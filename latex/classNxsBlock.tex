@@ -1,0 +1,136 @@
+\hypertarget{classNxsBlock}{
+\section{NxsBlock Class Reference}
+\label{classNxsBlock}\index{NxsBlock@{NxsBlock}}
+}
+Inheritance diagram for NxsBlock::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=10cm]{classNxsBlock}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classNxsBlock_ade0e632784669a14df73fa0dc927d6b2}{
+void {\bfseries SetNexus} (\hyperlink{classNxsReader}{NxsReader} $\ast$nxsptr)}
+\label{classNxsBlock_ade0e632784669a14df73fa0dc927d6b2}
+
+\item 
+\hypertarget{classNxsBlock_a69f8ef50e0b6ab9a967b02f35d226e4e}{
+\hyperlink{classNxsString}{NxsString} {\bfseries GetID} ()}
+\label{classNxsBlock_a69f8ef50e0b6ab9a967b02f35d226e4e}
+
+\item 
+\hypertarget{classNxsBlock_adb227d7b480839feaf8f352993c746b4}{
+bool {\bfseries IsEmpty} ()}
+\label{classNxsBlock_adb227d7b480839feaf8f352993c746b4}
+
+\item 
+\hypertarget{classNxsBlock_ae3236495862428eb16ffe8fa841fd76a}{
+void {\bfseries Enable} ()}
+\label{classNxsBlock_ae3236495862428eb16ffe8fa841fd76a}
+
+\item 
+\hypertarget{classNxsBlock_a08fd00d328cba58ead5a98f8edd39f14}{
+void {\bfseries Disable} ()}
+\label{classNxsBlock_a08fd00d328cba58ead5a98f8edd39f14}
+
+\item 
+\hypertarget{classNxsBlock_aad4bd8800e59e1504036525c945aea55}{
+bool {\bfseries IsEnabled} ()}
+\label{classNxsBlock_aad4bd8800e59e1504036525c945aea55}
+
+\item 
+\hypertarget{classNxsBlock_a8e41dfbbba26e86d841ca917ea0cdfcd}{
+bool {\bfseries IsUserSupplied} ()}
+\label{classNxsBlock_a8e41dfbbba26e86d841ca917ea0cdfcd}
+
+\item 
+\hypertarget{classNxsBlock_ae7eb26a193ae8f65017427e83a69de0e}{
+virtual unsigned {\bfseries CharLabelToNumber} (\hyperlink{classNxsString}{NxsString} s)}
+\label{classNxsBlock_ae7eb26a193ae8f65017427e83a69de0e}
+
+\item 
+\hypertarget{classNxsBlock_a22fe174afbb5f5a97c3eb386ea43c8c8}{
+virtual unsigned {\bfseries TaxonLabelToNumber} (\hyperlink{classNxsString}{NxsString} s)}
+\label{classNxsBlock_a22fe174afbb5f5a97c3eb386ea43c8c8}
+
+\item 
+\hypertarget{classNxsBlock_ad369f29d49db5f6bc0d9603571813cb5}{
+virtual void {\bfseries SkippingCommand} (\hyperlink{classNxsString}{NxsString} commandName)}
+\label{classNxsBlock_ad369f29d49db5f6bc0d9603571813cb5}
+
+\item 
+\hypertarget{classNxsBlock_a7c88492f921b9952381c57c59233a04f}{
+virtual void {\bfseries Report} (std::ostream \&out)}
+\label{classNxsBlock_a7c88492f921b9952381c57c59233a04f}
+
+\item 
+\hypertarget{classNxsBlock_a3642d732dd82298ef2f35a7b83b97719}{
+virtual void {\bfseries Reset} ()}
+\label{classNxsBlock_a3642d732dd82298ef2f35a7b83b97719}
+
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classNxsBlock_a8d85c9a7d0e2958b5531a9b734bdc1ea}{
+\hyperlink{classNxsString}{NxsString} {\bfseries errormsg}}
+\label{classNxsBlock_a8d85c9a7d0e2958b5531a9b734bdc1ea}
+
+\end{DoxyCompactItemize}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classNxsBlock_a3b7a229312d9182c6a7a3823d0e46a69}{
+virtual void {\bfseries Read} (\hyperlink{classNxsToken}{NxsToken} \&token)}
+\label{classNxsBlock_a3b7a229312d9182c6a7a3823d0e46a69}
+
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classNxsBlock_a3838d36624b7c4dbe47abfc558804f24}{
+bool {\bfseries isEmpty}}
+\label{classNxsBlock_a3838d36624b7c4dbe47abfc558804f24}
+
+\item 
+\hypertarget{classNxsBlock_a05a921edcd6bafc355b0c80352ada90d}{
+bool {\bfseries isEnabled}}
+\label{classNxsBlock_a05a921edcd6bafc355b0c80352ada90d}
+
+\item 
+\hypertarget{classNxsBlock_a6d7a0fdf8299bdaeca506f9c679fe804}{
+bool {\bfseries isUserSupplied}}
+\label{classNxsBlock_a6d7a0fdf8299bdaeca506f9c679fe804}
+
+\item 
+\hypertarget{classNxsBlock_a19738e5181f077f44a194d1841abc897}{
+\hyperlink{classNxsReader}{NxsReader} $\ast$ {\bfseries nexus}}
+\label{classNxsBlock_a19738e5181f077f44a194d1841abc897}
+
+\item 
+\hypertarget{classNxsBlock_a7af6b491ff4bbc4430489843268a5520}{
+\hyperlink{classNxsBlock}{NxsBlock} $\ast$ {\bfseries next}}
+\label{classNxsBlock_a7af6b491ff4bbc4430489843268a5520}
+
+\item 
+\hypertarget{classNxsBlock_a5adb993ee6e0e71448e5c51424ef30cb}{
+\hyperlink{classNxsString}{NxsString} {\bfseries id}}
+\label{classNxsBlock_a5adb993ee6e0e71448e5c51424ef30cb}
+
+\end{DoxyCompactItemize}
+\subsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classNxsBlock_a52410e92e5139842228caeaf0ac8dcc1}{
+class \hyperlink{classNxsBlock_a52410e92e5139842228caeaf0ac8dcc1}{NxsReader}}
+\label{classNxsBlock_a52410e92e5139842228caeaf0ac8dcc1}
+
+\end{DoxyCompactItemize}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/ncl/nxsblock.h\item 
+src/ncl/nxsblock.cpp\end{DoxyCompactItemize}

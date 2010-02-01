@@ -1,0 +1,116 @@
+\hypertarget{classNxsDiscreteMatrix}{
+\section{NxsDiscreteMatrix Class Reference}
+\label{classNxsDiscreteMatrix}\index{NxsDiscreteMatrix@{NxsDiscreteMatrix}}
+}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classNxsDiscreteMatrix_a537a120d005714989645805bb946a184}{
+{\bfseries NxsDiscreteMatrix} (unsigned rows, unsigned cols)}
+\label{classNxsDiscreteMatrix_a537a120d005714989645805bb946a184}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a17c807f6229f13f93bd50b86726911be}{
+void {\bfseries AddRows} (unsigned nAddRows)}
+\label{classNxsDiscreteMatrix_a17c807f6229f13f93bd50b86726911be}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_aa748836bfeeaf4d91567539a5f06297b}{
+void {\bfseries AddState} (unsigned i, unsigned j, unsigned value)}
+\label{classNxsDiscreteMatrix_aa748836bfeeaf4d91567539a5f06297b}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a9c833ce4c0f7770401014141bf0afad3}{
+void {\bfseries CopyStatesFromFirstTaxon} (unsigned i, unsigned j)}
+\label{classNxsDiscreteMatrix_a9c833ce4c0f7770401014141bf0afad3}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a25211235186f83196e719a983673c5f1}{
+void {\bfseries DebugSaveMatrix} (ostream \&out, unsigned colwidth=12)}
+\label{classNxsDiscreteMatrix_a25211235186f83196e719a983673c5f1}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_aa521f18e6fc030122599c227644e9a4d}{
+unsigned {\bfseries DuplicateRow} (unsigned row, unsigned count, unsigned startCol=0, unsigned endCol=UINT\_\-MAX)}
+\label{classNxsDiscreteMatrix_aa521f18e6fc030122599c227644e9a4d}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a89da8bcc568a9fa8b57a3c40453b8287}{
+void {\bfseries Flush} ()}
+\label{classNxsDiscreteMatrix_a89da8bcc568a9fa8b57a3c40453b8287}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_ada0b24e0f87ff41386c0947e51c340f1}{
+unsigned {\bfseries GetState} (unsigned i, unsigned j, unsigned k=0)}
+\label{classNxsDiscreteMatrix_ada0b24e0f87ff41386c0947e51c340f1}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a5888814b520e5850ff6cf1ab11edc71d}{
+unsigned {\bfseries GetNumStates} (unsigned i, unsigned j)}
+\label{classNxsDiscreteMatrix_a5888814b520e5850ff6cf1ab11edc71d}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a931d90b0bf6e031582b3d9c040e7ad6b}{
+unsigned {\bfseries GetObsNumStates} (unsigned j)}
+\label{classNxsDiscreteMatrix_a931d90b0bf6e031582b3d9c040e7ad6b}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a1ff98ffcf216238b4dd43b74fe0f8941}{
+bool {\bfseries IsGap} (unsigned i, unsigned j)}
+\label{classNxsDiscreteMatrix_a1ff98ffcf216238b4dd43b74fe0f8941}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a73adaad1c6b008aa44f2e4f181b6365a}{
+bool {\bfseries IsMissing} (unsigned i, unsigned j)}
+\label{classNxsDiscreteMatrix_a73adaad1c6b008aa44f2e4f181b6365a}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a9614a45c41e6db08bd067999d26095a4}{
+bool {\bfseries IsPolymorphic} (unsigned i, unsigned j)}
+\label{classNxsDiscreteMatrix_a9614a45c41e6db08bd067999d26095a4}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_aa82127952da11e91b2c89b8937a52f64}{
+void {\bfseries Reset} (unsigned rows, unsigned cols)}
+\label{classNxsDiscreteMatrix_aa82127952da11e91b2c89b8937a52f64}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a21162ff674ebeb3e2cb330ab0de6206e}{
+void {\bfseries SetGap} (unsigned i, unsigned j)}
+\label{classNxsDiscreteMatrix_a21162ff674ebeb3e2cb330ab0de6206e}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a8afd5f10fb53529af048cd822fede5a9}{
+void {\bfseries SetMissing} (unsigned i, unsigned j)}
+\label{classNxsDiscreteMatrix_a8afd5f10fb53529af048cd822fede5a9}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_aef3c5167d49997c45c1913d1fd21bd11}{
+void {\bfseries SetPolymorphic} (unsigned i, unsigned j, unsigned value=1)}
+\label{classNxsDiscreteMatrix_aef3c5167d49997c45c1913d1fd21bd11}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_a7e7de3f9d25943e889917cbc989f2278}{
+void {\bfseries SetState} (unsigned i, unsigned j, unsigned value)}
+\label{classNxsDiscreteMatrix_a7e7de3f9d25943e889917cbc989f2278}
+
+\end{DoxyCompactItemize}
+\subsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classNxsDiscreteMatrix_ab9466d1b21f90b6fd961284f19c6e9d4}{
+class \hyperlink{classNxsDiscreteMatrix_ab9466d1b21f90b6fd961284f19c6e9d4}{NxsCharactersBlock}}
+\label{classNxsDiscreteMatrix_ab9466d1b21f90b6fd961284f19c6e9d4}
+
+\item 
+\hypertarget{classNxsDiscreteMatrix_ad9ba2bb6bba16b181df5d60f0c244681}{
+class {\bfseries NxsAllelesBlock}}
+\label{classNxsDiscreteMatrix_ad9ba2bb6bba16b181df5d60f0c244681}
+
+\end{DoxyCompactItemize}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/ncl/nxsdiscretematrix.h\item 
+src/ncl/nxsdiscretematrix.cpp\end{DoxyCompactItemize}

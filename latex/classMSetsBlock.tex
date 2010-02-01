@@ -1,0 +1,142 @@
+\hypertarget{classMSetsBlock}{
+\section{MSetsBlock Class Reference}
+\label{classMSetsBlock}\index{MSetsBlock@{MSetsBlock}}
+}
+
+
+{\ttfamily \#include $<$msetsblock.h$>$}Inheritance diagram for MSetsBlock::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2cm]{classMSetsBlock}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classMSetsBlock_a46e45cb2258e0c5295d2c22ed8a03333}{MSetsBlock} ()
+\item 
+virtual \hyperlink{classMSetsBlock_aec8a27486caa13efccfcef0420287c31}{$\sim$MSetsBlock} ()
+\item 
+virtual void \hyperlink{classMSetsBlock_a88203ea243140fc5402abfecb41ee2c7}{Report} (ostream \&out)
+\item 
+virtual void \hyperlink{classMSetsBlock_a64e9ca54bba770d1a663de30dfca2073}{Reset} ()
+\item 
+int \hyperlink{classMSetsBlock_a0950179c8789b05e53fafc981281e694}{getNSets} () const 
+\item 
+\hyperlink{structTaxaSetName}{TaxaSetName} \& \hyperlink{classMSetsBlock_ac38f25bafc3eaaa704e3bc3d892f3783}{getSet} (int id)
+\item 
+TaxaSetNameVector \& \hyperlink{classMSetsBlock_af7a44d6b45025b01b20ba612e72c2f4d}{getSets} ()
+\item 
+int \hyperlink{classMSetsBlock_aae67ce46658428cb5a1793f5ead91ea8}{findArea} (string \&name)
+\end{DoxyCompactItemize}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{classMSetsBlock_ada321520d3bf38ec70c09e8e4568d2fd}{Read} (\hyperlink{classNxsToken}{NxsToken} \&token)
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+TaxaSetNameVector \hyperlink{classMSetsBlock_a30ed727f77895254e40487fc27ae2c97}{sets}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Sets Block of Nexus file parser
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classMSetsBlock_a46e45cb2258e0c5295d2c22ed8a03333}{
+\index{MSetsBlock@{MSetsBlock}!MSetsBlock@{MSetsBlock}}
+\index{MSetsBlock@{MSetsBlock}!MSetsBlock@{MSetsBlock}}
+\subsubsection[{MSetsBlock}]{\setlength{\rightskip}{0pt plus 5cm}MSetsBlock::MSetsBlock ()}}
+\label{classMSetsBlock_a46e45cb2258e0c5295d2c22ed8a03333}
+constructor, assigning an associated splits graph \hypertarget{classMSetsBlock_aec8a27486caa13efccfcef0420287c31}{
+\index{MSetsBlock@{MSetsBlock}!$\sim$MSetsBlock@{$\sim$MSetsBlock}}
+\index{$\sim$MSetsBlock@{$\sim$MSetsBlock}!MSetsBlock@{MSetsBlock}}
+\subsubsection[{$\sim$MSetsBlock}]{\setlength{\rightskip}{0pt plus 5cm}MSetsBlock::$\sim$MSetsBlock ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classMSetsBlock_aec8a27486caa13efccfcef0420287c31}
+destructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classMSetsBlock_aae67ce46658428cb5a1793f5ead91ea8}{
+\index{MSetsBlock@{MSetsBlock}!findArea@{findArea}}
+\index{findArea@{findArea}!MSetsBlock@{MSetsBlock}}
+\subsubsection[{findArea}]{\setlength{\rightskip}{0pt plus 5cm}int MSetsBlock::findArea (string \& {\em name})}}
+\label{classMSetsBlock_aae67ce46658428cb5a1793f5ead91ea8}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em name}]an area name \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+ID of the area with that name, -\/1 if not found 
+\end{DoxyReturn}
+\hypertarget{classMSetsBlock_a0950179c8789b05e53fafc981281e694}{
+\index{MSetsBlock@{MSetsBlock}!getNSets@{getNSets}}
+\index{getNSets@{getNSets}!MSetsBlock@{MSetsBlock}}
+\subsubsection[{getNSets}]{\setlength{\rightskip}{0pt plus 5cm}int MSetsBlock::getNSets () const\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classMSetsBlock_a0950179c8789b05e53fafc981281e694}
+\begin{DoxyReturn}{Returns}
+the number of sets 
+\end{DoxyReturn}
+\hypertarget{classMSetsBlock_ac38f25bafc3eaaa704e3bc3d892f3783}{
+\index{MSetsBlock@{MSetsBlock}!getSet@{getSet}}
+\index{getSet@{getSet}!MSetsBlock@{MSetsBlock}}
+\subsubsection[{getSet}]{\setlength{\rightskip}{0pt plus 5cm}{\bf TaxaSetName}\& MSetsBlock::getSet (int {\em id})\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classMSetsBlock_ac38f25bafc3eaaa704e3bc3d892f3783}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em id}]set id \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+reference to the corresponding set 
+\end{DoxyReturn}
+\hypertarget{classMSetsBlock_af7a44d6b45025b01b20ba612e72c2f4d}{
+\index{MSetsBlock@{MSetsBlock}!getSets@{getSets}}
+\index{getSets@{getSets}!MSetsBlock@{MSetsBlock}}
+\subsubsection[{getSets}]{\setlength{\rightskip}{0pt plus 5cm}TaxaSetNameVector\& MSetsBlock::getSets ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classMSetsBlock_af7a44d6b45025b01b20ba612e72c2f4d}
+\begin{DoxyReturn}{Returns}
+vector of all taxa set 
+\end{DoxyReturn}
+\hypertarget{classMSetsBlock_ada321520d3bf38ec70c09e8e4568d2fd}{
+\index{MSetsBlock@{MSetsBlock}!Read@{Read}}
+\index{Read@{Read}!MSetsBlock@{MSetsBlock}}
+\subsubsection[{Read}]{\setlength{\rightskip}{0pt plus 5cm}void MSetsBlock::Read ({\bf NxsToken} \& {\em token})\hspace{0.3cm}{\ttfamily  \mbox{[}protected, virtual\mbox{]}}}}
+\label{classMSetsBlock_ada321520d3bf38ec70c09e8e4568d2fd}
+main method to read block from file 
+\begin{DoxyParams}{Parameters}
+\item[{\em token}]a token reader \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classNxsBlock}{NxsBlock}.\hypertarget{classMSetsBlock_a88203ea243140fc5402abfecb41ee2c7}{
+\index{MSetsBlock@{MSetsBlock}!Report@{Report}}
+\index{Report@{Report}!MSetsBlock@{MSetsBlock}}
+\subsubsection[{Report}]{\setlength{\rightskip}{0pt plus 5cm}void MSetsBlock::Report (ostream \& {\em out})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classMSetsBlock_a88203ea243140fc5402abfecb41ee2c7}
+print info to an output stream 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream, cout for output to screen \end{DoxyParams}
+\hypertarget{classMSetsBlock_a64e9ca54bba770d1a663de30dfca2073}{
+\index{MSetsBlock@{MSetsBlock}!Reset@{Reset}}
+\index{Reset@{Reset}!MSetsBlock@{MSetsBlock}}
+\subsubsection[{Reset}]{\setlength{\rightskip}{0pt plus 5cm}void MSetsBlock::Reset ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classMSetsBlock_a64e9ca54bba770d1a663de30dfca2073}
+reset the block 
+
+Reimplemented from \hyperlink{classNxsBlock}{NxsBlock}.
+
+\subsection{Member Data Documentation}
+\hypertarget{classMSetsBlock_a30ed727f77895254e40487fc27ae2c97}{
+\index{MSetsBlock@{MSetsBlock}!sets@{sets}}
+\index{sets@{sets}!MSetsBlock@{MSetsBlock}}
+\subsubsection[{sets}]{\setlength{\rightskip}{0pt plus 5cm}TaxaSetNameVector {\bf MSetsBlock::sets}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classMSetsBlock_a30ed727f77895254e40487fc27ae2c97}
+list of taxa set names 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/msetsblock.h\item 
+src/msetsblock.cpp\end{DoxyCompactItemize}

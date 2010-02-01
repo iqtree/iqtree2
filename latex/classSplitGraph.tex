@@ -1,0 +1,470 @@
+\hypertarget{classSplitGraph}{
+\section{SplitGraph Class Reference}
+\label{classSplitGraph}\index{SplitGraph@{SplitGraph}}
+}
+
+
+{\ttfamily \#include $<$splitgraph.h$>$}Inheritance diagram for SplitGraph::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3cm]{classSplitGraph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classSplitGraph_aea160f196766a6573809410979e0df5b}{SplitGraph} ()
+\item 
+\hyperlink{classSplitGraph_aec55fe3e947b56545f57c9c596ec20a3}{SplitGraph} (\hyperlink{structParams}{Params} \&params)
+\item 
+void \hyperlink{classSplitGraph_a0111a637ecb711d90f2f15ce734a96c8}{init} (\hyperlink{structParams}{Params} \&params)
+\item 
+void \hyperlink{classSplitGraph_adb64089273f29e935d82a5fc74289792}{AddTaxaFromSets} ()
+\item 
+void \hyperlink{classSplitGraph_af306b9e7b96b0fc89d664548e2b6769a}{createStarTree} ()
+\item 
+void \hyperlink{classSplitGraph_a05d34dc9d03a3aed2e195b64acd698b0}{createBlocks} ()
+\item 
+virtual \hyperlink{classSplitGraph_a40780d552131a67c8cdb5b20037dbd16}{$\sim$SplitGraph} ()
+\item 
+void \hyperlink{classSplitGraph_a9cc756e24638ce4b7f78605c8ccb6543}{convertFromTreesBlock} (int burnin, double split\_\-threshold)
+\item 
+void \hyperlink{classSplitGraph_abd01f1db37dbb2c97becef1b38032dd9}{report} (ostream \&out)
+\item 
+void \hyperlink{classSplitGraph_a1876d549d833982752e4ad2e263ec6d4}{reportConflict} (ostream \&out)
+\item 
+double \hyperlink{classSplitGraph_aaff18dd254098b4e1912593f0e2de524}{calcWeight} ()
+\item 
+double \hyperlink{classSplitGraph_a8ef03a25d1057fb09e2da7d9b3a28035}{calcTrivialWeight} ()
+\item 
+double \hyperlink{classSplitGraph_a9404a37b5c287146c432b7ca28c0ed6e}{calcWeight} (\hyperlink{classSplit}{Split} \&taxa\_\-set)
+\item 
+int \hyperlink{classSplitGraph_a9e3db1bb803fc6ee62082eae9978057d}{countSplits} (\hyperlink{classSplit}{Split} \&taxa\_\-set)
+\item 
+int \hyperlink{classSplitGraph_a8124b259486ab72f1a53119b11001805}{countInternalSplits} (\hyperlink{classSplit}{Split} \&taxa\_\-set)
+\item 
+void \hyperlink{classSplitGraph_aee545f263532bb4d56109fa43455a50a}{generateTaxaSet} (char $\ast$filename, int size, int overlap, int times)
+\item 
+void \hyperlink{classSplitGraph_aaa150a66ac97d6170336a9c74ffecc88}{scaleWeight} (double norm, bool make\_\-int=false)
+\item 
+bool \hyperlink{classSplitGraph_a43b37646702074556d3c7c894dbee9ca}{containSplit} (\hyperlink{classSplit}{Split} \&sp)
+\item 
+void \hyperlink{classSplitGraph_a870e02f7034993ce445ab9ae1964a781}{findMaxCompatibleSplits} (\hyperlink{classSplitGraph}{SplitGraph} \&maxsg)
+\item 
+bool \hyperlink{classSplitGraph_acaa3948107ecf6717cd11cd57829587e}{compatible} (\hyperlink{classSplit}{Split} $\ast$sp)
+\item 
+int \hyperlink{classSplitGraph_a779ae52f511731d598f6133ecb0deb51}{getNTaxa} ()
+\item 
+int \hyperlink{classSplitGraph_adfdcee57a677ea807d595328abb28481}{getNAreas} ()
+\item 
+int \hyperlink{classSplitGraph_a848a5f43fcb791dd99a1865d5fe9df46}{getNSplits} ()
+\item 
+int \hyperlink{classSplitGraph_a4e3c9a6363de8ac9d1bd15797306aaf1}{getNTrivialSplits} ()
+\item 
+\hyperlink{classNxsTaxaBlock}{NxsTaxaBlock} $\ast$ \hyperlink{classSplitGraph_a3f0181782d3b80190ea24a8eeb44b289}{getTaxa} ()
+\item 
+\hyperlink{classMSplitsBlock}{MSplitsBlock} $\ast$ \hyperlink{classSplitGraph_a4a4029deff1beb7089b3559790da4b2d}{getSplitsBlock} ()
+\item 
+\hyperlink{classMPdaBlock}{MPdaBlock} $\ast$ \hyperlink{classSplitGraph_a6eb74cff199a65a2e3b3a17c7a7c96e9}{getPdaBlock} ()
+\item 
+\hyperlink{classMSetsBlock}{MSetsBlock} $\ast$ \hyperlink{classSplitGraph_acafe07757402de0ed22320bcc2429f55}{getSetsBlock} ()
+\item 
+\hyperlink{classNxsTreesBlock}{NxsTreesBlock} $\ast$ \hyperlink{classSplitGraph_ad10d2632515ccf7b795cb9ace660e050}{getTreesBlock} ()
+\item 
+bool \hyperlink{classSplitGraph_ae7b98f722c61033d05cee4b1e2c68e54}{isCircular} ()
+\item 
+bool \hyperlink{classSplitGraph_a05cfb8141526a6cbc5905eb74dccc0fa}{isWeaklyCompatible} ()
+\item 
+bool \hyperlink{classSplitGraph_a93a2b7ec12a3f75f143a2dfada8d7a02}{isBudgetConstraint} ()
+\item 
+bool \hyperlink{classSplitGraph_aab13a9043727eb04c7afa61ddf489b8f}{checkCircular} (matrix(double)\&mat)
+\item 
+int \hyperlink{classSplitGraph_a3c7c98462a61153525cb22439f6872ff}{getCircleId} (int i)
+\item 
+void \hyperlink{classSplitGraph_a49e61357ca80dc01cc75891c1316a921}{generateCircular} (\hyperlink{structParams}{Params} \&params)
+\item 
+void \hyperlink{classSplitGraph_ac00dacfe044abd770bb24b5714035742}{saveFile} (ostream \&out)
+\item 
+void \hyperlink{classSplitGraph_aff71095a191dc17326d6da9441496c37}{calcDistance} (char $\ast$filename)
+\item 
+void \hyperlink{classSplitGraph_a1cbeb318350af0d36f70b03ae11bd46d}{calcDistance} (matrix(double)\&dist)
+\item 
+void \hyperlink{classSplitGraph_a9e96c1c785114aa2fc0c998702345228}{calcDistance} (matrix(double)\&dist, vector$<$ int $>$ \&taxa\_\-order)
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classNxsTaxaBlock}{NxsTaxaBlock} $\ast$ \hyperlink{classSplitGraph_a3166d128ac9e267baf86d309deadb988}{taxa}
+\item 
+\hyperlink{classMSplitsBlock}{MSplitsBlock} $\ast$ \hyperlink{classSplitGraph_a42f7001d83a322db0b47a4bab44eeebd}{splits}
+\item 
+\hyperlink{classMPdaBlock}{MPdaBlock} $\ast$ \hyperlink{classSplitGraph_ab5bb72994879bbc43abf1b48f1278c21}{pda}
+\item 
+\hyperlink{classMSetsBlock}{MSetsBlock} $\ast$ \hyperlink{classSplitGraph_ac46902cb0a5a2c914c657f0434d004bd}{sets}
+\item 
+\hyperlink{classNxsTreesBlock}{NxsTreesBlock} $\ast$ \hyperlink{classSplitGraph_ad3f25cc271cafddeb348ba92cbcb9f59}{trees}
+\end{DoxyCompactItemize}
+\subsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classSplitGraph_a7a747beac427dfc013c53501e474d452}{
+class \hyperlink{classSplitGraph_a7a747beac427dfc013c53501e474d452}{MTree}}
+\label{classSplitGraph_a7a747beac427dfc013c53501e474d452}
+
+\item 
+\hypertarget{classSplitGraph_a0f5ece1842cb079997e8b0826d310fcd}{
+class \hyperlink{classSplitGraph_a0f5ece1842cb079997e8b0826d310fcd}{MTreeSet}}
+\label{classSplitGraph_a0f5ece1842cb079997e8b0826d310fcd}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\hyperlink{classSplitGraph}{SplitGraph} class
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classSplitGraph_aea160f196766a6573809410979e0df5b}{
+\index{SplitGraph@{SplitGraph}!SplitGraph@{SplitGraph}}
+\index{SplitGraph@{SplitGraph}!SplitGraph@{SplitGraph}}
+\subsubsection[{SplitGraph}]{\setlength{\rightskip}{0pt plus 5cm}SplitGraph::SplitGraph ()}}
+\label{classSplitGraph_aea160f196766a6573809410979e0df5b}
+empty constructor \hypertarget{classSplitGraph_aec55fe3e947b56545f57c9c596ec20a3}{
+\index{SplitGraph@{SplitGraph}!SplitGraph@{SplitGraph}}
+\index{SplitGraph@{SplitGraph}!SplitGraph@{SplitGraph}}
+\subsubsection[{SplitGraph}]{\setlength{\rightskip}{0pt plus 5cm}SplitGraph::SplitGraph ({\bf Params} \& {\em params})}}
+\label{classSplitGraph_aec55fe3e947b56545f57c9c596ec20a3}
+construct split graph from the parameters by calling init(params). 
+\begin{DoxyParams}{Parameters}
+\item[{\em params}]program parameters \end{DoxyParams}
+\hypertarget{classSplitGraph_a40780d552131a67c8cdb5b20037dbd16}{
+\index{SplitGraph@{SplitGraph}!$\sim$SplitGraph@{$\sim$SplitGraph}}
+\index{$\sim$SplitGraph@{$\sim$SplitGraph}!SplitGraph@{SplitGraph}}
+\subsubsection[{$\sim$SplitGraph}]{\setlength{\rightskip}{0pt plus 5cm}SplitGraph::$\sim$SplitGraph ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classSplitGraph_a40780d552131a67c8cdb5b20037dbd16}
+destructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classSplitGraph_adb64089273f29e935d82a5fc74289792}{
+\index{SplitGraph@{SplitGraph}!AddTaxaFromSets@{AddTaxaFromSets}}
+\index{AddTaxaFromSets@{AddTaxaFromSets}!SplitGraph@{SplitGraph}}
+\subsubsection[{AddTaxaFromSets}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::AddTaxaFromSets ()}}
+\label{classSplitGraph_adb64089273f29e935d82a5fc74289792}
+if no taxa block found, but the sets block is present, then this function will be invoked. It takes the taxa names from the sets block. \hypertarget{classSplitGraph_a9e96c1c785114aa2fc0c998702345228}{
+\index{SplitGraph@{SplitGraph}!calcDistance@{calcDistance}}
+\index{calcDistance@{calcDistance}!SplitGraph@{SplitGraph}}
+\subsubsection[{calcDistance}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::calcDistance (matrix(double)\& {\em dist}, \/  vector$<$ int $>$ \& {\em taxa\_\-order})}}
+\label{classSplitGraph_a9e96c1c785114aa2fc0c998702345228}
+calculate the distance matrix, based on the taxa\_\-order 
+\begin{DoxyParams}{Parameters}
+\item[{\em dist}](OUT) distance matrix \item[{\em taxa\_\-order}]an order of taxa \end{DoxyParams}
+\hypertarget{classSplitGraph_a1cbeb318350af0d36f70b03ae11bd46d}{
+\index{SplitGraph@{SplitGraph}!calcDistance@{calcDistance}}
+\index{calcDistance@{calcDistance}!SplitGraph@{SplitGraph}}
+\subsubsection[{calcDistance}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::calcDistance (matrix(double)\& {\em dist})}}
+\label{classSplitGraph_a1cbeb318350af0d36f70b03ae11bd46d}
+calculate the distance matrix 
+\begin{DoxyParams}{Parameters}
+\item[{\em dist}](OUT) distance matrix \end{DoxyParams}
+\hypertarget{classSplitGraph_aff71095a191dc17326d6da9441496c37}{
+\index{SplitGraph@{SplitGraph}!calcDistance@{calcDistance}}
+\index{calcDistance@{calcDistance}!SplitGraph@{SplitGraph}}
+\subsubsection[{calcDistance}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::calcDistance (char $\ast$ {\em filename})}}
+\label{classSplitGraph_aff71095a191dc17326d6da9441496c37}
+calculate the distance matrix, print to file in phylip format 
+\begin{DoxyParams}{Parameters}
+\item[{\em filename}]output file name \end{DoxyParams}
+\hypertarget{classSplitGraph_a8ef03a25d1057fb09e2da7d9b3a28035}{
+\index{SplitGraph@{SplitGraph}!calcTrivialWeight@{calcTrivialWeight}}
+\index{calcTrivialWeight@{calcTrivialWeight}!SplitGraph@{SplitGraph}}
+\subsubsection[{calcTrivialWeight}]{\setlength{\rightskip}{0pt plus 5cm}double SplitGraph::calcTrivialWeight ()}}
+\label{classSplitGraph_a8ef03a25d1057fb09e2da7d9b3a28035}
+calculate sum of weights of all trivial splits \hypertarget{classSplitGraph_a9404a37b5c287146c432b7ca28c0ed6e}{
+\index{SplitGraph@{SplitGraph}!calcWeight@{calcWeight}}
+\index{calcWeight@{calcWeight}!SplitGraph@{SplitGraph}}
+\subsubsection[{calcWeight}]{\setlength{\rightskip}{0pt plus 5cm}double SplitGraph::calcWeight ({\bf Split} \& {\em taxa\_\-set})}}
+\label{classSplitGraph_a9404a37b5c287146c432b7ca28c0ed6e}
+calculate sum of weights of preserved splits in the taxa\_\-set 
+\begin{DoxyParams}{Parameters}
+\item[{\em taxa\_\-set}]a set of taxa \end{DoxyParams}
+\hypertarget{classSplitGraph_aaff18dd254098b4e1912593f0e2de524}{
+\index{SplitGraph@{SplitGraph}!calcWeight@{calcWeight}}
+\index{calcWeight@{calcWeight}!SplitGraph@{SplitGraph}}
+\subsubsection[{calcWeight}]{\setlength{\rightskip}{0pt plus 5cm}double SplitGraph::calcWeight ()}}
+\label{classSplitGraph_aaff18dd254098b4e1912593f0e2de524}
+calculate sum of weights of all splits \hypertarget{classSplitGraph_aab13a9043727eb04c7afa61ddf489b8f}{
+\index{SplitGraph@{SplitGraph}!checkCircular@{checkCircular}}
+\index{checkCircular@{checkCircular}!SplitGraph@{SplitGraph}}
+\subsubsection[{checkCircular}]{\setlength{\rightskip}{0pt plus 5cm}bool SplitGraph::checkCircular (matrix(double)\& {\em mat})}}
+\label{classSplitGraph_aab13a9043727eb04c7afa61ddf489b8f}
+\begin{DoxyReturn}{Returns}
+TRUE if the distance matrix presents for circular splits graph 
+\end{DoxyReturn}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em mat}]distance matrix \end{DoxyParams}
+\hypertarget{classSplitGraph_acaa3948107ecf6717cd11cd57829587e}{
+\index{SplitGraph@{SplitGraph}!compatible@{compatible}}
+\index{compatible@{compatible}!SplitGraph@{SplitGraph}}
+\subsubsection[{compatible}]{\setlength{\rightskip}{0pt plus 5cm}bool SplitGraph::compatible ({\bf Split} $\ast$ {\em sp})}}
+\label{classSplitGraph_acaa3948107ecf6717cd11cd57829587e}
+check the compatibility of sp against all splits in this set 
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]the target split \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+TRUE if sp is compatible with all splits here, otherwise FALSE 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_a43b37646702074556d3c7c894dbee9ca}{
+\index{SplitGraph@{SplitGraph}!containSplit@{containSplit}}
+\index{containSplit@{containSplit}!SplitGraph@{SplitGraph}}
+\subsubsection[{containSplit}]{\setlength{\rightskip}{0pt plus 5cm}bool SplitGraph::containSplit ({\bf Split} \& {\em sp})}}
+\label{classSplitGraph_a43b37646702074556d3c7c894dbee9ca}
+\begin{DoxyReturn}{Returns}
+TRUE if split sp is contained in the split system 
+\end{DoxyReturn}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]target split to search for \end{DoxyParams}
+\hypertarget{classSplitGraph_a9cc756e24638ce4b7f78605c8ccb6543}{
+\index{SplitGraph@{SplitGraph}!convertFromTreesBlock@{convertFromTreesBlock}}
+\index{convertFromTreesBlock@{convertFromTreesBlock}!SplitGraph@{SplitGraph}}
+\subsubsection[{convertFromTreesBlock}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::convertFromTreesBlock (int {\em burnin}, \/  double {\em split\_\-threshold})}}
+\label{classSplitGraph_a9cc756e24638ce4b7f78605c8ccb6543}
+convert the collection of trees in TREES block into this split graph 
+\begin{DoxyParams}{Parameters}
+\item[{\em burnin}]the number of beginning trees to be discarded \item[{\em split\_\-threshold}]only keep those splits which appear more than this threshold \end{DoxyParams}
+\hypertarget{classSplitGraph_a8124b259486ab72f1a53119b11001805}{
+\index{SplitGraph@{SplitGraph}!countInternalSplits@{countInternalSplits}}
+\index{countInternalSplits@{countInternalSplits}!SplitGraph@{SplitGraph}}
+\subsubsection[{countInternalSplits}]{\setlength{\rightskip}{0pt plus 5cm}int SplitGraph::countInternalSplits ({\bf Split} \& {\em taxa\_\-set})}}
+\label{classSplitGraph_a8124b259486ab72f1a53119b11001805}
+count how many internal splits are covered by the taxon set 
+\begin{DoxyParams}{Parameters}
+\item[{\em taxa\_\-set}]a set of taxa \end{DoxyParams}
+\hypertarget{classSplitGraph_a9e3db1bb803fc6ee62082eae9978057d}{
+\index{SplitGraph@{SplitGraph}!countSplits@{countSplits}}
+\index{countSplits@{countSplits}!SplitGraph@{SplitGraph}}
+\subsubsection[{countSplits}]{\setlength{\rightskip}{0pt plus 5cm}int SplitGraph::countSplits ({\bf Split} \& {\em taxa\_\-set})}}
+\label{classSplitGraph_a9e3db1bb803fc6ee62082eae9978057d}
+count how many splits are covered by the taxon set 
+\begin{DoxyParams}{Parameters}
+\item[{\em taxa\_\-set}]a set of taxa \end{DoxyParams}
+\hypertarget{classSplitGraph_a05d34dc9d03a3aed2e195b64acd698b0}{
+\index{SplitGraph@{SplitGraph}!createBlocks@{createBlocks}}
+\index{createBlocks@{createBlocks}!SplitGraph@{SplitGraph}}
+\subsubsection[{createBlocks}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::createBlocks ()}}
+\label{classSplitGraph_a05d34dc9d03a3aed2e195b64acd698b0}
+new all blocks: taxa, splits, pda \hypertarget{classSplitGraph_af306b9e7b96b0fc89d664548e2b6769a}{
+\index{SplitGraph@{SplitGraph}!createStarTree@{createStarTree}}
+\index{createStarTree@{createStarTree}!SplitGraph@{SplitGraph}}
+\subsubsection[{createStarTree}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::createStarTree ()}}
+\label{classSplitGraph_af306b9e7b96b0fc89d664548e2b6769a}
+this function is invoked \hypertarget{classSplitGraph_a870e02f7034993ce445ab9ae1964a781}{
+\index{SplitGraph@{SplitGraph}!findMaxCompatibleSplits@{findMaxCompatibleSplits}}
+\index{findMaxCompatibleSplits@{findMaxCompatibleSplits}!SplitGraph@{SplitGraph}}
+\subsubsection[{findMaxCompatibleSplits}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::findMaxCompatibleSplits ({\bf SplitGraph} \& {\em maxsg})}}
+\label{classSplitGraph_a870e02f7034993ce445ab9ae1964a781}
+find the maximum-\/weight set of compatible splits 
+\begin{DoxyParams}{Parameters}
+\item[{\em maxsg}](OUT) set of compatible splits in a split graph class \end{DoxyParams}
+\hypertarget{classSplitGraph_a49e61357ca80dc01cc75891c1316a921}{
+\index{SplitGraph@{SplitGraph}!generateCircular@{generateCircular}}
+\index{generateCircular@{generateCircular}!SplitGraph@{SplitGraph}}
+\subsubsection[{generateCircular}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::generateCircular ({\bf Params} \& {\em params})}}
+\label{classSplitGraph_a49e61357ca80dc01cc75891c1316a921}
+generate a random circular split graph 
+\begin{DoxyParams}{Parameters}
+\item[{\em params}]program parameters \end{DoxyParams}
+\hypertarget{classSplitGraph_aee545f263532bb4d56109fa43455a50a}{
+\index{SplitGraph@{SplitGraph}!generateTaxaSet@{generateTaxaSet}}
+\index{generateTaxaSet@{generateTaxaSet}!SplitGraph@{SplitGraph}}
+\subsubsection[{generateTaxaSet}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::generateTaxaSet (char $\ast$ {\em filename}, \/  int {\em size}, \/  int {\em overlap}, \/  int {\em times})}}
+\label{classSplitGraph_aee545f263532bb4d56109fa43455a50a}
+generate pairs of random taxa set with overlap of taxa in common 
+\begin{DoxyParams}{Parameters}
+\item[{\em filename}]output file name \item[{\em size}]size of the taxa set \item[{\em overlap}]number of taxa common in both sets \item[{\em times}]number of times repeated \end{DoxyParams}
+\hypertarget{classSplitGraph_a3c7c98462a61153525cb22439f6872ff}{
+\index{SplitGraph@{SplitGraph}!getCircleId@{getCircleId}}
+\index{getCircleId@{getCircleId}!SplitGraph@{SplitGraph}}
+\subsubsection[{getCircleId}]{\setlength{\rightskip}{0pt plus 5cm}int SplitGraph::getCircleId (int {\em i})\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplitGraph_a3c7c98462a61153525cb22439f6872ff}
+get the ID of the taxon around the circle in a circular splits graph 
+\begin{DoxyParams}{Parameters}
+\item[{\em i}]a taxon \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+index of taxon on the circle 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_adfdcee57a677ea807d595328abb28481}{
+\index{SplitGraph@{SplitGraph}!getNAreas@{getNAreas}}
+\index{getNAreas@{getNAreas}!SplitGraph@{SplitGraph}}
+\subsubsection[{getNAreas}]{\setlength{\rightskip}{0pt plus 5cm}int SplitGraph::getNAreas ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplitGraph_adfdcee57a677ea807d595328abb28481}
+\begin{DoxyReturn}{Returns}
+number of areas 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_a848a5f43fcb791dd99a1865d5fe9df46}{
+\index{SplitGraph@{SplitGraph}!getNSplits@{getNSplits}}
+\index{getNSplits@{getNSplits}!SplitGraph@{SplitGraph}}
+\subsubsection[{getNSplits}]{\setlength{\rightskip}{0pt plus 5cm}int SplitGraph::getNSplits ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplitGraph_a848a5f43fcb791dd99a1865d5fe9df46}
+\begin{DoxyReturn}{Returns}
+number of splits 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_a779ae52f511731d598f6133ecb0deb51}{
+\index{SplitGraph@{SplitGraph}!getNTaxa@{getNTaxa}}
+\index{getNTaxa@{getNTaxa}!SplitGraph@{SplitGraph}}
+\subsubsection[{getNTaxa}]{\setlength{\rightskip}{0pt plus 5cm}int SplitGraph::getNTaxa ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplitGraph_a779ae52f511731d598f6133ecb0deb51}
+\begin{DoxyReturn}{Returns}
+number of taxa 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_a4e3c9a6363de8ac9d1bd15797306aaf1}{
+\index{SplitGraph@{SplitGraph}!getNTrivialSplits@{getNTrivialSplits}}
+\index{getNTrivialSplits@{getNTrivialSplits}!SplitGraph@{SplitGraph}}
+\subsubsection[{getNTrivialSplits}]{\setlength{\rightskip}{0pt plus 5cm}int SplitGraph::getNTrivialSplits ()}}
+\label{classSplitGraph_a4e3c9a6363de8ac9d1bd15797306aaf1}
+\begin{DoxyReturn}{Returns}
+number of trivial splits 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_a6eb74cff199a65a2e3b3a17c7a7c96e9}{
+\index{SplitGraph@{SplitGraph}!getPdaBlock@{getPdaBlock}}
+\index{getPdaBlock@{getPdaBlock}!SplitGraph@{SplitGraph}}
+\subsubsection[{getPdaBlock}]{\setlength{\rightskip}{0pt plus 5cm}{\bf MPdaBlock}$\ast$ SplitGraph::getPdaBlock ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplitGraph_a6eb74cff199a65a2e3b3a17c7a7c96e9}
+\begin{DoxyReturn}{Returns}
+PDA block 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_acafe07757402de0ed22320bcc2429f55}{
+\index{SplitGraph@{SplitGraph}!getSetsBlock@{getSetsBlock}}
+\index{getSetsBlock@{getSetsBlock}!SplitGraph@{SplitGraph}}
+\subsubsection[{getSetsBlock}]{\setlength{\rightskip}{0pt plus 5cm}{\bf MSetsBlock}$\ast$ SplitGraph::getSetsBlock ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplitGraph_acafe07757402de0ed22320bcc2429f55}
+\begin{DoxyReturn}{Returns}
+SETS block 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_a4a4029deff1beb7089b3559790da4b2d}{
+\index{SplitGraph@{SplitGraph}!getSplitsBlock@{getSplitsBlock}}
+\index{getSplitsBlock@{getSplitsBlock}!SplitGraph@{SplitGraph}}
+\subsubsection[{getSplitsBlock}]{\setlength{\rightskip}{0pt plus 5cm}{\bf MSplitsBlock}$\ast$ SplitGraph::getSplitsBlock ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplitGraph_a4a4029deff1beb7089b3559790da4b2d}
+\begin{DoxyReturn}{Returns}
+splits block 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_a3f0181782d3b80190ea24a8eeb44b289}{
+\index{SplitGraph@{SplitGraph}!getTaxa@{getTaxa}}
+\index{getTaxa@{getTaxa}!SplitGraph@{SplitGraph}}
+\subsubsection[{getTaxa}]{\setlength{\rightskip}{0pt plus 5cm}{\bf NxsTaxaBlock}$\ast$ SplitGraph::getTaxa ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplitGraph_a3f0181782d3b80190ea24a8eeb44b289}
+\begin{DoxyReturn}{Returns}
+taxa block 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_ad10d2632515ccf7b795cb9ace660e050}{
+\index{SplitGraph@{SplitGraph}!getTreesBlock@{getTreesBlock}}
+\index{getTreesBlock@{getTreesBlock}!SplitGraph@{SplitGraph}}
+\subsubsection[{getTreesBlock}]{\setlength{\rightskip}{0pt plus 5cm}{\bf NxsTreesBlock}$\ast$ SplitGraph::getTreesBlock ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplitGraph_ad10d2632515ccf7b795cb9ace660e050}
+\begin{DoxyReturn}{Returns}
+TREES block 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_a0111a637ecb711d90f2f15ce734a96c8}{
+\index{SplitGraph@{SplitGraph}!init@{init}}
+\index{init@{init}!SplitGraph@{SplitGraph}}
+\subsubsection[{init}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::init ({\bf Params} \& {\em params})}}
+\label{classSplitGraph_a0111a637ecb711d90f2f15ce734a96c8}
+init split graph from the parameters 
+\begin{DoxyParams}{Parameters}
+\item[{\em params}]program parameters \end{DoxyParams}
+\hypertarget{classSplitGraph_a93a2b7ec12a3f75f143a2dfada8d7a02}{
+\index{SplitGraph@{SplitGraph}!isBudgetConstraint@{isBudgetConstraint}}
+\index{isBudgetConstraint@{isBudgetConstraint}!SplitGraph@{SplitGraph}}
+\subsubsection[{isBudgetConstraint}]{\setlength{\rightskip}{0pt plus 5cm}bool SplitGraph::isBudgetConstraint ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplitGraph_a93a2b7ec12a3f75f143a2dfada8d7a02}
+\begin{DoxyReturn}{Returns}
+TRUE if it is the cost-\/constrained PD problem 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_ae7b98f722c61033d05cee4b1e2c68e54}{
+\index{SplitGraph@{SplitGraph}!isCircular@{isCircular}}
+\index{isCircular@{isCircular}!SplitGraph@{SplitGraph}}
+\subsubsection[{isCircular}]{\setlength{\rightskip}{0pt plus 5cm}bool SplitGraph::isCircular ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplitGraph_ae7b98f722c61033d05cee4b1e2c68e54}
+\begin{DoxyReturn}{Returns}
+TRUE if splits graph is circular 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_a05cfb8141526a6cbc5905eb74dccc0fa}{
+\index{SplitGraph@{SplitGraph}!isWeaklyCompatible@{isWeaklyCompatible}}
+\index{isWeaklyCompatible@{isWeaklyCompatible}!SplitGraph@{SplitGraph}}
+\subsubsection[{isWeaklyCompatible}]{\setlength{\rightskip}{0pt plus 5cm}bool SplitGraph::isWeaklyCompatible ()}}
+\label{classSplitGraph_a05cfb8141526a6cbc5905eb74dccc0fa}
+\begin{DoxyReturn}{Returns}
+TRUE if split system is weakly compatible 
+\end{DoxyReturn}
+\hypertarget{classSplitGraph_abd01f1db37dbb2c97becef1b38032dd9}{
+\index{SplitGraph@{SplitGraph}!report@{report}}
+\index{report@{report}!SplitGraph@{SplitGraph}}
+\subsubsection[{report}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::report (ostream \& {\em out})}}
+\label{classSplitGraph_abd01f1db37dbb2c97becef1b38032dd9}
+print infos of split graph 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]the output stream \end{DoxyParams}
+\hypertarget{classSplitGraph_a1876d549d833982752e4ad2e263ec6d4}{
+\index{SplitGraph@{SplitGraph}!reportConflict@{reportConflict}}
+\index{reportConflict@{reportConflict}!SplitGraph@{SplitGraph}}
+\subsubsection[{reportConflict}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::reportConflict (ostream \& {\em out})}}
+\label{classSplitGraph_a1876d549d833982752e4ad2e263ec6d4}
+print infos of compatibility graph of splits 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]the output stream \end{DoxyParams}
+\hypertarget{classSplitGraph_ac00dacfe044abd770bb24b5714035742}{
+\index{SplitGraph@{SplitGraph}!saveFile@{saveFile}}
+\index{saveFile@{saveFile}!SplitGraph@{SplitGraph}}
+\subsubsection[{saveFile}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::saveFile (ostream \& {\em out})}}
+\label{classSplitGraph_ac00dacfe044abd770bb24b5714035742}
+save split systems to a file 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream \end{DoxyParams}
+\hypertarget{classSplitGraph_aaa150a66ac97d6170336a9c74ffecc88}{
+\index{SplitGraph@{SplitGraph}!scaleWeight@{scaleWeight}}
+\index{scaleWeight@{scaleWeight}!SplitGraph@{SplitGraph}}
+\subsubsection[{scaleWeight}]{\setlength{\rightskip}{0pt plus 5cm}void SplitGraph::scaleWeight (double {\em norm}, \/  bool {\em make\_\-int} = {\ttfamily false})}}
+\label{classSplitGraph_aaa150a66ac97d6170336a9c74ffecc88}
+scale the weight of all splits to a norm factor 
+\begin{DoxyParams}{Parameters}
+\item[{\em norm}]normalized factor \item[{\em make\_\-int}]TRUE to round weights to int, FALSE otherwise \end{DoxyParams}
+
+
+\subsection{Member Data Documentation}
+\hypertarget{classSplitGraph_ab5bb72994879bbc43abf1b48f1278c21}{
+\index{SplitGraph@{SplitGraph}!pda@{pda}}
+\index{pda@{pda}!SplitGraph@{SplitGraph}}
+\subsubsection[{pda}]{\setlength{\rightskip}{0pt plus 5cm}{\bf MPdaBlock}$\ast$ {\bf SplitGraph::pda}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classSplitGraph_ab5bb72994879bbc43abf1b48f1278c21}
+PDA block \hypertarget{classSplitGraph_ac46902cb0a5a2c914c657f0434d004bd}{
+\index{SplitGraph@{SplitGraph}!sets@{sets}}
+\index{sets@{sets}!SplitGraph@{SplitGraph}}
+\subsubsection[{sets}]{\setlength{\rightskip}{0pt plus 5cm}{\bf MSetsBlock}$\ast$ {\bf SplitGraph::sets}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classSplitGraph_ac46902cb0a5a2c914c657f0434d004bd}
+SETS block \hypertarget{classSplitGraph_a42f7001d83a322db0b47a4bab44eeebd}{
+\index{SplitGraph@{SplitGraph}!splits@{splits}}
+\index{splits@{splits}!SplitGraph@{SplitGraph}}
+\subsubsection[{splits}]{\setlength{\rightskip}{0pt plus 5cm}{\bf MSplitsBlock}$\ast$ {\bf SplitGraph::splits}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classSplitGraph_a42f7001d83a322db0b47a4bab44eeebd}
+splits block \hypertarget{classSplitGraph_a3166d128ac9e267baf86d309deadb988}{
+\index{SplitGraph@{SplitGraph}!taxa@{taxa}}
+\index{taxa@{taxa}!SplitGraph@{SplitGraph}}
+\subsubsection[{taxa}]{\setlength{\rightskip}{0pt plus 5cm}{\bf NxsTaxaBlock}$\ast$ {\bf SplitGraph::taxa}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classSplitGraph_a3166d128ac9e267baf86d309deadb988}
+taxa block \hypertarget{classSplitGraph_ad3f25cc271cafddeb348ba92cbcb9f59}{
+\index{SplitGraph@{SplitGraph}!trees@{trees}}
+\index{trees@{trees}!SplitGraph@{SplitGraph}}
+\subsubsection[{trees}]{\setlength{\rightskip}{0pt plus 5cm}{\bf NxsTreesBlock}$\ast$ {\bf SplitGraph::trees}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classSplitGraph_ad3f25cc271cafddeb348ba92cbcb9f59}
+TREES block 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/splitgraph.h\item 
+src/splitgraph.cpp\end{DoxyCompactItemize}

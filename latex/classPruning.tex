@@ -1,0 +1,159 @@
+\hypertarget{classPruning}{
+\section{Pruning Class Reference}
+\label{classPruning}\index{Pruning@{Pruning}}
+}
+
+
+{\ttfamily \#include $<$pruning.h$>$}Inheritance diagram for Pruning::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3cm]{classPruning}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classPruning_a020fa8f3cef1e1119e534c5b6f0c8fae}{Pruning} (\hyperlink{structParams}{Params} \&params)
+\item 
+\hyperlink{classPruning_a4dd4ec835b284391a7260e3cd6b4491d}{Pruning} (\hyperlink{classPDTree}{PDTree} \&tree)
+\item 
+\hyperlink{classPruning_a71d6f0210e5083b0eded402c165431b7}{Pruning} ()
+\item 
+void \hyperlink{classPruning_a9ee0d53c821bfca89ebe57f090eeba99}{run} (\hyperlink{structParams}{Params} \&params, vector$<$ \hyperlink{classPDTaxaSet}{PDTaxaSet} $>$ \&taxa\_\-set)
+\item 
+void \hyperlink{classPruning_ab3423a1002c0eb4af4568f9accac93fa}{deleteExNode} (LeafSet::iterator pos)
+\item 
+void \hyperlink{classPruning_aeb07f089da3792788648d2b8d7d702ca}{buildLeaves} (\hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classPruning_ae0e583aa4e812cdce06af4cc634e0110}{printLeaves} ()
+\item 
+LeafSet::iterator \hyperlink{classPruning_a973dc17e371f5104adef79f4c227e81a}{findNode} (\hyperlink{classNode}{Node} $\ast$node)
+\item 
+LeafSet::iterator \hyperlink{classPruning_a9cf587b15c0bcabf01531a916d2338d5}{nearestLeaf} ()
+\item 
+void \hyperlink{classPruning_a03ad4c7dce2fee530783d4b783ac32e4}{doInitialSet} ()
+\item 
+void \hyperlink{classPruning_a6000133f6408dba298337f873dd1d165}{addLeaf} (\hyperlink{classNode}{Node} $\ast$leaf)
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+LeafSet \hyperlink{classPruning_aa7b17e04be84e8605bef199af9c86656}{leaves}
+\item 
+int \hyperlink{classPruning_a0b7c9c3601f3facb5eeb9b40f4a11059}{list\_\-size}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Implementation of \hyperlink{classPruning}{Pruning} algorithm with complexity O(n$\ast$log(n-\/k))
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classPruning_a020fa8f3cef1e1119e534c5b6f0c8fae}{
+\index{Pruning@{Pruning}!Pruning@{Pruning}}
+\index{Pruning@{Pruning}!Pruning@{Pruning}}
+\subsubsection[{Pruning}]{\setlength{\rightskip}{0pt plus 5cm}Pruning::Pruning ({\bf Params} \& {\em params})\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classPruning_a020fa8f3cef1e1119e534c5b6f0c8fae}
+construct from program parameters 
+\begin{DoxyParams}{Parameters}
+\item[{\em params}]program parameters \end{DoxyParams}
+\hypertarget{classPruning_a4dd4ec835b284391a7260e3cd6b4491d}{
+\index{Pruning@{Pruning}!Pruning@{Pruning}}
+\index{Pruning@{Pruning}!Pruning@{Pruning}}
+\subsubsection[{Pruning}]{\setlength{\rightskip}{0pt plus 5cm}Pruning::Pruning ({\bf PDTree} \& {\em tree})\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classPruning_a4dd4ec835b284391a7260e3cd6b4491d}
+constructor, get from another tree 
+\begin{DoxyParams}{Parameters}
+\item[{\em tree}]another \hyperlink{classMTree}{MTree} \end{DoxyParams}
+\hypertarget{classPruning_a71d6f0210e5083b0eded402c165431b7}{
+\index{Pruning@{Pruning}!Pruning@{Pruning}}
+\index{Pruning@{Pruning}!Pruning@{Pruning}}
+\subsubsection[{Pruning}]{\setlength{\rightskip}{0pt plus 5cm}Pruning::Pruning ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classPruning_a71d6f0210e5083b0eded402c165431b7}
+constructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classPruning_a6000133f6408dba298337f873dd1d165}{
+\index{Pruning@{Pruning}!addLeaf@{addLeaf}}
+\index{addLeaf@{addLeaf}!Pruning@{Pruning}}
+\subsubsection[{addLeaf}]{\setlength{\rightskip}{0pt plus 5cm}void Pruning::addLeaf ({\bf Node} $\ast$ {\em leaf})}}
+\label{classPruning_a6000133f6408dba298337f873dd1d165}
+insert a leaf into the LeafSet 
+\begin{DoxyParams}{Parameters}
+\item[{\em leaf}]leaf node to be inserted\end{DoxyParams}
+insert a leaf into the LeafSet \hypertarget{classPruning_aeb07f089da3792788648d2b8d7d702ca}{
+\index{Pruning@{Pruning}!buildLeaves@{buildLeaves}}
+\index{buildLeaves@{buildLeaves}!Pruning@{Pruning}}
+\subsubsection[{buildLeaves}]{\setlength{\rightskip}{0pt plus 5cm}void Pruning::buildLeaves ({\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classPruning_aeb07f089da3792788648d2b8d7d702ca}
+build the list of all leaves into field leaves. 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \end{DoxyParams}
+\hypertarget{classPruning_ab3423a1002c0eb4af4568f9accac93fa}{
+\index{Pruning@{Pruning}!deleteExNode@{deleteExNode}}
+\index{deleteExNode@{deleteExNode}!Pruning@{Pruning}}
+\subsubsection[{deleteExNode}]{\setlength{\rightskip}{0pt plus 5cm}void Pruning::deleteExNode (LeafSet::iterator {\em pos})}}
+\label{classPruning_ab3423a1002c0eb4af4568f9accac93fa}
+delete an external node 
+\begin{DoxyParams}{Parameters}
+\item[{\em pos}]the position of the node in the LeafSet \end{DoxyParams}
+\hypertarget{classPruning_a03ad4c7dce2fee530783d4b783ac32e4}{
+\index{Pruning@{Pruning}!doInitialSet@{doInitialSet}}
+\index{doInitialSet@{doInitialSet}!Pruning@{Pruning}}
+\subsubsection[{doInitialSet}]{\setlength{\rightskip}{0pt plus 5cm}void Pruning::doInitialSet ()}}
+\label{classPruning_a03ad4c7dce2fee530783d4b783ac32e4}
+mark the node in the inital set to be not PRUNABLE \hypertarget{classPruning_a973dc17e371f5104adef79f4c227e81a}{
+\index{Pruning@{Pruning}!findNode@{findNode}}
+\index{findNode@{findNode}!Pruning@{Pruning}}
+\subsubsection[{findNode}]{\setlength{\rightskip}{0pt plus 5cm}LeafSet::iterator Pruning::findNode ({\bf Node} $\ast$ {\em node})}}
+\label{classPruning_a973dc17e371f5104adef79f4c227e81a}
+find the iterator to the leaf node in leaves field 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]a leaf node. \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+iterator to the leaf node in leaves field 
+\end{DoxyReturn}
+\hypertarget{classPruning_a9cf587b15c0bcabf01531a916d2338d5}{
+\index{Pruning@{Pruning}!nearestLeaf@{nearestLeaf}}
+\index{nearestLeaf@{nearestLeaf}!Pruning@{Pruning}}
+\subsubsection[{nearestLeaf}]{\setlength{\rightskip}{0pt plus 5cm}LeafSet::iterator Pruning::nearestLeaf ()}}
+\label{classPruning_a9cf587b15c0bcabf01531a916d2338d5}
+\begin{DoxyReturn}{Returns}
+leaves.begin(). 
+\end{DoxyReturn}
+\hypertarget{classPruning_ae0e583aa4e812cdce06af4cc634e0110}{
+\index{Pruning@{Pruning}!printLeaves@{printLeaves}}
+\index{printLeaves@{printLeaves}!Pruning@{Pruning}}
+\subsubsection[{printLeaves}]{\setlength{\rightskip}{0pt plus 5cm}void Pruning::printLeaves ()}}
+\label{classPruning_ae0e583aa4e812cdce06af4cc634e0110}
+print all leaves into screen \hypertarget{classPruning_a9ee0d53c821bfca89ebe57f090eeba99}{
+\index{Pruning@{Pruning}!run@{run}}
+\index{run@{run}!Pruning@{Pruning}}
+\subsubsection[{run}]{\setlength{\rightskip}{0pt plus 5cm}void Pruning::run ({\bf Params} \& {\em params}, \/  vector$<$ {\bf PDTaxaSet} $>$ \& {\em taxa\_\-set})}}
+\label{classPruning_a9ee0d53c821bfca89ebe57f090eeba99}
+run the algorithm 
+\begin{DoxyParams}{Parameters}
+\item[{\em params}]program parameters \item[{\em taxa\_\-set}](OUT) vector of PD sets\end{DoxyParams}
+Steffen Klaere's pruning algorithm 
+
+\subsection{Member Data Documentation}
+\hypertarget{classPruning_aa7b17e04be84e8605bef199af9c86656}{
+\index{Pruning@{Pruning}!leaves@{leaves}}
+\index{leaves@{leaves}!Pruning@{Pruning}}
+\subsubsection[{leaves}]{\setlength{\rightskip}{0pt plus 5cm}LeafSet {\bf Pruning::leaves}}}
+\label{classPruning_aa7b17e04be84e8605bef199af9c86656}
+leaf set of the tree, used for pruning algorithm \hypertarget{classPruning_a0b7c9c3601f3facb5eeb9b40f4a11059}{
+\index{Pruning@{Pruning}!list\_\-size@{list\_\-size}}
+\index{list\_\-size@{list\_\-size}!Pruning@{Pruning}}
+\subsubsection[{list\_\-size}]{\setlength{\rightskip}{0pt plus 5cm}int {\bf Pruning::list\_\-size}}}
+\label{classPruning_a0b7c9c3601f3facb5eeb9b40f4a11059}
+maximum size of the ordered list of leaves 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/pruning.h\item 
+src/pruning.cpp\end{DoxyCompactItemize}

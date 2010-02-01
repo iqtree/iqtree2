@@ -1,0 +1,425 @@
+\hypertarget{classSplit}{
+\section{Split Class Reference}
+\label{classSplit}\index{Split@{Split}}
+}
+
+
+{\ttfamily \#include $<$split.h$>$}\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classSplit_a365a552fc4d3a0599c50ef629a691be4}{Split} ()
+\item 
+\hyperlink{classSplit_a94a33c0e8cfb74c40df1839c1a0bd843}{Split} (int antaxa, double aweight=0.0)
+\item 
+\hyperlink{classSplit_ad98691b8ee7de01dc6bb66eb5937f0ce}{Split} (const \hyperlink{classSplit}{Split} \&sp)
+\item 
+\hyperlink{classSplit_a9ef1d15c79111653ea9f2af81327630a}{Split} (int antaxa, double aweight, vector$<$ int $>$ taxa\_\-list)
+\item 
+void \hyperlink{classSplit_a62f6f9dd6849b2e3b5f4ff8d1a3131fd}{report} (ostream \&out)
+\item 
+\hyperlink{classSplit_a32ae47628734299802a079d19b70fc0a}{$\sim$Split} ()
+\item 
+int \hyperlink{classSplit_a3a2fd4ded9bc1d43c5cdb69b3d057e71}{getNTaxa} () const 
+\item 
+int \hyperlink{classSplit_af7441915bc8fed4333541b193e0394f4}{countTaxa} () const 
+\item 
+void \hyperlink{classSplit_a2d5be14eadb830619216ef12ddd512e7}{setNTaxa} (int antaxa)
+\item 
+int \hyperlink{classSplit_a2d63d14c00fa83c87afca7a412bced5d}{firstTaxon} ()
+\item 
+bool \hyperlink{classSplit_abb9262185c7f5bf5b9f6604c432a796f}{isEmpty} ()
+\item 
+double \hyperlink{classSplit_a08d9beb4e3b391de5b2aa13c57ea99ca}{getWeight} () const 
+\item 
+void \hyperlink{classSplit_a4c2f157bcf99e1522415915bb6823bb9}{setWeight} (double aweight)
+\item 
+bool \hyperlink{classSplit_a1e801d80a5667c140ee3f1ebe0137f07}{shouldInvert} ()
+\item 
+void \hyperlink{classSplit_aa1c5426a32b64ee0e56e980096a0074c}{invert} ()
+\item 
+bool \hyperlink{classSplit_afbf535c1d11bf7651ecd733045f2d688}{compatible} (\hyperlink{classSplit}{Split} \&sp)
+\item 
+bool \hyperlink{classSplit_a164299ace7e47de37ebe8f9daeda8fc8}{preserved} (\hyperlink{classSplit}{Split} \&taxa\_\-set)
+\item 
+int \hyperlink{classSplit_a96875580ea7a3e02f013951ba4b41596}{trivial} ()
+\item 
+void \hyperlink{classSplit_a35b159b165b623a7ee1d33bab6a1368f}{addTaxon} (int tax\_\-id)
+\item 
+void \hyperlink{classSplit_a35df7b8abdab57e1a8a097909a125396}{removeTaxon} (int tax\_\-id)
+\item 
+bool \hyperlink{classSplit_a080cf81fd05ba6487dfd9130b8b9787b}{containTaxon} (int tax\_\-id)
+\item 
+bool \hyperlink{classSplit_afffa3f41c2edcf5c66e8875a8151941d}{containAny} (IntVector \&tax\_\-id)
+\item 
+bool \hyperlink{classSplit_aaac9e8b488cf55b0d92bee3687abf40e}{containAll} (IntVector \&tax\_\-id)
+\item 
+void \hyperlink{classSplit_a6432380add76d5dd97ed106e2d6d10e6}{getTaxaList} (vector$<$ int $>$ \&invec)
+\item 
+void \hyperlink{classSplit_ab8f398ac2532dbeb5697cb2fc4e5ce6b}{getTaxaList} (vector$<$ int $>$ \&invec, vector$<$ int $>$ \&outvec)
+\item 
+bool \hyperlink{classSplit_ad74cb390339b148f3bc45e3e4db8ac58}{operator==} (const \hyperlink{classSplit}{Split} \&sp) const 
+\item 
+\hyperlink{classSplit}{Split} \& \hyperlink{classSplit_a553102b9ea76d19445a4071b822d17b0}{operator+=} (\hyperlink{classSplit}{Split} \&sp)
+\item 
+\hyperlink{classSplit}{Split} \& \hyperlink{classSplit_ac9be6ec283224b571f14353f348b251e}{operator$\ast$=} (\hyperlink{classSplit}{Split} \&sp)
+\item 
+\hyperlink{classSplit}{Split} \& \hyperlink{classSplit_a510547abdad1acc043c104810a936fa8}{operator-\/=} (\hyperlink{classSplit}{Split} \&sp)
+\item 
+bool \hyperlink{classSplit_a50109c1755bdaa7143295515bcd5be44}{overlap} (\hyperlink{classSplit}{Split} \&sp)
+\item 
+\hyperlink{classSplit}{Split} \& \hyperlink{classSplit_ab8d66a1714b54f7e1a1a0c714b2e1175}{operator=} (const \hyperlink{classSplit}{Split} \&sp)
+\item 
+bool \hyperlink{classSplit_a724c4b8226835191fb058048f5a5aff3}{subsetOf} (\hyperlink{classSplit}{Split} \&sp)
+\item 
+void \hyperlink{classSplit_aba2bc06ac8b0864cd7210e181de41275}{randomize} (int size)
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{classSplit_a41a18ab8832241bb319a4ddbca3af8b5}{ntaxa}
+\item 
+double \hyperlink{classSplit_aa8845f08e5d041e68ed0475fca6954c5}{weight}
+\end{DoxyCompactItemize}
+\subsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classSplit_ad180a9052e2cfb059a0ea9d7b370ec7b}{
+class \hyperlink{classSplit_ad180a9052e2cfb059a0ea9d7b370ec7b}{MSplitsBlock}}
+\label{classSplit_ad180a9052e2cfb059a0ea9d7b370ec7b}
+
+\item 
+\hypertarget{classSplit_ab8ea3e9164803ba3b6b59fab949bd0f3}{
+class \hyperlink{classSplit_ab8ea3e9164803ba3b6b59fab949bd0f3}{SplitGraph}}
+\label{classSplit_ab8ea3e9164803ba3b6b59fab949bd0f3}
+
+\item 
+\hypertarget{classSplit_aa341ce7452c8af86ea325aa7eff2f02d}{
+class \hyperlink{classSplit_aa341ce7452c8af86ea325aa7eff2f02d}{PDNetwork}}
+\label{classSplit_aa341ce7452c8af86ea325aa7eff2f02d}
+
+\item 
+\hypertarget{classSplit_a1615e6a0c22088bac5824899e6c3fa6e}{
+class \hyperlink{classSplit_a1615e6a0c22088bac5824899e6c3fa6e}{CircularNetwork}}
+\label{classSplit_a1615e6a0c22088bac5824899e6c3fa6e}
+
+\item 
+\hypertarget{classSplit_a5ea42f356770ae950d06d0e4917f93ad}{
+class \hyperlink{classSplit_a5ea42f356770ae950d06d0e4917f93ad}{PDTree}}
+\label{classSplit_a5ea42f356770ae950d06d0e4917f93ad}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Defining a split, also a set of taxa.
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classSplit_a365a552fc4d3a0599c50ef629a691be4}{
+\index{Split@{Split}!Split@{Split}}
+\index{Split@{Split}!Split@{Split}}
+\subsubsection[{Split}]{\setlength{\rightskip}{0pt plus 5cm}Split::Split ()}}
+\label{classSplit_a365a552fc4d3a0599c50ef629a691be4}
+empty constructor \hypertarget{classSplit_a94a33c0e8cfb74c40df1839c1a0bd843}{
+\index{Split@{Split}!Split@{Split}}
+\index{Split@{Split}!Split@{Split}}
+\subsubsection[{Split}]{\setlength{\rightskip}{0pt plus 5cm}Split::Split (int {\em antaxa}, \/  double {\em aweight} = {\ttfamily 0.0})}}
+\label{classSplit_a94a33c0e8cfb74c40df1839c1a0bd843}
+constructor 
+\begin{DoxyParams}{Parameters}
+\item[{\em antaxa}]number of taxa \item[{\em aweight}]weight of split \end{DoxyParams}
+\hypertarget{classSplit_ad98691b8ee7de01dc6bb66eb5937f0ce}{
+\index{Split@{Split}!Split@{Split}}
+\index{Split@{Split}!Split@{Split}}
+\subsubsection[{Split}]{\setlength{\rightskip}{0pt plus 5cm}Split::Split (const {\bf Split} \& {\em sp})}}
+\label{classSplit_ad98691b8ee7de01dc6bb66eb5937f0ce}
+constructor copy from another split 
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]split to be copied from \end{DoxyParams}
+\hypertarget{classSplit_a9ef1d15c79111653ea9f2af81327630a}{
+\index{Split@{Split}!Split@{Split}}
+\index{Split@{Split}!Split@{Split}}
+\subsubsection[{Split}]{\setlength{\rightskip}{0pt plus 5cm}Split::Split (int {\em antaxa}, \/  double {\em aweight}, \/  vector$<$ int $>$ {\em taxa\_\-list})}}
+\label{classSplit_a9ef1d15c79111653ea9f2af81327630a}
+construct the split from a taxa list 
+\begin{DoxyParams}{Parameters}
+\item[{\em antaxa}]number of taxa \item[{\em aweight}]weight of split \item[{\em taxa\_\-list}]list of taxa in one side of split \end{DoxyParams}
+\hypertarget{classSplit_a32ae47628734299802a079d19b70fc0a}{
+\index{Split@{Split}!$\sim$Split@{$\sim$Split}}
+\index{$\sim$Split@{$\sim$Split}!Split@{Split}}
+\subsubsection[{$\sim$Split}]{\setlength{\rightskip}{0pt plus 5cm}Split::$\sim$Split ()}}
+\label{classSplit_a32ae47628734299802a079d19b70fc0a}
+destructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classSplit_a35b159b165b623a7ee1d33bab6a1368f}{
+\index{Split@{Split}!addTaxon@{addTaxon}}
+\index{addTaxon@{addTaxon}!Split@{Split}}
+\subsubsection[{addTaxon}]{\setlength{\rightskip}{0pt plus 5cm}void Split::addTaxon (int {\em tax\_\-id})}}
+\label{classSplit_a35b159b165b623a7ee1d33bab6a1368f}
+add a taxon into the split 
+\begin{DoxyParams}{Parameters}
+\item[{\em tax\_\-id}]id of taxon from 0..ntaxa-\/1 \end{DoxyParams}
+\hypertarget{classSplit_afbf535c1d11bf7651ecd733045f2d688}{
+\index{Split@{Split}!compatible@{compatible}}
+\index{compatible@{compatible}!Split@{Split}}
+\subsubsection[{compatible}]{\setlength{\rightskip}{0pt plus 5cm}bool Split::compatible ({\bf Split} \& {\em sp})}}
+\label{classSplit_afbf535c1d11bf7651ecd733045f2d688}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]the other split \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if this split is compatible with sp 
+\end{DoxyReturn}
+\hypertarget{classSplit_aaac9e8b488cf55b0d92bee3687abf40e}{
+\index{Split@{Split}!containAll@{containAll}}
+\index{containAll@{containAll}!Split@{Split}}
+\subsubsection[{containAll}]{\setlength{\rightskip}{0pt plus 5cm}bool Split::containAll (IntVector \& {\em tax\_\-id})}}
+\label{classSplit_aaac9e8b488cf55b0d92bee3687abf40e}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em tax\_\-id}]vector of id of taxa from 0..ntaxa-\/1 \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if ALL taxa in tax\_\-id is in the set 
+\end{DoxyReturn}
+\hypertarget{classSplit_afffa3f41c2edcf5c66e8875a8151941d}{
+\index{Split@{Split}!containAny@{containAny}}
+\index{containAny@{containAny}!Split@{Split}}
+\subsubsection[{containAny}]{\setlength{\rightskip}{0pt plus 5cm}bool Split::containAny (IntVector \& {\em tax\_\-id})}}
+\label{classSplit_afffa3f41c2edcf5c66e8875a8151941d}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em tax\_\-id}]vector of id of taxa from 0..ntaxa-\/1 \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if SOME taxon in tax\_\-id is in the set 
+\end{DoxyReturn}
+\hypertarget{classSplit_a080cf81fd05ba6487dfd9130b8b9787b}{
+\index{Split@{Split}!containTaxon@{containTaxon}}
+\index{containTaxon@{containTaxon}!Split@{Split}}
+\subsubsection[{containTaxon}]{\setlength{\rightskip}{0pt plus 5cm}bool Split::containTaxon (int {\em tax\_\-id})}}
+\label{classSplit_a080cf81fd05ba6487dfd9130b8b9787b}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em tax\_\-id}]id of taxon from 0..ntaxa-\/1 \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if tax\_\-id is in the set 
+\end{DoxyReturn}
+\hypertarget{classSplit_af7441915bc8fed4333541b193e0394f4}{
+\index{Split@{Split}!countTaxa@{countTaxa}}
+\index{countTaxa@{countTaxa}!Split@{Split}}
+\subsubsection[{countTaxa}]{\setlength{\rightskip}{0pt plus 5cm}int Split::countTaxa () const}}
+\label{classSplit_af7441915bc8fed4333541b193e0394f4}
+get number of taxa being in the split \begin{DoxyReturn}{Returns}
+number of taxa 
+\end{DoxyReturn}
+\hypertarget{classSplit_a2d63d14c00fa83c87afca7a412bced5d}{
+\index{Split@{Split}!firstTaxon@{firstTaxon}}
+\index{firstTaxon@{firstTaxon}!Split@{Split}}
+\subsubsection[{firstTaxon}]{\setlength{\rightskip}{0pt plus 5cm}int Split::firstTaxon ()}}
+\label{classSplit_a2d63d14c00fa83c87afca7a412bced5d}
+get the first taxon in the set \begin{DoxyReturn}{Returns}
+the first taxon or -\/1 if empty 
+\end{DoxyReturn}
+\hypertarget{classSplit_a3a2fd4ded9bc1d43c5cdb69b3d057e71}{
+\index{Split@{Split}!getNTaxa@{getNTaxa}}
+\index{getNTaxa@{getNTaxa}!Split@{Split}}
+\subsubsection[{getNTaxa}]{\setlength{\rightskip}{0pt plus 5cm}int Split::getNTaxa () const\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplit_a3a2fd4ded9bc1d43c5cdb69b3d057e71}
+get number of taxa \begin{DoxyReturn}{Returns}
+number of taxa 
+\end{DoxyReturn}
+\hypertarget{classSplit_ab8f398ac2532dbeb5697cb2fc4e5ce6b}{
+\index{Split@{Split}!getTaxaList@{getTaxaList}}
+\index{getTaxaList@{getTaxaList}!Split@{Split}}
+\subsubsection[{getTaxaList}]{\setlength{\rightskip}{0pt plus 5cm}void Split::getTaxaList (vector$<$ int $>$ \& {\em invec}, \/  vector$<$ int $>$ \& {\em outvec})}}
+\label{classSplit_ab8f398ac2532dbeb5697cb2fc4e5ce6b}
+get the list of taxa contained in split and not contained in split 
+\begin{DoxyParams}{Parameters}
+\item[{\em invec}](OUT) taxa in this side of split \item[{\em outvec}](OUT) taxa on the other side \end{DoxyParams}
+\hypertarget{classSplit_a6432380add76d5dd97ed106e2d6d10e6}{
+\index{Split@{Split}!getTaxaList@{getTaxaList}}
+\index{getTaxaList@{getTaxaList}!Split@{Split}}
+\subsubsection[{getTaxaList}]{\setlength{\rightskip}{0pt plus 5cm}void Split::getTaxaList (vector$<$ int $>$ \& {\em invec})}}
+\label{classSplit_a6432380add76d5dd97ed106e2d6d10e6}
+get the list of taxa contained in split 
+\begin{DoxyParams}{Parameters}
+\item[{\em invec}](OUT) taxa in this side of split \end{DoxyParams}
+\hypertarget{classSplit_a08d9beb4e3b391de5b2aa13c57ea99ca}{
+\index{Split@{Split}!getWeight@{getWeight}}
+\index{getWeight@{getWeight}!Split@{Split}}
+\subsubsection[{getWeight}]{\setlength{\rightskip}{0pt plus 5cm}double Split::getWeight () const\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplit_a08d9beb4e3b391de5b2aa13c57ea99ca}
+get weight \begin{DoxyReturn}{Returns}
+weight 
+\end{DoxyReturn}
+\hypertarget{classSplit_aa1c5426a32b64ee0e56e980096a0074c}{
+\index{Split@{Split}!invert@{invert}}
+\index{invert@{invert}!Split@{Split}}
+\subsubsection[{invert}]{\setlength{\rightskip}{0pt plus 5cm}void Split::invert ()}}
+\label{classSplit_aa1c5426a32b64ee0e56e980096a0074c}
+invert the split (0-\/$>$1, 1-\/$>$0) \hypertarget{classSplit_abb9262185c7f5bf5b9f6604c432a796f}{
+\index{Split@{Split}!isEmpty@{isEmpty}}
+\index{isEmpty@{isEmpty}!Split@{Split}}
+\subsubsection[{isEmpty}]{\setlength{\rightskip}{0pt plus 5cm}bool Split::isEmpty ()}}
+\label{classSplit_abb9262185c7f5bf5b9f6604c432a796f}
+\begin{DoxyReturn}{Returns}
+TRUE if the set is empty 
+\end{DoxyReturn}
+\hypertarget{classSplit_ac9be6ec283224b571f14353f348b251e}{
+\index{Split@{Split}!operator$\ast$=@{operator$\ast$=}}
+\index{operator$\ast$=@{operator$\ast$=}!Split@{Split}}
+\subsubsection[{operator$\ast$=}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Split} \& Split::operator$\ast$= ({\bf Split} \& {\em sp})}}
+\label{classSplit_ac9be6ec283224b571f14353f348b251e}
+get the intersection with another split 
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]a split \end{DoxyParams}
+\hypertarget{classSplit_a553102b9ea76d19445a4071b822d17b0}{
+\index{Split@{Split}!operator+=@{operator+=}}
+\index{operator+=@{operator+=}!Split@{Split}}
+\subsubsection[{operator+=}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Split} \& Split::operator+= ({\bf Split} \& {\em sp})}}
+\label{classSplit_a553102b9ea76d19445a4071b822d17b0}
+add all taxa from another split into this split (union) 
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]a split \end{DoxyParams}
+\hypertarget{classSplit_a510547abdad1acc043c104810a936fa8}{
+\index{Split@{Split}!operator-\/=@{operator-\/=}}
+\index{operator-\/=@{operator-\/=}!Split@{Split}}
+\subsubsection[{operator-\/=}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Split} \& Split::operator-\/= ({\bf Split} \& {\em sp})}}
+\label{classSplit_a510547abdad1acc043c104810a936fa8}
+get the set difference with another split 
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]a split \end{DoxyParams}
+\hypertarget{classSplit_ab8d66a1714b54f7e1a1a0c714b2e1175}{
+\index{Split@{Split}!operator=@{operator=}}
+\index{operator=@{operator=}!Split@{Split}}
+\subsubsection[{operator=}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Split} \& Split::operator= (const {\bf Split} \& {\em sp})}}
+\label{classSplit_ab8d66a1714b54f7e1a1a0c714b2e1175}
+assignment 
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]a split \end{DoxyParams}
+\hypertarget{classSplit_ad74cb390339b148f3bc45e3e4db8ac58}{
+\index{Split@{Split}!operator==@{operator==}}
+\index{operator==@{operator==}!Split@{Split}}
+\subsubsection[{operator==}]{\setlength{\rightskip}{0pt plus 5cm}bool Split::operator== (const {\bf Split} \& {\em sp}) const}}
+\label{classSplit_ad74cb390339b148f3bc45e3e4db8ac58}
+compare two split, do not compare the weight 
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]the target split \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+TRUE if equal, FALSE otherwise 
+\end{DoxyReturn}
+\hypertarget{classSplit_a50109c1755bdaa7143295515bcd5be44}{
+\index{Split@{Split}!overlap@{overlap}}
+\index{overlap@{overlap}!Split@{Split}}
+\subsubsection[{overlap}]{\setlength{\rightskip}{0pt plus 5cm}bool Split::overlap ({\bf Split} \& {\em sp})}}
+\label{classSplit_a50109c1755bdaa7143295515bcd5be44}
+\begin{DoxyReturn}{Returns}
+TRUE if there is overlapped taxon with sp, FALSE otherwise 
+\end{DoxyReturn}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]a split \end{DoxyParams}
+\hypertarget{classSplit_a164299ace7e47de37ebe8f9daeda8fc8}{
+\index{Split@{Split}!preserved@{preserved}}
+\index{preserved@{preserved}!Split@{Split}}
+\subsubsection[{preserved}]{\setlength{\rightskip}{0pt plus 5cm}bool Split::preserved ({\bf Split} \& {\em taxa\_\-set})}}
+\label{classSplit_a164299ace7e47de37ebe8f9daeda8fc8}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em taxa\_\-set}]set of taxa \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if this split is preserved in the set taxa\_\-set 
+\end{DoxyReturn}
+\hypertarget{classSplit_aba2bc06ac8b0864cd7210e181de41275}{
+\index{Split@{Split}!randomize@{randomize}}
+\index{randomize@{randomize}!Split@{Split}}
+\subsubsection[{randomize}]{\setlength{\rightskip}{0pt plus 5cm}void Split::randomize (int {\em size})}}
+\label{classSplit_aba2bc06ac8b0864cd7210e181de41275}
+randomize the set of a specific size 
+\begin{DoxyParams}{Parameters}
+\item[{\em size}]number of taxa in the resulting set \end{DoxyParams}
+\hypertarget{classSplit_a35df7b8abdab57e1a8a097909a125396}{
+\index{Split@{Split}!removeTaxon@{removeTaxon}}
+\index{removeTaxon@{removeTaxon}!Split@{Split}}
+\subsubsection[{removeTaxon}]{\setlength{\rightskip}{0pt plus 5cm}void Split::removeTaxon (int {\em tax\_\-id})}}
+\label{classSplit_a35df7b8abdab57e1a8a097909a125396}
+remove a taxon from the split 
+\begin{DoxyParams}{Parameters}
+\item[{\em tax\_\-id}]id of taxon from 0..ntaxa-\/1 \end{DoxyParams}
+\hypertarget{classSplit_a62f6f9dd6849b2e3b5f4ff8d1a3131fd}{
+\index{Split@{Split}!report@{report}}
+\index{report@{report}!Split@{Split}}
+\subsubsection[{report}]{\setlength{\rightskip}{0pt plus 5cm}void Split::report (ostream \& {\em out})}}
+\label{classSplit_a62f6f9dd6849b2e3b5f4ff8d1a3131fd}
+print infos of split graph 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]the output stream \end{DoxyParams}
+\hypertarget{classSplit_a2d5be14eadb830619216ef12ddd512e7}{
+\index{Split@{Split}!setNTaxa@{setNTaxa}}
+\index{setNTaxa@{setNTaxa}!Split@{Split}}
+\subsubsection[{setNTaxa}]{\setlength{\rightskip}{0pt plus 5cm}void Split::setNTaxa (int {\em antaxa})}}
+\label{classSplit_a2d5be14eadb830619216ef12ddd512e7}
+copy from another split set number of taxa 
+\begin{DoxyParams}{Parameters}
+\item[{\em antaxa}]number of taxa\end{DoxyParams}
+set number of taxa 
+\begin{DoxyParams}{Parameters}
+\item[{\em antaxa}]number of taxa \end{DoxyParams}
+\hypertarget{classSplit_a4c2f157bcf99e1522415915bb6823bb9}{
+\index{Split@{Split}!setWeight@{setWeight}}
+\index{setWeight@{setWeight}!Split@{Split}}
+\subsubsection[{setWeight}]{\setlength{\rightskip}{0pt plus 5cm}void Split::setWeight (double {\em aweight})\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classSplit_a4c2f157bcf99e1522415915bb6823bb9}
+set weight 
+\begin{DoxyParams}{Parameters}
+\item[{\em aweight}]the new weight \end{DoxyParams}
+\hypertarget{classSplit_a1e801d80a5667c140ee3f1ebe0137f07}{
+\index{Split@{Split}!shouldInvert@{shouldInvert}}
+\index{shouldInvert@{shouldInvert}!Split@{Split}}
+\subsubsection[{shouldInvert}]{\setlength{\rightskip}{0pt plus 5cm}bool Split::shouldInvert ()}}
+\label{classSplit_a1e801d80a5667c140ee3f1ebe0137f07}
+check whether the split should be inverted (number of taxa $>$ ntaxa / 2) \begin{DoxyReturn}{Returns}
+TRUE yes, should be inverted 
+\end{DoxyReturn}
+\hypertarget{classSplit_a724c4b8226835191fb058048f5a5aff3}{
+\index{Split@{Split}!subsetOf@{subsetOf}}
+\index{subsetOf@{subsetOf}!Split@{Split}}
+\subsubsection[{subsetOf}]{\setlength{\rightskip}{0pt plus 5cm}bool Split::subsetOf ({\bf Split} \& {\em sp})}}
+\label{classSplit_a724c4b8226835191fb058048f5a5aff3}
+subset operator 
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]a split \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+TRUE of this set is a subset of sp 
+\end{DoxyReturn}
+\hypertarget{classSplit_a96875580ea7a3e02f013951ba4b41596}{
+\index{Split@{Split}!trivial@{trivial}}
+\index{trivial@{trivial}!Split@{Split}}
+\subsubsection[{trivial}]{\setlength{\rightskip}{0pt plus 5cm}int Split::trivial ()}}
+\label{classSplit_a96875580ea7a3e02f013951ba4b41596}
+if the split is trivial (contains 1 taxon in 1 side), return the taxon id, otherwise return -\/1 \begin{DoxyReturn}{Returns}
+the taxon id if the split is trivial 
+\end{DoxyReturn}
+
+
+\subsection{Member Data Documentation}
+\hypertarget{classSplit_a41a18ab8832241bb319a4ddbca3af8b5}{
+\index{Split@{Split}!ntaxa@{ntaxa}}
+\index{ntaxa@{ntaxa}!Split@{Split}}
+\subsubsection[{ntaxa}]{\setlength{\rightskip}{0pt plus 5cm}int {\bf Split::ntaxa}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classSplit_a41a18ab8832241bb319a4ddbca3af8b5}
+number of taxa \hypertarget{classSplit_aa8845f08e5d041e68ed0475fca6954c5}{
+\index{Split@{Split}!weight@{weight}}
+\index{weight@{weight}!Split@{Split}}
+\subsubsection[{weight}]{\setlength{\rightskip}{0pt plus 5cm}double {\bf Split::weight}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classSplit_aa8845f08e5d041e68ed0475fca6954c5}
+weight of split 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/split.h\item 
+src/split.cpp\end{DoxyCompactItemize}

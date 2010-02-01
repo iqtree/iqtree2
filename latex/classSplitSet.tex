@@ -1,0 +1,53 @@
+\hypertarget{classSplitSet}{
+\section{SplitSet Class Reference}
+\label{classSplitSet}\index{SplitSet@{SplitSet}}
+}
+
+
+{\ttfamily \#include $<$splitset.h$>$}\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classSplitSet_a6d18de51f6ef06b6f507f911a07468dc}{removeAll} ()
+\item 
+double \hyperlink{classSplitSet_ac1eced61b59973480c01fec6ad6ee7b5}{getWeight} ()
+\item 
+bool \hyperlink{classSplitSet_a4f71eb2dc2d5fd83a17680a539c0afe6}{compatible} (\hyperlink{classSplit}{Split} $\ast$sp)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Vector of Splits
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler 
+\end{DoxyAuthor}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classSplitSet_a4f71eb2dc2d5fd83a17680a539c0afe6}{
+\index{SplitSet@{SplitSet}!compatible@{compatible}}
+\index{compatible@{compatible}!SplitSet@{SplitSet}}
+\subsubsection[{compatible}]{\setlength{\rightskip}{0pt plus 5cm}bool SplitSet::compatible ({\bf Split} $\ast$ {\em sp})}}
+\label{classSplitSet_a4f71eb2dc2d5fd83a17680a539c0afe6}
+check the compatibility of sp against all splits in this set 
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]the target split \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+TRUE if sp is compatible with all splits here, otherwise FALSE 
+\end{DoxyReturn}
+\hypertarget{classSplitSet_ac1eced61b59973480c01fec6ad6ee7b5}{
+\index{SplitSet@{SplitSet}!getWeight@{getWeight}}
+\index{getWeight@{getWeight}!SplitSet@{SplitSet}}
+\subsubsection[{getWeight}]{\setlength{\rightskip}{0pt plus 5cm}double SplitSet::getWeight ()}}
+\label{classSplitSet_ac1eced61b59973480c01fec6ad6ee7b5}
+get the weight of the first split in the vector \hypertarget{classSplitSet_a6d18de51f6ef06b6f507f911a07468dc}{
+\index{SplitSet@{SplitSet}!removeAll@{removeAll}}
+\index{removeAll@{removeAll}!SplitSet@{SplitSet}}
+\subsubsection[{removeAll}]{\setlength{\rightskip}{0pt plus 5cm}void SplitSet::removeAll ()}}
+\label{classSplitSet_a6d18de51f6ef06b6f507f911a07468dc}
+release the memory of all element splits, then resize to 0 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/splitset.h\item 
+src/splitset.cpp\end{DoxyCompactItemize}

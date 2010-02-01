@@ -1,0 +1,134 @@
+\hypertarget{classRateInvar}{
+\section{RateInvar Class Reference}
+\label{classRateInvar}\index{RateInvar@{RateInvar}}
+}
+
+
+{\ttfamily \#include $<$rateinvar.h$>$}Inheritance diagram for RateInvar::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=4cm]{classRateInvar}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classRateInvar_ae78abd45146e41b786f6e0a7b8bd5747}{RateInvar} (\hyperlink{classPhyloTree}{PhyloTree} $\ast$tree)
+\item 
+virtual double \hyperlink{classRateInvar_a750aa513c32453d28cc50b14bb31a9a7}{getPInvar} ()
+\item 
+virtual double \hyperlink{classRateInvar_a593bcac4c771b4b69c2f286ed8789793}{optimizeParameters} ()
+\item 
+virtual double \hyperlink{classRateInvar_a23d4b3aed6205e4f121a3aee43996a49}{computeFunction} (double p\_\-invar\_\-value)
+\item 
+virtual int \hyperlink{classRateInvar_a3ffa388d5aa7f56bb2c047c35bc3b453}{getNDim} ()
+\item 
+virtual void \hyperlink{classRateInvar_a6b8c198319557891db9b91fb47b27428}{writeInfo} (ostream \&out)
+\item 
+virtual void \hyperlink{classRateInvar_aabcef1cc18777b54b0f8644ccb00913c}{writeParameters} (ostream \&out)
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+double \hyperlink{classRateInvar_af6b377196f15c6f58d115b8c24ddf00f}{p\_\-invar}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+class for rate heterogeneity with a fraction of invariable sites
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh $<$\href{mailto:minh.bui@univie.ac.at}{\tt minh.bui@univie.ac.at}$>$ 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classRateInvar_ae78abd45146e41b786f6e0a7b8bd5747}{
+\index{RateInvar@{RateInvar}!RateInvar@{RateInvar}}
+\index{RateInvar@{RateInvar}!RateInvar@{RateInvar}}
+\subsubsection[{RateInvar}]{\setlength{\rightskip}{0pt plus 5cm}RateInvar::RateInvar ({\bf PhyloTree} $\ast$ {\em tree})}}
+\label{classRateInvar_ae78abd45146e41b786f6e0a7b8bd5747}
+constructor 
+\begin{DoxyParams}{Parameters}
+\item[{\em tree}]associated phylogenetic tree \end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classRateInvar_a23d4b3aed6205e4f121a3aee43996a49}{
+\index{RateInvar@{RateInvar}!computeFunction@{computeFunction}}
+\index{computeFunction@{computeFunction}!RateInvar@{RateInvar}}
+\subsubsection[{computeFunction}]{\setlength{\rightskip}{0pt plus 5cm}double RateInvar::computeFunction (double {\em p\_\-invar\_\-value})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classRateInvar_a23d4b3aed6205e4f121a3aee43996a49}
+override function from \hyperlink{classOptimization}{Optimization} class, used by the \hyperlink{classOptimization_a59ccdfae81744716ce48226da029d470}{minimizeOneDimen()} to optimize p\_\-invar parameter 
+
+Reimplemented from \hyperlink{classOptimization_ad7ca7b884076f8c76312d516e23c6609}{Optimization}.
+
+Reimplemented in \hyperlink{classRateGammaInvar_a48fde92a023867c5d0656572f8dc0f71}{RateGammaInvar}.\hypertarget{classRateInvar_a3ffa388d5aa7f56bb2c047c35bc3b453}{
+\index{RateInvar@{RateInvar}!getNDim@{getNDim}}
+\index{getNDim@{getNDim}!RateInvar@{RateInvar}}
+\subsubsection[{getNDim}]{\setlength{\rightskip}{0pt plus 5cm}virtual int RateInvar::getNDim ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classRateInvar_a3ffa388d5aa7f56bb2c047c35bc3b453}
+return the number of dimensions 
+
+Reimplemented from \hyperlink{classOptimization_a6d04cefb0969f3cac9b607aa1412eb57}{Optimization}.
+
+Reimplemented in \hyperlink{classRateGammaInvar_a4f276d1639a79eece217b365439049c7}{RateGammaInvar}.\hypertarget{classRateInvar_a750aa513c32453d28cc50b14bb31a9a7}{
+\index{RateInvar@{RateInvar}!getPInvar@{getPInvar}}
+\index{getPInvar@{getPInvar}!RateInvar@{RateInvar}}
+\subsubsection[{getPInvar}]{\setlength{\rightskip}{0pt plus 5cm}virtual double RateInvar::getPInvar ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classRateInvar_a750aa513c32453d28cc50b14bb31a9a7}
+get the proportion of invariable sites \begin{DoxyReturn}{Returns}
+the proportion of invariable sites 
+\end{DoxyReturn}
+
+
+Reimplemented from \hyperlink{classRateHeterogeneity_ada76d84ed7f66ddde02734d9c72f4e7b}{RateHeterogeneity}.\hypertarget{classRateInvar_a593bcac4c771b4b69c2f286ed8789793}{
+\index{RateInvar@{RateInvar}!optimizeParameters@{optimizeParameters}}
+\index{optimizeParameters@{optimizeParameters}!RateInvar@{RateInvar}}
+\subsubsection[{optimizeParameters}]{\setlength{\rightskip}{0pt plus 5cm}double RateInvar::optimizeParameters ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classRateInvar_a593bcac4c771b4b69c2f286ed8789793}
+optimize parameters \begin{DoxyReturn}{Returns}
+the best likelihood 
+\end{DoxyReturn}
+
+
+Reimplemented from \hyperlink{classRateHeterogeneity_a1305d5b8481dd5a2482917ddb5fe57bd}{RateHeterogeneity}.
+
+Reimplemented in \hyperlink{classRateGammaInvar_ab72a2559cea978d312a243d521c2abef}{RateGammaInvar}.\hypertarget{classRateInvar_a6b8c198319557891db9b91fb47b27428}{
+\index{RateInvar@{RateInvar}!writeInfo@{writeInfo}}
+\index{writeInfo@{writeInfo}!RateInvar@{RateInvar}}
+\subsubsection[{writeInfo}]{\setlength{\rightskip}{0pt plus 5cm}void RateInvar::writeInfo (ostream \& {\em out})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classRateInvar_a6b8c198319557891db9b91fb47b27428}
+write information 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classRateHeterogeneity_a520772859d465036b6620bdbf2977efe}{RateHeterogeneity}.
+
+Reimplemented in \hyperlink{classRateGammaInvar_a428c3ac79ba1bf28da546f602d4b0f7b}{RateGammaInvar}.\hypertarget{classRateInvar_aabcef1cc18777b54b0f8644ccb00913c}{
+\index{RateInvar@{RateInvar}!writeParameters@{writeParameters}}
+\index{writeParameters@{writeParameters}!RateInvar@{RateInvar}}
+\subsubsection[{writeParameters}]{\setlength{\rightskip}{0pt plus 5cm}void RateInvar::writeParameters (ostream \& {\em out})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classRateInvar_aabcef1cc18777b54b0f8644ccb00913c}
+write parameters, used with modeltest 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classRateHeterogeneity_ad2832e686971cf1f2cac2a6f842a3550}{RateHeterogeneity}.
+
+Reimplemented in \hyperlink{classRateGammaInvar_a13b6629de9e3579aacff555f1bd76db5}{RateGammaInvar}.
+
+\subsection{Member Data Documentation}
+\hypertarget{classRateInvar_af6b377196f15c6f58d115b8c24ddf00f}{
+\index{RateInvar@{RateInvar}!p\_\-invar@{p\_\-invar}}
+\index{p\_\-invar@{p\_\-invar}!RateInvar@{RateInvar}}
+\subsubsection[{p\_\-invar}]{\setlength{\rightskip}{0pt plus 5cm}double {\bf RateInvar::p\_\-invar}}}
+\label{classRateInvar_af6b377196f15c6f58d115b8c24ddf00f}
+proportion of invariable sites 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/rateinvar.h\item 
+src/rateinvar.cpp\end{DoxyCompactItemize}

@@ -1,0 +1,153 @@
+\hypertarget{classMSplitsBlock}{
+\section{MSplitsBlock Class Reference}
+\label{classMSplitsBlock}\index{MSplitsBlock@{MSplitsBlock}}
+}
+
+
+{\ttfamily \#include $<$msplitsblock.h$>$}Inheritance diagram for MSplitsBlock::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2cm]{classMSplitsBlock}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classMSplitsBlock_a17ec9ef3354fde89163fd1ee6c22d5d6}{MSplitsBlock} (\hyperlink{classSplitGraph}{SplitGraph} $\ast$asgraph)
+\item 
+virtual \hyperlink{classMSplitsBlock_a214ec1c6f4a93bafc034d58794e0ca52}{$\sim$MSplitsBlock} ()
+\item 
+virtual void \hyperlink{classMSplitsBlock_a693bbbb86942e0ede5f21e2aa9caf008}{Report} (ostream \&out)
+\item 
+virtual void \hyperlink{classMSplitsBlock_ab05dcffb5cbb74d05a809e1ca81d7e23}{Reset} ()
+\item 
+void \hyperlink{classMSplitsBlock_a3f4b4b3afd38d0ddf0dc553836fd9e73}{AddSplit} (\hyperlink{classNxsToken}{NxsToken} \&token)
+\item 
+vector$<$ int $>$ \& \hyperlink{classMSplitsBlock_a900cb7fe40906072a3cf490ae647c5ce}{getCycle} ()
+\end{DoxyCompactItemize}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{classMSplitsBlock_a4eb9285aac79a0a29bc0f6be59a4b229}{Read} (\hyperlink{classNxsToken}{NxsToken} \&token)
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{classMSplitsBlock_abe567d446c6da8b7f31a3ac1e975cf2b}{ntaxa}
+\item 
+int \hyperlink{classMSplitsBlock_a6cc2af084a4652277e09c85b2feaea37}{nsplits}
+\item 
+\hyperlink{classSplitGraph}{SplitGraph} $\ast$ \hyperlink{classMSplitsBlock_a6b5251e50f2faf8c1ae161d2c76ca266}{sgraph}
+\item 
+vector$<$ int $>$ \hyperlink{classMSplitsBlock_a243b83ab3a6a5c3206da496475765d9d}{cycle}
+\end{DoxyCompactItemize}
+\subsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classMSplitsBlock_ab8ea3e9164803ba3b6b59fab949bd0f3}{
+class \hyperlink{classMSplitsBlock_ab8ea3e9164803ba3b6b59fab949bd0f3}{SplitGraph}}
+\label{classMSplitsBlock_ab8ea3e9164803ba3b6b59fab949bd0f3}
+
+\item 
+\hypertarget{classMSplitsBlock_a7a747beac427dfc013c53501e474d452}{
+class \hyperlink{classMSplitsBlock_a7a747beac427dfc013c53501e474d452}{MTree}}
+\label{classMSplitsBlock_a7a747beac427dfc013c53501e474d452}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+SplitsBlock to read from nexus file
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classMSplitsBlock_a17ec9ef3354fde89163fd1ee6c22d5d6}{
+\index{MSplitsBlock@{MSplitsBlock}!MSplitsBlock@{MSplitsBlock}}
+\index{MSplitsBlock@{MSplitsBlock}!MSplitsBlock@{MSplitsBlock}}
+\subsubsection[{MSplitsBlock}]{\setlength{\rightskip}{0pt plus 5cm}MSplitsBlock::MSplitsBlock ({\bf SplitGraph} $\ast$ {\em asgraph})}}
+\label{classMSplitsBlock_a17ec9ef3354fde89163fd1ee6c22d5d6}
+constructor, assigning an associated splits graph 
+\begin{DoxyParams}{Parameters}
+\item[{\em asgraph}]a splits graph \end{DoxyParams}
+\hypertarget{classMSplitsBlock_a214ec1c6f4a93bafc034d58794e0ca52}{
+\index{MSplitsBlock@{MSplitsBlock}!$\sim$MSplitsBlock@{$\sim$MSplitsBlock}}
+\index{$\sim$MSplitsBlock@{$\sim$MSplitsBlock}!MSplitsBlock@{MSplitsBlock}}
+\subsubsection[{$\sim$MSplitsBlock}]{\setlength{\rightskip}{0pt plus 5cm}MSplitsBlock::$\sim$MSplitsBlock ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classMSplitsBlock_a214ec1c6f4a93bafc034d58794e0ca52}
+destructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classMSplitsBlock_a3f4b4b3afd38d0ddf0dc553836fd9e73}{
+\index{MSplitsBlock@{MSplitsBlock}!AddSplit@{AddSplit}}
+\index{AddSplit@{AddSplit}!MSplitsBlock@{MSplitsBlock}}
+\subsubsection[{AddSplit}]{\setlength{\rightskip}{0pt plus 5cm}void MSplitsBlock::AddSplit ({\bf NxsToken} \& {\em token})}}
+\label{classMSplitsBlock_a3f4b4b3afd38d0ddf0dc553836fd9e73}
+parse a line containing split 
+\begin{DoxyParams}{Parameters}
+\item[{\em token}]a token reader \end{DoxyParams}
+\hypertarget{classMSplitsBlock_a900cb7fe40906072a3cf490ae647c5ce}{
+\index{MSplitsBlock@{MSplitsBlock}!getCycle@{getCycle}}
+\index{getCycle@{getCycle}!MSplitsBlock@{MSplitsBlock}}
+\subsubsection[{getCycle}]{\setlength{\rightskip}{0pt plus 5cm}vector$<$int$>$\& MSplitsBlock::getCycle ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classMSplitsBlock_a900cb7fe40906072a3cf490ae647c5ce}
+\begin{DoxyReturn}{Returns}
+cycle 
+\end{DoxyReturn}
+\hypertarget{classMSplitsBlock_a4eb9285aac79a0a29bc0f6be59a4b229}{
+\index{MSplitsBlock@{MSplitsBlock}!Read@{Read}}
+\index{Read@{Read}!MSplitsBlock@{MSplitsBlock}}
+\subsubsection[{Read}]{\setlength{\rightskip}{0pt plus 5cm}void MSplitsBlock::Read ({\bf NxsToken} \& {\em token})\hspace{0.3cm}{\ttfamily  \mbox{[}protected, virtual\mbox{]}}}}
+\label{classMSplitsBlock_a4eb9285aac79a0a29bc0f6be59a4b229}
+main method to read block from file 
+\begin{DoxyParams}{Parameters}
+\item[{\em token}]a token reader \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classNxsBlock}{NxsBlock}.\hypertarget{classMSplitsBlock_a693bbbb86942e0ede5f21e2aa9caf008}{
+\index{MSplitsBlock@{MSplitsBlock}!Report@{Report}}
+\index{Report@{Report}!MSplitsBlock@{MSplitsBlock}}
+\subsubsection[{Report}]{\setlength{\rightskip}{0pt plus 5cm}void MSplitsBlock::Report (ostream \& {\em out})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classMSplitsBlock_a693bbbb86942e0ede5f21e2aa9caf008}
+print info to an output stream 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream, cout for output to screen \end{DoxyParams}
+\hypertarget{classMSplitsBlock_ab05dcffb5cbb74d05a809e1ca81d7e23}{
+\index{MSplitsBlock@{MSplitsBlock}!Reset@{Reset}}
+\index{Reset@{Reset}!MSplitsBlock@{MSplitsBlock}}
+\subsubsection[{Reset}]{\setlength{\rightskip}{0pt plus 5cm}void MSplitsBlock::Reset ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classMSplitsBlock_ab05dcffb5cbb74d05a809e1ca81d7e23}
+reset the block 
+
+Reimplemented from \hyperlink{classNxsBlock}{NxsBlock}.
+
+\subsection{Member Data Documentation}
+\hypertarget{classMSplitsBlock_a243b83ab3a6a5c3206da496475765d9d}{
+\index{MSplitsBlock@{MSplitsBlock}!cycle@{cycle}}
+\index{cycle@{cycle}!MSplitsBlock@{MSplitsBlock}}
+\subsubsection[{cycle}]{\setlength{\rightskip}{0pt plus 5cm}vector$<$int$>$ {\bf MSplitsBlock::cycle}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classMSplitsBlock_a243b83ab3a6a5c3206da496475765d9d}
+taxa index around circle, if it is a circular split graph \hypertarget{classMSplitsBlock_a6cc2af084a4652277e09c85b2feaea37}{
+\index{MSplitsBlock@{MSplitsBlock}!nsplits@{nsplits}}
+\index{nsplits@{nsplits}!MSplitsBlock@{MSplitsBlock}}
+\subsubsection[{nsplits}]{\setlength{\rightskip}{0pt plus 5cm}int {\bf MSplitsBlock::nsplits}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classMSplitsBlock_a6cc2af084a4652277e09c85b2feaea37}
+number of splits \hypertarget{classMSplitsBlock_abe567d446c6da8b7f31a3ac1e975cf2b}{
+\index{MSplitsBlock@{MSplitsBlock}!ntaxa@{ntaxa}}
+\index{ntaxa@{ntaxa}!MSplitsBlock@{MSplitsBlock}}
+\subsubsection[{ntaxa}]{\setlength{\rightskip}{0pt plus 5cm}int {\bf MSplitsBlock::ntaxa}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classMSplitsBlock_abe567d446c6da8b7f31a3ac1e975cf2b}
+number of taxa \hypertarget{classMSplitsBlock_a6b5251e50f2faf8c1ae161d2c76ca266}{
+\index{MSplitsBlock@{MSplitsBlock}!sgraph@{sgraph}}
+\index{sgraph@{sgraph}!MSplitsBlock@{MSplitsBlock}}
+\subsubsection[{sgraph}]{\setlength{\rightskip}{0pt plus 5cm}{\bf SplitGraph}$\ast$ {\bf MSplitsBlock::sgraph}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classMSplitsBlock_a6b5251e50f2faf8c1ae161d2c76ca266}
+the associated splits graph 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/msplitsblock.h\item 
+src/msplitsblock.cpp\end{DoxyCompactItemize}

@@ -1,0 +1,102 @@
+\hypertarget{classRateGammaInvar}{
+\section{RateGammaInvar Class Reference}
+\label{classRateGammaInvar}\index{RateGammaInvar@{RateGammaInvar}}
+}
+
+
+{\ttfamily \#include $<$rategammainvar.h$>$}Inheritance diagram for RateGammaInvar::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=4cm]{classRateGammaInvar}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classRateGammaInvar_ada238d8306a13a7a9ad57fcb88349e48}{RateGammaInvar} (int ncat, \hyperlink{classPhyloTree}{PhyloTree} $\ast$tree)
+\item 
+virtual double \hyperlink{classRateGammaInvar_a48fde92a023867c5d0656572f8dc0f71}{computeFunction} (double value)
+\item 
+virtual double \hyperlink{classRateGammaInvar_ab72a2559cea978d312a243d521c2abef}{optimizeParameters} ()
+\item 
+virtual int \hyperlink{classRateGammaInvar_a4f276d1639a79eece217b365439049c7}{getNDim} ()
+\item 
+virtual void \hyperlink{classRateGammaInvar_a428c3ac79ba1bf28da546f602d4b0f7b}{writeInfo} (ostream \&out)
+\item 
+virtual void \hyperlink{classRateGammaInvar_a13b6629de9e3579aacff555f1bd76db5}{writeParameters} (ostream \&out)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+class for I+G rate heterogeneity
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh $<$\href{mailto:minh.bui@univie.ac.at}{\tt minh.bui@univie.ac.at}$>$ 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classRateGammaInvar_ada238d8306a13a7a9ad57fcb88349e48}{
+\index{RateGammaInvar@{RateGammaInvar}!RateGammaInvar@{RateGammaInvar}}
+\index{RateGammaInvar@{RateGammaInvar}!RateGammaInvar@{RateGammaInvar}}
+\subsubsection[{RateGammaInvar}]{\setlength{\rightskip}{0pt plus 5cm}RateGammaInvar::RateGammaInvar (int {\em ncat}, \/  {\bf PhyloTree} $\ast$ {\em tree})}}
+\label{classRateGammaInvar_ada238d8306a13a7a9ad57fcb88349e48}
+constructor 
+\begin{DoxyParams}{Parameters}
+\item[{\em ncat}]number of rate categories \item[{\em tree}]associated phylogenetic tree \end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classRateGammaInvar_a48fde92a023867c5d0656572f8dc0f71}{
+\index{RateGammaInvar@{RateGammaInvar}!computeFunction@{computeFunction}}
+\index{computeFunction@{computeFunction}!RateGammaInvar@{RateGammaInvar}}
+\subsubsection[{computeFunction}]{\setlength{\rightskip}{0pt plus 5cm}double RateGammaInvar::computeFunction (double {\em value})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classRateGammaInvar_a48fde92a023867c5d0656572f8dc0f71}
+override function from \hyperlink{classOptimization}{Optimization} class, used by the \hyperlink{classOptimization_a59ccdfae81744716ce48226da029d470}{minimizeOneDimen()} to optimize p\_\-invar or gamma shape parameter. 
+\begin{DoxyParams}{Parameters}
+\item[{\em value}]value of p\_\-invar (if cur\_\-optimize == 1) or gamma shape (if cur\_\-optimize == 0). \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classRateGamma_a24e01b7ec0d9170ceebcf03b603b2bbb}{RateGamma}.\hypertarget{classRateGammaInvar_a4f276d1639a79eece217b365439049c7}{
+\index{RateGammaInvar@{RateGammaInvar}!getNDim@{getNDim}}
+\index{getNDim@{getNDim}!RateGammaInvar@{RateGammaInvar}}
+\subsubsection[{getNDim}]{\setlength{\rightskip}{0pt plus 5cm}virtual int RateGammaInvar::getNDim ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classRateGammaInvar_a4f276d1639a79eece217b365439049c7}
+return the number of dimensions 
+
+Reimplemented from \hyperlink{classRateGamma_af271c0115c8a81ff6fac32d1cfef6187}{RateGamma}.\hypertarget{classRateGammaInvar_ab72a2559cea978d312a243d521c2abef}{
+\index{RateGammaInvar@{RateGammaInvar}!optimizeParameters@{optimizeParameters}}
+\index{optimizeParameters@{optimizeParameters}!RateGammaInvar@{RateGammaInvar}}
+\subsubsection[{optimizeParameters}]{\setlength{\rightskip}{0pt plus 5cm}double RateGammaInvar::optimizeParameters ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classRateGammaInvar_ab72a2559cea978d312a243d521c2abef}
+optimize parameters \begin{DoxyReturn}{Returns}
+the best likelihood 
+\end{DoxyReturn}
+
+
+Reimplemented from \hyperlink{classRateGamma_aadba870d743295ef057f9c78ac7fdd06}{RateGamma}.\hypertarget{classRateGammaInvar_a428c3ac79ba1bf28da546f602d4b0f7b}{
+\index{RateGammaInvar@{RateGammaInvar}!writeInfo@{writeInfo}}
+\index{writeInfo@{writeInfo}!RateGammaInvar@{RateGammaInvar}}
+\subsubsection[{writeInfo}]{\setlength{\rightskip}{0pt plus 5cm}void RateGammaInvar::writeInfo (ostream \& {\em out})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classRateGammaInvar_a428c3ac79ba1bf28da546f602d4b0f7b}
+write information 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classRateGamma_a835bb210fd8fb4552613fe49875cbfb5}{RateGamma}.\hypertarget{classRateGammaInvar_a13b6629de9e3579aacff555f1bd76db5}{
+\index{RateGammaInvar@{RateGammaInvar}!writeParameters@{writeParameters}}
+\index{writeParameters@{writeParameters}!RateGammaInvar@{RateGammaInvar}}
+\subsubsection[{writeParameters}]{\setlength{\rightskip}{0pt plus 5cm}void RateGammaInvar::writeParameters (ostream \& {\em out})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classRateGammaInvar_a13b6629de9e3579aacff555f1bd76db5}
+write parameters, used with modeltest 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classRateGamma_a88ffb33131f2cf23cfd0525e092c7717}{RateGamma}.
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/rategammainvar.h\item 
+src/rategammainvar.cpp\end{DoxyCompactItemize}

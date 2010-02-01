@@ -1,0 +1,291 @@
+\hypertarget{classGTRModel}{
+\section{GTRModel Class Reference}
+\label{classGTRModel}\index{GTRModel@{GTRModel}}
+}
+
+
+{\ttfamily \#include $<$gtrmodel.h$>$}Inheritance diagram for GTRModel::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=4cm]{classGTRModel}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classGTRModel_a6c79a459f383e64ee9540eaf8b854827}{GTRModel} (\hyperlink{classPhyloTree}{PhyloTree} $\ast$tree)
+\item 
+void \hyperlink{classGTRModel_a6a5736bfb839fca17dc6db2ee1cf91d5}{init} (StateFreqType \hyperlink{classGTRModel_a699318690979ff66c655dd3022d5127a}{freq\_\-type})
+\item 
+virtual void \hyperlink{classGTRModel_ad0625a75ce5e8f5fca7f65657b2677b8}{init} (const char $\ast$model\_\-name, StateFreqType \hyperlink{classGTRModel_a699318690979ff66c655dd3022d5127a}{freq\_\-type})
+\item 
+virtual \hyperlink{classGTRModel_aca20597dad26270745e2e82c771b5ee9}{$\sim$GTRModel} ()
+\item 
+void \hyperlink{classGTRModel_a121f6e38dae476820555a66ed3e6f10a}{setTree} (\hyperlink{classPhyloTree}{PhyloTree} $\ast$tree)
+\item 
+virtual void \hyperlink{classGTRModel_aa779b66b3824c4e956db7b56dee668c2}{computeTransMatrix} (double time, double $\ast$trans\_\-matrix)
+\item 
+virtual void \hyperlink{classGTRModel_aa7cdd1fb6852faccc185284c075c918b}{getStateFrequency} (double $\ast$\hyperlink{classGTRModel_a03c2ca5094d8c6563dbded5a05b26319}{state\_\-freq})
+\item 
+virtual void \hyperlink{classGTRModel_a9f6c7532d57b0e41d95dd95c5972cf5b}{computeTransDerv} (double time, double $\ast$trans\_\-matrix, double $\ast$trans\_\-derv1, double $\ast$trans\_\-derv2)
+\item 
+StateFreqType \hyperlink{classGTRModel_af2447a8e79a031706028d36beb6931bd}{getFreqType} ()
+\item 
+virtual int \hyperlink{classGTRModel_a6e2066898fbbb245596d4a97dd8ee33c}{getNDim} ()
+\item 
+virtual double \hyperlink{classGTRModel_ac32444cf94b5c3f3240aa344d4bc40b1}{targetFunk} (double x\mbox{[}$\,$\mbox{]})
+\item 
+virtual double \hyperlink{classGTRModel_a01c47ec7ac4b856e60aa3e4339e0044a}{optimizeParameters} ()
+\item 
+virtual void \hyperlink{classGTRModel_a233f9b473e4e3c549d801ff8a084e35e}{writeInfo} (ostream \&out)
+\item 
+virtual void \hyperlink{classGTRModel_a3dd6bc6cb405e76346eac7b813687a20}{writeParameters} (ostream \&out)
+\item 
+void \hyperlink{classGTRModel_ab73647f93c4fdde88c62a775586ae9ea}{decomposeRateMatrix} ()
+\end{DoxyCompactItemize}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{classGTRModel_a1231f10a523ef280e1862b18b0549aa6}{setVariables} (double $\ast$variables)
+\item 
+virtual void \hyperlink{classGTRModel_ae0d291e293dd142d41466650539a2481}{getVariables} (double $\ast$variables)
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classPhyloTree}{PhyloTree} $\ast$ \hyperlink{classGTRModel_a21785f014f182f075d608cfc9118e6fb}{phylo\_\-tree}
+\item 
+double $\ast$ \hyperlink{classGTRModel_ad194dff1b132c09e4c2ebff0f8cdedab}{rates}
+\item 
+double $\ast$ \hyperlink{classGTRModel_a03c2ca5094d8c6563dbded5a05b26319}{state\_\-freq}
+\item 
+StateFreqType \hyperlink{classGTRModel_a699318690979ff66c655dd3022d5127a}{freq\_\-type}
+\item 
+double $\ast$ \hyperlink{classGTRModel_a162f4d6889a320c2753ea31d6c0b03f1}{eigenvalues}
+\item 
+double $\ast$$\ast$ \hyperlink{classGTRModel_ab8e201929a6d84d9bd2e58d0a3e03b5b}{eigenvectors}
+\item 
+double $\ast$$\ast$ \hyperlink{classGTRModel_a74c9c92fe909714d09f75fdcb8459ac9}{inv\_\-eigenvectors}
+\item 
+double $\ast$ \hyperlink{classGTRModel_a79645d7740f239a3a101c0b58fcb236c}{eigen\_\-coeff}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+General Time Reversible (GTR) model of substitution. This works for all kind of data, not only DNA
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh $<$\href{mailto:minh.bui@univie.ac.at}{\tt minh.bui@univie.ac.at}$>$ 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classGTRModel_a6c79a459f383e64ee9540eaf8b854827}{
+\index{GTRModel@{GTRModel}!GTRModel@{GTRModel}}
+\index{GTRModel@{GTRModel}!GTRModel@{GTRModel}}
+\subsubsection[{GTRModel}]{\setlength{\rightskip}{0pt plus 5cm}GTRModel::GTRModel ({\bf PhyloTree} $\ast$ {\em tree})}}
+\label{classGTRModel_a6c79a459f383e64ee9540eaf8b854827}
+constructor 
+\begin{DoxyParams}{Parameters}
+\item[{\em tree}]associated tree for the model \end{DoxyParams}
+\hypertarget{classGTRModel_aca20597dad26270745e2e82c771b5ee9}{
+\index{GTRModel@{GTRModel}!$\sim$GTRModel@{$\sim$GTRModel}}
+\index{$\sim$GTRModel@{$\sim$GTRModel}!GTRModel@{GTRModel}}
+\subsubsection[{$\sim$GTRModel}]{\setlength{\rightskip}{0pt plus 5cm}GTRModel::$\sim$GTRModel ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classGTRModel_aca20597dad26270745e2e82c771b5ee9}
+destructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classGTRModel_a9f6c7532d57b0e41d95dd95c5972cf5b}{
+\index{GTRModel@{GTRModel}!computeTransDerv@{computeTransDerv}}
+\index{computeTransDerv@{computeTransDerv}!GTRModel@{GTRModel}}
+\subsubsection[{computeTransDerv}]{\setlength{\rightskip}{0pt plus 5cm}void GTRModel::computeTransDerv (double {\em time}, \/  double $\ast$ {\em trans\_\-matrix}, \/  double $\ast$ {\em trans\_\-derv1}, \/  double $\ast$ {\em trans\_\-derv2})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classGTRModel_a9f6c7532d57b0e41d95dd95c5972cf5b}
+compute the transition probability matrix.and the derivative 1 and 2 
+\begin{DoxyParams}{Parameters}
+\item[{\em time}]time between two events \item[{\em trans\_\-matrix}](OUT) the transition matrix between all pairs of states. Assume trans\_\-matrix has size of num\_\-states $\ast$ num\_\-states. \item[{\em trans\_\-derv1}](OUT) the 1st derivative matrix between all pairs of states. \item[{\em trans\_\-derv2}](OUT) the 2nd derivative matrix between all pairs of states. \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classSubstModel_ada88db5c6befc33de5ddb590667ba865}{SubstModel}.\hypertarget{classGTRModel_aa779b66b3824c4e956db7b56dee668c2}{
+\index{GTRModel@{GTRModel}!computeTransMatrix@{computeTransMatrix}}
+\index{computeTransMatrix@{computeTransMatrix}!GTRModel@{GTRModel}}
+\subsubsection[{computeTransMatrix}]{\setlength{\rightskip}{0pt plus 5cm}void GTRModel::computeTransMatrix (double {\em time}, \/  double $\ast$ {\em trans\_\-matrix})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classGTRModel_aa779b66b3824c4e956db7b56dee668c2}
+compute the transition probability matrix. 
+\begin{DoxyParams}{Parameters}
+\item[{\em time}]time between two events \item[{\em trans\_\-matrix}](OUT) the transition matrix between all pairs of states. Assume trans\_\-matrix has size of num\_\-states $\ast$ num\_\-states. \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classSubstModel_a83997a2aaea95f2c994d88a9d1cb190e}{SubstModel}.\hypertarget{classGTRModel_ab73647f93c4fdde88c62a775586ae9ea}{
+\index{GTRModel@{GTRModel}!decomposeRateMatrix@{decomposeRateMatrix}}
+\index{decomposeRateMatrix@{decomposeRateMatrix}!GTRModel@{GTRModel}}
+\subsubsection[{decomposeRateMatrix}]{\setlength{\rightskip}{0pt plus 5cm}void GTRModel::decomposeRateMatrix ()}}
+\label{classGTRModel_ab73647f93c4fdde88c62a775586ae9ea}
+decompose the rate matrix into eigenvalues and eigenvectors \hypertarget{classGTRModel_af2447a8e79a031706028d36beb6931bd}{
+\index{GTRModel@{GTRModel}!getFreqType@{getFreqType}}
+\index{getFreqType@{getFreqType}!GTRModel@{GTRModel}}
+\subsubsection[{getFreqType}]{\setlength{\rightskip}{0pt plus 5cm}StateFreqType GTRModel::getFreqType ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classGTRModel_af2447a8e79a031706028d36beb6931bd}
+get frequency type \begin{DoxyReturn}{Returns}
+frequency type 
+\end{DoxyReturn}
+\hypertarget{classGTRModel_a6e2066898fbbb245596d4a97dd8ee33c}{
+\index{GTRModel@{GTRModel}!getNDim@{getNDim}}
+\index{getNDim@{getNDim}!GTRModel@{GTRModel}}
+\subsubsection[{getNDim}]{\setlength{\rightskip}{0pt plus 5cm}int GTRModel::getNDim ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classGTRModel_a6e2066898fbbb245596d4a97dd8ee33c}
+\begin{DoxyReturn}{Returns}
+the number of dimensions 
+\end{DoxyReturn}
+
+
+Reimplemented from \hyperlink{classOptimization_a6d04cefb0969f3cac9b607aa1412eb57}{Optimization}.
+
+Reimplemented in \hyperlink{classModelDNA_adc73fda51fb0f02049ed891b29c3a951}{ModelDNA}, and \hyperlink{classModelUser_ad5a88a6c25475b8bb0ea778f4c40cf3b}{ModelUser}.\hypertarget{classGTRModel_aa7cdd1fb6852faccc185284c075c918b}{
+\index{GTRModel@{GTRModel}!getStateFrequency@{getStateFrequency}}
+\index{getStateFrequency@{getStateFrequency}!GTRModel@{GTRModel}}
+\subsubsection[{getStateFrequency}]{\setlength{\rightskip}{0pt plus 5cm}void GTRModel::getStateFrequency (double $\ast$ {\em state\_\-freq})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classGTRModel_aa7cdd1fb6852faccc185284c075c918b}
+compute the state frequency vector 
+\begin{DoxyParams}{Parameters}
+\item[{\em state\_\-freq}](OUT) state frequency vector. Assume state\_\-freq has size of num\_\-states \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classSubstModel_a18f98e25cacbd18e1b64b25d10a3e11f}{SubstModel}.\hypertarget{classGTRModel_ae0d291e293dd142d41466650539a2481}{
+\index{GTRModel@{GTRModel}!getVariables@{getVariables}}
+\index{getVariables@{getVariables}!GTRModel@{GTRModel}}
+\subsubsection[{getVariables}]{\setlength{\rightskip}{0pt plus 5cm}void GTRModel::getVariables (double $\ast$ {\em variables})\hspace{0.3cm}{\ttfamily  \mbox{[}protected, virtual\mbox{]}}}}
+\label{classGTRModel_ae0d291e293dd142d41466650539a2481}
+this function is served for the multi-\/dimension optimization. It should assign the model parameters from a vector of variables that is index from 1 (NOTE: not from 0) 
+\begin{DoxyParams}{Parameters}
+\item[{\em variables}]vector of variables, indexed from 1 \end{DoxyParams}
+
+
+Reimplemented in \hyperlink{classModelDNA_a4083dfee9b55936019483c5e9a4bb2f7}{ModelDNA}.\hypertarget{classGTRModel_ad0625a75ce5e8f5fca7f65657b2677b8}{
+\index{GTRModel@{GTRModel}!init@{init}}
+\index{init@{init}!GTRModel@{GTRModel}}
+\subsubsection[{init}]{\setlength{\rightskip}{0pt plus 5cm}virtual void GTRModel::init (const char $\ast$ {\em model\_\-name}, \/  StateFreqType {\em freq\_\-type})\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classGTRModel_ad0625a75ce5e8f5fca7f65657b2677b8}
+this function is served for \hyperlink{classModelDNA}{ModelDNA} and \hyperlink{classModelProtein}{ModelProtein} 
+\begin{DoxyParams}{Parameters}
+\item[{\em model\_\-name}]name of the model \item[{\em freq\_\-type}]state frequency type, can be FREQ\_\-USER\_\-DEFINED, FREQ\_\-EQUAL, FREQ\_\-EMPIRICAL, or FREQ\_\-ESTIMATE \end{DoxyParams}
+
+
+Reimplemented in \hyperlink{classModelDNA_ad7f5b56ae6499a222c01ad81e92e27a2}{ModelDNA}, and \hyperlink{classModelProtein_a752778117ce79f5c0161397835fc6bf0}{ModelProtein}.\hypertarget{classGTRModel_a6a5736bfb839fca17dc6db2ee1cf91d5}{
+\index{GTRModel@{GTRModel}!init@{init}}
+\index{init@{init}!GTRModel@{GTRModel}}
+\subsubsection[{init}]{\setlength{\rightskip}{0pt plus 5cm}void GTRModel::init (StateFreqType {\em freq\_\-type})}}
+\label{classGTRModel_a6a5736bfb839fca17dc6db2ee1cf91d5}
+init the model and decompose the rate matrix. This function should always be called after creating the class. Otherwise it will not work properly. 
+\begin{DoxyParams}{Parameters}
+\item[{\em freq\_\-type}]state frequency type, can be FREQ\_\-USER\_\-DEFINED, FREQ\_\-EQUAL, FREQ\_\-EMPIRICAL, or FREQ\_\-ESTIMATE \end{DoxyParams}
+\hypertarget{classGTRModel_a01c47ec7ac4b856e60aa3e4339e0044a}{
+\index{GTRModel@{GTRModel}!optimizeParameters@{optimizeParameters}}
+\index{optimizeParameters@{optimizeParameters}!GTRModel@{GTRModel}}
+\subsubsection[{optimizeParameters}]{\setlength{\rightskip}{0pt plus 5cm}double GTRModel::optimizeParameters ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classGTRModel_a01c47ec7ac4b856e60aa3e4339e0044a}
+optimize model parameters \begin{DoxyReturn}{Returns}
+the best likelihood 
+\end{DoxyReturn}
+
+
+Reimplemented from \hyperlink{classSubstModel_aa2d4bd724a699264b40dd5b2d129e29f}{SubstModel}.\hypertarget{classGTRModel_a121f6e38dae476820555a66ed3e6f10a}{
+\index{GTRModel@{GTRModel}!setTree@{setTree}}
+\index{setTree@{setTree}!GTRModel@{GTRModel}}
+\subsubsection[{setTree}]{\setlength{\rightskip}{0pt plus 5cm}void GTRModel::setTree ({\bf PhyloTree} $\ast$ {\em tree})}}
+\label{classGTRModel_a121f6e38dae476820555a66ed3e6f10a}
+set the associated tree 
+\begin{DoxyParams}{Parameters}
+\item[{\em tree}]the associated tree \end{DoxyParams}
+\hypertarget{classGTRModel_a1231f10a523ef280e1862b18b0549aa6}{
+\index{GTRModel@{GTRModel}!setVariables@{setVariables}}
+\index{setVariables@{setVariables}!GTRModel@{GTRModel}}
+\subsubsection[{setVariables}]{\setlength{\rightskip}{0pt plus 5cm}void GTRModel::setVariables (double $\ast$ {\em variables})\hspace{0.3cm}{\ttfamily  \mbox{[}protected, virtual\mbox{]}}}}
+\label{classGTRModel_a1231f10a523ef280e1862b18b0549aa6}
+this function is served for the multi-\/dimension optimization. It should pack the model parameters into a vector that is index from 1 (NOTE: not from 0) 
+\begin{DoxyParams}{Parameters}
+\item[{\em variables}](OUT) vector of variables, indexed from 1 \end{DoxyParams}
+
+
+Reimplemented in \hyperlink{classModelDNA_a83af5938f0b38371b6b971931b8748c2}{ModelDNA}.\hypertarget{classGTRModel_ac32444cf94b5c3f3240aa344d4bc40b1}{
+\index{GTRModel@{GTRModel}!targetFunk@{targetFunk}}
+\index{targetFunk@{targetFunk}!GTRModel@{GTRModel}}
+\subsubsection[{targetFunk}]{\setlength{\rightskip}{0pt plus 5cm}double GTRModel::targetFunk (double {\em x}\mbox{[}$\,$\mbox{]})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classGTRModel_ac32444cf94b5c3f3240aa344d4bc40b1}
+the target function which needs to be optimized 
+\begin{DoxyParams}{Parameters}
+\item[{\em x}]the input vector x \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the function value at x 
+\end{DoxyReturn}
+
+
+Reimplemented from \hyperlink{classOptimization_a7fe7c6178977ef7840ff65d216bf590e}{Optimization}.\hypertarget{classGTRModel_a233f9b473e4e3c549d801ff8a084e35e}{
+\index{GTRModel@{GTRModel}!writeInfo@{writeInfo}}
+\index{writeInfo@{writeInfo}!GTRModel@{GTRModel}}
+\subsubsection[{writeInfo}]{\setlength{\rightskip}{0pt plus 5cm}void GTRModel::writeInfo (ostream \& {\em out})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classGTRModel_a233f9b473e4e3c549d801ff8a084e35e}
+write information 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classSubstModel_ac81144591a9eb6b6d9abc9e873a20af6}{SubstModel}.\hypertarget{classGTRModel_a3dd6bc6cb405e76346eac7b813687a20}{
+\index{GTRModel@{GTRModel}!writeParameters@{writeParameters}}
+\index{writeParameters@{writeParameters}!GTRModel@{GTRModel}}
+\subsubsection[{writeParameters}]{\setlength{\rightskip}{0pt plus 5cm}virtual void GTRModel::writeParameters (ostream \& {\em out})\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classGTRModel_a3dd6bc6cb405e76346eac7b813687a20}
+write parameters, used with modeltest 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream \end{DoxyParams}
+
+
+Reimplemented in \hyperlink{classModelDNA_a46a8fd333239a3937e6116608e20cc78}{ModelDNA}.
+
+\subsection{Member Data Documentation}
+\hypertarget{classGTRModel_a79645d7740f239a3a101c0b58fcb236c}{
+\index{GTRModel@{GTRModel}!eigen\_\-coeff@{eigen\_\-coeff}}
+\index{eigen\_\-coeff@{eigen\_\-coeff}!GTRModel@{GTRModel}}
+\subsubsection[{eigen\_\-coeff}]{\setlength{\rightskip}{0pt plus 5cm}double$\ast$ {\bf GTRModel::eigen\_\-coeff}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classGTRModel_a79645d7740f239a3a101c0b58fcb236c}
+coefficient cache, served for fast computation of the P(t) matrix \hypertarget{classGTRModel_a162f4d6889a320c2753ea31d6c0b03f1}{
+\index{GTRModel@{GTRModel}!eigenvalues@{eigenvalues}}
+\index{eigenvalues@{eigenvalues}!GTRModel@{GTRModel}}
+\subsubsection[{eigenvalues}]{\setlength{\rightskip}{0pt plus 5cm}double$\ast$ {\bf GTRModel::eigenvalues}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classGTRModel_a162f4d6889a320c2753ea31d6c0b03f1}
+eigenvalues of the rate matrix Q \hypertarget{classGTRModel_ab8e201929a6d84d9bd2e58d0a3e03b5b}{
+\index{GTRModel@{GTRModel}!eigenvectors@{eigenvectors}}
+\index{eigenvectors@{eigenvectors}!GTRModel@{GTRModel}}
+\subsubsection[{eigenvectors}]{\setlength{\rightskip}{0pt plus 5cm}double$\ast$$\ast$ {\bf GTRModel::eigenvectors}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classGTRModel_ab8e201929a6d84d9bd2e58d0a3e03b5b}
+eigenvectors of the rate matrix Q \hypertarget{classGTRModel_a699318690979ff66c655dd3022d5127a}{
+\index{GTRModel@{GTRModel}!freq\_\-type@{freq\_\-type}}
+\index{freq\_\-type@{freq\_\-type}!GTRModel@{GTRModel}}
+\subsubsection[{freq\_\-type}]{\setlength{\rightskip}{0pt plus 5cm}StateFreqType {\bf GTRModel::freq\_\-type}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classGTRModel_a699318690979ff66c655dd3022d5127a}
+state frequency type \hypertarget{classGTRModel_a74c9c92fe909714d09f75fdcb8459ac9}{
+\index{GTRModel@{GTRModel}!inv\_\-eigenvectors@{inv\_\-eigenvectors}}
+\index{inv\_\-eigenvectors@{inv\_\-eigenvectors}!GTRModel@{GTRModel}}
+\subsubsection[{inv\_\-eigenvectors}]{\setlength{\rightskip}{0pt plus 5cm}double$\ast$$\ast$ {\bf GTRModel::inv\_\-eigenvectors}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classGTRModel_a74c9c92fe909714d09f75fdcb8459ac9}
+inverse eigenvectors of the rate matrix Q \hypertarget{classGTRModel_a21785f014f182f075d608cfc9118e6fb}{
+\index{GTRModel@{GTRModel}!phylo\_\-tree@{phylo\_\-tree}}
+\index{phylo\_\-tree@{phylo\_\-tree}!GTRModel@{GTRModel}}
+\subsubsection[{phylo\_\-tree}]{\setlength{\rightskip}{0pt plus 5cm}{\bf PhyloTree}$\ast$ {\bf GTRModel::phylo\_\-tree}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classGTRModel_a21785f014f182f075d608cfc9118e6fb}
+phylogenetic tree associated \hypertarget{classGTRModel_ad194dff1b132c09e4c2ebff0f8cdedab}{
+\index{GTRModel@{GTRModel}!rates@{rates}}
+\index{rates@{rates}!GTRModel@{GTRModel}}
+\subsubsection[{rates}]{\setlength{\rightskip}{0pt plus 5cm}double$\ast$ {\bf GTRModel::rates}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classGTRModel_ad194dff1b132c09e4c2ebff0f8cdedab}
+rates between pairs of states of the unit rate matrix Q. In order A-\/C, A-\/G, A-\/T, C-\/G, C-\/T (rate G-\/T = 1 always) \hypertarget{classGTRModel_a03c2ca5094d8c6563dbded5a05b26319}{
+\index{GTRModel@{GTRModel}!state\_\-freq@{state\_\-freq}}
+\index{state\_\-freq@{state\_\-freq}!GTRModel@{GTRModel}}
+\subsubsection[{state\_\-freq}]{\setlength{\rightskip}{0pt plus 5cm}double$\ast$ {\bf GTRModel::state\_\-freq}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classGTRModel_a03c2ca5094d8c6563dbded5a05b26319}
+state frequencies 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/gtrmodel.h\item 
+src/gtrmodel.cpp\end{DoxyCompactItemize}

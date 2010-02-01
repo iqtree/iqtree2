@@ -1,0 +1,248 @@
+\hypertarget{classAlignment}{
+\section{Alignment Class Reference}
+\label{classAlignment}\index{Alignment@{Alignment}}
+}
+
+
+{\ttfamily \#include $<$alignment.h$>$}\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classAlignment_a091e21f0cfb741cb5cdc3535c6cc287f}{Alignment} ()
+\item 
+\hyperlink{classAlignment_ad8ea66351921a99a02377e22062e54cb}{Alignment} (char $\ast$filename, InputType \&intype)
+\item 
+int \hyperlink{classAlignment_a50c61ad1efb041f9e0039d5293646b15}{readNexus} (char $\ast$filename)
+\item 
+int \hyperlink{classAlignment_a5d924570d1b019b734c9d30f35d1dd2e}{readPhylip} (char $\ast$filename)
+\item 
+void \hyperlink{classAlignment_abb4dfacef5d00ca51f214e21dfae2df3}{extractDataBlock} (\hyperlink{classNxsCharactersBlock}{NxsCharactersBlock} $\ast$data\_\-block)
+\item 
+virtual \hyperlink{classAlignment_a8787573a5060136c2a51f40cf229e356}{$\sim$Alignment} ()
+\item 
+int \hyperlink{classAlignment_ab897ce9c1a93577daa9934e906f7d6cd}{getNSeq} ()
+\item 
+int \hyperlink{classAlignment_a218c888333e7e7d35c44c3b554cf5716}{getNSite} ()
+\item 
+int \hyperlink{classAlignment_ab070fcbe981bdc38800a79066c770ddc}{getNPattern} ()
+\item 
+string \& \hyperlink{classAlignment_a88395c4218d679f68f7d8e74fb85ca9d}{getSeqName} (int i)
+\item 
+double \hyperlink{classAlignment_a87ce6b02455c75e5de5125dc3e491e05}{computeObsDist} (int seq1, int seq2)
+\item 
+double \hyperlink{classAlignment_a0be957c6fb7af20dc675f28969487131}{computeJCDist} (int seq1, int seq2)
+\item 
+virtual double \hyperlink{classAlignment_a88a4b45ead6d8f22c0416cfa01037049}{computeDist} (int seq1, int seq2)
+\item 
+void \hyperlink{classAlignment_ab6042ffe567a6b036b1715621bbe60d0}{computeDist} (double $\ast$dist\_\-mat)
+\item 
+void \hyperlink{classAlignment_ac99d17ec607ca7272c2d75686713865d}{printDist} (const char $\ast$file\_\-name, double $\ast$dist\_\-mat)
+\item 
+void \hyperlink{classAlignment_a2b951be4ee45b539683a0fd2692951fa}{printDist} (ostream \&out, double $\ast$dist\_\-mat)
+\item 
+void \hyperlink{classAlignment_aba9fa7f5358328bf5712049bb00ea2b6}{computeStateFreq} (double $\ast$state\_\-freq)
+\item 
+void \hyperlink{classAlignment_aa9a60448e5e8ac12bbf30557dfaf9018}{countConstSite} ()
+\item 
+void \hyperlink{classAlignment_a06ccd149a79b56d183752c560a9d8e1d}{addPattern} (\hyperlink{classPattern}{Pattern} \&pat, int site)
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{classAlignment_aef8af61d49ceedd23bbec2c9f8a3adef}{num\_\-states}
+\item 
+double \hyperlink{classAlignment_a85715ac791c22f38ca74dc60198d5f23}{frac\_\-const\_\-sites}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Multiple Sequence \hyperlink{classAlignment}{Alignment}. Stored by a vector of site-\/patterns
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler $<$\href{mailto:minh.bui@univie.ac.at}{\tt minh.bui@univie.ac.at}$>$ 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classAlignment_a091e21f0cfb741cb5cdc3535c6cc287f}{
+\index{Alignment@{Alignment}!Alignment@{Alignment}}
+\index{Alignment@{Alignment}!Alignment@{Alignment}}
+\subsubsection[{Alignment}]{\setlength{\rightskip}{0pt plus 5cm}Alignment::Alignment ()}}
+\label{classAlignment_a091e21f0cfb741cb5cdc3535c6cc287f}
+constructor \hypertarget{classAlignment_ad8ea66351921a99a02377e22062e54cb}{
+\index{Alignment@{Alignment}!Alignment@{Alignment}}
+\index{Alignment@{Alignment}!Alignment@{Alignment}}
+\subsubsection[{Alignment}]{\setlength{\rightskip}{0pt plus 5cm}Alignment::Alignment (char $\ast$ {\em filename}, \/  InputType \& {\em intype})}}
+\label{classAlignment_ad8ea66351921a99a02377e22062e54cb}
+constructor 
+\begin{DoxyParams}{Parameters}
+\item[{\em filename}]file name \item[{\em intype}](OUT) input format of the file \end{DoxyParams}
+\hypertarget{classAlignment_a8787573a5060136c2a51f40cf229e356}{
+\index{Alignment@{Alignment}!$\sim$Alignment@{$\sim$Alignment}}
+\index{$\sim$Alignment@{$\sim$Alignment}!Alignment@{Alignment}}
+\subsubsection[{$\sim$Alignment}]{\setlength{\rightskip}{0pt plus 5cm}Alignment::$\sim$Alignment ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classAlignment_a8787573a5060136c2a51f40cf229e356}
+destructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classAlignment_a06ccd149a79b56d183752c560a9d8e1d}{
+\index{Alignment@{Alignment}!addPattern@{addPattern}}
+\index{addPattern@{addPattern}!Alignment@{Alignment}}
+\subsubsection[{addPattern}]{\setlength{\rightskip}{0pt plus 5cm}void Alignment::addPattern ({\bf Pattern} \& {\em pat}, \/  int {\em site})}}
+\label{classAlignment_a06ccd149a79b56d183752c560a9d8e1d}
+add a pattern into the alignment 
+\begin{DoxyParams}{Parameters}
+\item[{\em pat}]the pattern \item[{\em site}]the site index of the pattern from the alignment \end{DoxyParams}
+\hypertarget{classAlignment_ab6042ffe567a6b036b1715621bbe60d0}{
+\index{Alignment@{Alignment}!computeDist@{computeDist}}
+\index{computeDist@{computeDist}!Alignment@{Alignment}}
+\subsubsection[{computeDist}]{\setlength{\rightskip}{0pt plus 5cm}void Alignment::computeDist (double $\ast$ {\em dist\_\-mat})}}
+\label{classAlignment_ab6042ffe567a6b036b1715621bbe60d0}
+compute distance matrix, assume dist\_\-mat is allocated by memory of size num\_\-seqs $\ast$ num\_\-seqs. 
+\begin{DoxyParams}{Parameters}
+\item[{\em dist\_\-mat}](OUT) distance matrix between all pairs of sequences \end{DoxyParams}
+\hypertarget{classAlignment_a88a4b45ead6d8f22c0416cfa01037049}{
+\index{Alignment@{Alignment}!computeDist@{computeDist}}
+\index{computeDist@{computeDist}!Alignment@{Alignment}}
+\subsubsection[{computeDist}]{\setlength{\rightskip}{0pt plus 5cm}virtual double Alignment::computeDist (int {\em seq1}, \/  int {\em seq2})\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classAlignment_a88a4b45ead6d8f22c0416cfa01037049}
+abstract function to compute the distance between 2 sequences. The default return Juke-\/Cantor corrected distance. 
+\begin{DoxyParams}{Parameters}
+\item[{\em seq1}]index of sequence 1 \item[{\em seq2}]index of sequence 2 \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+any distance between seq1 and seq2 
+\end{DoxyReturn}
+\hypertarget{classAlignment_a0be957c6fb7af20dc675f28969487131}{
+\index{Alignment@{Alignment}!computeJCDist@{computeJCDist}}
+\index{computeJCDist@{computeJCDist}!Alignment@{Alignment}}
+\subsubsection[{computeJCDist}]{\setlength{\rightskip}{0pt plus 5cm}double Alignment::computeJCDist (int {\em seq1}, \/  int {\em seq2})}}
+\label{classAlignment_a0be957c6fb7af20dc675f28969487131}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em seq1}]index of sequence 1 \item[{\em seq2}]index of sequence 2 \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Juke-\/Cantor correction distance between seq1 and seq2 
+\end{DoxyReturn}
+\hypertarget{classAlignment_a87ce6b02455c75e5de5125dc3e491e05}{
+\index{Alignment@{Alignment}!computeObsDist@{computeObsDist}}
+\index{computeObsDist@{computeObsDist}!Alignment@{Alignment}}
+\subsubsection[{computeObsDist}]{\setlength{\rightskip}{0pt plus 5cm}double Alignment::computeObsDist (int {\em seq1}, \/  int {\em seq2})}}
+\label{classAlignment_a87ce6b02455c75e5de5125dc3e491e05}
+compute the observed distance (number of different pairs of positions per site) between two sequences 
+\begin{DoxyParams}{Parameters}
+\item[{\em seq1}]index of sequence 1 \item[{\em seq2}]index of sequence 2 \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the observed distance between seq1 and seq2 (between 0.0 and 1.0) 
+\end{DoxyReturn}
+\hypertarget{classAlignment_aba9fa7f5358328bf5712049bb00ea2b6}{
+\index{Alignment@{Alignment}!computeStateFreq@{computeStateFreq}}
+\index{computeStateFreq@{computeStateFreq}!Alignment@{Alignment}}
+\subsubsection[{computeStateFreq}]{\setlength{\rightskip}{0pt plus 5cm}void Alignment::computeStateFreq (double $\ast$ {\em state\_\-freq})}}
+\label{classAlignment_aba9fa7f5358328bf5712049bb00ea2b6}
+compute empirical state frequencies from the alignment 
+\begin{DoxyParams}{Parameters}
+\item[{\em state\_\-freq}](OUT) is filled with state frequencies, assuming state\_\-freq was allocated with at least num\_\-states entries. \end{DoxyParams}
+\hypertarget{classAlignment_aa9a60448e5e8ac12bbf30557dfaf9018}{
+\index{Alignment@{Alignment}!countConstSite@{countConstSite}}
+\index{countConstSite@{countConstSite}!Alignment@{Alignment}}
+\subsubsection[{countConstSite}]{\setlength{\rightskip}{0pt plus 5cm}void Alignment::countConstSite ()}}
+\label{classAlignment_aa9a60448e5e8ac12bbf30557dfaf9018}
+count the fraction of constant sites in the alignment, update the variable frac\_\-const\_\-sites \hypertarget{classAlignment_abb4dfacef5d00ca51f214e21dfae2df3}{
+\index{Alignment@{Alignment}!extractDataBlock@{extractDataBlock}}
+\index{extractDataBlock@{extractDataBlock}!Alignment@{Alignment}}
+\subsubsection[{extractDataBlock}]{\setlength{\rightskip}{0pt plus 5cm}void Alignment::extractDataBlock ({\bf NxsCharactersBlock} $\ast$ {\em data\_\-block})}}
+\label{classAlignment_abb4dfacef5d00ca51f214e21dfae2df3}
+extract the alignment from a nexus data block, called by \hyperlink{classAlignment_a50c61ad1efb041f9e0039d5293646b15}{readNexus()} 
+\begin{DoxyParams}{Parameters}
+\item[{\em data\_\-block}]data block of nexus file \end{DoxyParams}
+\hypertarget{classAlignment_ab070fcbe981bdc38800a79066c770ddc}{
+\index{Alignment@{Alignment}!getNPattern@{getNPattern}}
+\index{getNPattern@{getNPattern}!Alignment@{Alignment}}
+\subsubsection[{getNPattern}]{\setlength{\rightskip}{0pt plus 5cm}int Alignment::getNPattern ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classAlignment_ab070fcbe981bdc38800a79066c770ddc}
+\begin{DoxyReturn}{Returns}
+number of patterns 
+\end{DoxyReturn}
+\hypertarget{classAlignment_ab897ce9c1a93577daa9934e906f7d6cd}{
+\index{Alignment@{Alignment}!getNSeq@{getNSeq}}
+\index{getNSeq@{getNSeq}!Alignment@{Alignment}}
+\subsubsection[{getNSeq}]{\setlength{\rightskip}{0pt plus 5cm}int Alignment::getNSeq ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classAlignment_ab897ce9c1a93577daa9934e906f7d6cd}
+\begin{DoxyReturn}{Returns}
+number of sequences 
+\end{DoxyReturn}
+\hypertarget{classAlignment_a218c888333e7e7d35c44c3b554cf5716}{
+\index{Alignment@{Alignment}!getNSite@{getNSite}}
+\index{getNSite@{getNSite}!Alignment@{Alignment}}
+\subsubsection[{getNSite}]{\setlength{\rightskip}{0pt plus 5cm}int Alignment::getNSite ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classAlignment_a218c888333e7e7d35c44c3b554cf5716}
+\begin{DoxyReturn}{Returns}
+number of sites (alignment columns) 
+\end{DoxyReturn}
+\hypertarget{classAlignment_a88395c4218d679f68f7d8e74fb85ca9d}{
+\index{Alignment@{Alignment}!getSeqName@{getSeqName}}
+\index{getSeqName@{getSeqName}!Alignment@{Alignment}}
+\subsubsection[{getSeqName}]{\setlength{\rightskip}{0pt plus 5cm}string \& Alignment::getSeqName (int {\em i})}}
+\label{classAlignment_a88395c4218d679f68f7d8e74fb85ca9d}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em i}]sequence index \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+sequence name 
+\end{DoxyReturn}
+\hypertarget{classAlignment_a2b951be4ee45b539683a0fd2692951fa}{
+\index{Alignment@{Alignment}!printDist@{printDist}}
+\index{printDist@{printDist}!Alignment@{Alignment}}
+\subsubsection[{printDist}]{\setlength{\rightskip}{0pt plus 5cm}void Alignment::printDist (ostream \& {\em out}, \/  double $\ast$ {\em dist\_\-mat})}}
+\label{classAlignment_a2b951be4ee45b539683a0fd2692951fa}
+write distance matrix into a stream in PHYLIP distance format 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream \item[{\em dist\_\-mat}]distance matrix \end{DoxyParams}
+\hypertarget{classAlignment_ac99d17ec607ca7272c2d75686713865d}{
+\index{Alignment@{Alignment}!printDist@{printDist}}
+\index{printDist@{printDist}!Alignment@{Alignment}}
+\subsubsection[{printDist}]{\setlength{\rightskip}{0pt plus 5cm}void Alignment::printDist (const char $\ast$ {\em file\_\-name}, \/  double $\ast$ {\em dist\_\-mat})}}
+\label{classAlignment_ac99d17ec607ca7272c2d75686713865d}
+write distance matrix into a file in PHYLIP distance format 
+\begin{DoxyParams}{Parameters}
+\item[{\em file\_\-name}]distance file name \item[{\em dist\_\-mat}]distance matrix \end{DoxyParams}
+\hypertarget{classAlignment_a50c61ad1efb041f9e0039d5293646b15}{
+\index{Alignment@{Alignment}!readNexus@{readNexus}}
+\index{readNexus@{readNexus}!Alignment@{Alignment}}
+\subsubsection[{readNexus}]{\setlength{\rightskip}{0pt plus 5cm}int Alignment::readNexus (char $\ast$ {\em filename})}}
+\label{classAlignment_a50c61ad1efb041f9e0039d5293646b15}
+read the alignment in NEXUS format 
+\begin{DoxyParams}{Parameters}
+\item[{\em filename}]file name \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+1 on success, 0 on failure 
+\end{DoxyReturn}
+\hypertarget{classAlignment_a5d924570d1b019b734c9d30f35d1dd2e}{
+\index{Alignment@{Alignment}!readPhylip@{readPhylip}}
+\index{readPhylip@{readPhylip}!Alignment@{Alignment}}
+\subsubsection[{readPhylip}]{\setlength{\rightskip}{0pt plus 5cm}int Alignment::readPhylip (char $\ast$ {\em filename})}}
+\label{classAlignment_a5d924570d1b019b734c9d30f35d1dd2e}
+read the alignment in PHYLIP format 
+\begin{DoxyParams}{Parameters}
+\item[{\em filename}]file name \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+1 on success, 0 on failure 
+\end{DoxyReturn}
+
+
+\subsection{Member Data Documentation}
+\hypertarget{classAlignment_a85715ac791c22f38ca74dc60198d5f23}{
+\index{Alignment@{Alignment}!frac\_\-const\_\-sites@{frac\_\-const\_\-sites}}
+\index{frac\_\-const\_\-sites@{frac\_\-const\_\-sites}!Alignment@{Alignment}}
+\subsubsection[{frac\_\-const\_\-sites}]{\setlength{\rightskip}{0pt plus 5cm}double {\bf Alignment::frac\_\-const\_\-sites}}}
+\label{classAlignment_a85715ac791c22f38ca74dc60198d5f23}
+fraction of constant sites \hypertarget{classAlignment_aef8af61d49ceedd23bbec2c9f8a3adef}{
+\index{Alignment@{Alignment}!num\_\-states@{num\_\-states}}
+\index{num\_\-states@{num\_\-states}!Alignment@{Alignment}}
+\subsubsection[{num\_\-states}]{\setlength{\rightskip}{0pt plus 5cm}int {\bf Alignment::num\_\-states}}}
+\label{classAlignment_aef8af61d49ceedd23bbec2c9f8a3adef}
+number of states 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/alignment.h\item 
+src/alignment.cpp\end{DoxyCompactItemize}

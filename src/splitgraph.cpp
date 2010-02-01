@@ -1,0 +1,591 @@
+/***************************************************************************
+ *   Copyright (C) 2006 by BUI Quang Minh, Steffen Klaere, Arndt von Haeseler   *
+ *   minh.bui@univie.ac.at   *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+#include "splitgraph.h"
+#include <iostream>
+#include <fstream>
+#include <cctype>
+#include <algorithm>
+#include "node.h"
+#include "ncl/ncl.h"
+#include "myreader.h"
+#include "mtree.h"
+#include "splitset.h"
+#include "mtreeset.h"
+
+//#define MY_DEBUG
+/********************************************************
+	Defining SplitGraph methods
+********************************************************/
+SplitGraph::SplitGraph()
+		: vector<Split*>()
+{
+	pda = NULL;
+	taxa = NULL;
+	splits = NULL;
+	sets = NULL;
+	trees = NULL;
+//	mtree = NULL;
+}
+
+SplitGraph::SplitGraph(Params &params) : vector<Split*>() {
+	init(params);
+}
+
+void SplitGraph::createBlocks() {
+	taxa = new NxsTaxaBlock();
+	splits = new MSplitsBlock(this);
+	pda = new MPdaBlock(this);
+	sets = new MSetsBlock();
+	trees = new TreesBlock(taxa);
+//	mtree = NULL;
+}
+
+
+void SplitGraph::init(Params &params)
+{
+	if (params.intype == IN_NEWICK) {
+		// read the input file, can contain more than 1 tree
+		MTreeSet mtrees(params.user_file, params.is_rooted, params.tree_burnin);
+		//mtree = new MTree(params.user_file, params.is_rooted);
+
+		if (params.is_rooted) {
+			params.sub_size++;
+			params.min_size++;
+		}
+		if (mtrees.isRooted() && params.root != NULL)
+			outError(ERR_CONFLICT_ROOT);
+		//SplitIntMap hash_ss;
+		mtrees.convertSplits(*this, params.split_threshold, true);
+
+		if (verbose_mode >= VB_MAX)
+			saveFile(cout);
+	} else {
+		createBlocks();
+		if (params.is_rooted) 
+			outError(ERR_ROOT_NET);
+	
+	 	cout << "Reading input file " << params.user_file << "..." << endl;
+
+		MyReader nexus(params.user_file);
+	
+		nexus.Add(taxa);
+		nexus.Add(splits);
+		nexus.Add(pda);
+		nexus.Add(sets);
+		nexus.Add(trees);
+
+		MyToken token(nexus.inf);
+		nexus.Execute(token);
+		if (trees->GetNumTrees() > 0) { 
+			if (getNSplits() > 0) 
+				outError("Ambiguous input file, pls only specify either SPLITS block or TREES block");
+			convertFromTreesBlock(params.tree_burnin, params.split_threshold);
+		}
+
+	}
+	
+	if (verbose_mode)
+		taxa->Report(cout);
+	//splits->Report(cout);
+	//reportConflict(cout);
+	if (params.pdtaxa_file != NULL) {
+		if (sets->getNSets() > 0)
+			outError("Taxa sets were already specified in the input file");
+		cout << "Reading taxa sets in file " << params.pdtaxa_file << "..." << endl;
+	
+		bool nexus_formated = (detectInputFile(params.pdtaxa_file) == IN_NEXUS);
+		if (nexus_formated) {
+			MyReader nexus(params.pdtaxa_file);
+			nexus.Add(sets);
+			MyToken token(nexus.inf);
+			nexus.Execute(token);
+		} else {
+			readTaxaSets(params.pdtaxa_file, sets);
+		}
+		if (sets->getNSets() == 0)
+			outError("No taxa sets found");
+	}
+
+	if (sets->getNSets() > 0 && taxa->GetNumTaxonLabels() == 0) {
+		AddTaxaFromSets();
+	}
+	if (taxa->GetNumTaxonLabels() == 0)
+		outError("No taxa found");
+	if (getNSplits() == 0) {
+		//outError(ERR_NO_SPLITS);
+		createStarTree();
+	}
+	cout << endl << "Split network contains " << getNTaxa()-params.is_rooted << 
+		" taxa and " << getNSplits()-params.is_rooted << " splits." << endl;
+
+}
+
+int SplitGraph::getNTrivialSplits() {
+	int count = 0;
+	for (iterator it = begin(); it != end(); it++)
+		if ((*it)->trivial() >= 0)
+			count++;
+	return count;
+}
+
+
+void SplitGraph::createStarTree() {
+	cout << "No splits found, creating a star tree with branch length of 1..." << endl;
+	int ntaxa = taxa->GetNumTaxonLabels();
+	for (int i = 0; i < ntaxa; i++) {
+		Split *sp = new Split(ntaxa, 1.0);
+		sp->addTaxon(i);
+		push_back(sp);
+	}
+	cout << "NOTE: subsequent PD will correspond to species richness." << endl;
+}
+
+
+void SplitGraph::AddTaxaFromSets() {
+	cout << "Taking taxa from SETS block..." << endl;
+	for (int i = 0; i < sets->getNSets(); i++)
+		for(vector<NxsString>::iterator it = sets->getSet(i).taxlist.begin(); 
+			it != sets->getSet(i).taxlist.end(); it++) 
+			if (!taxa->IsAlreadyDefined(*it)) {
+				taxa->AddTaxonLabel(*it);
+			}	
+}
+
+SplitGraph::~SplitGraph()
+{
+	
+	for (reverse_iterator it = rbegin(); it != rend(); it++) {
+		//(*it)->report(cout);
+		delete *it;
+	}
+	clear();
+	if (trees) delete trees;
+	if (sets) delete sets;
+	if (pda) delete pda;
+	if (splits) delete splits;
+	if (taxa) delete taxa;
+}
+
+
+void SplitGraph::convertFromTreesBlock(int burnin, double split_threshold) {
+	cout << trees->GetNumTrees() << " tree(s) loaded" << endl;
+	if (burnin >= trees->GetNumTrees())
+		outError("Burnin value is too large");
+	if (burnin > 0)
+	cout << burnin << " beginning tree(s) discarded" << endl;
+	
+	MTreeSet mtrees;
+	for (int i = burnin; i < trees->GetNumTrees(); i++) {
+		stringstream strs(trees->GetTranslatedTreeDescription(i), ios::in | ios::out | ios::app);
+		strs << ";";
+		MTree *tree = mtrees.newTree();
+		bool myrooted = trees->IsRootedTree(i);
+		tree->readTree(strs, myrooted);
+		mtrees.push_back(tree);
+	}
+	mtrees.checkConsistency();
+	//SplitIntMap hash_ss;
+	mtrees.convertSplits(*this, split_threshold, true);
+}
+
+
+
+void SplitGraph::report(ostream &out)
+{
+
+	out << endl;
+	out << "Split network contains ";
+
+	if (size() == 0)
+	{
+		out << "no split" << endl;
+	}
+	else if (size() == 1)
+		out << "one split" << endl;
+	else
+		out << size() << " splits" << endl;
+
+	if (size() == 0)
+		return;
+
+	int k = 0;
+	for (iterator it = begin(); it != end(); it++,k++)
+	{
+		out << '\t' << (k+1) << '\t';
+		(*it)->report(out);
+	}
+}
+
+void SplitGraph::reportConflict(ostream &out)
+{
+	int k = 0;
+	out << "Compatible splits: " << endl;
+	for (iterator i = begin(); i != end(); i++, k++)
+	{
+		out << (k+1) << '\t';
+		int k2 = 1;
+		for (iterator j = begin(); j != end(); j++, k2++)
+			if ( j != i && (*i)->compatible(*(*j)))
+			{
+				out << k2 << " ";
+			}
+		out << endl;
+	}
+}
+
+/**
+	calculate sum of weights of preserved splits in the taxa_set
+	@param taxa_set a set of taxa
+*/
+double SplitGraph::calcWeight(Split &taxa_set)
+{
+	double sum = 0.0;
+	for (iterator it = begin(); it != end(); it++)
+		if ((*it)->preserved(taxa_set))
+			sum += (*it)->getWeight();
+	return sum;
+}
+
+int SplitGraph::countSplits(Split &taxa_set)
+{
+	int cnt = 0;
+	for (iterator it = begin(); it != end(); it++)
+		if ((*it)->preserved(taxa_set))
+			cnt++;
+	return cnt;
+}
+
+int SplitGraph::countInternalSplits(Split &taxa_set)
+{
+	int cnt = 0;
+	for (iterator it = begin(); it != end(); it++)
+		if ((*it)->trivial() < 0 && (*it)->preserved(taxa_set))
+			cnt++;
+	return cnt;
+}
+
+/**
+	calculate sum of weights of all splits
+*/
+double SplitGraph::calcWeight() {
+	double sum = 0.0;
+	for (iterator it = begin(); it != end(); it++)
+		sum += (*it)->weight;
+	return sum;
+}
+
+double SplitGraph::calcTrivialWeight() {
+	double sum = 0.0;
+	for (iterator it = begin(); it != end(); it++)
+		if ((*it)->trivial() >= 0)
+			sum += (*it)->weight;
+	return sum;
+}
+
+
+void SplitGraph::generateTaxaSet(char *filename, int size, int overlap, int times) {
+	ofstream out(filename);
+	if (!out.is_open())
+		outError(ERR_WRITE_OUTPUT, filename);
+	assert(overlap <= size);
+	int total = 2*size - overlap;
+	int ntaxa = getNTaxa();
+	for (int cnt = 0; cnt < times; cnt++) {
+		// generate random taxon index 
+		IntVector ranvec;
+		BoolVector occur(ntaxa, false);
+		int i;
+		for (i = 0; i < total; i++) {
+			int rnum;
+			do { rnum = rand() % ntaxa; } while (occur[rnum]);
+			ranvec.push_back(rnum);
+			occur[rnum] = true;
+		}
+		// now write the first set
+		out << size << endl;
+		for (i = 0; i < size; i++) 
+			out << taxa->GetTaxonLabel(ranvec[i]) << endl;
+		out << endl;
+		// now write the second set
+		out << size << endl;
+		for (i = size-overlap; i < total; i++) 
+			out << taxa->GetTaxonLabel(ranvec[i]) << endl;
+		out << endl;
+	}
+	out.close();
+}
+
+void SplitGraph::calcDistance(char *filename) {
+	ofstream out(filename);
+	if (!out.is_open())
+		outError(ERR_WRITE_OUTPUT, filename);
+	matrix(double) dist;
+	int i, j;	
+	calcDistance(dist);
+
+	int ntaxa = getNTaxa();
+
+	// now write the distances in phylip .dist format
+	out << ntaxa << endl;
+	
+	for (i = 0; i < ntaxa; i++) {
+		out << taxa->GetTaxonLabel(i) << "   ";
+		for (j = 0; j < ntaxa; j++) {
+			out << dist[i][j] << "  ";
+		}
+		out << endl;
+	}
+	out.close();
+}
+
+void SplitGraph::calcDistance(matrix(double) &dist) {
+	int ntaxa = getNTaxa();
+	iterator it;
+	vector<int> vi, vj;
+	vector<int>::iterator i, j;
+
+	dist.resize(ntaxa);
+	for (matrix(double)::iterator di = dist.begin(); di != dist.end(); di++)
+		(*di).resize(ntaxa, 0);
+
+	for (it = begin(); it != end(); it++) {
+		(*it)->getTaxaList(vi, vj);
+		for (i = vi.begin(); i != vi.end(); i++)
+			for (j = vj.begin(); j < vj.end(); j++) {
+				dist[*i][*j] += (*it)->weight;
+				dist[*j][*i] += (*it)->weight;
+			}
+	}
+
+}
+
+
+void SplitGraph::calcDistance(matrix(double) &dist, vector<int> &taxa_order) {
+	int ntaxa = getNTaxa();
+	int i, j;
+
+	matrix(double) my_dist;
+	calcDistance(my_dist);
+	dist.resize(ntaxa);
+	for (i = 0; i < ntaxa; i++) {
+		dist[i].resize(ntaxa);
+		for (j = 0; j < ntaxa; j++)
+			dist[i][j] = my_dist[taxa_order[i]][taxa_order[j]];
+	}
+}
+
+bool SplitGraph::checkCircular(matrix(double) &dist) {
+	return true;
+	int ntaxa = getNTaxa();
+	Split taxa_set(ntaxa, 0.0);
+	for (int i = 0; i < ntaxa-2; i++)
+		for (int j = i+1; j < ntaxa-1; j++)
+			for (int k = j+1; k < ntaxa; k++) {
+				taxa_set.addTaxon(i);
+				taxa_set.addTaxon(j);
+				taxa_set.addTaxon(k);
+				taxa_set.weight = calcWeight(taxa_set);
+				if (fabs(2 * taxa_set.weight - (dist[i][j] + dist[i][k] + dist[j][k])) > 0.0001) {
+					cout << "Taxa " << i << " " << j << " " << k;
+					cout << " do not satisfy circular equation!" << endl;
+					cout << "Weight = " << taxa_set.weight << endl;
+					cout << "Sum dist/2 = " << (dist[i][j] + dist[i][k] + dist[j][k]) / 2.0 << endl;
+					cout << "dist = " << dist[i][j] << " " << dist[i][k] << " "
+						 << dist[j][k] << endl;
+					return false;
+				}
+				taxa_set.removeTaxon(i);
+				taxa_set.removeTaxon(j);
+				taxa_set.removeTaxon(k);
+			}
+	return true;
+}
+
+void SplitGraph::generateCircular(Params &params) {
+	int i, j;
+	int ntaxa = params.sub_size;
+	int num_splits = (params.num_splits > 0) ? params.num_splits : 3 * ntaxa;
+	if (num_splits < ntaxa) 
+		outError(ERR_FEW_SPLITS); 
+
+	taxa = new NxsTaxaBlock();
+	splits = new MSplitsBlock(this);
+
+	double threshold = (ntaxa > 3) ? (double)(num_splits - ntaxa) / (ntaxa*(ntaxa-3)/2) : 0.0;
+
+	// insert all trivial splits
+	for (i = 0; i < ntaxa; i++) {
+		double weight = randomLen(params);
+		Split *sp = new Split(ntaxa, weight);
+		sp->addTaxon(i);
+		push_back(sp);
+		NxsString str = "T";
+		str += (i+1);
+		taxa->AddTaxonLabel(str);
+		splits->cycle.push_back(i);
+	}
+
+	// randomly insert internal splits
+	for (i = 0; i < ntaxa-2 && getNSplits() < num_splits; i++)
+		for (j = i+1; j < ntaxa && j < ntaxa-3+i; j++) {
+			double choice = (double) rand() / RAND_MAX;
+			if (choice > threshold) continue;
+			double weight = randomLen(params);
+			Split *sp = new Split(ntaxa, weight);
+			for (int k = i; k <= j; k++)
+				sp->addTaxon(k);
+			push_back(sp);
+			if (getNSplits() >= num_splits) break;
+		}
+
+	ofstream out(params.user_file);
+	if (!out.is_open()) {
+		outError(ERR_WRITE_OUTPUT, params.user_file);
+	}
+
+	saveFile(out);
+	out.close();
+} 
+
+void SplitGraph::saveFile(ostream &out) {
+	int ntaxa = getNTaxa();
+	int i;
+	out << "#nexus" << endl << endl;
+	out << "BEGIN Taxa;" << endl;
+	out << "DIMENSIONS ntax=" << ntaxa << ";" << endl;
+	out << "TAXLABELS" << endl;
+	for (i = 0; i < ntaxa; i++)
+		out << "[" << i+1 << "] '" << taxa->GetTaxonLabel(i) << "'" << endl;
+	out << ";" << endl << "END; [Taxa]" << endl << endl;
+	out << "BEGIN Splits;" << endl;
+	out << "DIMENSIONS ntax=" << ntaxa << " nsplits=" << getNSplits() << ";" << endl;
+	out << "FORMAT labels=no weights=yes confidences=no intervals=no;" << endl;
+	if (isCircular()) {
+		out << "CYCLE";
+		for (i = 0; i < ntaxa; i++) 
+			out << " " << splits->cycle[i] + 1;
+		out << ";" << endl;
+	}
+	out << "MATRIX" << endl;
+	for (iterator it = begin(); it != end(); it++) {
+		out << "\t" << (*it)->weight << "\t";
+		for (i = 0; i < ntaxa; i++)
+			if ((*it)->containTaxon(i))
+				out << " " << i+1;
+		out << "," << endl;
+	}
+	out << ";" << endl << "END; [Splits]" << endl << endl;
+}
+
+void SplitGraph::scaleWeight(double norm, bool make_int) {
+	for (iterator itg = begin(); itg != end(); itg ++ )
+		if (make_int)
+			(*itg)->setWeight( round((*itg)->getWeight()*norm) );
+		else
+			(*itg)->setWeight( (*itg)->getWeight()*norm);
+}
+
+bool SplitGraph::containSplit(Split &sp) {
+	Split invert_sp(sp);
+	invert_sp.invert();
+	for (iterator it = begin(); it != end(); it++)
+		if ((*(*it)) == sp || (*(*it)) == invert_sp)
+			return true;
+	return false;
+}
+
+
+bool SplitGraph::compatible(Split *sp) {
+	for (iterator it = begin(); it != end(); it++)
+		if (!(*it)->compatible(*sp))
+			return false;
+	return true;
+}
+
+void SplitGraph::findMaxCompatibleSplits(SplitGraph &maxsg) {
+
+	// maximum number of compatible splits = 2n-3!
+	int max_splits = getNTaxa() * 2 - 3;
+
+	// myset will be sorted by weight in descending order
+	SplitSet myset;
+	myset.insert(myset.end(), begin(), end());
+	sort(myset.begin(), myset.end(), splitweightcmp);
+
+	// now build the spset
+	if (!maxsg.taxa)
+		maxsg.taxa = new NxsTaxaBlock();
+	if (!maxsg.splits)
+		maxsg.splits = new MSplitsBlock(&maxsg);
+	if (!maxsg.pda)
+		maxsg.pda = new MPdaBlock(&maxsg);
+
+	for (int i = 0; i < getNTaxa(); i++)
+		maxsg.taxa->AddTaxonLabel(taxa->GetTaxonLabel(i));
+	
+	// make the cycle
+	maxsg.splits->cycle = splits->cycle;
+	// make the splits
+
+	for (SplitSet::iterator it = myset.begin(); it != myset.end(); it++) 
+		if (maxsg.compatible(*it)){
+			maxsg.push_back(new Split(*(*it)));
+			//(*it)->report(cout);
+			if (maxsg.size() >= max_splits)
+				break;
+		}
+	myset.clear();
+}
+
+bool SplitGraph::isWeaklyCompatible() {
+	if (getNSplits() < 3) return true;
+	for (iterator it1 = begin(); it1+2 != end(); it1++)
+		for (iterator it2 = it1+1; it2+1 != end(); it2++)
+			for (iterator it3 = it2+1; it3 != end(); it3++) {
+				Split sp1(*(*it1));
+				Split sp2(*(*it2));
+				Split sp3(*(*it3));
+				Split sp(sp1);
+				sp *= sp2;
+				sp *= sp3;
+				if (sp.isEmpty()) continue;
+				sp1.invert();
+				sp2.invert();
+				sp = sp1;
+				sp *= sp2;
+				sp *= sp3;
+				if (sp.isEmpty()) continue;
+				sp2.invert();
+				sp3.invert();
+				sp = sp1;
+				sp *= sp2;
+				sp *= sp3;
+				if (sp.isEmpty()) continue;
+				sp1.invert();
+				sp2.invert();
+				sp = sp1;
+				sp *= sp2;
+				sp *= sp3;
+				if (sp.isEmpty()) continue;
+				return false;
+			}
+	return true;
+}
+
