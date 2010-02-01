@@ -1,0 +1,135 @@
+\hypertarget{classModelDNA}{
+\section{ModelDNA Class Reference}
+\label{classModelDNA}\index{ModelDNA@{ModelDNA}}
+}
+
+
+{\ttfamily \#include $<$modeldna.h$>$}Inheritance diagram for ModelDNA::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3cm]{classModelDNA}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classModelDNA_a58ee74d1a55b85db517f65bfa865b4c6}{ModelDNA} (const char $\ast$model\_\-name, StateFreqType freq, \hyperlink{classPhyloTree}{PhyloTree} $\ast$tree)
+\item 
+virtual void \hyperlink{classModelDNA_ad7f5b56ae6499a222c01ad81e92e27a2}{init} (const char $\ast$model\_\-name, StateFreqType freq)
+\item 
+void \hyperlink{classModelDNA_a2a44458bfe1d673b6718f2b881682cee}{setRateType} (const char $\ast$rate\_\-spec)
+\item 
+virtual int \hyperlink{classModelDNA_adc73fda51fb0f02049ed891b29c3a951}{getNDim} ()
+\item 
+virtual void \hyperlink{classModelDNA_a46a8fd333239a3937e6116608e20cc78}{writeParameters} (ostream \&out)
+\end{DoxyCompactItemize}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{classModelDNA_a83af5938f0b38371b6b971931b8748c2}{setVariables} (double $\ast$variables)
+\item 
+virtual void \hyperlink{classModelDNA_a4083dfee9b55936019483c5e9a4bb2f7}{getVariables} (double $\ast$variables)
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+string \hyperlink{classModelDNA_a519992726b2a06ec784c036aef64e749}{param\_\-spec}
+\item 
+int \hyperlink{classModelDNA_acb20f55e922b675d5eb110907fe97ea6}{num\_\-params}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+All DNA models are managed here
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh $<$\href{mailto:minh.bui@univie.ac.at}{\tt minh.bui@univie.ac.at}$>$ 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classModelDNA_a58ee74d1a55b85db517f65bfa865b4c6}{
+\index{ModelDNA@{ModelDNA}!ModelDNA@{ModelDNA}}
+\index{ModelDNA@{ModelDNA}!ModelDNA@{ModelDNA}}
+\subsubsection[{ModelDNA}]{\setlength{\rightskip}{0pt plus 5cm}ModelDNA::ModelDNA (const char $\ast$ {\em model\_\-name}, \/  StateFreqType {\em freq}, \/  {\bf PhyloTree} $\ast$ {\em tree})}}
+\label{classModelDNA_a58ee74d1a55b85db517f65bfa865b4c6}
+constructor 
+\begin{DoxyParams}{Parameters}
+\item[{\em model\_\-name}]model name, e.g., JC, HKY. \item[{\em freq}]state frequency type \item[{\em tree}]associated phylogenetic tree \end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classModelDNA_adc73fda51fb0f02049ed891b29c3a951}{
+\index{ModelDNA@{ModelDNA}!getNDim@{getNDim}}
+\index{getNDim@{getNDim}!ModelDNA@{ModelDNA}}
+\subsubsection[{getNDim}]{\setlength{\rightskip}{0pt plus 5cm}int ModelDNA::getNDim ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classModelDNA_adc73fda51fb0f02049ed891b29c3a951}
+return the number of dimensions 
+
+Reimplemented from \hyperlink{classGTRModel_a6e2066898fbbb245596d4a97dd8ee33c}{GTRModel}.\hypertarget{classModelDNA_a4083dfee9b55936019483c5e9a4bb2f7}{
+\index{ModelDNA@{ModelDNA}!getVariables@{getVariables}}
+\index{getVariables@{getVariables}!ModelDNA@{ModelDNA}}
+\subsubsection[{getVariables}]{\setlength{\rightskip}{0pt plus 5cm}void ModelDNA::getVariables (double $\ast$ {\em variables})\hspace{0.3cm}{\ttfamily  \mbox{[}protected, virtual\mbox{]}}}}
+\label{classModelDNA_a4083dfee9b55936019483c5e9a4bb2f7}
+this function is served for the multi-\/dimension optimization. It should assign the model parameters from a vector of variables that is index from 1 (NOTE: not from 0) 
+\begin{DoxyParams}{Parameters}
+\item[{\em variables}]vector of variables, indexed from 1 \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classGTRModel_ae0d291e293dd142d41466650539a2481}{GTRModel}.\hypertarget{classModelDNA_ad7f5b56ae6499a222c01ad81e92e27a2}{
+\index{ModelDNA@{ModelDNA}!init@{init}}
+\index{init@{init}!ModelDNA@{ModelDNA}}
+\subsubsection[{init}]{\setlength{\rightskip}{0pt plus 5cm}void ModelDNA::init (const char $\ast$ {\em model\_\-name}, \/  StateFreqType {\em freq})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classModelDNA_ad7f5b56ae6499a222c01ad81e92e27a2}
+initialization, called automatically by the constructor, no need to call it 
+\begin{DoxyParams}{Parameters}
+\item[{\em model\_\-name}]model name, e.g., JC, HKY. \item[{\em freq}]state frequency type \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classGTRModel_ad0625a75ce5e8f5fca7f65657b2677b8}{GTRModel}.\hypertarget{classModelDNA_a2a44458bfe1d673b6718f2b881682cee}{
+\index{ModelDNA@{ModelDNA}!setRateType@{setRateType}}
+\index{setRateType@{setRateType}!ModelDNA@{ModelDNA}}
+\subsubsection[{setRateType}]{\setlength{\rightskip}{0pt plus 5cm}void ModelDNA::setRateType (const char $\ast$ {\em rate\_\-spec})}}
+\label{classModelDNA_a2a44458bfe1d673b6718f2b881682cee}
+set the substitution rate parameters by a specification 
+\begin{DoxyParams}{Parameters}
+\item[{\em rate\_\-spec}]a string of six letters describing how rates are related \end{DoxyParams}
+\hypertarget{classModelDNA_a83af5938f0b38371b6b971931b8748c2}{
+\index{ModelDNA@{ModelDNA}!setVariables@{setVariables}}
+\index{setVariables@{setVariables}!ModelDNA@{ModelDNA}}
+\subsubsection[{setVariables}]{\setlength{\rightskip}{0pt plus 5cm}void ModelDNA::setVariables (double $\ast$ {\em variables})\hspace{0.3cm}{\ttfamily  \mbox{[}protected, virtual\mbox{]}}}}
+\label{classModelDNA_a83af5938f0b38371b6b971931b8748c2}
+this function is served for the multi-\/dimension optimization. It should pack the model parameters into a vector that is index from 1 (NOTE: not from 0) 
+\begin{DoxyParams}{Parameters}
+\item[{\em variables}](OUT) vector of variables, indexed from 1 \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classGTRModel_a1231f10a523ef280e1862b18b0549aa6}{GTRModel}.\hypertarget{classModelDNA_a46a8fd333239a3937e6116608e20cc78}{
+\index{ModelDNA@{ModelDNA}!writeParameters@{writeParameters}}
+\index{writeParameters@{writeParameters}!ModelDNA@{ModelDNA}}
+\subsubsection[{writeParameters}]{\setlength{\rightskip}{0pt plus 5cm}void ModelDNA::writeParameters (ostream \& {\em out})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classModelDNA_a46a8fd333239a3937e6116608e20cc78}
+write parameters, used with modeltest 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream \end{DoxyParams}
+
+
+Reimplemented from \hyperlink{classGTRModel_a3dd6bc6cb405e76346eac7b813687a20}{GTRModel}.
+
+\subsection{Member Data Documentation}
+\hypertarget{classModelDNA_acb20f55e922b675d5eb110907fe97ea6}{
+\index{ModelDNA@{ModelDNA}!num\_\-params@{num\_\-params}}
+\index{num\_\-params@{num\_\-params}!ModelDNA@{ModelDNA}}
+\subsubsection[{num\_\-params}]{\setlength{\rightskip}{0pt plus 5cm}int {\bf ModelDNA::num\_\-params}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classModelDNA_acb20f55e922b675d5eb110907fe97ea6}
+the number of free parameters \hypertarget{classModelDNA_a519992726b2a06ec784c036aef64e749}{
+\index{ModelDNA@{ModelDNA}!param\_\-spec@{param\_\-spec}}
+\index{param\_\-spec@{param\_\-spec}!ModelDNA@{ModelDNA}}
+\subsubsection[{param\_\-spec}]{\setlength{\rightskip}{0pt plus 5cm}string {\bf ModelDNA::param\_\-spec}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classModelDNA_a519992726b2a06ec784c036aef64e749}
+rate parameter specification, a string of 6 characters 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/modeldna.h\item 
+src/modeldna.cpp\end{DoxyCompactItemize}

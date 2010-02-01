@@ -1,0 +1,72 @@
+\hypertarget{classSplitIntMap}{
+\section{SplitIntMap Class Reference}
+\label{classSplitIntMap}\index{SplitIntMap@{SplitIntMap}}
+}
+
+
+{\ttfamily \#include $<$hashsplitset.h$>$}\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classSplit}{Split} $\ast$ \hyperlink{classSplitIntMap_ae86934b3eb2efeafda55f0e6a26bec09}{findSplit} (\hyperlink{classSplit}{Split} $\ast$sp)
+\item 
+\hyperlink{classSplit}{Split} $\ast$ \hyperlink{classSplitIntMap_abb18e331d550b889839b0f6427636512}{findSplit} (\hyperlink{classSplit}{Split} $\ast$sp, int \&value)
+\item 
+\hypertarget{classSplitIntMap_a922b1cf7f9415bea8a6d7b0b332cf7ab}{
+int {\bfseries getValue} (\hyperlink{classSplit}{Split} $\ast$sp)}
+\label{classSplitIntMap_a922b1cf7f9415bea8a6d7b0b332cf7ab}
+
+\item 
+\hypertarget{classSplitIntMap_a28c14844f8a7a6e381fe115ff49632db}{
+void {\bfseries setValue} (\hyperlink{classSplit}{Split} $\ast$sp, int value)}
+\label{classSplitIntMap_a28c14844f8a7a6e381fe115ff49632db}
+
+\item 
+\hypertarget{classSplitIntMap_aef719a7b617fc527072cc1579a3d6f2d}{
+void {\bfseries eraseSplit} (\hyperlink{classSplit}{Split} $\ast$sp)}
+\label{classSplitIntMap_aef719a7b617fc527072cc1579a3d6f2d}
+
+\item 
+\hypertarget{classSplitIntMap_acb0ff284023aa3b7dd3449a20f49c087}{
+void {\bfseries insertSplit} (\hyperlink{classSplit}{Split} $\ast$sp, int value)}
+\label{classSplitIntMap_acb0ff284023aa3b7dd3449a20f49c087}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\hyperlink{classSplitSet}{SplitSet} for quick search purpose
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler 
+\end{DoxyAuthor}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classSplitIntMap_abb18e331d550b889839b0f6427636512}{
+\index{SplitIntMap@{SplitIntMap}!findSplit@{findSplit}}
+\index{findSplit@{findSplit}!SplitIntMap@{SplitIntMap}}
+\subsubsection[{findSplit}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Split} $\ast$ SplitIntMap::findSplit ({\bf Split} $\ast$ {\em sp}, \/  int \& {\em value})}}
+\label{classSplitIntMap_abb18e331d550b889839b0f6427636512}
+find a split 
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]target split \item[{\em value}](OUT) associated value \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the split containing the same set of taxa with sp, NULL if not found 
+\end{DoxyReturn}
+\hypertarget{classSplitIntMap_ae86934b3eb2efeafda55f0e6a26bec09}{
+\index{SplitIntMap@{SplitIntMap}!findSplit@{findSplit}}
+\index{findSplit@{findSplit}!SplitIntMap@{SplitIntMap}}
+\subsubsection[{findSplit}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Split} $\ast$ SplitIntMap::findSplit ({\bf Split} $\ast$ {\em sp})}}
+\label{classSplitIntMap_ae86934b3eb2efeafda55f0e6a26bec09}
+find a split 
+\begin{DoxyParams}{Parameters}
+\item[{\em sp}]target split \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the split containing the same set of taxa with sp, NULL if not found 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/hashsplitset.h\item 
+src/hashsplitset.cpp\end{DoxyCompactItemize}

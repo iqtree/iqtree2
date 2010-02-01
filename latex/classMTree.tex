@@ -1,0 +1,445 @@
+\hypertarget{classMTree}{
+\section{MTree Class Reference}
+\label{classMTree}\index{MTree@{MTree}}
+}
+
+
+{\ttfamily \#include $<$mtree.h$>$}Inheritance diagram for MTree::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3cm]{classMTree}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classMTree_ac3f7f958f638616e0728cb8e2b865922}{MTree} (const char $\ast$userTreeFile, bool \&is\_\-rooted)
+\item 
+\hyperlink{classMTree_aa5d236fb4f1f1fbead1d167675c236c6}{MTree} (\hyperlink{classMTree}{MTree} \&tree)
+\item 
+\hyperlink{classMTree_aa6a5b154429fee7f9507f8fadce1fe95}{MTree} ()
+\item 
+virtual void \hyperlink{classMTree_ae1f6543f83abd7236065218131d7ea4b}{copyTree} (\hyperlink{classMTree}{MTree} $\ast$tree)
+\item 
+void \hyperlink{classMTree_a055e39797764c95c56dadd039eb4d00e}{init} (const char $\ast$userTreeFile, bool \&is\_\-rooted)
+\item 
+void \hyperlink{classMTree_ad7da0ad44a31e8e98262bd7ad0f494ab}{init} (\hyperlink{classMTree}{MTree} \&tree)
+\item 
+virtual \hyperlink{classMTree_ab56a0aa9ff7ee51f3b2352a0e80ca973}{$\sim$MTree} ()
+\item 
+virtual \hyperlink{classNode}{Node} $\ast$ \hyperlink{classMTree_a5e9560ad6b544027bea362387eb2ec3f}{newNode} (int node\_\-id=-\/1, const char $\ast$node\_\-name=NULL)
+\item 
+\hypertarget{classMTree_a8f1151b6e6d42903b7d02084c8deee43}{
+virtual \hyperlink{classNode}{Node} $\ast$ {\bfseries newNode} (int node\_\-id, int node\_\-name)}
+\label{classMTree_a8f1151b6e6d42903b7d02084c8deee43}
+
+\item 
+void \hyperlink{classMTree_ac186b9f3438e277d476f51803f2d3ce3}{printInfo} (\hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_a96831ce48d235543e2c5ecb5fed65f75}{printTree} (const char $\ast$outfile, int brtype=WT\_\-BR\_\-LEN)
+\item 
+void \hyperlink{classMTree_a55093d54d06d5e8841799a9bf7a0ce87}{printTree} (ostream \&out, int brtype=WT\_\-BR\_\-LEN)
+\item 
+void \hyperlink{classMTree_a822157e8fc26b2d434cc5c1e3129fdf0}{printTree} (ostream \&out, int brtype, \hyperlink{classNode}{Node} $\ast$node, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_ac360bb6736a82da78866093e3a58123d}{printSubTree} (ostream \&out, NodeVector \&subtree)
+\item 
+void \hyperlink{classMTree_a898930e7052de462eac23705647762d8}{printSubTree} (ostream \&out, NodeVector \&subtree, \hyperlink{classNode}{Node} $\ast$node, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_a5d39b487a997d5f5792c19fdc2db0dbe}{printTaxa} (const char $\ast$outfile)
+\item 
+void \hyperlink{classMTree_a192b058b88470afc75cc588d8c6ebf3d}{printTaxa} (ostream \&out, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_a4c243dff35cd7214acd606ebd59f6bf4}{printTaxa} (ostream \&out, NodeVector \&subtree)
+\item 
+void \hyperlink{classMTree_abc9c58ea59b80013b0581fe3644c9149}{readTree} (const char $\ast$infile, bool \&is\_\-rooted)
+\item 
+void \hyperlink{classMTree_a7ca6e031f4df4f38bad9f45a5d4891fb}{readTree} (istream \&in, bool \&is\_\-rooted)
+\item 
+void \hyperlink{classMTree_a6fa426401166681959012177d0e66f39}{parseFile} (istream \&infile, char \&ch, \hyperlink{classNode}{Node} $\ast$\&\hyperlink{classMTree_af29314a803a9e49bdddd4f5e374bd35e}{root}, double \&branch\_\-len)
+\item 
+void \hyperlink{classMTree_ad856b7db2e4871e455e1e69c4d5767ae}{initializeTree} (\hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+double \hyperlink{classMTree_a82b21a2f17affae4922b690ea6d2837b}{treeLength} (\hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_ab0f71f4d94294490f3afe53873d394b5}{getTaxaID} (vector$<$ int $>$ \&taxa, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_af8a50c7ddd8edaf62e10c14e719c6b05}{getTaxa} (NodeVector \&taxa, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_a7552f9cfb570e529ba25a4d6f223ea16}{getTaxaName} (vector$<$ \hyperlink{classNxsString}{NxsString} $>$ \&taxname, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_a26dd819152fe104a747b279619c0e844}{getInternalNodes} (NodeVector \&nodes, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+\hyperlink{classNode}{Node} $\ast$ \hyperlink{classMTree_a9bccf760c31c8eb021c4c93eb40575ed}{findNodeName} (string \&name, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+\hyperlink{classNode}{Node} $\ast$ \hyperlink{classMTree_a391cb6c0dc914177caa89a42a5fb8dcc}{findNodeID} (int id, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_a2f178b012e999e855bafa053a8caba8f}{scaleLength} (double norm, bool make\_\-int=false, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_a3d183600999c6af85817be3959b43ca8}{scaleCladeSupport} (double norm, bool make\_\-int=false, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_a95c626b2d8172ad06fabab353a77346e}{convertSplits} (\hyperlink{classSplitGraph}{SplitGraph} \&sg)
+\item 
+void \hyperlink{classMTree_a491979300fde5d4fac2f820c6ae327af}{convertSplits} (vector$<$ \hyperlink{classNxsString}{NxsString} $>$ \&taxname, \hyperlink{classSplitGraph}{SplitGraph} \&sg)
+\item 
+void \hyperlink{classMTree_a4f9af679d8d53b11044343f6a394e9ab}{convertSplits} (\hyperlink{classSplitGraph}{SplitGraph} \&sg, \hyperlink{classSplit}{Split} $\ast$resp, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_abd4b8cde5e2244eac599a42b33f21698}{convertToTree} (\hyperlink{classSplitGraph}{SplitGraph} \&sg)
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classNode}{Node} $\ast$ \hyperlink{classMTree_af29314a803a9e49bdddd4f5e374bd35e}{root}
+\item 
+int \hyperlink{classMTree_a8fe3d41dd96bf4507c60f2c73dcb1026}{leafNum}
+\item 
+int \hyperlink{classMTree_a1b8904ca0e0218081a92233cbe21478c}{nodeNum}
+\item 
+bool \hyperlink{classMTree_ae9131924ff162d9cda80333b6f6242b4}{rooted}
+\end{DoxyCompactItemize}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classMTree_ad81304aa2535e3e43f28eadcb5471c07}{freeNode} (\hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+void \hyperlink{classMTree_a4ba0e04e2f9a71b98eb2c640a1931fa7}{checkValidTree} (bool \&stop, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+General-\/purposed tree \begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classMTree_ac3f7f958f638616e0728cb8e2b865922}{
+\index{MTree@{MTree}!MTree@{MTree}}
+\index{MTree@{MTree}!MTree@{MTree}}
+\subsubsection[{MTree}]{\setlength{\rightskip}{0pt plus 5cm}MTree::MTree (const char $\ast$ {\em userTreeFile}, \/  bool \& {\em is\_\-rooted})}}
+\label{classMTree_ac3f7f958f638616e0728cb8e2b865922}
+constructor, read tree from user file 
+\begin{DoxyParams}{Parameters}
+\item[{\em userTreeFile}]the name of the user tree \item[{\em is\_\-rooted}](IN/OUT) true if tree is rooted \end{DoxyParams}
+\hypertarget{classMTree_aa5d236fb4f1f1fbead1d167675c236c6}{
+\index{MTree@{MTree}!MTree@{MTree}}
+\index{MTree@{MTree}!MTree@{MTree}}
+\subsubsection[{MTree}]{\setlength{\rightskip}{0pt plus 5cm}MTree::MTree ({\bf MTree} \& {\em tree})}}
+\label{classMTree_aa5d236fb4f1f1fbead1d167675c236c6}
+constructor, get from another tree 
+\begin{DoxyParams}{Parameters}
+\item[{\em tree}]another \hyperlink{classMTree}{MTree}\end{DoxyParams}
+constructor, get from another tree \hypertarget{classMTree_aa6a5b154429fee7f9507f8fadce1fe95}{
+\index{MTree@{MTree}!MTree@{MTree}}
+\index{MTree@{MTree}!MTree@{MTree}}
+\subsubsection[{MTree}]{\setlength{\rightskip}{0pt plus 5cm}MTree::MTree ()}}
+\label{classMTree_aa6a5b154429fee7f9507f8fadce1fe95}
+constructor \hypertarget{classMTree_ab56a0aa9ff7ee51f3b2352a0e80ca973}{
+\index{MTree@{MTree}!$\sim$MTree@{$\sim$MTree}}
+\index{$\sim$MTree@{$\sim$MTree}!MTree@{MTree}}
+\subsubsection[{$\sim$MTree}]{\setlength{\rightskip}{0pt plus 5cm}MTree::$\sim$MTree ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classMTree_ab56a0aa9ff7ee51f3b2352a0e80ca973}
+destructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classMTree_a4ba0e04e2f9a71b98eb2c640a1931fa7}{
+\index{MTree@{MTree}!checkValidTree@{checkValidTree}}
+\index{checkValidTree@{checkValidTree}!MTree@{MTree}}
+\subsubsection[{checkValidTree}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::checkValidTree (bool \& {\em stop}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classMTree_a4ba0e04e2f9a71b98eb2c640a1931fa7}
+check tree is bifurcating tree (every leaf with level 1 or 3) 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \item[{\em stop}](IN/OUT) set = true to stop the search\end{DoxyParams}
+check tree is bifurcating tree (every leaf with level 1 or 3) \hypertarget{classMTree_a4f9af679d8d53b11044343f6a394e9ab}{
+\index{MTree@{MTree}!convertSplits@{convertSplits}}
+\index{convertSplits@{convertSplits}!MTree@{MTree}}
+\subsubsection[{convertSplits}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::convertSplits ({\bf SplitGraph} \& {\em sg}, \/  {\bf Split} $\ast$ {\em resp}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_a4f9af679d8d53b11044343f6a394e9ab}
+convert the tree into the split system, iterative procedure 
+\begin{DoxyParams}{Parameters}
+\item[{\em sg}](OUT) resulting split graph \item[{\em resp}](internal) set of taxa below node \item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \end{DoxyParams}
+\hypertarget{classMTree_a491979300fde5d4fac2f820c6ae327af}{
+\index{MTree@{MTree}!convertSplits@{convertSplits}}
+\index{convertSplits@{convertSplits}!MTree@{MTree}}
+\subsubsection[{convertSplits}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::convertSplits (vector$<$ {\bf NxsString} $>$ \& {\em taxname}, \/  {\bf SplitGraph} \& {\em sg})}}
+\label{classMTree_a491979300fde5d4fac2f820c6ae327af}
+convert the tree into the split system 
+\begin{DoxyParams}{Parameters}
+\item[{\em taxname}]certain taxa name \item[{\em sg}](OUT) resulting split graph \end{DoxyParams}
+\hypertarget{classMTree_a95c626b2d8172ad06fabab353a77346e}{
+\index{MTree@{MTree}!convertSplits@{convertSplits}}
+\index{convertSplits@{convertSplits}!MTree@{MTree}}
+\subsubsection[{convertSplits}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::convertSplits ({\bf SplitGraph} \& {\em sg})}}
+\label{classMTree_a95c626b2d8172ad06fabab353a77346e}
+convert the tree into the split system 
+\begin{DoxyParams}{Parameters}
+\item[{\em sg}](OUT) resulting split graph \end{DoxyParams}
+\hypertarget{classMTree_abd4b8cde5e2244eac599a42b33f21698}{
+\index{MTree@{MTree}!convertToTree@{convertToTree}}
+\index{convertToTree@{convertToTree}!MTree@{MTree}}
+\subsubsection[{convertToTree}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::convertToTree ({\bf SplitGraph} \& {\em sg})}}
+\label{classMTree_abd4b8cde5e2244eac599a42b33f21698}
+convert compatible split set into tree 
+\begin{DoxyParams}{Parameters}
+\item[{\em sg}]source split graph \end{DoxyParams}
+\hypertarget{classMTree_ae1f6543f83abd7236065218131d7ea4b}{
+\index{MTree@{MTree}!copyTree@{copyTree}}
+\index{copyTree@{copyTree}!MTree@{MTree}}
+\subsubsection[{copyTree}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::copyTree ({\bf MTree} $\ast$ {\em tree})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classMTree_ae1f6543f83abd7236065218131d7ea4b}
+copy the tree structure into this tree 
+\begin{DoxyParams}{Parameters}
+\item[{\em tree}]the tree to copy \end{DoxyParams}
+\hypertarget{classMTree_a391cb6c0dc914177caa89a42a5fb8dcc}{
+\index{MTree@{MTree}!findNodeID@{findNodeID}}
+\index{findNodeID@{findNodeID}!MTree@{MTree}}
+\subsubsection[{findNodeID}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Node} $\ast$ MTree::findNodeID (int {\em id}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_a391cb6c0dc914177caa89a42a5fb8dcc}
+find a node with corresponding ID 
+\begin{DoxyParams}{Parameters}
+\item[{\em id}]node ID \item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+node if found, otherwise NULL 
+\end{DoxyReturn}
+\hypertarget{classMTree_a9bccf760c31c8eb021c4c93eb40575ed}{
+\index{MTree@{MTree}!findNodeName@{findNodeName}}
+\index{findNodeName@{findNodeName}!MTree@{MTree}}
+\subsubsection[{findNodeName}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Node} $\ast$ MTree::findNodeName (string \& {\em name}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_a9bccf760c31c8eb021c4c93eb40575ed}
+find a node with corresponding name 
+\begin{DoxyParams}{Parameters}
+\item[{\em name}]node name \item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+node if found, otherwise NULL 
+\end{DoxyReturn}
+\hypertarget{classMTree_ad81304aa2535e3e43f28eadcb5471c07}{
+\index{MTree@{MTree}!freeNode@{freeNode}}
+\index{freeNode@{freeNode}!MTree@{MTree}}
+\subsubsection[{freeNode}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::freeNode ({\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classMTree_ad81304aa2535e3e43f28eadcb5471c07}
+release the nemory. 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \end{DoxyParams}
+\hypertarget{classMTree_a26dd819152fe104a747b279619c0e844}{
+\index{MTree@{MTree}!getInternalNodes@{getInternalNodes}}
+\index{getInternalNodes@{getInternalNodes}!MTree@{MTree}}
+\subsubsection[{getInternalNodes}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::getInternalNodes (NodeVector \& {\em nodes}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_a26dd819152fe104a747b279619c0e844}
+get the descending internal nodes below the node 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \item[{\em nodes}](OUT) vector of internal nodes \end{DoxyParams}
+\hypertarget{classMTree_af8a50c7ddd8edaf62e10c14e719c6b05}{
+\index{MTree@{MTree}!getTaxa@{getTaxa}}
+\index{getTaxa@{getTaxa}!MTree@{MTree}}
+\subsubsection[{getTaxa}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::getTaxa (NodeVector \& {\em taxa}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_af8a50c7ddd8edaf62e10c14e719c6b05}
+get the descending taxa below the node 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \item[{\em taxa}](OUT) vector of taxa \end{DoxyParams}
+\hypertarget{classMTree_ab0f71f4d94294490f3afe53873d394b5}{
+\index{MTree@{MTree}!getTaxaID@{getTaxaID}}
+\index{getTaxaID@{getTaxaID}!MTree@{MTree}}
+\subsubsection[{getTaxaID}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::getTaxaID (vector$<$ int $>$ \& {\em taxa}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_ab0f71f4d94294490f3afe53873d394b5}
+get the descending taxa ID list below the node 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \item[{\em taxa}](OUT) taxa ID \end{DoxyParams}
+\hypertarget{classMTree_a7552f9cfb570e529ba25a4d6f223ea16}{
+\index{MTree@{MTree}!getTaxaName@{getTaxaName}}
+\index{getTaxaName@{getTaxaName}!MTree@{MTree}}
+\subsubsection[{getTaxaName}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::getTaxaName (vector$<$ {\bf NxsString} $>$ \& {\em taxname}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_a7552f9cfb570e529ba25a4d6f223ea16}
+get the descending taxa names below the node 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \item[{\em taxname}](OUT) taxa name \end{DoxyParams}
+\hypertarget{classMTree_ad7da0ad44a31e8e98262bd7ad0f494ab}{
+\index{MTree@{MTree}!init@{init}}
+\index{init@{init}!MTree@{MTree}}
+\subsubsection[{init}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::init ({\bf MTree} \& {\em tree})}}
+\label{classMTree_ad7da0ad44a31e8e98262bd7ad0f494ab}
+initialize tree, get from another tree 
+\begin{DoxyParams}{Parameters}
+\item[{\em tree}]another \hyperlink{classMTree}{MTree} \end{DoxyParams}
+
+
+Reimplemented in \hyperlink{classPDTree_a423ef933e7940c5c745e27898a394bfc}{PDTree}.\hypertarget{classMTree_a055e39797764c95c56dadd039eb4d00e}{
+\index{MTree@{MTree}!init@{init}}
+\index{init@{init}!MTree@{MTree}}
+\subsubsection[{init}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::init (const char $\ast$ {\em userTreeFile}, \/  bool \& {\em is\_\-rooted})}}
+\label{classMTree_a055e39797764c95c56dadd039eb4d00e}
+initialize the tree from a NEWICK tree file 
+\begin{DoxyParams}{Parameters}
+\item[{\em userTreeFile}]the name of the user tree \item[{\em is\_\-rooted}](IN/OUT) true if tree is rooted \end{DoxyParams}
+\hypertarget{classMTree_ad856b7db2e4871e455e1e69c4d5767ae}{
+\index{MTree@{MTree}!initializeTree@{initializeTree}}
+\index{initializeTree@{initializeTree}!MTree@{MTree}}
+\subsubsection[{initializeTree}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::initializeTree ({\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_ad856b7db2e4871e455e1e69c4d5767ae}
+initialize tree, set node structure 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \end{DoxyParams}
+\hypertarget{classMTree_a5e9560ad6b544027bea362387eb2ec3f}{
+\index{MTree@{MTree}!newNode@{newNode}}
+\index{newNode@{newNode}!MTree@{MTree}}
+\subsubsection[{newNode}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Node} $\ast$ MTree::newNode (int {\em node\_\-id} = {\ttfamily -\/1}, \/  const char $\ast$ {\em node\_\-name} = {\ttfamily NULL})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classMTree_a5e9560ad6b544027bea362387eb2ec3f}
+allocate a new node. Override this if you have an inherited \hyperlink{classNode}{Node} class. 
+\begin{DoxyParams}{Parameters}
+\item[{\em node\_\-id}]node ID \item[{\em node\_\-name}]node name \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+a new node 
+\end{DoxyReturn}
+
+
+Reimplemented in \hyperlink{classPhyloTree_a08daeabbb3fa596916aa48834e0b152d}{PhyloTree}.\hypertarget{classMTree_a6fa426401166681959012177d0e66f39}{
+\index{MTree@{MTree}!parseFile@{parseFile}}
+\index{parseFile@{parseFile}!MTree@{MTree}}
+\subsubsection[{parseFile}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::parseFile (istream \& {\em infile}, \/  char \& {\em ch}, \/  {\bf Node} $\ast$\& {\em root}, \/  double \& {\em branch\_\-len})}}
+\label{classMTree_a6fa426401166681959012177d0e66f39}
+parse the tree from the input file in newick format 
+\begin{DoxyParams}{Parameters}
+\item[{\em infile}]the input file \item[{\em ch}](IN/OUT) current char \item[{\em root}](IN/OUT) the root of the (sub)tree \item[{\em branch\_\-len}](OUT) branch length associated to the current root \end{DoxyParams}
+\hypertarget{classMTree_ac186b9f3438e277d476f51803f2d3ce3}{
+\index{MTree@{MTree}!printInfo@{printInfo}}
+\index{printInfo@{printInfo}!MTree@{MTree}}
+\subsubsection[{printInfo}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::printInfo ({\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_ac186b9f3438e277d476f51803f2d3ce3}
+print information 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \end{DoxyParams}
+\hypertarget{classMTree_a898930e7052de462eac23705647762d8}{
+\index{MTree@{MTree}!printSubTree@{printSubTree}}
+\index{printSubTree@{printSubTree}!MTree@{MTree}}
+\subsubsection[{printSubTree}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::printSubTree (ostream \& {\em out}, \/  NodeVector \& {\em subtree}, \/  {\bf Node} $\ast$ {\em node}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_a898930e7052de462eac23705647762d8}
+print the sub-\/tree to the output file in newick format 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]the output file. \item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \item[{\em subtree}]list of nodes (internal \& external) contained in the new tree \end{DoxyParams}
+\hypertarget{classMTree_ac360bb6736a82da78866093e3a58123d}{
+\index{MTree@{MTree}!printSubTree@{printSubTree}}
+\index{printSubTree@{printSubTree}!MTree@{MTree}}
+\subsubsection[{printSubTree}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::printSubTree (ostream \& {\em out}, \/  NodeVector \& {\em subtree})}}
+\label{classMTree_ac360bb6736a82da78866093e3a58123d}
+print the sub-\/tree to the output file in newick format 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]the output file. \item[{\em subtree}]list of nodes (internal \& external) contained in the new tree \end{DoxyParams}
+\hypertarget{classMTree_a4c243dff35cd7214acd606ebd59f6bf4}{
+\index{MTree@{MTree}!printTaxa@{printTaxa}}
+\index{printTaxa@{printTaxa}!MTree@{MTree}}
+\subsubsection[{printTaxa}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::printTaxa (ostream \& {\em out}, \/  NodeVector \& {\em subtree})}}
+\label{classMTree_a4c243dff35cd7214acd606ebd59f6bf4}
+print the taxa set of a given subtree 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]the output file. \item[{\em subtree}]the subtree vector \end{DoxyParams}
+\hypertarget{classMTree_a192b058b88470afc75cc588d8c6ebf3d}{
+\index{MTree@{MTree}!printTaxa@{printTaxa}}
+\index{printTaxa@{printTaxa}!MTree@{MTree}}
+\subsubsection[{printTaxa}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::printTaxa (ostream \& {\em out}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_a192b058b88470afc75cc588d8c6ebf3d}
+print the taxa set to the output file 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]the output file. \item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \end{DoxyParams}
+\hypertarget{classMTree_a5d39b487a997d5f5792c19fdc2db0dbe}{
+\index{MTree@{MTree}!printTaxa@{printTaxa}}
+\index{printTaxa@{printTaxa}!MTree@{MTree}}
+\subsubsection[{printTaxa}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::printTaxa (const char $\ast$ {\em outfile})}}
+\label{classMTree_a5d39b487a997d5f5792c19fdc2db0dbe}
+print the taxa set to the output file 
+\begin{DoxyParams}{Parameters}
+\item[{\em outfile}]the output file. \end{DoxyParams}
+\hypertarget{classMTree_a822157e8fc26b2d434cc5c1e3129fdf0}{
+\index{MTree@{MTree}!printTree@{printTree}}
+\index{printTree@{printTree}!MTree@{MTree}}
+\subsubsection[{printTree}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::printTree (ostream \& {\em out}, \/  int {\em brtype}, \/  {\bf Node} $\ast$ {\em node}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_a822157e8fc26b2d434cc5c1e3129fdf0}
+print the tree to the output file in newick format 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]the output file. \item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \item[{\em brtype}]type of branch to print \end{DoxyParams}
+\hypertarget{classMTree_a55093d54d06d5e8841799a9bf7a0ce87}{
+\index{MTree@{MTree}!printTree@{printTree}}
+\index{printTree@{printTree}!MTree@{MTree}}
+\subsubsection[{printTree}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::printTree (ostream \& {\em out}, \/  int {\em brtype} = {\ttfamily WT\_\-BR\_\-LEN})}}
+\label{classMTree_a55093d54d06d5e8841799a9bf7a0ce87}
+print the tree to the output file in newick format 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]the output stream. \item[{\em brtype}]type of branch to print \end{DoxyParams}
+\hypertarget{classMTree_a96831ce48d235543e2c5ecb5fed65f75}{
+\index{MTree@{MTree}!printTree@{printTree}}
+\index{printTree@{printTree}!MTree@{MTree}}
+\subsubsection[{printTree}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::printTree (const char $\ast$ {\em outfile}, \/  int {\em brtype} = {\ttfamily WT\_\-BR\_\-LEN})}}
+\label{classMTree_a96831ce48d235543e2c5ecb5fed65f75}
+print the tree to the output file in newick format 
+\begin{DoxyParams}{Parameters}
+\item[{\em outfile}]the output file. \item[{\em brtype}]type of branch to print \end{DoxyParams}
+\hypertarget{classMTree_a7ca6e031f4df4f38bad9f45a5d4891fb}{
+\index{MTree@{MTree}!readTree@{readTree}}
+\index{readTree@{readTree}!MTree@{MTree}}
+\subsubsection[{readTree}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::readTree (istream \& {\em in}, \/  bool \& {\em is\_\-rooted})}}
+\label{classMTree_a7ca6e031f4df4f38bad9f45a5d4891fb}
+read the tree from the ifstream in newick format 
+\begin{DoxyParams}{Parameters}
+\item[{\em in}]the input stream. \item[{\em is\_\-rooted}](IN/OUT) true if tree is rooted \end{DoxyParams}
+\hypertarget{classMTree_abc9c58ea59b80013b0581fe3644c9149}{
+\index{MTree@{MTree}!readTree@{readTree}}
+\index{readTree@{readTree}!MTree@{MTree}}
+\subsubsection[{readTree}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::readTree (const char $\ast$ {\em infile}, \/  bool \& {\em is\_\-rooted})}}
+\label{classMTree_abc9c58ea59b80013b0581fe3644c9149}
+read the tree from the input file in newick format 
+\begin{DoxyParams}{Parameters}
+\item[{\em infile}]the input file file. \item[{\em is\_\-rooted}](IN/OUT) true if tree is rooted \end{DoxyParams}
+\hypertarget{classMTree_a3d183600999c6af85817be3959b43ca8}{
+\index{MTree@{MTree}!scaleCladeSupport@{scaleCladeSupport}}
+\index{scaleCladeSupport@{scaleCladeSupport}!MTree@{MTree}}
+\subsubsection[{scaleCladeSupport}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::scaleCladeSupport (double {\em norm}, \/  bool {\em make\_\-int} = {\ttfamily false}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_a3d183600999c6af85817be3959b43ca8}
+scale the clade supports of all internal nodes to a norm factor 
+\begin{DoxyParams}{Parameters}
+\item[{\em norm}]normalized factor \item[{\em make\_\-int}]TRUE to round lengths to int, FALSE otherwise \item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \end{DoxyParams}
+\hypertarget{classMTree_a2f178b012e999e855bafa053a8caba8f}{
+\index{MTree@{MTree}!scaleLength@{scaleLength}}
+\index{scaleLength@{scaleLength}!MTree@{MTree}}
+\subsubsection[{scaleLength}]{\setlength{\rightskip}{0pt plus 5cm}void MTree::scaleLength (double {\em norm}, \/  bool {\em make\_\-int} = {\ttfamily false}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_a2f178b012e999e855bafa053a8caba8f}
+scale the length of all branches to a norm factor 
+\begin{DoxyParams}{Parameters}
+\item[{\em norm}]normalized factor \item[{\em make\_\-int}]TRUE to round lengths to int, FALSE otherwise \item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \end{DoxyParams}
+\hypertarget{classMTree_a82b21a2f17affae4922b690ea6d2837b}{
+\index{MTree@{MTree}!treeLength@{treeLength}}
+\index{treeLength@{treeLength}!MTree@{MTree}}
+\subsubsection[{treeLength}]{\setlength{\rightskip}{0pt plus 5cm}double MTree::treeLength ({\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classMTree_a82b21a2f17affae4922b690ea6d2837b}
+\begin{DoxyReturn}{Returns}
+sum of all branch lengths 
+\end{DoxyReturn}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \end{DoxyParams}
+
+
+\subsection{Member Data Documentation}
+\hypertarget{classMTree_a8fe3d41dd96bf4507c60f2c73dcb1026}{
+\index{MTree@{MTree}!leafNum@{leafNum}}
+\index{leafNum@{leafNum}!MTree@{MTree}}
+\subsubsection[{leafNum}]{\setlength{\rightskip}{0pt plus 5cm}int {\bf MTree::leafNum}}}
+\label{classMTree_a8fe3d41dd96bf4507c60f2c73dcb1026}
+number of leaves \hypertarget{classMTree_a1b8904ca0e0218081a92233cbe21478c}{
+\index{MTree@{MTree}!nodeNum@{nodeNum}}
+\index{nodeNum@{nodeNum}!MTree@{MTree}}
+\subsubsection[{nodeNum}]{\setlength{\rightskip}{0pt plus 5cm}int {\bf MTree::nodeNum}}}
+\label{classMTree_a1b8904ca0e0218081a92233cbe21478c}
+total number of nodes in the tree \hypertarget{classMTree_af29314a803a9e49bdddd4f5e374bd35e}{
+\index{MTree@{MTree}!root@{root}}
+\index{root@{root}!MTree@{MTree}}
+\subsubsection[{root}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Node}$\ast$ {\bf MTree::root}}}
+\label{classMTree_af29314a803a9e49bdddd4f5e374bd35e}
+root node. \hypertarget{classMTree_ae9131924ff162d9cda80333b6f6242b4}{
+\index{MTree@{MTree}!rooted@{rooted}}
+\index{rooted@{rooted}!MTree@{MTree}}
+\subsubsection[{rooted}]{\setlength{\rightskip}{0pt plus 5cm}bool {\bf MTree::rooted}}}
+\label{classMTree_ae9131924ff162d9cda80333b6f6242b4}
+user tree file name TRUE if the tree is rooted 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/mtree.h\item 
+src/mtree.cpp\end{DoxyCompactItemize}

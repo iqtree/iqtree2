@@ -1,0 +1,157 @@
+\hypertarget{classRateHeterogeneity}{
+\section{RateHeterogeneity Class Reference}
+\label{classRateHeterogeneity}\index{RateHeterogeneity@{RateHeterogeneity}}
+}
+
+
+{\ttfamily \#include $<$rateheterogeneity.h$>$}Inheritance diagram for RateHeterogeneity::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=4cm]{classRateHeterogeneity}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classRateHeterogeneity_a9a1e70b493cfd7ce53bfbce242bbcb46}{RateHeterogeneity} ()
+\item 
+virtual \hyperlink{classRateHeterogeneity_a695587b35c973b88c6d669dd00ffd791}{$\sim$RateHeterogeneity} ()
+\item 
+void \hyperlink{classRateHeterogeneity_a5333e4d51b14b79dbaa32df641891cbb}{setTree} (\hyperlink{classPhyloTree}{PhyloTree} $\ast$tree)
+\item 
+virtual int \hyperlink{classRateHeterogeneity_ac61808650eab5d2187f3cc9b20694f80}{getNRate} ()
+\item 
+virtual double \hyperlink{classRateHeterogeneity_a87546419c324a62d31055d564ea07f5e}{getRate} (int category)
+\item 
+virtual double \hyperlink{classRateHeterogeneity_ada76d84ed7f66ddde02734d9c72f4e7b}{getPInvar} ()
+\item 
+virtual double \hyperlink{classRateHeterogeneity_a1305d5b8481dd5a2482917ddb5fe57bd}{optimizeParameters} ()
+\item 
+virtual void \hyperlink{classRateHeterogeneity_a520772859d465036b6620bdbf2977efe}{writeInfo} (ostream \&out)
+\item 
+virtual void \hyperlink{classRateHeterogeneity_ad2832e686971cf1f2cac2a6f842a3550}{writeParameters} (ostream \&out)
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+string \hyperlink{classRateHeterogeneity_aec54d9090abff011fb0c437d51b1d759}{name}
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classPhyloTree}{PhyloTree} $\ast$ \hyperlink{classRateHeterogeneity_a15901cd491ded27a2d8cd4ddb731e647}{phylo\_\-tree}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+class for among-\/site rate heterogeneity, the default is homogeneous (equal) rate model
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh $<$\href{mailto:minh.bui@univie.ac.at}{\tt minh.bui@univie.ac.at}$>$ 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classRateHeterogeneity_a9a1e70b493cfd7ce53bfbce242bbcb46}{
+\index{RateHeterogeneity@{RateHeterogeneity}!RateHeterogeneity@{RateHeterogeneity}}
+\index{RateHeterogeneity@{RateHeterogeneity}!RateHeterogeneity@{RateHeterogeneity}}
+\subsubsection[{RateHeterogeneity}]{\setlength{\rightskip}{0pt plus 5cm}RateHeterogeneity::RateHeterogeneity ()}}
+\label{classRateHeterogeneity_a9a1e70b493cfd7ce53bfbce242bbcb46}
+constructor \hypertarget{classRateHeterogeneity_a695587b35c973b88c6d669dd00ffd791}{
+\index{RateHeterogeneity@{RateHeterogeneity}!$\sim$RateHeterogeneity@{$\sim$RateHeterogeneity}}
+\index{$\sim$RateHeterogeneity@{$\sim$RateHeterogeneity}!RateHeterogeneity@{RateHeterogeneity}}
+\subsubsection[{$\sim$RateHeterogeneity}]{\setlength{\rightskip}{0pt plus 5cm}RateHeterogeneity::$\sim$RateHeterogeneity ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classRateHeterogeneity_a695587b35c973b88c6d669dd00ffd791}
+destructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classRateHeterogeneity_ac61808650eab5d2187f3cc9b20694f80}{
+\index{RateHeterogeneity@{RateHeterogeneity}!getNRate@{getNRate}}
+\index{getNRate@{getNRate}!RateHeterogeneity@{RateHeterogeneity}}
+\subsubsection[{getNRate}]{\setlength{\rightskip}{0pt plus 5cm}virtual int RateHeterogeneity::getNRate ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classRateHeterogeneity_ac61808650eab5d2187f3cc9b20694f80}
+get the number of rate categories. The default returns 1 category since it is homogeneous model \begin{DoxyReturn}{Returns}
+the number of rate categories 
+\end{DoxyReturn}
+
+
+Reimplemented in \hyperlink{classRateGamma_a115dac63aaa8fc7ac256304506ef3307}{RateGamma}.\hypertarget{classRateHeterogeneity_ada76d84ed7f66ddde02734d9c72f4e7b}{
+\index{RateHeterogeneity@{RateHeterogeneity}!getPInvar@{getPInvar}}
+\index{getPInvar@{getPInvar}!RateHeterogeneity@{RateHeterogeneity}}
+\subsubsection[{getPInvar}]{\setlength{\rightskip}{0pt plus 5cm}virtual double RateHeterogeneity::getPInvar ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classRateHeterogeneity_ada76d84ed7f66ddde02734d9c72f4e7b}
+get the proportion of invariable sites. Default returns 0.0 since it is homogeneous model \begin{DoxyReturn}{Returns}
+the proportion of invariable sites 
+\end{DoxyReturn}
+
+
+Reimplemented in \hyperlink{classRateInvar_a750aa513c32453d28cc50b14bb31a9a7}{RateInvar}.\hypertarget{classRateHeterogeneity_a87546419c324a62d31055d564ea07f5e}{
+\index{RateHeterogeneity@{RateHeterogeneity}!getRate@{getRate}}
+\index{getRate@{getRate}!RateHeterogeneity@{RateHeterogeneity}}
+\subsubsection[{getRate}]{\setlength{\rightskip}{0pt plus 5cm}virtual double RateHeterogeneity::getRate (int {\em category})\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classRateHeterogeneity_a87546419c324a62d31055d564ea07f5e}
+get the rate of a specified category. Default returns 1.0 since it is homogeneous model 
+\begin{DoxyParams}{Parameters}
+\item[{\em category}]category ID from 0 to category-\/1 \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the rate of the specified category 
+\end{DoxyReturn}
+
+
+Reimplemented in \hyperlink{classRateGamma_a2e459469fd578b9d5d8bb18000d9d1d9}{RateGamma}.\hypertarget{classRateHeterogeneity_a1305d5b8481dd5a2482917ddb5fe57bd}{
+\index{RateHeterogeneity@{RateHeterogeneity}!optimizeParameters@{optimizeParameters}}
+\index{optimizeParameters@{optimizeParameters}!RateHeterogeneity@{RateHeterogeneity}}
+\subsubsection[{optimizeParameters}]{\setlength{\rightskip}{0pt plus 5cm}virtual double RateHeterogeneity::optimizeParameters ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classRateHeterogeneity_a1305d5b8481dd5a2482917ddb5fe57bd}
+optimize parameters. Default does nothing \begin{DoxyReturn}{Returns}
+the best likelihood 
+\end{DoxyReturn}
+
+
+Reimplemented in \hyperlink{classRateGamma_aadba870d743295ef057f9c78ac7fdd06}{RateGamma}, \hyperlink{classRateGammaInvar_ab72a2559cea978d312a243d521c2abef}{RateGammaInvar}, and \hyperlink{classRateInvar_a593bcac4c771b4b69c2f286ed8789793}{RateInvar}.\hypertarget{classRateHeterogeneity_a5333e4d51b14b79dbaa32df641891cbb}{
+\index{RateHeterogeneity@{RateHeterogeneity}!setTree@{setTree}}
+\index{setTree@{setTree}!RateHeterogeneity@{RateHeterogeneity}}
+\subsubsection[{setTree}]{\setlength{\rightskip}{0pt plus 5cm}void RateHeterogeneity::setTree ({\bf PhyloTree} $\ast$ {\em tree})}}
+\label{classRateHeterogeneity_a5333e4d51b14b79dbaa32df641891cbb}
+set phylogenetic tree 
+\begin{DoxyParams}{Parameters}
+\item[{\em tree}]associated phyogenetic tree \end{DoxyParams}
+\hypertarget{classRateHeterogeneity_a520772859d465036b6620bdbf2977efe}{
+\index{RateHeterogeneity@{RateHeterogeneity}!writeInfo@{writeInfo}}
+\index{writeInfo@{writeInfo}!RateHeterogeneity@{RateHeterogeneity}}
+\subsubsection[{writeInfo}]{\setlength{\rightskip}{0pt plus 5cm}virtual void RateHeterogeneity::writeInfo (ostream \& {\em out})\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classRateHeterogeneity_a520772859d465036b6620bdbf2977efe}
+write information 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream \end{DoxyParams}
+
+
+Reimplemented in \hyperlink{classRateGamma_a835bb210fd8fb4552613fe49875cbfb5}{RateGamma}, \hyperlink{classRateGammaInvar_a428c3ac79ba1bf28da546f602d4b0f7b}{RateGammaInvar}, and \hyperlink{classRateInvar_a6b8c198319557891db9b91fb47b27428}{RateInvar}.\hypertarget{classRateHeterogeneity_ad2832e686971cf1f2cac2a6f842a3550}{
+\index{RateHeterogeneity@{RateHeterogeneity}!writeParameters@{writeParameters}}
+\index{writeParameters@{writeParameters}!RateHeterogeneity@{RateHeterogeneity}}
+\subsubsection[{writeParameters}]{\setlength{\rightskip}{0pt plus 5cm}virtual void RateHeterogeneity::writeParameters (ostream \& {\em out})\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classRateHeterogeneity_ad2832e686971cf1f2cac2a6f842a3550}
+write parameters, used with modeltest 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]output stream \end{DoxyParams}
+
+
+Reimplemented in \hyperlink{classRateGamma_a88ffb33131f2cf23cfd0525e092c7717}{RateGamma}, \hyperlink{classRateGammaInvar_a13b6629de9e3579aacff555f1bd76db5}{RateGammaInvar}, and \hyperlink{classRateInvar_aabcef1cc18777b54b0f8644ccb00913c}{RateInvar}.
+
+\subsection{Member Data Documentation}
+\hypertarget{classRateHeterogeneity_aec54d9090abff011fb0c437d51b1d759}{
+\index{RateHeterogeneity@{RateHeterogeneity}!name@{name}}
+\index{name@{name}!RateHeterogeneity@{RateHeterogeneity}}
+\subsubsection[{name}]{\setlength{\rightskip}{0pt plus 5cm}string {\bf RateHeterogeneity::name}}}
+\label{classRateHeterogeneity_aec54d9090abff011fb0c437d51b1d759}
+name of the rate heterogeneity type \hypertarget{classRateHeterogeneity_a15901cd491ded27a2d8cd4ddb731e647}{
+\index{RateHeterogeneity@{RateHeterogeneity}!phylo\_\-tree@{phylo\_\-tree}}
+\index{phylo\_\-tree@{phylo\_\-tree}!RateHeterogeneity@{RateHeterogeneity}}
+\subsubsection[{phylo\_\-tree}]{\setlength{\rightskip}{0pt plus 5cm}{\bf PhyloTree}$\ast$ {\bf RateHeterogeneity::phylo\_\-tree}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classRateHeterogeneity_a15901cd491ded27a2d8cd4ddb731e647}
+phylogenetic tree associated 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/rateheterogeneity.h\item 
+src/rateheterogeneity.cpp\end{DoxyCompactItemize}

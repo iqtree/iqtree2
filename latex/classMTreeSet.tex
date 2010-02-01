@@ -1,0 +1,151 @@
+\hypertarget{classMTreeSet}{
+\section{MTreeSet Class Reference}
+\label{classMTreeSet}\index{MTreeSet@{MTreeSet}}
+}
+
+
+{\ttfamily \#include $<$mtreeset.h$>$}Inheritance diagram for MTreeSet::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2cm]{classMTreeSet}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classMTreeSet_a88d94d529da4f81c2fe4537baa794333}{MTreeSet} (const char $\ast$userTreeFile, bool \&is\_\-rooted, int burnin)
+\item 
+void \hyperlink{classMTreeSet_aef18c58d44d7f2fe2a9cf81e68e570cd}{init} (const char $\ast$userTreeFile, bool \&is\_\-rooted, int burnin)
+\item 
+void \hyperlink{classMTreeSet_a5522394de84eee1544e021d1baed3655}{readTrees} (const char $\ast$userTreeFile, bool \&is\_\-rooted, int burnin)
+\item 
+void \hyperlink{classMTreeSet_a0ebff75dc397363dc55622ad094c4432}{checkConsistency} ()
+\item 
+bool \hyperlink{classMTreeSet_a1788a15758d1c5292f05afb3b7920fbe}{isRooted} ()
+\item 
+void \hyperlink{classMTreeSet_a0fbde69391914ed669cd05007946867d}{printTrees} (const char $\ast$outfile, int brtype=WT\_\-BR\_\-LEN)
+\item 
+void \hyperlink{classMTreeSet_ad4401d1bde1649b95439953c218ca224}{printTrees} (ostream \&out, int brtype=WT\_\-BR\_\-LEN)
+\item 
+void \hyperlink{classMTreeSet_ae937b8a9957d096c14b2fa9364c6c660}{convertSplits} (vector$<$ \hyperlink{classNxsString}{NxsString} $>$ \&taxname, \hyperlink{classSplitGraph}{SplitGraph} \&sg, \hyperlink{classSplitIntMap}{SplitIntMap} \&hash\_\-ss, bool lensum)
+\item 
+void \hyperlink{classMTreeSet_ae973cf95e914256097ee21fd2491b89a}{convertSplits} (\hyperlink{classSplitGraph}{SplitGraph} \&sg, \hyperlink{classSplitIntMap}{SplitIntMap} \&hash\_\-ss, bool lensum)
+\item 
+void \hyperlink{classMTreeSet_a935eb55c363c816242dfa2c1f112cbec}{convertSplits} (\hyperlink{classSplitGraph}{SplitGraph} \&sg, double split\_\-threshold, bool lensum)
+\item 
+virtual \hyperlink{classMTreeSet_a27a34c268f7cdd554271771363d4d104}{$\sim$MTreeSet} ()
+\item 
+virtual \hyperlink{classMTree}{MTree} $\ast$ \hyperlink{classMTreeSet_a14f065ce54450ea54f3fd8e1cc025103}{newTree} ()
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Set of trees
+
+\begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classMTreeSet_a88d94d529da4f81c2fe4537baa794333}{
+\index{MTreeSet@{MTreeSet}!MTreeSet@{MTreeSet}}
+\index{MTreeSet@{MTreeSet}!MTreeSet@{MTreeSet}}
+\subsubsection[{MTreeSet}]{\setlength{\rightskip}{0pt plus 5cm}MTreeSet::MTreeSet (const char $\ast$ {\em userTreeFile}, \/  bool \& {\em is\_\-rooted}, \/  int {\em burnin})}}
+\label{classMTreeSet_a88d94d529da4f81c2fe4537baa794333}
+constructor, read trees from user file 
+\begin{DoxyParams}{Parameters}
+\item[{\em userTreeFile}]the name of the user trees \item[{\em is\_\-rooted}](IN/OUT) true if tree is rooted \item[{\em burnin}]the number of beginning trees to be discarded \end{DoxyParams}
+\hypertarget{classMTreeSet_a27a34c268f7cdd554271771363d4d104}{
+\index{MTreeSet@{MTreeSet}!$\sim$MTreeSet@{$\sim$MTreeSet}}
+\index{$\sim$MTreeSet@{$\sim$MTreeSet}!MTreeSet@{MTreeSet}}
+\subsubsection[{$\sim$MTreeSet}]{\setlength{\rightskip}{0pt plus 5cm}MTreeSet::$\sim$MTreeSet ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classMTreeSet_a27a34c268f7cdd554271771363d4d104}
+destructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classMTreeSet_a0ebff75dc397363dc55622ad094c4432}{
+\index{MTreeSet@{MTreeSet}!checkConsistency@{checkConsistency}}
+\index{checkConsistency@{checkConsistency}!MTreeSet@{MTreeSet}}
+\subsubsection[{checkConsistency}]{\setlength{\rightskip}{0pt plus 5cm}void MTreeSet::checkConsistency ()}}
+\label{classMTreeSet_a0ebff75dc397363dc55622ad094c4432}
+check the consistency of trees: taxa names between trees are matched, same rooted or unrooted \hypertarget{classMTreeSet_a935eb55c363c816242dfa2c1f112cbec}{
+\index{MTreeSet@{MTreeSet}!convertSplits@{convertSplits}}
+\index{convertSplits@{convertSplits}!MTreeSet@{MTreeSet}}
+\subsubsection[{convertSplits}]{\setlength{\rightskip}{0pt plus 5cm}void MTreeSet::convertSplits ({\bf SplitGraph} \& {\em sg}, \/  double {\em split\_\-threshold}, \/  bool {\em lensum})}}
+\label{classMTreeSet_a935eb55c363c816242dfa2c1f112cbec}
+convert all trees into the split system 
+\begin{DoxyParams}{Parameters}
+\item[{\em sg}](OUT) resulting split graph \item[{\em split\_\-threshold}]only keep those splits which appear more than this threshold \item[{\em lensum}]TRUE to assign split weight as sum of corresponding branch lengths. Otherwise just count the number of branches. \end{DoxyParams}
+\hypertarget{classMTreeSet_ae973cf95e914256097ee21fd2491b89a}{
+\index{MTreeSet@{MTreeSet}!convertSplits@{convertSplits}}
+\index{convertSplits@{convertSplits}!MTreeSet@{MTreeSet}}
+\subsubsection[{convertSplits}]{\setlength{\rightskip}{0pt plus 5cm}void MTreeSet::convertSplits ({\bf SplitGraph} \& {\em sg}, \/  {\bf SplitIntMap} \& {\em hash\_\-ss}, \/  bool {\em lensum})}}
+\label{classMTreeSet_ae973cf95e914256097ee21fd2491b89a}
+convert all trees into the split system 
+\begin{DoxyParams}{Parameters}
+\item[{\em sg}](OUT) resulting split graph \item[{\em hash\_\-ss}](OUT) hash split set \item[{\em lensum}]TRUE to assign split weight as sum of corresponding branch lengths. Otherwise just count the number of branches. \end{DoxyParams}
+\hypertarget{classMTreeSet_ae937b8a9957d096c14b2fa9364c6c660}{
+\index{MTreeSet@{MTreeSet}!convertSplits@{convertSplits}}
+\index{convertSplits@{convertSplits}!MTreeSet@{MTreeSet}}
+\subsubsection[{convertSplits}]{\setlength{\rightskip}{0pt plus 5cm}void MTreeSet::convertSplits (vector$<$ {\bf NxsString} $>$ \& {\em taxname}, \/  {\bf SplitGraph} \& {\em sg}, \/  {\bf SplitIntMap} \& {\em hash\_\-ss}, \/  bool {\em lensum})}}
+\label{classMTreeSet_ae937b8a9957d096c14b2fa9364c6c660}
+convert all trees into the split system 
+\begin{DoxyParams}{Parameters}
+\item[{\em taxname}]certain taxa name \item[{\em sg}](OUT) resulting split graph \item[{\em hash\_\-ss}](OUT) hash split set \item[{\em lensum}]TRUE if summing split length, FALSE to increment only \end{DoxyParams}
+\hypertarget{classMTreeSet_aef18c58d44d7f2fe2a9cf81e68e570cd}{
+\index{MTreeSet@{MTreeSet}!init@{init}}
+\index{init@{init}!MTreeSet@{MTreeSet}}
+\subsubsection[{init}]{\setlength{\rightskip}{0pt plus 5cm}void MTreeSet::init (const char $\ast$ {\em userTreeFile}, \/  bool \& {\em is\_\-rooted}, \/  int {\em burnin})}}
+\label{classMTreeSet_aef18c58d44d7f2fe2a9cf81e68e570cd}
+initialize the tree from a NEWICK tree file 
+\begin{DoxyParams}{Parameters}
+\item[{\em userTreeFile}]the name of the user tree \item[{\em is\_\-rooted}](IN/OUT) true if tree is rooted \item[{\em burnin}]the number of beginning trees to be discarded \end{DoxyParams}
+\hypertarget{classMTreeSet_a1788a15758d1c5292f05afb3b7920fbe}{
+\index{MTreeSet@{MTreeSet}!isRooted@{isRooted}}
+\index{isRooted@{isRooted}!MTreeSet@{MTreeSet}}
+\subsubsection[{isRooted}]{\setlength{\rightskip}{0pt plus 5cm}bool MTreeSet::isRooted ()}}
+\label{classMTreeSet_a1788a15758d1c5292f05afb3b7920fbe}
+\begin{DoxyReturn}{Returns}
+true if trees are rooted 
+\end{DoxyReturn}
+\hypertarget{classMTreeSet_a14f065ce54450ea54f3fd8e1cc025103}{
+\index{MTreeSet@{MTreeSet}!newTree@{newTree}}
+\index{newTree@{newTree}!MTreeSet@{MTreeSet}}
+\subsubsection[{newTree}]{\setlength{\rightskip}{0pt plus 5cm}virtual {\bf MTree}$\ast$ MTreeSet::newTree ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classMTreeSet_a14f065ce54450ea54f3fd8e1cc025103}
+new tree allocator \begin{DoxyReturn}{Returns}
+a new tree 
+\end{DoxyReturn}
+
+
+Reimplemented in \hyperlink{classPDTreeSet_a0af6b254e9faff292db3684ec6089e24}{PDTreeSet}.\hypertarget{classMTreeSet_ad4401d1bde1649b95439953c218ca224}{
+\index{MTreeSet@{MTreeSet}!printTrees@{printTrees}}
+\index{printTrees@{printTrees}!MTreeSet@{MTreeSet}}
+\subsubsection[{printTrees}]{\setlength{\rightskip}{0pt plus 5cm}void MTreeSet::printTrees (ostream \& {\em out}, \/  int {\em brtype} = {\ttfamily WT\_\-BR\_\-LEN})}}
+\label{classMTreeSet_ad4401d1bde1649b95439953c218ca224}
+print the tree to the output file in newick format 
+\begin{DoxyParams}{Parameters}
+\item[{\em out}]the output stream. \item[{\em brtype}]type of branch to print \end{DoxyParams}
+\hypertarget{classMTreeSet_a0fbde69391914ed669cd05007946867d}{
+\index{MTreeSet@{MTreeSet}!printTrees@{printTrees}}
+\index{printTrees@{printTrees}!MTreeSet@{MTreeSet}}
+\subsubsection[{printTrees}]{\setlength{\rightskip}{0pt plus 5cm}void MTreeSet::printTrees (const char $\ast$ {\em outfile}, \/  int {\em brtype} = {\ttfamily WT\_\-BR\_\-LEN})}}
+\label{classMTreeSet_a0fbde69391914ed669cd05007946867d}
+print the tree to the output file in newick format 
+\begin{DoxyParams}{Parameters}
+\item[{\em outfile}]the output file. \item[{\em brtype}]type of branch to print \end{DoxyParams}
+\hypertarget{classMTreeSet_a5522394de84eee1544e021d1baed3655}{
+\index{MTreeSet@{MTreeSet}!readTrees@{readTrees}}
+\index{readTrees@{readTrees}!MTreeSet@{MTreeSet}}
+\subsubsection[{readTrees}]{\setlength{\rightskip}{0pt plus 5cm}void MTreeSet::readTrees (const char $\ast$ {\em userTreeFile}, \/  bool \& {\em is\_\-rooted}, \/  int {\em burnin})}}
+\label{classMTreeSet_a5522394de84eee1544e021d1baed3655}
+read the tree from the input file in newick format 
+\begin{DoxyParams}{Parameters}
+\item[{\em userTreeFile}]the name of the user trees \item[{\em is\_\-rooted}](IN/OUT) true if tree is rooted \item[{\em burnin}]the number of beginning trees to be discarded \end{DoxyParams}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/mtreeset.h\item 
+src/mtreeset.cpp\end{DoxyCompactItemize}

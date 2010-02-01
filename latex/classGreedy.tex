@@ -1,0 +1,140 @@
+\hypertarget{classGreedy}{
+\section{Greedy Class Reference}
+\label{classGreedy}\index{Greedy@{Greedy}}
+}
+
+
+{\ttfamily \#include $<$greedy.h$>$}Inheritance diagram for Greedy::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3cm]{classGreedy}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classGreedy_a1aeec7fbb70ebb2abe0fcb97f21995d8}{Greedy} (\hyperlink{structParams}{Params} \&params)
+\item 
+\hyperlink{classGreedy_ab5f9558f6a84338ab866c11bffa934cc}{Greedy} (\hyperlink{classPDTree}{PDTree} \&tree)
+\item 
+\hyperlink{classGreedy_a916c0ab051f780c4d3ccec06f44bbf6c}{Greedy} ()
+\item 
+void \hyperlink{classGreedy_a9e5abfe8869f9e6695f77748d6fe5e51}{run} (\hyperlink{structParams}{Params} \&params, vector$<$ \hyperlink{classPDTaxaSet}{PDTaxaSet} $>$ \&taxa\_\-set)
+\item 
+void \hyperlink{classGreedy_a933a3b9c40efec6d2643092baccf6b7f}{updateOnLongestPath} (\hyperlink{classNode}{Node} $\ast$node, NodeVector \&\hyperlink{classGreedy_ac7f2cff520d775503d290e236fce8baf}{subtree}, \hyperlink{classPDTaxaSet}{PDTaxaSet} \&cur\_\-set)
+\item 
+void \hyperlink{classGreedy_a52d592f837f77cd51b39b8f4c3f64e0c}{buildOnInitialSet} (NodeVector \&\hyperlink{classGreedy_ac7f2cff520d775503d290e236fce8baf}{subtree}, NodeVector \&nodestack, \hyperlink{classNode}{Node} $\ast$node=NULL, \hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+double \hyperlink{classGreedy_a0f31932ace48884fa0b6aadbd444229d}{updateOnInitialSet} (NodeVector \&\hyperlink{classGreedy_ac7f2cff520d775503d290e236fce8baf}{subtree})
+\item 
+NeighborSet::iterator \hyperlink{classGreedy_a6b90a3f292fcf91be8f0a156e67822f0}{highestNeighbor} ()
+\item 
+void \hyperlink{classGreedy_aaa333c0d2919689abfe5a439f4e41b6a}{addNeighbor} (\hyperlink{classNeighbor}{Neighbor} $\ast$neigh)
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+NeighborSet \hyperlink{classGreedy_a56a5f478b16b0da1304d79d03d390ab0}{neighset}
+\item 
+NodeVector \hyperlink{classGreedy_ac7f2cff520d775503d290e236fce8baf}{subtree}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Implementation of greedy algorithm with complexity O(n$\ast$logk) \begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classGreedy_a1aeec7fbb70ebb2abe0fcb97f21995d8}{
+\index{Greedy@{Greedy}!Greedy@{Greedy}}
+\index{Greedy@{Greedy}!Greedy@{Greedy}}
+\subsubsection[{Greedy}]{\setlength{\rightskip}{0pt plus 5cm}Greedy::Greedy ({\bf Params} \& {\em params})\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classGreedy_a1aeec7fbb70ebb2abe0fcb97f21995d8}
+construct from program parameters 
+\begin{DoxyParams}{Parameters}
+\item[{\em params}]program parameters \end{DoxyParams}
+\hypertarget{classGreedy_ab5f9558f6a84338ab866c11bffa934cc}{
+\index{Greedy@{Greedy}!Greedy@{Greedy}}
+\index{Greedy@{Greedy}!Greedy@{Greedy}}
+\subsubsection[{Greedy}]{\setlength{\rightskip}{0pt plus 5cm}Greedy::Greedy ({\bf PDTree} \& {\em tree})\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classGreedy_ab5f9558f6a84338ab866c11bffa934cc}
+construct from a tree 
+\begin{DoxyParams}{Parameters}
+\item[{\em tree}]a tree class \end{DoxyParams}
+\hypertarget{classGreedy_a916c0ab051f780c4d3ccec06f44bbf6c}{
+\index{Greedy@{Greedy}!Greedy@{Greedy}}
+\index{Greedy@{Greedy}!Greedy@{Greedy}}
+\subsubsection[{Greedy}]{\setlength{\rightskip}{0pt plus 5cm}Greedy::Greedy ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classGreedy_a916c0ab051f780c4d3ccec06f44bbf6c}
+constructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classGreedy_aaa333c0d2919689abfe5a439f4e41b6a}{
+\index{Greedy@{Greedy}!addNeighbor@{addNeighbor}}
+\index{addNeighbor@{addNeighbor}!Greedy@{Greedy}}
+\subsubsection[{addNeighbor}]{\setlength{\rightskip}{0pt plus 5cm}void Greedy::addNeighbor ({\bf Neighbor} $\ast$ {\em neigh})}}
+\label{classGreedy_aaa333c0d2919689abfe5a439f4e41b6a}
+add an edge into the NeighborSet \hypertarget{classGreedy_a52d592f837f77cd51b39b8f4c3f64e0c}{
+\index{Greedy@{Greedy}!buildOnInitialSet@{buildOnInitialSet}}
+\index{buildOnInitialSet@{buildOnInitialSet}!Greedy@{Greedy}}
+\subsubsection[{buildOnInitialSet}]{\setlength{\rightskip}{0pt plus 5cm}void Greedy::buildOnInitialSet (NodeVector \& {\em subtree}, \/  NodeVector \& {\em nodestack}, \/  {\bf Node} $\ast$ {\em node} = {\ttfamily NULL}, \/  {\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classGreedy_a52d592f837f77cd51b39b8f4c3f64e0c}
+build the initial subtree based on the initial set of taxa 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node, NULL to start from the root \item[{\em dad}]dad of the node, used to direct the search \item[{\em subtree}](OUT) resulted subtree \item[{\em nodestack}](TEMP) stack of node, used only by function\end{DoxyParams}
+initialize the ordered list based on the initial tree structure \hypertarget{classGreedy_a6b90a3f292fcf91be8f0a156e67822f0}{
+\index{Greedy@{Greedy}!highestNeighbor@{highestNeighbor}}
+\index{highestNeighbor@{highestNeighbor}!Greedy@{Greedy}}
+\subsubsection[{highestNeighbor}]{\setlength{\rightskip}{0pt plus 5cm}NeighborSet::iterator Greedy::highestNeighbor ()}}
+\label{classGreedy_a6b90a3f292fcf91be8f0a156e67822f0}
+\begin{DoxyReturn}{Returns}
+innodes.begin(). 
+\end{DoxyReturn}
+\hypertarget{classGreedy_a9e5abfe8869f9e6695f77748d6fe5e51}{
+\index{Greedy@{Greedy}!run@{run}}
+\index{run@{run}!Greedy@{Greedy}}
+\subsubsection[{run}]{\setlength{\rightskip}{0pt plus 5cm}void Greedy::run ({\bf Params} \& {\em params}, \/  vector$<$ {\bf PDTaxaSet} $>$ \& {\em taxa\_\-set})}}
+\label{classGreedy_a9e5abfe8869f9e6695f77748d6fe5e51}
+run the algorithm 
+\begin{DoxyParams}{Parameters}
+\item[{\em params}]program parameters \item[{\em taxa\_\-set}](OUT) vector of PD sets\end{DoxyParams}
+run the algorithm \hypertarget{classGreedy_a0f31932ace48884fa0b6aadbd444229d}{
+\index{Greedy@{Greedy}!updateOnInitialSet@{updateOnInitialSet}}
+\index{updateOnInitialSet@{updateOnInitialSet}!Greedy@{Greedy}}
+\subsubsection[{updateOnInitialSet}]{\setlength{\rightskip}{0pt plus 5cm}double Greedy::updateOnInitialSet (NodeVector \& {\em subtree})}}
+\label{classGreedy_a0f31932ace48884fa0b6aadbd444229d}
+initialize the ordered list based on the initial subtree structure 
+\begin{DoxyParams}{Parameters}
+\item[{\em subtree}]vector containing nodes in the subtree \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the subtree length 
+\end{DoxyReturn}
+\hypertarget{classGreedy_a933a3b9c40efec6d2643092baccf6b7f}{
+\index{Greedy@{Greedy}!updateOnLongestPath@{updateOnLongestPath}}
+\index{updateOnLongestPath@{updateOnLongestPath}!Greedy@{Greedy}}
+\subsubsection[{updateOnLongestPath}]{\setlength{\rightskip}{0pt plus 5cm}void Greedy::updateOnLongestPath ({\bf Node} $\ast$ {\em node}, \/  NodeVector \& {\em subtree}, \/  {\bf PDTaxaSet} \& {\em cur\_\-set})}}
+\label{classGreedy_a933a3b9c40efec6d2643092baccf6b7f}
+update the ordered list based on the recent longest path 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the starting node \item[{\em subtree}](OUT) resulted subtree \item[{\em cur\_\-set}]the current set \end{DoxyParams}
+
+
+\subsection{Member Data Documentation}
+\hypertarget{classGreedy_a56a5f478b16b0da1304d79d03d390ab0}{
+\index{Greedy@{Greedy}!neighset@{neighset}}
+\index{neighset@{neighset}!Greedy@{Greedy}}
+\subsubsection[{neighset}]{\setlength{\rightskip}{0pt plus 5cm}NeighborSet {\bf Greedy::neighset}}}
+\label{classGreedy_a56a5f478b16b0da1304d79d03d390ab0}
+neighbor set \hypertarget{classGreedy_ac7f2cff520d775503d290e236fce8baf}{
+\index{Greedy@{Greedy}!subtree@{subtree}}
+\index{subtree@{subtree}!Greedy@{Greedy}}
+\subsubsection[{subtree}]{\setlength{\rightskip}{0pt plus 5cm}NodeVector {\bf Greedy::subtree}}}
+\label{classGreedy_ac7f2cff520d775503d290e236fce8baf}
+list of nodes in the subtree 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/greedy.h\item 
+src/greedy.cpp\end{DoxyCompactItemize}

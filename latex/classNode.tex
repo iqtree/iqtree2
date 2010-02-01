@@ -1,0 +1,270 @@
+\hypertarget{classNode}{
+\section{Node Class Reference}
+\label{classNode}\index{Node@{Node}}
+}
+
+
+{\ttfamily \#include $<$node.h$>$}Inheritance diagram for Node::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2cm]{classNode}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classNode_ad7a34779cad45d997bfd6d3d8043c75f}{Node} ()
+\item 
+\hyperlink{classNode_af6165e50e0ce42c0cfad89e62066be69}{Node} (int aid)
+\item 
+\hyperlink{classNode_a5161742d57505f425fb3f8b8ab0c883e}{Node} (int aid, int aname)
+\item 
+\hyperlink{classNode_aa8da7627c64a07c011e78cd71d9d5f8e}{Node} (int aid, const char $\ast$aname)
+\item 
+virtual \hyperlink{classNode_aa0840c3cb5c7159be6d992adecd2097c}{$\sim$Node} ()
+\item 
+virtual void \hyperlink{classNode_aaccc6f1874a0ddf07d281270d9f9c301}{deleteNode} ()
+\item 
+bool \hyperlink{classNode_a3a61dca67d5ad06cacb8c48eb6374973}{isLeaf} ()
+\item 
+int \hyperlink{classNode_a83a14e84b986038eb444e8945849d127}{degree} ()
+\item 
+\hyperlink{classNode}{Node} $\ast$ \hyperlink{classNode_a1340ab80fa547e2f09e766a4c327f387}{calcHeight} (\hyperlink{classNode}{Node} $\ast$dad=NULL)
+\item 
+double \hyperlink{classNode_a327b0ab1379f0dc6ad4062e3b253dd6f}{longestPath2} (\hyperlink{classNode}{Node} $\ast$\&node1, \hyperlink{classNode}{Node} $\ast$\&node2)
+\item 
+\hyperlink{classNeighbor}{Neighbor} $\ast$ \hyperlink{classNode_a522b44457c22e6c97e7becfec43cbdba}{findNeighbor} (\hyperlink{classNode}{Node} $\ast$node)
+\item 
+NeighborVec::iterator \hyperlink{classNode_acb2b4563be11a48ec1503bb22a56893a}{findNeighborIt} (\hyperlink{classNode}{Node} $\ast$node)
+\item 
+void \hyperlink{classNode_a991931db235cedbcdae20bcb77a57671}{updateNeighbor} (\hyperlink{classNode}{Node} $\ast$node, \hyperlink{classNode}{Node} $\ast$newnode, double newlen)
+\item 
+double \hyperlink{classNode_ac0dce50c1942b6c015fb8a10695dcc5a}{updateNeighbor} (\hyperlink{classNode}{Node} $\ast$node, \hyperlink{classNode}{Node} $\ast$newnode)
+\item 
+void \hyperlink{classNode_ab45fa6addf881a2c6c090bbd9686710f}{updateNeighbor} (NeighborVec::iterator nei\_\-it, \hyperlink{classNeighbor}{Neighbor} $\ast$newnei)
+\item 
+void \hyperlink{classNode_a60ae4ce857e2ed5c3115060eeeec405b}{updateNeighbor} (NeighborVec::iterator nei\_\-it, \hyperlink{classNeighbor}{Neighbor} $\ast$newnei, double newlen)
+\item 
+void \hyperlink{classNode_a7939f3acf93cb262bfea402e7c81bc87}{updateNeighbor} (\hyperlink{classNode}{Node} $\ast$node, \hyperlink{classNeighbor}{Neighbor} $\ast$newnei)
+\item 
+void \hyperlink{classNode_a0994f789ab4030889f70e5b69bcc57b3}{updateNeighbor} (\hyperlink{classNode}{Node} $\ast$node, \hyperlink{classNeighbor}{Neighbor} $\ast$newnei, double newlen)
+\item 
+virtual void \hyperlink{classNode_abd8e9dbecc4ad76fdebefbb1b578b6f0}{addNeighbor} (\hyperlink{classNode}{Node} $\ast$node, double length)
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{classNode_a59a543130a10c95f1e8642cf8c5645e8}{id}
+\item 
+\hyperlink{classNxsString}{NxsString} \hyperlink{classNode_a57c014f7366ed417746d92336d869510}{name}
+\item 
+NeighborVec \hyperlink{classNode_a35de03872f10f71851fe4c115a981d93}{neighbors}
+\item 
+double \hyperlink{classNode_aa0f22093957939b69e2872893ac6bccd}{height}
+\item 
+\hyperlink{classNeighbor}{Neighbor} $\ast$ \hyperlink{classNode_a2683e662b7577fbd5a5b78a9d2976a17}{highestNei}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+A \hyperlink{classNode}{Node} in the tree \begin{DoxyAuthor}{Author}
+BUI Quang Minh, Steffen Klaere, Arndt von Haeseler 
+\end{DoxyAuthor}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classNode_ad7a34779cad45d997bfd6d3d8043c75f}{
+\index{Node@{Node}!Node@{Node}}
+\index{Node@{Node}!Node@{Node}}
+\subsubsection[{Node}]{\setlength{\rightskip}{0pt plus 5cm}Node::Node ()\hspace{0.3cm}{\ttfamily  \mbox{[}inline\mbox{]}}}}
+\label{classNode_ad7a34779cad45d997bfd6d3d8043c75f}
+constructor \hypertarget{classNode_af6165e50e0ce42c0cfad89e62066be69}{
+\index{Node@{Node}!Node@{Node}}
+\index{Node@{Node}!Node@{Node}}
+\subsubsection[{Node}]{\setlength{\rightskip}{0pt plus 5cm}Node::Node (int {\em aid})}}
+\label{classNode_af6165e50e0ce42c0cfad89e62066be69}
+constructor 
+\begin{DoxyParams}{Parameters}
+\item[{\em aid}]id of this node \end{DoxyParams}
+\hypertarget{classNode_a5161742d57505f425fb3f8b8ab0c883e}{
+\index{Node@{Node}!Node@{Node}}
+\index{Node@{Node}!Node@{Node}}
+\subsubsection[{Node}]{\setlength{\rightskip}{0pt plus 5cm}Node::Node (int {\em aid}, \/  int {\em aname})}}
+\label{classNode_a5161742d57505f425fb3f8b8ab0c883e}
+constructor 
+\begin{DoxyParams}{Parameters}
+\item[{\em aid}]id of this node \item[{\em aname}]name of this node \end{DoxyParams}
+\hypertarget{classNode_aa8da7627c64a07c011e78cd71d9d5f8e}{
+\index{Node@{Node}!Node@{Node}}
+\index{Node@{Node}!Node@{Node}}
+\subsubsection[{Node}]{\setlength{\rightskip}{0pt plus 5cm}Node::Node (int {\em aid}, \/  const char $\ast$ {\em aname})}}
+\label{classNode_aa8da7627c64a07c011e78cd71d9d5f8e}
+constructor 
+\begin{DoxyParams}{Parameters}
+\item[{\em aid}]id of this node \item[{\em aname}]name of this node \end{DoxyParams}
+\hypertarget{classNode_aa0840c3cb5c7159be6d992adecd2097c}{
+\index{Node@{Node}!$\sim$Node@{$\sim$Node}}
+\index{$\sim$Node@{$\sim$Node}!Node@{Node}}
+\subsubsection[{$\sim$Node}]{\setlength{\rightskip}{0pt plus 5cm}Node::$\sim$Node ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classNode_aa0840c3cb5c7159be6d992adecd2097c}
+destructor 
+
+\subsection{Member Function Documentation}
+\hypertarget{classNode_abd8e9dbecc4ad76fdebefbb1b578b6f0}{
+\index{Node@{Node}!addNeighbor@{addNeighbor}}
+\index{addNeighbor@{addNeighbor}!Node@{Node}}
+\subsubsection[{addNeighbor}]{\setlength{\rightskip}{0pt plus 5cm}void Node::addNeighbor ({\bf Node} $\ast$ {\em node}, \/  double {\em length})\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classNode_abd8e9dbecc4ad76fdebefbb1b578b6f0}
+add a neighbor 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the neighbor node \item[{\em length}]branch length \end{DoxyParams}
+\hypertarget{classNode_a1340ab80fa547e2f09e766a4c327f387}{
+\index{Node@{Node}!calcHeight@{calcHeight}}
+\index{calcHeight@{calcHeight}!Node@{Node}}
+\subsubsection[{calcHeight}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Node} $\ast$ Node::calcHeight ({\bf Node} $\ast$ {\em dad} = {\ttfamily NULL})}}
+\label{classNode_a1340ab80fa547e2f09e766a4c327f387}
+calculate the height of the subtree rooted at this node, given the dad. Also return the lowestLeaf. 
+\begin{DoxyParams}{Parameters}
+\item[{\em dad}]the dad of this node \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the leaf at the lowest level. Also modify the height, highestNei of this class. 
+\end{DoxyReturn}
+\hypertarget{classNode_a83a14e84b986038eb444e8945849d127}{
+\index{Node@{Node}!degree@{degree}}
+\index{degree@{degree}!Node@{Node}}
+\subsubsection[{degree}]{\setlength{\rightskip}{0pt plus 5cm}int Node::degree ()}}
+\label{classNode_a83a14e84b986038eb444e8945849d127}
+\begin{DoxyReturn}{Returns}
+the number of adjacent nodes 
+\end{DoxyReturn}
+\hypertarget{classNode_aaccc6f1874a0ddf07d281270d9f9c301}{
+\index{Node@{Node}!deleteNode@{deleteNode}}
+\index{deleteNode@{deleteNode}!Node@{Node}}
+\subsubsection[{deleteNode}]{\setlength{\rightskip}{0pt plus 5cm}void Node::deleteNode ()\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classNode_aaccc6f1874a0ddf07d281270d9f9c301}
+used for the destructor \hypertarget{classNode_a522b44457c22e6c97e7becfec43cbdba}{
+\index{Node@{Node}!findNeighbor@{findNeighbor}}
+\index{findNeighbor@{findNeighbor}!Node@{Node}}
+\subsubsection[{findNeighbor}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Neighbor} $\ast$ Node::findNeighbor ({\bf Node} $\ast$ {\em node})}}
+\label{classNode_a522b44457c22e6c97e7becfec43cbdba}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the target node \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the iterator to the neighbor that has the node. If not found, return NULL 
+\end{DoxyReturn}
+\hypertarget{classNode_acb2b4563be11a48ec1503bb22a56893a}{
+\index{Node@{Node}!findNeighborIt@{findNeighborIt}}
+\index{findNeighborIt@{findNeighborIt}!Node@{Node}}
+\subsubsection[{findNeighborIt}]{\setlength{\rightskip}{0pt plus 5cm}NeighborVec::iterator Node::findNeighborIt ({\bf Node} $\ast$ {\em node})}}
+\label{classNode_acb2b4563be11a48ec1503bb22a56893a}
+
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]the target node \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the iterator to the neighbor that has the node. If not found, return neighbors.end() 
+\end{DoxyReturn}
+\hypertarget{classNode_a3a61dca67d5ad06cacb8c48eb6374973}{
+\index{Node@{Node}!isLeaf@{isLeaf}}
+\index{isLeaf@{isLeaf}!Node@{Node}}
+\subsubsection[{isLeaf}]{\setlength{\rightskip}{0pt plus 5cm}bool Node::isLeaf ()}}
+\label{classNode_a3a61dca67d5ad06cacb8c48eb6374973}
+\begin{DoxyReturn}{Returns}
+true of this is a leaf 
+\end{DoxyReturn}
+\hypertarget{classNode_a327b0ab1379f0dc6ad4062e3b253dd6f}{
+\index{Node@{Node}!longestPath2@{longestPath2}}
+\index{longestPath2@{longestPath2}!Node@{Node}}
+\subsubsection[{longestPath2}]{\setlength{\rightskip}{0pt plus 5cm}double Node::longestPath2 ({\bf Node} $\ast$\& {\em node1}, \/  {\bf Node} $\ast$\& {\em node2})}}
+\label{classNode_a327b0ab1379f0dc6ad4062e3b253dd6f}
+calculate the longest path in the subtree (version 2: more efficient) 
+\begin{DoxyParams}{Parameters}
+\item[{\em node1}]the returned node1 of the one end of the path \item[{\em node2}]the returned node2 of the one end of the path \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the length of the longest path
+\end{DoxyReturn}
+efficient longest path algorithm \hypertarget{classNode_a0994f789ab4030889f70e5b69bcc57b3}{
+\index{Node@{Node}!updateNeighbor@{updateNeighbor}}
+\index{updateNeighbor@{updateNeighbor}!Node@{Node}}
+\subsubsection[{updateNeighbor}]{\setlength{\rightskip}{0pt plus 5cm}void Node::updateNeighbor ({\bf Node} $\ast$ {\em node}, \/  {\bf Neighbor} $\ast$ {\em newnei}, \/  double {\em newlen})}}
+\label{classNode_a0994f789ab4030889f70e5b69bcc57b3}
+update the neighbor node with the newnode 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]old neighbor node \item[{\em newnei}]new neighbor \item[{\em newlen}]new branch length \end{DoxyParams}
+\hypertarget{classNode_a7939f3acf93cb262bfea402e7c81bc87}{
+\index{Node@{Node}!updateNeighbor@{updateNeighbor}}
+\index{updateNeighbor@{updateNeighbor}!Node@{Node}}
+\subsubsection[{updateNeighbor}]{\setlength{\rightskip}{0pt plus 5cm}void Node::updateNeighbor ({\bf Node} $\ast$ {\em node}, \/  {\bf Neighbor} $\ast$ {\em newnei})}}
+\label{classNode_a7939f3acf93cb262bfea402e7c81bc87}
+update the neighbor node with the newnode 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]old neighbor node \item[{\em newnei}]new neighbor \end{DoxyParams}
+\hypertarget{classNode_a60ae4ce857e2ed5c3115060eeeec405b}{
+\index{Node@{Node}!updateNeighbor@{updateNeighbor}}
+\index{updateNeighbor@{updateNeighbor}!Node@{Node}}
+\subsubsection[{updateNeighbor}]{\setlength{\rightskip}{0pt plus 5cm}void Node::updateNeighbor (NeighborVec::iterator {\em nei\_\-it}, \/  {\bf Neighbor} $\ast$ {\em newnei}, \/  double {\em newlen})}}
+\label{classNode_a60ae4ce857e2ed5c3115060eeeec405b}
+update the neighbor node with the newnode 
+\begin{DoxyParams}{Parameters}
+\item[{\em nei\_\-it}]iterator to the neighbor \item[{\em newnei}]new neighbor \item[{\em newlen}]new branch length \end{DoxyParams}
+\hypertarget{classNode_ab45fa6addf881a2c6c090bbd9686710f}{
+\index{Node@{Node}!updateNeighbor@{updateNeighbor}}
+\index{updateNeighbor@{updateNeighbor}!Node@{Node}}
+\subsubsection[{updateNeighbor}]{\setlength{\rightskip}{0pt plus 5cm}void Node::updateNeighbor (NeighborVec::iterator {\em nei\_\-it}, \/  {\bf Neighbor} $\ast$ {\em newnei})}}
+\label{classNode_ab45fa6addf881a2c6c090bbd9686710f}
+update the neighbor node with the newnode 
+\begin{DoxyParams}{Parameters}
+\item[{\em nei\_\-it}]iterator to the neighbor \item[{\em newnei}]new neighbor \end{DoxyParams}
+\hypertarget{classNode_ac0dce50c1942b6c015fb8a10695dcc5a}{
+\index{Node@{Node}!updateNeighbor@{updateNeighbor}}
+\index{updateNeighbor@{updateNeighbor}!Node@{Node}}
+\subsubsection[{updateNeighbor}]{\setlength{\rightskip}{0pt plus 5cm}double Node::updateNeighbor ({\bf Node} $\ast$ {\em node}, \/  {\bf Node} $\ast$ {\em newnode})}}
+\label{classNode_ac0dce50c1942b6c015fb8a10695dcc5a}
+update the neighbor node with the newnode 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]old neighbor node \item[{\em newnode}]new neighbor node \end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+length applied for the corresponding branch 
+\end{DoxyReturn}
+\hypertarget{classNode_a991931db235cedbcdae20bcb77a57671}{
+\index{Node@{Node}!updateNeighbor@{updateNeighbor}}
+\index{updateNeighbor@{updateNeighbor}!Node@{Node}}
+\subsubsection[{updateNeighbor}]{\setlength{\rightskip}{0pt plus 5cm}void Node::updateNeighbor ({\bf Node} $\ast$ {\em node}, \/  {\bf Node} $\ast$ {\em newnode}, \/  double {\em newlen})}}
+\label{classNode_a991931db235cedbcdae20bcb77a57671}
+update the neighbor node with the newnode 
+\begin{DoxyParams}{Parameters}
+\item[{\em node}]old neighbor node \item[{\em newnode}]new neighbor node \item[{\em newlen}]new length applied for the corresponding branch \end{DoxyParams}
+
+
+\subsection{Member Data Documentation}
+\hypertarget{classNode_aa0f22093957939b69e2872893ac6bccd}{
+\index{Node@{Node}!height@{height}}
+\index{height@{height}!Node@{Node}}
+\subsubsection[{height}]{\setlength{\rightskip}{0pt plus 5cm}double {\bf Node::height}}}
+\label{classNode_aa0f22093957939b69e2872893ac6bccd}
+the height of subtree rooted at this node, used for greedy algorithm \hypertarget{classNode_a2683e662b7577fbd5a5b78a9d2976a17}{
+\index{Node@{Node}!highestNei@{highestNei}}
+\index{highestNei@{highestNei}!Node@{Node}}
+\subsubsection[{highestNei}]{\setlength{\rightskip}{0pt plus 5cm}{\bf Neighbor}$\ast$ {\bf Node::highestNei}}}
+\label{classNode_a2683e662b7577fbd5a5b78a9d2976a17}
+child of maximal height of subtree rooted at this node, used for greedy algorithm \hypertarget{classNode_a59a543130a10c95f1e8642cf8c5645e8}{
+\index{Node@{Node}!id@{id}}
+\index{id@{id}!Node@{Node}}
+\subsubsection[{id}]{\setlength{\rightskip}{0pt plus 5cm}int {\bf Node::id}}}
+\label{classNode_a59a543130a10c95f1e8642cf8c5645e8}
+node id. \hypertarget{classNode_a57c014f7366ed417746d92336d869510}{
+\index{Node@{Node}!name@{name}}
+\index{name@{name}!Node@{Node}}
+\subsubsection[{name}]{\setlength{\rightskip}{0pt plus 5cm}{\bf NxsString} {\bf Node::name}}}
+\label{classNode_a57c014f7366ed417746d92336d869510}
+node name \hypertarget{classNode_a35de03872f10f71851fe4c115a981d93}{
+\index{Node@{Node}!neighbors@{neighbors}}
+\index{neighbors@{neighbors}!Node@{Node}}
+\subsubsection[{neighbors}]{\setlength{\rightskip}{0pt plus 5cm}NeighborVec {\bf Node::neighbors}}}
+\label{classNode_a35de03872f10f71851fe4c115a981d93}
+list of neighbors 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/node.h\item 
+src/node.cpp\end{DoxyCompactItemize}

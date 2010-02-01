@@ -1,0 +1,353 @@
+/***************************************************************************
+ *   Copyright (C) 2006 by BUI Quang Minh, Steffen Klaere, Arndt von Haeseler   *
+ *   minh.bui@univie.ac.at   *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+#ifndef SPLITGRAPH_H
+#define SPLITGRAPH_H
+
+#include <list>
+#include <vector>
+#include <string>
+#include "split.h"
+#include "ncl/ncl.h"
+#include "msplitsblock.h"
+#include "mpdablock.h"
+#include "msetsblock.h"
+#include "node.h"
+#include "splitset.h"
+#include "mtree.h"
+
+using namespace std;
+
+/**
+SplitGraph class
+
+@author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler
+*/
+class SplitGraph : public vector<Split*>
+{
+public:
+
+	friend class MTree;
+	friend class MTreeSet;
+
+/********************************************************
+	CONSTRUCTORs, INITIALIZATION AND DESTRUCTORs
+********************************************************/
+
+	/**
+		empty constructor
+	*/
+    SplitGraph();
+
+	/**
+		construct split graph from the parameters by calling init(params).
+		@param params program parameters
+	*/
+    SplitGraph(Params &params);
+
+	/**
+		init split graph from the parameters
+		@param params program parameters
+	*/
+    void init(Params &params);
+	
+	/**
+		if no taxa block found, but the sets block is present, then 
+		this function will be invoked. It takes the taxa names from the sets block.
+	*/
+	void AddTaxaFromSets();
+
+	/**
+		this function is invoked 
+	*/
+	void createStarTree();
+
+
+	/**
+		new all blocks: taxa, splits, pda
+	*/
+	void createBlocks();
+
+	/**
+		destructor
+	*/
+    virtual ~SplitGraph();
+
+	/**
+		convert the collection of trees in TREES block into this split graph
+		@param burnin the number of beginning trees to be discarded
+		@param split_threshold only keep those splits which appear more than this threshold 
+	*/
+	void convertFromTreesBlock(int burnin, double split_threshold);
+
+/********************************************************
+	PRINT INFORMATION
+********************************************************/
+
+	/**
+		print infos of split graph
+		@param out the output stream
+	*/	
+	void report(ostream &out);
+
+	/**
+		print infos of compatibility graph of splits
+		@param out the output stream
+	*/	
+	void reportConflict(ostream &out);
+
+/********************************************************
+	GET INFORMATION
+********************************************************/
+
+	/**
+		calculate sum of weights of all splits
+	*/
+	double calcWeight();
+
+
+	/**
+		calculate sum of weights of all trivial splits
+	*/
+	double calcTrivialWeight();
+
+	/**
+		calculate sum of weights of preserved splits in the taxa_set
+		@param taxa_set a set of taxa
+	*/
+	double calcWeight(Split &taxa_set);
+
+	/**
+		count how many splits are covered by the taxon set
+		@param taxa_set a set of taxa
+	*/
+	int countSplits(Split &taxa_set);
+
+	/**
+		count how many internal splits are covered by the taxon set
+		@param taxa_set a set of taxa
+	*/
+	int countInternalSplits(Split &taxa_set);
+
+	/**
+		generate pairs of random taxa set with overlap of taxa in common
+		@param filename output file name
+		@param size size of the taxa set
+		@param overlap number of taxa common in both sets
+		@param times number of times repeated
+	*/
+	void generateTaxaSet(char *filename, int size, int overlap, int times);
+
+	/**
+		scale the weight of all splits to a norm factor
+		@param norm normalized factor
+		@param make_int TRUE to round weights to int, FALSE otherwise
+	*/
+	void scaleWeight(double norm, bool make_int = false);
+
+
+	/**
+		@return TRUE if split sp is contained in the split system
+		@param sp target split to search for
+	*/
+	bool containSplit(Split &sp);
+
+/********************************************************
+	compatibility
+********************************************************/
+
+	/**
+		find the maximum-weight set of compatible splits
+		@param maxsg (OUT) set of compatible splits in a split graph class
+	*/
+	void findMaxCompatibleSplits(SplitGraph &maxsg);
+
+	/**
+ 		check the compatibility of sp against all splits in this set
+		@param sp the target split
+		@return TRUE if sp is compatible with all splits here, otherwise FALSE
+	*/
+	bool compatible(Split *sp);
+
+/********************************************************
+	OTHER STUFFS
+********************************************************/
+
+	/**
+		@return number of taxa
+	*/
+	int getNTaxa() {
+		assert(size() > 0);
+		return (*begin())->ntaxa;
+	}
+
+	/**
+		@return number of areas
+	*/
+	int getNAreas() {
+		return sets->getNSets();
+	}
+
+	/**
+		@return number of splits
+	*/
+	int getNSplits() {
+		return size();
+	}
+
+	/**
+		@return number of trivial splits
+	*/
+	int getNTrivialSplits();
+
+	/**
+		@return taxa block
+	*/
+	NxsTaxaBlock *getTaxa() {
+		return taxa;
+	}
+
+	/**
+		@return splits block
+	*/
+	MSplitsBlock *getSplitsBlock() {
+		return splits;
+	}
+
+	/**
+		@return PDA block
+	*/
+	MPdaBlock *getPdaBlock() {
+		return pda;
+	}
+
+	/**
+		@return SETS block
+	*/
+	MSetsBlock *getSetsBlock() {
+		return sets;
+	}
+
+	/**
+		@return TREES block
+	*/
+	NxsTreesBlock *getTreesBlock() {
+		return trees;
+	}
+
+	/**
+		@return TRUE if splits graph is circular
+	*/
+	bool isCircular() {
+		return splits->cycle.size() != 0;
+	}
+
+	/**
+		@return TRUE if split system is weakly compatible
+	*/
+	bool isWeaklyCompatible();
+
+	/**
+		@return TRUE if it is the cost-constrained PD problem
+	*/
+	bool isBudgetConstraint() {
+		return pda->cost_constrained;
+	}
+
+	/**
+		@return TRUE if the distance matrix presents for circular splits graph
+		@param mat distance matrix
+	*/
+	bool checkCircular(matrix(double) &mat);
+
+	/**
+		get the ID of the taxon around the circle in a circular splits graph
+		@param i a taxon
+		@return index of taxon on the circle
+	*/
+	int getCircleId(int i) {
+		assert(i >= 0 && i < getNTaxa());
+		return splits->cycle[i];
+	}
+
+	/**
+		generate a random circular split graph
+		@param params program parameters
+	*/
+	void generateCircular(Params &params);
+
+	/**
+		save split systems to a file
+		@param out output stream
+	*/
+	void saveFile(ostream &out);
+
+	/**
+		calculate the distance matrix, print to file in phylip format
+		@param filename output file name
+	*/
+	void calcDistance(char *filename);
+
+
+	/**
+		calculate the distance matrix
+		@param dist (OUT) distance matrix
+	*/
+	void calcDistance(matrix(double) &dist);
+
+	/**
+		calculate the distance matrix, based on the taxa_order
+		@param dist (OUT) distance matrix
+		@param taxa_order an order of taxa
+	*/
+	void calcDistance(matrix(double) &dist, vector<int> &taxa_order);
+
+
+protected:
+
+	/**
+		taxa block
+	*/
+	NxsTaxaBlock *taxa;
+
+	/**
+		splits block
+	*/
+	MSplitsBlock *splits;
+
+	/**
+		PDA block
+	*/
+	MPdaBlock *pda;
+
+	
+	/**
+		SETS block
+	*/
+	MSetsBlock *sets;
+
+
+	/**
+		TREES block
+	*/
+	NxsTreesBlock *trees;
+
+};
+
+#endif

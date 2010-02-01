@@ -1,0 +1,239 @@
+\hypertarget{classNxsToken}{
+\section{NxsToken Class Reference}
+\label{classNxsToken}\index{NxsToken@{NxsToken}}
+}
+Inheritance diagram for NxsToken::\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2cm]{classNxsToken}
+\end{center}
+\end{figure}
+\subsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+enum {\bfseries NxsTokenFlags} \{ \par
+{\bfseries saveCommandComments} =  0x0001, 
+{\bfseries parentheticalToken} =  0x0002, 
+{\bfseries curlyBracketedToken} =  0x0004, 
+{\bfseries doubleQuotedToken} =  0x0008, 
+\par
+{\bfseries singleCharacterToken} =  0x0010, 
+{\bfseries newlineIsToken} =  0x0020, 
+{\bfseries tildeIsPunctuation} =  0x0040, 
+{\bfseries useSpecialPunctuation} =  0x0080, 
+\par
+{\bfseries hyphenNotPunctuation} =  0x0100, 
+{\bfseries preserveUnderscores} =  0x0200, 
+{\bfseries ignorePunctuation} =  0x0400
+ \}
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classNxsToken_aa7932e5bf17ccae942e64d9cb1f6ae4c}{
+{\bfseries NxsToken} (istream \&i)}
+\label{classNxsToken_aa7932e5bf17ccae942e64d9cb1f6ae4c}
+
+\item 
+\hypertarget{classNxsToken_a54326092fbb2974720ddbc2ea176bb65}{
+bool {\bfseries AtEOF} ()}
+\label{classNxsToken_a54326092fbb2974720ddbc2ea176bb65}
+
+\item 
+\hypertarget{classNxsToken_ad2671eb776f8f76ac946fd5b76e93c0a}{
+bool {\bfseries AtEOL} ()}
+\label{classNxsToken_ad2671eb776f8f76ac946fd5b76e93c0a}
+
+\item 
+\hypertarget{classNxsToken_a27b278f4a91b233ec6412d1359ed4e04}{
+bool {\bfseries Abbreviation} (\hyperlink{classNxsString}{NxsString} s)}
+\label{classNxsToken_a27b278f4a91b233ec6412d1359ed4e04}
+
+\item 
+\hypertarget{classNxsToken_a8982d8c087b1c10ffd794c1689e0acea}{
+bool {\bfseries Begins} (\hyperlink{classNxsString}{NxsString} s, bool respect\_\-case=false)}
+\label{classNxsToken_a8982d8c087b1c10ffd794c1689e0acea}
+
+\item 
+\hypertarget{classNxsToken_adaffa5866ddf0a39a26a5e436183b9c5}{
+void {\bfseries BlanksToUnderscores} ()}
+\label{classNxsToken_adaffa5866ddf0a39a26a5e436183b9c5}
+
+\item 
+\hypertarget{classNxsToken_a339c42adadfab9d221581d6d64208b80}{
+bool {\bfseries Equals} (\hyperlink{classNxsString}{NxsString} s, bool respect\_\-case=false)}
+\label{classNxsToken_a339c42adadfab9d221581d6d64208b80}
+
+\item 
+\hypertarget{classNxsToken_a7272fd1469fa6424086a95ec4f92eab0}{
+long {\bfseries GetFileColumn} () const }
+\label{classNxsToken_a7272fd1469fa6424086a95ec4f92eab0}
+
+\item 
+\hypertarget{classNxsToken_a17e5caf91acc756c23159f76f8b2d0fd}{
+file\_\-pos {\bfseries GetFilePosition} () const }
+\label{classNxsToken_a17e5caf91acc756c23159f76f8b2d0fd}
+
+\item 
+\hypertarget{classNxsToken_ae0fb11bf350d907295447864afa714ec}{
+long {\bfseries GetFileLine} () const }
+\label{classNxsToken_ae0fb11bf350d907295447864afa714ec}
+
+\item 
+\hypertarget{classNxsToken_a3346e398b3f6b5e8c7c3cebc49ae1c4b}{
+void {\bfseries GetNextToken} ()}
+\label{classNxsToken_a3346e398b3f6b5e8c7c3cebc49ae1c4b}
+
+\item 
+\hypertarget{classNxsToken_a83d7b2a9a2307a0aee8476b904c8145f}{
+\hyperlink{classNxsString}{NxsString} {\bfseries GetToken} (bool respect\_\-case=true)}
+\label{classNxsToken_a83d7b2a9a2307a0aee8476b904c8145f}
+
+\item 
+\hypertarget{classNxsToken_abb9c1599e43267a342fb72be7b878541}{
+const char $\ast$ {\bfseries GetTokenAsCStr} (bool respect\_\-case=true)}
+\label{classNxsToken_abb9c1599e43267a342fb72be7b878541}
+
+\item 
+\hypertarget{classNxsToken_aba7767f4b14936fa7061b77cf2f9e543}{
+const \hyperlink{classNxsString}{NxsString} \& {\bfseries GetTokenReference} ()}
+\label{classNxsToken_aba7767f4b14936fa7061b77cf2f9e543}
+
+\item 
+\hypertarget{classNxsToken_a8231aba780039e4ef1fe2fbf24e21dba}{
+int {\bfseries GetTokenLength} () const }
+\label{classNxsToken_a8231aba780039e4ef1fe2fbf24e21dba}
+
+\item 
+\hypertarget{classNxsToken_af75d27ce09e09c66c838ad61e13839f7}{
+bool {\bfseries IsPlusMinusToken} ()}
+\label{classNxsToken_af75d27ce09e09c66c838ad61e13839f7}
+
+\item 
+\hypertarget{classNxsToken_a0e5bcf6a302bf475420b28036a218b51}{
+bool {\bfseries IsPunctuationToken} ()}
+\label{classNxsToken_a0e5bcf6a302bf475420b28036a218b51}
+
+\item 
+\hypertarget{classNxsToken_ada43d5e71e16665d7f20874bd6fb6641}{
+bool {\bfseries IsWhitespaceToken} ()}
+\label{classNxsToken_ada43d5e71e16665d7f20874bd6fb6641}
+
+\item 
+\hypertarget{classNxsToken_ac77db1862982198172efd9bc908d8e38}{
+void {\bfseries ReplaceToken} (const \hyperlink{classNxsString}{NxsString} s)}
+\label{classNxsToken_ac77db1862982198172efd9bc908d8e38}
+
+\item 
+\hypertarget{classNxsToken_afd330ed87b253864f10dd8c4282d824d}{
+void {\bfseries ResetToken} ()}
+\label{classNxsToken_afd330ed87b253864f10dd8c4282d824d}
+
+\item 
+\hypertarget{classNxsToken_ad6e4423d22411f5779f2043f22008256}{
+void {\bfseries SetSpecialPunctuationCharacter} (char c)}
+\label{classNxsToken_ad6e4423d22411f5779f2043f22008256}
+
+\item 
+\hypertarget{classNxsToken_afa5232738ca19e069173e8befe75e730}{
+void {\bfseries SetLabileFlagBit} (int bit)}
+\label{classNxsToken_afa5232738ca19e069173e8befe75e730}
+
+\item 
+\hypertarget{classNxsToken_a866fd0156710932ff8cc9aeeccde3fa6}{
+bool {\bfseries StoppedOn} (char ch)}
+\label{classNxsToken_a866fd0156710932ff8cc9aeeccde3fa6}
+
+\item 
+\hypertarget{classNxsToken_a1c6fa60bd11ed8df496ea30083005532}{
+void {\bfseries StripWhitespace} ()}
+\label{classNxsToken_a1c6fa60bd11ed8df496ea30083005532}
+
+\item 
+\hypertarget{classNxsToken_a19a122c7b27d6cda65034acee1d61d01}{
+void {\bfseries ToUpper} ()}
+\label{classNxsToken_a19a122c7b27d6cda65034acee1d61d01}
+
+\item 
+\hypertarget{classNxsToken_a0ae503db53d3e2ec1e194505575e9721}{
+void {\bfseries Write} (ostream \&out)}
+\label{classNxsToken_a0ae503db53d3e2ec1e194505575e9721}
+
+\item 
+\hypertarget{classNxsToken_afb060151230ba6d764dd894f5e50b075}{
+void {\bfseries Writeln} (ostream \&out)}
+\label{classNxsToken_afb060151230ba6d764dd894f5e50b075}
+
+\item 
+\hypertarget{classNxsToken_a8bcc10cb8b852257dc0449491e74cbff}{
+virtual void {\bfseries OutputComment} (const \hyperlink{classNxsString}{NxsString} \&msg)}
+\label{classNxsToken_a8bcc10cb8b852257dc0449491e74cbff}
+
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classNxsToken_a30b21153e170902dbfd8554a10c982ea}{
+\hyperlink{classNxsString}{NxsString} {\bfseries errormsg}}
+\label{classNxsToken_a30b21153e170902dbfd8554a10c982ea}
+
+\end{DoxyCompactItemize}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classNxsToken_aa142a5a69e1c72baf998e368f727ffee}{
+void {\bfseries AppendToComment} (char ch)}
+\label{classNxsToken_aa142a5a69e1c72baf998e368f727ffee}
+
+\item 
+\hypertarget{classNxsToken_afb74dbfb0fa6a930fd33ef59e235f710}{
+void {\bfseries AppendToToken} (char ch)}
+\label{classNxsToken_afb74dbfb0fa6a930fd33ef59e235f710}
+
+\item 
+\hypertarget{classNxsToken_a4f192c1a77663b4de509e0838929d312}{
+char {\bfseries GetNextChar} ()}
+\label{classNxsToken_a4f192c1a77663b4de509e0838929d312}
+
+\item 
+\hypertarget{classNxsToken_aad4d827a0814f56659327415508c9d79}{
+void {\bfseries GetComment} ()}
+\label{classNxsToken_aad4d827a0814f56659327415508c9d79}
+
+\item 
+\hypertarget{classNxsToken_a795e4e69cf60a1d2d61db352f79aedd2}{
+void {\bfseries GetCurlyBracketedToken} ()}
+\label{classNxsToken_a795e4e69cf60a1d2d61db352f79aedd2}
+
+\item 
+\hypertarget{classNxsToken_a574341a2ecd844630d340a28e64ff413}{
+void {\bfseries GetDoubleQuotedToken} ()}
+\label{classNxsToken_a574341a2ecd844630d340a28e64ff413}
+
+\item 
+\hypertarget{classNxsToken_a76bc1b62bee1e6de6a9ab2e01d720517}{
+void {\bfseries GetQuoted} ()}
+\label{classNxsToken_a76bc1b62bee1e6de6a9ab2e01d720517}
+
+\item 
+\hypertarget{classNxsToken_ad73bcb3d0feecbbf86d2b3b017667047}{
+void {\bfseries GetParentheticalToken} ()}
+\label{classNxsToken_ad73bcb3d0feecbbf86d2b3b017667047}
+
+\item 
+\hypertarget{classNxsToken_ace5934a87892ba50ebea2c1b93866dc3}{
+bool {\bfseries IsPunctuation} (char ch)}
+\label{classNxsToken_ace5934a87892ba50ebea2c1b93866dc3}
+
+\item 
+\hypertarget{classNxsToken_a4362f9387840f57ebde0f7aa5bf6d4c8}{
+bool {\bfseries IsWhitespace} (char ch)}
+\label{classNxsToken_a4362f9387840f57ebde0f7aa5bf6d4c8}
+
+\end{DoxyCompactItemize}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+src/ncl/nxstoken.h\item 
+src/ncl/nxstoken.cpp\end{DoxyCompactItemize}

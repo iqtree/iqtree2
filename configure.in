@@ -1,0 +1,12 @@
+AC_INIT(configure.in)
+
+AM_CONFIG_HEADER(config.h)
+AM_INIT_AUTOMAKE(pda, 0.6)
+
+AC_LANG_CPLUSPLUS
+AC_PROG_CXX
+AM_PROG_LIBTOOL
+
+AC_OUTPUT(Makefile src/Makefile src/lp/Makefile src/lp/bfp/Makefile \
+	src/lp/bfp/bfp_LUSOL/LUSOL/Makefile src/lp/bfp/bfp_LUSOL/Makefile src/lp/colamd/Makefile \
+	src/lp/shared/Makefile src/modeltest/Makefile src/ncl/Makefile)
