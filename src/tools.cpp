@@ -21,6 +21,7 @@
 #include "tools.h"
 
 VerboseMode verbose_mode;
+bool simple_nni;
 
 /*
 	WIN32 does not define gettimeofday() function.
@@ -445,6 +446,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	//params.freq_type = FREQ_UNKNOWN;
 	params.num_rate_cats = 4;
 	params.optimize_by_newton = true;
+	simple_nni = false;
 
 	struct timeval tv;
 	struct timezone tz;
@@ -728,7 +730,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mod <model_name>";
 				params.model_name = argv[cnt];
-			} else if (strcmp(argv[cnt],"-f") == 0) {
+			} else if (strcmp(argv[cnt], "-simple_nni") == 0 ) {
+				simple_nni = true;
+			}
+			else if (strcmp(argv[cnt],"-f") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -f <EQ|EM|ES>";

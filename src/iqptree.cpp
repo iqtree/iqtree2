@@ -326,10 +326,10 @@ Fast Nearest Neighbor Interchange by maximum likelihood
 ****************************************************************************/
 
 double IQPTree::optimizeNNI() {
-	// NOT DONE YET, for TUNG
-	// call the function implemented before
-	
-	
+
+	if (simple_nni) {
+		return PhyloTree::optimizeNNI();
+	}
 	int cnt = 1;
 	double lamda = 0.75;
 	int nniIteration = 0;
@@ -437,6 +437,11 @@ double IQPTree::optimizeNNI() {
 	//return cur_score;
 	//return PhyloTree::optimizeNNI();
 }
+
+double IQPTree::optimizeNNISimple() {
+	return PhyloTree::optimizeNNI();
+}
+
 void IQPTree::applyBranchLengthChanges() {
 	// TODO
 }

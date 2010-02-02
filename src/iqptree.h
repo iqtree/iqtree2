@@ -133,6 +133,11 @@ public:
 	*/
 	virtual double optimizeNNI();
 	
+	/*
+	 * 	Do Simple NNI (Slow NNI)
+	 */
+	double optimizeNNISimple();
+
 	/**
 		search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
 	*/

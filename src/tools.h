@@ -170,6 +170,8 @@ enum StateFreqType {FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL,
 
 const double MAX_GENETIC_DIST = 100.0;
 
+extern bool simple_nni;
+
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
@@ -475,6 +477,7 @@ struct Params {
 		TRUE if you want to optimize branch lengths by Newton-Raphson method
 	*/
 	bool optimize_by_newton;
+
 };
 
 /**
