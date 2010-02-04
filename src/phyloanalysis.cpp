@@ -310,6 +310,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	if (params.iqpnni_iterations > 0) {
 		cout << "Performing Nearest Neighbor Interchange..." << endl;
 		//cout << "Current tree likelihood: " << tree.optimizeNNIBranches() << endl;
+		//tree.optimizeAllBranches();
 		double newScore = tree.optimizeNNI();
 		cout << "Tree likelihood after NNI: " << newScore << endl;
 		if (newScore > bestTreeScore) {

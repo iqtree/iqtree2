@@ -877,7 +877,9 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 	double node1_len = node1_nei->length;	
 	NeighborVec::iterator node1_nei_it = node1_nei->node->findNeighborIt(node1);
 
+	
 	FOR_NEIGHBOR_IT(node2, node1, node2_it) {
+		
 		// do the NNI swap
 		Neighbor *node2_nei = *node2_it;
 		// TUNG unused variable ?
@@ -903,9 +905,13 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 			node2->clearReversePartialLh(node1);
 			node1->clearReversePartialLh(node2);
 			cur_score = score;
+			//cout << "Found better score for NNI with Node " << node1->id << "->" << "Node " << node2->id << endl;
 			break;
+			
 		}
-
+		
+		//cout << "Could not find better score for NNI with Node " << node1->id << "->" << "Node " << node2->id << endl;
+		
 		// else, swap back, also recover the branch lengths
 		node1->updateNeighbor(node1_it, node1_nei, node1_len);
 		node1_nei->node->updateNeighbor(node2, node1, node1_len);
