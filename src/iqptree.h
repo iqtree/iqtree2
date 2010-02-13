@@ -23,17 +23,30 @@
 #include "phylotree.h"
 #include "phylonode.h"
 #include <set>
+#include <map>
 
+
+/**
+	TODO
+*/
+const double MIN_BRANCH_LEN = 0.000001;
+const double MAX_BRANCH_LEN = 9.0;
+const double TOL_BRANCH_LEN = 0.00001;
+const double TOL_LIKELIHOOD = 0.001;
+const double SCALING_THRESHOLD = 1e-150;
+const double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
+
+
+/**
+	TODO 
+	*/
+typedef std::map< string, double > MapBranchLength;
 
 /**
 	nodeheightcmp, for building k-representative leaf set
 */
 struct nodeheightcmp
 {
-/**
-	nodeheightcmp, for building k-representative leaf set
-*/
-
   bool operator()(const Node* s1, const Node* s2) const
   {
     return (s1->height) < (s2->height);
@@ -64,6 +77,15 @@ struct NNIMove
 */
 typedef multiset<Node*, nodeheightcmp> RepresentLeafSet;
 
+/**
+	A Branch in the tree
+*/
+struct Branch
+{
+	PhyloNode *node1;
+	PhyloNode *node2;
+	double length;
+};
 
 /**
 Important Quartet Puzzling
@@ -127,6 +149,11 @@ public:
 ****************************************************************************/
 
 	/**
+		
+	*/
+	double optimizeModel();
+	
+	/**
 		This implement the fastNNI algorithm proposed in PHYML paper
 		TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
 		@return best likelihood found
@@ -140,8 +167,9 @@ public:
 
 	/**
 		search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
+		//TODO
 	*/
-	void generateAllPositiveNNIMoves(double cur_score,PhyloNode *node = NULL, PhyloNode *dad = NULL);
+	void generateAllPositiveNNIMoves( PhyloNode *node = NULL, PhyloNode *dad = NULL );
     
 	
 	/**
@@ -151,7 +179,7 @@ public:
 		@param node1 1 of the 2 nodes on the branch
 		@param node2 1 of the 2 nodes on the branch
 	*/	
-	NNIMove getBestNNIMoveForBranch(double cur_score, PhyloNode *node1, PhyloNode *node2); 
+	NNIMove getBestNNIMoveForBranch( PhyloNode *node1, PhyloNode *node2 ); 
 	
 	/**
 		distance matrix, used for IQP algorithm
@@ -164,21 +192,68 @@ public:
 	void addPossibleNNIMove(NNIMove myMove);
 	
 	/**
-		Described in PhyML paper : apply change to branches that not correspond to a swap  l = l + lamda(la - l)
+		Described in PhyML paper: apply changes to all branches that do not correspond to a swap with the following formula  l = l + lamda(la - l)
+		TODO
 	*/
-	void applyBranchLengthChanges();
+	void applyAllBranchLengthChanges(PhyloNode *node, PhyloNode *dad = NULL);
+	
+	
+	/**
+		Described in PhyML paper: apply change to branch that does not correspond to a swap with the following formula l = l + lamda(la - l)
+		@param node1 the first node of the branch
+		@param node2 the second node of the branch
+	*/
+	void applyBranchLengthChange( PhyloNode *node1, PhyloNode *node2, bool nonNNIBranch );			
+	
+	/**
+		TODO
+	*/
+	void applyChildBranchChanges(PhyloNode *node, PhyloNode *dad);
 	
 	/**
 		Do an NNI
 	*/
-	void swapNNIBranch(PhyloNode *node1, PhyloNode *node2);
+	void swapNNIBranch(NNIMove move);
 
+	
+	/**
+		TODO
+	*/
+	double calculateOptBranchLen( PhyloNode *node1, PhyloNode *node2 );
+	
 protected:
+	
+	/**
+		The lamda number for NNI process (described in PhyML Paper) 
+	*/	
+	double lamda;
+	
+	/**
+		TODO
+	*/
+	int nbNNIToApply;
   
   	/**
 		The list of possible NNI moves for the current tree;
 	*/
 	vector<NNIMove> possibleNNIMoves;
+	
+	
+	/**
+		List contains non-conflicting NNI moves for the current tree;
+	*/
+	vector<NNIMove> nonConflictMoves;
+	
+	
+	/**
+		List contains all the branches and their current lengths 
+	*/
+	vector<Branch> branches;
+	
+	/**
+		TODO 
+	*/
+	MapBranchLength mapOptBranLens;
 	
 	/**
 		k-representative parameter

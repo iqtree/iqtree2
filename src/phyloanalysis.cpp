@@ -298,7 +298,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	
 	cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
 	
-	cout << "Optimizing model parameters and branch lengths..." << endl;
+	cout << "Optimizing model parameters (no branch length optimization)" << endl;
 	double score2 = tree.optimizeModel();
 	cout << "Log-likelihood of the current tree: " << score2 << endl;
 	double bestTreeScore = score2;
@@ -349,8 +349,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	if (params.out_file)
 		tree.printTree(params.out_file);
 	else {
-		tree.printTree(cout);
-		cout << endl;
+		//tree.printTree(cout);
+		//cout << endl;
 		if (verbose_mode > VB_MED) {
 			tree.printTree(cout, WT_TAXON_ID + WT_BR_LEN);
 			cout << endl;

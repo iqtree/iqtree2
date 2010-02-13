@@ -870,7 +870,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 	node12_it->partial_lh = newPartialLh();
 	node21_it->partial_lh = newPartialLh();
 
-	// TUNG save the first found neighbor of node 1 (excluding node2) in node1_it
+	// TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
 	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it) 
 		break;
 	Neighbor *node1_nei = *node1_it;
