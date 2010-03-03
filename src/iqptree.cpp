@@ -312,7 +312,7 @@ double IQPTree::doIQP() {
 
 	clearAllPartialLh();
 	//TODO Original is to optimizeAllBranches
-	//optimizeAllBranches();
+	optimizeAllBranches();
 	return optimizeNNI();
 }
 
@@ -517,10 +517,6 @@ double IQPTree::optimizeNNI() {
 			lamda = 0;
 		}
 
-
-		//cout << "The number of NNIs to be applied is :" << nbNNIToApply << endl;
-
-
 		if (verbose_mode == VB_DEBUG) {
 			ofstream nniTreesFile("nniTrees", ios::app);
 			nniTreesFile << nbNNIToApply << endl;
@@ -545,19 +541,6 @@ double IQPTree::optimizeNNI() {
 					nonConflictMoves.at(i).node2, false);
 
 			double score1 = swapNNIBranch(nonConflictMoves.at(i));
-//
-//			cout << "new score = " << score1 << endl;
-
-
-//			if (fabs(score1 - cur_score) > 1 ) {
-//				cout << "Wrong swap" << endl;
-//				cout << "Score1 = " << score1 << endl;
-//				cout << "Cur_score = " << cur_score << endl;
-//				exit(0);
-//			}
-//			else {
-//				cout << "Corrected swap" << endl;
-//			}
 
 			//Print the tree
 			if (verbose_mode == VB_DEBUG) {
@@ -572,7 +555,6 @@ double IQPTree::optimizeNNI() {
 			}
 		}
 
-		//exit(0);
 		cnt++;
 
 		//clearAllPartialLh();
@@ -584,18 +566,16 @@ double IQPTree::optimizeNNI() {
 		//double newScore = computeLikelihood();
 
 		if (newScore < old_score) {
-			cout << "New score = " << newScore << endl;
 			cout << "Old score = " << old_score << endl;
+			cout << "New score after applying NNIs = " << newScore << endl;
 			lamda = lamda / 2;
 			cout << "!!! The tree didn't improve at NNI iteration "
 					<< nniIteration << " (applied NNIs=" << nbNNIToApply
 					<< ") , lamda will be devided by 2 -> new lamda = "
 					<< lamda << endl;
-			//TODO : Restore the backup tree
 			this->copyPhyloTree(backupTree);
 			resetLamda = false;
 			numbNNI -= nbNNIToApply;
-			//exit(0);
 		} else {
 			resetLamda = true;
 			cout << "New best tree found with score " << newScore

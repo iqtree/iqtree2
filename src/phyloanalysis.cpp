@@ -285,6 +285,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	tree.createModel(params);
 
 	cout << "Model of evolution: " << params.model_name << endl;
+	cout << "Random seed: " << params.ran_seed << endl;
 
 	if (params.parsimony) {
 		int score = tree.computeParsimonyScore();
