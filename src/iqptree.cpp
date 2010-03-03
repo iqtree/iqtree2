@@ -536,11 +536,11 @@ double IQPTree::optimizeNNI() {
 //			cur_score = PhyloTree::swapNNIBranch(cur_score,nonConflictMoves.at(i).node1, nonConflictMoves.at(i).node2);
 //			cout << "cur_score = " << cur_score << endl;
 
-
+			// Apply the calculated optimal branch length for the center branch
 			double new_len = applyBranchLengthChange(nonConflictMoves.at(i).node1,
 					nonConflictMoves.at(i).node2, false);
 
-			double score1 = swapNNIBranch(nonConflictMoves.at(i));
+			swapNNIBranch(nonConflictMoves.at(i));
 
 			//Print the tree
 			if (verbose_mode == VB_DEBUG) {
@@ -765,7 +765,9 @@ double IQPTree::swapNNIBranch(NNIMove move) {
 	node2->clearReversePartialLh(node1);
 	node1->clearReversePartialLh(node2);
 
-	return computeLikelihood();
+	// Return likelihood score only for debugging, otherwise return 0
+	//return computeLikelihood();
+	return 0;
 }
 
 void IQPTree::generateAllPositiveNNIMoves(PhyloNode *node, PhyloNode *dad) {
