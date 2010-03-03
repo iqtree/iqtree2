@@ -34,21 +34,21 @@
 
 const int DNA_MODEL_NUM = 14;
 
-string dna_model_names[DNA_MODEL_NUM] = 
+string dna_model_names[DNA_MODEL_NUM] =
 	{"JC", "F81", "K80", "HKY", "TNef", "TN", "K81", "K81uf",
 	"TIMef", "TIM", "TVMef", "TVM", "SYM", "GTR"};
 
 const int AA_MODEL_NUM = 11;
 
 string aa_model_names[AA_MODEL_NUM] =
-	{"Dayhoff", "mtMAM", "JTT", "WAG", "cpREV", "mtREV", "rtREV", 
+	{"Dayhoff", "mtMAM", "JTT", "WAG", "cpREV", "mtREV", "rtREV",
 	"mtART", "mtZOA", "VT", "LG"};
 
 /**
 	testing the best-fit model
 	return in params.freq_type and params.rate_type
 */
-string modelTest(Params &params, PhyloTree *in_tree) 
+string modelTest(Params &params, PhyloTree *in_tree)
 {
 	int nstates = in_tree->aln->num_states;
 	if (nstates != 4 && nstates != 20)
@@ -64,10 +64,10 @@ string modelTest(Params &params, PhyloTree *in_tree)
 	ofstream fmodel_test(fmodel_name.c_str());
 	fmodel_test.close();
 	int model, rate_type;
-	
+
 	string best_model;
 	double best_lh = -1000000000.0;
-	
+
 	bool fscore_ok = false;
 
 	if (nstates == 4) {
@@ -76,43 +76,43 @@ string modelTest(Params &params, PhyloTree *in_tree)
 			fscore_test.close();
 			cout << fscore_name << " exists, checking this file" << endl;
 			/* check if this works */
-			if (modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model) == EXIT_FAILURE) 
+			if (modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model) == EXIT_FAILURE)
 			{
 				cout << "Score file is invalid, assessing all models again" << endl;
 				fmodel_test.open(fmodel_name.c_str());
 				fmodel_test.close();
 			} else fscore_ok = true;
 		}
-	} 
+	}
 	if (!fscore_ok) {
 		/* first compute the likelihood score for all available models */
 		ofstream fscore(fscore_name.c_str());
-		if (!fscore.is_open()) 
+		if (!fscore.is_open())
 			outError("cannot write to .modelscore file!");
-	
+
 		fscore << "Tree ";
-	
+
 		PhyloTree *tree_homo = new PhyloTree();
 		tree_homo->optimize_by_newton = params.optimize_by_newton;
 		tree_homo->copyPhyloTree(in_tree);
-	
+
 		PhyloTree *tree_hetero = new PhyloTree();
 		tree_hetero->optimize_by_newton = params.optimize_by_newton;
 		tree_hetero->copyPhyloTree(in_tree);
-		
+
 		RateHeterogeneity *rate_class[4];
 		rate_class[0] = new RateHeterogeneity();
 		rate_class[1] = new RateInvar(NULL);
 		rate_class[2] = new RateGamma(4, NULL);
 		rate_class[3] = new RateGammaInvar(4, NULL);
 		GTRModel *subst_model;
-		if (nstates == 4) 
+		if (nstates == 4)
 			subst_model = new ModelDNA("JC", FREQ_UNKNOWN, in_tree);
 		else
 			subst_model = new ModelProtein("WAG", FREQ_UNKNOWN, in_tree);
-		
+
 		int num_models = (nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM;
-	
+
 		cout << "Tesing " << num_models*4 << ((nstates==4)?" DNA":" protein") << " models..." << endl;
 		for (model = 0; model < num_models; model++) {
 			for (rate_type = 0; rate_type <= 3; rate_type+=1) {
@@ -135,7 +135,7 @@ string modelTest(Params &params, PhyloTree *in_tree)
 				// initialize rate
 				tree->setRate(rate_class[rate_type]);
 				rate_class[rate_type]->setTree(tree);
-				
+
 				// print some infos
 				cout << "===> Testing ";
 				cout.width(12);
@@ -158,20 +158,20 @@ string modelTest(Params &params, PhyloTree *in_tree)
 				subst_model->writeParameters(fscore);
 				rate_class[rate_type]->writeParameters(fscore);
 				fscore << endl;
-				
+
 				if (cur_lh > best_lh) {
 					best_lh = cur_lh;
 					best_model = subst_model->name + rate_class[rate_type]->name;
 				}
 			}
 		}
-	
+
 		delete tree_hetero;
 		delete tree_homo;
-		
+
 		for (rate_type = 3; rate_type >= 0; rate_type--)
 			delete rate_class[rate_type];
-	
+
 		fscore.close();
 
 		/* now do the modeltest */
@@ -185,24 +185,24 @@ string modelTest(Params &params, PhyloTree *in_tree)
 		cout << "  AIC:     " << IC_model << endl;
 		model_list.insert(LRT_model);
 		model_list.insert(IC_model);
-	
+
 		/* applying other tests */
 		sprintf(model_arg, " -n%d", in_tree->aln->getNSite());
 		modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
 		cout << "  AICc:    " << IC_model << endl;
 		model_list.insert(IC_model);
-		
+
 		sprintf(model_arg, " -n%d -t%d", in_tree->aln->getNSite(), in_tree->aln->getNSeq());
 		modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
 		cout << "  AICc_t:  " << IC_model << endl;
 		model_list.insert(IC_model);
-	
-	
+
+
 		sprintf(model_arg, "-n%d -b ", in_tree->aln->getNSite());
 		modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
 		cout << "  BIC:     " << IC_model << endl;
 		model_list.insert(IC_model);
-		
+
 		sprintf(model_arg, "-n%d -t%d -b", in_tree->aln->getNSite(), in_tree->aln->getNSeq());
 		modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
 		cout << "  BIC_t:   " << IC_model << endl;
@@ -210,12 +210,12 @@ string modelTest(Params &params, PhyloTree *in_tree)
 	} else {
 		// FOR protein: no modeltest exists yet
 		model_list.insert(best_model);
-	} 
+	}
 	/* use the model that is most frequently selected */
 	if (model_list.size() > 1) {
 		cout << "Tests do not agree on one single model" << endl;
 		int max = 0;
-	
+
 		for (multiset<string>::iterator it = model_list.begin(); it != model_list.end(); it++)
 			if (model_list.count(*it) > max) {
 				max = model_list.count(*it);
@@ -224,7 +224,7 @@ string modelTest(Params &params, PhyloTree *in_tree)
 		cout << "Use the model that is most frequently selected: " << best_model << endl;
 	} else {
 		cout << "Best model: " << (*model_list.begin()) << endl;
-	} 
+	}
 
 	return best_model;
 	//return "GTR";
@@ -289,15 +289,15 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	if (params.parsimony) {
 		int score = tree.computeParsimonyScore();
 		cout << "User tree has parsimony score of " << score << endl;
-	
-		/* NNI with parsimony function */		
+
+		/* NNI with parsimony function */
 		tree.searchNNI();
 	}
 	/* optimize model parameters */
 	cout.precision(10);
-	
+
 	cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
-	
+
 	cout << "Optimizing model parameters (no branch length optimization)" << endl;
 	double score2 = tree.optimizeModel();
 	cout << "Log-likelihood of the current tree: " << score2 << endl;
@@ -311,7 +311,13 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		cout << "Performing Nearest Neighbor Interchange..." << endl;
 		//cout << "Current tree likelihood: " << tree.optimizeNNIBranches() << endl;
 		//tree.optimizeAllBranches();
+
+		//clock_t nniBeginClock, nniEndClock;
+		//nniBeginClock = clock();
 		double newScore = tree.optimizeNNI();
+		//nniEndClock = clock();
+		//printf("Time used for first NNI search: %8.6f seconds.\n", (double)(nniBeginClock - nniEndClock) / CLOCKS_PER_SEC);
+
 		cout << "Tree likelihood after NNI: " << newScore << endl;
 		if (newScore > bestTreeScore) {
 			bestTreeScore = newScore;
@@ -320,11 +326,11 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		else {
 			cout << "Tree didn't improve after NNI :( " << endl;
 		}
-		
+
 	}
 
 	/* do the IQP */
-	if (params.k_representative > 0 && params.p_delete > 0.0 && params.iqpnni_iterations > 1) {		
+	if (params.k_representative > 0 && params.p_delete > 0.0 && params.iqpnni_iterations > 1) {
 		tree.setRepresentNum(params.k_representative);
 		tree.setProbDelete(params.p_delete);
 		tree.setIQPIterations(params.iqpnni_iterations-1);
@@ -335,7 +341,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		cout << "Best score found : " << bestscore << endl;
 	} else {
 		/* do SPR with likelihood function */
-		if (params.tree_spr) 
+		if (params.tree_spr)
 			tree.optimizeSPRBranches();
 	}
 
@@ -362,7 +368,7 @@ void runPhyloAnalysis(Params &params) {
 
 	Alignment alignment(params.aln_file, params.intype);
 
-	runPhyloAnalysis(params, &alignment); 
+	runPhyloAnalysis(params, &alignment);
 }
 
 

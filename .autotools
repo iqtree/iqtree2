@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurations>
+<configuration name="Build (GNU)">
+<option id="no-create" value="false"/>
+<option id="srcdir" value=""/>
+<option id="build" value=""/>
+<option id="enable-maintainer-mode" value="false"/>
+<option id="version" value="false"/>
+<option id="cache-file" value=""/>
+<option id="help" value="false"/>
+<option id="includedir" value=""/>
+<option id="directories" value="null"/>
+<option id="oldincludedir" value=""/>
+<option id="localstatedir" value=""/>
+<option id="features" value="null"/>
+<option id="configure" value="configure"/>
+<option id="sbindir" value=""/>
+<option id="options" value="null"/>
+<option id="program-suffix" value=""/>
+<option id="platform" value="null"/>
+<option id="program-transform-name" value=""/>
+<option id="sysconfdir" value=""/>
+<option id="program-prefix" value=""/>
+<option id="host" value=""/>
+<option id="autogenOpts" value=""/>
+<option id="filenames" value="null"/>
+<option id="exec-prefix" value=""/>
+<option id="autogen" value="autogen.sh"/>
+<option id="quiet" value="false"/>
+<option id="mandir" value=""/>
+<option id="libdir" value=""/>
+<option id="general" value="null"/>
+<option id="bindir" value=""/>
+<option id="libexecdir" value=""/>
+<option id="prefix" value=""/>
+<option id="target" value=""/>
+<option id="sharedstatedir" value=""/>
+<option id="configdir" value=""/>
+<option id="user" value=""/>
+<option id="datadir" value=""/>
+<option id="infodir" value=""/>
+</configuration>
+</configurations>

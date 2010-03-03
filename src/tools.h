@@ -32,6 +32,7 @@
 
 //#include <sys/time.h>
 //#include <time.h>
+#include <sys/stat.h>
 #include <math.h>
 #include "ncl/ncl.h"
 #include "msetsblock.h"
@@ -104,7 +105,7 @@ public:
 	DoubleMatrix(int arows, int acols);
 	//inline double operator() (int i, int j);
 	inline double &operator() (int i, int j) { return value[i * cols + j]; };
-	inline double *operator[] (int i) {	return value + (i*cols); }; 
+	inline double *operator[] (int i) {	return value + (i*cols); };
 	virtual ~DoubleMatrix();
 	void setZero();
 };
@@ -122,11 +123,11 @@ enum RunMode {DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMI
 /**
 	type of generating trees or splits graphs
 */
-enum TreeGenType {NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED, 
+enum TreeGenType {NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED,
 		CIRCULAR_SPLIT_GRAPH, TAXA_SET};
 
 /**
-	when writing tree: 
+	when writing tree:
 		BR_LEN - output branch length
 		BR_NONE - don't output branch length
 		BR_CLADE - put branch length into internal node name
@@ -175,7 +176,7 @@ extern bool simple_nni;
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
-/** 
+/**
 	program parameters, everything is specified here
 */
 struct Params {
@@ -456,23 +457,23 @@ struct Params {
 		number of iqpnni iterations
 	*/
 	int iqpnni_iterations;
-	
+
 	/**
 		name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)
 	*/
 	string model_name;
-	
+
 	/**
 		state frequency type
 	*/
 	StateFreqType freq_type;
-	
+
 
 	/**
 		the number of rate categories
 	*/
 	int num_rate_cats;
-	
+
 	/**
 		TRUE if you want to optimize branch lengths by Newton-Raphson method
 	*/
@@ -490,10 +491,10 @@ struct PDRelatedMeasures {
 	vector<NxsString> setName;
 
 	/**
-		pd scores of areas		
+		pd scores of areas
 	*/
 	DoubleVector PDScore;
-	
+
 	/**
 		exclusive PD scores
 	*/
@@ -582,7 +583,7 @@ double randomLen(Params &params);
 /**
 	convert string to int, with error checking
 	@param str original string
-	@return the integer 
+	@return the integer
 */
 
 
@@ -619,6 +620,19 @@ const char ERR_INTERNAL[]          = "Internal error, pls contact authors!";
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
+/**
+ * convert int to string
+ * @param int
+ * @return string
+ */
+string convertIntToString(int number);
+
+/**
+ * Check if the file exists
+ * @param strFilename
+ * @return
+ */
+bool fileExists(string strFilename);
 
 int convert_int(const char *str) throw (string);
 
@@ -706,8 +720,8 @@ void parseArg(int argc, char *argv[], Params &params);
 /**
 	detect the format of input file
 	@param input_file file name
-	@return 
-		IN_NEWICK if file in newick format, 
+	@return
+		IN_NEWICK if file in newick format,
 		IN_NEXUS if in nexus format,
 		IN_OTHER if file format unknown.
 */

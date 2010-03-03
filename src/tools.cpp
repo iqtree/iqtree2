@@ -27,7 +27,7 @@ bool simple_nni;
 	WIN32 does not define gettimeofday() function.
 	Here declare it extra for WIN32 only.
 */
-#if defined(WIN32) 
+#if defined(WIN32)
 #include <sys/timeb.h>
 #include <sys/types.h>
 #include <winsock.h>
@@ -145,6 +145,35 @@ double randomLen(Params &params) {
 	return len;
 }
 
+string convertIntToString(int number)
+{
+   stringstream ss;//create a stringstream
+   ss << number;//add number to the stream
+   return ss.str();//return a string with the contents of the stream
+}
+
+bool fileExists(string strFilename) {
+  struct stat stFileInfo;
+  bool blnReturn;
+  int intStat;
+
+  // Attempt to get the file attributes
+  intStat = stat(strFilename.c_str(),&stFileInfo);
+  if(intStat == 0) {
+    // We were able to get the file attributes
+    // so the file obviously exists.
+    blnReturn = true;
+  } else {
+    // We were not able to get the file attributes.
+    // This may mean that we don't have permission to
+    // access the folder which contains this file. If you
+    // need to do that level of checking, lookup the
+    // return values of stat which will give you
+    // more details on why stat failed.
+    blnReturn = false;
+  }
+  return(blnReturn);
+}
 
 int convert_int(const char *str) throw (string) {
 	char *endptr;
@@ -274,10 +303,10 @@ void readWeightFile(Params &params, int ntaxa, double &scale, StrVector &tax_nam
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(params.param_file);
 		string name, tmp;
-		
+
 		in >> tmp;
 		scale = convert_double(tmp.c_str());
-	
+
 		for (; !in.eof() && ntaxa > 0; ntaxa--) {
 			// remove the failbit
 			in.exceptions(ios::badbit);
@@ -286,7 +315,7 @@ void readWeightFile(Params &params, int ntaxa, double &scale, StrVector &tax_nam
 			in.exceptions(ios::failbit | ios::badbit);
 
 			tax_name.push_back(name);
-			// read the sequence weight		
+			// read the sequence weight
 			in >> tmp;
 			tax_weight.push_back(convert_double(tmp.c_str()));
 		}
@@ -308,8 +337,8 @@ void readStringFile(const char* filename, int max_num, StrVector &strv) {
 		// set the failbit and badbit
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(filename);
-		string name;	
-	
+		string name;
+
 		// remove the failbit
 		in.exceptions(ios::badbit);
 		for (; !in.eof() && max_num > 0; max_num--) {
@@ -345,8 +374,8 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
 		// set the failbit and badbit
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(filename);
-		string name;	
-	
+		string name;
+
 		// remove the failbit
 		in.exceptions(ios::badbit);
 		while (!in.eof()) {
@@ -588,7 +617,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.mean_len = convert_double(argv[cnt+1]);
 				params.max_len = convert_double(argv[cnt+2]);
 				cnt += 2;
-	
+
 			} else if (strcmp(argv[cnt],"-rset") == 0) {
 				cnt++;
 				if (cnt >= argc-1)
@@ -686,7 +715,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -burnin <burnin_value>";
 				params.tree_burnin = convert_int(argv[cnt]);
-				if (params.tree_burnin < 0) 
+				if (params.tree_burnin < 0)
 					throw "Burnin value must not be negative";
 			} else if (strcmp(argv[cnt],"-t") == 0) {
 				cnt++;
@@ -694,7 +723,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -t <split_threshold>";
 				params.split_threshold = convert_double(argv[cnt]);
 				if (params.split_threshold < 0 && params.split_threshold > 1)
-					throw "Split threshold must be between 0 and 1";		
+					throw "Split threshold must be between 0 and 1";
 			} else if (strcmp(argv[cnt],"-iwc") == 0) {
 				params.test_input = TEST_WEAKLY_COMPATIBLE;
 			} else if (strcmp(argv[cnt],"-aln") == 0) {
@@ -747,7 +776,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.freq_type = FREQ_USER_DEFINED;
 				else
 					throw "Use -f <EQUAL|EMPIRICAL|ESTIMATE|DEFAULT>";
-					
+
 			} else if (strcmp(argv[cnt],"-c") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -763,17 +792,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else {
 				if (params.user_file == NULL)
 					params.user_file = argv[cnt];
-				else 
+				else
 					params.out_file = argv[cnt];
 			}
-			if (params.root != NULL && params.is_rooted) 
+			if (params.root != NULL && params.is_rooted)
 				throw "Not allowed to specify both -o <taxon> and -root";
 
 		} // try
 		catch (const char *str) {
 			outError(str);
 		//} catch (char *str) {
-			//outError(str);		
+			//outError(str);
 		} catch (string str) {
 			outError(str);
 		} catch (...) {
@@ -784,7 +813,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 		}
 
 	} // for
-	if (params.user_file == NULL && params.aln_file == NULL) 
+	if (params.user_file == NULL && params.aln_file == NULL)
 		usage(argv, false);
 }
 
@@ -833,7 +862,7 @@ void usage(char* argv[], bool full_command) {
 	cout << "  -endem            Compute area endemic PD." << endl;
 	cout << "  -compl <areas>    Compute area PD-complementarity given the listed <areas>." << endl;
 	cout << endl;
-	
+
 	if (!full_command) exit(0);
 
 	cout << "GENERATING RANDOM TREES:" << endl;
@@ -864,7 +893,7 @@ void usage(char* argv[], bool full_command) {
 }
 
 InputType detectInputFile(char *input_file) {
-	
+
 	try {
 		ifstream in;
 		in.exceptions(ios::failbit | ios::badbit);

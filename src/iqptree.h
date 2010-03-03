@@ -38,7 +38,7 @@ const double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
 
 
 /**
-	TODO 
+	TODO
 	*/
 typedef std::map< string, double > MapBranchLength;
 
@@ -59,20 +59,20 @@ struct nodeheightcmp
 struct NNIMove
 {
 	PhyloNode *node1;
-	Neighbor *node1Nei;	
+	Neighbor *node1Nei;
 	PhyloNode *node2;
 	Neighbor *node2Nei;
 	double score;
-	
+
 	bool operator<(const NNIMove& rhs) const
-	{ 
-		return score > rhs.score; 
+	{
+		return score > rhs.score;
 	}
-	
+
 };
 
 /**
-	Representative Leaf Set, stored as a multiset template of STL, 
+	Representative Leaf Set, stored as a multiset template of STL,
 	sorted in ascending order of leaf's height
 */
 typedef multiset<Node*, nodeheightcmp> RepresentLeafSet;
@@ -149,17 +149,17 @@ public:
 ****************************************************************************/
 
 	/**
-		
+
 	*/
 	double optimizeModel();
-	
+
 	/**
 		This implement the fastNNI algorithm proposed in PHYML paper
 		TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
 		@return best likelihood found
 	*/
 	virtual double optimizeNNI();
-	
+
 	/*
 	 * 	Do Simple NNI (Slow NNI)
 	 */
@@ -170,91 +170,91 @@ public:
 		//TODO
 	*/
 	void generateAllPositiveNNIMoves( PhyloNode *node = NULL, PhyloNode *dad = NULL );
-    
-	
+
+
 	/**
-		search the best swap for a branch 
+		search the best swap for a branch
 		@return NNIMove The best Move/Swap
 		@param cur_score the current score of the tree before the swaps
 		@param node1 1 of the 2 nodes on the branch
 		@param node2 1 of the 2 nodes on the branch
-	*/	
-	NNIMove getBestNNIMoveForBranch( PhyloNode *node1, PhyloNode *node2 ); 
-	
+	*/
+	NNIMove getBestNNIMoveForBranch( PhyloNode *node1, PhyloNode *node2 );
+
 	/**
 		distance matrix, used for IQP algorithm
 	*/
 	double *dist_matrix;
-	
+
 	/**
 		add a NNI move to the list of possible NNI moves;
 	*/
 	void addPossibleNNIMove(NNIMove myMove);
-	
+
 	/**
 		Described in PhyML paper: apply changes to all branches that do not correspond to a swap with the following formula  l = l + lamda(la - l)
 		TODO
 	*/
 	void applyAllBranchLengthChanges(PhyloNode *node, PhyloNode *dad = NULL);
-	
-	
+
+
 	/**
 		Described in PhyML paper: apply change to branch that does not correspond to a swap with the following formula l = l + lamda(la - l)
 		@param node1 the first node of the branch
 		@param node2 the second node of the branch
 	*/
-	void applyBranchLengthChange( PhyloNode *node1, PhyloNode *node2, bool nonNNIBranch );			
-	
+	double applyBranchLengthChange( PhyloNode *node1, PhyloNode *node2, bool nonNNIBranch );
+
 	/**
 		TODO
 	*/
 	void applyChildBranchChanges(PhyloNode *node, PhyloNode *dad);
-	
+
 	/**
 		Do an NNI
 	*/
-	void swapNNIBranch(NNIMove move);
+	double swapNNIBranch(NNIMove move);
 
-	
+
 	/**
 		TODO
 	*/
 	double calculateOptBranchLen( PhyloNode *node1, PhyloNode *node2 );
-	
+
 protected:
-	
+
 	/**
-		The lamda number for NNI process (described in PhyML Paper) 
-	*/	
+		The lamda number for NNI process (described in PhyML Paper)
+	*/
 	double lamda;
-	
+
 	/**
 		TODO
 	*/
 	int nbNNIToApply;
-  
+
   	/**
 		The list of possible NNI moves for the current tree;
 	*/
 	vector<NNIMove> possibleNNIMoves;
-	
-	
+
+
 	/**
 		List contains non-conflicting NNI moves for the current tree;
 	*/
 	vector<NNIMove> nonConflictMoves;
-	
-	
+
+
 	/**
-		List contains all the branches and their current lengths 
+		List contains all the branches and their current lengths
 	*/
 	vector<Branch> branches;
-	
+
 	/**
-		TODO 
+		TODO
 	*/
 	MapBranchLength mapOptBranLens;
-	
+
 	/**
 		k-representative parameter
 	*/
@@ -296,7 +296,7 @@ protected:
 		@param dad the other node of the reinsertion branch in the existing tree
 	*/
 	void reinsertLeaf(Node *leaf, Node *adjacent_node, Node *node, Node *dad);
-		
+
 	/**
 		reinsert the whole list of leaves back into the tree
 		@param del_leaves the list of deleted leaves, returned by deleteLeaves() function
@@ -305,7 +305,7 @@ protected:
 	void reinsertLeaves(PhyloNodeVector &del_leaves, PhyloNodeVector &adjacent_nodes);
 
 	/**
-		assess a quartet with four taxa. Current implementation uses the four-point condition 
+		assess a quartet with four taxa. Current implementation uses the four-point condition
 		based on distance matrix for quick evaluation.
 		@param leaf0 one of the leaf in the existing sub-tree
 		@param leaf1 one of the leaf in the existing sub-tree
@@ -315,7 +315,7 @@ protected:
 	int assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2, Node *del_leaf);
 
 	/**
-		assess the important quartets around a virtual root of the tree. 
+		assess the important quartets around a virtual root of the tree.
 		This function will assign bonus points to branches by updating the variable 'bonus_values'
 		@param cur_root the current virtual root
 		@param del_leaf a leaf that was deleted (not in the existing sub-tree)
