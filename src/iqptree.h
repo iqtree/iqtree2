@@ -273,7 +273,7 @@ protected:
 	/**
 		bonus values of all branches, used for IQP algorithm
 	*/
-	double *bonus_values;
+	//double *bonus_values;
 
 	/**
 		delete a leaf from the tree, assume tree is birfucating
@@ -324,8 +324,10 @@ protected:
 
 	/**
 		initialize the bonus points to ZERO
+		@param node the root of the sub-tree
+		@param dad dad of 'node', used to direct the recursion
 	*/
-	void initializeBonus();
+	void initializeBonus(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 	/**
 		raise the bonus points for all branches in the subtree rooted at a node
