@@ -356,6 +356,15 @@ public:
 protected:
 
 	/**
+		line number of the input file, used to output errors in input file
+	*/
+	int in_line;
+	/**
+		column number of the input file, used to output errors in input file
+	*/
+	int in_column; 
+
+	/**
 		release the nemory.
 		@param node the starting node, NULL to start from the root
 		@param dad dad of the node, used to direct the search
@@ -370,6 +379,15 @@ protected:
 	*/
 	void checkValidTree(bool& stop, Node *node = NULL, Node *dad = NULL);
 
+	/**
+		read the next character from a NEWICK file. Ignore comments [...]
+		@param in input stream
+		@param current_ch current character in the stream
+		@return next character read from input stream
+	*/
+	char readNextChar(istream &in, char current_ch = 0);
+
+	string reportInputInfo();
 };
 
 /**

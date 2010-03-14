@@ -525,7 +525,7 @@ inline bool controlchar(char ch) {
 }
 
 inline bool is_newick_token(char ch) {
-	return ch == ':' || ch == ';' || ch == ',' || ch == ')' || ch == '(';
+	return ch == ':' || ch == ';' || ch == ',' || ch == ')' || ch == '(' || ch == '[' || ch == ']';
 }
 
 /*--------------------------------------------------------------*/

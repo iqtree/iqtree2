@@ -292,9 +292,11 @@ void MTree::readTree(const char *infile, bool &is_rooted) {
 
 void MTree::readTree(istream &in, bool &is_rooted)
 {
+	in_line = 1;
+	in_column = 1;
 	try {
 		char ch;
-		in >> ch;
+		ch = readNextChar(in);
 		if (ch != '(')
 			throw "Tree file not started with an opening-bracket '('";
 	
@@ -321,16 +323,16 @@ void MTree::readTree(istream &in, bool &is_rooted)
 	} catch (bad_alloc) {
 		outError(ERR_NO_MEMORY);
 	} catch (const char *str) {
-		outError(str);
+		outError(str, reportInputInfo());
 	} catch (char *str) {
-		outError(str);
+		outError(str, reportInputInfo());
 	} catch (string str) {
-		outError(str);
+		outError(str.c_str(), reportInputInfo());
 	} catch (ios::failure) {
-		outError(ERR_READ_INPUT);
+		outError(ERR_READ_INPUT, reportInputInfo());
 	} catch (...) {
 		// anything else
-		outError(ERR_READ_ANY);
+		outError(ERR_READ_ANY, reportInputInfo());
 	}
 
 	nodeNum = leafNum;
@@ -371,7 +373,7 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, double &branch_len
 
 	if (ch == '(') {
 		// internal node
-		infile >> ch;
+		ch = readNextChar(infile);
 		while (ch != ')' && !infile.eof())
 		{
 			node = NULL;
@@ -385,7 +387,7 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, double &branch_len
 			if (infile.eof())
 				throw "Expecting ')', but end of file instead";
 			if (ch == ',')
-				infile >> ch;
+				ch = readNextChar(infile);
 			else if (ch != ')') {
 				string err = "Expecting ')', but found '";
 				err += ch;
@@ -393,7 +395,7 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, double &branch_len
 				throw err;
 			}
 		}
-		if (!infile.eof()) infile >> ch;
+		if (!infile.eof()) ch = readNextChar(infile);
 	}
 	// now read the node name
 	seqlen = 0;
@@ -402,9 +404,10 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, double &branch_len
 		seqname[seqlen] = ch;
 		seqlen++;
 		ch = infile.get();
+		in_column++;
 	}
-	if (controlchar(ch) && !infile.eof()) 
-		infile >> ch;
+	if ((controlchar(ch) || ch == '[') && !infile.eof()) 
+		ch = readNextChar(infile, ch);
 	if (seqlen == maxlen)
 		throw "Too long name ( > 100)";
 	seqname[seqlen] = 0;
@@ -424,16 +427,17 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, double &branch_len
 		return;
 	if (ch == ':')
 	{
-		infile >> ch;
+		ch = readNextChar(infile);
 		seqlen = 0;
 		while (!is_newick_token(ch) && !controlchar(ch) && !infile.eof() && seqlen < maxlen)
 		{
 			seqname[seqlen] = ch;
 			seqlen++;
 			ch = infile.get();
+			in_column++;
 		}
-		if (controlchar(ch) && !infile.eof()) 
-			infile >> ch;
+		if ((controlchar(ch) || ch == '[') && !infile.eof()) 
+			ch = readNextChar(infile, ch);
 		if (seqlen == maxlen || infile.eof())
 			throw "branch length format error.";
 		seqname[seqlen] = 0;
@@ -715,7 +719,45 @@ void MTree::freeNode(Node *node, Node *dad)
 	delete node;
 }
 
+char MTree::readNextChar(istream &in, char current_ch) {
+	char ch;
+	if (current_ch == '[') 
+		ch = current_ch; 
+	else { 
+		in.get(ch); 
+		in_column++;
+		if (ch == 10) { in_line++; in_column = 1; }
+	}
+	while (controlchar(ch) && !in.eof()) { 
+		in.get(ch); 
+		in_column++;
+		if (ch == 10) { in_line++; in_column = 1; }
+	}
+	// ignore comment
+	while (ch=='[' && !in.eof()) {
+		while (ch!=']' && !in.eof()) {
+			in.get(ch); 
+			in_column++;
+			if (ch == 10) { in_line++; in_column = 1; }
+		}
+		if (ch != ']') throw "Comments not ended with ]";
+		in_column++;
+		in.get(ch); 
+		if (ch == 10) { in_line++; in_column = 1; }
+		while (controlchar(ch) && !in.eof()) {
+			in_column++;
+			in.get(ch); 
+			if (ch == 10) { in_line++; in_column = 1; }
+		}
+	}
+	return ch;
+}
 
+string MTree::reportInputInfo() {
+	string str = " (line ";
+	str += convertIntToString(in_line) + " column " + convertIntToString(in_column-1) + ")";
+	return str;
+}
 
 /*********************************************
 	class PDTaxaSet

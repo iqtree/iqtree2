@@ -905,7 +905,7 @@ InputType detectInputFile(char *input_file) {
 			in >> ch;
 		} while (ch <= 32 && !in.eof() && count++ < 20);
 		in.close();
-		return (ch == '#') ? IN_NEXUS : ( (ch == '(') ? IN_NEWICK : IN_OTHER );
+		return (ch == '#') ? IN_NEXUS : ( (ch == '(' || ch == '[') ? IN_NEWICK : IN_OTHER );
 	} catch (ios::failure) {
 		outError("Cannot read file ", input_file);
 	}

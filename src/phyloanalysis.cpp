@@ -299,7 +299,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 
 	cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
 
-	cout << "Optimizing model parameters (no branch length optimization)" << endl;
+	cout << "Optimizing model parameters" << endl;
 	double score2 = tree.optimizeModel();
 	cout << "Log-likelihood of the current tree: " << score2 << endl;
 	double bestTreeScore = score2;
