@@ -399,14 +399,23 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, double &branch_len
 	}
 	// now read the node name
 	seqlen = 0;
-	while (!is_newick_token(ch) && !controlchar(ch) && !infile.eof() && seqlen < maxlen)
+	char end_ch = 0;
+	if (ch == '\'' || ch == '"') end_ch = ch;
+
+	while (!infile.eof() && seqlen < maxlen)
 	{
-		seqname[seqlen] = ch;
-		seqlen++;
+		if (end_ch == 0) {
+			if (is_newick_token(ch) || controlchar(ch)) break;
+		} 
+		seqname[seqlen++] = ch;
 		ch = infile.get();
 		in_column++;
+		if (end_ch != 0 && ch == end_ch) {
+			seqname[seqlen++] = ch;	
+			break;
+		} 
 	}
-	if ((controlchar(ch) || ch == '[') && !infile.eof()) 
+	if ((controlchar(ch) || ch == '[' || ch == end_ch) && !infile.eof()) 
 		ch = readNextChar(infile, ch);
 	if (seqlen == maxlen)
 		throw "Too long name ( > 100)";
