@@ -149,21 +149,12 @@ public:
 ****************************************************************************/
 
 	/**
-
-	*/
-	double optimizeModel();
-
-	/**
 		This implement the fastNNI algorithm proposed in PHYML paper
 		TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
 		@return best likelihood found
 	*/
 	virtual double optimizeNNI();
 
-	/*
-	 * 	Do Simple NNI (Slow NNI)
-	 */
-	double optimizeNNISimple();
 
 	/**
 		search all positive NNI move on the current tree and save them on the possilbleNNIMoves list

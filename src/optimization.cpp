@@ -321,6 +321,10 @@ double Optimization::minimizeOneDimen(double xmin, double xguess, double xmax, d
 
 double Optimization::minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f)
 {
+
+	//double fe;
+	//return minimizeOneDimen(xmin, rtn, xmax, tolerance, &f, &fe);
+
 	int j;
 	double fnew, df,ddf,dx,rtn,rtnold, temp, step, fstart;
 
@@ -350,7 +354,6 @@ double Optimization::minimizeNewton(double xmin, double xguess, double xmax, dou
 	// Newton does not work, turn to other method
 	double fe;
 	return minimizeOneDimen(xmin, rtn, xmax, tolerance, &f, &fe);
-	return 0.0;
 }
 
 /*

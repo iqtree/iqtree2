@@ -368,41 +368,6 @@ double IQPTree::doIQPNNI(string tree_file_name) {
  Fast Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 
-double IQPTree::optimizeModel() {
-
-	double cur_lh = computeLikelihood();
-	//double cur_lh = optimizeAllBranches(1);
-	assert(model);
-	assert(site_rate);
-
-	do {
-		double model_lh = model->optimizeParameters();
-		double rate_lh = site_rate->optimizeParameters();
-		if (model_lh == 0.0 && rate_lh == 0.0) {
-			cur_lh = optimizeAllBranches();
-			cout << "No parameters optimization was carried out" << endl;
-			break;
-		}
-		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
-		if (verbose_mode > VB_MIN) {
-			model->writeInfo(cout);
-			site_rate->writeInfo(cout);
-		}
-		if (new_lh > cur_lh + TOL_LIKELIHOOD) {
-			cur_lh = optimizeAllBranches(5); // loop only 5 times!
-			cur_lh = new_lh;
-			if (verbose_mode > VB_MIN)
-				cout << "Current Log-likelihood: " << cur_lh << endl;
-		} else {
-			cur_lh = optimizeAllBranches();
-			break;
-		}
-	} while (true);
-
-	return cur_lh;
-
-}
-
 double IQPTree::optimizeNNI() {
 	clock_t nniBeginClock, nniEndClock;
 	nniBeginClock = clock();
@@ -613,10 +578,6 @@ double IQPTree::optimizeNNI() {
 			- nniEndClock) / CLOCKS_PER_SEC);
 
 	return optimizeAllBranches(1);
-}
-
-double IQPTree::optimizeNNISimple() {
-	return PhyloTree::optimizeNNI();
 }
 
 void IQPTree::applyAllBranchLengthChanges(PhyloNode *node, PhyloNode *dad) {
