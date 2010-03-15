@@ -350,7 +350,7 @@ double Optimization::minimizeNewton(double xmin, double xguess, double xmax, dou
 	}
 	if (j > JMAX)
 		nrerror("Maximum number of iterations exceeded in Newton-Raphson");
-	if (f <= fstart) return rtn;
+	if (f <= fstart && (j > 1 || xguess > xmin+tolerance)) return rtn;
 	// Newton does not work, turn to other method
 	double fe;
 	return minimizeOneDimen(xmin, rtn, xmax, tolerance, &f, &fe);

@@ -374,6 +374,7 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 		if ((*aln)[ptn].is_const) {
 			lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
 		}
+		assert(lh_ptn > 0);
 		tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
 	}
 	//for (cat = ncat-1; cat >= 0; cat--)
@@ -621,6 +622,7 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
 		if ((*aln)[ptn].is_const) {
 			lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
 		}
+		assert(lh_ptn > 0);
 		double derv1_frac = lh_ptn_derv1 / lh_ptn;
 		double derv2_frac = lh_ptn_derv2 / lh_ptn;
 		tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
@@ -836,8 +838,9 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, double* &dist
 	setAlignment(alignment);
 }
 
-void PhyloTree::fixNegativeBranch(Node *node, Node *dad) {
+bool PhyloTree::fixNegativeBranch(Node *node, Node *dad) {
 	if (!node) node = root;
+	bool fixed = false;
 	FOR_NEIGHBOR_IT(node, dad, it) {
 		if ((*it)->length < 0.0) { // negative branch length detected
 			// add the amount to the neighboring branches
@@ -845,11 +848,16 @@ void PhyloTree::fixNegativeBranch(Node *node, Node *dad) {
 			FOR_NEIGHBOR_IT(node, (*it)->node, it2)
 				(*it2)->length += len_add;*/
 			if (verbose_mode == VB_DEBUG)
-				cout << "Negative branch length " << (*it)->length << " was set to zero" << endl;
-			(*it)->length = MIN_BRANCH_LEN;
+				cout << "Negative branch length " << (*it)->length << " was set to ";
+			(*it)->length = ((double)(rand())/RAND_MAX)*0.1+TOL_BRANCH_LEN;
+			//(*it)->length = MIN_BRANCH_LEN;				
+			if (verbose_mode == VB_DEBUG)
+				cout << (*it)->length << endl;
+			fixed = true;
 		}
-		fixNegativeBranch((*it)->node, node);
+		fixed = fixed | fixNegativeBranch((*it)->node, node);
 	}
+	return fixed;
 }
 
 

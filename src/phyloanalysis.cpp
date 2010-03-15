@@ -267,7 +267,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	}
 
 	/* Fix if negative branch lengths detected */
-	tree.fixNegativeBranch();
+	if (tree.fixNegativeBranch())
+		cout << "Some branch showed no or negative length and initialized by random length" << endl;
 
 	t_begin=clock();
 
@@ -359,7 +360,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		//tree.printTree(cout);
 		//cout << endl;
 		if (verbose_mode > VB_MED) {
-			tree.printTree(cout, WT_TAXON_ID + WT_BR_LEN);
+			tree.printTree(cout, WT_BR_LEN);
 			cout << endl;
 		}
 	}

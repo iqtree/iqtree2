@@ -380,8 +380,9 @@ public:
 		function will fix this.
 		@param node the current node
 		@param dad dad of the node, used to direct the search
+		@return TRUE if some branch has negative length, FALSE otherwise
 	*/
-	void fixNegativeBranch(Node *node = NULL, Node *dad = NULL);
+	bool fixNegativeBranch(Node *node = NULL, Node *dad = NULL);
 
 
 /****************************************************************************
