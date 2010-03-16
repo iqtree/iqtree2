@@ -165,6 +165,9 @@ void PhyloTree::createModel(Params &params) {
 
 }
 
+string PhyloTree::getModelName() {
+	return model->name + site_rate->name;
+}
 
 /****************************************************************************
 	Parsimony function
@@ -482,17 +485,24 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 }
 
 
-double PhyloTree::optimizeModel() {
-	double cur_lh = computeLikelihood();
-	//double cur_lh = optimizeAllBranches(1);
+double PhyloTree::optimizeModel(bool fixed_len) {
+	double cur_lh;
+	if (fixed_len) 
+		cur_lh = computeLikelihood();
+	else
+		cur_lh = optimizeAllBranches(1);
 	assert(model);
 	assert(site_rate);
-
 	do {
 		double model_lh = model->optimizeParameters();
+/*
+		if (model_lh != 0.0 && !fixed_len)
+			model_lh = optimizeAllBranches(3); */
 		double rate_lh = site_rate->optimizeParameters();
+/*		if (rate_lh != 0.0 && !fixed_len)
+			rate_lh = optimizeAllBranches(2);*/
 		if (model_lh == 0.0 && rate_lh == 0.0) {
-			cur_lh = optimizeAllBranches();
+			if (!fixed_len) cur_lh = optimizeAllBranches();
 			break;
 		}
 		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
@@ -501,12 +511,14 @@ double PhyloTree::optimizeModel() {
 			site_rate->writeInfo(cout);
 		}
 		if (new_lh > cur_lh + TOL_LIKELIHOOD) {
-			cur_lh = optimizeAllBranches(5); // loop only 5 times!
-			//cur_lh = new_lh;
+			if (!fixed_len)
+				cur_lh = optimizeAllBranches(3);  // loop only 5 times in total
+			else
+				cur_lh = new_lh;
 			if (verbose_mode > VB_MIN)
 				cout << "Current Log-likelihood: " << cur_lh << endl;
 		} else {
-			cur_lh = optimizeAllBranches();
+			if (!fixed_len) cur_lh = optimizeAllBranches();
 			break;
 		}
 	} while (true);
@@ -698,7 +710,7 @@ double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
 
 double PhyloTree::optimizeAllBranches(int iterations) {
 	if (verbose_mode > VB_MED)
-		cout << "Optimizing branch lenths..." << endl;
+		cout << "Optimizing branch lenths (max " << iterations << " loops)..." << endl;
 	double tree_lh = computeLikelihood();
 	//cout << tree_lh << endl;
 	for (int i = 0; i < iterations; i++) {
@@ -838,24 +850,22 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, double* &dist
 	setAlignment(alignment);
 }
 
-bool PhyloTree::fixNegativeBranch(Node *node, Node *dad) {
+int PhyloTree::fixNegativeBranch(double fixed_length, Node *node, Node *dad) {
 	if (!node) node = root;
-	bool fixed = false;
+	int fixed = 0;
 	FOR_NEIGHBOR_IT(node, dad, it) {
 		if ((*it)->length < 0.0) { // negative branch length detected
-			// add the amount to the neighboring branches
-			/*double len_add = -(*it)->length / (node->degree()-1);
-			FOR_NEIGHBOR_IT(node, (*it)->node, it2)
-				(*it2)->length += len_add;*/
 			if (verbose_mode == VB_DEBUG)
 				cout << "Negative branch length " << (*it)->length << " was set to ";
-			(*it)->length = ((double)(rand())/RAND_MAX)*0.1+TOL_BRANCH_LEN;
-			//(*it)->length = MIN_BRANCH_LEN;				
+			//(*it)->length = ((double)(rand())/RAND_MAX)*0.1+TOL_BRANCH_LEN;
+			(*it)->length = fixed_length;				
 			if (verbose_mode == VB_DEBUG)
 				cout << (*it)->length << endl;
-			fixed = true;
+			// set the backward branch length
+			(*it)->node->findNeighbor(node)->length = (*it)->length;
+			fixed++;
 		}
-		fixed = fixed | fixNegativeBranch((*it)->node, node);
+		fixed += fixNegativeBranch(fixed_length, (*it)->node, node);
 	}
 	return fixed;
 }

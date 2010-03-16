@@ -552,6 +552,13 @@ void Alignment::computeStateFreq (double *stateFrqArr) {
 	// for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
 	// std::cout << stateFrqArr[stateNo_] << endl;
 
+	if (verbose_mode >= VB_DEBUG) {
+		cout << "Empirical state frequencies: ";
+		for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
+			cout << stateFrqArr[stateNo_] << " ";
+		cout << endl;
+	}
+
 }
 
 void Alignment::getAppearance(char state, double *state_app) {
@@ -571,5 +578,40 @@ void Alignment::getAppearance(char state, double *state_app) {
 	for (i = 0; i < num_states; i++) 
 	if (state & (1 << i)) {
 		state_app[i] = 1.0;
+	}
+}
+
+
+void Alignment::computeEmpiricalRate (double *rates) {
+	int i, j, k;
+	assert(rates);
+	int nseqs = getNSeq();
+	double **pair_rates = (double**) new double[num_states];
+	for (i = 0; i < num_states; i++) {
+		pair_rates[i] = new double[num_states];
+		memset(pair_rates[i], 0, sizeof(double)*num_states);
+	}
+
+	for (iterator it = begin(); it != end(); it++) {
+		for (i = 0; i < nseqs-1; i++) {
+			char state1 = (*it)[i];
+			if (state1 >= num_states) continue;
+			for (j = i+1; j < nseqs; j++) {
+				char state2 = (*it)[j];
+				if (state2 < num_states) pair_rates[state1][state2] += (*it).frequency;
+			}
+		}
+	}
+
+	k = 0;
+	double last_rate = pair_rates[num_states-2][num_states-1] + pair_rates[num_states-1][num_states-2];
+	for (i = 0; i < num_states-1; i++)
+		for (j = i+1; j < num_states; j++)
+			rates[k++] = (pair_rates[i][j] + pair_rates[j][i]) / last_rate;
+	if (verbose_mode >= VB_DEBUG) {
+		cout << "Empirical rates: ";
+		for (k = 0; k < num_states*(num_states-1)/2; k++)
+			cout << rates[k] << " ";
+		cout << endl;
 	}
 }

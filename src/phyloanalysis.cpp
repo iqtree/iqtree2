@@ -267,9 +267,15 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	}
 
 	/* Fix if negative branch lengths detected */
-	if (tree.fixNegativeBranch())
-		cout << "Some branch showed no or negative length and initialized by random length" << endl;
-
+	double fixed_length = 0.01;
+	int fixed_number;
+	if (fixed_number = tree.fixNegativeBranch(fixed_length)) {
+		cout << "WARNING: " << fixed_number << " branches have no/negative lengths and initialized to " << fixed_length << endl;
+		if (verbose_mode >= VB_DEBUG) {
+			tree.printTree(cout);
+			cout << endl;
+		}
+	}
 	t_begin=clock();
 
 	bool test_only = params.model_name == "TESTONLY";
@@ -285,7 +291,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	}
 	tree.createModel(params);
 
-	cout << "Model of evolution: " << params.model_name << endl;
+	cout << "Model of evolution: " << tree.getModelName() << endl;
+	cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
 	cout << "Random seed: " << params.ran_seed << endl;
 
 	if (params.parsimony) {
@@ -301,7 +308,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
 
 	cout << "Optimizing model parameters" << endl;
-	double score2 = tree.optimizeModel();
+	double score2 = tree.optimizeModel(params.fixed_branch_length);
 	cout << "Log-likelihood of the current tree: " << score2 << endl;
 	double bestTreeScore = score2;
 	/* Optimize branch lengths with likelihood function */
@@ -330,9 +337,13 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		}
 
 	}
+	
 
 	/* do the IQP */
 	if (params.k_representative > 0 && params.p_delete > 0.0 && params.iqpnni_iterations > 1) {
+		cout << "Start " << params.iqpnni_iterations-1 << " iterations of IQP and NNI" << endl;
+		cout << "Number of representative leaves   : " << params.k_representative << endl;
+		cout << "Probability of deleting sequences : " << params.p_delete << endl << endl;
 		tree.setRepresentNum(params.k_representative);
 		tree.setProbDelete(params.p_delete);
 		tree.setIQPIterations(params.iqpnni_iterations-1);

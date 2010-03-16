@@ -34,6 +34,8 @@ double RateInvar::computeFunction(double p_invar_value) {
 }
 
 double RateInvar::optimizeParameters() {
+	if (verbose_mode >= VB_MAX)
+		cout << "Optimizing proportion of invariable sites..." << endl;
 	double negative_lh;
 	double ferror;
 	p_invar = minimizeOneDimen(1e-6, p_invar, phylo_tree->aln->frac_const_sites, 1e-6, &negative_lh, &ferror);

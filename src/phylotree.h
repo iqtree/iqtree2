@@ -121,6 +121,11 @@ public:
 	void createModel(Params &params);
 
 	/**
+		get the name of the model
+	*/
+	string getModelName();
+
+	/**
 		allocate a new node. Override this if you have an inherited Node class.
 		@param node_id node ID
 		@param node_name node name
@@ -205,9 +210,10 @@ public:
 
 	/**
 		optimize model parameters and tree branch lengths
+		@param fixed_len TRUE to fix branch lengths, default is false
 		@return the best likelihood 
 	*/
-	virtual double optimizeModel();
+	virtual double optimizeModel(bool fixed_len = false);
 
 /****************************************************************************
 	computing derivatives of likelihood function
@@ -378,11 +384,12 @@ public:
 	/**
 		Neighbor-joining tree might contain negative branch length. This
 		function will fix this.
+		@param fixed_length fixed branch length to set to negative branch lengths
 		@param node the current node
 		@param dad dad of the node, used to direct the search
-		@return TRUE if some branch has negative length, FALSE otherwise
+		@return The number of branches that have no/negative length
 	*/
-	bool fixNegativeBranch(Node *node = NULL, Node *dad = NULL);
+	int fixNegativeBranch(double fixed_length, Node *node = NULL, Node *dad = NULL);
 
 
 /****************************************************************************

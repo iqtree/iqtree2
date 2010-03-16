@@ -20,9 +20,9 @@
 #include "rategammainvar.h"
 
 RateGammaInvar::RateGammaInvar(int ncat, PhyloTree *tree)
-: RateInvar(tree), RateGamma(ncat, tree)
+: RateGamma(ncat, tree), RateInvar(tree)
 {
-	name = "+I+G";
+	name = "+I" + name;
 }
 
 

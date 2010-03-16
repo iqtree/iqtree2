@@ -37,9 +37,6 @@ GTRModel::GTRModel(PhyloTree *tree)
 	state_freq = new double[num_states];
 	freq_type = FREQ_UNKNOWN;
 	
-	for (i = 0; i < nrate; i++)
-		rates[i] = 1.0;
-
 	eigenvalues = new double[num_states];
 
 	eigenvectors = (double**) new double[num_states];
@@ -53,6 +50,8 @@ GTRModel::GTRModel(PhyloTree *tree)
 
 	eigen_coeff = new double[ncoeff];
 
+
+	phylo_tree->aln->computeEmpiricalRate(rates);
 	//eigen_coeff_derv1 = new double[ncoeff];
 	//eigen_coeff_derv2 = new double[ncoeff];
 			
@@ -91,10 +90,10 @@ void GTRModel::writeInfo(ostream &out) {
 	cout << "5. Transition   rate from C to T = " << rates[4] << endl;
 	cout << "6. Transversion rate from G to T = " << rates[5] << endl;
 	if (freq_type != FREQ_ESTIMATE) return;
-	cout << "State frequencies: ";
-	for (int i = 0; i < num_states; i++)
-		cout << state_freq[i] << "  ";
-	cout << endl;
+	cout << "   Base frequency A = " << state_freq[0] << endl;
+	cout << "   Base frequency C = " << state_freq[1] << endl;
+	cout << "   Base frequency G = " << state_freq[2] << endl;
+	cout << "   Base frequency T = " << state_freq[3] << endl;
 }
 
 
@@ -244,6 +243,10 @@ double GTRModel::optimizeParameters() {
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
 
+	if (verbose_mode >= VB_MAX)
+		cout << "Optimizing " << name << " model parameters..." << endl;
+
+
 	double *variables = new double[ndim+1];
 	double *upper_bound = new double[ndim+1];
 	double *lower_bound = new double[ndim+1];
@@ -257,7 +260,7 @@ double GTRModel::optimizeParameters() {
 		//cout << variables[i] << endl;
 		lower_bound[i] = 1e-4;
 		upper_bound[i] = 100.0;
-		bound_check[i] = true;
+		bound_check[i] = false;
 	}
 	if (freq_type == FREQ_ESTIMATE) {
 		for (i = ndim-num_states+2; i <= ndim; i++) 

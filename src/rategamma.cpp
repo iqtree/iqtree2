@@ -31,9 +31,10 @@ RateGamma::RateGamma(int ncat, PhyloTree *tree) : RateHeterogeneity()
 {
 	ncategory = ncat;
 	phylo_tree = tree;
-	gamma_shape = 1.0;
+	gamma_shape = MAX_GAMMA_SHAPE-1.0;
 	rates = new double[ncategory];
 	name = "+G";
+	name += convertIntToString(ncategory);
 	computeRates();
 }
 
@@ -91,6 +92,8 @@ double RateGamma::computeFunction(double shape) {
 }
 
 double RateGamma::optimizeParameters() {
+	if (verbose_mode >= VB_MAX)
+		cout << "Optimizing gamma shape..." << endl;
 	double negative_lh;
 	double current_shape = gamma_shape;
 	double ferror, optx;

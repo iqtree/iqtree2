@@ -475,6 +475,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	//params.freq_type = FREQ_UNKNOWN;
 	params.num_rate_cats = 4;
 	params.optimize_by_newton = true;
+	params.fixed_branch_length = false;
 	simple_nni = false;
 
 	struct timeval tv;
@@ -784,6 +785,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.num_rate_cats = convert_int(argv[cnt]);
 			} else if (strcmp(argv[cnt],"-brent") == 0) {
 				params.optimize_by_newton = false;
+			} else if (strcmp(argv[cnt],"-fixbr") == 0) {
+				params.fixed_branch_length = true;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

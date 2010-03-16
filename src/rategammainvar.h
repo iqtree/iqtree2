@@ -28,7 +28,7 @@ class for I+G rate heterogeneity
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class RateGammaInvar : public RateGamma, public RateInvar
+class RateGammaInvar : public RateInvar, public RateGamma
 {
 public:
  	/**

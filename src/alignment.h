@@ -174,6 +174,12 @@ public:
 	void computeStateFreq(double *state_freq);
 
 	/**
+		compute empirical rates between state pairs
+		@param rates (OUT) vector of size num_states*(num_states-1)/2 for the rates
+	*/
+	void computeEmpiricalRate (double *rates);
+
+	/**
 		count the fraction of constant sites in the alignment, update the variable frac_const_sites
 	*/
 	void countConstSite();

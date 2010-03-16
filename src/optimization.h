@@ -104,12 +104,6 @@ public:
 	virtual double derivativeFunk(double x[], double dfx[]);
 	
 	/**
-		check of range of parameters
-	*/
-	virtual bool checkRange(double x[]) { return true; }
-
-
-	/**
 		multi dimensional optimization by BFGS method
 		@param guess the initial starting point
 		@param ndim number of dimension

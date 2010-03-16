@@ -479,6 +479,10 @@ struct Params {
 	*/
 	bool optimize_by_newton;
 
+	/**
+		TRUE if you want to fix branch lengths during model optimization
+	*/
+	bool fixed_branch_length;
 };
 
 /**
