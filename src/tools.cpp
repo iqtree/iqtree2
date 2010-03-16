@@ -22,6 +22,7 @@
 
 VerboseMode verbose_mode;
 bool simple_nni;
+bool phyml_opt;
 
 /*
 	WIN32 does not define gettimeofday() function.
@@ -762,6 +763,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_name = argv[cnt];
 			} else if (strcmp(argv[cnt], "-simple_nni") == 0 ) {
 				simple_nni = true;
+			} else if (strcmp(argv[cnt], "-phyml_opt") == 0 ) {
+				phyml_opt = true;
 			}
 			else if (strcmp(argv[cnt],"-f") == 0) {
 				cnt++;

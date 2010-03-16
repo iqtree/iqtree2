@@ -39,7 +39,7 @@ const double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
 
 /**
 	TODO
-	*/
+*/
 typedef std::map< string, double > MapBranchLength;
 
 /**
@@ -237,12 +237,7 @@ protected:
 
 
 	/**
-		List contains all the branches and their current lengths
-	*/
-	vector<Branch> branches;
-
-	/**
-		TODO
+		Data structure (Map)storing all the optimal length of each branch
 	*/
 	MapBranchLength mapOptBranLens;
 
