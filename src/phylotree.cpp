@@ -512,7 +512,7 @@ double PhyloTree::optimizeModel(bool fixed_len) {
 		}
 		if (new_lh > cur_lh + TOL_LIKELIHOOD) {
 			if (!fixed_len)
-				cur_lh = optimizeAllBranches(3);  // loop only 5 times in total
+				cur_lh = optimizeAllBranches(5);  // loop only 5 times in total
 			else
 				cur_lh = new_lh;
 			if (verbose_mode > VB_MIN)

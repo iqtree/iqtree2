@@ -323,13 +323,21 @@ protected:
 	void raiseBonus(Node *node, Node *dad);
 
 	/**
-		find the branch with the best bonus points
+		find the best bonus point
 		@param node the root of the sub-tree
 		@param dad dad of 'node', used to direct the recursion
-		@param best_node (OUT) one end of the branch with highest bonus point
-		@param best_dad (OUT) the other end of the branch with highest bonus point
 	*/
-	double findBestBonus(Node *node, Node *dad, Node *&best_node, Node *&best_dad);
+	double findBestBonus(Node *node = NULL, Node *dad = NULL);
+
+	/**
+		determine the list of branches with the same best bonus point
+		@param best_bonus the best bonus determined by findBestBonus()
+		@param best_nodes (OUT) vector of one ends of the branches with highest bonus point
+		@param best_dads (OUT) vector of the other ends of the branches with highest bonus point
+		@param node the root of the sub-tree
+		@param dad dad of 'node', used to direct the recursion
+	*/
+	void findBestBranch(double best_bonus, NodeVector &best_nodes, NodeVector &best_dads, Node *node = NULL, Node *dad = NULL);
 
 };
 

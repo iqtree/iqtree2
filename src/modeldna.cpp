@@ -90,7 +90,7 @@ void ModelDNA::setRateType(const char *rate_str) {
 	char last_type = 0;
 	char t = first_type;
 	int num_ch = strlen(rate_str);
-	int i;
+	int i, j;
 
 	assert(num_ch == num_states*(num_states-1)/2);
 	for (i = 0; i < num_ch; i++) {
@@ -105,6 +105,27 @@ void ModelDNA::setRateType(const char *rate_str) {
 		param_spec.push_back(rate_str[i]-first_type);
 	}
 	assert(param_spec.length() == num_ch);
+	double *avg_rates = new double[num_params+1];
+	int *num_rates = new int[num_params+1];
+	memset(avg_rates, 0, sizeof(double) * (num_params+1));
+	memset(num_rates, 0, sizeof(int) * (num_params+1));
+	for (i = 0; i < param_spec.size(); i++) {
+		avg_rates[param_spec[i]] += rates[i];
+		num_rates[param_spec[i]]++;
+	}
+	for (i = 0; i <= num_params; i++)
+		avg_rates[i] /= num_rates[i];
+	for (i = 0; i < param_spec.size(); i++) {
+		rates[i] = avg_rates[param_spec[i]] / avg_rates[0];
+	}
+	if (verbose_mode >= VB_DEBUG) {
+		cout << "Initialized rates: ";
+		for (i = 0; i < param_spec.size(); i++) 
+			cout << rates[i] << " ";
+		cout << endl;
+	}
+	delete num_rates;
+	delete avg_rates;
 }
 
 
