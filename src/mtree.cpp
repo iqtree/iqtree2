@@ -768,6 +768,57 @@ string MTree::reportInputInfo() {
 	return str;
 }
 
+void MTree::drawTree(ostream &out) {
+	IntVector sub_tree_br;
+	printTree(out);
+	cout << endl;
+	drawTree(out, sub_tree_br);
+	out << endl;
+}
+
+void MTree::drawTree(ostream &out, IntVector &subtree_br, Node *node, Node *dad) {
+	int i;
+	if (!node) {
+		node = root;
+		if (node->isLeaf()) node = node->neighbors[0]->node;
+	}
+	
+	if (node->isLeaf()) {
+		bool first = true;
+		IntVector::iterator it;
+		for (it = subtree_br.begin(); it != subtree_br.end(); it++)
+			if (*it == 0) {
+				//out << "  " << (unsigned char)(194); 
+				out << "|--";	
+				first = false;
+			} else if (*it == 1){ 
+				out << "|  ";
+			} else { 
+				out << "   ";
+				first = false;
+			}
+		//out << (unsigned char)(196) << node->name << endl;
+		out << "|----" << node->name;
+		for (it = subtree_br.begin(); it != subtree_br.end(); it++) cout << " " << (*it);
+		cout << endl;
+		return;
+	}
+	int descendant_cnt = node->degree();
+	if (dad) descendant_cnt--;
+	int cnt = 0;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		if (cnt == 0) subtree_br.push_back(0);
+		else if (cnt == descendant_cnt-1) subtree_br.push_back(2);
+		else subtree_br.push_back(1);
+		
+		drawTree(out, subtree_br, (*it)->node, node);
+		//out << endl;
+		cnt++;
+		subtree_br.pop_back();
+	}
+	//out << endl;
+}
+
 /*********************************************
 	class PDTaxaSet
 *********************************************/

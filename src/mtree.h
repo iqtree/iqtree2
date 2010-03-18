@@ -172,6 +172,14 @@ public:
 	void printTaxa(ostream &out, NodeVector &subtree);
 
 /********************************************************
+	DRAW TREE
+********************************************************/
+
+	void drawTree(ostream &out);
+
+	void drawTree(ostream &out, IntVector &sub_tree_br, Node *node = NULL, Node *dad = NULL);
+
+/********************************************************
 	READ TREE FROM FILE
 ********************************************************/
 

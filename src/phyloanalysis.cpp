@@ -266,6 +266,9 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		tree.computeBioNJ(params, alignment, tree.dist_matrix);
 	}
 
+	if (verbose_mode >= VB_DEBUG)
+		tree.drawTree(cout);
+
 	/* Fix if negative branch lengths detected */
 	double fixed_length = 0.01;
 	int fixed_number;
