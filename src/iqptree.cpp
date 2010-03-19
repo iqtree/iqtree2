@@ -332,7 +332,7 @@ double IQPTree::doIQP() {
 	setAlignment(aln);
 
 	clearAllPartialLh();
-	//TODO Original is to optimizeAllBranches
+
 	double tree_lh = optimizeAllBranches();
 	
 	if (verbose_mode >= VB_MAX) {
@@ -340,7 +340,8 @@ double IQPTree::doIQP() {
 		printTree(cout);
 		cout << endl;
 	}
-	return optimizeNNI();
+	return tree_lh;
+	//return optimizeNNI();
 }
 
 double IQPTree::doIQPNNI(string tree_file_name) {
@@ -351,16 +352,49 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 	stringstream best_tree_string;
 	printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 
+	ofstream lh_file;
+	if (nni_lh) {
+		lh_file.open( (tree_file_name + ".lh").c_str() );
+		if (lh_file.is_open()) {
+			lh_file.precision(10);
+			lh_file << 1;
+			lh_file << "\t";
+			lh_file << best_score;
+			lh_file << endl;
+		}
+		else {
+			cout << "Cannot open file " + tree_file_name + ".lh";
+		}
+	}
+
 	for (int i = 1; i <= iqpnni_iterations; i++) {
 		if (verbose_mode >= VB_DEBUG)
 			cout << "Performing IQP in iteration " << i << endl;
-		double cur_score = doIQP();
+		double iqp_score = doIQP();
+		double nni_score = optimizeNNI();
+
+		if (lh_file.is_open()) {
+
+			lh_file << i+1;
+			lh_file << "\t";
+			lh_file << iqp_score;
+			lh_file << endl;
+
+			lh_file << i+1;
+			lh_file << "\t";
+			lh_file << nni_score;
+			lh_file << endl;
+
+		}
+		else {
+			cout << "Cannot open file " + tree_file_name + ".lh";
+		}
 		cout.precision(10);
-		cout << "Iteration " << i + 1 << " / Log-Likelihood: " << cur_score
+		cout << "Iteration " << i + 1 << " / Log-Likelihood: " << nni_score
 				<< endl;
-		if (cur_score > best_score+1e-6) {
-			cout << "BETTER TREE FOUND: " << cur_score << endl;
-			best_score = cur_score;
+		if (nni_score > best_score+1e-6) {
+			cout << "BETTER TREE FOUND: " << nni_score << endl;
+			best_score = nni_score;
 			best_tree_string.seekp(0);
 			printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 			printTree(tree_file_name.c_str());
@@ -371,6 +405,8 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 			assignLeafNames();
 		}
 	}
+
+	lh_file.close();
 	return best_score;
 }
 
@@ -393,7 +429,7 @@ double IQPTree::optimizeNNI() {
 
 	// Delete debug files (NNI trees)
 	if (verbose_mode > VB_MED) {
-		if (fileExists("nniTrees")) {
+		if ( fileExists("nniTrees") ) {
 			if (remove("nniTrees") != 0)
 				perror("Error deleting file nniTrees");
 			else
@@ -416,7 +452,6 @@ double IQPTree::optimizeNNI() {
 	do {
 
 		//Backup the tree before any modification
-		//TODO save the tree on memory instead of file
 		IQPTree *backupTree = new IQPTree();
 		backupTree->copyPhyloTree(this);
 
@@ -437,7 +472,7 @@ double IQPTree::optimizeNNI() {
 		possibleNNIMoves.clear();
 		nniIteration++;
 
-		generateAllPositiveNNIMoves();
+		genNNIMoves();
 
 		if (possibleNNIMoves.size() == 0) {
 			if (verbose_mode >= VB_DEBUG) {
@@ -479,9 +514,9 @@ double IQPTree::optimizeNNI() {
 			break;
 		}
 
-		if (verbose_mode == VB_DEBUG) {
+/*		if (verbose_mode == VB_DEBUG) {
 			cout << "Number of non-conflicting NNIs found = " << nniTotal << endl;
-		}
+		}*/
 
 		possibleNNIMoves = nonConflictMoves;
 		nbNNIToApply = (int) nonConflictMoves.size() * lamda;
@@ -505,7 +540,7 @@ double IQPTree::optimizeNNI() {
 		}
 
 		if (verbose_mode == VB_DEBUG) {
-			cout << "Lamda = " << lamda << endl;
+			cout << "lamda = " << lamda << endl;
 		}
 
 		if (nbNNIToApply < 1) {
@@ -528,9 +563,6 @@ double IQPTree::optimizeNNI() {
 						<< nonConflictMoves.at(i).node1->id << "->"
 						<< nonConflictMoves.at(i).node2->id << endl;
 			}
-
-//			cur_score = PhyloTree::swapNNIBranch(cur_score,nonConflictMoves.at(i).node1, nonConflictMoves.at(i).node2);
-//			cout << "cur_score = " << cur_score << endl;
 
 			// Apply the calculated optimal branch length for the center branch
 			double new_len = applyBranchLengthChange(nonConflictMoves.at(i).node1,
@@ -731,7 +763,7 @@ double IQPTree::swapNNIBranch(NNIMove move) {
 	return 0;
 }
 
-void IQPTree::generateAllPositiveNNIMoves(PhyloNode *node, PhyloNode *dad) {
+void IQPTree::genNNIMoves(PhyloNode *node, PhyloNode *dad) {
 
 	if (!node) {
 		node = (PhyloNode*) root;
@@ -763,7 +795,7 @@ void IQPTree::generateAllPositiveNNIMoves(PhyloNode *node, PhyloNode *dad) {
 
 	FOR_NEIGHBOR_IT(node,dad,it)
 		{
-			generateAllPositiveNNIMoves((PhyloNode*) (*it)->node, node);
+			genNNIMoves((PhyloNode*) (*it)->node, node);
 		}
 
 }

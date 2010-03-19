@@ -23,6 +23,7 @@
 VerboseMode verbose_mode;
 bool simple_nni;
 bool phyml_opt;
+bool nni_lh;
 
 /*
 	WIN32 does not define gettimeofday() function.
@@ -477,7 +478,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.num_rate_cats = 4;
 	params.optimize_by_newton = true;
 	params.fixed_branch_length = false;
+
 	simple_nni = false;
+	phyml_opt = false;
+	nni_lh = false;
 
 	struct timeval tv;
 	struct timezone tz;
@@ -761,10 +765,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mod <model_name>";
 				params.model_name = argv[cnt];
+
 			} else if (strcmp(argv[cnt], "-simple_nni") == 0 ) {
 				simple_nni = true;
 			} else if (strcmp(argv[cnt], "-phyml_opt") == 0 ) {
 				phyml_opt = true;
+			}
+			else if (strcmp(argv[cnt], "-nni_lh") == 0 ) {
+				nni_lh = true;
 			}
 			else if (strcmp(argv[cnt],"-f") == 0) {
 				cnt++;

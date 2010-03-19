@@ -160,7 +160,7 @@ public:
 		search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
 		//TODO
 	*/
-	void generateAllPositiveNNIMoves( PhyloNode *node = NULL, PhyloNode *dad = NULL );
+	void genNNIMoves( PhyloNode *node = NULL, PhyloNode *dad = NULL );
 
 
 	/**
