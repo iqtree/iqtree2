@@ -177,7 +177,10 @@ public:
 
 	void drawTree(ostream &out, int brtype = WT_BR_LEN);
 
-	void drawTree(ostream &out, int brtype, double brscale, IntVector &sub_tree_br, Node *node = NULL, Node *dad = NULL);
+	void drawTree(ostream &out, int brtype, double brscale, IntVector &sub_tree_br, 
+		Node *node = NULL, Node *dad = NULL);
+	void drawTree2(ostream &out, int brtype, double brscale, IntVector &sub_tree_br, 
+		Node *node = NULL, Node *dad = NULL);
 
 /********************************************************
 	READ TREE FROM FILE

@@ -267,7 +267,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	}
 
 	if (verbose_mode >= VB_MAX)
-		tree.drawTree(cout);
+		tree.drawTree(cout, WT_INTNODE+WT_BR_LEN);
 
 	/* Fix if negative branch lengths detected */
 	double fixed_length = 0.01;

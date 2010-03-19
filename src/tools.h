@@ -135,6 +135,7 @@ enum TreeGenType {NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED,
 const int WT_BR_LEN    = 1;
 const int WT_BR_CLADE  = 2;
 const int WT_TAXON_ID  = 4;
+const int WT_INTNODE   = 8;
 
 /**
 	search mode

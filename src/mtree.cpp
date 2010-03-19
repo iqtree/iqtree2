@@ -789,7 +789,10 @@ void MTree::drawTree(ostream &out, int brtype) {
 	double scale = treeDepth(node);
 	//if (verbose_mode >= VB_DEBUG)
 	//cout << "Tree depth: " << scale<< endl;
-	drawTree(out, brtype, scale, sub_tree_br);
+	if (brtype & WT_INTNODE)
+		drawTree2(out, brtype, scale, sub_tree_br);
+	else
+		drawTree(out, brtype, scale, sub_tree_br);
 	out << endl;
 }
 
@@ -835,6 +838,65 @@ void MTree::drawTree(ostream &out, int brtype, double brscale, IntVector &subtre
 			if ((*(it-1)) > 0) out << '|'; else out << ' ';
 			for (i = 0; i < abs(*it); i++) out << ' ';
 		}
+	}
+	subtree_br.pop_back();
+}
+
+void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtree_br, Node *node, Node *dad) {
+	int i, br_len = 3;
+	if (!node) {
+		node = root;
+		if (node->isLeaf()) node = node->neighbors[0]->node;
+	} else {
+		if (brtype & WT_BR_LEN) {
+			br_len = floor((node->findNeighbor(dad)->length * 60)/brscale)-1;
+			if (br_len < 3) br_len = 3;
+		}
+		/*
+		out << '+';
+		if ((brtype & WT_BR_CLADE) && !node->isLeaf()) {
+			string str = convertIntToString(node->id);
+			for (i = 0; i < br_len-str.length(); i++) out << '-';
+			out << node->id;
+		} else 
+		for (i = 0; i < br_len; i++) out << '-';*/
+	} 
+	if (node->isLeaf()) {
+		//assert(subtree_br.back() > 1000);
+		if (subtree_br.back() > 1000) subtree_br.back() -= 1000;
+		out << '+';
+		for (i = 0; i < subtree_br.back(); i++) 
+			out << '-';
+		out << node->name; 
+		if (brtype & WT_TAXON_ID)
+			out << " (" << node->id << ")";
+		out << endl;
+		return;
+	}
+	int descendant_cnt = node->degree();
+	if (dad) descendant_cnt--;
+	int cnt = 0;
+	subtree_br.push_back(br_len+1000);
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		if (cnt == descendant_cnt-1) 
+			subtree_br.back() = -subtree_br.back();
+		
+		drawTree2(out, brtype, brscale, subtree_br, (*it)->node, node);
+		cnt++;
+		if (cnt == descendant_cnt) break;
+		for (IntVector::iterator it = subtree_br.begin()+1; it != subtree_br.end(); it++) 
+		{
+			int num_dash = abs(*it);
+			if (num_dash > 1000) num_dash -=1000;
+			if ((*(it-1)) > 1000) 
+				out << "+"; 
+			else if ((*(it-1)) > 0) 
+				out << '|'; 
+			else out << ' ';
+			for (i = 0; i < num_dash; i++) 
+				if ((*(it-1)) > 1000) out << '-'; else out << ' ';
+		}
+		if (subtree_br.back() > 1000) subtree_br.back() -= 1000;
 	}
 	subtree_br.pop_back();
 }
