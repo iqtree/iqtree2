@@ -175,9 +175,9 @@ public:
 	DRAW TREE
 ********************************************************/
 
-	void drawTree(ostream &out);
+	void drawTree(ostream &out, int brtype = WT_BR_LEN);
 
-	void drawTree(ostream &out, IntVector &sub_tree_br, Node *node = NULL, Node *dad = NULL);
+	void drawTree(ostream &out, int brtype, double brscale, IntVector &sub_tree_br, Node *node = NULL, Node *dad = NULL);
 
 /********************************************************
 	READ TREE FROM FILE
@@ -227,6 +227,12 @@ public:
 	*/
 	double treeLength(Node *node = NULL, Node *dad = NULL);
 
+	/**
+		@return maximum path length from root node to taxa
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+	*/
+	double treeDepth(Node *node = NULL, Node *dad = NULL);
 	/**
 		get the descending taxa ID list below the node
 		@param node the starting node, NULL to start from the root

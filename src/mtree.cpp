@@ -484,6 +484,18 @@ double MTree::treeLength(Node *node, Node *dad)
 	return sum;
 }
 
+double MTree::treeDepth(Node *node, Node *dad)
+{
+	if (!node) node = root;
+	double maxsum = 0.0;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		double len = (*it)->length;
+		if (len < 0.0) len = 0.0;
+		double sum = len + treeDepth((*it)->node, node);
+		if (sum > maxsum) maxsum = sum;
+	}
+	return maxsum;
+}
 
 void MTree::getTaxa(NodeVector &taxa, Node *node, Node *dad) {
 	if (!node) node = root;
@@ -768,55 +780,63 @@ string MTree::reportInputInfo() {
 	return str;
 }
 
-void MTree::drawTree(ostream &out) {
+void MTree::drawTree(ostream &out, int brtype) {
 	IntVector sub_tree_br;
-	printTree(out);
+	//printTree(out);
 	cout << endl;
-	drawTree(out, sub_tree_br);
+	Node *node = root;
+	if (node->isLeaf()) node = node->neighbors[0]->node;
+	double scale = treeDepth(node);
+	//if (verbose_mode >= VB_DEBUG)
+	//cout << "Tree depth: " << scale<< endl;
+	drawTree(out, brtype, scale, sub_tree_br);
 	out << endl;
 }
 
-void MTree::drawTree(ostream &out, IntVector &subtree_br, Node *node, Node *dad) {
-	int i;
+void MTree::drawTree(ostream &out, int brtype, double brscale, IntVector &subtree_br, Node *node, Node *dad) {
+	int i, br_len = 3;
 	if (!node) {
 		node = root;
 		if (node->isLeaf()) node = node->neighbors[0]->node;
-	}
-	
+	} else {
+		if (brtype & WT_BR_LEN) {
+			br_len = floor((node->findNeighbor(dad)->length * 60)/brscale)-1;
+			if (br_len < 3) br_len = 3;
+			//if (!node->isLeaf() && br_len < 4) br_len = 4;
+		}
+		out << '+';
+		if ((brtype & WT_BR_CLADE) && !node->isLeaf()) {
+			string str = convertIntToString(node->id);
+			for (i = 0; i < br_len-str.length(); i++) out << '-';
+			out << node->id;
+		} else 
+		for (i = 0; i < br_len; i++) out << '-';
+	} 
 	if (node->isLeaf()) {
-		bool first = true;
-		IntVector::iterator it;
-		for (it = subtree_br.begin(); it != subtree_br.end(); it++)
-			if (*it == 0) {
-				//out << "  " << (unsigned char)(194); 
-				out << "|--";	
-				first = false;
-			} else if (*it == 1){ 
-				out << "|  ";
-			} else { 
-				out << "   ";
-				first = false;
-			}
-		//out << (unsigned char)(196) << node->name << endl;
-		out << "|----" << node->name;
-		for (it = subtree_br.begin(); it != subtree_br.end(); it++) cout << " " << (*it);
-		cout << endl;
+		out << node->name; 
+		if (brtype & WT_TAXON_ID)
+			out << " (" << node->id << ")";
+		out << endl;
 		return;
 	}
 	int descendant_cnt = node->degree();
 	if (dad) descendant_cnt--;
 	int cnt = 0;
+	subtree_br.push_back(br_len);
 	FOR_NEIGHBOR_IT(node, dad, it) {
-		if (cnt == 0) subtree_br.push_back(0);
-		else if (cnt == descendant_cnt-1) subtree_br.push_back(2);
-		else subtree_br.push_back(1);
+		if (cnt == descendant_cnt-1) 
+			subtree_br.back() = -subtree_br.back();
 		
-		drawTree(out, subtree_br, (*it)->node, node);
-		//out << endl;
+		drawTree(out, brtype, brscale, subtree_br, (*it)->node, node);
 		cnt++;
-		subtree_br.pop_back();
+		if (cnt == descendant_cnt) break;
+		for (IntVector::iterator it = subtree_br.begin()+1; it != subtree_br.end(); it++) 
+		{
+			if ((*(it-1)) > 0) out << '|'; else out << ' ';
+			for (i = 0; i < abs(*it); i++) out << ' ';
+		}
 	}
-	//out << endl;
+	subtree_br.pop_back();
 }
 
 /*********************************************

@@ -422,6 +422,9 @@ void runPDTree(Params &params)
 	else
 		cout << endl << "Running PD algorithm on ROOTED tree..." << endl;
 
+	//if (verbose_mode >= VB_DEBUG)
+		//test_greedy.drawTree(cout, WT_TAXON_ID);
+
 	if (params.run_mode == GREEDY || params.run_mode == BOTH_ALG || 
 		(params.run_mode == DETECTED)) {
 
