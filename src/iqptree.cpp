@@ -388,9 +388,6 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 			lh_file << endl;
 
 		}
-		else {
-			cout << "Cannot open file " + tree_file_name + ".lh";
-		}
 		cout.precision(10);
 		cout << "Iteration " << cur_iteration << " / Log-Likelihood: " << nni_score << endl;
 		if (nni_score > best_score+1e-6) {
