@@ -627,7 +627,12 @@ double IQPTree::optimizeNNI() {
 		printf("Time used : %8.6f seconds.\n", (double) (-nniBeginClock
 				+nniEndClock) / CLOCKS_PER_SEC);
 	}
-	return optimizeAllBranches(1);
+	//return optimizeAllBranches(1);
+	/* NOTE FOR TUNG: here you have to optimize branches so many loops 
+		until likelihood does not improve. Making
+		it only 1 loop is NOT satisfactory!!!
+	*/
+	return optimizeAllBranches();
 }
 
 void IQPTree::applyAllBranchLengthChanges(PhyloNode *node, PhyloNode *dad) {
