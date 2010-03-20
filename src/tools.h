@@ -128,14 +128,17 @@ enum TreeGenType {NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED,
 
 /**
 	when writing tree:
-		BR_LEN - output branch length
-		BR_NONE - don't output branch length
-		BR_CLADE - put branch length into internal node name
+		WT_BR_LEN - output branch length
+		WT_BR_CLADE - put branch length into internal node name
+		WT_TAXON_ID - output taxon ID
+		WT_INT_NODE - for draw tree, draw the internal node
+		WT_BR_SCALE - for draw tree, draw the branch proportional to its length
 */
 const int WT_BR_LEN    = 1;
 const int WT_BR_CLADE  = 2;
 const int WT_TAXON_ID  = 4;
-const int WT_INTNODE   = 8;
+const int WT_INT_NODE  = 8;
+const int WT_BR_SCALE  = 16;
 
 /**
 	search mode
@@ -169,6 +172,10 @@ enum TestType {TEST_NONE, TEST_COMPATIBLE, TEST_CIRCULAR, TEST_WEAKLY_COMPATIBLE
 */
 enum StateFreqType {FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, FREQ_ESTIMATE};
 
+/**
+	Stopping condition type
+*/
+enum STOP_CONDITION {SC_FIXED_ITERATION, SC_STOP_PREDICT};
 
 const double MAX_GENETIC_DIST = 100.0;
 
@@ -469,9 +476,24 @@ struct Params {
 	double p_delete;
 
 	/**
-		number of iqpnni iterations
+		min number of iqpnni iterations
 	*/
-	int iqpnni_iterations;
+	int min_iterations;
+
+	/**
+		max number of iqpnni iterations
+	*/
+	int max_iterations;
+
+	/**
+		stop condition, SC_FIXED_ITERATION or SC_STOP_PREDICT
+	*/
+	STOP_CONDITION stop_condition;
+
+	/**
+		confidence value for stop rule
+	*/
+	double stop_confidence;
 
 	/**
 		name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)

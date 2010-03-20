@@ -175,7 +175,7 @@ public:
 	DRAW TREE
 ********************************************************/
 
-	void drawTree(ostream &out, int brtype = WT_BR_LEN);
+	void drawTree(ostream &out, int brtype = WT_BR_SCALE + WT_INT_NODE);
 
 	void drawTree(ostream &out, int brtype, double brscale, IntVector &sub_tree_br, 
 		Node *node = NULL, Node *dad = NULL);

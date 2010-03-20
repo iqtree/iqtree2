@@ -471,7 +471,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.nexus_output = false;
 	params.k_representative = 4;
 	params.p_delete = 0.5;
-	params.iqpnni_iterations = 1;
+	params.min_iterations = 1;
+	params.max_iterations = 1;
+	params.stop_condition = SC_FIXED_ITERATION;
+	params.stop_confidence = 0.95;
 	params.model_name = "JC";
 	params.freq_type = FREQ_EMPIRICAL;
 	//params.freq_type = FREQ_UNKNOWN;
@@ -759,7 +762,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -n <#iterations>";
-				params.iqpnni_iterations = convert_int(argv[cnt]);
+				params.min_iterations = convert_int(argv[cnt]);
 			} else if (strcmp(argv[cnt],"-mod") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -798,6 +801,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_by_newton = false;
 			} else if (strcmp(argv[cnt],"-fixbr") == 0) {
 				params.fixed_branch_length = true;
+			} else if (strcmp(argv[cnt],"-stop") == 0) {
+				params.stop_condition = SC_STOP_PREDICT;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -stop <#max_iteration>";
+				params.max_iterations = convert_int(argv[cnt]);
+				if (params.max_iterations <= params.min_iterations)
+					throw "Specified max iteration must be greater than min iteration";
+			} else if (strcmp(argv[cnt],"-stopconf") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -stopconf <stop_confidence_value>";
+				params.stop_confidence = convert_double(argv[cnt]);
+				if (params.stop_confidence <= 0.5 || params.stop_confidence >= 1)
+					throw "Stop confidence value must be in range (0.5,1)";
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

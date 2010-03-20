@@ -61,7 +61,7 @@ am_pda_OBJECTS = alignment.$(OBJEXT) circularnetwork.$(OBJEXT) \
 	rategamma.$(OBJEXT) rategammainvar.$(OBJEXT) \
 	rateheterogeneity.$(OBJEXT) rateinvar.$(OBJEXT) \
 	split.$(OBJEXT) splitgraph.$(OBJEXT) splitset.$(OBJEXT) \
-	substmodel.$(OBJEXT) tools.$(OBJEXT)
+	stoprule.$(OBJEXT) substmodel.$(OBJEXT) tools.$(OBJEXT)
 pda_OBJECTS = $(am_pda_OBJECTS)
 pda_DEPENDENCIES = $(top_builddir)/src/modeltest/libmodeltest.la \
 	$(top_builddir)/src/lp/liblpsolve.la \
@@ -233,8 +233,8 @@ pda_SOURCES = alignment.cpp circularnetwork.cpp eigendecomposition.cpp \
 	msetsblock.cpp msplitsblock.cpp mtree.cpp mtreeset.cpp node.cpp optimization.cpp \
 	pattern.cpp pda.cpp pdnetwork.cpp pdtree.cpp pdtreeset.cpp phyloanalysis.cpp \
 	phylonode.cpp phylotree.cpp pruning.cpp rategamma.cpp rategammainvar.cpp \
-	rateheterogeneity.cpp rateinvar.cpp split.cpp splitgraph.cpp splitset.cpp substmodel.cpp \
-	tools.cpp
+	rateheterogeneity.cpp rateinvar.cpp split.cpp splitgraph.cpp splitset.cpp stoprule.cpp \
+	substmodel.cpp tools.cpp
 
 noinst_HEADERS = alignment.h bionj.h circularnetwork.h eigendecomposition.h \
 	greedy.h gtrmodel.h hashsplitset.h iqptree.h lpwrapper.h mexttree.h modeldna.h \
@@ -242,7 +242,7 @@ noinst_HEADERS = alignment.h bionj.h circularnetwork.h eigendecomposition.h \
 	mtree.h mtreeset.h myreader.h node.h optimization.h pattern.h pdnetwork.h \
 	pdtree.h pdtreeset.h phyloanalysis.h phylonode.h phylotree.h pruning.h \
 	rategamma.h rategammainvar.h rateheterogeneity.h rateinvar.h split.h splitgraph.h \
-	splitset.h substmodel.h tools.h
+	splitset.h stoprule.h substmodel.h tools.h
 
 SUBDIRS = lp modeltest ncl
 pda_LDADD = $(top_builddir)/src/modeltest/libmodeltest.la \
@@ -356,6 +356,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/split.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/splitgraph.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/splitset.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stoprule.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/substmodel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tools.Po@am__quote@
 

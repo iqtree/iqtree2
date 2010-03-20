@@ -31,6 +31,7 @@
 #include "rategammainvar.h"
 #include "modeltest_wrapper.h"
 #include "modelprotein.h"
+#include "stoprule.h"
 
 const int DNA_MODEL_NUM = 14;
 
@@ -266,8 +267,6 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		tree.computeBioNJ(params, alignment, tree.dist_matrix);
 	}
 
-	if (verbose_mode >= VB_MAX)
-		tree.drawTree(cout, WT_INTNODE+WT_BR_LEN);
 
 	/* Fix if negative branch lengths detected */
 	double fixed_length = 0.01;
@@ -319,7 +318,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	//cout << "Log-likelihood: " << tree.optimizeAllBranches() << endl;
 
 	/* do NNI with likelihood function */
-	if (params.iqpnni_iterations > 0) {
+	if (params.min_iterations > 0) {
 		cout << "Performing Nearest Neighbor Interchange..." << endl;
 		//cout << "Current tree likelihood: " << tree.optimizeNNIBranches() << endl;
 		//tree.optimizeAllBranches();
@@ -342,14 +341,21 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	}
 	
 
+
 	/* do the IQP */
-	if (params.k_representative > 0 && params.p_delete > 0.0 && params.iqpnni_iterations > 1) {
-		cout << "Start " << params.iqpnni_iterations-1 << " iterations of IQP and NNI" << endl;
+	if (params.k_representative > 0 && params.p_delete > 0.0 && params.min_iterations > 1) {
+		cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
 		cout << "Number of representative leaves   : " << params.k_representative << endl;
-		cout << "Probability of deleting sequences : " << params.p_delete << endl << endl;
+		cout << "Probability of deleting sequences : " << params.p_delete << endl;
+		cout << "Number of iterations              : ";
+		if (params.stop_condition == SC_FIXED_ITERATION) 
+			cout << params.min_iterations << endl;
+		else cout << "auto-predicted in range [" << params.min_iterations <<"," << 
+			params.max_iterations <<"], confidence " << params.stop_confidence << endl;
+		cout << endl;
 		tree.setRepresentNum(params.k_representative);
 		tree.setProbDelete(params.p_delete);
-		tree.setIQPIterations(params.iqpnni_iterations-1);
+		tree.setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
 
 		string tree_file_name = params.aln_file;
 		tree_file_name += ".treefile";
@@ -374,10 +380,13 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		//tree.printTree(cout);
 		//cout << endl;
 		if (verbose_mode > VB_MED) {
-			tree.printTree(cout, WT_BR_LEN);
-			cout << endl;
+			if (verbose_mode >= VB_DEBUG)
+				tree.drawTree(cout, WT_BR_SCALE + WT_INT_NODE + WT_BR_LEN);
+			else
+				tree.drawTree(cout);
 		}
 	}
+
 }
 
 void runPhyloAnalysis(Params &params) {

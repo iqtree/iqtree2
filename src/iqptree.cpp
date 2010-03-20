@@ -50,8 +50,11 @@ void IQPTree::setProbDelete(double p_del) {
 	p_delete = p_del;
 }
 
-void IQPTree::setIQPIterations(int iterations) {
-	iqpnni_iterations = iterations;
+void IQPTree::setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, 
+	int min_iterations, int max_iterations) {
+	stop_rule.setStopCondition(stop_condition);
+	stop_rule.setConfidenceValue(stop_confidence);
+	stop_rule.setIterationNum(min_iterations, max_iterations);
 }
 
 void IQPTree::findRepresentLeaves(RepresentLeafSet &leaves, PhyloNode *node,
@@ -315,10 +318,10 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves,
 			cout << best_nodes.size() << " branches show the same best bonus, branch nr. " << node_id << " is chosen" << endl;
 
 		reinsertLeaf(*it_leaf, *it_node, best_nodes[node_id], best_dads[node_id]);
-		if (verbose_mode >= VB_DEBUG) {
+		/*if (verbose_mode >= VB_DEBUG) {
 			printTree(cout);
 			cout << endl;
-		}
+		}*/
 	}
 }
 
@@ -337,8 +340,8 @@ double IQPTree::doIQP() {
 	
 	if (verbose_mode >= VB_MAX) {
 		cout << "IQP Likelihood = " << tree_lh << endl;
-		printTree(cout);
-		cout << endl;
+		//printTree(cout);
+		//cout << endl;
 	}
 	return tree_lh;
 	//return optimizeNNI();
@@ -351,7 +354,6 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 	// keep the best tree into a string
 	stringstream best_tree_string;
 	printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-
 	ofstream lh_file;
 	if (nni_lh) {
 		lh_file.open( (tree_file_name + ".lh").c_str() );
@@ -367,20 +369,20 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 		}
 	}
 
-	for (int i = 1; i <= iqpnni_iterations; i++) {
+	for (int cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration); cur_iteration++) {
 		if (verbose_mode >= VB_DEBUG)
-			cout << "Performing IQP in iteration " << i << endl;
+			cout << "Performing IQP in iteration " << cur_iteration << endl;
 		double iqp_score = doIQP();
 		double nni_score = optimizeNNI();
 
 		if (lh_file.is_open()) {
 
-			lh_file << i+1;
+			lh_file << cur_iteration;
 			lh_file << "\t";
 			lh_file << iqp_score;
 			lh_file << endl;
 
-			lh_file << i+1;
+			lh_file << cur_iteration;
 			lh_file << "\t";
 			lh_file << nni_score;
 			lh_file << endl;
@@ -390,14 +392,14 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 			cout << "Cannot open file " + tree_file_name + ".lh";
 		}
 		cout.precision(10);
-		cout << "Iteration " << i + 1 << " / Log-Likelihood: " << nni_score
-				<< endl;
+		cout << "Iteration " << cur_iteration << " / Log-Likelihood: " << nni_score << endl;
 		if (nni_score > best_score+1e-6) {
 			cout << "BETTER TREE FOUND: " << nni_score << endl;
 			best_score = nni_score;
 			best_tree_string.seekp(0);
 			printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 			printTree(tree_file_name.c_str());
+			stop_rule.addImprovedIteration(cur_iteration);
 		} else {
 			/* take back the current best tree */
 			best_tree_string.seekg(0);

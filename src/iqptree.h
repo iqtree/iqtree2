@@ -24,6 +24,7 @@
 #include "phylonode.h"
 #include <set>
 #include <map>
+#include "stoprule.h"
 
 
 /**
@@ -119,9 +120,11 @@ public:
 
 	/**
 		set the number of iterations for the IQPNNI algorithm
-		@param iterations the number of iterations
+		@param stop_condition stop condition (SC_FIXED_ITERATION, SC_STOP_PREDICT)
+		@param min_iterations the min number of iterations
+		@param max_iterations the maximum number of iterations
 	*/
-	void setIQPIterations(int iterations);
+	void setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, int min_iterations, int max_iterations);
 
 	/**
 		find the k-representative leaves under the node
@@ -215,6 +218,11 @@ public:
 protected:
 
 	/**
+		stopping rule
+	*/
+	StopRule stop_rule;
+
+	/**
 		The lamda number for NNI process (described in PhyML Paper)
 	*/
 	double lamda;
@@ -254,7 +262,7 @@ protected:
 	/**
 		number of IQPNNI iterations
 	*/
-	int iqpnni_iterations;
+	//int iqpnni_iterations;
 
 	/**
 		bonus values of all branches, used for IQP algorithm
