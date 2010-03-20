@@ -369,6 +369,7 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 		}
 	}
 
+	stop_rule.addImprovedIteration(1);
 	for (int cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration); cur_iteration++) {
 		if (verbose_mode >= VB_DEBUG)
 			cout << "Performing IQP in iteration " << cur_iteration << endl;
