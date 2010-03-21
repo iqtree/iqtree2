@@ -121,6 +121,12 @@ public:
 	string &getSeqName(int i);
 
 	/**
+		@param seq_name sequence name
+		@return corresponding ID, -1 if not found
+	*/
+	int getSeqID(string &seq_name);
+
+	/**
 		compute the observed distance (number of different pairs of positions per site) 
 			between two sequences
 		@param seq1 index of sequence 1
@@ -165,6 +171,19 @@ public:
 	*/
 	void printDist(ostream &out, double *dist_mat);
 
+	/**
+		read distance matrix from a file in PHYLIP distance format
+		@param file_name distance file name
+		@param dist_mat distance matrix
+	*/
+	void readDist(const char *file_name, double *dist_mat);
+
+	/**
+		read distance matrix from a stream in PHYLIP distance format
+		@param in input stream
+		@param dist_mat distance matrix
+	*/
+	void readDist(istream &in, double *dist_mat);
 
 	/**
 		compute empirical state frequencies from the alignment

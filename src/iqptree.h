@@ -127,6 +127,11 @@ public:
 	void setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, int min_iterations, int max_iterations);
 
 	/**
+		@param assess_quartet the quartet assessment, either IQP_DISTANCE or IQP_PARSIMONY
+	*/
+	void setIQPAssessQuartet(IQP_ASSESS_QUARTET assess_quartet);
+
+	/**
 		find the k-representative leaves under the node
 		@param node the node at which the subtree is rooted
 		@param dad the dad node of the considered subtree, to direct the search
@@ -223,6 +228,11 @@ protected:
 	StopRule stop_rule;
 
 	/**
+		criterion to assess important quartet
+	*/
+	IQP_ASSESS_QUARTET iqp_assess_quartet;
+
+	/**
 		The lamda number for NNI process (described in PhyML Paper)
 	*/
 	double lamda;
@@ -305,8 +315,20 @@ protected:
 		@param leaf1 one of the leaf in the existing sub-tree
 		@param leaf2 one of the leaf in the existing sub-tree
 		@param del_leaf a leaf that was deleted (not in the existing sub-tree)
+		@return 0, 1, or 2 depending on del_leaf should be in subtree containing leaf0, leaf1, or leaf2, respectively
 	*/
 	int assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2, Node *del_leaf);
+
+	/**
+		assess a quartet with four taxa using parsimony
+		@param leaf0 one of the leaf in the existing sub-tree
+		@param leaf1 one of the leaf in the existing sub-tree
+		@param leaf2 one of the leaf in the existing sub-tree
+		@param del_leaf a leaf that was deleted (not in the existing sub-tree)
+		@return 0, 1, or 2 depending on del_leaf should be in subtree containing leaf0, leaf1, or leaf2, respectively
+	*/
+	int assessQuartetParsimony(Node *leaf0, Node *leaf1, Node *leaf2,
+		Node *del_leaf);
 
 	/**
 		assess the important quartets around a virtual root of the tree.

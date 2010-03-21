@@ -29,6 +29,11 @@ string &Alignment::getSeqName(int i) {
 	return seq_names[i];
 }
 
+int Alignment::getSeqID(string &seq_name) {
+	for (int i = 0; i < getNSeq(); i++)
+		if (seq_name == getSeqName(i)) return i;
+	return -1;
+}
 
 void checkSeqName(StrVector &seq_names) {
 	ostringstream warn_str;
@@ -496,9 +501,52 @@ void Alignment::printDist(const char *file_name, double *dist_mat) {
 		cout << "Distance matrix was printed to " << file_name << endl;
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, file_name);
+	}	
+}
+
+void Alignment::readDist(istream &in, double *dist_mat) {
+	int nseqs;
+	in >> nseqs;
+	if (nseqs != getNSeq())
+		throw "Distance file has different number of taxa";
+	int pos = 0, seq1, seq2;
+	for (seq1 = 0; seq1 < nseqs; seq1 ++)  {
+		string seq_name;
+		in >> seq_name;
+		if (seq_name != getSeqName(seq1))
+			throw "Sequence name " + seq_name + " is different from " + getSeqName(seq1);
+		for (seq2 = 0; seq2 < nseqs; seq2 ++) {
+			in >> dist_mat[pos++];
+		}	
+	}
+	// check for symmetric matrix
+	for (seq1 = 0; seq1 < nseqs-1; seq1++) {
+		if (dist_mat[seq1*nseqs+seq1] != 0.0)
+			throw "Diagonal elements of distance matrix is not ZERO";
+		for (seq2 = seq1+1; seq2 < nseqs; seq2++)
+			if (dist_mat[seq1*nseqs+seq2] != dist_mat[seq2*nseqs+seq1])
+				throw "Distance between " + getSeqName(seq1) + " and " + getSeqName(seq2) + " is not symmetric";
+	}
+}
+
+void Alignment::readDist(const char *file_name, double *dist_mat) {
+	try {
+		ifstream in;
+		in.exceptions(ios::failbit | ios::badbit);
+		in.open(file_name);
+		readDist(in, dist_mat);
+		in.close();
+		cout << "Distance matrix was read from " << file_name << endl;
+	} catch (const char *str) {
+		outError(str);
+	} catch (string str) {
+		outError(str);
+	} catch (ios::failure) {
+		outError(ERR_READ_INPUT, file_name);
 	}
 	
 }
+
 
 void Alignment::computeStateFreq (double *stateFrqArr) {
 	int stateNo_;

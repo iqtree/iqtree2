@@ -481,6 +481,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.num_rate_cats = 4;
 	params.optimize_by_newton = true;
 	params.fixed_branch_length = false;
+	params.iqp_assess_quartet = IQP_DISTANCE;
 
 	simple_nni = false;
 	phyml_opt = false;
@@ -816,6 +817,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.stop_confidence = convert_double(argv[cnt]);
 				if (params.stop_confidence <= 0.5 || params.stop_confidence >= 1)
 					throw "Stop confidence value must be in range (0.5,1)";
+			} else if (strcmp(argv[cnt],"-iqppars") == 0) {
+				params.iqp_assess_quartet = IQP_PARSIMONY;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

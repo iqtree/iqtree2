@@ -259,12 +259,23 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		if (!tree.dist_matrix) {
 			tree.dist_matrix = new double[alignment->getNSeq() * alignment->getNSeq()];
 		}
-		alignment->computeDist(tree.dist_matrix);
+		if (!params.dist_file)
+			alignment->computeDist(tree.dist_matrix);
+		else
+			alignment->readDist(params.dist_file, tree.dist_matrix);
 	} else {
-		// stepwise addition
-		//tree.growTreeML(alignment);
-		// create BioNJ tree
-		tree.computeBioNJ(params, alignment, tree.dist_matrix);
+		if (params.parsimony) {
+			tree.growTreeMP(alignment); // stepwise addition
+			if (!tree.dist_matrix) {
+				tree.dist_matrix = new double[alignment->getNSeq() * alignment->getNSeq()];
+			}
+			if (!params.dist_file)
+				alignment->computeDist(tree.dist_matrix);
+			else
+				alignment->readDist(params.dist_file, tree.dist_matrix);
+			
+		} else
+			tree.computeBioNJ(params, alignment, tree.dist_matrix); // create BioNJ tree
 	}
 
 
@@ -297,13 +308,14 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
 	cout << "Random seed: " << params.ran_seed << endl;
 
+/*
 	if (params.parsimony) {
 		int score = tree.computeParsimonyScore();
 		cout << "User tree has parsimony score of " << score << endl;
 
-		/* NNI with parsimony function */
+		// NNI with parsimony function 
 		tree.searchNNI();
-	}
+	}*/
 	/* optimize model parameters */
 	cout.precision(10);
 
@@ -352,10 +364,12 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 			cout << params.min_iterations << endl;
 		else cout << "auto-predicted in range [" << params.min_iterations <<"," << 
 			params.max_iterations <<"], confidence " << params.stop_confidence << endl;
+		cout << "Important quartet assessed on     : " << ((params.iqp_assess_quartet == IQP_DISTANCE) ? "Distance" : "Parsimony") << endl;
 		cout << endl;
 		tree.setRepresentNum(params.k_representative);
 		tree.setProbDelete(params.p_delete);
 		tree.setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
+		tree.setIQPAssessQuartet(params.iqp_assess_quartet);
 
 		string tree_file_name = params.aln_file;
 		tree_file_name += ".treefile";
@@ -379,12 +393,13 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	else {
 		//tree.printTree(cout);
 		//cout << endl;
+		/*
 		if (verbose_mode > VB_MED) {
 			if (verbose_mode >= VB_DEBUG)
 				tree.drawTree(cout, WT_BR_SCALE + WT_INT_NODE + WT_BR_LEN);
 			else
 				tree.drawTree(cout);
-		}
+		}*/
 	}
 
 }

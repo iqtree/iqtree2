@@ -289,6 +289,106 @@ void PhyloTree::searchNNI() {
 	} while (true);
 }
 
+
+/****************************************************************************
+	Stepwise addition (greedy) by maximum parsimony
+****************************************************************************/
+
+int PhyloTree::addTaxonMP(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad) {
+	Neighbor *dad_nei = dad->findNeighbor(node);
+
+	// now insert the new node in the middle of the branch node-dad
+	double len = dad_nei->length;
+	node->updateNeighbor(dad, added_node, len/2.0);
+	dad->updateNeighbor(node, added_node, len/2.0);
+	added_node->updateNeighbor((Node*)1, node, len/2.0);
+	added_node->updateNeighbor((Node*)2, dad, len/2.0);
+	// compute the likelihood
+	//clearAllPartialLh();
+	int best_score = computeParsimonyScore();
+	target_node = node;
+	target_dad = dad;
+	// remove the added node
+	node->updateNeighbor(added_node, dad, len);
+	dad->updateNeighbor(added_node, node, len);
+	added_node->updateNeighbor(node, (Node*)1, len);
+	added_node->updateNeighbor(dad, (Node*)2, len);
+
+	// now tranverse the tree downwards
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		Node *target_node2;
+		Node *target_dad2;
+		double score = addTaxonMP(added_node, target_node2, target_dad2, (*it)->node, node);
+		if (score < best_score) {
+			best_score = score;
+			target_node = target_node2;
+			target_dad = target_dad2;
+		}
+	}
+	return best_score;
+}
+
+
+void PhyloTree::growTreeMP(Alignment *alignment) {
+
+	cout << "Stepwise addition using maximum parsimony..." << endl;
+	aln = alignment;
+	int size = aln->getNSeq();
+	if (size < 3)
+		outError(ERR_FEW_TAXA);
+
+	root = newNode();
+	Node *new_taxon;
+
+	// create initial tree with 3 taxa
+	for (leafNum = 0; leafNum < 3; leafNum++)
+	{
+		if (verbose_mode >= VB_MAX) 
+			cout << "Add " << aln->getSeqName(leafNum) << " to the tree" << endl;
+		new_taxon = newNode(leafNum, aln->getSeqName(leafNum).c_str());
+		root->addNeighbor(new_taxon, 1.0);
+		new_taxon->addNeighbor(root, 1.0);
+	}
+	root = findNodeID(0);
+	//optimizeAllBranches();
+
+	// stepwise adding the next taxon
+	for (leafNum = 3; leafNum < size; leafNum++)
+	{
+		if (verbose_mode >= VB_MAX) 
+			cout << "Add " << aln->getSeqName(leafNum) << " to the tree";
+		// allocate a new taxon and a new ajedcent internal node
+		new_taxon = newNode(leafNum, aln->getSeqName(leafNum).c_str());
+		Node *added_node = newNode();
+		added_node->addNeighbor(new_taxon, 1.0);
+		new_taxon->addNeighbor(added_node, 1.0);
+
+		// preserve two neighbors
+		added_node->addNeighbor((Node*)1, 1.0);
+		added_node->addNeighbor((Node*)2, 1.0);
+
+
+		Node *target_node = NULL;
+		Node *target_dad = NULL;
+		int score = addTaxonMP(added_node, target_node, target_dad, root->neighbors[0]->node, root);
+		if (verbose_mode >= VB_MAX) 
+			cout << ", score = " << score << endl;
+		// now insert the new node in the middle of the branch node-dad
+		double len = target_dad->findNeighbor(target_node)->length;
+		target_node->updateNeighbor(target_dad, added_node, len/2.0);
+		target_dad->updateNeighbor(target_node, added_node, len/2.0);
+		added_node->updateNeighbor((Node*)1, target_node, len/2.0);
+		added_node->updateNeighbor((Node*)2, target_dad, len/2.0);
+		// compute the likelihood
+		//clearAllPartialLh();
+		//optimizeAllBranches();
+		//optimizeNNI();
+	}
+
+	nodeNum = 2 * leafNum - 2;
+}
+
+
 /****************************************************************************
 	likelihood function
 ****************************************************************************/
@@ -839,7 +939,11 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, double* &dist
 	if (!dist_mat) {
 		dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
 	}
-	alignment->computeDist(dist_mat);
+	if (!params.dist_file)
+		alignment->computeDist(dist_mat);
+	else
+		alignment->readDist(params.dist_file, dist_mat);
+
 	alignment->printDist(dist_file.c_str(), dist_mat);
 	//delete dist_mat;
 

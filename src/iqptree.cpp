@@ -57,6 +57,10 @@ void IQPTree::setIQPIterations(STOP_CONDITION stop_condition, double stop_confid
 	stop_rule.setIterationNum(min_iterations, max_iterations);
 }
 
+void IQPTree::setIQPAssessQuartet(IQP_ASSESS_QUARTET assess_quartet) {
+	iqp_assess_quartet = assess_quartet;
+}
+
 void IQPTree::findRepresentLeaves(RepresentLeafSet &leaves, PhyloNode *node,
 		PhyloNode *dad) {
 	RepresentLeafSet::iterator last;
@@ -196,6 +200,26 @@ int IQPTree::assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2,
 	return 2;
 }
 
+int IQPTree::assessQuartetParsimony(Node *leaf0, Node *leaf1, Node *leaf2,
+		Node *del_leaf) {
+	int score[3] = {0, 0, 0};
+	for (Alignment::iterator it = aln->begin(); it != aln->end(); it++) {
+		char ch0 = (*it)[leaf0->id];
+		char ch1 = (*it)[leaf1->id];
+		char ch2 = (*it)[leaf2->id];
+		char chd = (*it)[del_leaf->id];
+		if (ch0 >= aln->num_states || ch1 >= aln->num_states || 
+			ch2 >= aln->num_states || chd >= aln->num_states) continue;
+		if (chd == ch0 && ch1 == ch2) score[0]++;
+		if (chd == ch1 && ch0 == ch2) score[1]++;
+		if (chd == ch2 && ch0 == ch1) score[2]++;
+	}
+	if (score[0] == score[1] && score[0] == score[2]) return floor(((double)(rand())/RAND_MAX) * 3);
+	if (score[0] > score[1] && score[0] > score[2]) return 0;
+	if (score[1] < score[2]) return 2;
+	return 1;
+}
+
 void IQPTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
 	if (!node) node = (PhyloNode*)root;
 	if (dad) {
@@ -269,7 +293,11 @@ void IQPTree::assessQuartets(PhyloNode *cur_root, PhyloNode *del_leaf) {
 				!= leaves[1].end(); i1++)
 			for (RepresentLeafSet::iterator i2 = leaves[2].begin(); i2
 					!= leaves[2].end(); i2++) {
-				int best_id = assessQuartet((*i0), (*i1), (*i2), del_leaf);
+				int best_id;
+				if (iqp_assess_quartet == IQP_DISTANCE)
+					best_id = assessQuartet((*i0), (*i1), (*i2), del_leaf);
+				else
+					best_id = assessQuartetParsimony((*i0), (*i1), (*i2), del_leaf);
 				raiseBonus(cur_root->neighbors[best_id]->node, cur_root);
 			}
 

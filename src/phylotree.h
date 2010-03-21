@@ -230,6 +230,28 @@ public:
 
 
 /****************************************************************************
+	Stepwise addition (greedy) by maximum parsimony
+****************************************************************************/
+
+	/**
+		grow the tree by step-wise addition
+		@param alignment input alignment
+	*/
+	void growTreeMP(Alignment *alignment);
+
+	/**
+		used internally by growTreeMP() to find the best target branch to add into the tree
+		@param added_node node to add
+		@param target_node (OUT) one end of the best branch found
+		@param target_dad (OUT) the other end of the best branch found
+		@param node the current node
+		@param dad dad of the node, used to direct the search
+		@return the parsimony score of the tree
+	*/
+	int  addTaxonMP(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad);
+
+
+/****************************************************************************
 	Nearest Neighbor Interchange with parsimony
 ****************************************************************************/
 	/**

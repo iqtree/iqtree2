@@ -177,6 +177,8 @@ enum StateFreqType {FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL,
 */
 enum STOP_CONDITION {SC_FIXED_ITERATION, SC_STOP_PREDICT};
 
+enum IQP_ASSESS_QUARTET {IQP_DISTANCE, IQP_PARSIMONY};
+
 const double MAX_GENETIC_DIST = 100.0;
 
 /**
@@ -521,6 +523,10 @@ struct Params {
 	*/
 	bool fixed_branch_length;
 
+	/**
+		criterion to assess important quartet
+	*/
+	IQP_ASSESS_QUARTET iqp_assess_quartet;
 };
 
 /**
