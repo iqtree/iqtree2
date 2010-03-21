@@ -210,9 +210,9 @@ int IQPTree::assessQuartetParsimony(Node *leaf0, Node *leaf1, Node *leaf2,
 		char chd = (*it)[del_leaf->id];
 		if (ch0 >= aln->num_states || ch1 >= aln->num_states || 
 			ch2 >= aln->num_states || chd >= aln->num_states) continue;
-		if (chd == ch0 && ch1 == ch2) score[0]++;
-		if (chd == ch1 && ch0 == ch2) score[1]++;
-		if (chd == ch2 && ch0 == ch1) score[2]++;
+		if (chd == ch0 && ch1 == ch2) score[0] += (*it).frequency;
+		if (chd == ch1 && ch0 == ch2) score[1] += (*it).frequency;
+		if (chd == ch2 && ch0 == ch1) score[2] += (*it).frequency;
 	}
 	if (score[0] == score[1] && score[0] == score[2]) return floor(((double)(rand())/RAND_MAX) * 3);
 	if (score[0] > score[1] && score[0] > score[2]) return 0;
