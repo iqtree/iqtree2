@@ -382,9 +382,13 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 	// keep the best tree into a string
 	stringstream best_tree_string;
 	printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+	// Remove the .treefile ending and add iq-tree.lh ending to the file name
+	string aln_file_name;
+	aln_file_name.assign(tree_file_name).erase(tree_file_name.size() - 9);
+	string lh_file_name = aln_file_name + ".iq-tree.lh";
 	ofstream lh_file;
 	if (nni_lh) {
-		lh_file.open( (tree_file_name + ".lh").c_str() );
+		lh_file.open( (lh_file_name).c_str() );
 		if (lh_file.is_open()) {
 			lh_file.precision(10);
 			lh_file << 1;
@@ -393,7 +397,7 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 			lh_file << endl;
 		}
 		else {
-			cout << "Cannot open file " + tree_file_name + ".lh";
+			cout << "Cannot open file " + lh_file_name;
 		}
 	}
 
@@ -477,11 +481,12 @@ double IQPTree::optimizeNNI() {
 	bool resetLamda = false;
 	int numbNNI = 0;
 
+	//Backup the tree before any modification
+	IQPTree backupTree;
+
 	do {
 
-		//Backup the tree before any modification
-		IQPTree *backupTree = new IQPTree();
-		backupTree->copyPhyloTree(this);
+		backupTree.copyPhyloTree(this);
 
 		nonConflictMoves.clear();
 		mapOptBranLens.clear();
@@ -586,11 +591,13 @@ double IQPTree::optimizeNNI() {
 		 Applying all non-conflicting NNIs
 		 */
 		for (int i = 0; i < nbNNIToApply; i++) {
-			if (verbose_mode == VB_DEBUG) {
+
+
+/*			if (verbose_mode == VB_DEBUG) {
 				cout << " \tApplying NNI for branch "
 						<< nonConflictMoves.at(i).node1->id << "->"
 						<< nonConflictMoves.at(i).node2->id << endl;
-			}
+			}*/
 
 			// Apply the calculated optimal branch length for the center branch
 			double new_len = applyBranchLengthChange(nonConflictMoves.at(i).node1,
@@ -617,7 +624,7 @@ double IQPTree::optimizeNNI() {
 
 		if (phyml_opt) {
 			applyAllBranchLengthChanges((PhyloNode*)root);
-			double newScore = computeLikelihood();
+			newScore = computeLikelihood();
 		}
 		else {
 			// Optimize all branch lengths after each NNI-Iteration
@@ -634,7 +641,8 @@ double IQPTree::optimizeNNI() {
 					<< nniIteration << " (applied NNIs=" << nbNNIToApply
 					<< ") , lamda will be devided by 2 -> new lamda = "
 					<< lamda << endl;
-			this->copyPhyloTree(backupTree);
+			this->copyPhyloTree(&backupTree);
+
 			resetLamda = false;
 			numbNNI -= nbNNIToApply;
 		} else {
@@ -647,6 +655,7 @@ double IQPTree::optimizeNNI() {
 						<< (newScore - old_score) / nbNNIToApply << endl;
 		}
 	} while (true);
+
 	nniEndClock = clock();
 	if (verbose_mode >= VB_DEBUG) {
 		cout << "Number of NNIs applied : " << numbNNI << endl;
