@@ -50,7 +50,7 @@ void IQPTree::setProbDelete(double p_del) {
 	p_delete = p_del;
 }
 
-void IQPTree::setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, 
+void IQPTree::setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence,
 	int min_iterations, int max_iterations) {
 	stop_rule.setStopCondition(stop_condition);
 	stop_rule.setConfidenceValue(stop_confidence);
@@ -208,7 +208,7 @@ int IQPTree::assessQuartetParsimony(Node *leaf0, Node *leaf1, Node *leaf2,
 		char ch1 = (*it)[leaf1->id];
 		char ch2 = (*it)[leaf2->id];
 		char chd = (*it)[del_leaf->id];
-		if (ch0 >= aln->num_states || ch1 >= aln->num_states || 
+		if (ch0 >= aln->num_states || ch1 >= aln->num_states ||
 			ch2 >= aln->num_states || chd >= aln->num_states) continue;
 		if (chd == ch0 && ch1 == ch2) score[0] += (*it).frequency;
 		if (chd == ch1 && ch0 == ch2) score[1] += (*it).frequency;
@@ -260,7 +260,7 @@ double IQPTree::findBestBonus(Node *node, Node *dad) {
 	}
 	return best_score;
 }
-	
+
 void IQPTree::findBestBranch(double best_bonus, NodeVector &best_nodes, NodeVector &best_dads, Node *node, Node *dad) {
 	if (!node) node = root;
 	if (dad && ((PhyloNeighbor*)(node->findNeighbor(dad)))->lh_scale_factor == best_bonus) {
@@ -365,7 +365,7 @@ double IQPTree::doIQP() {
 	clearAllPartialLh();
 
 	double tree_lh = optimizeAllBranches();
-	
+
 	if (verbose_mode >= VB_MAX) {
 		cout << "IQP Likelihood = " << tree_lh << endl;
 		//printTree(cout);
@@ -483,10 +483,12 @@ double IQPTree::optimizeNNI() {
 
 	//Backup the tree before any modification
 	IQPTree backupTree;
+	stringstream best_tree_string;
+	printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 
 	do {
 
-		backupTree.copyPhyloTree(this);
+		//backupTree.copyPhyloTree(this);
 
 		nonConflictMoves.clear();
 		mapOptBranLens.clear();
@@ -496,9 +498,9 @@ double IQPTree::optimizeNNI() {
 			lamda = 0.75;
 		}
 		else {
-			// TODO For debug only (delete after that)
 			if (verbose_mode >= VB_DEBUG)
 				cout << "Tree topology reverted, current score : " << cur_score << endl;
+				cout << "Trying lamda = " << lamda << endl;
 		}
 
 		double old_score = cur_score;
@@ -508,11 +510,13 @@ double IQPTree::optimizeNNI() {
 		genNNIMoves();
 
 		if (possibleNNIMoves.size() == 0) {
+
 			if (verbose_mode >= VB_DEBUG) {
 				cout << "Could not find any improving NNIs for NNI Iteration "
 						<< nniIteration << endl;
 				cout << "Stop optimizing using NNI" << endl;
 			}
+
 			break;
 		}
 
@@ -641,11 +645,17 @@ double IQPTree::optimizeNNI() {
 					<< nniIteration << " (applied NNIs=" << nbNNIToApply
 					<< ") , lamda will be devided by 2 -> new lamda = "
 					<< lamda << endl;
-			this->copyPhyloTree(&backupTree);
+
+			best_tree_string.seekg(0);
+			readTree(best_tree_string, rooted);
 
 			resetLamda = false;
 			numbNNI -= nbNNIToApply;
 		} else {
+
+			best_tree_string.seekg(0);
+			printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+
 			resetLamda = true;
 			if (verbose_mode >= VB_DEBUG)
 			cout << "New best tree found with score " << newScore
@@ -654,6 +664,7 @@ double IQPTree::optimizeNNI() {
 						<< " and improvement pro NNI "
 						<< (newScore - old_score) / nbNNIToApply << endl;
 		}
+
 	} while (true);
 
 	nniEndClock = clock();
@@ -663,7 +674,7 @@ double IQPTree::optimizeNNI() {
 				+nniEndClock) / CLOCKS_PER_SEC);
 	}
 	//return optimizeAllBranches(1);
-	/* NOTE FOR TUNG: here you have to optimize branches so many loops 
+	/* NOTE FOR TUNG: here you have to optimize branches so many loops
 		until likelihood does not improve. Making
 		it only 1 loop is NOT satisfactory!!!
 	*/
@@ -704,6 +715,7 @@ double IQPTree::applyBranchLengthChange(PhyloNode *node1, PhyloNode *node2,
 
 	double optLen = mapOptBranLens[key];
 	double new_len;
+
 	if (nonNNIBranch) {
 		new_len = current_len + lamda * (optLen - current_len);
 	} else {
