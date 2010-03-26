@@ -579,7 +579,7 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 			}
 		}
 		for (cat = ncat-1; cat >= 0; cat--)
-			delete trans_mat[cat];
+			delete [] trans_mat[cat];
 	}
 	dad_branch->partial_lh_computed = true;
 }
@@ -1042,8 +1042,8 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 	}
 
 	// restore the partial likelihood vector
-	delete node21_it->partial_lh;
-	delete node12_it->partial_lh;
+	delete [] node21_it->partial_lh;
+	delete [] node12_it->partial_lh;
 	node12_it->partial_lh = node1_lh_save;
 	node21_it->partial_lh = node2_lh_save;
 	return cur_score;

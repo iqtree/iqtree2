@@ -539,7 +539,7 @@ double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[]
 			guess[i] = minx[i];
 		fret = minf;
 	}
-	delete minx;
+	delete [] minx;
 	
 	return fret;
 }

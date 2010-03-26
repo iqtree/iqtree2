@@ -35,7 +35,7 @@ IQPTree::~IQPTree() {
 		//delete bonus_values;
 	//bonus_values = NULL;
 	if (dist_matrix)
-		delete dist_matrix;
+		delete [] dist_matrix;
 	dist_matrix = NULL;
 	if (root != NULL)
 		freeNode();
@@ -382,6 +382,7 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 	// keep the best tree into a string
 	stringstream best_tree_string;
 	printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+
 	// Remove the .treefile ending and add iq-tree.lh ending to the file name
 	string aln_file_name;
 	aln_file_name.assign(tree_file_name).erase(tree_file_name.size() - 9);
@@ -477,18 +478,16 @@ double IQPTree::optimizeNNI() {
 	}
 
 	// Set default value of lamda to 0.75
-	lamda = 0.75;
-	bool resetLamda = false;
+	//lamda = 0.75;
+	bool resetLamda = true;
 	int numbNNI = 0;
 
 	//Backup the tree before any modification
-	IQPTree backupTree;
-	stringstream best_tree_string;
-	printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+	//IQPTree *backupTree = new IQPTree();
+
+	stringstream backup_tree_string;
 
 	do {
-
-		//backupTree.copyPhyloTree(this);
 
 		nonConflictMoves.clear();
 		mapOptBranLens.clear();
@@ -496,11 +495,13 @@ double IQPTree::optimizeNNI() {
 
 		if (resetLamda) {
 			lamda = 0.75;
+			//backupTree->copyPhyloTree(this);
+			backup_tree_string.seekp(0);
+			printTree(backup_tree_string, WT_TAXON_ID + WT_BR_LEN);
 		}
 		else {
-			if (verbose_mode >= VB_DEBUG)
-				cout << "Tree topology reverted, current score : " << cur_score << endl;
-				cout << "Trying lamda = " << lamda << endl;
+			cout << "Tree topology reverted " << endl;
+			cout << "Loglikelihood: " << cur_score << endl;
 		}
 
 		double old_score = cur_score;
@@ -639,22 +640,30 @@ double IQPTree::optimizeNNI() {
 
 		if (newScore < old_score) {
 			cout << "Old score = " << old_score << endl;
-			cout << "New score after applying NNIs = " << newScore << endl;
+			cout << "New score = " << newScore << endl;
 			lamda = lamda / 2;
-			cout << "!!! The tree didn't improve at NNI iteration "
+			cout << "The tree didn't improve at NNI iteration "
 					<< nniIteration << " (applied NNIs=" << nbNNIToApply
-					<< ") , lamda will be devided by 2 -> new lamda = "
-					<< lamda << endl;
+					<< ") -> new lamda = " << lamda << endl;
 
-			best_tree_string.seekg(0);
-			readTree(best_tree_string, rooted);
+
+			backup_tree_string.seekg(0);
+			readTree(backup_tree_string, rooted);
+			assignLeafNames();
 
 			resetLamda = false;
 			numbNNI -= nbNNIToApply;
+
+			//this->copyPhyloTree( backupTree );
+
 		} else {
 
-			best_tree_string.seekg(0);
-			printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+			//backupTree.copyPhyloTree(this);
+
+			/*
+			backup_tree_string(0);
+			printTree(backup_tree_string, WT_TAXON_ID + WT_BR_LEN);
+			*/
 
 			resetLamda = true;
 			if (verbose_mode >= VB_DEBUG)
@@ -936,8 +945,8 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 			node21_it->length = node12_len[0];
 		}
 
-	delete node21_it->partial_lh;
-	delete node12_it->partial_lh;
+	delete [] node21_it->partial_lh;
+	delete [] node12_it->partial_lh;
 	// restore the partial likelihood vector
 	node12_it->partial_lh = node1_lh_save;
 	node21_it->partial_lh = node2_lh_save;

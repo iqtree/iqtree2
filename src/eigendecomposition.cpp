@@ -113,10 +113,10 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		std::cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
 
 	for (i=num_state-1; i>= 0; i--)
-		delete b[i];
+		delete [] b[i];
 
 	for (i=num_state-1; i>= 0; i--)
-		delete a[i];
+		delete [] a[i];
 
 } // eigensystem_new
 

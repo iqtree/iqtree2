@@ -273,10 +273,10 @@ double GTRModel::optimizeParameters() {
 	decomposeRateMatrix();
 	phylo_tree->clearAllPartialLh();
 	
-	delete bound_check;
-	delete lower_bound;
-	delete upper_bound;
-	delete variables;
+	delete [] bound_check;
+	delete [] lower_bound;
+	delete [] upper_bound;
+	delete [] variables;
 
 	return score;
 }
@@ -319,7 +319,7 @@ void GTRModel::decomposeRateMatrix() {
 
 
 	for (i = num_states-1; i >= 0; i--)
-		delete rate_matrix[i];
+		delete [] rate_matrix[i];
 } 
 
 GTRModel::~GTRModel()

@@ -124,8 +124,8 @@ void ModelDNA::setRateType(const char *rate_str) {
 			cout << rates[i] << " ";
 		cout << endl;
 	}
-	delete num_rates;
-	delete avg_rates;
+	delete [] num_rates;
+	delete [] avg_rates;
 }
 
 
