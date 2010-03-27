@@ -488,79 +488,79 @@ double IQPTree::optimizeNNI() {
 	//IQPTree *backupTree = new IQPTree();
 
 	stringstream backup_tree_string;
+	double cur_score;
 
 	do {
 
-		nonConflictMoves.clear();
-		mapOptBranLens.clear();
-		double cur_score = computeLikelihood();
+		nniIteration++;
 
 		if (resetLamda) {
 			lamda = 0.75;
 			//backupTree->copyPhyloTree(this);
 			backup_tree_string.seekp(0);
 			printTree(backup_tree_string, WT_TAXON_ID + WT_BR_LEN);
+
+			nonConflictMoves.clear();
+			mapOptBranLens.clear();
+			cur_score = computeLikelihood();
+			possibleNNIMoves.clear();
+			genNNIMoves();
+
+			if (possibleNNIMoves.size() == 0) {
+
+				if (verbose_mode >= VB_DEBUG) {
+					cout << "Could not find any improving NNIs for NNI Iteration "
+							<< nniIteration << endl;
+					cout << "Stop optimizing using NNI" << endl;
+				}
+
+				break;
+			}
+
+			// Sort all the possible moves (this is descending)
+			sort(possibleNNIMoves.begin(), possibleNNIMoves.end());
+
+			// Remove conflicting NNIs
+			for (vector<NNIMove>::iterator iterMove = possibleNNIMoves.begin(); iterMove
+					!= possibleNNIMoves.end(); iterMove++) {
+				bool choosen = true;
+				for (vector<NNIMove>::iterator iterNextMove =
+						nonConflictMoves.begin(); iterNextMove
+						!= nonConflictMoves.end(); iterNextMove++) {
+					if ((*iterMove).node1 == (*(iterNextMove)).node1
+							|| (*iterMove).node2 == (*(iterNextMove)).node1
+							|| (*iterMove).node1 == (*(iterNextMove)).node2
+							|| (*iterMove).node2 == (*(iterNextMove)).node2) {
+						choosen = false;
+						break;
+					}
+				}
+
+				if (choosen) {
+					nonConflictMoves.push_back(*iterMove);
+				}
+
+			}
+
+			int nniTotal = nonConflictMoves.size();
+
+			if (nniTotal == 0) {
+				break;
+			}
+
+			possibleNNIMoves = nonConflictMoves;
+			nbNNIToApply = (int) nonConflictMoves.size() * lamda;
+			numbNNI += nbNNIToApply;
+
 		}
 		else {
+
+			if (lamda == 0)
+				break;
+
 			cout << "Tree topology reverted " << endl;
 			cout << "Loglikelihood: " << cur_score << endl;
 		}
-
-		double old_score = cur_score;
-		possibleNNIMoves.clear();
-		nniIteration++;
-
-		genNNIMoves();
-
-		if (possibleNNIMoves.size() == 0) {
-
-			if (verbose_mode >= VB_DEBUG) {
-				cout << "Could not find any improving NNIs for NNI Iteration "
-						<< nniIteration << endl;
-				cout << "Stop optimizing using NNI" << endl;
-			}
-
-			break;
-		}
-
-		// Sort all the possible moves (this is descending)
-		sort(possibleNNIMoves.begin(), possibleNNIMoves.end());
-
-		// Remove conflicting NNIs
-		for (vector<NNIMove>::iterator iterMove = possibleNNIMoves.begin(); iterMove
-				!= possibleNNIMoves.end(); iterMove++) {
-			bool choosen = true;
-			for (vector<NNIMove>::iterator iterNextMove =
-					nonConflictMoves.begin(); iterNextMove
-					!= nonConflictMoves.end(); iterNextMove++) {
-				if ((*iterMove).node1 == (*(iterNextMove)).node1
-						|| (*iterMove).node2 == (*(iterNextMove)).node1
-						|| (*iterMove).node1 == (*(iterNextMove)).node2
-						|| (*iterMove).node2 == (*(iterNextMove)).node2) {
-					choosen = false;
-					break;
-				}
-			}
-
-			if (choosen) {
-				nonConflictMoves.push_back(*iterMove);
-			}
-
-		}
-
-		int nniTotal = nonConflictMoves.size();
-
-		if (nniTotal == 0) {
-			break;
-		}
-
-/*		if (verbose_mode == VB_DEBUG) {
-			cout << "Number of non-conflicting NNIs found = " << nniTotal << endl;
-		}*/
-
-		possibleNNIMoves = nonConflictMoves;
-		nbNNIToApply = (int) nonConflictMoves.size() * lamda;
-		numbNNI += nbNNIToApply;
 
 		/**
 		 * Print out the number of NNIs to apply and their scores (sorted)
@@ -599,13 +599,6 @@ double IQPTree::optimizeNNI() {
 		 */
 		for (int i = 0; i < nbNNIToApply; i++) {
 
-
-/*			if (verbose_mode == VB_DEBUG) {
-				cout << " \tApplying NNI for branch "
-						<< nonConflictMoves.at(i).node1->id << "->"
-						<< nonConflictMoves.at(i).node2->id << endl;
-			}*/
-
 			// Apply the calculated optimal branch length for the center branch
 			double new_len = applyBranchLengthChange(nonConflictMoves.at(i).node1,
 					nonConflictMoves.at(i).node2, false);
@@ -640,8 +633,8 @@ double IQPTree::optimizeNNI() {
 		}
 
 
-		if (newScore < old_score) {
-			cout << "Old score = " << old_score << endl;
+		if (newScore < cur_score) {
+			cout << "Old score = " << cur_score << endl;
 			cout << "New score = " << newScore << endl;
 			lamda = lamda / 2;
 			cout << "The tree didn't improve at NNI iteration "
@@ -673,9 +666,9 @@ double IQPTree::optimizeNNI() {
 			if (verbose_mode >= VB_DEBUG)
 			cout << "New best tree found with score " << newScore
 						<< " with " << nbNNIToApply << " NNIs"
-						<< " -- improvement general " << (newScore - old_score)
+						<< " -- improvement general " << (newScore - cur_score)
 						<< " and improvement pro NNI "
-						<< (newScore - old_score) / nbNNIToApply << endl;
+						<< (newScore - cur_score) / nbNNIToApply << endl;
 		}
 
 	} while (true);
@@ -808,7 +801,7 @@ double IQPTree::swapNNIBranch(NNIMove move) {
 	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
 			break;
 
-	// BUG FOR TUNG: memory leak here!!!!, you don't free the memory 
+	// BUG FOR TUNG: memory leak here!!!!, you don't free the memory
 	/*node12_it->partial_lh = newPartialLh();
 	node21_it->partial_lh = newPartialLh();*/
 
