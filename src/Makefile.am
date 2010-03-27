@@ -5,19 +5,19 @@ INCLUDES = $(all_includes)
 
 # the library search path.
 pda_LDFLAGS = $(all_libraries) -ldl
-pda_SOURCES = alignment.cpp circularnetwork.cpp eigendecomposition.cpp \
-	greedy.cpp gtrmodel.cpp hashsplitset.cpp iqptree.cpp lpwrapper.c mexttree.cpp \
-	modeldna.cpp modelprotein.cpp modeltest_wrapper.c modeluser.cpp mpdablock.cpp \
-	msetsblock.cpp msplitsblock.cpp mtree.cpp mtreeset.cpp node.cpp optimization.cpp \
-	pattern.cpp pda.cpp pdnetwork.cpp pdtree.cpp pdtreeset.cpp phyloanalysis.cpp \
-	phylonode.cpp phylotree.cpp pruning.cpp rategamma.cpp rategammainvar.cpp \
-	rateheterogeneity.cpp rateinvar.cpp split.cpp splitgraph.cpp splitset.cpp stoprule.cpp \
-	substmodel.cpp tools.cpp
-noinst_HEADERS = alignment.h bionj.h circularnetwork.h eigendecomposition.h \
-	greedy.h gtrmodel.h hashsplitset.h iqptree.h lpwrapper.h mexttree.h modeldna.h \
-	modelprotein.h modeltest_wrapper.h modeluser.h mpdablock.h msetsblock.h msplitsblock.h \
-	mtree.h mtreeset.h myreader.h node.h optimization.h pattern.h pdnetwork.h \
-	pdtree.h pdtreeset.h phyloanalysis.h phylonode.h phylotree.h pruning.h \
+pda_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
+	eigendecomposition.cpp greedy.cpp gtrmodel.cpp hashsplitset.cpp iqptree.cpp lpwrapper.c \
+	mexttree.cpp modeldna.cpp modelprotein.cpp modeltest_wrapper.c modeluser.cpp \
+	mpdablock.cpp msetsblock.cpp msplitsblock.cpp mtree.cpp mtreeset.cpp node.cpp \
+	optimization.cpp pattern.cpp pda.cpp pdnetwork.cpp pdtree.cpp pdtreeset.cpp \
+	phyloanalysis.cpp phylonode.cpp phylotree.cpp pruning.cpp rategamma.cpp \
+	rategammainvar.cpp rateheterogeneity.cpp rateinvar.cpp split.cpp splitgraph.cpp \
+	splitset.cpp stoprule.cpp substmodel.cpp tools.cpp
+noinst_HEADERS = alignment.h alignmentpairwise.h bionj.h circularnetwork.h \
+	eigendecomposition.h greedy.h gtrmodel.h hashsplitset.h iqptree.h lpwrapper.h mexttree.h \
+	modeldna.h modelprotein.h modeltest_wrapper.h modeluser.h mpdablock.h msetsblock.h \
+	msplitsblock.h mtree.h mtreeset.h myreader.h node.h optimization.h pattern.h \
+	pdnetwork.h pdtree.h pdtreeset.h phyloanalysis.h phylonode.h phylotree.h pruning.h \
 	rategamma.h rategammainvar.h rateheterogeneity.h rateinvar.h split.h splitgraph.h \
 	splitset.h stoprule.h substmodel.h tools.h
 SUBDIRS = lp modeltest ncl

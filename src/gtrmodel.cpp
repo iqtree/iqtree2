@@ -327,19 +327,19 @@ GTRModel::~GTRModel()
 	int i, j;
 	//delete eigen_coeff_derv2;
 	//delete eigen_coeff_derv1;
-	delete eigen_coeff;
+	delete [] eigen_coeff;
 
 	for (i = num_states-1; i>=0; i--)
-		delete inv_eigenvectors[i];
-	delete inv_eigenvectors;
+		delete [] inv_eigenvectors[i];
+	delete [] inv_eigenvectors;
 	for (i = num_states-1; i>=0; i--)
-		delete eigenvectors[i];
-	delete eigenvectors;
+		delete [] eigenvectors[i];
+	delete [] eigenvectors;
 
-	delete eigenvalues;
+	delete [] eigenvalues;
 
-	if (state_freq) delete state_freq;
-	if (rates) delete rates;
+	if (state_freq) delete [] state_freq;
+	if (rates) delete [] rates;
 }
 
 

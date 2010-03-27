@@ -47,12 +47,13 @@ CONFIG_CLEAN_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_pda_OBJECTS = alignment.$(OBJEXT) circularnetwork.$(OBJEXT) \
-	eigendecomposition.$(OBJEXT) greedy.$(OBJEXT) \
-	gtrmodel.$(OBJEXT) hashsplitset.$(OBJEXT) iqptree.$(OBJEXT) \
-	lpwrapper.$(OBJEXT) mexttree.$(OBJEXT) modeldna.$(OBJEXT) \
-	modelprotein.$(OBJEXT) modeltest_wrapper.$(OBJEXT) \
-	modeluser.$(OBJEXT) mpdablock.$(OBJEXT) msetsblock.$(OBJEXT) \
+am_pda_OBJECTS = alignment.$(OBJEXT) alignmentpairwise.$(OBJEXT) \
+	circularnetwork.$(OBJEXT) eigendecomposition.$(OBJEXT) \
+	greedy.$(OBJEXT) gtrmodel.$(OBJEXT) hashsplitset.$(OBJEXT) \
+	iqptree.$(OBJEXT) lpwrapper.$(OBJEXT) mexttree.$(OBJEXT) \
+	modeldna.$(OBJEXT) modelprotein.$(OBJEXT) \
+	modeltest_wrapper.$(OBJEXT) modeluser.$(OBJEXT) \
+	mpdablock.$(OBJEXT) msetsblock.$(OBJEXT) \
 	msplitsblock.$(OBJEXT) mtree.$(OBJEXT) mtreeset.$(OBJEXT) \
 	node.$(OBJEXT) optimization.$(OBJEXT) pattern.$(OBJEXT) \
 	pda.$(OBJEXT) pdnetwork.$(OBJEXT) pdtree.$(OBJEXT) \
@@ -227,20 +228,20 @@ INCLUDES = $(all_includes)
 
 # the library search path.
 pda_LDFLAGS = $(all_libraries) -ldl
-pda_SOURCES = alignment.cpp circularnetwork.cpp eigendecomposition.cpp \
-	greedy.cpp gtrmodel.cpp hashsplitset.cpp iqptree.cpp lpwrapper.c mexttree.cpp \
-	modeldna.cpp modelprotein.cpp modeltest_wrapper.c modeluser.cpp mpdablock.cpp \
-	msetsblock.cpp msplitsblock.cpp mtree.cpp mtreeset.cpp node.cpp optimization.cpp \
-	pattern.cpp pda.cpp pdnetwork.cpp pdtree.cpp pdtreeset.cpp phyloanalysis.cpp \
-	phylonode.cpp phylotree.cpp pruning.cpp rategamma.cpp rategammainvar.cpp \
-	rateheterogeneity.cpp rateinvar.cpp split.cpp splitgraph.cpp splitset.cpp stoprule.cpp \
-	substmodel.cpp tools.cpp
+pda_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
+	eigendecomposition.cpp greedy.cpp gtrmodel.cpp hashsplitset.cpp iqptree.cpp lpwrapper.c \
+	mexttree.cpp modeldna.cpp modelprotein.cpp modeltest_wrapper.c modeluser.cpp \
+	mpdablock.cpp msetsblock.cpp msplitsblock.cpp mtree.cpp mtreeset.cpp node.cpp \
+	optimization.cpp pattern.cpp pda.cpp pdnetwork.cpp pdtree.cpp pdtreeset.cpp \
+	phyloanalysis.cpp phylonode.cpp phylotree.cpp pruning.cpp rategamma.cpp \
+	rategammainvar.cpp rateheterogeneity.cpp rateinvar.cpp split.cpp splitgraph.cpp \
+	splitset.cpp stoprule.cpp substmodel.cpp tools.cpp
 
-noinst_HEADERS = alignment.h bionj.h circularnetwork.h eigendecomposition.h \
-	greedy.h gtrmodel.h hashsplitset.h iqptree.h lpwrapper.h mexttree.h modeldna.h \
-	modelprotein.h modeltest_wrapper.h modeluser.h mpdablock.h msetsblock.h msplitsblock.h \
-	mtree.h mtreeset.h myreader.h node.h optimization.h pattern.h pdnetwork.h \
-	pdtree.h pdtreeset.h phyloanalysis.h phylonode.h phylotree.h pruning.h \
+noinst_HEADERS = alignment.h alignmentpairwise.h bionj.h circularnetwork.h \
+	eigendecomposition.h greedy.h gtrmodel.h hashsplitset.h iqptree.h lpwrapper.h mexttree.h \
+	modeldna.h modelprotein.h modeltest_wrapper.h modeluser.h mpdablock.h msetsblock.h \
+	msplitsblock.h mtree.h mtreeset.h myreader.h node.h optimization.h pattern.h \
+	pdnetwork.h pdtree.h pdtreeset.h phyloanalysis.h phylonode.h phylotree.h pruning.h \
 	rategamma.h rategammainvar.h rateheterogeneity.h rateinvar.h split.h splitgraph.h \
 	splitset.h stoprule.h substmodel.h tools.h
 
@@ -321,6 +322,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/alignment.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/alignmentpairwise.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/circularnetwork.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eigendecomposition.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/greedy.Po@am__quote@

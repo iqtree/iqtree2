@@ -72,6 +72,27 @@ public:
     Alignment(char *filename, InputType &intype);
 
 	/**
+		destructor
+	*/	
+    virtual ~Alignment();
+
+
+/****************************************************************************
+	input alignment reader
+****************************************************************************/
+
+	/**
+		add a pattern into the alignment
+		@param pat the pattern
+		@param site the site index of the pattern from the alignment
+		@param freq frequency of pattern
+		@return TRUE if pattern contains only gaps or unknown char. 
+				In that case, the pattern won't be added.
+	*/
+	bool addPattern(Pattern &pat, int site, int freq = 1);
+
+
+	/**
 		read the alignment in NEXUS format
 		@param filename file name
 		@return 1 on success, 0 on failure
@@ -92,21 +113,21 @@ public:
 	*/
     void extractDataBlock(NxsCharactersBlock *data_block);
 
-	/**
-		destructor
-	*/	
-    virtual ~Alignment();
+
+/****************************************************************************
+	get general information from alignment
+****************************************************************************/
 
 	/**
 		@return number of sequences
 	*/
-	int getNSeq() { return seq_names.size(); }
+	inline int getNSeq() { return seq_names.size(); }
 
 
 	/**
 		@return number of sites (alignment columns)
 	*/
-	int getNSite() { return site_pattern.size(); }
+	inline int getNSite() { return site_pattern.size(); }
 
 
 	/**
@@ -125,6 +146,21 @@ public:
 		@return corresponding ID, -1 if not found
 	*/
 	int getSeqID(string &seq_name);
+
+/****************************************************************************
+	alignment general processing
+****************************************************************************/
+
+	/**
+		extract sub-alignment of a sub-set of sequences
+		@param seq_id ID of sequences to extract from
+	*/
+	void extractSubAlignment(IntVector &seq_id, Alignment *sub_aln);
+
+/****************************************************************************
+	Distance functions
+****************************************************************************/
+
 
 	/**
 		compute the observed distance (number of different pairs of positions per site) 
@@ -185,6 +221,11 @@ public:
 	*/
 	void readDist(istream &in, double *dist_mat);
 
+
+/****************************************************************************
+	some statistics
+****************************************************************************/
+
 	/**
 		compute empirical state frequencies from the alignment
 		@param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
@@ -212,13 +253,6 @@ public:
 		fraction of constant sites
 	*/
 	double frac_const_sites;
-
-	/**
-		add a pattern into the alignment
-		@param pat the pattern
-		@param site the site index of the pattern from the alignment
-	*/
-	void addPattern(Pattern &pat, int site);
 
 
 private:

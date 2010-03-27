@@ -164,6 +164,8 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 
 	site_pattern.resize(nsite, -1);
 
+	int num_gaps_only = 0;
+
 	for (site = 0; site < nsite; site++) {
  		Pattern pat;
 		for (seq = 0; seq < nseq; seq++) {
@@ -182,8 +184,10 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 				pat += pat_ch;
 			} 
 		}
-		addPattern(pat, site);
+		num_gaps_only += addPattern(pat, site);
 	}
+	if (num_gaps_only)
+		cout << "WARNING: " << num_gaps_only << " sites contain only gaps or unknown chars." << endl;
 	if (verbose_mode >= VB_MAX)
 		for (site = 0; site < size(); site++) {
 			for (seq = 0; seq < nseq; seq++)
@@ -192,19 +196,32 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 		}
 }
 
-void Alignment::addPattern(Pattern &pat, int site) {
+bool Alignment::addPattern(Pattern &pat, int site, int freq) {
+	// check if pattern contains only gaps
+	bool gaps_only = true;
+	for (Pattern::iterator it = pat.begin(); it != pat.end(); it++)
+		if ((*it) != STATE_UNKNOWN) { 
+			gaps_only = false; 
+			break;
+		}
+	if (gaps_only) {
+		if (verbose_mode >= VB_DEBUG)
+			cout << "Site " << site << " contains only gaps or unknown characters" << endl;
+		//return true;
+	}
 	PatternIntMap::iterator pat_it = pattern_index.find(pat);
 	if (pat_it == pattern_index.end()) { // not found
-		pat.frequency = 1;
+		pat.frequency = freq;
 		pat.computeConst();
 		push_back(pat);
 		pattern_index[pat] = size()-1;
 		site_pattern[site] = size()-1;
 	} else {
 		int index = pat_it->second;
-		(*this)[index].frequency++;
+		at(index).frequency += freq;
 		site_pattern[site] = index;
 	} 
+	return gaps_only;
 }
 
 enum SeqType {SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_UNKNOWN};
@@ -404,7 +421,7 @@ int Alignment::readPhylip(char *filename) {
 	}
 
 	// now convert to patterns
-	int site, seq;
+	int site, seq, num_gaps_only = 0;
 
 	for (site = 0; site < nsite; site++) {
  		Pattern pat;
@@ -415,13 +432,37 @@ int Alignment::readPhylip(char *filename) {
 					sequences[seq][site] << " at site " << site+1 << "\n";
 			pat.push_back(state);
 		}
-		addPattern(pat, site);
+		num_gaps_only += addPattern(pat, site);
 	}
+	if (num_gaps_only)
+		cout << "WARNING: " << num_gaps_only << " sites contain only gaps or unknown chars." << endl;
 	if (err_str.str() != "")
 		throw err_str.str();
 
 }
 
+
+
+void Alignment::extractSubAlignment(IntVector &seq_id, Alignment *sub_aln) {
+	IntVector::iterator it;
+	for (it = seq_id.begin(); it != seq_id.end(); it++) {
+		assert(*it >= 0 && *it < getNSeq());
+		sub_aln->seq_names.push_back(getSeqName(*it));
+	}
+	sub_aln->site_pattern.resize(getNPattern(), -1);
+	sub_aln->clear();
+	sub_aln->pattern_index.clear();
+	int site = 0;
+	VerboseMode save_mode = verbose_mode; 
+	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+	for (iterator pit = begin(); pit != end(); pit++, site++) {
+		Pattern pat;
+		for (it = seq_id.begin(); it != seq_id.end(); it++)
+			pat.push_back((*pit)[*it]);
+		sub_aln->addPattern(pat, site, (*pit).frequency);
+	}
+	verbose_mode = save_mode;
+}
 
 void Alignment::countConstSite() {
 	int num_const_sites = 0;
@@ -435,12 +476,16 @@ Alignment::~Alignment()
 }
 
 double Alignment::computeObsDist(int seq1, int seq2) {
-	int diff_pos = 0;
-	for (iterator it = begin(); it != end(); it++) {
-		if ((*it)[seq1] != (*it)[seq2])
-			diff_pos += (*it).frequency;
-	}
-	return ((double)diff_pos) / getNSite();
+	int diff_pos = 0, total_pos = 0;
+	for (iterator it = begin(); it != end(); it++) 
+		if  ((*it)[seq1] < num_states && (*it)[seq2] < num_states) {
+		//if ((*it)[seq1] != STATE_UNKNOWN && (*it)[seq2] != STATE_UNKNOWN) {
+			total_pos += (*it).frequency;
+			if ((*it)[seq1] != (*it)[seq2] )
+				diff_pos += (*it).frequency;
+		}
+	if (!total_pos) total_pos = 1;
+	return ((double)diff_pos) / total_pos;
 }
 
 double Alignment::computeJCDist(int seq1, int seq2) {
@@ -662,4 +707,9 @@ void Alignment::computeEmpiricalRate (double *rates) {
 			cout << rates[k] << " ";
 		cout << endl;
 	}
+
+	for (i = num_states-1; i >= 0; i--) {
+		delete [] pair_rates[i];
+	}
+	delete [] pair_rates;
 }
