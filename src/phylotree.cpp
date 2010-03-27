@@ -59,6 +59,18 @@ PhyloTree::PhyloTree()
 	model = NULL;
 	site_rate = NULL;
 	optimize_by_newton = false;
+	central_partial_lh = NULL;
+}
+
+PhyloTree::~PhyloTree() {
+	if (central_partial_lh)
+		delete [] central_partial_lh;
+	central_partial_lh = NULL;
+	if (model) delete model;
+	if (site_rate) delete site_rate;
+	if (root != NULL)
+		freeNode();
+	root = NULL;
 }
 
 void PhyloTree::assignLeafNames(Node *node, Node *dad) {
@@ -393,6 +405,38 @@ void PhyloTree::growTreeMP(Alignment *alignment) {
 	likelihood function
 ****************************************************************************/
 
+void PhyloTree::initializeAllPartialLh() {
+	int index;
+	initializeAllPartialLh(index);
+	assert(index == (nodeNum-1)*2);
+}
+
+void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
+	int block_size = aln->size() * aln->num_states * site_rate->getNRate();
+	if (!node) {
+		node = (PhyloNode*)root;
+		// allocate the big central partial likelihoods memory
+		if (!central_partial_lh) 
+			central_partial_lh = new double[nodeNum*2*block_size];
+		index = 0;
+	}
+	if (dad) {
+		// assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
+		PhyloNeighbor *nei = (PhyloNeighbor*)node->findNeighbor(dad);
+		assert(!nei->partial_lh);
+		nei->partial_lh = central_partial_lh + (index * block_size);
+		nei = (PhyloNeighbor*)dad->findNeighbor(node);
+		assert(!nei->partial_lh);
+		nei->partial_lh = central_partial_lh + ((index+1) * block_size);
+		index += 2;
+		assert(index < nodeNum*2-1);
+	}
+	FOR_NEIGHBOR_IT(node, dad, it)
+		initializeAllPartialLh(index, (PhyloNode*)(*it)->node, node);
+}
+
+
+
 double *PhyloTree::newPartialLh() {
 	return new double[aln->size() * aln->num_states * site_rate->getNRate()];
 }
@@ -409,6 +453,8 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 	PhyloNode *node = (PhyloNode*)dad_branch->node;
 	PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
 	assert(node_branch);
+	if (!central_partial_lh)
+		initializeAllPartialLh();
 	// swap node and dad if dad is a leaf
 	if (node->isLeaf()) {
 		PhyloNode *tmp_node = dad;
@@ -500,8 +546,9 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 
 	dad_branch->lh_scale_factor = 0.0;
 
-	if (!dad_branch->partial_lh)
-		dad_branch->partial_lh = newPartialLh();
+	assert(dad_branch->partial_lh);
+	//if (!dad_branch->partial_lh)
+	//	dad_branch->partial_lh = newPartialLh();
 	if (node->isLeaf() && dad) {
 		/* external node */
 		memset(dad_branch->partial_lh, 0, lh_size * sizeof(double));

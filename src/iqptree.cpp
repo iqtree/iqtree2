@@ -434,8 +434,10 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 		} else {
 			/* take back the current best tree */
 			best_tree_string.seekg(0);
+			freeNode();
 			readTree(best_tree_string, rooted);
 			assignLeafNames();
+			initializeAllPartialLh();
 		}
 	}
 
@@ -648,8 +650,10 @@ double IQPTree::optimizeNNI() {
 
 
 			backup_tree_string.seekg(0);
+			freeNode();
 			readTree(backup_tree_string, rooted);
 			assignLeafNames();
+			initializeAllPartialLh();
 
 			resetLamda = false;
 			numbNNI -= nbNNIToApply;
@@ -797,15 +801,16 @@ double IQPTree::swapNNIBranch(NNIMove move) {
 	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 
 	// save the likelihood vector at themapBranLens two ends of node1-node2
-	double *node1_lh_save = node12_it->partial_lh;
-	double *node2_lh_save = node21_it->partial_lh;
+	/*double *node1_lh_save = node12_it->partial_lh;
+	double *node2_lh_save = node21_it->partial_lh;*/
 
 	// TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
 	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
 			break;
 
-	node12_it->partial_lh = newPartialLh();
-	node21_it->partial_lh = newPartialLh();
+	// BUG FOR TUNG: memory leak here!!!!, you don't free the memory 
+	/*node12_it->partial_lh = newPartialLh();
+	node21_it->partial_lh = newPartialLh();*/
 
 	// do the NNI swap
 	node1->updateNeighbor(node1_nei->node, node2_nei);

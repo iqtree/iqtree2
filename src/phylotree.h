@@ -79,6 +79,12 @@ public:
 	PhyloTree();
 
 	/**
+		destructor
+	*/
+	virtual ~PhyloTree();
+
+
+	/**
 		copy the phylogenetic tree structure into this tree, override to take sequence names
 		in the alignment into account
 		@param tree the tree to copy
@@ -141,10 +147,7 @@ public:
 	*/
 	virtual Node* newNode(int node_id, int node_name);
 
-	/**
-		clear all partial likelihood for a clean computation again
-	*/
-	void clearAllPartialLh();
+
 
 	/**
 		this function return the parsimony or likelihood score of the tree. Default is 
@@ -180,6 +183,25 @@ public:
 /****************************************************************************
 	likelihood function
 ****************************************************************************/
+
+	/**
+		initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh 
+	*/
+	void initializeAllPartialLh();
+
+	/**
+		initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh 
+		@param node the current node
+		@param dad dad of the node, used to direct the search
+		@param index the index 
+	*/
+	void initializeAllPartialLh(int &index, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+
+	/**
+		clear all partial likelihood for a clean computation again
+	*/
+	void clearAllPartialLh();
 
 	/**
 		allocate memory for a partial likelihood vector
@@ -505,6 +527,11 @@ protected:
 	int spr_radius;
 
 
+	/**
+		the main memory storing all partial likelihoods for all neighbors of the tree.
+		The variable partial_lh in PhyloNeighbor will be assigned to a region inside this variable.
+	*/
+	double *central_partial_lh;
 };
 
 #endif

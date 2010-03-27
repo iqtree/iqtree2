@@ -38,14 +38,6 @@ public:
 	}
 
 	/**
-		destructor
-	*/
-	virtual ~PhyloNeighbor() {
-		if (!partial_lh) delete partial_lh;
-		partial_lh = NULL;
-	}
-
-	/**
 		tell that the partial likelihood vector is not computed
 	*/
 	void clearPartialLh() { partial_lh_computed = false; }

@@ -133,13 +133,13 @@ void Initialize(float **delta, FILE *input, int n, POINTERS *trees)
   int lig;                                          /* matrix line       */
   int col;                                          /* matrix column     */
   float distance;
-  char name_taxon[LEN];                             /* taxon’s name      */
+  char name_taxon[LEN];                             /* taxonï¿½s name      */
   WORD *name;
 
   for(lig=1; lig <= n; lig++)
     {
-      fscanf(input,"%s",name_taxon);                  /* read taxon’s name */
-      name=(WORD *)calloc(1,sizeof(WORD));            /* taxon’s name is   */
+      fscanf(input,"%s",name_taxon);                  /* read taxonï¿½s name */
+      name=(WORD *)calloc(1,sizeof(WORD));            /* taxonï¿½s name is   */
       if(name == NULL)                                /* put in trees      */
 	{
 	  printf("Out of memories !!");
@@ -402,7 +402,7 @@ void Compute_sums_Sx(float **delta, int n)
 	    }
 	}
       delta[i][i]=sum;                           /* store the sum Si in */
-    }                                               /* delta’s diagonal    */
+    }                                               /* deltaï¿½s diagonal    */
 }
 
 
@@ -651,8 +651,8 @@ int create(const char *inputFile, const char *outputFile) {
   char *chain2;                           /* idem                        */
   int *a, *b;                             /* pair to be agglomerated     */
   float **delta;                          /* delta matrix                */
-  float la;                               /* first taxon’s branch-length */
-  float lb;                               /* second taxon’s branch-length*/
+  float la;                               /* first taxonï¿½s branch-length */
+  float lb;                               /* second taxonï¿½s branch-length*/
   float vab;                              /* variance of Dab             */
   float lamda;
   int i;
@@ -769,8 +769,20 @@ int create(const char *inputFile, const char *outputFile) {
 	  trees[i].tail=NULL;
 	}
     }
-  free(delta);
   free(trees);
+  for(i=n; i>=1; i--)
+    {
+      free(delta[i]);
+    }
+  free(delta);
+  /* Minh free memory-leak */
+  free(chain2);
+  free(chain1);
+  free(b);
+  free(a);
+  free(Name_fich2);
+  free(Name_fich1);
+  /* Minh done */
   fclose(input);
   fclose(output);
 
