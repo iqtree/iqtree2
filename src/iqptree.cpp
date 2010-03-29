@@ -543,15 +543,10 @@ double IQPTree::optimizeNNI() {
 			}
 
 			int nniTotal = nonConflictMoves.size();
-
 			if (nniTotal == 0) {
 				break;
 			}
-
-			possibleNNIMoves = nonConflictMoves;
-			nbNNIToApply = (int) nonConflictMoves.size() * lamda;
-			numbNNI += nbNNIToApply;
-
+			nbNNIToApply = (int) nniTotal * lamda;
 		}
 		else {
 
@@ -632,13 +627,13 @@ double IQPTree::optimizeNNI() {
 			newScore = optimizeAllBranches(1);
 		}
 
-
 		if (newScore < cur_score) {
 			cout << "Old score = " << cur_score << endl;
 			cout << "New score = " << newScore << endl;
 			lamda = lamda / 2;
+			cout << "Total non-conflicting NNIs found = " << nniTotal << endl;
 			cout << "The tree didn't improve at NNI iteration "
-					<< nniIteration << " (applied NNIs=" << nbNNIToApply
+					<< nniIteration << " (applied NNIs = " << nbNNIToApply
 					<< ") -> new lamda = " << lamda << endl;
 
 
@@ -661,6 +656,8 @@ double IQPTree::optimizeNNI() {
 			backup_tree_string(0);
 			printTree(backup_tree_string, WT_TAXON_ID + WT_BR_LEN);
 			*/
+
+			numbNNI += nbNNIToApply;
 
 			resetLamda = true;
 			if (verbose_mode >= VB_DEBUG)
