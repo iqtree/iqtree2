@@ -612,33 +612,38 @@ double IQPTree::optimizeNNI() {
 
 		cnt++;
 
-		double newScore;
+		double new_score;
 
 		if (phyml_opt) {
 			applyAllBranchLengthChanges((PhyloNode*)root);
-			newScore = computeLikelihood();
+			new_score = computeLikelihood();
 		}
 		else {
 			// Optimize all branch lengths after each NNI-Iteration
 			// This is done by IQPNNI
-			newScore = optimizeAllBranches(1);
+			new_score = optimizeAllBranches(1);
 		}
 
-		if (newScore < cur_score) {
+		if (new_score < cur_score) {
 			cout << "Old score = " << cur_score << endl;
-			cout << "New score = " << newScore << endl;
+			cout << "New score = " << new_score << endl;
 			lamda = lamda / 2;
+			cout << "Total NNIs found = " << possibleNNIMoves.size() << endl;
 			cout << "Total non-conflicting NNIs found = " << nniTotal << endl;
 			cout << "The tree didn't improve at NNI iteration "
 					<< nniIteration << " (applied NNIs = " << nbNNIToApply
 					<< ") -> new lamda = " << lamda << endl;
-
 
 			backup_tree_string.seekg(0);
 			freeNode();
 			readTree(backup_tree_string, rooted);
 			assignLeafNames();
 			initializeAllPartialLh();
+
+
+			printTree("tmp_tree.tree");
+			cout << "Tree was printed to tmp_tree.tree" << endl;
+
 
 			resetLamda = false;
 			numbNNI -= nbNNIToApply;
@@ -650,11 +655,11 @@ double IQPTree::optimizeNNI() {
 			resetLamda = true;
 
 			if (verbose_mode >= VB_DEBUG)
-			cout << "New best tree found with score " << newScore
+			cout << "New best tree found with score " << new_score
 						<< " with " << nbNNIToApply << " NNIs"
-						<< " -- improvement general " << (newScore - cur_score)
+						<< " -- improvement general " << (new_score - cur_score)
 						<< " and improvement pro NNI "
-						<< (newScore - cur_score) / nbNNIToApply << endl;
+						<< (new_score - cur_score) / nbNNIToApply << endl;
 		}
 
 	} while (true);
@@ -776,20 +781,10 @@ double IQPTree::swapNNIBranch(NNIMove move) {
 	Neighbor *node1_nei = move.node1Nei;
 	Neighbor *node2_nei = move.node2Nei;
 
-	PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
-	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
+	assert(node1->degree() == 3 && node2->degree() == 3);
 
-	// save the likelihood vector at themapBranLens two ends of node1-node2
-	/*double *node1_lh_save = node12_it->partial_lh;
-	double *node2_lh_save = node21_it->partial_lh;*/
-
-	// TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
-	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
-			break;
-
-	// BUG FOR TUNG: memory leak here!!!!, you don't free the memory
-	/*node12_it->partial_lh = newPartialLh();
-	node21_it->partial_lh = newPartialLh();*/
+	PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
 	// do the NNI swap
 	node1->updateNeighbor(node1_nei->node, node2_nei);
@@ -927,6 +922,7 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 			node2_nei->node->updateNeighbor(node1, node2, node2_len);
 			node12_it->length = node12_len[0];
 			node21_it->length = node12_len[0];
+
 		}
 
 	delete [] node21_it->partial_lh;
