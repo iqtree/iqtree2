@@ -407,10 +407,13 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 		if (verbose_mode >= VB_DEBUG)
 			cout << "Performing IQP in iteration " << cur_iteration << endl;
 		double iqp_score = doIQP();
+
+		//TODO For debugging only,delete after that
+		printTree( (tree_file_name + "IQP").c_str() );
+
 		double nni_score = optimizeNNI();
 
 		if (lh_file.is_open()) {
-
 			lh_file << cur_iteration;
 			lh_file << "\t";
 			lh_file << iqp_score;
@@ -420,7 +423,6 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 			lh_file << "\t";
 			lh_file << nni_score;
 			lh_file << endl;
-
 		}
 		cout.precision(10);
 		cout << "Iteration " << cur_iteration << " / Log-Likelihood: " << nni_score << endl;
@@ -463,7 +465,7 @@ double IQPTree::optimizeNNI() {
 	int nniIteration = 0;
 
 	// Delete debug files (NNI trees)
-	if (verbose_mode > VB_MED) {
+	if (verbose_mode == VB_DEBUG) {
 		if ( fileExists("nniTrees") ) {
 			if (remove("nniTrees") != 0)
 				perror("Error deleting file nniTrees");
@@ -492,9 +494,7 @@ double IQPTree::optimizeNNI() {
 	double cur_score;
 
 	do {
-
 		nniIteration++;
-
 		// Tree get improved, lamda reset to 0.75
 		if (resetLamda) {
 			lamda = 0.75;
@@ -533,13 +533,10 @@ double IQPTree::optimizeNNI() {
 						break;
 					}
 				}
-
 				if (choosen) {
 					nonConflictMoves.push_back(*iterMove);
 				}
-
 			}
-
 			nniTotal = nonConflictMoves.size();
 			if (nniTotal == 0) {
 				break;
@@ -547,11 +544,8 @@ double IQPTree::optimizeNNI() {
 		}
 		// Tree get worse after doing NNI
 		else {
-			cout << "Tree topology reverted " << endl;
-			if (verbose_mode == VB_DEBUG) {
-				cur_score = computeLikelihood();
-				cout << "Recompute loglikelihood ... loglikelihood = " << cur_score << endl;
-			}
+			cur_score = computeLikelihood();
+			cout << "Tree topology reverted / Loglikelihood = " << cur_score << endl;
 		}
 
 		nbNNIToApply = (int) nniTotal * lamda;
@@ -633,13 +627,12 @@ double IQPTree::optimizeNNI() {
 			cout << "The tree didn't improve at NNI iteration "
 					<< nniIteration << " (applied NNIs = " << nbNNIToApply
 					<< ") -> new lamda = " << lamda << endl;
-
+			assert( (nbNNIToApply-1) > 0); // Tree cannot be worse if only 1 NNI is applied
 			backup_tree_string.seekg(0);
 			freeNode();
 			readTree(backup_tree_string, rooted);
 			assignLeafNames();
 			initializeAllPartialLh();
-
 
 			printTree("tmp_tree.tree");
 			cout << "Tree was printed to tmp_tree.tree" << endl;
