@@ -483,6 +483,7 @@ double IQPTree::optimizeNNI() {
 	//lamda = 0.75;
 	bool resetLamda = true;
 	int numbNNI = 0;
+	int nniTotal = 0;
 
 	//Backup the tree before any modification
 	//IQPTree *backupTree = new IQPTree();
@@ -494,12 +495,11 @@ double IQPTree::optimizeNNI() {
 
 		nniIteration++;
 
+		// Tree get improved, lamda reset to 0.75
 		if (resetLamda) {
 			lamda = 0.75;
-			//backupTree->copyPhyloTree(this);
 			backup_tree_string.seekp(0);
 			printTree(backup_tree_string, WT_TAXON_ID + WT_BR_LEN);
-
 			nonConflictMoves.clear();
 			mapOptBranLens.clear();
 			cur_score = computeLikelihood();
@@ -507,13 +507,11 @@ double IQPTree::optimizeNNI() {
 			genNNIMoves();
 
 			if (possibleNNIMoves.size() == 0) {
-
 				if (verbose_mode >= VB_DEBUG) {
 					cout << "Could not find any improving NNIs for NNI Iteration "
 							<< nniIteration << endl;
 					cout << "Stop optimizing using NNI" << endl;
 				}
-
 				break;
 			}
 
@@ -542,20 +540,21 @@ double IQPTree::optimizeNNI() {
 
 			}
 
-			int nniTotal = nonConflictMoves.size();
+			nniTotal = nonConflictMoves.size();
 			if (nniTotal == 0) {
 				break;
 			}
-			nbNNIToApply = (int) nniTotal * lamda;
 		}
+		// Tree get worse after doing NNI
 		else {
-
-			if (lamda == 0)
-				break;
-
 			cout << "Tree topology reverted " << endl;
-			cout << "Loglikelihood: " << cur_score << endl;
+			if (verbose_mode == VB_DEBUG) {
+				cur_score = computeLikelihood();
+				cout << "Recompute loglikelihood ... loglikelihood = " << cur_score << endl;
+			}
 		}
+
+		nbNNIToApply = (int) nniTotal * lamda;
 
 		/**
 		 * Print out the number of NNIs to apply and their scores (sorted)
@@ -580,7 +579,6 @@ double IQPTree::optimizeNNI() {
 
 		if (nbNNIToApply < 1) {
 			nbNNIToApply = 1;
-			lamda = 0;
 		}
 
 		if (verbose_mode == VB_DEBUG) {
@@ -593,7 +591,6 @@ double IQPTree::optimizeNNI() {
 		 Applying all non-conflicting NNIs
 		 */
 		for (int i = 0; i < nbNNIToApply; i++) {
-
 			// Apply the calculated optimal branch length for the center branch
 			double new_len = applyBranchLengthChange(nonConflictMoves.at(i).node1,
 					nonConflictMoves.at(i).node2, false);
@@ -649,17 +646,9 @@ double IQPTree::optimizeNNI() {
 			//this->copyPhyloTree( backupTree );
 
 		} else {
-
-			//backupTree.copyPhyloTree(this);
-
-			/*
-			backup_tree_string(0);
-			printTree(backup_tree_string, WT_TAXON_ID + WT_BR_LEN);
-			*/
-
 			numbNNI += nbNNIToApply;
-
 			resetLamda = true;
+
 			if (verbose_mode >= VB_DEBUG)
 			cout << "New best tree found with score " << newScore
 						<< " with " << nbNNIToApply << " NNIs"
