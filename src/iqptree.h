@@ -212,7 +212,7 @@ public:
 	/**
 		Do an NNI
 	*/
-	double swapNNIBranch(NNIMove move);
+	double doNNIMove(NNIMove move);
 
 
 	/**

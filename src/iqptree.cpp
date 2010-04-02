@@ -409,7 +409,9 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 		double iqp_score = doIQP();
 
 		//TODO For debugging only,delete after that
-		printTree( (tree_file_name + "IQP").c_str() );
+		std::stringstream ss_IQPTree;
+		ss_IQPTree << tree_file_name << ".IQP" << cur_iteration;
+		printTree( ss_IQPTree.str().c_str() );
 
 		double nni_score = optimizeNNI();
 
@@ -589,7 +591,7 @@ double IQPTree::optimizeNNI() {
 			double new_len = applyBranchLengthChange(nonConflictMoves.at(i).node1,
 					nonConflictMoves.at(i).node2, false);
 
-			swapNNIBranch(nonConflictMoves.at(i));
+			doNNIMove(nonConflictMoves.at(i));
 
 			//Print the tree
 			if (verbose_mode == VB_DEBUG) {
@@ -602,6 +604,14 @@ double IQPTree::optimizeNNI() {
 				nniTreesFile << "\n";
 				nniTreesFile.close();
 			}
+		}
+
+		// TODO For debugging only, delete after that
+		if ( nbNNIToApply == 1) {
+			double actual_score = computeLikelihood();
+			double correct_score = nonConflictMoves.at(0).score;
+			cout << "Actual score = " << actual_score << endl;
+			cout << "Correct score = " << correct_score << endl;
 		}
 
 		cnt++;
@@ -627,7 +637,7 @@ double IQPTree::optimizeNNI() {
 			cout << "The tree didn't improve at NNI iteration "
 					<< nniIteration << " (applied NNIs = " << nbNNIToApply
 					<< ") -> new lamda = " << lamda << endl;
-			assert( (nbNNIToApply-1) > 0); // Tree cannot be worse if only 1 NNI is applied
+			assert( (nbNNIToApply-1) == 0); // Tree cannot be worse if only 1 NNI is applied
 			backup_tree_string.seekg(0);
 			freeNode();
 			readTree(backup_tree_string, rooted);
@@ -767,7 +777,7 @@ void IQPTree::applyChildBranchChanges(PhyloNode *node, PhyloNode *dad) {
 
 }
 
-double IQPTree::swapNNIBranch(NNIMove move) {
+double IQPTree::doNNIMove(NNIMove move) {
 
 	PhyloNode *node1 = move.node1;
 	PhyloNode *node2 = move.node2;
