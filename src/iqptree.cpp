@@ -467,7 +467,7 @@ double IQPTree::optimizeNNI() {
 	int nniIteration = 0;
 
 	// Delete debug files (NNI trees)
-	if (verbose_mode == VB_DEBUG) {
+/*	if (verbose_mode == VB_DEBUG) {
 		if ( fileExists("nniTrees") ) {
 			if (remove("nniTrees") != 0)
 				perror("Error deleting file nniTrees");
@@ -481,7 +481,7 @@ double IQPTree::optimizeNNI() {
 			else
 				puts("File successfully deleted");
 		}
-	}
+	}*/
 
 	// Set default value of lamda to 0.75
 	//lamda = 0.75;
@@ -555,7 +555,7 @@ double IQPTree::optimizeNNI() {
 		/**
 		 * Print out the number of NNIs to apply and their scores (sorted)
 		 */
-		if (verbose_mode == VB_DEBUG) {
+/*		if (verbose_mode == VB_DEBUG) {
 			ofstream nniScore("nniScores", ios::app);
 			nniScore << nbNNIToApply << endl;
 			nniScore.precision(10);
@@ -567,7 +567,7 @@ double IQPTree::optimizeNNI() {
 				nniScore << endl;
 			}
 			nniScore.close();
-		}
+		}*/
 
 		if (verbose_mode == VB_DEBUG) {
 			cout << "lamda = " << lamda << endl;
@@ -577,11 +577,11 @@ double IQPTree::optimizeNNI() {
 			nbNNIToApply = 1;
 		}
 
-		if (verbose_mode == VB_DEBUG) {
+/*		if (verbose_mode == VB_DEBUG) {
 			ofstream nniTreesFile("nniTrees", ios::app);
 			nniTreesFile << nbNNIToApply << endl;
 			nniTreesFile.close();
-		}
+		}*/
 
 		/**
 		 Applying all non-conflicting NNIs
@@ -591,10 +591,15 @@ double IQPTree::optimizeNNI() {
 			double new_len = applyBranchLengthChange(nonConflictMoves.at(i).node1,
 					nonConflictMoves.at(i).node2, false);
 
+			if ( nbNNIToApply == 1 ) {
+				PhyloTree::swapNNIBranch( cur_score, nonConflictMoves.at(i).node1, nonConflictMoves.at(i).node2 );
+				break;
+			}
+
 			doNNIMove(nonConflictMoves.at(i));
 
 			//Print the tree
-			if (verbose_mode == VB_DEBUG) {
+/*			if (verbose_mode == VB_DEBUG) {
 				// Print out the tree and its score after this NNI operation
 				ofstream nniTreesFile("nniTrees", ios::app);
 				nniTreesFile.precision(10);
@@ -603,16 +608,16 @@ double IQPTree::optimizeNNI() {
 				printTree(nniTreesFile);
 				nniTreesFile << "\n";
 				nniTreesFile.close();
-			}
+			}*/
 		}
 
-		// TODO For debugging only, delete after that
-		if ( nbNNIToApply == 1) {
+		// TODO For debugging only, delete/comment out after that
+/*		if ( nbNNIToApply == 1) {
 			double actual_score = computeLikelihood();
 			double correct_score = nonConflictMoves.at(0).score;
 			cout << "Actual score = " << actual_score << endl;
 			cout << "Correct score = " << correct_score << endl;
-		}
+		}*/
 
 		cnt++;
 
@@ -786,8 +791,6 @@ double IQPTree::doNNIMove(NNIMove move) {
 
 	assert(node1->degree() == 3 && node2->degree() == 3);
 
-	PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
-	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
 	// do the NNI swap
 	node1->updateNeighbor(node1_nei->node, node2_nei);
@@ -795,6 +798,9 @@ double IQPTree::doNNIMove(NNIMove move) {
 
 	node2->updateNeighbor(node2_nei->node, node1_nei);
 	node1_nei->node->updateNeighbor(node1, node2);
+
+	PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
 	// clear partial likelihood vector
 	node12_it->clearPartialLh();
