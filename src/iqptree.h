@@ -60,9 +60,13 @@ struct nodeheightcmp
 struct NNIMove
 {
 	PhyloNode *node1;
-	Neighbor *node1Nei;
+	//Neighbor *node1Nei;
+	NeighborVec::iterator node1Nei_it;
+
 	PhyloNode *node2;
-	Neighbor *node2Nei;
+	//Neighbor *node2Nei;
+	NeighborVec::iterator node2Nei_it;
+
 	double score;
 
 	bool operator<(const NNIMove& rhs) const

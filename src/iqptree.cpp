@@ -413,6 +413,10 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 		ss_IQPTree << tree_file_name << ".IQP" << cur_iteration;
 		printTree( ss_IQPTree.str().c_str() );
 
+		//TODO DEBUG ONLY
+		if (cur_iteration == 36) {
+			cout << "The BUG is here !!! " << endl;
+		}
 		double nni_score = optimizeNNI();
 
 		if (lh_file.is_open()) {
@@ -428,6 +432,7 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 		}
 		cout.precision(10);
 		cout << "Iteration " << cur_iteration << " / Log-Likelihood: " << nni_score << endl;
+
 		if (nni_score > best_score+1e-6) {
 			cout << "BETTER TREE FOUND: " << nni_score << endl;
 			best_score = nni_score;
@@ -586,15 +591,20 @@ double IQPTree::optimizeNNI() {
 		/**
 		 Applying all non-conflicting NNIs
 		 */
-		for (int i = 0; i < nbNNIToApply; i++) {
+		for ( int i=0; i<nbNNIToApply; i++ ) {
 			// Apply the calculated optimal branch length for the center branch
 			double new_len = applyBranchLengthChange(nonConflictMoves.at(i).node1,
 					nonConflictMoves.at(i).node2, false);
 
-			if ( nbNNIToApply == 1 ) {
-				PhyloTree::swapNNIBranch( cur_score, nonConflictMoves.at(i).node1, nonConflictMoves.at(i).node2 );
-				break;
-			}
+//			if ( nbNNIToApply == 1 ) {
+//				double _score = PhyloTree::swapNNIBranch( cur_score, nonConflictMoves.at(i).node1, nonConflictMoves.at(i).node2 );
+//				cout << "Expceted to-swap neighbors : " << nonConflictMoves.at(i).node1Nei->node->id
+//						<< " and " << nonConflictMoves.at(i).node2Nei->node->id << endl;
+//				cout << "Expected score = " << nonConflictMoves.at(i).score << endl;
+//				cout << "Actual score = " << _score << endl;
+//				cout << endl;
+//				break;
+//			}
 
 			doNNIMove(nonConflictMoves.at(i));
 
@@ -612,12 +622,14 @@ double IQPTree::optimizeNNI() {
 		}
 
 		// TODO For debugging only, delete/comment out after that
-/*		if ( nbNNIToApply == 1) {
+		/*
+		if ( nbNNIToApply == 1) {
 			double actual_score = computeLikelihood();
 			double correct_score = nonConflictMoves.at(0).score;
 			cout << "Actual score = " << actual_score << endl;
 			cout << "Correct score = " << correct_score << endl;
-		}*/
+		}
+		*/
 
 		cnt++;
 
@@ -642,7 +654,7 @@ double IQPTree::optimizeNNI() {
 			cout << "The tree didn't improve at NNI iteration "
 					<< nniIteration << " (applied NNIs = " << nbNNIToApply
 					<< ") -> new lamda = " << lamda << endl;
-			assert( (nbNNIToApply-1) == 0); // Tree cannot be worse if only 1 NNI is applied
+			assert( (nbNNIToApply-1) != 0); // Tree cannot be worse if only 1 NNI is applied
 			backup_tree_string.seekg(0);
 			freeNode();
 			readTree(backup_tree_string, rooted);
@@ -651,7 +663,6 @@ double IQPTree::optimizeNNI() {
 
 			printTree("tmp_tree.tree");
 			cout << "Tree was printed to tmp_tree.tree" << endl;
-
 
 			resetLamda = false;
 			numbNNI -= nbNNIToApply;
@@ -786,18 +797,19 @@ double IQPTree::doNNIMove(NNIMove move) {
 
 	PhyloNode *node1 = move.node1;
 	PhyloNode *node2 = move.node2;
-	Neighbor *node1_nei = move.node1Nei;
-	Neighbor *node2_nei = move.node2Nei;
+	NeighborVec::iterator node1Nei_it = move.node1Nei_it;
+	NeighborVec::iterator node2Nei_it = move.node2Nei_it;
+	Neighbor *node1Nei = *node1Nei_it;
+	Neighbor *node2Nei = *node2Nei_it;
 
 	assert(node1->degree() == 3 && node2->degree() == 3);
 
-
 	// do the NNI swap
-	node1->updateNeighbor(node1_nei->node, node2_nei);
-	node2_nei->node->updateNeighbor(node2, node1);
+	node1->updateNeighbor(node1Nei_it, node2Nei);
+	node2Nei->node->updateNeighbor(node2, node1);
 
-	node2->updateNeighbor(node2_nei->node, node1_nei);
-	node1_nei->node->updateNeighbor(node1, node2);
+	node2->updateNeighbor(node2Nei_it, node1Nei);
+	node1Nei->node->updateNeighbor(node1, node2);
 
 	PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
 	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
@@ -808,6 +820,8 @@ double IQPTree::doNNIMove(NNIMove move) {
 
 	node2->clearReversePartialLh(node1);
 	node1->clearReversePartialLh(node2);
+
+	optimizeOneBranch(node1, node2);
 
 	// Return likelihood score only for debugging, otherwise return 0
 	//return computeLikelihood();
@@ -854,10 +868,12 @@ void IQPTree::genNNIMoves(PhyloNode *node, PhyloNode *dad) {
 NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 	assert(node1->degree() == 3 && node2->degree() == 3);
 
-	NNIMove mymove = { node1, NULL, node2, NULL, 0 };
+	NNIMove mymove;
+	mymove.score = 0;
 
 	PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
 	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
+
 	double node12_len[4];
 	node12_len[0] = node12_it->length; // Length of branch node1-node2 before swap
 	// Calculate optimal branch length for node12
@@ -872,26 +888,21 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 	double *node2_lh_save = node21_it->partial_lh;
 	node12_it->partial_lh = newPartialLh();
 	node21_it->partial_lh = newPartialLh();
+
 	// save the first found neighbor of node 1 (excluding node2) in node1_it
 	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
 			break;
 	Neighbor *node1_nei = *node1_it;
-	//mymove.node1Nei = node1_nei;
 	double node1_len = node1_nei->length;
 	NeighborVec::iterator node1_nei_it = node1_nei->node->findNeighborIt(node1);
-
-	int nniNr = 1; //
+	int nniNr = 1;
 	int chosenSwap = 1;
 	FOR_NEIGHBOR_IT(node2, node1, node2_it)
-		{
+	{
 			nniNr = nniNr + 1;
 			// do the NNI swap
 			Neighbor *node2_nei = *node2_it;
 			//mymove.node2Nei = node2_nei;
-
-			// TUNG unused variable ?
-			NeighborVec::iterator node2_nei_it =
-					node2_nei->node->findNeighborIt(node2);
 
 			double node2_len = node2_nei->length;
 
@@ -917,8 +928,8 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 
 				chosenSwap = nniNr;
 
-				mymove.node1Nei = node1_nei;
-				mymove.node2Nei = node2_nei;
+				mymove.node1Nei_it = node1_it;
+				mymove.node2Nei_it = node2_it;
 				mymove.score = best_score;
 				mymove.node1 = node1;
 				mymove.node2 = node2;
@@ -932,7 +943,7 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 			node12_it->length = node12_len[0];
 			node21_it->length = node12_len[0];
 
-		}
+	}
 
 	delete [] node21_it->partial_lh;
 	delete [] node12_it->partial_lh;

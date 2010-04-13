@@ -1047,6 +1047,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 	NeighborVec::iterator node1_nei_it = node1_nei->node->findNeighborIt(node1);
 
 
+	// Neighbors of node2 which are not node1
 	FOR_NEIGHBOR_IT(node2, node1, node2_it) {
 
 		// do the NNI swap
@@ -1062,7 +1063,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 		node2->updateNeighbor(node2_it, node1_nei);
 		node1_nei->node->updateNeighbor(node1, node2);
 
-		// clear partial likelihood vector
+		// partial_lhclear partial likelihood vector
 		node12_it->clearPartialLh();
 		node21_it->clearPartialLh();
 
@@ -1074,6 +1075,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 			node2->clearReversePartialLh(node1);
 			node1->clearReversePartialLh(node2);
 			cur_score = score;
+			cout << "Swapped neighbors :" << node1_nei->node->id << " and " << node2_nei->node->id << endl;
 			break;
 
 		}
