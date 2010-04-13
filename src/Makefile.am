@@ -1,4 +1,4 @@
-bin_PROGRAMS = pda
+bin_PROGRAMS = pda 
 
 # set the include path found by configure
 INCLUDES = $(all_includes)

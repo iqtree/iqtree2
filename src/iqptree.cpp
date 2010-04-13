@@ -795,6 +795,7 @@ void IQPTree::applyChildBranchChanges(PhyloNode *node, PhyloNode *dad) {
 
 double IQPTree::doNNIMove(NNIMove move) {
 
+
 	PhyloNode *node1 = move.node1;
 	PhyloNode *node2 = move.node2;
 	NeighborVec::iterator node1Nei_it = move.node1Nei_it;
@@ -803,6 +804,27 @@ double IQPTree::doNNIMove(NNIMove move) {
 	Neighbor *node2Nei = *node2Nei_it;
 
 	assert(node1->degree() == 3 && node2->degree() == 3);
+
+	int node1NeiID = node1Nei->node->id;
+	int node2NeiID = node1Nei->node->id;
+
+	NeighborVec::iterator node1it;
+	for(node1it = (node1)->neighbors.begin(); node1it != (node1)->neighbors.end(); node1it++)
+	{
+		if( (*node1it)->node->id == node1NeiID)
+			break;
+	}
+	node1Nei_it = node1it;
+	NeighborVec::iterator node2it;
+	for(node2it = (node2)->neighbors.begin(); node2it != (node2)->neighbors.end(); node2it++)
+	{
+		if( (*node2it)->node->id == node2NeiID)
+			break;
+	}
+	node2Nei_it = node2it;
+
+	node1Nei = *node1Nei_it;
+	node2Nei = *node2Nei_it;
 
 	// do the NNI swap
 	node1->updateNeighbor(node1Nei_it, node2Nei);
