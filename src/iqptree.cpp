@@ -507,6 +507,15 @@ double IQPTree::optimizeNNI() {
 			lamda = 0.75;
 			backup_tree_string.seekp(0);
 			printTree(backup_tree_string, WT_TAXON_ID + WT_BR_LEN);
+
+			/* FOR DEBUG ONLY */
+//			backup_tree_string.seekg(0);
+//			freeNode();
+//			readTree(backup_tree_string, rooted);
+//			assignLeafNames();
+//			initializeAllPartialLh();
+			/* FOR DEBUG ONLY */
+
 			nonConflictMoves.clear();
 			mapOptBranLens.clear();
 			cur_score = computeLikelihood();
@@ -811,35 +820,8 @@ double IQPTree::doNNIMove(NNIMove move) {
 
 	assert(node1->degree() == 3 && node2->degree() == 3);
 
-	PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
-	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
-
-	// save the likelihood vector at the two ends of node1-node2
-	double *node1_lh_save = node12_it->partial_lh;
-	double *node2_lh_save = node21_it->partial_lh;
-	node12_it->partial_lh = newPartialLh();
-	node21_it->partial_lh = newPartialLh();
-
 	int node1NeiID = node1Nei->node->id;
 	int node2NeiID = node2Nei->node->id;
-
-	NeighborVec::iterator node1it;
-	for(node1it = node1->neighbors.begin(); node1it != node1->neighbors.end(); node1it++)
-	{
-		if( (*node1it)->node->id == node1NeiID)
-			break;
-	}
-	node1Nei_it = node1it;
-	NeighborVec::iterator node2it;
-	for(node2it = node2->neighbors.begin(); node2it != node2->neighbors.end(); node2it++)
-	{
-		if( (*node2it)->node->id == node2NeiID)
-			break;
-	}
-	node2Nei_it = node2it;
-
-	node1Nei = *(node1Nei_it);
-	node2Nei = *(node2Nei_it);
 
 	// do the NNI swap
 	node1->updateNeighbor(node1Nei_it, node2Nei);
@@ -847,6 +829,9 @@ double IQPTree::doNNIMove(NNIMove move) {
 
 	node2->updateNeighbor(node2Nei_it, node1Nei);
 	node1Nei->node->updateNeighbor(node1, node2);
+
+	PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
 	// clear partial likelihood vector
 	node12_it->clearPartialLh();
@@ -856,12 +841,6 @@ double IQPTree::doNNIMove(NNIMove move) {
 	node1->clearReversePartialLh(node2);
 
 	optimizeOneBranch(node1, node2);
-
-	// restore the partial likelihood vector
-	delete [] node21_it->partial_lh;
-	delete [] node12_it->partial_lh;
-	node12_it->partial_lh = node1_lh_save;
-	node21_it->partial_lh = node2_lh_save;
 
 	// Return likelihood score only for debugging, otherwise return 0
 	//return computeLikelihood();
@@ -916,6 +895,7 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 
 	double node12_len[4];
 	node12_len[0] = node12_it->length; // Length of branch node1-node2 before swap
+
 	// Calculate optimal branch length for node12
 	double cur_score = optimizeOneBranch(node1, node2);
 	double best_score = cur_score;
@@ -926,8 +906,6 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 	// save the likelihood vector at the two ends of node1-node2
 	double *node1_lh_save = node12_it->partial_lh;
 	double *node2_lh_save = node21_it->partial_lh;
-	node12_it->partial_lh = newPartialLh();
-	node21_it->partial_lh = newPartialLh();
 
 	// save the first found neighbor of node 1 (excluding node2) in node1_it
 	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
@@ -939,12 +917,13 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 	FOR_NEIGHBOR_IT(node2, node1, node2_it)
 	{
 			nniNr = nniNr + 1;
-			// do the NNI swap
+
+			node12_it->partial_lh = newPartialLh();
+			node21_it->partial_lh = newPartialLh();
+
+			/* do the NNI swap */
 			Neighbor *node2_nei = *node2_it;
-			//mymove.node2Nei = node2_nei;
-
 			double node2_len = node2_nei->length;
-
 			node1->updateNeighbor(node1_it, node2_nei);
 			node2_nei->node->updateNeighbor(node2, node1);
 
@@ -954,6 +933,9 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 			// clear partial likelihood vector
 			node12_it->clearPartialLh();
 			node21_it->clearPartialLh();
+
+			node2->clearReversePartialLh(node1);
+			node1->clearReversePartialLh(node2);
 
 			// compute the score of the swapped topology
 			double score = optimizeOneBranch(node1, node2);
@@ -979,13 +961,12 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 			node12_it->length = node12_len[0];
 			node21_it->length = node12_len[0];
 
+			delete [] node21_it->partial_lh;
+			delete [] node12_it->partial_lh;
+			// restore the partial likelihood vector
+			node12_it->partial_lh = node1_lh_save;
+			node21_it->partial_lh = node2_lh_save;
 	}
-
-	delete [] node21_it->partial_lh;
-	delete [] node12_it->partial_lh;
-	// restore the partial likelihood vector
-	node12_it->partial_lh = node1_lh_save;
-	node21_it->partial_lh = node2_lh_save;
 
 	//Save the optimal branch length
 	//Branch bestBranch = { node1, node2, node12_len[chosenSwap] };
