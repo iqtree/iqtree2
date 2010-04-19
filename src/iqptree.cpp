@@ -362,7 +362,7 @@ double IQPTree::doIQP() {
 	// just to make sure IQP does it right
 	setAlignment(aln);
 
-	clearAllPartialLh();
+	//clearAllPartialLh();
 
 	double tree_lh = optimizeAllBranches();
 
@@ -508,12 +508,12 @@ double IQPTree::optimizeNNI() {
 			backup_tree_string.seekp(0);
 			printTree(backup_tree_string, WT_TAXON_ID + WT_BR_LEN);
 
-			/* FOR DEBUG ONLY */
-//			backup_tree_string.seekg(0);
-//			freeNode();
-//			readTree(backup_tree_string, rooted);
-//			assignLeafNames();
-//			initializeAllPartialLh();
+			/* FOR DEBUG ONLY. After clearAllPartialLikelihood has been fixed this can be removed */
+			backup_tree_string.seekg(0);
+			freeNode();
+			readTree(backup_tree_string, rooted);
+			assignLeafNames();
+			initializeAllPartialLh();
 			/* FOR DEBUG ONLY */
 
 			nonConflictMoves.clear();
