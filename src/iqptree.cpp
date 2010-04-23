@@ -382,7 +382,7 @@ double IQPTree::doIQP() {
 	// just to make sure IQP does it right
 	setAlignment(aln);
 
-	//clearAllPartialLh();
+	clearAllPartialLh();
 
 	double tree_lh = optimizeAllBranches();
 
@@ -490,35 +490,25 @@ double IQPTree::optimizeNNI() {
 
 	int cnt = 1;
 	int nniIteration = 0;
-
-	// Delete debug files (NNI trees)
-	/*	if (verbose_mode == VB_DEBUG) {
-	 if ( fileExists("nniTrees") ) {
-	 if (remove("nniTrees") != 0)
-	 perror("Error deleting file nniTrees");
-	 else
-	 puts("File successfully deleted");
-	 }
-
-	 if ( fileExists("nniScores") ) {
-	 if (remove("nniScores") != 0)
-	 perror("Error deleting file nniScores");
-	 else
-	 puts("File successfully deleted");
-	 }
-	 }*/
-
-	// Set default value of lamda to 0.75
-	//lamda = 0.75;
 	bool resetLamda = true;
 	int numbNNI = 0;
 	int nniTotal = 0;
 
-	//Backup the tree before any modification
-	//IQPTree *backupTree = new IQPTree();
+	// TODO Print the IQP tree to a string and read it back
+	/*
+	stringstream backup_iqp_tree;
+	backup_iqp_tree.seekp(0);
+	printTree(backup_iqp_tree, WT_TAXON_ID + WT_BR_LEN);
+	backup_iqp_tree.seekg(0);
+	freeNode();
+	readTree(backup_iqp_tree, rooted);
+	assignLeafNames();
+	initializeAllPartialLh();
+	*/
 
 	stringstream backup_tree_string;
 	double cur_score;
+
 
 	do {
 		nniIteration++;
@@ -528,14 +518,6 @@ double IQPTree::optimizeNNI() {
 			backup_tree_string.seekp(0);
 			printTree(backup_tree_string, WT_TAXON_ID + WT_BR_LEN);
 
-			/* FOR DEBUG ONLY. After clearAllPartialLikelihood has been fixed this can be removed */
-			backup_tree_string.seekg(0);
-			freeNode();
-			readTree(backup_tree_string, rooted);
-			assignLeafNames();
-			initializeAllPartialLh();
-			/* FOR DEBUG ONLY */
-
 			nonConflictMoves.clear();
 			mapOptBranLens.clear();
 			cur_score = computeLikelihood();
@@ -544,8 +526,7 @@ double IQPTree::optimizeNNI() {
 
 			if (possibleNNIMoves.size() == 0) {
 				if (verbose_mode >= VB_DEBUG) {
-					cout
-							<< "Could not find any improving NNIs for NNI Iteration "
+					cout << "Could not find any improving NNIs for NNI Iteration "
 							<< nniIteration << endl;
 					cout << "Stop optimizing using NNI" << endl;
 				}
@@ -579,7 +560,10 @@ double IQPTree::optimizeNNI() {
 				break;
 			}
 		}
-		// Tree get worse after doing NNI
+		/**
+		 * Tree get worse after applying NNIs:
+		 * Revert tree topology and reduce the number of NNIs to be aplied.
+		 */
 		else {
 			cur_score = computeLikelihood();
 			cout << "Tree topology reverted / Loglikelihood = " << cur_score
@@ -588,56 +572,23 @@ double IQPTree::optimizeNNI() {
 
 		nbNNIToApply = (int) nniTotal * lamda;
 
-		/**
-		 * Print out the number of NNIs to apply and their scores (sorted)
-		 */
-		/*		if (verbose_mode == VB_DEBUG) {
-		 ofstream nniScore("nniScores", ios::app);
-		 nniScore << nbNNIToApply << endl;
-		 nniScore.precision(10);
-		 int i;
-		 vector<NNIMove>::iterator iterMove;
-		 for (iterMove = possibleNNIMoves.begin(), i = 0; iterMove
-		 != possibleNNIMoves.end() && i < nbNNIToApply; iterMove++, i++) {
-		 nniScore << (*iterMove).score;
-		 nniScore << endl;
-		 }
-		 nniScore.close();
-		 }*/
-
-		if (verbose_mode == VB_DEBUG) {
+		if (verbose_mode == VB_DEBUG)
 			cout << "lamda = " << lamda << endl;
-		}
 
-		if (nbNNIToApply < 1) {
+
+		if (nbNNIToApply < 1)
 			nbNNIToApply = 1;
-		}
 
-		/*		if (verbose_mode == VB_DEBUG) {
-		 ofstream nniTreesFile("nniTrees", ios::app);
-		 nniTreesFile << nbNNIToApply << endl;
-		 nniTreesFile.close();
-		 }*/
 
-		/**
-		 Applying all non-conflicting NNIs
-		 */
+		//Applying all non-conflicting NNIs
 		for (int i = 0; i < nbNNIToApply; i++) {
 			// Apply the calculated optimal branch length for the center branch
 			double new_len = applyBranchLengthChange(
 					nonConflictMoves.at(i).node1, nonConflictMoves.at(i).node2,
 					false);
 
-			//			if ( nbNNIToApply == 1 ) {
-			//				double _score = PhyloTree::swapNNIBranch( cur_score, nonConflictMoves.at(i).node1, nonConflictMoves.at(i).node2 );
-			//				cout << "Expected to-swap neighbors : " << nonConflictMoves.at(i).node1Nei->node->id
-			//						<< " and " << nonConflictMoves.at(i).node2Nei->node->id << endl;
-			//				cout << "Expected score = " << nonConflictMoves.at(i).score << endl;
-			//				cout << "Actual score = " << _score << endl;
-			//				cout << endl;
-			//				break;
-			//			}
-
+			//DEBUG: Print the tree out if only 1 NNI is found,
+			//to make sure that the tree's likelihood must be improved.
 			if (nbNNIToApply == 1)
 				printTree("tree_before_1nni");
 
@@ -646,39 +597,18 @@ double IQPTree::optimizeNNI() {
 			if (nbNNIToApply == 1)
 				printTree("tree_after_1nni");
 
-			//Print the tree
-			/*			if (verbose_mode == VB_DEBUG) {
-			 // Print out the tree and its score after this NNI operation
-			 ofstream nniTreesFile("nniTrees", ios::app);
-			 nniTreesFile.precision(10);
-			 nniTreesFile << cur_score;
-			 nniTreesFile << "\t";
-			 printTree(nniTreesFile);
-			 nniTreesFile << "\n";
-			 nniTreesFile.close();
-			 }*/
 		}
 
-		// TODO For debugging only, delete/comment out after that
-		/*
-		 if ( nbNNIToApply == 1) {
-		 double actual_score = computeLikelihood();
-		 double correct_score = nonConflictMoves.at(0).score;
-		 cout << "Actual score = " << actual_score << endl;
-		 cout << "Correct score = " << correct_score << endl;
-		 }
-		 */
-
 		cnt++;
-
 		double new_score;
 
+		//Do it like in PhyML for the branch lengths
 		if (phyml_opt) {
 			applyAllBranchLengthChanges((PhyloNode*) root);
 			new_score = computeLikelihood();
 		} else {
-			// Optimize all branch lengths after each NNI-Iteration
-			// This is done by IQPNNI
+			//Do it like in IQPNNI: Optimize all branch lengths after each NNI-Iteration
+			clearAllPartialLh();
 			new_score = optimizeAllBranches(1);
 		}
 
@@ -701,8 +631,6 @@ double IQPTree::optimizeNNI() {
 
 			resetLamda = false;
 			numbNNI -= nbNNIToApply;
-
-			//this->copyPhyloTree( backupTree );
 
 		} else {
 			numbNNI += nbNNIToApply;
