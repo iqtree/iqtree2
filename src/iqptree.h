@@ -82,15 +82,6 @@ struct NNIMove
 */
 typedef multiset<Node*, nodeheightcmp> RepresentLeafSet;
 
-/**
-	A Branch in the tree
-*/
-struct Branch
-{
-	PhyloNode *node1;
-	PhyloNode *node2;
-	double length;
-};
 
 /**
 Important Quartet Puzzling
@@ -195,10 +186,25 @@ public:
 	void addPossibleNNIMove(NNIMove myMove);
 
 	/**
-		Described in PhyML paper: apply changes to all branches that do not correspond to a swap with the following formula  l = l + lamda(la - l)
-		TODO
-	*/
+	 * Described in PhyML paper: apply changes to all branches that do not correspond to a swap
+	 * with the following formula  l = l + lamda(la - l)
+	 * @param node
+	 * @param dad
+	 */
 	void applyAllBranchLengthChanges(PhyloNode *node, PhyloNode *dad = NULL);
+
+	/**
+	 * 	Save all the current branch lengths
+	 */
+	void saveBranchLengths(void);
+
+	/**
+	 * Get the branch length of the branch node1-node2
+	 * @param node1
+	 * @param node2
+	 * @return the branch length
+	 */
+	double getBranchLength(PhyloNode *node1, PhyloNode *node2);
 
 
 	/**
@@ -206,7 +212,7 @@ public:
 		@param node1 the first node of the branch
 		@param node2 the second node of the branch
 	*/
-	double applyBranchLengthChange( PhyloNode *node1, PhyloNode *node2, bool nonNNIBranch );
+	double applyBranchLengthChange(PhyloNode *node1, PhyloNode *node2, bool nonNNIBranch);
 
 	/**
 		TODO
@@ -259,9 +265,14 @@ protected:
 
 
 	/**
-		Data structure (Map)storing all the optimal length of each branch
+		Data structure (of type Map) which stores all the optimal branch lengths for all branches in the tree
 	*/
 	MapBranchLength mapOptBranLens;
+
+	/**
+	 * 	Data structure (of type Map) used to store the original branch lengths of the tree
+	 */
+	MapBranchLength savedBranLens;
 
 	/**
 		k-representative parameter
