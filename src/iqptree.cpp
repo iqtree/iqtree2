@@ -646,7 +646,7 @@ double IQPTree::optimizeNNI() {
 	} while (true);
 
 	nniEndClock = clock();
-	if (verbose_mode >= VB_DEBUG) {
+	if (verbose_mode >= VB_MED) {
 		cout << "Number of NNIs applied : " << numbNNI << endl;
 		printf("Time used : %8.6f seconds.\n", (double) (-nniBeginClock
 				+ nniEndClock) / CLOCKS_PER_SEC);
