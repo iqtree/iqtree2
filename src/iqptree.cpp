@@ -383,7 +383,7 @@ double IQPTree::doIQP() {
 	// just to make sure IQP does it right
 	setAlignment(aln);
 
-	//clearAllPartialLh();
+	clearAllPartialLh();
 
 	double tree_lh = optimizeAllBranches();
 
@@ -489,7 +489,7 @@ double IQPTree::optimizeNNI() {
 	int nniTotal = 0;
 
 	// TODO Print the IQP tree to a string and read it back
-
+	/*
 	stringstream backup_iqp_tree;
 	backup_iqp_tree.seekp(0);
 	printTree(backup_iqp_tree, WT_TAXON_ID + WT_BR_LEN);
@@ -498,6 +498,7 @@ double IQPTree::optimizeNNI() {
 	readTree(backup_iqp_tree, rooted);
 	assignLeafNames();
 	initializeAllPartialLh();
+	*/
 
 
 	stringstream backup_tree_string;
@@ -592,7 +593,7 @@ double IQPTree::optimizeNNI() {
 			new_score = computeLikelihood();
 		} else {
 			//Do it like in IQPNNI: Optimize all branch lengths after each NNI-Iteration
-			//clearAllPartialLh();
+			clearAllPartialLh();
 			new_score = optimizeAllBranches(1);
 		}
 
