@@ -489,6 +489,7 @@ double IQPTree::optimizeNNI() {
 	int nniTotal = 0;
 
 	// TODO Print the IQP tree to a string and read it back
+
 	stringstream backup_iqp_tree;
 	backup_iqp_tree.seekp(0);
 	printTree(backup_iqp_tree, WT_TAXON_ID + WT_BR_LEN);
@@ -497,6 +498,7 @@ double IQPTree::optimizeNNI() {
 	readTree(backup_iqp_tree, rooted);
 	assignLeafNames();
 	initializeAllPartialLh();
+
 
 	stringstream backup_tree_string;
 	double cur_score;
@@ -507,7 +509,7 @@ double IQPTree::optimizeNNI() {
 		// Tree get improved, lamda reset to 0.75
 		if (resetLamda) {
 			lamda = 0.75;
-			saveBranchLengths();
+			//saveBranchLengths();
 			nonConflictMoves.clear();
 			mapOptBranLens.clear();
 			cur_score = computeLikelihood();
@@ -593,6 +595,12 @@ double IQPTree::optimizeNNI() {
 			//clearAllPartialLh();
 			new_score = optimizeAllBranches(1);
 		}
+
+		if (nbNNIToApply == 1) {
+			cout << "Old score = " << cur_score << endl;
+			cout << "New score = " << new_score << endl;
+		}
+
 
 		if (new_score < cur_score) {
 			cout << "Old score = " << cur_score << endl;
