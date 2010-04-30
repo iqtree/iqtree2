@@ -163,7 +163,7 @@ public:
 		search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
 		//TODO
 	*/
-	void genNNIMoves( PhyloNode *node = NULL, PhyloNode *dad = NULL );
+	void genNNIMoves(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 
 	/**
@@ -196,7 +196,12 @@ public:
 	/**
 	 * 	Save all the current branch lengths
 	 */
-	void saveBranchLengths(void);
+	void saveBranchLengths(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+	/**
+	 * 	 Restore the branch lengths from the saved values
+	 */
+	void restoreBranchLengths(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 	/**
 	 * Get the branch length of the branch node1-node2
@@ -230,6 +235,18 @@ public:
 	*/
 	double calculateOptBranchLen( PhyloNode *node1, PhyloNode *node2 );
 
+	/**
+	 * TODO
+	 * @return
+	 */
+	int calNumNNI95(void);
+
+	/**
+	 * TODO
+	 * @return
+	 */
+	double calDeltaProNNI95(void);
+
 protected:
 
 	/**
@@ -247,10 +264,37 @@ protected:
 	*/
 	double lamda;
 
-	/**
-		TODO
-	*/
 	int nbNNIToApply;
+
+	/**
+	 *  Number of IQP Iteration that have been carried out
+	 */
+	int nbIQPIter;
+
+	/**
+	 * TODO
+	 */
+	int nbNNI95;
+
+	/**
+	 * TODO
+	 */
+	double deltaNNI95;
+
+	/**
+	 *  Vector contains number of NNIs used at each iterations
+	 */
+	vector<int> vecNbNNI;
+
+	/**
+	 *  Vector contains approximated improvement pro NNI at each iterations
+	 */
+	vector<double> vecImpProNNI;
+
+	/**
+	 * TODO
+	 */
+	double best_score;
 
   	/**
 		The list of possible NNI moves for the current tree;
