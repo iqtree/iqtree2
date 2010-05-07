@@ -29,8 +29,11 @@ IQPTree::IQPTree() :
 	dist_matrix = NULL;
 	//bonus_values = NULL;
 	nbIQPIter = 0;
-	nbNNI95 = 0;
+	nbNNI95 = 0.0;
 	deltaNNI95 = 0;
+	curScore = 0.0;
+	bestScore = 0.0;
+	heuris = false;
 }
 
 IQPTree::~IQPTree() {
@@ -388,51 +391,40 @@ double IQPTree::doIQP() {
 
 	clearAllPartialLh();
 
-	// TODO Print the IQP tree to a string and read it back
-	/*
-	stringstream backup_iqp_tree;
-	backup_iqp_tree.seekp(0);
-	printTree(backup_iqp_tree, WT_TAXON_ID + WT_BR_LEN);
-	backup_iqp_tree.seekg(0);
-	freeNode();
-	readTree(backup_iqp_tree, rooted);
-	assignLeafNames();
-	initializeAllPartialLh();
-	*/
-
-	double tree_lh = optimizeAllBranches();
-
-	cout << "Score of IQP-Tree : " << tree_lh << endl;
+	curScore = optimizeAllBranches();
+	//double tree_lh = computeLikelihood();
+	//double tree_lh = 0;
 
 	if (verbose_mode >= VB_MAX) {
-		cout << "IQP Likelihood = " << tree_lh << endl;
+		cout << "IQP Likelihood = " << curScore << endl;
 		//printTree(cout);
 		//cout << endl;
 	}
-	return tree_lh;
-	//return optimizeNNI();
+	return curScore;
 }
 
 double IQPTree::doIQPNNI(string tree_file_name) {
-	best_score = computeLikelihood();
+	bestScore = computeLikelihood();
 	printTree(tree_file_name.c_str());
 
 	// keep the best tree into a string
 	stringstream best_tree_string;
 	printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 
-	// Remove the .treefile ending and add iq-tree.lh ending to the file name
-	string aln_file_name;
-	aln_file_name.assign(tree_file_name).erase(tree_file_name.size() - 9);
-	string lh_file_name = aln_file_name + ".iq-tree.lh";
+	// write tree's loglikelihood to a file (if nni_lh option is enabled)
 	ofstream lh_file;
 	if (nni_lh) {
+		// Remove the .treefile ending and add iq-tree.lh ending to the file name
+		string aln_file_name;
+		aln_file_name.assign(tree_file_name).erase(tree_file_name.size() - 9);
+		string lh_file_name = aln_file_name + ".iq-tree.lh";
+
 		lh_file.open((lh_file_name).c_str());
 		if (lh_file.is_open()) {
 			lh_file.precision(10);
 			lh_file << 1;
 			lh_file << "\t";
-			lh_file << best_score;
+			lh_file << bestScore;
 			lh_file << endl;
 		} else {
 			cout << "Cannot open file " + lh_file_name;
@@ -443,19 +435,30 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 	for (int cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration); cur_iteration++) {
 		if (verbose_mode >= VB_DEBUG)
 			cout << "Performing IQP in iteration " << cur_iteration << endl;
-		nbIQPIter++;
 
-		if (nbIQPIter >= 30) {
+		nbIQPIter++;
+		if (nbIQPIter > num_iqp_stat) {
+
+			if (nbIQPIter == (num_iqp_stat + 1))
+				cout << "NNI-HEURISTICS STARTED FROM NOW ON !" << endl;
+
+			heuris = true;
 			nbNNI95 = calNumNNI95();
 			deltaNNI95 = calDeltaProNNI95();
-			//cout.precision(10);
-			//cout << "Max number of NNI :" << nbNNI95 << endl;
-			//cout << "Max improvment pro NNI :" << deltaNNI95 << endl;
+//			cout.precision(10);
+//			cout << "Improvment vector size = " << vecImpProNNI.size() << endl;
+//			cout << "Number NNI vector size = " << vecNbNNI.size() << endl;
+//			cout << "Max number of NNI :" << nbNNI95 << endl;
+//			cout << "Max improvment pro NNI :" << deltaNNI95 << endl;
+//			for (int i = 0; i < vecNbNNI.size(); i++)
+//				cout << vecNbNNI[i] << " ";
+//			cout << endl;
 		}
+
 		double iqp_score = doIQP();
 		double nni_score = optimizeNNI();
 
-		if (lh_file.is_open()) {
+		if (nni_lh && lh_file.is_open()) {
 			lh_file << cur_iteration;
 			lh_file << "\t";
 			lh_file << iqp_score;
@@ -470,9 +473,9 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 		cout << "Iteration " << cur_iteration << " / Log-Likelihood: "
 				<< nni_score << endl;
 
-		if (nni_score > best_score + 1e-6) {
+		if (nni_score > bestScore + 1e-6) {
 			cout << "BETTER TREE FOUND: " << nni_score << endl;
-			best_score = nni_score;
+			bestScore = nni_score;
 			best_tree_string.seekp(0);
 			printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 			printTree(tree_file_name.c_str());
@@ -488,7 +491,7 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 	}
 
 	lh_file.close();
-	return best_score;
+	return bestScore;
 }
 
 /****************************************************************************
@@ -509,9 +512,9 @@ double IQPTree::optimizeNNI() {
 	int nniIteration = 0; // Number of NNI steps
 	bool resetLamda = true;
 	int numbNNI = 0; // Total number of NNIs applied in this IQP-Iteration
+	bool stopNNI = false; // used in case the heuristics is applied, and the NNI search is stopped
 
-	double cur_score;
-
+	/*
 	stringstream backup_iqp_tree;
 	backup_iqp_tree.seekp(0);
 	printTree(backup_iqp_tree, WT_TAXON_ID + WT_BR_LEN);
@@ -520,6 +523,7 @@ double IQPTree::optimizeNNI() {
 	readTree(backup_iqp_tree, rooted);
 	assignLeafNames();
 	initializeAllPartialLh();
+	*/
 
 	do {
 		int nniTotal = 0; // number of non-conflicting NNIs found in this step
@@ -527,15 +531,17 @@ double IQPTree::optimizeNNI() {
 		nniIteration++;
 		// Tree get improved, lamda reset to 0.75
 		if (resetLamda) {
-			cur_score = computeLikelihood();
-			//100 IQPNNI iterations have been done
-			if (deltaNNI95 != 0 && nbNNI95 != 0) {
-				double maxScore = cur_score + deltaNNI95*(nbNNI95-numbNNI);
-				if (maxScore <= best_score)
+			curScore = computeLikelihood();
+			//N IQPNNI iterations have been done
+			if (heuris) {
+				double maxScore = curScore + deltaNNI95*(nbNNI95-numbNNI);
+				cout << "Estimated max-score = " << maxScore << endl;
+				if (maxScore <= bestScore)
 				{
-					cout << "BEST SCORE :" << best_score << endl;
+					cout << "BEST SCORE :" << bestScore << endl;
 					cout << "LIKELY MAX-SCORE " << maxScore << endl;
 					cout << "TREE IS NOT LIKELY TO BE IMPROVED, STOP DOING NNI-SEARCH !" << endl;
+					stopNNI = true;
 					break;
 				}
 			}
@@ -591,8 +597,10 @@ double IQPTree::optimizeNNI() {
 		//Tree get worse after applying NNIs:
 		//Revert tree topology and reduce the number of NNIs to be aplied.
 		else {
-			cur_score = computeLikelihood();
-			cout << "Tree topology reverted / Loglikelihood = " << cur_score << endl;
+			if (verbose_mode == VB_DEBUG) {
+				curScore = computeLikelihood();
+				cout << "Tree topology reverted / Loglikelihood = " << curScore << endl;
+			}
 		}
 
 		nbNNIToApply = (int) nniTotal * lamda;
@@ -623,12 +631,12 @@ double IQPTree::optimizeNNI() {
 			new_score = computeLikelihood();
 		} else {
 			//Do it like in IQPNNI: Optimize all branch lengths after each NNI-Iteration
-			clearAllPartialLh();
+			//clearAllPartialLh();
 			new_score = optimizeAllBranches(1);
 		}
 
-		if (new_score < cur_score) {
-			cout << "Old score = " << cur_score << endl;
+		if (new_score < curScore) {
+			cout << "Old score = " << curScore << endl;
 			cout << "New score = " << new_score << endl;
 			cout << "Total non-conflicting NNIs found = " << nniTotal << endl;
 			lamda = lamda / 2;
@@ -646,20 +654,18 @@ double IQPTree::optimizeNNI() {
 			resetLamda = false;
 
 		} else {
-
+			curScore = new_score; // Update current score
 			numbNNI += nbNNIToApply;
-			double deltaProNNI = (new_score - cur_score)/nbNNIToApply;
+			double deltaProNNI = (new_score - curScore)/nbNNIToApply;
 			resetLamda = true;
-
 			vecImpProNNI.push_back(deltaProNNI);
-
 			if (verbose_mode >= VB_DEBUG)
 				cout << "New best tree found with score " << new_score
 						<< " with " << nbNNIToApply << " NNIs"
 						<< " -- improvement general "
-						<< (new_score - cur_score)
+						<< (new_score - curScore)
 						<< " and improvement pro NNI " << (new_score
-						- cur_score) / nbNNIToApply << endl;
+						- curScore) / nbNNIToApply << endl;
 		}
 
 	} while (true);
@@ -672,20 +678,23 @@ double IQPTree::optimizeNNI() {
 		printf("Time used : %8.6f seconds.\n", (double) (-nniBeginClock
 				+ nniEndClock) / CLOCKS_PER_SEC);
 	}
-	clearAllPartialLh();
-	return optimizeAllBranches();
+
+	if (stopNNI) // NNI search is stopped, no need for optimizeAllBranches()
+		return curScore;
+	else
+		return optimizeAllBranches();
 }
 
 int IQPTree::calNumNNI95() {
 	sort(vecNbNNI.begin(), vecNbNNI.end());
-	int index = ceil(vecNbNNI.size() * 95 / 100);
-	return vecNbNNI[index];
+	int index = vecNbNNI.size() * 95 / 100;
+	return vecNbNNI[index-1];
 }
 
 double IQPTree::calDeltaProNNI95() {
 	sort(vecImpProNNI.begin(), vecImpProNNI.end());
-	int index = ceil(vecImpProNNI.size() * 95 / 100);
-	return vecImpProNNI[index];
+	int index = vecImpProNNI.size() * 95 / 100;
+	return vecImpProNNI[index-1];
 }
 
 void IQPTree::applyAllBranchLengthChanges(PhyloNode *node, PhyloNode *dad) {
@@ -929,6 +938,10 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 	// save the likelihood vector at the two ends of node1-node2
 	double *node1_lh_save = node12_it->partial_lh;
 	double *node2_lh_save = node21_it->partial_lh;
+	//save scaling vector
+	double node1_lh_scale = node12_it->lh_scale_factor;
+	double node2_lh_scale = node21_it->lh_scale_factor;
+
 	// save the first found neighbor of node 1 (excluding node2) in node1_it
 	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
 			break;
@@ -986,6 +999,9 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 	// restore the partial likelihood vector
 	node12_it->partial_lh = node1_lh_save;
 	node21_it->partial_lh = node2_lh_save;
+	node12_it->lh_scale_factor = node1_lh_scale;
+	node21_it->lh_scale_factor = node2_lh_scale;
+
 
 	string key("");
 	if (node1->id < node2->id) {

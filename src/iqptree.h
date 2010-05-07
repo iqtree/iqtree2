@@ -281,6 +281,8 @@ protected:
 	 */
 	double deltaNNI95;
 
+	bool heuris;
+
 	/**
 	 *  Vector contains number of NNIs used at each iterations
 	 */
@@ -292,9 +294,14 @@ protected:
 	vector<double> vecImpProNNI;
 
 	/**
-	 * TODO
+	 * The current best score found
 	 */
-	double best_score;
+	double bestScore;
+
+	/**
+	 * Current score of the tree;
+	 */
+	double curScore;
 
   	/**
 		The list of possible NNI moves for the current tree;

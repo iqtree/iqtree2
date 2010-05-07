@@ -196,6 +196,11 @@ extern bool phyml_opt;
  */
 extern bool nni_lh;
 
+/**
+ * 	Set the number of iqp iteration before the heuristics is applied
+ */
+extern int num_iqp_stat;
+
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/

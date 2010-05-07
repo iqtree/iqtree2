@@ -24,6 +24,7 @@ VerboseMode verbose_mode;
 bool simple_nni;
 bool phyml_opt;
 bool nni_lh;
+int num_iqp_stat;
 
 /*
 	WIN32 does not define gettimeofday() function.
@@ -483,9 +484,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.fixed_branch_length = false;
 	params.iqp_assess_quartet = IQP_DISTANCE;
 
+	/* TUNG: IQP-TREE Specific Options */
 	simple_nni = false;
 	phyml_opt = false;
 	nni_lh = false;
+	num_iqp_stat = 100;
+	/* TUNG: IQP-TREE Specific Options */
 
 	struct timeval tv;
 	struct timezone tz;
@@ -770,14 +774,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -mod <model_name>";
 				params.model_name = argv[cnt];
 
-			} else if (strcmp(argv[cnt], "-simple_nni") == 0 ) {
+			} else if (strcmp(argv[cnt], "-simple_nni") == 0) {
 				simple_nni = true;
-			} else if (strcmp(argv[cnt], "-phyml_opt") == 0 ) {
+			} else if (strcmp(argv[cnt], "-phyml_opt") == 0) {
 				phyml_opt = true;
-			}
-			else if (strcmp(argv[cnt], "-nni_lh") == 0 ) {
+			} else if (strcmp(argv[cnt], "-nni_lh") == 0) {
 				nni_lh = true;
+			} else if (strcmp(argv[cnt], "-num_iqp") == 0) {
+				cnt++;
+				num_iqp_stat = convert_int(argv[cnt]);
 			}
+
 			else if (strcmp(argv[cnt],"-f") == 0) {
 				cnt++;
 				if (cnt >= argc)
