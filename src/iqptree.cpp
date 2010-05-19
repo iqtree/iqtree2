@@ -33,7 +33,7 @@ IQPTree::IQPTree() :
 	deltaNNI95 = 0;
 	curScore = 0.0;
 	bestScore = 0.0;
-	heuris = false;
+	enableHeuris = false; // This is set true when the heuristic started (after N iterations)
 }
 
 IQPTree::~IQPTree() {
@@ -442,7 +442,7 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 			if (nbIQPIter == (num_iqp_stat + 1))
 				cout << "NNI-HEURISTICS STARTED FROM NOW ON !" << endl;
 
-			heuris = true;
+			enableHeuris = true;
 			nbNNI95 = calNumNNI95();
 			deltaNNI95 = calDeltaProNNI95();
 //			cout.precision(10);
@@ -531,15 +531,16 @@ double IQPTree::optimizeNNI() {
 		nniIteration++;
 		// Tree get improved, lamda reset to 0.75
 		if (resetLamda) {
-			curScore = computeLikelihood();
+//			if (curScore == 0)
+//				curScore = computeLikelihood();
 			//N IQPNNI iterations have been done
-			if (heuris) {
+			if (enableHeuris) {
 				double maxScore = curScore + deltaNNI95*(nbNNI95-numbNNI);
-				cout << "Estimated max-score = " << maxScore << endl;
 				if (maxScore <= bestScore)
 				{
+					cout << "TREE'S SCORE BEFORE STARTING NNI-STEP " << nniIteration << " = " << curScore << endl;
+					cout << "ESTIMATED MAX-SCORE = " << maxScore << endl;
 					cout << "BEST SCORE :" << bestScore << endl;
-					cout << "LIKELY MAX-SCORE " << maxScore << endl;
 					cout << "TREE IS NOT LIKELY TO BE IMPROVED, STOP DOING NNI-SEARCH !" << endl;
 					stopNNI = true;
 					break;
@@ -608,7 +609,6 @@ double IQPTree::optimizeNNI() {
 		if (verbose_mode == VB_DEBUG)
 			cout << "lamda = " << lamda << endl;
 
-
 		if (nbNNIToApply < 1)
 			nbNNIToApply = 1;
 
@@ -618,7 +618,6 @@ double IQPTree::optimizeNNI() {
 			double new_len = applyBranchLengthChange(
 					nonConflictMoves.at(i).node1, nonConflictMoves.at(i).node2,
 					false);
-
 			doNNIMove(nonConflictMoves.at(i));
 		}
 
@@ -654,9 +653,9 @@ double IQPTree::optimizeNNI() {
 			resetLamda = false;
 
 		} else {
-			curScore = new_score; // Update current score
 			numbNNI += nbNNIToApply;
 			double deltaProNNI = (new_score - curScore)/nbNNIToApply;
+			curScore = new_score; // Update current score
 			resetLamda = true;
 			vecImpProNNI.push_back(deltaProNNI);
 			if (verbose_mode >= VB_DEBUG)
@@ -819,6 +818,14 @@ double IQPTree::calculateOptBranchLen(PhyloNode *node1, PhyloNode *node2) {
 	return optLength;
 }
 
+double IQPTree::getCurScore(void) {
+	return curScore;
+}
+
+double IQPTree::setCurScore(double curScore) {
+	this->curScore = curScore;
+}
+
 void IQPTree::applyChildBranchChanges(PhyloNode *node, PhyloNode *dad) {
 
 	FOR_NEIGHBOR_IT(node, dad, it)
@@ -930,10 +937,15 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 	node12_len[0] = node12_it->length; // Length of branch node1-node2 before swap
 
 	// Calculate optimal branch length for node12
-	double cur_score = optimizeOneBranch(node1, node2);
-	double best_score = cur_score;
+	//double cur_score = optimizeOneBranch(node1, node2);
+	//double best_score = cur_score;
 
-	node12_len[1] = node12_it->length; // Optimal branch length of the current branch
+	double best_score = curScore;
+
+	// Optimal branch length of the current branch
+	// This length is actually unchanged since it is already optimized in the last NNI-Step
+	// In case branch lengths weren't optimized, optimizeOneBranch(node1, node2) will be called
+	node12_len[1] = node12_it->length;
 
 	// save the likelihood vector at the two ends of node1-node2
 	double *node1_lh_save = node12_it->partial_lh;

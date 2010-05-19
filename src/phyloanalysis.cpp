@@ -325,6 +325,9 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	double score2 = tree.optimizeModel(params.fixed_branch_length);
 	cout << "Log-likelihood of the current tree: " << score2 << endl;
 	double bestTreeScore = score2;
+	//Update tree score
+	tree.setCurScore(bestTreeScore);
+
 	/* Optimize branch lengths with likelihood function */
 	//cout << "Optimizing branch lengths..." << endl;
 	//cout << "Log-likelihood: " << tree.optimizeAllBranches() << endl;

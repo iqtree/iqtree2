@@ -247,6 +247,19 @@ public:
 	 */
 	double calDeltaProNNI95(void);
 
+	/**
+	 *
+	 * @return
+	 */
+	double getCurScore(void);
+
+	/**
+	 *
+	 * @param curScore
+	 * @return
+	 */
+	double setCurScore(double curScore);
+
 protected:
 
 	/**
@@ -281,7 +294,7 @@ protected:
 	 */
 	double deltaNNI95;
 
-	bool heuris;
+	bool enableHeuris;
 
 	/**
 	 *  Vector contains number of NNIs used at each iterations

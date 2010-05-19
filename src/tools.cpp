@@ -21,6 +21,8 @@
 #include "tools.h"
 
 VerboseMode verbose_mode;
+
+//TODO Where should I put this switches ?
 bool simple_nni;
 bool phyml_opt;
 bool nni_lh;
