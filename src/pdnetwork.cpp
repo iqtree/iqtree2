@@ -1050,6 +1050,8 @@ void PDNetwork::transformLP_Area(Params &params, const char *outfile, int total_
 			if (y_value[i] >= 0) continue;
 			Split *sp = (*spit);
 
+			if (sp->countTaxa() == 0)
+				cout << "0 taxa" << endl;
 			if (isBudgetConstraint() || count1[i] <= nareas - total_size) 
 			{
 				out << "y" << i << " <=";
@@ -1063,6 +1065,8 @@ void PDNetwork::transformLP_Area(Params &params, const char *outfile, int total_
 			if (isBudgetConstraint() || count2[i] <= nareas - total_size) 
 			{
 				sp->invert(); // scan the invert
+				if (sp->countTaxa() == 0)
+					cout << "0 taxa" << endl;
 				out << "y" << i << " <=";
 				for (j = 0; j < nareas; j++) {
 					if (sp->overlap(*area_taxa[j]))

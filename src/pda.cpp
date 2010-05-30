@@ -690,47 +690,50 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 			separator(out);
 		}
 
-		IntVector ranking;
-		IntVector index;
+		if (params.run_mode != PD_USER_SET) {
 
-		out << "Ranking based on the optimal sets" << endl;
 		
-
-		if (!makeRanking(pd_set, index, ranking)) {
-			out << "WARNING: Optimal sets are not nested, so ranking should not be considered stable" << endl;
-		}
-		if (subsize > 1) {
-			out << "WARNING: The first " << subsize << " ranks should be treated equal" << endl;
-		}
-		out << endl << "Rank*   ";
-		if (!sg.isPDArea()) 
-			out << "Taxon names" << endl;
-		else
-			out << "Area names" << endl;
-
-
-		for (IntVector::iterator intv = ranking.begin(), intid = index.begin(); intv != ranking.end(); intv ++, intid++) {
-			if (*intv == -10) 
-				out << "<--- multiple optimal set here --->" << endl;
-			else if (*intv == -1) 
-				out << "<--- BEGIN: greedy does not work --->" << endl;
-			else if (*intv == -2) 
-				out << "<--- END --->" << endl;
-			else {
-				out.width(5);
-				out <<  right << *intid << "   ";
-				if (sg.isPDArea())
-					out << sg.getSetsBlock()->getSet(*intv).name << endl;
-				else
-					out << sg.getTaxa()->GetTaxonLabel(*intv) << endl;
+			IntVector ranking;
+			IntVector index;
+	
+			out << "Ranking based on the optimal sets" << endl;
+			
+	
+			if (!makeRanking(pd_set, index, ranking)) {
+				out << "WARNING: Optimal sets are not nested, so ranking should not be considered stable" << endl;
 			}
+			if (subsize > 1) {
+				out << "WARNING: The first " << subsize << " ranks should be treated equal" << endl;
+			}
+			out << endl << "Rank*   ";
+			if (!sg.isPDArea()) 
+				out << "Taxon names" << endl;
+			else
+				out << "Area names" << endl;
+	
+	
+			for (IntVector::iterator intv = ranking.begin(), intid = index.begin(); intv != ranking.end(); intv ++, intid++) {
+				if (*intv == -10) 
+					out << "<--- multiple optimal set here --->" << endl;
+				else if (*intv == -1) 
+					out << "<--- BEGIN: greedy does not work --->" << endl;
+				else if (*intv == -2) 
+					out << "<--- END --->" << endl;
+				else {
+					out.width(5);
+					out <<  right << *intid << "   ";
+					if (sg.isPDArea())
+						out << sg.getSetsBlock()->getSet(*intv).name << endl;
+					else
+						out << sg.getTaxa()->GetTaxonLabel(*intv) << endl;
+				}
+			}
+			out << endl;
+			out <<  "(*) Negative ranks indicate the point at which the greedy algorithm" << endl <<
+					"    does not work. In that case, the corresponding taxon/area names" << endl <<
+					"    should be deleted from the optimal set of the same size" << endl;
+			separator(out);
 		}
-		out << endl;
-		out <<  "(*) Negative ranks indicate the point at which the greedy algorithm" << endl <<
-				"    does not work. In that case, the corresponding taxon/area names" << endl <<
-				"    should be deleted from the optimal set of the same size" << endl;
-		separator(out);
-
 
 		int max_len = sg.getTaxa()->GetMaxTaxonLabelLength();
 	
@@ -1404,7 +1407,7 @@ int main(int argc, char *argv[])
 		params.intype = detectInputFile(params.user_file);
 		if (params.intype == IN_NEWICK && params.pdtaxa_file && params.tree_gen == NONE) {
 			if (params.budget_file) {
-				if (params.budget < 0) params.run_mode = PD_USER_SET;
+				//if (params.budget < 0) params.run_mode = PD_USER_SET;
 			} else {
 				if (params.sub_size < 1) params.run_mode = PD_USER_SET;
 			}

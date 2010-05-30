@@ -396,13 +396,13 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	else {
 		//tree.printTree(cout);
 		//cout << endl;
-		
+		/*
 		if (verbose_mode > VB_MED) {
 			if (verbose_mode >= VB_DEBUG)
 				tree.drawTree(cout, WT_BR_SCALE + WT_INT_NODE + WT_BR_LEN);
 			else
 				tree.drawTree(cout);
-		}
+		}*/
 	}
 
 }
