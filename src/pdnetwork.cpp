@@ -1002,17 +1002,20 @@ void PDNetwork::checkYValue_Area(int total_size, vector<int> &y_value, vector<in
 			if (sp->overlap(*area_taxa[j])) { count2[i]++; id2 = j; }
 		}
 		sp->invert(); // invert back to original
-		if (isBudgetConstraint())
-			continue;
 		if (count1[i] == 0 || count2[i] == 0) 
 			y_value[i] = 0;
-		else if (count1[i] == 1 && count2[i] > nareas - total_size) {
-			y_value[i] = id1 + 2;
-		} else if (count2[i] == 1 && count1[i] > nareas - total_size) {
-			y_value[i] = id2 + 2;
-			//continue;
-		} else if (count1[i] > nareas - total_size && count2[i] > nareas - total_size) {
-			y_value[i] = 1;
+		else {
+			if (isBudgetConstraint())
+				continue;
+
+			if (count1[i] == 1 && count2[i] > nareas - total_size) {
+				y_value[i] = id1 + 2;
+			} else if (count2[i] == 1 && count1[i] > nareas - total_size) {
+				y_value[i] = id2 + 2;
+				//continue;
+			} else if (count1[i] > nareas - total_size && count2[i] > nareas - total_size) {
+				y_value[i] = 1;
+			}
 		}
 	}
 	
@@ -1020,6 +1023,9 @@ void PDNetwork::checkYValue_Area(int total_size, vector<int> &y_value, vector<in
 
 void PDNetwork::transformLP_Area(Params &params, const char *outfile, int total_size, bool make_bin) {
 	Split included_area(getNAreas());
+	int root_id = -1;
+	if (params.root || params.is_rooted) root_id = initialset[0];
+
 	IntVector::iterator it2;
 	for (it2 = initialareas.begin(); it2 != initialareas.end(); it2++)
 		included_area.addTaxon(*it2);
@@ -1052,7 +1058,8 @@ void PDNetwork::transformLP_Area(Params &params, const char *outfile, int total_
 
 			if (sp->countTaxa() == 0)
 				cout << "0 taxa" << endl;
-			if (isBudgetConstraint() || count1[i] <= nareas - total_size) 
+			if ((root_id < 0 || !sp->containTaxon(root_id)) && 
+				(isBudgetConstraint() || count1[i] <= nareas - total_size))
 			{
 				out << "y" << i << " <=";
 				for (j = 0; j < nareas; j++) {
@@ -1062,17 +1069,19 @@ void PDNetwork::transformLP_Area(Params &params, const char *outfile, int total_
 				out << ";" << endl;
 			}
 
-			if (isBudgetConstraint() || count2[i] <= nareas - total_size) 
+			if (isBudgetConstraint() || count2[i] <= nareas - total_size)
 			{
 				sp->invert(); // scan the invert
 				if (sp->countTaxa() == 0)
 					cout << "0 taxa" << endl;
-				out << "y" << i << " <=";
-				for (j = 0; j < nareas; j++) {
-					if (sp->overlap(*area_taxa[j]))
-						out << " +x" << j;
+				if ((root_id < 0 || !sp->containTaxon(root_id))) {
+					out << "y" << i << " <=";
+					for (j = 0; j < nareas; j++) {
+						if (sp->overlap(*area_taxa[j]))
+							out << " +x" << j;
+					}
+					out << ";" << endl;
 				}
-				out << ";" << endl;
 				sp->invert(); // invert back to original
 			}
 		}

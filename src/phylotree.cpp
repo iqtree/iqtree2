@@ -417,7 +417,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 		node = (PhyloNode*)root;
 		// allocate the big central partial likelihoods memory
 		if (!central_partial_lh) 
-			central_partial_lh = new double[nodeNum*2*block_size];
+			central_partial_lh = new double[(leafNum-1)*4*block_size];
 		index = 0;
 	}
 	if (dad) {

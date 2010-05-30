@@ -659,17 +659,20 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 			out << "Summary of the PD-score and the number of optimal PD-sets with the same " << endl << "optimal PD-score found." << endl;
 	
 			if (sg.isBudgetConstraint()) 
-				out << endl << "Budget   PD-score   #PD-sets" << endl;
+				out << endl << "Budget   PD-score   %PD-score   #PD-sets" << endl;
 			else
-				out << endl << "Size-k   PD-score   #PD-sets" << endl;
+				out << endl << "Size-k   PD-score   %PD-score   #PD-sets" << endl;
 	
 			int sizex = subsize;
+			double total = sg.calcWeight();
 	
 			for (it = pd_set.begin(); it != pd_set.end(); it++, sizex+=stepsize) {
 				out.width(6);
 				out << right << sizex << " ";
 				out.width(10);
 				out << right << (*it).getWeight() << " ";
+				out.width(10);
+				out << right << ((*it).getWeight()/total)*100.0 << " ";
 				out.width(6);
 				out << right << (*it).size();
 				out << endl;

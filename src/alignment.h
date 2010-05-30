@@ -154,8 +154,16 @@ public:
 	/**
 		extract sub-alignment of a sub-set of sequences
 		@param seq_id ID of sequences to extract from
+		@param sub_aln (OUT) extracted sub alignment
 	*/
 	void extractSubAlignment(IntVector &seq_id, Alignment *sub_aln);
+
+	/**
+		TODO
+		create a non-parametric bootstrap alignment from the current alignment
+		@param boot_aln (OUT) created bootstrap alignment
+	*/
+	void createBootstrapAlignment(Alignment *boot_aln);
 
 /****************************************************************************
 	Distance functions
