@@ -532,6 +532,11 @@ struct Params {
 		criterion to assess important quartet
 	*/
 	IQP_ASSESS_QUARTET iqp_assess_quartet;
+
+	/**
+		the LP file is in gurobi format or not
+	*/
+	bool gurobi_format;
 };
 
 /**
@@ -562,6 +567,7 @@ struct PDRelatedMeasures {
 		pd-complementarity scores of an area given some provided area
 	*/
 	DoubleVector PDComplementarity;
+
 };
 
 

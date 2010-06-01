@@ -1041,7 +1041,10 @@ void PDNetwork::transformLP_Area(Params &params, const char *outfile, int total_
 		checkYValue_Area(total_size, y_value, count1, count2);
 
 		// define the objective function
-		out << "max: ";
+		if (params.gurobi_format)
+			out << "Maximize" << endl;
+		else
+			out << "max: ";
 		
 		for (spit = begin(),i=0; spit != end(); spit++,i++)	{
 			if (y_value[i] < 0)
@@ -1049,7 +1052,11 @@ void PDNetwork::transformLP_Area(Params &params, const char *outfile, int total_
 			else if (y_value[i] >= 2)
 				out << " +" << (*spit)->getWeight() << " x" << y_value[i] - 2;
 		}
-		out << ";" << endl;
+
+		if (params.gurobi_format)
+			out << endl << "Subject to" << endl;
+		else
+			out << ";" << endl;
 
 		// adding the constraint for splits
 		for (spit = begin(),i=0; spit != end(); spit++,i++) {
@@ -1061,12 +1068,20 @@ void PDNetwork::transformLP_Area(Params &params, const char *outfile, int total_
 			if ((root_id < 0 || !sp->containTaxon(root_id)) && 
 				(isBudgetConstraint() || count1[i] <= nareas - total_size))
 			{
-				out << "y" << i << " <=";
+				out << "y" << i;
+				if (!params.gurobi_format)
+					out << " <=";
 				for (j = 0; j < nareas; j++) {
 					if (sp->overlap(*area_taxa[j]))
+					if (params.gurobi_format)
+						out << " - x" << j;
+					else
 						out << " +x" << j;
 				}
-				out << ";" << endl;
+				if (params.gurobi_format)
+					out << " <= 0" << endl;
+				else
+					out << ";" << endl;
 			}
 
 			if (isBudgetConstraint() || count2[i] <= nareas - total_size)
@@ -1075,12 +1090,20 @@ void PDNetwork::transformLP_Area(Params &params, const char *outfile, int total_
 				if (sp->countTaxa() == 0)
 					cout << "0 taxa" << endl;
 				if ((root_id < 0 || !sp->containTaxon(root_id))) {
-					out << "y" << i << " <=";
+					out << "y" << i;
+					if (!params.gurobi_format)
+						out << " <=";
 					for (j = 0; j < nareas; j++) {
 						if (sp->overlap(*area_taxa[j]))
-							out << " +x" << j;
+							if (params.gurobi_format)
+								out << " - x" << j;
+							else
+								out << " +x" << j;
 					}
-					out << ";" << endl;
+					if (params.gurobi_format)
+						out << " <= 0" << endl;
+					else
+						out << ";" << endl;
 				}
 				sp->invert(); // invert back to original
 			}
@@ -1096,7 +1119,10 @@ void PDNetwork::transformLP_Area(Params &params, const char *outfile, int total_
 					out << " +x" << j;
 					ok = true;
 				}
-			out << ";" << endl;
+			if (params.gurobi_format)
+				out << endl;
+			else
+				out << ";" << endl;
 			if (!ok) {
 				outError("No area contains taxon ", taxa->GetTaxonLabel(*it));
 			}
@@ -1104,44 +1130,84 @@ void PDNetwork::transformLP_Area(Params &params, const char *outfile, int total_
 
 		// constraint for k-set or total budget
 		if (isBudgetConstraint()) {
-			out << total_size << " >=";
 			for (j = 0; j < nareas; j++) {
 				out << " +" << getPdaBlock()->getCost(j) << " x" << j;
 			}
-			out << ";" << endl;
+			out << " <= " << total_size;
+			if (params.gurobi_format)
+				out << endl;
+			else
+				out << ";" << endl;
 		} else {
-			out << total_size << " = ";
 			for (j = 0; j < nareas; j++) {
 				out << " +x" << j;
 			}
-			out << ";" << endl;
+			out  << " = " << total_size;
+			if (params.gurobi_format)
+				out << endl;
+			else
+				out << ";" << endl;
 		}
 
 		// define the variable boundary
-		for (it2 = initialareas.begin(); it2 != initialareas.end(); it2++)
-			out << "x" << *it2 << " = 1;" << endl;
+		if (params.gurobi_format)
+			out << "Bounds" << endl;
+
+		for (it2 = initialareas.begin(); it2 != initialareas.end(); it2++) {
+			out << "x" << *it2 << " = 1";
+			if (params.gurobi_format)
+				out << endl;
+			else
+				out << ";" << endl;
+		}
 
 		for (i = 0; i < getNSplits(); i++) {
 			if (y_value[i] >= 0) continue;
-			out << "y" << i << " <= 1;" << endl;
+			if (params.gurobi_format)
+				out << "0 <= ";
+			out << "y" << i << " <= 1";
+			if (params.gurobi_format)
+				out << endl;
+			else
+				out << ";" << endl;
 		}
 
-		
-		bool first = true;
-		for (j = 0; j < nareas; j++) {
-			if (included_area.containTaxon(j)) continue;
-			if (make_bin) {
-				if (!first) 
-					out << ", ";
+		if (!make_bin) {
+			for (j = 0; j < nareas; j++) {
+				if (included_area.containTaxon(j)) continue;
+				if (params.gurobi_format)
+					out << "0 <= ";
+				out << "x" << j << " <= 1";
+				
+				if (params.gurobi_format)
+					out << endl;
 				else
-					out << "bin ";
+					out << ";" << endl;
+			}
+		} else {
+			bool first = true;
+			for (j = 0; j < nareas; j++) {
+				if (included_area.containTaxon(j)) continue;
+				if (params.gurobi_format) {
+					if (!first)
+						out << " ";
+					else 
+						out << "Binary" << endl;
+				} else {
+					if (!first) 
+						out << ", ";
+					else
+						out << "bin ";
+				}
 				out << "x" << j;
-			} else
-				out << "x" << j << " <= 1;" << endl;
-			first = false;
+				first = false;
+			}
+			if (!first)
+				if (params.gurobi_format)
+					out << endl;
+				else
+					out << ";" << endl;
 		}
-		if (make_bin && !first)
-			out << ";" << endl;
 		out.close();
 		//cout << "Transformed LP problem printed to " << outfile << endl;
 	} catch (ios::failure) {
