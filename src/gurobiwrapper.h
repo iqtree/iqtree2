@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2006 by BUI Quang Minh, Steffen Klaere, Arndt von Haeseler   *
+ *   Copyright (C) 2009 by BUI Quang Minh   *
  *   minh.bui@univie.ac.at   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -18,18 +18,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _LP_WRAPPER
-#define _LP_WRAPPER
+#ifndef GUROBI_WRAPPER_H
+#define GUROBI_WRAPPER_H
 
-#define tolerance 0.000001
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
-	interface to call LP_SOLVE
+	interface to call GUROBI LP solver
 	@param filename name of input lp file
 	@param ntaxa number of taxa
 	@param score (OUT) returned optimal score
@@ -42,13 +36,7 @@ extern "C" {
 		7 if returned solution is not binary. In this case, one should run the solver 
 		again with strict binary variable constraint.
 */
-int lp_solve(char *filename, int ntaxa, double *score, double *variables, int verbose_mode);
-
-int lp_demo();
-
-#ifdef __cplusplus
-}
-#endif
+int gurobi_solve(char *filename, int ntaxa, double *score, double *variables, int verbose_mode);
 
 
 #endif

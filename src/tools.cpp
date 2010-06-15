@@ -422,8 +422,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 	verbose_mode = VB_MIN;
 	params.tree_gen = NONE;
 	params.user_file = NULL;
+	params.out_prefix = NULL;
 	params.out_file = NULL;
 	params.sub_size = 0;
+	params.pd_proportion = 0.0;
 	params.min_size = 0;
 	params.step_size = 1;
 	params.find_all = false;
@@ -468,6 +470,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.test_input = TEST_NONE;
 	params.tree_burnin = 0;
 	params.split_threshold = 0.0;
+	params.gurobi_format = false;
+	params.bootstrap = false;
+
+
 	params.aln_file = NULL;
 	params.parsimony = false;
 	params.tree_spr = false;
@@ -485,7 +491,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.optimize_by_newton = true;
 	params.fixed_branch_length = false;
 	params.iqp_assess_quartet = IQP_DISTANCE;
-	params.gurobi_format = false;
 
 	/* TUNG: IQP-TREE Specific Options */
 	simple_nni = false;
@@ -519,6 +524,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -k <num_taxa>";
 				convert_range(argv[cnt], params.min_size, params.sub_size, params.step_size);
+			} else if (strcmp(argv[cnt],"-prefix") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -prefix <output_prefix>";
+				params.out_prefix = argv[cnt];
+			} else if (strcmp(argv[cnt],"-pp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -pr <pd_proportion>";
+				params.pd_proportion = convert_double(argv[cnt]);
+				if (params.pd_proportion < 0 || params.pd_proportion > 1)
+					throw "PD proportion must be between 0 and 1";
 			} else if (strcmp(argv[cnt],"-mk") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -739,7 +756,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -t <split_threshold>";
 				params.split_threshold = convert_double(argv[cnt]);
-				if (params.split_threshold < 0 && params.split_threshold > 1)
+				if (params.split_threshold < 0 || params.split_threshold > 1)
 					throw "Split threshold must be between 0 and 1";
 			} else if (strcmp(argv[cnt],"-iwc") == 0) {
 				params.test_input = TEST_WEAKLY_COMPATIBLE;
@@ -764,7 +781,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -pdel <probability>";
 				params.p_delete = convert_double(argv[cnt]);
-				if (params.p_delete < 0.0 && params.p_delete > 1.0)
+				if (params.p_delete < 0.0 || params.p_delete > 1.0)
 					throw "Probability of deleting a leaf must be between 0 and 1";
 			} else if (strcmp(argv[cnt],"-n") == 0) {
 				cnt++;
@@ -829,6 +846,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Stop confidence value must be in range (0.5,1)";
 			} else if (strcmp(argv[cnt],"-gurobi") == 0) {
 				params.gurobi_format = true;
+			} else if (strcmp(argv[cnt],"-boot") == 0) {
+				params.bootstrap = true;
+				params.multi_tree = true;
 			} else if (strcmp(argv[cnt],"-iqppars") == 0) {
 				params.iqp_assess_quartet = IQP_PARSIMONY;
 			} else if (argv[cnt][0] == '-') {
@@ -862,6 +882,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 	} // for
 	if (params.user_file == NULL && params.aln_file == NULL)
 		usage(argv, false);
+	if (!params.out_prefix)
+		if (params.user_file) 
+			params.out_prefix = params.user_file;
+		else 
+			params.out_prefix = params.aln_file;
 }
 
 void usage(char* argv[], bool full_command) {

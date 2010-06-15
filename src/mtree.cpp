@@ -568,15 +568,15 @@ void MTree::convertSplits(SplitGraph &sg, Split *resp, Node *node, Node *dad) {
 }
 
 void MTree::convertSplits(vector<NxsString> &taxname, SplitGraph &sg) {
-	if (!sg.taxa)
+	if (!sg.taxa) {
 		sg.taxa = new NxsTaxaBlock();
+		for (vector<NxsString>::iterator it = taxname.begin(); it != taxname.end(); it++)
+			sg.taxa->AddTaxonLabel(*it);
+	}
 	if (!sg.splits)
 		sg.splits = new MSplitsBlock(&sg);
 	if (!sg.pda)
 		sg.pda = new MPdaBlock(&sg);
-
-	for (vector<NxsString>::iterator it = taxname.begin(); it != taxname.end(); it++)
-		sg.taxa->AddTaxonLabel(*it);
 	
 	// make the cycle
 	getTaxaID(sg.splits->cycle);

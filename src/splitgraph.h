@@ -32,6 +32,9 @@
 #include "splitset.h"
 #include "mtree.h"
 
+
+class MTreeSet;
+
 using namespace std;
 
 /**
@@ -223,6 +226,8 @@ public:
 		return taxa;
 	}
 
+	void getTaxaName(vector<NxsString> &taxname);
+
 	/**
 		@return splits block
 	*/
@@ -249,6 +254,10 @@ public:
 	*/
 	NxsTreesBlock *getTreesBlock() {
 		return trees;
+	}
+
+	MTreeSet *getMTrees() {
+		return mtrees;
 	}
 
 	/**
@@ -347,6 +356,11 @@ protected:
 		TREES block
 	*/
 	NxsTreesBlock *trees;
+
+	/**
+		storing set of trees if the split graph is converted from it
+	*/
+	MTreeSet *mtrees;
 
 };
 

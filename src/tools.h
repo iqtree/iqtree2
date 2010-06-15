@@ -214,6 +214,11 @@ struct Params {
 		 input file name
 	*/
 	char *user_file;
+	
+	/**
+		prefix of the output file, default is the same as input file
+	*/
+	char *out_prefix;
 
 	/**
 		alignment file name
@@ -234,6 +239,11 @@ struct Params {
 		 size of the maximal PD-tree
 	*/
 	int sub_size;
+
+	/**
+		conservation proprotion, another way of input set size
+	*/
+	double pd_proportion;
 
 	/**
 		 min size of the maximal PD-tree
@@ -537,6 +547,11 @@ struct Params {
 		the LP file is in gurobi format or not
 	*/
 	bool gurobi_format;
+
+	/**
+		TRUE if doing bootstrap on the input trees (good, bad, ugly)
+	*/
+	bool bootstrap;
 };
 
 /**

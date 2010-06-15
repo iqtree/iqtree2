@@ -189,6 +189,15 @@ public:
 	void transformLP_Area(Params &params, const char *outfile, int total_size, bool make_bin);
 
 	/**
+		transform the problem into an Integer Linear Programming and write to .lp file
+		@param params program parameters
+		@param outfile name of output file in LP format
+		@param pd_proportion minimum PD proprotion to be conserved
+		@param make_bin TRUE if creating binary programming
+	*/
+	void transformMinK_Area(Params &params, const char *outfile, double pd_proprotion, bool make_bin);
+
+	/**
 		transform the PD problem into linear programming and solve it
 		@param params program parameters
 		@param taxa_set (OUT) the vector of set of taxa in the maximal PD set

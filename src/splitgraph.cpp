@@ -26,8 +26,8 @@
 #include "ncl/ncl.h"
 #include "myreader.h"
 #include "mtree.h"
-#include "splitset.h"
 #include "mtreeset.h"
+
 
 //#define MY_DEBUG
 /********************************************************
@@ -41,7 +41,7 @@ SplitGraph::SplitGraph()
 	splits = NULL;
 	sets = NULL;
 	trees = NULL;
-//	mtree = NULL;
+	mtrees = NULL;
 }
 
 SplitGraph::SplitGraph(Params &params) : vector<Split*>() {
@@ -54,7 +54,7 @@ void SplitGraph::createBlocks() {
 	pda = new MPdaBlock(this);
 	sets = new MSetsBlock();
 	trees = new TreesBlock(taxa);
-//	mtree = NULL;
+	//mtrees = NULL;
 }
 
 
@@ -62,17 +62,17 @@ void SplitGraph::init(Params &params)
 {
 	if (params.intype == IN_NEWICK) {
 		// read the input file, can contain more than 1 tree
-		MTreeSet mtrees(params.user_file, params.is_rooted, params.tree_burnin);
+		mtrees = new MTreeSet(params.user_file, params.is_rooted, params.tree_burnin);
 		//mtree = new MTree(params.user_file, params.is_rooted);
 
 		if (params.is_rooted) {
 			params.sub_size++;
 			params.min_size++;
 		}
-		if (mtrees.isRooted() && params.root != NULL)
+		if (mtrees->isRooted() && params.root != NULL)
 			outError(ERR_CONFLICT_ROOT);
 		//SplitIntMap hash_ss;
-		mtrees.convertSplits(*this, params.split_threshold, true);
+		mtrees->convertSplits(*this, params.split_threshold, true);
 
 		if (verbose_mode >= VB_MAX)
 			saveFile(cout);
@@ -122,6 +122,9 @@ void SplitGraph::init(Params &params)
 		if (sets->getNSets() == 0)
 			outError("No taxa sets found");
 	}
+
+	if (verbose_mode && sets->getNSets() > 0)
+		sets->Report(cout);
 
 	if (sets->getNSets() > 0 && taxa->GetNumTaxonLabels() == 0) {
 		AddTaxaFromSets();
@@ -181,6 +184,7 @@ SplitGraph::~SplitGraph()
 	if (pda) delete pda;
 	if (splits) delete splits;
 	if (taxa) delete taxa;
+	if (mtrees) delete mtrees;
 }
 
 
@@ -190,19 +194,19 @@ void SplitGraph::convertFromTreesBlock(int burnin, double split_threshold) {
 		outError("Burnin value is too large");
 	if (burnin > 0)
 	cout << burnin << " beginning tree(s) discarded" << endl;
+	mtrees = new MTreeSet();
 	
-	MTreeSet mtrees;
 	for (int i = burnin; i < trees->GetNumTrees(); i++) {
 		stringstream strs(trees->GetTranslatedTreeDescription(i), ios::in | ios::out | ios::app);
 		strs << ";";
-		MTree *tree = mtrees.newTree();
+		MTree *tree = mtrees->newTree();
 		bool myrooted = trees->IsRootedTree(i);
 		tree->readTree(strs, myrooted);
-		mtrees.push_back(tree);
+		mtrees->push_back(tree);
 	}
-	mtrees.checkConsistency();
+	mtrees->checkConsistency();
 	//SplitIntMap hash_ss;
-	mtrees.convertSplits(*this, split_threshold, true);
+	mtrees->convertSplits(*this, split_threshold, true);
 }
 
 
@@ -589,3 +593,9 @@ bool SplitGraph::isWeaklyCompatible() {
 	return true;
 }
 
+
+void SplitGraph::getTaxaName(vector<NxsString> &taxname) {
+	taxname.clear();
+	for (int i = 0; i < getNTaxa(); i++)
+		taxname.push_back(taxa->GetTaxonLabel(i));
+}
