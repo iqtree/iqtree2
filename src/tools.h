@@ -201,6 +201,8 @@ extern bool nni_lh;
  */
 extern int num_iqp_stat;
 
+extern double cmdLamda;
+
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
@@ -700,6 +702,14 @@ const char ERR_INTERNAL[]          = "Internal error, pls contact authors!";
  * @return string
  */
 string convertIntToString(int number);
+
+/**
+ *
+ * @param SRC
+ * @param DEST
+ * @return bool
+ */
+bool copyFile (const char SRC[], const char DEST[]);
 
 /**
  * Check if the file exists

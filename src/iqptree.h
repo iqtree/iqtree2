@@ -24,6 +24,7 @@
 #include "phylonode.h"
 #include <set>
 #include <map>
+#include <stack>
 #include "stoprule.h"
 
 
@@ -156,7 +157,7 @@ public:
 		TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
 		@return best likelihood found
 	*/
-	virtual double optimizeNNI();
+	virtual double optimizeNNI(bool fullNNI=true);
 
 
 	/**
@@ -374,7 +375,7 @@ protected:
 	/**
 		reinsert one leaf back into the tree
 		@param leaf the leaf to reinsert
-		@param adjacent_node the node adjacent to the leaf, returned by deleteLeaves() funcrion
+		@param adjacent_node the node adjacent to the leaf, returned by deleteLeaves() function
 		@param node one end node of the reinsertion branch in the existing tree
 		@param dad the other node of the reinsertion branch in the existing tree
 	*/

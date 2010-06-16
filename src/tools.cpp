@@ -27,6 +27,7 @@ bool simple_nni;
 bool phyml_opt;
 bool nni_lh;
 int num_iqp_stat;
+double cmdLamda;
 
 /*
 	WIN32 does not define gettimeofday() function.
@@ -150,11 +151,30 @@ double randomLen(Params &params) {
 	return len;
 }
 
+//From Tung
 string convertIntToString(int number)
 {
    stringstream ss;//create a stringstream
    ss << number;//add number to the stream
    return ss.str();//return a string with the contents of the stream
+}
+
+//From Tung
+bool copyFile (const char SRC[], const char DEST[])
+{
+    std::ifstream src; // the source file
+    std::ofstream dest; // the destination file
+
+    src.open (SRC, std::ios::binary); // open in binary to prevent jargon at the end of the buffer
+    dest.open (DEST, std::ios::binary); // same again, binary
+    if (!src.is_open() || !dest.is_open())
+        return false; // could not be copied
+
+    dest << src.rdbuf (); // copy the content
+    dest.close (); // close destination file
+    src.close (); // close source file
+
+    return true; // file copied successfully
 }
 
 bool fileExists(string strFilename) {
@@ -497,6 +517,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	phyml_opt = false;
 	nni_lh = false;
 	num_iqp_stat = 100;
+	cmdLamda = 0.75;
 	/* TUNG: IQP-TREE Specific Options */
 
 	struct timeval tv;
@@ -800,7 +821,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				phyml_opt = true;
 			} else if (strcmp(argv[cnt], "-nni_lh") == 0) {
 				nni_lh = true;
-			} else if (strcmp(argv[cnt], "-num_iqp") == 0) {
+			} else if (strcmp(argv[cnt], "-lamda") == 0) {
+				cnt++;
+				cmdLamda = convert_double(argv[cnt]);
+			}
+			else if (strcmp(argv[cnt], "-num_iqp") == 0) {
 				cnt++;
 				num_iqp_stat = convert_int(argv[cnt]);
 			}

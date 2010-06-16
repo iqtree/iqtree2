@@ -307,6 +307,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	cout << "Model of evolution: " << tree.getModelName() << endl;
 	cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
 	cout << "Random seed: " << params.ran_seed << endl;
+	cout << "Lamda used in NNI: " << cmdLamda << endl;
 
 /*
 	if (params.parsimony) {
@@ -333,16 +334,17 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	//cout << "Log-likelihood: " << tree.optimizeAllBranches() << endl;
 
 	/* do NNI with likelihood function */
+
 	if (params.min_iterations > 0) {
 		cout << "Performing Nearest Neighbor Interchange..." << endl;
 		//cout << "Current tree likelihood: " << tree.optimizeNNIBranches() << endl;
 		//tree.optimizeAllBranches();
 
-		//clock_t nniBeginClock, nniEndClock;
-		//nniBeginClock = clock();
-		double newScore = tree.optimizeNNI();
-		//nniEndClock = clock();
-		//printf("Time used for first NNI search: %8.6f seconds.\n", (double)(nniBeginClock - nniEndClock) / CLOCKS_PER_SEC);
+		clock_t nniBeginClock, nniEndClock;
+		nniBeginClock = clock();
+		double newScore = tree.optimizeNNI(false);
+		nniEndClock = clock();
+		printf("Time used for first NNI search: %8.6f seconds.\n", (double)(nniBeginClock - nniEndClock) / CLOCKS_PER_SEC);
 
 		cout << "Tree likelihood after NNI: " << newScore << endl;
 		if (newScore > bestTreeScore) {
@@ -354,8 +356,6 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		}
 
 	}
-	
-
 
 	/* do the IQP */
 	if (params.k_representative > 0 && params.p_delete > 0.0 && params.min_iterations > 1) {
@@ -377,7 +377,9 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		string tree_file_name = params.aln_file;
 		tree_file_name += ".treefile";
 		double bestscore = tree.doIQPNNI(tree_file_name);
-		cout << "Best score found : " << bestscore << endl;
+		cout << "Optimizing model parameters" << endl;
+		double endScore = tree.optimizeModel(params.fixed_branch_length);
+		cout << "Best score found : " << endScore << endl;
 	} else {
 		/* do SPR with likelihood function */
 		if (params.tree_spr)
