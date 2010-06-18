@@ -169,8 +169,7 @@ void IQPTree::deleteLeaf(Node *leaf) {
 	node2->updateNeighbor(near_node, node1, sum_len);
 }
 
-void IQPTree::deleteLeaves(PhyloNodeVector &del_leaves,
-		PhyloNodeVector &adjacent_nodes) {
+void IQPTree::deleteLeaves(PhyloNodeVector &del_leaves, PhyloNodeVector &adjacent_nodes) {
 	NodeVector taxa;
 	// get the vector of taxa
 	getTaxa(taxa);
@@ -901,7 +900,6 @@ void IQPTree::applyChildBranchChanges(PhyloNode *node, PhyloNode *dad) {
 }
 
 double IQPTree::doNNIMove(NNIMove move) {
-
 	PhyloNode *node1 = move.node1;
 	PhyloNode *node2 = move.node2;
 	NeighborVec::iterator node1Nei_it = move.node1Nei_it;

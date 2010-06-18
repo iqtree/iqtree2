@@ -19,8 +19,8 @@
  ***************************************************************************/
 #include "stoprule.h"
 
-StopRule::StopRule() 
-{	
+StopRule::StopRule()
+{
 	nTime_ = 0;
 	confidence_value = 0.95;
 	stop_condition = SC_FIXED_ITERATION;
@@ -49,8 +49,8 @@ void StopRule::setIterationNum(int min_it, int max_it) {
 	max_iteration = max_it;
 }
 
-void StopRule::setConfidenceValue(double confidence_val) 
-{	
+void StopRule::setConfidenceValue(double confidence_val)
+{
 	confidence_value = confidence_val;
 	assert(confidence_value > 0 && confidence_value < 1);
 }
@@ -71,7 +71,7 @@ void StopRule::addImprovedIteration(int iteration) {
 	predicted_iteration = upperTime;
 	cout << "INFO: Stopping rule suggests " << predicted_iteration << " iterations";
 	if (predicted_iteration > max_iteration || predicted_iteration < min_iteration) {
-		if (predicted_iteration > max_iteration) 
+		if (predicted_iteration > max_iteration)
 			predicted_iteration = max_iteration;
 		else
 			predicted_iteration = min_iteration;
@@ -290,7 +290,7 @@ void StopRule::readFile (const char *fileName) {
 
 
 	DoubleVector tmpTimeVec_;// (MAX_ITERATION, MAX_ITERATION);
-	
+
 	double old_time = -1.0;
 	while (inFile_.eof () == 0) {
 		double tmpTime_ = -1.0;
