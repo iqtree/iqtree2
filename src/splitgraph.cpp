@@ -60,6 +60,7 @@ void SplitGraph::createBlocks() {
 
 void SplitGraph::init(Params &params)
 {
+	mtrees = NULL;
 	if (params.intype == IN_NEWICK) {
 		// read the input file, can contain more than 1 tree
 		mtrees = new MTreeSet(params.user_file, params.is_rooted, params.tree_burnin);

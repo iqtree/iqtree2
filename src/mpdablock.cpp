@@ -37,7 +37,7 @@ void MPdaBlock::Report(ostream &out)
 {
 	out << "Budget = " << budget << endl;
 	out << "Taxa Costs = ";
-	for (vector<int>::iterator it = costs.begin(); it != costs.end(); it++)
+	for (DoubleVector::iterator it = costs.begin(); it != costs.end(); it++)
 		out << *it << " ";
 	out << endl;
 }
@@ -105,7 +105,7 @@ void MPdaBlock::Read(NxsToken &token)
 					//
 					token.GetNextToken();
 		
-					budget = atoi(token.GetToken().c_str());
+					budget = convert_double(token.GetToken().c_str());
 					if (budget <= 0)
 					{
 						errormsg = "BUDGET should be greater than zero (";
@@ -130,7 +130,7 @@ void MPdaBlock::Read(NxsToken &token)
 					//
 					token.GetNextToken();
 		
-					min_budget = atoi(token.GetToken().c_str());
+					min_budget = convert_double(token.GetToken().c_str());
 					if (budget < 0)
 					{
 						errormsg = "MIN_BUDGET should be greater than or equal to zero (";
@@ -215,7 +215,7 @@ void MPdaBlock::Read(NxsToken &token)
 				//
 				token.GetNextToken();
 
-				int taxcost = atoi(token.GetToken().c_str());
+				int taxcost = convert_double(token.GetToken().c_str());
 				if (taxcost < 0)
 				{
 					errormsg = "Taxon cost should be greater than or equal to zero (";
@@ -299,7 +299,7 @@ void MPdaBlock::readBudgetFile(Params &params) {
 		if (budget < 0) 
 			throw "Negative total budget.";
 		for (i = 0; i < ntaxa && !in.eof(); i++) {
-			int taxcost;
+			double taxcost;
 			int tax_id = -1;
 			taxname = "";
 			in.exceptions(ios::badbit);
@@ -348,7 +348,7 @@ void MPdaBlock::readBudgetAreaFile(Params &params) {
 		if (budget < 0) 
 			throw "Negative total budget.";
 		for (i = 0; i < nareas && !in.eof(); i++) {
-			int areacost;
+			double areacost;
 			int area_id = -1;
 			areaname = "";
 			in.exceptions(ios::badbit);

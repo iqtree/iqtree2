@@ -18,8 +18,8 @@
 #include "tools.h"
 
 
-const char STATE_UNKNOWN = 127;
-const char STATE_INVALID = 128;
+const char STATE_UNKNOWN = 126;
+const char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
 
 

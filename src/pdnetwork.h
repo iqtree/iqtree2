@@ -178,6 +178,7 @@ public:
 		@param make_bin TRUE if creating binary programming
 	*/
 	void transformLP(Params &params, const char *outfile, int total_size, bool make_bin);
+	void transformLP2(Params &params, const char *outfile, int total_size, bool make_bin);
 
 	/**
 		transform the problem into an Integer Linear Programming and write to .lp file
@@ -187,6 +188,7 @@ public:
 		@param make_bin TRUE if creating binary programming
 	*/
 	void transformLP_Area(Params &params, const char *outfile, int total_size, bool make_bin);
+	void transformLP_Area2(Params &params, const char *outfile, int total_size, bool make_bin);
 
 	/**
 		transform the problem into an Integer Linear Programming and write to .lp file
@@ -196,6 +198,7 @@ public:
 		@param make_bin TRUE if creating binary programming
 	*/
 	void transformMinK_Area(Params &params, const char *outfile, double pd_proprotion, bool make_bin);
+	void transformMinK_Area2(Params &params, const char *outfile, double pd_proportion, bool make_bin);
 
 	/**
 		transform the PD problem into linear programming and solve it
@@ -227,7 +230,7 @@ public:
 		@param outfile name of output file in LP format
 		@param included_area (OUT) collection of areas that should always be included
 	*/
-	void transformLP_Area_Coverage(const char *outfile, Split &included_area);
+	void transformLP_Area_Coverage(const char *outfile, Params &params, Split &included_area);
 
 
 	/**
@@ -372,6 +375,25 @@ protected:
 		@return TRUE if the 'taxon' is uniquely covered by only one area. Otherwise FALSE.
 	*/
 	bool isUniquelyCovered(int taxon, int &area);
+
+	void lpObjectiveMaxSD(ostream &out, Params &params, IntVector &y_value, int total_size);
+
+	void lpObjectiveMinK(ostream &out, Params &params);
+
+	void lpSplitConstraint_RS(ostream &out, Params &params, IntVector &y_value, IntVector &count1, IntVector &count2, int total_size);
+	void lpSplitConstraint_TS(ostream &out, Params &params, IntVector &y_value, int total_size);
+
+	void lpK_BudgetConstraint(ostream &out, Params &params, int total_size);
+
+	void lpMinSDConstraint(ostream &out, Params &params, IntVector &y_value);
+
+	void lpVariableBound(ostream &out, Params &params, Split &included_vars, IntVector &y_value);
+
+	void lpVariableBinary(ostream &out, Params &params, Split &included_vars);
+
+	void lpVariableBinary(const char *outfile, Params &params, Split &included_vars);
+	void lpVariableBinary(const char *outfile, Params &params, IntVector &initialset);
+	void lpInitialArea(ostream &out, Params &params);
 
 };
 

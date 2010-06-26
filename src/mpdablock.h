@@ -82,14 +82,14 @@ public:
 	/**
 		@return total budget
 	*/
-	int getBudget() {
+	double getBudget() {
 		return budget;
 	}
 
 	/**
 		@return min budget
 	*/
-	int getMinBudget() {
+	double getMinBudget() {
 		return min_budget;
 	}
 
@@ -103,7 +103,7 @@ public:
 	/**
 		@return cost of a taxon
 	*/
-	int getCost(int tax_id) {
+	double getCost(int tax_id) {
 		assert(tax_id < (int) costs.size());
 		return costs[tax_id];
 	}
@@ -119,13 +119,13 @@ protected:
 	/**
 		total budget
 	*/
-	int budget;
+	double budget;
 
 	/**
 		min budget, to compute PD sets with preservation
 		costs from min_budget to budget
 	*/
-	int min_budget;
+	double min_budget;
 
 	/**
 		size of PD set
@@ -140,7 +140,7 @@ protected:
 	/**
 		cost of each taxon
 	*/
-	vector<int> costs;
+	vector<double> costs;
 
 	/**
 		main method to read block from file
