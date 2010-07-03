@@ -498,8 +498,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.parsimony = false;
 	params.tree_spr = false;
 	params.nexus_output = false;
-	params.k_representative = 4;
-	params.p_delete = 0.5;
+	params.k_representative = 5;
+	params.p_delete = 0.1;
 	params.min_iterations = 1;
 	params.max_iterations = 1;
 	params.stop_condition = SC_FIXED_ITERATION;
@@ -517,7 +517,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	phyml_opt = false;
 	nni_lh = false;
 	num_iqp_stat = 100;
-	cmdLamda = 0.75;
+	cmdLamda = 1;
 	/* TUNG: IQP-TREE Specific Options */
 
 	struct timeval tv;
@@ -532,6 +532,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 			if (strcmp(argv[cnt],"-h") == 0 || strcmp(argv[cnt],"--help") == 0) {
 				usage(argv, false);
+			} else if (strcmp(argv[cnt],"-ho") == 0) {
+				usage_iqtree(argv, false);
 			} else if (strcmp(argv[cnt],"-hh") == 0 || strcmp(argv[cnt],"-hhh") == 0) {
 				usage(argv, true);
 			} else if (strcmp(argv[cnt],"-v") == 0) {
@@ -918,6 +920,7 @@ void usage(char* argv[], bool full_command) {
 	cout << "Usage: " << argv[0] << " [OPTIONS] <file_name> [<output_file>]" << endl;
 	cout << "GENERAL OPTIONS:" << endl;
 	cout << "  -h                Print this help dialog. Use -hh to display all options." << endl;
+	cout << "  -ho               Print help options for phylogenetic inference." << endl;
 	cout << "  <file_name>       User tree in NEWICK format or split network in NEXUS format." << endl;
 	cout << "  <output_file>     Output file to store results, default is '<file_name>.pda'." << endl;
 	cout << "  -k <num_taxa>     Find optimal PD set of size <num_taxa>." << endl;
@@ -989,6 +992,25 @@ void usage(char* argv[], bool full_command) {
 	exit(0);
 }
 
+void usage_iqtree(char* argv[], bool full_command) {
+	cout << "Usage: " << argv[0] << " -aln <alignment_file> [OPTIONS] [<input_tree_file>] " << endl;
+	cout << "IQ-Tree OPTIONS:" << endl;
+	cout << "   -n <num_iterations>           Number of iterations (Default is 1) " << endl;
+	cout << "   -mod <model>                  Evolutionary Models : 'JC', 'GTR', 'HKY' (Default is 'JC') " << endl;
+	cout << "                                 Rate Heterogeneity: add '+I' or '+G' to the model's name, e.g 'GTR+G'" << endl;
+	cout << "   -seed <num_seed>              Random seed number (used for IQP)" << endl;
+	cout << "   -pdel <num_pdel>              IQP: Probability of deleting a leaf (Default is 0.1)" << endl;
+	cout << "   -k <num_k>                    IQP: The size of the representative leaf set (Default is 5) " << endl;
+	cout << "   -stop <max_iterations>        Stopping rule " << endl;
+	cout << "   -stopconf <confidence_value>  Confidence value for the stopping rule " << endl;
+	cout << "   <input_tree_file>             The program can start with a give tree instead of constructing a starting tree by BioNJ " << endl;
+
+	if (full_command) {
+		//TODO Print other options here (to be added)
+	}
+
+	exit(0);
+}
 InputType detectInputFile(char *input_file) {
 
 	try {
