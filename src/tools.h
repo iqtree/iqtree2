@@ -826,6 +826,13 @@ bool overwriteFile(char *filename);
 void usage(char* argv[], bool full_command);
 
 /**
+ * print usage for iq-tree
+ * @param program arguments list
+ * @param full_command TRUE to print all available commands, FALSE to print normal usage dialog
+ */
+void usage_iqtree(char* argv[], bool full_command);
+
+/**
 	parse area name string, where names are separated by commas
 	@param area_names a string of name
 	@param areas (OUT) a set of name string
