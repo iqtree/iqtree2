@@ -467,8 +467,10 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 		clock_t endClock = clock();
 		printf("Time used for IQP : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
 
-		string iqp_tree = tree_file_name + "IQP" + convertIntToString(cur_iteration);
-		printTree(iqp_tree.c_str());
+		if (verbose_mode >= VB_DEBUG) {
+			string iqp_tree = tree_file_name + "IQP" + convertIntToString(cur_iteration);
+			printTree(iqp_tree.c_str());
+		}
 
 		startClock = clock();
 		double nni_score = optimizeNNI(false);
@@ -491,13 +493,15 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 				<< nni_score << endl;
 
 		//Tung : Write tree out to compare topology
-		if (abs(nni_score - bestScore) <= 0.0001)
-		{
-			cout << "Found tree with the same score as best score" << endl;
-			if (!copyFile(tree_file_name.c_str(),(tree_file_name + ".bestTree" + convertIntToString(cur_iteration)).c_str()))
-					cout << "Tree file could not be copied successfully";
-			printTree((tree_file_name + ".sameScoreBestTree" + convertIntToString(cur_iteration)).c_str());
-			//exit(0);
+		if (verbose_mode >= VB_DEBUG) {
+			if (abs(nni_score - bestScore) <= 0.0001)
+			{
+				cout << "Found tree with the same score as best score" << endl;
+				if (!copyFile(tree_file_name.c_str(),(tree_file_name + ".bestTree" + convertIntToString(cur_iteration)).c_str()))
+						cout << "Tree file could not be copied successfully";
+				printTree((tree_file_name + ".sameScoreBestTree" + convertIntToString(cur_iteration)).c_str());
+				//exit(0);
+			}
 		}
 
 		if (nni_score > bestScore + 1e-6) {
