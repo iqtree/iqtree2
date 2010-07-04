@@ -243,11 +243,6 @@ struct Params {
 	int sub_size;
 
 	/**
-		conservation proprotion, another way of input set size
-	*/
-	double pd_proportion;
-
-	/**
 		 min size of the maximal PD-tree
 		 used to calculate all PD-k trees from min_size to sub_size
 	*/
@@ -257,6 +252,21 @@ struct Params {
 		step_size when running from min_size to sub_size
 	*/
 	int step_size;
+
+	/**
+		conservation proprotion, another way of input set size
+	*/
+	double pd_proportion;
+
+	/**
+		min conservation proprotion
+	*/
+	double min_proportion;
+
+	/**
+		step conservation proprotion
+	*/
+	double step_proportion;
 
 	/**
 		sample size for computing PD distribution
@@ -549,6 +559,11 @@ struct Params {
 		the LP file is in gurobi format or not
 	*/
 	bool gurobi_format;
+
+	/**
+		number of threads for gurobi call
+	*/
+	bool gurobi_threads;
 
 	/**
 		TRUE if doing bootstrap on the input trees (good, bad, ugly)

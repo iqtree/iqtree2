@@ -446,6 +446,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.out_file = NULL;
 	params.sub_size = 0;
 	params.pd_proportion = 0.0;
+	params.min_proportion = 0.0;
+	params.step_proportion = 0.01;
 	params.min_size = 0;
 	params.step_size = 1;
 	params.find_all = false;
@@ -491,6 +493,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.tree_burnin = 0;
 	params.split_threshold = 0.0;
 	params.gurobi_format = false;
+	params.gurobi_threads = 1;
 	params.bootstrap = false;
 
 
@@ -555,8 +558,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt],"-pp") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -pr <pd_proportion>";
-				params.pd_proportion = convert_double(argv[cnt]);
+					throw "Use -pp <pd_proportion>";
+				convert_range(argv[cnt], params.min_proportion, params.pd_proportion, params.step_proportion);
 				if (params.pd_proportion < 0 || params.pd_proportion > 1)
 					throw "PD proportion must be between 0 and 1";
 			} else if (strcmp(argv[cnt],"-mk") == 0) {
@@ -873,6 +876,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Stop confidence value must be in range (0.5,1)";
 			} else if (strcmp(argv[cnt],"-gurobi") == 0) {
 				params.gurobi_format = true;
+			} else if (strcmp(argv[cnt],"-gthreads") == 0) {
+				params.gurobi_format = true;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -gthreads <gurobi_threads>";
+				params.gurobi_threads = convert_int(argv[cnt]);
+				if (params.gurobi_threads < 1)
+					throw "Wrong number of threads";
 			} else if (strcmp(argv[cnt],"-boot") == 0) {
 				params.bootstrap = true;
 				params.multi_tree = true;

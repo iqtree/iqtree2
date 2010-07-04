@@ -31,6 +31,7 @@ int lp_solve(char *filename, int ntaxa, double *score, double *variables, int ve
 	char name2[200];
 
 	lp = read_LP(filename, IMPORTANT + ((verbose_mode < 2) ? 0 : verbose_mode-1), "pd");
+	//lp = read_LP(filename, NORMAL, "pd");
 	//strcpy(name2, filename);
 	//strcat(name2,".cnv");
 	//write_lp(lp, name2);
@@ -40,6 +41,14 @@ int lp_solve(char *filename, int ntaxa, double *score, double *variables, int ve
 		return 1;
 	}
 
+	set_mip_gap(lp, TRUE, 0.0);
+	strcpy(name2, filename);
+	strcat(name2,".log");
+	set_outputfile(lp, name2);
+	set_verbose(lp, NORMAL);
+	
+	//if (verbose_mode) 
+	//	set_verbose(lp, DETAILED);
 	//put_msgfunc(lp, msgfunction, NULL, MSG_LPFEASIBLE | MSG_MILPFEASIBLE | MSG_MILPBETTER | MSG_MILPEQUAL);
 
 	//set_presolve(lp, PRESOLVE_ROWS | PRESOLVE_COLS | PRESOLVE_LINDEP, get_presolveloops(lp));
@@ -49,11 +58,16 @@ int lp_solve(char *filename, int ntaxa, double *score, double *variables, int ve
 	//strcat(name2,".presolve");
 	//write_lp(lp, name2);
 	
+	//int spx_status = get_status(lp);
+	//if (spx_status != OPTIMAL) {
+	//}
+
     if(ret == OPTIMAL || ret == PRESOLVED) {
 		ret = 0;
 	} else {
 		ret = 5;
-		printf("The solution by LP_SOLVE is not optimal!\n");
+		printf("LP_SOLVE ERROR: %s\n", get_statustext(lp, ret));	
+		exit (1);
 	}
 
 	if(ret == 0) {

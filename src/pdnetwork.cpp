@@ -43,12 +43,12 @@ PDNetwork::PDNetwork(Params &params) : SplitGraph(params) {
 	if (params.param_file != NULL) 
 		readParams(params);
 
-	if (params.budget_file != NULL)
+	if (params.budget_file != NULL) {
 		if (isPDArea())
 			pda->readBudgetAreaFile(params);
 		else
 			pda->readBudgetFile(params);
-
+	}
 	// identify the root
 	if (params.root != NULL) 
 		readRootNode(params.root);
@@ -353,21 +353,21 @@ int PDNetwork::calcMaxBudget() {
 
 void PDNetwork::enterFindPD(Params &params) {
 	// check parameters
-	if (params.pd_proportion == 0.0)
-	if (isBudgetConstraint()) {
-		int budget = (params.budget >= 0) ? params.budget : pda->getBudget();
-		if (budget < 0) {
-			outError(ERR_NO_BUDGET);
+	if (params.pd_proportion == 0.0) {
+		if (isBudgetConstraint()) {
+			int budget = (params.budget >= 0) ? params.budget : pda->getBudget();
+			if (budget < 0) {
+				outError(ERR_NO_BUDGET);
+			}
+		} else {
+			int min_accepted = !isPDArea() + 1;
+			int sub_size = (params.sub_size >= min_accepted) ? params.sub_size : pda->getSubSize();
+			if (sub_size < min_accepted && params.pdtaxa_file == NULL) {
+				outError(ERR_NO_K);
+			}
+			
 		}
-	} else {
-		int min_accepted = !isPDArea() + 1;
-		int sub_size = (params.sub_size >= min_accepted) ? params.sub_size : pda->getSubSize();
-		if (sub_size < min_accepted && params.pdtaxa_file == NULL) {
-			outError(ERR_NO_K);
-		}
-		
 	}
-
 	if (initialset.size() > 0) {
 		cout << "Consider split network as ROOTED." << endl;
 	} else {
@@ -815,7 +815,7 @@ void PDNetwork::findPD_LP(Params &params, vector<SplitSet> &taxa_set) {
 			cout << " " << k;
 			cout.flush();
 			if (params.gurobi_format)
-				lp_ret = gurobi_solve((char*)ofile.c_str(), ntaxa, &score, variables, verbose_mode);
+				lp_ret = gurobi_solve((char*)ofile.c_str(), ntaxa, &score, variables, verbose_mode, params.gurobi_threads);
 			else
 				lp_ret = lp_solve((char*)ofile.c_str(), ntaxa, &score, variables, verbose_mode);
 		} else lp_ret = 7;
@@ -829,7 +829,7 @@ void PDNetwork::findPD_LP(Params &params, vector<SplitSet> &taxa_set) {
 			cout << " " << k << "(bin)";
 			cout.flush();
 			if (params.gurobi_format)
-				lp_ret = gurobi_solve((char*)ofile.c_str(), ntaxa, &score, variables, verbose_mode);
+				lp_ret = gurobi_solve((char*)ofile.c_str(), ntaxa, &score, variables, verbose_mode, params.gurobi_threads);
 			else
 				lp_ret = lp_solve((char*)ofile.c_str(), ntaxa, &score, variables, verbose_mode);
 			if (lp_ret != 0) // check error again without allowing non-binary
@@ -892,7 +892,7 @@ void PDNetwork::transformMinK_Area2(Params &params, const char *outfile, double 
 		checkYValue_Area(0, y_value, count1, count2);
 
 		lpObjectiveMinK(out, params);
-		lpMinSDConstraint(out, params, y_value);
+		lpMinSDConstraint(out, params, y_value, pd_proportion);
 		lpSplitConstraint_RS(out, params, y_value, count1, count2, 0);
 		lpInitialArea(out, params);
 		lpVariableBound(out, params, included_area, y_value);
@@ -904,6 +904,56 @@ void PDNetwork::transformMinK_Area2(Params &params, const char *outfile, double 
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, outfile);
 	}
+}
+
+
+double PDNetwork::findMinKArea_LP(Params &params, const char* filename, double pd_proportion) {
+	int nareas = area_taxa.size();
+	double *variables = new double[nareas];
+	double score;
+	int lp_ret, i;
+
+	if (!params.binary_programming) {
+		cout << " " << pd_proportion;
+		cout.flush();
+		transformMinK_Area2(params, filename, pd_proportion, false);
+		if (params.gurobi_format)
+			lp_ret = gurobi_solve((char*)filename, nareas, &score, variables, verbose_mode, params.gurobi_threads);
+		else
+			lp_ret = lp_solve((char*)filename, nareas, &score, variables, verbose_mode);
+	} else lp_ret = 7;
+	if (lp_ret != 0 && lp_ret != 7)
+		outError("Something went wrong with LP solver!");
+	if (lp_ret == 7) { // fail with non-binary case, do again with strict binary
+		cout << " " << pd_proportion << "(bin)";
+		cout.flush();
+		if (params.binary_programming)
+			transformMinK_Area2(params, filename, pd_proportion, true);
+		else
+			lpVariableBinary(filename, params, initialareas);
+		if (params.gurobi_format)
+			lp_ret = gurobi_solve((char*)filename, nareas, &score, variables, verbose_mode, params.gurobi_threads);
+		else
+			lp_ret = lp_solve((char*)filename, nareas, &score, variables, verbose_mode);
+		if (lp_ret != 0) // check error again without allowing non-binary
+			outError("Something went wrong with LP solver!");
+	}	
+	Split area(nareas, score);
+	for (i = 0; i < nareas; i++)
+		if (1.0 - variables[i] < tolerance) {
+			//pd_set->addTaxon(taxa_order[i]);
+			area.addTaxon(i);
+		}
+	calcPDArea(area);
+	cout << " score: " << area.weight;
+	double budget_k;
+	if (isBudgetConstraint()) {
+		budget_k = calcCost(area);
+	} else {
+		budget_k = area.countTaxa();
+	}
+	delete variables;
+	return budget_k;
 }
 
 void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
@@ -921,28 +971,27 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 		}
 		int num_area_coverage = params.sub_size;
 		Split area_coverage;
-		if (checkAreaCoverage()) {
-			num_area_coverage = findMinAreas(params, area_coverage);
-			cout << "NOTE: it is determined that ";
-			if (isBudgetConstraint())
-				cout << "a budget of " << num_area_coverage << " is enough";
-			else
-				cout << "a number of " << num_area_coverage << " areas are enough";
-			cout << " to cover all taxa" << endl;
-			if (isBudgetConstraint()) {
-				if (params.budget > num_area_coverage) {
-					params.budget = num_area_coverage;
-					if (params.min_budget > params.budget)
-						params.min_budget = params.budget;
-					cout << "budget is therefore set to a maximum of " << num_area_coverage << endl;
-				}
-			} else
-			if (params.sub_size > num_area_coverage) {
-				params.sub_size = num_area_coverage;
-				if (params.min_size > params.sub_size) 
-					params.min_size = params.sub_size;
-				cout << "k is therefore set to a maximum of " << num_area_coverage << endl;
+		checkAreaCoverage();
+		num_area_coverage = findMinAreas(params, area_coverage);
+		cout << "We found ";
+		if (isBudgetConstraint())
+			cout << "a budget of " << num_area_coverage << " is enough";
+		else
+			cout << "a number of " << num_area_coverage << " areas are enough";
+		cout << " to cover all feasible taxa" << endl;
+		if (isBudgetConstraint()) {
+			if (params.budget > num_area_coverage) {
+				params.budget = num_area_coverage;
+				if (params.min_budget > params.budget)
+					params.min_budget = params.budget;
+				cout << "budget is therefore set to a maximum of " << num_area_coverage << endl;
 			}
+		} else
+		if (params.sub_size > num_area_coverage) {
+			params.sub_size = num_area_coverage;
+			if (params.min_size > params.sub_size) 
+				params.min_size = params.sub_size;
+			cout << "k is therefore set to a maximum of " << num_area_coverage << endl;
 		}
 	}
 
@@ -958,48 +1007,18 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 	// identifying minimum k/budget to conserve the proportion of SD
 	if (params.pd_proportion != 0.0) {
 		cout << "running p = ";
-		if (!params.binary_programming) {
-			cout << params.pd_proportion;
-			cout.flush();
-			transformMinK_Area2(params, ofile.c_str(), params.pd_proportion, false);
-			if (params.gurobi_format)
-				lp_ret = gurobi_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
-			else
-				lp_ret = lp_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
-		} else lp_ret = 7;
-		if (lp_ret != 0 && lp_ret != 7)
-			outError("Something went wrong with LP solver!");
-		if (lp_ret == 7) { // fail with non-binary case, do again with strict binary
-			cout << " " << params.pd_proportion << "(bin)";
-			cout.flush();
-			if (params.binary_programming)
-				transformMinK_Area2(params, ofile.c_str(), params.pd_proportion, true);
-			else
-				lpVariableBinary(ofile.c_str(), params, initialareas);
-			if (params.gurobi_format)
-				lp_ret = gurobi_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
-			else
-				lp_ret = lp_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
-			if (lp_ret != 0) // check error again without allowing non-binary
-				outError("Something went wrong with LP solver!");
-		}	
-		Split area(nareas, score);
-		for (i = 0; i < nareas; i++)
-			if (1.0 - variables[i] < tolerance) {
-				//pd_set->addTaxon(taxa_order[i]);
-				area.addTaxon(i);
-			}
-		calcPDArea(area);
-		cout << " score: " << area.weight;
-		int min_bk;
+		double bk = findMinKArea_LP(params, ofile.c_str(), params.pd_proportion);
+		double min_bk = bk;
+		if (params.min_proportion != 0.0)
+			min_bk = findMinKArea_LP(params, ofile.c_str(), params.min_proportion);
 		if (isBudgetConstraint()) {
-			min_bk = calcCost(area);
-			params.min_budget = params.budget = min_bk;
+			params.budget = bk;
+			params.min_budget = min_bk;
 		} else {
-			min_bk = area.countTaxa();
-			params.min_size = params.sub_size = min_bk;
+			params.sub_size = bk;
+			params.min_size = min_bk;
 		}
-		cout << endl <<  "minimum " << (isBudgetConstraint() ? "budget" : "k") << " of " << min_bk << " is required" << endl;
+		cout << endl << (isBudgetConstraint() ? "budget" : "k") << " from " << min_bk << " to " << bk << endl;
 		//areas_set[index].push_back(area);
 	}
 
@@ -1027,7 +1046,7 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 			cout.flush();
 			transformLP_Area2(params, ofile.c_str(), k, false);
 			if (params.gurobi_format)
-				lp_ret = gurobi_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
+				lp_ret = gurobi_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode, params.gurobi_threads);
 			else
 				lp_ret = lp_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
 		} else lp_ret = 7;
@@ -1042,7 +1061,7 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 			else
 				lpVariableBinary(ofile.c_str(), params, initialareas);
 			if (params.gurobi_format)
-				lp_ret = gurobi_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
+				lp_ret = gurobi_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode, params.gurobi_threads);
 			else
 				lp_ret = lp_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
 			if (lp_ret != 0) // check error again without allowing non-binary
@@ -1113,24 +1132,18 @@ void PDNetwork::transformLP_Area_Coverage(const char *outfile, Params &params, S
 		out.open(outfile);
 		iterator spit;
 
-		// define the objective function as minimum sum of x, x_i=1 if area i is chosen.
-		/*
-		out << "min:";
-		for (i = 0; i < nareas; i++) {
-			if (isBudgetConstraint())
-				out << " +" << pda->getCost(i) << " x" << i; 
-			else
-				out << " +x" << i;
-		}
-		out << ";" << endl;*/
 		lpObjectiveMinK(out, params);
 
 		// add constraint: every taxon should be covered by some area
 		for (j = 0; j < ntaxa; j++) {
 			if (tax_cover.containTaxon(j)) continue;
+			bool ok = false;
 			for (i = 0; i < nareas; i++)
-				if (area_taxa[i]->containTaxon(j))
+				if (area_taxa[i]->containTaxon(j)) {
 					out << " +x" << i;
+					ok = true;
+				}
+			if (!ok) continue;
 			out << " >= 1";
 			if (params.gurobi_format)
 				out << endl;
@@ -1158,7 +1171,7 @@ int PDNetwork::findMinAreas(Params &params, Split &area_id) {
 	transformLP_Area_Coverage(ofile.c_str(), params, included_area);
 	int lp_ret;
 	if (params.gurobi_format)
-		lp_ret = gurobi_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
+		lp_ret = gurobi_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode, params.gurobi_threads);
 	else
 		lp_ret = lp_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
 
@@ -1168,7 +1181,7 @@ int PDNetwork::findMinAreas(Params &params, Split &area_id) {
 		lpVariableBinary(ofile.c_str(), params, included_area);
 				
 		if (params.gurobi_format)
-			lp_ret = gurobi_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
+			lp_ret = gurobi_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode, params.gurobi_threads);
 		else
 			lp_ret = lp_solve((char*)ofile.c_str(), nareas, &score, variables, verbose_mode);
 		if (lp_ret != 0) // check error again without allowing non-binary
@@ -1189,13 +1202,10 @@ int PDNetwork::findMinAreas(Params &params, Split &area_id) {
 			else
 				count++;
 		}
-	if (taxon_coverage.countTaxa() != getNTaxa()) {
 	/*
-		for (i = 0; i < nareas; i++)
-			cout << variables[i] << endl;
-	*/
+	if (taxon_coverage.countTaxa() != getNTaxa()) {
 		outError("Something wrong with LP in determining taxon coverage");
-	}
+	}*/
 	delete variables;
 	return (count);
 }
@@ -1219,7 +1229,10 @@ bool PDNetwork::checkAreaCoverage() {
 }
 
 
-
+/***********************************************
+***********************************************
+	LP-aided functions
+***********************************************/
 
 
 void PDNetwork::lpObjectiveMaxSD(ostream &out, Params &params, IntVector &y_value, int total_size) {
@@ -1254,7 +1267,7 @@ void PDNetwork::lpObjectiveMaxSD(ostream &out, Params &params, IntVector &y_valu
 ///// TODO FOR taxon selection
 void PDNetwork::lpObjectiveMinK(ostream &out, Params &params) {
 	iterator spit;
-	int i,j;
+	int j;
 	int nareas = area_taxa.size();
 
 	// define the objective function
@@ -1297,11 +1310,12 @@ void PDNetwork::lpSplitConstraint_RS(ostream &out, Params &params, IntVector &y_
 			if (!params.gurobi_format)
 				out << " <=";
 			for (j = 0; j < nareas; j++) {
-				if (sp->overlap(*area_taxa[j]))
-				if (params.gurobi_format)
-					out << " -x" << j;
-				else
-					out << " +x" << j;
+				if (sp->overlap(*area_taxa[j])) {
+					if (params.gurobi_format)
+						out << " -x" << j;
+					else
+						out << " +x" << j;
+				}
 			}
 			if (params.gurobi_format)
 				out << " <= 0" << endl;
@@ -1316,11 +1330,12 @@ void PDNetwork::lpSplitConstraint_RS(ostream &out, Params &params, IntVector &y_
 			if (!params.gurobi_format)
 				out << " <=";
 			for (j = 0; j < nareas; j++) {
-				if (sp->overlap(*area_taxa[j]))
+				if (sp->overlap(*area_taxa[j])) {
 					if (params.gurobi_format)
 						out << " -x" << j;
 					else
 						out << " +x" << j;
+				}
 			}
 			if (params.gurobi_format)
 				out << " <= 0" << endl;
@@ -1376,7 +1391,7 @@ void PDNetwork::lpSplitConstraint_TS(ostream &out, Params &params, IntVector &y_
 void PDNetwork::lpK_BudgetConstraint(ostream &out, Params &params, int total_size) {
 
 	int nvars;
-	int i, j;
+	int j;
 	if (isPDArea())
 		nvars = area_taxa.size();
 	else
@@ -1400,20 +1415,21 @@ void PDNetwork::lpK_BudgetConstraint(ostream &out, Params &params, int total_siz
 		out << ";" << endl;
 }
 
-void PDNetwork::lpMinSDConstraint(ostream &out, Params &params, IntVector &y_value) {
+void PDNetwork::lpMinSDConstraint(ostream &out, Params &params, IntVector &y_value, double pd_proportion) {
 	iterator spit;
 	int i;
-	double required_sd = params.pd_proportion * calcWeight();
+	double required_sd = calcWeight() * pd_proportion;
 	// adding constraint for min conserved PD proportion
 	for (spit = begin(),i=0; spit != end(); spit++,i++)	{
 		if (y_value[i] < 0)
 			out << " +" << (*spit)->getWeight() << " y" << i;
 		else if (y_value[i] >= 2)
 			out << " +" << (*spit)->getWeight() << " x" << y_value[i] - 2;
-		if (y_value[i] == 1) required_sd -= (*spit)->getWeight();
+		else if (y_value[i] == 1) required_sd -= (*spit)->getWeight();
 	}
-
+	out.precision(12);
 	out << " >= " << required_sd;
+	out.precision(6);
 
 	if (params.gurobi_format)
 		out << endl;
@@ -1478,7 +1494,7 @@ void PDNetwork::lpVariableBound(ostream &out, Params &params, Split &included_va
 
 void PDNetwork::lpVariableBinary(ostream &out, Params &params, Split &included_vars) {
 	int nvars;
-	int i, j;
+	int j;
 	if (isPDArea())
 		nvars = area_taxa.size();
 	else
@@ -1501,11 +1517,12 @@ void PDNetwork::lpVariableBinary(ostream &out, Params &params, Split &included_v
 		out << "x" << j;
 		first = false;
 	}
-	if (!first)
+	if (!first) {
 		if (params.gurobi_format)
 			out << endl;
 		else
 			out << ";" << endl;
+	}
 }
 
 
@@ -1539,7 +1556,7 @@ void PDNetwork::lpVariableBinary(const char *outfile, Params &params, IntVector 
 
 void PDNetwork::lpInitialArea(ostream &out, Params &params) {
 	int nareas = getNAreas();
-	int i, j;
+	int j;
 
 	// adding constraint for initialset
 	for (IntVector::iterator it = initialset.begin(); it != initialset.end(); it++) {
@@ -1621,6 +1638,7 @@ void PDNetwork::checkYValue_Area(int total_size, vector<int> &y_value, vector<in
 		if (count1[i] == 0 || count2[i] == 0) 
 			y_value[i] = 0;
 		else {
+
 			if (count1[i] == nareas && count2[i] == nareas) {
 				y_value[i] = 1;
 				continue;

@@ -214,6 +214,8 @@ public:
 	*/
 	void findPDArea_LP(Params &params, vector<SplitSet> &areas_set);
 
+	double findMinKArea_LP(Params &params, const char* filename, double pd_proportion);
+
 	/**
 		@return TRUE if we are doing PD area optimization
 	*/
@@ -385,7 +387,7 @@ protected:
 
 	void lpK_BudgetConstraint(ostream &out, Params &params, int total_size);
 
-	void lpMinSDConstraint(ostream &out, Params &params, IntVector &y_value);
+	void lpMinSDConstraint(ostream &out, Params &params, IntVector &y_value, double pd_proportion);
 
 	void lpVariableBound(ostream &out, Params &params, Split &included_vars, IntVector &y_value);
 

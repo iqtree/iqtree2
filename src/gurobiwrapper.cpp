@@ -40,23 +40,21 @@
 		7 if returned solution is not binary. In this case, one should run the solver 
 		again with strict binary variable constraint.
 */
-int gurobi_solve(char *filename, int ntaxa, double *score, double *variables, int verbose_mode) {
+int gurobi_solve(char *filename, int ntaxa, double *score, double *variables, int verbose_mode, int num_threads) {
 	int ret = 0;
 	*score = -1;
 	string command;
+	ostringstream ss;
 
-	command = "gurobi_cl ResultFile=\"";
-	command += filename;
-	command += ".sol\" MIPGap=0 ";
-	command += filename;
-	command += " > ";
-	command += filename;
-	command += ".log";
+	ss << "gurobi_cl Threads=" << num_threads << " ResultFile=" << filename
+		<< ".sol MIPGap=0 "<< filename  << " >" << filename << ".log ";
+	command = ss.str();
 	if (verbose_mode)
 		cout << command << endl;
 	int sys_ret = system(command.c_str());
-	if (sys_ret == -1) {
-		cout << "gurobi_cl could not be executed" << endl;
+	if (sys_ret != 0) {
+		cout << "gurobi_cl could not be executed. Make sure it was installed with proper license." << endl;
+		cout << command << endl;
 		return -1;
 	}
 
