@@ -387,27 +387,15 @@ double IQPTree::doIQP() {
 
 	// just to make sure IQP does it right
 	setAlignment(aln);
-
-	//clearAllPartialLh();
-
-	//TUNG: I think it is still better to re-read the try so that everything is newly initialized
-	// It does not seems to affect performance
-	stringstream backup_iqp_tree;
-	backup_iqp_tree.seekp(0);
-	printTree(backup_iqp_tree, WT_TAXON_ID + WT_BR_LEN);
-	backup_iqp_tree.seekg(0);
-	freeNode();
-	readTree(backup_iqp_tree, rooted);
-	assignLeafNames();
-	initializeAllPartialLh();
-
-	curScore = optimizeAllBranches(1); // TUNG: I think it is not neccessary to use optimizeAllBranches()
+	clearAllPartialLh();
+	curScore = optimizeAllBranches();
 
 	if (verbose_mode >= VB_MAX) {
 		cout << "IQP Likelihood = " << curScore << endl;
 		//printTree(cout);
 		//cout << endl;
 	}
+
 	return curScore;
 }
 
@@ -473,7 +461,7 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 		}
 
 		startClock = clock();
-		double nni_score = optimizeNNI(false);
+		double nni_score = optimizeNNI(true);
 		endClock = clock();
 		printf("Time used for NNI : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
 
@@ -559,8 +547,6 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 		// Tree get improved, lamda reset to 0.75
 		if (resetLamda) {
 			nniIteration++;
-//			if (curScore == 0)
-//				curScore = computeLikelihood();
 			//N IQPNNI iterations have been done
 			if (enableHeuris) {
 				double maxScore = curScore + deltaNNI95*(nbNNI95-numbNNI);
@@ -668,8 +654,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 			new_score = computeLikelihood();
 		} else {
 			//Do it like in IQPNNI: Optimize all branch lengths after each NNI-Iteration
-			//clearAllPartialLh();
-			new_score = optimizeAllBranches(1);
+			new_score = optimizeAllBranches();
 		}
 
 		if (new_score < curScore) {
@@ -691,9 +676,6 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 			restoreBranchLengths();
 			clearAllPartialLh();
 			resetLamda = false;
-
-			//exit(0);
-
 		} else {
 			numbNNI += nbNNIToApply;
 			double delta = new_score - curScore;
@@ -720,16 +702,18 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 				+ nniEndClock) / CLOCKS_PER_SEC);
 	}
 
-	if (stopNNI) // NNI search is stopped, no need for optimizeAllBranches()
-		return curScore;
-	else
-	{
-		//clock_t startClock = clock();
-		curScore = optimizeAllBranches();
-		//clock_t endClock = clock();
-		//printf("Time used for optimizing all branches : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
-		return curScore;
-	}
+//	if (stopNNI) // NNI search is stopped, no need for optimizeAllBranches()
+//		return curScore;
+//	else
+//	{
+//		//clock_t startClock = clock();
+//		curScore = optimizeAllBranches();
+//		//clock_t endClock = clock();
+//		//printf("Time used for optimizing all branches : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
+//		return curScore;
+//	}
+
+	return curScore;
 }
 
 int IQPTree::calNumNNI95() {
@@ -983,13 +967,13 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 
 	double node12_len[4];
-	node12_len[0] = node12_it->length; // Length of branch node1-node2 before swap
+	node12_len[0] = node12_it->length; // Length of branch node1-node2 before the swap
 
 	// Calculate optimal branch length for node12
-	double cur_score = optimizeOneBranch(node1, node2);
-	double best_score = cur_score;
+	//double cur_score = optimizeOneBranch(node1, node2);
+	//double best_score = cur_score;
 
-	//double best_score = curScore;
+	double best_score = curScore;
 
 	// Optimal branch length of the current branch
 	// This length is actually unchanged since it is already optimized in the last NNI-Step
