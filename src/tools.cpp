@@ -501,7 +501,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.parsimony = false;
 	params.tree_spr = false;
 	params.nexus_output = false;
-	params.k_representative = 5;
+	params.k_representative = 4;
 	params.p_delete = 0.1;
 	params.min_iterations = 1;
 	params.max_iterations = 1;
