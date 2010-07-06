@@ -34,11 +34,12 @@
 REAL scaled_value(lprec *lp, REAL value, int index)
 {
   if(fabs(value) < lp->infinite) {
-    if(lp->scaling_used)
+    if(lp->scaling_used) {
       if(index > lp->rows)
         value /= lp->scalars[index];
       else
         value *= lp->scalars[index];
+    }
   }
   else
     value = my_sign(value)*lp->infinite;
@@ -48,11 +49,12 @@ REAL scaled_value(lprec *lp, REAL value, int index)
 REAL unscaled_value(lprec *lp, REAL value, int index)
 {
   if(fabs(value) < lp->infinite) {
-    if(lp->scaling_used)
+    if(lp->scaling_used) {
       if(index > lp->rows)
         value *= lp->scalars[index];
       else
         value /= lp->scalars[index];
+    }
   }
   else
     value = my_sign(value)*lp->infinite;
@@ -342,7 +344,7 @@ int CurtisReidScales(lprec *lp, MYBOOL _Advanced, REAL *FRowScale, REAL *FColSca
 
   /* Synchronize the RowScale and ColScale vectors */
   ekekm1 = ek * ekm1;
-  if(qkm1 != 0)
+  if(qkm1 != 0) {
   if((Result % 2) == 0) { /* pass is even, compute RowScale */
     for(row = 0; row<=lp->rows; row++)
       FRowScale[row]*=(1.0 + ekekm1 / qkm1);
@@ -356,6 +358,7 @@ int CurtisReidScales(lprec *lp, MYBOOL _Advanced, REAL *FRowScale, REAL *FColSca
     for(col=1; col<=colMax; col++)
       FColScale[col]+=(residual_even[col] / ((REAL) ColCount[col] * qkm1) -
                        ColScalem2[col] * ekekm1 / qkm1);
+  }
   }
 
   /* Do validation, if indicated */
@@ -490,7 +493,7 @@ STATIC MYBOOL transform_for_scale(lprec *lp, REAL *value)
 
 STATIC void accumulate_for_scale(lprec *lp, REAL *min, REAL *max, REAL value)
 {
-  if(transform_for_scale(lp, &value))
+  if(transform_for_scale(lp, &value)) {
     if(is_scaletype(lp, SCALE_MEAN)) {
       *max += value;
       *min += 1;
@@ -499,6 +502,7 @@ STATIC void accumulate_for_scale(lprec *lp, REAL *min, REAL *max, REAL value)
       SETMAX(*max, value);
       SETMIN(*min, value);
     }
+  }
 }
 
 STATIC REAL minmax_to_scale(lprec *lp, REAL min, REAL max, int itemcount)

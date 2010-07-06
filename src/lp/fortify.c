@@ -373,7 +373,7 @@ static void WaitIfstdOutput()
         {
                 char *ptr;
 
-                ptr=malloc(Nchars+1);
+                ptr=(char *) malloc(Nchars+1);
                 if (ptr!=NULL)
                 {
                         int n=0,l=0;
@@ -609,10 +609,16 @@ _Fortify_malloc(size_t size,char *file,unsigned long line)
 void FORTIFY_STORAGE
 _Fortify_free(void *uptr,char *file,unsigned long line)
 {
-	unsigned char *ptr = (unsigned char *)uptr - sizeof(struct Header) - FORTIFY_BEFORE_SIZE;
-	struct Header *h = (struct Header *)ptr;
+	unsigned char *ptr;
+	struct Header *h;
 
-        stdOutput = 0;
+	if(uptr == NULL)
+		return;
+
+	ptr = (unsigned char *)uptr - sizeof(struct Header) - FORTIFY_BEFORE_SIZE;
+	h = (struct Header *)ptr;
+
+	stdOutput = 0;
 
 	FORTIFY_LOCK();
 
@@ -1107,13 +1113,13 @@ _Fortify_Disable(char *file,unsigned long line,int how)
 {
 	int result;
 
-        if (how == 0)
+        if (how <= 0)
         {
     	    stdOutput = 0;
 
     	    FORTIFY_LOCK();
 
-    	    if(st_Head)
+    	    if((st_Head) && (how == 0))
     	    {
     		    sprintf(st_Buffer, "Fortify: %s.%d\n", file, line);
     		    st_Output(st_Buffer);
@@ -1125,7 +1131,7 @@ _Fortify_Disable(char *file,unsigned long line,int how)
     	    }
     	    else
     	    {
-    		    st_Disabled = 1;
+    		    st_Disabled = (how >= -1 ? 1 : 0);
     		    result = 1;
     	    }
 
@@ -1573,7 +1579,7 @@ _Fortify_strdup(char *str,char *file,unsigned long line)
 		return(0);
 	}
 
-	l = strlen(str) + 1;
+	l = (int) strlen(str) + 1;
 	__Fortify_CheckPointer(str,0,l,file,line);
 
 	ptr = (char *) _Fortify_malloc(l, file, line);

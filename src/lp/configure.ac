@@ -1,5 +1,5 @@
 AC_PREREQ(2.52)
-AC_INIT([lpsolve],5.5.0.12,[], [])
+AC_INIT([lpsolve],5.5.0.14,[], [])
 AC_CONFIG_SRCDIR(lp_simplex.c)
 AC_CANONICAL_HOST
 

@@ -58,7 +58,7 @@ int ini_readdata(FILE *fp, char *data, int szdata, int withcomment)
       *ptr = 0;
   }
 
-  l = strlen(data);
+  l = (int) strlen(data);
   while((l > 0) && (isspace(data[l - 1])))
     l--;
   data[l] = 0;

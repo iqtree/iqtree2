@@ -7,8 +7,8 @@
   #include <windows.h>
 #endif
 
-static char SpaceChars[3] = {" " "\7"};
-static char NumChars[14]  = {"0123456789-+."};
+/* static char SpaceChars[3] = {" " "\7"}; */
+/* static char NumChars[14]  = {"0123456789-+."}; */
 
 #define BIGNUMBER      1.0e+30
 #define TINYNUMBER     1.0e-04

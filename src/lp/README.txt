@@ -362,6 +362,108 @@ Change history:
   with MS Visual C 2008.
 - The reference guide now also contains the Java documentation.
 
+03/08/08 version 5.5.0.13
+- The code should now completely be reentrant and thread safe.
+  Especially the lp-parser, but also the solver code itself used static variables which made it
+  not reentrant.
+  The lp parser code has changed considerably for this. Also the lex and yacc code had to be made
+  reentrant. This is only tested with GNU flex and bison. Not with lex and yacc.
+  This should be no problem since the corresponding c files are included with the source so people
+  don't have to build these themselves.
+- commonlib.c/h were also under BFP/BFP_LUSOL/LUSOL while a more advanced version is also
+  under the shared directory. The one from LUSOL is removed.
+- If objective coefficients are all integer and the columns are integer or objective coefficients
+  are zero, then B&B can stop when the objective function equals ceil/floor(real objective)
+  which results in a faster solving process. This did not work anymore and is now fixed.
+- The lpsolve IDE is now also on sourceforge (previously it was a link to another site).
+  Also the sources are included.
+
+02/02/09 version 5.5.0.14
+- The lp format now allows spaces between the row label and the colon.
+- Added better error handling in the copy_lp API
+- Timeout in a MIP model sometimes resulted in an endless loop
+- Revised isnan call for gnu compilers
+- Removed some extra static variables for better reentrance support.
+- REPORT_Objective now reports large objective values (>1e-5) with better precision
+- On Windows the binaries are again compiled with compiler optimization /O2 for better performance.
+- Compiled and tested on Windows and Linux 64-bit. 64-bit binaries are now provided.
+  Changed project files and compile scripts for 64-bit compilation.
+  Binaries are now located in a subdirectory bin\platform
+- Added PHP driver so that lpsolve can be called from PHP
+- When an MPS file is created, upper bounds were written before lower bounds.
+  Now it is the other way around. First lower bounds and then upper bounds.
+- The MPS reader could not handle negative lower bounds where the lower bound was specified after the upper bound.
+- The MPS write now writes the implicit lower bound of zero if the variable has no lower bound and it is integer.
+  This to make sure that other solvers (like CPLEX) interprete the variable as integer and not binary.
+- The LINDO XLI parser interpreted negative lower and upper bounds as positive
+- Added the option -stat to the lp_solve driver program. It prints statistics of the model like number of
+  rows/columns used and smalled and largest value in objective, RHS and coefficient matrix.
+- Added the option -plp to the lp_solve driver program. It prints the model via the print_lp API function.
+
+09/09/09 version 5.5.0.15
+- Improved guess_basis
+- set_row(ex) corrections. Actually completely revised the routine.
+  Sometimes the matrix was corrupted after the call.
+- When in set_add_row mode, all API calls can now be used. For example printing or writing the model,
+  retrieving data from the model and so on are now all possible in that mode.
+  Will help greatly when debugging your models.
+- Sometimes an integer model is reported infeasible while it isn't because the integer solution
+  is much different from the relaxed (real) model. Then API call set_bb_depthlimit can be used
+  to increase the default B&B depth. However its new value was not used for the depth limit of an
+  individual variabled which could result in still infeasible results.
+- modified the demo program not to use the str_ versions of API calls, because they are not
+  performant and not intended to be used in real programs.
+- Added an lpsolve driver to Sysquake.
+- Added an lpsolve driver to FreeMat.
+- Added an lpsolve driver to Euler.
+- Added an Access example.
+- Added documentation to use lpsolve from Sage via the existing Python driver.
+- Changed the second parameter to read_mps, read_MPS, read_freemps and read_freeMPS from verbose to options.
+  These routines now supports via this options parameter the native IBM interpretation of
+  integer variables and allows to negate the objective constant.
+  This is also supported by the lp_solve command line program via the -mps_ibm and -mps_negobjconst options.
+  This is also supported by the IDE in the options tab.
+- Removed read_LPhandle and read_MPShandle from the lprec structure.
+  On their place there is now read_LP and read_MPS.
+  The handle functions are not usable anyway under windows as dll because the FILE structure
+  is searched in the dll space and therefore not working.
+  read_LP and read_MPS work on the file name and always work.
+  Since these handle routines were not documented anyway and the lp structure should not be
+  accessed by applications (except XLI and BFP drivers) this change should not give any (compatibility) problem at all.
+- write_lp/write_LP write just a + or - if the factor to a variable is +1 or -1
+  However when the number was not exactly one, for example 1.0000000000001, then the test
+  on equal to one gave false, but the writing was a 1 because only 12 significant digits are written.
+  The result was that the 1 was written in that case. Not an error, but when lp files are compared,
+  this is enoying. Now this is solved. When a +1 or -1 would be written then alyways only + and -
+  is written and +1 or -1 will never occur again.
+- When a message function is set via put_msgfunc,
+  in message MSG_LPOPTIMAL it was not possible to get the solution. Now it is.
+  Also when messages MSG_MILPFEASIBLE, MSG_MILPBETTER, MSG_MILPEQUAL were catched the
+  returned solution was the one from the previous MIP solution. This is now also fixed.
+  With this fix, the IDE now also shows the relaxed solution (column LP Optimal).
+- Extended the MATLAB, O-Matrix, Scilab, Octave, Python, PHP and of course the new
+  Sysquake, FreeMat and Euler drivers to support string constants. See the reference guide.
+- Compiled and tested lpsolve on MAC OSX 10.4.8 (Intel). Compilation scripts for this platform
+  were added and revised and binaries are provided to download.
+- Revised the c# and vb.net lpsolve code to pass arrays back and forth to the dll to make it also work on 64 bit systems.
+- IDE enhancements:
+      - Can talk to the lpsolve55.dll large address aware version so access to 3.4G 32 bit memory.
+      - Can write and read lp_solve parameter files ( type .lpi) via Options, Solver params, so
+        it is easy to save a readable file of parameters for a particular problem class when it is found.
+        The file can then be collected by the -rpar exe param or the read_params() API.
+      - Added Options, Reset to solver defaults to go back to all lp_solve defaults.
+      - Added in Help a link to the online help files.
+      - Resized the help, main and statistics windows for Vista.
+      - Added the Xpress XLI to the setup.
+      - Use the latest dlls, especially lpsolve55.dll, in the setup.
+      - Added the two new MPS options for IBM integer variables and negate objective constant.
+      - Added the option to ignore integer restrictions.
+17/09/09 version 5.5.0.15b
+- objfrom values where not correct if scaling is active.
+  Routine to calculate these values and the objective from-till values is revised
+  and made a bit more performant.
+- write_lp did not write all column data. For objective function and constraints.
+
 We are thrilled to hear from you and your experiences with this new version. The good and the bad.
 Also we would be pleased to hear about your experiences with the different BFPs on your models.
 

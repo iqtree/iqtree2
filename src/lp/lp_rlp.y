@@ -2,83 +2,111 @@
 /* NAME  : lp_rlp.y                                                          */
 /* ========================================================================= */
 
+/*
+   made reentrant with help of
+   http://www.usualcoding.eu/post/2007/09/03/Building-a-reentrant-parser-in-C-with-Flex/Bison
+*/
 
-%token VAR CONS INTCONS VARIABLECOLON INF SEC_INT SEC_BIN SEC_SEC SEC_SOS SOSDESCR SEC_FREE TOK_SIGN AR_M_OP RE_OPLE RE_OPGE END_C COMMA COLON MINIMISE MAXIMISE UNDEFINED
+/*
+   Note that a minimum version of bison is needed to be able to compile this.
+   Older version don't know the reentrant code.
+   Version 1.35 is not enough. v1.875 could be ok. Tested with v2.3
+*/
+
+%pure-parser
+%parse-param {parse_parm *parm}
+%parse-param {void *scanner}
+%lex-param {yyscan_t *scanner}
+
+%token VAR CONS INTCONS VARIABLECOLON INF SEC_INT SEC_BIN SEC_SEC SEC_SOS SOSDESCR SEC_FREE TOK_SIGN AR_M_OP RE_OPEQ RE_OPLE RE_OPGE END_C COMMA COLON MINIMISE MAXIMISE UNDEFINED
 
 
 %{
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
+#define scanner yyscanner
+#define PARM yyget_extra(yyscanner)
+#define YYSTYPE int
+#define YY_EXTRA_TYPE parse_parm *
+#define YY_FATAL_ERROR(msg) lex_fatal_error(PARM, yyscanner, msg)
+#undef YY_INPUT
+#define YY_INPUT(buf,result,max_size) result = lp_input((void *) PARM, buf, max_size);
+#define yyerror read_error
 
 #include "lpkit.h"
 #include "yacc_read.h"
 
+typedef struct parse_vars_s
+{
+  read_modeldata_func *lp_input;
+  void *userhandle;
+  char HadVar, HadVar0, HadVar1, HadVar2, HasAR_M_OP, HadConstraint, Had_lineair_sum, Had_lineair_sum0, do_add_row, HadSign, OP, Sign, isign, isign0, make_neg;
+  char state, state0;
+  char Within_int_decl;  /* TRUE when we are within an char declaration */
+  char Within_bin_decl;  /* TRUE when we are within an bin declaration */
+  char Within_sec_decl;  /* TRUE when we are within a sec declaration */
+  char Within_sos_decl;  /* TRUE when we are within a sos declaration */
+  char Within_sos_decl1;
+  char Within_free_decl; /* TRUE when we are within a free declaration */
+  short SOStype, SOStype0;        /* SOS type */
+  int SOSNr;
+  int SOSweight;         /* SOS weight */
+  char *Last_var, *Last_var0;
+  REAL f, f0, f1;
+} parse_vars;
+
 #ifdef FORTIFY
 # include "lp_fortify.h"
 #endif
-
-static int HadVar0, HadVar1, HadVar2, HasAR_M_OP, do_add_row, Had_lineair_sum0, HadSign;
-static char *Last_var = NULL, *Last_var0 = NULL;
-static REAL f, f0, f1;
-static int x;
-static int state, state0;
-static int Sign;
-static int isign, isign0;      /* internal_sign variable to make sure nothing goes wrong */
-                /* with lookahead */
-static int make_neg;   /* is true after the relational operator is seen in order */
-                /* to remember if lin_term stands before or after re_op */
-static int Within_int_decl = FALSE; /* TRUE when we are within an int declaration */
-static int Within_bin_decl = FALSE; /* TRUE when we are within an bin declaration */
-static int Within_sec_decl = FALSE; /* TRUE when we are within a sec declaration */
-static int Within_sos_decl = FALSE; /* TRUE when we are within a sos declaration */
-static int Within_sos_decl1;
-static int Within_free_decl = FALSE; /* TRUE when we are within a free declaration */
-static short SOStype0; /* SOS type */
-static short SOStype; /* SOS type */
-static int SOSNr;
-static int SOSweight = 0; /* SOS weight */
-
-static int HadConstraint;
-static int HadVar;
-static int Had_lineair_sum;
-
-extern FILE *yyin;
-
-#define YY_FATAL_ERROR lex_fatal_error
 
 /* let's please C++ users */
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-static int wrap(void)
+#if defined MSDOS || defined __MSDOS__ || defined WINDOWS || defined _WINDOWS || defined WIN32 || defined _WIN32
+#define YY_NO_UNISTD_H
+
+static int isatty(int f)
 {
-  return(1);
+  return(FALSE);
 }
+
+#if !defined _STDLIB_H
+# define _STDLIB_H
+#endif
+#endif
 
 static int __WINAPI lp_input_yyin(void *fpin, char *buf, int max_size)
 {
   int result;
 
-  if ( (result = fread( (char*)buf, sizeof(char), max_size, (FILE *) fpin)) < 0)
-    YY_FATAL_ERROR( "read() in flex scanner failed");
+  result = fread( (char*)buf, sizeof(char), max_size, (FILE *)fpin);
 
   return(result);
 }
 
-static read_modeldata_func *lp_input;
+static int __WINAPI lp_input(void *vpp, char *buf, int max_size)
+{
+  parse_parm *pp = (parse_parm *) vpp;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+  int result;
 
-#undef YY_INPUT
-#define YY_INPUT(buf,result,max_size) result = lp_input((void *) yyin, buf, max_size);
+  result = pv->lp_input(pv->userhandle, buf, max_size);
+  if (result < 0)
+    lex_fatal_error(pp, pp->scanner, "read() in flex scanner failed");
+  return(result);
+}
 
 #ifdef __cplusplus
 };
 #endif
 
-#define yywrap wrap
-#define yyerror read_error
-
 #include "lp_rlp.h"
+
+#undef yylval
 
 %}
 
@@ -90,11 +118,14 @@ EMPTY: /* EMPTY */
 
 inputfile       :
 {
-  isign = 0;
-  make_neg = 0;
-  Sign = 0;
-  HadConstraint = FALSE;
-  HadVar = HadVar0 = FALSE;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->isign = 0;
+  pv->make_neg = 0;
+  pv->Sign = 0;
+  pv->HadConstraint = FALSE;
+  pv->HadVar = pv->HadVar0 = FALSE;
 }
                   objective_function
                   constraints
@@ -113,11 +144,11 @@ inputfile       :
 
 objective_function:   MAXIMISE real_of
 {
-  set_obj_dir(TRUE);
+  set_obj_dir(PARM, TRUE);
 }
                     | MINIMISE real_of
 {
-  set_obj_dir(FALSE);
+  set_obj_dir(PARM, FALSE);
 }
                     | real_of
                 ;
@@ -125,11 +156,14 @@ objective_function:   MAXIMISE real_of
 real_of:            lineair_sum
                     END_C
 {
-  add_row();
-  HadConstraint = FALSE;
-  HadVar = HadVar0 = FALSE;
-  isign = 0;
-  make_neg = 0;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  add_row(pp);
+  pv->HadConstraint = FALSE;
+  pv->HadVar = pv->HadVar0 = FALSE;
+  pv->isign = 0;
+  pv->make_neg = 0;
 }
                 ;
 
@@ -150,7 +184,7 @@ lineair_sum:          EMPTY
  constraint:         real_constraint | VARIABLECOLON real_constraint;
  real_constraint:    x_lineair_sum2 RE_OP x_lineair_sum3 optionalrange END_C;
  optionalrange:      EMPTY | RE_OP cons_term RHS_STORE;
- RE_OP:              RE_OPLE | RE_OPGE;
+ RE_OP:              RE_OPEQ | RE_OPLE | RE_OPGE;
  cons_term:          x_SIGN REALCONS | INF;
  x_lineair_sum2:     EMPTY | x_lineair_sum3;
  x_lineair_sum3:     x_lineair_sum | INF RHS_STORE;
@@ -176,103 +210,130 @@ x_constraints   : constraint
 constraint      : real_constraint
                 | VARIABLECOLON
 {
-  if(!add_constraint_name(Last_var))
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if(!add_constraint_name(pp, pv->Last_var))
     YYABORT;
-  HadConstraint = TRUE;
+  pv->HadConstraint = TRUE;
 }
                   real_constraint
                 ;
 
 real_constraint : x_lineair_sum2
 {
-  HadVar1 = HadVar0;
-  HadVar0 = FALSE;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->HadVar1 = pv->HadVar0;
+  pv->HadVar0 = FALSE;
 }
                   RE_OP
 {
-  if(!store_re_op((char *) yytext, HadConstraint, HadVar, Had_lineair_sum))
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if(!store_re_op(pp, pv->OP, (int) pv->HadConstraint, (int) pv->HadVar, (int) pv->Had_lineair_sum))
     YYABORT;
-  make_neg = 1;
-  f1 = 0;
+  pv->make_neg = 1;
+  pv->f1 = 0;
 }
                   x_lineair_sum3
 {
-  Had_lineair_sum0 = Had_lineair_sum;
-  Had_lineair_sum = TRUE;
-  HadVar2 = HadVar0;
-  HadVar0 = FALSE;
-  do_add_row = FALSE;
-  if(HadConstraint && !HadVar ) {
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->Had_lineair_sum0 = pv->Had_lineair_sum;
+  pv->Had_lineair_sum = TRUE;
+  pv->HadVar2 = pv->HadVar0;
+  pv->HadVar0 = FALSE;
+  pv->do_add_row = FALSE;
+  if(pv->HadConstraint && !pv->HadVar ) {
     /* it is a range */
     /* already handled */
   }
-  else if(!HadConstraint && HadVar) {
+  else if(!pv->HadConstraint && pv->HadVar) {
     /* it is a bound */
 
-    if(!store_bounds(TRUE))
+    if(!store_bounds(pp, TRUE))
       YYABORT;
   }
   else {
     /* it is a row restriction */
-    if(HadConstraint && HadVar)
-      store_re_op("", HadConstraint, HadVar, Had_lineair_sum); /* makes sure that data stored in temporary buffers is treated correctly */
-    do_add_row = TRUE;
+    if(pv->HadConstraint && pv->HadVar)
+      store_re_op(pp, '\0', (int) pv->HadConstraint, (int) pv->HadVar, (int) pv->Had_lineair_sum); /* makes sure that data stored in temporary buffers is treated correctly */
+    pv->do_add_row = TRUE;
   }
 }
                   optionalrange
                   END_C
 {
-  if((!HadVar) && (!HadConstraint)) {
-    yyerror("parse error");
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if((!pv->HadVar) && (!pv->HadConstraint)) {
+    yyerror(pp, pp->scanner, "parse error");
     YYABORT;
   }
-  if(do_add_row)
-    add_row();
-  HadConstraint = FALSE;
-  HadVar = HadVar0 = FALSE;
-  isign = 0;
-  make_neg = 0;
-  null_tmp_store(TRUE);
+  if(pv->do_add_row)
+    add_row(pp);
+  pv->HadConstraint = FALSE;
+  pv->HadVar = pv->HadVar0 = FALSE;
+  pv->isign = 0;
+  pv->make_neg = 0;
+  null_tmp_store(pp, TRUE);
 }
                 ;
 
 optionalrange:    EMPTY
 {
-  if((!HadVar1) && (Had_lineair_sum0))
-    if(!negate_constraint())
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if((!pv->HadVar1) && (pv->Had_lineair_sum0))
+    if(!negate_constraint(pp))
       YYABORT;
 }
                 | RE_OP
 {
-  make_neg = 0;
-  isign = 0;
-  if(HadConstraint)
-    HadVar = Had_lineair_sum = FALSE;
-  HadVar0 = FALSE;
-  if(!store_re_op((char *) ((*yytext == '<') ? ">" : (*yytext == '>') ? "<" : yytext), HadConstraint, HadVar, Had_lineair_sum))
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->make_neg = 0;
+  pv->isign = 0;
+  if(pv->HadConstraint)
+    pv->HadVar = pv->Had_lineair_sum = FALSE;
+  pv->HadVar0 = FALSE;
+  if(!store_re_op(pp, (char) ((pv->OP == '<') ? '>' : (pv->OP == '>') ? '<' : pv->OP), (int) pv->HadConstraint, (int) pv->HadVar, (int) pv->Had_lineair_sum))
     YYABORT;
 }
                   cons_term
 {
-  f -= f1;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->f -= pv->f1;
 }
                   RHS_STORE
 {
-  if((HadVar1) || (!HadVar2) || (HadVar0)) {
-    yyerror("parse error");
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if((pv->HadVar1) || (!pv->HadVar2) || (pv->HadVar0)) {
+    yyerror(pp, pp->scanner, "parse error");
     YYABORT;
   }
 
-  if(HadConstraint && !HadVar ) {
+  if(pv->HadConstraint && !pv->HadVar ) {
     /* it is a range */
     /* already handled */
-    if(!negate_constraint())
+    if(!negate_constraint(pp))
       YYABORT;
   }
-  else if(!HadConstraint && HadVar) {
+  else if(!pv->HadConstraint && pv->HadVar) {
     /* it is a bound */
 
-    if(!store_bounds(TRUE))
+    if(!store_bounds(pp, TRUE))
       YYABORT;
   }
 }
@@ -280,42 +341,57 @@ optionalrange:    EMPTY
 
 x_lineair_sum2:   EMPTY
 {
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
   /* to allow a range */
   /* constraint: < max */
-  if(!HadConstraint) {
-    yyerror("parse error");
+  if(!pv->HadConstraint) {
+    yyerror(pp, pp->scanner, "parse error");
     YYABORT;
   }
-  Had_lineair_sum = FALSE;
+  pv->Had_lineair_sum = FALSE;
 }
                 | x_lineair_sum3
 {
-  Had_lineair_sum = TRUE;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->Had_lineair_sum = TRUE;
 }
                 ;
 
 x_lineair_sum3  :  x_lineair_sum
                 | INF
 {
-  isign = Sign;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->isign = pv->Sign;
 }
                   RHS_STORE
                 ;
 
 x_lineair_sum:
 {
-  state = state0 = 0;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->state = pv->state0 = 0;
 }
                 x_lineair_sum1
 {
-  if (state == 1) {
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if (pv->state == 1) {
     /* RHS_STORE */
-    if (    (isign0 || !make_neg)
-        && !(isign0 && !make_neg)) /* but not both! */
-      f0 = -f0;
-    if(make_neg)
-      f1 += f0;
-    if(!rhs_store(f0, HadConstraint, HadVar, Had_lineair_sum))
+    if (    (pv->isign0 || !pv->make_neg)
+        && !(pv->isign0 && !pv->make_neg)) /* but not both! */
+      pv->f0 = -pv->f0;
+    if(pv->make_neg)
+      pv->f1 += pv->f0;
+    if(!rhs_store(pp, pv->f0, (int) pv->HadConstraint, (int) pv->HadVar, (int) pv->Had_lineair_sum))
       YYABORT;
   }
 }
@@ -329,64 +405,79 @@ x_lineair_sum1  : x_lineair_term
 x_lineair_term  : x_SIGN
                   x_lineair_term1
 {
-  if ((HadSign || state == 1) && (state0 == 1)) {
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if ((pv->HadSign || pv->state == 1) && (pv->state0 == 1)) {
     /* RHS_STORE */
-    if (    (isign0 || !make_neg)
-        && !(isign0 && !make_neg)) /* but not both! */
-      f0 = -f0;
-    if(make_neg)
-      f1 += f0;
-    if(!rhs_store(f0, HadConstraint, HadVar, Had_lineair_sum))
+    if (    (pv->isign0 || !pv->make_neg)
+        && !(pv->isign0 && !pv->make_neg)) /* but not both! */
+      pv->f0 = -pv->f0;
+    if(pv->make_neg)
+      pv->f1 += pv->f0;
+    if(!rhs_store(pp, pv->f0, (int) pv->HadConstraint, (int) pv->HadVar, (int) pv->Had_lineair_sum))
       YYABORT;
   }
-  if (state == 1) {
-    f0 = f;
-    isign0 = isign;
+  if (pv->state == 1) {
+    pv->f0 = pv->f;
+    pv->isign0 = pv->isign;
   }
-  if (state == 2) {
-    if((HadSign) || (state0 != 1)) {
-     isign0 = isign;
-     f0 = 1.0;
+  if (pv->state == 2) {
+    if((pv->HadSign) || (pv->state0 != 1)) {
+     pv->isign0 = pv->isign;
+     pv->f0 = 1.0;
     }
-    if (    (isign0 || make_neg)
-        && !(isign0 && make_neg)) /* but not both! */
-      f0 = -f0;
-    if(!var_store(Last_var, f0, HadConstraint, HadVar, Had_lineair_sum)) {
-      yyerror("var_store failed");
+    if (    (pv->isign0 || pv->make_neg)
+        && !(pv->isign0 && pv->make_neg)) /* but not both! */
+      pv->f0 = -pv->f0;
+    if(!var_store(pp, pv->Last_var, pv->f0, (int) pv->HadConstraint, (int) pv->HadVar, (int) pv->Had_lineair_sum)) {
+      yyerror(pp, pp->scanner, "var_store failed");
       YYABORT;
     }
-    HadConstraint |= HadVar;
-    HadVar = HadVar0 = TRUE;
+    pv->HadConstraint |= pv->HadVar;
+    pv->HadVar = pv->HadVar0 = TRUE;
   }
-  state0 = state;
+  pv->state0 = pv->state;
 }
                 ;
 
 x_lineair_term1 : REALCONS
 {
-  state = 1;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->state = 1;
 }
                 | optional_AR_M_OP
 {
-  if ((HasAR_M_OP) && (state != 1)) {
-    yyerror("parse error");
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if ((pv->HasAR_M_OP) && (pv->state != 1)) {
+    yyerror(pp, pp->scanner, "parse error");
     YYABORT;
   }
 }
                   VAR
 {
-  state = 2;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->state = 2;
 }
                 ;
 
-RE_OP: RE_OPLE | RE_OPGE
+RE_OP: RE_OPEQ | RE_OPLE | RE_OPGE
                 ;
 
 cons_term:        x_SIGN
                   REALCONS
                 | INF
 {
-  isign = Sign;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->isign = pv->Sign;
 }
                 ;
 
@@ -400,34 +491,49 @@ REALCONS: INTCONS | CONS
 
 x_SIGN:           EMPTY
 {
-  isign = 0;
-  HadSign = FALSE;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->isign = 0;
+  pv->HadSign = FALSE;
 }
                 | TOK_SIGN
 {
-  isign = Sign;
-  HadSign = TRUE;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->isign = pv->Sign;
+  pv->HadSign = TRUE;
 }
                 ;
 
 optional_AR_M_OP: EMPTY
 {
-  HasAR_M_OP = FALSE;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->HasAR_M_OP = FALSE;
 }
                 | AR_M_OP
 {
-  HasAR_M_OP = TRUE;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->HasAR_M_OP = TRUE;
 }
                 ;
 
 RHS_STORE:        EMPTY
 {
-  if (    (isign || !make_neg)
-      && !(isign && !make_neg)) /* but not both! */
-    f = -f;
-  if(!rhs_store(f, HadConstraint, HadVar, Had_lineair_sum))
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if (    (pv->isign || !pv->make_neg)
+      && !(pv->isign && !pv->make_neg)) /* but not both! */
+    pv->f = -pv->f;
+  if(!rhs_store(pp, pv->f, (int) pv->HadConstraint, (int) pv->HadVar, (int) pv->Had_lineair_sum))
     YYABORT;
-  isign = 0;
+  pv->isign = 0;
 }
                 ;
 
@@ -452,28 +558,37 @@ SEC_INT_BIN_SEC_SOS_FREE: SEC_INT | SEC_BIN | SEC_SEC | SEC_SOS | SEC_FREE
 int_bin_sec_sos_free_declaration:
                   SEC_INT_BIN_SEC_SOS_FREE
 {
-  Within_sos_decl1 = Within_sos_decl;
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  pv->Within_sos_decl1 = pv->Within_sos_decl;
 }
                   x_int_bin_sec_sos_free_declaration
                 ;
 
 xx_int_bin_sec_sos_free_declaration:
 {
-  if((!Within_int_decl) && (!Within_sec_decl) && (!Within_sos_decl1) && (!Within_free_decl)) {
-    yyerror("parse error");
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if((!pv->Within_int_decl) && (!pv->Within_sec_decl) && (!pv->Within_sos_decl1) && (!pv->Within_free_decl)) {
+    yyerror(pp, pp->scanner, "parse error");
     YYABORT;
   }
-  SOStype = SOStype0;
-  check_int_sec_sos_free_decl(Within_int_decl, Within_sec_decl, Within_sos_decl1 = (Within_sos_decl1 ? 1 : 0), Within_free_decl);
+  pv->SOStype = pv->SOStype0;
+  check_int_sec_sos_free_decl(pp, (int) pv->Within_int_decl, (int) pv->Within_sec_decl, (int) (pv->Within_sos_decl1 = (pv->Within_sos_decl1 ? 1 : 0)), (int) pv->Within_free_decl);
 }
                   optionalsos
                   vars
                   optionalsostype
                   END_C
 {
-  if((Within_sos_decl1) && (SOStype == 0))
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if((pv->Within_sos_decl1) && (pv->SOStype == 0))
   {
-    yyerror("Unsupported SOS type (0)");
+    yyerror(pp, pp->scanner, "Unsupported SOS type (0)");
     YYABORT;
   }
 }
@@ -487,29 +602,38 @@ x_int_bin_sec_sos_free_declaration:
 optionalsos:      EMPTY
                 | SOSDESCR
 {
-  FREE(Last_var0);
-  Last_var0 = strdup(Last_var);
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  FREE(pv->Last_var0);
+  pv->Last_var0 = strdup(pv->Last_var);
 }
                   sosdescr
                 ;
 
 optionalsostype:  EMPTY
 {
-  if(Within_sos_decl1) {
-    set_sos_type(SOStype);
-    set_sos_weight((double) SOSweight, 1);
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if(pv->Within_sos_decl1) {
+    set_sos_type(pp, pv->SOStype);
+    set_sos_weight(pp, (double) pv->SOSweight, 1);
   }
 }
                 | RE_OPLE
                   INTCONS
 {
-  if((Within_sos_decl1) && (!SOStype))
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if((pv->Within_sos_decl1) && (!pv->SOStype))
   {
-    set_sos_type(SOStype = (short) (f + .1));
+    set_sos_type(pp, pv->SOStype = (short) (pv->f + .1));
   }
   else
   {
-    yyerror("SOS type not expected");
+    yyerror(pp, pp->scanner, "SOS type not expected");
     YYABORT;
   }
 }
@@ -518,12 +642,18 @@ optionalsostype:  EMPTY
 
 optionalSOSweight:EMPTY
 {
-  set_sos_weight((double) SOSweight, 1);
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  set_sos_weight(pp, (double) pv->SOSweight, 1);
 }
                 | COLON
                   INTCONS
 {
-  set_sos_weight(f, 1);
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  set_sos_weight(pp, pv->f, 1);
 }
                 ;
 
@@ -543,80 +673,95 @@ optionalcomma:    EMPTY
 
 variable:         EMPTY
 {
-  if(Within_sos_decl1 == 1)
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if(pv->Within_sos_decl1 == 1)
   {
     char buf[16];
 
-    SOSweight++;
-    sprintf(buf, "SOS%d", SOSweight);
-    storevarandweight(buf);
+    pv->SOSweight++;
+    sprintf(buf, "SOS%d", pv->SOSweight);
+    storevarandweight(pp, buf);
 
-    check_int_sec_sos_free_decl(Within_int_decl, Within_sec_decl, 2, Within_free_decl);
-    Within_sos_decl1 = 2;
-    SOSNr = 0;
+    check_int_sec_sos_free_decl(pp, (int) pv->Within_int_decl, (int) pv->Within_sec_decl, 2, (int) pv->Within_free_decl);
+    pv->Within_sos_decl1 = 2;
+    pv->SOSNr = 0;
   }
 
-  storevarandweight(Last_var);
+  storevarandweight(pp, pv->Last_var);
 
-  if(Within_sos_decl1 == 2)
+  if(pv->Within_sos_decl1 == 2)
   {
-    SOSNr++;
-    set_sos_weight((double) SOSNr, 2);
+    pv->SOSNr++;
+    set_sos_weight(pp, (double) pv->SOSNr, 2);
   }
 }
                 ;
 
 variablecolon:
 {
-  if(!Within_sos_decl1) {
-    yyerror("parse error");
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if(!pv->Within_sos_decl1) {
+    yyerror(pp, pp->scanner, "parse error");
     YYABORT;
   }
-  if(Within_sos_decl1 == 1) {
-    FREE(Last_var0);
-    Last_var0 = strdup(Last_var);
+  if(pv->Within_sos_decl1 == 1) {
+    FREE(pv->Last_var0);
+    pv->Last_var0 = strdup(pv->Last_var);
   }
-  if(Within_sos_decl1 == 2)
+  if(pv->Within_sos_decl1 == 2)
   {
-    storevarandweight(Last_var);
-    SOSNr++;
-    set_sos_weight((double) SOSNr, 2);
+    storevarandweight(pp, pv->Last_var);
+    pv->SOSNr++;
+    set_sos_weight(pp, (double) pv->SOSNr, 2);
   }
 }
                 ;
 
 sosweight:        EMPTY
 {
-  if(Within_sos_decl1 == 1)
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if(pv->Within_sos_decl1 == 1)
   {
     char buf[16];
 
-    SOSweight++;
-    sprintf(buf, "SOS%d", SOSweight);
-    storevarandweight(buf);
+    pv->SOSweight++;
+    sprintf(buf, "SOS%d", pv->SOSweight);
+    storevarandweight(pp, buf);
 
-    check_int_sec_sos_free_decl(Within_int_decl, Within_sec_decl, 2, Within_free_decl);
-    Within_sos_decl1 = 2;
-    SOSNr = 0;
+    check_int_sec_sos_free_decl(pp, (int) pv->Within_int_decl, (int) pv->Within_sec_decl, 2, (int) pv->Within_free_decl);
+    pv->Within_sos_decl1 = 2;
+    pv->SOSNr = 0;
 
-    storevarandweight(Last_var0);
-    SOSNr++;
+    storevarandweight(pp, pv->Last_var0);
+    pv->SOSNr++;
   }
 
-  set_sos_weight(f, 2);
+  set_sos_weight(pp, pv->f, 2);
 }
                 ;
 
 sosdescr:         EMPTY
 { /* SOS name */
-  if(Within_sos_decl1 == 1)
+  parse_parm *pp = PARM;
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+  if(pv->Within_sos_decl1 == 1)
   {
-    storevarandweight(Last_var0);
-    set_sos_type(SOStype);
-    check_int_sec_sos_free_decl(Within_int_decl, Within_sec_decl, 2, Within_free_decl);
-    Within_sos_decl1 = 2;
-    SOSNr = 0;
-    SOSweight++;
+    parse_parm *pp = PARM;
+    parse_vars *pv = (parse_vars *) pp->parse_vars;
+
+    storevarandweight(pp, pv->Last_var0);
+    set_sos_type(pp, pv->SOStype);
+    check_int_sec_sos_free_decl(pp, (int) pv->Within_int_decl, (int) pv->Within_sec_decl, 2, (int) pv->Within_free_decl);
+    pv->Within_sos_decl1 = 2;
+    pv->SOSNr = 0;
+    pv->SOSweight++;
   }
 }
                 ;
@@ -648,8 +793,9 @@ x_onevarwithoptionalweight:
 
 %%
 
-static void yy_delete_allocated_memory(void)
+static void yy_delete_allocated_memory(parse_parm *pp)
 {
+  parse_vars *pv = (parse_vars *) pp->parse_vars;
   /* free memory allocated by flex. Otherwise some memory is not freed.
      This is a bit tricky. There is not much documentation about this, but a lot of
      reports of memory that keeps allocated */
@@ -663,27 +809,49 @@ static void yy_delete_allocated_memory(void)
     /* lex doesn't define this macro and thus should not come here, but lex doesn't has
        this memory leak also ...*/
 
+#  if 0
+    /* older versions of flex */
     yy_delete_buffer(YY_CURRENT_BUFFER); /* comment this line if you have problems with it */
     yy_init = 1; /* make sure that the next time memory is allocated again */
     yy_start = 0;
+#  else
+    /* As of version 2.5.9 Flex  */
+    yylex_destroy(pp->scanner); /* comment this line if you have problems with it */
+#  endif
 # endif
 
-  FREE(Last_var);
-  FREE(Last_var0);
+  FREE(pv->Last_var);
+  FREE(pv->Last_var0);
 }
 
-static int parse(void)
+static int parse(parse_parm *pp)
 {
-  return(yyparse());
+  return(yyparse(pp, pp->scanner));
 }
 
 lprec *read_lp1(lprec *lp, void *userhandle, read_modeldata_func read_modeldata, int verbose, char *lp_name)
 {
-  yyin = (FILE *) userhandle;
-  yyout = NULL;
-  yylineno = 1;
-  lp_input = read_modeldata;
-  return(yacc_read(lp, verbose, lp_name, &yylineno, parse, yy_delete_allocated_memory));
+  parse_vars *pv;
+  lprec *lp1 = NULL;
+
+  CALLOC(pv, 1, parse_vars);
+  if (pv != NULL) {
+    parse_parm pp;
+
+    memset(&pp, 0, sizeof(pp));
+    pp.parse_vars = (void *) pv;
+
+    yylex_init(&pp.scanner);
+    yyset_extra(&pp, pp.scanner);
+
+    yyset_in((FILE *) userhandle, pp.scanner);
+    yyset_out(NULL, pp.scanner);
+    pv->lp_input = read_modeldata;
+    pv->userhandle = userhandle;
+    lp1 = yacc_read(lp, verbose, lp_name, parse, &pp, yy_delete_allocated_memory);
+    FREE(pv);
+  }
+  return(lp1);
 }
 
 lprec * __WINAPI read_lp(FILE *filename, int verbose, char *lp_name)

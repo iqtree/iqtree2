@@ -11,7 +11,7 @@ typedef struct _hashelem
   struct _hashelem *nextelem;
 } hashelem;
 
-typedef struct _hashtable
+typedef struct /* _hashtable */
 {
   hashelem         **table;
   int              size;

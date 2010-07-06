@@ -961,7 +961,7 @@ STATIC int rowprim(lprec *lp, int colnr, LREAL *theta, REAL *pcol, int *nzpcol, 
 {
   int      i, ii, iy, iz, Hpass, k, *nzlist;
   LREAL    f, savef;
-  REAL     Heps, Htheta, Hlimit, epsvalue, epspivot, p;
+  REAL     Heps, Htheta, Hlimit, epsvalue, epspivot, p = 0.0;
   pricerec current, candidate;
   MYBOOL   isupper = !lp->is_lower[colnr], HarrisTwoPass = FALSE;
 
@@ -1940,7 +1940,7 @@ STATIC MYBOOL multi_recompute(multirec *multi, int index, MYBOOL isphase2, MYBOO
   n = index;
   while(n < multi->used) {
     i = ++multi->freeList[0];
-    multi->freeList[i] = ((pricerec *) multi->sortedList[n].pvoidreal.ptr) - multi->items;
+    multi->freeList[i] = (int) (((pricerec *) multi->sortedList[n].pvoidreal.ptr) - multi->items);
     n++;
   }
   multi->used  = index;
@@ -1981,7 +1981,7 @@ STATIC MYBOOL multi_removevar(multirec *multi, int varnr)
 STATIC int multi_enteringvar(multirec *multi, pricerec *current, int priority)
 {
   lprec    *lp = multi->lp;
-  int      i, bestindex, colnr;
+  int      i = 0, bestindex, colnr;
   REAL     bound, score, bestscore = -lp->infinite;
   REAL     b1, b2, b3;
   pricerec *candidate, *bestcand;

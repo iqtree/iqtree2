@@ -25,7 +25,6 @@ EXPORTS
    get_bb_depthlimit
    get_bb_floorfirst
    get_bb_rule
-   get_bounds
    get_bounds_tighter
    get_break_at_value
    get_col_name
@@ -152,6 +151,7 @@ EXPORTS
    read_freeMPS
    read_freemps
    read_lp
+   read_lpex
    read_mps
    read_basis
    read_params

@@ -353,7 +353,9 @@ void LUSOL_setpivotmodel(LUSOLrec *LUSOL, int pivotmodel, int initlevel)
 
 MYBOOL LUSOL_tightenpivot(LUSOLrec *LUSOL)
 {
+#if 0
   REAL newvalue;
+#endif
 
   /* Give up tightening if we are already less than limit and we cannot change strategy */
   if(MIN(LUSOL->parmlu[LUSOL_RP_FACTORMAX_Lij],

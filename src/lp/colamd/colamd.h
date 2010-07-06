@@ -192,7 +192,7 @@ typedef struct Colamd_Row_struct
 ?                                                                             \
     (-1)                                                                      \
 :                                                                             \
-    (2 * (nnz) + COLAMD_C (n_col) + COLAMD_R (n_row) + (n_col) + ((nnz) / 5)) \
+    (int) (2 * (nnz) + COLAMD_C (n_col) + COLAMD_R (n_row) + (n_col) + ((nnz) / 5)) \
 )
 
 /* ========================================================================== */

@@ -239,7 +239,7 @@ STATIC MYBOOL stallMonitor_check(lprec *lp, int rownr, int colnr, int lastnr,
     /* Check if we should change pivoting strategy */
     else if(isCreeping ||                                                 /* We have OF creep */
             (monitor->Ncycle > monitor->limitstall[monitor->isdual]) ||   /* KE empirical value */
-            (monitor->Ccycle == rownr) && (monitor->Rcycle == colnr)) {   /* Obvious cycling */
+            ((monitor->Ccycle == rownr) && (monitor->Rcycle == colnr))) {   /* Obvious cycling */
 
       monitor->active = TRUE;
 
@@ -567,7 +567,7 @@ STATIC int primloop(lprec *lp, MYBOOL primalfeasible, REAL primaloffset)
   int    i, j, k, colnr = 0, rownr = 0, lastnr = 0,
          candidatecount = 0, minitcount = 0, ok = TRUE;
   LREAL  theta = 0.0;
-  REAL   epsvalue, xviolated, cviolated,
+  REAL   epsvalue, xviolated, cviolated = 0.0,
          *prow = NULL, *pcol = NULL,
          *drow = lp->drow;
   int    *workINT = NULL,

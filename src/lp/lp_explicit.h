@@ -1,243 +1,264 @@
+#define HEADER_lp_report
+
 #include "lp_lib.h"
 
+#if defined LPSOLVEAPIFROMLPRECDEF
+# define LPSOLVEAPIFROMLPREC
+# define LPSOLVEAPIDEF
+#endif
+
+#if defined LPSOLVEAPIFROMLIBDEF
+# define LPSOLVEAPIFROMLIB
+# define LPSOLVEAPIDEF
+#endif
+
+#if !defined LPSOLVEAPIDEF
+# define LPSOLVEAPIDEF extern
+#endif
+
 /* entries for lp structure */
-add_column_func               *_add_column;
-add_columnex_func             *_add_columnex;
-add_constraint_func           *_add_constraint;
-add_constraintex_func         *_add_constraintex;
-add_lag_con_func              *_add_lag_con;
-add_SOS_func                  *_add_SOS;
-column_in_lp_func             *_column_in_lp;
-copy_lp_func                  *_copy_lp;
-default_basis_func            *_default_basis;
-del_column_func               *_del_column;
-del_constraint_func           *_del_constraint;
-delete_lp_func                *_delete_lp;
-dualize_lp_func               *_dualize_lp;
-free_lp_func                  *_free_lp;
-get_anti_degen_func           *_get_anti_degen;
-get_basis_func                *_get_basis;
-get_basiscrash_func           *_get_basiscrash;
-get_bb_depthlimit_func        *_get_bb_depthlimit;
-get_bb_floorfirst_func        *_get_bb_floorfirst;
-get_bb_rule_func              *_get_bb_rule;
-get_bounds_tighter_func       *_get_bounds_tighter;
-get_break_at_value_func       *_get_break_at_value;
-get_col_name_func             *_get_col_name;
-get_columnex_func             *_get_columnex;
-get_constr_type_func          *_get_constr_type;
-get_constr_value_func         *_get_constr_value;
-get_constraints_func          *_get_constraints;
-get_dual_solution_func        *_get_dual_solution;
-get_epsb_func                 *_get_epsb;
-get_epsd_func                 *_get_epsd;
-get_epsel_func                *_get_epsel;
-get_epsint_func               *_get_epsint;
-get_epsperturb_func           *_get_epsperturb;
-get_epspivot_func             *_get_epspivot;
-get_improve_func              *_get_improve;
-get_infinite_func             *_get_infinite;
-get_lambda_func               *_get_lambda;
-get_lowbo_func                *_get_lowbo;
-get_lp_index_func             *_get_lp_index;
-get_lp_name_func              *_get_lp_name;
-get_Lrows_func                *_get_Lrows;
-get_mat_func                  *_get_mat;
-get_mat_byindex_func          *_get_mat_byindex;
-get_max_level_func            *_get_max_level;
-get_maxpivot_func             *_get_maxpivot;
-get_mip_gap_func              *_get_mip_gap;
-get_multiprice_func           *_get_multiprice;
-get_nameindex_func            *_get_nameindex;
-get_Ncolumns_func             *_get_Ncolumns;
-get_negrange_func             *_get_negrange;
-get_nz_func                   *_get_nonzeros;
-get_Norig_columns_func        *_get_Norig_columns;
-get_Norig_rows_func           *_get_Norig_rows;
-get_Nrows_func                *_get_Nrows;
-get_obj_bound_func            *_get_obj_bound;
-get_objective_func            *_get_objective;
-get_orig_index_func           *_get_orig_index;
-get_origcol_name_func         *_get_origcol_name;
-get_origrow_name_func         *_get_origrow_name;
-get_partialprice_func         *_get_partialprice;
-get_pivoting_func             *_get_pivoting;
-get_presolve_func             *_get_presolve;
-get_presolveloops_func        *_get_presolveloops;
-get_primal_solution_func      *_get_primal_solution;
-get_print_sol_func            *_get_print_sol;
-get_pseudocosts_func          *_get_pseudocosts;
-get_ptr_constraints_func      *_get_ptr_constraints;
-get_ptr_dual_solution_func    *_get_ptr_dual_solution;
-get_ptr_lambda_func           *_get_ptr_lambda;
-get_ptr_primal_solution_func  *_get_ptr_primal_solution;
-get_ptr_sensitivity_obj_func  *_get_ptr_sensitivity_obj;
-get_ptr_sensitivity_objex_func *_get_ptr_sensitivity_objex;
-get_ptr_sensitivity_rhs_func  *_get_ptr_sensitivity_rhs;
-get_ptr_variables_func        *_get_ptr_variables;
-get_rh_func                   *_get_rh;
-get_rh_range_func             *_get_rh_range;
-get_row_func                  *_get_row;
-get_row_name_func             *_get_row_name;
-get_scalelimit_func           *_get_scalelimit;
-get_scaling_func              *_get_scaling;
-get_sensitivity_obj_func      *_get_sensitivity_obj;
-get_sensitivity_objex_func    *_get_sensitivity_objex;
-get_sensitivity_rhs_func      *_get_sensitivity_rhs;
-get_simplextype_func          *_get_simplextype;
-get_solutioncount_func        *_get_solutioncount;
-get_solutionlimit_func        *_get_solutionlimit;
-get_status_func               *_get_status;
-get_statustext_func           *_get_statustext;
-get_timeout_func              *_get_timeout;
-get_total_iter_func           *_get_total_iter;
-get_total_nodes_func          *_get_total_nodes;
-get_upbo_func                 *_get_upbo;
-get_var_branch_func           *_get_var_branch;
-get_var_dualresult_func       *_get_var_dualresult;
-get_var_primalresult_func     *_get_var_primalresult;
-get_var_priority_func         *_get_var_priority;
-get_variables_func            *_get_variables;
-get_verbose_func              *_get_verbose;
-get_working_objective_func    *_get_working_objective;
-has_BFP_func                  *_has_BFP;
-has_XLI_func                  *_has_XLI;
-is_add_rowmode_func           *_is_add_rowmode;
-is_anti_degen_func            *_is_anti_degen;
-is_binary_func                *_is_binary;
-is_break_at_first_func        *_is_break_at_first;
-is_constr_type_func           *_is_constr_type;
-is_debug_func                 *_is_debug;
-is_feasible_func              *_is_feasible;
-is_unbounded_func             *_is_unbounded;
-is_infinite_func              *_is_infinite;
-is_int_func                   *_is_int;
-is_integerscaling_func        *_is_integerscaling;
-is_lag_trace_func             *_is_lag_trace;
-is_maxim_func                 *_is_maxim;
-is_nativeBFP_func             *_is_nativeBFP;
-is_nativeXLI_func             *_is_nativeXLI;
-is_negative_func              *_is_negative;
-is_piv_mode_func              *_is_piv_mode;
-is_piv_rule_func              *_is_piv_rule;
-is_presolve_func              *_is_presolve;
-is_scalemode_func             *_is_scalemode;
-is_scaletype_func             *_is_scaletype;
-is_semicont_func              *_is_semicont;
-is_SOS_var_func               *_is_SOS_var;
-is_trace_func                 *_is_trace;
-lp_solve_version_func         *_lp_solve_version;
-make_lp_func                  *_make_lp;
-print_constraints_func        *_print_constraints;
-print_debugdump_func          *_print_debugdump;
-print_duals_func              *_print_duals;
-print_lp_func                 *_print_lp;
-print_objective_func          *_print_objective;
-print_scales_func             *_print_scales;
-print_solution_func           *_print_solution;
-print_str_func                *_print_str;
-print_tableau_func            *_print_tableau;
-put_abortfunc_func            *_put_abortfunc;
-put_bb_nodefunc_func          *_put_bb_nodefunc;
-put_bb_branchfunc_func        *_put_bb_branchfunc;
-put_logfunc_func              *_put_logfunc;
-put_msgfunc_func              *_put_msgfunc;
-read_LPhandle_func            *_read_LPhandle;
-read_MPShandle_func           *_read_MPShandle;
-read_XLI_func                 *_read_XLI;
-read_params_func              *_read_params;
-read_basis_func               *_read_basis;
-reset_basis_func              *_reset_basis;
-reset_params_func             *_reset_params;
-resize_lp_func                *_resize_lp;
-set_add_rowmode_func          *_set_add_rowmode;
-set_anti_degen_func           *_set_anti_degen;
-set_basisvar_func             *_set_basisvar;
-set_basis_func                *_set_basis;
-set_basiscrash_func           *_set_basiscrash;
-set_bb_depthlimit_func        *_set_bb_depthlimit;
-set_bb_floorfirst_func        *_set_bb_floorfirst;
-set_bb_rule_func              *_set_bb_rule;
-set_BFP_func                  *_set_BFP;
-set_binary_func               *_set_binary;
-set_bounds_func               *_set_bounds;
-set_bounds_tighter_func       *_set_bounds_tighter;
-set_break_at_first_func       *_set_break_at_first;
-set_break_at_value_func       *_set_break_at_value;
-set_column_func               *_set_column;
-set_columnex_func             *_set_columnex;
-set_col_name_func             *_set_col_name;
-set_constr_type_func          *_set_constr_type;
-set_debug_func                *_set_debug;
-set_epsb_func                 *_set_epsb;
-set_epsd_func                 *_set_epsd;
-set_epsel_func                *_set_epsel;
-set_epsint_func               *_set_epsint;
-set_epslevel_func             *_set_epslevel;
-set_epsperturb_func           *_set_epsperturb;
-set_epspivot_func             *_set_epspivot;
-set_unbounded_func            *_set_unbounded;
-set_improve_func              *_set_improve;
-set_infinite_func             *_set_infinite;
-set_int_func                  *_set_int;
-set_lag_trace_func            *_set_lag_trace;
-set_lowbo_func                *_set_lowbo;
-set_lp_name_func              *_set_lp_name;
-set_mat_func                  *_set_mat;
-set_maxim_func                *_set_maxim;
-set_maxpivot_func             *_set_maxpivot;
-set_minim_func                *_set_minim;
-set_mip_gap_func              *_set_mip_gap;
-set_multiprice_func           *_set_multiprice;
-set_negrange_func             *_set_negrange;
-set_obj_bound_func            *_set_obj_bound;
-set_obj_fn_func               *_set_obj_fn;
-set_obj_fnex_func             *_set_obj_fnex;
-set_obj_func                  *_set_obj;
-set_outputfile_func           *_set_outputfile;
-set_outputstream_func         *_set_outputstream;
-set_partialprice_func         *_set_partialprice;
-set_pivoting_func             *_set_pivoting;
-set_preferdual_func           *_set_preferdual;
-set_presolve_func             *_set_presolve;
-set_print_sol_func            *_set_print_sol;
-set_pseudocosts_func          *_set_pseudocosts;
-set_rh_func                   *_set_rh;
-set_rh_range_func             *_set_rh_range;
-set_rh_vec_func               *_set_rh_vec;
-set_row_func                  *_set_row;
-set_rowex_func                *_set_rowex;
-set_row_name_func             *_set_row_name;
-set_scalelimit_func           *_set_scalelimit;
-set_scaling_func              *_set_scaling;
-set_semicont_func             *_set_semicont;
-set_sense_func                *_set_sense;
-set_simplextype_func          *_set_simplextype;
-set_solutionlimit_func        *_set_solutionlimit;
-set_timeout_func              *_set_timeout;
-set_trace_func                *_set_trace;
-set_upbo_func                 *_set_upbo;
-set_var_branch_func           *_set_var_branch;
-set_var_weights_func          *_set_var_weights;
-set_verbose_func              *_set_verbose;
-set_XLI_func                  *_set_XLI;
-solve_func                    *_solve;
-str_add_column_func           *_str_add_column;
-str_add_constraint_func       *_str_add_constraint;
-str_add_lag_con_func          *_str_add_lag_con;
-str_set_obj_fn_func           *_str_set_obj_fn;
-str_set_rh_vec_func           *_str_set_rh_vec;
-time_elapsed_func             *_time_elapsed;
-unscale_func                  *_unscale;
-write_lp_func                 *_write_lp;
-write_LP_func                 *_write_LP;
-write_mps_func                *_write_mps;
-write_MPS_func                *_write_MPS;
-write_freemps_func            *_write_freemps;
-write_freeMPS_func            *_write_freeMPS;
-write_XLI_func                *_write_XLI;
-write_basis_func              *_write_basis;
-write_params_func             *_write_params;
+LPSOLVEAPIDEF add_column_func               *_add_column;
+LPSOLVEAPIDEF add_columnex_func             *_add_columnex;
+LPSOLVEAPIDEF add_constraint_func           *_add_constraint;
+LPSOLVEAPIDEF add_constraintex_func         *_add_constraintex;
+LPSOLVEAPIDEF add_lag_con_func              *_add_lag_con;
+LPSOLVEAPIDEF add_SOS_func                  *_add_SOS;
+LPSOLVEAPIDEF column_in_lp_func             *_column_in_lp;
+LPSOLVEAPIDEF copy_lp_func                  *_copy_lp;
+LPSOLVEAPIDEF default_basis_func            *_default_basis;
+LPSOLVEAPIDEF del_column_func               *_del_column;
+LPSOLVEAPIDEF del_constraint_func           *_del_constraint;
+LPSOLVEAPIDEF delete_lp_func                *_delete_lp;
+LPSOLVEAPIDEF dualize_lp_func               *_dualize_lp;
+LPSOLVEAPIDEF free_lp_func                  *_free_lp;
+LPSOLVEAPIDEF get_anti_degen_func           *_get_anti_degen;
+LPSOLVEAPIDEF get_basis_func                *_get_basis;
+LPSOLVEAPIDEF get_basiscrash_func           *_get_basiscrash;
+LPSOLVEAPIDEF get_bb_depthlimit_func        *_get_bb_depthlimit;
+LPSOLVEAPIDEF get_bb_floorfirst_func        *_get_bb_floorfirst;
+LPSOLVEAPIDEF get_bb_rule_func              *_get_bb_rule;
+LPSOLVEAPIDEF get_bounds_tighter_func       *_get_bounds_tighter;
+LPSOLVEAPIDEF get_break_at_value_func       *_get_break_at_value;
+LPSOLVEAPIDEF get_col_name_func             *_get_col_name;
+LPSOLVEAPIDEF get_column_func               *_get_column;
+LPSOLVEAPIDEF get_columnex_func             *_get_columnex;
+LPSOLVEAPIDEF get_constr_type_func          *_get_constr_type;
+LPSOLVEAPIDEF get_constr_value_func         *_get_constr_value;
+LPSOLVEAPIDEF get_constraints_func          *_get_constraints;
+LPSOLVEAPIDEF get_dual_solution_func        *_get_dual_solution;
+LPSOLVEAPIDEF get_epsb_func                 *_get_epsb;
+LPSOLVEAPIDEF get_epsd_func                 *_get_epsd;
+LPSOLVEAPIDEF get_epsel_func                *_get_epsel;
+LPSOLVEAPIDEF get_epsint_func               *_get_epsint;
+LPSOLVEAPIDEF get_epsperturb_func           *_get_epsperturb;
+LPSOLVEAPIDEF get_epspivot_func             *_get_epspivot;
+LPSOLVEAPIDEF get_improve_func              *_get_improve;
+LPSOLVEAPIDEF get_infinite_func             *_get_infinite;
+LPSOLVEAPIDEF get_lambda_func               *_get_lambda;
+LPSOLVEAPIDEF get_lowbo_func                *_get_lowbo;
+LPSOLVEAPIDEF get_lp_index_func             *_get_lp_index;
+LPSOLVEAPIDEF get_lp_name_func              *_get_lp_name;
+LPSOLVEAPIDEF get_Lrows_func                *_get_Lrows;
+LPSOLVEAPIDEF get_mat_func                  *_get_mat;
+LPSOLVEAPIDEF get_mat_byindex_func          *_get_mat_byindex;
+LPSOLVEAPIDEF get_max_level_func            *_get_max_level;
+LPSOLVEAPIDEF get_maxpivot_func             *_get_maxpivot;
+LPSOLVEAPIDEF get_mip_gap_func              *_get_mip_gap;
+LPSOLVEAPIDEF get_multiprice_func           *_get_multiprice;
+LPSOLVEAPIDEF get_nameindex_func            *_get_nameindex;
+LPSOLVEAPIDEF get_Ncolumns_func             *_get_Ncolumns;
+LPSOLVEAPIDEF get_negrange_func             *_get_negrange;
+LPSOLVEAPIDEF get_nz_func                   *_get_nonzeros;
+LPSOLVEAPIDEF get_Norig_columns_func        *_get_Norig_columns;
+LPSOLVEAPIDEF get_Norig_rows_func           *_get_Norig_rows;
+LPSOLVEAPIDEF get_Nrows_func                *_get_Nrows;
+LPSOLVEAPIDEF get_obj_bound_func            *_get_obj_bound;
+LPSOLVEAPIDEF get_objective_func            *_get_objective;
+LPSOLVEAPIDEF get_orig_index_func           *_get_orig_index;
+LPSOLVEAPIDEF get_origcol_name_func         *_get_origcol_name;
+LPSOLVEAPIDEF get_origrow_name_func         *_get_origrow_name;
+LPSOLVEAPIDEF get_partialprice_func         *_get_partialprice;
+LPSOLVEAPIDEF get_pivoting_func             *_get_pivoting;
+LPSOLVEAPIDEF get_presolve_func             *_get_presolve;
+LPSOLVEAPIDEF get_presolveloops_func        *_get_presolveloops;
+LPSOLVEAPIDEF get_primal_solution_func      *_get_primal_solution;
+LPSOLVEAPIDEF get_print_sol_func            *_get_print_sol;
+LPSOLVEAPIDEF get_pseudocosts_func          *_get_pseudocosts;
+LPSOLVEAPIDEF get_ptr_constraints_func      *_get_ptr_constraints;
+LPSOLVEAPIDEF get_ptr_dual_solution_func    *_get_ptr_dual_solution;
+LPSOLVEAPIDEF get_ptr_lambda_func           *_get_ptr_lambda;
+LPSOLVEAPIDEF get_ptr_primal_solution_func  *_get_ptr_primal_solution;
+LPSOLVEAPIDEF get_ptr_sensitivity_obj_func  *_get_ptr_sensitivity_obj;
+LPSOLVEAPIDEF get_ptr_sensitivity_objex_func *_get_ptr_sensitivity_objex;
+LPSOLVEAPIDEF get_ptr_sensitivity_rhs_func  *_get_ptr_sensitivity_rhs;
+LPSOLVEAPIDEF get_ptr_variables_func        *_get_ptr_variables;
+LPSOLVEAPIDEF get_rh_func                   *_get_rh;
+LPSOLVEAPIDEF get_rh_range_func             *_get_rh_range;
+LPSOLVEAPIDEF get_row_func                  *_get_row;
+LPSOLVEAPIDEF get_rowex_func                *_get_rowex;
+LPSOLVEAPIDEF get_row_name_func             *_get_row_name;
+LPSOLVEAPIDEF get_scalelimit_func           *_get_scalelimit;
+LPSOLVEAPIDEF get_scaling_func              *_get_scaling;
+LPSOLVEAPIDEF get_sensitivity_obj_func      *_get_sensitivity_obj;
+LPSOLVEAPIDEF get_sensitivity_objex_func    *_get_sensitivity_objex;
+LPSOLVEAPIDEF get_sensitivity_rhs_func      *_get_sensitivity_rhs;
+LPSOLVEAPIDEF get_simplextype_func          *_get_simplextype;
+LPSOLVEAPIDEF get_solutioncount_func        *_get_solutioncount;
+LPSOLVEAPIDEF get_solutionlimit_func        *_get_solutionlimit;
+LPSOLVEAPIDEF get_status_func               *_get_status;
+LPSOLVEAPIDEF get_statustext_func           *_get_statustext;
+LPSOLVEAPIDEF get_timeout_func              *_get_timeout;
+LPSOLVEAPIDEF get_total_iter_func           *_get_total_iter;
+LPSOLVEAPIDEF get_total_nodes_func          *_get_total_nodes;
+LPSOLVEAPIDEF get_upbo_func                 *_get_upbo;
+LPSOLVEAPIDEF get_var_branch_func           *_get_var_branch;
+LPSOLVEAPIDEF get_var_dualresult_func       *_get_var_dualresult;
+LPSOLVEAPIDEF get_var_primalresult_func     *_get_var_primalresult;
+LPSOLVEAPIDEF get_var_priority_func         *_get_var_priority;
+LPSOLVEAPIDEF get_variables_func            *_get_variables;
+LPSOLVEAPIDEF get_verbose_func              *_get_verbose;
+LPSOLVEAPIDEF get_working_objective_func    *_get_working_objective;
+LPSOLVEAPIDEF guess_basis_func              *_guess_basis;
+LPSOLVEAPIDEF has_BFP_func                  *_has_BFP;
+LPSOLVEAPIDEF has_XLI_func                  *_has_XLI;
+LPSOLVEAPIDEF is_add_rowmode_func           *_is_add_rowmode;
+LPSOLVEAPIDEF is_anti_degen_func            *_is_anti_degen;
+LPSOLVEAPIDEF is_binary_func                *_is_binary;
+LPSOLVEAPIDEF is_break_at_first_func        *_is_break_at_first;
+LPSOLVEAPIDEF is_constr_type_func           *_is_constr_type;
+LPSOLVEAPIDEF is_debug_func                 *_is_debug;
+LPSOLVEAPIDEF is_feasible_func              *_is_feasible;
+LPSOLVEAPIDEF is_unbounded_func             *_is_unbounded;
+LPSOLVEAPIDEF is_infinite_func              *_is_infinite;
+LPSOLVEAPIDEF is_int_func                   *_is_int;
+LPSOLVEAPIDEF is_integerscaling_func        *_is_integerscaling;
+LPSOLVEAPIDEF is_lag_trace_func             *_is_lag_trace;
+LPSOLVEAPIDEF is_maxim_func                 *_is_maxim;
+LPSOLVEAPIDEF is_nativeBFP_func             *_is_nativeBFP;
+LPSOLVEAPIDEF is_nativeXLI_func             *_is_nativeXLI;
+LPSOLVEAPIDEF is_negative_func              *_is_negative;
+LPSOLVEAPIDEF is_piv_mode_func              *_is_piv_mode;
+LPSOLVEAPIDEF is_piv_rule_func              *_is_piv_rule;
+LPSOLVEAPIDEF is_presolve_func              *_is_presolve;
+LPSOLVEAPIDEF is_scalemode_func             *_is_scalemode;
+LPSOLVEAPIDEF is_scaletype_func             *_is_scaletype;
+LPSOLVEAPIDEF is_semicont_func              *_is_semicont;
+LPSOLVEAPIDEF is_SOS_var_func               *_is_SOS_var;
+LPSOLVEAPIDEF is_trace_func                 *_is_trace;
+LPSOLVEAPIDEF is_use_names_func             *_is_use_names;
+LPSOLVEAPIDEF lp_solve_version_func         *_lp_solve_version;
+LPSOLVEAPIDEF make_lp_func                  *_make_lp;
+LPSOLVEAPIDEF print_constraints_func        *_print_constraints;
+LPSOLVEAPIDEF print_debugdump_func          *_print_debugdump;
+LPSOLVEAPIDEF print_duals_func              *_print_duals;
+LPSOLVEAPIDEF print_lp_func                 *_print_lp;
+LPSOLVEAPIDEF print_objective_func          *_print_objective;
+LPSOLVEAPIDEF print_scales_func             *_print_scales;
+LPSOLVEAPIDEF print_solution_func           *_print_solution;
+LPSOLVEAPIDEF print_str_func                *_print_str;
+LPSOLVEAPIDEF print_tableau_func            *_print_tableau;
+LPSOLVEAPIDEF put_abortfunc_func            *_put_abortfunc;
+LPSOLVEAPIDEF put_bb_nodefunc_func          *_put_bb_nodefunc;
+LPSOLVEAPIDEF put_bb_branchfunc_func        *_put_bb_branchfunc;
+LPSOLVEAPIDEF put_logfunc_func              *_put_logfunc;
+LPSOLVEAPIDEF put_msgfunc_func              *_put_msgfunc;
+LPSOLVEAPIDEF read_LP_func                  *_read_LP;
+LPSOLVEAPIDEF read_MPS_func                 *_read_MPS;
+LPSOLVEAPIDEF read_XLI_func                 *_read_XLI;
+LPSOLVEAPIDEF read_params_func              *_read_params;
+LPSOLVEAPIDEF read_basis_func               *_read_basis;
+LPSOLVEAPIDEF reset_basis_func              *_reset_basis;
+LPSOLVEAPIDEF reset_params_func             *_reset_params;
+LPSOLVEAPIDEF reportfunc                    *_report;
+LPSOLVEAPIDEF resize_lp_func                *_resize_lp;
+LPSOLVEAPIDEF set_add_rowmode_func          *_set_add_rowmode;
+LPSOLVEAPIDEF set_anti_degen_func           *_set_anti_degen;
+LPSOLVEAPIDEF set_basisvar_func             *_set_basisvar;
+LPSOLVEAPIDEF set_basis_func                *_set_basis;
+LPSOLVEAPIDEF set_basiscrash_func           *_set_basiscrash;
+LPSOLVEAPIDEF set_bb_depthlimit_func        *_set_bb_depthlimit;
+LPSOLVEAPIDEF set_bb_floorfirst_func        *_set_bb_floorfirst;
+LPSOLVEAPIDEF set_bb_rule_func              *_set_bb_rule;
+LPSOLVEAPIDEF set_BFP_func                  *_set_BFP;
+LPSOLVEAPIDEF set_binary_func               *_set_binary;
+LPSOLVEAPIDEF set_bounds_func               *_set_bounds;
+LPSOLVEAPIDEF set_bounds_tighter_func       *_set_bounds_tighter;
+LPSOLVEAPIDEF set_break_at_first_func       *_set_break_at_first;
+LPSOLVEAPIDEF set_break_at_value_func       *_set_break_at_value;
+LPSOLVEAPIDEF set_column_func               *_set_column;
+LPSOLVEAPIDEF set_columnex_func             *_set_columnex;
+LPSOLVEAPIDEF set_col_name_func             *_set_col_name;
+LPSOLVEAPIDEF set_constr_type_func          *_set_constr_type;
+LPSOLVEAPIDEF set_debug_func                *_set_debug;
+LPSOLVEAPIDEF set_epsb_func                 *_set_epsb;
+LPSOLVEAPIDEF set_epsd_func                 *_set_epsd;
+LPSOLVEAPIDEF set_epsel_func                *_set_epsel;
+LPSOLVEAPIDEF set_epsint_func               *_set_epsint;
+LPSOLVEAPIDEF set_epslevel_func             *_set_epslevel;
+LPSOLVEAPIDEF set_epsperturb_func           *_set_epsperturb;
+LPSOLVEAPIDEF set_epspivot_func             *_set_epspivot;
+LPSOLVEAPIDEF set_unbounded_func            *_set_unbounded;
+LPSOLVEAPIDEF set_improve_func              *_set_improve;
+LPSOLVEAPIDEF set_infinite_func             *_set_infinite;
+LPSOLVEAPIDEF set_int_func                  *_set_int;
+LPSOLVEAPIDEF set_lag_trace_func            *_set_lag_trace;
+LPSOLVEAPIDEF set_lowbo_func                *_set_lowbo;
+LPSOLVEAPIDEF set_lp_name_func              *_set_lp_name;
+LPSOLVEAPIDEF set_mat_func                  *_set_mat;
+LPSOLVEAPIDEF set_maxim_func                *_set_maxim;
+LPSOLVEAPIDEF set_maxpivot_func             *_set_maxpivot;
+LPSOLVEAPIDEF set_minim_func                *_set_minim;
+LPSOLVEAPIDEF set_mip_gap_func              *_set_mip_gap;
+LPSOLVEAPIDEF set_multiprice_func           *_set_multiprice;
+LPSOLVEAPIDEF set_negrange_func             *_set_negrange;
+LPSOLVEAPIDEF set_obj_bound_func            *_set_obj_bound;
+LPSOLVEAPIDEF set_obj_fn_func               *_set_obj_fn;
+LPSOLVEAPIDEF set_obj_fnex_func             *_set_obj_fnex;
+LPSOLVEAPIDEF set_obj_func                  *_set_obj;
+LPSOLVEAPIDEF set_outputfile_func           *_set_outputfile;
+LPSOLVEAPIDEF set_outputstream_func         *_set_outputstream;
+LPSOLVEAPIDEF set_partialprice_func         *_set_partialprice;
+LPSOLVEAPIDEF set_pivoting_func             *_set_pivoting;
+LPSOLVEAPIDEF set_preferdual_func           *_set_preferdual;
+LPSOLVEAPIDEF set_presolve_func             *_set_presolve;
+LPSOLVEAPIDEF set_print_sol_func            *_set_print_sol;
+LPSOLVEAPIDEF set_pseudocosts_func          *_set_pseudocosts;
+LPSOLVEAPIDEF set_rh_func                   *_set_rh;
+LPSOLVEAPIDEF set_rh_range_func             *_set_rh_range;
+LPSOLVEAPIDEF set_rh_vec_func               *_set_rh_vec;
+LPSOLVEAPIDEF set_row_func                  *_set_row;
+LPSOLVEAPIDEF set_rowex_func                *_set_rowex;
+LPSOLVEAPIDEF set_row_name_func             *_set_row_name;
+LPSOLVEAPIDEF set_scalelimit_func           *_set_scalelimit;
+LPSOLVEAPIDEF set_scaling_func              *_set_scaling;
+LPSOLVEAPIDEF set_semicont_func             *_set_semicont;
+LPSOLVEAPIDEF set_sense_func                *_set_sense;
+LPSOLVEAPIDEF set_simplextype_func          *_set_simplextype;
+LPSOLVEAPIDEF set_solutionlimit_func        *_set_solutionlimit;
+LPSOLVEAPIDEF set_timeout_func              *_set_timeout;
+LPSOLVEAPIDEF set_trace_func                *_set_trace;
+LPSOLVEAPIDEF set_upbo_func                 *_set_upbo;
+LPSOLVEAPIDEF set_var_branch_func           *_set_var_branch;
+LPSOLVEAPIDEF set_var_weights_func          *_set_var_weights;
+LPSOLVEAPIDEF set_verbose_func              *_set_verbose;
+LPSOLVEAPIDEF set_XLI_func                  *_set_XLI;
+LPSOLVEAPIDEF solve_func                    *_solve;
+LPSOLVEAPIDEF str_add_column_func           *_str_add_column;
+LPSOLVEAPIDEF str_add_constraint_func       *_str_add_constraint;
+LPSOLVEAPIDEF str_add_lag_con_func          *_str_add_lag_con;
+LPSOLVEAPIDEF str_set_obj_fn_func           *_str_set_obj_fn;
+LPSOLVEAPIDEF str_set_rh_vec_func           *_str_set_rh_vec;
+LPSOLVEAPIDEF time_elapsed_func             *_time_elapsed;
+LPSOLVEAPIDEF unscale_func                  *_unscale;
+LPSOLVEAPIDEF write_lp_func                 *_write_lp;
+LPSOLVEAPIDEF write_LP_func                 *_write_LP;
+LPSOLVEAPIDEF write_mps_func                *_write_mps;
+LPSOLVEAPIDEF write_MPS_func                *_write_MPS;
+LPSOLVEAPIDEF write_freemps_func            *_write_freemps;
+LPSOLVEAPIDEF write_freeMPS_func            *_write_freeMPS;
+LPSOLVEAPIDEF write_XLI_func                *_write_XLI;
+LPSOLVEAPIDEF write_basis_func              *_write_basis;
+LPSOLVEAPIDEF write_params_func             *_write_params;
 
 #if defined LPSOLVEAPIFROMLPREC
 
@@ -320,6 +341,7 @@ static int init_lpsolve(lprec *lp)
   _get_rh = lp->get_rh;
   _get_rh_range = lp->get_rh_range;
   _get_row = lp->get_row;
+  _get_rowex = lp->get_rowex;
   _get_row_name = lp->get_row_name;
   _get_scalelimit = lp->get_scalelimit;
   _get_scaling = lp->get_scaling;
@@ -368,6 +390,7 @@ static int init_lpsolve(lprec *lp)
   _is_semicont = lp->is_semicont;
   _is_SOS_var = lp->is_SOS_var;
   _is_trace = lp->is_trace;
+  _is_use_names = lp->is_use_names;
   _lp_solve_version = lp->lp_solve_version;
   _make_lp = lp->make_lp;
   _print_constraints = lp->print_constraints;
@@ -384,13 +407,14 @@ static int init_lpsolve(lprec *lp)
   _put_bb_branchfunc = lp->put_bb_branchfunc;
   _put_logfunc = lp->put_logfunc;
   _put_msgfunc = lp->put_msgfunc;
-  _read_LPhandle = lp->read_LPhandle;
-  _read_MPShandle = lp->read_MPShandle;
+  _read_LP = lp->read_LP;
+  _read_MPS = lp->read_MPS;
   _read_XLI = lp->read_XLI;
   _read_params = lp->read_params;
   _read_basis = lp->read_basis;
   _reset_basis = lp->reset_basis;
   _reset_params = lp->reset_params;
+  _report = lp->report;
   _resize_lp = lp->resize_lp;
   _set_add_rowmode = lp->set_add_rowmode;
   _set_anti_degen = lp->set_anti_degen;
@@ -554,6 +578,7 @@ static int init_lpsolve(hlpsolve lpsolve)
   _get_bounds_tighter = (get_bounds_tighter_func *) AddressOf(lpsolve, "get_bounds_tighter");
   _get_break_at_value = (get_break_at_value_func *) AddressOf(lpsolve, "get_break_at_value");
   _get_col_name = (get_col_name_func *) AddressOf(lpsolve, "get_col_name");
+  _get_column = (get_column_func *) AddressOf(lpsolve, "get_column");
   _get_columnex = (get_columnex_func *) AddressOf(lpsolve, "get_columnex");
   _get_constr_type = (get_constr_type_func *) AddressOf(lpsolve, "get_constr_type");
   _get_constr_value = (get_constr_value_func *) AddressOf(lpsolve, "get_constr_value");
@@ -608,6 +633,7 @@ static int init_lpsolve(hlpsolve lpsolve)
   _get_rh = (get_rh_func *) AddressOf(lpsolve, "get_rh");
   _get_rh_range = (get_rh_range_func *) AddressOf(lpsolve, "get_rh_range");
   _get_row = (get_row_func *) AddressOf(lpsolve, "get_row");
+  _get_rowex = (get_rowex_func *) AddressOf(lpsolve, "get_rowex");
   _get_row_name = (get_row_name_func *) AddressOf(lpsolve, "get_row_name");
   _get_scalelimit = (get_scalelimit_func *) AddressOf(lpsolve, "get_scalelimit");
   _get_scaling = (get_scaling_func *) AddressOf(lpsolve, "get_scaling");
@@ -630,6 +656,7 @@ static int init_lpsolve(hlpsolve lpsolve)
   _get_variables = (get_variables_func *) AddressOf(lpsolve, "get_variables");
   _get_verbose = (get_verbose_func *) AddressOf(lpsolve, "get_verbose");
   _get_working_objective = (get_working_objective_func *) AddressOf(lpsolve, "get_working_objective");
+  _guess_basis = (guess_basis_func *) AddressOf(lpsolve, "guess_basis");
   _has_BFP = (has_BFP_func *) AddressOf(lpsolve, "has_BFP");
   _has_XLI = (has_XLI_func *) AddressOf(lpsolve, "has_XLI");
   _is_add_rowmode = (is_add_rowmode_func *) AddressOf(lpsolve, "is_add_rowmode");
@@ -656,6 +683,7 @@ static int init_lpsolve(hlpsolve lpsolve)
   _is_semicont = (is_semicont_func *) AddressOf(lpsolve, "is_semicont");
   _is_SOS_var = (is_SOS_var_func *) AddressOf(lpsolve, "is_SOS_var");
   _is_trace = (is_trace_func *) AddressOf(lpsolve, "is_trace");
+  _is_use_names = (is_use_names_func *) AddressOf(lpsolve, "is_use_names");
   _lp_solve_version = (lp_solve_version_func *) AddressOf(lpsolve, "lp_solve_version");
   _make_lp = (make_lp_func *) AddressOf(lpsolve, "make_lp");
   _print_constraints = (print_constraints_func *) AddressOf(lpsolve, "print_constraints");
@@ -672,13 +700,14 @@ static int init_lpsolve(hlpsolve lpsolve)
   _put_bb_branchfunc = (put_bb_branchfunc_func *) AddressOf(lpsolve, "put_bb_branchfunc");
   _put_logfunc = (put_logfunc_func *) AddressOf(lpsolve, "put_logfunc");
   _put_msgfunc = (put_msgfunc_func *) AddressOf(lpsolve, "put_msgfunc");
-  _read_LPhandle = (read_LPhandle_func *) AddressOf(lpsolve, "read_LPhandle");
-  _read_MPShandle = (read_MPShandle_func *) AddressOf(lpsolve, "read_MPShandle");
+  _read_LP = (read_LP_func *) AddressOf(lpsolve, "read_LP");
+  _read_MPS = (read_MPS_func *) AddressOf(lpsolve, "read_MPS");
   _read_XLI = (read_XLI_func *) AddressOf(lpsolve, "read_XLI");
   _read_params = (read_params_func *) AddressOf(lpsolve, "read_params");
   _read_basis = (read_basis_func *) AddressOf(lpsolve, "read_basis");
   _reset_basis = (reset_basis_func *) AddressOf(lpsolve, "reset_basis");
   _reset_params = (reset_params_func *) AddressOf(lpsolve, "reset_params");
+  _report = (reportfunc *) AddressOf(lpsolve, "report");
   _resize_lp = (resize_lp_func *) AddressOf(lpsolve, "resize_lp");
   _set_add_rowmode = (set_add_rowmode_func *) AddressOf(lpsolve, "set_add_rowmode");
   _set_anti_degen = (set_anti_degen_func *) AddressOf(lpsolve, "set_anti_degen");
@@ -800,6 +829,7 @@ static int init_lpsolve(hlpsolve lpsolve)
 #define get_bounds_tighter _get_bounds_tighter
 #define get_break_at_value _get_break_at_value
 #define get_col_name _get_col_name
+#define get_column _get_column
 #define get_columnex _get_columnex
 #define get_constr_type _get_constr_type
 #define get_constr_value _get_constr_value
@@ -854,6 +884,7 @@ static int init_lpsolve(hlpsolve lpsolve)
 #define get_rh _get_rh
 #define get_rh_range _get_rh_range
 #define get_row _get_row
+#define get_rowex _get_rowex
 #define get_row_name _get_row_name
 #define get_scalelimit _get_scalelimit
 #define get_scaling _get_scaling
@@ -876,6 +907,7 @@ static int init_lpsolve(hlpsolve lpsolve)
 #define get_variables _get_variables
 #define get_verbose _get_verbose
 #define get_working_objective _get_working_objective
+#define guess_basis _guess_basis
 #define has_BFP _has_BFP
 #define has_XLI _has_XLI
 #define is_add_rowmode _is_add_rowmode
@@ -902,6 +934,7 @@ static int init_lpsolve(hlpsolve lpsolve)
 #define is_semicont _is_semicont
 #define is_SOS_var _is_SOS_var
 #define is_trace _is_trace
+#define is_use_names _is_use_names
 #define lp_solve_version _lp_solve_version
 #define make_lp _make_lp
 #define print_constraints _print_constraints
@@ -918,13 +951,14 @@ static int init_lpsolve(hlpsolve lpsolve)
 #define put_bb_branchfunc _put_bb_branchfunc
 #define put_logfunc _put_logfunc
 #define put_msgfunc _put_msgfunc
-#define read_LPhandle _read_LPhandle
-#define read_MPShandle _read_MPShandle
+#define read_LP _read_LP
+#define read_MPS _read_MPS
 #define read_XLI _read_XLI
 #define read_params _read_params
 #define read_basis _read_basis
 #define reset_basis _reset_basis
 #define reset_params _reset_params
+#define report _report
 #define resize_lp _resize_lp
 #define set_add_rowmode _set_add_rowmode
 #define set_anti_degen _set_anti_degen

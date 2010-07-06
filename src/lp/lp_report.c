@@ -54,8 +54,8 @@ char * __VACALL explain(lprec *lp, char *format, ...)
 }
 void __VACALL report(lprec *lp, int level, char *format, ...)
 {
-  static char buff[DEF_STRBUFSIZE+1];
-  static va_list ap;
+  char buff[DEF_STRBUFSIZE+1];
+  va_list ap;
 
   if(lp == NULL) {
     va_start(ap, format);
@@ -164,7 +164,7 @@ void blockWriteLREAL(FILE *output, char *label, LREAL *vector, int first, int la
 {
   int i, k = 0;
 
-  fprintf(output, label);
+  fprintf(output, "%s", label);
   fprintf(output, "\n");
   for(i = first; i <= last; i++) {
     fprintf(output, " %18g", vector[i]);
@@ -193,7 +193,7 @@ void blockWriteAMAT(FILE *output, const char *label, lprec* lp, int first, int l
   if(last < 0)
     last = lp->rows;
 
-  fprintf(output, label);
+  fprintf(output, "%s", label);
   fprintf(output, "\n");
 
   if(first == 0) {
@@ -258,7 +258,7 @@ void blockWriteBMAT(FILE *output, const char *label, lprec* lp, int first, int l
   if(last < 0)
     last = lp->rows;
 
-  fprintf(output, label);
+  fprintf(output, "%s", label);
   fprintf(output, "\n");
 
   for(i = first; i <= last; i++) {
@@ -356,8 +356,10 @@ void REPORT_objective(lprec *lp)
 {
   if(lp->outstream == NULL)
     return;
-  fprintf(lp->outstream, "\nValue of objective function: %g\n",
-    (double)lp->best_solution[0]);
+  if(fabs(lp->best_solution[0]) < 1e-5)
+    fprintf(lp->outstream, "\nValue of objective function: %g\n", (double)lp->best_solution[0]);
+  else
+    fprintf(lp->outstream, "\nValue of objective function: %.8f\n", (double)lp->best_solution[0]);
   fflush(lp->outstream);
 }
 
@@ -512,11 +514,6 @@ void REPORT_lp(lprec *lp)
 
   if(lp->outstream == NULL)
     return;
-
-  if(lp->matA->is_roworder) {
-    report(lp, IMPORTANT, "REPORT_lp: Cannot print lp while in row entry mode.\n");
-    return;
-  }
 
   fprintf(lp->outstream, "Model name: %s\n", get_lp_name(lp));
   fprintf(lp->outstream, "          ");

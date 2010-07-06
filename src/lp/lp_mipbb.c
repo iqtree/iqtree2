@@ -368,7 +368,7 @@ STATIC MYBOOL initbranches_BB(BBrec *BB)
     /* Otherwise check if we should do automatic branching */
     else if(get_var_branch(lp, k) == BRANCH_AUTOMATIC) {
       new_bound = modf(BB->lastsolution/get_pseudorange(lp->bb_PseudoCost, k, BB->vartype), &temp);
-      if(_isnan(new_bound))
+      if(isnan(new_bound))
         new_bound = 0;
       else if(new_bound < 0)
         new_bound += 1.0;
@@ -615,7 +615,7 @@ Finish:
         BB->isfloor = !BB->isfloor;
       /* Header initialization */
       BB->isfloor = !BB->isfloor;
-      while(!OKstatus && !lp->bb_break && (BB->nodesleft > 0))
+      while(!OKstatus && /* !userabort(lp, -1) */ lp->spx_status != TIMEOUT && !lp->bb_break && (BB->nodesleft > 0))
         OKstatus = nextbranch_BB( BB );
     }
 
@@ -920,12 +920,18 @@ STATIC int solve_LP(lprec *lp, BBrec *BB)
 
     else if((lp->bb_totalnodes == 0) && (MIP_count(lp) > 0)) {
       if(lp->lag_status != RUNNING) {
-       report(lp, NORMAL, "\nRelaxed solution  " RESULTVALUEMASK " after %10.0f iter is B&B base.\n",
-                          lp->solution[0], (double) lp->total_iter);
+        report(lp, NORMAL, "\nRelaxed solution  " RESULTVALUEMASK " after %10.0f iter is B&B base.\n",
+                           lp->solution[0], (double) lp->total_iter);
         report(lp, NORMAL, " \n");
       }
-      if((lp->usermessage != NULL) && (lp->msgmask & MSG_LPOPTIMAL))
+      if((lp->usermessage != NULL) && (lp->msgmask & MSG_LPOPTIMAL)) {
+        REAL *best_solution = lp->best_solution;
+
+        /* transfer_solution(lp, TRUE); */
+        lp->best_solution = lp->solution;
         lp->usermessage(lp, lp->msghandle, MSG_LPOPTIMAL);
+        lp->best_solution = best_solution;
+      }
       set_var_priority(lp);
     }
 
@@ -1035,7 +1041,7 @@ STATIC int rcfbound_BB(BBrec *BB, int varno, MYBOOL isINT, REAL *newbound, MYBOO
 
 STATIC MYBOOL findnode_BB(BBrec *BB, int *varno, int *vartype, int *varcus)
 {
-  int    countsossc, countnint, k;
+  int    countsossc, countnint, k, reasonmsg = MSG_NONE;
   REAL   varsol;
   MYBOOL is_better = FALSE, is_equal = FALSE, is_feasible = TRUE;
   lprec  *lp = BB->lp;
@@ -1130,7 +1136,7 @@ STATIC MYBOOL findnode_BB(BBrec *BB, int *varno, int *vartype, int *varcus)
     /* Check if we have reached the depth limit for any individual variable
       (protects against infinite recursions of mainly integer variables) */
     k = *varno-lp->rows;
-    if((*varno > 0) && (lp->bb_varactive[k] >= abs(DEF_BB_LIMITLEVEL))) {
+    if((*varno > 0) && (lp->bb_limitlevel != 0) && (lp->bb_varactive[k] >= abs(lp->bb_limitlevel) /* abs(DEF_BB_LIMITLEVEL) */)) {
       /* if(!is_action(lp->nomessage, NOMSG_BBLIMIT)) {*/
 /*
         report(lp, IMPORTANT, "findnode_BB: Reached B&B depth limit %d for variable %d; will not dive further.\n\n",
@@ -1166,8 +1172,7 @@ STATIC MYBOOL findnode_BB(BBrec *BB, int *varno, int *vartype, int *varcus)
         if((lp->solutionlimit <= 0) || (lp->solutioncount < lp->solutionlimit)) {
           lp->solutioncount++;
           SETMIN(lp->bb_solutionlevel, lp->bb_level);
-          if((lp->usermessage != NULL) && (lp->msgmask & MSG_MILPEQUAL))
-            lp->usermessage(lp, lp->msghandle, MSG_MILPEQUAL);
+          reasonmsg = MSG_MILPEQUAL;
         }
       }
 
@@ -1191,11 +1196,11 @@ STATIC MYBOOL findnode_BB(BBrec *BB, int *varno, int *vartype, int *varcus)
                  lp->solution[0], (double) lp->total_iter, (double) lp->bb_totalnodes,
                  100.0*fabs(my_reldiff(lp->solution[0], lp->bb_limitOF)));
         }
-        if((lp->usermessage != NULL) && (MIP_count(lp) > 0)) {
-          if((lp->msgmask & MSG_MILPFEASIBLE) && (lp->bb_improvements == 0))
-            lp->usermessage(lp, lp->msghandle, MSG_MILPFEASIBLE);
-          else if((lp->msgmask & MSG_MILPBETTER) && (lp->msgmask & MSG_MILPBETTER))
-            lp->usermessage(lp, lp->msghandle, MSG_MILPBETTER);
+        if(MIP_count(lp) > 0) {
+          if(lp->bb_improvements == 0)
+            reasonmsg = MSG_MILPFEASIBLE;
+          else
+            reasonmsg = MSG_MILPBETTER;
         }
 
         lp->bb_status = FEASFOUND;
@@ -1237,6 +1242,9 @@ STATIC MYBOOL findnode_BB(BBrec *BB, int *varno, int *vartype, int *varcus)
          ) {
       }
     }
+    if((reasonmsg != MSG_NONE) && (lp->msgmask & reasonmsg) && (lp->usermessage != NULL))
+      lp->usermessage(lp, lp->msghandle, reasonmsg);
+
     if(lp->print_sol != FALSE) {
       print_objective(lp);
       print_solution(lp, 1);
@@ -1418,7 +1426,7 @@ STATIC int run_BB(lprec *lp)
 
   /* Check if we should adjust status */
   if(lp->solutioncount > prevsolutions) {
-    if((status == PROCBREAK) || (status == USERABORT) || (status == TIMEOUT))
+    if((status == PROCBREAK) || (status == USERABORT) || (status == TIMEOUT) || userabort(lp, -1))
       status = SUBOPTIMAL;
     else
       status = OPTIMAL;

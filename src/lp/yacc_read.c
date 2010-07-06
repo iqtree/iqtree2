@@ -40,29 +40,10 @@
 # include "lp_fortify.h"
 #endif
 
-
 #define tol 1.0e-10
 #define coldatastep 100
 
 #define HASHSIZE       10007  /* A prime number! */
-
-static short      Maximise;
-static short      Ignore_int_decl;
-static short      int_decl;
-static short      Ignore_sec_decl;
-static short      sos_decl;
-static short      Ignore_free_decl;
-static int        Rows;
-static int        Columns;
-static int        Non_zeros;
-static short      *relat;
-static int        Verbose;
-static hashtable  *Hash_tab;
-static hashtable  *Hash_constraints;
-static jmp_buf    jump_buf;
-static int        *lineno;
-static int        Lin_term_count;
-static char       *title;
 
 struct structSOSvars {
   char                 *name;
@@ -71,14 +52,14 @@ struct structSOSvars {
   struct structSOSvars *next;
 };
 
-static struct structSOS {
+struct structSOS {
   char                 *name;
   short                type;
   int                  Nvars;
   int                  weight;
   struct structSOSvars *SOSvars, *LastSOSvars;
   struct structSOS     *next;
-} *FirstSOS, *LastSOS;
+};
 
 struct SOSrow {
   int  col;
@@ -92,16 +73,7 @@ struct SOSrowdata {
   struct SOSrow *SOSrow;
 };
 
-static struct _tmp_store_struct
-{
-  char    *name;
-  int     row;
-  REAL    value;
-  REAL    rhs_value;
-  short   relat;
-} tmp_store;
-
-static struct rside /* contains relational operator and rhs value */
+struct rside /* contains relational operator and rhs value */
 {
   int           row;
   REAL          value;
@@ -109,9 +81,9 @@ static struct rside /* contains relational operator and rhs value */
   struct rside  *next;
   short         relat;
   short         range_relat;
-  char		negate;
+  char          negate;
   short         SOStype;
-} *First_rside, *rs;
+};
 
 struct column
 {
@@ -121,7 +93,7 @@ struct column
   struct  column *prev;
 };
 
-static struct structcoldata {
+struct structcoldata {
   int               must_be_int;
   int               must_be_sec;
   int               must_be_free;
@@ -129,175 +101,177 @@ static struct structcoldata {
   REAL              lowbo;
   struct  column   *firstcol;
   struct  column   *col;
-} *coldata;
+};
 
-static void error(int verbose, char *string)
+static void error(parse_parm *pp, int verbose, char *string)
 {
-  if(Verbose >= verbose)
-    report(NULL, verbose, "%s on line %d\n", string, *lineno);
+  if(pp == NULL)
+    report(NULL, CRITICAL, string);
+  else if(pp->Verbose >= verbose)
+    report(NULL, verbose, "%s on line %d\n", string, pp->lineno);
 }
 
 /*
  * error handling routine for yyparse()
  */
-void read_error(char *string)
+void read_error(parse_parm *pp, void *scanner, char *string)
 {
-  error(CRITICAL, string);
+  error(pp, CRITICAL, string);
 }
 
 /* called when lex gets a fatal error */
-void lex_fatal_error(char *msg)
+void lex_fatal_error(parse_parm *pp, void *scanner, char *msg)
 {
-  read_error(msg);
-  longjmp(jump_buf, 1);
+  read_error(pp, scanner, msg);
+  longjmp(pp->jump_buf, 1);
 }
 
-void add_row()
+void add_row(parse_parm *pp)
 {
-  Rows++;
-  rs = NULL;
-  Lin_term_count = 0;
+  pp->Rows++;
+  pp->rs = NULL;
+  pp->Lin_term_count = 0;
 }
 
-void add_sos_row(short SOStype)
+void add_sos_row(parse_parm *pp, short SOStype)
 {
-  if (rs != NULL)
-    rs->SOStype = SOStype;
-  Rows++;
-  rs = NULL;
-  Lin_term_count = 0;
+  if (pp->rs != NULL)
+    pp->rs->SOStype = SOStype;
+  pp->Rows++;
+  pp->rs = NULL;
+  pp->Lin_term_count = 0;
 }
 
-void check_int_sec_sos_free_decl(int within_int_decl, int within_sec_decl, int sos_decl0, int within_free_decl)
+void check_int_sec_sos_free_decl(parse_parm *pp, int within_int_decl, int within_sec_decl, int sos_decl0, int within_free_decl)
 {
-  Ignore_int_decl = TRUE;
-  Ignore_sec_decl = TRUE;
-  Ignore_free_decl = TRUE;
-  sos_decl = 0;
+  pp->Ignore_int_decl = TRUE;
+  pp->Ignore_sec_decl = TRUE;
+  pp->Ignore_free_decl = TRUE;
+  pp->sos_decl = 0;
   if(within_int_decl) {
-    Ignore_int_decl = FALSE;
-    int_decl = (short) within_int_decl;
+    pp->Ignore_int_decl = FALSE;
+    pp->int_decl = (char) within_int_decl;
     if(within_sec_decl)
-      Ignore_sec_decl = FALSE;
+      pp->Ignore_sec_decl = FALSE;
   }
   else if(within_sec_decl) {
-    Ignore_sec_decl = FALSE;
+    pp->Ignore_sec_decl = FALSE;
   }
   else if(sos_decl0) {
-    sos_decl = (short) sos_decl0;
+    pp->sos_decl = (char) sos_decl0;
   }
   else if(within_free_decl) {
-    Ignore_free_decl = FALSE;
+    pp->Ignore_free_decl = FALSE;
   }
 }
 
-static void add_int_var(char *name, short int_decl)
+static void add_int_var(parse_parm *pp, char *name, short int_decl)
 {
   hashelem *hp;
 
-  if((hp = findhash(name, Hash_tab)) == NULL) {
+  if((hp = findhash(name, pp->Hash_tab)) == NULL) {
     char buf[256];
 
     sprintf(buf, "Unknown variable %s declared integer, ignored", name);
-    error(NORMAL, buf);
+    error(pp, NORMAL, buf);
   }
-  else if(coldata[hp->index].must_be_int) {
+  else if(pp->coldata[hp->index].must_be_int) {
     char buf[256];
 
     sprintf(buf, "Variable %s declared integer more than once, ignored", name);
-    error(NORMAL, buf);
+    error(pp, NORMAL, buf);
   }
   else {
-    coldata[hp->index].must_be_int = TRUE;
+    pp->coldata[hp->index].must_be_int = TRUE;
     if(int_decl == 2) {
-      if(coldata[hp->index].lowbo != -DEF_INFINITE * (REAL) 10.0) {
+      if(pp->coldata[hp->index].lowbo != -DEF_INFINITE * (REAL) 10.0) {
         char buf[256];
 
         sprintf(buf, "Variable %s: lower bound on variable redefined", name);
-        error(NORMAL, buf);
+        error(pp, NORMAL, buf);
       }
-      coldata[hp->index].lowbo = 0;
-      if(coldata[hp->index].upbo < DEF_INFINITE) {
+      pp->coldata[hp->index].lowbo = 0;
+      if(pp->coldata[hp->index].upbo < DEF_INFINITE) {
         char buf[256];
 
         sprintf(buf, "Variable %s: upper bound on variable redefined", name);
-        error(NORMAL, buf);
+        error(pp, NORMAL, buf);
       }
-      coldata[hp->index].upbo = 1;
+      pp->coldata[hp->index].upbo = 1;
     }
     else if(int_decl == 3) {
-      if(coldata[hp->index].upbo == DEF_INFINITE)
-        coldata[hp->index].upbo = 1.0;
+      if(pp->coldata[hp->index].upbo == DEF_INFINITE * (REAL) 10.0)
+        pp->coldata[hp->index].upbo = 1.0;
     }
   }
 }
 
-static void add_sec_var(char *name)
+static void add_sec_var(parse_parm *pp, char *name)
 {
   hashelem *hp;
 
-  if((hp = findhash(name, Hash_tab)) == NULL) {
+  if((hp = findhash(name, pp->Hash_tab)) == NULL) {
     char buf[256];
 
     sprintf(buf, "Unknown variable %s declared semi-continuous, ignored", name);
-    error(NORMAL, buf);
+    error(pp, NORMAL, buf);
   }
-  else if(coldata[hp->index].must_be_sec) {
+  else if(pp->coldata[hp->index].must_be_sec) {
     char buf[256];
 
     sprintf(buf, "Variable %s declared semi-continuous more than once, ignored", name);
-    error(NORMAL, buf);
+    error(pp, NORMAL, buf);
   }
   else
-    coldata[hp->index].must_be_sec = TRUE;
+    pp->coldata[hp->index].must_be_sec = TRUE;
 }
 
-int set_sec_threshold(char *name, REAL threshold)
+int set_sec_threshold(parse_parm *pp, char *name, REAL threshold)
 {
   hashelem *hp;
 
-  if((hp = findhash(name, Hash_tab)) == NULL) {
+  if((hp = findhash(name, pp->Hash_tab)) == NULL) {
     char buf[256];
 
     sprintf(buf, "Unknown variable %s declared semi-continuous, ignored", name);
-    error(NORMAL, buf);
+    error(pp, NORMAL, buf);
     return(FALSE);
   }
 
-  if ((coldata[hp->index].lowbo > 0.0) && (threshold > 0.0)) {
+  if ((pp->coldata[hp->index].lowbo > 0.0) && (threshold > 0.0)) {
     char buf[256];
 
-    coldata[hp->index].must_be_sec = FALSE;
-    sprintf(buf, "Variable %s declared semi-continuous, but it has a non-negative lower bound (%f), ignored", name, coldata[hp->index].lowbo);
-    error(NORMAL, buf);
+    pp->coldata[hp->index].must_be_sec = FALSE;
+    sprintf(buf, "Variable %s declared semi-continuous, but it has a non-negative lower bound (%f), ignored", name, pp->coldata[hp->index].lowbo);
+    error(pp, NORMAL, buf);
   }
-  if (threshold > coldata[hp->index].lowbo)
-    coldata[hp->index].lowbo = threshold;
+  if (threshold > pp->coldata[hp->index].lowbo)
+    pp->coldata[hp->index].lowbo = threshold;
 
-  return(coldata[hp->index].must_be_sec);
+  return(pp->coldata[hp->index].must_be_sec);
 }
 
-static void add_free_var(char *name)
+static void add_free_var(parse_parm *pp, char *name)
 {
   hashelem *hp;
 
-  if((hp = findhash(name, Hash_tab)) == NULL) {
+  if((hp = findhash(name, pp->Hash_tab)) == NULL) {
     char buf[256];
 
     sprintf(buf, "Unknown variable %s declared free, ignored", name);
-    error(NORMAL, buf);
+    error(pp, NORMAL, buf);
   }
-  else if(coldata[hp->index].must_be_free) {
+  else if(pp->coldata[hp->index].must_be_free) {
     char buf[256];
 
     sprintf(buf, "Variable %s declared free more than once, ignored", name);
-    error(NORMAL, buf);
+    error(pp, NORMAL, buf);
   }
   else
-    coldata[hp->index].must_be_free = TRUE;
+    pp->coldata[hp->index].must_be_free = TRUE;
 }
 
-static int add_sos_name(char *name)
+static int add_sos_name(parse_parm *pp, char *name)
 {
   struct structSOS *SOS;
 
@@ -312,16 +286,16 @@ static int add_sos_name(char *name)
   strcpy(SOS->name, name);
   SOS->type = 0;
 
-  if(FirstSOS == NULL)
-    FirstSOS = SOS;
+  if(pp->FirstSOS == NULL)
+    pp->FirstSOS = SOS;
   else
-    LastSOS->next = SOS;
-  LastSOS = SOS;
+    pp->LastSOS->next = SOS;
+  pp->LastSOS = SOS;
 
   return(TRUE);
 }
 
-static int add_sos_var(char *name)
+static int add_sos_var(parse_parm *pp, char *name)
 {
   struct structSOSvars *SOSvar;
 
@@ -336,105 +310,103 @@ static int add_sos_var(char *name)
     }
     strcpy(SOSvar->name, name);
 
-    if(LastSOS->SOSvars == NULL)
-      LastSOS->SOSvars = SOSvar;
+    if(pp->LastSOS->SOSvars == NULL)
+      pp->LastSOS->SOSvars = SOSvar;
     else
-      LastSOS->LastSOSvars->next = SOSvar;
-    LastSOS->LastSOSvars = SOSvar;
-    LastSOS->Nvars = LastSOS->Nvars + 1;
+      pp->LastSOS->LastSOSvars->next = SOSvar;
+    pp->LastSOS->LastSOSvars = SOSvar;
+    pp->LastSOS->Nvars = pp->LastSOS->Nvars + 1;
   }
-  LastSOS->LastSOSvars->weight = 0;
+  pp->LastSOS->LastSOSvars->weight = 0;
 
   return(TRUE);
 }
 
-void storevarandweight(char *name)
+void storevarandweight(parse_parm *pp, char *name)
 {
-  if(!Ignore_int_decl) {
-    add_int_var(name, int_decl);
-    if(!Ignore_sec_decl)
-      add_sec_var(name);
+  if(!pp->Ignore_int_decl) {
+    add_int_var(pp, name, pp->int_decl);
+    if(!pp->Ignore_sec_decl)
+      add_sec_var(pp, name);
   }
-  else if(!Ignore_sec_decl)
-    add_sec_var(name);
-  else if(sos_decl==1)
-    add_sos_name(name);
-  else if(sos_decl==2)
-    add_sos_var(name);
-  else if(!Ignore_free_decl)
-    add_free_var(name);
+  else if(!pp->Ignore_sec_decl)
+    add_sec_var(pp, name);
+  else if(pp->sos_decl==1)
+    add_sos_name(pp, name);
+  else if(pp->sos_decl==2)
+    add_sos_var(pp, name);
+  else if(!pp->Ignore_free_decl)
+    add_free_var(pp, name);
 }
 
-int set_sos_type(int SOStype)
+int set_sos_type(parse_parm *pp, int SOStype)
 {
-  if(LastSOS != NULL)
-    LastSOS->type = (short) SOStype;
+  if(pp->LastSOS != NULL)
+    pp->LastSOS->type = (short) SOStype;
   return(TRUE);
 }
 
-int set_sos_weight(double weight, int sos_decl)
+int set_sos_weight(parse_parm *pp, double weight, int sos_decl)
 {
-  if(LastSOS != NULL)
+  if(pp->LastSOS != NULL) {
     if(sos_decl==1)
-      LastSOS->weight = (int) (weight+.1);
+      pp->LastSOS->weight = (int) (weight+.1);
     else
-      LastSOS->LastSOSvars->weight = weight;
+      pp->LastSOS->LastSOSvars->weight = weight;
+  }
   return(TRUE);
 }
 
-void set_obj_dir(int maximise)
+static int inccoldata(parse_parm *pp)
 {
-  Maximise = (short) maximise;
-}
+  long Columns = pp->Columns;
 
-static int inccoldata(void)
-{
   if(Columns == 0)
-    CALLOC(coldata, coldatastep, struct structcoldata);
+    CALLOC(pp->coldata, coldatastep, struct structcoldata);
   else if((Columns%coldatastep) == 0)
-    REALLOC(coldata, Columns + coldatastep, struct structcoldata);
+    REALLOC(pp->coldata, Columns + coldatastep, struct structcoldata);
 
-  if(coldata != NULL) {
-    coldata[Columns].upbo = (REAL) DEF_INFINITE;
-    coldata[Columns].lowbo = (REAL) -DEF_INFINITE * (REAL) 10.0; /* temporary. If still this value then 0 will be taken */
-    coldata[Columns].col = NULL;
-    coldata[Columns].firstcol = NULL;
-    coldata[Columns].must_be_int = FALSE;
-    coldata[Columns].must_be_sec = FALSE;
-    coldata[Columns].must_be_free = FALSE;
+  if(pp->coldata != NULL) {
+    pp->coldata[Columns].upbo = (REAL) DEF_INFINITE * (REAL) 10.0;
+    pp->coldata[Columns].lowbo = (REAL) -DEF_INFINITE * (REAL) 10.0; /* temporary. If still this value then 0 will be taken */
+    pp->coldata[Columns].col = NULL;
+    pp->coldata[Columns].firstcol = NULL;
+    pp->coldata[Columns].must_be_int = FALSE;
+    pp->coldata[Columns].must_be_sec = FALSE;
+    pp->coldata[Columns].must_be_free = FALSE;
   }
 
-  return(coldata != NULL);
+  return(pp->coldata != NULL);
 }
 
 /*
  * initialisation of hashstruct and globals.
  */
-static int init_read(int verbose)
+static int init_read(parse_parm *pp, int verbose)
 {
   int ok = FALSE;
 
-  Verbose = verbose;
-  set_obj_dir(TRUE);
-  Rows = 0;
-  Non_zeros = 0;
-  Columns = 0;
-  FirstSOS = LastSOS = NULL;
-  Lin_term_count = 0;
-  if (CALLOC(First_rside, 1, struct rside) != NULL) {
-    rs = First_rside;
-    rs->value = rs->range_value = 0;
+  pp->Verbose = verbose;
+  set_obj_dir(pp, TRUE);
+  pp->Rows = 0;
+  pp->Non_zeros = 0;
+  pp->Columns = 0;
+  pp->FirstSOS = pp->LastSOS = NULL;
+  pp->Lin_term_count = 0;
+  if (CALLOC(pp->First_rside, 1, struct rside) != NULL) {
+    pp->rs = pp->First_rside;
+    pp->rs->value = pp->rs->range_value = 0;
     /* first row (nr 0) is always the objective function */
-    rs->relat = OF;
-    rs->range_relat = -1;
-    rs->SOStype = 0;
-    Hash_tab = NULL;
-    Hash_constraints = NULL;
-    if (((Hash_tab = create_hash_table(HASHSIZE, 0)) == NULL) ||
-        ((Hash_constraints = create_hash_table(HASHSIZE, 0)) == NULL)){
-      FREE(First_rside);
-      FREE(Hash_tab);
-      FREE(Hash_constraints);
+    pp->rs->relat = OF;
+    pp->rs->range_relat = -1;
+    pp->rs->SOStype = 0;
+    pp->Hash_tab = NULL;
+    pp->Hash_constraints = NULL;
+    if (((pp->Hash_tab = create_hash_table(HASHSIZE, 0)) == NULL) ||
+        ((pp->Hash_constraints = create_hash_table(HASHSIZE, 0)) == NULL)){
+      FREE(pp->First_rside);
+      FREE(pp->Hash_tab);
+      FREE(pp->Hash_constraints);
     }
     else
       ok = TRUE;
@@ -445,13 +417,13 @@ static int init_read(int verbose)
 /*
  * clears the tmp_store variable after all information has been copied
  */
-void null_tmp_store(int init_Lin_term_count)
+void null_tmp_store(parse_parm *pp, int init_Lin_term_count)
 {
-  tmp_store.value = 0;
-  tmp_store.rhs_value = 0;
-  FREE(tmp_store.name);
+  pp->tmp_store.value = 0;
+  pp->tmp_store.rhs_value = 0;
+  FREE(pp->tmp_store.name);
   if(init_Lin_term_count)
-    Lin_term_count = 0;
+    pp->Lin_term_count = 0;
 }
 
 /*
@@ -461,12 +433,12 @@ void null_tmp_store(int init_Lin_term_count)
  *            A(row, variable).
  * Sign     : (global)  determines the sign of value.
  * store()  : stores value in matrix
- *	      A(row, variable). If A(row, variable) already contains data,
- *	      value is added to the existing value.
+ *            A(row, variable). If A(row, variable) already contains data,
+ *            value is added to the existing value.
  */
-static int store(char *variable,
-		  int row,
-		  REAL value)
+static int store(parse_parm *pp, char *variable,
+                 int row,
+                 REAL value)
 {
   hashelem *h_tab_p;
   struct column *col_p;
@@ -475,78 +447,78 @@ static int store(char *variable,
     char buf[256];
 
     sprintf(buf, "(store) Warning, variable %s has an effective coefficient of 0, Ignored", variable);
-    error(NORMAL, buf);
+    error(pp, NORMAL, buf);
     /* return(TRUE); */
   }
 
-  if((h_tab_p = findhash(variable, Hash_tab)) == NULL) {
-    if (((h_tab_p = puthash(variable, Columns, NULL, Hash_tab)) == NULL)
+  if((h_tab_p = findhash(variable, pp->Hash_tab)) == NULL) {
+    if (((h_tab_p = puthash(variable, pp->Columns, NULL, pp->Hash_tab)) == NULL)
        ) return(FALSE);
-    inccoldata();
-    Columns++; /* counter for calloc of final array */
+    inccoldata(pp);
+    pp->Columns++; /* counter for calloc of final array */
     if(value) {
       if (CALLOC(col_p, 1, struct column) == NULL)
         return(FALSE);
-      Non_zeros++; /* for calloc of final arrays */
+      pp->Non_zeros++; /* for calloc of final arrays */
       col_p->row = row;
       col_p->value = value;
-      coldata[h_tab_p->index].firstcol = coldata[h_tab_p->index].col = col_p;
+      pp->coldata[h_tab_p->index].firstcol = pp->coldata[h_tab_p->index].col = col_p;
     }
   }
-  else if((coldata[h_tab_p->index].col == NULL) || (coldata[h_tab_p->index].col->row != row)) {
+  else if((pp->coldata[h_tab_p->index].col == NULL) || (pp->coldata[h_tab_p->index].col->row != row)) {
     if(value) {
       if (CALLOC(col_p, 1, struct column) == NULL)
         return(FALSE);
-      Non_zeros++; /* for calloc of final arrays */
-      if(coldata[h_tab_p->index].col != NULL)
-        coldata[h_tab_p->index].col->prev = col_p;
+      pp->Non_zeros++; /* for calloc of final arrays */
+      if(pp->coldata[h_tab_p->index].col != NULL)
+        pp->coldata[h_tab_p->index].col->prev = col_p;
       else
-        coldata[h_tab_p->index].firstcol = col_p;
+        pp->coldata[h_tab_p->index].firstcol = col_p;
       col_p->value = value;
       col_p->row = row;
-      col_p->next = coldata[h_tab_p->index].col;
-      coldata[h_tab_p->index].col = col_p;
+      col_p->next = pp->coldata[h_tab_p->index].col;
+      pp->coldata[h_tab_p->index].col = col_p;
     }
   }
   else if(value) {
-    coldata[h_tab_p->index].col->value += value;
-    if(fabs(coldata[h_tab_p->index].col->value) < tol) /* eliminitate rounding errors */
-      coldata[h_tab_p->index].col->value = 0;
+    pp->coldata[h_tab_p->index].col->value += value;
+    if(fabs(pp->coldata[h_tab_p->index].col->value) < tol) /* eliminitate rounding errors */
+      pp->coldata[h_tab_p->index].col->value = 0;
   }
   return(TRUE);
 } /* store */
 
-static int storefirst(void)
+static int storefirst(parse_parm *pp)
 {
     struct rside *rp;
 
-    if ((rs != NULL) && (rs->row == tmp_store.row))
+    if ((pp->rs != NULL) && (pp->rs->row == pp->tmp_store.row))
       return(TRUE);
 
     /* make space for the rhs information */
     if (CALLOC(rp, 1, struct rside) == NULL)
       return(FALSE);
-    rp->next = First_rside;
-    First_rside = rs = rp;
-    rs->row = /* row */ tmp_store.row;
-    rs->value = tmp_store.rhs_value;
-    rs->relat = tmp_store.relat;
-    rs->range_relat = -1;
-    rs->SOStype = 0;
+    rp->next = pp->First_rside;
+    pp->First_rside = pp->rs = rp;
+    pp->rs->row = /* row */ pp->tmp_store.row;
+    pp->rs->value = pp->tmp_store.rhs_value;
+    pp->rs->relat = pp->tmp_store.relat;
+    pp->rs->range_relat = -1;
+    pp->rs->SOStype = 0;
 
-    if(tmp_store.name != NULL) {
-      if(tmp_store.value != 0) {
-	if (!store(tmp_store.name, tmp_store.row, tmp_store.value))
-	  return(FALSE);
+    if(pp->tmp_store.name != NULL) {
+      if(pp->tmp_store.value != 0) {
+        if (!store(pp, pp->tmp_store.name, pp->tmp_store.row, pp->tmp_store.value))
+          return(FALSE);
       }
       else {
-	char buf[256];
+        char buf[256];
 
-	sprintf(buf, "Warning, variable %s has an effective coefficient of 0, ignored", tmp_store.name);
-	error(NORMAL, buf);
+        sprintf(buf, "Warning, variable %s has an effective coefficient of 0, ignored", pp->tmp_store.name);
+        error(pp, NORMAL, buf);
       }
     }
-    null_tmp_store(FALSE);
+    null_tmp_store(pp, FALSE);
     return(TRUE);
 }
 
@@ -555,11 +527,11 @@ static int storefirst(void)
  * Also checks if it constraint was a bound and if so stores it in the
  * boundslist
  */
-int store_re_op(char *yytext, int HadConstraint, int HadVar, int Had_lineair_sum)
+int store_re_op(parse_parm *pp, char OP, int HadConstraint, int HadVar, int Had_lineair_sum)
 {
   short tmp_relat;
 
-  switch(yytext[0]) {
+  switch(OP) {
 
   case '=':
     tmp_relat = EQ;
@@ -574,39 +546,39 @@ int store_re_op(char *yytext, int HadConstraint, int HadVar, int Had_lineair_sum
     break;
 
   case 0:
-    if(rs != NULL)
-      tmp_relat = rs->relat;
+    if(pp->rs != NULL)
+      tmp_relat = pp->rs->relat;
     else
-      tmp_relat = tmp_store.relat;
+      tmp_relat = pp->tmp_store.relat;
     break;
 
   default:
     {
       char buf[256];
 
-      sprintf(buf, "Error: unknown relational operator %s", yytext);
-      error(CRITICAL, buf);
+      sprintf(buf, "Error: unknown relational operator %c", OP);
+      error(pp, CRITICAL, buf);
     }
     return(FALSE);
     break;
   }
 
-  if(/* Lin_term_count > 1 */ HadConstraint && HadVar) {/* it is not a bound */
-    if(Lin_term_count <= 1)
-      if(!storefirst())
+  if(/* pp->Lin_term_count > 1 */ HadConstraint && HadVar) {/* it is not a bound */
+    if(pp->Lin_term_count <= 1)
+      if(!storefirst(pp))
         return(FALSE);
-    rs->relat = tmp_relat;
+    pp->rs->relat = tmp_relat;
   }
-  else if(/* Lin_term_count == 0 */ HadConstraint && !Had_lineair_sum /* HadVar */ /* && (rs != NULL) */) { /* it is a range */
-    if(Lin_term_count == 1)
-      if(!storefirst())
+  else if(/* pp->Lin_term_count == 0 */ HadConstraint && !Had_lineair_sum /* HadVar */ /* && (pp->rs != NULL) */) { /* it is a range */
+    if(pp->Lin_term_count == 1)
+      if(!storefirst(pp))
         return(FALSE);
-    if(rs == NULL) { /* range before row, already reported */
-      error(CRITICAL, "Error: range for undefined row");
+    if(pp->rs == NULL) { /* range before row, already reported */
+      error(pp, CRITICAL, "Error: range for undefined row");
       return(FALSE);
     }
 
-    if(rs->negate)
+    if(pp->rs->negate)
       switch (tmp_relat) {
       case LE:
         tmp_relat = GE;
@@ -616,27 +588,27 @@ int store_re_op(char *yytext, int HadConstraint, int HadVar, int Had_lineair_sum
         break;
       }
 
-    if(rs->range_relat != -1) {
-      error(CRITICAL, "Error: There was already a range for this row");
+    if(pp->rs->range_relat != -1) {
+      error(pp, CRITICAL, "Error: There was already a range for this row");
       return(FALSE);
     }
-    else if(tmp_relat == rs->relat) {
-      error(CRITICAL, "Error: relational operator for range is the same as relation operator for equation");
+    else if(tmp_relat == pp->rs->relat) {
+      error(pp, CRITICAL, "Error: relational operator for range is the same as relation operator for equation");
       return(FALSE);
     }
     else
-      rs->range_relat = tmp_relat;
+      pp->rs->range_relat = tmp_relat;
   }
   else /* could be a bound */
-    tmp_store.relat = tmp_relat;
+    pp->tmp_store.relat = tmp_relat;
 
   return(TRUE);
 } /* store_re_op */
 
-int negate_constraint()
+int negate_constraint(parse_parm *pp)
 {
-    if(rs != NULL)
-      rs->negate = TRUE;
+    if(pp->rs != NULL)
+      pp->rs->negate = TRUE;
 
     return(TRUE);
 }
@@ -645,45 +617,45 @@ int negate_constraint()
  * store RHS value in the rightside structure
  * if type = true then
  */
-int rhs_store(REAL value, int HadConstraint, int HadVar, int Had_lineair_sum)
+int rhs_store(parse_parm *pp, REAL value, int HadConstraint, int HadVar, int Had_lineair_sum)
 {
-  if(/* Lin_term_count > 1 */ (HadConstraint && HadVar) || (Rows == 0)){ /* not a bound */
-    if (Rows == 0)
+  if(/* pp->Lin_term_count > 1 */ (HadConstraint && HadVar) || (pp->Rows == 0)){ /* not a bound */
+    if (pp->Rows == 0)
       value = -value;
-    /* if(Lin_term_count < 2) */
-    if(rs == NULL)
-      tmp_store.rhs_value += value;
+    /* if(pp->Lin_term_count < 2) */
+    if(pp->rs == NULL)
+      pp->tmp_store.rhs_value += value;
     else
 
-    if(rs == NULL) {
-      error(CRITICAL, "Error: No variable specified");
+    if(pp->rs == NULL) {
+      error(pp, CRITICAL, "Error: No variable specified");
       return(FALSE);
     }
     else
-      rs->value += value;
+      pp->rs->value += value;
   }
-  else if(/* Lin_term_count == 0 */ HadConstraint && !HadVar) { /* a range */
-    if(rs == NULL) /* if range before row, already reported */
-      tmp_store.rhs_value += value;
-    else if(rs->range_relat < 0) /* was a bad range; ignore */;
+  else if(/* pp->Lin_term_count == 0 */ HadConstraint && !HadVar) { /* a range */
+    if(pp->rs == NULL) /* if range before row, already reported */
+      pp->tmp_store.rhs_value += value;
+    else if(pp->rs->range_relat < 0) /* was a bad range; ignore */;
     else {
-      if(rs->negate)
+      if(pp->rs->negate)
         value = -value;
-      if(((rs->relat == LE) && (rs->range_relat == GE) &&
-         (rs->value < value)) ||
-        ((rs->relat == GE) && (rs->range_relat == LE) &&
-         (rs->value > value)) ||
-	((rs->relat == EQ) || (rs->range_relat == EQ))) {
-        rs->range_relat = -2;
-	error(CRITICAL, "Error: range restriction conflicts");
-	return(FALSE);
+      if(((pp->rs->relat == LE) && (pp->rs->range_relat == GE) &&
+         (pp->rs->value < value)) ||
+        ((pp->rs->relat == GE) && (pp->rs->range_relat == LE) &&
+         (pp->rs->value > value)) ||
+        ((pp->rs->relat == EQ) || (pp->rs->range_relat == EQ))) {
+        pp->rs->range_relat = -2;
+        error(pp, CRITICAL, "Error: range restriction conflicts");
+        return(FALSE);
       }
       else
-        rs->range_value += value;
+        pp->rs->range_value += value;
     }
   }
   else /* a bound */
-    tmp_store.rhs_value += value;
+    pp->tmp_store.rhs_value += value;
   return(TRUE);
 } /* RHS_store */
 
@@ -692,37 +664,37 @@ int rhs_store(REAL value, int HadConstraint, int HadVar, int Had_lineair_sum)
  * count the amount of lineair terms in a constraint
  * only store in data-structure if the constraint is not a bound
  */
-int var_store(char *var, REAL value, int HadConstraint, int HadVar, int Had_lineair_sum)
+int var_store(parse_parm *pp, char *var, REAL value, int HadConstraint, int HadVar, int Had_lineair_sum)
 {
   int row;
 
-  row = Rows;
+  row = pp->Rows;
 
   /* also in a bound the same var name can occur more than once. Check for
      this. Don't increment Lin_term_count */
 
-  if(Lin_term_count != 1 || tmp_store.name == NULL || strcmp(tmp_store.name, var) != 0)
-    Lin_term_count++;
+  if(pp->Lin_term_count != 1 || pp->tmp_store.name == NULL || strcmp(pp->tmp_store.name, var) != 0)
+    pp->Lin_term_count++;
 
   /* always store objective function with rownr == 0. */
   if(row == 0)
-    return(store(var,  row,  value));
+    return(store(pp, var,  row,  value));
 
-  if(Lin_term_count == 1) { /* don't store yet. could be a bound */
-    if(MALLOC(tmp_store.name, strlen(var) + 1, char) != NULL)
-      strcpy(tmp_store.name, var);
-    tmp_store.row = row;
-    tmp_store.value += value;
+  if(pp->Lin_term_count == 1) { /* don't store yet. could be a bound */
+    if(MALLOC(pp->tmp_store.name, strlen(var) + 1, char) != NULL)
+      strcpy(pp->tmp_store.name, var);
+    pp->tmp_store.row = row;
+    pp->tmp_store.value += value;
     return(TRUE);
   }
 
-  if(Lin_term_count == 2) { /* now you can also store the first variable */
-    if(!storefirst())
+  if(pp->Lin_term_count == 2) { /* now you can also store the first variable */
+    if(!storefirst(pp))
       return(FALSE);
-    /* null_tmp_store(FALSE); */
+    /* null_tmp_store(pp, FALSE); */
   }
 
-  return(store(var, row, value));
+  return(store(pp, var, row, value));
 } /* var_store */
 
 
@@ -730,114 +702,114 @@ int var_store(char *var, REAL value, int HadConstraint, int HadVar, int Had_line
 /*
  * store the information in tmp_store because it is a bound
  */
-int store_bounds(int warn)
+int store_bounds(parse_parm *pp, int warn)
 {
-  if(tmp_store.value != 0) {
+  if(pp->tmp_store.value != 0) {
     hashelem *h_tab_p;
     REAL boundvalue;
 
-    if((h_tab_p = findhash(tmp_store.name, Hash_tab)) == NULL) {
+    if((h_tab_p = findhash(pp->tmp_store.name, pp->Hash_tab)) == NULL) {
       /* a new columnname is found, create an entry in the hashlist */
-      if ((h_tab_p = puthash(tmp_store.name, Columns, NULL, Hash_tab)) == NULL) {
-        error(CRITICAL, "Not enough memory");
+      if ((h_tab_p = puthash(pp->tmp_store.name, pp->Columns, NULL, pp->Hash_tab)) == NULL) {
+        error(pp, CRITICAL, "Not enough memory");
         return(FALSE);
       }
-      inccoldata();
-      Columns++; /* counter for calloc of final array */
+      inccoldata(pp);
+      pp->Columns++; /* counter for calloc of final array */
     }
 
-    if(tmp_store.value < 0) { /* divide by negative number, */
+    if(pp->tmp_store.value < 0) { /* divide by negative number, */
       /* relational operator may change */
-      if(tmp_store.relat == GE)
-	tmp_store.relat = LE;
-      else if(tmp_store.relat == LE)
-	tmp_store.relat = GE;
+      if(pp->tmp_store.relat == GE)
+        pp->tmp_store.relat = LE;
+      else if(pp->tmp_store.relat == LE)
+        pp->tmp_store.relat = GE;
     }
 
-    boundvalue = tmp_store.rhs_value / tmp_store.value;
+    boundvalue = pp->tmp_store.rhs_value / pp->tmp_store.value;
 
 #if FALSE
     /* Check sanity of bound; all variables should be positive */
-    if(   ((tmp_store.relat == EQ) && (boundvalue < 0))
-       || ((tmp_store.relat == LE) && (boundvalue < 0))) { /* Error */
-      error(CRITICAL, "Error: variables must always be non-negative");
+    if(   ((pp->tmp_store.relat == EQ) && (boundvalue < 0))
+       || ((pp->tmp_store.relat == LE) && (boundvalue < 0))) { /* Error */
+      error(pp, CRITICAL, "Error: variables must always be non-negative");
       return(FALSE);
     }
 #endif
 
 #if FALSE
-    if((tmp_store.relat == GE) && (boundvalue <= 0)) /* Warning */
-      error(NORMAL, "Warning: useless bound; variables are always >= 0");
+    if((pp->tmp_store.relat == GE) && (boundvalue <= 0)) /* Warning */
+      error(pp, NORMAL, "Warning: useless bound; variables are always >= 0");
 #endif
 
     /* bound seems to be sane, add it */
-    if((tmp_store.relat == GE) || (tmp_store.relat == EQ)) {
-      if(boundvalue > coldata[h_tab_p->index].lowbo - tol)
-	coldata[h_tab_p->index].lowbo = boundvalue;
+    if((pp->tmp_store.relat == GE) || (pp->tmp_store.relat == EQ)) {
+      if(boundvalue > pp->coldata[h_tab_p->index].lowbo - tol)
+        pp->coldata[h_tab_p->index].lowbo = boundvalue;
       else if(warn)
-        error(NORMAL, "Ineffective lower bound, ignored");
+        error(pp, NORMAL, "Ineffective lower bound, ignored");
     }
-    if((tmp_store.relat == LE) || (tmp_store.relat == EQ)) {
-      if(boundvalue < coldata[h_tab_p->index].upbo + tol)
-	coldata[h_tab_p->index].upbo  = boundvalue;
+    if((pp->tmp_store.relat == LE) || (pp->tmp_store.relat == EQ)) {
+      if(boundvalue < pp->coldata[h_tab_p->index].upbo + tol)
+        pp->coldata[h_tab_p->index].upbo  = boundvalue;
       else if (warn)
-        error(NORMAL, "Ineffective upper bound, ignored");
+        error(pp, NORMAL, "Ineffective upper bound, ignored");
     }
 
     /* check for empty range */
-    if((warn) && (coldata[h_tab_p->index].upbo + tol < coldata[h_tab_p->index].lowbo)) {
-      error(CRITICAL, "Error: bound contradicts earlier bounds");
+    if((warn) && (pp->coldata[h_tab_p->index].upbo + tol < pp->coldata[h_tab_p->index].lowbo)) {
+      error(pp, CRITICAL, "Error: bound contradicts earlier bounds");
       return(FALSE);
     }
   }
-  else /* tmp_store.value = 0 ! */ {
+  else /* pp->tmp_store.value = 0 ! */ {
     char buf[256];
 
-    if((tmp_store.rhs_value == 0) ||
-       ((tmp_store.rhs_value > 0) && (tmp_store.relat == LE)) ||
-       ((tmp_store.rhs_value < 0) && (tmp_store.relat == GE))) {
+    if((pp->tmp_store.rhs_value == 0) ||
+       ((pp->tmp_store.rhs_value > 0) && (pp->tmp_store.relat == LE)) ||
+       ((pp->tmp_store.rhs_value < 0) && (pp->tmp_store.relat == GE))) {
       sprintf(buf, "Variable %s has an effective coefficient of 0 in bound, ignored",
-	      tmp_store.name);
+              pp->tmp_store.name);
       if(warn)
-        error(NORMAL, buf);
+        error(pp, NORMAL, buf);
     }
     else {
       sprintf(buf, "Error, variable %s has an effective coefficient of 0 in bound",
-	      tmp_store.name);
-      error(CRITICAL, buf);
+              pp->tmp_store.name);
+      error(pp, CRITICAL, buf);
       return(FALSE);
     }
   }
 
-  /* null_tmp_store(FALSE); */
-  tmp_store.rhs_value = 0;
+  /* null_tmp_store(pp, FALSE); */
+  pp->tmp_store.rhs_value = 0;
 
   return(TRUE);
 } /* store_bounds */
 
-int set_title(char *name)
+int set_title(parse_parm *pp, char *name)
 {
-  title = strdup(name);
+  pp->title = strdup(name);
   return(TRUE);
 }
 
-int add_constraint_name(char *name)
+int add_constraint_name(parse_parm *pp, char *name)
 {
   int row;
   hashelem *hp;
 
-  if((hp = findhash(name, Hash_constraints)) != NULL) {
+  if((hp = findhash(name, pp->Hash_constraints)) != NULL) {
     row = hp->index;
-    rs = First_rside;
-    while ((rs != NULL) && (rs->row != row))
-      rs = rs->next;
+    pp->rs = pp->First_rside;
+    while ((pp->rs != NULL) && (pp->rs->row != row))
+      pp->rs = pp->rs->next;
   }
   else {
-    row = Rows;
-    if (((hp = puthash(name, row, NULL, Hash_constraints)) == NULL)
+    row = pp->Rows;
+    if (((hp = puthash(name, row, NULL, pp->Hash_constraints)) == NULL)
        ) return(FALSE);
     if(row)
-      rs = NULL;
+      pp->rs = NULL;
   }
 
   return(TRUE);
@@ -847,7 +819,7 @@ int add_constraint_name(char *name)
  * transport the data from the intermediate structure to the sparse matrix
  * and free the intermediate structure
  */
-static int readinput(lprec *lp)
+static int readinput(parse_parm *pp, lprec *lp)
 {
   int    i, i1, count, index, col;
   struct column *cp, *tcp;
@@ -861,11 +833,11 @@ static int readinput(lprec *lp)
   struct SOSrow *SOSrow, *SOSrow1;
 
   if(lp != NULL) {
-    if (CALLOC(negateAndSOS, 1 + Rows, signed char) == NULL)
+    if (CALLOC(negateAndSOS, 1 + pp->Rows, signed char) == NULL)
       return(FALSE);
 
-    rp = First_rside;
-    for(i = Rows; (i >= 0) && (rp != NULL); i--) {
+    rp = pp->First_rside;
+    for(i = pp->Rows; (i >= 0) && (rp != NULL); i--) {
       if(rp->SOStype == 0)
         negateAndSOS[i] = (rp->negate ? -1 : 0);
       else
@@ -875,7 +847,7 @@ static int readinput(lprec *lp)
     }
 
     /* fill names with the rownames */
-    hp = Hash_constraints->first;
+    hp = pp->Hash_constraints->first;
     while(hp != NULL) {
       if (/* (negateAndSOS[hp->index] <= 0) && */ (!set_row_name(lp, hp->index, hp->name)))
         return(FALSE);
@@ -883,8 +855,8 @@ static int readinput(lprec *lp)
     }
   }
 
-  for(i = Rows; i >= 0; i--) {
-    rp = First_rside;
+  for(i = pp->Rows; i >= 0; i--) {
+    rp = pp->First_rside;
     if((lp != NULL) && (rp != NULL)) {
       if(rp->SOStype == 0) {
         if (rp->negate) {
@@ -922,10 +894,10 @@ static int readinput(lprec *lp)
           rp->relat = EQ;
           rp->range_relat = EQ;
         }
-	if(i) {
+        if(i) {
           set_constr_type(lp, i, rp->relat);
-	  relat[i] = rp->relat;
-	}
+          pp->relat[i] = rp->relat;
+        }
         set_rh(lp, i, rp->value);
         if (rp->range_relat >= 0)
           set_rh_range(lp, i, rp->range_value - rp->value);
@@ -933,27 +905,27 @@ static int readinput(lprec *lp)
       else {
         SOSinMatrix = TRUE;
         if(i)
-          relat[i] = rp->relat;
+          pp->relat[i] = rp->relat;
       }
     }
     if(rp != NULL) {
-      First_rside = rp->next;
+      pp->First_rside = rp->next;
       free(rp); /* free memory when data has been read */
     }
     else
-      First_rside = NULL;
+      pp->First_rside = NULL;
   }
 
-  while(First_rside != NULL) {
-    rp = First_rside;
-    First_rside = rp->next;
+  while(pp->First_rside != NULL) {
+    rp = pp->First_rside;
+    pp->First_rside = rp->next;
     free(rp); /* free memory when data has been read */
   }
 
   /* start reading the Hash_list structure */
   index = 0;
 
-  if((SOSinMatrix) && (CALLOC(SOSrowdata, 1 + Rows, struct SOSrowdata) == NULL)) {
+  if((SOSinMatrix) && (CALLOC(SOSrowdata, 1 + pp->Rows, struct SOSrowdata) == NULL)) {
     FREE(negateAndSOS);
     FREE(row);
     FREE(rowno);
@@ -961,7 +933,7 @@ static int readinput(lprec *lp)
   }
 
   if((lp != NULL) &&
-     ((MALLOC(row, 1 + Rows, REAL) == NULL) || (MALLOC(rowno, 1 + Rows, int) == NULL))) {
+     ((MALLOC(row, 1 + pp->Rows, REAL) == NULL) || (MALLOC(rowno, 1 + pp->Rows, int) == NULL))) {
     FREE(SOSrowdata);
     FREE(negateAndSOS);
     FREE(row);
@@ -969,76 +941,79 @@ static int readinput(lprec *lp)
     return(FALSE);
   }
 
-  /* for(i = 0; i < Hash_tab->size; i++) {
-    hp = Hash_tab->table[i]; */
-    hp = Hash_tab->first;
+  /* for(i = 0; i < pp->Hash_tab->size; i++) {
+    hp = pp->Hash_tab->table[i]; */
+    hp = pp->Hash_tab->first;
     while(hp != NULL) {
       count = 0;
       index++;
-      cp = coldata[hp->index].firstcol;
+      cp = pp->coldata[hp->index].firstcol;
       col = hp->index + 1;
       while(cp != NULL) {
         if(lp != NULL) {
           if (negateAndSOS[cp->row] <= 0) {
             rowno[count] = cp->row;
-  	    a = cp->value;
-  	    if (negateAndSOS[cp->row])
-  	      a = -a;
+              a = cp->value;
+              if (negateAndSOS[cp->row])
+                a = -a;
             row[count++] = a;
           }
-	  else {
-	    if (MALLOC(SOSrow, 1, struct SOSrow) == NULL) {
+          else {
+            if (MALLOC(SOSrow, 1, struct SOSrow) == NULL) {
               FREE(SOSrowdata);
               FREE(negateAndSOS);
               FREE(row);
               FREE(rowno);
               return(FALSE);
-	    }
-	    if(SOSrowdata[cp->row].SOSrow == NULL)
-	      SOSrowdata[cp->row].name = strdup(get_row_name(lp, cp->row));
-	    SOSrow->next = SOSrowdata[cp->row].SOSrow;
-	    SOSrowdata[cp->row].SOSrow = SOSrow;
-	    SOSrowdata[cp->row].type = negateAndSOS[cp->row];
-	    SOSrow->col = col;
-	    SOSrow->value = cp->value;
-	  }
-	}
-	tcp = cp;
-	/* cp = cp->next; */
-	cp = cp->prev;
-	free(tcp); /* free memory when data has been read */
+            }
+            if(SOSrowdata[cp->row].SOSrow == NULL)
+              SOSrowdata[cp->row].name = strdup(get_row_name(lp, cp->row));
+            SOSrow->next = SOSrowdata[cp->row].SOSrow;
+            SOSrowdata[cp->row].SOSrow = SOSrow;
+            SOSrowdata[cp->row].type = negateAndSOS[cp->row];
+            SOSrow->col = col;
+            SOSrow->value = cp->value;
+          }
+        }
+        tcp = cp;
+        /* cp = cp->next; */
+        cp = cp->prev;
+        free(tcp); /* free memory when data has been read */
       }
 
       if(lp != NULL) {
         add_columnex(lp, count, row, rowno);
         /* check for bound */
-        if(coldata[hp->index].lowbo == -DEF_INFINITE * 10.0)
-  	  /* lp->orig_lowbo[Rows+index] = 0.0; */
+        if(pp->coldata[hp->index].lowbo == -DEF_INFINITE * 10.0)
+          /* lp->orig_lowbo[pp->Rows+index] = 0.0; */
           set_lowbo(lp, index, 0);
         else
-  	  /* lp->orig_lowbo[Rows+index] = coldata[hp->index].lowbo; */
-          set_lowbo(lp, index, coldata[hp->index].lowbo);
-        /* lp->orig_upbo[Rows+index] = coldata[hp->index].upbo; */
-        set_upbo(lp, index, coldata[hp->index].upbo);
+          /* lp->orig_lowbo[pp->Rows+index] = pp->coldata[hp->index].lowbo; */
+          set_lowbo(lp, index, pp->coldata[hp->index].lowbo);
+        /* lp->orig_upbo[pp->Rows+index] = pp->coldata[hp->index].upbo; */
+        if(pp->coldata[hp->index].upbo >= DEF_INFINITE)
+          set_upbo(lp, index, DEF_INFINITE);
+        else
+          set_upbo(lp, index, pp->coldata[hp->index].upbo);
 
         /* check if it must be an integer variable */
-        if(coldata[hp->index].must_be_int) {
-  	  /* lp->must_be_int[Rows + index]=TRUE; */
+        if(pp->coldata[hp->index].must_be_int) {
+          /* lp->must_be_int[pp->Rows + index]=TRUE; */
           set_int(lp, index, TRUE);
         }
-        if(coldata[hp->index].must_be_sec) {
+        if(pp->coldata[hp->index].must_be_sec) {
           set_semicont(lp, index, TRUE);
         }
-        if(coldata[hp->index].must_be_free) {
+        if(pp->coldata[hp->index].must_be_free) {
           set_unbounded(lp, index);
         }
 
         /* copy name of column variable */
         if (!set_col_name(lp, index, hp->name)) {
-	  FREE(SOSrowdata);
+          FREE(SOSrowdata);
           FREE(negateAndSOS);
           FREE(row);
-	  FREE(rowno);
+          FREE(rowno);
           return(FALSE);
         }
 
@@ -1055,64 +1030,64 @@ static int readinput(lprec *lp)
       hp = hp->nextelem;
 
     }
-    /* Hash_tab->table[i] = NULL; */
+    /* pp->Hash_tab->table[i] = NULL; */
 
-  FREE(coldata);
+  FREE(pp->coldata);
 
   if(SOSrowdata != NULL) {
     struct structSOS *structSOS;
     struct structSOSvars *SOSvars, *SOSvars1;
     int SOSweight = 0;
 
-    for(i = 1; i <= Rows; i++) {
+    for(i = 1; i <= pp->Rows; i++) {
       SOSrow = SOSrowdata[i].SOSrow;
       if(SOSrow != NULL) {
-	if(MALLOC(structSOS, 1, struct structSOS) == NULL) {
-	  FREE(SOSrowdata);
+        if(MALLOC(structSOS, 1, struct structSOS) == NULL) {
+          FREE(SOSrowdata);
           FREE(negateAndSOS);
           FREE(row);
-	  FREE(rowno);
+          FREE(rowno);
           return(FALSE);
-	}
-	structSOS->Nvars = 0;
-	structSOS->type = SOSrowdata[i].type;
-	structSOS->weight = ++SOSweight;
-	structSOS->name = strdup(SOSrowdata[i].name);
-	structSOS->LastSOSvars = NULL;
-	structSOS->next = FirstSOS;
-	FirstSOS = structSOS;
-	SOSvars = NULL;
+        }
+        structSOS->Nvars = 0;
+        structSOS->type = SOSrowdata[i].type;
+        structSOS->weight = ++SOSweight;
+        structSOS->name = strdup(SOSrowdata[i].name);
+        structSOS->LastSOSvars = NULL;
+        structSOS->next = pp->FirstSOS;
+        pp->FirstSOS = structSOS;
+        SOSvars = NULL;
         while(SOSrow != NULL) {
-	  SOSvars1 = SOSvars;
-	  MALLOC(SOSvars, 1, struct structSOSvars);
-	  SOSvars->next = SOSvars1;
-	  SOSvars->col = SOSrow->col;
-	  SOSvars->weight = SOSrow->value;
-	  SOSvars->name = NULL;
-	  structSOS->Nvars++;
+          SOSvars1 = SOSvars;
+          MALLOC(SOSvars, 1, struct structSOSvars);
+          SOSvars->next = SOSvars1;
+          SOSvars->col = SOSrow->col;
+          SOSvars->weight = SOSrow->value;
+          SOSvars->name = NULL;
+          structSOS->Nvars++;
           SOSrow1 = SOSrow->next;
-	  FREE(SOSrow);
-	  SOSrow = SOSrow1;
-	}
-	structSOS->SOSvars = SOSvars;
+          FREE(SOSrow);
+          SOSrow = SOSrow1;
+        }
+        structSOS->SOSvars = SOSvars;
       }
     }
     FREE(SOSrowdata);
   }
 
-  while(FirstSOS != NULL)
+  while(pp->FirstSOS != NULL)
   {
     struct structSOSvars *SOSvars, *SOSvars1;
     int *sosvars, n, col;
     REAL *weights;
     hashelem *hp;
 
-    LastSOS = FirstSOS;
-    FirstSOS = FirstSOS->next;
-    SOSvars = LastSOS->SOSvars;
+    pp->LastSOS = pp->FirstSOS;
+    pp->FirstSOS = pp->FirstSOS->next;
+    SOSvars = pp->LastSOS->SOSvars;
     if(lp != NULL) {
-      MALLOC(sosvars, LastSOS->Nvars, int);
-      MALLOC(weights, LastSOS->Nvars, double);
+      MALLOC(sosvars, pp->LastSOS->Nvars, int);
+      MALLOC(weights, pp->LastSOS->Nvars, double);
     }
     else {
       sosvars = NULL;
@@ -1125,36 +1100,36 @@ static int readinput(lprec *lp)
       SOSvars = SOSvars->next;
       if(lp != NULL) {
         col = SOSvars1->col;
-	if(col == 0)
+        if(col == 0)
           if((hp = findhash(SOSvars1->name, lp->colname_hashtab)) != NULL)
-	    col = hp->index;
-	if (col) {
+            col = hp->index;
+        if (col) {
           sosvars[n] = col;
-	  weights[n++] = SOSvars1->weight;
-	}
+          weights[n++] = SOSvars1->weight;
+        }
       }
       FREE(SOSvars1->name);
       FREE(SOSvars1);
     }
     if(lp != NULL) {
-      add_SOS(lp, LastSOS->name, LastSOS->type, LastSOS->weight, n, sosvars, weights);
+      add_SOS(lp, pp->LastSOS->name, pp->LastSOS->type, pp->LastSOS->weight, n, sosvars, weights);
       FREE(weights);
       FREE(sosvars);
     }
-    FREE(LastSOS->name);
-    FREE(LastSOS);
+    FREE(pp->LastSOS->name);
+    FREE(pp->LastSOS);
   }
 
   if(negateAndSOS != NULL) {
-    for(i1 = 0, i = 1; i <= Rows; i++)
+    for(i1 = 0, i = 1; i <= pp->Rows; i++)
       if(negateAndSOS[i] <= 0)
-        relat[++i1] = relat[i];
+        pp->relat[++i1] = pp->relat[i];
 
 #if 01
-    for(i = Rows; i > 0; i--)
+    for(i = pp->Rows; i > 0; i--)
       if(negateAndSOS[i] > 0) {
         del_constraint(lp, i);
-        Rows--;
+        pp->Rows--;
       }
 #endif
   }
@@ -1162,68 +1137,68 @@ static int readinput(lprec *lp)
   /* the following should be replaced by a call to the MPS print routine MB */
 
 #if 0
-  if(Verbose) {
+  if(pp->Verbose) {
     int j;
 
     printf("\n");
     printf("**********Data read**********\n");
-    printf("Rows    : %d\n", Rows);
-    printf("Columns : %d\n", Columns);
-    printf("Nonnuls : %d\n", Non_zeros);
+    printf("Rows    : %d\n", pp->Rows);
+    printf("Columns : %d\n", pp->Columns);
+    printf("Nonnuls : %d\n", pp->Non_zeros);
     printf("NAME          LPPROB\n");
     printf("ROWS\n");
-    for(i = 0; i <= Rows; i++) {
-      if(relat[i] == LE)
-	printf(" L  ");
-      else if(relat[i] == EQ)
-	printf(" E  ");
-      else if(relat[i] == GE)
-	printf(" G  ");
-      else if(relat[i] == OF)
-	printf(" N  ");
+    for(i = 0; i <= pp->Rows; i++) {
+      if(pp->relat[i] == LE)
+        printf(" L  ");
+      else if(pp->relat[i] == EQ)
+        printf(" E  ");
+      else if(pp->relat[i] == GE)
+        printf(" G  ");
+      else if(pp->relat[i] == OF)
+        printf(" N  ");
       printf("%s\n", get_row_name(lp, i));
     }
 
     printf("COLUMNS\n");
     j = 0;
-    for(i = 0; i < Non_zeros; i++) {
+    for(i = 0; i < pp->Non_zeros; i++) {
       if(i == lp->col_end[j])
-	j++;
+        j++;
       printf("    %-8s  %-8s  %g\n", get_col_name(lp, j),
-	     get_row_name(lp, lp->mat[i].row_nr), (double)lp->mat[i].value);
+             get_row_name(lp, lp->mat[i].row_nr), (double)lp->mat[i].value);
     }
 
     printf("RHS\n");
-    for(i = 0; i <= Rows; i++) {
+    for(i = 0; i <= pp->Rows; i++) {
       printf("    RHS       %-8s  %g\n", get_row_name(lp, i),
-	     (double)lp->orig_rhs[i]);
+             (double)lp->orig_rhs[i]);
     }
 
     printf("RANGES\n");
-    for(i = 1; i <= Rows; i++)
+    for(i = 1; i <= pp->Rows; i++)
       if((lp->orig_upbo[i] != lp->infinite) && (lp->orig_upbo[i] != 0)) {
-	printf("    RGS       %-8s  %g\n", get_row_name(lp, i),
-	       (double)lp->orig_upbo[i]);
+        printf("    RGS       %-8s  %g\n", get_row_name(lp, i),
+               (double)lp->orig_upbo[i]);
       }
       else if((lp->orig_lowbo[i] != 0)) {
-	printf("    RGS       %-8s  %g\n", get_row_name(lp, i),
-	       (double)-lp->orig_lowbo[i]);
+        printf("    RGS       %-8s  %g\n", get_row_name(lp, i),
+               (double)-lp->orig_lowbo[i]);
       }
 
     printf("BOUNDS\n");
-    for(i = Rows + 1; i <= Rows + Columns; i++) {
+    for(i = pp->Rows + 1; i <= pp->Rows + pp->Columns; i++) {
       if((lp->orig_lowbo[i] != 0) && (lp->orig_upbo[i] < lp->infinite) &&
          (lp->orig_lowbo[i] == lp->orig_upbo[i])) {
-        printf(" FX BND       %-8s  %g\n", get_col_name(lp, i - Rows),
+        printf(" FX BND       %-8s  %g\n", get_col_name(lp, i - pp->Rows),
                (double)lp->orig_upbo[i]);
       }
       else {
         if(lp->orig_upbo[i] < lp->infinite)
-  	  printf(" UP BND       %-8s  %g\n", get_col_name(lp, i - Rows),
-  		 (double)lp->orig_upbo[i]);
+            printf(" UP BND       %-8s  %g\n", get_col_name(lp, i - pp->Rows),
+                   (double)lp->orig_upbo[i]);
         if(lp->orig_lowbo[i] > 0)
-  	  printf(" LO BND       %-8s  %g\n", get_col_name(lp, i - Rows),
-  		 (double)lp->orig_lowbo[i]);
+            printf(" LO BND       %-8s  %g\n", get_col_name(lp, i - pp->Rows),
+                   (double)lp->orig_lowbo[i]);
       }
     }
 
@@ -1237,74 +1212,73 @@ static int readinput(lprec *lp)
   return(TRUE);
 } /* readinput */
 
-lprec *yacc_read(lprec *lp, int verbose, char *lp_name, int *_lineno, int (*parse) (void), void (*delete_allocated_memory) (void))
+lprec *yacc_read(lprec *lp, int verbose, char *lp_name, int (*parse) (parse_parm *pp), parse_parm *pp, void (*delete_allocated_memory) (parse_parm *pp))
 {
   REAL *orig_upbo;
   int stat = -1;
   lprec *lp0 = lp;
 
-  lineno = _lineno;
-  title = lp_name;
+  pp->title = lp_name;
 
-  if(!init_read(verbose))
-    error(CRITICAL, "init_read failed");
-  else if (setjmp(jump_buf) == 0)
-    stat = parse();
+  if(!init_read(pp, verbose))
+    error(pp, CRITICAL, "init_read failed");
+  else if (setjmp(pp->jump_buf) == 0)
+    stat = parse(pp);
 
-  delete_allocated_memory();
+  delete_allocated_memory(pp);
 
-  Rows--;
+  pp->Rows--;
 
-  relat = NULL;
-  if((stat != 0) || (CALLOC(relat, Rows + 1, short) != NULL)) {
+  pp->relat = NULL;
+  if((stat != 0) || (CALLOC(pp->relat, pp->Rows + 1, short) != NULL)) {
     if(stat == 0) {
       if(lp == NULL) {
-        lp = make_lp(Rows, 0);
+        lp = make_lp(pp->Rows, 0);
       }
       else {
         int NRows;
 
-	for(NRows = get_Nrows(lp); NRows < Rows; NRows++)
-	  add_constraintex(lp, 0, NULL, NULL, LE, 0);
+        for(NRows = get_Nrows(lp); NRows < pp->Rows; NRows++)
+          add_constraintex(lp, 0, NULL, NULL, LE, 0);
       }
     }
     else
       lp = NULL;
     if ((stat != 0) || (lp != NULL)) {
       if(lp != NULL) {
-        set_verbose(lp, Verbose);
+        set_verbose(lp, pp->Verbose);
       }
 
-      if (!readinput(lp)) {
-	if((lp != NULL) && (lp0 == NULL))
+      if (!readinput(pp, lp)) {
+        if((lp != NULL) && (lp0 == NULL))
           delete_lp(lp);
-	lp = NULL;
+        lp = NULL;
       }
 
       if(lp != NULL) {
-	set_lp_name(lp, title);
-	if(Maximise)
-	  set_maxim(lp);
+        set_lp_name(lp, pp->title);
+        if(pp->Maximise)
+          set_maxim(lp);
 
-	if(Rows) {
-	  int row;
+        if(pp->Rows) {
+          int row;
 
-	  MALLOCCPY(orig_upbo, lp->orig_upbo, 1 + Rows, REAL);
-	  for(row = 1; row <= Rows; row++)
-	    set_constr_type(lp, row, relat[row]);
+          MALLOCCPY(orig_upbo, lp->orig_upbo, 1 + pp->Rows, REAL);
+          for(row = 1; row <= pp->Rows; row++)
+            set_constr_type(lp, row, pp->relat[row]);
 
-	  memcpy(lp->orig_upbo, orig_upbo, (1 + Rows) * sizeof(*orig_upbo)); /* restore upper bounds (range) */
-	  FREE(orig_upbo);
-	}
+          memcpy(lp->orig_upbo, orig_upbo, (1 + pp->Rows) * sizeof(*orig_upbo)); /* restore upper bounds (range) */
+          FREE(orig_upbo);
+        }
       }
-      if((title != NULL) && (title != lp_name))
-        free(title);
+      if((pp->title != NULL) && (pp->title != lp_name))
+        free(pp->title);
 
-      free_hash_table(Hash_tab);
-      free_hash_table(Hash_constraints);
+      free_hash_table(pp->Hash_tab);
+      free_hash_table(pp->Hash_constraints);
     }
-    FREE(relat);
+    FREE(pp->relat);
   }
-  null_tmp_store(FALSE);
+  null_tmp_store(pp, FALSE);
   return(lp);
 }

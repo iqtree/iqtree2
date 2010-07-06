@@ -58,24 +58,6 @@ REAL *cloneREAL(lprec *lp, REAL *origlist, int size);
 MYBOOL *cloneMYBOOL(lprec *lp, MYBOOL *origlist, int size);
 int *cloneINT(lprec *lp, int *origlist, int size);
 
-#if defined INLINE
-INLINE void set_biton(MYBOOL *bitarray, int item)
-{
-  bitarray[item / 8] |= (1 << (item % 8));
-}
-INLINE void set_bitoff(MYBOOL *bitarray, int item)
-{
-  bitarray[item / 8] &= ~(1 << (item % 8));
-}
-INLINE MYBOOL is_biton(MYBOOL *bitarray, int item)
-{
-  return( (MYBOOL) ((bitarray[item / 8] & (1 << (item % 8))) != 0) );
-}
-#else
-void set_biton(MYBOOL *bitarray, int item);
-MYBOOL set_bitoff(MYBOOL *bitarray, int item);
-MYBOOL is_biton(MYBOOL *bitarray, int item);
-#endif
 int comp_bits(MYBOOL *bitarray1, MYBOOL *bitarray2, int items);
 
 STATIC workarraysrec *mempool_create(lprec *lp);

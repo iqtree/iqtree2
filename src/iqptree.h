@@ -25,6 +25,7 @@
 #include <set>
 #include <map>
 #include <stack>
+#include <vector>
 #include "stoprule.h"
 
 
@@ -47,13 +48,6 @@ typedef std::map< string, double > MapBranchLength;
 /**
 	nodeheightcmp, for building k-representative leaf set
 */
-struct nodeheightcmp
-{
-  bool operator()(const Node* s1, const Node* s2) const
-  {
-    return (s1->height) < (s2->height);
-  }
-};
 
 /**
 	NNISwap, define a NNI Swap or Move
@@ -77,11 +71,26 @@ struct NNIMove
 
 };
 
+class RepLeaf {
+public:
+	Node *leaf;
+	int height;
+	RepLeaf(Node *aleaf, int aheight = 0) {leaf=aleaf; height=aheight;}
+};
+
+struct nodeheightcmp
+{
+  bool operator()(const RepLeaf* s1, const RepLeaf* s2) const
+  {
+    return (s1->height) < (s2->height);
+  }
+};
+
 /**
 	Representative Leaf Set, stored as a multiset template of STL,
 	sorted in ascending order of leaf's height
 */
-typedef multiset<Node*, nodeheightcmp> RepresentLeafSet;
+typedef multiset<RepLeaf*, nodeheightcmp> RepresentLeafSet;
 
 
 /**
@@ -133,7 +142,8 @@ public:
 		@param dad the dad node of the considered subtree, to direct the search
 		@param leaves (OUT) the k-representative leaf set
 	*/
-	void findRepresentLeaves(RepresentLeafSet &leaves, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+	RepresentLeafSet* findRepresentLeaves(vector<RepresentLeafSet*> &leaves, int nei_id,
+		PhyloNode *dad);
 
 	/**
 		perform one IQPNNI iteration
@@ -416,7 +426,7 @@ protected:
 		@param cur_root the current virtual root
 		@param del_leaf a leaf that was deleted (not in the existing sub-tree)
 	*/
-	void assessQuartets(PhyloNode *cur_root, PhyloNode *del_leaf);
+	void assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *cur_root, PhyloNode *del_leaf);
 
 	/**
 		initialize the bonus points to ZERO
@@ -430,8 +440,9 @@ protected:
 		@param node the root of the sub-tree
 		@param dad dad of 'node', used to direct the recursion
 	*/
-	void raiseBonus(Node *node, Node *dad);
-
+	void raiseBonus(Neighbor *nei, Node *dad, double bonus);
+	void raiseBonus(Neighbor *nei, Node *dad);
+	void combineBonus(Neighbor *nei, Node *dad);
 	/**
 		find the best bonus point
 		@param node the root of the sub-tree
@@ -448,6 +459,7 @@ protected:
 		@param dad dad of 'node', used to direct the recursion
 	*/
 	void findBestBranch(double best_bonus, NodeVector &best_nodes, NodeVector &best_dads, Node *node = NULL, Node *dad = NULL);
+
 
 };
 

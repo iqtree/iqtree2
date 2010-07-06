@@ -1006,15 +1006,20 @@ void usage(char* argv[], bool full_command) {
 void usage_iqtree(char* argv[], bool full_command) {
 	cout << "Usage: " << argv[0] << " -aln <alignment_file> [OPTIONS] [<input_tree_file>] " << endl;
 	cout << "IQ-Tree OPTIONS:" << endl;
+	cout << "   -mod <model>                  Evolutionary models : JC, GTR, HKY, etc. (Default is JC)" << endl;
+	cout << "                                 Rate Heterogeneity: add '+I' or '+G' to the model name, e.g GTR+G" << endl;
+	cout << "   -c <gamma_categories>         Number of Gamma rate categories" << endl;
+	cout << "   -f <state_frequency>          Either EQUAL, EMPIRICAL, ESTIMATE, or DEFAULT" << endl;
 	cout << "   -n <num_iterations>           Number of iterations (Default is 1) " << endl;
-	cout << "   -mod <model>                  Evolutionary Models : 'JC', 'GTR', 'HKY' (Default is 'JC') " << endl;
-	cout << "                                 Rate Heterogeneity: add '+I' or '+G' to the model's name, e.g 'GTR+G'" << endl;
-	cout << "   -seed <num_seed>              Random seed number (used for IQP)" << endl;
 	cout << "   -pdel <num_pdel>              IQP: Probability of deleting a leaf (Default is 0.1)" << endl;
-	cout << "   -k <num_k>                    IQP: The size of the representative leaf set (Default is 5) " << endl;
-	cout << "   -stop <max_iterations>        Stopping rule " << endl;
-	cout << "   -stopconf <confidence_value>  Confidence value for the stopping rule " << endl;
-	cout << "   <input_tree_file>             The program can start with a give tree instead of constructing a starting tree by BioNJ " << endl;
+	cout << "   -krep <num_k>                 IQP: The size of the representative leaf set (Default is 5) " << endl;
+	cout << "   -stop <max_iterations>        Turn on stopping rule" << endl;
+	cout << "   -stopconf <confidence_value>  Confidence value for stopping rule, default 0.95" << endl;
+	cout << "   -fixbr                        Fix branch lengths of the input tree" << endl;
+	cout << "   -seed <num_seed>              Random seed number (used for IQP)" << endl;
+	cout << "   -v                            Verbose mode" << endl;
+	cout << "   -prefix <out_prefix>          All output file names will have this prefix" << endl;
+	cout << "   <input_tree_file>             Start with the give tree instead of the default BioNJ tree" << endl;
 
 	if (full_command) {
 		//TODO Print other options here (to be added)

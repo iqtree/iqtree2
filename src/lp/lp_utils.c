@@ -6,6 +6,7 @@
 #include "lp_utils.h"
 #include <time.h>
 #include <sys/timeb.h>
+#include "lp_bit.h"
 
 #ifdef FORTIFY
 # include "lp_fortify.h"
@@ -149,20 +150,6 @@ STATIC MYBOOL allocFREE(lprec *lp, void **ptr)
 #include "lp_utils.h"
 /* alloc-routines should always be before this line! */
 
-#if !defined INLINE
-void set_biton(MYBOOL *bitarray, int item)
-{
-  bitarray[item / 8] |= (1 << (item % 8));
-}
-void set_bitoff(MYBOOL *bitarray, int item)
-{
-  bitarray[item / 8] &= ~(1 << (item % 8));
-}
-MYBOOL is_biton(MYBOOL *bitarray, int item)
-{
-  return( (MYBOOL) ((bitarray[item / 8] & (1 << (item % 8))) != 0) );
-}
-#endif
 int comp_bits(MYBOOL *bitarray1, MYBOOL *bitarray2, int items)
 {
   int            i, items4, left = 0, right = 0;
@@ -575,7 +562,7 @@ STATIC MYBOOL isINT(lprec *lp, REAL value)
   value = fabs(value)+lp->epsint;
   return( (MYBOOL) (my_reldiff(value, floor(value)) < 2*lp->epsint) );
 #elif 0
-  static REAL hold;
+  REAL hold;
   value = fabs(value);
   hold = pow(10, MIN(-2, log10(value+1)+log10(lp->epsint)));
   return( (MYBOOL) (modf(value+lp->epsint, &value) < 2*hold) );
@@ -613,11 +600,11 @@ STATIC void chsign_bounds(REAL *lobound, REAL *upbound)
 /* ---------------------------------------------------------------------------------- */
 STATIC REAL rand_uniform(lprec *lp, REAL range)
 {
-  static MYBOOL randomized = FALSE;
+  static MYBOOL randomized = FALSE; /* static ok here for reentrancy/multithreading */
 
   if(!randomized) {
-    srand((unsigned) time( NULL ));
     randomized = TRUE;
+    srand((unsigned) time( NULL ));
   }
   range *= (REAL) rand() / (REAL) RAND_MAX;
   return( range );
