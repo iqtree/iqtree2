@@ -555,12 +555,14 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 		}
 	}
 
+	/*
 	best_tree_string.seekg(0);
 	freeNode();
 	readTree(best_tree_string, rooted);
 	assignLeafNames();
 	initializeAllPartialLh();
 	bestScore = optimizeNNI(true);
+	*/
 
 	lh_file.close();
 	return bestScore;
