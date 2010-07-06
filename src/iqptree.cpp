@@ -231,12 +231,12 @@ void IQPTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
 
 
 void IQPTree::raiseBonus(Neighbor *nei, Node *dad, double bonus) {
-	Node *node = nei->node;
+	//Node *node = nei->node;
 	//assert(((PhyloNeighbor*)nei)->lh_scale_factor == 0.0);
-	((PhyloNeighbor*)nei)->lh_scale_factor += bonus;
-	//((PhyloNeighbor*) (node->findNeighbor(dad)))->lh_scale_factor+=bonus;
+	((PhyloNeighbor*)nei)->lh_scale_factor = -bonus;
+	/*
 	FOR_NEIGHBOR_IT(node, dad, it)
-		raiseBonus((*it), node, bonus);
+		raiseBonus((*it), node, bonus);*/
 }
 
 /*
@@ -247,27 +247,41 @@ void IQPTree::raiseBonus(Neighbor *nei, Node *dad, double bonus) {
 	cout << dad->id << " - " << nei->node->id << " : " << bonus << endl;
 }*/
 
-
-void IQPTree::raiseBonus(Neighbor *nei, Node *dad) {
-	Node *node = nei->node;
-	PhyloNeighbor *dad_nei = (PhyloNeighbor*)(node->findNeighbor(dad));
-	double bonus = ((PhyloNeighbor*)nei)->lh_scale_factor;
-	FOR_NEIGHBOR_IT(node, dad, it) {
-		((PhyloNeighbor*)(*it))->lh_scale_factor += bonus;
-		raiseBonus((*it), node);
-		dad_nei->lh_scale_factor += ((PhyloNeighbor*)((*it)->node->findNeighbor(node)))->lh_scale_factor;
+void IQPTree::sumBonus(Neighbor *node_nei, Node *node) {
+	if (((PhyloNeighbor*)node_nei)->lh_scale_factor > 0) return;
+	double sum = -((PhyloNeighbor*)node_nei)->lh_scale_factor;
+	FOR_NEIGHBOR_IT(node, node_nei->node, it) {
+		Node *child = (*it)->node;
+		PhyloNeighbor *child_nei = (PhyloNeighbor*)child->findNeighbor(node);
+		sumBonus(child_nei, child); 
+		sum += child_nei->lh_scale_factor;
 	}
+	((PhyloNeighbor*)node_nei)->lh_scale_factor = sum;
 }
 
-void IQPTree::combineBonus(Neighbor *nei, Node *dad) {
-	Node *node = nei->node;
-	PhyloNeighbor *dad_nei = (PhyloNeighbor*)node->findNeighbor(dad);
-	double bonus = ((PhyloNeighbor*)nei)->lh_scale_factor + dad_nei->lh_scale_factor;
-	((PhyloNeighbor*)nei)->lh_scale_factor = dad_nei->lh_scale_factor = bonus;
+
+void IQPTree::combineBonus(Neighbor *dad_nei, Node *dad) {
+	Node *node = dad_nei->node;
+	PhyloNeighbor *node_nei = (PhyloNeighbor*)node->findNeighbor(dad);
+	sumBonus(node_nei, node);
+	sumBonus(dad_nei, dad);
+
 	FOR_NEIGHBOR_IT(node, dad, it) {
 		combineBonus((*it), node);
 	}
 }
+
+
+void IQPTree::combineTwoBonus(PhyloNeighbor *dad_nei, Node *dad) {
+	Node *node = dad_nei->node;
+	PhyloNeighbor *node_nei = (PhyloNeighbor*)node->findNeighbor(dad);
+	double sum = dad_nei->lh_scale_factor + node_nei->lh_scale_factor;
+	dad_nei->lh_scale_factor = node_nei->lh_scale_factor = sum;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		combineTwoBonus((PhyloNeighbor*)(*it), node);
+	}
+}
+
 double IQPTree::findBestBonus(Node *node, Node *dad) {
 	double best_score;
 	if (!node)
@@ -378,8 +392,8 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves,
 		for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
 			assessQuartets(leaves_vec, (PhyloNode*) (*it), (*it_leaf));
 		}
-		//raiseBonus(root->neighbors[0], root);
 		combineBonus(root->neighbors[0], root);
+		combineTwoBonus((PhyloNeighbor*)root->neighbors[0], root);
 		//cout << root->id << endl;
 		NodeVector best_nodes, best_dads;
 		//cout << "XXX" << endl;
