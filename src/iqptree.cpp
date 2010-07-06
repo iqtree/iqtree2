@@ -379,7 +379,8 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves,
 		PhyloNodeVector &adjacent_nodes) {
 	PhyloNodeVector::iterator it_leaf, it_node;
 
-	vector<RepresentLeafSet*> leaves_vec(nodeNum*3, NULL);
+	vector<RepresentLeafSet*> leaves_vec;
+	leaves_vec.resize(nodeNum*3, NULL);
 	assert(root->isLeaf());
 
 	for (it_leaf = del_leaves.begin(), it_node = adjacent_nodes.begin(); it_leaf
