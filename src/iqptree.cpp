@@ -592,7 +592,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 
 	do {
 		nbNNIToApply = 0;
-		// Tree get improved, lamda reset to 0.75
+		// Tree get improved, lamda reset
 		if (resetLamda) {
 			nniIteration++;
 			//N IQPNNI iterations have been done
@@ -694,20 +694,20 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 		}
 
 		cnt++;
-		double new_score;
+		double newScore;
 
 		//Do it like in PhyML for the branch lengths
 		if (phyml_opt) {
 			applyAllBranchLengthChanges((PhyloNode*) root);
-			new_score = computeLikelihood();
+			newScore = computeLikelihood();
 		} else {
 			//Do it like in IQPNNI: Optimize all branch lengths after each NNI-Iteration
-			new_score = optimizeAllBranches();
+			newScore = optimizeAllBranches();
 		}
 
-		if (new_score < curScore) {
+		if (newScore < curScore) {
 			cout << "Old score = " << curScore << endl;
-			cout << "New score = " << new_score << endl;
+			cout << "New score = " << newScore << endl;
 			cout << "Using lamda = " << lamda << endl;
 			cout << "Total non-conflicting NNIs found = " << nniTotal << endl;
 			lamda = lamda / 2;
@@ -726,13 +726,13 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 			resetLamda = false;
 		} else {
 			numbNNI += nbNNIToApply;
-			double delta = new_score - curScore;
-			double deltaProNNI = (new_score - curScore)/nbNNIToApply;
-			curScore = new_score; // Update current score
+			double delta = newScore - curScore;
+			double deltaProNNI = (newScore - curScore)/nbNNIToApply;
+			curScore = newScore; // Update current score
 			resetLamda = true;
 			vecImpProNNI.push_back(deltaProNNI);
 			if (verbose_mode >= VB_DEBUG)
-				cout << "New best tree found with score " << new_score
+				cout << "New best tree found with score " << newScore
 						<< " with " << nbNNIToApply << " NNIs"
 						<< " -- improvement general "
 						<< delta
@@ -1014,18 +1014,15 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 	PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
 	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 
-	double node12_len[4];
+        // Array to store the branch lengths : Before the swap, optimized,1.NNI swap, 2.NNI swap
+	double node12_len[4]; 
 	node12_len[0] = node12_it->length; // Length of branch node1-node2 before the swap
 
-	// Calculate optimal branch length for node12
-	//double cur_score = optimizeOneBranch(node1, node2);
-	//double best_score = cur_score;
+	// Calculate optimal branch length for branch node1-node2
+	//double bestScore = optimizeOneBranch(node1, node2);
+        double bestScore = curScore;
 
-	double best_score = curScore;
-
-	// Optimal branch length of the current branch
-	// This length is actually unchanged since it is already optimized in the last NNI-Step
-	// In case branch lengths weren't optimized, optimizeOneBranch(node1, node2) will be called
+	// Optimal branch length of the current branch	
 	node12_len[1] = node12_it->length;
 
 	// save the likelihood vector at the two ends of node1-node2
@@ -1062,17 +1059,16 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 			node21_it->clearPartialLh();
 
 			// compute the score of the swapped topology
-			double score = optimizeOneBranch(node1, node2);
-
+			double newScore = optimizeOneBranch(node1, node2, false);
 			node12_len[nniNr] = node12_it->length;
 
 			// If score is better, save the NNI move
-			if (score > best_score) {
-				best_score = score;
+			if (newScore > bestScore) {
+				bestScore = newScore;
 				chosenSwap = nniNr;
 				mymove.node1Nei_it = node1_it;
 				mymove.node2Nei_it = node2_it;
-				mymove.score = best_score;
+				mymove.score = bestScore;
 				mymove.node1 = node1;
 				mymove.node2 = node2;
 			}
