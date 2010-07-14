@@ -308,9 +308,10 @@ public:
 		optimize one branch length by ML
 		@param node1 1st end node of the branch
 		@param node2 2nd end node of the branch
+                @param clearLH true to clear the partial likelihood, otherwise false
 		@return likelihood score
 	*/
-	double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2);
+	double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH=true);
 
 	/**
 		optimize all branch lengths of the children of node

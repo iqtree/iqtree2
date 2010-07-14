@@ -151,6 +151,14 @@ public:
 	*/
 	double doIQP();
 
+        /**
+         * Perturb the tree for the next round of local search
+         * @param nbLeaves Number of leaves to choose for the perturbation
+         * @param nbDist The distance
+         * @return The new loglikelihood of the tree
+         */
+        double perturbTree(int nbLeaves, int nbDist);
+
 	/**
 		perform all IQPNNI iterations
 		@return best likelihood found

@@ -813,7 +813,7 @@ double PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
 	return lh;
 }
 
-double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2) {
+double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH) {
 	double negative_lh;
 	current_it = (PhyloNeighbor*)node1->findNeighbor(node2);
 	assert(current_it);
@@ -832,8 +832,10 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2) {
 		return -negative_lh;
 	current_it->length = optx;
 	current_it_back->length = optx;
-	node1->clearReversePartialLh(node2);
-	node2->clearReversePartialLh(node1);
+        if (clearLH) {
+            node1->clearReversePartialLh(node2);
+            node2->clearReversePartialLh(node1);
+        }
 	return -negative_lh;
 }
 
