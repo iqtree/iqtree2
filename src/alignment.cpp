@@ -112,7 +112,7 @@ int Alignment::readNexus(char *filename) {
 		outError("No data is given in the input file");	
 		return 0;
 	}
-	if (verbose_mode > VB_MED)
+	if (verbose_mode >= VB_DEBUG)
 		data_block->Report(cout);
 	
 	extractDataBlock(data_block);

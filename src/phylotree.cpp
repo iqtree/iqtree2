@@ -608,21 +608,27 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 					}
 				}
 				// check if one should scale partial likelihoods
-				bool do_scale = false;
+				bool do_scale = true;
 				partial_lh_site = dad_branch->partial_lh + (ptn*block);
 				for (cat = 0; cat < block; cat++)
-					if (partial_lh_site[cat] < SCALING_THRESHOLD) {
-						do_scale = true; break;
+					if (partial_lh_site[cat] > SCALING_THRESHOLD) {
+						do_scale = false; break;
 					}
 				if (!do_scale) continue;
 				// now do the likelihood scaling
-				/*double lh_max = partial_lh_site[0];
+				/*
+				double lh_max = partial_lh_site[0];
 				for (cat = 1; cat < block; cat++)
 					if (lh_max < partial_lh_site[cat]) lh_max = partial_lh_site[cat];
+				for (cat = 0; cat < block; cat++)
+					partial_lh_site[cat] /= lh_max;
+				dad_branch->lh_scale_factor += log(lh_max) * (*aln)[ptn].frequency;
+				
 				*/
 				for (cat = 0; cat < block; cat++)
 					partial_lh_site[cat] /= SCALING_THRESHOLD;
 				dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
+				
 			}
 		}
 		for (cat = ncat-1; cat >= 0; cat--)

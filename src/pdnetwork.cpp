@@ -25,6 +25,9 @@
 #include "lpwrapper.h"
 #include "gurobiwrapper.h"
 
+extern void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDRelatedMeasures &pd_more, bool full_report);
+
+
 PDNetwork::PDNetwork()
  : SplitGraph()
 {
@@ -383,7 +386,7 @@ void PDNetwork::enterFindPD(Params &params) {
 		if (isBudgetConstraint()) {
 			// fix the budget and min_budget first
 			if (params.budget < 0) params.budget = pda->budget;
-			if (verbose_mode >= VB_MED) {
+			if (verbose_mode >= VB_DEBUG) {
 				pda->Report(cout);
 			}
 			cout << "Budget constraint with budget = " << params.budget << " ..." << endl;
@@ -913,6 +916,7 @@ double PDNetwork::findMinKArea_LP(Params &params, const char* filename, double p
 	double score;
 	int lp_ret, i;
 
+
 	if (!params.binary_programming) {
 		cout << " " << pd_proportion;
 		cout.flush();
@@ -956,11 +960,156 @@ double PDNetwork::findMinKArea_LP(Params &params, const char* filename, double p
 	return budget_k;
 }
 
+void PDNetwork::computeFeasibleBudget(Params &params, IntVector &ok_budget) {
+	if (!isBudgetConstraint()) {
+		ok_budget.resize(params.sub_size+1, 1);
+		return;
+	}
+	cout << "Computing feasible budget values..." << endl;
+	IntVector cost_present;
+	cost_present.resize((*max_element(pda->costs.begin(), pda->costs.end())) + 1, 0);
+	int i, j, num_cost = 0;
+	DoubleVector::iterator it;
+	for (it = pda->costs.begin(); it != pda->costs.end(); it++) {
+		if ((*it) != round(*it)) {
+			outError("Non integer cost detected.");
+		}
+		if ((*it) != 0 && !(cost_present[*it])) {
+			num_cost++;	
+			cost_present[*it] = 1;
+		}
+	}
+	if (num_cost == 0) outError("All costs are zero! Please check the input budget file.");
+	if (cost_present[1]) {
+		// if cost of 1 detected, all budget values are feasible
+		ok_budget.resize(params.budget+1, 1);
+		return;
+	}
+	IntVector unique_cost;
+	IntVector::iterator it2;
+	for (i = 0, it2 = cost_present.begin(); it2 != cost_present.end(); it2++, i++)
+		if (*it2) unique_cost.push_back(i);
+	assert(unique_cost.size() == num_cost);
+
+	ok_budget.resize(params.budget+1, 0);
+	// initialize all entry with corresponding cost
+	for (it2 = unique_cost.begin(); it2 != unique_cost.end(); it2++)
+		ok_budget[*it2] = 1;
+	// now use dynamic programming to find feasible budgets
+
+	for (i = 0; i <= params.budget; i++) 
+		for (it2 = unique_cost.begin(); it2 != unique_cost.end(); it2++) {
+			j = i - (*it2);
+			if (j < 0) continue;
+			if (ok_budget[j]) {
+				ok_budget[i] = 1;
+				break;
+			}
+		}
+		
+
+	if (verbose_mode < VB_MED)
+		return;
+	cout << "Feasible budgets:";
+	for (i = 0; i < ok_budget.size(); i++)
+		if (ok_budget[i]) cout << " " << i;
+	cout << endl;
+}
+
+
+void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
+	char filename[300];
+	//int c_old = -1;
+	int c_num = 0, i;
+	//double w_old = -1.0;
+	char scorename[300];
+	ofstream scoreout;
+	ofstream out;
+	if (params.nr_output == 1) {
+		if (params.run_mode == PD_USER_SET || !isPDArea()) {
+			sprintf(filename, "%s.pdtaxa", params.out_prefix);
+			cout << "All taxa list(s) printed to " << filename << endl;
+		} else { 
+			sprintf(filename, "%s.pdarea", params.out_prefix);
+			cout << "All area list(s) printed to " << filename << endl;
+		}
+		out.open(filename);
+		sprintf(scorename, "%s.score", params.out_prefix);
+		scoreout.open(scorename);
+	}
+
+
+	for (vector<SplitSet>::iterator it = pd_set.begin(); it != pd_set.end(); it++) {
+		// ignore, if get the same PD sets again
+		//if (it != pd_set.begin() && it->getWeight() == (it-1)->getWeight() && it->size() == (it-1)->size()) 
+			//continue;
+		if ((*it).empty()) continue;
+		c_num = 0;
+		if (params.nr_output == 1)
+			scoreout << (*it)[0]->countTaxa() << "  " << (it)->getWeight() << endl;
+
+		for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); it2++, c_num++ ){
+			Split *this_set = *it2;
+			int count = this_set->countTaxa();
+			//if (count == 0) continue;
+			
+			//if (count != c_old) {
+			if (c_num == 0) {
+				//c_num = 0;
+				sprintf(filename, "%s.%d.pdtaxa", params.out_prefix, count);
+			}
+			else {
+				//c_num++;
+				sprintf(filename, "%s.%d.pdtaxa.%d", params.out_prefix, count, c_num);
+			}
+			//if (fabs(w_old - this_set->getWeight()) > 1e-5 || (c_old != count))
+	//			if (params.nr_output == 1)
+		//			scoreout << count << "  " << this_set->getWeight() << endl;
+			//w_old = this_set->getWeight();
+	
+			//c_old = count;
+			if (params.nr_output > 10) {
+				out.open(filename);
+				if (params.run_mode == PD_USER_SET || !isPDArea()) {
+					for (i = 0; i < getNTaxa(); i++) 
+						if (this_set->containTaxon(i))
+							out << getTaxa()->GetTaxonLabel(i) << endl;
+				} else {
+					for (i = 0; i < getSetsBlock()->getNSets(); i++) 
+						if (this_set->containTaxon(i))
+							out << getSetsBlock()->getSet(i).name << endl;
+				}
+				out.close();
+				//cout << "Taxa list printed to " << filename << endl;
+			} else if (params.nr_output == 1) {
+				out << count << "  " << this_set->getWeight() << endl;
+				if (params.run_mode == PD_USER_SET || !isPDArea()) {
+					for (i = 0; i < getNTaxa(); i++) 
+						if (this_set->containTaxon(i))
+							out << getTaxa()->GetTaxonLabel(i) << endl;
+				} else {
+					for (i = 0; i < getSetsBlock()->getNSets(); i++) 
+						if (this_set->containTaxon(i))
+							out << getSetsBlock()->getSet(i).name << endl;
+				}
+			}
+		}
+	}
+
+	if (params.nr_output == 1) {
+		out.close();
+		scoreout.close();
+		//cout << "PD scores printed to " << scorename << endl;
+	}
+}
+
 void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 	if (params.find_all)
 		outError("Current linear programming does not support multiple optimal sets!");
 	PDRelatedMeasures pd_more;
 	// get the taxa in the areas, only if EMPTY!
+	Split *area_coverage = new Split();
+	int num_area_coverage = params.sub_size;
 	if (area_taxa.empty()) {
 		computePD(params, area_taxa, pd_more);
 		if (params.root || params.is_rooted) {
@@ -969,10 +1118,8 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 			for (SplitSet::iterator it = area_taxa.begin(); it != area_taxa.end(); it++)
 				(*it)->addTaxon(root_id);
 		}
-		int num_area_coverage = params.sub_size;
-		Split area_coverage;
 		checkAreaCoverage();
-		num_area_coverage = findMinAreas(params, area_coverage);
+		num_area_coverage = findMinAreas(params, *area_coverage);
 		cout << "We found ";
 		if (isBudgetConstraint())
 			cout << "a budget of " << num_area_coverage << " is enough";
@@ -1002,6 +1149,20 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 	int nareas = area_taxa.size();
 	int k, min_k, max_k, step_k, index;
 
+	if (params.pd_proportion == 1.0 && params.min_proportion == 0.0) {
+		if (area_coverage->empty()) num_area_coverage = findMinAreas(params, *area_coverage);
+		calcPDArea(*area_coverage);
+		areas_set.resize(1);
+		areas_set[0].push_back(area_coverage);
+		if (isBudgetConstraint()) {
+			params.budget = params.min_budget = num_area_coverage;
+		} else {
+			params.sub_size = params.min_size = num_area_coverage;
+		}
+		return;
+	}
+
+
 	double *variables = new double[nareas];
 
 	// identifying minimum k/budget to conserve the proportion of SD
@@ -1022,6 +1183,8 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 		//areas_set[index].push_back(area);
 	}
 
+	IntVector list_k;
+
 	if (isBudgetConstraint()) { // non-budget case
 		min_k = params.min_budget;
 		max_k = params.budget;
@@ -1032,14 +1195,17 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 		step_k = params.step_size;
 	}
 	areas_set.resize((max_k - min_k)/step_k + 1);
+	computeFeasibleBudget(params, list_k);
 
-
+	time_t time_init;
+	time(&time_init);
 	// now construction the optimal PD sets
 	if (isBudgetConstraint())
 		cout << "running budget = ";
 	else
 		cout << "running k = ";
 	for (k = min_k; k <= max_k; k += step_k) {
+		if (!list_k[k]) continue;
 		index = (k - min_k) / step_k;
 		if (!params.binary_programming) {
 			cout << " " << k;
@@ -1076,9 +1242,19 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 			}
 		calcPDArea(*area);
 		areas_set[index].push_back(area);
+		time_t time_cur;
+		time(&time_cur);
+		if (difftime(time_cur, time_init) > 10) {
+			// write output if more than 10 seconds have elapsed
+			printOutputSetScore(params, areas_set);
+			PDRelatedMeasures pd_more; // just for called function, nothing
+			summarizeSplit(params, *this, areas_set, pd_more, false);
+			time_init = time_cur;
+		}
 	}
 	cout << endl;
 	delete variables;	
+	delete area_coverage;
 }
 
 
@@ -1119,7 +1295,7 @@ void PDNetwork::transformLP_Area_Coverage(const char *outfile, Params &params, S
 	}
 	for (j = 0; j < ntaxa; j++) {
 		if (isUniquelyCovered(j, i)) {
-			if (verbose_mode > VB_MIN) {
+			if (verbose_mode >= VB_MED) {
 				cout << "Taxon " << taxa->GetTaxonLabel(j) << " is uniquely covered by " << sets->getSet(i).name << endl;
 			}
 			included_area.addTaxon(i);

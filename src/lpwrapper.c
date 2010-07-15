@@ -42,10 +42,10 @@ int lp_solve(char *filename, int ntaxa, double *score, double *variables, int ve
 	}
 
 	set_mip_gap(lp, TRUE, 0.0);
-	strcpy(name2, filename);
+	/*strcpy(name2, filename);
 	strcat(name2,".log");
 	set_outputfile(lp, name2);
-	set_verbose(lp, NORMAL);
+	set_verbose(lp, NORMAL);*/
 	
 	//if (verbose_mode) 
 	//	set_verbose(lp, DETAILED);
@@ -98,9 +98,9 @@ int lp_solve(char *filename, int ntaxa, double *score, double *variables, int ve
 				break;
 			}
 			if (row[j] > tolerance && (1.0 - row[j]) > tolerance) {
-				if (verbose_mode) printf("\n%s = %10.8f", name, row[j]);
+				if (verbose_mode >= 3) printf("\n%s = %10.8f", name, row[j]);
 				ret = 7;
-				if (!verbose_mode) break;
+				if (verbose_mode < 3) break;
 			}
 			variables[index] = row[j];
 		}

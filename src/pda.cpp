@@ -128,7 +128,7 @@ inline void separator(ostream &out, int type = 0) {
 
 
 void printCopyright(ostream &out) {
-	out << "PDA - Phylogenetic Diversity Analyzer version " << VERSION;
+	out << "PDA - Phylogenetic Diversity Analyzer version " << VERSION << " build " << __DATE__;
 #ifdef DEBUG
 	out << " - debug mode";
 #endif
@@ -198,7 +198,7 @@ void summarizeFooter(ostream &out, Params &params) {
 	char *date;
 	date = ctime(&beginTime);
 
-	out << "Time used: " << (double)params.run_time / CLOCKS_PER_SEC << " seconds." << endl;
+	out << "Time used: " << params.run_time  << " seconds." << endl;
 	out << "Finished time: " << date << endl;
 }
 
@@ -536,6 +536,7 @@ bool makeRanking(vector<SplitSet> &pd_set, IntVector &indices, IntVector &rankin
 	Split *cur_sp = NULL;
 	int id = 1;
 	for (it = pd_set.begin(); it != pd_set.end(); it++) {
+		if ((*it).empty()) continue;
 		if ((*it).size() > 1) {
 			nested = false;
 			ranking.push_back(-10);
@@ -631,7 +632,7 @@ void computeTaxaFrequency(SplitSet &taxa_set, DoubleVector &freq) {
 /**
 	summarize the running results
 */
-void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDRelatedMeasures &pd_more) {
+void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDRelatedMeasures &pd_more, bool full_report) {
 	int i;
 
 
@@ -719,6 +720,12 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 			out << endl;
 			separator(out);
 		}
+
+		if (!full_report) {
+			out.close();
+			return;
+		}
+
 
 		/****************************/
 		/********* BOOTSTRAP ********/
@@ -979,7 +986,7 @@ void runPDSplit(Params &params) {
 
 	// begining time of the algorithm run
 	time_t time_begin = clock();
-
+	time(&time_begin);
 	// check parameters
 	if (sg.isPDArea()) {
 		if (sg.isBudgetConstraint()) {
@@ -1036,11 +1043,13 @@ void runPDSplit(Params &params) {
 	}
 
 	// ending time
-	params.run_time = clock() - time_begin;
+	time_t time_end;
+	time(&time_end);
+	params.run_time = difftime(time_end, time_begin);
 
-	cout << "Time used: " << (double) (params.run_time) / CLOCKS_PER_SEC << " seconds." << endl;
+	cout << "Time used: " << (double) (params.run_time) << " seconds." << endl;
 
-	if (verbose_mode >= VB_MED && !sg.isPDArea()) {
+	if (verbose_mode >= VB_DEBUG && !sg.isPDArea()) {
 		cout << "PD set(s) with score(s): " << endl;
 		for (vector<SplitSet>::iterator it = pd_set.begin(); it != pd_set.end(); it++) 
 		for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); it2++ ){
@@ -1055,90 +1064,10 @@ void runPDSplit(Params &params) {
 		}
 	}
 
-	char filename[300];
-	//int c_old = -1;
-	int c_num = 0;
-	//double w_old = -1.0;
-	char scorename[300];
-	ofstream scoreout;
-	ofstream out;
-	if (params.nr_output == 1) {
-		if (params.run_mode == PD_USER_SET || !sg.isPDArea()) {
-			sprintf(filename, "%s.pdtaxa", params.out_prefix);
-			cout << "All taxa list(s) printed to " << filename << endl;
-		} else { 
-			sprintf(filename, "%s.pdarea", params.out_prefix);
-			cout << "All area list(s) printed to " << filename << endl;
-		}
-		out.open(filename);
-		sprintf(scorename, "%s.score", params.out_prefix);
-		scoreout.open(scorename);
-	}
+	sg.printOutputSetScore(params, pd_set);
 
 
-	for (vector<SplitSet>::iterator it = pd_set.begin(); it != pd_set.end(); it++) {
-		// ignore, if get the same PD sets again
-		//if (it != pd_set.begin() && it->getWeight() == (it-1)->getWeight() && it->size() == (it-1)->size()) 
-			//continue;
-		c_num = 0;
-		if (params.nr_output == 1)
-			scoreout << (*it)[0]->countTaxa() << "  " << (it)->getWeight() << endl;
-
-		for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); it2++, c_num++ ){
-			Split *this_set = *it2;
-			int count = this_set->countTaxa();
-			//if (count == 0) continue;
-			
-			//if (count != c_old) {
-			if (c_num == 0) {
-				//c_num = 0;
-				sprintf(filename, "%s.%d.pdtaxa", params.out_prefix, count);
-			}
-			else {
-				//c_num++;
-				sprintf(filename, "%s.%d.pdtaxa.%d", params.out_prefix, count, c_num);
-			}
-			//if (fabs(w_old - this_set->getWeight()) > 1e-5 || (c_old != count))
-	//			if (params.nr_output == 1)
-		//			scoreout << count << "  " << this_set->getWeight() << endl;
-			//w_old = this_set->getWeight();
-	
-			//c_old = count;
-			if (params.nr_output > 10) {
-				out.open(filename);
-				if (params.run_mode == PD_USER_SET || !sg.isPDArea()) {
-					for (i = 0; i < sg.getNTaxa(); i++) 
-						if (this_set->containTaxon(i))
-							out << sg.getTaxa()->GetTaxonLabel(i) << endl;
-				} else {
-					for (i = 0; i < sg.getSetsBlock()->getNSets(); i++) 
-						if (this_set->containTaxon(i))
-							out << sg.getSetsBlock()->getSet(i).name << endl;
-				}
-				out.close();
-				cout << "Taxa list printed to " << filename << endl;
-			} else if (params.nr_output == 1) {
-				out << count << "  " << this_set->getWeight() << endl;
-				if (params.run_mode == PD_USER_SET || !sg.isPDArea()) {
-					for (i = 0; i < sg.getNTaxa(); i++) 
-						if (this_set->containTaxon(i))
-							out << sg.getTaxa()->GetTaxonLabel(i) << endl;
-				} else {
-					for (i = 0; i < sg.getSetsBlock()->getNSets(); i++) 
-						if (this_set->containTaxon(i))
-							out << sg.getSetsBlock()->getSet(i).name << endl;
-				}
-			}
-		}
-	}
-
-	if (params.nr_output == 1) {
-		out.close();
-		scoreout.close();
-		cout << "PD scores printed to " << scorename << endl;
-	}
-
-	summarizeSplit(params, sg, pd_set, pd_more);
+	summarizeSplit(params, sg, pd_set, pd_more, true);
 
 	if (params.calc_pdgain) {
 		matrix(double) delta_gain;
@@ -1463,8 +1392,16 @@ int main(int argc, char *argv[])
         system("echo $HOSTNAME");
 	printCopyright(cout);
 
+
 	Params params;
 	parseArg(argc, argv, params);
+
+	if (verbose_mode >= VB_MED) {
+		for (int i = 0; i < argc; i++)
+			cout << " " << argv[i];
+		cout << endl;
+	}
+
 
 	srand(params.ran_seed);
 

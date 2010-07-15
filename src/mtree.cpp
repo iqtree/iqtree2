@@ -96,7 +96,7 @@ void MTree::printTree(const char *ofile, int brtype)
 		out.open(ofile);
 		printTree(out, brtype);
 		out.close();
-		if (verbose_mode > VB_MIN)
+		if (verbose_mode >= VB_MED)
 			cout << "Tree was printed to " << ofile << endl;
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, ofile);

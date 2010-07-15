@@ -95,6 +95,7 @@ public:
 	*/
 	int calcCost(Split &taxset);
 
+	void printOutputSetScore(Params &params, vector<SplitSet> &pd_set);
 
 	/**
 		compute the PD score of a given taxa set in filename
@@ -241,6 +242,8 @@ public:
 		@param area_id (OUT) minimal set of areas which cover all taxa
 	*/
 	int findMinAreas(Params &params, Split &area_id);
+
+
 
 	/**
 		the set of areas, each item contains the set of taxa in the area.
@@ -396,6 +399,8 @@ protected:
 	void lpVariableBinary(const char *outfile, Params &params, Split &included_vars);
 	void lpVariableBinary(const char *outfile, Params &params, IntVector &initialset);
 	void lpInitialArea(ostream &out, Params &params);
+
+	void computeFeasibleBudget(Params &params, IntVector &list_k);
 
 };
 

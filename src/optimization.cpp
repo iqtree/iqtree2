@@ -332,6 +332,8 @@ double Optimization::minimizeNewton(double xmin, double xguess, double xmax, dou
 
 	for (j=1;j<=JMAX;j++) {
 		f = computeFuncDerv(rtn,df,ddf);
+		if (!isnormal(f)) 
+			return 0;
 		if (j == 1) fstart = f;
 		if (ddf == 0.0) break;
 		dx=df/fabs(ddf);

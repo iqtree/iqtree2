@@ -75,7 +75,7 @@ void SplitGraph::init(Params &params)
 		//SplitIntMap hash_ss;
 		mtrees->convertSplits(*this, params.split_threshold, true);
 
-		if (verbose_mode >= VB_MAX)
+		if (verbose_mode >= VB_DEBUG)
 			saveFile(cout);
 	} else {
 		createBlocks();
@@ -102,7 +102,7 @@ void SplitGraph::init(Params &params)
 
 	}
 	
-	if (verbose_mode)
+	if (verbose_mode >= VB_DEBUG)
 		taxa->Report(cout);
 	//splits->Report(cout);
 	//reportConflict(cout);
@@ -124,7 +124,7 @@ void SplitGraph::init(Params &params)
 			outError("No taxa sets found");
 	}
 
-	if (verbose_mode && sets->getNSets() > 0)
+	if (verbose_mode >= VB_DEBUG && sets->getNSets() > 0)
 		sets->Report(cout);
 
 	if (sets->getNSets() > 0 && taxa->GetNumTaxonLabels() == 0) {
