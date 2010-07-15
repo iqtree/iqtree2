@@ -705,8 +705,22 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 			newScore = optimizeAllBranches();
 		}
 
-		if (newScore < curScore) {
-			cout << "Old score = " << curScore << endl;
+                if (newScore > curScore + 1e-6) {
+                        numbNNI += nbNNIToApply;
+			double delta = newScore - curScore;
+			double deltaProNNI = (newScore - curScore)/nbNNIToApply;
+			curScore = newScore; // Update current score
+			resetLamda = true;
+			vecImpProNNI.push_back(deltaProNNI);
+			if (verbose_mode >= VB_DEBUG)
+				cout << "New best tree found with score " << newScore
+						<< " with " << nbNNIToApply << " NNIs"
+						<< " -- improvement general "
+						<< delta
+						<< " and improvement pro NNI " << deltaProNNI << endl;
+                }
+                else {
+                    	cout << "Old score = " << curScore << endl;
 			cout << "New score = " << newScore << endl;
 			cout << "Using lamda = " << lamda << endl;
 			cout << "Total non-conflicting NNIs found = " << nniTotal << endl;
@@ -724,21 +738,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 			restoreBranchLengths();
 			clearAllPartialLh();
 			resetLamda = false;
-		} else {
-			numbNNI += nbNNIToApply;
-			double delta = newScore - curScore;
-			double deltaProNNI = (newScore - curScore)/nbNNIToApply;
-			curScore = newScore; // Update current score
-			resetLamda = true;
-			vecImpProNNI.push_back(deltaProNNI);
-			if (verbose_mode >= VB_DEBUG)
-				cout << "New best tree found with score " << newScore
-						<< " with " << nbNNIToApply << " NNIs"
-						<< " -- improvement general "
-						<< delta
-						<< " and improvement pro NNI " << deltaProNNI << endl;
-		}
-
+                }
 	} while (fullNNI);
 
 	vecNbNNI.push_back(numbNNI);
@@ -1063,7 +1063,7 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 			node12_len[nniNr] = node12_it->length;
 
 			// If score is better, save the NNI move
-			if (newScore > bestScore) {
+			if (newScore > bestScore + 1e-6) {
 				bestScore = newScore;
 				chosenSwap = nniNr;
 				mymove.node1Nei_it = node1_it;

@@ -1460,6 +1460,7 @@ void testInputFile(Params &params) {
 int main(int argc, char *argv[])
 {
 
+        system("echo $HOSTNAME");
 	printCopyright(cout);
 
 	Params params;
