@@ -705,7 +705,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 			newScore = optimizeAllBranches();
 		}
 
-                if (newScore > curScore + 1e-6) {
+                if (newScore > curScore - 1e-6) {
                         numbNNI += nbNNIToApply;
 			double delta = newScore - curScore;
 			double deltaProNNI = (newScore - curScore)/nbNNIToApply;
@@ -1019,8 +1019,8 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 	node12_len[0] = node12_it->length; // Length of branch node1-node2 before the swap
 
 	// Calculate optimal branch length for branch node1-node2
-	//double bestScore = optimizeOneBranch(node1, node2);
-        double bestScore = curScore;
+	double bestScore = optimizeOneBranch(node1, node2);
+        //double bestScore = curScore;
 
 	// Optimal branch length of the current branch	
 	node12_len[1] = node12_it->length;
