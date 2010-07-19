@@ -432,7 +432,8 @@ double IQPTree::doIQP() {
     // just to make sure IQP does it right
     setAlignment(aln);
     clearAllPartialLh();
-    curScore = optimizeAllBranches(1);
+    //curScore = optimizeAllBranches(1);
+    curScore = computeLikelihood();
 
     if (verbose_mode >= VB_MAX) {
         cout << "IQP Likelihood = " << curScore << endl;
@@ -686,7 +687,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
             newScore = computeLikelihood();
         } else {
             //Do it like in IQPNNI: Optimize all branch lengths after each NNI-Iteration
-            newScore = optimizeAllBranches(1);
+            newScore = optimizeAllBranches();
         }
 
         if (newScore > curScore - TOL_LIKELIHOOD) {
@@ -724,7 +725,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
         }
     } while (fullNNI);
 
-    optimizeAllBranches();
+    //optimizeAllBranches();
 
     vecNbNNI.push_back(numbNNI);
 
