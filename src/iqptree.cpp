@@ -495,23 +495,23 @@ double IQPTree::doIQPNNI(string tree_file_name) {
             //				cout << vecNbNNI[i] << " ";
             //			cout << endl;
         }
-        clock_t startClock = clock();
+        //clock_t startClock = clock();
         double iqp_score = doIQP();
-        clock_t endClock = clock();
-        cout.precision(15);
-        cout << "IQP score : " << iqp_score << endl;
-        printf("Time used for IQP : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
+        //clock_t endClock = clock();
+        //cout.precision(15);
+        //cout << "IQP score : " << iqp_score << endl;
+        //printf("Time used for IQP : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
 
         if (verbose_mode >= VB_DEBUG) {
             string iqp_tree = tree_file_name + "IQP" + convertIntToString(cur_iteration);
             printTree(iqp_tree.c_str());
         }
 
-        startClock = clock();
+        //startClock = clock();
         //double nni_score = optimizeNNI(true);
         optimizeNNI(true); // the new score is saved in curScore
-        endClock = clock();
-        printf("Time used for NNI : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
+        //endClock = clock();
+        //printf("Time used for NNI : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
 
         if (nni_lh && lh_file.is_open()) {
             lh_file << cur_iteration;
@@ -578,7 +578,7 @@ double IQPTree::doIQPNNI(string tree_file_name) {
 double IQPTree::optimizeNNI(bool fullNNI) {
 
     clock_t nniBeginClock, nniEndClock;
-    nniBeginClock = clock();
+    //nniBeginClock = clock();
 
     // Switch to run "slow NNI"
     if (simple_nni) {
@@ -602,7 +602,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
                     //cout << "TREE'S SCORE BEFORE STARTING NNI-STEP " << nniIteration << " = " << curScore << endl;
                     //cout << "ESTIMATED MAX-SCORE = " << maxScore << endl;
                     //cout << "BEST SCORE :" << bestScore << endl;
-                    cout << "TREE IS NOT LIKELY TO BE IMPROVED, STOP DOING NNI-SEARCH !" << endl;
+                    //cout << "TREE IS NOT LIKELY TO BE IMPROVED, STOP DOING NNI-SEARCH !" << endl;
                     return curScore;
                 }
             }
@@ -729,7 +729,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 
     vecNbNNI.push_back(numbNNI);
 
-    nniEndClock = clock();
+    //nniEndClock = clock();
     if (verbose_mode >= VB_MED) {
         cout << "Number of NNIs applied : " << numbNNI << endl;
         printf("Time used : %8.6f seconds.\n", (double) (-nniBeginClock
