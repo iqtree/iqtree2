@@ -597,7 +597,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
             //N IQPNNI iterations have been done
             if (enableHeuris) {
                 double maxScore = curScore + deltaNNI95 * (nbNNI95 - numbNNI);
-                if (maxScore <= bestScore - TOL_LIKELIHOOD) {
+                if (maxScore <= bestScore + TOL_LIKELIHOOD) {
                     //cout << "TREE'S SCORE BEFORE STARTING NNI-STEP " << nniIteration << " = " << curScore << endl;
                     //cout << "ESTIMATED MAX-SCORE = " << maxScore << endl;
                     //cout << "BEST SCORE :" << bestScore << endl;
