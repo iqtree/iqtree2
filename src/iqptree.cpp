@@ -432,8 +432,8 @@ double IQPTree::doIQP() {
     // just to make sure IQP does it right
     setAlignment(aln);
     clearAllPartialLh();
-    //curScore = optimizeAllBranches(1);
-    curScore = computeLikelihood();
+    curScore = optimizeAllBranches();
+    //curScore = computeLikelihood();
 
     if (verbose_mode >= VB_MAX) {
         cout << "IQP Likelihood = " << curScore << endl;
@@ -986,8 +986,8 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
     node12_len[0] = node12_it->length; // Length of branch node1-node2 before the swap
 
     // Calculate optimal branch length for branch node1-node2
-    double bestScore = optimizeOneBranch(node1, node2);
-    //double bestScore = curScore;
+    //double bestScore = optimizeOneBranch(node1, node2);
+    double bestScore = curScore;
 
     // Optimal branch length of the current branch
     node12_len[1] = node12_it->length;
