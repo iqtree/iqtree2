@@ -686,7 +686,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
             newScore = computeLikelihood();
         } else {
             //Do it like in IQPNNI: Optimize all branch lengths after each NNI-Iteration
-            newScore = optimizeAllBranches(1);
+            newScore = optimizeAllBranches();
         }
 
         if (newScore > curScore - TOL_LIKELIHOOD) {
@@ -724,7 +724,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
         }
     } while (fullNNI);
 
-    optimizeAllBranches();
+    //optimizeAllBranches();
 
     vecNbNNI.push_back(numbNNI);
 
