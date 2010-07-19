@@ -342,7 +342,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 
 		clock_t nniBeginClock, nniEndClock;
 		nniBeginClock = clock();
-		double newScore = tree.optimizeNNI(true);
+		//double newScore = tree.optimizeNNI(true);
+                double newScore = tree.optimizeNNI(true);
 		nniEndClock = clock();
 		printf("Time used for first NNI search: %8.6f seconds.\n", (double)(nniBeginClock - nniEndClock) / CLOCKS_PER_SEC);
 

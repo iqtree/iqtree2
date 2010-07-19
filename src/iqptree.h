@@ -277,7 +277,7 @@ public:
 	 * @param curScore
 	 * @return
 	 */
-	double setCurScore(double curScore);
+	void setCurScore(double curScore);
 
 protected:
 
