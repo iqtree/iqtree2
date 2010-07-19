@@ -432,7 +432,7 @@ double IQPTree::doIQP() {
     // just to make sure IQP does it right
     setAlignment(aln);
     clearAllPartialLh();
-    curScore = optimizeAllBranches();
+    curScore = optimizeAllBranches(1);
     //curScore = computeLikelihood();
 
     if (verbose_mode >= VB_MAX) {
