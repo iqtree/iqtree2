@@ -335,7 +335,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 
 	/* do NNI with likelihood function */
 
-        /*
+        
 	if (params.min_iterations > 0) {
 		cout << "Performing Nearest Neighbor Interchange..." << endl;
 		//cout << "Current tree likelihood: " << tree.optimizeNNIBranches() << endl;
@@ -357,8 +357,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 			cout << "Tree didn't improve after NNI :( " << endl;
 		}
 
-	}
-        */
+	}        
 
 	/* do the IQP */
 	if (params.k_representative > 0 && params.p_delete > 0.0 && params.min_iterations > 1) {
