@@ -93,7 +93,10 @@ void MTree::printTree(const char *ofile, int brtype)
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
-		out.open(ofile);
+		if (brtype & WT_APPEND) 
+			out.open(ofile, ios_base::out | ios_base::app);
+		else
+			out.open(ofile);
 		printTree(out, brtype);
 		out.close();
 		if (verbose_mode >= VB_MED)
@@ -125,13 +128,37 @@ void MTree::printTree(ostream &out, int brtype) {
 		printTree(out, brtype, root);
 
 	out << ";";
+	if (brtype & WT_NEWLINE) out << endl;
 }
 
-void MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
+struct IntString {
+	int id;
+	string str;
+};
+
+/**
+	nodecmp, for pruning algorithm
+*/
+struct IntStringCmp
 {
+	/**
+		nodecmp, for pruning algorithm
+	*/
+  bool operator()(const IntString* s1, const IntString* s2) const
+  {
+    return (s1->id) < (s2->id);
+  }
+};
+
+typedef set<IntString*, IntStringCmp> IntStringSet;
+
+int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
+{
+	int smallest_taxid = leafNum;
 	out.precision(6);
 	if (!node) node = root;
 	if (node->isLeaf()) {
+		smallest_taxid = node->id;
 		if (brtype & WT_TAXON_ID) 
 			out << node->id;
 		else
@@ -146,17 +173,44 @@ void MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 		double length = 0.0;
 		//for (int i = 0; i < node->neighbors.size(); i++)
 			//if (node->neighbors[i]->node != dad)
-		FOR_NEIGHBOR_IT(node, dad, it) {
-			if ((*it)->node->name != ROOT_NAME) {
-				if (!first)
-					out << ",";
-				printTree(out, brtype, (*it)->node, node);
-				first = false;
-			} else
+		if (! (brtype & WT_SORT_TAXA)) {
+			FOR_NEIGHBOR_IT(node, dad, it) {
+				if ((*it)->node->name != ROOT_NAME) {
+					if (!first)
+						out << ",";
+					int taxid = printTree(out, brtype, (*it)->node, node);
+					if (taxid < smallest_taxid) smallest_taxid = taxid;
+					first = false;
+				} else
+					length = (*it)->length;
+			} else {
 				length = (*it)->length;
+			} 
 		} else {
-			length = (*it)->length;
-		}
+			IntStringSet strout;
+			FOR_NEIGHBOR_IT(node, dad, it) {
+				if ((*it)->node->name != ROOT_NAME) {
+					ostringstream ss;
+					IntString *str = new IntString;
+					str->id = printTree(ss, brtype, (*it)->node, node);
+					//ss.flush();
+					str->str = ss.str();
+					strout.insert(str);
+				} else
+					length = (*it)->length;
+			} else {
+				length = (*it)->length;
+			} 
+			smallest_taxid = (*strout.begin())->id;
+			IntStringSet::iterator iss;
+			for (iss = strout.begin(); iss != strout.end(); iss++) {
+				if (!first) out << ",";
+				out << (*iss)->str;
+				first = false;
+			}
+			for (iss = strout.begin(); iss != strout.end(); iss++)
+				delete (*iss);
+		} 
 		out << ")";
 		if (!node->name.empty())
 			out << node->name;
@@ -168,6 +222,7 @@ void MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 				out << length; 
 			}
 	}
+	return smallest_taxid;
 }
 
 

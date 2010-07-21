@@ -514,6 +514,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.optimize_by_newton = true;
 	params.fixed_branch_length = false;
 	params.iqp_assess_quartet = IQP_DISTANCE;
+	params.output_trees = false;
 
 	/* TUNG: IQP-TREE Specific Options */
 	simple_nni = false;
@@ -889,6 +890,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.multi_tree = true;
 			} else if (strcmp(argv[cnt],"-iqppars") == 0) {
 				params.iqp_assess_quartet = IQP_PARSIMONY;
+			} else if (strcmp(argv[cnt],"-treels") == 0) {
+				params.output_trees = true;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

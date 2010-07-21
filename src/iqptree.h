@@ -164,7 +164,7 @@ public:
 		@return best likelihood found
 		@param tree_file_name name of the tree file to write the best tree found
 	*/
-	double doIQPNNI(string tree_file_name);
+	double doIQPNNI(Params &params);
 
 /****************************************************************************
 	Fast Nearest Neighbor Interchange by maximum likelihood

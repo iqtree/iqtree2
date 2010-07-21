@@ -444,9 +444,17 @@ double IQPTree::doIQP() {
     return curScore;
 }
 
-double IQPTree::doIQPNNI(string tree_file_name) {
+double IQPTree::doIQPNNI(Params &params) {
+	string tree_file_name = params.aln_file;
+	tree_file_name += ".treefile";
     bestScore = computeLikelihood();
     printTree(tree_file_name.c_str());
+    string treels_name = params.aln_file;
+    treels_name += ".treels";
+	if (params.output_trees)
+		printTree(treels_name.c_str(), WT_TAXON_ID | WT_SORT_TAXA | WT_NEWLINE);
+		//printTree(treels_name.c_str(), WT_NEWLINE | WT_BR_LEN);
+
 
     // keep the best tree into a string
     stringstream best_tree_string;
@@ -538,6 +546,11 @@ double IQPTree::doIQPNNI(string tree_file_name) {
                 //exit(0);
             }
         }
+
+		if (params.output_trees)
+			printTree(treels_name.c_str(), WT_TAXON_ID | WT_NEWLINE | WT_APPEND | WT_SORT_TAXA);
+			//printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_BR_LEN);
+
 
         if (curScore > bestScore + TOL_LIKELIHOOD) {
             //nni_score = optimizeNNI(true);

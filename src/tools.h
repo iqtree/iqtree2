@@ -133,12 +133,18 @@ enum TreeGenType {NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED,
 		WT_TAXON_ID - output taxon ID
 		WT_INT_NODE - for draw tree, draw the internal node
 		WT_BR_SCALE - for draw tree, draw the branch proportional to its length
+		WT_SORT_TAXA - sort the taxa s.t. subtrees with least taxon ID come first
+		WT_APPEND    - append the output file
+		WT_NEWLINE   - print a newline after
 */
 const int WT_BR_LEN    = 1;
 const int WT_BR_CLADE  = 2;
 const int WT_TAXON_ID  = 4;
 const int WT_INT_NODE  = 8;
 const int WT_BR_SCALE  = 16;
+const int WT_SORT_TAXA = 32;
+const int WT_APPEND    = 64;
+const int WT_NEWLINE   = 128;
 
 /**
 	search mode
@@ -569,6 +575,11 @@ struct Params {
 		TRUE if doing bootstrap on the input trees (good, bad, ugly)
 	*/
 	bool bootstrap;
+	
+	/**
+		TRUE if output all trees from every IQPNNI iteration
+	*/
+	bool output_trees;
 };
 
 /**

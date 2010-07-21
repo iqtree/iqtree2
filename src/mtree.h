@@ -129,8 +129,9 @@ public:
 		@param node the starting node, NULL to start from the root
 		@param dad dad of the node, used to direct the search
 		@param brtype type of branch to print
+		@return ID of the taxon with smallest ID
 	*/
-	void printTree(ostream &out, int brtype, Node *node, Node *dad = NULL);
+	int printTree(ostream &out, int brtype, Node *node, Node *dad = NULL);
 
 
 	/**

@@ -376,9 +376,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		tree.setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
 		tree.setIQPAssessQuartet(params.iqp_assess_quartet);
 
-		string tree_file_name = params.aln_file;
-		tree_file_name += ".treefile";
-		double bestscore = tree.doIQPNNI(tree_file_name);
+		double bestscore = tree.doIQPNNI(params);
 		cout << "Optimizing model parameters" << endl;
 		double endScore = tree.optimizeModel(params.fixed_branch_length);
 		cout << "Best score found : " << endScore << endl;
