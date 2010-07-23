@@ -449,17 +449,7 @@ protected:
 		@param dad dad of 'node', used to direct the recursion
 	*/
 	void raiseBonus(Neighbor *nei, Node *dad, double bonus);
-	//void raiseBonus(Neighbor *nei, Node *dad);
-	void combineBonus(Neighbor *nei, Node *dad);
-	void sumBonus(Neighbor *node_nei, Node *node);
-	void combineTwoBonus(PhyloNeighbor *dad_nei, Node *dad);
-
-	/**
-		find the best bonus point
-		@param node the root of the sub-tree
-		@param dad dad of 'node', used to direct the recursion
-	*/
-	double findBestBonus(Node *node = NULL, Node *dad = NULL);
+	double computePartialBonus(Node *node, Node* dad);
 
 	/**
 		determine the list of branches with the same best bonus point
@@ -469,8 +459,7 @@ protected:
 		@param node the root of the sub-tree
 		@param dad dad of 'node', used to direct the recursion
 	*/
-	void findBestBranch(double best_bonus, NodeVector &best_nodes, NodeVector &best_dads, Node *node = NULL, Node *dad = NULL);
-
+	void findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, Node *node=NULL, Node *dad=NULL);
 
 };
 

@@ -152,24 +152,32 @@ void IQPTree::deleteLeaves(PhyloNodeVector &del_leaves, PhyloNodeVector &adjacen
     // get the vector of taxa
     getTaxa(taxa);
     root = NULL;
-    int remain_leaves = taxa.size();
+    int num_delete = floor(p_delete * taxa.size());
+    int i;
+    if (num_delete > taxa.size() - 4) num_delete = taxa.size() - 4;
     // now try to randomly delete some taxa of the probability of p_delete
-    for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++) {
-        PhyloNode *taxon = (PhyloNode*) (*it);
-        if (((double) (rand()) / RAND_MAX) < p_delete && remain_leaves > 3) {
-            del_leaves.push_back(taxon);
-            adjacent_nodes.push_back((PhyloNode*) (taxon->neighbors[0]->node));
-            deleteLeaf(taxon);
-            remain_leaves--;
-        } else if (!root)
-            root = taxon;
+    for (i = 0; i < num_delete; ) {
+		int id = floor((((double) rand()) / RAND_MAX) * taxa.size());
+		if (!taxa[id]) continue; else i++;
+        PhyloNode *taxon = (PhyloNode*) taxa[id];
+		del_leaves.push_back(taxon);
+		adjacent_nodes.push_back((PhyloNode*) (taxon->neighbors[0]->node));
+		deleteLeaf(taxon);
+		taxa[id] = NULL;
     }
+	// set root to the first taxon which was not deleted
+    for (i = 0; i < taxa.size(); i++)
+    	if (taxa[i]) { 
+    		root = taxa[i];
+    		break;
+		}
 }
 
 int IQPTree::assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2,
         Node *del_leaf) {
     assert(dist_matrix);
     int nseq = aln->getNSeq();
+    int id0 = leaf0->id, id1 = leaf1->id, id2 = leaf2->id;
     double dist0 = dist_matrix[leaf0->id * nseq + del_leaf->id]
             + dist_matrix[leaf1->id * nseq + leaf2->id];
     double dist1 = dist_matrix[leaf1->id * nseq + del_leaf->id]
@@ -214,106 +222,61 @@ void IQPTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
     if (!node)
         node = (PhyloNode*) root;
     if (dad) {
-        ((PhyloNeighbor*) (node->findNeighbor(dad)))->lh_scale_factor = 0.0;
-        ((PhyloNeighbor*) (dad->findNeighbor(node)))->lh_scale_factor = 0.0;
+    	PhyloNeighbor *node_nei = (PhyloNeighbor*) node->findNeighbor(dad);
+		PhyloNeighbor *dad_nei = (PhyloNeighbor*) dad->findNeighbor(node);
+        node_nei->lh_scale_factor = 0.0;
+        node_nei->partial_lh_computed = false;
+        dad_nei->lh_scale_factor = 0.0;
+        dad_nei->partial_lh_computed = false;
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
         initializeBonus((PhyloNode*) ((*it)->node), node);
     }
-    /*
-     if (!bonus_values)
-     bonus_values = new double[nodeNum];
-     for (int i = 0; i < nodeNum; i++)
-     bonus_values[i] = 0.0;*/
 }
 
 void IQPTree::raiseBonus(Neighbor *nei, Node *dad, double bonus) {
-    //Node *node = nei->node;
-    //assert(((PhyloNeighbor*)nei)->lh_scale_factor == 0.0);
-    ((PhyloNeighbor*) nei)->lh_scale_factor = -bonus;
-    /*
-    FOR_NEIGHBOR_IT(node, dad, it)
-            raiseBonus((*it), node, bonus);*/
+    ((PhyloNeighbor*) nei)->lh_scale_factor += bonus;
+    if (verbose_mode >= VB_DEBUG)
+   		cout << dad->id << " - " << nei->node->id << " : " << bonus << endl;
+
+ //  FOR_NEIGHBOR_IT(nei->node, dad, it)
+	//	raiseBonus((*it), nei->node, bonus);
 }
 
-/*
-void IQPTree::raiseBonus(Neighbor *nei, Node *dad, double bonus) {
-        Node *node = nei->node;
-        assert(((PhyloNeighbor*)nei)->lh_scale_factor == 0.0);
-        ((PhyloNeighbor*)nei)->lh_scale_factor += bonus;
-        cout << dad->id << " - " << nei->node->id << " : " << bonus << endl;
-}*/
 
-void IQPTree::sumBonus(Neighbor *node_nei, Node *node) {
-    if (((PhyloNeighbor*) node_nei)->lh_scale_factor > 0) return;
-    double sum = -((PhyloNeighbor*) node_nei)->lh_scale_factor;
-
-    FOR_NEIGHBOR_IT(node, node_nei->node, it) {
-        Node *child = (*it)->node;
-        PhyloNeighbor *child_nei = (PhyloNeighbor*) child->findNeighbor(node);
-        sumBonus(child_nei, child);
-        sum += child_nei->lh_scale_factor;
-    }
-    ((PhyloNeighbor*) node_nei)->lh_scale_factor = sum;
+double IQPTree::computePartialBonus(Node *node, Node* dad) {
+	PhyloNeighbor *node_nei = (PhyloNeighbor*)node->findNeighbor(dad);
+	if (node_nei->partial_lh_computed) return node_nei->lh_scale_factor;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		node_nei->lh_scale_factor += computePartialBonus((*it)->node, node);
+	}
+	node_nei->partial_lh_computed = true;
+	return node_nei->lh_scale_factor;
 }
 
-void IQPTree::combineBonus(Neighbor *dad_nei, Node *dad) {
-    Node *node = dad_nei->node;
-    PhyloNeighbor *node_nei = (PhyloNeighbor*) node->findNeighbor(dad);
-    sumBonus(node_nei, node);
-    sumBonus(dad_nei, dad);
-
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        combineBonus((*it), node);
-    }
-}
-
-void IQPTree::combineTwoBonus(PhyloNeighbor *dad_nei, Node *dad) {
-    Node *node = dad_nei->node;
-    PhyloNeighbor *node_nei = (PhyloNeighbor*) node->findNeighbor(dad);
-    double sum = dad_nei->lh_scale_factor + node_nei->lh_scale_factor;
-    dad_nei->lh_scale_factor = node_nei->lh_scale_factor = sum;
-
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        combineTwoBonus((PhyloNeighbor*) (*it), node);
-    }
-}
-
-double IQPTree::findBestBonus(Node *node, Node *dad) {
-    double best_score;
+void IQPTree::findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, Node *node, Node *dad) {
+    double score;
     if (!node)
         node = root;
     if (!dad) {
         best_score = 0;
     } else {
-        best_score
-                = ((PhyloNeighbor*) (node->findNeighbor(dad)))->lh_scale_factor;
+        score = computePartialBonus(node, dad) + computePartialBonus(dad, node);
+        if (score >= best_score) {
+        	if (score > best_score) {
+				best_score = score;
+				best_nodes.clear();
+				best_dads.clear();
+            }
+            best_nodes.push_back(node);
+            best_dads.push_back(dad);
+        } 
         //cout << node->id << " - " << dad->id << " : " << best_score << endl;
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-        double score;
-        score = findBestBonus((*it)->node, node);
-        if (score > best_score) {
-            best_score = score;
-        }
-    }
-    return best_score;
-}
-
-void IQPTree::findBestBranch(double best_bonus, NodeVector &best_nodes,
-        NodeVector &best_dads, Node *node, Node *dad) {
-    if (!node)
-        node = root;
-    if (dad && ((PhyloNeighbor*) (node->findNeighbor(dad)))->lh_scale_factor
-            == best_bonus) {
-        best_nodes.push_back(node);
-        best_dads.push_back(dad);
-    }
-
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        findBestBranch(best_bonus, best_nodes, best_dads, (*it)->node, node);
+        findBestBonus(best_score, best_nodes, best_dads, (*it)->node, node);
     }
 }
 
@@ -377,29 +340,29 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves,
         PhyloNodeVector &adjacent_nodes) {
     PhyloNodeVector::iterator it_leaf, it_node;
 
-    vector<RepresentLeafSet*> leaves_vec;
-    leaves_vec.resize(nodeNum * 3, NULL);
+	int num_del_leaves = del_leaves.size();
     assert(root->isLeaf());
 
     for (it_leaf = del_leaves.begin(), it_node = adjacent_nodes.begin(); it_leaf
             != del_leaves.end(); it_leaf++, it_node++) {
+		vector<RepresentLeafSet*> leaves_vec;
+		leaves_vec.resize(nodeNum * 3, NULL);
         if (verbose_mode >= VB_DEBUG)
-            cout << "Reinserting " << (*it_leaf)->name << endl;
+            cout << "Reinserting " << (*it_leaf)->name << " (" << (*it_leaf)->id << ")" << endl;
         initializeBonus();
         NodeVector nodes;
         getInternalNodes(nodes);
+		if (verbose_mode >= VB_DEBUG)
+			drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
+			//printTree(cout, WT_BR_LEN | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
         for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
             assessQuartets(leaves_vec, (PhyloNode*) (*it), (*it_leaf));
         }
-        combineBonus(root->neighbors[0], root);
-        combineTwoBonus((PhyloNeighbor*) root->neighbors[0], root);
-        //cout << root->id << endl;
         NodeVector best_nodes, best_dads;
-        //cout << "XXX" << endl;
-        double best_bonus = findBestBonus();
-        //if (verbose_mode >= VB_MAX)
-        //cout << "Best IQP Bonus: " << best_bonus << endl;
-        findBestBranch(best_bonus, best_nodes, best_dads);
+        double best_bonus;
+        findBestBonus(best_bonus, best_nodes, best_dads);
+        if (verbose_mode >= VB_DEBUG) 
+        	cout << "Best bonus " << best_bonus << " " << best_nodes[0]->id << " " << best_dads[0]->id << endl;
         assert(best_nodes.size() == best_dads.size());
         int node_id = floor((((double) rand()) / RAND_MAX) * best_nodes.size());
         if (best_nodes.size() > 1 && verbose_mode >= VB_DEBUG)
@@ -413,17 +376,20 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves,
          printTree(cout);
          cout << endl;
          }*/
+		for (vector<RepresentLeafSet*>::iterator rit = leaves_vec.begin(); rit != leaves_vec.end(); rit++)
+			if ((*rit)) {
+				RepresentLeafSet *tit = (*rit);
+				for (RepresentLeafSet::iterator rlit = tit->begin(); rlit != tit->end(); rlit++)
+					delete (*rlit);
+				delete (*rit);
+			}
     }
-    for (vector<RepresentLeafSet*>::iterator rit = leaves_vec.begin(); rit != leaves_vec.end(); rit++)
-        if ((*rit)) {
-            RepresentLeafSet *tit = (*rit);
-            for (RepresentLeafSet::iterator rlit = tit->begin(); rlit != tit->end(); rlit++)
-                delete (*rlit);
-            delete (*rit);
-        }
 }
 
 double IQPTree::doIQP() {
+
+	if (verbose_mode >= VB_DEBUG)
+		drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
 
     PhyloNodeVector del_leaves, adjacent_nodes;
     deleteLeaves(del_leaves, adjacent_nodes);

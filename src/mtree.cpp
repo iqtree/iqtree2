@@ -214,6 +214,8 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 		out << ")";
 		if (!node->name.empty())
 			out << node->name;
+		else if (brtype & WT_INT_NODE)
+			out << node->id;
 		if (dad != NULL || length > 0.0)
 			if (brtype & WT_BR_LEN)
 				out << ":" << length; 

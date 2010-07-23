@@ -845,6 +845,7 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
 	return -negative_lh;
 }
 
+
 double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
 	double tree_lh = 0.0;
 	FOR_NEIGHBOR_IT(node, dad, it) {
@@ -855,11 +856,13 @@ double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
 
 
 double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
-	double tree_lh = optimizeChildBranches(node, dad);
+	//double tree_lh = optimizeChildBranches(node, dad);
+	double tree_lh;
 	FOR_NEIGHBOR_IT(node, dad, it) {
-		if (!(*it)->node->isLeaf())
+		//if (!(*it)->node->isLeaf())
 			tree_lh = optimizeAllBranches((PhyloNode*)(*it)->node, node);
 	}
+	if (dad) tree_lh = optimizeOneBranch(node, dad);
 	return tree_lh;
 }
 
