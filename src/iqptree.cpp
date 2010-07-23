@@ -615,7 +615,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
                     //cout << "TREE'S SCORE BEFORE STARTING NNI-STEP " << nniIteration << " = " << curScore << endl;
                     //cout << "ESTIMATED MAX-SCORE = " << maxScore << endl;
                     //cout << "BEST SCORE :" << bestScore << endl;
-                    //cout << "TREE IS NOT LIKELY TO BE IMPROVED, STOP DOING NNI-SEARCH !" << endl;
+                    cout << "TREE IS NOT LIKELY TO BE IMPROVED, STOP DOING NNI-SEARCH !" << endl;
                     return curScore;
                 }
             }
