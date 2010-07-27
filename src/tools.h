@@ -147,6 +147,13 @@ const int WT_APPEND    = 64;
 const int WT_NEWLINE   = 128;
 
 /**
+	when computing Robinson-Foulds distances
+*/
+const int RF_ADJACENT_PAIR = 1;
+const int RF_ALL_PAIR	   = 2;
+
+
+/**
 	search mode
 */
 //enum SearchMode {EXHAUSTIVE, EXHAUSTIVE_CIRCULAR};
@@ -580,6 +587,11 @@ struct Params {
 		TRUE if output all trees from every IQPNNI iteration
 	*/
 	bool output_trees;
+
+	/**
+		Robinson-Foulds distance computation mode: RF_ADJACENT PAIR, RF_ALL_PAIR
+	*/
+	int rf_dist_mode;
 };
 
 /**

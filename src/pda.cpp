@@ -1373,6 +1373,47 @@ void calcDistribution(Params &params) {
 	}
 }
 
+void computeRFDist(Params &params) {
+
+	if (!params.user_file) outError("User tree file not provided");
+
+	string filename = params.out_prefix;
+	filename += ".rfdist";
+	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin);
+	int i, j, n = trees.size();
+	int rfsize = n*n;
+	int *rfdist = new int [rfsize];
+	memset(rfdist, 0, rfsize * sizeof(int));
+	trees.computeRFDist(rfdist, params.rf_dist_mode);
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename.c_str());
+		out << n << endl;
+		if (params.rf_dist_mode == RF_ADJACENT_PAIR) {
+			out << "XXX        ";
+			for (i = 0; i < n; i++) 
+				out << " " << rfdist[i];
+			out << endl;
+		} else {
+			// all pairs
+			for (i = 0; i < n; i++)  {
+				out << "Tree" << i << "      ";
+				for (j = 0; j < n; j++) 
+					out << " " << rfdist[i*n+j];
+				out << endl;
+			}
+		} 
+		out.close();
+		cout << "Robinson-Foulds distances printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+	delete rfdist;
+}
+
+
 void testInputFile(Params &params) {
 	SplitGraph sg(params);
 	if (sg.isWeaklyCompatible())
@@ -1408,6 +1449,8 @@ int main(int argc, char *argv[])
 	// call the main function
 	if (params.tree_gen != NONE) {
 		generateRandomTree(params);
+	} else if (params.rf_dist_mode != 0) {
+		computeRFDist(params);
 	} else if (params.test_input != TEST_NONE) {
 		params.intype = detectInputFile(params.user_file);
 		testInputFile(params);

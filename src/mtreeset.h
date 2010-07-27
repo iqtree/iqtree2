@@ -23,6 +23,7 @@
 #include "mtree.h"
 #include "splitgraph.h"
 
+
 /**
 Set of trees
 
@@ -108,6 +109,13 @@ public:
 			Otherwise just count the number of branches.
 	*/
 	void convertSplits(SplitGraph &sg, double split_threshold, bool lensum);
+
+	/**
+		compute the Robinson-Foulds distance between trees
+		@param rfdist (OUT) RF distance
+		@param mode 
+	*/
+	void computeRFDist(int *rfdist, int mode = RF_ALL_PAIR);
 
 	/**
 		destructor

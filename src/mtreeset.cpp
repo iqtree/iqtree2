@@ -289,3 +289,62 @@ MTreeSet::~MTreeSet()
 }
 
 
+void MTreeSet::computeRFDist(int *rfdist, int mode) {
+	// exit if less than 2 trees
+	if (size() < 2)
+		return;
+#ifdef USE_HASH_MAP
+	cout << "Using hash_map" << endl;
+#else
+	cout << "Using map" << endl;
+#endif
+	cout << "Computing Robinson-Foulds distance..." << endl;
+
+	vector<NxsString> taxname(front()->leafNum);
+	vector<SplitIntMap*> hs_vec;
+	vector<SplitGraph*> sg_vec;
+
+	front()->getTaxaName(taxname);
+
+
+	// converting trees into split system then stored in SplitIntMap for efficiency
+	for (iterator it = begin(); it != end(); it++) {
+		SplitGraph *sg = new SplitGraph();
+		SplitIntMap *hs = new SplitIntMap();
+
+		(*it)->convertSplits(taxname, *sg);
+		// make sure that taxon 0 is included
+		for (SplitGraph::iterator sit = sg->begin(); sit != sg->end(); sit++) {
+			if (!(*sit)->containTaxon(0)) (*sit)->invert();
+			hs->insertSplit((*sit), 1);
+		}
+		hs_vec.push_back(hs);
+		sg_vec.push_back(sg);
+	}
+
+	// now start the RF computation
+	int id = 0;
+	for (vector<SplitIntMap*>::iterator hsit = hs_vec.begin(); hsit+1 != hs_vec.end(); hsit++, id++) {
+		vector<SplitIntMap*>::iterator end_it = hs_vec.end();
+		if (mode == RF_ADJACENT_PAIR) end_it = hsit+2;
+		int id2 = id+1;
+		for (vector<SplitIntMap*>::iterator hsit2 = hsit+1; hsit2 != end_it; hsit2++, id2++) {
+			int common_splits = 0;
+			for (SplitIntMap::iterator spit = (*hsit2)->begin(); spit != (*hsit2)->end(); spit++) {
+				if ((*hsit)->findSplit(spit->first)) common_splits++;
+			}
+			int rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
+			if (mode == RF_ADJACENT_PAIR) 
+				rfdist[id] = rf_val;
+			else {
+				rfdist[id*size() + id2] = rfdist[id2*size() + id] = rf_val;
+			}
+		}
+	}
+	// delete memory 
+	for (id = size()-1; id >= 0; id--) {
+		delete hs_vec[id];
+		delete sg_vec[id];
+	}
+}
+
