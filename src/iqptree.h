@@ -146,6 +146,14 @@ public:
 		PhyloNode *dad);
 
 	/**
+		clear representative leave sets iteratively, called once a leaf is re-inserted into the tree
+		@param node the node at which the subtree is rooted
+		@param dad the dad node of the considered subtree, to direct the search
+		@param leaves (OUT) the k-representative leaf set
+	*/
+	void clearRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec, Node *node, Node *dad);
+
+	/**
 		perform one IQPNNI iteration
 		@return current likelihood
 	*/
@@ -449,6 +457,14 @@ protected:
 		@param dad dad of 'node', used to direct the recursion
 	*/
 	void raiseBonus(Neighbor *nei, Node *dad, double bonus);
+
+	/**
+		Bonuses are stored in a partial fashion. This function will propagate the bonus at every branch
+		into the subtree at this branch.
+		@param node the root of the sub-tree
+		@param dad dad of 'node', used to direct the recursion
+		@return the partial bonus of the branch (node -> dad)
+	*/
 	double computePartialBonus(Node *node, Node* dad);
 
 	/**

@@ -126,6 +126,24 @@ RepresentLeafSet* IQPTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves
     return leaves;
 }
 
+/*
+void IQPTree::clearRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec, Node *node, Node *dad) {
+	int nei_id;
+	for (nei_id = 0; nei_id < node->neighbors.size(); nei_id++)
+		if (node->neighbors[nei_id]->node == dad) break;
+	assert(nei_id < node->neighbors.size());
+	int set_id = node->id * 3 + nei_id; 
+	if (leaves_vec[set_id]) {
+		for (RepresentLeafSet::iterator rlit = leaves_vec[set_id]->begin(); rlit != leaves_vec[set_id]->end(); rlit++)
+			delete (*rlit);
+		delete leaves_vec[set_id];
+		leaves_vec[set_id] = NULL;
+	}
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		clearRepresentLeaves(leaves_vec, (*it)->node, node);
+	}
+}*/
+
 void IQPTree::deleteLeaf(Node *leaf) {
     Node *near_node = leaf->neighbors[0]->node;
     assert(leaf->isLeaf() && near_node->degree() == 3);
@@ -280,6 +298,7 @@ void IQPTree::findBestBonus(double &best_score, NodeVector &best_nodes, NodeVect
     }
 }
 
+
 void IQPTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *cur_root, PhyloNode *del_leaf) {
     const int MAX_DEGREE = 3;
     RepresentLeafSet * leaves[MAX_DEGREE];
@@ -345,10 +364,10 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves,
 
     for (it_leaf = del_leaves.begin(), it_node = adjacent_nodes.begin(); it_leaf
             != del_leaves.end(); it_leaf++, it_node++) {
-		vector<RepresentLeafSet*> leaves_vec;
-		leaves_vec.resize(nodeNum * 3, NULL);
         if (verbose_mode >= VB_DEBUG)
             cout << "Reinserting " << (*it_leaf)->name << " (" << (*it_leaf)->id << ")" << endl;
+		vector<RepresentLeafSet*> leaves_vec;
+		leaves_vec.resize(nodeNum * 3, NULL);
         initializeBonus();
         NodeVector nodes;
         getInternalNodes(nodes);
@@ -372,17 +391,18 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves,
 
         reinsertLeaf(*it_leaf, *it_node, best_nodes[node_id],
                 best_dads[node_id]);
+		//clearRepresentLeaves(leaves_vec, *it_node, *it_leaf);
         /*if (verbose_mode >= VB_DEBUG) {
          printTree(cout);
          cout << endl;
          }*/
 		for (vector<RepresentLeafSet*>::iterator rit = leaves_vec.begin(); rit != leaves_vec.end(); rit++)
-			if ((*rit)) {
-				RepresentLeafSet *tit = (*rit);
-				for (RepresentLeafSet::iterator rlit = tit->begin(); rlit != tit->end(); rlit++)
-					delete (*rlit);
-				delete (*rit);
-			}
+		if ((*rit)) {
+			RepresentLeafSet *tit = (*rit);
+			for (RepresentLeafSet::iterator rlit = tit->begin(); rlit != tit->end(); rlit++)
+				delete (*rlit);
+			delete (*rit);
+		}
     }
 }
 
@@ -391,9 +411,18 @@ double IQPTree::doIQP() {
 	if (verbose_mode >= VB_DEBUG)
 		drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
 
+	clock_t time_begin = clock();
+
     PhyloNodeVector del_leaves, adjacent_nodes;
     deleteLeaves(del_leaves, adjacent_nodes);
     reinsertLeaves(del_leaves, adjacent_nodes);
+
+	clock_t time_end = clock();
+
+    if (verbose_mode >= VB_MED) {
+    	cout << "IQP Time = " << (double)(time_end - time_begin) / CLOCKS_PER_SEC << endl;
+    }
+	
 
     // just to make sure IQP does it right
     setAlignment(aln);
@@ -557,7 +586,7 @@ double IQPTree::doIQPNNI(Params &params) {
 double IQPTree::optimizeNNI(bool fullNNI) {
 
     clock_t nniBeginClock, nniEndClock;
-    //nniBeginClock = clock();
+    nniBeginClock = clock();
 
     // Switch to run "slow NNI"
     if (simple_nni) {
@@ -708,7 +737,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 
     vecNbNNI.push_back(numbNNI);
 
-    //nniEndClock = clock();
+    nniEndClock = clock();
     if (verbose_mode >= VB_MED) {
         cout << "Number of NNIs applied : " << numbNNI << endl;
         printf("Time used : %8.6f seconds.\n", (double) (-nniBeginClock
