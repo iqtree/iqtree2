@@ -19,9 +19,23 @@
  ***************************************************************************/
 #include "modelfactory.h"
 
+double *ModelFactory::getTransMatrix(double time) {
+	iterator ass_it = find(round(time * 1e6));
+	if (ass_it != end()) {
+		return ass_it->second;
+	}
+	return NULL;
+}
+
+void ModelFactory::addTransMatrix(double time, double *trans_mat) {
+	insert(value_type(round(time * 1e6), trans_mat));
+}
 
 ModelFactory::~ModelFactory()
 {
+	for (iterator it = begin(); it != end(); it++)
+		delete it->second;
+	clear();
 }
 
 

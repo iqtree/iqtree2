@@ -23,7 +23,7 @@
 #include "tools.h"
 
 /**
-Store the rate matrix corresponding to evolutionary time so that one must not compute again. 
+Store the transition matrix corresponding to evolutionary time so that one must not compute again. 
 For efficiency purpose esp. for protein (20x20) or codon (61x61)
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
@@ -31,6 +31,18 @@ For efficiency purpose esp. for protein (20x20) or codon (61x61)
 class ModelFactory : public hash_map<int, double*>
 {
 public:
+
+
+	/**
+		get the transition matrix
+		@param time branch length
+		@return transition matrix for time
+	*/
+	double *getTransMatrix(double time);
+
+	double *getTransMatrixDerv(double time, double *trans_derv1, double trans_derv2);
+
+	void addTransMatrix(double time, double *trans_mat);
 
     ~ModelFactory();
 
