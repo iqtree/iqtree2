@@ -128,20 +128,20 @@ RepresentLeafSet* IQPTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves
 
 /*
 void IQPTree::clearRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec, Node *node, Node *dad) {
-	int nei_id;
-	for (nei_id = 0; nei_id < node->neighbors.size(); nei_id++)
-		if (node->neighbors[nei_id]->node == dad) break;
-	assert(nei_id < node->neighbors.size());
-	int set_id = node->id * 3 + nei_id; 
-	if (leaves_vec[set_id]) {
-		for (RepresentLeafSet::iterator rlit = leaves_vec[set_id]->begin(); rlit != leaves_vec[set_id]->end(); rlit++)
-			delete (*rlit);
-		delete leaves_vec[set_id];
-		leaves_vec[set_id] = NULL;
-	}
-	FOR_NEIGHBOR_IT(node, dad, it) {
-		clearRepresentLeaves(leaves_vec, (*it)->node, node);
-	}
+        int nei_id;
+        for (nei_id = 0; nei_id < node->neighbors.size(); nei_id++)
+                if (node->neighbors[nei_id]->node == dad) break;
+        assert(nei_id < node->neighbors.size());
+        int set_id = node->id * 3 + nei_id;
+        if (leaves_vec[set_id]) {
+                for (RepresentLeafSet::iterator rlit = leaves_vec[set_id]->begin(); rlit != leaves_vec[set_id]->end(); rlit++)
+                        delete (*rlit);
+                delete leaves_vec[set_id];
+                leaves_vec[set_id] = NULL;
+        }
+        FOR_NEIGHBOR_IT(node, dad, it) {
+                clearRepresentLeaves(leaves_vec, (*it)->node, node);
+        }
 }*/
 
 void IQPTree::deleteLeaf(Node *leaf) {
@@ -174,21 +174,22 @@ void IQPTree::deleteLeaves(PhyloNodeVector &del_leaves, PhyloNodeVector &adjacen
     int i;
     if (num_delete > taxa.size() - 4) num_delete = taxa.size() - 4;
     // now try to randomly delete some taxa of the probability of p_delete
-    for (i = 0; i < num_delete; ) {
-		int id = floor((((double) rand()) / RAND_MAX) * taxa.size());
-		if (!taxa[id]) continue; else i++;
+    for (i = 0; i < num_delete;) {
+        int id = floor((((double) rand()) / RAND_MAX) * taxa.size());
+        if (!taxa[id]) continue;
+        else i++;
         PhyloNode *taxon = (PhyloNode*) taxa[id];
-		del_leaves.push_back(taxon);
-		adjacent_nodes.push_back((PhyloNode*) (taxon->neighbors[0]->node));
-		deleteLeaf(taxon);
-		taxa[id] = NULL;
+        del_leaves.push_back(taxon);
+        adjacent_nodes.push_back((PhyloNode*) (taxon->neighbors[0]->node));
+        deleteLeaf(taxon);
+        taxa[id] = NULL;
     }
-	// set root to the first taxon which was not deleted
+    // set root to the first taxon which was not deleted
     for (i = 0; i < taxa.size(); i++)
-    	if (taxa[i]) { 
-    		root = taxa[i];
-    		break;
-		}
+        if (taxa[i]) {
+            root = taxa[i];
+            break;
+        }
 }
 
 int IQPTree::assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2,
@@ -240,8 +241,8 @@ void IQPTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
     if (!node)
         node = (PhyloNode*) root;
     if (dad) {
-    	PhyloNeighbor *node_nei = (PhyloNeighbor*) node->findNeighbor(dad);
-		PhyloNeighbor *dad_nei = (PhyloNeighbor*) dad->findNeighbor(node);
+        PhyloNeighbor *node_nei = (PhyloNeighbor*) node->findNeighbor(dad);
+        PhyloNeighbor *dad_nei = (PhyloNeighbor*) dad->findNeighbor(node);
         node_nei->lh_scale_factor = 0.0;
         node_nei->partial_lh_computed = false;
         dad_nei->lh_scale_factor = 0.0;
@@ -256,21 +257,21 @@ void IQPTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
 void IQPTree::raiseBonus(Neighbor *nei, Node *dad, double bonus) {
     ((PhyloNeighbor*) nei)->lh_scale_factor += bonus;
     if (verbose_mode >= VB_DEBUG)
-   		cout << dad->id << " - " << nei->node->id << " : " << bonus << endl;
+        cout << dad->id << " - " << nei->node->id << " : " << bonus << endl;
 
- //  FOR_NEIGHBOR_IT(nei->node, dad, it)
-	//	raiseBonus((*it), nei->node, bonus);
+    //  FOR_NEIGHBOR_IT(nei->node, dad, it)
+    //	raiseBonus((*it), nei->node, bonus);
 }
 
-
 double IQPTree::computePartialBonus(Node *node, Node* dad) {
-	PhyloNeighbor *node_nei = (PhyloNeighbor*)node->findNeighbor(dad);
-	if (node_nei->partial_lh_computed) return node_nei->lh_scale_factor;
-	FOR_NEIGHBOR_IT(node, dad, it) {
-		node_nei->lh_scale_factor += computePartialBonus((*it)->node, node);
-	}
-	node_nei->partial_lh_computed = true;
-	return node_nei->lh_scale_factor;
+    PhyloNeighbor *node_nei = (PhyloNeighbor*) node->findNeighbor(dad);
+    if (node_nei->partial_lh_computed) return node_nei->lh_scale_factor;
+
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        node_nei->lh_scale_factor += computePartialBonus((*it)->node, node);
+    }
+    node_nei->partial_lh_computed = true;
+    return node_nei->lh_scale_factor;
 }
 
 void IQPTree::findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, Node *node, Node *dad) {
@@ -282,14 +283,14 @@ void IQPTree::findBestBonus(double &best_score, NodeVector &best_nodes, NodeVect
     } else {
         score = computePartialBonus(node, dad) + computePartialBonus(dad, node);
         if (score >= best_score) {
-        	if (score > best_score) {
-				best_score = score;
-				best_nodes.clear();
-				best_dads.clear();
+            if (score > best_score) {
+                best_score = score;
+                best_nodes.clear();
+                best_dads.clear();
             }
             best_nodes.push_back(node);
             best_dads.push_back(dad);
-        } 
+        }
         //cout << node->id << " - " << dad->id << " : " << best_score << endl;
     }
 
@@ -297,7 +298,6 @@ void IQPTree::findBestBonus(double &best_score, NodeVector &best_nodes, NodeVect
         findBestBonus(best_score, best_nodes, best_dads, (*it)->node, node);
     }
 }
-
 
 void IQPTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *cur_root, PhyloNode *del_leaf) {
     const int MAX_DEGREE = 3;
@@ -359,29 +359,29 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves,
         PhyloNodeVector &adjacent_nodes) {
     PhyloNodeVector::iterator it_leaf, it_node;
 
-	int num_del_leaves = del_leaves.size();
+    int num_del_leaves = del_leaves.size();
     assert(root->isLeaf());
 
     for (it_leaf = del_leaves.begin(), it_node = adjacent_nodes.begin(); it_leaf
             != del_leaves.end(); it_leaf++, it_node++) {
         if (verbose_mode >= VB_DEBUG)
             cout << "Reinserting " << (*it_leaf)->name << " (" << (*it_leaf)->id << ")" << endl;
-		vector<RepresentLeafSet*> leaves_vec;
-		leaves_vec.resize(nodeNum * 3, NULL);
+        vector<RepresentLeafSet*> leaves_vec;
+        leaves_vec.resize(nodeNum * 3, NULL);
         initializeBonus();
         NodeVector nodes;
         getInternalNodes(nodes);
-		if (verbose_mode >= VB_DEBUG)
-			drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
-			//printTree(cout, WT_BR_LEN | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
+        if (verbose_mode >= VB_DEBUG)
+            drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
+        //printTree(cout, WT_BR_LEN | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
         for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
             assessQuartets(leaves_vec, (PhyloNode*) (*it), (*it_leaf));
         }
         NodeVector best_nodes, best_dads;
         double best_bonus;
         findBestBonus(best_bonus, best_nodes, best_dads);
-        if (verbose_mode >= VB_DEBUG) 
-        	cout << "Best bonus " << best_bonus << " " << best_nodes[0]->id << " " << best_dads[0]->id << endl;
+        if (verbose_mode >= VB_DEBUG)
+            cout << "Best bonus " << best_bonus << " " << best_nodes[0]->id << " " << best_dads[0]->id << endl;
         assert(best_nodes.size() == best_dads.size());
         int node_id = floor((((double) rand()) / RAND_MAX) * best_nodes.size());
         if (best_nodes.size() > 1 && verbose_mode >= VB_DEBUG)
@@ -391,38 +391,38 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves,
 
         reinsertLeaf(*it_leaf, *it_node, best_nodes[node_id],
                 best_dads[node_id]);
-		//clearRepresentLeaves(leaves_vec, *it_node, *it_leaf);
+        //clearRepresentLeaves(leaves_vec, *it_node, *it_leaf);
         /*if (verbose_mode >= VB_DEBUG) {
          printTree(cout);
          cout << endl;
          }*/
-		for (vector<RepresentLeafSet*>::iterator rit = leaves_vec.begin(); rit != leaves_vec.end(); rit++)
-		if ((*rit)) {
-			RepresentLeafSet *tit = (*rit);
-			for (RepresentLeafSet::iterator rlit = tit->begin(); rlit != tit->end(); rlit++)
-				delete (*rlit);
-			delete (*rit);
-		}
+        for (vector<RepresentLeafSet*>::iterator rit = leaves_vec.begin(); rit != leaves_vec.end(); rit++)
+            if ((*rit)) {
+                RepresentLeafSet *tit = (*rit);
+                for (RepresentLeafSet::iterator rlit = tit->begin(); rlit != tit->end(); rlit++)
+                    delete (*rlit);
+                delete (*rit);
+            }
     }
 }
 
 double IQPTree::doIQP() {
 
-	if (verbose_mode >= VB_DEBUG)
-		drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
+    if (verbose_mode >= VB_DEBUG)
+        drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
 
-	clock_t time_begin = clock();
+    clock_t time_begin = clock();
 
     PhyloNodeVector del_leaves, adjacent_nodes;
     deleteLeaves(del_leaves, adjacent_nodes);
     reinsertLeaves(del_leaves, adjacent_nodes);
 
-	clock_t time_end = clock();
+    clock_t time_end = clock();
 
     if (verbose_mode >= VB_MED) {
-    	cout << "IQP Time = " << (double)(time_end - time_begin) / CLOCKS_PER_SEC << endl;
+        cout << "IQP Time = " << (double) (time_end - time_begin) / CLOCKS_PER_SEC << endl;
     }
-	
+
 
     // just to make sure IQP does it right
     setAlignment(aln);
@@ -440,15 +440,15 @@ double IQPTree::doIQP() {
 }
 
 double IQPTree::doIQPNNI(Params &params) {
-	string tree_file_name = params.aln_file;
-	tree_file_name += ".treefile";
+    string tree_file_name = params.aln_file;
+    tree_file_name += ".treefile";
     bestScore = computeLikelihood();
     printTree(tree_file_name.c_str());
     string treels_name = params.aln_file;
     treels_name += ".treels";
-	if (params.output_trees)
-		printTree(treels_name.c_str(), WT_TAXON_ID | WT_SORT_TAXA | WT_NEWLINE);
-		//printTree(treels_name.c_str(), WT_NEWLINE | WT_BR_LEN);
+    if (params.output_trees)
+        printTree(treels_name.c_str(), WT_TAXON_ID | WT_SORT_TAXA | WT_NEWLINE);
+    //printTree(treels_name.c_str(), WT_NEWLINE | WT_BR_LEN);
 
 
     // keep the best tree into a string
@@ -542,9 +542,9 @@ double IQPTree::doIQPNNI(Params &params) {
             }
         }
 
-		if (params.output_trees)
-			printTree(treels_name.c_str(), WT_TAXON_ID | WT_NEWLINE | WT_APPEND | WT_SORT_TAXA);
-			//printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_BR_LEN);
+        if (params.output_trees)
+            printTree(treels_name.c_str(), WT_TAXON_ID | WT_NEWLINE | WT_APPEND | WT_SORT_TAXA);
+        //printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_BR_LEN);
 
 
         if (curScore > bestScore + TOL_LIKELIHOOD) {
@@ -660,7 +660,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 
             nniTotal = nonConflictMoves.size();
 
-        }            // The tree's topology was reverted
+        }// The tree's topology was reverted
         else {
             if (verbose_mode >= VB_DEBUG) {
                 double tmpScore = computeLikelihood();
@@ -682,7 +682,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
         //Applying all non-conflicting NNIs
         for (int i = 0; i < nbNNIToApply; i++) {
             // Apply the calculated optimal branch length for the center branch
-           applyBranchLengthChange(nonConflictMoves.at(i).node1, nonConflictMoves.at(i).node2,false);
+            applyBranchLengthChange(nonConflictMoves.at(i).node1, nonConflictMoves.at(i).node2, false);
             //double scoreBeforeNNI = computeLikelihood();
             doNNIMove(nonConflictMoves.at(i));
         }
@@ -960,7 +960,7 @@ void IQPTree::genNNIMoves(PhyloNode *node, PhyloNode *dad) {
         if (myMove.score != 0) {
             addPossibleNNIMove(myMove);
         }
-    }        //External branch
+    }//External branch
     else if (dad) {
         double optBranchLen = calculateOptBranchLen(node, dad);
         string key("");
