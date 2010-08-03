@@ -26,7 +26,7 @@ VerboseMode verbose_mode;
 bool simple_nni;
 bool phyml_opt;
 bool nni_lh;
-int num_iqp_stat;
+int numheu;
 double cmdLamda;
 
 /*
@@ -521,7 +521,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	simple_nni = false;
 	phyml_opt = false;
 	nni_lh = false;
-	num_iqp_stat = 100;
+	numheu = 100;
 	cmdLamda = 1;
 	/* TUNG: IQP-TREE Specific Options */
 
@@ -832,9 +832,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				cmdLamda = convert_double(argv[cnt]);
 			}
-			else if (strcmp(argv[cnt], "-num_iqp") == 0) {
+                        else if (strcmp(argv[cnt], "-numheu") == 0) {
 				cnt++;
-				num_iqp_stat = convert_int(argv[cnt]);
+				numheu = convert_int(argv[cnt]);
 			}
 
 			else if (strcmp(argv[cnt],"-f") == 0) {

@@ -481,9 +481,9 @@ double IQPTree::doIQPNNI(Params &params) {
             cout << "Performing IQP in iteration " << cur_iteration << endl;
 
         nbIQPIter++;
-        if (nbIQPIter > num_iqp_stat) {
+        if (nbIQPIter > numheu) {
 
-            if (nbIQPIter == (num_iqp_stat + 1))
+            if (nbIQPIter == (numheu + 1))
                 cout << "NNI-HEURISTICS STARTED FROM NOW ON !" << endl;
 
             enableHeuris = true;
