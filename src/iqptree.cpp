@@ -423,7 +423,6 @@ double IQPTree::doIQP() {
         cout << "IQP Time = " << (double) (time_end - time_begin) / CLOCKS_PER_SEC << endl;
     }
 
-
     // just to make sure IQP does it right
     setAlignment(aln);
     clearAllPartialLh();
