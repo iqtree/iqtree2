@@ -19,16 +19,71 @@
  ***************************************************************************/
 #include "modelfactory.h"
 
-double *ModelFactory::getTransMatrix(double time) {
-	iterator ass_it = find(round(time * 1e6));
-	if (ass_it != end()) {
-		return ass_it->second;
-	}
-	return NULL;
+ModelFactory::ModelFactory(SubstModel *amodel, bool store_matrix) { 
+	model = amodel; 
+	store_trans_matrix = store_matrix;
+	is_storing = false;
 }
 
-void ModelFactory::addTransMatrix(double time, double *trans_mat) {
-	insert(value_type(round(time * 1e6), trans_mat));
+void ModelFactory::startStoringTransMatrix() {
+	if (!store_trans_matrix) return;
+	is_storing = true;
+}
+
+void ModelFactory::stopStoringTransMatrix() {
+	if (!store_trans_matrix) return;
+	is_storing = false;
+	if (!empty()) {
+		for (iterator it = begin(); it != end(); it++)
+			delete it->second;
+		clear();
+	}
+}
+
+
+void ModelFactory::computeTransMatrix(double time, double *trans_matrix) {
+	if (!store_trans_matrix || !is_storing) {
+		model->computeTransMatrix(time, trans_matrix);
+		return;
+	}
+	int mat_size = model->num_states * model->num_states;
+	iterator ass_it = find(round(time * 1e6));
+	if (ass_it == end()) {
+		// allocate memory for 3 matricies
+		double *trans_entry = new double[mat_size * 3];
+		trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
+		model->computeTransMatrix(time, trans_entry);
+		ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
+	} else {
+		//if (verbose_mode >= VB_MAX) 
+			//cout << "ModelFactory bingo" << endl;
+	} 
+	
+	memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
+}
+
+
+void ModelFactory::computeTransDerv(double time, double *trans_matrix, 
+	double *trans_derv1, double *trans_derv2) {
+	if (!store_trans_matrix || !is_storing) {
+		model->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
+		return;
+	}
+	int mat_size = model->num_states * model->num_states;
+	iterator ass_it = find(round(time * 1e6));
+	if (ass_it == end()) {
+		// allocate memory for 3 matricies
+		double *trans_entry = new double[mat_size * 3];
+		trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
+		model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2));
+		ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
+	} else if (ass_it->second[mat_size] == 0.0 && ass_it->second[mat_size+1] == 0.0) {
+		double *trans_entry = ass_it->second;
+		model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2));
+	}
+	memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
+	memcpy(trans_derv1, ass_it->second + mat_size, mat_size * sizeof(double));
+	memcpy(trans_derv2, ass_it->second + (mat_size*2), mat_size * sizeof(double));
 }
 
 ModelFactory::~ModelFactory()
@@ -37,5 +92,3 @@ ModelFactory::~ModelFactory()
 		delete it->second;
 	clear();
 }
-
-

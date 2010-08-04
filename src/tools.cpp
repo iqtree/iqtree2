@@ -498,6 +498,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 
 	params.aln_file = NULL;
+	params.aln_output = NULL;
 	params.parsimony = false;
 	params.tree_spr = false;
 	params.nexus_output = false;
@@ -508,6 +509,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.stop_condition = SC_FIXED_ITERATION;
 	params.stop_confidence = 0.95;
 	params.model_name = "JC";
+	params.store_trans_matrix = false;
 	params.freq_type = FREQ_EMPIRICAL;
 	//params.freq_type = FREQ_UNKNOWN;
 	params.num_rate_cats = 4;
@@ -793,6 +795,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -aln <alignment_file>";
 				params.aln_file = argv[cnt];
+			} else if (strcmp(argv[cnt],"-alnout") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -alnout <alignment_file>";
+				params.aln_output = argv[cnt];
 			} else if (strcmp(argv[cnt],"-pars") == 0) {
 				// maximum parsimony
 				params.parsimony = true;
@@ -821,7 +828,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mod <model_name>";
 				params.model_name = argv[cnt];
-
+			} else if (strcmp(argv[cnt],"-mstore") == 0) {
+				params.store_trans_matrix = true;
 			} else if (strcmp(argv[cnt], "-simple_nni") == 0) {
 				simple_nni = true;
 			} else if (strcmp(argv[cnt], "-phyml_opt") == 0) {

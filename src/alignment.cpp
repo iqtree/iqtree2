@@ -309,6 +309,46 @@ char convertState(char state, SeqType seq_type) {
 	}
 }
 
+char convertStateBack(char state, int num_states) {
+	if (state == STATE_UNKNOWN) return '-';
+	if (state == STATE_INVALID) return '?';
+
+	switch (num_states) {
+	case 2:
+		switch (state) {
+		case 0: return '0';
+		case 1: return '1';
+		default: return STATE_INVALID;
+		}
+	case 4: // DNA
+		switch (state) {
+			case 0: return 'A';
+			case 1: return 'C';
+			case 2: return 'G';
+			case 3: return 'T';
+			case 1+4+3: return 'R'; // A or G, Purine
+			case 2+8+3: return 'Y'; // C or T, Pyrimidine
+			case 1+8+3: return 'W'; // A or T, Weak
+			case 2+4+3: return 'S'; // G or C, Strong
+			case 1+2+3: return 'M'; // A or C, Amino
+			case 4+8+3: return 'K'; // G or T, Keto
+			case 2+4+8+3: return 'B'; // C or G or T
+			case 1+2+8+3: return 'H'; // A or C or T
+			case 1+4+8+3: return 'D'; // A or G or T
+			case 1+2+4+3: return 'V'; // A or G or C
+			default: return '?'; // unrecognize character
+		}
+		return state;
+	case 20: // Protein
+		if (state < 20) 
+			return symbols_protein[state];
+		else 
+			return '-';
+	default:
+		return '?';
+	}
+}
+
 int Alignment::readPhylip(char *filename) {
 	
 	StrVector sequences;
@@ -441,6 +481,31 @@ int Alignment::readPhylip(char *filename) {
 
 }
 
+
+void Alignment::printPhylip(char *file_name) {
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(file_name);
+		out << seq_names.size() << " " << site_pattern.size() << endl;
+		StrVector::iterator it;
+		int max_seq_len = 10;
+		for (it = seq_names.begin(); it != seq_names.end(); it++)
+			if ((*it).length() > max_seq_len) max_seq_len = (*it).length();
+		int seq_id = 0;
+		for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
+			out.width(max_seq_len);
+			out << left << (*it) << " ";
+			for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++)
+				out << convertStateBack(at(*i)[seq_id], num_states);
+			out << endl;
+		}
+		out.close();
+		cout << "Alignment was printed to " << file_name << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, file_name);
+	}	
+}
 
 
 void Alignment::extractSubAlignment(IntVector &seq_id, Alignment *sub_aln) {

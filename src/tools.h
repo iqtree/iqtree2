@@ -241,6 +241,11 @@ struct Params {
 	char *aln_file;
 
 	/**
+		alignment output file name
+	*/
+	char *aln_output;
+
+	/**
 		compute parsimony score on trees
 	*/
 	bool parsimony;
@@ -541,6 +546,11 @@ struct Params {
 		name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)
 	*/
 	string model_name;
+
+	/**
+		TRUE to store transition matrix into a hash table for computation efficiency
+	*/
+	bool store_trans_matrix;
 
 	/**
 		state frequency type

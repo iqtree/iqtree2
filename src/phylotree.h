@@ -15,6 +15,7 @@
 #include "mtree.h"
 #include "alignment.h"
 #include "substmodel.h"
+#include "modelfactory.h"
 #include "phylonode.h"
 #include "optimization.h"
 #include "rateheterogeneity.h"
@@ -236,6 +237,7 @@ public:
 		@return the best likelihood 
 	*/
 	virtual double optimizeModel(bool fixed_len = false);
+
 
 /****************************************************************************
 	computing derivatives of likelihood function
@@ -488,6 +490,7 @@ public:
 	*/
 	bool optimize_by_newton;
 
+
 protected:
 
 	/**
@@ -502,6 +505,11 @@ protected:
 		associated substitution model
 	*/
 	SubstModel *model;
+
+	/**
+		stores transition matrices computed before for efficiency purpose, eps. AA or CODON model.
+	*/
+	ModelFactory *model_factory;
 
 	/**
 		among-site rates 

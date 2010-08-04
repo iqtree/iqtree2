@@ -115,6 +115,12 @@ public:
 
 
 /****************************************************************************
+	output alignment 
+****************************************************************************/
+
+	void printPhylip(char *filename);
+
+/****************************************************************************
 	get general information from alignment
 ****************************************************************************/
 
@@ -273,7 +279,7 @@ private:
 	/**
 		Site to pattern index
 	*/
-	vector<int> site_pattern;
+	IntVector site_pattern;
 
 	/**
 		hash map from pattern to index in the vector of patterns (the alignment)

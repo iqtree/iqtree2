@@ -60,12 +60,14 @@ PhyloTree::PhyloTree()
 	site_rate = NULL;
 	optimize_by_newton = false;
 	central_partial_lh = NULL;
+	model_factory = NULL;
 }
 
 PhyloTree::~PhyloTree() {
 	if (central_partial_lh)
 		delete [] central_partial_lh;
 	central_partial_lh = NULL;
+	if (model_factory) delete model_factory;
 	if (model) delete model;
 	if (site_rate) delete site_rate;
 	if (root != NULL)
@@ -141,10 +143,10 @@ void PhyloTree::clearAllPartialLh() {
 void PhyloTree::createModel(Params &params) {
 	assert(aln);
 	optimize_by_newton = params.optimize_by_newton;
-
 	string model_str = params.model_name;
 
 	string::size_type pos = model_str.find('+');
+;
 
 	/* create site-rate heterogeneity */
 	if (pos != string::npos) {
@@ -175,7 +177,10 @@ void PhyloTree::createModel(Params &params) {
 		outError("Unsupported model type");
 	}
 
+	model_factory = new ModelFactory(model, params.store_trans_matrix);
+
 }
+
 
 string PhyloTree::getModelName() {
 	return model->name + site_rate->name;
@@ -487,7 +492,7 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 	for (cat = 0; cat < ncat; cat++) {
 		//trans_mat[cat] = model->newTransMatrix();
 		double *trans_cat = trans_mat + (cat*trans_size);
-		model->computeTransMatrix(dad_branch->length * site_rate->getRate(cat), trans_cat);
+		model_factory->computeTransMatrix(dad_branch->length * site_rate->getRate(cat), trans_cat);
 		for (state1 = 0; state1 < nstates; state1++) {
 			double *trans_mat_state = trans_cat + (state1*nstates);
 			for (state2 = 0; state2 < nstates; state2++)
@@ -592,7 +597,7 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 			dad_branch->lh_scale_factor += ((PhyloNeighbor*)(*it))->lh_scale_factor;
 
 			for (cat = 0; cat < ncat; cat++)
-				model->computeTransMatrix((*it)->length * site_rate->getRate(cat), trans_mat[cat]);
+				model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), trans_mat[cat]);
 
 			for (ptn = 0; ptn < aln->size(); ptn++) {
 				for (cat = 0; cat < ncat; cat++)
@@ -640,6 +645,7 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 
 double PhyloTree::optimizeModel(bool fixed_len) {
 	double cur_lh;
+	model_factory->stopStoringTransMatrix();
 	if (fixed_len) 
 		cur_lh = computeLikelihood();
 	else
@@ -675,6 +681,7 @@ double PhyloTree::optimizeModel(bool fixed_len) {
 			break;
 		}
 	} while (true);
+	model_factory->startStoringTransMatrix();
 	return cur_lh;
 }
 
@@ -727,7 +734,7 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
 		double *derv2_cat = trans_derv2 + (cat*trans_size);
 		double rate_val = site_rate->getRate(cat);
 		double rate_sqr = rate_val * rate_val;
-		model->computeTransDerv(dad_branch->length * rate_val, trans_cat, derv1_cat, derv2_cat);
+		model_factory->computeTransDerv(dad_branch->length * rate_val, trans_cat, derv1_cat, derv2_cat);
 		for (state1 = 0; state1 < nstates; state1++) {
 			double *trans_mat_state = trans_cat + (state1*nstates);
 			double *trans_derv1_state = derv1_cat + (state1*nstates);

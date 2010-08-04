@@ -412,8 +412,10 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 void runPhyloAnalysis(Params &params) {
 
 	Alignment alignment(params.aln_file, params.intype);
-
-	runPhyloAnalysis(params, &alignment);
+	if (params.aln_output) 
+		alignment.printPhylip(params.aln_output);
+	else
+		runPhyloAnalysis(params, &alignment);
 }
 
 
