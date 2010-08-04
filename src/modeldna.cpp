@@ -73,9 +73,13 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 		setRateType("123450");
 		def_freq = FREQ_ESTIMATE;
 	} else {
+		//cout << "User-specified model "<< model_name << endl;
+		setRateType(model_name);
+		def_freq = FREQ_ESTIMATE;
+/*
 		string str = "Invalid model name: ";
 		str += model_name;
-		outError(str);
+		outError(str);*/
 	}
 	
 	name = model_name;
