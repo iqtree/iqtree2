@@ -389,7 +389,48 @@ void readInitAreaFile(Params &params, int nareas, StrVector &area_name) {
 	readStringFile(params.initial_area_file, nareas, area_name);
 }
 
+void readAreasBoundary(char *file_name, MSetsBlock *areas, double *areas_boundary) {
+	
+	try {
+		ifstream in;
+		in.exceptions(ios::failbit | ios::badbit);
+		in.open(file_name);
 
+		int nset;
+		in >> nset;
+		if (nset != areas->getNSets())
+			throw "File has different number of areas";
+		int pos = 0, seq1, seq2;
+		for (seq1 = 0; seq1 < nset; seq1 ++)  {
+			string seq_name;
+			in >> seq_name;
+			if (seq_name != areas->getSet(seq1).name)
+				throw "Area name " + seq_name + " is different from " + areas->getSet(seq1).name;
+			for (seq2 = 0; seq2 < nset; seq2 ++) {
+				in >> areas_boundary[pos++];
+			}	
+		}
+		// check for symmetric matrix
+		for (seq1 = 0; seq1 < nset-1; seq1++) {
+			if (areas_boundary[seq1*nset+seq1] <= 1e-6)
+				throw "Diagonal elements of distance matrix should represent the boundary of single areas";
+			for (seq2 = seq1+1; seq2 < nset; seq2++)
+				if (areas_boundary[seq1*nset+seq2] != areas_boundary[seq2*nset+seq1])
+					throw "Shared boundary between " + areas->getSet(seq1).name + " and " + areas->getSet(seq2).name + " is not symmetric";
+		}
+
+
+		in.close();
+		cout << "Areas relation matrix was read from " << file_name << endl;
+	} catch (const char *str) {
+		outError(str);
+	} catch (string str) {
+		outError(str);
+	} catch (ios::failure) {
+		outError(ERR_READ_INPUT, file_name);
+	}
+	
+}
 
 void readTaxaSets(char *filename, MSetsBlock *sets) {
 	TaxaSetNameVector *allsets = &sets->getSets();
@@ -457,6 +498,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.initial_file = NULL;
 	params.initial_area_file = NULL;
 	params.pdtaxa_file = NULL;
+	params.areas_boundary_file = NULL;
+	params.boundary_modifier = 1.0;
 	params.dist_file = NULL;
 	params.budget_file = NULL;
 	params.overlap = 0;
@@ -631,6 +674,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -s <file>";
 				params.pdtaxa_file = argv[cnt];
+			} else if (strcmp(argv[cnt],"-bound") == 0) {
+				// boundary length of areas
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bound <file>";
+				params.areas_boundary_file = argv[cnt];
+			} else if (strcmp(argv[cnt],"-blm") == 0) {
+				// boundary length modifier
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -blm <boundary_modifier>";
+				params.boundary_modifier = convert_double(argv[cnt]);
 			} else if (strcmp(argv[cnt],"-dist") == 0) {
 				// calculate distance matrix from the tree
 				params.run_mode = CALC_DIST;

@@ -42,6 +42,7 @@ SplitGraph::SplitGraph()
 	sets = NULL;
 	trees = NULL;
 	mtrees = NULL;
+	areas_boundary = NULL;
 }
 
 SplitGraph::SplitGraph(Params &params) : vector<Split*>() {
@@ -124,6 +125,14 @@ void SplitGraph::init(Params &params)
 			outError("No taxa sets found");
 	}
 
+	areas_boundary = NULL;
+	if (params.areas_boundary_file) {
+		if (sets->getNSets() == 0) outError("No taxon sets defined yet");
+		areas_boundary = new double [sets->getNSets() * sets->getNSets()];
+		cout << "Reading sets relation file " << params.areas_boundary_file << "..." << endl;
+		readAreasBoundary(params.areas_boundary_file, sets, areas_boundary);
+	}
+
 	if (verbose_mode >= VB_DEBUG && sets->getNSets() > 0)
 		sets->Report(cout);
 
@@ -180,6 +189,7 @@ SplitGraph::~SplitGraph()
 		delete *it;
 	}
 	clear();
+	if (areas_boundary) delete areas_boundary;
 	if (trees) delete trees;
 	if (sets) delete sets;
 	if (pda) delete pda;
@@ -516,6 +526,19 @@ bool SplitGraph::containSplit(Split &sp) {
 	return false;
 }
 
+double SplitGraph::computeBoundary(Split &area) {
+	if (!areas_boundary) return 0.0;
+	int nareas = sets->getNSets();
+	double boundary = 0.0;
+	for (int i = 0; i < nareas; i++) 
+	if (area.containTaxon(i)) {
+		boundary += areas_boundary[i*nareas+i];
+		for (int j = i+1; j < nareas; j++) 
+			if (area.containTaxon(j))
+				boundary -= 2.0 * areas_boundary[i*nareas+j];
+	}
+	return boundary;
+}
 
 bool SplitGraph::compatible(Split *sp) {
 	for (iterator it = begin(); it != end(); it++)

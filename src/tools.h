@@ -341,6 +341,16 @@ struct Params {
 	char *pdtaxa_file;
 
 	/**
+		sets relation file, in form of a distance matrix file
+	*/
+	char *areas_boundary_file;
+	
+	/**
+		boundary length modifier
+	*/
+	double boundary_modifier;
+
+	/**
 		output file to store the distance matrix
 	*/
 	char *dist_file;
@@ -840,6 +850,14 @@ void readInitAreaFile(Params &params, int nareas, StrVector &area_name);
 */
 void readTaxaSets(char *filename, MSetsBlock *sets);
 
+/**
+	read areas shared boundary file, in form of a standard distance matrix
+	@param file_name file name
+	@param areas the read sets block
+	@param areas_shared_boundary (OUT) shared boundary length between areas.
+		Diagonal elements represent the boundary length of single areas
+*/
+void readAreasBoundary(char *file_name, MSetsBlock *areas, double *areas_shared_boundary);
 
 /**
 	parse program argument into params

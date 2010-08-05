@@ -171,6 +171,13 @@ public:
 	*/
 	bool containSplit(Split &sp);
 
+	/**
+		compute the boundary length of the area set, using areas_boundary variable
+		@param area a set of area ID
+		@return boundary length
+	*/
+	double computeBoundary(Split &area);
+
 /********************************************************
 	compatibility
 ********************************************************/
@@ -351,6 +358,10 @@ protected:
 	*/
 	MSetsBlock *sets;
 
+	/**
+		relationship between the sets. For example, the common boundary length between two areas.
+	*/
+	double *areas_boundary;
 
 	/**
 		TREES block

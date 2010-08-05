@@ -1326,6 +1326,23 @@ void PDNetwork::transformLP_Area_Coverage(const char *outfile, Params &params, S
 			else
 				out << ";" << endl;
 		}
+		// constraint on the variable for the shared boundary between areas
+		if (areas_boundary && params.boundary_modifier != 0.0) {
+			for (i = 0; i < nareas-1; i++)
+				for (j = i+1; j < nareas; j++)
+					if (areas_boundary[i*nareas+j] > 0.0) {
+						out << "x" << i << " - y" << i << "_" << j << " >= 0";
+						if (params.gurobi_format)
+							out << endl;
+						else
+							out << ";" << endl;
+						out << "x" << j << " - y" << i << "_" << j << " >= 0";
+						if (params.gurobi_format)
+							out << endl;
+						else
+							out << ";" << endl;
+					}
+		}
 		// add bound for variable x
 		IntVector y_value;
 		lpVariableBound(out, params, included_area, y_value);
@@ -1378,6 +1395,23 @@ int PDNetwork::findMinAreas(Params &params, Split &area_id) {
 			else
 				count++;
 		}
+	ofile = params.out_prefix;
+	ofile += ".cover";
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(ofile.c_str());
+		out << area_id.countTaxa() << " " << count << " " << computeBoundary(area_id) << " " << params.boundary_modifier << endl;
+		for (i = 0; i < nareas; i++)
+			if (area_id.containTaxon(i))
+				out << sets->getSet(i).name << endl;
+		out.close();
+		//cout << "Transformed LP problem printed to " << outfile << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, ofile);
+	}
+	
+			
 	/*
 	if (taxon_coverage.countTaxa() != getNTaxa()) {
 		outError("Something wrong with LP in determining taxon coverage");
@@ -1443,7 +1477,7 @@ void PDNetwork::lpObjectiveMaxSD(ostream &out, Params &params, IntVector &y_valu
 ///// TODO FOR taxon selection
 void PDNetwork::lpObjectiveMinK(ostream &out, Params &params) {
 	iterator spit;
-	int j;
+	int i, j;
 	int nareas = area_taxa.size();
 
 	// define the objective function
@@ -1452,14 +1486,22 @@ void PDNetwork::lpObjectiveMinK(ostream &out, Params &params) {
 	else
 		out << "min: ";
 	
-	if (isBudgetConstraint()) 
-		for (j = 0; j < nareas; j++) {
-			out << ((j>0) ? " +" : "") << getPdaBlock()->getCost(j) << " x" << j;
+	for (j = 0; j < nareas; j++) {
+		double coeff = (isBudgetConstraint()) ? getPdaBlock()->getCost(j) : 1.0;
+		if (areas_boundary) coeff += areas_boundary[j*nareas+j] * params.boundary_modifier;
+		out << ((j>0) ? " +" : "") << coeff << " x" << j;
+
+
+	}
+
+	if (areas_boundary && params.boundary_modifier != 0.0) {
+		for (i = 0; i < nareas-1; i++) 
+		for (j = i+1; j < nareas; j++) 
+		if (areas_boundary[i*nareas+j] > 0.0) {
+			double coeff = 2*areas_boundary[i*nareas+j] * params.boundary_modifier;
+			out << " -" << coeff << " y" << i << "_" << j;
 		}
-	else 
-		for (j = 0; j < nareas; j++) {
-			out << ((j>0) ? " +" : "") << "x" << j;
-		}
+	}
 
 	if (params.gurobi_format)
 		out << endl << "Subject to" << endl;
@@ -1655,16 +1697,32 @@ void PDNetwork::lpVariableBound(ostream &out, Params &params, Split &included_va
 			out << ";" << endl;
 	}
 
-	if (y_value.empty()) return;
-	for (i = 0; i < getNSplits(); i++) {
-		if (y_value[i] >= 0) continue;
-		if (params.gurobi_format)
-			out << "0 <= ";
-		out << "y" << i << " <= 1";
-		if (params.gurobi_format)
-			out << endl;
-		else
-			out << ";" << endl;
+	if (!y_value.empty()) {
+		for (i = 0; i < getNSplits(); i++) {
+			if (y_value[i] >= 0) continue;
+			if (params.gurobi_format)
+				out << "0 <= ";
+			out << "y" << i << " <= 1";
+			if (params.gurobi_format)
+				out << endl;
+			else
+				out << ";" << endl;
+		}
+	}
+	int nvars = included_vars.getNTaxa();
+	if (areas_boundary && params.boundary_modifier != 0.0) {
+		for (i = 0; i < included_vars.getNTaxa()-1; i++)
+		for (j = i+1; j < included_vars.getNTaxa(); j++) 
+			if (areas_boundary[i*nvars+j] > 0.0) {
+				if (params.gurobi_format)
+					out << "0 <= ";
+				out << "y" << i << "_" << j << " <= 1";
+				if (params.gurobi_format)
+					out << endl;
+				else
+					out << ";" << endl;
+				
+			}
 	}
 }
 
