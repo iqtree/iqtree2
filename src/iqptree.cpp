@@ -486,8 +486,8 @@ double IQPTree::doIQPNNI(Params &params) {
                 cout << "NNI-HEURISTICS STARTED FROM NOW ON !" << endl;
 
             enableHeuris = true;
-            nbNNI95 = calNumNNI95();
-            deltaNNI95 = calDeltaProNNI95();
+            nbNNI95 = estimateNumNNI();
+            deltaNNI95 = estimateDeltaNNI();
             //			cout.precision(10);
             //			cout << "Improvment vector size = " << vecImpProNNI.size() << endl;
             //			cout << "Number NNI vector size = " << vecNbNNI.size() << endl;
@@ -734,7 +734,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
 
     //optimizeAllBranches();
 
-    vecNbNNI.push_back(numbNNI);
+    vecNumNNI.push_back(numbNNI);
 
     nniEndClock = clock();
     if (verbose_mode >= VB_MED) {
@@ -746,16 +746,25 @@ double IQPTree::optimizeNNI(bool fullNNI) {
     return curScore;
 }
 
-int IQPTree::calNumNNI95() {
-    sort(vecNbNNI.begin(), vecNbNNI.end());
-    int index = vecNbNNI.size() * 95 / 100;
-    return vecNbNNI[index - 1];
+int IQPTree::estimateNumNNI() {
+    if ( vecNumNNI.size() == 0 )
+        return 0;
+    else {
+        sort(vecNumNNI.begin(), vecNumNNI.end());
+        int index = floor ( vecNumNNI.size() * 95 / 100 );
+        return vecNumNNI[index];
+    }
 }
 
-double IQPTree::calDeltaProNNI95() {
-    sort(vecImpProNNI.begin(), vecImpProNNI.end());
-    int index = vecImpProNNI.size() * 95 / 100;
-    return vecImpProNNI[index - 1];
+double IQPTree::estimateDeltaNNI() {
+    if ( vecImpProNNI.size() == 0 )
+        return 0;
+    else {
+        sort(vecImpProNNI.begin(), vecImpProNNI.end());
+        int index = floor( vecImpProNNI.size() * 95 / 100 );
+        return vecImpProNNI[index];
+    }
+
 }
 
 void IQPTree::applyAllBranchLengthChanges(PhyloNode *node, PhyloNode *dad) {

@@ -266,13 +266,13 @@ public:
 	 * TODO
 	 * @return
 	 */
-	int calNumNNI95(void);
+	int estimateNumNNI(void);
 
 	/**
 	 * TODO
 	 * @return
 	 */
-	double calDeltaProNNI95(void);
+	double estimateDeltaNNI(void);
 
 	/**
 	 *
@@ -326,7 +326,7 @@ protected:
 	/**
 	 *  Vector contains number of NNIs used at each iterations
 	 */
-	vector<int> vecNbNNI;
+	vector<int> vecNumNNI;
 
 	/**
 	 *  Vector contains approximated improvement pro NNI at each iterations
