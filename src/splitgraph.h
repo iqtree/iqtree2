@@ -233,7 +233,7 @@ public:
 		return taxa;
 	}
 
-	void getTaxaName(vector<NxsString> &taxname);
+	void getTaxaName(vector<string> &taxname);
 
 	/**
 		@return splits block

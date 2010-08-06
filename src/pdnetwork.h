@@ -168,7 +168,7 @@ public:
 		@param pd_comp (OUT) corresponding PD endemism
 	*/
 	void calcPDComplementarity(SplitSet &area_set, char *area_names, 
-		vector<NxsString> &all_names, DoubleVector &pd_comp);
+		vector<string> &all_names, DoubleVector &pd_comp);
 
 
 	/**

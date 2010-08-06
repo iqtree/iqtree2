@@ -325,7 +325,7 @@ void MExtTree::setLeavesName(NodeVector &myleaves) {
 void MExtTree::calcDist(char *filename) {
 	matrix(double) dist;
 	matrix(double)::iterator it;
-	vector<NxsString> taxname;
+	vector<string> taxname;
 	int i, j;	
 
 	// allocate memory
@@ -387,7 +387,7 @@ void MExtTree::calcDist(Node *aroot, double cur_len, matrix(double) &dist, Node 
 	
 }
 
-void MExtTree::reportDisagreedTrees(vector<NxsString> &taxname, MTreeSet &trees, Split &mysplit) {
+void MExtTree::reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit) {
 	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++) {
 		MTree *tree = (*it);
 		SplitGraph sg;
@@ -400,7 +400,7 @@ void MExtTree::reportDisagreedTrees(vector<NxsString> &taxname, MTreeSet &trees,
 }
 
 
-void MExtTree::createBootstrapSupport(vector<NxsString> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, Node *node, Node *dad) {
+void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, Node *node, Node *dad) {
 	if (!node) node = root;	
 	FOR_NEIGHBOR_IT(node, dad, it) {
 		if (!node->isLeaf() && !(*it)->node->isLeaf()) {

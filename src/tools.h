@@ -621,7 +621,7 @@ struct PDRelatedMeasures {
 	/**
 		names of areas
 	*/
-	vector<NxsString> setName;
+	vector<string> setName;
 
 	/**
 		pd scores of areas

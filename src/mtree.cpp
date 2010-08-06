@@ -579,7 +579,7 @@ void MTree::getInternalNodes(NodeVector &nodes, Node *node, Node *dad) {
 }
 
 
-void MTree::getTaxaName(vector<NxsString> &taxname, Node *node, Node *dad) {
+void MTree::getTaxaName(vector<string> &taxname, Node *node, Node *dad) {
 	if (!node) node = root;
 	if (node->isLeaf()) {
 		taxname[node->id] = node->name;
@@ -624,11 +624,11 @@ void MTree::convertSplits(SplitGraph &sg, Split *resp, Node *node, Node *dad) {
 		resp->addTaxon(node->id);
 }
 
-void MTree::convertSplits(vector<NxsString> &taxname, SplitGraph &sg) {
+void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg) {
 	if (!sg.taxa) {
 		sg.taxa = new NxsTaxaBlock();
-		for (vector<NxsString>::iterator it = taxname.begin(); it != taxname.end(); it++)
-			sg.taxa->AddTaxonLabel(*it);
+		for (vector<string>::iterator it = taxname.begin(); it != taxname.end(); it++)
+			sg.taxa->AddTaxonLabel(NxsString(it->c_str()));
 	}
 	if (!sg.splits)
 		sg.splits = new MSplitsBlock(&sg);
@@ -645,7 +645,7 @@ void MTree::convertSplits(vector<NxsString> &taxname, SplitGraph &sg) {
 void MTree::convertSplits(SplitGraph &sg) {
 
 	// make the taxa name
-	vector<NxsString> taxname;
+	vector<string> taxname;
 	taxname.resize(leafNum);
 	getTaxaName(taxname);
 

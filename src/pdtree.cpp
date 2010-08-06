@@ -42,12 +42,10 @@ void PDTree::init(Params &params) {
 	}
 
 	if (params.sub_size > leafNum) {
-		NxsString err = "Subset size k = ";
-		err += params.sub_size-params.is_rooted;
-		err += " is greater than the number of taxa = ";
-		err += leafNum-params.is_rooted;
-		err += "";
-		outError(err);
+		ostringstream err;
+		err << "Subset size k = " << params.sub_size-params.is_rooted << 
+			" is greater than the number of taxa = " << leafNum-params.is_rooted;
+		outError(err.str());
 	}
 
 	if (params.is_rooted) {
@@ -203,7 +201,7 @@ void PDTree::computePD(Params &params, vector<PDTaxaSet> &taxa_set, PDRelatedMea
 		readTaxaSets(params.pdtaxa_file, sets);
 	}
 
-	allsets = &sets->getSets();
+	allsets = sets->getSets();
 
 	//sets->Report(cout);
 
@@ -213,10 +211,10 @@ void PDTree::computePD(Params &params, vector<PDTaxaSet> &taxa_set, PDRelatedMea
 	TaxaSetNameVector::iterator i;
 
 	for (i = allsets->begin(), it_ts = taxa_set.begin(); i != allsets->end(); i++, it_ts++) {
-		set<NxsString> taxa_name;
+		set<string> taxa_name;
 		for (NodeVector::iterator it = initialset.begin(); it != initialset.end(); it++)
 			taxa_name.insert((*it)->name);
-		for (vector<NxsString>::iterator it2 = (*i).taxlist.begin(); it2 != (*i).taxlist.end(); it2++) {
+		for (vector<string>::iterator it2 = (*i)->taxlist.begin(); it2 != (*i)->taxlist.end(); it2++) {
 			LeafMapName::iterator nameit = lsn.find(*it2);
 			if (nameit == lsn.end())
 				outError(ERR_NO_TAXON, *it2);
@@ -232,9 +230,9 @@ void PDTree::computePD(Params &params, vector<PDTaxaSet> &taxa_set, PDRelatedMea
 		}
 		calcPD(id_set);
 		(*it_ts).score = id_set.getWeight();
-		(*it_ts).name = (*i).name;
+		(*it_ts).name = (*i)->name;
 		pd_more.PDScore.push_back(id_set.getWeight());
-		pd_more.setName.push_back((*i).name);
+		pd_more.setName.push_back((*i)->name);
 	}
 
 	delete sets;
@@ -242,7 +240,7 @@ void PDTree::computePD(Params &params, vector<PDTaxaSet> &taxa_set, PDRelatedMea
 
 
 
-void PDTree::makeTaxaSet(set<NxsString> &taxa_name, PDTaxaSet &taxa_set, Node *node, Node *dad) {
+void PDTree::makeTaxaSet(set<string> &taxa_name, PDTaxaSet &taxa_set, Node *node, Node *dad) {
 	if (!node) node = root;
 	if (node->isLeaf() && taxa_name.find(node->name) != taxa_name.end()) {
 		taxa_set.push_back(node);

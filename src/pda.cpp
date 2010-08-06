@@ -128,7 +128,7 @@ inline void separator(ostream &out, int type = 0) {
 
 
 void printCopyright(ostream &out) {
-	out << "PDA - Phylogenetic Diversity Analyzer version " << VERSION << " build " << __DATE__;
+	out << "PDA - Phylogenetic Diversity Analyzer version " << VERSION << " built " << __DATE__;
 #ifdef DEBUG
 	out << " - debug mode";
 #endif
@@ -203,9 +203,9 @@ void summarizeFooter(ostream &out, Params &params) {
 }
 
 
-int getMaxNameLen(vector<NxsString> &setName) {
+int getMaxNameLen(vector<string> &setName) {
 	int len = 0;
-	for (vector<NxsString>::iterator it = setName.begin(); it != setName.end(); it++)
+	for (vector<string>::iterator it = setName.begin(); it != setName.end(); it++)
 		if (len < (*it).length()) 
 			len = (*it).length();
 	return len;
@@ -310,7 +310,7 @@ void printTaxaSet(Params &params, vector<PDTaxaSet> &taxa_set, RunMode cur_mode)
 	int subsize = params.min_size-params.is_rooted;
 	ofstream out;
 	ofstream scoreout;
-	NxsString filename;
+	string filename;
 	filename = params.out_prefix;
 	filename += ".score";
 	scoreout.open(filename.c_str());
@@ -595,7 +595,7 @@ void printNexusSets(const char *filename, PDNetwork &sg, vector<SplitSet> &pd_se
 				out << "   TAXSET Opt_" << taxa.size() << "_" << id << " =";
 				for (IntVector::iterator iit = taxa.begin(); iit != taxa.end(); iit++) {
 					if (sg.isPDArea())
-						out << " '" << sg.getSetsBlock()->getSet(*iit).name << "'";
+						out << " '" << sg.getSetsBlock()->getSet(*iit)->name << "'";
 					else
 						out << " '" << sg.getTaxa()->GetTaxonLabel(*iit) << "'";
 				}
@@ -738,7 +738,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 				out << "For k/budget = " << subsize << " the " << ((sg.isPDArea()) ? "areas" : "taxa") 
 					<< " supports are: " << endl;
 				for (i = 0; i < freq.size(); i++)
-					out << ((sg.isPDArea()) ? sg.getSetsBlock()->getSet(i).name : sg.getTaxa()->GetTaxonLabel(i)) 
+					out << ((sg.isPDArea()) ? sg.getSetsBlock()->getSet(i)->name : sg.getTaxa()->GetTaxonLabel(i)) 
 						<< "\t" << freq[i] << endl;
 				if ((it+1) != pd_set.end()) separator(out, 1);
 			}
@@ -783,7 +783,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 					out.width(5);
 					out <<  right << *intid << "   ";
 					if (sg.isPDArea())
-						out << sg.getSetsBlock()->getSet(*intv).name << endl;
+						out << sg.getSetsBlock()->getSet(*intv)->name << endl;
 					else
 						out << sg.getTaxa()->GetTaxonLabel(*intv) << endl;
 				}
@@ -888,13 +888,13 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 						if (this_set->containTaxon(i)) 
 							if (sg.isBudgetConstraint()) {
 								out.width(max_len);
-								out << left << sg.getSetsBlock()->getSet(i).name << "\t"; 
+								out << left << sg.getSetsBlock()->getSet(i)->name << "\t"; 
 								out.width(10);
 								out << right << sg.getPdaBlock()->getCost(i);
 								out << endl;
 				
 							} else {
-								out << sg.getSetsBlock()->getSet(i).name << endl;
+								out << sg.getSetsBlock()->getSet(i)->name << endl;
 							}
 					
 					Split sp(sg.getNTaxa());
@@ -1017,7 +1017,7 @@ void runPDSplit(Params &params) {
 			MTreeSet *mtrees = sg.getMTrees();
 			if (mtrees->size() < 100) 
 				cout << "Warning: bootstrap may be unstable with less than 100 trees" << endl;
-			vector<NxsString> taxname;
+			vector<string> taxname;
 			sg.getTaxaName(taxname);
 			i = 1;
 			for (MTreeSet::iterator it = mtrees->begin(); it != mtrees->end(); it++, i++) {
@@ -1072,7 +1072,7 @@ void runPDSplit(Params &params) {
 	if (params.calc_pdgain) {
 		matrix(double) delta_gain;
 		sg.calcPDGain(pd_set, delta_gain);
-		NxsString filename = params.out_prefix;
+		string filename = params.out_prefix;
 		filename += ".pdgain";
 		printGainMatrix((char*)filename.c_str(), delta_gain, pd_set.front().front()->countTaxa());
 		//cout << delta_gain;
@@ -1122,7 +1122,7 @@ void assignBootstrapSupports(Params &params) {
 	SplitGraph sg;
 	SplitIntMap hash_ss;
 	// make the taxa name
-	vector<NxsString> taxname;
+	vector<string> taxname;
 	taxname.resize(mytree.leafNum);
 	mytree.getTaxaName(taxname);
 
@@ -1233,22 +1233,18 @@ void calcTreeCluster(Params &params) {
 	tree.createCluster(taxa, clusters);
 	int cnt = 1;
 
-	NxsString treename = params.out_prefix;
+	string treename = params.out_prefix;
 	treename += ".clu-id";
 	tree.printTree(treename.c_str());
 
 	for (matrix(int)::iterator it = clusters.begin(); it != clusters.end(); it++, cnt++) {
-		NxsString filename = params.out_prefix;
-		filename += ".";
-		filename += cnt;
-		filename += ".clu";
-		ofstream out(filename.c_str());
+		ostringstream filename;
+		filename << params.out_prefix << "." << cnt << ".clu";
+		ofstream out(filename.str().c_str());
 
-		NxsString filename2 = params.out_prefix;
-		filename2 += ".";
-		filename2 += cnt;
-		filename2 += ".name-clu";
-		ofstream out2(filename2.c_str());
+		ostringstream filename2;
+		filename2 << params.out_prefix << "." << cnt << ".name-clu";
+		ofstream out2(filename2.str().c_str());
 
 		out << "w" << endl << "c" << endl << "4" << endl << "b" << endl << "g" << endl << 4-params.is_rooted << endl;
 		IntVector::iterator it2;
@@ -1268,7 +1264,7 @@ void calcTreeCluster(Params &params) {
 
 void printTaxa(Params &params) {
 	MTree mytree(params.user_file, params.is_rooted);
-	vector<NxsString> taxname;
+	vector<string> taxname;
 	taxname.resize(mytree.leafNum);
 	mytree.getTaxaName(taxname);
 	sort(taxname.begin(), taxname.end());
@@ -1280,7 +1276,7 @@ void printTaxa(Params &params) {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(filename.c_str());
-		for (vector<NxsString>::iterator it = taxname.begin(); it != taxname.end(); it++) {
+		for (vector<string>::iterator it = taxname.begin(); it != taxname.end(); it++) {
 			if ((*it) != ROOT_NAME) out << (*it);
 			out << endl;
 		}
@@ -1305,7 +1301,7 @@ void printAreaList(Params &params) {
 
 	//sets->Report(cout);
 
-	TaxaSetNameVector *allsets = &sets->getSets();
+	TaxaSetNameVector *allsets = sets->getSets();
 
 	string filename = params.out_prefix;
 	filename += ".names";
@@ -1315,7 +1311,7 @@ void printAreaList(Params &params) {
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(filename.c_str());
 		for (TaxaSetNameVector::iterator it = allsets->begin(); it != allsets->end(); it++) {
-			out << (*it).name;
+			out << (*it)->name;
 			out << endl;
 		}
 		out.close();

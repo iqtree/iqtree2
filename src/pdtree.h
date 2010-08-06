@@ -118,7 +118,7 @@ public:
 		@param node the starting node, NULL to start from the root
 		@param dad dad of the node, used to direct the search
 	*/
-	void makeTaxaSet(set<NxsString> &taxa_name, PDTaxaSet &taxa_set, Node *node = NULL, Node *dad = NULL);
+	void makeTaxaSet(set<string> &taxa_name, PDTaxaSet &taxa_set, Node *node = NULL, Node *dad = NULL);
 
 	/**
 		compute the PD score of a given taxa set with name in taxa_name

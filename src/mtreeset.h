@@ -90,7 +90,7 @@ public:
 		@param hash_ss (OUT) hash split set
 		@param lensum TRUE if summing split length, FALSE to increment only
 	*/
-	void convertSplits(vector<NxsString> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, bool lensum);
+	void convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, bool lensum);
 
 	/**
 		convert all trees into the split system

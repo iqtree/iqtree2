@@ -404,8 +404,8 @@ void readAreasBoundary(char *file_name, MSetsBlock *areas, double *areas_boundar
 		for (seq1 = 0; seq1 < nset; seq1 ++)  {
 			string seq_name;
 			in >> seq_name;
-			if (seq_name != areas->getSet(seq1).name)
-				throw "Area name " + seq_name + " is different from " + areas->getSet(seq1).name;
+			if (seq_name != areas->getSet(seq1)->name)
+				throw "Area name " + seq_name + " is different from " + areas->getSet(seq1)->name;
 			for (seq2 = 0; seq2 < nset; seq2 ++) {
 				in >> areas_boundary[pos++];
 			}	
@@ -416,7 +416,7 @@ void readAreasBoundary(char *file_name, MSetsBlock *areas, double *areas_boundar
 				throw "Diagonal elements of distance matrix should represent the boundary of single areas";
 			for (seq2 = seq1+1; seq2 < nset; seq2++)
 				if (areas_boundary[seq1*nset+seq2] != areas_boundary[seq2*nset+seq1])
-					throw "Shared boundary between " + areas->getSet(seq1).name + " and " + areas->getSet(seq2).name + " is not symmetric";
+					throw "Shared boundary between " + areas->getSet(seq1)->name + " and " + areas->getSet(seq2)->name + " is not symmetric";
 		}
 
 
@@ -433,7 +433,7 @@ void readAreasBoundary(char *file_name, MSetsBlock *areas, double *areas_boundar
 }
 
 void readTaxaSets(char *filename, MSetsBlock *sets) {
-	TaxaSetNameVector *allsets = &sets->getSets();
+	TaxaSetNameVector *allsets = sets->getSets();
 	try {
 		int count = 0;
 		ifstream in;
@@ -446,17 +446,18 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
 		in.exceptions(ios::badbit);
 		while (!in.eof()) {
 			int ntaxa = 0;
-			NxsString str;
+			string str;
 			if (!(in >> str)) break;
 			ntaxa = convert_int(str.c_str());
 			if (ntaxa <= 0) throw "Number of taxa must be > 0";
 			count++;
-			allsets->resize(allsets->size()+1);
-			TaxaSetName *myset = &allsets->back();
+			//allsets->resize(allsets->size()+1);
+			TaxaSetName *myset = new TaxaSetName;
+			allsets->push_back(myset);
 			myset->name = "";
 			myset->name += count;
 			for (; ntaxa > 0; ntaxa--) {
-				NxsString str;
+				string str;
 				if (!(in >> str)) throw "Cannot read in taxon name";
 				if ((ntaxa > 1) && in.eof()) throw "Unexpected end of file while reading taxon names";
 				myset->taxlist.push_back(str);

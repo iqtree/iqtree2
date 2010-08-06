@@ -105,7 +105,7 @@ public:
 	/**
 		node name
 	*/
-	NxsString name;
+	string name;
 
 	/**
 		list of neighbors

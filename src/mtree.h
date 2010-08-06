@@ -259,7 +259,7 @@ public:
 		@param dad dad of the node, used to direct the search
 		@param taxname (OUT) taxa name
 	*/
-	void getTaxaName(vector<NxsString> &taxname, Node *node = NULL, Node *dad = NULL);
+	void getTaxaName(vector<string> &taxname, Node *node = NULL, Node *dad = NULL);
 
 	/**
 		get the descending internal nodes below the node
@@ -322,7 +322,7 @@ public:
 		@param taxname certain taxa name
 		@param sg (OUT) resulting split graph
 	*/
-	void convertSplits(vector<NxsString> &taxname, SplitGraph &sg);
+	void convertSplits(vector<string> &taxname, SplitGraph &sg);
 
 	/**
 		convert the tree into the split system, iterative procedure
@@ -427,7 +427,7 @@ public:
 	/**
 		name of this taxa set
 	*/
-	NxsString name;
+	string  name;
 
 	/**
 		assign subtree string

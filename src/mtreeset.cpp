@@ -194,7 +194,7 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, bool lensum
 
 
 void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, bool lensum) {
-	vector<NxsString> taxname(front()->leafNum);
+	vector<string> taxname(front()->leafNum);
 	// make sure that the split system contains at least 1 split
 	if (size() == 0)
 		return;
@@ -203,7 +203,7 @@ void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, bool lensum) 
 	convertSplits(taxname, sg, hash_ss, lensum);
 }
 
-void MTreeSet::convertSplits(vector<NxsString> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, bool lensum) {
+void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, bool lensum) {
 
 #ifdef USE_HASH_MAP
 	cout << "Using hash_map" << endl;
@@ -212,7 +212,7 @@ void MTreeSet::convertSplits(vector<NxsString> &taxname, SplitGraph &sg, SplitIn
 #endif
 	cout << "Converting collection of tree(s) into split system..." << endl;
 	SplitGraph::iterator itg;
-	vector<NxsString>::iterator its;
+	vector<string>::iterator its;
 /*
 	for (its = taxname.begin(); its != taxname.end(); its++)
 		if (*its == ROOT_NAME) {	
@@ -227,7 +227,7 @@ void MTreeSet::convertSplits(vector<NxsString> &taxname, SplitGraph &sg, SplitIn
 	}
 
 	for (its = taxname.begin(); its != taxname.end(); its++)
-		sg.getTaxa()->AddTaxonLabel(*its);
+		sg.getTaxa()->AddTaxonLabel(NxsString(its->c_str()));
 
 	SplitGraph *isg;
 	for (iterator it = begin(); it != end(); it++) {
@@ -300,7 +300,7 @@ void MTreeSet::computeRFDist(int *rfdist, int mode) {
 #endif
 	cout << "Computing Robinson-Foulds distance..." << endl;
 
-	vector<NxsString> taxname(front()->leafNum);
+	vector<string> taxname(front()->leafNum);
 	vector<SplitIntMap*> hs_vec;
 	vector<SplitGraph*> sg_vec;
 

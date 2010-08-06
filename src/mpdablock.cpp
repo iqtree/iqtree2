@@ -376,7 +376,7 @@ void MPdaBlock::readBudgetAreaFile(Params &params) {
 	for (i = 0; i < nareas; i++)
 		if (costs[i] < 0) {
 			costs[i] = 0;
-			cout << "Warning: area " << sgraph->getSetsBlock()->getSet(i).name
+			cout << "Warning: area " << sgraph->getSetsBlock()->getSet(i)->name
 				<< "has no cost! set to 0." << endl;
 		}
 	cost_constrained = true;

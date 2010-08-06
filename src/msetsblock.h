@@ -25,19 +25,20 @@
 /**
 	a taxa set with name
 */
-struct TaxaSetName {
+class TaxaSetName {
+public:
 	/**
 		set name
 	*/
-	NxsString name;
+	string name;
 	
 	/**
 		string vector of taxa names
 	*/
-	vector<NxsString> taxlist;
+	vector<string> taxlist;
 };
 
-typedef vector<TaxaSetName> TaxaSetNameVector;
+typedef vector<TaxaSetName*> TaxaSetNameVector;
 
 /**
 Sets Block of Nexus file parser
@@ -78,12 +79,12 @@ public:
 		@param id set id
 		@return reference to the corresponding set
 	*/
-	inline TaxaSetName & getSet(int id) { return sets[id]; }
+	inline TaxaSetName *getSet(int id) { return sets[id]; }
 
 	/**
 		@return vector of all taxa set
 	*/
-	inline TaxaSetNameVector &getSets() { return sets; }
+	inline TaxaSetNameVector *getSets() { return &sets; }
 
 	/**
 		@param name an area name

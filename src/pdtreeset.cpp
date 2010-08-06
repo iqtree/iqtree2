@@ -41,12 +41,10 @@ void PDTreeSet::init(Params &params) {
 	}
 
 	if (params.sub_size > getNTaxa()) {
-		NxsString err = "Subset size k = ";
-		err += params.sub_size - params.is_rooted;
-		err += " is greater than the number of taxa = ";
-		err += getNTaxa() - params.is_rooted;
-		err += "";
-		outError(err);
+		ostringstream err;
+		err << "Subset size k = " << params.sub_size - params.is_rooted <<
+			" is greater than the number of taxa = " << getNTaxa() - params.is_rooted;
+		outError(err.str());
 	}
 
 	if (isRootedTrees()) {
@@ -78,7 +76,7 @@ int PDTreeSet::getNTaxa() {
 }
 
 void PDTreeSet::readRootNode(char *root_name) {
-	NxsString name = root_name;
+	string name = root_name;
 	init_taxa.push_back(name);
 	for (iterator it = begin(); it != end(); it++)
 		((PDTree*)(*it))->readRootNode(root_name);

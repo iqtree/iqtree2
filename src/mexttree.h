@@ -141,10 +141,10 @@ public:
 		@param taxname vector of taxa names
 		@param trees set of trees
 	*/
-	void createBootstrapSupport(vector<NxsString> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, 
+	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, 
 		Node *node = NULL, Node *dad = NULL);
 
-	void reportDisagreedTrees(vector<NxsString> &taxname, MTreeSet &trees, Split &mysplit);
+	void reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit);
 
 /********************************************************
 	CLUSTER for each branch, useful for likelihood mapping analysis

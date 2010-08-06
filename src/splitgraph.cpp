@@ -174,10 +174,10 @@ void SplitGraph::createStarTree() {
 void SplitGraph::AddTaxaFromSets() {
 	cout << "Taking taxa from SETS block..." << endl;
 	for (int i = 0; i < sets->getNSets(); i++)
-		for(vector<NxsString>::iterator it = sets->getSet(i).taxlist.begin(); 
-			it != sets->getSet(i).taxlist.end(); it++) 
-			if (!taxa->IsAlreadyDefined(*it)) {
-				taxa->AddTaxonLabel(*it);
+		for(vector<string>::iterator it = sets->getSet(i)->taxlist.begin(); 
+			it != sets->getSet(i)->taxlist.end(); it++) 
+			if (!taxa->IsAlreadyDefined(NxsString(it->c_str()))) {
+				taxa->AddTaxonLabel(NxsString(it->c_str()));
 			}	
 }
 
@@ -451,9 +451,9 @@ void SplitGraph::generateCircular(Params &params) {
 		Split *sp = new Split(ntaxa, weight);
 		sp->addTaxon(i);
 		push_back(sp);
-		NxsString str = "T";
-		str += (i+1);
-		taxa->AddTaxonLabel(str);
+		ostringstream str;
+		str << "T" << (i+1);
+		taxa->AddTaxonLabel(NxsString(str.str().c_str()));
 		splits->cycle.push_back(i);
 	}
 
@@ -618,7 +618,7 @@ bool SplitGraph::isWeaklyCompatible() {
 }
 
 
-void SplitGraph::getTaxaName(vector<NxsString> &taxname) {
+void SplitGraph::getTaxaName(vector<string> &taxname) {
 	taxname.clear();
 	for (int i = 0; i < getNTaxa(); i++)
 		taxname.push_back(taxa->GetTaxonLabel(i));

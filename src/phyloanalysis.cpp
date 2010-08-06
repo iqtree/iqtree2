@@ -231,6 +231,21 @@ string modelTest(Params &params, PhyloTree *in_tree)
 	//return "GTR";
 }
 
+void reportPhyloAnalysis(Params &params, Alignment &alignment, IQPTree &tree) {
+	string outfile = params.aln_file;
+	outfile += ".iqtree";
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(outfile.c_str());
+		out << "Number of patterns: " << alignment.size() << endl;
+		out.close();
+		cout << "Analysis results are reported in " << outfile << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, outfile);
+	}
+}
+
 void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *alignment) {
 
 	clock_t t_begin, t_end;
@@ -406,6 +421,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 				tree.drawTree(cout);
 		}*/
 	}
+
+	reportPhyloAnalysis(params, *alignment, tree);
 
 }
 

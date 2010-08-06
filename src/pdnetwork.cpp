@@ -107,9 +107,9 @@ void PDNetwork::readParams(Params &params) {
 	for (int i = 0; i < tax_name.size(); i++) {	
 		int id = -1;
 		try {
-			NxsString name = "";
+			string name = "";
 			name.append(tax_name[i]);
-			id = taxa->FindTaxon(name);
+			id = taxa->FindTaxon(NxsString(name.c_str()));
 		} catch (NxsTaxaBlock::NxsX_NoSuchTaxon) {
 			outError(ERR_NO_TAXON, tax_name[i]);
 		}
@@ -143,9 +143,9 @@ void PDNetwork::readInitialSet(Params &params) {
 	for (StrVector::iterator it = tax_name.begin(); it != tax_name.end(); it++) {
 		int id = -1;
 		try {
-			NxsString name = "";
+			string name = "";
 			name.append(*it);
-			id = taxa->FindTaxon(name);
+			id = taxa->FindTaxon(NxsString(name.c_str()));
 		} catch (NxsTaxaBlock::NxsX_NoSuchTaxon) {
 			outError(ERR_NO_TAXON, *it);
 		}
@@ -279,7 +279,7 @@ void PDNetwork::computePD(Params &params, SplitSet &pd_set, PDRelatedMeasures &p
 	//sets = new MSetsBlock();
 
 	//sets->Report(cout);
-	TaxaSetNameVector *allsets = &sets->getSets();
+	TaxaSetNameVector *allsets = sets->getSets();
 	TaxaSetNameVector::iterator i;
 	for (i = allsets->begin(); i != allsets->end(); i++) {
 		Split *id_set = new Split(getNTaxa());
@@ -287,17 +287,17 @@ void PDNetwork::computePD(Params &params, SplitSet &pd_set, PDRelatedMeasures &p
 		for (IntVector::iterator it = initialset.begin(); it != initialset.end(); it++)
 			id_set->addTaxon(*it);
 		*/
-		for (vector<NxsString>::iterator it2 = (*i).taxlist.begin(); it2 != (*i).taxlist.end(); it2++) {
+		for (vector<string>::iterator it2 = (*i)->taxlist.begin(); it2 != (*i)->taxlist.end(); it2++) {
 			int id = -1;
 			try {
-				id = taxa->FindTaxon(*it2);
+				id = taxa->FindTaxon(NxsString(it2->c_str()));
 			} catch (NxsTaxaBlock::NxsX_NoSuchTaxon) {
 				outError(ERR_NO_TAXON, *it2);
 			}
 			if (id >= 0)
 				id_set->addTaxon(id);
 		}
-		pd_more.setName.push_back((*i).name);
+		pd_more.setName.push_back((*i)->name);
 		if (params.exclusive_pd) {
 			calcExclusivePD(*id_set);
 			pd_more.exclusivePD.push_back(id_set->getWeight());
@@ -408,14 +408,14 @@ void PDNetwork::enterFindPD(Params &params) {
 			if (params.sub_size <= 0) params.sub_size = pda->sub_size;
 			if (!isPDArea()) {
 				if (params.sub_size < 2 || params.sub_size > getNTaxa()) {
-					NxsString str = "k must be between 2 and ";
-					str += getNTaxa()-params.is_rooted;
-					outError(str);
+					ostringstream str;
+					str <<"k must be between 2 and " << getNTaxa()-params.is_rooted;
+					outError(str.str());
 				}
 			} else if (params.sub_size < 1 || params.sub_size > sets->getNSets()) {
-					NxsString str = "k must be between 1 and ";
-					str += sets->getNSets();
-					outError(str);
+					ostringstream str;
+					str << "k must be between 1 and " << sets->getNSets();
+					outError(str.str());
 				}
 			if (params.min_size < min_accepted) params.min_size = params.sub_size;
 		}
@@ -715,7 +715,7 @@ void PDNetwork::calcPDEndemism(SplitSet &area_set, DoubleVector &pd_endem) {
 }
 
 void PDNetwork::calcPDComplementarity(SplitSet &area_set, char *area_names, 
-	vector<NxsString> &all_names, DoubleVector &pd_comp) {
+	vector<string> &all_names, DoubleVector &pd_comp) {
 
 	set<string> given_areas;
 
@@ -727,7 +727,7 @@ void PDNetwork::calcPDComplementarity(SplitSet &area_set, char *area_names,
 	cout << endl;
 */
 	SplitSet::iterator it_s;
-	vector<NxsString>::iterator it_n;
+	vector<string>::iterator it_n;
 
 	Split given_id(getNTaxa());
 
@@ -994,6 +994,7 @@ void PDNetwork::computeFeasibleBudget(Params &params, IntVector &ok_budget) {
 	ok_budget.resize(params.budget+1, 0);
 	// initialize all entry with corresponding cost
 	for (it2 = unique_cost.begin(); it2 != unique_cost.end(); it2++)
+	if (*it2 < ok_budget.size())
 		ok_budget[*it2] = 1;
 	// now use dynamic programming to find feasible budgets
 
@@ -1077,7 +1078,7 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 				} else {
 					for (i = 0; i < getSetsBlock()->getNSets(); i++) 
 						if (this_set->containTaxon(i))
-							out << getSetsBlock()->getSet(i).name << endl;
+							out << getSetsBlock()->getSet(i)->name << endl;
 				}
 				out.close();
 				//cout << "Taxa list printed to " << filename << endl;
@@ -1090,7 +1091,7 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 				} else {
 					for (i = 0; i < getSetsBlock()->getNSets(); i++) 
 						if (this_set->containTaxon(i))
-							out << getSetsBlock()->getSet(i).name << endl;
+							out << getSetsBlock()->getSet(i)->name << endl;
 				}
 			}
 		}
@@ -1253,7 +1254,7 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 		}
 	}
 	cout << endl;
-	delete variables;	
+	delete [] variables;	
 	delete area_coverage;
 }
 
@@ -1296,7 +1297,7 @@ void PDNetwork::transformLP_Area_Coverage(const char *outfile, Params &params, S
 	for (j = 0; j < ntaxa; j++) {
 		if (isUniquelyCovered(j, i)) {
 			if (verbose_mode >= VB_MED) {
-				cout << "Taxon " << taxa->GetTaxonLabel(j) << " is uniquely covered by " << sets->getSet(i).name << endl;
+				cout << "Taxon " << taxa->GetTaxonLabel(j) << " is uniquely covered by " << sets->getSet(i)->name << endl;
 			}
 			included_area.addTaxon(i);
 			tax_cover.addTaxon(j);
@@ -1404,7 +1405,7 @@ int PDNetwork::findMinAreas(Params &params, Split &area_id) {
 		out << area_id.countTaxa() << " " << count << " " << computeBoundary(area_id) << " " << params.boundary_modifier << endl;
 		for (i = 0; i < nareas; i++)
 			if (area_id.containTaxon(i))
-				out << sets->getSet(i).name << endl;
+				out << sets->getSet(i)->name << endl;
 		out.close();
 		//cout << "Transformed LP problem printed to " << outfile << endl;
 	} catch (ios::failure) {
@@ -1416,7 +1417,7 @@ int PDNetwork::findMinAreas(Params &params, Split &area_id) {
 	if (taxon_coverage.countTaxa() != getNTaxa()) {
 		outError("Something wrong with LP in determining taxon coverage");
 	}*/
-	delete variables;
+	delete [] variables;
 	return (count);
 }
 
