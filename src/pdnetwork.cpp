@@ -1177,7 +1177,7 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 		if (params.min_proportion == 0.0) params.min_proportion = params.pd_proportion;
 		cout << "running p = ";
 		double prop;
-		areas_set.resize(floor((params.pd_proportion-params.min_proportion)/params.step_proportion) + 2);
+		areas_set.resize(round((params.pd_proportion-params.min_proportion)/params.step_proportion) + 1);
 		for (prop = params.min_proportion, index = 0; prop <= params.pd_proportion + 1e-6; prop += params.step_proportion, index++) {
 			Split *area = new Split(nareas);
 			if (prop < 1.0) 
