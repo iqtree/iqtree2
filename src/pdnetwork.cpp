@@ -898,6 +898,7 @@ void PDNetwork::transformMinK_Area2(Params &params, const char *outfile, double 
 		lpMinSDConstraint(out, params, y_value, pd_proportion);
 		lpSplitConstraint_RS(out, params, y_value, count1, count2, 0);
 		lpInitialArea(out, params);
+		lpBoundaryConstraint(out, params);
 		lpVariableBound(out, params, included_area, y_value);
 		if (make_bin)
 			lpVariableBinary(out, params, included_area);
@@ -910,7 +911,7 @@ void PDNetwork::transformMinK_Area2(Params &params, const char *outfile, double 
 }
 
 
-double PDNetwork::findMinKArea_LP(Params &params, const char* filename, double pd_proportion) {
+double PDNetwork::findMinKArea_LP(Params &params, const char* filename, double pd_proportion, Split &area) {
 	int nareas = area_taxa.size();
 	double *variables = new double[nareas];
 	double score;
@@ -942,7 +943,7 @@ double PDNetwork::findMinKArea_LP(Params &params, const char* filename, double p
 		if (lp_ret != 0) // check error again without allowing non-binary
 			outError("Something went wrong with LP solver!");
 	}	
-	Split area(nareas, score);
+	area.setNTaxa(nareas);
 	for (i = 0; i < nareas; i++)
 		if (1.0 - variables[i] < tolerance) {
 			//pd_set->addTaxon(taxa_order[i]);
@@ -1038,7 +1039,7 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 		sprintf(scorename, "%s.score", params.out_prefix);
 		scoreout.open(scorename);
 	}
-
+	double total_weight = calcWeight();
 
 	for (vector<SplitSet>::iterator it = pd_set.begin(); it != pd_set.end(); it++) {
 		// ignore, if get the same PD sets again
@@ -1083,7 +1084,11 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 				out.close();
 				//cout << "Taxa list printed to " << filename << endl;
 			} else if (params.nr_output == 1) {
-				out << count << "  " << this_set->getWeight() << endl;
+				out << count << "  " << this_set->getWeight() << " " << 
+					this_set->getWeight()  / total_weight << " " <<
+					calcCost(*this_set) << " " << computeBoundary(*this_set) << " " <<
+					params.boundary_modifier << endl;
+
 				if (params.run_mode == PD_USER_SET || !isPDArea()) {
 					for (i = 0; i < getNTaxa(); i++) 
 						if (this_set->containTaxon(i))
@@ -1168,10 +1173,16 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 
 	// identifying minimum k/budget to conserve the proportion of SD
 	if (params.pd_proportion != 0.0) {
+		if (params.min_proportion == 0.0) params.min_proportion = params.pd_proportion;
 		cout << "running p = ";
-		double bk = findMinKArea_LP(params, ofile.c_str(), params.pd_proportion);
-		double min_bk = bk;
-		if (params.min_proportion != 0.0)
+		double prop;
+		areas_set.resize(floor((params.pd_proportion-params.min_proportion)/params.step_proportion) + 2);
+		for (prop = params.min_proportion, index = 0; prop <= params.pd_proportion + 1e-6; prop += params.step_proportion, index++) {
+			Split *area = new Split;
+			double bk = findMinKArea_LP(params, ofile.c_str(), prop, *area);
+			areas_set[index].push_back(area);
+		}
+/*		if (params.min_proportion != 0.0)
 			min_bk = findMinKArea_LP(params, ofile.c_str(), params.min_proportion);
 		if (isBudgetConstraint()) {
 			params.budget = bk;
@@ -1180,8 +1191,11 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 			params.sub_size = bk;
 			params.min_size = min_bk;
 		}
-		cout << endl << (isBudgetConstraint() ? "budget" : "k") << " from " << min_bk << " to " << bk << endl;
-		//areas_set[index].push_back(area);
+		cout << endl << (isBudgetConstraint() ? "budget" : "k") << " from " << min_bk << " to " << bk << endl;*/
+		cout << endl;
+		delete [] variables;	
+		delete area_coverage;
+		return;
 	}
 
 	IntVector list_k;
@@ -1327,23 +1341,8 @@ void PDNetwork::transformLP_Area_Coverage(const char *outfile, Params &params, S
 			else
 				out << ";" << endl;
 		}
-		// constraint on the variable for the shared boundary between areas
-		if (areas_boundary && params.boundary_modifier != 0.0) {
-			for (i = 0; i < nareas-1; i++)
-				for (j = i+1; j < nareas; j++)
-					if (areas_boundary[i*nareas+j] > 0.0) {
-						out << "x" << i << " - y" << i << "_" << j << " >= 0";
-						if (params.gurobi_format)
-							out << endl;
-						else
-							out << ";" << endl;
-						out << "x" << j << " - y" << i << "_" << j << " >= 0";
-						if (params.gurobi_format)
-							out << endl;
-						else
-							out << ";" << endl;
-					}
-		}
+		lpBoundaryConstraint(out, params);
+
 		// add bound for variable x
 		IntVector y_value;
 		lpVariableBound(out, params, included_area, y_value);
@@ -1508,6 +1507,29 @@ void PDNetwork::lpObjectiveMinK(ostream &out, Params &params) {
 		out << endl << "Subject to" << endl;
 	else
 		out << ";" << endl;
+}
+
+void PDNetwork::lpBoundaryConstraint(ostream &out, Params &params) {
+	// constraint on the variable for the shared boundary between areas
+	if (!areas_boundary || params.boundary_modifier == 0.0) 
+		return;
+	int i, j;
+	int nareas = area_taxa.size();
+
+	for (i = 0; i < nareas-1; i++)
+		for (j = i+1; j < nareas; j++)
+			if (areas_boundary[i*nareas+j] > 0.0) {
+				out << "x" << i << " - y" << i << "_" << j << " >= 0";
+				if (params.gurobi_format)
+					out << endl;
+				else
+					out << ";" << endl;
+				out << "x" << j << " - y" << i << "_" << j << " >= 0";
+				if (params.gurobi_format)
+					out << endl;
+				else
+					out << ";" << endl;
+			}
 }
 
 void PDNetwork::lpSplitConstraint_RS(ostream &out, Params &params, IntVector &y_value, IntVector &count1, IntVector &count2, int total_size) {

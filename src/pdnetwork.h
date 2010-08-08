@@ -215,7 +215,7 @@ public:
 	*/
 	void findPDArea_LP(Params &params, vector<SplitSet> &areas_set);
 
-	double findMinKArea_LP(Params &params, const char* filename, double pd_proportion);
+	double findMinKArea_LP(Params &params, const char* filename, double pd_proportion, Split &area);
 
 	/**
 		@return TRUE if we are doing PD area optimization
@@ -393,6 +393,8 @@ protected:
 	void lpMinSDConstraint(ostream &out, Params &params, IntVector &y_value, double pd_proportion);
 
 	void lpVariableBound(ostream &out, Params &params, Split &included_vars, IntVector &y_value);
+
+	void lpBoundaryConstraint(ostream &out, Params &params);
 
 	void lpVariableBinary(ostream &out, Params &params, Split &included_vars);
 
