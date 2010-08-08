@@ -1126,6 +1126,7 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 		}
 		checkAreaCoverage();
 		num_area_coverage = findMinAreas(params, *area_coverage);
+		calcPDArea(*area_coverage);
 		cout << "We found ";
 		if (isBudgetConstraint())
 			cout << "a budget of " << num_area_coverage << " is enough";
@@ -1157,7 +1158,6 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 
 	if (params.pd_proportion == 1.0 && params.min_proportion == 0.0) {
 		if (area_coverage->empty()) num_area_coverage = findMinAreas(params, *area_coverage);
-		calcPDArea(*area_coverage);
 		areas_set.resize(1);
 		areas_set[0].push_back(area_coverage);
 		if (isBudgetConstraint()) {
@@ -1178,9 +1178,12 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 		double prop;
 		areas_set.resize(floor((params.pd_proportion-params.min_proportion)/params.step_proportion) + 2);
 		for (prop = params.min_proportion, index = 0; prop <= params.pd_proportion + 1e-6; prop += params.step_proportion, index++) {
-			Split *area = new Split;
-			double bk = findMinKArea_LP(params, ofile.c_str(), prop, *area);
-			areas_set[index].push_back(area);
+			Split *area = new Split(nareas);
+			if (prop < 1.0) 
+				findMinKArea_LP(params, ofile.c_str(), prop, *area);
+			else
+				*area = *area_coverage;
+ 			areas_set[index].push_back(area);
 		}
 /*		if (params.min_proportion != 0.0)
 			min_bk = findMinKArea_LP(params, ofile.c_str(), params.min_proportion);
@@ -1659,7 +1662,10 @@ void PDNetwork::lpK_BudgetConstraint(ostream &out, Params &params, int total_siz
 void PDNetwork::lpMinSDConstraint(ostream &out, Params &params, IntVector &y_value, double pd_proportion) {
 	iterator spit;
 	int i;
-	double required_sd = calcWeight() * pd_proportion;
+	double total_weight = calcWeight();
+	double required_sd = total_weight * pd_proportion;
+	if (required_sd > total_weight) required_sd = total_weight;
+	required_sd -= 1e-6;
 	// adding constraint for min conserved PD proportion
 	for (spit = begin(),i=0; spit != end(); spit++,i++)	{
 		if (y_value[i] < 0)
