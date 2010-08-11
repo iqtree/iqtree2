@@ -122,6 +122,10 @@ void PhyloTree::setModel(SubstModel *amodel) {
 	model = amodel;
 }
 
+void PhyloTree::setModelFactory(ModelFactory *model_fac) {
+	model_factory = model_fac;
+}
+
 void PhyloTree::setRate(RateHeterogeneity *rate) {
 	site_rate = rate;
 }

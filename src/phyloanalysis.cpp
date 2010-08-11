@@ -132,6 +132,8 @@ string modelTest(Params &params, PhyloTree *in_tree)
 				subst_model->init(((nstates==4)?dna_model_names[model].c_str():aa_model_names[model].c_str()), FREQ_UNKNOWN);
 				subst_model->setTree(tree);
 				tree->setModel(subst_model);
+				tree->setModelFactory(new ModelFactory(subst_model, false));
+
 
 				// initialize rate
 				tree->setRate(rate_class[rate_type]);

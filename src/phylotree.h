@@ -114,6 +114,12 @@ public:
 	void setModel(SubstModel *amodel);
 
 	/**
+		set the model factory
+		@param model_fac model factory
+	*/
+	void setModelFactory(ModelFactory *model_fac);
+
+	/**
 		set rate heterogeneity, important to compute the likelihood
 		@param rate associated rate heterogeneity class
 	*/
