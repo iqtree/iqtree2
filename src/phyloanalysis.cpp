@@ -112,6 +112,8 @@ string modelTest(Params &params, PhyloTree *in_tree)
 		else
 			subst_model = new ModelProtein("WAG", FREQ_UNKNOWN, in_tree);
 
+		ModelFactory *model_fac = new ModelFactory(subst_model, false);
+
 		int num_models = (nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM;
 
 		cout << "Tesing " << num_models*4 << ((nstates==4)?" DNA":" protein") << " models..." << endl;
@@ -132,7 +134,7 @@ string modelTest(Params &params, PhyloTree *in_tree)
 				subst_model->init(((nstates==4)?dna_model_names[model].c_str():aa_model_names[model].c_str()), FREQ_UNKNOWN);
 				subst_model->setTree(tree);
 				tree->setModel(subst_model);
-				tree->setModelFactory(new ModelFactory(subst_model, false));
+				tree->setModelFactory(model_fac);
 
 
 				// initialize rate
@@ -166,14 +168,21 @@ string modelTest(Params &params, PhyloTree *in_tree)
 					best_lh = cur_lh;
 					best_model = subst_model->name + rate_class[rate_type]->name;
 				}
+
+				tree->setModel(NULL);
+				tree->setModelFactory(NULL);
+				tree->setRate(NULL);
+
 			}
 		}
 
+		delete model_fac;
+		delete subst_model;
+		for (rate_type = 3; rate_type >= 0; rate_type--)
+			delete rate_class[rate_type];
 		delete tree_hetero;
 		delete tree_homo;
 
-		for (rate_type = 3; rate_type >= 0; rate_type--)
-			delete rate_class[rate_type];
 
 		fscore.close();
 
