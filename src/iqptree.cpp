@@ -244,9 +244,9 @@ void IQPTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
         PhyloNeighbor *node_nei = (PhyloNeighbor*) node->findNeighbor(dad);
         PhyloNeighbor *dad_nei = (PhyloNeighbor*) dad->findNeighbor(node);
         node_nei->lh_scale_factor = 0.0;
-        node_nei->partial_lh_computed = false;
+        node_nei->partial_lh_computed = 0;
         dad_nei->lh_scale_factor = 0.0;
-        dad_nei->partial_lh_computed = false;
+        dad_nei->partial_lh_computed = 0;
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
@@ -270,7 +270,7 @@ double IQPTree::computePartialBonus(Node *node, Node* dad) {
     FOR_NEIGHBOR_IT(node, dad, it) {
         node_nei->lh_scale_factor += computePartialBonus((*it)->node, node);
     }
-    node_nei->partial_lh_computed = true;
+    node_nei->partial_lh_computed = 1;
     return node_nei->lh_scale_factor;
 }
 

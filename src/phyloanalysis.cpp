@@ -288,7 +288,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		if (!params.dist_file)
 			alignment->computeDist(tree.dist_matrix);
 		else
-			alignment->readDist(params.dist_file, tree.dist_matrix);
+ 			alignment->readDist(params.dist_file, tree.dist_matrix);
 	} else {
 		if (params.parsimony) {
 			tree.growTreeMP(alignment); // stepwise addition
@@ -304,7 +304,6 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 			tree.computeBioNJ(params, alignment, tree.dist_matrix); // create BioNJ tree
 	}
 
-
 	/* Fix if negative branch lengths detected */
 	double fixed_length = 0.01;
 	int fixed_number;
@@ -315,6 +314,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 			cout << endl;
 		}
 	}
+
 	t_begin=clock();
 
 	bool test_only = params.model_name == "TESTONLY";
@@ -347,6 +347,9 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	cout.precision(10);
 
 	cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
+
+	cout << "Parsimony score: " << tree.computeParsimonyScore() << endl;
+	cout << "Fast parsimony score: " << tree.computeParsimony() << endl;
 
 	cout << "Optimizing model parameters" << endl;
 	double score2 = tree.optimizeModel(params.fixed_branch_length);

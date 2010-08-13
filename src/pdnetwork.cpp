@@ -422,6 +422,16 @@ void PDNetwork::enterFindPD(Params &params) {
 	} 	
 }
 
+void printLPVersion(bool gurobi_format) {
+	if (gurobi_format)
+		cout << "Using GUROBI" << endl;
+	else {
+		int lp_majorversion, lp_minorversion, lp_release, lp_build;
+		lp_solve_version_info(&lp_majorversion, &lp_minorversion, &lp_release, &lp_build);
+		cout << "Using LP_SOLVE " << lp_majorversion << "." << lp_minorversion << "." << lp_release << "." << lp_build << endl;
+	}
+}
+
 void PDNetwork::findPD(Params &params, vector<SplitSet> &taxa_set, vector<int> &taxa_order) {
 
 	// call the entering function
@@ -438,13 +448,11 @@ void PDNetwork::findPD(Params &params, vector<SplitSet> &taxa_set, vector<int> &
 
 	params.detected_mode = EXHAUSTIVE;
 
+
 	if (isPDArea()) {
 		params.detected_mode = LINEAR_PROGRAMMING;
+		printLPVersion(params.gurobi_format);
 		cout << "Optimizing PD over " << sets->getNSets() << " areas..." << endl;
-		if (params.gurobi_format)
-			cout << "Using GUROBI" << endl;
-		else
-			cout << "Using LP_SOLVE" << endl;
 		cout << "Linear programming on general split network..." << endl;
 		findPDArea_LP(params, taxa_set);
 	} else if (params.run_mode == GREEDY) {	
@@ -456,10 +464,7 @@ void PDNetwork::findPD(Params &params, vector<SplitSet> &taxa_set, vector<int> &
 		taxa_set[0].push_back(new Split(curset));
 	} else if (params.run_mode != EXHAUSTIVE) {
 		params.detected_mode = LINEAR_PROGRAMMING;
-		if (params.gurobi_format)
-			cout << "Using GUROBI" << endl;
-		else
-			cout << "Using LP_SOLVE" << endl;
+		printLPVersion(params.gurobi_format);
 		cout << "Linear programming on general split network..." << endl;
 		findPD_LP(params, taxa_set);
 	} 

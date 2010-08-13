@@ -73,7 +73,7 @@ int modeltest(char *args, const char *score_file, const char *out_file, char *LR
 		return EXIT_FAILURE;
 	}
 
-	run_modeltest(argc, argv);
+	int status = run_modeltest(argc, argv);
 
 #ifdef WIN32
 	freopen("CON", "w", stdout);
@@ -100,5 +100,5 @@ int modeltest(char *args, const char *score_file, const char *out_file, char *LR
 /*	for (; argc > 0; argc--)
 		free(argv[argc-1]);*/
 
-	return EXIT_SUCCESS;
+	return status;
 }

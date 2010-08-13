@@ -317,8 +317,9 @@ void MExtTree::setLeavesName(NodeVector &myleaves) {
 	for (int i = 0; i < myleaves.size(); i++)
 	{
 		myleaves[i]->id = i;
-		myleaves[i]->name = "T";
-		myleaves[i]->name += myleaves[i]->id;
+		stringstream str;
+		str << 'T' << myleaves[i]->id;
+		myleaves[i]->name = str.str();
 	}
 }
 

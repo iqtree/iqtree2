@@ -27,9 +27,10 @@
 
 using namespace std;
 
-typedef int UINT;
 
 const int UINT_BITS = sizeof(UINT) * 8;
+const int BITS_DIV = (sizeof(int) == 2) ? 4 : ((sizeof(int)==4) ? 5 : 6);
+const int BITS_MODULO = UINT_BITS-1;
 
 /**
 Defining a split, also a set of taxa.

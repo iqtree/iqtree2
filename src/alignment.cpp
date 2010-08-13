@@ -309,7 +309,7 @@ char convertState(char state, SeqType seq_type) {
 	}
 }
 
-char convertStateBack(char state, int num_states) {
+char Alignment::convertStateBack(char state) {
 	if (state == STATE_UNKNOWN) return '-';
 	if (state == STATE_INVALID) return '?';
 
@@ -497,7 +497,7 @@ void Alignment::printPhylip(char *file_name) {
 			out.width(max_seq_len);
 			out << left << (*it) << " ";
 			for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++)
-				out << convertStateBack(at(*i)[seq_id], num_states);
+				out << convertStateBack(at(*i)[seq_id]);
 			out << endl;
 		}
 		out.close();

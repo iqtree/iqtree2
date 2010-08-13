@@ -170,14 +170,37 @@ public:
 ****************************************************************************/
 
 	/**
-		compute the parsimony score of the tree, given the alignment
+		compute the tree parsimony score
+		@return tree likelihood
+	*/
+	int computeParsimony();
+
+	/**
+		TODO: Compute partial parsimony score of the subtree rooted at dad
+		@param dad_branch the branch leading to the subtree
+		@param dad its dad, used to direct the tranversal
+	*/
+	void computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+
+	/**
+		compute tree parsimony score on a branch
+		@param dad_branch the branch leading to the subtree
+		@param dad its dad, used to direct the tranversal	
+		@return tree likelihood
+	*/
+	int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+
+	/**
+		SLOW VERSION: compute the parsimony score of the tree, given the alignment
 		@return the parsimony score
 	*/
 	int computeParsimonyScore();
 
 
 	/**
-		compute the parsimony score of the tree, given the alignment
+		SLOW VERSION: compute the parsimony score of the tree, given the alignment
 		@return the parsimony score
 		@param node the current node
 		@param dad dad of the node, used to direct the search
@@ -547,6 +570,19 @@ protected:
 		The variable partial_lh in PhyloNeighbor will be assigned to a region inside this variable.
 	*/
 	double *central_partial_lh;
+
+	/**
+		the main memory storing all partial parsimony states for all neighbors of the tree.
+		The variable partial_pars in PhyloNeighbor will be assigned to a region inside this variable.
+	*/
+	UINT *central_partial_pars;
+
+	int getBitsBlockSize();
+	UINT *newBitsBlock();
+
+	UINT getBitsBlock(UINT *bit_vec, int index);
+	
+	void setBitsBlock(UINT *bit_vec, int index, UINT value);
 };
 
 #endif

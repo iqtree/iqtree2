@@ -60,6 +60,7 @@ PhyloTree::PhyloTree()
 	site_rate = NULL;
 	optimize_by_newton = false;
 	central_partial_lh = NULL;
+	central_partial_pars = NULL;
 	model_factory = NULL;
 }
 
@@ -67,6 +68,9 @@ PhyloTree::~PhyloTree() {
 	if (central_partial_lh)
 		delete [] central_partial_lh;
 	central_partial_lh = NULL;
+	if (central_partial_pars)
+		delete [] central_partial_pars;
+	central_partial_pars = NULL;
 	if (model_factory) delete model_factory;
 	if (model) delete model;
 	if (site_rate) delete site_rate;
@@ -194,6 +198,189 @@ string PhyloTree::getModelName() {
 	Parsimony function
 ****************************************************************************/
 
+
+
+int PhyloTree::getBitsBlockSize() {
+	// reserve the last entry for parsimony score
+	return (aln->num_states*aln->size()+ UINT_BITS - 1) / UINT_BITS + 1;
+}
+
+UINT *PhyloTree::newBitsBlock() {
+	return new UINT[getBitsBlockSize()]; 
+}
+
+UINT PhyloTree::getBitsBlock(UINT *bit_vec, int index) {
+	int nstates = aln->num_states;
+	int myindex = (index * nstates);
+	int bit_pos_begin = myindex >> BITS_DIV;
+	int bit_off_begin = myindex & BITS_MODULO;
+	int bit_pos_end;
+	int bit_off_end = bit_off_begin + nstates;
+	if (bit_off_end > UINT_BITS) {
+		bit_off_end -= UINT_BITS;
+		bit_pos_end = bit_pos_begin+1;
+	} else
+		bit_pos_end = bit_pos_begin;
+
+
+	if (bit_pos_begin == bit_pos_end)
+		return (bit_vec[bit_pos_begin] >> bit_off_begin) & ((1 << nstates) - 1);
+	else {
+		int part1 = (bit_vec[bit_pos_begin] >> bit_off_begin);
+		int part2 = bit_vec[bit_pos_end] & ((1 << bit_off_end) - 1);
+		return part1 | (part2 << (UINT_BITS - bit_off_begin));
+	}
+}
+
+void PhyloTree::setBitsBlock(UINT *bit_vec, int index, UINT value) {
+	int nstates = aln->num_states;
+	int myindex = (index * nstates);
+	int bit_pos_begin = myindex >> BITS_DIV;
+	int bit_off_begin = myindex & BITS_MODULO;
+	int bit_pos_end;
+	int bit_off_end = bit_off_begin + nstates;
+	if (bit_off_end > UINT_BITS) {
+		bit_off_end -= UINT_BITS;
+		bit_pos_end = bit_pos_begin+1;
+	} else
+		bit_pos_end = bit_pos_begin;
+
+	int allstates = (1 << nstates) - 1;
+	assert(value <= allstates);
+
+	if (bit_pos_begin == bit_pos_end) {
+		// first clear the bit between bit_off_begin and bit_off_end
+		bit_vec[bit_pos_begin] &= ~(allstates << bit_off_begin);
+		// now set the bit
+		bit_vec[bit_pos_begin] |= value << bit_off_begin;
+	} else {
+		int len1 = UINT_BITS - bit_off_begin;
+		int allbit1 = (1 << len1) - 1;
+		// clear bit from bit_off_begin to UINT_BITS
+		bit_vec[bit_pos_begin] &= ~(allbit1 << bit_off_begin);
+		// set bit  from bit_off_begin to UINT_BITS
+		bit_vec[bit_pos_begin] |= ((value & allbit1) << bit_off_begin);
+
+		// clear bit from 0 to bit_off_end 
+		bit_vec[bit_pos_end] &= ~((1 << bit_off_end)-1);
+		// now set the bit the value
+		bit_vec[bit_pos_end] |= (value >> len1);
+	
+	}
+}
+
+
+
+void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	// don't recompute the likelihood
+	if (dad_branch->partial_lh_computed & 2)
+		return;
+	Node *node = dad_branch->node;
+	assert(node->degree() <= 3);
+	int ptn;
+	int nstates = aln->num_states;
+	int pars_size = getBitsBlockSize();
+	assert(dad_branch->partial_pars);
+
+	if (node->isLeaf() && dad) {
+		// external node 
+		memset(dad_branch->partial_pars, 0, pars_size * sizeof(int));
+		for (ptn = 0; ptn < aln->size(); ptn++) {
+			char state;
+			if (node->name == ROOT_NAME) {
+				state = STATE_UNKNOWN;
+			} else {
+				assert(node->id < aln->getNSeq());
+				state = (aln->at(ptn))[node->id];
+			}
+			if (state == STATE_UNKNOWN) {
+				// fill all entries with bit 1
+				setBitsBlock(dad_branch->partial_pars, ptn, (1 << nstates)-1);
+			} else if (state < nstates) {
+				setBitsBlock(dad_branch->partial_pars, ptn, 1 << state);
+			} else {
+				// ambiguous character, for DNA, RNA
+				state = state - (nstates-1);
+				setBitsBlock(dad_branch->partial_pars, ptn, state);
+			}
+		}
+	} else {
+		// internal node 
+		//memset(dad_branch->partial_pars, 127, pars_size * sizeof(int));
+		UINT *partial_pars_dad = dad_branch->partial_pars;
+		UINT *partial_pars_child1 = NULL, *partial_pars_child2 = NULL;
+		// take the intersection of two child states (with &= bit operation)
+		FOR_NEIGHBOR_IT(node, dad, it)
+		if ((*it)->node->name != ROOT_NAME) {
+			computePartialParsimony((PhyloNeighbor*)(*it), (PhyloNode*)node);
+			if (!partial_pars_child1)
+				partial_pars_child1 = ((PhyloNeighbor*)(*it))->partial_pars;
+			else
+				partial_pars_child2 = ((PhyloNeighbor*)(*it))->partial_pars;
+		}
+		assert(partial_pars_child1 && partial_pars_child2);
+		for (int i = 0; i < pars_size-1; i++)
+			partial_pars_dad[i] = partial_pars_child1[i] & partial_pars_child2[i];
+		int partial_pars = partial_pars_child1[pars_size-1] + partial_pars_child2[pars_size-1];
+		// now check if some intersection is empty, change to union (Fitch algorithm) and increase the parsimony score
+		for (ptn = 0; ptn < aln->size(); ptn++) 
+			if (getBitsBlock(partial_pars_dad, ptn) == 0) {
+				setBitsBlock(partial_pars_dad, ptn, getBitsBlock(partial_pars_child1, ptn) | getBitsBlock(partial_pars_child2, ptn));
+				partial_pars += aln->at(ptn).frequency;
+			}
+		partial_pars_dad[pars_size-1] = partial_pars;
+	}
+	dad_branch->partial_lh_computed |= 2;
+}
+
+
+int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	PhyloNode *node = (PhyloNode*)dad_branch->node;
+	PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
+	assert(node_branch);
+	if (!central_partial_pars)
+		initializeAllPartialLh();
+	// swap node and dad if dad is a leaf
+	if (node->isLeaf()) {
+		PhyloNode *tmp_node = dad;
+		dad = node;
+		node = tmp_node;
+		PhyloNeighbor *tmp_nei = dad_branch;
+		dad_branch = node_branch;
+		node_branch = tmp_nei;
+		//cout << "swapped\n";
+	}
+	if ((dad_branch->partial_lh_computed & 2) == 0)
+		computePartialParsimony(dad_branch, dad);
+	if ((node_branch->partial_lh_computed & 2) == 0)
+		computePartialParsimony(node_branch, node);
+	// now combine likelihood at the branch
+
+	int pars_size = getBitsBlockSize();
+	int nstates = aln->num_states;
+	int i, ptn;
+	int tree_pars = node_branch->partial_pars[pars_size-1] + dad_branch->partial_pars[pars_size-1];
+	UINT *partial_pars = newBitsBlock();
+	for (i = 0; i < pars_size-1; i++)
+		partial_pars[i] = (node_branch->partial_pars[i] & dad_branch->partial_pars[i]);
+
+	for (ptn = 0; ptn < aln->size(); ptn++)  {
+		/*
+		for (i = 0; i < aln->getNSeq(); i++)
+			cout << aln->convertStateBack(aln->at(ptn)[i]);
+		cout << endl;*/
+
+		if (getBitsBlock(partial_pars, ptn) == 0)
+			tree_pars += aln->at(ptn).frequency;
+	}
+	delete [] partial_pars;
+	return tree_pars;
+}
+
+int PhyloTree::computeParsimony() {
+	return computeParsimonyBranch((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root);
+}
+
 int PhyloTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, PhyloNode *dad) {
 	int score = 0;
 	states = 0;
@@ -249,7 +436,8 @@ int PhyloTree::computeParsimonyScore() {
 	assert(root && root->isLeaf());
 
 	int score = 0;
-	for (int ptn = 0; ptn < aln->size(); ptn++)   {
+	for (int ptn = 0; ptn < aln->size(); ptn++)  
+	if (!aln->at(ptn).is_const) {
 		int states;
 		score += computeParsimonyScore(ptn, states) * (*aln)[ptn].frequency;
 	}
@@ -422,11 +610,22 @@ void PhyloTree::initializeAllPartialLh() {
 
 void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
 	int block_size = aln->size() * aln->num_states * site_rate->getNRate();
+	int pars_block_size = getBitsBlockSize();
 	if (!node) {
 		node = (PhyloNode*)root;
 		// allocate the big central partial likelihoods memory
+		cout << "Allocating " << (leafNum-1)*4*block_size*sizeof(double) << " bytes for partial likelihood vectors" << endl;
 		if (!central_partial_lh) 
 			central_partial_lh = new double[(leafNum-1)*4*block_size];
+		if (!central_partial_lh) {
+			outError("Not enough memory");
+		}
+		cout << "Allocating " << (leafNum-1)*4*pars_block_size*sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
+		if (!central_partial_pars)
+			central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
+		if (!central_partial_pars) {
+			outError("Not enough memory");
+		}
 		index = 0;
 	}
 	if (dad) {
@@ -434,9 +633,11 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 		PhyloNeighbor *nei = (PhyloNeighbor*)node->findNeighbor(dad);
 		assert(!nei->partial_lh);
 		nei->partial_lh = central_partial_lh + (index * block_size);
+		nei->partial_pars = central_partial_pars + (index * pars_block_size);
 		nei = (PhyloNeighbor*)dad->findNeighbor(node);
 		assert(!nei->partial_lh);
 		nei->partial_lh = central_partial_lh + ((index+1) * block_size);
+		nei->partial_pars = central_partial_pars + ((index+1) * pars_block_size);
 		index += 2;
 		assert(index < nodeNum*2-1);
 	}
@@ -474,9 +675,9 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 		node_branch = tmp_nei;
 		//cout << "swapped\n";
 	}
-	if (!dad_branch->partial_lh_computed)
+	if ((dad_branch->partial_lh_computed & 1) == 0)
 		computePartialLikelihood(dad_branch, dad);
-	if (!node_branch->partial_lh_computed)
+	if ((node_branch->partial_lh_computed & 1) == 0)
 		computePartialLikelihood(node_branch, node);
 	// now combine likelihood at the branch
 
@@ -543,7 +744,7 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 
 void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 	// don't recompute the likelihood
-	if (dad_branch->partial_lh_computed)
+	if (dad_branch->partial_lh_computed & 1)
 		return;
 	Node *node = dad_branch->node;
 	int ptn, cat;
@@ -643,7 +844,7 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 		for (cat = ncat-1; cat >= 0; cat--)
 			delete [] trans_mat[cat];
 	}
-	dad_branch->partial_lh_computed = true;
+	dad_branch->partial_lh_computed |= 1;
 }
 
 
@@ -709,9 +910,9 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
 		node_branch = tmp_nei;
 		//cout << "swapped\n";
 	}
-	if (!dad_branch->partial_lh_computed)
+	if ((dad_branch->partial_lh_computed & 1) == 0)
 		computePartialLikelihood(dad_branch, dad);
-	if (!node_branch->partial_lh_computed)
+	if ((node_branch->partial_lh_computed & 1) == 0)
 		computePartialLikelihood(node_branch, node);
 	// now combine likelihood at the branch
 

@@ -33,21 +33,22 @@ public:
 	*/
 	PhyloNeighbor(Node *anode, double alength) : Neighbor(anode, alength) {	
 		partial_lh = NULL; 
-		partial_lh_computed = false;
+		partial_lh_computed = 0;
 		lh_scale_factor = 0.0;
+		partial_pars = NULL;
 	}
 
 	/**
 		tell that the partial likelihood vector is not computed
 	*/
-	void clearPartialLh() { partial_lh_computed = false; }
+	void clearPartialLh() { partial_lh_computed = 0; }
 
 private:
 
 	/**
 		true if the partial likelihood was computed
 	*/
-	bool partial_lh_computed;
+	int  partial_lh_computed;
 
 	/**
 		vector containing the partial likelihoods
@@ -58,6 +59,13 @@ private:
 		likelihood scaling factor
 	*/
 	double lh_scale_factor;
+
+
+	/**
+		vector containing the partial parsimony scores
+	*/
+	UINT *partial_pars;
+
 };
 
 /**

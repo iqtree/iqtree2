@@ -15,7 +15,7 @@
 void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
 	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
 	assert(node_nei);
-	node_nei->partial_lh_computed = false;
+	node_nei->partial_lh_computed = 0;
 	for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++)
 		if ((*it)->node != dad)
 			((PhyloNode*)(*it)->node)->clearReversePartialLh(this);
@@ -23,9 +23,9 @@ void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
 
 void PhyloNode::clearAllPartialLh(PhyloNode *dad) {
 	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
-	node_nei->partial_lh_computed = false;
+	node_nei->partial_lh_computed = 0;
 	node_nei = (PhyloNeighbor*)dad->findNeighbor(this);
-	node_nei->partial_lh_computed = false;
+	node_nei->partial_lh_computed = 0;
 	for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++)
 		if ((*it)->node != dad)
 			((PhyloNode*)(*it)->node)->clearAllPartialLh(this);

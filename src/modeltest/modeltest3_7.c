@@ -150,7 +150,7 @@ static void		ParseArgs(int, char**);
 static int		RecognizeInputFormat(); // change prototype by Minh
 static int		ReadPaupScores(); // change prototype by Minh
 static void		Initialize();
-static void 	ReadScores();
+static int 	ReadScores(); // change prototype by Minh
 static void 	PrintTitle(FILE *fp);
 static void 	PrintDate(FILE *fp);
 static void 	PrintOS (FILE *fp);
@@ -548,7 +548,7 @@ static int RecognizeInputFormat()
 		ungetc(iochar,stdin);
 		printf("\nInput format: raw log likelihood scores \n");
 		format=1;
-		ReadScores();
+		if (!ReadScores()) return 0;
 		}
 	return 1;
 }
@@ -899,7 +899,7 @@ void Initialize()
 
 
 /******************* ReadScores ************************/
-static void ReadScores()
+static int ReadScores()
 {
 	float score[NUM_MODELS];
 	int i,j;
@@ -907,9 +907,10 @@ static void ReadScores()
 	i=0;
 	score[NUM_MODELS-1]= 0;
 
-	while (!feof(stdin))
+	while (!feof(stdin) && i < NUM_MODELS)
 		{
-		scanf("%f", &score[i]);
+		int items = scanf("%f", &score[i]);
+		if (items < 1 || items == EOF) return 0;
 		i++;
 		}
 	
@@ -923,16 +924,16 @@ static void ReadScores()
 			{
 		printf("\n\nThe input file is incomplete or incorrect. \nAre you using the most updated block of PAUP* commands?. ");
 		printf("See that beginning in version 3.x Modeltest reads 56 instead of 40 (v2.x) or 24 (v1.x) models, so you should use the appropriate PAUP* block\n");
-		exit(0);
+		return 0;
 			}
 		}
 		
 	if (i>NUM_MODELS+1)
 		{
 		printf("\n\nThe input file has more than %d scores", NUM_MODELS);
-		exit(0);
+		return 0;
 		}
-
+	return 1;
 }
 
 
