@@ -96,7 +96,8 @@ void ModelDNA::setRateType(const char *rate_str) {
 	int num_ch = strlen(rate_str);
 	int i, j;
 
-	assert(num_ch == num_states*(num_states-1)/2);
+	if (num_ch != num_states*(num_states-1)/2)
+		outError("Wrong model name ", rate_str);
 	for (i = 0; i < num_ch; i++) {
 		if (rate_str[i] > last_type) last_type = rate_str[i];
 		if (rate_str[i] < first_type) first_type = rate_str[i];

@@ -61,8 +61,9 @@ string modelTest(Params &params, PhyloTree *in_tree)
 	char LRT_model[10];
 	char IC_model[10];
 	multiset<string> model_list;
-	string fscore_name = params.aln_file;
-	string fmodel_name = params.aln_file;
+	string fscore_name = params.out_prefix;
+	string fmodel_name = params.out_prefix;
+	
 	char model_arg[40] = "";
 	fscore_name += ".modelscore";
 	fmodel_name += ".modeltest";
@@ -248,7 +249,8 @@ string modelTest(Params &params, PhyloTree *in_tree)
 
 void reportPhyloAnalysis(Params &params, Alignment &alignment, IQPTree &tree) {
 	int i, j;
-	string outfile = params.aln_file;
+	string outfile = params.out_prefix;
+
 	outfile += ".iqtree";
 	try {
 		ofstream out;
@@ -317,14 +319,16 @@ void reportPhyloAnalysis(Params &params, Alignment &alignment, IQPTree &tree) {
 
 		out << "MAXIMUM LIKELIHOOD TREE" << endl << "-----------------------" << endl << endl;
 		
-		out << "Note: this is an UNROOTED tree!" << endl << endl;
+		out << "NOTE: Tree is UNROOTED although outgroup taxon '" << 
+			((params.root) ? params.root : tree.aln->getSeqName(0)) <<"' is drawn at root" << endl << endl;
 
+		tree.setRootNode(params.root);
 		tree.drawTree(out);
 
 		out << "Log-likehood of the tree: " << fixed << tree.computeLikelihood() << endl <<
 			   "Unconstrained log-likelihood (without tree): " << alignment.computeUnconstrainedLogL() << endl << endl <<
 			   "Tree in newick format:" << endl << endl;
-		tree.printTree(out);
+		tree.printResultTree(params, out);
 		out << endl;
 		
 		time_t cur_time;
@@ -399,6 +403,14 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 			
 		} else*/
 			tree.computeBioNJ(params, alignment, tree.dist_matrix); // create BioNJ tree
+	}
+
+	if (params.root) {
+		string str = params.root;
+		if (!tree.findNodeName(str)) {
+			str = "Specified root name " + str + "not found";
+			outError(str);
+		}
 	}
 
 	/* Fix if negative branch lengths detected */
@@ -488,9 +500,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 
 	}        
 
-    string tree_file_name = params.aln_file;
-    tree_file_name += ".treefile";
-    tree.printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH);
+	tree.printResultTree(params);
 
 
 	/* do the IQP */

@@ -165,11 +165,19 @@ void PhyloTree::createModel(Params &params) {
 		string rate_str = model_str.substr(pos);
 		if (rate_str == "+I")
 			site_rate = new RateInvar(this);
-		else if (rate_str == "+G")
+		else if (rate_str.substr(0,2) == "+G") {
+			if (rate_str.length() > 2) {
+				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
+				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
+			}
 			site_rate = new RateGamma(params.num_rate_cats, this);
-		else if (rate_str == "+I+G" || rate_str == "+G+I")
+		} else if (rate_str.substr(0,4) == "+I+G" || rate_str == "+G+I") {
+			if (rate_str.length() > 4) {
+				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
+				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
+			}
 			site_rate = new RateGammaInvar(params.num_rate_cats, this);
-		else
+		} else
 			outError("Invalid rate heterogeneity type");
 		model_str = model_str.substr(0, pos);
 	} else site_rate = new RateHeterogeneity();
@@ -1207,8 +1215,8 @@ void PhyloTree::growTreeML(Alignment *alignment) {
 
 void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, double* &dist_mat) {
 	cout << "Computing BioNJ tree..." << endl;
-	string dist_file = params.aln_file;
-	string bionj_file = params.aln_file;
+	string dist_file = params.out_prefix;
+	string bionj_file = params.out_prefix;
 	dist_file += ".dist";
 	bionj_file += ".bionj";
 

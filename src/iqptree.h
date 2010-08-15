@@ -112,6 +112,21 @@ public:
     virtual ~IQPTree();
 
 	/**
+		print tree to .treefile
+		@param params program parameters, field root is taken
+	*/
+	void printResultTree(Params &params);
+
+	/**
+		print tree to out
+		@param params program parameters, field root is taken
+		@param out (OUT) output stream
+	*/
+	void printResultTree(Params &params, ostream &out);
+
+	void setRootNode(char *my_root);
+
+	/**
 		set k-representative parameter
 		@param k_rep k-representative
 	*/

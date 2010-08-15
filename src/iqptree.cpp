@@ -443,11 +443,13 @@ double IQPTree::doIQP() {
 }
 
 double IQPTree::doIQPNNI(Params &params) {
-    string tree_file_name = params.aln_file;
+    string tree_file_name = params.out_prefix;
     tree_file_name += ".treefile";
     bestScore = computeLikelihood();
-    printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH);
-    string treels_name = params.aln_file;
+
+	printResultTree(params);
+
+    string treels_name = params.out_prefix;
     treels_name += ".treels";
     if (params.output_trees)
         printTree(treels_name.c_str(), WT_TAXON_ID | WT_SORT_TAXA | WT_NEWLINE);
@@ -557,7 +559,7 @@ double IQPTree::doIQPNNI(Params &params) {
             bestScore = curScore;
             best_tree_string.seekp(0);
             printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-            printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH);
+            printResultTree(params);
             stop_rule.addImprovedIteration(cur_iteration);
         } else {
             /* take back the current best tree */
@@ -1124,4 +1126,24 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 
 void IQPTree::addPossibleNNIMove(NNIMove myMove) {
     possibleNNIMoves.push_back(myMove);
+}
+
+void IQPTree::setRootNode(char *my_root) {
+    string root_name;
+    if (my_root) root_name = my_root; else root_name = aln->getSeqName(0);
+    root = findNodeName(root_name);
+    assert(root);
+}
+
+void IQPTree::printResultTree(Params &params) {
+	setRootNode(params.root);
+    string tree_file_name = params.out_prefix;
+    tree_file_name += ".treefile";
+    printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+}
+
+
+void IQPTree::printResultTree(Params &params, ostream &out) {
+	setRootNode(params.root);
+    printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 }
