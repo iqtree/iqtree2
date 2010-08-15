@@ -48,10 +48,10 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 	} else if (strcmp(model_name, "K81uf") == 0) {
 		setRateType("012210");
 		def_freq = FREQ_ESTIMATE;
-	} else if (strcmp(model_name, "TN") == 0 || strcmp(model_name, "TN93") == 0) {
+	} else if (strcmp(model_name, "TN") == 0 || strcmp(model_name, "TrN") == 0 || strcmp(model_name, "TN93") == 0) {
 		setRateType("010020");
 		def_freq = FREQ_ESTIMATE;
-	} else if (strcmp(model_name, "TNef") == 0) {
+	} else if (strcmp(model_name, "TNef") == 0 || strcmp(model_name, "TrNef") == 0) {
 		setRateType("010020");
 		def_freq = FREQ_EQUAL;
 	} else if (strcmp(model_name, "TIM") == 0) {
