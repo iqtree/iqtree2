@@ -23,6 +23,7 @@ RateGammaInvar::RateGammaInvar(int ncat, PhyloTree *tree)
 : RateGamma(ncat, tree), RateInvar(tree)
 {
 	name = "+I" + name;
+	full_name = "Invar+" + full_name;
 }
 
 

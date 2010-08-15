@@ -34,6 +34,12 @@ StopRule::~StopRule()
 {
 }
 
+int StopRule::getNumIterations() {
+	if (stop_condition == SC_FIXED_ITERATION || predicted_iteration == 0)
+		return min_iteration;
+	return predicted_iteration;
+}
+
 bool StopRule::meetStopCondition(int current_iteration) {
 	if (stop_condition == SC_FIXED_ITERATION || predicted_iteration == 0)
 		return current_iteration > min_iteration;

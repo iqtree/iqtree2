@@ -33,6 +33,8 @@ PhyloTree() {
     deltaNNI95 = 0;
     curScore = 0.0;
     bestScore = 0.0;
+    cur_pars_score = -1;
+    enable_parsimony = false;
     enableHeuris = false; // This is set true when the heuristic started (after N iterations)
 }
 
@@ -427,10 +429,12 @@ double IQPTree::doIQP() {
     setAlignment(aln);
     clearAllPartialLh();
     curScore = optimizeAllBranches();
+    if (enable_parsimony)
+    	cur_pars_score = computeParsimony();
     //curScore = computeLikelihood();
 
     if (verbose_mode >= VB_MAX) {
-        cout << "IQP Likelihood = " << curScore << endl;
+        cout << "IQP Likelihood = " << curScore << "  Parsimony = " << cur_pars_score << endl;
         //printTree(cout);
         //cout << endl;
     }
@@ -442,7 +446,7 @@ double IQPTree::doIQPNNI(Params &params) {
     string tree_file_name = params.aln_file;
     tree_file_name += ".treefile";
     bestScore = computeLikelihood();
-    printTree(tree_file_name.c_str());
+    printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH);
     string treels_name = params.aln_file;
     treels_name += ".treels";
     if (params.output_trees)
@@ -553,7 +557,7 @@ double IQPTree::doIQPNNI(Params &params) {
             bestScore = curScore;
             best_tree_string.seekp(0);
             printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-            printTree(tree_file_name.c_str());
+            printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH);
             stop_rule.addImprovedIteration(cur_iteration);
         } else {
             /* take back the current best tree */
@@ -710,6 +714,11 @@ double IQPTree::optimizeNNI(bool fullNNI) {
                     << " -- improvement general "
                     << delta
                     << " and improvement pro NNI " << deltaProNNI << endl;
+			if (enable_parsimony) {
+				cur_pars_score = computeParsimony();
+				if (verbose_mode >= VB_MAX)
+					cout << "Improved parsimony score: " << cur_pars_score << endl;
+			}
         } else {
             cout << "Old score = " << curScore << endl;
             cout << "New score = " << newScore << endl;
@@ -1015,6 +1024,10 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
     double node1_lh_scale = node12_it->lh_scale_factor;
     double node2_lh_scale = node21_it->lh_scale_factor;
 
+	// save parsimony vector
+    UINT *node1_pars_save = node12_it->partial_pars;
+    UINT *node2_pars_save = node21_it->partial_pars;
+
     // save the first found neighbor of node 1 (excluding node2) in node1_it
     FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
     break;
@@ -1022,8 +1035,14 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
     double node1_len = node1_nei->length;
     int nniNr = 1;
     int chosenSwap = 1;
+	// replace partial_lh with a new vector
     node12_it->partial_lh = newPartialLh();
     node21_it->partial_lh = newPartialLh();
+
+	// replace partial_pars with a new vector
+    node12_it->partial_pars = newBitsBlock();
+    node21_it->partial_pars = newBitsBlock();
+
 
     FOR_NEIGHBOR_IT(node2, node1, node2_it) {
         nniNr = nniNr + 1;
@@ -1041,20 +1060,28 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
         node12_it->clearPartialLh();
         node21_it->clearPartialLh();
 
-        // compute the score of the swapped topology
-        double newScore = optimizeOneBranch(node1, node2, false);
-        node12_len[nniNr] = node12_it->length;
+		// compute score with parsimony, accept topology if parsimony score is not so bad
 
-        // If score is better, save the NNI move
-        if (newScore > bestScore + TOL_LIKELIHOOD) {
-            bestScore = newScore;
-            chosenSwap = nniNr;
-            mymove.node1Nei_it = node1_it;
-            mymove.node2Nei_it = node2_it;
-            mymove.score = bestScore;
-            mymove.node1 = node1;
-            mymove.node2 = node2;
-        }
+		int pars_score = -10;
+		if (enable_parsimony) pars_score = computeParsimonyBranch(node12_it, node1);
+		if (pars_score < cur_pars_score) {
+			// compute the score of the swapped topology
+			double newScore = optimizeOneBranch(node1, node2, false);
+			node12_len[nniNr] = node12_it->length;
+	
+			// If score is better, save the NNI move
+			if (newScore > bestScore + TOL_LIKELIHOOD) {
+				bestScore = newScore;
+				chosenSwap = nniNr;
+				mymove.node1Nei_it = node1_it;
+				mymove.node2Nei_it = node2_it;
+				mymove.score = bestScore;
+				mymove.node1 = node1;
+				mymove.node2 = node2;
+			}
+        } else {
+        	cout << "pars filtered" << endl;
+        } 
 
         // swap back and recover the branch lengths
         node1->updateNeighbor(node1_it, node1_nei, node1_len);
@@ -1066,9 +1093,14 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
 
     }
 
+    delete[] node21_it->partial_pars;
+    delete[] node12_it->partial_pars;
+
     delete[] node21_it->partial_lh;
     delete[] node12_it->partial_lh;
     // restore the partial likelihood vector
+    node12_it->partial_pars = node1_pars_save;
+    node21_it->partial_pars = node2_pars_save;
     node12_it->partial_lh = node1_lh_save;
     node21_it->partial_lh = node2_lh_save;
     node12_it->lh_scale_factor = node1_lh_scale;

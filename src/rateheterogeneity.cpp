@@ -24,6 +24,7 @@ RateHeterogeneity::RateHeterogeneity()
  : Optimization()
 {
 	name = "";
+	full_name = "Uniform";
 	phylo_tree = NULL;
 }
 

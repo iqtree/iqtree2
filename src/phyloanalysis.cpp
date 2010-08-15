@@ -18,6 +18,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "phyloanalysis.h"
 #include "alignment.h"
 #include "phylotree.h"
@@ -142,18 +146,18 @@ string modelTest(Params &params, PhyloTree *in_tree)
 				rate_class[rate_type]->setTree(tree);
 
 				// print some infos
-				cout << "===> Testing ";
-				cout.width(12);
-				string str;
-				str = subst_model->name;
-				str += rate_class[rate_type]->name;
-				cout << left << str << " (df=" << subst_model->getNDim()+rate_class[rate_type]->getNDim() << ")";
 
 				// clear all likelihood values
 				tree->clearAllPartialLh();
 
 				// optimize model parameters
 				double cur_lh = tree->optimizeModel();
+				cout << "===> Testing ";
+				cout.width(12);
+				string str;
+				str = subst_model->name;
+				str += rate_class[rate_type]->name;
+				cout << left << str << " (df=" << subst_model->getNDim()+rate_class[rate_type]->getNDim() << ")";
 				cout.precision(10);
 				cout << ":  Log-likelihood " << cur_lh << endl;
 				fscore << str << endl;
@@ -243,15 +247,107 @@ string modelTest(Params &params, PhyloTree *in_tree)
 }
 
 void reportPhyloAnalysis(Params &params, Alignment &alignment, IQPTree &tree) {
+	int i, j;
 	string outfile = params.aln_file;
 	outfile += ".iqtree";
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(outfile.c_str());
-		out << "Number of patterns: " << alignment.size() << endl;
+		out << "ANALYSIS RESULTS OF IQTREE " << VERSION << " built " << __DATE__<< endl << endl;
+		out << "Random seed number (for debugging purpose): " << params.ran_seed << endl << endl;
+		out << "REFERENCES" << endl << "----------" << endl << endl <<
+			   "A manuscript describing IQTREE is currently under preparation." << endl << endl <<
+			   "Please always cite: " << endl << endl <<
+			   "Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: Moving Fast Through Tree Space" << endl <<
+			   "and Stopping in Time, Mol. Biol. Evol., 21(8):1565-1571." << endl << endl <<
+			   "If you use the parallel version, please cite: " << endl << endl <<
+			   "Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)" << endl << 
+			   "pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies," << endl <<
+			   "Bioinformatics, 21:3794-3796." << endl << endl;
+
+		out << "INPUT ALIGNMENT" << endl << "---------------" << endl << endl <<
+			   "Alignment file name: " << params.aln_file << endl <<
+			   "Type of sequences: " << ((alignment.num_states == 2) ? "Binary" : ((alignment.num_states == 4) ? "DNA" : "Protein")) << endl <<
+			   "Number of sequences: " << alignment.getNSeq() << endl <<
+			   "Number of sites: " << alignment.getNSite() << endl <<
+			   "Number of constant sites: " << round(alignment.frac_const_sites * alignment.getNSite()) <<
+			   " (= " << alignment.frac_const_sites*100 << "% of all sites)" << endl << 
+			   "Number of patterns: " << alignment.size() << endl << endl;
+
+		out << "SUBSTITUTION PROCESS" << endl << "--------------------"  << endl << endl <<
+			   "Model of substitution: " << tree.getModel()->name << endl << endl;
+		out << "Rate matrix R:" << endl << endl;
+
+		double *rate_mat = new double[alignment.num_states*(alignment.num_states-1)/2];
+		tree.getModel()->getRateMatrix(rate_mat);
+		int k;
+		if (alignment.num_states > 4) out << fixed;
+		for (i = 0, k = 0; i < alignment.num_states-1; i++)
+			for (j = i+1; j < alignment.num_states; j++, k++) {
+				out << "  " << alignment.convertStateBack(i) << "-" << alignment.convertStateBack(j) << ": " << rate_mat[k];
+				if (alignment.num_states <= 4) out << endl; else
+					if (k % 5 == 4) out << endl;
+			}
+		if (alignment.num_states > 4) out << endl;
+		out.unsetf(ios_base::fixed);
+		delete rate_mat;
+
+		out << endl << "State frequencies:" << endl << endl;
+
+		double *state_freqs = new double[alignment.num_states];
+		tree.getModel()->getStateFrequency(state_freqs);
+		for (i = 0; i < alignment.num_states; i++)
+			out << "  pi(" << alignment.convertStateBack(i) << ") = " << state_freqs[i] << endl;
+		delete state_freqs;
+
+
+
+		out << endl << "RATE HETEROGENEITY" << endl << "------------------" << endl << endl;
+		out << "Model of rate heterogeneity: " << tree.getRate()->full_name << endl;
+		tree.getRate()->writeInfo(out);
+// Bootstrap analysis: 
+//Display as outgroup: a
+
+		out << endl << "TREE SEARCH" << endl << "-----------" << endl << endl <<
+			   "Stopping rule: " << ((params.stop_condition == SC_STOP_PREDICT) ? "Yes" : "No") << endl <<
+			   "Number of iterations: " << tree.stop_rule.getNumIterations() << endl <<
+			   "Probability of deleting sequences: " << params.p_delete << endl <<
+			   "Number of representative leaves: " << params.k_representative << endl << endl;
+
+		out << "MAXIMUM LIKELIHOOD TREE" << endl << "-----------------------" << endl << endl;
+		
+		out << "Note: this is an UNROOTED tree!" << endl << endl;
+
+		tree.drawTree(out);
+
+		out << "Log-likehood of the tree: " << fixed << tree.computeLikelihood() << endl <<
+			   "Unconstrained log-likelihood (without tree): " << alignment.computeUnconstrainedLogL() << endl << endl <<
+			   "Tree in newick format:" << endl << endl;
+		tree.printTree(out);
+		out << endl;
+		
+		time_t cur_time;
+		time (&cur_time);
+		
+		char *date_str;
+		date_str = ctime(&cur_time);
+		out.unsetf(ios_base::fixed);
+		out << endl << "TIME STAMP" << endl << "----------" << endl << endl << "Date and time: " << date_str << 
+			   "Running time: " << (double)params.run_time / CLOCKS_PER_SEC << " seconds" << endl << endl;
+
+		out << "CREDITS" << endl << "-------" << endl << endl <<
+			   "Some parts of the code were taken from TREE-PUZZLE package:" << endl << endl <<
+			   "Heiko A. Schmidt, Korbinian Strimmer, Martin Vingron, and Arndt von Haeseler" << endl <<
+			   "(2002) TREE-PUZZLE: Maximum likelihood phylogenetic analysis using quartets" << endl << 
+			   "and parallel computing, Bioinformatics, 18:502-504." << endl << endl <<
+
+			   "The source codes to construct the BIONJ tree were taken from BIONJ software:" << endl << endl <<
+			   "Oliver Gascuel (1997) BIONJ: An Improved Version of the NJ Algorithm" << endl <<
+			   "Based on a Simple Model of Sequence Data, Mol. Bio. Evol., 14:685-695." << endl << endl;
+
 		out.close();
-		cout << "Analysis results are reported in " << outfile << endl;
+		cout << "Analysis results reported in " << outfile << endl << endl;
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, outfile);
 	}
@@ -290,6 +386,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		else
  			alignment->readDist(params.dist_file, tree.dist_matrix);
 	} else {
+/*
 		if (params.parsimony) {
 			tree.growTreeMP(alignment); // stepwise addition
 			if (!tree.dist_matrix) {
@@ -300,7 +397,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 			else
 				alignment->readDist(params.dist_file, tree.dist_matrix);
 			
-		} else
+		} else*/
 			tree.computeBioNJ(params, alignment, tree.dist_matrix); // create BioNJ tree
 	}
 
@@ -348,8 +445,11 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 
 	cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
 
+
+	if (params.parsimony) tree.enable_parsimony = true;
 	cout << "Parsimony score: " << tree.computeParsimonyScore() << endl;
-	cout << "Fast parsimony score: " << tree.computeParsimony() << endl;
+	tree.cur_pars_score = tree.computeParsimony();
+	cout << "Fast parsimony score: " << tree.cur_pars_score << endl;
 
 	cout << "Optimizing model parameters" << endl;
 	double score2 = tree.optimizeModel(params.fixed_branch_length);
@@ -387,6 +487,11 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		}
 
 	}        
+
+    string tree_file_name = params.aln_file;
+    tree_file_name += ".treefile";
+    tree.printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH);
+
 
 	/* do the IQP */
 	if (params.k_representative > 0 && params.p_delete > 0.0 && params.min_iterations > 1) {

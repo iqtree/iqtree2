@@ -1433,11 +1433,10 @@ int main(int argc, char *argv[])
 	Params params;
 	parseArg(argc, argv, params);
 
-	if (verbose_mode >= VB_MED) {
-		for (int i = 0; i < argc; i++)
-			cout << " " << argv[i];
-		cout << endl;
-	}
+	cout << "Program executed with: " << endl;
+	for (int i = 0; i < argc; i++)
+		cout << " " << argv[i];
+	cout << endl;
 
 
 	srand(params.ran_seed);

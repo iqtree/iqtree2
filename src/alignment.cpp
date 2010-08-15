@@ -589,12 +589,13 @@ void Alignment::printDist(ostream &out, double *dist_mat) {
 	int nseqs = getNSeq();
 	out << nseqs << endl;
 	int pos = 0;
+	out.precision(6);
+	out << fixed;
 	for (int seq1 = 0; seq1 < nseqs; seq1 ++)  {
 		out.width(10);
 		out << left << getSeqName(seq1) << " ";
+		out.width(8);
 		for (int seq2 = 0; seq2 < nseqs; seq2 ++) {
-			out.width(8);
-			out.precision(6);
 			out << dist_mat[pos++] << " ";
 		}	
 		out << endl;
@@ -778,3 +779,14 @@ void Alignment::computeEmpiricalRate (double *rates) {
 	}
 	delete [] pair_rates;
 }
+
+double Alignment::computeUnconstrainedLogL() {
+	int nptn = size();
+	double logl = 0.0;
+	int nsite = getNSite(), i;
+	double lognsite = log(nsite);
+	for (i = 0; i < nptn; i++)
+		logl += (log(at(i).frequency) - lognsite) * at(i).frequency;
+	return logl;
+}
+

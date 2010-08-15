@@ -25,6 +25,7 @@ RateInvar::RateInvar(PhyloTree *tree)
 	p_invar = 0.0;
 	phylo_tree = tree;
 	name = "+I";
+	full_name = "Invar";
 }
 
 double RateInvar::computeFunction(double p_invar_value) {

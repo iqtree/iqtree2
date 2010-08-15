@@ -31,6 +31,12 @@ void SubstModel::computeTransMatrix(double time, double *trans_matrix) {
 			trans_matrix[i] = non_diagonal;
 }
 
+void SubstModel::getRateMatrix(double *rate_mat) {
+	int nrate = num_states*(num_states-1)/2;
+	for (int i = 0; i < nrate; i++)
+		rate_mat[i] = 1.0;
+}
+
 void SubstModel::getStateFrequency(double *state_freq) {
 	double freq = 1.0 / num_states;
 	for (int i = 0; i < num_states; i++)

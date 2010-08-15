@@ -316,7 +316,7 @@ double Optimization::minimizeOneDimen(double xmin, double xguess, double xmax, d
 	One dimensional optimization with Newton Raphson 
 	only applicable if 1st and 2nd derivatives are easy to compute
 *****************************************************/
-#define JMAX 20
+#define JMAX 50
 
 
 double Optimization::minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f)

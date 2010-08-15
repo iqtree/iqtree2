@@ -134,6 +134,10 @@ void PhyloTree::setRate(RateHeterogeneity *rate) {
 	site_rate = rate;
 }
 
+RateHeterogeneity *PhyloTree::getRate() {
+	return site_rate;
+}
+
 
 Node* PhyloTree::newNode(int node_id, const char* node_name) {
 	return (Node*) (new PhyloNode(node_id, node_name));
@@ -614,17 +618,19 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 	if (!node) {
 		node = (PhyloNode*)root;
 		// allocate the big central partial likelihoods memory
-		cout << "Allocating " << (leafNum-1)*4*block_size*sizeof(double) << " bytes for partial likelihood vectors" << endl;
+		if (verbose_mode >= VB_MED)
+			cout << "Allocating " << (leafNum-1)*4*block_size*sizeof(double) << " bytes for partial likelihood vectors" << endl;
 		if (!central_partial_lh) 
 			central_partial_lh = new double[(leafNum-1)*4*block_size];
 		if (!central_partial_lh) {
-			outError("Not enough memory");
+			outError("Not enough memory for partial likelihood vectors");
 		}
-		cout << "Allocating " << (leafNum-1)*4*pars_block_size*sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
+		if (verbose_mode >= VB_MED)
+			cout << "Allocating " << (leafNum-1)*4*pars_block_size*sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
 		if (!central_partial_pars)
 			central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
 		if (!central_partial_pars) {
-			outError("Not enough memory");
+			outError("Not enough memory for partial parsimony vectors");
 		}
 		index = 0;
 	}

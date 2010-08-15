@@ -165,7 +165,10 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 			out << node->name;
 
 		if (brtype & WT_BR_LEN)
-			out << ":" << node->neighbors[0]->length; 
+			if (brtype & WT_BR_LEN_FIXED_WIDTH)
+				out << ":" << fixed << node->neighbors[0]->length; 
+			else
+				out << ":" << node->neighbors[0]->length; 
 	} else {
 		// internal node
 		out << "(";

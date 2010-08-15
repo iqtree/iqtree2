@@ -77,6 +77,12 @@ public:
 	virtual void computeTransMatrix(double time, double *trans_matrix);
 
 	/**
+		Get the rate matrix.
+		@param rate_mat (OUT) upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
+	*/
+	virtual void getRateMatrix(double *rate_mat);
+
+	/**
 		compute the state frequency vector
 		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
 	*/

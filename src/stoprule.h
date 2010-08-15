@@ -76,6 +76,11 @@ public:
 		@return TRUE if stop condition is met, FALSE otherwise
 	*/
 	bool meetStopCondition(int current_iteration);
+	
+	/**
+		@return the number of iterations required to stop the search
+	*/
+	int getNumIterations();
 
 private:
 

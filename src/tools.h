@@ -138,6 +138,7 @@ enum TreeGenType {NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED,
 		WT_SORT_TAXA - sort the taxa s.t. subtrees with least taxon ID come first
 		WT_APPEND    - append the output file
 		WT_NEWLINE   - print a newline after
+		WT_BR_LEN_FIXED_WIDTH - print branch length in fixed number format
 */
 const int WT_BR_LEN    = 1;
 const int WT_BR_CLADE  = 2;
@@ -147,6 +148,7 @@ const int WT_BR_SCALE  = 16;
 const int WT_SORT_TAXA = 32;
 const int WT_APPEND    = 64;
 const int WT_NEWLINE   = 128;
+const int WT_BR_LEN_FIXED_WIDTH   = 256;
 
 /**
 	when computing Robinson-Foulds distances

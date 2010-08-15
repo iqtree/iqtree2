@@ -287,12 +287,19 @@ public:
 	 */
 	void setCurScore(double curScore);
 
-protected:
+	/**
+		current parsimony score of the tree
+	*/
+	int cur_pars_score;
 
+	bool enable_parsimony;
 	/**
 		stopping rule
 	*/
 	StopRule stop_rule;
+
+protected:
+
 
 	/**
 		criterion to assess important quartet
@@ -374,6 +381,7 @@ protected:
 		probability to delete a leaf
 	*/
 	double p_delete;
+
 
 	/**
 		number of IQPNNI iterations

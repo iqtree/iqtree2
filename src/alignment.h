@@ -261,6 +261,11 @@ public:
 	void countConstSite();
 
 	/**
+		@return unconstrained log-likelihood (without a tree)
+	*/
+	double computeUnconstrainedLogL();
+
+	/**
 		number of states
 	*/
 	int num_states;

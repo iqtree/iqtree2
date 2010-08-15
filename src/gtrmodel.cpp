@@ -185,6 +185,10 @@ void GTRModel::computeTransDerv(double time, double *trans_matrix,
 	}*/
 }
 
+void GTRModel::getRateMatrix(double *rate_mat) {
+	int nrate = num_states*(num_states-1)/2;
+	memcpy(rate_mat, rates, nrate * sizeof(double));
+}
 
 void GTRModel::getStateFrequency(double *freq) {
 	assert(state_freq);

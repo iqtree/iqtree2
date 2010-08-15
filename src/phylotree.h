@@ -126,6 +126,12 @@ public:
 	void setRate(RateHeterogeneity *rate);
 
 	/**
+		get rate heterogeneity
+		@return associated rate heterogeneity class
+	*/
+	RateHeterogeneity *getRate();
+
+	/**
 		create substitution model with possible rate heterogeneity. Create proper class objects
 		for two variables: model and site_rate. It takes the following field of params into account:
 			model_name, num_rate_cats, freq_type
@@ -137,6 +143,8 @@ public:
 		get the name of the model
 	*/
 	string getModelName();
+
+	SubstModel *getModel() { return model; }
 
 	/**
 		allocate a new node. Override this if you have an inherited Node class.
@@ -577,11 +585,35 @@ protected:
 	*/
 	UINT *central_partial_pars;
 
+/****************************************************************************
+	Vector of bit blocks, used for parsimony function
+****************************************************************************/
+
+	/**
+		@return size of the bits block vector for one node
+	*/
 	int getBitsBlockSize();
+
+	/**
+		allocate new memory for a bit block vector
+		@return the allocated memory
+	*/
 	UINT *newBitsBlock();
 
+	/**
+		get bit blocks, each block span num_state bits
+		@param bit_vec bit block vector
+		@param index block index
+		@return the content of the block at index
+	*/
 	UINT getBitsBlock(UINT *bit_vec, int index);
 	
+	/**
+		set bit blocks, each block span num_state bits
+		@param bit_vec bit block vector
+		@param index block index
+		@param value the content of the block at index
+	*/
 	void setBitsBlock(UINT *bit_vec, int index, UINT value);
 };
 

@@ -35,13 +35,14 @@ RateGamma::RateGamma(int ncat, PhyloTree *tree) : RateHeterogeneity()
 	rates = new double[ncategory];
 	name = "+G";
 	name += convertIntToString(ncategory);
+	full_name = "Gamma";
 	computeRates();
 }
 
 
 RateGamma::~RateGamma()
 {
-	if (rates) delete rates;
+	if (rates) delete [] rates;
 }
 
 void RateGamma::computeRates() {
@@ -106,6 +107,7 @@ double RateGamma::optimizeParameters() {
 
 void RateGamma::writeInfo(ostream &out) {
 	out << "Gamma shape parameter: " << gamma_shape << endl;
+	out << "Number of categories: " << ncategory << endl;
 }
 
 void RateGamma::writeParameters(ostream &out) {

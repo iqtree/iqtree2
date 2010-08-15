@@ -95,6 +95,12 @@ public:
 	*/
 	string name;
 
+
+	/**
+		full name of the rate heterogeneity type
+	*/
+	string full_name;
+
 protected:
 
 	/**
