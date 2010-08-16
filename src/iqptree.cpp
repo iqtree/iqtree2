@@ -843,6 +843,9 @@ double IQPTree::optimizeNNI(bool fullNNI) {
             double deltaProNNI = (newScore - curScore) / nbNNIToApply;
             curScore = newScore; // Update current score
             resetLamda = true;
+            if (vecImpProNNI.size() >= 100) {
+                vecImpProNNI.erase(vecImpProNNI.begin());
+            }
             vecImpProNNI.push_back(deltaProNNI);
             if (verbose_mode >= VB_DEBUG)
                 cout << "New best tree found with score " << newScore
@@ -877,6 +880,9 @@ double IQPTree::optimizeNNI(bool fullNNI) {
         }
     } while (fullNNI);
 
+    if (vecNumNNI.size() >= 100) {
+        vecNumNNI.erase(vecNumNNI.begin());
+    }
     vecNumNNI.push_back(numbNNI);
 
     //return curScore;
@@ -894,9 +900,11 @@ int IQPTree::estimateNumNNI() {
     if ( vecNumNNI.size() == 0 )
         return 0;
     else {
-        sort(vecNumNNI.begin(), vecNumNNI.end());
-        int index = floor ( vecNumNNI.size() * 95 / 100 );
-        return vecNumNNI[index];
+        vector<int> tmpVecNumNNI (vecNumNNI.size());
+        copy(vecNumNNI.begin(), vecNumNNI.end(),tmpVecNumNNI.begin());
+        sort(tmpVecNumNNI.begin(), tmpVecNumNNI.end());
+        int index = floor ( tmpVecNumNNI.size() * 95 / 100 );
+        return tmpVecNumNNI[index];
     }
 }
 
@@ -904,9 +912,11 @@ double IQPTree::estimateDeltaNNI() {
     if ( vecImpProNNI.size() == 0 )
         return 0;
     else {
-        sort(vecImpProNNI.begin(), vecImpProNNI.end());
-        int index = floor( vecImpProNNI.size() * 95 / 100 );
-        return vecImpProNNI[index];
+        vector<double> tmpVecImpProNNI (vecImpProNNI.size());
+        copy(vecImpProNNI.begin(), vecImpProNNI.end(), tmpVecImpProNNI.begin());
+        sort(tmpVecImpProNNI.begin(), tmpVecImpProNNI.end());
+        int index = floor( tmpVecImpProNNI.size() * 95 / 100 );
+        return tmpVecImpProNNI[index];
     }
 
 }
