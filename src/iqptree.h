@@ -110,25 +110,25 @@ public:
      */
     virtual ~IQPTree();
 
-	/**
-		print tree to .treefile
-		@param params program parameters, field root is taken
-	*/
-	void printResultTree(Params &params);
+    /**
+            print tree to .treefile
+            @param params program parameters, field root is taken
+     */
+    void printResultTree(Params &params);
 
-	/**
-		print tree to out
-		@param params program parameters, field root is taken
-		@param out (OUT) output stream
-	*/
-	void printResultTree(Params &params, ostream &out);
+    /**
+            print tree to out
+            @param params program parameters, field root is taken
+            @param out (OUT) output stream
+     */
+    void printResultTree(Params &params, ostream &out);
 
-	void setRootNode(char *my_root);
+    void setRootNode(char *my_root);
 
-	/**
-		set k-representative parameter
-		@param k_rep k-representative
-	*/
+    /**
+            set k-representative parameter
+            @param k_rep k-representative
+     */
     void setRepresentNum(int k_rep);
 
     /**
@@ -309,24 +309,29 @@ public:
      */
     double getCurScore(void);
 
-	/**
-		current parsimony score of the tree
-	*/
-	int cur_pars_score;
+    /**
+            current parsimony score of the tree
+     */
+    int cur_pars_score;
 
-	bool enable_parsimony;
-	/**
-		stopping rule
-	*/
-	StopRule stop_rule;
+    bool enable_parsimony;
+    /**
+            stopping rule
+     */
+    StopRule stop_rule;
+
+    /**
+     * Current score of the tree;
+     */
+    double curScore;
 
 protected:
 
 
-	/**
-		criterion to assess important quartet
-	*/
-	IQP_ASSESS_QUARTET iqp_assess_quartet;
+    /**
+            criterion to assess important quartet
+     */
+    IQP_ASSESS_QUARTET iqp_assess_quartet;
 
     /**
             The lamda number for NNI process (described in PhyML Paper)
@@ -378,11 +383,6 @@ protected:
     double bestScore;
 
     /**
-     * Current score of the tree;
-     */
-    double curScore;
-
-    /**
             The list of possible NNI moves for the current tree;
      */
     vector<NNIMove> possibleNNIMoves;
@@ -405,15 +405,17 @@ protected:
     MapBranchLength savedBranLens;
 
 
-	/**
-		number of IQPNNI iterations
-	*/
-	//int iqpnni_iterations;
+    /**
+            number of IQPNNI iterations
+     */
+    //int iqpnni_iterations;
 
     /**
             probability to delete a leaf
      */
     double p_delete;
+
+    int k_represent;
 
     /**
             number of IQPNNI iterations
