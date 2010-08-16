@@ -477,27 +477,45 @@ double IQPTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
     return this->curScore;
 }
 
-double IQPTree::perturb(int times) {    
-    NodeVector taxa;
-    // get the vector of taxa
-    getTaxa(taxa);
-    int cnt = 1;
-    double score;
-    while ( cnt <= times && taxa.size() >= 2 ) {
-        int taxaID1, taxaID2;
-        get2RandNumb(taxa.size(), taxaID1, taxaID2);
-        PhyloNode *taxon1 = (PhyloNode*) taxa[taxaID1];
-        PhyloNode *taxon2 = (PhyloNode*) taxa[taxaID2];
-        int dist = taxon1->calDist(taxon2);
-        if (dist < 4 || dist > 15)
-            continue;
-        cnt++;
-        score = swapTaxa(taxon1, taxon2);
+double IQPTree::perturb(int times) {
+
+    while (times > 0) {
+        NodeVector taxa;
+        // get the vector of taxa
+        getTaxa(taxa);
+        int taxonid1 = floor((((double) rand()) / RAND_MAX) * taxa.size());
+        PhyloNode *taxon1 = (PhyloNode*) taxa[taxonid1];
+        PhyloNode *taxon2;
+        int dists[taxa.size()];
+        int minDist = 1000000;
+        for (int i = 0; i < taxa.size(); i++) {
+            if (i == taxonid1)
+                continue;
+            taxon2 = (PhyloNode*) taxa[i];
+            int dist = taxon1->calDist(taxon2);
+            dists[i] = dist;
+            if (dist >= 7 && dist < minDist)
+                minDist = dist;
+        }
+
+        int taxonid2;
+        for (int i = 0; i < taxa.size(); i++) {
+            if (dists[i] == minDist)
+                taxonid2 = i;
+        }
+
+        taxon2 = (PhyloNode*) taxa[taxonid2];
+
+        cout << "Swapping node " << taxon1->id << " and node " << taxon2->id << endl;
+        cout << "Distance " << minDist << endl;
+        curScore = swapTaxa(taxon1, taxon2);
         //taxa.erase( taxa.begin() + taxaID1 );
         //taxa.erase( taxa.begin() + taxaID2 -1 );
-    }
 
-    return score;
+        times--;
+    }
+    curScore = optimizeAllBranches(1);
+    return curScore;
 }
 
 double IQPTree::doILS(Params &params, int perturbLevel) {
@@ -527,7 +545,7 @@ double IQPTree::doILS(Params &params, int perturbLevel) {
         startClock = clock();
         optimizeNNI(true);
         endClock = clock();
-        cout << "Perturbing Time = " << (double) (endClock - startClock) / CLOCKS_PER_SEC << endl;
+        cout << "NNI Time = " << (double) (endClock - startClock) / CLOCKS_PER_SEC << endl;
 
         cout.precision(15);
         cout << "Iteration " << i << " / Log-Likelihood: "
@@ -557,7 +575,7 @@ double IQPTree::doIQPNNI(Params &params) {
     tree_file_name += ".treefile";
     bestScore = curScore;
 
-	printResultTree(params);
+    printResultTree(params);
 
     string treels_name = params.out_prefix;
     treels_name += ".treels";
@@ -630,15 +648,6 @@ double IQPTree::doIQPNNI(Params &params) {
         //endClock = clock();
         //printf("Total time used for NNI : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
 
-        if (verbose_mode >= VB_DEBUG) {
-            lh_parsimony << this->curScore;
-            lh_parsimony << " ";
-            cout << " Computing parsimony score ... " << endl;
-            int parsimonyScore = computeParsimonyScore();
-            lh_parsimony << parsimonyScore << endl;
-        }
-
-
         if (nni_lh && lh_file.is_open()) {
             lh_file << cur_iteration;
             lh_file << "\t";
@@ -698,10 +707,6 @@ double IQPTree::doIQPNNI(Params &params) {
     bestScore = optimizeNNI(true);
      */
 
-    if (lh_parsimony.is_open())
-        lh_parsimony.close();
-    if (lh_file.is_open())
-        lh_file.close();
     return bestScore;
 }
 
@@ -1030,10 +1035,6 @@ double IQPTree::calculateOptBranchLen(PhyloNode *node1, PhyloNode *node2) {
 
 double IQPTree::getCurScore(void) {
     return curScore;
-}
-
-void IQPTree::setCurScore(double curScore) {
-    this->curScore = curScore;
 }
 
 void IQPTree::applyChildBranchChanges(PhyloNode *node, PhyloNode *dad) {
