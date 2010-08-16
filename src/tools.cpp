@@ -27,7 +27,9 @@ bool simple_nni;
 bool phyml_opt;
 bool nni_lh;
 int numheu;
-double cmdLamda;
+double cmdLambda;
+bool ils;
+int perLevel;
 
 /*
 	WIN32 does not define gettimeofday() function.
@@ -568,7 +570,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 	phyml_opt = false;
 	nni_lh = false;
 	numheu = 100;
-	cmdLamda = 1;
+	cmdLambda = 0.75;
+        ils = false;
+        perLevel = 1;
 	/* TUNG: IQP-TREE Specific Options */
 
 	struct timeval tv;
@@ -892,15 +896,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				phyml_opt = true;
 			} else if (strcmp(argv[cnt], "-nni_lh") == 0) {
 				nni_lh = true;
-			} else if (strcmp(argv[cnt], "-lamda") == 0) {
+			} else if (strcmp(argv[cnt], "-lambda") == 0) {
 				cnt++;
-				cmdLamda = convert_double(argv[cnt]);
+				cmdLambda = convert_double(argv[cnt]);
 			}
                         else if (strcmp(argv[cnt], "-numheu") == 0) {
 				cnt++;
 				numheu = convert_int(argv[cnt]);
 			}
-
+                        else if (strcmp(argv[cnt], "-ils") == 0) {
+                                ils = true;
+			}
+                        else if (strcmp(argv[cnt], "-pLevel") == 0) {
+                                cnt++;
+                                perLevel = convert_int(argv[cnt]);
+			}
 			else if (strcmp(argv[cnt],"-f") == 0) {
 				cnt++;
 				if (cnt >= argc)

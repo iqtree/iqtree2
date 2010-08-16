@@ -88,6 +88,11 @@ public:
 */
 typedef vector<Neighbor*> NeighborVec;
 
+/**
+	Node vector
+*/
+typedef vector<Node*> NodeVector;
+
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
@@ -121,6 +126,13 @@ public:
 		child of maximal height of subtree rooted at this node, used for greedy algorithm
 	*/
 	Neighbor *highestNei;
+
+
+        /**
+         *      List of closest leaves to the current node.
+         */
+        NodeVector closestLeaves;
+
 
 	/**
 		constructor 
@@ -175,6 +187,14 @@ public:
 		@return the leaf at the lowest level. Also modify the height, highestNei of this class.
 	*/
 	Node *calcHeight(Node *dad = NULL);
+
+
+        /**
+         * Calculate the distance between 2 nodes. Only for binary tree.
+         * @param parner the other node
+         * @return the distance
+         */
+        int calDist(Node *parner, Node *dad = NULL, int curLen = 0);
 
 	/** calculate the longest path in the subtree (version 2: more efficient)
 		@param node1 the returned node1 of the one end of the path
@@ -266,10 +286,7 @@ public:
 		if ((*it)->node != (mydad))
 
 
-/**
-	Node vector
-*/
-typedef vector<Node*> NodeVector;
+
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/

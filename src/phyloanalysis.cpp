@@ -442,7 +442,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	cout << "Model of evolution: " << tree.getModelName() << endl;
 	cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
 	cout << "Random seed: " << params.ran_seed << endl;
-	cout << "Lamda used in NNI: " << cmdLamda << endl;
+	cout << "Lambda used in NNI: " << cmdLambda << endl;
 
 /*
 	if (params.parsimony) {
@@ -464,12 +464,24 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	cout << "Fast parsimony score: " << tree.cur_pars_score << endl;
 
 	cout << "Optimizing model parameters" << endl;
-	double score2 = tree.optimizeModel(params.fixed_branch_length);
-	cout << "Log-likelihood of the current tree: " << score2 << endl;
-	double bestTreeScore = score2;
+	double bestTreeScore = tree.optimizeModel(params.fixed_branch_length);
+	cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 	//Update tree score
 	tree.setCurScore(bestTreeScore);
 
+        
+//        tree.drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
+//        string alnfile = params.aln_file;
+//        string tree1 = alnfile + ".treefileBEFORE";
+//        string tree2 = alnfile + ".treefileAFTER";
+//        tree.printTree(tree1.c_str(), WT_TAXON_ID | WT_SORT_TAXA | WT_NEWLINE);
+
+//        tree.perturb();
+
+//        tree.printTree(tree2.c_str(), WT_TAXON_ID | WT_SORT_TAXA | WT_NEWLINE);
+//        tree.drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
+        
+        
 	/* Optimize branch lengths with likelihood function */
 	//cout << "Optimizing branch lengths..." << endl;
 	//cout << "Log-likelihood: " << tree.optimizeAllBranches() << endl;
@@ -487,7 +499,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		//double newScore = tree.optimizeNNI(true);
                 double newScore = tree.optimizeNNI(true);
 		nniEndClock = clock();
-		printf("Time used for first NNI search: %8.6f seconds.\n", (double)(nniBeginClock - nniEndClock) / CLOCKS_PER_SEC);
+		printf("Time used for first NNI search: %8.6f seconds.\n", (double)(nniEndClock - nniBeginClock) / CLOCKS_PER_SEC);
 
 		cout << "Tree likelihood after NNI: " << newScore << endl;
 		if (newScore > bestTreeScore) {
@@ -498,13 +510,18 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 			cout << "Tree didn't improve after NNI :( " << endl;
 		}
 
-	}        
+	}
 
-	tree.printResultTree(params);
-
-
-	/* do the IQP */
-	if (params.k_representative > 0 && params.p_delete > 0.0 && params.min_iterations > 1) {
+        /* do iterated local search */
+        if ( ils && params.min_iterations > 1 ) {
+            cout << "Star doing iterated local search " << endl;
+            tree.doILS( params , perLevel );
+            cout << "Optimizing model parameters" << endl;
+            double endScore = tree.optimizeModel(params.fixed_branch_length);
+            cout << "Best score found : " << endScore << endl;
+        }
+	/* do the IQPNNI */
+        else if (params.k_representative > 0 && params.p_delete > 0.0 && params.min_iterations > 1) {
 		cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
 		cout << "Number of representative leaves   : " << params.k_representative << endl;
 		cout << "Probability of deleting sequences : " << params.p_delete << endl;
@@ -520,7 +537,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		tree.setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
 		tree.setIQPAssessQuartet(params.iqp_assess_quartet);
 
-		double bestscore = tree.doIQPNNI(params);
+		tree.doIQPNNI(params);
 		cout << "Optimizing model parameters" << endl;
 		double endScore = tree.optimizeModel(params.fixed_branch_length);
 		cout << "Best score found : " << endScore << endl;

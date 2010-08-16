@@ -214,12 +214,21 @@ extern bool phyml_opt;
 extern bool nni_lh;
 
 /**
- * 	Set the number of iqp iteration before the heuristics is applied
+ *  Set the number of iqp iteration before the heuristics is applied
  */
 extern int numheu;
 
-extern double cmdLamda;
+/**
+ *  Lambda in PhyML algorithm
+ */
+extern double cmdLambda;
 
+/**
+ *  Use Iterated Local Search
+ */
+extern bool ils;
+
+extern int perLevel;
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/

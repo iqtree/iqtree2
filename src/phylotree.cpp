@@ -737,8 +737,11 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 				for (state1 = 0; state1 < nstates; state1++) {
 					double lh_state = 0.0;  // likelihood of state1
 					double *trans_state = trans_mat + (cat*trans_size + state1*nstates);
+
+                                        // *************  FOR OPTIMIZATION ******************************
 					for (state2 = 0; state2 < nstates; state2++)
 						lh_state += partial_lh_child[state2] * trans_state[state2];
+                                        // *************  FOR OPTIMIZATION ******************************
 					lh_ptn += lh_state * partial_lh_site[state1];
 				}
 			}
@@ -826,8 +829,15 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 					for (int state = 0; state < nstates; state++) {
 						double lh_child = 0.0;
 						double *trans_state = trans_mat[cat] + (state * nstates);
+
+
+                                                // *************  FOR OPTIMIZATION ******************************
 						for (int state2 = 0; state2 < nstates; state2++)
 							lh_child += trans_state[state2] * partial_lh_child[state2];
+                                                // *************  FOR OPTIMIZATION ******************************
+
+
+
 						partial_lh_site[state] *= lh_child;
 					}
 				}

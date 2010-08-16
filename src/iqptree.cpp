@@ -28,11 +28,11 @@ PhyloTree() {
     p_delete = 0.0;
     dist_matrix = NULL;
     //bonus_values = NULL;
-    nbIQPIter = 0;
+    nbIQPIter = 0; // Number of iteration before the speed up is started
     nbNNI95 = 0.0;
     deltaNNI95 = 0;
-    curScore = 0.0;
-    bestScore = 0.0;
+    curScore = 0.0; // Current score of the tree
+    bestScore = 0.0; // Best score found sofar
     cur_pars_score = -1;
     enable_parsimony = false;
     enableHeuris = false; // This is set true when the heuristic started (after N iterations)
@@ -428,7 +428,7 @@ double IQPTree::doIQP() {
     // just to make sure IQP does it right
     setAlignment(aln);
     clearAllPartialLh();
-    curScore = optimizeAllBranches();
+    curScore = optimizeAllBranches(1);
     if (enable_parsimony)
     	cur_pars_score = computeParsimony();
     //curScore = computeLikelihood();
@@ -442,10 +442,120 @@ double IQPTree::doIQP() {
     return curScore;
 }
 
+void get2RandNumb(const int size, int &first, int &second) {
+    // pick a random element
+    first = floor((((double) rand()) / RAND_MAX) * size);
+    // pick a random element from what's left (there is one fewer to choose from)...
+    second = floor((((double) rand()) / RAND_MAX) * (size-1));
+    // ...and adjust second choice to take into account the first choice
+    if (second >= first) {
+        ++second;
+    }
+}
+
+double IQPTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
+    assert( node1->isLeaf() );
+    assert( node2->isLeaf() );
+
+    PhyloNeighbor *node1nei = (PhyloNeighbor*) *( node1->neighbors.begin() );
+    PhyloNeighbor *node2nei = (PhyloNeighbor*) *( node2->neighbors.begin() );
+
+    node2nei->node->updateNeighbor(node2, node1);
+    node1nei->node->updateNeighbor(node1, node2);
+
+    // Update the new neightbors of the 2 nodes
+    node1->updateNeighbor(node1->neighbors.begin(), node2nei);
+    node2->updateNeighbor(node2->neighbors.begin(), node1nei);
+
+    PhyloNeighbor *node1NewNei = (PhyloNeighbor*) *( node1->neighbors.begin() );
+    PhyloNeighbor *node2NewNei = (PhyloNeighbor*) *( node2->neighbors.begin() );
+
+    // Reoptimize the branch lengths
+    optimizeOneBranch(node1, (PhyloNode*) node1NewNei->node );
+    this->curScore = optimizeOneBranch(node2, (PhyloNode*) node2NewNei->node );
+    //drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
+    return this->curScore;
+}
+
+double IQPTree::perturb(int times) {    
+    NodeVector taxa;
+    // get the vector of taxa
+    getTaxa(taxa);
+    int cnt = 1;
+    double score;
+    while ( cnt <= times && taxa.size() >= 2 ) {
+        int taxaID1, taxaID2;
+        get2RandNumb(taxa.size(), taxaID1, taxaID2);
+        PhyloNode *taxon1 = (PhyloNode*) taxa[taxaID1];
+        PhyloNode *taxon2 = (PhyloNode*) taxa[taxaID2];
+        int dist = taxon1->calDist(taxon2);
+        if (dist < 4 || dist > 15)
+            continue;
+        cnt++;
+        score = swapTaxa(taxon1, taxon2);
+        //taxa.erase( taxa.begin() + taxaID1 );
+        //taxa.erase( taxa.begin() + taxaID2 -1 );
+    }
+
+    return score;
+}
+
+double IQPTree::doILS(Params &params, int perturbLevel) {
+
+    string tree_file_name = params.aln_file;
+    tree_file_name += ".treefile";
+    // keep the best tree into a string
+    stringstream best_tree_string;
+    printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+    bestScore = curScore;
+
+    int numIter = params.min_iterations;
+    for (int i=1 ; i <= numIter; i++) {
+
+        if (i > numheu) {
+            enableHeuris = true;
+            nbNNI95 = estimateNumNNI();
+            deltaNNI95 = estimateDeltaNNI();
+        }
+
+        cout.precision(10);
+        clock_t startClock = clock();
+        perturb(perturbLevel);
+        clock_t endClock = clock(); 
+        cout << "Perturbing Time = " << (double) (endClock - startClock) / CLOCKS_PER_SEC << endl;
+
+        startClock = clock();
+        optimizeNNI(true);
+        endClock = clock();
+        cout << "Perturbing Time = " << (double) (endClock - startClock) / CLOCKS_PER_SEC << endl;
+
+        cout.precision(15);
+        cout << "Iteration " << i << " / Log-Likelihood: "
+                << curScore << endl;
+        if (curScore > bestScore + TOL_LIKELIHOOD) {
+            //nni_score = optimizeNNI(true);
+            //curScore = optimizeAllBranches();
+            cout << "BETTER TREE FOUND: " << curScore << endl;
+            bestScore = curScore;
+            best_tree_string.seekp(0);
+            printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+            printTree(tree_file_name.c_str());
+        } else {
+            /* take back the current best tree */
+            best_tree_string.seekg(0);
+            freeNode();
+            readTree(best_tree_string, rooted);
+            assignLeafNames();
+            initializeAllPartialLh();
+        }
+    }
+
+    return bestScore;
+}
 double IQPTree::doIQPNNI(Params &params) {
     string tree_file_name = params.out_prefix;
     tree_file_name += ".treefile";
-    bestScore = computeLikelihood();
+    bestScore = curScore;
 
 	printResultTree(params);
 
@@ -508,18 +618,26 @@ double IQPTree::doIQPNNI(Params &params) {
         //clock_t endClock = clock();
         //cout.precision(15);
         //cout << "IQP score : " << iqp_score << endl;
-        //printf("Time used for IQP : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
+        //printf("Total time used for IQP : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
 
         if (verbose_mode >= VB_DEBUG) {
             string iqp_tree = tree_file_name + "IQP" + convertIntToString(cur_iteration);
             printTree(iqp_tree.c_str());
         }
 
-        //startClock = clock();
-        //double nni_score = optimizeNNI(true);
+        //startClock = clock();        
         optimizeNNI(true); // the new score is saved in curScore
         //endClock = clock();
-        //printf("Time used for NNI : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
+        //printf("Total time used for NNI : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
+
+        if (verbose_mode >= VB_DEBUG) {
+            lh_parsimony << this->curScore;
+            lh_parsimony << " ";
+            cout << " Computing parsimony score ... " << endl;
+            int parsimonyScore = computeParsimonyScore();
+            lh_parsimony << parsimonyScore << endl;
+        }
+
 
         if (nni_lh && lh_file.is_open()) {
             lh_file << cur_iteration;
@@ -580,7 +698,10 @@ double IQPTree::doIQPNNI(Params &params) {
     bestScore = optimizeNNI(true);
      */
 
-    lh_file.close();
+    if (lh_parsimony.is_open())
+        lh_parsimony.close();
+    if (lh_file.is_open())
+        lh_file.close();
     return bestScore;
 }
 
@@ -619,7 +740,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
                     return curScore;
                 }
             }
-            lamda = cmdLamda;
+            lambda = cmdLambda;
             nonConflictMoves.clear();
             mapOptBranLens.clear();
             savedBranLens.clear();
@@ -628,8 +749,16 @@ double IQPTree::optimizeNNI(bool fullNNI) {
             //Save all the current branch lengths
             saveBranchLengths();
 
+            clock_t evaNNIbegin, evaNNIend;
+            evaNNIbegin = clock();
             //Generate all possible NNI moves
             genNNIMoves();
+            evaNNIend = clock();
+
+            if (verbose_mode >= VB_MED) {
+                printf("Time used for evaluating NNIs: %8.6f seconds.\n", (double) (-evaNNIbegin
+                        + evaNNIend) / CLOCKS_PER_SEC);
+            }
 
             if (possibleNNIMoves.size() == 0) {
                 if (verbose_mode >= VB_DEBUG) {
@@ -676,10 +805,10 @@ double IQPTree::optimizeNNI(bool fullNNI) {
             }
         }
 
-        nbNNIToApply = (int) nniTotal * lamda;
+        nbNNIToApply = (int) nniTotal * lambda;
 
         if (verbose_mode == VB_DEBUG)
-            cout << "lamda = " << lamda << endl;
+            cout << "lamda = " << lambda << endl;
 
         if (nbNNIToApply < 1)
             nbNNIToApply = 1;
@@ -700,7 +829,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
             newScore = computeLikelihood();
         } else {
             //Do it like in IQPNNI: Optimize all branch lengths after each NNI-Iteration
-            newScore = optimizeAllBranches();
+            newScore = optimizeAllBranches(1);
         }
 
         if (newScore > curScore - TOL_LIKELIHOOD) {
@@ -724,12 +853,12 @@ double IQPTree::optimizeNNI(bool fullNNI) {
         } else {
             cout << "Old score = " << curScore << endl;
             cout << "New score = " << newScore << endl;
-            cout << "Using lamda = " << lamda << endl;
+            cout << "Using lamda = " << lambda << endl;
             cout << "Total non-conflicting NNIs found = " << nniTotal << endl;
-            lamda = lamda / 2;
+            lambda = lambda / 2;
             cout << "The tree didn't improve at NNI step " << nniIteration
                     << " (applied NNIs = " << nbNNIToApply
-                    << ") -> Trying new lamda = " << lamda << endl;
+                    << ") -> Trying new lamda = " << lambda << endl;
             assert((nbNNIToApply - 1) != 0); //Tree cannot be worse if only 1 NNI is applied
 
             //Restore the tree by reverting all NNIs
@@ -743,17 +872,16 @@ double IQPTree::optimizeNNI(bool fullNNI) {
         }
     } while (fullNNI);
 
-    //optimizeAllBranches();
-
     vecNumNNI.push_back(numbNNI);
 
+    //return curScore;
+    this->curScore = optimizeAllBranches();
     nniEndClock = clock();
     if (verbose_mode >= VB_MED) {
         cout << "Number of NNIs applied : " << numbNNI << endl;
         printf("Time used : %8.6f seconds.\n", (double) (-nniBeginClock
                 + nniEndClock) / CLOCKS_PER_SEC);
     }
-
     return curScore;
 }
 
@@ -810,7 +938,7 @@ double IQPTree::applyBranchLengthChange(PhyloNode *node1, PhyloNode *node2,
     double new_len;
 
     if (nonNNIBranch) {
-        new_len = current_len + lamda * (optLen - current_len);
+        new_len = current_len + lambda * (optLen - current_len);
     } else {
         new_len = optLen;
     }
@@ -1013,8 +1141,8 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
     node12_len[0] = node12_it->length; // Length of branch node1-node2 before the swap
 
     // Calculate optimal branch length for branch node1-node2
-    //double bestScore = optimizeOneBranch(node1, node2);
-    double bestScore = curScore;
+    double bestScore = optimizeOneBranch(node1, node2);
+    //double bestScore = curScore;
 
     // Optimal branch length of the current branch
     node12_len[1] = node12_it->length;
