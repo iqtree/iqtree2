@@ -467,7 +467,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	double bestTreeScore = tree.optimizeModel(params.fixed_branch_length);
 	cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 	//Update tree score
-	tree.setCurScore(bestTreeScore);
+	tree.curScore = bestTreeScore;
 
         
 //        tree.drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
