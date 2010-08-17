@@ -325,6 +325,21 @@ public:
      */
     double curScore;
 
+
+     /**
+     *      Parsimony scores, used for linear regression
+     */
+    double* pars_scores;
+
+
+    /**
+     *      The coressponding log-likelihood score from computed indendently from the parsimony
+     *      scores
+     */
+    double* lh_scores;
+
+    Linear* linRegModel;
+
 protected:
 
 
@@ -392,7 +407,6 @@ protected:
             List contains non-conflicting NNI moves for the current tree;
      */
     vector<NNIMove> nonConflictMoves;
-
 
     /**
             Data structure (of type Map) which stores all the optimal branch lengths for all branches in the tree

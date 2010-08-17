@@ -457,8 +457,16 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 
 	cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
 
+	if (params.parsimony) {
+            tree.enable_parsimony = true;
+            tree.pars_scores = new double[3000];
+            tree.lh_scores = new double[3000];
 
-	if (params.parsimony) tree.enable_parsimony = true;
+            for (int i=0; i<3000; i++) {
+                tree.pars_scores[i] = 0;
+                tree.lh_scores[i] = 0;
+            }
+        }
 	cout << "Parsimony score: " << tree.computeParsimonyScore() << endl;
 	tree.cur_pars_score = tree.computeParsimony();
 	cout << "Fast parsimony score: " << tree.cur_pars_score << endl;

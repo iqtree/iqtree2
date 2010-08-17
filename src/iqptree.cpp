@@ -36,6 +36,7 @@ PhyloTree() {
     cur_pars_score = -1;
     enable_parsimony = false;
     enableHeuris = false; // This is set true when the heuristic started (after N iterations)
+    linRegModel = NULL;
 }
 
 IQPTree::~IQPTree() {
@@ -631,12 +632,12 @@ double IQPTree::doIQPNNI(Params &params) {
             //				cout << vecNbNNI[i] << " ";
             //			cout << endl;
         }
-        //clock_t startClock = clock();
+        clock_t startClock = clock();
         double iqp_score = doIQP();
-        //clock_t endClock = clock();
-        //cout.precision(15);
-        //cout << "IQP score : " << iqp_score << endl;
-        //printf("Total time used for IQP : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
+        clock_t endClock = clock();
+        cout.precision(15);
+        cout << "IQP score : " << iqp_score << endl;
+        printf("Total time used for IQP : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
 
         if (verbose_mode >= VB_DEBUG) {
             string iqp_tree = tree_file_name + "IQP" + convertIntToString(cur_iteration);
@@ -1165,7 +1166,7 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
     double node1_lh_scale = node12_it->lh_scale_factor;
     double node2_lh_scale = node21_it->lh_scale_factor;
 
-	// save parsimony vector
+    // save parsimony vector
     UINT *node1_pars_save = node12_it->partial_pars;
     UINT *node2_pars_save = node21_it->partial_pars;
 
@@ -1176,18 +1177,16 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
     double node1_len = node1_nei->length;
     int nniNr = 1;
     int chosenSwap = 1;
-	// replace partial_lh with a new vector
+    // replace partial_lh with a new vector
     node12_it->partial_lh = newPartialLh();
     node21_it->partial_lh = newPartialLh();
 
-	// replace partial_pars with a new vector
+    // replace partial_pars with a new vector
     node12_it->partial_pars = newBitsBlock();
     node21_it->partial_pars = newBitsBlock();
 
-
     FOR_NEIGHBOR_IT(node2, node1, node2_it) {
         nniNr = nniNr + 1;
-
         /* do the NNI swap */
         Neighbor *node2_nei = *node2_it;
         double node2_len = node2_nei->length;
@@ -1201,28 +1200,49 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
         node12_it->clearPartialLh();
         node21_it->clearPartialLh();
 
-		// compute score with parsimony, accept topology if parsimony score is not so bad
+        double newScore = NULL;
+        double lh_prediction = 100.0;
+        // compute score with parsimony, accept topology if parsimony score is not so bad
+        int pars_score = -10;
+        if (enable_parsimony) {
+            pars_score = computeParsimonyBranch(node12_it, node1);
+//            if (linRegModel != NULL)
+//                lh_prediction = linRegModel->getValue(pars_score);
+//            else {
+//                for (int i = 0; i < 3000; i++) {
+//                    if (pars_scores[i] == 0) {
+//                        pars_scores[i] = pars_score;
+//                        newScore = optimizeOneBranch(node1, node2, false);
+//                        lh_scores[i] = newScore;
+//                        break;
+//                    }
+//                }
+//                if (pars_scores[2999] != 0) {
+//                    linRegModel = new Linear(3000, pars_scores, lh_scores);
+//                }
+//            }
+            // If enough data points is collected, start linear regression
 
-		int pars_score = -10;
-		if (enable_parsimony) pars_score = computeParsimonyBranch(node12_it, node1);
-		if (pars_score < cur_pars_score) {
-			// compute the score of the swapped topology
-			double newScore = optimizeOneBranch(node1, node2, false);
-			node12_len[nniNr] = node12_it->length;
-	
-			// If score is better, save the NNI move
-			if (newScore > bestScore + TOL_LIKELIHOOD) {
-				bestScore = newScore;
-				chosenSwap = nniNr;
-				mymove.node1Nei_it = node1_it;
-				mymove.node2Nei_it = node2_it;
-				mymove.score = bestScore;
-				mymove.node1 = node1;
-				mymove.node2 = node2;
-			}
+        }
+        //if (lh_prediction > bestScore || pars_score < cur_pars_score)
+        if (pars_score < cur_pars_score) {
+            // compute the score of the swapped topology
+            if (!newScore)
+                newScore = optimizeOneBranch(node1, node2, false);
+            node12_len[nniNr] = node12_it->length;
+            // If score is better, save the NNI move
+            if (newScore > bestScore + TOL_LIKELIHOOD) {
+                bestScore = newScore;
+                chosenSwap = nniNr;
+                mymove.node1Nei_it = node1_it;
+                mymove.node2Nei_it = node2_it;
+                mymove.score = bestScore;
+                mymove.node1 = node1;
+                mymove.node2 = node2;
+            }
         } else {
-        	cout << "pars filtered" << endl;
-        } 
+            //cout << "pars filtered" << endl;
+        }
 
         // swap back and recover the branch lengths
         node1->updateNeighbor(node1_it, node1_nei, node1_len);
@@ -1269,20 +1289,20 @@ void IQPTree::addPossibleNNIMove(NNIMove myMove) {
 
 void IQPTree::setRootNode(char *my_root) {
     string root_name;
-    if (my_root) root_name = my_root; else root_name = aln->getSeqName(0);
+    if (my_root) root_name = my_root;
+    else root_name = aln->getSeqName(0);
     root = findNodeName(root_name);
     assert(root);
 }
 
 void IQPTree::printResultTree(Params &params) {
-	setRootNode(params.root);
+    setRootNode(params.root);
     string tree_file_name = params.out_prefix;
     tree_file_name += ".treefile";
     printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 }
 
-
 void IQPTree::printResultTree(Params &params, ostream &out) {
-	setRootNode(params.root);
+    setRootNode(params.root);
     printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 }
