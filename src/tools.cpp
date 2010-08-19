@@ -902,6 +902,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
                         else if (strcmp(argv[cnt], "-numheu") == 0) {
 				cnt++;
+                                if (cnt >= argc)
+                                    throw "Please speciy the number of iteration used for the speed up";
 				numheu = convert_int(argv[cnt]);
 			}
                         else if (strcmp(argv[cnt], "-ils") == 0) {
