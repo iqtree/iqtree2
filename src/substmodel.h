@@ -13,6 +13,7 @@
 #define SUBSTMODEL_H
 
 #include <string>
+#include "tools.h"
 
 using namespace std;
 
@@ -30,6 +31,12 @@ public:
 	*/
     SubstModel(int nstates);
 
+
+	/**
+		@return the number of dimensions
+	*/
+	virtual int getNDim() { return 0; }
+	
 	/**
 		compute the transition probability matrix. One should override this function when defining new model.
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)
@@ -53,6 +60,13 @@ public:
 		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
 	*/
 	virtual void getStateFrequency(double *state_freq);
+
+	/**
+		get frequency type
+		@return frequency type
+	*/
+	virtual StateFreqType getFreqType() { return FREQ_EQUAL; }
+
 
 	/**
 		allocate memory for a transition matrix. One should override this function when defining new model
@@ -97,6 +111,12 @@ public:
 		name of the model
 	*/
 	string name;
+
+
+	/**
+		full name of the model
+	*/
+	string full_name;
 
 	/**
 		destructor

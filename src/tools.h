@@ -218,6 +218,13 @@ const int WT_BR_LEN_FIXED_WIDTH   = 256;
 const int RF_ADJACENT_PAIR = 1;
 const int RF_ALL_PAIR	   = 2;
 
+/**
+	split weight summarization 
+*/
+const int SW_COUNT       = 1; // just counting the number of splits
+const int SW_SUM         = 2; // take the sum of all split weights
+const int SW_AVG_ALL     = 3; // take the split weight average over all trees
+const int SW_AVG_PRESENT = 4; // take the split weight average over all trees that the split is present
 
 /**
 	search mode
@@ -242,7 +249,7 @@ extern VerboseMode verbose_mode;
 /**
 	consensus reconstruction type
 */
-enum ConsensusType {CONSENSUS_TREE, CONSENSUS_NETWORK, ASSIGN_BOOTSTRAP};
+enum ConsensusType {CT_NONE, CT_CONSENSUS_TREE, CT_CONSENSUS_NETWORK, CT_ASSIGN_SUPPORT};
 
 enum TestType {TEST_NONE, TEST_COMPATIBLE, TEST_CIRCULAR, TEST_WEAKLY_COMPATIBLE, TEST_K_COMPATIBLE};
 
@@ -314,6 +321,11 @@ struct Params {
 		alignment file name
 	*/
 	char *aln_file;
+	
+	/**
+		B, D, or P for Binary, DNA, or Protein sequences
+	*/
+	char *sequence_type;
 
 	/**
 		alignment output file name
@@ -523,14 +535,14 @@ struct Params {
 	bool multi_tree;
 
 	/**
-		file name containing all trees from bootstrap analysis
+		2nd user tree used in assignBootstrapSupport
 	*/
-	char *boot_trees;
+	char *second_tree;
 
 	/**
 		type of consensus building
 	*/
-	ConsensusType calc_consensus;
+	ConsensusType consensus_type;
 
 	/**
 		set the TRUE if want to find the minimal PD set, instead of the default maximal PD set
@@ -586,6 +598,12 @@ struct Params {
 		threshold of split frequency, splits appear less than threshold will be discarded
 	*/
 	double split_threshold;
+
+	/**
+		Way to summarize split weight in the consensus tree or network: SW_SUM, SW_AVG_ALL, or SW_AVG_PRESENT
+	*/
+	double split_weight_summary;
+
 
 	/**
 		true if one wants to optimize tree by subtree pruning and regrafting
@@ -676,12 +694,12 @@ struct Params {
 	/**
 		TRUE if doing bootstrap on the input trees (good, bad, ugly)
 	*/
-	bool bootstrap;
+	int num_bootstrap_samples;
 	
 	/**
 		TRUE if output all trees from every IQPNNI iteration
 	*/
-	bool output_trees;
+	bool write_intermediate_trees;
 
 	/**
 		Robinson-Foulds distance computation mode: RF_ADJACENT PAIR, RF_ALL_PAIR

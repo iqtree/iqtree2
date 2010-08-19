@@ -139,14 +139,14 @@ void MTreeSet::printTrees(ostream & out, int brtype) {
 	}
 }
 
-void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, bool lensum) {
+void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighting_type) {
 	SplitIntMap hash_ss;
 	if (split_threshold == 0.0) {
-		convertSplits(sg, hash_ss, lensum);
+		convertSplits(sg, hash_ss, weighting_type);
 		return;
 	}
 	//SplitGraph temp;
-	convertSplits(sg, hash_ss, lensum);
+	convertSplits(sg, hash_ss, weighting_type);
 	int nsplits = sg.getNSplits();
 
 	double threshold = split_threshold * size();
@@ -193,17 +193,17 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, bool lensum
 }
 
 
-void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, bool lensum) {
+void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type) {
 	vector<string> taxname(front()->leafNum);
 	// make sure that the split system contains at least 1 split
 	if (size() == 0)
 		return;
 	
 	front()->getTaxaName(taxname);
-	convertSplits(taxname, sg, hash_ss, lensum);
+	convertSplits(taxname, sg, hash_ss, weighting_type);
 }
 
-void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, bool lensum) {
+void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type) {
 
 #ifdef USE_HASH_MAP
 	cout << "Using hash_map" << endl;
@@ -221,13 +221,14 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 		}*/
 	sort(taxname.begin(), taxname.end());
 	sg.createBlocks();
-	if (size() == 1 && lensum) {
+	for (its = taxname.begin(); its != taxname.end(); its++)
+		sg.getTaxa()->AddTaxonLabel(NxsString(its->c_str()));
+
+	if (size() == 1 && weighting_type != SW_COUNT) {
 		front()->convertSplits(sg);
 		return;
 	}
 
-	for (its = taxname.begin(); its != taxname.end(); its++)
-		sg.getTaxa()->AddTaxonLabel(NxsString(its->c_str()));
 
 	SplitGraph *isg;
 	for (iterator it = begin(); it != end(); it++) {
@@ -253,7 +254,7 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 			Split *sp = hash_ss.findSplit(*itg, value);
 			if (sp != NULL) {
 				//Split *sp = ass_it->first;
-				if (lensum)
+				if (weighting_type != SW_COUNT)
 					sp->setWeight(sp->getWeight() + (*itg)->getWeight());
 				else
 					sp->setWeight(sp->getWeight() + 1);
@@ -261,7 +262,7 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 			}
 			else {
 				sp = new Split(*(*itg));
-				if (lensum)
+				if (weighting_type != SW_COUNT)
 					sp->setWeight((*itg)->getWeight());
 				else				
 					sp->setWeight(1);

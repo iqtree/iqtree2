@@ -53,7 +53,7 @@ void checkSeqName(StrVector &seq_names) {
 	}
 }
 
-Alignment::Alignment(char *filename, InputType &intype) : vector<Pattern>() {
+Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : vector<Pattern>() {
 
 	cout << "Reading alignment file " << filename << "..." << endl;
 	intype = detectInputFile(filename);
@@ -63,7 +63,7 @@ Alignment::Alignment(char *filename, InputType &intype) : vector<Pattern>() {
 		if (intype == IN_NEXUS) {
 			readNexus(filename);
 		} else {
-			readPhylip(filename);
+			readPhylip(filename, sequence_type);
 			//outError("in progress");
 			//outError("Alignment format not supported, use NEXUS format.");
 		}
@@ -349,7 +349,7 @@ char Alignment::convertStateBack(char state) {
 	}
 }
 
-int Alignment::readPhylip(char *filename) {
+int Alignment::readPhylip(char *filename, char *sequence_type) {
 	
 	StrVector sequences;
 	ostringstream err_str;
@@ -442,7 +442,8 @@ int Alignment::readPhylip(char *filename) {
 		throw err_str.str();
 
 	/* now check data type */		
-	SeqType seq_type = detectSequenceType(sequences);
+	SeqType seq_type = SEQ_UNKNOWN;
+	seq_type = detectSequenceType(sequences);
 	switch (seq_type) {
 	case SEQ_BINARY: 
 		num_states = 2;
@@ -457,7 +458,25 @@ int Alignment::readPhylip(char *filename) {
 		cout << "Alignment most likely contains protein sequences" << endl;
 		break;
 	default: 
-		throw "Unknown sequence type.";
+		if (!sequence_type)
+			throw "Unknown sequence type.";
+	}
+	SeqType user_seq_type;
+	if (sequence_type) {
+		if (strcmp(sequence_type, "B") == 0) {
+			num_states = 2;
+			user_seq_type = SEQ_BINARY;
+		} else if (strcmp(sequence_type, "D") == 0) {
+			num_states = 4;
+			user_seq_type = SEQ_DNA;
+		} else if (strcmp(sequence_type, "P") == 0) {
+			num_states = 20;
+			user_seq_type = SEQ_PROTEIN;
+		} else
+			throw "Invalid sequence type.";
+		if (user_seq_type != seq_type && seq_type != SEQ_UNKNOWN)
+			outWarning("Your specified sequence type is different from the detected one");
+		seq_type = user_seq_type;
 	}
 
 	// now convert to patterns

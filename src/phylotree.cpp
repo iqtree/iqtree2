@@ -877,8 +877,9 @@ double PhyloTree::optimizeModel(bool fixed_len) {
 	model_factory->stopStoringTransMatrix();
 	if (fixed_len) 
 		cur_lh = computeLikelihood();
-	else
+	else {
 		cur_lh = optimizeAllBranches(1);
+	}
 	assert(model);
 	assert(site_rate);
 	do {

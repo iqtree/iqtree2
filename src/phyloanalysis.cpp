@@ -37,6 +37,9 @@
 #include "modelprotein.h"
 #include "stoprule.h"
 
+#include "mtreeset.h"
+#include "mexttree.h"
+
 const int DNA_MODEL_NUM = 14;
 
 string dna_model_names[DNA_MODEL_NUM] =
@@ -197,7 +200,7 @@ string modelTest(Params &params, PhyloTree *in_tree)
 	}
 
 	if (nstates == 4) {
-		cout << "Performing ModelTest 3.7 from David Posada..." << endl;
+		cout << "Performing ModelTest 3.7 (Posada and Crandall, 1998) ..." << endl;
 		cout << "  LRT:     " << LRT_model << endl;
 		cout << "  AIC:     " << IC_model << endl;
 		model_list.insert(LRT_model);
@@ -247,7 +250,7 @@ string modelTest(Params &params, PhyloTree *in_tree)
 	//return "GTR";
 }
 
-void reportPhyloAnalysis(Params &params, Alignment &alignment, IQPTree &tree) {
+void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alignment, IQPTree &tree) {
 	int i, j;
 	string outfile = params.out_prefix;
 
@@ -261,12 +264,16 @@ void reportPhyloAnalysis(Params &params, Alignment &alignment, IQPTree &tree) {
 		out << "REFERENCES" << endl << "----------" << endl << endl <<
 			   "A manuscript describing IQTREE is currently under preparation." << endl << endl <<
 			   "Please always cite: " << endl << endl <<
-			   "Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: Moving Fast Through Tree Space" << endl <<
-			   "and Stopping in Time, Mol. Biol. Evol., 21(8):1565-1571." << endl << endl <<
+			   "Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space" << endl <<
+			   "and stopping in time. Mol. Biol. Evol., 21(8):1565-1571." << endl << endl <<
 			   "If you use the parallel version, please cite: " << endl << endl <<
 			   "Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)" << endl << 
-			   "pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies," << endl <<
+			   "pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies." << endl <<
 			   "Bioinformatics, 21:3794-3796." << endl << endl;
+
+		if (original_model == "TEST" || original_model == "TESTONLY")
+		out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl
+			<< "(see CREDITS section for the citation)" << endl << endl;
 
 		out << "INPUT ALIGNMENT" << endl << "---------------" << endl << endl <<
 			   "Alignment file name: " << params.aln_file << endl <<
@@ -295,14 +302,30 @@ void reportPhyloAnalysis(Params &params, Alignment &alignment, IQPTree &tree) {
 		out.unsetf(ios_base::fixed);
 		delete rate_mat;
 
-		out << endl << "State frequencies:" << endl << endl;
+		out << endl << "State frequencies: ";
+		switch (tree.getModel()->getFreqType()) {
+		case FREQ_EMPIRICAL:
+			out << "(empirical counts from alignment)" << endl;
+			break;
+		case FREQ_ESTIMATE:
+			out << "(estimated with maximum likelihood)" << endl;
+			break;
+		case FREQ_USER_DEFINED:
+			out << "(user-defined)" << endl;
+			break;
+		case FREQ_EQUAL:
+			out << "(equal frequencies)" << endl;
+			break;
+		default:
+			break;
+		}
+		out << endl;
 
 		double *state_freqs = new double[alignment.num_states];
 		tree.getModel()->getStateFrequency(state_freqs);
 		for (i = 0; i < alignment.num_states; i++)
 			out << "  pi(" << alignment.convertStateBack(i) << ") = " << state_freqs[i] << endl;
 		delete state_freqs;
-
 
 
 		out << endl << "RATE HETEROGENEITY" << endl << "------------------" << endl << endl;
@@ -323,6 +346,7 @@ void reportPhyloAnalysis(Params &params, Alignment &alignment, IQPTree &tree) {
 			((params.root) ? params.root : tree.aln->getSeqName(0)) <<"' is drawn at root" << endl << endl;
 
 		tree.setRootNode(params.root);
+		tree.sortTaxa();
 		tree.drawTree(out);
 
 		out << "Log-likehood of the tree: " << fixed << tree.computeLikelihood() << endl <<
@@ -340,15 +364,23 @@ void reportPhyloAnalysis(Params &params, Alignment &alignment, IQPTree &tree) {
 		out << endl << "TIME STAMP" << endl << "----------" << endl << endl << "Date and time: " << date_str << 
 			   "Running time: " << (double)params.run_time / CLOCKS_PER_SEC << " seconds" << endl << endl;
 
-		out << "CREDITS" << endl << "-------" << endl << endl <<
-			   "Some parts of the code were taken from TREE-PUZZLE package:" << endl << endl <<
-			   "Heiko A. Schmidt, Korbinian Strimmer, Martin Vingron, and Arndt von Haeseler" << endl <<
-			   "(2002) TREE-PUZZLE: Maximum likelihood phylogenetic analysis using quartets" << endl << 
-			   "and parallel computing, Bioinformatics, 18:502-504." << endl << endl <<
+		out << "CREDITS" << endl << "-------" << endl << endl 
+			<< "Some parts of the code were taken from TREE-PUZZLE package:" << endl << endl 
+			<< "Heiko A. Schmidt, Korbinian Strimmer, Martin Vingron, and Arndt von Haeseler" << endl 
+			<< "(2002) TREE-PUZZLE: maximum likelihood phylogenetic analysis using quartets" << endl
+			<< "and parallel computing. Bioinformatics, 18(3):502-504." << endl << endl 
 
-			   "The source codes to construct the BIONJ tree were taken from BIONJ software:" << endl << endl <<
-			   "Oliver Gascuel (1997) BIONJ: An Improved Version of the NJ Algorithm" << endl <<
-			   "Based on a Simple Model of Sequence Data, Mol. Bio. Evol., 14:685-695." << endl << endl;
+			<< "The source codes to construct the BIONJ tree were taken from BIONJ software:" << endl << endl 
+			<< "Oliver Gascuel (1997) BIONJ: an improved version of the NJ algorithm" << endl 
+			<< "nased on a simple model of sequence data. Mol. Bio. Evol., 14:685-695." << endl << endl 
+
+			<< "The Nexus file parser was taken from the Nexus Class Library:" << endl << endl 
+			<< "Paul O. Lewis (2003) NCL: a C++ class library for interpreting data files in" << endl 
+			<< "NEXUS format. Bioinformatics, 19(17):2330-2331." << endl << endl 
+
+			<< "The Modeltest 3.7 source codes were taken from:" << endl << endl 
+			<< "David Posada and Keith A. Crandall (1998) MODELTEST: testing the model of" << endl
+			<< "DNA substitution. Bioinformatics, 14(9):817-8." << endl << endl;
 
 		out.close();
 		cout << "Analysis results reported in " << outfile << endl << endl;
@@ -415,8 +447,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 
 	/* Fix if negative branch lengths detected */
 	double fixed_length = 0.01;
-	int fixed_number;
-	if (fixed_number = tree.fixNegativeBranch(fixed_length)) {
+	int fixed_number = tree.fixNegativeBranch(fixed_length);
+	if (fixed_number) {
 		cout << "WARNING: " << fixed_number << " branches have no/negative lengths and initialized to " << fixed_length << endl;
 		if (verbose_mode >= VB_DEBUG) {
 			tree.printTree(cout);
@@ -427,6 +459,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	t_begin=clock();
 
 	bool test_only = params.model_name == "TESTONLY";
+	string original_model = params.model_name;
 	/* initialize substitution model */
 	if (params.model_name == "TEST" || params.model_name == "TESTONLY") {
 		params.model_name = modelTest(params, &tree);
@@ -439,7 +472,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	}
 	tree.createModel(params);
 
-	cout << "Model of evolution: " << tree.getModelName() << endl;
+	cout << "Model of evolution: " << tree.getModelName() << " (" << 
+		tree.getModel()->getNDim() + tree.getRate()->getNDim() << " free parameters)" << endl;
 	cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
 	cout << "Random seed: " << params.ran_seed << endl;
 	cout << "Lambda used in NNI: " << cmdLambda << endl;
@@ -562,6 +596,9 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	t_end=clock();
 	params.run_time = (t_end-t_begin);
 	printf("Time used: %8.6f seconds.\n", (double)params.run_time / CLOCKS_PER_SEC);
+
+    tree.printResultTree(params);
+
 	if (params.out_file)
 		tree.printTree(params.out_file);
 	else {
@@ -576,13 +613,13 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		}*/
 	}
 
-	reportPhyloAnalysis(params, *alignment, tree);
+	reportPhyloAnalysis(params, original_model, *alignment, tree);
 
 }
 
 void runPhyloAnalysis(Params &params) {
 
-	Alignment alignment(params.aln_file, params.intype);
+	Alignment alignment(params.aln_file, params.sequence_type, params.intype);
 	if (params.aln_output) 
 		alignment.printPhylip(params.aln_output);
 	else
@@ -590,3 +627,139 @@ void runPhyloAnalysis(Params &params) {
 }
 
 
+
+void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, bool rooted, 
+	const char *output_tree, const char *out_prefix) {
+	//bool rooted = false;
+	// read the tree file
+
+	MExtTree mytree(target_tree, rooted);
+	// reindex the taxa in the tree to aphabetical names
+	NodeVector taxa;
+	mytree.getTaxa(taxa);
+	sort(taxa.begin(), taxa.end(), nodenamecmp);
+	int i = 0;
+	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++) {
+		(*it)->id = i++;
+	}
+
+	// read the bootstrap tree file
+	MTreeSet boot_trees(input_trees, rooted, burnin);
+	/*
+	string filename = params.boot_trees;
+	filename += ".nolen";
+	boot_trees.printTrees(filename.c_str(), false);
+	return;
+	*/
+	SplitGraph sg;
+	SplitIntMap hash_ss;
+	// make the taxa name
+	vector<string> taxname;
+	taxname.resize(mytree.leafNum);
+	mytree.getTaxaName(taxname);
+
+	boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT);
+	// compute the percentage of appearance
+	sg.scaleWeight(100.0/boot_trees.size(), true);
+//	printSplitSet(sg, hash_ss);
+	//sg.report(cout);
+	cout << "Creating bootstrap support values..." << endl;
+	mytree.createBootstrapSupport(taxname, boot_trees, sg, hash_ss);
+	//mytree.scaleLength(100.0/boot_trees.size(), true);
+	string out_file;
+	if (output_tree) 
+		out_file = output_tree;
+	else {
+		if (out_prefix)
+			out_file = out_prefix;
+		else
+			out_file = target_tree;
+		out_file += ".suptree";
+	}
+	
+	mytree.printTree(out_file.c_str());
+	cout << "Tree with assigned bootstrap support written to " << out_file << endl;
+}
+
+void computeConsensusTree(const char *input_trees, int burnin, double cutoff, 
+	const char *output_tree, const char *out_prefix) {
+	bool rooted = false;
+
+	// read the bootstrap tree file
+	MTreeSet boot_trees(input_trees, rooted, burnin);
+	string first_taxname = boot_trees.front()->root->name;
+	//if (params.root) first_taxname = params.root;	
+
+	SplitGraph sg;
+
+	boot_trees.convertSplits(sg, cutoff, SW_COUNT);
+	//sg.report(cout);
+
+	cout << "Creating greedy consensus tree..." << endl;
+	MTree mytree;
+	SplitGraph maxsg;
+	sg.findMaxCompatibleSplits(maxsg);
+	//maxsg.saveFile(cout);
+	cout << "convert compatible split system into tree..." << endl;
+	mytree.convertToTree(maxsg);
+	Node *node = mytree.findNodeName(first_taxname);
+	if (node) mytree.root = node;
+	mytree.scaleLength(100.0/boot_trees.size(), true);
+
+	mytree.getTaxaID(maxsg.getSplitsBlock()->getCycle());
+	//maxsg.saveFile(cout);
+
+	string out_file;
+
+	if (output_tree) 
+		out_file = output_tree;
+	else {
+		if (out_prefix)
+			out_file = out_prefix;
+		else
+			out_file = input_trees;
+		out_file += ".contree";
+	}
+
+	
+	mytree.printTree(out_file.c_str(), WT_BR_CLADE);
+	cout << "Consensus tree written to " << out_file << endl;
+}
+
+void computeConsensusNetwork(const char *input_trees, int burnin, double cutoff, 
+	const char *output_tree, const char *out_prefix) {
+	bool rooted = false;
+
+	// read the bootstrap tree file
+	MTreeSet boot_trees(input_trees, rooted, burnin);
+
+	SplitGraph sg;
+	//SplitIntMap hash_ss;
+
+	boot_trees.convertSplits(sg, cutoff, SW_SUM);
+
+	string out_file;
+
+	if (output_tree) 
+		out_file = output_tree;
+	else {
+		if (out_prefix)
+			out_file = out_prefix;
+		else
+			out_file = input_trees;
+		out_file += ".nex";
+	}
+
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(out_file.c_str());
+		sg.saveFile(out);
+		out.close();
+		cout << "Consensus network printed to " << out_file << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, out_file);
+	}
+
+}

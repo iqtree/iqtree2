@@ -30,66 +30,81 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 {
 	assert(num_states == 4); // make sure that you create model for DNA
 	StateFreqType def_freq = FREQ_UNKNOWN;
+	name = model_name;
+	full_name = model_name;
+
 	if (strcmp(model_name, "JC") == 0 || strcmp(model_name, "JC69") == 0) {
 		setRateType("000000");
 		def_freq = FREQ_EQUAL;
+		full_name = "JC (Juke and Cantor, 1969)";
 	} else if (strcmp(model_name, "F81") == 0) {
 		setRateType("000000");
 		def_freq = FREQ_ESTIMATE;
+		full_name = "F81 (Felsenstein, 1981)";
 	} else if (strcmp(model_name, "K2P") == 0 || strcmp(model_name, "K80") == 0) {
 		setRateType("010010");
 		def_freq = FREQ_EQUAL;
+		full_name = "K2P (Kimura, 1980)";
 	} else if (strcmp(model_name, "HKY") == 0 || strcmp(model_name, "HKY85") == 0) {
 		setRateType("010010");
 		def_freq = FREQ_ESTIMATE;
+		full_name = "HKY (Hasegawa, Kishino and Yano, 1985)";
 	} else if (strcmp(model_name, "K3P") == 0 || strcmp(model_name, "K81") == 0) {
 		setRateType("012210");
 		def_freq = FREQ_EQUAL;
+		full_name = "K3P (Kimura, 1981)";
 	} else if (strcmp(model_name, "K81uf") == 0) {
 		setRateType("012210");
 		def_freq = FREQ_ESTIMATE;
+		full_name = "K3P unequal frequencies (Kimura, 1981)";
 	} else if (strcmp(model_name, "TN") == 0 || strcmp(model_name, "TrN") == 0 || strcmp(model_name, "TN93") == 0) {
 		setRateType("010020");
 		def_freq = FREQ_ESTIMATE;
+		full_name = "TN (Tamura and Nei, 1993)";
 	} else if (strcmp(model_name, "TNef") == 0 || strcmp(model_name, "TrNef") == 0) {
 		setRateType("010020");
 		def_freq = FREQ_EQUAL;
+		full_name = "TN equal frequencies (Tamura and Nei, 1993)";
 	} else if (strcmp(model_name, "TIM") == 0) {
 		setRateType("012230");		
 		def_freq = FREQ_ESTIMATE;
+		full_name = "TIM ()";
 	} else if (strcmp(model_name, "TIMef") == 0) {
 		setRateType("012230");		
 		def_freq = FREQ_EQUAL;
+		full_name = "TIM equal frequencies";
 	} else if (strcmp(model_name, "TVM") == 0) {
 		setRateType("412310");		
 		def_freq = FREQ_ESTIMATE;
+		full_name = "TVM";
 	} else if (strcmp(model_name, "TVMef") == 0) {
 		setRateType("412310");		
 		def_freq = FREQ_EQUAL;
+		full_name = "TVM equal frequencies";
 	} else if (strcmp(model_name, "SYM") == 0) {
 		setRateType("123450");
 		def_freq = FREQ_EQUAL;
-	} else if (strcmp(model_name, "GTR") == 0) {
+		full_name = "SYM (Zharkihk, 1994)";
+	} else if (strcmp(model_name, "GTR") == 0 || strcmp(model_name, "REV") == 0) {
 		setRateType("123450");
 		def_freq = FREQ_ESTIMATE;
+		full_name = "GTR (Tavare, 1986)";
 	} else {
 		//cout << "User-specified model "<< model_name << endl;
-		setRateType(model_name);
-		def_freq = FREQ_ESTIMATE;
-/*
-		string str = "Invalid model name: ";
-		str += model_name;
-		outError(str);*/
+		if (setRateType(model_name))
+			def_freq = FREQ_ESTIMATE;
+		else {
+			readParameters(model_name);
+			//name += " (user-defined)";
+		}
 	}
 	
-	name = model_name;
 	if (freq == FREQ_UNKNOWN || def_freq == FREQ_EQUAL) freq = def_freq;
 	GTRModel::init(freq);
-	//decomposeRateMatrix();
 }
 
 
-void ModelDNA::setRateType(const char *rate_str) {
+bool ModelDNA::setRateType(const char *rate_str) {
 	char first_type = 127;
 	char last_type = 0;
 	char t = first_type;
@@ -97,12 +112,15 @@ void ModelDNA::setRateType(const char *rate_str) {
 	int i, j;
 
 	if (num_ch != num_states*(num_states-1)/2)
-		outError("Wrong model name ", rate_str);
+		return false;
+	if (rate_str[num_ch-1] != '0')
+		return false;
 	for (i = 0; i < num_ch; i++) {
 		if (rate_str[i] > last_type) last_type = rate_str[i];
 		if (rate_str[i] < first_type) first_type = rate_str[i];
 	}
-	assert(first_type == rate_str[num_ch-1]);
+	if (first_type != rate_str[num_ch-1])
+		return false;
 
 	num_params = last_type - first_type;
 	param_spec = "";
@@ -131,6 +149,7 @@ void ModelDNA::setRateType(const char *rate_str) {
 	}
 	delete [] num_rates;
 	delete [] avg_rates;
+	return true;
 }
 
 

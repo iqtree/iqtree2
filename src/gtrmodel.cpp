@@ -30,6 +30,7 @@ GTRModel::GTRModel(PhyloTree *tree)
 	int ncoeff = num_states*num_states*num_states;
 	
 	name = "GTR";
+	full_name = "GTR (Tavare, 1986)";
 	phylo_tree = tree;
 	
 	rates = new double[nrate];
@@ -54,6 +55,8 @@ GTRModel::GTRModel(PhyloTree *tree)
 	phylo_tree->aln->computeEmpiricalRate(rates);
 	//eigen_coeff_derv1 = new double[ncoeff];
 	//eigen_coeff_derv2 = new double[ncoeff];
+
+	num_params = num_states*(num_states-1)/2 - 1;
 			
 }
 
@@ -82,18 +85,20 @@ void GTRModel::init(StateFreqType type) {
 
 void GTRModel::writeInfo(ostream &out) {
 	if (num_states != 4) return;
-	cout << endl;
-	cout << "1. Transversion rate from A to C = " << rates[0] << endl;
-	cout << "2. Transition   rate from A to G = " << rates[1] << endl;
-	cout << "3. Transversion rate from A to T = " << rates[2] << endl;
-	cout << "4. Transversion rate from C to G = " << rates[3] << endl;
-	cout << "5. Transition   rate from C to T = " << rates[4] << endl;
-	cout << "6. Transversion rate from G to T = " << rates[5] << endl;
-	if (freq_type != FREQ_ESTIMATE) return;
-	cout << "   Base frequency A = " << state_freq[0] << endl;
-	cout << "   Base frequency C = " << state_freq[1] << endl;
-	cout << "   Base frequency G = " << state_freq[2] << endl;
-	cout << "   Base frequency T = " << state_freq[3] << endl;
+	cout << "Rate parameters:" << endl;
+	
+	cout << "  A-C: " << rates[0] << endl;
+	cout << "  A-G: " << rates[1] << endl;
+	cout << "  A-T: " << rates[2] << endl;
+	cout << "  C-G: " << rates[3] << endl;
+	cout << "  C-T: " << rates[4] << endl;
+	cout << "  G-T: " << rates[5] << endl;
+	//if (freq_type != FREQ_ESTIMATE) return;
+	cout << "Base frequencies: " << endl;
+	cout << "  A: " << state_freq[0] << endl;
+	cout << "  C: " << state_freq[1] << endl;
+	cout << "  G: " << state_freq[2] << endl;
+	cout << "  T: " << state_freq[3] << endl;
 }
 
 
@@ -199,31 +204,30 @@ void GTRModel::getStateFrequency(double *freq) {
 
 int GTRModel::getNDim() { 
 	assert(freq_type != FREQ_UNKNOWN);
-	int ndim = num_states*(num_states-1)/2 - 1; 
+	int ndim = num_params;
 	if (freq_type == FREQ_ESTIMATE) 
 		ndim += num_states-1;
 	return ndim;
 }
 
 void GTRModel::setVariables(double *variables) {
-	int ndim = getNDim();
-	if (freq_type != FREQ_ESTIMATE)
-		memcpy(variables+1, rates, ndim*sizeof(double));
-	else {
-		int nrate = ndim-num_states+1;
+	int nrate = getNDim();
+	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+	if (nrate > 0)
 		memcpy(variables+1, rates, nrate*sizeof(double));
+	if (freq_type == FREQ_ESTIMATE)
 		memcpy(variables+nrate+1, state_freq, (num_states-1)*sizeof(double));
-	}
 }
 
 void GTRModel::getVariables(double *variables) {
-	int ndim = getNDim();
-	if (freq_type != FREQ_ESTIMATE)
-		memcpy(rates, variables+1, ndim * sizeof(double));
-	else {
-		int nrate = ndim-num_states+1;
+
+	int nrate = getNDim();
+	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+	if (nrate > 0)
+		memcpy(rates, variables+1, nrate * sizeof(double));
+
+	if (freq_type == FREQ_ESTIMATE) {
 		double sum = 0.0;
-		memcpy(rates, variables+1, nrate*sizeof(double));
 		memcpy(state_freq, variables+nrate+1, (num_states-1)*sizeof(double));
 		for (int i = 0; i < num_states-1; i++) 
 			sum += state_freq[i];
@@ -325,6 +329,45 @@ void GTRModel::decomposeRateMatrix() {
 	for (i = num_states-1; i >= 0; i--)
 		delete [] rate_matrix[i];
 } 
+
+void GTRModel::readRates(istream &in) throw(const char*) {
+	int nrates = num_states*(num_states-1)/2;
+	for (int i = 0; i < nrates; i++) {
+		if (!(in >> rates[i]))
+			throw "Rate entries could not be read";
+		if (rates[i] < 0.0)
+			throw "Negative rates found";
+	}
+}
+
+void GTRModel::readStateFreq(istream &in) throw(const char*) {
+	int i;
+	for (i = 0; i < num_states; i++) {
+		if (!(in >> state_freq[i])) 
+			throw "State frequencies could not be read";
+		if (state_freq[i] < 0.0)
+			throw "Negative state frequencies found";
+	}
+	double sum = 0.0;
+	for (i = 0; i < num_states; i++) sum += state_freq[i];
+	if (fabs(sum-1.0) > 1e-5)
+		throw "State frequencies do not sum up to 1.0";
+}
+
+void GTRModel::readParameters(const char *file_name) { 
+	try {
+		cout << "Reading model parameters from file " << file_name << endl;
+		ifstream in(file_name);
+		readRates(in);
+		readStateFreq(in);
+	}
+	catch (const char *str) {
+		outError(str);
+	} 
+	num_params = 0;
+	writeInfo(cout);
+}
+
 
 GTRModel::~GTRModel()
 {

@@ -50,8 +50,9 @@ public:
 	/**
 		set the substitution rate parameters by a specification
 		@param rate_spec a string of six letters describing how rates are related
+		@return TRUE if successful, FALSE otherwise
 	*/
-	void setRateType(const char *rate_spec);
+	bool setRateType(const char *rate_spec);
 
 	/**
 		return the number of dimensions
@@ -85,10 +86,6 @@ protected:
 	*/
 	string param_spec;
 	
-	/**
-		the number of free parameters
-	*/
-	int num_params;
 
 };
 

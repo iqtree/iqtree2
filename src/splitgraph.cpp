@@ -74,7 +74,7 @@ void SplitGraph::init(Params &params)
 		if (mtrees->isRooted() && params.root != NULL)
 			outError(ERR_CONFLICT_ROOT);
 		//SplitIntMap hash_ss;
-		mtrees->convertSplits(*this, params.split_threshold, true);
+		mtrees->convertSplits(*this, params.split_threshold, SW_SUM);
 
 		if (verbose_mode >= VB_DEBUG)
 			saveFile(cout);
@@ -217,7 +217,7 @@ void SplitGraph::convertFromTreesBlock(int burnin, double split_threshold) {
 	}
 	mtrees->checkConsistency();
 	//SplitIntMap hash_ss;
-	mtrees->convertSplits(*this, split_threshold, true);
+	mtrees->convertSplits(*this, split_threshold, SW_SUM);
 }
 
 

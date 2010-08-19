@@ -20,14 +20,14 @@
 #ifndef MODELPROTEIN_H
 #define MODELPROTEIN_H
 
-#include "modeluser.h"
+#include "gtrmodel.h"
 
 /**
 Substitution models for protein sequences
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelProtein : public ModelUser
+class ModelProtein : public GTRModel
 {
 public:
 	/**
@@ -50,7 +50,8 @@ public:
 		@param in input stream
 	*/
 	virtual void readRates(istream &in) throw(const char*);
-	
+
+
 };
 
 #endif

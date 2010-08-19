@@ -90,7 +90,7 @@ public:
 		@param hash_ss (OUT) hash split set
 		@param lensum TRUE if summing split length, FALSE to increment only
 	*/
-	void convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, bool lensum);
+	void convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type);
 
 	/**
 		convert all trees into the split system
@@ -99,7 +99,7 @@ public:
 		@param lensum TRUE to assign split weight as sum of corresponding branch lengths. 
 			Otherwise just count the number of branches.
 	*/
-	void convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, bool lensum);
+	void convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type);
 
 	/**
 		convert all trees into the split system
@@ -108,7 +108,7 @@ public:
 		@param lensum TRUE to assign split weight as sum of corresponding branch lengths. 
 			Otherwise just count the number of branches.
 	*/
-	void convertSplits(SplitGraph &sg, double split_threshold, bool lensum);
+	void convertSplits(SplitGraph &sg, double split_threshold, int weighting_type);
 
 	/**
 		compute the Robinson-Foulds distance between trees

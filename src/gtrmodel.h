@@ -67,6 +67,26 @@ public:
 	*/
     void setTree(PhyloTree *tree);
 
+	/**
+		Read the upper-triangle rate matrix from an input stream. 
+		It will throw error messages if failed
+		@param in input stream
+	*/
+	virtual void readRates(istream &in) throw(const char*);
+	
+	/**
+		Read state frequencies from an input stream. 
+		It will throw error messages if failed
+		@param in input stream
+	*/
+	virtual void readStateFreq(istream &in) throw(const char*);
+
+	/**
+		read model parameters from a file
+		@param file_name file containing upper-triangle rate matrix and state frequencies
+	*/
+	void readParameters(const char *file_name);
+
 
 	/**
 		compute the transition probability matrix.
@@ -90,6 +110,13 @@ public:
 
 
 	/**
+		get frequency type
+		@return frequency type
+	*/
+	virtual StateFreqType getFreqType() { return freq_type; }
+
+
+	/**
 		compute the transition probability matrix.and the derivative 1 and 2
 		@param time time between two events
 		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
@@ -99,12 +126,6 @@ public:
 	*/
 	virtual void computeTransDerv(double time, double *trans_matrix, 
 		double *trans_derv1, double *trans_derv2);
-
-	/**
-		get frequency type
-		@return frequency type
-	*/
-	StateFreqType getFreqType() { return freq_type; }
 
 	/**
 		@return the number of dimensions
@@ -171,6 +192,12 @@ protected:
 		In order A-C, A-G, A-T, C-G, C-T (rate G-T = 1 always)
 	*/
 	double *rates;
+
+	/**
+		the number of free rate parameters
+	*/
+	int num_params;
+
 
 	/**
 		state frequencies

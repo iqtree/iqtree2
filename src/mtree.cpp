@@ -841,6 +841,32 @@ string MTree::reportInputInfo() {
 	return str;
 }
 
+
+typedef map<int, Neighbor*> IntNeighborMap;
+
+int MTree::sortTaxa(Node *node, Node *dad) {
+	if (!node) {
+		node = root;
+		if (node->isLeaf()) node = node->neighbors[0]->node;
+	}
+	if (node->isLeaf())
+		return node->id;
+	IntNeighborMap taxid_nei_map;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		int taxid = sortTaxa((*it)->node, node);
+		taxid_nei_map.insert(IntNeighborMap::value_type(taxid, (*it)));
+	}
+	;
+	int i = 0;
+	for (IntNeighborMap::iterator it = taxid_nei_map.begin(); it != taxid_nei_map.end(); it++, i++) {
+		if (node->neighbors[i]->node == dad) i++;
+		node->neighbors[i] = it->second;
+	}
+	
+	return taxid_nei_map.begin()->first;
+}
+
+
 void MTree::drawTree(ostream &out, int brtype) {
 	IntVector sub_tree_br;
 	if (verbose_mode >= VB_DEBUG)

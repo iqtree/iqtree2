@@ -37,8 +37,24 @@
 #include "msetsblock.h"
 #include "myreader.h"
 #include "phyloanalysis.h"
+#include "eigen/Core"
 
 using namespace std;
+
+
+// import most common Eigen types 
+USING_PART_OF_NAMESPACE_EIGEN
+
+void test_eigen()
+{
+  Matrix3f m3;
+  m3 << 1, 2, 3, 4, 5, 6, 7, 8, 9;
+  Matrix4f m4 = Matrix4f::Identity();
+  Vector4i v4(1, 2, 3, 4);
+
+  std::cout << "m3\n" << m3 << "\nm4:\n"
+    << m4 << "\nv4:\n" << v4 << std::endl;
+}
 
 
 void generateRandomTree(Params &params)
@@ -683,7 +699,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 		/********** SUMMARY *********/
 		/****************************/
 
-		if (params.run_mode != PD_USER_SET && !params.bootstrap) {
+		if (params.run_mode != PD_USER_SET && !params.num_bootstrap_samples) {
 			out << "Summary of the PD-score and the number of optimal PD-sets with the same " << endl << "optimal PD-score found." << endl;
 	
 			if (sg.isBudgetConstraint()) 
@@ -730,7 +746,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 		/****************************/
 		/********* BOOTSTRAP ********/
 		/****************************/
-		if (params.run_mode != PD_USER_SET && params.bootstrap) {
+		if (params.run_mode != PD_USER_SET && params.num_bootstrap_samples) {
 			out << "Summary of the bootstrap analysis " << endl;
 			for (it = pd_set.begin(); it != pd_set.end(); it++) {
 				DoubleVector freq;
@@ -750,7 +766,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 		/********** RANKING *********/
 		/****************************/
 
-		if (params.run_mode != PD_USER_SET && !params.bootstrap) {
+		if (params.run_mode != PD_USER_SET && !params.num_bootstrap_samples) {
 
 		
 			IntVector ranking;
@@ -804,13 +820,14 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 		if (params.run_mode != PD_USER_SET)
 			out << "Detailed information of all taxa found in the optimal PD-sets" << endl;
 
-		if (pd_set.size() > 1) 
+		if (pd_set.size() > 1) {
 			if (sg.isBudgetConstraint())
 				out << "with budget = " << params.min_budget <<
 					" to " << params.budget << endl << endl;
 			else
 				out << "with k = " << params.min_size-params.is_rooted <<
 					" to " << params.sub_size-params.is_rooted << endl << endl;
+		}
 
 		if (params.run_mode != PD_USER_SET)
 			separator(out,1);
@@ -865,18 +882,19 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 				if (params.run_mode == PD_USER_SET && it2 != (*it).begin())
 					separator(out, 1);
 
-				if (params.run_mode == PD_USER_SET)
+				if (params.run_mode == PD_USER_SET) {
 					if (!sg.isBudgetConstraint())
 						out << "Set " << c_num << " has PD score of " << this_set->getWeight();
 					else 
 						out << "Set " << c_num << " has PD score of " << this_set->getWeight() << 
 						" and requires " << sg.calcCost(*this_set) << " budget";
-				else if (num_sets > 1) 
+				} else if (num_sets > 1) {
 					if (!sg.isBudgetConstraint())
 						out << endl << "PD set " << c_num;
 					else
 						out << endl << "PD set " << c_num << " has " << this_set->countTaxa()-params.is_rooted << 
 						" taxa and requires " << sg.calcCost(*this_set) << " budget";
+				}
 
 				if (!sg.isPDArea() && (num_sets > 1 || params.run_mode == PD_USER_SET )) 
 					out << " and covers " << sg.countSplits(*(*it)[0]) << " splits (of which " 
@@ -885,7 +903,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 		
 				if (params.run_mode != PD_USER_SET && sg.isPDArea()) {
 					for (i = 0; i < sg.getSetsBlock()->getNSets(); i++) 
-						if (this_set->containTaxon(i)) 
+						if (this_set->containTaxon(i)) {
 							if (sg.isBudgetConstraint()) {
 								out.width(max_len);
 								out << left << sg.getSetsBlock()->getSet(i)->name << "\t"; 
@@ -896,6 +914,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 							} else {
 								out << sg.getSetsBlock()->getSet(i)->name << endl;
 							}
+						}
 					
 					Split sp(sg.getNTaxa());
 					for (i = 0; i < sg.getSetsBlock()->getNSets(); i++) 
@@ -908,7 +927,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 					
 				} else
 				for ( i = 0; i < sg.getNTaxa(); i++) 
-					if (sg.getTaxa()->GetTaxonLabel(i) != ROOT_NAME && this_set->containTaxon(i)) 
+					if (sg.getTaxa()->GetTaxonLabel(i) != ROOT_NAME && this_set->containTaxon(i)) {
 						if (sg.isBudgetConstraint()) {
 							out.width(max_len);
 							out << left << sg.getTaxa()->GetTaxonLabel(i) << "\t"; 
@@ -919,6 +938,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 						} else {
 							out << sg.getTaxa()->GetTaxonLabel(i) << endl;
 						}
+					}
 			}
 		}
 
@@ -1012,7 +1032,7 @@ void runPDSplit(Params &params) {
 
 	} else {
 		// otherwise, call the main function
-		if (params.bootstrap) {
+		if (params.num_bootstrap_samples) {
 			cout << endl << "======= START BOOTSTRAP ANALYSIS =======" << endl;
 			MTreeSet *mtrees = sg.getMTrees();
 			if (mtrees->size() < 100) 
@@ -1095,125 +1115,6 @@ void printSplitSet(SplitGraph &sg, SplitIntMap &hash_ss) {
 		if ((*it)->getWeight() > 50 && (*it)->countTaxa() > 1)
 		(*it)->report(cout);
 	}
-}
-
-void assignBootstrapSupports(Params &params) {
-	//bool rooted = false;
-	// read the tree file
-
-	MExtTree mytree(params.user_file, params.is_rooted);
-	// reindex the taxa in the tree to aphabetical names
-	NodeVector taxa;
-	mytree.getTaxa(taxa);
-	sort(taxa.begin(), taxa.end(), nodenamecmp);
-	int i = 0;
-	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++) {
-		(*it)->id = i++;
-	}
-
-	// read the bootstrap tree file
-	MTreeSet boot_trees(params.boot_trees, params.is_rooted, params.tree_burnin);
-	/*
-	string filename = params.boot_trees;
-	filename += ".nolen";
-	boot_trees.printTrees(filename.c_str(), false);
-	return;
-	*/
-	SplitGraph sg;
-	SplitIntMap hash_ss;
-	// make the taxa name
-	vector<string> taxname;
-	taxname.resize(mytree.leafNum);
-	mytree.getTaxaName(taxname);
-
-	boot_trees.convertSplits(taxname, sg, hash_ss, false);
-	// compute the percentage of appearance
-	sg.scaleWeight(100.0/boot_trees.size(), true);
-//	printSplitSet(sg, hash_ss);
-	//sg.report(cout);
-	cout << "Creating bootstrap support values..." << endl;
-	mytree.createBootstrapSupport(taxname, boot_trees, sg, hash_ss);
-	//mytree.scaleLength(100.0/boot_trees.size(), true);
-	if (params.out_file != NULL)
-		mytree.printTree(params.out_file);
-	else {
-		mytree.printTree(cout);
-		cout << endl;
-	}
-	//cout << "Tree with bootstrap support is printed to " << params.out_file << endl;
-}
-
-void calcGreedyConsensus(Params &params) {
-	bool rooted = false;
-
-	// read the bootstrap tree file
-	MTreeSet boot_trees(params.boot_trees, rooted, params.tree_burnin);
-	string first_taxname = boot_trees.front()->root->name;
-	if (params.root) first_taxname = params.root;	
-
-	/*
-	string filename = params.boot_trees;
-	filename += ".nolen";
-	boot_trees.printTrees(filename.c_str(), false);
-	return;
-	*/
-	SplitGraph sg;
-	//SplitIntMap hash_ss;
-
-	boot_trees.convertSplits(sg, params.split_threshold, false);
-	//sg.report(cout);
-
-	cout << "Creating greedy consensus tree..." << endl;
-	MTree mytree;
-	SplitGraph maxsg;
-	sg.findMaxCompatibleSplits(maxsg);
-	//maxsg.saveFile(cout);
-	cout << "convert compatible split system into tree..." << endl;
-	mytree.convertToTree(maxsg);
-	Node *node = mytree.findNodeName(first_taxname);
-	if (node) mytree.root = node;
-	mytree.scaleLength(100.0/boot_trees.size(), true);
-
-	mytree.getTaxaID(maxsg.getSplitsBlock()->getCycle());
-	//maxsg.saveFile(cout);
-
-	//mytree.makeBranchLenToLabel();
-	if (params.out_file != NULL) {
-		mytree.printTree(params.out_file, WT_BR_CLADE);
-		//mytree.printTree(params.out_file, BR_LEN);
-	}
-	else {
-		mytree.printTree(cout, WT_BR_CLADE);
-		//mytree.printTree(cout, BR_LEN);
-		cout << endl;
-	}
-	//spset.clear();
-	//cout << "Tree with bootstrap support is printed to " << params.out_file << endl;
-}
-
-void calcConsensusNetwork(Params &params) {
-
-	// read the bootstrap tree file
-	MTreeSet boot_trees(params.boot_trees, params.is_rooted, params.tree_burnin);
-
-	SplitGraph sg;
-	//SplitIntMap hash_ss;
-
-	boot_trees.convertSplits(sg, params.split_threshold, true);
-
-	string filename = params.user_file;
-
-	try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		out.open(filename.c_str());
-		sg.saveFile(out);
-		out.close();
-		cout << "Consensus network is printed to " << filename << endl;
-	} catch (ios::failure) {
-		outError(ERR_WRITE_OUTPUT, filename);
-	}
-
 }
 
 void readTaxaOrder(char *taxa_order_file, StrVector &taxa_order) {
@@ -1425,7 +1326,7 @@ void testInputFile(Params &params) {
 ********************************************************/
 int main(int argc, char *argv[])
 {
-
+	//test_eigen();
         system("echo $HOSTNAME");
 	printCopyright(cout);
 
@@ -1457,11 +1358,21 @@ int main(int argc, char *argv[])
 		scaleBranchLength(params);
 	} else if (params.run_mode == PD_DISTRIBUTION) {
 		calcDistribution(params);
-	} else if (params.boot_trees != NULL) {
-		switch (params.calc_consensus) {
-			case CONSENSUS_TREE: calcGreedyConsensus(params); break;
-			case ASSIGN_BOOTSTRAP: assignBootstrapSupports(params); break;
-			case CONSENSUS_NETWORK: calcConsensusNetwork(params); break;
+	} else if (params.consensus_type != CT_NONE) {
+		switch (params.consensus_type) {
+			case CT_CONSENSUS_TREE: 
+				computeConsensusTree(params.user_file, params.tree_burnin, 
+					params.split_threshold, params.out_file, params.out_prefix); 
+				break;
+			case CT_CONSENSUS_NETWORK: 
+				computeConsensusNetwork(params.user_file, params.tree_burnin, 
+					params.split_threshold, params.out_file, params.out_prefix); 
+				break;
+			case CT_ASSIGN_SUPPORT: 
+				assignBootstrapSupport(params.user_file, params.tree_burnin, 
+					params.second_tree, params.is_rooted, params.out_file, params.out_prefix); 
+				break;
+			case CT_NONE: break;
 		}
 	} else if (params.branch_cluster > 0) {
 		calcTreeCluster(params);

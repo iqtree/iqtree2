@@ -580,7 +580,7 @@ double IQPTree::doIQPNNI(Params &params) {
 
     string treels_name = params.out_prefix;
     treels_name += ".treels";
-    if (params.output_trees)
+    if (params.write_intermediate_trees)
         printTree(treels_name.c_str(), WT_TAXON_ID | WT_SORT_TAXA | WT_NEWLINE);
     //printTree(treels_name.c_str(), WT_NEWLINE | WT_BR_LEN);
 
@@ -675,7 +675,7 @@ double IQPTree::doIQPNNI(Params &params) {
             }
         }
 
-        if (params.output_trees)
+        if (params.write_intermediate_trees)
             printTree(treels_name.c_str(), WT_TAXON_ID | WT_NEWLINE | WT_APPEND | WT_SORT_TAXA);
         //printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_BR_LEN);
 

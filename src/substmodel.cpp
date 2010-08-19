@@ -16,6 +16,7 @@ SubstModel::SubstModel(int nstates)
 {
 	num_states = nstates;
 	name = "JC";
+	full_name = "JC (Juke and Cantor, 1969)";
 }
 
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)

@@ -53,7 +53,7 @@ am_pda_OBJECTS = alignment.$(OBJEXT) alignmentpairwise.$(OBJEXT) \
 	hashsplitset.$(OBJEXT) iqptree.$(OBJEXT) lpwrapper.$(OBJEXT) \
 	mexttree.$(OBJEXT) modeldna.$(OBJEXT) modelfactory.$(OBJEXT) \
 	modelprotein.$(OBJEXT) modeltest_wrapper.$(OBJEXT) \
-	modeluser.$(OBJEXT) mpdablock.$(OBJEXT) msetsblock.$(OBJEXT) \
+	mpdablock.$(OBJEXT) msetsblock.$(OBJEXT) \
 	msplitsblock.$(OBJEXT) mtree.$(OBJEXT) mtreeset.$(OBJEXT) \
 	node.$(OBJEXT) optimization.$(OBJEXT) pattern.$(OBJEXT) \
 	pda.$(OBJEXT) pdnetwork.$(OBJEXT) pdtree.$(OBJEXT) \
@@ -64,8 +64,8 @@ am_pda_OBJECTS = alignment.$(OBJEXT) alignmentpairwise.$(OBJEXT) \
 	split.$(OBJEXT) splitgraph.$(OBJEXT) splitset.$(OBJEXT) \
 	stoprule.$(OBJEXT) substmodel.$(OBJEXT) tools.$(OBJEXT)
 pda_OBJECTS = $(am_pda_OBJECTS)
-pda_DEPENDENCIES = $(top_builddir)/src/modeltest/libmodeltest.la \
-	$(top_builddir)/src/lp/liblpsolve.la \
+pda_DEPENDENCIES = $(top_builddir)/src/lp/liblpsolve.la \
+	$(top_builddir)/src/modeltest/libmodeltest.la \
 	$(top_builddir)/src/ncl/libNCL.la
 pda_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(pda_LDFLAGS) \
@@ -231,8 +231,8 @@ pda_LDFLAGS = $(all_libraries) -ldl
 pda_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
 	eigendecomposition.cpp greedy.cpp gtrmodel.cpp gurobiwrapper.cpp hashsplitset.cpp iqptree.cpp \
 	lpwrapper.c mexttree.cpp modeldna.cpp modelfactory.cpp modelprotein.cpp \
-	modeltest_wrapper.c modeluser.cpp mpdablock.cpp msetsblock.cpp msplitsblock.cpp mtree.cpp \
-	mtreeset.cpp node.cpp optimization.cpp pattern.cpp pda.cpp pdnetwork.cpp pdtree.cpp \
+	modeltest_wrapper.c mpdablock.cpp msetsblock.cpp msplitsblock.cpp mtree.cpp mtreeset.cpp \
+	node.cpp optimization.cpp pattern.cpp pda.cpp pdnetwork.cpp pdtree.cpp \
 	pdtreeset.cpp phyloanalysis.cpp phylonode.cpp phylotree.cpp pruning.cpp rategamma.cpp \
 	rategammainvar.cpp rateheterogeneity.cpp rateinvar.cpp split.cpp splitgraph.cpp \
 	splitset.cpp stoprule.cpp substmodel.cpp tools.cpp
@@ -240,15 +240,14 @@ pda_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
 noinst_HEADERS = alignment.h alignmentpairwise.h bionj.h circularnetwork.h \
 	eigendecomposition.h greedy.h gtrmodel.h gurobiwrapper.h hashsplitset.h iqptree.h \
 	lpwrapper.h mexttree.h modeldna.h modelfactory.h modelprotein.h modeltest_wrapper.h \
-	modeluser.h mpdablock.h msetsblock.h msplitsblock.h mtree.h mtreeset.h myreader.h \
-	node.h optimization.h pattern.h pdnetwork.h pdtree.h pdtreeset.h \
-	phyloanalysis.h phylonode.h phylotree.h pruning.h rategamma.h rategammainvar.h \
-	rateheterogeneity.h rateinvar.h split.h splitgraph.h splitset.h stoprule.h substmodel.h \
-	tools.h
+	mpdablock.h msetsblock.h msplitsblock.h mtree.h mtreeset.h myreader.h node.h \
+	optimization.h pattern.h pdnetwork.h pdtree.h pdtreeset.h phyloanalysis.h phylonode.h \
+	phylotree.h pruning.h rategamma.h rategammainvar.h rateheterogeneity.h rateinvar.h \
+	split.h splitgraph.h splitset.h stoprule.h substmodel.h tools.h
 
-SUBDIRS = lp modeltest ncl
-pda_LDADD = $(top_builddir)/src/modeltest/libmodeltest.la \
-	$(top_builddir)/src/lp/liblpsolve.la $(top_builddir)/src/ncl/libNCL.la
+SUBDIRS = eigen lp modeltest ncl
+pda_LDADD = $(top_builddir)/src/lp/liblpsolve.la \
+	$(top_builddir)/src/modeltest/libmodeltest.la $(top_builddir)/src/ncl/libNCL.la
 
 AM_CXXFLAGS = -Wno-deprecated
 all: all-recursive
@@ -337,7 +336,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modelfactory.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modelprotein.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modeltest_wrapper.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modeluser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mpdablock.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msetsblock.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/msplitsblock.Po@am__quote@

@@ -514,6 +514,14 @@ void get_VT(double **q, double *f) {
 
 } /* vt data */
 
+
+ModelProtein::ModelProtein(const char *model_name, StateFreqType freq, PhyloTree *tree)
+ : GTRModel(tree)
+{
+	init(model_name, freq);
+}
+
+
 void ModelProtein::init(const char *model_name, StateFreqType freq) {
 	assert(num_states == 20);
 	name = model_name;
@@ -547,6 +555,7 @@ void ModelProtein::init(const char *model_name, StateFreqType freq) {
 	}
 
 	if (!model_str.empty()) {
+		// read rates from internal string
 		try {
 			istringstream in(model_str);
 			readRates(in);
@@ -555,18 +564,14 @@ void ModelProtein::init(const char *model_name, StateFreqType freq) {
 		catch (const char *str) {
 			outError(str);
 		} 
+	} else {
+		readParameters(model_name);
 	}
+	num_params = 0;
 	assert(freq != FREQ_ESTIMATE);
 	if (freq == FREQ_UNKNOWN) freq = FREQ_USER_DEFINED;
 	GTRModel::init(freq);
 }
-
-ModelProtein::ModelProtein(const char *model_name, StateFreqType freq, PhyloTree *tree)
- : ModelUser(tree)
-{
-	init(model_name, freq);
-}
-
 
 void ModelProtein::readRates(istream &in) throw(const char*) {
 	int nrates = num_states*(num_states-1)/2;
@@ -588,4 +593,5 @@ void ModelProtein::readRates(istream &in) throw(const char*) {
 			throw "Negative rates found";
 	}
 }
+
 

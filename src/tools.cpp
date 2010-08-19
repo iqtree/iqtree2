@@ -525,8 +525,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.pd_limit = 100;
 	params.calc_pdgain = false;
 	params.multi_tree = false;
-	params.boot_trees = NULL;
-	params.calc_consensus = ASSIGN_BOOTSTRAP;
+	params.second_tree = NULL;
+	params.consensus_type = CT_NONE;
 	params.find_pd_min = false;
 	params.branch_cluster = 0;
 	params.taxa_order_file = NULL;
@@ -538,12 +538,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.test_input = TEST_NONE;
 	params.tree_burnin = 0;
 	params.split_threshold = 0.0;
+	params.split_weight_summary = SW_SUM;
 	params.gurobi_format = false;
 	params.gurobi_threads = 1;
-	params.bootstrap = false;
+	params.num_bootstrap_samples = 0;
 
 
 	params.aln_file = NULL;
+	params.sequence_type = NULL;
 	params.aln_output = NULL;
 	params.parsimony = false;
 	params.tree_spr = false;
@@ -562,7 +564,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.optimize_by_newton = true;
 	params.fixed_branch_length = false;
 	params.iqp_assess_quartet = IQP_DISTANCE;
-	params.output_trees = false;
+	params.write_intermediate_trees = false;
 	params.rf_dist_mode = 0;
 
 	/* TUNG: IQP-TREE Specific Options */
@@ -587,7 +589,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 			if (strcmp(argv[cnt],"-h") == 0 || strcmp(argv[cnt],"--help") == 0) {
 				usage(argv, false);
-			} else if (strcmp(argv[cnt],"-ho") == 0) {
+			} else if (strcmp(argv[cnt],"-ho") == 0 || strcmp(argv[cnt],"-?") == 0) {
 				usage_iqtree(argv, false);
 			} else if (strcmp(argv[cnt],"-hh") == 0 || strcmp(argv[cnt],"-hhh") == 0) {
 				usage(argv, true);
@@ -602,10 +604,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -k <num_taxa>";
 				convert_range(argv[cnt], params.min_size, params.sub_size, params.step_size);
-			} else if (strcmp(argv[cnt],"-prefix") == 0) {
+				params.k_representative = params.min_size;
+			} else if (strcmp(argv[cnt],"-pre") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -prefix <output_prefix>";
+					throw "Use -pre <output_prefix>";
 				params.out_prefix = argv[cnt];
 			} else if (strcmp(argv[cnt],"-pp") == 0) {
 				cnt++;
@@ -619,10 +622,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mk <min_taxa>";
 				params.min_size = convert_int(argv[cnt]);
-			} else if (strcmp(argv[cnt],"-b") == 0) {
+			} else if (strcmp(argv[cnt],"-bud") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -b <budget>";
+					throw "Use -bud <budget>";
 				convert_range(argv[cnt], params.min_budget, params.budget, params.step_budget);
 			} else if (strcmp(argv[cnt],"-mb") == 0) {
 				cnt++;
@@ -640,7 +643,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.find_all = true;
 			} else if (strcmp(argv[cnt],"-g") == 0 || strcmp(argv[cnt],"--greedy") == 0) {
 				params.run_mode = GREEDY;
-			} else if (strcmp(argv[cnt],"-p") == 0 || strcmp(argv[cnt],"--pruning") == 0) {
+			} else if (strcmp(argv[cnt],"-pr") == 0 || strcmp(argv[cnt],"--pruning") == 0) {
 				params.run_mode = PRUNING;
 			//} else if (strcmp(argv[cnt],"--both") == 0) {
 				//params.run_mode = BOTH_ALG;
@@ -665,19 +668,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -u <file>";
 				params.budget_file = argv[cnt];
-			} else if (strcmp(argv[cnt],"-d") == 0) {
+			} else if (strcmp(argv[cnt],"-dd") == 0) {
 				// compute distribution of PD score on random sets
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -d <sample_size>";
+					throw "Use -dd <sample_size>";
 				params.run_mode = PD_DISTRIBUTION;
 				params.sample_size = convert_int(argv[cnt]);
-			} else if (strcmp(argv[cnt],"-s") == 0) {
+			} else if (strcmp(argv[cnt],"-ts") == 0) {
 				// calculate PD score a taxa set listed in the file
 				cnt++;
 				//params.run_mode = PD_USER_SET;
 				if (cnt >= argc)
-					throw "Use -s <file>";
+					throw "Use -ts <taxa_file>";
 				params.pdtaxa_file = argv[cnt];
 			} else if (strcmp(argv[cnt],"-bound") == 0) {
 				// boundary length of areas
@@ -691,12 +694,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -blm <boundary_modifier>";
 				params.boundary_modifier = convert_double(argv[cnt]);
-			} else if (strcmp(argv[cnt],"-dist") == 0) {
+			} else if (strcmp(argv[cnt],"-dist") == 0 || strcmp(argv[cnt],"-d") == 0) {
 				// calculate distance matrix from the tree
 				params.run_mode = CALC_DIST;
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -dist <outfile.dist>";
+					throw "Use -dist <distance_file>";
 				params.dist_file = argv[cnt];
 			} else if (strcmp(argv[cnt],"-r") == 0) {
 				cnt++;
@@ -780,20 +783,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt],"-sup") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -sup <treefile>";
-				params.boot_trees = argv[cnt];
+					throw "Use -sup <target_tree_file>";
+				params.second_tree = argv[cnt];
+				params.consensus_type = CT_ASSIGN_SUPPORT;
 			} else if (strcmp(argv[cnt],"-con") == 0) {
 				cnt++;
-				if (cnt >= argc)
-					throw "Use -con <treefile>";
-				params.boot_trees = argv[cnt];
-				params.calc_consensus = CONSENSUS_TREE;
-			} else if (strcmp(argv[cnt],"-conet") == 0) {
+				params.consensus_type = CT_CONSENSUS_TREE;
+			} else if (strcmp(argv[cnt],"-net") == 0) {
 				cnt++;
-				if (cnt >= argc)
-					throw "Use -conet <treefile>";
-				params.boot_trees = argv[cnt];
-				params.calc_consensus = CONSENSUS_NETWORK;
+				params.consensus_type = CT_CONSENSUS_NETWORK;
 			} else if (strcmp(argv[cnt],"-min") == 0) {
 				params.find_pd_min = true;
 			} else if (strcmp(argv[cnt],"-excl") == 0) {
@@ -832,12 +830,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt],"-lpbin") == 0) {
 				params.run_mode = LINEAR_PROGRAMMING;
 				params.binary_programming = true;
-			} else if (strcmp(argv[cnt],"-m") == 0) {
+			} else if (strcmp(argv[cnt],"-mult") == 0) {
 				params.multi_tree = true;
-			} else if (strcmp(argv[cnt],"-burnin") == 0) {
+			} else if (strcmp(argv[cnt],"-bi") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -burnin <burnin_value>";
+					throw "Use -bi <burnin_value>";
 				params.tree_burnin = convert_int(argv[cnt]);
 				if (params.tree_burnin < 0)
 					throw "Burnin value must not be negative";
@@ -848,13 +846,24 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.split_threshold = convert_double(argv[cnt]);
 				if (params.split_threshold < 0 || params.split_threshold > 1)
 					throw "Split threshold must be between 0 and 1";
+			} else if (strcmp(argv[cnt],"-swc") == 0) {
+				params.split_weight_summary = SW_COUNT;			
+			} else if (strcmp(argv[cnt],"-swa") == 0) {
+				params.split_weight_summary = SW_AVG_ALL;
+			} else if (strcmp(argv[cnt],"-swp") == 0) {
+				params.split_weight_summary = SW_AVG_PRESENT;
 			} else if (strcmp(argv[cnt],"-iwc") == 0) {
 				params.test_input = TEST_WEAKLY_COMPATIBLE;
-			} else if (strcmp(argv[cnt],"-aln") == 0) {
+			} else if (strcmp(argv[cnt],"-aln") == 0 || strcmp(argv[cnt],"-s") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -aln <alignment_file>";
+					throw "Use -aln, -s <alignment_file>";
 				params.aln_file = argv[cnt];
+			} else if (strcmp(argv[cnt],"-st") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -st <B|D|P>";
+				params.sequence_type = argv[cnt];
 			} else if (strcmp(argv[cnt],"-alnout") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -871,7 +880,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -krep <num_k>";
 				params.k_representative = convert_int(argv[cnt]);
-			} else if (strcmp(argv[cnt],"-pdel") == 0) {
+			} else if (strcmp(argv[cnt],"-pdel") == 0 || strcmp(argv[cnt],"-p") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -pdel <probability>";
@@ -883,7 +892,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -n <#iterations>";
 				params.min_iterations = convert_int(argv[cnt]);
-			} else if (strcmp(argv[cnt],"-mod") == 0) {
+			} else if (strcmp(argv[cnt],"-mod") == 0 || strcmp(argv[cnt],"-m") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mod <model_name>";
@@ -916,17 +925,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 			else if (strcmp(argv[cnt],"-f") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -f <EQ|EM|ES>";
-				if (strcmp(argv[cnt],"EQUAL") == 0)
+					throw "Use -f <EQ | EM | ES | UD>";
+				if (strcmp(argv[cnt],"EQL") == 0)
 					params.freq_type = FREQ_EQUAL;
-				else if (strcmp(argv[cnt],"EMPIRICAL") == 0)
+				else if (strcmp(argv[cnt],"EM") == 0)
 					params.freq_type = FREQ_EMPIRICAL;
-				else if (strcmp(argv[cnt],"ESTIMATE") == 0)
+				else if (strcmp(argv[cnt],"ES") == 0)
 					params.freq_type = FREQ_ESTIMATE;
-				else if (strcmp(argv[cnt],"DEFAULT") == 0)
+				else if (strcmp(argv[cnt],"UD") == 0)
 					params.freq_type = FREQ_USER_DEFINED;
 				else
-					throw "Use -f <EQUAL|EMPIRICAL|ESTIMATE|DEFAULT>";
+					throw "Use -f <EQ | EM | ES | UD>";
 
 			} else if (strcmp(argv[cnt],"-c") == 0) {
 				cnt++;
@@ -938,18 +947,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_by_newton = false;
 			} else if (strcmp(argv[cnt],"-fixbr") == 0) {
 				params.fixed_branch_length = true;
-			} else if (strcmp(argv[cnt],"-stop") == 0) {
+			} else if (strcmp(argv[cnt],"-sr") == 0) {
 				params.stop_condition = SC_STOP_PREDICT;
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -stop <#max_iteration>";
+					throw "Use -sr <#max_iteration>";
 				params.max_iterations = convert_int(argv[cnt]);
 				if (params.max_iterations <= params.min_iterations)
 					throw "Specified max iteration must be greater than min iteration";
-			} else if (strcmp(argv[cnt],"-stopconf") == 0) {
+			} else if (strcmp(argv[cnt],"-sc") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -stopconf <stop_confidence_value>";
+					throw "Use -sc <stop_confidence_value>";
 				params.stop_confidence = convert_double(argv[cnt]);
 				if (params.stop_confidence <= 0.5 || params.stop_confidence >= 1)
 					throw "Stop confidence value must be in range (0.5,1)";
@@ -963,13 +972,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.gurobi_threads = convert_int(argv[cnt]);
 				if (params.gurobi_threads < 1)
 					throw "Wrong number of threads";
-			} else if (strcmp(argv[cnt],"-boot") == 0) {
-				params.bootstrap = true;
+			} else if (strcmp(argv[cnt],"-b") == 0) {
 				params.multi_tree = true;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -b <num_bootstrap_samples>";
+				params.num_bootstrap_samples = convert_int(argv[cnt]);
+				if (params.num_bootstrap_samples < 1) 
+					throw "Wrong number of bootstrap samples";
 			} else if (strcmp(argv[cnt],"-iqppars") == 0) {
 				params.iqp_assess_quartet = IQP_PARSIMONY;
-			} else if (strcmp(argv[cnt],"-treels") == 0) {
-				params.output_trees = true;
+			} else if (strcmp(argv[cnt],"-wt") == 0) {
+				params.write_intermediate_trees = true;
 			} else if (strcmp(argv[cnt],"-rf_all") == 0) {
 				params.rf_dist_mode = RF_ALL_PAIR;
 			} else if (strcmp(argv[cnt],"-rf_adj") == 0) {
@@ -1005,18 +1019,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 	} // for
 	if (params.user_file == NULL && params.aln_file == NULL)
 		usage(argv, false);
-	if (!params.out_prefix)
+	if (!params.out_prefix) {
 		if (params.user_file) 
 			params.out_prefix = params.user_file;
 		else 
 			params.out_prefix = params.aln_file;
+	}
 }
 
 void usage(char* argv[], bool full_command) {
 	cout << "Usage: " << argv[0] << " [OPTIONS] <file_name> [<output_file>]" << endl;
 	cout << "GENERAL OPTIONS:" << endl;
 	cout << "  -h                Print this help dialog. Use -hh to display all options." << endl;
-	cout << "  -ho               Print help options for phylogenetic inference." << endl;
+	cout << "  -?                Print help options for phylogenetic inference." << endl;
 	cout << "  <file_name>       User tree in NEWICK format or split network in NEXUS format." << endl;
 	cout << "  <output_file>     Output file to store results, default is '<file_name>.pda'." << endl;
 	cout << "  -k <num_taxa>     Find optimal PD set of size <num_taxa>." << endl;
@@ -1037,7 +1052,7 @@ void usage(char* argv[], bool full_command) {
 	cout << "  -root             Make the tree ROOTED, default is unrooted." << endl;
 	cout << "    NOTE: this option and -o <taxon> cannot be both specified." << endl;
 	cout << "  -g, --greedy      Run greedy algorithm only." << endl;
-	cout << "  -p, --pruning     Run pruning algorithm only." << endl;
+	cout << "  -pr, --pruning    Run pruning algorithm only." << endl;
 	cout << "    NOTE: by default, the program automatically chooses suitable algorithm." << endl;
 	cout << endl;
 	cout << "OPTIONS FOR SPLIT-NETWORK:" << endl;
@@ -1072,12 +1087,9 @@ void usage(char* argv[], bool full_command) {
 	cout << endl;
 
 	cout << "MISCELLANEOUS:" << endl;
-	cout << "  -d <sample_size>  Compute PD distribution of random sets of size k." << endl;
-	cout << "  -dist <outfile>   Calculate the distance matrix inferred from tree." << endl;
+	cout << "  -dd <sample_size> Compute PD distribution of random sets of size k." << endl;
+	cout << "  -d <outfile>      Calculate the distance matrix inferred from tree." << endl;
 	cout << "  -seed <number>    Set the seed for random number generator." << endl;
-	cout << "  -con <treefile>   Compute an extended majority-rule consensus tree." << endl;
-	cout << "  -conet <treefile> Compute a consensus network." << endl;
-	cout << "  -sup <treefile>   Assign support values of each node in input tree." << endl;
 
 
 //	cout << "  -rep <times>        Repeat algorithm a number of times." << endl;
@@ -1089,25 +1101,67 @@ void usage(char* argv[], bool full_command) {
 }
 
 void usage_iqtree(char* argv[], bool full_command) {
-	cout << "Usage: " << argv[0] << " -aln <alignment_file> [OPTIONS] [<input_tree_file>] " << endl;
-	cout << "IQ-TREE OPTIONS:" << endl;
-	cout << "  -aln <alignment_file>   Input alignment file name (REQUIRED)" << endl; 
-	cout << "  <input_tree_file>       Start with give tree instead of default BioNJ tree" << endl;
-	cout << "  -o <outgroup_taxon>     Outgroup taxon name used to print tree file" << endl;
-	cout << "  -mod <model_name>       Substitution model: HKY, GTR, WAG,..., default is JC" << endl;
-	cout << "                          Rate Heterogeneity: add '+I','+G','+G8' to model name" << endl;
-	cout << "  -c <gamma_categories>   Number of Gamma rate categories, default is 4" << endl;
-	cout << "  -f <state_frequency>    Either EQUAL, EMPIRICAL, ESTIMATE, or DEFAULT" << endl;
-	cout << "  -n <num_iterations>     Number of iterations, default is 1 (equiv. to PHYML)" << endl;
-	cout << "  -pdel <num_pdel>        IQP: Probability of deleting a leaf, default is 0.1" << endl;
-	cout << "  -krep <num_k>           IQP: Size of representative leaf set, default is 5" << endl;
-	cout << "  -stop <max_iterations>  Turn on stopping rule, not exceeding max_iterations" << endl;
-	cout << "  -stopconf <confidence>  Confidence value for stopping rule, default is 0.95" << endl;
-	cout << "  -fixbr                  Fix branch lengths of the input tree" << endl;
-	cout << "  -seed <num_seed>        Random seed number" << endl;
-	cout << "  -prefix <out_prefix>    All output file names will have this prefix" << endl;
-	cout << "  -v                      Verbose mode" << endl;
-	cout << endl;
+	cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS] [<tree_file>] " << endl << endl;
+	cout << "GENERAL OPTIONS:" << endl
+		 << "  -?                   Print this help dialog" << endl
+		 << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP or NEXUS format"  << endl
+		 << "  -st <B|D|P>          Binary, DNA, or Protein sequences (default: auto-detect)"  << endl
+		 << "  <tree_file>          Initial tree for tree reconstruction (default: BIONJ)" << endl
+		 << "                       Or set of trees for consensus reconstruction (see below)" << endl
+		 << "  -o <outgroup_taxon>  Outgroup taxon name, used when writing .treefile" << endl 
+		 << "  -pre <PREFIX>        Use <PREFIX> for all output files (default: alignment" << endl
+		 << "                       file name)" << endl
+	<< endl << "SUBSTITUTION MODEL OPTIONS:" << endl
+		 << "  -m <substitution_model_name>" << endl
+		 << "                  DNA: JC (default), F81, K2P, HKY, K3P, K81uf, TN/TrN, TNef," << endl
+		 << "                       TIM, TIMef, HKY, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
+		 << "                       specification, e.g., '010010' is equivalent to HKY" << endl
+		 << "              Protein: JC (default), WAG, cpREV, mtREV, Dayhoff, mtMAM, JTT, LG," << endl
+		 << "                       mtART, mtZOA, VT, or rtREV" << endl
+		 << "               Binary: JC (default)" << endl
+		 << "   Rate heterogeneity: Append '+I', '+G[n]', or '+I+G[n]' to the model name for" << endl
+		 << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is the number of" << endl
+		 << "                       categories for Gamma rates (default: n=4)" << endl
+		 << " Modeltest (DNA only): TEST or TESTONLY if you have no idea which model to use." << endl
+		 << "                       With 'TEST', IQTREE will evaluate all models and select" << endl
+		 << "                       the most suitable one. With 'TESTONLY' IQTREE will stop" << endl
+		 << "                       after finishing Modeltest" << endl
+		 << "            Otherwise: Name of the file containing user model parameters" << endl
+		 << "                       incl. rate matrix and state frequencies" << endl
+		 //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
+		 << "  -f <EQ|EM|ES|UD>     EQual, EMpirical, EStimated, or User-Defined state" << endl 
+		 << "                       frequency (default: detected from the model name)" << endl
+	<< endl << "TREE INFERENCE OPTIONS:" << endl
+		 << "  -p <probability>     IQP: Probability of deleting a leaf (default: 0.1)" << endl
+		 << "  -k <#representative> IQP: Size of representative leaf set (default: 5)" << endl
+		 << "  -n <#iterations>     Number of iterations  (default: 1, equiv. to PHYML)" << endl
+		 << "  -sr <#iterations>    Turn on stopping rule, not exceeding #iterations" << endl
+		 << "  -sc <confidence>     Confidence value for stopping rule (default: 0.95)" << endl
+		 << "  -wt                  Write all intermediate trees into .treels file" << endl
+		 << "  -d <file>            Read the genetic distances from the file (default: " << endl
+		 << "                       Juke-Cantor distances)" << endl
+		 << "  -fixbr               Fix branch lengths of <tree_file>, only estimate" << endl
+		 << "                       model parameters" << endl
+		 << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
+		 << "  -v, -vv, -vvv        Verbose mode, print more messages to the screen" << endl
+	<< endl << "CONSENSUS RECONSTRUCTION OPTIONS:" << endl
+		 << "  -t <threshold>       Number between 0 and 1 for minimum split support." << endl
+		 << "                       Use '-t 0.5 -con' for majority-rule consensus'" << endl
+		 << "                       (default: 0, i.e. extended consensus)" << endl
+		 << "  -bi <burnin>         Discard <burnin> trees at the beginning of <tree_file>" << endl
+		 << "  -con                 Compute consensus tree of the trees in <tree_file>." << endl
+		 << "                       Output to <tree_file>.contree or <PREFIX>.contree" << endl
+		 << "  -net                 Compute consensus network of the trees in <trees_file>." << endl
+		 << "                       Output to <tree_file>.nex or <PREFIX>.nex" << endl
+		 << "  -sup <target_tree>   Assign support values for branches in <target_tree>" << endl
+		 << "                       based on the trees from <tree_file>. Output to" << endl
+		 << "                       <target_tree>.suptree or <PREFIX>.suptree" << endl
+	<< endl << "ROBINSON-FOULDS DISTANCE OPTIONS:" << endl
+		 << "  -rf_all              Compute all-to-all Robinson-Foulds distances of the" << endl
+		 << "                       trees in <tree_file>. Output to .rfdist file" << endl
+		 << "  -rf_adj              Compute Robinson-Foulds distances between adjacent pairs" << endl
+		 << "                       of the trees in <tree_file>. Output to .rfdist file" << endl
+		 << endl;
 
 	if (full_command) {
 		//TODO Print other options here (to be added)
