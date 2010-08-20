@@ -787,10 +787,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.second_tree = argv[cnt];
 				params.consensus_type = CT_ASSIGN_SUPPORT;
 			} else if (strcmp(argv[cnt],"-con") == 0) {
-				cnt++;
 				params.consensus_type = CT_CONSENSUS_TREE;
 			} else if (strcmp(argv[cnt],"-net") == 0) {
-				cnt++;
 				params.consensus_type = CT_CONSENSUS_NETWORK;
 			} else if (strcmp(argv[cnt],"-min") == 0) {
 				params.find_pd_min = true;
@@ -1020,10 +1018,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 	if (params.user_file == NULL && params.aln_file == NULL)
 		usage(argv, false);
 	if (!params.out_prefix) {
-		if (params.user_file) 
-			params.out_prefix = params.user_file;
-		else 
+		if (params.aln_file) 
 			params.out_prefix = params.aln_file;
+		else 
+			params.out_prefix = params.user_file;
 	}
 }
 

@@ -747,7 +747,7 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 			}
 		}
 		lh_ptn *= p_var_cat;
-		if ((*aln)[ptn].is_const) {
+		if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
 			lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
 		}
 		assert(lh_ptn > 0);
@@ -1021,7 +1021,7 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
 		lh_ptn *= p_var_cat;
 		lh_ptn_derv1 *= p_var_cat;
 		lh_ptn_derv2 *= p_var_cat;
-		if ((*aln)[ptn].is_const) {
+		if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
 			lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
 		}
 		assert(lh_ptn > 0);

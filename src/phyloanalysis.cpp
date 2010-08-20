@@ -327,10 +327,22 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 			out << "  pi(" << alignment.convertStateBack(i) << ") = " << state_freqs[i] << endl;
 		delete state_freqs;
 
-
+		RateHeterogeneity *rate_model = tree.getRate();
 		out << endl << "RATE HETEROGENEITY" << endl << "------------------" << endl << endl;
-		out << "Model of rate heterogeneity: " << tree.getRate()->full_name << endl;
-		tree.getRate()->writeInfo(out);
+		out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
+		rate_model->writeInfo(out);
+		
+		if (rate_model->getNRate() > 1 || rate_model->getPInvar() > 0.0) {
+			out << endl << "Rates and their respective probabilities used in the likelihood function:" << endl << endl
+				<< " Category  Relative rate  Probability" << endl;
+			if (rate_model->getPInvar() > 0.0)
+				out << "  0         0              " << rate_model->getPInvar() << endl;
+			for (i = 0; i < rate_model->getNRate(); i++) {
+				out << "  " << i+1 << "         ";
+				out.width(14);
+				out << left << rate_model->getRate(i) << " " << (1.0 - rate_model->getPInvar()) / rate_model->getNRate() << endl;
+			}
+		}
 // Bootstrap analysis: 
 //Display as outgroup: a
 
@@ -354,7 +366,13 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 			   "Tree in newick format:" << endl << endl;
 		tree.printResultTree(params, out);
 		out << endl;
-		
+/*
+		if (params.write_intermediate_trees) {
+			out << endl << "CONSENSUS OF INTERMEDIATE TREES" << endl << "-----------------------" << endl << endl 
+				<< "Number of intermediate trees: " << tree.stop_rule.getNumIterations() << endl
+				<< "Split threshold: " << params.split_threshold << endl
+				<< "Burn-in: " << params.tree_burnin << endl << endl;
+		}*/
 		time_t cur_time;
 		time (&cur_time);
 		
@@ -554,6 +572,11 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 
 	}
 
+	tree.setRepresentNum(params.k_representative);
+	tree.setProbDelete(params.p_delete);
+	tree.setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
+	tree.setIQPAssessQuartet(params.iqp_assess_quartet);
+
         /* do iterated local search */
         if ( ils && params.min_iterations > 1 ) {
             cout << "Star doing iterated local search " << endl;
@@ -574,10 +597,6 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 			params.max_iterations <<"], confidence " << params.stop_confidence << endl;
 		cout << "Important quartet assessed on     : " << ((params.iqp_assess_quartet == IQP_DISTANCE) ? "Distance" : "Parsimony") << endl;
 		cout << endl;
-		tree.setRepresentNum(params.k_representative);
-		tree.setProbDelete(params.p_delete);
-		tree.setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
-		tree.setIQPAssessQuartet(params.iqp_assess_quartet);
 
 		tree.doIQPNNI(params);
 		cout << "Optimizing model parameters" << endl;
