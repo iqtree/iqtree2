@@ -23,7 +23,8 @@
 #include <string.h>
 #include <iostream>
 
-const double ZERO = 0.0000001;
+const double ZERO = 0.000001;
+using namespace std;
 
 EigenDecomposition::EigenDecomposition()
 {
@@ -105,12 +106,23 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		for (i = 0, zero = 0.0; i < num_state; i++) {
 			for (k = 0; k < num_state; k++) zero += b[i][k] * evec[k][j];
 			zero -= eval[j] * evec[i][j];
-			if (fabs(zero) > 1.0e-5)
+			if (fabs(zero) > 1.0e-5) {
 				error = 1;
+				break;
+			}
 		}
 	}
-	if (error)
+	if (error) {
 		std::cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
+		std::cout << "Rate matrix R: " << endl;
+		for (i = 0; i < num_state; i++) {
+			for (j = 0; j < num_state; j++) std::cout << rate_params[i][j] << " ";
+			cout << endl;
+		}
+		std::cout << "State frequencies: " << endl;
+		for (i = 0; i < num_state; i++) std::cout << state_freq[i] << " ";
+		std::cout << endl;
+	}
 
 	for (i=num_state-1; i>= 0; i--)
 		delete [] b[i];

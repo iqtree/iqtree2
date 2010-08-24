@@ -237,7 +237,7 @@ void GTRModel::getVariables(double *variables) {
 
 double GTRModel::targetFunk(double x[]) {
 	getVariables(x);
-	if (state_freq[num_states-1] <= 0.0) return 1.0e+9;
+	if (state_freq[num_states-1] <= 1e-6) return 1.0e+9;
 	decomposeRateMatrix();
 	assert(phylo_tree);
 	phylo_tree->clearAllPartialLh();

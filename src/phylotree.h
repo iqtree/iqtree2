@@ -21,8 +21,8 @@
 #include "rateheterogeneity.h"
 
 // ******** FOR OPTIMIZATION *******
-#include "miniSSEL1BLAS.h"
-#include "miniSSEL1BLAS.hpp"
+//#include "miniSSEL1BLAS.h"
+//#include "miniSSEL1BLAS.hpp"
 // ******** FOR OPTIMIZATION *******
 
 const int MAX_SPR_MOVES = 20;
