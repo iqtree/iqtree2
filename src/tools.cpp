@@ -504,6 +504,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.areas_boundary_file = NULL;
 	params.boundary_modifier = 1.0;
 	params.dist_file = NULL;
+	params.compute_ml_dist = false;
 	params.budget_file = NULL;
 	params.overlap = 0;
 	params.is_rooted = false;
@@ -701,6 +702,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -dist <distance_file>";
 				params.dist_file = argv[cnt];
+			} else if (strcmp(argv[cnt],"-dml") == 0) {
+				params.compute_ml_dist = true;
 			} else if (strcmp(argv[cnt],"-r") == 0) {
 				cnt++;
 				if (cnt >= argc)

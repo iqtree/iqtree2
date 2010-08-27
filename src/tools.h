@@ -443,6 +443,11 @@ struct Params {
 	char *dist_file;
 
 	/**
+		TRUE to compute the maximum-likelihood distances
+	*/
+	bool compute_ml_dist;
+
+	/**
 		file containing budget information
 	*/
 	char *budget_file;

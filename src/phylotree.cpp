@@ -18,6 +18,7 @@
 #include "gtrmodel.h"
 #include "modeldna.h"
 #include "modelprotein.h"
+#include "alignmentpairwise.h"
 
 const double MIN_BRANCH_LEN = 0.000001;
 const double MAX_BRANCH_LEN = 9.0;
@@ -626,19 +627,20 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 	if (!node) {
 		node = (PhyloNode*)root;
 		// allocate the big central partial likelihoods memory
-		if (verbose_mode >= VB_MED)
-			cout << "Allocating " << (leafNum-1)*4*block_size*sizeof(double) << " bytes for partial likelihood vectors" << endl;
-		if (!central_partial_lh) 
-			central_partial_lh = new double[(leafNum-1)*4*block_size];
 		if (!central_partial_lh) {
-			outError("Not enough memory for partial likelihood vectors");
+			if (verbose_mode >= VB_MED)
+				cout << "Allocating " << (leafNum-1)*4*block_size*sizeof(double) << " bytes for partial likelihood vectors" << endl;
+			central_partial_lh = new double[(leafNum-1)*4*block_size];
+			if (!central_partial_lh) 
+				outError("Not enough memory for partial likelihood vectors");
+		
 		}
-		if (verbose_mode >= VB_MED)
-			cout << "Allocating " << (leafNum-1)*4*pars_block_size*sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
-		if (!central_partial_pars)
-			central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
 		if (!central_partial_pars) {
-			outError("Not enough memory for partial parsimony vectors");
+			if (verbose_mode >= VB_MED)
+				cout << "Allocating " << (leafNum-1)*4*pars_block_size*sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
+			central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
+			if (!central_partial_pars)
+				outError("Not enough memory for partial parsimony vectors");
 		}
 		index = 0;
 	}
@@ -1219,34 +1221,80 @@ void PhyloTree::growTreeML(Alignment *alignment) {
 	nodeNum = 2 * leafNum - 2;
 }
 
+/****************************************************************************
+	Distance function
+****************************************************************************/
+
+double PhyloTree::computeDist(int seq1, int seq2) {
+	// if no model or site rate is specified, return JC distance
+	if (!model_factory || !site_rate) return aln->computeDist(seq1, seq2);
+
+	// now optimize the distance based on the model and site rate
+	AlignmentPairwise aln_pair(aln, seq1, seq2);
+	aln_pair.model_factory = model_factory;
+	aln_pair.site_rate = site_rate;
+	return aln_pair.optimizeDist();
+}
+
+
+void PhyloTree::computeDist(double *dist_mat) {
+	time_t begin_time = clock();
+	int nseqs = aln->getNSeq();
+	int pos = 0;
+	double longest_dist = 0.0;
+	for (int seq1 = 0; seq1 < nseqs; seq1 ++) 
+		for (int seq2 = 0; seq2 < nseqs; seq2 ++, pos++) {
+			if (seq1 == seq2) 
+				dist_mat[pos] = 0.0; 
+			else if (seq2 > seq1) {
+				dist_mat[pos] = computeDist(seq1, seq2);
+			} else dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
+			if (dist_mat[pos] > longest_dist) 
+				longest_dist = dist_mat[pos]; 
+		}
+	if (longest_dist > MAX_GENETIC_DIST*0.99) 
+		outWarning("Some distances are saturated. Please check your alignment again");
+	cout << "Time: " << (double)(clock() - begin_time) / CLOCKS_PER_SEC << " seconds" << endl;
+}
+
 
 /****************************************************************************
 	compute BioNJ tree, a more accurate extension of Neighbor-Joining
 ****************************************************************************/
 
-void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, double* &dist_mat) {
-	cout << "Computing BioNJ tree..." << endl;
+void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, double* &dist_mat, bool read_tree) {
 	string dist_file = params.out_prefix;
 	string bionj_file = params.out_prefix;
 	dist_file += ".dist";
 	bionj_file += ".bionj";
 
+	aln = alignment;
+
 	if (!dist_mat) {
 		dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
 	}
 	if (!params.dist_file)
-		alignment->computeDist(dist_mat);
+		computeDist(dist_mat);
 	else
 		alignment->readDist(params.dist_file, dist_mat);
 
 	alignment->printDist(dist_file.c_str(), dist_mat);
 	//delete dist_mat;
 
+	if (params.user_file) return;
+
+	cout << "Computing BioNJ tree..." << endl;
 	BioNj bionj;
 	bionj.create(dist_file.c_str(), bionj_file.c_str());
-	bool my_rooted = false;
-	readTree(bionj_file.c_str(), my_rooted);
-	setAlignment(alignment);
+	if (read_tree) {
+		bool my_rooted = false;
+		bool empty_tree = (!root);
+		if (root) freeNode();
+		readTree(bionj_file.c_str(), my_rooted);
+		//assignLeafNames();
+		if (!empty_tree) initializeAllPartialLh();
+		setAlignment(alignment);
+	}
 }
 
 int PhyloTree::fixNegativeBranch(double fixed_length, Node *node, Node *dad) {

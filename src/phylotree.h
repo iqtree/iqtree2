@@ -168,7 +168,6 @@ public:
 	virtual Node* newNode(int node_id, int node_name);
 
 
-
 	/**
 		this function return the parsimony or likelihood score of the tree. Default is 
 		to compute the parsimony score. Override this function if you define a new
@@ -459,6 +458,25 @@ public:
 	double addTaxonML(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad);
 
 /****************************************************************************
+	Distance function
+****************************************************************************/
+
+	/**
+		compute the distance between 2 sequences. 
+		@param seq1 index of sequence 1
+		@param seq2 index of sequence 2		
+		@return distance between seq1 and seq2
+	*/
+	double computeDist(int seq1, int seq2);
+
+
+	/**
+		compute distance matrix, assume dist_mat is allocated by memory of size num_seqs * num_seqs.
+		@param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
+	*/
+	void computeDist(double *dist_mat);
+
+/****************************************************************************
 	compute BioNJ tree, a more accurate extension of Neighbor-Joining
 ****************************************************************************/
 
@@ -468,7 +486,7 @@ public:
 		@param alignment input alignment
 		@param dist_mat (OUT) distance matrix
 	*/
-	void computeBioNJ(Params &params, Alignment *alignment, double* &dist_mat);
+	void computeBioNJ(Params &params, Alignment *alignment, double* &dist_mat, bool read_tree);
 
 	/**
 		Neighbor-joining tree might contain negative branch length. This

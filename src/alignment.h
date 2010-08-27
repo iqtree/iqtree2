@@ -163,10 +163,10 @@ public:
 
 	/**
 		extract sub-alignment of a sub-set of sequences
+		@param aln original input alignment
 		@param seq_id ID of sequences to extract from
-		@param sub_aln (OUT) extracted sub alignment
 	*/
-	void extractSubAlignment(IntVector &seq_id, Alignment *sub_aln);
+	void extractSubAlignment(Alignment *aln, IntVector &seq_id);
 
 	/**
 		TODO
@@ -205,11 +205,6 @@ public:
 	*/
 	virtual double computeDist(int seq1, int seq2) { return computeJCDist(seq1, seq2); }
 
-	/**
-		compute distance matrix, assume dist_mat is allocated by memory of size num_seqs * num_seqs.
-		@param dist_mat (OUT) distance matrix between all pairs of sequences
-	*/
-	void computeDist(double *dist_mat);
 
 	/**
 		write distance matrix into a file in PHYLIP distance format

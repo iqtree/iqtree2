@@ -527,25 +527,27 @@ void Alignment::printPhylip(char *file_name) {
 }
 
 
-void Alignment::extractSubAlignment(IntVector &seq_id, Alignment *sub_aln) {
+void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id) {
 	IntVector::iterator it;
 	for (it = seq_id.begin(); it != seq_id.end(); it++) {
-		assert(*it >= 0 && *it < getNSeq());
-		sub_aln->seq_names.push_back(getSeqName(*it));
+		assert(*it >= 0 && *it < aln->getNSeq());
+		seq_names.push_back(aln->getSeqName(*it));
 	}
-	sub_aln->site_pattern.resize(getNPattern(), -1);
-	sub_aln->clear();
-	sub_aln->pattern_index.clear();
+	num_states = aln->num_states;
+	site_pattern.resize(aln->getNPattern(), -1);
+	clear();
+	pattern_index.clear();
 	int site = 0;
 	VerboseMode save_mode = verbose_mode; 
 	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
-	for (iterator pit = begin(); pit != end(); pit++, site++) {
+	for (iterator pit = aln->begin(); pit != aln->end(); pit++, site++) {
 		Pattern pat;
 		for (it = seq_id.begin(); it != seq_id.end(); it++)
 			pat.push_back((*pit)[*it]);
-		sub_aln->addPattern(pat, site, (*pit).frequency);
+		addPattern(pat, site, (*pit).frequency);
 	}
 	verbose_mode = save_mode;
+	countConstSite();
 }
 
 void Alignment::countConstSite() {
@@ -584,24 +586,6 @@ double Alignment::computeJCDist(int seq1, int seq2) {
 		return MAX_GENETIC_DIST;
 	}
 	return -log(x) * (num_states - 1) / num_states;
-}
-
-void Alignment::computeDist(double *dist_mat) {
-	int nseqs = getNSeq();
-	int pos = 0;
-	double longest_dist = 0.0;
-	for (int seq1 = 0; seq1 < nseqs; seq1 ++) 
-		for (int seq2 = 0; seq2 < nseqs; seq2 ++, pos++) {
-			if (seq1 == seq2) 
-				dist_mat[pos] = 0.0; 
-			else if (seq2 > seq1)
-				dist_mat[pos] = computeDist(seq1, seq2);
-			else dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
-			if (dist_mat[pos] > longest_dist) 
-				longest_dist = dist_mat[pos]; 
-		}
-	if (longest_dist == MAX_GENETIC_DIST) 
-		outWarning("Some distances are saturated. Please check your alignment again");
 }
 
 void Alignment::printDist(ostream &out, double *dist_mat) {

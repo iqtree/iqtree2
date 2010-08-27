@@ -435,10 +435,10 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		if (!tree.dist_matrix) {
 			tree.dist_matrix = new double[alignment->getNSeq() * alignment->getNSeq()];
 		}
-		if (!params.dist_file)
-			alignment->computeDist(tree.dist_matrix);
-		else
+		if (params.dist_file)
  			alignment->readDist(params.dist_file, tree.dist_matrix);
+		//else
+			//tree.computeDist(tree.dist_matrix);
 	} else {
 /*
 		if (params.parsimony) {
@@ -452,7 +452,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 				alignment->readDist(params.dist_file, tree.dist_matrix);
 			
 		} else*/
-			tree.computeBioNJ(params, alignment, tree.dist_matrix); // create BioNJ tree
+			cout << "Computing Juke-Cantor distances..." << endl;
+			tree.computeBioNJ(params, alignment, tree.dist_matrix, true); // create BioNJ tree
 	}
 
 	if (params.root) {
@@ -528,6 +529,17 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 	//Update tree score
 	tree.curScore = bestTreeScore;
+
+	if (!params.dist_file && params.compute_ml_dist) {
+		cout << "Computing ML distances based on estimated model parameters..." << endl;
+		tree.computeBioNJ(params, alignment, tree.dist_matrix, true); // create BioNJ tree
+		tree.fixNegativeBranch(fixed_length);
+		if (!params.fixed_branch_length)
+			tree.curScore = tree.optimizeAllBranches();
+		else
+			tree.curScore = tree.computeLikelihood();
+		cout << "Log-likelihood of the new tree: " << tree.curScore << endl;
+	}
 
         
 //        tree.drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
