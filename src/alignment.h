@@ -145,6 +145,8 @@ public:
 	*/
 	inline int getNPattern() { return size(); }
 
+	inline int getPatternID(int site) { return site_pattern[site]; }
+
 	/**
 		@param i sequence index
 		@return sequence name
@@ -156,6 +158,11 @@ public:
 		@return corresponding ID, -1 if not found
 	*/
 	int getSeqID(string &seq_name);
+
+	/**
+		@return length of the longest sequence name
+	*/
+	int getMaxSeqNameLength();
 
 /****************************************************************************
 	alignment general processing

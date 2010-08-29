@@ -353,6 +353,35 @@ public:
 
 
 /********************************************************
+	calculate distance matrix
+********************************************************/
+
+
+	/**
+		calculate the pairwise distances on the tree, print the matrix to file (in phylip format)
+		@param filename file name
+	*/
+	void calcDist(char *filename);
+
+	/**
+		calculate the pairwise distances on the tree
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+		@param dist (OUT) distance matrix
+	*/
+	void calcDist(double* &dist, Node *node = NULL, Node *dad = NULL );
+
+	/**
+		calculate the pairwise distances on the tree
+		@param aroot the starting root
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+		@param cur_len current length from aroot to node
+		@param dist (OUT) distance matrix
+	*/
+	void calcDist(Node *aroot, double cur_len, double* &dist, Node *node, Node *dad);
+
+/********************************************************
 	PROPERTIES OF TREE
 ********************************************************/
 	/**

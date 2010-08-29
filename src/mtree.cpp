@@ -1017,6 +1017,69 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
 	}
 }
 
+
+void MTree::calcDist(char *filename) {
+	vector<string> taxname;
+	int i, j;	
+
+	// allocate memory
+	taxname.resize(leafNum);
+	double *dist = new double [leafNum * leafNum];
+	// calculate the distances
+	calcDist(dist);
+	// get the taxa name
+	getTaxaName(taxname);
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+	
+		// now write the distances in phylip .dist format
+		out << leafNum << endl;
+		
+		for (i = 0; i < leafNum; i++) {
+			out << taxname[i] << "   ";
+			for (j = 0; j < leafNum; j++) {
+				out << dist[i*leafNum + j] << "  ";
+			}
+			out << endl;
+		}
+		out.close();
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+	delete [] dist;
+}
+
+
+void MTree::calcDist(double* &dist, Node *node, Node *dad) {
+	if (!node) node = root;
+	if (node->isLeaf()) {
+		calcDist(node, 0.0, dist, node, NULL);
+	}
+	//for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
+		//if ((*it)->node != dad)	{
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		calcDist(dist, (*it)->node, node);
+	}
+}
+
+void MTree::calcDist(Node *aroot, double cur_len, double* &dist, Node *node, Node *dad) {
+	if (!node) node = root;
+	if (node->isLeaf()) {
+		dist[aroot->id * leafNum + node->id] = cur_len;
+		dist[node->id * leafNum + aroot->id] = cur_len;
+	}
+	//for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
+		//if ((*it)->node != dad)	{
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		calcDist(aroot, cur_len + (*it)->length, dist, (*it)->node, node);
+	}
+	
+}
+
+
 /*********************************************
 	class PDTaxaSet
 *********************************************/

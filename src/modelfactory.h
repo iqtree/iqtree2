@@ -53,6 +53,14 @@ public:
 	void computeTransMatrix(double time, double *trans_matrix);
 
 	/**
+		Wrapper for computing the transition probability between two states.
+		@param time time between two events
+		@param state1 first state
+		@param state2 second state
+	*/
+	double computeTrans(double time, int state1, int state2);
+
+	/**
 		Wrapper for computing the transition probability matrix and the derivative 1 and 2 from the model.
 		It use ModelFactory that stores matrix computed before for effiency purpose.
 		@param time time between two events

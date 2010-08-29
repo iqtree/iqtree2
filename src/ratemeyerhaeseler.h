@@ -17,66 +17,75 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef ALIGNMENTPAIRWISE_H
-#define ALIGNMENTPAIRWISE_H
+#ifndef RATEMEYERHAESELER_H
+#define RATEMEYERHAESELER_H
 
-#include "alignment.h"
-#include "optimization.h"
-#include "modelfactory.h"
 #include "rateheterogeneity.h"
+#include "tools.h"
 
 /**
-Pairwise alignment
+Implementation for site-specific rates of Meyer & von Haeseler (2003)
+Inherited from Optimization and the double vector for storing site-specific rates
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class AlignmentPairwise : public Alignment, public Optimization
+class RateMeyerHaeseler : public RateHeterogeneity, public DoubleVector
 {
 public:
-    AlignmentPairwise();
-
 	/**
-		construct the pairwise alignment from two sequences of a multiple alignment
-		@param aln input multiple alignment
-		@param seq_id1 ID of the first sequence
-		@param seq_id2 ID of the second sequence
+		constructor
 	*/
-    AlignmentPairwise(Alignment *aln, int seq_id1, int seq_id2);
+    RateMeyerHaeseler();
+
+    ~RateMeyerHaeseler();
+
 
 	/**
-		compute the likelihood for a distance between two sequences. Used for the ML optimization of the distance.
+		get the number of rate categories. 
+		@return the number of rate categories
+	*/
+	virtual int getNRate() { return size(); }
+
+	/**
+		get the rate of a specified category
+		@param category category ID from 0 to #category-1
+		@return the rate of the specified category
+	*/
+	virtual double getRate(int category) { assert(category < size()); return at(category); }
+
+
+	/**
+		optimize parameters, the rates in this case
+		@return the best likelihood 
+	*/
+	virtual double optimizeParameters();
+
+	/**
+		optimize rate of site
+		@param site target site
+		@return the optimized rate value, also update the corresponding element of the vector
+	*/
+	double optimizeSiteRate(int site);
+
+	/**
+		This function is inherited from Optimization class for optimizting site rates 
 		@param value x-value of the function
-		@return log-likelihood 
+		@return f(value) of function f you want to minimize
 	*/
 	virtual double computeFunction(double value);
 
-	/**
-		compute the ML distance between two sequences
-		@return the ML distance
-	*/
-	double optimizeDist(double initial_dist);
 
+	void writeSiteRates(const char *file_name);
 
 	/**
-		destructor
+		distance matrix inferred from the path lengths of the tree (not from the sequences)
 	*/
-    ~AlignmentPairwise();
+	double *dist_mat;
 
 	/**
-		pairwise state frequencies
+		current site under optimization
 	*/
-	int *pair_freq;
-
-	/**
-		stores transition matrices computed before for efficiency purpose, eps. AA or CODON model.
-	*/
-	ModelFactory *model_factory;
-
-	/**
-		among-site rates 
-	*/
-	RateHeterogeneity *site_rate;
-
+	int optimizing_site;
 };
 
 #endif

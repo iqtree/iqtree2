@@ -34,6 +34,13 @@ public:
 	*/
 	void computeConst();
 
+	/**
+		@param num_states number of states of the model
+		@return the number of ambiguous character incl. gaps 
+	*/
+	int computeAmbiguousChar(int num_states);
+
+
 	/** 
 		destructor
 	*/

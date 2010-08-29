@@ -636,9 +636,10 @@ double IQPTree::doIQPNNI(Params &params) {
         double iqp_score = doIQP();
         clock_t endClock = clock();
         cout.precision(15);
-        cout << "IQP score : " << iqp_score << endl;
-        printf("Total time used for IQP : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
-
+        if (verbose_mode >= VB_MED) {
+			cout << "IQP score : " << iqp_score << endl;
+			printf("Total time used for IQP : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
+		}
         if (verbose_mode >= VB_DEBUG) {
             string iqp_tree = tree_file_name + "IQP" + convertIntToString(cur_iteration);
             printTree(iqp_tree.c_str());

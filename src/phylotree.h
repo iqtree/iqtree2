@@ -151,6 +151,8 @@ public:
 
 	SubstModel *getModel() { return model; }
 
+	ModelFactory *getModelFactory() { return model_factory; }
+
 	/**
 		allocate a new node. Override this if you have an inherited Node class.
 		@param node_id node ID
@@ -279,6 +281,12 @@ public:
 	*/
 	virtual double optimizeModel(bool fixed_len = false);
 
+	/**
+		Roll back the tree saved with only Taxon IDs and branch lengths.
+		For this function to work, one must printTree before with WT_TAXON_ID + WT_BR_LEN
+		@param best_tree_string input stream to read from
+	*/
+	void rollBack(istream &best_tree_string);
 
 /****************************************************************************
 	computing derivatives of likelihood function
@@ -465,9 +473,10 @@ public:
 		compute the distance between 2 sequences. 
 		@param seq1 index of sequence 1
 		@param seq2 index of sequence 2		
+		@param initial_dist initial distance
 		@return distance between seq1 and seq2
 	*/
-	double computeDist(int seq1, int seq2);
+	double computeDist(int seq1, int seq2, double initial_dist);
 
 
 	/**
@@ -475,6 +484,15 @@ public:
 		@param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
 	*/
 	void computeDist(double *dist_mat);
+
+	/**
+		compute distance matrix, allocating memory if necessary
+		@param params program parameters
+		@param alignment input alignment
+		@param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
+		@param dist_file (OUT) name of the distance file
+	*/
+	void computeDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file);
 
 /****************************************************************************
 	compute BioNJ tree, a more accurate extension of Neighbor-Joining
@@ -484,10 +502,9 @@ public:
 		compute BioNJ tree
 		@param params program parameters
 		@param alignment input alignment
-		@param dist_mat (OUT) distance matrix
+		@param dist_file distance matrix file
 	*/
-	void computeBioNJ(Params &params, Alignment *alignment, double* &dist_mat, bool read_tree);
-
+	void computeBioNJ(Params &params, Alignment *alignment, string &dist_file);
 	/**
 		Neighbor-joining tree might contain negative branch length. This
 		function will fix this.

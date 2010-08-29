@@ -127,6 +127,19 @@ void GTRModel::computeTransMatrix(double time, double *trans_matrix) {
 	}
 }
 
+double GTRModel::computeTrans(double time, int state1, int state2) {
+	double evol_time = time / total_num_subst;
+	int i;
+
+	double *coeff_entry = eigen_coeff + ((state1*num_states+state2)*num_states);
+	double trans_prob = 0.0;
+	for (i = 0; i < num_states; i++) {
+		trans_prob += coeff_entry[i] * exp(evol_time * eigenvalues[i]);
+	}
+	return trans_prob;
+}
+
+
 void GTRModel::computeTransDerv(double time, double *trans_matrix, 
 	double *trans_derv1, double *trans_derv2) 
 {

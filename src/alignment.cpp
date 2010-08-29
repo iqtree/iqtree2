@@ -35,6 +35,14 @@ int Alignment::getSeqID(string &seq_name) {
 	return -1;
 }
 
+int Alignment::getMaxSeqNameLength() {
+	int len = 0;
+	for (int i = 0; i < getNSeq(); i++)
+		if (getSeqName(i).length() > len) 
+			len = getSeqName(i).length();
+	return len;
+}
+
 void checkSeqName(StrVector &seq_names) {
 	ostringstream warn_str;
 	for (StrVector::iterator it = seq_names.begin(); it != seq_names.end(); it++) {
@@ -55,7 +63,7 @@ void checkSeqName(StrVector &seq_names) {
 
 Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : vector<Pattern>() {
 
-	cout << "Reading alignment file " << filename << "..." << endl;
+	cout << "Reading alignment file " << filename << " ..." << endl;
 	intype = detectInputFile(filename);
 
 	try {
@@ -80,10 +88,10 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 		
 	checkSeqName(seq_names);
 	cout << "Alignment contains " << getNSeq() << " sequences with " << getNSite() << " characters" << endl;
-	cout << "Number of character states is " << num_states << endl;
-	cout << "Number of patterns = " << size() << endl;
+	//cout << "Number of character states is " << num_states << endl;
+	//cout << "Number of patterns = " << size() << endl;
 	countConstSite();
-	cout << "Fraction of constant sites: " << frac_const_sites << endl;
+	//cout << "Fraction of constant sites: " << frac_const_sites << endl;
 
 }
 
@@ -187,7 +195,7 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 		num_gaps_only += addPattern(pat, site);
 	}
 	if (num_gaps_only)
-		cout << "WARNING: " << num_gaps_only << " sites contain only gaps or unknown chars." << endl;
+		cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous chars." << endl;
 	if (verbose_mode >= VB_MAX)
 		for (site = 0; site < size(); site++) {
 			for (seq = 0; seq < nseq; seq++)
@@ -206,7 +214,7 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
 		}
 	if (gaps_only) {
 		if (verbose_mode >= VB_DEBUG)
-			cout << "Site " << site << " contains only gaps or unknown characters" << endl;
+			cout << "Site " << site << " contains only gaps or ambiguous characters" << endl;
 		//return true;
 	}
 	PatternIntMap::iterator pat_it = pattern_index.find(pat);
@@ -494,7 +502,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 		num_gaps_only += addPattern(pat, site);
 	}
 	if (num_gaps_only)
-		cout << "WARNING: " << num_gaps_only << " sites contain only gaps or unknown chars." << endl;
+		cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous chars." << endl;
 	if (err_str.str() != "")
 		throw err_str.str();
 
@@ -506,14 +514,13 @@ void Alignment::printPhylip(char *file_name) {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(file_name);
-		out << seq_names.size() << " " << site_pattern.size() << endl;
+		out << getNSeq() << " " << getNSite() << endl;
 		StrVector::iterator it;
-		int max_seq_len = 10;
-		for (it = seq_names.begin(); it != seq_names.end(); it++)
-			if ((*it).length() > max_seq_len) max_seq_len = (*it).length();
+		int max_len = getMaxSeqNameLength();
+		if (max_len < 10) max_len = 10;
 		int seq_id = 0;
 		for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
-			out.width(max_seq_len);
+			out.width(max_len);
 			out << left << (*it) << " ";
 			for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++)
 				out << convertStateBack(at(*i)[seq_id]);
@@ -590,16 +597,22 @@ double Alignment::computeJCDist(int seq1, int seq2) {
 
 void Alignment::printDist(ostream &out, double *dist_mat) {
 	int nseqs = getNSeq();
+	int max_len = getMaxSeqNameLength();
+	if (max_len < 10) max_len = 10;
 	out << nseqs << endl;
 	int pos = 0;
 	out.precision(6);
 	out << fixed;
 	for (int seq1 = 0; seq1 < nseqs; seq1 ++)  {
-		out.width(10);
+		out.width(max_len);
 		out << left << getSeqName(seq1) << " ";
-		out.width(8);
 		for (int seq2 = 0; seq2 < nseqs; seq2 ++) {
-			out << dist_mat[pos++] << " ";
+			out << dist_mat[pos++];
+			if (seq2 % 7 == 6) {
+				out << endl;
+				out.width(max_len+1);
+			} 
+			out << " "; 
 		}	
 		out << endl;
 	}

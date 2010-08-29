@@ -32,6 +32,13 @@ void SubstModel::computeTransMatrix(double time, double *trans_matrix) {
 			trans_matrix[i] = non_diagonal;
 }
 
+double SubstModel::computeTrans(double time, int state1, int state2) {
+	double non_diagonal = (1.0 - exp(-time*num_states/(num_states - 1))) / num_states;
+	if (state1 != state2)
+		return non_diagonal;
+	return 1.0 - non_diagonal * (num_states - 1);
+}
+
 void SubstModel::getRateMatrix(double *rate_mat) {
 	int nrate = num_states*(num_states-1)/2;
 	for (int i = 0; i < nrate; i++)

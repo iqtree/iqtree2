@@ -41,6 +41,10 @@ void ModelFactory::stopStoringTransMatrix() {
 }
 
 
+double ModelFactory::computeTrans(double time, int state1, int state2) {
+	return model->computeTrans(time, state1, state2);
+}
+
 void ModelFactory::computeTransMatrix(double time, double *trans_matrix) {
 	if (!store_trans_matrix || !is_storing) {
 		model->computeTransMatrix(time, trans_matrix);

@@ -46,6 +46,14 @@ public:
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix);
 
+	/**
+		compute the transition probability between two states. One should override this function when defining new model.
+		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)
+		@param time time between two events
+		@param state1 first state
+		@param state2 second state
+	*/
+	virtual double computeTrans(double time, int state1, int state2);
 
 	/**
 		Get the rate matrix. One should override this function when defining new model.

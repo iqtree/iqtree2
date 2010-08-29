@@ -123,6 +123,14 @@ void PhyloTree::setAlignment(Alignment *alignment)
 	}
 }
 
+void PhyloTree::rollBack(istream &best_tree_string) {
+	best_tree_string.seekg(0);
+	freeNode();
+	readTree(best_tree_string, rooted);
+	assignLeafNames();
+	initializeAllPartialLh();			
+}
+
 void PhyloTree::setModel(SubstModel *amodel) {
 	model = amodel;
 }
@@ -1225,15 +1233,17 @@ void PhyloTree::growTreeML(Alignment *alignment) {
 	Distance function
 ****************************************************************************/
 
-double PhyloTree::computeDist(int seq1, int seq2) {
+double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
 	// if no model or site rate is specified, return JC distance
-	if (!model_factory || !site_rate) return aln->computeDist(seq1, seq2);
+	if (initial_dist == 0.0) 
+		initial_dist = aln->computeDist(seq1, seq2);
+	if (!model_factory || !site_rate) return initial_dist;
 
 	// now optimize the distance based on the model and site rate
 	AlignmentPairwise aln_pair(aln, seq1, seq2);
 	aln_pair.model_factory = model_factory;
 	aln_pair.site_rate = site_rate;
-	return aln_pair.optimizeDist();
+	return aln_pair.optimizeDist(initial_dist);
 }
 
 
@@ -1247,7 +1257,7 @@ void PhyloTree::computeDist(double *dist_mat) {
 			if (seq1 == seq2) 
 				dist_mat[pos] = 0.0; 
 			else if (seq2 > seq1) {
-				dist_mat[pos] = computeDist(seq1, seq2);
+				dist_mat[pos] = computeDist(seq1, seq2, dist_mat[pos]);
 			} else dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
 			if (dist_mat[pos] > longest_dist) 
 				longest_dist = dist_mat[pos]; 
@@ -1257,44 +1267,46 @@ void PhyloTree::computeDist(double *dist_mat) {
 	cout << "Time: " << (double)(clock() - begin_time) / CLOCKS_PER_SEC << " seconds" << endl;
 }
 
+void PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file) {
+
+	aln = alignment;
+	dist_file = params.out_prefix;
+	if (!model_factory) 
+		dist_file += ".jcdist";
+	else
+		dist_file += ".mldist";
+
+	if (!dist_mat) {
+		dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
+		memset(dist_mat, 0, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
+	}
+	if (!params.dist_file) {
+		computeDist(dist_mat);
+		alignment->printDist(dist_file.c_str(), dist_mat);
+	} else {
+		alignment->readDist(params.dist_file, dist_mat);
+		dist_file = params.dist_file;
+	}
+}
+
 
 /****************************************************************************
 	compute BioNJ tree, a more accurate extension of Neighbor-Joining
 ****************************************************************************/
 
-void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, double* &dist_mat, bool read_tree) {
-	string dist_file = params.out_prefix;
+void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_file) {
 	string bionj_file = params.out_prefix;
-	dist_file += ".dist";
 	bionj_file += ".bionj";
 
-	aln = alignment;
-
-	if (!dist_mat) {
-		dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
-	}
-	if (!params.dist_file)
-		computeDist(dist_mat);
-	else
-		alignment->readDist(params.dist_file, dist_mat);
-
-	alignment->printDist(dist_file.c_str(), dist_mat);
-	//delete dist_mat;
-
-	if (params.user_file) return;
-
-	cout << "Computing BioNJ tree..." << endl;
+	cout << "Computing BIONJ tree..." << endl;
 	BioNj bionj;
 	bionj.create(dist_file.c_str(), bionj_file.c_str());
-	if (read_tree) {
-		bool my_rooted = false;
-		bool empty_tree = (!root);
-		if (root) freeNode();
-		readTree(bionj_file.c_str(), my_rooted);
-		//assignLeafNames();
-		if (!empty_tree) initializeAllPartialLh();
-		setAlignment(alignment);
-	}
+	bool my_rooted = false;
+	bool non_empty_tree = (root != NULL);
+	if (root) freeNode();
+	readTree(bionj_file.c_str(), my_rooted);
+	if (non_empty_tree) initializeAllPartialLh();
+	setAlignment(alignment);
 }
 
 int PhyloTree::fixNegativeBranch(double fixed_length, Node *node, Node *dad) {

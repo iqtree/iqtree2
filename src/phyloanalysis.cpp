@@ -39,6 +39,7 @@
 
 #include "mtreeset.h"
 #include "mexttree.h"
+#include "ratemeyerhaeseler.h"
 
 const int DNA_MODEL_NUM = 14;
 
@@ -401,7 +402,20 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 			<< "DNA substitution. Bioinformatics, 14(9):817-8." << endl << endl;
 
 		out.close();
-		cout << "Analysis results reported in " << outfile << endl << endl;
+		cout << "Analysis results written to: " << endl 
+			<<  "  IQ-TREE report file:    " << outfile << endl 
+			<<  "  Final tree file:        " << params.out_prefix << ".treefile" << endl;
+		if (!params.dist_file) {
+			cout <<  "  Juke-Cantor distances:  " << params.out_prefix << ".jcdist" << endl;
+			if (params.compute_ml_dist)
+				cout <<  "  Likelihood distances:   " << params.out_prefix << ".mldist" << endl;
+		}
+		if (!params.user_file)
+			cout << "  BIONJ tree file:        " << params.out_prefix << ".bionj" << endl;
+		if (params.mvh_site_rate)
+			cout << "  Rates by MvH model:     " << params.out_prefix << ".mvhrate" << endl;
+		cout << endl;
+
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, outfile);
 	}
@@ -427,33 +441,25 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 
 	/* initialize tree, either by user tree or BioNJ tree */
 	IQPTree tree;
+	if (!tree.dist_matrix) {
+		tree.dist_matrix = new double[alignment->getNSeq() * alignment->getNSeq()];
+		memset(tree.dist_matrix, 0, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
+	}
+	if (params.dist_file) {
+		cout << "Reading distance matrix file " << params.dist_file << " ..." << endl;
+	} else {
+		cout << "Computing Juke-Cantor distances..." << endl;
+	}
+	string dist_file;
+	tree.computeDist(params, alignment, tree.dist_matrix, dist_file);
+
 	if (params.user_file) {
 		// start the search with user-defined tree
 		bool myrooted = params.is_rooted;
 		tree.readTree(params.user_file, myrooted);
 		tree.setAlignment(alignment);
-		if (!tree.dist_matrix) {
-			tree.dist_matrix = new double[alignment->getNSeq() * alignment->getNSeq()];
-		}
-		if (params.dist_file)
- 			alignment->readDist(params.dist_file, tree.dist_matrix);
-		//else
-			//tree.computeDist(tree.dist_matrix);
 	} else {
-/*
-		if (params.parsimony) {
-			tree.growTreeMP(alignment); // stepwise addition
-			if (!tree.dist_matrix) {
-				tree.dist_matrix = new double[alignment->getNSeq() * alignment->getNSeq()];
-			}
-			if (!params.dist_file)
-				alignment->computeDist(tree.dist_matrix);
-			else
-				alignment->readDist(params.dist_file, tree.dist_matrix);
-			
-		} else*/
-			cout << "Computing Juke-Cantor distances..." << endl;
-			tree.computeBioNJ(params, alignment, tree.dist_matrix, true); // create BioNJ tree
+		tree.computeBioNJ(params, alignment, dist_file); // create BioNJ tree
 	}
 
 	if (params.root) {
@@ -531,14 +537,25 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	tree.curScore = bestTreeScore;
 
 	if (!params.dist_file && params.compute_ml_dist) {
+		stringstream best_tree_string;
+		tree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
 		cout << "Computing ML distances based on estimated model parameters..." << endl;
-		tree.computeBioNJ(params, alignment, tree.dist_matrix, true); // create BioNJ tree
-		tree.fixNegativeBranch(fixed_length);
-		if (!params.fixed_branch_length)
-			tree.curScore = tree.optimizeAllBranches();
-		else
-			tree.curScore = tree.computeLikelihood();
-		cout << "Log-likelihood of the new tree: " << tree.curScore << endl;
+		tree.computeDist(params, alignment, tree.dist_matrix, dist_file); 
+		if (!params.user_file) {
+			tree.computeBioNJ(params, alignment, dist_file); // create BioNJ tree
+			tree.fixNegativeBranch(fixed_length);
+			if (!params.fixed_branch_length)
+				tree.curScore = tree.optimizeAllBranches();
+			else
+				tree.curScore = tree.computeLikelihood();
+			cout << "Log-likelihood of the new BIONJ tree: " << tree.curScore << endl;
+			if (tree.curScore < bestTreeScore - 1e-6) {
+				cout << "The new tree is worse, rolling back the first BIONJ tree..." << endl;
+				tree.rollBack(best_tree_string);
+				tree.curScore = tree.computeLikelihood();
+				cout << "Backup log-likelihood: " << tree.curScore << endl;
+			}
+		}
 	}
 
         
@@ -623,6 +640,16 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	/* root the tree at the first sequence */
 	tree.root = tree.findNodeName(alignment->getSeqName(0));
 	assert(tree.root);
+
+	if (params.mvh_site_rate) {
+		RateMeyerHaeseler rate_mvh;
+		cout << "Computing site-specific rates by " << rate_mvh.full_name << "..." << endl;
+		rate_mvh.setTree(&tree);
+		rate_mvh.optimizeParameters();
+		string rate_file = params.out_prefix;
+		rate_file += ".mvhrate";
+		rate_mvh.writeSiteRates(rate_file.c_str());
+	}
 
 	t_end=clock();
 	params.run_time = (t_end-t_begin);

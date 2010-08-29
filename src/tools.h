@@ -710,6 +710,11 @@ struct Params {
 		Robinson-Foulds distance computation mode: RF_ADJACENT PAIR, RF_ALL_PAIR
 	*/
 	int rf_dist_mode;
+	
+	/**
+		compute the site-specific rates by Meyer & von Haeseler method
+	*/
+	bool mvh_site_rate;
 };
 
 /**
