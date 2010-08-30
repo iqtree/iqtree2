@@ -37,6 +37,7 @@
 #include "msetsblock.h"
 #include "myreader.h"
 #include "phyloanalysis.h"
+#include "matree.h"
 #include "eigen/Core"
 
 using namespace std;
@@ -1320,6 +1321,101 @@ void testInputFile(Params &params) {
 	
 }
 
+/**MINH ANH: for some statistics about the branches on the input tree*/
+void branchStats(Params &params){
+	MaTree mytree(params.user_file, params.is_rooted);
+	mytree.drawTree(cout,WT_TAXON_ID + WT_INT_NODE);
+	//report to output file
+	string output;
+	if (params.out_file) 
+		output = params.out_file;
+	else {
+		if (params.out_prefix)
+			output = params.out_prefix;
+		else
+			output = params.user_file;
+		output += ".stats";
+	}
+	
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(output.c_str());		
+		mytree.printBrInfo(out);
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, output);
+	}
+	cout << "Information about branch lengths of the tree is printed to: " << output << endl;
+}
+
+/**MINH ANH: for comparison between the input tree and each tree in a given set of trees*/
+void compare(Params &params){
+	MaTree mytree(params.second_tree, params.is_rooted);
+	//sort taxon names and update nodeID, to be consistent with MTreeSet
+	NodeVector taxa;
+	mytree.getTaxa(taxa);
+	sort(taxa.begin(), taxa.end(), nodenamecmp);
+	int i;
+	NodeVector::iterator it;
+	for (it = taxa.begin(), i = 0; it != taxa.end(); it++, i++)
+			(*it)->id = i;
+
+	string drawFile = params.second_tree;
+	drawFile += ".draw";
+	try {
+		ofstream out1;
+		out1.exceptions(ios::failbit | ios::badbit);
+		out1.open(drawFile.c_str());		
+		mytree.drawTree(out1,WT_TAXON_ID + WT_INT_NODE);
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, drawFile);
+	}
+	cout << "Tree with branchID (nodeID) was printed to: " << drawFile << endl;
+		
+
+	MTreeSet trees(params.user_file,params.is_rooted, params.tree_burnin);
+	DoubleMatrix brMatrix;
+	DoubleVector BSDs;
+	IntVector RFs;
+	mytree.comparedTo(trees, brMatrix, RFs, BSDs);
+	int numTree = trees.size();
+	int numNode = mytree.nodeNum;
+	
+	string output;
+	if (params.out_file) 
+		output = params.out_file;
+	else {
+		if (params.out_prefix)
+			output = params.out_prefix;
+		else
+			output = params.user_file;
+		output += ".compare";
+	}
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(output.c_str());		
+		//print the header
+		out << "tree  " ;
+		for (int nodeID = 0; nodeID < numNode; nodeID++ )
+			if ( brMatrix[0][nodeID] != -2 )
+				out << "br_" << nodeID << "  ";
+		out << "RF  BSD" << endl;
+		for ( int treeID = 0; treeID < numTree; treeID++ )
+		{
+			out << treeID << "  ";
+			for (int nodeID = 0; nodeID < numNode; nodeID++ )
+				if ( brMatrix[treeID][nodeID] != -2 )
+					out << brMatrix[treeID][nodeID] << "  ";
+			out << RFs[treeID] << "  " << BSDs[treeID] << endl;
+		}
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, output);
+	}
+	cout << "Comparison with the given set of trees is printed to: " << output << endl;
+}
+
 
 /********************************************************
 	main function
@@ -1358,6 +1454,8 @@ int main(int argc, char *argv[])
 		scaleBranchLength(params);
 	} else if (params.run_mode == PD_DISTRIBUTION) {
 		calcDistribution(params);
+	} else if (params.run_mode == STATS){ /**MINH ANH: for some statistics on the input tree*/
+		branchStats(params); // MA
 	} else if (params.consensus_type != CT_NONE) {
 		switch (params.consensus_type) {
 			case CT_CONSENSUS_TREE: 
@@ -1373,6 +1471,8 @@ int main(int argc, char *argv[])
 					params.second_tree, params.is_rooted, params.out_file, params.out_prefix); 
 				break;
 			case CT_NONE: break;
+			/**MINH ANH: for some comparison*/
+			case COMPARE: compare(params); break; //MA
 		}
 	} else if (params.branch_cluster > 0) {
 		calcTreeCluster(params);

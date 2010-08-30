@@ -136,7 +136,8 @@ void Split::report(ostream &out)
 		for (UINT j = 0; j < UINT_BITS && (i*UINT_BITS+j < getNTaxa()); j++)
 			if ((*this)[i] & (1 << j))
 			{
-				out << i * UINT_BITS + j + 1 << " ";
+				//out << i * UINT_BITS + j + 1 << " ";
+				out << i * UINT_BITS + j << " ";
 			}
 	out << endl;
 }

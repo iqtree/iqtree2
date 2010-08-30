@@ -794,7 +794,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.consensus_type = CT_CONSENSUS_TREE;
 			} else if (strcmp(argv[cnt],"-net") == 0) {
 				params.consensus_type = CT_CONSENSUS_NETWORK;
-			} else if (strcmp(argv[cnt],"-min") == 0) {
+			} 
+			/**MINH ANH: to serve some statistics*/
+			else if (strcmp(argv[cnt],"-comp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -comp <treefile>";
+				params.consensus_type = COMPARE;
+				params.second_tree = argv[cnt];
+			}else if (strcmp(argv[cnt],"-stats") == 0) {
+				params.run_mode = STATS;
+				
+			} // MA
+			else if (strcmp(argv[cnt],"-min") == 0) {
 				params.find_pd_min = true;
 			} else if (strcmp(argv[cnt],"-excl") == 0) {
 				params.exclusive_pd = true;
@@ -1006,7 +1018,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (params.root != NULL && params.is_rooted)
 				throw "Not allowed to specify both -o <taxon> and -root";
 
-		} // try
+		}
+		 
+		// try
 		catch (const char *str) {
 			outError(str);
 		//} catch (char *str) {
@@ -1094,6 +1108,8 @@ void usage(char* argv[], bool full_command) {
 	cout << "  -dd <sample_size> Compute PD distribution of random sets of size k." << endl;
 	cout << "  -d <outfile>      Calculate the distance matrix inferred from tree." << endl;
 	cout << "  -seed <number>    Set the seed for random number generator." << endl;
+	cout << "  -stats <outfile>  Output some statistics about branch lengths on the tree." << endl;
+	cout << "  -comp <treefile> Compare the tree with each in the input trees." << endl; 
 
 
 //	cout << "  -rep <times>        Repeat algorithm a number of times." << endl;
