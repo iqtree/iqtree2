@@ -37,6 +37,9 @@ public:
 	*/
     RateMeyerHaeseler();
 
+	/**
+		destructor
+	*/
     ~RateMeyerHaeseler();
 
 
@@ -75,6 +78,12 @@ public:
 	virtual double computeFunction(double value);
 
 
+	/**
+		write site-rates to a file in the following format:
+		1  rate_1
+		2  rate_2
+		....
+	*/
 	void writeSiteRates(const char *file_name);
 
 	/**
@@ -83,7 +92,7 @@ public:
 	double *dist_mat;
 
 	/**
-		current site under optimization
+		current site under optimization. Note that this is not thread-safe
 	*/
 	int optimizing_site;
 };

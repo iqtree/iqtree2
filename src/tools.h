@@ -716,6 +716,18 @@ struct Params {
 		compute the site-specific rates by Meyer & von Haeseler method
 	*/
 	bool mvh_site_rate;
+
+	/**
+		Percentage threshold to accept a branch of the approximate likelihood ratio test 
+		(aLRT) with SH-like interpretation. See Guindon et al. (2010) Syst. Biol. for details. 
+		Default: 90%.
+	*/
+	int aLRT_threshold;
+	
+	/**
+		number of replicates, default: 1000
+	*/
+	int aLRT_replicates;
 };
 
 /**

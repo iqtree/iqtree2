@@ -568,6 +568,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.write_intermediate_trees = false;
 	params.rf_dist_mode = 0;
 	params.mvh_site_rate = false;
+	params.aLRT_threshold = 85;
+	params.aLRT_replicates = 1000;
 
 	/* TUNG: IQP-TREE Specific Options */
 	simple_nni = false;
@@ -1004,6 +1006,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.rf_dist_mode = RF_ALL_PAIR;
 			} else if (strcmp(argv[cnt],"-rf_adj") == 0) {
 				params.rf_dist_mode = RF_ADJACENT_PAIR;
+			} else if (strcmp(argv[cnt],"-aLRT") == 0) {
+				cnt++;
+				if (cnt+1 >= argc)
+					throw "Use -aLRT <threshold%> <#replicates>";
+				params.aLRT_threshold = convert_int(argv[cnt]);
+				if (params.aLRT_threshold < 50 || params.aLRT_threshold > 100) 
+					throw "aLRT thresold must be between 50 and 100";
+				cnt++;
+				params.aLRT_replicates = convert_int(argv[cnt]);
+				if (params.aLRT_replicates < 1000) 
+					throw "aLRT replicates must be at least 1000";
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

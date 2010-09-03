@@ -262,17 +262,21 @@ public:
 	/**
 		compute tree likelihood on a branch. used to optimize branch length
 		@param dad_branch the branch leading to the subtree
-		@param dad its dad, used to direct the tranversal	
+		@param dad its dad, used to direct the tranversal
+		@param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
+				assuming pattern_lh has the size of the number of patterns
 		@return tree likelihood
 	*/
-	double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+	double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
 
 	/**
 		compute the tree likelihood 
+		@param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
+				assuming pattern_lh has the size of the number of patterns
 		@return tree likelihood
 	*/
-	double computeLikelihood();
+	double computeLikelihood(double *pattern_lh = NULL);
 
 	/**
 		optimize model parameters and tree branch lengths
@@ -556,6 +560,38 @@ public:
 
 	void regraftSubtree(PruningInfo &info, 
 		PhyloNode *in_node, PhyloNode *in_dad);
+
+/****************************************************************************
+	Approximate Likelihood Ratio Test with SH-like interpretation
+****************************************************************************/
+
+	void computeNNIPatternLh(
+		double &lh2, double *pattern_lh2, 
+		double &lh3, double *pattern_lh3,
+		PhyloNode *node1, PhyloNode *node2);
+
+	/**
+		Resampling estimated log-likelihood (RELL)
+	*/
+	void resampleLh(double **pat_lh, double *lh_new, int size);
+
+	/**
+		Test one branch of the tree with aLRT SH-like interpretation
+	*/
+	double testOneBranch(
+		double best_score, double *pattern_lh, 
+		int times, PhyloNode *node1, PhyloNode *node2);
+
+	/**
+		Test all branches of the tree with aLRT SH-like interpretation
+	*/
+	int testAllBranches(int threshold, 
+		double best_score, double *pattern_lh, 
+		int times, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+/****************************************************************************
+	Public variables
+****************************************************************************/
 
 	/**
 		associated alignment	

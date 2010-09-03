@@ -62,14 +62,14 @@ double RateMeyerHaeseler::optimizeParameters() {
 		int freq = phylo_tree->aln->at(i).frequency;
 		if (phylo_tree->aln->at(i).computeAmbiguousChar(nstates) < nseq-2) {
 			optimizeSiteRate(i);
-			if (at(i) < MAX_SITE_RATE) {
-				if(at(i) > MIN_SITE_RATE) {
-					sum += at(i) * freq;
-					ok_sites += freq;
-					ok_ptn[i] = 1;
-				} else  invar_sites += freq;
-			} else  saturated_sites += freq; 
-		} else { ambiguous_sites += freq; at(i) = 0; }
+			if (at(i) == 0.0) invar_sites += freq; 
+			if (at(i) == MAX_SITE_RATE) saturated_sites += freq; 
+		} else { ambiguous_sites += freq; }
+		if (at(i) < MAX_SITE_RATE) {
+			sum += at(i) * freq;
+			ok_ptn[i] = 1;
+			ok_sites += freq;
+		}
 	} 
 
 	// now scale such that the mean of rates is 1
@@ -79,7 +79,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 
 	if (ambiguous_sites) {
 		stringstream str;
-		str << ambiguous_sites << " sites were ignored due to too many gaps or ambiguous characters";
+		str << ambiguous_sites << " sites contain too many gaps or ambiguous characters";
 		outWarning(str.str());
 	}
 	if (saturated_sites) {
@@ -88,6 +88,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 		outWarning(str.str());
 	}
 	cout << invar_sites << " sites have zero rate" << endl;
+	return 0.0;
 }
 
 double RateMeyerHaeseler::optimizeSiteRate(int site) {

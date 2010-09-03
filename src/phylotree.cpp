@@ -19,6 +19,7 @@
 #include "modeldna.h"
 #include "modelprotein.h"
 #include "alignmentpairwise.h"
+#include <algorithm>
 
 const double MIN_BRANCH_LEN = 0.000001;
 const double MAX_BRANCH_LEN = 9.0;
@@ -676,14 +677,14 @@ double *PhyloTree::newPartialLh() {
 }
 
 
-double PhyloTree::computeLikelihood() {
+double PhyloTree::computeLikelihood(double *pattern_lh) {
 	assert(model);
 	assert(site_rate);
-	return computeLikelihoodBranch((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root);
+	return computeLikelihoodBranch((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root, pattern_lh);
 }
 
 
-double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
 	PhyloNode *node = (PhyloNode*)dad_branch->node;
 	PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
 	assert(node_branch);
@@ -761,7 +762,9 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 			lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
 		}
 		assert(lh_ptn > 0);
-		tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
+		lh_ptn = log(lh_ptn);
+		tree_lh += lh_ptn * (*aln)[ptn].frequency;
+		if (pattern_lh) pattern_lh[ptn] = lh_ptn;
 	}
 	//for (cat = ncat-1; cat >= 0; cat--)
 		//delete trans_mat[cat];
@@ -1240,9 +1243,7 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
 	if (!model_factory || !site_rate) return initial_dist;
 
 	// now optimize the distance based on the model and site rate
-	AlignmentPairwise aln_pair(aln, seq1, seq2);
-	aln_pair.model_factory = model_factory;
-	aln_pair.site_rate = site_rate;
+	AlignmentPairwise aln_pair(this, seq1, seq2);
 	return aln_pair.optimizeDist(initial_dist);
 }
 
@@ -1744,4 +1745,170 @@ void PhyloTree::regraftSubtree(PruningInfo &info,
 	// SOMETHING NEED TO BE DONE
 	//in_dad->updateNeighbor(in_dad_it,
 
+}
+
+void PhyloTree::computeNNIPatternLh(
+	double &lh2, double *pattern_lh2, 
+	double &lh3, double *pattern_lh3,
+	PhyloNode *node1, PhyloNode *node2) 
+{
+    assert(node1->degree() == 3 && node2->degree() == 3);
+
+	const int IT_NUM = 6, IT_OPT = 5;
+	
+	NeighborVec::iterator saved_it[IT_NUM];
+    PhyloNeighbor *node12_it;
+    PhyloNeighbor *node21_it;
+	int id = 0;
+
+	FOR_NEIGHBOR_DECLARE(node1, node2, it) {
+		saved_it[id++] = (*it)->node->findNeighborIt(node1);
+	} else {
+		saved_it[id++] = it; 
+		node12_it = (PhyloNeighbor*)(*it);
+	} 	
+
+	FOR_NEIGHBOR(node2, node1, it) {
+		saved_it[id++] = (*it)->node->findNeighborIt(node2); 
+	} else  {
+		saved_it[id++] = it; 
+		node21_it = (PhyloNeighbor*)(*it);
+	} 
+	assert(id == IT_NUM);
+
+	
+	Neighbor *saved_nei[IT_NUM];
+	// save Neighbor and allocate new Neighbor pointer
+	for (id = 0; id < IT_NUM; id++) {
+		saved_nei[id] = (*saved_it[id]);
+		*saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
+		((PhyloNeighbor*)(*saved_it[id]))->partial_lh = newPartialLh();
+	}
+
+    // save the first found neighbor of node 1 (excluding node2) in node1_it
+    FOR_NEIGHBOR_DECLARE(node1, node2, node1_it) break;
+    Neighbor *node1_nei = *node1_it;
+
+	bool first = true;
+    FOR_NEIGHBOR_IT(node2, node1, node2_it) {
+        /* do the NNI swap */
+        Neighbor *node2_nei = *node2_it;
+        node1->updateNeighbor(node1_it, node2_nei);
+        node2_nei->node->updateNeighbor(node2, node1);
+
+        node2->updateNeighbor(node2_it, node1_nei);
+        node1_nei->node->updateNeighbor(node1, node2);
+
+		// re-optimize five adjacent branches
+		double newScore;
+		for (int opt = 0; opt < IT_OPT; opt++) {
+			// clear partial likelihood vector
+			for (id = 0; id < IT_NUM; id++) 
+				((PhyloNeighbor*)(*saved_it[id]))->clearPartialLh();
+			FOR_NEIGHBOR(node1, node2, it) {
+				newScore = optimizeOneBranch(node1, (PhyloNode*)(*it)->node, false);
+			}
+		
+			FOR_NEIGHBOR(node2, node1, it) {
+				optimizeOneBranch(node2, (PhyloNode*)(*it)->node, false);
+			}
+			optimizeOneBranch(node1, node2, false);
+		}
+
+		double *result_lh;
+		if (first) {
+			result_lh = pattern_lh2;
+			lh2 = newScore;
+		} else {
+			result_lh = pattern_lh3;
+			lh3 = newScore;
+		}
+
+		computeLikelihoodBranch((PhyloNeighbor*)node1->findNeighbor(node2), node1, result_lh);
+         // compute the score of the swapped topology
+
+        // swap back and recover the branch lengths
+        node1->updateNeighbor(node1_it, node1_nei);
+        node1_nei->node->updateNeighbor(node2, node1);
+        node2->updateNeighbor(node2_it, node2_nei);
+        node2_nei->node->updateNeighbor(node1, node2);
+		first = false;
+    }
+
+	// restore the Neighbor*
+	for (id = 0; id < IT_NUM; id++) {
+		delete (*saved_it[id]);
+		(*saved_it[id]) = saved_nei[id];
+	}
+	
+	// restore the length of 4 branches around node1, node2
+	FOR_NEIGHBOR(node1, node2, it) 
+		(*it)->length = (*it)->node->findNeighbor(node1)->length;
+	FOR_NEIGHBOR(node2, node1, it) 
+		(*it)->length = (*it)->node->findNeighbor(node2)->length;
+
+}
+
+void PhyloTree::resampleLh(double **pat_lh, double *lh_new, int size) {
+	int nsite = aln->getNSite();
+	memset(lh_new, 0, sizeof(double)*size);
+	for (int i = 0; i < nsite; i++) {
+		int site_id = round(((double)(rand()) / RAND_MAX) * nsite);
+		int ptn_id = aln->getPatternID(site_id);
+		for (int j = 0; j < size; j++)
+			lh_new[j] += pat_lh[j][ptn_id];
+	}
+}
+
+// Implementation of testBranch follows Guindon et al. (2010)
+double PhyloTree::testOneBranch(
+	double best_score, double *pattern_lh, 
+	int times, PhyloNode *node1, PhyloNode *node2) 
+{
+	int NUM_NNI = 3;
+	double lh[NUM_NNI];
+	double *pat_lh[NUM_NNI];
+	lh[0] = best_score; pat_lh[0] = pattern_lh;
+	pat_lh[1] = new double[aln->getNPattern()];
+	pat_lh[2] = new double[aln->getNPattern()];
+	computeNNIPatternLh(lh[1], pat_lh[1], lh[2], pat_lh[2], node1, node2);
+	double aLRT;
+	if (lh[1] > lh[2]) 
+		aLRT = 2*(lh[0] - lh[1]);
+	else
+		aLRT = 2*(lh[0] - lh[2]);
+
+	int support = 0;
+	
+	for (int i = 0; i < times; i++) {
+		double lh_new[NUM_NNI];
+		// resampling estimated log-likelihood (RELL)
+		resampleLh(pat_lh, lh_new, NUM_NNI);
+		double cs[NUM_NNI];
+		cs[0] = lh_new[0] - lh[0];
+		cs[1] = lh_new[1] - lh[1];
+		cs[2] = lh_new[2] - lh[2];
+		sort(cs, cs+NUM_NNI);
+		if (aLRT > 2* (cs[2] - cs[1]) + 0.1) support++;
+	}
+	delete [] pat_lh[2];
+	delete [] pat_lh[1];
+	return ((double)support) / times;
+}
+
+int PhyloTree::testAllBranches(int threshold, double best_score, double *pattern_lh, 
+	int times, PhyloNode *node, PhyloNode *dad) 
+{
+	int num_low_support = 0;
+	if (!node) node = (PhyloNode*)root;
+	if (dad && !node->isLeaf() && !dad->isLeaf()) {
+		int support = round(testOneBranch(best_score, pattern_lh, times, node, dad)*100);
+		node->name = convertIntToString(support);
+		if (support < threshold) num_low_support = 1;
+		((PhyloNeighbor*)node->findNeighbor(dad))->partial_pars[0] = support;
+		((PhyloNeighbor*)dad->findNeighbor(node))->partial_pars[0] = support;
+	}
+	FOR_NEIGHBOR_IT(node, dad, it)
+		num_low_support += testAllBranches(threshold, best_score, pattern_lh, times, (PhyloNode*)(*it)->node, node);
+	return num_low_support;
 }

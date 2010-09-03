@@ -994,7 +994,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
 			}
 			out << node->id; 
 			if (!node->name.empty())
-				out << " " << node->name;
+				out << " (" << node->name << ")";
 			if (brtype & WT_BR_LEN && dad)
 				out << " " << node->findNeighbor(dad)->length;
 			if (!subtree_br.empty())

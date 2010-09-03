@@ -356,7 +356,8 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 		out << "MAXIMUM LIKELIHOOD TREE" << endl << "-----------------------" << endl << endl;
 		
 		out << "NOTE: Tree is UNROOTED although outgroup taxon '" << 
-			((params.root) ? params.root : tree.aln->getSeqName(0)) <<"' is drawn at root" << endl << endl;
+			((params.root) ? params.root : tree.aln->getSeqName(0)) <<"' is drawn at root" << endl;
+		out << "aLRT SH-like support values (%) for clades are displayed in parentheses" << endl << endl;
 
 		tree.setRootNode(params.root);
 		tree.sortTaxa();
@@ -650,6 +651,14 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		rate_file += ".mvhrate";
 		rate_mvh.writeSiteRates(rate_file.c_str());
 	}
+
+	cout <<"Testing tree branches by aLRT with " << params.aLRT_replicates << " replicates..." << endl;
+	double *pattern_lh = new double[tree.aln->getNPattern()];
+    tree.setRootNode(params.root);
+	double score = tree.computeLikelihood(pattern_lh);
+	int num_low_support = tree.testAllBranches(params.aLRT_threshold, score, pattern_lh, params.aLRT_replicates);
+	cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
+	delete [] pattern_lh;
 
 	t_end=clock();
 	params.run_time = (t_end-t_begin);
