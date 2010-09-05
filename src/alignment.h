@@ -173,7 +173,7 @@ public:
 		@param aln original input alignment
 		@param seq_id ID of sequences to extract from
 	*/
-	void extractSubAlignment(Alignment *aln, IntVector &seq_id);
+	void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
 
 	/**
 		TODO

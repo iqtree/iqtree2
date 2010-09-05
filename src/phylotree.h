@@ -573,7 +573,7 @@ public:
 	/**
 		Resampling estimated log-likelihood (RELL)
 	*/
-	void resampleLh(double **pat_lh, double *lh_new, int size);
+	void resampleLh(double **pat_lh, double *lh_new);
 
 	/**
 		Test one branch of the tree with aLRT SH-like interpretation
@@ -588,6 +588,34 @@ public:
 	int testAllBranches(int threshold, 
 		double best_score, double *pattern_lh, 
 		int times, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+/****************************************************************************
+	Collapse stable (highly supported) clades by one representative 
+****************************************************************************/
+
+    /**
+            delete a leaf from the tree, assume tree is birfucating
+            @param leaf the leaf node to remove
+     */
+    void deleteLeaf(Node *leaf);
+
+    /**
+            reinsert one leaf back into the tree
+            @param leaf the leaf to reinsert
+            @param adjacent_node the node adjacent to the leaf, returned by deleteLeaves() function
+            @param node one end node of the reinsertion branch in the existing tree
+            @param dad the other node of the reinsertion branch in the existing tree
+     */
+    void reinsertLeaf(Node *leaf, Node *node, Node *dad);
+
+
+	/**
+		Collapse stable (highly supported) clades by one representative 
+		@return the number of taxa prunned
+	*/
+	int collapseStableClade(int min_support, NodeVector &pruned_taxa, StrVector &linked_name, double* &dist_mat);
+
+	int restoreStableClade(Alignment *original_aln, NodeVector &pruned_taxa, StrVector &linked_name);
 
 /****************************************************************************
 	Public variables

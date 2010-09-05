@@ -87,7 +87,8 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 		outError("Alignment must have at least 3 sequences");
 		
 	checkSeqName(seq_names);
-	cout << "Alignment contains " << getNSeq() << " sequences with " << getNSite() << " characters" << endl;
+	cout << "Alignment contains " << getNSeq() << " sequences with " << getNSite() << 
+		" characters and " << getNPattern() << " patterns"<< endl;
 	//cout << "Number of character states is " << num_states << endl;
 	//cout << "Number of patterns = " << size() << endl;
 	countConstSite();
@@ -534,27 +535,36 @@ void Alignment::printPhylip(char *file_name) {
 }
 
 
-void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id) {
+void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char) {
 	IntVector::iterator it;
 	for (it = seq_id.begin(); it != seq_id.end(); it++) {
 		assert(*it >= 0 && *it < aln->getNSeq());
 		seq_names.push_back(aln->getSeqName(*it));
 	}
 	num_states = aln->num_states;
-	site_pattern.resize(aln->getNPattern(), -1);
+	site_pattern.resize(aln->getNSite(), -1);
 	clear();
 	pattern_index.clear();
 	int site = 0;
 	VerboseMode save_mode = verbose_mode; 
 	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
-	for (iterator pit = aln->begin(); pit != aln->end(); pit++, site++) {
+	for (iterator pit = aln->begin(); pit != aln->end(); pit++) {
 		Pattern pat;
-		for (it = seq_id.begin(); it != seq_id.end(); it++)
-			pat.push_back((*pit)[*it]);
+		int true_char = 0;
+		for (it = seq_id.begin(); it != seq_id.end(); it++) {
+			char ch = (*pit)[*it];
+			if (ch != STATE_UNKNOWN) true_char++;
+			pat.push_back(ch);
+		}
+		if (true_char < min_true_char) continue;
 		addPattern(pat, site, (*pit).frequency);
+		for (int i = 0; i < (*pit).frequency; i++)
+			site_pattern[site++] = size()-1;
 	}
+	site_pattern.resize(site);
 	verbose_mode = save_mode;
 	countConstSite();
+	assert(size() <= aln->size());
 }
 
 void Alignment::countConstSite() {
@@ -583,7 +593,8 @@ double Alignment::computeObsDist(int seq1, int seq2) {
 
 double Alignment::computeJCDist(int seq1, int seq2) {
 	double obs_dist = computeObsDist(seq1, seq2);
-	double x = 1.0 - ((double)num_states * obs_dist / (num_states-1));
+	double z = (double)num_states / (num_states-1);
+	double x = 1.0 - (z * obs_dist);
 	if (x <= 0) {
 		string str = "Too long distance between two sequences ";
 		str += getSeqName(seq1);
@@ -592,7 +603,7 @@ double Alignment::computeJCDist(int seq1, int seq2) {
 		outWarning(str);
 		return MAX_GENETIC_DIST;
 	}
-	return -log(x) * (num_states - 1) / num_states;
+	return -log(x) / z;
 }
 
 void Alignment::printDist(ostream &out, double *dist_mat) {

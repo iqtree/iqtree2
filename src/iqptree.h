@@ -442,33 +442,18 @@ protected:
     //double *bonus_values;
 
     /**
-            delete a leaf from the tree, assume tree is birfucating
-            @param leaf the leaf node to remove
-     */
-    void deleteLeaf(Node *leaf);
-
-    /**
             delete a set of leaves from tree (with the probability p_delete), assume tree is birfucating
             @param del_leaves (OUT) the list of deleted leaves
             @param adjacent_nodes (OUT) the corresponding list of nodes adjacent to the deleted leaves
      */
-    void deleteLeaves(PhyloNodeVector &del_leaves, PhyloNodeVector &adjacent_nodes);
-
-    /**
-            reinsert one leaf back into the tree
-            @param leaf the leaf to reinsert
-            @param adjacent_node the node adjacent to the leaf, returned by deleteLeaves() function
-            @param node one end node of the reinsertion branch in the existing tree
-            @param dad the other node of the reinsertion branch in the existing tree
-     */
-    void reinsertLeaf(Node *leaf, Node *adjacent_node, Node *node, Node *dad);
+    void deleteLeaves(PhyloNodeVector &del_leaves);
 
     /**
             reinsert the whole list of leaves back into the tree
             @param del_leaves the list of deleted leaves, returned by deleteLeaves() function
             @param adjacent_nodes the corresponding list of nodes adjacent to the deleted leaves, returned by deleteLeaves() function
      */
-    void reinsertLeaves(PhyloNodeVector &del_leaves, PhyloNodeVector &adjacent_nodes);
+    void reinsertLeaves(PhyloNodeVector &del_leaves);
 
     /**
             assess a quartet with four taxa. Current implementation uses the four-point condition

@@ -568,7 +568,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.write_intermediate_trees = false;
 	params.rf_dist_mode = 0;
 	params.mvh_site_rate = false;
-	params.aLRT_threshold = 85;
+	params.aLRT_threshold = 90;
 	params.aLRT_replicates = 1000;
 
 	/* TUNG: IQP-TREE Specific Options */
@@ -1011,8 +1011,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt+1 >= argc)
 					throw "Use -aLRT <threshold%> <#replicates>";
 				params.aLRT_threshold = convert_int(argv[cnt]);
-				if (params.aLRT_threshold < 50 || params.aLRT_threshold > 100) 
-					throw "aLRT thresold must be between 50 and 100";
+				if (params.aLRT_threshold < 85 || params.aLRT_threshold > 101) 
+					throw "aLRT thresold must be between 85 and 100";
 				cnt++;
 				params.aLRT_replicates = convert_int(argv[cnt]);
 				if (params.aLRT_replicates < 1000) 

@@ -147,28 +147,7 @@ void IQPTree::clearRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec, Node *
         }
 }*/
 
-void IQPTree::deleteLeaf(Node *leaf) {
-    Node *near_node = leaf->neighbors[0]->node;
-    assert(leaf->isLeaf() && near_node->degree() == 3);
-    Node *node1 = NULL;
-    Node *node2 = NULL;
-    double sum_len = 0.0;
-
-    FOR_NEIGHBOR_IT(near_node, leaf, it) {
-        sum_len += (*it)->length;
-        if (!node1)
-            node1 = (*it)->node;
-        else
-            node2 = (*it)->node;
-    }
-    // make sure that the returned node1 and node2 are correct
-    assert(node1 && node2);
-    // update the neighbor
-    node1->updateNeighbor(near_node, node2, sum_len);
-    node2->updateNeighbor(near_node, node1, sum_len);
-}
-
-void IQPTree::deleteLeaves(PhyloNodeVector &del_leaves, PhyloNodeVector &adjacent_nodes) {
+void IQPTree::deleteLeaves(PhyloNodeVector &del_leaves) {
     NodeVector taxa;
     // get the vector of taxa
     getTaxa(taxa);
@@ -183,7 +162,6 @@ void IQPTree::deleteLeaves(PhyloNodeVector &del_leaves, PhyloNodeVector &adjacen
         else i++;
         PhyloNode *taxon = (PhyloNode*) taxa[id];
         del_leaves.push_back(taxon);
-        adjacent_nodes.push_back((PhyloNode*) (taxon->neighbors[0]->node));
         deleteLeaf(taxon);
         taxa[id] = NULL;
     }
@@ -338,35 +316,13 @@ void IQPTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *c
 
 }
 
-void IQPTree::reinsertLeaf(Node *leaf, Node *adjacent_node, Node *node,
-        Node *dad) {
-    bool first = true;
-    Neighbor *nei = node->findNeighbor(dad);
-    double len = nei->length;
-
-    FOR_NEIGHBOR_IT(adjacent_node, leaf, it) {
-        if (first) {
-            (*it)->node = node;
-            (*it)->length = len / 2;
-            node->updateNeighbor(dad, adjacent_node, len / 2);
-        } else {
-            (*it)->node = dad;
-            (*it)->length = len / 2;
-            dad->updateNeighbor(node, adjacent_node, len / 2);
-        }
-        first = false;
-    }
-}
-
-void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves,
-        PhyloNodeVector &adjacent_nodes) {
-    PhyloNodeVector::iterator it_leaf, it_node;
+void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
+    PhyloNodeVector::iterator it_leaf;
 
     int num_del_leaves = del_leaves.size();
     assert(root->isLeaf());
 
-    for (it_leaf = del_leaves.begin(), it_node = adjacent_nodes.begin(); it_leaf
-            != del_leaves.end(); it_leaf++, it_node++) {
+    for (it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
         if (verbose_mode >= VB_DEBUG)
             cout << "Reinserting " << (*it_leaf)->name << " (" << (*it_leaf)->id << ")" << endl;
         vector<RepresentLeafSet*> leaves_vec;
@@ -392,7 +348,7 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves,
             << " branches show the same best bonus, branch nr. "
             << node_id << " is chosen" << endl;
 
-        reinsertLeaf(*it_leaf, *it_node, best_nodes[node_id],
+        reinsertLeaf(*it_leaf, best_nodes[node_id],
                 best_dads[node_id]);
         //clearRepresentLeaves(leaves_vec, *it_node, *it_leaf);
         /*if (verbose_mode >= VB_DEBUG) {
@@ -416,9 +372,9 @@ double IQPTree::doIQP() {
 
     clock_t time_begin = clock();
 
-    PhyloNodeVector del_leaves, adjacent_nodes;
-    deleteLeaves(del_leaves, adjacent_nodes);
-    reinsertLeaves(del_leaves, adjacent_nodes);
+    PhyloNodeVector del_leaves;
+    deleteLeaves(del_leaves);
+    reinsertLeaves(del_leaves);
 
     clock_t time_end = clock();
 

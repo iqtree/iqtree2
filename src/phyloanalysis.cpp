@@ -497,9 +497,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		}
 	}
 	tree.createModel(params);
-
-	cout << "Model of evolution: " << tree.getModelName() << " (" << 
-		tree.getModel()->getNDim() + tree.getRate()->getNDim() << " free parameters)" << endl;
+	int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
+	cout << "Model of evolution: " << tree.getModelName() << " (" << model_df << " free parameters)" << endl;
 	cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
 	cout << "Random seed: " << params.ran_seed << endl;
 	cout << "Lambda used in NNI: " << cmdLambda << endl;
@@ -537,7 +536,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	//Update tree score
 	tree.curScore = bestTreeScore;
 
-	if (!params.dist_file && params.compute_ml_dist) {
+	if (!params.dist_file && params.compute_ml_dist && model_df > 0) {
 		stringstream best_tree_string;
 		tree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
 		cout << "Computing ML distances based on estimated model parameters..." << endl;
@@ -599,7 +598,42 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		else {
 			cout << "Tree didn't improve after NNI :( " << endl;
 		}
+	}
+	NodeVector pruned_taxa;
+	StrVector linked_name;
+	double *saved_dist_mat = tree.dist_matrix;
+	double *pattern_lh;
+	int num_low_support;
+	if (params.min_iterations > 1) {
+		clock_t mytime = clock();
+		cout <<"Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
+		pattern_lh = new double[tree.aln->getNPattern()];
+		tree.setRootNode(params.root);
+		double score = tree.computeLikelihood(pattern_lh);
+		num_low_support = tree.testAllBranches(params.aLRT_threshold, score, pattern_lh, params.aLRT_replicates);
+		cout << "  " << (((double)clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
+		cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
+		delete [] pattern_lh;
+		cout << "Collapsing stable clades..." << endl;
+		tree.collapseStableClade(params.aLRT_threshold, pruned_taxa, linked_name, tree.dist_matrix);
+		cout << pruned_taxa.size() << " taxa were pruned from stable clades" << endl;
+	}
 
+	if (!pruned_taxa.empty()) {
+		cout << "Pruned alignment contains " << tree.aln->getNSeq() << " sequences and " << 
+			tree.aln->getNSite() << " sites and " << tree.aln->getNPattern() << " patterns" << endl;
+		//tree.clearAllPartialLh();
+		tree.initializeAllPartialLh();
+		tree.clearAllPartialLh();
+		tree.curScore = tree.optimizeAllBranches();
+		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
+		tree.curScore = tree.optimizeNNI();
+		cout << "Log-likelihood	after optimizing partial tree: " << tree.curScore << endl;
+	}
+	// set p delete if ZERO
+	if (params.p_delete == 0) {
+		int num_high_support = tree.leafNum - 3 - num_low_support; 
+		params.p_delete = (3.0 + num_high_support) / tree.leafNum;
 	}
 
 	tree.setRepresentNum(params.k_representative);
@@ -629,14 +663,29 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		cout << endl;
 
 		tree.doIQPNNI(params);
-		cout << "Optimizing model parameters" << endl;
-		double endScore = tree.optimizeModel(params.fixed_branch_length);
-		cout << "Best score found : " << endScore << endl;
 	} else {
 		/* do SPR with likelihood function */
 		if (params.tree_spr)
 			tree.optimizeSPRBranches();
 	}
+
+
+	if (!pruned_taxa.empty()) {
+		cout << "Restoring full tree..." << endl;
+		tree.restoreStableClade(alignment, pruned_taxa, linked_name);
+		delete [] tree.dist_matrix;
+		tree.dist_matrix = saved_dist_mat;
+		tree.initializeAllPartialLh();
+		tree.clearAllPartialLh();
+		tree.curScore = tree.optimizeAllBranches();
+		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
+		tree.curScore = tree.optimizeNNI();
+		cout << "Log-likelihood	after reoptimizing full tree: " << tree.curScore << endl;
+	}
+
+	cout << "Optimizing model parameters" << endl;
+	double endScore = tree.optimizeModel(params.fixed_branch_length);
+	cout << "Best score found : " << endScore << endl;
 
 	/* root the tree at the first sequence */
 	tree.root = tree.findNodeName(alignment->getSeqName(0));
@@ -652,11 +701,11 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		rate_mvh.writeSiteRates(rate_file.c_str());
 	}
 
-	cout <<"Testing tree branches by aLRT with " << params.aLRT_replicates << " replicates..." << endl;
-	double *pattern_lh = new double[tree.aln->getNPattern()];
+	cout <<"Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
+	pattern_lh = new double[tree.aln->getNPattern()];
     tree.setRootNode(params.root);
 	double score = tree.computeLikelihood(pattern_lh);
-	int num_low_support = tree.testAllBranches(params.aLRT_threshold, score, pattern_lh, params.aLRT_replicates);
+	num_low_support = tree.testAllBranches(params.aLRT_threshold, score, pattern_lh, params.aLRT_replicates);
 	cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
 	delete [] pattern_lh;
 
