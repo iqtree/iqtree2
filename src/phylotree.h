@@ -257,7 +257,7 @@ public:
 		@param dad_branch the branch leading to the subtree
 		@param dad its dad, used to direct the tranversal
 	*/
-	void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+	void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
 	/**
 		compute tree likelihood on a branch. used to optimize branch length
@@ -291,6 +291,8 @@ public:
 		@param best_tree_string input stream to read from
 	*/
 	void rollBack(istream &best_tree_string);
+
+	bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 /****************************************************************************
 	computing derivatives of likelihood function
@@ -565,7 +567,7 @@ public:
 	Approximate Likelihood Ratio Test with SH-like interpretation
 ****************************************************************************/
 
-	void computeNNIPatternLh(
+	void computeNNIPatternLh(double cur_lh,
 		double &lh2, double *pattern_lh2, 
 		double &lh3, double *pattern_lh3,
 		PhyloNode *node1, PhyloNode *node2);

@@ -422,6 +422,27 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 	}
 }
 
+void checkZeroDist(Alignment *aln, double *dist) {
+	int ntaxa = aln->getNSeq();
+	IntVector checked;
+	checked.resize(ntaxa, 0);
+	int i, j;
+	for (i = 0; i < ntaxa-1; i++) {
+		if (checked[i]) continue;
+		string str = ""; 
+		bool first = true;
+		for (j = i+1; j < ntaxa; j++)
+			if (dist[i*ntaxa+j] <= 1e-6) {
+				if (first) str = "ZERO distance between sequences " + aln->getSeqName(i);
+				str += ", " + aln->getSeqName(j);
+				checked[j] = 1;
+				first = false;
+			}
+		checked[i] = 1;
+		if (str != "") outWarning(str);
+	}
+}
+
 void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *alignment) {
 
 	clock_t t_begin, t_end;
@@ -453,6 +474,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	}
 	string dist_file;
 	tree.computeDist(params, alignment, tree.dist_matrix, dist_file);
+
+	checkZeroDist(alignment, tree.dist_matrix);
 
 	if (params.user_file) {
 		// start the search with user-defined tree
@@ -599,6 +622,11 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 			cout << "Tree didn't improve after NNI :( " << endl;
 		}
 	}
+	/*
+	double sum_scaling = 1.0;
+	if (!tree.checkEqualScalingFactor(sum_scaling))
+		cout << "Scaling factor not equal along the tree" << endl;
+	*/
 	NodeVector pruned_taxa;
 	StrVector linked_name;
 	double *saved_dist_mat = tree.dist_matrix;
@@ -611,6 +639,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		tree.setRootNode(params.root);
 		double score = tree.computeLikelihood(pattern_lh);
 		num_low_support = tree.testAllBranches(params.aLRT_threshold, score, pattern_lh, params.aLRT_replicates);
+	    tree.printResultTree(params);
 		cout << "  " << (((double)clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
 		cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
 		delete [] pattern_lh;
@@ -633,7 +662,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	// set p delete if ZERO
 	if (params.p_delete == 0) {
 		int num_high_support = tree.leafNum - 3 - num_low_support; 
-		params.p_delete = (3.0 + num_high_support) / tree.leafNum;
+		params.p_delete = (2.0 + num_high_support)*2.0 / tree.leafNum;
+		if (params.p_delete > 0.5) params.p_delete = 0.5;
 	}
 
 	tree.setRepresentNum(params.k_representative);
@@ -671,6 +701,7 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 
 
 	if (!pruned_taxa.empty()) {
+		tree.disableHeuristic();
 		cout << "Restoring full tree..." << endl;
 		tree.restoreStableClade(alignment, pruned_taxa, linked_name);
 		delete [] tree.dist_matrix;

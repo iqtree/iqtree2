@@ -43,6 +43,12 @@ public:
 	*/
 	void clearPartialLh() { partial_lh_computed = 0; }
 
+	/**
+		clear all partial likelihood recursively in forward direction
+		@param dad dad of this neighbor
+	*/
+	void clearForwardPartialLh(Node *dad);
+
 private:
 
 	/**

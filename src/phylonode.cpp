@@ -12,6 +12,14 @@
 #include "phylonode.h"
 
 
+void PhyloNeighbor::clearForwardPartialLh(Node *dad) {
+	clearPartialLh();
+	for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it ++)
+		if ((*it)->node != dad)
+			((PhyloNeighbor*)*it)->clearForwardPartialLh(node);
+}
+
+
 void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
 	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
 	assert(node_nei);
@@ -30,6 +38,7 @@ void PhyloNode::clearAllPartialLh(PhyloNode *dad) {
 		if ((*it)->node != dad)
 			((PhyloNode*)(*it)->node)->clearAllPartialLh(this);
 }
+
 
 PhyloNode::PhyloNode()
  : Node()

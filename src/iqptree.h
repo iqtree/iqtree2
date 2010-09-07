@@ -340,6 +340,8 @@ public:
 
     Linear* linRegModel;
 
+	void disableHeuristic() { enableHeuris = false; }
+
 protected:
 
 

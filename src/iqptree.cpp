@@ -385,7 +385,19 @@ double IQPTree::doIQP() {
     // just to make sure IQP does it right
     setAlignment(aln);
     clearAllPartialLh();
+
+	// optimize branches at the reinsertion point
+/*
+	for (PhyloNodeVector::iterator dit = del_leaves.begin(); dit != del_leaves.end(); dit++) {
+		PhyloNode *adj_node = (PhyloNode*)(*dit)->neighbors[0]->node;
+		FOR_NEIGHBOR_IT(adj_node, (*dit), it)
+			curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*it)->node);
+		curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
+	}
+	double score = curScore;
+*/
     curScore = optimizeAllBranches(1);
+    //cout << " diff = " << curScore - score << endl;
     if (enable_parsimony)
     	cur_pars_score = computeParsimony();
     //curScore = computeLikelihood();
@@ -532,7 +544,7 @@ double IQPTree::doIQPNNI(Params &params) {
     tree_file_name += ".treefile";
     bestScore = curScore;
 
-    printResultTree(params);
+    //printResultTree(params);
 
     string treels_name = params.out_prefix;
     treels_name += ".treels";
@@ -644,7 +656,7 @@ double IQPTree::doIQPNNI(Params &params) {
             bestScore = curScore;
             best_tree_string.seekp(0);
             printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-            printResultTree(params);
+            //printResultTree(params);
             stop_rule.addImprovedIteration(cur_iteration);
         } else {
             /* take back the current best tree */

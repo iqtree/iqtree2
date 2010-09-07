@@ -603,6 +603,7 @@ double Alignment::computeJCDist(int seq1, int seq2) {
 		outWarning(str);
 		return MAX_GENETIC_DIST;
 	}
+
 	return -log(x) / z;
 }
 
