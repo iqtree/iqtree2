@@ -559,7 +559,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	//Update tree score
 	tree.curScore = bestTreeScore;
 
-	if (!params.dist_file && params.compute_ml_dist && model_df > 0) {
+	if (!params.dist_file && params.compute_ml_dist && 
+		(tree.getModel()->name != "JC" || tree.getRate()->getNDim() > 1)) {
 		stringstream best_tree_string;
 		tree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
 		cout << "Computing ML distances based on estimated model parameters..." << endl;
@@ -632,8 +633,9 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 	double *saved_dist_mat = tree.dist_matrix;
 	double *pattern_lh;
 	int num_low_support;
-	if (params.min_iterations > 1) {
-		clock_t mytime = clock();
+	clock_t mytime;
+	if (params.min_iterations > 1 && params.aLRT_threshold <= 100) {
+		mytime = clock();
 		cout <<"Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
 		pattern_lh = new double[tree.aln->getNPattern()];
 		tree.setRootNode(params.root);
@@ -643,6 +645,8 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		cout << "  " << (((double)clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
 		cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
 		delete [] pattern_lh;
+		
+		//tree.drawTree(cout);
 		cout << "Collapsing stable clades..." << endl;
 		tree.collapseStableClade(params.aLRT_threshold, pruned_taxa, linked_name, tree.dist_matrix);
 		cout << pruned_taxa.size() << " taxa were pruned from stable clades" << endl;
@@ -732,11 +736,13 @@ void runPhyloAnalysis(Params &params, /*TreesBlock *trees_block, */ Alignment *a
 		rate_mvh.writeSiteRates(rate_file.c_str());
 	}
 
+	mytime = clock();
 	cout <<"Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
 	pattern_lh = new double[tree.aln->getNPattern()];
     tree.setRootNode(params.root);
 	double score = tree.computeLikelihood(pattern_lh);
 	num_low_support = tree.testAllBranches(params.aLRT_threshold, score, pattern_lh, params.aLRT_replicates);
+	cout << "  " << (((double)clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
 	cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
 	delete [] pattern_lh;
 

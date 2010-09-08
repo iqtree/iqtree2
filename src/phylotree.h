@@ -610,6 +610,7 @@ public:
      */
     void reinsertLeaf(Node *leaf, Node *node, Node *dad);
 
+	bool isSupportedNode(PhyloNode* node, int min_support);
 
 	/**
 		Collapse stable (highly supported) clades by one representative 

@@ -392,7 +392,7 @@ double IQPTree::doIQP() {
 		PhyloNode *adj_node = (PhyloNode*)(*dit)->neighbors[0]->node;
 		FOR_NEIGHBOR_IT(adj_node, (*dit), it)
 			curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*it)->node);
-		curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
+		//curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
 	}
 	double score = curScore;
 */

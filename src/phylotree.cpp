@@ -688,7 +688,8 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
 		if (sum_scaling < 0.0) {
 			ptn_scale = new double[nptn];
 			memset(ptn_scale, 0, sizeof(double) * nptn);
-			clearAllPartialLh();
+			//clearAllPartialLh();
+			((PhyloNeighbor*)root->neighbors[0])->clearForwardPartialLh(root);
 			computePartialLikelihood((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root, ptn_scale);
 			assert(fabs(sum_scaling - ((PhyloNeighbor*)root->neighbors[0])->lh_scale_factor) < 1e-6);
 		}
@@ -2079,6 +2080,15 @@ void PhyloTree::reinsertLeaf(Node *leaf, Node *node,
     }
 }
 
+bool PhyloTree::isSupportedNode(PhyloNode* node, int min_support) {
+	FOR_NEIGHBOR_IT(node, NULL, it)
+		if (! (*it)->node->isLeaf())
+			if (((PhyloNeighbor*)*it)->partial_pars[0] < min_support) {
+				return false;
+			}
+	return true;
+}
+
 int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa, StrVector &linked_name, double* &dist_mat) {
 	NodeVector taxa;
 	NodeVector::iterator tax_it;
@@ -2112,7 +2122,7 @@ int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa, Str
 				}
 			assert(near_nei);
 			// continue if the cherry is not stable, or distance between two taxa is near ZERO
-			if (near_nei->partial_pars[0] < min_support && dist_mat[taxon->id*ntaxa + adj_taxon->id] > 1e-6) continue;
+			if (!isSupportedNode((PhyloNode*)near_nei->node, min_support) && dist_mat[taxon->id*ntaxa + adj_taxon->id] > 2e-6) continue;
 			// now do the taxon pruning 
 			Node *pruned_taxon = taxon, *stayed_taxon = adj_taxon;
 			// prune the taxon that is far away

@@ -568,7 +568,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.write_intermediate_trees = false;
 	params.rf_dist_mode = 0;
 	params.mvh_site_rate = false;
-	params.aLRT_threshold = 90;
+	params.aLRT_threshold = 101;
 	params.aLRT_replicates = 1000;
 
 	/* TUNG: IQP-TREE Specific Options */

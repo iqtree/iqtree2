@@ -177,6 +177,11 @@ public:
 	bool isLeaf();
 
 	/**
+		@return TRUE if this node is a cherry, FALSE otherwise
+	*/
+	bool isCherry();
+
+	/**
 		@return the number of adjacent nodes
 	*/
 	int degree();
