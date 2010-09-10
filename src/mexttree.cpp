@@ -359,9 +359,12 @@ void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, 
 					sprintf(tmp, "/%d", (int)(sp->getWeight()));
 				(*it)->node->name.append(tmp);
 			} else {
-				cout << "split not found:" << endl;
-				mysplit.report(cout);
-			}
+				(*it)->node->name.append("/0");
+				if (verbose_mode >= VB_MED) {
+					cout << "split not found:" << endl;
+					mysplit.report(cout);
+				}
+			} 
 			/* new stuff: report trees that do not contain the split */
 			if (strncmp((*it)->node->name.c_str(), "INFO", 4) == 0) {
 				cout << "Reporting trees not containing the split " << (*it)->node->name << endl;

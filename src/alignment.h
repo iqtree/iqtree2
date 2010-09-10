@@ -122,7 +122,7 @@ public:
 
 	char convertStateBack(char state);
 
-	void printPhylip(char *filename);
+	void printPhylip(const char *filename, bool append = false);
 
 /****************************************************************************
 	get general information from alignment

@@ -1015,7 +1015,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "aLRT thresold must be between 85 and 100";
 				cnt++;
 				params.aLRT_replicates = convert_int(argv[cnt]);
-				if (params.aLRT_replicates < 1000) 
+				if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0) 
 					throw "aLRT replicates must be at least 1000";
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
@@ -1139,6 +1139,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 		 << "  -?                   Print this help dialog" << endl
 		 << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP or NEXUS format"  << endl
 		 << "  -st <B|D|P>          Binary, DNA, or Protein sequences (default: auto-detect)"  << endl
+		 << "  -b <#samples>        Non-parametric bootstrap (default: none)" << endl
 		 << "  <tree_file>          Initial tree for tree reconstruction (default: BIONJ)" << endl
 		 << "                       Or set of trees for consensus reconstruction (see below)" << endl
 		 << "  -o <outgroup_taxon>  Outgroup taxon name, used when writing .treefile" << endl 

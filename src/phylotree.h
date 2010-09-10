@@ -269,6 +269,9 @@ public:
 	*/
 	double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
+	template<int NSTATES>
+	double __computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+	
 
 	/**
 		compute the tree likelihood 

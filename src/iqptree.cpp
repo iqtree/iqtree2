@@ -25,7 +25,8 @@ int cntBranches = 0;
 IQPTree::IQPTree() :
 PhyloTree() {
     k_represent = 0;
-    p_delete = 0.0;
+    //p_delete = 0.0;
+    k_delete = k_delete_min = k_delete_max = k_delete_stay = 0;
     dist_matrix = NULL;
     //bonus_values = NULL;
     nbIQPIter = 0; // Number of iteration before the speed up is started
@@ -56,7 +57,36 @@ void IQPTree::setRepresentNum(int k_rep) {
 }
 
 void IQPTree::setProbDelete(double p_del) {
-    p_delete = p_del;
+    //p_delete = p_del;
+    if (p_del != 0.0) {
+		k_delete = k_delete_min = k_delete_max = round(p_del * leafNum);
+		return;
+    }
+	k_delete = k_delete_min = 10;
+	k_delete_max = leafNum / 2;
+	if (k_delete_max > 100) k_delete_max = 100;
+	if (k_delete_max < 20) k_delete_max = 20;
+	k_delete_stay = ceil(leafNum/k_delete);
+}
+
+double IQPTree::getProbDelete() {
+	return (double)k_delete / leafNum;
+}
+
+void IQPTree::resetKDelete() {
+	k_delete = k_delete_min;
+	k_delete_stay = ceil(leafNum / k_delete);
+}
+
+void IQPTree::increaseKDelete() {
+	if (k_delete >= k_delete_max)
+		return;
+	k_delete_stay--;
+	if (k_delete_stay > 0) return;
+	k_delete++;
+	k_delete_stay = ceil(leafNum / k_delete);
+	if (verbose_mode >= VB_MED)
+		cout << "Increase k_delete to " << k_delete << endl;
 }
 
 void IQPTree::setIQPIterations(STOP_CONDITION stop_condition,
@@ -152,7 +182,8 @@ void IQPTree::deleteLeaves(PhyloNodeVector &del_leaves) {
     // get the vector of taxa
     getTaxa(taxa);
     root = NULL;
-    int num_delete = floor(p_delete * taxa.size());
+    //int num_delete = floor(p_delete * taxa.size());
+    int num_delete = k_delete;
     int i;
     if (num_delete > taxa.size() - 4) num_delete = taxa.size() - 4;
     // now try to randomly delete some taxa of the probability of p_delete
@@ -378,7 +409,7 @@ double IQPTree::doIQP() {
 
     clock_t time_end = clock();
 
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VB_MAX) {
         cout << "IQP Time = " << (double) (time_end - time_begin) / CLOCKS_PER_SEC << endl;
     }
 
@@ -604,7 +635,7 @@ double IQPTree::doIQPNNI(Params &params) {
         double iqp_score = doIQP();
         clock_t endClock = clock();
         cout.precision(15);
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VB_MAX) {
 			cout << "IQP score : " << iqp_score << endl;
 			printf("Total time used for IQP : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
 		}
@@ -658,6 +689,9 @@ double IQPTree::doIQPNNI(Params &params) {
             printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
             //printResultTree(params);
             stop_rule.addImprovedIteration(cur_iteration);
+			
+			// Variable Neighborhood search idea, reset k_delete if tree is better
+			resetKDelete();
         } else {
             /* take back the current best tree */
             best_tree_string.seekg(0);
@@ -665,6 +699,12 @@ double IQPTree::doIQPNNI(Params &params) {
             readTree(best_tree_string, rooted);
             assignLeafNames();
             initializeAllPartialLh();
+
+			// Variable Neighborhood search idea, increase k_delete if tree is not better
+			increaseKDelete();
+
+			if (curScore > bestScore - 1e-4) // if goes back, increase k_delete once more
+				increaseKDelete();
         }
     }
 
@@ -730,7 +770,7 @@ double IQPTree::optimizeNNI(bool fullNNI) {
             genNNIMoves();
             evaNNIend = clock();
 
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VB_MAX) {
                 printf("Time used for evaluating NNIs: %8.6f seconds.\n", (double) (-evaNNIbegin
                         + evaNNIend) / CLOCKS_PER_SEC);
             }

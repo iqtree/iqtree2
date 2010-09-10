@@ -707,8 +707,16 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
 	return score;
 }
 
-
 double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+	switch(aln->num_states) {
+		case 2: __computeLikelihoodBranch<2> (dad_branch, dad, pattern_lh);
+		case 4: __computeLikelihoodBranch<4> (dad_branch, dad, pattern_lh);
+		case 20: __computeLikelihoodBranch<20> (dad_branch, dad, pattern_lh);
+	}
+}
+
+template<int NSTATES>
+double PhyloTree::__computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
 	PhyloNode *node = (PhyloNode*)dad_branch->node;
 	PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
 	assert(node_branch);
@@ -1937,7 +1945,7 @@ void PhyloTree::computeNNIPatternLh(
 
 	// restore the Neighbor*
 	for (id = 0; id < IT_NUM; id++) {
-		delete ((PhyloNeighbor*)*saved_it[id])->partial_lh;
+		delete [] ((PhyloNeighbor*)*saved_it[id])->partial_lh;
 		delete (*saved_it[id]);
 		(*saved_it[id]) = saved_nei[id];
 	}
@@ -1962,9 +1970,9 @@ void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
 		freq[ptn_id]++;
 	}
 	for (i = 0; i < nptn; i++) {
-		lh_new[0] += pat_lh[0][i] * freq[i];
-		lh_new[1] += pat_lh[1][i] * freq[i];
-		lh_new[2] += pat_lh[2][i] * freq[i];
+		lh_new[0] += freq[i] * pat_lh[0][i];
+		lh_new[1] += freq[i] * pat_lh[1][i];
+		lh_new[2] += freq[i] * pat_lh[2][i];
 	}
 }
 

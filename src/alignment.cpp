@@ -510,11 +510,14 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 }
 
 
-void Alignment::printPhylip(char *file_name) {
+void Alignment::printPhylip(const char *file_name, bool append) {
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
-		out.open(file_name);
+		if (append)
+			out.open(file_name, ios_base::out | ios_base::app);
+		else
+			out.open(file_name);
 		out << getNSeq() << " " << getNSite() << endl;
 		StrVector::iterator it;
 		int max_len = getMaxSeqNameLength();
@@ -566,6 +569,25 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
 	countConstSite();
 	assert(size() <= aln->size());
 }
+
+void Alignment::createBootstrapAlignment(Alignment *aln) {
+	int site, nsite = aln->getNSite();
+	seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
+	num_states = aln->num_states;
+	site_pattern.resize(nsite, -1);
+	clear();
+	pattern_index.clear();
+	VerboseMode save_mode = verbose_mode; 
+	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+	for (site = 0; site < nsite; site++) {
+		int ptn_id = aln->getPatternID(floor((((double)rand())/RAND_MAX) * nsite));
+ 		Pattern pat = aln->at(ptn_id);
+		addPattern(pat, site);
+	}
+	verbose_mode = save_mode;
+	countConstSite();
+}
+
 
 void Alignment::countConstSite() {
 	int num_const_sites = 0;

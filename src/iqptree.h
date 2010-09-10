@@ -137,6 +137,11 @@ public:
      */
     void setProbDelete(double p_del);
 
+    double getProbDelete();
+
+	void resetKDelete();
+	void increaseKDelete();
+
     /**
             set the number of iterations for the IQPNNI algorithm
             @param stop_condition stop condition (SC_FIXED_ITERATION, SC_STOP_PREDICT)
@@ -429,8 +434,13 @@ protected:
     /**
             probability to delete a leaf
      */
-    double p_delete;
+    //double p_delete;
 
+	int k_delete, k_delete_min, k_delete_max, k_delete_stay;
+
+	/**
+		number of representative leaves for IQP step
+	*/
     int k_represent;
 
     /**

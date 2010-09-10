@@ -34,6 +34,7 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 	full_name = model_name;
 
 	if (strcmp(model_name, "JC") == 0 || strcmp(model_name, "JC69") == 0) {
+		name = "JC";
 		setRateType("000000");
 		def_freq = FREQ_EQUAL;
 		full_name = "JC (Juke and Cantor, 1969)";
@@ -42,14 +43,17 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 		def_freq = FREQ_ESTIMATE;
 		full_name = "F81 (Felsenstein, 1981)";
 	} else if (strcmp(model_name, "K2P") == 0 || strcmp(model_name, "K80") == 0) {
+		name = "K2P";
 		setRateType("010010");
 		def_freq = FREQ_EQUAL;
 		full_name = "K2P (Kimura, 1980)";
 	} else if (strcmp(model_name, "HKY") == 0 || strcmp(model_name, "HKY85") == 0) {
+		name = "HKY";
 		setRateType("010010");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "HKY (Hasegawa, Kishino and Yano, 1985)";
 	} else if (strcmp(model_name, "K3P") == 0 || strcmp(model_name, "K81") == 0) {
+		name = "K3P";
 		setRateType("012210");
 		def_freq = FREQ_EQUAL;
 		full_name = "K3P (Kimura, 1981)";
@@ -58,10 +62,12 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 		def_freq = FREQ_ESTIMATE;
 		full_name = "K3P unequal frequencies (Kimura, 1981)";
 	} else if (strcmp(model_name, "TN") == 0 || strcmp(model_name, "TrN") == 0 || strcmp(model_name, "TN93") == 0) {
+		name = "TN";
 		setRateType("010020");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TN (Tamura and Nei, 1993)";
 	} else if (strcmp(model_name, "TNef") == 0 || strcmp(model_name, "TrNef") == 0) {
+		name = "TNef";
 		setRateType("010020");
 		def_freq = FREQ_EQUAL;
 		full_name = "TN equal frequencies (Tamura and Nei, 1993)";
@@ -86,6 +92,7 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 		def_freq = FREQ_EQUAL;
 		full_name = "SYM (Zharkihk, 1994)";
 	} else if (strcmp(model_name, "GTR") == 0 || strcmp(model_name, "REV") == 0) {
+		name = "GTR";
 		setRateType("123450");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "GTR (Tavare, 1986)";
