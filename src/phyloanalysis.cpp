@@ -870,8 +870,10 @@ void runPhyloAnalysis(Params &params) {
 			params.split_threshold, params.out_file, params.out_prefix); 
 
 		cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
+		MExtTree ext_tree;
 		assignBootstrapSupport(boottrees_name.c_str(), 0, 
-			treefile_name.c_str(), false, params.out_file, params.out_prefix); 
+			treefile_name.c_str(), false, params.out_file, params.out_prefix, ext_tree); 
+		//tree.copyTree(&ext_tree);
 		cout << endl;
 
 		reportPhyloAnalysis(params, original_model, alignment, tree);
@@ -881,11 +883,11 @@ void runPhyloAnalysis(Params &params) {
 
 
 void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, bool rooted, 
-	const char *output_tree, const char *out_prefix) {
+	const char *output_tree, const char *out_prefix, MExtTree &mytree) {
 	//bool rooted = false;
 	// read the tree file
 
-	MExtTree mytree(target_tree, rooted);
+	mytree.init(target_tree, rooted);
 	// reindex the taxa in the tree to aphabetical names
 	NodeVector taxa;
 	mytree.getTaxa(taxa);

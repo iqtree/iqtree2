@@ -22,6 +22,7 @@
 #define PHYLOANALYSIS_H
 
 #include "tools.h"
+#include "mexttree.h"
 
 /**
 	main function to carry out phylogenetic inference
@@ -39,7 +40,7 @@ void runPhyloAnalysis(Params &params);
 		output_tree will be named target_tree appended with ".suptree"
 */
 void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, 
-	bool rooted, const char *output_tree, const char *out_prefix);
+	bool rooted, const char *output_tree, const char *out_prefix, MExtTree &mytree);
 
 /**
 	Compute the consensus tree from the collection of trees from input_trees

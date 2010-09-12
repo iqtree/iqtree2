@@ -1457,6 +1457,7 @@ int main(int argc, char *argv[])
 	} else if (params.run_mode == STATS){ /**MINH ANH: for some statistics on the input tree*/
 		branchStats(params); // MA
 	} else if (params.consensus_type != CT_NONE) {
+		MExtTree tree;
 		switch (params.consensus_type) {
 			case CT_CONSENSUS_TREE: 
 				computeConsensusTree(params.user_file, params.tree_burnin, 
@@ -1468,7 +1469,7 @@ int main(int argc, char *argv[])
 				break;
 			case CT_ASSIGN_SUPPORT: 
 				assignBootstrapSupport(params.user_file, params.tree_burnin, 
-					params.second_tree, params.is_rooted, params.out_file, params.out_prefix); 
+					params.second_tree, params.is_rooted, params.out_file, params.out_prefix, tree); 
 				break;
 			case CT_NONE: break;
 			/**MINH ANH: for some comparison*/
