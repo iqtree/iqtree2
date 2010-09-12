@@ -315,6 +315,17 @@ public:
     double getCurScore(void);
 
     /**
+     *
+     * @return
+     */
+    double getBestScore(void) { return bestScore; }
+
+    /**
+     *
+     */
+    void setBestScore(double score) { bestScore = score; }
+
+    /**
             current parsimony score of the tree
      */
     int cur_pars_score;

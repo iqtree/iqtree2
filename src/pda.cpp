@@ -145,7 +145,7 @@ inline void separator(ostream &out, int type = 0) {
 
 
 void printCopyright(ostream &out) {
-	out << "PDA - Phylogenetic Diversity Analyzer version " << VERSION << " built " << __DATE__;
+ 	out << "PDA - Phylogenetic Diversity Analyzer version " << VERSION << " built " << __DATE__;
 #ifdef DEBUG
 	out << " - debug mode";
 #endif
