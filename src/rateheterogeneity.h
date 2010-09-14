@@ -53,6 +53,12 @@ public:
 	void setTree(PhyloTree *tree);
 
 	/**
+		set phylogenetic tree
+		@param tree associated phyogenetic tree
+	*/
+	PhyloTree *getTree() { return phylo_tree; }
+
+	/**
 		get the number of rate categories. The default returns 1 category since it is homogeneous model
 		@return the number of rate categories
 	*/

@@ -449,6 +449,11 @@ struct Params {
 	bool compute_ml_dist;
 
 	/**
+		TRUE to compute the maximum-likelihood tree
+	*/
+	bool compute_ml_tree;
+
+	/**
 		file containing budget information
 	*/
 	char *budget_file;

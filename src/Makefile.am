@@ -20,7 +20,7 @@ noinst_HEADERS = alignment.h matree.h alignmentpairwise.h bionj.h circularnetwor
 	optimization.h pattern.h pdnetwork.h pdtree.h pdtreeset.h phyloanalysis.h phylonode.h \
 	phylotree.h pruning.h rategamma.h rategammainvar.h rateheterogeneity.h rateinvar.h \
 	ratemeyerhaeseler.h split.h splitgraph.h splitset.h stoprule.h substmodel.h tools.h
-SUBDIRS = eigen lp modeltest ncl
+SUBDIRS = lp modeltest ncl
 pda_LDADD = $(top_builddir)/src/lp/liblpsolve.la \
 	$(top_builddir)/src/modeltest/libmodeltest.la $(top_builddir)/src/ncl/libNCL.la
 AM_CXXFLAGS = -Wno-deprecated

@@ -659,7 +659,7 @@ void Alignment::printDist(const char *file_name, double *dist_mat) {
 		out.open(file_name);
 		printDist(out, dist_mat);
 		out.close();
-		cout << "Distance matrix was printed to " << file_name << endl;
+		//cout << "Distance matrix was printed to " << file_name << endl;
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, file_name);
 	}	

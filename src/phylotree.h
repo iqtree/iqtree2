@@ -137,14 +137,6 @@ public:
 	RateHeterogeneity *getRate();
 
 	/**
-		create substitution model with possible rate heterogeneity. Create proper class objects
-		for two variables: model and site_rate. It takes the following field of params into account:
-			model_name, num_rate_cats, freq_type
-		@param params program parameters
-	*/
-	void createModel(Params &params);
-
-	/**
 		get the name of the model
 	*/
 	string getModelName();
@@ -280,13 +272,6 @@ public:
 		@return tree likelihood
 	*/
 	double computeLikelihood(double *pattern_lh = NULL);
-
-	/**
-		optimize model parameters and tree branch lengths
-		@param fixed_len TRUE to fix branch lengths, default is false
-		@return the best likelihood 
-	*/
-	virtual double optimizeModel(bool fixed_len = false);
 
 	/**
 		Roll back the tree saved with only Taxon IDs and branch lengths.
@@ -654,6 +639,7 @@ protected:
 	SubstModel *model;
 
 	/**
+		Model factory includes SubstModel and RateHeterogeneity
 		stores transition matrices computed before for efficiency purpose, eps. AA or CODON model.
 	*/
 	ModelFactory *model_factory;

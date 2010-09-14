@@ -121,7 +121,7 @@ string modelTest(Params &params, PhyloTree *in_tree)
 		else
 			subst_model = new ModelProtein("WAG", FREQ_UNKNOWN, in_tree);
 
-		ModelFactory *model_fac = new ModelFactory(subst_model, false);
+		ModelFactory *model_fac = new ModelFactory();
 
 		int num_models = (nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM;
 
@@ -143,20 +143,22 @@ string modelTest(Params &params, PhyloTree *in_tree)
 				subst_model->init(((nstates==4)?dna_model_names[model].c_str():aa_model_names[model].c_str()), FREQ_UNKNOWN);
 				subst_model->setTree(tree);
 				tree->setModel(subst_model);
-				tree->setModelFactory(model_fac);
-
-
 				// initialize rate
 				tree->setRate(rate_class[rate_type]);
 				rate_class[rate_type]->setTree(tree);
 
-				// print some infos
+				// initialize model factory
+				tree->setModelFactory(model_fac);
+				model_fac->model = subst_model;
+				model_fac->site_rate = rate_class[rate_type]; 
 
+
+				// print some infos
 				// clear all likelihood values
 				tree->clearAllPartialLh();
 
 				// optimize model parameters
-				double cur_lh = tree->optimizeModel();
+				double cur_lh = tree->getModelFactory()->optimizeParameters();
 				cout << "===> Testing ";
 				cout.width(12);
 				string str;
@@ -363,10 +365,10 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 		
 		out << "NOTE: Tree is UNROOTED although outgroup taxon '" << 
 			((params.root) ? params.root : tree.aln->getSeqName(0)) <<"' is drawn at root" << endl;
-		if (params.aLRT_replicates > 0 || params.num_bootstrap_samples > 1) { 
+		if (params.aLRT_replicates > 0 || (params.num_bootstrap_samples && params.compute_ml_tree)) { 
 			out << "Numbers in parentheses are ";
 			if (params.aLRT_replicates > 0) out << "SH-like aLRT supports";
-			if (params.num_bootstrap_samples > 1) out << " / bootstrap supports";
+			if (params.num_bootstrap_samples && params.compute_ml_tree) out << " / bootstrap supports";
 			out << " (%)" << endl;
 		}
 		out << endl;
@@ -435,11 +437,8 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 	if (params.num_bootstrap_samples) 
 		cout << endl << "Non-parametric bootstrap results written to:" << endl 
 			 << "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl
-			 << "  Bootstrap trees:          " << params.out_prefix << ".boottrees" << endl;
-	if (params.num_bootstrap_samples > 1) {
-		cout << "  Consensus tree:           " << params.out_prefix << ".contree" << endl
-			 << "  ML-Tree with supports:    " << params.out_prefix << ".suptree" << endl;
-	}
+			 << "  Bootstrap trees:          " << params.out_prefix << ".boottrees" << endl
+			 << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
 	cout << endl;
 
 }
@@ -540,7 +539,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 			printf("Time used: %8.6f seconds.\n", (double)params.run_time / CLOCKS_PER_SEC);
 		}
 	}
-	tree.createModel(params);
+	assert(tree.aln);
+	tree.optimize_by_newton = params.optimize_by_newton;
+	if (!tree.getModelFactory()) tree.setModelFactory(new ModelFactory(params, &tree));
+	tree.setModel(tree.getModelFactory()->model);
+	tree.setRate(tree.getModelFactory()->site_rate);
 	int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
 	cout << "Model of evolution: " << tree.getModelName() << " (" << model_df << " free parameters)" << endl;
 	cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
@@ -558,7 +561,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	/* optimize model parameters */
 	cout.precision(10);
 
-	cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
+
+	//cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
 
 	if (params.parsimony) {
             tree.enable_parsimony = true;
@@ -570,12 +574,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
                 tree.lh_scores[i] = 0;
             }
         }
-	cout << "Parsimony score: " << tree.computeParsimonyScore() << endl;
+	//cout << "Parsimony score: " << tree.computeParsimonyScore() << endl;
 	tree.cur_pars_score = tree.computeParsimony();
-	cout << "Fast parsimony score: " << tree.cur_pars_score << endl;
+	//cout << "Fast parsimony score: " << tree.cur_pars_score << endl;
 
 	cout << "Optimizing model parameters" << endl;
-	double bestTreeScore = tree.optimizeModel(params.fixed_branch_length);
+	double bestTreeScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
 	cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 	//Update tree score
 	tree.curScore = bestTreeScore;
@@ -636,7 +640,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		nniEndClock = clock();
 		printf("Time used for first NNI search: %8.6f seconds.\n", (double)(nniEndClock - nniBeginClock) / CLOCKS_PER_SEC);
 
-		cout << "Tree likelihood after NNI: " << newScore << endl;
+		//cout << "Tree likelihood after NNI: " << newScore << endl;
 		if (newScore > bestTreeScore) {
 			bestTreeScore = newScore;
 			cout << "Found new best tree log-likelihood : " << bestTreeScore << endl;
@@ -709,7 +713,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
             cout << "Star doing iterated local search " << endl;
             tree.doILS( params , perLevel );
             cout << "Optimizing model parameters" << endl;
-            double endScore = tree.optimizeModel(params.fixed_branch_length);
+            double endScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
             cout << "Best score found : " << endScore << endl;
         }
 	/* do the IQPNNI */
@@ -748,7 +752,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	}
 
 	cout << "Optimizing model parameters" << endl;
-	tree.setBestScore(tree.optimizeModel(params.fixed_branch_length));
+	tree.setBestScore(tree.getModelFactory()->optimizeParameters(params.fixed_branch_length));
 	cout << "Best score found : " << tree.getBestScore() << endl;
 
 	/* root the tree at the first sequence */
@@ -846,6 +850,7 @@ void runPhyloAnalysis(Params &params) {
 
 			Alignment bootstrap_alignment;
 			IQPTree boot_tree;
+			cout << "Creating bootstrap alignment..." << endl;
 			bootstrap_alignment.createBootstrapAlignment(&alignment);
 			bootstrap_alignment.printPhylip(bootaln_name.c_str(), true);
 			runPhyloAnalysis(params, original_model, &bootstrap_alignment, boot_tree);
@@ -874,20 +879,20 @@ void runPhyloAnalysis(Params &params) {
 				reportPhyloAnalysis(params, original_model, bootstrap_alignment, boot_tree);
 		}
 
-		if (params.num_bootstrap_samples > 1) {
+		cout << endl << "===> COMPUTE CONSENSUS TREE FROM " << 
+			params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
+		computeConsensusTree(boottrees_name.c_str(), 0, 
+			params.split_threshold, NULL, params.out_prefix); 
+
+		if (params.compute_ml_tree) {
 			cout << endl << "===> START ANALYSIS ON THE ORIGINAL ALIGNMENT" << endl << endl;
 			params.aLRT_replicates = saved_aLRT_replicates;
 			runPhyloAnalysis(params, original_model, &alignment, tree);
 
-			cout << endl << "===> COMPUTE CONSENSUS TREE FROM " << 
-				params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
-			computeConsensusTree(boottrees_name.c_str(), 0, 
-				params.split_threshold, params.out_file, params.out_prefix); 
-
 			cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
 			MExtTree ext_tree;
 			assignBootstrapSupport(boottrees_name.c_str(), 0, 
-				treefile_name.c_str(), false, params.out_file, params.out_prefix, ext_tree); 
+				treefile_name.c_str(), false, treefile_name.c_str(), params.out_prefix, ext_tree); 
 			tree.copyTree(&ext_tree);
 			reportPhyloAnalysis(params, original_model, alignment, tree);
 		}

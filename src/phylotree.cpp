@@ -12,12 +12,6 @@
 #include "phylotree.h"
 #include "bionj.h"
 #include "rateheterogeneity.h"
-#include "rateinvar.h"
-#include "rategamma.h"
-#include "rategammainvar.h"
-#include "gtrmodel.h"
-#include "modeldna.h"
-#include "modelprotein.h"
 #include "alignmentpairwise.h"
 #include <algorithm>
 
@@ -161,55 +155,6 @@ void PhyloTree::clearAllPartialLh() {
 	((PhyloNode*)root->neighbors[0]->node)->clearAllPartialLh((PhyloNode*)root);
 }
 
-
-void PhyloTree::createModel(Params &params) {
-	assert(aln);
-	optimize_by_newton = params.optimize_by_newton;
-	string model_str = params.model_name;
-
-	string::size_type pos = model_str.find('+');
-;
-
-	/* create site-rate heterogeneity */
-	if (pos != string::npos) {
-		string rate_str = model_str.substr(pos);
-		if (rate_str == "+I")
-			site_rate = new RateInvar(this);
-		else if (rate_str.substr(0,2) == "+G") {
-			if (rate_str.length() > 2) {
-				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
-				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
-			}
-			site_rate = new RateGamma(params.num_rate_cats, this);
-		} else if (rate_str.substr(0,4) == "+I+G" || rate_str == "+G+I") {
-			if (rate_str.length() > 4) {
-				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
-				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
-			}
-			site_rate = new RateGammaInvar(params.num_rate_cats, this);
-		} else
-			outError("Invalid rate heterogeneity type");
-		model_str = model_str.substr(0, pos);
-	} else site_rate = new RateHeterogeneity();
-
-	/* create substitution model */
-
-	if (model_str == "JC" /*&& (params.freq_type == FREQ_UNKNOWN || params.freq_type == FREQ_EQUAL)*/) {
-		 model = new SubstModel(aln->num_states);
-	} else if (model_str == "GTR") {
-		model = new GTRModel(this);
-		((GTRModel*)model)->init(params.freq_type);
-	} else if (aln->num_states == 4) {
-		model = new ModelDNA(model_str.c_str(), params.freq_type, this);
-	} else if (aln->num_states == 20) {
-		model = new ModelProtein(model_str.c_str(), params.freq_type, this);
-	} else {
-		outError("Unsupported model type");
-	}
-
-	model_factory = new ModelFactory(model, params.store_trans_matrix);
-
-}
 
 
 string PhyloTree::getModelName() {
@@ -919,49 +864,6 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 	dad_branch->partial_lh_computed |= 1;
 }
 
-
-double PhyloTree::optimizeModel(bool fixed_len) {
-	double cur_lh;
-	model_factory->stopStoringTransMatrix();
-	if (fixed_len) 
-		cur_lh = computeLikelihood();
-	else {
-		cur_lh = optimizeAllBranches(1);
-	}
-	assert(model);
-	assert(site_rate);
-	do {
-		double model_lh = model->optimizeParameters();
-/*
-		if (model_lh != 0.0 && !fixed_len)
-			model_lh = optimizeAllBranches(3); */
-		double rate_lh = site_rate->optimizeParameters();
-/*		if (rate_lh != 0.0 && !fixed_len)
-			rate_lh = optimizeAllBranches(2);*/
-		if (model_lh == 0.0 && rate_lh == 0.0) {
-			if (!fixed_len) cur_lh = optimizeAllBranches();
-			break;
-		}
-		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
-		if (verbose_mode > VB_MIN) {
-			model->writeInfo(cout);
-			site_rate->writeInfo(cout);
-		}
-		if (new_lh > cur_lh + TOL_LIKELIHOOD) {
-			if (!fixed_len)
-				cur_lh = optimizeAllBranches(5);  // loop only 5 times in total
-			else
-				cur_lh = new_lh;
-			if (verbose_mode > VB_MIN)
-				cout << "Current Log-likelihood: " << cur_lh << endl;
-		} else {
-			if (!fixed_len) cur_lh = optimizeAllBranches();
-			break;
-		}
-	} while (true);
-	model_factory->startStoringTransMatrix();
-	return cur_lh;
-}
 
 
 /****************************************************************************

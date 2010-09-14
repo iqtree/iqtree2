@@ -22,6 +22,7 @@
 
 #include "tools.h"
 #include "substmodel.h"
+#include "rateheterogeneity.h"
 
 /**
 Store the transition matrix corresponding to evolutionary time so that one must not compute again. 
@@ -36,11 +37,28 @@ public:
 
 	/**
 		constructor
-		@param amodel pointer for the actual model
+		create substitution model with possible rate heterogeneity. Create proper class objects
+		for two variables: model and site_rate. It takes the following field of params into account:
+			model_name, num_rate_cats, freq_type, store_trans_matrix
+		@param params program parameters
+		@param tree associated phylogenetic tree
 	*/
-	ModelFactory(SubstModel *amodel, bool store_matrix);
+	ModelFactory(Params &params, PhyloTree *tree);
 
+	/**
+		blank constructor
+	*/
+	
+	ModelFactory();
+
+	/**
+		Start to store transition matrix for efficiency
+	*/
 	void startStoringTransMatrix();
+
+	/**
+		Stop storing transition matrix, e.g., when optimizing model parameters
+	*/
 	void stopStoringTransMatrix();
 
 	/**
@@ -77,10 +95,24 @@ public:
 	*/
     ~ModelFactory();
 
+
+	/**
+		optimize model parameters and tree branch lengths
+		@param fixed_len TRUE to fix branch lengths, default is false
+		@return the best likelihood 
+	*/
+	double optimizeParameters(bool fixed_len = false);
+
 	/**
 		pointer to the model, will not be deleted when deleting ModelFactory object
 	*/
 	SubstModel *model;
+
+
+	/**
+		pointer to the site-rate heterogeneity, will not be deleted when deleting ModelFactory object
+	*/
+	RateHeterogeneity *site_rate;
 
 	/**
 		TRUE to store transition matrix into this hash table for computation efficiency

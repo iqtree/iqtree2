@@ -505,6 +505,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.boundary_modifier = 1.0;
 	params.dist_file = NULL;
 	params.compute_ml_dist = true;
+	params.compute_ml_tree = true;
 	params.budget_file = NULL;
 	params.overlap = 0;
 	params.is_rooted = false;
@@ -998,6 +999,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.num_bootstrap_samples = convert_int(argv[cnt]);
 				if (params.num_bootstrap_samples < 1) 
 					throw "Wrong number of bootstrap samples";
+			} else if (strcmp(argv[cnt],"-bo") == 0) {
+				params.multi_tree = true;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -b <num_bootstrap_samples>";
+				params.num_bootstrap_samples = convert_int(argv[cnt]);
+				if (params.num_bootstrap_samples < 1) 
+					throw "Wrong number of bootstrap samples";
+				params.compute_ml_tree = false;
 			} else if (strcmp(argv[cnt],"-iqppars") == 0) {
 				params.iqp_assess_quartet = IQP_PARSIMONY;
 			} else if (strcmp(argv[cnt],"-wt") == 0) {

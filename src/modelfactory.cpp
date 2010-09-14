@@ -18,11 +18,120 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "modelfactory.h"
+#include "rateinvar.h"
+#include "rategamma.h"
+#include "rategammainvar.h"
+#include "gtrmodel.h"
+#include "modeldna.h"
+#include "modelprotein.h"
 
-ModelFactory::ModelFactory(SubstModel *amodel, bool store_matrix) { 
-	model = amodel; 
-	store_trans_matrix = store_matrix;
+ModelFactory::ModelFactory() { 
+	model = NULL; 
+	site_rate = NULL;
+	store_trans_matrix = false;
 	is_storing = false;
+}
+
+ModelFactory::ModelFactory(Params &params, PhyloTree *tree) { 
+	store_trans_matrix = params.store_trans_matrix;
+	is_storing = false;
+
+	string model_str = params.model_name;
+	string::size_type pos = model_str.find('+');
+
+	/* create site-rate heterogeneity */
+	if (pos != string::npos) {
+		string rate_str = model_str.substr(pos);
+		if (rate_str == "+I")
+			site_rate = new RateInvar(tree);
+		else if (rate_str.substr(0,2) == "+G") {
+			if (rate_str.length() > 2) {
+				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
+				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
+			}
+			site_rate = new RateGamma(params.num_rate_cats, tree);
+		} else if (rate_str.substr(0,4) == "+I+G" || rate_str == "+G+I") {
+			if (rate_str.length() > 4) {
+				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
+				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
+			}
+			site_rate = new RateGammaInvar(params.num_rate_cats, tree);
+		} else
+			outError("Invalid rate heterogeneity type");
+		model_str = model_str.substr(0, pos);
+	} else {
+		site_rate = new RateHeterogeneity();
+		site_rate->setTree(tree);
+	} 	
+
+	/* create substitution model */
+
+	if (model_str == "JC" /*&& (params.freq_type == FREQ_UNKNOWN || params.freq_type == FREQ_EQUAL)*/) {
+		 model = new SubstModel(tree->aln->num_states);
+	} else if (model_str == "GTR") {
+		model = new GTRModel(tree);
+		((GTRModel*)model)->init(params.freq_type);
+	} else if (tree->aln->num_states == 4) {
+		model = new ModelDNA(model_str.c_str(), params.freq_type, tree);
+	} else if (tree->aln->num_states == 20) {
+		model = new ModelProtein(model_str.c_str(), params.freq_type, tree);
+	} else {
+		outError("Unsupported model type");
+	}
+}
+
+
+double ModelFactory::optimizeParameters(bool fixed_len) {
+	assert(model);
+	assert(site_rate);
+
+	double cur_lh;
+	PhyloTree *tree = site_rate->getTree();
+	assert(tree);
+
+	stopStoringTransMatrix();
+	if (fixed_len) 
+		cur_lh = tree->computeLikelihood();
+	else {
+		cur_lh = tree->optimizeAllBranches(1);
+	}
+	int i;
+	for (i = 2; i < 100; i++) {
+		double model_lh = model->optimizeParameters();
+/*
+		if (model_lh != 0.0 && !fixed_len)
+			model_lh = optimizeAllBranches(3); */
+		double rate_lh = site_rate->optimizeParameters();
+/*		if (rate_lh != 0.0 && !fixed_len)
+			rate_lh = optimizeAllBranches(2);*/
+		if (model_lh == 0.0 && rate_lh == 0.0) {
+			if (!fixed_len) cur_lh = tree->optimizeAllBranches();
+			break;
+		}
+		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
+		if (verbose_mode >= VB_MED) {
+			model->writeInfo(cout);
+			site_rate->writeInfo(cout);
+		}
+		if (new_lh > cur_lh + 1e-4) {
+			if (!fixed_len)
+				cur_lh = tree->optimizeAllBranches(i);  // loop only 5 times in total
+			else
+				cur_lh = new_lh;
+			if (verbose_mode > VB_MIN)
+				cout << "Current Log-likelihood: " << cur_lh << endl;
+		} else {
+			if (!fixed_len) cur_lh = tree->optimizeAllBranches();
+			break;
+		}
+	}
+	if (verbose_mode == VB_MIN) {
+		model->writeInfo(cout);
+		site_rate->writeInfo(cout);
+	}
+	cout << "Optimization took " << i-1 << " rounds to finish" << endl;
+	startStoringTransMatrix();
+	return cur_lh;
 }
 
 void ModelFactory::startStoringTransMatrix() {
