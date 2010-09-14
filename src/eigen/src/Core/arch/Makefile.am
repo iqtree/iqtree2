@@ -1,3 +1,0 @@
-INCLUDES = $(all_includes)
-METASOURCES = AUTO
-SUBDIRS = AltiVec SSE
