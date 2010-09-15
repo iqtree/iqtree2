@@ -1829,7 +1829,7 @@ void PhyloTree::computeNNIPatternLh(
 				check_score += result_lh[i] * aln->at(i).frequency;
 			}
 			// make sure that the pattern likelihoods were just computed correctly
-			assert(fabs(new_score - check_score) < 1e-6);
+			assert(fabs(new_score - check_score) < 1e-4);
 		}
 /*
 		if (fabs(new_score - old_score) > TOL_LIKELIHOOD)
