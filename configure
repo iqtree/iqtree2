@@ -15136,7 +15136,7 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
 
 
-ac_config_files="$ac_config_files Makefile src/Makefile src/eigen/Makefile src/eigen/src/Core/Makefile src/eigen/src/Core/arch/AltiVec/Makefile src/eigen/src/Core/arch/Makefile src/eigen/src/Core/arch/SSE/Makefile src/eigen/src/Core/util/Makefile src/eigen/src/Makefile src/lp/Makefile src/lp/bfp/Makefile src/lp/bfp/bfp_LUSOL/LUSOL/Makefile src/lp/bfp/bfp_LUSOL/Makefile src/lp/colamd/Makefile src/lp/shared/Makefile src/modeltest/Makefile src/ncl/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile src/lp/Makefile src/lp/bfp/Makefile src/lp/bfp/bfp_LUSOL/LUSOL/Makefile src/lp/bfp/bfp_LUSOL/Makefile src/lp/colamd/Makefile src/lp/shared/Makefile src/modeltest/Makefile src/ncl/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -16127,13 +16127,6 @@ do
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
-    "src/eigen/Makefile") CONFIG_FILES="$CONFIG_FILES src/eigen/Makefile" ;;
-    "src/eigen/src/Core/Makefile") CONFIG_FILES="$CONFIG_FILES src/eigen/src/Core/Makefile" ;;
-    "src/eigen/src/Core/arch/AltiVec/Makefile") CONFIG_FILES="$CONFIG_FILES src/eigen/src/Core/arch/AltiVec/Makefile" ;;
-    "src/eigen/src/Core/arch/Makefile") CONFIG_FILES="$CONFIG_FILES src/eigen/src/Core/arch/Makefile" ;;
-    "src/eigen/src/Core/arch/SSE/Makefile") CONFIG_FILES="$CONFIG_FILES src/eigen/src/Core/arch/SSE/Makefile" ;;
-    "src/eigen/src/Core/util/Makefile") CONFIG_FILES="$CONFIG_FILES src/eigen/src/Core/util/Makefile" ;;
-    "src/eigen/src/Makefile") CONFIG_FILES="$CONFIG_FILES src/eigen/src/Makefile" ;;
     "src/lp/Makefile") CONFIG_FILES="$CONFIG_FILES src/lp/Makefile" ;;
     "src/lp/bfp/Makefile") CONFIG_FILES="$CONFIG_FILES src/lp/bfp/Makefile" ;;
     "src/lp/bfp/bfp_LUSOL/LUSOL/Makefile") CONFIG_FILES="$CONFIG_FILES src/lp/bfp/bfp_LUSOL/LUSOL/Makefile" ;;

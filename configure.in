@@ -7,8 +7,7 @@ AC_LANG_CPLUSPLUS
 AC_PROG_CXX
 AM_PROG_LIBTOOL
 
-AC_OUTPUT(Makefile src/Makefile src/eigen/Makefile src/eigen/src/Core/Makefile \
-	src/eigen/src/Core/arch/AltiVec/Makefile src/eigen/src/Core/arch/Makefile src/eigen/src/Core/arch/SSE/Makefile \
-	src/eigen/src/Core/util/Makefile src/eigen/src/Makefile src/lp/Makefile src/lp/bfp/Makefile \
+AC_OUTPUT(Makefile src/Makefile \
+	src/lp/Makefile src/lp/bfp/Makefile \
 	src/lp/bfp/bfp_LUSOL/LUSOL/Makefile src/lp/bfp/bfp_LUSOL/Makefile src/lp/colamd/Makefile \
 	src/lp/shared/Makefile src/modeltest/Makefile src/ncl/Makefile)
