@@ -541,6 +541,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	}
 	assert(tree.aln);
 	tree.optimize_by_newton = params.optimize_by_newton;
+	tree.sse = params.SSE;
 	if (!tree.getModelFactory()) tree.setModelFactory(new ModelFactory(params, &tree));
 	tree.setModel(tree.getModelFactory()->model);
 	tree.setRate(tree.getModelFactory()->site_rate);

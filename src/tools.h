@@ -733,6 +733,11 @@ struct Params {
 		number of replicates, default: 1000
 	*/
 	int aLRT_replicates;
+
+	/**
+		SSE Option
+	*/
+        bool SSE;
 };
 
 /**

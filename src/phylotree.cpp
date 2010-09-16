@@ -9,6 +9,9 @@
 // Copyright: See COPYING file that comes with this distribution
 //
 //
+#define EIGEN_NO_AUTOMATIC_RESIZING
+#define NDEBUG
+#include <Eigen/Core>
 #include "phylotree.h"
 #include "bionj.h"
 #include "rateheterogeneity.h"
@@ -58,6 +61,9 @@ PhyloTree::PhyloTree()
 	central_partial_lh = NULL;
 	central_partial_pars = NULL;
 	model_factory = NULL;
+	ptn_lh = NULL;
+	lh_derv1 = NULL;
+	lh_derv2 = NULL;
 }
 
 PhyloTree::~PhyloTree() {
@@ -116,6 +122,13 @@ void PhyloTree::setAlignment(Alignment *alignment)
 		assert(node->isLeaf());
 		node->id = seq;
 	}
+	int alnSize = aln->size();
+	ptn_lh = Eigen::ei_aligned_new<double>(alnSize);
+	lh_derv1 = Eigen::ei_aligned_new<double>(alnSize);
+	lh_derv2 = Eigen::ei_aligned_new<double>(alnSize);
+	ptn_freq = Eigen::ei_aligned_new<double>(alnSize);
+	for (int ptn = 0; ptn < alnSize; ptn++)
+		ptn_freq[ptn] = (*aln)[ptn].frequency;
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {
@@ -154,9 +167,7 @@ Node* PhyloTree::newNode(int node_id, int node_name) {
 void PhyloTree::clearAllPartialLh() {
 	((PhyloNode*)root->neighbors[0]->node)->clearAllPartialLh((PhyloNode*)root);
 }
-
-
-
+	
 string PhyloTree::getModelName() {
 	return model->name + site_rate->name;
 }
@@ -235,8 +246,6 @@ void PhyloTree::setBitsBlock(UINT *bit_vec, int index, UINT value) {
 	
 	}
 }
-
-
 
 void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 	// don't recompute the likelihood
@@ -584,7 +593,8 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 		if (!central_partial_lh) {
 			if (verbose_mode >= VB_MED)
 				cout << "Allocating " << (leafNum-1)*4*block_size*sizeof(double) << " bytes for partial likelihood vectors" << endl;
-			central_partial_lh = new double[(leafNum-1)*4*block_size];
+			//central_partial_lh = new double[(leafNum-1)*4*block_size];
+			central_partial_lh = Eigen::ei_aligned_new<double>((leafNum - 1)*4 * block_size);
 			if (!central_partial_lh) 
 				outError("Not enough memory for partial likelihood vectors");
 		
@@ -592,7 +602,8 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 		if (!central_partial_pars) {
 			if (verbose_mode >= VB_MED)
 				cout << "Allocating " << (leafNum-1)*4*pars_block_size*sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
-			central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
+			//central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
+			central_partial_pars = Eigen::ei_aligned_new<UINT>((leafNum - 1)*4 * pars_block_size);
 			if (!central_partial_pars)
 				outError("Not enough memory for partial parsimony vectors");
 		}
@@ -618,9 +629,9 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 
 
 double *PhyloTree::newPartialLh() {
-	return new double[aln->size() * aln->num_states * site_rate->getNRate()];
+	//return new double[aln->size() * aln->num_states * site_rate->getNRate()];
+	return Eigen::ei_aligned_new<double>(aln->size() * aln->num_states * site_rate->getNRate());
 }
-
 
 double PhyloTree::computeLikelihood(double *pattern_lh) {
 	assert(model);
@@ -653,15 +664,19 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
 }
 
 double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
-	switch(aln->num_states) {
-		case 2: __computeLikelihoodBranch<2> (dad_branch, dad, pattern_lh);
-		case 4: __computeLikelihoodBranch<4> (dad_branch, dad, pattern_lh);
-		case 20: __computeLikelihoodBranch<20> (dad_branch, dad, pattern_lh);
+	if (sse) {
+		switch(aln->num_states) {
+			case 2: return computeLikelihoodBranchSSE<2> (dad_branch, dad, pattern_lh);
+			case 4: return computeLikelihoodBranchSSE<4> (dad_branch, dad, pattern_lh);
+			case 20: return computeLikelihoodBranchSSE<20> (dad_branch, dad, pattern_lh);
+		}
+	} else {
+		return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
 	}
+
 }
 
-template<int NSTATES>
-double PhyloTree::__computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
 	PhyloNode *node = (PhyloNode*)dad_branch->node;
 	PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
 	assert(node_branch);
@@ -684,8 +699,6 @@ double PhyloTree::__computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode
 	// now combine likelihood at the branch
 
 	double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-	//if (tree_lh < 0.0)
-	//	cout << tree_lh << endl;
 	int ncat = site_rate->getNRate();
 	double p_invar = site_rate->getPInvar();
 	double p_var_cat = (1.0 - p_invar) / (double)ncat;
@@ -751,7 +764,106 @@ double PhyloTree::__computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode
 	return tree_lh;
 }
 
-void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
+template<int NSTATES>
+double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+    PhyloNode *node = (PhyloNode*) dad_branch->node; // Node A
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad); // Node B
+    assert(node_branch);
+    if (!central_partial_lh)
+        initializeAllPartialLh();
+    // swap node and dad if dad is a leaf
+    if (node->isLeaf()) {
+        PhyloNode *tmp_node = dad;
+        dad = node;
+        node = tmp_node;
+        PhyloNeighbor *tmp_nei = dad_branch;
+        dad_branch = node_branch;
+        node_branch = tmp_nei;
+        //cout << "swapped\n";
+    }
+    if ((dad_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihoodSSE<NSTATES>(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihoodSSE<NSTATES>(node_branch, node);
+    // now combine likelihood at the branch
+
+    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+    int ncat = site_rate->getNRate();
+    double p_invar = site_rate->getPInvar();
+    double p_var_cat = (1.0 - p_invar) / (double) ncat;
+    //int nstates = aln->num_states;
+    int block = ncat * NSTATES;
+    int trans_size = NSTATES * NSTATES;
+    int ptn, cat, state1, state2;
+    double *partial_lh_site;
+    double *partial_lh_child;
+    double *trans_state;
+
+    EIGEN_ALIGN16 double trans_mat[ncat * trans_size];
+    EIGEN_ALIGN16 double state_freq[NSTATES];
+    model->getStateFrequency(state_freq);
+
+    for (cat = 0; cat < ncat; cat++) {
+        //trans_mat[cat] = model->newTransMatrix();
+        double *trans_cat = trans_mat + (cat * trans_size);
+        model_factory->computeTransMatrix(dad_branch->length * site_rate->getRate(cat), trans_cat);
+        for (state1 = 0; state1 < NSTATES; state1++) {
+            double *trans_mat_state = trans_cat + (state1 * NSTATES);
+            for (state2 = 0; state2 < NSTATES; state2++)
+                trans_mat_state[state2] *= state_freq[state1];
+        }
+    }
+    //Eigen::VectorXd cats(ncat);
+    for (ptn = 0; ptn < aln->size(); ptn++) {
+        double lh_ptn = 0.0; // likelihood of the pattern
+        int dad_state = 1000; // just something big enough
+        if (dad->isLeaf())
+            dad_state = (*aln)[ptn][dad->id];        
+        if (dad_state >= 4) {
+            // Internal node            
+            for (cat = 0; cat < ncat; cat++) {
+                partial_lh_site = node_branch->partial_lh + (ptn * block + cat * NSTATES);
+                partial_lh_child = dad_branch->partial_lh + (ptn * block + cat * NSTATES);
+		Eigen::Map<Eigen::Matrix<double, 1, NSTATES>, Eigen::Aligned> eigen_partial_lh_child(&partial_lh_child[0]);
+		Eigen::Map<Eigen::Matrix<double, 1, NSTATES>, Eigen::Aligned> eigen_partial_lh_site(&partial_lh_site[0]);
+                trans_state = trans_mat + cat * trans_size;
+                Eigen::Map<Eigen::Matrix<double, NSTATES, NSTATES>, Eigen::Aligned> eigen_trans_state(&trans_state[0]);          
+                //cats[cat] = (eigen_partial_lh_child * eigen_trans_state).dot(eigen_partial_lh_site);
+		lh_ptn += (eigen_partial_lh_child * eigen_trans_state).dot(eigen_partial_lh_site);
+            }
+        } else {
+            // external node
+            for (cat = 0; cat < ncat; cat++) {                
+                partial_lh_child = dad_branch->partial_lh + (ptn * block + cat * NSTATES);
+		trans_state = trans_mat + (cat * trans_size + dad_state * NSTATES);
+                Eigen::Map<Eigen::Matrix<double, 1, NSTATES>, Eigen::Aligned> eigen_partial_lh_child(&partial_lh_child[0]);   Eigen::Map<Eigen::Matrix<double, 1, NSTATES>, Eigen::Aligned> eigen_trans_state(&trans_state[0]);
+                lh_ptn += eigen_partial_lh_child.dot(eigen_trans_state);
+                //cats[cat] = eigen_partial_lh_child.dot(eigen_trans_state);
+            }
+            
+        }
+        //lh_ptn = cats.sum();
+        lh_ptn *= p_var_cat;
+        if ((*aln)[ptn].is_const && (*aln)[ptn][0] < NSTATES) {
+            lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
+        }
+        assert(lh_ptn > 0);
+ 	ptn_lh[ptn] = lh_ptn;
+
+//         tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
+// 	if (pattern_lh) pattern_lh[ptn] = lh_ptn;
+    }
+    Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_ptn_lh(ptn_lh,aln->size());
+    Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_ptn_freq(ptn_freq, aln->size());		
+    tree_lh = (ei_ptn_lh.log() * ei_ptn_freq).sum();	
+//     
+    if (pattern_lh)
+	memcpy(pattern_lh, ptn_lh, aln->size() * sizeof(double));
+
+    return tree_lh;
+}
+
+void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
 	// don't recompute the likelihood
 	if (dad_branch->partial_lh_computed & 1)
 		return;
@@ -862,16 +974,273 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 			delete [] trans_mat[cat];
 	}
 	dad_branch->partial_lh_computed |= 1;
+
 }
 
+void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
+	if (sse) {
+		switch(aln->num_states) {
+			case 2: return computePartialLikelihoodSSE<2> (dad_branch, dad, pattern_scale);
+			case 4: return computePartialLikelihoodSSE<4> (dad_branch, dad, pattern_scale);
+			case 20:return computePartialLikelihoodSSE<20> (dad_branch, dad, pattern_scale);
+		}
+	} else {
+		return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
+	}
+}
 
+template<int NSTATES>
+void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
+    // don't recompute the likelihood
+    if (dad_branch->partial_lh_computed & 1)
+        return;
+    Node *node = dad_branch->node;
+    int ptn, cat;
+    int ncat = site_rate->getNRate();
+    int block = NSTATES * ncat;
+    int lh_size = aln->size() * block;
+    int matSize = NSTATES * NSTATES;
+    double *partial_lh_site;
+    double *partial_lh_child;    
+
+    dad_branch->lh_scale_factor = 0.0;
+
+    assert(dad_branch->partial_lh);
+
+    if (node->isLeaf() && dad) {
+        /* external node */
+        memset(dad_branch->partial_lh, 0, lh_size * sizeof (double));
+        double *partial_lh_site;
+        for (ptn = 0; ptn < aln->size(); ptn++) {
+            char state;
+            partial_lh_site = dad_branch->partial_lh + (ptn * block);
+            if (node->name == ROOT_NAME) {
+                state = STATE_UNKNOWN;
+            } else {
+                assert(node->id < aln->getNSeq());
+                state = (aln->at(ptn))[node->id];
+            }
+            if (state == STATE_UNKNOWN) {
+                for (int state2 = 0; state2 < block; state2++) {
+                    partial_lh_site[state2] = 1.0;
+                }
+            } else if (state < NSTATES) {
+                for (cat = 0; cat < ncat; cat++)
+                    partial_lh_site[cat * NSTATES + state] = 1.0;
+            } else {
+                // ambiguous character, for DNA, RNA
+                state = state - (NSTATES - 1);
+                for (int state2 = 0; state2 < NSTATES; state2++)
+                    if (state & (1 << state2)) {
+                        for (cat = 0; cat < ncat; cat++)
+                            partial_lh_site[cat * NSTATES + state2] = 1.0;
+                    }
+            }
+        }
+
+    } else {
+        EIGEN_ALIGN16 double trans_mat[ncat * matSize];        
+        for (ptn = 0; ptn < lh_size; ptn++)
+            dad_branch->partial_lh[ptn] = 1.0;
+
+        FOR_NEIGHBOR_IT(node, dad, it)
+        if ((*it)->node->name != ROOT_NAME) {
+            computePartialLikelihoodSSE<NSTATES>((PhyloNeighbor*) (*it), (PhyloNode*) node, pattern_scale);
+
+            dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
+
+            for (cat = 0; cat < ncat; cat++) {
+                model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), &trans_mat[cat * matSize]);
+            }
+
+            for (ptn = 0; ptn < aln->size(); ptn++) {
+                for (cat = 0; cat < ncat; cat++) {
+                    partial_lh_site = dad_branch->partial_lh + (ptn * block + cat * NSTATES);
+                    partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + (ptn * block + cat * NSTATES);
+		    Eigen::Map<Eigen::Matrix<double, 1, NSTATES>, Eigen::Aligned> eigen_partial_lh_child(partial_lh_child);
+	            Eigen::Map<Eigen::Array<double, 1, NSTATES>, Eigen::Aligned> eigen_partial_lh_site(partial_lh_site);	Eigen::Map<Eigen::Matrix<double, NSTATES, NSTATES>, Eigen::Aligned> eigen_trans_state(&trans_mat[cat * matSize]); 		                                                            
+                    eigen_partial_lh_site *= (eigen_partial_lh_child * eigen_trans_state).array();
+                }
+                
+                // check if one should scale partial likelihoods
+                bool do_scale = true;
+                partial_lh_site = dad_branch->partial_lh + (ptn * block);
+
+		// THIS CAN ALSO BE OPTIMIZED
+                for (cat = 0; cat < block; cat++)
+                    if (partial_lh_site[cat] > SCALING_THRESHOLD) {
+                        do_scale = false;
+                        break;
+                    }
+                if (!do_scale) continue;
+		// THIS CAN ALSO BE OPTIMIZED
+
+
+                Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_partial_lh_site(dad_branch->partial_lh + ptn * block, block);
+// 		if ( ei_partial_lh_site.any() <= SCALING_THRESHOLD ) {
+                	ei_partial_lh_site /= SCALING_THRESHOLD;
+                	dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;			
+// 		}
+
+		if (pattern_scale)
+			pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
+
+            }
+        }
+
+    }
+    dad_branch->partial_lh_computed |= 1;
+}
 
 /****************************************************************************
 	computing derivatives of likelihood function
 ****************************************************************************/
+template<int NSTATES>
+double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    assert(node_branch);
+    // swap node and dad if dad is a leaf
+    if (node->isLeaf()) {
+        PhyloNode *tmp_node = dad;
+        dad = node;
+        node = tmp_node;
+        PhyloNeighbor *tmp_nei = dad_branch;
+        dad_branch = node_branch;
+        node_branch = tmp_nei;
+        //cout << "swapped\n";
+    }
+    if ((dad_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihoodSSE<NSTATES>(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihoodSSE<NSTATES>(node_branch, node);
+    // now combine likelihood at the branch
 
-double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
-{
+    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+    df = ddf = 0.0;
+    int ncat = site_rate->getNRate();
+    double p_invar = site_rate->getPInvar();
+    double p_var_cat = (1.0 - p_invar) / (double) ncat;
+    int block = ncat * NSTATES;
+    int trans_size = NSTATES * NSTATES;
+    int ptn, cat, state1, state2;
+    double *partial_lh_site;
+    double *partial_lh_child;
+    double *trans_state;
+    double *derv1_state;
+    double *derv2_state;
+
+    EIGEN_ALIGN16 double trans_mat[ncat * trans_size];
+    EIGEN_ALIGN16 double trans_derv1[ncat * trans_size];
+    EIGEN_ALIGN16 double trans_derv2[ncat * trans_size];
+    EIGEN_ALIGN16 double state_freq[NSTATES];
+    model->getStateFrequency(state_freq);
+
+    Eigen::Map<Eigen::Array<double, 1, NSTATES>, Eigen::Aligned> ei_state_freq(state_freq);
+    Eigen::Array<double, NSTATES, NSTATES> ei_state_freq_mat = ei_state_freq.colwise().replicate(NSTATES);			
+
+    for (cat = 0; cat < ncat; cat++) {        
+        double *trans_cat = trans_mat + (cat * trans_size);
+        double *derv1_cat = trans_derv1 + (cat * trans_size);
+        double *derv2_cat = trans_derv2 + (cat * trans_size);
+        double rate_val = site_rate->getRate(cat);
+        double rate_sqr = rate_val * rate_val;
+        model_factory->computeTransDerv(dad_branch->length * rate_val, trans_cat, derv1_cat, derv2_cat);
+
+	Eigen::Map<Eigen::Array<double, NSTATES, NSTATES>, Eigen::Aligned> ei_trans_cat(trans_cat);
+	Eigen::Map<Eigen::Array<double, NSTATES, NSTATES>, Eigen::Aligned> ei_derv1_cat(derv1_cat);
+	Eigen::Map<Eigen::Array<double, NSTATES, NSTATES>, Eigen::Aligned> ei_derv2_cat(derv2_cat);
+
+	ei_trans_cat *= ei_state_freq_mat;
+	ei_derv1_cat *= (ei_state_freq_mat * rate_val);
+	ei_derv2_cat *= (ei_state_freq_mat * rate_sqr);
+
+//         for (state1 = 0; state1 < NSTATES; state1++) {
+//             double *trans_mat_state = trans_cat + (state1 * NSTATES);
+//             double *trans_derv1_state = derv1_cat + (state1 * NSTATES);
+//             double *trans_derv2_state = derv2_cat + (state1 * NSTATES);
+//             for (state2 = 0; state2 < NSTATES; state2++) {
+//                 trans_mat_state[state2] *= state_freq[state1];
+//                 trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
+//                 trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
+//             }
+//         }
+    }
+
+    int alnSize = aln->size();
+    for (ptn = 0; ptn < alnSize; ptn++) {
+        double lh_ptn = 0.0; // likelihood of the pattern
+        double lh_ptn_derv1 = 0.0;
+        double lh_ptn_derv2 = 0.0;
+        int dad_state = STATE_UNKNOWN;
+        if (dad->isLeaf())
+            dad_state = (*aln)[ptn][dad->id];
+
+        if (dad_state >= 4) {
+           // internal node, or external node but ambiguous character
+            for (cat = 0; cat < ncat; cat++) {
+                trans_state = trans_mat + cat * trans_size;
+                derv1_state = trans_derv1 + cat * trans_size;
+                derv2_state = trans_derv2 + cat * trans_size;
+                partial_lh_site = node_branch->partial_lh + (ptn * block + cat * NSTATES);
+                partial_lh_child = dad_branch->partial_lh + (ptn * block + cat * NSTATES);
+		Eigen::Map<Eigen::Matrix<double, 1, NSTATES>, Eigen::Aligned> ei_partial_lh_site(partial_lh_site);
+		Eigen::Map<Eigen::Matrix<double, 1, NSTATES>, Eigen::Aligned> ei_partial_lh_child(partial_lh_child);
+		Eigen::Map<Eigen::Matrix<double, NSTATES, NSTATES>, Eigen::Aligned> ei_trans_state(trans_state);
+		Eigen::Map<Eigen::Matrix<double, NSTATES, NSTATES>, Eigen::Aligned> ei_derv1_state(derv1_state);
+		Eigen::Map<Eigen::Matrix<double, NSTATES, NSTATES>, Eigen::Aligned> ei_derv2_state(derv2_state);
+
+                lh_ptn += (ei_partial_lh_child * ei_trans_state).dot(ei_partial_lh_site);
+                lh_ptn_derv1 += (ei_partial_lh_child * ei_derv1_state).dot(ei_partial_lh_site);
+                lh_ptn_derv2 += (ei_partial_lh_child * ei_derv2_state).dot(ei_partial_lh_site);
+            }
+        } else {
+            // external node
+            for (cat = 0; cat < ncat; cat++) {
+                trans_state = trans_mat + (cat * trans_size + dad_state * NSTATES);
+                derv1_state = trans_derv1 + (cat * trans_size + dad_state * NSTATES);
+                derv2_state = trans_derv2 + (cat * trans_size + dad_state * NSTATES);
+                partial_lh_child = dad_branch->partial_lh + (ptn * block + cat * NSTATES);
+		Eigen::Map<Eigen::Matrix<double, 1, NSTATES>, Eigen::Aligned> ei_partial_lh_child(partial_lh_child);
+		Eigen::Map<Eigen::Matrix<double, 1, NSTATES>, Eigen::Aligned> ei_trans_state(trans_state);
+		Eigen::Map<Eigen::Matrix<double, 1, NSTATES>, Eigen::Aligned> ei_derv1_state(derv1_state);
+		Eigen::Map<Eigen::Matrix<double, 1, NSTATES>, Eigen::Aligned> ei_derv2_state(derv2_state);
+
+                lh_ptn += ei_partial_lh_child.dot(ei_trans_state);
+                lh_ptn_derv1 += ei_partial_lh_child.dot(ei_derv1_state);
+                lh_ptn_derv2 += ei_partial_lh_child.dot(ei_derv2_state);
+
+            }
+        }
+
+        lh_ptn *= p_var_cat;
+        lh_ptn_derv1 *= p_var_cat;
+        lh_ptn_derv2 *= p_var_cat;
+        if ((*aln)[ptn].is_const && (*aln)[ptn][0] < 4) {
+            lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
+        }
+        assert(lh_ptn > 0);
+
+	ptn_lh[ptn] = lh_ptn;
+	lh_derv1[ptn] = lh_ptn_derv1;
+	lh_derv2[ptn] = lh_ptn_derv1;
+
+    }
+   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_pattern_scores(ptn_lh, alnSize);
+   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_derv1_scores(lh_derv1, alnSize);
+   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_derv2_scores(lh_derv2, alnSize);
+   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_freq(ptn_freq, alnSize);
+	
+   ei_derv1_scores /= ei_pattern_scores;    
+   ei_derv2_scores /= ei_pattern_scores;
+   df = ( ei_derv1_scores * ei_freq ).sum();
+   ddf = ( ( ei_derv2_scores - ei_derv1_scores.square() ) * ei_freq ).sum();
+   tree_lh = ( ei_pattern_scores.log() * ei_freq ).sum();
+	
+   return tree_lh;
+}
+
+double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
 	PhyloNode *node = (PhyloNode*)dad_branch->node;
 	PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
 	assert(node_branch);
@@ -886,9 +1255,9 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
 		//cout << "swapped\n";
 	}
 	if ((dad_branch->partial_lh_computed & 1) == 0)
-		computePartialLikelihood(dad_branch, dad);
+		computePartialLikelihoodNaive(dad_branch, dad);
 	if ((node_branch->partial_lh_computed & 1) == 0)
-		computePartialLikelihood(node_branch, node);
+		computePartialLikelihoodNaive(node_branch, node);
 	// now combine likelihood at the branch
 
 	double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
@@ -985,6 +1354,18 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
 		//delete trans_mat[cat];
 	//delete state_freq;
 	return tree_lh;
+}
+double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
+{
+	if (sse) {
+		switch(aln->num_states) {
+			case 2: return computeLikelihoodDervSSE<2> (dad_branch, dad, df, ddf);
+			case 4: return computeLikelihoodDervSSE<4> (dad_branch, dad, df, ddf);
+			case 20:return computeLikelihoodDervSSE<20> (dad_branch, dad, df, ddf);
+		}
+	} else {
+		return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
+	}
 }
 
 /****************************************************************************

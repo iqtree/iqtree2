@@ -571,6 +571,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.mvh_site_rate = false;
 	params.aLRT_threshold = 101;
 	params.aLRT_replicates = 1000;
+	params.SSE = false;
 
 	/* TUNG: IQP-TREE Specific Options */
 	simple_nni = false;
@@ -932,9 +933,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
                                 if (cnt >= argc)
                                     throw "Please speciy the number of iteration used for the speed up";
-				numheu = convert_int(argv[cnt]);
-			}
-                        else if (strcmp(argv[cnt], "-ils") == 0) {
+				numheu = convert_int(argv[cnt]);			
+			} else if (strcmp(argv[cnt], "-sse") == 0) {
+				params.SSE = true;
+                        } else if (strcmp(argv[cnt], "-ils") == 0) {
                                 ils = true;
 			}
                         else if (strcmp(argv[cnt], "-pLevel") == 0) {

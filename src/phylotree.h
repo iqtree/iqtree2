@@ -20,11 +20,6 @@
 #include "optimization.h"
 #include "rateheterogeneity.h"
 
-// ******** FOR OPTIMIZATION *******
-//#include "miniSSEL1BLAS.h"
-//#include "miniSSEL1BLAS.hpp"
-// ******** FOR OPTIMIZATION *******
-
 const int MAX_SPR_MOVES = 20;
 
 /**
@@ -110,7 +105,7 @@ public:
 		set the alignment, important to compute parsimony or likelihood score
 		@param alignment associated alignment
 	*/
-    void setAlignment(Alignment *alignment);
+    	void setAlignment(Alignment *alignment);
 
 	/**
 		set the substitution model, important to compute the likelihood
@@ -250,6 +245,11 @@ public:
 		@param dad its dad, used to direct the tranversal
 	*/
 	void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+	
+	void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+
+	template<int NSTATES>
+	void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL); 
 
 	/**
 		compute tree likelihood on a branch. used to optimize branch length
@@ -262,7 +262,10 @@ public:
 	double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
 	template<int NSTATES>
-	double __computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+	double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+	
+	double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+	
 	
 
 	/**
@@ -295,7 +298,10 @@ public:
 	*/
 	double computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
+	double computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
+	template<int NSTATES>
+	double computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 /****************************************************************************
 	Stepwise addition (greedy) by maximum parsimony
 ****************************************************************************/
@@ -622,6 +628,11 @@ public:
 	*/
 	bool optimize_by_newton;
 
+        /**
+         *      TRUE if the loglikelihood is computed using SSE
+         */
+        bool sse;
+
 
 protected:
 
@@ -668,6 +679,13 @@ protected:
 	*/
 	int spr_radius;
 
+	/**
+		temporary vector to store likelihood of each pattern (only used for computation)
+	*/
+	double *ptn_lh;
+	double *lh_derv1;
+	double *lh_derv2;
+	double *ptn_freq;
 
 	/**
 		the main memory storing all partial likelihoods for all neighbors of the tree.
