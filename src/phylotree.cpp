@@ -848,17 +848,17 @@ double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNod
             lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
         }
         assert(lh_ptn > 0);
- 	ptn_lh[ptn] = lh_ptn;
+ 	//ptn_lh[ptn] = lh_ptn;
 
-//         tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
-// 	if (pattern_lh) pattern_lh[ptn] = lh_ptn;
+        tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
+ 	if (pattern_lh) pattern_lh[ptn] = lh_ptn;
     }
-    Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_ptn_lh(ptn_lh,aln->size());
-    Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_ptn_freq(ptn_freq, aln->size());
-    tree_lh = (ei_ptn_lh.log() * ei_ptn_freq).sum();	
-     
-    if (pattern_lh)
-	memcpy(pattern_lh, ptn_lh, aln->size() * sizeof(double));
+//    Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_ptn_lh(ptn_lh,aln->size());
+//    Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_ptn_freq(ptn_freq, aln->size());
+//    tree_lh = (ei_ptn_lh.log() * ei_ptn_freq).sum();
+//
+//    if (pattern_lh)
+//	memcpy(pattern_lh, ptn_lh, aln->size() * sizeof(double));
 
     return tree_lh;
 }
@@ -1129,6 +1129,8 @@ double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode 
     double lh_ptn; // likelihood of the pattern
     double lh_ptn_derv1;
     double lh_ptn_derv2;
+    double derv1_frac;
+    double derv2_frac;
     int padding1;
     int padding2;
 
@@ -1141,7 +1143,7 @@ double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode 
     Eigen::Map<Eigen::Array<double, 1, NSTATES>, Eigen::Aligned> ei_state_freq(state_freq);
     Eigen::Array<double, NSTATES, NSTATES> ei_state_freq_mat = ei_state_freq.colwise().replicate(NSTATES);			
 
-    for (cat = 0; cat < ncat; cat++) {        
+    for (cat = 0; cat < ncat; cat++) {
         double *trans_cat = trans_mat + (cat * trans_size);
         double *derv1_cat = trans_derv1 + (cat * trans_size);
         double *derv2_cat = trans_derv2 + (cat * trans_size);
@@ -1157,6 +1159,27 @@ double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode 
 	ei_derv1_cat *= (ei_state_freq_mat * rate_val);
 	ei_derv2_cat *= (ei_state_freq_mat * rate_sqr);
     }
+
+//    for (cat = 0; cat < ncat; cat++) {
+//        //trans_mat[cat] = model->newTransMatrix();
+//        double *trans_cat = trans_mat + (cat * trans_size);
+//        double *derv1_cat = trans_derv1 + (cat * trans_size);
+//        double *derv2_cat = trans_derv2 + (cat * trans_size);
+//        double rate_val = site_rate->getRate(cat);
+//        double rate_sqr = rate_val * rate_val;
+//        model_factory->computeTransDerv(dad_branch->length * rate_val, trans_cat, derv1_cat, derv2_cat);
+//        for (state1 = 0; state1 < NSTATES; state1++) {
+//            double *trans_mat_state = trans_cat + (state1 * NSTATES);
+//            double *trans_derv1_state = derv1_cat + (state1 * NSTATES);
+//            double *trans_derv2_state = derv2_cat + (state1 * NSTATES);
+//
+//            for (state2 = 0; state2 < NSTATES; state2++) {
+//                trans_mat_state[state2] *= state_freq[state1];
+//                trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
+//                trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
+//            }
+//        }
+//    }
 
     int alnSize = aln->size();
     for (ptn = 0; ptn < alnSize; ptn++) {
@@ -1209,33 +1232,32 @@ double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode 
         }
 
         lh_ptn *= p_var_cat;
-        lh_ptn_derv1 *= p_var_cat;
-        lh_ptn_derv2 *= p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < 4) {
             lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
         }
         assert(lh_ptn > 0);
 
-//        double derv1_frac = lh_ptn_derv1 / lh_ptn;
-//	double derv2_frac = lh_ptn_derv2 / lh_ptn;
-//	tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
-//	df += derv1_frac * (*aln)[ptn].frequency;
-//	ddf += (derv2_frac - derv1_frac*derv1_frac) * (*aln)[ptn].frequency;
-
-	ptn_lh[ptn] = lh_ptn;
-	lh_derv1[ptn] = lh_ptn_derv1;
-	lh_derv2[ptn] = lh_ptn_derv1;
+        derv1_frac = (lh_ptn_derv1 * p_var_cat) / lh_ptn;
+	derv2_frac = (lh_ptn_derv2 * p_var_cat) / lh_ptn;
+	tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
+	df += derv1_frac * (*aln)[ptn].frequency;
+	ddf += (derv2_frac - derv1_frac*derv1_frac) * (*aln)[ptn].frequency;
+        
+        
+//	ptn_lh[ptn] = lh_ptn;
+//	lh_derv1[ptn] = lh_ptn_derv1;
+//	lh_derv2[ptn] = lh_ptn_derv1;
     }
-   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_pattern_scores(ptn_lh, alnSize);
-   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_derv1_scores(lh_derv1, alnSize);
-   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_derv2_scores(lh_derv2, alnSize);
-   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_freq(ptn_freq, alnSize);
-	
-   ei_derv1_scores /= ei_pattern_scores;
-   ei_derv2_scores /= ei_pattern_scores;
-   df = ( ei_derv1_scores * ei_freq ).sum();
-   ddf = ( ( ei_derv2_scores - ei_derv1_scores.square() ) * ei_freq ).sum();
-   tree_lh = ( ei_freq * ei_pattern_scores.log() ).sum();
+//   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_pattern_scores(ptn_lh, alnSize);
+//   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_derv1_scores(lh_derv1, alnSize);
+//   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_derv2_scores(lh_derv2, alnSize);
+//   Eigen::Map<Eigen::ArrayXd, Eigen::Aligned> ei_freq(ptn_freq, alnSize);
+//
+//   ei_derv1_scores /= ei_pattern_scores;
+//   ei_derv2_scores /= ei_pattern_scores;
+//   df = ( ei_derv1_scores * ei_freq ).sum();
+//   ddf = ( ( ei_derv2_scores - ei_derv1_scores.square() ) * ei_freq ).sum();
+//   tree_lh = ( ei_freq * ei_pattern_scores.log() ).sum();
 	
    return tree_lh;
 }
