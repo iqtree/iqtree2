@@ -55,8 +55,8 @@ PhyloTree::PhyloTree()
  : MTree()
 {
 	aln = NULL;
-	model = NULL;
-	site_rate = NULL;
+	//model = NULL;
+	//site_rate = NULL;
 	optimize_by_newton = false;
 	central_partial_lh = NULL;
 	central_partial_pars = NULL;
@@ -74,8 +74,6 @@ PhyloTree::~PhyloTree() {
 		delete [] central_partial_pars;
 	central_partial_pars = NULL;
 	if (model_factory) delete model_factory;
-	if (model) delete model;
-	if (site_rate) delete site_rate;
 	if (root != NULL)
 		freeNode();
 	root = NULL;
@@ -139,22 +137,9 @@ void PhyloTree::rollBack(istream &best_tree_string) {
 	initializeAllPartialLh();			
 }
 
-void PhyloTree::setModel(SubstModel *amodel) {
-	model = amodel;
-}
-
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
 	model_factory = model_fac;
 }
-
-void PhyloTree::setRate(RateHeterogeneity *rate) {
-	site_rate = rate;
-}
-
-RateHeterogeneity *PhyloTree::getRate() {
-	return site_rate;
-}
-
 
 Node* PhyloTree::newNode(int node_id, const char* node_name) {
 	return (Node*) (new PhyloNode(node_id, node_name));
@@ -168,10 +153,6 @@ void PhyloTree::clearAllPartialLh() {
 	((PhyloNode*)root->neighbors[0]->node)->clearAllPartialLh((PhyloNode*)root);
 }
 	
-string PhyloTree::getModelName() {
-	return model->name + site_rate->name;
-}
-
 /****************************************************************************
 	Parsimony function
 ****************************************************************************/
@@ -333,7 +314,7 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad)
 	// now combine likelihood at the branch
 
 	int pars_size = getBitsBlockSize();
-	int nstates = aln->num_states;
+	//int nstates = aln->num_states;
 	int i, ptn;
 	int tree_pars = node_branch->partial_pars[pars_size-1] + dad_branch->partial_pars[pars_size-1];
 	UINT *partial_pars = newBitsBlock();
@@ -585,7 +566,7 @@ void PhyloTree::initializeAllPartialLh() {
 }
 
 void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
-	int block_size = aln->size() * aln->num_states * site_rate->getNRate();
+	int block_size = aln->size() * aln->num_states * model_factory->site_rate->getNRate();
 	int pars_block_size = getBitsBlockSize();
 	if (!node) {
 		node = (PhyloNode*)root;
@@ -630,7 +611,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 
 double *PhyloTree::newPartialLh() {
 	//return new double[aln->size() * aln->num_states * site_rate->getNRate()];
-	return Eigen::ei_aligned_new<double>(aln->size() * aln->num_states * site_rate->getNRate());
+	return Eigen::ei_aligned_new<double>(aln->size() * aln->num_states * model_factory->site_rate->getNRate());
 }
 
 double PhyloTree::computeLikelihood(double *pattern_lh) {
@@ -669,11 +650,11 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 			case 2: return computeLikelihoodBranchSSE<2> (dad_branch, dad, pattern_lh);
 			case 4: return computeLikelihoodBranchSSE<4> (dad_branch, dad, pattern_lh);
 			case 20: return computeLikelihoodBranchSSE<20> (dad_branch, dad, pattern_lh);
+			default: return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
 		}
 	} else {
 		return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
 	}
-
 }
 
 double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
@@ -699,8 +680,8 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
 	// now combine likelihood at the branch
 
 	double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-	int ncat = site_rate->getNRate();
-	double p_invar = site_rate->getPInvar();
+	int ncat = model_factory->site_rate->getNRate();
+	double p_invar = model_factory->site_rate->getPInvar();
 	double p_var_cat = (1.0 - p_invar) / (double)ncat;
 	int nstates = aln->num_states;
 	int block = ncat * nstates;
@@ -709,12 +690,12 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
 
 	double trans_mat[ncat*trans_size];
 	double state_freq[nstates];
-	model->getStateFrequency(state_freq);
+	model_factory->model->getStateFrequency(state_freq);
 
 	for (cat = 0; cat < ncat; cat++) {
 		//trans_mat[cat] = model->newTransMatrix();
 		double *trans_cat = trans_mat + (cat*trans_size);
-		model_factory->computeTransMatrix(dad_branch->length * site_rate->getRate(cat), trans_cat);
+		model_factory->computeTransMatrix(dad_branch->length * model_factory->site_rate->getRate(cat), trans_cat);
 		for (state1 = 0; state1 < nstates; state1++) {
 			double *trans_mat_state = trans_cat + (state1*nstates);
 			for (state2 = 0; state2 < nstates; state2++)
@@ -751,7 +732,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
 		}
 		lh_ptn *= p_var_cat;
 		if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-			lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
+			lh_ptn += p_invar * state_freq[(int)(*aln)[ptn][0]];
 		}
 		assert(lh_ptn > 0);
 		lh_ptn = log(lh_ptn);
@@ -788,8 +769,8 @@ double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNod
     // now combine likelihood at the branch
 
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-    int ncat = site_rate->getNRate();
-    double p_invar = site_rate->getPInvar();
+    int ncat = model_factory->site_rate->getNRate();
+    double p_invar = model_factory->site_rate->getPInvar();
     double p_var_cat = (1.0 - p_invar) / (double) ncat;
     //int nstates = aln->num_states;
     int block = ncat * NSTATES;
@@ -801,12 +782,12 @@ double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNod
 
     EIGEN_ALIGN16 double trans_mat[ncat * trans_size];
     EIGEN_ALIGN16 double state_freq[NSTATES];
-    model->getStateFrequency(state_freq);
+    model_factory->model->getStateFrequency(state_freq);
 
     for (cat = 0; cat < ncat; cat++) {
         //trans_mat[cat] = model->newTransMatrix();
         double *trans_cat = trans_mat + (cat * trans_size);
-        model_factory->computeTransMatrix(dad_branch->length * site_rate->getRate(cat), trans_cat);
+        model_factory->computeTransMatrix(dad_branch->length * model_factory->site_rate->getRate(cat), trans_cat);
         for (state1 = 0; state1 < NSTATES; state1++) {
             double *trans_mat_state = trans_cat + (state1 * NSTATES);
             for (state2 = 0; state2 < NSTATES; state2++)
@@ -845,7 +826,7 @@ double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNod
         //lh_ptn = cats.sum();
         lh_ptn *= p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < NSTATES) {
-            lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
+            lh_ptn += p_invar * state_freq[(int)(*aln)[ptn][0]];
         }
         assert(lh_ptn > 0);
  	//ptn_lh[ptn] = lh_ptn;
@@ -869,9 +850,9 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
 		return;
 	Node *node = dad_branch->node;
 	int ptn, cat;
-	int ncat = site_rate->getNRate();
+	int ncat = model_factory->site_rate->getNRate();
 	int nstates = aln->num_states;
-	int block = nstates * site_rate->getNRate();
+	int block = nstates * model_factory->site_rate->getNRate();
 	int lh_size = aln->size() * block;
 	double *partial_lh_site;
 
@@ -913,7 +894,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
 	} else {
 		/* internal node */
 		double *trans_mat[ncat];
-		for (cat = 0; cat < ncat; cat++) trans_mat[cat] = model->newTransMatrix();
+		for (cat = 0; cat < ncat; cat++) trans_mat[cat] = model_factory->model->newTransMatrix();
 		for (ptn = 0; ptn < lh_size; ptn++)
 			dad_branch->partial_lh[ptn] = 1.0;
 		FOR_NEIGHBOR_IT(node, dad, it)
@@ -923,7 +904,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
 			dad_branch->lh_scale_factor += ((PhyloNeighbor*)(*it))->lh_scale_factor;
 
 			for (cat = 0; cat < ncat; cat++)
-				model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), trans_mat[cat]);
+				model_factory->computeTransMatrix((*it)->length * model_factory->site_rate->getRate(cat), trans_mat[cat]);
 
 			for (ptn = 0; ptn < aln->size(); ptn++) {
 				for (cat = 0; cat < ncat; cat++)
@@ -990,7 +971,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
         return;
     Node *node = dad_branch->node;
     int ptn, cat;
-    int ncat = site_rate->getNRate();
+    int ncat = model_factory->site_rate->getNRate();
     int block = NSTATES * ncat;
     int lh_size = aln->size() * block;
     int matSize = NSTATES * NSTATES;
@@ -1046,7 +1027,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
             dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
 
             for (cat = 0; cat < ncat; cat++) {
-                model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), &trans_mat[cat * matSize]);
+                model_factory->computeTransMatrix((*it)->length * model_factory->site_rate->getRate(cat), &trans_mat[cat * matSize]);
             }
 
             for (ptn = 0; ptn < alnSize; ptn++) {
@@ -1115,8 +1096,8 @@ double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode 
 
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     df = ddf = 0.0;
-    int ncat = site_rate->getNRate();
-    double p_invar = site_rate->getPInvar();
+    int ncat = model_factory->site_rate->getNRate();
+    double p_invar = model_factory->site_rate->getPInvar();
     double p_var_cat = (1.0 - p_invar) / (double) ncat;
     int block = ncat * NSTATES;
     int trans_size = NSTATES * NSTATES;
@@ -1138,7 +1119,7 @@ double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode 
     EIGEN_ALIGN16 double trans_derv1[ncat * trans_size];
     EIGEN_ALIGN16 double trans_derv2[ncat * trans_size];
     EIGEN_ALIGN16 double state_freq[NSTATES];
-    model->getStateFrequency(state_freq);
+    model_factory->model->getStateFrequency(state_freq);
 
     Eigen::Map<Eigen::Array<double, 1, NSTATES>, Eigen::Aligned> ei_state_freq(state_freq);
     Eigen::Array<double, NSTATES, NSTATES> ei_state_freq_mat = ei_state_freq.colwise().replicate(NSTATES);			
@@ -1147,7 +1128,7 @@ double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode 
         double *trans_cat = trans_mat + (cat * trans_size);
         double *derv1_cat = trans_derv1 + (cat * trans_size);
         double *derv2_cat = trans_derv2 + (cat * trans_size);
-        double rate_val = site_rate->getRate(cat);
+        double rate_val = model_factory->site_rate->getRate(cat);
         double rate_sqr = rate_val * rate_val;
         model_factory->computeTransDerv(dad_branch->length * rate_val, trans_cat, derv1_cat, derv2_cat);
 
@@ -1233,7 +1214,7 @@ double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode 
 
         lh_ptn *= p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < 4) {
-            lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
+            lh_ptn += p_invar * state_freq[(int)(*aln)[ptn][0]];
         }
         assert(lh_ptn > 0);
 
@@ -1284,8 +1265,8 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
 
 	double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 	df = ddf = 0.0;
-	int ncat = site_rate->getNRate();
-	double p_invar = site_rate->getPInvar();
+	int ncat = model_factory->site_rate->getNRate();
+	double p_invar = model_factory->site_rate->getPInvar();
 	double p_var_cat = (1.0 - p_invar) / (double)ncat;
 	int nstates = aln->num_states;
 	int block = ncat * nstates;
@@ -1296,14 +1277,14 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
 	double trans_derv1[ncat*trans_size];
 	double trans_derv2[ncat*trans_size];
 	double state_freq[nstates];
-	model->getStateFrequency(state_freq);
+	model_factory->model->getStateFrequency(state_freq);
 
 	for (cat = 0; cat < ncat; cat++) {
 		//trans_mat[cat] = model->newTransMatrix();
 		double *trans_cat = trans_mat + (cat*trans_size);
 		double *derv1_cat = trans_derv1 + (cat*trans_size);
 		double *derv2_cat = trans_derv2 + (cat*trans_size);
-		double rate_val = site_rate->getRate(cat);
+		double rate_val = model_factory->site_rate->getRate(cat);
 		double rate_sqr = rate_val * rate_val;
 		model_factory->computeTransDerv(dad_branch->length * rate_val, trans_cat, derv1_cat, derv2_cat);
 		for (state1 = 0; state1 < nstates; state1++) {
@@ -1363,7 +1344,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
 		lh_ptn_derv1 *= p_var_cat;
 		lh_ptn_derv2 *= p_var_cat;
 		if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-			lh_ptn += p_invar * state_freq[(*aln)[ptn][0]];
+			lh_ptn += p_invar * state_freq[(int)(*aln)[ptn][0]];
 		}
 		assert(lh_ptn > 0);
 		double derv1_frac = lh_ptn_derv1 / lh_ptn;
@@ -1384,6 +1365,7 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
 			case 2: return computeLikelihoodDervSSE<2> (dad_branch, dad, df, ddf);
 			case 4: return computeLikelihoodDervSSE<4> (dad_branch, dad, df, ddf);
 			case 20:return computeLikelihoodDervSSE<20> (dad_branch, dad, df, ddf);
+			default: return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
 		}
 	} else {
 		return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
@@ -1580,7 +1562,7 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
 	// if no model or site rate is specified, return JC distance
 	if (initial_dist == 0.0) 
 		initial_dist = aln->computeDist(seq1, seq2);
-	if (!model_factory || !site_rate) return initial_dist;
+	if (!model_factory) return initial_dist;
 
 	// now optimize the distance based on the model and site rate
 	AlignmentPairwise aln_pair(this, seq1, seq2);
@@ -1963,7 +1945,7 @@ double PhyloTree::assessSPRMove(double cur_score, const SPRMove &spr) {
 
 	bool first = true;
 	PhyloNeighbor *node2_nei = (PhyloNeighbor*)node2->findNeighbor(dad2);
-	PhyloNeighbor *dad2_nei = (PhyloNeighbor*)dad2->findNeighbor(node2);
+//	PhyloNeighbor *dad2_nei = (PhyloNeighbor*)dad2->findNeighbor(node2);
 	double len2 = node2_nei->length;
 	FOR_NEIGHBOR(dad, node, it) {
 		if (first) {
@@ -2079,7 +2061,7 @@ void PhyloTree::regraftSubtree(PruningInfo &info,
 	NeighborVec::iterator in_dad_it = in_dad->findNeighborIt(in_node);
 	Neighbor *in_dad_nei = (*in_dad_it);
 	Neighbor *in_node_nei = (*in_node_it);
-	double in_len = in_dad_nei->length;
+//	double in_len = in_dad_nei->length;
 	info.dad->updateNeighbor(info.dad_it_right, in_dad_nei);
 	info.dad->updateNeighbor(info.dad_it_left, in_node_nei);
 	// SOMETHING NEED TO BE DONE
@@ -2105,7 +2087,7 @@ void PhyloTree::computeNNIPatternLh(
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 	double *ptn_scale = NULL;
 	double new_scale[aln->getNPattern()];
-	double sum_scaling = node12_it->lh_scale_factor + node21_it->lh_scale_factor;
+//	double sum_scaling = node12_it->lh_scale_factor + node21_it->lh_scale_factor;
 	NeighborVec::iterator it;
 	ptn_scale = new double[aln->getNPattern()];
 	memset(ptn_scale, 0, sizeof(double) * aln->getNPattern());
@@ -2488,7 +2470,7 @@ int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa, Str
 }
 
 int PhyloTree::restoreStableClade(Alignment *original_aln, NodeVector &pruned_taxa, StrVector &linked_name) {
-	int num_inserted_taxa;
+//	int num_inserted_taxa;
 	NodeVector::reverse_iterator tax_it;
 	StrVector::reverse_iterator linked_it;
 	tax_it = pruned_taxa.rbegin();
@@ -2506,6 +2488,7 @@ int PhyloTree::restoreStableClade(Alignment *original_aln, NodeVector &pruned_ta
 	initializeTree();
 	setAlignment(original_aln);
 	root = findNodeName(aln->getSeqName(0));
+	return 0;
 	//if (verbose_mode >= VB_MED) drawTree(cout);
 }
 

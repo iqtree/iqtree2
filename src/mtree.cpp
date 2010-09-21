@@ -164,11 +164,12 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 		else
 			out << node->name;
 
-		if (brtype & WT_BR_LEN)
+		if (brtype & WT_BR_LEN) {
 			if (brtype & WT_BR_LEN_FIXED_WIDTH)
 				out << ":" << fixed << node->neighbors[0]->length; 
 			else
 				out << ":" << node->neighbors[0]->length; 
+		}
 	} else {
 		// internal node
 		out << "(";
@@ -219,13 +220,14 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 			out << node->name;
 		else if (brtype & WT_INT_NODE)
 			out << node->id;
-		if (dad != NULL || length > 0.0)
+		if (dad != NULL || length > 0.0) {
 			if (brtype & WT_BR_LEN)
 				out << ":" << length; 
 			else if (brtype & WT_BR_CLADE) {
 				if (! node->name.empty()) out << "/";
 				out << length; 
 			}
+		}
 	}
 	return smallest_taxid;
 }
@@ -272,7 +274,7 @@ void MTree::printSubTree(ostream &out, NodeVector &subtree, Node *node, Node *da
 		bool first = true;
 
 		FOR_NEIGHBOR(node, dad, it)	{
-			if (subtree[(*it)->node->id] != NULL)
+			if (subtree[(*it)->node->id] != NULL) {
 				if((*it)->node->name != ROOT_NAME) {
 					if (!first)
 						out << ",";
@@ -280,6 +282,7 @@ void MTree::printSubTree(ostream &out, NodeVector &subtree, Node *node, Node *da
 					first = false;
 				} else
 					length += (*it)->length;
+			}
 		} else {
 			length += (*it)->length;
 		}
@@ -333,7 +336,6 @@ void MTree::printTaxa(ostream &out, NodeVector &subtree) {
 }
 
 void MTree::readTree(const char *infile, bool &is_rooted) {
-	cout << "Reading tree file " << infile << " ..." << endl;
 	ifstream in;
 	try {
 		in.exceptions(ios::failbit | ios::badbit);
@@ -998,11 +1000,12 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
 				out << " (" << node->name << ")";
 			if (brtype & WT_BR_LEN && dad)
 				out << " " << node->findNeighbor(dad)->length;
-			if (!subtree_br.empty())
-			if (subtree_br.back() >1000) 
-				subtree_br.back() -= 1000;
-			else if (subtree_br.back() < 0) 
-				subtree_br.back() -= 1000;
+			if (!subtree_br.empty()) {
+				if (subtree_br.back() >1000) 
+					subtree_br.back() -= 1000;
+				else if (subtree_br.back() < 0) 
+					subtree_br.back() -= 1000;
+			}
 		} else {
 			if (dad) {
 				if (abs(subtree_br.back()) > 1000) out << ' '; else out << "|";

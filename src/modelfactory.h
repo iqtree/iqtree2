@@ -52,6 +52,13 @@ public:
 	ModelFactory();
 
 	/**
+		get the name of the model
+	*/
+	string getModelName();
+
+	void writeInfo(ostream &out);
+
+	/**
 		Start to store transition matrix for efficiency
 	*/
 	void startStoringTransMatrix();

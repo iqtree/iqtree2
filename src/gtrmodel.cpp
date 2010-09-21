@@ -23,9 +23,9 @@
 #include <string.h>
 
 GTRModel::GTRModel(PhyloTree *tree)
- : SubstModel(tree->aln->num_states), EigenDecomposition(), Optimization()
+ : SubstModel(tree->aln->num_states), Optimization(), EigenDecomposition()
 {
-	int i, j;
+	int i;
 	int nrate = num_states*(num_states-1)/2;
 	int ncoeff = num_states*num_states*num_states;
 	
@@ -78,6 +78,7 @@ void GTRModel::init(StateFreqType type) {
 	case FREQ_EMPIRICAL:
 		phylo_tree->aln->computeStateFreq(state_freq);
 		break;
+	default: break;
 	}
 
 	decomposeRateMatrix();
@@ -384,7 +385,7 @@ void GTRModel::readParameters(const char *file_name) {
 
 GTRModel::~GTRModel()
 {
-	int i, j;
+	int i;
 	//delete eigen_coeff_derv2;
 	//delete eigen_coeff_derv1;
 	delete [] eigen_coeff;

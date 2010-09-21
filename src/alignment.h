@@ -67,7 +67,7 @@ public:
 	/**
 		constructor
 		@param filename file name
-		@param sequence_type type of the sequence, either "B", "D", "P", or NULL
+		@param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
 		@param intype (OUT) input format of the file
 	*/
     Alignment(char *filename,  char *sequence_type, InputType &intype);
@@ -104,7 +104,7 @@ public:
 	/**
 		read the alignment in PHYLIP format
 		@param filename file name
-		@param sequence_type type of the sequence, either "B", "D", "P", or NULL
+		@param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
 		@return 1 on success, 0 on failure
 	*/
 	int readPhylip(char *filename, char *sequence_type);

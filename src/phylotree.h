@@ -108,39 +108,6 @@ public:
     	void setAlignment(Alignment *alignment);
 
 	/**
-		set the substitution model, important to compute the likelihood
-		@param amodel associated substitution model
-	*/
-	void setModel(SubstModel *amodel);
-
-	/**
-		set the model factory
-		@param model_fac model factory
-	*/
-	void setModelFactory(ModelFactory *model_fac);
-
-	/**
-		set rate heterogeneity, important to compute the likelihood
-		@param rate associated rate heterogeneity class
-	*/
-	void setRate(RateHeterogeneity *rate);
-
-	/**
-		get rate heterogeneity
-		@return associated rate heterogeneity class
-	*/
-	RateHeterogeneity *getRate();
-
-	/**
-		get the name of the model
-	*/
-	string getModelName();
-
-	SubstModel *getModel() { return model; }
-
-	ModelFactory *getModelFactory() { return model_factory; }
-
-	/**
 		allocate a new node. Override this if you have an inherited Node class.
 		@param node_id node ID
 		@param node_name node name
@@ -155,6 +122,40 @@ public:
 		@return a new node
 	*/
 	virtual Node* newNode(int node_id, int node_name);
+
+
+
+/****************************************************************************
+	Model management for maximum likelihood
+****************************************************************************/
+
+	/**
+		set the model factory
+		@param model_fac model factory
+	*/
+	void setModelFactory(ModelFactory *model_fac);
+
+	/**
+		@return pointer to the model factory
+	*/
+	ModelFactory *getModelFactory() { return model_factory; }
+
+	/**
+		get rate heterogeneity
+		@return associated rate heterogeneity class
+	*/
+	RateHeterogeneity *getRate() {	
+		if (!model_factory) return NULL;
+		return model_factory->site_rate; 
+	}
+
+	/**
+		@return associated substitution model class
+	*/
+	SubstModel *getModel() { 
+		if (!model_factory) return NULL;
+		return model_factory->model; 
+	}
 
 
 	/**
@@ -647,7 +648,7 @@ protected:
 	/**
 		associated substitution model
 	*/
-	SubstModel *model;
+	//SubstModel *model;
 
 	/**
 		Model factory includes SubstModel and RateHeterogeneity
@@ -658,7 +659,7 @@ protected:
 	/**
 		among-site rates 
 	*/
-	RateHeterogeneity *site_rate;
+	//RateHeterogeneity *site_rate;
 
 	/**
 		current branch iterator, used by computeFunction() to optimize branch lengths

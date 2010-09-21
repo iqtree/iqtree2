@@ -81,6 +81,15 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 }
 
 
+string ModelFactory::getModelName() {
+	return model->name + site_rate->name;
+}
+
+void ModelFactory::writeInfo(ostream &out) {
+	model->writeInfo(out);
+	site_rate->writeInfo(out);
+}
+
 double ModelFactory::optimizeParameters(bool fixed_len) {
 	assert(model);
 	assert(site_rate);
@@ -125,11 +134,7 @@ double ModelFactory::optimizeParameters(bool fixed_len) {
 			break;
 		}
 	}
-	if (verbose_mode == VB_MIN) {
-		model->writeInfo(cout);
-		site_rate->writeInfo(cout);
-	}
-	cout << "Optimization took " << i-1 << " rounds to finish" << endl;
+	//cout << "Optimization took " << i-1 << " rounds to finish" << endl;
 	startStoringTransMatrix();
 	return cur_lh;
 }
@@ -204,4 +209,6 @@ ModelFactory::~ModelFactory()
 	for (iterator it = begin(); it != end(); it++)
 		delete it->second;
 	clear();
+	if (model) delete model;
+	if (site_rate) delete site_rate;
 }

@@ -50,7 +50,7 @@ string dna_model_names[DNA_MODEL_NUM] =
 const int AA_MODEL_NUM = 11;
 
 string aa_model_names[AA_MODEL_NUM] =
-	{"Dayhoff", "mtMAM", "JTT", "WAG", "cpREV", "mtREV", "rtREV",
+	{"PAM", "mtMAM", "JTT", "WAG", "cpREV", "mtREV", "rtREV",
 	"mtART", "mtZOA", "VT", "LG"};
 
 /**
@@ -116,16 +116,29 @@ string modelTest(Params &params, PhyloTree *in_tree)
 		rate_class[2] = new RateGamma(4, NULL);
 		rate_class[3] = new RateGammaInvar(4, NULL);
 		GTRModel *subst_model;
+		StateFreqType freq = ((nstates == 4) ? FREQ_UNKNOWN : params.freq_type);
 		if (nstates == 4)
-			subst_model = new ModelDNA("JC", FREQ_UNKNOWN, in_tree);
+			subst_model = new ModelDNA("JC", freq, in_tree);
 		else
-			subst_model = new ModelProtein("WAG", FREQ_UNKNOWN, in_tree);
+			subst_model = new ModelProtein("WAG", freq, in_tree);
 
 		ModelFactory *model_fac = new ModelFactory();
 
 		int num_models = (nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM;
 
-		cout << "Tesing " << num_models*4 << ((nstates==4)?" DNA":" protein") << " models..." << endl;
+		cout << "Tesing " << num_models*4 << ((nstates==4)?" DNA":" protein") << " models";
+		if (nstates == 20)  {
+			cout << " (Assuming ";
+			switch (freq) {
+			case FREQ_EMPIRICAL: cout << "empirical"; break;
+			case FREQ_ESTIMATE: cout << "estimated"; break;
+			case FREQ_USER_DEFINED: cout << "model-specified"; break;
+			case FREQ_EQUAL: cout << "equal"; break;
+			default: break;
+			}
+			cout << " amino-acid frequencies)";
+		}
+		cout << "..." << endl;
 		for (model = 0; model < num_models; model++) {
 			for (rate_type = 0; rate_type <= 3; rate_type+=1) {
 				// initialize tree
@@ -140,11 +153,11 @@ string modelTest(Params &params, PhyloTree *in_tree)
 					tree = tree_hetero;
 				}
 				// initialize model
-				subst_model->init(((nstates==4)?dna_model_names[model].c_str():aa_model_names[model].c_str()), FREQ_UNKNOWN);
+				subst_model->init(((nstates==4)?dna_model_names[model].c_str():aa_model_names[model].c_str()), freq);
 				subst_model->setTree(tree);
-				tree->setModel(subst_model);
+				//tree->setModel(subst_model);
 				// initialize rate
-				tree->setRate(rate_class[rate_type]);
+				//tree->setRate(rate_class[rate_type]);
 				rate_class[rate_type]->setTree(tree);
 
 				// initialize model factory
@@ -158,7 +171,6 @@ string modelTest(Params &params, PhyloTree *in_tree)
 				tree->clearAllPartialLh();
 
 				// optimize model parameters
-				double cur_lh = tree->getModelFactory()->optimizeParameters();
 				cout << "===> Testing ";
 				cout.width(12);
 				string str;
@@ -166,6 +178,8 @@ string modelTest(Params &params, PhyloTree *in_tree)
 				str += rate_class[rate_type]->name;
 				cout << left << str << " (df=" << subst_model->getNDim()+rate_class[rate_type]->getNDim() << ")";
 				cout.precision(10);
+				cout.flush();
+				double cur_lh = tree->getModelFactory()->optimizeParameters();
 				cout << ":  Log-likelihood " << cur_lh << endl;
 				fscore << str << endl;
 				fscore.precision(10);
@@ -180,13 +194,15 @@ string modelTest(Params &params, PhyloTree *in_tree)
 					best_model = subst_model->name + rate_class[rate_type]->name;
 				}
 
-				tree->setModel(NULL);
+				//tree->setModel(NULL);
 				tree->setModelFactory(NULL);
-				tree->setRate(NULL);
+				//tree->setRate(NULL);
 
 			}
 		}
 
+		model_fac->model = NULL;
+		model_fac->site_rate = NULL;
 		delete model_fac;
 		delete subst_model;
 		for (rate_type = 3; rate_type >= 0; rate_type--)
@@ -206,37 +222,37 @@ string modelTest(Params &params, PhyloTree *in_tree)
 		cout << "Performing ModelTest 3.7 (Posada and Crandall, 1998) ..." << endl;
 		cout << "  LRT:     " << LRT_model << endl;
 		cout << "  AIC:     " << IC_model << endl;
-		model_list.insert(LRT_model);
-		model_list.insert(IC_model);
+		model_list.insert(string(LRT_model));
+		model_list.insert(string(IC_model));
 
 		/* applying other tests */
 		sprintf(model_arg, " -n%d", in_tree->aln->getNSite());
 		modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
 		cout << "  AICc:    " << IC_model << endl;
-		model_list.insert(IC_model);
+		model_list.insert(string(IC_model));
 
 		sprintf(model_arg, " -n%d -t%d", in_tree->aln->getNSite(), in_tree->aln->getNSeq());
 		modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
 		cout << "  AICc_t:  " << IC_model << endl;
-		model_list.insert(IC_model);
+		model_list.insert(string(IC_model));
 
 
 		sprintf(model_arg, "-n%d -b ", in_tree->aln->getNSite());
 		modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
 		cout << "  BIC:     " << IC_model << endl;
-		model_list.insert(IC_model);
+		model_list.insert(string(IC_model));
 
 		sprintf(model_arg, "-n%d -t%d -b", in_tree->aln->getNSite(), in_tree->aln->getNSeq());
 		modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
 		cout << "  BIC_t:   " << IC_model << endl;
-		model_list.insert(IC_model);
+		model_list.insert(string(IC_model));
 	} else {
 		// FOR protein: no modeltest exists yet
 		model_list.insert(best_model);
 	}
 	/* use the model that is most frequently selected */
 	if (model_list.size() > 1) {
-		cout << "Tests do not agree on one single model" << endl;
+		//cout << "Tests do not agree on one single model" << endl;
 		int max = 0;
 
 		for (multiset<string>::iterator it = model_list.begin(); it != model_list.end(); it++)
@@ -246,7 +262,7 @@ string modelTest(Params &params, PhyloTree *in_tree)
 			}
 		cout << "Use the model that is most frequently selected: " << best_model << endl;
 	} else {
-		cout << "Best model: " << (*model_list.begin()) << endl;
+		cout << "Select model with highest likelihood: " << (*model_list.begin()) << endl;
 	}
 
 	return best_model;
@@ -500,6 +516,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
 	if (params.user_file) {
 		// start the search with user-defined tree
+		cout << "Reading user-tree file " << params.user_file << " ..." << endl;
 		bool myrooted = params.is_rooted;
 		tree.readTree(params.user_file, myrooted);
 		tree.setAlignment(alignment);
@@ -543,10 +560,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	tree.optimize_by_newton = params.optimize_by_newton;
 	tree.sse = params.SSE;
 	if (!tree.getModelFactory()) tree.setModelFactory(new ModelFactory(params, &tree));
-	tree.setModel(tree.getModelFactory()->model);
-	tree.setRate(tree.getModelFactory()->site_rate);
+	//tree.setModel(tree.getModelFactory()->model);
+	//tree.setRate(tree.getModelFactory()->site_rate);
 	int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
-	cout << "Model of evolution: " << tree.getModelName() << " (" << model_df << " free parameters)" << endl;
+	cout << "Model of evolution: " << tree.getModelFactory()->getModelName() << " (" << model_df << " free parameters)" << endl;
 	cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
 	cout << "Random seed: " << params.ran_seed << endl;
 	cout << "Lambda used in NNI: " << cmdLambda << endl;
@@ -579,8 +596,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	tree.cur_pars_score = tree.computeParsimony();
 	//cout << "Fast parsimony score: " << tree.cur_pars_score << endl;
 
-	cout << "Optimizing model parameters" << endl;
+	cout << "Optimizing model parameters..." << endl;
 	double bestTreeScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
+	if (verbose_mode == VB_MIN)
+		tree.getModelFactory()->writeInfo(cout);
 	cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 	//Update tree score
 	tree.curScore = bestTreeScore;
@@ -713,7 +732,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         if ( ils && params.min_iterations > 1 ) {
             cout << "Star doing iterated local search " << endl;
             tree.doILS( params , perLevel );
-            cout << "Optimizing model parameters" << endl;
+            cout << "Optimizing model parameters..." << endl;
             double endScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
             cout << "Best score found : " << endScore << endl;
         }
@@ -752,7 +771,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		cout << "Log-likelihood	after reoptimizing full tree: " << tree.curScore << endl;
 	}
 
-	cout << "Optimizing model parameters" << endl;
+	cout << "Optimizing model parameters..." << endl;
 	tree.setBestScore(tree.getModelFactory()->optimizeParameters(params.fixed_branch_length));
 	cout << "Best score found : " << tree.getBestScore() << endl;
 

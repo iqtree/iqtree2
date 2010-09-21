@@ -132,7 +132,7 @@ int Alignment::readNexus(char *filename) {
 void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 	int nseq = data_block->GetNTax();
 	int nsite = data_block->GetNCharTotal();
-	char *symbols;
+	char *symbols = NULL;
 	//num_states = strlen(symbols);
 	char char_to_state[NUM_CHAR];
 	char state_to_char[NUM_CHAR];
@@ -350,7 +350,7 @@ char Alignment::convertStateBack(char state) {
 		return state;
 	case 20: // Protein
 		if (state < 20) 
-			return symbols_protein[state];
+			return symbols_protein[(int)state];
 		else 
 			return '-';
 	default:
@@ -472,13 +472,13 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 	}
 	SeqType user_seq_type;
 	if (sequence_type) {
-		if (strcmp(sequence_type, "B") == 0) {
+		if (strcmp(sequence_type, "BIN") == 0) {
 			num_states = 2;
 			user_seq_type = SEQ_BINARY;
-		} else if (strcmp(sequence_type, "D") == 0) {
+		} else if (strcmp(sequence_type, "DNA") == 0) {
 			num_states = 4;
 			user_seq_type = SEQ_DNA;
-		} else if (strcmp(sequence_type, "P") == 0) {
+		} else if (strcmp(sequence_type, "AA") == 0) {
 			num_states = 20;
 			user_seq_type = SEQ_PROTEIN;
 		} else
@@ -506,7 +506,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 		cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous chars." << endl;
 	if (err_str.str() != "")
 		throw err_str.str();
-
+	return 1;
 }
 
 
@@ -780,7 +780,7 @@ void Alignment::getAppearance(char state, double *state_app) {
 
 	memset(state_app, 0, num_states * sizeof(double));
 	if (state < num_states) {
-		state_app[state] = 1.0;
+		state_app[(int)state] = 1.0;
 		return;
 	}
 	state -= (num_states-1);
@@ -807,7 +807,7 @@ void Alignment::computeEmpiricalRate (double *rates) {
 			if (state1 >= num_states) continue;
 			for (j = i+1; j < nseqs; j++) {
 				char state2 = (*it)[j];
-				if (state2 < num_states) pair_rates[state1][state2] += (*it).frequency;
+				if (state2 < num_states) pair_rates[(int)state1][(int)state2] += (*it).frequency;
 			}
 		}
 	}

@@ -673,7 +673,7 @@ void ModelProtein::init(const char *model_name, StateFreqType freq) {
 	else if (name == "LG") model_str = model_LG;
 	else if (name == "mtART") model_str = model_mtART;
 	else if (name == "mtZOA") model_str = model_mtZOA;
-	else if (name == "VT" || name == "rtREV" || name == "Dayhoff") {
+	else if (name == "VT" || name == "rtREV" || name == "Dayhoff" || name == "PAM") {
 		double *q[num_states];
 		int i, j, k;
 		for (i = 0; i < num_states; i++)

@@ -114,9 +114,9 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 bool ModelDNA::setRateType(const char *rate_str) {
 	char first_type = 127;
 	char last_type = 0;
-	char t = first_type;
+	//char t = first_type;
 	int num_ch = strlen(rate_str);
-	int i, j;
+	int i;
 
 	if (num_ch != num_states*(num_states-1)/2)
 		return false;
@@ -140,13 +140,13 @@ bool ModelDNA::setRateType(const char *rate_str) {
 	memset(avg_rates, 0, sizeof(double) * (num_params+1));
 	memset(num_rates, 0, sizeof(int) * (num_params+1));
 	for (i = 0; i < param_spec.size(); i++) {
-		avg_rates[param_spec[i]] += rates[i];
-		num_rates[param_spec[i]]++;
+		avg_rates[(int)param_spec[i]] += rates[i];
+		num_rates[(int)param_spec[i]]++;
 	}
 	for (i = 0; i <= num_params; i++)
 		avg_rates[i] /= num_rates[i];
 	for (i = 0; i < param_spec.size(); i++) {
-		rates[i] = avg_rates[param_spec[i]] / avg_rates[0];
+		rates[i] = avg_rates[(int)param_spec[i]] / avg_rates[0];
 	}
 	if (verbose_mode >= VB_DEBUG) {
 		cout << "Initialized rates: ";
@@ -190,7 +190,7 @@ void ModelDNA::getVariables(double *variables) {
 	int num_all = param_spec.length();
 	for (i = 0; i < num_all; i++)
 		if (param_spec[i] > 0)
-			rates[i] = variables[param_spec[i]];
+			rates[i] = variables[(int)param_spec[i]];
 	if (freq_type == FREQ_ESTIMATE) {
 		int ndim = getNDim();
 		memcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
@@ -205,7 +205,7 @@ void ModelDNA::setVariables(double *variables) {
 	int num_all = param_spec.length();
 	for (int i = 0; i < num_all; i++)
 		if (param_spec[i] > 0)
-			variables[param_spec[i]] = rates[i];
+			variables[(int)param_spec[i]] = rates[i];
 	if (freq_type == FREQ_ESTIMATE) {
 		int ndim = getNDim();
 		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));

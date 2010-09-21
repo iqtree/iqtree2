@@ -326,7 +326,7 @@ double Optimization::minimizeNewton(double xmin, double xguess, double xmax, dou
 	//return minimizeOneDimen(xmin, rtn, xmax, tolerance, &f, &fe);
 
 	int j;
-	double fnew, df,ddf,dx,rtn,rtnold, temp, step, fstart;
+	double df,ddf,dx,rtn,rtnold, fstart=0;
 
 	rtn=xguess;
 

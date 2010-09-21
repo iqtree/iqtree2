@@ -880,7 +880,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt],"-st") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -st <B|D|P>";
+					throw "Use -st <BIN|DNA|AA>";
 				params.sequence_type = argv[cnt];
 			} else if (strcmp(argv[cnt],"-alnout") == 0) {
 				cnt++;
@@ -947,7 +947,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -f <EQ | EM | ES | UD>";
-				if (strcmp(argv[cnt],"EQL") == 0)
+				if (strcmp(argv[cnt],"EQ") == 0)
 					params.freq_type = FREQ_EQUAL;
 				else if (strcmp(argv[cnt],"EM") == 0)
 					params.freq_type = FREQ_EMPIRICAL;
@@ -1150,7 +1150,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 	cout << "GENERAL OPTIONS:" << endl
 		 << "  -?                   Print this help dialog" << endl
 		 << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP or NEXUS format"  << endl
-		 << "  -st <B|D|P>          Binary, DNA, or Protein sequences (default: auto-detect)"  << endl
+		 << "  -st <BIN|DNA|AA>     Binary, DNA, or Protein sequences (default: auto-detect)"  << endl
 		 << "  -b <#replicates>     Non-parametric bootstrap (default: none)" << endl
 		 << "  <tree_file>          Initial tree for tree reconstruction (default: BIONJ)" << endl
 		 << "                       Or set of trees for consensus reconstruction (see below)" << endl
@@ -1162,13 +1162,13 @@ void usage_iqtree(char* argv[], bool full_command) {
 		 << "                  DNA: JC (default), F81, K2P, HKY, K3P, K81uf, TN/TrN, TNef," << endl
 		 << "                       TIM, TIMef, HKY, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
 		 << "                       specification, e.g., '010010' is equivalent to HKY" << endl
-		 << "              Protein: JC (default), WAG, cpREV, mtREV, Dayhoff, mtMAM, JTT, LG," << endl
+		 << "              Protein: JC (default), WAG, cpREV, mtREV, PAM, mtMAM, JTT, LG," << endl
 		 << "                       mtART, mtZOA, VT, or rtREV" << endl
 		 << "               Binary: JC (default)" << endl
 		 << "   Rate heterogeneity: Append '+I', '+G[n]', or '+I+G[n]' to the model name for" << endl
 		 << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is the number of" << endl
 		 << "                       categories for Gamma rates (default: n=4)" << endl
-		 << " Modeltest (DNA only): TEST or TESTONLY if you have no idea which model to use." << endl
+		 << "            Modeltest: TEST or TESTONLY if you have no idea which model to use." << endl
 		 << "                       With 'TEST', IQTREE will evaluate all models and select" << endl
 		 << "                       the most suitable one. With 'TESTONLY' IQTREE will stop" << endl
 		 << "                       after finishing Modeltest" << endl
