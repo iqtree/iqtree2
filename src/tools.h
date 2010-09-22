@@ -738,6 +738,10 @@ struct Params {
 		SSE Option
 	*/
         bool SSE;
+	/**
+		TRUE to print site log-likelihood
+	*/
+    bool print_site_lh;
 };
 
 /**

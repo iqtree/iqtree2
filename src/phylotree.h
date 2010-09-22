@@ -123,7 +123,11 @@ public:
 	*/
 	virtual Node* newNode(int node_id, int node_name);
 
-
+	/**
+		write site log-likelihood to a file
+		@param filename file name
+	*/
+	void writeSiteLh(const char *filename);
 
 /****************************************************************************
 	Model management for maximum likelihood

@@ -450,6 +450,9 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 	if (params.mvh_site_rate)
 		cout << "  Site-rates by MvH model:  " << params.out_prefix << ".mvhrate" << endl;
 	
+	if (params.print_site_lh)
+		cout << "  Site log-likelihood:      " << params.out_prefix << ".sitelh" << endl;
+
 	if (params.num_bootstrap_samples) 
 		cout << endl << "Non-parametric bootstrap results written to:" << endl 
 			 << "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl
@@ -799,6 +802,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		cout << "  " << (((double)clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
 		cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
 		delete [] pattern_lh;
+	}
+
+	if (params.print_site_lh) {
+		string sitelh_file = params.out_prefix;
+		sitelh_file += ".sitelh";
+		tree.writeSiteLh(sitelh_file.c_str());
 	}
 	t_end=clock();
 	params.run_time = (t_end-t_begin);

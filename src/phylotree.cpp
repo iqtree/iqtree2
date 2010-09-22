@@ -152,6 +152,25 @@ Node* PhyloTree::newNode(int node_id, int node_name) {
 void PhyloTree::clearAllPartialLh() {
 	((PhyloNode*)root->neighbors[0]->node)->clearAllPartialLh((PhyloNode*)root);
 }
+
+void PhyloTree::writeSiteLh(const char *filename) {
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+		double *pattern_lh = new double[aln->getNPattern()];
+		computeLikelihood(pattern_lh);
+		out << aln->getNSite() << endl;
+		out << "0         ";
+		for (int i = 0; i < aln->getNSite(); i++)
+			out << " " << pattern_lh[aln->getPatternID(i)];
+		delete [] pattern_lh;
+		out.close();
+		//cout << "Transformed LP problem printed to " << outfile << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}	
+}
 	
 /****************************************************************************
 	Parsimony function

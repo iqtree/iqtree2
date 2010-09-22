@@ -572,6 +572,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.aLRT_threshold = 101;
 	params.aLRT_replicates = 1000;
 	params.SSE = false;
+	params.print_site_lh = false;
 
 	/* TUNG: IQP-TREE Specific Options */
 	simple_nni = false;
@@ -1029,6 +1030,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.aLRT_replicates = convert_int(argv[cnt]);
 				if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0) 
 					throw "aLRT replicates must be at least 1000";
+			} else if (strcmp(argv[cnt],"-wsl") == 0) {
+				params.print_site_lh = true;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];
