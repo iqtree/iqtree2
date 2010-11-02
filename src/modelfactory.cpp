@@ -17,8 +17,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "modelfactory.h"
 #include "rateinvar.h"
+#include "modelfactory.h"
 #include "rategamma.h"
 #include "rategammainvar.h"
 #include "gtrmodel.h"
@@ -81,15 +81,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 }
 
 
-string ModelFactory::getModelName() {
-	return model->name + site_rate->name;
-}
-
-void ModelFactory::writeInfo(ostream &out) {
-	model->writeInfo(out);
-	site_rate->writeInfo(out);
-}
-
 double ModelFactory::optimizeParameters(bool fixed_len) {
 	assert(model);
 	assert(site_rate);
@@ -134,7 +125,11 @@ double ModelFactory::optimizeParameters(bool fixed_len) {
 			break;
 		}
 	}
-	//cout << "Optimization took " << i-1 << " rounds to finish" << endl;
+	if (verbose_mode == VB_MIN) {
+		model->writeInfo(cout);
+		site_rate->writeInfo(cout);
+	}
+	cout << "Optimization took " << i-1 << " rounds to finish" << endl;
 	startStoringTransMatrix();
 	return cur_lh;
 }
@@ -209,6 +204,4 @@ ModelFactory::~ModelFactory()
 	for (iterator it = begin(); it != end(); it++)
 		delete it->second;
 	clear();
-	if (model) delete model;
-	if (site_rate) delete site_rate;
 }

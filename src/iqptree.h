@@ -101,9 +101,11 @@ Important Quartet Puzzling
 class IQPTree : public PhyloTree {
 public:
     /**
-            constructor
+            default constructor
      */
     IQPTree();
+
+    IQPTree(Alignment *aln);
 
     /**
             destructor
@@ -139,8 +141,8 @@ public:
 
     double getProbDelete();
 
-	void resetKDelete();
-	void increaseKDelete();
+    void resetKDelete();
+    void increaseKDelete();
 
     /**
             set the number of iterations for the IQPNNI algorithm
@@ -318,12 +320,16 @@ public:
      *
      * @return
      */
-    double getBestScore(void) { return bestScore; }
+    double getBestScore(void) {
+        return bestScore;
+    }
 
     /**
      *
      */
-    void setBestScore(double score) { bestScore = score; }
+    void setBestScore(double score) {
+        bestScore = score;
+    }
 
     /**
             current parsimony score of the tree
@@ -342,7 +348,7 @@ public:
     double curScore;
 
 
-     /**
+    /**
      *      Parsimony scores, used for linear regression
      */
     double* pars_scores;
@@ -356,7 +362,9 @@ public:
 
     Linear* linRegModel;
 
-	void disableHeuristic() { enableHeuris = false; }
+    void disableHeuristic() {
+        enableHeuris = false;
+    }
 
 protected:
 
@@ -367,7 +375,7 @@ protected:
     IQP_ASSESS_QUARTET iqp_assess_quartet;
 
     /**
-            The lamda number for NNI process (described in PhyML Paper)
+       The lamda number for NNI process (described in PhyML Paper)
      */
     double lambda;
 
@@ -386,18 +394,21 @@ protected:
     /**
      *  Number of IQP Iteration that have been carried out
      */
-    int nbIQPIter;
+    unsigned int nbIQPIter;
 
     /**
-     * TODO
+     * 95% confidence value for number of NNIs found in one iteration
      */
-    int nbNNI95;
+    unsigned int nbNNI95;
 
     /**
-     * TODO
+     * 95% confidence value for likelihood improvement made by one NNI
      */
     double deltaNNI95;
 
+    /**
+     * 
+     */
     bool enableHeuris;
 
     /**
@@ -437,21 +448,11 @@ protected:
     MapBranchLength savedBranLens;
 
 
-    /**
-            number of IQPNNI iterations
-     */
-    //int iqpnni_iterations;
+    int k_delete, k_delete_min, k_delete_max, k_delete_stay;
 
     /**
-            probability to delete a leaf
+            number of representative leaves for IQP step
      */
-    //double p_delete;
-
-	int k_delete, k_delete_min, k_delete_max, k_delete_stay;
-
-	/**
-		number of representative leaves for IQP step
-	*/
     int k_represent;
 
     /**

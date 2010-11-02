@@ -40,6 +40,25 @@ PhyloTree() {
     linRegModel = NULL;
 }
 
+IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln) 
+{
+    k_represent = 0;
+    //p_delete = 0.0;
+    k_delete = k_delete_min = k_delete_max = k_delete_stay = 0;
+    dist_matrix = NULL;
+    //bonus_values = NULL;
+    nbIQPIter = 0; // Number of iteration before the speed up is started
+    nbNNI95 = 0.0;
+    deltaNNI95 = 0;
+    curScore = 0.0; // Current score of the tree
+    bestScore = 0.0; // Best score found sofar
+    cur_pars_score = -1;
+    enable_parsimony = false;
+    enableHeuris = false; // This is set true when the heuristic started (after N iterations)
+    linRegModel = NULL;
+}
+
+
 IQPTree::~IQPTree() {
     //if (bonus_values)
     //delete bonus_values;
@@ -110,8 +129,8 @@ RepresentLeafSet* IQPTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves
     leaves_vec[set_id] = leaves;
     RepresentLeafSet::iterator last;
     RepresentLeafSet::iterator cur_it;
-    int i, j;
-    //double admit_height = 1000000;
+    int count, i, j;
+    double admit_height = 1000000;
 
     leaves->clear();
     if (node->isLeaf()) {
@@ -208,7 +227,7 @@ int IQPTree::assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2,
         Node *del_leaf) {
     assert(dist_matrix);
     int nseq = aln->getNSeq();
-    //int id0 = leaf0->id, id1 = leaf1->id, id2 = leaf2->id;
+    int id0 = leaf0->id, id1 = leaf1->id, id2 = leaf2->id;
     double dist0 = dist_matrix[leaf0->id * nseq + del_leaf->id]
             + dist_matrix[leaf1->id * nseq + leaf2->id];
     double dist1 = dist_matrix[leaf1->id * nseq + del_leaf->id]
@@ -350,7 +369,7 @@ void IQPTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *c
 void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
     PhyloNodeVector::iterator it_leaf;
 
- //   int num_del_leaves = del_leaves.size();
+    int num_del_leaves = del_leaves.size();
     assert(root->isLeaf());
 
     for (it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
@@ -498,7 +517,7 @@ double IQPTree::perturb(int times) {
                 minDist = dist;
         }
 
-        int taxonid2 = -1;
+        int taxonid2;
         for (int i = 0; i < taxa.size(); i++) {
             if (dists[i] == minDist)
                 taxonid2 = i;
@@ -1187,12 +1206,11 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
     int nniNr = 1;
     int chosenSwap = 1;
     // replace partial_lh with a new vector
-    node12_it->partial_lh = newPartialLh();
-    node21_it->partial_lh = newPartialLh();
+//    node12_it->partial_lh = newPartialLh();
+//    node21_it->partial_lh = newPartialLh();
 
-    // replace partial_pars with a new vector
-    node12_it->partial_pars = newBitsBlock();
-    node21_it->partial_pars = newBitsBlock();
+    node12_it->partial_lh = tmp_partial_lh1;
+    node21_it->partial_lh = tmp_partial_lh2;
 
     FOR_NEIGHBOR_IT(node2, node1, node2_it) {
         nniNr = nniNr + 1;
@@ -1210,10 +1228,13 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
         node21_it->clearPartialLh();
 
         double newScore = NULL;
-        //double lh_prediction = 100.0;
+//        double lh_prediction = 100.0;
         // compute score with parsimony, accept topology if parsimony score is not so bad
         int pars_score = -10;
         if (enable_parsimony) {
+            // replace partial_pars with a new vector
+            node12_it->partial_pars = newBitsBlock();
+            node21_it->partial_pars = newBitsBlock();
             pars_score = computeParsimonyBranch(node12_it, node1);
 //            if (linRegModel != NULL)
 //                lh_prediction = linRegModel->getValue(pars_score);
@@ -1252,7 +1273,6 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
         } else {
             //cout << "pars filtered" << endl;
         }
-
         // swap back and recover the branch lengths
         node1->updateNeighbor(node1_it, node1_nei, node1_len);
         node1_nei->node->updateNeighbor(node2, node1, node1_len);
@@ -1262,21 +1282,20 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
         node21_it->length = node12_len[0];
 
     }
+    if (enable_parsimony) {
+        delete[] node21_it->partial_pars;
+        delete[] node12_it->partial_pars;
+        node12_it->partial_pars = node1_pars_save;
+        node21_it->partial_pars = node2_pars_save;
+    }
 
-    delete[] node21_it->partial_pars;
-    delete[] node12_it->partial_pars;
-
-    delete[] node21_it->partial_lh;
-    delete[] node12_it->partial_lh;
+//    delete[] node21_it->partial_lh;
+//    delete[] node12_it->partial_lh;
     // restore the partial likelihood vector
-    node12_it->partial_pars = node1_pars_save;
-    node21_it->partial_pars = node2_pars_save;
     node12_it->partial_lh = node1_lh_save;
     node21_it->partial_lh = node2_lh_save;
     node12_it->lh_scale_factor = node1_lh_scale;
     node21_it->lh_scale_factor = node2_lh_scale;
-
-
     string key("");
     if (node1->id < node2->id) {
         key += convertIntToString(node1->id) + "->" + convertIntToString(
@@ -1285,7 +1304,6 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
         key += convertIntToString(node2->id) + "->" + convertIntToString(
                 node1->id);
     }
-
     mapOptBranLens.insert(MapBranchLength::value_type(key,
             node12_len[chosenSwap]));
 

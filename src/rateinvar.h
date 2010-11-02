@@ -20,8 +20,8 @@
 #ifndef RATEINVAR_H
 #define RATEINVAR_H
 
-#include <rateheterogeneity.h>
 #include "phylotree.h"
+#include "rateheterogeneity.h"
 
 /**
 class for rate heterogeneity with a fraction of invariable sites

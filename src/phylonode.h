@@ -12,7 +12,7 @@
 #ifndef PHYLONODE_H
 #define PHYLONODE_H
 
-#include <node.h>
+#include "node.h"
 
 /**
 A neighbor in a phylogenetic tree

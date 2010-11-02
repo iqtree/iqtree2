@@ -17,8 +17,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "ratemeyerhaeseler.h"
 #include "phylotree.h"
+#include "ratemeyerhaeseler.h"
 
 const double MIN_SITE_RATE = 1e-6;
 const double MAX_SITE_RATE = 100.0;

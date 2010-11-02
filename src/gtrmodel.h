@@ -20,11 +20,13 @@
 #ifndef GTRMODEL_H
 #define GTRMODEL_H
 
+#define EIGEN
+#include "phylotree.h"
 #include "substmodel.h"
 #include "optimization.h"
-#include "phylotree.h"
 #include "alignment.h"
 #include "eigendecomposition.h"
+
 
 
 /**
