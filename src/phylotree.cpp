@@ -80,8 +80,6 @@ PhyloTree::PhyloTree(Alignment *alignment)
     for (int ptn = 0; ptn < alnSize; ++ptn) {
         ptn_freqs[ptn] = (*aln)[ptn].frequency;
     }
-    tmp_partial_lh1 = newPartialLh();
-    tmp_partial_lh2 = newPartialLh();
     state_freq = NULL;
 }
 
@@ -604,12 +602,14 @@ void PhyloTree::growTreeMP(Alignment *alignment) {
 
 void PhyloTree::initializeAllPartialLh() {
     int index;
+    block_size = alnSize * numStates * site_rate->getNRate();
+    tmp_partial_lh1 = newPartialLh();
+    tmp_partial_lh2 = newPartialLh();
     initializeAllPartialLh(index);
     assert(index == (nodeNum - 1)*2);
 }
 
 void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
-    block_size = alnSize * numStates * site_rate->getNRate();
     int pars_block_size = getBitsBlockSize();
     if (!node) {
         node = (PhyloNode*) root;

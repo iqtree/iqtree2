@@ -41,7 +41,7 @@ public:
 	/**
 		tell that the partial likelihood vector is not computed
 	*/
-	void clearPartialLh() { partial_lh_computed = 0; }
+	inline void clearPartialLh() { partial_lh_computed = 0; }
 
 	/**
 		clear all partial likelihood recursively in forward direction
