@@ -987,6 +987,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
     double *partial_lh_child;
     double *partial_lh_block;
     bool do_scale = true;
+    double freq;
     dad_branch->lh_scale_factor = 0.0;    
     if (!node->isLeaf() || !dad) {
         EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
@@ -1004,6 +1005,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
             partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh;
             partial_lh_block = partial_lh_site;
             for (ptn = 0; ptn < alnSize; ++ptn) {
+                freq = ptn_freqs[ptn];
                 trans_state = trans_mat;
                 cat = 0;
                 while (true) {
@@ -1031,7 +1033,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
                 for (cat = 0; cat < block; partial_lh_block += ++cat)
                     *partial_lh_block /= SCALING_THRESHOLD;
                 partial_lh_block += block;
-                dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * ptn_freqs[ptn];
+                dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * freq;
                 if (pattern_scale)
                     pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
             }
