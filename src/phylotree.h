@@ -176,7 +176,7 @@ public:
         if (site_rate && aln && state_freq) {            
             double p_invar = site_rate->getPInvar();
             for (int ptn = 0; ptn < aln->size(); ++ptn)
-                p_invar_ptn[ptn] = p_invar * state_freq[(*aln)[ptn][0]];
+                p_invar_ptns[ptn] = p_invar * state_freq[(*aln)[ptn][0]];
         }
     }
 
@@ -750,7 +750,7 @@ protected:
      */
     UINT *central_partial_pars;
     
-    ArrayXd p_invar_ptn;
+    ArrayXd p_invar_ptns;
 
     /**
      * State frequencies
@@ -794,6 +794,16 @@ protected:
      */
     double *tmp_partial_lh1;
     double *tmp_partial_lh2;
+
+    /**
+     * Array to store likelihood score of each pattern
+     */
+    ArrayXd lh_ptns;
+
+     /**
+     * Array to store log likelihood score of each pattern
+     */
+    ArrayXd lh_ptns_log;
 
     /****************************************************************************
             Vector of bit blocks, used for parsimony function

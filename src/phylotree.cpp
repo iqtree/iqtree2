@@ -64,7 +64,8 @@ PhyloTree::PhyloTree()
 }
 
 PhyloTree::PhyloTree(Alignment *alignment)
-:   ptn_freqs( alignment->size() ), p_invar_ptn( alignment->size() ), MTree() {
+:   ptn_freqs(alignment->size()), p_invar_ptns(alignment->size()),
+        lh_ptns (alignment->size()), lh_ptns_log(alignment->size()), MTree() {
     aln = alignment;
     alnSize = aln->size();
     numStates = aln->num_states;
@@ -75,6 +76,8 @@ PhyloTree::PhyloTree(Alignment *alignment)
     central_partial_lh = NULL;
     central_partial_pars = NULL;
     model_factory = NULL;
+//    lh_ptns = ei_aligned_new<double>(alnSize);
+//    lh_ptns_log = ei_aligned_new<double>(alnSize);
     //p_invar_ptn = ei_aligned_new<double>(alnSize);
     //ptn_freqs = ei_aligned_new<double>(alnSize);
     for (int ptn = 0; ptn < alnSize; ++ptn) {
@@ -106,6 +109,10 @@ PhyloTree::~PhyloTree() {
         delete [] tmp_partial_lh2;
     if (root != NULL)
         freeNode();
+//    if (lh_ptns)
+//        delete [] lh_ptns;
+//    if (lh_ptns_log)
+//        delete [] lh_ptns_log;
     root = NULL;
 }
 
@@ -838,10 +845,13 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
         }
 
         lh_ptn *= p_var_cat;
-        lh_ptn += p_invar_ptn[ptn];
-        tree_lh += log(lh_ptn) * ptn_freqs[ptn];
+        lh_ptn += p_invar_ptns[ptn];
+        lh_ptns[ptn] = lh_ptn;
+        //tree_lh += log(lh_ptn) * ptn_freqs[ptn];
         if (pattern_lh) pattern_lh[ptn] = lh_ptn;
     }
+    vrda_log(alnSize, lh_ptns.data(), lh_ptns_log.data());
+    tree_lh += (lh_ptns_log * ptn_freqs).sum();
     return tree_lh;
 }
 
@@ -1114,7 +1124,6 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         ei_derv1_cat *= (ei_state_freq_mat * rate_val);
         ei_derv2_cat *= (ei_state_freq_mat * rate_sqr);
     }
-    
     for (ptn = 0; ptn < alnSize; ++ptn) {
         lh_ptn = 0.0;
         lh_ptn_derv1 = 0.0;
@@ -1128,21 +1137,24 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
             MappedMat(NSTATES) ei_trans_state(trans_state);
             MappedMat(NSTATES) ei_derv1_state(derv1_state);
             MappedMat(NSTATES) ei_derv2_state(derv2_state);
-            lh_ptn += (ei_partial_lh_child * ei_trans_state).dot(ei_partial_lh_site);            
+            lh_ptn += (ei_partial_lh_child * ei_trans_state).dot(ei_partial_lh_site);
             lh_ptn_derv1 += (ei_partial_lh_child * ei_derv1_state).dot(ei_partial_lh_site);
             lh_ptn_derv2 += (ei_partial_lh_child * ei_derv2_state).dot(ei_partial_lh_site);
             partial_lh_site += NSTATES;
             partial_lh_child += NSTATES;
         }
         lh_ptn *= p_var_cat;
-        lh_ptn += p_invar_ptn[ptn];
+        lh_ptn += p_invar_ptns[ptn];
+        lh_ptns[ptn] = lh_ptn;
         double tmp = p_var_cat / lh_ptn;
         derv1_frac = lh_ptn_derv1 * tmp;
         derv2_frac = lh_ptn_derv2 * tmp;
         df += derv1_frac * ptn_freqs[ptn];
-        ddf += (derv2_frac - derv1_frac * derv1_frac) * ptn_freqs[ptn];
-        tree_lh += log(lh_ptn) * ptn_freqs[ptn];
+        ddf += (derv2_frac - derv1_frac * derv1_frac) * ptn_freqs[ptn];         
+        //tree_lh += log(lh_ptn) * ptn_freqs[ptn];
     }
+    vrda_log(alnSize, lh_ptns.data(), lh_ptns_log.data());
+    tree_lh += (lh_ptns_log * ptn_freqs).sum();
     return tree_lh;
 }
 
