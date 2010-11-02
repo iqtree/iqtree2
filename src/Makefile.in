@@ -67,7 +67,8 @@ am_pda_OBJECTS = alignment.$(OBJEXT) alignmentpairwise.$(OBJEXT) \
 pda_OBJECTS = $(am_pda_OBJECTS)
 pda_DEPENDENCIES = $(top_builddir)/src/lp/liblpsolve.la \
 	$(top_builddir)/src/modeltest/libmodeltest.la \
-	$(top_builddir)/src/ncl/libNCL.la
+	$(top_builddir)/src/ncl/libNCL.la \
+	$(top_srcdir)/lib/libacml_mv.a
 pda_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(pda_LDFLAGS) \
 	$(LDFLAGS) -o $@
@@ -248,7 +249,7 @@ noinst_HEADERS = alignment.h matree.h alignmentpairwise.h bionj.h circularnetwor
 
 SUBDIRS = lp modeltest ncl
 pda_LDADD = $(top_builddir)/src/lp/liblpsolve.la \
-	$(top_builddir)/src/modeltest/libmodeltest.la $(top_builddir)/src/ncl/libNCL.la
+	$(top_builddir)/src/modeltest/libmodeltest.la $(top_builddir)/src/ncl/libNCL.la $(top_srcdir)/lib/libacml_mv.a
 
 AM_CXXFLAGS = -Wno-deprecated
 all: all-recursive
@@ -264,9 +265,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign  src/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  src/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign  src/Makefile
+	  $(AUTOMAKE) --gnu  src/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \

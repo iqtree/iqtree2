@@ -22,5 +22,5 @@ noinst_HEADERS = alignment.h matree.h alignmentpairwise.h bionj.h circularnetwor
 	ratemeyerhaeseler.h split.h splitgraph.h splitset.h stoprule.h substmodel.h tools.h
 SUBDIRS = lp modeltest ncl
 pda_LDADD = $(top_builddir)/src/lp/liblpsolve.la \
-	$(top_builddir)/src/modeltest/libmodeltest.la $(top_builddir)/src/ncl/libNCL.la
+	$(top_builddir)/src/modeltest/libmodeltest.la $(top_builddir)/src/ncl/libNCL.la $(top_srcdir)/lib/libacml_mv.a
 AM_CXXFLAGS = -Wno-deprecated
