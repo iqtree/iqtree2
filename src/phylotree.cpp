@@ -982,9 +982,9 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
         return;
     Node *node = dad_branch->node;
     int ptn, cat, padding;
-    double *trans_state;
-    double *partial_lh_site;
-    double *partial_lh_child;
+    double *trans_state;    
+//    double *partial_lh_site;
+//    double *partial_lh_child;
     dad_branch->lh_scale_factor = 0.0;    
     if (!node->isLeaf() || !dad) {
         EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
@@ -997,23 +997,27 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
             dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
             for (cat = 0; cat < numCat; cat++) {
                 model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), &trans_mat[cat * tranSize]);
-            }            
+            }
+            double *partial_lh_site =  dad_branch->partial_lh;
+            double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh;
             for (ptn = 0; ptn < alnSize; ++ptn) {
                 for (cat = 0; cat < numCat; ++cat) {
-                    padding = ptn * block + cat * NSTATES;
-                    partial_lh_site = dad_branch->partial_lh + padding;
-                    partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + padding;
+//                    padding = ptn * block + cat * NSTATES;
+//                    partial_lh_site = dad_branch->partial_lh + padding;
+//                    partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + padding;
                     trans_state = trans_mat + cat * tranSize;
                     MappedRowVec(NSTATES) ei_partial_lh_child(partial_lh_child);
                     MappedRowVec(NSTATES) ei_partial_lh_site(partial_lh_site);
                     MappedMat(NSTATES) ei_trans_state(trans_state);
                     ei_partial_lh_site.noalias() = (ei_partial_lh_child * ei_trans_state).cwiseProduct(ei_partial_lh_site);
+                    partial_lh_site += NSTATES;
+                    partial_lh_child += NSTATES;
                 }
                 // check if one should scale partial likelihoods
                 bool do_scale = true;
-                partial_lh_site = dad_branch->partial_lh + (ptn * block);
+                double *partial_lh_block = dad_branch->partial_lh + (ptn * block);
                 for (cat = 0; cat < block; ++cat)
-                    if (partial_lh_site[cat] > SCALING_THRESHOLD) {
+                    if (partial_lh_block[cat] > SCALING_THRESHOLD) {
                         do_scale = false;
                         break;
                     }
@@ -1022,7 +1026,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
 //                Map<VectorXd, Aligned> ei_partial_lh_block(partial_lh_site, block);
 //                ei_partial_lh_block.noalias() = ei_partial_lh_block / SCALING_THRESHOLD;
                 for (cat = 0; cat < block; ++cat)
-                    partial_lh_site[cat] /= SCALING_THRESHOLD;
+                    partial_lh_block[cat] /= SCALING_THRESHOLD;
                 dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * ptn_freqs[ptn];
                 if (pattern_scale)
                     pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
