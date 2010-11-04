@@ -81,7 +81,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 }
 
 
-double ModelFactory::optimizeParameters(bool fixed_len) {
+double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 	assert(model);
 	assert(site_rate);
 
@@ -125,11 +125,12 @@ double ModelFactory::optimizeParameters(bool fixed_len) {
 			break;
 		}
 	}
-	if (verbose_mode == VB_MIN) {
+	if (verbose_mode == VB_MIN && write_info) {
 		model->writeInfo(cout);
 		site_rate->writeInfo(cout);
 	}
-	cout << "Optimization took " << i-1 << " rounds to finish" << endl;
+	if (write_info)
+		cout << "Optimization took " << i-1 << " rounds to finish" << endl;
 	startStoringTransMatrix();
 	return cur_lh;
 }

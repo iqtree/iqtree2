@@ -61,6 +61,8 @@ PhyloTree::PhyloTree()
     central_partial_lh = NULL;    
     central_partial_pars = NULL;
     model_factory = NULL;
+    tmp_partial_lh1 = NULL;
+    tmp_partial_lh2 = NULL;
 }
 
 PhyloTree::PhyloTree(Alignment *alignment)
@@ -76,6 +78,8 @@ PhyloTree::PhyloTree(Alignment *alignment)
     central_partial_lh = NULL;
     central_partial_pars = NULL;
     model_factory = NULL;
+    tmp_partial_lh1 = NULL;
+    tmp_partial_lh2 = NULL;
 //    lh_ptns = ei_aligned_new<double>(alnSize);
 //    lh_ptns_log = ei_aligned_new<double>(alnSize);
     //p_invar_ptn = ei_aligned_new<double>(alnSize);
@@ -104,9 +108,11 @@ PhyloTree::~PhyloTree() {
 //    if (ptn_freqs)
 //        ei_aligned_delete<double>(ptn_freqs, alnSize);
     if (tmp_partial_lh1)
-        delete [] tmp_partial_lh1;
+    	ei_aligned_delete<double>(tmp_partial_lh1, block_size);
+        //delete [] tmp_partial_lh1;
     if (tmp_partial_lh2)
-        delete [] tmp_partial_lh2;
+    	ei_aligned_delete<double>(tmp_partial_lh2, block_size);
+        //delete [] tmp_partial_lh2;
     if (root != NULL)
         freeNode();
 //    if (lh_ptns)
@@ -155,6 +161,9 @@ void PhyloTree::setAlignment(Alignment *alignment) {
         assert(node->isLeaf());
         node->id = seq;
     }
+    alnSize = aln->size();
+    numStates = aln->num_states;
+    tranSize = numStates * numStates;
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {
@@ -175,6 +184,7 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
 
 void PhyloTree::setRate(RateHeterogeneity *rate) {
     site_rate = rate;
+    if (!rate) return;
     numCat = site_rate->getNRate();
     p_invar = site_rate->getPInvar();
     p_var_cat = (1.0 - p_invar) / (double) numCat;

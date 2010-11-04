@@ -103,17 +103,19 @@ string modelTest(Params &params, PhyloTree *in_tree)
 
 		PhyloTree *tree_homo = new PhyloTree();
 		tree_homo->optimize_by_newton = params.optimize_by_newton;
+		tree_homo->sse = params.SSE;
 		tree_homo->copyPhyloTree(in_tree);
 
 		PhyloTree *tree_hetero = new PhyloTree();
 		tree_hetero->optimize_by_newton = params.optimize_by_newton;
+		tree_hetero->sse = params.SSE;
 		tree_hetero->copyPhyloTree(in_tree);
 
 		RateHeterogeneity *rate_class[4];
 		rate_class[0] = new RateHeterogeneity();
 		rate_class[1] = new RateInvar(NULL);
-		rate_class[2] = new RateGamma(4, NULL);
-		rate_class[3] = new RateGammaInvar(4, NULL);
+		rate_class[2] = new RateGamma(params.num_rate_cats, NULL);
+		rate_class[3] = new RateGammaInvar(params.num_rate_cats, NULL);
 		GTRModel *subst_model;
 		if (nstates == 4)
 			subst_model = new ModelDNA("JC", FREQ_UNKNOWN, in_tree);
@@ -157,7 +159,7 @@ string modelTest(Params &params, PhyloTree *in_tree)
 				tree->clearAllPartialLh();
 
 				// optimize model parameters
-				double cur_lh = tree->getModelFactory()->optimizeParameters();
+				double cur_lh = tree->getModelFactory()->optimizeParameters(false, false);
 				cout << "===> Testing ";
 				cout.width(12);
 				string str;
@@ -800,7 +802,8 @@ void runPhyloAnalysis(Params &params) {
 		alignment.printPhylip(params.aln_output);
 	} else if (params.num_bootstrap_samples == 0) {
 		runPhyloAnalysis(params, original_model, &alignment, tree);
-		reportPhyloAnalysis(params, original_model, alignment, tree);
+		if (original_model != "TESTONLY")
+			reportPhyloAnalysis(params, original_model, alignment, tree);
 	} else {
 		// turn off aLRT test
 		int saved_aLRT_replicates = params.aLRT_replicates;
