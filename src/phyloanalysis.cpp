@@ -467,9 +467,7 @@ void checkZeroDist(Alignment *aln, double *dist) {
 }
 
 void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
-
 	clock_t t_begin, t_end;
-
 /*
 	cout << "Computing parsimony score..." << endl;
 	for (int i = 0; i < trees_block->GetNumTrees(); i++) {
@@ -496,9 +494,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	}
 	string dist_file;
 	tree.computeDist(params, alignment, tree.dist_matrix, dist_file);
-
 	checkZeroDist(alignment, tree.dist_matrix);
-
 	if (params.user_file) {
 		// start the search with user-defined tree
 		bool myrooted = params.is_rooted;
@@ -507,7 +503,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	} else {
 		tree.computeBioNJ(params, alignment, dist_file); // create BioNJ tree
 	}
-
 	if (params.root) {
 		string str = params.root;
 		if (!tree.findNodeName(str)) {
@@ -515,7 +510,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 			outError(str);
 		}
 	}
-
 	/* Fix if negative branch lengths detected */
 	double fixed_length = 0.01;
 	int fixed_number = tree.fixNegativeBranch(fixed_length);
@@ -526,9 +520,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 			cout << endl;
 		}
 	}
-
 	t_begin=clock();
-
 	bool test_only = params.model_name == "TESTONLY";
 	/* initialize substitution model */
 	if (params.model_name == "TEST" || params.model_name == "TESTONLY") {
@@ -554,7 +546,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
 	cout << "Random seed: " << params.ran_seed << endl;
 	cout << "Lambda used in NNI search: " << cmdLambda << endl;
-
 /*
 	if (params.parsimony) {
 		int score = tree.computeParsimonyScore();
@@ -562,33 +553,27 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
 		// NNI with parsimony function 
 		tree.searchNNI();
-	}*/
-	/* optimize model parameters */
+	}*/	
 	cout.precision(10);
-
-
 	//cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
-
 	if (params.parsimony) {
             tree.enable_parsimony = true;
             tree.pars_scores = new double[3000];
             tree.lh_scores = new double[3000];
-
             for (int i=0; i<3000; i++) {
                 tree.pars_scores[i] = 0;
                 tree.lh_scores[i] = 0;
             }
+            //cout << "Parsimony score: " << tree.computeParsimonyScore() << endl;
+            tree.cur_pars_score = tree.computeParsimony();
+            //cout << "Fast parsimony score: " << tree.cur_pars_score << endl;
         }
-	//cout << "Parsimony score: " << tree.computeParsimonyScore() << endl;
-	tree.cur_pars_score = tree.computeParsimony();
-	//cout << "Fast parsimony score: " << tree.cur_pars_score << endl;
-
+        /* optimize model parameters */
 	cout << "Optimizing model parameters" << endl;
 	double bestTreeScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
 	cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 	//Update tree score
-	tree.curScore = bestTreeScore;
-	
+	tree.curScore = bestTreeScore;	
 	if ((tree.getModel()->name == "JC") && tree.getRate()->getNDim() == 0)
 		params.compute_ml_dist = false;
 	if (!params.dist_file && params.compute_ml_dist) {
@@ -623,7 +608,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		cout << "Performing Nearest Neighbor Interchange..." << endl;
 		//cout << "Current tree likelihood: " << tree.optimizeNNIBranches() << endl;
 		//tree.optimizeAllBranches();
-
 		clock_t nniBeginClock, nniEndClock;
 		nniBeginClock = clock();
 		//double newScore = tree.optimizeNNI(true);
@@ -701,7 +685,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
         /* do iterated local search */
         if ( ils && params.min_iterations > 1 ) {
-            cout << "Star doing iterated local search " << endl;
+            cout << "Start doing iterated local search " << endl;
             tree.doILS( params , perLevel );
             cout << "Optimizing model parameters" << endl;
             double endScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
@@ -794,7 +778,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 }
 
 void runPhyloAnalysis(Params &params) {
-
 	Alignment alignment(params.aln_file, params.sequence_type, params.intype);
 	IQPTree tree( &alignment );
 	string original_model = params.model_name;

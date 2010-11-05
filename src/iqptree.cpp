@@ -626,29 +626,17 @@ double IQPTree::doIQPNNI(Params &params) {
             cout << "Cannot open file " + lh_file_name;
         }
     }
-
     stop_rule.addImprovedIteration(1);
     for (int cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration); cur_iteration++) {
         if (verbose_mode >= VB_DEBUG)
             cout << "Performing IQP in iteration " << cur_iteration << endl;
-
         nbIQPIter++;
         if (nbIQPIter > numheu) {
-
             if (nbIQPIter == (numheu + 1))
                 cout << "NNI-HEURISTICS STARTED FROM NOW ON !" << endl;
-
             enableHeuris = true;
             nbNNI95 = estimateNumNNI();
             deltaNNI95 = estimateDeltaNNI();
-            //			cout.precision(10);
-            //			cout << "Improvment vector size = " << vecImpProNNI.size() << endl;
-            //			cout << "Number NNI vector size = " << vecNbNNI.size() << endl;
-            //			cout << "Max number of NNI :" << nbNNI95 << endl;
-            //			cout << "Max improvment pro NNI :" << deltaNNI95 << endl;
-            //			for (int i = 0; i < vecNbNNI.size(); i++)
-            //				cout << vecNbNNI[i] << " ";
-            //			cout << endl;
         }
         clock_t startClock = clock();
         double iqp_score = doIQP();
@@ -726,16 +714,6 @@ double IQPTree::doIQPNNI(Params &params) {
 				increaseKDelete();
         }
     }
-
-    /*
-    best_tree_string.seekg(0);
-    freeNode();
-    readTree(best_tree_string, rooted);
-    assignLeafNames();
-    initializeAllPartialLh();
-    bestScore = optimizeNNI(true);
-     */
-
     return bestScore;
 }
 
@@ -1206,8 +1184,8 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
     int nniNr = 1;
     int chosenSwap = 1;
     // replace partial_lh with a new vector
-//    node12_it->partial_lh = newPartialLh();
-//    node21_it->partial_lh = newPartialLh();
+    //    node12_it->partial_lh = newPartialLh();
+    //    node21_it->partial_lh = newPartialLh();
 
     node12_it->partial_lh = tmp_partial_lh1;
     node21_it->partial_lh = tmp_partial_lh2;
@@ -1228,7 +1206,7 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
         node21_it->clearPartialLh();
 
         double newScore = NULL;
-//        double lh_prediction = 100.0;
+        //        double lh_prediction = 100.0;
         // compute score with parsimony, accept topology if parsimony score is not so bad
         int pars_score = -10;
         if (enable_parsimony) {
@@ -1236,21 +1214,21 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
             node12_it->partial_pars = newBitsBlock();
             node21_it->partial_pars = newBitsBlock();
             pars_score = computeParsimonyBranch(node12_it, node1);
-//            if (linRegModel != NULL)
-//                lh_prediction = linRegModel->getValue(pars_score);
-//            else {
-//                for (int i = 0; i < 3000; i++) {
-//                    if (pars_scores[i] == 0) {
-//                        pars_scores[i] = pars_score;
-//                        newScore = optimizeOneBranch(node1, node2, false);
-//                        lh_scores[i] = newScore;
-//                        break;
-//                    }
-//                }
-//                if (pars_scores[2999] != 0) {
-//                    linRegModel = new Linear(3000, pars_scores, lh_scores);
-//                }
-//            }
+            //            if (linRegModel != NULL)
+            //                lh_prediction = linRegModel->getValue(pars_score);
+            //            else {
+            //                for (int i = 0; i < 3000; i++) {
+            //                    if (pars_scores[i] == 0) {
+            //                        pars_scores[i] = pars_score;
+            //                        newScore = optimizeOneBranch(node1, node2, false);
+            //                        lh_scores[i] = newScore;
+            //                        break;
+            //                    }
+            //                }
+            //                if (pars_scores[2999] != 0) {
+            //                    linRegModel = new Linear(3000, pars_scores, lh_scores);
+            //                }
+            //            }
             // If enough data points is collected, start linear regression
 
         }
@@ -1289,8 +1267,8 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
         node21_it->partial_pars = node2_pars_save;
     }
 
-//    delete[] node21_it->partial_lh;
-//    delete[] node12_it->partial_lh;
+    //    delete[] node21_it->partial_lh;
+    //    delete[] node12_it->partial_lh;
     // restore the partial likelihood vector
     node12_it->partial_lh = node1_lh_save;
     node21_it->partial_lh = node2_lh_save;

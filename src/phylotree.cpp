@@ -22,7 +22,7 @@ const double MIN_BRANCH_LEN = 0.000001;
 const double MAX_BRANCH_LEN = 9.0;
 const double TOL_BRANCH_LEN = 0.00001;
 const double TOL_LIKELIHOOD = 0.0001;
-const double SCALING_THRESHOLD = DBL_MIN / 2;
+const double SCALING_THRESHOLD = sqrt(DBL_MIN);
 const double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
 
 

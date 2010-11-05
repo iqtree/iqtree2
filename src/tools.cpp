@@ -504,7 +504,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.areas_boundary_file = NULL;
 	params.boundary_modifier = 1.0;
 	params.dist_file = NULL;
-	params.compute_ml_dist = true;
+	params.compute_ml_dist = false;
 	params.compute_ml_tree = true;
 	params.budget_file = NULL;
 	params.overlap = 0;
