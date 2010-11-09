@@ -1040,6 +1040,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
                     partial_lh_block += block;
                     continue;
                 }
+                partial_lh_block = partial_lh_site;
                 for (cat = 0; cat < block; partial_lh_block += ++cat)
                     *partial_lh_block /= SCALING_THRESHOLD;
                 partial_lh_block += block;
