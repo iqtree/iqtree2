@@ -1107,8 +1107,8 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     //assert(node_branch);
-    // swap node and dad if dad is a leaf
-    if (dad->isLeaf()) {
+    // swap node and dad if node is a leaf
+    if (node->isLeaf()) {
         PhyloNode *tmp_node = dad;
         dad = node;
         node = tmp_node;
@@ -1166,33 +1166,66 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         derv1_state += tranSize;
         derv2_state += tranSize;
     }
+    int dad_state = STATE_UNKNOWN;
     for (ptn = 0; ptn < alnSize; ++ptn) {
         lh_ptn = 0.0;
         lh_ptn_derv1 = 0.0;
         lh_ptn_derv2 = 0.0;
-        freq = ptn_freqs[ptn];
-        cat = 0;
-        trans_state = trans_mat;
-        derv1_state = trans_derv1;
-        derv2_state = trans_derv2;
-        while (true) {
-            ++cat;
-            MappedRowVec(NSTATES) ei_partial_lh_site(partial_lh_site);
-            MappedRowVec(NSTATES) ei_partial_lh_child(partial_lh_child);
-            MappedMat(NSTATES) ei_trans_state(trans_state);
-            MappedMat(NSTATES) ei_derv1_state(derv1_state);
-            MappedMat(NSTATES) ei_derv2_state(derv2_state);
-            lh_ptn += (ei_partial_lh_child * ei_trans_state).dot(ei_partial_lh_site);
-            lh_ptn_derv1 += (ei_partial_lh_child * ei_derv1_state).dot(ei_partial_lh_site);
-            lh_ptn_derv2 += (ei_partial_lh_child * ei_derv2_state).dot(ei_partial_lh_site);
-            partial_lh_site += NSTATES;
-            partial_lh_child += NSTATES;
-            if (cat == numCat)
-                break;
-            trans_state += tranSize;
-            derv1_state += tranSize;
-            derv2_state += tranSize;
+        freq = ptn_freqs[ptn];              
+        int padding;
+        if (dad->isLeaf()) {
+            dad_state = (*aln)[ptn][dad->id];
+            padding = dad_state * NSTATES;
         }
+        if (dad_state < NSTATES) {
+            //external node
+            trans_state = trans_mat + padding;
+            derv1_state = trans_derv1 + padding;
+            derv2_state = trans_derv2 + padding;
+            cat = 0;
+            while (true) {
+                ++cat;
+                MappedVec(NSTATES) ei_partial_lh_child(partial_lh_child);
+                MappedVec(NSTATES) ei_trans_state(trans_state);
+                MappedVec(NSTATES) ei_derv1_state(derv1_state);
+                MappedVec(NSTATES) ei_derv2_state(derv2_state);
+                lh_ptn += ei_partial_lh_child.dot(ei_trans_state);
+                lh_ptn_derv1 += ei_partial_lh_child.dot(ei_derv1_state);
+                lh_ptn_derv2 += ei_partial_lh_child.dot(ei_derv2_state);
+                partial_lh_child += NSTATES;
+                partial_lh_site += NSTATES;
+                if ( cat == numCat )
+                    break;
+                trans_state += tranSize;
+                derv1_state += tranSize;
+                derv2_state += tranSize;                
+            }
+        } else {
+            // internal node, or external node but ambiguous character
+            cat = 0;
+            trans_state = trans_mat;
+            derv1_state = trans_derv1;
+            derv2_state = trans_derv2;            
+            while (true) {
+                ++cat;
+                MappedRowVec(NSTATES) ei_partial_lh_site(partial_lh_site);
+                MappedRowVec(NSTATES) ei_partial_lh_child(partial_lh_child);
+                MappedMat(NSTATES) ei_trans_state(trans_state);
+                MappedMat(NSTATES) ei_derv1_state(derv1_state);
+                MappedMat(NSTATES) ei_derv2_state(derv2_state);
+                lh_ptn += (ei_partial_lh_child * ei_trans_state).dot(ei_partial_lh_site);
+                lh_ptn_derv1 += (ei_partial_lh_child * ei_derv1_state).dot(ei_partial_lh_site);
+                lh_ptn_derv2 += (ei_partial_lh_child * ei_derv2_state).dot(ei_partial_lh_site);
+                partial_lh_site += NSTATES;
+                partial_lh_child += NSTATES;
+                if (cat == numCat)
+                    break;
+                trans_state += tranSize;
+                derv1_state += tranSize;
+                derv2_state += tranSize;
+            }
+        }
+
         lh_ptn *= p_var_cat;
         lh_ptn += p_invar_ptns[ptn];
         lh_ptns[ptn] = lh_ptn;
@@ -1304,7 +1337,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
                     lh_ptn_derv2 += lh_state_derv2 * partial_lh_site[state1];
                 }
             }
-        }
+        }                
         lh_ptn *= p_var_cat;
         lh_ptn_derv1 *= p_var_cat;
         lh_ptn_derv2 *= p_var_cat;

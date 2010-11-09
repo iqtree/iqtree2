@@ -36,6 +36,7 @@ typedef Array<double, Dynamic, Dynamic, RowMajor> RowMajorArrayXXd;
 #define MappedMat(NSTATES) Map<Matrix<double, NSTATES, NSTATES>, Aligned>
 #define MappedArr2D(NSTATES) Map<Array<double, NSTATES, NSTATES>, Aligned>
 #define MappedRowVec(NSTATES) Map<Matrix<double, 1, NSTATES>, Aligned>
+#define MappedVec(NSTATES) Map<Matrix<double, NSTATES, 1>, Aligned>
 #define Matrix(NSTATES) Matrix<double, NSTATES, NSTATES>
 #define RowVector(NSTATES) Matrix<double, 1, NSTATES>
 #define MappedRowArr2DDyn Map<Array<double, Dynamic, Dynamic, RowMajor>, Aligned>
