@@ -17,6 +17,7 @@
 #define EIGEN_CACHEFRIENDLY_PRODUCT_THRESHOLD 80
 #define EIGEN_UNROLLING_LIMIT 1000
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (512*256)
+//#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (8*512*512)
 #include "Eigen/Core"
 #include "mtree.h"
 #include "alignment.h"

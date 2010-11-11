@@ -22,8 +22,10 @@ const double MIN_BRANCH_LEN = 0.000001;
 const double MAX_BRANCH_LEN = 9.0;
 const double TOL_BRANCH_LEN = 0.00001;
 const double TOL_LIKELIHOOD = 0.0001;
-const double SCALING_THRESHOLD = sqrt(DBL_MIN);
-const double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
+const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
+const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
+//const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
+//const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
 
 
 /****************************************************************************
@@ -978,6 +980,7 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
         switch (aln->num_states) {
             case 2: return computePartialLikelihoodSSE < 2 > (dad_branch, dad, pattern_scale);
             case 4: return computePartialLikelihoodSSE < 4 > (dad_branch, dad, pattern_scale);
+            //case 4: return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
             case 20:return computePartialLikelihoodSSE < 20 > (dad_branch, dad, pattern_scale);
         }
     } else {
@@ -998,69 +1001,19 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
     double *partial_lh_block;
     bool do_scale = true;
     double freq;
-    dad_branch->lh_scale_factor = 0.0;    
-    if (!node->isLeaf() || !dad) {
-        EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
-        for (ptn = 0; ptn < lh_size; ++ptn)
-            dad_branch->partial_lh[ptn] = 1.0;
+    dad_branch->lh_scale_factor = 0.0;
 
-        FOR_NEIGHBOR_IT(node, dad, it)
-        if ((*it)->node->name != ROOT_NAME) {
-            computePartialLikelihoodSSE<NSTATES > ((PhyloNeighbor*) (*it), (PhyloNode*) node, pattern_scale);
-            dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
-            for (cat = 0; cat < numCat; cat++) {
-                model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), &trans_mat[cat * tranSize]);
-            }
-            partial_lh_site =  dad_branch->partial_lh;
-            partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh;
-            partial_lh_block = partial_lh_site;
-            for (ptn = 0; ptn < alnSize; ++ptn) {
-                freq = ptn_freqs[ptn];
-                trans_state = trans_mat;
-                cat = 0;
-                while (true) {
-                    ++cat;
-                    MappedRowVec(NSTATES) ei_partial_lh_child(partial_lh_child);
-                    MappedRowVec(NSTATES) ei_partial_lh_site(partial_lh_site);
-                    MappedMat(NSTATES) ei_trans_state(trans_state);
-                    ei_partial_lh_site.noalias() = (ei_partial_lh_child * ei_trans_state).cwiseProduct(ei_partial_lh_site);
-                    partial_lh_site += NSTATES;
-                    partial_lh_child += NSTATES;
-                    if (cat == numCat)
-                        break;
-                    trans_state += tranSize;
-                }
-                // check if one should scale partial likelihoods
-                for (cat = 0; cat < block; partial_lh_block += ++cat)
-                    if (*partial_lh_block > SCALING_THRESHOLD) {
-                        do_scale = false;
-                        break;
-                    }
-                if (!do_scale) {
-                    partial_lh_block += block;
-                    continue;
-                }
-                partial_lh_block = partial_lh_site;
-                for (cat = 0; cat < block; partial_lh_block += ++cat)
-                    *partial_lh_block /= SCALING_THRESHOLD;
-                partial_lh_block += block;
-                dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * freq;
-                if (pattern_scale)
-                    pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
-            }
-        }
-    } else {
-        /* external node */
+    if (node->isLeaf() && dad) {
+        // external node
         memset(dad_branch->partial_lh, 0, lh_size * sizeof (double));
-        double *partial_lh_site;        
+        //double *partial_lh_site;
         for (ptn = 0; ptn < alnSize; ++ptn) {
             char state;
             partial_lh_site = dad_branch->partial_lh + (ptn * block);
 
             if (node->name == ROOT_NAME) {
                 state = STATE_UNKNOWN;
-            } else {
-                //assert(node->id < aln->getNSeq());
+            } else {                
                 state = (aln->at(ptn))[node->id];
             }
 
@@ -1069,12 +1022,12 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
                     partial_lh_site[state2] = 1.0;
                 }
             } else if (state < NSTATES) {
-                cat = 0;                
-                double *_par_lh_site = partial_lh_site + state;                
+                cat = 0;
+                double *_par_lh_site = partial_lh_site + state;
                 while (true) {
                     *_par_lh_site = 1.0;
                     ++cat;
-                    if ( cat == numCat)
+                    if (cat == numCat)
                         break;
                     _par_lh_site += NSTATES;
                 }
@@ -1095,8 +1048,68 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
                     }
             }
         }
-    }
+    } else {
+        // internal node
+        EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
+        for (ptn = 0; ptn < lh_size; ++ptn)
+            dad_branch->partial_lh[ptn] = 1.0;
 
+        FOR_NEIGHBOR_IT(node, dad, it)
+        if ((*it)->node->name != ROOT_NAME) {
+            computePartialLikelihoodSSE<NSTATES > ((PhyloNeighbor*) (*it), (PhyloNode*) node, pattern_scale);
+            dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
+            for (cat = 0; cat < numCat; cat++) {
+                model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), &trans_mat[cat * tranSize]);
+            }
+            partial_lh_site = dad_branch->partial_lh;
+            partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh;            
+            for (ptn = 0; ptn < alnSize; ++ptn) {
+                partial_lh_block = partial_lh_site;
+                freq = ptn_freqs[ptn];
+                trans_state = trans_mat;
+                cat = 0;
+                do_scale = true;
+                while (true) {
+                    ++cat;
+                    MappedRowVec(NSTATES) ei_partial_lh_child(partial_lh_child);
+                    MappedRowVec(NSTATES) ei_partial_lh_site(partial_lh_site);
+                    MappedMat(NSTATES) ei_trans_state(trans_state);
+                    ei_partial_lh_site.noalias() = (ei_partial_lh_child * ei_trans_state).cwiseProduct(ei_partial_lh_site);                    
+                    partial_lh_site += NSTATES;
+                    partial_lh_child += NSTATES;
+                    if (cat == numCat)
+                        break;
+                    else
+                        trans_state += tranSize;
+                }
+
+                for (cat = 0; cat < block; cat++)
+                    if (partial_lh_block[cat] > SCALING_THRESHOLD) {
+                        do_scale = false;
+                        break;
+                    }
+
+                if (!do_scale) {
+                    continue;
+                }
+                else {
+//                    for (cat = 0; cat < block; ++cat)
+//                        partial_lh_block[cat] = ldexp(partial_lh_block[cat], BINARY_SCALE);
+//                    dad_branch->lh_scale_factor += LOG_BINARY_SCALE * freq;
+//                    if (pattern_scale)
+//                        pattern_scale[ptn] += LOG_BINARY_SCALE;
+
+                    for (cat = 0; cat < block; ++cat) {
+                        partial_lh_block[cat] /= SCALING_THRESHOLD;
+                    }
+                    dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * freq;
+                    if (pattern_scale)
+                        pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
+                }                
+            }
+        }
+    }
+     
     dad_branch->partial_lh_computed |= 1;
 }
 
@@ -1119,14 +1132,17 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihoodSSE<NSTATES > (dad_branch, dad);
+        //computePartialLikelihoodNaive(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihoodSSE<NSTATES > (node_branch, node);
+        //computePartialLikelihoodNaive(node_branch, node);
 
     // now combine likelihood at the branch
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     df = ddf = 0.0;
 
-    int ptn, cat;
+    int ptn = 0;
+    int cat = 0;
     double *partial_lh_site = node_branch->partial_lh;
     double *partial_lh_child = dad_branch->partial_lh;
     double lh_ptn; // likelihood of the pattern
@@ -1137,7 +1153,6 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     double *trans_state;
     double *derv1_state;
     double *derv2_state;
-    double freq;
 
     EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
     EIGEN_ALIGN16 double trans_derv1[numCat * tranSize];
@@ -1148,8 +1163,7 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
 
     trans_state = trans_mat;
     derv1_state = trans_derv1;
-    derv2_state = trans_derv2;
-    cat = 0;
+    derv2_state = trans_derv2;    
     while (true) {        
         double rate_val = site_rate->getRate(cat);
         double rate_sqr = rate_val * rate_val;
@@ -1168,11 +1182,11 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         derv2_state += tranSize;
     }
     int dad_state = STATE_UNKNOWN;
-    for (ptn = 0; ptn < alnSize; ++ptn) {
+    for ( ; ptn < alnSize; ++ptn) {
         lh_ptn = 0.0;
         lh_ptn_derv1 = 0.0;
         lh_ptn_derv2 = 0.0;
-        freq = ptn_freqs[ptn];              
+        double freq = ptn_freqs[ptn];
         int padding;
         if (dad->isLeaf()) {
             dad_state = (*aln)[ptn][dad->id];
@@ -1227,15 +1241,15 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
             }
         }
 
-        lh_ptn *= p_var_cat;
-        lh_ptn += p_invar_ptns[ptn];
-        lh_ptns[ptn] = lh_ptn;
+        lh_ptn = lh_ptn * p_var_cat + p_invar_ptns[ptn];
+        //lh_ptn += p_invar_ptns[ptn];        
         double tmp = p_var_cat / lh_ptn;
         derv1_frac = lh_ptn_derv1 * tmp;
         derv2_frac = lh_ptn_derv2 * tmp;
         df += derv1_frac * freq;
         ddf += (derv2_frac - derv1_frac * derv1_frac) * freq;
-        //tree_lh += log(lh_ptn) * ptn_freqs[ptn];
+        lh_ptns[ptn] = lh_ptn;
+        //tree_lh += log(lh_ptn) * freq;
     }
     vrda_log(alnSize, lh_ptns.data(), lh_ptns_log.data());
     tree_lh += (lh_ptns_log * ptn_freqs).sum();
