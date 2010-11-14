@@ -43,15 +43,15 @@
 #define USE_HASH_MAP
 
 #ifdef USE_HASH_MAP
-	#if defined(WIN32)
-	#	include <hash_map>
-	using namespace stdext;
-	#else
-	#	include <ext/hash_map>
-	using namespace __gnu_cxx;
-	#endif
+#if defined(WIN32)
+#include <hash_map>
+using namespace stdext;
 #else
-	#include <map>
+#include <ext/hash_map>
+using namespace __gnu_cxx;
+#endif
+#else
+#include <map>
 #endif
 
 
@@ -59,6 +59,7 @@ using namespace std;
 
 class Linear {
 public:
+
     Linear(int n, double *x, double *y) {
 
         // calculate the averages of arrays x and y
@@ -119,59 +120,59 @@ private:
 
 
 /**
-	vector of double number
-*/
+        vector of double number
+ */
 typedef vector<double> DoubleVector;
 
 /**
-	vector of int
-*/
+        vector of int
+ */
 typedef vector<int> IntList;
 
 
 /**
-	vector of int
-*/
+        vector of int
+ */
 typedef vector<int> IntVector;
 
 /**
-	vector of bool
-*/
+        vector of bool
+ */
 typedef vector<bool> BoolVector;
 
 
 /**
-	vector of char
-*/
+        vector of char
+ */
 typedef vector<char> CharVector;
 
 /**
-	vector of string
-*/
+        vector of string
+ */
 typedef vector<string> StrVector;
 
 
 /**
-	matrix of double number
-*/
+        matrix of double number
+ */
 #define matrix(T) vector<vector<T> >
 
 /**
-	matrix of double
-*/
+        matrix of double
+ */
 /*
 class DoubleMatrix {
 public:
-	double *value;
-	int rows, cols, size;
-	DoubleMatrix(int arows, int acols);
-	//inline double operator() (int i, int j);
-	inline double &operator() (int i, int j) { return value[i * cols + j]; };
-	inline double *operator[] (int i) {	return value + (i*cols); };
-	virtual ~DoubleMatrix();
-	void setZero();
+        double *value;
+        int rows, cols, size;
+        DoubleMatrix(int arows, int acols);
+        //inline double operator() (int i, int j);
+        inline double &operator() (int i, int j) { return value[i * cols + j]; };
+        inline double *operator[] (int i) {	return value + (i*cols); };
+        virtual ~DoubleMatrix();
+        void setZero();
 };
-*/
+ */
 typedef matrix(double) DoubleMatrix;
 
 typedef unsigned int UINT;
@@ -180,598 +181,604 @@ typedef unsigned int UINT;
 /*--------------------------------------------------------------*/
 
 /**
-	run mode of program
-*/
-enum RunMode {DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING, CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN, SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS}; //STATS added by MA
+        run mode of program
+ */
+enum RunMode {
+    DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING, CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN, SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS
+}; //STATS added by MA
 
 /**
-	type of generating trees or splits graphs
-*/
-enum TreeGenType {NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED,
-		CIRCULAR_SPLIT_GRAPH, TAXA_SET};
+        type of generating trees or splits graphs
+ */
+enum TreeGenType {
+    NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED,
+    CIRCULAR_SPLIT_GRAPH, TAXA_SET
+};
 
 /**
-	when writing tree:
-		WT_BR_LEN - output branch length
-		WT_BR_CLADE - put branch length into internal node name
-		WT_TAXON_ID - output taxon ID
-		WT_INT_NODE - for draw tree, draw the internal node
-		WT_BR_SCALE - for draw tree, draw the branch proportional to its length
-		WT_SORT_TAXA - sort the taxa s.t. subtrees with least taxon ID come first
-		WT_APPEND    - append the output file
-		WT_NEWLINE   - print a newline after
-		WT_BR_LEN_FIXED_WIDTH - print branch length in fixed number format
-*/
-const int WT_BR_LEN    = 1;
-const int WT_BR_CLADE  = 2;
-const int WT_TAXON_ID  = 4;
-const int WT_INT_NODE  = 8;
-const int WT_BR_SCALE  = 16;
+        when writing tree:
+                WT_BR_LEN - output branch length
+                WT_BR_CLADE - put branch length into internal node name
+                WT_TAXON_ID - output taxon ID
+                WT_INT_NODE - for draw tree, draw the internal node
+                WT_BR_SCALE - for draw tree, draw the branch proportional to its length
+                WT_SORT_TAXA - sort the taxa s.t. subtrees with least taxon ID come first
+                WT_APPEND    - append the output file
+                WT_NEWLINE   - print a newline after
+                WT_BR_LEN_FIXED_WIDTH - print branch length in fixed number format
+ */
+const int WT_BR_LEN = 1;
+const int WT_BR_CLADE = 2;
+const int WT_TAXON_ID = 4;
+const int WT_INT_NODE = 8;
+const int WT_BR_SCALE = 16;
 const int WT_SORT_TAXA = 32;
-const int WT_APPEND    = 64;
-const int WT_NEWLINE   = 128;
-const int WT_BR_LEN_FIXED_WIDTH   = 256;
+const int WT_APPEND = 64;
+const int WT_NEWLINE = 128;
+const int WT_BR_LEN_FIXED_WIDTH = 256;
 
 /**
-	when computing Robinson-Foulds distances
-*/
+        when computing Robinson-Foulds distances
+ */
 const int RF_ADJACENT_PAIR = 1;
-const int RF_ALL_PAIR	   = 2;
+const int RF_ALL_PAIR = 2;
 
 /**
-	split weight summarization 
-*/
-const int SW_COUNT       = 1; // just counting the number of splits
-const int SW_SUM         = 2; // take the sum of all split weights
-const int SW_AVG_ALL     = 3; // take the split weight average over all trees
+        split weight summarization
+ */
+const int SW_COUNT = 1; // just counting the number of splits
+const int SW_SUM = 2; // take the sum of all split weights
+const int SW_AVG_ALL = 3; // take the split weight average over all trees
 const int SW_AVG_PRESENT = 4; // take the split weight average over all trees that the split is present
 
 /**
-	search mode
-*/
+        search mode
+ */
 //enum SearchMode {EXHAUSTIVE, EXHAUSTIVE_CIRCULAR};
 
 /**
-	input type, tree or splits graph
-*/
-enum InputType {IN_NEWICK, IN_NEXUS, IN_OTHER};
+        input type, tree or splits graph
+ */
+enum InputType {
+    IN_NEWICK, IN_NEXUS, IN_OTHER
+};
 
 /**
-	verbose mode, determine how verbose should the screen be printed.
-*/
-enum VerboseMode {VB_MIN, VB_MED, VB_MAX, VB_DEBUG};
+        verbose mode, determine how verbose should the screen be printed.
+ */
+enum VerboseMode {
+    VB_MIN, VB_MED, VB_MAX, VB_DEBUG
+};
 
 /**
-	verbose level on the screen
-*/
+        verbose level on the screen
+ */
 extern VerboseMode verbose_mode;
 
 /**
-	consensus reconstruction type
-*/
-enum ConsensusType {CT_NONE, CT_CONSENSUS_TREE, CT_CONSENSUS_NETWORK,
-CT_ASSIGN_SUPPORT, COMPARE};
+        consensus reconstruction type
+ */
+enum ConsensusType {
+    CT_NONE, CT_CONSENSUS_TREE, CT_CONSENSUS_NETWORK,
+    CT_ASSIGN_SUPPORT, COMPARE
+};
 
-enum TestType {TEST_NONE, TEST_COMPATIBLE, TEST_CIRCULAR, TEST_WEAKLY_COMPATIBLE, TEST_K_COMPATIBLE};
+enum TestType {
+    TEST_NONE, TEST_COMPATIBLE, TEST_CIRCULAR, TEST_WEAKLY_COMPATIBLE, TEST_K_COMPATIBLE
+};
 
 /**
-	State frequency type
-*/
-enum StateFreqType {FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, FREQ_ESTIMATE};
+        State frequency type
+ */
+enum StateFreqType {
+    FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, FREQ_ESTIMATE
+};
 
 /**
-	Stopping condition type
-*/
-enum STOP_CONDITION {SC_FIXED_ITERATION, SC_STOP_PREDICT};
+        Stopping condition type
+ */
+enum STOP_CONDITION {
+    SC_FIXED_ITERATION, SC_STOP_PREDICT
+};
 
-enum IQP_ASSESS_QUARTET {IQP_DISTANCE, IQP_PARSIMONY};
+enum IQP_ASSESS_QUARTET {
+    IQP_DISTANCE, IQP_PARSIMONY
+};
 
 const double MAX_GENETIC_DIST = 100.0;
 
-/**
- *  Use simple NNI for NNI-Search instead of PhyML-NNI
- */
-extern bool simple_nni;
-
-/**
- *  Branch length optimization like PhyML
- */
-extern bool phyml_opt;
-
-/**
- *  Output log-likelihood
- */
-extern bool nni_lh;
-
-/**
- *  Set the number of iqp iteration before the heuristics is applied
- */
-extern int numheu;
-
-/**
- *  Lambda in PhyML algorithm
- */
-extern double cmdLambda;
-
-/**
- *  Use Iterated Local Search
- */
-extern bool ils;
-
-extern int perLevel;
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
 /**
-	program parameters, everything is specified here
-*/
+        program parameters, everything is specified here
+ */
 struct Params {
-
-	/**
-		 input file name
-	*/
-	char *user_file;
-	
-	/**
-		prefix of the output file, default is the same as input file
-	*/
-	char *out_prefix;
-
-	/**
-		alignment file name
-	*/
-	char *aln_file;
-	
-	/**
-		B, D, or P for Binary, DNA, or Protein sequences
-	*/
-	char *sequence_type;
-
-	/**
-		alignment output file name
-	*/
-	char *aln_output;
-
-	/**
-		compute parsimony score on trees
-	*/
-	bool parsimony;
-
-	/**
-		 output file name
-	*/
-	char *out_file;
-
-	/**
-		 size of the maximal PD-tree
-	*/
-	int sub_size;
-
-	/**
-		 min size of the maximal PD-tree
-		 used to calculate all PD-k trees from min_size to sub_size
-	*/
-	int min_size;
-
-	/**
-		step_size when running from min_size to sub_size
-	*/
-	int step_size;
-
-	/**
-		conservation proprotion, another way of input set size
-	*/
-	double pd_proportion;
-
-	/**
-		min conservation proprotion
-	*/
-	double min_proportion;
-
-	/**
-		step conservation proprotion
-	*/
-	double step_proportion;
-
-	/**
-		sample size for computing PD distribution
-	*/
-	int sample_size;
-
-
-	/**
-		TRUE if want to find all optimal PD-k set
-		with the same maximal PD score
-	*/
-	bool find_all;
-
-	/**
-		 type of random tree to be generated
-	*/
-	TreeGenType tree_gen;
-
-	/**
-		when generating random split graph, specify the number of
-		splits here!
-	*/
-	int num_splits;
-
-	/**
-		 running mode: which algorithms to be applied
-	*/
-	RunMode run_mode;
-
-	/**
-		 real running mode if run_mode == DETECTED
-	*/
-	RunMode detected_mode;
-
-	/**
-		 parameter file
-	*/
-	char *param_file;
-
-	/**
-		file containing taxa names to be included into the PD-tree
-	*/
-	char *initial_file;
-
-	/**
-		file containing area names to be included into the PD set
-	*/
-	char *initial_area_file;
-
-	/**
-		file containing a list of specific taxa sets which user wants
-		to compute PD score on these sets only
-	*/
-	char *pdtaxa_file;
-
-	/**
-		sets relation file, in form of a distance matrix file
-	*/
-	char *areas_boundary_file;
-	
-	/**
-		boundary length modifier
-	*/
-	double boundary_modifier;
-
-	/**
-		output file to store the distance matrix
-	*/
-	char *dist_file;
-
-	/**
-		TRUE to compute the maximum-likelihood distances
-	*/
-	bool compute_ml_dist;
-
-	/**
-		TRUE to compute the maximum-likelihood tree
-	*/
-	bool compute_ml_tree;
-
-	/**
-		file containing budget information
-	*/
-	char *budget_file;
-
-	/**
-		used when generating pair of taxa set with overlapping
-	*/
-	int overlap;
-
-	// private use
-	/**
-		 number of times to repeat the algorithms
-	*/
-	int repeated_time;
-
-	/**
-		 print no tree to output
-	*/
-	int nr_output;
-
-	/**
-		input type, tree or splits graph
-	*/
-	InputType intype;
-
-	/**
-		total budget, for cost constrained PD problem
-	*/
-	int budget;
-
-	/**
-		minimum budget, for cost constrained PD problem
-	*/
-	int min_budget;
-
-	/**
-		step_budget when running from min_budget to budget
-	*/
-	int step_budget;
-
-	/**
-		name of the root taxon
-	*/
-	char *root;
-
-	/**
-		true if tree is forced to be rooted
-	*/
-	bool is_rooted;
-
-
-	/**
-		min branch length, used to create random tree/network
-	*/
-	double min_len;
-
-	/**
-		mean branch length, used to create random tree/network
-	*/
-	double mean_len;
-
-	/**
-		max branch length, used to create random tree/network
-	*/
-	double max_len;
-
-	/**
-		random number seed
-	*/
-	unsigned int ran_seed;
-
-	/**
-		run time of the algorithm
-	*/
-	long run_time;
-
-	/**
-		limit on the number of optimal PD sets
-	*/
-	int pd_limit;
-
-	/**
-		TRUE if one wants to calculate the PD gain matrix in terms of delta_k^j = pd(PD_k \/ {j}) - pd_k
-	*/
-	bool calc_pdgain;
-
-	/**
-		TRUE if tree file contains more than 1 tree
-	*/
-	bool multi_tree;
-
-	/**
-		2nd user tree used in assignBootstrapSupport
-	*/
-	char *second_tree;
-
-	/**
-		type of consensus building
-	*/
-	ConsensusType consensus_type;
-
-	/**
-		set the TRUE if want to find the minimal PD set, instead of the default maximal PD set
-	*/
-	bool find_pd_min;
-
-	/**
-		set TRUE to find area's endemic PD instead of regular PD
-	*/
-	bool endemic_pd;
-
-	/**
-		set TRUE to find exclusive PD instead of regular PD
-	*/
-	bool exclusive_pd;
-
-	/**
-		to find PD complementarity given this area
-	*/
-	char *complement_area;
-
-	/**
-		used for likelihood mapping: for each branch, print the four cluster
-	*/
-	int branch_cluster;
-
-	/**
-		file containing taxa order
-	*/
-	char *taxa_order_file;
-
-	/**
-		to scale branch length or clade support with a factor
-	*/
-	double scaling_factor;
-
-	/**
-		TRUE if always use binary linear programming
-	*/
-	bool binary_programming;
-
-	/**
-		test the input split system in one of the TestType
-	*/
-	TestType test_input;
-
-	/**
-		burnin value: number of beginning trees to be discarded
-	*/
-	int tree_burnin;
-
-	/**
-		threshold of split frequency, splits appear less than threshold will be discarded
-	*/
-	double split_threshold;
-
-	/**
-		Way to summarize split weight in the consensus tree or network: SW_SUM, SW_AVG_ALL, or SW_AVG_PRESENT
-	*/
-	double split_weight_summary;
-
-
-	/**
-		true if one wants to optimize tree by subtree pruning and regrafting
-	*/
-	bool tree_spr;
-
-	/**
-		true if printing out of optimal sets in NEXUS format
-	*/
-	bool nexus_output;
-
-	/**
-		k-representative parameter, used for IQP algorithm
-	*/
-	int k_representative;
-
-	/**
-		probability of deleting a leaf, used for IQP algorithm
-	*/
-	double p_delete;
-
-	/**
-		min number of iqpnni iterations
-	*/
-	int min_iterations;
-
-	/**
-		max number of iqpnni iterations
-	*/
-	int max_iterations;
-
-	/**
-		stop condition, SC_FIXED_ITERATION or SC_STOP_PREDICT
-	*/
-	STOP_CONDITION stop_condition;
-
-	/**
-		confidence value for stop rule
-	*/
-	double stop_confidence;
-
-	/**
-		name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)
-	*/
-	string model_name;
-
-	/**
-		TRUE to store transition matrix into a hash table for computation efficiency
-	*/
-	bool store_trans_matrix;
-
-	/**
-		state frequency type
-	*/
-	StateFreqType freq_type;
-
-
-	/**
-		the number of rate categories
-	*/
-	int num_rate_cats;
-
-	/**
-		TRUE if you want to optimize branch lengths by Newton-Raphson method
-	*/
-	bool optimize_by_newton;
-
-	/**
-		TRUE if you want to fix branch lengths during model optimization
-	*/
-	bool fixed_branch_length;
-
-	/**
-		criterion to assess important quartet
-	*/
-	IQP_ASSESS_QUARTET iqp_assess_quartet;
-
-	/**
-		the LP file is in gurobi format or not
-	*/
-	bool gurobi_format;
-
-	/**
-		number of threads for gurobi call
-	*/
-	bool gurobi_threads;
-
-	/**
-		TRUE if doing bootstrap on the input trees (good, bad, ugly)
-	*/
-	int num_bootstrap_samples;
-	
-	/**
-		TRUE if output all trees from every IQPNNI iteration
-	*/
-	bool write_intermediate_trees;
-
-	/**
-		Robinson-Foulds distance computation mode: RF_ADJACENT PAIR, RF_ALL_PAIR
-	*/
-	int rf_dist_mode;
-	
-	/**
-		compute the site-specific rates by Meyer & von Haeseler method
-	*/
-	bool mvh_site_rate;
-
-	/**
-		Percentage threshold to accept a branch of the approximate likelihood ratio test 
-		(aLRT) with SH-like interpretation. See Guindon et al. (2010) Syst. Biol. for details. 
-		Default: 90%.
-	*/
-	int aLRT_threshold;
-	
-	/**
-		number of replicates, default: 1000
-	*/
-	int aLRT_replicates;
-
-	/**
-		SSE Option
-	*/
-        bool SSE;
-	/**
-		TRUE to print site log-likelihood
-	*/
+    /**
+             input file name
+     */
+    char *user_file;
+
+    /**
+            prefix of the output file, default is the same as input file
+     */
+    char *out_prefix;
+
+    /**
+            alignment file name
+     */
+    char *aln_file;
+
+    /**
+            B, D, or P for Binary, DNA, or Protein sequences
+     */
+    char *sequence_type;
+
+    /**
+            alignment output file name
+     */
+    char *aln_output;
+
+    /**
+            compute parsimony score on trees
+     */
+    bool parsimony;
+
+    /**
+             output file name
+     */
+    char *out_file;
+
+    /**
+             size of the maximal PD-tree
+     */
+    int sub_size;
+
+    /**
+             min size of the maximal PD-tree
+             used to calculate all PD-k trees from min_size to sub_size
+     */
+    int min_size;
+
+    /**
+            step_size when running from min_size to sub_size
+     */
+    int step_size;
+
+    /**
+            conservation proprotion, another way of input set size
+     */
+    double pd_proportion;
+
+    /**
+            min conservation proprotion
+     */
+    double min_proportion;
+
+    /**
+            step conservation proprotion
+     */
+    double step_proportion;
+
+    /**
+            sample size for computing PD distribution
+     */
+    int sample_size;
+
+
+    /**
+            TRUE if want to find all optimal PD-k set
+            with the same maximal PD score
+     */
+    bool find_all;
+
+    /**
+             type of random tree to be generated
+     */
+    TreeGenType tree_gen;
+
+    /**
+            when generating random split graph, specify the number of
+            splits here!
+     */
+    int num_splits;
+
+    /**
+             running mode: which algorithms to be applied
+     */
+    RunMode run_mode;
+
+    /**
+             real running mode if run_mode == DETECTED
+     */
+    RunMode detected_mode;
+
+    /**
+             parameter file
+     */
+    char *param_file;
+
+    /**
+            file containing taxa names to be included into the PD-tree
+     */
+    char *initial_file;
+
+    /**
+            file containing area names to be included into the PD set
+     */
+    char *initial_area_file;
+
+    /**
+            file containing a list of specific taxa sets which user wants
+            to compute PD score on these sets only
+     */
+    char *pdtaxa_file;
+
+    /**
+            sets relation file, in form of a distance matrix file
+     */
+    char *areas_boundary_file;
+
+    /**
+            boundary length modifier
+     */
+    double boundary_modifier;
+
+    /**
+            output file to store the distance matrix
+     */
+    char *dist_file;
+
+    /**
+            TRUE to compute the maximum-likelihood distances
+     */
+    bool compute_ml_dist;
+
+    /**
+            TRUE to compute the maximum-likelihood tree
+     */
+    bool compute_ml_tree;
+
+    /**
+            file containing budget information
+     */
+    char *budget_file;
+
+    /**
+            used when generating pair of taxa set with overlapping
+     */
+    int overlap;
+
+    // private use
+    /**
+             number of times to repeat the algorithms
+     */
+    int repeated_time;
+
+    /**
+             print no tree to output
+     */
+    int nr_output;
+
+    /**
+            input type, tree or splits graph
+     */
+    InputType intype;
+
+    /**
+            total budget, for cost constrained PD problem
+     */
+    int budget;
+
+    /**
+            minimum budget, for cost constrained PD problem
+     */
+    int min_budget;
+
+    /**
+            step_budget when running from min_budget to budget
+     */
+    int step_budget;
+
+    /**
+            name of the root taxon
+     */
+    char *root;
+
+    /**
+            true if tree is forced to be rooted
+     */
+    bool is_rooted;
+
+
+    /**
+            min branch length, used to create random tree/network
+     */
+    double min_len;
+
+    /**
+            mean branch length, used to create random tree/network
+     */
+    double mean_len;
+
+    /**
+            max branch length, used to create random tree/network
+     */
+    double max_len;
+
+    /**
+            random number seed
+     */
+    unsigned int ran_seed;
+
+    /**
+            run time of the algorithm
+     */
+    long run_time;
+
+    /**
+            limit on the number of optimal PD sets
+     */
+    int pd_limit;
+
+    /**
+            TRUE if one wants to calculate the PD gain matrix in terms of delta_k^j = pd(PD_k \/ {j}) - pd_k
+     */
+    bool calc_pdgain;
+
+    /**
+            TRUE if tree file contains more than 1 tree
+     */
+    bool multi_tree;
+
+    /**
+            2nd user tree used in assignBootstrapSupport
+     */
+    char *second_tree;
+
+    /**
+            type of consensus building
+     */
+    ConsensusType consensus_type;
+
+    /**
+            set the TRUE if want to find the minimal PD set, instead of the default maximal PD set
+     */
+    bool find_pd_min;
+
+    /**
+            set TRUE to find area's endemic PD instead of regular PD
+     */
+    bool endemic_pd;
+
+    /**
+            set TRUE to find exclusive PD instead of regular PD
+     */
+    bool exclusive_pd;
+
+    /**
+            to find PD complementarity given this area
+     */
+    char *complement_area;
+
+    /**
+            used for likelihood mapping: for each branch, print the four cluster
+     */
+    int branch_cluster;
+
+    /**
+            file containing taxa order
+     */
+    char *taxa_order_file;
+
+    /**
+            to scale branch length or clade support with a factor
+     */
+    double scaling_factor;
+
+    /**
+            TRUE if always use binary linear programming
+     */
+    bool binary_programming;
+
+    /**
+            test the input split system in one of the TestType
+     */
+    TestType test_input;
+
+    /**
+            burnin value: number of beginning trees to be discarded
+     */
+    int tree_burnin;
+
+    /**
+            threshold of split frequency, splits appear less than threshold will be discarded
+     */
+    double split_threshold;
+
+    /**
+            Way to summarize split weight in the consensus tree or network: SW_SUM, SW_AVG_ALL, or SW_AVG_PRESENT
+     */
+    double split_weight_summary;
+
+
+    /**
+            true if one wants to optimize tree by subtree pruning and regrafting
+     */
+    bool tree_spr;
+
+    /**
+            true if printing out of optimal sets in NEXUS format
+     */
+    bool nexus_output;
+
+    /**
+            k-representative parameter, used for IQP algorithm
+     */
+    int k_representative;
+
+    /**
+            probability of deleting a leaf, used for IQP algorithm
+     */
+    double p_delete;
+
+    /**
+            min number of iqpnni iterations
+     */
+    int min_iterations;
+
+    /**
+            max number of iqpnni iterations
+     */
+    int max_iterations;
+
+    /**
+            stop condition, SC_FIXED_ITERATION or SC_STOP_PREDICT
+     */
+    STOP_CONDITION stop_condition;
+
+    /**
+            confidence value for stop rule
+     */
+    double stop_confidence;
+
+    /**
+            name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)
+     */
+    string model_name;
+
+    /**
+            TRUE to store transition matrix into a hash table for computation efficiency
+     */
+    bool store_trans_matrix;
+
+    /**
+            state frequency type
+     */
+    StateFreqType freq_type;
+
+
+    /**
+            the number of rate categories
+     */
+    int num_rate_cats;
+
+    /**
+            TRUE if you want to optimize branch lengths by Newton-Raphson method
+     */
+    bool optimize_by_newton;
+
+    /**
+            TRUE if you want to fix branch lengths during model optimization
+     */
+    bool fixed_branch_length;
+
+    /**
+            criterion to assess important quartet
+     */
+    IQP_ASSESS_QUARTET iqp_assess_quartet;
+
+    /**
+            the LP file is in gurobi format or not
+     */
+    bool gurobi_format;
+
+    /**
+            number of threads for gurobi call
+     */
+    bool gurobi_threads;
+
+    /**
+            TRUE if doing bootstrap on the input trees (good, bad, ugly)
+     */
+    int num_bootstrap_samples;
+
+    /**
+            TRUE if output all trees from every IQPNNI iteration
+     */
+    bool write_intermediate_trees;
+
+    /**
+            Robinson-Foulds distance computation mode: RF_ADJACENT PAIR, RF_ALL_PAIR
+     */
+    int rf_dist_mode;
+
+    /**
+            compute the site-specific rates by Meyer & von Haeseler method
+     */
+    bool mvh_site_rate;
+
+    /**
+            Percentage threshold to accept a branch of the approximate likelihood ratio test
+            (aLRT) with SH-like interpretation. See Guindon et al. (2010) Syst. Biol. for details.
+            Default: 90%.
+     */
+    int aLRT_threshold;
+
+    /**
+            number of replicates, default: 1000
+     */
+    int aLRT_replicates;
+
+    /**
+            SSE Option
+     */
+    bool SSE;
+    /**
+            TRUE to print site log-likelihood
+     */
     bool print_site_lh;
+
+    /**
+     *  Output log-likelihood
+     */
+    bool nni_lh;
+
+    /**
+     *  The number of iqp iteration before the heuristics is applied
+     */
+    int speedUpFromIter;
+
+    /**
+     *  Lambda in PhyML algorithm
+     */
+    double cmdLambda;
+
+    /**
+     * Confidence level for the speed up heuristics
+     */
+    double speed_conf;
 };
 
 /**
-	related measures for PD
-*/
+        related measures for PD
+ */
 struct PDRelatedMeasures {
-	/**
-		names of areas
-	*/
-	vector<string> setName;
+    /**
+            names of areas
+     */
+    vector<string> setName;
 
-	/**
-		pd scores of areas
-	*/
-	DoubleVector PDScore;
+    /**
+            pd scores of areas
+     */
+    DoubleVector PDScore;
 
-	/**
-		exclusive PD scores
-	*/
-	DoubleVector exclusivePD;
+    /**
+            exclusive PD scores
+     */
+    DoubleVector exclusivePD;
 
-	/**
-		endemic pd scores of an area given all other areas
-	*/
-	DoubleVector PDEndemism;
+    /**
+            endemic pd scores of an area given all other areas
+     */
+    DoubleVector PDEndemism;
 
-	/**
-		pd-complementarity scores of an area given some provided area
-	*/
-	DoubleVector PDComplementarity;
+    /**
+            pd-complementarity scores of an area given some provided area
+     */
+    DoubleVector PDComplementarity;
 
 };
 
@@ -780,34 +787,33 @@ struct PDRelatedMeasures {
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
-
 /**
-	@return TRUE of ch is a control character (ascii <= 32)
-*/
+        @return TRUE of ch is a control character (ascii <= 32)
+ */
 inline bool controlchar(char ch) {
-	return ch <= 32;
+    return ch <= 32;
 }
 
 inline bool is_newick_token(char ch) {
-	return ch == ':' || ch == ';' || ch == ',' || ch == ')' || ch == '(' || ch == '[' || ch == ']';
+    return ch == ':' || ch == ';' || ch == ',' || ch == ')' || ch == '(' || ch == '[' || ch == ']';
 }
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
 /**
-	print error message then exit program
-*/
+        print error message then exit program
+ */
 //void outError(char *error);
 
 /**
-	print error message then exit program
-*/
+        print error message then exit program
+ */
 void outError(const char *error);
 
 /**
-	print error message then exit program
-*/
+        print error message then exit program
+ */
 void outError(string error);
 
 
@@ -815,19 +821,19 @@ void outError(string error);
 /*--------------------------------------------------------------*/
 
 /**
-	print double error messages then exit program
-*/
+        print double error messages then exit program
+ */
 void outError(const char *error, const char *msg);
 
 /**
-	print double error messages then exit program
-*/
+        print double error messages then exit program
+ */
 void outError(const char *error, string msg);
 
 /**
-	Output a warning message to screen
-	@param error warning message
-*/
+        Output a warning message to screen
+        @param error warning message
+ */
 void outWarning(const char *warn);
 void outWarning(string warn);
 
@@ -837,49 +843,49 @@ void outWarning(string warn);
 
 
 /**
-	generate a random branch length under an exponential distribution
-	with mean params.mean_len. Also make sure that the resulting
-	length is in the range (params.min_len, params.max_len)
-	@return the random branch length
-*/
+        generate a random branch length under an exponential distribution
+        with mean params.mean_len. Also make sure that the resulting
+        length is in the range (params.min_len, params.max_len)
+        @return the random branch length
+ */
 double randomLen(Params &params);
 
 /**
-	convert string to int, with error checking
-	@param str original string
-	@return the integer
-*/
+        convert string to int, with error checking
+        @param str original string
+        @return the integer
+ */
 
 
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 /*
-	Error messages
-*/
-const char ERR_NO_TAXON[]          = "Find no taxon with name ";
-const char ERR_NO_AREA[]          = "Find no area with name ";
-const char ERR_NO_ROOT[]           = "Root taxon not found: ";
-const char ERR_ROOT_NET[]          = "-root option is not available for network";
-const char ERR_CONFLICT_ROOT[]     = "Tree is already rooted, -o <taxon> is not allowed.";
-const char ERR_DUPLICATED_TAXA[]   = "Duplicated taxa name in the tree.";
-const char ERR_FEW_TAXA[]          = "Number of taxa must be greater than 2.";
-const char ERR_NO_SPLITS[]         = "No splits found!";
-const char ERR_FEW_SPLITS[]        = "Number of splits must be at least equal to the number of taxa";
-const char ERR_NEG_BRANCH[]        = "Negative branch length not allowed.";
-const char ERR_NO_MEMORY[]         = "Not enough memory!";
+        Error messages
+ */
+const char ERR_NO_TAXON[] = "Find no taxon with name ";
+const char ERR_NO_AREA[] = "Find no area with name ";
+const char ERR_NO_ROOT[] = "Root taxon not found: ";
+const char ERR_ROOT_NET[] = "-root option is not available for network";
+const char ERR_CONFLICT_ROOT[] = "Tree is already rooted, -o <taxon> is not allowed.";
+const char ERR_DUPLICATED_TAXA[] = "Duplicated taxa name in the tree.";
+const char ERR_FEW_TAXA[] = "Number of taxa must be greater than 2.";
+const char ERR_NO_SPLITS[] = "No splits found!";
+const char ERR_FEW_SPLITS[] = "Number of splits must be at least equal to the number of taxa";
+const char ERR_NEG_BRANCH[] = "Negative branch length not allowed.";
+const char ERR_NO_MEMORY[] = "Not enough memory!";
 
-const char ERR_READ_INPUT[]        = "File not found or incorrect input, pls check it again.";
-const char ERR_UNEXPECTED_EOF[]    = "Unexpected end of file.";
-const char ERR_READ_ANY[]          = "Unidentified error while reading file, pls check it carefully again.";
-const char ERR_WRITE_OUTPUT[]      = "Cannot write to file ";
+const char ERR_READ_INPUT[] = "File not found or incorrect input, pls check it again.";
+const char ERR_UNEXPECTED_EOF[] = "Unexpected end of file.";
+const char ERR_READ_ANY[] = "Unidentified error while reading file, pls check it carefully again.";
+const char ERR_WRITE_OUTPUT[] = "Cannot write to file ";
 
-const char ERR_NO_K[]              = "You must specify the number of taxa in the PD set.";
-const char ERR_TOO_SMALL_K[]       = "Size of PD-set must be at least the size of initial set.";
-const char ERR_NO_BUDGET[]         = "Total budget is not specified or less than zero.";
-const char ERR_TOO_SMALL_BUDGET[]  = "Not enough budget to conserve the inital set of taxa.";
+const char ERR_NO_K[] = "You must specify the number of taxa in the PD set.";
+const char ERR_TOO_SMALL_K[] = "Size of PD-set must be at least the size of initial set.";
+const char ERR_NO_BUDGET[] = "Total budget is not specified or less than zero.";
+const char ERR_TOO_SMALL_BUDGET[] = "Not enough budget to conserve the inital set of taxa.";
 
-const char ERR_INTERNAL[]          = "Internal error, pls contact authors!";
+const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
@@ -897,7 +903,7 @@ string convertIntToString(int number);
  * @param DEST
  * @return bool
  */
-bool copyFile (const char SRC[], const char DEST[]);
+bool copyFile(const char SRC[], const char DEST[]);
 
 /**
  * Check if the file exists
@@ -909,116 +915,123 @@ bool fileExists(string strFilename);
 int convert_int(const char *str) throw (string);
 
 /**
-	convert string to double, with error checking
-	@param str original string
-	@return the double
-*/
+        convert string to double, with error checking
+        @param str original string
+        @return the double
+ */
 double convert_double(const char *str) throw (string);
+
+/**
+ * Convert seconds to hour, minute, second
+ * @param sec
+ * @return string represent hour, minute, second
+ */
+string convert_time(const double sec);
 
 
 /**
-	convert a string to to range lower:upper:step_size with error checking
-	@param str original string
-	@param lower (OUT) lower bound of the range
-	@param upper (OUT) upper bound of the range
-	@param step_size (OUT) step size of the range
-*/
+        convert a string to to range lower:upper:step_size with error checking
+        @param str original string
+        @param lower (OUT) lower bound of the range
+        @param upper (OUT) upper bound of the range
+        @param step_size (OUT) step size of the range
+ */
 void convert_range(const char *str, int &lower, int &upper, int &step_size) throw (string);
 
 /**
-	convert a string to to range lower:upper:step_size with error checking
-	@param str original string
-	@param lower (OUT) lower bound of the range
-	@param upper (OUT) upper bound of the range
-	@param step_size (OUT) step size of the range
-*/
+        convert a string to to range lower:upper:step_size with error checking
+        @param str original string
+        @param lower (OUT) lower bound of the range
+        @param upper (OUT) upper bound of the range
+        @param step_size (OUT) step size of the range
+ */
 void convert_range(const char *str, double &lower, double &upper, double &step_size) throw (string);
 
 
 /**
-	read the file containing branch/split scaling factor and taxa weights
-	@param params program parameters
-	@param ntaxa total number of taxa
-	@param scale (OUT) scaling factor
-	@param tax_name (OUT) vector of taxa names
-	@param tax_weight (OUT) vector of corresponding taxa weights
-*/
+        read the file containing branch/split scaling factor and taxa weights
+        @param params program parameters
+        @param ntaxa total number of taxa
+        @param scale (OUT) scaling factor
+        @param tax_name (OUT) vector of taxa names
+        @param tax_weight (OUT) vector of corresponding taxa weights
+ */
 void readWeightFile(Params &params, int ntaxa, double &scale, StrVector &tax_name, DoubleVector &tax_weight);
 
 /**
-	read the initial taxa set from the file
-	@param params program parameters
-	@param ntaxa number of taxa
-	@param tax_name (OUT) vector of taxa names
-*/
+        read the initial taxa set from the file
+        @param params program parameters
+        @param ntaxa number of taxa
+        @param tax_name (OUT) vector of taxa names
+ */
 void readInitTaxaFile(Params &params, int ntaxa, StrVector &tax_name);
 
 /**
-	read the initial area set from the file
-	@param params program parameters
-	@param nareas number of areas
-	@param area_name (OUT) vector of area names
-*/
+        read the initial area set from the file
+        @param params program parameters
+        @param nareas number of areas
+        @param area_name (OUT) vector of area names
+ */
 void readInitAreaFile(Params &params, int nareas, StrVector &area_name);
 
 
 /**
-	read a list of taxa set from a file, not in nexus format but as follows:
-	n1
-	tax-name-1
-	...
-	tax-name-n1
+        read a list of taxa set from a file, not in nexus format but as follows:
+        n1
+        tax-name-1
+        ...
+        tax-name-n1
 
-	n2
-	tax-name-1
-	...
-	tax-name-n2
-	....
+        n2
+        tax-name-1
+        ...
+        tax-name-n2
+        ....
 
-	@param filename file name
-	@param sets (OUT) the returned sets of taxa
-*/
+        @param filename file name
+        @param sets (OUT) the returned sets of taxa
+ */
 void readTaxaSets(char *filename, MSetsBlock *sets);
 
 /**
-	read areas shared boundary file, in form of a standard distance matrix
-	@param file_name file name
-	@param areas the read sets block
-	@param areas_shared_boundary (OUT) shared boundary length between areas.
-		Diagonal elements represent the boundary length of single areas
-*/
+        read areas shared boundary file, in form of a standard distance matrix
+        @param file_name file name
+        @param areas the read sets block
+        @param areas_shared_boundary (OUT) shared boundary length between areas.
+                Diagonal elements represent the boundary length of single areas
+ */
 void readAreasBoundary(char *file_name, MSetsBlock *areas, double *areas_shared_boundary);
 
 /**
-	parse program argument into params
-	@param argc number of arguments
-	@param argv list of arguments
-	@param params (OUT) program parameters
-*/
+        parse program argument into params
+        @param argc number of arguments
+        @param argv list of arguments
+        @param params (OUT) program parameters
+ */
 void parseArg(int argc, char *argv[], Params &params);
 
 /**
-	detect the format of input file
-	@param input_file file name
-	@return
-		IN_NEWICK if file in newick format,
-		IN_NEXUS if in nexus format,
-		IN_OTHER if file format unknown.
-*/
+        detect the format of input file
+        @param input_file file name
+        @return
+                IN_NEWICK if file in newick format,
+                IN_NEXUS if in nexus format,
+                IN_OTHER if file format unknown.
+ */
 InputType detectInputFile(char *input_file);
 
 /**
-	if file exists, ask user to overwrite it or not
-	@param filename file name
-	@return TRUE if agree to overwrite an existing file, or simply file does not exist
-*/
+        if file exists, ask user to overwrite it or not
+        @param filename file name
+        @return TRUE if agree to overwrite an existing file, or simply file does not exist
+ */
 bool overwriteFile(char *filename);
 
 /**
-	print usage information
-	@param argv program arguments list
-	@param full_command TRUE to print all available commands, FALSE to print normal usage dialog
-*/
+        print usage information
+        @param argv program arguments list
+        @param full_command TRUE to print all available commands, FALSE to print normal usage dialog
+ */
 void usage(char* argv[], bool full_command);
 
 /**
@@ -1029,10 +1042,10 @@ void usage(char* argv[], bool full_command);
 void usage_iqtree(char* argv[], bool full_command);
 
 /**
-	parse area name string, where names are separated by commas
-	@param area_names a string of name
-	@param areas (OUT) a set of name string
-*/
+        parse area name string, where names are separated by commas
+        @param area_names a string of name
+        @param areas (OUT) a set of name string
+ */
 void parseAreaName(char *area_names, set<string> &areas);
 
 #endif

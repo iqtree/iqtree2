@@ -29,21 +29,11 @@
 #include "stoprule.h"
 
 
-/**
-        TODO
- */
-const double MIN_BRANCH_LEN = 0.000001;
-const double MAX_BRANCH_LEN = 9.0;
-const double TOL_BRANCH_LEN = 0.00001;
-const double TOL_LIKELIHOOD = 0.001;
-const double SCALING_THRESHOLD = 1e-150;
-const double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
+#define SPEED_UP_AFTER_ITER_NUM 100
 
-
-/**
-        TODO
- */
 typedef std::map< string, double > MapBranchLength;
+typedef std::multiset< double, std::less< double > > multiSetDB;
+typedef std::multiset< int, std::less< int > > MultiSetInt;
 
 /**
         nodeheightcmp, for building k-representative leaf set
@@ -220,11 +210,10 @@ public:
             TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
             @return best likelihood found
      */
-    virtual double optimizeNNI(bool fullNNI = true);
+    virtual double optimizeNNI(bool beginHeu = false, int *skipped = NULL);
 
     /**
-            search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
-            //TODO
+            search all positive NNI move on the current tree and save them on the possilbleNNIMoves list            
      */
     void genNNIMoves(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
@@ -302,13 +291,13 @@ public:
      * TODO
      * @return
      */
-    int estimateNumNNI(void);
+    int estimateNNICount(void);
 
     /**
      * TODO
      * @return
      */
-    double estimateDeltaNNI(void);
+    double estimateNNIDelta(void);
 
     /**
      *
@@ -347,7 +336,6 @@ public:
      */
     double curScore;
 
-
     /**
      *      Parsimony scores, used for linear regression
      */
@@ -362,8 +350,24 @@ public:
 
     Linear* linRegModel;
 
-    void disableHeuristic() {
+    inline void disableHeuristic() {
         enableHeuris = false;
+    }
+
+    inline void setSpeed_conf(double speed_conf) {
+        this->speed_conf = speed_conf;
+    }
+
+    inline double getSpeed_conf() const {
+        return speed_conf;
+    }
+
+    inline void setStartLambda(double startLambda) {
+        this->startLambda = startLambda;
+    }
+
+    inline double getStartLambda() const {
+        return startLambda;
     }
 
 protected:
@@ -377,7 +381,7 @@ protected:
     /**
        The lamda number for NNI process (described in PhyML Paper)
      */
-    double lambda;
+    double startLambda;
 
     /**
      * Array that stores the frequency that each taxa has been choosen to be swapped
@@ -392,34 +396,34 @@ protected:
     int nbNNIToApply;
 
     /**
-     *  Number of IQP Iteration that have been carried out
-     */
-    unsigned int nbIQPIter;
-
-    /**
      * 95% confidence value for number of NNIs found in one iteration
      */
-    unsigned int nbNNI95;
+    unsigned int nni_count_est;
 
     /**
      * 95% confidence value for likelihood improvement made by one NNI
      */
-    double deltaNNI95;
+    double nni_delta_est;
 
     /**
-     * 
+     * Enable/Disable speed-up heuristics
      */
     bool enableHeuris;
 
     /**
+     * Confidence level for speed up heuristics
+     */
+    double speed_conf;
+
+    /**
      *  Vector contains number of NNIs used at each iterations
      */
-    vector<int> vecNumNNI;
+    vector<int> vecNumNNI;    
 
     /**
      *  Vector contains approximated improvement pro NNI at each iterations
      */
-    vector<double> vecImpProNNI;
+    vector<double> vecImpProNNI;    
 
     /**
      * The current best score found

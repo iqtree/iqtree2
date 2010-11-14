@@ -22,14 +22,13 @@
 
 VerboseMode verbose_mode;
 
-//TODO Where should I put this switches ?
-bool simple_nni;
+//FIXME Where should I put this switches ?
 bool phyml_opt;
 bool nni_lh;
-int numheu;
+int speedUpFromIter;
 double cmdLambda;
-bool ils;
-int perLevel;
+//bool ils;
+//int perLevel;
 
 /*
 	WIN32 does not define gettimeofday() function.
@@ -226,6 +225,16 @@ double convert_double(const char *str) throw (string) {
 		throw err;
 	}
 	return d;
+}
+
+string convert_time(const double sec) {
+    int sec_int = (int) floor(sec);
+    int secs = sec_int % 60;
+    int mins = (sec_int % 3600) / 60;
+    int hours = sec_int / 3600;
+    stringstream ss;
+    ss << hours << ":" << mins << ":" << secs;
+    return ss.str();
 }
 
 void convert_range(const char *str, int &lower, int &upper, int &step_size) throw (string) {
@@ -553,12 +562,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.tree_spr = false;
 	params.nexus_output = false;
 	params.k_representative = 4;
-	params.p_delete = 0.1;
-	params.min_iterations = 1;
+	params.p_delete = 0.0;
+	params.min_iterations = 0;
 	params.max_iterations = 1;
 	params.stop_condition = SC_FIXED_ITERATION;
 	params.stop_confidence = 0.95;
-	params.model_name = "JC";
+	params.model_name = "HKY";
 	params.store_trans_matrix = false;
 	params.freq_type = FREQ_EMPIRICAL;
 	//params.freq_type = FREQ_UNKNOWN;
@@ -571,19 +580,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.mvh_site_rate = false;
 	params.aLRT_threshold = 101;
 	params.aLRT_replicates = 1000;
-	params.SSE = false;
-	params.print_site_lh = false;
-
-	/* TUNG: IQP-TREE Specific Options */
-	simple_nni = false;
-	phyml_opt = false;
-	nni_lh = false;
-	numheu = 100;
-	cmdLambda = 0.75;
-        ils = false;
-        perLevel = 1;
-	/* TUNG: IQP-TREE Specific Options */
-
+	params.SSE = true;
+	params.print_site_lh = false;			
+	params.nni_lh = false;
+	params.cmdLambda = 0.75;
+        params.speed_conf = 0.75;
+	
 	struct timeval tv;
 	struct timezone tz;
 	// initialize random seed based on current time
@@ -920,30 +922,26 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.mvh_site_rate = true;
 			} else if (strcmp(argv[cnt],"-mstore") == 0) {
 				params.store_trans_matrix = true;
-			} else if (strcmp(argv[cnt], "-simple_nni") == 0) {
-				simple_nni = true;
 			} else if (strcmp(argv[cnt], "-phyml_opt") == 0) {
 				phyml_opt = true;
 			} else if (strcmp(argv[cnt], "-nni_lh") == 0) {
-				nni_lh = true;
+				params.nni_lh = true;
 			} else if (strcmp(argv[cnt], "-lambda") == 0) {
 				cnt++;
-				cmdLambda = convert_double(argv[cnt]);
+				params.cmdLambda = convert_double(argv[cnt]);
+                                if (params.cmdLambda > 1.0)
+                                    throw "Lambda must be in (0,1]";
 			}
-                        else if (strcmp(argv[cnt], "-numheu") == 0) {
+                        else if (strcmp(argv[cnt], "-spc") == 0) {
 				cnt++;
                                 if (cnt >= argc)
-                                    throw "Please speciy the number of iteration used for the speed up";
-				numheu = convert_int(argv[cnt]);			
-			} else if (strcmp(argv[cnt], "-sse") == 0) {
-				params.SSE = true;
-                        } else if (strcmp(argv[cnt], "-ils") == 0) {
-                                ils = true;
-			}
-                        else if (strcmp(argv[cnt], "-pLevel") == 0) {
-                                cnt++;
-                                perLevel = convert_int(argv[cnt]);
-			}
+                                    throw "Please specify the speed-up confidence level";
+                                params.speed_conf = convert_double(argv[cnt]);
+                                if (  params.speed_conf <= 0.5 || params.speed_conf >1 )
+                                    throw "Speed up confidence level must be bigger than 0.5 and smaller or equal 1";
+			} else if (strcmp(argv[cnt], "-nosse") == 0) {
+				params.SSE = false;
+                        }
 			else if (strcmp(argv[cnt],"-f") == 0) {
 				cnt++;
 				if (cnt >= argc)

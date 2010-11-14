@@ -18,12 +18,6 @@
 #include <algorithm>
 #include <limits>
 
-const double MIN_BRANCH_LEN = 0.000001;
-const double MAX_BRANCH_LEN = 9.0;
-const double TOL_BRANCH_LEN = 0.00001;
-const double TOL_LIKELIHOOD = 0.0001;
-const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
-const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
 
@@ -1074,7 +1068,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
                     MappedRowVec(NSTATES) ei_partial_lh_child(partial_lh_child);
                     MappedRowVec(NSTATES) ei_partial_lh_site(partial_lh_site);
                     MappedMat(NSTATES) ei_trans_state(trans_state);
-                    ei_partial_lh_site.noalias() = (ei_partial_lh_child * ei_trans_state).cwiseProduct(ei_partial_lh_site);                    
+                    ei_partial_lh_site.noalias() = (ei_partial_lh_child * ei_trans_state).cwiseProduct(ei_partial_lh_site);
                     partial_lh_site += NSTATES;
                     partial_lh_child += NSTATES;
                     if (cat == numCat)
@@ -1082,26 +1076,14 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
                     else
                         trans_state += tranSize;
                 }
-
                 for (cat = 0; cat < block; cat++)
                     if (partial_lh_block[cat] > SCALING_THRESHOLD) {
                         do_scale = false;
                         break;
                     }
-
-                if (!do_scale) {
-                    continue;
-                }
-                else {
-//                    for (cat = 0; cat < block; ++cat)
-//                        partial_lh_block[cat] = ldexp(partial_lh_block[cat], BINARY_SCALE);
-//                    dad_branch->lh_scale_factor += LOG_BINARY_SCALE * freq;
-//                    if (pattern_scale)
-//                        pattern_scale[ptn] += LOG_BINARY_SCALE;
-
-                    for (cat = 0; cat < block; ++cat) {
-                        partial_lh_block[cat] /= SCALING_THRESHOLD;
-                    }
+                if (do_scale) {
+                    Map<ArrayXd, Aligned> ei_lh_block(partial_lh_block, block);
+                    ei_lh_block *= SCALING_THRESHOLD_INVER;                    
                     dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * freq;
                     if (pattern_scale)
                         pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
