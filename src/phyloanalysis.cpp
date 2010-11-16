@@ -615,7 +615,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
     /* do NNI with likelihood function */
 
-    if ( params.min_iterations == 0 ) {
+    if ( params.min_iterations == -1 ) {
         if ( alignment->getNSeq() < 100 )
             params.min_iterations = 200;
         else

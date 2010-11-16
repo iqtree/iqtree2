@@ -563,7 +563,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.nexus_output = false;
 	params.k_representative = 4;
 	params.p_delete = 0.0;
-	params.min_iterations = 0;
+	params.min_iterations = -1;
 	params.max_iterations = 1;
 	params.stop_condition = SC_FIXED_ITERATION;
 	params.stop_confidence = 0.95;
