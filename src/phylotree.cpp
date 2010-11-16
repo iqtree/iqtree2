@@ -154,6 +154,10 @@ void PhyloTree::setAlignment(Alignment *alignment) {
         node->id = seq;
     }
     alnSize = aln->size();
+    ptn_freqs.resize(alnSize);
+    p_invar_ptns.resize(alnSize);
+    lh_ptns.resize(alnSize);
+    lh_ptns_log.resize(alnSize);
     numStates = aln->num_states;
     tranSize = numStates * numStates;
     ptn_freqs.resize(alnSize);
@@ -173,6 +177,7 @@ void PhyloTree::rollBack(istream &best_tree_string) {
 
 void PhyloTree::setModel(SubstModel *amodel) {
     model = amodel;
+    calStateFreq();
 }
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
