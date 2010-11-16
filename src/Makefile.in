@@ -251,7 +251,8 @@ SUBDIRS = lp modeltest ncl
 pda_LDADD = $(top_builddir)/src/lp/liblpsolve.la \
 	$(top_builddir)/src/modeltest/libmodeltest.la $(top_builddir)/src/ncl/libNCL.la $(top_srcdir)/lib/libacml_mv.a
 
-AM_CXXFLAGS = -Wno-deprecated
+AM_CXXFLAGS = -Wno-deprecated -O3 -static
+AM_CFLAGS = -Wno-deprecated -O3 -static
 all: all-recursive
 
 .SUFFIXES:
@@ -265,9 +266,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign  src/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  src/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign  src/Makefile
+	  $(AUTOMAKE) --gnu  src/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
