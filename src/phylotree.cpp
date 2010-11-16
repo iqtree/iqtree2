@@ -76,10 +76,6 @@ PhyloTree::PhyloTree(Alignment *alignment)
     model_factory = NULL;
     tmp_partial_lh1 = NULL;
     tmp_partial_lh2 = NULL;
-//    lh_ptns = ei_aligned_new<double>(alnSize);
-//    lh_ptns_log = ei_aligned_new<double>(alnSize);
-    //p_invar_ptn = ei_aligned_new<double>(alnSize);
-    //ptn_freqs = ei_aligned_new<double>(alnSize);
     for (int ptn = 0; ptn < alnSize; ++ptn) {
         ptn_freqs[ptn] = (*aln)[ptn].frequency;
     }
@@ -160,6 +156,11 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     alnSize = aln->size();
     numStates = aln->num_states;
     tranSize = numStates * numStates;
+    ptn_freqs.resize(alnSize);
+    p_invar_ptns.resize(alnSize);
+    lh_ptns.resize(alnSize);
+    lh_ptns_log.resize(alnSize);
+
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {
