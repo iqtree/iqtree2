@@ -1238,6 +1238,7 @@ void IQPTree::printResultTree(Params &params) {
     string tree_file_name = params.out_prefix;
     tree_file_name += ".treefile";
     printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+    //printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH);
 }
 
 void IQPTree::printResultTree(Params &params, ostream &out) {

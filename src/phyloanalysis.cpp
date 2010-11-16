@@ -789,12 +789,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << "Time used for tree reconstruction: " << convert_time(treeSearchTime) << "s" << endl;
     cout << "Total time used: " << convert_time((double) params.run_time / CLOCKS_PER_SEC) << "s" << endl;
     //printf( "Total time used: %8.6f seconds.\n", (double) params.run_time / CLOCKS_PER_SEC );
-
-    tree.printResultTree(params);
-
+    
+    tree.printResultTree(params);    
     if (params.out_file)
-       # tree.printTree(params.out_file);
-        tree.printTree(params.out_file,WT_BR_LEN_FIXED_WIDTH);
+        tree.printTree(params.out_file);
+        //tree.printTree(params.out_file,WT_BR_LEN_FIXED_WIDTH);
 	
     else {
         //tree.printTree(cout);

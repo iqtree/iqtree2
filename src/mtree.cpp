@@ -155,7 +155,7 @@ typedef set<IntString*, IntStringCmp> IntStringSet;
 int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 {
 	int smallest_taxid = leafNum;
-#	out.precision(16);
+	out.precision(10);
 	if (!node) node = root;
 	if (node->isLeaf()) {
 		smallest_taxid = node->id;
