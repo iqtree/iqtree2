@@ -793,7 +793,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     tree.printResultTree(params);
 
     if (params.out_file)
-        tree.printTree(params.out_file);
+       # tree.printTree(params.out_file);
+        tree.printTree(params.out_file,WT_BR_LEN_FIXED_WIDTH);
+	
     else {
         //tree.printTree(cout);
         //cout << endl;
