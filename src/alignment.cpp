@@ -642,10 +642,10 @@ void Alignment::printDist(ostream &out, double *dist_mat) {
 		out << left << getSeqName(seq1) << " ";
 		for (int seq2 = 0; seq2 < nseqs; seq2 ++) {
 			out << dist_mat[pos++];
-			if (seq2 % 7 == 6) {
+			/*if (seq2 % 7 == 6) {
 				out << endl;
 				out.width(max_len+1);
-			} 
+			} */
 			out << " "; 
 		}	
 		out << endl;

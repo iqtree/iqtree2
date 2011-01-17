@@ -874,6 +874,7 @@ void PDNetwork::transformLP_Area2(Params &params, const char *outfile, int total
 		lpSplitConstraint_RS(out, params, y_value, count1, count2, total_size);
 		lpInitialArea(out, params);
 		lpK_BudgetConstraint(out, params, total_size);
+		lpBoundaryConstraint(out, params);
 		lpVariableBound(out, params, included_area, y_value);
 		if (make_bin)
 			lpVariableBinary(out, params, included_area);
@@ -1498,12 +1499,19 @@ void PDNetwork::lpObjectiveMinK(ostream &out, Params &params) {
 	}
 
 	if (areas_boundary && params.boundary_modifier != 0.0) {
+		if (params.quad_programming)
+			out << " + [";
 		for (i = 0; i < nareas-1; i++) 
 		for (j = i+1; j < nareas; j++) 
 		if (areas_boundary[i*nareas+j] > 0.0) {
 			double coeff = 2*areas_boundary[i*nareas+j] * params.boundary_modifier;
-			out << " -" << coeff << " y" << i << "_" << j;
+			if (params.quad_programming)
+				out << " -" << coeff << " x" << i << " * x" << j;
+			else
+				out << " -" << coeff << " y" << i << "_" << j;
 		}
+		if (params.quad_programming)
+			out << " ] / 2";
 	}
 
 	if (params.gurobi_format)
@@ -1512,10 +1520,56 @@ void PDNetwork::lpObjectiveMinK(ostream &out, Params &params) {
 		out << ";" << endl;
 }
 
+void PDNetwork::lpK_BudgetConstraint(ostream &out, Params &params, int total_size) {
+
+	int nvars;
+	int i, j;
+	if (isPDArea())
+		nvars = area_taxa.size();
+	else
+		nvars = getNTaxa();
+
+	for (j = 0; j < nvars; j++) {
+		double coeff = (isBudgetConstraint()) ? getPdaBlock()->getCost(j) : 1.0;
+		if (areas_boundary) coeff += areas_boundary[j*nvars+j] * params.boundary_modifier;
+		out << ((j>0) ? " +" : "") << coeff << " x" << j;
+		
+	}
+	
+	if (areas_boundary && params.boundary_modifier != 0.0) {
+		for (i = 0; i < nvars-1; i++) 
+		for (j = i+1; j < nvars; j++) 
+		if (areas_boundary[i*nvars+j] > 0.0) {
+			double coeff = 2*areas_boundary[i*nvars+j] * params.boundary_modifier;
+				out << " -" << coeff << " y" << i << "_" << j;
+		}
+	}
+	out << " <= " << total_size;
+	
+	// constraint for k-set or total budget
+	/*
+	if (isBudgetConstraint()) {
+		for (j = 0; j < nvars; j++) {
+			out << ((j==0)? "" : " +") << getPdaBlock()->getCost(j) << " x" << j;
+		}
+		out << " <= " << total_size;
+	} else {
+		for (j = 0; j < nvars; j++) {
+			out << ((j==0)? "" : " +") << "x" << j;
+		}
+		out  << " = " << total_size;
+	}*/
+	if (params.gurobi_format)
+		out << endl;
+	else
+		out << ";" << endl;
+}
+
 void PDNetwork::lpBoundaryConstraint(ostream &out, Params &params) {
 	// constraint on the variable for the shared boundary between areas
 	if (!areas_boundary || params.boundary_modifier == 0.0) 
 		return;
+	if (params.quad_programming) return;
 	int i, j;
 	int nareas = area_taxa.size();
 
@@ -1632,32 +1686,6 @@ void PDNetwork::lpSplitConstraint_TS(ostream &out, Params &params, IntVector &y_
 	}
 }
 
-void PDNetwork::lpK_BudgetConstraint(ostream &out, Params &params, int total_size) {
-
-	int nvars;
-	int j;
-	if (isPDArea())
-		nvars = area_taxa.size();
-	else
-		nvars = getNTaxa();
-
-	// constraint for k-set or total budget
-	if (isBudgetConstraint()) {
-		for (j = 0; j < nvars; j++) {
-			out << ((j==0)? "" : " +") << getPdaBlock()->getCost(j) << " x" << j;
-		}
-		out << " <= " << total_size;
-	} else {
-		for (j = 0; j < nvars; j++) {
-			out << ((j==0)? "" : " +") << "x" << j;
-		}
-		out  << " = " << total_size;
-	}
-	if (params.gurobi_format)
-		out << endl;
-	else
-		out << ";" << endl;
-}
 
 void PDNetwork::lpMinSDConstraint(ostream &out, Params &params, IntVector &y_value, double pd_proportion) {
 	iterator spit;
@@ -1720,7 +1748,7 @@ void PDNetwork::lpVariableBound(ostream &out, Params &params, Split &included_va
 		}
 	}
 	int nvars = included_vars.getNTaxa();
-	if (areas_boundary && params.boundary_modifier != 0.0) {
+	if (areas_boundary && params.boundary_modifier != 0.0 && !params.quad_programming) {
 		for (i = 0; i < included_vars.getNTaxa()-1; i++)
 		for (j = i+1; j < included_vars.getNTaxa(); j++) 
 			if (areas_boundary[i*nvars+j] > 0.0) {

@@ -602,6 +602,10 @@ struct Params {
      */
     double split_weight_summary;
 
+	/**
+		TRUE if use quadratic programming (for GUROBI)
+	*/
+	bool quad_programming;
 
     /**
             true if one wants to optimize tree by subtree pruning and regrafting

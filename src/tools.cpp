@@ -546,6 +546,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.complement_area = NULL;
 	params.scaling_factor = 0.0;
 	params.binary_programming = false;
+	params.quad_programming = false;
 	params.test_input = TEST_NONE;
 	params.tree_burnin = 0;
 	params.split_threshold = 0.0;
@@ -851,6 +852,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt],"-lpbin") == 0) {
 				params.run_mode = LINEAR_PROGRAMMING;
 				params.binary_programming = true;
+			} else if (strcmp(argv[cnt],"-qp") == 0) {
+				params.gurobi_format = true;
+				params.quad_programming = true;
 			} else if (strcmp(argv[cnt],"-mult") == 0) {
 				params.multi_tree = true;
 			} else if (strcmp(argv[cnt],"-bi") == 0) {
@@ -1112,7 +1116,7 @@ void usage(char* argv[], bool full_command) {
 	cout << "    Find optimal PD sets with budget <min>, <min>+<step>, <min>+2*<step>,..." << endl;
 	cout << endl;
 	cout << "OPTIONS FOR AREA ANALYSIS:" << endl;
-	cout << "  -s <taxa_file>    Compute PD of areas (user-defined sets) in <taxa_file>." << endl;
+	cout << "  -ts <taxa_file>   Compute PD of areas (user-defined sets) in <taxa_file>." << endl;
 	cout << "  -excl             Compute area exclusive PD." << endl;
 	cout << "  -endem            Compute area endemic PD." << endl;
 	cout << "  -compl <areas>    Compute area PD-complementarity given the listed <areas>." << endl;
