@@ -668,6 +668,16 @@ struct Params {
      */
     int num_rate_cats;
 
+	/**
+		shape parameter (alpha) of the Gamma distribution for site rates
+	*/
+    double gamma_shape;
+
+	/**
+		proportion of invariable sites
+	*/
+    double p_invar_sites;
+
     /**
             TRUE if you want to optimize branch lengths by Newton-Raphson method
      */

@@ -34,9 +34,10 @@ public:
 	/**
 		constructor
 		@param ncat number of rate categories
+		@param shape Gamma shape parameter
 		@param tree associated phylogenetic tree
 	*/
-    RateGamma(int ncat, PhyloTree *tree);
+    RateGamma(int ncat, double shape, PhyloTree *tree);
 
 	/**
 		destructor
@@ -77,7 +78,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return 1; }
+	virtual int getNDim() { return !fix_gamma_shape; }
 
 	/**
 		write information
@@ -109,7 +110,10 @@ protected:
 	*/
 	double gamma_shape;
 
-
+	/**
+		TRUE to fix the gamma shape parameter
+	*/
+	bool fix_gamma_shape;
 
 	//Normally, beta is assigned equal to alpha
 	double cmpPerPointGamma (const double prob, const double shape);

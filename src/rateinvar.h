@@ -33,9 +33,10 @@ class RateInvar : virtual public RateHeterogeneity
 public:
 	/**
 		constructor
+		@param p_invar_sites proportion of invariable sites
 		@param tree associated phylogenetic tree
 	*/
-	RateInvar(PhyloTree *tree);
+	RateInvar(double p_invar_sites, PhyloTree *tree);
 
 
 	/**
@@ -60,7 +61,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return 1; }
+	virtual int getNDim() { return !fix_p_invar; }
 	
 
 	/**
@@ -79,6 +80,11 @@ public:
 		proportion of invariable sites
 	*/
 	double p_invar;
+	
+	/**
+		TRUE to fix the proportion of invariable sites
+	*/
+	bool fix_p_invar;
 
 protected:
 

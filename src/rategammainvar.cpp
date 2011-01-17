@@ -19,8 +19,8 @@
  ***************************************************************************/
 #include "rategammainvar.h"
 
-RateGammaInvar::RateGammaInvar(int ncat, PhyloTree *tree)
-: RateInvar(tree), RateGamma(ncat, tree)
+RateGammaInvar::RateGammaInvar(int ncat, double shape, double p_invar_sites, PhyloTree *tree)
+: RateInvar(p_invar_sites, tree), RateGamma(ncat, shape, tree)
 {
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;

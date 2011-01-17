@@ -19,13 +19,18 @@
  ***************************************************************************/
 #include "rateinvar.h"
 
-RateInvar::RateInvar(PhyloTree *tree)
+RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
  : RateHeterogeneity()
 {
 	p_invar = 0.0;
+	fix_p_invar = false;
 	phylo_tree = tree;
 	name = "+I";
 	full_name = "Invar";
+	if (p_invar_sites > 0) {
+		p_invar = p_invar_sites;
+		fix_p_invar = true;
+	}
 }
 
 double RateInvar::computeFunction(double p_invar_value) {
@@ -35,6 +40,8 @@ double RateInvar::computeFunction(double p_invar_value) {
 }
 
 double RateInvar::optimizeParameters() {
+	if (fix_p_invar)
+		return -computeFunction(p_invar);
 	if (verbose_mode >= VB_MAX)
 		cout << "Optimizing proportion of invariable sites..." << endl;
 	double negative_lh;

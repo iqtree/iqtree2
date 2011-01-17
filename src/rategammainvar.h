@@ -36,7 +36,7 @@ public:
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
 	*/
-    RateGammaInvar(int ncat, PhyloTree *tree);
+    RateGammaInvar(int ncat, double shape, double p_invar_sites, PhyloTree *tree);
 
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize
@@ -56,7 +56,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return 2; }
+	virtual int getNDim() { return RateInvar::getNDim() + RateGamma::getNDim(); }
 
 
 	/**

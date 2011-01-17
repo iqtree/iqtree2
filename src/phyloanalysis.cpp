@@ -109,9 +109,9 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 
         RateHeterogeneity * rate_class[4];
         rate_class[0] = new RateHeterogeneity();
-        rate_class[1] = new RateInvar(NULL);
-        rate_class[2] = new RateGamma(params.num_rate_cats, NULL);
-        rate_class[3] = new RateGammaInvar(params.num_rate_cats, NULL);
+        rate_class[1] = new RateInvar(-1, NULL);
+        rate_class[2] = new RateGamma(params.num_rate_cats, -1, NULL);
+        rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1, -1, NULL);
         GTRModel *subst_model;
         if (nstates == 4)
             subst_model = new ModelDNA("JC", FREQ_UNKNOWN, in_tree);
@@ -432,6 +432,9 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
     if (params.mvh_site_rate)
         cout << "  Site-rates by MvH model:  " << params.out_prefix << ".mvhrate" << endl;
 
+    if (params.print_site_lh)
+		cout << "  Site log-likelihoods:     " << params.out_prefix << ".sitelh" << endl;
+
     if (params.num_bootstrap_samples)
         cout << endl << "Non-parametric bootstrap results written to:" << endl
             << "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl
@@ -460,6 +463,34 @@ void checkZeroDist(Alignment *aln, double *dist) {
         checked[i] = 1;
         if (str != "") outWarning(str);
     }
+}
+
+void printSiteLh(Params &params, IQPTree &tree) {
+	int i;
+	double *pattern_lh = new double[tree.aln->getNPattern()];
+	tree.computeLikelihood(pattern_lh);
+
+	string site_lh_file = params.out_prefix;
+	site_lh_file += ".sitelh";
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(site_lh_file.c_str());
+		out << tree.aln->getNSite() << endl;
+		out << "XXX        ";
+		for (i = 0; i < tree.aln->getNSite(); i++) 
+			out << " " << pattern_lh[tree.aln->getPatternID(i)];
+		out << endl;
+		out.close();
+		cout << "Site log-likelihoods printed to " << site_lh_file << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, site_lh_file);
+	}
+
+
+	delete [] pattern_lh;
+
 }
 
 void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
@@ -585,8 +616,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
     //Update tree score
     tree.curScore = bestTreeScore;
+	/*
     if ((tree.getModel()->name == "JC") && tree.getRate()->getNDim() == 0)
-        params.compute_ml_dist = false;
+        params.compute_ml_dist = false;*/
     if (!params.dist_file && params.compute_ml_dist) {
         stringstream best_tree_string;
         tree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
@@ -807,6 +839,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         }*/
     }
 
+	if (params.print_site_lh) {
+		printSiteLh(params, tree);
+	}
 }
 
 void runPhyloAnalysis(Params &params) {

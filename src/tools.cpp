@@ -513,7 +513,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.areas_boundary_file = NULL;
 	params.boundary_modifier = 1.0;
 	params.dist_file = NULL;
-	params.compute_ml_dist = false;
+	params.compute_ml_dist = true;
 	params.compute_ml_tree = true;
 	params.budget_file = NULL;
 	params.overlap = 0;
@@ -573,6 +573,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.freq_type = FREQ_EMPIRICAL;
 	//params.freq_type = FREQ_UNKNOWN;
 	params.num_rate_cats = 4;
+	params.gamma_shape = -1.0;
+	params.p_invar_sites = -1.0;
 	params.optimize_by_newton = true;
 	params.fixed_branch_length = false;
 	params.iqp_assess_quartet = IQP_DISTANCE;
@@ -649,7 +651,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.root = argv[cnt];
 			} else if (strcmp(argv[cnt],"-root") == 0) {
 				params.is_rooted = true;
-			} else if (strcmp(argv[cnt],"-a") == 0 || strcmp(argv[cnt],"-all") == 0) {
+			} else if (strcmp(argv[cnt],"-all") == 0) {
 				params.find_all = true;
 			} else if (strcmp(argv[cnt],"-g") == 0 || strcmp(argv[cnt],"--greedy") == 0) {
 				params.run_mode = GREEDY;
@@ -662,10 +664,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -e <file>";
 				params.param_file = argv[cnt];
-			} else if (strcmp(argv[cnt],"-i") == 0) {
+			} else if (strcmp(argv[cnt],"-if") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -i <file>";
+					throw "Use -if <file>";
 				params.initial_file = argv[cnt];
 			} else if (strcmp(argv[cnt],"-ia") == 0) {
 				cnt++;
@@ -967,6 +969,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -c <#rate_category>";
 				params.num_rate_cats = convert_int(argv[cnt]);
 				if (params.num_rate_cats < 1) throw "Wrong number of rate categories";
+			} else if (strcmp(argv[cnt],"-a") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -a <gamma_shape>";
+				params.gamma_shape = convert_double(argv[cnt]);
+				if (params.gamma_shape < 0) throw "Wrong number of gamma shape parameter (alpha)";
+			} else if (strcmp(argv[cnt],"-i") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -i <p_invar_sites>";
+				params.p_invar_sites = convert_double(argv[cnt]);
+				if (params.p_invar_sites < 0) throw "Wrong number of proportion of invariable sites";
 			} else if (strcmp(argv[cnt],"-brent") == 0) {
 				params.optimize_by_newton = false;
 			} else if (strcmp(argv[cnt],"-fixbr") == 0) {
@@ -1089,7 +1103,7 @@ void usage(char* argv[], bool full_command) {
 	cout << "  -o <taxon>        Root name to compute rooted PD, default is unrooted. " << endl;
 	cout << "  -i <file>         File containing taxa to be included into PD set." << endl;
 	cout << "  -e <file>         File containing branch/split scale and taxa weights." << endl;
-	cout << "  -a, -all          Identify multiple optimal PD sets." << endl;
+	cout << "  -all              Identify multiple optimal PD sets." << endl;
 	cout << "  -lim <max_limit>  The maximum number of PD sets for each k if -a is specified." << endl;
 	cout << "  -min              Compute minimal PD sets, default is maximal PD sets." << endl;
 	cout << "  -1out             Also print taxa sets and scores to separate files." << endl;
@@ -1151,67 +1165,60 @@ void usage(char* argv[], bool full_command) {
 }
 
 void usage_iqtree(char* argv[], bool full_command) {
-	cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS] [<tree_file>] " << endl << endl;
+	cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS] [<treefile>] " << endl << endl;
 	cout << "GENERAL OPTIONS:" << endl
-		 << "  -?                   Print this help dialog" << endl
+		 << "  -?                   Printing this help dialog" << endl
 		 << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP or NEXUS format"  << endl
 		 << "  -st <BIN|DNA|AA>     Binary, DNA, or Protein sequences (default: auto-detect)"  << endl
 		 << "  -b <#replicates>     Non-parametric bootstrap (default: none)" << endl
-		 << "  <tree_file>          Initial tree for tree reconstruction (default: BIONJ)" << endl
+		 << "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl
 		 << "                       Or set of trees for consensus reconstruction (see below)" << endl
-		 << "  -o <outgroup_taxon>  Outgroup taxon name, used when writing .treefile" << endl 
-		 << "  -pre <PREFIX>        Use <PREFIX> for all output files (default: alignment" << endl
-		 << "                       file name)" << endl
+		 << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl 
+		 << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment)" << endl
 	<< endl << "SUBSTITUTION MODEL OPTIONS:" << endl
 		 << "  -m <substitution_model_name>" << endl
 		 << "                  DNA: JC (default), F81, K2P, HKY, K3P, K81uf, TN/TrN, TNef," << endl
 		 << "                       TIM, TIMef, HKY, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
-		 << "                       specification, e.g., '010010' is equivalent to HKY" << endl
-		 << "              Protein: JC (default), WAG, cpREV, mtREV, PAM, mtMAM, JTT, LG," << endl
-		 << "                       mtART, mtZOA, VT, or rtREV" << endl
+		 << "                       specification, e.g., '010010' is equiv. to HKY" << endl
+		 << "              Protein: Poisson (default), WAG, cpREV, mtREV, PAM, mtMAM, JTT," << endl
+		 << "                       LG, mtART, mtZOA, VT, or rtREV" << endl
 		 << "               Binary: JC (default)" << endl
-		 << "   Rate heterogeneity: Append '+I', '+G[n]', or '+I+G[n]' to the model name for" << endl
-		 << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is the number of" << endl
+		 << "   Rate heterogeneity: Appending '+I', '+G[n]', or '+I+G[n]' to model name for" << endl
+		 << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl
 		 << "                       categories for Gamma rates (default: n=4)" << endl
-		 << "            Modeltest: TEST or TESTONLY if you have no idea which model to use." << endl
-		 << "                       With 'TEST', IQTREE will evaluate all models and select" << endl
-		 << "                       the most suitable one. With 'TESTONLY' IQTREE will stop" << endl
-		 << "                       after finishing Modeltest" << endl
-		 << "            Otherwise: Name of the file containing user model parameters" << endl
-		 << "                       incl. rate matrix and state frequencies" << endl
+		 << "            Modeltest: TEST or TESTONLY to select model with Modeltest." << endl
+		 << "                       TESTONLY will stop the run after finishing Modeltest" << endl
+		 << "            Otherwise: Name of file containing user-model parameters" << endl
+		 << "                       (rate matrix and state frequencies)" << endl
+		 << endl
+		 << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
+		 << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
 		 //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
 		 << "  -f <EQ|EM|ES|UD>     EQual, EMpirical, EStimated, or User-Defined state" << endl 
-		 << "                       frequency (default: detected from the model name)" << endl
+		 << "                       frequency (default: detected from model name)" << endl
 	<< endl << "TREE INFERENCE OPTIONS:" << endl
-		 << "  -p <probability>     IQP: Probability of deleting a leaf (default: 0.1)" << endl
-		 << "  -k <#representative> IQP: Size of representative leaf set (default: 5)" << endl
-		 << "  -n <#iterations>     Number of iterations  (default: 1, equiv. to PHYML)" << endl
-		 << "  -sr <#iterations>    Turn on stopping rule, not exceeding #iterations" << endl
+		 << "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
+		 << "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl
+		 << "  -n <#iterations>     Number of iterations  (default: auto)" << endl
+		 << "  -sr <#iterations>    Stopping rule with max. #iterations (default: off)" << endl
 		 << "  -sc <confidence>     Confidence value for stopping rule (default: 0.95)" << endl
-		 << "  -wt                  Write all intermediate trees into .treels file" << endl
-		 << "  -d <file>            Read the genetic distances from the file (default: " << endl
-		 << "                       Juke-Cantor distances)" << endl
-		 << "  -fixbr               Fix branch lengths of <tree_file>, only estimate" << endl
-		 << "                       model parameters" << endl
+		 << "  -wt                  Writing all intermediate trees into .treels file" << endl
+		 << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
+		 << "  -fixbr               Fix branch lengths of <treefile>" << endl
 		 << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
-		 << "  -v, -vv, -vvv        Verbose mode, print more messages to the screen" << endl
+		 << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
 	<< endl << "CONSENSUS RECONSTRUCTION OPTIONS:" << endl
-		 << "  -t <threshold>       Number between 0 and 1 for minimum split support." << endl
-		 << "                       Use '-t 0.5 -con' for majority-rule consensus'" << endl
-		 << "                       (default: 0, i.e. extended consensus)" << endl
-		 << "  -bi <burnin>         Discard <burnin> trees at the beginning of <tree_file>" << endl
-		 << "  -con                 Compute consensus tree of the trees in <tree_file>." << endl
-		 << "                       Output to <tree_file>.contree or <PREFIX>.contree" << endl
-		 << "  -net                 Compute consensus network of the trees in <trees_file>." << endl
-		 << "                       Output to <tree_file>.nex or <PREFIX>.nex" << endl
-		 << "  -sup <target_tree>   Assign support values for branches in <target_tree>" << endl
-		 << "                       based on the trees from <tree_file>. Output to" << endl
-		 << "                       <target_tree>.suptree or <PREFIX>.suptree" << endl
+		 << "  -t <threshold>       Min split support in range [0,1]. 0.5 for majority-rule" << endl
+		 << "                       consensus (default: 0, i.e. extended consensus)" << endl
+		 << "  -bi <burnin>         Discarding <burnin> trees at beginning of <treefile>" << endl
+		 << "  -con                 Computing consensus tree to .contree file" << endl
+		 << "  -net                 Computing consensus network to .nex file" << endl
+		 << "  -sup <target_tree>   Assigning support values for <target_tree> to .suptree" << endl
 	<< endl << "ROBINSON-FOULDS DISTANCE OPTIONS:" << endl
-		 << "  -rf_all              Compute all-to-all Robinson-Foulds distances of the" << endl
-		 << "                       trees in <tree_file>. Output to .rfdist file" << endl
-		 << "  -rf_adj              Compute Robinson-Foulds distances between adjacent pairs" << endl
-		 << "                       of the trees in <tree_file>. Output to .rfdist file" << endl
+		 << "  -rf_all              Computing all-to-all RF distances of trees in <treefile>" << endl
+		 << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
+	<< endl << "MISCELLANEOUS OPTIONS:" << endl
+		 << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
 		 << endl;
 
 	if (full_command) {

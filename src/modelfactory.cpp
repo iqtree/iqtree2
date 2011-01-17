@@ -42,20 +42,20 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	/* create site-rate heterogeneity */
 	if (pos != string::npos) {
 		string rate_str = model_str.substr(pos);
-		if (rate_str == "+I")
-			site_rate = new RateInvar(tree);
-		else if (rate_str.substr(0,2) == "+G") {
-			if (rate_str.length() > 2) {
-				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
-				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
-			}
-			site_rate = new RateGamma(params.num_rate_cats, tree);
-		} else if (rate_str.substr(0,4) == "+I+G" || rate_str == "+G+I") {
+		if (rate_str == "+I") {
+			site_rate = new RateInvar(params.p_invar_sites, tree);
+		} else if (rate_str.substr(0,4) == "+I+G" || rate_str.substr(0,4) == "+G+I") {
 			if (rate_str.length() > 4) {
 				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
 				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
-			site_rate = new RateGammaInvar(params.num_rate_cats, tree);
+			site_rate = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.p_invar_sites, tree);
+		} else if (rate_str.substr(0,2) == "+G") {
+			if (rate_str.length() > 2) {
+				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
+				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
+			}
+			site_rate = new RateGamma(params.num_rate_cats, params.gamma_shape, tree);
 		} else
 			outError("Invalid rate heterogeneity type");
 		model_str = model_str.substr(0, pos);
@@ -66,7 +66,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 
 	/* create substitution model */
 
-	if (model_str == "JC" /*&& (params.freq_type == FREQ_UNKNOWN || params.freq_type == FREQ_EQUAL)*/) {
+	if (model_str == "JC" || model_str == "Poisson"/*&& (params.freq_type == FREQ_UNKNOWN || params.freq_type == FREQ_EQUAL)*/) {
 		 model = new SubstModel(tree->aln->num_states);
 	} else if (model_str == "GTR") {
 		model = new GTRModel(tree);
