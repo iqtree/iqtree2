@@ -187,7 +187,7 @@ public:
         if (site_rate && aln && state_freq) {            
             double p_invar = site_rate->getPInvar();
             for (int ptn = 0; ptn < aln->size(); ++ptn)
-                p_invar_ptns[ptn] = p_invar * state_freq[(*aln)[ptn][0]];
+                p_invar_ptns[ptn] = p_invar * state_freq[(int)(*aln)[ptn][0]];
         }
     }
 

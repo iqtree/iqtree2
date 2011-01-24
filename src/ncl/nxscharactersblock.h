@@ -584,9 +584,9 @@ inline char NxsCharactersBlock::GetState(
 	assert(symbols != NULL);
 	char state_char = '\0';
 
-	unsigned symbolsLen = strlen(symbols);
+	//unsigned symbolsLen = strlen(symbols);
 	unsigned p = matrix->GetState(i, j, k);
-	assert(p < symbolsLen);
+	assert(p < strlen(symbols));
 	state_char = *(symbols + p);
 
 	return state_char;

@@ -39,6 +39,7 @@
 #include "mtreeset.h"
 #include "mexttree.h"
 #include "ratemeyerhaeseler.h"
+#include "whtest_wrapper.h"
 
 const int DNA_MODEL_NUM = 14;
 
@@ -386,6 +387,23 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
                                         << "Split threshold: " << params.split_threshold << endl
                                         << "Burn-in: " << params.tree_burnin << endl << endl;
                         }*/
+
+		if (original_model == "WHTEST") {
+			out << endl << "TEST OF MODEL HOMOGENEITY" << endl << "-------------------------" << endl << endl;
+			out << "Delta of input data:                 " << params.whtest_delta << endl;
+			out << ".95 quantile of Delta distribution:  " << params.whtest_delta_quantile << endl;
+			out << "Number of simulations performed:     " << params.whtest_simulations << endl;
+			out << "P-value:                             " << params.whtest_p_value << endl;
+			if (params.whtest_p_value < 0.05) {
+				out << "RESULT: Model homogeneity is rejected (p-value cutoff 0.05)" << endl;
+			} else {
+				out << "RESULT: Model homogeneity is NOT rejected (p-value cutoff 0.05)" << endl;
+			}
+			out << endl << "For this result please cite:" << endl;
+			out << "G. Weiss and A. von Haeseler (2003) Testing substitution models" << endl
+				<< "within a phylogenetic tree. Mol. Biol. Evol, 20(4):572-578" << endl << endl;
+		}
+
         time_t cur_time;
         time(&cur_time);
 
@@ -440,6 +458,8 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
             << "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl
             << "  Bootstrap trees:          " << params.out_prefix << ".boottrees" << endl
             << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
+	if (original_model == "WHTEST")
+		cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;
     cout << endl;
 
 }
@@ -559,6 +579,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
             printf("Time used: %8.6f seconds.\n", (double) params.run_time / CLOCKS_PER_SEC);
         }
     }
+    
+    if (params.model_name == "WHTEST") {
+    	if (alignment->num_states != 4) 
+    		outError("Weiss & von Haeseler test of model homogeneity only works for DNA");
+    	params.model_name="GTR+G";
+    }
     assert(tree.aln);
     tree.optimize_by_newton = params.optimize_by_newton;
     tree.sse = params.SSE;
@@ -616,6 +642,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
     //Update tree score
     tree.curScore = bestTreeScore;
+
 	/*
     if ((tree.getModel()->name == "JC") && tree.getRate()->getNDim() == 0)
         params.compute_ml_dist = false;*/
@@ -668,9 +695,15 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
             bestTreeScore = tree.curScore ;
             cout << "Found new best tree log-likelihood : " << bestTreeScore << endl;
         } else {
-            cout << "Tree didn't improve after NNI :( " << endl;
+            cout << "Tree didn't improve after NNI" << endl;
         }
     }
+
+	if (original_model == "WHTEST") {
+		cout << endl << "Testing model homogeneity by Weiss & von Haeseler (2003)..." << endl;
+		WHTest(params, tree);
+	}
+
     /*
     double sum_scaling = 1.0;
     if (!tree.checkEqualScalingFactor(sum_scaling))
@@ -757,8 +790,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         cout << "Number of iterations              : ";
         if (params.stop_condition == SC_FIXED_ITERATION)
             cout << params.min_iterations << endl;
-        else cout << "auto-predicted in range [" << params.min_iterations << "," <<
-                params.max_iterations << "], confidence " << params.stop_confidence << endl;
+        else cout << "predicted in [" << params.min_iterations << "," <<
+                params.max_iterations << "] (confidence " << params.stop_confidence << ")" << endl;
         cout << "Important quartet assessed on     : " << ((params.iqp_assess_quartet == IQP_DISTANCE) ? "Distance" : "Parsimony") << endl;
         cout << endl;
         tree.doIQPNNI(params);

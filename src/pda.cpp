@@ -22,7 +22,7 @@
 #include <config.h>
 #endif
 
-#include "Eigen/Core"
+//#include "Eigen/Core"
 #include <iostream>
 #include <cstdlib>
 #include <errno.h>

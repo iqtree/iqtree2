@@ -590,6 +590,10 @@ double IQPTree::perturb(int times) {
 
 
 double IQPTree::doIQPNNI(Params &params) {
+
+	time_t begin_time, cur_time;
+	time(&begin_time);
+
     string tree_file_name = params.out_prefix;
     tree_file_name += ".treefile";
     bestScore = curScore;
@@ -624,7 +628,8 @@ double IQPTree::doIQPNNI(Params &params) {
         }
     }
     stop_rule.addImprovedIteration(1);
-    for (int cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration); cur_iteration++) {
+    int cur_iteration;
+    for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration); cur_iteration++) {
         if (verbose_mode >= VB_DEBUG)
             cout << "Performing IQP in iteration " << cur_iteration << endl;
 
@@ -671,10 +676,20 @@ double IQPTree::doIQPNNI(Params &params) {
             lh_file << endl;
         }
         
-        cout.precision(10);
-        if (!skipped)
-            cout << "Iteration " << cur_iteration << " / Log-Likelihood: "
-                    << curScore << endl;
+        cout.precision(6);
+        time(&cur_time);
+        double elapsed_secs = difftime(cur_time,begin_time);
+		double remaining_secs = (stop_rule.getNumIterations() - cur_iteration)*
+			 elapsed_secs / (cur_iteration-1);
+		cout.setf(ios::fixed,ios::floatfield);
+        if (!skipped) {
+            cout << "Iteration " << cur_iteration << " / LogL: " << curScore 
+            	<< " / Time elapsed: " << convert_time(elapsed_secs) 
+            	<< "s"; 
+           if (cur_iteration > 10 && elapsed_secs > 10)
+           		cout <<	" (" << convert_time(remaining_secs) << "s left)";
+           cout << endl;
+        }
 
         //Tung : Write tree out to compare topology
 //        if (verbose_mode >= VB_DEBUG) {
@@ -718,6 +733,16 @@ double IQPTree::doIQPNNI(Params &params) {
                 increaseKDelete();
         }
     }
+
+	int predicted_iteration = stop_rule.getPredictedIteration();
+	cout.unsetf(ios::fixed);
+
+	if (predicted_iteration > cur_iteration) {
+		cout << endl << "WARNING: " << predicted_iteration
+			<< " iterations are needed to ensure that with a " 
+			<< floor(params.stop_confidence*100) << "% confidence" << endl
+			<< "         the IQPNNI search will not find a better tree" << endl;
+	}
     return bestScore;
 }
 
@@ -837,7 +862,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped) {
             sort(vecImpProNNI.begin(), vecImpProNNI.end());
         }
     } else {
-        cout << "NNI search could not find any better tree !!!" << endl;
+        //cout << "NNI search could not find any better tree !!!" << endl;
     }
     return curScore;
 }

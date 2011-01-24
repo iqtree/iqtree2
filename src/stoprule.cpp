@@ -40,6 +40,10 @@ int StopRule::getNumIterations() {
 	return predicted_iteration;
 }
 
+int StopRule::getPredictedIteration() {
+	return predicted_iteration;
+}
+
 bool StopRule::meetStopCondition(int current_iteration) {
 	if (stop_condition == SC_FIXED_ITERATION || predicted_iteration == 0)
 		return current_iteration > min_iteration;
@@ -75,15 +79,12 @@ void StopRule::addImprovedIteration(int iteration) {
 	double upperTime;
 	if (predict(upperTime) == 0) return;
 	predicted_iteration = upperTime;
-	cout << "INFO: Stopping rule suggests " << predicted_iteration << " iterations";
-	if (predicted_iteration > max_iteration || predicted_iteration < min_iteration) {
-		if (predicted_iteration > max_iteration)
-			predicted_iteration = max_iteration;
-		else
+	if (stop_condition == SC_STOP_PREDICT && predicted_iteration > max_iteration)
+		predicted_iteration = max_iteration;
+	if (predicted_iteration < min_iteration)
 			predicted_iteration = min_iteration;
-		cout << ", but set to " << predicted_iteration;
-	}
-	cout << endl;
+	cout << "Stopping rule suggests " << predicted_iteration << " iterations (" 
+		<< (predicted_iteration - iteration) << " more iterations)" << endl;
 }
 
 

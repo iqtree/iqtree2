@@ -568,7 +568,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.max_iterations = 1;
 	params.stop_condition = SC_FIXED_ITERATION;
 	params.stop_confidence = 0.95;
-	params.model_name = "HKY";
+	params.model_name = "";
 	params.store_trans_matrix = false;
 	params.freq_type = FREQ_EMPIRICAL;
 	//params.freq_type = FREQ_UNKNOWN;
@@ -588,6 +588,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.nni_lh = false;
 	params.cmdLambda = 0.75;
         params.speed_conf = 0.75;
+    params.whtest_simulations = 1000;
 	
 	struct timeval tv;
 	struct timezone tz;
@@ -1048,6 +1049,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "aLRT replicates must be at least 1000";
 			} else if (strcmp(argv[cnt],"-wsl") == 0) {
 				params.print_site_lh = true;
+			} else if (strcmp(argv[cnt],"-ns") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ns <num_simulations>";
+				params.whtest_simulations = convert_int(argv[cnt]);
+				if (params.whtest_simulations < 1) 
+					throw "Wrong number of simulations for WH-test";
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];
@@ -1177,25 +1185,25 @@ void usage_iqtree(char* argv[], bool full_command) {
 		 << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment)" << endl
 	<< endl << "SUBSTITUTION MODEL OPTIONS:" << endl
 		 << "  -m <substitution_model_name>" << endl
-		 << "                  DNA: JC (default), F81, K2P, HKY, K3P, K81uf, TN/TrN, TNef," << endl
-		 << "                       TIM, TIMef, HKY, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
+		 << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
+		 << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
 		 << "                       specification, e.g., '010010' is equiv. to HKY" << endl
 		 << "              Protein: Poisson (default), WAG, cpREV, mtREV, PAM, mtMAM, JTT," << endl
 		 << "                       LG, mtART, mtZOA, VT, or rtREV" << endl
-		 << "               Binary: JC (default)" << endl
-		 << "   Rate heterogeneity: Appending '+I', '+G[n]', or '+I+G[n]' to model name for" << endl
-		 << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl
-		 << "                       categories for Gamma rates (default: n=4)" << endl
+		 << "               Binary: JC-like" << endl
 		 << "            Modeltest: TEST or TESTONLY to select model with Modeltest." << endl
 		 << "                       TESTONLY will stop the run after finishing Modeltest" << endl
 		 << "            Otherwise: Name of file containing user-model parameters" << endl
-		 << "                       (rate matrix and state frequencies)" << endl
-		 << endl
+		 << "                       (rate parameters and state frequencies)" << endl
+		 << "  -f <EQ|EM|ES|UD>     EQual, EMpirical, EStimated, or User-Defined state" << endl 
+		 << "                       frequency (default: detected from model name)" << endl
+	<< endl << "RATE HETEROGENEITY OPTIONS:" << endl
+		 << "  -m <substitution_model_name>+I or +G[n] or +I+G[n]" << endl
+		 << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl
+		 << "                       categories for Gamma rates (default: n=4)" << endl
 		 << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
 		 << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
 		 //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
-		 << "  -f <EQ|EM|ES|UD>     EQual, EMpirical, EStimated, or User-Defined state" << endl 
-		 << "                       frequency (default: detected from model name)" << endl
 	<< endl << "TREE INFERENCE OPTIONS:" << endl
 		 << "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
 		 << "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl

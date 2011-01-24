@@ -44,6 +44,9 @@ public:
 	*/
     virtual ~RateGamma();
 
+	virtual double getGammaShape() { return gamma_shape; }
+
+
 	/**
 		@return the number of rate categories
 	*/

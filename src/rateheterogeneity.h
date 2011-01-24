@@ -77,6 +77,8 @@ public:
 	*/
 	virtual double getPInvar() { return 0.0; }
 
+	virtual double getGammaShape() { return 0.0; }
+
 	/**
 		optimize parameters. Default does nothing
 		@return the best likelihood 

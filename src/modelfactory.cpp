@@ -37,6 +37,10 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	is_storing = false;
 
 	string model_str = params.model_name;
+	if (model_str == "")
+		if (tree->aln->num_states == 4) model_str = "HKY";
+		else if (tree->aln->num_states == 20) model_str = "WAG";
+		else model_str = "JC";
 	string::size_type pos = model_str.find('+');
 
 	/* create site-rate heterogeneity */

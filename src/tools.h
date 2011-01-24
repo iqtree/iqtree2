@@ -763,6 +763,15 @@ struct Params {
      * Confidence level for the speed up heuristics
      */
     double speed_conf;
+
+	/**
+		Results of Weiss & Haeseler test of model homogeneity
+	*/
+	double whtest_simulations;
+	double whtest_delta;
+	double whtest_delta_quantile;
+	double whtest_p_value;
+	
 };
 
 /**

@@ -82,6 +82,11 @@ public:
 	*/
 	int getNumIterations();
 
+	/**
+		@return predicted iteration, 0 if no prediction has been made
+	*/
+	int getPredictedIteration();
+
 private:
 
 	double predict (double &upperTime);
