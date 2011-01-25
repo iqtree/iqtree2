@@ -1019,14 +1019,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.num_bootstrap_samples = convert_int(argv[cnt]);
 				if (params.num_bootstrap_samples < 1) 
 					throw "Wrong number of bootstrap samples";
-			} else if (strcmp(argv[cnt],"-bo") == 0) {
-				params.multi_tree = true;
-				cnt++;
-				if (cnt >= argc)
-					throw "Use -b <num_bootstrap_samples>";
-				params.num_bootstrap_samples = convert_int(argv[cnt]);
-				if (params.num_bootstrap_samples < 1) 
-					throw "Wrong number of bootstrap samples";
 				params.compute_ml_tree = false;
 			} else if (strcmp(argv[cnt],"-iqppars") == 0) {
 				params.iqp_assess_quartet = IQP_PARSIMONY;

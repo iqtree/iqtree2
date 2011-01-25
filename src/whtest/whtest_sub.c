@@ -886,6 +886,7 @@ void Compute_q_hat_pairwise()
 	double Q[16], T1[16], T2[16];
 	double rate[6];
 	FILE *fps;
+	double rate_sum;
 	double *q0_matrix = ( double * ) calloc ( 16, sizeof ( double ) );
 
 	num_q = 0;
@@ -960,9 +961,20 @@ void Compute_q_hat_pairwise()
 		fprintf(fps, "%f\n", rate[k]/rate[5]);
 	fprintf ( fps,"\n" );
 
-	free(q0_matrix);
 	fclose ( fps );
 
+	/* check that the scaling is 1 total subst per site */
+	rate_sum = 0.0;
+	for (i = 0; i < 4; i++) {
+		rate_sum -= q0_matrix[i*4+i] * ((i==0) ? statPi[0] : (statPi[i]-statPi[i-1]));
+	}
+	if (fabs(rate_sum - 1.0) > 1e-3) {
+		if (isMasterProc())
+			fprintf ( stderr,"\nq0_matrix not scaled to 1 total subst. per site (%f)\n", rate_sum );
+		Finalize(1);
+	}
+
+	free(q0_matrix);
 }
 
 

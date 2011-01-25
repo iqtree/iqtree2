@@ -264,10 +264,10 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         out << "Random seed number (for debugging purpose): " << params.ran_seed << endl << endl;
         out << "REFERENCES" << endl << "----------" << endl << endl <<
                 "A manuscript describing IQTREE is currently under preparation." << endl << endl <<
-                "Please always cite: " << endl << endl <<
+                "*** Please always cite: " << endl << endl <<
                 "Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space" << endl <<
                 "and stopping in time. Mol. Biol. Evol., 21(8):1565-1571." << endl << endl <<
-                "If you use the parallel version, please cite: " << endl << endl <<
+                "*** If you use the parallel version, please cite: " << endl << endl <<
                 "Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)" << endl <<
                 "pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies." << endl <<
                 "Bioinformatics, 21:3794-3796." << endl << endl;
@@ -354,6 +354,22 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         // Bootstrap analysis:
         //Display as outgroup: a
 
+		if (original_model == "WHTEST") {
+			out << endl << "TEST OF MODEL HOMOGENEITY" << endl << "-------------------------" << endl << endl;
+			out << "Delta of input data:                 " << params.whtest_delta << endl;
+			out << ".95 quantile of Delta distribution:  " << params.whtest_delta_quantile << endl;
+			out << "Number of simulations performed:     " << params.whtest_simulations << endl;
+			out << "P-value:                             " << params.whtest_p_value << endl;
+			if (params.whtest_p_value < 0.05) {
+				out << "RESULT: Homogeneity assumption is rejected (p-value cutoff 0.05)" << endl;
+			} else {
+				out << "RESULT: Homogeneity assumption is NOT rejected (p-value cutoff 0.05)" << endl;
+			}
+			out << endl << "*** For this result please cite:" << endl << endl;
+			out << "G. Weiss and A. von Haeseler (2003) Testing substitution models" << endl
+				<< "within a phylogenetic tree. Mol. Biol. Evol, 20(4):572-578" << endl;
+		}
+
         out << endl << "TREE SEARCH" << endl << "-----------" << endl << endl <<
                 "Stopping rule: " << ((params.stop_condition == SC_STOP_PREDICT) ? "Yes" : "No") << endl <<
                 "Number of iterations: " << tree.stop_rule.getNumIterations() << endl <<
@@ -388,21 +404,6 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
                                         << "Burn-in: " << params.tree_burnin << endl << endl;
                         }*/
 
-		if (original_model == "WHTEST") {
-			out << endl << "TEST OF MODEL HOMOGENEITY" << endl << "-------------------------" << endl << endl;
-			out << "Delta of input data:                 " << params.whtest_delta << endl;
-			out << ".95 quantile of Delta distribution:  " << params.whtest_delta_quantile << endl;
-			out << "Number of simulations performed:     " << params.whtest_simulations << endl;
-			out << "P-value:                             " << params.whtest_p_value << endl;
-			if (params.whtest_p_value < 0.05) {
-				out << "RESULT: Model homogeneity is rejected (p-value cutoff 0.05)" << endl;
-			} else {
-				out << "RESULT: Model homogeneity is NOT rejected (p-value cutoff 0.05)" << endl;
-			}
-			out << endl << "For this result please cite:" << endl;
-			out << "G. Weiss and A. von Haeseler (2003) Testing substitution models" << endl
-				<< "within a phylogenetic tree. Mol. Biol. Evol, 20(4):572-578" << endl << endl;
-		}
 
         time_t cur_time;
         time(&cur_time);
@@ -456,10 +457,11 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
     if (params.num_bootstrap_samples)
         cout << endl << "Non-parametric bootstrap results written to:" << endl
             << "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl
-            << "  Bootstrap trees:          " << params.out_prefix << ".boottrees" << endl
-            << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
-	if (original_model == "WHTEST")
-		cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;
+            << "  Bootstrap trees:          " << params.out_prefix << ".boottrees" << endl;
+	if (params.num_bootstrap_samples > 1)
+        cout << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
+/*	if (original_model == "WHTEST")
+		cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
     cout << endl;
 
 }
@@ -924,9 +926,9 @@ void runPhyloAnalysis(Params &params) {
             cout << endl << "===> START BOOTSTRAP REPLICATE NUMBER " << sample + 1 << endl << endl;
 
             Alignment bootstrap_alignment;
-            IQPTree boot_tree;
             cout << "Creating bootstrap alignment..." << endl;
             bootstrap_alignment.createBootstrapAlignment(&alignment);
+            IQPTree boot_tree(&bootstrap_alignment);
             bootstrap_alignment.printPhylip(bootaln_name.c_str(), true);
             runPhyloAnalysis(params, original_model, &bootstrap_alignment, boot_tree);
             // read in the output tree file
@@ -954,10 +956,13 @@ void runPhyloAnalysis(Params &params) {
                 reportPhyloAnalysis(params, original_model, bootstrap_alignment, boot_tree);
         }
 
-        cout << endl << "===> COMPUTE CONSENSUS TREE FROM " <<
-                params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
-        computeConsensusTree(boottrees_name.c_str(), 0,
-                params.split_threshold, NULL, params.out_prefix);
+		if (params.num_bootstrap_samples > 1) {
+	
+			cout << endl << "===> COMPUTE CONSENSUS TREE FROM " <<
+					params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
+			computeConsensusTree(boottrees_name.c_str(), 0,
+					params.split_threshold, NULL, params.out_prefix);
+		}
 
         if (params.compute_ml_tree) {
             cout << endl << "===> START ANALYSIS ON THE ORIGINAL ALIGNMENT" << endl << endl;

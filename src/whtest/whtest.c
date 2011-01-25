@@ -166,12 +166,12 @@ void WHT_setParams(int nsim, double gamma_shape, char *filename, double *dist) {
 	strcpy ( ausgabe_report, datei_name );
 	strcat ( ausgabe_report, ".whtest" );
 
-	strcpy ( ausgabe_sim_result, ausgabe_report );
-	strcat ( ausgabe_sim_result, ".sim" );
-	strcpy ( ausgabe_dist, ausgabe_report );
-	strcat ( ausgabe_dist, ".dist" );
+	strcpy ( ausgabe_sim_result, datei_name );
+	strcat ( ausgabe_sim_result, ".whsim" );
+	strcpy ( ausgabe_dist, datei_name );
+	strcat ( ausgabe_dist, ".whdist" );
 
-	strcpy ( ausgabe_nj_tree, ausgabe_report );
+	strcpy ( ausgabe_nj_tree, datei_name );
 	strcat ( ausgabe_nj_tree, ".nj" );
 
 	ml_distance = dist;
