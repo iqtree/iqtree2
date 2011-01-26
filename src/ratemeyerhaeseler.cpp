@@ -20,15 +20,12 @@
 #include "phylotree.h"
 #include "ratemeyerhaeseler.h"
 
-const double MIN_SITE_RATE = 1e-6;
-const double MAX_SITE_RATE = 100.0;
-const double TOL_SITE_RATE = 1e-6;
 
 
 RateMeyerHaeseler::RateMeyerHaeseler()
  : RateHeterogeneity()
 {
-	name = "MvH";
+	name = "MH";
 	full_name = "Meyer & von Haeseler (2003)";
 	dist_mat = NULL;
 }
@@ -40,20 +37,41 @@ RateMeyerHaeseler::~RateMeyerHaeseler()
 }
 
 
+double RateMeyerHaeseler::getRate(int category) {
+	if (category < size())
+		return at(category);
+
+	return 1.0;
+}
+
+void RateMeyerHaeseler::getRates(DoubleVector &rates) {
+	rates.clear();
+	if (empty()) {
+		rates.resize(phylo_tree->aln->size(), 1.0);
+	} else {
+		rates.insert(rates.begin(), begin(), end());
+	} 
+}
+
+void RateMeyerHaeseler::setRates(DoubleVector &rates) {
+	clear();
+	insert(begin(), rates.begin(), rates.end());
+}
+
 double RateMeyerHaeseler::optimizeParameters() {
 	assert(phylo_tree);
 	if (!dist_mat) {
 		dist_mat = new double[phylo_tree->leafNum * phylo_tree->leafNum];
-		// compute the distance based on the path lengths between taxa of the tree
-		phylo_tree->calcDist(dist_mat);
 	}
+	// compute the distance based on the path lengths between taxa of the tree
+	phylo_tree->calcDist(dist_mat);
 	if (empty()) resize(phylo_tree->aln->getNPattern(), 1.0);
 	IntVector ok_ptn;
 	ok_ptn.resize(size(), 0);
 	double sum = 0.0;
 	int i;
 	int ok_sites = 0;
-	int saturated_sites = 0;
+	int saturated_sites = 0, saturated_ptn = 0;
 	int invar_sites = 0;
 	int ambiguous_sites = 0;
 	int nseq = phylo_tree->leafNum;
@@ -63,7 +81,10 @@ double RateMeyerHaeseler::optimizeParameters() {
 		if (phylo_tree->aln->at(i).computeAmbiguousChar(nstates) < nseq-2) {
 			optimizeSiteRate(i);
 			if (at(i) == 0.0) invar_sites += freq; 
-			if (at(i) == MAX_SITE_RATE) saturated_sites += freq; 
+			if (at(i) == MAX_SITE_RATE) {
+				saturated_sites += freq; 
+				saturated_ptn ++;
+			}
 		} else { ambiguous_sites += freq; }
 		if (at(i) < MAX_SITE_RATE) {
 			sum += at(i) * freq;
@@ -84,22 +105,43 @@ double RateMeyerHaeseler::optimizeParameters() {
 	}
 	if (saturated_sites) {
 		stringstream str;
-		str << saturated_sites << " sites show saturated (too high) rates";
+		str << saturated_sites << " sites (" << saturated_ptn << " patterns) show too high rates (>=" << MAX_SITE_RATE << ")";
 		outWarning(str.str());
 	}
 	cout << invar_sites << " sites have zero rate" << endl;
-	return 0.0;
+	phylo_tree->clearAllPartialLh();
+	return phylo_tree->computeLikelihood();
 }
 
 double RateMeyerHaeseler::optimizeSiteRate(int site) {
 	optimizing_site = site;
+
+
+		double minf = INFINITY, minx;
+#ifdef DEBUG		
+		for (double val=0.1; val < 100; val += 0.1) {
+			double f = computeFunction(val);
+			
+			//cout << f << " ";
+			if (f < minf) { minf = f; minx = val; }
+		}
+		//cout << endl;
+		//cout << "minx: " << minx << " " << minf << endl;
+#endif
 	double negative_lh;
 	double current_rate = at(site);
 	double ferror, optx;
-	optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, &negative_lh, &ferror);
-	if (optx > MAX_SITE_RATE*0.99) optx = MAX_SITE_RATE;
+	double max_rate = 50;
+    /*if (phylo_tree->optimize_by_newton) // Newton-Raphson method
+        optx = minimizeNewton(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, negative_lh);
+    else */
+		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &negative_lh, &ferror);
+	if (optx > max_rate*0.99) optx = MAX_SITE_RATE;
 	if (optx < MIN_SITE_RATE*1.01) optx = 0;
 	at(site) = optx;
+	if (negative_lh > minf+1e-3) {
+		cout << "Something wrong at pattern " << site << endl;
+	}
 	return optx;
 }
 
@@ -121,6 +163,30 @@ double RateMeyerHaeseler::computeFunction(double value) {
 	return -lh;
 }
 
+double RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf) {
+	int nseq = phylo_tree->leafNum;
+	int nstate = phylo_tree->getModel()->num_states;
+	int i, j;
+	double lh = 0.0;
+	double trans, derv1, derv2;
+	SubstModel *model = phylo_tree->getModel();
+	Pattern *pat = & phylo_tree->aln->at(optimizing_site);
+	df = ddf = 0.0;
+	for (i = 0; i < nseq-1; i++)
+		for (j = i+1; j < nseq; j++) {
+			int state1 = pat->at(i);
+			int state2 = pat->at(j);
+			if (state1 >= nstate || state2 >= nstate) continue;
+			trans = model->computeTrans(value * dist_mat[i*nseq + j], state1, state2, derv1, derv2);
+			lh += log(trans);
+			double t = derv1 / trans;
+			df -= t;
+			ddf -= (derv2/trans - t*t);
+		}
+	return -lh;
+}
+
+
 void RateMeyerHaeseler::writeSiteRates(const char *file_name) {
 	int nsite = phylo_tree->aln->getNSite();
 	int i;
@@ -134,4 +200,42 @@ void RateMeyerHaeseler::writeSiteRates(const char *file_name) {
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, file_name);
 	}
+}
+
+void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
+	int i;
+	if (tree.leafNum < 25) 
+		cout << "WARNING: Method not recommended for less than 25 sequences" << endl;
+	setTree(&tree);
+	//RateHeterogeneity *backup_rate = tree.getRate();
+	tree.getModelFactory()->site_rate = this;
+	tree.setRate(this);
+
+
+	DoubleVector prev_rates;
+	getRates(prev_rates);
+	setRates(prev_rates);
+	string rate_file = params.out_prefix;
+	rate_file += ".mhrate";
+	double prev_lh = tree.getBestScore();
+	string dist_file = params.out_prefix;
+	dist_file += ".tdist";
+
+	for (i = 2; i < 100; i++) {
+		optimizeParameters();
+		writeSiteRates(rate_file.c_str());
+		phylo_tree->aln->printDist(dist_file.c_str(), dist_mat);
+		tree.curScore = tree.optimizeAllBranches();
+		if (params.min_iterations) tree.curScore = tree.optimizeNNI();
+		if (tree.curScore <= prev_lh + TOL_LIKELIHOOD) {
+			break;
+		}
+		getRates(prev_rates);
+		prev_lh = tree.curScore;
+		tree.setBestScore(tree.curScore);
+		cout << "Current Log-likelihood: " << tree.curScore << endl;
+	}
+	cout << "Optimization took " << i-1 << " rounds to finish" << endl;
+	//tree.getModelFactory()->site_rate = backup_rate;
+	//tree.setRate(backup_rate);
 }

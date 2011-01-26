@@ -753,22 +753,27 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
     double state_freq[nstates];
     model->getStateFrequency(state_freq);
 
+	if (!site_rate->isSiteSpecificRate())
     for (cat = 0; cat < ncat; cat++) {
         //trans_mat[cat] = model->newTransMatrix();
         double *trans_cat = trans_mat + (cat * trans_size);
-        model_factory->computeTransMatrix(dad_branch->length * site_rate->getRate(cat), trans_cat);
-        for (state1 = 0; state1 < nstates; state1++) {
+        model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getRate(cat), state_freq, trans_cat);
+        /*for (state1 = 0; state1 < nstates; state1++) {
             double *trans_mat_state = trans_cat + (state1 * nstates);
             for (state2 = 0; state2 < nstates; state2++)
                 trans_mat_state[state2] *= state_freq[state1];
-        }
+        }*/
     }
 
     for (ptn = 0; ptn < aln->size(); ptn++) {
+        if (site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
+        	continue;
         double lh_ptn = 0.0; // likelihood of the pattern
         int dad_state = 1000; // just something big enough
         if (dad->isLeaf())
             dad_state = (*aln)[ptn][dad->id];
+        if (site_rate->isSiteSpecificRate())
+        	model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getRate(ptn), state_freq, trans_mat);
         for (cat = 0; cat < ncat; cat++) {
             double *partial_lh_site = node_branch->partial_lh + (ptn * block + cat * nstates);
             double *partial_lh_child = dad_branch->partial_lh + (ptn * block + cat * nstates);
@@ -927,10 +932,14 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
 
             dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
 
+			if (!site_rate->isSiteSpecificRate())
             for (cat = 0; cat < ncat; cat++)
                 model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), trans_mat[cat]);
 
             for (ptn = 0; ptn < aln->size(); ptn++) {
+            	if (site_rate->isSiteSpecificRate())
+                	model_factory->computeTransMatrix((*it)->length * site_rate->getRate(ptn), trans_mat[0]);
+            	
                 for (cat = 0; cat < ncat; cat++) {
                     partial_lh_site = dad_branch->partial_lh + (ptn * block + cat * nstates);
                     double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + (ptn * block + cat * nstates);
@@ -1281,14 +1290,16 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     double state_freq[nstates];
     model->getStateFrequency(state_freq);
 
+	if (!site_rate->isSiteSpecificRate())
     for (cat = 0; cat < ncat; cat++) {
         //trans_mat[cat] = model->newTransMatrix();
         double *trans_cat = trans_mat + (cat * trans_size);
         double *derv1_cat = trans_derv1 + (cat * trans_size);
         double *derv2_cat = trans_derv2 + (cat * trans_size);
         double rate_val = site_rate->getRate(cat);
-        double rate_sqr = rate_val * rate_val;
-        model_factory->computeTransDerv(dad_branch->length * rate_val, trans_cat, derv1_cat, derv2_cat);
+        //double rate_sqr = rate_val * rate_val;
+        model_factory->computeTransDervFreq(dad_branch->length, rate_val, state_freq, trans_cat, derv1_cat, derv2_cat);
+		/*
         for (state1 = 0; state1 < nstates; state1++) {
             double *trans_mat_state = trans_cat + (state1 * nstates);
             double *trans_derv1_state = derv1_cat + (state1 * nstates);
@@ -1299,16 +1310,21 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
                 trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
                 trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
             }
-        }
+        }*/
     }
 
     for (ptn = 0; ptn < aln->size(); ptn++) {
+        if (site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
+        	continue;
         double lh_ptn = 0.0; // likelihood of the pattern
         double lh_ptn_derv1 = 0.0;
         double lh_ptn_derv2 = 0.0;
         int dad_state = STATE_UNKNOWN;
         if (dad->isLeaf())
             dad_state = (*aln)[ptn][dad->id];
+        if (site_rate->isSiteSpecificRate())
+	        model_factory->computeTransDervFreq(dad_branch->length, site_rate->getRate(ptn), state_freq, 
+	        	trans_mat, trans_derv1, trans_derv2);
         for (cat = 0; cat < ncat; cat++) {
             double *partial_lh_site = node_branch->partial_lh + (ptn * block + cat * nstates);
             double *partial_lh_child = dad_branch->partial_lh + (ptn * block + cat * nstates);
@@ -1430,7 +1446,7 @@ double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
 
 double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
     //double tree_lh = optimizeChildBranches(node, dad);
-    double tree_lh;
+    double tree_lh = 0.0;
 
     FOR_NEIGHBOR_IT(node, dad, it) {
         //if (!(*it)->node->isLeaf())

@@ -449,7 +449,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
             cout << "  Likelihood distances:     " << params.out_prefix << ".mldist" << endl;
     }
     if (params.mvh_site_rate)
-        cout << "  Site-rates by MvH model:  " << params.out_prefix << ".mvhrate" << endl;
+        cout << "  Site-rates by MH model:   " << params.out_prefix << ".mhrate" << endl;
 
     if (params.print_site_lh)
 		cout << "  Site log-likelihoods:     " << params.out_prefix << ".sitelh" << endl;
@@ -828,14 +828,14 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     tree.root = tree.findNodeName(alignment->getSeqName(0));
     assert(tree.root);
 
+    RateMeyerHaeseler *rate_mvh = new RateMeyerHaeseler();
+
     if (params.mvh_site_rate) {
-        RateMeyerHaeseler rate_mvh;
-        cout << "Computing site-specific rates by " << rate_mvh.full_name << "..." << endl;
-        rate_mvh.setTree(&tree);
-        rate_mvh.optimizeParameters();
-        string rate_file = params.out_prefix;
-        rate_file += ".mvhrate";
-        rate_mvh.writeSiteRates(rate_file.c_str());
+        cout << endl << "Computing site-specific rates by " << rate_mvh->full_name << "..." << endl;
+        rate_mvh->runIterativeProc(params, tree);
+    	cout << "BEST SCORE FOUND : " << tree.getBestScore() << endl;
+		
+    	
     }
 
     if (params.aLRT_replicates > 0) {

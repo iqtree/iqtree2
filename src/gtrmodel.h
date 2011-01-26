@@ -107,6 +107,16 @@ public:
 	virtual double computeTrans(double time, int state1, int state2);
 
 	/**
+		compute the transition probability between two states
+		@param time time between two events
+		@param state1 first state
+		@param state2 second state
+		@param derv1 (OUT) 1st derivative
+		@param derv2 (OUT) 2nd derivative
+	*/
+	virtual double computeTrans(double time, int state1, int state2, double &derv1, double &derv2);
+
+	/**
 		Get the rate matrix.
 		@param rate_mat (OUT) upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
 	*/

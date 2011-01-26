@@ -37,10 +37,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	is_storing = false;
 
 	string model_str = params.model_name;
-	if (model_str == "")
+	if (model_str == "") {
 		if (tree->aln->num_states == 4) model_str = "HKY";
 		else if (tree->aln->num_states == 20) model_str = "WAG";
 		else model_str = "JC";
+	}
 	string::size_type pos = model_str.find('+');
 
 	/* create site-rate heterogeneity */
@@ -180,6 +181,15 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix) {
 	memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
 }
 
+void ModelFactory::computeTransMatrixFreq(double time, double *state_freq, double *trans_matrix) {
+	int nstates = model->num_states;
+	computeTransMatrix(time, trans_matrix);
+	for (int state1 = 0; state1 < nstates; state1++) {
+		double *trans_mat_state = trans_matrix + (state1 * nstates);
+		for (int state2 = 0; state2 < nstates; state2++)
+			trans_mat_state[state2] *= state_freq[state1];
+	}
+}
 
 void ModelFactory::computeTransDerv(double time, double *trans_matrix, 
 	double *trans_derv1, double *trans_derv2) {
@@ -202,6 +212,25 @@ void ModelFactory::computeTransDerv(double time, double *trans_matrix,
 	memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
 	memcpy(trans_derv1, ass_it->second + mat_size, mat_size * sizeof(double));
 	memcpy(trans_derv2, ass_it->second + (mat_size*2), mat_size * sizeof(double));
+}
+
+void ModelFactory::computeTransDervFreq(double time, double rate_val, double *state_freq, double *trans_matrix, 
+		double *trans_derv1, double *trans_derv2) 
+{
+	int nstates = model->num_states;	
+	double rate_sqr = rate_val*rate_val;
+	computeTransDerv(time * rate_val, trans_matrix, trans_derv1, trans_derv2);
+	for (int state1 = 0; state1 < nstates; state1++) {
+		double *trans_mat_state = trans_matrix + (state1 * nstates);
+		double *trans_derv1_state = trans_derv1 + (state1 * nstates);
+		double *trans_derv2_state = trans_derv2 + (state1 * nstates);
+
+		for (int state2 = 0; state2 < nstates; state2++) {
+			trans_mat_state[state2] *= state_freq[state1];
+			trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
+			trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
+		}
+	}
 }
 
 ModelFactory::~ModelFactory()

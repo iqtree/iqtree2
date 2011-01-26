@@ -22,6 +22,8 @@
 
 #include "rateheterogeneity.h"
 #include "tools.h"
+#include "iqptree.h"
+
 
 /**
 Implementation for site-specific rates of Meyer & von Haeseler (2003)
@@ -42,20 +44,29 @@ public:
 	*/
     ~RateMeyerHaeseler();
 
+	/**
+		@return true 
+	*/
+	virtual bool isSiteSpecificRate() { return true; }
 
 	/**
 		get the number of rate categories. 
 		@return the number of rate categories
 	*/
-	virtual int getNRate() { return size(); }
+	//virtual int getNRate() { return size(); }
 
 	/**
 		get the rate of a specified category
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) { assert(category < size()); return at(category); }
+	virtual double getRate(int category);
 
+
+	void getRates(DoubleVector &rates);
+
+
+	void setRates(DoubleVector &rates);
 
 	/**
 		optimize parameters, the rates in this case
@@ -77,6 +88,14 @@ public:
 	*/
 	virtual double computeFunction(double value);
 
+	/**
+		This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
+		@param value x-value of the function
+		@param df (OUT) first derivative
+		@param ddf (OUT) second derivative
+		@return f(value) of function f you want to minimize
+	*/
+	virtual double computeFuncDerv(double value, double &df, double &ddf);
 
 	/**
 		write site-rates to a file in the following format:
@@ -85,6 +104,8 @@ public:
 		....
 	*/
 	void writeSiteRates(const char *file_name);
+
+	void runIterativeProc(Params &params, IQPTree &tree);
 
 	/**
 		distance matrix inferred from the path lengths of the tree (not from the sequences)

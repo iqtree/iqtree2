@@ -77,6 +77,8 @@ public:
 	*/
 	void computeTransMatrix(double time, double *trans_matrix);
 
+	void computeTransMatrixFreq(double time, double *state_freq, double *trans_matrix);
+
 	/**
 		Wrapper for computing the transition probability between two states.
 		@param time time between two events
@@ -95,6 +97,9 @@ public:
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	void computeTransDerv(double time, double *trans_matrix, 
+		double *trans_derv1, double *trans_derv2);
+
+	void computeTransDervFreq(double time, double rate_val, double *state_freq, double *trans_matrix, 
 		double *trans_derv1, double *trans_derv2);
 
 	/**

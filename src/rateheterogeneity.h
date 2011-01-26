@@ -27,6 +27,11 @@ using namespace std;
 
 class PhyloTree;
 
+const double MIN_SITE_RATE = 1e-6;
+const double MAX_SITE_RATE = 200.0;
+const double TOL_SITE_RATE = 1e-6;
+
+
 /**
 class for among-site rate heterogeneity, the default is homogeneous (equal) rate model
 
@@ -57,6 +62,11 @@ public:
 		@param tree associated phyogenetic tree
 	*/
 	PhyloTree *getTree() { return phylo_tree; }
+
+	/**
+		@return false by default. True if rates are site-specific (Meyer and von Haeseler (2003) model)
+	*/
+	virtual bool isSiteSpecificRate() { return false; }
 
 	/**
 		get the number of rate categories. The default returns 1 category since it is homogeneous model

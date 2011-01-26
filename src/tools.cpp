@@ -925,8 +925,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mod <model_name>";
 				params.model_name = argv[cnt];
-			} else if (strcmp(argv[cnt],"-mvh") == 0) {
+			} else if (strcmp(argv[cnt],"-mh") == 0) {
 				params.mvh_site_rate = true;
+				params.SSE = false;
 			} else if (strcmp(argv[cnt],"-mstore") == 0) {
 				params.store_trans_matrix = true;
 			} else if (strcmp(argv[cnt], "-phyml_opt") == 0) {
@@ -1195,7 +1196,13 @@ void usage_iqtree(char* argv[], bool full_command) {
 		 << "                       categories for Gamma rates (default: n=4)" << endl
 		 << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
 		 << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
+		 << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
+		 << "                       Meyer & von Haeseler (2003) method" << endl
 		 //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
+	<< endl << "TEST OF MODEL HOMOGENEITY OPTIONS:" << endl
+		 << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
+		 << "                       Weiss & von Haeseler (2003) method" << endl
+		 << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
 	<< endl << "TREE INFERENCE OPTIONS:" << endl
 		 << "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
 		 << "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl
