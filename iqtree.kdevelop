@@ -14,14 +14,14 @@
     <projectname>pda</projectname>
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
-    <description/>
-    <defaultencoding/>
+    <description></description>
+    <defaultencoding></defaultencoding>
     <versioncontrol>kdevsubversion</versioncontrol>
   </general>
   <kdevautoproject>
     <general>
       <activetarget>src/pda</activetarget>
-      <useconfiguration>optimized</useconfiguration>
+      <useconfiguration>debug</useconfiguration>
     </general>
     <run>
       <mainprogram>/scratch/minh/projects/pda/debug/src/pda</mainprogram>
@@ -36,7 +36,7 @@
         <pda>/scratch/minh/projects/pda/debug/./src</pda>
       </cwd>
       <programargs> -aln example.phy -n 2 -vv -mod HKY -pdel 0.5 </programargs>
-      <globaldebugarguments>-s 10.phy </globaldebugarguments>
+      <globaldebugarguments>-s 30.phy -nosse -mh -n 0 -m JC 30.phy.iqpnni.treefile</globaldebugarguments>
       <globalcwd>/home/CIBIV/minh/projects/pda/branches/iq-tree/examples/</globalcwd>
       <useglobalprogram>true</useglobalprogram>
       <autocompile>false</autocompile>
@@ -96,6 +96,23 @@
         <cxxflags>-pg -fprofile-arcs -O0</cxxflags>
         <f77flags/>
       </profile>
+      <optimized-O3>
+        <envvars/>
+        <configargs/>
+        <builddir>/scratch/minh/projects/pda/optimized-O3</builddir>
+        <topsourcedir/>
+        <cppflags/>
+        <ldflags/>
+        <ccompiler>kdevgccoptions</ccompiler>
+        <cxxcompiler>kdevgppoptions</cxxcompiler>
+        <f77compiler>kdevg77options</f77compiler>
+        <ccompilerbinary/>
+        <cxxcompilerbinary/>
+        <f77compilerbinary/>
+        <cflags/>
+        <cxxflags>-O3 -g</cxxflags>
+        <f77flags/>
+      </optimized-O3>
     </configurations>
     <make>
       <envvars>
@@ -229,7 +246,7 @@
       <includePaths>.;</includePaths>
     </codecompletion>
     <creategettersetter>
-      <prefixGet/>
+      <prefixGet></prefixGet>
       <prefixSet>set</prefixSet>
       <prefixVariable>m_,_</prefixVariable>
       <parameterName>theValue</parameterName>
@@ -251,11 +268,11 @@
   </cppsupportpart>
   <kdevdebugger>
     <general>
-      <gdbpath/>
-      <dbgshell/>
-      <configGdbScript/>
-      <runShellScript/>
-      <runGdbScript/>
+      <gdbpath></gdbpath>
+      <dbgshell></dbgshell>
+      <configGdbScript></configGdbScript>
+      <runShellScript></runShellScript>
+      <runGdbScript></runGdbScript>
       <breakonloadinglibs>true</breakonloadinglibs>
       <separatetty>false</separatetty>
       <floatingtoolbar>false</floatingtoolbar>
