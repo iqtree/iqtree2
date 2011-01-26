@@ -33,10 +33,16 @@ void SubstModel::computeTransMatrix(double time, double *trans_matrix) {
 }
 
 double SubstModel::computeTrans(double time, int state1, int state2) {
-	double non_diagonal = (1.0 - exp(-time*num_states/(num_states - 1))) / num_states;
+	double expt = exp(-time * num_states / (num_states-1));
+	if (state1 != state2) {
+		return (1.0 - expt) / num_states;
+	}
+	return (1.0 + (num_states-1)*expt) / num_states;
+
+/*	double non_diagonal = (1.0 - exp(-time*num_states/(num_states - 1))) / num_states;
 	if (state1 != state2)
 		return non_diagonal;
-	return 1.0 - non_diagonal * (num_states - 1);
+	return 1.0 - non_diagonal * (num_states - 1);*/
 }
 
 double SubstModel::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {

@@ -43,18 +43,20 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
-LTLIBRARIES = $(noinst_LTLIBRARIES)
-liblpsolve_la_LIBADD =
-am_liblpsolve_la_OBJECTS = colamd.lo commonlib.lo ini.lo lp_Hash.lo \
-	lp_LUSOL.lo lp_MDO.lo lp_MPS.lo lp_SOS.lo lp_crash.lo \
-	lp_lib.lo lp_matrix.lo lp_mipbb.lo lp_params.lo lp_presolve.lo \
-	lp_price.lo lp_pricePSE.lo lp_report.lo lp_rlp.lo lp_scale.lo \
-	lp_simplex.lo lp_utils.lo lp_wlp.lo lusol.lo mmio.lo myblas.lo \
-	yacc_read.lo
-liblpsolve_la_OBJECTS = $(am_liblpsolve_la_OBJECTS)
-liblpsolve_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(liblpsolve_la_LDFLAGS) $(LDFLAGS) -o $@
+LIBRARIES = $(noinst_LIBRARIES)
+ARFLAGS = cru
+liblpsolve_a_AR = $(AR) $(ARFLAGS)
+liblpsolve_a_LIBADD =
+am_liblpsolve_a_OBJECTS = colamd.$(OBJEXT) commonlib.$(OBJEXT) \
+	ini.$(OBJEXT) lp_Hash.$(OBJEXT) lp_LUSOL.$(OBJEXT) \
+	lp_MDO.$(OBJEXT) lp_MPS.$(OBJEXT) lp_SOS.$(OBJEXT) \
+	lp_crash.$(OBJEXT) lp_lib.$(OBJEXT) lp_matrix.$(OBJEXT) \
+	lp_mipbb.$(OBJEXT) lp_params.$(OBJEXT) lp_presolve.$(OBJEXT) \
+	lp_price.$(OBJEXT) lp_pricePSE.$(OBJEXT) lp_report.$(OBJEXT) \
+	lp_rlp.$(OBJEXT) lp_scale.$(OBJEXT) lp_simplex.$(OBJEXT) \
+	lp_utils.$(OBJEXT) lp_wlp.$(OBJEXT) lusol.$(OBJEXT) \
+	mmio.$(OBJEXT) myblas.$(OBJEXT) yacc_read.$(OBJEXT)
+liblpsolve_a_OBJECTS = $(am_liblpsolve_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -67,8 +69,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(liblpsolve_la_SOURCES)
-DIST_SOURCES = $(liblpsolve_la_SOURCES)
+SOURCES = $(liblpsolve_a_SOURCES)
+DIST_SOURCES = $(liblpsolve_a_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -202,8 +204,8 @@ INCLUDES = -I$(top_srcdir)/src/lp/shared -I$(top_srcdir)/src/lp/bfp \
 	-I$(top_srcdir)/src/lp/bfp/bfp_LUSOL -I$(top_srcdir)/src/lp/bfp/bfp_LUSOL/LUSOL \
 	-I$(top_srcdir)/src/lp/colamd $(all_includes)
 
-noinst_LTLIBRARIES = liblpsolve.la
-liblpsolve_la_SOURCES = colamd.c commonlib.c ini.c lp_Hash.c lp_LUSOL.c \
+noinst_LIBRARIES = liblpsolve.a
+liblpsolve_a_SOURCES = colamd.c commonlib.c ini.c lp_Hash.c lp_LUSOL.c \
 	lp_MDO.c lp_MPS.c lp_SOS.c lp_crash.c lp_lib.c lp_matrix.c lp_mipbb.c \
 	lp_params.c lp_presolve.c lp_price.c lp_pricePSE.c lp_report.c lp_rlp.c lp_scale.c \
 	lp_simplex.c lp_utils.c lp_wlp.c lusol.c mmio.c myblas.c yacc_read.c
@@ -211,7 +213,7 @@ liblpsolve_la_SOURCES = colamd.c commonlib.c ini.c lp_Hash.c lp_LUSOL.c \
 AM_CFLAGS = -DINVERSE_ACTIVE=INVERSE_LUSOL -DPARSER_LP \
 	-DRoleIsExternalInvEngine -DYY_NEVER_INTERACTIVE
 
-liblpsolve_la_LDFLAGS = -ldl
+AM_LDFLAGS = -ldl
 SUBDIRS = shared bfp colamd
 noinst_HEADERS = declare.h fortify.h ini.h lp_Hash.h lp_MDO.h lp_MPS.h lp_SOS.h \
 	lp_crash.h lp_explicit.h lp_fortify.h lp_lib.h lp_matrix.h lp_mipbb.h \
@@ -252,16 +254,12 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 
-clean-noinstLTLIBRARIES:
-	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
-	@list='$(noinst_LTLIBRARIES)'; for p in $$list; do \
-	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
-	  test "$$dir" != "$$p" || dir=.; \
-	  echo "rm -f \"$${dir}/so_locations\""; \
-	  rm -f "$${dir}/so_locations"; \
-	done
-liblpsolve.la: $(liblpsolve_la_OBJECTS) $(liblpsolve_la_DEPENDENCIES) 
-	$(liblpsolve_la_LINK)  $(liblpsolve_la_OBJECTS) $(liblpsolve_la_LIBADD) $(LIBS)
+clean-noinstLIBRARIES:
+	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+liblpsolve.a: $(liblpsolve_a_OBJECTS) $(liblpsolve_a_DEPENDENCIES) 
+	-rm -f liblpsolve.a
+	$(liblpsolve_a_AR) liblpsolve.a $(liblpsolve_a_OBJECTS) $(liblpsolve_a_LIBADD)
+	$(RANLIB) liblpsolve.a
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -269,32 +267,32 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/colamd.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/commonlib.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ini.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_Hash.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_LUSOL.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_MDO.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_MPS.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_SOS.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_crash.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_lib.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_matrix.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_mipbb.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_params.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_presolve.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_price.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_pricePSE.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_report.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_rlp.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_scale.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_simplex.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_utils.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_wlp.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lusol.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mmio.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/myblas.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/yacc_read.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/colamd.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/commonlib.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ini.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_Hash.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_LUSOL.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_MDO.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_MPS.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_SOS.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_crash.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_lib.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_matrix.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_mipbb.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_params.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_presolve.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_price.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_pricePSE.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_report.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_rlp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_scale.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_simplex.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_utils.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lp_wlp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lusol.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mmio.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/myblas.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/yacc_read.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -498,7 +496,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-recursive
-all-am: Makefile $(LTLIBRARIES) $(HEADERS)
+all-am: Makefile $(LIBRARIES) $(HEADERS)
 installdirs: installdirs-recursive
 installdirs-am:
 install: install-recursive
@@ -527,7 +525,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-recursive
 
-clean-am: clean-generic clean-libtool clean-noinstLTLIBRARIES \
+clean-am: clean-generic clean-libtool clean-noinstLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-recursive
@@ -589,7 +587,7 @@ uninstall-am:
 
 .PHONY: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) CTAGS GTAGS \
 	all all-am check check-am clean clean-generic clean-libtool \
-	clean-noinstLTLIBRARIES ctags ctags-recursive distclean \
+	clean-noinstLIBRARIES ctags ctags-recursive distclean \
 	distclean-compile distclean-generic distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-dvi \

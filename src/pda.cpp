@@ -132,7 +132,7 @@ inline void separator(ostream &out, int type = 0) {
 
 void printCopyright(ostream &out) {
  	out << "PDA - Phylogenetic Diversity Analyzer version " << VERSION << " built " << __DATE__;
-#ifdef DEBUG
+#ifndef NDEBUG
 	out << " - debug mode";
 #endif
 	out << endl << "Copyright (c) 2006-2008 Bui Quang Minh, Steffen Klaere and Arndt von Haeseler." << endl << endl;

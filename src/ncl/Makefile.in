@@ -43,14 +43,19 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
-LTLIBRARIES = $(noinst_LTLIBRARIES)
-libNCL_la_LIBADD =
-am_libNCL_la_OBJECTS = nxsassumptionsblock.lo nxsblock.lo \
-	nxscharactersblock.lo nxsdatablock.lo nxsdiscretedatum.lo \
-	nxsdiscretematrix.lo nxsdistancedatum.lo nxsdistancesblock.lo \
-	nxsemptyblock.lo nxsexception.lo nxsreader.lo nxssetreader.lo \
-	nxsstring.lo nxstaxablock.lo nxstoken.lo nxstreesblock.lo
-libNCL_la_OBJECTS = $(am_libNCL_la_OBJECTS)
+LIBRARIES = $(noinst_LIBRARIES)
+ARFLAGS = cru
+libNCL_a_AR = $(AR) $(ARFLAGS)
+libNCL_a_LIBADD =
+am_libNCL_a_OBJECTS = nxsassumptionsblock.$(OBJEXT) nxsblock.$(OBJEXT) \
+	nxscharactersblock.$(OBJEXT) nxsdatablock.$(OBJEXT) \
+	nxsdiscretedatum.$(OBJEXT) nxsdiscretematrix.$(OBJEXT) \
+	nxsdistancedatum.$(OBJEXT) nxsdistancesblock.$(OBJEXT) \
+	nxsemptyblock.$(OBJEXT) nxsexception.$(OBJEXT) \
+	nxsreader.$(OBJEXT) nxssetreader.$(OBJEXT) nxsstring.$(OBJEXT) \
+	nxstaxablock.$(OBJEXT) nxstoken.$(OBJEXT) \
+	nxstreesblock.$(OBJEXT)
+libNCL_a_OBJECTS = $(am_libNCL_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -63,8 +68,8 @@ CXXLD = $(CXX)
 CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libNCL_la_SOURCES)
-DIST_SOURCES = $(libNCL_la_SOURCES)
+SOURCES = $(libNCL_a_SOURCES)
+DIST_SOURCES = $(libNCL_a_SOURCES)
 HEADERS = $(noinst_HEADERS)
 ETAGS = etags
 CTAGS = ctags
@@ -191,8 +196,8 @@ noinst_HEADERS = ncl.h nxsassumptionsblock.h nxsblock.h nxscharactersblock.h \
 	nxsdistancesblock.h nxsemptyblock.h nxsexception.h nxsindent.h nxsreader.h nxssetreader.h \
 	nxsstring.h nxstaxablock.h nxstoken.h nxstreesblock.h
 
-noinst_LTLIBRARIES = libNCL.la
-libNCL_la_SOURCES = nxsassumptionsblock.cpp nxsblock.cpp nxscharactersblock.cpp \
+noinst_LIBRARIES = libNCL.a
+libNCL_a_SOURCES = nxsassumptionsblock.cpp nxsblock.cpp nxscharactersblock.cpp \
 	nxsdatablock.cpp nxsdiscretedatum.cpp nxsdiscretematrix.cpp nxsdistancedatum.cpp \
 	nxsdistancesblock.cpp nxsemptyblock.cpp nxsexception.cpp nxsreader.cpp nxssetreader.cpp \
 	nxsstring.cpp nxstaxablock.cpp nxstoken.cpp nxstreesblock.cpp
@@ -231,16 +236,12 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 
-clean-noinstLTLIBRARIES:
-	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
-	@list='$(noinst_LTLIBRARIES)'; for p in $$list; do \
-	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
-	  test "$$dir" != "$$p" || dir=.; \
-	  echo "rm -f \"$${dir}/so_locations\""; \
-	  rm -f "$${dir}/so_locations"; \
-	done
-libNCL.la: $(libNCL_la_OBJECTS) $(libNCL_la_DEPENDENCIES) 
-	$(CXXLINK)  $(libNCL_la_OBJECTS) $(libNCL_la_LIBADD) $(LIBS)
+clean-noinstLIBRARIES:
+	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+libNCL.a: $(libNCL_a_OBJECTS) $(libNCL_a_DEPENDENCIES) 
+	-rm -f libNCL.a
+	$(libNCL_a_AR) libNCL.a $(libNCL_a_OBJECTS) $(libNCL_a_LIBADD)
+	$(RANLIB) libNCL.a
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -248,22 +249,22 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsassumptionsblock.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsblock.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxscharactersblock.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsdatablock.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsdiscretedatum.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsdiscretematrix.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsdistancedatum.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsdistancesblock.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsemptyblock.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsexception.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsreader.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxssetreader.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsstring.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxstaxablock.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxstoken.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxstreesblock.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsassumptionsblock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsblock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxscharactersblock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsdatablock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsdiscretedatum.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsdiscretematrix.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsdistancedatum.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsdistancesblock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsemptyblock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsexception.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsreader.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxssetreader.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxsstring.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxstaxablock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxstoken.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nxstreesblock.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -367,7 +368,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(HEADERS)
+all-am: Makefile $(LIBRARIES) $(HEADERS)
 installdirs:
 install: install-am
 install-exec: install-exec-am
@@ -395,7 +396,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-libtool clean-noinstLTLIBRARIES \
+clean-am: clean-generic clean-libtool clean-noinstLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
@@ -455,7 +456,7 @@ uninstall-am:
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-libtool clean-noinstLTLIBRARIES ctags distclean \
+	clean-libtool clean-noinstLIBRARIES ctags distclean \
 	distclean-compile distclean-generic distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-dvi \

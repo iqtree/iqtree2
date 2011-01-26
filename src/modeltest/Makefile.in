@@ -43,10 +43,12 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
-LTLIBRARIES = $(noinst_LTLIBRARIES)
-libmodeltest_la_LIBADD =
-am_libmodeltest_la_OBJECTS = modeltest3_7.lo
-libmodeltest_la_OBJECTS = $(am_libmodeltest_la_OBJECTS)
+LIBRARIES = $(noinst_LIBRARIES)
+ARFLAGS = cru
+libmodeltest_a_AR = $(AR) $(ARFLAGS)
+libmodeltest_a_LIBADD =
+am_libmodeltest_a_OBJECTS = modeltest3_7.$(OBJEXT)
+libmodeltest_a_OBJECTS = $(am_libmodeltest_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -59,8 +61,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libmodeltest_la_SOURCES)
-DIST_SOURCES = $(libmodeltest_la_SOURCES)
+SOURCES = $(libmodeltest_a_SOURCES)
+DIST_SOURCES = $(libmodeltest_a_SOURCES)
 HEADERS = $(noinst_HEADERS)
 ETAGS = etags
 CTAGS = ctags
@@ -182,8 +184,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 INCLUDES = $(all_includes)
 METASOURCES = AUTO
-noinst_LTLIBRARIES = libmodeltest.la
-libmodeltest_la_SOURCES = modeltest3_7.c
+noinst_LIBRARIES = libmodeltest.a
+libmodeltest_a_SOURCES = modeltest3_7.c
 noinst_HEADERS = modeltest3_7.h
 all: all-am
 
@@ -219,16 +221,12 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 
-clean-noinstLTLIBRARIES:
-	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
-	@list='$(noinst_LTLIBRARIES)'; for p in $$list; do \
-	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
-	  test "$$dir" != "$$p" || dir=.; \
-	  echo "rm -f \"$${dir}/so_locations\""; \
-	  rm -f "$${dir}/so_locations"; \
-	done
-libmodeltest.la: $(libmodeltest_la_OBJECTS) $(libmodeltest_la_DEPENDENCIES) 
-	$(LINK)  $(libmodeltest_la_OBJECTS) $(libmodeltest_la_LIBADD) $(LIBS)
+clean-noinstLIBRARIES:
+	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+libmodeltest.a: $(libmodeltest_a_OBJECTS) $(libmodeltest_a_DEPENDENCIES) 
+	-rm -f libmodeltest.a
+	$(libmodeltest_a_AR) libmodeltest.a $(libmodeltest_a_OBJECTS) $(libmodeltest_a_LIBADD)
+	$(RANLIB) libmodeltest.a
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -236,7 +234,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modeltest3_7.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modeltest3_7.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -340,7 +338,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(HEADERS)
+all-am: Makefile $(LIBRARIES) $(HEADERS)
 installdirs:
 install: install-am
 install-exec: install-exec-am
@@ -368,7 +366,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-libtool clean-noinstLTLIBRARIES \
+clean-am: clean-generic clean-libtool clean-noinstLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
@@ -428,7 +426,7 @@ uninstall-am:
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-libtool clean-noinstLTLIBRARIES ctags distclean \
+	clean-libtool clean-noinstLIBRARIES ctags distclean \
 	distclean-compile distclean-generic distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-dvi \

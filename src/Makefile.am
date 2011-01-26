@@ -4,7 +4,7 @@ bin_PROGRAMS = pda
 INCLUDES = $(all_includes)
 
 # the library search path.
-pda_LDFLAGS = $(all_libraries) -ldl
+pda_LDFLAGS = $(all_libraries) -ldl -static
 pda_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
 	eigendecomposition.cpp greedy.cpp gtrmodel.cpp gurobiwrapper.cpp hashsplitset.cpp iqptree.cpp \
 	lpwrapper.c matree.cpp mexttree.cpp modeldna.cpp modelfactory.cpp modelprotein.cpp \
@@ -23,8 +23,7 @@ noinst_HEADERS = alignment.h alignmentpairwise.h bionj.h circularnetwork.h \
 	stoprule.h substmodel.h tools.h whtest_wrapper.h
 SUBDIRS = lp modeltest ncl whtest
 pda_LDADD = $(top_builddir)/src/whtest/libwhtest.a \
-	$(top_builddir)/src/lp/liblpsolve.la $(top_builddir)/src/modeltest/libmodeltest.la \
-	$(top_builddir)/src/ncl/libNCL.la $(top_srcdir)/lib/libacml_mv.a
-AM_CXXFLAGS = -Wno-deprecated -static
-AM_CFLAGS = -Wno-deprecated -static
+	$(top_builddir)/src/ncl/libNCL.a $(top_builddir)/src/modeltest/libmodeltest.a \
+	$(top_builddir)/src/lp/liblpsolve.a $(top_srcdir)/lib/libacml_mv.a
+AM_CXXFLAGS = -Wno-deprecated
 

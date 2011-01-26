@@ -116,22 +116,12 @@ double RateMeyerHaeseler::optimizeParameters() {
 double RateMeyerHaeseler::optimizeSiteRate(int site) {
 	optimizing_site = site;
 
+	double max_rate = 100;
 
 		double minf = INFINITY, minx;
-#ifdef DEBUG		
-		for (double val=0.1; val < 100; val += 0.1) {
-			double f = computeFunction(val);
-			
-			//cout << f << " ";
-			if (f < minf) { minf = f; minx = val; }
-		}
-		//cout << endl;
-		//cout << "minx: " << minx << " " << minf << endl;
-#endif
 	double negative_lh;
 	double current_rate = at(site);
 	double ferror, optx;
-	double max_rate = 50;
     /*if (phylo_tree->optimize_by_newton) // Newton-Raphson method
         optx = minimizeNewton(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, negative_lh);
     else */
@@ -139,9 +129,28 @@ double RateMeyerHaeseler::optimizeSiteRate(int site) {
 	if (optx > max_rate*0.99) optx = MAX_SITE_RATE;
 	if (optx < MIN_SITE_RATE*1.01) optx = 0;
 	at(site) = optx;
-	if (negative_lh > minf+1e-3) {
-		cout << "Something wrong at pattern " << site << endl;
+#ifndef NDEBUG		
+	if (optx == MAX_SITE_RATE) {
+		cout << "Checking pattern " << site << endl;
+		ofstream out("x", ios::app);
+		out << site;
+		for (double val=0.1; val <= 30; val += 0.1) {
+			double f = computeFunction(val);
+			
+			out << " " << f;
+			if (f < minf) { minf = f; minx = val; }
+		}
+		out << endl;
+		//cout << "minx: " << minx << " " << minf << endl;
+		if (negative_lh > minf+1e-3) {
+			optx = minimizeOneDimen(MIN_SITE_RATE, minx, max_rate, 1e-3, &negative_lh, &ferror);
+			at(site) = optx;
+			cout << "FIX rate: " << minx << " -> " << optx << endl;
+		}
+		out.close();
 	}
+#endif
+
 	return optx;
 }
 

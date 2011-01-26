@@ -24,7 +24,7 @@
       <useconfiguration>debug</useconfiguration>
     </general>
     <run>
-      <mainprogram>/scratch/minh/projects/pda/debug/src/pda</mainprogram>
+      <mainprogram>/home/minh/projects/iqpnni_new/branches/iq-tree/debug/src/pda</mainprogram>
       <terminal>true</terminal>
       <runarguments>
         <pda/>
@@ -35,9 +35,9 @@
       <cwd>
         <pda>/scratch/minh/projects/pda/debug/./src</pda>
       </cwd>
-      <programargs> -aln example.phy -n 2 -vv -mod HKY -pdel 0.5 </programargs>
-      <globaldebugarguments>-s 30.phy -nosse -mh -n 0 -m JC 30.phy.iqpnni.treefile</globaldebugarguments>
-      <globalcwd>/home/CIBIV/minh/projects/pda/branches/iq-tree/examples/</globalcwd>
+      <programargs> -aln 8.aln -n 10  -mod HKY -pdel 0.3 -krep 4</programargs>
+      <globaldebugarguments>-s 30.phy -n 0 -mh -nosse -m JC</globaldebugarguments>
+      <globalcwd>/home/minh/projects/iqpnni_new/branches/iq-tree/examples/</globalcwd>
       <useglobalprogram>true</useglobalprogram>
       <autocompile>false</autocompile>
       <autoinstall>false</autoinstall>
@@ -46,11 +46,11 @@
     </run>
     <configurations>
       <optimized>
-        <builddir>/scratch/minh/projects/pda/optimized</builddir>
+        <builddir>optimized</builddir>
         <ccompiler>kdevgccoptions</ccompiler>
         <cxxcompiler>kdevgppoptions</cxxcompiler>
         <f77compiler>kdevg77options</f77compiler>
-        <cxxflags>-O2 -g0  -std=c++98 -Wall -Wno-sign-compare</cxxflags>
+        <cxxflags>-O2 -g0</cxxflags>
         <envvars/>
         <configargs/>
         <topsourcedir/>
@@ -63,26 +63,26 @@
         <f77flags/>
       </optimized>
       <debug>
-        <configargs>--enable-debug=full</configargs>
-        <builddir>/scratch/minh/projects/pda/debug</builddir>
+        <configargs></configargs>
+        <builddir>debug</builddir>
         <ccompiler>kdevgccoptions</ccompiler>
         <cxxcompiler>kdevgppoptions</cxxcompiler>
         <f77compiler>kdevg77options</f77compiler>
         <cxxflags>-O0 -g3</cxxflags>
         <envvars/>
-        <topsourcedir/>
-        <cppflags/>
-        <ldflags/>
-        <ccompilerbinary/>
-        <cxxcompilerbinary/>
-        <f77compilerbinary/>
-        <cflags>-O0 -g3</cflags>
-        <f77flags/>
+        <topsourcedir></topsourcedir>
+        <cppflags></cppflags>
+        <ldflags></ldflags>
+        <ccompilerbinary></ccompilerbinary>
+        <cxxcompilerbinary></cxxcompilerbinary>
+        <f77compilerbinary></f77compilerbinary>
+        <cflags></cflags>
+        <f77flags></f77flags>
       </debug>
       <profile>
         <envvars/>
         <configargs/>
-        <builddir>/scratch/minh/projects/pda/profile</builddir>
+        <builddir>profile</builddir>
         <topsourcedir/>
         <cppflags/>
         <ldflags/>
@@ -93,26 +93,9 @@
         <cxxcompilerbinary/>
         <f77compilerbinary/>
         <cflags/>
-        <cxxflags>-pg -fprofile-arcs -O0</cxxflags>
+        <cxxflags>-O0 -pg -fprofile-arcs</cxxflags>
         <f77flags/>
       </profile>
-      <optimized-O3>
-        <envvars/>
-        <configargs/>
-        <builddir>/scratch/minh/projects/pda/optimized-O3</builddir>
-        <topsourcedir/>
-        <cppflags/>
-        <ldflags/>
-        <ccompiler>kdevgccoptions</ccompiler>
-        <cxxcompiler>kdevgppoptions</cxxcompiler>
-        <f77compiler>kdevg77options</f77compiler>
-        <ccompilerbinary/>
-        <cxxcompilerbinary/>
-        <f77compilerbinary/>
-        <cflags/>
-        <cxxflags>-O3 -g</cxxflags>
-        <f77flags/>
-      </optimized-O3>
     </configurations>
     <make>
       <envvars>
@@ -174,6 +157,7 @@
     </ignoredoxygen>
   </kdevdoctreeview>
   <kdevfilecreate>
+    <filetypes/>
     <useglobaltypes>
       <type ext="cpp" />
       <type ext="h" />
@@ -196,6 +180,7 @@
     <projectdoc>
       <docsystem>Doxygen Documentation Collection</docsystem>
       <docurl>pda.tag</docurl>
+      <usermanualurl/>
     </projectdoc>
   </kdevdocumentation>
   <substmap>
@@ -223,7 +208,7 @@
       <designerpluginpaths/>
     </qt>
     <codecompletion>
-      <automaticCodeCompletion>false</automaticCodeCompletion>
+      <automaticCodeCompletion>true</automaticCodeCompletion>
       <automaticArgumentsHint>true</automaticArgumentsHint>
       <automaticHeaderCompletion>true</automaticHeaderCompletion>
       <codeCompletionDelay>250</codeCompletionDelay>
@@ -236,13 +221,13 @@
       <statusBarTypeEvaluation>false</statusBarTypeEvaluation>
       <namespaceAliases>std=_GLIBCXX_STD;__gnu_cxx=std</namespaceAliases>
       <processPrimaryTypes>true</processPrimaryTypes>
-      <processFunctionArguments>false</processFunctionArguments>
-      <preProcessAllHeaders>false</preProcessAllHeaders>
+      <processFunctionArguments>true</processFunctionArguments>
+      <preProcessAllHeaders>true</preProcessAllHeaders>
       <parseMissingHeadersExperimental>false</parseMissingHeadersExperimental>
       <resolveIncludePathsUsingMakeExperimental>false</resolveIncludePathsUsingMakeExperimental>
       <alwaysParseInBackground>true</alwaysParseInBackground>
       <usePermanentCaching>true</usePermanentCaching>
-      <alwaysIncludeNamespaces>false</alwaysIncludeNamespaces>
+      <alwaysIncludeNamespaces>true</alwaysIncludeNamespaces>
       <includePaths>.;</includePaths>
     </codecompletion>
     <creategettersetter>
