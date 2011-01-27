@@ -866,10 +866,12 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
         lh_ptn += p_invar_ptns[ptn];
         lh_ptns[ptn] = lh_ptn;
         //tree_lh += log(lh_ptn) * ptn_freqs[ptn];
-        if (pattern_lh) pattern_lh[ptn] = lh_ptn;
     }
     vrda_log(alnSize, lh_ptns.data(), lh_ptns_log.data());
     tree_lh += (lh_ptns_log * ptn_freqs).sum();
+    if (pattern_lh) 
+    for (ptn = 0; ptn < alnSize; ++ptn)
+    	pattern_lh[ptn] = lh_ptns_log[ptn];
     return tree_lh;
 }
 

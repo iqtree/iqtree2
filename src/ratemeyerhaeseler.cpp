@@ -129,7 +129,7 @@ double RateMeyerHaeseler::optimizeSiteRate(int site) {
 	if (optx > max_rate*0.99) optx = MAX_SITE_RATE;
 	if (optx < MIN_SITE_RATE*1.01) optx = 0;
 	at(site) = optx;
-#ifndef NDEBUG		
+//#ifndef NDEBUG		
 	if (optx == MAX_SITE_RATE) {
 		cout << "Checking pattern " << site << endl;
 		ofstream out("x", ios::app);
@@ -149,7 +149,7 @@ double RateMeyerHaeseler::optimizeSiteRate(int site) {
 		}
 		out.close();
 	}
-#endif
+//#endif
 
 	return optx;
 }

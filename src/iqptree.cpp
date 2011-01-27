@@ -127,8 +127,8 @@ RepresentLeafSet* IQPTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves
     leaves_vec[set_id] = leaves;
     RepresentLeafSet::iterator last;
     RepresentLeafSet::iterator cur_it;
-    int count, i, j;
-    double admit_height = 1000000;
+    int i, j;
+    //double admit_height = 1000000;
 
     leaves->clear();
     if (node->isLeaf()) {
@@ -225,7 +225,7 @@ int IQPTree::assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2,
         Node *del_leaf) {
     assert(dist_matrix);
     int nseq = aln->getNSeq();
-    int id0 = leaf0->id, id1 = leaf1->id, id2 = leaf2->id;
+    //int id0 = leaf0->id, id1 = leaf1->id, id2 = leaf2->id;
     double dist0 = dist_matrix[leaf0->id * nseq + del_leaf->id]
             + dist_matrix[leaf1->id * nseq + leaf2->id];
     double dist1 = dist_matrix[leaf1->id * nseq + del_leaf->id]
@@ -367,7 +367,7 @@ void IQPTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *c
 void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
     PhyloNodeVector::iterator it_leaf;
 
-    int num_del_leaves = del_leaves.size();
+    //int num_del_leaves = del_leaves.size();
     assert(root->isLeaf());
 
     for (it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
@@ -515,7 +515,7 @@ double IQPTree::perturb(int times) {
                 minDist = dist;
         }
 
-        int taxonid2;
+        int taxonid2 = -1;
         for (int i = 0; i < taxa.size(); i++) {
             if (dists[i] == minDist)
                 taxonid2 = i;
