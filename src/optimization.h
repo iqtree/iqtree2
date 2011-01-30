@@ -119,6 +119,11 @@ public:
 
     ~Optimization();
 
+	/**
+		original numerical recipes method
+	*/
+	double brent(double ax, double bx, double cx, double tol, double *xmin);
+
 private:
 
 	double brent_opt (double ax, double bx, double cx, double tol,

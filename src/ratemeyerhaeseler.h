@@ -68,6 +68,8 @@ public:
 
 	void setRates(DoubleVector &rates);
 
+	void initializeRates();
+
 	/**
 		optimize parameters, the rates in this case
 		@return the best likelihood 
@@ -97,13 +99,6 @@ public:
 	*/
 	virtual double computeFuncDerv(double value, double &df, double &ddf);
 
-	/**
-		write site-rates to a file in the following format:
-		1  rate_1
-		2  rate_2
-		....
-	*/
-	void writeSiteRates(const char *file_name);
 
 	void runIterativeProc(Params &params, IQPTree &tree);
 

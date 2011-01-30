@@ -448,6 +448,10 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         if (params.compute_ml_dist)
             cout << "  Likelihood distances:     " << params.out_prefix << ".mldist" << endl;
     }
+	if (tree.getRate()->getGammaShape() > 0)
+        cout << "  Gamma-distributed rates:  " << params.out_prefix << ".rate" << endl;
+		
+
     if (params.mvh_site_rate)
         cout << "  Site-rates by MH model:   " << params.out_prefix << ".mhrate" << endl;
 
@@ -828,6 +832,17 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     tree.root = tree.findNodeName(alignment->getSeqName(0));
     assert(tree.root);
 
+	if (tree.getRate()->getGammaShape() > 0) {
+		cout << "Computing Gamma site rates with empirical Bayesian..." << endl;
+		DoubleVector pattern_rates;
+		tree.getRate()->computePatternRates(pattern_rates);
+		string rate_file = params.out_prefix;
+		rate_file += ".rate";
+		tree.getRate()->writeSiteRates(pattern_rates, rate_file.c_str());
+	}
+
+
+
     RateMeyerHaeseler *rate_mvh = new RateMeyerHaeseler();
 
     if (params.mvh_site_rate) {
@@ -850,6 +865,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         cout << "Time used:  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
         delete [] pattern_lh;
     }
+
     t_end = clock();
     params.run_time = (t_end - t_begin);
     cout << endl;

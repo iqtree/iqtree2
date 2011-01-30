@@ -17,6 +17,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
+#include "phylotree.h"
 #include "rateheterogeneity.h"
 
 
@@ -36,3 +38,18 @@ RateHeterogeneity::~RateHeterogeneity()
 {
 }
 
+
+void RateHeterogeneity::writeSiteRates(DoubleVector &pattern_rates, const char *file_name) {
+	int nsite = phylo_tree->aln->getNSite();
+	int i;
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(file_name);
+		for (i = 0; i < nsite; i++) 
+			out << i+1 << "\t" << pattern_rates[phylo_tree->aln->getPatternID(i)] << endl;
+		out.close();
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, file_name);
+	}
+}

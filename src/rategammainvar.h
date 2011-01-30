@@ -20,8 +20,8 @@
 #ifndef RATEGAMMAINVAR_H
 #define RATEGAMMAINVAR_H
 
-#include <rategamma.h>
 #include <rateinvar.h>
+#include <rategamma.h>
 
 /**
 class for I+G rate heterogeneity

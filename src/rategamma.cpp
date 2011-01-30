@@ -17,8 +17,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "rategamma.h"
 #include "phylotree.h"
+#include "rategamma.h"
 #include <math.h>
 
 
@@ -122,6 +122,15 @@ void RateGamma::writeParameters(ostream &out) {
 	out << "\t" << gamma_shape;
 }
 
+void RateGamma::computePatternRates(DoubleVector &pattern_rates) {
+	int npattern = phylo_tree->aln->getNPattern();
+	double ptn_rates[npattern];
+	phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0], 
+		(PhyloNode*)phylo_tree->root, NULL, ptn_rates);
+
+	pattern_rates.clear();
+	pattern_rates.insert(pattern_rates.begin(), ptn_rates, ptn_rates + npattern);
+}
 
 
 /*NUMERICAL SUBROUTINES

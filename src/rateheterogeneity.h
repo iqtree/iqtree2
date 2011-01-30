@@ -23,12 +23,14 @@
 
 #include "optimization.h"
 #include <string>
+#include "tools.h"
+
 using namespace std;
 
 class PhyloTree;
 
 const double MIN_SITE_RATE = 1e-6;
-const double MAX_SITE_RATE = 200.0;
+const double MAX_SITE_RATE = 100.0;
 const double TOL_SITE_RATE = 1e-6;
 
 
@@ -107,6 +109,21 @@ public:
 	*/
 	virtual void writeParameters(ostream &out) {}
 
+	/**
+		Compute site-specific rates. Override this for Gamma model
+		@param pattern_rates (OUT) pattern rates. Resizing if necesary
+	*/
+	virtual void computePatternRates(DoubleVector &pattern_rates) {}
+
+	/**
+		write site-rates to a file in the following format:
+		1  rate_1
+		2  rate_2
+		....
+		@param pattern_rates Rates of patterns
+		@param file_name target file to write rates
+	*/
+	void writeSiteRates(DoubleVector &pattern_rates, const char *file_name);
 
 	/**
 		name of the rate heterogeneity type
