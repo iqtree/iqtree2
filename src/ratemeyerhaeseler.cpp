@@ -150,11 +150,11 @@ double RateMeyerHaeseler::optimizeSiteRate(int site) {
 	double negative_lh;
 	double current_rate = at(site);
 	double ferror, optx, optx2;
-    /*if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
+    if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
 	{
-    	optx = minimizeNewton(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, negative_lh);
+    	optx = minimizeNewton(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, negative_lh);
     }
-    else */
+    else 
 		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh, &ferror);
 	//negative_lh = brent(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &optx);
 	if (optx > max_rate*0.99) optx = MAX_SITE_RATE;
@@ -162,17 +162,24 @@ double RateMeyerHaeseler::optimizeSiteRate(int site) {
 	at(site) = optx;
 //#ifndef NDEBUG		
 	if (optx == MAX_SITE_RATE) {
-		if (verbose_mode >= VB_MED)
+		ofstream out;
+	
+		if (verbose_mode >= VB_MED)  {
 			cout << "Checking pattern " << site << " (" << current_rate << ")" << endl;
-		ofstream out("x", ios::app);
-		out << site;
+			out.open("x", ios::app);
+			out << site;
+		}
 		for (double val=0.1; val <= 30; val += 0.1) {
 			double f = computeFunction(val);
 			
-			out << " " << f;
+			if (verbose_mode >= VB_MED) out << " " << f;
 			if (f < minf) { minf = f; minx = val; }
+			if (verbose_mode < VB_MED && minf < negative_lh) break;
 		}
-		out << endl;
+		if (verbose_mode >= VB_MED) { 
+			out << endl;
+			out.close();
+		}
 		//cout << "minx: " << minx << " " << minf << endl;
 		if (negative_lh > minf+1e-3) {
 			optx = minimizeOneDimen(MIN_SITE_RATE, minx, max_rate, 1e-3, &negative_lh, &ferror);
@@ -180,7 +187,6 @@ double RateMeyerHaeseler::optimizeSiteRate(int site) {
 			if (verbose_mode >= VB_MED)
 				cout << "FIX rate: " << minx << " , " << optx << endl;
 		}
-		out.close();
 	}
 //#endif
 
@@ -233,6 +239,8 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 	int i;
 	if (tree.leafNum < 25) 
 		cout << "WARNING: Method not recommended for less than 25 sequences" << endl;
+	ofstream out("x");
+	out.close();
 	setTree(&tree);
 	RateHeterogeneity *backup_rate = tree.getRate();
 	if (backup_rate->getGammaShape() > 0 ) {
@@ -254,8 +262,8 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 	
 	//if  (empty()) initializeRates();
 
-	//DoubleVector prev_rates;
-	//getRates(prev_rates);
+	DoubleVector prev_rates;
+	getRates(prev_rates);
 	//setRates(prev_rates);
 	string rate_file = params.out_prefix;
 	rate_file += ".mhrate";
@@ -269,13 +277,16 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 		phylo_tree->aln->printDist(dist_file.c_str(), dist_mat);
 		tree.curScore = tree.optimizeAllBranches();
 		if (params.min_iterations) tree.curScore = tree.optimizeNNI();
+		cout << "Current Log-likelihood: " << tree.curScore << endl;
 		if (tree.curScore <= prev_lh + TOL_LIKELIHOOD) {
+			setRates(prev_rates);
+			tree.curScore = tree.optimizeAllBranches();
+			tree.setBestScore(tree.curScore);
 			break;
 		}
-		//getRates(prev_rates);
+		getRates(prev_rates);
 		prev_lh = tree.curScore;
 		tree.setBestScore(tree.curScore);
-		cout << "Current Log-likelihood: " << tree.curScore << endl;
 	}
 	cout << "Optimization took " << i-1 << " rounds to finish" << endl;
 	//tree.getModelFactory()->site_rate = backup_rate;

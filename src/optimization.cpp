@@ -374,7 +374,7 @@ double Optimization::minimizeNewton(double xmin, double xguess, double xmax, dou
 		return rtn;
 	// Newton does not work, turn to other method
 	double fe;
-	return minimizeOneDimen(xmin, rtn, xmax, tolerance, &f, &fe);
+	return minimizeOneDimen(xmin, xguess, xmax, tolerance, &f, &fe);
 }
 
 /*

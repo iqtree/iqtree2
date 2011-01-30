@@ -848,7 +848,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     if (params.mvh_site_rate) {
         cout << endl << "Computing site-specific rates by " << rate_mvh->full_name << "..." << endl;
         rate_mvh->runIterativeProc(params, tree);
-    	cout << "BEST SCORE FOUND : " << tree.getBestScore() << endl;
+    	//cout << "BEST SCORE FOUND : " << tree.getBestScore() << endl;
 		
     	
     }
