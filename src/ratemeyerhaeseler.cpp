@@ -85,6 +85,68 @@ void RateMeyerHaeseler::initializeRates() {
 	}
 }
 
+double RateMeyerHaeseler::optimizeRate(int pattern) {
+	optimizing_pattern = pattern;
+
+	double max_rate = MAX_SITE_RATE;
+
+	double minf = INFINITY, minx = 0;
+	double negative_lh;
+	double current_rate = at(pattern);
+	double ferror, optx;
+    if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
+	{
+    	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, negative_lh);
+    	double optx2, negative_lh2;
+		optx2 = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh2, &ferror);
+		if (negative_lh2 < negative_lh - 1e-4) {
+			cout << "Something wrong with NEWTON for pattern " << pattern << ": " << optx2 << " " << 
+			negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
+		}
+		if (negative_lh < negative_lh2 - 1e-4) {
+			cout << "Something wrong with Brent for pattern " << pattern << ": " << optx2 << " " << 
+			negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
+		}
+    }
+    else 
+		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh, &ferror);
+	//negative_lh = brent(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &optx);
+	if (optx > max_rate*0.99) optx = MAX_SITE_RATE;
+	//if (optx < MIN_SITE_RATE*1.01) optx = 0;
+	at(pattern) = optx;
+//#ifndef NDEBUG		
+	if (optx == MAX_SITE_RATE) {
+		ofstream out;
+	
+		if (verbose_mode >= VB_MED)  {
+			cout << "Checking pattern " << pattern << " (" << current_rate << ")" << endl;
+			out.open("x", ios::app);
+			out << pattern;
+		}
+		for (double val=0.1; val <= 100; val += 0.1) {
+			double f = computeFunction(val);
+			
+			if (verbose_mode >= VB_MED) out << " " << f;
+			if (f < minf) { minf = f; minx = val; }
+			if (verbose_mode < VB_MED && minf < negative_lh) break;
+		}
+		if (verbose_mode >= VB_MED) { 
+			out << endl;
+			out.close();
+		}
+		//cout << "minx: " << minx << " " << minf << endl;
+		if (negative_lh > minf+1e-3) {
+			optx = minimizeOneDimen(MIN_SITE_RATE, minx, max_rate, 1e-3, &negative_lh, &ferror);
+			at(pattern) = optx;
+			if (verbose_mode >= VB_MED)
+				cout << "FIX rate: " << minx << " , " << optx << endl;
+		}
+	}
+//#endif
+
+	return optx;
+}
+
 double RateMeyerHaeseler::optimizeParameters() {
 	assert(phylo_tree);
 	if (!dist_mat) {
@@ -107,8 +169,8 @@ double RateMeyerHaeseler::optimizeParameters() {
 	for (i = 0; i < size(); i++) {
 		int freq = phylo_tree->aln->at(i).frequency;
 		if (phylo_tree->aln->at(i).computeAmbiguousChar(nstates) < nseq-2) {
-			optimizeSiteRate(i);
-			if (at(i) == 0.0) invar_sites += freq; 
+			optimizeRate(i);
+			if (at(i) < MIN_SITE_RATE*2) invar_sites += freq; 
 			if (at(i) == MAX_SITE_RATE) {
 				saturated_sites += freq; 
 				saturated_ptn ++;
@@ -141,97 +203,41 @@ double RateMeyerHaeseler::optimizeParameters() {
 	return phylo_tree->computeLikelihood();
 }
 
-double RateMeyerHaeseler::optimizeSiteRate(int site) {
-	optimizing_site = site;
-
-	double max_rate = MAX_SITE_RATE;
-
-		double minf = INFINITY, minx;
-	double negative_lh;
-	double current_rate = at(site);
-	double ferror, optx, optx2;
-    if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
-	{
-    	optx = minimizeNewton(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, negative_lh);
-    }
-    else 
-		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh, &ferror);
-	//negative_lh = brent(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &optx);
-	if (optx > max_rate*0.99) optx = MAX_SITE_RATE;
-	if (optx < MIN_SITE_RATE*1.01) optx = 0;
-	at(site) = optx;
-//#ifndef NDEBUG		
-	if (optx == MAX_SITE_RATE) {
-		ofstream out;
-	
-		if (verbose_mode >= VB_MED)  {
-			cout << "Checking pattern " << site << " (" << current_rate << ")" << endl;
-			out.open("x", ios::app);
-			out << site;
-		}
-		for (double val=0.1; val <= 30; val += 0.1) {
-			double f = computeFunction(val);
-			
-			if (verbose_mode >= VB_MED) out << " " << f;
-			if (f < minf) { minf = f; minx = val; }
-			if (verbose_mode < VB_MED && minf < negative_lh) break;
-		}
-		if (verbose_mode >= VB_MED) { 
-			out << endl;
-			out.close();
-		}
-		//cout << "minx: " << minx << " " << minf << endl;
-		if (negative_lh > minf+1e-3) {
-			optx = minimizeOneDimen(MIN_SITE_RATE, minx, max_rate, 1e-3, &negative_lh, &ferror);
-			at(site) = optx;
-			if (verbose_mode >= VB_MED)
-				cout << "FIX rate: " << minx << " , " << optx << endl;
-		}
-	}
-//#endif
-
-	return optx;
-}
 
 double RateMeyerHaeseler::computeFunction(double value) {
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
-	int i, j;
+	int i, j, state1, state2;
 	double lh = 0.0;
 	SubstModel *model = phylo_tree->getModel();
-	Pattern *pat = & phylo_tree->aln->at(optimizing_site);
+	Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
 	
-	for (i = 0; i < nseq-1; i++)
-		for (j = i+1; j < nseq; j++) {
-			int state1 = pat->at(i);
-			int state2 = pat->at(j);
-			if (state1 >= nstate || state2 >= nstate) continue;
-			lh += log(model->computeTrans(value * dist_mat[i*nseq + j], state1, state2));
-		}
-	return -lh;
+	for (i = 0; i < nseq-1; i++) if ((state1 = pat->at(i)) < nstate) 
+		for (j = i+1; j < nseq; j++) if ((state2 = pat->at(j)) < nstate) 
+			lh -= log(model->computeTrans(value * dist_mat[i*nseq + j], state1, state2));
+	return lh;
 }
 
 double RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf) {
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
-	int i, j;
+	int i, j, state1, state2;
 	double lh = 0.0;
 	double trans, derv1, derv2;
 	SubstModel *model = phylo_tree->getModel();
-	Pattern *pat = & phylo_tree->aln->at(optimizing_site);
+	Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
 	df = ddf = 0.0;
-	for (i = 0; i < nseq-1; i++)
-		for (j = i+1; j < nseq; j++) {
-			int state1 = pat->at(i);
-			int state2 = pat->at(j);
-			if (state1 >= nstate || state2 >= nstate) continue;
-			trans = model->computeTrans(value * dist_mat[i*nseq + j], state1, state2, derv1, derv2);
-			lh += log(trans);
-			double t = derv1 / trans;
-			df -= t;
-			ddf -= (derv2/trans - t*t);
+	for (i = 0; i < nseq-1; i++) if ((state1 = pat->at(i)) < nstate) 
+		for (j = i+1; j < nseq; j++) if ((state2 = pat->at(j)) < nstate) {
+			double dist = dist_mat[i*nseq + j];
+			trans = model->computeTrans(value * dist, state1, state2, derv1, derv2);
+			lh -= log(trans);
+			double t1 = derv1 / trans;
+			double t2 = derv2 / trans;
+			df -= t1 * dist;
+			ddf -= dist * dist * (t2 - t1*t1);
 		}
-	return -lh;
+	return lh;
 }
 
 

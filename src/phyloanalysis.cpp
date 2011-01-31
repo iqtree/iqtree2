@@ -853,7 +853,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     	
     }
 
-    if (params.aLRT_replicates > 0) {
+    if (params.aLRT_replicates > 0 && params.min_iterations > 0) {
         mytime = clock();
         cout << endl;
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;

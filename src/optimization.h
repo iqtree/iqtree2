@@ -78,6 +78,8 @@ public:
 	*/
 	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f);
 
+	double minimizeNewtonSafeMode(double xmin, double xguess, double xmax, double tolerance, double &f);
+
 	/*****************************************************
 		Multi dimensional optimization with BFGS method
 	*****************************************************/

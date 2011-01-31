@@ -70,14 +70,19 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
 
 	double trans_mat[trans_size], trans_derv1[trans_size], trans_derv2[trans_size];
 	double sum_trans[trans_size],sum_derv1[trans_size], sum_derv2[trans_size];
+	memset(sum_trans, 0, sizeof(double) * trans_size);
+	memset(sum_derv1, 0, sizeof(double) * trans_size);
+	memset(sum_derv2, 0, sizeof(double) * trans_size);
 
-	tree->getModelFactory()->computeTransDerv(value * site_rate->getRate(0), sum_trans, sum_derv1, sum_derv2);
-	for (cat = 1; cat < ncat; cat++) {
-		tree->getModelFactory()->computeTransDerv(value * site_rate->getRate(cat), trans_mat, trans_derv1, trans_derv2);
+	//tree->getModelFactory()->computeTransDerv(value * site_rate->getRate(0), sum_trans, sum_derv1, sum_derv2);
+	for (cat = 0; cat < ncat; cat++) {
+		double rate_val = site_rate->getRate(cat);
+		double rate_sqr = rate_val * rate_val;
+		tree->getModelFactory()->computeTransDerv(value * rate_val, trans_mat, trans_derv1, trans_derv2);
 		for (i = 0; i < trans_size; i++) {
 			sum_trans[i] += trans_mat[i];
-			sum_derv1[i] += trans_derv1[i];
-			sum_derv2[i] += trans_derv2[i];
+			sum_derv1[i] += trans_derv1[i] * rate_val;
+			sum_derv2[i] += trans_derv2[i] * rate_sqr;
 		}
 	}
 	double lh = 0.0;
@@ -101,9 +106,9 @@ double AlignmentPairwise::optimizeDist(double initial_dist) {
 	if (!tree->getModelFactory() || !tree->getRate()) return dist;
 
 	double negative_lh, ferror;
-	//if (tree->optimize_by_newton) // Newton-Raphson method
-		//dist = minimizeNewton(1e-6, dist, MAX_GENETIC_DIST, 1e-6, negative_lh);
-	//else // Brent method
+	if (tree->optimize_by_newton) // Newton-Raphson method
+		dist = minimizeNewton(1e-6, dist, MAX_GENETIC_DIST, 1e-6, negative_lh);
+	else // Brent method
 		dist = minimizeOneDimen(1e-6, dist, MAX_GENETIC_DIST, 1e-6, &negative_lh, &ferror); 
 	return dist;
 }

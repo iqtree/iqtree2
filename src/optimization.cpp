@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+
+
 using namespace std;
 
 const double ERROR_X = 1.0e-4;
@@ -334,7 +336,7 @@ double Optimization::minimizeOneDimen(double xmin, double xguess, double xmax, d
 	One dimensional optimization with Newton Raphson 
 	only applicable if 1st and 2nd derivatives are easy to compute
 *****************************************************/
-#define JMAX 50
+#define JMAX 20
 
 
 double Optimization::minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f)
@@ -347,6 +349,9 @@ double Optimization::minimizeNewton(double xmin, double xguess, double xmax, dou
 	double df,ddf,dx,rtn,rtnold, fstart=0;
 
 	rtn=xguess;
+	if (rtn < xmin) rtn = xmin;
+	if (rtn > xmax) rtn = xmax;
+	
 
 	for (j=1;j<=JMAX;j++) {
 		f = computeFuncDerv(rtn,df,ddf);
@@ -361,8 +366,8 @@ double Optimization::minimizeNewton(double xmin, double xguess, double xmax, dou
 		if (rtn < xmin) rtn = xmin;
 		if (rtn > xmax) rtn = xmax;
 		dx = rtnold-rtn;
-
-/*		while (fabs(dx) > tolerance && computeFunction(rtn) > f) {
+/*
+		while (fabs(dx) > tolerance && (fnew = computeFunction(rtn)) > f) {
 			dx /= 2;
 			rtn = rtnold - dx;
 		}*/
@@ -375,6 +380,24 @@ double Optimization::minimizeNewton(double xmin, double xguess, double xmax, dou
 	// Newton does not work, turn to other method
 	double fe;
 	return minimizeOneDimen(xmin, xguess, xmax, tolerance, &f, &fe);
+}
+
+double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double xmax, double tolerance, double &f)
+{
+	double optx = minimizeNewton(xmin, xguess, xmax, tolerance, f);
+	double fnew;
+	// check value at the boundary
+	if ((fnew = computeFunction(xmax)) < f) {
+		cout << "Note from Newton safe mode: " << optx << " -> " << xmax << endl;
+		optx = xmax;
+		f = fnew;
+	}
+	if ((fnew = computeFunction(xmin)) < f) {
+		cout << "Note from Newton safe mode: " << optx << " -> " << xmin << endl;
+		optx = xmin;
+		f = fnew;
+	}
+	return optx;
 }
 
 /*

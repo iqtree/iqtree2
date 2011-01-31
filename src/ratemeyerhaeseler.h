@@ -78,10 +78,10 @@ public:
 
 	/**
 		optimize rate of site
-		@param site target site
+		@param site target pattern
 		@return the optimized rate value, also update the corresponding element of the vector
 	*/
-	double optimizeSiteRate(int site);
+	double optimizeRate(int pattern);
 
 	/**
 		This function is inherited from Optimization class for optimizting site rates 
@@ -108,9 +108,9 @@ public:
 	double *dist_mat;
 
 	/**
-		current site under optimization. Note that this is not thread-safe
+		current pattern under optimization. Note that this is not thread-safe
 	*/
-	int optimizing_site;
+	int optimizing_pattern;
 };
 
 #endif
