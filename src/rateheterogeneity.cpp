@@ -46,6 +46,8 @@ void RateHeterogeneity::writeSiteRates(DoubleVector &pattern_rates, const char *
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(file_name);
+		out.setf(ios::fixed,ios::floatfield);
+		out.precision(5);
 		for (i = 0; i < nsite; i++) 
 			out << i+1 << "\t" << pattern_rates[phylo_tree->aln->getPatternID(i)] << endl;
 		out.close();

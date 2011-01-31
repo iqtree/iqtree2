@@ -73,14 +73,16 @@ void RateMeyerHaeseler::initializeRates() {
 				int state1 = pat->at(i);
 				int state2 = pat->at(j);
 				if (state1 >= nstate || state2 >= nstate) continue;
-				total += dist_mat[state1 * nstate + state2];
-				if (state1 != state2) diff += dist_mat[state1 * nstate + state2];
+				//total += dist_mat[state1 * nstate + state2];
+				//if (state1 != state2) diff += dist_mat[state1 * nstate + state2];
+				total++;
+				if (state1 != state2) diff++;
 		}
 		double obs_diff = double(diff) / total;
 		double tolog = 1.0 - obs_diff*nstate/(nstate-1);
 		if (tolog > 0.0) {
 			at(rate_id) = -log(tolog) * (nstate-1) / nstate;
-		} else at(rate_id) = 10.0;
+		} else at(rate_id) = 1.0;
 		
 	}
 }
@@ -97,16 +99,17 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
     if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
 	{
     	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, negative_lh);
+/*
     	double optx2, negative_lh2;
 		optx2 = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh2, &ferror);
 		if (negative_lh2 < negative_lh - 1e-4) {
 			cout << "Something wrong with NEWTON for pattern " << pattern << ": " << optx2 << " " << 
 			negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
 		}
-		if (negative_lh < negative_lh2 - 1e-4) {
+		if (negative_lh < negative_lh2 - 1e-4 && verbose_mode >= VB_MED) {
 			cout << "Something wrong with Brent for pattern " << pattern << ": " << optx2 << " " << 
 			negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
-		}
+		}*/
     }
     else 
 		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh, &ferror);
@@ -175,9 +178,10 @@ double RateMeyerHaeseler::optimizeParameters() {
 				saturated_sites += freq; 
 				saturated_ptn ++;
 			}
-		} else { ambiguous_sites += freq; }
-		if (at(i) < MAX_SITE_RATE) {
-			sum += at(i) * freq;
+		} else { at(i) = 0; ambiguous_sites += freq; }
+		if (at(i) < MAX_SITE_RATE) 
+		{
+			if (at(i) > MIN_SITE_RATE) sum += at(i) * freq;
 			ok_ptn[i] = 1;
 			ok_sites += freq;
 		}
@@ -185,7 +189,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 
 	// now scale such that the mean of rates is 1
 	for (i = 0; i < size(); i++) {
-		if (ok_ptn[i]) at(i) = at(i) * ok_sites / sum;
+		if (ok_ptn[i] && at(i) > MIN_SITE_RATE) at(i) = at(i) * ok_sites / sum;
 	}
 
 	if (ambiguous_sites) {
@@ -278,8 +282,8 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 	dist_file += ".tdist";
 
 	for (i = 2; i < 100; i++) {
+		writeSiteRates(prev_rates, rate_file.c_str());
 		optimizeParameters();
-		writeSiteRates(*this, rate_file.c_str());
 		phylo_tree->aln->printDist(dist_file.c_str(), dist_mat);
 		tree.curScore = tree.optimizeAllBranches();
 		if (params.min_iterations) tree.curScore = tree.optimizeNNI();

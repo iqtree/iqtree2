@@ -766,8 +766,8 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
     }
 
     for (ptn = 0; ptn < aln->size(); ptn++) {
-        //if (site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
-        	//continue;
+        if (site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
+        	continue;
         double lh_ptn = 0.0; // likelihood of the pattern
         double rate_ptn = 0.0;
         int dad_state = 1000; // just something big enough
@@ -1321,8 +1321,8 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     }
 
     for (ptn = 0; ptn < aln->size(); ptn++) {
-        //if (site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
-        	//continue;
+        if (site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
+        	continue;
         double lh_ptn = 0.0; // likelihood of the pattern
         double lh_ptn_derv1 = 0.0;
         double lh_ptn_derv2 = 0.0;

@@ -387,12 +387,12 @@ double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double x
 	double optx = minimizeNewton(xmin, xguess, xmax, tolerance, f);
 	double fnew;
 	// check value at the boundary
-	if ((fnew = computeFunction(xmax)) < f) {
-		cout << "Note from Newton safe mode: " << optx << " -> " << xmax << endl;
+	if ((optx < xmax) && (fnew = computeFunction(xmax)) <= f+tolerance) {
+		cout << "Note from Newton safe mode: " << optx << " (" << f << ") -> " << xmax << " ("<< fnew << ")" << endl;
 		optx = xmax;
 		f = fnew;
 	}
-	if ((fnew = computeFunction(xmin)) < f) {
+	if ((optx > xmin) && (fnew = computeFunction(xmin)) <= f+tolerance) {
 		cout << "Note from Newton safe mode: " << optx << " -> " << xmin << endl;
 		optx = xmin;
 		f = fnew;
