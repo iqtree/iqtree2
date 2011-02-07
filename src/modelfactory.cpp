@@ -63,7 +63,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			}
 			site_rate = new RateGamma(params.num_rate_cats, params.gamma_shape, tree);
 		} else if (rate_str == "+M") {
-			site_rate = new RateMeyerHaeseler();
+			site_rate = new RateMeyerHaeseler(params.mean_rate);
 			site_rate->setTree(tree);
 		} else
 			outError("Invalid rate heterogeneity type");

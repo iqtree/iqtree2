@@ -37,7 +37,7 @@ public:
 	/**
 		constructor
 	*/
-    RateMeyerHaeseler();
+    RateMeyerHaeseler(double mean_rate_val);
 
 	/**
 		destructor
@@ -111,6 +111,14 @@ public:
 		current pattern under optimization. Note that this is not thread-safe
 	*/
 	int optimizing_pattern;
+
+private:
+
+	/**
+		rates will be scaled to this mean. 0 for no scaling
+	*/
+	double mean_rate;
+
 };
 
 #endif

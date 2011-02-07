@@ -581,6 +581,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.write_intermediate_trees = false;
 	params.rf_dist_mode = 0;
 	params.mvh_site_rate = false;
+	params.mean_rate = 1.0;
 	params.aLRT_threshold = 101;
 	params.aLRT_replicates = 1000;
 	params.SSE = true;
@@ -928,6 +929,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt],"-mh") == 0) {
 				params.mvh_site_rate = true;
 				params.SSE = false;
+			} else if (strcmp(argv[cnt],"-nr") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nr <mean_rate>";
+				params.mean_rate = convert_double(argv[cnt]);
+				if (params.mean_rate < 0) 
+					throw "Wrong mean rate for MH model";
 			} else if (strcmp(argv[cnt],"-mstore") == 0) {
 				params.store_trans_matrix = true;
 			} else if (strcmp(argv[cnt], "-phyml_opt") == 0) {

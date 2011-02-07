@@ -723,6 +723,11 @@ struct Params {
      */
     bool mvh_site_rate;
 
+	/**
+		rates will be normalized to this mean value
+	*/
+	double mean_rate;
+
     /**
             Percentage threshold to accept a branch of the approximate likelihood ratio test
             (aLRT) with SH-like interpretation. See Guindon et al. (2010) Syst. Biol. for details.

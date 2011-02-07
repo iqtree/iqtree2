@@ -22,12 +22,13 @@
 
 
 
-RateMeyerHaeseler::RateMeyerHaeseler()
+RateMeyerHaeseler::RateMeyerHaeseler(double mean_rate_val)
  : RateHeterogeneity()
 {
 	name = "MH";
 	full_name = "Meyer & von Haeseler (2003)";
 	dist_mat = NULL;
+	mean_rate = mean_rate_val;
 }
 
 
@@ -47,7 +48,7 @@ double RateMeyerHaeseler::getRate(int category) {
 void RateMeyerHaeseler::getRates(DoubleVector &rates) {
 	rates.clear();
 	if (empty()) {
-		rates.resize(phylo_tree->aln->size(), 1.0);
+		rates.resize(phylo_tree->aln->size(), mean_rate);
 	} else {
 		rates.insert(rates.begin(), begin(), end());
 	} 
@@ -60,19 +61,16 @@ void RateMeyerHaeseler::setRates(DoubleVector &rates) {
 
 void RateMeyerHaeseler::initializeRates() {
 
-	int i, j, rate_id = 0;
+	int i, j, rate_id = 0, state1, state2;
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
 
-	resize(phylo_tree->aln->getNPattern(), 1.0);
+	resize(phylo_tree->aln->getNPattern(), mean_rate);
 
 	for (Alignment::iterator pat = phylo_tree->aln->begin(); pat != phylo_tree->aln->end(); pat++, rate_id++) {
 		double diff = 0, total = 0;
-		for (i = 0; i < nseq-1; i++)
-			for (j = i+1; j < nseq; j++) {
-				int state1 = pat->at(i);
-				int state2 = pat->at(j);
-				if (state1 >= nstate || state2 >= nstate) continue;
+		for (i = 0; i < nseq-1; i++) if ((state1 = pat->at(i)) < nstate)
+			for (j = i+1; j < nseq; j++) if ((state2 = pat->at(j)) < nstate) {
 				//total += dist_mat[state1 * nstate + state2];
 				//if (state1 != state2) diff += dist_mat[state1 * nstate + state2];
 				total++;
@@ -99,17 +97,17 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
     if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
 	{
     	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, negative_lh);
-/*
-    	double optx2, negative_lh2;
-		optx2 = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh2, &ferror);
-		if (negative_lh2 < negative_lh - 1e-4) {
-			cout << "Something wrong with NEWTON for pattern " << pattern << ": " << optx2 << " " << 
-			negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
-		}
-		if (negative_lh < negative_lh2 - 1e-4 && verbose_mode >= VB_MED) {
-			cout << "Something wrong with Brent for pattern " << pattern << ": " << optx2 << " " << 
-			negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
-		}*/
+
+  //  	double optx2, negative_lh2;
+	//	optx2 = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh2, &ferror);
+	//	if (negative_lh2 < negative_lh - 1e-4) {
+	//		cout << "Something wrong with NEWTON for pattern " << pattern << ": " << optx2 << " " << 
+	//		negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
+	//	}
+	//	if (negative_lh < negative_lh2 - 1e-4 && verbose_mode >= VB_MED) {
+	//		cout << "Something wrong with Brent for pattern " << pattern << ": " << optx2 << " " << 
+	//		negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
+	//	}
     }
     else 
 		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh, &ferror);
@@ -188,8 +186,9 @@ double RateMeyerHaeseler::optimizeParameters() {
 	} 
 
 	// now scale such that the mean of rates is 1
+	if (mean_rate > 0.0)
 	for (i = 0; i < size(); i++) {
-		if (ok_ptn[i] && at(i) > MIN_SITE_RATE) at(i) = at(i) * ok_sites / sum;
+		if (ok_ptn[i] && at(i) > MIN_SITE_RATE) at(i) = at(i) * ok_sites * mean_rate / sum;
 	}
 
 	if (ambiguous_sites) {
@@ -249,8 +248,10 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 	int i;
 	if (tree.leafNum < 25) 
 		cout << "WARNING: Method not recommended for less than 25 sequences" << endl;
-	ofstream out("x");
-	out.close();
+	if (verbose_mode >= VB_MED) {
+		ofstream out("x");
+		out.close();
+	}
 	setTree(&tree);
 	RateHeterogeneity *backup_rate = tree.getRate();
 	if (backup_rate->getGammaShape() > 0 ) {

@@ -843,7 +843,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
 
 
-    RateMeyerHaeseler *rate_mvh = new RateMeyerHaeseler();
+    RateMeyerHaeseler *rate_mvh = new RateMeyerHaeseler(params.mean_rate);
 
     if (params.mvh_site_rate) {
         cout << endl << "Computing site-specific rates by " << rate_mvh->full_name << "..." << endl;
