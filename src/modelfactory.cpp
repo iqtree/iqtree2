@@ -63,6 +63,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			}
 			site_rate = new RateGamma(params.num_rate_cats, params.gamma_shape, tree);
 		} else if (rate_str == "+M") {
+			tree->sse = false;
 			site_rate = new RateMeyerHaeseler(params.mean_rate);
 			site_rate->setTree(tree);
 		} else
@@ -107,6 +108,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 	int i;
 	for (i = 2; i < 100; i++) {
 		double model_lh = model->optimizeParameters();
+		//if (model_lh != 0.0) cur_lh = model_lh;
 /*
 		if (model_lh != 0.0 && !fixed_len)
 			model_lh = optimizeAllBranches(3); */

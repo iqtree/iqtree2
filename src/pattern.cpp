@@ -10,6 +10,7 @@
 //
 //
 #include "pattern.h"
+#include "alignment.h"
 
 Pattern::Pattern()
  : string()
@@ -32,11 +33,13 @@ int Pattern::computeAmbiguousChar(int num_states) {
 
 
 void Pattern::computeConst() {
-	char ch = at(0);
+	char ch = STATE_UNKNOWN;
 	is_const = true;
-	for (iterator i = begin(); i != end(); i++)
-		if (*i != ch) {
+	for (iterator i = begin(); i != end(); i++) {
+		if (ch != STATE_UNKNOWN && *i != STATE_UNKNOWN && *i != ch) {
 			is_const = false;
 			return;
-		}
+		} 
+		if (*i != STATE_UNKNOWN) ch = *i;
+	}
 }

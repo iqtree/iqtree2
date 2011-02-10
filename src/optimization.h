@@ -80,6 +80,9 @@ public:
 
 	double minimizeNewtonSafeMode(double xmin, double xguess, double xmax, double tolerance, double &f);
 
+
+	double rtsafe(double x1, double xguess, double x2, double xacc, double &f);
+
 	/*****************************************************
 		Multi dimensional optimization with BFGS method
 	*****************************************************/

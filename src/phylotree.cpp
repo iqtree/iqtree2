@@ -59,6 +59,7 @@ PhyloTree::PhyloTree()
     model_factory = NULL;
     tmp_partial_lh1 = NULL;
     tmp_partial_lh2 = NULL;
+    discard_saturated_site = true;
 }
 
 PhyloTree::PhyloTree(Alignment *alignment)
@@ -76,10 +77,15 @@ PhyloTree::PhyloTree(Alignment *alignment)
     model_factory = NULL;
     tmp_partial_lh1 = NULL;
     tmp_partial_lh2 = NULL; 
+    discard_saturated_site = true;
     for (int ptn = 0; ptn < alnSize; ++ptn) {
         ptn_freqs[ptn] = (*aln)[ptn].frequency;
     }
     state_freq = NULL;
+}
+
+void PhyloTree::discardSaturatedSite(bool val) {
+	discard_saturated_site = val;
 }
 
 PhyloTree::~PhyloTree() {
@@ -699,7 +705,7 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
             check_score += pattern_lh[i] * aln->at(i).frequency;
         }
         delete [] ptn_scale;
-        assert(fabs(score - check_score) < 1e-6);
+        //assert(fabs(score - check_score) < 1e-6);
     }
     return score;
 }
@@ -766,8 +772,6 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
     }
 
     for (ptn = 0; ptn < aln->size(); ptn++) {
-        if (site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
-        	continue;
         double lh_ptn = 0.0; // likelihood of the pattern
         double rate_ptn = 0.0;
         int dad_state = 1000; // just something big enough
@@ -802,10 +806,16 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
             lh_ptn += p_invar * state_freq[(int)(*aln)[ptn][0]];
         }
+//#ifdef DEBUG
+		if (lh_ptn <= 0.0)
+			cout << "Negative likelihood: " << lh_ptn << " " << site_rate->getRate(ptn) << endl;
+//#endif
         assert(lh_ptn > 0);
         lh_ptn = log(lh_ptn);
-        tree_lh += lh_ptn * (*aln)[ptn].frequency;
         if (pattern_lh) pattern_lh[ptn] = lh_ptn;
+        if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
+        	continue;
+        tree_lh += lh_ptn * (*aln)[ptn].frequency;
     }
     //for (cat = ncat-1; cat >= 0; cat--)
     //delete trans_mat[cat];
@@ -1192,7 +1202,7 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         lh_ptn_derv1 = 0.0;
         lh_ptn_derv2 = 0.0;
         double freq = ptn_freqs[ptn];
-        int padding;
+        int padding = 0;
         if (dad->isLeaf()) {
             dad_state = (*aln)[ptn][dad->id];
             padding = dad_state * NSTATES;
@@ -1321,7 +1331,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     }
 
     for (ptn = 0; ptn < aln->size(); ptn++) {
-        if (site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
+        if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
         	continue;
         double lh_ptn = 0.0; // likelihood of the pattern
         double lh_ptn_derv1 = 0.0;
@@ -2243,7 +2253,9 @@ void PhyloTree::computeNNIPatternLh(
                 check_score += result_lh[i] * aln->at(i).frequency;
             }
             // make sure that the pattern likelihoods were just computed correctly
-            assert(fabs(new_score - check_score) < 1e-4);
+            /*if (!(fabs(new_score - check_score) < 1e-3))
+            	cout << new_score << " " << check_score << endl;
+            assert(fabs(new_score - check_score) < 1e-3);*/
         }
         /*
                         if (fabs(new_score - old_score) > TOL_LIKELIHOOD)

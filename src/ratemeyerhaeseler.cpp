@@ -25,7 +25,7 @@
 RateMeyerHaeseler::RateMeyerHaeseler(double mean_rate_val)
  : RateHeterogeneity()
 {
-	name = "MH";
+	name = "+MH";
 	full_name = "Meyer & von Haeseler (2003)";
 	dist_mat = NULL;
 	mean_rate = mean_rate_val;
@@ -37,6 +37,12 @@ RateMeyerHaeseler::~RateMeyerHaeseler()
 	if (dist_mat) delete [] dist_mat;
 }
 
+int RateMeyerHaeseler::getNDim() {
+	if (phylo_tree) 
+		return phylo_tree->aln->getNPattern()-1;
+	if (empty()) return 0;
+	return size()-1; 
+}
 
 double RateMeyerHaeseler::getRate(int category) {
 	if (category < size())
@@ -65,6 +71,9 @@ void RateMeyerHaeseler::initializeRates() {
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
 
+	if (nseq < 25) 
+		outWarning("Meyer & von Haeseler model is not recommended for < 25 sequences\n");
+
 	resize(phylo_tree->aln->getNPattern(), mean_rate);
 
 	for (Alignment::iterator pat = phylo_tree->aln->begin(); pat != phylo_tree->aln->end(); pat++, rate_id++) {
@@ -80,7 +89,7 @@ void RateMeyerHaeseler::initializeRates() {
 		double tolog = 1.0 - obs_diff*nstate/(nstate-1);
 		if (tolog > 0.0) {
 			at(rate_id) = -log(tolog) * (nstate-1) / nstate;
-		} else at(rate_id) = 1.0;
+		} else at(rate_id) = obs_diff;
 		
 	}
 }
@@ -94,33 +103,39 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 	double negative_lh;
 	double current_rate = at(pattern);
 	double ferror, optx;
+	/* constant site alway have ZERO rates */
+	if (phylo_tree->aln->at(pattern).is_const) {
+		return (at(pattern) = MIN_SITE_RATE);
+	}
     if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
 	{
     	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, negative_lh);
-
-  //  	double optx2, negative_lh2;
-	//	optx2 = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh2, &ferror);
-	//	if (negative_lh2 < negative_lh - 1e-4) {
-	//		cout << "Something wrong with NEWTON for pattern " << pattern << ": " << optx2 << " " << 
-	//		negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
-	//	}
-	//	if (negative_lh < negative_lh2 - 1e-4 && verbose_mode >= VB_MED) {
-	//		cout << "Something wrong with Brent for pattern " << pattern << ": " << optx2 << " " << 
-	//		negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
-	//	}
+		if (optx > MAX_SITE_RATE*0.99 || (optx < MIN_SITE_RATE*2 && !phylo_tree->aln->at(pattern).is_const)) 
+		{
+			double optx2, negative_lh2;
+			optx2 = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh2, &ferror);
+			if (negative_lh2 < negative_lh - 1e-4) {
+				cout << "+++NEWTON IS WRONG for pattern " << pattern << ": " << optx2 << " " << 
+				negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
+			}
+			if (negative_lh < negative_lh2 - 1e-4 && verbose_mode >= VB_MED) {
+				cout << "Brent is wrong for pattern " << pattern << ": " << optx2 << " " << 
+				negative_lh2 << " (Newton: " << optx << " " << negative_lh <<")" << endl;
+			}
+		}
     }
     else 
 		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh, &ferror);
 	//negative_lh = brent(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &optx);
 	if (optx > max_rate*0.99) optx = MAX_SITE_RATE;
-	//if (optx < MIN_SITE_RATE*1.01) optx = 0;
+	if (optx < MIN_SITE_RATE*2) optx = MIN_SITE_RATE;
 	at(pattern) = optx;
 //#ifndef NDEBUG		
-	if (optx == MAX_SITE_RATE) {
+	if (optx == MAX_SITE_RATE || (optx == MIN_SITE_RATE && !phylo_tree->aln->at(pattern).is_const)) {
 		ofstream out;
 	
 		if (verbose_mode >= VB_MED)  {
-			cout << "Checking pattern " << pattern << " (" << current_rate << ")" << endl;
+			cout << "Checking pattern " << pattern << " (" << current_rate << ", " << optx << ")" << endl;
 			out.open("x", ios::app);
 			out << pattern;
 		}
@@ -150,6 +165,10 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 
 double RateMeyerHaeseler::optimizeParameters() {
 	assert(phylo_tree);
+	double tree_lh = phylo_tree->computeLikelihood();
+	DoubleVector prev_rates;
+	getRates(prev_rates);
+
 	if (!dist_mat) {
 		dist_mat = new double[phylo_tree->leafNum * phylo_tree->leafNum];
 	}
@@ -171,12 +190,12 @@ double RateMeyerHaeseler::optimizeParameters() {
 		int freq = phylo_tree->aln->at(i).frequency;
 		if (phylo_tree->aln->at(i).computeAmbiguousChar(nstates) < nseq-2) {
 			optimizeRate(i);
-			if (at(i) < MIN_SITE_RATE*2) invar_sites += freq; 
+			if (at(i) == MIN_SITE_RATE) invar_sites += freq; 
 			if (at(i) == MAX_SITE_RATE) {
 				saturated_sites += freq; 
 				saturated_ptn ++;
 			}
-		} else { at(i) = 0; ambiguous_sites += freq; }
+		} else { at(i) = 1.0; ambiguous_sites += freq; }
 		if (at(i) < MAX_SITE_RATE) 
 		{
 			if (at(i) > MIN_SITE_RATE) sum += at(i) * freq;
@@ -203,7 +222,30 @@ double RateMeyerHaeseler::optimizeParameters() {
 	}
 	cout << invar_sites << " sites have zero rate" << endl;
 	phylo_tree->clearAllPartialLh();
-	return phylo_tree->computeLikelihood();
+
+/*
+	double new_tree_lh = phylo_tree->computeLikelihood();
+	if (new_tree_lh < tree_lh - TOL_LIKELIHOOD) {
+		cout << "Worse likelihood (" << new_tree_lh << "), roll back site rates..." << endl;
+		setRates(prev_rates);
+		phylo_tree->clearAllPartialLh();
+		new_tree_lh = phylo_tree->computeLikelihood();
+	}*/
+	
+	stringstream best_tree_string;
+	phylo_tree->printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
+	best_tree_string.flush();
+	double new_tree_lh = phylo_tree->optimizeAllBranches(1);
+	if (new_tree_lh < tree_lh - TOL_LIKELIHOOD) {
+		cout << "Worse likelihood (" << new_tree_lh << "), roll back site rates..." << endl;
+		setRates(prev_rates);
+		phylo_tree->rollBack(best_tree_string);
+		//phylo_tree->clearAllPartialLh();
+		new_tree_lh = phylo_tree->computeLikelihood();
+		cout << "Backup log-likelihood: " << new_tree_lh << endl;
+	}
+	
+	return new_tree_lh;
 }
 
 
@@ -246,8 +288,6 @@ double RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf)
 
 void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 	int i;
-	if (tree.leafNum < 25) 
-		cout << "WARNING: Method not recommended for less than 25 sequences" << endl;
 	if (verbose_mode >= VB_MED) {
 		ofstream out("x");
 		out.close();
@@ -273,8 +313,6 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 	
 	//if  (empty()) initializeRates();
 
-	DoubleVector prev_rates;
-	getRates(prev_rates);
 	//setRates(prev_rates);
 	string rate_file = params.out_prefix;
 	rate_file += ".mhrate";
@@ -283,19 +321,16 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 	dist_file += ".tdist";
 
 	for (i = 2; i < 100; i++) {
+		DoubleVector prev_rates;
+		getRates(prev_rates);
 		writeSiteRates(prev_rates, rate_file.c_str());
-		optimizeParameters();
+		tree.curScore = optimizeParameters();
 		phylo_tree->aln->printDist(dist_file.c_str(), dist_mat);
-		tree.curScore = tree.optimizeAllBranches();
-		if (params.min_iterations) tree.curScore = tree.optimizeNNI();
 		cout << "Current Log-likelihood: " << tree.curScore << endl;
-		if (tree.curScore <= prev_lh + TOL_LIKELIHOOD) {
-			setRates(prev_rates);
-			tree.curScore = tree.optimizeAllBranches();
+		if (tree.curScore <= prev_lh + 1e-4) {
 			tree.setBestScore(tree.curScore);
 			break;
 		}
-		getRates(prev_rates);
 		prev_lh = tree.curScore;
 		tree.setBestScore(tree.curScore);
 	}

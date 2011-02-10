@@ -55,6 +55,12 @@ public:
 	*/
 	//virtual int getNRate() { return size(); }
 
+
+	/**
+		return the number of dimensions
+	*/
+	virtual int getNDim();
+
 	/**
 		get the rate of a specified category
 		@param category category ID from 0 to #category-1

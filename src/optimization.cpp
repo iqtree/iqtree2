@@ -336,51 +336,7 @@ double Optimization::minimizeOneDimen(double xmin, double xguess, double xmax, d
 	One dimensional optimization with Newton Raphson 
 	only applicable if 1st and 2nd derivatives are easy to compute
 *****************************************************/
-#define JMAX 20
 
-
-double Optimization::minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f)
-{
-
-	//double fe;
-	//return minimizeOneDimen(xmin, rtn, xmax, tolerance, &f, &fe);
-
-	int j;
-	double df,ddf,dx,rtn,rtnold, fstart=0;
-
-	rtn=xguess;
-	if (rtn < xmin) rtn = xmin;
-	if (rtn > xmax) rtn = xmax;
-	
-
-	for (j=1;j<=JMAX;j++) {
-		f = computeFuncDerv(rtn,df,ddf);
-		if (!isnormal(f)) 
-			return 0;
-		if (j == 1) fstart = f;
-		if (ddf == 0.0) break;
-		dx=(df/fabs(ddf));
-		if (fabs(dx) <= tolerance) break;
-
-		rtnold = rtn; rtn = rtn-dx;
-		if (rtn < xmin) rtn = xmin;
-		if (rtn > xmax) rtn = xmax;
-		dx = rtnold-rtn;
-/*
-		while (fabs(dx) > tolerance && (fnew = computeFunction(rtn)) > f) {
-			dx /= 2;
-			rtn = rtnold - dx;
-		}*/
-		if (fabs(dx) <= tolerance) { rtn = rtnold; break; }
-	}
-	//if (j > JMAX)
-		//nrerror("Maximum number of iterations exceeded in Newton-Raphson");
-	if (f <= fstart && j <= JMAX && (j > 1 || xguess > xmin+tolerance)) 
-		return rtn;
-	// Newton does not work, turn to other method
-	double fe;
-	return minimizeOneDimen(xmin, xguess, xmax, tolerance, &f, &fe);
-}
 
 double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double xmax, double tolerance, double &f)
 {
@@ -388,71 +344,70 @@ double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double x
 	double fnew;
 	// check value at the boundary
 	if ((optx < xmax) && (fnew = computeFunction(xmax)) <= f+tolerance) {
-		cout << "Note from Newton safe mode: " << optx << " (" << f << ") -> " << xmax << " ("<< fnew << ")" << endl;
+		//if (verbose_mode >= VB_MAX)
+			//cout << "Note from Newton safe mode: " << optx << " (" << f << ") -> " << xmax << " ("<< fnew << ")" << endl;
 		optx = xmax;
 		f = fnew;
 	}
 	if ((optx > xmin) && (fnew = computeFunction(xmin)) <= f+tolerance) {
-		cout << "Note from Newton safe mode: " << optx << " -> " << xmin << endl;
+		//if (verbose_mode >= VB_MAX)
+			//cout << "Note from Newton safe mode: " << optx << " -> " << xmin << endl;
 		optx = xmin;
 		f = fnew;
 	}
 	return optx;
 }
 
-/*
-double Optimization::minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f)
+double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm)
 {
+	const int MAXIT = 100;
 	int j;
-	double df,ddf,dx,dxold,rtn,temp, fold, fstart;
-	double xmin_orig = xmin, xmax_orig = xmax;
+	double df,dx,dxold,f;
+	double temp,xh,xl,rts, fold;
 
-	rtn=xguess;
-	dx=dxold=(xmax-xmin);
-	fstart = fold = f = computeFuncDerv(rtn,df,ddf);
+	rts=xguess;
+	if (rts < x1) rts = x1;
+	if (rts > x2) rts = x2;
+	fold = fm = computeFuncDerv(rts,f,df);
+	if (f < 0.0) {
+		xl = rts;
+		xh = x2;
+	} else {
+		xh = rts;
+		xl = x1;	
+	}
 
-	for (j=1;j<=JMAX;j++) {
-		if (ddf <= 0.0) break;
-		if ((((rtn-xmax)*ddf-df) * ((rtn-xmin)*ddf-df) > 0) || // run out of range
-			(fabs(2.0*df) > fabs(dxold*ddf)) // dx not decreasing fast enough
-			) // f even increase
-		{
-			dxold = dx;
-			dx = 0.5*(xmax-xmin);
-			rtn = xmin+dx;
-			if (xmin == rtn) break;
+	dx=dxold=fabs(xh-xl);
+	for (j=1;j<=MAXIT;j++) {
+		if (
+			(df <= 0.0) // function is concave
+			|| (fm > fold + xacc) // increasing
+			|| (((rts-xh)*df-f)*((rts-xl)*df-f) >= 0.0) // out of bound
+			//|| (fabs(2.0*f) > fabs(dxold*df))  // converge too slow
+			) {
+			dxold=dx;
+			dx=0.5*(xh-xl);
+			rts=xl+dx;
+			if (xl == rts) return rts;
 		} else {
 			dxold=dx;
-			if (ddf == 0.0)
-				nrerror("2nd derivative is zero");
-			dx=df/ddf;
-			temp=rtn;
-			//if (f > fold) dx /= 2.0;
-			//if (ddf < 0) dx = -dx;
-			rtn -= dx;
-			//if (rtn < xmin) rtn = xmin;
-			//if (rtn > xmax) rtn = xmax;
-			dx = temp - rtn;
-			if (temp == rtn) break;
+			dx=f/df;
+			temp=rts;
+			rts -= dx;
+			if (temp == rts) return rts;
 		}
-		if (fabs(dx) < tolerance) break;
-		fold = f;
-		f = computeFuncDerv(rtn,df,ddf);
-		//if (f > fold) break; // Does not decrease function, escape
-		if (df < 0.0) 
-			xmin = rtn;
+		if (fabs(dx) < xacc) { fm = computeFunction(rts); return rts; }
+		fold = fm;
+		fm = computeFuncDerv(rts,f,df);
+		if (f < 0.0)
+			xl=rts;
 		else
-			xmax = rtn;
+			xh=rts;
 	}
-	if (j > JMAX)
-	nrerror("Maximum number of iterations exceeded in Newton-Raphson");
-	if (f <= fstart) return rtn;
-	// Newton does not work (find a max instead of min), turn to other method
-	double fe;
-	return minimizeOneDimen(xmin_orig, xguess, xmax_orig, tolerance, &f, &fe);
-	//return 0.0;
-}*/
-#undef JMAX
+	nrerror("Maximum number of iterations exceeded in minimizeNewton");
+	return 0.0;
+}
+
 
 /*****************************************************
 	Multi dimensional optimization with BFGS method
@@ -665,7 +620,8 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 			sumdg += SQR(dg[i]);
 			sumxi += SQR(xi[i]);
 		}
-		if (fac*fac > EPS*sumdg*sumxi) {
+		if (fac*fac > EPS*sumdg*sumxi)
+		{
 			fac=1.0/fac;
 			fad=1.0/fae;
 			for (i=1;i<=n;i++) dg[i]=fac*xi[i]-fad*hdg[i];
@@ -723,7 +679,7 @@ double Optimization::derivativeFunk(double x[], double dfx[]) {
 }
 
 
-#define NRANSI
+/*#define NRANSI
 #define ITMAX 100
 #define CGOLD 0.3819660
 #define ZEPS 1.0e-10
@@ -797,4 +753,103 @@ double Optimization::brent(double ax, double bx, double cx, double tol,
 #undef CGOLD
 #undef ZEPS
 #undef SHFT
-#undef NRANSI
+#undef NRANSI*/
+
+/*#define JMAX 20
+
+double Optimization::minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f)
+{
+	return rtsafe(xmin, xguess, xmax, tolerance, f);
+	//double fe;
+	//return minimizeOneDimen(xmin, rtn, xmax, tolerance, &f, &fe);
+
+	int j;
+	double df,ddf,dx,rtn,rtnold, fstart=0, fnew;
+
+	rtn=xguess;
+	if (rtn < xmin) rtn = xmin;
+	if (rtn > xmax) rtn = xmax;
+	
+
+	for (j=1;j<=JMAX;j++) {
+		f = computeFuncDerv(rtn,df,ddf);
+		if (!isnormal(f)) 
+			return 0;
+		if (j == 1) fstart = f;
+		if (ddf == 0.0) break;
+		dx=(df/fabs(ddf));
+		if (fabs(dx) <= tolerance) break;
+
+		rtnold = rtn; rtn = rtn-dx;
+		if (rtn < xmin) rtn = xmin;
+		if (rtn > xmax) rtn = xmax;
+		dx = rtnold-rtn;
+
+		while (fabs(dx) > tolerance && (fnew = computeFunction(rtn)) > f + tolerance) {
+			dx /= 2;
+			rtn = rtnold - dx;
+		}
+		if (fabs(dx) <= tolerance) { rtn = rtnold; break; }
+	}
+	//if (j > JMAX)
+		//nrerror("Maximum number of iterations exceeded in Newton-Raphson");
+	if (f <= fstart && j <= JMAX && (j > 1 || xguess > xmin+tolerance)) 
+		return rtn;
+	// Newton does not work, turn to other method
+	double fe;
+	return minimizeOneDimen(xmin, xguess, xmax, tolerance, &f, &fe);
+}*/
+
+/*
+double Optimization::minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f)
+{
+	int j;
+	double df,ddf,dx,dxold,rtn,temp, fold, fstart;
+	double xmin_orig = xmin, xmax_orig = xmax;
+
+	rtn=xguess;
+	dx=dxold=(xmax-xmin);
+	fstart = fold = f = computeFuncDerv(rtn,df,ddf);
+
+	for (j=1;j<=JMAX;j++) {
+		if (ddf <= 0.0) break;
+		if ((((rtn-xmax)*ddf-df) * ((rtn-xmin)*ddf-df) > 0) || // run out of range
+			(fabs(2.0*df) > fabs(dxold*ddf)) // dx not decreasing fast enough
+			) // f even increase
+		{
+			dxold = dx;
+			dx = 0.5*(xmax-xmin);
+			rtn = xmin+dx;
+			if (xmin == rtn) break;
+		} else {
+			dxold=dx;
+			if (ddf == 0.0)
+				nrerror("2nd derivative is zero");
+			dx=df/ddf;
+			temp=rtn;
+			//if (f > fold) dx /= 2.0;
+			//if (ddf < 0) dx = -dx;
+			rtn -= dx;
+			//if (rtn < xmin) rtn = xmin;
+			//if (rtn > xmax) rtn = xmax;
+			dx = temp - rtn;
+			if (temp == rtn) break;
+		}
+		if (fabs(dx) < tolerance) break;
+		fold = f;
+		f = computeFuncDerv(rtn,df,ddf);
+		//if (f > fold) break; // Does not decrease function, escape
+		if (df < 0.0) 
+			xmin = rtn;
+		else
+			xmax = rtn;
+	}
+	if (j > JMAX)
+	nrerror("Maximum number of iterations exceeded in Newton-Raphson");
+	if (f <= fstart) return rtn;
+	// Newton does not work (find a max instead of min), turn to other method
+	double fe;
+	return minimizeOneDimen(xmin_orig, xguess, xmax_orig, tolerance, &f, &fe);
+	//return 0.0;
+}
+#undef JMAX*/

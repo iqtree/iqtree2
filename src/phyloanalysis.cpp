@@ -391,9 +391,10 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         tree.sortTaxa();
         tree.drawTree(out);
 
-        out << "Log-likehood of the tree: " << fixed << tree.getBestScore() << endl <<
-                "Unconstrained log-likelihood (without tree): " << alignment.computeUnconstrainedLogL() << endl << endl <<
-                "Tree in newick format:" << endl << endl;
+        out << "Log-likehood of the tree: " << fixed << tree.getBestScore() << endl
+            << "Unconstrained log-likelihood (without tree): " << alignment.computeUnconstrainedLogL() << endl 
+            << "Total tree length: " << tree.treeLength() << endl << endl
+            << "Tree in newick format:" << endl << endl;
         tree.printResultTree(params, out);
         out << endl;
         /*
@@ -452,7 +453,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         cout << "  Gamma-distributed rates:  " << params.out_prefix << ".rate" << endl;
 		
 
-    if (params.mvh_site_rate)
+    if (params.mvh_site_rate || tree.getRate()->isSiteSpecificRate())
         cout << "  Site-rates by MH model:   " << params.out_prefix << ".mhrate" << endl;
 
     if (params.print_site_lh)
@@ -504,7 +505,7 @@ void printSiteLh(Params &params, IQPTree &tree) {
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(site_lh_file.c_str());
 		out << tree.aln->getNSite() << endl;
-		out << "XXX        ";
+		out << "Site_Lh   ";
 		for (i = 0; i < tree.aln->getNSite(); i++) 
 			out << " " << pattern_lh[tree.aln->getPatternID(i)];
 		out << endl;
@@ -820,9 +821,13 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         tree.curScore = tree.optimizeNNI();
         cout << "Log-likelihood	after reoptimizing full tree: " << tree.curScore << endl;
     }
-    cout << endl;
-    cout << "Optimizing model parameters" << endl;
-    tree.setBestScore(tree.getModelFactory()->optimizeParameters(params.fixed_branch_length));
+
+	if (params.min_iterations) {
+		cout << endl;
+		cout << "Optimizing model parameters" << endl;
+		tree.setBestScore(tree.getModelFactory()->optimizeParameters(params.fixed_branch_length));
+    } else
+    	tree.setBestScore(tree.curScore);
     cout << endl;
     cout << "BEST SCORE FOUND : " << tree.getBestScore() << endl;
     t_tree_search_end = clock();
@@ -847,8 +852,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
     if (params.mvh_site_rate) {
         cout << endl << "Computing site-specific rates by " << rate_mvh->full_name << "..." << endl;
+       	tree.discardSaturatedSite(params.discard_saturated_site);
         rate_mvh->runIterativeProc(params, tree);
-    	//cout << "BEST SCORE FOUND : " << tree.getBestScore() << endl;
+    	cout << endl << "BEST SCORE FOUND : " << tree.getBestScore() << endl;
 		
     	
     }
@@ -865,6 +871,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         cout << "Time used:  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
         delete [] pattern_lh;
     }
+
+	cout << "Total tree length: " << tree.treeLength() << endl;
 
     t_end = clock();
     params.run_time = (t_end - t_begin);
@@ -892,6 +900,13 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
 	if (params.print_site_lh) {
 		printSiteLh(params, tree);
+	}
+
+
+	if (tree.getRate()->isSiteSpecificRate()) {
+		string rate_file = params.out_prefix;
+		rate_file += ".mhrate";
+		tree.getRate()->writeSiteRates(*((RateMeyerHaeseler*)(tree.getRate())), rate_file.c_str());
 	}
 }
 

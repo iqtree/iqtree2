@@ -47,12 +47,17 @@ double AlignmentPairwise::computeFunction(double value) {
 
 	double trans_mat[trans_size];
 	double sum_trans_mat[trans_size];
+	
 
-	tree->getModelFactory()->computeTransMatrix(value * site_rate->getRate(0), sum_trans_mat);
-	for (cat = 1; cat < ncat; cat++) {
-		tree->getModelFactory()->computeTransMatrix(value * site_rate->getRate(cat), trans_mat);
-		for (i = 0; i < trans_size; i++)
-			sum_trans_mat[i] += trans_mat[i];
+	if (tree->getModelFactory()->site_rate->isSiteSpecificRate())
+		tree->getModelFactory()->computeTransMatrix(value, sum_trans_mat);
+	else {
+		tree->getModelFactory()->computeTransMatrix(value * site_rate->getRate(0), sum_trans_mat);
+		for (cat = 1; cat < ncat; cat++) {
+			tree->getModelFactory()->computeTransMatrix(value * site_rate->getRate(cat), trans_mat);
+			for (i = 0; i < trans_size; i++)
+				sum_trans_mat[i] += trans_mat[i];
+		}
 	}
 	double lh = 0.0;
 	for (i = 0; i < trans_size; i++) {
@@ -77,6 +82,9 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
 	//tree->getModelFactory()->computeTransDerv(value * site_rate->getRate(0), sum_trans, sum_derv1, sum_derv2);
 	for (cat = 0; cat < ncat; cat++) {
 		double rate_val = site_rate->getRate(cat);
+		if (tree->getModelFactory()->site_rate->isSiteSpecificRate())
+			rate_val = 1.0;
+
 		double rate_sqr = rate_val * rate_val;
 		tree->getModelFactory()->computeTransDerv(value * rate_val, trans_mat, trans_derv1, trans_derv2);
 		for (i = 0; i < trans_size; i++) {

@@ -163,6 +163,8 @@ public:
      */
     RateHeterogeneity *getRate();
 
+	void discardSaturatedSite(bool val);
+
     /**
             get the name of the model
      */
@@ -761,6 +763,11 @@ protected:
             The variable partial_pars in PhyloNeighbor will be assigned to a region inside this variable.
      */
     UINT *central_partial_pars;
+
+	/**
+		TRUE to discard saturated for Meyer & von Haeseler (2003) model
+	*/
+	bool discard_saturated_site;
     
     ArrayXd p_invar_ptns;
 

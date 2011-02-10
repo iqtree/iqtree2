@@ -724,6 +724,11 @@ struct Params {
     bool mvh_site_rate;
 
 	/**
+		TRUE to discard saturated for Meyer & von Haeseler (2003) model
+	*/
+	bool discard_saturated_site;
+
+	/**
 		rates will be normalized to this mean value
 	*/
 	double mean_rate;
