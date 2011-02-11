@@ -88,6 +88,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	} else {
 		outError("Unsupported model type");
 	}
+
+	tree->discardSaturatedSite(params.discard_saturated_site);
+
 }
 
 

@@ -815,7 +815,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         if (pattern_lh) pattern_lh[ptn] = lh_ptn;
         if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
         	continue;
-        tree_lh += lh_ptn * (*aln)[ptn].frequency;
+        tree_lh += lh_ptn * aln->at(ptn).frequency;
     }
     //for (cat = ncat-1; cat >= 0; cat--)
     //delete trans_mat[cat];

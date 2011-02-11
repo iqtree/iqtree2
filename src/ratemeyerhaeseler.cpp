@@ -223,8 +223,23 @@ double RateMeyerHaeseler::optimizeParameters() {
 		outWarning(str.str());
 	}
 	cout << invar_sites << " sites have zero rate" << endl;
-	phylo_tree->clearAllPartialLh();
 
+// DEBUG
+/*
+	writeSiteRates(*this, "xrate");
+	phylo_tree->clearAllPartialLh();
+	double pattern_lh[size()];
+	double new_tree_lh1 = phylo_tree->computeLikelihood(pattern_lh);
+	ofstream out("xlogl");
+	double check = 0.0;
+	for (i = 0; i < size(); i++) { 
+		out << pattern_lh[i] << endl;
+		check += pattern_lh[i] * phylo_tree->aln->at(i).frequency;
+	}
+	out.close();
+	cout << "Site rates and pattern log-likelihood written " << new_tree_lh1 << " " << check << endl;
+	exit(1);*/
+// END DEBUG
 
 	double new_tree_lh = phylo_tree->computeLikelihood();
 	if (new_tree_lh < tree_lh - TOL_LIKELIHOOD) {
