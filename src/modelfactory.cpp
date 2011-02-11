@@ -105,6 +105,8 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 	else {
 		cur_lh = tree->optimizeAllBranches(1);
 	}
+	if (verbose_mode >= VB_MED)
+		cout << "Initial log-likelihood: " << cur_lh << endl;
 	int i;
 	for (i = 2; i < 100; i++) {
 		double model_lh = model->optimizeParameters();
@@ -129,8 +131,8 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 				cur_lh = tree->optimizeAllBranches(i);  // loop only 5 times in total
 			else
 				cur_lh = new_lh;
-			if (verbose_mode > VB_MIN)
-				cout << "Current Log-likelihood: " << cur_lh << endl;
+			if (verbose_mode >= VB_MED)
+				cout << "Current log-likelihood: " << cur_lh << endl;
 		} else {
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches();
 			break;
@@ -141,7 +143,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 		site_rate->writeInfo(cout);
 	}
 	if (write_info)
-		cout << "Optimization took " << i-1 << " rounds to finish" << endl;
+		cout << "Parameters optimization took " << i-1 << " rounds to finish" << endl << endl;
 	startStoringTransMatrix();
 	return cur_lh;
 }

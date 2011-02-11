@@ -223,19 +223,19 @@ double RateMeyerHaeseler::optimizeParameters() {
 	cout << invar_sites << " sites have zero rate" << endl;
 	phylo_tree->clearAllPartialLh();
 
-/*
+
 	double new_tree_lh = phylo_tree->computeLikelihood();
 	if (new_tree_lh < tree_lh - TOL_LIKELIHOOD) {
-		cout << "Worse likelihood (" << new_tree_lh << "), roll back site rates..." << endl;
+		cout << "Worse likelihood (" << new_tree_lh << "), rolling back site rates..." << endl;
 		setRates(prev_rates);
 		phylo_tree->clearAllPartialLh();
 		new_tree_lh = phylo_tree->computeLikelihood();
-	}*/
+	}
 	
+	/*
 	stringstream best_tree_string;
 	phylo_tree->printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
-	best_tree_string.flush();
-	double new_tree_lh = phylo_tree->optimizeAllBranches(1);
+	double new_tree_lh = phylo_tree->optimizeAllBranches();
 	if (new_tree_lh < tree_lh - TOL_LIKELIHOOD) {
 		cout << "Worse likelihood (" << new_tree_lh << "), roll back site rates..." << endl;
 		setRates(prev_rates);
@@ -243,7 +243,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 		//phylo_tree->clearAllPartialLh();
 		new_tree_lh = phylo_tree->computeLikelihood();
 		cout << "Backup log-likelihood: " << new_tree_lh << endl;
-	}
+	}*/
 	
 	return new_tree_lh;
 }
@@ -319,13 +319,15 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 	double prev_lh = tree.getBestScore();
 	string dist_file = params.out_prefix;
 	dist_file += ".tdist";
+	tree.getModelFactory()->stopStoringTransMatrix();
 
 	for (i = 2; i < 100; i++) {
 		DoubleVector prev_rates;
 		getRates(prev_rates);
 		writeSiteRates(prev_rates, rate_file.c_str());
 		tree.curScore = optimizeParameters();
-		phylo_tree->aln->printDist(dist_file.c_str(), dist_mat);
+		//phylo_tree->aln->printDist(dist_file.c_str(), dist_mat);
+		tree.curScore = tree.optimizeAllBranches(i);
 		cout << "Current Log-likelihood: " << tree.curScore << endl;
 		if (tree.curScore <= prev_lh + 1e-4) {
 			tree.setBestScore(tree.curScore);
@@ -335,6 +337,7 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 		tree.setBestScore(tree.curScore);
 	}
 	cout << "Optimization took " << i-1 << " rounds to finish" << endl;
+	tree.getModelFactory()->startStoringTransMatrix();
 	//tree.getModelFactory()->site_rate = backup_rate;
 	//tree.setRate(backup_rate);
 }
