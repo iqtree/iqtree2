@@ -165,8 +165,8 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 
 double RateMeyerHaeseler::optimizeParameters() {
 	assert(phylo_tree);
-	//double tree_lh = phylo_tree->computeLikelihood();
-	double tree_lh = phylo_tree->optimizeAllBranches();
+	double tree_lh = phylo_tree->computeLikelihood();
+	//double tree_lh = phylo_tree->optimizeAllBranches();
 	DoubleVector prev_rates;
 	getRates(prev_rates);
 
@@ -240,7 +240,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 	cout << "Site rates and pattern log-likelihood written " << new_tree_lh1 << " " << check << endl;
 	exit(1);*/
 // END DEBUG
-
+/*
 	double new_tree_lh = phylo_tree->computeLikelihood();
 	if (new_tree_lh < tree_lh - TOL_LIKELIHOOD) {
 		cout << "Worse likelihood (" << new_tree_lh << "), rolling back site rates..." << endl;
@@ -249,11 +249,11 @@ double RateMeyerHaeseler::optimizeParameters() {
 		new_tree_lh = phylo_tree->computeLikelihood();
 		cout << "Back up likelihood: " << new_tree_lh << endl;
 	}
+*/
 	
-	/*
 	stringstream best_tree_string;
 	phylo_tree->printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
-	double new_tree_lh = phylo_tree->optimizeAllBranches();
+	double new_tree_lh = phylo_tree->optimizeAllBranches(1);
 	if (new_tree_lh < tree_lh - TOL_LIKELIHOOD) {
 		cout << "Worse likelihood (" << new_tree_lh << "), roll back site rates..." << endl;
 		setRates(prev_rates);
@@ -261,7 +261,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 		//phylo_tree->clearAllPartialLh();
 		new_tree_lh = phylo_tree->computeLikelihood();
 		cout << "Backup log-likelihood: " << new_tree_lh << endl;
-	}*/
+	}
 	
 	return new_tree_lh;
 }
