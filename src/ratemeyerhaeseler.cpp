@@ -165,7 +165,8 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 
 double RateMeyerHaeseler::optimizeParameters() {
 	assert(phylo_tree);
-	double tree_lh = phylo_tree->computeLikelihood();
+	//double tree_lh = phylo_tree->computeLikelihood();
+	double tree_lh = phylo_tree->optimizeAllBranches();
 	DoubleVector prev_rates;
 	getRates(prev_rates);
 
@@ -205,9 +206,10 @@ double RateMeyerHaeseler::optimizeParameters() {
 	} 
 
 	// now scale such that the mean of rates is 1
+	double scale_f = ok_sites * mean_rate / sum;
 	if (mean_rate > 0.0)
 	for (i = 0; i < size(); i++) {
-		if (ok_ptn[i] && at(i) > MIN_SITE_RATE) at(i) = at(i) * ok_sites * mean_rate / sum;
+		if (ok_ptn[i] && at(i) > MIN_SITE_RATE) at(i) = at(i) * scale_f;
 	}
 
 	if (ambiguous_sites) {
@@ -230,6 +232,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 		setRates(prev_rates);
 		phylo_tree->clearAllPartialLh();
 		new_tree_lh = phylo_tree->computeLikelihood();
+		cout << "Back up likelihood: " << new_tree_lh << endl;
 	}
 	
 	/*
