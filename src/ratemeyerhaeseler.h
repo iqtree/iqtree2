@@ -37,7 +37,7 @@ public:
 	/**
 		constructor
 	*/
-    RateMeyerHaeseler(double mean_rate_val);
+    RateMeyerHaeseler(double mean_rate_val = 1.0);
 
 	/**
 		destructor
@@ -66,8 +66,14 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category);
+	//virtual double getRate(int category);
 
+	/**
+		get the rate of a specified site-pattern. Default returns 1.0 since it is homogeneous model
+		@param ptn pattern ID 
+		@return the rate of the specified site-pattern
+	*/
+	virtual double getPtnRate(int ptn);
 
 	void getRates(DoubleVector &rates);
 
@@ -84,10 +90,15 @@ public:
 
 	/**
 		optimize rate of site
-		@param site target pattern
+		@param pattern target pattern
 		@return the optimized rate value, also update the corresponding element of the vector
 	*/
 	double optimizeRate(int pattern);
+
+	/**
+		optimize rates of all site-patterns
+	*/
+	virtual void optimizeRates();
 
 	/**
 		This function is inherited from Optimization class for optimizting site rates 
@@ -118,7 +129,7 @@ public:
 	*/
 	int optimizing_pattern;
 
-private:
+protected:
 
 	/**
 		rates will be scaled to this mean. 0 for no scaling

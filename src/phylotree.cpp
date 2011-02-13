@@ -778,7 +778,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         if (dad->isLeaf())
             dad_state = (*aln)[ptn][dad->id];
         if (site_rate->isSiteSpecificRate())
-        	model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getRate(ptn), state_freq, trans_mat);
+        	model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getPtnRate(ptn), state_freq, trans_mat);
         for (cat = 0; cat < ncat; cat++) {
 	        double lh_cat = 0.0; // likelihood of the pattern's category
             double *partial_lh_site = node_branch->partial_lh + (ptn * block + cat * nstates);
@@ -808,12 +808,12 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         }
 //#ifdef DEBUG
 		if (lh_ptn <= 0.0)
-			cout << "Negative likelihood: " << lh_ptn << " " << site_rate->getRate(ptn) << endl;
+			cout << "Negative likelihood: " << lh_ptn << " " << site_rate->getPtnRate(ptn) << endl;
 //#endif
         assert(lh_ptn > 0);
         lh_ptn = log(lh_ptn);
         if (pattern_lh) pattern_lh[ptn] = lh_ptn;
-        if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
+        if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getPtnRate(ptn) >= MAX_SITE_RATE)
         	continue;
         tree_lh += lh_ptn * aln->at(ptn).frequency;
     }
@@ -955,7 +955,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
 
             for (ptn = 0; ptn < aln->size(); ptn++) {
             	if (site_rate->isSiteSpecificRate())
-                	model_factory->computeTransMatrix((*it)->length * site_rate->getRate(ptn), trans_mat[0]);
+                	model_factory->computeTransMatrix((*it)->length * site_rate->getPtnRate(ptn), trans_mat[0]);
             	
                 for (cat = 0; cat < ncat; cat++) {
                     partial_lh_site = dad_branch->partial_lh + (ptn * block + cat * nstates);
@@ -1331,7 +1331,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     }
 
     for (ptn = 0; ptn < aln->size(); ptn++) {
-        if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getRate(ptn) >= MAX_SITE_RATE)
+        if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getPtnRate(ptn) >= MAX_SITE_RATE)
         	continue;
         double lh_ptn = 0.0; // likelihood of the pattern
         double lh_ptn_derv1 = 0.0;
@@ -1340,7 +1340,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         if (dad->isLeaf())
             dad_state = (*aln)[ptn][dad->id];
         if (site_rate->isSiteSpecificRate())
-	        model_factory->computeTransDervFreq(dad_branch->length, site_rate->getRate(ptn), state_freq, 
+	        model_factory->computeTransDervFreq(dad_branch->length, site_rate->getPtnRate(ptn), state_freq, 
 	        	trans_mat, trans_derv1, trans_derv2);
         for (cat = 0; cat < ncat; cat++) {
             double *partial_lh_site = node_branch->partial_lh + (ptn * block + cat * nstates);

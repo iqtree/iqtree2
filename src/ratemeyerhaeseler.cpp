@@ -44,9 +44,17 @@ int RateMeyerHaeseler::getNDim() {
 	return size()-1; 
 }
 
+/*
 double RateMeyerHaeseler::getRate(int category) {
 	if (category < size())
 		return at(category);
+
+	return 1.0;
+}*/
+
+double RateMeyerHaeseler::getPtnRate(int ptn) {
+	if (ptn < size())
+		return at(ptn);
 
 	return 1.0;
 }
@@ -93,6 +101,7 @@ void RateMeyerHaeseler::initializeRates() {
 		
 	}
 }
+
 
 double RateMeyerHaeseler::optimizeRate(int pattern) {
 	optimizing_pattern = pattern;
@@ -163,13 +172,8 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 	return optx;
 }
 
-double RateMeyerHaeseler::optimizeParameters() {
-	assert(phylo_tree);
-	double tree_lh = phylo_tree->computeLikelihood();
-	//double tree_lh = phylo_tree->optimizeAllBranches();
-	DoubleVector prev_rates;
-	getRates(prev_rates);
 
+void RateMeyerHaeseler::optimizeRates() {
 	if (!dist_mat) {
 		dist_mat = new double[phylo_tree->leafNum * phylo_tree->leafNum];
 	}
@@ -223,7 +227,17 @@ double RateMeyerHaeseler::optimizeParameters() {
 		outWarning(str.str());
 	}
 	cout << invar_sites << " sites have zero rate" << endl;
-	phylo_tree->clearAllPartialLh();
+
+}
+
+double RateMeyerHaeseler::optimizeParameters() {
+	assert(phylo_tree);
+	double tree_lh = phylo_tree->computeLikelihood();
+	//double tree_lh = phylo_tree->optimizeAllBranches();
+	DoubleVector prev_rates;
+	getRates(prev_rates);
+
+	optimizeRates();
 
 // DEBUG
 /*
@@ -251,6 +265,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 	}
 */
 	
+	phylo_tree->clearAllPartialLh();
 	stringstream best_tree_string;
 	phylo_tree->printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
 	double new_tree_lh = phylo_tree->optimizeAllBranches(1);

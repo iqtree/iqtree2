@@ -84,11 +84,22 @@ public:
 	virtual double getRate(int category) { return 1.0; }
 
 	/**
+		get the rate of a specified site-pattern. Default returns 1.0 since it is homogeneous model
+		@param ptn pattern ID 
+		@return the rate of the specified site-pattern
+	*/
+	virtual double getPtnRate(int ptn) { return 1.0; }
+
+	/**
 		get the proportion of invariable sites. Default returns 0.0 since it is homogeneous model
 		@return the proportion of invariable sites
 	*/
 	virtual double getPInvar() { return 0.0; }
 
+	/**
+		get the Gamma shape. Default returns 0.0 since it is homogeneous model
+		@return Gamma shape
+	*/	
 	virtual double getGammaShape() { return 0.0; }
 
 	/**

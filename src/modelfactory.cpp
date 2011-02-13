@@ -25,6 +25,7 @@
 #include "modeldna.h"
 #include "modelprotein.h"
 #include "ratemeyerhaeseler.h"
+#include "ratemeyerdiscrete.h"
 
 ModelFactory::ModelFactory() { 
 	model = NULL; 
@@ -62,9 +63,16 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
 			site_rate = new RateGamma(params.num_rate_cats, params.gamma_shape, tree);
-		} else if (rate_str == "+M") {
+		} else if (rate_str.substr(0,2) == "+M") {
 			tree->sse = false;
-			site_rate = new RateMeyerHaeseler(params.mean_rate);
+			if (rate_str.length() > 2) {
+				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
+				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
+			} else params.num_rate_cats = 0;
+			if (params.num_rate_cats > 0)
+				site_rate = new RateMeyerDiscrete(params.num_rate_cats);
+			else
+				site_rate = new RateMeyerHaeseler(params.mean_rate);
 			site_rate->setTree(tree);
 		} else
 			outError("Invalid rate heterogeneity type");
