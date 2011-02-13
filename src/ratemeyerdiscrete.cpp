@@ -49,26 +49,35 @@ void RateMeyerDiscrete::optimizeRates() {
 	//AddKMeansLogging(&cout, false);
 	double points[nsites];
 	int assignments[nsites];
-	int attempts = 10, i;
+	int attempts = sqrt(nsites), i;
 	for (i = 0; i < nsites; i++) {
-		points[i] = at(phylo_tree->aln->getPatternID(i));
-		if (points[i] == MIN_SITE_RATE) points[i] = -MAX_SITE_RATE;
+		if (at(phylo_tree->aln->getPatternID(i)) == MAX_SITE_RATE) 
+			points[i] = log(1e6);
+		else 
+			points[i] = log(at(phylo_tree->aln->getPatternID(i)));
 	}
 	memset(rates, 0, sizeof(double) * ncategory);
 
 	double cost = RunKMeansPlusPlus(nsites, ncategory, 1, points, attempts, rates, assignments);
 	// assign the categorized rates
 	double sum = 0.0, ok = 0.0;
+	for (i = 0; i < ncategory; i++) rates[i] = exp(rates[i]);
 	for (i = 0; i < nsites; i++) {
 		double site_r = rates[assignments[i]];
-		if (site_r < MIN_SITE_RATE) site_r = MIN_SITE_RATE;
+		if (site_r < 2*MIN_SITE_RATE) site_r = MIN_SITE_RATE;
+		if (site_r > MAX_SITE_RATE*0.99) site_r = MAX_SITE_RATE;
 		at(phylo_tree->aln->getPatternID(i)) = site_r;
 		if (site_r < MAX_SITE_RATE) { sum += site_r; ok += mean_rate; }
 	}
 
-	if (fabs(sum - ok) > 1e-3) 
-		cout << "Wrong normalization " << sum << " " << ok << endl;
+	if (fabs(sum - ok) > 1e-3) {
+		cout << "Normalizing " << sum << " / " << ok << endl;
+		double scale_f = ok / sum;
+		for (i = 0; i < size(); i++) {
+			if (at(i) > MIN_SITE_RATE && at(i) < MAX_SITE_RATE) at(i) = at(i) * scale_f;
+	}
 
+	}
 	std::sort(rates, rates + ncategory);
 	if (rates[0] < MIN_SITE_RATE) rates[0] = MIN_SITE_RATE;
 	if (verbose_mode >= VB_MED) {

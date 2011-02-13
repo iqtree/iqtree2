@@ -116,7 +116,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 	else {
 		cur_lh = tree->optimizeAllBranches(1);
 	}
-	if (verbose_mode >= VB_MED)
+	if (verbose_mode >= VB_MED || write_info)
 		cout << "Initial log-likelihood: " << cur_lh << endl;
 	int i;
 	for (i = 2; i < 100; i++) {
@@ -142,7 +142,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 				cur_lh = tree->optimizeAllBranches(i);  // loop only 5 times in total
 			else
 				cur_lh = new_lh;
-			if (verbose_mode >= VB_MED)
+			if (verbose_mode >= VB_MED || write_info)
 				cout << "Current log-likelihood: " << cur_lh << endl;
 		} else {
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches();
