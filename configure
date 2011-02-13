@@ -15237,7 +15237,7 @@ fi
 done
 
 
-ac_config_files="$ac_config_files Makefile src/Makefile src/lp/Makefile src/lp/bfp/Makefile src/lp/bfp/bfp_LUSOL/LUSOL/Makefile src/lp/bfp/bfp_LUSOL/Makefile src/lp/colamd/Makefile src/lp/shared/Makefile src/modeltest/Makefile src/ncl/Makefile src/whtest/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile src/kmeans/Makefile src/lp/Makefile src/lp/bfp/Makefile src/lp/bfp/bfp_LUSOL/LUSOL/Makefile src/lp/bfp/bfp_LUSOL/Makefile src/lp/colamd/Makefile src/lp/shared/Makefile src/modeltest/Makefile src/ncl/Makefile src/whtest/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -16228,6 +16228,7 @@ do
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
+    "src/kmeans/Makefile") CONFIG_FILES="$CONFIG_FILES src/kmeans/Makefile" ;;
     "src/lp/Makefile") CONFIG_FILES="$CONFIG_FILES src/lp/Makefile" ;;
     "src/lp/bfp/Makefile") CONFIG_FILES="$CONFIG_FILES src/lp/bfp/Makefile" ;;
     "src/lp/bfp/bfp_LUSOL/LUSOL/Makefile") CONFIG_FILES="$CONFIG_FILES src/lp/bfp/bfp_LUSOL/LUSOL/Makefile" ;;

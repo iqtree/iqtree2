@@ -8,6 +8,7 @@ AC_PROG_CXX
 AM_PROG_LIBTOOL
 AC_CHECK_FUNCS(gettimeofday)
 
-AC_OUTPUT(Makefile src/Makefile src/lp/Makefile src/lp/bfp/Makefile \
-	src/lp/bfp/bfp_LUSOL/LUSOL/Makefile src/lp/bfp/bfp_LUSOL/Makefile src/lp/colamd/Makefile \
-	src/lp/shared/Makefile src/modeltest/Makefile src/ncl/Makefile src/whtest/Makefile)
+AC_OUTPUT(Makefile src/Makefile src/kmeans/Makefile src/lp/Makefile \
+	src/lp/bfp/Makefile src/lp/bfp/bfp_LUSOL/LUSOL/Makefile src/lp/bfp/bfp_LUSOL/Makefile \
+	src/lp/colamd/Makefile src/lp/shared/Makefile src/modeltest/Makefile src/ncl/Makefile \
+	src/whtest/Makefile)

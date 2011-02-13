@@ -14,14 +14,14 @@
     <projectname>pda</projectname>
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
-    <description></description>
-    <defaultencoding></defaultencoding>
+    <description/>
+    <defaultencoding/>
     <versioncontrol>kdevsubversion</versioncontrol>
   </general>
   <kdevautoproject>
     <general>
       <activetarget>src/pda</activetarget>
-      <useconfiguration>debug</useconfiguration>
+      <useconfiguration>optimized</useconfiguration>
     </general>
     <run>
       <mainprogram>/home/minh/projects/iqpnni_new/branches/iq-tree/debug/src/pda</mainprogram>
@@ -36,8 +36,9 @@
         <pda>/scratch/minh/projects/pda/debug/./src</pda>
       </cwd>
       <programargs> -aln 8.aln -n 10  -mod HKY -pdel 0.3 -krep 4</programargs>
-      <globaldebugarguments>-s 30.phy -n 0 -mh -nosse -m JC</globaldebugarguments>
-      <globalcwd>/home/minh/projects/iqpnni_new/branches/iq-tree/examples/</globalcwd>
+      <globaldebugarguments>-s 10.phy -m JC -n 0 -v -nosse
+-m JC+M</globaldebugarguments>
+      <globalcwd>/home/minh/projects/iqpnni_new/branches/iq-tree/examples/mhtest/</globalcwd>
       <useglobalprogram>true</useglobalprogram>
       <autocompile>false</autocompile>
       <autoinstall>false</autoinstall>
@@ -63,21 +64,21 @@
         <f77flags/>
       </optimized>
       <debug>
-        <configargs></configargs>
+        <configargs/>
         <builddir>debug</builddir>
         <ccompiler>kdevgccoptions</ccompiler>
         <cxxcompiler>kdevgppoptions</cxxcompiler>
         <f77compiler>kdevg77options</f77compiler>
         <cxxflags>-O0 -g3</cxxflags>
         <envvars/>
-        <topsourcedir></topsourcedir>
-        <cppflags></cppflags>
-        <ldflags></ldflags>
-        <ccompilerbinary></ccompilerbinary>
-        <cxxcompilerbinary></cxxcompilerbinary>
-        <f77compilerbinary></f77compilerbinary>
-        <cflags></cflags>
-        <f77flags></f77flags>
+        <topsourcedir/>
+        <cppflags/>
+        <ldflags/>
+        <ccompilerbinary/>
+        <cxxcompilerbinary/>
+        <f77compilerbinary/>
+        <cflags/>
+        <f77flags/>
       </debug>
       <profile>
         <envvars/>
@@ -231,7 +232,7 @@
       <includePaths>.;</includePaths>
     </codecompletion>
     <creategettersetter>
-      <prefixGet></prefixGet>
+      <prefixGet/>
       <prefixSet>set</prefixSet>
       <prefixVariable>m_,_</prefixVariable>
       <parameterName>theValue</parameterName>
@@ -253,11 +254,11 @@
   </cppsupportpart>
   <kdevdebugger>
     <general>
-      <gdbpath></gdbpath>
-      <dbgshell></dbgshell>
-      <configGdbScript></configGdbScript>
-      <runShellScript></runShellScript>
-      <runGdbScript></runGdbScript>
+      <gdbpath/>
+      <dbgshell/>
+      <configGdbScript/>
+      <runShellScript/>
+      <runGdbScript/>
       <breakonloadinglibs>true</breakonloadinglibs>
       <separatetty>false</separatetty>
       <floatingtoolbar>false</floatingtoolbar>
