@@ -26,8 +26,11 @@ RateMeyerDiscrete::RateMeyerDiscrete(int ncat)
  : RateMeyerHaeseler()
 {
 	ncategory = ncat;
-	rates = new double[ncategory];
-	memset(rates, 0, sizeof(double) * ncategory);
+	rates = NULL;
+	if (ncat > 0) {
+		rates = new double[ncategory];
+		memset(rates, 0, sizeof(double) * ncategory);
+	}
 	name = "+M";
 	name += convertIntToString(ncategory);
 	full_name += " with " + convertIntToString(ncategory) + " categories";
@@ -40,16 +43,19 @@ RateMeyerDiscrete::~RateMeyerDiscrete()
 }
 
 void RateMeyerDiscrete::optimizeRates() {
-	assert(ncategory > 0);
-
 	RateMeyerHaeseler::optimizeRates();
+}
+
+void RateMeyerDiscrete::classifyRatesKMeans() {
+
+	assert(ncategory > 0);
 	int nsites = phylo_tree->aln->getNSite();
 
 	// clustering the rates with k-means
 	//AddKMeansLogging(&cout, false);
 	double points[nsites];
 	int assignments[nsites];
-	int attempts = sqrt(nsites), i;
+	int attempts = nsites, i;
 	for (i = 0; i < nsites; i++) {
 		if (at(phylo_tree->aln->getPatternID(i)) == MAX_SITE_RATE) 
 			points[i] = log(1e6);
@@ -59,6 +65,7 @@ void RateMeyerDiscrete::optimizeRates() {
 	memset(rates, 0, sizeof(double) * ncategory);
 
 	double cost = RunKMeansPlusPlus(nsites, ncategory, 1, points, attempts, rates, assignments);
+	cout << "Rates are classified by k-means (" << attempts << " runs) with cost " << cost << endl;
 	// assign the categorized rates
 	double sum = 0.0, ok = 0.0;
 	for (i = 0; i < ncategory; i++) rates[i] = exp(rates[i]);
@@ -71,7 +78,7 @@ void RateMeyerDiscrete::optimizeRates() {
 	}
 
 	if (fabs(sum - ok) > 1e-3) {
-		cout << "Normalizing " << sum << " / " << ok << endl;
+		//cout << "Normalizing " << sum << " / " << ok << endl;
 		double scale_f = ok / sum;
 		for (i = 0; i < size(); i++) {
 			if (at(i) > MIN_SITE_RATE && at(i) < MAX_SITE_RATE) at(i) = at(i) * scale_f;
@@ -81,9 +88,39 @@ void RateMeyerDiscrete::optimizeRates() {
 	std::sort(rates, rates + ncategory);
 	if (rates[0] < MIN_SITE_RATE) rates[0] = MIN_SITE_RATE;
 	if (verbose_mode >= VB_MED) {
-		cout << "K-means cost: " << cost << endl;
+		//cout << "K-means cost: " << cost << endl;
 		for (i = 0; i < ncategory; i++) cout << rates[i] << " ";
 		cout << endl;
 	}
 
 }
+
+
+double RateMeyerDiscrete::classifyRates(double tree_lh) {
+	double new_tree_lh;
+	if (ncategory > 0) {
+		classifyRatesKMeans();
+		phylo_tree->clearAllPartialLh();
+		new_tree_lh = phylo_tree->computeLikelihood();
+		return new_tree_lh;
+	}
+
+	// identifying proper number of categories
+	int nptn = phylo_tree->aln->getNPattern();
+	rates = new double[nptn];
+	DoubleVector continuous_rates;
+	getRates(continuous_rates);
+
+	for (ncategory = 4; ; ncategory++) {
+		classifyRatesKMeans();
+		phylo_tree->clearAllPartialLh();
+		new_tree_lh = phylo_tree->optimizeAllBranches();
+		cout << "For " << ncategory << " categories, LogL = " << new_tree_lh << endl;
+		if (new_tree_lh > tree_lh - 3.0) break;
+		setRates(continuous_rates);
+	}
+
+	cout << endl << "Number of categories is set to " << ncategory << endl;
+	return new_tree_lh;
+}
+

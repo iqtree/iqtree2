@@ -252,7 +252,7 @@ noinst_HEADERS = alignment.h alignmentpairwise.h bionj.h circularnetwork.h \
 	rateheterogeneity.h rateinvar.h ratemeyerdiscrete.h ratemeyerhaeseler.h split.h \
 	splitgraph.h splitset.h stoprule.h substmodel.h tools.h whtest_wrapper.h
 
-SUBDIRS = lp modeltest ncl whtest kmeans
+SUBDIRS = kmeans lp modeltest ncl whtest
 pda_LDADD = $(top_builddir)/src/kmeans/libkmeans.a \
 	$(top_builddir)/src/lp/liblpsolve.a $(top_builddir)/src/modeltest/libmodeltest.a \
 	$(top_builddir)/src/ncl/libNCL.a $(top_builddir)/src/whtest/libwhtest.a $(top_srcdir)/lib/libacml_mv.a
@@ -271,9 +271,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  src/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign  src/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu  src/Makefile
+	  $(AUTOMAKE) --foreign  src/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \

@@ -133,8 +133,18 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 			}
 		}
     }
-    else 
+    else {
 		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh, &ferror);
+		double fnew;
+		if ((optx < max_rate) && (fnew = computeFunction(max_rate)) <= negative_lh+TOL_SITE_RATE) {
+			optx = max_rate;
+			negative_lh = fnew;
+		}
+		if ((optx > MIN_SITE_RATE) && (fnew = computeFunction(MIN_SITE_RATE)) <= negative_lh+TOL_SITE_RATE) {
+			optx = MIN_SITE_RATE;
+			negative_lh = fnew;
+		}
+	}
 	//negative_lh = brent(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &optx);
 	if (optx > max_rate*0.99) optx = MAX_SITE_RATE;
 	if (optx < MIN_SITE_RATE*2) optx = MIN_SITE_RATE;
@@ -276,6 +286,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 		//phylo_tree->clearAllPartialLh();
 		new_tree_lh = phylo_tree->computeLikelihood();
 		cout << "Backup log-likelihood: " << new_tree_lh << endl;
+		return classifyRates(new_tree_lh);
 	}
 	
 	return new_tree_lh;

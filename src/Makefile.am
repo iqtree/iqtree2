@@ -22,7 +22,7 @@ noinst_HEADERS = alignment.h alignmentpairwise.h bionj.h circularnetwork.h \
 	phyloanalysis.h phylonode.h phylotree.h pruning.h rategamma.h rategammainvar.h \
 	rateheterogeneity.h rateinvar.h ratemeyerdiscrete.h ratemeyerhaeseler.h split.h \
 	splitgraph.h splitset.h stoprule.h substmodel.h tools.h whtest_wrapper.h
-SUBDIRS = lp modeltest ncl whtest kmeans
+SUBDIRS = kmeans lp modeltest ncl whtest
 pda_LDADD = $(top_builddir)/src/kmeans/libkmeans.a \
 	$(top_builddir)/src/lp/liblpsolve.a $(top_builddir)/src/modeltest/libmodeltest.a \
 	$(top_builddir)/src/ncl/libNCL.a $(top_builddir)/src/whtest/libwhtest.a $(top_srcdir)/lib/libacml_mv.a

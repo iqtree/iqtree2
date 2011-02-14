@@ -67,9 +67,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			tree->sse = false;
 			if (rate_str.length() > 2) {
 				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
-				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
-			} else params.num_rate_cats = 0;
-			if (params.num_rate_cats > 0)
+				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else params.num_rate_cats = -1;
+			if (params.num_rate_cats >= 0)
 				site_rate = new RateMeyerDiscrete(params.num_rate_cats);
 			else
 				site_rate = new RateMeyerHaeseler(params.mean_rate);

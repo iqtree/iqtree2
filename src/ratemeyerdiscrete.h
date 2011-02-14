@@ -64,6 +64,17 @@ public:
 	*/
 	virtual void optimizeRates();
 
+	/**
+		classify rates into categories.
+		@param tree_lh the current tree log-likelihood
+	*/
+	virtual double classifyRates(double tree_lh);
+
+	/**
+		classify rates into categories using k-means++ method.
+	*/
+	void classifyRatesKMeans();
+
 protected:
 
 	/**
