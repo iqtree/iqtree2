@@ -123,6 +123,13 @@ public:
 	virtual double optimizeParameters() { return 0.0; }
 
 	/**
+		classify rates into categories, this is meant for the discrete MH model. 
+		The default just return tree_lh
+		@param tree_lh the current tree log-likelihood
+	*/
+	virtual double classifyRates(double tree_lh) { return tree_lh; }
+
+	/**
 		write information
 		@param out output stream
 	*/

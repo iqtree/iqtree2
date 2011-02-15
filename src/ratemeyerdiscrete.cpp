@@ -155,28 +155,39 @@ bool RateMeyerDiscrete::isSiteSpecificRate() {
 }
 
 int RateMeyerDiscrete::getNDiscreteRate() { 
-	if (ncategory < 1) return 1;
+	if (!is_categorized) return RateMeyerHaeseler::getNDiscreteRate();
+	assert(ncategory > 0);
 	return ncategory; 
 }
 
 double RateMeyerDiscrete::getRate(int category) {
-	if (isSiteSpecificRate()) return RateMeyerHaeseler::getRate(category);
+	if (!is_categorized) return RateMeyerHaeseler::getRate(category);
 	assert(category < ncategory); 
 	return rates[category]; 
 }
 
 double RateMeyerDiscrete::getPtnCat(int ptn) {
-	if (!ptn_cat) return -1;
+	if (!is_categorized) return RateMeyerHaeseler::getPtnCat(ptn);
+	assert(ptn_cat);
 	return ptn_cat[ptn];
 }
 
-void RateMeyerDiscrete::optimizeRates() {
-	RateMeyerHaeseler::optimizeRates();
+double RateMeyerDiscrete::optimizeParameters() {
+	if (is_categorized) {
+		return phylo_tree->computeLikelihood();
+		is_categorized = false;
+		setRates(full_rates);
+		phylo_tree->clearAllPartialLh();
+	}
+	double tree_lh = RateMeyerHaeseler::optimizeParameters();
+	getRates(full_rates);
+	return tree_lh;
 }
 
 void RateMeyerDiscrete::classifyRatesKMeans() {
 
 	assert(ncategory > 0);
+	setRates(full_rates);
 	int nptn = size();
 
 	// clustering the rates with k-means
@@ -243,8 +254,6 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 	// identifying proper number of categories
 	int nptn = phylo_tree->aln->getNPattern();
 	rates = new double[nptn];
-	DoubleVector continuous_rates;
-	getRates(continuous_rates);
 
 	for (ncategory = 4; ; ncategory++) {
 		classifyRatesKMeans();
@@ -258,7 +267,6 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 		cout << endl;
 		//if (new_tree_lh > tree_lh - 3.0) break;
 		if (pval > 0.05) break;
-		setRates(continuous_rates);
 	}
 
 	cout << endl << "Number of categories is set to " << ncategory << endl;

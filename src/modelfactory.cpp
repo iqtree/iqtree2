@@ -145,6 +145,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 			if (verbose_mode >= VB_MED || write_info)
 				cout << "Current log-likelihood: " << cur_lh << endl;
 		} else {
+			site_rate->classifyRates(new_lh);
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches();
 			break;
 		}

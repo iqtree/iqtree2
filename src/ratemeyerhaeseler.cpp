@@ -286,7 +286,6 @@ double RateMeyerHaeseler::optimizeParameters() {
 		//phylo_tree->clearAllPartialLh();
 		new_tree_lh = phylo_tree->computeLikelihood();
 		cout << "Backup log-likelihood: " << new_tree_lh << endl;
-		return classifyRates(new_tree_lh);
 	}
 	
 	return new_tree_lh;
