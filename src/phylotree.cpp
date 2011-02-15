@@ -755,12 +755,12 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
     int trans_size = nstates * nstates;
     int ptn, cat, state1, state2;
 
-    double trans_mat[ncat * trans_size];
+    double trans_mat[site_rate->getNDiscreteRate() * trans_size];
     double state_freq[nstates];
     model->getStateFrequency(state_freq);
 
 	if (!site_rate->isSiteSpecificRate())
-    for (cat = 0; cat < ncat; cat++) {
+    for (cat = 0; cat < site_rate->getNDiscreteRate(); cat++) {
         //trans_mat[cat] = model->newTransMatrix();
         double *trans_cat = trans_mat + (cat * trans_size);
         model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getRate(cat), state_freq, trans_cat);
@@ -781,18 +781,23 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         	model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getPtnRate(ptn), state_freq, trans_mat);
         for (cat = 0; cat < ncat; cat++) {
 	        double lh_cat = 0.0; // likelihood of the pattern's category
-            double *partial_lh_site = node_branch->partial_lh + (ptn * block + cat * nstates);
-            double *partial_lh_child = dad_branch->partial_lh + (ptn * block + cat * nstates);
+			int lh_offset = cat*nstates + ptn*block;
+            double *partial_lh_site = node_branch->partial_lh + lh_offset;
+            double *partial_lh_child = dad_branch->partial_lh + lh_offset;
             if (dad_state < nstates) { // single state
                 // external node
-                double *trans_state = trans_mat + (cat * trans_size + dad_state * nstates);
+                int ptn_cat = site_rate->getPtnCat(ptn);
+                if (ptn_cat < 0) ptn_cat = cat;
+                double *trans_state = trans_mat + (ptn_cat * trans_size + dad_state * nstates);
                 for (state2 = 0; state2 < nstates; state2++)
                     lh_cat += partial_lh_child[state2] * trans_state[state2];
             } else {
                 // internal node, or external node but ambiguous character
                 for (state1 = 0; state1 < nstates; state1++) {
                     double lh_state = 0.0; // likelihood of state1
-                    double *trans_state = trans_mat + (cat * trans_size + state1 * nstates);
+					int ptn_cat = site_rate->getPtnCat(ptn);
+					if (ptn_cat < 0) ptn_cat = cat;
+                    double *trans_state = trans_mat + (ptn_cat * trans_size + state1 * nstates);
                     for (state2 = 0; state2 < nstates; state2++)
                         lh_state += partial_lh_child[state2] * trans_state[state2];
                     lh_cat += lh_state * partial_lh_site[state1];
@@ -939,8 +944,9 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
         }
     } else {
         /* internal node */
-        double *trans_mat[ncat];
-        for (cat = 0; cat < ncat; cat++) trans_mat[cat] = model->newTransMatrix();
+        int discrete_cat = site_rate->getNDiscreteRate();
+        double *trans_mat[site_rate->getNDiscreteRate()];
+        for (cat = 0; cat < discrete_cat; cat++) trans_mat[cat] = model->newTransMatrix();
         for (ptn = 0; ptn < lh_size; ptn++)
             dad_branch->partial_lh[ptn] = 1.0;
         FOR_NEIGHBOR_IT(node, dad, it)
@@ -950,19 +956,22 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
             dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
 
 			if (!site_rate->isSiteSpecificRate())
-            for (cat = 0; cat < ncat; cat++)
+            for (cat = 0; cat < discrete_cat; cat++)
                 model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), trans_mat[cat]);
 
             for (ptn = 0; ptn < aln->size(); ptn++) {
             	if (site_rate->isSiteSpecificRate())
                 	model_factory->computeTransMatrix((*it)->length * site_rate->getPtnRate(ptn), trans_mat[0]);
             	
-                for (cat = 0; cat < ncat; cat++) {
-                    partial_lh_site = dad_branch->partial_lh + (ptn * block + cat * nstates);
-                    double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + (ptn * block + cat * nstates);
+				for (cat = 0; cat < ncat; cat++) {
+					int lh_offset = cat*nstates + ptn*block;
+                    partial_lh_site = dad_branch->partial_lh + lh_offset;
+                    double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + lh_offset;
                     for (int state = 0; state < nstates; state++) {
                         double lh_child = 0.0;
-                        double *trans_state = trans_mat[cat] + (state * nstates);
+						int ptn_cat = site_rate->getPtnCat(ptn);
+						if (ptn_cat < 0) ptn_cat = cat;
+                        double *trans_state = trans_mat[ptn_cat] + (state * nstates);
                         for (int state2 = 0; state2 < nstates; state2++)
                             lh_child += trans_state[state2] * partial_lh_child[state2];
 
@@ -1301,14 +1310,16 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     int trans_size = nstates * nstates;
     int ptn, cat, state1, state2;
 
-    double trans_mat[ncat * trans_size];
-    double trans_derv1[ncat * trans_size];
-    double trans_derv2[ncat * trans_size];
+	int discrete_cat = site_rate->getNDiscreteRate();
+
+    double trans_mat[discrete_cat * trans_size];
+    double trans_derv1[discrete_cat * trans_size];
+    double trans_derv2[discrete_cat * trans_size];
     double state_freq[nstates];
     model->getStateFrequency(state_freq);
 
 	if (!site_rate->isSiteSpecificRate())
-    for (cat = 0; cat < ncat; cat++) {
+    for (cat = 0; cat < discrete_cat; cat++) {
         //trans_mat[cat] = model->newTransMatrix();
         double *trans_cat = trans_mat + (cat * trans_size);
         double *derv1_cat = trans_derv1 + (cat * trans_size);
@@ -1343,13 +1354,16 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
 	        model_factory->computeTransDervFreq(dad_branch->length, site_rate->getPtnRate(ptn), state_freq, 
 	        	trans_mat, trans_derv1, trans_derv2);
         for (cat = 0; cat < ncat; cat++) {
-            double *partial_lh_site = node_branch->partial_lh + (ptn * block + cat * nstates);
-            double *partial_lh_child = dad_branch->partial_lh + (ptn * block + cat * nstates);
+			int lh_offset = cat*nstates + ptn*block;
+            double *partial_lh_site = node_branch->partial_lh + lh_offset;
+            double *partial_lh_child = dad_branch->partial_lh + lh_offset;
             if (dad_state < nstates) {
                 // external node
-                double *trans_state = trans_mat + (cat * trans_size + dad_state * nstates);
-                double *derv1_state = trans_derv1 + (cat * trans_size + dad_state * nstates);
-                double *derv2_state = trans_derv2 + (cat * trans_size + dad_state * nstates);
+                int ptn_cat = site_rate->getPtnCat(ptn);
+                if (ptn_cat < 0) ptn_cat = cat;
+                double *trans_state = trans_mat + (ptn_cat * trans_size + dad_state * nstates);
+                double *derv1_state = trans_derv1 + (ptn_cat * trans_size + dad_state * nstates);
+                double *derv2_state = trans_derv2 + (ptn_cat * trans_size + dad_state * nstates);
                 for (state2 = 0; state2 < nstates; state2++) {
                     lh_ptn += partial_lh_child[state2] * trans_state[state2];
                     lh_ptn_derv1 += partial_lh_child[state2] * derv1_state[state2];
@@ -1361,9 +1375,11 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
                     double lh_state = 0.0; // likelihood of state1
                     double lh_state_derv1 = 0.0;
                     double lh_state_derv2 = 0.0;
-                    double *trans_state = trans_mat + (cat * trans_size + state1 * nstates);
-                    double *derv1_state = trans_derv1 + (cat * trans_size + state1 * nstates);
-                    double *derv2_state = trans_derv2 + (cat * trans_size + state1 * nstates);
+                int ptn_cat = site_rate->getPtnCat(ptn);
+                if (ptn_cat < 0) ptn_cat = cat;
+                    double *trans_state = trans_mat + (ptn_cat * trans_size + state1 * nstates);
+                    double *derv1_state = trans_derv1 + (ptn_cat * trans_size + state1 * nstates);
+                    double *derv2_state = trans_derv2 + (ptn_cat * trans_size + state1 * nstates);
                     for (state2 = 0; state2 < nstates; state2++) {
                         lh_state += partial_lh_child[state2] * trans_state[state2];
                         lh_state_derv1 += partial_lh_child[state2] * derv1_state[state2];

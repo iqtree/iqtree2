@@ -34,6 +34,14 @@ extern "C" {
 */
 int modeltest(char *args, const char *score_file, const char *out_file, char *LRT_model, char *IC_model);
 
+/**
+	compute p-value for a chi-square value
+	@param chi_square chi-square value
+	@param df degree of freedom
+	@return p-value
+*/
+double computePValueChiSquare(double chi_square, double df);
+
 #ifdef __cplusplus
 }
 #endif

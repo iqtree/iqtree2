@@ -77,6 +77,13 @@ public:
 	virtual int getNRate() { return 1; }
 
 	/**
+		get the number of rate categories for site-specific category model
+		The default returns 1 category since it is homogeneous model
+		@return the number of rate categories
+	*/
+	virtual int getNDiscreteRate() { return 1; }
+
+	/**
 		get the rate of a specified category. Default returns 1.0 since it is homogeneous model
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
@@ -89,6 +96,13 @@ public:
 		@return the rate of the specified site-pattern
 	*/
 	virtual double getPtnRate(int ptn) { return 1.0; }
+
+	/**
+		get rate category of a specified site-pattern. Default returns 1.0 since it is homogeneous model
+		@param ptn pattern ID 
+		@return the rate category of the specified site-pattern
+	*/
+	virtual double getPtnCat(int ptn) { return -1; }
 
 	/**
 		get the proportion of invariable sites. Default returns 0.0 since it is homogeneous model

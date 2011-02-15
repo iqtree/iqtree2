@@ -49,7 +49,7 @@ double AlignmentPairwise::computeFunction(double value) {
 	double sum_trans_mat[trans_size];
 	
 
-	if (tree->getModelFactory()->site_rate->isSiteSpecificRate())
+	if (tree->getModelFactory()->site_rate->getGammaShape() == 0.0)
 		tree->getModelFactory()->computeTransMatrix(value, sum_trans_mat);
 	else {
 		tree->getModelFactory()->computeTransMatrix(value * site_rate->getRate(0), sum_trans_mat);
@@ -82,7 +82,7 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
 	//tree->getModelFactory()->computeTransDerv(value * site_rate->getRate(0), sum_trans, sum_derv1, sum_derv2);
 	for (cat = 0; cat < ncat; cat++) {
 		double rate_val = site_rate->getRate(cat);
-		if (tree->getModelFactory()->site_rate->isSiteSpecificRate())
+		if (tree->getModelFactory()->site_rate->getGammaShape() == 0.0)
 			rate_val = 1.0;
 
 		double rate_sqr = rate_val * rate_val;

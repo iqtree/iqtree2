@@ -23,5 +23,6 @@
 
 int run_modeltest(int argc, char **argv);
 void Free();
+float ChiSquare (float x, int df);
 
 #endif

@@ -279,7 +279,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 	stringstream best_tree_string;
 	phylo_tree->printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
 	double new_tree_lh = phylo_tree->optimizeAllBranches(1);
-	if (new_tree_lh < tree_lh - TOL_LIKELIHOOD) {
+	if (new_tree_lh < tree_lh + 1e-5) {
 		cout << "Worse likelihood (" << new_tree_lh << "), roll back site rates..." << endl;
 		setRates(prev_rates);
 		phylo_tree->rollBack(best_tree_string);

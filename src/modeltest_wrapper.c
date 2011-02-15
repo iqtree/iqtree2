@@ -102,3 +102,7 @@ int modeltest(char *args, const char *score_file, const char *out_file, char *LR
 
 	return status;
 }
+
+double computePValueChiSquare(double chi_square, double df) {
+	return (double)ChiSquare((float)chi_square, (float)df);	
+}

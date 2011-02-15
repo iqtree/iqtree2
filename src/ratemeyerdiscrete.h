@@ -42,15 +42,25 @@ public:
     virtual ~RateMeyerDiscrete();
 
 	/**
+		get the number of rate categories for site-specific category model
 		@return the number of rate categories
 	*/
-	//virtual int getNRate() { return ncategory; }
+	virtual int getNDiscreteRate();
 
 	/**
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	//virtual double getRate(int category) { assert(category < ncategory); return rates[category]; }
+	virtual double getRate(int category);
+
+	/**
+		get rate category of a specified site-pattern. 
+		@param ptn pattern ID 
+		@return the rate category of the specified site-pattern
+	*/
+	virtual double getPtnCat(int ptn);
+
+	virtual bool isSiteSpecificRate();
 
 	/**
 		return the number of dimensions
@@ -83,10 +93,16 @@ protected:
 	int ncategory;
 
 	/**
+		category index for every pattern
+	*/
+	int *ptn_cat;
+
+	/**
 		rates, containing ncategory elements
 	*/
 	double *rates;
 
+	bool is_categorized;
 };
 
 #endif

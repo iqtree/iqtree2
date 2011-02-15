@@ -21,19 +21,20 @@
 #include "phylotree.h"
 #include "ratemeyerdiscrete.h"
 #include "kmeans/KMeans.h"
-
+#include "modeltest_wrapper.h"
 
 /**
 	Solve k-means problem for one-dimensional data with dynamic programming
 	@param n number of data points
-	@param k number of clusters
+	@param ncat number of clusters
 	@param data data point of size n: x[0..n-1]
 	@param center (OUT) output k centers of k clusters: center[0...k-1] will be filled
 	@param cluster (OUT) cluster assignments for each data point: cluster[0...n-1] will be filled
 	@return the minimum sum of squares over all k clusters
 */
-double kMeansOneDim(int n, int k, double *data, double *center, int *cluster) {
-	int i, j, m;
+double kMeansOneDim(int n, int ncat, double *data, double *center, int *cluster) {
+	int i, j, m, k = ncat;
+	if (ncat == 0) k = n;
 	/**
 		dynamic programming cost matrix, c[i][j] = cost of i clusters for {x1...xj}
 	*/
@@ -52,6 +53,8 @@ double kMeansOneDim(int n, int k, double *data, double *center, int *cluster) {
 	double *m1[n];
 	
 	double x[n]; // sorted data points
+
+	double h[n]; // Hartigan index
 
 	// allocate memory 
 	for (i = 0; i < k; i++) c[i] = new double[n];
@@ -94,6 +97,9 @@ double kMeansOneDim(int n, int k, double *data, double *center, int *cluster) {
 					id[i][j] = m;
 				}
 		}
+		// compute Hartigan index
+		h[i-1] = (n-i-1)*(c[i-1][n-1]-c[i][n-1]) / c[i][n-1];
+		//cout << i << " clusters " << h[i-1] << endl;
 	}
 
 	double min_cost = c[k-1][n-1];
@@ -119,11 +125,16 @@ double kMeansOneDim(int n, int k, double *data, double *center, int *cluster) {
 	return min_cost;
 }
 
+/************************************************
+	RateMeyerDiscrete
+************************************************/
 RateMeyerDiscrete::RateMeyerDiscrete(int ncat)
  : RateMeyerHaeseler()
 {
 	ncategory = ncat;
 	rates = NULL;
+	ptn_cat = NULL;
+	is_categorized = false;
 	if (ncat > 0) {
 		rates = new double[ncategory];
 		memset(rates, 0, sizeof(double) * ncategory);
@@ -139,6 +150,26 @@ RateMeyerDiscrete::~RateMeyerDiscrete()
 	if (rates) delete [] rates;
 }
 
+bool RateMeyerDiscrete::isSiteSpecificRate() { 
+	return !is_categorized; 
+}
+
+int RateMeyerDiscrete::getNDiscreteRate() { 
+	if (ncategory < 1) return 1;
+	return ncategory; 
+}
+
+double RateMeyerDiscrete::getRate(int category) {
+	if (isSiteSpecificRate()) return RateMeyerHaeseler::getRate(category);
+	assert(category < ncategory); 
+	return rates[category]; 
+}
+
+double RateMeyerDiscrete::getPtnCat(int ptn) {
+	if (!ptn_cat) return -1;
+	return ptn_cat[ptn];
+}
+
 void RateMeyerDiscrete::optimizeRates() {
 	RateMeyerHaeseler::optimizeRates();
 }
@@ -151,8 +182,8 @@ void RateMeyerDiscrete::classifyRatesKMeans() {
 	// clustering the rates with k-means
 	//AddKMeansLogging(&cout, false);
 	double points[nptn];
-	int assignments[nptn];
 	int i;
+	if (!ptn_cat) ptn_cat = new int[nptn];
 	for (i = 0; i < nptn; i++) {
 		if (at(i) == MAX_SITE_RATE) 
 			points[i] = log(1e6);
@@ -162,7 +193,7 @@ void RateMeyerDiscrete::classifyRatesKMeans() {
 	memset(rates, 0, sizeof(double) * ncategory);
 
 	//double cost = RunKMeansPlusPlus(nsites, ncategory, 1, points, attempts, rates, assignments);
-	double cost = kMeansOneDim(nptn, ncategory, points, rates, assignments);
+	double cost = kMeansOneDim(nptn, ncategory, points, rates, ptn_cat);
 	//cout << "Rates are classified by k-means (" << attempts << " runs) with cost " << cost << endl;
 	//cout << "Minimum cost by dynamic programming is " << cost1 << endl;
 	//if (cost > cost1+1e-6)
@@ -179,7 +210,7 @@ void RateMeyerDiscrete::classifyRatesKMeans() {
 	}
 
 	for (i = 0; i < nptn; i++) {
-		at(i) = rates[assignments[i]];
+		at(i) = rates[ptn_cat[i]];
 		if (at(i) < MAX_SITE_RATE) { 
 			sum += at(i) * phylo_tree->aln->at(i).frequency; 
 			ok += mean_rate * phylo_tree->aln->at(i).frequency; 
@@ -200,6 +231,7 @@ void RateMeyerDiscrete::classifyRatesKMeans() {
 
 double RateMeyerDiscrete::classifyRates(double tree_lh) {
 	double new_tree_lh;
+	is_categorized = true;
 	if (ncategory > 0) {
 		cout << endl << "Classifying rates into " << ncategory << " categories..." << endl;
 		classifyRatesKMeans();
@@ -218,13 +250,20 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 		classifyRatesKMeans();
 		phylo_tree->clearAllPartialLh();
 		new_tree_lh = phylo_tree->optimizeAllBranches();
-		cout << "For " << ncategory << " categories, LogL = " << new_tree_lh << endl;
-		if (new_tree_lh > tree_lh - 3.0) break;
+		cout << "For " << ncategory << " categories, LogL = " << new_tree_lh;
+		double lh_diff = 2*(tree_lh - new_tree_lh);
+		double df = (nptn - ncategory);
+		double pval = computePValueChiSquare(lh_diff, df);
+		cout << ", p-value = " << pval;
+		cout << endl;
+		//if (new_tree_lh > tree_lh - 3.0) break;
+		if (pval > 0.05) break;
 		setRates(continuous_rates);
 	}
 
 	cout << endl << "Number of categories is set to " << ncategory << endl;
 	return new_tree_lh;
 }
+
 
 

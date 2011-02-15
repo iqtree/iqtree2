@@ -666,7 +666,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
             else
                 tree.curScore = tree.computeLikelihood();
             cout << "Log-likelihood of the new BIONJ tree: " << tree.curScore << endl;
-            if (tree.curScore < bestTreeScore - 1e-6) {
+            if (tree.curScore < bestTreeScore - 1e-5) {
                 cout << "The new tree is worse, rolling back the first BIONJ tree..." << endl;
                 tree.rollBack(best_tree_string);
                 tree.curScore = tree.computeLikelihood();
