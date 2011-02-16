@@ -73,7 +73,7 @@ public:
 		Compute site-specific rates. Override this for Gamma model
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
 	*/
-	virtual void computePatternRates(DoubleVector &pattern_rates);
+	virtual void computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
 
 	/**
 		optimize parameters. Default is to optimize gamma shape 

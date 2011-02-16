@@ -172,6 +172,11 @@ double RateMeyerDiscrete::getPtnCat(int ptn) {
 	return ptn_cat[ptn];
 }
 
+void RateMeyerDiscrete::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
+	pattern_rates.insert(pattern_rates.begin(), begin(), end());
+	pattern_cat.insert(pattern_cat.begin(), ptn_cat, ptn_cat + size());
+}
+
 double RateMeyerDiscrete::optimizeParameters() {
 	if (is_categorized) {
 		return phylo_tree->computeLikelihood();
@@ -232,9 +237,11 @@ void RateMeyerDiscrete::classifyRatesKMeans() {
 		//cout << "Normalizing " << sum << " / " << ok << endl;
 		double scale_f = ok / sum;
 		for (i = 0; i < size(); i++) {
-			if (at(i) > MIN_SITE_RATE && at(i) < MAX_SITE_RATE) at(i) = at(i) * scale_f;
-	}
-
+			if (at(i) > 2*MIN_SITE_RATE && at(i) < MAX_SITE_RATE) at(i) = at(i) * scale_f;
+		}
+		for (i = 0; i < ncategory; i++)
+			if (rates[i] > 2*MIN_SITE_RATE && rates[i] < MAX_SITE_RATE)
+				rates[i] *= scale_f;
 	}
 
 }
@@ -275,3 +282,7 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 
 
 
+
+void RateMeyerDiscrete::writeInfo(ostream &out) {
+	//out << "Number of categories: " << ncategory << endl;
+}

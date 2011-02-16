@@ -359,7 +359,8 @@ void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, 
 					sprintf(tmp, "/%d", (int)(sp->getWeight()));
 				(*it)->node->name.append(tmp);
 			} else {
-				(*it)->node->name.append("/0");
+				if (!(*it)->node->name.empty()) (*it)->node->name.append("/");
+				(*it)->node->name.append("0");
 				if (verbose_mode >= VB_MED) {
 					cout << "split not found:" << endl;
 					mysplit.report(cout);

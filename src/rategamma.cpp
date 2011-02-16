@@ -122,7 +122,8 @@ void RateGamma::writeParameters(ostream &out) {
 	out << "\t" << gamma_shape;
 }
 
-void RateGamma::computePatternRates(DoubleVector &pattern_rates) {
+void RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
+	cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 	int npattern = phylo_tree->aln->getNPattern();
 	double ptn_rates[npattern];
 	phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0], 
@@ -130,6 +131,11 @@ void RateGamma::computePatternRates(DoubleVector &pattern_rates) {
 
 	pattern_rates.clear();
 	pattern_rates.insert(pattern_rates.begin(), ptn_rates, ptn_rates + npattern);
+	pattern_cat.resize(npattern, 0);
+	for (int i = 0; i < npattern; i++)
+		for (int j = 1; j < ncategory; j++)
+			if (fabs(rates[j] - ptn_rates[i]) < fabs(rates[pattern_cat[i]] - ptn_rates[i]))
+				pattern_cat[i] = j;
 }
 
 

@@ -75,6 +75,12 @@ public:
 	*/
 	virtual double getPtnRate(int ptn);
 
+	/**
+		Compute site-specific rates. Override this for Gamma model
+		@param pattern_rates (OUT) pattern rates. Resizing if necesary
+	*/
+	virtual void computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+
 	void getRates(DoubleVector &rates);
 
 

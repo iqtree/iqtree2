@@ -24,6 +24,8 @@
 #include "tools.h"
 #include "mexttree.h"
 
+class PhyloTree;
+
 /**
 	main function to carry out phylogenetic inference
 	@param params program parameters
@@ -45,6 +47,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 /**
 	Compute the consensus tree from the collection of trees from input_trees
 	and print resulting tree to output_tree. 
+	@param phylo_tree used to optimize branch lengths of the consensus tree. Can be NULL
 	@param input_trees collection of input trees to infer split supports
 	@param burnin the number trees at the beginning of input_trees to be discarded
 	@param cutoff only incorporate those splits that have support values more than cutoff

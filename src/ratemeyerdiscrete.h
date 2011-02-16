@@ -60,6 +60,12 @@ public:
 	*/
 	virtual double getPtnCat(int ptn);
 
+	/**
+		Compute site-specific rates. Override this for Gamma model
+		@param pattern_rates (OUT) pattern rates. Resizing if necesary
+	*/
+	virtual void computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+
 	virtual bool isSiteSpecificRate();
 
 	/**
@@ -84,6 +90,12 @@ public:
 		classify rates into categories using k-means++ method.
 	*/
 	void classifyRatesKMeans();
+
+	/**
+		write information
+		@param out output stream
+	*/
+	virtual void writeInfo(ostream &out);
 
 protected:
 

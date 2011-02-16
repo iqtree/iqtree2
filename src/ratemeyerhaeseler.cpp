@@ -59,6 +59,10 @@ double RateMeyerHaeseler::getPtnRate(int ptn) {
 	return 1.0;
 }
 
+void RateMeyerHaeseler::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
+	pattern_rates.insert(pattern_rates.begin(), begin(), end());
+}
+
 void RateMeyerHaeseler::getRates(DoubleVector &rates) {
 	rates.clear();
 	if (empty()) {
@@ -338,7 +342,8 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 	setTree(&tree);
 	RateHeterogeneity *backup_rate = tree.getRate();
 	if (backup_rate->getGammaShape() > 0 ) {
-		backup_rate->computePatternRates(*this);
+		IntVector pattern_cat;
+		backup_rate->computePatternRates(*this, pattern_cat);
 		double sum = 0.0;
 		for (i = 0; i < size(); i++)
 			sum += at(i) * phylo_tree->aln->at(i).frequency;
@@ -357,17 +362,17 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
 	//if  (empty()) initializeRates();
 
 	//setRates(prev_rates);
-	string rate_file = params.out_prefix;
-	rate_file += ".mhrate";
+	//string rate_file = params.out_prefix;
+	//rate_file += ".mhrate";
 	double prev_lh = tree.getBestScore();
 	string dist_file = params.out_prefix;
 	dist_file += ".tdist";
 	tree.getModelFactory()->stopStoringTransMatrix();
 
 	for (i = 2; i < 100; i++) {
-		DoubleVector prev_rates;
-		getRates(prev_rates);
-		writeSiteRates(prev_rates, rate_file.c_str());
+		//DoubleVector prev_rates;
+		//getRates(prev_rates);
+		//writeSiteRates(prev_rates, rate_file.c_str());
 		tree.curScore = optimizeParameters();
 		//phylo_tree->aln->printDist(dist_file.c_str(), dist_mat);
 		tree.curScore = tree.optimizeAllBranches(i);

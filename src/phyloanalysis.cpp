@@ -260,9 +260,20 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(outfile.c_str());
-        out << "ANALYSIS RESULTS OF IQTREE " << VERSION << " built " << __DATE__ << endl << endl;
-        out << "Random seed number (for debugging purpose): " << params.ran_seed << endl << endl;
-        out << "REFERENCES" << endl << "----------" << endl << endl <<
+        out << "IQ-TREE " << VERSION << " built " << __DATE__ << endl << endl << 
+               "Input file name: " << params.aln_file << endl;
+		if (params.user_file)
+			out << "User tree file name: " << params.user_file << endl;
+		out << "Type of analysis: ";
+		if (params.compute_ml_tree)
+			out << "tree reconstruction";
+		if (params.num_bootstrap_samples > 0) {
+			if (params.compute_ml_tree) out << " + ";
+			out << "non-parametric bootstrap (" << params.num_bootstrap_samples << " replicates)";
+		}
+		out << endl;
+    	out << "Random seed number: " << params.ran_seed << endl;
+        out << endl << "REFERENCES" << endl << "----------" << endl << endl <<
                 "A manuscript describing IQTREE is currently under preparation." << endl << endl <<
                 "*** Please always cite: " << endl << endl <<
                 "Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space" << endl <<
@@ -276,20 +287,26 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
             out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl
                 << "(see CREDITS section for the citation)" << endl << endl;
 
-        out << "INPUT ALIGNMENT" << endl << "---------------" << endl << endl <<
-                "Alignment file name: " << params.aln_file << endl <<
-                "Type of sequences: " << ((alignment.num_states == 2) ? "Binary" : ((alignment.num_states == 4) ? "DNA" : "Protein")) << endl <<
-                "Number of sequences: " << alignment.getNSeq() << endl <<
-                "Number of sites: " << alignment.getNSite() << endl <<
+        out << "SEQUENCE ALIGNMENT" << endl << "------------------" << endl << endl <<
+                "Input data: "  << alignment.getNSeq() << " sequences with " << 
+                alignment.getNSite() << " " << ((alignment.num_states == 2) ? "binary" : ((alignment.num_states == 4) ? "nucleotide" : "amino-acid")) << 
+                " sites" << endl <<
                 "Number of constant sites: " << round(alignment.frac_const_sites * alignment.getNSite()) <<
                 " (= " << alignment.frac_const_sites * 100 << "% of all sites)" << endl <<
-                "Number of patterns: " << alignment.size() << endl << endl;
+                "Number of site patterns: " << alignment.size() << endl << endl;
 
-        if (params.num_bootstrap_samples)
+        if (params.num_bootstrap_samples) {
             out << "BOOTSTRAP ANALYSIS" << endl << "------------------" << endl << endl
-                << "Type of bootstrap: non-parametric" << endl
-                << "Number of replicates: " << params.num_bootstrap_samples << endl
-                << endl;
+            	<< "Consensus split threshold: " << floor(params.split_threshold * 1000)/10 << "%";
+         	if (params.split_threshold == 0.5) out << " (majority-rule consensus)" << endl;
+         	if (params.split_threshold == 0.0) out << " (extended consensus)" << endl;
+         	if (params.split_threshold == 1.0) out << " (strict consensus)" << endl;
+            out << endl << "See " << params.out_prefix << ".bootaln for generated bootstrap alignments" << endl
+            	<< "See " << params.out_prefix << ".boottrees for reconstructed bootstrap trees" << endl;
+            if (params.num_bootstrap_samples > 1)
+            	out << "See " << params.out_prefix << ".contree for consensus tree" << endl;
+            out << endl;
+        }
 
         out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl << endl <<
                 "Model of substitution: " << tree.getModel()->name << endl << endl;
@@ -340,17 +357,30 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
         rate_model->writeInfo(out);
 
-        if (rate_model->getNRate() > 1 || rate_model->getPInvar() > 0.0) {
-            out << endl << "Rates and their respective probabilities used in the likelihood function:" << endl << endl
-                    << " Category  Relative rate  Probability" << endl;
+        if (rate_model->getNDiscreteRate() > 1 || rate_model->getPInvar() > 0.0) {
+            out << endl << " Category  Relative_rate  Proportion" << endl;
             if (rate_model->getPInvar() > 0.0)
                 out << "  0         0              " << rate_model->getPInvar() << endl;
-            for (i = 0; i < rate_model->getNRate(); i++) {
+            int cats = rate_model->getNDiscreteRate();
+			DoubleVector prop;
+			if (rate_model->getGammaShape() > 0)
+				prop.resize((1.0 - rate_model->getPInvar()) / rate_model->getNRate(), cats);
+			else {
+				prop.resize(cats, 0.0);
+				for (i = 0; i < tree.aln->getNPattern(); i++)
+					prop[rate_model->getPtnCat(i)] += tree.aln->at(i).frequency;
+	            for (i = 0; i < cats; i++)
+	            	prop[i] /= tree.aln->getNSite();
+			}
+            for (i = 0; i < cats; i++) {
                 out << "  " << i + 1 << "         ";
                 out.width(14);
-                out << left << rate_model->getRate(i) << " " << (1.0 - rate_model->getPInvar()) / rate_model->getNRate() << endl;
+                out << left << rate_model->getRate(i) << " " << prop[i];
+                out << endl;
             }
         }
+		if (rate_model->getNDiscreteRate() > 1 || rate_model->isSiteSpecificRate())
+			out << endl << "See file " << params.out_prefix << ".rate for site-specific rates and categories" << endl;
         // Bootstrap analysis:
         //Display as outgroup: a
 
@@ -406,6 +436,30 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
                         }*/
 
 
+		if (params.num_bootstrap_samples > 1) {
+        	out << endl << "CONSENSUS TREE" << endl << "--------------" << endl << endl;
+        	out << "Branch lengths are optimized by maximum likelihood on original alignment" << endl;
+            out << "Numbers in parentheses are bootstrap supports (%)" << endl << endl;
+
+        	string con_file = params.out_prefix;
+        	con_file += ".contree";
+        	bool rooted = false;
+
+			tree.freeNode();
+			tree.readTree(con_file.c_str(), rooted);
+			double fixed_length = 0.01;
+			int fixed_number = tree.fixNegativeBranch(fixed_length);
+			tree.setAlignment(tree.aln);
+		    tree.initializeAllPartialLh();
+			tree.optimizeAllBranches();
+			tree.printTree(con_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+			tree.sortTaxa();
+        	tree.drawTree(out);
+        	out << endl << "Consensus tree in newick format: " << endl << endl;
+	        tree.printResultTree(params, out);
+        	out << endl;
+		}
+
         time_t cur_time;
         time(&cur_time);
 
@@ -453,8 +507,8 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         cout << "  Gamma-distributed rates:  " << params.out_prefix << ".rate" << endl;
 		
 
-    if (params.mvh_site_rate || tree.getRate()->isSiteSpecificRate())
-        cout << "  Site-rates by MH model:   " << params.out_prefix << ".mhrate" << endl;
+    if (tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0)
+        cout << "  Site-rates by MH model:   " << params.out_prefix << ".rate" << endl;
 
     if (params.print_site_lh)
 		cout << "  Site log-likelihoods:     " << params.out_prefix << ".sitelh" << endl;
@@ -837,23 +891,19 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     tree.root = tree.findNodeName(alignment->getSeqName(0));
     assert(tree.root);
 
-	if (tree.getRate()->getGammaShape() > 0) {
-		cout << "Computing Gamma site rates with empirical Bayesian..." << endl;
-		DoubleVector pattern_rates;
-		tree.getRate()->computePatternRates(pattern_rates);
-		string rate_file = params.out_prefix;
-		rate_file += ".rate";
-		tree.getRate()->writeSiteRates(pattern_rates, rate_file.c_str());
-	}
+	string rate_file = params.out_prefix;
+	rate_file += ".rate";
+	tree.getRate()->writeSiteRates(rate_file.c_str());
 
-
-
-    RateMeyerHaeseler *rate_mvh = new RateMeyerHaeseler(params.mean_rate);
 
     if (params.mvh_site_rate) {
+	    RateMeyerHaeseler *rate_mvh = new RateMeyerHaeseler(params.mean_rate);
         cout << endl << "Computing site-specific rates by " << rate_mvh->full_name << "..." << endl;
         rate_mvh->runIterativeProc(params, tree);
     	cout << endl << "BEST SCORE FOUND : " << tree.getBestScore() << endl;
+		string mhrate_file = params.out_prefix;
+		mhrate_file += ".mhrate";
+		tree.getRate()->writeSiteRates(mhrate_file.c_str());
 		
     	
     }
@@ -902,11 +952,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	}
 
 
-	if (tree.getRate()->isSiteSpecificRate()) {
+/*	if (tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) {
 		string rate_file = params.out_prefix;
 		rate_file += ".mhrate";
-		tree.getRate()->writeSiteRates(*((RateMeyerHaeseler*)(tree.getRate())), rate_file.c_str());
-	}
+		tree.getRate()->writeSiteRates(rate_file.c_str());
+	}*/
 }
 
 void runPhyloAnalysis(Params &params) {
@@ -1102,9 +1152,9 @@ void computeConsensusTree(const char *input_trees, int burnin, double cutoff,
         out_file += ".contree";
     }
 
-
     mytree.printTree(out_file.c_str(), WT_BR_CLADE);
     cout << "Consensus tree written to " << out_file << endl;
+
 }
 
 void computeConsensusNetwork(const char *input_trees, int burnin, double cutoff,

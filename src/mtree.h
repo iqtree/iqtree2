@@ -409,6 +409,13 @@ public:
 	*/
 	bool rooted;
 
+	/**
+		release the nemory.
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+	*/
+	void freeNode(Node *node = NULL, Node *dad = NULL);
+
 protected:
 
 	/**
@@ -420,12 +427,6 @@ protected:
 	*/
 	int in_column; 
 
-	/**
-		release the nemory.
-		@param node the starting node, NULL to start from the root
-		@param dad dad of the node, used to direct the search
-	*/
-	void freeNode(Node *node = NULL, Node *dad = NULL);
 
 	/**
 		check tree is bifurcating tree (every leaf with level 1 or 3)
