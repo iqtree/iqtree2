@@ -1026,8 +1026,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.gurobi_threads = convert_int(argv[cnt]);
 				if (params.gurobi_threads < 1)
 					throw "Wrong number of threads";
-			} else if (strcmp(argv[cnt],"-b") == 0) {
+			} else if (strcmp(argv[cnt],"-b") == 0 || strcmp(argv[cnt],"-bo") == 0) {
 				params.multi_tree = true;
+				if (strcmp(argv[cnt],"-bo") == 0) params.compute_ml_tree = false;
+				if (strcmp(argv[cnt],"-b") == 0) params.consensus_type = CT_CONSENSUS_TREE;
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -b <num_bootstrap_samples>";
@@ -1035,6 +1037,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (params.num_bootstrap_samples < 1) 
 					throw "Wrong number of bootstrap samples";
 				if (params.num_bootstrap_samples == 1) params.compute_ml_tree = false;
+				if (params.num_bootstrap_samples == 1) params.consensus_type = CT_NONE;
+			} else if (strcmp(argv[cnt],"-bc") == 0) {
+				params.multi_tree = true;
+				params.compute_ml_tree = false;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bc <num_bootstrap_samples>";
+				params.num_bootstrap_samples = convert_int(argv[cnt]);
+				if (params.num_bootstrap_samples < 1) 
+					throw "Wrong number of bootstrap samples";
+				if (params.num_bootstrap_samples > 1) params.consensus_type = CT_CONSENSUS_TREE;
 			} else if (strcmp(argv[cnt],"-iqppars") == 0) {
 				params.iqp_assess_quartet = IQP_PARSIMONY;
 			} else if (strcmp(argv[cnt],"-wt") == 0) {
@@ -1185,12 +1198,15 @@ void usage_iqtree(char* argv[], bool full_command) {
 		 << "  -?                   Printing this help dialog" << endl
 		 << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP or NEXUS format"  << endl
 		 << "  -st <BIN|DNA|AA>     Binary, DNA, or Protein sequences (default: auto-detect)"  << endl
-		 << "  -b <#replicates>     Non-parametric bootstrap (default: none)" << endl
 		 << "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl
-		 << "                       Or set of trees for consensus reconstruction (see below)" << endl
 		 << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl 
 		 << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment)" << endl
-	<< endl << "SUBSTITUTION MODEL OPTIONS:" << endl
+	<< endl << "NON-PARAMETRIC BOOTSTRAP:" << endl
+		 << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (default: none)" << endl
+		 << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
+		 << "  -bo <#replicates>    Bootstrap only" << endl
+		 << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
+	<< endl << "SUBSTITUTION MODEL:" << endl
 		 << "  -m <substitution_model_name>" << endl
 		 << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
 		 << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
@@ -1204,7 +1220,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 		 << "                       (rate parameters and state frequencies)" << endl
 		 << "  -f <EQ|EM|ES|UD>     EQual, EMpirical, EStimated, or User-Defined state" << endl 
 		 << "                       frequency (default: detected from model name)" << endl
-	<< endl << "RATE HETEROGENEITY OPTIONS:" << endl
+	<< endl << "RATE HETEROGENEITY:" << endl
 		 << "  -m <substitution_model_name>+I or +G[n] or +I+G[n]" << endl
 		 << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl
 		 << "                       categories for Gamma rates (default: n=4)" << endl
@@ -1213,11 +1229,11 @@ void usage_iqtree(char* argv[], bool full_command) {
 		 << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
 		 << "                       Meyer & von Haeseler (2003) method" << endl
 		 //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
-	<< endl << "TEST OF MODEL HOMOGENEITY OPTIONS:" << endl
+	<< endl << "TEST OF MODEL HOMOGENEITY:" << endl
 		 << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
 		 << "                       Weiss & von Haeseler (2003) method" << endl
 		 << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
-	<< endl << "TREE INFERENCE OPTIONS:" << endl
+	<< endl << "TREE INFERENCE:" << endl
 		 << "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
 		 << "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl
 		 << "  -n <#iterations>     Number of iterations  (default: auto)" << endl
@@ -1228,17 +1244,18 @@ void usage_iqtree(char* argv[], bool full_command) {
 		 << "  -fixbr               Fix branch lengths of <treefile>" << endl
 		 << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
 		 << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
-	<< endl << "CONSENSUS RECONSTRUCTION OPTIONS:" << endl
+	<< endl << "CONSENSUS RECONSTRUCTION:" << endl
+		 << "  <tree_file>          Set of input trees for consensus reconstruction" << endl
 		 << "  -t <threshold>       Min split support in range [0,1]. 0.5 for majority-rule" << endl
 		 << "                       consensus (default: 0, i.e. extended consensus)" << endl
 		 << "  -bi <burnin>         Discarding <burnin> trees at beginning of <treefile>" << endl
 		 << "  -con                 Computing consensus tree to .contree file" << endl
 		 << "  -net                 Computing consensus network to .nex file" << endl
 		 << "  -sup <target_tree>   Assigning support values for <target_tree> to .suptree" << endl
-	<< endl << "ROBINSON-FOULDS DISTANCE OPTIONS:" << endl
+	<< endl << "ROBINSON-FOULDS DISTANCE:" << endl
 		 << "  -rf_all              Computing all-to-all RF distances of trees in <treefile>" << endl
 		 << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
-	<< endl << "MISCELLANEOUS OPTIONS:" << endl
+	<< endl << "MISCELLANEOUS:" << endl
 		 << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
 		 << endl;
 

@@ -1442,6 +1442,10 @@ int main(int argc, char *argv[])
 		calcDistribution(params);
 	} else if (params.run_mode == STATS){ /**MINH ANH: for some statistics on the input tree*/
 		branchStats(params); // MA
+	} else if (params.branch_cluster > 0) {
+		calcTreeCluster(params);
+	} else if (params.aln_file) {
+		runPhyloAnalysis(params);
 	} else if (params.consensus_type != CT_NONE) {
 		MExtTree tree;
 		switch (params.consensus_type) {
@@ -1461,10 +1465,6 @@ int main(int argc, char *argv[])
 			/**MINH ANH: for some comparison*/
 			case COMPARE: compare(params); break; //MA
 		}
-	} else if (params.branch_cluster > 0) {
-		calcTreeCluster(params);
-	} else if (params.aln_file) {
-		runPhyloAnalysis(params);
 	} else {
 		params.intype = detectInputFile(params.user_file);
 		if (params.intype == IN_NEWICK && params.pdtaxa_file && params.tree_gen == NONE) {

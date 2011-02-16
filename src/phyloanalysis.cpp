@@ -272,8 +272,8 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 			out << "non-parametric bootstrap (" << params.num_bootstrap_samples << " replicates)";
 		}
 		out << endl;
-    	out << "Random seed number: " << params.ran_seed << endl;
-        out << endl << "REFERENCES" << endl << "----------" << endl << endl <<
+    	out << "Random seed number: " << params.ran_seed << endl << endl;
+        out << "REFERENCES" << endl << "----------" << endl << endl <<
                 "A manuscript describing IQTREE is currently under preparation." << endl << endl <<
                 "*** Please always cite: " << endl << endl <<
                 "Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space" << endl <<
@@ -294,19 +294,6 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
                 "Number of constant sites: " << round(alignment.frac_const_sites * alignment.getNSite()) <<
                 " (= " << alignment.frac_const_sites * 100 << "% of all sites)" << endl <<
                 "Number of site patterns: " << alignment.size() << endl << endl;
-
-        if (params.num_bootstrap_samples) {
-            out << "BOOTSTRAP ANALYSIS" << endl << "------------------" << endl << endl
-            	<< "Consensus split threshold: " << floor(params.split_threshold * 1000)/10 << "%";
-         	if (params.split_threshold == 0.5) out << " (majority-rule consensus)" << endl;
-         	if (params.split_threshold == 0.0) out << " (extended consensus)" << endl;
-         	if (params.split_threshold == 1.0) out << " (strict consensus)" << endl;
-            out << endl << "See " << params.out_prefix << ".bootaln for generated bootstrap alignments" << endl
-            	<< "See " << params.out_prefix << ".boottrees for reconstructed bootstrap trees" << endl;
-            if (params.num_bootstrap_samples > 1)
-            	out << "See " << params.out_prefix << ".contree for consensus tree" << endl;
-            out << endl;
-        }
 
         out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl << endl <<
                 "Model of substitution: " << tree.getModel()->name << endl << endl;
@@ -351,9 +338,10 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         for (i = 0; i < alignment.num_states; i++)
             out << "  pi(" << alignment.convertStateBack(i) << ") = " << state_freqs[i] << endl;
         delete [] state_freqs;
+		out << endl;
 
         RateHeterogeneity *rate_model = tree.getRate();
-        out << endl << "RATE HETEROGENEITY" << endl << "------------------" << endl << endl;
+        out << "RATE HETEROGENEITY" << endl << "------------------" << endl << endl;
         out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
         rate_model->writeInfo(out);
 
@@ -381,11 +369,12 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         }
 		if (rate_model->getNDiscreteRate() > 1 || rate_model->isSiteSpecificRate())
 			out << endl << "See file " << params.out_prefix << ".rate for site-specific rates and categories" << endl;
+		out << endl;
         // Bootstrap analysis:
         //Display as outgroup: a
 
 		if (original_model == "WHTEST") {
-			out << endl << "TEST OF MODEL HOMOGENEITY" << endl << "-------------------------" << endl << endl;
+			out << "TEST OF MODEL HOMOGENEITY" << endl << "-------------------------" << endl << endl;
 			out << "Delta of input data:                 " << params.whtest_delta << endl;
 			out << ".95 quantile of Delta distribution:  " << params.whtest_delta_quantile << endl;
 			out << "Number of simulations performed:     " << params.whtest_simulations << endl;
@@ -397,36 +386,38 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 			}
 			out << endl << "*** For this result please cite:" << endl << endl;
 			out << "G. Weiss and A. von Haeseler (2003) Testing substitution models" << endl
-				<< "within a phylogenetic tree. Mol. Biol. Evol, 20(4):572-578" << endl;
+				<< "within a phylogenetic tree. Mol. Biol. Evol, 20(4):572-578" << endl << endl;
 		}
 
-        out << endl << "TREE SEARCH" << endl << "-----------" << endl << endl <<
+        out << "TREE SEARCH" << endl << "-----------" << endl << endl <<
                 "Stopping rule: " << ((params.stop_condition == SC_STOP_PREDICT) ? "Yes" : "No") << endl <<
                 "Number of iterations: " << tree.stop_rule.getNumIterations() << endl <<
                 "Probability of deleting sequences: " << params.p_delete << endl <<
                 "Number of representative leaves: " << params.k_representative << endl << endl;
 
-        out << "MAXIMUM LIKELIHOOD TREE" << endl << "-----------------------" << endl << endl;
-
-        out << "NOTE: Tree is UNROOTED although outgroup taxon '" <<
-                ((params.root) ? params.root : tree.aln->getSeqName(0)) << "' is drawn at root" << endl;
-        if (params.aLRT_replicates > 0 || (params.num_bootstrap_samples && params.compute_ml_tree)) {
-            out << "Numbers in parentheses are ";
-            if (params.aLRT_replicates > 0) out << "SH-like aLRT supports";
-            if (params.num_bootstrap_samples && params.compute_ml_tree) out << " / bootstrap supports";
-            out << " (%)" << endl;
-        }
-        out << endl;
-        tree.setRootNode(params.root);
-        tree.sortTaxa();
-        tree.drawTree(out);
-
-        out << "Log-likehood of the tree: " << fixed << tree.getBestScore() << endl
-            << "Unconstrained log-likelihood (without tree): " << alignment.computeUnconstrainedLogL() << endl 
-            << "Total tree length: " << tree.treeLength() << endl << endl
-            << "Tree in newick format:" << endl << endl;
-        tree.printResultTree(params, out);
-        out << endl;
+		if (params.compute_ml_tree) {
+			out << "MAXIMUM LIKELIHOOD TREE" << endl << "-----------------------" << endl << endl;
+	
+			out << "NOTE: Tree is UNROOTED although outgroup taxon '" <<
+					((params.root) ? params.root : tree.aln->getSeqName(0)) << "' is drawn at root" << endl;
+			if (params.aLRT_replicates > 0 || (params.num_bootstrap_samples && params.compute_ml_tree)) {
+				out << "Numbers in parentheses are ";
+				if (params.aLRT_replicates > 0) out << "SH-like aLRT supports";
+				if (params.num_bootstrap_samples && params.compute_ml_tree) out << " / bootstrap supports";
+				out << " (%)" << endl;
+			}
+			out << endl;
+			tree.setRootNode(params.root);
+			tree.sortTaxa();
+			tree.drawTree(out);
+	
+			out << "Log-likehood of the tree: " << fixed << tree.getBestScore() << endl
+				<< "Unconstrained log-likelihood (without tree): " << alignment.computeUnconstrainedLogL() << endl 
+				<< "Total tree length: " << tree.treeLength() << endl << endl
+				<< "Tree in newick format:" << endl << endl;
+			tree.printResultTree(params, out);
+			out << endl << endl;
+		}
         /*
                         if (params.write_intermediate_trees) {
                                 out << endl << "CONSENSUS OF INTERMEDIATE TREES" << endl << "-----------------------" << endl << endl
@@ -436,9 +427,15 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
                         }*/
 
 
-		if (params.num_bootstrap_samples > 1) {
-        	out << endl << "CONSENSUS TREE" << endl << "--------------" << endl << endl;
-        	out << "Branch lengths are optimized by maximum likelihood on original alignment" << endl;
+		if (params.consensus_type == CT_CONSENSUS_TREE) {
+        	out << "CONSENSUS TREE" << endl << "--------------" << endl << endl;
+        	out << "Consensus tree is constructed from " << params.num_bootstrap_samples << " bootstrap trees" << endl
+				<< "Branches with bootstrap support >" << floor(params.split_threshold * 1000)/10 << "% are kept";
+			if (params.split_threshold == 0.0) out << " (extended consensus)";
+			if (params.split_threshold == 0.5) out << " (majority-rule consensus)";
+			if (params.split_threshold >= 0.99) out << " (strict consensus)";
+			
+        	out << endl << "Branch lengths are optimized by maximum likelihood on original alignment" << endl;
             out << "Numbers in parentheses are bootstrap supports (%)" << endl << endl;
 
         	string con_file = params.out_prefix;
@@ -457,7 +454,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         	tree.drawTree(out);
         	out << endl << "Consensus tree in newick format: " << endl << endl;
 	        tree.printResultTree(params, out);
-        	out << endl;
+        	out << endl << endl;
 		}
 
         time_t cur_time;
@@ -466,7 +463,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         char *date_str;
         date_str = ctime(&cur_time);
         out.unsetf(ios_base::fixed);
-        out << endl << "TIME STAMP" << endl << "----------" << endl << endl << "Date and time: " << date_str <<
+        out << "TIME STAMP" << endl << "----------" << endl << endl << "Date and time: " << date_str <<
                 "Running time: " << (double) params.run_time / CLOCKS_PER_SEC << " seconds" << endl << endl;
 
         out << "CREDITS" << endl << "-------" << endl << endl
@@ -494,8 +491,9 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
     }
 
     cout << "Analysis results written to: " << endl
-            << "  IQ-TREE report:           " << params.out_prefix << ".iqtree" << endl
-            << "  Maximum-likelihood tree:  " << params.out_prefix << ".treefile" << endl;
+            << "  IQ-TREE report:           " << params.out_prefix << ".iqtree" << endl;
+    if (params.compute_ml_tree)
+        cout << "  Maximum-likelihood tree:  " << params.out_prefix << ".treefile" << endl;
     if (!params.user_file)
         cout << "  BIONJ tree:               " << params.out_prefix << ".bionj" << endl;
     if (!params.dist_file) {
@@ -513,12 +511,6 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
     if (params.print_site_lh)
 		cout << "  Site log-likelihoods:     " << params.out_prefix << ".sitelh" << endl;
 
-    if (params.num_bootstrap_samples)
-        cout << endl << "Non-parametric bootstrap results written to:" << endl
-            << "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl
-            << "  Bootstrap trees:          " << params.out_prefix << ".boottrees" << endl;
-	if (params.num_bootstrap_samples > 1)
-        cout << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
 /*	if (original_model == "WHTEST")
 		cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
     cout << endl;
@@ -1036,7 +1028,7 @@ void runPhyloAnalysis(Params &params) {
                 reportPhyloAnalysis(params, original_model, bootstrap_alignment, boot_tree);
         }
 
-		if (params.num_bootstrap_samples > 1) {
+		if (params.consensus_type == CT_CONSENSUS_TREE) {
 	
 			cout << endl << "===> COMPUTE CONSENSUS TREE FROM " <<
 					params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
@@ -1055,7 +1047,23 @@ void runPhyloAnalysis(Params &params) {
                     treefile_name.c_str(), false, treefile_name.c_str(), params.out_prefix, ext_tree);
             tree.copyTree(&ext_tree);
             reportPhyloAnalysis(params, original_model, alignment, tree);
-        }
+        }  else if (params.consensus_type == CT_CONSENSUS_TREE) {
+        	int mi = params.min_iterations;
+        	STOP_CONDITION sc = params.stop_condition;
+        	params.min_iterations = 0;
+        	params.stop_condition = SC_FIXED_ITERATION;
+            runPhyloAnalysis(params, original_model, &alignment, tree);
+        	params.min_iterations = mi;
+        	params.stop_condition = sc;
+    		tree.setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
+            reportPhyloAnalysis(params, original_model, alignment, tree);
+        } else    cout << endl;
+		cout << "Non-parametric bootstrap results written to:" << endl
+			<< "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl
+			<< "  Bootstrap trees:          " << params.out_prefix << ".boottrees" << endl;
+		if (params.consensus_type == CT_CONSENSUS_TREE)
+			cout << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
+		cout << endl;
     }
 }
 
