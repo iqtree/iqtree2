@@ -225,10 +225,10 @@ void RateMeyerDiscrete::computePatternRates(DoubleVector &pattern_rates, IntVect
 
 double RateMeyerDiscrete::optimizeParameters() {
 	if (is_categorized) {
-		return phylo_tree->computeLikelihood();
 		is_categorized = false;
 		setRates(full_rates);
 		phylo_tree->clearAllPartialLh();
+		return phylo_tree->computeLikelihood();
 	}
 	double tree_lh = RateMeyerHaeseler::optimizeParameters();
 	getRates(full_rates);
@@ -262,6 +262,38 @@ double RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf)
 	return lh;
 }
 
+
+double RateMeyerDiscrete::optimizeCatRate(int cat) {
+	optimizing_cat = cat;
+	double negative_lh;
+	double current_rate = rates[cat];
+	double ferror, optx;
+    if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
+	{
+    	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, negative_lh);
+    }
+    else {
+		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, &negative_lh, &ferror);
+		double fnew;
+		if ((optx < MAX_SITE_RATE) && (fnew = computeFunction(MAX_SITE_RATE)) <= negative_lh+TOL_SITE_RATE) {
+			optx = MAX_SITE_RATE;
+			negative_lh = fnew;
+		}
+		if ((optx > MIN_SITE_RATE) && (fnew = computeFunction(MIN_SITE_RATE)) <= negative_lh+TOL_SITE_RATE) {
+			optx = MIN_SITE_RATE;
+			negative_lh = fnew;
+		}
+	}
+	//negative_lh = brent(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &optx);
+	if (optx > MAX_SITE_RATE*0.99) optx = MAX_SITE_RATE;
+	if (optx < MIN_SITE_RATE*2) optx = MIN_SITE_RATE;
+	rates[cat] = optx;
+//#ifndef NDEBUG		
+//#endif
+
+	return optx;	
+}
+
 void RateMeyerDiscrete::normalizeRates() {
 	double sum = 0.0, ok = 0.0;
 	int nptn = size();
@@ -287,7 +319,7 @@ void RateMeyerDiscrete::normalizeRates() {
 	}
 }
 
-void RateMeyerDiscrete::classifyRatesKMeans() {
+double RateMeyerDiscrete::classifyRatesKMeans() {
 
 	assert(ncategory > 0);
 	setRates(full_rates);
@@ -333,56 +365,36 @@ void RateMeyerDiscrete::classifyRatesKMeans() {
 		rates[i] /= nsites[i];
 	}*/
 
-	for (i = 0; i < nptn; i++)
-		at(i) = rates[ptn_cat[i]];
+	normalizeRates();
+	phylo_tree->clearAllPartialLh();
+	if (mcat_type & MCAT_MEAN)
+		return phylo_tree->computeLikelihood();
 
-	if (!(mcat_type & MCAT_MEAN)) // optimize category rates again by ML
+	// optimize category rates again by ML
+	double cur_lh = phylo_tree->computeLikelihood();
+	for (int k = 0; k < 100; k++) {
+		phylo_tree->calcDist(dist_mat);
 		for (i = 0; i < ncategory; i++)
 			optimizeCatRate(i);
-
-	normalizeRates();
-}
-
-double RateMeyerDiscrete::optimizeCatRate(int cat) {
-	optimizing_cat = cat;
-	double negative_lh;
-	double current_rate = rates[cat];
-	double ferror, optx;
-    if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
-	{
-    	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, negative_lh);
-    }
-    else {
-		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, &negative_lh, &ferror);
-		double fnew;
-		if ((optx < MAX_SITE_RATE) && (fnew = computeFunction(MAX_SITE_RATE)) <= negative_lh+TOL_SITE_RATE) {
-			optx = MAX_SITE_RATE;
-			negative_lh = fnew;
-		}
-		if ((optx > MIN_SITE_RATE) && (fnew = computeFunction(MIN_SITE_RATE)) <= negative_lh+TOL_SITE_RATE) {
-			optx = MIN_SITE_RATE;
-			negative_lh = fnew;
+		normalizeRates();
+		phylo_tree->clearAllPartialLh();
+		double new_lh = phylo_tree->optimizeAllBranches(1);
+		if (new_lh > cur_lh + 1e-2) {
+			cur_lh = new_lh; 
+			//cout << "Current log-likelihood: " << cur_lh << endl;
+		} else {
+			return new_lh;
 		}
 	}
-	//negative_lh = brent(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &optx);
-	if (optx > MAX_SITE_RATE*0.99) optx = MAX_SITE_RATE;
-	if (optx < MIN_SITE_RATE*2) optx = MIN_SITE_RATE;
-	rates[cat] = optx;
-//#ifndef NDEBUG		
-//#endif
-
-	return optx;	
 }
+
 
 double RateMeyerDiscrete::classifyRates(double tree_lh) {
 	double new_tree_lh;
 	is_categorized = true;
 	if (ncategory > 0) {
 		cout << endl << "Classifying rates into " << ncategory << " categories..." << endl;
-		classifyRatesKMeans();
-		phylo_tree->clearAllPartialLh();
-		new_tree_lh = phylo_tree->computeLikelihood();
-		return new_tree_lh;
+		return classifyRatesKMeans();
 	}
 
 	// identifying proper number of categories
@@ -390,8 +402,7 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 	rates = new double[nptn];
 
 	for (ncategory = 2; ; ncategory++) {
-		classifyRatesKMeans();
-		phylo_tree->clearAllPartialLh();
+		new_tree_lh = classifyRatesKMeans();
 		new_tree_lh = phylo_tree->optimizeAllBranches();
 		cout << "For " << ncategory << " categories, LogL = " << new_tree_lh;
 		double lh_diff = 2*(tree_lh - new_tree_lh);

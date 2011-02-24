@@ -88,8 +88,9 @@ public:
 
 	/**
 		classify rates into categories using k-means++ method.
+		@return tree likelihood
 	*/
-	void classifyRatesKMeans();
+	double classifyRatesKMeans();
 
 
 	/**

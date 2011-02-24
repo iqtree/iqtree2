@@ -301,8 +301,8 @@ void RateMeyerHaeseler::optimizeRates() {
 
 double RateMeyerHaeseler::optimizeParameters() {
 	assert(phylo_tree);
-
 	double tree_lh = phylo_tree->computeLikelihood();
+
 	DoubleVector prev_rates;
 	getRates(prev_rates);
 
