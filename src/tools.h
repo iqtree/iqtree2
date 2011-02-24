@@ -285,6 +285,10 @@ enum IQP_ASSESS_QUARTET {
     IQP_DISTANCE, IQP_PARSIMONY
 };
 
+const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model
+const int MCAT_MEAN = 2; // take the mean of rates for each category for Meyer & von Haeseler model
+const int MCAT_PATTERN = 4; // categorize site-patterns instead of sites for Meyer & von Haeseler model
+
 const double MAX_GENETIC_DIST = 100.0;
 
 
@@ -781,7 +785,21 @@ struct Params {
 	double whtest_delta;
 	double whtest_delta_quantile;
 	double whtest_p_value;
-	
+
+
+	/**
+		bit-wise type including MCAT_LOG, MCAT_MEAN
+	*/
+	int mcat_type;	
+
+	/**
+		initial rate file in format: 
+		Site Rate
+		1  f_1
+		2  f_2
+		...
+	*/
+	char *rate_file;
 };
 
 /**

@@ -39,7 +39,7 @@ public:
 		@param seq_id1 ID of the first sequence
 		@param seq_id2 ID of the second sequence
 	*/
-    AlignmentPairwise(PhyloTree *atree, int seq_id1, int seq_id2);
+    AlignmentPairwise(PhyloTree *atree, int seq1, int seq2);
 
 	/**
 		compute the likelihood for a distance between two sequences. Used for the ML optimization of the distance.
@@ -77,7 +77,8 @@ public:
 	int *pair_freq;
 
 	PhyloTree *tree;
-	
+
+	int seq_id1, seq_id2;
 };
 
 #endif

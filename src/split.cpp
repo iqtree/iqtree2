@@ -436,3 +436,106 @@ bool Split::containAny(IntVector &tax_id) {
 		if (containTaxon(*it)) return true;
 	return false;
 }
+
+
+/**
+	Solve k-means problem for one-dimensional data with dynamic programming
+	@param n number of data points
+	@param ncat number of clusters
+	@param data data point of size n: x[0..n-1]
+	@param center (OUT) output k centers of k clusters: center[0...k-1] will be filled
+	@param cluster (OUT) cluster assignments for each data point: cluster[0...n-1] will be filled
+	@return the minimum sum of squares over all k clusters
+*/
+double kMeansOneDim(int n, int ncat, double *data, double *center, int *cluster) {
+	int i, j, m, k = ncat;
+	if (ncat == 0) k = n;
+	/**
+		dynamic programming cost matrix, c[i][j] = cost of i clusters for {x1...xj}
+	*/
+	double *c[k]; 
+	/**
+		id is used to trace back the minimal solution
+	*/
+	double *id[k]; 
+	/** 
+		c1[i][j] = cost of 1 cluster for {xi...xj}
+	*/
+	double *c1[n];
+	/** 
+		m1[i][j] = mean of {xi...xj}
+	*/
+	double *m1[n];
+	
+	double x[n]; // sorted data points
+
+	double h[n]; // Hartigan index
+
+	// allocate memory 
+	for (i = 0; i < k; i++) c[i] = new double[n];
+	for (i = 0; i < k; i++) id[i] = new double[n];
+	for (i = 0; i < n; i++) c1[i] = new double[n];
+	for (i = 0; i < n; i++) m1[i] = new double[n];
+
+	// first sort data into x
+	memmove(x, data, sizeof(double)*n);
+	std::sort(x, x+n);
+	// first compute c1 matrix
+	for (i = 0; i < n; i++) {
+		double sum = 0.0;
+		for (j = i; j < n; j++) {
+			sum += x[j];
+			double mean = sum / (j-i+1);
+			m1[i][j] = mean;
+			double ss = 0; 
+			for (m = i; m <= j; m++) 
+				ss += (x[m]-mean)*(x[m]-mean); // sum of squared difference
+				//ss += fabs(x[m]-mean); // sum of absolute difference
+			c1[i][j] = ss;
+		}
+	}
+
+	/* now compute dynamic programming matrix */
+	// initialize the 1st row
+	for (j = 0; j < n; j++) {
+		c[0][j] = c1[0][j];
+		id[0][j] = -1;
+	}
+	for (i = 1; i < k; i++) {
+		// no i clusters exist for less than i data points
+		for (j = 0; j < i; j++) { c[i][j] = INFINITY; id[i][j] = -1; }
+		for (j = i; j < n; j++) {
+			c[i][j] = INFINITY;
+			for (m = i-1; m < j; m++)
+				if (c[i][j] > c[i-1][m] + c1[m+1][j]) {
+					c[i][j] = c[i-1][m] + c1[m+1][j];
+					id[i][j] = m;
+				}
+		}
+		// compute Hartigan index
+		h[i-1] = (n-i-1)*(c[i-1][n-1]-c[i][n-1]) / c[i][n-1];
+		//cout << i << " clusters " << h[i-1] << endl;
+	}
+
+	double min_cost = c[k-1][n-1];
+	int bound[k+1];
+	// now trace back
+	bound[k] = n-1;
+	for (i = k-1; i >= 0; i--) {
+		bound[i] = id[i][bound[i+1]];
+	}
+
+	for (i = 0; i < k; i++) {
+		center[i] = m1[bound[i]+1][bound[i+1]];
+		for (j = 0; j < n; j++)
+			if (data[j] <= x[bound[i+1]] && data[j] >= x[bound[i]+1])
+				cluster[j] = i;
+	}
+
+	// free memory
+	for (i = n-1; i >= 0; i--) delete [] m1[i];
+	for (i = n-1; i >= 0; i--) delete [] c1[i];
+	for (i = k-1; i >= 0; i--) delete [] id[i];
+	for (i = k-1; i >= 0; i--) delete [] c[i];
+	return min_cost;
+}

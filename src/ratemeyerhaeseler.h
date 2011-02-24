@@ -37,12 +37,14 @@ public:
 	/**
 		constructor
 	*/
-    RateMeyerHaeseler(double mean_rate_val = 1.0);
+    RateMeyerHaeseler(char *file_name, PhyloTree *tree);
 
 	/**
 		destructor
 	*/
     ~RateMeyerHaeseler();
+
+	void readRateFile(char *rate_file);
 
 	/**
 		@return true 
@@ -138,10 +140,7 @@ public:
 
 protected:
 
-	/**
-		rates will be scaled to this mean. 0 for no scaling
-	*/
-	double mean_rate;
+	char *rate_file;
 
 };
 

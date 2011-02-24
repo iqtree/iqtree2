@@ -70,9 +70,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else params.num_rate_cats = -1;
 			if (params.num_rate_cats >= 0)
-				site_rate = new RateMeyerDiscrete(params.num_rate_cats);
+				site_rate = new RateMeyerDiscrete(params.num_rate_cats, params.mcat_type, params.rate_file, tree);
 			else
-				site_rate = new RateMeyerHaeseler(params.mean_rate);
+				site_rate = new RateMeyerHaeseler(params.rate_file, tree);
 			site_rate->setTree(tree);
 		} else
 			outError("Invalid rate heterogeneity type");
@@ -137,9 +137,9 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);
 		}
-		if (new_lh > cur_lh + 1e-4) {
+		if (new_lh > cur_lh + 1e-3) {
 			if (!fixed_len)
-				cur_lh = tree->optimizeAllBranches(i);  // loop only 5 times in total
+				cur_lh = tree->optimizeAllBranches(1);  // loop only 5 times in total
 			else
 				cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)
@@ -178,6 +178,10 @@ void ModelFactory::stopStoringTransMatrix() {
 
 double ModelFactory::computeTrans(double time, int state1, int state2) {
 	return model->computeTrans(time, state1, state2);
+}
+
+double ModelFactory::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
+	return model->computeTrans(time, state1, state2, derv1, derv2);
 }
 
 void ModelFactory::computeTransMatrix(double time, double *trans_matrix) {

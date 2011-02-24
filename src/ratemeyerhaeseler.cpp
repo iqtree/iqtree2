@@ -22,15 +22,73 @@
 
 
 
-RateMeyerHaeseler::RateMeyerHaeseler(double mean_rate_val)
+RateMeyerHaeseler::RateMeyerHaeseler(char *file_name, PhyloTree *tree)
  : RateHeterogeneity()
 {
 	name = "+MH";
 	full_name = "Meyer & von Haeseler (2003)";
 	dist_mat = NULL;
-	mean_rate = mean_rate_val;
+	setTree(tree);
+	rate_file = file_name;
 }
 
+void RateMeyerHaeseler::readRateFile(char *rate_file) {
+	cout << "Reading site-specific rate file " << rate_file << " ..." << endl;
+	try {
+		ifstream in;
+		in.exceptions(ios::failbit | ios::badbit);
+		in.open(rate_file);
+		char line[256];
+		int site, i;
+		double rate;
+		int nsites = phylo_tree->aln->getNSite();
+		resize(phylo_tree->aln->getNPattern(), -1.0);
+		int saturated_sites = 0, saturated_ptn = 0;
+
+		in.getline(line, sizeof(line));
+		//if (strncmp(line, "Site", 4) != 0) throw "Wrong header line";
+
+		for (i = 0; i < nsites; i++) {
+			in.getline(line, sizeof(line));
+			stringstream ss(line);
+			string tmp;
+			ss >> tmp;
+			site = convert_int(tmp.c_str());
+			if (site <= 0 || site > nsites) throw "Wrong site number (must be between 1 and #sites)";
+			site--;
+			ss >> tmp;
+			rate = convert_double(tmp.c_str());
+			if (rate < 0.0) throw "Negative rate not allowed";
+			if (rate <= 0.0) rate = MIN_SITE_RATE;
+			int ptn = phylo_tree->aln->getPatternID(site);
+			if (rate >= MAX_SITE_RATE) {
+				rate = MAX_SITE_RATE; 
+				saturated_sites += phylo_tree->aln->at(ptn).frequency; 
+				saturated_ptn ++;
+			}
+			at(ptn) = rate;
+		}
+		in.clear();
+		// set the failbit again
+		in.exceptions(ios::failbit | ios::badbit);
+		in.close();
+
+		for (i = 0; i < size(); i++)
+			if (at(i) < 0.0) throw "Some site has no rate information";
+
+		if (saturated_sites) {
+			stringstream str;
+			str << saturated_sites << " sites (" << saturated_ptn << " patterns) show too high rates (>=" << MAX_SITE_RATE << ")";
+			outWarning(str.str());
+		}
+	} catch (const char *str) {
+		outError(str);
+	} catch (string str) {
+		outError(str);
+	} catch(ios::failure) {
+		outError(ERR_READ_INPUT);
+	}
+}
 
 RateMeyerHaeseler::~RateMeyerHaeseler()
 {
@@ -66,7 +124,7 @@ void RateMeyerHaeseler::computePatternRates(DoubleVector &pattern_rates, IntVect
 void RateMeyerHaeseler::getRates(DoubleVector &rates) {
 	rates.clear();
 	if (empty()) {
-		rates.resize(phylo_tree->aln->size(), mean_rate);
+		rates.resize(phylo_tree->aln->size(), 1.0);
 	} else {
 		rates.insert(rates.begin(), begin(), end());
 	} 
@@ -86,7 +144,7 @@ void RateMeyerHaeseler::initializeRates() {
 	if (nseq < 25) 
 		outWarning("Meyer & von Haeseler model is not recommended for < 25 sequences\n");
 
-	resize(phylo_tree->aln->getNPattern(), mean_rate);
+	resize(phylo_tree->aln->getNPattern(), 1.0);
 
 	for (Alignment::iterator pat = phylo_tree->aln->begin(); pat != phylo_tree->aln->end(); pat++, rate_id++) {
 		double diff = 0, total = 0;
@@ -193,8 +251,6 @@ void RateMeyerHaeseler::optimizeRates() {
 	}
 	// compute the distance based on the path lengths between taxa of the tree
 	phylo_tree->calcDist(dist_mat);
-	if (empty()) 
-		initializeRates();
 	IntVector ok_ptn;
 	ok_ptn.resize(size(), 0);
 	double sum = 0.0;
@@ -207,14 +263,14 @@ void RateMeyerHaeseler::optimizeRates() {
 	int nstates = phylo_tree->aln->num_states;
 	for (i = 0; i < size(); i++) {
 		int freq = phylo_tree->aln->at(i).frequency;
-		if (phylo_tree->aln->at(i).computeAmbiguousChar(nstates) < nseq-2) {
+		if (phylo_tree->aln->at(i).computeAmbiguousChar(nstates) <= nseq-2) {
 			optimizeRate(i);
 			if (at(i) == MIN_SITE_RATE) invar_sites += freq; 
 			if (at(i) == MAX_SITE_RATE) {
 				saturated_sites += freq; 
 				saturated_ptn ++;
 			}
-		} else { at(i) = 1.0; ambiguous_sites += freq; }
+		} else { at(i) = MIN_SITE_RATE; ambiguous_sites += freq; }
 		if (at(i) < MAX_SITE_RATE) 
 		{
 			if (at(i) > MIN_SITE_RATE) sum += at(i) * freq;
@@ -224,8 +280,7 @@ void RateMeyerHaeseler::optimizeRates() {
 	} 
 
 	// now scale such that the mean of rates is 1
-	double scale_f = ok_sites * mean_rate / sum;
-	if (mean_rate > 0.0)
+	double scale_f = ok_sites / sum;
 	for (i = 0; i < size(); i++) {
 		if (ok_ptn[i] && at(i) > MIN_SITE_RATE) at(i) = at(i) * scale_f;
 	}
@@ -240,56 +295,44 @@ void RateMeyerHaeseler::optimizeRates() {
 		str << saturated_sites << " sites (" << saturated_ptn << " patterns) show too high rates (>=" << MAX_SITE_RATE << ")";
 		outWarning(str.str());
 	}
-	cout << invar_sites << " sites have zero rate" << endl;
+	//cout << invar_sites << " sites have zero rate" << endl;
 
 }
 
 double RateMeyerHaeseler::optimizeParameters() {
 	assert(phylo_tree);
+
 	double tree_lh = phylo_tree->computeLikelihood();
-	//double tree_lh = phylo_tree->optimizeAllBranches();
 	DoubleVector prev_rates;
 	getRates(prev_rates);
 
+	if (empty()) {
+		if (rate_file) {
+			readRateFile(rate_file);
+			phylo_tree->clearAllPartialLh();
+			return phylo_tree->optimizeAllBranches();
+		}
+		initializeRates();
+	}
+
 	optimizeRates();
 
-// DEBUG
-/*
-	writeSiteRates(*this, "xrate");
-	double pattern_lh[size()];
-	double new_tree_lh1 = phylo_tree->computeLikelihood(pattern_lh);
-	ofstream out("xlogl");
-	double check = 0.0;
-	for (i = 0; i < size(); i++) { 
-		out << pattern_lh[i] << endl;
-		check += pattern_lh[i] * phylo_tree->aln->at(i).frequency;
-	}
-	out.close();
-	cout << "Site rates and pattern log-likelihood written " << new_tree_lh1 << " " << check << endl;
-	exit(1);*/
-// END DEBUG
-/*
-	double new_tree_lh = phylo_tree->computeLikelihood();
-	if (new_tree_lh < tree_lh - TOL_LIKELIHOOD) {
-		cout << "Worse likelihood (" << new_tree_lh << "), rolling back site rates..." << endl;
-		setRates(prev_rates);
-		phylo_tree->clearAllPartialLh();
-		new_tree_lh = phylo_tree->computeLikelihood();
-		cout << "Back up likelihood: " << new_tree_lh << endl;
-	}
-*/
 	
 	phylo_tree->clearAllPartialLh();
+
 	stringstream best_tree_string;
 	phylo_tree->printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
 	double new_tree_lh = phylo_tree->optimizeAllBranches(1);
-	if (new_tree_lh < tree_lh + 1e-5) {
+	//double new_tree_lh = phylo_tree->computeLikelihood();
+
+	if (new_tree_lh < tree_lh - 1e-5) {
 		cout << "Worse likelihood (" << new_tree_lh << "), roll back site rates..." << endl;
 		setRates(prev_rates);
 		phylo_tree->rollBack(best_tree_string);
 		//phylo_tree->clearAllPartialLh();
 		new_tree_lh = phylo_tree->computeLikelihood();
-		cout << "Backup log-likelihood: " << new_tree_lh << endl;
+		//cout << "Backup log-likelihood: " << new_tree_lh << endl;
+		new_tree_lh = tree_lh;
 	}
 	
 	return new_tree_lh;

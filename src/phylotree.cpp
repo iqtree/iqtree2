@@ -628,8 +628,10 @@ void PhyloTree::growTreeMP(Alignment *alignment) {
 void PhyloTree::initializeAllPartialLh() {
     int index;
     block_size = alnSize * numStates * site_rate->getNRate();
-    tmp_partial_lh1 = newPartialLh();
-    tmp_partial_lh2 = newPartialLh();
+    if (!tmp_partial_lh1) 
+    	tmp_partial_lh1 = newPartialLh();
+    if (!tmp_partial_lh2)
+    	tmp_partial_lh2 = newPartialLh();
     initializeAllPartialLh(index);
     assert(index == (nodeNum - 1)*2);
 }

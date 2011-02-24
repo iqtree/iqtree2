@@ -34,7 +34,7 @@ public:
 		constructor
 		@param ncat number of rate categories
    */
-   RateMeyerDiscrete(int ncat);
+   RateMeyerDiscrete(int ncat, int cat_type, char *file_name, PhyloTree *tree);
 
 	/**
 		destructor
@@ -91,6 +91,27 @@ public:
 	*/
 	void classifyRatesKMeans();
 
+
+	/**
+		This function is inherited from Optimization class for optimizting site rates 
+		@param value x-value of the function
+		@return f(value) of function f you want to minimize
+	*/
+	virtual double computeFunction(double value);
+
+	/**
+		This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
+		@param value x-value of the function
+		@param df (OUT) first derivative
+		@param ddf (OUT) second derivative
+		@return f(value) of function f you want to minimize
+	*/
+	virtual double computeFuncDerv(double value, double &df, double &ddf);
+
+	double optimizeCatRate(int cat);
+
+	void normalizeRates();
+
 	/**
 		write information
 		@param out output stream
@@ -118,8 +139,16 @@ protected:
 		false at beginning, true after continuous rates were optimized
 	*/
 	bool is_categorized;
+
+	int mcat_type;
 	
 	DoubleVector full_rates;
+
+	/**
+		current category under optimization. Note that this is not thread-safe
+	*/
+	int optimizing_cat;
+
 };
 
 #endif

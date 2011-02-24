@@ -591,6 +591,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.cmdLambda = 0.75;
         params.speed_conf = 0.75;
     params.whtest_simulations = 1000;
+    params.mcat_type = MCAT_LOG;
+    params.rate_file = NULL;
 	
 	struct timeval tv;
 	struct timezone tz;
@@ -1076,6 +1078,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.whtest_simulations = convert_int(argv[cnt]);
 				if (params.whtest_simulations < 1) 
 					throw "Wrong number of simulations for WH-test";
+			} else if (strcmp(argv[cnt],"-mr") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mr <rate_file>";
+				params.rate_file = argv[cnt];
+			} else if (strcmp(argv[cnt],"-cat_mean") == 0) {
+				params.mcat_type |= MCAT_MEAN;
+			} else if (strcmp(argv[cnt],"-cat_nolog") == 0) {
+				params.mcat_type &= (127 - MCAT_LOG);
+			} else if (strcmp(argv[cnt],"-cat_no_w") == 0) {
+				params.mcat_type |= MCAT_PATTERN;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

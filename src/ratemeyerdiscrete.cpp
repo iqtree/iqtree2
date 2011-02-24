@@ -23,118 +23,164 @@
 #include "kmeans/KMeans.h"
 #include "modeltest_wrapper.h"
 
-/**
-	Solve k-means problem for one-dimensional data with dynamic programming
-	@param n number of data points
-	@param ncat number of clusters
-	@param data data point of size n: x[0..n-1]
-	@param center (OUT) output k centers of k clusters: center[0...k-1] will be filled
-	@param cluster (OUT) cluster assignments for each data point: cluster[0...n-1] will be filled
-	@return the minimum sum of squares over all k clusters
-*/
-double kMeansOneDim(int n, int ncat, double *data, double *center, int *cluster) {
-	int i, j, m, k = ncat;
-	if (ncat == 0) k = n;
-	/**
-		dynamic programming cost matrix, c[i][j] = cost of i clusters for {x1...xj}
-	*/
-	double *c[k]; 
-	/**
-		id is used to trace back the minimal solution
-	*/
-	double *id[k]; 
-	/** 
-		c1[i][j] = cost of 1 cluster for {xi...xj}
-	*/
-	double *c1[n];
-	/** 
-		m1[i][j] = mean of {xi...xj}
-	*/
-	double *m1[n];
+/************************************************
+	Huy's k-means dynamic programming algorithm
+************************************************/
+
+void quicksort(double arr[], int weight[], int index[], int left, int right) {
+      int i = left, j = right, tmp2;
+      double tmp;
+      double pivot = arr[(left + right) / 2];
+ 
+      /* partition */
+      while (i <= j) {
+            while (arr[i] < pivot)
+                  i++;
+            while (arr[j] > pivot)
+                  j--;
+            if (i <= j) {
+                  tmp = arr[i];
+                  arr[i] = arr[j];
+                  arr[j] = tmp;
+                  tmp2 = index[i];
+                  index[i] = index[j];
+                  index[j] = tmp2;
+                  tmp2 = weight[i];
+                  weight[i] = weight[j];
+                  weight[j] = tmp2;
+                  i++;
+                  j--;
+            }
+      };
+ 
+      /* recursion */
+      if (left < j)
+            quicksort(arr, weight, index, left, j);
+      if (i < right)
+            quicksort(arr, weight, index, i, right);
+}
+
+double mean_sum(int l, int r, double *sumA, double *sumAsquare, int *sumW) {
+/*	double mean = (sumA[r]-sumA[l-1])/(r-l+1);
+	return sumAsquare[r]-sumAsquare[l-1]- 2*(sumA[r]- sumA[l-1])*mean + mean*mean*(r-l+1);*/
+
+	double sum = (sumA[r]- sumA[l-1]);
+	return sumAsquare[r]-sumAsquare[l-1] - sum*sum/(sumW[r] - sumW[l-1]);
+
+/*
+	double mean = (sumA[r]-sumA[l-1]);
+	return sumAsquare[r]-sumAsquare[l-1]- 2*(sumA[r]- sumA[l-1])*mean + mean*mean*(r-l+1);*/
+}
+
+
+
+// Runs k-means on the given set of points.
+//   - n: The number of points in the data set
+//   - k: The number of clusters to look for
+//   - d: The number of dimensions that the data set lives in
+//   - points: An array of size n*d where points[d*i + j] gives coordinate j of poi
+//   - attempts: The number of times to independently run k-means with different starting centers.
+//               The best result is always returned (as measured by the cost function).
+//   - centers: This can either be null or an array of size k*d. In the latter case, it will be
+//              filled with the locations of all final cluster centers. Specifically
+//              centers[d*i + j] will give coordinate j of center i. If the cluster is unused, it
+//              will contain NaN instead.
+//   - assignments: This can either be null or an array of size n. In the latter case, it will be
+//                  filled with the cluster that each pois assigned to (an integer between 0
+//                  and k-1 inclusive).
+// The final cost of the clustering is also returned.
+
+double RunKMeans1D(int n, int k, double *points, int *weights, double *centers, int *assignments) {
+	double *sumA;
+	double *sumAsquare;
+	int *sumW;
+	double **Cost;
+	int **trace;
 	
-	double x[n]; // sorted data points
+	sumA = new double[n+1];
+	sumAsquare = new double[n+1];
+	sumW = new int[n+1];
+	Cost = new double*[n+1];
+	for (int i=0; i<=n; i++) Cost[i] = new double[k+1];
+	trace = new int*[n+1];
+	for (int i=0; i<=n; i++) trace[i] = new int[k+1];
 
-	double h[n]; // Hartigan index
+	int *index = new int[n+1];
+	for (int i=0; i<n; i++) index[i] = i;
 
-	// allocate memory 
-	for (i = 0; i < k; i++) c[i] = new double[n];
-	for (i = 0; i < k; i++) id[i] = new double[n];
-	for (i = 0; i < n; i++) c1[i] = new double[n];
-	for (i = 0; i < n; i++) m1[i] = new double[n];
+	//for (int i=1; i<=n; i++) cout <<index[i] <<"\t" <<points[i] <<endl;
 
-	// first sort data into x
-	memmove(x, data, sizeof(double)*n);
-	std::sort(x, x+n);
-	// first compute c1 matrix
-	for (i = 0; i < n; i++) {
-		double sum = 0.0;
-		for (j = i; j < n; j++) {
-			sum += x[j];
-			double mean = sum / (j-i+1);
-			m1[i][j] = mean;
-			double ss = 0; 
-			for (m = i; m <= j; m++) 
-				ss += (x[m]-mean)*(x[m]-mean); // sum of squared difference
-				//ss += fabs(x[m]-mean); // sum of absolute difference
-			c1[i][j] = ss;
-		}
+	quicksort(points, weights, index, 0, n-1);
+	
+	//for (int i=n; i>0; i--) {points[i] = points[i-1]; index[i] = index[i-1];}
+	//for (int i=1; i<=n; i++) cout <<index[i] <<"\t" <<points[i] <<endl;
+	
+	//exit(1);
+	
+	sumA[0] = 0; sumAsquare[0] =0; sumW[0] = 0;
+	for (int i=1; i<=n; i++) {
+		/*sumA[i] = sumA[i-1] + points[i-1];
+		sumAsquare[i] = sumAsquare[i-1] + points[i-1]*points[i-1];*/
+		sumA[i] = sumA[i-1] + points[i-1] * weights[i-1];
+		sumAsquare[i] = sumAsquare[i-1] + points[i-1]*points[i-1] * weights[i-1];
+		sumW[i] = sumW[i-1] + weights[i-1];
 	}
-
-	/* now compute dynamic programming matrix */
-	// initialize the 1st row
-	for (j = 0; j < n; j++) {
-		c[0][j] = c1[0][j];
-		id[0][j] = -1;
-	}
-	for (i = 1; i < k; i++) {
-		// no i clusters exist for less than i data points
-		for (j = 0; j < i; j++) { c[i][j] = INFINITY; id[i][j] = -1; }
-		for (j = i; j < n; j++) {
-			c[i][j] = INFINITY;
-			for (m = i-1; m < j; m++)
-				if (c[i][j] > c[i-1][m] + c1[m+1][j]) {
-					c[i][j] = c[i-1][m] + c1[m+1][j];
-					id[i][j] = m;
+	
+	Cost[0][0] = 0;
+	for (int i=1; i<=n; i++) {
+		Cost[i][1] = mean_sum(1, i, sumA, sumAsquare, sumW);
+		trace[i][1] = 0;
+		for (int j=2; j<=(i<=k?i:k); j++) {
+			Cost[i][j] = Cost[j-1][j-1]+ mean_sum(j, i, sumA, sumAsquare, sumW);
+			trace[i][j] = j-1;
+			for (int _k=j; _k<=i-1; _k++) {
+				double temp = mean_sum(_k+1, i, sumA, sumAsquare, sumW);
+				if (Cost[i][j] >= Cost[_k][j-1]+ temp) {
+					Cost[i][j] = Cost[_k][j-1]+ temp;			
+					trace[i][j] = _k;
 				}
+			}
 		}
-		// compute Hartigan index
-		h[i-1] = (n-i-1)*(c[i-1][n-1]-c[i][n-1]) / c[i][n-1];
-		//cout << i << " clusters " << h[i-1] << endl;
 	}
-
-	double min_cost = c[k-1][n-1];
-	int bound[k+1];
-	// now trace back
-	bound[k] = n-1;
-	for (i = k-1; i >= 0; i--) {
-		bound[i] = id[i][bound[i+1]];
+	
+	double min_cost = Cost[n][k];
+	
+    int i = n; int j = k;
+    while (i>0) {
+		int t= trace[i][j];
+		centers[j-1] = (sumA[i]-sumA[t])/(sumW[i]-sumW[t]);
+		//cout << "category " <<k-j<<endl;
+		for (int _i=t+1; _i<=i; _i++) {
+			//cout <<index[_i] << "\t" <<points[_i] <<endl;
+			assignments[index[_i-1]] = j-1; //points[_i] \in category k-j
+		}
+		i=t; j=j-1;
 	}
+	
+	for (int i=n; i>=0; i--) delete [] trace[i];
+	delete [] trace;
+	for (int i=n; i>=0; i--) delete [] Cost[i];
+	delete [] Cost;
 
-	for (i = 0; i < k; i++) {
-		center[i] = m1[bound[i]+1][bound[i+1]];
-		for (j = 0; j < n; j++)
-			if (data[j] <= x[bound[i+1]] && data[j] >= x[bound[i]+1])
-				cluster[j] = i;
-	}
+	delete [] sumW;	
+	delete [] sumAsquare;
+	delete [] sumA;
 
-	// free memory
-	for (i = n-1; i >= 0; i--) delete [] m1[i];
-	for (i = n-1; i >= 0; i--) delete [] c1[i];
-	for (i = k-1; i >= 0; i--) delete [] id[i];
-	for (i = k-1; i >= 0; i--) delete [] c[i];
 	return min_cost;
 }
+     
 
 /************************************************
 	RateMeyerDiscrete
 ************************************************/
-RateMeyerDiscrete::RateMeyerDiscrete(int ncat)
- : RateMeyerHaeseler()
+RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type, char *file_name, PhyloTree *tree)
+ : RateMeyerHaeseler(file_name, tree)
 {
 	ncategory = ncat;
 	rates = NULL;
 	ptn_cat = NULL;
 	is_categorized = false;
+	mcat_type = cat_type;
 	if (ncat > 0) {
 		rates = new double[ncategory];
 		memset(rates, 0, sizeof(double) * ncategory);
@@ -189,6 +235,58 @@ double RateMeyerDiscrete::optimizeParameters() {
 	return tree_lh;
 }
 
+double RateMeyerDiscrete::computeFunction(double value) {
+	if (!is_categorized) return RateMeyerHaeseler::computeFunction(value);
+	double lh = 0.0;
+	
+	for (int i = 0; i < size(); i++)
+		if (ptn_cat[i] == optimizing_cat) {
+			optimizing_pattern = i;
+			lh += RateMeyerHaeseler::computeFunction(value) * phylo_tree->aln->at(i).frequency;
+		}
+	return lh;
+}
+
+double RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
+	if (!is_categorized) return RateMeyerHaeseler::computeFuncDerv(value, df, ddf);
+	double lh = 0.0, derv1, derv2;
+	df = 0.0; ddf = 0.0;	
+	for (int i = 0; i < size(); i++)
+		if (ptn_cat[i] == optimizing_cat) {
+			optimizing_pattern = i;
+			int freq =  phylo_tree->aln->at(i).frequency;
+			lh += RateMeyerHaeseler::computeFuncDerv(value, derv1, derv2) * freq;
+			df += derv1 * freq;
+			ddf += derv2 * freq;
+		}
+	return lh;
+}
+
+void RateMeyerDiscrete::normalizeRates() {
+	double sum = 0.0, ok = 0.0;
+	int nptn = size();
+	int i;
+
+	for (i = 0; i < nptn; i++) {
+		at(i) = rates[ptn_cat[i]];
+		if (at(i) < MAX_SITE_RATE) { 
+			sum += at(i) * phylo_tree->aln->at(i).frequency; 
+			ok += phylo_tree->aln->at(i).frequency; 
+		}
+	}
+
+	if (fabs(sum - ok) > 1e-3) {
+		//cout << "Normalizing rates " << sum << " / " << ok << endl;
+		double scale_f = ok / sum;
+		for (i = 0; i < size(); i++) {
+			if (at(i) > 2*MIN_SITE_RATE && at(i) < MAX_SITE_RATE) at(i) = at(i) * scale_f;
+		}
+		for (i = 0; i < ncategory; i++)
+			if (rates[i] > 2*MIN_SITE_RATE && rates[i] < MAX_SITE_RATE)
+				rates[i] *= scale_f;
+	}
+}
+
 void RateMeyerDiscrete::classifyRatesKMeans() {
 
 	assert(ncategory > 0);
@@ -198,54 +296,83 @@ void RateMeyerDiscrete::classifyRatesKMeans() {
 	// clustering the rates with k-means
 	//AddKMeansLogging(&cout, false);
 	double points[nptn];
+	int weights[nptn];
 	int i;
 	if (!ptn_cat) ptn_cat = new int[nptn];
 	for (i = 0; i < nptn; i++) {
-		if (at(i) == MAX_SITE_RATE) 
-			points[i] = log(1e6);
-		else 
-			points[i] = log(at(i));
+		points[i] = at(i);
+		if (mcat_type & MCAT_LOG) points[i] = log(points[i]);
+		weights[i] = 1;
+		if (!(mcat_type & MCAT_PATTERN)) 
+			weights[i] = phylo_tree->aln->at(i).frequency;
 	}
 	memset(rates, 0, sizeof(double) * ncategory);
 
-	//double cost = RunKMeansPlusPlus(nsites, ncategory, 1, points, attempts, rates, assignments);
-	double cost = kMeansOneDim(nptn, ncategory, points, rates, ptn_cat);
-	//cout << "Rates are classified by k-means (" << attempts << " runs) with cost " << cost << endl;
-	//cout << "Minimum cost by dynamic programming is " << cost1 << endl;
-	//if (cost > cost1+1e-6)
-		//cout << "k-means++ is stuck in local minimum, global is " << cost1 << endl;
+	//double cost = RunKMeansPlusPlus(nptn, ncategory, 1, points, sqrt(nptn), rates, ptn_cat);
+	double cost = RunKMeans1D(nptn, ncategory, points, weights, rates, ptn_cat);
 	// assign the categorized rates
-	double sum = 0.0, ok = 0.0;
-	for (i = 0; i < ncategory; i++) rates[i] = exp(rates[i]);
+	if  (mcat_type & MCAT_LOG) 
+		for (i = 0; i < ncategory; i++) rates[i] = exp(rates[i]);
 	if (rates[0] < MIN_SITE_RATE) rates[0] = MIN_SITE_RATE;
-	if (rates[ncategory-1] > MAX_SITE_RATE) rates[ncategory-1] = MAX_SITE_RATE;
+	if (rates[ncategory-1] > MAX_SITE_RATE - 1e-6) rates[ncategory-1] = MAX_SITE_RATE;
 	if (verbose_mode >= VB_MED) {
 		cout << "K-means cost: " << cost << endl;
 		for (i = 0; i < ncategory; i++) cout << rates[i] << " ";
 		cout << endl;
 	}
-
+/*
+	int nsites[ncategory];
+	memset(rates, 0, sizeof(double) * ncategory);
+	memset(nsites, 0, sizeof(int) * ncategory);
 	for (i = 0; i < nptn; i++) {
+		rates[ptn_cat[i]] += at(i) * phylo_tree->aln->at(i).frequency;
+		nsites[ptn_cat[i]] += phylo_tree->aln->at(i).frequency;
+	}
+
+	for (i = 0; i < ncategory; i++) {
+		rates[i] /= nsites[i];
+	}*/
+
+	for (i = 0; i < nptn; i++)
 		at(i) = rates[ptn_cat[i]];
-		if (at(i) < MAX_SITE_RATE) { 
-			sum += at(i) * phylo_tree->aln->at(i).frequency; 
-			ok += mean_rate * phylo_tree->aln->at(i).frequency; 
-		}
-	}
 
-	if (fabs(sum - ok) > 1e-3) {
-		//cout << "Normalizing " << sum << " / " << ok << endl;
-		double scale_f = ok / sum;
-		for (i = 0; i < size(); i++) {
-			if (at(i) > 2*MIN_SITE_RATE && at(i) < MAX_SITE_RATE) at(i) = at(i) * scale_f;
-		}
+	if (!(mcat_type & MCAT_MEAN)) // optimize category rates again by ML
 		for (i = 0; i < ncategory; i++)
-			if (rates[i] > 2*MIN_SITE_RATE && rates[i] < MAX_SITE_RATE)
-				rates[i] *= scale_f;
-	}
+			optimizeCatRate(i);
 
+	normalizeRates();
 }
 
+double RateMeyerDiscrete::optimizeCatRate(int cat) {
+	optimizing_cat = cat;
+	double negative_lh;
+	double current_rate = rates[cat];
+	double ferror, optx;
+    if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
+	{
+    	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, negative_lh);
+    }
+    else {
+		optx = minimizeOneDimen(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, &negative_lh, &ferror);
+		double fnew;
+		if ((optx < MAX_SITE_RATE) && (fnew = computeFunction(MAX_SITE_RATE)) <= negative_lh+TOL_SITE_RATE) {
+			optx = MAX_SITE_RATE;
+			negative_lh = fnew;
+		}
+		if ((optx > MIN_SITE_RATE) && (fnew = computeFunction(MIN_SITE_RATE)) <= negative_lh+TOL_SITE_RATE) {
+			optx = MIN_SITE_RATE;
+			negative_lh = fnew;
+		}
+	}
+	//negative_lh = brent(MIN_SITE_RATE, current_rate, max_rate, 1e-3, &optx);
+	if (optx > MAX_SITE_RATE*0.99) optx = MAX_SITE_RATE;
+	if (optx < MIN_SITE_RATE*2) optx = MIN_SITE_RATE;
+	rates[cat] = optx;
+//#ifndef NDEBUG		
+//#endif
+
+	return optx;	
+}
 
 double RateMeyerDiscrete::classifyRates(double tree_lh) {
 	double new_tree_lh;
@@ -262,7 +389,7 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 	int nptn = phylo_tree->aln->getNPattern();
 	rates = new double[nptn];
 
-	for (ncategory = 4; ; ncategory++) {
+	for (ncategory = 2; ; ncategory++) {
 		classifyRatesKMeans();
 		phylo_tree->clearAllPartialLh();
 		new_tree_lh = phylo_tree->optimizeAllBranches();

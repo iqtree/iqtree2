@@ -352,7 +352,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
             int cats = rate_model->getNDiscreteRate();
 			DoubleVector prop;
 			if (rate_model->getGammaShape() > 0)
-				prop.resize((1.0 - rate_model->getPInvar()) / rate_model->getNRate(), cats);
+				prop.resize(cats, (1.0 - rate_model->getPInvar()) / rate_model->getNRate());
 			else {
 				prop.resize(cats, 0.0);
 				for (i = 0; i < tree.aln->getNPattern(); i++)
@@ -445,7 +445,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 			tree.freeNode();
 			tree.readTree(con_file.c_str(), rooted);
 			double fixed_length = 0.01;
-			int fixed_number = tree.fixNegativeBranch(fixed_length);
+			tree.fixNegativeBranch(fixed_length);
 			tree.setAlignment(tree.aln);
 		    tree.initializeAllPartialLh();
 			tree.optimizeAllBranches();
@@ -889,7 +889,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
 
     if (params.mvh_site_rate) {
-	    RateMeyerHaeseler *rate_mvh = new RateMeyerHaeseler(params.mean_rate);
+	    RateMeyerHaeseler *rate_mvh = new RateMeyerHaeseler(params.rate_file, &tree);
         cout << endl << "Computing site-specific rates by " << rate_mvh->full_name << "..." << endl;
         rate_mvh->runIterativeProc(params, tree);
     	cout << endl << "BEST SCORE FOUND : " << tree.getBestScore() << endl;
