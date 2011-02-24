@@ -386,6 +386,7 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
 			return new_lh;
 		}
 	}
+	return cur_lh;
 }
 
 
