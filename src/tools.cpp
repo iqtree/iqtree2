@@ -591,7 +591,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.cmdLambda = 0.75;
         params.speed_conf = 0.75;
     params.whtest_simulations = 1000;
-    params.mcat_type = MCAT_LOG;
+    params.mcat_type = MCAT_LOG + MCAT_PATTERN;
     params.rate_file = NULL;
 	
 	struct timeval tv;
@@ -1087,8 +1087,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.mcat_type |= MCAT_MEAN;
 			} else if (strcmp(argv[cnt],"-cat_nolog") == 0) {
 				params.mcat_type &= (127 - MCAT_LOG);
-			} else if (strcmp(argv[cnt],"-cat_no_w") == 0) {
-				params.mcat_type |= MCAT_PATTERN;
+			} else if (strcmp(argv[cnt],"-cat_site") == 0) {
+				params.mcat_type &= (127-MCAT_PATTERN);
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];
