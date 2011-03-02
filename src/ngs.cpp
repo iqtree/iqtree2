@@ -324,6 +324,8 @@ void runNGSAnalysis(Params &params) {
 	for (i = 0; i < aln.num_states; i++) out << state_freq[i] << " \t";
 	out << endl << endl;
 
+	out << "Q matrix can be obtained by multiplying rate parameters with state frequencies" << endl << endl;
+
 	out << "Position-specific rates: " << endl;
 	for (i = 0; i < aln.ncategory; i++)
 		out << i+1 << '\t' << tree.getRate()->getRate(i) << endl;
