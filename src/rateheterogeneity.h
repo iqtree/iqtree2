@@ -98,11 +98,11 @@ public:
 	virtual double getPtnRate(int ptn) { return 1.0; }
 
 	/**
-		get rate category of a specified site-pattern. Default returns 1.0 since it is homogeneous model
+		get rate category of a specified site-pattern. Default returns -1 since it is homogeneous model
 		@param ptn pattern ID 
 		@return the rate category of the specified site-pattern
 	*/
-	virtual double getPtnCat(int ptn) { return -1; }
+	virtual int getPtnCat(int ptn) { return -1; }
 
 	/**
 		get the proportion of invariable sites. Default returns 0.0 since it is homogeneous model

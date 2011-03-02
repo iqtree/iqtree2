@@ -33,8 +33,13 @@ public:
  	/**
 		constructor
 		@param ncat number of rate categories
+		@param cat_type category type, bitwise, incl. CAT_LOG, CAT_MEAN, CAT_PATTERN
+		@param file_name rate file name, NULL if not inputed
+		@param tree associated phylo tree
    */
    RateMeyerDiscrete(int ncat, int cat_type, char *file_name, PhyloTree *tree);
+
+   RateMeyerDiscrete();
 
 	/**
 		destructor
@@ -54,11 +59,18 @@ public:
 	virtual double getRate(int category);
 
 	/**
+		get the rate of a specified site-pattern. Default returns 1.0 since it is homogeneous model
+		@param ptn pattern ID 
+		@return the rate of the specified site-pattern
+	*/
+	virtual double getPtnRate(int ptn);
+
+	/**
 		get rate category of a specified site-pattern. 
 		@param ptn pattern ID 
 		@return the rate category of the specified site-pattern
 	*/
-	virtual double getPtnCat(int ptn);
+	virtual int getPtnCat(int ptn);
 
 	/**
 		Compute site-specific rates. Override this for Gamma model
@@ -143,8 +155,6 @@ protected:
 
 	int mcat_type;
 	
-	DoubleVector full_rates;
-
 	/**
 		current category under optimization. Note that this is not thread-safe
 	*/

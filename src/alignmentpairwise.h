@@ -69,7 +69,7 @@ public:
 	/**
 		destructor
 	*/
-    ~AlignmentPairwise();
+    virtual ~AlignmentPairwise();
 
 	/**
 		pairwise state frequencies

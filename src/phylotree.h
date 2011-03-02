@@ -328,7 +328,7 @@ public:
                             assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
-    double computeLikelihood(double *pattern_lh = NULL);
+    virtual double computeLikelihood(double *pattern_lh = NULL);
 
     /**
             Roll back the tree saved with only Taxon IDs and branch lengths.
@@ -448,7 +448,7 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    double optimizeAllBranches(int iterations = 100);
+    virtual double optimizeAllBranches(int iterations = 100);
 
     /**
             inherited from Optimization class, to return to likelihood of the tree

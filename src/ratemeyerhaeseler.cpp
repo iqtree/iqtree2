@@ -32,6 +32,16 @@ RateMeyerHaeseler::RateMeyerHaeseler(char *file_name, PhyloTree *tree)
 	rate_file = file_name;
 }
 
+RateMeyerHaeseler::RateMeyerHaeseler()
+ : RateHeterogeneity()
+{
+	name = "+MH";
+	full_name = "Meyer & von Haeseler (2003)";
+	dist_mat = NULL;
+	phylo_tree = NULL;
+	rate_file = NULL;
+}
+
 void RateMeyerHaeseler::readRateFile(char *rate_file) {
 	cout << "Reading site-specific rate file " << rate_file << " ..." << endl;
 	try {
@@ -147,7 +157,7 @@ void RateMeyerHaeseler::initializeRates() {
 	resize(phylo_tree->aln->getNPattern(), 1.0);
 
 	for (Alignment::iterator pat = phylo_tree->aln->begin(); pat != phylo_tree->aln->end(); pat++, rate_id++) {
-		double diff = 0, total = 0;
+		int diff = 0, total = 0;
 		for (i = 0; i < nseq-1; i++) if ((state1 = pat->at(i)) < nstate)
 			for (j = i+1; j < nseq; j++) if ((state2 = pat->at(j)) < nstate) {
 				//total += dist_mat[state1 * nstate + state2];
@@ -155,6 +165,8 @@ void RateMeyerHaeseler::initializeRates() {
 				total++;
 				if (state1 != state2) diff++;
 		}
+		if (diff == 0) diff = 1;
+		if (total == 0) total = 1;
 		double obs_diff = double(diff) / total;
 		double tolog = 1.0 - obs_diff*nstate/(nstate-1);
 		if (tolog > 0.0) {

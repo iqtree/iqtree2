@@ -26,6 +26,7 @@
 #include "modelprotein.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
+#include "ngs.h"
 
 ModelFactory::ModelFactory() { 
 	model = NULL; 
@@ -74,6 +75,14 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			else
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree);
 			site_rate->setTree(tree);
+		} else if (rate_str.substr(0,2) == "+F") {
+			tree->sse = false;
+			if (rate_str.length() > 2) {
+				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
+				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else params.num_rate_cats = -1;
+			site_rate = new NGSRate(tree);
+			site_rate->setTree(tree);
 		} else
 			outError("Invalid rate heterogeneity type");
 		model_str = model_str.substr(0, pos);
@@ -106,6 +115,9 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 	assert(model);
 	assert(site_rate);
 
+	time_t begin_time, cur_time;
+	time(&begin_time);
+
 	double cur_lh;
 	PhyloTree *tree = site_rate->getTree();
 	assert(tree);
@@ -119,7 +131,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 	if (verbose_mode >= VB_MED || write_info)
 		cout << "Initial log-likelihood: " << cur_lh << endl;
 	int i;
-	for (i = 2; i < 100; i++) {
+	for (i = 2; i < 500; i++) {
 		double model_lh = model->optimizeParameters();
 		//if (model_lh != 0.0) cur_lh = model_lh;
 /*
@@ -154,8 +166,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 		model->writeInfo(cout);
 		site_rate->writeInfo(cout);
 	}
+	time(&cur_time);
+	double elapsed_secs = difftime(cur_time,begin_time);
 	if (write_info)
-		cout << "Parameters optimization took " << i-1 << " rounds to finish" << endl << endl;
+		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec) to finish" << endl << endl;
 	startStoringTransMatrix();
 	return cur_lh;
 }

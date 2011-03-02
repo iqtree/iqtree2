@@ -39,6 +39,8 @@ public:
 	*/
     RateMeyerHaeseler(char *file_name, PhyloTree *tree);
 
+    RateMeyerHaeseler();
+
 	/**
 		destructor
 	*/

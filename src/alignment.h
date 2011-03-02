@@ -251,18 +251,18 @@ public:
 		@param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
 			at least num_states entries.
 	*/
-	void computeStateFreq(double *state_freq);
+	virtual void computeStateFreq(double *state_freq);
 
 	/**
 		compute empirical rates between state pairs
 		@param rates (OUT) vector of size num_states*(num_states-1)/2 for the rates
 	*/
-	void computeEmpiricalRate (double *rates);
+	virtual void computeEmpiricalRate (double *rates);
 
 	/**
 		count the fraction of constant sites in the alignment, update the variable frac_const_sites
 	*/
-	void countConstSite();
+	virtual void countConstSite();
 
 	/**
 		@return unconstrained log-likelihood (without a tree)

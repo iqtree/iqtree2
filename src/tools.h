@@ -800,6 +800,11 @@ struct Params {
 		...
 	*/
 	char *rate_file;
+
+	/**
+		next-generation sequencing input file for Fritz project
+	*/
+	char *ngs_file;
 };
 
 /**

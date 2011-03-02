@@ -215,6 +215,7 @@ Node* PhyloTree::newNode(int node_id, int node_name) {
 }
 
 void PhyloTree::clearAllPartialLh() {
+	if (!root) return;
     ((PhyloNode*) root->neighbors[0]->node)->clearAllPartialLh((PhyloNode*) root);
 }
 
@@ -1264,7 +1265,6 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
 }
 
 void PhyloTree::computeDist(double *dist_mat) {
-    time_t begin_time = clock();
     int nseqs = aln->getNSeq();
     int pos = 0;
     double longest_dist = 0.0;
@@ -1280,7 +1280,6 @@ void PhyloTree::computeDist(double *dist_mat) {
         }
     if (longest_dist > MAX_GENETIC_DIST * 0.99)
         outWarning("Some distances are saturated. Please check your alignment again");
-    cout << "Time: " << (double) (clock() - begin_time) / CLOCKS_PER_SEC << " seconds" << endl;
 }
 
 void PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file) {

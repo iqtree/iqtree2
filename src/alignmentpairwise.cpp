@@ -30,6 +30,26 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2) : Ali
 	seq_id1 = seq1;
 	seq_id2 = seq2;
 	num_states = tree->aln->num_states;
+	pair_freq = NULL;
+
+	if (tree->getRate()->isSiteSpecificRate()) return;
+	
+	// categorized rates
+	if (tree->getRate()->getPtnCat(0) >= 0) {
+		int size_sqr = num_states * num_states;
+		int total_size = size_sqr * tree->getRate()->getNDiscreteRate();
+		pair_freq = new int[total_size];
+		memset(pair_freq, 0, sizeof(int)*total_size);
+		int i = 0;
+		for (Alignment::iterator it = tree->aln->begin(); it != tree->aln->end(); it++, i++) {
+			int state1 = (*it)[seq_id1];
+			int state2 = (*it)[seq_id2];
+			if (state1 < num_states && state2 < num_states)
+				pair_freq[tree->getRate()->getPtnCat(i)*size_sqr + state1*num_states + state2] += it->frequency;
+		}
+		return;
+	}
+	
 	pair_freq = new int[num_states * num_states];
 	memset(pair_freq, 0, sizeof(int) * num_states * num_states);
 	for (Alignment::iterator it = tree->aln->begin(); it != tree->aln->end(); it++) {
@@ -37,32 +57,44 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2) : Ali
 		int state2 = (*it)[seq_id2];
 		if (state1 < num_states && state2 < num_states)
 			pair_freq[state1 * num_states + state2] += it->frequency;
-	}
-	
+	}	
 }
 
 double AlignmentPairwise::computeFunction(double value) {
 
 	RateHeterogeneity *site_rate = tree->getRate();
-	int ncat = site_rate->getNRate();
+	int ncat = site_rate->getNDiscreteRate();
 	int trans_size = num_states * num_states;
 	int cat, i;
 	int nptn = tree->aln->getNPattern();
 	double lh = 0.0;
 
-	if (site_rate->isSiteSpecificRate() || site_rate->getPtnCat(0) >= 0) {
+	// site-specific rates
+	if (site_rate->isSiteSpecificRate()) {
 		for (i = 0; i < nptn; i++) {
 			int state1 = tree->aln->at(i)[seq_id1];
 			int state2 = tree->aln->at(i)[seq_id2];
 			if (state1 >= num_states || state2 >= num_states) continue;
 			double trans = tree->getModelFactory()->computeTrans(value * site_rate->getPtnRate(i), state1, state2);
-			lh += log(trans) * tree->aln->at(i).frequency;
+			lh -= log(trans) * tree->aln->at(i).frequency;
 			
 		}
-		return -lh;
+		return lh;
 	}
 
 	double trans_mat[trans_size];
+
+	// categorized rates
+	if (site_rate->getPtnCat(0) >= 0) {
+		for (cat = 0; cat < ncat; cat++) {
+			tree->getModelFactory()->computeTransMatrix(value*site_rate->getRate(cat), trans_mat);
+			int *pair_pos = pair_freq + cat*trans_size;
+			for (i = 0; i < trans_size; i++) 
+				lh -= pair_pos[i] * log(trans_mat[i]);
+		}
+		return lh;
+	}
+
 	double sum_trans_mat[trans_size];
 	
 	if (tree->getModelFactory()->site_rate->getGammaShape() == 0.0)
@@ -76,22 +108,22 @@ double AlignmentPairwise::computeFunction(double value) {
 		}
 	}
 	for (i = 0; i < trans_size; i++) {
-		lh += pair_freq[i] * log(sum_trans_mat[i]);
+		lh -= pair_freq[i] * log(sum_trans_mat[i]);
 	}
 	// negative log-likelihood (for minimization)
-	return -lh;
+	return lh;
 }
 
 double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
 	RateHeterogeneity *site_rate = tree->getRate();
-	int ncat = site_rate->getNRate();
+	int ncat = site_rate->getNDiscreteRate();
 	int trans_size = num_states * num_states;
 	int cat, i;
 	int nptn = tree->aln->getNPattern();
 	double lh = 0.0;
 	df = 0.0; ddf = 0.0;
 
-	if (site_rate->isSiteSpecificRate() || site_rate->getPtnCat(0) >= 0) {
+	if (site_rate->isSiteSpecificRate()) {
 		for (i = 0; i < nptn; i++) {
 			int state1 = tree->aln->at(i)[seq_id1];
 			int state2 = tree->aln->at(i)[seq_id2];
@@ -100,19 +132,37 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
 			double rate_sqr = rate_val * rate_val;
 			double derv1, derv2;
 			double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
-			lh += log(trans) * tree->aln->at(i).frequency;
+			lh -= log(trans) * tree->aln->at(i).frequency;
 			double d1 = derv1 / trans;
-			df += rate_val * d1 * tree->aln->at(i).frequency;
-			ddf += rate_sqr * (derv2/trans - d1*d1) * tree->aln->at(i).frequency;
+			df -= rate_val * d1 * tree->aln->at(i).frequency;
+			ddf -= rate_sqr * (derv2/trans - d1*d1) * tree->aln->at(i).frequency;
 			
 		}
-		df = -df;
-		ddf = -ddf;
-		return -lh;
+		return lh;
+	}
+
+	double trans_mat[trans_size], trans_derv1[trans_size], trans_derv2[trans_size];
+
+	// categorized rates
+	if (site_rate->getPtnCat(0) >= 0) {
+		for (cat = 0; cat < ncat; cat++) {
+			double rate_val = site_rate->getRate(cat);
+			double derv1 = 0.0, derv2 = 0.0;
+			tree->getModelFactory()->computeTransDerv(value*rate_val, trans_mat, trans_derv1, trans_derv2);
+			int *pair_pos = pair_freq + cat*trans_size;
+			for (i = 0; i < trans_size; i++) if (pair_pos[i] > 0) {
+				double d1 = trans_derv1[i] / trans_mat[i];
+				derv1 += pair_pos[i] * d1;
+				derv2 += pair_pos[i] * (trans_derv2[i]/trans_mat[i] - d1 * d1);
+				lh -= pair_pos[i] * log(trans_mat[i]);
+			}
+			df -= derv1 * rate_val;
+			ddf -= derv2 * rate_val * rate_val;
+		}
+		return lh;
 	}
 
 
-	double trans_mat[trans_size], trans_derv1[trans_size], trans_derv2[trans_size];
 	double sum_trans[trans_size],sum_derv1[trans_size], sum_derv2[trans_size];
 	memset(sum_trans, 0, sizeof(double) * trans_size);
 	memset(sum_derv1, 0, sizeof(double) * trans_size);
@@ -131,15 +181,14 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
 			sum_derv2[i] += trans_derv2[i] * rate_sqr;
 		}
 	}
-	for (i = 0; i < trans_size; i++) {
-		lh += pair_freq[i] * log(sum_trans[i]);
+	for (i = 0; i < trans_size; i++) if (pair_freq[i] > 0) {
+		lh -= pair_freq[i] * log(sum_trans[i]);
 		double d1 = sum_derv1[i] / sum_trans[i];
-		df += pair_freq[i] * d1;
-		ddf += pair_freq[i] * (sum_derv2[i]/sum_trans[i] - d1 * d1);
+		df -= pair_freq[i] * d1;
+		ddf -= pair_freq[i] * (sum_derv2[i]/sum_trans[i] - d1 * d1);
 	}
 	// negative log-likelihood (for minimization)
-	df = -df; ddf = -ddf;
-	return -lh;
+	return lh;
 }
 
 double AlignmentPairwise::optimizeDist(double initial_dist) {

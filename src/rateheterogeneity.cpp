@@ -55,13 +55,13 @@ void RateHeterogeneity::writeSiteRates(const char *file_name) {
 		out.setf(ios::fixed,ios::floatfield);
 		out.precision(5);
 		out << "Site\tRate";
-		if (!pattern_cat.empty()) out << "\tCategory";
+		if (!pattern_cat.empty()) out << "\tCategory\tCategorized_rate";
 		out << endl;
 		for (i = 0; i < nsite; i++) {
 			int ptn = phylo_tree->aln->getPatternID(i);
 			out << i+1 << "\t";
 			if (pattern_rates[ptn] >= MAX_SITE_RATE) out << "100.0"; else out << pattern_rates[ptn];
-			if (!pattern_cat.empty()) out << "\t" << pattern_cat[ptn]+1;
+			if (!pattern_cat.empty()) out << "\t" << pattern_cat[ptn]+1 << "\t" << getRate(pattern_cat[ptn]);
 			out << endl;
 		}
 		out.close();

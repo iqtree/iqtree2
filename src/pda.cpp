@@ -23,6 +23,7 @@
 #endif
 
 //#include "Eigen/Core"
+#include "phylotree.h"
 #include <iostream>
 #include <cstdlib>
 #include <errno.h>
@@ -38,7 +39,7 @@
 #include "myreader.h"
 #include "phyloanalysis.h"
 #include "matree.h"
-
+#include "ngs.h"
 
 using namespace std;
 
@@ -1446,6 +1447,8 @@ int main(int argc, char *argv[])
 		calcTreeCluster(params);
 	} else if (params.aln_file) {
 		runPhyloAnalysis(params);
+	} else if (params.ngs_file) {
+		runNGSAnalysis(params);
 	} else if (params.consensus_type != CT_NONE) {
 		MExtTree tree;
 		switch (params.consensus_type) {

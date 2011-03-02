@@ -702,8 +702,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     if (!params.dist_file && params.compute_ml_dist) {
         stringstream best_tree_string;
         tree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
-        cout << "Computing ML distances based on estimated model parameters..." << endl;
+        cout << "Computing ML distances based on estimated model parameters...";
+        clock_t begin_time = clock();
         tree.computeDist(params, alignment, tree.dist_matrix, dist_file);
+        cout << " " << double(clock() - begin_time) / CLOCKS_PER_SEC << " sec" << endl;
         if (!params.user_file) {
             tree.computeBioNJ(params, alignment, dist_file); // create BioNJ tree
             tree.fixNegativeBranch(fixed_length);

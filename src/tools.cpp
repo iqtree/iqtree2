@@ -593,6 +593,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.whtest_simulations = 1000;
     params.mcat_type = MCAT_LOG + MCAT_PATTERN;
     params.rate_file = NULL;
+    params.ngs_file = NULL;
 	
 	struct timeval tv;
 	struct timezone tz;
@@ -891,6 +892,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -aln, -s <alignment_file>";
 				params.aln_file = argv[cnt];
+			} else if (strcmp(argv[cnt],"-sf") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sf <ngs_file>";
+				params.ngs_file = argv[cnt];
 			} else if (strcmp(argv[cnt],"-st") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1120,11 +1126,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 		}
 
 	} // for
-	if (params.user_file == NULL && params.aln_file == NULL)
+	if (params.user_file == NULL && params.aln_file == NULL && params.ngs_file == NULL)
 		usage(argv, false);
 	if (!params.out_prefix) {
 		if (params.aln_file) 
 			params.out_prefix = params.aln_file;
+		else if (params.ngs_file) 
+			params.out_prefix = params.ngs_file;
 		else 
 			params.out_prefix = params.user_file;
 	}
