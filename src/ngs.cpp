@@ -176,29 +176,6 @@ double NGSAlignment::computeFuncDervCat(int cat, double value, double &df, doubl
 	return lh;
 }
 
-/*double NGSAlignment::computeFunction(double value) {
-	double lh = 0.0;
-	for (int cat = 0; cat < ncategory; cat++)
-		lh += computeFunctionCat(cat, value*tree->getRate()->getRate(cat));
-	double lh_old = AlignmentPairwise::computeFunction(value);
-	assert(fabs(lh-lh_old) < 0.001);
-	return lh;
-}
-
-double NGSAlignment::computeFuncDerv(double value, double &df, double &ddf) {
-	double lh = 0.0;
-	df = ddf = 0.0;
-	for (int cat = 0; cat < ncategory; cat++) {
-		double derv1, derv2;
-		lh += computeFuncDervCat(cat, value, derv1, derv2);
-		df += derv1;
-		ddf += derv2;
-	}
-	double df_old, ddf_old;
-	double lh_old = AlignmentPairwise::computeFuncDerv(1.0, df_old, ddf_old);
-	return lh;
-}*/
-
 /****************************************************************************
         NGSRate
  ****************************************************************************/
@@ -224,7 +201,7 @@ double NGSRate::optimizeParameters() {
 	double negative_lh;
 	for (cat = 0; cat < ncategory; cat++) {
 		optimizing_cat = cat;
-		rates[cat] = minimizeNewtonSafeMode(1e-6, rates[cat], MAX_GENETIC_DIST, 1e-6, negative_lh);
+		rates[cat] = minimizeNewtonSafeMode(1e-6, rates[cat], 10.0, 1e-6, negative_lh);
 	}
 	return phylo_tree->computeLikelihood();
 }
