@@ -57,13 +57,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
 				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
-			site_rate = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.p_invar_sites, tree);
+			site_rate = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, params.p_invar_sites, tree);
 		} else if (rate_str.substr(0,2) == "+G") {
 			if (rate_str.length() > 2) {
 				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
 				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
-			site_rate = new RateGamma(params.num_rate_cats, params.gamma_shape, tree);
+			site_rate = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, tree);
 		} else if (rate_str.substr(0,2) == "+M") {
 			tree->sse = false;
 			if (rate_str.length() > 2) {
@@ -151,7 +151,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 		}
 		if (new_lh > cur_lh + 1e-3) {
 			if (!fixed_len)
-				cur_lh = tree->optimizeAllBranches(1);  // loop only 5 times in total
+				cur_lh = tree->optimizeAllBranches(i<5 ? i : 5);  // loop only 5 times in total
 			else
 				cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)

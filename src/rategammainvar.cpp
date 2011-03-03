@@ -19,8 +19,8 @@
  ***************************************************************************/
 #include "rategammainvar.h"
 
-RateGammaInvar::RateGammaInvar(int ncat, double shape, double p_invar_sites, PhyloTree *tree)
-: RateInvar(p_invar_sites, tree), RateGamma(ncat, shape, tree)
+RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, PhyloTree *tree)
+: RateInvar(p_invar_sites, tree), RateGamma(ncat, shape, median, tree)
 {
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
@@ -29,10 +29,12 @@ RateGammaInvar::RateGammaInvar(int ncat, double shape, double p_invar_sites, Phy
 
 double RateGammaInvar::computeFunction(double value) {
 	if (cur_optimize == 0)
-		return RateGamma::computeFunction(value);
+		gamma_shape = value;
 	else 
-		return RateInvar::computeFunction(value);
-	
+		p_invar = value;
+	computeRates();
+	phylo_tree->clearAllPartialLh();
+	return -phylo_tree->computeLikelihood();	
 }
 
 double RateGammaInvar::optimizeParameters() {
@@ -41,6 +43,7 @@ double RateGammaInvar::optimizeParameters() {
 	tree_lh = RateGamma::optimizeParameters();
 	cur_optimize = 1;
 	tree_lh = RateInvar::optimizeParameters();
+	phylo_tree->clearAllPartialLh();
 	return tree_lh;
 }
 

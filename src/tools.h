@@ -676,6 +676,11 @@ struct Params {
 		shape parameter (alpha) of the Gamma distribution for site rates
 	*/
     double gamma_shape;
+    
+	/**
+		TRUE to use median rate for discrete categories, FALSE to use mean rate instead
+	*/
+    bool gamma_median;
 
 	/**
 		proportion of invariable sites

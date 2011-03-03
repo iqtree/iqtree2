@@ -37,7 +37,7 @@ public:
 		@param shape Gamma shape parameter
 		@param tree associated phylogenetic tree
 	*/
-    RateGamma(int ncat, double shape, PhyloTree *tree);
+    RateGamma(int ncat, double shape, bool median, PhyloTree *tree);
 
 	/**
 		destructor
@@ -64,10 +64,15 @@ public:
 	*/
 	virtual double getRate(int category) { return rates[category]; }
 
-	/** discrete Gamma according to Yang 1994 (JME 39:306-314).
+	/** discrete Gamma according to Yang 1994 (JME 39:306-314) and using median cutting point
 		It takes 'ncategory' and 'gamma_shape' variables as input. On output, it write to 'rates' variable.
 	*/
 	void computeRates();
+
+	/** discrete Gamma according to Yang 1994 (JME 39:306-314) and using mean of the portion of gamma distribution
+		It takes 'ncategory' and 'gamma_shape' variables as input. On output, it write to 'rates' variable.
+	*/
+	void computeRatesMean ();
 
 	/**
 		Compute site-specific rates. Override this for Gamma model
@@ -128,8 +133,13 @@ protected:
 	*/
 	bool fix_gamma_shape;
 
+	/**
+		TRUE to use median rate for discrete categories, FALSE to use mean rate instead
+	*/
+	bool cut_median;
+
 	//Normally, beta is assigned equal to alpha
-	double cmpPerPointGamma (const double prob, const double shape);
+	//double cmpPerPointGamma (const double prob, const double shape);
 
 	/***********************************************************
 	NUMERICAL SUBROUTINES

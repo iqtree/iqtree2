@@ -36,7 +36,7 @@ public:
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
 	*/
-    RateGammaInvar(int ncat, double shape, double p_invar_sites, PhyloTree *tree);
+    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, PhyloTree *tree);
 
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize

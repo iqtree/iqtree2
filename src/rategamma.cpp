@@ -27,10 +27,11 @@ const double MIN_GAMMA_SHAPE = 0.001;
 const double MAX_GAMMA_SHAPE = 10000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
 
-RateGamma::RateGamma(int ncat, double shape, PhyloTree *tree) : RateHeterogeneity()
+RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : RateHeterogeneity()
 {
 	ncategory = ncat;
 	phylo_tree = tree;
+	cut_median = median;
 	gamma_shape = MAX_GAMMA_SHAPE-1.0;
 	fix_gamma_shape = false;
 	if (shape >= 0) {
@@ -60,24 +61,30 @@ void RateGamma::computeRates() {
 		return;
 	}
 
-	for (cat = 0; cat < ncategory; cat ++) {
-		double prob = ( 2.0 * cat + 1 ) / (2.0 * ncategory);
-		rates[ cat ] = cmpPerPointGamma (prob, gamma_shape);
+	if (!cut_median) {
+		computeRatesMean();
+	} else {
+		for (cat = 0; cat < ncategory; cat ++) {
+			double prob = ( 2.0 * cat + 1 ) / (2.0 * ncategory);
+			double perPoint_ = cmpPointChi2 (prob, 2.0 * gamma_shape) / (2.0 * gamma_shape);
+			perPoint_ = perPoint_ < 0.0 ? -perPoint_ : perPoint_;
+			rates[ cat ] = perPoint_;
+		}
+	
+		//rescale in order to make mean equal to 1.0
+	
+	
+		for (cat = 0; cat < ncategory; cat ++)
+			sum_rates += rates[ cat];
+	
+		for (cat = 0; cat < ncategory; cat ++)
+			rates[ cat ] = rates[ cat ] * ncategory / sum_rates;
 	}
-
-	//rescale in order to make mean equal to 1.0
-
-	for (cat = 0; cat < ncategory; cat ++)
-		sum_rates += rates[ cat];
-
-	for (cat = 0; cat < ncategory; cat ++)
-		rates[ cat ] = rates[ cat ] * ncategory / sum_rates;
 
 	/* if invariable sites are present */
 	double p_inv = getPInvar();
 	for (cat = 0; cat < ncategory; cat++)
 		rates[cat] = rates[cat]/(1.0 - p_inv);
-	
 
 	/* check for very small rates */
 	for (cat = 0; cat < ncategory; cat ++)
@@ -85,10 +92,21 @@ void RateGamma::computeRates() {
 			rates[cat] = MIN_RATE;
 }
 
-double RateGamma::cmpPerPointGamma (const double prob, const double shape) {
-	double perPoint_ = cmpPointChi2 (prob, 2.0 * shape) / (2.0 * shape);
-	perPoint_ = perPoint_ < 0.0 ? -perPoint_ : perPoint_;
-	return perPoint_;
+/*double RateGamma::cmpPerPointGamma (const double prob, const double shape) {
+}*/
+
+void RateGamma::computeRatesMean () {
+	int i;
+	double lnga1=cmpLnGamma(gamma_shape+1);
+	double freqK[ncategory];
+	for (i=0; i<ncategory-1; i++) /* cutting points, Eq. 9 */
+		freqK[i]=cmpPointChi2((i+1.0)/ncategory, 2.0 * gamma_shape) / (2.0 * gamma_shape);
+	for (i=0; i<ncategory-1; i++) /* Eq. 10 */
+		freqK[i]=cmpIncompleteGamma(freqK[i]*gamma_shape, gamma_shape+1, lnga1);
+
+	rates[0] = freqK[0]*ncategory;
+	rates[ncategory-1] = (1-freqK[ncategory-2])*ncategory;
+	for (i=1; i<ncategory-1; i++)  rates[i] = (freqK[i]-freqK[i-1])*ncategory;
 }
 
 double RateGamma::computeFunction(double shape) {
