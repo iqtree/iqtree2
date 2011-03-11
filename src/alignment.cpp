@@ -570,6 +570,32 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
 	assert(size() <= aln->size());
 }
 
+
+void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
+	int i;
+	for (i = 0; i < aln->getNSeq(); i++) {
+		seq_names.push_back(aln->getSeqName(i));
+	}
+	num_states = aln->num_states;
+	site_pattern.resize(aln->getNSite(), -1);
+	clear();
+	pattern_index.clear();
+	int site = 0;
+	VerboseMode save_mode = verbose_mode; 
+	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+	for (i = 0; i != ptn_id.size(); i++) {
+		assert(ptn_id[i] >= 0 && ptn_id[i] < aln->getNPattern());
+		Pattern pat = aln->at(ptn_id[i]);
+		addPattern(pat, site, aln->at(ptn_id[i]).frequency);
+		for (int j = 0; j < aln->at(ptn_id[i]).frequency; j++)
+			site_pattern[site++] = size()-1;
+	}
+	site_pattern.resize(site);
+	verbose_mode = save_mode;
+	countConstSite();
+	assert(size() <= aln->size());
+}
+
 void Alignment::createBootstrapAlignment(Alignment *aln) {
 	int site, nsite = aln->getNSite();
 	seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());

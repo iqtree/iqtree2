@@ -37,7 +37,7 @@ public:
 	/**
 		constructor
 	*/
-    RateMeyerHaeseler(char *file_name, PhyloTree *tree);
+    RateMeyerHaeseler(char *file_name, PhyloTree *tree, bool rate_type);
 
     RateMeyerHaeseler();
 
@@ -135,15 +135,27 @@ public:
 	*/
 	double *dist_mat;
 
-	/**
-		current pattern under optimization. Note that this is not thread-safe
-	*/
-	int optimizing_pattern;
 
 protected:
 
 	char *rate_file;
 
+	/**
+		current pattern under optimization. Note that this is not thread-safe
+	*/
+	int optimizing_pattern;
+
+	/**
+		FALSE to use MH Model, FALSE for using tree-likelihood
+	*/
+	bool rate_mh;
+
+	double cur_scale;
+
+	PhyloTree *ptn_tree;
+
+	void prepareRateML(IntVector &ptn_id);
+	void completeRateML();
 };
 
 #endif

@@ -39,9 +39,18 @@ class NGSAlignment : public AlignmentPairwise
 public:
 
 	/**
+		constructor
 		@param filename file in Fritz's format
 	*/
     NGSAlignment(const char *filename);
+
+	/**
+		constructor
+		@param nstate number of states
+		@param ncat number of categories
+		@param freq pair-state frequencies for all categories
+	*/
+	NGSAlignment(int nstate, int ncat, int *freq);
 
 	/**
 		read file in Fritz's format
@@ -56,36 +65,45 @@ public:
 	virtual void computeStateFreq(double *state_freq);
 
 	/**
+		compute the sum of pair state frequencies over all categories
+		@param sum_pair_freq (OUT) will be filled in with num_states*num_states entries. 
+			Memory has to be allocated before calling this function.
+	*/
+	void computeSumPairFreq (int *sum_pair_freq);
+
+	/**
 		compute empirical rates between state pairs
 		@param rates (OUT) vector of size num_states*(num_states-1)/2 for the rates
 	*/
 	virtual void computeEmpiricalRate (double *rates);
 
+	/**
+		compute the empirical distance for a category, used to initialize rate scaling factor
+		@param cat specific category, between 0 and ncategory-1
+	*/
 	double computeEmpiricalDist(int cat);
 
+	/**
+		negative likelihood function for a category with a rate scaling factor
+		@param cat specific category, between 0 and ncategory-1
+		@param value a rate scaling factor
+		@return negative log-likelihood (for minimization purpose)
+	*/
 	double computeFunctionCat(int cat, double value);
 
+	/**
+		negative likelihood and 1st and 2nd derivative function for a category with a rate scaling factor
+		@param cat specific category, between 0 and ncategory-1
+		@param value a rate scaling factor
+		@param df (OUT) 1st derivative
+		@param ddf (OUT) 2nd derivative
+		@return negative log-likelihood (for minimization purpose)
+	*/
 	double computeFuncDervCat(int cat, double value, double &df, double &ddf);
 
-    /**
-            inherited from Optimization class, to return to likelihood of the tree
-            when the current branch length is set to value
-            @param value current branch length
-            @return negative of likelihood (for minimization)
-     */
-    //virtual double computeFunction(double value);
-
-    /**
-            Inherited from Optimization class.
-            This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
-            used by Newton raphson method to minimize the function.
-            @param value current branch length
-            @param df (OUT) first derivative
-            @param ddf (OUT) second derivative
-            @return negative of likelihood (for minimization)
-     */
-    //virtual double computeFuncDerv(double value, double &df, double &ddf);
-
+	/**
+		number of category
+	*/
 	int ncategory;
 };
 
@@ -96,9 +114,10 @@ public:
 
     /**
      * Constructor with given alignment
+     * @param params program parameters
      * @param alignment
      */
-	NGSTree(NGSAlignment *alignment);	
+	NGSTree(Params &params, NGSAlignment *alignment);	
 
     /**
             compute the tree likelihood
@@ -170,6 +189,11 @@ public:
 
 };
 
+
+/**
+	Main function
+	@param params input program parameters
+*/
 void runNGSAnalysis(Params &params);
 
 #endif

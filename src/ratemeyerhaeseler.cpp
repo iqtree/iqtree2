@@ -22,7 +22,7 @@
 
 
 
-RateMeyerHaeseler::RateMeyerHaeseler(char *file_name, PhyloTree *tree)
+RateMeyerHaeseler::RateMeyerHaeseler(char *file_name, PhyloTree *tree, bool rate_type)
  : RateHeterogeneity()
 {
 	name = "+MH";
@@ -30,6 +30,7 @@ RateMeyerHaeseler::RateMeyerHaeseler(char *file_name, PhyloTree *tree)
 	dist_mat = NULL;
 	setTree(tree);
 	rate_file = file_name;
+	rate_mh = rate_type;
 }
 
 RateMeyerHaeseler::RateMeyerHaeseler()
@@ -176,6 +177,30 @@ void RateMeyerHaeseler::initializeRates() {
 	}
 }
 
+void RateMeyerHaeseler::prepareRateML(IntVector &ptn_id) {
+	Alignment *aln = new Alignment();
+	aln->extractPatterns(phylo_tree->aln, ptn_id);
+	ptn_tree = new PhyloTree(aln);
+	stringstream ss;
+	phylo_tree->printTree(ss);
+	ptn_tree->readTree(ss, phylo_tree->rooted);
+	ptn_tree->setAlignment(aln);
+	ptn_tree->setModelFactory(phylo_tree->getModelFactory());
+	ptn_tree->setModel(phylo_tree->getModelFactory()->model);
+	ptn_tree->setRate(new RateHeterogeneity());
+	ptn_tree->computeLikelihood();
+	//cout << optimizing_pattern << " " << lh << endl;
+	cur_scale = 1.0;
+}
+
+void RateMeyerHaeseler::completeRateML() {
+	ptn_tree->setModelFactory(NULL);
+	ptn_tree->setModel(NULL);
+	//ptn_tree->setRate(NULL);
+	delete ptn_tree->aln;
+	delete ptn_tree;
+	ptn_tree = NULL;
+}
 
 double RateMeyerHaeseler::optimizeRate(int pattern) {
 	optimizing_pattern = pattern;
@@ -190,7 +215,14 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 	if (phylo_tree->aln->at(pattern).is_const) {
 		return (at(pattern) = MIN_SITE_RATE);
 	}
-    if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
+
+	if (!rate_mh) {	
+		IntVector ptn_id;
+		ptn_id.push_back(optimizing_pattern);
+		prepareRateML(ptn_id);
+	}
+
+    if (phylo_tree->optimize_by_newton && rate_mh) // Newton-Raphson method 
 	{
     	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, negative_lh);
 		if (optx > MAX_SITE_RATE*0.99 || (optx < MIN_SITE_RATE*2 && !phylo_tree->aln->at(pattern).is_const)) 
@@ -223,6 +255,12 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 	if (optx > max_rate*0.99) optx = MAX_SITE_RATE;
 	if (optx < MIN_SITE_RATE*2) optx = MIN_SITE_RATE;
 	at(pattern) = optx;
+
+	if (!rate_mh) { 
+		completeRateML(); 
+		return optx; 
+	}
+
 //#ifndef NDEBUG		
 	if (optx == MAX_SITE_RATE || (optx == MIN_SITE_RATE && !phylo_tree->aln->at(pattern).is_const)) {
 		ofstream out;
@@ -352,6 +390,14 @@ double RateMeyerHaeseler::optimizeParameters() {
 
 
 double RateMeyerHaeseler::computeFunction(double value) {
+	if (!rate_mh) {
+		if (value != cur_scale) {
+			ptn_tree->scaleLength(value/cur_scale);
+			cur_scale = value;
+			ptn_tree->clearAllPartialLh();
+		}
+		return -ptn_tree->computeLikelihood();
+	}
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
 	int i, j, state1, state2;

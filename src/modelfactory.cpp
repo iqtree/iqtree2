@@ -71,9 +71,10 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else params.num_rate_cats = -1;
 			if (params.num_rate_cats >= 0)
-				site_rate = new RateMeyerDiscrete(params.num_rate_cats, params.mcat_type, params.rate_file, tree);
+				site_rate = new RateMeyerDiscrete(params.num_rate_cats, params.mcat_type, 
+					params.rate_file, tree, params.rate_mh_type);
 			else
-				site_rate = new RateMeyerHaeseler(params.rate_file, tree);
+				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
 			site_rate->setTree(tree);
 		} else if (rate_str.substr(0,2) == "+F") {
 			tree->sse = false;

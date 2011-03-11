@@ -23,6 +23,7 @@
 */
 
 #include "ngs.h"
+#include "modeltest_wrapper.h"
 
 /****************************************************************************
         NGSAlignment
@@ -30,6 +31,14 @@
 
 NGSAlignment::NGSAlignment(const char *filename) : AlignmentPairwise() {
 	readFritzFile(filename);
+}
+
+NGSAlignment::NGSAlignment(int nstate, int ncat, int *freq) : AlignmentPairwise() {
+	num_states = nstate;
+	ncategory = ncat;
+	int total_size = ncategory*num_states*num_states;
+	pair_freq = new int[total_size];
+	memcpy(pair_freq, freq, total_size * sizeof(int));
 }
 
 void NGSAlignment::readFritzFile(const char *filename) {
@@ -90,6 +99,16 @@ void NGSAlignment::computeStateFreq (double *stateFrqArr) {
 	cout << endl;
 }
 
+void NGSAlignment::computeSumPairFreq (int *sum_pair_freq) {
+	int cat, id, i, j;
+	memset(sum_pair_freq, 0, sizeof(int)*num_states*num_states);
+	for (cat = 0, id = 0; cat < ncategory; cat++) {
+		for (i = 0; i < num_states; i++)
+			for (j = 0; j < num_states; j++, id++) {
+				sum_pair_freq[i*num_states+j] += pair_freq[id];
+			}
+	}
+}
 
 void NGSAlignment::computeEmpiricalRate (double *rates) {
 	int i, j, k, cat, id;
@@ -221,12 +240,15 @@ void NGSRate::writeInfo(ostream &out) {
         NGSTree
  ****************************************************************************/
 
-NGSTree::NGSTree(NGSAlignment *alignment) {
+NGSTree::NGSTree(Params &params, NGSAlignment *alignment) {
 	aln = alignment;
     model = NULL;
     site_rate = NULL;
     optimize_by_newton = true;
     model_factory = NULL;
+    optimize_by_newton = params.optimize_by_newton;
+    //tree.sse = params.SSE;
+    sse = false;
 }
 
 double NGSTree::computeLikelihood(double *pattern_lh) {
@@ -241,33 +263,7 @@ double NGSTree::optimizeAllBranches(int iterations) {
         main function
  ****************************************************************************/
 
-void runNGSAnalysis(Params &params) {
-	char model_name[20];
-	NGSAlignment aln(params.ngs_file);
-	if (params.model_name == "") 
-		sprintf(model_name, "GTR+F%d", aln.ncategory);
-	else
-		sprintf(model_name, "%s+F%d", params.model_name.c_str(), aln.ncategory);
-	params.model_name = model_name;
-	NGSTree tree(&aln);
-	aln.tree = &tree;
-    tree.optimize_by_newton = params.optimize_by_newton;
-    //tree.sse = params.SSE;
-    tree.sse = false;
-    tree.setModelFactory(new ModelFactory(params, &tree));
-    tree.setModel(tree.getModelFactory()->model);
-    tree.setRate(tree.getModelFactory()->site_rate);
-
-    int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
-    cout << endl;
-    cout << "Model of evolution: " << tree.getModelName() << " (" << model_df << " free parameters)" << endl;
-
-    cout << endl;
-    cout << "Optimizing model parameters" << endl;
-    cout.precision(10);
-    double bestTreeScore = tree.getModelFactory()->optimizeParameters(false);
-    cout << "Log-likelihood: " << bestTreeScore << endl;
-
+void reportNGSAnalysis(Params &params, NGSAlignment &aln, NGSTree &tree) {
 	string out_file(params.out_prefix);
 	out_file += ".ngs";
 	ofstream out(out_file.c_str());
@@ -306,6 +302,79 @@ void runNGSAnalysis(Params &params) {
 	out << "Position-specific rates: " << endl;
 	for (i = 0; i < aln.ncategory; i++)
 		out << i+1 << '\t' << tree.getRate()->getRate(i) << endl;
+	
+	out.precision(12);
+	out << endl << "Log-likelihood: " << tree.computeLikelihood() << endl;
 	out.close();
 	cout << endl << "Results written to: " << out_file << endl << endl;
+}
+
+void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string model) {
+	int sum_freq[aln.num_states * aln.num_states];
+	char model_name[20];
+
+	cout << endl << "-->TESTING EQUAL-RATE NULL MODEL..." << endl << endl;
+	cout.precision(6);
+
+	aln.computeSumPairFreq(sum_freq);
+	NGSAlignment sum_aln(aln.num_states, 1, sum_freq);
+
+	NGSTree sum_tree(params, &sum_aln);
+	sum_aln.tree = &sum_tree;
+
+	if (model == "") 
+		sprintf(model_name, "GTR+F1");
+	else
+		sprintf(model_name, "%s+F1", model.c_str());
+	params.model_name = model_name;
+    sum_tree.setModelFactory(new ModelFactory(params, &sum_tree));
+    sum_tree.setModel(sum_tree.getModelFactory()->model);
+    sum_tree.setRate(sum_tree.getModelFactory()->site_rate);
+
+	cout.precision(12);
+    double bestTreeScore = sum_tree.getModelFactory()->optimizeParameters(false);
+    cout << "Log-likelihood of null model: " << bestTreeScore << endl;
+    cout << "Rate (or distance) of null model: " << sum_tree.getRate()->getRate(0) << endl;
+    double lh_diff = 2*(tree.computeLikelihood() - bestTreeScore);
+    cout << "2(lnL1 - lnL0) = " << lh_diff << endl;
+    cout << "p-value (chi-square test, df = " << aln.ncategory-1 << "): " << computePValueChiSquare(lh_diff, aln.ncategory-1) << endl;
+}
+
+
+void runNGSAnalysis(Params &params) {
+	char model_name[20];
+	// read input file, initialize NGSAlignment
+	NGSAlignment aln(params.ngs_file);
+
+	// initialize NGSTree
+	NGSTree tree(params, &aln);
+	aln.tree = &tree;
+
+	// initialize Model 
+	string original_model = params.model_name;
+	if (params.model_name == "") 
+		sprintf(model_name, "GTR+F%d", aln.ncategory);
+	else
+		sprintf(model_name, "%s+F%d", params.model_name.c_str(), aln.ncategory);
+	params.model_name = model_name;
+    tree.setModelFactory(new ModelFactory(params, &tree));
+    tree.setModel(tree.getModelFactory()->model);
+    tree.setRate(tree.getModelFactory()->site_rate);
+
+    int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
+    cout << endl;
+    cout << "Model of evolution: " << tree.getModelName() << " (" << model_df << " free parameters)" << endl;
+    cout << endl;
+
+	// optimize model parameters and rate scaling factors
+    cout << "Optimizing model parameters" << endl;
+    cout.precision(12);
+    double bestTreeScore = tree.getModelFactory()->optimizeParameters(false);
+    cout << "Log-likelihood: " << bestTreeScore << endl;
+
+	testSingleRateModel(params, aln, tree, original_model);
+
+	// report running results
+	reportNGSAnalysis(params, aln, tree);
+
 }

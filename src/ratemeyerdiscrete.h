@@ -37,7 +37,7 @@ public:
 		@param file_name rate file name, NULL if not inputed
 		@param tree associated phylo tree
    */
-   RateMeyerDiscrete(int ncat, int cat_type, char *file_name, PhyloTree *tree);
+   RateMeyerDiscrete(int ncat, int cat_type, char *file_name, PhyloTree *tree, bool rate_type);
 
    RateMeyerDiscrete();
 

@@ -173,8 +173,8 @@ double RunKMeans1D(int n, int k, double *points, int *weights, double *centers, 
 /************************************************
 	RateMeyerDiscrete
 ************************************************/
-RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type, char *file_name, PhyloTree *tree)
- : RateMeyerHaeseler(file_name, tree)
+RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type, char *file_name, PhyloTree *tree, bool rate_type)
+ : RateMeyerHaeseler(file_name, tree, rate_type)
 {
 	ncategory = ncat;
 	rates = NULL;
@@ -198,6 +198,7 @@ RateMeyerDiscrete::RateMeyerDiscrete() {
 	mcat_type = 0;
 	rates = NULL;
 	name = full_name = "";
+	rate_mh = true;
 }
 
 
@@ -251,6 +252,15 @@ double RateMeyerDiscrete::optimizeParameters() {
 
 double RateMeyerDiscrete::computeFunction(double value) {
 	if (!is_categorized) return RateMeyerHaeseler::computeFunction(value);
+	if (!rate_mh) {
+		if (value != cur_scale) {
+			ptn_tree->scaleLength(value/cur_scale);
+			cur_scale = value;
+			ptn_tree->clearAllPartialLh();
+		}
+		return -ptn_tree->computeLikelihood();
+	}
+
 	double lh = 0.0;
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
@@ -336,7 +346,15 @@ double RateMeyerDiscrete::optimizeCatRate(int cat) {
 	double current_rate = rates[cat];
 	double ferror, optx;
 
-    if (phylo_tree->optimize_by_newton) // Newton-Raphson method 
+	if (!rate_mh) {
+		IntVector ptn_id;
+		for (int i = 0; i < size(); i++)
+			if (ptn_cat[i] == optimizing_cat)
+				ptn_id.push_back(i);
+		prepareRateML(ptn_id);
+	}
+
+    if (phylo_tree->optimize_by_newton && rate_mh) // Newton-Raphson method 
 	{
     	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, MAX_SITE_RATE, TOL_SITE_RATE, negative_lh);
     }
@@ -359,6 +377,7 @@ double RateMeyerDiscrete::optimizeCatRate(int cat) {
 //#ifndef NDEBUG		
 //#endif
 
+	if (!rate_mh) completeRateML();
 	return optx;	
 }
 
@@ -481,3 +500,4 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 void RateMeyerDiscrete::writeInfo(ostream &out) {
 	//out << "Number of categories: " << ncategory << endl;
 }
+

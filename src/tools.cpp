@@ -582,6 +582,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.write_intermediate_trees = false;
 	params.rf_dist_mode = 0;
 	params.mvh_site_rate = false;
+	params.rate_mh_type = true;
 	params.discard_saturated_site = false;
 	params.mean_rate = 1.0;
 	params.aLRT_threshold = 101;
@@ -944,6 +945,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.mvh_site_rate = true;
  				params.discard_saturated_site = true;
 				params.SSE = false;
+			} else if (strcmp(argv[cnt],"-rl") == 0) {
+				params.rate_mh_type = false;
 			} else if (strcmp(argv[cnt],"-nr") == 0) {
 				cnt++;
 				if (cnt >= argc)

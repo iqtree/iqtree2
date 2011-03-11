@@ -176,6 +176,13 @@ public:
 	void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
 
 	/**
+		extract a sub-set of patterns
+		@param aln original input alignment
+		@param ptn_id ID of patterns to extract from
+	*/
+	void extractPatterns(Alignment *aln, IntVector &ptn_id);
+
+	/**
 		TODO
 		create a non-parametric bootstrap alignment from the current alignment
 		@param boot_aln (OUT) created bootstrap alignment

@@ -733,6 +733,11 @@ struct Params {
     bool mvh_site_rate;
 
 	/**
+		FALSE to use MH Model, FALSE for using tree-likelihood
+	*/
+	bool rate_mh_type;
+
+	/**
 		TRUE to discard saturated for Meyer & von Haeseler (2003) model
 	*/
 	bool discard_saturated_site;
