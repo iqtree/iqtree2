@@ -88,6 +88,15 @@ void MTree::printInfo(Node *node, Node *dad)
 	}
 }
 
+int MTree::countZeroBranches(Node *node, Node *dad) {
+	int count = 0;
+	if (node == NULL) node = root;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		if ((*it)->length <= 2e-6) count++;
+		count += countZeroBranches((*it)->node, node);
+	}
+	return count;
+}
 void MTree::printTree(const char *ofile, int brtype)
 {
 	try {
@@ -896,6 +905,7 @@ void MTree::drawTree(ostream &out, int brtype, double brscale, IntVector &subtre
 		node = root;
 		if (node->isLeaf()) node = node->neighbors[0]->node;
 	} else {
+		
 		if (brtype & WT_BR_SCALE) {
 			br_len = floor(node->findNeighbor(dad)->length * brscale)-1;
 			if (br_len < 3) br_len = 3;
@@ -939,6 +949,9 @@ void MTree::drawTree(ostream &out, int brtype, double brscale, IntVector &subtre
 void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtree_br, Node *node, Node *dad) {
 	int i, br_len = 3;
 	IntVector::iterator ii;
+	bool zero_length = false;
+
+	//cout << "DrawTree2!" << endl;
 	if (!node) {
 		node = root;
 		if (node->isLeaf()) node = node->neighbors[0]->node;
@@ -947,6 +960,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
 			br_len = floor(node->findNeighbor(dad)->length * brscale)-1;
 			if (br_len < 3) br_len = 3;
 		}
+		if (node->findNeighbor(dad)->length <= 2e-6) zero_length = true;
 	} 
 	if (node->isLeaf()) {
 		for (ii = subtree_br.begin()+1; ii != subtree_br.end(); ii++) {
@@ -957,7 +971,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
 		}
 		out << '+';
 		for (i = 0; i < br_len; i++) 
-			out << '-';
+			out << ((zero_length) ? '*' : '-');
 		out << node->name; 
 		if (brtype & WT_TAXON_ID)
 			out << " (" << node->id << ")";
@@ -996,7 +1010,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
 			if (dad) {
 				out << '+';
 				for (i = 0; i < abs(br_len); i++) 
-					out << '-';
+					out << ((zero_length) ? '*' : '-');
 			}
 			out << node->id; 
 			if (!node->name.empty())

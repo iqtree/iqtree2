@@ -43,6 +43,18 @@ public:
 	void eigensystem_sym(double **rate_params, double *state_freq, 
 	double *eval, double **evec, double **inv_evec, int num_state);
 
+	/**
+		EigenSystem for general non-symmetric matrix
+		@param rate_params rate parameters (not the rate matrix)
+		@param state_freq state frequencies
+		@param eval (OUT) eigenvalues
+		@param evec (OUT) eigenvectors
+		@param inv_evec (OUT) inverse matrix of eigenvectors
+		@param num_state (IN) number of states
+	*/
+	void eigensystem(double **rate_params, double *state_freq, 
+	double *eval, double **evec, double **inv_evec, int num_state);
+
 protected:
 
 	/**
@@ -74,6 +86,10 @@ private:
 	void eliminateZero(double **mat, double *forg, int num, 
 		double **new_mat, double *new_forg, int &new_num);
 
+/*********************************************************
+* aided function for symmetric matrix
+*********************************************************/
+
 	/**
 		transform the rate matrix into symmetric form, used for subsequent eigen decomposition
 		@param a (IN/OUT) rate matrix
@@ -81,7 +97,8 @@ private:
 		@param stateFrq_sqrt square root of state frequencies
 		@param num_state number of states
 	*/
-	void transformRateMatrix(double **a, double *stateFrq, double *stateFrq_sqrt, int num_state);
+	void symmetrizeRateMatrix(double **a, double *stateFrq, double *stateFrq_sqrt, int num_state);
+
 
 	/**
 		Householder transformation of symmetric matrix A
@@ -107,6 +124,46 @@ private:
 	*/
 	void tqli(double *d, double *e, int n, double **z);
 
+/*********************************************************
+* aided function for non-symmetric matrix
+*********************************************************/
+
+	/**
+		convert a non-symmetric matrix into Hessenberg form with zeros everywhere
+		below the diagonal except for the first sub-diagonal row
+		@param a (IN-OUT) the matrix
+		@param ordr (OUT) the order of columns
+		@param n (IN) size of matrix 
+	*/
+	void elmhes(double **a, int *ordr, int n);
+
+	/*
+		something here
+	*/
+	void eltran(double **a, double **zz, int *ordr, int n);
+
+	/*
+		something here
+	*/
+	void mcdiv(double ar, double ai, double br, double bi,
+	           double *cr, double *ci);
+
+	/**
+		QR algorithm for non-symmetric matrix to calculate eigenvectors and eigenvalues
+		of a Hessenberg matrix (should be preceded by elmhes function)
+		@param n (IN) size of matrix 
+	*/
+	void hqr2(int n, int low, int hgh, double **h, double **zz, double *wr, double *wi);
+
+	/**
+		compute the inverse of a square matrix
+		@param inmat (IN) the matrix
+		@param imtrx (OUT) the inverse of the input matrix
+		@param size the size of matrix
+	*/
+	void luinverse(double **inmat, double **imtrx, int size);
+
+	void checkevector(double **evec, double **ivec, int nn);
 
 };
 

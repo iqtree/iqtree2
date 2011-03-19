@@ -247,7 +247,7 @@ enum InputType {
         verbose mode, determine how verbose should the screen be printed.
  */
 enum VerboseMode {
-    VB_MIN, VB_MED, VB_MAX, VB_DEBUG
+    VB_QUIET, VB_MIN, VB_MED, VB_MAX, VB_DEBUG
 };
 
 /**

@@ -865,6 +865,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt],"-qp") == 0) {
 				params.gurobi_format = true;
 				params.quad_programming = true;
+			} else if (strcmp(argv[cnt],"-q") == 0) {
+				verbose_mode = VB_QUIET;
 			} else if (strcmp(argv[cnt],"-mult") == 0) {
 				params.multi_tree = true;
 			} else if (strcmp(argv[cnt],"-bi") == 0) {

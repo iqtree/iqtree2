@@ -44,8 +44,10 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2) : Ali
 		for (Alignment::iterator it = tree->aln->begin(); it != tree->aln->end(); it++, i++) {
 			int state1 = (*it)[seq_id1];
 			int state2 = (*it)[seq_id2];
+			addPattern(state1, state2, it->frequency, tree->getRate()->getPtnCat(i));
+		/*
 			if (state1 < num_states && state2 < num_states)
-				pair_freq[tree->getRate()->getPtnCat(i)*size_sqr + state1*num_states + state2] += it->frequency;
+				pair_freq[tree->getRate()->getPtnCat(i)*size_sqr + state1*num_states + state2] += it->frequency;*/
 		}
 		return;
 	}
@@ -55,9 +57,44 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2) : Ali
 	for (Alignment::iterator it = tree->aln->begin(); it != tree->aln->end(); it++) {
 		int state1 = (*it)[seq_id1];
 		int state2 = (*it)[seq_id2];
-		if (state1 < num_states && state2 < num_states)
-			pair_freq[state1 * num_states + state2] += it->frequency;
+		addPattern(state1, state2, it->frequency);
+/*		if (state1 < num_states && state2 < num_states)
+			pair_freq[state1 * num_states + state2] += it->frequency;*/
 	}	
+}
+
+bool AlignmentPairwise::addPattern(int state1, int state2, int freq, int cat) {
+	int i;
+	if (state1 == STATE_UNKNOWN || state2 == STATE_UNKNOWN) return true;
+
+	int *pair_pos = pair_freq + (cat*num_states*num_states);
+	// unambiguous case	
+	if (state1 < num_states && state2 < num_states) {
+		pair_pos[state1*num_states + state2] += freq;
+		return false;
+	}
+
+	return true;
+
+	if (state1 < num_states) {
+		// ambiguous character, for DNA, RNA
+		state2 = state2 - (num_states - 1);
+		for (i = 0; i < num_states; i++)
+			if (state2 & (1 << i))
+				pair_pos[state1*num_states + i] += freq;
+		return false;
+	}
+
+	if (state2 < num_states) {
+		// ambiguous character, for DNA, RNA
+		state1 = state1 - (num_states - 1);
+		for (i = 0; i < num_states; i++)
+			if (state1 & (1 << i))
+				pair_pos[i*num_states + state2] += freq;
+		return false;
+	}
+
+	return true;
 }
 
 double AlignmentPairwise::computeFunction(double value) {
@@ -89,8 +126,10 @@ double AlignmentPairwise::computeFunction(double value) {
 		for (cat = 0; cat < ncat; cat++) {
 			tree->getModelFactory()->computeTransMatrix(value*site_rate->getRate(cat), trans_mat);
 			int *pair_pos = pair_freq + cat*trans_size;
-			for (i = 0; i < trans_size; i++) 
+			for (i = 0; i < trans_size; i++) if (pair_pos[i]) {
+				if (trans_mat[i] <= 0) throw "Negative transition probability";
 				lh -= pair_pos[i] * log(trans_mat[i]);
+			}
 		}
 		return lh;
 	}
@@ -151,6 +190,7 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
 			tree->getModelFactory()->computeTransDerv(value*rate_val, trans_mat, trans_derv1, trans_derv2);
 			int *pair_pos = pair_freq + cat*trans_size;
 			for (i = 0; i < trans_size; i++) if (pair_pos[i] > 0) {
+				if (trans_mat[i] <= 0) throw "Negative transition probability";
 				double d1 = trans_derv1[i] / trans_mat[i];
 				derv1 += pair_pos[i] * d1;
 				derv2 += pair_pos[i] * (trans_derv2[i]/trans_mat[i] - d1 * d1);

@@ -118,7 +118,7 @@ bool ModelDNA::setRateType(const char *rate_str) {
 	int num_ch = strlen(rate_str);
 	int i;
 
-	if (num_ch != num_states*(num_states-1)/2)
+	if (num_ch != getNumRateEntries())
 		return false;
 	if (rate_str[num_ch-1] != '0')
 		return false;
@@ -178,7 +178,7 @@ void ModelDNA::writeParameters(ostream &out) {
 	if (num_params <= 1)
 		out << "\t" << rates[1];
 	else {
-		int nrateout = num_states*(num_states-1)/2 - 1;
+		int nrateout = getNumRateEntries() - 1;
 		for (i = 0; i < nrateout; i++)
 			out << "\t" << rates[i];
 	}

@@ -46,6 +46,7 @@ public:
 	*/
 	double minimizeOneDimen(double xmin, double xguess, double xmax, double tolerance, double *fx, double *ferror);
 
+	double minimizeOneDimenSafeMode(double xmin, double xguess, double xmax, double tolerance, double *fx);
 
 	/*****************************************************
 		One dimensional optimization with Newton Raphson 
@@ -144,7 +145,7 @@ private:
 };
 
 
-void nrerror(const char error_text[]);
+void nrerror(const char *error_text);
 
 
 #endif

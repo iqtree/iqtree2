@@ -267,6 +267,12 @@ public:
 	virtual void computeEmpiricalRate (double *rates);
 
 	/**
+		compute non-reversible empirical rates between state pairs
+		@param rates (OUT) vector of size num_states*(num_states-1) for the rates
+	*/
+	virtual void computeEmpiricalRateNonRev (double *rates);
+
+	/**
 		count the fraction of constant sites in the alignment, update the variable frac_const_sites
 	*/
 	virtual void countConstSite();

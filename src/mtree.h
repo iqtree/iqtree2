@@ -98,6 +98,13 @@ public:
 	virtual Node* newNode(int node_id, int node_name);
 
 
+	/**
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+		@return the number of branches with zero length ( <= 1e-6)
+	*/
+	int countZeroBranches(Node *node = NULL, Node *dad = NULL);
+
 /********************************************************
 	PRINT INFORMATION
 ********************************************************/

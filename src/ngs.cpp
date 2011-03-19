@@ -92,11 +92,14 @@ void NGSAlignment::computeStateFreq (double *stateFrqArr) {
 
 	int sum_count = 0;
 	for (i = 0; i < num_states; i++) sum_count += state_count[i];
+	if (sum_count == 0) throw "Empty data observed";
 	for (i = 0; i < num_states; i++) stateFrqArr[i] = double(state_count[i]) / sum_count;
-	cout << "Empirical state frequencies: ";
-	for (i = 0; i < num_states; i++) 
-		cout << stateFrqArr[i] << " ";
-	cout << endl;
+	if (verbose_mode >= VB_MIN) {
+		cout << "Empirical state frequencies: ";
+		for (i = 0; i < num_states; i++) 
+			cout << stateFrqArr[i] << " ";
+		cout << endl;
+	}
 }
 
 void NGSAlignment::computeSumPairFreq (int *sum_pair_freq) {
@@ -128,14 +131,16 @@ void NGSAlignment::computeEmpiricalRate (double *rates) {
 
 	k = 0;
 	double last_rate = pair_rates[num_states-2][num_states-1] + pair_rates[num_states-1][num_states-2];
+	if (last_rate == 0.0) throw "Last rate entry is ZERO";
 	for (i = 0; i < num_states-1; i++)
 		for (j = i+1; j < num_states; j++)
 			rates[k++] = (pair_rates[i][j] + pair_rates[j][i]) / last_rate;
-	cout << "Empirical rates: ";
-	for (k = 0; k < num_states*(num_states-1)/2; k++)
-		cout << rates[k] << " ";
-	cout << endl;
-
+	if (verbose_mode >= VB_MIN) {
+		cout << "Empirical rates: ";
+		for (k = 0; k < num_states*(num_states-1)/2; k++)
+			cout << rates[k] << " ";
+		cout << endl;
+	}
 	for (i = num_states-1; i >= 0; i--) {
 		delete [] pair_rates[i];
 	}
@@ -165,8 +170,10 @@ double NGSAlignment::computeFunctionCat(int cat, double value) {
 	tree->getModelFactory()->computeTransMatrix(value, trans_mat);
 	int *pair_pos = pair_freq + cat*trans_size;
 
-	for (i = 0; i < trans_size; i++) 
+	for (i = 0; i < trans_size; i++) if (pair_pos[i]) {
+		if (trans_mat[i] <= 0) throw "Negative transition probability";
 		lh -= pair_pos[i] * log(trans_mat[i]);
+	}
 	return lh;
 }
 
@@ -183,6 +190,7 @@ double NGSAlignment::computeFuncDervCat(int cat, double value, double &df, doubl
 	tree->getModelFactory()->computeTransDerv(value, trans_mat, trans_derv1, trans_derv2);
 	int *pair_pos = pair_freq + cat*trans_size;
 	for (i = 0; i < trans_size; i++) if (pair_pos[i] > 0) {
+		if (trans_mat[i] <= 0) throw "Negative transition probability";
 		double d1 = trans_derv1[i] / trans_mat[i];
 		derv1 += pair_pos[i] * d1;
 		derv2 += pair_pos[i] * (trans_derv2[i]/trans_mat[i] - d1 * d1);
@@ -220,7 +228,10 @@ double NGSRate::optimizeParameters() {
 	double negative_lh;
 	for (cat = 0; cat < ncategory; cat++) {
 		optimizing_cat = cat;
-		rates[cat] = minimizeNewtonSafeMode(1e-6, rates[cat], 10.0, 1e-6, negative_lh);
+		if (phylo_tree->optimize_by_newton) 
+			rates[cat] = minimizeNewtonSafeMode(1e-6, rates[cat], 10.0, 1e-6, negative_lh);
+		else
+			rates[cat] = minimizeOneDimenSafeMode(1e-6, rates[cat], 10.0, 1e-6, &negative_lh);
 	}
 	return phylo_tree->computeLikelihood();
 }
@@ -244,7 +255,6 @@ NGSTree::NGSTree(Params &params, NGSAlignment *alignment) {
 	aln = alignment;
     model = NULL;
     site_rate = NULL;
-    optimize_by_newton = true;
     model_factory = NULL;
     optimize_by_newton = params.optimize_by_newton;
     //tree.sse = params.SSE;
@@ -263,23 +273,36 @@ double NGSTree::optimizeAllBranches(int iterations) {
         main function
  ****************************************************************************/
 
-void reportNGSAnalysis(Params &params, NGSAlignment &aln, NGSTree &tree) {
-	string out_file(params.out_prefix);
-	out_file += ".ngs";
-	ofstream out(out_file.c_str());
+void reportNGSAnalysis(const char *file_name, Params &params, NGSAlignment &aln, NGSTree &tree, 
+	DoubleMatrix &rate_info, StrVector &rate_name) {
+	ofstream out(file_name);
+	out.setf(ios::fixed,ios::floatfield);
 
 	int i, j, k;
-	
-	double rate_param[aln.num_states * aln.num_states / 2];
+
+
+	double rate_param[aln.num_states * aln.num_states];
 	double rate_matrix[aln.num_states * aln.num_states];
+
+	out << "Input file: " << params.ngs_file << endl;
+	out << "Model of evolution: " << tree.getModel()->name << endl << endl;
+
+	out << "Substitution process assuming one homogeneous model among all positions:" << endl;
 
 	out << "Rate parameters: " << endl;
 
 	tree.getModel()->getRateMatrix(rate_param);
 
-	for (i = 0, k=0; i < aln.num_states-1; i++)
-		for (j = i+1; j < aln.num_states; j++, k++)
-			rate_matrix[i*aln.num_states+j] = rate_matrix[j*aln.num_states+i] = rate_param[k];
+	if (tree.getModel()->name == "UNREST") {
+		for (i = 0, k=0; i < aln.num_states; i++)
+			for (j = 0; j < aln.num_states; j++)
+				if (i != j)
+					rate_matrix[i*aln.num_states+j] = rate_param[k++];
+	} else {
+		for (i = 0, k=0; i < aln.num_states-1; i++)
+			for (j = i+1; j < aln.num_states; j++, k++)
+				rate_matrix[i*aln.num_states+j] = rate_matrix[j*aln.num_states+i] = rate_param[k];
+	}
 
 	for (i = 0; i < aln.num_states; i++) {
 		for (j = 0; j < aln.num_states; j++) {
@@ -299,24 +322,80 @@ void reportNGSAnalysis(Params &params, NGSAlignment &aln, NGSTree &tree) {
 
 	out << "Q matrix can be obtained by multiplying rate parameters with state frequencies" << endl << endl;
 
-	out << "Position-specific rates: " << endl;
-	for (i = 0; i < aln.ncategory; i++)
-		out << i+1 << '\t' << tree.getRate()->getRate(i) << endl;
-	
-	out.precision(12);
-	out << endl << "Log-likelihood: " << tree.computeLikelihood() << endl;
+	out << "Log-likelihood: " << tree.computeLikelihood() << endl << endl;
+
+	out << "Inferred posisiton-specific rates under one model or position-specific model: " << endl;
+
+	out << "Position\tOne_model_rate";
+	for (StrVector::iterator it = rate_name.begin(); it != rate_name.end(); it++)
+		out << "\t" << (*it);
+	out << endl;
+	for (i = 0; i < aln.ncategory; i++) {
+		out << i+1 << '\t' << tree.getRate()->getRate(i);
+		DoubleVector *rate_vec = &rate_info[i];
+		for (DoubleVector::iterator dit = rate_vec->begin(); dit != rate_vec->end(); dit++)
+			out << "\t" << *dit;
+		out << endl;
+	}
 	out.close();
-	cout << endl << "Results written to: " << out_file << endl << endl;
+	cout << endl << "Results written to: " << file_name << endl << endl;
 }
 
-void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string model) {
-	int sum_freq[aln.num_states * aln.num_states];
+bool checkFreq(int *pair_freq, int n) {
+	int i, count = 0;
+	for (i=0; i < n*n; i++)
+		if (pair_freq[i] != 0) count++;
+	if (count <= n) return false;
+	return true;
+}
+
+void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string model, 
+	int *freq, DoubleVector &rate_info, StrVector &rate_name, bool write_info) {
+
+	char model_name[20];
+	NGSAlignment sum_aln(aln.num_states, 1, freq);
+
+	NGSTree sum_tree(params, &sum_aln);
+	sum_aln.tree = &sum_tree;
+
+	if (model == "") 
+		sprintf(model_name, "GTR+F1");
+	else
+		sprintf(model_name, "%s+F1", model.c_str());
+	try {
+		params.model_name = model_name;
+		sum_tree.setModelFactory(new ModelFactory(params, &sum_tree));
+		sum_tree.setModel(sum_tree.getModelFactory()->model);
+		sum_tree.setRate(sum_tree.getModelFactory()->site_rate);
+    	double bestTreeScore = sum_tree.getModelFactory()->optimizeParameters(false, write_info);
+		cout << "LogL: " << bestTreeScore;
+		cout << " / Rate: " << sum_tree.getRate()->getRate(0) << endl;
+    } catch (...) {
+		cout << "Skipped due to sparse matrix" << endl;
+		//rate_info.push_back(MIN_SITE_RATE);
+		rate_info.insert(rate_info.end(), rate_name.size(), MIN_SITE_RATE);
+		return;
+    }
+    //return sum_tree.getRate()->getRate(0);
+	rate_info.push_back(sum_tree.getRate()->getRate(0));
+
+    double rate_mat[aln.num_states*aln.num_states];
+    memset(rate_mat, 0, aln.num_states*aln.num_states*sizeof(double));
+    sum_tree.getModel()->getRateMatrix(rate_mat);
+    rate_info.insert(rate_info.end(), rate_mat, rate_mat+sum_tree.getModel()->getNumRateEntries());
+
+	if (tree.getModel()->isReversible()) {
+		sum_tree.getModel()->getStateFrequency(rate_mat);
+		rate_info.insert(rate_info.end(), rate_mat, rate_mat+aln.num_states);
+    }
+}
+
+
+/*
+
+void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string model, int *sum_freq) {
 	char model_name[20];
 
-	cout << endl << "-->TESTING EQUAL-RATE NULL MODEL..." << endl << endl;
-	cout.precision(6);
-
-	aln.computeSumPairFreq(sum_freq);
 	NGSAlignment sum_aln(aln.num_states, 1, sum_freq);
 
 	NGSTree sum_tree(params, &sum_aln);
@@ -331,20 +410,28 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
     sum_tree.setModel(sum_tree.getModelFactory()->model);
     sum_tree.setRate(sum_tree.getModelFactory()->site_rate);
 
-	cout.precision(12);
-    double bestTreeScore = sum_tree.getModelFactory()->optimizeParameters(false);
+    double bestTreeScore = sum_tree.getModelFactory()->optimizeParameters(false, false);
     cout << "Log-likelihood of null model: " << bestTreeScore << endl;
     cout << "Rate (or distance) of null model: " << sum_tree.getRate()->getRate(0) << endl;
     double lh_diff = 2*(tree.computeLikelihood() - bestTreeScore);
     cout << "2(lnL1 - lnL0) = " << lh_diff << endl;
     cout << "p-value (chi-square test, df = " << aln.ncategory-1 << "): " << computePValueChiSquare(lh_diff, aln.ncategory-1) << endl;
-}
+
+	string out_file = params.out_prefix;
+	out_file += ".ngs_e";
+	DoubleVector tmp;
+	reportNGSAnalysis(out_file.c_str(), params, sum_aln, sum_tree, tmp);
+
+}*/
 
 
 void runNGSAnalysis(Params &params) {
 	char model_name[20];
 	// read input file, initialize NGSAlignment
 	NGSAlignment aln(params.ngs_file);
+	cout.setf(ios::fixed,ios::floatfield);
+
+	params.freq_type = FREQ_ESTIMATE;
 
 	// initialize NGSTree
 	NGSTree tree(params, &aln);
@@ -368,13 +455,62 @@ void runNGSAnalysis(Params &params) {
 
 	// optimize model parameters and rate scaling factors
     cout << "Optimizing model parameters" << endl;
-    cout.precision(12);
-    double bestTreeScore = tree.getModelFactory()->optimizeParameters(false);
+    double bestTreeScore = tree.getModelFactory()->optimizeParameters(false, true);
     cout << "Log-likelihood: " << bestTreeScore << endl;
 
-	testSingleRateModel(params, aln, tree, original_model);
+
+	DoubleMatrix part_rate(aln.ncategory);
+	StrVector rate_name;
+
+
+	int i, j;
+
+	rate_name.push_back("Varying_model_rate");
+
+	if (tree.getModel()->isReversible()) {
+		for (i = 0; i < aln.num_states-1; i++) 
+			for (j = i+1; j < aln.num_states; j++) {
+				stringstream x;
+				x << aln.convertStateBack(i) << "->" << aln.convertStateBack(j);
+				rate_name.push_back(x.str());
+			}
+		for (i = 0; i < aln.num_states; i++) {
+			stringstream x;
+			x << aln.convertStateBack(i);
+			rate_name.push_back(x.str());
+		}
+	} else {
+		for (i = 0; i < aln.num_states; i++) 
+			for (j = 0; j < aln.num_states; j++) if (j != i) {
+				stringstream x;
+				x << aln.convertStateBack(i) << "->" << aln.convertStateBack(j);
+				rate_name.push_back(x.str());
+			}
+	}
+
+
+	VerboseMode vb_saved = verbose_mode;
+	verbose_mode = VB_QUIET;
+
+	cout << endl << "--> INFERING RATE ASSUMING POSITION-SPECIFIC MODEL..." << endl << endl;
+	for (int pos = 0; pos < aln.ncategory; pos++) {
+		cout << "Position " << pos << " / ";
+		int *pair_pos = aln.pair_freq + (pos*aln.num_states*aln.num_states);
+		testSingleRateModel(params, aln, tree, original_model, pair_pos, part_rate[pos], rate_name, false);
+	}
+
+
+	verbose_mode = vb_saved;
+
+	int sum_freq[aln.num_states*aln.num_states];
+	cout << endl << "-->INFERING RATE UNDER EQUAL-RATE NULL MODEL..." << endl << endl;
+	aln.computeSumPairFreq(sum_freq);
+	DoubleVector null_rate;
+	testSingleRateModel(params, aln, tree, original_model, sum_freq, null_rate, rate_name, true);
 
 	// report running results
-	reportNGSAnalysis(params, aln, tree);
+	string out_file = params.out_prefix;
+	out_file += ".ngs";
+	reportNGSAnalysis(out_file.c_str(), params, aln, tree, part_rate, rate_name);
 
 }

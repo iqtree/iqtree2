@@ -26,7 +26,7 @@ GTRModel::GTRModel(PhyloTree *tree)
  : SubstModel(tree->aln->num_states), Optimization(), EigenDecomposition()
 {
 	int i;
-	int nrate = num_states*(num_states-1)/2;
+	int nrate = getNumRateEntries();
 	int ncoeff = num_states*num_states*num_states;
 	
 	name = "GTR";
@@ -56,8 +56,8 @@ GTRModel::GTRModel(PhyloTree *tree)
 	//eigen_coeff_derv1 = new double[ncoeff];
 	//eigen_coeff_derv2 = new double[ncoeff];
 
-	num_params = num_states*(num_states-1)/2 - 1;
-			
+	num_params = getNumRateEntries() - 1;
+
 }
 
 void GTRModel::setTree(PhyloTree *tree) {
@@ -71,10 +71,10 @@ void GTRModel::init(StateFreqType type) {
 	assert(freq_type != FREQ_UNKNOWN);
 	switch (freq_type) {
 	case FREQ_EQUAL:
-	case FREQ_ESTIMATE:
 		for (i = 0; i < num_states; i++)
 			state_freq[i] = 1.0/num_states;
 		break;	
+	case FREQ_ESTIMATE:
 	case FREQ_EMPIRICAL:
 		phylo_tree->aln->computeStateFreq(state_freq);
 		break;
@@ -86,20 +86,20 @@ void GTRModel::init(StateFreqType type) {
 
 void GTRModel::writeInfo(ostream &out) {
 	if (num_states != 4) return;
-	cout << "Rate parameters:" << endl;
+	out << "Rate parameters:" << endl;
 	
-	cout << "  A-C: " << rates[0] << endl;
-	cout << "  A-G: " << rates[1] << endl;
-	cout << "  A-T: " << rates[2] << endl;
-	cout << "  C-G: " << rates[3] << endl;
-	cout << "  C-T: " << rates[4] << endl;
-	cout << "  G-T: " << rates[5] << endl;
+	out << "  A-C: " << rates[0] << endl;
+	out << "  A-G: " << rates[1] << endl;
+	out << "  A-T: " << rates[2] << endl;
+	out << "  C-G: " << rates[3] << endl;
+	out << "  C-T: " << rates[4] << endl;
+	out << "  G-T: " << rates[5] << endl;
 	//if (freq_type != FREQ_ESTIMATE) return;
-	cout << "Base frequencies: " << endl;
-	cout << "  A: " << state_freq[0] << endl;
-	cout << "  C: " << state_freq[1] << endl;
-	cout << "  G: " << state_freq[2] << endl;
-	cout << "  T: " << state_freq[3] << endl;
+	out << "Base frequencies: " << endl;
+	out << "  A: " << state_freq[0] << endl;
+	out << "  C: " << state_freq[1] << endl;
+	out << "  G: " << state_freq[2] << endl;
+	out << "  T: " << state_freq[3] << endl;
 }
 
 
@@ -179,8 +179,6 @@ void GTRModel::computeTransDerv(double time, double *trans_matrix,
 
 			int coeff_offset = offset*num_states;
 			double *coeff_entry       = eigen_coeff + coeff_offset;
-			//double *coeff_derv1_entry = eigen_coeff_derv1 + coeff_offset;
-			//double *coeff_derv2_entry = eigen_coeff_derv2 + coeff_offset;
 			*trans_entry = 0.0;
 			*derv1_entry = 0.0;
 			*derv2_entry = 0.0;
@@ -190,39 +188,16 @@ void GTRModel::computeTransDerv(double time, double *trans_matrix,
 				*trans_entry += trans;
 				*derv1_entry += trans2;
 				*derv2_entry += trans2 * eigenvalues[k];
-				//*derv1_entry += coeff_derv1_entry[k] * exptime[k];
-				//*derv2_entry += coeff_derv2_entry[k] * exptime[k];
 			}
 			if (*trans_entry < 0.0) {
 				*trans_entry = 0.0;
 			}
 		}
 	}
-	/*if (verbose_mode == VB_DEBUG) {
-		cout.precision(4);
-		cout << "time = " << time << endl;
-		for (i = 0; i < num_states; i++, cout << endl) {
-			for (j = 0; j < num_states; j++) {
-				cout.width(8);
-				cout << right << trans_matrix[i*num_states+j] << " ";
-			}
-			cout << "| ";
-			for (j = 0; j < num_states; j++) {
-				cout << right << trans_derv1[i*num_states+j] << " ";
-				cout.width(8);
-			}
-			cout << "| ";
-			for (j = 0; j < num_states; j++) {
-				cout.width(8);
-				cout << right << trans_derv2[i*num_states+j] << " ";
-			}
-		}
-		cout.precision(10);
-	}*/
 }
 
 void GTRModel::getRateMatrix(double *rate_mat) {
-	int nrate = num_states*(num_states-1)/2;
+	int nrate = getNumRateEntries();
 	memcpy(rate_mat, rates, nrate * sizeof(double));
 }
 
@@ -322,7 +297,7 @@ double GTRModel::optimizeParameters() {
 
 
 
-void GTRModel::decomposeRateMatrix() {
+void GTRModel::decomposeRateMatrix(){
 	double *rate_matrix[num_states];
 	int i, j, k = 0;
 
@@ -337,7 +312,8 @@ void GTRModel::decomposeRateMatrix() {
 		}
 	}
 	/* eigensystem of 1 PAM rate matrix */
-	eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states); 
+	eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
+	//eigensystem(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);  
 
 	
 
@@ -362,7 +338,7 @@ void GTRModel::decomposeRateMatrix() {
 } 
 
 void GTRModel::readRates(istream &in) throw(const char*) {
-	int nrates = num_states*(num_states-1)/2;
+	int nrates = getNumRateEntries();
 	for (int i = 0; i < nrates; i++) {
 		if (!(in >> rates[i]))
 			throw "Rate entries could not be read";
@@ -400,7 +376,11 @@ void GTRModel::readParameters(const char *file_name) {
 }
 
 
-GTRModel::~GTRModel()
+GTRModel::~GTRModel() {
+	freeMem();
+}
+
+void GTRModel::freeMem()
 {
 	int i;
 	//delete eigen_coeff_derv2;
@@ -419,5 +399,3 @@ GTRModel::~GTRModel()
 	if (state_freq) delete [] state_freq;
 	if (rates) delete [] rates;
 }
-
-

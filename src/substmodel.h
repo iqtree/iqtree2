@@ -36,7 +36,18 @@ public:
 		@return the number of dimensions
 	*/
 	virtual int getNDim() { return 0; }
+
+	/**
+		@return TRUE if model is time-reversible, FALSE otherwise
+	*/
+	virtual bool isReversible() { return true; };
 	
+	/**
+		@return the number of rate entries, equal to the number of elements
+			in the upper-diagonal of the rate matrix (since model is reversible)
+	*/
+	virtual int getNumRateEntries() { return num_states*(num_states-1)/2; }
+
 	/**
 		compute the transition probability matrix. One should override this function when defining new model.
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)

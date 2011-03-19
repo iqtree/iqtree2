@@ -185,9 +185,12 @@ RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type, char *file_name, Ph
 		rates = new double[ncategory];
 		memset(rates, 0, sizeof(double) * ncategory);
 	}
-	name = "+M";
+	//name = "+M";
 	name += convertIntToString(ncategory);
-	full_name += " with " + convertIntToString(ncategory) + " categories";
+	if (ncategory > 0)
+		full_name += " with " + convertIntToString(ncategory) + " categories";
+	else
+		full_name += "auto-detect #categories";
 }
 
 RateMeyerDiscrete::RateMeyerDiscrete() {
@@ -240,7 +243,7 @@ void RateMeyerDiscrete::computePatternRates(DoubleVector &pattern_rates, IntVect
 	pattern_cat.insert(pattern_cat.begin(), ptn_cat, ptn_cat + size());
 }
 
-double RateMeyerDiscrete::optimizeParameters() {
+/*double RateMeyerDiscrete::optimizeParameters() {
 	if (is_categorized) {
 		is_categorized = false;
 		phylo_tree->clearAllPartialLh();
@@ -248,7 +251,19 @@ double RateMeyerDiscrete::optimizeParameters() {
 	}
 	double tree_lh = RateMeyerHaeseler::optimizeParameters();
 	return tree_lh;
+}*/
+
+double RateMeyerDiscrete::optimizeParameters() {
+	if (!is_categorized) return RateMeyerHaeseler::optimizeParameters();
+	phylo_tree->calcDist(dist_mat);
+	for (int i = 0; i < ncategory; i++)
+		optimizeCatRate(i);
+	normalizeRates();
+	phylo_tree->clearAllPartialLh();
+	return phylo_tree->computeLikelihood();
+	//return phylo_tree->optimizeAllBranches(2);
 }
+
 
 double RateMeyerDiscrete::computeFunction(double value) {
 	if (!is_categorized) return RateMeyerHaeseler::computeFunction(value);
@@ -404,7 +419,7 @@ void RateMeyerDiscrete::normalizeRates() {
 }
 
 double RateMeyerDiscrete::classifyRatesKMeans() {
-	clock_t begin_time = clock();
+	//clock_t begin_time = clock();
 
 	assert(ncategory > 0);
 	int nptn = size();
@@ -444,14 +459,16 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
 	if (mcat_type & MCAT_MEAN)
 		return cur_lh;
 
+	return phylo_tree->getModelFactory()->optimizeParameters(false,false);
+
 	// optimize category rates again by ML
-	for (int k = 0; k < 100; k++) {
+/*	for (int k = 0; k < 100; k++) {
 		phylo_tree->calcDist(dist_mat);
 		for (i = 0; i < ncategory; i++)
 			optimizeCatRate(i);
 		normalizeRates();
 		phylo_tree->clearAllPartialLh();
-		double new_lh = phylo_tree->optimizeAllBranches(1);
+		double new_lh = phylo_tree->optimizeAllBranches(k+2);
 		if (new_lh > cur_lh + 1e-2) {
 			cur_lh = new_lh; 
 			cout << "Current log-likelihood: " << cur_lh << endl;
@@ -460,12 +477,14 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
 			break;
 		}
 	}
-	cout << double(clock() - begin_time ) / CLOCKS_PER_SEC << " seconds" << endl;
+	cout << double(clock() - begin_time ) / CLOCKS_PER_SEC << " seconds" << endl;*/
 	return cur_lh;
 }
 
 
 double RateMeyerDiscrete::classifyRates(double tree_lh) {
+	if (is_categorized) return tree_lh;
+
 	double new_tree_lh;
 	is_categorized = true;
 	if (ncategory > 0) {
@@ -478,6 +497,7 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 	rates = new double[nptn];
 
 	for (ncategory = 2; ; ncategory++) {
+		cout << endl << "Classifying rates into " << ncategory << " categories..." << endl;
 		new_tree_lh = classifyRatesKMeans();
 		new_tree_lh = phylo_tree->optimizeAllBranches();
 		cout << "For " << ncategory << " categories, LogL = " << new_tree_lh;

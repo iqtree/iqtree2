@@ -65,6 +65,17 @@ public:
 	*/
 	double optimizeDist(double initial_dist);
 
+	/**
+		add a pattern into the alignment
+		@param state1
+		@param state2 states of the pattern
+		@param freq frequency of pattern
+		@param cat category for the pattern (for the discrete model)
+		@return TRUE if pattern contains only gaps or unknown char. 
+				In that case, the pattern won't be added.
+	*/
+	bool addPattern(int state1, int state2, int freq, int cat = 0);
+
 
 	/**
 		destructor

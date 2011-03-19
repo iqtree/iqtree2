@@ -715,7 +715,7 @@ void ModelProtein::init(const char *model_name, StateFreqType freq) {
 }
 
 void ModelProtein::readRates(istream &in) throw(const char*) {
-	int nrates = num_states*(num_states-1)/2;
+	int nrates = getNumRateEntries();
 	int row = 1, col = 0;
 	// since states for protein is stored in lower-triangle, special treatment is needed
 	for (int i = 0; i < nrates; i++, col++) {

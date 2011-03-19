@@ -299,7 +299,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
                 "Model of substitution: " << tree.getModel()->name << endl << endl;
         out << "Rate matrix R:" << endl << endl;
 
-        double *rate_mat = new double[alignment.num_states * (alignment.num_states - 1) / 2];
+        double *rate_mat = new double[alignment.num_states * alignment.num_states];
         tree.getModel()->getRateMatrix(rate_mat);
         int k;
         if (alignment.num_states > 4) out << fixed;
@@ -407,6 +407,14 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 				out << " (%)" << endl;
 			}
 			out << endl;
+
+			int zero_branches = tree.countZeroBranches();
+			if (zero_branches > 0) {
+				out << "WARNING: " << zero_branches << " branches of ZERO lengths and should be treated with caution!" << endl;
+				cout << endl << "*WARNING*: " << zero_branches  << " branches of ZERO lengths and should be treated with caution!" << endl;
+				out << "         Such branches are denoted by '***' in the figure" << endl << endl;
+			}
+
 			tree.setRootNode(params.root);
 			tree.sortTaxa();
 			tree.drawTree(out);
@@ -774,7 +782,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     double *pattern_lh;
     int num_low_support;
     clock_t mytime;
-    if (params.min_iterations > 1 && params.aLRT_threshold <= 100 && params.aLRT_replicates > 0) {
+    if (params.aLRT_threshold <= 100 && params.aLRT_replicates > 0) {
         mytime = clock();
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
         pattern_lh = new double[tree.aln->getNPattern()];
@@ -906,7 +914,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     	
     }
 
-    if (params.aLRT_replicates > 0 && params.min_iterations > 0) {
+    if (params.aLRT_replicates > 0) {
         mytime = clock();
         cout << endl;
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;

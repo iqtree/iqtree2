@@ -87,13 +87,12 @@ double ran1(long *idum) {
 long idum = 123456;
 double tt;
 
-void nrerror(const char error_text[])
+void nrerror(const char *error_text)
 /* Numerical Recipes standard error handler */
 {
-	fprintf(stderr,"Numerical Recipes run-time error...\n");
-	fprintf(stderr,"%s\n",error_text);
-	fprintf(stderr,"...now exiting to system...\n");
-	exit(1);
+	cerr << "NUMERICAL ERROR: " << error_text << endl;
+	//exit(1);
+	throw error_text;
 }
 
 double *vector(long nl, long nh)
@@ -331,6 +330,26 @@ double Optimization::minimizeOneDimen(double xmin, double xguess, double xmax, d
 	return optx; /* return optimal x */
 }
 
+double Optimization::minimizeOneDimenSafeMode(double xmin, double xguess, double xmax, double tolerance, double *f)
+{
+	double ferror;
+	double optx = minimizeOneDimen(xmin, xguess, xmax, tolerance, f, &ferror);
+	double fnew;
+	// check value at the boundary
+	if ((optx < xmax) && (fnew = computeFunction(xmax)) <= *f+tolerance) {
+		//if (verbose_mode >= VB_MAX)
+			//cout << "Note from Newton safe mode: " << optx << " (" << f << ") -> " << xmax << " ("<< fnew << ")" << endl;
+		optx = xmax;
+		*f = fnew;
+	}
+	if ((optx > xmin) && (fnew = computeFunction(xmin)) <= *f+tolerance) {
+		//if (verbose_mode >= VB_MAX)
+			//cout << "Note from Newton safe mode: " << optx << " -> " << xmin << endl;
+		optx = xmin;
+		*f = fnew;
+	}
+	return optx;
+}
 
 /*****************************************************
 	One dimensional optimization with Newton Raphson 

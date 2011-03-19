@@ -856,6 +856,22 @@ void Alignment::computeEmpiricalRate (double *rates) {
 	delete [] pair_rates;
 }
 
+void Alignment::computeEmpiricalRateNonRev (double *rates) {
+	double rates_mat[num_states*num_states];
+	int i, j, k;
+
+	computeEmpiricalRate(rates);
+	
+	for (i = 0, k = 0; i < num_states-1; i++)
+		for (j = i+1; j < num_states; j++)
+			rates_mat[i*num_states+j] = rates_mat[j*num_states+i] = rates[k++];
+			
+	for (i = 0, k = 0; i < num_states; i++)
+		for (j = 0; j < num_states; j++)
+			if (j != i) rates[k++] = rates_mat[i*num_states+j];
+	
+}
+
 double Alignment::computeUnconstrainedLogL() {
 	int nptn = size();
 	double logl = 0.0;

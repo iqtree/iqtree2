@@ -184,7 +184,7 @@ public:
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
 	*/
-	void decomposeRateMatrix();
+	virtual void decomposeRateMatrix();
 
 protected:
 
@@ -201,6 +201,8 @@ protected:
 		@param variables vector of variables, indexed from 1
 	*/
 	virtual void getVariables(double *variables);
+
+	virtual void freeMem();
 
 	/**
 		phylogenetic tree associated

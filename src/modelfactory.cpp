@@ -22,6 +22,7 @@
 #include "rategamma.h"
 #include "rategammainvar.h"
 #include "gtrmodel.h"
+#include "modelnonrev.h"
 #include "modeldna.h"
 #include "modelprotein.h"
 #include "ratemeyerhaeseler.h"
@@ -66,8 +67,22 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			site_rate = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, tree);
 		} else if (rate_str.substr(0,2) == "+M") {
 			tree->sse = false;
+			params.rate_mh_type = true;
 			if (rate_str.length() > 2) {
 				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
+				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else params.num_rate_cats = -1;
+			if (params.num_rate_cats >= 0)
+				site_rate = new RateMeyerDiscrete(params.num_rate_cats, params.mcat_type, 
+					params.rate_file, tree, params.rate_mh_type);
+			else
+				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
+			site_rate->setTree(tree);
+		} else if (rate_str.substr(0,4) == "+CAT") {
+			tree->sse = false;
+			params.rate_mh_type = false;
+			if (rate_str.length() > 4) {
+				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
 				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else params.num_rate_cats = -1;
 			if (params.num_rate_cats >= 0)
@@ -99,6 +114,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	} else if (model_str == "GTR") {
 		model = new GTRModel(tree);
 		((GTRModel*)model)->init(params.freq_type);
+	} else if (model_str == "UNREST") {
+		params.freq_type = FREQ_EQUAL;
+		params.optimize_by_newton = false;
+		tree->optimize_by_newton = false;
+		model = new ModelNonRev(tree);
+		((ModelNonRev*)model)->init(params.freq_type);
 	} else if (tree->aln->num_states == 4) {
 		model = new ModelDNA(model_str.c_str(), params.freq_type, tree);
 	} else if (tree->aln->num_states == 20) {
@@ -129,16 +150,21 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 	else {
 		cur_lh = tree->optimizeAllBranches(1);
 	}
-	if (verbose_mode >= VB_MED || write_info)
+	if (verbose_mode >= VB_MED || write_info) 
 		cout << "Initial log-likelihood: " << cur_lh << endl;
 	int i;
+	bool optimize_rate = true;
 	for (i = 2; i < 500; i++) {
 		double model_lh = model->optimizeParameters();
 		//if (model_lh != 0.0) cur_lh = model_lh;
 /*
 		if (model_lh != 0.0 && !fixed_len)
 			model_lh = optimizeAllBranches(3); */
-		double rate_lh = site_rate->optimizeParameters();
+		double rate_lh = 0.0;
+		if (optimize_rate) {
+			rate_lh = site_rate->optimizeParameters();
+			if (rate_lh < model_lh+1e-6) optimize_rate = false;
+		}
 /*		if (rate_lh != 0.0 && !fixed_len)
 			rate_lh = optimizeAllBranches(2);*/
 		if (model_lh == 0.0 && rate_lh == 0.0) {
@@ -146,6 +172,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 			break;
 		}
 		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
+		
 		if (verbose_mode >= VB_MED) {
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);

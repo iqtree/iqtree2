@@ -60,7 +60,7 @@ double SubstModel::computeTrans(double time, int state1, int state2, double &der
 }
 
 void SubstModel::getRateMatrix(double *rate_mat) {
-	int nrate = num_states*(num_states-1)/2;
+	int nrate = getNumRateEntries();
 	for (int i = 0; i < nrate; i++)
 		rate_mat[i] = 1.0;
 }
