@@ -316,8 +316,8 @@ double NGSRead::computeFunction(double value) {
 		int state2 = read[i];
 		if (state1 >= num_states || state2 >= num_states) continue;
 		double rate_val = site_rate->getRate(rate_id);
-		if (homo_rate)
-			rate_val = 1.0;
+		if (homo_rate > 0)
+			rate_val = homo_rate;
 		double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2);
 		lh -= log(trans);
 		rate_id++;
@@ -337,8 +337,8 @@ double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
 		int state2 = read[i];
 		if (state1 >= num_states || state2 >= num_states) continue;
 		double rate_val = site_rate->getRate(rate_id);
-		if (homo_rate)
-			rate_val = 1.0;
+		if (homo_rate > 0)
+			rate_val = homo_rate;
 		double rate_sqr = rate_val * rate_val;
 		double derv1, derv2;
 		double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
@@ -499,10 +499,12 @@ void NGSReadSet::parsNextGen(string filename, string ref_ID,double ident,int mis
 					assert(tempread.scaff.length() == tempread.read.length());
 
 					if(count==mismatches || mismatches < 0){
-						tempread.homo_rate = false;
-						read_info.distance = tempread.optimizeDist(1.0-tempread.identity);
-						tempread.homo_rate = true;
+						tempread.homo_rate = homo_rate;
 						read_info.homo_distance = tempread.optimizeDist(1.0-tempread.identity);
+						read_info.homo_logl = -tempread.computeFunction(read_info.homo_distance);
+						tempread.homo_rate = 0.0;
+						read_info.distance = tempread.optimizeDist(read_info.homo_distance);
+						read_info.logl = -tempread.computeFunction(read_info.distance);
 						read_info.id = tempread.id;
 						read_info.identity = tempread.identity;
 						push_back(read_info);
@@ -690,10 +692,11 @@ void reportNGSReads(const char *file_name, Params &params, NGSReadSet &ngs_reads
 {
 	ofstream out(file_name);
 	out.setf(ios::fixed,ios::floatfield);
-	out << "Read\tHamming_dist\tOne_rate_dist\tVarying_rate_dist" << endl;
+	out << "Read\tHamm_dist\tHomo_dist\tHete_dist\tHomo_logl\tHete_logl" << endl;
 	for (int i = 0; i < ngs_reads.size(); i++)
 		out << ngs_reads[i].id << '\t' << 1.0 - ngs_reads[i].identity << 
-		'\t' << ngs_reads[i].homo_distance << '\t' << ngs_reads[i].distance << endl;
+		'\t' << ngs_reads[i].homo_distance << '\t' << ngs_reads[i].distance << 
+		'\t' << ngs_reads[i].homo_logl << '\t' << ngs_reads[i].logl << endl;
 	out.close();
 	cout << endl << "Results written to: " << file_name << endl << endl;
 
@@ -791,6 +794,8 @@ void runNGSAnalysis(Params &params) {
 	
 	NGSReadSet ngs_reads;
 	ngs_reads.tree = &tree;
+	ngs_reads.homo_rate = null_rate[0];
+	cout << "Homogeneous rate: " << ngs_reads.homo_rate << endl;
 	cout << "Reading mapped reads file " << params.ngs_mapped_reads << " ... " << endl;
 	ngs_reads.parsNextGen(params.ngs_mapped_reads);
 	ngs_reads.writeInfo();

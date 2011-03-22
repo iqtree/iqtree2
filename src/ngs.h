@@ -210,7 +210,7 @@ public:
 	float identity;
 	string name;
 
-	bool homo_rate;
+	double homo_rate;
 
 	/**
 		compute the likelihood for a distance between two sequences. Used for the ML optimization of the distance.
@@ -236,7 +236,9 @@ struct ReadInfo {
 	int id;
 	float identity;
 	float distance;
+	float logl;
 	float homo_distance;
+	float homo_logl;
 };
 
 
@@ -247,6 +249,8 @@ public:
 	void writeInfo();
 
 	PhyloTree *tree;
+	double homo_rate;
+
 
 };
 

@@ -185,7 +185,6 @@ RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type, char *file_name, Ph
 		rates = new double[ncategory];
 		memset(rates, 0, sizeof(double) * ncategory);
 	}
-	//name = "+M";
 	name += convertIntToString(ncategory);
 	if (ncategory > 0)
 		full_name += " with " + convertIntToString(ncategory) + " categories";

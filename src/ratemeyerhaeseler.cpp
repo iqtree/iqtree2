@@ -40,11 +40,12 @@ RateMeyerHaeseler::RateMeyerHaeseler(char *file_name, PhyloTree *tree, bool rate
 RateMeyerHaeseler::RateMeyerHaeseler()
  : RateHeterogeneity()
 {
-	name = "+MH";
+	name = "+M";
 	full_name = "Meyer & von Haeseler (2003)";
 	dist_mat = NULL;
 	phylo_tree = NULL;
 	rate_file = NULL;
+	rate_mh = true;
 }
 
 void RateMeyerHaeseler::readRateFile(char *rate_file) {
