@@ -41,6 +41,22 @@ NGSAlignment::NGSAlignment(int nstate, int ncat, int *freq) : AlignmentPairwise(
 	memcpy(pair_freq, freq, total_size * sizeof(int));
 }
 
+NGSAlignment::NGSAlignment(int nstate, string &seq1, string &seq2) {
+	num_states = nstate;
+	ncategory = 1;
+	pair_freq = new int[nstate*nstate];
+	memset(pair_freq, 0, sizeof(int)*nstate*nstate);
+	assert(seq1.length() == seq2.length());
+	int len = seq1.length();
+	int i;
+	for (i = 0; i < len; i++) {
+		int state1 = convertState(seq1[i], SEQ_DNA);
+		int state2 = convertState(seq2[i], SEQ_DNA);
+		if (state1 < num_states && state2 < num_states) 
+			pair_freq[state1*num_states+state2] ++;
+	}
+}
+
 void NGSAlignment::readFritzFile(const char *filename) {
 	cout << "Reading Fritz file " << filename << " ..." << endl;
 	try {
@@ -269,6 +285,252 @@ double NGSTree::optimizeAllBranches(int iterations) {
 	return computeLikelihood();
 }
 
+
+/****************************************************************************
+        NGSRead
+ ****************************************************************************/
+
+
+void NGSRead::init() {
+	scaff.clear();
+	read.clear();
+	id = -2;
+	match_pos= -2;
+	flag=true;
+	identity=-2;
+	times=1.0;
+	direction=true;
+}
+
+
+double NGSRead::computeFunction(double value) {
+
+	RateHeterogeneity *site_rate = tree->getRate();
+	int i, rate_id;
+	int nptn = scaff.length();
+	double lh = 0.0;
+
+	// site-specific rates
+	for (i = 0, rate_id = 0; i < nptn; i++) {
+		int state1 = scaff[i];
+		int state2 = read[i];
+		if (state1 >= num_states || state2 >= num_states) continue;
+		double rate_val = site_rate->getRate(rate_id);
+		if (homo_rate)
+			rate_val = 1.0;
+		double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2);
+		lh -= log(trans);
+		rate_id++;
+	}
+	return lh;
+}
+
+double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
+	RateHeterogeneity *site_rate = tree->getRate();
+	int i, rate_id;
+	int nptn = scaff.length();
+	double lh = 0.0;
+	df = 0.0; ddf = 0.0;
+
+	for (i = 0, rate_id = 0; i < nptn; i++) {
+		int state1 = scaff[i];
+		int state2 = read[i];
+		if (state1 >= num_states || state2 >= num_states) continue;
+		double rate_val = site_rate->getRate(rate_id);
+		if (homo_rate)
+			rate_val = 1.0;
+		double rate_sqr = rate_val * rate_val;
+		double derv1, derv2;
+		double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
+		lh -= log(trans);
+		double d1 = derv1 / trans;
+		df -= rate_val * d1;
+		ddf -= rate_sqr * (derv2/trans - d1*d1);
+		rate_id++;	
+	}
+	return lh;
+}
+
+/****************************************************************************
+        NGSReadSet
+ ****************************************************************************/
+
+void reverseComplement(string &str) {
+	string out;
+	out.resize(str.length(), ' ');
+	string::reverse_iterator it;
+	string::iterator oit;
+	for (it = str.rbegin(), oit = out.begin(); it != str.rend(); it++, oit++) {
+		char c = toupper(*it);
+		switch (c) {
+			case 'A': *oit = 'T'; break;
+			case 'T': *oit = 'A'; break;
+			case 'G': *oit = 'C'; break;
+			case 'C': *oit = 'G'; break;
+			default: *oit = *it; break;
+		}
+	}
+	//cout << str << endl << out << endl;
+	str = out;
+}
+
+//("File","total",0.8,-1)
+void NGSReadSet::parsNextGen(string filename, string ref_ID,double ident,int mismatches) 
+{
+//	cout<<"start"<<endl;
+	string a= "total";
+	size_t buffer_size = 1200;
+	ifstream myfile; //test2
+	myfile.open(filename.c_str(),ifstream::in);
+	if(!myfile.good()){
+		cout<<"No such file "<<filename.c_str()<<endl;
+		exit(0);
+	}
+	char* line = new char[buffer_size];
+//	cout<<"start"<<endl;
+
+	NGSRead tempread;
+	tempread.init();
+	tempread.tree = tree;
+	tempread.num_states = tree->aln->num_states;
+
+	ReadInfo read_info;
+
+	myfile.getline(line,buffer_size);
+	string ref;
+	for (; !myfile.eof(); ) {
+		if(line[0]=='S'&& line[1]=='e'){
+			for(size_t i=0;i<buffer_size;i++){
+				if(line[i]=='\0' ||line[i]=='\n' ){
+					break;
+				}
+				if(tempread.id ==-2 && strncmp(&line[i],"ID: ",4)==0){
+					tempread.id = atoi(&line[i+4]);
+				}else if(tempread.id !=-2 && strncmp(&line[i],"ID: ",4)==0){
+					int id = atoi(&line[i+4]);
+
+					if(id==0){
+						tempread.flag=true;
+					}else{
+						tempread.flag=false;
+					}
+
+				}else if(strncmp(&line[i],"forward",7)==0){
+					tempread.direction=true;
+//					cout<<i<<endl;
+				}else if(strncmp(&line[i],"backward",8)==0){
+					tempread.direction=false;
+				}
+
+				if(strncmp(&line[i],"me: ",4)==0){
+					i=i+4;
+					while(i<buffer_size&&line[i]!=' '){
+						tempread.name+=line[i];
+						i++;
+					}
+				}
+				if(strncmp(&line[i],"re: ",4)==0){
+					tempread.score= atoi(&line[i+4]);
+					break;
+				}
+
+				if(strncmp(&line[i],"at: ",4)==0){
+					tempread.match_pos= atoi(&line[i+4])+1;
+				}
+				if(strncmp(&line[i],"ld: ",4)==0){
+					tempread.chr.clear();
+					size_t t=i+4;
+					while(t<buffer_size && line[t]!='\n' &&  line[t]!='\0'){
+						//tempread.chr.size()>3 &&
+						if( line[t]==' '){
+							break;
+						}
+						tempread.chr+=line[t];
+						t++;
+					}
+				}
+			}
+
+			if( (strcmp(tempread.chr.c_str(),ref_ID.c_str())==0 || strcmp(a.c_str(),ref_ID.c_str())==0 )){
+
+				myfile.getline(line,buffer_size);
+				for(size_t i=0;i<buffer_size;i++){
+					if(line[i]=='\0' ||line[i]=='\n' ){
+						break;
+					}
+					if(strncmp(&line[i],"es: ",4)==0){
+						tempread.times= atof(&line[i+4]);
+					}
+					if(strncmp(&line[i],"ty: ",4)==0){
+						tempread.identity=atof(&line[i+4]);
+						break;
+					}
+				}
+
+				if(tempread.identity>=ident){
+					string scaff;
+					string read;
+					myfile.getline(line,buffer_size);
+					size_t i=0;
+					while(i<buffer_size &&line[i]!=' '  &&line[i]!='\t'&&line[i]!='\0'&&line[i]!='\n'){
+						scaff+=line[i];
+						i++;
+					}
+
+					myfile.getline(line,buffer_size);
+					i=0;
+					int count=0;
+					while(i<buffer_size && line[i]!=' ' &&line[i]!='\t'&&line[i]!='\0'&&line[i]!='\n'){
+						read+=line[i];
+						if(line[i]!='-' && scaff[i]!='-' && scaff[i]!=line[i]){
+							count++;
+						}
+						i++;
+					}
+
+					tempread.scaff=scaff;
+					tempread.read=read;
+					if (!tempread.direction) {
+						reverseComplement(tempread.scaff);
+						reverseComplement(tempread.read);
+					}
+					tempread.convertState(tempread.scaff, SEQ_DNA);
+					tempread.convertState(tempread.read, SEQ_DNA);
+					assert(tempread.scaff.length() == tempread.read.length());
+
+					if(count==mismatches || mismatches < 0){
+						tempread.homo_rate = false;
+						read_info.distance = tempread.optimizeDist(1.0-tempread.identity);
+						tempread.homo_rate = true;
+						read_info.homo_distance = tempread.optimizeDist(1.0-tempread.identity);
+						read_info.id = tempread.id;
+						read_info.identity = tempread.identity;
+						push_back(read_info);
+					}
+					scaff.clear();
+					read.clear();
+				}
+			}
+			tempread.chr.clear();
+			tempread.init();
+		}
+
+		myfile.getline(line,buffer_size);
+		if (size()>0 && size() % 10000 == 0) cout << size() << " reads processed" << endl;
+
+	}
+
+	cout << size() << " total reads processed" << endl;
+
+	myfile.close();
+	delete [] line;
+}
+
+void NGSReadSet::writeInfo() {
+	cout << size() << " reads process in total" << endl;
+	return;
+}
+
 /****************************************************************************
         main function
  ****************************************************************************/
@@ -424,6 +686,18 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
 
 }*/
 
+void reportNGSReads(const char *file_name, Params &params, NGSReadSet &ngs_reads)
+{
+	ofstream out(file_name);
+	out.setf(ios::fixed,ios::floatfield);
+	out << "Read\tHamming_dist\tOne_rate_dist\tVarying_rate_dist" << endl;
+	for (int i = 0; i < ngs_reads.size(); i++)
+		out << ngs_reads[i].id << '\t' << 1.0 - ngs_reads[i].identity << 
+		'\t' << ngs_reads[i].homo_distance << '\t' << ngs_reads[i].distance << endl;
+	out.close();
+	cout << endl << "Results written to: " << file_name << endl << endl;
+
+}
 
 void runNGSAnalysis(Params &params) {
 	char model_name[20];
@@ -494,7 +768,7 @@ void runNGSAnalysis(Params &params) {
 
 	cout << endl << "--> INFERING RATE ASSUMING POSITION-SPECIFIC MODEL..." << endl << endl;
 	for (int pos = 0; pos < aln.ncategory; pos++) {
-		cout << "Position " << pos << " / ";
+		cout << "Position " << pos+1 << " / ";
 		int *pair_pos = aln.pair_freq + (pos*aln.num_states*aln.num_states);
 		testSingleRateModel(params, aln, tree, original_model, pair_pos, part_rate[pos], rate_name, false);
 	}
@@ -513,4 +787,15 @@ void runNGSAnalysis(Params &params) {
 	out_file += ".ngs";
 	reportNGSAnalysis(out_file.c_str(), params, aln, tree, part_rate, rate_name);
 
+	if (!params.ngs_mapped_reads) return;
+	
+	NGSReadSet ngs_reads;
+	ngs_reads.tree = &tree;
+	cout << "Reading mapped reads file " << params.ngs_mapped_reads << " ... " << endl;
+	ngs_reads.parsNextGen(params.ngs_mapped_reads);
+	ngs_reads.writeInfo();
+
+	out_file = params.ngs_mapped_reads;
+	out_file += ".dist";
+	reportNGSReads(out_file.c_str(), params, ngs_reads);
 }

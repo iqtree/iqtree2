@@ -52,6 +52,8 @@ public:
 	*/
 	NGSAlignment(int nstate, int ncat, int *freq);
 
+	NGSAlignment(int nstate, string &seq1, string &seq2);
+
 	/**
 		read file in Fritz's format
 	*/
@@ -189,6 +191,64 @@ public:
 
 };
 
+class NGSRead : public AlignmentPairwise {
+public:
+
+	void init();
+
+	int orig_length;
+	int score; //brauch ich das???
+	int id;
+	int scaff_id;
+	int match_pos;
+	bool direction;
+	string chr;
+	string scaff;
+	string read;
+	double times;
+	bool flag;
+	float identity;
+	string name;
+
+	bool homo_rate;
+
+	/**
+		compute the likelihood for a distance between two sequences. Used for the ML optimization of the distance.
+		@param value x-value of the function
+		@return log-likelihood 
+	*/
+	virtual double computeFunction(double value);
+
+
+	/**
+		This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
+		used by Newton raphson method to minimize the function.
+		@param value x-value of the function
+		@param df (OUT) first derivative
+		@param ddf (OUT) second derivative
+		@return f(value) of function f you want to minimize
+	*/
+	virtual double computeFuncDerv(double value, double &df, double &ddf);
+	
+};
+
+struct ReadInfo {
+	int id;
+	float identity;
+	float distance;
+	float homo_distance;
+};
+
+
+class NGSReadSet : public vector<ReadInfo>  {
+public:
+	void parsNextGen(string filename, 
+		string ref_ID="total",double ident=0.0,int mismatches=-1);
+	void writeInfo();
+
+	PhyloTree *tree;
+
+};
 
 /**
 	Main function

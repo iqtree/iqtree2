@@ -233,14 +233,12 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
 	return gaps_only;
 }
 
-enum SeqType {SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_UNKNOWN};
-
 /**
 	detect the data type of the input sequences
 	@param sequences vector of strings
 	@return the data type of the input sequences
 */
-SeqType detectSequenceType(StrVector &sequences) {
+SeqType Alignment::detectSequenceType(StrVector &sequences) {
 	int num_nuc = 0;
 	int num_ungap = 0;
 	int num_bin = 0;
@@ -270,7 +268,7 @@ SeqType detectSequenceType(StrVector &sequences) {
 	@param seq_type data type (SEQ_DNA, etc.)
 	@return state ID
 */
-char convertState(char state, SeqType seq_type) {
+char Alignment::convertState(char state, SeqType seq_type) {
 	if (state == '?' || state == '-')
 		return STATE_UNKNOWN;
 
@@ -356,6 +354,11 @@ char Alignment::convertStateBack(char state) {
 	default:
 		return '?';
 	}
+}
+
+void Alignment::convertState(string &str, SeqType seq_type) {
+	for (string::iterator it = str.begin(); it != str.end(); it++)
+		(*it) = convertState(*it, seq_type);
 }
 
 int Alignment::readPhylip(char *filename, char *sequence_type) {

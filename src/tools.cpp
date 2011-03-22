@@ -596,6 +596,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.mcat_type = MCAT_LOG + MCAT_PATTERN;
     params.rate_file = NULL;
     params.ngs_file = NULL;
+    params.ngs_mapped_reads = NULL;
 	
 	struct timeval tv;
 	struct timezone tz;
@@ -901,6 +902,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -sf <ngs_file>";
 				params.ngs_file = argv[cnt];
+			} else if (strcmp(argv[cnt],"-sm") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sm <ngs_mapped_read_file>";
+				params.ngs_mapped_reads = argv[cnt];
 			} else if (strcmp(argv[cnt],"-st") == 0) {
 				cnt++;
 				if (cnt >= argc)

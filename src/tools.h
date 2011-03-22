@@ -815,6 +815,11 @@ struct Params {
 		next-generation sequencing input file for Fritz project
 	*/
 	char *ngs_file;
+	
+	/**
+		next-generation sequencing input file containing mapped reads to the reference genome
+	*/
+	char *ngs_mapped_reads;
 };
 
 /**

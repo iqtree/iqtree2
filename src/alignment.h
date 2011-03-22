@@ -22,6 +22,8 @@ const char STATE_UNKNOWN = 126;
 const char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
 
+enum SeqType {SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_UNKNOWN};
+
 
 #ifdef USE_HASH_MAP
 /*
@@ -119,6 +121,10 @@ public:
 /****************************************************************************
 	output alignment 
 ****************************************************************************/
+	SeqType detectSequenceType(StrVector &sequences);
+
+	char convertState(char state, SeqType seq_type);
+	void convertState(string &str, SeqType seq_type);
 
 	char convertStateBack(char state);
 
