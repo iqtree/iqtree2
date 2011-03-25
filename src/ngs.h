@@ -194,23 +194,75 @@ public:
 class NGSRead : public AlignmentPairwise {
 public:
 
+	/** 
+		constructor
+	*/
+	NGSRead(PhyloTree *atree);
+
 	void init();
 
-	int orig_length;
+	//int orig_length;
+
+	/**
+		alignment score
+	*/
 	int score; //brauch ich das???
+
+	/**
+		read ID
+	*/
 	int id;
-	int scaff_id;
+
+	//int scaff_id;
+
+	/**
+		matched position in the reference sequence
+	*/
 	int match_pos;
+
+	/**
+		TRUE for mapping forward strand, FALSE for backward
+	*/
 	bool direction;
+
+	/**
+		name of the reference sequence for which match found
+	*/
 	string chr;
+
+	/**
+		mapped portion of reference sequence
+	*/
 	string scaff;
+
+	/**
+		mapped portion of read
+	*/
 	string read;
+
+	/**
+		number of times that read is mapped (multiple optimal alignment scores)
+	*/
 	double times;
+
+	/**
+		TRUE if it is the first match, FALSE otherwise (in case of multiple hits)
+	*/
 	bool flag;
+
+	/**
+		alignment identity 
+	*/
 	float identity;
+
+	/**
+		read name
+	*/
 	string name;
 
 	double homo_rate;
+
+	void computePairFreq();
 
 	/**
 		compute the likelihood for a distance between two sequences. Used for the ML optimization of the distance.
@@ -244,13 +296,32 @@ struct ReadInfo {
 
 class NGSReadSet : public vector<ReadInfo>  {
 public:
-	void parsNextGen(string filename, 
-		string ref_ID="total",double ident=0.0,int mismatches=-1);
+
+	/**
+		read in file containing mapped reads to the reference
+		@param filename file name
+		@param ref_ID reference sequence name to accept reads
+		@param ident identity threshold to accept reads
+		@param mismatches number of exact mismatches to accept reads
+	*/
+	void parseNextGen(string filename, string ref_ID="total",double ident=0.0,int mismatches=-1);
+
+	/**
+		this function will be called everytime a read is accepted from the parseNextGen()
+		@param tempread read at current position while parsing 
+	*/
+	virtual void processReadWhileParsing(NGSRead &tempread);
+
+	/**
+		write information
+	*/
 	void writeInfo();
 
 	PhyloTree *tree;
+
 	double homo_rate;
 
+	vector<double*> pair_freq;
 
 };
 

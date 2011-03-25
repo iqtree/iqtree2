@@ -290,6 +290,12 @@ double NGSTree::optimizeAllBranches(int iterations) {
         NGSRead
  ****************************************************************************/
 
+NGSRead::NGSRead(PhyloTree *atree)  {
+	init();
+	tree = atree;
+	num_states = tree->aln->num_states;
+	pair_freq = new int[num_states * num_states];
+}
 
 void NGSRead::init() {
 	scaff.clear();
@@ -302,6 +308,15 @@ void NGSRead::init() {
 	direction=true;
 }
 
+void NGSRead::computePairFreq() {
+	int len = scaff.length();
+	assert(len == read.length());
+	memset(pair_freq, 0, sizeof(int)*num_states*num_states);
+	for (int i = 0; i < len; i++)
+		if (scaff[i] < num_states && read[i] < num_states)
+			pair_freq[scaff[i]*num_states+read[i]]++;
+}
+
 
 double NGSRead::computeFunction(double value) {
 
@@ -309,16 +324,23 @@ double NGSRead::computeFunction(double value) {
 	int i, rate_id;
 	int nptn = scaff.length();
 	double lh = 0.0;
-
+	if (homo_rate > 0.0) {
+		int trans_size = num_states*num_states;
+		double trans_mat[trans_size];
+		tree->getModelFactory()->computeTransMatrix(value * homo_rate, trans_mat);
+		for (i = 0; i < trans_size; i++) if (pair_freq[i]) {
+			lh -= pair_freq[i] * log(trans_mat[i]);
+		}
+		return lh;
+	}
 	// site-specific rates
 	for (i = 0, rate_id = 0; i < nptn; i++) {
 		int state1 = scaff[i];
 		int state2 = read[i];
 		if (state1 >= num_states || state2 >= num_states) continue;
+		double trans;
 		double rate_val = site_rate->getRate(rate_id);
-		if (homo_rate > 0)
-			rate_val = homo_rate;
-		double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2);
+		trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2);
 		lh -= log(trans);
 		rate_id++;
 	}
@@ -332,22 +354,38 @@ double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
 	double lh = 0.0;
 	df = 0.0; ddf = 0.0;
 
+	if (homo_rate > 0.0) { // homogeneous rate
+		int trans_size = num_states*num_states;
+		double trans_mat[trans_size];
+		double trans_derv1[trans_size];
+		double trans_derv2[trans_size];
+		tree->getModelFactory()->computeTransDerv(value * homo_rate, trans_mat, trans_derv1, trans_derv2);
+		for (i = 0; i < trans_size; i++) if (pair_freq[i]) {
+			lh -= pair_freq[i] * log(trans_mat[i]);
+			double d1 = trans_derv1[i] / trans_mat[i];
+			df -=  pair_freq[i] * d1;
+			ddf -= pair_freq[i] * (trans_derv2[i]/trans_mat[i] - d1*d1);
+		}
+		df *= homo_rate;
+		ddf *= homo_rate * homo_rate;	
+		return lh;
+	}
+
 	for (i = 0, rate_id = 0; i < nptn; i++) {
 		int state1 = scaff[i];
 		int state2 = read[i];
 		if (state1 >= num_states || state2 >= num_states) continue;
+		double trans, derv1, derv2;
 		double rate_val = site_rate->getRate(rate_id);
-		if (homo_rate > 0)
-			rate_val = homo_rate;
 		double rate_sqr = rate_val * rate_val;
-		double derv1, derv2;
-		double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
+		trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
 		lh -= log(trans);
 		double d1 = derv1 / trans;
 		df -= rate_val * d1;
 		ddf -= rate_sqr * (derv2/trans - d1*d1);
 		rate_id++;	
 	}
+
 	return lh;
 }
 
@@ -362,12 +400,13 @@ void reverseComplement(string &str) {
 	string::iterator oit;
 	for (it = str.rbegin(), oit = out.begin(); it != str.rend(); it++, oit++) {
 		char c = toupper(*it);
+		//*oit = c;
 		switch (c) {
 			case 'A': *oit = 'T'; break;
 			case 'T': *oit = 'A'; break;
 			case 'G': *oit = 'C'; break;
 			case 'C': *oit = 'G'; break;
-			default: *oit = *it; break;
+			default: *oit = c; break;
 		}
 	}
 	//cout << str << endl << out << endl;
@@ -375,7 +414,7 @@ void reverseComplement(string &str) {
 }
 
 //("File","total",0.8,-1)
-void NGSReadSet::parsNextGen(string filename, string ref_ID,double ident,int mismatches) 
+void NGSReadSet::parseNextGen(string filename, string ref_ID,double ident,int mismatches) 
 {
 //	cout<<"start"<<endl;
 	string a= "total";
@@ -389,12 +428,7 @@ void NGSReadSet::parsNextGen(string filename, string ref_ID,double ident,int mis
 	char* line = new char[buffer_size];
 //	cout<<"start"<<endl;
 
-	NGSRead tempread;
-	tempread.init();
-	tempread.tree = tree;
-	tempread.num_states = tree->aln->num_states;
-
-	ReadInfo read_info;
+	NGSRead tempread(tree);
 
 	myfile.getline(line,buffer_size);
 	string ref;
@@ -490,24 +524,9 @@ void NGSReadSet::parsNextGen(string filename, string ref_ID,double ident,int mis
 
 					tempread.scaff=scaff;
 					tempread.read=read;
-					if (!tempread.direction) {
-						reverseComplement(tempread.scaff);
-						reverseComplement(tempread.read);
-					}
-					tempread.convertState(tempread.scaff, SEQ_DNA);
-					tempread.convertState(tempread.read, SEQ_DNA);
-					assert(tempread.scaff.length() == tempread.read.length());
 
 					if(count==mismatches || mismatches < 0){
-						tempread.homo_rate = homo_rate;
-						read_info.homo_distance = tempread.optimizeDist(1.0-tempread.identity);
-						read_info.homo_logl = -tempread.computeFunction(read_info.homo_distance);
-						tempread.homo_rate = 0.0;
-						read_info.distance = tempread.optimizeDist(read_info.homo_distance);
-						read_info.logl = -tempread.computeFunction(read_info.distance);
-						read_info.id = tempread.id;
-						read_info.identity = tempread.identity;
-						push_back(read_info);
+						processReadWhileParsing(tempread);
 					}
 					scaff.clear();
 					read.clear();
@@ -522,14 +541,56 @@ void NGSReadSet::parsNextGen(string filename, string ref_ID,double ident,int mis
 
 	}
 
-	cout << size() << " total reads processed" << endl;
+	cout << size() << " reads processed in total" << endl;
 
 	myfile.close();
 	delete [] line;
 }
 
+void NGSReadSet::processReadWhileParsing(NGSRead &tempread) {
+
+	//if (!tempread.flag) return;
+	
+	if (!tempread.direction) {
+		reverseComplement(tempread.scaff);
+		reverseComplement(tempread.read);
+	}
+	tempread.convertState(tempread.scaff, SEQ_DNA);
+	tempread.convertState(tempread.read, SEQ_DNA);
+	assert(tempread.scaff.length() == tempread.read.length());
+
+	ReadInfo read_info;
+
+	tempread.homo_rate = homo_rate;
+	tempread.computePairFreq();
+	read_info.homo_distance = tempread.optimizeDist(1.0-tempread.identity);
+	read_info.homo_logl = -tempread.computeFunction(read_info.homo_distance);
+	tempread.homo_rate = 0.0;
+	read_info.distance = tempread.optimizeDist(read_info.homo_distance);
+	read_info.logl = -tempread.computeFunction(read_info.distance);
+	read_info.id = tempread.id;
+	read_info.identity = tempread.identity;
+	push_back(read_info);
+
+
+	int i, id;
+	for (i = 0, id = 0; i < tempread.scaff.length(); i++) {
+		int state1 = tempread.scaff[i];
+		int state2 = tempread.read[i];
+		if (state1 >= tempread.num_states || state2 >= tempread.num_states) continue;
+		double *pair_pos;
+		if (id >= pair_freq.size()) {
+			pair_pos = new double[tempread.num_states * tempread.num_states];
+			memset(pair_pos, 0, sizeof(double)*tempread.num_states * tempread.num_states);
+			pair_freq.push_back(pair_pos);
+		} else pair_pos = pair_freq[id];
+		pair_pos[state1*tempread.num_states + state2] += 1.0/tempread.times;
+		id++;
+	}
+}
+
 void NGSReadSet::writeInfo() {
-	cout << size() << " reads process in total" << endl;
+	//cout << size() << " reads process in total" << endl;
 	return;
 }
 
@@ -614,8 +675,9 @@ bool checkFreq(int *pair_freq, int n) {
 }
 
 void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string model, 
-	int *freq, DoubleVector &rate_info, StrVector &rate_name, bool write_info) {
-
+	int *freq, DoubleVector &rate_info, StrVector &rate_name, 
+	bool write_info, const char *report_file) 
+{
 	char model_name[20];
 	NGSAlignment sum_aln(aln.num_states, 1, freq);
 
@@ -652,6 +714,12 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
 		sum_tree.getModel()->getStateFrequency(rate_mat);
 		rate_info.insert(rate_info.end(), rate_mat, rate_mat+aln.num_states);
     }
+
+	if (report_file) {
+		DoubleMatrix tmp(1);
+		tmp[0] = rate_info;
+		reportNGSAnalysis(report_file, params, sum_aln, sum_tree, tmp, rate_name);
+	}
 }
 
 
@@ -698,11 +766,30 @@ void reportNGSReads(const char *file_name, Params &params, NGSReadSet &ngs_reads
 		'\t' << ngs_reads[i].homo_distance << '\t' << ngs_reads[i].distance << 
 		'\t' << ngs_reads[i].homo_logl << '\t' << ngs_reads[i].logl << endl;
 	out.close();
-	cout << endl << "Results written to: " << file_name << endl << endl;
+	cout << endl << "Read distances to the reference written to: " << file_name << endl << endl;
 
+	string count_file = params.ngs_mapped_reads;
+	count_file += ".freq";
+	out.open(count_file.c_str());
+	int num_states = ngs_reads.tree->getModel()->num_states;
+	out << ngs_reads.pair_freq.size() << " " << num_states << endl;
+	for (vector<double*>::iterator it = ngs_reads.pair_freq.begin(); it != ngs_reads.pair_freq.end(); it++) {
+		for (int i = 0; i < num_states; i++) {
+			for (int j = 0; j < num_states; j++)
+				out << int(round((*it)[i*num_states+j])) << ((j<num_states-1) ? "\t" : "");
+			out << endl;
+		}
+		out << endl;
+	}
+	out.close();
+	cout << "Position-specific pair counts written to: " << count_file << endl << endl;
 }
 
 void runNGSAnalysis(Params &params) {
+
+	time_t begin_time;
+	time(&begin_time);
+
 	char model_name[20];
 	// read input file, initialize NGSAlignment
 	NGSAlignment aln(params.ngs_file);
@@ -773,7 +860,7 @@ void runNGSAnalysis(Params &params) {
 	for (int pos = 0; pos < aln.ncategory; pos++) {
 		cout << "Position " << pos+1 << " / ";
 		int *pair_pos = aln.pair_freq + (pos*aln.num_states*aln.num_states);
-		testSingleRateModel(params, aln, tree, original_model, pair_pos, part_rate[pos], rate_name, false);
+		testSingleRateModel(params, aln, tree, original_model, pair_pos, part_rate[pos], rate_name, false, NULL);
 	}
 
 
@@ -783,24 +870,31 @@ void runNGSAnalysis(Params &params) {
 	cout << endl << "-->INFERING RATE UNDER EQUAL-RATE NULL MODEL..." << endl << endl;
 	aln.computeSumPairFreq(sum_freq);
 	DoubleVector null_rate;
-	testSingleRateModel(params, aln, tree, original_model, sum_freq, null_rate, rate_name, true);
+	string out_file = params.out_prefix;
+	out_file += ".ngs_e";
+	testSingleRateModel(params, aln, tree, original_model, sum_freq, null_rate, rate_name, true, out_file.c_str());
 
 	// report running results
-	string out_file = params.out_prefix;
+	out_file = params.out_prefix;
 	out_file += ".ngs";
 	reportNGSAnalysis(out_file.c_str(), params, aln, tree, part_rate, rate_name);
 
-	if (!params.ngs_mapped_reads) return;
+	if (params.ngs_mapped_reads) {
 	
-	NGSReadSet ngs_reads;
-	ngs_reads.tree = &tree;
-	ngs_reads.homo_rate = null_rate[0];
-	cout << "Homogeneous rate: " << ngs_reads.homo_rate << endl;
-	cout << "Reading mapped reads file " << params.ngs_mapped_reads << " ... " << endl;
-	ngs_reads.parsNextGen(params.ngs_mapped_reads);
-	ngs_reads.writeInfo();
+		NGSReadSet ngs_reads;
+		ngs_reads.tree = &tree;
+		ngs_reads.homo_rate = null_rate[0];
+		//cout << "Homogeneous rate: " << ngs_reads.homo_rate << endl;
+		cout << "Computing read distances to reference from file " << params.ngs_mapped_reads << " ... " << endl;
+		ngs_reads.parseNextGen(params.ngs_mapped_reads);
+		ngs_reads.writeInfo();
+	
+		out_file = params.ngs_mapped_reads;
+		out_file += ".dist";
+		reportNGSReads(out_file.c_str(), params, ngs_reads);
+	}
+	time_t end_time;
+	time(&end_time);
 
-	out_file = params.ngs_mapped_reads;
-	out_file += ".dist";
-	reportNGSReads(out_file.c_str(), params, ngs_reads);
+	cout << "Total run time: " << difftime(end_time, begin_time) << " seconds" << endl << endl;
 }
