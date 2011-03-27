@@ -29,6 +29,10 @@
         NGSAlignment
  ****************************************************************************/
 
+NGSAlignment::NGSAlignment(PhyloTree *atree) : AlignmentPairwise() {
+	tree = atree;
+}
+
 NGSAlignment::NGSAlignment(const char *filename) : AlignmentPairwise() {
 	readFritzFile(filename);
 }
@@ -56,6 +60,14 @@ NGSAlignment::NGSAlignment(int nstate, string &seq1, string &seq2) {
 			pair_freq[state1*num_states+state2] ++;
 	}
 }
+
+char NGSAlignment::convertState(char state, SeqType seq_type) {
+	char c = Alignment::convertState(state, SEQ_DNA);
+	if (c == STATE_UNKNOWN) return 4;
+	if (c >= 4) return 5;
+	return c;
+}
+
 
 void NGSAlignment::readFritzFile(const char *filename) {
 	cout << "Reading Fritz file " << filename << " ..." << endl;
@@ -264,6 +276,119 @@ void NGSRate::writeInfo(ostream &out) {
 }
 
 /****************************************************************************
+        NGSRateCat
+ ****************************************************************************/
+NGSRateCat::NGSRateCat(PhyloTree *tree, int ncat) {
+	phylo_tree = tree;
+	ncategory = ncat;
+	rates = new double[ncategory];
+	proportion = new double[ncategory];
+	int i;
+	for (i = 0; i < ncategory; i++) {
+		rates[i] = (double)rand()/RAND_MAX;
+		proportion[i] = 1.0/ncategory;
+	}
+
+	sum_pair_freq = new int[tree->aln->num_states * tree->aln->num_states];
+	((NGSAlignment*)tree->aln)->computeSumPairFreq(sum_pair_freq);
+
+	name = "+FC";
+	name += convertIntToString(ncategory);
+	full_name = name;
+	is_categorized = true;
+}
+
+
+/**
+	return the number of dimensions
+*/
+int NGSRateCat::getNDim() { 
+	return 2*ncategory-1;
+}
+
+void NGSRateCat::setVariables(double *variables) {
+	memcpy(variables+1, rates, ncategory * sizeof(double));
+	memcpy(variables+ncategory+1, proportion, (ncategory-1)*sizeof(double));
+}
+
+void NGSRateCat::getVariables(double *variables) {
+	memcpy(rates, variables+1, ncategory * sizeof(double));
+	memcpy(proportion, variables+ncategory+1, (ncategory-1)*sizeof(double));
+	double sum = 0.0;
+	for (int i = 0; i < ncategory-1; i++)
+		sum += proportion[i];
+	proportion[ncategory-1] = 1.0 - sum;
+}
+
+
+/**
+	the target function which needs to be optimized
+	@param x the input vector x
+	@return the function value at x
+*/
+double NGSRateCat::targetFunk(double x[]) { 
+	getVariables(x);
+	if (proportion[ncategory-1] <= 1e-6) return 1e9;
+	return -phylo_tree->computeLikelihood();
+}
+
+
+double NGSRateCat::optimizeParameters() {
+	int ndim = getNDim();
+	
+	// return if nothing to be optimized
+	if (ndim == 0) return 0.0;
+
+	cout << "Optimizing " << name << " model parameters..." << endl;
+
+
+	double *variables = new double[ndim+1];
+	double *upper_bound = new double[ndim+1];
+	double *lower_bound = new double[ndim+1];
+	bool *bound_check = new bool[ndim+1];
+	int i;
+	double score;
+	
+	// by BFGS algorithm
+	setVariables(variables);
+	for (i = 1; i <= ndim; i++) {
+		//cout << variables[i] << endl;
+		lower_bound[i] = 1e-4;
+		upper_bound[i] = 100.0;
+		bound_check[i] = false;
+	}
+	for (i = ndim-ncategory+2; i <= ndim; i++) 
+		upper_bound[i] = 1.0;
+	//packData(variables, lower_bound, upper_bound, bound_check);
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, 1e-6);
+
+	getVariables(variables);
+	
+	delete [] bound_check;
+	delete [] lower_bound;
+	delete [] upper_bound;
+	delete [] variables;
+
+	return score;
+}
+
+
+void NGSRateCat::writeInfo(ostream &out) {
+	int i;
+	double avg = 0.0;
+	out << "Rates: ";
+	for (i = 0; i < ncategory; i++)
+		out << " " << rates[i];
+	out << endl << "Proportion: ";
+	for (i = 0; i < ncategory; i++)
+		out << " " << proportion[i];
+	out << endl;
+	for (i = 0; i < ncategory; i++)
+		avg += rates[i]*proportion[i];
+	cout << avg << endl;
+}
+
+/****************************************************************************
         NGSTree
  ****************************************************************************/
 
@@ -287,14 +412,42 @@ double NGSTree::optimizeAllBranches(int iterations) {
 
 
 /****************************************************************************
+        NGSTreeCat
+ ****************************************************************************/
+
+NGSTreeCat::NGSTreeCat(Params &params, NGSAlignment *alignment) : NGSTree(params, alignment) {
+}
+
+double NGSTreeCat::computeLikelihood(double *pattern_lh) {
+	int num_states = getModel()->num_states;
+	int trans_size = num_states*num_states;
+	double sum_trans_mat[trans_size], trans_mat[trans_size];
+	int i, cat;
+	NGSRateCat *site_rate = (NGSRateCat*)getRate();
+	
+	memset(sum_trans_mat, 0, trans_size * sizeof(double));
+	for (cat = 0; cat < site_rate->getNDiscreteRate(); cat++) {
+		getModel()->computeTransMatrix(site_rate->getRate(cat), trans_mat);
+		for (i = 0; i < trans_size; i++)
+			sum_trans_mat[i] += site_rate->proportion[cat]*trans_mat[i];
+	}
+	double lh = 0.0;
+	for (i = 0; i < trans_size; i++)
+		lh += ((NGSAlignment*)aln)->pair_freq[i] * log(sum_trans_mat[i]);
+	return lh;
+}
+
+
+/****************************************************************************
         NGSRead
  ****************************************************************************/
 
-NGSRead::NGSRead(PhyloTree *atree)  {
+NGSRead::NGSRead(PhyloTree *atree) : NGSAlignment(atree) {
 	init();
-	tree = atree;
-	num_states = tree->aln->num_states;
-	pair_freq = new int[num_states * num_states];
+	if (tree) {
+		num_states = tree->aln->num_states;
+	} else num_states = 4;
+	pair_freq = new int[(num_states+1) * (num_states+1)];
 }
 
 void NGSRead::init() {
@@ -550,48 +703,79 @@ void NGSReadSet::parseNextGen(string filename, string ref_ID,double ident,int mi
 void NGSReadSet::processReadWhileParsing(NGSRead &tempread) {
 
 	//if (!tempread.flag) return;
+	int i, id;
 	
 	if (!tempread.direction) {
 		reverseComplement(tempread.scaff);
 		reverseComplement(tempread.read);
 	}
-	tempread.convertState(tempread.scaff, SEQ_DNA);
-	tempread.convertState(tempread.read, SEQ_DNA);
+	tempread.convertStateStr(tempread.scaff, SEQ_DNA);
+	tempread.convertStateStr(tempread.read, SEQ_DNA);
 	assert(tempread.scaff.length() == tempread.read.length());
 
-	ReadInfo read_info;
+	int nstates = 4 + (!ngs_ignore_gaps);
 
-	tempread.homo_rate = homo_rate;
-	tempread.computePairFreq();
-	read_info.homo_distance = tempread.optimizeDist(1.0-tempread.identity);
-	read_info.homo_logl = -tempread.computeFunction(read_info.homo_distance);
-	tempread.homo_rate = 0.0;
-	read_info.distance = tempread.optimizeDist(read_info.homo_distance);
-	read_info.logl = -tempread.computeFunction(read_info.distance);
-	read_info.id = tempread.id;
-	read_info.identity = tempread.identity;
-	push_back(read_info);
-
-
-	int i, id;
 	for (i = 0, id = 0; i < tempread.scaff.length(); i++) {
 		int state1 = tempread.scaff[i];
 		int state2 = tempread.read[i];
-		if (state1 >= tempread.num_states || state2 >= tempread.num_states) continue;
-		double *pair_pos;
-		if (id >= pair_freq.size()) {
-			pair_pos = new double[tempread.num_states * tempread.num_states];
-			memset(pair_pos, 0, sizeof(double)*tempread.num_states * tempread.num_states);
+		if (state1 >= nstates || state2 >= nstates) continue;
+		double *pair_pos, *state_pos;
+		while (id >= state_freq.size()) {
+			state_pos = new double[nstates];
+			memset(state_pos, 0, sizeof(double)*(nstates));
+			state_freq.push_back(state_pos);
+		}
+		state_pos = state_freq[id];
+		state_pos[state2] += 1.0/tempread.times;
+		while (id >= pair_freq.size()) {
+			pair_pos = new double[(nstates) * (nstates)];
+			memset(pair_pos, 0, sizeof(double)*(nstates) * (nstates));
 			pair_freq.push_back(pair_pos);
-		} else pair_pos = pair_freq[id];
-		pair_pos[state1*tempread.num_states + state2] += 1.0/tempread.times;
+		}
+		pair_pos = pair_freq[id];
+		pair_pos[state1*(nstates) + state2] += 1.0/tempread.times;
 		id++;
 	}
+
+	if (tree) {
+		ReadInfo read_info;
+		tempread.homo_rate = homo_rate;
+		tempread.computePairFreq();
+		read_info.homo_distance = tempread.optimizeDist(1.0-tempread.identity);
+		read_info.homo_logl = -tempread.computeFunction(read_info.homo_distance);
+		tempread.homo_rate = 0.0;
+		read_info.distance = tempread.optimizeDist(read_info.homo_distance);
+		read_info.logl = -tempread.computeFunction(read_info.distance);
+		read_info.id = tempread.id;
+		read_info.identity = tempread.identity;
+		push_back(read_info);
+	}
+
+
 }
 
 void NGSReadSet::writeInfo() {
 	//cout << size() << " reads process in total" << endl;
 	return;
+}
+
+void NGSReadSet::writeFreqMatrix(ostream &out) {
+	int num_states = 4 + (!ngs_ignore_gaps);
+	out << pair_freq.size() << " " << num_states << endl;
+	vector<double*>::iterator it;
+	vector<double*>::iterator pit;
+	
+	for (it = pair_freq.begin(), pit = state_freq.begin(); it != pair_freq.end(); it++, pit++) {
+		for (int i = 0; i < num_states; i++) {
+			for (int j = 0; j < num_states; j++) {
+				if (!ngs_ignore_gaps && i == num_states-1 && j == num_states-1)
+					out << int(round((*pit)[i]*((*pit)[i]-1)/2));
+				else out << int(round((*it)[i*num_states+j])) << ((j<num_states-1) ? "\t" : "");
+			}
+			out << endl;
+		}
+		out << endl;
+	}
 }
 
 /****************************************************************************
@@ -722,6 +906,57 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
 	}
 }
 
+void testTwoRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string model, 
+	int *freq, DoubleVector &rate_info, StrVector &rate_name, 
+	bool write_info, const char *report_file) 
+{
+	char model_name[20];
+	NGSAlignment sum_aln(aln.num_states, 1, freq);
+
+	NGSTreeCat sum_tree(params, &sum_aln);
+	sum_aln.tree = &sum_tree;
+
+	if (model == "") 
+		sprintf(model_name, "GTR+FC2");
+	else
+		sprintf(model_name, "%s+FC2", model.c_str());
+	try {
+		params.model_name = model_name;
+		sum_tree.setModelFactory(new ModelFactory(params, &sum_tree));
+		sum_tree.setModel(sum_tree.getModelFactory()->model);
+		sum_tree.setRate(sum_tree.getModelFactory()->site_rate);
+    	double bestTreeScore = sum_tree.getModelFactory()->optimizeParameters(false, write_info);
+		cout << "LogL: " << bestTreeScore;
+		cout << " / Rate: " << sum_tree.getRate()->getRate(0) << endl;
+    } catch (const char*) {
+		cout << "Skipped due to sparse matrix" << endl;
+	//rate_info.insert(rate_info.end(), rate_name.size(), MIN_SITE_RATE);
+		return;
+    } catch (string &str) {
+    	cout << str;
+    	return;
+    }
+    //return sum_tree.getRate()->getRate(0);
+
+/*
+	rate_info.push_back(sum_tree.getRate()->getRate(0));
+
+    double rate_mat[aln.num_states*aln.num_states];
+    memset(rate_mat, 0, aln.num_states*aln.num_states*sizeof(double));
+    sum_tree.getModel()->getRateMatrix(rate_mat);
+    rate_info.insert(rate_info.end(), rate_mat, rate_mat+sum_tree.getModel()->getNumRateEntries());
+
+	if (tree.getModel()->isReversible()) {
+		sum_tree.getModel()->getStateFrequency(rate_mat);
+		rate_info.insert(rate_info.end(), rate_mat, rate_mat+aln.num_states);
+    }
+
+	if (report_file) {
+		DoubleMatrix tmp(1);
+		tmp[0] = rate_info;
+		reportNGSAnalysis(report_file, params, sum_aln, sum_tree, tmp, rate_name);
+	}*/
+}
 
 /*
 
@@ -771,19 +1006,28 @@ void reportNGSReads(const char *file_name, Params &params, NGSReadSet &ngs_reads
 	string count_file = params.ngs_mapped_reads;
 	count_file += ".freq";
 	out.open(count_file.c_str());
-	int num_states = ngs_reads.tree->getModel()->num_states;
-	out << ngs_reads.pair_freq.size() << " " << num_states << endl;
-	for (vector<double*>::iterator it = ngs_reads.pair_freq.begin(); it != ngs_reads.pair_freq.end(); it++) {
-		for (int i = 0; i < num_states; i++) {
-			for (int j = 0; j < num_states; j++)
-				out << int(round((*it)[i*num_states+j])) << ((j<num_states-1) ? "\t" : "");
-			out << endl;
-		}
-		out << endl;
-	}
+	ngs_reads.writeFreqMatrix(out);
 	out.close();
 	cout << "Position-specific pair counts written to: " << count_file << endl << endl;
+	
 }
+
+void computePairCount(Params &params, NGSTree *tree, double homo_rate) {
+	NGSReadSet ngs_reads;
+	ngs_reads.tree = tree;
+	ngs_reads.homo_rate = homo_rate;
+	ngs_reads.ngs_ignore_gaps = params.ngs_ignore_gaps;
+	//cout << "Homogeneous rate: " << ngs_reads.homo_rate << endl;
+	cout << "Computing read distances to reference from file " << params.ngs_mapped_reads << " ... " << endl;
+	ngs_reads.parseNextGen(params.ngs_mapped_reads);
+	ngs_reads.writeInfo();
+
+	string out_file = params.ngs_mapped_reads;
+	out_file += ".dist";
+	reportNGSReads(out_file.c_str(), params, ngs_reads);
+}
+
+
 
 void runNGSAnalysis(Params &params) {
 
@@ -791,6 +1035,12 @@ void runNGSAnalysis(Params &params) {
 	time(&begin_time);
 
 	char model_name[20];
+
+	if (!params.ngs_file) {
+		computePairCount(params, NULL, 0.0);
+		return;
+	}
+
 	// read input file, initialize NGSAlignment
 	NGSAlignment aln(params.ngs_file);
 	cout.setf(ios::fixed,ios::floatfield);
@@ -874,25 +1124,22 @@ void runNGSAnalysis(Params &params) {
 	out_file += ".ngs_e";
 	testSingleRateModel(params, aln, tree, original_model, sum_freq, null_rate, rate_name, true, out_file.c_str());
 
+	DoubleVector two_rate;
+
+	cout << endl << "-->INFERING RATE UNDER TWO-RATE MODEL..." << endl << endl;
+	testTwoRateModel(params, aln, tree, original_model, sum_freq, two_rate, rate_name, true, NULL);
+
+
 	// report running results
 	out_file = params.out_prefix;
 	out_file += ".ngs";
 	reportNGSAnalysis(out_file.c_str(), params, aln, tree, part_rate, rate_name);
 
 	if (params.ngs_mapped_reads) {
-	
-		NGSReadSet ngs_reads;
-		ngs_reads.tree = &tree;
-		ngs_reads.homo_rate = null_rate[0];
-		//cout << "Homogeneous rate: " << ngs_reads.homo_rate << endl;
-		cout << "Computing read distances to reference from file " << params.ngs_mapped_reads << " ... " << endl;
-		ngs_reads.parseNextGen(params.ngs_mapped_reads);
-		ngs_reads.writeInfo();
-	
-		out_file = params.ngs_mapped_reads;
-		out_file += ".dist";
-		reportNGSReads(out_file.c_str(), params, ngs_reads);
+		computePairCount(params, &tree, null_rate[0]);	
 	}
+
+
 	time_t end_time;
 	time(&end_time);
 

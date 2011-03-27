@@ -1447,7 +1447,7 @@ int main(int argc, char *argv[])
 		calcTreeCluster(params);
 	} else if (params.aln_file) {
 		runPhyloAnalysis(params);
-	} else if (params.ngs_file) {
+	} else if (params.ngs_file || params.ngs_mapped_reads) {
 		runNGSAnalysis(params);
 	} else if (params.consensus_type != CT_NONE) {
 		MExtTree tree;

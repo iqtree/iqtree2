@@ -123,8 +123,8 @@ public:
 ****************************************************************************/
 	SeqType detectSequenceType(StrVector &sequences);
 
-	char convertState(char state, SeqType seq_type);
-	void convertState(string &str, SeqType seq_type);
+	virtual char convertState(char state, SeqType seq_type);
+	virtual void convertStateStr(string &str, SeqType seq_type);
 
 	char convertStateBack(char state);
 

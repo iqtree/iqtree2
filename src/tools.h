@@ -820,6 +820,8 @@ struct Params {
 		next-generation sequencing input file containing mapped reads to the reference genome
 	*/
 	char *ngs_mapped_reads;
+	
+	bool ngs_ignore_gaps;
 };
 
 /**

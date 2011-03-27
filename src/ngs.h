@@ -42,6 +42,8 @@ public:
 		constructor
 		@param filename file in Fritz's format
 	*/
+	NGSAlignment(PhyloTree *atree);
+
     NGSAlignment(const char *filename);
 
 	/**
@@ -53,6 +55,9 @@ public:
 	NGSAlignment(int nstate, int ncat, int *freq);
 
 	NGSAlignment(int nstate, string &seq1, string &seq2);
+
+	virtual char convertState(char state, SeqType seq_type);
+
 
 	/**
 		read file in Fritz's format
@@ -191,7 +196,90 @@ public:
 
 };
 
-class NGSRead : public AlignmentPairwise {
+class NGSRateCat : public RateMeyerDiscrete {
+public:
+
+	/**
+		@param tree must be NGSTree type
+	*/
+	NGSRateCat(PhyloTree *tree, int ncat);
+
+	/**
+		optimize rates of all site-patterns
+		compute categorized rates from the "continuous" rate of the original Meyer & von Haeseler model.
+		The current implementation uses the k-means algorithm with k-means++ package.
+	*/
+	virtual double optimizeParameters();
+
+
+	/**
+		return the number of dimensions
+	*/
+	virtual int getNDim();
+	
+
+	/**
+		the target function which needs to be optimized
+		@param x the input vector x
+		@return the function value at x
+	*/
+	virtual double targetFunk(double x[]);
+
+	/**
+		write information
+		@param out output stream
+	*/
+	virtual void writeInfo(ostream &out);
+
+	/**
+		proportion of position categories
+	*/
+	double *proportion;
+
+	/**
+		sum of pair freq from all positions
+	*/
+	int *sum_pair_freq;
+
+protected:
+
+	/**
+		this function is served for the multi-dimension optimization. It should pack the model parameters 
+		into a vector that is index from 1 (NOTE: not from 0)
+		@param variables (OUT) vector of variables, indexed from 1
+	*/
+	virtual void setVariables(double *variables);
+
+	/**
+		this function is served for the multi-dimension optimization. It should assign the model parameters 
+		from a vector of variables that is index from 1 (NOTE: not from 0)
+		@param variables vector of variables, indexed from 1
+	*/
+	virtual void getVariables(double *variables);
+};
+
+
+class NGSTreeCat : public NGSTree {
+
+public:
+
+    /**
+     * Constructor with given alignment
+     * @param params program parameters
+     * @param alignment
+     */
+	NGSTreeCat(Params &params, NGSAlignment *alignment);	
+    /**
+            compute the tree likelihood
+            @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
+                            assuming pattern_lh has the size of the number of patterns
+            @return tree likelihood
+     */
+    virtual double computeLikelihood(double *pattern_lh = NULL);
+};
+
+
+class NGSRead : public NGSAlignment {
 public:
 
 	/** 
@@ -312,6 +400,8 @@ public:
 	*/
 	virtual void processReadWhileParsing(NGSRead &tempread);
 
+	void writeFreqMatrix(ostream &out);
+
 	/**
 		write information
 	*/
@@ -322,6 +412,10 @@ public:
 	double homo_rate;
 
 	vector<double*> pair_freq;
+
+	vector<double*> state_freq;
+
+	bool ngs_ignore_gaps;
 
 };
 

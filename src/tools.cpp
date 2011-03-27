@@ -597,7 +597,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.rate_file = NULL;
     params.ngs_file = NULL;
     params.ngs_mapped_reads = NULL;
-	
+	params.ngs_ignore_gaps = true;	
+
 	struct timeval tv;
 	struct timezone tz;
 	// initialize random seed based on current time
@@ -907,6 +908,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -sm <ngs_mapped_read_file>";
 				params.ngs_mapped_reads = argv[cnt];
+			} else if (strcmp(argv[cnt],"-ngs_gap") == 0) {
+				params.ngs_ignore_gaps = false;
 			} else if (strcmp(argv[cnt],"-st") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1140,13 +1143,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 		}
 
 	} // for
-	if (params.user_file == NULL && params.aln_file == NULL && params.ngs_file == NULL)
+	if (params.user_file == NULL && params.aln_file == NULL && params.ngs_file == NULL && params.ngs_mapped_reads == NULL)
 		usage(argv, false);
 	if (!params.out_prefix) {
 		if (params.aln_file) 
 			params.out_prefix = params.aln_file;
 		else if (params.ngs_file) 
 			params.out_prefix = params.ngs_file;
+		else if (params.ngs_mapped_reads) 
+			params.out_prefix = params.ngs_mapped_reads;
 		else 
 			params.out_prefix = params.user_file;
 	}

@@ -91,6 +91,14 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			else
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
 			site_rate->setTree(tree);
+		} else if (rate_str.substr(0,3) == "+FC") {
+			tree->sse = false;
+			if (rate_str.length() > 3) {
+				params.num_rate_cats = convert_int(rate_str.substr(3).c_str());
+				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else params.num_rate_cats = -1;
+			site_rate = new NGSRateCat(tree, params.num_rate_cats);
+			site_rate->setTree(tree);
 		} else if (rate_str.substr(0,2) == "+F") {
 			tree->sse = false;
 			if (rate_str.length() > 2) {
@@ -154,7 +162,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 		cout << "Initial log-likelihood: " << cur_lh << endl;
 	int i;
 	bool optimize_rate = true;
-	for (i = 2; i < 500; i++) {
+	for (i = 2; i < 100; i++) {
 		double model_lh = model->optimizeParameters();
 		//if (model_lh != 0.0) cur_lh = model_lh;
 /*

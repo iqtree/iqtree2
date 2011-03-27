@@ -356,7 +356,7 @@ char Alignment::convertStateBack(char state) {
 	}
 }
 
-void Alignment::convertState(string &str, SeqType seq_type) {
+void Alignment::convertStateStr(string &str, SeqType seq_type) {
 	for (string::iterator it = str.begin(); it != str.end(); it++)
 		(*it) = convertState(*it, seq_type);
 }
