@@ -821,7 +821,23 @@ void reportNGSAnalysis(const char *file_name, Params &params, NGSAlignment &aln,
 		out << endl;
 	}
 	out << endl;
-	out << "State frequencies: " << endl;
+	out << "State frequencies: ";
+	switch (tree.getModel()->getFreqType()) {
+		case FREQ_EMPIRICAL:
+			out << "(empirical counts from alignment)" << endl;
+			break;
+		case FREQ_ESTIMATE:
+			out << "(estimated with maximum likelihood)" << endl;
+			break;
+		case FREQ_USER_DEFINED:
+			out << "(user-defined)" << endl;
+			break;
+		case FREQ_EQUAL:
+			out << "(equal frequencies)" << endl;
+			break;
+		default:
+			break;
+	}
 
 	double state_freq[aln.num_states];
 	tree.getModel()->getStateFrequency(state_freq);
@@ -835,7 +851,7 @@ void reportNGSAnalysis(const char *file_name, Params &params, NGSAlignment &aln,
 
 	out << "Inferred posisiton-specific rates under one model or position-specific model: " << endl;
 
-	out << "Position\tOne_model_rate";
+	out << "Position\tSeq_error";
 	for (StrVector::iterator it = rate_name.begin(); it != rate_name.end(); it++)
 		out << "\t" << (*it);
 	out << endl;
@@ -1081,7 +1097,7 @@ void runNGSAnalysis(Params &params) {
 
 	int i, j;
 
-	rate_name.push_back("Varying_model_rate");
+	rate_name.push_back("Hete_error");
 
 	if (tree.getModel()->isReversible()) {
 		for (i = 0; i < aln.num_states-1; i++) 
