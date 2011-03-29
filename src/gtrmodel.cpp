@@ -216,13 +216,33 @@ int GTRModel::getNDim() {
 	return ndim;
 }
 
+
+void GTRModel::scaleStateFreq(bool sum_one) {
+	int i;
+	if (sum_one) {
+		// make the frequencies sum to 1
+		double sum = 0.0;
+		for (i = 0; i < num_states; i++) sum += state_freq[i];
+		for (i = 0; i < num_states; i++) state_freq[i] /= sum;		
+	} else {
+		// make the last frequency equal to 1
+		if (state_freq[num_states-1] == 1.0) return;
+		assert(state_freq[num_states-1] > 1.1e-6);
+		for (i = 0; i < num_states; i++) 
+			state_freq[i] /= state_freq[num_states-1];
+	}
+}
+
 void GTRModel::setVariables(double *variables) {
 	int nrate = getNDim();
 	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
 	if (nrate > 0)
 		memcpy(variables+1, rates, nrate*sizeof(double));
-	if (freq_type == FREQ_ESTIMATE)
+	if (freq_type == FREQ_ESTIMATE) {
+		scaleStateFreq(false);
 		memcpy(variables+nrate+1, state_freq, (num_states-1)*sizeof(double));
+		scaleStateFreq(true);
+	}
 }
 
 void GTRModel::getVariables(double *variables) {
@@ -233,11 +253,14 @@ void GTRModel::getVariables(double *variables) {
 		memcpy(rates, variables+1, nrate * sizeof(double));
 
 	if (freq_type == FREQ_ESTIMATE) {
-		double sum = 0.0;
+		//double sum = 0.0;
 		memcpy(state_freq, variables+nrate+1, (num_states-1)*sizeof(double));
+		state_freq[num_states-1] = 1.0;
+		scaleStateFreq(true);
+/*
 		for (int i = 0; i < num_states-1; i++) 
 			sum += state_freq[i];
-		state_freq[num_states-1] = 1.0 - sum;
+		state_freq[num_states-1] = 1.0 - sum;*/
 	}
 }
 
@@ -260,6 +283,7 @@ double GTRModel::optimizeParameters() {
 	if (verbose_mode >= VB_MAX)
 		cout << "Optimizing " << name << " model parameters..." << endl;
 
+	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
 	double *variables = new double[ndim+1];
 	double *upper_bound = new double[ndim+1];
@@ -276,14 +300,16 @@ double GTRModel::optimizeParameters() {
 		upper_bound[i] = 100.0;
 		bound_check[i] = false;
 	}
+
 	if (freq_type == FREQ_ESTIMATE) {
 		for (i = ndim-num_states+2; i <= ndim; i++) 
-			upper_bound[i] = 1.0;
+			upper_bound[i] = 10.0;
 	}
 	//packData(variables, lower_bound, upper_bound, bound_check);
 	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, 1e-6);
 
 	getVariables(variables);
+	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);
 	decomposeRateMatrix();
 	phylo_tree->clearAllPartialLh();
 	

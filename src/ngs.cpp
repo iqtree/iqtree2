@@ -1045,7 +1045,7 @@ void runNGSAnalysis(Params &params) {
 	NGSAlignment aln(params.ngs_file);
 	cout.setf(ios::fixed,ios::floatfield);
 
-	params.freq_type = FREQ_ESTIMATE;
+	//params.freq_type = FREQ_ESTIMATE;
 
 	// initialize NGSTree
 	NGSTree tree(params, &aln);
@@ -1053,8 +1053,10 @@ void runNGSAnalysis(Params &params) {
 
 	// initialize Model 
 	string original_model = params.model_name;
-	if (params.model_name == "") 
+	if (params.model_name == "") {
 		sprintf(model_name, "GTR+F%d", aln.ncategory);
+		params.freq_type = FREQ_ESTIMATE;
+	}
 	else
 		sprintf(model_name, "%s+F%d", params.model_name.c_str(), aln.ncategory);
 	params.model_name = model_name;
