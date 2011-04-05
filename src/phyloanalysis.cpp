@@ -882,13 +882,14 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         cout << "Log-likelihood	after reoptimizing full tree: " << tree.curScore << endl;
     }
 
-	if (params.min_iterations) {
-		cout << endl;
-		cout << "Optimizing model parameters" << endl;
-		tree.setBestScore(tree.getModelFactory()->optimizeParameters(params.fixed_branch_length));
+    if (params.min_iterations) {
+        cout << endl;
+        cout << "Optimizing model parameters" << endl;
+        tree.setBestScore(tree.getModelFactory()->optimizeParameters(params.fixed_branch_length));
     } else
-    	tree.setBestScore(tree.curScore);
+        tree.setBestScore(tree.curScore);
     cout << endl;
+    cout.precision(10);
     cout << "BEST SCORE FOUND : " << tree.getBestScore() << endl;
     t_tree_search_end = clock();
     double treeSearchTime = (double) (t_tree_search_end - t_tree_search_start) / CLOCKS_PER_SEC;

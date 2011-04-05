@@ -980,10 +980,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                         else if (strcmp(argv[cnt], "-spc") == 0) {
 				cnt++;
                                 if (cnt >= argc)
-                                    throw "Please specify the speed-up confidence level";
+                                    throw "Please specify the confidence level for the adaptive NNI Search";
                                 params.speed_conf = convert_double(argv[cnt]);
                                 if (  params.speed_conf <= 0.5 || params.speed_conf >1 )
-                                    throw "Speed up confidence level must be bigger than 0.5 and smaller or equal 1";
+                                    throw "Confidence level of the adaptive NNI search must be higher than 0.75 and <= 1";
 			} else if (strcmp(argv[cnt], "-nosse") == 0) {
 				params.SSE = false;
                         }
