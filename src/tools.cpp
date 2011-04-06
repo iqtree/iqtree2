@@ -591,7 +591,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_site_lh = false;			
 	params.nni_lh = false;
 	params.cmdLambda = 0.75;
-        params.speed_conf = 0.75;
+        params.speed_conf = 0.95;
     params.whtest_simulations = 1000;
     params.mcat_type = MCAT_LOG + MCAT_PATTERN;
     params.rate_file = NULL;

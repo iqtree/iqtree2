@@ -210,7 +210,7 @@ public:
             TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
             @return best likelihood found
      */
-    virtual double optimizeNNI();
+    virtual double optimizeNNI(bool beginHeu=false, int *skipped=NULL);
 
     /**
             search all positive NNI move on the current tree and save them on the possilbleNNIMoves list            
