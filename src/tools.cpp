@@ -559,6 +559,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.aln_file = NULL;
 	params.sequence_type = NULL;
 	params.aln_output = NULL;
+	params.aln_output_format = ALN_PHYLIP;
 	params.parsimony = false;
 	params.tree_spr = false;
 	params.nexus_output = false;
@@ -915,11 +916,20 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -st <BIN|DNA|AA>";
 				params.sequence_type = argv[cnt];
-			} else if (strcmp(argv[cnt],"-alnout") == 0) {
+			} else if (strcmp(argv[cnt],"-ao") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -alnout <alignment_file>";
+					throw "Use -ao <alignment_file>";
 				params.aln_output = argv[cnt];
+			} else if (strcmp(argv[cnt],"-af") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -af <aln_format>";
+				if (strcmp(argv[cnt],"phy") == 0)
+					params.aln_output_format = ALN_PHYLIP;
+				else if (strcmp(argv[cnt],"fasta") == 0)
+					params.aln_output_format = ALN_FASTA;
+				else throw "Unknown output format";
 			} else if (strcmp(argv[cnt],"-pars") == 0) {
 				// maximum parsimony
 				params.parsimony = true;

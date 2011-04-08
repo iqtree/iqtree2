@@ -130,6 +130,8 @@ public:
 
 	void printPhylip(const char *filename, bool append = false);
 
+	void printFasta(const char *filename, bool append = false);
+
 /****************************************************************************
 	get general information from alignment
 ****************************************************************************/

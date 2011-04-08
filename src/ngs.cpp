@@ -1103,7 +1103,7 @@ void runNGSAnalysis(Params &params) {
 		for (i = 0; i < aln.num_states-1; i++) 
 			for (j = i+1; j < aln.num_states; j++) {
 				stringstream x;
-				x << aln.convertStateBack(i) << "->" << aln.convertStateBack(j);
+				x << aln.convertStateBack(i) << "<->" << aln.convertStateBack(j);
 				rate_name.push_back(x.str());
 			}
 		for (i = 0; i < aln.num_states; i++) {

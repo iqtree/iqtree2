@@ -246,7 +246,7 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
 
 	for (StrVector::iterator it = sequences.begin(); it != sequences.end(); it++)
 		for (string::iterator i = it->begin(); i != it->end(); i++) {
-			if ((*i) != '?' && (*i) != '-') num_ungap++;
+			if ((*i) != '?' && (*i) != '-' && (*i) != '.') num_ungap++;
 			if ((*i) == 'A' || (*i) == 'C' || (*i) == 'G' || (*i) == 'T' || (*i) == 'U')
 				num_nuc++;
 			if ((*i) == '0' || (*i) == '1')
@@ -269,7 +269,7 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
 	@return state ID
 */
 char Alignment::convertState(char state, SeqType seq_type) {
-	if (state == '?' || state == '-')
+	if (state == '?' || state == '-' || state == '.')
 		return STATE_UNKNOWN;
 
 	char *loc;
@@ -406,7 +406,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 			}
 			for (string::iterator it = line.begin(); it != line.end(); it++) {
 				if ((*it) <= ' ') continue;
-				if (isalpha(*it) || (*it) == '-' || (*it) == '?')
+				if (isalpha(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.')
 					sequences[seq_id].append(1, toupper(*it));
 				else {
 					err_str << "Unrecognized character " << *it << " on line " << line_num;
@@ -531,6 +531,30 @@ void Alignment::printPhylip(const char *file_name, bool append) {
 			out << left << (*it) << " ";
 			for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++)
 				out << convertStateBack(at(*i)[seq_id]);
+			out << endl;
+		}
+		out.close();
+		cout << "Alignment was printed to " << file_name << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, file_name);
+	}	
+}
+
+void Alignment::printFasta(const char *file_name, bool append) {
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		if (append)
+			out.open(file_name, ios_base::out | ios_base::app);
+		else
+			out.open(file_name);
+		StrVector::iterator it;
+		int seq_id = 0;
+		for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
+			out << ">" << (*it) << endl;
+			for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++) {
+				out << convertStateBack(at(*i)[seq_id]);
+			}
 			out << endl;
 		}
 		out.close();

@@ -275,6 +275,14 @@ enum StateFreqType {
 };
 
 /**
+	alignment format type
+ */
+
+enum AlnFormat {
+	ALN_PHYLIP, ALN_FASTA
+};
+
+/**
         Stopping condition type
  */
 enum STOP_CONDITION {
@@ -323,6 +331,11 @@ struct Params {
             alignment output file name
      */
     char *aln_output;
+    
+    /**
+            alignment output format
+     */
+    AlnFormat aln_output_format;
 
     /**
             compute parsimony score on trees

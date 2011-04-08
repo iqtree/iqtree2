@@ -971,7 +971,10 @@ void runPhyloAnalysis(Params &params) {
     IQPTree tree(&alignment);
     string original_model = params.model_name;
     if (params.aln_output) {
-        alignment.printPhylip(params.aln_output);
+    	if (params.aln_output_format == ALN_PHYLIP)
+        	alignment.printPhylip(params.aln_output);
+        else if (params.aln_output_format == ALN_FASTA)
+        	alignment.printFasta(params.aln_output);
     } else if (params.num_bootstrap_samples == 0) {
         runPhyloAnalysis(params, original_model, &alignment, tree);
         if (original_model != "TESTONLY")
