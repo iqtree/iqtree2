@@ -1108,8 +1108,8 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
     // Optimal branch length of the current branch
     node12_len[1] = node12_it->length;
     
-    node12_it->length = node12_len[0];
-    node21_it->length = node12_len[0];      
+    //node12_it->length = node12_len[0];
+    //node21_it->length = node12_len[0];      
 
     // save the likelihood vector at the two ends of node1-node2
     double *node1_lh_save = node12_it->partial_lh;
@@ -1202,10 +1202,9 @@ NNIMove IQPTree::getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2) {
         node1->updateNeighbor(node1_it, node1_nei, node1_len);
         node1_nei->node->updateNeighbor(node2, node1, node1_len);
         node2->updateNeighbor(node2_it, node2_nei, node2_len);
-        node2_nei->node->updateNeighbor(node1, node2, node2_len);
-                
-        node12_it->length = node12_len[0];
-        node21_it->length = node12_len[0];        
+        node2_nei->node->updateNeighbor(node1, node2, node2_len);                
+        node12_it->length = node12_len[1];
+        node21_it->length = node12_len[1];        
 
     }
     if (enable_parsimony) {
