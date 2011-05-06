@@ -297,7 +297,7 @@ const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler mode
 const int MCAT_MEAN = 2; // take the mean of rates for each category for Meyer & von Haeseler model
 const int MCAT_PATTERN = 4; // categorize site-patterns instead of sites for Meyer & von Haeseler model
 
-const double MAX_GENETIC_DIST = 100.0;
+const double MAX_GENETIC_DIST = 9.0;
 
 
 /*--------------------------------------------------------------*/
