@@ -69,11 +69,16 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 	try {
 	
 		if (intype == IN_NEXUS) {
+			cout << "Nexus format detected" << endl;
 			readNexus(filename);
-		} else {
+		} else if (intype == IN_FASTA) {
+			cout << "Fasta format detected" << endl;
+			readFasta(filename, sequence_type);
+		} else if (intype == IN_PHYLIP) {
+			cout << "Phylip format detected" << endl;
 			readPhylip(filename, sequence_type);
-			//outError("in progress");
-			//outError("Alignment format not supported, use NEXUS format.");
+		} else {
+			outError("Unknown sequence format, please use PHYLIP, FASTA, or NEXUS format");
 		}
 	} catch (ios::failure) {
 		outError(ERR_READ_INPUT);
@@ -262,6 +267,46 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
 	return SEQ_PROTEIN;
 }
 
+void buildStateMap(char *map, SeqType seq_type) {
+	memset(map, STATE_INVALID, NUM_CHAR);
+	map['?'] = STATE_UNKNOWN;
+	map['-'] = STATE_UNKNOWN;
+	map['.'] = STATE_UNKNOWN;
+
+	switch (seq_type) {
+	case SEQ_BINARY:
+		map['0'] = 0;
+		map['1'] = 1;
+		return;
+	case SEQ_DNA: // DNA
+			map['A'] = 0;
+			map['C'] = 1;
+			map['G'] = 2;
+			map['T'] = 3;
+			map['U'] = 3;
+			map['R'] = 1+4+3; // A or G, Purine
+			map['Y'] = 2+8+3; // C or T, Pyrimidine
+			map['N'] = STATE_UNKNOWN;
+			map['W'] = 1+8+3; // A or T, Weak
+			map['S'] = 2+4+3; // G or C, Strong
+			map['M'] = 1+2+3; // A or C, Amino
+			map['K'] = 4+8+3; // G or T, Keto
+			map['B'] = 2+4+8+3; // C or G or T
+			map['H'] = 1+2+8+3; // A or C or T
+			map['D'] = 1+4+8+3; // A or G or T
+			map['V'] = 1+2+4+3; // A or G or C
+		return;
+	case SEQ_PROTEIN: // Protein
+		for (int i = 0; i < 20; i++)
+			map[(int)symbols_protein[i]] = i;
+		map[(int)symbols_protein[20]] = STATE_UNKNOWN;
+		return;
+	default:
+		return;
+	}
+}
+
+
 /**
 	convert a raw characer state into ID, indexed from 0
 	@param state input raw state
@@ -361,67 +406,14 @@ void Alignment::convertStateStr(string &str, SeqType seq_type) {
 		(*it) = convertState(*it, seq_type);
 }
 
-int Alignment::readPhylip(char *filename, char *sequence_type) {
-	
-	StrVector sequences;
+int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
+	int seq_id;
 	ostringstream err_str;
-	ifstream in;
-	int line_num = 1;
-	// set the failbit and badbit
-	in.exceptions(ios::failbit | ios::badbit);
-	in.open(filename);
-	int nseq = 0, nsite = 0;
-	int seq_id = 0;
-	string line;
-	// remove the failbit
-	in.exceptions(ios::badbit);
-	
-	for (; !in.eof(); line_num++) {
-		getline(in, line);
-		if (line == "") continue;
+	site_pattern.resize(nsite, -1);
+	clear();
+	pattern_index.clear();
 
-		//cout << line << endl;		
-		if (nseq == 0) { // read number of sequences and sites
-			istringstream line_in(line);
-			if (!(line_in >> nseq >> nsite))
-				throw "Invalid PHYLIP format. First line must contain number of sequences and sites";
-			//cout << "nseq: " << nseq << "  nsite: " << nsite << endl;
-			if (nseq < 3)
-				throw "There must be at least 3 sequences";
-			if (nsite < 1)
-				throw "No alignment columns";
-
-			seq_names.resize(nseq, "");
-			site_pattern.resize(nsite, -1);
-			sequences.resize(nseq, "");
-			clear();
-			pattern_index.clear();
-
-		} else { // read sequence contents
-			if (seq_names[seq_id] == "") { // cut out the sequence name
-				string::size_type pos = line.find(' ');
-				if (pos == string::npos) pos = 10; //  assume standard phylip
-				seq_names[seq_id] = line.substr(0, pos);
-				line.erase(0, pos);
-			}
-			for (string::iterator it = line.begin(); it != line.end(); it++) {
-				if ((*it) <= ' ') continue;
-				if (isalpha(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.')
-					sequences[seq_id].append(1, toupper(*it));
-				else {
-					err_str << "Unrecognized character " << *it << " on line " << line_num;
-					throw err_str.str();
-				}
-			}
-			seq_id++;
-			if (seq_id == nseq) seq_id = 0;
-		} 
-		//sequences.	
-	}
-	in.clear();
-	// set the failbit again
-	in.exceptions(ios::failbit | ios::badbit);
-	in.close();
+	if (nseq != seq_names.size()) throw "Different number of sequences than specified";
 
 	/* now check that all sequence names are correct */
 	for (seq_id = 0; seq_id < nseq; seq_id ++) {
@@ -494,14 +486,20 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 	// now convert to patterns
 	int site, seq, num_gaps_only = 0;
 
+	char char_to_state[NUM_CHAR];
+
+	buildStateMap(char_to_state, seq_type);
+
+	Pattern pat;
+	pat.resize(nseq);
 	for (site = 0; site < nsite; site++) {
- 		Pattern pat;
 		for (seq = 0; seq < nseq; seq++) {
-			char state = convertState(sequences[seq][site], seq_type);
+			//char state = convertState(sequences[seq][site], seq_type);
+			char state = char_to_state[(int)(sequences[seq][site])];
 			if (state == STATE_INVALID) 
 				err_str << "Sequence " << seq_names[seq] << " has invalid character " << 
 					sequences[seq][site] << " at site " << site+1 << "\n";
-			pat.push_back(state);
+			pat[seq] = state;
 		}
 		num_gaps_only += addPattern(pat, site);
 	}
@@ -512,24 +510,187 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 	return 1;
 }
 
+int Alignment::readPhylip(char *filename, char *sequence_type) {
+	
+	StrVector sequences;
+	ostringstream err_str;
+	ifstream in;
+	int line_num = 1;
+	// set the failbit and badbit
+	in.exceptions(ios::failbit | ios::badbit);
+	in.open(filename);
+	int nseq = 0, nsite = 0;
+	int seq_id = 0;
+	string line;
+	// remove the failbit
+	in.exceptions(ios::badbit);
+	
+	for (; !in.eof(); line_num++) {
+		getline(in, line);
+		if (line == "") continue;
 
-void Alignment::printPhylip(const char *file_name, bool append) {
+		//cout << line << endl;		
+		if (nseq == 0) { // read number of sequences and sites
+			istringstream line_in(line);
+			if (!(line_in >> nseq >> nsite))
+				throw "Invalid PHYLIP format. First line must contain number of sequences and sites";
+			//cout << "nseq: " << nseq << "  nsite: " << nsite << endl;
+			if (nseq < 3)
+				throw "There must be at least 3 sequences";
+			if (nsite < 1)
+				throw "No alignment columns";
+
+			seq_names.resize(nseq, "");
+			sequences.resize(nseq, "");
+
+		} else { // read sequence contents
+			if (seq_names[seq_id] == "") { // cut out the sequence name
+				string::size_type pos = line.find(' ');
+				if (pos == string::npos) pos = 10; //  assume standard phylip
+				seq_names[seq_id] = line.substr(0, pos);
+				line.erase(0, pos);
+			}
+			for (string::iterator it = line.begin(); it != line.end(); it++) {
+				if ((*it) <= ' ') continue;
+				if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.')
+					sequences[seq_id].append(1, toupper(*it));
+				else {
+					err_str << "Unrecognized character " << *it << " on line " << line_num;
+					throw err_str.str();
+				}
+			}
+			seq_id++;
+			if (seq_id == nseq) seq_id = 0;
+		} 
+		//sequences.	
+	}
+	in.clear();
+	// set the failbit again
+	in.exceptions(ios::failbit | ios::badbit);
+	in.close();
+
+	return buildPattern(sequences, sequence_type, nseq, nsite);
+}
+
+int Alignment::readFasta(char *filename, char *sequence_type) {
+	
+	StrVector sequences;
+	ostringstream err_str;
+	ifstream in;
+	int line_num = 1;
+	string line;
+
+	// set the failbit and badbit
+	in.exceptions(ios::failbit | ios::badbit);
+	in.open(filename);
+	// remove the failbit
+	in.exceptions(ios::badbit);
+
+	for (; !in.eof(); line_num++) {
+		getline(in, line);
+		if (line == "") continue;
+
+		//cout << line << endl;		
+		if (line[0] == '>') { // next sequence
+			string::size_type pos = line.find(' ');
+			seq_names.push_back(line.substr(1, pos-1));
+			sequences.push_back("");
+			continue;
+		}
+		 // read sequence contents
+		if (sequences.empty()) throw "First line must begin with '>' to define sequence name";
+		for (string::iterator it = line.begin(); it != line.end(); it++) {
+			if ((*it) <= ' ') continue;
+			if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.')
+				sequences.back().append(1, toupper(*it));
+			else {
+				err_str << "Unrecognized character " << *it << " on line " << line_num;
+				throw err_str.str();
+			}
+		}
+	}
+	in.clear();
+	// set the failbit again
+	in.exceptions(ios::failbit | ios::badbit);
+	in.close();
+
+	for (int i = 0; i < seq_names.size(); i++)
+		cout << '"' << seq_names[i] << '"' << endl;
+	return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+}
+
+
+int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_sites, bool exclude_gaps) {
+	if (aln_site_list) {
+		cout << "Reading site position list " << aln_site_list << " ..." << endl;
+		kept_sites.resize(getNSite(), 0);
+		try {
+			ifstream in;
+			in.exceptions(ios::failbit | ios::badbit);
+			in.open(aln_site_list);
+			in.exceptions(ios::badbit);
+		
+			while (!in.eof()) {
+				int left, right;
+				left = right = 0;
+				in >> left;
+				if (in.eof()) break;
+				in >> right;
+				cout << left << "-" << right << endl;
+				if (left <= 0 || right <= 0) throw "Range must be positive";
+				if (left > right) throw "Left range is bigger than right range";
+				left--;
+				if (right > getNSite()) throw "Right range is bigger than alignment size";
+				for (int i = left; i < right; i++)
+					kept_sites[i] = 1;
+			}
+			in.close();
+		} catch (ios::failure) {
+			outError(ERR_READ_INPUT, aln_site_list);
+		} catch (const char* str) {
+			outError(str);
+		} 
+	} else {
+		kept_sites.resize(getNSite(), 1);
+	}
+
+	int j;
+	if (exclude_gaps) {
+		for (j = 0; j < kept_sites.size(); j++) 
+		if (kept_sites[j] && at(site_pattern[j]).computeAmbiguousChar(num_states) > 0) {
+			kept_sites[j] = 0;
+		}
+	}
+
+	int final_length = 0;
+	for (j = 0; j < kept_sites.size(); j++) 
+		if (kept_sites[j]) final_length++;
+	return final_length;
+}
+
+void Alignment::printPhylip(const char *file_name, bool append, const char *aln_site_list, bool exclude_gaps) {
+	IntVector kept_sites;
+	int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps);
+
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
+
 		if (append)
 			out.open(file_name, ios_base::out | ios_base::app);
 		else
 			out.open(file_name);
-		out << getNSeq() << " " << getNSite() << endl;
+		out << getNSeq() << " " << final_length << endl;
 		StrVector::iterator it;
 		int max_len = getMaxSeqNameLength();
 		if (max_len < 10) max_len = 10;
 		int seq_id = 0;
 		for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
 			out.width(max_len);
-			out << left << (*it) << " ";
-			for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++)
+			out << left << (*it) << "  ";
+			int j = 0;
+			for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
+				if (kept_sites[j])
 				out << convertStateBack(at(*i)[seq_id]);
 			out << endl;
 		}
@@ -540,7 +701,9 @@ void Alignment::printPhylip(const char *file_name, bool append) {
 	}	
 }
 
-void Alignment::printFasta(const char *file_name, bool append) {
+void Alignment::printFasta(const char *file_name, bool append, const char *aln_site_list, bool exclude_gaps) {
+	IntVector kept_sites;
+	buildRetainingSites(aln_site_list, kept_sites, exclude_gaps);
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
@@ -552,9 +715,10 @@ void Alignment::printFasta(const char *file_name, bool append) {
 		int seq_id = 0;
 		for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
 			out << ">" << (*it) << endl;
-			for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++) {
-				out << convertStateBack(at(*i)[seq_id]);
-			}
+			int j = 0;
+			for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++) 
+				if (kept_sites[j])
+					out << convertStateBack(at(*i)[seq_id]);
 			out << endl;
 		}
 		out.close();

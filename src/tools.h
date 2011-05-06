@@ -240,7 +240,7 @@ const int SW_AVG_PRESENT = 4; // take the split weight average over all trees th
         input type, tree or splits graph
  */
 enum InputType {
-    IN_NEWICK, IN_NEXUS, IN_OTHER
+    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_OTHER
 };
 
 /**
@@ -333,9 +333,18 @@ struct Params {
     char *aln_output;
     
     /**
+            file containing list of sites posititon to keep, format:
+            pos1 pos2
+            ....
+     */
+    char *aln_site_list;
+
+    /**
             alignment output format
      */
     AlnFormat aln_output_format;
+
+	bool aln_nogaps;
 
     /**
             compute parsimony score on trees
@@ -1102,6 +1111,8 @@ void parseArg(int argc, char *argv[], Params &params);
         @return
                 IN_NEWICK if file in newick format,
                 IN_NEXUS if in nexus format,
+                IN_FASTA if in fasta format,
+                IN_PHYLIP if in phylip format,
                 IN_OTHER if file format unknown.
  */
 InputType detectInputFile(char *input_file);

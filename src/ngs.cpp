@@ -88,7 +88,7 @@ void NGSAlignment::readFritzFile(const char *filename) {
 		pair_freq = new int[total_size];
 		for (i=0; i < total_size; i++) {
 			in >> tmp;
-			int count = convert_int(tmp.c_str());
+			int count = round(convert_double(tmp.c_str()));
 			if (count < 0) throw "Wrong count";
 			pair_freq[i] = count;
 		}

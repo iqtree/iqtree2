@@ -102,6 +102,7 @@ public:
 	*/
 	int readNexus(char *filename);
 
+	int buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite);
 
 	/**
 		read the alignment in PHYLIP format
@@ -110,6 +111,14 @@ public:
 		@return 1 on success, 0 on failure
 	*/
 	int readPhylip(char *filename, char *sequence_type);
+
+	/**
+		read the alignment in FASTA format
+		@param filename file name
+		@param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+		@return 1 on success, 0 on failure
+	*/
+	int readFasta(char *filename, char *sequence_type);
 
 	/**
 		extract the alignment from a nexus data block, called by readNexus()
@@ -128,9 +137,13 @@ public:
 
 	char convertStateBack(char state);
 
-	void printPhylip(const char *filename, bool append = false);
+	int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites, bool exclude_gaps);
 
-	void printFasta(const char *filename, bool append = false);
+	void printPhylip(const char *filename, bool append = false, 
+		const char *aln_site_list = NULL, bool exclude_gaps = false);
+
+	void printFasta(const char *filename, bool append = false, 
+		const char *aln_site_list = NULL, bool exclude_gaps = false);
 
 /****************************************************************************
 	get general information from alignment

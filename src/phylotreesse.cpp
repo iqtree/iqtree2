@@ -341,6 +341,7 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     }
     vrda_log(alnSize, lh_ptns.data(), lh_ptns_log.data());
     tree_lh += (lh_ptns_log * ptn_freqs).sum();
+	if (!isnormal(tree_lh)) outError("Log-likelihood is NaN. Please contact author");
     return tree_lh;
 }
 

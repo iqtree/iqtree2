@@ -559,7 +559,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.aln_file = NULL;
 	params.sequence_type = NULL;
 	params.aln_output = NULL;
+	params.aln_site_list = NULL;
 	params.aln_output_format = ALN_PHYLIP;
+	params.aln_nogaps = false;
 	params.parsimony = false;
 	params.tree_spr = false;
 	params.nexus_output = false;
@@ -921,6 +923,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -ao <alignment_file>";
 				params.aln_output = argv[cnt];
+			} else if (strcmp(argv[cnt],"-as") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -as <aln_site_list>";
+				params.aln_site_list = argv[cnt];
 			} else if (strcmp(argv[cnt],"-af") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -930,6 +937,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				else if (strcmp(argv[cnt],"fasta") == 0)
 					params.aln_output_format = ALN_FASTA;
 				else throw "Unknown output format";
+			} else if (strcmp(argv[cnt],"-nogap") == 0) {
+				params.aln_nogaps = true;
 			} else if (strcmp(argv[cnt],"-pars") == 0) {
 				// maximum parsimony
 				params.parsimony = true;
@@ -1328,7 +1337,15 @@ InputType detectInputFile(char *input_file) {
 			in >> ch;
 		} while (ch <= 32 && !in.eof() && count++ < 20);
 		in.close();
-		return (ch == '#') ? IN_NEXUS : ( (ch == '(' || ch == '[') ? IN_NEWICK : IN_OTHER );
+		switch (ch) {
+			case '#': return IN_NEXUS;
+			case '(': return IN_NEWICK;
+			case '[': return IN_NEWICK;
+			case '>': return IN_FASTA;
+			default: 
+				if (isdigit(ch)) return IN_PHYLIP; 
+				return IN_OTHER;
+		}
 	} catch (ios::failure) {
 		outError("Cannot read file ", input_file);
 	}
