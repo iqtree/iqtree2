@@ -246,7 +246,6 @@ void GTRModel::setVariables(double *variables) {
 }
 
 void GTRModel::getVariables(double *variables) {
-
 	int nrate = getNDim();
 	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
 	if (nrate > 0)
