@@ -22,7 +22,7 @@ const char STATE_UNKNOWN = 126;
 const char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
 
-enum SeqType {SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_UNKNOWN};
+enum SeqType {SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MULTISTATE, SEQ_UNKNOWN};
 
 
 #ifdef USE_HASH_MAP
@@ -137,13 +137,23 @@ public:
 
 	char convertStateBack(char state);
 
-	int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites, bool exclude_gaps);
+	/**
+		get alignment site range from the residue range relative to a sequence
+		@param seq_id reference sequence
+		@param residue_left (IN/OUT) left of range
+		@param residue_right (IN/OUT) right of range [left,right)
+		@return TRUE if success, FALSE if out of range
+	*/
+	bool getSiteFromResidue(int seq_id, int &residue_left, int &residue_right);
+
+	int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites, 
+		bool exclude_gaps, const char *ref_seq_name);
 
 	void printPhylip(const char *filename, bool append = false, 
-		const char *aln_site_list = NULL, bool exclude_gaps = false);
+		const char *aln_site_list = NULL, bool exclude_gaps = false, const char *ref_seq_name = NULL);
 
 	void printFasta(const char *filename, bool append = false, 
-		const char *aln_site_list = NULL, bool exclude_gaps = false);
+		const char *aln_site_list = NULL, bool exclude_gaps = false, const char *ref_seq_name = NULL);
 
 /****************************************************************************
 	get general information from alignment

@@ -601,6 +601,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ngs_file = NULL;
     params.ngs_mapped_reads = NULL;
 	params.ngs_ignore_gaps = true;	
+	params.do_pars_multistate = false;
 
 	struct timeval tv;
 	struct timezone tz;
@@ -928,6 +929,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -as <aln_site_list>";
 				params.aln_site_list = argv[cnt];
+			} else if (strcmp(argv[cnt],"-an") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -as <ref_seq_name>";
+				params.ref_seq_name = argv[cnt];
 			} else if (strcmp(argv[cnt],"-af") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1131,6 +1137,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.mcat_type &= (127 - MCAT_LOG);
 			} else if (strcmp(argv[cnt],"-cat_site") == 0) {
 				params.mcat_type &= (127-MCAT_PATTERN);
+			} else if (strcmp(argv[cnt], "-tina") == 0) {
+				params.do_pars_multistate = true;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

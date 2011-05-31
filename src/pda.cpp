@@ -40,6 +40,7 @@
 #include "phyloanalysis.h"
 #include "matree.h"
 #include "ngs.h"
+#include "parsmultistate.h"
 
 using namespace std;
 
@@ -1404,6 +1405,7 @@ void compare(Params &params){
 }
 
 
+
 /********************************************************
 	main function
 ********************************************************/
@@ -1428,6 +1430,8 @@ int main(int argc, char *argv[])
 	// call the main function
 	if (params.tree_gen != NONE) {
 		generateRandomTree(params);
+	} else if (params.do_pars_multistate) {
+		doParsMultiState(params);
 	} else if (params.rf_dist_mode != 0) {
 		computeRFDist(params);
 	} else if (params.test_input != TEST_NONE) {

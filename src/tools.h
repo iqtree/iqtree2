@@ -339,11 +339,20 @@ struct Params {
      */
     char *aln_site_list;
 
+	/**
+		name of the reference sequence where aln_site_list is based on,
+		NULL to take alignment positions.
+	*/
+	char *ref_seq_name;
+
     /**
             alignment output format
      */
     AlnFormat aln_output_format;
 
+	/**
+		TRUE to discard all gappy positions
+	*/
 	bool aln_nogaps;
 
     /**
@@ -844,6 +853,8 @@ struct Params {
 	char *ngs_mapped_reads;
 	
 	bool ngs_ignore_gaps;
+
+	bool do_pars_multistate;
 };
 
 /**

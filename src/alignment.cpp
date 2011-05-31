@@ -301,6 +301,10 @@ void buildStateMap(char *map, SeqType seq_type) {
 			map[(int)symbols_protein[i]] = i;
 		map[(int)symbols_protein[20]] = STATE_UNKNOWN;
 		return;
+	case SEQ_MULTISTATE:
+		for (int i = 0; i <= STATE_UNKNOWN; i++)
+			map[i] = i;
+		return;
 	default:
 		return;
 	}
@@ -476,6 +480,9 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
 		} else if (strcmp(sequence_type, "AA") == 0) {
 			num_states = 20;
 			user_seq_type = SEQ_PROTEIN;
+		} else if (strcmp(sequence_type, "MULTI") == 0) {
+			cout << "Multi-state data with " << num_states << " alphabets" << endl;
+			user_seq_type = SEQ_MULTISTATE;
 		} else
 			throw "Invalid sequence type.";
 		if (user_seq_type != seq_type && seq_type != SEQ_UNKNOWN)
@@ -524,6 +531,8 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 	string line;
 	// remove the failbit
 	in.exceptions(ios::badbit);
+	bool multi_state = (sequence_type && strcmp(sequence_type,"MULTI") == 0);
+	num_states = 0;
 	
 	for (; !in.eof(); line_num++) {
 		getline(in, line);
@@ -550,6 +559,17 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 				seq_names[seq_id] = line.substr(0, pos);
 				line.erase(0, pos);
 			}
+			if (multi_state) {
+				stringstream linestr(line);
+				int state;
+				while (!linestr.eof() ) {
+					state = -1;
+					linestr >> state;
+					if (state < 0) break;
+					sequences[seq_id].append(1, state);
+					if (num_states < state+1) num_states = state+1;
+				}
+			} else
 			for (string::iterator it = line.begin(); it != line.end(); it++) {
 				if ((*it) <= ' ') continue;
 				if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.')
@@ -619,9 +639,36 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 	return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
 }
 
+bool Alignment::getSiteFromResidue(int seq_id, int &residue_left, int &residue_right) {
+	int i, j;
+	int site_left = -1, site_right = -1;
+	for (i = 0, j = -1; i < getNSite(); i++) {
+		if (at(site_pattern[i])[seq_id] != STATE_UNKNOWN) j++;
+		if (j == residue_left) site_left = i;
+		if (j == residue_right-1) site_right = i+1;
+	}
+	if (site_left < 0 || site_right < 0)
+		 cout << "Out of range: Maxmimal residue number is " << j+1 << endl;
+	if (site_left == -1) outError("Left residue range is too high");
+	if (site_right == -1) {
+		outWarning("Right residue range is set to alignment length");
+		site_right = getNSite();
+	}
+	residue_left = site_left;
+	residue_right = site_right;
+	return true;
+}
 
-int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_sites, bool exclude_gaps) {
+int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_sites, 
+	bool exclude_gaps, const char *ref_seq_name) 
+{
 	if (aln_site_list) {
+		int seq_id = -1;
+		if (ref_seq_name) {
+			string ref_seq = ref_seq_name;
+			seq_id = getSeqID(ref_seq);
+			if (seq_id < 0) outError("Reference sequence name not found: ", ref_seq_name);
+		}
 		cout << "Reading site position list " << aln_site_list << " ..." << endl;
 		kept_sites.resize(getNSite(), 0);
 		try {
@@ -641,6 +688,7 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
 				if (left > right) throw "Left range is bigger than right range";
 				left--;
 				if (right > getNSite()) throw "Right range is bigger than alignment size";
+				if (seq_id >= 0) getSiteFromResidue(seq_id, left, right);
 				for (int i = left; i < right; i++)
 					kept_sites[i] = 1;
 			}
@@ -668,9 +716,10 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
 	return final_length;
 }
 
-void Alignment::printPhylip(const char *file_name, bool append, const char *aln_site_list, bool exclude_gaps) {
+void Alignment::printPhylip(const char *file_name, bool append, const char *aln_site_list, 
+	bool exclude_gaps, const char *ref_seq_name) {
 	IntVector kept_sites;
-	int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps);
+	int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, ref_seq_name);
 
 	try {
 		ofstream out;
@@ -701,9 +750,11 @@ void Alignment::printPhylip(const char *file_name, bool append, const char *aln_
 	}	
 }
 
-void Alignment::printFasta(const char *file_name, bool append, const char *aln_site_list, bool exclude_gaps) {
+void Alignment::printFasta(const char *file_name, bool append, const char *aln_site_list
+	, bool exclude_gaps, const char *ref_seq_name) 
+{
 	IntVector kept_sites;
-	buildRetainingSites(aln_site_list, kept_sites, exclude_gaps);
+	buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, ref_seq_name);
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);

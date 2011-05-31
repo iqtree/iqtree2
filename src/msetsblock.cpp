@@ -59,6 +59,7 @@ void MSetsBlock::Read(NxsToken &token)
 {
 	// This should be the semicolon after the block name
 	//
+
 	token.GetNextToken();
 
 	if (!token.Equals(";"))
@@ -77,6 +78,7 @@ void MSetsBlock::Read(NxsToken &token)
 		{
 			// This should be the NTAX keyword
 			//
+			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 			token.GetNextToken();
 
 			//sets.resize(sets.size()+1);
@@ -95,9 +97,11 @@ void MSetsBlock::Read(NxsToken &token)
 				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 			}
 
+				token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 				token.GetNextToken();
 			do {
 				myset->taxlist.push_back(token.GetToken());
+				token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 				token.GetNextToken();
 			} while (!token.AtEOF() && !token.Equals(";"));
 
