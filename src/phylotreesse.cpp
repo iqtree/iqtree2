@@ -246,6 +246,8 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     double *trans_state;
     double *derv1_state;
     double *derv2_state;
+    p_invar = site_rate->getPInvar();
+    p_var_cat = (1.0 - p_invar) / (double) numCat;
         
     double state_freq[NSTATES];
     model->getStateFrequency(state_freq);
@@ -253,9 +255,6 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
     EIGEN_ALIGN16 double trans_derv1[numCat * tranSize];
     EIGEN_ALIGN16 double trans_derv2[numCat * tranSize];
-
-//    Map<Array<double, 1, NSTATES>, Aligned> ei_state_freq(state_freq);
-//    Array<double, NSTATES, NSTATES> ei_state_freq_mat = ei_state_freq.colwise().replicate(NSTATES);
 
     int discrete_cat = site_rate->getNDiscreteRate();
     if (!site_rate->isSiteSpecificRate())
@@ -267,42 +266,11 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
             double rate_val = site_rate->getRate(cat);
             //double rate_sqr = rate_val * rate_val;
             model_factory->computeTransDervFreq(dad_branch->length, rate_val, state_freq, trans_cat, derv1_cat, derv2_cat);
-            /*
-    for (state1 = 0; state1 < nstates; state1++) {
-        double *trans_mat_state = trans_cat + (state1 * nstates);
-        double *trans_derv1_state = derv1_cat + (state1 * nstates);
-        double *trans_derv2_state = derv2_cat + (state1 * nstates);
 
-        for (state2 = 0; state2 < nstates; state2++) {
-            trans_mat_state[state2] *= state_freq[state1];
-            trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
-            trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
-        }
-    }*/
         }
 
     bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
-    
-   
-    
-//    while (true) {        
-//        double rate_val = site_rate->getRate(cat);
-//        double rate_sqr = rate_val * rate_val;
-//        model_factory->computeTransDerv(dad_branch->length * rate_val, trans_state, derv1_state, derv2_state);
-//        MappedArr2D(NSTATES) ei_trans_cat(trans_state);
-//        MappedArr2D(NSTATES) ei_derv1_cat(derv1_state);
-//        MappedArr2D(NSTATES) ei_derv2_cat(derv2_state);
-//        ei_trans_cat *= ei_state_freq_mat;
-//        ei_derv1_cat *= (ei_state_freq_mat * rate_val);
-//        ei_derv2_cat *= (ei_state_freq_mat * rate_sqr);
-//        ++cat;
-//        if ( cat == numCat)
-//            break;
-//        trans_state += tranSize;
-//        derv1_state += tranSize;
-//        derv2_state += tranSize;
-//    }
-    
+          
     int dad_state = STATE_UNKNOWN;
     for ( ; ptn < alnSize; ++ptn) {
         lh_ptn = 0.0;
@@ -416,6 +384,7 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
         switch (aln->num_states) {
             case 2: return computeLikelihoodDervSSE < 2 > (dad_branch, dad, df, ddf);
             case 4: return computeLikelihoodDervSSE < 4 > (dad_branch, dad, df, ddf);
+            //case 4: return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
             case 20:return computeLikelihoodDervSSE < 20 > (dad_branch, dad, df, ddf);
             default: return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
         }

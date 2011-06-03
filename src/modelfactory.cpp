@@ -298,7 +298,6 @@ void ModelFactory::computeTransDervFreq(double time, double rate_val, double *st
 		double *trans_mat_state = trans_matrix + (state1 * nstates);
 		double *trans_derv1_state = trans_derv1 + (state1 * nstates);
 		double *trans_derv2_state = trans_derv2 + (state1 * nstates);
-
 		for (int state2 = 0; state2 < nstates; state2++) {
 			trans_mat_state[state2] *= state_freq[state1];
 			trans_derv1_state[state2] *= (state_freq[state1] * rate_val);

@@ -268,7 +268,7 @@ double GTRModel::targetFunk(double x[]) {
 	if (state_freq[num_states-1] < 1e-4) return 1.0e+12;
 	decomposeRateMatrix();
 	assert(phylo_tree);
-	phylo_tree->clearAllPartialLh();
+	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
 }
 
@@ -310,7 +310,7 @@ double GTRModel::optimizeParameters() {
 	getVariables(variables);
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);
 	decomposeRateMatrix();
-	phylo_tree->clearAllPartialLh();
+	phylo_tree->clearAllPartialLH();
 	
 	delete [] bound_check;
 	delete [] lower_bound;

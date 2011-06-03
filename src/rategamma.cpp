@@ -112,7 +112,7 @@ void RateGamma::computeRatesMean () {
 double RateGamma::computeFunction(double shape) {
 	gamma_shape = shape;
 	computeRates();
-	phylo_tree->clearAllPartialLh();
+	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
 }
 
@@ -127,7 +127,7 @@ double RateGamma::optimizeParameters() {
 	optx = minimizeOneDimen(MIN_GAMMA_SHAPE, current_shape, MAX_GAMMA_SHAPE, TOL_GAMMA_SHAPE, &negative_lh, &ferror);
 	gamma_shape = optx;
 	computeRates();
-	phylo_tree->clearAllPartialLh();
+	phylo_tree->clearAllPartialLH();
 	return -negative_lh;
 }
 

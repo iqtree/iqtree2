@@ -258,7 +258,7 @@ double RateMeyerDiscrete::optimizeParameters() {
 	for (int i = 0; i < ncategory; i++)
 		optimizeCatRate(i);
 	normalizeRates();
-	phylo_tree->clearAllPartialLh();
+	phylo_tree->clearAllPartialLH();
 	return phylo_tree->computeLikelihood();
 	//return phylo_tree->optimizeAllBranches(2);
 }
@@ -270,7 +270,7 @@ double RateMeyerDiscrete::computeFunction(double value) {
 		if (value != cur_scale) {
 			ptn_tree->scaleLength(value/cur_scale);
 			cur_scale = value;
-			ptn_tree->clearAllPartialLh();
+			ptn_tree->clearAllPartialLH();
 		}
 		return -ptn_tree->computeLikelihood();
 	}
@@ -452,7 +452,7 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
 	}
 
 	normalizeRates();
-	phylo_tree->clearAllPartialLh();
+	phylo_tree->clearAllPartialLH();
 	double cur_lh = phylo_tree->computeLikelihood();
 
 	if (mcat_type & MCAT_MEAN)

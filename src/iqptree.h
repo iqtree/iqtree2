@@ -31,7 +31,7 @@
 
 #define SPEED_UP_AFTER_ITER_NUM 100
 
-typedef std::map< string, double > MapBranchLength;
+typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;
 typedef std::multiset< int, std::less< int > > MultiSetInt;
 
@@ -225,7 +225,7 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    NNIMove getBestNNIMoveForBranch(PhyloNode *node1, PhyloNode *node2);
+    NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2);
 
     /**
             distance matrix, used for IQP algorithm
@@ -248,12 +248,12 @@ public:
     /**
      * 	Save all the current branch lengths
      */
-    void saveBranchLengths(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void saveBranLens(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * 	 Restore the branch lengths from the saved values
      */
-    void restoreBranchLengths(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void restoreAllBranLen(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * Get the branch length of the branch node1-node2
@@ -261,7 +261,7 @@ public:
      * @param node2
      * @return the branch length
      */
-    double getBranchLength(PhyloNode *node1, PhyloNode *node2);
+    double getBranLen(PhyloNode *node1, PhyloNode *node2);
 
 
     /**
@@ -279,13 +279,7 @@ public:
     /**
             Do an NNI
      */
-    double doNNIMove(NNIMove move);
-
-
-    /**
-            TODO
-     */
-    double calculateOptBranchLen(PhyloNode *node1, PhyloNode *node2);
+    double doNNI(NNIMove move);
 
     /**
      * TODO
@@ -393,7 +387,7 @@ protected:
      */
     NodeVector taxaSet;
 
-    int nbNNIToApply;
+    int nbNNI;
 
     /**
      * 95% confidence value for number of NNIs found in one iteration
@@ -433,23 +427,23 @@ protected:
     /**
             The list of possible NNI moves for the current tree;
      */
-    vector<NNIMove> possibleNNIMoves;
+    vector<NNIMove> posNNIs;
 
 
     /**
             List contains non-conflicting NNI moves for the current tree;
      */
-    vector<NNIMove> nonConflictMoves;
+    vector<NNIMove> indeNNIs;
 
     /**
             Data structure (of type Map) which stores all the optimal branch lengths for all branches in the tree
      */
-    MapBranchLength mapOptBranLens;
+    BranLenMap mapOptBranLens;
 
     /**
      * 	Data structure (of type Map) used to store the original branch lengths of the tree
      */
-    MapBranchLength savedBranLens;
+    BranLenMap savedBranLens;
 
 
     int k_delete, k_delete_min, k_delete_max, k_delete_stay;

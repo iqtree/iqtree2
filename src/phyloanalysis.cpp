@@ -153,7 +153,7 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 
                 // print some infos
                 // clear all likelihood values
-                tree->clearAllPartialLh();
+                tree->clearAllPartialLH();
 
                 // optimize model parameters
                 double cur_lh = tree->getModelFactory()->optimizeParameters(false, false);
@@ -805,7 +805,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
                 tree.aln->getNSite() << " sites and " << tree.aln->getNPattern() << " patterns" << endl;
         //tree.clearAllPartialLh();
         tree.initializeAllPartialLh();
-        tree.clearAllPartialLh();
+        tree.clearAllPartialLH();
         tree.curScore = tree.optimizeAllBranches();
         //cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
         tree.curScore = tree.optimizeNNI();
@@ -875,7 +875,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         delete [] tree.dist_matrix;
         tree.dist_matrix = saved_dist_mat;
         tree.initializeAllPartialLh();
-        tree.clearAllPartialLh();
+        tree.clearAllPartialLH();
         tree.curScore = tree.optimizeAllBranches();
         //cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
         tree.curScore = tree.optimizeNNI();

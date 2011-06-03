@@ -189,8 +189,6 @@ void PhyloTree::setRate(RateHeterogeneity *rate) {
     site_rate = rate;
     if (!rate) return;
     numCat = site_rate->getNRate();
-    p_invar = site_rate->getPInvar();
-    p_var_cat = (1.0 - p_invar) / (double) numCat;
     if (aln) {
         block = aln->num_states * numCat;
         lh_size = aln->size() * block;
@@ -209,7 +207,7 @@ Node* PhyloTree::newNode(int node_id, int node_name) {
     return (Node*) (new PhyloNode(node_id, node_name));
 }
 
-void PhyloTree::clearAllPartialLh() {
+void PhyloTree::clearAllPartialLH() {
     if (!root) return;
     ((PhyloNode*) root->neighbors[0]->node)->clearAllPartialLh((PhyloNode*) root);
 }
@@ -1091,14 +1089,12 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
     assert(current_it_back);
     double current_len = current_it->length;
     double ferror, optx;
-    /*if (verbose_mode == VB_DEBUG) {
-            cout << "For branch " << node1->name << "," << node2->name << endl;
-    }*/
     if (optimize_by_newton) // Newton-Raphson method
         optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
-    else // Brent methodcase 20:return computeLikelihoodDervSSE<20> (dad_branch, dad, df, ddf);
+    else // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
-    if (fabs(current_len - optx) <= TOL_BRANCH_LEN) // if nothing changes, return
+    //if (fabs(current_len - optx) <= TOL_BRANCH_LEN) // if nothing changes, return
+	if (current_len == optx) // if nothing changes, return
         return -negative_lh;
     current_it->length = optx;
     current_it_back->length = optx;
@@ -1137,8 +1133,13 @@ double PhyloTree::optimizeAllBranches(int iterations) {
     //cout << tree_lh << endl;
     for (int i = 0; i < iterations; i++) {
         double new_tree_lh = optimizeAllBranches((PhyloNode*) root);
-        //clearAllPartialLh();
-        //new_tree_lh = computeLikelihood();
+		/*
+        clearAllPartialLH();
+        double new_tree_lh2 = computeLikelihood();
+		if (fabs(new_tree_lh - new_tree_lh2) > TOL_LIKELIHOOD) {
+			cout << "Wrong " << new_tree_lh <<" "<< new_tree_lh2 << endl;
+			exit(1);
+		}*/
         if (verbose_mode > VB_MAX) {
             cout << "BRANCH LEN " << i + 1 << " : ";
             cout.precision(10);
@@ -1165,7 +1166,7 @@ double PhyloTree::addTaxonML(Node *added_node, Node* &target_node, Node* &target
     added_node->updateNeighbor((Node*) 1, node, len / 2.0);
     added_node->updateNeighbor((Node*) 2, dad, len / 2.0);
     // compute the likelihood
-    clearAllPartialLh();
+    clearAllPartialLH();
     double best_score = optimizeChildBranches((PhyloNode*) added_node);
     target_node = node;
     target_dad = dad;
@@ -1235,7 +1236,7 @@ void PhyloTree::growTreeML(Alignment *alignment) {
         added_node->updateNeighbor((Node*) 1, target_node, len / 2.0);
         added_node->updateNeighbor((Node*) 2, target_dad, len / 2.0);
         // compute the likelihood
-        clearAllPartialLh();
+        clearAllPartialLH();
         optimizeAllBranches();
         optimizeNNI();
     }
@@ -1515,7 +1516,7 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad)
         dad1_nei->length = sibling1_len;
         dad2_nei->node = sibling2;
         dad2_nei->length = sibling2_len;
-        clearAllPartialLh();
+        clearAllPartialLH();
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
@@ -1560,7 +1561,7 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         vector<PhyloNeighbor*>::iterator it2;
         for (it2 = spr_path.begin(); it2 != spr_path.end(); it2++)
             (*it2)->clearPartialLh();
-        clearAllPartialLh();
+        clearAllPartialLH();
         // optimize relevant branches
         double score;
 
@@ -1655,7 +1656,7 @@ double PhyloTree::assessSPRMove(double cur_score, const SPRMove &spr) {
         ((PhyloNeighbor*) (*it))->clearPartialLh();
     }
 
-    clearAllPartialLh();
+    clearAllPartialLH();
     // optimize branches
     double score;
     score = optimizeAllBranches(dad);
@@ -1675,7 +1676,7 @@ double PhyloTree::assessSPRMove(double cur_score, const SPRMove &spr) {
     dad_nei1->length = sibling1_len;
     dad_nei2->node = sibling2;
     dad_nei2->length = sibling2_len;
-    clearAllPartialLh();
+    clearAllPartialLH();
 
     return cur_score;
 
@@ -1688,7 +1689,7 @@ double PhyloTree::optimizeSPR() {
     for (int i = 0; i < 100; i++) {
         spr_moves.clear();
         double score = optimizeSPR(cur_score, (PhyloNode*) root->neighbors[0]->node);
-        clearAllPartialLh();
+        clearAllPartialLH();
         if (score <= cur_score) {
             for (SPRMoves::iterator it = spr_moves.begin(); it != spr_moves.end(); it++) {
                 //cout << (*it).score << endl;

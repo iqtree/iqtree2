@@ -33,7 +33,7 @@ double RateGammaInvar::computeFunction(double value) {
 	else 
 		p_invar = value;
 	computeRates();
-	phylo_tree->clearAllPartialLh();
+	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();	
 }
 
@@ -43,7 +43,7 @@ double RateGammaInvar::optimizeParameters() {
 	tree_lh = RateGamma::optimizeParameters();
 	cur_optimize = 1;
 	tree_lh = RateInvar::optimizeParameters();
-	phylo_tree->clearAllPartialLh();
+	phylo_tree->clearAllPartialLH();
 	return tree_lh;
 }
 

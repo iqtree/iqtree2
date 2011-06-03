@@ -364,7 +364,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 	if (empty()) {
 		if (rate_file) {
 			readRateFile(rate_file);
-			phylo_tree->clearAllPartialLh();
+			phylo_tree->clearAllPartialLH();
 			return phylo_tree->optimizeAllBranches();
 		}
 		initializeRates();
@@ -373,7 +373,7 @@ double RateMeyerHaeseler::optimizeParameters() {
 	optimizeRates();
 
 	
-	phylo_tree->clearAllPartialLh();
+	phylo_tree->clearAllPartialLH();
 
 	stringstream best_tree_string;
 	phylo_tree->printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
@@ -399,7 +399,7 @@ double RateMeyerHaeseler::computeFunction(double value) {
 		if (value != cur_scale) {
 			ptn_tree->scaleLength(value/cur_scale);
 			cur_scale = value;
-			ptn_tree->clearAllPartialLh();
+			ptn_tree->clearAllPartialLH();
 		}
 		return -ptn_tree->computeLikelihood();
 	}

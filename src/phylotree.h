@@ -285,7 +285,7 @@ public:
     /**
             clear all partial likelihood for a clean computation again
      */
-    void clearAllPartialLh();
+    void clearAllPartialLH();
 
     /**
             allocate memory for a partial likelihood vector
