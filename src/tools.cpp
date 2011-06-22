@@ -544,7 +544,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.endemic_pd = false;
 	params.exclusive_pd = false;
 	params.complement_area = NULL;
-	params.scaling_factor = 0.0;
+	params.scaling_factor = -1;
 	params.binary_programming = false;
 	params.quad_programming = false;
 	params.test_input = TEST_NONE;
@@ -614,7 +614,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 		try {
 
 			if (strcmp(argv[cnt],"-h") == 0 || strcmp(argv[cnt],"--help") == 0) {
+#ifdef IQ_TREE
+				usage_iqtree(argv, false);
+#else
 				usage(argv, false);
+#endif
 			} else if (strcmp(argv[cnt],"-ho") == 0 || strcmp(argv[cnt],"-?") == 0) {
 				usage_iqtree(argv, false);
 			} else if (strcmp(argv[cnt],"-hh") == 0 || strcmp(argv[cnt],"-hhh") == 0) {
@@ -851,6 +855,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.run_mode = PRINT_TAXA;
 			} else if (strcmp(argv[cnt],"-area") == 0) {
 				params.run_mode = PRINT_AREA;
+			} else if (strcmp(argv[cnt],"-scale") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -scale <scaling_factor>";
+				params.scaling_factor = convert_double(argv[cnt]);
 			} else if (strcmp(argv[cnt],"-scalebranch") == 0) {
 				params.run_mode = SCALE_BRANCH_LEN;
 				cnt++;

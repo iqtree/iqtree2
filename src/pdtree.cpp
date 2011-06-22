@@ -161,6 +161,15 @@ void PDTree::readParams(Params &params) {
 		tax_weight[(*nameit).second->id] = ori_weight[i];
 	}
 
+	if (params.scaling_factor >= 0) {
+		if (params.scaling_factor > 1) outError("Scaling factor must be between 0 and 1");
+		cout << "Rescaling branch lengths with " << params.scaling_factor << 
+			" and taxa weights with " << 1 - params.scaling_factor << endl;
+		scale = params.scaling_factor;
+		for (DoubleVector::iterator it = tax_weight.begin(); it != tax_weight.end(); it++)
+			(*it) *= (1 - scale);
+	}
+
 	// incoporate them into the tree
 	incoporateParams(scale, tax_weight);
 }

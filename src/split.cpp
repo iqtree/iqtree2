@@ -243,8 +243,10 @@ int Split::trivial() {
 	for (iterator it = begin(); it != end(); it++, pos++) {
 		UINT content = *it;
 		int max_step;
-		if ((it + 1) == end()) 
+		if ((it + 1) == end()) {
 			max_step = ntaxa % UINT_BITS;
+			if (!max_step) max_step = UINT_BITS;
+		}
 		else
 			max_step = UINT_BITS;
 

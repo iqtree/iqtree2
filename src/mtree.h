@@ -295,6 +295,15 @@ public:
 	Node *findNodeName(string &name, Node *node = NULL, Node* dad = NULL);
 
 	/**
+		find a leaf with corresponding name
+		@param name leaf name
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+		@return node if found, otherwise NULL
+	*/
+	Node *findLeafName(string &name, Node *node = NULL, Node* dad = NULL);
+
+	/**
 		find a node with corresponding ID
 		@param id node ID
 		@param node the starting node, NULL to start from the root

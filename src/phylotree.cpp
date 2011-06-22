@@ -148,7 +148,7 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     int nseq = aln->getNSeq();
     for (int seq = 0; seq < nseq; seq++) {
         string seq_name = aln->getSeqName(seq);
-        Node *node = findNodeName(seq_name);
+        Node *node = findLeafName(seq_name);
         if (!node) {
             string str = "Alignment has a sequence name ";
             str += seq_name;

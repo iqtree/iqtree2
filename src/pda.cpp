@@ -133,11 +133,20 @@ inline void separator(ostream &out, int type = 0) {
 
 
 void printCopyright(ostream &out) {
+#ifdef IQ_TREE
+ 	out << "IQ-TREE beta version " << VERSION << " built " << __DATE__;
+#else
  	out << "PDA - Phylogenetic Diversity Analyzer version " << VERSION << " built " << __DATE__;
+#endif
 #ifdef DEBUG
 	out << " - debug mode";
 #endif
+
+#ifdef IQ_TREE
+	out << endl << "Copyright (c) 2011 Nguyen Lam Tung, Bui Quang Minh, and Arndt von Haeseler." << endl << endl;
+#else
 	out << endl << "Copyright (c) 2006-2008 Bui Quang Minh, Steffen Klaere and Arndt von Haeseler." << endl << endl;
+#endif
 }
 
 void printRunMode(ostream &out, RunMode run_mode) {

@@ -45,7 +45,8 @@ int Alignment::getMaxSeqNameLength() {
 
 void checkSeqName(StrVector &seq_names) {
 	ostringstream warn_str;
-	for (StrVector::iterator it = seq_names.begin(); it != seq_names.end(); it++) {
+	StrVector::iterator it;
+	for (it = seq_names.begin(); it != seq_names.end(); it++) {
 		string orig_name = (*it);
 		for (string::iterator i = it->begin(); i != it->end(); i++) {
 			if (!isalnum(*i) && (*i) != '_' && (*i) != '-' && (*i) != '.') {
@@ -59,6 +60,20 @@ void checkSeqName(StrVector &seq_names) {
 		string str = "Some sequence names are changed as follows:\n";
 		outWarning(str + warn_str.str());
 	}
+	// now check that sequence names are different
+	StrVector names;
+	names.insert(names.begin(), seq_names.begin(), seq_names.end());
+	sort(names.begin(), names.end());
+	bool ok = true;
+	for (it = names.begin(); it != names.end(); it++) {
+		if (it+1==names.end()) break;
+		if (*it == *(it+1)) {
+			cout << "ERROR: Duplicated sequence name " << *it << endl;
+			ok = false;
+		}
+	}
+	if (!ok) outError("Please rename sequences listed above!");
+	
 }
 
 Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : vector<Pattern>() {
@@ -1082,9 +1097,13 @@ void Alignment::computeEmpiricalRate (double *rates) {
 
 	k = 0;
 	double last_rate = pair_rates[num_states-2][num_states-1] + pair_rates[num_states-1][num_states-2];
+	if (last_rate == 0) last_rate = 1;
 	for (i = 0; i < num_states-1; i++)
-		for (j = i+1; j < num_states; j++)
+		for (j = i+1; j < num_states; j++) {
 			rates[k++] = (pair_rates[i][j] + pair_rates[j][i]) / last_rate;
+			if (rates[k-1] == 0) rates[k-1] = 1e-4;
+		}
+	rates[k-1] = 1;
 	if (verbose_mode >= VB_DEBUG) {
 		cout << "Empirical rates: ";
 		for (k = 0; k < num_states*(num_states-1)/2; k++)

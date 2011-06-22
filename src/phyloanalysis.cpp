@@ -519,6 +519,9 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
     if (params.print_site_lh)
 		cout << "  Site log-likelihoods:     " << params.out_prefix << ".sitelh" << endl;
 
+    if (params.write_intermediate_trees)
+		cout << "  All intermediate trees:   " << params.out_prefix << ".treels" << endl;
+
 /*	if (original_model == "WHTEST")
 		cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
     cout << endl;
@@ -895,7 +898,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     double treeSearchTime = (double) (t_tree_search_end - t_tree_search_start) / CLOCKS_PER_SEC;
 
     /* root the tree at the first sequence */
-    tree.root = tree.findNodeName(alignment->getSeqName(0));
+    tree.root = tree.findLeafName(alignment->getSeqName(0));
     assert(tree.root);
 
 	string rate_file = params.out_prefix;
@@ -1161,7 +1164,7 @@ void computeConsensusTree(const char *input_trees, int burnin, double cutoff,
     //maxsg.saveFile(cout);
     cout << "convert compatible split system into tree..." << endl;
     mytree.convertToTree(maxsg);
-    Node *node = mytree.findNodeName(first_taxname);
+    Node *node = mytree.findLeafName(first_taxname);
     if (node) mytree.root = node;
     mytree.scaleLength(100.0 / boot_trees.size(), true);
 

@@ -591,7 +591,7 @@ double IQPTree::doIQPNNI(Params &params) {
     string treels_name = params.out_prefix;
     treels_name += ".treels";
     if (params.write_intermediate_trees)
-        printTree(treels_name.c_str(), WT_TAXON_ID | WT_SORT_TAXA | WT_NEWLINE);
+        printTree(treels_name.c_str(), WT_SORT_TAXA | WT_NEWLINE | WT_BR_LEN);
     //printTree(treels_name.c_str(), WT_NEWLINE | WT_BR_LEN);
 
     // keep the best tree into a string
@@ -694,7 +694,7 @@ double IQPTree::doIQPNNI(Params &params) {
         //        }
 
         if (params.write_intermediate_trees)
-            printTree(treels_name.c_str(), WT_TAXON_ID | WT_NEWLINE | WT_APPEND | WT_SORT_TAXA);
+            printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
         //printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_BR_LEN);
 
         if (curScore > bestScore + TOL_LIKELIHOOD) {

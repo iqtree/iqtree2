@@ -251,7 +251,7 @@ SUBDIRS = shared bfp colamd
 noinst_HEADERS = declare.h fortify.h ini.h lp_Hash.h lp_MDO.h lp_MPS.h lp_SOS.h \
 	lp_crash.h lp_explicit.h lp_fortify.h lp_lib.h lp_matrix.h lp_mipbb.h \
 	lp_presolve.h lp_price.h lp_pricePSE.h lp_report.h lp_rlp.h lp_scale.h lp_simplex.h \
-	lp_solveDLL.h lp_types.h lp_utils.h lp_wlp.h lpkit.h lpsolve.h ufortify.h yacc_read.h
+	lp_solveDLL.h lp_types.h lp_utils.h lp_wlp.h lpkit.h lpsolve.h ufortify.h yacc_read.h lp_bit.h
 
 all: all-recursive
 
@@ -266,9 +266,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu src/lp/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign src/lp/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu src/lp/Makefile
+	  $(AUTOMAKE) --foreign src/lp/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \

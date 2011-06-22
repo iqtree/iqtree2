@@ -164,7 +164,7 @@ typedef set<IntString*, IntStringCmp> IntStringSet;
 int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 {
 	int smallest_taxid = leafNum;
-	out.precision(20);
+	out.precision(6);
 	if (!node) node = root;
 	if (node->isLeaf()) {
 		smallest_taxid = node->id;
@@ -747,6 +747,16 @@ Node *MTree::findNodeName(string &name, Node *node, Node *dad) {
 	if (node->name == name) return node;
 	FOR_NEIGHBOR_IT(node, dad, it) {
 		Node *res = findNodeName(name, (*it)->node, node);
+		if (res) return res;
+	}
+	return NULL;
+}
+
+Node *MTree::findLeafName(string &name, Node *node, Node *dad) {
+	if (!node) node = root;
+	if (node->isLeaf() && node->name == name) return node;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		Node *res = findLeafName(name, (*it)->node, node);
 		if (res) return res;
 	}
 	return NULL;
