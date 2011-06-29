@@ -43,7 +43,7 @@ int Alignment::getMaxSeqNameLength() {
 	return len;
 }
 
-void checkSeqName(StrVector &seq_names) {
+void Alignment::checkSeqName() {
 	ostringstream warn_str;
 	StrVector::iterator it;
 	for (it = seq_names.begin(); it != seq_names.end(); it++) {
@@ -73,7 +73,20 @@ void checkSeqName(StrVector &seq_names) {
 		}
 	}
 	if (!ok) outError("Please rename sequences listed above!");
-	
+	if (verbose_mode >= VB_MIN) {
+		int max_len = getMaxSeqNameLength();
+		cout.width(max_len);
+		cout << left << "Name" << " #Ungappy+unambiguous chars" << endl;
+		int num_problem_seq = 0;
+		for (int i = 0; i < seq_names.size(); i++) {
+			int num_proper_chars = countProperChar(i);
+			int percent_proper_chars = num_proper_chars*100 / getNSite();
+			cout.width(max_len);
+			cout << left << seq_names[i] << " " << num_proper_chars << " (" << percent_proper_chars << "%)" << endl;
+			if (percent_proper_chars < 50) num_problem_seq++;
+		}
+		if (num_problem_seq) cout << "WARNING: " << num_problem_seq << " sequences contain less than 50% proper characters" << endl;
+	}
 }
 
 Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : vector<Pattern>() {
@@ -106,7 +119,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 	if (getNSeq() < 3) 
 		outError("Alignment must have at least 3 sequences");
 		
-	checkSeqName(seq_names);
+	checkSeqName();
 	cout << "Alignment contains " << getNSeq() << " sequences with " << getNSite() << 
 		" characters and " << getNPattern() << " patterns"<< endl;
 	//cout << "Number of character states is " << num_states << endl;
@@ -649,8 +662,6 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 	in.exceptions(ios::failbit | ios::badbit);
 	in.close();
 
-	for (int i = 0; i < seq_names.size(); i++)
-		cout << '"' << seq_names[i] << '"' << endl;
 	return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
 }
 
@@ -877,6 +888,14 @@ void Alignment::countConstSite() {
 	for (iterator it = begin(); it != end(); it++)
 		if ((*it).is_const) num_const_sites += (*it).frequency;
 	frac_const_sites = ((double)num_const_sites) / getNSite();
+}
+
+int Alignment::countProperChar(int seq_id) {
+	int num_proper_chars = 0;
+	for (iterator it = begin(); it != end(); it++) {
+		if ((*it)[seq_id] >= 0 && (*it)[seq_id] < num_states) num_proper_chars+=(*it).frequency;
+	}
+	return num_proper_chars;
 }
 
 Alignment::~Alignment()

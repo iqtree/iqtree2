@@ -96,3 +96,39 @@ int TinaTree::computeParsimonyScore() {
     return score;
 }
 
+void TinaTree::initializeAllPartialLh() {
+    int index;
+    initializeAllPartialLh(index);
+    assert(index == (nodeNum - 1)*2);
+}
+
+void TinaTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
+    int pars_block_size = getBitsBlockSize();
+    if (!node) {
+        node = (PhyloNode*) root;
+        // allocate the big central partial likelihoods memory
+
+        if (!central_partial_pars) {
+            if (verbose_mode >= VB_MED)
+                cout << "Allocating " << (leafNum - 1)*4 * pars_block_size * sizeof (UINT) << " bytes for partial parsimony vectors" << endl;
+            //central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
+            central_partial_pars = ei_aligned_new<UINT > ((leafNum - 1)*4 * pars_block_size);
+            if (!central_partial_pars)
+                outError("Not enough memory for partial parsimony vectors");
+        }
+        index = 0;
+    }
+    if (dad) {
+        // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
+        PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
+        //assert(!nei->partial_lh);
+        nei->partial_pars = central_partial_pars + (index * pars_block_size);
+        nei = (PhyloNeighbor*) dad->findNeighbor(node);
+        //assert(!nei->partial_lh);
+        nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
+        index += 2;
+        assert(index < nodeNum * 2 - 1);
+    }
+    FOR_NEIGHBOR_IT(node, dad, it)
+    initializeAllPartialLh(index, (PhyloNode*) (*it)->node, node);
+}

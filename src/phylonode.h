@@ -24,6 +24,7 @@ class PhyloNeighbor : public Neighbor {
 	friend class PhyloNode;
 	friend class PhyloTree;
 	friend class IQPTree;
+	friend class TinaTree;
 
 public:
 	/**

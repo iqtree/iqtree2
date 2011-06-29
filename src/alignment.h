@@ -195,6 +195,12 @@ public:
 	*/
 	int getMaxSeqNameLength();
 
+	/**
+		check proper and undupplicated sequence names
+		
+	*/
+	void checkSeqName();
+
 /****************************************************************************
 	alignment general processing
 ****************************************************************************/
@@ -307,6 +313,12 @@ public:
 		count the fraction of constant sites in the alignment, update the variable frac_const_sites
 	*/
 	virtual void countConstSite();
+
+	/**
+		@return the number of ungappy and unambiguous characters from a sequence
+		@param seq_id sequence ID
+	*/
+	int countProperChar(int seq_id);
 
 	/**
 		@return unconstrained log-likelihood (without a tree)

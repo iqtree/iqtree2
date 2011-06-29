@@ -245,6 +245,8 @@ public:
      */
     int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
+	void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
+
 
     /**
             SLOW VERSION: compute the parsimony score of the tree, given the alignment
@@ -271,7 +273,7 @@ public:
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
      */
-    void initializeAllPartialLh();
+    virtual void initializeAllPartialLh();
 
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
@@ -279,7 +281,7 @@ public:
             @param dad dad of the node, used to direct the search
             @param index the index
      */
-    void initializeAllPartialLh(int &index, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void initializeAllPartialLh(int &index, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 
     /**
@@ -840,20 +842,53 @@ protected:
     UINT *newBitsBlock();
 
     /**
+            @return size of the bits entry (for storing num_states bits)
+     */
+    int getBitsEntrySize();
+
+	/**
+		@param bits_entry
+		@return TRUE if bits_entry contains all 0s, FALSE otherwise
+	*/
+	bool isEmptyBitsEntry(UINT *bits_entry);
+
+	/**
+		@param bits_entry1
+		@param bits_entry1
+		@param bits_union (OUT) union of bits_entry1 and bits_entry2
+	*/
+	void unionBitsEntry(UINT *bits_entry1, UINT *bits_entry2, UINT* &bits_union);
+
+	/**
+		set a single bit to 1
+		@param bits_entry
+		@param id index of the bit in the entry to set to 1
+	*/
+	void setBitsEntry(UINT* &bits_entry, int id);
+
+	/**
+		get a single bit content
+		@param bits_entry
+		@param id index of the bit in the entry
+		@return TRUE if bit ID is 1, FALSE otherwise
+	*/
+	bool getBitsEntry(UINT* &bits_entry, int id);
+
+    /**
             get bit blocks, each block span num_state bits
             @param bit_vec bit block vector
             @param index block index
-            @return the content of the block at index
+            @param bits_entry (OUT) content of the block at index
      */
-    UINT getBitsBlock(UINT *bit_vec, int index);
+    void getBitsBlock(UINT *bit_vec, int index, UINT* &bits_entry);
 
     /**
             set bit blocks, each block span num_state bits
-            @param bit_vec bit block vector
+            @param bit_vec (OUT) bit block vector
             @param index block index
-            @param value the content of the block at index
+            @param bits_entry the content of the block at index
      */
-    void setBitsBlock(UINT *bit_vec, int index, UINT value);
+    void setBitsBlock(UINT* &bit_vec, int index, UINT *bits_entry);
 };
 
 #endif

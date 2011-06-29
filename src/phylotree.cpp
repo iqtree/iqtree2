@@ -227,68 +227,122 @@ int PhyloTree::getBitsBlockSize() {
     return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
 }
 
+int PhyloTree::getBitsEntrySize() {
+    // reserve the last entry for parsimony score
+    return (aln->num_states + UINT_BITS - 1) / UINT_BITS;
+}
+
 UINT *PhyloTree::newBitsBlock() {
     return new UINT[getBitsBlockSize()];
 }
 
-UINT PhyloTree::getBitsBlock(UINT *bit_vec, int index) {
+void PhyloTree::getBitsBlock(UINT *bit_vec, int index, UINT* &bits_entry) {
     int nstates = aln->num_states;
     int myindex = (index * nstates);
     int bit_pos_begin = myindex >> BITS_DIV;
     int bit_off_begin = myindex & BITS_MODULO;
-    int bit_pos_end;
-    int bit_off_end = bit_off_begin + nstates;
-    if (bit_off_end > UINT_BITS) {
-        bit_off_end -= UINT_BITS;
-        bit_pos_end = bit_pos_begin + 1;
-    } else
-        bit_pos_end = bit_pos_begin;
+    int bit_pos_end = (myindex + nstates) >> BITS_DIV;
+    int bit_off_end = (myindex + nstates) & BITS_MODULO;
 
-
-    if (bit_pos_begin == bit_pos_end)
-        return (bit_vec[bit_pos_begin] >> bit_off_begin) & ((1 << nstates) - 1);
-    else {
-        int part1 = (bit_vec[bit_pos_begin] >> bit_off_begin);
-        int part2 = bit_vec[bit_pos_end] & ((1 << bit_off_end) - 1);
-        return part1 | (part2 << (UINT_BITS - bit_off_begin));
+    if (bit_pos_begin == bit_pos_end) {
+        bits_entry[0] = (bit_vec[bit_pos_begin] >> bit_off_begin) & ((1 << nstates) - 1);
+        return;
     }
+	UINT part1 = (bit_vec[bit_pos_begin] >> bit_off_begin);
+	int rest_bits = nstates;
+	int id;
+	for (id = 0; rest_bits >= UINT_BITS; id++, rest_bits -= UINT_BITS, bit_pos_begin++) {
+		bits_entry[id] = part1;
+		if (bit_off_begin > 0) bits_entry[id] |= (bit_vec[bit_pos_begin+1] << (UINT_BITS - bit_off_begin));
+		part1 = (bit_vec[bit_pos_begin+1] >> bit_off_begin);
+	}
+	if (bit_pos_begin == bit_pos_end) {
+		bits_entry[id] = (bit_vec[bit_pos_begin] >> bit_off_begin) & ((1 << rest_bits) - 1);
+		return;
+	}
+	UINT part2 = bit_vec[bit_pos_end];
+	if (bit_off_end < UINT_BITS) part2 &= ((1 << bit_off_end) - 1);
+	bits_entry[id] = part1;
+	if (bit_off_begin > 0) bits_entry[id] |= (part2 << (UINT_BITS - bit_off_begin));
 }
 
-void PhyloTree::setBitsBlock(UINT *bit_vec, int index, UINT value) {
+void PhyloTree::setBitsBlock(UINT* &bit_vec, int index, UINT *bits_entry) {
     int nstates = aln->num_states;
     int myindex = (index * nstates);
     int bit_pos_begin = myindex >> BITS_DIV;
     int bit_off_begin = myindex & BITS_MODULO;
-    int bit_pos_end;
-    int bit_off_end = bit_off_begin + nstates;
-    if (bit_off_end > UINT_BITS) {
-        bit_off_end -= UINT_BITS;
-        bit_pos_end = bit_pos_begin + 1;
-    } else
-        bit_pos_end = bit_pos_begin;
+    int bit_pos_end = (myindex + nstates) >> BITS_DIV;
+    int bit_off_end = (myindex + nstates) & BITS_MODULO;
 
-    int allstates = (1 << nstates) - 1;
-    assert(value <= allstates);
+    //assert(value <= allstates);
 
     if (bit_pos_begin == bit_pos_end) {
         // first clear the bit between bit_off_begin and bit_off_end
+	    int allstates = (1 << nstates) - 1;
         bit_vec[bit_pos_begin] &= ~(allstates << bit_off_begin);
         // now set the bit
-        bit_vec[bit_pos_begin] |= value << bit_off_begin;
-    } else {
-        int len1 = UINT_BITS - bit_off_begin;
-        int allbit1 = (1 << len1) - 1;
-        // clear bit from bit_off_begin to UINT_BITS
-        bit_vec[bit_pos_begin] &= ~(allbit1 << bit_off_begin);
-        // set bit  from bit_off_begin to UINT_BITS
-        bit_vec[bit_pos_begin] |= ((value & allbit1) << bit_off_begin);
-
-        // clear bit from 0 to bit_off_end
-        bit_vec[bit_pos_end] &= ~((1 << bit_off_end) - 1);
-        // now set the bit the value
-        bit_vec[bit_pos_end] |= (value >> len1);
-
+        bit_vec[bit_pos_begin] |= bits_entry[0] << bit_off_begin;
+        return;
     }
+	int len1 = UINT_BITS - bit_off_begin;
+	// clear bit from bit_off_begin to UINT_BITS
+	bit_vec[bit_pos_begin] &= (1 << bit_off_begin) - 1;
+	// set bit  from bit_off_begin to UINT_BITS
+	bit_vec[bit_pos_begin] |= (bits_entry[0] << bit_off_begin);
+	int rest_bits = nstates - len1;
+	int id;
+	for (id = 0; rest_bits >= UINT_BITS; bit_pos_begin++, id++, rest_bits -= UINT_BITS) {
+		bit_vec[bit_pos_begin+1] = (bits_entry[id+1] << bit_off_begin);
+		if (len1 < UINT_BITS) bit_vec[bit_pos_begin+1] |= (bits_entry[id] >> len1);
+	}
+
+	assert(bit_pos_begin == bit_pos_end-1);
+	// clear bit from 0 to bit_off_end
+	bit_vec[bit_pos_end] &= ~((1 << bit_off_end) - 1);
+	// now set the bit the value
+	if (len1 < UINT_BITS) bit_vec[bit_pos_end] |= (bits_entry[id] >> len1);
+	rest_bits -= bit_off_begin;
+	if  (rest_bits > 0)
+		bit_vec[bit_pos_end] |= (bits_entry[id+1] << bit_off_begin);
+}
+
+bool PhyloTree::isEmptyBitsEntry(UINT *bits_entry) {
+	int rest_bits = aln->num_states;
+	int i;
+	for (i = 0; rest_bits >= UINT_BITS; rest_bits -= UINT_BITS, i++)
+		if (bits_entry[i]) return false;
+	if (bits_entry[i] & ((1 << rest_bits)-1)) return false;
+	return true;
+}
+
+void PhyloTree::unionBitsEntry(UINT *bits_entry1, UINT *bits_entry2, UINT* &bits_union) {
+	int rest_bits = aln->num_states;
+	int i;
+	for (i = 0; rest_bits > 0; rest_bits -= UINT_BITS, i++)
+		bits_union[i] = bits_entry1[i] | bits_entry2[i];
+}
+
+void PhyloTree::setBitsEntry(UINT* &bits_entry, int id) {
+    int bit_pos = id >> BITS_DIV;
+    int bit_off = id & BITS_MODULO;
+	bits_entry[bit_pos] |= (1 << bit_off);
+}
+
+
+bool PhyloTree::getBitsEntry(UINT* &bits_entry, int id) {
+    int bit_pos = id >> BITS_DIV;
+    int bit_off = id & BITS_MODULO;
+	if (bits_entry[bit_pos] & (1 << bit_off)) return true;
+	return false;
+}
+
+
+void setBitsAll(UINT* &bit_vec, int num) {
+	int id;
+	int size = num/UINT_BITS;
+	memset(bit_vec, 255, size * sizeof(UINT));
+	num &= BITS_MODULO;
+	if (num) bit_vec[size] = (1 << num) - 1;
 }
 
 void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
@@ -300,11 +354,16 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
     int ptn;
     int nstates = aln->num_states;
     int pars_size = getBitsBlockSize();
+    int entry_size = getBitsEntrySize();
     assert(dad_branch->partial_pars);
+    UINT *bits_entry = new UINT[entry_size];
+	UINT *bits_entry1 = new UINT[entry_size];
+	UINT *bits_entry2 = new UINT[entry_size];
 
     if (node->isLeaf() && dad) {
         // external node
-        memset(dad_branch->partial_pars, 0, pars_size * sizeof (int));
+        setBitsAll(dad_branch->partial_pars, nstates * aln->size());
+        dad_branch->partial_pars[pars_size-1] = 0;
         for (ptn = 0; ptn < aln->size(); ptn++) {
             char state;
             if (node->name == ROOT_NAME) {
@@ -315,13 +374,17 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
             }
             if (state == STATE_UNKNOWN) {
                 // fill all entries with bit 1
-                setBitsBlock(dad_branch->partial_pars, ptn, (1 << nstates) - 1);
+                //setBitsBlock(dad_branch->partial_pars, ptn, (1 << nstates) - 1);
             } else if (state < nstates) {
-                setBitsBlock(dad_branch->partial_pars, ptn, 1 << state);
+			    memset(bits_entry, 0, sizeof(UINT) * entry_size);
+            	setBitsEntry(bits_entry, state);
+                setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
             } else {
                 // ambiguous character, for DNA, RNA
                 state = state - (nstates - 1);
-                setBitsBlock(dad_branch->partial_pars, ptn, state);
+			    memset(bits_entry, 0, sizeof(UINT) * entry_size);
+                bits_entry[0] = state;
+                setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
             }
         }
     } else {
@@ -339,18 +402,28 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
                 partial_pars_child2 = ((PhyloNeighbor*) (*it))->partial_pars;
         }
         assert(partial_pars_child1 && partial_pars_child2);
+		// take the intersection of two bits block
         for (int i = 0; i < pars_size - 1; i++)
             partial_pars_dad[i] = partial_pars_child1[i] & partial_pars_child2[i];
         int partial_pars = partial_pars_child1[pars_size - 1] + partial_pars_child2[pars_size - 1];
         // now check if some intersection is empty, change to union (Fitch algorithm) and increase the parsimony score
-        for (ptn = 0; ptn < aln->size(); ptn++)
-            if (getBitsBlock(partial_pars_dad, ptn) == 0) {
-                setBitsBlock(partial_pars_dad, ptn, getBitsBlock(partial_pars_child1, ptn) | getBitsBlock(partial_pars_child2, ptn));
+        for (ptn = 0; ptn < aln->size(); ptn++) {
+        	getBitsBlock(partial_pars_dad, ptn, bits_entry);
+            if (isEmptyBitsEntry(bits_entry)) {
+            	getBitsBlock(partial_pars_child1, ptn, bits_entry1);
+            	getBitsBlock(partial_pars_child2, ptn, bits_entry2);
+            	unionBitsEntry(bits_entry1, bits_entry2, bits_entry);
+            	//cout << bits_entry[0] << " " << bits_entry[1] << endl;
+                setBitsBlock(partial_pars_dad, ptn, bits_entry);
                 partial_pars += aln->at(ptn).frequency;
             }
+		}
         partial_pars_dad[pars_size - 1] = partial_pars;
     }
     dad_branch->partial_lh_computed |= 2;
+    delete [] bits_entry2;
+    delete [] bits_entry1;
+    delete [] bits_entry;
 }
 
 int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
@@ -376,10 +449,12 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad)
     // now combine likelihood at the branch
 
     int pars_size = getBitsBlockSize();
+    int entry_size = getBitsEntrySize();
     //int nstates = aln->num_states;
     int i, ptn;
     int tree_pars = node_branch->partial_pars[pars_size - 1] + dad_branch->partial_pars[pars_size - 1];
     UINT *partial_pars = newBitsBlock();
+    UINT *bits_entry = new UINT[entry_size];
     for (i = 0; i < pars_size - 1; i++)
         partial_pars[i] = (node_branch->partial_pars[i] & dad_branch->partial_pars[i]);
 
@@ -388,16 +463,52 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad)
         for (i = 0; i < aln->getNSeq(); i++)
                 cout << aln->convertStateBack(aln->at(ptn)[i]);
         cout << endl;*/
-
-        if (getBitsBlock(partial_pars, ptn) == 0)
+		getBitsBlock(partial_pars, ptn, bits_entry);
+        if (isEmptyBitsEntry(bits_entry))
             tree_pars += aln->at(ptn).frequency;
     }
+    delete [] bits_entry;
     delete [] partial_pars;
     return tree_pars;
 }
 
 int PhyloTree::computeParsimony() {
     return computeParsimonyBranch((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root);
+}
+
+void PhyloTree::printParsimonyStates(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	if (!dad) {
+		dad = (PhyloNode*)root;
+		dad_branch = (PhyloNeighbor*)root->neighbors[0];
+		cout << "Parsimonious states for every node and site: " << endl;
+	}
+	int site;	
+   	cout << "States for node ";
+   	int max_len = aln->getMaxSeqNameLength();
+   	if (max_len < 3) max_len = 3;
+   	cout.width(max_len);
+   	if (!dad_branch->node->name.empty()) 
+   		cout << left << dad_branch->node->name; 
+   	else 
+   		cout << left << dad_branch->node->id;
+ 	cout << " are ";
+   	UINT *bits_entry = new UINT[getBitsEntrySize()];
+    for (site = 0; site < aln->getNSite(); site++) {
+    	int ptn = aln->getPatternID(site);
+    	getBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
+    	cout << "{";
+    	bool first = true;
+    	for (int i = 0; i < aln->num_states; i++)
+    		if (getBitsEntry(bits_entry, i)) { 
+    			cout << ((!first) ? "," : "") << i; 
+    			first = false; 
+    		}
+    	cout << "}\t";
+	}
+	cout << endl;
+	delete [] bits_entry;
+	FOR_NEIGHBOR_IT(dad_branch->node, dad, it)
+		printParsimonyStates((PhyloNeighbor*)(*it), (PhyloNode*)(dad_branch->node));
 }
 
 int PhyloTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, PhyloNode *dad) {
