@@ -600,6 +600,7 @@ void MTree::getInternalNodes(NodeVector &nodes, Node *node, Node *dad) {
 void MTree::getTaxaName(vector<string> &taxname, Node *node, Node *dad) {
 	if (!node) node = root;
 	if (node->isLeaf()) {
+		if (taxname.empty()) taxname.resize(leafNum);
 		taxname[node->id] = node->name;
 	}
 	//for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 

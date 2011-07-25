@@ -855,6 +855,22 @@ struct Params {
 	bool ngs_ignore_gaps;
 
 	bool do_pars_multistate;
+
+	/**
+		File containing p-values of the genes, for GSS project with Roland
+	*/
+	char *gene_pvalue_file;
+
+	/**
+		scaling factor for the p-values
+	*/
+	double gene_scale_factor;
+
+	/**
+		transforming pvalues to logarithms
+	*/
+	bool gene_pvalue_loga;
+
 };
 
 /**

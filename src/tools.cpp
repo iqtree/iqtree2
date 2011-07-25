@@ -602,6 +602,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ngs_mapped_reads = NULL;
 	params.ngs_ignore_gaps = true;	
 	params.do_pars_multistate = false;
+	params.gene_pvalue_file = NULL;
+	params.gene_scale_factor = -1;
+	params.gene_pvalue_loga = false;
 
 	struct timeval tv;
 	struct timezone tz;
@@ -860,6 +863,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -scale <scaling_factor>";
 				params.scaling_factor = convert_double(argv[cnt]);
+			} else if (strcmp(argv[cnt],"-scaleg") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -scaleg <gene_scale_factor>";
+				params.gene_scale_factor = convert_double(argv[cnt]);
 			} else if (strcmp(argv[cnt],"-scalebranch") == 0) {
 				params.run_mode = SCALE_BRANCH_LEN;
 				cnt++;
@@ -1148,6 +1156,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.mcat_type &= (127-MCAT_PATTERN);
 			} else if (strcmp(argv[cnt], "-tina") == 0) {
 				params.do_pars_multistate = true;
+			} else if (strcmp(argv[cnt], "-pval") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -pval <gene_pvalue_file>";
+				params.gene_pvalue_file = argv[cnt];
+			} else if (strcmp(argv[cnt], "-plog") == 0) {
+				params.gene_pvalue_loga = true;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

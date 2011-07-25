@@ -220,7 +220,7 @@ public:
 	/**
 		@return TRUE if we are doing PD area optimization
 	*/
-	bool isPDArea();
+	virtual bool isPDArea();
 
 	/**
 		check if all taxa are covered by the set of areas

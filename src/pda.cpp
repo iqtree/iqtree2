@@ -41,6 +41,7 @@
 #include "matree.h"
 #include "ngs.h"
 #include "parsmultistate.h"
+#include "gss.h"
 
 using namespace std;
 
@@ -1227,10 +1228,10 @@ void scaleBranchLength(Params &params) {
 	PDTree tree(params);
 	if (params.run_mode == SCALE_BRANCH_LEN) {
 		cout << "Scaling branch length with a factor of " << params.scaling_factor << " ..." << endl;
-		tree.scaleLength(params.scaling_factor, true);
+		tree.scaleLength(params.scaling_factor, false);
 	} else {
 		cout << "Scaling clade support with a factor of " << params.scaling_factor << " ..." << endl;
-		tree.scaleCladeSupport(params.scaling_factor, true);
+		tree.scaleCladeSupport(params.scaling_factor, false);
 	}
 	if (params.out_file != NULL)
 		tree.printTree(params.out_file);
@@ -1462,6 +1463,8 @@ int main(int argc, char *argv[])
 		runPhyloAnalysis(params);
 	} else if (params.ngs_file || params.ngs_mapped_reads) {
 		runNGSAnalysis(params);
+	} else if (params.pdtaxa_file && params.gene_scale_factor >=0.0 && params.gene_pvalue_file) {
+		runGSSAnalysis(params);
 	} else if (params.consensus_type != CT_NONE) {
 		MExtTree tree;
 		switch (params.consensus_type) {
