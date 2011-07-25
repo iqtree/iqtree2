@@ -2883,8 +2883,8 @@ fi
 
 
 # Define the identity of the package.
- PACKAGE=pda
- VERSION=0.6
+ PACKAGE=iqtree
+ VERSION=0.9
 
 
 cat >>confdefs.h <<_ACEOF

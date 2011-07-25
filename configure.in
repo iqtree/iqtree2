@@ -1,7 +1,7 @@
 AC_INIT(configure.in)
 
 AM_CONFIG_HEADER(config.h)
-AM_INIT_AUTOMAKE(pda, 0.6)
+AM_INIT_AUTOMAKE(iqtree, 0.9)
 
 AC_LANG_CPLUSPLUS
 AC_PROG_CXX

@@ -14,17 +14,17 @@
     <projectname>pda</projectname>
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
-    <description></description>
-    <defaultencoding></defaultencoding>
+    <description/>
+    <defaultencoding/>
     <versioncontrol>kdevsubversion</versioncontrol>
   </general>
   <kdevautoproject>
     <general>
       <activetarget>src/pda</activetarget>
-      <useconfiguration>debug</useconfiguration>
+      <useconfiguration>optimized</useconfiguration>
     </general>
     <run>
-      <mainprogram>/scratch/minh/projects/pda/debug/src/pda</mainprogram>
+      <mainprogram>/scratch/minh/projects/pda/debug/src/iqtree</mainprogram>
       <terminal>true</terminal>
       <runarguments>
         <pda/>
@@ -36,9 +36,8 @@
         <pda>/scratch/minh/projects/pda/debug/./src</pda>
       </cwd>
       <programargs> -aln example.phy -n 2 -vv -mod HKY -pdel 0.5 </programargs>
-      <globaldebugarguments>-s example.phy example.tree -tina -root -st MULTI
-</globaldebugarguments>
-      <globalcwd>/project/pd-phylo/tina/</globalcwd>
+      <globaldebugarguments>test.new -scaleg 0.5 -k 2:10 -ts toyexample.set -pval toyexample.pvals </globaldebugarguments>
+      <globalcwd>/project/pd-phylo/roland</globalcwd>
       <useglobalprogram>true</useglobalprogram>
       <autocompile>false</autocompile>
       <autoinstall>false</autoinstall>
@@ -247,7 +246,7 @@
       <includePaths>.;</includePaths>
     </codecompletion>
     <creategettersetter>
-      <prefixGet></prefixGet>
+      <prefixGet/>
       <prefixSet>set</prefixSet>
       <prefixVariable>m_,_</prefixVariable>
       <parameterName>theValue</parameterName>
@@ -269,11 +268,11 @@
   </cppsupportpart>
   <kdevdebugger>
     <general>
-      <gdbpath></gdbpath>
-      <dbgshell></dbgshell>
-      <configGdbScript></configGdbScript>
-      <runShellScript></runShellScript>
-      <runGdbScript></runGdbScript>
+      <gdbpath/>
+      <dbgshell/>
+      <configGdbScript/>
+      <runShellScript/>
+      <runGdbScript/>
       <breakonloadinglibs>true</breakonloadinglibs>
       <separatetty>false</separatetty>
       <floatingtoolbar>false</floatingtoolbar>

@@ -3,3 +3,5 @@
 AUTOMAKE_OPTIONS = foreign 1.4
 
 SUBDIRS = src
+
+EXTRA_DIST = lib/libacml_mv.a
