@@ -1421,6 +1421,11 @@ void compare(Params &params){
 ********************************************************/
 int main(int argc, char *argv[])
 {
+
+/*	cout << "time_t: " << sizeof(time_t) << endl
+		<< "clock_t: " << sizeof(clock_t) << endl
+		<< "CLOCKS_PER_SEC: "<< CLOCKS_PER_SEC << endl;*/
+
 	//test_eigen();
         system("echo $HOSTNAME");
 	printCopyright(cout);
