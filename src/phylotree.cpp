@@ -169,7 +169,7 @@ void PhyloTree::setAlignment(Alignment *alignment) {
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {
-    best_tree_string.seekg(0);
+    best_tree_string.seekg(0, ios::beg);
     freeNode();
     readTree(best_tree_string, rooted);
     assignLeafNames();

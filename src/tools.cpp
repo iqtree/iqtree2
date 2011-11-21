@@ -33,7 +33,7 @@ double cmdLambda;
 /*
 	WIN32 does not define gettimeofday() function.
 	Here declare it extra for WIN32 only.
-*/
+ */
 #if defined(WIN32)
 #include <sys/timeb.h>
 #include <sys/types.h>
@@ -41,9 +41,9 @@ double cmdLambda;
 struct timezone {};
 void gettimeofday(struct timeval* t,void* timezone)
 {       struct _timeb timebuffer;
-        _ftime( &timebuffer );
-        t->tv_sec=timebuffer.time;
-        t->tv_usec=1000*timebuffer.millitm;
+_ftime( &timebuffer );
+t->tv_sec=timebuffer.time;
+t->tv_usec=1000*timebuffer.millitm;
 }
 #else
 #include <sys/time.h>
@@ -52,7 +52,7 @@ void gettimeofday(struct timeval* t,void* timezone)
 
 /********************************************************
 	Defining DoubleMatrix methods
-********************************************************/
+ ********************************************************/
 
 /*DoubleMatrix::DoubleMatrix(int arows, int acols) {
 	rows = arows;
@@ -70,28 +70,28 @@ DoubleMatrix::~DoubleMatrix() {
 	if (value) delete value;
 	value = NULL;
 }
-*/
+ */
 
 /********************************************************
 	Miscellaneous
-********************************************************/
+ ********************************************************/
 
 /**
 	Output an error to screen, then exit program
 	@param error error message
-*/
+ */
 /*
 void outError(char *error)
 {
 	cerr << "ERROR: " << error << endl;
 	exit(2);
 }
-*/
+ */
 
 /**
 	Output an error to screen, then exit program
 	@param error error message
-*/
+ */
 void outError(const char *error)
 {
 	cerr << "ERROR: " << error << endl;
@@ -101,7 +101,7 @@ void outError(const char *error)
 /**
 	Output an error to screen, then exit program
 	@param error error message
-*/
+ */
 void outError(string error)
 {
 	outError(error.c_str());
@@ -122,7 +122,7 @@ void outError(const char *error, string msg) {
 /**
 	Output a warning message to screen
 	@param error warning message
-*/
+ */
 void outWarning(const char *warn)
 {
 	cerr << "*WARNING* " << warn << endl;
@@ -138,67 +138,67 @@ double randomLen(Params &params) {
 	double ran = static_cast<double> (rand () % 999 + 1) / 1000;
 	double len = - params.mean_len * log (ran);
 
-    if (len < params.min_len) {
-      int fac = rand () % 1000;
-      double delta = static_cast<double> (fac)  / 1000.0; //delta < 1.0
-      len = params.min_len + delta / 1000.0;
-    }
+	if (len < params.min_len) {
+		int fac = rand () % 1000;
+		double delta = static_cast<double> (fac)  / 1000.0; //delta < 1.0
+		len = params.min_len + delta / 1000.0;
+	}
 
-    if (len > params.max_len) {
-      int fac = rand () % 1000;
-      double delta = static_cast<double> (fac)  / 1000.0; //delta < 1.0
-      len = params.max_len - delta / 1000.0;
-    }
+	if (len > params.max_len) {
+		int fac = rand () % 1000;
+		double delta = static_cast<double> (fac)  / 1000.0; //delta < 1.0
+		len = params.max_len - delta / 1000.0;
+	}
 	return len;
 }
 
 //From Tung
 string convertIntToString(int number)
 {
-   stringstream ss;//create a stringstream
-   ss << number;//add number to the stream
-   return ss.str();//return a string with the contents of the stream
+	stringstream ss;//create a stringstream
+	ss << number;//add number to the stream
+	return ss.str();//return a string with the contents of the stream
 }
 
 //From Tung
 bool copyFile (const char SRC[], const char DEST[])
 {
-    std::ifstream src; // the source file
-    std::ofstream dest; // the destination file
+	std::ifstream src; // the source file
+	std::ofstream dest; // the destination file
 
-    src.open (SRC, std::ios::binary); // open in binary to prevent jargon at the end of the buffer
-    dest.open (DEST, std::ios::binary); // same again, binary
-    if (!src.is_open() || !dest.is_open())
-        return false; // could not be copied
+	src.open (SRC, std::ios::binary); // open in binary to prevent jargon at the end of the buffer
+	dest.open (DEST, std::ios::binary); // same again, binary
+	if (!src.is_open() || !dest.is_open())
+		return false; // could not be copied
 
-    dest << src.rdbuf (); // copy the content
-    dest.close (); // close destination file
-    src.close (); // close source file
+	dest << src.rdbuf (); // copy the content
+	dest.close (); // close destination file
+	src.close (); // close source file
 
-    return true; // file copied successfully
+	return true; // file copied successfully
 }
 
 bool fileExists(string strFilename) {
-  struct stat stFileInfo;
-  bool blnReturn;
-  int intStat;
+	struct stat stFileInfo;
+	bool blnReturn;
+	int intStat;
 
-  // Attempt to get the file attributes
-  intStat = stat(strFilename.c_str(),&stFileInfo);
-  if(intStat == 0) {
-    // We were able to get the file attributes
-    // so the file obviously exists.
-    blnReturn = true;
-  } else {
-    // We were not able to get the file attributes.
-    // This may mean that we don't have permission to
-    // access the folder which contains this file. If you
-    // need to do that level of checking, lookup the
-    // return values of stat which will give you
-    // more details on why stat failed.
-    blnReturn = false;
-  }
-  return(blnReturn);
+	// Attempt to get the file attributes
+	intStat = stat(strFilename.c_str(),&stFileInfo);
+	if(intStat == 0) {
+		// We were able to get the file attributes
+		// so the file obviously exists.
+		blnReturn = true;
+	} else {
+		// We were not able to get the file attributes.
+		// This may mean that we don't have permission to
+		// access the folder which contains this file. If you
+		// need to do that level of checking, lookup the
+		// return values of stat which will give you
+		// more details on why stat failed.
+		blnReturn = false;
+	}
+	return(blnReturn);
 }
 
 int convert_int(const char *str) throw (string) {
@@ -228,13 +228,13 @@ double convert_double(const char *str) throw (string) {
 }
 
 string convert_time(const double sec) {
-    int sec_int = (int) floor(sec);
-    int secs = sec_int % 60;
-    int mins = (sec_int % 3600) / 60;
-    int hours = sec_int / 3600;
-    stringstream ss;
-    ss << hours << ":" << mins << ":" << secs;
-    return ss.str();
+	int sec_int = (int) floor(sec);
+	int secs = sec_int % 60;
+	int mins = (sec_int % 3600) / 60;
+	int hours = sec_int / 3600;
+	stringstream ss;
+	ss << hours << ":" << mins << ":" << secs;
+	return ss.str();
 }
 
 void convert_range(const char *str, int &lower, int &upper, int &step_size) throw (string) {
@@ -401,7 +401,7 @@ void readInitAreaFile(Params &params, int nareas, StrVector &area_name) {
 }
 
 void readAreasBoundary(char *file_name, MSetsBlock *areas, double *areas_boundary) {
-	
+
 	try {
 		ifstream in;
 		in.exceptions(ios::failbit | ios::badbit);
@@ -440,7 +440,7 @@ void readAreasBoundary(char *file_name, MSetsBlock *areas, double *areas_boundar
 	} catch (ios::failure) {
 		outError(ERR_READ_INPUT, file_name);
 	}
-	
+
 }
 
 void readTaxaSets(char *filename, MSetsBlock *sets) {
@@ -593,13 +593,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.SSE = true;
 	params.print_site_lh = false;			
 	params.nni_lh = false;
-	params.cmdLambda = 0.75;
-        params.speed_conf = 0.95;
-    params.whtest_simulations = 1000;
-    params.mcat_type = MCAT_LOG + MCAT_PATTERN;
-    params.rate_file = NULL;
-    params.ngs_file = NULL;
-    params.ngs_mapped_reads = NULL;
+	params.lambda = 0.75;
+	params.speed_conf = 0.95;
+	params.whtest_simulations = 1000;
+	params.mcat_type = MCAT_LOG + MCAT_PATTERN;
+	params.rate_file = NULL;
+	params.ngs_file = NULL;
+	params.ngs_mapped_reads = NULL;
 	params.ngs_ignore_gaps = true;	
 	params.do_pars_multistate = false;
 	params.gene_pvalue_file = NULL;
@@ -678,7 +678,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.run_mode = GREEDY;
 			} else if (strcmp(argv[cnt],"-pr") == 0 || strcmp(argv[cnt],"--pruning") == 0) {
 				params.run_mode = PRUNING;
-			//} else if (strcmp(argv[cnt],"--both") == 0) {
+				//} else if (strcmp(argv[cnt],"--both") == 0) {
 				//params.run_mode = BOTH_ALG;
 			} else if (strcmp(argv[cnt],"-e") == 0) {
 				cnt++;
@@ -835,7 +835,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.second_tree = argv[cnt];
 			}else if (strcmp(argv[cnt],"-stats") == 0) {
 				params.run_mode = STATS;
-				
+
 			} // MA
 			else if (strcmp(argv[cnt],"-min") == 0) {
 				params.find_pd_min = true;
@@ -992,11 +992,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_name = argv[cnt];
 			} else if (strcmp(argv[cnt],"-mh") == 0) {
 				params.mvh_site_rate = true;
- 				params.discard_saturated_site = false;
+				params.discard_saturated_site = false;
 				params.SSE = false;
 			} else if (strcmp(argv[cnt],"-mhs") == 0) {
 				params.mvh_site_rate = true;
- 				params.discard_saturated_site = true;
+				params.discard_saturated_site = true;
 				params.SSE = false;
 			} else if (strcmp(argv[cnt],"-rl") == 0) {
 				params.rate_mh_type = false;
@@ -1013,22 +1013,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 				phyml_opt = true;
 			} else if (strcmp(argv[cnt], "-nni_lh") == 0) {
 				params.nni_lh = true;
-			} else if (strcmp(argv[cnt], "-lambda") == 0) {
+			} else if (strcmp(argv[cnt], "-lmd") == 0) {
 				cnt++;
-				params.cmdLambda = convert_double(argv[cnt]);
-                                if (params.cmdLambda > 1.0)
-                                    throw "Lambda must be in (0,1]";
+				params.lambda = convert_double(argv[cnt]);
+				if (params.lambda > 1.0)
+					throw "Lambda must be in (0,1]";
 			}
-                        else if (strcmp(argv[cnt], "-spc") == 0) {
+			else if (strcmp(argv[cnt], "-spc") == 0) {
 				cnt++;
-                                if (cnt >= argc)
-                                    throw "Please specify the confidence level for the adaptive NNI Search";
-                                params.speed_conf = convert_double(argv[cnt]);
-                                if (  params.speed_conf <= 0.5 || params.speed_conf >1 )
-                                    throw "Confidence level of the adaptive NNI search must be higher than 0.75 and <= 1";
+				if (cnt >= argc)
+					throw "Please specify the confidence level for the adaptive NNI Search";
+				params.speed_conf = convert_double(argv[cnt]);
+				if (  params.speed_conf <= 0.75 || params.speed_conf >1 )
+					throw "Confidence level of the adaptive NNI search must be higher than 0.75 and <= 1";
 			} else if (strcmp(argv[cnt], "-nosse") == 0) {
 				params.SSE = false;
-                        }
+			}
 			else if (strcmp(argv[cnt],"-f") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1178,11 +1178,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				throw "Not allowed to specify both -o <taxon> and -root";
 
 		}
-		 
+
 		// try
 		catch (const char *str) {
 			outError(str);
-		//} catch (char *str) {
+			//} catch (char *str) {
 			//outError(str);
 		} catch (string str) {
 			outError(str);
@@ -1275,8 +1275,8 @@ void usage(char* argv[], bool full_command) {
 	cout << "  -comp <treefile> Compare the tree with each in the input trees." << endl; 
 
 
-//	cout << "  -rep <times>        Repeat algorithm a number of times." << endl;
-//	cout << "  -noout              Print no output file." << endl;
+	//	cout << "  -rep <times>        Repeat algorithm a number of times." << endl;
+	//	cout << "  -noout              Print no output file." << endl;
 	cout << endl;
 	//cout << "HIDDEN OPTIONS: see the source code file pda.cpp::parseArg()" << endl;
 
@@ -1286,69 +1286,72 @@ void usage(char* argv[], bool full_command) {
 void usage_iqtree(char* argv[], bool full_command) {
 	cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS] [<treefile>] " << endl << endl;
 	cout << "GENERAL OPTIONS:" << endl
-		 << "  -?                   Printing this help dialog" << endl
-		 << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP or NEXUS format"  << endl
-		 << "  -st <BIN|DNA|AA>     Binary, DNA, or Protein sequences (default: auto-detect)"  << endl
-		 << "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl
-		 << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl 
-		 << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment)" << endl
-	<< endl << "NON-PARAMETRIC BOOTSTRAP:" << endl
-		 << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (default: none)" << endl
-		 << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
-		 << "  -bo <#replicates>    Bootstrap only" << endl
-		 << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
-	<< endl << "SUBSTITUTION MODEL:" << endl
-		 << "  -m <substitution_model_name>" << endl
-		 << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
-		 << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
-		 << "                       specification, e.g., '010010' is equiv. to HKY" << endl
-		 << "              Protein: Poisson (default), WAG, cpREV, mtREV, PAM, mtMAM, JTT," << endl
-		 << "                       LG, mtART, mtZOA, VT, or rtREV" << endl
-		 << "               Binary: JC-like" << endl
-		 << "            Modeltest: TEST or TESTONLY to select model with Modeltest." << endl
-		 << "                       TESTONLY will stop the run after finishing Modeltest" << endl
-		 << "            Otherwise: Name of file containing user-model parameters" << endl
-		 << "                       (rate parameters and state frequencies)" << endl
-		 << "  -f <EQ|EM|ES|UD>     EQual, EMpirical, EStimated, or User-Defined state" << endl 
-		 << "                       frequency (default: detected from model name)" << endl
-	<< endl << "RATE HETEROGENEITY:" << endl
-		 << "  -m <substitution_model_name>+I or +G[n] or +I+G[n]" << endl
-		 << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl
-		 << "                       categories for Gamma rates (default: n=4)" << endl
-		 << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
-		 << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
-		 << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
-		 << "                       Meyer & von Haeseler (2003) method" << endl
-		 //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
-	<< endl << "TEST OF MODEL HOMOGENEITY:" << endl
-		 << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
-		 << "                       Weiss & von Haeseler (2003) method" << endl
-		 << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
-	<< endl << "TREE INFERENCE:" << endl
-		 << "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
-		 << "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl
-		 << "  -n <#iterations>     Number of iterations  (default: auto)" << endl
-		 << "  -sr <#iterations>    Stopping rule with max. #iterations (default: off)" << endl
-		 << "  -sc <confidence>     Confidence value for stopping rule (default: 0.95)" << endl
-		 << "  -wt                  Writing all intermediate trees into .treels file" << endl
-		 << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
-		 << "  -fixbr               Fix branch lengths of <treefile>" << endl
-		 << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
-		 << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
-	<< endl << "CONSENSUS RECONSTRUCTION:" << endl
-		 << "  <tree_file>          Set of input trees for consensus reconstruction" << endl
-		 << "  -t <threshold>       Min split support in range [0,1]. 0.5 for majority-rule" << endl
-		 << "                       consensus (default: 0, i.e. extended consensus)" << endl
-		 << "  -bi <burnin>         Discarding <burnin> trees at beginning of <treefile>" << endl
-		 << "  -con                 Computing consensus tree to .contree file" << endl
-		 << "  -net                 Computing consensus network to .nex file" << endl
-		 << "  -sup <target_tree>   Assigning support values for <target_tree> to .suptree" << endl
-	<< endl << "ROBINSON-FOULDS DISTANCE:" << endl
-		 << "  -rf_all              Computing all-to-all RF distances of trees in <treefile>" << endl
-		 << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
-	<< endl << "MISCELLANEOUS:" << endl
-		 << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
-		 << endl;
+			<< "  -?                   Printing this help dialog" << endl
+			<< "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP or NEXUS format"  << endl
+			<< "  -st <BIN|DNA|AA>     Binary, DNA, or Protein sequences (default: auto-detect)"  << endl
+			<< "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl
+			<< "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
+			<< "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment)" << endl
+			<< endl << "NON-PARAMETRIC BOOTSTRAP:" << endl
+			<< "  -b <#replicates>     Bootstrap + ML tree + consensus tree (default: none)" << endl
+			<< "  -bc <#replicates>    Bootstrap + consensus tree" << endl
+			<< "  -bo <#replicates>    Bootstrap only" << endl
+			<< "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
+			<< endl << "SUBSTITUTION MODEL:" << endl
+			<< "  -m <substitution_model_name>" << endl
+			<< "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
+			<< "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
+			<< "                       specification, e.g., '010010' is equiv. to HKY" << endl
+			<< "              Protein: Poisson (default), WAG, cpREV, mtREV, PAM, mtMAM, JTT," << endl
+			<< "                       LG, mtART, mtZOA, VT, or rtREV" << endl
+			<< "               Binary: JC-like" << endl
+			<< "            Modeltest: TEST or TESTONLY to select model with Modeltest." << endl
+			<< "                       TESTONLY will stop the run after finishing Modeltest" << endl
+			<< "            Otherwise: Name of file containing user-model parameters" << endl
+			<< "                       (rate parameters and state frequencies)" << endl
+			<< "  -f <EQ|EM|ES|UD>     EQual, EMpirical, EStimated, or User-Defined state" << endl
+			<< "                       frequency (default: detected from model name)" << endl
+			<< endl << "RATE HETEROGENEITY:" << endl
+			<< "  -m <substitution_model_name>+I or +G[n] or +I+G[n]" << endl
+			<< "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl
+			<< "                       categories for Gamma rates (default: n=4)" << endl
+			<< "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
+			<< "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
+			<< "  -mh                  Computing site-specific rates to .mhrate file using" << endl
+			<< "                       Meyer & von Haeseler (2003) method" << endl
+			//<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
+			<< endl << "TEST OF MODEL HOMOGENEITY:" << endl
+			<< "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
+			<< "                       Weiss & von Haeseler (2003) method" << endl
+			<< "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
+			<< endl << "TREE INFERENCE:" << endl
+			<< "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
+			<< "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl
+			<< "  -n <#iterations>     Number of iterations  (default: auto)" << endl
+			<< "  -sr <#iterations>	   Stopping rule with max. #iterations (default: off)" << endl
+			<< "  -sc <confidence>     Confidence value for stopping rule (default: 0.95)" << endl
+			<< "  -spc <level>         Speed up confidence level for NNI adaptive search (default 0.95)" << endl
+			<< "  -lmd <lambda>        lambda parameter for the PhyML search (default 0.75)" << endl
+			<< "  -nosse               Disable SSE instructions" << endl
+			<< "  -wt                  Writing all intermediate trees into .treels file" << endl
+			<< "  -d <file>            Reading genetic distances from file (default: JC)" << endl
+			<< "  -fixbr               Fix branch lengths of <treefile>" << endl
+			<< "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
+			<< "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
+			<< endl << "CONSENSUS RECONSTRUCTION:" << endl
+			<< "  <tree_file>          Set of input trees for consensus reconstruction" << endl
+			<< "  -t <threshold>       Min split support in range [0,1]. 0.5 for majority-rule" << endl
+			<< "                       consensus (default: 0, i.e. extended consensus)" << endl
+			<< "  -bi <burnin>         Discarding <burnin> trees at beginning of <treefile>" << endl
+			<< "  -con                 Computing consensus tree to .contree file" << endl
+			<< "  -net                 Computing consensus network to .nex file" << endl
+			<< "  -sup <target_tree>   Assigning support values for <target_tree> to .suptree" << endl
+			<< endl << "ROBINSON-FOULDS DISTANCE:" << endl
+			<< "  -rf_all              Computing all-to-all RF distances of trees in <treefile>" << endl
+			<< "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
+			<< endl << "MISCELLANEOUS:" << endl
+			<< "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
+			<< endl;
 
 	if (full_command) {
 		//TODO Print other options here (to be added)
@@ -1370,13 +1373,13 @@ InputType detectInputFile(char *input_file) {
 		} while (ch <= 32 && !in.eof() && count++ < 20);
 		in.close();
 		switch (ch) {
-			case '#': return IN_NEXUS;
-			case '(': return IN_NEWICK;
-			case '[': return IN_NEWICK;
-			case '>': return IN_FASTA;
-			default: 
-				if (isdigit(ch)) return IN_PHYLIP; 
-				return IN_OTHER;
+		case '#': return IN_NEXUS;
+		case '(': return IN_NEWICK;
+		case '[': return IN_NEWICK;
+		case '>': return IN_FASTA;
+		default:
+			if (isdigit(ch)) return IN_PHYLIP;
+			return IN_OTHER;
 		}
 	} catch (ios::failure) {
 		outError("Cannot read file ", input_file);

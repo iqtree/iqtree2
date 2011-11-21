@@ -700,7 +700,7 @@ double IQPTree::doIQPNNI(Params &params) {
         if (curScore > bestScore + TOL_LIKELIHOOD) {
             cout << "BETTER TREE FOUND: " << curScore << endl;
             bestScore = curScore;
-            best_tree_string.seekp(0);
+            best_tree_string.seekp(0, ios::beg);
             printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
             //cout << best_tree_string.str() << endl;
             //printResultTree(params);
@@ -710,7 +710,7 @@ double IQPTree::doIQPNNI(Params &params) {
             resetKDelete();
         } else {
             /* take back the current best tree */
-            best_tree_string.seekg(0);
+            best_tree_string.seekg(0, ios::beg);
             freeNode();
             readTree(best_tree_string, rooted);
             assignLeafNames();

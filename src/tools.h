@@ -812,7 +812,7 @@ struct Params {
     /**
      *  Lambda in PhyML algorithm
      */
-    double cmdLambda;
+    double lambda;
 
     /**
      * Confidence level for the speed up heuristics

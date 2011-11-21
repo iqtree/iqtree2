@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "phylotree.h"
-#include "acml_mv/acml_mv.h"
+//#include "acml_mv/acml_mv.h"
 
 template<int NSTATES>
 inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
@@ -80,18 +80,18 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < NSTATES) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
         }                
-        //lh_ptn += p_invar_ptns[ptn];
-        lh_ptns[ptn] = lh_ptn;
-        //tree_lh += log(lh_ptn) * ptn_freqs[ptn];
+        lh_ptn += p_invar_ptns[ptn];
+        //lh_ptns[ptn] = lh_ptn;
+        tree_lh += log(lh_ptn) * ptn_freqs[ptn];
     }
-    vrda_log(alnSize, lh_ptns.data(), lh_ptns_log.data());
-    tree_lh += (lh_ptns_log * ptn_freqs).sum();
-    if (pattern_lh) 
-    for (ptn = 0; ptn < alnSize; ++ptn)
-    	pattern_lh[ptn] = lh_ptns_log[ptn];
+    //vrda_log(alnSize, lh_ptns.data(), lh_ptns_log.data());
+    //tree_lh += (lh_ptns_log * ptn_freqs).sum();
+    if (pattern_lh) {
+		for (ptn = 0; ptn < alnSize; ++ptn)
+			pattern_lh[ptn] = lh_ptns_log[ptn];
+	}
     return tree_lh;
 }
-
 
 template<int NSTATES>
 inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
@@ -225,15 +225,11 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihoodSSE<NSTATES > (dad_branch, dad);
-        //computePartialLikelihoodNaive(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihoodSSE<NSTATES > (node_branch, node);
-        //computePartialLikelihoodNaive(node_branch, node);
-
     // now combine likelihood at the branch
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     df = ddf = 0.0;
-
     int ptn = 0;
     int cat = 0;
     double *partial_lh_site = node_branch->partial_lh;
@@ -248,14 +244,11 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     double *derv2_state;
     p_invar = site_rate->getPInvar();
     p_var_cat = (1.0 - p_invar) / (double) numCat;
-        
     double state_freq[NSTATES];
     model->getStateFrequency(state_freq);
-
     EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
     EIGEN_ALIGN16 double trans_derv1[numCat * tranSize];
     EIGEN_ALIGN16 double trans_derv2[numCat * tranSize];
-
     int discrete_cat = site_rate->getNDiscreteRate();
     if (!site_rate->isSiteSpecificRate())
         for (cat = 0; cat < discrete_cat; cat++) {
@@ -266,11 +259,8 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
             double rate_val = site_rate->getRate(cat);
             //double rate_sqr = rate_val * rate_val;
             model_factory->computeTransDervFreq(dad_branch->length, rate_val, state_freq, trans_cat, derv1_cat, derv2_cat);
-
         }
-
     bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
-          
     int dad_state = STATE_UNKNOWN;
     for ( ; ptn < alnSize; ++ptn) {
         lh_ptn = 0.0;
@@ -330,7 +320,6 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
                 derv2_state += tranSize;
             }
         }
-
         lh_ptn = lh_ptn * p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < NSTATES) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
@@ -340,12 +329,14 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         derv2_frac = lh_ptn_derv2 * tmp;
         df += derv1_frac * freq;
         ddf += (derv2_frac - derv1_frac * derv1_frac) * freq;
-        lh_ptns[ptn] = lh_ptn;
-        //tree_lh += log(lh_ptn) * freq;
+        //lh_ptns[ptn] = lh_ptn;
+        tree_lh += log(lh_ptn) * freq;
     }
-    vrda_log(alnSize, lh_ptns.data(), lh_ptns_log.data());
-    tree_lh += (lh_ptns_log * ptn_freqs).sum();
-    if (!isnormal(tree_lh)) outError("Log-likelihood is NaN. Please contact the author");
+    //vrda_log(alnSize, lh_ptns.data(), lh_ptns_log.data());q
+    //tree_lh += (lh_ptns_log * ptn_freqs).sum();
+    if (!isnormal(tree_lh)){
+    	outError("Log-likelihood is NaN. Please contact the author");
+    }
     return tree_lh;
 }
 
@@ -353,7 +344,6 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
     if (sse) {
         switch (aln->num_states) {            
             case 2: return computeLikelihoodBranchSSE <2> (dad_branch, dad, pattern_lh);
-            //case 4: return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
             case 4: return computeLikelihoodBranchSSE <4> (dad_branch, dad, pattern_lh);
             case 20: return computeLikelihoodBranchSSE <20> (dad_branch, dad, pattern_lh);
             default: return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
@@ -384,7 +374,6 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
         switch (aln->num_states) {
             case 2: return computeLikelihoodDervSSE < 2 > (dad_branch, dad, df, ddf);
             case 4: return computeLikelihoodDervSSE < 4 > (dad_branch, dad, df, ddf);
-            //case 4: return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
             case 20:return computeLikelihoodDervSSE < 20 > (dad_branch, dad, df, ddf);
             default: return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
         }
