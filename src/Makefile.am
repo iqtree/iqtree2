@@ -15,7 +15,7 @@ iqtree_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
 	rategammainvar.cpp rateheterogeneity.cpp rateinvar.cpp ratemeyerdiscrete.cpp \
 	ratemeyerhaeseler.cpp split.cpp splitgraph.cpp splitset.cpp stoprule.cpp substmodel.cpp \
 	tinatree.cpp tools.cpp whtest_wrapper.cpp
-noinst_HEADERS = acml_mv/acml_mv.h alignment.h alignmentpairwise.h bionj.h \
+noinst_HEADERS = alignment.h alignmentpairwise.h bionj.h \
 	circularnetwork.h eigendecomposition.h greedy.h gss.h gtrmodel.h gurobiwrapper.h \
 	hashsplitset.h iqptree.h lpwrapper.h matree.h mexttree.h modeldna.h modelfactory.h \
 	modelnonrev.h modelprotein.h modeltest_wrapper.h mpdablock.h msetsblock.h \
@@ -27,7 +27,7 @@ noinst_HEADERS = acml_mv/acml_mv.h alignment.h alignmentpairwise.h bionj.h \
 SUBDIRS = kmeans lp modeltest ncl whtest
 iqtree_LDADD = $(top_builddir)/src/kmeans/libkmeans.a \
 	$(top_builddir)/src/lp/liblpsolve.a $(top_builddir)/src/modeltest/libmodeltest.a \
-	$(top_builddir)/src/ncl/libNCL.a $(top_builddir)/src/whtest/libwhtest.a $(top_srcdir)/lib/libacml_mv.a
+	$(top_builddir)/src/ncl/libNCL.a $(top_builddir)/src/whtest/libwhtest.a
 AM_CXXFLAGS = -Wno-deprecated -DIQ_TREE
 
 AM_CFLAGS = -DIQ_TREE

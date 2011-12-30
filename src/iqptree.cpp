@@ -21,6 +21,7 @@
 
 //TODO Only to test
 int cntBranches = 0;
+extern clock_t t_begin;
 
 IQPTree::IQPTree() :
 PhyloTree() {
@@ -49,7 +50,7 @@ IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln)
     nni_count_est = 0.0;
     nni_delta_est = 0;
     curScore = 0.0; // Current score of the tree
-    bestScore = 0.0; // Best score found sofar
+    bestScore = 0.0; // Best score found so far
     cur_pars_score = -1;
     enable_parsimony = false;
     enableHeuris = true; // This is set true when the heuristic started (after N iterations)
@@ -622,22 +623,22 @@ double IQPTree::doIQPNNI(Params &params) {
     for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration); cur_iteration++) {
         if (verbose_mode >= VB_DEBUG)
             cout << "Performing IQP in iteration " << cur_iteration << endl;
-
-        //clock_t startClock = clock();
         double iqp_score = doIQP();      
-        //clock_t endClock = clock();
-        //cout.precision(15);
-        //        if (verbose_mode >= VB_MAX) {
-        //            cout << "IQP score : " << iqp_score << endl;
-        //            printf("Total time used for IQP : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
-        //        }
 
-        //        if (verbose_mode >= VB_DEBUG) {
-        //            string iqp_tree = tree_file_name + "IQP" + convertIntToString(cur_iteration);
-        //            printTree(iqp_tree.c_str());
-        //        }
+/*        cout.precision(15);
+		if (verbose_mode >= VB_MAX) {
+			cout << "IQP score : " << iqp_score << endl;
+			printf("Total time used for IQP : %8.6f seconds. \n",
+					(double) (-startClock + endClock) / CLOCKS_PER_SEC);
+		}
 
-        //startClock = clock();        
+		if (verbose_mode >= VB_DEBUG) {
+			string iqp_tree = tree_file_name + "IQP" + convertIntToString(
+					cur_iteration);
+			printTree(iqp_tree.c_str());
+		}
+*/
+
         int skipped = 0;
         if (enableHeuris) {
             if (cur_iteration > SPEED_UP_AFTER_ITER_NUM) {
@@ -650,9 +651,6 @@ double IQPTree::doIQPNNI(Params &params) {
         } else {
             optimizeNNI();
         }
-
-        //endClock = clock();
-        //printf("Total time used for NNI : %8.6f seconds. \n", (double) (-startClock + endClock) / CLOCKS_PER_SEC);
 
         if (params.nni_lh && lh_file.is_open()) {
             lh_file << cur_iteration;
@@ -675,23 +673,27 @@ double IQPTree::doIQPNNI(Params &params) {
         
         if (!skipped) {
             cout << "Iteration " << cur_iteration << " / LogL: " << curScore 
-            	<< " / Time elapsed: " << convert_time(elapsed_secs) 
-            	<< "s"; 
+            	<< " / Time elapsed: " << convert_time(elapsed_secs) << "s";
            if (cur_iteration > 10 && elapsed_secs > 10)
            		cout <<	" (" << convert_time(remaining_secs) << "s left)";
            cout << endl;
         }
 
-        //Tung : Write tree out to compare topology
-        //        if (verbose_mode >= VB_DEBUG) {
-        //            if (abs(curScore - bestScore) <= 0.0001) {
-        //                cout << "Found tree with the same score as best score" << endl;
-        //                if (!copyFile(tree_file_name.c_str(), (tree_file_name + ".bestTree" + convertIntToString(cur_iteration)).c_str()))
-        //                    cout << "Tree file could not be copied successfully";
-        //                printTree((tree_file_name + ".sameScoreBestTree" + convertIntToString(cur_iteration)).c_str());
-        //                //exit(0);
-        //            }
-        //        }
+/*
+        if (verbose_mode >= VB_DEBUG) {
+			if (abs(curScore - bestScore) <= 0.0001) {
+				cout << "Found tree with the same score as best score" << endl;
+				if (!copyFile(
+						tree_file_name.c_str(),
+						(tree_file_name + ".bestTree" + convertIntToString(
+								cur_iteration)).c_str()))
+					cout << "Tree file could not be copied successfully";
+				printTree(
+						(tree_file_name + ".sameScoreBestTree"
+								+ convertIntToString(cur_iteration)).c_str());
+			}
+		}
+*/
 
         if (params.write_intermediate_trees)
             printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
@@ -820,7 +822,6 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped) {
             doNNI(indeNNIs.at(i));
         }
         double newScore = optimizeAllBranches(1);
-
         if (newScore > curScore + TOL_LIKELIHOOD) {
             if (enableHeuris)
                 vecImpProNNI.push_back((newScore - curScore) / nbNNI);

@@ -22,14 +22,6 @@
 
 VerboseMode verbose_mode;
 
-//FIXME Where should I put this switches ?
-bool phyml_opt;
-bool nni_lh;
-int speedUpFromIter;
-double cmdLambda;
-//bool ils;
-//int perLevel;
-
 /*
 	WIN32 does not define gettimeofday() function.
 	Here declare it extra for WIN32 only.
@@ -593,7 +585,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.SSE = true;
 	params.print_site_lh = false;			
 	params.nni_lh = false;
-	params.lambda = 0.75;
+	params.lambda = 1;
 	params.speed_conf = 0.95;
 	params.whtest_simulations = 1000;
 	params.mcat_type = MCAT_LOG + MCAT_PATTERN;
@@ -1009,8 +1001,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong mean rate for MH model";
 			} else if (strcmp(argv[cnt],"-mstore") == 0) {
 				params.store_trans_matrix = true;
-			} else if (strcmp(argv[cnt], "-phyml_opt") == 0) {
-				phyml_opt = true;
 			} else if (strcmp(argv[cnt], "-nni_lh") == 0) {
 				params.nni_lh = true;
 			} else if (strcmp(argv[cnt], "-lmd") == 0) {
@@ -1024,8 +1014,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Please specify the confidence level for the adaptive NNI Search";
 				params.speed_conf = convert_double(argv[cnt]);
-				if (  params.speed_conf <= 0.75 || params.speed_conf >1 )
-					throw "Confidence level of the adaptive NNI search must be higher than 0.75 and <= 1";
+				if (  params.speed_conf < 0.75 || params.speed_conf >1 )
+					throw "Confidence level of the adaptive NNI search must be >= 0.75 and <= 1";
 			} else if (strcmp(argv[cnt], "-nosse") == 0) {
 				params.SSE = false;
 			}
@@ -1195,7 +1185,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 	} // for
 	if (params.user_file == NULL && params.aln_file == NULL && params.ngs_file == NULL && params.ngs_mapped_reads == NULL)
-		usage(argv, false);
+#ifdef IQ_TREE
+				usage_iqtree(argv, false);
+#else
+				usage(argv, false);
+#endif
 	if (!params.out_prefix) {
 		if (params.aln_file) 
 			params.out_prefix = params.aln_file;

@@ -42,6 +42,7 @@
 #include "whtest_wrapper.h"
 
 const int DNA_MODEL_NUM = 14;
+clock_t t_begin, t_end;
 
 string dna_model_names[DNA_MODEL_NUM] ={"JC", "F81", "K80", "HKY", "TNef", "TN", "K81", "K81uf",
     "TIMef", "TIM", "TVMef", "TVM", "SYM", "GTR"};
@@ -578,7 +579,6 @@ void printSiteLh(Params &params, IQPTree &tree) {
 }
 
 void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
-    clock_t t_begin, t_end;
     /*
             cout << "Computing parsimony score..." << endl;
             for (int i = 0; i < trees_block->GetNumTrees(); i++) {
@@ -675,10 +675,16 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << "Model of evolution: " << tree.getModelName() << " (" << model_df << " free parameters)" << endl;
     cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
     cout << "Random seed: " << params.ran_seed << endl;
+    cout << "Lambda for local search: " << params.lambda << endl;
     if (params.speed_conf != 1.0) {
-        cout <<"Speed-Up 's confidence value: " << params.speed_conf << endl;
+    	if (alignment->getNSeq() <= 100) {
+    		params.speed_conf = 0.95;
+    	} else {
+    		params.speed_conf = 0.75;
+    	}
+        cout <<"Confidence value for speed up: " << params.speed_conf << endl;
     } else {
-        cout <<"Speed-Up: disabled " << endl;
+        cout <<"Speed up: disabled " << endl;
     }
 
     /*
@@ -927,7 +933,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         double score = tree.computeLikelihood(pattern_lh);
         num_low_support = tree.testAllBranches(params.aLRT_threshold, score, pattern_lh, params.aLRT_replicates);        
         cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
-        cout << "Time used:  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
+        cout << "CPU Time used:  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
         delete [] pattern_lh;
     }
 
@@ -936,8 +942,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     t_end = clock();
     params.run_time = (t_end - t_begin);
     cout << endl;
-    cout << "Time used for tree reconstruction: " << convert_time(treeSearchTime) << "s" << endl;
-    cout << "Total time used: " << convert_time((double) params.run_time / CLOCKS_PER_SEC) << "s" << endl;
+    cout << "CPU time used for tree reconstruction: " << treeSearchTime << " (" << convert_time(treeSearchTime) << ") "<< "s" << endl;
+    cout << "CPU total time used: " << (double) params.run_time / CLOCKS_PER_SEC << " (" << convert_time((double) params.run_time / CLOCKS_PER_SEC) << " )"<< "s" << endl;
     //printf( "Total time used: %8.6f seconds.\n", (double) params.run_time / CLOCKS_PER_SEC );
     
     tree.printResultTree(params);    
