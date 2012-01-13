@@ -664,8 +664,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     } 
     tree.setModel(tree.getModelFactory()->model);
     tree.setRate(tree.getModelFactory()->site_rate);
-    tree.calStateFreq();
-    tree.calPInvarPtn();
     tree.setStartLambda(params.lambda);
     int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
     clock_t t_tree_search_start, t_tree_search_end;

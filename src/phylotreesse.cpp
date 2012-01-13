@@ -18,7 +18,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "phylotree.h"
-//#include "acml_mv/acml_mv.h"
 
 template<int NSTATES>
 inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
@@ -80,12 +79,8 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < NSTATES) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
         }                
-        lh_ptn += p_invar_ptns[ptn];
-        //lh_ptns[ptn] = lh_ptn;
         tree_lh += log(lh_ptn) * ptn_freqs[ptn];
     }
-    //vrda_log(alnSize, lh_ptns.data(), lh_ptns_log.data());
-    //tree_lh += (lh_ptns_log * ptn_freqs).sum();
     if (pattern_lh) {
 		for (ptn = 0; ptn < alnSize; ++ptn)
 			pattern_lh[ptn] = lh_ptns_log[ptn];
@@ -230,7 +225,6 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     // now combine likelihood at the branch
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     df = ddf = 0.0;
-    int ptn = 0;
     int cat = 0;
     double *partial_lh_site = node_branch->partial_lh;
     double *partial_lh_child = dad_branch->partial_lh;
@@ -242,8 +236,8 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     double *trans_state;
     double *derv1_state;
     double *derv2_state;
-    p_invar = site_rate->getPInvar();
-    p_var_cat = (1.0 - p_invar) / (double) numCat;
+    double p_invar = site_rate->getPInvar();
+    double p_var_cat = (1.0 - p_invar) / (double) numCat;
     double state_freq[NSTATES];
     model->getStateFrequency(state_freq);
     EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
@@ -259,10 +253,11 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
             double rate_val = site_rate->getRate(cat);
             //double rate_sqr = rate_val * rate_val;
             model_factory->computeTransDervFreq(dad_branch->length, rate_val, state_freq, trans_cat, derv1_cat, derv2_cat);
+
         }
     bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
     int dad_state = STATE_UNKNOWN;
-    for ( ; ptn < alnSize; ++ptn) {
+    for (int ptn = 0 ; ptn < alnSize; ++ptn) {
         lh_ptn = 0.0;
         lh_ptn_derv1 = 0.0;
         lh_ptn_derv2 = 0.0;
@@ -270,8 +265,8 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         int padding = 0;
         if (dad->isLeaf()) {
             dad_state = (*aln)[ptn][dad->id];
-            padding = dad_state * NSTATES;
         }
+        padding = dad_state * NSTATES;
         if (dad_state < NSTATES) {
             //external node
             trans_state = trans_mat + padding;
@@ -321,21 +316,22 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
             }
         }
         lh_ptn = lh_ptn * p_var_cat;
+        lh_ptn_derv1 *= p_var_cat;
+        lh_ptn_derv2 *= p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < NSTATES) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
-        }        
-        double tmp = p_var_cat / lh_ptn;
-        derv1_frac = lh_ptn_derv1 * tmp;
-        derv2_frac = lh_ptn_derv2 * tmp;
+        }
+        //assert(lh_ptn > 0);
+        // Think about other strategy !!!
+        //double tmp = p_var_cat / lh_ptn;
+        //derv1_frac = lh_ptn_derv1 * tmp;
+        //derv2_frac = lh_ptn_derv2 * tmp;
+        derv1_frac = lh_ptn_derv1 / lh_ptn;
+        derv2_frac = lh_ptn_derv2 / lh_ptn;
+
         df += derv1_frac * freq;
         ddf += (derv2_frac - derv1_frac * derv1_frac) * freq;
-        //lh_ptns[ptn] = lh_ptn;
         tree_lh += log(lh_ptn) * freq;
-    }
-    //vrda_log(alnSize, lh_ptns.data(), lh_ptns_log.data());q
-    //tree_lh += (lh_ptns_log * ptn_freqs).sum();
-    if (!isnormal(tree_lh)){
-    	outError("Log-likelihood is NaN. Please contact the author");
     }
     return tree_lh;
 }
@@ -360,7 +356,6 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
         switch (aln->num_states) {
             case 2: return computePartialLikelihoodSSE < 2 > (dad_branch, dad, pattern_scale);
             case 4: return computePartialLikelihoodSSE < 4 > (dad_branch, dad, pattern_scale);
-            //case 4: return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
             case 20:return computePartialLikelihoodSSE < 20 > (dad_branch, dad, pattern_scale);
             default: return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
         }

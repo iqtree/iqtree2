@@ -771,17 +771,6 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped) {
             //Save all the current branch lengths
             saveBranLens();                
             //Generate all possible NNI moves
-			
-			///////////// DEBUG
-			/*
-			clearAllPartialLH();
-			double curScore2 = computeLikelihood();
-			if (fabs(curScore2 - curScore) > TOL_LIKELIHOOD) {
-				cout << "Wrong " << curScore <<" "<< curScore2  <<endl;
-				exit(1);
-			}
-			*/
-			///////////// END DEBUG
 			genNNIMoves();          
             if (posNNIs.size() == 0) {
                 if (nniIteration == 1)
@@ -855,13 +844,11 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped) {
 
     if (foundBetterTree) {
         curScore = optimizeAllBranches();
-        //cout << "Current score of the tree after finishing iteration " << curScore << endl;
-        //cout << "Recalculate the likelihood " << computeLikelihood() << endl;
         if (enableHeuris) {
             vecNumNNI.push_back(numbNNI);                                    
         }
     } else {
-        //cout << "NNI search could not find any better tree !!!" << endl;
+        cout << "NNI search could not find any better tree !!!" << endl;
     }
     return curScore;
 }

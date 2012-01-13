@@ -178,20 +178,6 @@ public:
         return model_factory;
     }
 
-    inline void calStateFreq() {
-        if (model) {
-            state_freq = ei_aligned_new<double>(model->num_states);
-            model->getStateFrequency(state_freq);
-        }
-    }
-
-    inline void calPInvarPtn() {
-        if (site_rate && aln && state_freq) {            
-            double p_invar = site_rate->getPInvar();
-            for (int ptn = 0; ptn < aln->size(); ++ptn)
-                p_invar_ptns[ptn] = p_invar * state_freq[(int)(*aln)[ptn][0]];
-        }
-    }
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -771,13 +757,6 @@ protected:
 	*/
 	bool discard_saturated_site;
     
-    ArrayXd p_invar_ptns;
-
-    /**
-     * State frequencies
-     */
-    double *state_freq;
-
     /**
      * Number of category
      */
@@ -804,10 +783,6 @@ protected:
      * Size of the transition matrix
      */
     int tranSize;
-
-    double p_invar;
-
-    double p_var_cat;
 
     /**
      * Temporary partial likelihood array: used when swapping branch and recalculate the

@@ -62,8 +62,7 @@ PhyloTree::PhyloTree()
 }
 
 PhyloTree::PhyloTree(Alignment *alignment)
-: MTree(), p_invar_ptns(alignment->size()), ptn_freqs(alignment->size()),
-lh_ptns(alignment->size()), lh_ptns_log(alignment->size()) {
+: MTree(), ptn_freqs(alignment->size()), lh_ptns(alignment->size()), lh_ptns_log(alignment->size()) {
     aln = alignment;
     alnSize = aln->size();
     numStates = aln->num_states;
@@ -80,7 +79,6 @@ lh_ptns(alignment->size()), lh_ptns_log(alignment->size()) {
     for (int ptn = 0; ptn < alnSize; ++ptn) {
         ptn_freqs[ptn] = (*aln)[ptn].frequency;
     }
-    state_freq = NULL;
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {
@@ -95,15 +93,9 @@ PhyloTree::~PhyloTree() {
     if (central_partial_pars)
         delete [] central_partial_pars;
     central_partial_pars = NULL;
-    if (model && state_freq)
-        ei_aligned_delete<double>(state_freq, model->num_states);
     if (model_factory) delete model_factory;
     if (model) delete model;
     if (site_rate) delete site_rate;
-    //    if (p_invar_ptn)
-    //        ei_aligned_delete<double>(p_invar_ptn, alnSize);
-    //    if (ptn_freqs)
-    //        ei_aligned_delete<double>(ptn_freqs, alnSize);
     if (tmp_partial_lh1)
         ei_aligned_delete<double>(tmp_partial_lh1, block_size);
     //delete [] tmp_partial_lh1;
@@ -160,7 +152,6 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     }
     alnSize = aln->size();
     ptn_freqs.resize(alnSize);
-    p_invar_ptns.resize(alnSize);
     lh_ptns.resize(alnSize);
     lh_ptns_log.resize(alnSize);
     numStates = aln->num_states;
@@ -178,7 +169,6 @@ void PhyloTree::rollBack(istream &best_tree_string) {
 
 void PhyloTree::setModel(SubstModel *amodel) {
     model = amodel;
-    calStateFreq();
 }
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
