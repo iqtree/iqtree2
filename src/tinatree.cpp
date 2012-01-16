@@ -111,8 +111,7 @@ void TinaTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *da
         if (!central_partial_pars) {
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << (leafNum - 1)*4 * pars_block_size * sizeof (UINT) << " bytes for partial parsimony vectors" << endl;
-            //central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
-            central_partial_pars = ei_aligned_new<UINT > ((leafNum - 1)*4 * pars_block_size);
+            central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
             if (!central_partial_pars)
                 outError("Not enough memory for partial parsimony vectors");
         }
