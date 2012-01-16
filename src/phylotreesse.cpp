@@ -80,11 +80,11 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
         }                
         tree_lh += log(lh_ptn) * ptn_freqs[ptn];
+        if (pattern_lh) {
+    		pattern_lh[ptn] = lh_ptn;
+    	}
     }
-    if (pattern_lh) {
-		for (ptn = 0; ptn < alnSize; ++ptn)
-			pattern_lh[ptn] = lh_ptns_log[ptn];
-	}
+
     return tree_lh;
 }
 
@@ -174,7 +174,8 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
                     MappedRowVec(NSTATES) ei_partial_lh_child(partial_lh_child);
                     MappedRowVec(NSTATES) ei_partial_lh_site(partial_lh_site);
                     MappedMat(NSTATES) ei_trans_state(trans_state);
-                    ei_partial_lh_site.noalias() = (ei_partial_lh_child * ei_trans_state).cwiseProduct(ei_partial_lh_site);
+                    //ei_partial_lh_site.noalias() = (ei_partial_lh_child * ei_trans_state).cwiseProduct(ei_partial_lh_site);
+                    ei_partial_lh_site.array() *= (ei_partial_lh_child * ei_trans_state).array();
                     partial_lh_site += NSTATES;
                     partial_lh_child += NSTATES;
                     if (cat == numCat)
@@ -188,7 +189,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
                         break;
                     }
                 if (do_scale) {
-                    Map<ArrayXd, Aligned> ei_lh_block(partial_lh_block, block);
+                    Map<VectorXd, Aligned> ei_lh_block(partial_lh_block, block);
                     ei_lh_block *= SCALING_THRESHOLD_INVER;                    
                     dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * freq;
                     if (pattern_scale)
@@ -316,21 +317,23 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
             }
         }
         lh_ptn = lh_ptn * p_var_cat;
-        lh_ptn_derv1 *= p_var_cat;
-        lh_ptn_derv2 *= p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < NSTATES) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
         }
-        //assert(lh_ptn > 0);
-        // Think about other strategy !!!
-        //double tmp = p_var_cat / lh_ptn;
-        //derv1_frac = lh_ptn_derv1 * tmp;
-        //derv2_frac = lh_ptn_derv2 * tmp;
-        derv1_frac = lh_ptn_derv1 / lh_ptn;
-        derv2_frac = lh_ptn_derv2 / lh_ptn;
-
-        df += derv1_frac * freq;
-        ddf += (derv2_frac - derv1_frac * derv1_frac) * freq;
+        double pad = p_var_cat / lh_ptn;
+        if (isinf(pad)) {
+        	lh_ptn_derv1 *= p_var_cat;
+			lh_ptn_derv2 *= p_var_cat;
+			derv1_frac = lh_ptn_derv1 / lh_ptn;
+			derv2_frac = lh_ptn_derv2 / lh_ptn;
+        } else {
+            derv1_frac = lh_ptn_derv1 * pad;
+            derv2_frac = lh_ptn_derv2 * pad;
+        }
+        double tmp1 = derv1_frac * freq;
+        double tmp2 = derv2_frac * freq;
+        df += tmp1;
+        ddf += tmp2 - tmp1 * derv1_frac;
         tree_lh += log(lh_ptn) * freq;
     }
     return tree_lh;

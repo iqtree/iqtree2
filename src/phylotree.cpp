@@ -62,7 +62,7 @@ PhyloTree::PhyloTree()
 }
 
 PhyloTree::PhyloTree(Alignment *alignment)
-: MTree(), ptn_freqs(alignment->size()), lh_ptns(alignment->size()), lh_ptns_log(alignment->size()) {
+: MTree(), ptn_freqs(alignment->size()) {
     aln = alignment;
     alnSize = aln->size();
     numStates = aln->num_states;
@@ -87,8 +87,7 @@ void PhyloTree::discardSaturatedSite(bool val) {
 
 PhyloTree::~PhyloTree() {
     if (central_partial_lh)
-        //delete [] central_partial_lh;
-        ei_aligned_delete<double>(central_partial_lh, (leafNum - 1) * 4 * block_size);
+        delete [] central_partial_lh;
     central_partial_lh = NULL;
     if (central_partial_pars)
         delete [] central_partial_pars;
@@ -97,17 +96,11 @@ PhyloTree::~PhyloTree() {
     if (model) delete model;
     if (site_rate) delete site_rate;
     if (tmp_partial_lh1)
-        ei_aligned_delete<double>(tmp_partial_lh1, block_size);
-    //delete [] tmp_partial_lh1;
+    	delete [] tmp_partial_lh1;
     if (tmp_partial_lh2)
-        ei_aligned_delete<double>(tmp_partial_lh2, block_size);
-    //delete [] tmp_partial_lh2;
+    	delete [] tmp_partial_lh2;
     if (root != NULL)
         freeNode();
-    //    if (lh_ptns)
-    //        delete [] lh_ptns;
-    //    if (lh_ptns_log)
-    //        delete [] lh_ptns_log;
     root = NULL;
 }
 
@@ -152,8 +145,6 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     }
     alnSize = aln->size();
     ptn_freqs.resize(alnSize);
-    lh_ptns.resize(alnSize);
-    lh_ptns_log.resize(alnSize);
     numStates = aln->num_states;
     tranSize = numStates * numStates;
     ptn_freqs.resize(alnSize);
@@ -739,8 +730,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         if (!central_partial_lh) {
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << (leafNum - 1) * 4 * block_size * sizeof (double) << " bytes for partial likelihood vectors" << endl;
-            //central_partial_lh = new double[(leafNum-1)*4*block_size];
-            central_partial_lh = ei_aligned_new<double>((leafNum - 1) * 4 * block_size);
+            central_partial_lh = new double[(leafNum-1)*4*block_size];
             if (!central_partial_lh)
                 outError("Not enough memory for partial likelihood vectors");
 
@@ -748,8 +738,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         if (!central_partial_pars) {
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << (leafNum - 1)*4 * pars_block_size * sizeof (UINT) << " bytes for partial parsimony vectors" << endl;
-            //central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
-            central_partial_pars = ei_aligned_new<UINT > ((leafNum - 1)*4 * pars_block_size);
+            central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
             if (!central_partial_pars)
                 outError("Not enough memory for partial parsimony vectors");
         }
@@ -773,8 +762,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 }
 
 double *PhyloTree::newPartialLh() {
-    //return new double[aln->size() * aln->num_states * site_rate->getNRate()];
-    return ei_aligned_new<double>(block_size);
+    return new double[aln->size() * aln->num_states * site_rate->getNRate()];
 }
 
 double PhyloTree::computeLikelihood(double *pattern_lh) {

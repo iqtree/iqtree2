@@ -12,7 +12,7 @@
 
 #ifndef PHYLOTREE_H
 #define PHYLOTREE_H
-//#define NDEBUG
+#define NDEBUG
 #define EIGEN_NO_AUTOMATIC_RESIZING
 #define EIGEN_CACHEFRIENDLY_PRODUCT_THRESHOLD 80
 #define EIGEN_UNROLLING_LIMIT 1000
@@ -104,6 +104,8 @@ public:
        default constructor ( everything is initialized to NULL)
      */
     PhyloTree();
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     /**
      * Constructor with given alignment
@@ -790,16 +792,6 @@ protected:
      */
     double *tmp_partial_lh1;
     double *tmp_partial_lh2;
-
-    /**
-     * Array to store likelihood score of each pattern
-     */
-    ArrayXd lh_ptns;
-
-     /**
-     * Array to store log likelihood score of each pattern
-     */
-    ArrayXd lh_ptns_log;
 
     /****************************************************************************
             Vector of bit blocks, used for parsimony function
