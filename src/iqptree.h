@@ -209,13 +209,20 @@ public:
             This implement the fastNNI algorithm proposed in PHYML paper
             TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
             @return best likelihood found
+            @param skipped (OUT) 1 if current iteration is skipped, otherwise 0
+            @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    virtual double optimizeNNI(bool beginHeu=false, int *skipped=NULL);
+    virtual double optimizeNNI(bool beginHeu=false, int *skipped = NULL, int *nni_count = NULL);
 
     /**
             search all positive NNI move on the current tree and save them on the possilbleNNIMoves list            
      */
     void genNNIMoves(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
+            search all positive NNI move on the current tree and save them on the possilbleNNIMoves list            
+     */
+    void genNNIMovesSort();
 
 
     /**
@@ -225,7 +232,7 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2);
+    NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh_contribution = -1.0);
 
     /**
             distance matrix, used for IQP algorithm
@@ -541,5 +548,8 @@ protected:
     void findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, Node *node = NULL, Node *dad = NULL);
 
 };
+
+void estimateNNICutoff(Params &params);
+
 
 #endif

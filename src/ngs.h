@@ -52,7 +52,7 @@ public:
 		@param ncat number of categories
 		@param freq pair-state frequencies for all categories
 	*/
-	NGSAlignment(int nstate, int ncat, int *freq);
+	NGSAlignment(int nstate, int ncat, double *freq);
 
 	NGSAlignment(int nstate, string &seq1, string &seq2);
 
@@ -76,7 +76,7 @@ public:
 		@param sum_pair_freq (OUT) will be filled in with num_states*num_states entries. 
 			Memory has to be allocated before calling this function.
 	*/
-	void computeSumPairFreq (int *sum_pair_freq);
+	void computeSumPairFreq (double *sum_pair_freq);
 
 	/**
 		compute empirical rates between state pairs
@@ -112,6 +112,8 @@ public:
 		number of category
 	*/
 	int ncategory;
+
+	//double *pair_freq;
 };
 
 
@@ -239,7 +241,7 @@ public:
 	/**
 		sum of pair freq from all positions
 	*/
-	int *sum_pair_freq;
+	double *sum_pair_freq;
 
 protected:
 

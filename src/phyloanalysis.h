@@ -51,10 +51,11 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 	@param input_trees collection of input trees to infer split supports
 	@param burnin the number trees at the beginning of input_trees to be discarded
 	@param cutoff only incorporate those splits that have support values more than cutoff
+	@param weight_threshold minimum weight cutoff
 	@param output_tree (OUT, OVERWRITE IF EXIST) Resulting consensus tree will be written to this file. If NULL,
 		output_tree will be named input_trees appended with ".contree"
 */
-void computeConsensusTree(const char *input_trees, int burnin, double cutoff, 
+void computeConsensusTree(const char *input_trees, int burnin, double cutoff, double weight_threshold,
 	const char *output_tree, const char *out_prefix);
 
 /**
@@ -63,10 +64,11 @@ void computeConsensusTree(const char *input_trees, int burnin, double cutoff,
 	@param input_trees collection of input trees to infer split supports
 	@param burnin the number trees at the beginning of input_trees to be discarded
 	@param cutoff only incorporate those splits that have support values more than cutoff
+	@param weight_threshold minimum weight cutoff
 	@param output_tree (OUT, OVERWRITE IF EXIST) Resulting consensus tree will be written to this file. If NULL,
 		output_tree will be named input_trees appended with ".connetwork"
 */
-void computeConsensusNetwork(const char *input_trees, int burnin, double cutoff, 
+void computeConsensusNetwork(const char *input_trees, int burnin, double cutoff, double weight_threshold,
 	const char *output_tree, const char *out_prefix);
 
 

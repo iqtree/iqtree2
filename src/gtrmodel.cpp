@@ -113,10 +113,13 @@ void GTRModel::computeTransMatrix(double time, double *trans_matrix) {
 	for (i = 0; i < num_states; i++)
 		exptime[i] = exp(evol_time * eigenvalues[i]);
 
-	for (i = 0; i < num_states; i ++) {
-		for (j = 0; j < num_states; j ++) {
-			double *trans_entry = trans_matrix + (i*num_states+j);
-			double *coeff_entry = eigen_coeff + ((i*num_states+j)*num_states);
+	int row_offset;
+	for (i = 0, row_offset = 0; i < num_states; i++, row_offset+=num_states) {
+		double *trans_row = trans_matrix + row_offset;
+		for (j = i+1; j < num_states; j ++) { 
+			// compute upper triangle entries
+			double *trans_entry = trans_row + j;
+			double *coeff_entry = eigen_coeff + ((row_offset+j)*num_states);
 			*trans_entry = 0.0;
 			for (k = 0; k < num_states; k ++) {
 				*trans_entry += coeff_entry[k] * exptime[k];
@@ -124,7 +127,15 @@ void GTRModel::computeTransMatrix(double time, double *trans_matrix) {
 			if (*trans_entry < 0.0) {
 				*trans_entry = 0.0;
 			}
+			// update lower triangle entries
+			trans_matrix[j*num_states+i] = (state_freq[i]/state_freq[j]) * (*trans_entry);
 		}
+		trans_row[i] = 0.0; // initialize diagonal entry
+		// taking the sum of row
+		double sum = 0.0;
+		for (j = 0; j < num_states; j++)
+			sum += trans_row[j];
+		trans_row[i] = 1.0 - sum; // update diagonal entry
 	}
 }
 

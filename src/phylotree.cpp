@@ -85,7 +85,7 @@ void PhyloTree::discardSaturatedSite(bool val) {
     discard_saturated_site = val;
 }
 
-PhyloTree::~PhyloTree() {
+void PhyloTree::freePhyloTree() {
     if (central_partial_lh)
         delete [] central_partial_lh;
     central_partial_lh = NULL;
@@ -102,6 +102,10 @@ PhyloTree::~PhyloTree() {
     if (root != NULL)
         freeNode();
     root = NULL;
+}
+
+PhyloTree::~PhyloTree() {
+	freePhyloTree();
 }
 
 void PhyloTree::assignLeafNames(Node *node, Node *dad) {
@@ -319,7 +323,7 @@ bool PhyloTree::getBitsEntry(UINT* &bits_entry, int id) {
 
 
 void setBitsAll(UINT* &bit_vec, int num) {
-	int id;
+	//int id;
 	int size = num/UINT_BITS;
 	memset(bit_vec, 255, size * sizeof(UINT));
 	num &= BITS_MODULO;
@@ -968,6 +972,13 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
             bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
 
             for (ptn = 0; ptn < aln->size(); ptn++) {
+				// avoid the case that all child partial likelihoods equal 1.0
+/*				double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + (ptn*block);
+				bool all_ones = true;
+				for (int i = 0; i < nstates; i++)
+					if (partial_lh_child[i] < 0.999999) { all_ones = false; break; }
+				if (all_ones) continue;*/
+					
                 int ptn_cat = site_rate->getPtnCat(ptn);
                 if (site_rate->isSiteSpecificRate())
                     model_factory->computeTransMatrix((*it)->length * site_rate->getPtnRate(ptn), trans_mat);
@@ -1080,6 +1091,8 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         }
 
     bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
+    double derv1_frac;
+    double derv2_frac;
 
     for (ptn = 0; ptn < aln->size(); ptn++) {
         int ptn_cat = site_rate->getPtnCat(ptn);
@@ -1132,18 +1145,53 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
                 }
             }
         }
-        lh_ptn *= p_var_cat;
-        lh_ptn_derv1 *= p_var_cat;
-        lh_ptn_derv2 *= p_var_cat;
+/*		if (p_invar > 0.0) {
+			lh_ptn *= p_var_cat;
+			lh_ptn_derv1 *= p_var_cat;
+			lh_ptn_derv2 *= p_var_cat;
+			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
+				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+			}
+			assert(lh_ptn > 0);
+			double derv1_frac = lh_ptn_derv1 / lh_ptn;
+			double derv2_frac = lh_ptn_derv2 / lh_ptn;
+			tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
+			df += derv1_frac * (*aln)[ptn].frequency;
+			ddf += (derv2_frac - derv1_frac * derv1_frac) * (*aln)[ptn].frequency;
+		} else {
+			double derv1_frac = lh_ptn_derv1 / lh_ptn;
+			double derv2_frac = lh_ptn_derv2 / lh_ptn;
+			lh_ptn *= p_var_cat;
+			assert(lh_ptn > 0);
+			tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
+			df += derv1_frac * (*aln)[ptn].frequency;
+			ddf += (derv2_frac - derv1_frac * derv1_frac) * (*aln)[ptn].frequency;
+			
+		} 
+*/
+		// Tung beo's trick
+
+        lh_ptn = lh_ptn * p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
         }
-        assert(lh_ptn > 0);
-        double derv1_frac = lh_ptn_derv1 / lh_ptn;
-        double derv2_frac = lh_ptn_derv2 / lh_ptn;
-        tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
-        df += derv1_frac * (*aln)[ptn].frequency;
-        ddf += (derv2_frac - derv1_frac * derv1_frac) * (*aln)[ptn].frequency;
+        double pad = p_var_cat / lh_ptn;
+        if (isinf(pad)) {
+        	lh_ptn_derv1 *= p_var_cat;
+			lh_ptn_derv2 *= p_var_cat;
+			derv1_frac = lh_ptn_derv1 / lh_ptn;
+			derv2_frac = lh_ptn_derv2 / lh_ptn;
+        } else {
+            derv1_frac = lh_ptn_derv1 * pad;
+            derv2_frac = lh_ptn_derv2 * pad;
+        }
+		double freq = (*aln)[ptn].frequency;
+        double tmp1 = derv1_frac * freq;
+        double tmp2 = derv2_frac * freq;
+        df += tmp1;
+        ddf += tmp2 - tmp1 * derv1_frac;
+        tree_lh += log(lh_ptn) * freq;
+
     }
     //for (cat = ncat-1; cat >= 0; cat--)
     //delete trans_mat[cat];
@@ -1348,7 +1396,24 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
     return aln_pair.optimizeDist(initial_dist);
 }
 
-void PhyloTree::computeDist(double *dist_mat) {
+double PhyloTree::correctDist(double *dist_mat) {
+	int i, j, k, pos;
+	int n = aln->getNSeq();
+	int nsqr = n*n;
+	// use Floyd algorithm to find shortest path between all pairs of taxa
+	for (k = 0; k < n; k++)
+		for (i = 0, pos = 0; i < n; i++)
+			for (j = 0; j < n; j++, pos++) {
+				double tmp = dist_mat[i*n+k] + dist_mat[k*n+j];
+				if (dist_mat[pos] > tmp) dist_mat[pos] = tmp;
+			}
+	double longest_dist = 0.0;
+	for (i = 0; i < nsqr; i++) 
+		if (dist_mat[i] > longest_dist) longest_dist = dist_mat[i];
+	return longest_dist;
+}
+
+double PhyloTree::computeDist(double *dist_mat) {
     int nseqs = aln->getNSeq();
     int pos = 0;
     double longest_dist = 0.0;
@@ -1362,12 +1427,14 @@ void PhyloTree::computeDist(double *dist_mat) {
             if (dist_mat[pos] > longest_dist)
                 longest_dist = dist_mat[pos];
         }
+/*
     if (longest_dist > MAX_GENETIC_DIST * 0.99)
-        outWarning("Some distances are saturated. Please check your alignment again");
+        outWarning("Some distances are saturated. Please check your alignment again");*/
+	return correctDist(dist_mat);
 }
 
-void PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file) {
-
+double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file) {
+	double longest_dist = 0.0;
     aln = alignment;
     dist_file = params.out_prefix;
     if (!model_factory)
@@ -1380,12 +1447,45 @@ void PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dist_
         memset(dist_mat, 0, sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
     }
     if (!params.dist_file) {
-        computeDist(dist_mat);
+        longest_dist = computeDist(dist_mat);
         alignment->printDist(dist_file.c_str(), dist_mat);
     } else {
-        alignment->readDist(params.dist_file, dist_mat);
+        longest_dist = alignment->readDist(params.dist_file, dist_mat);
         dist_file = params.dist_file;
     }
+	return longest_dist;
+}
+
+double PhyloTree::computeObsDist(double *dist_mat) {
+    int nseqs = aln->getNSeq();
+    int pos = 0;
+    double longest_dist = 0.0;
+    for (int seq1 = 0; seq1 < nseqs; seq1++)
+        for (int seq2 = 0; seq2 < nseqs; seq2++, pos++) {
+            if (seq1 == seq2)
+                dist_mat[pos] = 0.0;
+            else if (seq2 > seq1) {
+                dist_mat[pos] = aln->computeObsDist(seq1, seq2);
+            } else dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
+            if (dist_mat[pos] > longest_dist)
+                longest_dist = dist_mat[pos];
+        }
+	return correctDist(dist_mat);
+}
+
+double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file) {
+	double longest_dist = 0.0;
+    aln = alignment;
+    dist_file = params.out_prefix;
+    dist_file += ".obsdist";
+
+    if (!dist_mat) {
+        dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
+        memset(dist_mat, 0, sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
+    }
+	longest_dist = computeObsDist(dist_mat);
+	alignment->printDist(dist_file.c_str(), dist_mat);
+	return longest_dist;
 }
 
 /****************************************************************************
@@ -1412,7 +1512,7 @@ int PhyloTree::fixNegativeBranch(double fixed_length, Node *node, Node *dad) {
     int fixed = 0;
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-        if ((*it)->length < 0.0) { // negative branch length detected
+        if ((*it)->length <= 0.0) { // negative branch length detected
             if (verbose_mode == VB_DEBUG)
                 cout << "Negative branch length " << (*it)->length << " was set to ";
             //(*it)->length = ((double)(rand())/RAND_MAX)*0.1+TOL_BRANCH_LEN;

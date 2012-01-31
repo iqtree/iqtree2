@@ -31,6 +31,13 @@ int Pattern::computeAmbiguousChar(int num_states) {
 	return num;
 }
 
+int Pattern::computeGapChar(int num_states) {
+	int num = 0;
+	for (iterator i = begin(); i != end(); i++)
+		if (*i == STATE_UNKNOWN) num++;
+	return num;
+}
+
 
 void Pattern::computeConst() {
 	char ch = STATE_UNKNOWN;

@@ -74,7 +74,7 @@ void SplitGraph::init(Params &params)
 		if (mtrees->isRooted() && params.root != NULL)
 			outError(ERR_CONFLICT_ROOT);
 		//SplitIntMap hash_ss;
-		mtrees->convertSplits(*this, params.split_threshold, SW_SUM);
+		mtrees->convertSplits(*this, params.split_threshold, SW_SUM, params.split_weight_threshold);
 
 		if (verbose_mode >= VB_DEBUG)
 			saveFile(cout);
@@ -98,7 +98,7 @@ void SplitGraph::init(Params &params)
 		if (trees->GetNumTrees() > 0) { 
 			if (getNSplits() > 0) 
 				outError("Ambiguous input file, pls only specify either SPLITS block or TREES block");
-			convertFromTreesBlock(params.tree_burnin, params.split_threshold);
+			convertFromTreesBlock(params.tree_burnin, params.split_threshold, params.split_weight_threshold);
 		}
 
 	}
@@ -199,7 +199,7 @@ SplitGraph::~SplitGraph()
 }
 
 
-void SplitGraph::convertFromTreesBlock(int burnin, double split_threshold) {
+void SplitGraph::convertFromTreesBlock(int burnin, double split_threshold, double weight_threshold) {
 	cout << trees->GetNumTrees() << " tree(s) loaded" << endl;
 	if (burnin >= trees->GetNumTrees())
 		outError("Burnin value is too large");
@@ -217,7 +217,7 @@ void SplitGraph::convertFromTreesBlock(int burnin, double split_threshold) {
 	}
 	mtrees->checkConsistency();
 	//SplitIntMap hash_ss;
-	mtrees->convertSplits(*this, split_threshold, SW_SUM);
+	mtrees->convertSplits(*this, split_threshold, SW_SUM, weight_threshold);
 }
 
 
@@ -499,7 +499,11 @@ void SplitGraph::saveFile(ostream &out) {
 		out << ";" << endl;
 	}
 	out << "MATRIX" << endl;
+	int near_zeros = 0;
+	int zeros = 0;
 	for (iterator it = begin(); it != end(); it++) {
+		if ((*it)->weight == 0.0) zeros ++;
+		if ((*it)->weight <= 1e-6) near_zeros ++;
 		out << "\t" << (*it)->weight << "\t";
 		for (i = 0; i < ntaxa; i++)
 			if ((*it)->containTaxon(i))
@@ -507,6 +511,10 @@ void SplitGraph::saveFile(ostream &out) {
 		out << "," << endl;
 	}
 	out << ";" << endl << "END; [Splits]" << endl << endl;
+	if (near_zeros) {
+		outWarning("Some nearly-zero split weights observed");
+		cout << zeros << " zero-weights and " << near_zeros << " near zero weights!" << endl;
+	}
 }
 
 void SplitGraph::scaleWeight(double norm, bool make_int) {

@@ -1424,9 +1424,25 @@ int main(int argc, char *argv[])
 
 /*	cout << "time_t: " << sizeof(time_t) << endl
 		<< "clock_t: " << sizeof(clock_t) << endl
-		<< "CLOCKS_PER_SEC: "<< CLOCKS_PER_SEC << endl;*/
+		<< "CLOCKS_PER_SEC: "<< CLOCKS_PER_SEC << endl;
 
 	//test_eigen();
+
+	srand(0);
+	double a=(double)rand()/RAND_MAX, b=0, c=0;
+	int maxj = 0;
+	clock_t cbegin = clock();
+	if (cbegin==0) { b=1.2345; maxj=1000000000;}
+	//for (int i = 1; i < 100; i++)
+	for (int j = 1; j < maxj; j++) {
+		c+=a/b;
+		//a=rand();
+	}
+	clock_t cend = clock();
+	cout << cbegin << " a= " << a << " c= " << c << endl;
+	cout << "time: " << double(cend-cbegin)/CLOCKS_PER_SEC << endl;
+	return 0;*/
+	
         system("echo $HOSTNAME");
 	printCopyright(cout);
 
@@ -1464,7 +1480,7 @@ int main(int argc, char *argv[])
 		branchStats(params); // MA
 	} else if (params.branch_cluster > 0) {
 		calcTreeCluster(params);
-	} else if (params.aln_file) {
+	} else if (params.aln_file || params.partition_file) {
 		runPhyloAnalysis(params);
 	} else if (params.ngs_file || params.ngs_mapped_reads) {
 		runNGSAnalysis(params);
@@ -1474,12 +1490,12 @@ int main(int argc, char *argv[])
 		MExtTree tree;
 		switch (params.consensus_type) {
 			case CT_CONSENSUS_TREE: 
-				computeConsensusTree(params.user_file, params.tree_burnin, 
-					params.split_threshold, params.out_file, params.out_prefix); 
+				computeConsensusTree(params.user_file, params.tree_burnin, params.split_threshold, 
+					params.split_weight_threshold, params.out_file, params.out_prefix); 
 				break;
 			case CT_CONSENSUS_NETWORK: 
-				computeConsensusNetwork(params.user_file, params.tree_burnin, 
-					params.split_threshold, params.out_file, params.out_prefix); 
+				computeConsensusNetwork(params.user_file, params.tree_burnin, params.split_threshold, 
+					params.split_weight_threshold, params.out_file, params.out_prefix); 
 				break;
 			case CT_ASSIGN_SUPPORT: 
 				assignBootstrapSupport(params.user_file, params.tree_burnin, 

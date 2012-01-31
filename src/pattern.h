@@ -40,6 +40,11 @@ public:
 	*/
 	int computeAmbiguousChar(int num_states);
 
+	/**
+		@param num_states number of states of the model
+		@return the number of gaps 
+	*/
+	int computeGapChar(int num_states);
 
 	/** 
 		destructor

@@ -596,6 +596,25 @@ void MTree::getInternalNodes(NodeVector &nodes, Node *node, Node *dad) {
 	}
 }
 
+void MTree::getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
+	if (!node) node = root;
+	//for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
+		//if ((*it)->node != dad)	{
+	FOR_NEIGHBOR_IT(node, dad, it)
+	if (!(*it)->node->isLeaf()) {
+		if (!node->isLeaf()) {
+			if (node->id < (*it)->node->id) {
+				nodes.push_back(node);
+				nodes2.push_back((*it)->node);
+			} else {
+				nodes.push_back((*it)->node);
+				nodes2.push_back(node);
+			} 
+		}
+		getInternalBranches(nodes, nodes2, (*it)->node, node);
+	}
+}
+
 
 void MTree::getTaxaName(vector<string> &taxname, Node *node, Node *dad) {
 	if (!node) node = root;

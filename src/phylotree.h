@@ -118,6 +118,7 @@ public:
      */
     virtual ~PhyloTree();
 
+	void freePhyloTree();
 
     /**
             copy the phylogenetic tree structure into this tree, override to take sequence names
@@ -535,8 +536,16 @@ public:
     /**
             compute distance matrix, assume dist_mat is allocated by memory of size num_seqs * num_seqs.
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
+            @return the longest distance
      */
-    void computeDist(double *dist_mat);
+    double computeDist(double *dist_mat);
+    
+    /**
+            compute observed distance matrix, assume dist_mat is allocated by memory of size num_seqs * num_seqs.
+            @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
+            @return the longest distance
+     */
+	double computeObsDist(double *dist_mat);
 
     /**
             compute distance matrix, allocating memory if necessary
@@ -544,8 +553,27 @@ public:
             @param alignment input alignment
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
             @param dist_file (OUT) name of the distance file
+            @return the longest distance
      */
-    void computeDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file);
+    double computeDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file);
+
+    /**
+            compute observed distance matrix, allocating memory if necessary
+            @param params program parameters
+            @param alignment input alignment
+            @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
+            @param dist_file (OUT) name of the distance file
+            @return the longest distance
+	*/
+    double computeObsDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file);
+
+	/**
+		correct the distances to follow metric property of triangle inequalities.
+		Using the Floyd alogrithm.
+		@param dist_mat (IN/OUT) the shortest path between all pairs of taxa
+        @return the longest distance
+	*/
+	double correctDist(double *dist_mat);
 
     /****************************************************************************
             compute BioNJ tree, a more accurate extension of Neighbor-Joining

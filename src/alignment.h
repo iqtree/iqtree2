@@ -155,6 +155,12 @@ public:
 	void printFasta(const char *filename, bool append = false, 
 		const char *aln_site_list = NULL, bool exclude_gaps = false, const char *ref_seq_name = NULL);
 
+	/**
+		Print the number of gaps per site
+		@param filename output file name
+	*/
+	void printSiteGaps(const char *filename);
+
 /****************************************************************************
 	get general information from alignment
 ****************************************************************************/
@@ -220,11 +226,30 @@ public:
 	void extractPatterns(Alignment *aln, IntVector &ptn_id);
 
 	/**
-		TODO
-		create a non-parametric bootstrap alignment from the current alignment
-		@param boot_aln (OUT) created bootstrap alignment
+		create a non-parametric bootstrap alignment from an input alignment
+		@param aln input alignment
 	*/
-	void createBootstrapAlignment(Alignment *boot_aln);
+	void createBootstrapAlignment(Alignment *aln);
+
+	/**
+		create a gap masked alignment from an input alignment. Gap patterns of masked_aln 
+			will be superimposed into aln to create the current alignment object.
+		@param aln input alignment
+		@param masked_aln gappy alignment of the same size with aln
+	*/
+	void createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln);
+
+	/**
+		concatenate an alignment into the current alignment object
+		@param aln an alignment of the same number of sequences and sequence names    
+	*/
+	void concatenateAlignment(Alignment *aln);
+
+	/**
+		copy the input alignment into the current alignment object
+		@param aln input alignment
+	*/
+	void copyAlignment(Alignment *aln);
 
 /****************************************************************************
 	Distance functions
@@ -275,15 +300,16 @@ public:
 		read distance matrix from a file in PHYLIP distance format
 		@param file_name distance file name
 		@param dist_mat distance matrix
+		@return the longest distance
 	*/
-	void readDist(const char *file_name, double *dist_mat);
+	double readDist(const char *file_name, double *dist_mat);
 
 	/**
 		read distance matrix from a stream in PHYLIP distance format
 		@param in input stream
 		@param dist_mat distance matrix
 	*/
-	void readDist(istream &in, double *dist_mat);
+	double readDist(istream &in, double *dist_mat);
 
 
 /****************************************************************************

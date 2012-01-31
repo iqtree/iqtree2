@@ -44,6 +44,7 @@ public:
 	*/
 	virtual int getNumRateEntries() { return num_states*(num_states-1); }
 
+	virtual void getQMatrix(double *rate_mat);
 	
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors

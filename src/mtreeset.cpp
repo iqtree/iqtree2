@@ -139,30 +139,32 @@ void MTreeSet::printTrees(ostream & out, int brtype) {
 	}
 }
 
-void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighting_type) {
+void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighting_type, double weight_threshold) {
 	SplitIntMap hash_ss;
+/*
 	if (split_threshold == 0.0) {
-		convertSplits(sg, hash_ss, weighting_type);
+		convertSplits(sg, hash_ss, weighting_type, weight_threshold);
 		return;
-	}
+	}*/
 	//SplitGraph temp;
-	convertSplits(sg, hash_ss, weighting_type);
+	convertSplits(sg, hash_ss, weighting_type, weight_threshold);
 	int nsplits = sg.getNSplits();
 
 	double threshold = split_threshold * size();
-	
+	int count=0;
 	for (SplitGraph::iterator it = sg.begin(); it != sg.end(); ) {
+		count++;
 		//SplitIntMap::iterator ass_it = hash_ss.find(*it);
 		int freq_value;
 		Split *sp = hash_ss.findSplit(*it, freq_value);
 		assert(sp != NULL);
+		assert(*sp == *(*it));
 		//Split *sp = ass_it->first;
 		if (freq_value <= threshold) {
 			if (verbose_mode == VB_DEBUG) {
 				sp->report(cout);
 			}
 			int num = hash_ss.getValue(sg.back());
-			//hash_ss.erase(ass_it);
 			hash_ss.eraseSplit(sp);
 			if (it != sg.end()-1) {
 				hash_ss.eraseSplit(sg.back());
@@ -189,21 +191,23 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 	temp.sets = NULL;
 	temp.trees = NULL;
 	*/
-	cout << nsplits - sg.getNSplits() << " split(s) discarded due to frequency <= " << split_threshold << endl;
+	cout << nsplits - sg.getNSplits() << " split(s) discarded because frequency <= " << split_threshold << endl;
 }
 
 
-void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type) {
+void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, 
+	int weighting_type, double weight_threshold) {
 	vector<string> taxname(front()->leafNum);
 	// make sure that the split system contains at least 1 split
 	if (size() == 0)
 		return;
 	
 	front()->getTaxaName(taxname);
-	convertSplits(taxname, sg, hash_ss, weighting_type);
+	convertSplits(taxname, sg, hash_ss, weighting_type, weight_threshold);
 }
 
-void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type) {
+void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, 
+	int weighting_type, double weight_threshold) {
 
 #ifdef USE_HASH_MAP
 	cout << "Using hash_map" << endl;
@@ -223,11 +227,11 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 	sg.createBlocks();
 	for (its = taxname.begin(); its != taxname.end(); its++)
 		sg.getTaxa()->AddTaxonLabel(NxsString(its->c_str()));
-
+/*
 	if (size() == 1 && weighting_type != SW_COUNT) {
-		front()->convertSplits(sg);
+		front()->convertSplits(taxname, sg);
 		return;
-	}
+	}*/
 
 
 	SplitGraph *isg;
@@ -251,6 +255,7 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 		for (itg = isg->begin(); itg != isg->end(); itg++) {
 			//SplitIntMap::iterator ass_it = hash_ss.find(*itg);
 			int value;
+			//if ((*itg)->getWeight()==0.0) cout << "zero weight!" << endl;
 			Split *sp = hash_ss.findSplit(*itg, value);
 			if (sp != NULL) {
 				//Split *sp = ass_it->first;
@@ -276,6 +281,17 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 		delete isg;
 	}
 
+	int discarded = 0;	
+	for (itg = sg.begin(); itg != sg.end(); )  {
+		if ((*itg)->getWeight() <= weight_threshold) {
+			discarded++;
+			delete (*itg);
+			(*itg) = sg.back();
+			sg.pop_back(); 
+		} else itg++;
+	}
+	if (discarded)
+		cout << "WARNING: " << discarded << " split(s) discarded because weight <= " << weight_threshold << endl;
 	//sg.report(cout);
 }
 

@@ -85,7 +85,7 @@ public:
 	/**
 		pairwise state frequencies
 	*/
-	int *pair_freq;
+	double *pair_freq;
 
 	PhyloTree *tree;
 

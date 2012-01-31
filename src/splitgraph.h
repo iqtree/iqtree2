@@ -96,8 +96,9 @@ public:
 		convert the collection of trees in TREES block into this split graph
 		@param burnin the number of beginning trees to be discarded
 		@param split_threshold only keep those splits which appear more than this threshold 
+		@param weight_threshold minimum weight cutoff
 	*/
-	void convertFromTreesBlock(int burnin, double split_threshold);
+	void convertFromTreesBlock(int burnin, double split_threshold, double weight_threshold);
 
 /********************************************************
 	PRINT INFORMATION

@@ -89,8 +89,10 @@ public:
 		@param sg (OUT) resulting split graph
 		@param hash_ss (OUT) hash split set
 		@param lensum TRUE if summing split length, FALSE to increment only
+		@param weight_threshold minimum weight cutoff
 	*/
-	void convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type);
+	void convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, 
+		int weighting_type, double weight_threshold);
 
 	/**
 		convert all trees into the split system
@@ -98,8 +100,10 @@ public:
 		@param hash_ss (OUT) hash split set
 		@param lensum TRUE to assign split weight as sum of corresponding branch lengths. 
 			Otherwise just count the number of branches.
+		@param weight_threshold minimum weight cutoff
 	*/
-	void convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type);
+	void convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, 
+		int weighting_type, double weight_threshold);
 
 	/**
 		convert all trees into the split system
@@ -107,8 +111,10 @@ public:
 		@param split_threshold only keep those splits which appear more than this threshold 
 		@param lensum TRUE to assign split weight as sum of corresponding branch lengths. 
 			Otherwise just count the number of branches.
+		@param weight_threshold minimum weight cutoff
 	*/
-	void convertSplits(SplitGraph &sg, double split_threshold, int weighting_type);
+	void convertSplits(SplitGraph &sg, double split_threshold, 
+		int weighting_type, double weight_threshold);
 
 	/**
 		compute the Robinson-Foulds distance between trees

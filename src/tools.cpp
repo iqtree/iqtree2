@@ -542,6 +542,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.test_input = TEST_NONE;
 	params.tree_burnin = 0;
 	params.split_threshold = 0.0;
+	params.split_weight_threshold = 0.0;
 	params.split_weight_summary = SW_SUM;
 	params.gurobi_format = false;
 	params.gurobi_threads = 1;
@@ -549,10 +550,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 
 	params.aln_file = NULL;
+	params.partition_file = NULL;
 	params.sequence_type = NULL;
 	params.aln_output = NULL;
 	params.aln_site_list = NULL;
 	params.aln_output_format = ALN_PHYLIP;
+	params.gap_masked_aln = NULL;
+	params.concatenate_aln = NULL;
 	params.aln_nogaps = false;
 	params.parsimony = false;
 	params.tree_spr = false;
@@ -898,6 +902,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.split_threshold = convert_double(argv[cnt]);
 				if (params.split_threshold < 0 || params.split_threshold > 1)
 					throw "Split threshold must be between 0 and 1";
+			} else if (strcmp(argv[cnt],"-tw") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -t <split_weight_threshold>";
+				params.split_weight_threshold = convert_double(argv[cnt]);
+				if (params.split_weight_threshold < 0)
+					throw "Split weight threshold is negative";
 			} else if (strcmp(argv[cnt],"-swc") == 0) {
 				params.split_weight_summary = SW_COUNT;			
 			} else if (strcmp(argv[cnt],"-swa") == 0) {
@@ -911,6 +922,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -aln, -s <alignment_file>";
 				params.aln_file = argv[cnt];
+			} else if (strcmp(argv[cnt],"-sp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sp <partition_file>";
+				params.partition_file = argv[cnt];
 			} else if (strcmp(argv[cnt],"-sf") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -941,7 +957,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt],"-an") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -as <ref_seq_name>";
+					throw "Use -an <ref_seq_name>";
 				params.ref_seq_name = argv[cnt];
 			} else if (strcmp(argv[cnt],"-af") == 0) {
 				cnt++;
@@ -952,6 +968,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 				else if (strcmp(argv[cnt],"fasta") == 0)
 					params.aln_output_format = ALN_FASTA;
 				else throw "Unknown output format";
+			} else if (strcmp(argv[cnt],"-am") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -am <gap_masked_aln>";
+				params.gap_masked_aln = argv[cnt];
+			} else if (strcmp(argv[cnt],"-ac") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ac <concatenate_aln>";
+				params.concatenate_aln = argv[cnt];
 			} else if (strcmp(argv[cnt],"-nogap") == 0) {
 				params.aln_nogaps = true;
 			} else if (strcmp(argv[cnt],"-pars") == 0) {
@@ -1113,6 +1139,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.rf_dist_mode = RF_ALL_PAIR;
 			} else if (strcmp(argv[cnt],"-rf_adj") == 0) {
 				params.rf_dist_mode = RF_ADJACENT_PAIR;
+			} else if (strcmp(argv[cnt],"-rf") == 0) {
+				params.rf_dist_mode = RF_TWO_TREE_SETS;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rf <second_tree>";
+				params.second_tree = argv[cnt];
 			} else if (strcmp(argv[cnt],"-aLRT") == 0) {
 				cnt++;
 				if (cnt+1 >= argc)
@@ -1151,6 +1183,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -pval <gene_pvalue_file>";
 				params.gene_pvalue_file = argv[cnt];
+			} else if (strcmp(argv[cnt], "-nnitest") == 0) {
+				testNNI = true;
+			} else if (strcmp(argv[cnt], "-nnicut") == 0) {
+				estimate_nni_cutoff = true;
+				//nni_cutoff = -5.41/2;
+			} else if (strcmp(argv[cnt], "-nnichi2") == 0) {
+				nni_cutoff = -5.41/2;
+			} else if (strcmp(argv[cnt], "-nnicutval") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nnicutval <log_diff_value>";
+				nni_cutoff = convert_double(argv[cnt]);
+				if (nni_cutoff >= 0) throw "cutoff value for -nnicutval must be negative";
+			} else if (strcmp(argv[cnt], "-nnisort") == 0) {
+				nni_sort = true;
 			} else if (strcmp(argv[cnt], "-plog") == 0) {
 				params.gene_pvalue_loga = true;
 			} else if (argv[cnt][0] == '-') {
@@ -1184,14 +1231,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 		}
 
 	} // for
-	if (params.user_file == NULL && params.aln_file == NULL && params.ngs_file == NULL && params.ngs_mapped_reads == NULL)
+	if (!params.user_file && !params.aln_file && !params.ngs_file && !params.ngs_mapped_reads && !params.partition_file)
 #ifdef IQ_TREE
 				usage_iqtree(argv, false);
 #else
 				usage(argv, false);
 #endif
 	if (!params.out_prefix) {
-		if (params.aln_file) 
+		if (params.partition_file)
+			params.out_prefix = params.partition_file; 
+		else if (params.aln_file) 
 			params.out_prefix = params.aln_file;
 		else if (params.ngs_file) 
 			params.out_prefix = params.ngs_file;

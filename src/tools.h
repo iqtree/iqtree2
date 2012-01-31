@@ -222,6 +222,7 @@ const int WT_BR_LEN_FIXED_WIDTH = 256;
  */
 const int RF_ADJACENT_PAIR = 1;
 const int RF_ALL_PAIR = 2;
+const int RF_TWO_TREE_SETS = 3;
 
 /**
         split weight summarization
@@ -299,6 +300,20 @@ const int MCAT_PATTERN = 4; // categorize site-patterns instead of sites for Mey
 
 const double MAX_GENETIC_DIST = 9.0;
 
+struct NNIInfo {
+	double lh_score[4]; // tree log-likelihood of zero-branch, current tree, NNI tree 1, NNI tree 2
+	double br_len[4]; // length of current branch, optimized branch, NNI branch 1, NNI branch 2
+	int nni_round;
+	int iqpnni_iteration;
+};
+
+extern bool testNNI;
+extern double nni_cutoff;
+extern bool estimate_nni_cutoff;
+extern vector<NNIInfo> nni_info;
+extern ofstream outNNI;
+extern bool nni_sort;
+
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
@@ -323,6 +338,11 @@ struct Params {
     char *aln_file;
 
     /**
+            file specifying partition model
+     */
+    char *partition_file;
+
+    /**
             B, D, or P for Binary, DNA, or Protein sequences
      */
     char *sequence_type;
@@ -331,6 +351,16 @@ struct Params {
             alignment output file name
      */
     char *aln_output;
+
+    /**
+            alignment where the gappy patterns will be superimposed into the input alignment
+     */
+    char *gap_masked_aln;
+
+    /**
+            alignment to be concatenated into the input alignment
+     */
+    char *concatenate_aln;
     
     /**
             file containing list of sites posititon to keep, format:
@@ -631,6 +661,11 @@ struct Params {
             threshold of split frequency, splits appear less than threshold will be discarded
      */
     double split_threshold;
+
+    /**
+            threshold of split weight, splits with weight less than or equal to threshold will be discarded
+     */
+    double split_weight_threshold;
 
     /**
             Way to summarize split weight in the consensus tree or network: SW_SUM, SW_AVG_ALL, or SW_AVG_PRESENT

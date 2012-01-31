@@ -25,6 +25,7 @@
 #include "modelnonrev.h"
 #include "modeldna.h"
 #include "modelprotein.h"
+#include "modelbin.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
 #include "ngs.h"
@@ -128,6 +129,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		tree->optimize_by_newton = false;
 		model = new ModelNonRev(tree);
 		((ModelNonRev*)model)->init(params.freq_type);
+	} else if (tree->aln->num_states == 2) {
+		model = new ModelBIN(model_str.c_str(), params.freq_type, tree);
 	} else if (tree->aln->num_states == 4) {
 		model = new ModelDNA(model_str.c_str(), params.freq_type, tree);
 	} else if (tree->aln->num_states == 20) {

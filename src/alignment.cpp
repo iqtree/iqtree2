@@ -882,6 +882,59 @@ void Alignment::createBootstrapAlignment(Alignment *aln) {
 	countConstSite();
 }
 
+void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) {
+	if (masked_aln->getNSeq() != aln->getNSeq()) outError("Different number of sequences in masked alignment");
+	if (masked_aln->getNSite() != aln->getNSite()) outError("Different number of sites in masked alignment");
+	
+	int site, nsite = aln->getNSite(), nseq = aln->getNSeq();
+	seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
+	num_states = aln->num_states;
+	site_pattern.resize(nsite, -1);
+	clear();
+	pattern_index.clear();
+	IntVector name_map;
+	for (StrVector::iterator it = seq_names.begin(); it != seq_names.end(); it++) {
+		int seq_id = masked_aln->getSeqID(*it);
+		if (seq_id < 0) outError("Masked alignment does not contain taxon ", *it);
+		name_map.push_back(seq_id);
+	}
+	VerboseMode save_mode = verbose_mode; 
+	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+	for (site = 0; site < nsite; site++) {
+		int ptn_id = aln->getPatternID(site);
+ 		Pattern pat = aln->at(ptn_id);
+ 		Pattern masked_pat = masked_aln->at(masked_aln->getPatternID(site));
+		for (int seq = 0; seq < nseq; seq++)
+			if (masked_pat[name_map[seq]] == STATE_UNKNOWN) pat[seq] = STATE_UNKNOWN;
+		addPattern(pat, site);
+	}
+	verbose_mode = save_mode;
+	countConstSite();
+}
+
+void Alignment::concatenateAlignment(Alignment *aln) {
+	if (getNSeq() != aln->getNSeq()) outError("Different number of sequences in two alignments");
+	if (num_states != aln->num_states) outError("Different number of states in two alignments");
+	int site, nsite = aln->getNSite();
+	int cur_sites = getNSite();
+	site_pattern.resize(cur_sites + nsite , -1);
+	IntVector name_map;
+	for (StrVector::iterator it = seq_names.begin(); it != seq_names.end(); it++) {
+		int seq_id = aln->getSeqID(*it);
+		if (seq_id < 0) outError("The other alignment does not contain taxon ", *it);
+		name_map.push_back(seq_id);
+	}
+	VerboseMode save_mode = verbose_mode; 
+	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+	for (site = 0; site < nsite; site++) {
+ 		Pattern pat = aln->at(aln->getPatternID(site));
+		Pattern new_pat = pat;
+		for (int i = 0; i < name_map.size(); i++) new_pat[i] = pat[name_map[i]];
+		addPattern(new_pat, site + cur_sites);
+	}
+	verbose_mode = save_mode;
+	countConstSite();
+}
 
 void Alignment::countConstSite() {
 	int num_const_sites = 0;
@@ -911,7 +964,8 @@ double Alignment::computeObsDist(int seq1, int seq2) {
 			if ((*it)[seq1] != (*it)[seq2] )
 				diff_pos += (*it).frequency;
 		}
-	if (!total_pos) total_pos = 1;
+	if (!total_pos) 
+		return MAX_GENETIC_DIST; // return +INF if no overlap between two sequences
 	return ((double)diff_pos) / total_pos;
 }
 
@@ -919,12 +973,13 @@ double Alignment::computeJCDist(int seq1, int seq2) {
 	double obs_dist = computeObsDist(seq1, seq2);
 	double z = (double)num_states / (num_states-1);
 	double x = 1.0 - (z * obs_dist);
+
 	if (x <= 0) {
-		string str = "Too long distance between two sequences ";
+/*		string str = "Too long distance between two sequences ";
 		str += getSeqName(seq1);
 		str += " and ";
 		str += getSeqName(seq2);
-		outWarning(str);
+		outWarning(str);*/
 		return MAX_GENETIC_DIST;
 	}
 
@@ -967,7 +1022,8 @@ void Alignment::printDist(const char *file_name, double *dist_mat) {
 	}	
 }
 
-void Alignment::readDist(istream &in, double *dist_mat) {
+double Alignment::readDist(istream &in, double *dist_mat) {
+	double longest_dist = 0.0;
 	int nseqs;
 	in >> nseqs;
 	if (nseqs != getNSeq())
@@ -980,6 +1036,8 @@ void Alignment::readDist(istream &in, double *dist_mat) {
 			throw "Sequence name " + seq_name + " is different from " + getSeqName(seq1);
 		for (seq2 = 0; seq2 < nseqs; seq2 ++) {
 			in >> dist_mat[pos++];
+			if (dist_mat[pos-1] > longest_dist)
+				longest_dist = dist_mat[pos-1];
 		}	
 	}
 	// check for symmetric matrix
@@ -990,14 +1048,17 @@ void Alignment::readDist(istream &in, double *dist_mat) {
 			if (dist_mat[seq1*nseqs+seq2] != dist_mat[seq2*nseqs+seq1])
 				throw "Distance between " + getSeqName(seq1) + " and " + getSeqName(seq2) + " is not symmetric";
 	}
+	return longest_dist;
 }
 
-void Alignment::readDist(const char *file_name, double *dist_mat) {
+double Alignment::readDist(const char *file_name, double *dist_mat) {
+	double longest_dist = 0.0;
+	
 	try {
 		ifstream in;
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(file_name);
-		readDist(in, dist_mat);
+		longest_dist = readDist(in, dist_mat);
 		in.close();
 		cout << "Distance matrix was read from " << file_name << endl;
 	} catch (const char *str) {
@@ -1007,7 +1068,7 @@ void Alignment::readDist(const char *file_name, double *dist_mat) {
 	} catch (ios::failure) {
 		outError(ERR_READ_INPUT, file_name);
 	}
-	
+	return longest_dist;
 }
 
 
@@ -1162,3 +1223,25 @@ double Alignment::computeUnconstrainedLogL() {
 	return logl;
 }
 
+void Alignment::printSiteGaps(const char *filename) {
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+
+		out.open(filename);
+		int nsite = getNSite();
+		out << nsite << endl << "Site_Gap  ";
+		for (int site = 0; site < getNSite(); site++) {
+			out << " " << at(getPatternID(site)).computeGapChar(num_states);
+		}
+		out << endl << "Site_Ambi ";
+		for (int site = 0; site < getNSite(); site++) {
+			out << " " << at(getPatternID(site)).computeAmbiguousChar(num_states);
+		}
+		out << endl;
+		out.close();
+		cout << "Site gap-counts printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}	
+}

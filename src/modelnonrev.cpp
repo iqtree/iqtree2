@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "modelnonrev.h"
+//#include "whtest/eigen.h"
 
 ModelNonRev::ModelNonRev(PhyloTree *tree)
  : GTRModel(tree)
@@ -39,40 +40,116 @@ void ModelNonRev::freeMem() {
 	delete [] rate_matrix;
 }
 
+void ModelNonRev::getQMatrix(double *rate_mat) {
+	memmove(rate_mat, rate_matrix, num_states*num_states*sizeof(double));
+}
+
+/* BQM: Ziheng Yang code which fixed old matinv function */
+int matinv (double x[], int n, int m, double space[])
+{
+/* x[n*m]  ... m>=n
+   space[n].  This puts the fabs(|x|) into space[0].  Check and calculate |x|.
+   Det may have the wrong sign.  Check and fix.
+*/
+   int i,j,k;
+   int *irow=(int*) space;
+   double ee=1e-100, t,t1,xmax, det=1;
+
+   for(i=0; i<n; i++) irow[i]=i;
+
+   for(i=0; i<n; i++)  {
+      xmax = fabs(x[i*m+i]);
+      for (j=i+1; j<n; j++)
+         if (xmax<fabs(x[j*m+i]))
+            { xmax = fabs(x[j*m+i]); irow[i]=j; }
+      det *= x[irow[i]*m+i];
+      if (xmax < ee)   {
+         printf("\nxmax = %.4e close to zero at %3d!\t\n", xmax,i+1);
+         exit(-1);
+      }
+      if (irow[i] != i) {
+         for(j=0; j < m; j++) {
+            t = x[i*m+j];
+            x[i*m+j] = x[irow[i]*m+j];
+            x[irow[i]*m+j] = t;
+         }
+      }
+      t = 1./x[i*m+i];
+      for (j=0; j < n; j++) {
+         if (j == i) continue;
+         t1 = t*x[j*m+i];
+         for (k=0; k<=m; k++)  x[j*m+k] -= t1*x[i*m+k];
+         x[j*m+i] = -t1;
+      }
+      for (j=0; j <= m; j++)   x[i*m+j] *= t;
+      x[i*m+i] = t;
+   }                            /* for(i) */
+   for (i=n-1; i>=0; i--) {
+      if (irow[i] == i) continue;
+      for (j=0; j < n; j++)  {
+         t = x[j*m+i];
+         x[j*m+i] = x[j*m + irow[i]];
+         x[j*m + irow[i]] = t;
+      }
+   }
+   space[0]=det;
+   return(0);
+}
+
+int QtoPi (double Q[], double pi[], int n, double space[])
+{
+/* from rate matrix Q[] to pi, the stationary frequencies:
+   Q' * pi = 0     pi * 1 = 1
+   space[] is of size n*(n+1).
+*/
+   int i,j;
+   double *T = space;      /* T[n*(n+1)]  */
+
+   for(i=0;i<n+1;i++) T[i]=1;
+   for(i=1;i<n;i++) {
+      for(j=0;j<n;j++)
+         T[i*(n+1)+j] =  Q[j*n+i];     /* transpose */
+      T[i*(n+1)+n] = 0.;
+   }
+   matinv(T, n, n+1, pi);
+   for(i=0;i<n;i++) 
+      pi[i] = T[i*(n+1)+n];
+   return (0);
+}
+/* End of Ziheng Yang code */
 
 void ModelNonRev::decomposeRateMatrix() {
 	int i, j, k;
-	double sum, temp;
-	double m[num_states];
+	double sum;
+	//double m[num_states];
+	double space[num_states*(num_states+1)];
 
 	for (i = 0; i < num_states; i++)
 		state_freq[i] = 1.0/num_states;
 
 	for (i = 0, k = 0; i < num_states; i++) {
 		rate_matrix[i*num_states+i] = 0.0;
+		double row_sum = 0.0;
 		for (j = 0; j < num_states; j++) 
-			if (j != i) 
-				rate_matrix[i*num_states+j] = rates[k++];
+			if (j != i) {
+				row_sum += (rate_matrix[i*num_states+j] = rates[k++]);
+			}
+		rate_matrix[i*num_states+i] = -row_sum;
 	}
+	QtoPi(rate_matrix, state_freq, num_states, space);
 
 
 	for (i = 0, sum = 0.0; i < num_states; i++) {
-		for (j = 0, temp = 0.0; j < num_states; j++)
-			temp += rate_matrix[i*num_states+j];
-		m[i] = temp; /* row sum */
-		sum += temp; /* exp. rate */
+		sum -= rate_matrix[i*num_states+i] * state_freq[i]; /* exp. rate */
 	}
 
 	if (sum == 0.0) throw "Empty Q matrix";
 
-	double delta = total_num_subst*num_states / sum; /* 0.01 subst. per unit time */
+	double delta = total_num_subst / sum; /* 0.01 subst. per unit time */
 
 	for (i = 0; i < num_states; i++) {
 		for (j = 0; j < num_states; j++) {
-			if (i != j)
-				rate_matrix[i*num_states+j] *= delta;
-			else
-				rate_matrix[i*num_states+j] = delta * (-m[i]);
+			rate_matrix[i*num_states+j] *= delta;
 		}
 	}	
 } 

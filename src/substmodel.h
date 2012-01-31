@@ -87,6 +87,13 @@ public:
 	virtual void getRateMatrix(double *rate_mat);
 
 	/**
+		Get the rate matrix Q. One should override this function when defining new model.
+		The default is equal rate of 1 (JC Model), valid for all kind of data.
+		@param rate_mat (OUT) upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
+	*/
+	virtual void getQMatrix(double *rate_mat) {}
+
+	/**
 		compute the state frequency vector. One should override this function when defining new model.
 		The default is equal state sequency, valid for all kind of data.
 		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states

@@ -79,7 +79,9 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < NSTATES) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
         }                
-        tree_lh += log(lh_ptn) * ptn_freqs[ptn];
+		lh_ptn = log(lh_ptn);
+        tree_lh += lh_ptn * ptn_freqs[ptn];
+		// BQM: pattern_lh contains the LOG-likelihood, not likelihood
         if (pattern_lh) {
     		pattern_lh[ptn] = lh_ptn;
     	}

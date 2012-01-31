@@ -37,19 +37,19 @@ NGSAlignment::NGSAlignment(const char *filename) : AlignmentPairwise() {
 	readFritzFile(filename);
 }
 
-NGSAlignment::NGSAlignment(int nstate, int ncat, int *freq) : AlignmentPairwise() {
+NGSAlignment::NGSAlignment(int nstate, int ncat, double *freq) : AlignmentPairwise() {
 	num_states = nstate;
 	ncategory = ncat;
 	int total_size = ncategory*num_states*num_states;
-	pair_freq = new int[total_size];
-	memcpy(pair_freq, freq, total_size * sizeof(int));
+	pair_freq = new double[total_size];
+	memcpy(pair_freq, freq, total_size * sizeof(double));
 }
 
 NGSAlignment::NGSAlignment(int nstate, string &seq1, string &seq2) {
 	num_states = nstate;
 	ncategory = 1;
-	pair_freq = new int[nstate*nstate];
-	memset(pair_freq, 0, sizeof(int)*nstate*nstate);
+	pair_freq = new double[nstate*nstate];
+	memset(pair_freq, 0, sizeof(double)*nstate*nstate);
 	assert(seq1.length() == seq2.length());
 	int len = seq1.length();
 	int i;
@@ -57,7 +57,7 @@ NGSAlignment::NGSAlignment(int nstate, string &seq1, string &seq2) {
 		int state1 = convertState(seq1[i], SEQ_DNA);
 		int state2 = convertState(seq2[i], SEQ_DNA);
 		if (state1 < num_states && state2 < num_states) 
-			pair_freq[state1*num_states+state2] ++;
+			pair_freq[state1*num_states+state2] += 1;
 	}
 }
 
@@ -85,10 +85,10 @@ void NGSAlignment::readFritzFile(const char *filename) {
 		num_states = convert_int(tmp.c_str());
 		total_size = ncategory*num_states*num_states;
 		if (num_states < 1) throw "Wrong number of states";
-		pair_freq = new int[total_size];
+		pair_freq = new double[total_size];
 		for (i=0; i < total_size; i++) {
 			in >> tmp;
-			int count = round(convert_double(tmp.c_str()));
+			double count = convert_double(tmp.c_str());
 			if (count < 0) throw "Wrong count";
 			pair_freq[i] = count;
 		}
@@ -108,8 +108,8 @@ void NGSAlignment::readFritzFile(const char *filename) {
 
 void NGSAlignment::computeStateFreq (double *stateFrqArr) {
 	int cat, i, j, id = 0;
-	int state_count[num_states];
-	memset(state_count, 0, sizeof(int)*num_states);
+	double state_count[num_states];
+	memset(state_count, 0, sizeof(double)*num_states);
 	for (cat = 0, id = 0; cat < ncategory; cat++) {
 		for (i = 0; i < num_states; i++)
 			for (j = 0; j < num_states; j++, id++) {
@@ -118,7 +118,7 @@ void NGSAlignment::computeStateFreq (double *stateFrqArr) {
 			}
 	}
 
-	int sum_count = 0;
+	double sum_count = 0;
 	for (i = 0; i < num_states; i++) sum_count += state_count[i];
 	if (sum_count == 0) throw "Empty data observed";
 	for (i = 0; i < num_states; i++) stateFrqArr[i] = double(state_count[i]) / sum_count;
@@ -130,9 +130,9 @@ void NGSAlignment::computeStateFreq (double *stateFrqArr) {
 	}
 }
 
-void NGSAlignment::computeSumPairFreq (int *sum_pair_freq) {
+void NGSAlignment::computeSumPairFreq (double *sum_pair_freq) {
 	int cat, id, i, j;
-	memset(sum_pair_freq, 0, sizeof(int)*num_states*num_states);
+	memset(sum_pair_freq, 0, sizeof(double)*num_states*num_states);
 	for (cat = 0, id = 0; cat < ncategory; cat++) {
 		for (i = 0; i < num_states; i++)
 			for (j = 0; j < num_states; j++, id++) {
@@ -178,8 +178,8 @@ void NGSAlignment::computeEmpiricalRate (double *rates) {
 double NGSAlignment::computeEmpiricalDist(int cat) {
 	int i;
 	int trans_size = num_states*num_states;
-	int *pair_pos = pair_freq + (cat*trans_size);
-	int match_pos = 0, total_pos = 0;
+	double *pair_pos = pair_freq + (cat*trans_size);
+	double match_pos = 0, total_pos = 0;
 	for (i = 0; i < num_states; i++) 
 		match_pos += pair_pos[i*num_states+i];
 	for (i = 0; i < trans_size; i++) 
@@ -196,9 +196,9 @@ double NGSAlignment::computeFunctionCat(int cat, double value) {
 	int i;
 
 	tree->getModelFactory()->computeTransMatrix(value, trans_mat);
-	int *pair_pos = pair_freq + cat*trans_size;
+	double *pair_pos = pair_freq + cat*trans_size;
 
-	for (i = 0; i < trans_size; i++) if (pair_pos[i]) {
+	for (i = 0; i < trans_size; i++) if (pair_pos[i] > 1e-6) {
 		if (trans_mat[i] <= 0) throw "Negative transition probability";
 		lh -= pair_pos[i] * log(trans_mat[i]);
 	}
@@ -216,8 +216,8 @@ double NGSAlignment::computeFuncDervCat(int cat, double value, double &df, doubl
 	
 
 	tree->getModelFactory()->computeTransDerv(value, trans_mat, trans_derv1, trans_derv2);
-	int *pair_pos = pair_freq + cat*trans_size;
-	for (i = 0; i < trans_size; i++) if (pair_pos[i] > 0) {
+	double *pair_pos = pair_freq + cat*trans_size;
+	for (i = 0; i < trans_size; i++) if (pair_pos[i] > 1e-6) {
 		if (trans_mat[i] <= 0) throw "Negative transition probability";
 		double d1 = trans_derv1[i] / trans_mat[i];
 		derv1 += pair_pos[i] * d1;
@@ -289,7 +289,7 @@ NGSRateCat::NGSRateCat(PhyloTree *tree, int ncat) {
 		proportion[i] = 1.0/ncategory;
 	}
 
-	sum_pair_freq = new int[tree->aln->num_states * tree->aln->num_states];
+	sum_pair_freq = new double[tree->aln->num_states * tree->aln->num_states];
 	((NGSAlignment*)tree->aln)->computeSumPairFreq(sum_pair_freq);
 
 	name = "+FC";
@@ -447,7 +447,7 @@ NGSRead::NGSRead(PhyloTree *atree) : NGSAlignment(atree) {
 	if (tree) {
 		num_states = tree->aln->num_states;
 	} else num_states = 4;
-	pair_freq = new int[(num_states+1) * (num_states+1)];
+	pair_freq = new double[(num_states+1) * (num_states+1)];
 }
 
 void NGSRead::init() {
@@ -464,10 +464,10 @@ void NGSRead::init() {
 void NGSRead::computePairFreq() {
 	int len = scaff.length();
 	assert(len == read.length());
-	memset(pair_freq, 0, sizeof(int)*num_states*num_states);
+	memset(pair_freq, 0, sizeof(double)*num_states*num_states);
 	for (int i = 0; i < len; i++)
 		if (scaff[i] < num_states && read[i] < num_states)
-			pair_freq[scaff[i]*num_states+read[i]]++;
+			pair_freq[scaff[i]*num_states+read[i]] += 1;
 }
 
 
@@ -481,7 +481,7 @@ double NGSRead::computeFunction(double value) {
 		int trans_size = num_states*num_states;
 		double trans_mat[trans_size];
 		tree->getModelFactory()->computeTransMatrix(value * homo_rate, trans_mat);
-		for (i = 0; i < trans_size; i++) if (pair_freq[i]) {
+		for (i = 0; i < trans_size; i++) if (pair_freq[i] > 1e-6) {
 			lh -= pair_freq[i] * log(trans_mat[i]);
 		}
 		return lh;
@@ -513,7 +513,7 @@ double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
 		double trans_derv1[trans_size];
 		double trans_derv2[trans_size];
 		tree->getModelFactory()->computeTransDerv(value * homo_rate, trans_mat, trans_derv1, trans_derv2);
-		for (i = 0; i < trans_size; i++) if (pair_freq[i]) {
+		for (i = 0; i < trans_size; i++) if (pair_freq[i] > 1e-6) {
 			lh -= pair_freq[i] * log(trans_mat[i]);
 			double d1 = trans_derv1[i] / trans_mat[i];
 			df -=  pair_freq[i] * d1;
@@ -866,16 +866,17 @@ void reportNGSAnalysis(const char *file_name, Params &params, NGSAlignment &aln,
 	cout << endl << "Results written to: " << file_name << endl << endl;
 }
 
+/*
 bool checkFreq(int *pair_freq, int n) {
 	int i, count = 0;
 	for (i=0; i < n*n; i++)
 		if (pair_freq[i] != 0) count++;
 	if (count <= n) return false;
 	return true;
-}
+}*/
 
 void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string model, 
-	int *freq, DoubleVector &rate_info, StrVector &rate_name, 
+	double *freq, DoubleVector &rate_info, StrVector &rate_name, 
 	bool write_info, const char *report_file) 
 {
 	char model_name[20];
@@ -923,7 +924,7 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
 }
 
 void testTwoRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string model, 
-	int *freq, DoubleVector &rate_info, StrVector &rate_name, 
+	double *freq, DoubleVector &rate_info, StrVector &rate_name, 
 	bool write_info, const char *report_file) 
 {
 	char model_name[20];
@@ -1127,19 +1128,22 @@ void runNGSAnalysis(Params &params) {
 	cout << endl << "--> INFERING RATE ASSUMING POSITION-SPECIFIC MODEL..." << endl << endl;
 	for (int pos = 0; pos < aln.ncategory; pos++) {
 		cout << "Position " << pos+1 << " / ";
-		int *pair_pos = aln.pair_freq + (pos*aln.num_states*aln.num_states);
+		double *pair_pos = aln.pair_freq + (pos*aln.num_states*aln.num_states);
 		testSingleRateModel(params, aln, tree, original_model, pair_pos, part_rate[pos], rate_name, false, NULL);
 	}
 
 
 	verbose_mode = vb_saved;
 
-	int sum_freq[aln.num_states*aln.num_states];
+	double sum_freq[aln.num_states*aln.num_states];
 	cout << endl << "-->INFERING RATE UNDER EQUAL-RATE NULL MODEL..." << endl << endl;
 	aln.computeSumPairFreq(sum_freq);
 	DoubleVector null_rate;
 	string out_file = params.out_prefix;
 	out_file += ".ngs_e";
+	for (i = 0; i < aln.num_states*aln.num_states; i++)
+		cout << sum_freq[i] << " ";
+	cout << endl;
 	testSingleRateModel(params, aln, tree, original_model, sum_freq, null_rate, rate_name, true, out_file.c_str());
 
 	DoubleVector two_rate;
