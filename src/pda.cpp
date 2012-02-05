@@ -1443,17 +1443,37 @@ int main(int argc, char *argv[])
 	cout << "time: " << double(cend-cbegin)/CLOCKS_PER_SEC << endl;
 	return 0;*/
 	
-        system("echo $HOSTNAME");
+/*	stringstream ss("(T0:0.1,(T1:0.1,(T2:0.1,(T3:0.1,T4:0.1):0.1):0.1):0.1,T5:0.1);");
+	MTree tree;
+	bool is_rooted = false;
+	tree.readTree(ss, is_rooted);
+	tree.drawTree(cout);
+	if (argc != 2) return 0;
+	string tax_cov(argv[1]);
+	for (string::iterator it = tax_cov.begin(); it != tax_cov.end(); it++)
+		(*it) -= '0';
+	MTree tree2;
+	tree2.copyTree(&tree, tax_cov);
+	cout << "new tree has " << tree2.leafNum << " leaves and " << tree2.nodeNum - tree2.leafNum << " internal nodes" << endl;
+	tree2.drawTree(cout);
+	tree2.printTree(cout);
+	cout << endl;
+
+	return 0;*/
+
 	printCopyright(cout);
 
-
+	
 	Params params;
 	parseArg(argc, argv, params);
 
-	cout << "Program executed with: " << endl;
+	cout << "Running machine: ";
+	cout.flush();
+	system("hostname");
+	cout << "Running arguments: " << endl;
 	for (int i = 0; i < argc; i++)
 		cout << " " << argv[i];
-	cout << endl;
+	cout << endl << endl;
 
 
 	srand(params.ran_seed);

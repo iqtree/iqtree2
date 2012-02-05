@@ -20,14 +20,23 @@
 #ifndef PHYLOSUPERTREE_H
 #define PHYLOSUPERTREE_H
 
-#include <phylotree.h>
+#include "iqptree.h"
+
+
+struct PartitionInfo {
+	string name;
+	string model_name;
+	string aln_file;
+	string sequence_type;
+	string position_spec;
+};
 
 /**
 Phylogenetic tree for partition model (multi-gene alignment)
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class PhyloSuperTree : public PhyloTree, public vector<PhyloTree* >
+class PhyloSuperTree : public IQPTree, public vector<PhyloTree* >
 {
 public:
 	/** 
@@ -41,13 +50,44 @@ public:
     PhyloSuperTree(Params &params);
 
 
-    virtual ~PhyloSuperTree();
+    ~PhyloSuperTree();
 
-protected:
+	virtual bool isSuperTree() { return true; }
+
+    /**
+            compute the distance between 2 sequences.
+            @param seq1 index of sequence 1
+            @param seq2 index of sequence 2
+            @param initial_dist initial distance
+            @return distance between seq1 and seq2
+     */
+    virtual double computeDist(int seq1, int seq2, double initial_dist);
+
+
 	/**
-		partition names
+		TODO: create sub-trees of the current super-tree
 	*/
-	StrVector part_names; 
+	void mapTrees();
+
+    /**
+            compute the tree likelihood
+            @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
+                            assuming pattern_lh has the size of the number of patterns
+            @return tree likelihood
+     */
+    virtual double computeLikelihood(double *pattern_lh = NULL);
+
+    /**
+            optimize all branch lengths of the tree
+            @param iterations number of iterations to loop through all branches
+            @return the likelihood of the tree
+     */
+    virtual double optimizeAllBranches(int iterations = 100);
+
+	/**
+		partition information
+	*/
+	vector<PartitionInfo> part_info; 
 
 };
 

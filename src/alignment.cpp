@@ -498,7 +498,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
 			throw "Unknown sequence type.";
 	}
 	SeqType user_seq_type;
-	if (sequence_type) {
+	if (sequence_type && strcmp(sequence_type,"") != 0) {
 		if (strcmp(sequence_type, "BIN") == 0) {
 			num_states = 2;
 			user_seq_type = SEQ_BINARY;

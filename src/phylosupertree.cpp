@@ -18,13 +18,15 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "phylosupertree.h"
+#include "superalignment.h"
+#include "superalignmentpairwise.h"
 
 PhyloSuperTree::PhyloSuperTree()
- : PhyloTree()
+ : IQPTree()
 {
 }
 
-PhyloSuperTree::PhyloSuperTree(Params &params) :  PhyloTree() {
+PhyloSuperTree::PhyloSuperTree(Params &params) :  IQPTree() {
 	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
 	try {
 		ifstream in;
@@ -34,23 +36,25 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  PhyloTree() {
 
 		Params origin_params = params;
 		//memcpy(&origin_params, &params, sizeof(params));
-		string part_name, model_name, aln_file, sequence_type, position_spec;
+		PartitionInfo info;
 
 		while (!in.eof()) {
-			getline(in, part_name, ',');
+			getline(in, info.name, ',');
 			if (in.eof()) break;
+			getline(in, info.model_name, ',');
+			if (info.model_name == "") info.model_name = params.model_name;
+			getline(in, info.aln_file, ',');
+			if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
+			getline(in, info.sequence_type, ',');
+			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
+			getline(in, info.position_spec);
+			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" << 
+				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
+			part_info.push_back(info);
+			Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
+			PhyloTree *tree = new PhyloTree(part_aln);
+			push_back(tree);
 			params = origin_params;
-			part_names.push_back(part_name);
-			getline(in, model_name, ',');
-			if (model_name == "*") model_name = params.model_name;
-			getline(in, aln_file, ',');
-			if (aln_file == "*") aln_file = params.aln_file;
-			getline(in, sequence_type, ',');
-			if (sequence_type=="*") sequence_type = params.sequence_type;
-			getline(in, position_spec);
-			cout << "Reading partition " << part_name << " (" << params.model_name << "," << 
-				aln_file << "," << sequence_type << "," << position_spec << ") ..." << endl;
-			Alignment *aln = new Alignment((char*)aln_file.c_str(), (char*)sequence_type.c_str(), params.intype);
 		}
 
 		in.clear();
@@ -62,12 +66,59 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  PhyloTree() {
 	} catch (string str) {
 		outError(str);
 	}
+	aln = new SuperAlignment(this);
+	string str = params.out_prefix;
+	str += ".part";
+	aln->printPhylip(str.c_str());
+	str = params.out_prefix;
+	str += ".concat";
+	((SuperAlignment*)aln)->printCombinedAlignment(str.c_str());
+	cout << endl;
+
 }
 
+double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist) {
+    // if no model or site rate is specified, return JC distance
+    if (initial_dist == 0.0)
+        initial_dist = aln->computeDist(seq1, seq2);
+    if (initial_dist == MAX_GENETIC_DIST) return initial_dist;
+    if (!model_factory || !site_rate) return initial_dist;
+
+    // now optimize the distance based on the model and site rate
+    SuperAlignmentPairwise aln_pair(this, seq1, seq2);
+    return aln_pair.optimizeDist(initial_dist);
+}
+
+void PhyloSuperTree::mapTrees() {
+	assert(root);
+	int part = 0;
+	for (iterator it = begin(); it != end(); it++, part++) {
+		string taxa_set = ((SuperAlignment*)aln)->getPattern(part);
+		(*it)->copyTree(this, taxa_set);
+		//(*it)->drawTree(cout);
+		(*it)->initializeAllPartialLh();
+	}
+}
+
+double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
+	double tree_lh = 0.0;
+	for (iterator it = begin(); it != end(); it++)
+		tree_lh += (*it)->computeLikelihood();
+	return tree_lh;
+}
+
+double PhyloSuperTree::optimizeAllBranches(int iterations) {
+	double tree_lh = 0.0;
+	for (iterator it = begin(); it != end(); it++)
+		tree_lh += (*it)->optimizeAllBranches(iterations);
+	return tree_lh;
+}
 
 PhyloSuperTree::~PhyloSuperTree()
 {
-	freePhyloTree();
+	for (reverse_iterator it = rbegin(); it != rend(); it++)
+		delete (*it);
+	clear();
 }
 
 

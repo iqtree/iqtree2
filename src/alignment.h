@@ -184,6 +184,8 @@ public:
 
 	inline int getPatternID(int site) { return site_pattern[site]; }
 
+	inline Pattern getPattern(int site) { return at(site_pattern[site]); }
+
 	/**
 		@param i sequence index
 		@return sequence name
@@ -263,7 +265,7 @@ public:
 		@param seq2 index of sequence 2
 		@return the observed distance between seq1 and seq2 (between 0.0 and 1.0)
 	*/
-	double computeObsDist(int seq1, int seq2);
+	virtual double computeObsDist(int seq1, int seq2);
 
 	/**
 		@param seq1 index of sequence 1
@@ -362,7 +364,7 @@ public:
 	double frac_const_sites;
 
 
-private:
+protected:
 
 	/**
 		sequence names

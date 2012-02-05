@@ -69,6 +69,68 @@ void MTree::copyTree(MTree *tree) {
 	readTree(ss, tree->rooted);
 }
 
+void MTree::copyTree(MTree *tree, string &taxa_set) {
+	if (tree->leafNum != taxa_set.length()) outError("#leaves and taxa_set do not match!");
+	leafNum = nodeNum = 0;
+	for (string::iterator it = taxa_set.begin(); it != taxa_set.end(); it++)
+		nodeNum += (*it);
+	double new_len;
+	root = copyTree(tree, taxa_set, new_len);
+}
+
+Node* MTree::copyTree(MTree *tree, string &taxa_set, double &len, Node *node, Node *dad) {
+	if (!node) {
+		if (taxa_set[tree->root->id]) {
+			node = tree->root; 
+		} else {
+			for (int i = 0; i < tree->leafNum; i++)
+				if (taxa_set[i]) { 
+					node = tree->findNodeID(i); 
+					break;
+				}
+		}
+	}
+	Node *new_node = NULL;
+	NodeVector new_nodes;
+	DoubleVector new_lens;
+	if (node->isLeaf()) {
+		len = 0.0;
+		if (taxa_set[node->id]) { 
+			new_node = newNode(leafNum++, node->name.c_str());
+		}
+		if (dad) return new_node;
+	}
+	if (new_node) {
+		new_nodes.push_back(new_node);
+		new_lens.push_back(len);
+	}
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		double new_len;
+		new_node = copyTree(tree, taxa_set, new_len, (*it)->node, node);
+		if (new_node) {
+			new_nodes.push_back(new_node);
+			new_lens.push_back((*it)->length + new_len);
+		}
+	}
+	if (new_nodes.empty()) return NULL;
+	if (new_nodes.size() == 1) {
+		len = new_lens[0];
+		return new_nodes[0];
+	}
+	if (!dad && new_nodes.size() == 2) {
+		double sum_len = new_lens[0] + new_lens[1];
+		new_nodes[0]->addNeighbor(new_nodes[1], sum_len);
+		new_nodes[1]->addNeighbor(new_nodes[0], sum_len);
+		return new_nodes[0];
+	}
+	Node* int_node = newNode(nodeNum++, node->name.c_str());
+	len = 0.0;
+	for (int i = 0; i < new_nodes.size(); i++) {
+		int_node->addNeighbor(new_nodes[i], new_lens[i]);
+		new_nodes[i]->addNeighbor(int_node, new_lens[i]);
+	}
+	return int_node;
+}
 
 Node* MTree::newNode(int node_id, const char* node_name) {
 	return new Node(node_id, node_name);

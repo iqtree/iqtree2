@@ -41,6 +41,7 @@
 #include "mexttree.h"
 #include "ratemeyerhaeseler.h"
 #include "whtest_wrapper.h"
+#include "partitionmodel.h"
 
 const int DNA_MODEL_NUM = 14;
 clock_t t_begin, t_end;
@@ -253,6 +254,181 @@ string modelTest(Params &params, PhyloTree *in_tree) {
     //return "GTR";
 }
 
+void reportReferences(ofstream &out, string &original_model) {
+	out << "A manuscript describing IQTREE is currently under preparation." << endl << endl <<
+		"*** Please always cite: " << endl << endl <<
+		"Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space" << endl <<
+		"and stopping in time. Mol. Biol. Evol., 21(8):1565-1571." << endl << endl <<
+		"*** If you use the parallel version, please cite: " << endl << endl <<
+		"Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)" << endl <<
+		"pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies." << endl <<
+		"Bioinformatics, 21:3794-3796." << endl << endl;
+
+	if (original_model == "TEST" || original_model == "TESTONLY")
+		out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl
+			<< "(see CREDITS section for the citation)" << endl << endl;
+}
+
+void reportAlignment(ofstream &out, Alignment &alignment) {
+	out <<  "Input data: "  << alignment.getNSeq() << " sequences with " << 
+			alignment.getNSite() << " " << ((alignment.num_states == 2) ? "binary" : ((alignment.num_states == 4) ? "nucleotide" : "amino-acid")) << 
+			" sites" << endl <<
+			"Number of constant sites: " << round(alignment.frac_const_sites * alignment.getNSite()) <<
+			" (= " << alignment.frac_const_sites * 100 << "% of all sites)" << endl <<
+			"Number of site patterns: " << alignment.size() << endl << endl;
+}
+
+void reportModel(ofstream &out, PhyloTree &tree) {
+	int i, j;
+	out << "Model of substitution: " << tree.getModel()->name << endl << endl;
+	out << "Rate parameter R:" << endl << endl;
+
+	double *rate_mat = new double[tree.aln->num_states * tree.aln->num_states];
+	tree.getModel()->getRateMatrix(rate_mat);
+	int k;
+	if (tree.aln->num_states > 4) out << fixed;
+	if (tree.getModel()->isReversible()) {
+		for (i = 0, k = 0; i < tree.aln->num_states - 1; i++)
+			for (j = i + 1; j < tree.aln->num_states; j++, k++) {
+				out << "  " << tree.aln->convertStateBack(i) << "-" << tree.aln->convertStateBack(j) << ": " << rate_mat[k];
+				if (tree.aln->num_states <= 4) out << endl;
+				else
+					if (k % 5 == 4) out << endl;
+			}
+	} else { // non-reversible model
+		for (i = 0, k = 0; i < tree.aln->num_states; i++)
+			for (j = 0; j < tree.aln->num_states; j++) 
+				if (i!=j) {
+				out << "  " << tree.aln->convertStateBack(i) << "-" << tree.aln->convertStateBack(j) << ": " << rate_mat[k];
+				if (tree.aln->num_states <= 4) out << endl;
+				else
+					if (k % 5 == 4) out << endl;
+				k++;
+			}
+		
+	} 
+
+	if (!tree.getModel()->isReversible()) {
+		double *q_mat = new double[tree.aln->num_states * tree.aln->num_states];
+		tree.getModel()->getQMatrix(q_mat);
+
+		out << endl << "Rate matrix Q:" << endl << endl;
+		for (i = 0, k = 0; i < tree.aln->num_states; i++) {
+			for (j = 0; j < tree.aln->num_states; j++, k++) 
+				out << "  " << q_mat[k];
+			out << endl;
+		} 
+
+		delete [] q_mat;
+	}
+
+	if (tree.aln->num_states > 4) out << endl;
+	out.unsetf(ios_base::fixed);
+	delete [] rate_mat;
+
+	out << endl << "State frequencies: ";
+	if (!tree.getModel()->isReversible()) out << "(inferred from Q matrix)" << endl; else
+	switch (tree.getModel()->getFreqType()) {
+		case FREQ_EMPIRICAL:
+			out << "(empirical counts from alignment)" << endl;
+			break;
+		case FREQ_ESTIMATE:
+			out << "(estimated with maximum likelihood)" << endl;
+			break;
+		case FREQ_USER_DEFINED:
+			out << "(user-defined)" << endl;
+			break;
+		case FREQ_EQUAL:
+			out << "(equal frequencies)" << endl;
+			break;
+		default:
+			break;
+	}
+	out << endl;
+
+	double *state_freqs = new double[tree.aln->num_states];
+	tree.getModel()->getStateFrequency(state_freqs);
+	for (i = 0; i < tree.aln->num_states; i++)
+		out << "  pi(" << tree.aln->convertStateBack(i) << ") = " << state_freqs[i] << endl;
+	delete [] state_freqs;
+	out << endl;
+}
+
+void reportRate(ofstream &out, Params &params, PhyloTree &tree) {
+	int i, j;
+	RateHeterogeneity *rate_model = tree.getRate();
+	out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
+	rate_model->writeInfo(out);
+
+	if (rate_model->getNDiscreteRate() > 1 || rate_model->getPInvar() > 0.0) {
+		out << endl << " Category  Relative_rate  Proportion" << endl;
+		if (rate_model->getPInvar() > 0.0)
+			out << "  0         0              " << rate_model->getPInvar() << endl;
+		int cats = rate_model->getNDiscreteRate();
+		DoubleVector prop;
+		if (rate_model->getGammaShape() > 0)
+			prop.resize(cats, (1.0 - rate_model->getPInvar()) / rate_model->getNRate());
+		else {
+			prop.resize(cats, 0.0);
+			for (i = 0; i < tree.aln->getNPattern(); i++)
+				prop[rate_model->getPtnCat(i)] += tree.aln->at(i).frequency;
+			for (i = 0; i < cats; i++)
+				prop[i] /= tree.aln->getNSite();
+		}
+		for (i = 0; i < cats; i++) {
+			out << "  " << i + 1 << "         ";
+			out.width(14);
+			out << left << rate_model->getRate(i) << " " << prop[i];
+			out << endl;
+		}
+	}
+/*
+	if (rate_model->getNDiscreteRate() > 1 || rate_model->isSiteSpecificRate())
+		out << endl << "See file " << rate_file << " for site-specific rates and categories" << endl;*/
+	out << endl;
+}
+
+void reportTree(ofstream &out, Params &params, PhyloTree &tree) {
+
+	int zero_branches = tree.countZeroBranches();
+	if (zero_branches > 0) {
+		out << "WARNING: " << zero_branches << " branches of ZERO lengths and should be treated with caution!" << endl;
+		cout << endl << "*WARNING*: " << zero_branches  << " branches of ZERO lengths and should be treated with caution!" << endl;
+		out << "         Such branches are denoted by '***' in the figure" << endl << endl;
+	}
+	tree.sortTaxa();
+	tree.drawTree(out);
+
+	out << "Log-likehood of the tree: " << fixed << tree.computeLikelihood() << endl
+		<< "Unconstrained log-likelihood (without tree): " << tree.aln->computeUnconstrainedLogL() << endl 
+		<< "Total tree length: " << tree.treeLength() << endl << endl
+		<< "Tree in newick format:" << endl << endl;
+
+    tree.printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+
+	out << endl << endl;
+}
+
+void reportCredits(ofstream &out) {
+	out << "CREDITS" << endl << "-------" << endl << endl
+		<< "Some parts of the code were taken from TREE-PUZZLE package:" << endl << endl
+		<< "Heiko A. Schmidt, Korbinian Strimmer, Martin Vingron, and Arndt von Haeseler" << endl
+		<< "(2002) TREE-PUZZLE: maximum likelihood phylogenetic analysis using quartets" << endl
+		<< "and parallel computing. Bioinformatics, 18(3):502-504." << endl << endl
+
+		<< "The source codes to construct the BIONJ tree were taken from BIONJ software:" << endl << endl
+		<< "Oliver Gascuel (1997) BIONJ: an improved version of the NJ algorithm" << endl
+		<< "nased on a simple model of sequence data. Mol. Bio. Evol., 14:685-695." << endl << endl
+
+		<< "The Nexus file parser was taken from the Nexus Class Library:" << endl << endl
+		<< "Paul O. Lewis (2003) NCL: a C++ class library for interpreting data files in" << endl
+		<< "NEXUS format. Bioinformatics, 19(17):2330-2331." << endl << endl
+
+		<< "The Modeltest 3.7 source codes were taken from:" << endl << endl
+		<< "David Posada and Keith A. Crandall (1998) MODELTEST: testing the model of" << endl
+		<< "DNA substitution. Bioinformatics, 14(9):817-8." << endl << endl;
+}
+
 void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alignment, IQPTree &tree) {
     int i, j;
     string outfile = params.out_prefix;
@@ -262,8 +438,12 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(outfile.c_str());
-        out << "IQ-TREE " << VERSION << " built " << __DATE__ << endl << endl << 
-               "Input file name: " << params.aln_file << endl;
+        out << "IQ-TREE " << VERSION << " built " << __DATE__ << endl << endl;
+        if (params.partition_file) 
+               out << "Partition file name: " << params.partition_file << endl;
+        if (params.aln_file) 
+               out << "Input file name: " << params.aln_file << endl;
+               
 		if (params.user_file)
 			out << "User tree file name: " << params.user_file << endl;
 		out << "Type of analysis: ";
@@ -275,132 +455,45 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 		}
 		out << endl;
     	out << "Random seed number: " << params.ran_seed << endl << endl;
-        out << "REFERENCES" << endl << "----------" << endl << endl <<
-                "A manuscript describing IQTREE is currently under preparation." << endl << endl <<
-                "*** Please always cite: " << endl << endl <<
-                "Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space" << endl <<
-                "and stopping in time. Mol. Biol. Evol., 21(8):1565-1571." << endl << endl <<
-                "*** If you use the parallel version, please cite: " << endl << endl <<
-                "Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)" << endl <<
-                "pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies." << endl <<
-                "Bioinformatics, 21:3794-3796." << endl << endl;
+        out << "REFERENCES" << endl << "----------" << endl << endl;
+        reportReferences(out, original_model);
 
-        if (original_model == "TEST" || original_model == "TESTONLY")
-            out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl
-                << "(see CREDITS section for the citation)" << endl << endl;
+        out << "SEQUENCE ALIGNMENT" << endl << "------------------" << endl << endl;
+        if (tree.isSuperTree()) {
+			out << "Input data: " << alignment.getNSeq() << " taxa with " << 
+					alignment.getNSite() << " partitions" << endl << endl;
+        	PhyloSuperTree *stree = (PhyloSuperTree*)&tree;
+        	int part = 0;
+        	for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
+        		out << "FOR PARTITION " << stree->part_info[part].name <<":" << endl << endl;
+        		reportAlignment(out, *((*it)->aln));
+        	}
+        } else reportAlignment(out, alignment);
 
-        out << "SEQUENCE ALIGNMENT" << endl << "------------------" << endl << endl <<
-                "Input data: "  << alignment.getNSeq() << " sequences with " << 
-                alignment.getNSite() << " " << ((alignment.num_states == 2) ? "binary" : ((alignment.num_states == 4) ? "nucleotide" : "amino-acid")) << 
-                " sites" << endl <<
-                "Number of constant sites: " << round(alignment.frac_const_sites * alignment.getNSite()) <<
-                " (= " << alignment.frac_const_sites * 100 << "% of all sites)" << endl <<
-                "Number of site patterns: " << alignment.size() << endl << endl;
 
-        out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl << endl <<
-                "Model of substitution: " << tree.getModel()->name << endl << endl;
-        out << "Rate parameter R:" << endl << endl;
+        out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl << endl;
+        if (tree.isSuperTree()) {
+        	out << "Full partition model with separate branch lengths and models between partitions" << endl << endl;
+        	PhyloSuperTree *stree = (PhyloSuperTree*)&tree;
+        	int part = 0;
+        	for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
+        		out << "FOR PARTITION " << stree->part_info[part].name <<":" << endl << endl;
+        		reportModel(out, *(*it));
+        	}
+        } else
+        	reportModel(out, tree);
 
-        double *rate_mat = new double[alignment.num_states * alignment.num_states];
-        tree.getModel()->getRateMatrix(rate_mat);
-        int k;
-        if (alignment.num_states > 4) out << fixed;
-		if (tree.getModel()->isReversible()) {
-			for (i = 0, k = 0; i < alignment.num_states - 1; i++)
-				for (j = i + 1; j < alignment.num_states; j++, k++) {
-					out << "  " << alignment.convertStateBack(i) << "-" << alignment.convertStateBack(j) << ": " << rate_mat[k];
-					if (alignment.num_states <= 4) out << endl;
-					else
-						if (k % 5 == 4) out << endl;
-				}
-		} else { // non-reversible model
-			for (i = 0, k = 0; i < alignment.num_states; i++)
-				for (j = 0; j < alignment.num_states; j++) 
-					if (i!=j) {
-					out << "  " << alignment.convertStateBack(i) << "-" << alignment.convertStateBack(j) << ": " << rate_mat[k];
-					if (alignment.num_states <= 4) out << endl;
-					else
-						if (k % 5 == 4) out << endl;
-					k++;
-				}
-			
-		} 
-
-		if (!tree.getModel()->isReversible()) {
-			double *q_mat = new double[alignment.num_states * alignment.num_states];
-			tree.getModel()->getQMatrix(q_mat);
-
-        	out << endl << "Rate matrix Q:" << endl << endl;
-			for (i = 0, k = 0; i < alignment.num_states; i++) {
-				for (j = 0; j < alignment.num_states; j++, k++) 
-					out << "  " << q_mat[k];
-				out << endl;
-			} 
-
-        	delete [] q_mat;
-        }
-
-        if (alignment.num_states > 4) out << endl;
-        out.unsetf(ios_base::fixed);
-        delete [] rate_mat;
-
-        out << endl << "State frequencies: ";
-		if (!tree.getModel()->isReversible()) out << "(inferred from Q matrix)" << endl; else
-        switch (tree.getModel()->getFreqType()) {
-            case FREQ_EMPIRICAL:
-                out << "(empirical counts from alignment)" << endl;
-                break;
-            case FREQ_ESTIMATE:
-                out << "(estimated with maximum likelihood)" << endl;
-                break;
-            case FREQ_USER_DEFINED:
-                out << "(user-defined)" << endl;
-                break;
-            case FREQ_EQUAL:
-                out << "(equal frequencies)" << endl;
-                break;
-            default:
-                break;
-        }
-        out << endl;
-
-        double *state_freqs = new double[alignment.num_states];
-        tree.getModel()->getStateFrequency(state_freqs);
-        for (i = 0; i < alignment.num_states; i++)
-            out << "  pi(" << alignment.convertStateBack(i) << ") = " << state_freqs[i] << endl;
-        delete [] state_freqs;
-		out << endl;
-
-        RateHeterogeneity *rate_model = tree.getRate();
         out << "RATE HETEROGENEITY" << endl << "------------------" << endl << endl;
-        out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
-        rate_model->writeInfo(out);
+        if (tree.isSuperTree()) {
+        	PhyloSuperTree *stree = (PhyloSuperTree*)&tree;
+        	int part = 0;
+        	for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
+        		out << "FOR PARTITION " << stree->part_info[part].name <<":" << endl << endl;
+        		reportRate(out, params, *(*it));
+        	}
+        } else
+        	reportRate(out, params, tree);
 
-        if (rate_model->getNDiscreteRate() > 1 || rate_model->getPInvar() > 0.0) {
-            out << endl << " Category  Relative_rate  Proportion" << endl;
-            if (rate_model->getPInvar() > 0.0)
-                out << "  0         0              " << rate_model->getPInvar() << endl;
-            int cats = rate_model->getNDiscreteRate();
-			DoubleVector prop;
-			if (rate_model->getGammaShape() > 0)
-				prop.resize(cats, (1.0 - rate_model->getPInvar()) / rate_model->getNRate());
-			else {
-				prop.resize(cats, 0.0);
-				for (i = 0; i < tree.aln->getNPattern(); i++)
-					prop[rate_model->getPtnCat(i)] += tree.aln->at(i).frequency;
-	            for (i = 0; i < cats; i++)
-	            	prop[i] /= tree.aln->getNSite();
-			}
-            for (i = 0; i < cats; i++) {
-                out << "  " << i + 1 << "         ";
-                out.width(14);
-                out << left << rate_model->getRate(i) << " " << prop[i];
-                out << endl;
-            }
-        }
-		if (rate_model->getNDiscreteRate() > 1 || rate_model->isSiteSpecificRate())
-			out << endl << "See file " << params.out_prefix << ".rate for site-specific rates and categories" << endl;
-		out << endl;
         // Bootstrap analysis:
         //Display as outgroup: a
 
@@ -430,8 +523,9 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 		if (params.compute_ml_tree) {
 			out << "MAXIMUM LIKELIHOOD TREE" << endl << "-----------------------" << endl << endl;
 	
+			tree.setRootNode(params.root);
 			out << "NOTE: Tree is UNROOTED although outgroup taxon '" <<
-					((params.root) ? params.root : tree.aln->getSeqName(0)) << "' is drawn at root" << endl;
+					tree.root->name << "' is drawn at root" << endl;
 			if (params.aLRT_replicates > 0 || (params.num_bootstrap_samples && params.compute_ml_tree)) {
 				out << "Numbers in parentheses are ";
 				if (params.aLRT_replicates > 0) out << "SH-like aLRT supports";
@@ -439,24 +533,23 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 				out << " (%)" << endl;
 			}
 			out << endl;
+			reportTree(out, params, tree);
 
-			int zero_branches = tree.countZeroBranches();
-			if (zero_branches > 0) {
-				out << "WARNING: " << zero_branches << " branches of ZERO lengths and should be treated with caution!" << endl;
-				cout << endl << "*WARNING*: " << zero_branches  << " branches of ZERO lengths and should be treated with caution!" << endl;
-				out << "         Such branches are denoted by '***' in the figure" << endl << endl;
+			if (tree.isSuperTree()) {
+				PhyloSuperTree *stree = (PhyloSuperTree*)&tree;
+				int part = 0;
+				for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
+					out << "FOR PARTITION " << stree->part_info[part].name <<":" << endl << endl;
+					string root_name;
+					if (params.root) root_name = params.root;
+					else root_name = (*it)->aln->getSeqName(0);
+					(*it)->root = (*it)->findNodeName(root_name);
+					assert((*it)->root);
+					reportTree(out, params, *(*it));
+				}
 			}
+		
 
-			tree.setRootNode(params.root);
-			tree.sortTaxa();
-			tree.drawTree(out);
-	
-			out << "Log-likehood of the tree: " << fixed << tree.getBestScore() << endl
-				<< "Unconstrained log-likelihood (without tree): " << alignment.computeUnconstrainedLogL() << endl 
-				<< "Total tree length: " << tree.treeLength() << endl << endl
-				<< "Tree in newick format:" << endl << endl;
-			tree.printResultTree(params, out);
-			out << endl << endl;
 		}
         /*
                         if (params.write_intermediate_trees) {
@@ -506,24 +599,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         out << "TIME STAMP" << endl << "----------" << endl << endl << "Date and time: " << date_str <<
                 "Running time: " << (double) params.run_time / CLOCKS_PER_SEC << " seconds" << endl << endl;
 
-        out << "CREDITS" << endl << "-------" << endl << endl
-                << "Some parts of the code were taken from TREE-PUZZLE package:" << endl << endl
-                << "Heiko A. Schmidt, Korbinian Strimmer, Martin Vingron, and Arndt von Haeseler" << endl
-                << "(2002) TREE-PUZZLE: maximum likelihood phylogenetic analysis using quartets" << endl
-                << "and parallel computing. Bioinformatics, 18(3):502-504." << endl << endl
-
-                << "The source codes to construct the BIONJ tree were taken from BIONJ software:" << endl << endl
-                << "Oliver Gascuel (1997) BIONJ: an improved version of the NJ algorithm" << endl
-                << "nased on a simple model of sequence data. Mol. Bio. Evol., 14:685-695." << endl << endl
-
-                << "The Nexus file parser was taken from the Nexus Class Library:" << endl << endl
-                << "Paul O. Lewis (2003) NCL: a C++ class library for interpreting data files in" << endl
-                << "NEXUS format. Bioinformatics, 19(17):2330-2331." << endl << endl
-
-                << "The Modeltest 3.7 source codes were taken from:" << endl << endl
-                << "David Posada and Keith A. Crandall (1998) MODELTEST: testing the model of" << endl
-                << "DNA substitution. Bioinformatics, 14(9):817-8." << endl << endl;
-
+		reportCredits(out);
         out.close();
 
     } catch (ios::failure) {
@@ -625,10 +701,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
      */
 
     /* initialize tree, either by user tree or BioNJ tree */
+/*
     if (!tree.dist_matrix) {
         tree.dist_matrix = new double[alignment->getNSeq() * alignment->getNSeq()];
         memset(tree.dist_matrix, 0, sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
-    }
+    }*/
     if (params.dist_file) {
         cout << "Reading distance matrix file " << params.dist_file << " ..." << endl;
     } else {
@@ -694,7 +771,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         tree.setSpeed_conf(params.speed_conf);
     try {
 		if (!tree.getModelFactory())
-			tree.setModelFactory(new ModelFactory(params, &tree));
+			if (tree.isSuperTree())
+				tree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*)&tree));
+			else
+				tree.setModelFactory(new ModelFactory(params, &tree));
     } catch (string str) {
     	outError(str);
     } 
@@ -773,6 +853,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 			if (!params.user_file) {
 				tree.computeBioNJ(params, alignment, dist_file); // create BioNJ tree
 				tree.fixNegativeBranch(fixed_length);
+				if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
 				if (!params.fixed_branch_length)
 					tree.curScore = tree.optimizeAllBranches();
 				else
@@ -781,6 +862,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 				if (tree.curScore < bestTreeScore - 1e-5) {
 					cout << "The new tree is worse, rolling back the first BIONJ tree..." << endl;
 					tree.rollBack(best_tree_string);
+					if (tree.isSuperTree()) {
+						((PhyloSuperTree*)&tree)->mapTrees();
+						tree.optimizeAllBranches();
+					}
+					
 					tree.curScore = tree.computeLikelihood();
 					cout << "Backup log-likelihood: " << tree.curScore << endl;
 				}
@@ -961,6 +1047,15 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	rate_file += ".rate";
 	tree.getRate()->writeSiteRates(rate_file.c_str());
 
+	if (tree.isSuperTree()) {
+		PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+		int part;
+		for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
+			rate_file = params.out_prefix;
+			rate_file = rate_file + "." + stree->part_info[part].name + ".rate";
+			(*it)->getRate()->writeSiteRates(rate_file.c_str());
+		}
+	}
 
     if (params.mvh_site_rate) {
 	    RateMeyerHaeseler *rate_mvh = new RateMeyerHaeseler(params.rate_file, &tree, params.rate_mh_type);
@@ -1033,24 +1128,27 @@ void runPhyloAnalysis(Params &params) {
 		outNNI.open(str.c_str());
 		outNNI << "cur_lh\tzero_lh\tnni_lh1\tnni_lh2\topt_len\tnnilen1\tnnilen2\tnni_round" << endl;
 	}
+	Alignment *alignment;
+	IQPTree *tree;
 	if (params.partition_file) {
-		PhyloSuperTree pstree(params);
-		return;
-	}
-    Alignment alignment(params.aln_file, params.sequence_type, params.intype);
-    IQPTree tree(&alignment);
+		tree = new PhyloSuperTree(params);
+		alignment = tree->aln;
+	} else {
+		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
+		tree = new IQPTree(alignment);
+    }
     string original_model = params.model_name;
 	if (params.concatenate_aln) {
 		Alignment aln(params.concatenate_aln, params.sequence_type, params.intype);
 		cout << "Concatenating " << params.aln_file << " with " << params.concatenate_aln << " ..." << endl;
-		alignment.concatenateAlignment(&aln);
+		alignment->concatenateAlignment(&aln);
 	}
 
     if (params.aln_output) {
 		if (params.gap_masked_aln) {
 			Alignment out_aln;
 		    Alignment masked_aln(params.gap_masked_aln, params.sequence_type, params.intype);
-			out_aln.createGapMaskedAlignment(&masked_aln, &alignment);
+			out_aln.createGapMaskedAlignment(&masked_aln, alignment);
         	out_aln.printPhylip(params.aln_output, false, params.aln_site_list, 
         		params.aln_nogaps, params.ref_seq_name);
 			string str = params.gap_masked_aln;
@@ -1058,15 +1156,15 @@ void runPhyloAnalysis(Params &params) {
 			out_aln.printSiteGaps(str.c_str());
 		} else
 		if (params.aln_output_format == ALN_PHYLIP)
-        	alignment.printPhylip(params.aln_output, false, params.aln_site_list, 
+        	alignment->printPhylip(params.aln_output, false, params.aln_site_list, 
         		params.aln_nogaps, params.ref_seq_name);
         else if (params.aln_output_format == ALN_FASTA)
-        	alignment.printFasta(params.aln_output, false, params.aln_site_list, 
+        	alignment->printFasta(params.aln_output, false, params.aln_site_list, 
         	params.aln_nogaps, params.ref_seq_name);
     } else if (params.num_bootstrap_samples == 0) {
-        runPhyloAnalysis(params, original_model, &alignment, tree);
+        runPhyloAnalysis(params, original_model, alignment, *tree);
         if (original_model != "TESTONLY")
-            reportPhyloAnalysis(params, original_model, alignment, tree);
+            reportPhyloAnalysis(params, original_model, *alignment, *tree);
     } else {
         // turn off aLRT test
         int saved_aLRT_replicates = params.aLRT_replicates;
@@ -1105,7 +1203,7 @@ void runPhyloAnalysis(Params &params) {
 
             Alignment bootstrap_alignment;
             cout << "Creating bootstrap alignment..." << endl;
-            bootstrap_alignment.createBootstrapAlignment(&alignment);
+            bootstrap_alignment.createBootstrapAlignment(alignment);
             IQPTree boot_tree(&bootstrap_alignment);
             bootstrap_alignment.printPhylip(bootaln_name.c_str(), true);
             runPhyloAnalysis(params, original_model, &bootstrap_alignment, boot_tree);
@@ -1145,24 +1243,24 @@ void runPhyloAnalysis(Params &params) {
         if (params.compute_ml_tree) {
             cout << endl << "===> START ANALYSIS ON THE ORIGINAL ALIGNMENT" << endl << endl;
             params.aLRT_replicates = saved_aLRT_replicates;
-            runPhyloAnalysis(params, original_model, &alignment, tree);
+            runPhyloAnalysis(params, original_model, alignment, *tree);
 
             cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
             MExtTree ext_tree;
             assignBootstrapSupport(boottrees_name.c_str(), 0,
                     treefile_name.c_str(), false, treefile_name.c_str(), params.out_prefix, ext_tree);
-            tree.copyTree(&ext_tree);
-            reportPhyloAnalysis(params, original_model, alignment, tree);
+            tree->copyTree(&ext_tree);
+            reportPhyloAnalysis(params, original_model, *alignment, *tree);
         }  else if (params.consensus_type == CT_CONSENSUS_TREE) {
         	int mi = params.min_iterations;
         	STOP_CONDITION sc = params.stop_condition;
         	params.min_iterations = 0;
         	params.stop_condition = SC_FIXED_ITERATION;
-            runPhyloAnalysis(params, original_model, &alignment, tree);
+            runPhyloAnalysis(params, original_model, alignment, *tree);
         	params.min_iterations = mi;
         	params.stop_condition = sc;
-    		tree.setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
-            reportPhyloAnalysis(params, original_model, alignment, tree);
+    		tree->setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
+            reportPhyloAnalysis(params, original_model, *alignment, *tree);
         } else    cout << endl;
 		cout << "Non-parametric bootstrap results written to:" << endl
 			<< "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl
@@ -1173,6 +1271,8 @@ void runPhyloAnalysis(Params &params) {
     }
 
 	if (testNNI) outNNI.close();
+	delete tree;
+	delete alignment;
 }
 
 void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, bool rooted,

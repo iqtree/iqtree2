@@ -118,14 +118,18 @@ public:
      */
     virtual ~PhyloTree();
 
-	void freePhyloTree();
-
     /**
             copy the phylogenetic tree structure into this tree, override to take sequence names
             in the alignment into account
             @param tree the tree to copy
      */
     virtual void copyTree(MTree *tree);
+	/**
+		copy the sub-tree structure into this tree
+		@param tree the tree to copy
+		@param taxa_set 0-1 string of length leafNum (1 to keep the leaf)
+	*/
+	virtual void copyTree(MTree *tree, string &taxa_set);
 
 
     /**
@@ -181,6 +185,7 @@ public:
         return model_factory;
     }
 
+	virtual bool isSuperTree() { return false; }
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -530,7 +535,7 @@ public:
             @param initial_dist initial distance
             @return distance between seq1 and seq2
      */
-    double computeDist(int seq1, int seq2, double initial_dist);
+    virtual double computeDist(int seq1, int seq2, double initial_dist);
 
 
     /**

@@ -67,6 +67,14 @@ public:
 	*/
 	virtual void copyTree(MTree *tree);
 
+	/**
+		copy the sub-tree structure into this tree
+		@param tree the tree to copy
+		@param taxa_set 0-1 string of length leafNum (1 to keep the leaf)
+	*/
+	virtual void copyTree(MTree *tree, string &taxa_set);
+
+	Node* copyTree(MTree *tree, string &taxa_set, double &len, Node *node = NULL, Node *dad = NULL);
 
 	/**
 		initialize the tree from a NEWICK tree file

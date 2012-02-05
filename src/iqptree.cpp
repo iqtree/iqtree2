@@ -76,9 +76,6 @@ IQPTree::~IQPTree() {
     if (dist_matrix)
         delete[] dist_matrix;
     dist_matrix = NULL;
-    if (root != NULL)
-        freeNode();
-    root = NULL;
 }
 
 void IQPTree::setRepresentNum(int k_rep) {

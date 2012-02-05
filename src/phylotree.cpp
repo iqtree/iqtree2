@@ -85,7 +85,7 @@ void PhyloTree::discardSaturatedSite(bool val) {
     discard_saturated_site = val;
 }
 
-void PhyloTree::freePhyloTree() {
+PhyloTree::~PhyloTree() {
     if (central_partial_lh)
         delete [] central_partial_lh;
     central_partial_lh = NULL;
@@ -99,13 +99,6 @@ void PhyloTree::freePhyloTree() {
     	delete [] tmp_partial_lh1;
     if (tmp_partial_lh2)
     	delete [] tmp_partial_lh2;
-    if (root != NULL)
-        freeNode();
-    root = NULL;
-}
-
-PhyloTree::~PhyloTree() {
-	freePhyloTree();
 }
 
 void PhyloTree::assignLeafNames(Node *node, Node *dad) {
@@ -121,6 +114,13 @@ void PhyloTree::assignLeafNames(Node *node, Node *dad) {
 
 void PhyloTree::copyTree(MTree *tree) {
     MTree::copyTree(tree);
+    if (!aln) return;
+    // reset the ID with alignment
+    setAlignment(aln);
+}
+
+void PhyloTree::copyTree(MTree *tree, string &taxa_set) {
+	MTree::copyTree(tree, taxa_set);
     if (!aln) return;
     // reset the ID with alignment
     setAlignment(aln);
