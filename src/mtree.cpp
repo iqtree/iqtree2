@@ -678,6 +678,19 @@ void MTree::getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *nod
 }
 
 
+void MTree::getOrderedTaxa(NodeVector &taxa, Node *node, Node *dad) {
+	if (!node) node = root;
+	if (node->isLeaf()) {
+		if (taxa.empty()) taxa.resize(leafNum);
+		taxa[node->id] = node;
+	}
+	//for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
+		//if ((*it)->node != dad)	{
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		getOrderedTaxa(taxa, (*it)->node, node);
+	}
+}
+
 void MTree::getTaxaName(vector<string> &taxname, Node *node, Node *dad) {
 	if (!node) node = root;
 	if (node->isLeaf()) {

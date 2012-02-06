@@ -119,9 +119,8 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 	if (node->isLeaf()) {
 		assert(dad);
 		PhyloNode *node_part = (PhyloNode*)part_taxa[node->id];
-		PhyloNode *dad_part = (PhyloNode*)node_part->neighbors[0]->node;
-		
 		if (node_part) {
+			PhyloNode *dad_part = (PhyloNode*)node_part->neighbors[0]->node;
 			assert(node_part->isLeaf());
 			nei->link_neighbors[part] = (PhyloNeighbor*) node_part->neighbors[0];
 			dad_nei->link_neighbors[part] = (PhyloNeighbor*)dad_part->findNeighbor(node_part);
@@ -164,18 +163,40 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 void PhyloSuperTree::mapTrees() {
 	assert(root);
 	int part = 0;
+	drawTree(cout);
 	for (iterator it = begin(); it != end(); it++, part++) {
 		string taxa_set = ((SuperAlignment*)aln)->getPattern(part);
 		(*it)->copyTree(this, taxa_set);
-		//(*it)->drawTree(cout);
+		(*it)->drawTree(cout);
 		(*it)->initializeAllPartialLh();
-		NodeVector my_taxa;
-		(*it)->getTaxa(my_taxa);
-		NodeVector part_taxa;
+		NodeVector my_taxa, part_taxa;
+		(*it)->getOrderedTaxa(my_taxa);
 		part_taxa.resize(leafNum, NULL);
-		for (int i = 0; i < leafNum; i++)
-			part_taxa[i] = my_taxa[((SuperAlignment*)aln)->taxa_index[i][part]];
+		int i;
+		for (i = 0; i < leafNum; i++) {
+			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
+			if (id >=0) part_taxa[i] = my_taxa[id];
+		}
 		linkTree(part, part_taxa);
+		NodeVector nodes1, nodes2;
+		getInternalBranches(nodes1, nodes2);
+		for (i = 0; i < nodes1.size(); i++) {
+			PhyloNeighbor *nei1 = ((SuperNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part];
+			PhyloNeighbor *nei2 = ((SuperNeighbor*)nodes2[i]->findNeighbor(nodes1[i]))->link_neighbors[part];
+			cout << nodes1[i]->id << "," << nodes2[i]->id << " -> ";
+			if (nei2) 
+				if (nei2->node->isLeaf())
+					cout << nei2->node->name;
+				else cout << nei2->node->id;
+			else cout << -1;
+			cout << ",";
+			if (nei1) 
+				if (nei1->node->isLeaf())
+					cout << nei1->node->name;
+				else cout << nei1->node->id;
+			else cout << -1;
+			cout << endl;
+		}
 	}
 }
 

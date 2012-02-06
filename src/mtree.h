@@ -278,6 +278,14 @@ public:
 	void getTaxa(NodeVector &taxa, Node *node = NULL, Node *dad = NULL);
 
 	/**
+		get the descending taxa below the node
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+		@param taxa (OUT) vector of taxa
+	*/
+	void getOrderedTaxa(NodeVector &taxa, Node *node = NULL, Node *dad = NULL);
+
+	/**
 		get the descending taxa names below the node
 		@param node the starting node, NULL to start from the root
 		@param dad dad of the node, used to direct the search
