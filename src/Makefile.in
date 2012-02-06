@@ -53,25 +53,26 @@ am_iqtree_OBJECTS = alignment.$(OBJEXT) alignmentpairwise.$(OBJEXT) \
 	circularnetwork.$(OBJEXT) eigendecomposition.$(OBJEXT) \
 	greedy.$(OBJEXT) gss.$(OBJEXT) gtrmodel.$(OBJEXT) \
 	gurobiwrapper.$(OBJEXT) hashsplitset.$(OBJEXT) \
-	iqptree.$(OBJEXT) lpwrapper.$(OBJEXT) matree.$(OBJEXT) \
-	mexttree.$(OBJEXT) modelbin.$(OBJEXT) modeldna.$(OBJEXT) \
-	modelfactory.$(OBJEXT) modelnonrev.$(OBJEXT) \
-	modelprotein.$(OBJEXT) modeltest_wrapper.$(OBJEXT) \
-	mpdablock.$(OBJEXT) msetsblock.$(OBJEXT) \
-	msplitsblock.$(OBJEXT) mtree.$(OBJEXT) mtreeset.$(OBJEXT) \
-	ngs.$(OBJEXT) node.$(OBJEXT) optimization.$(OBJEXT) \
-	parsmultistate.$(OBJEXT) partitionmodel.$(OBJEXT) \
-	pattern.$(OBJEXT) pda.$(OBJEXT) pdnetwork.$(OBJEXT) \
-	pdtree.$(OBJEXT) pdtreeset.$(OBJEXT) phyloanalysis.$(OBJEXT) \
-	phylonode.$(OBJEXT) phylosupertree.$(OBJEXT) \
-	phylotree.$(OBJEXT) phylotreesse.$(OBJEXT) pruning.$(OBJEXT) \
-	rategamma.$(OBJEXT) rategammainvar.$(OBJEXT) \
-	rateheterogeneity.$(OBJEXT) rateinvar.$(OBJEXT) \
-	ratemeyerdiscrete.$(OBJEXT) ratemeyerhaeseler.$(OBJEXT) \
-	split.$(OBJEXT) splitgraph.$(OBJEXT) splitset.$(OBJEXT) \
-	stoprule.$(OBJEXT) substmodel.$(OBJEXT) \
-	superalignment.$(OBJEXT) superalignmentpairwise.$(OBJEXT) \
-	tinatree.$(OBJEXT) tools.$(OBJEXT) whtest_wrapper.$(OBJEXT)
+	iqptree.$(OBJEXT) lpwrapper.$(OBJEXT) maalignment.$(OBJEXT) \
+	matree.$(OBJEXT) mexttree.$(OBJEXT) modelbin.$(OBJEXT) \
+	modeldna.$(OBJEXT) modelfactory.$(OBJEXT) \
+	modelnonrev.$(OBJEXT) modelprotein.$(OBJEXT) \
+	modeltest_wrapper.$(OBJEXT) mpdablock.$(OBJEXT) \
+	msetsblock.$(OBJEXT) msplitsblock.$(OBJEXT) mtree.$(OBJEXT) \
+	mtreeset.$(OBJEXT) ngs.$(OBJEXT) node.$(OBJEXT) \
+	optimization.$(OBJEXT) parsmultistate.$(OBJEXT) \
+	partitionmodel.$(OBJEXT) pattern.$(OBJEXT) pda.$(OBJEXT) \
+	pdnetwork.$(OBJEXT) pdtree.$(OBJEXT) pdtreeset.$(OBJEXT) \
+	phyloanalysis.$(OBJEXT) phylonode.$(OBJEXT) \
+	phylosupertree.$(OBJEXT) phylotree.$(OBJEXT) \
+	phylotreesse.$(OBJEXT) pruning.$(OBJEXT) rategamma.$(OBJEXT) \
+	rategammainvar.$(OBJEXT) rateheterogeneity.$(OBJEXT) \
+	rateinvar.$(OBJEXT) ratemeyerdiscrete.$(OBJEXT) \
+	ratemeyerhaeseler.$(OBJEXT) split.$(OBJEXT) \
+	splitgraph.$(OBJEXT) splitset.$(OBJEXT) stoprule.$(OBJEXT) \
+	substmodel.$(OBJEXT) superalignment.$(OBJEXT) \
+	superalignmentpairwise.$(OBJEXT) tinatree.$(OBJEXT) \
+	tools.$(OBJEXT) whtest_wrapper.$(OBJEXT)
 iqtree_OBJECTS = $(am_iqtree_OBJECTS)
 iqtree_DEPENDENCIES = $(top_builddir)/src/kmeans/libkmeans.a \
 	$(top_builddir)/src/lp/liblpsolve.a \
@@ -271,7 +272,7 @@ INCLUDES = $(all_includes)
 iqtree_LDFLAGS = $(all_libraries) -ldl -static
 iqtree_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
 	eigendecomposition.cpp greedy.cpp gss.cpp gtrmodel.cpp gurobiwrapper.cpp hashsplitset.cpp \
-	iqptree.cpp lpwrapper.c matree.cpp mexttree.cpp modelbin.cpp modeldna.cpp \
+	iqptree.cpp lpwrapper.c maalignment.cpp matree.cpp mexttree.cpp modelbin.cpp modeldna.cpp \
 	modelfactory.cpp modelnonrev.cpp modelprotein.cpp modeltest_wrapper.c mpdablock.cpp \
 	msetsblock.cpp msplitsblock.cpp mtree.cpp mtreeset.cpp ngs.cpp node.cpp \
 	optimization.cpp parsmultistate.cpp partitionmodel.cpp pattern.cpp pda.cpp pdnetwork.cpp \
@@ -283,7 +284,7 @@ iqtree_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
 
 noinst_HEADERS = alignment.h alignmentpairwise.h bionj.h circularnetwork.h \
 	eigendecomposition.h greedy.h gss.h gtrmodel.h gurobiwrapper.h hashsplitset.h iqptree.h \
-	lpwrapper.h matree.h mexttree.h modelbin.h modeldna.h modelfactory.h modelnonrev.h \
+	lpwrapper.h maalignment.h matree.h mexttree.h modelbin.h modeldna.h modelfactory.h modelnonrev.h \
 	modelprotein.h modeltest_wrapper.h mpdablock.h msetsblock.h msplitsblock.h mtree.h \
 	mtreeset.h myreader.h ngs.h node.h optimization.h parsmultistate.h \
 	partitionmodel.h pattern.h pdnetwork.h pdtree.h pdtreeset.h phyloanalysis.h phylonode.h \
@@ -493,6 +494,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hashsplitset.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iqptree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lpwrapper.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/maalignment.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/matree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mexttree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modelbin.Po@am__quote@

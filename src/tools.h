@@ -184,8 +184,8 @@ typedef unsigned int UINT;
         run mode of program
  */
 enum RunMode {
-    DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING, CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN, SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS
-}; //STATS added by MA
+    DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING, CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN, SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS, GBO
+}; //STATS and GBO added by MA (STATS for some statistics on tree, GBO = guided 'bootstrap'
 
 /**
         type of generating trees or splits graphs
@@ -351,6 +351,11 @@ struct Params {
             alignment output file name
      */
     char *aln_output;
+
+	/**
+		file containing site likelihood as input for 'guided bootstrap' (added by MA)
+	*/
+	char *siteLL_file;
 
     /**
             alignment where the gappy patterns will be superimposed into the input alignment
@@ -1012,8 +1017,12 @@ double randomLen(Params &params);
         @param str original string
         @return the integer
  */
-
-
+/**
+	Compute the logarithm of the factorial of an integer number 
+	@param num: the number
+	@return logarithm of (num! = 1*2*...*num)
+*/
+double logFac (const int num);
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/

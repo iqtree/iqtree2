@@ -7,7 +7,7 @@ INCLUDES = $(all_includes)
 iqtree_LDFLAGS = $(all_libraries) -ldl -static
 iqtree_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
 	eigendecomposition.cpp greedy.cpp gss.cpp gtrmodel.cpp gurobiwrapper.cpp hashsplitset.cpp \
-	iqptree.cpp lpwrapper.c matree.cpp mexttree.cpp modelbin.cpp modeldna.cpp \
+	iqptree.cpp lpwrapper.c maalignment.cpp matree.cpp mexttree.cpp modelbin.cpp modeldna.cpp \
 	modelfactory.cpp modelnonrev.cpp modelprotein.cpp modeltest_wrapper.c mpdablock.cpp \
 	msetsblock.cpp msplitsblock.cpp mtree.cpp mtreeset.cpp ngs.cpp node.cpp \
 	optimization.cpp parsmultistate.cpp partitionmodel.cpp pattern.cpp pda.cpp pdnetwork.cpp \
@@ -18,7 +18,7 @@ iqtree_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
 	superalignmentpairwise.cpp tinatree.cpp tools.cpp whtest_wrapper.cpp
 noinst_HEADERS = alignment.h alignmentpairwise.h bionj.h circularnetwork.h \
 	eigendecomposition.h greedy.h gss.h gtrmodel.h gurobiwrapper.h hashsplitset.h iqptree.h \
-	lpwrapper.h matree.h mexttree.h modelbin.h modeldna.h modelfactory.h modelnonrev.h \
+	lpwrapper.h maalignment.h matree.h mexttree.h modelbin.h modeldna.h modelfactory.h modelnonrev.h \
 	modelprotein.h modeltest_wrapper.h mpdablock.h msetsblock.h msplitsblock.h mtree.h \
 	mtreeset.h myreader.h ngs.h node.h optimization.h parsmultistate.h \
 	partitionmodel.h pattern.h pdnetwork.h pdtree.h pdtreeset.h phyloanalysis.h phylonode.h \

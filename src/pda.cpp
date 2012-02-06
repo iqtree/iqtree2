@@ -42,6 +42,7 @@
 #include "ngs.h"
 #include "parsmultistate.h"
 #include "gss.h"
+#include "maalignment.h" //added by MA
 
 using namespace std;
 
@@ -1414,7 +1415,43 @@ void compare(Params &params){
 	cout << "Comparison with the given set of trees is printed to: " << output << endl;
 }
 
+/**MINH ANH: to compute 'guided bootstrap' alignment*/
+void guidedBootstrap(Params &params)
+{
+	MaAlignment inputAlign(params.aln_file,params.sequence_type, params.intype);
+	inputAlign.readLogLL(params.siteLL_file);
 
+	string outFre_name = params.out_prefix;
+    outFre_name += ".patInfo";
+
+	inputAlign.printPatObsExpFre(outFre_name.c_str());
+
+	string gboAln_name = params.out_prefix;
+    gboAln_name += ".gbo";
+
+	MaAlignment gboAlign;
+	double prob;
+	gboAlign.generateExpectedAlignment(&inputAlign, prob);
+	gboAlign.printPhylip(gboAln_name.c_str());
+
+
+	string outProb_name = params.out_prefix;
+	outProb_name += ".gbo.logP";
+	try {
+		ofstream outProb;
+		outProb.exceptions(ios::failbit | ios::badbit);
+		outProb.open(outProb_name.c_str());
+		outProb.precision(10);
+		outProb << prob << endl;
+		outProb.close();
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, outProb_name);
+	}
+
+	cout << "Information about patterns in the input alignment is printed to: " << outFre_name << endl;
+	cout << "A 'guided bootstrap' alignment is printed to: " << gboAln_name << endl;
+	cout << "Log of the probability of the new alignment is printed to: " << outProb_name << endl;
+}
 
 /********************************************************
 	main function
@@ -1501,7 +1538,10 @@ int main(int argc, char *argv[])
 	} else if (params.branch_cluster > 0) {
 		calcTreeCluster(params);
 	} else if (params.aln_file || params.partition_file) {
-		runPhyloAnalysis(params);
+		if (params.siteLL_file)
+			guidedBootstrap(params);
+		else
+			runPhyloAnalysis(params);
 	} else if (params.ngs_file || params.ngs_mapped_reads) {
 		runNGSAnalysis(params);
 	} else if (params.pdtaxa_file && params.gene_scale_factor >=0.0 && params.gene_pvalue_file) {

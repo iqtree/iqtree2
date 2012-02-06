@@ -550,7 +550,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 
 	params.aln_file = NULL;
-	params.partition_file = NULL;
+	params.siteLL_file = NULL; //added by MA
 	params.sequence_type = NULL;
 	params.aln_output = NULL;
 	params.aln_site_list = NULL;
@@ -822,7 +822,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt],"-net") == 0) {
 				params.consensus_type = CT_CONSENSUS_NETWORK;
 			} 
-			/**MINH ANH: to serve some statistics*/
+			/**MINH ANH: to serve some statistics on tree*/
 			else if (strcmp(argv[cnt],"-comp") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -831,7 +831,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.second_tree = argv[cnt];
 			}else if (strcmp(argv[cnt],"-stats") == 0) {
 				params.run_mode = STATS;
-
+			}else if (strcmp(argv[cnt],"-gbo") == 0) { //guided bootstrap
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -gbo <site likelihod file>";
+				params.siteLL_file = argv[cnt];
+				params.run_mode = GBO;
 			} // MA
 			else if (strcmp(argv[cnt],"-min") == 0) {
 				params.find_pd_min = true;
@@ -1315,7 +1320,8 @@ void usage(char* argv[], bool full_command) {
 	cout << "  -d <outfile>      Calculate the distance matrix inferred from tree." << endl;
 	cout << "  -seed <number>    Set the seed for random number generator." << endl;
 	cout << "  -stats <outfile>  Output some statistics about branch lengths on the tree." << endl;
-	cout << "  -comp <treefile> Compare the tree with each in the input trees." << endl; 
+	cout << "  -comp <treefile> Compare the tree with each in the input trees." << endl;
+	cout << "  -gbo <site_ll_file> Compute and output the alignment of (normalized) expected frequencies given in site_ll_file." << endl;
 
 
 	//	cout << "  -rep <times>        Repeat algorithm a number of times." << endl;
@@ -1459,4 +1465,14 @@ void parseAreaName(char *area_names, set<string> &areas) {
 		else
 			all = all.substr(pos+1);
 	}
+}
+
+double logFac (const int num)
+{
+	if (num < 0 ) return -1.0;
+	if (num == 0 ) return 0.0;
+	double ret = 0;
+	for ( int i = 1; i<=num; i++ )
+		ret += log((double)i);
+	return ret;
 }
