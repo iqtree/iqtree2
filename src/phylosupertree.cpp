@@ -106,16 +106,59 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 		if (node->isLeaf()) // two-taxa tree
 			dad = (SuperNode*)node->neighbors[0]->node;
 	}
-	SuperAlignment *aln = (SuperAlignment*) (this->aln);
-	if (node->isLeaf() && dad) {
-		PhyloNode *node_part = (PhyloNode*)part_taxa[node->id];
-		assert(node_part->isLeaf());
-		SuperNeighbor *nei = (SuperNeighbor*)(node->neighbors[0]);
+	SuperNeighbor *nei;
+	SuperNeighbor *dad_nei;
+	if (dad) {
+		nei = (SuperNeighbor*)node->findNeighbor(dad);
+		dad_nei = (SuperNeighbor*)dad->findNeighbor(node);
 		if (nei->link_neighbors.empty()) nei->link_neighbors.resize(size());
+		if (dad_nei->link_neighbors.empty()) dad_nei->link_neighbors.resize(size());
+		nei->link_neighbors[part] = NULL;
+		dad_nei->link_neighbors[part] = NULL;
 	}
-	FOR_NEIGHBOR_IT(node, dad, it) {
+	if (node->isLeaf()) {
+		assert(dad);
+		PhyloNode *node_part = (PhyloNode*)part_taxa[node->id];
+		PhyloNode *dad_part = (PhyloNode*)node_part->neighbors[0]->node;
+		
+		if (node_part) {
+			assert(node_part->isLeaf());
+			nei->link_neighbors[part] = (PhyloNeighbor*) node_part->neighbors[0];
+			dad_nei->link_neighbors[part] = (PhyloNeighbor*)dad_part->findNeighbor(node_part);
+		} 
+		return;
+	}
+
+	vector<PhyloNeighbor*> part_vec;
+	vector<PhyloNeighbor*> child_part_vec;
+	FOR_NEIGHBOR_DECLARE(node, dad, it) {
 		linkTree(part, part_taxa, (SuperNode*) (*it)->node, (SuperNode*) node);
+		if (((SuperNeighbor*)*it)->link_neighbors[part]) {
+			part_vec.push_back(((SuperNeighbor*)*it)->link_neighbors[part]);
+			child_part_vec.push_back(((SuperNeighbor*)(*it)->node->findNeighbor(node))->link_neighbors[part]);
+			assert(child_part_vec.back()->node == child_part_vec.front()->node);
+		}
 	}
+	if (!dad || part_vec.empty()) return;
+
+	if (part_vec.size() == 1) {
+		nei->link_neighbors[part] = child_part_vec[0];
+		dad_nei->link_neighbors[part] = part_vec[0];
+		return;
+	}
+	PhyloNode *node_part = (PhyloNode*) child_part_vec[0]->node;
+	PhyloNode *dad_part = NULL;
+	FOR_NEIGHBOR(node_part, NULL, it) {
+		bool appear = false;
+		for (vector<PhyloNeighbor*>::iterator it2 = part_vec.begin(); it2 != part_vec.end(); it2++)
+			if ((*it2) == (*it)) { appear = true; break; }
+		if (!appear) {
+			assert(!dad_part);
+			dad_part = (PhyloNode*)(*it)->node;
+		}
+	}
+	nei->link_neighbors[part] = (PhyloNeighbor*)node_part->findNeighbor(dad_part);
+	dad_nei->link_neighbors[part] = (PhyloNeighbor*)dad_part->findNeighbor(node_part);
 }
 
 void PhyloSuperTree::mapTrees() {
@@ -126,6 +169,13 @@ void PhyloSuperTree::mapTrees() {
 		(*it)->copyTree(this, taxa_set);
 		//(*it)->drawTree(cout);
 		(*it)->initializeAllPartialLh();
+		NodeVector my_taxa;
+		(*it)->getTaxa(my_taxa);
+		NodeVector part_taxa;
+		part_taxa.resize(leafNum, NULL);
+		for (int i = 0; i < leafNum; i++)
+			part_taxa[i] = my_taxa[((SuperAlignment*)aln)->taxa_index[i][part]];
+		linkTree(part, part_taxa);
 	}
 }
 

@@ -38,8 +38,8 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree)
 		(*it)->setModel((*it)->getModelFactory()->model);
 		(*it)->setRate((*it)->getModelFactory()->site_rate);
 		params.model_name = model_name;
-		string taxa_set = ((SuperAlignment*)tree->aln)->getPattern(part);
-		(*it)->copyTree(tree, taxa_set);
+		//string taxa_set = ((SuperAlignment*)tree->aln)->getPattern(part);
+		//(*it)->copyTree(tree, taxa_set);
 		//(*it)->drawTree(cout);
 	}
 }
