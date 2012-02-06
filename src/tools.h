@@ -613,6 +613,11 @@ struct Params {
     ConsensusType consensus_type;
 
     /**
+            file containing weights for every tree in the input tree file
+     */
+    char *tree_weight_file;
+
+    /**
             set the TRUE if want to find the minimal PD set, instead of the default maximal PD set
      */
     bool find_pd_min;
@@ -789,9 +794,10 @@ struct Params {
     int num_bootstrap_samples;
 
     /**
-            TRUE if output all trees from every IQPNNI iteration
+            1 if output all intermediate trees from every IQPNNI iteration
+            2 if output all intermediate trees + 1-NNI-away trees
      */
-    bool write_intermediate_trees;
+    int write_intermediate_trees;
 
     /**
             Robinson-Foulds distance computation mode: RF_ADJACENT PAIR, RF_ALL_PAIR

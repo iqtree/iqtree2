@@ -490,7 +490,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL, ostream *out = NULL, int brtype = 0);
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
@@ -500,7 +500,7 @@ public:
             @param node2 2nd end node of the branch
             @return the likelihood of the tree
      */
-    double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2);
+    double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, ostream *out = NULL, int brtype = 0);
 
 
     /****************************************************************************

@@ -115,6 +115,11 @@ public:
      */
     void printResultTree(Params &params, ostream &out);
 
+	/**
+		print intermediate tree
+	*/
+	void printIntermediateTree(const char *ofile, int brtype, int wtype);
+
     void setRootNode(char *my_root);
 
     /**

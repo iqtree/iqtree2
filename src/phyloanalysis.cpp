@@ -355,7 +355,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 }
 
 void reportRate(ofstream &out, Params &params, PhyloTree &tree) {
-	int i, j;
+	int i;
 	RateHeterogeneity *rate_model = tree.getRate();
 	out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
 	rate_model->writeInfo(out);
@@ -430,7 +430,6 @@ void reportCredits(ofstream &out) {
 }
 
 void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alignment, IQPTree &tree) {
-    int i, j;
     string outfile = params.out_prefix;
 
     outfile += ".iqtree";
@@ -770,11 +769,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     else
         tree.setSpeed_conf(params.speed_conf);
     try {
-		if (!tree.getModelFactory())
+		if (!tree.getModelFactory()) {
 			if (tree.isSuperTree())
 				tree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*)&tree));
 			else
 				tree.setModelFactory(new ModelFactory(params, &tree));
+		}
     } catch (string str) {
     	outError(str);
     } 
@@ -995,7 +995,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 //    }
 
     /* do the IQPNNI */
-    if (params.k_representative > 0 && params.min_iterations > 1) {
+    if (params.k_representative > 0 && params.min_iterations >= 1) {
         cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
         cout << "Number of representative leaves   : " << params.k_representative << endl;
         cout << "Probability of deleting sequences : " << tree.getProbDelete() << endl;
@@ -1049,7 +1049,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
 	if (tree.isSuperTree()) {
 		PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
-		int part;
+		int part = 0;
 		for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
 			rate_file = params.out_prefix;
 			rate_file = rate_file + "." + stree->part_info[part].name + ".rate";
@@ -1237,7 +1237,7 @@ void runPhyloAnalysis(Params &params) {
 			cout << endl << "===> COMPUTE CONSENSUS TREE FROM " <<
 					params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
 			computeConsensusTree(boottrees_name.c_str(), 0, -1,
-					params.split_threshold, NULL, params.out_prefix);
+					params.split_threshold, NULL, params.out_prefix, NULL);
 		}
 
         if (params.compute_ml_tree) {
@@ -1248,7 +1248,7 @@ void runPhyloAnalysis(Params &params) {
             cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
             MExtTree ext_tree;
             assignBootstrapSupport(boottrees_name.c_str(), 0,
-                    treefile_name.c_str(), false, treefile_name.c_str(), params.out_prefix, ext_tree);
+                    treefile_name.c_str(), false, treefile_name.c_str(), params.out_prefix, ext_tree, NULL);
             tree->copyTree(&ext_tree);
             reportPhyloAnalysis(params, original_model, *alignment, *tree);
         }  else if (params.consensus_type == CT_CONSENSUS_TREE) {
@@ -1276,7 +1276,7 @@ void runPhyloAnalysis(Params &params) {
 }
 
 void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, bool rooted,
-        const char *output_tree, const char *out_prefix, MExtTree &mytree) {
+        const char *output_tree, const char *out_prefix, MExtTree &mytree, const char* tree_weight_file) {
     //bool rooted = false;
     // read the tree file
 
@@ -1291,7 +1291,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
     }
 
     // read the bootstrap tree file
-    MTreeSet boot_trees(input_trees, rooted, burnin);
+    MTreeSet boot_trees(input_trees, rooted, burnin, tree_weight_file);
     /*
     string filename = params.boot_trees;
     filename += ".nolen";
@@ -1307,7 +1307,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 
     boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
     // compute the percentage of appearance
-    sg.scaleWeight(100.0 / boot_trees.size(), true);
+    sg.scaleWeight(100.0 / boot_trees.sumTreeWeights(), true);
     //	printSplitSet(sg, hash_ss);
     //sg.report(cout);
     cout << "Creating bootstrap support values..." << endl;
@@ -1329,11 +1329,11 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 }
 
 void computeConsensusTree(const char *input_trees, int burnin, double cutoff, double weight_threshold,
-        const char *output_tree, const char *out_prefix) {
+        const char *output_tree, const char *out_prefix, const char *tree_weight_file) {
     bool rooted = false;
 
     // read the bootstrap tree file
-    MTreeSet boot_trees(input_trees, rooted, burnin);
+    MTreeSet boot_trees(input_trees, rooted, burnin, tree_weight_file);
     string first_taxname = boot_trees.front()->root->name;
     //if (params.root) first_taxname = params.root;
 
@@ -1351,7 +1351,7 @@ void computeConsensusTree(const char *input_trees, int burnin, double cutoff, do
     mytree.convertToTree(maxsg);
     Node *node = mytree.findLeafName(first_taxname);
     if (node) mytree.root = node;
-    mytree.scaleLength(100.0 / boot_trees.size(), true);
+    mytree.scaleLength(100.0 / boot_trees.sumTreeWeights(), true);
 
     mytree.getTaxaID(maxsg.getSplitsBlock()->getCycle());
     //maxsg.saveFile(cout);
@@ -1374,11 +1374,11 @@ void computeConsensusTree(const char *input_trees, int burnin, double cutoff, do
 }
 
 void computeConsensusNetwork(const char *input_trees, int burnin, double cutoff, double weight_threshold,
-        const char *output_tree, const char *out_prefix) {
+        const char *output_tree, const char *out_prefix, const char* tree_weight_file) {
     bool rooted = false;
 
     // read the bootstrap tree file
-    MTreeSet boot_trees(input_trees, rooted, burnin);
+    MTreeSet boot_trees(input_trees, rooted, burnin,tree_weight_file);
 
     SplitGraph sg;
     //SplitIntMap hash_ss;

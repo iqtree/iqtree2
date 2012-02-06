@@ -599,8 +599,7 @@ double IQPTree::doIQPNNI(Params &params) {
     //printResultTree(params);
     string treels_name = params.out_prefix;
     treels_name += ".treels";
-    if (params.write_intermediate_trees)
-        printTree(treels_name.c_str(), WT_SORT_TAXA | WT_NEWLINE | WT_BR_LEN);
+    printIntermediateTree(treels_name.c_str(), WT_SORT_TAXA | WT_NEWLINE | WT_BR_LEN, params.write_intermediate_trees);
     //printTree(treels_name.c_str(), WT_NEWLINE | WT_BR_LEN);
 
     // keep the best tree into a string
@@ -717,8 +716,7 @@ double IQPTree::doIQPNNI(Params &params) {
 		}
 */
 
-        if (params.write_intermediate_trees)
-            printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
+        printIntermediateTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN, params.write_intermediate_trees);
         //printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_BR_LEN);
 
         if (curScore > bestScore + TOL_LIKELIHOOD) {
@@ -1421,4 +1419,14 @@ void IQPTree::printResultTree(Params &params) {
 void IQPTree::printResultTree(Params &params, ostream &out) {
     setRootNode(params.root);
     printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+}
+
+void IQPTree::printIntermediateTree(const char *ofile, int brtype, int wtype) {
+	if (!wtype) return;
+	printTree(ofile, brtype);
+	if (wtype == 1) return;
+	ofstream out(ofile, ios_base::out | ios_base::app);
+	PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN);
+	out.close();
+	// now print 1-NNI-away trees
 }

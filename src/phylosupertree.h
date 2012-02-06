@@ -21,6 +21,7 @@
 #define PHYLOSUPERTREE_H
 
 #include "iqptree.h"
+#include "supernode.h"
 
 
 struct PartitionInfo {
@@ -55,6 +56,23 @@ public:
 	virtual bool isSuperTree() { return true; }
 
     /**
+            allocate a new node. Override this if you have an inherited Node class.
+            @param node_id node ID
+            @param node_name node name
+            @return a new node
+     */
+    virtual Node* newNode(int node_id = -1, const char* node_name = NULL);
+
+    /**
+            allocate a new node. Override this if you have an inherited Node class.
+            @param node_id node ID
+            @param node_name node name issued by an interger
+            @return a new node
+     */
+    virtual Node* newNode(int node_id, int node_name);
+
+
+    /**
             compute the distance between 2 sequences.
             @param seq1 index of sequence 1
             @param seq2 index of sequence 2
@@ -68,6 +86,8 @@ public:
 		TODO: create sub-trees of the current super-tree
 	*/
 	void mapTrees();
+
+	void linkTree(int part, NodeVector &part_taxa, SuperNode *node = NULL, SuperNode *dad = NULL);
 
     /**
             compute the tree likelihood

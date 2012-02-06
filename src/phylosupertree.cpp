@@ -77,6 +77,14 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQPTree() {
 
 }
 
+Node* PhyloSuperTree::newNode(int node_id, const char* node_name) {
+    return (Node*) (new SuperNode(node_id, node_name));
+}
+
+Node* PhyloSuperTree::newNode(int node_id, int node_name) {
+    return (Node*) (new SuperNode(node_id, node_name));
+}
+
 double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist) {
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0)
@@ -87,6 +95,27 @@ double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist) {
     // now optimize the distance based on the model and site rate
     SuperAlignmentPairwise aln_pair(this, seq1, seq2);
     return aln_pair.optimizeDist(initial_dist);
+}
+
+void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, SuperNode *dad) {
+	if (!node) {
+		if (!root->isLeaf()) 
+			node = (SuperNode*) root; 
+		else 
+			node = (SuperNode*)root->neighbors[0]->node;
+		if (node->isLeaf()) // two-taxa tree
+			dad = (SuperNode*)node->neighbors[0]->node;
+	}
+	SuperAlignment *aln = (SuperAlignment*) (this->aln);
+	if (node->isLeaf() && dad) {
+		PhyloNode *node_part = (PhyloNode*)part_taxa[node->id];
+		assert(node_part->isLeaf());
+		SuperNeighbor *nei = (SuperNeighbor*)(node->neighbors[0]);
+		if (nei->link_neighbors.empty()) nei->link_neighbors.resize(size());
+	}
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		linkTree(part, part_taxa, (SuperNode*) (*it)->node, (SuperNode*) node);
+	}
 }
 
 void PhyloSuperTree::mapTrees() {

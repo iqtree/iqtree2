@@ -1551,15 +1551,15 @@ int main(int argc, char *argv[])
 		switch (params.consensus_type) {
 			case CT_CONSENSUS_TREE: 
 				computeConsensusTree(params.user_file, params.tree_burnin, params.split_threshold, 
-					params.split_weight_threshold, params.out_file, params.out_prefix); 
+					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file); 
 				break;
 			case CT_CONSENSUS_NETWORK: 
 				computeConsensusNetwork(params.user_file, params.tree_burnin, params.split_threshold, 
-					params.split_weight_threshold, params.out_file, params.out_prefix); 
+					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file); 
 				break;
 			case CT_ASSIGN_SUPPORT: 
 				assignBootstrapSupport(params.user_file, params.tree_burnin, 
-					params.second_tree, params.is_rooted, params.out_file, params.out_prefix, tree); 
+					params.second_tree, params.is_rooted, params.out_file, params.out_prefix, tree, params.tree_weight_file); 
 				break;
 			case CT_NONE: break;
 			/**MINH ANH: for some comparison*/

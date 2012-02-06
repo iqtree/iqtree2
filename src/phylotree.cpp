@@ -1532,7 +1532,7 @@ int PhyloTree::fixNegativeBranch(double fixed_length, Node *node, Node *dad) {
         Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 
-double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2) {
+double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, ostream *out, int brtype) {
     assert(node1->degree() == 3 && node2->degree() == 3);
 
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
@@ -1577,6 +1577,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
         // compute the score of the swapped topology
         double score;
         score = optimizeOneBranch(node1, node2);
+		if (out) printTree(*out, brtype);
         // if better: return
         if (score > cur_score) {
             node2->clearReversePartialLh(node1);
@@ -1605,15 +1606,15 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
     return cur_score;
 }
 
-double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad) {
+double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad, ostream *out, int brtype) {
     if (!node) node = (PhyloNode*) root;
     if (!node->isLeaf() && dad && !dad->isLeaf()) {
-        double score = swapNNIBranch(cur_score, node, dad);
+        double score = swapNNIBranch(cur_score, node, dad, out, brtype);
         if (score > cur_score) return score;
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node);
+        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype);
         if (score > cur_score) return score;
     }
     return cur_score;

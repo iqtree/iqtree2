@@ -23,13 +23,50 @@ MTreeSet::MTreeSet()
 {
 }
 
-MTreeSet::MTreeSet(const char *userTreeFile, bool &is_rooted, int burnin) {
-	init(userTreeFile, is_rooted, burnin);
+MTreeSet::MTreeSet(const char *userTreeFile, bool &is_rooted, int burnin, const char *tree_weight_file) {
+	init(userTreeFile, is_rooted, burnin, tree_weight_file);
 }
 
-void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin) {
+
+void readIntVector(const char *file_name, int burnin, IntVector &vec) {
+	cout << "Reading integer vector file " << file_name << " ..." << endl;
+	try {
+		ifstream in;
+		in.exceptions(ios::failbit | ios::badbit);
+		in.open(file_name);
+		// remove the failbit
+		in.exceptions(ios::badbit);
+
+		for (; !in.eof();) {
+			int i;
+			if(!(in >> i)) break;
+			if (burnin > 0) 
+				burnin--;
+			else 
+				vec.push_back(i);
+			
+		}
+		in.clear();
+		// set the failbit again
+		in.exceptions(ios::failbit | ios::badbit);
+		in.close();
+	} catch(ios::failure) {
+		outError(ERR_READ_INPUT);
+	}
+}
+
+void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin, const char *tree_weight_file) {
 	readTrees(userTreeFile, is_rooted, burnin);
 	checkConsistency();
+
+	if (tree_weight_file) 
+		readIntVector(tree_weight_file, burnin, tree_weights);
+	else 
+		tree_weights.resize(size(), 1);
+
+	if (size() != tree_weights.size())
+		outError("Tree file and tree weight file have different number of entries");
+
 }
 
 void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin) {
@@ -139,7 +176,9 @@ void MTreeSet::printTrees(ostream & out, int brtype) {
 	}
 }
 
-void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighting_type, double weight_threshold) {
+void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighting_type, 
+	double weight_threshold) 
+{
 	SplitIntMap hash_ss;
 /*
 	if (split_threshold == 0.0) {
@@ -235,7 +274,8 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 
 
 	SplitGraph *isg;
-	for (iterator it = begin(); it != end(); it++) {
+	int tree_id = 0;
+	for (iterator it = begin(); it != end(); it++, tree_id++) {
 		MTree *tree = *it;
 		if (tree->leafNum != taxname.size())
 			outError("Tree has different number of taxa!");
@@ -260,22 +300,22 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 			if (sp != NULL) {
 				//Split *sp = ass_it->first;
 				if (weighting_type != SW_COUNT)
-					sp->setWeight(sp->getWeight() + (*itg)->getWeight());
+					sp->setWeight(sp->getWeight() + (*itg)->getWeight() * tree_weights[tree_id]);
 				else
-					sp->setWeight(sp->getWeight() + 1);
-				hash_ss.setValue(sp, value + 1);
+					sp->setWeight(sp->getWeight() + tree_weights[tree_id]);
+				hash_ss.setValue(sp, value + tree_weights[tree_id]);
 			}
 			else {
 				sp = new Split(*(*itg));
 				if (weighting_type != SW_COUNT)
-					sp->setWeight((*itg)->getWeight());
+					sp->setWeight((*itg)->getWeight() * tree_weights[tree_id]);
 				else				
-					sp->setWeight(1);
+					sp->setWeight(tree_weights[tree_id]);
 				sg.push_back(sp);
 				//SplitIntMap::value_type spair(sp, 1);
 				//hash_ss.insert(spair);
 				
-				hash_ss.insertSplit(sp, 1);
+				hash_ss.insertSplit(sp, tree_weights[tree_id]);
  			}
 		}
 		delete isg;
@@ -365,3 +405,10 @@ void MTreeSet::computeRFDist(int *rfdist, int mode) {
 	}
 }
 
+
+int MTreeSet::sumTreeWeights() {
+	int sum = 0;
+	for (IntVector::iterator it = tree_weights.begin(); it != tree_weights.end(); it++)
+		sum += (*it);
+	return sum;
+}

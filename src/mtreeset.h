@@ -40,7 +40,7 @@ public:
 		@param is_rooted (IN/OUT) true if tree is rooted
 		@param burnin the number of beginning trees to be discarded
 	*/
-	MTreeSet(const char *userTreeFile, bool &is_rooted, int burnin);
+	MTreeSet(const char *userTreeFile, bool &is_rooted, int burnin, const char *tree_weight_file = NULL);
 
 	/**
 		initialize the tree from a NEWICK tree file
@@ -48,7 +48,7 @@ public:
 		@param is_rooted (IN/OUT) true if tree is rooted
 		@param burnin the number of beginning trees to be discarded
 	*/
-	void init(const char *userTreeFile, bool &is_rooted, int burnin);
+	void init(const char *userTreeFile, bool &is_rooted, int burnin, const char *tree_weight_file = NULL);
 
 
 	/**
@@ -123,6 +123,8 @@ public:
 	*/
 	void computeRFDist(int *rfdist, int mode = RF_ALL_PAIR);
 
+	int sumTreeWeights();
+
 	/**
 		destructor
 	*/
@@ -133,6 +135,8 @@ public:
 		@return a new tree
 	*/
 	virtual MTree *newTree() { return new MTree(); }
+
+	IntVector tree_weights;
 
 };
 

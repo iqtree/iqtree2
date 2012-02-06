@@ -42,7 +42,7 @@ void runPhyloAnalysis(Params &params);
 		output_tree will be named target_tree appended with ".suptree"
 */
 void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, 
-	bool rooted, const char *output_tree, const char *out_prefix, MExtTree &mytree);
+	bool rooted, const char *output_tree, const char *out_prefix, MExtTree &mytree, const char* tree_weight_file);
 
 /**
 	Compute the consensus tree from the collection of trees from input_trees
@@ -56,7 +56,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 		output_tree will be named input_trees appended with ".contree"
 */
 void computeConsensusTree(const char *input_trees, int burnin, double cutoff, double weight_threshold,
-	const char *output_tree, const char *out_prefix);
+	const char *output_tree, const char *out_prefix, const char* tree_weight_file);
 
 /**
 	Compute the consensus network from the collection of trees in input_trees.
@@ -69,7 +69,7 @@ void computeConsensusTree(const char *input_trees, int burnin, double cutoff, do
 		output_tree will be named input_trees appended with ".connetwork"
 */
 void computeConsensusNetwork(const char *input_trees, int burnin, double cutoff, double weight_threshold,
-	const char *output_tree, const char *out_prefix);
+	const char *output_tree, const char *out_prefix, const char* tree_weight_file);
 
 
 #endif

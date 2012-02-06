@@ -529,6 +529,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.calc_pdgain = false;
 	params.multi_tree = false;
 	params.second_tree = NULL;
+	params.tree_weight_file = NULL;
 	params.consensus_type = CT_NONE;
 	params.find_pd_min = false;
 	params.branch_cluster = 0;
@@ -551,6 +552,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 	params.aln_file = NULL;
 	params.siteLL_file = NULL; //added by MA
+	params.partition_file = NULL;
 	params.sequence_type = NULL;
 	params.aln_output = NULL;
 	params.aln_site_list = NULL;
@@ -578,7 +580,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.optimize_by_newton = true;
 	params.fixed_branch_length = false;
 	params.iqp_assess_quartet = IQP_DISTANCE;
-	params.write_intermediate_trees = false;
+	params.write_intermediate_trees = 0;
 	params.rf_dist_mode = 0;
 	params.mvh_site_rate = false;
 	params.rate_mh_type = true;
@@ -817,6 +819,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -sup <target_tree_file>";
 				params.second_tree = argv[cnt];
 				params.consensus_type = CT_ASSIGN_SUPPORT;
+			} else if (strcmp(argv[cnt],"-treew") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -treew <tree_weight_file>";
+				params.tree_weight_file = argv[cnt];
 			} else if (strcmp(argv[cnt],"-con") == 0) {
 				params.consensus_type = CT_CONSENSUS_TREE;
 			} else if (strcmp(argv[cnt],"-net") == 0) {
@@ -1139,7 +1146,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt],"-iqppars") == 0) {
 				params.iqp_assess_quartet = IQP_PARSIMONY;
 			} else if (strcmp(argv[cnt],"-wt") == 0) {
-				params.write_intermediate_trees = true;
+				params.write_intermediate_trees = 1;
+			} else if (strcmp(argv[cnt],"-wt2") == 0) {
+				params.write_intermediate_trees = 2;
 			} else if (strcmp(argv[cnt],"-rf_all") == 0) {
 				params.rf_dist_mode = RF_ALL_PAIR;
 			} else if (strcmp(argv[cnt],"-rf_adj") == 0) {
