@@ -311,6 +311,15 @@ public:
 	void getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL);
 
 	/**
+		get all descending branches below the node
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+		@param nodes (OUT) vector of one end node of branch
+		@param nodes2 (OUT) vector of the other end node of branch
+	*/
+	void getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL);
+
+	/**
 		find a node with corresponding name
 		@param name node name
 		@param node the starting node, NULL to start from the root
@@ -439,6 +448,11 @@ public:
 		total number of nodes in the tree
 	*/
 	int nodeNum;
+
+	/**
+		total number of branches in the tree
+	*/
+	int branchNum;
 
 	/**
 		user tree file name

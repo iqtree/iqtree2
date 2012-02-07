@@ -22,6 +22,8 @@
 
 #include <phylonode.h>
 
+typedef vector<PhyloNeighbor*> PhyloNeighborVec;
+
 /**
 A neighbor in a phylogenetic SUPER tree
 
@@ -42,9 +44,18 @@ public:
 	}
 
 	/**
+		construct class with a node and length
+		@param anode the other end of the branch
+		@param alength length of branch
+		@param aid branch ID
+	*/
+	SuperNeighbor(Node *anode, double alength, int aid) : PhyloNeighbor(anode, alength, aid) {	
+	}
+
+	/**
 		vector of size m (m = #partitions)
 	*/
-	vector<PhyloNeighbor*> link_neighbors;
+	PhyloNeighborVec link_neighbors;
 
 };
 
@@ -92,8 +103,9 @@ public:
 		add a neighbor
 		@param node the neighbor node
 		@param length branch length
+		@param id branch ID
 	*/
-	virtual void addNeighbor(Node *node, double length);
+	virtual void addNeighbor(Node *node, double length, int id = -1);
 
     ~SuperNode();
 

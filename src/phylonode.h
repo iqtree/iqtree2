@@ -40,6 +40,19 @@ public:
 	}
 
 	/**
+		construct class with a node and length
+		@param anode the other end of the branch
+		@param alength length of branch
+		@param aid branch ID
+	*/
+	PhyloNeighbor(Node *anode, double alength, int aid) : Neighbor(anode, alength, aid) {	
+		partial_lh = NULL; 
+		partial_lh_computed = 0;
+		lh_scale_factor = 0.0;
+		partial_pars = NULL;
+	}
+
+	/**
 		tell that the partial likelihood vector is not computed
 	*/
 	inline void clearPartialLh() { partial_lh_computed = 0; }
@@ -119,8 +132,9 @@ public:
 		add a neighbor
 		@param node the neighbor node
 		@param length branch length
+		@param id branch ID
 	*/
-	virtual void addNeighbor(Node *node, double length);
+	virtual void addNeighbor(Node *node, double length, int id = -1);
 
 
 

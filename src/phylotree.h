@@ -93,6 +93,15 @@ struct PruningInfo {
 
 };
 
+struct SwapNNIParam {
+	double nni1_score;
+	double nni1_brlen;
+	double nni2_score;
+	double nni2_brlen;
+	Neighbor* node1_nei;
+	Neighbor* node2_nei;
+};
+
 /**
 Phylogenetic Tree class
 
@@ -421,7 +430,7 @@ public:
             @param clearLH true to clear the partial likelihood, otherwise false
             @return likelihood score
      */
-    double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
+    virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
 
     /**
             optimize all branch lengths of the children of node
@@ -500,7 +509,9 @@ public:
             @param node2 2nd end node of the branch
             @return the likelihood of the tree
      */
-    double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, ostream *out = NULL, int brtype = 0);
+    double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
+    	ostream *out = NULL, int brtype = 0,
+    	SwapNNIParam *nni_param = NULL);
 
 
     /****************************************************************************

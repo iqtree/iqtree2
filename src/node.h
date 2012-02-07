@@ -59,6 +59,11 @@ public:
 	double length;
 
 	/**
+		branch ID
+	*/
+	int id;
+
+	/**
 		construct class with a node and length
 		@param anode the other end of the branch
 		@param alength length of branch
@@ -66,6 +71,19 @@ public:
 	Neighbor(Node *anode, double alength) {
 		node = anode;
 		length = alength;
+		id = -1;
+	}
+
+	/**
+		construct class with a node and length
+		@param anode the other end of the branch
+		@param alength length of branch
+		@param id branch ID
+	*/
+	Neighbor(Node *anode, double alength, int aid) {
+		node = anode;
+		length = alength;
+		id = aid;
 	}
 
 	/**
@@ -75,6 +93,7 @@ public:
 	Neighbor(Neighbor *nei) {
 		node = nei->node;
 		length = nei->length;
+		id = nei->id;
 	}
 
 	/**
@@ -270,8 +289,9 @@ public:
 		add a neighbor
 		@param node the neighbor node
 		@param length branch length
+		@param id branch ID
 	*/
-	virtual void addNeighbor(Node *node, double length);
+	virtual void addNeighbor(Node *node, double length, int id = -1);
 };
 
 /*

@@ -25,11 +25,23 @@
 
 
 struct PartitionInfo {
-	string name;
-	string model_name;
-	string aln_file;
-	string sequence_type;
-	string position_spec;
+	string name; // partition name
+	string model_name; // model name
+	string aln_file; // alignment file associated
+	string sequence_type; // sequence type (DNA/AA/BIN)
+	string position_spec; // position specification, e.g., "1-100\1 1-100\2"
+
+	double cur_score; // current log-likelihood 
+
+	DoubleVector null_score; // log-likelihood of each branch collapsed to zero
+	DoubleVector opt_score; // optimized log-likelihood for every branch
+	DoubleVector nni1_score; // log-likelihood for 1st NNI for every branch
+	DoubleVector nni2_score; // log-likelihood for 2nd NNI for every branch
+
+	DoubleVector cur_brlen; // current branch lengths
+	DoubleVector opt_brlen; // optimized branch lengths for every branch
+	DoubleVector nni1_brlen; // branch length for 1st NNI for every branch
+	DoubleVector nni2_brlen; // branch length for 2nd NNI for every branch
 };
 
 /**
@@ -104,10 +116,42 @@ public:
      */
     virtual double optimizeAllBranches(int iterations = 100);
 
+    /**
+            optimize one branch length by ML
+            @param node1 1st end node of the branch
+            @param node2 2nd end node of the branch
+            @param clearLH true to clear the partial likelihood, otherwise false
+            @return likelihood score
+     */
+    virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
+
+    /**
+            search all positive NNI move on the current tree and save them on the possilbleNNIMoves list            
+     */
+    virtual void genNNIMoves(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
+            search the best swap for a branch
+            @return NNIMove The best Move/Swap
+            @param cur_score the current score of the tree before the swaps
+            @param node1 1 of the 2 nodes on the branch
+            @param node2 1 of the 2 nodes on the branch
+     */
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh_contribution = -1.0);
+
+    /**
+            Do an NNI
+     */
+    virtual double doNNI(NNIMove move);
+
+	void initPartitionInfo();
+
 	/**
 		partition information
 	*/
 	vector<PartitionInfo> part_info; 
+
+	
 
 };
 

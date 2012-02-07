@@ -71,10 +71,12 @@ void MTree::copyTree(MTree *tree) {
 
 void MTree::copyTree(MTree *tree, string &taxa_set) {
 	if (tree->leafNum != taxa_set.length()) outError("#leaves and taxa_set do not match!");
-	leafNum = nodeNum = 0;
+	leafNum = nodeNum = branchNum = 0;
 	for (string::iterator it = taxa_set.begin(); it != taxa_set.end(); it++)
 		nodeNum += (*it);
 	double new_len;
+	if (root) freeNode();
+	root = NULL;
 	root = copyTree(tree, taxa_set, new_len);
 }
 
@@ -119,15 +121,17 @@ Node* MTree::copyTree(MTree *tree, string &taxa_set, double &len, Node *node, No
 	}
 	if (!dad && new_nodes.size() == 2) {
 		double sum_len = new_lens[0] + new_lens[1];
-		new_nodes[0]->addNeighbor(new_nodes[1], sum_len);
-		new_nodes[1]->addNeighbor(new_nodes[0], sum_len);
+		new_nodes[0]->addNeighbor(new_nodes[1], sum_len, branchNum);
+		new_nodes[1]->addNeighbor(new_nodes[0], sum_len, branchNum);
+		branchNum++;
 		return new_nodes[0];
 	}
 	Node* int_node = newNode(nodeNum++, node->name.c_str());
 	len = 0.0;
 	for (int i = 0; i < new_nodes.size(); i++) {
-		int_node->addNeighbor(new_nodes[i], new_lens[i]);
-		new_nodes[i]->addNeighbor(int_node, new_lens[i]);
+		int_node->addNeighbor(new_nodes[i], new_lens[i], branchNum);
+		new_nodes[i]->addNeighbor(int_node, new_lens[i], branchNum);
+		branchNum++;
 	}
 	return int_node;
 }
@@ -482,7 +486,11 @@ void MTree::readTree(istream &in, bool &is_rooted)
 
 void MTree::initializeTree(Node *node, Node* dad)
 {
-	if (!node) node = root;
+	if (!node) {
+		node = root;
+		nodeNum = leafNum;
+		branchNum = 0;
+	}
 	if (!node->isLeaf())
 	{
 		node->id = nodeNum;
@@ -492,8 +500,12 @@ void MTree::initializeTree(Node *node, Node* dad)
 	}
 	//for (int i = 0; i < node->neighbors.size(); i++)
 		//if (node->neighbors[i]->node != dad)
-	FOR_NEIGHBOR_IT(node, dad, it)
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		(*it)->id = branchNum;
+		(*it)->node->findNeighbor(node)->id = branchNum;
+		branchNum++;
 		initializeTree((*it)->node, node);
+	}
 }
 
 
@@ -677,6 +689,21 @@ void MTree::getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *nod
 	}
 }
 
+void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
+	if (!node) node = root;
+	//for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
+		//if ((*it)->node != dad)	{
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		if (node->id < (*it)->node->id) {
+			nodes.push_back(node);
+			nodes2.push_back((*it)->node);
+		} else {
+			nodes.push_back((*it)->node);
+			nodes2.push_back(node);
+		} 
+		getBranches(nodes, nodes2, (*it)->node, node);
+	}
+}
 
 void MTree::getOrderedTaxa(NodeVector &taxa, Node *node, Node *dad) {
 	if (!node) node = root;

@@ -45,8 +45,8 @@ void SuperNode::init() {
 }
 
 
-void SuperNode::addNeighbor(Node *node, double length) {
-	neighbors.push_back(new SuperNeighbor(node, length));
+void SuperNode::addNeighbor(Node *node, double length, int id) {
+	neighbors.push_back(new SuperNeighbor(node, length, id));
 }
 
 SuperNode::~SuperNode()

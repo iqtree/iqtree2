@@ -66,6 +66,6 @@ void PhyloNode::init() {
 }
 
 
-void PhyloNode::addNeighbor(Node *node, double length) {
-	neighbors.push_back(new PhyloNeighbor(node, length));
+void PhyloNode::addNeighbor(Node *node, double length, int id) {
+	neighbors.push_back(new PhyloNeighbor(node, length, id));
 }

@@ -170,8 +170,8 @@ NeighborVec::iterator Node::findNeighborIt(Node *node) {
     return neighbors.end();
 }
 
-void Node::addNeighbor(Node *node, double length) {
-    neighbors.push_back(new Neighbor(node, length));
+void Node::addNeighbor(Node *node, double length, int id) {
+    neighbors.push_back(new Neighbor(node, length, id));
 }
 
 void Node::updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei) {

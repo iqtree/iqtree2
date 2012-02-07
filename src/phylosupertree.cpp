@@ -178,16 +178,23 @@ void PhyloSuperTree::mapTrees() {
 			if (id >=0) part_taxa[i] = my_taxa[id];
 		}
 		linkTree(part, part_taxa);
+		
 		NodeVector nodes1, nodes2;
-		getInternalBranches(nodes1, nodes2);
+		getBranches(nodes1, nodes2);
 		for (i = 0; i < nodes1.size(); i++) {
 			PhyloNeighbor *nei1 = ((SuperNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part];
 			PhyloNeighbor *nei2 = ((SuperNeighbor*)nodes2[i]->findNeighbor(nodes1[i]))->link_neighbors[part];
-			cout << nodes1[i]->id << "," << nodes2[i]->id << " -> ";
-			if (nei2) 
+			cout << nodes1[i]->findNeighbor(nodes2[i])->id << ":";
+			if (nodes1[i]->isLeaf()) cout << nodes1[i]->name; else cout << nodes1[i]->id;
+			cout << ",";
+			if (nodes2[i]->isLeaf()) cout << nodes2[i]->name; else cout << nodes2[i]->id;
+			cout << " -> ";
+			if (nei2) {
+				cout << nei2->id << ":";
 				if (nei2->node->isLeaf())
 					cout << nei2->node->name;
 				else cout << nei2->node->id;
+			}
 			else cout << -1;
 			cout << ",";
 			if (nei1) 
@@ -222,3 +229,154 @@ PhyloSuperTree::~PhyloSuperTree()
 }
 
 
+double PhyloSuperTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH) {
+	int part = 0;
+	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
+	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
+	assert(nei1 && nei2);
+	double tree_lh = 0.0;
+	for (iterator it = begin(); it != end(); it++, part++) {
+		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
+		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
+		double score;
+		if (part_info[part].cur_score == 0.0) 
+			part_info[part].cur_score = (*it)->computeLikelihood();
+		if (nei1_part && nei2_part) {
+			if (part_info[part].opt_score[nei1_part->id] == 0.0) {
+				part_info[part].cur_brlen[nei1_part->id] = nei1_part->length;
+				part_info[part].opt_score[nei1_part->id] = (*it)->optimizeOneBranch((PhyloNode*)nei1_part->node, (PhyloNode*)nei2_part->node, clearLH);
+				part_info[part].opt_brlen[nei1_part->id] = nei1_part->length;
+			}
+			score = part_info[part].opt_score[nei1_part->id];
+		} else 
+			score = part_info[part].cur_score;
+		tree_lh += score;
+	}
+	return tree_lh;
+}
+
+void PhyloSuperTree::initPartitionInfo() {
+	int part = 0;
+	for (iterator it = begin(); it != end(); it++, part++) {
+		part_info[part].cur_score = 0.0;
+		part_info[part].null_score.clear();
+		part_info[part].null_score.resize((*it)->branchNum, 0.0);
+		part_info[part].opt_score.clear();
+		part_info[part].opt_score.resize((*it)->branchNum, 0.0);	
+		part_info[part].nni1_score.clear();
+		part_info[part].nni1_score.resize((*it)->branchNum, 0.0);	
+		part_info[part].nni2_score.clear();
+		part_info[part].nni2_score.resize((*it)->branchNum, 0.0);
+
+		part_info[part].cur_brlen.resize((*it)->branchNum, 0.0);
+		part_info[part].opt_brlen.resize((*it)->branchNum, 0.0);
+		part_info[part].nni1_brlen.resize((*it)->branchNum, 0.0);
+		part_info[part].nni2_brlen.resize((*it)->branchNum, 0.0);
+	}
+}
+
+void PhyloSuperTree::genNNIMoves(PhyloNode *node, PhyloNode *dad) {
+	initPartitionInfo();
+	IQPTree::genNNIMoves(node, dad);
+}
+
+NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh_contribution) {
+    NNIMove myMove;
+    myMove.score = 0;
+	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
+	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
+	assert(nei1 && nei2);
+	SuperNeighbor *node1_nei;
+	SuperNeighbor *node2_nei;
+	SuperNeighbor *node2_nei_other;
+	FOR_NEIGHBOR_IT(node1, node2, node1_it) { 
+		node1_nei = (SuperNeighbor*)(*node1_it);
+		break; 
+	}
+	FOR_NEIGHBOR_IT(node2, node1, node2_it) {
+		node2_nei = (SuperNeighbor*)(*node2_it);
+		break;
+	}
+
+	FOR_NEIGHBOR_IT(node2, node1, node2_it_other) 
+	if ((*node2_it_other) != node2_nei) {
+		node2_nei_other = (SuperNeighbor*)(*node2_it_other);
+		break;
+	}
+
+	double bestScore = optimizeOneBranch(node1, node2, false);
+
+	int part = 0;
+	double nni1_score = 0.0, nni2_score = 0.0;
+	for (iterator it = begin(); it != end(); it++, part++) {
+		if (part_info[part].cur_score == 0.0) 
+			part_info[part].cur_score = (*it)->computeLikelihood();
+		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
+		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
+		if (!nei1_part || !nei2_part) {
+			nni1_score += part_info[part].cur_score;
+			nni2_score += part_info[part].cur_score;
+			continue;
+		}
+		int brid = nei1_part->id;
+		if (part_info[part].opt_score[brid] == 0.0) {
+			double cur_len = nei1_part->length;
+			part_info[part].cur_brlen[brid] = cur_len;
+			part_info[part].opt_score[brid] = (*it)->optimizeOneBranch((PhyloNode*)nei1_part->node, (PhyloNode*)nei2_part->node, false);
+			part_info[part].opt_brlen[brid] = nei1_part->length;
+			// restore branch lengths
+			nei1_part->length = cur_len;
+			nei2_part->length = cur_len;
+		}
+
+		bool is_nni = true;
+		FOR_NEIGHBOR_DECLARE(node1, node2, nit) {
+			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+		}
+		FOR_NEIGHBOR(node2, node1, nit) {
+			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+		}
+		if (!is_nni) {
+			nni1_score += part_info[part].opt_score[brid];
+			nni2_score += part_info[part].opt_score[brid];
+			continue;
+		}
+		if (part_info[part].nni1_score[brid] == 0.0) {
+			SwapNNIParam nni_param;
+			nni_param.node1_nei = node1_nei->link_neighbors[part];
+			nni_param.node2_nei = node2_nei->link_neighbors[part];
+			(*it)->swapNNIBranch(0.0, (PhyloNode*)nei2_part->node, (PhyloNode*)nei1_part->node, NULL, 0,
+				&nni_param);
+
+			part_info[part].nni1_score[brid] = nni_param.nni1_score;
+			part_info[part].nni2_score[brid] = nni_param.nni2_score;
+			part_info[part].nni1_brlen[brid] = nni_param.nni1_brlen;
+			part_info[part].nni2_brlen[brid] = nni_param.nni2_brlen;
+		}
+		nni1_score += part_info[part].nni1_score[brid];
+		nni2_score += part_info[part].nni2_score[brid];
+	}
+	if (nni1_score > bestScore+TOL_LIKELIHOOD) {
+		bestScore = nni1_score;
+		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
+		myMove.node2Nei_it = node2->findNeighborIt(node2_nei->node);
+		myMove.score = bestScore;
+		myMove.node1 = node1;
+		myMove.node2 = node2;
+	}
+
+	if (nni2_score > bestScore+TOL_LIKELIHOOD) {
+		bestScore = nni2_score;
+		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
+		myMove.node2Nei_it = node2->findNeighborIt(node2_nei_other->node);
+		myMove.score = bestScore;
+		myMove.node1 = node1;
+		myMove.node2 = node2;
+	}
+
+	return myMove;
+}
+
+double PhyloSuperTree::doNNI(NNIMove move) {
+	return IQPTree::doNNI(move);
+}
