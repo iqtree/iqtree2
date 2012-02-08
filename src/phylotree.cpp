@@ -1532,42 +1532,7 @@ int PhyloTree::fixNegativeBranch(double fixed_length, Node *node, Node *dad) {
         Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 
-double PhyloTree::doNNI(NNIMove move) {
-    PhyloNode *node1 = move.node1;
-    PhyloNode *node2 = move.node2;
-    NeighborVec::iterator node1Nei_it = move.node1Nei_it;
-    NeighborVec::iterator node2Nei_it = move.node2Nei_it;
-    Neighbor *node1Nei = *(node1Nei_it);
-    Neighbor *node2Nei = *(node2Nei_it);
-
-    assert(node1->degree() == 3 && node2->degree() == 3);
-
-    // do the NNI swap
-    node1->updateNeighbor(node1Nei_it, node2Nei);
-    node2Nei->node->updateNeighbor(node2, node1);
-
-    node2->updateNeighbor(node2Nei_it, node1Nei);
-    node1Nei->node->updateNeighbor(node1, node2);
-
-    PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
-    PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
-
-    // clear partial likelihood vector
-    node12_it->clearPartialLh();
-    node21_it->clearPartialLh();
-
-    node2->clearReversePartialLh(node1);
-    node1->clearReversePartialLh(node2);
-
-    //optimizeOneBranch(node1, node2);
-
-    // Return likelihood score only for debugging, otherwise return 0
-    //return computeLikelihood();
-    return 0;
-}
-
-double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
-	ostream *out, int brtype, SwapNNIParam *nni_param) {
+double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, ostream *out, int brtype) {
     assert(node1->degree() == 3 && node2->degree() == 3);
 
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
@@ -1582,8 +1547,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 
     // TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
     FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
-    	break;
-	if (nni_param) node1_it = node1->findNeighborIt(nni_param->node1_nei->node);
+    break;
     Neighbor *node1_nei = *node1_it;
     double node1_len = node1_nei->length;
     NeighborVec::iterator node1_nei_it = node1_nei->node->findNeighborIt(node1);
@@ -1591,18 +1555,8 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 
     // Neighbors of node2 which are not node1
 
-	vector<NeighborVec::iterator> node2_its;
-    FOR_NEIGHBOR_DECLARE(node2, node1, node2_it) node2_its.push_back(node2_it);
-    assert(node2_its.size() == 2);
-    if (nni_param && nni_param->node2_nei != (*node2_its[0])) {
-    	node2_it = node2_its[0];
-    	node2_its[0] = node2_its[1];
-    	node2_its[1] = node2_it;
-    }
+    FOR_NEIGHBOR_IT(node2, node1, node2_it) {
 
-	int cnt;
-    for (cnt = 0; cnt < node2_its.size(); cnt++) {
-		node2_it = node2_its[cnt];
         // do the NNI swap
         Neighbor *node2_nei = *node2_it;
         // TUNG unused variable ?
@@ -1622,16 +1576,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 
         // compute the score of the swapped topology
         double score;
-        score = optimizeOneBranch(node1, node2, false);
-        if (nni_param) {
-			if (cnt==0) {
-				nni_param->nni1_score = score;
-				nni_param->nni1_brlen = node12_it->length;
-			} else {
-				nni_param->nni2_score = score;
-				nni_param->nni2_brlen = node12_it->length;
-			}
-		}
+        score = optimizeOneBranch(node1, node2);
 		if (out) printTree(*out, brtype);
         // if better: return
         if (score > cur_score) {

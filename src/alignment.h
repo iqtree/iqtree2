@@ -351,7 +351,7 @@ public:
 	/**
 		@return unconstrained log-likelihood (without a tree)
 	*/
-	virtual double computeUnconstrainedLogL();
+	double computeUnconstrainedLogL();
 
 	/**
 		number of states
@@ -373,8 +373,18 @@ public:
 		- From THIS alignment, we have frequencies d_1 ... d_k (sum = len = nsite)
 		- Prob(THIS | refAlign) = nsite!/(d_1! * ... * d_k!) product(p_i^d_i)
 	*/
-	void multinomialProb(Alignment refAlign, double &prob);
+	void multinomialProb (Alignment refAlign, double &prob);
 
+	/** Added by MA
+		Compute the probability of the `expected alignment' according to the multinomial distribution with parameters determined by the pattern's observed frequencies in THIS alignment.
+		The `expected alignment' consists of patterns with log-likelihoods (under some model+tree) given in the input file (inputLL).
+		Note that order of the log-likelihoods in inputLL must corresponds to patterns in THIS alignment.
+
+		@param inputLL the input patterns log-likelihood vector
+		@param prob (OUT) the returned probability
+	*/
+	void multinomialProb (DoubleVector logLL, double &prob);
+	
 
 protected:
 

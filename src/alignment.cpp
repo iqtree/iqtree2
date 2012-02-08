@@ -1269,3 +1269,69 @@ void Alignment::multinomialProb(Alignment refAlign, double &prob)
 	}
 	prob = fac - sumFac + sumProb;
 }
+
+void Alignment::multinomialProb (DoubleVector logLL, double &prob)
+{
+	cout << "Function in Alignment: Compute probability of the expected alignment (determined by patterns log-likelihood under some tree and model) given THIS alignment." << endl;
+
+	//The expected normalized requencies
+	IntVector expectedNorFre;
+	
+	if ( logLL.empty()) 
+		outError("Error: log likelihood of patterns are not given!");
+
+	int patNum = getNPattern();
+
+	assert(logLL.size() == patNum);
+
+	int alignLen = getNSite();		
+	//resize the expectedNorFre vector
+	expectedNorFre.resize(patNum,-1);
+
+	//Vector containing the 'relative' likelihood of the pattern p_i 
+	DoubleVector LL(patNum,-1.0);
+	double sumLL = 0; //sum of the likelihood of the patterns in the alignment
+
+	//Compute the `relative' (to the first pattern) likelihood from the logLL			
+	for ( int i = 0; i < patNum; i++ )
+	{
+		LL[i] = exp(logLL[i]-logLL[0]);
+		//LL[i] = exp(logLL[i]);
+		sumLL += LL[i];
+	}
+
+	//Vector containing l_i = p_i*ell/sum_i(p_i)
+	DoubleVector ell(patNum, -1.0);
+	//Compute l_i
+	for ( int i = 0; i < patNum; i++ )
+	{
+		ell[i] = (double)alignLen * LL[i] / sumLL;
+	}
+
+
+	//Vector containing r_i where r_0 = ell_0; r_{i+1} = ell_{i+1} + r_i - ordinaryRounding(r_i)
+	DoubleVector r(patNum, -1.0);
+	//Compute r_i and the expected normalized frequencies
+	r[0] = ell[0];
+	expectedNorFre[0] = (int)floor(ell[0]+0.5); //note that floor(_number+0.5) returns the ordinary rounding of _number
+	//int sum = expectedNorFre[0];
+	for (int j = 1; j < patNum; j++ )
+	{
+		r[j] = ell[j] + r[j-1] - floor(r[j-1]+0.5);
+		expectedNorFre[j] = (int)floor(r[j]+0.5);
+		//sum += expectedNorFre[j];
+	}
+	
+	//cout << "Number of patterns: " << patNum << ", sum of expected sites: " << sum << endl;
+	//return expectedNorFre;
+	//compute the probability of having expectedNorFre given the observed pattern frequencies of THIS alignment
+	double sumFac = 0;
+	double sumProb = 0;
+	double fac = logFac(alignLen);
+	for (int patID = 0; patID < patNum; patID++) {
+		int patFre = expectedNorFre[patID];
+		sumFac += logFac(patFre);
+		sumProb += (double)patFre*log((double)at(patID).frequency/(double)alignLen);
+	}
+	prob = fac - sumFac + sumProb;
+}
