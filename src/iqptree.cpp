@@ -388,7 +388,7 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
         NodeVector nodes;
         getInternalNodes(nodes);
         if (verbose_mode >= VB_DEBUG)
-            drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
+            drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
         //printTree(cout, WT_BR_LEN | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
         for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
             assessQuartets(leaves_vec, (PhyloNode*) (*it), (*it_leaf));
@@ -420,11 +420,13 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
                 delete (*rit);
             }
     }
+	if (verbose_mode >= VB_DEBUG)
+		drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 }
 
 double IQPTree::doIQP() {
     if (verbose_mode >= VB_DEBUG)
-        drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
+        drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
     clock_t time_begin = clock();
     PhyloNodeVector del_leaves;
     deleteLeaves(del_leaves);
@@ -1020,39 +1022,6 @@ void IQPTree::applyChildBranchChanges(PhyloNode *node, PhyloNode *dad) {
 
 }
 
-double IQPTree::doNNI(NNIMove move) {
-    PhyloNode *node1 = move.node1;
-    PhyloNode *node2 = move.node2;
-    NeighborVec::iterator node1Nei_it = move.node1Nei_it;
-    NeighborVec::iterator node2Nei_it = move.node2Nei_it;
-    Neighbor *node1Nei = *(node1Nei_it);
-    Neighbor *node2Nei = *(node2Nei_it);
-
-    assert(node1->degree() == 3 && node2->degree() == 3);
-
-    // do the NNI swap
-    node1->updateNeighbor(node1Nei_it, node2Nei);
-    node2Nei->node->updateNeighbor(node2, node1);
-
-    node2->updateNeighbor(node2Nei_it, node1Nei);
-    node1Nei->node->updateNeighbor(node1, node2);
-
-    PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
-    PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
-
-    // clear partial likelihood vector
-    node12_it->clearPartialLh();
-    node21_it->clearPartialLh();
-
-    node2->clearReversePartialLh(node1);
-    node1->clearReversePartialLh(node2);
-
-    //optimizeOneBranch(node1, node2);
-
-    // Return likelihood score only for debugging, otherwise return 0
-    //return computeLikelihood();
-    return 0;
-}
 
 void IQPTree::genNNIMoves(PhyloNode *node, PhyloNode *dad) {
     if (!node) {

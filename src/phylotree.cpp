@@ -1532,6 +1532,39 @@ int PhyloTree::fixNegativeBranch(double fixed_length, Node *node, Node *dad) {
         Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 
+double PhyloTree::doNNI(NNIMove move) {
+    PhyloNode *node1 = move.node1;
+    PhyloNode *node2 = move.node2;
+    NeighborVec::iterator node1Nei_it = move.node1Nei_it;
+    NeighborVec::iterator node2Nei_it = move.node2Nei_it;
+    Neighbor *node1Nei = *(node1Nei_it);
+    Neighbor *node2Nei = *(node2Nei_it);
+
+    assert(node1->degree() == 3 && node2->degree() == 3);
+
+    // do the NNI swap
+    node1->updateNeighbor(node1Nei_it, node2Nei);
+    node2Nei->node->updateNeighbor(node2, node1);
+
+    node2->updateNeighbor(node2Nei_it, node1Nei);
+    node1Nei->node->updateNeighbor(node1, node2);
+
+    PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+    PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
+
+    // clear partial likelihood vector
+    node12_it->clearPartialLh();
+    node21_it->clearPartialLh();
+
+    node2->clearReversePartialLh(node1);
+    node1->clearReversePartialLh(node2);
+
+    //optimizeOneBranch(node1, node2);
+
+    // Return likelihood score only for debugging, otherwise return 0
+    //return computeLikelihood();
+    return 0;
+}
 
 double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
 	ostream *out, int brtype, SwapNNIParam *nni_param) {

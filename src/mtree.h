@@ -319,6 +319,10 @@ public:
 	*/
 	void getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL);
 
+	void getBranchLengths(DoubleVector &len, Node *node = NULL, Node *dad = NULL);
+
+	void setBranchLengths(DoubleVector &len, Node *node = NULL, Node *dad = NULL);
+
 	/**
 		find a node with corresponding name
 		@param name node name

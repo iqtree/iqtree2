@@ -705,6 +705,32 @@ void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node 
 	}
 }
 
+void MTree::getBranchLengths(DoubleVector &len, Node *node, Node *dad) {
+	if (!node) {
+		node = root;
+		assert(len.size() == branchNum);
+	}
+	//for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
+		//if ((*it)->node != dad)	{
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		len[(*it)->id] = (*it)->length;
+		getBranchLengths(len, (*it)->node, node);
+	}
+}
+
+void MTree::setBranchLengths(DoubleVector &len, Node *node, Node *dad) {
+	if (!node) {
+		node = root;
+		assert(len.size() == branchNum);
+	}
+	//for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
+		//if ((*it)->node != dad)	{
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		(*it)->length = (*it)->node->findNeighbor(node)->length = len[(*it)->id];
+		setBranchLengths(len, (*it)->node, node);
+	}
+}
+
 void MTree::getOrderedTaxa(NodeVector &taxa, Node *node, Node *dad) {
 	if (!node) node = root;
 	if (node->isLeaf()) {
@@ -1016,9 +1042,10 @@ int MTree::sortTaxa(Node *node, Node *dad) {
 
 void MTree::drawTree(ostream &out, int brtype) {
 	IntVector sub_tree_br;
-	if (verbose_mode >= VB_DEBUG)
-		printTree(out);
-	cout << endl;
+	if (verbose_mode >= VB_DEBUG) {
+		printTree(cout);
+		cout << endl;
+	}
 	Node *node = root;
 	if (node->isLeaf()) node = node->neighbors[0]->node;
 	double scale = 60.0/treeDepth(node);
@@ -1107,6 +1134,8 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
 		out << node->name; 
 		if (brtype & WT_TAXON_ID)
 			out << " (" << node->id << ")";
+		if (brtype & WT_BR_ID)
+			out << " [" << node->neighbors[0]->id << "]";
 		if (brtype & WT_BR_LEN)
 			out << " " << node->neighbors[0]->length;
 		//out << " ";
@@ -1149,6 +1178,8 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
 				out << " (" << node->name << ")";
 			if (brtype & WT_BR_LEN && dad)
 				out << " " << node->findNeighbor(dad)->length;
+			if (brtype & WT_BR_ID && dad)
+				out << " [" << node->findNeighbor(dad)->id << "]";
 			if (!subtree_br.empty()) {
 				if (subtree_br.back() >1000) 
 					subtree_br.back() -= 1000;

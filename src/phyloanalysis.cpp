@@ -833,7 +833,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
     //Update tree score
     tree.curScore = bestTreeScore;
-
+	if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->computeBranchLengths();
 	/*
     if ((tree.getModel()->name == "JC") && tree.getRate()->getNDim() == 0)
         params.compute_ml_dist = false;*/
@@ -1070,7 +1070,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     	
     }
 
-    if (params.aLRT_replicates > 0) {
+    if (!tree.isSuperTree() && params.aLRT_replicates > 0) {
         mytime = clock();
         cout << endl;
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;

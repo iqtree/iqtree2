@@ -103,6 +103,28 @@ struct SwapNNIParam {
 };
 
 /**
+        NNISwap, define a NNI Swap or Move
+ */
+struct NNIMove {
+    PhyloNode *node1;
+    //Neighbor *node1Nei;
+    NeighborVec::iterator node1Nei_it;
+
+    PhyloNode *node2;
+    //Neighbor *node2Nei;
+    NeighborVec::iterator node2Nei_it;
+
+    double score;
+    
+    int swap_id;
+
+    bool operator<(const NNIMove & rhs) const {
+        return score > rhs.score;
+    }
+
+};
+
+/**
 Phylogenetic Tree class
 
         @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
@@ -513,6 +535,10 @@ public:
     	ostream *out = NULL, int brtype = 0,
     	SwapNNIParam *nni_param = NULL);
 
+    /**
+            Do an NNI
+     */
+    virtual double doNNI(NNIMove move);
 
     /****************************************************************************
             Stepwise addition (greedy) by maximum likelihood

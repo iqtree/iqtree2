@@ -66,6 +66,11 @@ public:
 	void printCombinedAlignment(const char *filename, bool append = false);
 
 	/**
+		@return unconstrained log-likelihood (without a tree)
+	*/
+	virtual double computeUnconstrainedLogL();
+
+	/**
 		actual partition alignments
 	*/
 	vector<Alignment*> partitions;

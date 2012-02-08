@@ -351,7 +351,7 @@ public:
 	/**
 		@return unconstrained log-likelihood (without a tree)
 	*/
-	double computeUnconstrainedLogL();
+	virtual double computeUnconstrainedLogL();
 
 	/**
 		number of states

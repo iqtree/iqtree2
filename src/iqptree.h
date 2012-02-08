@@ -39,25 +39,6 @@ typedef std::multiset< int, std::less< int > > MultiSetInt;
         nodeheightcmp, for building k-representative leaf set
  */
 
-/**
-        NNISwap, define a NNI Swap or Move
- */
-struct NNIMove {
-    PhyloNode *node1;
-    //Neighbor *node1Nei;
-    NeighborVec::iterator node1Nei_it;
-
-    PhyloNode *node2;
-    //Neighbor *node2Nei;
-    NeighborVec::iterator node2Nei_it;
-
-    double score;
-
-    bool operator<(const NNIMove & rhs) const {
-        return score > rhs.score;
-    }
-
-};
 
 class RepLeaf {
 public:
@@ -265,7 +246,7 @@ public:
     /**
      * 	 Restore the branch lengths from the saved values
      */
-    void restoreAllBranLen(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void restoreAllBranLen(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * Get the branch length of the branch node1-node2
@@ -288,10 +269,6 @@ public:
      */
     void applyChildBranchChanges(PhyloNode *node, PhyloNode *dad);
 
-    /**
-            Do an NNI
-     */
-    virtual double doNNI(NNIMove move);
 
     /**
      * TODO
@@ -478,16 +455,14 @@ protected:
     /**
             delete a set of leaves from tree (with the probability p_delete), assume tree is birfucating
             @param del_leaves (OUT) the list of deleted leaves
-            @param adjacent_nodes (OUT) the corresponding list of nodes adjacent to the deleted leaves
      */
     void deleteLeaves(PhyloNodeVector &del_leaves);
 
     /**
             reinsert the whole list of leaves back into the tree
             @param del_leaves the list of deleted leaves, returned by deleteLeaves() function
-            @param adjacent_nodes the corresponding list of nodes adjacent to the deleted leaves, returned by deleteLeaves() function
      */
-    void reinsertLeaves(PhyloNodeVector &del_leaves);
+    virtual void reinsertLeaves(PhyloNodeVector &del_leaves);
 
     /**
             assess a quartet with four taxa. Current implementation uses the four-point condition

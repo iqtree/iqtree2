@@ -132,3 +132,11 @@ void SuperAlignment::printCombinedAlignment(const char *file_name, bool append) 
 		outError(ERR_WRITE_OUTPUT, file_name);
 	}	
 }
+
+double SuperAlignment::computeUnconstrainedLogL() {
+	double logl = 0.0;
+	vector<Alignment*>::iterator pit;
+	for (pit = partitions.begin(); pit != partitions.end(); pit++)
+		logl += (*pit)->computeUnconstrainedLogL();
+	return logl;
+}

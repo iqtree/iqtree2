@@ -144,6 +144,22 @@ public:
      */
     virtual double doNNI(NNIMove move);
 
+    /**
+     * 	 Restore the branch lengths from the saved values
+     */
+    virtual void restoreAllBranLen(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
+            reinsert the whole list of leaves back into the tree
+            @param del_leaves the list of deleted leaves, returned by deleteLeaves() function
+     */
+    virtual void reinsertLeaves(PhyloNodeVector &del_leaves);
+
+	/**
+		compute the weighted average of branch lengths over partitions
+	*/
+	void computeBranchLengths();
+
 	void initPartitionInfo();
 
 	/**
