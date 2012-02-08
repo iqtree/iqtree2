@@ -184,7 +184,7 @@ typedef unsigned int UINT;
         run mode of program
  */
 enum RunMode {
-    DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING, CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN, SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS, GBO
+    DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING, CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN, SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS //, GBO, MPRO
 }; //STATS and GBO added by MA (STATS for some statistics on tree, GBO = guided 'bootstrap'
 
 /**
@@ -608,6 +608,10 @@ struct Params {
      */
     char *second_tree;
 
+	/**
+		2nd alignment used in computing multinomialProb (Added by MA)
+	*/
+	char *second_align;
     /**
             type of consensus building
      */

@@ -603,6 +603,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.gene_pvalue_file = NULL;
 	params.gene_scale_factor = -1;
 	params.gene_pvalue_loga = false;
+	params.second_align = NULL;
 
 	struct timeval tv;
 	struct timezone tz;
@@ -843,7 +844,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -gbo <site likelihod file>";
 				params.siteLL_file = argv[cnt];
-				params.run_mode = GBO;
+				//params.run_mode = GBO;
+			} // MA
+			else if (strcmp(argv[cnt],"-mprob") == 0) { //compute multinomial distribution probability
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mprob <ref_alignment>";
+				params.second_align = argv[cnt];
+				//params.run_mode = MPRO;
 			} // MA
 			else if (strcmp(argv[cnt],"-min") == 0) {
 				params.find_pd_min = true;

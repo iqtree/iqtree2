@@ -22,6 +22,8 @@
 
 #include <alignment.h>
 
+typedef vector< Alignment > AlignmentVector;
+
 /**
 Extended Alignment class to serve some analysis, created by MA
 
@@ -38,8 +40,9 @@ public:
 
 	/**
 		To generate a new alignment from a given alignment (with the Expected Normalized Frequency)
-		@param inputAlign the given alignment for which we can derive the expected normalized requency
+		@param inputAlign the input alignment for which we can derive the expected normalized requency (CONSTANT)
 		@param prop (OUT) the probability of the new alignment given the observed frequency of patterns in the input alignment (inputAlign).
+		THEN THIS ALIGNMENT IS UPDATED!
 		prop is computed as follows:
 		- We have pattern 1 ... k in the inputAlign with observed freq. d_1 ... d_k (d_1+..+d_k = ell)
 		==> The observed (relative) frequencies are p_1 ... p_k, p_i = d_i/ell
@@ -94,6 +97,12 @@ public:
 	*/
 	void readLogLL(char *filename);
 
+	/**
+		Compute the multinomial probabilities for a vector of object alignments according to the parameters determined by THIS alignment
+		@param objectAligns vector containing the object alignments
+		@param probs (OUT) returned vector containing the probabilities (double)
+	*/
+	//void multinomialProb (AlignmentVector objectAligns, DoubleVector &probs);
 private:
 	/*
 		Log likelihood of the patterns.

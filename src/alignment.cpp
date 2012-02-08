@@ -1245,3 +1245,27 @@ void Alignment::printSiteGaps(const char *filename) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}	
 }
+
+//added by MA
+void Alignment::multinomialProb(Alignment refAlign, double &prob)
+{
+	cout << "Computing the probability of this alignment given the multinomial distribution determined by a reference alignment ..." << endl;
+	//should we check for compatibility of sequence's names and sequence's order in THIS alignment and in the objectAlign??
+	//check alignment length
+	int nsite = getNSite();
+	assert(nsite == refAlign.getNSite());
+	double sumFac = 0;
+	double sumProb = 0;
+	double fac = logFac(nsite);
+	int index;
+	for ( iterator it = begin(); it != end() ; it++)
+	{
+		PatternIntMap::iterator pat_it = refAlign.pattern_index.find((*it));
+		if ( pat_it == refAlign.pattern_index.end() ) //not found ==> error
+			outError("Pattern in the current alignment is not found in the reference alignment!");
+		sumFac += logFac((*it).frequency);
+		index = pat_it->second;
+		sumProb += (double)(*it).frequency*log((double)refAlign.at(index).frequency/(double)nsite);
+	}
+	prob = fac - sumFac + sumProb;
+}

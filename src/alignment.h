@@ -363,6 +363,18 @@ public:
 	*/
 	double frac_const_sites;
 
+	/** Added by MA
+		Compute the probability of the this alignment according to the multinomial distribution with parameters determined by the reference alignment
+		@param refAlign the reference alignment
+		@param prob (OUT) the returned probabilty
+		
+		The probability is computed as follows:
+		- From the reference alignment, we count the relative pattern frequencies p_1 ... p_k (sum = 1)
+		- From THIS alignment, we have frequencies d_1 ... d_k (sum = len = nsite)
+		- Prob(THIS | refAlign) = nsite!/(d_1! * ... * d_k!) product(p_i^d_i)
+	*/
+	void multinomialProb(Alignment refAlign, double &prob);
+
 
 protected:
 

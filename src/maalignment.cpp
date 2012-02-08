@@ -215,3 +215,41 @@ void MaAlignment::generateExpectedAlignment(MaAlignment *aln, double &prob)
 	cout << "Maximum unconstraint (log) likelihood of the input alignment: " << probMax << endl;
 // 	cout << "Maximum unconstraint likelihood: " << exp(probMax) << endl;
 }
+
+/*void MaAlignment::multinomialProb(Alignment objectAlign, double &prob)
+{
+	cout << "Computing the multinomial probability of an object alignment given a reference alignment ..." << endl;
+	//should we check for compatibility of sequence's names and sequence's order in THIS alignment and in the objectAlign??
+	//check alignment length
+	int nsite = getNSite();
+	assert(nsite == objectAlign.getNSite());
+	double sumFac = 0;
+	double sumProb = 0;
+	double fac = logFac(nsite);
+	int index;
+	for ( Alignment::iterator objectIt = objectAlign.begin(); objectIt != objectAlign.end() ; objectIt++)
+	{
+		PatternIntMap::iterator pat_it = pattern_index.find((*objectIt));
+		if ( pat_it == pattern_index.end() ) //not found ==> error
+			outError("Pattern in the object alignment is not found in the reference alignment!");
+		sumFac += logFac((*objectIt).frequency);
+		index = pat_it->second;
+		sumProb += (double)(*objectIt).frequency*log((double)at(index).frequency/(double)nsite);
+	}
+	prob = fac - sumFac + sumProb;
+}*/
+
+/*void MaAlignment::multinomialProb(AlignmentVector objectAligns, DoubleVector &probs)
+{
+	int num = objectAligns.size();
+	double curProb;
+	if (num > 0)
+	{
+		probs.resize(num,0);
+		for ( int i = 0; i < num; i++ )
+		{
+			(*this).multinomialProb(objectAligns[i], curProb);
+			probs[i] = curProb;
+		}
+	}
+}*/

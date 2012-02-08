@@ -1453,6 +1453,30 @@ void guidedBootstrap(Params &params)
 	cout << "Log of the probability of the new alignment is printed to: " << outProb_name << endl;
 }
 
+/**MINH ANH: to compute the probability of an alignment given the multinomial distribution of patterns frequencies derived from a reference alignment*/
+void computeMulProb(Params &params)
+{
+	Alignment refAlign(params.second_align, params.sequence_type, params.intype);
+	Alignment inputAlign(params.aln_file, params.sequence_type, params.intype);
+	double prob;
+	inputAlign.multinomialProb(refAlign,prob);
+	//Printing
+	string outProb_name = params.out_prefix;
+	outProb_name += ".mprob";
+	try {
+		ofstream outProb;
+		outProb.exceptions(ios::failbit | ios::badbit);
+		outProb.open(outProb_name.c_str());
+		outProb.precision(10);
+		outProb << prob << endl;
+		outProb.close();
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, outProb_name);
+	}
+	cout << "Probability of alignment " << params.aln_file << " given alignment " << params.second_align << " is: " << prob << endl;
+	cout << "The probability is printed to: " << outProb_name << endl;
+}
+
 /********************************************************
 	main function
 ********************************************************/
@@ -1538,9 +1562,13 @@ int main(int argc, char *argv[])
 	} else if (params.branch_cluster > 0) {
 		calcTreeCluster(params);
 	} else if (params.aln_file || params.partition_file) {
-		if (params.siteLL_file)
-			guidedBootstrap(params);
-		else
+		if (params.siteLL_file || params.second_align)
+		{
+			if (params.siteLL_file)
+				guidedBootstrap(params);
+			if (params.second_align)
+				computeMulProb(params);
+		} else
 			runPhyloAnalysis(params);
 	} else if (params.ngs_file || params.ngs_mapped_reads) {
 		runNGSAnalysis(params);
