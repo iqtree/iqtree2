@@ -165,28 +165,14 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 	dad_nei->link_neighbors[part] = (PhyloNeighbor*)dad_part->findNeighbor(node_part);
 }
 
-void PhyloSuperTree::mapTrees() {
-	assert(root);
+void PhyloSuperTree::printMapInfo() {
+	NodeVector nodes1, nodes2;
+	getBranches(nodes1, nodes2);
 	int part = 0;
-	if (verbose_mode >= VB_DEBUG) drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 	for (iterator it = begin(); it != end(); it++, part++) {
-		string taxa_set = ((SuperAlignment*)aln)->getPattern(part);
-		(*it)->copyTree(this, taxa_set);
-		if (verbose_mode >= VB_DEBUG) (*it)->drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
-		(*it)->initializeAllPartialLh();
-		NodeVector my_taxa, part_taxa;
-		(*it)->getOrderedTaxa(my_taxa);
-		part_taxa.resize(leafNum, NULL);
-		int i;
-		for (i = 0; i < leafNum; i++) {
-			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
-			if (id >=0) part_taxa[i] = my_taxa[id];
-		}
-		linkTree(part, part_taxa);
-		if (verbose_mode < VB_DEBUG) continue;
-		NodeVector nodes1, nodes2;
-		getBranches(nodes1, nodes2);
-		for (i = 0; i < nodes1.size(); i++) {
+		cout << "Subtree for partition " << part << endl;
+		(*it)->drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
+		for (int i = 0; i < nodes1.size(); i++) {
 			PhyloNeighbor *nei1 = ((SuperNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part];
 			PhyloNeighbor *nei2 = ((SuperNeighbor*)nodes2[i]->findNeighbor(nodes1[i]))->link_neighbors[part];
 			cout << nodes1[i]->findNeighbor(nodes2[i])->id << ":";
@@ -210,6 +196,29 @@ void PhyloSuperTree::mapTrees() {
 			cout << endl;
 		}
 	}
+}
+
+
+void PhyloSuperTree::mapTrees() {
+	assert(root);
+	int part = 0;
+	if (verbose_mode >= VB_DEBUG) 
+		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
+	for (iterator it = begin(); it != end(); it++, part++) {
+		string taxa_set = ((SuperAlignment*)aln)->getPattern(part);
+		(*it)->copyTree(this, taxa_set);
+		(*it)->initializeAllPartialLh();
+		NodeVector my_taxa, part_taxa;
+		(*it)->getOrderedTaxa(my_taxa);
+		part_taxa.resize(leafNum, NULL);
+		int i;
+		for (i = 0; i < leafNum; i++) {
+			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
+			if (id >=0) part_taxa[i] = my_taxa[id];
+		}
+		linkTree(part, part_taxa);
+	}
+	if (verbose_mode >= VB_DEBUG) printMapInfo();
 }
 
 double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
@@ -393,7 +402,8 @@ double PhyloSuperTree::doNNI(NNIMove move) {
 	SuperNeighbor *node1_nei = (SuperNeighbor*)*move.node1Nei_it;
 	SuperNeighbor *node2_nei = (SuperNeighbor*)*move.node2Nei_it;
 	int part = 0;
-	for (iterator it = begin(); it != end(); it++, part++) {
+	iterator it;
+	for (it = begin(), part = 0; it != end(); it++, part++) {
 		bool is_nni = true;
 		FOR_NEIGHBOR_DECLARE(move.node1, NULL, nit) {
 			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
@@ -419,8 +429,31 @@ double PhyloSuperTree::doNNI(NNIMove move) {
 			nei1_part->length = nei2_part->length = part_info[part].nni2_brlen[brid];
 
 		(*it)->doNNI(part_move);
+
 	} 
-	return PhyloTree::doNNI(move);
+	PhyloTree::doNNI(move);
+
+	linkTrees();
+
+	return 0;
+}
+
+void PhyloSuperTree::linkTrees() {
+	int part = 0;
+	iterator it;
+	for (it = begin(), part = 0; it != end(); it++, part++) {
+
+		(*it)->initializeTree();
+		NodeVector my_taxa, part_taxa;
+		(*it)->getOrderedTaxa(my_taxa);
+		part_taxa.resize(leafNum, NULL);
+		int i;
+		for (i = 0; i < leafNum; i++) {
+			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
+			if (id >=0) part_taxa[i] = my_taxa[id];
+		}
+		linkTree(part, part_taxa);
+	}
 }
 
 void PhyloSuperTree::restoreAllBranLen(PhyloNode *node, PhyloNode *dad) {
@@ -462,9 +495,9 @@ void PhyloSuperTree::computeBranchLengths() {
 			if (!nei1) continue;
 			neighbors1[i]->length += (nei1->length) * (*it)->aln->getNSite() / brfreq[nei1->id];
 			occurence[i] += (*it)->aln->getNSite();
-			cout << neighbors1[i]->id << "  " << nodes1[i]->id << nodes1[i]->name <<"," << nodes2[i]->id << nodes2[i]->name <<": " << (nei1->length) / brfreq[nei1->id] << endl;
+			//cout << neighbors1[i]->id << "  " << nodes1[i]->id << nodes1[i]->name <<"," << nodes2[i]->id << nodes2[i]->name <<": " << (nei1->length) / brfreq[nei1->id] << endl;
 		}
-		cout << endl;
+		//cout << endl;
 	}
 	for (i = 0; i < nodes1.size(); i++) {
 		if (occurence[i])

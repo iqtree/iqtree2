@@ -1270,6 +1270,25 @@ void calcDistribution(Params &params) {
 	}
 }
 
+void printRFDist(ostream &out, int *rfdist, int n, int m, int rf_dist_mode) {
+	int i, j;
+	out << n << endl;
+	if (rf_dist_mode == RF_ADJACENT_PAIR) {
+		out << "XXX        ";
+		for (i = 0; i < n; i++) 
+			out << " " << rfdist[i];
+		out << endl;
+	} else {
+		// all pairs
+		for (i = 0; i < n; i++)  {
+			out << "Tree" << i << "      ";
+			for (j = 0; j < m; j++) 
+				out << " " << rfdist[i*m+j];
+			out << endl;
+		}
+	} 
+}
+
 void computeRFDist(Params &params) {
 
 	if (!params.user_file) outError("User tree file not provided");
@@ -1277,36 +1296,34 @@ void computeRFDist(Params &params) {
 	string filename = params.out_prefix;
 	filename += ".rfdist";
 	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin);
-	int i, j, n = trees.size();
-	int rfsize = n*n;
-	int *rfdist = new int [rfsize];
-	memset(rfdist, 0, rfsize * sizeof(int));
-	trees.computeRFDist(rfdist, params.rf_dist_mode);
+	int n = trees.size(), m = trees.size();
+	int *rfdist;
+	if (params.rf_dist_mode == RF_TWO_TREE_SETS) {
+		MTreeSet treeset2(params.second_tree, params.is_rooted, params.tree_burnin);
+		m = treeset2.size();
+		rfdist = new int [n*m];
+		memset(rfdist, 0, n*m* sizeof(int));
+		trees.computeRFDist(rfdist, &treeset2);
+	} else {
+		rfdist = new int [n*n];
+		memset(rfdist, 0, n*n* sizeof(int));
+		trees.computeRFDist(rfdist, params.rf_dist_mode);
+	}
+
+	if (verbose_mode >= VB_MED) printRFDist(cout, rfdist, n, m, params.rf_dist_mode);
 
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(filename.c_str());
-		out << n << endl;
-		if (params.rf_dist_mode == RF_ADJACENT_PAIR) {
-			out << "XXX        ";
-			for (i = 0; i < n; i++) 
-				out << " " << rfdist[i];
-			out << endl;
-		} else {
-			// all pairs
-			for (i = 0; i < n; i++)  {
-				out << "Tree" << i << "      ";
-				for (j = 0; j < n; j++) 
-					out << " " << rfdist[i*n+j];
-				out << endl;
-			}
-		} 
+		printRFDist(out, rfdist, n, m, params.rf_dist_mode);
 		out.close();
 		cout << "Robinson-Foulds distances printed to " << filename << endl;
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
+
+
 	delete rfdist;
 }
 

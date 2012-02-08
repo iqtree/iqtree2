@@ -123,6 +123,13 @@ public:
 	*/
 	void computeRFDist(int *rfdist, int mode = RF_ALL_PAIR);
 
+	/**
+		compute the Robinson-Foulds distance between trees
+		@param rfdist (OUT) RF distance
+		@param mode 
+	*/
+	void computeRFDist(int *rfdist, MTreeSet *treeset2);
+
 	int sumTreeWeights();
 
 	/**

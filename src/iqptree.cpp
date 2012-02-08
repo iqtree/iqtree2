@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "iqptree.h"
+#include "phylosupertree.h"
 
 bool testNNI = false; // BQM
 const double INF_NNI_CUTOFF = -1000000.0;
@@ -598,7 +599,7 @@ double IQPTree::doIQPNNI(Params &params) {
     string tree_file_name = params.out_prefix;
     tree_file_name += ".treefile";
     bestScore = curScore;
-    //printResultTree(params);
+    printResultTree(params);
     string treels_name = params.out_prefix;
     treels_name += ".treels";
     printIntermediateTree(treels_name.c_str(), WT_SORT_TAXA | WT_NEWLINE | WT_BR_LEN, params.write_intermediate_trees);
@@ -727,7 +728,7 @@ double IQPTree::doIQPNNI(Params &params) {
             best_tree_string.seekp(0, ios::beg);
             printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
             //cout << best_tree_string.str() << endl;
-            //printResultTree(params);
+            printResultTree(params);
             stop_rule.addImprovedIteration(cur_iteration);
 
             // Variable Neighborhood search idea, reset k_delete if tree is better
@@ -774,7 +775,11 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count) {
     double curLamb = startLambda;
 	if (skipped) *skipped = 0;
     do {
-        //cout << "Doing NNI round " << nniIteration << endl;
+		if (verbose_mode >= VB_MAX) {
+        	cout << "Doing NNI round " << nniIteration << endl;
+        	drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
+        	if (isSuperTree()) ((PhyloSuperTree*)this)->printMapInfo();
+        }
         nbNNI = 0;
         // Tree get improved, lamda reset
         if (resetLamda) {

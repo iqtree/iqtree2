@@ -101,6 +101,8 @@ public:
 
 	void linkTree(int part, NodeVector &part_taxa, SuperNode *node = NULL, SuperNode *dad = NULL);
 
+	void linkTrees();
+
     /**
             compute the tree likelihood
             @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
@@ -160,6 +162,8 @@ public:
 	*/
 	void computeBranchLengths();
 
+	void printMapInfo();
+	
 	void initPartitionInfo();
 
 	/**
