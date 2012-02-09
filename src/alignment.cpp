@@ -864,6 +864,100 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
 	assert(size() <= aln->size());
 }
 
+void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
+	int i;
+	for (i = 0; i < aln->getNSeq(); i++) {
+		seq_names.push_back(aln->getSeqName(i));
+	}
+	num_states = aln->num_states;
+	site_pattern.resize(site_id.size(), -1);
+	clear();
+	pattern_index.clear();
+	VerboseMode save_mode = verbose_mode; 
+	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+	for (i = 0; i != site_id.size(); i++) {
+		if (site_id[i] < 0 || site_id[i] >= aln->getNSite())
+			throw "Site ID out of bound";
+		Pattern pat = aln->getPattern(site_id[i]);
+		addPattern(pat, i);
+	}
+	verbose_mode = save_mode;
+	countConstSite();
+	cout << getNSite() << " positions were extracted" << endl;
+}
+
+void convert_range(const char *str, int &lower, int &upper, int &step_size, char* &endptr) throw (string) {
+	//char *endptr;
+	char *beginptr = (char*) str;
+
+	// parse the lower bound of the range
+	int d = strtol(str, &endptr, 10);
+	if ((d == 0 && ((long) endptr - (const long) str) == 0) || abs(d) == HUGE_VALL) {
+		string err = "Expecting integer, but found \"";
+		err += str;
+		err += "\" instead";
+		throw err;
+	}
+	lower = d;
+	//int d_save = d;
+	upper = d;
+	step_size = 1;
+	if (*endptr != '-') return;
+
+	// parse the upper bound of the range
+	str = endptr+1;
+	d = strtol(str, &endptr, 10);
+	if ((d == 0 && ((long) endptr - (const long) str) == 0) || abs(d) == HUGE_VALL) {
+		string err = "Expecting integer, but found \"";
+		err += str;
+		err += "\" instead";
+		throw err;
+	}
+
+	//lower = d_save;
+	upper = d;
+	if (*endptr != '\\') return;
+
+	// parse the step size of the range
+	str = endptr+1;
+	d = strtol(str, &endptr, 10);
+	if ((d == 0 && ((long) endptr - (const long) str) == 0) || abs(d) == HUGE_VALL) {
+		string err = "Expecting integer, but found \"";
+		err += str;
+		err += "\" instead";
+		throw err;
+	}
+
+	step_size = d;
+	str = beginptr;
+
+}
+
+void Alignment::extractSites(Alignment *aln, const char* spec) {
+	int i, j;
+	char *str = (char*)spec;
+	IntVector site_id;
+	try {
+		for (; *str != 0; ) {
+			int lower, upper, step;
+			convert_range(str, lower, upper, step, str);
+			lower--; upper--;
+			if (upper >= aln->getNSite()) throw "Too large site ID";
+			if (lower < 0) throw "Negative site ID";
+			if (lower > upper) throw "Wrong range";
+			if (step < 1) throw "Wrong step size";
+			for (i = lower; i <= upper; i+=step)
+				site_id.push_back(i);
+			if (*str == ',') str++; else break;
+		}
+	} catch (const char* err) {
+		outError(err);
+	} catch (string err) {
+		outError(err);
+	}
+	extractSites(aln, site_id);
+}
+
 void Alignment::createBootstrapAlignment(Alignment *aln) {
 	int site, nsite = aln->getNSite();
 	seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());

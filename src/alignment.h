@@ -253,6 +253,20 @@ public:
 	*/
 	void copyAlignment(Alignment *aln);
 
+	/**
+		extract a sub-set of sites
+		@param aln original input alignment
+		@param ptn_id ID of sites to extract from (starting from 0)
+	*/
+	void extractSites(Alignment *aln, IntVector &site_id);
+
+	/**
+		extract a sub-set of sites
+		@param aln original input alignment
+		@param spec specification of positions, e.g. "1-100,101-200\2"
+	*/
+	void extractSites(Alignment *aln, const char* spec);
+
 /****************************************************************************
 	Distance functions
 ****************************************************************************/

@@ -52,6 +52,12 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQPTree() {
 				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
 			part_info.push_back(info);
 			Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
+			if (!info.position_spec.empty()) {
+				Alignment *new_aln = new Alignment();
+				new_aln->extractSites(part_aln, info.position_spec.c_str());
+				delete part_aln;
+				part_aln = new_aln;
+			}
 			PhyloTree *tree = new PhyloTree(part_aln);
 			push_back(tree);
 			params = origin_params;
@@ -100,6 +106,42 @@ double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist) {
 void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei) {
 	SuperNode *node = (SuperNode*)dad_nei->node;
 	SuperNode *dad = (SuperNode*)nei->node;
+	nei->link_neighbors[part] = NULL;
+	dad_nei->link_neighbors[part] = NULL;
+	vector<PhyloNeighbor*> part_vec;
+	vector<PhyloNeighbor*> child_part_vec;
+
+	FOR_NEIGHBOR_DECLARE(node, dad, it) {
+		if (((SuperNeighbor*)*it)->link_neighbors[part]) {
+			part_vec.push_back(((SuperNeighbor*)*it)->link_neighbors[part]);
+			child_part_vec.push_back(((SuperNeighbor*)(*it)->node->findNeighbor(node))->link_neighbors[part]);
+			assert(child_part_vec.back()->node == child_part_vec.front()->node);
+		}
+	}
+	if (part_vec.empty()) return;
+	if (part_vec.size() == 1) {
+		nei->link_neighbors[part] = child_part_vec[0];
+		dad_nei->link_neighbors[part] = part_vec[0];
+		return;
+	}
+	if (part_vec[0] == child_part_vec[1]) {
+		// ping-pong, out of sub-tree
+		assert(part_vec[1] == child_part_vec[0]);
+		return;
+	}
+	PhyloNode *node_part = (PhyloNode*) child_part_vec[0]->node;
+	PhyloNode *dad_part = NULL;
+	FOR_NEIGHBOR(node_part, NULL, it) {
+		bool appear = false;
+		for (vector<PhyloNeighbor*>::iterator it2 = part_vec.begin(); it2 != part_vec.end(); it2++)
+			if ((*it2) == (*it)) { appear = true; break; }
+		if (!appear) {
+			assert(!dad_part);
+			dad_part = (PhyloNode*)(*it)->node;
+		}
+	}
+	nei->link_neighbors[part] = (PhyloNeighbor*)node_part->findNeighbor(dad_part);
+	dad_nei->link_neighbors[part] = (PhyloNeighbor*)dad_part->findNeighbor(node_part);
 }
 
 void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, SuperNode *dad) {
@@ -408,6 +450,8 @@ double PhyloSuperTree::doNNI(NNIMove move) {
 	SuperNeighbor *node2_nei = (SuperNeighbor*)*move.node2Nei_it;
 	int part = 0;
 	iterator it;
+	PhyloTree::doNNI(move);
+
 	for (it = begin(), part = 0; it != end(); it++, part++) {
 		bool is_nni = true;
 		FOR_NEIGHBOR_DECLARE(move.node1, NULL, nit) {
@@ -438,7 +482,6 @@ double PhyloSuperTree::doNNI(NNIMove move) {
 		(*it)->doNNI(part_move);
 
 	} 
-	PhyloTree::doNNI(move);
 
 	//linkTrees();
 
