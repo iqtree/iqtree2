@@ -1539,6 +1539,7 @@ double PhyloTree::doNNI(NNIMove move) {
     NeighborVec::iterator node2Nei_it = move.node2Nei_it;
     Neighbor *node1Nei = *(node1Nei_it);
     Neighbor *node2Nei = *(node2Nei_it);
+ 
 /*
     NeighborVec::iterator node1Nei_back_it = node1Nei->node->findNeighborIt(node1);
     NeighborVec::iterator node2Nei_back_it = node2Nei->node->findNeighborIt(node2);
@@ -1592,7 +1593,8 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 
     // TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
     FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
-    break;
+    	break;
+	if (nni_param) node1_it = node1->findNeighborIt(nni_param->node1_nei->node);
     Neighbor *node1_nei = *node1_it;
     double node1_len = node1_nei->length;
     NeighborVec::iterator node1_nei_it = node1_nei->node->findNeighborIt(node1);
@@ -1600,8 +1602,18 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 
     // Neighbors of node2 which are not node1
 
-    FOR_NEIGHBOR_IT(node2, node1, node2_it) {
+	vector<NeighborVec::iterator> node2_its;
+    FOR_NEIGHBOR_DECLARE(node2, node1, node2_it) node2_its.push_back(node2_it);
+    assert(node2_its.size() == 2);
+    if (nni_param && nni_param->node2_nei != (*node2_its[0])) {
+    	node2_it = node2_its[0];
+    	node2_its[0] = node2_its[1];
+    	node2_its[1] = node2_it;
+    }
 
+	int cnt;
+    for (cnt = 0; cnt < node2_its.size(); cnt++) {
+		node2_it = node2_its[cnt];
         // do the NNI swap
         Neighbor *node2_nei = *node2_it;
         // TUNG unused variable ?
@@ -1621,7 +1633,16 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 
         // compute the score of the swapped topology
         double score;
-        score = optimizeOneBranch(node1, node2);
+        score = optimizeOneBranch(node1, node2, false);
+        if (nni_param) {
+			if (cnt==0) {
+				nni_param->nni1_score = score;
+				nni_param->nni1_brlen = node12_it->length;
+			} else {
+				nni_param->nni2_score = score;
+				nni_param->nni2_brlen = node12_it->length;
+			}
+		}
 		if (out) printTree(*out, brtype);
         // if better: return
         if (score > cur_score) {
