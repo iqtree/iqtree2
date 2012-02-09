@@ -421,6 +421,8 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
                 delete (*rit);
             }
     }
+	initializeTree(); // BQM: re-index nodes and branches s.t. ping-pong neighbors have the same ID
+
 	if (verbose_mode >= VB_DEBUG)
 		drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 }

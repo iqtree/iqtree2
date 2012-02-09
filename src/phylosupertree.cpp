@@ -97,6 +97,11 @@ double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist) {
     return aln_pair.optimizeDist(initial_dist);
 }
 
+void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei) {
+	SuperNode *node = (SuperNode*)dad_nei->node;
+	SuperNode *dad = (SuperNode*)nei->node;
+}
+
 void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, SuperNode *dad) {
 	if (!node) {
 		if (!root->isLeaf()) 
@@ -408,11 +413,13 @@ double PhyloSuperTree::doNNI(NNIMove move) {
 		FOR_NEIGHBOR_DECLARE(move.node1, NULL, nit) {
 			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
-		if (!is_nni) continue;
 		FOR_NEIGHBOR(move.node2, NULL, nit) {
 			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
-		if (!is_nni) continue;
+		if (!is_nni) {
+			linkBranch(part, nei1, nei2);
+			continue;
+		}
 
 		NNIMove part_move;
 		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
@@ -433,7 +440,7 @@ double PhyloSuperTree::doNNI(NNIMove move) {
 	} 
 	PhyloTree::doNNI(move);
 
-	linkTrees();
+	//linkTrees();
 
 	return 0;
 }
@@ -465,7 +472,6 @@ void PhyloSuperTree::restoreAllBranLen(PhyloNode *node, PhyloNode *dad) {
 
 void PhyloSuperTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 	IQPTree::reinsertLeaves(del_leaves);
-	initializeTree();
 	mapTrees();
 }
 

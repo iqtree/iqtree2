@@ -103,6 +103,8 @@ public:
 
 	void linkTrees();
 
+	void linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei);
+
     /**
             compute the tree likelihood
             @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
