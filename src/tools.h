@@ -851,6 +851,11 @@ struct Params {
     bool print_site_lh;
 
     /**
+            TRUE to print tree log-likelihood
+     */
+    bool print_tree_lh;
+
+    /**
      *  Output log-likelihood
      */
     bool nni_lh;

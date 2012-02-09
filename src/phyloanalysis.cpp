@@ -388,7 +388,7 @@ void reportRate(ofstream &out, Params &params, PhyloTree &tree) {
 	out << endl;
 }
 
-void reportTree(ofstream &out, Params &params, PhyloTree &tree) {
+void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh) {
 
 	int zero_branches = tree.countZeroBranches();
 	if (zero_branches > 0) {
@@ -399,7 +399,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree) {
 	tree.sortTaxa();
 	tree.drawTree(out);
 
-	out << "Log-likehood of the tree: " << fixed << tree.computeLikelihood() << endl
+	out << "Log-likehood of the tree: " << fixed << tree_lh << endl
 		<< "Unconstrained log-likelihood (without tree): " << tree.aln->computeUnconstrainedLogL() << endl 
 		<< "Total tree length: " << tree.treeLength() << endl << endl
 		<< "Tree in newick format:" << endl << endl;
@@ -532,7 +532,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 				out << " (%)" << endl;
 			}
 			out << endl;
-			reportTree(out, params, tree);
+			reportTree(out, params, tree, tree.curScore);
 
 			if (tree.isSuperTree()) {
 				PhyloSuperTree *stree = (PhyloSuperTree*)&tree;
@@ -544,7 +544,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 					else root_name = (*it)->aln->getSeqName(0);
 					(*it)->root = (*it)->findNodeName(root_name);
 					assert((*it)->root);
-					reportTree(out, params, *(*it));
+					reportTree(out, params, *(*it),(*it)->computeLikelihood());
 				}
 			}
 		
@@ -1176,9 +1176,10 @@ void runPhyloAnalysis(Params &params) {
         boottrees_name += ".boottrees";
         string bootaln_name = params.out_prefix;
         bootaln_name += ".bootaln";
+        string bootlh_name = params.out_prefix;
+        bootlh_name += ".bootlh";
         // first empty the boottrees file
         try {
-            // write the tree into .boottrees file
             ofstream tree_out;
             tree_out.exceptions(ios::failbit | ios::badbit);
             tree_out.open(boottrees_name.c_str());
@@ -1189,7 +1190,6 @@ void runPhyloAnalysis(Params &params) {
 
         // empty the bootaln file
         try {
-            // write the tree into .boottrees file
             ofstream tree_out;
             tree_out.exceptions(ios::failbit | ios::badbit);
             tree_out.open(bootaln_name.c_str());
@@ -1205,6 +1205,17 @@ void runPhyloAnalysis(Params &params) {
             Alignment bootstrap_alignment;
             cout << "Creating bootstrap alignment..." << endl;
             bootstrap_alignment.createBootstrapAlignment(alignment);
+			if (params.print_tree_lh) {
+				double prob;
+				bootstrap_alignment.multinomialProb(*alignment, prob);
+				ofstream boot_lh;
+				if (sample == 0) 
+					boot_lh.open(bootlh_name.c_str());
+				else
+					boot_lh.open(bootlh_name.c_str(), ios_base::out | ios_base::app);
+				boot_lh << "0\t" << prob << endl;
+				boot_lh.close();
+			}
             IQPTree boot_tree(&bootstrap_alignment);
             bootstrap_alignment.printPhylip(bootaln_name.c_str(), true);
             runPhyloAnalysis(params, original_model, &bootstrap_alignment, boot_tree);

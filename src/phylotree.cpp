@@ -799,6 +799,41 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     return score;
 }
 
+double PhyloTree::computePatternLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+    assert(model);
+    assert(site_rate);
+    assert(root->isLeaf());
+    double *ptn_scale = NULL;
+    int nptn = aln->getNPattern();
+    if (pattern_lh) {
+    	PhyloNeighbor *node_branch = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
+        double sum_scaling = dad_branch->lh_scale_factor + node_branch->lh_scale_factor;
+        if (sum_scaling < 0.0) {
+        	cout << __func__ << endl;
+        	outError("Some partial likelihoods are scaled. This function does not work for large trees");
+            ptn_scale = new double[nptn];
+            memset(ptn_scale, 0, sizeof (double) * nptn);
+            //clearAllPartialLh();
+            dad_branch->clearForwardPartialLh(dad);
+            node_branch->clearForwardPartialLh(dad_branch->node);
+            computePartialLikelihood(dad_branch, dad, ptn_scale);
+            computePartialLikelihood(node_branch, (PhyloNode*)dad_branch->node, ptn_scale);
+            assert(fabs(sum_scaling - dad_branch->lh_scale_factor-node_branch->lh_scale_factor) < 1e-6);
+        }
+    }
+    double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
+    if (ptn_scale) {
+        double check_score = 0.0;
+        for (int i = 0; i < nptn; i++) {
+            pattern_lh[i] += ptn_scale[i];
+            check_score += pattern_lh[i] * aln->at(i).frequency;
+        }
+        delete [] ptn_scale;
+        //assert(fabs(score - check_score) < 1e-6);
+    }
+    return score;
+}
+
 double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh, double *pattern_rate) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
@@ -1539,8 +1574,10 @@ double PhyloTree::doNNI(NNIMove move) {
     NeighborVec::iterator node2Nei_it = move.node2Nei_it;
     Neighbor *node1Nei = *(node1Nei_it);
     Neighbor *node2Nei = *(node2Nei_it);
- 
-/*
+
+/*	Node *node1_node = node1Nei->node;
+	Node *node2_node = node2Nei->node;
+
     NeighborVec::iterator node1Nei_back_it = node1Nei->node->findNeighborIt(node1);
     NeighborVec::iterator node2Nei_back_it = node2Nei->node->findNeighborIt(node2);
     Neighbor *node1Nei_back = *(node1Nei_back_it);
@@ -1560,6 +1597,13 @@ double PhyloTree::doNNI(NNIMove move) {
     node1Nei->node->updateNeighbor(node1, node2);
     //node1Nei->node->updateNeighbor(node1Nei_back_it, node2Nei_back);
 
+	// BQM check branch ID
+/*
+	if (node1->findNeighbor(node2_node)->id != node2_node->findNeighbor(node1)->id)
+		outError("Wrong ID");
+	if (node2->findNeighbor(node1_node)->id != node1_node->findNeighbor(node2)->id)
+		outError("Wrong ID");*/
+
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
@@ -1578,7 +1622,7 @@ double PhyloTree::doNNI(NNIMove move) {
 }
 
 double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
-	ostream *out, int brtype, SwapNNIParam *nni_param) {
+	ostream *out, int brtype, SwapNNIParam *nni_param, ostream *out_lh) {
     assert(node1->degree() == 3 && node2->degree() == 3);
 
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
@@ -1644,6 +1688,16 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 			}
 		}
 		if (out) printTree(*out, brtype);
+		if (out_lh) {
+			double *pattern_lh = new double[aln->getNPattern()];
+			(*out_lh) << computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
+			double prob;
+			DoubleVector pattern_lh_vec;
+			pattern_lh_vec.insert(pattern_lh_vec.end(), pattern_lh, pattern_lh+aln->getNPattern());
+			aln->multinomialProb(pattern_lh_vec, prob);
+			(*out_lh) << "\t" << prob << endl;
+			delete [] pattern_lh;
+		}
         // if better: return
         if (score > cur_score) {
             node2->clearReversePartialLh(node1);
@@ -1672,15 +1726,15 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
     return cur_score;
 }
 
-double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad, ostream *out, int brtype) {
+double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad, ostream *out, int brtype, ostream *out_lh) {
     if (!node) node = (PhyloNode*) root;
     if (!node->isLeaf() && dad && !dad->isLeaf()) {
-        double score = swapNNIBranch(cur_score, node, dad, out, brtype);
+        double score = swapNNIBranch(cur_score, node, dad, out, brtype, NULL, out_lh);
         if (score > cur_score) return score;
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype);
+        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype, out_lh);
         if (score > cur_score) return score;
     }
     return cur_score;

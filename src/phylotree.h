@@ -358,6 +358,16 @@ public:
     virtual double computeLikelihood(double *pattern_lh = NULL);
 
     /**
+            compute the tree likelihood on a branch and pattern likelihoods
+            @param dad_branch the branch leading to the subtree
+            @param dad its dad, used to direct the tranversal
+            @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
+                            assuming pattern_lh has the size of the number of patterns
+            @return tree likelihood
+     */
+	double computePatternLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+
+    /**
             Roll back the tree saved with only Taxon IDs and branch lengths.
             For this function to work, one must printTree before with WT_TAXON_ID + WT_BR_LEN
             @param best_tree_string input stream to read from
@@ -521,7 +531,8 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL, ostream *out = NULL, int brtype = 0);
+    double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL, 
+    	ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL);
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
@@ -532,8 +543,7 @@ public:
             @return the likelihood of the tree
      */
     double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
-    	ostream *out = NULL, int brtype = 0,
-    	SwapNNIParam *nni_param = NULL);
+    	ostream *out = NULL, int brtype = 0, SwapNNIParam *nni_param = NULL, ostream *out_lh = NULL);
 
     /**
             Do an NNI

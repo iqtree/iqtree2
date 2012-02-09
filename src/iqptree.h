@@ -99,7 +99,7 @@ public:
 	/**
 		print intermediate tree
 	*/
-	void printIntermediateTree(const char *ofile, int brtype, int wtype);
+	void printIntermediateTree(const char *ofile, int brtype, Params &params);
 
     void setRootNode(char *my_root);
 

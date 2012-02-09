@@ -590,6 +590,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.aLRT_replicates = 1000;
 	params.SSE = true;
 	params.print_site_lh = false;			
+	params.print_tree_lh = false;			
 	params.nni_lh = false;
 	params.lambda = 1;
 	params.speed_conf = 0.95;
@@ -1180,6 +1181,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "aLRT replicates must be at least 1000";
 			} else if (strcmp(argv[cnt],"-wsl") == 0) {
 				params.print_site_lh = true;
+			} else if (strcmp(argv[cnt],"-wtl") == 0) {
+				params.print_tree_lh = true;
 			} else if (strcmp(argv[cnt],"-ns") == 0) {
 				cnt++;
 				if (cnt >= argc)

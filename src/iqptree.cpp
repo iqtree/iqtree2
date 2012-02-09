@@ -602,7 +602,7 @@ double IQPTree::doIQPNNI(Params &params) {
     printResultTree(params);
     string treels_name = params.out_prefix;
     treels_name += ".treels";
-    printIntermediateTree(treels_name.c_str(), WT_SORT_TAXA | WT_NEWLINE | WT_BR_LEN, params.write_intermediate_trees);
+    printIntermediateTree(treels_name.c_str(), WT_SORT_TAXA | WT_NEWLINE | WT_BR_LEN, params);
     //printTree(treels_name.c_str(), WT_NEWLINE | WT_BR_LEN);
 
     // keep the best tree into a string
@@ -719,7 +719,7 @@ double IQPTree::doIQPNNI(Params &params) {
 		}
 */
 
-        printIntermediateTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN, params.write_intermediate_trees);
+        printIntermediateTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN, params);
         //printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_BR_LEN);
 
         if (curScore > bestScore + TOL_LIKELIHOOD) {
@@ -1395,12 +1395,36 @@ void IQPTree::printResultTree(Params &params, ostream &out) {
     printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 }
 
-void IQPTree::printIntermediateTree(const char *ofile, int brtype, int wtype) {
-	if (!wtype) return;
+void IQPTree::printIntermediateTree(const char *ofile, int brtype, Params &params) {
+	if (!params.write_intermediate_trees) return;
 	printTree(ofile, brtype);
-	if (wtype == 1) return;
+	ofstream out_lh;
+	string out_lh_file = params.out_prefix;
+	out_lh_file += ".treelh";
+	if (params.print_tree_lh) {
+		if (brtype & WT_APPEND) 
+			out_lh.open(out_lh_file.c_str(), ios_base::out | ios_base::app);
+		else
+			out_lh.open(out_lh_file.c_str());
+		double *pattern_lh = new double[aln->getNPattern()];
+		out_lh << computeLikelihood(pattern_lh);
+		double prob;
+		DoubleVector pattern_lh_vec;
+		pattern_lh_vec.insert(pattern_lh_vec.end(), pattern_lh, pattern_lh+aln->getNPattern());
+		aln->multinomialProb(pattern_lh_vec, prob);
+		out_lh << "\t" << prob << endl;
+		delete [] pattern_lh;
+	}
+	if (params.write_intermediate_trees == 1) {
+		if (params.print_tree_lh) out_lh.close();
+		return;
+	}
 	ofstream out(ofile, ios_base::out | ios_base::app);
-	PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN);
+	if (params.print_tree_lh)
+		PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN, &out_lh);
+	else
+		PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN);
 	out.close();
+	if (params.print_tree_lh) out_lh.close();
 	// now print 1-NNI-away trees
 }
