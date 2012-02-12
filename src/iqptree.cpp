@@ -1117,7 +1117,7 @@ void IQPTree::genNNIMovesSort() {
 		PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
 		PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 		double stored_len = node12_it->length;
-		double bestScore = optimizeOneBranch(node1, node2, false);
+		optimizeOneBranch(node1, node2, false);
 		string key("");
 		if (node1->id < node2->id) {
 			key += convertIntToString(node1->id) + "->" + convertIntToString(node2->id);

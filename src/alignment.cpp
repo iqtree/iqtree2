@@ -934,7 +934,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
 }
 
 void Alignment::extractSites(Alignment *aln, const char* spec) {
-	int i, j;
+	int i;
 	char *str = (char*)spec;
 	IntVector site_id;
 	try {

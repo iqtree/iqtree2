@@ -175,41 +175,11 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 		return;
 	}
 
-	vector<PhyloNeighbor*> part_vec;
-	vector<PhyloNeighbor*> child_part_vec;
 	FOR_NEIGHBOR_DECLARE(node, dad, it) {
 		linkTree(part, part_taxa, (SuperNode*) (*it)->node, (SuperNode*) node);
-		if (((SuperNeighbor*)*it)->link_neighbors[part]) {
-			part_vec.push_back(((SuperNeighbor*)*it)->link_neighbors[part]);
-			child_part_vec.push_back(((SuperNeighbor*)(*it)->node->findNeighbor(node))->link_neighbors[part]);
-			assert(child_part_vec.back()->node == child_part_vec.front()->node);
-		}
 	}
-	if (!dad || part_vec.empty()) return;
-
-	if (part_vec.size() == 1) {
-		nei->link_neighbors[part] = child_part_vec[0];
-		dad_nei->link_neighbors[part] = part_vec[0];
-		return;
-	}
-	if (part_vec[0] == child_part_vec[1]) {
-		// ping-pong, out of sub-tree
-		assert(part_vec[1] == child_part_vec[0]);
-		return;
-	}
-	PhyloNode *node_part = (PhyloNode*) child_part_vec[0]->node;
-	PhyloNode *dad_part = NULL;
-	FOR_NEIGHBOR(node_part, NULL, it) {
-		bool appear = false;
-		for (vector<PhyloNeighbor*>::iterator it2 = part_vec.begin(); it2 != part_vec.end(); it2++)
-			if ((*it2) == (*it)) { appear = true; break; }
-		if (!appear) {
-			assert(!dad_part);
-			dad_part = (PhyloNode*)(*it)->node;
-		}
-	}
-	nei->link_neighbors[part] = (PhyloNeighbor*)node_part->findNeighbor(dad_part);
-	dad_nei->link_neighbors[part] = (PhyloNeighbor*)dad_part->findNeighbor(node_part);
+	if (!dad) return;
+	linkBranch(part, nei, dad_nei);
 }
 
 void PhyloSuperTree::printMapInfo() {
@@ -461,7 +431,8 @@ double PhyloSuperTree::doNNI(NNIMove move) {
 			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
 		if (!is_nni) {
-			linkBranch(part, nei1, nei2);
+			// relink the branch if it does not correspond to NNI for partition
+			linkBranch(part, nei1, nei2); 
 			continue;
 		}
 
