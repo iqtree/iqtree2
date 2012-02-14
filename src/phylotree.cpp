@@ -2265,6 +2265,7 @@ void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
     memset(freq, 0, nptn * sizeof (int));
     for (i = 0; i < nsite; i++) {
         int site_id = floor(((double) (rand()) / RAND_MAX) * nsite);
+        if (site_id >= nsite) site_id--;
         int ptn_id = aln->getPatternID(site_id);
         freq[ptn_id]++;
     }

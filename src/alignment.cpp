@@ -968,7 +968,9 @@ void Alignment::createBootstrapAlignment(Alignment *aln) {
 	VerboseMode save_mode = verbose_mode; 
 	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
 	for (site = 0; site < nsite; site++) {
-		int ptn_id = aln->getPatternID(floor((((double)rand())/RAND_MAX) * nsite));
+		int site_id = floor((((double)rand())/RAND_MAX) * nsite);
+		if (site_id >= nsite) site_id = nsite-1;
+		int ptn_id = aln->getPatternID(site_id);
  		Pattern pat = aln->at(ptn_id);
 		addPattern(pat, site);
 	}
