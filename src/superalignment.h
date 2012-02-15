@@ -43,8 +43,22 @@ class SuperAlignment : public Alignment
 {
 public:
     SuperAlignment(PhyloSuperTree *super_tree);
+    SuperAlignment();
 
     ~SuperAlignment();
+
+	virtual bool isSuperAlignment() { return true; }
+
+	/**
+		Quit if some sequences contain only gaps or missing data
+	*/
+	virtual void checkGappySeq();
+
+	/**
+		create a non-parametric bootstrap alignment from an input alignment
+		@param aln input alignment
+	*/
+	virtual void createBootstrapAlignment(Alignment *aln);
 
 	/**
 		compute the observed distance (number of different pairs of positions per site) 

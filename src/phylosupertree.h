@@ -22,6 +22,7 @@
 
 #include "iqptree.h"
 #include "supernode.h"
+#include "superalignment.h"
 
 
 struct PartitionInfo {
@@ -56,6 +57,11 @@ public:
 		constructor
 	*/
     PhyloSuperTree();
+
+	/** 
+		constructor
+	*/
+    PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
 	/** 
 		constructor

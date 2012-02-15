@@ -26,6 +26,16 @@ PhyloSuperTree::PhyloSuperTree()
 {
 }
 
+
+PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree) :  IQPTree(alignment) {
+	part_info = super_tree->part_info;
+	for (vector<Alignment*>::iterator it = alignment->partitions.begin(); it != alignment->partitions.end(); it++) {
+		PhyloTree *tree = new PhyloTree((*it));
+		push_back(tree);
+	}
+	aln = alignment;
+}
+
 PhyloSuperTree::PhyloSuperTree(Params &params) :  IQPTree() {
 	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
 	try {

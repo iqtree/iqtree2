@@ -21,6 +21,9 @@
 #include "superalignment.h"
 #include "phylosupertree.h"
 
+SuperAlignment::SuperAlignment()
+ : Alignment() {}
+
 SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
  : Alignment()
 {
@@ -57,6 +60,52 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 	}
 	verbose_mode = save_mode;
 	countConstSite();
+}
+
+void SuperAlignment::checkGappySeq() {
+	int nseq = getNSeq(), part = 0, i;
+	IntVector gap_only_seq;
+	gap_only_seq.resize(nseq, 1);
+	//cout << "Checking gaps..." << endl;
+	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++, part++) {
+		IntVector keep_seqs;
+		for (i = 0; i < nseq; i++)
+			if (taxa_index[i][part] >= 0)
+			if (!(*it)->isGapOnlySeq(taxa_index[i][part])) {
+				keep_seqs.push_back(taxa_index[i][part]);
+				gap_only_seq[i] = 0;
+			}
+		if (keep_seqs.size() < (*it)->getNSeq()) {
+			cout << "Discard " << (*it)->getNSeq() - keep_seqs.size() 
+				 << " sequences from partition number " << part+1 << endl;
+			Alignment *aln = new Alignment;
+			aln->extractSubAlignment((*it), keep_seqs, 0);
+			delete (*it);
+			(*it) = aln;
+		}
+	}
+	int wrong_seq = 0;
+	for (i = 0; i < nseq; i++)
+		if (gap_only_seq[i]) {
+			cout << "ERROR: Sequence " << getSeqName(i) << " contains only gaps or missing data" << endl;
+			wrong_seq++;
+		}
+	if (wrong_seq) {
+		outError("Some sequences (see above) are problematic, please check your alignment again");
+		}
+}
+
+void SuperAlignment::createBootstrapAlignment(Alignment *aln) {
+	if (!aln->isSuperAlignment()) outError("Internal error: ", __func__);
+	Alignment::copyAlignment(aln);
+	SuperAlignment *super_aln = (SuperAlignment*) aln;
+	if (!partitions.empty()) outError("Internal error: ", __func__);
+	for (vector<Alignment*>::iterator it = super_aln->partitions.begin(); it != super_aln->partitions.end(); it++) {
+		Alignment *boot_aln = new Alignment;
+		boot_aln->createBootstrapAlignment(*it);
+		partitions.push_back(boot_aln);
+	}
+	taxa_index = super_aln->taxa_index;
 }
 
 double SuperAlignment::computeObsDist(int seq1, int seq2) {

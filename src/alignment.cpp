@@ -89,6 +89,28 @@ void Alignment::checkSeqName() {
 	}
 }
 
+bool Alignment::isGapOnlySeq(int seq_id) {
+	assert(seq_id < getNSeq());
+	for (iterator it = begin(); it != end(); it++)
+		if ((*it)[seq_id] != STATE_UNKNOWN) {
+			return false;
+		}
+	return true;
+}
+
+void Alignment::checkGappySeq() {
+	int nseq = getNSeq(), i;
+	int wrong_seq = 0;
+	for (i = 0; i < nseq; i++)
+		if (isGapOnlySeq(i)) {
+			cout << "ERROR: Sequence " << getSeqName(i) << " contains only gaps or missing data" << endl;
+			wrong_seq++;
+		}
+	if (wrong_seq) {
+		outError("Some sequences (see above) are problematic, please check your alignment again");
+	}
+}
+
 Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : vector<Pattern>() {
 
 	cout << "Reading alignment file " << filename << " ..." << endl;
@@ -959,6 +981,7 @@ void Alignment::extractSites(Alignment *aln, const char* spec) {
 }
 
 void Alignment::createBootstrapAlignment(Alignment *aln) {
+	if (aln->isSuperAlignment()) outError("Internal error: ", __func__);
 	int site, nsite = aln->getNSite();
 	seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
 	num_states = aln->num_states;
@@ -1027,6 +1050,25 @@ void Alignment::concatenateAlignment(Alignment *aln) {
 		Pattern new_pat = pat;
 		for (int i = 0; i < name_map.size(); i++) new_pat[i] = pat[name_map[i]];
 		addPattern(new_pat, site + cur_sites);
+	}
+	verbose_mode = save_mode;
+	countConstSite();
+}
+
+void Alignment::copyAlignment(Alignment *aln) {
+	int site, nsite = aln->getNSite();
+	seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
+	num_states = aln->num_states;
+	site_pattern.resize(nsite, -1);
+	clear();
+	pattern_index.clear();
+	VerboseMode save_mode = verbose_mode; 
+	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+	for (site = 0; site < nsite; site++) {
+		int site_id = site;
+		int ptn_id = aln->getPatternID(site_id);
+ 		Pattern pat = aln->at(ptn_id);
+		addPattern(pat, site);
 	}
 	verbose_mode = save_mode;
 	countConstSite();

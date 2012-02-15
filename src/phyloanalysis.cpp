@@ -25,6 +25,7 @@
 #include "phylosupertree.h"
 #include "phyloanalysis.h"
 #include "alignment.h"
+#include "superalignment.h"
 #include "iqptree.h"
 #include "gtrmodel.h"
 #include "modeldna.h"
@@ -580,6 +581,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 			tree.fixNegativeBranch(fixed_length);
 			tree.setAlignment(tree.aln);
 		    tree.initializeAllPartialLh();
+			if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
 			tree.optimizeAllBranches();
 			tree.printTree(con_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 			tree.sortTaxa();
@@ -605,7 +607,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         outError(ERR_WRITE_OUTPUT, outfile);
     }
 
-    cout << "Analysis results written to: " << endl
+    cout << endl << "Analysis results written to: " << endl
             << "  IQ-TREE report:           " << params.out_prefix << ".iqtree" << endl;
     if (params.compute_ml_tree)
         cout << "  Maximum-likelihood tree:  " << params.out_prefix << ".treefile" << endl;
@@ -1163,6 +1165,7 @@ void runPhyloAnalysis(Params &params) {
         	alignment->printFasta(params.aln_output, false, params.aln_site_list, 
         	params.aln_nogaps, params.ref_seq_name);
     } else if (params.num_bootstrap_samples == 0) {
+		alignment->checkGappySeq();
         runPhyloAnalysis(params, original_model, alignment, *tree);
         if (original_model != "TESTONLY")
             reportPhyloAnalysis(params, original_model, *alignment, *tree);
@@ -1202,12 +1205,16 @@ void runPhyloAnalysis(Params &params) {
         for (int sample = 0; sample < params.num_bootstrap_samples; sample++) {
             cout << endl << "===> START BOOTSTRAP REPLICATE NUMBER " << sample + 1 << endl << endl;
 
-            Alignment bootstrap_alignment;
+            Alignment* bootstrap_alignment;
             cout << "Creating bootstrap alignment..." << endl;
-            bootstrap_alignment.createBootstrapAlignment(alignment);
+            if (alignment->isSuperAlignment())
+            	bootstrap_alignment = new SuperAlignment;
+            else
+            	bootstrap_alignment = new Alignment;
+            bootstrap_alignment->createBootstrapAlignment(alignment);
 			if (params.print_tree_lh) {
 				double prob;
-				bootstrap_alignment.multinomialProb(*alignment, prob);
+				bootstrap_alignment->multinomialProb(*alignment, prob);
 				ofstream boot_lh;
 				if (sample == 0) 
 					boot_lh.open(bootlh_name.c_str());
@@ -1216,9 +1223,13 @@ void runPhyloAnalysis(Params &params) {
 				boot_lh << "0\t" << prob << endl;
 				boot_lh.close();
 			}
-            IQPTree boot_tree(&bootstrap_alignment);
-            bootstrap_alignment.printPhylip(bootaln_name.c_str(), true);
-            runPhyloAnalysis(params, original_model, &bootstrap_alignment, boot_tree);
+            IQPTree *boot_tree;
+            if (alignment->isSuperAlignment())
+            	boot_tree = new PhyloSuperTree((SuperAlignment*)bootstrap_alignment, (PhyloSuperTree*)tree);
+           	else
+            	boot_tree = new IQPTree(bootstrap_alignment);
+            bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+            runPhyloAnalysis(params, original_model, bootstrap_alignment, *boot_tree);
             // read in the output tree file
             string tree_str;
             try {
@@ -1241,7 +1252,7 @@ void runPhyloAnalysis(Params &params) {
                 outError(ERR_WRITE_OUTPUT, boottrees_name);
             }
             if (params.num_bootstrap_samples == 1)
-                reportPhyloAnalysis(params, original_model, bootstrap_alignment, boot_tree);
+                reportPhyloAnalysis(params, original_model, *bootstrap_alignment, *boot_tree);
         }
 
 		if (params.consensus_type == CT_CONSENSUS_TREE) {

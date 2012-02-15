@@ -1576,10 +1576,10 @@ double PhyloTree::doNNI(NNIMove move) {
     Neighbor *node2Nei = *(node2Nei_it);
 
     // TODO MINH
-	Node *nodeA = node1Nei->node;
+/*	Node *nodeA = node1Nei->node;
 	Node *nodeB = node2Nei->node;
 
-/*    NeighborVec::iterator nodeA_it = nodeA->findNeighborIt(node1);
+    NeighborVec::iterator nodeA_it = nodeA->findNeighborIt(node1);
     NeighborVec::iterator nodeB_it = nodeB->findNeighborIt(node2);
     Neighbor *nodeANei = *(nodeA_it);
     Neighbor *nodeBNei = *(nodeB_it);
@@ -1598,7 +1598,7 @@ double PhyloTree::doNNI(NNIMove move) {
     node1Nei->node->updateNeighbor(node1, node2);
 
 	// BQM check branch ID
-
+/*
 	if (node1->findNeighbor(nodeB)->id != nodeB->findNeighbor(node1)->id) {
 		cout << node1->findNeighbor(nodeB)->id << "<->" << nodeB->findNeighbor(node1)->id << endl;
 		cout << node1->id << "," << nodeB->id << endl;
@@ -1608,7 +1608,8 @@ double PhyloTree::doNNI(NNIMove move) {
 		cout << node2->findNeighbor(nodeA)->id << "<->" << nodeA->findNeighbor(node2)->id << endl;
 		cout << node2->id << "," << nodeA->id << endl;
 		outError("Wrong ID");
-	}
+	}*/
+
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 

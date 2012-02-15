@@ -209,6 +209,19 @@ public:
 	*/
 	void checkSeqName();
 
+	/**
+		Quit if some sequences contain only gaps or missing data
+	*/
+	virtual void checkGappySeq();
+
+	/**
+		@return TRUE if seq_id contains only gaps or missing characters
+		@param seq_id sequence ID
+	*/
+	bool isGapOnlySeq(int seq_id);
+
+	virtual bool isSuperAlignment() { return false; }
+
 /****************************************************************************
 	alignment general processing
 ****************************************************************************/
@@ -231,7 +244,7 @@ public:
 		create a non-parametric bootstrap alignment from an input alignment
 		@param aln input alignment
 	*/
-	void createBootstrapAlignment(Alignment *aln);
+	virtual void createBootstrapAlignment(Alignment *aln);
 
 	/**
 		create a gap masked alignment from an input alignment. Gap patterns of masked_aln 
