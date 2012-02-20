@@ -193,7 +193,7 @@ void MaAlignment::generateExpectedAlignment(MaAlignment *aln, double &prob)
 		{			
 			Pattern pat = aln->at(patID);
 			addPattern(pat,site);
-			site++;			
+			site++;	
 		}
 
 		//to compute the probability of the new alignment given the multinomial distribution

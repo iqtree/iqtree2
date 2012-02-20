@@ -391,7 +391,7 @@ public:
 	double frac_const_sites;
 
 	/** Added by MA
-		Compute the probability of the this alignment according to the multinomial distribution with parameters determined by the reference alignment
+		Compute the probability of this alignment according to the multinomial distribution with parameters determined by the reference alignment
 		@param refAlign the reference alignment
 		@param prob (OUT) the returned probabilty
 		
@@ -404,7 +404,7 @@ public:
 
 	/** Added by MA
 		Compute the probability of the `expected alignment' according to the multinomial distribution with parameters determined by the pattern's observed frequencies in THIS alignment.
-		The `expected alignment' consists of patterns with log-likelihoods (under some model+tree) given in the input file (inputLL).
+		The `expected alignment' consists of patterns with log-likelihoods (under some model+tree) given in the input file (logLL).
 		Note that order of the log-likelihoods in inputLL must corresponds to patterns in THIS alignment.
 
 		@param inputLL the input patterns log-likelihood vector

@@ -1387,7 +1387,7 @@ void Alignment::printSiteGaps(const char *filename) {
 //added by MA
 void Alignment::multinomialProb(Alignment refAlign, double &prob)
 {
-	cout << "Computing the probability of this alignment given the multinomial distribution determined by a reference alignment ..." << endl;
+// 	cout << "Computing the probability of this alignment given the multinomial distribution determined by a reference alignment ..." << endl;
 	//should we check for compatibility of sequence's names and sequence's order in THIS alignment and in the objectAlign??
 	//check alignment length
 	int nsite = getNSite();
@@ -1410,7 +1410,7 @@ void Alignment::multinomialProb(Alignment refAlign, double &prob)
 
 void Alignment::multinomialProb (DoubleVector logLL, double &prob)
 {
-	cout << "Function in Alignment: Compute probability of the expected alignment (determined by patterns log-likelihood under some tree and model) given THIS alignment." << endl;
+	//cout << "Function in Alignment: Compute probability of the expected alignment (determined by patterns log-likelihood under some tree and model) given THIS alignment." << endl;
 
 	//The expected normalized requencies
 	IntVector expectedNorFre;
@@ -1433,8 +1433,8 @@ void Alignment::multinomialProb (DoubleVector logLL, double &prob)
 	//Compute the `relative' (to the first pattern) likelihood from the logLL			
 	for ( int i = 0; i < patNum; i++ )
 	{
-		LL[i] = exp(logLL[i]-logLL[0]);
-		//LL[i] = exp(logLL[i]);
+		//LL[i] = exp(logLL[i]-logLL[0]);
+		LL[i] = exp(logLL[i]);
 		sumLL += LL[i];
 	}
 
