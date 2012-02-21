@@ -174,7 +174,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 		double rate_lh = 0.0;
 		if (optimize_rate) {
 			rate_lh = site_rate->optimizeParameters();
-			if (rate_lh < model_lh+1e-6) optimize_rate = false;
+			if (rate_lh < model_lh+1e-6 && model_lh != 0.0) optimize_rate = false;
 		}
 /*		if (rate_lh != 0.0 && !fixed_len)
 			rate_lh = optimizeAllBranches(2);*/

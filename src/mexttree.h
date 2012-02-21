@@ -55,6 +55,19 @@ public:
     MExtTree() : MTree() {};
 
 /********************************************************
+	READ TREE FROM FILE
+********************************************************/
+
+	/**
+		read the tree in nodes.dmp file from NCBI taxonomy
+		@param infile the input file file.
+		@param is_rooted (IN/OUT) true if tree is rooted
+	*/
+	void readNCBITree(const char *infile, bool &is_rooted); 
+	void readNCBITree(istream &in, bool &is_rooted); 
+
+
+/********************************************************
 	GENERATE RANDOM TREE PROCEDURES
 ********************************************************/
 

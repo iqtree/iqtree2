@@ -658,27 +658,24 @@ void checkZeroDist(Alignment *aln, double *dist) {
     }
 }
 
-void printSiteLh(Params &params, IQPTree &tree) {
+void printSiteLh(const char*filename, IQPTree &tree) {
 	int i;
 	double *pattern_lh = new double[tree.aln->getNPattern()];
 	tree.computeLikelihood(pattern_lh);
 
-	string site_lh_file = params.out_prefix;
-	site_lh_file += ".sitelh";
-
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
-		out.open(site_lh_file.c_str());
+		out.open(filename);
 		out << tree.aln->getNSite() << endl;
 		out << "Site_Lh   ";
 		for (i = 0; i < tree.aln->getNSite(); i++) 
 			out << " " << pattern_lh[tree.aln->getPatternID(i)];
 		out << endl;
 		out.close();
-		cout << "Site log-likelihoods printed to " << site_lh_file << endl;
+		cout << "Site log-likelihoods printed to " << filename << endl;
 	} catch (ios::failure) {
-		outError(ERR_WRITE_OUTPUT, site_lh_file);
+		outError(ERR_WRITE_OUTPUT, filename);
 	}
 
 
@@ -1050,6 +1047,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	rate_file += ".rate";
 	tree.getRate()->writeSiteRates(rate_file.c_str());
 
+	if (params.print_site_lh) {
+		string site_lh_file = params.out_prefix;
+		site_lh_file += ".sitelh";
+		printSiteLh(site_lh_file.c_str(), tree);
+	}
+
 	if (tree.isSuperTree()) {
 		PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
 		int part = 0;
@@ -1068,6 +1071,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		string mhrate_file = params.out_prefix;
 		mhrate_file += ".mhrate";
 		tree.getRate()->writeSiteRates(mhrate_file.c_str());
+
+		if (params.print_site_lh) {
+			string site_lh_file = params.out_prefix;
+			site_lh_file += ".mhsitelh";
+			printSiteLh(site_lh_file.c_str(), tree);
+		}
 		
     	
     }
@@ -1110,10 +1119,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
                         tree.drawTree(cout);
         }*/
     }
-
-	if (params.print_site_lh) {
-		printSiteLh(params, tree);
-	}
 
 
 /*	if (tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) {

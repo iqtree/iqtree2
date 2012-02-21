@@ -409,3 +409,24 @@ void MExtTree::createCluster(int clu_num, Node *node, Node *dad) {
 		createCluster(clu_num, (*it)->node, node);
 	}
 }
+
+void MExtTree::readNCBITree(const char *infile, bool &is_rooted) {
+	ifstream in;
+	try {
+		in.exceptions(ios::failbit | ios::badbit);
+		in.open(infile);
+		readNCBITree(in, is_rooted);
+		in.close();
+	} catch (ios::failure) {
+		outError(ERR_READ_INPUT, infile);		
+	}
+
+	rooted = is_rooted;
+
+	if (verbose_mode >= VB_MED)
+	cout << "Tree contains " << leafNum - is_rooted << 
+		" taxa and " << nodeNum-1-is_rooted << " branches" << endl;
+}
+
+void MExtTree::readNCBITree(istream &in, bool &is_rooted) {
+}
