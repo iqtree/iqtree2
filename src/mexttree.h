@@ -63,8 +63,8 @@ public:
 		@param infile the input file file.
 		@param is_rooted (IN/OUT) true if tree is rooted
 	*/
-	void readNCBITree(const char *infile, bool &is_rooted); 
-	void readNCBITree(istream &in, bool &is_rooted); 
+	Node* readNCBITree(const char *infile, int root_id); 
+	Node* readNCBITree(istream &in, int root_id);
 
 
 /********************************************************

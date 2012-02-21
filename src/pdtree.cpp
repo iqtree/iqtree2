@@ -134,10 +134,20 @@ void PDTree::readInitialSet(Params &params) {
 	for (StrVector::iterator it = tax_name.begin(); it != tax_name.end(); it++) {
 		LeafMapName::iterator nameit = lsn.find((*it));
 		if (nameit == lsn.end()) {
-			outError(ERR_NO_TAXON, *it);
-		}
+			Node *node = findNodeName(*it);
+			if (!node)
+				cout << "Find no taxon with name " << *it << endl;
+			else {
+				Node *taxon;
+				int distance = findNearestTaxon(taxon, node);
+				cout << "Replace internal node " << node->name << " by taxon " 
+					 << taxon->name << " (" << distance << " branches away)" << endl;
+				initialset.push_back(taxon);
+			}
+		} else
 		initialset.push_back((*nameit).second);
 	}
+	cout << initialset.size() << " initial taxa" << endl;
 }
 
 
@@ -371,4 +381,20 @@ void PDTree::calcPDComplementarity(vector<PDTaxaSet> &area_set, char *area_names
 	}
 
 }
-
+int PDTree::findNearestTaxon(Node* &taxon, Node *node, Node *dad) {
+	if (node->isLeaf()) {
+		taxon = node;
+		return 0;
+	}
+	int distance = 10000000;
+	taxon = NULL;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		Node *mytaxon;
+		int mydistance = findNearestTaxon(mytaxon, (*it)->node, node);
+		if (mydistance < distance) {
+			distance = mydistance;
+			taxon = mytaxon;
+		}
+	}
+	return distance+1;
+}

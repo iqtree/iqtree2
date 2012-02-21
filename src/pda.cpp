@@ -1494,6 +1494,26 @@ void computeMulProb(Params &params)
 	cout << "The probability is printed to: " << outProb_name << endl;
 }
 
+void processNCBITree(const char* filename, int taxid) {
+	MExtTree tree;
+	Node *dad = tree.readNCBITree(filename, taxid);
+	cout << "Dad ID: " << dad->name << " Root ID: " << tree.root->name << endl;
+	string str = filename;
+	str += ".tree";
+	//tree.printTree(str.c_str(), WT_SORT_TAXA | WT_BR_LEN);
+	cout << "NCBI tree printed to " << str << endl;
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(str.c_str());
+		tree.printTree(out, WT_SORT_TAXA | WT_BR_LEN, tree.root, dad);
+		out << ";" << endl;
+		out.close();
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, str);
+	}
+}
+
 /********************************************************
 	main function
 ********************************************************/
@@ -1578,6 +1598,8 @@ int main(int argc, char *argv[])
 		branchStats(params); // MA
 	} else if (params.branch_cluster > 0) {
 		calcTreeCluster(params);
+	} else if (params.ncbi_taxid) {
+		processNCBITree(params.user_file, params.ncbi_taxid);
 	} else if (params.aln_file || params.partition_file) {
 		if (params.siteLL_file || params.second_align)
 		{

@@ -410,23 +410,71 @@ void MExtTree::createCluster(int clu_num, Node *node, Node *dad) {
 	}
 }
 
-void MExtTree::readNCBITree(const char *infile, bool &is_rooted) {
+Node *MExtTree::readNCBITree(const char *infile, int root_id) {
 	ifstream in;
+	cout << "Reading NCBI nodes file " << infile << endl;
+	Node *parent = NULL;
 	try {
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(infile);
-		readNCBITree(in, is_rooted);
+		in.exceptions(ios::badbit);
+		parent = readNCBITree(in, root_id);
 		in.close();
 	} catch (ios::failure) {
 		outError(ERR_READ_INPUT, infile);		
 	}
 
-	rooted = is_rooted;
-
-	if (verbose_mode >= VB_MED)
-	cout << "Tree contains " << leafNum - is_rooted << 
-		" taxa and " << nodeNum-1-is_rooted << " branches" << endl;
+	return parent;
 }
 
-void MExtTree::readNCBITree(istream &in, bool &is_rooted) {
+Node* MExtTree::readNCBITree(istream &in, int root_id) {
+	IntVector parents_id;
+	NodeVector nodes;
+	nodes.resize(2000000, NULL);
+	int node_id, parent_id, max_node_id = 0, num_nodes = 0;
+	char ch;
+	in_line = in_column = 0;
+	
+	while (!in.eof()) {
+		node_id = parent_id = 0;
+		if (!(in >> node_id)) break;
+		in_line++;
+		num_nodes ++;
+		if (node_id <= 0) throw "Wrong node ID";
+		if (node_id >= nodes.size()) throw "Too large node ID";
+		in >> ch;
+		if (ch != '|') throw "No | between node ID and parent ID";
+		in >> parent_id;		
+		if (parent_id <= 0) throw "Wrong parent ID";
+		if (parent_id >= nodes.size()) throw "Too large parent ID";
+		string str;
+		getline(in, str);
+		if (node_id > max_node_id) max_node_id = node_id;
+		if (nodes[node_id]) throw "Duplicated node ID";
+		nodes[node_id] = newNode(node_id, node_id);
+		nodes[node_id]->height = parent_id; // use height temporarily for parent_id
+	}
+	for (node_id = 0; node_id <= max_node_id; node_id++)
+	if (nodes[node_id]) {
+		parent_id = nodes[node_id]->height;
+		if (!nodes[parent_id]) throw "Parent ID not found";
+		if (parent_id == node_id) { 
+			cout << "Ignore " << node_id << " | " << parent_id << endl; 
+			continue; 
+		}
+		nodes[node_id]->addNeighbor(nodes[parent_id],1.0);
+		nodes[parent_id]->addNeighbor(nodes[node_id],1.0);
+	}
+	leafNum = nodeNum = branchNum = 0;
+	for (node_id = 0; node_id <= max_node_id; node_id++)
+	if (nodes[node_id] && nodes[node_id]->isLeaf()) {
+		nodes[node_id]->id = leafNum;
+		leafNum++;
+	}
+	rooted = true;
+	if (!nodes[root_id]) throw "Root node not available";
+	root = nodes[root_id];
+	initializeTree();
+	cout << num_nodes << " NCBI nodes, " << nodeNum << " tree nodes, " << leafNum << " leaves, " << branchNum << " branches" << endl;
+	return nodes[nodes[root_id]->height];
 }

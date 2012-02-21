@@ -98,6 +98,7 @@ public:
 	*/
 	void buildLeafMapName(LeafMapName &lsn, Node *node = NULL, Node* dad = NULL);
 
+	int findNearestTaxon(Node* &taxon, Node *node, Node *dad = NULL);
 
 /********************************************************
 	Computing PD of area (user-defined set of taxa)

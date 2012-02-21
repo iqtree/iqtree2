@@ -37,8 +37,9 @@ Node::Node(int aid) {
 
 Node::Node(int aid, int aname) {
     id = aid;
-    name = "";
-    name += aname;
+    char str[20];
+    sprintf(str, "%d", aname);
+    name = str;
     height = -1;
 }
 

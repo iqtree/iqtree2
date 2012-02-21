@@ -605,6 +605,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.gene_scale_factor = -1;
 	params.gene_pvalue_loga = false;
 	params.second_align = NULL;
+	params.ncbi_taxid = 0;
 
 	struct timeval tv;
 	struct timezone tz;
@@ -1225,6 +1226,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				nni_sort = true;
 			} else if (strcmp(argv[cnt], "-plog") == 0) {
 				params.gene_pvalue_loga = true;
+			} else if (strcmp(argv[cnt], "-dmp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -dmp <ncbi_taxid>";
+				params.ncbi_taxid = convert_int(argv[cnt]);
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];
@@ -1288,7 +1294,7 @@ void usage(char* argv[], bool full_command) {
 	cout << "  -k <min>:<max>:<step>" << endl;
 	cout << "    Find optimal PD sets of size <min>, <min>+<step>, <min>+2*<step>,..." << endl;
 	cout << "  -o <taxon>        Root name to compute rooted PD, default is unrooted. " << endl;
-	cout << "  -i <file>         File containing taxa to be included into PD set." << endl;
+	cout << "  -if <file>        File containing taxa to be included into PD set." << endl;
 	cout << "  -e <file>         File containing branch/split scale and taxa weights." << endl;
 	cout << "  -all              Identify multiple optimal PD sets." << endl;
 	cout << "  -lim <max_limit>  The maximum number of PD sets for each k if -a is specified." << endl;

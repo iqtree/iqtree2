@@ -927,6 +927,11 @@ struct Params {
 	*/
 	bool gene_pvalue_loga;
 
+	/**
+		NCBI taxonomy ID, for processing nodes.dmp file
+	*/
+	int ncbi_taxid;
+
 };
 
 /**

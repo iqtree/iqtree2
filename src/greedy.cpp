@@ -59,18 +59,26 @@ void Greedy::run(Params &params, vector<PDTaxaSet> &taxa_set)
 		updateOnLongestPath(root->highestNei->node, subtree, taxa_set[0]);
 	} else {
 		root = initialset[0];
+		int included = initialset.size();
 		// put all taxa on the initial set into subtree
 		for (NodeVector::iterator it = initialset.begin(); it != initialset.end(); it++) {
+			if (subtree[(*it)->id]) {
+				cout << "Duplicated " << (*it)->name << endl;
+				included--;
+				continue;
+			}
 			subtree[(*it)->id] = (*it);
+			taxa_set[0].push_back(*it);
 		}
-		list_size = params.sub_size - initialset.size();
+		list_size = params.sub_size - included;
+		cout << included << " distinct taxa included, adding " << list_size << " more taxa" << endl;
 		// initialize maximal distance set
 		root->calcHeight();
 
 		NodeVector nodestack;
 		buildOnInitialSet(subtree, nodestack);
 		taxa_set[0].score = updateOnInitialSet(subtree);
-		taxa_set[0].insert(taxa_set[0].end(), initialset.begin(), initialset.end());
+		//taxa_set[0].insert(taxa_set[0].end(), initialset.begin(), initialset.end());
 	}
 
 	// greedy step
