@@ -103,6 +103,54 @@ void readLogLL(Alignment* aln, char *fileName, vector<DoubleVector> &logLLs)
 
 }
 
+void computeExpectedNorFre(Alignment *aln, DoubleVector &logLL, IntVector &expectedNorFre)
+{
+	//IntVector expectedNorFre;
+	if ( logLL.empty()) 
+		outError("Error: log likelihood of patterns are not given!");
+
+	int patNum = aln->getNPattern();
+	int alignLen = aln->getNSite();		
+	//resize the expectedNorFre vector
+	expectedNorFre.resize(patNum,-1);
+
+	//Vector containing the likelihood of the pattern p_i
+	DoubleVector LL(patNum,-1.0);
+	double sumLL = 0; //sum of the likelihood of the patterns in the alignment
+
+	//Compute the likelihood from the logLL
+	for ( int i = 0; i < patNum; i++ )
+	{
+		LL[i] = exp(logLL[i]);
+		sumLL += LL[i];
+	}
+
+	//Vector containing l_i = p_i*ell/sum_i(p_i)
+	DoubleVector ell(patNum, -1.0);
+	//Compute l_i
+	for ( int i = 0; i < patNum; i++ )
+	{
+		ell[i] = (double)alignLen * LL[i] / sumLL;
+	}
+
+
+	//Vector containing r_i where r_0 = ell_0; r_{i+1} = ell_{i+1} + r_i - ordinaryRounding(r_i)
+	DoubleVector r(patNum, -1.0);
+	//Compute r_i and the expected normalized frequencies
+	r[0] = ell[0];
+	expectedNorFre[0] = (int)floor(ell[0]+0.5); //note that floor(_number+0.5) returns the ordinary rounding of _number
+	int sum = expectedNorFre[0];
+	for (int j = 1; j < patNum; j++ )
+	{
+		r[j] = ell[j] + r[j-1] - floor(r[j-1]+0.5);
+		expectedNorFre[j] = (int)floor(r[j]+0.5);
+		sum += expectedNorFre[j];
+	}
+	
+	//cout << "Number of patterns: " << patNum << ", sum of expected sites: " << sum << endl;
+	//return expectedNorFre;
+}
+
 void computeTreeWeights(DoubleVector &reProb, IntVector &reW) {
 	int nDiff = reProb.size();
 	reW.resize(nDiff,-1);
@@ -121,6 +169,14 @@ void computeTreeWeights(DoubleVector &reProb, IntVector &reW) {
 	}	
 }
 
+double euclideanDist(IntVector &vec1, IntVector &vec2) {
+	if (vec1.size() != vec2.size()) outError("Different vector size ", __func__);
+	double dist = 0.0;
+	for (int i = 0; i < vec1.size(); i++) 
+		dist += (vec1[i]-vec2[i])*(vec1[i]-vec2[i]);
+	return sqrt(dist);
+}
+
 void runGuidedBootstrap(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
     if (!params.user_file) {
 		outError("You have to specify user tree file");
@@ -132,6 +188,8 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		outError("Please provide target tree file via -sup option");
     }
 
+
+
 	// read tree file
 	cout << "Reading tree file " << params.second_tree << endl;
 	tree.readTree(params.second_tree, params.is_rooted);
@@ -139,14 +197,20 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
     NodeVector taxa;
     tree.getTaxa(taxa);
     sort(taxa.begin(), taxa.end(), nodenamecmp);
-    int i = 0;
+    int i = 0, j;
     for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++) {
         (*it)->id = i++;
     }
 
+	cout << "Original pattern freq: ";
+	for (i = 0; i < alignment->getNPattern(); i++)
+		cout << alignment->at(i).frequency << " ";
+	cout << endl;
+
 	// read in trees file
 	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin);
 	vector<DoubleVector> site_lhs;
+	vector<IntVector> expected_freqs;
 
 	// read in corresponding site-log-likelihood for all trees
 	readLogLL(alignment, params.siteLL_file, site_lhs);
@@ -154,7 +218,7 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	if (site_lhs.size() != trees.size()) outError("Different number of sitelh vectors");
 
 	// compute RF distance
-	int ntrees = trees.size(), j;
+	int ntrees = trees.size();
 	IntVector::iterator it;
 	int *rfdist;
 	rfdist = new int [ntrees*ntrees];
@@ -179,15 +243,40 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		double prob;
 		alignment->multinomialProb(site_lhs[*it], prob);
 		prob_vec.push_back(prob);
+		IntVector expected_freq;
+		computeExpectedNorFre(alignment, site_lhs[*it], expected_freq);
+		expected_freqs.push_back(expected_freq);
+		for (i = 0; i < expected_freq.size(); i++)
+			cout << expected_freq[i] << " ";
+		cout << endl;
 	}
 
+	// generate bootstrap samples
 	for (i = 0; i < params.gbo_replicates; i++) {
 		Alignment* bootstrap_alignment;
 		if (alignment->isSuperAlignment())
 			bootstrap_alignment = new SuperAlignment;
 		else
 			bootstrap_alignment = new Alignment;
-		bootstrap_alignment->createBootstrapAlignment(alignment);
+		IntVector pattern_freq;
+		bootstrap_alignment->createBootstrapAlignment(alignment, &pattern_freq);
+		double prob;
+		bootstrap_alignment->multinomialProb(*alignment, prob);
+		double min_dist = -1.0;
+		int chosen_id = -1;
+		for (j = 0; j < expected_freqs.size(); j++) {
+			double dist = euclideanDist(pattern_freq, expected_freqs[j]);
+			//cout << dist << " ";
+			if (dist < min_dist || min_dist < 0) {
+				min_dist = dist;
+				chosen_id = j;
+			}
+		}
+		cout << "Bootstrap " << i+1 << " choose " << chosen_id <<" dist " << min_dist<< " prob " << prob << endl;
+		for (j = 0; j < pattern_freq.size(); j++) 
+			cout << pattern_freq[j] << " ";
+		cout << endl;
+		delete bootstrap_alignment;
 	}
 
 	// compute tree weights from the log-probability

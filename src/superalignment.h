@@ -58,7 +58,7 @@ public:
 		create a non-parametric bootstrap alignment from an input alignment
 		@param aln input alignment
 	*/
-	virtual void createBootstrapAlignment(Alignment *aln);
+	virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL);
 
 	/**
 		compute the observed distance (number of different pairs of positions per site) 

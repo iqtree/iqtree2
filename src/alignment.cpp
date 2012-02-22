@@ -980,7 +980,7 @@ void Alignment::extractSites(Alignment *aln, const char* spec) {
 	extractSites(aln, site_id);
 }
 
-void Alignment::createBootstrapAlignment(Alignment *aln) {
+void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq) {
 	if (aln->isSuperAlignment()) outError("Internal error: ", __func__);
 	int site, nsite = aln->getNSite();
 	seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
@@ -990,15 +990,32 @@ void Alignment::createBootstrapAlignment(Alignment *aln) {
 	pattern_index.clear();
 	VerboseMode save_mode = verbose_mode; 
 	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+	if (pattern_freq) {
+		pattern_freq->resize(0);
+		pattern_freq->resize(aln->getNPattern(), 0);
+	}
 	for (site = 0; site < nsite; site++) {
 		int site_id = floor((((double)rand())/RAND_MAX) * nsite);
 		if (site_id >= nsite) site_id = nsite-1;
 		int ptn_id = aln->getPatternID(site_id);
  		Pattern pat = aln->at(ptn_id);
 		addPattern(pat, site);
+		if (pattern_freq) ((*pattern_freq)[ptn_id])++;
 	}
 	verbose_mode = save_mode;
 	countConstSite();
+}
+
+void Alignment::resamplePatternFreq(IntVector &pattern_freq) {
+	pattern_freq.resize(0);
+	pattern_freq.resize(getNPattern(), 0);
+	int site, nsite = getNSite();
+	for (site = 0; site < nsite; site++) {
+		int site_id = floor((((double)rand())/RAND_MAX) * nsite);
+		if (site_id >= nsite) site_id = nsite-1;
+		int ptn_id = getPatternID(site_id);
+		pattern_freq[ptn_id]++;
+	}
 }
 
 void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) {

@@ -244,7 +244,13 @@ public:
 		create a non-parametric bootstrap alignment from an input alignment
 		@param aln input alignment
 	*/
-	virtual void createBootstrapAlignment(Alignment *aln);
+	virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL);
+
+	/**
+		resampling pattern frequency by a non-parametric bootstrap 
+		@param pattern_freq resampled pattern frequencies
+	*/
+	void resamplePatternFreq(IntVector &pattern_freq);
 
 	/**
 		create a gap masked alignment from an input alignment. Gap patterns of masked_aln 

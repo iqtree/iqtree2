@@ -95,8 +95,9 @@ void SuperAlignment::checkGappySeq() {
 		}
 }
 
-void SuperAlignment::createBootstrapAlignment(Alignment *aln) {
+void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq) {
 	if (!aln->isSuperAlignment()) outError("Internal error: ", __func__);
+	if (pattern_freq) outError("Unsupported yet.", __func__);
 	Alignment::copyAlignment(aln);
 	SuperAlignment *super_aln = (SuperAlignment*) aln;
 	if (!partitions.empty()) outError("Internal error: ", __func__);
