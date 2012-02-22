@@ -44,6 +44,8 @@
 #include "whtest_wrapper.h"
 #include "partitionmodel.h"
 
+void runGuidedBootstrap(Params &params, string &original_model, Alignment *alignment, IQPTree &tree);
+
 const int DNA_MODEL_NUM = 14;
 clock_t t_begin, t_end;
 
@@ -1169,6 +1171,8 @@ void runPhyloAnalysis(Params &params) {
         else if (params.aln_output_format == ALN_FASTA)
         	alignment->printFasta(params.aln_output, false, params.aln_site_list, 
         	params.aln_nogaps, params.ref_seq_name);
+    } else if (params.gbo_replicates > 0) {
+    	runGuidedBootstrap(params, original_model, alignment, *tree);
     } else if (params.num_bootstrap_samples == 0) {
 		alignment->checkGappySeq();
         runPhyloAnalysis(params, original_model, alignment, *tree);
@@ -1334,7 +1338,8 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
     mytree.getTaxaName(taxname);
 
     boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
-    // compute the percentage of appearance
+     cout << sg.size() << " splits found" << endl;
+   // compute the percentage of appearance
     sg.scaleWeight(100.0 / boot_trees.sumTreeWeights(), true);
     //	printSplitSet(sg, hash_ss);
     //sg.report(cout);

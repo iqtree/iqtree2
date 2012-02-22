@@ -932,6 +932,11 @@ struct Params {
 	*/
 	int ncbi_taxid;
 
+	/**
+		number of replicates for guided bootstrap
+	*/
+	int gbo_replicates;
+
 };
 
 /**

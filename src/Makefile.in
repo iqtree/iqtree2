@@ -52,10 +52,10 @@ PROGRAMS = $(bin_PROGRAMS)
 am_iqtree_OBJECTS = alignment.$(OBJEXT) alignmentpairwise.$(OBJEXT) \
 	circularnetwork.$(OBJEXT) eigendecomposition.$(OBJEXT) \
 	greedy.$(OBJEXT) gss.$(OBJEXT) gtrmodel.$(OBJEXT) \
-	gurobiwrapper.$(OBJEXT) hashsplitset.$(OBJEXT) \
-	iqptree.$(OBJEXT) lpwrapper.$(OBJEXT) maalignment.$(OBJEXT) \
-	matree.$(OBJEXT) mexttree.$(OBJEXT) modelbin.$(OBJEXT) \
-	modeldna.$(OBJEXT) modelfactory.$(OBJEXT) \
+	guidedbootstrap.$(OBJEXT) gurobiwrapper.$(OBJEXT) \
+	hashsplitset.$(OBJEXT) iqptree.$(OBJEXT) lpwrapper.$(OBJEXT) \
+	maalignment.$(OBJEXT) matree.$(OBJEXT) mexttree.$(OBJEXT) \
+	modelbin.$(OBJEXT) modeldna.$(OBJEXT) modelfactory.$(OBJEXT) \
 	modelnonrev.$(OBJEXT) modelprotein.$(OBJEXT) \
 	modeltest_wrapper.$(OBJEXT) mpdablock.$(OBJEXT) \
 	msetsblock.$(OBJEXT) msplitsblock.$(OBJEXT) mtree.$(OBJEXT) \
@@ -271,16 +271,17 @@ INCLUDES = $(all_includes)
 # the library search path.
 iqtree_LDFLAGS = $(all_libraries) -ldl -static
 iqtree_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
-	eigendecomposition.cpp greedy.cpp gss.cpp gtrmodel.cpp gurobiwrapper.cpp hashsplitset.cpp \
-	iqptree.cpp lpwrapper.c maalignment.cpp matree.cpp mexttree.cpp modelbin.cpp modeldna.cpp \
-	modelfactory.cpp modelnonrev.cpp modelprotein.cpp modeltest_wrapper.c mpdablock.cpp \
-	msetsblock.cpp msplitsblock.cpp mtree.cpp mtreeset.cpp ngs.cpp node.cpp \
-	optimization.cpp parsmultistate.cpp partitionmodel.cpp pattern.cpp pda.cpp pdnetwork.cpp \
-	pdtree.cpp pdtreeset.cpp phyloanalysis.cpp phylonode.cpp phylosupertree.cpp \
-	phylotree.cpp phylotreesse.cpp pruning.cpp rategamma.cpp rategammainvar.cpp \
-	rateheterogeneity.cpp rateinvar.cpp ratemeyerdiscrete.cpp ratemeyerhaeseler.cpp split.cpp \
-	splitgraph.cpp splitset.cpp stoprule.cpp substmodel.cpp superalignment.cpp \
-	superalignmentpairwise.cpp supernode.cpp tinatree.cpp tools.cpp whtest_wrapper.cpp
+	eigendecomposition.cpp greedy.cpp gss.cpp gtrmodel.cpp guidedbootstrap.cpp gurobiwrapper.cpp \
+	hashsplitset.cpp iqptree.cpp lpwrapper.c maalignment.cpp matree.cpp mexttree.cpp \
+	modelbin.cpp modeldna.cpp modelfactory.cpp modelnonrev.cpp modelprotein.cpp \
+	modeltest_wrapper.c mpdablock.cpp msetsblock.cpp msplitsblock.cpp mtree.cpp mtreeset.cpp \
+	ngs.cpp node.cpp optimization.cpp parsmultistate.cpp partitionmodel.cpp \
+	pattern.cpp pda.cpp pdnetwork.cpp pdtree.cpp pdtreeset.cpp phyloanalysis.cpp \
+	phylonode.cpp phylosupertree.cpp phylotree.cpp phylotreesse.cpp pruning.cpp \
+	rategamma.cpp rategammainvar.cpp rateheterogeneity.cpp rateinvar.cpp \
+	ratemeyerdiscrete.cpp ratemeyerhaeseler.cpp split.cpp splitgraph.cpp splitset.cpp \
+	stoprule.cpp substmodel.cpp superalignment.cpp superalignmentpairwise.cpp \
+	supernode.cpp tinatree.cpp tools.cpp whtest_wrapper.cpp
 
 noinst_HEADERS = alignment.h alignmentpairwise.h bionj.h circularnetwork.h \
 	eigendecomposition.h greedy.h gss.h gtrmodel.h gurobiwrapper.h hashsplitset.h iqptree.h \
@@ -490,6 +491,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/greedy.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gss.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gtrmodel.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/guidedbootstrap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gurobiwrapper.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hashsplitset.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iqptree.Po@am__quote@

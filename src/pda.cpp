@@ -1601,7 +1601,7 @@ int main(int argc, char *argv[])
 	} else if (params.ncbi_taxid) {
 		processNCBITree(params.user_file, params.ncbi_taxid);
 	} else if (params.aln_file || params.partition_file) {
-		if (params.siteLL_file || params.second_align)
+		if ((params.siteLL_file || params.second_align) && !params.gbo_replicates)
 		{
 			if (params.siteLL_file)
 				guidedBootstrap(params);

@@ -1628,7 +1628,7 @@ double PhyloTree::doNNI(NNIMove move) {
 }
 
 double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
-	ostream *out, int brtype, SwapNNIParam *nni_param, ostream *out_lh) {
+	ostream *out, int brtype, SwapNNIParam *nni_param, ostream *out_lh, ostream *site_lh) {
     assert(node1->degree() == 3 && node2->degree() == 3);
 
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
@@ -1702,6 +1702,10 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 			pattern_lh_vec.insert(pattern_lh_vec.end(), pattern_lh, pattern_lh+aln->getNPattern());
 			aln->multinomialProb(pattern_lh_vec, prob);
 			(*out_lh) << "\t" << prob << endl;
+			(*site_lh) << "Site_Lh   ";
+			for (int i = 0; i < aln->getNSite(); i++)
+				(*site_lh) << "\t" << pattern_lh[aln->getPatternID(i)];
+			(*site_lh) << endl;
 			delete [] pattern_lh;
 		}
         // if better: return
@@ -1732,15 +1736,16 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
     return cur_score;
 }
 
-double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad, ostream *out, int brtype, ostream *out_lh) {
+double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad, ostream *out, 
+	int brtype, ostream *out_lh, ostream *site_lh) {
     if (!node) node = (PhyloNode*) root;
     if (!node->isLeaf() && dad && !dad->isLeaf()) {
-        double score = swapNNIBranch(cur_score, node, dad, out, brtype, NULL, out_lh);
+        double score = swapNNIBranch(cur_score, node, dad, out, brtype, NULL, out_lh, site_lh);
         if (score > cur_score) return score;
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype, out_lh);
+        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype, out_lh, site_lh);
         if (score > cur_score) return score;
     }
     return cur_score;

@@ -1407,14 +1407,22 @@ void IQPTree::printResultTree(Params &params, ostream &out) {
 void IQPTree::printIntermediateTree(const char *ofile, int brtype, Params &params) {
 	if (!params.write_intermediate_trees) return;
 	printTree(ofile, brtype);
-	ofstream out_lh;
+	ofstream out_lh, site_lh;
 	string out_lh_file = params.out_prefix;
 	out_lh_file += ".treelh";
+	string site_lh_file = params.out_prefix;
+	site_lh_file += ".sitelh";
 	if (params.print_tree_lh) {
 		if (brtype & WT_APPEND) 
 			out_lh.open(out_lh_file.c_str(), ios_base::out | ios_base::app);
 		else
 			out_lh.open(out_lh_file.c_str());
+
+		if (brtype & WT_APPEND) 
+			site_lh.open(site_lh_file.c_str(), ios_base::out | ios_base::app);
+		else
+			site_lh.open(site_lh_file.c_str());
+
 		double *pattern_lh = new double[aln->getNPattern()];
 		out_lh << computeLikelihood(pattern_lh);
 		double prob;
@@ -1422,6 +1430,11 @@ void IQPTree::printIntermediateTree(const char *ofile, int brtype, Params &param
 		pattern_lh_vec.insert(pattern_lh_vec.end(), pattern_lh, pattern_lh+aln->getNPattern());
 		aln->multinomialProb(pattern_lh_vec, prob);
 		out_lh << "\t" << prob << endl;
+		if (!(brtype & WT_APPEND)) site_lh << aln->getNSite() << endl;
+		site_lh << "Site_Lh   ";
+		for (int i = 0; i < aln->getNSite(); i++)
+			site_lh << "\t" << pattern_lh[aln->getPatternID(i)];
+		site_lh << endl;
 		delete [] pattern_lh;
 	}
 	if (params.write_intermediate_trees == 1) {
@@ -1430,7 +1443,7 @@ void IQPTree::printIntermediateTree(const char *ofile, int brtype, Params &param
 	}
 	ofstream out(ofile, ios_base::out | ios_base::app);
 	if (params.print_tree_lh)
-		PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN, &out_lh);
+		PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN, &out_lh, &site_lh);
 	else
 		PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN);
 	out.close();
