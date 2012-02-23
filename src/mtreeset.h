@@ -130,6 +130,8 @@ public:
 	*/
 	void computeRFDist(int *rfdist, MTreeSet *treeset2);
 
+	int categorizeDistinctTrees(IntVector &category);
+
 	int sumTreeWeights();
 
 	/**

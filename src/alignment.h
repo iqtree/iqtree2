@@ -47,9 +47,11 @@ namespace __gnu_cxx {
 
 
 #ifdef USE_HASH_MAP
+typedef hash_map<string, int> StringIntMap;
 typedef hash_map<string, int> PatternIntMap;
 //typedef map<string, int> PatternIntMap;
 #else
+typedef map<string, int> StringIntMap;
 typedef map<string, int> PatternIntMap;
 #endif
 /**

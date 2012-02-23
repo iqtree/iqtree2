@@ -1307,6 +1307,8 @@ void runPhyloAnalysis(Params &params) {
 	delete alignment;
 }
 
+void writeInternalNodeNames(MTree &tree, string &out_file);
+
 void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, bool rooted,
         const char *output_tree, const char *out_prefix, MExtTree &mytree, const char* tree_weight_file) {
     //bool rooted = false;
@@ -1359,6 +1361,16 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 
     mytree.printTree(out_file.c_str());
     cout << "Tree with assigned bootstrap support written to " << out_file << endl;
+
+	if (out_prefix)
+		out_file = out_prefix;
+	else
+		out_file = target_tree;
+	out_file += ".supval";
+	writeInternalNodeNames(mytree, out_file);
+
+    cout << "Support values written to " << out_file << endl;
+
 }
 
 void computeConsensusTree(const char *input_trees, int burnin, double cutoff, double weight_threshold,

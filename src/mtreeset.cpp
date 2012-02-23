@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "mtreeset.h"
+#include "alignment.h"
 
 MTreeSet::MTreeSet()
 {
@@ -479,3 +480,97 @@ int MTreeSet::sumTreeWeights() {
 		sum += (*it);
 	return sum;
 }
+
+int MTreeSet::categorizeDistinctTrees(IntVector &category) {
+	if (empty()) return 0;
+	if (size() == 1) {
+		category.resize(1,0);
+		return 1;
+	}
+	StringIntMap tree_cat_map;
+	string root_name = front()->root->name;
+	int ncat = 0;
+	category.resize(size(),-1);
+
+	int id = 0;
+	for (iterator it = begin(); it != end(); it++, id++) {
+		(*it)->root = (*it)->findNodeName(root_name);
+		if (!(*it)->root || !(*it)->root->isLeaf()) 
+			outError("Internal error ", __func__);
+		stringstream ostr;
+		(*it)->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+		string str = ostr.str();
+		StringIntMap::iterator map_it = tree_cat_map.find(str);
+		if (map_it == tree_cat_map.end()) { // not found
+			category[id] = ncat;
+			tree_cat_map[str] = ncat;
+			ncat++;
+		} else {
+			category[id] = map_it->second;
+		}
+	}
+	return ncat;
+}
+
+/*int MTreeSet::categorizeDistinctTrees(IntVector &category) {
+	// exit if less than 2 trees
+	if (empty()) return 0;
+	if (size() == 1) {
+		category.resize(1,0);
+		return 1;
+	}
+#ifdef USE_HASH_MAP
+	cout << "Using hash_map" << endl;
+#else
+	cout << "Using map" << endl;
+#endif
+	cout << "Checking duplicated trees..." << endl;
+
+	vector<string> taxname(front()->leafNum);
+	vector<SplitIntMap*> hs_vec;
+	vector<SplitGraph*> sg_vec;
+
+	front()->getTaxaName(taxname);
+
+
+	// converting trees into split system then stored in SplitIntMap for efficiency
+	for (iterator it = begin(); it != end(); it++) {
+		SplitGraph *sg = new SplitGraph();
+		SplitIntMap *hs = new SplitIntMap();
+
+		(*it)->convertSplits(taxname, *sg);
+		// make sure that taxon 0 is included
+		for (SplitGraph::iterator sit = sg->begin(); sit != sg->end(); sit++) {
+			if (!(*sit)->containTaxon(0)) (*sit)->invert();
+			hs->insertSplit((*sit), 1);
+		}
+		hs_vec.push_back(hs);
+		sg_vec.push_back(sg);
+	}
+
+	// now start the RF computation
+	int id = 0, ncat = 0;
+	category.resize(size(),-1);
+	for (vector<SplitIntMap*>::iterator hsit = hs_vec.begin(); hsit != hs_vec.end(); hsit++, id++) 
+	if (category[id] < 0) {
+		category[id] = ncat;
+		int id2 = id+1;
+		for (vector<SplitIntMap*>::iterator hsit2 = hsit+1; hsit2 != hs_vec.end(); hsit2++, id2++) 
+		if (category[id2] < 0) {
+			bool equal = true;
+			for (SplitIntMap::iterator spit = (*hsit2)->begin(); spit != (*hsit2)->end(); spit++) {
+				if (!(*hsit)->findSplit(spit->first)) { equal = false; break; }
+			}
+			if (equal) category[id2] = ncat;
+		}
+		ncat++;
+	}
+	// delete memory 
+	for (id = size()-1; id >= 0; id--) {
+		delete hs_vec[id];
+		delete sg_vec[id];
+	}
+	return ncat;
+}
+
+*/

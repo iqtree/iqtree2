@@ -43,6 +43,21 @@
 #include "whtest_wrapper.h"
 #include "partitionmodel.h"
 
+void writeInternalNodeNames(MTree &tree, string &out_file) {
+	try {
+		ofstream out(out_file.c_str());
+		NodeVector nodes;
+		tree.getInternalNodes(nodes);
+		for (NodeVector::iterator nit = nodes.begin(); nit != nodes.end(); nit++) {
+			out  << " " << (*nit)->name;
+		}
+		out << endl;
+		out.close();
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, out_file);
+	}
+}
+
 void readLogLL(Alignment* aln, char *fileName, vector<DoubleVector> &logLLs)
 {
 	//First read the values from inFile to a DoubleVector
@@ -202,10 +217,12 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
         (*it)->id = i++;
     }
 
-	cout << "Original pattern freq: ";
-	for (i = 0; i < alignment->getNPattern(); i++)
-		cout << alignment->at(i).frequency << " ";
-	cout << endl;
+	if (verbose_mode >= VB_DEBUG) {
+		cout << "Original pattern freq: ";
+		for (i = 0; i < alignment->getNPattern(); i++)
+			cout << alignment->at(i).frequency << " ";
+		cout << endl;
+	}
 
 	// read in trees file
 	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin);
@@ -217,24 +234,32 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	cout << site_lhs.size() << " log-likelihood vectors loaded" << endl;
 	if (site_lhs.size() != trees.size()) outError("Different number of sitelh vectors");
 
-	// compute RF distance
+	// get distinct trees
 	int ntrees = trees.size();
 	IntVector::iterator it;
+	IntVector diff_tree_ids;
+	IntVector tree_category;
+	trees.categorizeDistinctTrees(tree_category);
+	for (i = 0; i < ntrees; i++) {
+		int cat = tree_category[i];
+		if (diff_tree_ids.empty() || tree_category[diff_tree_ids.back()] < cat)
+			diff_tree_ids.push_back(i);
+	}
+/*
 	int *rfdist;
 	rfdist = new int [ntrees*ntrees];
 	memset(rfdist, 0, ntrees*ntrees* sizeof(int));
-	trees.computeRFDist(rfdist, RF_ALL_PAIR);
-	IntVector diff_tree_ids;
+	trees.computeRFDist(rfdist, RF_ALL_PAIR);*/
+	// identify distinct trees
+	/*
 	IntVector checked;
 	checked.resize(ntrees, 0);
-	
-	// identify distinct trees
 	for (i = 0; i < ntrees; i++) if (!checked[i]) {
 		for (j = i; j < ntrees; j++) if (!checked[j]) {
 			if (rfdist[i*ntrees + j] == 0) checked[j] = 1;
 		}
 		diff_tree_ids.push_back(i);
-	}
+	}*/
 	cout << diff_tree_ids.size() << " distinct trees detected" << endl;
 
 	// compute multinomial probability for every distinct tree
@@ -246,11 +271,14 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		IntVector expected_freq;
 		computeExpectedNorFre(alignment, site_lhs[*it], expected_freq);
 		expected_freqs.push_back(expected_freq);
-		for (i = 0; i < expected_freq.size(); i++)
-			cout << expected_freq[i] << " ";
-		cout << endl;
+		if (verbose_mode >= VB_DEBUG) {
+			for (i = 0; i < expected_freq.size(); i++)
+				cout << expected_freq[i] << " ";
+			cout << endl;
+		}
 	}
 
+	cout << "Conducting " << params.gbo_replicates << " non-parametric resampling..." << endl;
 	// generate bootstrap samples
 	for (i = 0; i < params.gbo_replicates; i++) {
 		Alignment* bootstrap_alignment;
@@ -272,19 +300,32 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 				chosen_id = j;
 			}
 		}
-		cout << "Bootstrap " << i+1 << " choose " << chosen_id <<" dist " << min_dist<< " prob " << prob << endl;
-		for (j = 0; j < pattern_freq.size(); j++) 
-			cout << pattern_freq[j] << " ";
-		cout << endl;
+		diff_tree_ids.push_back(diff_tree_ids[chosen_id]);
+		prob_vec.push_back(prob);
+		if (verbose_mode >= VB_MED) {
+			cout << "Bootstrap " << i+1 << " choose " << chosen_id 
+				 <<" dist " << min_dist<< " prob " << prob << endl;
+		}
+
+		if (verbose_mode >= VB_DEBUG) {
+			for (j = 0; j < pattern_freq.size(); j++) 
+				cout << pattern_freq[j] << " ";
+			cout << endl;
+		}
 		delete bootstrap_alignment;
 	}
 
 	// compute tree weights from the log-probability
 	IntVector diff_tree_weights;
 	computeTreeWeights(prob_vec, diff_tree_weights);
+	if (verbose_mode >= VB_MAX) {
+		for (i = 0; i < prob_vec.size(); i++) cout << prob_vec[i] << " " << diff_tree_weights[i] << " " << diff_tree_ids[i] << endl;
+		cout << endl;
+	}
+
 	for (i = 0; i < ntrees; i++) trees.tree_weights[i] = 0;
 	for (it = diff_tree_ids.begin(), i = 0; it != diff_tree_ids.end(); it++, i++) {
-		trees.tree_weights[*it] = diff_tree_weights[i];
+		trees.tree_weights[*it] += diff_tree_weights[i];
 	}
 	cout << "sum weights: " << trees.sumTreeWeights() << endl;
 
@@ -310,16 +351,17 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	tree.setAlignment(alignment);
 
     string out_file;
-    if (params.out_file)
-        out_file = params.out_file;
-    else {
-        out_file = params.user_file;
-        out_file += ".suptree";
-    }
+	out_file = params.out_prefix;
+	out_file += ".suptree";
 
     tree.printTree(out_file.c_str());
     cout << "Tree with assigned bootstrap support written to " << out_file << endl;
 
+	out_file = params.out_prefix;
+	out_file += ".supval";
+	writeInternalNodeNames(tree, out_file);
 
-	delete [] rfdist;
+    cout << "Support values written to " << out_file << endl;
+	//delete [] rfdist;
 }
+
