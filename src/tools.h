@@ -937,6 +937,11 @@ struct Params {
 	*/
 	int gbo_replicates;
 
+	/**
+		TRUE to use RELL method of Simodaira Hasegawa, FALSE otherwise
+	*/
+	bool use_rell_method;
+
 };
 
 /**

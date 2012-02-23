@@ -607,6 +607,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.second_align = NULL;
 	params.ncbi_taxid = 0;
 	params.gbo_replicates = 0;
+	params.use_rell_method = true;
 
 	struct timeval tv;
 	struct timezone tz;
@@ -1237,6 +1238,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
 				params.gbo_replicates = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-norell") == 0) {
+				params.use_rell_method = false;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];
