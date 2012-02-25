@@ -119,13 +119,15 @@ void MTreeSet::checkConsistency() {
 		return;
 	iterator it;
 	bool rooted = front()->rooted;
-	for (it = begin()+1; it != end(); it++)
-		if ((*it)->rooted != rooted) 
+	int i;
+	for (it = begin()+1, i = 1; it != end(); it++, i++)
+		if ((*it)->rooted != rooted) {
+			cout << i+1 << " " << (*it)->rooted << " " << rooted << endl;
 			outError("Rooted and unrooted trees are mixed up");
+		}
 
 	NodeVector taxa1;
 	NodeVector::iterator it2;
-	int i;
 
 	for (it = begin(); it != end(); it++) {
 		MTree *tree = *it;
@@ -277,6 +279,7 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 	SplitGraph *isg;
 	int tree_id = 0;
 	for (iterator it = begin(); it != end(); it++, tree_id++) {
+		if (tree_weights[tree_id] == 0) continue;
 		MTree *tree = *it;
 		if (tree->leafNum != taxname.size())
 			outError("Tree has different number of taxa!");

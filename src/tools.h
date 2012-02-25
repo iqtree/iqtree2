@@ -942,6 +942,10 @@ struct Params {
 	*/
 	bool use_rell_method;
 
+	/**
+		TRUE to use ELW method of Strimmer & Rambaut for new bootstrap, FALSE otherwise
+	*/
+	bool use_elw_method;
 };
 
 /**

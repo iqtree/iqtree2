@@ -43,21 +43,6 @@
 #include "whtest_wrapper.h"
 #include "partitionmodel.h"
 
-void writeInternalNodeNames(MTree &tree, string &out_file) {
-	try {
-		ofstream out(out_file.c_str());
-		NodeVector nodes;
-		tree.getInternalNodes(nodes);
-		for (NodeVector::iterator nit = nodes.begin(); nit != nodes.end(); nit++) {
-			out  << " " << (*nit)->name;
-		}
-		out << endl;
-		out.close();
-	} catch (ios::failure) {
-		outError(ERR_WRITE_OUTPUT, out_file);
-	}
-}
-
 void readPatternLogLL(Alignment* aln, char *fileName, vector<DoubleVector> &logLLs)
 {
 	//First read the values from inFile to a DoubleVector
@@ -204,6 +189,39 @@ double computeRELLLogL(DoubleVector &pattern_lh, IntVector &pattern_freq) {
 	return lh;
 }
 
+/**
+	computing Expected Likelihood Weights (ELW) of trees by Strimmer & Rambaut (2002)
+*/
+void computeExpectedLhWeights(Alignment *aln, vector<DoubleVector> &pattern_lhs, 
+	IntVector &treeids, int num_replicates, DoubleVector &elw) {
+	cout << "Computing Expected Likelihood Weights (ELW) with " << num_replicates << " replicates ..." << endl;
+	int i, j;
+	elw.resize(treeids.size(), 0.0);
+	vector<DoubleVector> all_logl;
+	for (i = 0; i < num_replicates; i++) {
+		IntVector pattern_freq;
+		aln->resamplePatternFreq(pattern_freq);
+		DoubleVector logl;
+		logl.resize(treeids.size(), 0.0);
+		j = 0;
+		for (IntVector::iterator it = treeids.begin(); it != treeids.end(); it++, j++) {
+			logl[j] = computeRELLLogL(pattern_lhs[*it], pattern_freq);
+		}
+		double max_logl = logl[0];
+		for (j = 0; j < logl.size(); j++) 
+			if (max_logl < logl[j]) max_logl = logl[j];
+		double sum = 0.0;
+		for (j = 0; j < logl.size(); j++) {
+			logl[j] = exp(logl[j] - max_logl);
+			sum += logl[j];
+		}
+		for (j = 0; j < logl.size(); j++) 
+			elw[j] += (logl[j]/sum);
+	}
+	for (j = 0; j < elw.size(); j++) 
+		elw[j] /= num_replicates;
+}
+
 void runGuidedBootstrap(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
     if (!params.user_file) {
 		outError("You have to specify user tree file");
@@ -291,75 +309,100 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		}
 	}
 
-	cout << "Conducting " << params.gbo_replicates << " non-parametric resampling..." << endl;
-	if (params.use_rell_method) cout << "Use RELL method (resampling estimated log-likelihoods)" << endl;
-	// generate bootstrap samples
-	for (i = 0; i < params.gbo_replicates; i++) {
-		Alignment* bootstrap_alignment;
-		if (alignment->isSuperAlignment())
-			bootstrap_alignment = new SuperAlignment;
-		else
-			bootstrap_alignment = new Alignment;
-		IntVector pattern_freq;
-		bootstrap_alignment->createBootstrapAlignment(alignment, &pattern_freq);
-		double prob;
-		bootstrap_alignment->multinomialProb(*alignment, prob);
-		double min_dist = -1.0;
-		int chosen_id = -1;
-		// select best-fit tree by euclidean distance
-		for (j = 0; j < expected_freqs.size(); j++) {
-			double dist = euclideanDist(pattern_freq, expected_freqs[j]);
-			//cout << dist << " ";
-			if (dist < min_dist || min_dist < 0) {
-				min_dist = dist;
-				chosen_id = j;
-			}
-		}
-
-		// select best-fit tree by RELL method 
-		double max_logl = 1, max_logl_saved = 0;
-		int chosen_id2 = -1, chosen_id2_saved = -1;
-		for (j = 0; j < ndiff; j++) {
-			int tree_id = diff_tree_ids[j];
-			double logl = computeRELLLogL(pattern_lhs[tree_id], pattern_freq);
-			//if (verbose_mode >= VB_MAX) cout << logl << endl;
-			if (max_logl > 0 || max_logl < logl) {
-				max_logl_saved = max_logl;
-				max_logl = logl;
-				chosen_id2_saved = chosen_id2;
-				chosen_id2 = j;
-			}
-			
-		}
-		if (verbose_mode >= VB_MED) {
-			cout << "Bootstrap " << i+1 << " choose id=" << diff_tree_ids[chosen_id] // <<" dist=" << min_dist 
-				 << " id2=" << diff_tree_ids[chosen_id2] << " lh2=" << max_logl 
-				 << " id2s=" << diff_tree_ids[chosen_id2_saved] << " lh2s=" << max_logl_saved
-				 << " prob=" << prob << endl;
-		}
-		if (params.use_rell_method)
-			diff_tree_ids.push_back(diff_tree_ids[chosen_id2]);
-		else
-			diff_tree_ids.push_back(diff_tree_ids[chosen_id]);
-		prob_vec.push_back(prob);
-
-		if (verbose_mode >= VB_DEBUG) {
-			for (j = 0; j < pattern_freq.size(); j++) 
-				cout << pattern_freq[j] << " ";
-			cout << endl;
-		}
-		delete bootstrap_alignment;
-	}
-
-	// compute tree weights from the log-probability
 	IntVector diff_tree_weights;
-	computeTreeWeights(prob_vec, diff_tree_weights);
+
+
+	if (params.use_elw_method) { 	// compute ELW weights
+		DoubleVector elw;
+		computeExpectedLhWeights(alignment, pattern_lhs, diff_tree_ids, params.gbo_replicates, elw);
+		string elw_file_name = params.out_prefix;
+		elw_file_name += ".elw";
+		ofstream elw_file(elw_file_name.c_str());
+		elw_file << "Treeid\tELW" << endl;
+		for (i = 0; i < elw.size(); i++) 
+			elw_file << diff_tree_ids[i]+1 << "\t" << elw[i] << endl;
+		elw_file.close();
+		cout << "ELW printed to " << elw_file_name << endl;
+		diff_tree_weights.resize(diff_tree_ids.size(), 0);
+		for (i = 0; i < diff_tree_ids.size(); i++)
+			diff_tree_weights[i] = round(elw[i]*1000000);
+	} else {
+		double own_prob;
+		alignment->multinomialProb(*alignment, own_prob);
+		cout << "Own prob: " << own_prob << endl;
+	
+		cout << "Conducting " << params.gbo_replicates << " non-parametric resampling..." << endl;
+		if (params.use_rell_method) cout << "Use RELL method (resampling estimated log-likelihoods)" << endl;
+		// generate bootstrap samples
+		for (i = 0; i < params.gbo_replicates; i++) {
+			Alignment* bootstrap_alignment;
+			if (alignment->isSuperAlignment())
+				bootstrap_alignment = new SuperAlignment;
+			else
+				bootstrap_alignment = new Alignment;
+			IntVector pattern_freq;
+			bootstrap_alignment->createBootstrapAlignment(alignment, &pattern_freq);
+			double prob;
+			bootstrap_alignment->multinomialProb(*alignment, prob);
+			double min_dist = -1.0;
+			int chosen_id = -1;
+			// select best-fit tree by euclidean distance
+			for (j = 0; j < expected_freqs.size(); j++) {
+				double dist = euclideanDist(pattern_freq, expected_freqs[j]);
+				//cout << dist << " ";
+				if (dist < min_dist || min_dist < 0) {
+					min_dist = dist;
+					chosen_id = j;
+				}
+			}
+	
+			// select best-fit tree by RELL method 
+			double max_logl = 1, max_logl_saved = 0;
+			int chosen_id2 = -1, chosen_id2_saved = -1;
+			for (j = 0; j < ndiff; j++) {
+				int tree_id = diff_tree_ids[j];
+				double logl = computeRELLLogL(pattern_lhs[tree_id], pattern_freq);
+				//if (verbose_mode >= VB_MAX) cout << logl << endl;
+				if (max_logl > 0 || max_logl < logl) {
+					max_logl_saved = max_logl;
+					max_logl = logl;
+					chosen_id2_saved = chosen_id2;
+					chosen_id2 = j;
+				}
+				
+			}
+			if (verbose_mode >= VB_MED) {
+				cout << "Bootstrap " << i+1 << " choose id=" << diff_tree_ids[chosen_id]+1 // <<" dist=" << min_dist 
+					<< " id2=" << diff_tree_ids[chosen_id2]+1 << " lh2=" << max_logl 
+					<< " id2s=" << diff_tree_ids[chosen_id2_saved]+1 << " lh2s=" << max_logl_saved
+					<< " prob=" << prob << endl;
+			}
+			if (params.use_rell_method)
+				diff_tree_ids.push_back(diff_tree_ids[chosen_id2]);
+			else
+				diff_tree_ids.push_back(diff_tree_ids[chosen_id]);
+			prob_vec.push_back(prob);
+	
+			if (verbose_mode >= VB_DEBUG) {
+				for (j = 0; j < pattern_freq.size(); j++) 
+					cout << pattern_freq[j] << " ";
+				cout << endl;
+			}
+			delete bootstrap_alignment;
+		}
+	
+		// compute tree weights from the log-probability
+		computeTreeWeights(prob_vec, diff_tree_weights);
+
+	} // end of Arndt's method
+
+
 	int max_weight = 0;
 	for (i = 0; i < diff_tree_weights.size(); i++)
 		if (diff_tree_weights[i] > max_weight) max_weight = diff_tree_weights[i];
 	cout << "Max weight: " << max_weight << endl;
 	if (verbose_mode >= VB_MAX) {
-		for (i = 0; i < prob_vec.size(); i++) cout << prob_vec[i] << " " << diff_tree_weights[i] << " " << diff_tree_ids[i] << endl;
+		for (i = 0; i < prob_vec.size(); i++) cout << prob_vec[i] << " " << diff_tree_weights[i] << " " << diff_tree_ids[i]+1 << endl;
 		cout << endl;
 	}
 
@@ -399,7 +442,7 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 
 	out_file = params.out_prefix;
 	out_file += ".supval";
-	writeInternalNodeNames(tree, out_file);
+	tree.writeInternalNodeNames(out_file);
 
     cout << "Support values written to " << out_file << endl;
 	//delete [] rfdist;

@@ -608,6 +608,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.ncbi_taxid = 0;
 	params.gbo_replicates = 0;
 	params.use_rell_method = true;
+	params.use_elw_method = false;
 
 	struct timeval tv;
 	struct timezone tz;
@@ -1240,6 +1241,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.gbo_replicates = convert_int(argv[cnt]);
 			} else if (strcmp(argv[cnt], "-norell") == 0) {
 				params.use_rell_method = false;
+			} else if (strcmp(argv[cnt], "-elw") == 0) {
+				params.use_elw_method = true;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

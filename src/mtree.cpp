@@ -1331,3 +1331,19 @@ void PDTaxaSet::makeIDSet(int ntaxa, Split &id_set) {
 	for (iterator it = begin(); it != end(); it++)
 		id_set.addTaxon((*it)->id);
 }
+
+void MTree::writeInternalNodeNames(string &out_file) {
+	try {
+		ofstream out(out_file.c_str());
+		NodeVector nodes;
+		getInternalNodes(nodes);
+		for (NodeVector::iterator nit = nodes.begin(); nit != nodes.end(); nit++) {
+			out  << " " << (*nit)->name;
+		}
+		out << endl;
+		out.close();
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, out_file);
+	}
+}
+

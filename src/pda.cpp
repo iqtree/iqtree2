@@ -1571,9 +1571,9 @@ int main(int argc, char *argv[])
 	cout << "Running arguments: " << endl;
 	for (int i = 0; i < argc; i++)
 		cout << " " << argv[i];
-	cout << endl << endl;
+	cout << endl;
 
-
+	cout << "Random number generator seed: " << params.ran_seed << endl << endl;
 	srand(params.ran_seed);
 
 	// call the main function

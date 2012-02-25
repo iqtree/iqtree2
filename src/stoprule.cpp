@@ -119,7 +119,7 @@ void StopRule::cmpInvMat (DoubleMatrix &oriMat, DoubleMatrix &invMat, int size) 
 		}
 		if (maxb == 0.0) {
 			/* Singular matrix */
-			std::cout << "\n\n\nHALT: PLEASE REPORT ERROR D TO DEVELOPERS\n\n\n";
+			cout << "\n\n\nHALT: PLEASE REPORT ERROR D TO DEVELOPERS\n\n\n";
 			//OutStream::write(oriMat, cout);
 			exit(1);
 		}

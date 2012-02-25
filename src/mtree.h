@@ -187,6 +187,8 @@ public:
 	*/
 	void printTaxa(ostream &out, NodeVector &subtree);
 
+	void writeInternalNodeNames(string &out_file);
+
 /********************************************************
 	DRAW TREE
 ********************************************************/

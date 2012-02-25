@@ -1094,6 +1094,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
         cout << "CPU Time used:  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
         delete [] pattern_lh;
+		string out_file = params.out_prefix;
+		out_file += ".alrt";
+		tree.writeInternalNodeNames(out_file);
+	
+		cout << "Support values written to " << out_file << endl;
     }
 
 	cout << "Total tree length: " << tree.treeLength() << endl;
@@ -1307,8 +1312,6 @@ void runPhyloAnalysis(Params &params) {
 	delete alignment;
 }
 
-void writeInternalNodeNames(MTree &tree, string &out_file);
-
 void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, bool rooted,
         const char *output_tree, const char *out_prefix, MExtTree &mytree, const char* tree_weight_file) {
     //bool rooted = false;
@@ -1367,7 +1370,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 	else
 		out_file = target_tree;
 	out_file += ".supval";
-	writeInternalNodeNames(mytree, out_file);
+	mytree.writeInternalNodeNames(out_file);
 
     cout << "Support values written to " << out_file << endl;
 

@@ -119,15 +119,15 @@ void EigenDecomposition::eigensystem(
 		}
 	}
 	if (error) {
-		std::cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
-		std::cout << "Rate matrix R: " << endl;
+		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
+		cout << "Rate matrix R: " << endl;
 		for (i = 0; i < num_state; i++) {
-			for (j = 0; j < num_state; j++) std::cout << rate_params[i][j] << " ";
+			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
 			cout << endl;
 		}
-		std::cout << "State frequencies: " << endl;
-		for (i = 0; i < num_state; i++) std::cout << state_freq[i] << " ";
-		std::cout << endl;
+		cout << "State frequencies: " << endl;
+		for (i = 0; i < num_state; i++) cout << state_freq[i] << " ";
+		cout << endl;
 	}
 
 	for (i=num_state-1; i>= 0; i--)
@@ -225,15 +225,15 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		}
 	}
 	if (error) {
-		std::cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
-		std::cout << "Rate matrix R: " << endl;
+		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
+		cout << "Rate matrix R: " << endl;
 		for (i = 0; i < num_state; i++) {
-			for (j = 0; j < num_state; j++) std::cout << rate_params[i][j] << " ";
+			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
 			cout << endl;
 		}
-		std::cout << "State frequencies: " << endl;
-		for (i = 0; i < num_state; i++) std::cout << state_freq[i] << " ";
-		std::cout << endl;
+		cout << "State frequencies: " << endl;
+		for (i = 0; i < num_state; i++) cout << state_freq[i] << " ";
+		cout << endl;
 	}
 
 	for (i=num_state-1; i>= 0; i--)
@@ -597,7 +597,7 @@ void EigenDecomposition::hqr2(int n, int low, int hgh, double **h,
 				break;
 			if (itn == 0) {
 				/* all eigenvalues have not converged */
-				std::cout << "\n\n\nHALT: PLEASE REPORT ERROR B TO DEVELOPERS\n\n\n";
+				cout << "\n\n\nHALT: PLEASE REPORT ERROR B TO DEVELOPERS\n\n\n";
 				exit(1);
 			}
 			y = h[na - 1][na - 1];
@@ -951,7 +951,7 @@ void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
 		}
 		if (maxb == 0.0) {
 			/* Singular matrix */
-			std::cout << "\n\n\nHALT: PLEASE REPORT ERROR C TO DEVELOPERS\n\n\n";
+			cout << "\n\n\nHALT: PLEASE REPORT ERROR C TO DEVELOPERS\n\n\n";
 			exit(1);
 		}
 		wk[i] = 1.0 / maxb;
@@ -1054,7 +1054,7 @@ void EigenDecomposition::checkevector(double **evec, double **ivec, int nn) {
 		}
 	}
 	if (error) {
-		std::cout << "\nWARNING: Inversion of eigenvector matrix not perfect!\n";
+		cout << "\nWARNING: Inversion of eigenvector matrix not perfect!\n";
 	}
 
 	for (i = nn-1; i >= 0; i--)

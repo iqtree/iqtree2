@@ -554,7 +554,7 @@ double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[]
 				guess[i] = ((double)(rand())/RAND_MAX) * (upper[i] - lower[i])/3 + lower[i];
 			}
 		} while (false);
-		std::cout << "Restart estimation at the boundary... " << std::endl;
+		cout << "Restart estimation at the boundary... " << std::endl;
 	} while (count < MAX_ITER);
 	if (count > 1) {
 		for (i = 1; i <= ndim; i++)
