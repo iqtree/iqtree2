@@ -193,11 +193,12 @@ double computeRELLLogL(DoubleVector &pattern_lh, IntVector &pattern_freq) {
 	computing Expected Likelihood Weights (ELW) of trees by Strimmer & Rambaut (2002)
 */
 void computeExpectedLhWeights(Alignment *aln, vector<DoubleVector> &pattern_lhs, 
-	IntVector &treeids, int num_replicates, DoubleVector &elw) {
+	IntVector &treeids, int num_replicates, DoubleVector &elw, DoubleVector *sh_pval = NULL) {
 	cout << "Computing Expected Likelihood Weights (ELW) with " << num_replicates << " replicates ..." << endl;
-	int i, j;
+	int i, j, ntrees = treeids.size();
 	elw.resize(treeids.size(), 0.0);
 	vector<DoubleVector> all_logl;
+	// general RELL logl
 	for (i = 0; i < num_replicates; i++) {
 		IntVector pattern_freq;
 		aln->resamplePatternFreq(pattern_freq);
@@ -207,6 +208,7 @@ void computeExpectedLhWeights(Alignment *aln, vector<DoubleVector> &pattern_lhs,
 		for (IntVector::iterator it = treeids.begin(); it != treeids.end(); it++, j++) {
 			logl[j] = computeRELLLogL(pattern_lhs[*it], pattern_freq);
 		}
+		if (sh_pval) all_logl.push_back(logl);
 		double max_logl = logl[0];
 		for (j = 0; j < logl.size(); j++) 
 			if (max_logl < logl[j]) max_logl = logl[j];
@@ -218,8 +220,51 @@ void computeExpectedLhWeights(Alignment *aln, vector<DoubleVector> &pattern_lhs,
 		for (j = 0; j < logl.size(); j++) 
 			elw[j] += (logl[j]/sum);
 	}
+	// normalize ELW weights to sum of 1
 	for (j = 0; j < elw.size(); j++) 
 		elw[j] /= num_replicates;
+
+	if (!sh_pval) return;
+
+
+	// centering step in SH test
+	DoubleVector mean_logl;
+	mean_logl.resize(ntrees, 0);
+	for (i = 0; i < num_replicates; i++) 
+		for (j = 0; j < ntrees; j++) {
+			mean_logl[j] += all_logl[i][j];
+		}
+	for (j = 0; j < ntrees; j++) 
+		mean_logl[j] /= num_replicates;
+	for (i = 0; i < num_replicates; i++) 
+		for (j = 0; j < ntrees; j++) {
+			all_logl[i][j] -= mean_logl[j];
+		}
+
+	// computing delta
+	for (i = 0; i < num_replicates; i++) {
+		double max_logl = *max_element(all_logl[i].begin(), all_logl[i].end());
+		for (j = 0; j < ntrees; j++) all_logl[i][j] = max_logl - all_logl[i][j];
+	}
+
+	// computing original delta
+	DoubleVector orig_logl;
+	orig_logl.resize(ntrees, 0);
+	for (j = 0; j < ntrees; j++) {
+		int tree_id = treeids[j];
+		i = 0;
+		for (Alignment::iterator it = aln->begin(); it != aln->end(); it++, i++)
+			orig_logl[j] += pattern_lhs[tree_id][i] * it->frequency;
+	}
+	double max_logl = *max_element(orig_logl.begin(), orig_logl.end());
+	for (j = 0; j < ntrees; j++) orig_logl[j] = max_logl - orig_logl[j];
+	sh_pval->resize(ntrees, 0);
+	for (i = 0; i < num_replicates; i++) 
+	for (j = 0; j < ntrees; j++) {
+			if (orig_logl[j] < all_logl[i][j]) (*sh_pval)[j] += 1.0;
+	}
+	for (j = 0; j < ntrees; j++) 
+		(*sh_pval)[j] /= num_replicates;
 }
 
 void runGuidedBootstrap(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
@@ -313,14 +358,14 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 
 
 	if (params.use_elw_method) { 	// compute ELW weights
-		DoubleVector elw;
-		computeExpectedLhWeights(alignment, pattern_lhs, diff_tree_ids, params.gbo_replicates, elw);
+		DoubleVector elw, sh_pval;
+		computeExpectedLhWeights(alignment, pattern_lhs, diff_tree_ids, params.gbo_replicates, elw, &sh_pval);
 		string elw_file_name = params.out_prefix;
 		elw_file_name += ".elw";
 		ofstream elw_file(elw_file_name.c_str());
-		elw_file << "Treeid\tELW" << endl;
+		elw_file << "Treeid\tELW\tSH-pval" << endl;
 		for (i = 0; i < elw.size(); i++) 
-			elw_file << diff_tree_ids[i]+1 << "\t" << elw[i] << endl;
+			elw_file << diff_tree_ids[i]+1 << "\t" << elw[i] << "\t" << sh_pval[i] << endl;
 		elw_file.close();
 		cout << "ELW printed to " << elw_file_name << endl;
 		diff_tree_weights.resize(diff_tree_ids.size(), 0);
