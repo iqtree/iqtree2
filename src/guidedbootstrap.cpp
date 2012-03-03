@@ -422,20 +422,36 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 				//if (verbose_mode >= VB_MAX) cout << logl << endl;
 			}
 			double max_logl = *max_element(logl.begin(), logl.end());
-			DoubleVector weights;
-			weights.resize(ndiff);
-			for (j = 0; j < ndiff; j++) logl[j] = exp(logl[j] - max_logl);
-			double sum = accumulate(logl.begin(), logl.end(), 0.0);
-			for (j = 0; j < ndiff; j++) weights[j] = logl[j]/sum;
 
 			if (params.use_rell_method) {
 				int k = 0;
-				int max_id = max_element(weights.begin(), weights.end()) - weights.begin();
 				if (params.use_max_tree_per_bootstrap) {
-					diff_tree_ids.push_back(diff_tree_ids[max_id]);
-					prob_vec.push_back(prob);
-					k=1;
+					double logl_cutoff = max_logl - 0.1;
+					int num_max = 0;
+					for (j = 0; j < ndiff; j++) 
+						if (logl[j] >= logl_cutoff) num_max++;
+					int max_rand = floor(((double)rand() / RAND_MAX)*num_max);
+					if (max_rand >= num_max) max_rand = num_max - 1;
+					if (verbose_mode >= VB_MED) 
+						cout << "Bootstrap " << i+1 <<  " lprob=" << prob << " max_logl=" << 
+							max_logl << "  Tie broken " << max_rand << "/" << num_max << endl;
+					for (j = 0; j < ndiff && max_rand >= 0; j++) 
+						if (logl[j] >= logl_cutoff) {
+							max_rand--;
+							if (max_rand < 0) {
+								diff_tree_ids.push_back(diff_tree_ids[j]);
+								prob_vec.push_back(prob);
+								break;
+							}
+						}
 				} else {
+					DoubleVector weights;
+					weights.resize(ndiff);
+					for (j = 0; j < ndiff; j++) weights[j] = exp(logl[j] - max_logl);
+					double sum = accumulate(weights.begin(), weights.end(), 0.0);
+					for (j = 0; j < ndiff; j++) weights[j] /= sum;
+					int max_id = max_element(weights.begin(), weights.end()) - weights.begin();
+
 					double weight_cutoff = weights[max_id] * 0.001;
 					for (j = 0; j < ndiff; j++) {
 						if (weights[j] >= weight_cutoff) {
@@ -444,10 +460,10 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 							k++;
 						}
 					}
+					if (verbose_mode >= VB_MED) 
+						cout << "Bootstrap " << i+1 <<  " lprob=" << prob << " max_id=" << max_id << " max_w=" << 
+							weights[max_id] << " " << k << " trees" << endl;
 				}
-				if (verbose_mode >= VB_MED) 
-					cout << "Bootstrap " << i+1 <<  " lprob=" << prob << " max_id=" << max_id << " max_w=" << 
-						weights[max_id] << " " << k << " trees" << endl;
 			}
 			else {
 				diff_tree_ids.push_back(diff_tree_ids[chosen_id]);
