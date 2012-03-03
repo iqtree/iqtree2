@@ -525,6 +525,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.min_len = 0.001;
 	params.mean_len = 0.1;
 	params.max_len = 0.999;
+	params.num_zero_len = 0;
 	params.pd_limit = 100;
 	params.calc_pdgain = false;
 	params.multi_tree = false;
@@ -799,7 +800,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.mean_len = convert_double(argv[cnt+1]);
 				params.max_len = convert_double(argv[cnt+2]);
 				cnt += 2;
-
+			} else if (strcmp(argv[cnt],"-rzero") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rzero <num_zero_branch>";
+				params.num_zero_len = convert_int(argv[cnt]);
+				if (params.num_zero_len <= 0) throw "num_zero_len must be positive";
 			} else if (strcmp(argv[cnt],"-rset") == 0) {
 				cnt++;
 				if (cnt >= argc-1)

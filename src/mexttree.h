@@ -118,6 +118,10 @@ public:
 	void setLeavesName(NodeVector &myleaves);
 
 
+	void setZeroInternalBranches(int num_zero_len);
+
+	void collapseZeroBranches(Node *node = NULL, Node *dad = NULL);
+
 /********************************************************
 	BOOTSTRAP
 ********************************************************/

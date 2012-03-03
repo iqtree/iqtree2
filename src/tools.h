@@ -571,6 +571,11 @@ struct Params {
      */
     double max_len;
 
+	/**
+		number of internal branches to set zero length
+	*/
+	int num_zero_len;
+
     /**
             random number seed
      */

@@ -39,6 +39,48 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 	default:
 		break;
 	}
+
+}
+
+void MExtTree::setZeroInternalBranches(int num_zero_len) {
+	NodeVector nodes, nodes2;
+	getInternalBranches(nodes, nodes2);
+	if (num_zero_len > nodes.size()) outError("The specified number of zero branches is too much");
+	for (int i = 0; i < num_zero_len;) {
+		int id = floor(((double) rand() / RAND_MAX) * nodes.size());
+		if (id >= nodes.size()) id = nodes.size()-1;
+		if (!nodes[id]) continue;
+		i++;
+		nodes[id]->findNeighbor(nodes2[id])->length = 0.0;
+		nodes2[id]->findNeighbor(nodes[id])->length = 0.0;
+		nodes[id] = NULL;
+		nodes2[id] = NULL;
+	}
+}
+
+void MExtTree::collapseZeroBranches(Node *node, Node *dad) {
+	if (!node) node = root;
+	FOR_NEIGHBOR_DECLARE(node, dad, it) {
+		collapseZeroBranches((*it)->node, node);
+	}
+	NeighborVec nei_vec;
+	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
+	for (it = nei_vec.begin(); it != nei_vec.end(); it++) 
+	if ((*it)->node != dad) {
+		if ((*it)->length == 0.0) { // delete the child node
+			Node *child = (*it)->node;
+			bool first = true;
+			FOR_NEIGHBOR_IT(child, node, it2) {
+				if (first)
+					node->updateNeighbor(child, (*it2)->node, (*it2)->length);
+				else
+					node->addNeighbor((*it2)->node, (*it2)->length);
+				(*it2)->node->updateNeighbor(child, node);
+				first = false;
+			}
+			delete child;
+		}
+	}
 }
 
 void MExtTree::generateCaterpillar(int size) {
@@ -321,7 +363,8 @@ void MExtTree::generateStarTree(Params &params) {
 	NodeVector nodes, nodes2;
 	getInternalBranches(nodes, nodes2);
 	for (int i = 0; i < nodes.size(); i++) {
-		nodes[i]->find
+		nodes[i]->findNeighbor(nodes2[i])->length = 0.0;
+		nodes2[i]->findNeighbor(nodes[i])->length = 0.0;
 	}
 
 }

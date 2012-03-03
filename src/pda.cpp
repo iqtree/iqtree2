@@ -54,7 +54,7 @@ void generateRandomTree(Params &params)
 		outError(ERR_FEW_TAXA);
 	}
 
-	cout << "Random number seed: " << params.ran_seed << endl << endl;
+	//cout << "Random number seed: " << params.ran_seed << endl << endl;
 
 	SplitGraph sg;
 
@@ -79,18 +79,37 @@ void generateRandomTree(Params &params)
 				cout << "Generating random balanced tree..." << endl;
 				break;
 			case STAR_TREE:
-				cout << "Generating star tree with random branch lengths..." << endl;
+				cout << "Generating star tree with random external branch lengths..." << endl;
 				break;
 			default: break;
+			}	
+			ofstream out2;
+			if (params.num_zero_len) {
+				cout << "Setting " << params.num_zero_len << " internal branches to zero length..." << endl;
+				string str = params.user_file;
+				str += ".collapsed";
+				out2.open(str.c_str());
 			}
 			for (int i = 0; i < params.repeated_time; i++) {
 				MExtTree mtree;
 				mtree.generateRandomTree(params.tree_gen, params);
+				if (params.num_zero_len) {
+					mtree.setZeroInternalBranches(params.num_zero_len);
+					MExtTree collapsed_tree;
+					collapsed_tree.copyTree(&mtree);
+					collapsed_tree.collapseZeroBranches();
+					collapsed_tree.printTree(out2);
+					out2 << endl;
+				}
 				mtree.printTree(out);
 				out << endl;
 			}
 			out.close();		
 			cout << params.repeated_time << " tree(s) printed to " << params.user_file << endl;
+			if (params.num_zero_len) {
+				out2.close();		
+				cout << params.repeated_time << " collapsed tree(s) printed to " << params.user_file << ".collapsed" << endl;
+			}
 		}
 		// Generate random trees if optioned
 		else if (params.tree_gen == CIRCULAR_SPLIT_GRAPH) {
