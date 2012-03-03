@@ -61,7 +61,7 @@ void generateRandomTree(Params &params)
 	try {
 
 		if (params.tree_gen == YULE_HARDING || params.tree_gen == CATERPILLAR ||
-			params.tree_gen == BALANCED || params.tree_gen == UNIFORM) {
+			params.tree_gen == BALANCED || params.tree_gen == UNIFORM || params.tree_gen == STAR_TREE) {
 			if (!overwriteFile(params.user_file)) return;
 			ofstream out;
 			out.open(params.user_file);
@@ -77,6 +77,9 @@ void generateRandomTree(Params &params)
 				break;
 			case BALANCED:
 				cout << "Generating random balanced tree..." << endl;
+				break;
+			case STAR_TREE:
+				cout << "Generating star tree with random branch lengths..." << endl;
 				break;
 			default: break;
 			}
@@ -1298,12 +1301,19 @@ void computeRFDist(Params &params) {
 	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin);
 	int n = trees.size(), m = trees.size();
 	int *rfdist;
+	string infoname = params.out_prefix;
+	infoname += ".rfinfo";
+	string treename = params.out_prefix;
+	treename += ".rftree";
 	if (params.rf_dist_mode == RF_TWO_TREE_SETS) {
 		MTreeSet treeset2(params.second_tree, params.is_rooted, params.tree_burnin);
 		m = treeset2.size();
 		rfdist = new int [n*m];
 		memset(rfdist, 0, n*m* sizeof(int));
-		trees.computeRFDist(rfdist, &treeset2);
+		if (verbose_mode >= VB_MED) 
+			trees.computeRFDist(rfdist, &treeset2, infoname.c_str(),treename.c_str());
+		else
+			trees.computeRFDist(rfdist, &treeset2);
 	} else {
 		rfdist = new int [n*n];
 		memset(rfdist, 0, n*n* sizeof(int));

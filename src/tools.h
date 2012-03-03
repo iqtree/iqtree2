@@ -192,7 +192,7 @@ enum RunMode {
  */
 enum TreeGenType {
     NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED,
-    CIRCULAR_SPLIT_GRAPH, TAXA_SET
+    CIRCULAR_SPLIT_GRAPH, TAXA_SET, STAR_TREE
 };
 
 /**
@@ -307,13 +307,6 @@ struct NNIInfo {
 	int nni_round;
 	int iqpnni_iteration;
 };
-
-extern bool testNNI;
-extern double nni_cutoff;
-extern bool estimate_nni_cutoff;
-extern vector<NNIInfo> nni_info;
-extern ofstream outNNI;
-extern bool nni_sort;
 
 
 /*--------------------------------------------------------------*/
@@ -805,6 +798,11 @@ struct Params {
     int write_intermediate_trees;
 
     /**
+    	TRUE to avoid duplicated trees while writing intermediate trees
+     */
+    bool avoid_duplicated_trees;
+
+    /**
             Robinson-Foulds distance computation mode: RF_ADJACENT PAIR, RF_ALL_PAIR
      */
     int rf_dist_mode;
@@ -946,6 +944,34 @@ struct Params {
 		TRUE to use ELW method of Strimmer & Rambaut for new bootstrap, FALSE otherwise
 	*/
 	bool use_elw_method;
+
+	/**
+		TRUE to weight each bootstrap sample by its probability, FALSE otherwise
+	*/
+	bool use_weighted_bootstrap;
+
+	/**
+		TRUE to use the single ML tree per bootstrap, FALSE to include several sup-optima
+	*/
+	bool use_max_tree_per_bootstrap;
+
+	/** 
+		TRUE to empirically estimate nni_cutoff
+	*/
+	bool estimate_nni_cutoff;
+
+	/**
+		logl difference with zero-branch tree, to cutoff before evaluating NNI
+	*/
+	double nni_cutoff;
+
+	/** 
+		sort the NNI before evaluating
+	*/
+	bool nni_sort;
+
+	/** print some output info for NNI */
+	bool testNNI;
 };
 
 /**

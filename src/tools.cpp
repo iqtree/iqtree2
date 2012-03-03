@@ -581,6 +581,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.fixed_branch_length = false;
 	params.iqp_assess_quartet = IQP_DISTANCE;
 	params.write_intermediate_trees = 0;
+	params.avoid_duplicated_trees = false;
 	params.rf_dist_mode = 0;
 	params.mvh_site_rate = false;
 	params.rate_mh_type = true;
@@ -609,6 +610,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.gbo_replicates = 0;
 	params.use_rell_method = true;
 	params.use_elw_method = false;
+	params.use_weighted_bootstrap = true;
+	params.use_max_tree_per_bootstrap = false;
+
+	//const double INF_NNI_CUTOFF = -1000000.0;
+	params.nni_cutoff = -1000000.0;
+	params.estimate_nni_cutoff = false;
+	params.nni_sort = false;
+	params.testNNI = false;
+
 
 	struct timeval tv;
 	struct timezone tz;
@@ -746,6 +756,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -r <num_taxa>";
 				params.sub_size = convert_int(argv[cnt]);
 				params.tree_gen = YULE_HARDING;
+			} else if (strcmp(argv[cnt],"-rstar") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rstar <num_taxa>";
+				params.sub_size = convert_int(argv[cnt]);
+				params.tree_gen = STAR_TREE;
 			} else if (strcmp(argv[cnt],"-ru") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1162,6 +1178,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.write_intermediate_trees = 1;
 			} else if (strcmp(argv[cnt],"-wt2") == 0) {
 				params.write_intermediate_trees = 2;
+			} else if (strcmp(argv[cnt],"-nodup") == 0) {
+				params.avoid_duplicated_trees = true;
 			} else if (strcmp(argv[cnt],"-rf_all") == 0) {
 				params.rf_dist_mode = RF_ALL_PAIR;
 			} else if (strcmp(argv[cnt],"-rf_adj") == 0) {
@@ -1213,20 +1231,20 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -pval <gene_pvalue_file>";
 				params.gene_pvalue_file = argv[cnt];
 			} else if (strcmp(argv[cnt], "-nnitest") == 0) {
-				testNNI = true;
+				params.testNNI = true;
 			} else if (strcmp(argv[cnt], "-nnicut") == 0) {
-				estimate_nni_cutoff = true;
+				params.estimate_nni_cutoff = true;
 				//nni_cutoff = -5.41/2;
 			} else if (strcmp(argv[cnt], "-nnichi2") == 0) {
-				nni_cutoff = -5.41/2;
+				params.nni_cutoff = -5.41/2;
 			} else if (strcmp(argv[cnt], "-nnicutval") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -nnicutval <log_diff_value>";
-				nni_cutoff = convert_double(argv[cnt]);
-				if (nni_cutoff >= 0) throw "cutoff value for -nnicutval must be negative";
+				params.nni_cutoff = convert_double(argv[cnt]);
+				if (params.nni_cutoff >= 0) throw "cutoff value for -nnicutval must be negative";
 			} else if (strcmp(argv[cnt], "-nnisort") == 0) {
-				nni_sort = true;
+				params.nni_sort = true;
 			} else if (strcmp(argv[cnt], "-plog") == 0) {
 				params.gene_pvalue_loga = true;
 			} else if (strcmp(argv[cnt], "-dmp") == 0) {
@@ -1243,6 +1261,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.use_rell_method = false;
 			} else if (strcmp(argv[cnt], "-elw") == 0) {
 				params.use_elw_method = true;
+			} else if (strcmp(argv[cnt], "-noweight") == 0) {
+				params.use_weighted_bootstrap = false;
+			} else if (strcmp(argv[cnt], "-nomore") == 0) {
+				params.use_max_tree_per_bootstrap = true;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

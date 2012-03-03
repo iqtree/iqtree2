@@ -410,7 +410,9 @@ void MTreeSet::computeRFDist(int *rfdist, int mode) {
 }
 
 
-void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2) {
+void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2, 
+	const char *info_file, const char *tree_file) 
+{
 	// exit if less than 2 trees
 #ifdef USE_HASH_MAP
 	cout << "Using hash_map" << endl;
@@ -419,61 +421,94 @@ void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2) {
 #endif
 	cout << "Computing Robinson-Foulds distance between two sets of trees..." << endl;
 
+	ofstream oinfo;
+	ofstream otree;
+	if (info_file) oinfo.open(info_file);
+	if (tree_file) otree.open(tree_file);
+
 	vector<string> taxname(front()->leafNum);
 	vector<SplitIntMap*> hs_vec;
 	vector<SplitGraph*> sg_vec;
+	vector<NodeVector> nodes_vec;
 
 	front()->getTaxaName(taxname);
+
 
 	iterator it;
 	// converting trees into split system then stored in SplitIntMap for efficiency
 	for (iterator it = begin(); it != end(); it++) {
 		SplitGraph *sg = new SplitGraph();
 		SplitIntMap *hs = new SplitIntMap();
+		NodeVector nodes;
 
-		(*it)->convertSplits(taxname, *sg);
+		(*it)->convertSplits(taxname, *sg, &nodes);
 		// make sure that taxon 0 is included
-		for (SplitGraph::iterator sit = sg->begin(); sit != sg->end(); sit++) {
+		int i = 0;
+		for (SplitGraph::iterator sit = sg->begin(); sit != sg->end(); sit++, i++) {
 			if (!(*sit)->containTaxon(0)) (*sit)->invert();
-			hs->insertSplit((*sit), 1);
+			hs->insertSplit((*sit), i);
 		}
 		hs_vec.push_back(hs);
 		sg_vec.push_back(sg);
+		nodes_vec.push_back(nodes);
 	}
 
 	// converting trees into split system then stored in SplitIntMap for efficiency
 	for (it = treeset2->begin(); it != treeset2->end(); it++) {
 		SplitGraph *sg = new SplitGraph();
 		SplitIntMap *hs = new SplitIntMap();
+		NodeVector nodes;
 
-		(*it)->convertSplits(taxname, *sg);
+		(*it)->convertSplits(taxname, *sg, &nodes);
 		// make sure that taxon 0 is included
-		for (SplitGraph::iterator sit = sg->begin(); sit != sg->end(); sit++) {
+		int i = 0;
+		for (SplitGraph::iterator sit = sg->begin(); sit != sg->end(); sit++, i++) {
 			if (!(*sit)->containTaxon(0)) (*sit)->invert();
-			hs->insertSplit((*sit), 1);
+			hs->insertSplit((*sit), i);
 		}
 		hs_vec.push_back(hs);
 		sg_vec.push_back(sg);
+		nodes_vec.push_back(nodes);
 	}
 
 	// now start the RF computation
 	int id = 0;
 	int col_size = hs_vec.size() - size();
-	for (vector<SplitIntMap*>::iterator hsit = hs_vec.begin(); id < size(); hsit++, id++) {
+	for (vector<SplitGraph*>::iterator hsit = sg_vec.begin(); id < size(); hsit++, id++) {
 		int id2 = 0;
 		for (vector<SplitIntMap*>::iterator hsit2 = (hs_vec.begin() + size()); hsit2 != hs_vec.end(); hsit2++, id2++) {
 			int common_splits = 0;
-			for (SplitIntMap::iterator spit = (*hsit2)->begin(); spit != (*hsit2)->end(); spit++) {
-				if ((*hsit)->findSplit(spit->first)) common_splits++;
+			int i = 0;
+			for (SplitGraph::iterator spit = (*hsit)->begin(); spit != (*hsit)->end(); spit++, i++) {
+				if ((*hsit2)->findSplit(*spit)) {
+					common_splits++;
+					if (info_file && (*spit)->trivial()<0) oinfo << " " << nodes_vec[id][i]->name;
+				} else {
+					if (info_file && (*spit)->trivial()<0) oinfo << " -" << nodes_vec[id][i]->name;
+					nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;
+				} 
 			}
 			int rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
 			rfdist[id*col_size + id2] = rf_val;
+			if (info_file) oinfo << endl;
+			if (tree_file) { at(id)->printTree(otree); otree << endl; }
+			for (i = 0; i < nodes_vec[id].size(); i++)
+				if (nodes_vec[id][i]->name[0] == '-') nodes_vec[id][i]->name.erase(0,1);
 		}
 	}
 	// delete memory 
 	for (id = hs_vec.size()-1; id >= 0; id--) {
 		delete hs_vec[id];
 		delete sg_vec[id];
+	}
+
+	if (info_file) {
+		oinfo.close();
+		cout << "Detailed split occurences printed to " << info_file << endl;
+	}
+	if (tree_file) {
+		otree.close();
+		cout << "Detailed split occurences on tree printed to " << tree_file << endl;
 	}
 }
 

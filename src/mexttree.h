@@ -73,7 +73,7 @@ public:
 
 	/**
 		generate a random tree with given tree type
-		@param tree_type can be YULE_HARDING, UNIFORM, BALANCED, or CATERPILLAR
+		@param tree_type can be YULE_HARDING, UNIFORM, BALANCED, or CATERPILLAR, or STAR_TREE
 		@param params program parameters
 		@param binary TRUE if you want to generate a binary tree
 	*/
@@ -104,6 +104,12 @@ public:
 		@param size number of taxa
 	*/
 	void generateBalanced(int size);
+
+	/**
+		generate a star tree
+		@param params program parameters
+	*/
+	void generateStarTree(Params &params);
 
 	/**
 		set the leaf ID and names when generating random tree

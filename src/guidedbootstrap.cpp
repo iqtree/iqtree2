@@ -20,6 +20,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+#include <numeric>
 #include "phylotree.h"
 #include "phylosupertree.h"
 #include "phyloanalysis.h"
@@ -201,7 +202,7 @@ void computeExpectedLhWeights(Alignment *aln, vector<DoubleVector> &pattern_lhs,
 	// general RELL logl
 	for (i = 0; i < num_replicates; i++) {
 		IntVector pattern_freq;
-		aln->resamplePatternFreq(pattern_freq);
+		aln->createBootstrapAlignment(pattern_freq);
 		DoubleVector logl;
 		logl.resize(treeids.size(), 0.0);
 		j = 0;
@@ -356,8 +357,8 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 
 	IntVector diff_tree_weights;
 
-
 	if (params.use_elw_method) { 	// compute ELW weights
+
 		DoubleVector elw, sh_pval;
 		computeExpectedLhWeights(alignment, pattern_lhs, diff_tree_ids, params.gbo_replicates, elw, &sh_pval);
 		string elw_file_name = params.out_prefix;
@@ -377,18 +378,29 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		cout << "Own prob: " << own_prob << endl;
 	
 		cout << "Conducting " << params.gbo_replicates << " non-parametric resampling..." << endl;
-		if (params.use_rell_method) cout << "Use RELL method (resampling estimated log-likelihoods)" << endl;
+		if (params.use_rell_method) 
+			cout << "Use RELL method (resampling estimated log-likelihoods)" << endl;
+		else 
+			cout << "Use Euclidean distance" << endl;
+		if (params.use_weighted_bootstrap)
+			cout << "Weighting bootstrap sample by its probability given original alignment" << endl;
+		else
+			cout << "All bootstrap samples have equal weights" << endl;
+
+		if (params.use_max_tree_per_bootstrap) 
+			cout << "Use one ML tree per bootstrap" << endl;
+		else
+			cout << "Weighting trees per bootstrap" << endl;
+
 		// generate bootstrap samples
 		for (i = 0; i < params.gbo_replicates; i++) {
-			Alignment* bootstrap_alignment;
-			if (alignment->isSuperAlignment())
-				bootstrap_alignment = new SuperAlignment;
-			else
-				bootstrap_alignment = new Alignment;
 			IntVector pattern_freq;
-			bootstrap_alignment->createBootstrapAlignment(alignment, &pattern_freq);
+			alignment->createBootstrapAlignment(pattern_freq);
 			double prob;
-			bootstrap_alignment->multinomialProb(*alignment, prob);
+			if (params.use_weighted_bootstrap)
+				prob = alignment->multinomialProb(pattern_freq);
+			else
+				prob = 0;
 			double min_dist = -1.0;
 			int chosen_id = -1;
 			// select best-fit tree by euclidean distance
@@ -402,38 +414,55 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 			}
 	
 			// select best-fit tree by RELL method 
-			double max_logl = 1, max_logl_saved = 0;
-			int chosen_id2 = -1, chosen_id2_saved = -1;
+			DoubleVector logl;
+			logl.resize(ndiff);
 			for (j = 0; j < ndiff; j++) {
 				int tree_id = diff_tree_ids[j];
-				double logl = computeRELLLogL(pattern_lhs[tree_id], pattern_freq);
+				logl[j] = computeRELLLogL(pattern_lhs[tree_id], pattern_freq);
 				//if (verbose_mode >= VB_MAX) cout << logl << endl;
-				if (max_logl > 0 || max_logl < logl) {
-					max_logl_saved = max_logl;
-					max_logl = logl;
-					chosen_id2_saved = chosen_id2;
-					chosen_id2 = j;
+			}
+			double max_logl = *max_element(logl.begin(), logl.end());
+			DoubleVector weights;
+			weights.resize(ndiff);
+			for (j = 0; j < ndiff; j++) logl[j] = exp(logl[j] - max_logl);
+			double sum = accumulate(logl.begin(), logl.end(), 0.0);
+			for (j = 0; j < ndiff; j++) weights[j] = logl[j]/sum;
+
+			if (params.use_rell_method) {
+				int k = 0;
+				int max_id = max_element(weights.begin(), weights.end()) - weights.begin();
+				if (params.use_max_tree_per_bootstrap) {
+					diff_tree_ids.push_back(diff_tree_ids[max_id]);
+					prob_vec.push_back(prob);
+					k=1;
+				} else {
+					double weight_cutoff = weights[max_id] * 0.001;
+					for (j = 0; j < ndiff; j++) {
+						if (weights[j] >= weight_cutoff) {
+							diff_tree_ids.push_back(diff_tree_ids[j]);
+							prob_vec.push_back(prob + log(weights[j]));
+							k++;
+						}
+					}
 				}
-				
+				if (verbose_mode >= VB_MED) 
+					cout << "Bootstrap " << i+1 <<  " lprob=" << prob << " max_id=" << max_id << " max_w=" << 
+						weights[max_id] << " " << k << " trees" << endl;
 			}
-			if (verbose_mode >= VB_MED) {
-				cout << "Bootstrap " << i+1 << " choose id=" << diff_tree_ids[chosen_id]+1 // <<" dist=" << min_dist 
-					<< " id2=" << diff_tree_ids[chosen_id2]+1 << " lh2=" << max_logl 
-					<< " id2s=" << diff_tree_ids[chosen_id2_saved]+1 << " lh2s=" << max_logl_saved
-					<< " prob=" << prob << endl;
-			}
-			if (params.use_rell_method)
-				diff_tree_ids.push_back(diff_tree_ids[chosen_id2]);
-			else
+			else {
 				diff_tree_ids.push_back(diff_tree_ids[chosen_id]);
-			prob_vec.push_back(prob);
+				prob_vec.push_back(prob);
+				if (verbose_mode >= VB_MED) {
+					cout << "Bootstrap " << i+1 << " choose id=" << diff_tree_ids[chosen_id]+1 // <<" dist=" << min_dist 
+						<< " lprob=" << prob << endl;
+				}
+			}
 	
 			if (verbose_mode >= VB_DEBUG) {
 				for (j = 0; j < pattern_freq.size(); j++) 
 					cout << pattern_freq[j] << " ";
 				cout << endl;
 			}
-			delete bootstrap_alignment;
 		}
 	
 		// compute tree weights from the log-probability
@@ -442,21 +471,17 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	} // end of Arndt's method
 
 
-	int max_weight = 0;
-	for (i = 0; i < diff_tree_weights.size(); i++)
-		if (diff_tree_weights[i] > max_weight) max_weight = diff_tree_weights[i];
-	cout << "Max weight: " << max_weight << endl;
-	if (verbose_mode >= VB_MAX) {
-		for (i = 0; i < prob_vec.size(); i++) cout << prob_vec[i] << " " << diff_tree_weights[i] << " " << diff_tree_ids[i]+1 << endl;
-		cout << endl;
-	}
-
 	for (i = 0; i < ntrees; i++) trees.tree_weights[i] = 0;
 	for (it = diff_tree_ids.begin(), i = 0; it != diff_tree_ids.end(); it++, i++) {
 		trees.tree_weights[*it] += diff_tree_weights[i];
 	}
+	if (verbose_mode >= VB_MED) {
+		for (i = 0; i < ntrees; i++)
+			if (trees.tree_weights[i] > 0) cout << "Tree " << i+1 << " weight=" << trees.tree_weights[i] << endl;
+	}
+	int max_tree_id = max_element(trees.tree_weights.begin(), trees.tree_weights.end()) - trees.tree_weights.begin();
+	cout << "max_tree_id = " << max_tree_id << "   max_weight = " << trees.tree_weights[max_tree_id] << endl;
 	cout << "Sum weight: " << trees.sumTreeWeights() << endl;
-
 	// assign bootstrap support
     SplitGraph sg;
     SplitIntMap hash_ss;

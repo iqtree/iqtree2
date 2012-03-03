@@ -20,16 +20,6 @@
 #include "iqptree.h"
 #include "phylosupertree.h"
 
-bool testNNI = false; // BQM
-const double INF_NNI_CUTOFF = -1000000.0;
-double nni_cutoff = INF_NNI_CUTOFF;
-bool estimate_nni_cutoff = false;
-ofstream outNNI;
-vector<NNIInfo> nni_info;
-bool nni_sort = false;
-
-int nni_round = 1;
-
 
 //TODO Only to test
 int cntBranches = 0;
@@ -50,6 +40,11 @@ PhyloTree() {
     enable_parsimony = false;
     enableHeuris = true; // This is set true when the heuristic started (after N iterations)
     linRegModel = NULL;
+	nni_round = 1;
+	estimate_nni_cutoff = false;
+	nni_cutoff = -1e6;
+	nni_sort = false;
+	testNNI = false;
 }
 
 IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln) 
@@ -67,8 +62,50 @@ IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln)
     enable_parsimony = false;
     enableHeuris = true; // This is set true when the heuristic started (after N iterations)
     linRegModel = NULL;
+	nni_round = 1;
+	estimate_nni_cutoff = false;
+	nni_cutoff = -1e6;
+	nni_sort = false;
+	testNNI = false;
 }
 
+void IQPTree::setParams(Params &params) {
+	k_represent = params.k_representative;
+    if (params.p_delete == 0.0) {
+        if (aln->getNSeq() < 51)
+            params.p_delete = 0.5;
+        else if (aln->getNSeq() < 100)
+            params.p_delete = 0.3;
+        else if (aln->getNSeq() < 200)
+            params.p_delete = 0.2;
+        else
+            params.p_delete = 0.1;
+    }
+    //tree.setProbDelete(params.p_delete);
+    if (params.p_delete != 0.0) {
+		k_delete = k_delete_min = k_delete_max = round(params.p_delete * leafNum);
+    } else {
+		k_delete = k_delete_min = 10;
+		k_delete_max = leafNum / 2;
+		if (k_delete_max > 100) k_delete_max = 100;
+		if (k_delete_max < 20) k_delete_max = 20;
+		k_delete_stay = ceil(leafNum/k_delete);
+	}
+
+    //tree.setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
+
+    stop_rule.setStopCondition(params.stop_condition);
+    stop_rule.setConfidenceValue(params.stop_confidence);
+    stop_rule.setIterationNum(params.min_iterations, params.max_iterations);
+
+    //tree.setIQPAssessQuartet(params.iqp_assess_quartet);
+    iqp_assess_quartet = params.iqp_assess_quartet;
+
+	estimate_nni_cutoff = params.estimate_nni_cutoff;
+	nni_cutoff = params.nni_cutoff;
+	nni_sort = params.nni_sort;
+	testNNI	= params.testNNI;
+}
 
 IQPTree::~IQPTree() {
     //if (bonus_values)
@@ -77,23 +114,6 @@ IQPTree::~IQPTree() {
     if (dist_matrix)
         delete[] dist_matrix;
     dist_matrix = NULL;
-}
-
-void IQPTree::setRepresentNum(int k_rep) {
-    k_represent = k_rep;
-}
-
-void IQPTree::setProbDelete(double p_del) {
-    //p_delete = p_del;
-    if (p_del != 0.0) {
-		k_delete = k_delete_min = k_delete_max = round(p_del * leafNum);
-		return;
-    }
-	k_delete = k_delete_min = 10;
-	k_delete_max = leafNum / 2;
-	if (k_delete_max > 100) k_delete_max = 100;
-	if (k_delete_max < 20) k_delete_max = 20;
-	k_delete_stay = ceil(leafNum/k_delete);
 }
 
 double IQPTree::getProbDelete() {
@@ -121,10 +141,6 @@ void IQPTree::setIQPIterations(STOP_CONDITION stop_condition,
     stop_rule.setStopCondition(stop_condition);
     stop_rule.setConfidenceValue(stop_confidence);
     stop_rule.setIterationNum(min_iterations, max_iterations);
-}
-
-void IQPTree::setIQPAssessQuartet(IQP_ASSESS_QUARTET assess_quartet) {
-    iqp_assess_quartet = assess_quartet;
 }
 
 RepresentLeafSet* IQPTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec, int nei_id,
@@ -603,6 +619,14 @@ double IQPTree::perturb(int times) {
 //}
 
 double IQPTree::doIQPNNI(Params &params) {
+
+	if (testNNI) { 
+		string str = params.out_prefix;
+		str += ".nni";
+		outNNI.open(str.c_str());
+		outNNI << "cur_lh\tzero_lh\tnni_lh1\tnni_lh2\topt_len\tnnilen1\tnnilen2\tnni_round" << endl;
+	}
+
     time_t begin_time, cur_time;
     time(&begin_time);
     string tree_file_name = params.out_prefix;
@@ -767,6 +791,9 @@ double IQPTree::doIQPNNI(Params &params) {
                 << floor(params.stop_confidence * 100) << "% confidence" << endl
                 << "         the IQPNNI search will not find a better tree" << endl;
     }
+
+	if (testNNI) outNNI.close();
+
     return bestScore;
 }
 
@@ -1139,7 +1166,7 @@ void IQPTree::genNNIMovesSort() {
 	} 
 }
 
-void estimateNNICutoff(Params &params) {
+void IQPTree::estimateNNICutoff(Params &params) {
 	double delta[nni_info.size()];
 	int i;
 	for (i = 0; i < nni_info.size(); i++) {
@@ -1406,6 +1433,16 @@ void IQPTree::printResultTree(Params &params, ostream &out) {
 
 void IQPTree::printIntermediateTree(const char *ofile, int brtype, Params &params) {
 	if (!params.write_intermediate_trees) return;
+	setRootNode(params.root);
+	if (params.avoid_duplicated_trees) {
+		stringstream ostr;
+		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+		string tree_str = ostr.str();
+		if (treels.find(tree_str) != treels.end()) // already in treels
+			return;
+		treels[tree_str] = 1;
+		//cout << tree_str << endl;
+	}
 	printTree(ofile, brtype);
 	ofstream out_lh, site_lh;
 	string out_lh_file = params.out_prefix;
@@ -1443,9 +1480,15 @@ void IQPTree::printIntermediateTree(const char *ofile, int brtype, Params &param
 	}
 	ofstream out(ofile, ios_base::out | ios_base::app);
 	if (params.print_tree_lh)
-		PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN, &out_lh, &site_lh);
+		if (params.avoid_duplicated_trees) 
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN, &out_lh, &site_lh, &treels);
+		else
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN, &out_lh, &site_lh);
 	else
-		PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN);
+		if (params.avoid_duplicated_trees) 
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN, NULL, NULL, &treels);
+		else
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, &out, WT_NEWLINE | WT_BR_LEN);
 	out.close();
 	if (params.print_tree_lh) out_lh.close();
 	// now print 1-NNI-away trees

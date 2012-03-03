@@ -77,6 +77,7 @@ public:
     IQPTree();
 
     IQPTree(Alignment *aln);
+	void setParams(Params &params);
 
     /**
             destructor
@@ -107,13 +108,13 @@ public:
             set k-representative parameter
             @param k_rep k-representative
      */
-    void setRepresentNum(int k_rep);
+   // void setRepresentNum(int k_rep);
 
     /**
             set the probability of deleteing sequences for IQP algorithm
             @param p_del probability of deleting sequences
      */
-    void setProbDelete(double p_del);
+    //void setProbDelete(double p_del);
 
     double getProbDelete();
 
@@ -131,7 +132,7 @@ public:
     /**
             @param assess_quartet the quartet assessment, either IQP_DISTANCE or IQP_PARSIMONY
      */
-    void setIQPAssessQuartet(IQP_ASSESS_QUARTET assess_quartet);
+    //void setIQPAssessQuartet(IQP_ASSESS_QUARTET assess_quartet);
 
     /**
             find the k-representative leaves under the node
@@ -353,6 +354,7 @@ public:
         return startLambda;
     }
 
+
 protected:
 
 
@@ -441,6 +443,32 @@ protected:
             number of representative leaves for IQP step
      */
     int k_represent;
+
+	/**
+		this keeps the list of intermediate trees. 
+		it will be activated if params.avoid_duplicated_trees is TRUE.
+	*/
+	StringIntMap treels;
+
+	/**
+	*/
+	vector<NNIInfo> nni_info;
+
+	int nni_round;
+
+	bool estimate_nni_cutoff;
+	
+public:
+	double nni_cutoff;
+
+protected:
+	bool nni_sort;
+
+	bool testNNI;
+
+	ofstream outNNI;
+
+	void estimateNNICutoff(Params &params);
 
     /**
             number of IQPNNI iterations

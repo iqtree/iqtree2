@@ -126,9 +126,9 @@ public:
 	/**
 		compute the Robinson-Foulds distance between trees
 		@param rfdist (OUT) RF distance
-		@param mode 
 	*/
-	void computeRFDist(int *rfdist, MTreeSet *treeset2);
+	void computeRFDist(int *rfdist, MTreeSet *treeset2, 
+		const char* info_file = NULL, const char *tree_file = NULL);
 
 	int categorizeDistinctTrees(IntVector &category);
 

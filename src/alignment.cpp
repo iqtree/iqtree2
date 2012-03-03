@@ -1006,7 +1006,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
 	countConstSite();
 }
 
-void Alignment::resamplePatternFreq(IntVector &pattern_freq) {
+void Alignment::createBootstrapAlignment(IntVector &pattern_freq) {
 	pattern_freq.resize(0);
 	pattern_freq.resize(getNPattern(), 0);
 	int site, nsite = getNSite();
@@ -1446,12 +1446,12 @@ void Alignment::multinomialProb (DoubleVector logLL, double &prob)
 	//Vector containing the 'relative' likelihood of the pattern p_i 
 	DoubleVector LL(patNum,-1.0);
 	double sumLL = 0; //sum of the likelihood of the patterns in the alignment
-
+	double max_logl = *max_element(logLL.begin(), logLL.end()); // to rescale the log-likelihood
 	//Compute the `relative' (to the first pattern) likelihood from the logLL			
 	for ( int i = 0; i < patNum; i++ )
 	{
-		//LL[i] = exp(logLL[i]-logLL[0]);
-		LL[i] = exp(logLL[i]);
+		LL[i] = exp(logLL[i]-max_logl);
+		//LL[i] = exp(logLL[i]);
 		sumLL += LL[i];
 	}
 
@@ -1489,4 +1489,27 @@ void Alignment::multinomialProb (DoubleVector logLL, double &prob)
 		sumProb += (double)patFre*log((double)at(patID).frequency/(double)alignLen);
 	}
 	prob = fac - sumFac + sumProb;
+}
+
+double Alignment::multinomialProb (IntVector &pattern_freq)
+{
+	//cout << "Function in Alignment: Compute probability of the expected alignment (determined by patterns log-likelihood under some tree and model) given THIS alignment." << endl;
+
+	//The expected normalized requencies
+	
+	//cout << "Number of patterns: " << patNum << ", sum of expected sites: " << sum << endl;
+	//return expectedNorFre;
+	//compute the probability of having expectedNorFre given the observed pattern frequencies of THIS alignment
+	assert(size() == pattern_freq.size());
+	int patNum = getNPattern();
+	int alignLen = getNSite();		
+	double sumFac = 0;
+	double sumProb = 0;
+	double fac = logFac(alignLen);
+	for (int patID = 0; patID < patNum; patID++) {
+		int patFre = pattern_freq[patID];
+		sumFac += logFac(patFre);
+		sumProb += (double)patFre*log((double)at(patID).frequency/(double)alignLen);
+	}
+	return (fac - sumFac + sumProb);
 }

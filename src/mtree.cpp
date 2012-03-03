@@ -456,7 +456,13 @@ void MTree::readTree(istream &in, bool &is_rooted)
 			root->addNeighbor(node, branch_len);
 			node->addNeighbor(root, branch_len);
 			leafNum++;
-		}
+		} else { // assign root to one of the neighbor of node, if any
+			FOR_NEIGHBOR_IT(node, NULL, it)
+				if ((*it)->node->isLeaf()) {
+					root = (*it)->node;
+					break;
+				}
+		} 
 		// make sure that root is a leaf
 		assert(root->isLeaf());
 	
@@ -770,7 +776,7 @@ void MTree::getTaxaID(vector<int> &taxa, Node *node, Node *dad) {
 }
 
 
-void MTree::convertSplits(SplitGraph &sg, Split *resp, Node *node, Node *dad) {
+void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *node, Node *dad) {
 	if (!node) node = root;
 	assert(resp->getNTaxa() == leafNum);
 	bool has_child = false;
@@ -779,18 +785,19 @@ void MTree::convertSplits(SplitGraph &sg, Split *resp, Node *node, Node *dad) {
 		//getTaxaID((*it)->node, node, taxa);
 		
 		Split *sp = new Split(leafNum, (*it)->length);
-		convertSplits(sg, sp, (*it)->node, node);
+		convertSplits(sg, sp, nodes, (*it)->node, node);
 		*resp += *sp;
 		if (sp->shouldInvert())
 			sp->invert();
 		sg.push_back(sp);
+		if (nodes) nodes->push_back((*it)->node);
 		has_child = true;
 	}
 	if (!has_child)
 		resp->addTaxon(node->id);
 }
 
-void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg) {
+void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *nodes) {
 	if (!sg.taxa) {
 		sg.taxa = new NxsTaxaBlock();
 		for (vector<string>::iterator it = taxname.begin(); it != taxname.end(); it++)
@@ -805,17 +812,17 @@ void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg) {
 	getTaxaID(sg.splits->cycle);
 	// make the splits
 	Split sp(leafNum);
-	convertSplits(sg, &sp);
+	convertSplits(sg, &sp, nodes);
 }
 
-void MTree::convertSplits(SplitGraph &sg) {
+void MTree::convertSplits(SplitGraph &sg, NodeVector *nodes) {
 
 	// make the taxa name
 	vector<string> taxname;
 	taxname.resize(leafNum);
 	getTaxaName(taxname);
 
-	convertSplits(taxname, sg);
+	convertSplits(taxname, sg, nodes);
 }
 
 inline int splitnumtaxacmp(const Split* a, const Split* b)

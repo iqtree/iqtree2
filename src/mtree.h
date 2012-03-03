@@ -380,14 +380,14 @@ public:
 		convert the tree into the split system
 		@param sg (OUT) resulting split graph
 	*/
-	void convertSplits(SplitGraph &sg);
+	void convertSplits(SplitGraph &sg, NodeVector *nodes = NULL);
 
 	/**
 		convert the tree into the split system
 		@param taxname certain taxa name
 		@param sg (OUT) resulting split graph
 	*/
-	void convertSplits(vector<string> &taxname, SplitGraph &sg);
+	void convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *nodes = NULL);
 
 	/**
 		convert the tree into the split system, iterative procedure
@@ -396,7 +396,7 @@ public:
 		@param node the starting node, NULL to start from the root
 		@param dad dad of the node, used to direct the search
 	*/
-	void convertSplits(SplitGraph &sg, Split *resp, Node *node = NULL, Node *dad = NULL);
+	void convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes = NULL, Node *node = NULL, Node *dad = NULL);
 
 /********************************************************
 	CONVERT SPLIT SYSTEM INTO TREE

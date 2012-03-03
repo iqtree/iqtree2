@@ -252,7 +252,7 @@ public:
 		resampling pattern frequency by a non-parametric bootstrap 
 		@param pattern_freq resampled pattern frequencies
 	*/
-	void resamplePatternFreq(IntVector &pattern_freq);
+	void createBootstrapAlignment(IntVector &pattern_freq);
 
 	/**
 		create a gap masked alignment from an input alignment. Gap patterns of masked_aln 
@@ -419,6 +419,11 @@ public:
 		@param prob (OUT) the returned probability
 	*/
 	void multinomialProb (DoubleVector logLL, double &prob);
+
+	/** Adapted from MA
+		compute the probability of the alignment defined by pattern_freq given this alignment	
+	*/
+	double multinomialProb (IntVector &pattern_freq);
 	
 
 protected:

@@ -520,7 +520,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
                 "Number of iterations: " << tree.stop_rule.getNumIterations() << endl <<
                 "Probability of deleting sequences: " << params.p_delete << endl <<
                 "Number of representative leaves: " << params.k_representative << endl << 
-                "NNI log-likelihood cutoff: " << nni_cutoff << endl << endl;
+                "NNI log-likelihood cutoff: " << tree.nni_cutoff << endl << endl;
 
 		if (params.compute_ml_tree) {
 			out << "MAXIMUM LIKELIHOOD TREE" << endl << "-----------------------" << endl << endl;
@@ -803,7 +803,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     } else {
         cout <<"Speed up: disabled " << endl;
     }
-	cout << "NNI cutoff: " << nni_cutoff << endl;
+	cout << "NNI cutoff: " << params.nni_cutoff << endl;
 
     /*
             if (params.parsimony) {
@@ -972,20 +972,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
                     if (params.p_delete > 0.5) params.p_delete = 0.5;
             }*/
 
-    tree.setRepresentNum(params.k_representative);
-    if (params.p_delete == 0.0) {
-        if (alignment->getNSeq() < 51)
-            params.p_delete = 0.5;
-        else if (alignment->getNSeq() < 100)
-            params.p_delete = 0.3;
-        else if (alignment->getNSeq() < 200)
-            params.p_delete = 0.2;
-        else
-            params.p_delete = 0.1;
-    }
-    tree.setProbDelete(params.p_delete);
-    tree.setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
-    tree.setIQPAssessQuartet(params.iqp_assess_quartet);
+	tree.setParams(params);
+
 
     /* do iterated local search */
 //    if (ils && params.min_iterations > 1) {
@@ -1137,12 +1125,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
 
 void runPhyloAnalysis(Params &params) {
-	if (testNNI) { 
-		string str = params.out_prefix;
-		str += ".nni";
-		outNNI.open(str.c_str());
-		outNNI << "cur_lh\tzero_lh\tnni_lh1\tnni_lh2\topt_len\tnnilen1\tnnilen2\tnni_round" << endl;
-	}
+
 	Alignment *alignment;
 	IQPTree *tree;
 	if (params.partition_file) {
@@ -1307,7 +1290,6 @@ void runPhyloAnalysis(Params &params) {
 		cout << endl;
     }
 
-	if (testNNI) outNNI.close();
 	delete tree;
 	delete alignment;
 }

@@ -1628,7 +1628,7 @@ double PhyloTree::doNNI(NNIMove move) {
 }
 
 double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
-	ostream *out, int brtype, SwapNNIParam *nni_param, ostream *out_lh, ostream *site_lh) {
+	ostream *out, int brtype, SwapNNIParam *nni_param, ostream *out_lh, ostream *site_lh, StringIntMap *treels) {
     assert(node1->degree() == 3 && node2->degree() == 3);
 
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
@@ -1693,8 +1693,20 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 				nni_param->nni2_brlen = node12_it->length;
 			}
 		}
-		if (out) printTree(*out, brtype);
-		if (out_lh) {
+		bool duplicated_tree = false;
+		if (treels) {
+			stringstream ostr;
+			printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+			string tree_str = ostr.str();
+			if (treels->find(tree_str) != treels->end()) // already in treels
+				duplicated_tree = true;
+			else {
+				(*treels)[tree_str] = 1;
+				//cout << tree_str << endl;
+			}
+		}
+		if (out && !duplicated_tree) printTree(*out, brtype);
+		if (out_lh && !duplicated_tree) {
 			double *pattern_lh = new double[aln->getNPattern()];
 			(*out_lh) << computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
 			double prob;
@@ -1737,15 +1749,15 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 }
 
 double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad, ostream *out, 
-	int brtype, ostream *out_lh, ostream *site_lh) {
+	int brtype, ostream *out_lh, ostream *site_lh, StringIntMap *treels) {
     if (!node) node = (PhyloNode*) root;
     if (!node->isLeaf() && dad && !dad->isLeaf()) {
-        double score = swapNNIBranch(cur_score, node, dad, out, brtype, NULL, out_lh, site_lh);
+        double score = swapNNIBranch(cur_score, node, dad, out, brtype, NULL, out_lh, site_lh, treels);
         if (score > cur_score) return score;
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype, out_lh, site_lh);
+        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype, out_lh, site_lh, treels);
         if (score > cur_score) return score;
     }
     return cur_score;

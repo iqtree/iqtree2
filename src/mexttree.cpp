@@ -33,6 +33,9 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 	case BALANCED:
 		generateBalanced(params.sub_size);
 		break;
+	case STAR_TREE:
+		generateStarTree(params);
+		break;
 	default:
 		break;
 	}
@@ -310,6 +313,16 @@ void MExtTree::generateYuleHarding(Params &params, bool binary) {
 	nodeNum = leafNum;
 	initializeTree();
 
+
+}
+
+void MExtTree::generateStarTree(Params &params) {
+	generateYuleHarding(params);
+	NodeVector nodes, nodes2;
+	getInternalBranches(nodes, nodes2);
+	for (int i = 0; i < nodes.size(); i++) {
+		nodes[i]->find
+	}
 
 }
 
