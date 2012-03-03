@@ -520,7 +520,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
                 "Number of iterations: " << tree.stop_rule.getNumIterations() << endl <<
                 "Probability of deleting sequences: " << params.p_delete << endl <<
                 "Number of representative leaves: " << params.k_representative << endl << 
-                "NNI log-likelihood cutoff: " << tree.nni_cutoff << endl << endl;
+                "NNI log-likelihood cutoff: " << tree.getNNICutoff() << endl << endl;
 
 		if (params.compute_ml_tree) {
 			out << "MAXIMUM LIKELIHOOD TREE" << endl << "-----------------------" << endl << endl;
@@ -660,7 +660,7 @@ void checkZeroDist(Alignment *aln, double *dist) {
     }
 }
 
-void printSiteLh(const char*filename, IQPTree &tree) {
+void printSiteLh(const char*filename, IQPTree &tree, bool append = false) {
 	int i;
 	double *pattern_lh = new double[tree.aln->getNPattern()];
 	tree.computeLikelihood(pattern_lh);
@@ -668,14 +668,19 @@ void printSiteLh(const char*filename, IQPTree &tree) {
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
-		out.open(filename);
-		out << tree.aln->getNSite() << endl;
+		if (append) {
+			out.open(filename, ios::out | ios::app);
+		}
+		else {
+			out.open(filename);
+			out << tree.aln->getNSite() << endl;
+		}
 		out << "Site_Lh   ";
 		for (i = 0; i < tree.aln->getNSite(); i++) 
 			out << " " << pattern_lh[tree.aln->getPatternID(i)];
 		out << endl;
 		out.close();
-		cout << "Site log-likelihoods printed to " << filename << endl;
+		if (!append) cout << "Site log-likelihoods printed to " << filename << endl;
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
@@ -721,6 +726,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     }
     if (params.user_file) {
         // start the search with user-defined tree
+        cout << "Reading user tree file " << params.user_file << " ..." << endl;
         bool myrooted = params.is_rooted;
         tree.readTree(params.user_file, myrooted);
         tree.setAlignment(alignment);
@@ -984,6 +990,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 //        cout << "Best score found : " << endScore << endl;
 //    }
 
+	/* evaluating all trees in user tree file */
+
     /* do the IQPNNI */
     if (params.k_representative > 0 && params.min_iterations >= 1) {
         cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
@@ -1124,6 +1132,43 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 }
 
 
+void evaluateTrees(Params &params, IQPTree *tree) {
+	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin);
+	if (trees.size() == 1) return;
+	string tree_file = params.user_file;
+	tree_file += ".eval";
+	ofstream treeout;
+	if (!params.fixed_branch_length) {
+		treeout.open(tree_file.c_str());
+	}
+	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++) {
+		cout << "Tree " << (it-trees.begin())+1;
+		tree->copyTree(*it);
+		double fixed_length = 0.001;
+		int fixed_number = tree->fixNegativeBranch(fixed_length);
+		tree->initializeAllPartialLh();
+		if (tree->isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
+		if (!params.fixed_branch_length) {
+			tree->curScore = tree->optimizeAllBranches();
+			tree->printTree(treeout);
+			treeout << endl;
+		}
+		else
+			tree->curScore = tree->computeLikelihood();
+		cout << " / LogL: " << tree->curScore << endl;
+		if (params.print_site_lh) {
+			string site_lh_file = params.user_file;
+			site_lh_file += ".sitelh";
+			printSiteLh(site_lh_file.c_str(), *tree, (it != trees.begin()));
+		}
+	}
+	if (!params.fixed_branch_length) {
+		treeout.close();
+		cout << "Trees with optimized branch lengths printed to " << tree_file << endl;
+	}
+	
+}
+
 void runPhyloAnalysis(Params &params) {
 
 	Alignment *alignment;
@@ -1166,6 +1211,9 @@ void runPhyloAnalysis(Params &params) {
         runPhyloAnalysis(params, original_model, alignment, *tree);
         if (original_model != "TESTONLY")
             reportPhyloAnalysis(params, original_model, *alignment, *tree);
+        if (params.min_iterations == 0 && params.user_file && params.print_site_lh) {
+        	evaluateTrees(params, tree);
+        }
     } else {
         // turn off aLRT test
         int saved_aLRT_replicates = params.aLRT_replicates;

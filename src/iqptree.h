@@ -100,7 +100,7 @@ public:
 	/**
 		print intermediate tree
 	*/
-	void printIntermediateTree(const char *ofile, int brtype, Params &params);
+	void printIntermediateTree(int brtype, Params &params);
 
     void setRootNode(char *my_root);
 
@@ -355,6 +355,8 @@ public:
     }
 
 
+	inline double getNNICutoff() { return nni_cutoff; }
+
 protected:
 
 
@@ -457,18 +459,25 @@ protected:
 	int nni_round;
 
 	bool estimate_nni_cutoff;
-	
-public:
+
 	double nni_cutoff;
 
-protected:
 	bool nni_sort;
 
 	bool testNNI;
 
 	ofstream outNNI;
 
+	bool save_all_trees;
+	bool print_tree_lh;
+
+	ofstream out_treels, out_treelh, out_sitelh;
+
 	void estimateNNICutoff(Params &params);
+
+	void saveCurrentTree(PhyloNode* node1, PhyloNode *node2); // save current tree
+	
+
 
     /**
             number of IQPNNI iterations

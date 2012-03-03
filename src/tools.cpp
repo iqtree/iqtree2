@@ -1184,6 +1184,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.write_intermediate_trees = 1;
 			} else if (strcmp(argv[cnt],"-wt2") == 0) {
 				params.write_intermediate_trees = 2;
+				params.avoid_duplicated_trees = true;
+				params.print_tree_lh = true;
+			} else if (strcmp(argv[cnt],"-wt3") == 0) {
+				params.write_intermediate_trees = 3;
+				params.avoid_duplicated_trees = true;
+				params.print_tree_lh = true;
 			} else if (strcmp(argv[cnt],"-nodup") == 0) {
 				params.avoid_duplicated_trees = true;
 			} else if (strcmp(argv[cnt],"-rf_all") == 0) {
