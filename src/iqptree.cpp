@@ -47,6 +47,7 @@ PhyloTree() {
 	testNNI = false;
 	save_all_trees = false;
 	print_tree_lh = false;
+	write_intermediate_trees = false;
 }
 
 IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln) 
@@ -71,6 +72,7 @@ IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln)
 	testNNI = false;
 	save_all_trees = false;
 	print_tree_lh = false;
+	write_intermediate_trees = false;
 }
 
 void IQPTree::setParams(Params &params) {
@@ -110,7 +112,8 @@ void IQPTree::setParams(Params &params) {
 	nni_sort = params.nni_sort;
 	testNNI	= params.testNNI;
 	
-	if (params.write_intermediate_trees > 2) 
+	write_intermediate_trees = params.write_intermediate_trees;
+	if (write_intermediate_trees > 2 || params.gbo_replicates > 0) 
 		save_all_trees = true;
 	print_tree_lh = params.print_tree_lh;
 }
@@ -122,6 +125,10 @@ IQPTree::~IQPTree() {
     if (dist_matrix)
         delete[] dist_matrix;
     dist_matrix = NULL;
+
+	for (vector<double* >::reverse_iterator it = treels_ptnlh.rbegin(); it != treels_ptnlh.rend(); it++)
+		delete [] (*it);
+	treels_ptnlh.clear();
 }
 
 double IQPTree::getProbDelete() {
@@ -944,6 +951,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count) {
 
     if (foundBetterTree) {
         curScore = optimizeAllBranches();
+        //if (save_all_trees) saveCurrentTree(NULL, NULL); // BQM: for new bootstrap
         if (enableHeuris) {
             vecNumNNI.push_back(numbNNI);                                    
         }
@@ -1446,25 +1454,31 @@ void IQPTree::saveCurrentTree(PhyloNode* node1, PhyloNode *node2) {
 	if (treels.find(tree_str) != treels.end()) // already in treels
 		return;
 	else 
-		treels[tree_str] = 1;
+		treels[tree_str] = treels_ptnlh.size();
 
-	printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
+	if (write_intermediate_trees) printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
+
+	double *pattern_lh = new double[aln->getNPattern()];
+	double logl;
+	if (!node1)
+		logl = computeLikelihood(pattern_lh);
+	else
+		logl = computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
+
+	treels_ptnlh.push_back(pattern_lh);
+
 	if (print_tree_lh) {
-		double *pattern_lh = new double[aln->getNPattern()];
-		if (!node1)
-			out_treelh << computeLikelihood(pattern_lh);
-		else
-			out_treelh << computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
+		out_treelh << logl;
 		double prob;
 		DoubleVector pattern_lh_vec;
 		pattern_lh_vec.insert(pattern_lh_vec.end(), pattern_lh, pattern_lh+aln->getNPattern());
 		aln->multinomialProb(pattern_lh_vec, prob);
 		out_treelh << "\t" << prob << endl;
+
 		out_sitelh << "Site_Lh   ";
 		for (int i = 0; i < aln->getNSite(); i++)
 			out_sitelh << "\t" << pattern_lh[aln->getPatternID(i)];
 		out_sitelh << endl;
-		delete [] pattern_lh;
 	}
 }
 
@@ -1494,25 +1508,37 @@ void IQPTree::printResultTree(Params &params, ostream &out) {
 }
 
 void IQPTree::printIntermediateTree(int brtype, Params &params) {
-	if (!params.write_intermediate_trees) return;
+	if (!params.write_intermediate_trees && !save_all_trees) return;
 	setRootNode(params.root);
 	bool duplicated_tree = false;
+	double *pattern_lh = NULL;
+	double logl = curScore;
 	if (params.avoid_duplicated_trees) {
 		stringstream ostr;
 		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 		string tree_str = ostr.str();
-		if (treels.find(tree_str) != treels.end()) // already in treels
+		if (treels.find(tree_str) != treels.end()) { // already in treels
 			duplicated_tree = true;
-		else
-			treels[tree_str] = 1;
+			//pattern_lh = treels_ptnlh[treels[tree_str]];
+		}
+		else {
+			treels[tree_str] = treels_ptnlh.size();
+			pattern_lh = new double[aln->getNPattern()];
+			logl = computeLikelihood(pattern_lh);
+			treels_ptnlh.push_back(pattern_lh);
+		}
 		//cout << tree_str << endl;
+	} else {
+		if (params.print_tree_lh) {
+			pattern_lh = new double[aln->getNPattern()];
+			logl = computeLikelihood(pattern_lh);
+		}
 	}
 
 	if (!duplicated_tree) {
-		printTree(out_treels, brtype);
+		if (write_intermediate_trees) printTree(out_treels, brtype);
 		if (params.print_tree_lh) {
-			double *pattern_lh = new double[aln->getNPattern()];
-			out_treelh << computeLikelihood(pattern_lh);
+			out_treelh << logl;
 			double prob;
 			DoubleVector pattern_lh_vec;
 			pattern_lh_vec.insert(pattern_lh_vec.end(), pattern_lh, pattern_lh+aln->getNPattern());
@@ -1523,21 +1549,25 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 			for (int i = 0; i < aln->getNSite(); i++)
 				out_sitelh << "\t" << pattern_lh[aln->getPatternID(i)];
 			out_sitelh << endl;
-			delete [] pattern_lh;
+			if (!params.avoid_duplicated_trees) delete [] pattern_lh;
 		}
 	}
-	if (params.write_intermediate_trees == 1) {
+	if (params.write_intermediate_trees == 1 && !save_all_trees) {
 		return;
 	}
+
+	ofstream *out = NULL;
+	if (params.write_intermediate_trees) out = &out_treels;
+
 	if (params.print_tree_lh)
 		if (params.avoid_duplicated_trees) 
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, &out_treels, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh, &treels);
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh, &treels, &treels_ptnlh);
 		else
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, &out_treels, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh);
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh);
 	else
 		if (params.avoid_duplicated_trees) 
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, &out_treels, WT_NEWLINE | WT_BR_LEN, NULL, NULL, &treels);
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, NULL, NULL, &treels, &treels_ptnlh);
 		else
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, &out_treels, WT_NEWLINE | WT_BR_LEN);
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN);
 	// now print 1-NNI-away trees
 }

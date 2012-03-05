@@ -809,8 +809,8 @@ double PhyloTree::computePatternLikelihood(PhyloNeighbor *dad_branch, PhyloNode 
     	PhyloNeighbor *node_branch = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
         double sum_scaling = dad_branch->lh_scale_factor + node_branch->lh_scale_factor;
         if (sum_scaling < 0.0) {
-        	cout << __func__ << endl;
-        	outError("Some partial likelihoods are scaled. This function does not work for large trees");
+        	//cout << __func__ << endl;
+        	//outError("Some partial likelihoods are scaled. This function does not work for large trees");
             ptn_scale = new double[nptn];
             memset(ptn_scale, 0, sizeof (double) * nptn);
             //clearAllPartialLh();
@@ -1628,7 +1628,8 @@ double PhyloTree::doNNI(NNIMove move) {
 }
 
 double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
-	ostream *out, int brtype, SwapNNIParam *nni_param, ostream *out_lh, ostream *site_lh, StringIntMap *treels) {
+	ostream *out, int brtype, SwapNNIParam *nni_param, ostream *out_lh, ostream *site_lh, 
+	StringIntMap *treels, vector<double*> *treels_ptnlh) {
     assert(node1->degree() == 3 && node2->degree() == 3);
 
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
@@ -1694,6 +1695,8 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 			}
 		}
 		bool duplicated_tree = false;
+		double logl = 0.0;
+		double *pattern_lh = NULL;
 		if (treels) {
 			stringstream ostr;
 			printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
@@ -1701,14 +1704,19 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 			if (treels->find(tree_str) != treels->end()) // already in treels
 				duplicated_tree = true;
 			else {
-				(*treels)[tree_str] = 1;
+				(*treels)[tree_str] = treels_ptnlh->size();
+				pattern_lh = new double[aln->getNPattern()];
+				logl = computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
+				treels_ptnlh->push_back(pattern_lh);
 				//cout << tree_str << endl;
 			}
+		} else if (out_lh) {
+			pattern_lh = new double[aln->getNPattern()];
+			logl = computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
 		}
 		if (out && !duplicated_tree) printTree(*out, brtype);
 		if (out_lh && !duplicated_tree) {
-			double *pattern_lh = new double[aln->getNPattern()];
-			(*out_lh) << computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
+			(*out_lh) << logl;
 			double prob;
 			DoubleVector pattern_lh_vec;
 			pattern_lh_vec.insert(pattern_lh_vec.end(), pattern_lh, pattern_lh+aln->getNPattern());
@@ -1718,7 +1726,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 			for (int i = 0; i < aln->getNSite(); i++)
 				(*site_lh) << "\t" << pattern_lh[aln->getPatternID(i)];
 			(*site_lh) << endl;
-			delete [] pattern_lh;
+			if (!treels) delete [] pattern_lh;
 		}
         // if better: return
         if (score > cur_score) {
@@ -1749,15 +1757,15 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 }
 
 double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad, ostream *out, 
-	int brtype, ostream *out_lh, ostream *site_lh, StringIntMap *treels) {
+	int brtype, ostream *out_lh, ostream *site_lh, StringIntMap *treels, vector<double*> *treels_ptnlh) {
     if (!node) node = (PhyloNode*) root;
     if (!node->isLeaf() && dad && !dad->isLeaf()) {
-        double score = swapNNIBranch(cur_score, node, dad, out, brtype, NULL, out_lh, site_lh, treels);
+        double score = swapNNIBranch(cur_score, node, dad, out, brtype, NULL, out_lh, site_lh, treels, treels_ptnlh);
         if (score > cur_score) return score;
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype, out_lh, site_lh, treels);
+        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype, out_lh, site_lh, treels, treels_ptnlh);
         if (score > cur_score) return score;
     }
     return cur_score;

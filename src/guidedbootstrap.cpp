@@ -44,7 +44,7 @@
 #include "whtest_wrapper.h"
 #include "partitionmodel.h"
 
-void readPatternLogLL(Alignment* aln, char *fileName, vector<DoubleVector> &logLLs)
+void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs)
 {
 	//First read the values from inFile to a DoubleVector
 	//int siteNum;
@@ -72,8 +72,9 @@ void readPatternLogLL(Alignment* aln, char *fileName, vector<DoubleVector> &logL
 				if (!(inFile >> ll)) throw "Wrong logLL entry";
 				_logllVec.push_back(ll);
 			}
-			DoubleVector logLL;
-			logLL.resize(aln->getNPattern(),0.0);
+			double *logLL = new double[aln->getNPattern()];
+			memset(logLL, 0, sizeof(double) * aln->getNPattern());
+			//logLL.resize(aln->getNPattern(),0.0);
 			for (int i = 0; i < _logllVec.size(); i++)
 			{
 				int patIndex = aln->getPatternID(i);
@@ -104,11 +105,12 @@ void readPatternLogLL(Alignment* aln, char *fileName, vector<DoubleVector> &logL
 
 }
 
-void computeExpectedNorFre(Alignment *aln, DoubleVector &logLL, IntVector &expectedNorFre)
+void computeExpectedNorFre(Alignment *aln, double *logLL, IntVector &expectedNorFre)
 {
 	//IntVector expectedNorFre;
-	if ( logLL.empty()) 
+/*	if ( logLL.empty()) 
 		outError("Error: log likelihood of patterns are not given!");
+*/
 
 	int patNum = aln->getNPattern();
 	int alignLen = aln->getNSite();		
@@ -182,10 +184,10 @@ double euclideanDist(IntVector &vec1, IntVector &vec2) {
 	return sqrt(dist);
 }
 
-double computeRELLLogL(DoubleVector &pattern_lh, IntVector &pattern_freq) {
+double computeRELL(double *pattern_lh, IntVector &pattern_freq) {
 	double lh = 0.0;
-	int npat = pattern_lh.size();
-	if (npat != pattern_freq.size()) outError("Wrong vector size ", __func__);
+	int npat = pattern_freq.size();
+	//if (npat != pattern_freq.size()) outError("Wrong vector size ", __func__);
 	for (int i = 0; i < npat; i++) lh += pattern_freq[i] * pattern_lh[i];
 	return lh;
 }
@@ -193,7 +195,7 @@ double computeRELLLogL(DoubleVector &pattern_lh, IntVector &pattern_freq) {
 /**
 	computing Expected Likelihood Weights (ELW) of trees by Strimmer & Rambaut (2002)
 */
-void computeExpectedLhWeights(Alignment *aln, vector<DoubleVector> &pattern_lhs, 
+void computeExpectedLhWeights(Alignment *aln, vector<double*> &pattern_lhs, 
 	IntVector &treeids, int num_replicates, DoubleVector &elw, DoubleVector *sh_pval = NULL) {
 	cout << "Computing Expected Likelihood Weights (ELW) with " << num_replicates << " replicates ..." << endl;
 	int i, j, ntrees = treeids.size();
@@ -207,7 +209,7 @@ void computeExpectedLhWeights(Alignment *aln, vector<DoubleVector> &pattern_lhs,
 		logl.resize(treeids.size(), 0.0);
 		j = 0;
 		for (IntVector::iterator it = treeids.begin(); it != treeids.end(); it++, j++) {
-			logl[j] = computeRELLLogL(pattern_lhs[*it], pattern_freq);
+			logl[j] = computeRELL(pattern_lhs[*it], pattern_freq);
 		}
 		if (sh_pval) all_logl.push_back(logl);
 		double max_logl = logl[0];
@@ -269,29 +271,49 @@ void computeExpectedLhWeights(Alignment *aln, vector<DoubleVector> &pattern_lhs,
 }
 
 void runGuidedBootstrap(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
-    if (!params.user_file) {
-		outError("You have to specify user tree file");
-    }
-    if (!params.siteLL_file) {
-		outError("Please provide site log-likelihood file via -gbo option");
-    }
-    if (!params.second_tree) {
-		outError("Please provide target tree file via -sup option");
-    }
 
+	int i = 0, j;
 
+	MTreeSet trees;
+	vector<double*> *pattern_lhs = NULL;
+	vector<IntVector> expected_freqs;
 
-	// read tree file
-	cout << "Reading tree file " << params.second_tree << endl;
-	tree.readTree(params.second_tree, params.is_rooted);
-    // reindex the taxa in the tree to aphabetical names
-    NodeVector taxa;
-    tree.getTaxa(taxa);
-    sort(taxa.begin(), taxa.end(), nodenamecmp);
-    int i = 0, j;
-    for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++) {
-        (*it)->id = i++;
-    }
+	if (!tree.save_all_trees) {
+		if (!params.user_file) {
+			outError("You have to specify user tree file");
+		}
+		if (!params.siteLL_file) {
+			outError("Please provide site log-likelihood file via -gbo option");
+		}
+		if (!params.second_tree) {
+			outError("Please provide target tree file via -sup option");
+		}
+	
+		// read tree file
+		cout << "Reading tree file " << params.second_tree << endl;
+		tree.readTree(params.second_tree, params.is_rooted);
+	    // reindex the taxa in the tree to aphabetical names
+		NodeVector taxa;
+		tree.getTaxa(taxa);
+		sort(taxa.begin(), taxa.end(), nodenamecmp);
+		for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++) {
+			(*it)->id = i++;
+		}
+		// read in trees file
+		trees.init(params.user_file, params.is_rooted, params.tree_burnin);
+		// read in corresponding site-log-likelihood for all trees
+		pattern_lhs = new vector<double*>;
+		readPatternLogLL(alignment, params.siteLL_file, *pattern_lhs);
+	} else {
+	 	trees.init(tree.treels, tree.rooted);
+		trees.tree_weights.resize(trees.size(), 1);
+		pattern_lhs = &tree.treels_ptnlh;
+	} 
+
+	IntVector origin_freq;
+	for (i = 0; i < alignment->getNPattern(); i++) 
+		origin_freq.push_back(alignment->at(i).frequency);
+	
 
 	if (verbose_mode >= VB_DEBUG) {
 		cout << "Original pattern freq: ";
@@ -300,15 +322,8 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		cout << endl;
 	}
 
-	// read in trees file
-	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin);
-	vector<DoubleVector> pattern_lhs;
-	vector<IntVector> expected_freqs;
-
-	// read in corresponding site-log-likelihood for all trees
-	readPatternLogLL(alignment, params.siteLL_file, pattern_lhs);
-	cout << pattern_lhs.size() << " log-likelihood vectors loaded" << endl;
-	if (pattern_lhs.size() != trees.size()) outError("Different number of sitelh vectors");
+	cout << pattern_lhs->size() << " log-likelihood vectors loaded" << endl;
+	if (pattern_lhs->size() != trees.size()) outError("Different number of sitelh vectors");
 
 	// get distinct trees
 	int ntrees = trees.size();
@@ -343,10 +358,10 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	DoubleVector prob_vec;
 	for (it = diff_tree_ids.begin(); it != diff_tree_ids.end(); it++) {
 		double prob;
-		alignment->multinomialProb(pattern_lhs[*it], prob);
+		alignment->multinomialProb((*pattern_lhs)[*it], prob);
 		prob_vec.push_back(prob);
 		IntVector expected_freq;
-		computeExpectedNorFre(alignment, pattern_lhs[*it], expected_freq);
+		computeExpectedNorFre(alignment, (*pattern_lhs)[*it], expected_freq);
 		expected_freqs.push_back(expected_freq);
 		if (verbose_mode >= VB_DEBUG) {
 			for (i = 0; i < expected_freq.size(); i++)
@@ -360,7 +375,7 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	if (params.use_elw_method) { 	// compute ELW weights
 
 		DoubleVector elw, sh_pval;
-		computeExpectedLhWeights(alignment, pattern_lhs, diff_tree_ids, params.gbo_replicates, elw, &sh_pval);
+		computeExpectedLhWeights(alignment, (*pattern_lhs), diff_tree_ids, params.gbo_replicates, elw, &sh_pval);
 		string elw_file_name = params.out_prefix;
 		elw_file_name += ".elw";
 		ofstream elw_file(elw_file_name.c_str());
@@ -418,7 +433,7 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 			logl.resize(ndiff);
 			for (j = 0; j < ndiff; j++) {
 				int tree_id = diff_tree_ids[j];
-				logl[j] = computeRELLLogL(pattern_lhs[tree_id], pattern_freq);
+				logl[j] = computeRELL((*pattern_lhs)[tree_id], pattern_freq);
 				//if (verbose_mode >= VB_MAX) cout << logl << endl;
 			}
 			double max_logl = *max_element(logl.begin(), logl.end());
@@ -493,7 +508,9 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	}
 	if (verbose_mode >= VB_MED) {
 		for (i = 0; i < ntrees; i++)
-			if (trees.tree_weights[i] > 0) cout << "Tree " << i+1 << " weight=" << trees.tree_weights[i] << endl;
+			if (trees.tree_weights[i] > 0) 
+				cout << "Tree " << i+1 << " weight= " << trees.tree_weights[i] 
+					 << " logl= " << computeRELL((*pattern_lhs)[i], origin_freq) << endl;
 	}
 	int max_tree_id = max_element(trees.tree_weights.begin(), trees.tree_weights.end()) - trees.tree_weights.begin();
 	cout << "max_tree_id = " << max_tree_id << "   max_weight = " << trees.tree_weights[max_tree_id] << endl;
@@ -520,11 +537,14 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	tree.setAlignment(alignment);
 
     string out_file;
-	out_file = params.out_prefix;
-	out_file += ".suptree";
 
-    tree.printTree(out_file.c_str());
-    cout << "Tree with assigned bootstrap support written to " << out_file << endl;
+	if (!tree.save_all_trees) {
+		out_file = params.out_prefix;
+		out_file += ".suptree";
+	
+		tree.printTree(out_file.c_str());
+		cout << "Tree with assigned bootstrap support written to " << out_file << endl;
+	}
 
 	out_file = params.out_prefix;
 	out_file += ".supval";

@@ -70,6 +70,24 @@ void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin, const
 
 }
 
+void MTreeSet::init(StringIntMap &treels, bool &is_rooted) {
+	resize(treels.size());
+	for (StringIntMap::iterator it = treels.begin(); it != treels.end(); it++) {
+		MTree *tree = newTree();
+		stringstream ss(it->first);
+		bool myrooted = is_rooted;
+		tree->readTree(ss, myrooted);
+		NodeVector taxa;
+		tree->getTaxa(taxa);
+		for (NodeVector::iterator taxit = taxa.begin(); taxit != taxa.end(); taxit++)
+			(*taxit)->id = atoi((*taxit)->name.c_str());
+		at(it->second) = tree;
+		//cout << "Tree " << it->second << ": ";
+		//tree->printTree(cout, WT_NEWLINE);
+	}
+	cout << size() << " tree(s) converted" << endl;
+}
+
 void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin) {
 	cout << "Reading tree(s) file " << infile << " ..." << endl;
 	ifstream in;
@@ -281,9 +299,10 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 	for (iterator it = begin(); it != end(); it++, tree_id++) {
 		if (tree_weights[tree_id] == 0) continue;
 		MTree *tree = *it;
+
 		if (tree->leafNum != taxname.size())
 			outError("Tree has different number of taxa!");
-		NodeVector taxa;
+/*		NodeVector taxa;
 		tree->getTaxa(taxa);
 		sort(taxa.begin(), taxa.end(), nodenamecmp);
 		int i = 0;
@@ -291,7 +310,7 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 			if ((*it2)->name != taxname[i]) 
 				outError("Tree has different taxa names!");
 			(*it2)->id = i++;
-		}
+		}*/
 		isg = new SplitGraph();
 		tree->convertSplits(taxname, *isg);
 		//isg->getTaxa()->Report(cout);
@@ -538,6 +557,7 @@ int MTreeSet::categorizeDistinctTrees(IntVector &category) {
 		stringstream ostr;
 		(*it)->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 		string str = ostr.str();
+		//cout << str << endl;
 		StringIntMap::iterator map_it = tree_cat_map.find(str);
 		if (map_it == tree_cat_map.end()) { // not found
 			category[id] = ncat;

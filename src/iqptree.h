@@ -446,12 +446,17 @@ protected:
      */
     int k_represent;
 
+public:
+	bool save_all_trees;
 	/**
 		this keeps the list of intermediate trees. 
 		it will be activated if params.avoid_duplicated_trees is TRUE.
 	*/
 	StringIntMap treels;
 
+	vector<double* > treels_ptnlh;
+
+protected:
 	/**
 	*/
 	vector<NNIInfo> nni_info;
@@ -467,9 +472,9 @@ protected:
 	bool testNNI;
 
 	ofstream outNNI;
-
-	bool save_all_trees;
+protected:
 	bool print_tree_lh;
+	bool write_intermediate_trees;
 
 	ofstream out_treels, out_treelh, out_sitelh;
 

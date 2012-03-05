@@ -22,6 +22,7 @@
 
 #include "mtree.h"
 #include "splitgraph.h"
+#include "alignment.h"
 
 
 /**
@@ -49,6 +50,8 @@ public:
 		@param burnin the number of beginning trees to be discarded
 	*/
 	void init(const char *userTreeFile, bool &is_rooted, int burnin, const char *tree_weight_file = NULL);
+
+	void init(StringIntMap &treels, bool &is_rooted);
 
 
 	/**

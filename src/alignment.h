@@ -419,6 +419,7 @@ public:
 		@param prob (OUT) the returned probability
 	*/
 	void multinomialProb (DoubleVector logLL, double &prob);
+	void multinomialProb (double *logLL, double &prob);
 
 	/** Adapted from MA
 		compute the probability of the alignment defined by pattern_freq given this alignment	

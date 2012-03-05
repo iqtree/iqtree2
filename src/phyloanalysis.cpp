@@ -1097,6 +1097,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		cout << "Support values written to " << out_file << endl;
     }
 
+    if (!tree.isSuperTree() && params.gbo_replicates > 0) {
+		runGuidedBootstrap(params, original_model, alignment, tree);
+	}
+
 	cout << "Total tree length: " << tree.treeLength() << endl;
 
     t_end = clock();
@@ -1204,7 +1208,7 @@ void runPhyloAnalysis(Params &params) {
         else if (params.aln_output_format == ALN_FASTA)
         	alignment->printFasta(params.aln_output, false, params.aln_site_list, 
         	params.aln_nogaps, params.ref_seq_name);
-    } else if (params.gbo_replicates > 0) {
+    } else if (params.gbo_replicates > 0 && params.user_file) {
     	runGuidedBootstrap(params, original_model, alignment, *tree);
     } else if (params.num_bootstrap_samples == 0) {
 		alignment->checkGappySeq();
