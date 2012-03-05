@@ -45,7 +45,7 @@ PhyloTree() {
 	nni_cutoff = -1e6;
 	nni_sort = false;
 	testNNI = false;
-	save_all_trees = false;
+	save_all_trees = 0;
 	print_tree_lh = false;
 	write_intermediate_trees = false;
 }
@@ -70,7 +70,7 @@ IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln)
 	nni_cutoff = -1e6;
 	nni_sort = false;
 	testNNI = false;
-	save_all_trees = false;
+	save_all_trees = 0;
 	print_tree_lh = false;
 	write_intermediate_trees = false;
 }
@@ -114,7 +114,9 @@ void IQPTree::setParams(Params &params) {
 	
 	write_intermediate_trees = params.write_intermediate_trees;
 	if (write_intermediate_trees > 2 || params.gbo_replicates > 0) 
-		save_all_trees = true;
+		save_all_trees = 1;
+	if (params.gbo_replicates > 0)
+		if (params.iqp_assess_quartet != IQP_BOOTSTRAP) save_all_trees = 2;
 	print_tree_lh = params.print_tree_lh;
 }
 
@@ -699,7 +701,24 @@ double IQPTree::doIQPNNI(Params &params) {
 		}
         if (verbose_mode >= VB_DEBUG)
             cout << "Performing IQP in iteration " << cur_iteration << endl;
-        double iqp_score = doIQP();      
+        double iqp_score;
+        Alignment *saved_aln = aln;
+        if (iqp_assess_quartet == IQP_BOOTSTRAP) {
+        	// create bootstrap sample
+        	enableHeuris = false;
+            Alignment* bootstrap_alignment;
+            if (aln->isSuperAlignment())
+            	bootstrap_alignment = new SuperAlignment;
+            else
+            	bootstrap_alignment = new Alignment;
+            bootstrap_alignment->createBootstrapAlignment(aln);
+            setAlignment(bootstrap_alignment);
+            initializeAllPartialLh();
+            clearAllPartialLH();
+            curScore = iqp_score = optimizeAllBranches();
+        } else {
+        	iqp_score = doIQP();
+        }
 
 		setRootNode(params.root);
 
@@ -733,6 +752,15 @@ double IQPTree::doIQPNNI(Params &params) {
             optimizeNNI();
         }
 
+		if (iqp_assess_quartet == IQP_BOOTSTRAP) {
+			// restore alignment
+			delete aln;
+            setAlignment(saved_aln);
+            initializeAllPartialLh();
+            clearAllPartialLH();
+            curScore = optimizeAllBranches();
+		}
+
         if (params.nni_lh && lh_file.is_open()) {
             lh_file << cur_iteration;
             lh_file << "\t";
@@ -753,18 +781,19 @@ double IQPTree::doIQPNNI(Params &params) {
         cout.setf(ios::fixed, ios::floatfield);
         
         if (!skipped) {
-            cout << "Iteration " << cur_iteration << " / LogL: " << curScore 
+            cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap ":"Iteration ") << cur_iteration << " / LogL: " << curScore 
             	<< " / Time elapsed: " << convert_time(elapsed_secs) << "s";
            if (cur_iteration > 10 && elapsed_secs > 10)
            		cout <<	" (" << convert_time(remaining_secs) << "s left)";
            cout << endl;
         } else {
-            cout << "Iteration " << cur_iteration << " skipped after " << nni_count << " NNI / LogL: " << curScore 
+            cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap ":"Iteration ") << cur_iteration << " skipped after " << nni_count << " NNI / LogL: " << curScore 
             	<< " / Time elapsed: " << convert_time(elapsed_secs) << "s";
            if (cur_iteration > 10 && elapsed_secs > 10)
            		cout <<	" (" << convert_time(remaining_secs) << "s left)";
            cout << endl;
 		}
+
 
 /*
         if (verbose_mode >= VB_DEBUG) {
@@ -854,7 +883,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count) {
         nbNNI = 0;
         // Tree get improved, lamda reset
         if (resetLamda) {
-            if (save_all_trees) saveCurrentTree(NULL, NULL); // BQM: for new bootstrap
+            if (save_all_trees == 2) saveCurrentTree(NULL, NULL); // BQM: for new bootstrap
 
             ++nniIteration;
             nni_round = nniIteration;
@@ -1375,7 +1404,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
             // compute the score of the swapped topology            
             double newScore = optimizeOneBranch(node1, node2, false);
 
-            if (save_all_trees) saveCurrentTree(node1, node2); // BQM: for new bootstrap
+            if (save_all_trees == 2) saveCurrentTree(node1, node2); // BQM: for new bootstrap
 
 			nni.lh_score[nniNr] = newScore;
 			nni.br_len[nniNr] = node12_it->length;

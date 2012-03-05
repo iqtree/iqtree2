@@ -535,7 +535,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 				out << " (%)" << endl;
 			}
 			out << endl;
-			reportTree(out, params, tree, tree.curScore);
+			reportTree(out, params, tree, tree.getBestScore());
 
 			if (tree.isSuperTree()) {
 				PhyloSuperTree *stree = (PhyloSuperTree*)&tree;
@@ -1002,7 +1002,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
             cout << params.min_iterations << endl;
         else cout << "predicted in [" << params.min_iterations << "," <<
                 params.max_iterations << "] (confidence " << params.stop_confidence << ")" << endl;
-        cout << "Important quartet assessed on     : " << ((params.iqp_assess_quartet == IQP_DISTANCE) ? "Distance" : "Parsimony") << endl;
+        cout << "Important quartet assessed on     : " << ((params.iqp_assess_quartet == IQP_DISTANCE) ? "Distance" : ((params.iqp_assess_quartet == IQP_PARSIMONY) ? "Parsimony" : "Bootstrap")) << endl;
         cout << endl;
         tree.doIQPNNI(params);
     } else {
@@ -1090,11 +1090,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
         cout << "CPU Time used:  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
         delete [] pattern_lh;
+/*
 		string out_file = params.out_prefix;
 		out_file += ".alrt";
 		tree.writeInternalNodeNames(out_file);
 	
-		cout << "Support values written to " << out_file << endl;
+		cout << "Support values written to " << out_file << endl;*/
     }
 
     if (!tree.isSuperTree() && params.gbo_replicates > 0) {
@@ -1480,15 +1481,7 @@ void computeConsensusNetwork(const char *input_trees, int burnin, double cutoff,
     }
 
 
-    try {
-        ofstream out;
-        out.exceptions(ios::failbit | ios::badbit);
-        out.open(out_file.c_str());
-        sg.saveFile(out);
-        out.close();
-        cout << "Consensus network printed to " << out_file << endl;
-    } catch (ios::failure) {
-        outError(ERR_WRITE_OUTPUT, out_file);
-    }
+    sg.saveFile(out_file.c_str());
+    cout << "Consensus network printed to " << out_file << endl;
 
 }

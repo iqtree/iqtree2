@@ -447,7 +447,7 @@ protected:
     int k_represent;
 
 public:
-	bool save_all_trees;
+	int save_all_trees;
 	/**
 		this keeps the list of intermediate trees. 
 		it will be activated if params.avoid_duplicated_trees is TRUE.

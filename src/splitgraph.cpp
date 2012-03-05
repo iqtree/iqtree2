@@ -479,7 +479,7 @@ void SplitGraph::generateCircular(Params &params) {
 	out.close();
 } 
 
-void SplitGraph::saveFile(ostream &out) {
+void SplitGraph::saveFile(ostream &out, bool omit_trivial) {
 	int ntaxa = getNTaxa();
 	int i;
 	out << "#nexus" << endl << endl;
@@ -490,7 +490,7 @@ void SplitGraph::saveFile(ostream &out) {
 		out << "[" << i+1 << "] '" << taxa->GetTaxonLabel(i) << "'" << endl;
 	out << ";" << endl << "END; [Taxa]" << endl << endl;
 	out << "BEGIN Splits;" << endl;
-	out << "DIMENSIONS ntax=" << ntaxa << " nsplits=" << getNSplits() << ";" << endl;
+	out << "DIMENSIONS ntax=" << ntaxa << " nsplits=" << ((omit_trivial) ? getNSplits() - getNTrivialSplits() : getNSplits()) << ";" << endl;
 	out << "FORMAT labels=no weights=yes confidences=no intervals=no;" << endl;
 	if (isCircular()) {
 		out << "CYCLE";
@@ -502,6 +502,7 @@ void SplitGraph::saveFile(ostream &out) {
 	int near_zeros = 0;
 	int zeros = 0;
 	for (iterator it = begin(); it != end(); it++) {
+		if (omit_trivial && (*it)->trivial() >= 0) continue;
 		if ((*it)->weight == 0.0) zeros ++;
 		if ((*it)->weight <= 1e-6) near_zeros ++;
 		out << "\t" << (*it)->weight << "\t";
@@ -512,9 +513,21 @@ void SplitGraph::saveFile(ostream &out) {
 	}
 	out << ";" << endl << "END; [Splits]" << endl << endl;
 	if (near_zeros) {
-		outWarning("Some nearly-zero split weights observed");
-		cout << zeros << " zero-weights and " << near_zeros << " near zero weights!" << endl;
+		//outWarning("Some nearly-zero split weights observed");
+		//cout << zeros << " zero-weights and " << near_zeros << " near zero weights!" << endl;
 	}
+}
+
+void SplitGraph::saveFile(const char* out_file, bool omit_trivial) {
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(out_file);
+        saveFile(out, omit_trivial);
+        out.close();
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, out_file);
+    }
 }
 
 void SplitGraph::scaleWeight(double norm, bool make_int) {

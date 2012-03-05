@@ -306,7 +306,6 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		readPatternLogLL(alignment, params.siteLL_file, *pattern_lhs);
 	} else {
 	 	trees.init(tree.treels, tree.rooted);
-		trees.tree_weights.resize(trees.size(), 1);
 		pattern_lhs = &tree.treels_ptnlh;
 	} 
 
@@ -523,7 +522,11 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
     taxname.resize(tree.leafNum);
     tree.getTaxaName(taxname);
 
-    trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
+	if (!tree.save_all_trees)
+    	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
+    else
+    	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false);
+
     cout << sg.size() << " splits found" << endl;
     // compute the percentage of appearance
     sg.scaleWeight(100.0 / trees.sumTreeWeights(), true);
@@ -545,6 +548,12 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		tree.printTree(out_file.c_str());
 		cout << "Tree with assigned bootstrap support written to " << out_file << endl;
 	}
+
+	out_file = params.out_prefix;
+	out_file += ".splits";
+
+	sg.saveFile(out_file.c_str(), true);
+	cout << "Split supports printed to NEXUS file " << out_file << endl;
 
 	out_file = params.out_prefix;
 	out_file += ".supval";

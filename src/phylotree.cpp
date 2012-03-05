@@ -152,6 +152,11 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     numStates = aln->num_states;
     tranSize = numStates * numStates;
     ptn_freqs.resize(alnSize);
+    for (int ptn = 0; ptn < alnSize; ++ptn) {
+        ptn_freqs[ptn] = (*aln)[ptn].frequency;
+    }
+	block = aln->num_states * numCat;
+	lh_size = aln->size() * block;
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {

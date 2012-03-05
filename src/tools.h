@@ -292,7 +292,7 @@ enum STOP_CONDITION {
 };
 
 enum IQP_ASSESS_QUARTET {
-    IQP_DISTANCE, IQP_PARSIMONY
+    IQP_DISTANCE, IQP_PARSIMONY, IQP_BOOTSTRAP
 };
 
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model

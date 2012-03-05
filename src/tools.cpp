@@ -1050,6 +1050,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -n <#iterations>";
 				params.min_iterations = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt],"-nb") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nb <#bootstrap_replicates>";
+				params.min_iterations = convert_int(argv[cnt]);
+				params.iqp_assess_quartet = IQP_BOOTSTRAP;
+				params.avoid_duplicated_trees = true;
 			} else if (strcmp(argv[cnt],"-mod") == 0 || strcmp(argv[cnt],"-m") == 0) {
 				cnt++;
 				if (cnt >= argc)

@@ -312,8 +312,16 @@ public:
 	/**
 		save split systems to a file
 		@param out output stream
+		@param omit_trivial TRUE to omit trivial splits, FALSE otherwise
 	*/
-	void saveFile(ostream &out);
+	void saveFile(ostream &out, bool omit_trivial = false);
+
+	/**
+		save split systems to a file
+		@param out output file name
+		@param omit_trivial TRUE to omit trivial splits, FALSE otherwise
+	*/
+	void saveFile(const char* out_file, bool omit_trivial = false);
 
 	/**
 		calculate the distance matrix, print to file in phylip format
