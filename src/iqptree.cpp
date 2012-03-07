@@ -116,7 +116,7 @@ void IQPTree::setParams(Params &params) {
 	if (write_intermediate_trees > 2 || params.gbo_replicates > 0) 
 		save_all_trees = 1;
 	if (params.gbo_replicates > 0)
-		if (params.iqp_assess_quartet != IQP_BOOTSTRAP) save_all_trees = 2;
+		if (params.iqp_assess_quartet != IQP_BOOTSTRAP) { save_all_trees = 2;  }
 	print_tree_lh = params.print_tree_lh;
 }
 
@@ -883,7 +883,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count) {
         nbNNI = 0;
         // Tree get improved, lamda reset
         if (resetLamda) {
-            if (save_all_trees == 2) saveCurrentTree(NULL, NULL); // BQM: for new bootstrap
+            if (save_all_trees == 2) saveCurrentTree(curScore, NULL, NULL); // BQM: for new bootstrap
 
             ++nniIteration;
             nni_round = nniIteration;
@@ -1404,7 +1404,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
             // compute the score of the swapped topology            
             double newScore = optimizeOneBranch(node1, node2, false);
 
-            if (save_all_trees == 2) saveCurrentTree(node1, node2); // BQM: for new bootstrap
+            if (save_all_trees == 2) saveCurrentTree(newScore, node1, node2); // BQM: for new bootstrap
 
 			nni.lh_score[nniNr] = newScore;
 			nni.br_len[nniNr] = node12_it->length;
@@ -1476,12 +1476,24 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     return myMove;
 }
 
-void IQPTree::saveCurrentTree(PhyloNode* node1, PhyloNode *node2) {
+void IQPTree::saveCurrentTree(double cur_logl, PhyloNode* node1, PhyloNode *node2) {
 	stringstream ostr;
 	printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	string tree_str = ostr.str();
-	if (treels.find(tree_str) != treels.end()) // already in treels
+	StringIntMap::iterator it = treels.find(tree_str);
+	if (it != treels.end()) {// already in treels
+		if (cur_logl <= treels_logl[it->second]+1e-4)
+			return;
+		if (verbose_mode >= VB_MAX) 
+			cout << "Updated logl " <<treels_logl[it->second] <<
+				" to " << cur_logl << endl;
+		treels_logl[it->second] = cur_logl;
+		if (!node1)
+			computeLikelihood(treels_ptnlh[it->second]);
+		else
+			computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, treels_ptnlh[it->second]);
 		return;
+	}
 	else 
 		treels[tree_str] = treels_ptnlh.size();
 
@@ -1547,8 +1559,16 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 		stringstream ostr;
 		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 		string tree_str = ostr.str();
-		if (treels.find(tree_str) != treels.end()) { // already in treels
+		StringIntMap::iterator it = treels.find(tree_str);
+		if (it != treels.end()) { // already in treels
 			duplicated_tree = true;
+			if (curScore > treels_logl[it->second] + 1e-4) {
+				if (verbose_mode >= VB_MAX) 
+					cout << "Updated logl " <<treels_logl[it->second] <<
+						" to " << curScore << endl;
+				treels_logl[it->second] = curScore;
+				computeLikelihood(treels_ptnlh[it->second]);
+			}
 			//pattern_lh = treels_ptnlh[treels[tree_str]];
 		}
 		else {

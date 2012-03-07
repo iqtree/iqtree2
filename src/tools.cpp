@@ -611,8 +611,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.gbo_replicates = 0;
 	params.use_rell_method = true;
 	params.use_elw_method = false;
-	params.use_weighted_bootstrap = true;
-	params.use_max_tree_per_bootstrap = false;
+	params.use_weighted_bootstrap = false;
+	params.use_max_tree_per_bootstrap = true;
 	params.max_candidate_trees = 10000;
 	params.distinct_trees = true;
 
@@ -1278,6 +1278,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
 				params.gbo_replicates = convert_int(argv[cnt]);
+				params.avoid_duplicated_trees = true;
 			} else if (strcmp(argv[cnt], "-bmax") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1293,6 +1294,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.use_weighted_bootstrap = false;
 			} else if (strcmp(argv[cnt], "-nomore") == 0) {
 				params.use_max_tree_per_bootstrap = true;
+			} else if (strcmp(argv[cnt], "-bweight") == 0) {
+				params.use_weighted_bootstrap = true;
+			} else if (strcmp(argv[cnt], "-bmore") == 0) {
+				params.use_max_tree_per_bootstrap = false;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

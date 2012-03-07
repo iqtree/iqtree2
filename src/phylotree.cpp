@@ -1758,8 +1758,17 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 			stringstream ostr;
 			printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 			string tree_str = ostr.str();
-			if (treels->find(tree_str) != treels->end()) // already in treels
+			StringIntMap::iterator it = treels->find(tree_str);
+			if (it != treels->end()) {// already in treels
 				duplicated_tree = true;
+				if (score > treels_logl->at(it->second) + 1e-4) {
+					if (verbose_mode >= VB_MAX) 
+						cout << "Updated logl " <<treels_logl->at(it->second) <<
+							" to " << score << endl;
+					treels_logl->at(it->second) = score;
+					computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, treels_ptnlh->at(it->second));
+				}
+			}
 			else {
 				(*treels)[tree_str] = treels_ptnlh->size();
 				pattern_lh = new double[aln->getNPattern()];

@@ -65,6 +65,13 @@ void SubstModel::getRateMatrix(double *rate_mat) {
 		rate_mat[i] = 1.0;
 }
 
+void SubstModel::getQMatrix(double *q_mat) {
+	int i, j, k;
+	for (i = 0, k = 0; i < num_states; i++)
+		for (j = 0; j < num_states; j++, k++)
+			if (i == j) q_mat[k] = -1.0; else q_mat[k] = 1.0/3;
+}
+
 void SubstModel::getStateFrequency(double *state_freq) {
 	double freq = 1.0 / num_states;
 	for (int i = 0; i < num_states; i++)

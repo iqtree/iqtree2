@@ -486,7 +486,7 @@ protected:
 
 	void estimateNNICutoff(Params &params);
 
-	void saveCurrentTree(PhyloNode* node1, PhyloNode *node2); // save current tree
+	void saveCurrentTree(double logl, PhyloNode* node1, PhyloNode *node2); // save current tree
 	
 
 

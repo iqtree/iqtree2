@@ -311,19 +311,6 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 		
 	} 
 
-	if (!tree.getModel()->isReversible()) {
-		double *q_mat = new double[tree.aln->num_states * tree.aln->num_states];
-		tree.getModel()->getQMatrix(q_mat);
-
-		out << endl << "Rate matrix Q:" << endl << endl;
-		for (i = 0, k = 0; i < tree.aln->num_states; i++) {
-			for (j = 0; j < tree.aln->num_states; j++, k++) 
-				out << "  " << q_mat[k];
-			out << endl;
-		} 
-
-		delete [] q_mat;
-	}
 
 	if (tree.aln->num_states > 4) out << endl;
 	out.unsetf(ios_base::fixed);
@@ -355,6 +342,25 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 		out << "  pi(" << tree.aln->convertStateBack(i) << ") = " << state_freqs[i] << endl;
 	delete [] state_freqs;
 	out << endl;
+
+
+	// report Q matrix
+	double *q_mat = new double[tree.aln->num_states * tree.aln->num_states];
+	tree.getModel()->getQMatrix(q_mat);
+
+	out << "Rate matrix Q:" << endl << endl;
+	for (i = 0, k = 0; i < tree.aln->num_states; i++) {
+		out << "  " << tree.aln->convertStateBack(i);
+		for (j = 0; j < tree.aln->num_states; j++, k++) {
+			out << "  ";
+			out.width(8);
+			out << q_mat[k];
+		}
+		out << endl;
+	} 
+	out << endl;
+	delete [] q_mat;
+
 }
 
 void reportRate(ofstream &out, Params &params, PhyloTree &tree) {
