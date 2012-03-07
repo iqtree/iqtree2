@@ -613,6 +613,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.use_elw_method = false;
 	params.use_weighted_bootstrap = true;
 	params.use_max_tree_per_bootstrap = false;
+	params.max_candidate_trees = 10000;
+	params.distinct_trees = true;
 
 	//const double INF_NNI_CUTOFF = -1000000.0;
 	params.nni_cutoff = -1000000.0;
@@ -1276,6 +1278,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
 				params.gbo_replicates = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-bmax") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bmax <max_candidate_trees>";
+				params.max_candidate_trees = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-nodiff") == 0) {
+				params.distinct_trees = false;
 			} else if (strcmp(argv[cnt], "-norell") == 0) {
 				params.use_rell_method = false;
 			} else if (strcmp(argv[cnt], "-elw") == 0) {

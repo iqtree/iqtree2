@@ -218,6 +218,29 @@ void GTRModel::getStateFrequency(double *freq) {
 	memcpy(freq, state_freq, sizeof(double) * num_states);
 }
 
+void GTRModel::getQMatrix(double *q_mat) {
+	double *rate_matrix[num_states];
+	int i, j, k = 0;
+
+	for (i = 0; i < num_states; i++)
+		rate_matrix[i] = new double[num_states];
+
+	for (i = 0, k = 0; i < num_states; i++) {
+		rate_matrix[i][i] = 0.0;
+		for (j = i+1; j < num_states; j++, k++) {
+			rate_matrix[i][j] = rates[k];
+			rate_matrix[j][i] = rates[k];
+		}
+	}
+
+	computeRateMatrix(rate_matrix, state_freq, num_states);
+	for (i = 0; i < num_states; i++)
+		memmove(q_mat + (i*num_states), rate_matrix[i], num_states * sizeof(double));
+
+	for (i = num_states-1; i >= 0; i--)
+		delete [] rate_matrix[i];
+
+}
 
 int GTRModel::getNDim() { 
 	assert(freq_type != FREQ_UNKNOWN);

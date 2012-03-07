@@ -367,6 +367,32 @@ public:
      */
 	double computePatternLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
+	/**
+		Compute the variance in tree log-likelihood 
+		(Kishino & Hasegawa 1989, JME 29:170-179)
+		@param pattern_lh pattern log-likelihoods, will be computed if NULL
+		@param tree_lh tree log-likelihood, will be computed if ZERO
+	*/
+	double computeLogLVariance(double *pattern_lh = NULL, double tree_lh = 0.0);
+
+	/**
+		Compute the variance in log-likelihood difference
+		between the current tree and another tree.
+		(Kishino & Hasegawa 1989, JME 29:170-179)
+		@param pattern_lh_other pattern log-likelihoods of the other tree
+		@param pattern_lh pattern log-likelihoods of current tree, will be computed if NULL
+	*/
+	double computeLogLDiffVariance(double *pattern_lh_other, double *pattern_lh = NULL);
+
+	/**
+		Compute the variance in log-likelihood difference
+		between the current tree and another tree.
+		(Kishino & Hasegawa 1989, JME 29:170-179)
+		@param other_tree the other tree to compare
+		@param pattern_lh pattern log-likelihoods of current tree, will be computed if NULL
+	*/
+	double computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh = NULL);
+
     /**
             Roll back the tree saved with only Taxon IDs and branch lengths.
             For this function to work, one must printTree before with WT_TAXON_ID + WT_BR_LEN
@@ -533,7 +559,7 @@ public:
      */
     double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL, 
     	ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL, ostream *site_lh = NULL, 
-    	StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL);
+    	StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL);
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
@@ -545,7 +571,8 @@ public:
      */
     double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
     	ostream *out = NULL, int brtype = 0, SwapNNIParam *nni_param = NULL, 
-    	ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL);
+    	ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL, 
+    	vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL);
 
     /**
             Do an NNI

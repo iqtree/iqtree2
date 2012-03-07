@@ -63,7 +63,7 @@ protected:
 	double total_num_subst;
 	
 
-private:
+protected:
 
 	/**
 		compute the rate matrix and then normalize it such that the total number of substitutions is 1.

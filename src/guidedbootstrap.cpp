@@ -44,13 +44,15 @@
 #include "whtest_wrapper.h"
 #include "partitionmodel.h"
 
-void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs)
+
+void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs, DoubleVector &trees_logl)
 {
 	//First read the values from inFile to a DoubleVector
 	//int siteNum;
 	string currentString;
 	cout << "\nReading file containing site's loglikelihood: " << fileName << "...." << endl;
     ifstream inFile;
+    int i;
 	try{
 		inFile.exceptions (ios::failbit | ios::badbit);
 		inFile.open(fileName);
@@ -67,15 +69,17 @@ void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs)
 			//reading each line of the file
 			//remove the badbit
 			//set the failbit again
-			for (int i = 0; i < aln->getNSite(); i++) {
+			double logl = 0.0;
+			for (i = 0; i < aln->getNSite(); i++) {
 				double ll;
 				if (!(inFile >> ll)) throw "Wrong logLL entry";
 				_logllVec.push_back(ll);
+				logl += ll;
 			}
 			double *logLL = new double[aln->getNPattern()];
 			memset(logLL, 0, sizeof(double) * aln->getNPattern());
 			//logLL.resize(aln->getNPattern(),0.0);
-			for (int i = 0; i < _logllVec.size(); i++)
+			for (i = 0; i < _logllVec.size(); i++)
 			{
 				int patIndex = aln->getPatternID(i);
 				if ( logLL[patIndex] == 0 )
@@ -85,6 +89,7 @@ void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs)
 						outError("Conflicting between the likelihoods reported for pattern", aln->at(i));
 			}
 			logLLs.push_back(logLL);
+			trees_logl.push_back(logl);
 		}/**finish reading*/
 		inFile.clear();
 		inFile.exceptions (ios::failbit | ios::badbit);
@@ -272,11 +277,17 @@ void computeExpectedLhWeights(Alignment *aln, vector<double*> &pattern_lhs,
 
 void runGuidedBootstrap(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
 
-	int i = 0, j;
+	int i, j;
+
+	clock_t begin_time = clock();
 
 	MTreeSet trees;
 	vector<double*> *pattern_lhs = NULL;
 	vector<IntVector> expected_freqs;
+	DoubleVector *trees_logl = NULL;
+	IntVector diff_tree_ids;
+	int ntrees = 0;
+	IntVector::iterator it;
 
 	if (!tree.save_all_trees) {
 		if (!params.user_file) {
@@ -296,18 +307,43 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		NodeVector taxa;
 		tree.getTaxa(taxa);
 		sort(taxa.begin(), taxa.end(), nodenamecmp);
+		i = 0;
 		for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++) {
 			(*it)->id = i++;
 		}
-		// read in trees file
-		trees.init(params.user_file, params.is_rooted, params.tree_burnin);
 		// read in corresponding site-log-likelihood for all trees
+		trees_logl = new DoubleVector;
 		pattern_lhs = new vector<double*>;
-		readPatternLogLL(alignment, params.siteLL_file, *pattern_lhs);
+		readPatternLogLL(alignment, params.siteLL_file, *pattern_lhs, *trees_logl);
+
+		if (!params.distinct_trees) {
+			// read in trees file
+			trees.init(params.user_file, params.is_rooted, params.tree_burnin);
+	
+			if (pattern_lhs->size() != trees.size()) 
+				outError("Different number of sitelh vectors");
+			// get distinct trees
+			ntrees = trees.size();
+			IntVector tree_category;
+			trees.categorizeDistinctTrees(tree_category);
+			for (i = 0; i < ntrees; i++) {
+				int cat = tree_category[i];
+				if (diff_tree_ids.empty() || tree_category[diff_tree_ids.back()] < cat)
+					diff_tree_ids.push_back(i);
+			}
+			cout << diff_tree_ids.size() << " distinct trees detected" << endl;
+		}
+
 	} else {
-	 	trees.init(tree.treels, tree.rooted);
 		pattern_lhs = &tree.treels_ptnlh;
+		trees_logl = &tree.treels_logl;
 	} 
+
+	if (diff_tree_ids.empty()) {
+		diff_tree_ids.resize(pattern_lhs->size());
+		ntrees = pattern_lhs->size();
+		for (i = 0; i < ntrees; i++) diff_tree_ids[i] = i;
+	}
 
 	IntVector origin_freq;
 	for (i = 0; i < alignment->getNPattern(); i++) 
@@ -322,36 +358,28 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	}
 
 	cout << pattern_lhs->size() << " log-likelihood vectors loaded" << endl;
-	if (pattern_lhs->size() != trees.size()) outError("Different number of sitelh vectors");
 
-	// get distinct trees
-	int ntrees = trees.size();
-	IntVector::iterator it;
-	IntVector diff_tree_ids;
-	IntVector tree_category;
-	trees.categorizeDistinctTrees(tree_category);
-	for (i = 0; i < ntrees; i++) {
-		int cat = tree_category[i];
-		if (diff_tree_ids.empty() || tree_category[diff_tree_ids.back()] < cat)
-			diff_tree_ids.push_back(i);
-	}
-/*
-	int *rfdist;
-	rfdist = new int [ntrees*ntrees];
-	memset(rfdist, 0, ntrees*ntrees* sizeof(int));
-	trees.computeRFDist(rfdist, RF_ALL_PAIR);*/
-	// identify distinct trees
-	/*
-	IntVector checked;
-	checked.resize(ntrees, 0);
-	for (i = 0; i < ntrees; i++) if (!checked[i]) {
-		for (j = i; j < ntrees; j++) if (!checked[j]) {
-			if (rfdist[i*ntrees + j] == 0) checked[j] = 1;
-		}
-		diff_tree_ids.push_back(i);
-	}*/
 	int ndiff = diff_tree_ids.size();
-	cout << diff_tree_ids.size() << " distinct trees detected" << endl;
+
+	// consider only 10,000 trees with highest likelihoods
+	if (params.max_candidate_trees > 0 && ndiff > params.max_candidate_trees) {
+		DoubleVector neg_logl;
+		neg_logl.resize(ndiff);
+		for (i = 0; i < ndiff; i++) 
+			neg_logl[i] = -trees_logl->at(diff_tree_ids[i]);
+		nth_element(neg_logl.begin(), neg_logl.begin() + params.max_candidate_trees, neg_logl.end());
+		double logl_cutoff = -neg_logl[params.max_candidate_trees];
+		IntVector diff_tree_ids_new;
+		diff_tree_ids_new.reserve(params.max_candidate_trees);
+		for (i = 0; i < ndiff; i++)
+			if (trees_logl->at(diff_tree_ids[i]) > logl_cutoff)
+				diff_tree_ids_new.push_back(diff_tree_ids[i]);
+		diff_tree_ids = diff_tree_ids_new;
+		ndiff = diff_tree_ids.size();
+		cout << "Reduce to " << ndiff << " highest likelihood trees" << endl;
+	}
+
+	IntVector orig_diff_tree_ids = diff_tree_ids;
 
 	// compute multinomial probability for every distinct tree
 	DoubleVector prob_vec;
@@ -501,6 +529,16 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	} // end of Arndt's method
 
 
+	// now load in the trees
+	if (tree.save_all_trees) {
+		trees.init(tree.treels, tree.rooted, orig_diff_tree_ids);
+	} else if (params.distinct_trees) {
+		trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL, &orig_diff_tree_ids);
+		//trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL);
+		if (pattern_lhs->size() != trees.size()) 
+			outError("Different number of sitelh vectors");
+	} 
+
 	for (i = 0; i < ntrees; i++) trees.tree_weights[i] = 0;
 	for (it = diff_tree_ids.begin(), i = 0; it != diff_tree_ids.end(); it++, i++) {
 		trees.tree_weights[*it] += diff_tree_weights[i];
@@ -560,6 +598,17 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	tree.writeInternalNodeNames(out_file);
 
     cout << "Support values written to " << out_file << endl;
+
+	if (!tree.save_all_trees) {
+		for (vector<double* >::reverse_iterator it = pattern_lhs->rbegin(); it != pattern_lhs->rend(); it++)
+			delete [] (*it);
+		delete pattern_lhs;
+		delete trees_logl;
+	}
+
+	clock_t end_time = clock();
+	
+	cout << "Time for guided bootstrap: " << (end_time-begin_time)/CLOCKS_PER_SEC << " seconds" << endl << endl;
 	//delete [] rfdist;
 }
 

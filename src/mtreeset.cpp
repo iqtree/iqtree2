@@ -56,8 +56,10 @@ void readIntVector(const char *file_name, int burnin, IntVector &vec) {
 	}
 }
 
-void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin, const char *tree_weight_file) {
-	readTrees(userTreeFile, is_rooted, burnin);
+void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin, 
+	const char *tree_weight_file, IntVector *trees_id) 
+{
+	readTrees(userTreeFile, is_rooted, burnin, trees_id);
 	checkConsistency();
 
 	if (tree_weight_file) 
@@ -70,9 +72,16 @@ void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin, const
 
 }
 
-void MTreeSet::init(StringIntMap &treels, bool &is_rooted) {
-	resize(treels.size());
-	for (StringIntMap::iterator it = treels.begin(); it != treels.end(); it++) {
+void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &trees_id) {
+	resize(treels.size(), NULL);
+	int i, count = 0;
+	IntVector ok_trees;
+	ok_trees.resize(treels.size(), 0);
+	for (i = 0; i < trees_id.size(); i++) ok_trees[trees_id[i]] = 1;
+
+	for (StringIntMap::iterator it = treels.begin(); it != treels.end(); it++) 
+	if (ok_trees[it->second]) {
+		count++;
 		MTree *tree = newTree();
 		stringstream ss(it->first);
 		bool myrooted = is_rooted;
@@ -85,14 +94,22 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted) {
 		//cout << "Tree " << it->second << ": ";
 		//tree->printTree(cout, WT_NEWLINE);
 	}
-	cout << size() << " tree(s) converted" << endl;
+	cout << count << " tree(s) converted" << endl;
 	tree_weights.resize(size(), 1);
 }
 
-void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin) {
+void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, IntVector *trees_id) {
 	cout << "Reading tree(s) file " << infile << " ..." << endl;
 	ifstream in;
-	int count = 1;
+	int count, omitted;
+	IntVector ok_trees;
+	if (trees_id) {
+		int max_id = *max_element(trees_id->begin(), trees_id->end());
+		ok_trees.resize(max_id+1, 0);
+		for (IntVector::iterator it = trees_id->begin(); it != trees_id->end(); it++)
+			ok_trees[*it] = 1;
+		cout << "Restricting to " << trees_id->size() << " trees" << endl;
+	}
 	try {
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(infile);
@@ -107,23 +124,37 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin) {
 			if (in.eof())
 				throw "Burnin value is too large.";
 		}
-		for (count = 1; !in.eof(); count++) {
-			//cout << "Reading tree " << count << " ..." << endl;
-			MTree *tree = newTree();
-			bool myrooted = is_rooted;
-			//tree->userFile = (char*) infile;
-			tree->readTree(in, myrooted);
-			push_back(tree);
-			//cout << "Tree contains " << tree->leafNum - tree->rooted << 
-			//" taxa and " << tree->nodeNum-1-tree->rooted << " branches" << endl;
+		for (count = 1, omitted = 0; !in.eof(); count++) {
+			if (!trees_id || (count <= ok_trees.size() && ok_trees[count-1])){
+				//cout << "Reading tree " << count << " ..." << endl;
+				MTree *tree = newTree();
+				bool myrooted = is_rooted;
+				//tree->userFile = (char*) infile;
+				tree->readTree(in, myrooted);
+				push_back(tree);
+				//cout << "Tree contains " << tree->leafNum - tree->rooted << 
+				//" taxa and " << tree->nodeNum-1-tree->rooted << " branches" << endl;
+			} else {
+				// omit the tree
+				push_back(NULL);
+				//in.exceptions(ios::badbit);
+				while (!in.eof()) {
+					char ch;
+					if (!(in >> ch)) break;
+					if (ch == ';') break;
+				}
+				omitted++;
+			} 
 			char ch;
 			in.exceptions(ios::goodbit);
 			in >> ch;
 			if (in.eof()) break;
 			in.unget();
 			in.exceptions(ios::failbit | ios::badbit);
+
 		}
-		cout << count << " tree(s) loaded" << endl;
+		cout << count-omitted << " tree(s) loaded" << endl;
+		if (omitted) cout << omitted << " tree(s) omitted" << endl;
 		//in.exceptions(ios::failbit | ios::badbit);
 		in.close();
 	} catch (ios::failure) {
@@ -137,18 +168,24 @@ void MTreeSet::checkConsistency() {
 	if (empty()) 
 		return;
 	iterator it;
-	bool rooted = front()->rooted;
+	bool rooted = false;
 	int i;
-	for (it = begin()+1, i = 1; it != end(); it++, i++)
-		if ((*it)->rooted != rooted) {
+	bool first = true;
+	for (it = begin(), i = 0; it != end(); it++, i++)
+	if ((*it)) {
+		if (!first && (*it)->rooted != rooted) {
 			cout << i+1 << " " << (*it)->rooted << " " << rooted << endl;
 			outError("Rooted and unrooted trees are mixed up");
+			rooted = (*it)->rooted;
 		}
+		first = false;
+	}
 
 	NodeVector taxa1;
 	NodeVector::iterator it2;
 
-	for (it = begin(); it != end(); it++) {
+	first = true;
+	for (it = begin(); it != end(); it++) if (*it) {
 		MTree *tree = *it;
 		NodeVector taxa;
 		tree->getTaxa(taxa);
@@ -156,9 +193,10 @@ void MTreeSet::checkConsistency() {
 		for (it2 = taxa.begin(), i = 0; it2 != taxa.end(); it2++, i++)
 			(*it2)->id = i;
 
-		if (it == begin()) 
+		if (first ) {
 			taxa1 = taxa;
-		else {
+			first = false;
+		} else {
 			// now check this tree with the first tree	
 			if (tree->leafNum != taxa1.size())
 				outError("Tree has different number of taxa!");

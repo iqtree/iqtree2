@@ -128,6 +128,8 @@ public:
 	*/
 	virtual void getStateFrequency(double *state_freq);
 
+	virtual void getQMatrix(double *q_mat);
+
 	/**
 		rescale the state frequencies
 		@param sum_one TRUE to make frequencies sum to 1, FALSE to make last entry equal to 1

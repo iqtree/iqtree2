@@ -325,6 +325,10 @@ public:
      */
     double* pars_scores;
 
+	/**
+		Log-likelihood variance
+	*/
+	double logl_variance;
 
     /**
      *      The coressponding log-likelihood score from computed indendently from the parsimony
@@ -455,6 +459,8 @@ public:
 	StringIntMap treels;
 
 	vector<double* > treels_ptnlh;
+	
+	DoubleVector treels_logl;
 
 protected:
 	/**

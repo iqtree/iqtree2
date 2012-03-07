@@ -847,6 +847,19 @@ void reportNGSAnalysis(const char *file_name, Params &params, NGSAlignment &aln,
 
 	out << "Q matrix can be obtained by multiplying rate parameters with state frequencies" << endl << endl;
 
+	double *q_mat = new double[tree.aln->num_states * tree.aln->num_states];
+	tree.getModel()->getQMatrix(q_mat);
+
+	for (i = 0, k = 0; i < tree.aln->num_states; i++) {
+		for (j = 0; j < tree.aln->num_states; j++, k++) 
+			out << "  " << q_mat[k];
+		out << endl;
+	} 
+
+	delete [] q_mat;
+		
+	out << endl;
+
 	out << "Log-likelihood: " << tree.computeLikelihood() << endl << endl;
 
 	out << "Inferred posisiton-specific rates under one model or position-specific model: " << endl;

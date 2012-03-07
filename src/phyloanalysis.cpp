@@ -391,7 +391,7 @@ void reportRate(ofstream &out, Params &params, PhyloTree &tree) {
 	out << endl;
 }
 
-void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh) {
+void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, double lh_variance) {
 
 	int zero_branches = tree.countZeroBranches();
 	if (zero_branches > 0) {
@@ -402,7 +402,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh) 
 	tree.sortTaxa();
 	tree.drawTree(out);
 
-	out << "Log-likehood of the tree: " << fixed << tree_lh << endl
+	out << "Log-likehood of the tree: " << fixed << tree_lh << " (s.e. " << sqrt(lh_variance) << ")" << endl
 		<< "Unconstrained log-likelihood (without tree): " << tree.aln->computeUnconstrainedLogL() << endl 
 		<< "Total tree length: " << tree.treeLength() << endl << endl
 		<< "Tree in newick format:" << endl << endl;
@@ -535,7 +535,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 				out << " (%)" << endl;
 			}
 			out << endl;
-			reportTree(out, params, tree, tree.getBestScore());
+			reportTree(out, params, tree, tree.getBestScore(), tree.logl_variance);
 
 			if (tree.isSuperTree()) {
 				PhyloSuperTree *stree = (PhyloSuperTree*)&tree;
@@ -547,7 +547,8 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 					else root_name = (*it)->aln->getSeqName(0);
 					(*it)->root = (*it)->findNodeName(root_name);
 					assert((*it)->root);
-					reportTree(out, params, *(*it),(*it)->computeLikelihood());
+					reportTree(out, params, *(*it),(*it)->computeLikelihood(), 
+						(*it)->computeLogLVariance());
 				}
 			}
 		
@@ -1045,6 +1046,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	rate_file += ".rate";
 	tree.getRate()->writeSiteRates(rate_file.c_str());
 
+	// compute logl variance
+	tree.logl_variance = tree.computeLogLVariance();
+
 	if (params.print_site_lh) {
 		string site_lh_file = params.out_prefix;
 		site_lh_file += ".sitelh";
@@ -1150,7 +1154,8 @@ void evaluateTrees(Params &params, IQPTree *tree) {
 		cout << "Tree " << (it-trees.begin())+1;
 		tree->copyTree(*it);
 		double fixed_length = 0.001;
-		int fixed_number = tree->fixNegativeBranch(fixed_length);
+		//int fixed_number = tree->fixNegativeBranch(fixed_length);
+		tree->fixNegativeBranch(fixed_length);
 		tree->initializeAllPartialLh();
 		if (tree->isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
 		if (!params.fixed_branch_length) {

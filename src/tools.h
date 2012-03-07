@@ -960,6 +960,12 @@ struct Params {
 	*/
 	bool use_max_tree_per_bootstrap;
 
+	/** maximum number of candidate trees to consider for new bootstrap */
+	int max_candidate_trees; 
+
+	/** TRUE if user_file contains topologically distinct trees */
+	bool distinct_trees;
+
 	/** 
 		TRUE to empirically estimate nni_cutoff
 	*/

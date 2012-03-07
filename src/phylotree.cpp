@@ -839,6 +839,58 @@ double PhyloTree::computePatternLikelihood(PhyloNeighbor *dad_branch, PhyloNode 
     return score;
 }
 
+double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
+	int i;
+	int nptn = aln->getNPattern();
+	int nsite = aln->getNSite();
+	double *pattern_lh = ptn_lh;
+	if (!ptn_lh) {
+		pattern_lh = new double[nptn];
+		tree_lh = computeLikelihood(pattern_lh);
+	}
+	if (tree_lh == 0.0) {
+		for (i = 0; i < nptn; i++) tree_lh += pattern_lh[i] * aln->at(i).frequency;
+	}
+	double avg_site_lh = tree_lh / nsite;
+	double variance = 0.0;
+	for (i = 0; i < nptn; i++) {
+		double diff = (pattern_lh[i] - avg_site_lh);
+		variance +=  diff * diff * aln->at(i).frequency;
+	}
+	if (!ptn_lh) delete [] pattern_lh;
+	return variance * nsite / (nsite-1);
+}
+
+double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_lh) {
+	int i;
+	int nptn = aln->getNPattern();
+	int nsite = aln->getNSite();
+	double *pattern_lh = ptn_lh;
+	if (!ptn_lh) {
+		pattern_lh = new double[nptn];
+		computeLikelihood(pattern_lh);
+	}
+
+	double avg_site_lh_diff = 0.0;
+	for (i = 0; i < nptn; i++) 
+		avg_site_lh_diff += (pattern_lh[i]-pattern_lh_other[i]) * aln->at(i).frequency;
+	avg_site_lh_diff /= nsite;
+	double variance = 0.0;
+	for (i = 0; i < nptn; i++) {
+		double diff = (pattern_lh[i]- pattern_lh_other[i] - avg_site_lh_diff);
+		variance += diff * diff * aln->at(i).frequency;
+	}
+	if (!ptn_lh) delete [] pattern_lh;
+	return variance * nsite / (nsite-1);
+}
+
+double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh) {
+	double *pattern_lh_other = new double[aln->getNPattern()];
+	other_tree->computeLikelihood(pattern_lh_other);
+	return computeLogLDiffVariance(pattern_lh_other, pattern_lh);
+	delete [] pattern_lh_other;
+}
+
 double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh, double *pattern_rate) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
@@ -1634,7 +1686,7 @@ double PhyloTree::doNNI(NNIMove move) {
 
 double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
 	ostream *out, int brtype, SwapNNIParam *nni_param, ostream *out_lh, ostream *site_lh, 
-	StringIntMap *treels, vector<double*> *treels_ptnlh) {
+	StringIntMap *treels, vector<double*> *treels_ptnlh, DoubleVector *treels_logl) {
     assert(node1->degree() == 3 && node2->degree() == 3);
 
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
@@ -1713,6 +1765,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 				pattern_lh = new double[aln->getNPattern()];
 				logl = computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
 				treels_ptnlh->push_back(pattern_lh);
+				treels_logl->push_back(logl);
 				//cout << tree_str << endl;
 			}
 		} else if (out_lh) {
@@ -1762,15 +1815,19 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 }
 
 double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad, ostream *out, 
-	int brtype, ostream *out_lh, ostream *site_lh, StringIntMap *treels, vector<double*> *treels_ptnlh) {
+	int brtype, ostream *out_lh, ostream *site_lh, StringIntMap *treels, 
+	vector<double*> *treels_ptnlh, DoubleVector *treels_logl) 
+{
     if (!node) node = (PhyloNode*) root;
     if (!node->isLeaf() && dad && !dad->isLeaf()) {
-        double score = swapNNIBranch(cur_score, node, dad, out, brtype, NULL, out_lh, site_lh, treels, treels_ptnlh);
+        double score = swapNNIBranch(cur_score, node, dad, out, brtype, NULL, out_lh, site_lh, 
+        	treels, treels_ptnlh, treels_logl);
         if (score > cur_score) return score;
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype, out_lh, site_lh, treels, treels_ptnlh);
+        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype, 
+        out_lh, site_lh, treels, treels_ptnlh, treels_logl);
         if (score > cur_score) return score;
     }
     return cur_score;

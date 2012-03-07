@@ -1495,6 +1495,7 @@ void IQPTree::saveCurrentTree(PhyloNode* node1, PhyloNode *node2) {
 		logl = computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
 
 	treels_ptnlh.push_back(pattern_lh);
+	treels_logl.push_back(logl);
 
 	if (print_tree_lh) {
 		out_treelh << logl;
@@ -1555,6 +1556,7 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 			pattern_lh = new double[aln->getNPattern()];
 			logl = computeLikelihood(pattern_lh);
 			treels_ptnlh.push_back(pattern_lh);
+			treels_logl.push_back(logl);
 		}
 		//cout << tree_str << endl;
 	} else {
@@ -1590,12 +1592,12 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 
 	if (params.print_tree_lh)
 		if (params.avoid_duplicated_trees) 
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh, &treels, &treels_ptnlh);
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh, &treels, &treels_ptnlh, &treels_logl);
 		else
 			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh);
 	else
 		if (params.avoid_duplicated_trees) 
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, NULL, NULL, &treels, &treels_ptnlh);
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, NULL, NULL, &treels, &treels_ptnlh, &treels_logl);
 		else
 			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN);
 	// now print 1-NNI-away trees
