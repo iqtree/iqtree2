@@ -608,6 +608,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.gene_pvalue_loga = false;
 	params.second_align = NULL;
 	params.ncbi_taxid = 0;
+	params.ncbi_taxon_level = NULL;
 	params.gbo_replicates = 0;
 	params.use_rell_method = true;
 	params.use_elw_method = false;
@@ -1273,6 +1274,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -dmp <ncbi_taxid>";
 				params.ncbi_taxid = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-dmplevel") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -dmp <ncbi_taxon_level";
+				params.ncbi_taxon_level = argv[cnt];
 			} else if (strcmp(argv[cnt], "-bb") == 0) {
 				cnt++;
 				if (cnt >= argc)

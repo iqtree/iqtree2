@@ -970,15 +970,17 @@ MTree::~MTree()
 	root = NULL;
 }
 
-void MTree::freeNode(Node *node, Node *dad)
+int MTree::freeNode(Node *node, Node *dad)
 {
 	if (!node) node = root;
 	NeighborVec::reverse_iterator it;
+	int num_nodes = 1;
 	for (it = node->neighbors.rbegin(); it != node->neighbors.rend(); it++)
 		if ((*it)->node != dad) {
-			freeNode((*it)->node, node);
+			num_nodes += freeNode((*it)->node, node);
 		}
 	delete node;
+	return num_nodes;
 }
 
 char MTree::readNextChar(istream &in, char current_ch) {

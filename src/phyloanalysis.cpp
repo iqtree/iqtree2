@@ -1000,7 +1000,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	/* evaluating all trees in user tree file */
 
     /* do the IQPNNI */
-    if (params.k_representative > 0 && params.min_iterations >= 1) {
+    if (params.k_representative > 0/* && params.min_iterations >= 1*/) {
         cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
         cout << "Number of representative leaves   : " << params.k_representative << endl;
         cout << "Probability of deleting sequences : " << tree.getProbDelete() << endl;
@@ -1220,7 +1220,7 @@ void runPhyloAnalysis(Params &params) {
         else if (params.aln_output_format == ALN_FASTA)
         	alignment->printFasta(params.aln_output, false, params.aln_site_list, 
         	params.aln_nogaps, params.ref_seq_name);
-    } else if (params.gbo_replicates > 0 && params.user_file) {
+    } else if (params.gbo_replicates > 0 && params.user_file && params.siteLL_file) {
     	runGuidedBootstrap(params, original_model, alignment, *tree);
     } else if (params.num_bootstrap_samples == 0) {
 		alignment->checkGappySeq();

@@ -936,6 +936,11 @@ struct Params {
 	int ncbi_taxid;
 
 	/**
+		NCBI taxon rank, restricting the tree to that rank
+	*/
+	const char *ncbi_taxon_level;
+
+	/**
 		number of replicates for guided bootstrap
 	*/
 	int gbo_replicates;

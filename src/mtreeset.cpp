@@ -395,7 +395,7 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 		} else itg++;
 	}
 	if (discarded)
-		cout << "WARNING: " << discarded << " split(s) discarded because weight <= " << weight_threshold << endl;
+		cout << discarded << " split(s) discarded because weight <= " << weight_threshold << endl;
 	//sg.report(cout);
 }
 

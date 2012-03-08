@@ -1523,9 +1523,9 @@ void computeMulProb(Params &params)
 	cout << "The probability is printed to: " << outProb_name << endl;
 }
 
-void processNCBITree(const char* filename, int taxid) {
+void processNCBITree(const char* filename, int taxid, const char *taxon_level) {
 	MExtTree tree;
-	Node *dad = tree.readNCBITree(filename, taxid);
+	Node *dad = tree.readNCBITree(filename, taxid, taxon_level);
 	cout << "Dad ID: " << dad->name << " Root ID: " << tree.root->name << endl;
 	string str = filename;
 	str += ".tree";
@@ -1628,7 +1628,7 @@ int main(int argc, char *argv[])
 	} else if (params.branch_cluster > 0) {
 		calcTreeCluster(params);
 	} else if (params.ncbi_taxid) {
-		processNCBITree(params.user_file, params.ncbi_taxid);
+		processNCBITree(params.user_file, params.ncbi_taxid, params.ncbi_taxon_level);
 	} else if (params.aln_file || params.partition_file) {
 		if ((params.siteLL_file || params.second_align) && !params.gbo_replicates)
 		{
