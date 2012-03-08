@@ -48,6 +48,8 @@ PhyloTree() {
 	save_all_trees = 0;
 	print_tree_lh = false;
 	write_intermediate_trees = false;
+	max_candidate_trees = 0;
+	logl_cutoff = 0.0;
 }
 
 IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln) 
@@ -73,6 +75,8 @@ IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln)
 	save_all_trees = 0;
 	print_tree_lh = false;
 	write_intermediate_trees = false;
+	max_candidate_trees = 0;
+	logl_cutoff = 0.0;
 }
 
 void IQPTree::setParams(Params &params) {
@@ -118,6 +122,7 @@ void IQPTree::setParams(Params &params) {
 	if (params.gbo_replicates > 0)
 		if (params.iqp_assess_quartet != IQP_BOOTSTRAP) { save_all_trees = 2;  }
 	print_tree_lh = params.print_tree_lh;
+	max_candidate_trees = params.max_candidate_trees;
 }
 
 IQPTree::~IQPTree() {
@@ -814,6 +819,18 @@ double IQPTree::doIQPNNI(Params &params) {
         printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN, params);
         //printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_BR_LEN);
 
+		// estimate logl_cutoff
+		if (params.avoid_duplicated_trees && params.max_candidate_trees > 0 && treels_logl.size() > 1000) {
+			int num_entries = params.max_candidate_trees * cur_iteration / stop_rule.getNumIterations();
+			if (num_entries < treels_logl.size() * 0.9) {
+				DoubleVector logl = treels_logl;
+				nth_element(logl.begin(), logl.begin() + (treels_logl.size()-num_entries), logl.end());
+				logl_cutoff = logl[treels_logl.size()-num_entries] - 5.0;
+			} else logl_cutoff = *min_element(treels_logl.begin(), treels_logl.end()) - 5.0;
+
+			cout << treels_logl.size() << " entries and logl_cutoff = " << logl_cutoff << endl;
+		}
+
         if (curScore > bestScore + TOL_LIKELIHOOD) {
             cout << "BETTER TREE FOUND: " << curScore << endl;
             bestScore = curScore;
@@ -1494,8 +1511,10 @@ void IQPTree::saveCurrentTree(double cur_logl, PhyloNode* node1, PhyloNode *node
 			computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, treels_ptnlh[it->second]);
 		return;
 	}
-	else 
+	else {
+		if (logl_cutoff != 0.0 && cur_logl <= logl_cutoff + 1e-4) return;
 		treels[tree_str] = treels_ptnlh.size();
+	}
 
 	if (write_intermediate_trees) printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
 
@@ -1556,6 +1575,7 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 	double *pattern_lh = NULL;
 	double logl = curScore;
 	if (params.avoid_duplicated_trees) {
+		// estimate logl_cutoff
 		stringstream ostr;
 		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 		string tree_str = ostr.str();
@@ -1572,11 +1592,15 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 			//pattern_lh = treels_ptnlh[treels[tree_str]];
 		}
 		else {
-			treels[tree_str] = treels_ptnlh.size();
-			pattern_lh = new double[aln->getNPattern()];
-			logl = computeLikelihood(pattern_lh);
-			treels_ptnlh.push_back(pattern_lh);
-			treels_logl.push_back(logl);
+			if (logl_cutoff != 0.0 && curScore <= logl_cutoff + 1e-4) 
+				duplicated_tree = true;
+			else {
+				treels[tree_str] = treels_ptnlh.size();
+				pattern_lh = new double[aln->getNPattern()];
+				logl = computeLikelihood(pattern_lh);
+				treels_ptnlh.push_back(pattern_lh);
+				treels_logl.push_back(logl);
+			}
 		}
 		//cout << tree_str << endl;
 	} else {
@@ -1612,12 +1636,14 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 
 	if (params.print_tree_lh)
 		if (params.avoid_duplicated_trees) 
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh, &treels, &treels_ptnlh, &treels_logl);
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh, 
+			&treels, &treels_ptnlh, &treels_logl, &max_candidate_trees, &logl_cutoff);
 		else
 			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh);
 	else
 		if (params.avoid_duplicated_trees) 
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, NULL, NULL, &treels, &treels_ptnlh, &treels_logl);
+			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, NULL, NULL, 
+			&treels, &treels_ptnlh, &treels_logl, &max_candidate_trees, &logl_cutoff);
 		else
 			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN);
 	// now print 1-NNI-away trees

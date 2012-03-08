@@ -461,6 +461,10 @@ public:
 	vector<double* > treels_ptnlh;
 	
 	DoubleVector treels_logl;
+	
+	int max_candidate_trees;
+	
+	double logl_cutoff;
 
 protected:
 	/**

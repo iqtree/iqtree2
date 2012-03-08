@@ -1686,7 +1686,8 @@ double PhyloTree::doNNI(NNIMove move) {
 
 double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
 	ostream *out, int brtype, SwapNNIParam *nni_param, ostream *out_lh, ostream *site_lh, 
-	StringIntMap *treels, vector<double*> *treels_ptnlh, DoubleVector *treels_logl) {
+	StringIntMap *treels, vector<double*> *treels_ptnlh, DoubleVector *treels_logl, 
+	int *max_trees, double *logl_cutoff) {
     assert(node1->degree() == 3 && node2->degree() == 3);
 
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
@@ -1770,11 +1771,15 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 				}
 			}
 			else {
-				(*treels)[tree_str] = treels_ptnlh->size();
-				pattern_lh = new double[aln->getNPattern()];
-				logl = computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
-				treels_ptnlh->push_back(pattern_lh);
-				treels_logl->push_back(logl);
+				if (*logl_cutoff != 0.0 && score <= *logl_cutoff + 1e-4) 
+					duplicated_tree = true;
+				else {
+					(*treels)[tree_str] = treels_ptnlh->size();
+					pattern_lh = new double[aln->getNPattern()];
+					logl = computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
+					treels_ptnlh->push_back(pattern_lh);
+					treels_logl->push_back(logl);
+				}
 				//cout << tree_str << endl;
 			}
 		} else if (out_lh) {
@@ -1825,18 +1830,18 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 
 double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad, ostream *out, 
 	int brtype, ostream *out_lh, ostream *site_lh, StringIntMap *treels, 
-	vector<double*> *treels_ptnlh, DoubleVector *treels_logl) 
+	vector<double*> *treels_ptnlh, DoubleVector *treels_logl, int *max_trees, double *logl_cutoff) 
 {
     if (!node) node = (PhyloNode*) root;
     if (!node->isLeaf() && dad && !dad->isLeaf()) {
         double score = swapNNIBranch(cur_score, node, dad, out, brtype, NULL, out_lh, site_lh, 
-        	treels, treels_ptnlh, treels_logl);
+        	treels, treels_ptnlh, treels_logl, max_trees, logl_cutoff);
         if (score > cur_score) return score;
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
         double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node, out, brtype, 
-        out_lh, site_lh, treels, treels_ptnlh, treels_logl);
+        out_lh, site_lh, treels, treels_ptnlh, treels_logl, max_trees, logl_cutoff);
         if (score > cur_score) return score;
     }
     return cur_score;

@@ -559,7 +559,8 @@ public:
      */
     double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL, 
     	ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL, ostream *site_lh = NULL, 
-    	StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL);
+    	StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL, 
+    	int *max_trees = NULL, double *logl_cutoff = NULL);
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
@@ -572,7 +573,8 @@ public:
     double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
     	ostream *out = NULL, int brtype = 0, SwapNNIParam *nni_param = NULL, 
     	ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL, 
-    	vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL);
+    	vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL, 
+    	int *max_trees = NULL, double *logl_cutoff = NULL);
 
     /**
             Do an NNI

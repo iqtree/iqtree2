@@ -341,6 +341,7 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		}
 		pattern_lhs = &tree.treels_ptnlh;
 		trees_logl = &tree.treels_logl;
+		cout << "logl_cutoff = " << tree.logl_cutoff << " after " << tree.max_candidate_trees <<" trees" << endl;
 	} 
 
 	if (diff_tree_ids.empty()) {
@@ -380,7 +381,7 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 				diff_tree_ids_new.push_back(diff_tree_ids[i]);
 		diff_tree_ids = diff_tree_ids_new;
 		ndiff = diff_tree_ids.size();
-		cout << "Reduce to " << ndiff << " highest likelihood trees" << endl;
+		cout << "Reduce to " << ndiff << " highest likelihood trees with cutoff " << logl_cutoff << endl;
 	}
 
 	IntVector orig_diff_tree_ids = diff_tree_ids;
