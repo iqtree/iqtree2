@@ -609,6 +609,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.second_align = NULL;
 	params.ncbi_taxid = 0;
 	params.ncbi_taxon_level = NULL;
+	params.ncbi_names_file = NULL;
+	params.ncbi_ignore_level = NULL;
 	params.gbo_replicates = 0;
 	params.use_rell_method = true;
 	params.use_elw_method = false;
@@ -1274,11 +1276,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -dmp <ncbi_taxid>";
 				params.ncbi_taxid = convert_int(argv[cnt]);
-			} else if (strcmp(argv[cnt], "-dmplevel") == 0) {
+			} else if (strcmp(argv[cnt], "-dmplevel") == 0 || strcmp(argv[cnt], "-dmprank") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -dmp <ncbi_taxon_level";
+					throw "Use -dmprank <ncbi_taxon_rank>";
 				params.ncbi_taxon_level = argv[cnt];
+			} else if (strcmp(argv[cnt], "-dmpignore") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -dmpignore <ncbi_ignore_level>";
+				params.ncbi_ignore_level = argv[cnt];
+			} else if (strcmp(argv[cnt], "-dmpname") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -dmpname <ncbi_names_file>";
+				params.ncbi_names_file = argv[cnt];
 			} else if (strcmp(argv[cnt], "-bb") == 0) {
 				cnt++;
 				if (cnt >= argc)

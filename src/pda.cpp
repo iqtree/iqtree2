@@ -43,6 +43,7 @@
 #include "parsmultistate.h"
 #include "gss.h"
 #include "maalignment.h" //added by MA
+#include "ncbitree.h"
 
 using namespace std;
 
@@ -1523,19 +1524,22 @@ void computeMulProb(Params &params)
 	cout << "The probability is printed to: " << outProb_name << endl;
 }
 
-void processNCBITree(const char* filename, int taxid, const char *taxon_level) {
-	MExtTree tree;
-	Node *dad = tree.readNCBITree(filename, taxid, taxon_level);
+void processNCBITree(Params &params) {
+	NCBITree tree;
+	Node *dad = tree.readNCBITree(params.user_file, params.ncbi_taxid, params.ncbi_taxon_level, params.ncbi_ignore_level);
+	if (params.ncbi_names_file) tree.readNCBINames(params.ncbi_names_file);
+	
 	cout << "Dad ID: " << dad->name << " Root ID: " << tree.root->name << endl;
-	string str = filename;
+	string str = params.user_file;
 	str += ".tree";
+	if (params.out_file) str = params.out_file;
 	//tree.printTree(str.c_str(), WT_SORT_TAXA | WT_BR_LEN);
 	cout << "NCBI tree printed to " << str << endl;
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(str.c_str());
-		tree.printTree(out, WT_SORT_TAXA | WT_BR_LEN, tree.root, dad);
+		tree.printTree(out, WT_SORT_TAXA | WT_BR_LEN | WT_TAXON_ID, tree.root, dad);
 		out << ";" << endl;
 		out.close();
 	} catch (ios::failure) {
@@ -1628,7 +1632,7 @@ int main(int argc, char *argv[])
 	} else if (params.branch_cluster > 0) {
 		calcTreeCluster(params);
 	} else if (params.ncbi_taxid) {
-		processNCBITree(params.user_file, params.ncbi_taxid, params.ncbi_taxon_level);
+		processNCBITree(params);
 	} else if (params.aln_file || params.partition_file) {
 		if ((params.siteLL_file || params.second_align) && !params.gbo_replicates)
 		{

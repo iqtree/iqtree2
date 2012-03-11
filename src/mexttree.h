@@ -54,19 +54,6 @@ public:
 	*/
     MExtTree() : MTree() {};
 
-/********************************************************
-	READ TREE FROM FILE
-********************************************************/
-
-	/**
-		read the tree in nodes.dmp file from NCBI taxonomy
-		@param infile the input file file.
-		@param root_id taxon ID of the root
-		@param taxon_level e.g. "species", "genus"; NULL to take all taxa (incl. subspecies)
-	*/
-	Node* readNCBITree(const char *infile, int root_id, const char* taxon_level = NULL); 
-	Node* readNCBITree(istream &in, int root_id, const char* taxon_level = NULL);
-
 
 /********************************************************
 	GENERATE RANDOM TREE PROCEDURES
@@ -162,22 +149,7 @@ public:
 	*/
 	void createCluster(int clu_num, Node *node, Node *dad);
 
-protected:
-	/**
-		prune subtree below the taxon_level
-		@return number of nodes pruned
-	*/
-	int pruneTaxa(StrVector &node_levels, const char* taxon_level, Node *node, Node *dad);
 
-	/**
-		prune all nodes that have degree of 2
-		@return number of nodes pruned
-	*/
-	int pruneBridgeNodes(Node *node, Node *dad);
-
-	void countNodeNum(Node *node, Node *dad);
-
-	
 };
 
 #endif

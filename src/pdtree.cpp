@@ -147,7 +147,7 @@ void PDTree::readInitialSet(Params &params) {
 		} else
 		initialset.push_back((*nameit).second);
 	}
-	cout << initialset.size() << " initial taxa" << endl;
+	cout << initialset.size() - rooted << " initial taxa" << endl;
 }
 
 

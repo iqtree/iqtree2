@@ -941,6 +941,16 @@ struct Params {
 	const char *ncbi_taxon_level;
 
 	/**
+		rank to ingore, e.g., "no rank", branch length to such node will be set to zero
+	*/
+	const char *ncbi_ignore_level;
+
+	/**
+		typically names.dmp from NCBI
+	*/
+	const char *ncbi_names_file;
+
+	/**
 		number of replicates for guided bootstrap
 	*/
 	int gbo_replicates;

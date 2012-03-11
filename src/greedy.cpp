@@ -71,7 +71,7 @@ void Greedy::run(Params &params, vector<PDTaxaSet> &taxa_set)
 			taxa_set[0].push_back(*it);
 		}
 		list_size = params.sub_size - included;
-		cout << included << " distinct taxa included, adding " << list_size << " more taxa" << endl;
+		cout << included - rooted << " distinct taxa included, adding " << list_size << " more taxa" << endl;
 		// initialize maximal distance set
 		root->calcHeight();
 
@@ -82,6 +82,8 @@ void Greedy::run(Params &params, vector<PDTaxaSet> &taxa_set)
 	}
 
 	// greedy step
+
+	if (list_size < 0) outError("Too small k");
 
 	int ts;
 	for (ts = 0; list_size > 0; list_size--)
