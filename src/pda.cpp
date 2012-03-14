@@ -1659,7 +1659,8 @@ int main(int argc, char *argv[])
 				break;
 			case CT_ASSIGN_SUPPORT: 
 				assignBootstrapSupport(params.user_file, params.tree_burnin, 
-					params.second_tree, params.is_rooted, params.out_file, params.out_prefix, tree, params.tree_weight_file); 
+					params.second_tree, params.is_rooted, params.out_file, 
+					params.out_prefix, tree, params.tree_weight_file, &params); 
 				break;
 			case CT_NONE: break;
 			/**MINH ANH: for some comparison*/

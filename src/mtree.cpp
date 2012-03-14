@@ -671,8 +671,8 @@ void MTree::getInternalNodes(NodeVector &nodes, Node *node, Node *dad) {
 		//if ((*it)->node != dad)	{
 	FOR_NEIGHBOR_IT(node, dad, it)
 	if (!(*it)->node->isLeaf()) {
-		nodes.push_back((*it)->node);
 		getInternalNodes(nodes, (*it)->node, node);
+		nodes.push_back((*it)->node);
 	}
 }
 

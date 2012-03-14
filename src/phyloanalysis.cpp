@@ -1332,7 +1332,8 @@ void runPhyloAnalysis(Params &params) {
             cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
             MExtTree ext_tree;
             assignBootstrapSupport(boottrees_name.c_str(), 0,
-                    treefile_name.c_str(), false, treefile_name.c_str(), params.out_prefix, ext_tree, NULL);
+                    treefile_name.c_str(), false, treefile_name.c_str(), 
+                    params.out_prefix, ext_tree, NULL);
             tree->copyTree(&ext_tree);
             reportPhyloAnalysis(params, original_model, *alignment, *tree);
         }  else if (params.consensus_type == CT_CONSENSUS_TREE) {
@@ -1359,7 +1360,9 @@ void runPhyloAnalysis(Params &params) {
 }
 
 void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, bool rooted,
-        const char *output_tree, const char *out_prefix, MExtTree &mytree, const char* tree_weight_file) {
+        const char *output_tree, const char *out_prefix, MExtTree &mytree, 
+        const char* tree_weight_file, Params *params) 
+{
     //bool rooted = false;
     // read the tree file
 
@@ -1373,8 +1376,6 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
         (*it)->id = i++;
     }
 
-    // read the bootstrap tree file
-    MTreeSet boot_trees(input_trees, rooted, burnin, tree_weight_file);
     /*
     string filename = params.boot_trees;
     filename += ".nolen";
@@ -1388,10 +1389,28 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
     taxname.resize(mytree.leafNum);
     mytree.getTaxaName(taxname);
 
-    boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
+    // read the bootstrap tree file
+
+    MTreeSet boot_trees;
+    if (params && detectInputFile((char*)input_trees) == IN_NEXUS) {
+		sg.init(*params);
+		for (SplitGraph::iterator it = sg.begin(); it != sg.end(); it++)
+			hash_ss.insertSplit((*it), (*it)->getWeight());
+		StrVector sgtaxname;
+		sg.getTaxaName(sgtaxname);
+		i = 0;
+		for (StrVector::iterator sit = sgtaxname.begin(); sit != sgtaxname.end(); sit++, i++) {
+			Node *leaf = mytree.findLeafName(*sit);
+			if (!leaf) outError("Tree does not contain taxon ", *sit);
+			leaf->id = i;
+		}
+    } else {
+    	boot_trees.init(input_trees, rooted, burnin, tree_weight_file);
+    	boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
+	    sg.scaleWeight(100.0 / boot_trees.sumTreeWeights(), true);
+    }
      cout << sg.size() << " splits found" << endl;
    // compute the percentage of appearance
-    sg.scaleWeight(100.0 / boot_trees.sumTreeWeights(), true);
     //	printSplitSet(sg, hash_ss);
     //sg.report(cout);
     cout << "Creating bootstrap support values..." << endl;
