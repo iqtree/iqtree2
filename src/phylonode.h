@@ -14,7 +14,7 @@
 
 #include "node.h"
 
-typedef unsigned short int UBYTE;
+typedef short int UBYTE;
 
 /**
 A neighbor in a phylogenetic tree

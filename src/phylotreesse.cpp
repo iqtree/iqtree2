@@ -122,6 +122,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
             }
 
             if (state == STATE_UNKNOWN) {
+                dad_branch->scale_num[ptn] = -1;
                 for (int state2 = 0; state2 < block; state2++) {
                     partial_lh_site[state2] = 1.0;
                 }
@@ -157,6 +158,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
         EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
         for (ptn = 0; ptn < lh_size; ++ptn)
             dad_branch->partial_lh[ptn] = 1.0;
+        for (ptn = 0; ptn < alnSize; ptn++) dad_branch->scale_num[ptn] = -1;
  
         FOR_NEIGHBOR_IT(node, dad, it)
         if ((*it)->node->name != ROOT_NAME) {
@@ -167,7 +169,13 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
             }
             partial_lh_site = dad_branch->partial_lh;
             partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh;            
-            for (ptn = 0; ptn < alnSize; ++ptn) {
+            for (ptn = 0; ptn < alnSize; ++ptn) 
+            if (((PhyloNeighbor*) (*it))->scale_num[ptn] < 0) {
+				partial_lh_site += NSTATES * numCat;
+				partial_lh_child += NSTATES * numCat;
+            } else {
+
+				if (dad_branch->scale_num[ptn] < 0) dad_branch->scale_num[ptn] = 0;
 				dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
                 partial_lh_block = partial_lh_site;
                 freq = ptn_freqs[ptn];
