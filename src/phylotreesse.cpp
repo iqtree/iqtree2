@@ -81,11 +81,12 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
         }                
 		lh_ptn = log(lh_ptn);
         tree_lh += lh_ptn * ptn_freqs[ptn];
+        _pattern_lh[ptn] = lh_ptn;
 		// BQM: pattern_lh contains the LOG-likelihood, not likelihood
-        if (pattern_lh) {
-    		pattern_lh[ptn] = lh_ptn;
-    	}
     }
+	if (pattern_lh) {
+		memmove(pattern_lh, _pattern_lh, alnSize*sizeof(double));
+	}
 
     return tree_lh;
 }
@@ -104,6 +105,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
     bool do_scale = true;
     double freq;
     dad_branch->lh_scale_factor = 0.0;
+    memset(dad_branch->scale_num, 0, aln->size() * sizeof (UBYTE));
 
     if (node->isLeaf() && dad) {
         // external node
@@ -155,7 +157,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
         EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
         for (ptn = 0; ptn < lh_size; ++ptn)
             dad_branch->partial_lh[ptn] = 1.0;
-
+ 
         FOR_NEIGHBOR_IT(node, dad, it)
         if ((*it)->node->name != ROOT_NAME) {
             computePartialLikelihoodSSE<NSTATES > ((PhyloNeighbor*) (*it), (PhyloNode*) node, pattern_scale);
@@ -166,6 +168,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
             partial_lh_site = dad_branch->partial_lh;
             partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh;            
             for (ptn = 0; ptn < alnSize; ++ptn) {
+				dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
                 partial_lh_block = partial_lh_site;
                 freq = ptn_freqs[ptn];
                 trans_state = trans_mat;
@@ -194,6 +197,7 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
                     Map<VectorXd, Aligned> ei_lh_block(partial_lh_block, block);
                     ei_lh_block *= SCALING_THRESHOLD_INVER;                    
                     dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * freq;
+                	dad_branch->scale_num[ptn] += 1;
                     if (pattern_scale)
                         pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
                 }                
@@ -336,7 +340,9 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         double tmp2 = derv2_frac * freq;
         df += tmp1;
         ddf += tmp2 - tmp1 * derv1_frac;
-        tree_lh += log(lh_ptn) * freq;
+        lh_ptn = log(lh_ptn);
+        tree_lh += lh_ptn * freq;
+        _pattern_lh[ptn] = lh_ptn;
     }
     return tree_lh;
 }

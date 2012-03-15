@@ -810,7 +810,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -rzero <num_zero_branch>";
 				params.num_zero_len = convert_int(argv[cnt]);
-				if (params.num_zero_len <= 0) throw "num_zero_len must be positive";
+				if (params.num_zero_len < 0) throw "num_zero_len must not be negative";
 			} else if (strcmp(argv[cnt],"-rset") == 0) {
 				cnt++;
 				if (cnt >= argc-1)

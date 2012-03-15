@@ -189,7 +189,7 @@ double euclideanDist(IntVector &vec1, IntVector &vec2) {
 	return sqrt(dist);
 }
 
-double computeRELL(double *pattern_lh, IntVector &pattern_freq) {
+inline double computeRELL(double *pattern_lh, IntVector &pattern_freq) {
 	double lh = 0.0;
 	int npat = pattern_freq.size();
 	//if (npat != pattern_freq.size()) outError("Wrong vector size ", __func__);
@@ -451,49 +451,41 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 				prob = alignment->multinomialProb(pattern_freq);
 			else
 				prob = 0;
-			double min_dist = -1.0;
-			int chosen_id = -1;
-			// select best-fit tree by euclidean distance
-			for (j = 0; j < expected_freqs.size(); j++) {
-				double dist = euclideanDist(pattern_freq, expected_freqs[j]);
-				//cout << dist << " ";
-				if (dist < min_dist || min_dist < 0) {
-					min_dist = dist;
-					chosen_id = j;
-				}
-			}
-	
-			// select best-fit tree by RELL method 
-			DoubleVector logl;
-			logl.resize(ndiff);
-			for (j = 0; j < ndiff; j++) {
-				int tree_id = diff_tree_ids[j];
-				logl[j] = computeRELL((*pattern_lhs)[tree_id], pattern_freq);
-				//if (verbose_mode >= VB_MAX) cout << logl << endl;
-			}
-			double max_logl = *max_element(logl.begin(), logl.end());
-
 			if (params.use_rell_method) {
+				// select best-fit tree by RELL method 
+				DoubleVector logl;
+				logl.resize(ndiff);
+				for (j = 0; j < ndiff; j++) {
+					int tree_id = diff_tree_ids[j];
+					logl[j] = computeRELL((*pattern_lhs)[tree_id], pattern_freq);
+					//if (verbose_mode >= VB_MAX) cout << logl << endl;
+				}
+				DoubleVector::iterator max_logl = max_element(logl.begin(), logl.end());
 				int k = 0;
 				if (params.use_max_tree_per_bootstrap) {
-					double logl_cutoff = max_logl - accepted_diff;
+					double logl_cutoff = *max_logl - accepted_diff;
 					int num_max = 0;
 					for (j = 0; j < ndiff; j++) 
 						if (logl[j] >= logl_cutoff) num_max++;
-					int max_rand = floor(((double)rand() / RAND_MAX)*num_max);
-					if (max_rand >= num_max) max_rand = num_max - 1;
-					for (j = 0; j < ndiff && max_rand >= 0; j++) 
-					if (logl[j] >= logl_cutoff) {
-						max_rand--;
-						if (max_rand < 0) {
-							diff_tree_ids.push_back(diff_tree_ids[j]);
-							prob_vec.push_back(prob);
-							break;
+					if (num_max == 1) {
+						diff_tree_ids.push_back(diff_tree_ids[max_logl - logl.begin()]);
+						prob_vec.push_back(prob);
+					} else {
+						int max_rand = floor(((double)rand() / RAND_MAX)*num_max);
+						if (max_rand >= num_max) max_rand = num_max - 1;
+						for (j = 0; j < ndiff && max_rand >= 0; j++) 
+						if (logl[j] >= logl_cutoff) {
+							max_rand--;
+							if (max_rand < 0) {
+								diff_tree_ids.push_back(diff_tree_ids[j]);
+								prob_vec.push_back(prob);
+								break;
+							}
 						}
 					}
 					if (verbose_mode >= VB_MAX) {
 						cout << "Bootstrap " << i+1 <<  " lprob=" << prob << " max_logl=" << 
-							max_logl << " select " << diff_tree_ids[j]+1;
+							*max_logl << " select " << diff_tree_ids[j]+1;
 						if (num_max > 1)
 						 	cout << "  tie broken " << num_max << endl;
 						 else
@@ -502,7 +494,7 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 				} else {
 					DoubleVector weights;
 					weights.resize(ndiff);
-					for (j = 0; j < ndiff; j++) weights[j] = exp(logl[j] - max_logl);
+					for (j = 0; j < ndiff; j++) weights[j] = exp(logl[j] - *max_logl);
 					double sum = accumulate(weights.begin(), weights.end(), 0.0);
 					for (j = 0; j < ndiff; j++) weights[j] /= sum;
 					int max_id = max_element(weights.begin(), weights.end()) - weights.begin();
@@ -521,6 +513,17 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 				}
 			}
 			else {
+			// select best-fit tree by euclidean distance
+				double min_dist = -1.0;
+				int chosen_id = -1;
+				for (j = 0; j < expected_freqs.size(); j++) {
+					double dist = euclideanDist(pattern_freq, expected_freqs[j]);
+					//cout << dist << " ";
+					if (dist < min_dist || min_dist < 0) {
+						min_dist = dist;
+						chosen_id = j;
+					}
+				}
 				diff_tree_ids.push_back(diff_tree_ids[chosen_id]);
 				prob_vec.push_back(prob);
 				if (verbose_mode >= VB_MAX) {

@@ -14,6 +14,8 @@
 
 #include "node.h"
 
+typedef unsigned short int UBYTE;
+
 /**
 A neighbor in a phylogenetic tree
 
@@ -80,6 +82,10 @@ private:
 	*/
 	double lh_scale_factor;
 
+	/**
+		vector containing number of scaling events per pattern // NEW!
+	*/
+	UBYTE *scale_num;
 
 	/**
 		vector containing the partial parsimony scores

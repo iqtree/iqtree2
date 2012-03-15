@@ -54,11 +54,15 @@ PhyloTree::PhyloTree()
     site_rate = NULL;
     optimize_by_newton = false;
     central_partial_lh = NULL;
+    central_scale_num = NULL;
     central_partial_pars = NULL;
     model_factory = NULL;
     tmp_partial_lh1 = NULL;
     tmp_partial_lh2 = NULL;
+    tmp_scale_num1 = NULL;
+    tmp_scale_num2 = NULL;
     discard_saturated_site = true;
+    _pattern_lh = NULL;
 }
 
 PhyloTree::PhyloTree(Alignment *alignment)
@@ -71,14 +75,18 @@ PhyloTree::PhyloTree(Alignment *alignment)
     site_rate = NULL;
     optimize_by_newton = false;
     central_partial_lh = NULL;
+    central_scale_num = NULL;
     central_partial_pars = NULL;
     model_factory = NULL;
     tmp_partial_lh1 = NULL;
     tmp_partial_lh2 = NULL;
+    tmp_scale_num1 = NULL;
+    tmp_scale_num2 = NULL;
     discard_saturated_site = true;
     for (int ptn = 0; ptn < alnSize; ++ptn) {
         ptn_freqs[ptn] = (*aln)[ptn].frequency;
     }
+    _pattern_lh = NULL;
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {
@@ -89,16 +97,25 @@ PhyloTree::~PhyloTree() {
     if (central_partial_lh)
         delete [] central_partial_lh;
     central_partial_lh = NULL;
+	if (central_scale_num)
+		delete [] central_scale_num;
+    central_scale_num = NULL;
+
     if (central_partial_pars)
         delete [] central_partial_pars;
     central_partial_pars = NULL;
     if (model_factory) delete model_factory;
     if (model) delete model;
     if (site_rate) delete site_rate;
+    if (tmp_scale_num1)
+    	delete [] tmp_scale_num1;
+    if (tmp_scale_num2)
+    	delete [] tmp_scale_num2;
     if (tmp_partial_lh1)
     	delete [] tmp_partial_lh1;
     if (tmp_partial_lh2)
     	delete [] tmp_partial_lh2;
+    if (_pattern_lh) delete [] _pattern_lh;
 }
 
 void PhyloTree::assignLeafNames(Node *node, Node *dad) {
@@ -727,12 +744,18 @@ void PhyloTree::initializeAllPartialLh() {
         tmp_partial_lh1 = newPartialLh();
     if (!tmp_partial_lh2)
         tmp_partial_lh2 = newPartialLh();
+    if (!tmp_scale_num1)
+        tmp_scale_num1 = newScaleNum();
+    if (!tmp_scale_num2)
+        tmp_scale_num2 = newScaleNum();
+    if (!_pattern_lh) _pattern_lh = new double [aln->size()];
     initializeAllPartialLh(index);
     assert(index == (nodeNum - 1)*2);
 }
 
 void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
     int pars_block_size = getBitsBlockSize();
+    int scale_block_size = aln->size();
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
@@ -743,6 +766,13 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
             if (!central_partial_lh)
                 outError("Not enough memory for partial likelihood vectors");
 
+        }
+        if (!central_scale_num) {
+            if (verbose_mode >= VB_MED)
+                cout << "Allocating " << (leafNum - 1)*4*scale_block_size*sizeof (UBYTE) << " bytes for scale num vectors" << endl;
+            central_scale_num = new UBYTE[(leafNum-1)*4*scale_block_size];
+            if (!central_scale_num)
+                outError("Not enough memory for scale num vectors");
         }
         if (!central_partial_pars) {
             if (verbose_mode >= VB_MED)
@@ -758,10 +788,12 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
         //assert(!nei->partial_lh);
         nei->partial_lh = central_partial_lh + (index * block_size);
+        nei->scale_num = central_scale_num + (index * scale_block_size);
         nei->partial_pars = central_partial_pars + (index * pars_block_size);
         nei = (PhyloNeighbor*) dad->findNeighbor(node);
         //assert(!nei->partial_lh);
         nei->partial_lh = central_partial_lh + ((index + 1) * block_size);
+        nei->scale_num = central_scale_num + ((index + 1) * scale_block_size);
         nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
         index += 2;
         assert(index < nodeNum * 2 - 1);
@@ -774,6 +806,10 @@ double *PhyloTree::newPartialLh() {
     return new double[aln->size() * aln->num_states * site_rate->getNRate()];
 }
 
+UBYTE *PhyloTree::newScaleNum() {
+    return new UBYTE[aln->size()];
+}
+
 double PhyloTree::computeLikelihood(double *pattern_lh) {
     assert(model);
     assert(site_rate);
@@ -781,14 +817,19 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     double *ptn_scale = NULL;
     int nptn = aln->getNPattern();
     if (pattern_lh) {
-        double sum_scaling = ((PhyloNeighbor*) root->neighbors[0])->lh_scale_factor;
+    	PhyloNeighbor *nei = ((PhyloNeighbor*) root->neighbors[0]);
+        double sum_scaling = nei->lh_scale_factor;
         if (sum_scaling < 0.0) {
             ptn_scale = new double[nptn];
             memset(ptn_scale, 0, sizeof (double) * nptn);
+            for (int i = 0; i < nptn; i++)
+            	ptn_scale[i] = nei->scale_num[i] * LOG_SCALING_THRESHOLD;
             //clearAllPartialLh();
-            ((PhyloNeighbor*) root->neighbors[0])->clearForwardPartialLh(root);
+/*            ((PhyloNeighbor*) root->neighbors[0])->clearForwardPartialLh(root);
             computePartialLikelihood((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root, ptn_scale);
             assert(fabs(sum_scaling - ((PhyloNeighbor*) root->neighbors[0])->lh_scale_factor) < 1e-6);
+            */
+
         }
     }
     double score = computeLikelihoodBranch((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root, pattern_lh);
@@ -799,44 +840,44 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
             check_score += pattern_lh[i] * aln->at(i).frequency;
         }
         delete [] ptn_scale;
-        //assert(fabs(score - check_score) < 1e-6);
+        if (fabs(score - check_score) > 1e-6) outError("Scaling error ", __func__);
     }
     return score;
 }
 
-double PhyloTree::computePatternLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
-    assert(model);
-    assert(site_rate);
-    assert(root->isLeaf());
-    double *ptn_scale = NULL;
+void PhyloTree::computePatternLikelihood(double *ptn_lh, PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	if (!dad_branch) {
+		dad_branch = (PhyloNeighbor*) root->neighbors[0];
+		dad = (PhyloNode*) root;
+	}
     int nptn = aln->getNPattern();
-    if (pattern_lh) {
-    	PhyloNeighbor *node_branch = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
-        double sum_scaling = dad_branch->lh_scale_factor + node_branch->lh_scale_factor;
-        if (sum_scaling < 0.0) {
-        	//cout << __func__ << endl;
-        	//outError("Some partial likelihoods are scaled. This function does not work for large trees");
-            ptn_scale = new double[nptn];
-            memset(ptn_scale, 0, sizeof (double) * nptn);
-            //clearAllPartialLh();
-            dad_branch->clearForwardPartialLh(dad);
-            node_branch->clearForwardPartialLh(dad_branch->node);
-            computePartialLikelihood(dad_branch, dad, ptn_scale);
-            computePartialLikelihood(node_branch, (PhyloNode*)dad_branch->node, ptn_scale);
-            assert(fabs(sum_scaling - dad_branch->lh_scale_factor-node_branch->lh_scale_factor) < 1e-6);
-        }
-    }
-    double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
-    if (ptn_scale) {
-        double check_score = 0.0;
+	PhyloNeighbor *node_branch = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
+	double sum_scaling = dad_branch->lh_scale_factor + node_branch->lh_scale_factor;
+	if (sum_scaling < 0.0) {
         for (int i = 0; i < nptn; i++) {
-            pattern_lh[i] += ptn_scale[i];
-            check_score += pattern_lh[i] * aln->at(i).frequency;
+            ptn_lh[i] = _pattern_lh[i] + (dad_branch->scale_num[i]+node_branch->scale_num[i]) * LOG_SCALING_THRESHOLD;
+        }
+		
+/*
+		double *ptn_scale = new double[nptn];
+		memset(ptn_scale, 0, sizeof (double) * nptn);
+		if (dad_branch->lh_scale_factor != 0.0) {
+			dad_branch->clearForwardPartialLh(dad);
+			computePartialLikelihood(dad_branch, dad, ptn_scale);
+		}
+		if (node_branch->lh_scale_factor != 0.0) {
+			node_branch->clearForwardPartialLh(dad_branch->node);
+			computePartialLikelihood(node_branch, (PhyloNode*)dad_branch->node, ptn_scale);
+		}
+        for (int i = 0; i < nptn; i++) {
+            _pattern_lh[i] += ptn_scale[i];
         }
         delete [] ptn_scale;
-        //assert(fabs(score - check_score) < 1e-6);
-    }
-    return score;
+*/
+	} else
+		memmove(ptn_lh, _pattern_lh, nptn*sizeof(double));
+    //double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
+    //return score;
 }
 
 double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
@@ -985,11 +1026,12 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         //#endif
         assert(lh_ptn > 0);
         lh_ptn = log(lh_ptn);
-        if (pattern_lh) pattern_lh[ptn] = lh_ptn;
+        _pattern_lh[ptn] = lh_ptn;
         if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getPtnRate(ptn) >= MAX_SITE_RATE)
             continue;
         tree_lh += lh_ptn * aln->at(ptn).frequency;
     }
+    if (pattern_lh) memmove(pattern_lh, _pattern_lh, aln->size()*sizeof(double));
     //for (cat = ncat-1; cat >= 0; cat--)
     //delete trans_mat[cat];
     //delete state_freq;
@@ -1010,6 +1052,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
     double *partial_lh_site;
 
     dad_branch->lh_scale_factor = 0.0;
+    memset(dad_branch->scale_num, 0, aln->size() * sizeof (UBYTE));
 
     assert(dad_branch->partial_lh);
     //if (!dad_branch->partial_lh)
@@ -1028,6 +1071,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
             }
             if (state == STATE_UNKNOWN) {
                 // fill all entries (also over rate category) with 1.0
+                partial_lh_site[0] = -1.0;
                 for (int state2 = 0; state2 < block; state2++) {
                     partial_lh_site[state2] = 1.0;
                 }
@@ -1049,8 +1093,10 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
         int discrete_cat = site_rate->getNDiscreteRate();
         double trans_mat[discrete_cat * trans_size];
         //for (cat = 0; cat < discrete_cat; cat++) trans_mat[cat] = model->newTransMatrix();
-        for (ptn = 0; ptn < lh_size; ptn++)
+        for (ptn = 0; ptn < lh_size; ptn++) {
             dad_branch->partial_lh[ptn] = 1.0;
+        }
+        
         FOR_NEIGHBOR_IT(node, dad, it)
         if ((*it)->node->name != ROOT_NAME) {
             computePartialLikelihoodNaive((PhyloNeighbor*) (*it), (PhyloNode*) node, pattern_scale);
@@ -1065,12 +1111,9 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
 
             for (ptn = 0; ptn < aln->size(); ptn++) {
 				// avoid the case that all child partial likelihoods equal 1.0
-/*				double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + (ptn*block);
-				bool all_ones = true;
-				for (int i = 0; i < nstates; i++)
-					if (partial_lh_child[i] < 0.999999) { all_ones = false; break; }
-				if (all_ones) continue;*/
-					
+				//double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + (ptn*block);
+				//if (partial_lh_child[0] < 0.0) continue;
+				dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
                 int ptn_cat = site_rate->getPtnCat(ptn);
                 if (site_rate->isSiteSpecificRate())
                     model_factory->computeTransMatrix((*it)->length * site_rate->getPtnRate(ptn), trans_mat);
@@ -1110,6 +1153,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                 for (cat = 0; cat < block; cat++)
                     partial_lh_site[cat] /= SCALING_THRESHOLD;
                 dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
+                dad_branch->scale_num[ptn] += 1;
                 if (pattern_scale)
                     pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
             }
@@ -1282,7 +1326,9 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         double tmp2 = derv2_frac * freq;
         df += tmp1;
         ddf += tmp2 - tmp1 * derv1_frac;
-        tree_lh += log(lh_ptn) * freq;
+        lh_ptn = log(lh_ptn);
+        tree_lh += lh_ptn * freq;
+        _pattern_lh[ptn] = lh_ptn;
 
     }
     //for (cat = ncat-1; cat >= 0; cat--)
@@ -1697,8 +1743,15 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
     // save the likelihood vector at the two ends of node1-node2
     double *node1_lh_save = node12_it->partial_lh;
     double *node2_lh_save = node21_it->partial_lh;
+    UBYTE *node1_scale_save = node12_it->scale_num;
+    UBYTE *node2_scale_save = node21_it->scale_num;
+    double node1_lh_scale = node12_it->lh_scale_factor;
+    double node2_lh_scale = node21_it->lh_scale_factor;
+
     node12_it->partial_lh = newPartialLh();
     node21_it->partial_lh = newPartialLh();
+    node12_it->scale_num = newScaleNum();
+    node21_it->scale_num = newScaleNum();
 
     // TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
     FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
@@ -1753,7 +1806,6 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 			}
 		}
 		bool duplicated_tree = false;
-		double logl = 0.0;
 		double *pattern_lh = NULL;
 		if (treels) {
 			stringstream ostr;
@@ -1767,7 +1819,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 						cout << "Updated logl " <<treels_logl->at(it->second) <<
 							" to " << score << endl;
 					treels_logl->at(it->second) = score;
-					computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, treels_ptnlh->at(it->second));
+					computePatternLikelihood(treels_ptnlh->at(it->second), (PhyloNeighbor*)node1->findNeighbor(node2), node1);
 				}
 			}
 			else {
@@ -1776,23 +1828,21 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 				else {
 					(*treels)[tree_str] = treels_ptnlh->size();
 					pattern_lh = new double[aln->getNPattern()];
-					logl = computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
+					computePatternLikelihood(pattern_lh, (PhyloNeighbor*)node1->findNeighbor(node2), node1);
 					treels_ptnlh->push_back(pattern_lh);
-					treels_logl->push_back(logl);
+					treels_logl->push_back(score);
 				}
 				//cout << tree_str << endl;
 			}
 		} else if (out_lh) {
 			pattern_lh = new double[aln->getNPattern()];
-			logl = computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
+			computePatternLikelihood(pattern_lh, (PhyloNeighbor*)node1->findNeighbor(node2), node1);
 		}
 		if (out && !duplicated_tree) printTree(*out, brtype);
 		if (out_lh && !duplicated_tree) {
-			(*out_lh) << logl;
+			(*out_lh) << score;
 			double prob;
-			DoubleVector pattern_lh_vec;
-			pattern_lh_vec.insert(pattern_lh_vec.end(), pattern_lh, pattern_lh+aln->getNPattern());
-			aln->multinomialProb(pattern_lh_vec, prob);
+			aln->multinomialProb(pattern_lh, prob);
 			(*out_lh) << "\t" << prob << endl;
 			(*site_lh) << "Site_Lh   ";
 			for (int i = 0; i < aln->getNSite(); i++)
@@ -1821,10 +1871,16 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
     }
 
     // restore the partial likelihood vector
+    delete [] node21_it->scale_num;
+    delete [] node12_it->scale_num;
     delete [] node21_it->partial_lh;
     delete [] node12_it->partial_lh;
     node12_it->partial_lh = node1_lh_save;
     node21_it->partial_lh = node2_lh_save;
+    node12_it->scale_num = node1_scale_save;
+    node21_it->scale_num = node2_scale_save;
+    node12_it->lh_scale_factor = node1_lh_scale;
+    node21_it->lh_scale_factor = node2_lh_scale;
     return cur_score;
 }
 
@@ -2197,21 +2253,26 @@ void PhyloTree::computeNNIPatternLh(
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
     double *ptn_scale = NULL;
-    double new_scale[aln->getNPattern()];
+    int nptn = aln->getNPattern();
+    double new_scale[nptn];
     //double sum_scaling = node12_it->lh_scale_factor + node21_it->lh_scale_factor;
     NeighborVec::iterator it;
-    ptn_scale = new double[aln->getNPattern()];
-    memset(ptn_scale, 0, sizeof (double) * aln->getNPattern());
+    ptn_scale = new double[nptn];
+    memset(ptn_scale, 0, sizeof (double) * nptn);
 
     FOR_NEIGHBOR(node1, node2, it)
     if (((PhyloNeighbor*) * it)->lh_scale_factor < 0.0) {
-        ((PhyloNeighbor*) * it)->clearForwardPartialLh(node1);
-        computePartialLikelihood((PhyloNeighbor*) (*it), node1, ptn_scale);
+/*        ((PhyloNeighbor*) * it)->clearForwardPartialLh(node1);
+        computePartialLikelihood((PhyloNeighbor*) (*it), node1, ptn_scale);*/
+        for (int i = 0; i < nptn; i++) 
+			ptn_scale[i] += ((PhyloNeighbor*) (*it))->scale_num[i] * LOG_SCALING_THRESHOLD;
     }
     FOR_NEIGHBOR(node2, node1, it)
     if (((PhyloNeighbor*) * it)->lh_scale_factor < 0.0) {
-        ((PhyloNeighbor*) * it)->clearForwardPartialLh(node2);
-        computePartialLikelihood((PhyloNeighbor*) (*it), node2, ptn_scale);
+/*        ((PhyloNeighbor*) * it)->clearForwardPartialLh(node2);
+        computePartialLikelihood((PhyloNeighbor*) (*it), node2, ptn_scale);*/
+        for (int i = 0; i < nptn; i++) 
+			ptn_scale[i] += ((PhyloNeighbor*) (*it))->scale_num[i] * LOG_SCALING_THRESHOLD;
     }
 
     const int IT_NUM = 6;
@@ -2239,6 +2300,7 @@ void PhyloTree::computeNNIPatternLh(
         saved_nei[id] = (*saved_it[id]);
         *saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
         ((PhyloNeighbor*) (*saved_it[id]))->partial_lh = newPartialLh();
+        ((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
     }
 
     // get the Neighbor again since it is replaced for saving purpose
@@ -2305,7 +2367,7 @@ void PhyloTree::computeNNIPatternLh(
             lh3 = new_score;
         }
 
-        memcpy(new_scale, ptn_scale, sizeof (double) * aln->getNPattern());
+        memcpy(new_scale, ptn_scale, sizeof (double) * nptn);
 
         node12_it->clearPartialLh();
         node21_it->clearPartialLh();
@@ -2321,7 +2383,7 @@ void PhyloTree::computeNNIPatternLh(
 
         if (ptn_scale) {
             double check_score = 0.0;
-            for (i = 0; i < aln->getNPattern(); i++) {
+            for (i = 0; i < nptn; i++) {
                 result_lh[i] += new_scale[i];
                 check_score += result_lh[i] * aln->at(i).frequency;
             }
@@ -2346,6 +2408,7 @@ void PhyloTree::computeNNIPatternLh(
 
     // restore the Neighbor*
     for (id = 0; id < IT_NUM; id++) {
+        delete [] ((PhyloNeighbor*) * saved_it[id])->scale_num;
         delete [] ((PhyloNeighbor*) * saved_it[id])->partial_lh;
         delete (*saved_it[id]);
         (*saved_it[id]) = saved_nei[id];
@@ -2607,6 +2670,7 @@ int PhyloTree::restoreStableClade(Alignment *original_aln, NodeVector &pruned_ta
     return 0;
 }
 
+/*
 bool PhyloTree::checkEqualScalingFactor(double &sum_scaling, PhyloNode *node, PhyloNode *dad) {
     if (!node) node = (PhyloNode*) root;
     if (dad) {
@@ -2621,4 +2685,4 @@ bool PhyloTree::checkEqualScalingFactor(double &sum_scaling, PhyloNode *node, Ph
     FOR_NEIGHBOR_IT(node, dad, it)
     if (!checkEqualScalingFactor(sum_scaling, (PhyloNode*) (*it)->node, node)) return false;
     return true;
-}
+}*/

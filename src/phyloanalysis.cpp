@@ -1009,7 +1009,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
             cout << params.min_iterations << endl;
         else cout << "predicted in [" << params.min_iterations << "," <<
                 params.max_iterations << "] (confidence " << params.stop_confidence << ")" << endl;
-        cout << "Important quartet assessed on     : " << ((params.iqp_assess_quartet == IQP_DISTANCE) ? "Distance" : ((params.iqp_assess_quartet == IQP_PARSIMONY) ? "Parsimony" : "Bootstrap")) << endl;
+        cout << "Important quartet assessed on     : " << ((params.iqp_assess_quartet == IQP_DISTANCE) ? 
+        	"Distance" : ((params.iqp_assess_quartet == IQP_PARSIMONY) ? "Parsimony" : "Bootstrap")) << endl;
+       	cout << "SSE instructions                  : " << ((tree.sse)? "Yes" : "No") << endl;
+		cout << "Branch length optimization method : " << ((tree.optimize_by_newton) ? "Newton" : "Brent") << endl;
         cout << endl;
         tree.doIQPNNI(params);
     } else {

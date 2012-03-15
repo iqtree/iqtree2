@@ -320,6 +320,11 @@ public:
     double *newPartialLh();
 
     /**
+            allocate memory for a scale num vector
+     */
+    UBYTE *newScaleNum();
+
+    /**
             compute the partial likelihood at a subtree
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
@@ -358,14 +363,14 @@ public:
     virtual double computeLikelihood(double *pattern_lh = NULL);
 
     /**
-            compute the tree likelihood on a branch and pattern likelihoods
+            compute pattern likelihoods only if the accumulated scaling factor is non-zero.
+            Otherwise, copy the pattern_lh attribute
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
-            @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
+            @param pattern_lh (OUT) pattern log-likelihoods, 
                             assuming pattern_lh has the size of the number of patterns
-            @return tree likelihood
      */
-	double computePatternLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+	void computePatternLikelihood(double *pattern_lh, PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
 	/**
 		Compute the variance in tree log-likelihood 
@@ -807,7 +812,15 @@ public:
      */
     bool sse;
 
+
 protected:
+
+	/**
+		internal pattern log-likelihoods, always stored after calling computeLikelihood() 
+		or related functions. Note that scaling factors are not incorporated here. 
+		If you want to get real pattern log-likelihoods, please use computePatternLikelihood()
+	*/
+	double *_pattern_lh;
 
     /**
             assign the leaf names with the alignment sequence names, using the leaf ID for assignment.
@@ -859,6 +872,13 @@ protected:
      */
     double *central_partial_lh;
 
+	
+    /**
+            the main memory storing all scaling event numbers for all neighbors of the tree.
+            The variable scale_num in PhyloNeighbor will be assigned to a region inside this variable.
+     */
+	UBYTE *central_scale_num;
+
     /**
             the main memory storing all partial parsimony states for all neighbors of the tree.
             The variable partial_pars in PhyloNeighbor will be assigned to a region inside this variable.
@@ -903,6 +923,12 @@ protected:
      */
     double *tmp_partial_lh1;
     double *tmp_partial_lh2;
+    /**
+     * Temporary scale num array: used when swapping branch and recalculate the
+     * likelihood --> avoid calling malloc
+     */
+    UBYTE *tmp_scale_num1;
+    UBYTE *tmp_scale_num2;
 
     /****************************************************************************
             Vector of bit blocks, used for parsimony function

@@ -826,7 +826,7 @@ double IQPTree::doIQPNNI(Params &params) {
 				DoubleVector logl = treels_logl;
 				nth_element(logl.begin(), logl.begin() + (treels_logl.size()-num_entries), logl.end());
 				logl_cutoff = logl[treels_logl.size()-num_entries] - 5.0;
-			} else logl_cutoff = *min_element(treels_logl.begin(), treels_logl.end()) - 5.0;
+			} else logl_cutoff = 0.0;
 
 			cout << treels_logl.size() << " entries and logl_cutoff = " << logl_cutoff << endl;
 		}
@@ -1363,6 +1363,8 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     double *node1_lh_save = node12_it->partial_lh;
     double *node2_lh_save = node21_it->partial_lh;
     //save scaling vector
+    UBYTE *node1_scale_save = node12_it->scale_num;
+    UBYTE *node2_scale_save = node21_it->scale_num;
     double node1_lh_scale = node12_it->lh_scale_factor;
     double node2_lh_scale = node21_it->lh_scale_factor;
 
@@ -1379,6 +1381,9 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     int chosenSwap = 1;
     node12_it->partial_lh = tmp_partial_lh1;
     node21_it->partial_lh = tmp_partial_lh2;
+
+    node12_it->scale_num = tmp_scale_num1;
+    node21_it->scale_num = tmp_scale_num2;
 
     FOR_NEIGHBOR_IT(node2, node1, node2_it) {
         nniNr = nniNr + 1;      
@@ -1469,6 +1474,8 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     // restore the partial likelihood vector
     node12_it->partial_lh = node1_lh_save;
     node21_it->partial_lh = node2_lh_save;
+    node12_it->scale_num = node1_scale_save;
+    node21_it->scale_num = node2_scale_save;
     node12_it->lh_scale_factor = node1_lh_scale;
     node21_it->lh_scale_factor = node2_lh_scale;
     string key("");
@@ -1506,9 +1513,9 @@ void IQPTree::saveCurrentTree(double cur_logl, PhyloNode* node1, PhyloNode *node
 				" to " << cur_logl << endl;
 		treels_logl[it->second] = cur_logl;
 		if (!node1)
-			computeLikelihood(treels_ptnlh[it->second]);
+			computePatternLikelihood(treels_ptnlh[it->second]);
 		else
-			computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, treels_ptnlh[it->second]);
+			computePatternLikelihood(treels_ptnlh[it->second], (PhyloNeighbor*)node1->findNeighbor(node2), node1);
 		return;
 	}
 	else {
@@ -1519,21 +1526,18 @@ void IQPTree::saveCurrentTree(double cur_logl, PhyloNode* node1, PhyloNode *node
 	if (write_intermediate_trees) printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
 
 	double *pattern_lh = new double[aln->getNPattern()];
-	double logl;
 	if (!node1)
-		logl = computeLikelihood(pattern_lh);
+		computePatternLikelihood(pattern_lh);
 	else
-		logl = computePatternLikelihood((PhyloNeighbor*)node1->findNeighbor(node2), node1, pattern_lh);
+		computePatternLikelihood(pattern_lh, (PhyloNeighbor*)node1->findNeighbor(node2), node1);
 
 	treels_ptnlh.push_back(pattern_lh);
-	treels_logl.push_back(logl);
+	treels_logl.push_back(cur_logl);
 
 	if (print_tree_lh) {
-		out_treelh << logl;
+		out_treelh << cur_logl;
 		double prob;
-		DoubleVector pattern_lh_vec;
-		pattern_lh_vec.insert(pattern_lh_vec.end(), pattern_lh, pattern_lh+aln->getNPattern());
-		aln->multinomialProb(pattern_lh_vec, prob);
+		aln->multinomialProb(pattern_lh, prob);
 		out_treelh << "\t" << prob << endl;
 
 		out_sitelh << "Site_Lh   ";
@@ -1587,7 +1591,7 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 					cout << "Updated logl " <<treels_logl[it->second] <<
 						" to " << curScore << endl;
 				treels_logl[it->second] = curScore;
-				computeLikelihood(treels_ptnlh[it->second]);
+				computePatternLikelihood(treels_ptnlh[it->second]);
 			}
 			//pattern_lh = treels_ptnlh[treels[tree_str]];
 		}
@@ -1597,7 +1601,7 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 			else {
 				treels[tree_str] = treels_ptnlh.size();
 				pattern_lh = new double[aln->getNPattern()];
-				logl = computeLikelihood(pattern_lh);
+				computePatternLikelihood(pattern_lh);
 				treels_ptnlh.push_back(pattern_lh);
 				treels_logl.push_back(logl);
 			}
@@ -1606,7 +1610,7 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 	} else {
 		if (params.print_tree_lh) {
 			pattern_lh = new double[aln->getNPattern()];
-			logl = computeLikelihood(pattern_lh);
+			computePatternLikelihood(pattern_lh);
 		}
 	}
 
@@ -1615,9 +1619,7 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 		if (params.print_tree_lh) {
 			out_treelh << logl;
 			double prob;
-			DoubleVector pattern_lh_vec;
-			pattern_lh_vec.insert(pattern_lh_vec.end(), pattern_lh, pattern_lh+aln->getNPattern());
-			aln->multinomialProb(pattern_lh_vec, prob);
+			aln->multinomialProb(pattern_lh, prob);
 			out_treelh << "\t" << prob << endl;
 			if (!(brtype & WT_APPEND)) out_sitelh << aln->getNSite() << endl;
 			out_sitelh << "Site_Lh   ";
