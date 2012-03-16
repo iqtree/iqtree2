@@ -370,7 +370,7 @@ public:
             @param pattern_lh (OUT) pattern log-likelihoods, 
                             assuming pattern_lh has the size of the number of patterns
      */
-	void computePatternLikelihood(double *pattern_lh, PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
+	void computePatternLikelihood(double *pattern_lh, PhyloNeighbor *dad_branch, PhyloNode *dad);
 
 	/**
 		Compute the variance in tree log-likelihood 

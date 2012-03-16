@@ -849,6 +849,7 @@ double IQPTree::doIQPNNI(Params &params) {
             readTree(best_tree_string, rooted);
             assignLeafNames();
             initializeAllPartialLh();
+            clearAllPartialLH();
 
             // Variable Neighborhood search idea, increase k_delete if tree is not better
             increaseKDelete();
@@ -1513,7 +1514,7 @@ void IQPTree::saveCurrentTree(double cur_logl, PhyloNode* node1, PhyloNode *node
 				" to " << cur_logl << endl;
 		treels_logl[it->second] = cur_logl;
 		if (!node1)
-			computePatternLikelihood(treels_ptnlh[it->second]);
+			computeLikelihood(treels_ptnlh[it->second]);
 		else
 			computePatternLikelihood(treels_ptnlh[it->second], (PhyloNeighbor*)node1->findNeighbor(node2), node1);
 		return;
@@ -1527,7 +1528,7 @@ void IQPTree::saveCurrentTree(double cur_logl, PhyloNode* node1, PhyloNode *node
 
 	double *pattern_lh = new double[aln->getNPattern()];
 	if (!node1)
-		computePatternLikelihood(pattern_lh);
+		computeLikelihood(pattern_lh);
 	else
 		computePatternLikelihood(pattern_lh, (PhyloNeighbor*)node1->findNeighbor(node2), node1);
 
@@ -1591,7 +1592,7 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 					cout << "Updated logl " <<treels_logl[it->second] <<
 						" to " << curScore << endl;
 				treels_logl[it->second] = curScore;
-				computePatternLikelihood(treels_ptnlh[it->second]);
+				computeLikelihood(treels_ptnlh[it->second]);
 			}
 			//pattern_lh = treels_ptnlh[treels[tree_str]];
 		}
@@ -1601,7 +1602,7 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 			else {
 				treels[tree_str] = treels_ptnlh.size();
 				pattern_lh = new double[aln->getNPattern()];
-				computePatternLikelihood(pattern_lh);
+				computeLikelihood(pattern_lh);
 				treels_ptnlh.push_back(pattern_lh);
 				treels_logl.push_back(logl);
 			}
@@ -1610,7 +1611,7 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 	} else {
 		if (params.print_tree_lh) {
 			pattern_lh = new double[aln->getNPattern()];
-			computePatternLikelihood(pattern_lh);
+			computeLikelihood(pattern_lh);
 		}
 	}
 

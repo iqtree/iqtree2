@@ -931,11 +931,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		WHTest(params, tree);
 	}
 
-    /*
+    
     double sum_scaling = 1.0;
     if (!tree.checkEqualScalingFactor(sum_scaling))
             cout << "Scaling factor not equal along the tree" << endl;
-     */
+     
     NodeVector pruned_taxa;
     StrVector linked_name;
     double *saved_dist_mat = tree.dist_matrix;

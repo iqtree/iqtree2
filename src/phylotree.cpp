@@ -814,42 +814,46 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     assert(model);
     assert(site_rate);
     assert(root->isLeaf());
-    double *ptn_scale = NULL;
-    int nptn = aln->getNPattern();
-    if (pattern_lh) {
-    	PhyloNeighbor *nei = ((PhyloNeighbor*) root->neighbors[0]);
-        double sum_scaling = nei->lh_scale_factor;
+    //double *ptn_scale = NULL;
+   	PhyloNeighbor *nei = ((PhyloNeighbor*) root->neighbors[0]);
+//    double sum_scaling = nei->lh_scale_factor;
+//    double check = 0.0;
+/*    if (pattern_lh) {
         if (sum_scaling < 0.0) {
             ptn_scale = new double[nptn];
             memset(ptn_scale, 0, sizeof (double) * nptn);
-            for (int i = 0; i < nptn; i++)
+            for (int i = 0; i < nptn; i++) {
             	ptn_scale[i] = max(nei->scale_num[i],UBYTE(0)) * LOG_SCALING_THRESHOLD;
+            	check += ptn_scale[i] * aln->at(i).frequency;
+            }
+            if (fabs(check-sum_scaling) > 1e-3) {
+            	outError("sum_scaling does not match", __func__);
+            }
             //clearAllPartialLh();
-/*            ((PhyloNeighbor*) root->neighbors[0])->clearForwardPartialLh(root);
-            computePartialLikelihood((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root, ptn_scale);
-            assert(fabs(sum_scaling - ((PhyloNeighbor*) root->neighbors[0])->lh_scale_factor) < 1e-6);
-            */
-
         }
-    }
-    double score = computeLikelihoodBranch((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root, pattern_lh);
-    if (ptn_scale) {
-        double check_score = 0.0;
+    }*/
+    double score = computeLikelihoodBranch(nei, (PhyloNode*) root, pattern_lh);
+    if (pattern_lh && nei->lh_scale_factor < 0.0) {
+    	int nptn = aln->getNPattern();
+        //double check_score = 0.0;
         for (int i = 0; i < nptn; i++) {
-            pattern_lh[i] += ptn_scale[i];
-            check_score += pattern_lh[i] * aln->at(i).frequency;
+            pattern_lh[i] += max(nei->scale_num[i],UBYTE(0)) * LOG_SCALING_THRESHOLD;
+            //check_score += (pattern_lh[i] * (aln->at(i).frequency));
         }
-        delete [] ptn_scale;
-        if (fabs(score - check_score) > 1e-6) outError("Scaling error ", __func__);
+ /*       if (fabs(score - check_score) > 1e-6) {
+        	cout << "score = " << score << " check_score = " << check_score << endl;
+        	outError("Scaling error ", __func__);
+        }*/
+        //delete [] ptn_scale;
     }
     return score;
 }
 
 void PhyloTree::computePatternLikelihood(double *ptn_lh, PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	if (!dad_branch) {
+/*	if (!dad_branch) {
 		dad_branch = (PhyloNeighbor*) root->neighbors[0];
 		dad = (PhyloNode*) root;
-	}
+	}*/
     int nptn = aln->getNPattern();
 	PhyloNeighbor *node_branch = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
 	double sum_scaling = dad_branch->lh_scale_factor + node_branch->lh_scale_factor;
@@ -1793,27 +1797,40 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 
         node2->updateNeighbor(node2_it, node1_nei);
         node1_nei->node->updateNeighbor(node1, node2);
-
-        // partial_lhclear partial likelihood vector
-        node12_it->clearPartialLh();
-        node21_it->clearPartialLh();
-
-        // compute the score of the swapped topology
-        double score;
-        score = optimizeOneBranch(node1, node2, false);
-        if (nni_param) {
-			if (cnt==0) {
-				nni_param->nni1_score = score;
-				nni_param->nni1_brlen = node12_it->length;
-			} else {
-				nni_param->nni2_score = score;
-				nni_param->nni2_brlen = node12_it->length;
-			}
-		}
 		bool duplicated_tree = false;
-		double *pattern_lh = NULL;
+		string tree_str;
 		if (treels) {
 			stringstream ostr;
+			printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+			tree_str = ostr.str();
+			StringIntMap::iterator it = treels->find(tree_str);
+			if (it != treels->end()) {// already in treels
+				duplicated_tree = true;
+			}
+		}
+
+        double score = 0;
+
+		if (!duplicated_tree) {
+			// partial_lhclear partial likelihood vector
+			node12_it->clearPartialLh();
+			node21_it->clearPartialLh();
+	
+			// compute the score of the swapped topology
+			score = optimizeOneBranch(node1, node2, false);
+			if (nni_param) {
+				if (cnt==0) {
+					nni_param->nni1_score = score;
+					nni_param->nni1_brlen = node12_it->length;
+				} else {
+					nni_param->nni2_score = score;
+					nni_param->nni2_brlen = node12_it->length;
+				}
+			}
+		}
+		double *pattern_lh = NULL;
+		if (treels) {
+/*			stringstream ostr;
 			printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 			string tree_str = ostr.str();
 			StringIntMap::iterator it = treels->find(tree_str);
@@ -1827,16 +1844,17 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 					computePatternLikelihood(treels_ptnlh->at(it->second), (PhyloNeighbor*)node1->findNeighbor(node2), node1);
 				}
 			}
-			else {
-				if (*logl_cutoff != 0.0 && score <= *logl_cutoff + 1e-4) 
+			else {*/
+			if (!duplicated_tree) {
+/*				if (*logl_cutoff != 0.0 && score <= *logl_cutoff + 1e-4) 
 					duplicated_tree = true;
-				else {
+				else {*/
 					(*treels)[tree_str] = treels_ptnlh->size();
 					pattern_lh = new double[aln->getNPattern()];
 					computePatternLikelihood(pattern_lh, (PhyloNeighbor*)node1->findNeighbor(node2), node1);
 					treels_ptnlh->push_back(pattern_lh);
 					treels_logl->push_back(score);
-				}
+				//}
 				//cout << tree_str << endl;
 			}
 		} else if (out_lh) {
@@ -2258,7 +2276,7 @@ void PhyloTree::computeNNIPatternLh(
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 //    double *ptn_scale = NULL;
-    int nptn = aln->getNPattern();
+//    int nptn = aln->getNPattern();
 //    double new_scale[nptn];
     //double sum_scaling = node12_it->lh_scale_factor + node21_it->lh_scale_factor;
     NeighborVec::iterator it;
@@ -2313,7 +2331,7 @@ void PhyloTree::computeNNIPatternLh(
     node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 
-    PhyloNeighbor *node2_lastnei;
+    PhyloNeighbor *node2_lastnei = NULL;
 
     // save the first found neighbor of node 1 (excluding node2) in node1_it
     FOR_NEIGHBOR_DECLARE(node1, node2, node1_it) break;
@@ -2398,7 +2416,7 @@ void PhyloTree::computeNNIPatternLh(
             if (!(fabs(new_score - check_score) < 1e-3))
                 cout << new_score << " " << check_score << endl;
             assert(fabs(new_score - check_score) < 1e-3);
-        }
+        }*/
         /*
                         if (fabs(new_score - old_score) > TOL_LIKELIHOOD)
                                 cout << "something wrong" << endl;
@@ -2677,7 +2695,7 @@ int PhyloTree::restoreStableClade(Alignment *original_aln, NodeVector &pruned_ta
     return 0;
 }
 
-/*
+
 bool PhyloTree::checkEqualScalingFactor(double &sum_scaling, PhyloNode *node, PhyloNode *dad) {
     if (!node) node = (PhyloNode*) root;
     if (dad) {
@@ -2692,4 +2710,4 @@ bool PhyloTree::checkEqualScalingFactor(double &sum_scaling, PhyloNode *node, Ph
     FOR_NEIGHBOR_IT(node, dad, it)
     if (!checkEqualScalingFactor(sum_scaling, (PhyloNode*) (*it)->node, node)) return false;
     return true;
-}*/
+}
