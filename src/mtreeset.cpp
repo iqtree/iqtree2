@@ -471,7 +471,7 @@ void MTreeSet::computeRFDist(int *rfdist, int mode) {
 
 
 void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2, 
-	const char *info_file, const char *tree_file) 
+	const char *info_file, const char *tree_file, int *incomp_splits) 
 {
 	// exit if less than 2 trees
 #ifdef USE_HASH_MAP
@@ -479,12 +479,12 @@ void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2,
 #else
 	cout << "Using map" << endl;
 #endif
-	cout << "Computing Robinson-Foulds distance between two sets of trees..." << endl;
 
 	ofstream oinfo;
 	ofstream otree;
 	if (info_file) oinfo.open(info_file);
 	if (tree_file) otree.open(tree_file);
+	if (incomp_splits) memset(incomp_splits, 0, size()*treeset2->size()*sizeof(int));
 
 	vector<string> taxname(front()->leafNum);
 	vector<SplitIntMap*> hs_vec;
@@ -546,6 +546,8 @@ void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2,
 				} else {
 					if (info_file && (*spit)->trivial()<0) oinfo << " -" << nodes_vec[id][i]->name;
 					nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;
+					if (incomp_splits && !sg_vec[id2+size()]->compatible(*spit))
+						nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;
 				} 
 			}
 			int rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
@@ -554,6 +556,19 @@ void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2,
 			if (tree_file) { at(id)->printTree(otree); otree << endl; }
 			for (i = 0; i < nodes_vec[id].size(); i++)
 				if (nodes_vec[id][i]->name[0] == '-') nodes_vec[id][i]->name.erase(0,1);
+		}
+		if (!incomp_splits) continue;
+		id2 = 0;
+		// count incompatible splits
+		for (vector<SplitGraph*>::iterator hsit3 = sg_vec.begin()+size(); hsit3 != sg_vec.end(); hsit3++, id2++) {
+			int num_incomp = 0;
+			SplitGraph::iterator spit;
+			for (spit = (*hsit)->begin(); spit != (*hsit)->end(); spit++) 
+				if (!(*hsit3)->compatible(*spit)) num_incomp++;
+			for (spit = (*hsit3)->begin(); spit != (*hsit3)->end(); spit++) 
+				if (!(*hsit)->compatible(*spit)) num_incomp++;
+					
+			incomp_splits[id*col_size + id2] = num_incomp;
 		}
 	}
 	// delete memory 

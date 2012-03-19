@@ -133,7 +133,7 @@ public:
 		@param rfdist (OUT) RF distance
 	*/
 	void computeRFDist(int *rfdist, MTreeSet *treeset2, 
-		const char* info_file = NULL, const char *tree_file = NULL);
+		const char* info_file = NULL, const char *tree_file = NULL, int *incomp_splits = NULL);
 
 	int categorizeDistinctTrees(IntVector &category);
 

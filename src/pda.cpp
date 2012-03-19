@@ -1321,17 +1321,21 @@ void computeRFDist(Params &params) {
 	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin);
 	int n = trees.size(), m = trees.size();
 	int *rfdist;
+	int *incomp_splits = NULL;
 	string infoname = params.out_prefix;
 	infoname += ".rfinfo";
 	string treename = params.out_prefix;
 	treename += ".rftree";
 	if (params.rf_dist_mode == RF_TWO_TREE_SETS) {
 		MTreeSet treeset2(params.second_tree, params.is_rooted, params.tree_burnin);
+		cout << "Computing Robinson-Foulds distances between two sets of trees" << endl;
 		m = treeset2.size();
 		rfdist = new int [n*m];
 		memset(rfdist, 0, n*m* sizeof(int));
+		incomp_splits = new int [n*m];
+		memset(incomp_splits, 0, n*m* sizeof(int));
 		if (verbose_mode >= VB_MED) 
-			trees.computeRFDist(rfdist, &treeset2, infoname.c_str(),treename.c_str());
+			trees.computeRFDist(rfdist, &treeset2, infoname.c_str(),treename.c_str(), incomp_splits);
 		else
 			trees.computeRFDist(rfdist, &treeset2);
 	} else {
@@ -1353,8 +1357,22 @@ void computeRFDist(Params &params) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
 
+	if (incomp_splits)
+	try {
+		filename = params.out_prefix;
+		filename += ".incomp";
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename.c_str());
+		printRFDist(out, incomp_splits, n, m, params.rf_dist_mode);
+		out.close();
+		cout << "Number of incompatible splits in printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
 
-	delete rfdist;
+	if (incomp_splits) delete [] incomp_splits;
+	delete [] rfdist;
 }
 
 
