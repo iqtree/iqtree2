@@ -895,15 +895,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
     /* do NNI with likelihood function */
 
-    if ( params.min_iterations == -1 ) {
-        if ( alignment->getNSeq() < 100 )
-            params.min_iterations = 200;
-        else
-            params.min_iterations = alignment->getNSeq() * 2;
-    }
 
 	//bool saved_estimate_nni = estimate_nni_cutoff;
 	//estimate_nni_cutoff = false; // do not estimate NNI cutoff based on initial BIONJ tree
+
+	tree.setParams(params);
 
     if (params.min_iterations > 0) {
         cout << endl;
@@ -932,9 +928,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	}
 
     
-    double sum_scaling = 1.0;
+    /*double sum_scaling = 1.0;
     if (!tree.checkEqualScalingFactor(sum_scaling))
-            cout << "Scaling factor not equal along the tree" << endl;
+            cout << "Scaling factor not equal along the tree" << endl;*/
      
     NodeVector pruned_taxa;
     StrVector linked_name;
@@ -985,7 +981,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
                     if (params.p_delete > 0.5) params.p_delete = 0.5;
             }*/
 
-	tree.setParams(params);
+	//tree.setParams(params);
 
 
     /* do iterated local search */

@@ -1806,7 +1806,9 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 			StringIntMap::iterator it = treels->find(tree_str);
 			if (it != treels->end()) {// already in treels
 				duplicated_tree = true;
-			}
+			} else {
+				//cout << __func__ << ": new tree" << endl;
+			} 
 		}
 
         double score = 0;
@@ -2710,4 +2712,12 @@ bool PhyloTree::checkEqualScalingFactor(double &sum_scaling, PhyloNode *node, Ph
     FOR_NEIGHBOR_IT(node, dad, it)
     if (!checkEqualScalingFactor(sum_scaling, (PhyloNode*) (*it)->node, node)) return false;
     return true;
+}
+
+void PhyloTree::randomizeNeighbors(Node *node, Node *dad) {
+	if (!node) node = root;
+	FOR_NEIGHBOR_IT(node, dad, it) 
+		randomizeNeighbors((*it)->node, node);
+
+	random_shuffle(node->neighbors.begin(), node->neighbors.end());
 }

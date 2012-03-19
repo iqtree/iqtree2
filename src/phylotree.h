@@ -783,6 +783,11 @@ public:
 
     int restoreStableClade(Alignment *original_aln, NodeVector &pruned_taxa, StrVector &linked_name);
 
+	/**
+		randomize the neighbor orders of all nodes
+	*/
+	void randomizeNeighbors(Node *node = NULL, Node *dad = NULL);
+
     /****************************************************************************
             Public variables
      ****************************************************************************/
