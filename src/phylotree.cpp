@@ -849,17 +849,19 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     return score;
 }
 
-void PhyloTree::computePatternLikelihood(double *ptn_lh, PhyloNeighbor *dad_branch, PhyloNode *dad) {
+void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl) {
 /*	if (!dad_branch) {
 		dad_branch = (PhyloNeighbor*) root->neighbors[0];
 		dad = (PhyloNode*) root;
 	}*/
     int nptn = aln->getNPattern();
-	PhyloNeighbor *node_branch = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
-	double sum_scaling = dad_branch->lh_scale_factor + node_branch->lh_scale_factor;
+	//PhyloNeighbor *node_branch = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
+	//double sum_scaling = dad_branch->lh_scale_factor + node_branch->lh_scale_factor;
+	double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
 	if (sum_scaling < 0.0) {
         for (int i = 0; i < nptn; i++) {
-            ptn_lh[i] = _pattern_lh[i] + (max(UBYTE(0),dad_branch->scale_num[i])+max(UBYTE(0),node_branch->scale_num[i])) * LOG_SCALING_THRESHOLD;
+            //ptn_lh[i] = _pattern_lh[i] + (max(UBYTE(0),dad_branch->scale_num[i])+max(UBYTE(0),node_branch->scale_num[i])) * LOG_SCALING_THRESHOLD;
+            ptn_lh[i] = _pattern_lh[i] + (max(UBYTE(0),current_it->scale_num[i])+max(UBYTE(0),current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
         }
 		
 /*
@@ -880,6 +882,16 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, PhyloNeighbor *dad_bran
 */
 	} else
 		memmove(ptn_lh, _pattern_lh, nptn*sizeof(double));
+	if (cur_logl) {
+        double check_score = 0.0;
+        for (int i = 0; i < nptn; i++) {
+            check_score += (ptn_lh[i] * (aln->at(i).frequency));
+        }
+        if (fabs(check_score - *cur_logl) > 0.001) {
+        	cout << *cur_logl << " " << check_score << endl;
+        	outError("Wrong ", __func__);
+        }
+    }
     //double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
     //return score;
 }
@@ -891,7 +903,7 @@ double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
 	double *pattern_lh = ptn_lh;
 	if (!ptn_lh) {
 		pattern_lh = new double[nptn];
-		tree_lh = computeLikelihood(pattern_lh);
+		computePatternLikelihood(pattern_lh);
 	}
 	if (tree_lh == 0.0) {
 		for (i = 0; i < nptn; i++) tree_lh += pattern_lh[i] * aln->at(i).frequency;
@@ -913,7 +925,7 @@ double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_
 	double *pattern_lh = ptn_lh;
 	if (!ptn_lh) {
 		pattern_lh = new double[nptn];
-		computeLikelihood(pattern_lh);
+		computePatternLikelihood(pattern_lh);
 	}
 
 	double avg_site_lh_diff = 0.0;
@@ -931,7 +943,7 @@ double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_
 
 double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh) {
 	double *pattern_lh_other = new double[aln->getNPattern()];
-	other_tree->computeLikelihood(pattern_lh_other);
+	other_tree->computePatternLikelihood(pattern_lh_other);
 	return computeLogLDiffVariance(pattern_lh_other, pattern_lh);
 	delete [] pattern_lh_other;
 }
@@ -1853,7 +1865,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 				else {*/
 					(*treels)[tree_str] = treels_ptnlh->size();
 					pattern_lh = new double[aln->getNPattern()];
-					computePatternLikelihood(pattern_lh, (PhyloNeighbor*)node1->findNeighbor(node2), node1);
+					computePatternLikelihood(pattern_lh);
 					treels_ptnlh->push_back(pattern_lh);
 					treels_logl->push_back(score);
 				//}
@@ -1861,7 +1873,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 			}
 		} else if (out_lh) {
 			pattern_lh = new double[aln->getNPattern()];
-			computePatternLikelihood(pattern_lh, (PhyloNeighbor*)node1->findNeighbor(node2), node1);
+			computePatternLikelihood(pattern_lh);
 		}
 		if (out && !duplicated_tree) printTree(*out, brtype);
 		if (out_lh && !duplicated_tree) {
@@ -2406,7 +2418,7 @@ void PhyloTree::computeNNIPatternLh(
         //new_score = computeLikelihoodBranch(node2_lastnei, node2, result_lh);
         //double x[aln->getNPattern()];
         //new_score = computeLikelihoodBranch(node12_it, node1, result_lh);
-        computePatternLikelihood(result_lh, node2_lastnei, node2);
+        computePatternLikelihood(result_lh);
 
 /*        if (ptn_scale) {
             double check_score = 0.0;

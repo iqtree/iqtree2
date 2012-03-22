@@ -365,12 +365,10 @@ public:
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
             Otherwise, copy the pattern_lh attribute
-            @param dad_branch the branch leading to the subtree
-            @param dad its dad, used to direct the tranversal
             @param pattern_lh (OUT) pattern log-likelihoods, 
                             assuming pattern_lh has the size of the number of patterns
      */
-	void computePatternLikelihood(double *pattern_lh, PhyloNeighbor *dad_branch, PhyloNode *dad);
+	void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
 
 	/**
 		Compute the variance in tree log-likelihood 

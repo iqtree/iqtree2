@@ -670,7 +670,7 @@ void checkZeroDist(Alignment *aln, double *dist) {
 void printSiteLh(const char*filename, IQPTree &tree, bool append = false) {
 	int i;
 	double *pattern_lh = new double[tree.aln->getNPattern()];
-	tree.computeLikelihood(pattern_lh);
+	tree.computePatternLikelihood(pattern_lh);
 
 	try {
 		ofstream out;
@@ -943,8 +943,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
         pattern_lh = new double[tree.aln->getNPattern()];
         tree.setRootNode(params.root);
-        double score = tree.computeLikelihood(pattern_lh);
-        num_low_support = tree.testAllBranches(params.aLRT_threshold, score, pattern_lh, params.aLRT_replicates);
+        tree.computePatternLikelihood(pattern_lh, &tree.curScore);
+        num_low_support = tree.testAllBranches(params.aLRT_threshold, tree.curScore, pattern_lh, params.aLRT_replicates);
         tree.printResultTree(params);
         cout << "  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
         cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
@@ -1094,7 +1094,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
         pattern_lh = new double[tree.aln->getNPattern()];
         tree.setRootNode(params.root);
-        double score = tree.computeLikelihood(pattern_lh);
+        double score = tree.getBestScore();
+        tree.computePatternLikelihood(pattern_lh, &score);
         num_low_support = tree.testAllBranches(params.aLRT_threshold, score, pattern_lh, params.aLRT_replicates);        
         cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
         cout << "CPU Time used:  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
