@@ -516,7 +516,7 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int iterations = 100);
+    virtual double optimizeAllBranches(int iterations = 100, double tolerance = TOL_LIKELIHOOD);
 
     /**
             inherited from Optimization class, to return to likelihood of the tree

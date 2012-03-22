@@ -1332,8 +1332,10 @@ void computeRFDist(Params &params) {
 		m = treeset2.size();
 		rfdist = new int [n*m];
 		memset(rfdist, 0, n*m* sizeof(int));
-		incomp_splits = new int [n*m];
-		memset(incomp_splits, 0, n*m* sizeof(int));
+		if (verbose_mode >= VB_MAX) {
+			incomp_splits = new int [n*m];
+			memset(incomp_splits, 0, n*m* sizeof(int));
+		}
 		if (verbose_mode >= VB_MED) 
 			trees.computeRFDist(rfdist, &treeset2, infoname.c_str(),treename.c_str(), incomp_splits);
 		else

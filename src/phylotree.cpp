@@ -1410,8 +1410,8 @@ double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
     return tree_lh;
 }
 
-double PhyloTree::optimizeAllBranches(int iterations) {
-    if (verbose_mode > VB_MED)
+double PhyloTree::optimizeAllBranches(int iterations, double tolerance) {
+    if (verbose_mode >= VB_MED)
         cout << "Optimizing branch lenths (max " << iterations << " loops)..." << endl;
     double tree_lh = computeLikelihood();
     //cout << tree_lh << endl;
@@ -1424,12 +1424,12 @@ double PhyloTree::optimizeAllBranches(int iterations) {
 			cout << "Wrong " << new_tree_lh <<" "<< new_tree_lh2 << endl;
 			exit(1);
 		}*/
-        if (verbose_mode > VB_MAX) {
+        if (verbose_mode >= VB_MED) {
             cout << "BRANCH LEN " << i + 1 << " : ";
             cout.precision(10);
             cout << new_tree_lh << endl;
         }
-        if (new_tree_lh <= tree_lh + TOL_LIKELIHOOD)
+        if (new_tree_lh <= tree_lh + tolerance)
             return (new_tree_lh > tree_lh) ? new_tree_lh : tree_lh;
         tree_lh = new_tree_lh;
     }

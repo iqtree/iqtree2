@@ -255,10 +255,10 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	return tree_lh;
 }
 
-double PhyloSuperTree::optimizeAllBranches(int iterations) {
+double PhyloSuperTree::optimizeAllBranches(int iterations, double tolerance) {
 	double tree_lh = 0.0;
 	for (iterator it = begin(); it != end(); it++)
-		tree_lh += (*it)->optimizeAllBranches(iterations);
+		tree_lh += (*it)->optimizeAllBranches(iterations, tolerance);
 	if (iterations >= 100) computeBranchLengths();
 	return tree_lh;
 }

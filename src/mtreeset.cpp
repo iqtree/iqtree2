@@ -546,8 +546,8 @@ void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2,
 				} else {
 					if (info_file && (*spit)->trivial()<0) oinfo << " -" << nodes_vec[id][i]->name;
 					nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;
-					if (incomp_splits && !sg_vec[id2+size()]->compatible(*spit))
-						nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;
+					/*if (incomp_splits && !sg_vec[id2+size()]->compatible(*spit))
+						nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;*/
 				} 
 			}
 			int rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
