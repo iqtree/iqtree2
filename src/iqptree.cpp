@@ -47,7 +47,7 @@ PhyloTree() {
 	testNNI = false;
 	save_all_trees = 0;
 	print_tree_lh = false;
-	write_intermediate_trees = false;
+	write_intermediate_trees = 0;
 	max_candidate_trees = 0;
 	logl_cutoff = 0.0;
 }
@@ -74,7 +74,7 @@ IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln)
 	testNNI = false;
 	save_all_trees = 0;
 	print_tree_lh = false;
-	write_intermediate_trees = false;
+	write_intermediate_trees = 0;
 	max_candidate_trees = 0;
 	logl_cutoff = 0.0;
 }
@@ -1632,6 +1632,7 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 	if (!duplicated_tree) {
 		if (write_intermediate_trees) printTree(out_treels, brtype);
 		if (params.print_tree_lh) {
+			out_treelh.precision(10);
 			out_treelh << logl;
 			double prob;
 			aln->multinomialProb(pattern_lh, prob);

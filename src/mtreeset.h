@@ -52,7 +52,7 @@ public:
 	void init(const char *userTreeFile, bool &is_rooted, int burnin, 
 		const char *tree_weight_file = NULL, IntVector *trees_id = NULL);
 
-	void init(StringIntMap &treels, bool &is_rooted, IntVector &trees_id);
+	void init(StringIntMap &treels, bool &is_rooted, IntVector &weights);
 
 
 	/**

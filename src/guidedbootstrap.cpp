@@ -544,10 +544,16 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 
 	} // end of Arndt's method
 
+	IntVector final_tree_weights;
+	final_tree_weights.resize(ntrees, 0);
+	//for (i = 0; i < ntrees; i++) trees.tree_weights[i] = 0;
+	for (it = diff_tree_ids.begin(), i = 0; it != diff_tree_ids.end(); it++, i++) {
+		final_tree_weights[*it] += diff_tree_weights[i];
+	}
 
 	// now load in the trees
 	if (tree.save_all_trees) {
-		trees.init(tree.treels, tree.rooted, orig_diff_tree_ids);
+		trees.init(tree.treels, tree.rooted, final_tree_weights);
 	} else if (params.distinct_trees) {
 		trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL, &orig_diff_tree_ids);
 		//trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL);
@@ -555,10 +561,6 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 			outError("Different number of sitelh vectors");
 	} 
 
-	for (i = 0; i < ntrees; i++) trees.tree_weights[i] = 0;
-	for (it = diff_tree_ids.begin(), i = 0; it != diff_tree_ids.end(); it++, i++) {
-		trees.tree_weights[*it] += diff_tree_weights[i];
-	}
 	int sum_weights = trees.sumTreeWeights();
 	if (verbose_mode >= VB_MED) {
 		for (i = 0; i < ntrees; i++)

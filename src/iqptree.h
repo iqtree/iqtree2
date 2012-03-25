@@ -484,7 +484,7 @@ protected:
 	ofstream outNNI;
 protected:
 	bool print_tree_lh;
-	bool write_intermediate_trees;
+	int write_intermediate_trees;
 
 	ofstream out_treels, out_treelh, out_sitelh;
 
