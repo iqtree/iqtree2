@@ -275,6 +275,25 @@ void computeExpectedLhWeights(Alignment *aln, vector<double*> &pattern_lhs,
 		(*sh_pval)[j] /= num_replicates;
 }
 
+void printTrees(const char *ofile, StringIntMap &treels, DoubleVector &logl, IntVector &weights) {
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(ofile);
+		for (StringIntMap::iterator it = treels.begin(); it != treels.end(); it++) 
+		if (weights[it->second]) {
+			int id = it->second;
+			out.precision(10);
+			out << "[ lh=" << logl[id] << " w=" << weights[id] << " ] ";
+			out << it->first << endl;
+		}
+		out.close();
+		cout << "Tree(s) were printed to " << ofile << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, ofile);
+	}
+}
+
 void runGuidedBootstrap(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
 
 	int i, j;
@@ -554,20 +573,21 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	// now load in the trees
 	if (tree.save_all_trees) {
 		trees.init(tree.treels, tree.rooted, final_tree_weights);
+		string out_file = params.out_prefix;
+		out_file += ".btrees";
+		printTrees(out_file.c_str(), tree.treels, tree.treels_logl, final_tree_weights);
 	} else if (params.distinct_trees) {
-		trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL, &orig_diff_tree_ids);
+		trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL, &final_tree_weights);
 		//trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL);
-		if (pattern_lhs->size() != trees.size()) 
-			outError("Different number of sitelh vectors");
+/*		if (pattern_lhs->size() != trees.size()) 
+			outError("Different number of sitelh vectors");*/
 	} 
 
 	int sum_weights = trees.sumTreeWeights();
 	if (verbose_mode >= VB_MED) {
-		for (i = 0; i < ntrees; i++)
+		for (i = 0; i < trees.size(); i++)
 			if (trees.tree_weights[i] > 0) 
-				cout << "Tree " << i+1 << " weight= " <<
-					trees.tree_weights[i] * 100 / sum_weights <<
-					" logl= " << trees_logl->at(i) << endl;
+				cout << "Tree " << i+1 << " weight= " << trees.tree_weights[i] * 100 / sum_weights << endl;
 	}
 	int max_tree_id = max_element(trees.tree_weights.begin(), trees.tree_weights.end()) - trees.tree_weights.begin();
 	cout << "max_tree_id = " << max_tree_id+1 << "   max_weight = " << trees.tree_weights[max_tree_id];

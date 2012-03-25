@@ -57,15 +57,15 @@ void readIntVector(const char *file_name, int burnin, IntVector &vec) {
 }
 
 void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin, 
-	const char *tree_weight_file, IntVector *trees_id) 
+	const char *tree_weight_file, IntVector *weights) 
 {
-	readTrees(userTreeFile, is_rooted, burnin, trees_id);
+	readTrees(userTreeFile, is_rooted, burnin, weights);
 	checkConsistency();
 
 	if (tree_weight_file) 
 		readIntVector(tree_weight_file, burnin, tree_weights);
-	else 
-		tree_weights.resize(size(), 1);
+/*	else if (!weights)
+		tree_weights.resize(size(), 1);*/
 
 	if (size() != tree_weights.size())
 		outError("Tree file and tree weight file have different number of entries");
@@ -74,7 +74,7 @@ void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin,
 
 void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 	//resize(treels.size(), NULL);
-	int i, count = 0;
+	int count = 0;
 	//IntVector ok_trees;
 	//ok_trees.resize(treels.size(), 0);
 	//for (i = 0; i < trees_id.size(); i++) ok_trees[trees_id[i]] = 1;
@@ -100,18 +100,18 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 	//tree_weights.resize(size(), 1);
 }
 
-void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, IntVector *trees_id) {
+void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, IntVector *weights) {
 	cout << "Reading tree(s) file " << infile << " ..." << endl;
 	ifstream in;
 	int count, omitted;
-	IntVector ok_trees;
+/*	IntVector ok_trees;
 	if (trees_id) {
 		int max_id = *max_element(trees_id->begin(), trees_id->end());
 		ok_trees.resize(max_id+1, 0);
 		for (IntVector::iterator it = trees_id->begin(); it != trees_id->end(); it++)
 			ok_trees[*it] = 1;
 		cout << "Restricting to " << trees_id->size() << " trees" << endl;
-	}
+	}*/
 	try {
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(infile);
@@ -127,18 +127,21 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, IntVec
 				throw "Burnin value is too large.";
 		}
 		for (count = 1, omitted = 0; !in.eof(); count++) {
-			if (!trees_id || (count <= ok_trees.size() && ok_trees[count-1])){
+			if (!weights || weights->at(count-1)) {
 				//cout << "Reading tree " << count << " ..." << endl;
 				MTree *tree = newTree();
 				bool myrooted = is_rooted;
 				//tree->userFile = (char*) infile;
 				tree->readTree(in, myrooted);
 				push_back(tree);
+				if (weights) 
+					tree_weights.push_back(weights->at(count-1)); 
+				else tree_weights.push_back(1);
 				//cout << "Tree contains " << tree->leafNum - tree->rooted << 
 				//" taxa and " << tree->nodeNum-1-tree->rooted << " branches" << endl;
 			} else {
 				// omit the tree
-				push_back(NULL);
+				//push_back(NULL);
 				//in.exceptions(ios::badbit);
 				while (!in.eof()) {
 					char ch;

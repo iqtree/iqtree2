@@ -1524,7 +1524,7 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 	StringIntMap::iterator it = treels.find(tree_str);
 	if (it != treels.end()) {// already in treels
 		if (cur_logl <= treels_logl[it->second]+1e-4) {
-			if (cur_logl < treels_logl[it->second]-2.0)
+			if (cur_logl < treels_logl[it->second]-5.0)
 			cout << "Current lh " << cur_logl << " is much worse than expected " << treels_logl[it->second] << endl;
 			return;
 		}

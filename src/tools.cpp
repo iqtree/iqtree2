@@ -1297,6 +1297,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -bb <#replicates>";
 				params.gbo_replicates = convert_int(argv[cnt]);
 				params.avoid_duplicated_trees = true;
+				if (params.gbo_replicates < 1000) throw "#replicates must be >= 1000";
 			} else if (strcmp(argv[cnt], "-bmax") == 0) {
 				cnt++;
 				if (cnt >= argc)
