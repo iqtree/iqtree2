@@ -667,10 +667,13 @@ void checkZeroDist(Alignment *aln, double *dist) {
     }
 }
 
-void printSiteLh(const char*filename, IQPTree &tree, bool append = false) {
+void printSiteLh(const char*filename, IQPTree &tree, double *ptn_lh = NULL, bool append = false) {
 	int i;
-	double *pattern_lh = new double[tree.aln->getNPattern()];
-	tree.computePatternLikelihood(pattern_lh);
+	double *pattern_lh;
+	if (!ptn_lh) {
+		pattern_lh = new double[tree.aln->getNPattern()];
+		tree.computePatternLikelihood(pattern_lh);
+	} else pattern_lh = ptn_lh;
 
 	try {
 		ofstream out;
@@ -692,9 +695,7 @@ void printSiteLh(const char*filename, IQPTree &tree, bool append = false) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
 
-
-	delete [] pattern_lh;
-
+	if (!ptn_lh) delete [] pattern_lh;
 }
 
 void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
@@ -938,17 +939,18 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     double *pattern_lh;
     int num_low_support;
     clock_t mytime;
+
+    pattern_lh = new double[tree.aln->getNPattern()];
+
     if (params.aLRT_threshold <= 100 && params.aLRT_replicates > 0) {
         mytime = clock();
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
-        pattern_lh = new double[tree.aln->getNPattern()];
         tree.setRootNode(params.root);
         tree.computePatternLikelihood(pattern_lh, &tree.curScore);
         num_low_support = tree.testAllBranches(params.aLRT_threshold, tree.curScore, pattern_lh, params.aLRT_replicates);
         tree.printResultTree(params);
         cout << "  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
         cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
-        delete [] pattern_lh;
 
         //tree.drawTree(cout);
         cout << "Collapsing stable clades..." << endl;
@@ -1047,9 +1049,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     tree.root = tree.findLeafName(alignment->getSeqName(0));
     assert(tree.root);
 
-	string rate_file = params.out_prefix;
-	rate_file += ".rate";
-	tree.getRate()->writeSiteRates(rate_file.c_str());
+    double myscore = tree.getBestScore();
+    tree.computePatternLikelihood(pattern_lh, &myscore);
 
 	// compute logl variance
 	tree.logl_variance = tree.computeLogLVariance();
@@ -1057,18 +1058,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	if (params.print_site_lh) {
 		string site_lh_file = params.out_prefix;
 		site_lh_file += ".sitelh";
-		printSiteLh(site_lh_file.c_str(), tree);
+		printSiteLh(site_lh_file.c_str(), tree, pattern_lh);
 	}
 
-	if (tree.isSuperTree()) {
-		PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
-		int part = 0;
-		for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
-			rate_file = params.out_prefix;
-			rate_file = rate_file + "." + stree->part_info[part].name + ".rate";
-			(*it)->getRate()->writeSiteRates(rate_file.c_str());
-		}
-	}
 
     if (params.mvh_site_rate) {
 	    RateMeyerHaeseler *rate_mvh = new RateMeyerHaeseler(params.rate_file, &tree, params.rate_mh_type);
@@ -1092,14 +1084,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         mytime = clock();
         cout << endl;
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
-        pattern_lh = new double[tree.aln->getNPattern()];
         tree.setRootNode(params.root);
-        double score = tree.getBestScore();
-        tree.computePatternLikelihood(pattern_lh, &score);
-        num_low_support = tree.testAllBranches(params.aLRT_threshold, score, pattern_lh, params.aLRT_replicates);        
+        num_low_support = tree.testAllBranches(params.aLRT_threshold, myscore, pattern_lh, params.aLRT_replicates);        
         cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
         cout << "CPU Time used:  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
-        delete [] pattern_lh;
+        //delete [] pattern_lh;
 /*
 		string out_file = params.out_prefix;
 		out_file += ".alrt";
@@ -1107,6 +1096,21 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	
 		cout << "Support values written to " << out_file << endl;*/
     }
+
+
+	string rate_file = params.out_prefix;
+	rate_file += ".rate";
+	tree.getRate()->writeSiteRates(rate_file.c_str());
+
+	if (tree.isSuperTree()) {
+		PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+		int part = 0;
+		for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
+			rate_file = params.out_prefix;
+			rate_file = rate_file + "." + stree->part_info[part].name + ".rate";
+			(*it)->getRate()->writeSiteRates(rate_file.c_str());
+		}
+	}
 
     if (!tree.isSuperTree() && params.gbo_replicates > 0) {
 		runGuidedBootstrap(params, original_model, alignment, tree);
@@ -1138,6 +1142,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         }*/
     }
 
+    delete [] pattern_lh;
 
 /*	if (tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) {
 		string rate_file = params.out_prefix;
@@ -1175,7 +1180,7 @@ void evaluateTrees(Params &params, IQPTree *tree) {
 		if (params.print_site_lh) {
 			string site_lh_file = params.user_file;
 			site_lh_file += ".sitelh";
-			printSiteLh(site_lh_file.c_str(), *tree, (it != trees.begin()));
+			printSiteLh(site_lh_file.c_str(), *tree, NULL, (it != trees.begin()));
 		}
 	}
 	if (!params.fixed_branch_length) {

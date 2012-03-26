@@ -19,6 +19,9 @@
  ***************************************************************************/
 #include "phylotree.h"
 
+/* BQM: to ignore all-gapp subtree at an alignment site */
+#define IGNORE_GAP_LH
+
 template<int NSTATES>
 inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
     PhyloNode *node = (PhyloNode*) dad_branch->node; // Node A
@@ -122,7 +125,9 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
             }
 
             if (state == STATE_UNKNOWN) {
+#ifdef IGNORE_GAP_LH
                 dad_branch->scale_num[ptn] = -1;
+#endif
                 for (int state2 = 0; state2 < block; state2++) {
                     partial_lh_site[state2] = 1.0;
                 }
@@ -158,8 +163,9 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
         EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
         for (ptn = 0; ptn < lh_size; ++ptn)
             dad_branch->partial_lh[ptn] = 1.0;
+#ifdef IGNORE_GAP_LH
         for (ptn = 0; ptn < alnSize; ptn++) dad_branch->scale_num[ptn] = -1;
- 
+#endif 
         FOR_NEIGHBOR_IT(node, dad, it)
         if ((*it)->node->name != ROOT_NAME) {
             computePartialLikelihoodSSE<NSTATES > ((PhyloNeighbor*) (*it), (PhyloNode*) node, pattern_scale);
@@ -170,12 +176,16 @@ inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, Ph
             partial_lh_site = dad_branch->partial_lh;
             partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh;            
             for (ptn = 0; ptn < alnSize; ++ptn) 
+#ifdef IGNORE_GAP_LH
             if (((PhyloNeighbor*) (*it))->scale_num[ptn] < 0) {
 				partial_lh_site += NSTATES * numCat;
 				partial_lh_child += NSTATES * numCat;
-            } else {
-
+            } else
+#endif
+			{
+#ifdef IGNORE_GAP_LH
 				if (dad_branch->scale_num[ptn] < 0) dad_branch->scale_num[ptn] = 0;
+#endif
 				dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
                 partial_lh_block = partial_lh_site;
                 freq = ptn_freqs[ptn];
