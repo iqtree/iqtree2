@@ -998,6 +998,10 @@ struct Params {
 
 	/** print some output info for NNI */
 	bool testNNI;
+
+
+	/** TRUE to compress big file using zlib */
+	bool do_compression;
 };
 
 /**

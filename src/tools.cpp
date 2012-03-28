@@ -624,7 +624,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.estimate_nni_cutoff = false;
 	params.nni_sort = false;
 	params.testNNI = false;
-
+	params.do_compression = false;
 
 	struct timeval tv;
 	struct timezone tz;
@@ -1317,6 +1317,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.use_weighted_bootstrap = true;
 			} else if (strcmp(argv[cnt], "-bmore") == 0) {
 				params.use_max_tree_per_bootstrap = false;
+			} else if (strcmp(argv[cnt], "-gz") == 0) {
+				params.do_compression = true;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

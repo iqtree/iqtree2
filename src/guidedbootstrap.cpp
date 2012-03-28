@@ -44,6 +44,8 @@
 #include "whtest_wrapper.h"
 #include "partitionmodel.h"
 
+//#include "zpipe.h"
+#include "gzstream.h"
 
 void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs, DoubleVector &trees_logl)
 {
@@ -275,22 +277,141 @@ void computeExpectedLhWeights(Alignment *aln, vector<double*> &pattern_lhs,
 		(*sh_pval)[j] /= num_replicates;
 }
 
-void printTrees(const char *ofile, StringIntMap &treels, DoubleVector &logl, IntVector &weights) {
+void printTrees(const char *ofile, StringIntMap &treels, 
+	DoubleVector &logl, IntVector *weights, bool compression) 
+{
+	int count = 0;
 	try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		out.open(ofile);
+		ostream *out;
+		if (compression) out = new ogzstream; else out = new ofstream;
+		out->exceptions(ios::failbit | ios::badbit);
+		if (compression) 
+			((ogzstream*)out)->open(ofile);
+		else
+			((ofstream*)out)->open(ofile);
+			
 		for (StringIntMap::iterator it = treels.begin(); it != treels.end(); it++) 
-		if (weights[it->second]) {
+		if (!weights || weights->at(it->second)) {
 			int id = it->second;
-			out.precision(10);
-			out << "[ lh=" << logl[id] << " w=" << weights[id] << " ] ";
-			out << it->first << endl;
+			out->precision(10);
+			(*out) << "[ lh=" << logl[id];
+			if (weights) (*out) << " w=" << weights->at(id);
+			(*out) << " ] ";
+			(*out) << it->first << endl;
+			count++;
 		}
-		out.close();
-		cout << "Tree(s) were printed to " << ofile << endl;
+		if (compression) 
+			((ogzstream*)out)->close();
+		else
+			((ofstream*)out)->close();
+		cout << count << " tree(s) printed to " << ofile << endl;
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, ofile);
+	}
+}
+
+void printPatternLh(const char *ofile, IQPTree *tree, bool compression) {
+	int count = 0, i;
+	int scale = 1000;
+	try {
+		ostream *out;
+		if (compression) out = new ogzstream; else out = new ofstream;
+		out->exceptions(ios::failbit | ios::badbit);
+		if (compression) 
+			((ogzstream*)out)->open(ofile/*, ios::out | ios::binary*/);
+		else
+			((ofstream*)out)->open(ofile/*, ios::out | ios::binary*/);
+		int idfirst = tree->treels.begin()->second;
+		(*out) << tree->treels.size() << " " << tree->aln->getNSite() <<
+				" " << tree->aln->getNPattern() << " " << scale << endl;
+		for (i = 0; i < tree->aln->getNSite(); i++)
+			(*out) << " " << tree->aln->getPatternID(i);
+		(*out) << endl;
+		for (StringIntMap::iterator it = tree->treels.begin(); it != tree->treels.end(); it++) 
+		{
+			int id = it->second;
+			assert(id < tree->treels_ptnlh.size());
+			//out->write((char*)tree->treels_ptnlh[id], sizeof(double)*tree->aln->size());
+			out->precision(10);
+			(*out) << -tree->treels_logl[id];
+			if (id == idfirst) {
+				out->precision(6);
+				for (int i = 0; i < tree->aln->size(); i++)
+					(*out) << " " << -tree->treels_ptnlh[id][i];
+			} else {
+				for (int i = 0; i < tree->aln->size(); i++) {
+					int diff = round((tree->treels_ptnlh[id][i]-tree->treels_ptnlh[idfirst][i])*scale);
+					(*out) << " " << diff;
+				}
+			}
+			(*out) << endl;
+			count++;
+		}
+		if (compression) 
+			((ogzstream*)out)->close();
+		else
+			((ofstream*)out)->close();
+		cout << count << " pattern log-likelihood vector(s) printed to " << ofile << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, ofile);
+	}
+}
+
+void readPatternLh(const char *infile, IQPTree *tree, bool compression) {
+	int count = 0, i;
+	int ntrees, nsite, nptn, scale;
+	double max_tol = 0.0;
+	try {
+		istream *in;
+		if (compression) in = new igzstream; else in = new ifstream;
+		in->exceptions(ios::failbit | ios::badbit);
+		if (compression) 
+			((ogzstream*)in)->open(infile/*, ios::out | ios::binary*/);
+		else
+			((ofstream*)in)->open(infile/*, ios::out | ios::binary*/);
+		(*in) >> ntrees >> nsite >> nptn >> scale;
+		if (nsite != tree->aln->getNSite()) outError("Number of sites does not match");
+		if (nptn !=  tree->aln->getNPattern()) outError("Number of patterns does not match");
+		for (i = 0; i < tree->aln->getNSite(); i++) {
+			int id;
+			(*in) >> id;
+			if (id != tree->aln->getPatternID(i)) outError("Pattern ID does not match");
+		}
+		tree->treels_logl.resize(ntrees, 0.0);
+		tree->treels_ptnlh.resize(ntrees, NULL);
+		for (int id = 0; id < ntrees; id++) 
+		{
+			double logl;
+			(*in) >> logl;
+			logl = -logl;
+			tree->treels_logl[id] = logl;
+			double *pattern_lh = new double[nptn];
+			if (id == 0) {
+				for (i = 0; i < nptn; i++) {
+					(*in) >> pattern_lh[i];
+					pattern_lh[i] = -pattern_lh[i];
+				}
+				tree->treels_ptnlh[id] = pattern_lh;
+			} else {
+				double sum = 0.0;
+				for (i = 0; i < nptn; i++) {
+					int diff;
+					(*in) >> diff;
+					pattern_lh[i] = tree->treels_ptnlh[0][i]+(double)diff/scale;
+					sum += pattern_lh[i] * tree->aln->at(i).frequency;
+				}
+				if (fabs(sum-logl) > max_tol) max_tol = fabs(sum-logl);
+			}
+			count++;
+		}
+		cout << "max tolerance = " << max_tol << endl;
+		if (compression) 
+			((ogzstream*)in)->close();
+		else
+			((ofstream*)in)->close();
+		cout << count << " pattern log-likelihood vector(s) read from " << infile << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, infile);
 	}
 }
 
@@ -574,8 +695,20 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	if (tree.save_all_trees) {
 		trees.init(tree.treels, tree.rooted, final_tree_weights);
 		string out_file = params.out_prefix;
-		out_file += ".btrees";
-		printTrees(out_file.c_str(), tree.treels, tree.treels_logl, final_tree_weights);
+		if (params.do_compression) {
+			out_file += ".btrees.gz";
+			printTrees(out_file.c_str(), tree.treels, tree.treels_logl, 
+				&final_tree_weights, params.do_compression);
+			out_file = params.out_prefix;
+			out_file += ".alltrees.gz";
+			printTrees(out_file.c_str(), tree.treels, tree.treels_logl, NULL, 
+				params.do_compression);
+			if (params.print_site_lh) {
+				out_file = params.out_prefix;
+				out_file += ".ptnlh.gz";
+				printPatternLh(out_file.c_str(), &tree, params.do_compression);
+			}
+		}
 	} else if (params.distinct_trees) {
 		trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL, &final_tree_weights);
 		//trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL);
