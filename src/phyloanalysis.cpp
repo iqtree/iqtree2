@@ -1168,7 +1168,7 @@ void evaluateTrees(Params &params, IQPTree *tree) {
 		//int fixed_number = tree->fixNegativeBranch(fixed_length);
 		tree->fixNegativeBranch(fixed_length);
 		tree->initializeAllPartialLh();
-		if (tree->isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
+		if (tree->isSuperTree()) ((PhyloSuperTree*)tree)->mapTrees();
 		if (!params.fixed_branch_length) {
 			tree->curScore = tree->optimizeAllBranches();
 			tree->printTree(treeout);
@@ -1225,7 +1225,7 @@ void runPhyloAnalysis(Params &params) {
         else if (params.aln_output_format == ALN_FASTA)
         	alignment->printFasta(params.aln_output, false, params.aln_site_list, 
         	params.aln_nogaps, params.ref_seq_name);
-    } else if (params.gbo_replicates > 0 && params.user_file && params.siteLL_file) {
+    } else if (params.gbo_replicates > 0 && params.user_file && params.second_tree) {
     	runGuidedBootstrap(params, original_model, alignment, *tree);
     } else if (params.num_bootstrap_samples == 0) {
 		alignment->checkGappySeq();

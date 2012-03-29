@@ -471,6 +471,14 @@ public:
 	bool rooted;
 
 	/**
+		precision to print branch lengths, default: 6
+	*/
+	int num_precision;
+
+	/** if WT_BR_SCALE turned on, printTree will scale branch length with this factor */
+	double len_scale;
+
+	/**
 		release the nemory.
 		@param node the starting node, NULL to start from the root
 		@param dad dad of the node, used to direct the search

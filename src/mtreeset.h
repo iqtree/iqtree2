@@ -50,7 +50,7 @@ public:
 		@param burnin the number of beginning trees to be discarded
 	*/
 	void init(const char *userTreeFile, bool &is_rooted, int burnin, 
-		const char *tree_weight_file = NULL, IntVector *weights = NULL);
+		const char *tree_weight_file = NULL, IntVector *weights = NULL, bool compressed = false);
 
 	void init(StringIntMap &treels, bool &is_rooted, IntVector &weights);
 
@@ -61,7 +61,7 @@ public:
 		@param is_rooted (IN/OUT) true if tree is rooted
 		@param burnin the number of beginning trees to be discarded
 	*/
-	void readTrees(const char *userTreeFile, bool &is_rooted, int burnin, IntVector *weights = NULL);
+	void readTrees(const char *userTreeFile, bool &is_rooted, int burnin, IntVector *weights = NULL, bool compressed = false);
 
 	/**
 		check the consistency of trees: taxa names between trees are matched, same rooted or unrooted

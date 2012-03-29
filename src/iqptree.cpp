@@ -50,6 +50,7 @@ PhyloTree() {
 	write_intermediate_trees = 0;
 	max_candidate_trees = 0;
 	logl_cutoff = 0.0;
+	len_scale = 10000;
 }
 
 IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln) 
@@ -77,6 +78,7 @@ IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln)
 	write_intermediate_trees = 0;
 	max_candidate_trees = 0;
 	logl_cutoff = 0.0;
+	len_scale = 10000;
 }
 
 void IQPTree::setParams(Params &params) {
@@ -1532,6 +1534,9 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 			cout << "Updated logl " <<treels_logl[it->second] <<
 				" to " << cur_logl << endl;
 		treels_logl[it->second] = cur_logl;
+		ostr.seekp(ios::beg);
+		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
+		treels_newick[it->second] = ostr.str();
 		computePatternLikelihood(treels_ptnlh[it->second], &cur_logl);
 		return;
 	}
@@ -1547,6 +1552,9 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 
 	treels_ptnlh.push_back(pattern_lh);
 	treels_logl.push_back(cur_logl);
+	ostr.seekp(ios::beg);
+	printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
+	treels_newick.push_back(ostr.str());
 
 	if (print_tree_lh) {
 		out_treelh << cur_logl;
@@ -1606,6 +1614,9 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 						" to " << curScore << endl;
 				treels_logl[it->second] = curScore;
 				computeLikelihood(treels_ptnlh[it->second]);
+				ostr.seekp(ios::beg);
+				printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
+				treels_newick[it->second] = ostr.str();
 			}
 			//pattern_lh = treels_ptnlh[treels[tree_str]];
 		}
@@ -1619,6 +1630,9 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 				computePatternLikelihood(pattern_lh, &logl);
 				treels_ptnlh.push_back(pattern_lh);
 				treels_logl.push_back(logl);
+				ostr.seekp(ios::beg);
+				printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
+				treels_newick.push_back(ostr.str());
 			}
 		}
 		//cout << tree_str << endl;

@@ -277,8 +277,7 @@ void computeExpectedLhWeights(Alignment *aln, vector<double*> &pattern_lhs,
 		(*sh_pval)[j] /= num_replicates;
 }
 
-void printTrees(const char *ofile, StringIntMap &treels, 
-	DoubleVector &logl, IntVector *weights, bool compression) 
+void printTrees(const char *ofile, IQPTree &tree, IntVector *weights, bool compression) 
 {
 	int count = 0;
 	try {
@@ -289,21 +288,22 @@ void printTrees(const char *ofile, StringIntMap &treels,
 			((ogzstream*)out)->open(ofile);
 		else
 			((ofstream*)out)->open(ofile);
-			
-		for (StringIntMap::iterator it = treels.begin(); it != treels.end(); it++) 
+		(*out) << "[ scale=" << tree.len_scale << " ]" << endl;
+		for (StringIntMap::iterator it = tree.treels.begin(); it != tree.treels.end(); it++) 
 		if (!weights || weights->at(it->second)) {
 			int id = it->second;
 			out->precision(10);
-			(*out) << "[ lh=" << logl[id];
+			(*out) << "[ lh=" << tree.treels_logl[id];
 			if (weights) (*out) << " w=" << weights->at(id);
 			(*out) << " ] ";
-			(*out) << it->first << endl;
+			(*out) << tree.treels_newick[id] << endl;
 			count++;
 		}
 		if (compression) 
 			((ogzstream*)out)->close();
 		else
 			((ofstream*)out)->close();
+		delete out;
 		cout << count << " tree(s) printed to " << ofile << endl;
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, ofile);
@@ -327,6 +327,7 @@ void printPatternLh(const char *ofile, IQPTree *tree, bool compression) {
 		for (i = 0; i < tree->aln->getNSite(); i++)
 			(*out) << " " << tree->aln->getPatternID(i);
 		(*out) << endl;
+		// DO NOT CHANGE 
 		for (StringIntMap::iterator it = tree->treels.begin(); it != tree->treels.end(); it++) 
 		{
 			int id = it->second;
@@ -351,6 +352,7 @@ void printPatternLh(const char *ofile, IQPTree *tree, bool compression) {
 			((ogzstream*)out)->close();
 		else
 			((ofstream*)out)->close();
+		delete out;
 		cout << count << " pattern log-likelihood vector(s) printed to " << ofile << endl;
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, ofile);
@@ -366,13 +368,13 @@ void readPatternLh(const char *infile, IQPTree *tree, bool compression) {
 		if (compression) in = new igzstream; else in = new ifstream;
 		in->exceptions(ios::failbit | ios::badbit);
 		if (compression) 
-			((ogzstream*)in)->open(infile/*, ios::out | ios::binary*/);
+			((igzstream*)in)->open(infile/*, ios::out | ios::binary*/);
 		else
-			((ofstream*)in)->open(infile/*, ios::out | ios::binary*/);
+			((ifstream*)in)->open(infile/*, ios::out | ios::binary*/);
 		(*in) >> ntrees >> nsite >> nptn >> scale;
 		if (nsite != tree->aln->getNSite()) outError("Number of sites does not match");
 		if (nptn !=  tree->aln->getNPattern()) outError("Number of patterns does not match");
-		for (i = 0; i < tree->aln->getNSite(); i++) {
+		for (i = 0; i < nsite; i++) {
 			int id;
 			(*in) >> id;
 			if (id != tree->aln->getPatternID(i)) outError("Pattern ID does not match");
@@ -391,7 +393,6 @@ void readPatternLh(const char *infile, IQPTree *tree, bool compression) {
 					(*in) >> pattern_lh[i];
 					pattern_lh[i] = -pattern_lh[i];
 				}
-				tree->treels_ptnlh[id] = pattern_lh;
 			} else {
 				double sum = 0.0;
 				for (i = 0; i < nptn; i++) {
@@ -400,20 +401,138 @@ void readPatternLh(const char *infile, IQPTree *tree, bool compression) {
 					pattern_lh[i] = tree->treels_ptnlh[0][i]+(double)diff/scale;
 					sum += pattern_lh[i] * tree->aln->at(i).frequency;
 				}
-				if (fabs(sum-logl) > max_tol) max_tol = fabs(sum-logl);
+				max_tol = max(max_tol, fabs(sum-logl));
 			}
+			tree->treels_ptnlh[id] = pattern_lh;
 			count++;
 		}
 		cout << "max tolerance = " << max_tol << endl;
 		if (compression) 
-			((ogzstream*)in)->close();
+			((igzstream*)in)->close();
 		else
-			((ofstream*)in)->close();
+			((ifstream*)in)->close();
+		delete in;
 		cout << count << " pattern log-likelihood vector(s) read from " << infile << endl;
 	} catch (ios::failure) {
-		outError(ERR_WRITE_OUTPUT, infile);
+		outError(ERR_READ_INPUT, infile);
 	}
 }
+
+void computeAllPatternLh(Params &params, IQPTree &tree) {
+	/* this part copied from phyloanalysis.cpp */
+	tree.optimize_by_newton = params.optimize_by_newton;
+	tree.sse = params.SSE;
+    try {
+		if (!tree.getModelFactory()) {
+			if (tree.isSuperTree())
+				tree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*)&tree));
+			else
+				tree.setModelFactory(new ModelFactory(params, &tree));
+		}
+    } catch (string str) {
+    	outError(str);
+    } 
+    tree.setModel(tree.getModelFactory()->model);
+    tree.setRate(tree.getModelFactory()->site_rate);
+    tree.setStartLambda(params.lambda);
+	if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
+
+    int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
+    cout << endl;
+    cout << "Estimating model parameters for: " << tree.getModelName() << " (" << model_df << " free parameters)" << endl;
+    cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
+    /* optimize model parameters */
+    cout << endl;
+    cout << "Optimizing model parameters" << endl;
+    double bestTreeScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
+    cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
+
+    //Update tree score
+    tree.curScore = bestTreeScore;
+	if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->computeBranchLengths();
+    stringstream best_tree_string;
+    tree.printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+
+	cout << "Computing pattern log-likelihoods of trees in " << params.user_file << " ..." << endl;
+	/* now compute the treels_ptnlh */
+	try {
+		istream *in;
+		if (params.do_compression) in = new igzstream; else in = new ifstream;
+		in->exceptions(ios::failbit | ios::badbit);
+		if (params.do_compression) 
+			((igzstream*)in)->open(params.user_file); 
+		else 
+			((ifstream*)in)->open(params.user_file);
+		double max_logl_diff = 0.0;
+		char ch;
+		(*in) >> ch;
+		if (ch == '[') {
+			string str;
+			(*in) >> str;
+			if (str.substr(0,6) == "scale=") {
+				tree.len_scale = convert_double(str.substr(6).c_str());
+			}
+			do {
+				(*in) >> ch;
+			} while (!in->eof() && ch != ']');
+		} else in->unget();
+		cout << "Applying branch length scaling: " << tree.len_scale << endl;
+
+		while (!in->eof()) {
+			in->exceptions(ios::goodbit);
+			(*in) >> ch;
+			if (in->eof()) break;
+			in->exceptions(ios::failbit | ios::badbit);
+			double expected_lh = 0.0;
+			if (ch == '[') {
+				string str;
+				(*in) >> str;
+				if (str.substr(0,3) == "lh=") {
+					expected_lh = convert_double(str.substr(3).c_str());
+				}
+				do  {
+					(*in) >> ch;
+				} while (!in->eof() && ch != ']');
+			} else in->unget();
+
+			tree.freeNode();
+			tree.readTree(*in, tree.rooted);
+			tree.scaleLength(1.0/tree.len_scale); // scale the branch length
+			tree.assignLeafNames();
+			tree.initializeAllPartialLh();
+			tree.clearAllPartialLH();
+			if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
+			double *pattern_lh = new double [tree.aln->getNPattern()];
+			if (!params.fixed_branch_length) {
+				tree.curScore = tree.optimizeAllBranches();
+				tree.computePatternLikelihood(pattern_lh);
+			} else {
+				tree.curScore = tree.computeLikelihood(pattern_lh);
+			}
+			if (expected_lh != 0.0)
+				max_logl_diff = max(max_logl_diff, fabs(tree.curScore-expected_lh));
+			tree.treels_ptnlh.push_back(pattern_lh);
+			tree.treels_logl.push_back(tree.curScore);
+			if (tree.treels_ptnlh.size() % 500 == 0) 
+				cout << tree.treels_ptnlh.size() << " trees evaluated" << endl;
+		}
+
+		cout << "Maximal log-likelihood error is " << max_logl_diff << endl << endl; 
+
+		if (params.do_compression) ((igzstream*)in)->close(); else ((ifstream*)in)->close();
+		delete in;
+	} catch (ios::failure) {
+		outError(ERR_READ_INPUT, params.user_file);		
+	}
+
+	/* take back the current best tree */
+	best_tree_string.seekg(0, ios::beg);
+	tree.freeNode();
+	tree.readTree(best_tree_string, tree.rooted);
+	tree.assignLeafNames();
+	tree.initializeAllPartialLh();
+	tree.clearAllPartialLH();
+	}
 
 void runGuidedBootstrap(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
 
@@ -433,9 +552,6 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		if (!params.user_file) {
 			outError("You have to specify user tree file");
 		}
-		if (!params.siteLL_file) {
-			outError("Please provide site log-likelihood file via -gbo option");
-		}
 		if (!params.second_tree) {
 			outError("Please provide target tree file via -sup option");
 		}
@@ -452,10 +568,20 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 			(*it)->id = i++;
 		}
 		// read in corresponding site-log-likelihood for all trees
-		trees_logl = new DoubleVector;
+		/*trees_logl = new DoubleVector;
 		pattern_lhs = new vector<double*>;
-		readPatternLogLL(alignment, params.siteLL_file, *pattern_lhs, *trees_logl);
+		readPatternLogLL(alignment, params.siteLL_file, *pattern_lhs, *trees_logl);*/
 
+		if (params.siteLL_file) {
+			// read pattern loglikelihoods from file
+			readPatternLh(params.siteLL_file, &tree, params.do_compression);
+		} else {
+			// compute all pattern log-likelihoods
+	        tree.setAlignment(alignment);
+			computeAllPatternLh(params, tree);
+		} 
+		pattern_lhs = &tree.treels_ptnlh;
+		trees_logl = &tree.treels_logl;
 		if (!params.distinct_trees) {
 			// read in trees file
 			trees.init(params.user_file, params.is_rooted, params.tree_burnin);
@@ -697,12 +823,10 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		string out_file = params.out_prefix;
 		if (params.do_compression) {
 			out_file += ".btrees.gz";
-			printTrees(out_file.c_str(), tree.treels, tree.treels_logl, 
-				&final_tree_weights, params.do_compression);
+			printTrees(out_file.c_str(), tree, &final_tree_weights, params.do_compression);
 			out_file = params.out_prefix;
 			out_file += ".alltrees.gz";
-			printTrees(out_file.c_str(), tree.treels, tree.treels_logl, NULL, 
-				params.do_compression);
+			printTrees(out_file.c_str(), tree, NULL, params.do_compression);
 			if (params.print_site_lh) {
 				out_file = params.out_prefix;
 				out_file += ".ptnlh.gz";
@@ -710,7 +834,7 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 			}
 		}
 	} else if (params.distinct_trees) {
-		trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL, &final_tree_weights);
+		trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL, &final_tree_weights, params.do_compression);
 		//trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL);
 /*		if (pattern_lhs->size() != trees.size()) 
 			outError("Different number of sitelh vectors");*/
@@ -772,12 +896,13 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 
     cout << "Support values written to " << out_file << endl;
 
+	/*
 	if (!tree.save_all_trees) {
 		for (vector<double* >::reverse_iterator it = pattern_lhs->rbegin(); it != pattern_lhs->rend(); it++)
 			delete [] (*it);
 		delete pattern_lhs;
 		delete trees_logl;
-	}
+	}*/
 
 	clock_t end_time = clock();
 	

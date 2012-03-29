@@ -217,6 +217,7 @@ const int WT_APPEND = 64;
 const int WT_NEWLINE = 128;
 const int WT_BR_LEN_FIXED_WIDTH = 256;
 const int WT_BR_ID = 512;
+const int WT_BR_LEN_ROUNDING = 1024;
 
 /**
         when computing Robinson-Foulds distances

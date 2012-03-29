@@ -32,6 +32,8 @@ MTree::MTree() {
 	leafNum = 0;
 	nodeNum = 0;
 	rooted = false;
+	num_precision = 6;
+	len_scale = 1.0;
 }
 
 MTree::MTree(const char *userTreeFile, bool &is_rooted)
@@ -40,6 +42,8 @@ MTree::MTree(const char *userTreeFile, bool &is_rooted)
 }
 
 void MTree::init(const char *userTreeFile, bool &is_rooted) {
+	num_precision = 6;
+	len_scale = 1.0;
 	readTree(userTreeFile, is_rooted);
 	//printInfo();
 }
@@ -60,6 +64,8 @@ void MTree::init(MTree &tree) {
 	//userFile = tree.userFile;
 	// have to delete the root when exchange to another object
 	tree.root = NULL;
+	num_precision = tree.num_precision;
+	len_scale = tree.len_scale;
 }
 
 void MTree::copyTree(MTree *tree) {
@@ -230,7 +236,7 @@ typedef set<IntString*, IntStringCmp> IntStringSet;
 int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 {
 	int smallest_taxid = leafNum;
-	out.precision(6);
+	out.precision(num_precision);
 	if (!node) node = root;
 	if (node->isLeaf()) {
 		smallest_taxid = node->id;
@@ -240,10 +246,13 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 			out << node->name;
 
 		if (brtype & WT_BR_LEN) {
+			double len = node->neighbors[0]->length;
+			if (brtype & WT_BR_SCALE) len *= len_scale;
+			if (brtype & WT_BR_LEN_ROUNDING) len = round(len);
 			if (brtype & WT_BR_LEN_FIXED_WIDTH)
-				out << ":" << fixed << node->neighbors[0]->length; 
+				out << ":" << fixed << len;
 			else
-				out << ":" << node->neighbors[0]->length; 
+				out << ":" << len; 
 		}
 	} else {
 		// internal node
@@ -296,12 +305,14 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 		else if (brtype & WT_INT_NODE)
 			out << node->id;
 		if (dad != NULL || length > 0.0) {
-			if (brtype & WT_BR_LEN)
+			if (brtype & WT_BR_SCALE) length *= len_scale;
+			if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
+			if (brtype & WT_BR_LEN) {
 				if (brtype & WT_BR_LEN_FIXED_WIDTH)
 					out << ":" << fixed << length;
 				else
 					out << ":" << length; 
-			else if (brtype & WT_BR_CLADE) {
+			} else if (brtype & WT_BR_CLADE) {
 				if (! node->name.empty()) out << "/";
 				out << length; 
 			}

@@ -19,6 +19,7 @@
  ***************************************************************************/
 #include "mtreeset.h"
 #include "alignment.h"
+#include "gzstream.h"
 
 MTreeSet::MTreeSet()
 {
@@ -57,9 +58,9 @@ void readIntVector(const char *file_name, int burnin, IntVector &vec) {
 }
 
 void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin, 
-	const char *tree_weight_file, IntVector *weights) 
+	const char *tree_weight_file, IntVector *weights, bool compressed) 
 {
-	readTrees(userTreeFile, is_rooted, burnin, weights);
+	readTrees(userTreeFile, is_rooted, burnin, weights, compressed);
 	checkConsistency();
 
 	if (tree_weight_file) 
@@ -100,9 +101,8 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 	//tree_weights.resize(size(), 1);
 }
 
-void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, IntVector *weights) {
+void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, IntVector *weights, bool compressed) {
 	cout << "Reading tree(s) file " << infile << " ..." << endl;
-	ifstream in;
 	int count, omitted;
 /*	IntVector ok_trees;
 	if (trees_id) {
@@ -113,26 +113,29 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, IntVec
 		cout << "Restricting to " << trees_id->size() << " trees" << endl;
 	}*/
 	try {
-		in.exceptions(ios::failbit | ios::badbit);
-		in.open(infile);
+		istream *in;
+		if (compressed) in = new igzstream; else in = new ifstream;
+		in->exceptions(ios::failbit | ios::badbit);
+		
+		if (compressed) ((igzstream*)in)->open(infile); else ((ifstream*)in)->open(infile);
 		if (burnin > 0) {
 			int cnt = 0;
-			while (cnt < burnin && !in.eof()) {
+			while (cnt < burnin && !in->eof()) {
 				char ch;
-				in >> ch;
+				(*in) >> ch;
 				if (ch == ';') cnt++;
 			}
 			cout << cnt << " beginning tree(s) discarded" << endl;
-			if (in.eof())
+			if (in->eof())
 				throw "Burnin value is too large.";
 		}
-		for (count = 1, omitted = 0; !in.eof(); count++) {
+		for (count = 1, omitted = 0; !in->eof(); count++) {
 			if (!weights || weights->at(count-1)) {
 				//cout << "Reading tree " << count << " ..." << endl;
 				MTree *tree = newTree();
 				bool myrooted = is_rooted;
 				//tree->userFile = (char*) infile;
-				tree->readTree(in, myrooted);
+				tree->readTree(*in, myrooted);
 				push_back(tree);
 				if (weights) 
 					tree_weights.push_back(weights->at(count-1)); 
@@ -142,26 +145,26 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, IntVec
 			} else {
 				// omit the tree
 				//push_back(NULL);
-				//in.exceptions(ios::badbit);
-				while (!in.eof()) {
+				//in->exceptions(ios::badbit);
+				while (!in->eof()) {
 					char ch;
-					if (!(in >> ch)) break;
+					if (!((*in) >> ch)) break;
 					if (ch == ';') break;
 				}
 				omitted++;
 			} 
 			char ch;
-			in.exceptions(ios::goodbit);
-			in >> ch;
-			if (in.eof()) break;
-			in.unget();
-			in.exceptions(ios::failbit | ios::badbit);
+			in->exceptions(ios::goodbit);
+			(*in) >> ch;
+			if (in->eof()) break;
+			in->unget();
+			in->exceptions(ios::failbit | ios::badbit);
 
 		}
 		cout << count-omitted << " tree(s) loaded" << endl;
 		if (omitted) cout << omitted << " tree(s) omitted" << endl;
-		//in.exceptions(ios::failbit | ios::badbit);
-		in.close();
+		//in->exceptions(ios::failbit | ios::badbit);
+		if (compressed) ((igzstream*)in)->close(); else ((ifstream*)in)->close();
 	} catch (ios::failure) {
 		outError(ERR_READ_INPUT, infile);		
 	} catch (const char* str) {

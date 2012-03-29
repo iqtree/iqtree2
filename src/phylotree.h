@@ -816,6 +816,13 @@ public:
     bool sse;
 
 
+    /**
+            assign the leaf names with the alignment sequence names, using the leaf ID for assignment.
+            @param node the starting node, NULL to start from the root
+            @param dad dad of the node, used to direct the search
+     */
+    void assignLeafNames(Node *node = NULL, Node *dad = NULL);
+
 protected:
 
 	/**
@@ -824,13 +831,6 @@ protected:
 		If you want to get real pattern log-likelihoods, please use computePatternLikelihood()
 	*/
 	double *_pattern_lh;
-
-    /**
-            assign the leaf names with the alignment sequence names, using the leaf ID for assignment.
-            @param node the starting node, NULL to start from the root
-            @param dad dad of the node, used to direct the search
-     */
-    void assignLeafNames(Node *node = NULL, Node *dad = NULL);
 
 
     /**

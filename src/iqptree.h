@@ -458,9 +458,14 @@ public:
 	*/
 	StringIntMap treels;
 
+	/** pattern log-likelihood vector for each treels */
 	vector<double* > treels_ptnlh;
 	
+	/** tree log-likelihood for each treels */
 	DoubleVector treels_logl;
+	
+	/** NEWICK string for each treels */
+	StrVector treels_newick;
 	
 	int max_candidate_trees;
 	
