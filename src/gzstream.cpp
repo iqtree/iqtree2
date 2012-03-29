@@ -158,6 +158,10 @@ void gzstreambase::close() {
             clear( rdstate() | std::ios::badbit);
 }
 
+z_off_t gzstreambase::get_raw_bytes() {
+	return gztell(buf.file);
+}
+
 #ifdef GZSTREAM_NAMESPACE
 } // namespace GZSTREAM_NAMESPACE
 #endif

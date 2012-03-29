@@ -51,6 +51,7 @@ PhyloTree() {
 	max_candidate_trees = 0;
 	logl_cutoff = 0.0;
 	len_scale = 10000;
+	save_all_br_lens = false;
 }
 
 IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln) 
@@ -79,6 +80,7 @@ IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln)
 	max_candidate_trees = 0;
 	logl_cutoff = 0.0;
 	len_scale = 10000;
+	save_all_br_lens = false;
 }
 
 void IQPTree::setParams(Params &params) {
@@ -130,6 +132,7 @@ void IQPTree::setParams(Params &params) {
 		save_all_trees = 1;
 	if (params.gbo_replicates > 0)
 		if (params.iqp_assess_quartet != IQP_BOOTSTRAP) { save_all_trees = 2;  }
+	if (params.gbo_replicates > 0 && params.do_compression) save_all_br_lens = true;
 	print_tree_lh = params.print_tree_lh;
 	max_candidate_trees = params.max_candidate_trees;
 	setRootNode(params.root);
@@ -1534,9 +1537,11 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 			cout << "Updated logl " <<treels_logl[it->second] <<
 				" to " << cur_logl << endl;
 		treels_logl[it->second] = cur_logl;
-		ostr.seekp(ios::beg);
-		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
-		treels_newick[it->second] = ostr.str();
+		if (save_all_br_lens) {
+			ostr.seekp(ios::beg);
+			printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
+			treels_newick[it->second] = ostr.str();
+		}
 		computePatternLikelihood(treels_ptnlh[it->second], &cur_logl);
 		return;
 	}
@@ -1552,10 +1557,11 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 
 	treels_ptnlh.push_back(pattern_lh);
 	treels_logl.push_back(cur_logl);
-	ostr.seekp(ios::beg);
-	printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
-	treels_newick.push_back(ostr.str());
-
+	if (save_all_br_lens) {
+		ostr.seekp(ios::beg);
+		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
+		treels_newick.push_back(ostr.str());
+	}
 	if (print_tree_lh) {
 		out_treelh << cur_logl;
 		double prob;
@@ -1614,9 +1620,11 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 						" to " << curScore << endl;
 				treels_logl[it->second] = curScore;
 				computeLikelihood(treels_ptnlh[it->second]);
-				ostr.seekp(ios::beg);
-				printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
-				treels_newick[it->second] = ostr.str();
+				if (save_all_br_lens) {
+					ostr.seekp(ios::beg);
+					printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
+					treels_newick[it->second] = ostr.str();
+				}
 			}
 			//pattern_lh = treels_ptnlh[treels[tree_str]];
 		}
@@ -1630,9 +1638,11 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 				computePatternLikelihood(pattern_lh, &logl);
 				treels_ptnlh.push_back(pattern_lh);
 				treels_logl.push_back(logl);
-				ostr.seekp(ios::beg);
-				printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
-				treels_newick.push_back(ostr.str());
+				if (save_all_br_lens) {
+					ostr.seekp(ios::beg);
+					printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
+					treels_newick.push_back(ostr.str());
+				}
 			}
 		}
 		//cout << tree_str << endl;

@@ -1367,3 +1367,12 @@ void MTree::writeInternalNodeNames(string &out_file) {
 	}
 }
 
+void MTree::assignLeafID(Node *node, Node *dad) {
+    if (!node) node = root;
+    if (node->isLeaf()) {
+        node->id = atoi(node->name.c_str());
+        assert(node->id >= 0 && node->id < leafNum);
+    }
+    FOR_NEIGHBOR_IT(node, dad, it)
+    	assignLeafID((*it)->node, node);
+}

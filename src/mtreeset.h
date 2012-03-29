@@ -64,6 +64,13 @@ public:
 	void readTrees(const char *userTreeFile, bool &is_rooted, int burnin, IntVector *weights = NULL, bool compressed = false);
 
 	/**
+		assign the leaf IDs with their names for all trees
+
+	*/
+	void assignLeafID();
+
+	
+	/**
 		check the consistency of trees: taxa names between trees are matched, same rooted or unrooted
 	*/
 	void checkConsistency();

@@ -222,6 +222,10 @@ bool MTreeSet::isRooted() {
 	return (front()->rooted);
 }
 
+void MTreeSet::assignLeafID() {
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->assignLeafID();
+}
 
 void MTreeSet::printTrees(const char *ofile, int  brtype)
 {
@@ -633,6 +637,7 @@ int MTreeSet::categorizeDistinctTrees(IntVector &category) {
 	}
 	return ncat;
 }
+
 
 /*int MTreeSet::categorizeDistinctTrees(IntVector &category) {
 	// exit if less than 2 trees

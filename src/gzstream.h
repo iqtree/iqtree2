@@ -43,6 +43,7 @@ namespace GZSTREAM_NAMESPACE {
 // ----------------------------------------------------------------------------
 
 class gzstreambuf : public std::streambuf {
+	friend class gzstreambase;
 private:
     static const int bufferSize = 47+256;    // size of data buff
     // totals 512 bytes under g++ for igzstream at the end.
@@ -80,6 +81,8 @@ public:
     ~gzstreambase();
     void open( const char* name, int open_mode);
     void close();
+	z_off_t get_raw_bytes(); // BQM: return number of uncompressed bytes
+
     gzstreambuf* rdbuf() { return &buf; }
 };
 

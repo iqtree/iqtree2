@@ -371,6 +371,14 @@ public:
 	*/
 	void scaleCladeSupport(double norm, bool make_int = false, Node *node = NULL, Node *dad = NULL);
 
+	/**
+		assign the leaf IDs with their names
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+
+	*/
+	void assignLeafID(Node *node = NULL, Node *dad = NULL);
+
 	
 /********************************************************
 	CONVERT TREE INTO SPLIT SYSTEM

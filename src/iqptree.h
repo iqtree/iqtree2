@@ -451,7 +451,13 @@ protected:
     int k_represent;
 
 public:
+
+	/** 2 to save all trees, 1 to save intermediate trees */
 	int save_all_trees;
+
+	/** TRUE to save also branch lengths into treels_newick */	
+	bool save_all_br_lens;
+
 	/**
 		this keeps the list of intermediate trees. 
 		it will be activated if params.avoid_duplicated_trees is TRUE.

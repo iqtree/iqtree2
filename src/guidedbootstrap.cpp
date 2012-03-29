@@ -299,12 +299,20 @@ void printTrees(const char *ofile, IQPTree &tree, IntVector *weights, bool compr
 			(*out) << tree.treels_newick[id] << endl;
 			count++;
 		}
-		if (compression) 
+		cout << count << " tree(s) printed to " << ofile << endl;
+		
+		if (compression) {
+			z_off_t uncompress = ((ogzstream*)out)->get_raw_bytes();
 			((ogzstream*)out)->close();
+			struct stat st;
+			stat(ofile, &st);
+			cout.precision(3);
+			cout << "Compression ratio: " << ((double)st.st_size/uncompress) 
+				 << " (" << uncompress << " -> " << st.st_size << " bytes)" << endl;
+		}
 		else
 			((ofstream*)out)->close();
 		delete out;
-		cout << count << " tree(s) printed to " << ofile << endl;
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, ofile);
 	}
@@ -453,7 +461,7 @@ void computeAllPatternLh(Params &params, IQPTree &tree) {
     stringstream best_tree_string;
     tree.printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 
-	cout << "Computing pattern log-likelihoods of trees in " << params.user_file << " ..." << endl;
+	cout << "Computing pattern log-likelihoods for trees in " << params.user_file << " ..." << endl;
 	/* now compute the treels_ptnlh */
 	try {
 		istream *in;
@@ -517,6 +525,7 @@ void computeAllPatternLh(Params &params, IQPTree &tree) {
 				cout << tree.treels_ptnlh.size() << " trees evaluated" << endl;
 		}
 
+		cout << tree.treels_ptnlh.size() << " trees evaluated in total" << endl;
 		cout << "Maximal log-likelihood error is " << max_logl_diff << endl << endl; 
 
 		if (params.do_compression) ((igzstream*)in)->close(); else ((ifstream*)in)->close();
@@ -835,6 +844,8 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		}
 	} else if (params.distinct_trees) {
 		trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL, &final_tree_weights, params.do_compression);
+		// assuming user_file contains species ID (instead of full name)
+		trees.assignLeafID();
 		//trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL);
 /*		if (pattern_lhs->size() != trees.size()) 
 			outError("Different number of sitelh vectors");*/
@@ -857,10 +868,12 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
     taxname.resize(tree.leafNum);
     tree.getTaxaName(taxname);
 
-	if (!tree.save_all_trees)
+	/*if (!tree.save_all_trees)
     	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
     else
     	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false);
+	*/
+   	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false); // do not sort taxa
 
     cout << sg.size() << " splits found" << endl;
     // compute the percentage of appearance
@@ -868,11 +881,24 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
     //	printSplitSet(sg, hash_ss);
     //sg.report(cout);
     cout << "Creating bootstrap support values..." << endl;
-	MExtTree mytree(tree);
+    stringstream tree_stream;
+    tree.printTree(tree_stream, WT_TAXON_ID |  WT_BR_LEN);
+	MExtTree mytree;
+	mytree.readTree(tree_stream, tree.rooted);
+	mytree.assignLeafID();
     mytree.createBootstrapSupport(taxname, trees, sg, hash_ss);
-	tree.init(mytree);
 
-	tree.setAlignment(alignment);
+	// now write resulting tree with supports
+	tree_stream.seekp(0, ios::beg);
+	mytree.printTree(tree_stream);
+
+	// now read resulting tree 
+	tree_stream.seekg(0, ios::beg);
+	tree.freeNode();
+	tree.readTree(tree_stream, tree.rooted);
+	tree.assignLeafNames();
+	tree.initializeAllPartialLh();
+	tree.clearAllPartialLH();
 
     string out_file;
 
