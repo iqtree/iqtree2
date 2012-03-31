@@ -44,7 +44,7 @@
 #include "whtest_wrapper.h"
 #include "partitionmodel.h"
 
-void runGuidedBootstrap(Params &params, string &original_model, Alignment *alignment, IQPTree &tree);
+void runGuidedBootstrap(Params &params, Alignment *alignment, IQPTree &tree);
 
 const int DNA_MODEL_NUM = 14;
 clock_t t_begin, t_end;
@@ -1113,7 +1113,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	}
 
     if (!tree.isSuperTree() && params.gbo_replicates > 0) {
-		runGuidedBootstrap(params, original_model, alignment, tree);
+		runGuidedBootstrap(params, alignment, tree);
 	}
 
 	cout << "Total tree length: " << tree.treeLength() << endl;
@@ -1226,7 +1226,7 @@ void runPhyloAnalysis(Params &params) {
         	alignment->printFasta(params.aln_output, false, params.aln_site_list, 
         	params.aln_nogaps, params.ref_seq_name);
     } else if (params.gbo_replicates > 0 && params.user_file && params.second_tree) {
-    	runGuidedBootstrap(params, original_model, alignment, *tree);
+    	runGuidedBootstrap(params, alignment, *tree);
     } else if (params.num_bootstrap_samples == 0) {
 		alignment->checkGappySeq();
         runPhyloAnalysis(params, original_model, alignment, *tree);

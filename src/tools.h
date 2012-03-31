@@ -957,6 +957,11 @@ struct Params {
 	int gbo_replicates;
 
 	/**
+		TRUE to check with different max_candidate_trees
+	*/
+	int check_gbo_sample_size;
+
+	/**
 		TRUE to use RELL method of Simodaira Hasegawa, FALSE otherwise
 	*/
 	bool use_rell_method;

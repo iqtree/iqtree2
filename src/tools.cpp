@@ -612,6 +612,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.ncbi_names_file = NULL;
 	params.ncbi_ignore_level = NULL;
 	params.gbo_replicates = 0;
+	params.check_gbo_sample_size = 0;
 	params.use_rell_method = true;
 	params.use_elw_method = false;
 	params.use_weighted_bootstrap = false;
@@ -1298,6 +1299,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.gbo_replicates = convert_int(argv[cnt]);
 				params.avoid_duplicated_trees = true;
 				if (params.gbo_replicates < 1000) throw "#replicates must be >= 1000";
+			} else if (strcmp(argv[cnt], "-bs") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bs <begin_sampling_size>";
+				params.check_gbo_sample_size = convert_int(argv[cnt]);
 			} else if (strcmp(argv[cnt], "-bmax") == 0) {
 				cnt++;
 				if (cnt >= argc)

@@ -541,9 +541,43 @@ void computeAllPatternLh(Params &params, IQPTree &tree) {
 	tree.assignLeafNames();
 	tree.initializeAllPartialLh();
 	tree.clearAllPartialLH();
+}
+
+void readTrees(Params &params, Alignment *alignment, IQPTree &tree) {
+	if (!params.user_file) {
+		outError("You have to specify user tree file");
+	}
+	if (!params.second_tree) {
+		outError("Please provide target tree file via -sup option");
 	}
 
-void runGuidedBootstrap(Params &params, string &original_model, Alignment *alignment, IQPTree &tree) {
+	// read tree file
+	cout << "Reading tree file " << params.second_tree << endl;
+	tree.readTree(params.second_tree, params.is_rooted);
+	// reindex the taxa in the tree to aphabetical names
+	NodeVector taxa;
+	tree.getTaxa(taxa);
+	sort(taxa.begin(), taxa.end(), nodenamecmp);
+	int i = 0;
+	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++) {
+		(*it)->id = i++;
+	}
+	// read in corresponding site-log-likelihood for all trees
+	/*trees_logl = new DoubleVector;
+	pattern_lhs = new vector<double*>;
+	readPatternLogLL(alignment, params.siteLL_file, *pattern_lhs, *trees_logl);*/
+
+	if (params.siteLL_file) {
+		// read pattern loglikelihoods from file
+		readPatternLh(params.siteLL_file, &tree, params.do_compression);
+	} else {
+		// compute all pattern log-likelihoods
+		tree.setAlignment(alignment);
+		computeAllPatternLh(params, tree);
+	} 
+}
+
+void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQPTree &tree) {
 
 	int i, j;
 
@@ -558,37 +592,7 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	IntVector::iterator it;
 
 	if (!tree.save_all_trees) {
-		if (!params.user_file) {
-			outError("You have to specify user tree file");
-		}
-		if (!params.second_tree) {
-			outError("Please provide target tree file via -sup option");
-		}
-	
-		// read tree file
-		cout << "Reading tree file " << params.second_tree << endl;
-		tree.readTree(params.second_tree, params.is_rooted);
-	    // reindex the taxa in the tree to aphabetical names
-		NodeVector taxa;
-		tree.getTaxa(taxa);
-		sort(taxa.begin(), taxa.end(), nodenamecmp);
-		i = 0;
-		for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++) {
-			(*it)->id = i++;
-		}
-		// read in corresponding site-log-likelihood for all trees
-		/*trees_logl = new DoubleVector;
-		pattern_lhs = new vector<double*>;
-		readPatternLogLL(alignment, params.siteLL_file, *pattern_lhs, *trees_logl);*/
-
-		if (params.siteLL_file) {
-			// read pattern loglikelihoods from file
-			readPatternLh(params.siteLL_file, &tree, params.do_compression);
-		} else {
-			// compute all pattern log-likelihoods
-	        tree.setAlignment(alignment);
-			computeAllPatternLh(params, tree);
-		} 
+		readTrees(params, alignment, tree);
 		pattern_lhs = &tree.treels_ptnlh;
 		trees_logl = &tree.treels_logl;
 		if (!params.distinct_trees) {
@@ -616,7 +620,7 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 		}
 		pattern_lhs = &tree.treels_ptnlh;
 		trees_logl = &tree.treels_logl;
-		cout << "logl_cutoff = " << tree.logl_cutoff << " after " << tree.max_candidate_trees <<" trees" << endl;
+		//cout << "logl_cutoff = " << tree.logl_cutoff << " after " << tree.max_candidate_trees <<" trees" << endl;
 	} 
 
 	if (diff_tree_ids.empty()) {
@@ -936,3 +940,29 @@ void runGuidedBootstrap(Params &params, string &original_model, Alignment *align
 	//delete [] rfdist;
 }
 
+void runGuidedBootstrap(Params &params, Alignment *alignment, IQPTree &tree) {
+	if (!params.check_gbo_sample_size) {
+		runGuidedBootstrapReal(params, alignment, tree);
+		return;	
+	}
+	int max_sample = params.max_candidate_trees;
+	if (tree.save_all_trees) max_sample = tree.treels.size();
+	for (int sample_size = params.check_gbo_sample_size; sample_size <= max_sample; sample_size *= 2) {
+		cout << "CHECKING SAMPLING SIZE " << sample_size << endl;
+		int sample_saved = params.max_candidate_trees;
+		char *prefix_saved = params.out_prefix;
+
+		// set parameters properly
+		string prefix = params.out_prefix;
+		stringstream ss;
+		ss << ".S" << sample_size;
+		prefix += ss.str();
+		//params.out_prefix = (char*)prefix.c_str();
+		params.max_candidate_trees = sample_size;
+
+		runGuidedBootstrapReal(params, alignment, tree);
+		// restore parameters
+		params.max_candidate_trees = sample_saved;
+		params.out_prefix = prefix_saved;
+	}
+}
