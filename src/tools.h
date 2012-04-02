@@ -1008,6 +1008,11 @@ struct Params {
 
 	/** TRUE to compress big file using zlib */
 	bool do_compression;
+
+	/**
+		number of bootstrap samples for AvH curiosity
+	*/
+	int avh_test;
 };
 
 /**

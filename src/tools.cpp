@@ -627,6 +627,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.testNNI = false;
 	params.do_compression = false;
 
+	params.avh_test = 0;
+
 	struct timeval tv;
 	struct timezone tz;
 	// initialize random seed based on current time
@@ -1325,6 +1327,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.use_max_tree_per_bootstrap = false;
 			} else if (strcmp(argv[cnt], "-gz") == 0) {
 				params.do_compression = true;
+			} else if (strcmp(argv[cnt], "-avh") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -avh <arndt_#bootstrap>";
+				params.avh_test = convert_int(argv[cnt]);
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

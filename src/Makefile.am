@@ -18,15 +18,16 @@ iqtree_SOURCES = alignment.cpp alignmentpairwise.cpp circularnetwork.cpp \
 	splitset.cpp stoprule.cpp substmodel.cpp superalignment.cpp \
 	superalignmentpairwise.cpp supernode.cpp tinatree.cpp tools.cpp whtest_wrapper.cpp
 noinst_HEADERS = alignment.h alignmentpairwise.h bionj.h circularnetwork.h \
-	eigendecomposition.h greedy.h gss.h gtrmodel.h gurobiwrapper.h hashsplitset.h iqptree.h \
-	lpwrapper.h maalignment.h matree.h mexttree.h modelbin.h modeldna.h modelfactory.h \
-	modelnonrev.h modelprotein.h modeltest_wrapper.h mpdablock.h msetsblock.h \
-	msplitsblock.h mtree.h mtreeset.h myreader.h ncbitree.h ngs.h node.h optimization.h \
-	parsmultistate.h partitionmodel.h pattern.h pdnetwork.h pdtree.h pdtreeset.h \
-	phyloanalysis.h phylonode.h phylosupertree.h phylotree.h pruning.h rategamma.h \
-	rategammainvar.h rateheterogeneity.h rateinvar.h ratemeyerdiscrete.h ratemeyerhaeseler.h \
-	split.h splitgraph.h splitset.h stoprule.h substmodel.h superalignment.h \
-	superalignmentpairwise.h supernode.h tinatree.h tools.h whtest_wrapper.h
+	eigendecomposition.h greedy.h gss.h gtrmodel.h guidedbootstrap.h gurobiwrapper.h \
+	hashsplitset.h iqptree.h lpwrapper.h maalignment.h matree.h mexttree.h modelbin.h \
+	modeldna.h modelfactory.h modelnonrev.h modelprotein.h modeltest_wrapper.h \
+	mpdablock.h msetsblock.h msplitsblock.h mtree.h mtreeset.h myreader.h ncbitree.h \
+	ngs.h node.h optimization.h parsmultistate.h partitionmodel.h pattern.h \
+	pdnetwork.h pdtree.h pdtreeset.h phyloanalysis.h phylonode.h phylosupertree.h \
+	phylotree.h pruning.h rategamma.h rategammainvar.h rateheterogeneity.h rateinvar.h \
+	ratemeyerdiscrete.h ratemeyerhaeseler.h split.h splitgraph.h splitset.h stoprule.h \
+	substmodel.h superalignment.h superalignmentpairwise.h supernode.h tinatree.h \
+	tools.h whtest_wrapper.h
 SUBDIRS = kmeans lp modeltest ncl whtest
 iqtree_LDADD = $(top_builddir)/src/kmeans/libkmeans.a \
 	$(top_builddir)/src/lp/liblpsolve.a $(top_builddir)/src/modeltest/libmodeltest.a \

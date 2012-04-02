@@ -46,6 +46,7 @@
 
 //#include "zpipe.h"
 #include "gzstream.h"
+#include "guidedbootstrap.h"
 
 void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs, DoubleVector &trees_logl)
 {
@@ -965,4 +966,37 @@ void runGuidedBootstrap(Params &params, Alignment *alignment, IQPTree &tree) {
 		params.max_candidate_trees = sample_saved;
 		params.out_prefix = prefix_saved;
 	}
+}
+
+void runAvHTest(Params &params, Alignment *alignment, IQPTree &tree) {
+	// collection of all bootstrapped site-pattern frequency vectors
+	IntVectorCollection boot_freqs;
+	// number of times the bootstrap alignments were resampled
+	IntVector boot_times;
+	// hash_map to quick search through the collection
+	IntVectorMap boot_map;
+
+	cout << "Checking Arndt curiosity for " << params.avh_test << " bootstrap replicates ..." << endl;
+	for (int id = 0; id < params.avh_test; id++) {
+		IntVector *boot_freq = new IntVector;
+		alignment->createBootstrapAlignment(*boot_freq);
+		IntVectorMap::iterator it = boot_map.find(boot_freq);
+		if (it == boot_map.end()) { // not found
+			boot_map[boot_freq] = boot_freqs.size();
+			boot_freqs.push_back(boot_freq);
+			boot_times.push_back(1);
+			if (verbose_mode >= VB_MED) {
+				for (int i = 0; i < boot_freq->size(); i++) 
+					cout << boot_freq->at(i) << " ";
+				cout << endl;
+			}
+		} else {
+			boot_times[it->second]++;
+		} 
+	}
+
+	cout << boot_freqs.size() << " distinct alignments have been sampled" << endl;
+
+	for (IntVectorCollection::reverse_iterator rit = boot_freqs.rbegin(); rit != boot_freqs.rend(); rit++)
+		delete (*rit);
 }
