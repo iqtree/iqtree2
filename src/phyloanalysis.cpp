@@ -1160,6 +1160,9 @@ void evaluateTrees(Params &params, IQPTree *tree) {
 	if (!params.fixed_branch_length) {
 		treeout.open(tree_file.c_str());
 	}
+	string score_file = params.user_file;
+	score_file += ".treelh";
+	ofstream scoreout(score_file.c_str());
 	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++) {
 		cout << "Tree " << (it-trees.begin())+1;
 		tree->copyTree(*it);
@@ -1170,6 +1173,7 @@ void evaluateTrees(Params &params, IQPTree *tree) {
 		if (tree->isSuperTree()) ((PhyloSuperTree*)tree)->mapTrees();
 		if (!params.fixed_branch_length) {
 			tree->curScore = tree->optimizeAllBranches();
+			treeout << "[ lh=" << tree->curScore << " ]";
 			tree->printTree(treeout);
 			treeout << endl;
 		}
@@ -1181,12 +1185,14 @@ void evaluateTrees(Params &params, IQPTree *tree) {
 			site_lh_file += ".sitelh";
 			printSiteLh(site_lh_file.c_str(), *tree, NULL, (it != trees.begin()));
 		}
+		scoreout << tree->curScore << endl;
 	}
 	if (!params.fixed_branch_length) {
 		treeout.close();
 		cout << "Trees with optimized branch lengths printed to " << tree_file << endl;
 	}
-	
+	scoreout.close();
+	cout << "Tree log-likelihoods printed to " << score_file << endl;
 }
 
 void runPhyloAnalysis(Params &params) {
@@ -1320,6 +1326,7 @@ void runPhyloAnalysis(Params &params) {
             }
             if (params.num_bootstrap_samples == 1)
                 reportPhyloAnalysis(params, original_model, *bootstrap_alignment, *boot_tree);
+            delete bootstrap_alignment;
         }
 
 		if (params.consensus_type == CT_CONSENSUS_TREE) {

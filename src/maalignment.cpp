@@ -23,7 +23,7 @@ void MaAlignment::readLogLL(char *fileName)
 {
 	//First read the values from inFile to a DoubleVector
 	DoubleVector _logllVec;
-	int siteNum;
+	int siteNum = -1;
 	string currentString;
 	cout << "\nReading file containing site's loglikelihood: " << fileName << "...." << endl;
     ifstream inFile;

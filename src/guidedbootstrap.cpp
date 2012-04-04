@@ -968,35 +968,215 @@ void runGuidedBootstrap(Params &params, Alignment *alignment, IQPTree &tree) {
 	}
 }
 
+/* compute logarithm of (n choose k) */
+double logNchooseK(int n, int k) {
+	if (k > n-k) k = n-k;
+	double ret = 0.0;
+	int i;
+	for (i = k+1; i <= n; i++) ret += log(i);
+	for (i = 2; i <= n-k; i++) ret -= log(i);
+	return ret;
+}
+
+void generateFirstMultinorm(IntVector &x, int n, int k) {
+	x.resize(k, 0);
+	x.back() = n;
+}
+
+bool generateNextMultinorm(IntVector &x) {
+	if (x.size() < 2) return false;
+	int id = x.size()-1;
+	while (id >= 0 && x[id] == 0) id--;
+	if (id <= 0) return false;
+	x[id-1]++;
+	x.back() = x[id]-1;
+	if (id < x.size()-1) x[id] = 0;
+	return true;
+}
+
+void generateMultinorm(IntVector &x, int n, int k, int i, int sum) {
+	if (x.empty()) x.resize(k, 0);
+	if (i == k-1) {
+		x[i] = sum;
+		for (int j = 0; j < k; j++) cout << x[j] << " ";
+		cout << endl;
+		return;
+	}
+	for (int j = 0; j <= sum; j++) {
+		x[i] = j;
+		generateMultinorm(x, n, k, i+1, sum-j);
+	}
+}
+
 void runAvHTest(Params &params, Alignment *alignment, IQPTree &tree) {
-	// collection of all bootstrapped site-pattern frequency vectors
+	// collection of distinct bootstrapped site-pattern frequency vectors
 	IntVectorCollection boot_freqs;
 	// number of times the bootstrap alignments were resampled
 	IntVector boot_times;
 	// hash_map to quick search through the collection
 	IntVectorMap boot_map;
+	// multinomial probability of distinct bootstrap alignments
+	DoubleVector boot_prob;
+
+	// index from bootstrap number b to disinct bootstrap alignment
+	IntVector boot_index;
+	// number of distinct bootstrap aligments per B
+	IntVector diff_boot_alns;
+
+	// map from distinct alignment to tree
+	IntVector aln_tree_map;
+	StringIntMap tree_map;
+	// vector of all distinct reconstructed trees
+	MTreeSet boot_trees;
+	int id;
 
 	cout << "Checking Arndt curiosity for " << params.avh_test << " bootstrap replicates ..." << endl;
-	for (int id = 0; id < params.avh_test; id++) {
+
+	// generate all distinct bootstrap alignments
+	cout << "Theoretical number of distinct alignments = " << 
+		 exp(logNchooseK(alignment->getNSite()+alignment->getNPattern()-1, alignment->getNPattern()-1)) << endl;
+	IntVector afreq;
+	//generateMultinorm(x, alignment->getNSite(), alignment->getNPattern(), 0, alignment->getNSite());
+	generateFirstMultinorm(afreq, alignment->getNSite(), alignment->getNPattern());
+	int num_multi = 0;
+	do {
+		num_multi++;
+		/*cout << num_multi << ": ";
+		for (id = 0; id < afreq.size(); id++) cout << afreq[id] << " ";
+		cout << endl;*/
+		IntVector *boot_freq = new IntVector;
+		*boot_freq = afreq;
+		boot_map[boot_freq] = boot_freqs.size();
+		boot_freqs.push_back(boot_freq);
+		boot_times.push_back(0);
+		boot_prob.push_back(alignment->multinomialProb(*boot_freq));
+	} while (generateNextMultinorm(afreq));
+	cout << num_multi << " distinct bootstrap alignments" << endl;
+
+	// generate usual bootstrap alignments
+	int diff_boot_aln = 0;
+	for (id = 0; id < params.avh_test; id++) {
 		IntVector *boot_freq = new IntVector;
 		alignment->createBootstrapAlignment(*boot_freq);
 		IntVectorMap::iterator it = boot_map.find(boot_freq);
 		if (it == boot_map.end()) { // not found
+			outError(__func__);
+			boot_index.push_back(boot_freqs.size());
 			boot_map[boot_freq] = boot_freqs.size();
 			boot_freqs.push_back(boot_freq);
 			boot_times.push_back(1);
-			if (verbose_mode >= VB_MED) {
-				for (int i = 0; i < boot_freq->size(); i++) 
-					cout << boot_freq->at(i) << " ";
-				cout << endl;
-			}
+			boot_prob.push_back(alignment->multinomialProb(*boot_freq));
 		} else {
+			if (boot_times[it->second] == 0) diff_boot_aln++;
 			boot_times[it->second]++;
-		} 
+			boot_index.push_back(it->second);
+			delete boot_freq;
+		}
+		diff_boot_alns.push_back(diff_boot_aln);
 	}
 
 	cout << boot_freqs.size() << " distinct alignments have been sampled" << endl;
 
+	// reconstruct tree for each distinct alignment
+	string orig_model = params.model_name;
+	int saved_aLRT_replicates = params.aLRT_replicates;
+	params.aLRT_replicates = 0;
+	for (id = 0; id < boot_freqs.size(); id++) {
+		cout << endl << "===> COMPUTING TREE FOR ALIGNMENT " << id << endl;
+		Alignment *boot_aln = new Alignment;
+		boot_aln->extractPatternFreqs(alignment, *boot_freqs[id]);
+
+		IQPTree boot_tree(boot_aln);
+		runPhyloAnalysis(params, orig_model, boot_aln, boot_tree);
+        boot_tree.setRootNode(params.root);
+		stringstream ss;
+		boot_tree.printTree(ss, WT_SORT_TAXA);
+		string str = ss.str();
+		StringIntMap::iterator it = tree_map.find(str);
+		if (it == tree_map.end()) { // not found
+			tree_map[str] = boot_trees.size();
+			aln_tree_map.push_back(boot_trees.size());
+			MTree *tree = new MTree;
+			tree->readTree(ss, params.is_rooted);
+			boot_trees.push_back(tree);
+		} else {
+			aln_tree_map.push_back(it->second);
+		} 
+		//delete boot_aln;
+	}
+	cout << boot_trees.size() << " distinct trees have been reconstructed" << endl;
+
+	cout << "===> EVALUATING TREES ON ORIGINAL ALIGNMENT" << endl;
+	string out_file = params.out_prefix;
+	out_file += ".trees";
+	boot_trees.printTrees(out_file.c_str(),WT_SORT_TAXA);
+	params.min_iterations = 0;
+	runPhyloAnalysis(params, orig_model, alignment, tree);
+	params.user_file = (char*)out_file.c_str();
+	evaluateTrees(params, &tree);
+
+	params.aLRT_replicates = saved_aLRT_replicates;
+
+	double logn = log(params.avh_test);
+	cout.precision(5);
+	if (verbose_mode >= VB_MED) {
+		for (int j = 0; j < boot_freqs.size(); j++) {
+			cout << "p=" << alignment->multinomialProb(*boot_freqs[j]) 
+				 << " p_obs=" << log(boot_times[j]) - logn << " tree=" << aln_tree_map[j] << " ";
+			//boot_trees[aln_tree_map[j]]->printTree(cout,WT_SORT_TAXA);
+			cout << " ";
+			
+			for (int i = 0; i < boot_freqs[j]->size(); i++) 
+				cout << boot_freqs[j]->at(i) << " ";
+			cout << endl;
+		}
+	}
+	
+	// computing weights
+	double max_prob = *max_element(boot_prob.begin(), boot_prob.end());
+	DoubleVector boot_weight;
+	boot_weight.resize(boot_prob.size(), 0.0);
+	for (id = 0; id < boot_freqs.size(); id++)
+		boot_weight[id] = exp(boot_prob[id] - max_prob);
+
+
+	// summarize results
+	out_file = params.out_prefix;
+	out_file += ".avh";
+	ofstream out(out_file.c_str());
+	out << boot_trees.size() << endl;
+	//boot_trees.printTrees(out, WT_SORT_TAXA);
+	DoubleVector tree_weights; // by weighted bootstrap
+	tree_weights.resize(boot_trees.size(), 0);
+	for (id = 0; id < boot_freqs.size(); id++)
+		tree_weights[aln_tree_map[id]] += boot_weight[id];
+	double sum_weight = accumulate(tree_weights.begin(), tree_weights.end(), 0.0);
+	for (id = 0; id < boot_trees.size(); id++) {
+		tree_weights[id] /= sum_weight;
+		out << tree_weights[id] << endl;
+	}
+
+	// by standard bootstrap
+	out << "B\tTree\tpB_T\tDiff_B" << endl;
+	for (int sample = 1; sample <= params.avh_test; sample++) {
+
+		DoubleVector normal_tree_weights; 
+		normal_tree_weights.resize(boot_trees.size(), 0);
+		for (id = 0; id < sample; id++) {
+			normal_tree_weights[aln_tree_map[boot_index[id]]] += 1;
+		}
+		sum_weight = accumulate(normal_tree_weights.begin(), normal_tree_weights.end(), 0.0);
+		for (id = 0; id < boot_trees.size(); id++)
+			normal_tree_weights[id] /= sum_weight;
+		// print results
+		for (id = 0; id < boot_trees.size(); id++) {
+			out << sample << "\t" << id << "\t" << normal_tree_weights[id] << "\t" 
+				<< diff_boot_alns[sample-1] << endl;
+		}
+	}
+
+	out.close();
+	cout << "Results printed to " << out_file << endl;
 	for (IntVectorCollection::reverse_iterator rit = boot_freqs.rbegin(); rit != boot_freqs.rend(); rit++)
 		delete (*rit);
 }

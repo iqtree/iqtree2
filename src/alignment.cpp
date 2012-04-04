@@ -11,6 +11,7 @@
 //
 #include "alignment.h"
 #include "myreader.h"
+#include <numeric>
 
 char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
 char symbols_dna[]     = "ACGT";
@@ -878,6 +879,33 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
 		Pattern pat = aln->at(ptn_id[i]);
 		addPattern(pat, site, aln->at(ptn_id[i]).frequency);
 		for (int j = 0; j < aln->at(ptn_id[i]).frequency; j++)
+			site_pattern[site++] = size()-1;
+	}
+	site_pattern.resize(site);
+	verbose_mode = save_mode;
+	countConstSite();
+	assert(size() <= aln->size());
+}
+
+void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
+	int i;
+	assert(ptn_freq.size() <= aln->getNPattern());
+	for (i = 0; i < aln->getNSeq(); i++) {
+		seq_names.push_back(aln->getSeqName(i));
+	}
+	num_states = aln->num_states;
+	site_pattern.resize(accumulate(ptn_freq.begin(), ptn_freq.end(), 0), -1);
+	clear();
+	pattern_index.clear();
+	int site = 0;
+	VerboseMode save_mode = verbose_mode; 
+	verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+	for (i = 0; i != ptn_freq.size(); i++) 
+	if (ptn_freq[i]) {
+		assert(ptn_freq[i] > 0);
+		Pattern pat = aln->at(i);
+		addPattern(pat, site, ptn_freq[i]);
+		for (int j = 0; j < ptn_freq[i]; j++)
 			site_pattern[site++] = size()-1;
 	}
 	site_pattern.resize(site);

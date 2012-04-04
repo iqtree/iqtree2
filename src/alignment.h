@@ -243,6 +243,13 @@ public:
 	void extractPatterns(Alignment *aln, IntVector &ptn_id);
 
 	/**
+		extract a sub-set of patterns
+		@param aln original input alignment
+		@param ptn_freq pattern frequency to extract from
+	*/
+	void extractPatternFreqs(Alignment *aln, IntVector &ptn_freq);
+
+	/**
 		create a non-parametric bootstrap alignment from an input alignment
 		@param aln input alignment
 	*/

@@ -42,6 +42,43 @@ namespace __gnu_cxx {
 	};
 } // namespace __gnu_cxx
 
+namespace std {
+	/**
+		Define equal_to of two IntVector, used for hash_set (or hash_map) template
+	*/
+	template<>
+	struct equal_to<IntVector*> {
+		/**
+			@return true if *s1 == *s2
+			@param s1 first IntVector
+			@param s2 second IntVector
+		*/
+		bool operator()(const IntVector* s1, const IntVector* s2) const{
+			return *s1 == *s2;
+		}
+	};
+	/**
+		Define less than relationship of two IntVector, used for set (or map) template
+	*/
+	template<>
+	struct less<IntVector*> {
+		/**
+			@return true if *s1 < *s2 alphabetically
+			@param s1 first IntVector
+			@param s2 second IntVector
+		*/
+		bool operator()(const IntVector *s1, const IntVector *s2) const {
+			assert(s1->size() == s2->size());
+			for (int i = 0; i < s1->size(); i++)
+				if ((*s1)[i] < (*s2)[i]) 
+					return true;
+				else if ((*s1)[i] > (*s2)[i]) return false;
+			return false;
+		}
+	};
+} // namespace std
+
+
 typedef hash_map<IntVector*, int> IntVectorMap;
 
 typedef vector<IntVector*> IntVectorCollection;

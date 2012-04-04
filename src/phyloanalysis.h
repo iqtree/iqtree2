@@ -25,12 +25,17 @@
 #include "mexttree.h"
 
 class PhyloTree;
+class IQPTree;
 
 /**
 	main function to carry out phylogenetic inference
 	@param params program parameters
 */
 void runPhyloAnalysis(Params &params);
+
+void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignment, IQPTree &tree);
+
+void evaluateTrees(Params &params, IQPTree *tree);
 
 /**
 	take the collection of trees from input_trees, it assign support values to target_tree
