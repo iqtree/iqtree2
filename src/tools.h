@@ -1318,4 +1318,12 @@ void usage_iqtree(char* argv[], bool full_command);
  */
 void parseAreaName(char *area_names, set<string> &areas);
 
+/**
+ * generate 2 different random integer numbers smaller than a specific integer threshold
+ * @param size integer threshold
+ * @param &first first random integer number
+ * @param @second second random integer number
+ */
+void get2RandNumb(const int size, int &first, int &second);
+
 #endif

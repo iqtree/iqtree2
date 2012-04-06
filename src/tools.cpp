@@ -480,8 +480,16 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
 	}
 }
 
-
-
+void get2RandNumb(const int size, int &first, int &second) {
+    // pick a random element
+    first = floor((((double) rand()) / RAND_MAX) * size);
+    // pick a random element from what's left (there is one fewer to choose from)...
+    second = floor((((double) rand()) / RAND_MAX) * (size-1));
+    // ...and adjust second choice to take into account the first choice
+    if (second >= first) {
+        ++second;
+    }
+}
 void parseArg(int argc, char *argv[], Params &params) {
 	int cnt;
 	verbose_mode = VB_MIN;

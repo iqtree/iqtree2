@@ -818,14 +818,15 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     }
 	cout << "NNI cutoff: " << params.nni_cutoff << endl;
 
-    /*
-            if (params.parsimony) {
-                    int score = tree.computeParsimonyScore();
-                    cout << "User tree has parsimony score of " << score << endl;
 
-                    // NNI with parsimony function
-                    tree.searchNNI();
-            }*/
+//    if (params.parsimony) {
+//		int score = tree.computeParsimonyScore();
+//		cout << "User tree has parsimony score of " << score << endl;
+//
+//		// NNI with parsimony function
+//		tree.searchNNI();
+//	}
+
     cout.precision(10);
     //cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
     if (params.parsimony) {
@@ -840,17 +841,20 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         tree.cur_pars_score = tree.computeParsimony();
         //cout << "Fast parsimony score: " << tree.cur_pars_score << endl;
     }
+
     /* optimize model parameters */
     cout << endl;
-    cout << "Optimizing model parameters" << endl;
+    cout << "Optimizing model parameters and branch lengths" << endl;
     double bestTreeScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
     cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
+
     //Update tree score
     tree.curScore = bestTreeScore;
 	if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->computeBranchLengths();
 	/*
     if ((tree.getModel()->name == "JC") && tree.getRate()->getNDim() == 0)
         params.compute_ml_dist = false;*/
+
     if (!params.dist_file && params.compute_ml_dist) {
         stringstream best_tree_string;
         tree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
@@ -889,12 +893,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         }
     }
 
-    /* Optimize branch lengths with likelihood function */
-    //cout << "Optimizing branch lengths..." << endl;
-    //cout << "Log-likelihood: " << tree.optimizeAllBranches() << endl;
-
     /* do NNI with likelihood function */
-
 
 	//bool saved_estimate_nni = estimate_nni_cutoff;
 	//estimate_nni_cutoff = false; // do not estimate NNI cutoff based on initial BIONJ tree
@@ -903,20 +902,20 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
     if (params.min_iterations > 0) {
         cout << endl;
-        cout << "Performing Nearest Neighbor Interchange... " ;
+        cout << "Performing local search with NNI moves ... " << endl;
         //cout << "Current tree likelihood: " << tree.optimizeNNIBranches() << endl;
         //tree.optimizeAllBranches();
         clock_t nniBeginClock, nniEndClock;
         nniBeginClock = clock();        
         tree.optimizeNNI();
+        //tree.optimizeNNINew();
         nniEndClock = clock();
-        //printf("Time used for first NNI search: %8.6f seconds.\n", (double) (nniEndClock - nniBeginClock) / CLOCKS_PER_SEC);
-        cout << (double) (nniEndClock - nniBeginClock) / CLOCKS_PER_SEC << "s" << endl;
+        cout << "Time elapsed :" << (double) (nniEndClock - nniBeginClock) / CLOCKS_PER_SEC << "s" << endl;
         if (tree.curScore > bestTreeScore + TOL_LIKELIHOOD) {
             bestTreeScore = tree.curScore ;
             cout << "Found new best tree log-likelihood : " << bestTreeScore << endl;
         } else {
-            cout << "Tree didn't improve after NNI" << endl;
+            cout << "The local search cannot improve the tree likelihood :( " << endl;
         }
     }
 
