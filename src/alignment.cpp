@@ -610,6 +610,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 				seq_names[seq_id] = line.substr(0, pos);
 				line.erase(0, pos);
 			}
+			int old_len = sequences[seq_id].length();
 			if (multi_state) {
 				stringstream linestr(line);
 				int state;
@@ -630,8 +631,16 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 					throw err_str.str();
 				}
 			}
-			seq_id++;
-			if (seq_id == nseq) seq_id = 0;
+			if (sequences[seq_id].length() != sequences[0].length()) {
+				err_str << "Line " << line_num << ": alignment block has variable sequence lengths" << endl;
+				throw err_str.str();
+			}
+			if (sequences[seq_id].length() > old_len) 
+				seq_id++;
+			if (seq_id == nseq) {
+				seq_id = 0;
+				// make sure that all sequences have the same length at this moment
+			}
 		} 
 		//sequences.	
 	}

@@ -816,6 +816,10 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     assert(root->isLeaf());
     //double *ptn_scale = NULL;
    	PhyloNeighbor *nei = ((PhyloNeighbor*) root->neighbors[0]);
+    current_it = nei;
+    assert(current_it);
+    current_it_back = (PhyloNeighbor*) nei->node->findNeighbor(root);
+    assert(current_it_back);
 //    double sum_scaling = nei->lh_scale_factor;
 //    double check = 0.0;
 /*    if (pattern_lh) {

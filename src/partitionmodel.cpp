@@ -32,7 +32,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree)
 	PhyloSuperTree::iterator it;
 	int part;
 	for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
-		assert(!((*it)->model_factory));
+		assert(!((*it)->getModelFactory()));
 		params.model_name = tree->part_info[part].model_name;
 		(*it)->setModelFactory(new ModelFactory(params, (*it)));
 		(*it)->setModel((*it)->getModelFactory()->model);

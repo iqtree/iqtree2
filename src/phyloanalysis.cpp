@@ -1049,6 +1049,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
     double myscore = tree.getBestScore();
     tree.computePatternLikelihood(pattern_lh, &myscore);
+    //tree.computeLikelihood(pattern_lh);
 
 	// compute logl variance
 	tree.logl_variance = tree.computeLogLVariance();
@@ -1273,6 +1274,8 @@ void runPhyloAnalysis(Params &params) {
             outError(ERR_WRITE_OUTPUT, bootaln_name);
         }
 
+		clock_t start_time = clock();
+
         // do bootstrap analysis
         for (int sample = 0; sample < params.num_bootstrap_samples; sample++) {
             cout << endl << "===> START BOOTSTRAP REPLICATE NUMBER " << sample + 1 << endl << endl;
@@ -1359,6 +1362,8 @@ void runPhyloAnalysis(Params &params) {
     		tree->setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
             reportPhyloAnalysis(params, original_model, *alignment, *tree);
         } else    cout << endl;
+
+		cout << "CPU total time for bootstrap: " << (clock() - start_time) / CLOCKS_PER_SEC << " seconds." << endl << endl;
 		cout << "Non-parametric bootstrap results written to:" << endl
 			<< "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl
 			<< "  Bootstrap trees:          " << params.out_prefix << ".boottrees" << endl;

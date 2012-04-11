@@ -1105,9 +1105,17 @@ void runAvHTest(Params &params, Alignment *alignment, IQPTree &tree) {
 		//delete boot_aln;
 	}
 	cout << boot_trees.size() << " distinct trees have been reconstructed" << endl;
-
-	cout << "===> EVALUATING TREES ON ORIGINAL ALIGNMENT" << endl;
 	string out_file = params.out_prefix;
+	out_file += ".bootmap";
+	ofstream out;
+	out.open(out_file.c_str());
+	for (id = 0; id < boot_freqs.size(); id++) {
+		for (int i = 0; i < boot_freqs[id]->size(); i++) out << boot_freqs[id]->at(i) << " ";
+		out << boot_prob[id] << " " << aln_tree_map[id] << endl;
+	}
+	out.close();
+	cout << "===> EVALUATING TREES ON ORIGINAL ALIGNMENT" << endl;
+	out_file = params.out_prefix;
 	out_file += ".trees";
 	boot_trees.printTrees(out_file.c_str(),WT_SORT_TAXA);
 	params.min_iterations = 0;
@@ -1143,10 +1151,12 @@ void runAvHTest(Params &params, Alignment *alignment, IQPTree &tree) {
 	// summarize results
 	out_file = params.out_prefix;
 	out_file += ".avh";
-	ofstream out(out_file.c_str());
+	out.open(out_file.c_str());
 	out << boot_trees.size() << endl;
 	//boot_trees.printTrees(out, WT_SORT_TAXA);
-	DoubleVector tree_weights; // by weighted bootstrap
+
+	/* computing true bootstrap probabilities based on all distinct bootstrap alignments */
+	DoubleVector tree_weights; 
 	tree_weights.resize(boot_trees.size(), 0);
 	for (id = 0; id < boot_freqs.size(); id++)
 		tree_weights[aln_tree_map[id]] += boot_weight[id];
@@ -1156,10 +1166,24 @@ void runAvHTest(Params &params, Alignment *alignment, IQPTree &tree) {
 		out << tree_weights[id] << endl;
 	}
 
-	// by standard bootstrap
-	out << "B\tTree\tpB_T\tDiff_B" << endl;
+	out << "B\tTree\tpB_T\tDiff_B\tpwB_T" << endl;
 	for (int sample = 1; sample <= params.avh_test; sample++) {
+		// weighted bootstrap version
+		tree_weights.resize(0);
+		tree_weights.resize(boot_trees.size(), 0);
+		vector<bool> duplicated;
+		duplicated.resize(boot_freqs.size(), false);
+		for (id = 0; id < sample; id++) 
+		if (!duplicated[boot_index[id]]) {
+			tree_weights[aln_tree_map[boot_index[id]]] += boot_weight[boot_index[id]];
+			duplicated[boot_index[id]] = true;
+		}
+		double sum_weight = accumulate(tree_weights.begin(), tree_weights.end(), 0.0);
+		for (id = 0; id < boot_trees.size(); id++) {
+			tree_weights[id] /= sum_weight;
+		}
 
+		// by standard bootstrap
 		DoubleVector normal_tree_weights; 
 		normal_tree_weights.resize(boot_trees.size(), 0);
 		for (id = 0; id < sample; id++) {
@@ -1169,9 +1193,10 @@ void runAvHTest(Params &params, Alignment *alignment, IQPTree &tree) {
 		for (id = 0; id < boot_trees.size(); id++)
 			normal_tree_weights[id] /= sum_weight;
 		// print results
-		for (id = 0; id < boot_trees.size(); id++) {
+		for (id = 0; id < boot_trees.size(); id++) 
+		{
 			out << sample << "\t" << id << "\t" << normal_tree_weights[id] << "\t" 
-				<< diff_boot_alns[sample-1] << endl;
+				<< diff_boot_alns[sample-1] << "\t" << tree_weights[id] << endl;
 		}
 	}
 

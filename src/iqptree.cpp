@@ -526,7 +526,7 @@ double IQPTree::doIQP() {
     return curScore;
 }
 
-void get2RandNumb(const int size, int &first, int &second) {
+/*void get2RandNumb(const int size, int &first, int &second) {
     // pick a random element
     first = floor((((double) rand()) / RAND_MAX) * size);
     // pick a random element from what's left (there is one fewer to choose from)...
@@ -535,7 +535,7 @@ void get2RandNumb(const int size, int &first, int &second) {
     if (second >= first) {
         ++second;
     }
-}
+}*/
 
 double IQPTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
     assert( node1->isLeaf() );
@@ -669,7 +669,7 @@ double IQPTree::doIQPNNI(Params &params) {
     string tree_file_name = params.out_prefix;
     tree_file_name += ".treefile";
     bestScore = curScore;
-    printResultTree(params);
+    //printResultTree(params);
     string treels_name = params.out_prefix;
     treels_name += ".treels";
 	string out_lh_file = params.out_prefix;
