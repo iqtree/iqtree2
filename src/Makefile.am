@@ -32,7 +32,8 @@ SUBDIRS = kmeans lp modeltest ncl whtest
 iqtree_LDADD = $(top_builddir)/src/kmeans/libkmeans.a \
 	$(top_builddir)/src/lp/liblpsolve.a $(top_builddir)/src/modeltest/libmodeltest.a \
 	$(top_builddir)/src/ncl/libNCL.a $(top_builddir)/src/whtest/libwhtest.a
-AM_CXXFLAGS = -Wno-deprecated -DIQ_TREE -O3
+AM_CXXFLAGS = -DIQ_TREE -O3 -Wno-deprecated -g0 -std=c++98 -Wall \
+	-Wno-sign-compare
 AM_CFLAGS = -DIQ_TREE -O3
 
 EXTRA_DIST = Eigen/Core Eigen/Dense Eigen/Eigen \

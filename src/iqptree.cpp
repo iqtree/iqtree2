@@ -52,6 +52,7 @@ PhyloTree() {
 	logl_cutoff = 0.0;
 	len_scale = 10000;
 	save_all_br_lens = false;
+	duplication_counter = 0;
 }
 
 IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln) 
@@ -81,6 +82,7 @@ IQPTree::IQPTree(Alignment *aln) : PhyloTree(aln)
 	logl_cutoff = 0.0;
 	len_scale = 10000;
 	save_all_br_lens = false;
+	duplication_counter = 0;
 }
 
 void IQPTree::setParams(Params &params) {
@@ -829,6 +831,8 @@ double IQPTree::doIQPNNI(Params &params) {
            		cout <<	" (" << convert_time(remaining_secs) << "s left)";
            cout << endl;
 		}
+		cout << "duplication_counter = " << 	duplication_counter << endl;
+
 
 
 /*
@@ -895,6 +899,7 @@ double IQPTree::doIQPNNI(Params &params) {
 		out_treelh.close();
 		out_sitelh.close();
 	}
+
 
     return bestScore;
 }
@@ -1528,6 +1533,7 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 	string tree_str = ostr.str();
 	StringIntMap::iterator it = treels.find(tree_str);
 	if (it != treels.end()) {// already in treels
+		duplication_counter++;
 		if (cur_logl <= treels_logl[it->second]+1e-4) {
 			if (cur_logl < treels_logl[it->second]-5.0)
 			cout << "Current lh " << cur_logl << " is much worse than expected " << treels_logl[it->second] << endl;

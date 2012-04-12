@@ -503,7 +503,7 @@ protected:
 
 	void saveCurrentTree(double logl); // save current tree
 	
-
+	int duplication_counter;
 
     /**
             number of IQPNNI iterations
