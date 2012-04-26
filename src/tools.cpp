@@ -560,6 +560,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 
 	params.aln_file = NULL;
+	params.treeset_file = NULL;
 	params.siteLL_file = NULL; //added by MA
 	params.partition_file = NULL;
 	params.sequence_type = NULL;
@@ -985,6 +986,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -aln, -s <alignment_file>";
 				params.aln_file = argv[cnt];
+			} else if (strcmp(argv[cnt],"-z") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -aln, -z <user_trees_file>";
+				params.treeset_file = argv[cnt];
 			} else if (strcmp(argv[cnt],"-sp") == 0) {
 				cnt++;
 				if (cnt >= argc)

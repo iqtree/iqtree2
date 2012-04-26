@@ -333,6 +333,11 @@ struct Params {
     char *aln_file;
 
     /**
+            file containng multiple trees to evaluate at the end
+     */
+    char *treeset_file;
+
+    /**
             file specifying partition model
      */
     char *partition_file;

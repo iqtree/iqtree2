@@ -1120,7 +1120,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQPTree &tree) {
 	boot_trees.printTrees(out_file.c_str(),WT_SORT_TAXA);
 	params.min_iterations = 0;
 	runPhyloAnalysis(params, orig_model, alignment, tree);
-	params.user_file = (char*)out_file.c_str();
+	params.treeset_file = (char*)out_file.c_str();
 	evaluateTrees(params, &tree);
 
 	params.aLRT_replicates = saved_aLRT_replicates;

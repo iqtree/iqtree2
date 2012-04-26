@@ -1152,15 +1152,16 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
 
 void evaluateTrees(Params &params, IQPTree *tree) {
-	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin);
-	if (trees.size() == 1) return;
-	string tree_file = params.user_file;
+	if (!params.treeset_file) return;
+	MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin);
+	//if (trees.size() == 1) return;
+	string tree_file = params.treeset_file;
 	tree_file += ".eval";
 	ofstream treeout;
 	if (!params.fixed_branch_length) {
 		treeout.open(tree_file.c_str());
 	}
-	string score_file = params.user_file;
+	string score_file = params.treeset_file;
 	score_file += ".treelh";
 	ofstream scoreout(score_file.c_str());
 	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++) {
@@ -1181,7 +1182,7 @@ void evaluateTrees(Params &params, IQPTree *tree) {
 			tree->curScore = tree->computeLikelihood();
 		cout << " / LogL: " << tree->curScore << endl;
 		if (params.print_site_lh) {
-			string site_lh_file = params.user_file;
+			string site_lh_file = params.treeset_file;
 			site_lh_file += ".sitelh";
 			printSiteLh(site_lh_file.c_str(), *tree, NULL, (it != trees.begin()));
 		}
@@ -1239,7 +1240,7 @@ void runPhyloAnalysis(Params &params) {
         runPhyloAnalysis(params, original_model, alignment, *tree);
         if (original_model != "TESTONLY")
             reportPhyloAnalysis(params, original_model, *alignment, *tree);
-        if (params.min_iterations == 0 && params.user_file && params.print_site_lh) {
+        if (params.treeset_file) {
         	evaluateTrees(params, tree);
         }
     } else {
