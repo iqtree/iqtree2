@@ -2,5 +2,5 @@
 #define iqtree_VERSION_MAJOR @iqtree_VERSION_MAJOR@
 #define iqtree_VERSION_MINOR @iqtree_VERSION_MINOR@
 
-// does the platform provide exp and log functions?
+// does the platform provide gettimeofday functions?
 #cmakedefine HAVE_GETTIMEOFDAY

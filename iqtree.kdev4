@@ -1,4 +1,4 @@
 [Project]
-Name=iqtree
 Manager=KDevCMakeManager
+Name=iqtree-cmake
 VersionControl=
