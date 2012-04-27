@@ -25,13 +25,13 @@
 #include "iqptree.h"
 #include "alignment.h"
 
-/*#if defined(WIN32)
+#if !defined(__GNUC__)
 namespace stdext {
-#else
+#elif GCC_VERSION < 40300
 namespace __gnu_cxx {
-#endif
-*/
+#else
 namespace std {
+#endif
 	template<>
 	struct hash<IntVector*> {
 		size_t operator()(const IntVector* sp) const {
@@ -41,7 +41,7 @@ namespace std {
 			return sum;
 		}
 	};
-} // namespace __gnu_cxx
+} // namespace 
 
 namespace std {
 	/**

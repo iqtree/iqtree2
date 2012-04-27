@@ -25,16 +25,15 @@ const int NUM_CHAR = 256;
 enum SeqType {SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MULTISTATE, SEQ_UNKNOWN};
 
 
-#ifdef USE_HASH_MAP
+#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300
 /*
 	Define the hash function of Split
 */
-/*#if defined(WIN32) 
+#if !defined(__GNUC__) 
 namespace stdext {
 #else
 namespace __gnu_cxx {
-#endif*/
-/*namespace std {
+#endif
 	template<>
 	struct hash<string> {
 		size_t operator()(string str) const {
@@ -42,9 +41,8 @@ namespace __gnu_cxx {
 			return hash_str(str.c_str());
 		}
 	};
-} // namespace __gnu_cxx
-*/
-#endif
+} // namespace
+#endif // USE_HASH_MAP
 
 
 #ifdef USE_HASH_MAP

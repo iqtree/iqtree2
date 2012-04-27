@@ -31,13 +31,13 @@ using namespace std;
 /*
 	Define the hash function of Split
 */
-/*#if defined(WIN32)
+#if !defined(__GNUC__)
 namespace stdext {
-#else
+#elif GCC_VERSION < 40300
 namespace __gnu_cxx {
-#endif
-*/
+#else
 namespace std {
+#endif
 	template<>
 	struct hash<Split*> {
 		size_t operator()(const Split* sp) const {
@@ -47,8 +47,8 @@ namespace std {
 			return sum;
 		}
 	};
-} // namespace __gnu_cxx
-#endif
+} // namespace
+#endif // USE_HASH_MAP
 
 namespace std {
 	/**

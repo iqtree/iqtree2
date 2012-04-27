@@ -42,17 +42,27 @@
 
 #define USE_HASH_MAP
 
+#ifdef __GNUC__
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#else
+#define GCC_VERSION 0
+#endif
+
 #ifdef USE_HASH_MAP
-/*#if defined(WIN32)
-#include <hash_map>
-using namespace stdext;
+	#if !defined(__GNUC__)
+		#include <hash_map>
+		using namespace stdext;
+	#else
+		#if GCC_VERSION < 40300
+			#include <ext/hash_map>
+			using namespace __gnu_cxx;
+			#define unordered_map hash_map
+		#else
+			#include <unordered_map>
+		#endif
+	#endif
 #else
-#include <ext/hash_map>
-using namespace __gnu_cxx;*/
-#include <unordered_map>
-//#endif
-#else
-#include <map>
+	#include <map>
 #endif
 
 

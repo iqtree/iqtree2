@@ -1621,11 +1621,11 @@ double logFac (const int num)
 
 template <class T>
 inline T quantile(const vector<T>& v, const double q) {
-	uint size = v.size();
+	unsigned int size = v.size();
 	if (q <= 0) return *std::min_element(v.begin(), v.end());
 	if (q >= 1) return *std::max_element(v.begin(), v.end());
 	double pos = (size - 1) * q;
-	uint ind = uint(pos);
+	unsigned int ind = (unsigned int)(pos);
 	double delta = pos - ind;
 	vector<T> w(size);
 	std::copy(v, v.begin() + size, w.begin());
