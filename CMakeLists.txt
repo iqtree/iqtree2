@@ -22,6 +22,7 @@ include_directories("${PROJECT_BINARY_DIR}")
 #add_definitions(-std=c++0x)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIQ_TREE -O3 -Wno-deprecated -g0 -std=c++0x -Wall -Wno-sign-compare -Wno-unused-but-set-variable")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIQ_TREE -O3 -Wno-deprecated -g0 -std=c++98 -Wall -Wno-sign-compare -Wno-unused")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DIQ_TREE -O3 -Wno-deprecated -g0 -Wall -std=gnu99 -Wno-sign-compare -Wno-unused")
 
 add_subdirectory(ncl)
 add_subdirectory(whtest)
@@ -91,5 +92,8 @@ whtest_wrapper.cpp
 lpwrapper.c
 modeltest_wrapper.c)
 
-
+if (WIN32)
+target_link_libraries(iqtree ncl whtest modeltest lp z)
+else (WIN32)
 target_link_libraries(iqtree ncl whtest modeltest lp z dl)
+endif (WIN32)
