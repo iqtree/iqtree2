@@ -40,21 +40,21 @@ Split *SplitIntMap::findSplit(Split *sp, int &value) {
 
 int SplitIntMap::getValue(Split *sp) {
     int value;
-    assert(findSplit(sp, value));
+    if (!findSplit(sp, value)) outError(__func__);
     return value;
 }
 
 void SplitIntMap::setValue(Split *sp, int value) {
-    assert(findSplit(sp));
+    if (!findSplit(sp)) outError(__func__);
     (*this)[sp] = value;
 }
 
 void SplitIntMap::eraseSplit(Split *sp) {
-    assert(findSplit(sp));
+    if (!findSplit(sp)) outError(__func__);
     erase(sp);
 }
 
 void SplitIntMap::insertSplit(Split *sp, int value) {
-    assert(!findSplit(sp));
+    if (findSplit(sp)) outError(__func__);
     (*this)[sp] = value;
 }

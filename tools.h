@@ -52,14 +52,13 @@
 	#if !defined(__GNUC__)
 		#include <hash_map>
 		using namespace stdext;
+	#elif GCC_VERSION < 40300
+		#include <ext/hash_map>
+		using namespace __gnu_cxx;
+		#define unordered_map hash_map
 	#else
-		#if GCC_VERSION < 40300
-			#include <ext/hash_map>
-			using namespace __gnu_cxx;
-			#define unordered_map hash_map
-		#else
-			#include <unordered_map>
-		#endif
+		#include <tr1/unordered_map>
+		using namespace std::tr1;
 	#endif
 #else
 	#include <map>

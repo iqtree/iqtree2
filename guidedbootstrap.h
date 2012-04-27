@@ -25,23 +25,14 @@
 #include "iqptree.h"
 #include "alignment.h"
 
-#if !defined(__GNUC__)
-namespace stdext {
-#elif GCC_VERSION < 40300
-namespace __gnu_cxx {
-#else
-namespace std {
-#endif
-	template<>
-	struct hash<IntVector*> {
-		size_t operator()(const IntVector* sp) const {
-			size_t sum = 0;
-			for (IntVector::const_iterator it = sp->begin(); it != sp->end(); it++)
-				sum = (*it) + (sum << 6) + (sum << 16) - sum;
-			return sum;
-		}
-	};
-} // namespace 
+struct hashfunc_IntVector {
+	size_t operator()(const IntVector* sp) const {
+		size_t sum = 0;
+		for (IntVector::const_iterator it = sp->begin(); it != sp->end(); it++)
+			sum = (*it) + (sum << 6) + (sum << 16) - sum;
+		return sum;
+	}
+};
 
 namespace std {
 	/**
@@ -80,7 +71,7 @@ namespace std {
 } // namespace std
 
 
-typedef unordered_map<IntVector*, int> IntVectorMap;
+typedef unordered_map<IntVector*, int, hashfunc_IntVector> IntVectorMap;
 
 typedef vector<IntVector*> IntVectorCollection;
 

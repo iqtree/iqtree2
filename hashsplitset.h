@@ -31,23 +31,14 @@ using namespace std;
 /*
 	Define the hash function of Split
 */
-#if !defined(__GNUC__)
-namespace stdext {
-#elif GCC_VERSION < 40300
-namespace __gnu_cxx {
-#else
-namespace std {
-#endif
-	template<>
-	struct hash<Split*> {
-		size_t operator()(const Split* sp) const {
-			size_t sum = 0;
-			for (Split::const_iterator it = sp->begin(); it != sp->end(); it++)
-				sum = (*it) + (sum << 6) + (sum << 16) - sum;
-			return sum;
-		}
-	};
-} // namespace
+struct hashfunc_Split {
+	size_t operator()(const Split* sp) const {
+		size_t sum = 0;
+		for (Split::const_iterator it = sp->begin(); it != sp->end(); it++)
+			sum = (*it) + (sum << 6) + (sum << 16) - sum;
+		return sum;
+	}
+};
 #endif // USE_HASH_MAP
 
 namespace std {
@@ -93,7 +84,7 @@ SplitSet for quick search purpose
 @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler
 */
 #ifdef USE_HASH_MAP
-class SplitIntMap : public unordered_map<Split*, int>
+class SplitIntMap : public unordered_map<Split*, int, hashfunc_Split>
 #else
 class SplitIntMap : map<Split*, int, std::less<Split*> > 
 #endif
