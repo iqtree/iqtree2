@@ -4,6 +4,11 @@ project(iqtree)
 # The version number.
 set (iqtree_VERSION_MAJOR 0)
 set (iqtree_VERSION_MINOR 9)
+
+
+include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
+check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
+
 # configure a header file to pass some of the CMake settings
 # to the source code
 configure_file (
@@ -13,9 +18,6 @@ configure_file (
 # add the binary tree to the search path for include files
 # so that we will find TutorialConfig.h
 include_directories("${PROJECT_BINARY_DIR}")
-
-include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
-check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
 
 #add_definitions(-std=c++0x)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIQ_TREE -O3 -Wno-deprecated -g0 -std=c++0x -Wall -Wno-sign-compare -Wno-unused-but-set-variable")
