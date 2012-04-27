@@ -58,6 +58,17 @@ struct nodeheightcmp {
     }
 };
 
+struct IntBranchInfo {
+	PhyloNode *node1;
+	PhyloNode *node2;
+	double lh_contribution; // log-likelihood contribution of this branch: L(T)-L(T|e=0)
+};
+
+inline int int_branch_cmp (const IntBranchInfo a, const IntBranchInfo b)
+{
+	return (a.lh_contribution < b.lh_contribution);
+}
+
 /**
         Representative Leaf Set, stored as a multiset template of STL,
         sorted in ascending order of leaf's height
@@ -77,6 +88,7 @@ public:
     IQPTree();
 
     IQPTree(Alignment *aln);
+	
 	void setParams(Params &params);
 
     /**
@@ -195,22 +207,35 @@ public:
     /**
             This implement the fastNNI algorithm proposed in PHYML paper
             TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
-            @return best likelihood found
-            @param skipped (OUT) 1 if current iteration is skipped, otherwise 0
+            @return number of NNI applied
+            @param skipped (OUT) 1 if current iteration is skipped, otherwise 0. Just to know
+	 whether the local search had been run to the end or it was stopped inbetween
             @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    virtual double optimizeNNI(bool beginHeu=false, int *skipped = NULL, int *nni_count = NULL);
+    int optimizeNNI(bool beginHeu=false, int* skipped = NULL);
 
     /**
             search all positive NNI move on the current tree and save them on the possilbleNNIMoves list            
      */
-    virtual void genNNIMoves(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void genNNIMoves(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
-            search all positive NNI move on the current tree and save them on the possilbleNNIMoves list            
+            search all positive NNI move on the current tree and save them 
+	 		on the possilbleNNIMoves list            
      */
     void genNNIMovesSort();
 
+	/**
+	 		apply nni2apply NNIs from the non-conflicting NNI list
+	 		@param nni2apply number of NNIs to apply from the list
+	*/
+	void applyNNIs (int nni2apply);
+
+	/**
+	 		generate non conflicting NNI moves. 
+	 		moves are saved in vec_nonconf_nni
+	 */
+	void genNonconfNNIs();
 
     /**
             search the best swap for a branch
@@ -229,15 +254,7 @@ public:
     /**
             add a NNI move to the list of possible NNI moves;
      */
-    void addPossibleNNIMove(NNIMove myMove);
-
-    /**
-     * Described in PhyML paper: apply changes to all branches that do not correspond to a swap
-     * with the following formula  l = l + lamda(la - l)
-     * @param node
-     * @param dad
-     */
-    void applyAllBranchLengthChanges(PhyloNode *node, PhyloNode *dad = NULL);
+    void addPositiveNNIMove(NNIMove myMove);
 
     /**
      * 	Save all the current branch lengths
@@ -259,29 +276,46 @@ public:
 
 
     /**
-            Described in PhyML paper: apply change to branch that does not correspond to a swap with the following formula l = l + lamda(la - l)
+            Described in PhyML paper: apply change to branch that does not 
+	 		correspond to a swap with the following formula l = l + lamda(la - l)
             @param node1 the first node of the branch
             @param node2 the second node of the branch
      */
-    double applyBranchLengthChange(PhyloNode *node1, PhyloNode *node2, bool nonNNIBranch);
+    void changeBranLen(PhyloNode *node1, PhyloNode *node2, double branLen);
 
     /**
-            TODO
+            Change all branch length according to the computed values during
+	 * 		NNI evaluation. There might be branches that are not be affected
+	 * 		since tree topology is changed after doing NNI
      */
-    void applyChildBranchChanges(PhyloNode *node, PhyloNode *dad);
+    void changeAllBran(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 
     /**
-     * TODO
-     * @return
+     * Estimate the 95% quantile of the distribution of N (see paper for more d
+                                                           details)
+     * @return the estimated value
      */
-    int estimateNNICount(void);
+    inline int estN95(void);
 
     /**
-     * TODO
-     * @return
+     * Estimate the median of the distribution of N (see paper for more d
+                                                           details)
+     * @return the estimated value
+     */	
+	inline int estNMedian(void);
+
+    /**
+     * Estimate the 95% quantile of the distribution of DELTA (see paper for 
+                                                               more detail)
+     * @return the estimated value
      */
-    double estimateNNIDelta(void);
+    inline double estDelta95(void);
+
+	/**
+	 * 	Convert a branch into to string
+	 * */
+	inline string bran2string(PhyloNode* node1, PhyloNode* node2);
 
     /**
      *
@@ -326,7 +360,7 @@ public:
     double* pars_scores;
 
 	/**
-		Log-likelihood variance
+		Log-likelihood variastring IQPTree::bran2string(PhyloNode* node1, PhyloNode* node2)nce
 	*/
 	double logl_variance;
 
@@ -362,17 +396,25 @@ public:
 	inline double getNNICutoff() { return nni_cutoff; }
 
 protected:
-
-
+	/**
+	 	contains all parameters passed to the program's command line
+	 */
+	Params *params; 
+		
     /**
             criterion to assess important quartet
      */
     IQP_ASSESS_QUARTET iqp_assess_quartet;
 
     /**
-       The lamda number for NNI process (described in PhyML Paper)
+       The lamda number for NNI search (described in PhyML Paper)
      */
     double startLambda;
+
+	/**
+	 * current lambda value in use
+	*/
+	double curLambda;
 
     /**
      * Array that stores the frequency that each taxa has been choosen to be swapped
@@ -384,12 +426,12 @@ protected:
      */
     NodeVector taxaSet;
 
-    int nbNNI;
+    //int nbNNI;
 
     /**
      * 95% confidence value for number of NNIs found in one iteration
      */
-    unsigned int nni_count_est;
+    int nni_count_est;
 
     /**
      * 95% confidence value for likelihood improvement made by one NNI
@@ -422,7 +464,7 @@ protected:
     double bestScore;
 
     /**
-            The list of possible NNI moves for the current tree;
+            The list of positive NNI moves for the current tree;
      */
     vector<NNIMove> posNNIs;
 
@@ -430,15 +472,17 @@ protected:
     /**
             List contains non-conflicting NNI moves for the current tree;
      */
-    vector<NNIMove> indeNNIs;
+    vector<NNIMove> vec_nonconf_nni;
 
     /**
-            Data structure (of type Map) which stores all the optimal branch lengths for all branches in the tree
+            Data structure (of type Map) which stores all the optimal 
+			branch lengths for all branches in the tree
      */
     BranLenMap mapOptBranLens;
 
     /**
-     * 	Data structure (of type Map) used to store the original branch lengths of the tree
+     * 	Data structure (of type Map) used to store the original branch 
+		lengths of the tree
      */
     BranLenMap savedBranLens;
 

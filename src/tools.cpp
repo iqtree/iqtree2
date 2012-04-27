@@ -519,7 +519,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.overlap = 0;
 	params.is_rooted = false;
 	params.sample_size = -1;
-
 	params.repeated_time = 1;
 	//params.nr_output = 10000;
 	params.nr_output = 0;
@@ -628,13 +627,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.use_max_tree_per_bootstrap = true;
 	params.max_candidate_trees = 10000;
 	params.distinct_trees = true;
-
 	//const double INF_NNI_CUTOFF = -1000000.0;
 	params.nni_cutoff = -1000000.0;
 	params.estimate_nni_cutoff = false;
 	params.nni_sort = false;
 	params.testNNI = false;
 	params.do_compression = false;
+	params.new_heuristic = false;
 
 	params.avh_test = 0;
 
@@ -1341,6 +1340,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.use_max_tree_per_bootstrap = false;
 			} else if (strcmp(argv[cnt], "-gz") == 0) {
 				params.do_compression = true;
+			} else if (strcmp(argv[cnt], "-newheu") == 0) {
+				params.new_heuristic = true;
 			} else if (strcmp(argv[cnt], "-avh") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1616,4 +1617,16 @@ double logFac (const int num)
 	for ( int i = 1; i<=num; i++ )
 		ret += log((double)i);
 	return ret;
+}
+
+template <class T>
+inline T quantile(const vector<T>& v, const double q) {
+	uint size = v.size();
+	if (q <= 0) return *std::min_element(v.begin(), v.end());
+	if (q >= 1) return *std::max_element(v.begin(), v.end());
+	double pos = (size - 1) * q;
+	uint ind = uint(pos);
+	double delta = pos - ind;
+	vector<T> w(size);
+	std::copy(v, v.begin() + size, w.begin());
 }

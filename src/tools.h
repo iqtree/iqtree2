@@ -884,6 +884,8 @@ struct Params {
      */
     double speed_conf;
 
+	bool new_heuristic;
+
 	/**
 		Results of Weiss & Haeseler test of model homogeneity
 	*/
