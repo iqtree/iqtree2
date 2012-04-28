@@ -578,7 +578,7 @@ static int ReadPaupScores()
 		if (isalpha (iochar))    
 			{
 			ungetc(iochar,stdin);
-			scanf("%s",&string);
+			scanf("%s",string);
 			if (DEBUGLEVEL >= 2)
 				fprintf(stdout,"\nINFO:   Reading string %s", string);			
 			if (strcmp(string,"infinity") == 0)
