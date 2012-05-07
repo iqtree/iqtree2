@@ -48,16 +48,12 @@ GTRModel::GTRModel(PhyloTree *tree)
 	for (i = 0; i < num_states; i++)
 		inv_eigenvectors[i] = new double[num_states];
 		
-
 	eigen_coeff = new double[ncoeff];
-
 
 	phylo_tree->aln->computeEmpiricalRate(rates);
 	//eigen_coeff_derv1 = new double[ncoeff];
 	//eigen_coeff_derv2 = new double[ncoeff];
-
 	num_params = getNumRateEntries() - 1;
-
 }
 
 void GTRModel::setTree(PhyloTree *tree) {
@@ -80,14 +76,12 @@ void GTRModel::init(StateFreqType type) {
 		break;
 	default: break;
 	}
-
 	decomposeRateMatrix();
 }
 
 void GTRModel::writeInfo(ostream &out) {
 	if (num_states != 4) return;
 	out << "Rate parameters:" << endl;
-	
 	out << "  A-C: " << rates[0] << endl;
 	out << "  A-G: " << rates[1] << endl;
 	out << "  A-T: " << rates[2] << endl;
@@ -102,10 +96,8 @@ void GTRModel::writeInfo(ostream &out) {
 	out << "  T: " << state_freq[3] << endl;
 }
 
-
 void GTRModel::computeTransMatrix(double time, double *trans_matrix) {
 	/* compute P(t) */
-
 	double evol_time = time / total_num_subst;
 	double exptime[num_states];
 	int i, j, k;
@@ -373,8 +365,6 @@ void GTRModel::decomposeRateMatrix(){
 	/* eigensystem of 1 PAM rate matrix */
 	eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
 	//eigensystem(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);  
-
-	
 
 	for (i = 0; i < num_states; i++)
 		for (j = 0; j < num_states; j++) {

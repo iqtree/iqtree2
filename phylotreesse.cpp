@@ -19,6 +19,7 @@
  ***************************************************************************/
 #include "phylotree.h"
 
+
 /* BQM: to ignore all-gapp subtree at an alignment site */
 #define IGNORE_GAP_LH
 
@@ -95,7 +96,7 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
 }
 
 template<int NSTATES>
-inline void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
+void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
     // don't recompute the likelihood
     if (dad_branch->partial_lh_computed & 1)
         return;
@@ -244,9 +245,9 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodSSE<NSTATES > (dad_branch, dad);
+        computePartialLikelihoodSSE<NSTATES> (dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodSSE<NSTATES > (node_branch, node);
+        computePartialLikelihoodSSE<NSTATES> (node_branch, node);
     // now combine likelihood at the branch
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     df = ddf = 0.0;
@@ -271,12 +272,10 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     int discrete_cat = site_rate->getNDiscreteRate();
     if (!site_rate->isSiteSpecificRate())
         for (cat = 0; cat < discrete_cat; cat++) {
-            //trans_mat[cat] = model->newTransMatrix();
             double *trans_cat = trans_mat + (cat * tranSize);
             double *derv1_cat = trans_derv1 + (cat * tranSize);
             double *derv2_cat = trans_derv2 + (cat * tranSize);
             double rate_val = site_rate->getRate(cat);
-            //double rate_sqr = rate_val * rate_val;
             model_factory->computeTransDervFreq(dad_branch->length, rate_val, state_freq, trans_cat, derv1_cat, derv2_cat);
 
         }

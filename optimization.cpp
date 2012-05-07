@@ -398,7 +398,6 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 		xl = x1;	
 	}
 
-
 	dx=dxold=fabs(xh-xl);
 	for (j=1;j<=MAXIT;j++) {
 		if (
