@@ -1384,7 +1384,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 {
     //bool rooted = false;
     // read the tree file
-
+	cout << "Reading tree " << target_tree << " ..." << endl;
     mytree.init(target_tree, rooted);
     // reindex the taxa in the tree to aphabetical names
     NodeVector taxa;
@@ -1423,6 +1423,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 			if (!leaf) outError("Tree does not contain taxon ", *sit);
 			leaf->id = i;
 		}
+		sg.scaleWeight(100.0 / sg.maxWeight(), true);
     } else {
     	boot_trees.init(input_trees, rooted, burnin, tree_weight_file);
     	boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);

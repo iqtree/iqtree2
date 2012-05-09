@@ -314,6 +314,12 @@ double SplitGraph::calcTrivialWeight() {
 	return sum;
 }
 
+double SplitGraph::maxWeight() {
+	double m = -1e6;
+	for (iterator it = begin(); it != end(); it++)
+		if (m < (*it)->weight) m = (*it)->weight;
+	return m;
+}
 
 void SplitGraph::generateTaxaSet(char *filename, int size, int overlap, int times) {
 	ofstream out(filename);

@@ -179,6 +179,11 @@ public:
 	*/
 	double computeBoundary(Split &area);
 
+	 /**
+	  @return max split weight
+	 */
+	double maxWeight();
+	
 /********************************************************
 	compatibility
 ********************************************************/

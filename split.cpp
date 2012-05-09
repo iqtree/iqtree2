@@ -58,16 +58,17 @@ Split::Split(int antaxa, double aweight, vector<int> taxa_list)
 	// inverted mode: include the remaining part into the split
 
 	// if taxa_list contains more than half of taxa, turn on the inverted mode
-	bool inverted = (taxa_list.size() > ntaxa / 2);
 	/* if taxa_list contains exactly one haft of taxa, only turn on the inverted mode
 	 if taxon 0 is not in the list */
-	if (taxa_list.size() == ntaxa / 2) {
+/*	bool inverted = (taxa_list.size()*2 > ntaxa);
+	if (taxa_list.size()*2 == ntaxa) {
+		inverted = true;
 		for (it = taxa_list.begin(); it != taxa_list.end(); it++)
 			if ((*it) == 0) {
+				inverted = false;
 				break;
 			}
-		inverted = true;
-	}
+	}*/
 
 	// resize the split size
 	resize((ntaxa + UINT_BITS -1) / UINT_BITS, 0);
@@ -81,7 +82,8 @@ Split::Split(int antaxa, double aweight, vector<int> taxa_list)
 	}
 
 
-	if (inverted) invert();
+	//if (inverted) invert();
+	if (shouldInvert()) invert();
 
 }
 

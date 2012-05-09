@@ -19,10 +19,15 @@ configure_file (
 # so that we will find TutorialConfig.h
 include_directories("${PROJECT_BINARY_DIR}")
 
-#add_definitions(-std=c++0x)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIQ_TREE -O3 -Wno-deprecated -g0 -std=c++0x -Wall -Wno-sign-compare -Wno-unused-but-set-variable")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIQ_TREE -O3 -Wno-deprecated -g0 -std=c++98 -Wall -Wno-sign-compare -Wno-unused")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DIQ_TREE -O3 -g0 -Wall -std=gnu99 -Wno-sign-compare -Wno-unused")
+add_definitions(-DIQ_TREE)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused")
+
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
+
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g2")
+set(CMAKE_C_FLAGS_DEBUG "-O0 -g2")
 
 add_subdirectory(ncl)
 add_subdirectory(whtest)
