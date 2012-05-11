@@ -1423,7 +1423,9 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 			if (!leaf) outError("Tree does not contain taxon ", *sit);
 			leaf->id = i;
 		}
-		sg.scaleWeight(100.0 / sg.maxWeight(), true);
+		double m = 100.0 / sg.maxWeight();
+		cout << "Rescaling split weights by " << m << endl;
+		sg.scaleWeight(m, true);
     } else {
     	boot_trees.init(input_trees, rooted, burnin, tree_weight_file);
     	boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);

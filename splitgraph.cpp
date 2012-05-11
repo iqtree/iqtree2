@@ -91,7 +91,7 @@ void SplitGraph::init(Params &params)
 		nexus.Add(splits);
 		nexus.Add(pda);
 		nexus.Add(sets);
-		nexus.Add(trees);
+		//nexus.Add(trees);
 
 		MyToken token(nexus.inf);
 		nexus.Execute(token);
