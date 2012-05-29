@@ -808,14 +808,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << "Random seed: " << params.ran_seed << endl;
     cout << "Lambda for local search: " << params.lambda << endl;
     if (params.speed_conf != 1.0) {
-    	if (alignment->getNSeq() <= 100) {
-    		params.speed_conf = 0.95;
-    	} else {
-    		params.speed_conf = 0.75;
-    	}
-        cout <<"Confidence value for speed up: " << params.speed_conf << endl;
+        cout <<"Confidence value for speed up NNI: ";
+		if (params.new_heuristic) cout << "Using 50%*"<< params.speed_conf <<endl; else cout << "N" << params.speed_conf << " * delta" << params.speed_conf <<endl;
     } else {
-        cout <<"Speed up: disabled " << endl;
+        cout <<"Speed up NNI: disabled " << endl;
     }
 	cout << "NNI cutoff: " << params.nni_cutoff << endl;
 
@@ -1409,6 +1405,8 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
     mytree.getTaxaName(taxname);
 
     // read the bootstrap tree file
+	double scale=100.0;
+	if (params->scaling_factor > 0) scale = params->scaling_factor;
 
     MTreeSet boot_trees;
     if (params && detectInputFile((char*)input_trees) == IN_NEXUS) {
@@ -1423,14 +1421,20 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 			if (!leaf) outError("Tree does not contain taxon ", *sit);
 			leaf->id = i;
 		}
-		double m = 100.0 / sg.maxWeight();
-		cout << "Rescaling split weights by " << m << endl;
-		sg.scaleWeight(m, true);
+		scale /= sg.maxWeight();
     } else {
     	boot_trees.init(input_trees, rooted, burnin, tree_weight_file);
     	boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
-	    sg.scaleWeight(100.0 / boot_trees.sumTreeWeights(), true);
+    	scale /= boot_trees.sumTreeWeights();
     }
+    //sg.report(cout);
+	cout << "Rescaling split weights by " << scale << endl;
+	if (params->scaling_factor < 0) 
+	  sg.scaleWeight(scale, true);
+	else {
+	  sg.scaleWeight(scale, false, params->numeric_precision);
+	}
+
      cout << sg.size() << " splits found" << endl;
    // compute the percentage of appearance
     //	printSplitSet(sg, hash_ss);

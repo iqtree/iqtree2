@@ -779,19 +779,33 @@ double IQPTree::doIQPNNI(Params &params) {
         int skipped = 0;
         int nni_count = 0;
         if (enableHeuris) {
-			if (params.new_heuristic) {
-				/*
-				nni_count_est = estNMedian ();
-				nni_delta_est = estDelta95 ();
-				*/
-			} else if (cur_iteration > SPEED_UP_AFTER_ITER_NUM) {
-				/*
-				nni_count_est = estN95();
-				nni_delta_est = estDelta95();
+			if (cur_iteration > SPEED_UP_AFTER_ITER_NUM) {
+				if (!params.new_heuristic) {				
+				  nni_count_est = estN95 ();
+				  nni_delta_est = estDelta95 ();
+				} else {
+				  double nni_count_est95 = estN95();
+				  double nni_delta_est95 = estDelta95();
+				  double nni_count_estMedian = estNMedian();
+				  double nni_delta_estMedian = estDeltaMedian();
+				  double maxScore;
+				  double maxScore1 = nni_delta_est95 * nni_count_estMedian;
+				  double maxScore2 = nni_delta_estMedian * nni_count_est95;
+				  if (maxScore2 > maxScore1) {
+					maxScore = maxScore2;
+					nni_count_est = nni_count_est95;
+					nni_delta_est = nni_delta_estMedian;
+				  } else {
+					maxScore = maxScore1;
+					nni_count_est = nni_count_estMedian;
+					nni_delta_est = nni_delta_est95;
+				  }
+					
+				}
 				cout << "Estimated number of NNIs : "<< nni_count_est << endl;
 				cout << "Estimated lh improvement per NNI : " << nni_delta_est << endl;
-				*/
-				nni_count = optimizeNNI(true, &skipped);
+				
+				 optimizeNNI(true, &skipped, &nni_count);
             } else {
                 optimizeNNI();
             }
@@ -916,14 +930,15 @@ double IQPTree::doIQPNNI(Params &params) {
 /****************************************************************************
  Fast Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
-
-int IQPTree::optimizeNNI(bool beginHeu, int* skipped) {
+double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     bool resetLamda = true;
     bool foundBetterTree = true;
     curLambda = startLambda;
 	if (skipped) *skipped = 0;
 	nni_round = 0; // number of NNI round
 	int nni_count = 0;
+	if (nni_count_ret) *nni_count_ret = nni_count;
+
 	int nni2apply = 0; // number of nni to be applied in this round
 	int nonconf_nni = 0; // number of non-conflicting NNIs found in this round
     do {
@@ -942,7 +957,8 @@ int IQPTree::optimizeNNI(bool beginHeu, int* skipped) {
 				}
 			}
             if (beginHeu) {
-                double maxScore = curScore + nni_delta_est * (nni_count_est - nni_count);
+				double maxScore = curScore + nni_delta_est * (nni_count_est - nni_count);
+				if (maxScore < curScore) maxScore = curScore;
                 if (maxScore <= bestScore) {
                     if (skipped) *skipped = 1;
                     return curScore;
@@ -978,6 +994,7 @@ int IQPTree::optimizeNNI(bool beginHeu, int* skipped) {
                 vecImpProNNI.push_back((newScore - curScore) / nni2apply);
 			}
             nni_count += nni2apply;                
+			if (nni_count_ret) *nni_count_ret = nni_count;
             curScore = newScore; // Update the current score
             resetLamda = true;            
         } else {            
@@ -1044,7 +1061,7 @@ void IQPTree::genNonconfNNIs() {
 		 }
 }
 
-int IQPTree::estN95() {
+double IQPTree::estN95() {
     if ( vecNumNNI.size() == 0 ) {
         return 0;
     } else {
@@ -1054,7 +1071,7 @@ int IQPTree::estN95() {
     }
 }
 
-int IQPTree::estNMedian() {
+double IQPTree::estNMedian() {
     if ( vecNumNNI.size() == 0 ) {
         return 0;
     } else {
@@ -1065,6 +1082,22 @@ int IQPTree::estNMedian() {
 			median = (vecNumNNI[size / 2 + 1] + vecNumNNI[size/2]) / 2;
 		} else {
 			median = vecNumNNI[size/2];
+		}
+		return median;
+    }
+}
+
+double IQPTree::estDeltaMedian() {
+    if ( vecImpProNNI.size() == 0 ) {
+        return 0;
+    } else {
+		double median;
+		size_t size = vecImpProNNI.size();
+		sort(vecImpProNNI.begin(), vecImpProNNI.end());
+		if (size % 2 == 0) {
+			median = (vecImpProNNI[size / 2 + 1] + vecImpProNNI[size/2]) / 2;
+		} else {
+			median = vecImpProNNI[size/2];
 		}
 		return median;
     }

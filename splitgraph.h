@@ -162,8 +162,9 @@ public:
 		scale the weight of all splits to a norm factor
 		@param norm normalized factor
 		@param make_int TRUE to round weights to int, FALSE otherwise
+		@param precision numerical precision, default (-1) for no rounding
 	*/
-	void scaleWeight(double norm, bool make_int = false);
+	void scaleWeight(double norm, bool make_int = false, int precision = -1);
 
 
 	/**

@@ -800,7 +800,9 @@ void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *
         *resp += *sp;
         if (sp->shouldInvert())
             sp->invert();
-        sg.push_back(sp);
+		 /* ignore nodes with degree of 2 because such split will be added before */
+        if (node->degree() != 2) 
+		  sg.push_back(sp);
         if (nodes) nodes->push_back((*it)->node);
         has_child = true;
     }

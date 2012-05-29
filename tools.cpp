@@ -546,6 +546,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.exclusive_pd = false;
 	params.complement_area = NULL;
 	params.scaling_factor = -1;
+	params.numeric_precision = -1;
 	params.binary_programming = false;
 	params.quad_programming = false;
 	params.test_input = TEST_NONE;
@@ -939,6 +940,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -scalenode <scaling_factor>";
 				params.scaling_factor = convert_double(argv[cnt]);
+			} else if (strcmp(argv[cnt],"-prec") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -prec <numeric_precision>";
+				params.numeric_precision = convert_int(argv[cnt]);
 			} else if (strcmp(argv[cnt],"-lp") == 0) {
 				params.run_mode = LINEAR_PROGRAMMING;
 			} else if (strcmp(argv[cnt],"-lpbin") == 0) {

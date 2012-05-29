@@ -536,12 +536,14 @@ void SplitGraph::saveFile(const char* out_file, bool omit_trivial) {
     }
 }
 
-void SplitGraph::scaleWeight(double norm, bool make_int) {
+void SplitGraph::scaleWeight(double norm, bool make_int, int precision) {
 	for (iterator itg = begin(); itg != end(); itg ++ )
 		if (make_int)
 			(*itg)->setWeight( round((*itg)->getWeight()*norm) );
-		else
+		else if (precision < 0)
 			(*itg)->setWeight( (*itg)->getWeight()*norm);
+		else 
+			(*itg)->setWeight( round((*itg)->getWeight()*norm*pow10(precision))/pow10(precision));
 }
 
 bool SplitGraph::containSplit(Split &sp) {

@@ -204,20 +204,21 @@ public:
             Fast Nearest Neighbor Interchange by maximum likelihood
      ****************************************************************************/
 
-    /**
+
+	/**
             This implement the fastNNI algorithm proposed in PHYML paper
             TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
-            @return number of NNI applied
-            @param skipped (OUT) 1 if current iteration is skipped, otherwise 0. Just to know
-	 whether the local search had been run to the end or it was stopped inbetween
+            @return best likelihood found
+            @param skipped (OUT) 1 if current iteration is skipped, otherwise 0
             @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    int optimizeNNI(bool beginHeu=false, int* skipped = NULL);
+    double optimizeNNI(bool beginHeu=false, int *skipped = NULL, int *nni_count = NULL);
+
 
     /**
             search all positive NNI move on the current tree and save them on the possilbleNNIMoves list            
      */
-    void genNNIMoves(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void genNNIMoves(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
             search all positive NNI move on the current tree and save them 
@@ -296,14 +297,21 @@ public:
                                                            details)
      * @return the estimated value
      */
-    inline int estN95(void);
+    inline double estN95(void);
 
     /**
      * Estimate the median of the distribution of N (see paper for more d
                                                            details)
      * @return the estimated value
      */	
-	inline int estNMedian(void);
+	inline double estNMedian(void);
+	
+	 /**
+     * Estimate the median of the distribution of N (see paper for more d
+                                                           details)
+     * @return the estimated value
+     */	
+	inline double estDeltaMedian(void);
 
     /**
      * Estimate the 95% quantile of the distribution of DELTA (see paper for 
@@ -429,12 +437,12 @@ protected:
     //int nbNNI;
 
     /**
-     * 95% confidence value for number of NNIs found in one iteration
+     * confidence value for number of NNIs found in one iteration
      */
     int nni_count_est;
 
     /**
-     * 95% confidence value for likelihood improvement made by one NNI
+     * confidence value for likelihood improvement made by one NNI
      */
     double nni_delta_est;
 

@@ -408,12 +408,17 @@ void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, 
 			// if found smt
 			if (sp != NULL) {
 				//Split *sp = ass_it->first;
-				char tmp[100];
+				/*char tmp[100];
 				if ((*it)->node->name.empty()) {
-					sprintf(tmp, "%d", (int)(sp->getWeight()));
+					sprintf(tmp, "%d", round(sp->getWeight()));
 				} else
-					sprintf(tmp, "/%d", (int)(sp->getWeight()));
-				(*it)->node->name.append(tmp);
+					sprintf(tmp, "/%d", round(sp->getWeight()));*/
+				stringstream tmp;
+				if ((*it)->node->name.empty())
+				  tmp << sp->getWeight();
+				else
+				  tmp << "/" << sp->getWeight();
+				(*it)->node->name.append(tmp.str());
 			} else {
 				if (!(*it)->node->name.empty()) (*it)->node->name.append("/");
 				(*it)->node->name.append("0");

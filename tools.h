@@ -1030,6 +1030,9 @@ struct Params {
 		number of bootstrap samples for AvH curiosity
 	*/
 	int avh_test;
+	
+	/** precision when printing out for floating-point number */
+	int numeric_precision;
 };
 
 /**
