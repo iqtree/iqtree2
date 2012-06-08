@@ -19,7 +19,7 @@
  ***************************************************************************/
 #include "iqptree.h"
 #include "phylosupertree.h"
-
+#include "mexttree.h"
 
 //TODO Only to test
 int cntBranches = 0;
@@ -140,6 +140,16 @@ void IQPTree::setParams(Params &params) {
 	print_tree_lh = params.print_tree_lh;
 	max_candidate_trees = params.max_candidate_trees;
 	setRootNode(params.root);
+	
+	if (params.online_bootstrap) {
+		cout << "Generating " << params.gbo_replicates << " samples for ultra-fast bootstrap..." << endl;
+		boot_samples.resize(params.gbo_replicates);
+		boot_logl.resize(params.gbo_replicates, -DBL_MAX);
+		boot_trees.resize(params.gbo_replicates, -1);
+		for (int i = 0; i < params.gbo_replicates; i++) {
+			aln->createBootstrapAlignment(boot_samples[i]);
+		}
+	}
 }
 
 IQPTree::~IQPTree() {
@@ -1525,28 +1535,33 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 	printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	string tree_str = ostr.str();
 	StringIntMap::iterator it = treels.find(tree_str);
+	int tree_index = -1;
 	if (it != treels.end()) {// already in treels
 		duplication_counter++;
+		tree_index = it->second;
 		if (cur_logl <= treels_logl[it->second]+1e-4) {
 			if (cur_logl < treels_logl[it->second]-5.0)
 			cout << "Current lh " << cur_logl << " is much worse than expected " << treels_logl[it->second] << endl;
 			return;
 		}
 		if (verbose_mode >= VB_MAX) 
-			cout << "Updated logl " <<treels_logl[it->second] <<
-				" to " << cur_logl << endl;
+			cout << "Updated logl " <<treels_logl[it->second] << " to " << cur_logl << endl;
 		treels_logl[it->second] = cur_logl;
 		if (save_all_br_lens) {
 			ostr.seekp(ios::beg);
 			printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
 			treels_newick[it->second] = ostr.str();
 		}
-		computePatternLikelihood(treels_ptnlh[it->second], &cur_logl);
-		return;
+		if (boot_samples.empty()) {
+		  computePatternLikelihood(treels_ptnlh[it->second], &cur_logl);
+		  return;
+		}
 	}
 	else {
 		if (logl_cutoff != 0.0 && cur_logl <= logl_cutoff + 1e-4) return;
-		treels[tree_str] = treels_ptnlh.size();
+		tree_index = treels_logl.size();
+		treels[tree_str] = treels_logl.size();
+		treels_logl.push_back(cur_logl);
 	}
 
 	if (write_intermediate_trees) printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
@@ -1554,8 +1569,24 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 	double *pattern_lh = new double[aln->getNPattern()];
 	computePatternLikelihood(pattern_lh, &cur_logl);
 
-	treels_ptnlh.push_back(pattern_lh);
-	treels_logl.push_back(cur_logl);
+	if (boot_samples.empty()) {
+		// for runGuidedBootstrap
+		treels_ptnlh.push_back(pattern_lh);
+	} else {
+		// online bootstrap
+		int nptn = aln->getNPattern();
+		int updated = 0;
+		for (int sample = 0; sample < boot_samples.size(); sample++) {
+			double rell = 0.0;
+			for (int ptn = 0; ptn < nptn; ptn++) rell += pattern_lh[ptn] * boot_samples[sample][ptn];
+			if (rell > boot_logl[sample]) {
+				boot_logl[sample] = rell;
+				boot_trees[sample] = tree_index;
+				updated++;
+			}
+		}
+		if (updated && verbose_mode >= VB_MED) cout << updated << " boot trees updated" << endl;
+	} 
 	if (save_all_br_lens) {
 		ostr.seekp(ios::beg);
 		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_SCALE | WT_BR_LEN_ROUNDING);
@@ -1572,7 +1603,94 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 			out_sitelh << "\t" << pattern_lh[aln->getPatternID(i)];
 		out_sitelh << endl;
 	}
+	if (!boot_samples.empty()) delete [] pattern_lh;
 }
+
+void IQPTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
+    int sum_weights = trees.sumTreeWeights();
+    int i;
+    if (verbose_mode >= VB_MED) {
+        for (i = 0; i < trees.size(); i++)
+            if (trees.tree_weights[i] > 0)
+                cout << "Tree " << i+1 << " weight= " << (double)trees.tree_weights[i] * 100 / sum_weights << endl;
+    }
+    int max_tree_id = max_element(trees.tree_weights.begin(), trees.tree_weights.end()) - trees.tree_weights.begin();
+    cout << "max_tree_id = " << max_tree_id+1 << "   max_weight = " << trees.tree_weights[max_tree_id];
+    cout << " (" << (double)trees.tree_weights[max_tree_id] * 100 / sum_weights << "%)"<< endl;
+    // assign bootstrap support
+    SplitGraph sg;
+    SplitIntMap hash_ss;
+    // make the taxa name
+    vector<string> taxname;
+    taxname.resize(leafNum);
+    getTaxaName(taxname);
+
+    /*if (!tree.save_all_trees)
+    	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
+    else
+    	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false);
+    */
+    trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false); // do not sort taxa
+
+    cout << sg.size() << " splits found" << endl;
+    // compute the percentage of appearance
+    sg.scaleWeight(100.0 / trees.sumTreeWeights(), true);
+    //	printSplitSet(sg, hash_ss);
+    //sg.report(cout);
+    cout << "Creating bootstrap support values..." << endl;
+    stringstream tree_stream;
+    printTree(tree_stream, WT_TAXON_ID |  WT_BR_LEN);
+    MExtTree mytree;
+    mytree.readTree(tree_stream, rooted);
+    mytree.assignLeafID();
+    mytree.createBootstrapSupport(taxname, trees, sg, hash_ss);
+
+    // now write resulting tree with supports
+    tree_stream.seekp(0, ios::beg);
+    mytree.printTree(tree_stream);
+
+    // now read resulting tree
+    tree_stream.seekg(0, ios::beg);
+    freeNode();
+    readTree(tree_stream, rooted);
+    assignLeafNames();
+    initializeAllPartialLh();
+    clearAllPartialLH();
+
+    string out_file;
+
+    if (!save_all_trees) {
+        out_file = params.out_prefix;
+        out_file += ".suptree";
+
+        printTree(out_file.c_str());
+        cout << "Tree with assigned bootstrap support written to " << out_file << endl;
+    }
+
+    out_file = params.out_prefix;
+    out_file += ".splits";
+
+    sg.saveFile(out_file.c_str(), true);
+    cout << "Split supports printed to NEXUS file " << out_file << endl;
+
+    out_file = params.out_prefix;
+    out_file += ".supval";
+    writeInternalNodeNames(out_file);
+
+    cout << "Support values written to " << out_file << endl;
+}
+
+void IQPTree::summarizeBootstrap(Params &params)
+{
+	MTreeSet trees;
+	IntVector tree_weights;
+	tree_weights.resize(treels.size(), 0);
+	for (int sample = 0; sample < boot_trees.size(); sample++)
+		tree_weights[boot_trees[sample]]++;
+	trees.init(treels, rooted, tree_weights);
+	summarizeBootstrap(params, trees);
+}
+
 
 void IQPTree::addPositiveNNIMove(NNIMove myMove) {
     posNNIs.push_back(myMove);
@@ -1675,21 +1793,4 @@ void IQPTree::printIntermediateTree(int brtype, Params &params) {
 	save_all_trees = 2;
 	genNNIMoves();
 	save_all_trees = x;
-/*
-	ofstream *out = NULL;
-	if (params.write_intermediate_trees) out = &out_treels;
-
-	if (params.print_tree_lh)
-		if (params.avoid_duplicated_trees) 
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh, 
-			&treels, &treels_ptnlh, &treels_logl, &max_candidate_trees, &logl_cutoff);
-		else
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, &out_treelh, &out_sitelh);
-	else
-		if (params.avoid_duplicated_trees) 
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN, NULL, NULL, 
-			&treels, &treels_ptnlh, &treels_logl, &max_candidate_trees, &logl_cutoff);
-		else
-			PhyloTree::optimizeNNI(0.0, NULL, NULL, out, WT_NEWLINE | WT_BR_LEN);*/
-	// now print 1-NNI-away trees
 }

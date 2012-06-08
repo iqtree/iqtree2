@@ -389,8 +389,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, do
 			SwapNNIParam nni_param;
 			nni_param.node1_nei = node1_nei->link_neighbors[part];
 			nni_param.node2_nei = node2_nei->link_neighbors[part];
-			(*it)->swapNNIBranch(0.0, (PhyloNode*)nei2_part->node, (PhyloNode*)nei1_part->node, NULL, 0,
-				&nni_param);
+			(*it)->swapNNIBranch(0.0, (PhyloNode*)nei2_part->node, (PhyloNode*)nei1_part->node, &nni_param);
 
 			part_info[part].nni1_score[brid] = nni_param.nni1_score;
 			part_info[part].nni2_score[brid] = nni_param.nni2_score;

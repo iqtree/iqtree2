@@ -560,10 +560,11 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL, 
-    	ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL, ostream *site_lh = NULL, 
+    double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL
+		/*,ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL, ostream *site_lh = NULL, 
     	StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL, 
-    	int *max_trees = NULL, double *logl_cutoff = NULL);
+    	int *max_trees = NULL, double *logl_cutoff = NULL*/
+	);
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
@@ -571,13 +572,15 @@ public:
             @param cur_score current likelihood score
             @param node1 1st end node of the branch
             @param node2 2nd end node of the branch
+            @param nni_param (OUT) if not NULL: swapping information returned
             @return the likelihood of the tree
      */
-    double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
-    	ostream *out = NULL, int brtype = 0, SwapNNIParam *nni_param = NULL, 
+    double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL
+    /*,	ostream *out = NULL, int brtype = 0, 
     	ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL, 
     	vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL, 
-    	int *max_trees = NULL, double *logl_cutoff = NULL);
+    	int *max_trees = NULL, double *logl_cutoff = NULL
+	*/);
 
     /**
             Do an NNI

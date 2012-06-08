@@ -628,6 +628,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.use_max_tree_per_bootstrap = true;
 	params.max_candidate_trees = 10000;
 	params.distinct_trees = true;
+	params.online_bootstrap = true;
 	//const double INF_NNI_CUTOFF = -1000000.0;
 	params.nni_cutoff = -1000000.0;
 	params.estimate_nni_cutoff = false;
@@ -1330,6 +1331,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -bmax <max_candidate_trees>";
 				params.max_candidate_trees = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-boff") == 0) {
+				params.online_bootstrap = false;
 			} else if (strcmp(argv[cnt], "-nodiff") == 0) {
 				params.distinct_trees = false;
 			} else if (strcmp(argv[cnt], "-norell") == 0) {

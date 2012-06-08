@@ -874,6 +874,8 @@ struct Params {
      */
     bool print_tree_lh;
 
+	/****** adaptive NNI search heuristic ******/
+	
     /**
      *  Output log-likelihood
      */
@@ -896,6 +898,8 @@ struct Params {
 
 	bool new_heuristic;
 
+	/***** WH-test (Weiss & von Haeseler 2003) *****/
+	
 	/**
 		Results of Weiss & Haeseler test of model homogeneity
 	*/
@@ -919,6 +923,8 @@ struct Params {
 	*/
 	char *rate_file;
 
+	/***** NGS stuffs   ********/
+	
 	/**
 		next-generation sequencing input file for Fritz project
 	*/
@@ -948,6 +954,8 @@ struct Params {
 	*/
 	bool gene_pvalue_loga;
 
+	/***** variables for reading NCBI taxonomy tree *******/
+	
 	/**
 		NCBI taxonomy ID, for processing nodes.dmp file
 	*/
@@ -967,7 +975,10 @@ struct Params {
 		typically names.dmp from NCBI
 	*/
 	const char *ncbi_names_file;
-
+	
+	/**********************************************/
+	/**** variables for ultra-fast bootstrap ******/
+	
 	/**
 		number of replicates for guided bootstrap
 	*/
@@ -1004,6 +1015,12 @@ struct Params {
 	/** TRUE if user_file contains topologically distinct trees */
 	bool distinct_trees;
 
+	/** NEW: TRUE to update bootstrap trees during the search (do not store treels_ptnlh).
+		FALSE to call runGuidedBootstrap() at the end */
+	bool online_bootstrap;
+	
+	/****** variables for NNI cutoff heuristics ******/
+	
 	/** 
 		TRUE to empirically estimate nni_cutoff
 	*/

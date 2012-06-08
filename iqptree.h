@@ -27,7 +27,7 @@
 #include <stack>
 #include <vector>
 #include "stoprule.h"
-
+#include "mtreeset.h"
 
 #define SPEED_UP_AFTER_ITER_NUM 100
 
@@ -503,11 +503,11 @@ protected:
     int k_represent;
 
 public:
-
+	/****** following variables are for ultra-fast bootstrap *******/
 	/** 2 to save all trees, 1 to save intermediate trees */
 	int save_all_trees;
 
-	/** TRUE to save also branch lengths into treels_newick */	
+	/** TRUE to save also branch lengths into treels_newick */
 	bool save_all_br_lens;
 
 	/**
@@ -525,11 +525,29 @@ public:
 	/** NEWICK string for each treels */
 	StrVector treels_newick;
 	
+	/** maximum number of distinct candidate trees (tau parameter) */
 	int max_candidate_trees;
 	
+	/** log-likelihood threshold (l_min) */
 	double logl_cutoff;
+	
+	/** vector of bootstrap alignments generated */
+	vector<IntVector> boot_samples;
+
+	/** newick string of corresponding bootstrap trees */
+	IntVector boot_trees;
+
+	/** corresponding RELL log-likelihood */
+	DoubleVector boot_logl;
+	
+	/** summarize all bootstrap trees */
+
+	void summarizeBootstrap(Params &params, MTreeSet &trees);
+
+	void summarizeBootstrap(Params &params);
 
 protected:
+	/**** NNI cutoff heuristic *****/
 	/**
 	*/
 	vector<NNIInfo> nni_info;

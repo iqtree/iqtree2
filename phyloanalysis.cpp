@@ -1109,7 +1109,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	}
 
     if (!tree.isSuperTree() && params.gbo_replicates > 0) {
-		runGuidedBootstrap(params, alignment, tree);
+		if (!params.online_bootstrap)
+			runGuidedBootstrap(params, alignment, tree);
+		else
+			tree.summarizeBootstrap(params);
 	}
 
 	cout << "Total tree length: " << tree.treeLength() << endl;

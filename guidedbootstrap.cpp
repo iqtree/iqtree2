@@ -861,7 +861,8 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQPTree &tree)
         			outError("Different number of sitelh vectors");*/
     }
 
-    int sum_weights = trees.sumTreeWeights();
+	tree.summarizeBootstrap(params, trees);
+/*    int sum_weights = trees.sumTreeWeights();
     if (verbose_mode >= VB_MED) {
         for (i = 0; i < trees.size(); i++)
             if (trees.tree_weights[i] > 0)
@@ -878,11 +879,6 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQPTree &tree)
     taxname.resize(tree.leafNum);
     tree.getTaxaName(taxname);
 
-    /*if (!tree.save_all_trees)
-    	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
-    else
-    	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false);
-    */
     trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false); // do not sort taxa
 
     cout << sg.size() << " splits found" << endl;
@@ -930,8 +926,8 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQPTree &tree)
     out_file += ".supval";
     tree.writeInternalNodeNames(out_file);
 
-    cout << "Support values written to " << out_file << endl;
-
+    cout << "Support values written to " << out_file << endl;*/
+    
     /*
     if (!tree.save_all_trees) {
     	for (vector<double* >::reverse_iterator it = pattern_lhs->rbegin(); it != pattern_lhs->rend(); it++)
