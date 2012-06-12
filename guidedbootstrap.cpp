@@ -526,6 +526,7 @@ void computeAllPatternLh(Params &params, IQPTree &tree) {
                 max_logl_diff = max(max_logl_diff, fabs(tree.curScore-expected_lh));
             tree.treels_ptnlh.push_back(pattern_lh);
             tree.treels_logl.push_back(tree.curScore);
+			cout << "Tree " << tree.treels_logl.size() << ": " << tree.curScore << endl;
             if (tree.treels_ptnlh.size() % 500 == 0)
                 cout << tree.treels_ptnlh.size() << " trees evaluated" << endl;
         }

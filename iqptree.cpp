@@ -141,7 +141,7 @@ void IQPTree::setParams(Params &params) {
 	max_candidate_trees = params.max_candidate_trees;
 	setRootNode(params.root);
 	
-	if (params.online_bootstrap) {
+	if (params.online_bootstrap && params.gbo_replicates > 0) {
 		cout << "Generating " << params.gbo_replicates << " samples for ultra-fast bootstrap..." << endl;
 		boot_samples.resize(params.gbo_replicates);
 		boot_logl.resize(params.gbo_replicates, -DBL_MAX);
@@ -1566,6 +1566,9 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 
 	if (write_intermediate_trees) printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
 
+	
+	if (verbose_mode >= VB_MED) 
+		cout << "treels_logl " << treels_logl.size() << ": " << cur_logl << endl;
 	double *pattern_lh = new double[aln->getNPattern()];
 	computePatternLikelihood(pattern_lh, &cur_logl);
 
