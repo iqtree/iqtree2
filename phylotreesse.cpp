@@ -53,11 +53,9 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
     double *trans_state;
     double p_invar = site_rate->getPInvar();
     double p_var_cat = (1.0 - p_invar) / (double) numCat;
-
     EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
     EIGEN_ALIGN16 double state_freq[NSTATES];
     model->getStateFrequency(state_freq);
-
     for (cat = 0; cat < numCat; cat++) {
         double *trans_cat = trans_mat + (cat * tranSize);
         model_factory->computeTransMatrix(dad_branch->length * site_rate->getRate(cat), trans_cat);
@@ -277,7 +275,6 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
             double *derv2_cat = trans_derv2 + (cat * tranSize);
             double rate_val = site_rate->getRate(cat);
             model_factory->computeTransDervFreq(dad_branch->length, rate_val, state_freq, trans_cat, derv1_cat, derv2_cat);
-
         }
     bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
     int dad_state = STATE_UNKNOWN;

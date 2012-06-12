@@ -798,23 +798,19 @@ double IQPTree::doIQPNNI(Params &params) {
 				  double nni_delta_est95 = estDelta95();
 				  double nni_count_estMedian = estNMedian();
 				  double nni_delta_estMedian = estDeltaMedian();
-				  double maxScore;
 				  double maxScore1 = nni_delta_est95 * nni_count_estMedian;
 				  double maxScore2 = nni_delta_estMedian * nni_count_est95;
 				  if (maxScore2 > maxScore1) {
-					maxScore = maxScore2;
 					nni_count_est = nni_count_est95;
 					nni_delta_est = nni_delta_estMedian;
 				  } else {
-					maxScore = maxScore1;
 					nni_count_est = nni_count_estMedian;
 					nni_delta_est = nni_delta_est95;
 				  }
 					
 				}
-				cout << "Estimated number of NNIs : "<< nni_count_est << endl;
-				cout << "Estimated lh improvement per NNI : " << nni_delta_est << endl;
-				
+				//cout << "Estimated number of NNIs : "<< nni_count_est << endl;
+				//cout << "Estimated lh improvement per NNI : " << nni_delta_est << endl;
 				 optimizeNNI(true, &skipped, &nni_count);
             } else {
                 optimizeNNI();
@@ -864,7 +860,7 @@ double IQPTree::doIQPNNI(Params &params) {
            		cout <<	" (" << convert_time(remaining_secs) << "s left)";
            cout << endl;
 		}
-		cout << "duplication_counter = " << 	duplication_counter << endl;
+		//cout << "duplication_counter = " << 	duplication_counter << endl;
 
 
 
@@ -998,6 +994,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         }
         nni2apply = ceil(nonconf_nni * curLambda);
 		applyNNIs(nni2apply);
+		//changeAllBran();
         double newScore = optimizeAllBranches(1);
         if (newScore > curScore + TOL_LIKELIHOOD) {
             if (enableHeuris) {
@@ -1039,7 +1036,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             vecNumNNI.push_back(nni_count);
         }
     } else {
-        //cout << "Local search could not find any better tree !!!" << endl;
+        cout << "Local search could not find any better tree !!!" << endl;
     }
     return curScore;
 }
