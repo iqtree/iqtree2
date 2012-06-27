@@ -514,18 +514,16 @@ double IQPTree::doIQP() {
     clearAllPartialLH();
 
 	// optimize branches at the reinsertion point
-/*
 	for (PhyloNodeVector::iterator dit = del_leaves.begin(); dit != del_leaves.end(); dit++) {
 		PhyloNode *adj_node = (PhyloNode*)(*dit)->neighbors[0]->node;
 		FOR_NEIGHBOR_IT(adj_node, (*dit), it)
 			curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*it)->node);
 		//curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
 	}
-	double score = curScore;
-*/
+	//double score = curScore;
 	/** BQM: please check careful! */
     //curScore = optimizeAllBranches(1);
-    curScore = optimizeAllBranches(5, 1.0);
+    //curScore = optimizeAllBranches(5, 1.0);
     //clearAllPartialLH();
     //double curScore2 = computeLikelihood();
     //cout << " diff = " << curScore - score << endl;
@@ -994,7 +992,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         }
         nni2apply = ceil(nonconf_nni * curLambda);
 		applyNNIs(nni2apply);
-		//changeAllBran();
+		changeAllBran();
         double newScore = optimizeAllBranches(1);
         if (newScore > curScore + TOL_LIKELIHOOD) {
             if (enableHeuris) {
@@ -1004,11 +1002,14 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 			if (nni_count_ret) *nni_count_ret = nni_count;
             curScore = newScore; // Update the current score
             resetLamda = true;            
-        } else {            
-            cout << " Tree score gets worse at NNI round: " << nni_round << endl;
-			cout << " Number of NNI moves applied: " << nni2apply << endl;
-			curLambda = curLambda / 2;		
-			cout << " Rollback tree with new lambda = " << curLambda << endl;			
+        } else {
+        	curLambda = curLambda / 2;
+        	if (verbose_mode >= VB_MED) {
+                cout << " Tree score gets worse at NNI round: " << nni_round << endl;
+    			cout << " Number of NNI moves applied: " << nni2apply << endl;
+    			cout << " Rollback tree with new lambda = " << curLambda << endl;
+        	}
+
             /* tree cannot be worse if only 1 NNI is applied */
             if ( nni2apply == 1) {
                 cout << "THIS IS A BUG !!!" << endl;
@@ -1028,7 +1029,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     } while (true);
 
     if (foundBetterTree) {
-        curScore = optimizeAllBranches();
+        curScore = optimizeAllBranches(1);
         if (save_all_trees == 2) {
 			saveCurrentTree(curScore); // BQM: for new bootstrap
 		}

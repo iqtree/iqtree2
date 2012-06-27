@@ -376,12 +376,11 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
     } else {
         return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
     }
-
 }
 
 
 void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
-    if (sse) {
+	if (sse) {
         switch (aln->num_states) {
         case 2:
             return computePartialLikelihoodSSE < 2 > (dad_branch, dad, pattern_scale);
