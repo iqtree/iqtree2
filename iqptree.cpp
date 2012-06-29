@@ -513,22 +513,27 @@ double IQPTree::doIQP() {
     setAlignment(aln);
     clearAllPartialLH();
 
-	// optimize branches at the reinsertion point
-	for (PhyloNodeVector::iterator dit = del_leaves.begin(); dit != del_leaves.end(); dit++) {
-		PhyloNode *adj_node = (PhyloNode*)(*dit)->neighbors[0]->node;
-		FOR_NEIGHBOR_IT(adj_node, (*dit), it)
-			curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*it)->node);
-		//curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
-	}
 	//double score = curScore;
 	/** BQM: please check careful! */
     //curScore = optimizeAllBranches(1);
-    //curScore = optimizeAllBranches(5, 1.0);
+    if (params->gbo_replicates)
+    	curScore = optimizeAllBranches(5, 1.0);
+    else {
+    	// optimize branches at the reinsertion point
+    	for (PhyloNodeVector::iterator dit = del_leaves.begin(); dit != del_leaves.end(); dit++) {
+    		PhyloNode *adj_node = (PhyloNode*)(*dit)->neighbors[0]->node;
+    		FOR_NEIGHBOR_IT(adj_node, (*dit), it)
+    			curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*it)->node);
+    		//curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
+    	}
+    }
+
     //clearAllPartialLH();
     //double curScore2 = computeLikelihood();
     //cout << " diff = " << curScore - score << endl;
     if (enable_parsimony)
     	cur_pars_score = computeParsimony();
+
 
     if (verbose_mode >= VB_MAX) {
         cout << "IQP Likelihood = " << curScore << "  Parsimony = " << cur_pars_score << endl;
