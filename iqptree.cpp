@@ -812,8 +812,8 @@ double IQPTree::doIQPNNI(Params &params) {
 				  }
 					
 				}
-				//cout << "Estimated number of NNIs : "<< nni_count_est << endl;
-				//cout << "Estimated lh improvement per NNI : " << nni_delta_est << endl;
+				if (cur_iteration % 10 == 0) 
+					cout << "Estimated number of NNIs: "<< nni_count_est << ", delta-logl per NNI: " << nni_delta_est << endl;
 				 optimizeNNI(true, &skipped, &nni_count);
             } else {
                 optimizeNNI();
@@ -863,7 +863,7 @@ double IQPTree::doIQPNNI(Params &params) {
            		cout <<	" (" << convert_time(remaining_secs) << "s left)";
            cout << endl;
 		}
-		//cout << "duplication_counter = " << 	duplication_counter << endl;
+		if (duplication_counter) cout << "duplication_counter = " << 	duplication_counter << endl;
 
 
 
@@ -1293,7 +1293,7 @@ void IQPTree::estimateNNICutoff(Params &params) {
 		delta[i] = lh_score[0] - lh_score[2];
 	}
 	std::sort(delta,delta+nni_info.size());
-	nni_cutoff = delta[nni_info.size()/10];
+	nni_cutoff = delta[nni_info.size()/20];
 	cout << endl << "Estimated NNI cutoff: " << nni_cutoff << endl;
 	string file_name = params.out_prefix;
 	file_name += ".nnidelta";
@@ -1592,6 +1592,11 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 			}
 		}
 		if (updated && verbose_mode >= VB_MED) cout << updated << " boot trees updated" << endl;
+		if (tree_index >= max_candidate_trees/2 && boot_splits.empty()) {
+			// summarize split support half way for stopping criterion
+			cout << "Summarizing current bootstrap supports..." << endl;
+			summarizeBootstrap();
+		}
 	} 
 	if (save_all_br_lens) {
 		ostr.seekp(ios::beg);
@@ -1629,8 +1634,11 @@ void IQPTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     // make the taxa name
     vector<string> taxname;
     taxname.resize(leafNum);
-    getTaxaName(taxname);
-
+    if (boot_splits.empty()) {
+		getTaxaName(taxname);
+	} else {
+		boot_splits.getTaxaName(taxname);
+	}
     /*if (!tree.save_all_trees)
     	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
     else
@@ -1639,7 +1647,12 @@ void IQPTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false); // do not sort taxa
 
     cout << sg.size() << " splits found" << endl;
-    // compute the percentage of appearance
+
+	if (!boot_splits.empty()) {
+		// check the stopping criterion for ultra-fast bootstrap
+		checkBootstrapStopping(sg);
+	}
+	// compute the percentage of appearance
     sg.scaleWeight(100.0 / trees.sumTreeWeights(), true);
     //	printSplitSet(sg, hash_ss);
     //sg.report(cout);
@@ -1697,6 +1710,98 @@ void IQPTree::summarizeBootstrap(Params &params)
 	summarizeBootstrap(params, trees);
 }
 
+void IQPTree::summarizeBootstrap()
+{
+	MTreeSet trees;
+	IntVector tree_weights;
+	tree_weights.resize(treels.size(), 0);
+	for (int sample = 0; sample < boot_trees.size(); sample++)
+		tree_weights[boot_trees[sample]]++;
+	trees.init(treels, rooted, tree_weights);
+    //SplitGraph sg;
+    //SplitIntMap hash_ss;
+    // make the taxa name
+    vector<string> taxname;
+    taxname.resize(leafNum);
+    getTaxaName(taxname);
+
+    /*if (!tree.save_all_trees)
+    	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
+    else
+    	trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false);
+    */
+    trees.convertSplits(taxname, boot_splits, boot_splits_map, SW_COUNT, -1, false); // do not sort taxa
+}
+
+double computeCorrelation(IntVector &ix, IntVector &iy) {
+	
+	assert(ix.size() == iy.size());
+	DoubleVector x;
+	DoubleVector y;
+	
+
+	double mx = 0.0, my = 0.0; // mean value
+	int i;
+	x.resize(ix.size());
+	y.resize(iy.size());
+	for (i = 0; i < x.size(); i++) {
+		x[i] = ix[i];
+		y[i] = iy[i];
+		mx += x[i];
+		my += y[i];
+	}
+	mx /= x.size();
+	my /= y.size();
+	for (i = 0; i < x.size(); i++) {
+		x[i] = x[i]/mx - 1.0;
+		y[i] = y[i]/my - 1.0;
+	}
+
+	double f1 = 0.0, f2 = 0.0, f3 = 0.0;
+	for (i = 0; i < x.size(); i++) {
+		f1 += (x[i]) * (y[i]);
+		f2 += (x[i]) * (x[i]);
+		f3 += (y[i]) * (y[i]);
+	}
+	return f1 / (sqrt(f2) * sqrt(f3));
+}
+
+void IQPTree::checkBootstrapStopping(SplitGraph &sg) {
+	IntVector split_supports;
+	SplitIntMap split_map;
+	int i;
+	// collect split supports
+	for (i = 0; i < boot_splits.size(); i++) 
+		if (boot_splits[i]->trivial() == -1) {
+			split_map.insertSplit(boot_splits[i], split_supports.size());
+			split_supports.push_back((int)(boot_splits[i]->getWeight()));
+		}
+	
+	// collect split supports for new tree collection
+	IntVector split_supports_new;
+	split_supports_new.resize(split_supports.size(), -1);
+	for (i = 0; i < sg.size(); i++) 
+	if (sg[i]->trivial() == -1) {
+		int index;
+		Split *sp = split_map.findSplit(sg[i], index);
+		if (sp) {
+			// split found
+			split_supports_new[index] = (int)(sg[i]->getWeight());
+		} else {
+			// new split
+			split_supports_new.push_back((int)(sg[i]->getWeight()));
+		}
+	}
+	cout << split_supports_new.size() - split_supports.size() << " new splits compared to old boot_splits" << endl;
+	if (split_supports_new.size() > split_supports.size())
+		split_supports.resize(split_supports_new.size(), 0);
+	
+	// now compute correlation coefficient 
+	double corr = computeCorrelation(split_supports, split_supports_new);
+	cout << "Correlation coefficient: " << corr << endl;
+	if (corr < 0.99) 
+		cout << "**WARNING**: Not enough candidate trees, rerun with option -bmax " << max_candidate_trees*2 << endl;
+}
 
 void IQPTree::addPositiveNNIMove(NNIMove myMove) {
     posNNIs.push_back(myMove);

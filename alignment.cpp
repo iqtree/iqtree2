@@ -157,10 +157,12 @@ int Alignment::readNexus(char *filename) {
     NxsAssumptionsBlock *assumptions_block;
     NxsDataBlock *data_block = NULL;
     NxsTreesBlock *trees_block = NULL;
+    NxsCharactersBlock *char_block = NULL;
 
     taxa_block = new NxsTaxaBlock();
     assumptions_block = new NxsAssumptionsBlock(taxa_block);
     data_block = new NxsDataBlock(taxa_block, assumptions_block);
+    char_block = new NxsCharactersBlock(taxa_block, assumptions_block);
     trees_block = new TreesBlock(taxa_block);
 
     MyReader nexus(filename);
@@ -168,19 +170,28 @@ int Alignment::readNexus(char *filename) {
     nexus.Add(taxa_block);
     nexus.Add(assumptions_block);
     nexus.Add(data_block);
+	nexus.Add(char_block);
     nexus.Add(trees_block);
 
     MyToken token(nexus.inf);
     nexus.Execute(token);
 
-    if (data_block->GetNTax() == 0) {
+	if (data_block->GetNTax() && char_block->GetNTax()) { 
+		outError("I am confused since both DATA and CHARACTERS blocks were specified");
+		return 0;
+	}
+
+    if (char_block->GetNTax() == 0) { char_block = data_block; }
+
+    if (char_block->GetNTax() == 0) {
         outError("No data is given in the input file");
         return 0;
     }
     if (verbose_mode >= VB_DEBUG)
-        data_block->Report(cout);
+        char_block->Report(cout);
 
-    extractDataBlock(data_block);
+
+    extractDataBlock(char_block);
 
     return 1;
 }

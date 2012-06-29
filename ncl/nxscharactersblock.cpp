@@ -1137,7 +1137,17 @@ void NxsCharactersBlock::HandleFormat(
 			// Check to make sure user has not used any symbols already in the
 			// default symbols list for this data type
 			//
+			/* BQM: erase used symbols */
+			NxsString told = t;
+			t="";
 			for (int i = 0; i < tlen; i++)
+				{
+				if (!IsInSymbols(told[i]) && told[i] > 32)
+					{
+						t += told[i];
+					}
+				}
+/*			for (int i = 0; i < tlen; i++)
 				{
 				if (IsInSymbols(t[i]))
 					{
@@ -1146,7 +1156,7 @@ void NxsCharactersBlock::HandleFormat(
 					errormsg += " defined in SYMBOLS has already been predefined for this DATATYPE";
 					throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 					}
-				}
+				}*/
 
 			// If we've made it this far, go ahead and add the user-defined
 			// symbols to the end of the list of predefined symbols

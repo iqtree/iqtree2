@@ -539,13 +539,23 @@ public:
 
 	/** corresponding RELL log-likelihood */
 	DoubleVector boot_logl;
+
+	/** Set of splits occuring in bootstrap trees */
+	SplitGraph boot_splits;
 	
+	/** Corresponding map for set of splits occuring in bootstrap trees */
+	SplitIntMap boot_splits_map;
+
 	/** summarize all bootstrap trees */
 
 	void summarizeBootstrap(Params &params, MTreeSet &trees);
 
 	void summarizeBootstrap(Params &params);
 
+	void summarizeBootstrap();
+
+	void checkBootstrapStopping(SplitGraph &sg);
+	
 protected:
 	/**** NNI cutoff heuristic *****/
 	/**

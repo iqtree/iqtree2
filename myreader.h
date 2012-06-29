@@ -95,7 +95,7 @@ public:
 	*/
 	virtual void	OutputComment(const NxsString &comment)
 	{
-		cout << comment;
+		//cout << comment;
 	}
 
 	/**
@@ -136,7 +136,7 @@ public:
 	*/
 	virtual void OutputComment(const NxsString &msg)
 	{
-		cout << msg << endl;
+		//cout << msg << endl;
 	}
 
 };

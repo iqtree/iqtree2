@@ -27,6 +27,8 @@
 
 using namespace std;
 
+class SplitGraph;
+
 #ifdef USE_HASH_MAP
 /*
 	Define the hash function of Split
@@ -114,6 +116,13 @@ public:
 
 	void insertSplit(Split *sp, int value);
 
+	/**
+	 * build a map from the input split graph
+	 * @param sg input split graph
+	 * @param use_index TRUE to map to index of splits in sg, FALSE to map to split weights
+	*/
+	void buildMap(SplitGraph &sg, bool use_index = true);
+	
 };
 
 #endif

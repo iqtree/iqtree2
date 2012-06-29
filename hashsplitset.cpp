@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "hashsplitset.h"
+#include "splitgraph.h"
 
 Split *SplitIntMap::findSplit(Split *sp) {
     iterator ass_it = find(sp);
@@ -58,4 +59,14 @@ void SplitIntMap::insertSplit(Split *sp, int value) {
     if (findSplit(sp)) outError(__func__);
     if (verbose_mode >= VB_MAX) sp->report(cout);
     (*this)[sp] = value;
+}
+
+void SplitIntMap::buildMap(SplitGraph &sg, bool use_index) {
+	clear();
+	for (int i = 0; i < sg.size(); i++) {
+		if (use_index) 
+			insertSplit(sg[i], i);
+		else
+			insertSplit(sg[i], sg[i]->getWeight());
+	}
 }
