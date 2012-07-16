@@ -1488,6 +1488,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 	cout << "GENERAL OPTIONS:" << endl
 			<< "  -?                   Printing this help dialog" << endl
 			<< "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP or NEXUS format"  << endl
+			<< "  -z <tree_files>      Evaluate all trees in the given file"  << endl
 			<< "  -st <BIN|DNA|AA>     Binary, DNA, or Protein sequences (default: auto-detect)"  << endl
 			<< "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl
 			<< "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl

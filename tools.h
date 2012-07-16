@@ -343,7 +343,7 @@ struct Params {
     char *aln_file;
 
     /**
-            file containng multiple trees to evaluate at the end
+            file containing multiple trees to evaluate at the end
      */
     char *treeset_file;
 
