@@ -406,6 +406,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 		out << "         Such branches are denoted by '***' in the figure" << endl << endl;
 	}
 	tree.sortTaxa();
+	//tree.setExtendedFigChar();
 	tree.drawTree(out);
 
 	out << "Log-likehood of the tree: " << fixed << tree_lh << " (s.e. " << sqrt(lh_variance) << ")" << endl
@@ -427,7 +428,7 @@ void reportCredits(ofstream &out) {
 
 		<< "The source codes to construct the BIONJ tree were taken from BIONJ software:" << endl << endl
 		<< "Oliver Gascuel (1997) BIONJ: an improved version of the NJ algorithm" << endl
-		<< "nased on a simple model of sequence data. Mol. Bio. Evol., 14:685-695." << endl << endl
+		<< "based on a simple model of sequence data. Mol. Bio. Evol., 14:685-695." << endl << endl
 
 		<< "The Nexus file parser was taken from the Nexus Class Library:" << endl << endl
 		<< "Paul O. Lewis (2003) NCL: a C++ class library for interpreting data files in" << endl
@@ -937,12 +938,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
     pattern_lh = new double[tree.aln->getNPattern()];
 
-    if (params.aLRT_threshold <= 100 && params.aLRT_replicates > 0) {
+    if (params.aLRT_threshold <= 100 && (params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
         mytime = clock();
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
         tree.setRootNode(params.root);
         tree.computePatternLikelihood(pattern_lh, &tree.curScore);
-        num_low_support = tree.testAllBranches(params.aLRT_threshold, tree.curScore, pattern_lh, params.aLRT_replicates);
+        num_low_support = tree.testAllBranches(params.aLRT_threshold, tree.curScore, pattern_lh, params.aLRT_replicates, params.localbp_replicates);
         tree.printResultTree(params);
         cout << "  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
         cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
@@ -1076,13 +1077,13 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     	
     }
 
-    if (!tree.isSuperTree() && params.aLRT_replicates > 0) {
+    if (!tree.isSuperTree() && (params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
         mytime = clock();
         cout << endl;
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
         tree.setRootNode(params.root);
-        num_low_support = tree.testAllBranches(params.aLRT_threshold, myscore, pattern_lh, params.aLRT_replicates);        
-        cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
+        num_low_support = tree.testAllBranches(params.aLRT_threshold, myscore, pattern_lh, params.aLRT_replicates, params.localbp_replicates);
+        //cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
         cout << "CPU Time used:  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
         //delete [] pattern_lh;
 /*

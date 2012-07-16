@@ -493,6 +493,8 @@ public:
 	*/
 	int freeNode(Node *node = NULL, Node *dad = NULL);
 
+	void setExtendedFigChar();
+	
 protected:
 
 	/**
@@ -505,6 +507,16 @@ protected:
 	int in_column; 
 
 
+	/**
+	 * special character for drawing tree figure 
+	 * 0: vertical line
+	 *  1: horizontal line
+	 *  2: top corner
+	 *  3: middle corner
+	 *  4: bottom corner
+	*/
+	string fig_char;
+	
 	/**
 		check tree is bifurcating tree (every leaf with level 1 or 3)
 		@param node the starting node, NULL to start from the root

@@ -313,12 +313,12 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
 
     for (StrVector::iterator it = sequences.begin(); it != sequences.end(); it++)
         for (string::iterator i = it->begin(); i != it->end(); i++) {
-            if ((*i) != '?' && (*i) != '-' && (*i) != '.') num_ungap++;
+            if ((*i) != '?' && (*i) != '-' && (*i) != '.' && *i != 'N' && *i != 'X') num_ungap++;
             if ((*i) == 'A' || (*i) == 'C' || (*i) == 'G' || (*i) == 'T' || (*i) == 'U')
                 num_nuc++;
             if ((*i) == '0' || (*i) == '1')
                 num_bin++;
-            if (isalpha(*i)) num_alphabet++;
+            if (isalnum(*i)) num_alphabet++;
         }
     if (((double)num_nuc) / num_ungap > 0.9)
         return SEQ_DNA;
@@ -349,6 +349,7 @@ void buildStateMap(char *map, SeqType seq_type) {
         map['R'] = 1+4+3; // A or G, Purine
         map['Y'] = 2+8+3; // C or T, Pyrimidine
         map['N'] = STATE_UNKNOWN;
+        map['X'] = STATE_UNKNOWN;
         map['W'] = 1+8+3; // A or T, Weak
         map['S'] = 2+4+3; // G or C, Strong
         map['M'] = 1+2+3; // A or C, Amino

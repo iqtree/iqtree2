@@ -861,6 +861,11 @@ struct Params {
     int aLRT_replicates;
 
     /**
+            number of replicates for local bootstrap probabilities method of Adachi & Hasegawa (1996) in MOLPHY
+     */
+    int localbp_replicates;
+	
+    /**
             SSE Option
      */
     bool SSE;

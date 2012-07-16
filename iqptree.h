@@ -541,20 +541,21 @@ public:
 	DoubleVector boot_logl;
 
 	/** Set of splits occuring in bootstrap trees */
-	SplitGraph boot_splits;
+	SplitGraph *boot_splits;
 	
 	/** Corresponding map for set of splits occuring in bootstrap trees */
-	SplitIntMap boot_splits_map;
+	//SplitIntMap boot_splits_map;
 
 	/** summarize all bootstrap trees */
-
 	void summarizeBootstrap(Params &params, MTreeSet &trees);
 
 	void summarizeBootstrap(Params &params);
 
-	void summarizeBootstrap();
+	/** summarize bootstrap trees into split set */
+	void summarizeBootstrap(SplitGraph &sg);
 
-	void checkBootstrapStopping(SplitGraph &sg);
+	/** @return TRUE if stopping criterion is met */
+	bool checkBootstrapStopping(SplitGraph &sg);
 	
 protected:
 	/**** NNI cutoff heuristic *****/
@@ -581,8 +582,10 @@ protected:
 
 	void estimateNNICutoff(Params &params);
 
-	void saveCurrentTree(double logl); // save current tree
+	virtual void saveCurrentTree(double logl); // save current tree
 	
+	void saveNNITrees(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
 	int duplication_counter;
 
     /**

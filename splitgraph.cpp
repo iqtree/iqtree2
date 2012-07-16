@@ -181,7 +181,7 @@ void SplitGraph::AddTaxaFromSets() {
 			}	
 }
 
-SplitGraph::~SplitGraph()
+void SplitGraph::freeMem()
 {
 	
 	for (reverse_iterator it = rbegin(); it != rend(); it++) {
@@ -196,6 +196,11 @@ SplitGraph::~SplitGraph()
 	if (splits) delete splits;
 	if (taxa) delete taxa;
 	if (mtrees) delete mtrees;
+}
+
+SplitGraph::~SplitGraph()
+{
+	freeMem();
 }
 
 

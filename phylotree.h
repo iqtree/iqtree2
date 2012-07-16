@@ -745,15 +745,15 @@ public:
             Test one branch of the tree with aLRT SH-like interpretation
      */
     double testOneBranch(
-            double best_score, double *pattern_lh,
-            int times, PhyloNode *node1, PhyloNode *node2);
+            double best_score, double *pattern_lh, int reps, int lbp_reps, 
+            PhyloNode *node1, PhyloNode *node2, double &lbp_support);
 
     /**
             Test all branches of the tree with aLRT SH-like interpretation
      */
     int testAllBranches(int threshold,
-            double best_score, double *pattern_lh,
-            int times, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+            double best_score, double *pattern_lh, int reps, int lbp_reps,
+            PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative
@@ -999,6 +999,10 @@ protected:
             @param bits_entry the content of the block at index
      */
     void setBitsBlock(UINT* &bit_vec, int index, UINT *bits_entry);
+	
+	virtual void saveCurrentTree(double logl) {} // save current tree
+
+	
 };
 
 #endif

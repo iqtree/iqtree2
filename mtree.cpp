@@ -34,6 +34,7 @@ MTree::MTree() {
     rooted = false;
     num_precision = 6;
     len_scale = 1.0;
+	fig_char = "|-+++";
 }
 
 MTree::MTree(const char *userTreeFile, bool &is_rooted)
@@ -46,6 +47,7 @@ void MTree::init(const char *userTreeFile, bool &is_rooted) {
     len_scale = 1.0;
     readTree(userTreeFile, is_rooted);
     //printInfo();
+	fig_char = "|-+++";
 }
 
 
@@ -66,6 +68,7 @@ void MTree::init(MTree &tree) {
     tree.root = NULL;
     num_precision = tree.num_precision;
     len_scale = tree.len_scale;
+    fig_char = tree.fig_char;
 }
 
 void MTree::copyTree(MTree *tree) {
@@ -1076,6 +1079,13 @@ int MTree::sortTaxa(Node *node, Node *dad) {
     return taxid_nei_map.begin()->first;
 }
 
+void MTree::setExtendedFigChar() {
+	//fig_char[0] = 179;
+	//fig_char[1] = 196;
+	fig_char[2] = '/';
+	//fig_char[3] = 195;
+	fig_char[4] = '\\';
+}
 
 void MTree::drawTree(ostream &out, int brtype) {
     IntVector sub_tree_br;
@@ -1155,21 +1165,21 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
     } else {
         if (brtype & WT_BR_SCALE) {
             br_len = floor(node->findNeighbor(dad)->length * brscale)-1;
-            if (br_len < 3) br_len = 3;
+            if (br_len < 2) br_len = 2;
         }
         if (node->findNeighbor(dad)->length <= 2e-6) zero_length = true;
     }
     if (node->isLeaf()) {
         for (ii = subtree_br.begin()+1; ii != subtree_br.end(); ii++) {
             if (abs(*(ii-1)) > 1000) out << ' ';
-            else out << '|';
+            else out << fig_char[0];
             int num = abs(*ii);
             if (num > 1000) num -= 1000;
             for (i = 0; i < num; i++) out << ' ';
         }
-        out << '+';
+        out << ((node==dad->neighbors.front()->node) ? fig_char[2] : ((node==dad->neighbors.back()->node) ? fig_char[4] : fig_char[3]));
         for (i = 0; i < br_len; i++)
-            out << ((zero_length) ? '*' : '-');
+            out << ((zero_length) ? '*' : fig_char[1]);
         out << node->name;
         if (brtype & WT_TAXON_ID)
             out << " (" << node->id << ")";
@@ -1201,7 +1211,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
         if (subtree_br.size() > 1)
             for (ii = subtree_br.begin()+1; ii != subtree_br.end(); ii++) {
                 if (abs(*(ii-1)) > 1000) out << ' ';
-                else out << '|';
+                else out << fig_char[0];
                 if (ii == subtree_br.begin()) continue;
                 int num = abs(*ii);
                 if (num > 1000) num -= 1000;
@@ -1209,9 +1219,9 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
             }
         if (first) {
             if (dad) {
-                out << '+';
+				out << ((node==dad->neighbors.front()->node) ? fig_char[2] : ((node==dad->neighbors.back()->node) ? fig_char[4] : fig_char[3]));
                 for (i = 0; i < abs(br_len); i++)
-                    out << ((zero_length) ? '*' : '-');
+                    out << ((zero_length) ? '*' : fig_char[1]);
             }
             out << node->id;
             if (!node->name.empty())
@@ -1229,11 +1239,11 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
         } else {
             if (dad) {
                 if (abs(subtree_br.back()) > 1000) out << ' ';
-                else out << "|";
+                else out << fig_char[0];
                 for (i = 0; i < abs(br_len); i++)
                     out << ' ';
             }
-            out << "|";
+            out << fig_char[0];
         }
         //out << " ";
         //copy (subtree_br.begin(), subtree_br.end(), ostream_iterator<int> (out, " "));

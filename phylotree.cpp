@@ -1393,8 +1393,8 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
         optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
     else // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
-    //if (fabs(current_len - optx) <= TOL_BRANCH_LEN) // if nothing changes, return
-    if (current_len == optx) // if nothing changes, return
+    if (fabs(current_len - optx) <= TOL_BRANCH_LEN) // if nothing changes, return
+    //if (current_len == optx) // if nothing changes, return
         return -negative_lh;
     current_it->length = optx;
     current_it_back->length = optx;
@@ -2379,6 +2379,8 @@ void PhyloTree::computeNNIPatternLh(
             if (new_score < old_score + TOL_LIKELIHOOD) break;
             old_score = new_score;
         }
+        saveCurrentTree(new_score); // BQM: for new bootstrap
+
         //new_score = optimizeOneBranch(node1, node2, false);
         if (new_score > cur_lh + TOL_LIKELIHOOD)
             cout << "Alternative NNI shows better likelihood " << new_score << " > " << cur_lh << endl;
@@ -2469,8 +2471,8 @@ void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
 // Implementation of testBranch follows Guindon et al. (2010)
 
 double PhyloTree::testOneBranch(
-    double best_score, double *pattern_lh,
-    int times, PhyloNode *node1, PhyloNode *node2) {
+    double best_score, double *pattern_lh, int reps, int lbp_reps, 
+    PhyloNode *node1, PhyloNode *node2, double &lbp_support) {
     int NUM_NNI = 3;
     double lh[NUM_NNI];
     double *pat_lh[NUM_NNI];
@@ -2487,10 +2489,14 @@ double PhyloTree::testOneBranch(
 
     int support = 0;
 
+	lbp_support = 0.0;
+	int times = max(reps, lbp_reps);
+	
     for (int i = 0; i < times; i++) {
         double lh_new[NUM_NNI];
         // resampling estimated log-likelihood (RELL)
         resampleLh(pat_lh, lh_new);
+		if (lh_new[0] > lh_new[1] && lh_new[0] > lh_new[2]) lbp_support += 1.0;
         double cs[NUM_NNI], cs_best, cs_2nd_best;
         cs[0] = lh_new[0] - lh[0];
         cs[1] = lh_new[1] - lh[1];
@@ -2512,25 +2518,28 @@ double PhyloTree::testOneBranch(
     }
     delete [] pat_lh[2];
     delete [] pat_lh[1];
+    lbp_support /= times;
     return ((double) support) / times;
 }
 
 int PhyloTree::testAllBranches(int threshold, double best_score, double *pattern_lh,
-                               int times, PhyloNode *node, PhyloNode *dad) {
+                               int reps, int lbp_reps, PhyloNode *node, PhyloNode *dad) {
     int num_low_support = 0;
     if (!node) {
         node = (PhyloNode*) root;
         root->neighbors[0]->node->name = "";
     }
     if (dad && !node->isLeaf() && !dad->isLeaf()) {
-        int support = round(testOneBranch(best_score, pattern_lh, times, node, dad)*100);
+		double lbp_support;
+        int support = round(testOneBranch(best_score, pattern_lh, reps, lbp_reps, node, dad, lbp_support)*100);
         node->name = convertIntToString(support);
+        if (lbp_reps) node->name += "/" + convertIntToString(round(lbp_support*100));
         if (support < threshold) num_low_support = 1;
         ((PhyloNeighbor*) node->findNeighbor(dad))->partial_pars[0] = support;
         ((PhyloNeighbor*) dad->findNeighbor(node))->partial_pars[0] = support;
     }
     FOR_NEIGHBOR_IT(node, dad, it)
-    num_low_support += testAllBranches(threshold, best_score, pattern_lh, times, (PhyloNode*) (*it)->node, node);
+    num_low_support += testAllBranches(threshold, best_score, pattern_lh, reps, lbp_reps, (PhyloNode*) (*it)->node, node);
     return num_low_support;
 }
 

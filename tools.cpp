@@ -598,7 +598,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.discard_saturated_site = false;
 	params.mean_rate = 1.0;
 	params.aLRT_threshold = 101;
-	params.aLRT_replicates = 1000;
+	params.aLRT_replicates = 0;
+	params.localbp_replicates = 0;
 	params.SSE = true;
 	params.print_site_lh = false;			
 	params.print_tree_lh = false;			
@@ -626,7 +627,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.use_elw_method = false;
 	params.use_weighted_bootstrap = false;
 	params.use_max_tree_per_bootstrap = true;
-	params.max_candidate_trees = 10000;
+	params.max_candidate_trees = 0;
 	params.distinct_trees = true;
 	params.online_bootstrap = true;
 	//const double INF_NNI_CUTOFF = -1000000.0;
@@ -1248,6 +1249,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.aLRT_replicates = convert_int(argv[cnt]);
 				if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0) 
 					throw "aLRT replicates must be at least 1000";
+			} else if (strcmp(argv[cnt],"-alrt") == 0) {
+				cnt++;
+				params.aLRT_replicates = convert_int(argv[cnt]);
+				if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0) 
+					throw "aLRT replicates must be at least 1000";
+			} else if (strcmp(argv[cnt],"-lbp") == 0) {
+				cnt++;
+				params.localbp_replicates = convert_int(argv[cnt]);
+				if (params.localbp_replicates < 1000 && params.localbp_replicates != 0) 
+					throw "Local bootstrap (LBP) replicates must be at least 1000";
 			} else if (strcmp(argv[cnt],"-wsl") == 0) {
 				params.print_site_lh = true;
 			} else if (strcmp(argv[cnt],"-wtl") == 0) {

@@ -87,6 +87,9 @@ public:
 	*/
 	void createBlocks();
 
+	/** free allocated memory, called by destructor */
+	void freeMem();
+	
 	/**
 		destructor
 	*/
