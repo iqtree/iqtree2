@@ -519,9 +519,6 @@ double IQPTree::doIQP() {
     setAlignment(aln);
     clearAllPartialLH();
 
-	//double score = curScore;
-	/** BQM: please check careful! */
-    //curScore = optimizeAllBranches(1);
     if (params->gbo_replicates)
     	curScore = optimizeAllBranches(3, 1.0);
     else {
@@ -532,11 +529,9 @@ double IQPTree::doIQP() {
     			curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*it)->node);
     		//curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
     	}
+    	//curScore = optimizeAllBranches();
     }
 
-    //clearAllPartialLH();
-    //double curScore2 = computeLikelihood();
-    //cout << " diff = " << curScore - score << endl;
     if (enable_parsimony)
     	cur_pars_score = computeParsimony();
 
@@ -1052,7 +1047,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     } while (true);
 
     if (foundBetterTree) {
-        curScore = optimizeAllBranches(1);
+    	curScore = optimizeAllBranches(1);
         if (enableHeuris) {
             vecNumNNI.push_back(nni_count);
         }
@@ -1064,7 +1059,6 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 		saveCurrentTree(curScore); // BQM: for new bootstrap
 		saveNNITrees();
 	}
-
 	return curScore;
 }
 
