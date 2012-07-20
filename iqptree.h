@@ -289,7 +289,7 @@ public:
 	 * 		NNI evaluation. There might be branches that are not be affected
 	 * 		since tree topology is changed after doing NNI
      */
-    void changeAllBran(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void changeAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 
     /**

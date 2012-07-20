@@ -696,6 +696,7 @@ void MTree::getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *nod
     //if ((*it)->node != dad)	{
     FOR_NEIGHBOR_IT(node, dad, it)
     if (!(*it)->node->isLeaf()) {
+        getInternalBranches(nodes, nodes2, (*it)->node, node);
         if (!node->isLeaf()) {
             if (node->id < (*it)->node->id) {
                 nodes.push_back(node);
@@ -705,7 +706,6 @@ void MTree::getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *nod
                 nodes2.push_back(node);
             }
         }
-        getInternalBranches(nodes, nodes2, (*it)->node, node);
     }
 }
 

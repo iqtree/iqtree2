@@ -634,6 +634,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.nni_cutoff = -1000000.0;
 	params.estimate_nni_cutoff = false;
 	params.nni_sort = false;
+	params.nni_opt_5branches = false;
 	params.testNNI = false;
 	params.do_compression = false;
 	params.new_heuristic = false;
@@ -1303,6 +1304,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (params.nni_cutoff >= 0) throw "cutoff value for -nnicutval must be negative";
 			} else if (strcmp(argv[cnt], "-nnisort") == 0) {
 				params.nni_sort = true;
+			} else if (strcmp(argv[cnt], "-nni5") == 0) {
+				params.nni_opt_5branches = true;
 			} else if (strcmp(argv[cnt], "-plog") == 0) {
 				params.gene_pvalue_loga = true;
 			} else if (strcmp(argv[cnt], "-dmp") == 0) {

@@ -1168,7 +1168,7 @@ void evaluateTrees(Params &params, IQPTree *tree) {
 	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++) {
 		cout << "Tree " << (it-trees.begin())+1;
 		tree->copyTree(*it);
-		double fixed_length = 0.001;
+		double fixed_length = 0.01;
 		//int fixed_number = tree->fixNegativeBranch(fixed_length);
 		tree->fixNegativeBranch(fixed_length);
 		tree->initializeAllPartialLh();

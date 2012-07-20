@@ -1414,6 +1414,23 @@ void branchStats(Params &params){
 		outError(ERR_WRITE_OUTPUT, output);
 	}
 	cout << "Information about branch lengths of the tree is printed to: " << output << endl;
+	
+	/***** Following added by BQM to print internal branch lengths */
+	NodeVector nodes1, nodes2;
+	mytree.getInternalBranches(nodes1, nodes2);
+	output = params.out_prefix;
+	output += ".inlen";
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(output.c_str());
+		for (int i = 0; i < nodes1.size(); i++)
+			out << nodes1[i]->findNeighbor(nodes2[i])->length << " ";
+		out << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, output);
+	}
+	cout << "Internal branch lengths printed to: " << output << endl;
 }
 
 /**MINH ANH: for comparison between the input tree and each tree in a given set of trees*/

@@ -1393,7 +1393,6 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
         optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
     else // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
-    //if (fabs(current_len - optx) <= TOL_BRANCH_LEN) // if nothing changes, return
     if (current_len == optx) // if nothing changes, return
         return -negative_lh;
     current_it->length = optx;
@@ -2355,7 +2354,7 @@ void PhyloTree::computeNNIPatternLh(
         node12_it->clearPartialLh();
         node21_it->clearPartialLh();
         int i;
-        for (i = 0; i < 1; i++) {
+        for (i = 0; i < 2; i++) {
 
             new_score = optimizeOneBranch(node1, node2, false);
 

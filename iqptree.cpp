@@ -1009,8 +1009,9 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             nonconf_nni = vec_nonconf_nni.size();
         }
         nni2apply = ceil(nonconf_nni * curLambda);
+        if (nni2apply == 1) curLambda = 0.0;
+		changeAllBranches();
 		applyNNIs(nni2apply);
-		//changeAllBran();
         double newScore = optimizeAllBranches(1);
         if (newScore > curScore + TOL_LIKELIHOOD) {
             if (enableHeuris) {
@@ -1029,6 +1030,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         	}
 
             /* tree cannot be worse if only 1 NNI is applied */
+			
             if ( nni2apply == 1) {
                 cout << "THIS IS A BUG !!!" << endl;
                 cout << "The tree likelihood is supposed to be greater or equal than " << vec_nonconf_nni.at(0).score << endl;
@@ -1054,10 +1056,11 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     } else {
         cout << "Local search could not find any better tree !!!" << endl;
     }
-	if (save_all_trees == 2) {
+
+	if (save_all_trees == 2 && params->nni_opt_5branches) {
         curScore = optimizeAllBranches();
 		saveCurrentTree(curScore); // BQM: for new bootstrap
-		saveNNITrees();
+		saveNNITrees(); // optimize 5 branches around NNI, this makes program slower
 	}
 	return curScore;
 }
@@ -1212,7 +1215,7 @@ inline double IQPTree::getCurScore() {
     return curScore;
 }
 
-void IQPTree::changeAllBran(PhyloNode *node, PhyloNode *dad) {
+void IQPTree::changeAllBranches(PhyloNode *node, PhyloNode *dad) {
 	if (!node) {
         node = (PhyloNode*) root;
     }
@@ -1220,9 +1223,10 @@ void IQPTree::changeAllBran(PhyloNode *node, PhyloNode *dad) {
 		string key = bran2string ((PhyloNode*) (*it)->node, (PhyloNode*) node);
 		BranLenMap::iterator bran_it = mapOptBranLens.find(key);
 		if ( bran_it != mapOptBranLens.end() ) {
-			changeBranLen((PhyloNode*) (*it)->node, (PhyloNode*) node, bran_it->second);
+			double curlen = (*it)->length;
+			changeBranLen((PhyloNode*) (*it)->node, (PhyloNode*) node, curlen + curLambda*(bran_it->second-curlen));
 		}
-		changeAllBran((PhyloNode*) (*it)->node, (PhyloNode*) node);
+		changeAllBranches((PhyloNode*) (*it)->node, (PhyloNode*) node);
     }
 
 }
@@ -1581,19 +1585,20 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 		  computePatternLikelihood(treels_ptnlh[it->second], &cur_logl);
 		  return;
 		}
-	}
-	else {
+		if (verbose_mode >= VB_MED)
+			cout << "Update treels_logl[" << tree_index << "] := " << cur_logl << endl;
+	} else {
 		if (logl_cutoff != 0.0 && cur_logl <= logl_cutoff + 1e-4) return;
 		tree_index = treels_logl.size();
 		treels[tree_str] = treels_logl.size();
 		treels_logl.push_back(cur_logl);
+		if (verbose_mode >= VB_MED)
+			cout << "Add    treels_logl[" << tree_index << "] := " << cur_logl << endl;
 	}
 
 	if (write_intermediate_trees) printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
 
 	
-	if (verbose_mode >= VB_MED) 
-		cout << "treels_logl " << treels_logl.size() << ": " << cur_logl << endl;
 	double *pattern_lh = new double[aln->getNPattern()];
 	computePatternLikelihood(pattern_lh, &cur_logl);
 
@@ -1648,6 +1653,8 @@ void IQPTree::saveNNITrees(PhyloNode *node, PhyloNode *dad) {
 		double *pat_lh2 = new double[aln->getNPattern()];
 		double lh1, lh2;
 		computeNNIPatternLh(curScore, lh1, pat_lh1, lh2, pat_lh2, node, dad);
+		delete [] pat_lh2;
+		delete [] pat_lh1;
     }
     FOR_NEIGHBOR_IT(node, dad, it)
 		saveNNITrees((PhyloNode*) (*it)->node, node);
