@@ -1176,6 +1176,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.max_iterations = convert_int(argv[cnt]);
 				if (params.max_iterations <= params.min_iterations)
 					throw "Specified max iteration must be greater than min iteration";
+			} else if (strcmp(argv[cnt],"-nm") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nm <#max_iteration>";
+				params.max_iterations = convert_int(argv[cnt]);
+				if (params.max_iterations <= params.min_iterations)
+					throw "Specified max iteration must be greater than min iteration";
 			} else if (strcmp(argv[cnt],"-sc") == 0) {
 				cnt++;
 				if (cnt >= argc)

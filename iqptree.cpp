@@ -914,7 +914,7 @@ double IQPTree::doIQPNNI(Params &params) {
             if (curScore > bestScore - 1e-4) // if goes back, increase k_delete once more
                 increaseKDelete();
         }
-        if (cur_iteration == stop_rule.getNumIterations()-1 && params.gbo_replicates && !boot_splits->empty()) {
+        if (cur_iteration == stop_rule.getNumIterations()-1 && params.gbo_replicates && !boot_splits->empty() && stop_rule.getNumIterations()*2 <= params.max_iterations) {
 			SplitGraph *sg = new SplitGraph;
 			summarizeBootstrap(*sg);
 			if (!checkBootstrapStopping(*sg)) {
