@@ -88,31 +88,33 @@ public:
     IQPTree();
 
     IQPTree(Alignment *aln);
-	
-	void setParams(Params &params);
 
     /**
             destructor
      */
     virtual ~IQPTree();
 
+    void init();
+
+	void setParams(Params& params);
+
     /**
             print tree to .treefile
             @param params program parameters, field root is taken
      */
-    void printResultTree(Params &params);
+    void printResultTree();
 
     /**
             print tree to out
             @param params program parameters, field root is taken
             @param out (OUT) output stream
      */
-    void printResultTree(Params &params, ostream &out);
+    void printResultTree(ostream &out);
 
 	/**
 		print intermediate tree
 	*/
-	void printIntermediateTree(int brtype, Params &params);
+	void printIntermediateTree(int brtype);
 
     void setRootNode(char *my_root);
 
@@ -165,6 +167,7 @@ public:
 
     /**
             perform one IQPNNI iteration
+            @param paramters given through command line and others
             @return current likelihood
      */
     double doIQP();
@@ -196,9 +199,8 @@ public:
     /**
             perform all IQPNNI iterations
             @return best likelihood found
-            @param tree_file_name name of the tree file to write the best tree found
      */
-    double doIQPNNI(Params &params);
+    double doIQPNNI();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
@@ -216,13 +218,13 @@ public:
 
 
     /**
-            search all positive NNI move on the current tree and save them on the possilbleNNIMoves list            
+            search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
      */
     virtual void genNNIMoves(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
-            search all positive NNI move on the current tree and save them 
-	 		on the possilbleNNIMoves list            
+            search all positive NNI move on the current tree and save them
+	 		on the possilbleNNIMoves list
      */
     void genNNIMovesSort();
 
@@ -233,7 +235,7 @@ public:
 	void applyNNIs (int nni2apply);
 
 	/**
-	 		generate non conflicting NNI moves. 
+	 		generate non conflicting NNI moves.
 	 		moves are saved in vec_nonconf_nni
 	 */
 	void genNonconfNNIs();
@@ -277,7 +279,7 @@ public:
 
 
     /**
-            Described in PhyML paper: apply change to branch that does not 
+            Described in PhyML paper: apply change to branch that does not
 	 		correspond to a swap with the following formula l = l + lamda(la - l)
             @param node1 the first node of the branch
             @param node2 the second node of the branch
@@ -303,18 +305,18 @@ public:
      * Estimate the median of the distribution of N (see paper for more d
                                                            details)
      * @return the estimated value
-     */	
+     */
 	inline double estNMedian(void);
-	
+
 	 /**
      * Estimate the median of the distribution of N (see paper for more d
                                                            details)
      * @return the estimated value
-     */	
+     */
 	inline double estDeltaMedian(void);
 
     /**
-     * Estimate the 95% quantile of the distribution of DELTA (see paper for 
+     * Estimate the 95% quantile of the distribution of DELTA (see paper for
                                                                more detail)
      * @return the estimated value
      */
@@ -404,11 +406,6 @@ public:
 	inline double getNNICutoff() { return nni_cutoff; }
 
 protected:
-	/**
-	 	contains all parameters passed to the program's command line
-	 */
-	Params *params; 
-		
     /**
             criterion to assess important quartet
      */
@@ -459,12 +456,12 @@ protected:
     /**
      *  Vector contains number of NNIs used at each iterations
      */
-    vector<int> vecNumNNI;    
+    vector<int> vecNumNNI;
 
     /**
      *  Vector contains approximated improvement pro NNI at each iterations
      */
-    vector<double> vecImpProNNI;    
+    vector<double> vecImpProNNI;
 
     /**
      * The current best score found
@@ -483,13 +480,13 @@ protected:
     vector<NNIMove> vec_nonconf_nni;
 
     /**
-            Data structure (of type Map) which stores all the optimal 
+            Data structure (of type Map) which stores all the optimal
 			branch lengths for all branches in the tree
      */
     BranLenMap mapOptBranLens;
 
     /**
-     * 	Data structure (of type Map) used to store the original branch 
+     * 	Data structure (of type Map) used to store the original branch
 		lengths of the tree
      */
     BranLenMap savedBranLens;
@@ -511,26 +508,26 @@ public:
 	bool save_all_br_lens;
 
 	/**
-		this keeps the list of intermediate trees. 
+		this keeps the list of intermediate trees.
 		it will be activated if params.avoid_duplicated_trees is TRUE.
 	*/
 	StringIntMap treels;
 
 	/** pattern log-likelihood vector for each treels */
 	vector<double* > treels_ptnlh;
-	
+
 	/** tree log-likelihood for each treels */
 	DoubleVector treels_logl;
-	
+
 	/** NEWICK string for each treels */
 	StrVector treels_newick;
-	
+
 	/** maximum number of distinct candidate trees (tau parameter) */
 	int max_candidate_trees;
-	
+
 	/** log-likelihood threshold (l_min) */
 	double logl_cutoff;
-	
+
 	/** vector of bootstrap alignments generated */
 	vector<IntVector> boot_samples;
 
@@ -542,7 +539,7 @@ public:
 
 	/** Set of splits occuring in bootstrap trees */
 	SplitGraph *boot_splits;
-	
+
 	/** Corresponding map for set of splits occuring in bootstrap trees */
 	//SplitIntMap boot_splits_map;
 
@@ -556,7 +553,7 @@ public:
 
 	/** @return TRUE if stopping criterion is met */
 	bool checkBootstrapStopping(SplitGraph &sg);
-	
+
 protected:
 	/**** NNI cutoff heuristic *****/
 	/**
@@ -578,12 +575,12 @@ protected:
 	bool print_tree_lh;
 	int write_intermediate_trees;
 
-	ofstream out_treels, out_treelh, out_sitelh;
+	ofstream out_treels, out_treelh, out_sitelh, out_treebetter;
 
-	void estimateNNICutoff(Params &params);
+	void estimateNNICutoff(Params* params);
 
 	virtual void saveCurrentTree(double logl); // save current tree
-	
+
 	void saveNNITrees(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 	int duplication_counter;

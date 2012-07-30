@@ -49,6 +49,10 @@ void SPRMoves::add(PhyloNode *prune_node, PhyloNode *prune_dad,
 
 PhyloTree::PhyloTree()
         : MTree() {
+	init();
+}
+
+void PhyloTree::init() {
     aln = NULL;
     model = NULL;
     site_rate = NULL;
@@ -63,30 +67,19 @@ PhyloTree::PhyloTree()
     tmp_scale_num2 = NULL;
     discard_saturated_site = true;
     _pattern_lh = NULL;
+
 }
 
-PhyloTree::PhyloTree(Alignment *alignment)
-        : MTree(), ptn_freqs(alignment->size()) {
-    aln = alignment;
+PhyloTree::PhyloTree(Alignment *aln) : MTree() {
+	init();
+    this->aln = aln;
     alnSize = aln->size();
     numStates = aln->num_states;
     tranSize = numStates * numStates;
-    model = NULL;
-    site_rate = NULL;
-    optimize_by_newton = false;
-    central_partial_lh = NULL;
-    central_scale_num = NULL;
-    central_partial_pars = NULL;
-    model_factory = NULL;
-    tmp_partial_lh1 = NULL;
-    tmp_partial_lh2 = NULL;
-    tmp_scale_num1 = NULL;
-    tmp_scale_num2 = NULL;
-    discard_saturated_site = true;
+    ptn_freqs.resize(alnSize);
     for (int ptn = 0; ptn < alnSize; ++ptn) {
         ptn_freqs[ptn] = (*aln)[ptn].frequency;
     }
-    _pattern_lh = NULL;
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {
@@ -151,6 +144,17 @@ void PhyloTree::copyPhyloTree(PhyloTree *tree) {
 
 void PhyloTree::setAlignment(Alignment *alignment) {
     aln = alignment;
+    alnSize = aln->size();
+    ptn_freqs.resize(alnSize);
+    numStates = aln->num_states;
+    tranSize = numStates * numStates;
+    ptn_freqs.resize(alnSize);
+    for (int ptn = 0; ptn < alnSize; ++ptn) {
+        ptn_freqs[ptn] = (*aln)[ptn].frequency;
+    }
+    block = aln->num_states * numCat;
+    lh_size = aln->size() * block;
+
     int nseq = aln->getNSeq();
     for (int seq = 0; seq < nseq; seq++) {
         string seq_name = aln->getSeqName(seq);
@@ -164,16 +168,6 @@ void PhyloTree::setAlignment(Alignment *alignment) {
         assert(node->isLeaf());
         node->id = seq;
     }
-    alnSize = aln->size();
-    ptn_freqs.resize(alnSize);
-    numStates = aln->num_states;
-    tranSize = numStates * numStates;
-    ptn_freqs.resize(alnSize);
-    for (int ptn = 0; ptn < alnSize; ++ptn) {
-        ptn_freqs[ptn] = (*aln)[ptn].frequency;
-    }
-    block = aln->num_states * numCat;
-    lh_size = aln->size() * block;
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {
@@ -2470,7 +2464,7 @@ void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
 // Implementation of testBranch follows Guindon et al. (2010)
 
 double PhyloTree::testOneBranch(
-    double best_score, double *pattern_lh, int reps, int lbp_reps, 
+    double best_score, double *pattern_lh, int reps, int lbp_reps,
     PhyloNode *node1, PhyloNode *node2, double &lbp_support) {
     int NUM_NNI = 3;
     double lh[NUM_NNI];
@@ -2490,7 +2484,7 @@ double PhyloTree::testOneBranch(
 
 	lbp_support = 0.0;
 	int times = max(reps, lbp_reps);
-	
+
     for (int i = 0; i < times; i++) {
         double lh_new[NUM_NNI];
         // resampling estimated log-likelihood (RELL)

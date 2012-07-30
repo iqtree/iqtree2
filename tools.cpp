@@ -411,7 +411,7 @@ void readAreasBoundary(char *file_name, MSetsBlock *areas, double *areas_boundar
 				throw "Area name " + seq_name + " is different from " + areas->getSet(seq1)->name;
 			for (seq2 = 0; seq2 < nset; seq2 ++) {
 				in >> areas_boundary[pos++];
-			}	
+			}
 		}
 		// check for symmetric matrix
 		for (seq1 = 0; seq1 < nset-1; seq1++) {
@@ -601,8 +601,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.aLRT_replicates = 0;
 	params.localbp_replicates = 0;
 	params.SSE = true;
-	params.print_site_lh = false;			
-	params.print_tree_lh = false;			
+	params.print_site_lh = false;
+	params.print_tree_lh = false;
 	params.nni_lh = false;
 	params.lambda = 1;
 	params.speed_conf = 0.95;
@@ -611,7 +611,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.rate_file = NULL;
 	params.ngs_file = NULL;
 	params.ngs_mapped_reads = NULL;
-	params.ngs_ignore_gaps = true;	
+	params.ngs_ignore_gaps = true;
 	params.do_pars_multistate = false;
 	params.gene_pvalue_file = NULL;
 	params.gene_scale_factor = -1;
@@ -638,6 +638,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.testNNI = false;
 	params.do_compression = false;
 	params.new_heuristic = false;
+	params.write_best_trees = false;
 
 	params.avh_test = 0;
 
@@ -876,7 +877,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.consensus_type = CT_CONSENSUS_TREE;
 			} else if (strcmp(argv[cnt],"-net") == 0) {
 				params.consensus_type = CT_CONSENSUS_NETWORK;
-			} 
+			}
 			/**MINH ANH: to serve some statistics on tree*/
 			else if (strcmp(argv[cnt],"-comp") == 0) {
 				cnt++;
@@ -982,7 +983,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (params.split_weight_threshold < 0)
 					throw "Split weight threshold is negative";
 			} else if (strcmp(argv[cnt],"-swc") == 0) {
-				params.split_weight_summary = SW_COUNT;			
+				params.split_weight_summary = SW_COUNT;
 			} else if (strcmp(argv[cnt],"-swa") == 0) {
 				params.split_weight_summary = SW_AVG_ALL;
 			} else if (strcmp(argv[cnt],"-swp") == 0) {
@@ -1107,7 +1108,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -nr <mean_rate>";
 				params.mean_rate = convert_double(argv[cnt]);
-				if (params.mean_rate < 0) 
+				if (params.mean_rate < 0)
 					throw "Wrong mean rate for MH model";
 			} else if (strcmp(argv[cnt],"-mstore") == 0) {
 				params.store_trans_matrix = true;
@@ -1208,7 +1209,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -b <num_bootstrap_samples>";
 				params.num_bootstrap_samples = convert_int(argv[cnt]);
-				if (params.num_bootstrap_samples < 1) 
+				if (params.num_bootstrap_samples < 1)
 					throw "Wrong number of bootstrap samples";
 				if (params.num_bootstrap_samples == 1) params.compute_ml_tree = false;
 				if (params.num_bootstrap_samples == 1) params.consensus_type = CT_NONE;
@@ -1219,7 +1220,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -bc <num_bootstrap_samples>";
 				params.num_bootstrap_samples = convert_int(argv[cnt]);
-				if (params.num_bootstrap_samples < 1) 
+				if (params.num_bootstrap_samples < 1)
 					throw "Wrong number of bootstrap samples";
 				if (params.num_bootstrap_samples > 1) params.consensus_type = CT_CONSENSUS_TREE;
 			} else if (strcmp(argv[cnt],"-iqppars") == 0) {
@@ -1251,21 +1252,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt+1 >= argc)
 					throw "Use -aLRT <threshold%> <#replicates>";
 				params.aLRT_threshold = convert_int(argv[cnt]);
-				if (params.aLRT_threshold < 85 || params.aLRT_threshold > 101) 
+				if (params.aLRT_threshold < 85 || params.aLRT_threshold > 101)
 					throw "aLRT thresold must be between 85 and 100";
 				cnt++;
 				params.aLRT_replicates = convert_int(argv[cnt]);
-				if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0) 
+				if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0)
 					throw "aLRT replicates must be at least 1000";
 			} else if (strcmp(argv[cnt],"-alrt") == 0) {
 				cnt++;
 				params.aLRT_replicates = convert_int(argv[cnt]);
-				if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0) 
+				if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0)
 					throw "aLRT replicates must be at least 1000";
 			} else if (strcmp(argv[cnt],"-lbp") == 0) {
 				cnt++;
 				params.localbp_replicates = convert_int(argv[cnt]);
-				if (params.localbp_replicates < 1000 && params.localbp_replicates != 0) 
+				if (params.localbp_replicates < 1000 && params.localbp_replicates != 0)
 					throw "Local bootstrap (LBP) replicates must be at least 1000";
 			} else if (strcmp(argv[cnt],"-wsl") == 0) {
 				params.print_site_lh = true;
@@ -1276,7 +1277,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -ns <num_simulations>";
 				params.whtest_simulations = convert_int(argv[cnt]);
-				if (params.whtest_simulations < 1) 
+				if (params.whtest_simulations < 1)
 					throw "Wrong number of simulations for WH-test";
 			} else if (strcmp(argv[cnt],"-mr") == 0) {
 				cnt++;
@@ -1372,6 +1373,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.do_compression = true;
 			} else if (strcmp(argv[cnt], "-newheu") == 0) {
 				params.new_heuristic = true;
+			} else if (strcmp(argv[cnt], "-wbt") == 0)	{
+				params.write_best_trees = true;
 			} else if (strcmp(argv[cnt], "-avh") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1416,14 +1419,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
 	if (!params.out_prefix) {
 		if (params.partition_file)
-			params.out_prefix = params.partition_file; 
-		else if (params.aln_file) 
+			params.out_prefix = params.partition_file;
+		else if (params.aln_file)
 			params.out_prefix = params.aln_file;
-		else if (params.ngs_file) 
+		else if (params.ngs_file)
 			params.out_prefix = params.ngs_file;
-		else if (params.ngs_mapped_reads) 
+		else if (params.ngs_mapped_reads)
 			params.out_prefix = params.ngs_mapped_reads;
-		else 
+		else
 			params.out_prefix = params.user_file;
 	}
 }

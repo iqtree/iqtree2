@@ -327,6 +327,13 @@ struct NNIInfo {
         program parameters, everything is specified here
  */
 struct Params {
+	clock_t startTime;
+
+	/**
+	 *		write all current best trees to file
+	 */
+	bool write_best_trees;
+
     /**
              input file name
      */
@@ -376,7 +383,7 @@ struct Params {
             alignment to be concatenated into the input alignment
      */
     char *concatenate_aln;
-    
+
     /**
             file containing list of sites posititon to keep, format:
             pos1 pos2
@@ -771,7 +778,7 @@ struct Params {
 		shape parameter (alpha) of the Gamma distribution for site rates
 	*/
     double gamma_shape;
-    
+
 	/**
 		TRUE to use median rate for discrete categories, FALSE to use mean rate instead
 	*/
@@ -864,7 +871,7 @@ struct Params {
             number of replicates for local bootstrap probabilities method of Adachi & Hasegawa (1996) in MOLPHY
      */
     int localbp_replicates;
-	
+
     /**
             SSE Option
      */
@@ -880,7 +887,7 @@ struct Params {
     bool print_tree_lh;
 
 	/****** adaptive NNI search heuristic ******/
-	
+
     /**
      *  Output log-likelihood
      */
@@ -904,7 +911,7 @@ struct Params {
 	bool new_heuristic;
 
 	/***** WH-test (Weiss & von Haeseler 2003) *****/
-	
+
 	/**
 		Results of Weiss & Haeseler test of model homogeneity
 	*/
@@ -917,10 +924,10 @@ struct Params {
 	/**
 		bit-wise type including MCAT_LOG, MCAT_MEAN
 	*/
-	int mcat_type;	
+	int mcat_type;
 
 	/**
-		initial rate file in format: 
+		initial rate file in format:
 		Site Rate
 		1  f_1
 		2  f_2
@@ -929,17 +936,17 @@ struct Params {
 	char *rate_file;
 
 	/***** NGS stuffs   ********/
-	
+
 	/**
 		next-generation sequencing input file for Fritz project
 	*/
 	char *ngs_file;
-	
+
 	/**
 		next-generation sequencing input file containing mapped reads to the reference genome
 	*/
 	char *ngs_mapped_reads;
-	
+
 	bool ngs_ignore_gaps;
 
 	bool do_pars_multistate;
@@ -960,7 +967,7 @@ struct Params {
 	bool gene_pvalue_loga;
 
 	/***** variables for reading NCBI taxonomy tree *******/
-	
+
 	/**
 		NCBI taxonomy ID, for processing nodes.dmp file
 	*/
@@ -980,10 +987,10 @@ struct Params {
 		typically names.dmp from NCBI
 	*/
 	const char *ncbi_names_file;
-	
+
 	/**********************************************/
 	/**** variables for ultra-fast bootstrap ******/
-	
+
 	/**
 		number of replicates for guided bootstrap
 	*/
@@ -1015,7 +1022,7 @@ struct Params {
 	bool use_max_tree_per_bootstrap;
 
 	/** maximum number of candidate trees to consider for new bootstrap */
-	int max_candidate_trees; 
+	int max_candidate_trees;
 
 	/** TRUE if user_file contains topologically distinct trees */
 	bool distinct_trees;
@@ -1023,10 +1030,10 @@ struct Params {
 	/** NEW: TRUE to update bootstrap trees during the search (do not store treels_ptnlh).
 		FALSE to call runGuidedBootstrap() at the end */
 	bool online_bootstrap;
-	
+
 	/****** variables for NNI cutoff heuristics ******/
-	
-	/** 
+
+	/**
 		TRUE to empirically estimate nni_cutoff
 	*/
 	bool estimate_nni_cutoff;
@@ -1036,7 +1043,7 @@ struct Params {
 	*/
 	double nni_cutoff;
 
-	/** 
+	/**
 		sort the NNI before evaluating
 	*/
 	bool nni_sort;
@@ -1057,7 +1064,7 @@ struct Params {
 		number of bootstrap samples for AvH curiosity
 	*/
 	int avh_test;
-	
+
 	/** precision when printing out for floating-point number */
 	int numeric_precision;
 };
@@ -1167,7 +1174,7 @@ double randomLen(Params &params);
         @return the integer
  */
 /**
-	Compute the logarithm of the factorial of an integer number 
+	Compute the logarithm of the factorial of an integer number
 	@param num: the number
 	@return logarithm of (num! = 1*2*...*num)
 */
@@ -1372,5 +1379,9 @@ void parseAreaName(char *area_names, set<string> &areas);
  * @param @second second random integer number
  */
 void get2RandNumb(const int size, int &first, int &second);
+
+inline double getEslapsedTime(clock_t startTime) {
+	return double(clock() - startTime) / CLOCKS_PER_SEC;
+}
 
 #endif

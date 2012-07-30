@@ -85,7 +85,7 @@ void generateRandomTree(Params &params)
 				cout << "Generating star tree with random external branch lengths..." << endl;
 				break;
 			default: break;
-			}	
+			}
 			ofstream out2;
 			if (params.num_zero_len) {
 				cout << "Setting " << params.num_zero_len << " internal branches to zero length..." << endl;
@@ -107,10 +107,10 @@ void generateRandomTree(Params &params)
 				mtree.printTree(out);
 				out << endl;
 			}
-			out.close();		
+			out.close();
 			cout << params.repeated_time << " tree(s) printed to " << params.user_file << endl;
 			if (params.num_zero_len) {
-				out2.close();		
+				out2.close();
 				cout << params.repeated_time << " collapsed tree(s) printed to " << params.user_file << ".collapsed" << endl;
 			}
 		}
@@ -121,7 +121,7 @@ void generateRandomTree(Params &params)
 			sg.generateCircular(params);
 		} else if (params.tree_gen == TAXA_SET) {
 			sg.init(params);
-			cout << "Generating random taxa set of size " << params.sub_size << 
+			cout << "Generating random taxa set of size " << params.sub_size <<
 				" overlap " << params.overlap << " with " << params.repeated_time << " times..." << endl;
 			if (!overwriteFile(params.pdtaxa_file)) return;
 			sg.generateTaxaSet(params.pdtaxa_file, params.sub_size, params.overlap, params.repeated_time);
@@ -147,10 +147,10 @@ void generateRandomTree(Params &params)
 
 inline void separator(ostream &out, int type = 0) {
 	switch (type) {
-	case 0: 
+	case 0:
 		out << endl << "==============================================================================" << endl;
 		break;
-	case 1: 
+	case 1:
 		out << endl << "-----------------------------------------------------------" << endl;
 		break;
 	default:
@@ -247,7 +247,7 @@ void summarizeFooter(ostream &out, Params &params) {
 int getMaxNameLen(vector<string> &setName) {
 	int len = 0;
 	for (vector<string>::iterator it = setName.begin(); it != setName.end(); it++)
-		if (len < (*it).length()) 
+		if (len < (*it).length())
 			len = (*it).length();
 	return len;
 }
@@ -269,7 +269,7 @@ void printPDUser(ostream &out, Params &params, PDRelatedMeasures &pd_more) {
 		out << pd_more.PDScore[cnt] << "  ";
 		if (params.exclusive_pd) {
 			out.width(7);
-			out << pd_more.exclusivePD[cnt] << "  ";					
+			out << pd_more.exclusivePD[cnt] << "  ";
 		}
 		if (params.endemic_pd) {
 			out.width(7);
@@ -284,7 +284,7 @@ void printPDUser(ostream &out, Params &params, PDRelatedMeasures &pd_more) {
 	separator(out, 1);
 }
 
-void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set, 
+void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set,
 	PDRelatedMeasures &pd_more) {
 	string filename;
 	if (params.out_file == NULL) {
@@ -297,22 +297,22 @@ void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set,
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(filename.c_str());
-		
+
 		summarizeHeader(out, params, false, IN_NEWICK);
-		out << "Tree size: " << tree.leafNum-params.is_rooted << " taxa, " << 
+		out << "Tree size: " << tree.leafNum-params.is_rooted << " taxa, " <<
 			tree.nodeNum-1-params.is_rooted << " branches" << endl;
 		separator(out);
 
 		vector<PDTaxaSet>::iterator tid;
-	
+
 		if (params.run_mode == PD_USER_SET) {
 			printPDUser(out, params, pd_more);
 		}
-		else if (taxa_set.size() > 1) 
+		else if (taxa_set.size() > 1)
 			out << "Optimal PD-sets with k = " << params.min_size-params.is_rooted <<
 			" to " << params.sub_size-params.is_rooted << endl << endl;
-	
-	
+
+
 		int subsize = params.min_size-params.is_rooted;
 		if (params.run_mode == PD_USER_SET) subsize = 1;
 		for (tid = taxa_set.begin(); tid != taxa_set.end(); tid++, subsize++) {
@@ -325,7 +325,7 @@ void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set,
 				out << "For k = " << subsize << " the optimal PD score is " << (*tid).score << endl;
 				out << "The optimal PD set has " << subsize << " taxa:" << endl;
 			}
-			for (NodeVector::iterator it = (*tid).begin(); it != (*tid).end(); it++) 
+			for (NodeVector::iterator it = (*tid).begin(); it != (*tid).end(); it++)
 				if ((*it)->name != ROOT_NAME){
 					out << (*it)->name << endl;
 				}
@@ -336,11 +336,11 @@ void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set,
 			tid->clear();
 		}
 		taxa_set.clear();
-	
+
 		summarizeFooter(out, params);
 		out.close();
 		cout << endl << "Results are summarized in " << filename << endl << endl;
-	
+
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
@@ -389,7 +389,7 @@ void printTaxaSet(Params &params, vector<PDTaxaSet> &taxa_set, RunMode cur_mode)
 		} else {
 			out << subsize << " " << (*tid).score << endl;
 			scoreout << subsize << " " << (*tid).score << endl;
-			(*tid).printTaxa(out);		
+			(*tid).printTaxa(out);
 		}
 	}
 
@@ -432,7 +432,7 @@ void runPDTree(Params &params)
 		PDRelatedMeasures pd_more;
 		tree.computePD(params, taxa_set, pd_more);
 
-		if (params.endemic_pd) 
+		if (params.endemic_pd)
 			tree.calcPDEndemism(taxa_set, pd_more.PDEndemism);
 		if (params.complement_area != NULL)
 			tree.calcPDComplementarity(taxa_set, params.complement_area, pd_more.PDComplementarity);
@@ -445,8 +445,8 @@ void runPDTree(Params &params)
 
 
 	/*********************************************
-		run greedy algorithm 
-	*********************************************/ 
+		run greedy algorithm
+	*********************************************/
 
 	if (params.sub_size < 2) {
 		outError(ERR_NO_K);
@@ -466,7 +466,7 @@ void runPDTree(Params &params)
 	if (verbose_mode >= VB_DEBUG)
 		test_greedy.drawTree(cout, WT_INT_NODE + WT_BR_SCALE + WT_BR_LEN);
 
-	if (params.run_mode == GREEDY || params.run_mode == BOTH_ALG || 
+	if (params.run_mode == GREEDY || params.run_mode == BOTH_ALG ||
 		(params.run_mode == DETECTED)) {
 
 		if (params.run_mode == DETECTED && params.sub_size >= test_greedy.leafNum * 7 / 10
@@ -487,7 +487,7 @@ void runPDTree(Params &params)
 			if (params.min_size == params.sub_size)
 				printf("Resulting tree length = %10.4f\n", taxa_set[0].score);
 
-			if (params.nr_output > 0) 
+			if (params.nr_output > 0)
 				printTaxaSet(params, taxa_set, GREEDY);
 
 			PDRelatedMeasures pd_more;
@@ -497,9 +497,9 @@ void runPDTree(Params &params)
 	}
 
 	/*********************************************
-		run pruning algorithm 
+		run pruning algorithm
 	*********************************************/
-	if (params.run_mode == PRUNING || params.run_mode == BOTH_ALG || 
+	if (params.run_mode == PRUNING || params.run_mode == BOTH_ALG ||
 		(params.run_mode == DETECTED)) {
 
 		Pruning test_pruning;
@@ -543,7 +543,7 @@ void checkSplitDistance(ostream &out, PDNetwork &sg) {
 	bool found = false;
 	for (i = 0; i < ntaxa-1; i++) {
 		bool first = true;
-		for (j = i+1; j < ntaxa; j++) 
+		for (j = i+1; j < ntaxa; j++)
 			if (abs(dist[i][j]) <= 1e-5) {
 				if (!found) {
 					out << "The following sets of taxa (each set in a line) have very small split-distance" << endl;
@@ -551,7 +551,7 @@ void checkSplitDistance(ostream &out, PDNetwork &sg) {
 					out << "optimal PD sets to be reported, one should only keep one taxon from each set" << endl;
 					out << "and exclude the rest from the analysis." << endl << endl;
 				}
-				if (first) 
+				if (first)
 					out << sg.getTaxa()->GetTaxonLabel(i);
 				found = true;
 				first = false;
@@ -559,7 +559,7 @@ void checkSplitDistance(ostream &out, PDNetwork &sg) {
 			}
 		if (!first) out << endl;
 	}
-	if (found) 
+	if (found)
 		separator(out);
 }
 
@@ -584,7 +584,7 @@ bool makeRanking(vector<SplitSet> &pd_set, IntVector &indices, IntVector &rankin
 			indices.push_back(0);
 		}
 		Split *sp = (*it)[0];
-		
+
 		if (!cur_sp) {
 			IntVector sp_tax;
 			sp->getTaxaList(sp_tax);
@@ -661,11 +661,11 @@ void computeTaxaFrequency(SplitSet &taxa_set, DoubleVector &freq) {
 
 	freq.resize(ntaxa, 0);
 	for (SplitSet::iterator it2 = taxa_set.begin(); it2 != taxa_set.end(); it2++) {
-		for ( i = 0; i < ntaxa; i++) 
+		for ( i = 0; i < ntaxa; i++)
 			if ((*it2)->containTaxon(i)) freq[i] += 1.0;
 	}
 
-	for ( i = 0; i < ntaxa; i++) 
+	for ( i = 0; i < ntaxa; i++)
 		freq[i] /= taxa_set.size();
 
 }
@@ -696,14 +696,14 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 		/********** HEADER **********/
 		/****************************/
 		summarizeHeader(out, params, sg.isBudgetConstraint(), IN_NEXUS);
-	
-		out << "Network size: " << sg.getNTaxa()-params.is_rooted << " taxa, " << 
-			sg.getNSplits()-params.is_rooted << " splits (of which " << 
+
+		out << "Network size: " << sg.getNTaxa()-params.is_rooted << " taxa, " <<
+			sg.getNSplits()-params.is_rooted << " splits (of which " <<
 			sg.getNTrivialSplits() << " are trivial splits)" << endl;
 		out << "Network type: " << ((sg.isCircular()) ? "Circular" : "General") << endl;
-	
+
 		separator(out);
-	
+
 		checkSplitDistance(out, sg);
 
 		int c_num = 0;
@@ -726,15 +726,15 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 
 		if (params.run_mode != PD_USER_SET && !params.num_bootstrap_samples) {
 			out << "Summary of the PD-score and the number of optimal PD-sets with the same " << endl << "optimal PD-score found." << endl;
-	
-			if (sg.isBudgetConstraint()) 
+
+			if (sg.isBudgetConstraint())
 				out << endl << "Budget   PD-score   %PD-score   #PD-sets" << endl;
 			else
 				out << endl << "Size-k   PD-score   %PD-score   #PD-sets" << endl;
-	
+
 			int sizex = subsize;
 			double total = sg.calcWeight();
-	
+
 			for (it = pd_set.begin(); it != pd_set.end(); it++, sizex+=stepsize) {
 				out.width(6);
 				out << right << sizex << " ";
@@ -746,16 +746,16 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 				out << right << (*it).size();
 				out << endl;
 			}
-	
+
 			out << endl;
-			if (!params.find_all) 
+			if (!params.find_all)
 				out << "Note: You did not choose the option to find multiple optimal PD sets." << endl <<
 					"That's why we only reported one PD-set per size-k or budget. If you want" << endl <<
 					"to determine all multiple PD-sets, use the '-a' option.";
 			else {
 				out << "Note: The number of multiple optimal PD sets to be reported is limited to " << params.pd_limit << "." << endl <<
 					"There might be cases where the actual #PD-sets exceeds that upper-limit but" << endl <<
-					"won't be listed here. Please refer to the above list to identify such cases." << endl << 
+					"won't be listed here. Please refer to the above list to identify such cases." << endl <<
 					"To increase the upper-limit, use the '-lim <limit_number>' option.";
 			}
 			out << endl;
@@ -776,10 +776,10 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 			for (it = pd_set.begin(); it != pd_set.end(); it++) {
 				DoubleVector freq;
 				computeTaxaFrequency((*it), freq);
-				out << "For k/budget = " << subsize << " the " << ((sg.isPDArea()) ? "areas" : "taxa") 
+				out << "For k/budget = " << subsize << " the " << ((sg.isPDArea()) ? "areas" : "taxa")
 					<< " supports are: " << endl;
 				for (i = 0; i < freq.size(); i++)
-					out << ((sg.isPDArea()) ? sg.getSetsBlock()->getSet(i)->name : sg.getTaxa()->GetTaxonLabel(i)) 
+					out << ((sg.isPDArea()) ? sg.getSetsBlock()->getSet(i)->name : sg.getTaxa()->GetTaxonLabel(i))
 						<< "\t" << freq[i] << endl;
 				if ((it+1) != pd_set.end()) separator(out, 1);
 			}
@@ -793,13 +793,13 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 
 		if (params.run_mode != PD_USER_SET && !params.num_bootstrap_samples) {
 
-		
+
 			IntVector ranking;
 			IntVector index;
-	
+
 			out << "Ranking based on the optimal sets" << endl;
-			
-	
+
+
 			if (!makeRanking(pd_set, index, ranking)) {
 				out << "WARNING: Optimal sets are not nested, so ranking should not be considered stable" << endl;
 			}
@@ -807,18 +807,18 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 				out << "WARNING: The first " << subsize << " ranks should be treated equal" << endl;
 			}
 			out << endl << "Rank*   ";
-			if (!sg.isPDArea()) 
+			if (!sg.isPDArea())
 				out << "Taxon names" << endl;
 			else
 				out << "Area names" << endl;
-	
-	
+
+
 			for (IntVector::iterator intv = ranking.begin(), intid = index.begin(); intv != ranking.end(); intv ++, intid++) {
-				if (*intv == -10) 
+				if (*intv == -10)
 					out << "<--- multiple optimal set here --->" << endl;
-				else if (*intv == -1) 
+				else if (*intv == -1)
 					out << "<--- BEGIN: greedy does not work --->" << endl;
-				else if (*intv == -2) 
+				else if (*intv == -2)
 					out << "<--- END --->" << endl;
 				else {
 					out.width(5);
@@ -837,7 +837,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 		}
 
 		int max_len = sg.getTaxa()->GetMaxTaxonLabelLength();
-	
+
 		/****************************/
 		/***** DETAILED SETS ********/
 		/****************************/
@@ -856,19 +856,19 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 
 		if (params.run_mode != PD_USER_SET)
 			separator(out,1);
-	
+
 		for (it = pd_set.begin(); it != pd_set.end(); it++, subsize+=stepsize) {
-	
+
 			// check if the pd-sets are the same as previous one
 			if (sg.isBudgetConstraint() && it != pd_set.begin()) {
 				vector<SplitSet>::iterator prev, next;
-				for (next=it, prev=it-1; next != pd_set.end() && next->getWeight() == (*prev).getWeight() && 
+				for (next=it, prev=it-1; next != pd_set.end() && next->getWeight() == (*prev).getWeight() &&
 					next->size() == (*prev).size(); next++ ) ;
 				if (next != it) {
 					// found something in between!
 					out << endl;
 					//out << endl << "**************************************************************" << endl;
-					out << "For budget = " << subsize << " -> " << subsize+(next-it-1)*stepsize << 
+					out << "For budget = " << subsize << " -> " << subsize+(next-it-1)*stepsize <<
 						" the optimal PD score and PD sets" << endl;
 					out << "are identical to the case when budget = " << subsize-stepsize << endl;
 					//out << "**************************************************************" << endl;
@@ -877,89 +877,89 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 					if (it == pd_set.end()) break;
 				}
 			}
-	
+
 			if (it != pd_set.begin()) separator(out, 1);
-	
+
 			int num_sets = (*it).size();
 			double weight = (*it).getWeight();
-	
+
 			if (params.run_mode != PD_USER_SET) {
 				out << "For " << ((sg.isBudgetConstraint()) ? "budget" : "k") << " = " << subsize;
 				out << " the optimal PD score is " << weight << endl;
-		
+
 				if (num_sets == 1) {
 					if (!sg.isBudgetConstraint())
-						out << "The optimal PD set has " << (*it)[0]->countTaxa()-params.is_rooted << 
+						out << "The optimal PD set has " << (*it)[0]->countTaxa()-params.is_rooted <<
 							((sg.isPDArea()) ? " areas" : " taxa");
 					else
-						out << "The optimal PD set has " << (*it)[0]->countTaxa()-params.is_rooted << 
+						out << "The optimal PD set has " << (*it)[0]->countTaxa()-params.is_rooted <<
 						((sg.isPDArea()) ? " areas" : " taxa") << " and requires " << sg.calcCost(*(*it)[0]) << " budget";
-					if (!sg.isPDArea()) out << " and covers " << sg.countSplits(*(*it)[0]) << 
+					if (!sg.isPDArea()) out << " and covers " << sg.countSplits(*(*it)[0]) <<
 						" splits (of which " << sg.countInternalSplits(*(*it)[0]) << " are internal splits)";
 					out << endl;
 				}
-				else 
+				else
 					out << "Found " << num_sets << " PD sets with the same optimal score." << endl;
 			}
 			for (it2 = (*it).begin(), c_num=1; it2 != (*it).end(); it2++, c_num++){
 				Split *this_set = *it2;
-	
+
 				if (params.run_mode == PD_USER_SET && it2 != (*it).begin())
 					separator(out, 1);
 
 				if (params.run_mode == PD_USER_SET) {
 					if (!sg.isBudgetConstraint())
 						out << "Set " << c_num << " has PD score of " << this_set->getWeight();
-					else 
-						out << "Set " << c_num << " has PD score of " << this_set->getWeight() << 
+					else
+						out << "Set " << c_num << " has PD score of " << this_set->getWeight() <<
 						" and requires " << sg.calcCost(*this_set) << " budget";
 				} else if (num_sets > 1) {
 					if (!sg.isBudgetConstraint())
 						out << endl << "PD set " << c_num;
 					else
-						out << endl << "PD set " << c_num << " has " << this_set->countTaxa()-params.is_rooted << 
+						out << endl << "PD set " << c_num << " has " << this_set->countTaxa()-params.is_rooted <<
 						" taxa and requires " << sg.calcCost(*this_set) << " budget";
 				}
 
-				if (!sg.isPDArea() && (num_sets > 1 || params.run_mode == PD_USER_SET )) 
-					out << " and covers " << sg.countSplits(*(*it)[0]) << " splits (of which " 
+				if (!sg.isPDArea() && (num_sets > 1 || params.run_mode == PD_USER_SET ))
+					out << " and covers " << sg.countSplits(*(*it)[0]) << " splits (of which "
 					<< sg.countInternalSplits(*(*it)[0]) << " are internal splits)";
 				out << endl;
-		
+
 				if (params.run_mode != PD_USER_SET && sg.isPDArea()) {
-					for (i = 0; i < sg.getSetsBlock()->getNSets(); i++) 
+					for (i = 0; i < sg.getSetsBlock()->getNSets(); i++)
 						if (this_set->containTaxon(i)) {
 							if (sg.isBudgetConstraint()) {
 								out.width(max_len);
-								out << left << sg.getSetsBlock()->getSet(i)->name << "\t"; 
+								out << left << sg.getSetsBlock()->getSet(i)->name << "\t";
 								out.width(10);
 								out << right << sg.getPdaBlock()->getCost(i);
 								out << endl;
-				
+
 							} else {
 								out << sg.getSetsBlock()->getSet(i)->name << endl;
 							}
 						}
-					
+
 					Split sp(sg.getNTaxa());
-					for (i = 0; i < sg.getSetsBlock()->getNSets(); i++) 
-						if (this_set->containTaxon(i)) 
+					for (i = 0; i < sg.getSetsBlock()->getNSets(); i++)
+						if (this_set->containTaxon(i))
 							sp += *(sg.area_taxa[i]);
 					out << endl << "which contains " << sp.countTaxa() - params.is_rooted << " taxa: " << endl;
-					for (i = 0; i < sg.getNTaxa(); i++) 
-						if (sg.getTaxa()->GetTaxonLabel(i) != ROOT_NAME && sp.containTaxon(i)) 
+					for (i = 0; i < sg.getNTaxa(); i++)
+						if (sg.getTaxa()->GetTaxonLabel(i) != ROOT_NAME && sp.containTaxon(i))
 							out << sg.getTaxa()->GetTaxonLabel(i) << endl;
-					
+
 				} else
-				for ( i = 0; i < sg.getNTaxa(); i++) 
+				for ( i = 0; i < sg.getNTaxa(); i++)
 					if (sg.getTaxa()->GetTaxonLabel(i) != ROOT_NAME && this_set->containTaxon(i)) {
 						if (sg.isBudgetConstraint()) {
 							out.width(max_len);
-							out << left << sg.getTaxa()->GetTaxonLabel(i) << "\t"; 
+							out << left << sg.getTaxa()->GetTaxonLabel(i) << "\t";
 							out.width(10);
 							out << right << sg.getPdaBlock()->getCost(i);
 							out << endl;
-			
+
 						} else {
 							out << sg.getTaxa()->GetTaxonLabel(i) << endl;
 						}
@@ -972,7 +972,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 		/****************************/
 
 		summarizeFooter(out, params);
-	
+
 		out.close();
 		cout << endl << "Results are summarized in " << filename << endl << endl;
 	} catch (ios::failure) {
@@ -1040,7 +1040,7 @@ void runPDSplit(Params &params) {
 		} else {
 			int sub_size = (params.sub_size >= 1) ? params.sub_size : sg.getPdaBlock()->getSubSize();
 			if (sub_size < 1 && params.pd_proportion == 0.0) params.run_mode = PD_USER_SET;
-			
+
 		}
 	}
 
@@ -1049,7 +1049,7 @@ void runPDSplit(Params &params) {
 		cout << "Computing PD score for user-defined set of taxa..." << endl;
 		pd_set.resize(1);
 		sg.computePD(params, pd_set[0], pd_more);
-		if (params.endemic_pd) 
+		if (params.endemic_pd)
 			sg.calcPDEndemism(pd_set[0], pd_more.PDEndemism);
 
 		if (params.complement_area != NULL)
@@ -1060,7 +1060,7 @@ void runPDSplit(Params &params) {
 		if (params.num_bootstrap_samples) {
 			cout << endl << "======= START BOOTSTRAP ANALYSIS =======" << endl;
 			MTreeSet *mtrees = sg.getMTrees();
-			if (mtrees->size() < 100) 
+			if (mtrees->size() < 100)
 				cout << "Warning: bootstrap may be unstable with less than 100 trees" << endl;
 			vector<string> taxname;
 			sg.getTaxaName(taxname);
@@ -1084,7 +1084,7 @@ void runPDSplit(Params &params) {
 			cout << "======= DONE BOOTSTRAP ANALYSIS =======" << endl << endl;
 		} else {
 			sg.findPD(params, pd_set, taxa_order);
-		} 
+		}
 	}
 
 	// ending time
@@ -1096,11 +1096,11 @@ void runPDSplit(Params &params) {
 
 	if (verbose_mode >= VB_DEBUG && !sg.isPDArea()) {
 		cout << "PD set(s) with score(s): " << endl;
-		for (vector<SplitSet>::iterator it = pd_set.begin(); it != pd_set.end(); it++) 
+		for (vector<SplitSet>::iterator it = pd_set.begin(); it != pd_set.end(); it++)
 		for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); it2++ ){
 			//(*it)->report(cout);
 			cout << "  " << (*it2)->getWeight() << "    ";
-			for (i = 0; i < sg.getNTaxa(); i++) 
+			for (i = 0; i < sg.getNTaxa(); i++)
 				if ((*it2)->containTaxon(i))
 				cout << sg.getTaxa()->GetTaxonLabel(i) << "  ";
 			if (sg.isBudgetConstraint())
@@ -1124,7 +1124,7 @@ void runPDSplit(Params &params) {
 	}
 
 
-	//for (i = pd_set.size()-1; i >= 0; i--) 
+	//for (i = pd_set.size()-1; i >= 0; i--)
 	//	delete pd_set[i];
 
 }
@@ -1143,7 +1143,7 @@ void printSplitSet(SplitGraph &sg, SplitIntMap &hash_ss) {
 }
 
 void readTaxaOrder(char *taxa_order_file, StrVector &taxa_order) {
-	
+
 }
 
 void calcTreeCluster(Params &params) {
@@ -1194,7 +1194,7 @@ void printTaxa(Params &params) {
 	taxname.resize(mytree.leafNum);
 	mytree.getTaxaName(taxname);
 	sort(taxname.begin(), taxname.end());
-	
+
 	string filename = params.out_prefix;
 	filename += ".taxa";
 
@@ -1300,18 +1300,18 @@ void printRFDist(ostream &out, int *rfdist, int n, int m, int rf_dist_mode) {
 	out << n << endl;
 	if (rf_dist_mode == RF_ADJACENT_PAIR) {
 		out << "XXX        ";
-		for (i = 0; i < n; i++) 
+		for (i = 0; i < n; i++)
 			out << " " << rfdist[i];
 		out << endl;
 	} else {
 		// all pairs
 		for (i = 0; i < n; i++)  {
 			out << "Tree" << i << "      ";
-			for (j = 0; j < m; j++) 
+			for (j = 0; j < m; j++)
 				out << " " << rfdist[i*m+j];
 			out << endl;
 		}
-	} 
+	}
 }
 
 void computeRFDist(Params &params) {
@@ -1338,7 +1338,7 @@ void computeRFDist(Params &params) {
 			incomp_splits = new int [n*m];
 			memset(incomp_splits, 0, n*m* sizeof(int));
 		}
-		if (verbose_mode >= VB_MED) 
+		if (verbose_mode >= VB_MED)
 			trees.computeRFDist(rfdist, &treeset2, infoname.c_str(),treename.c_str(), incomp_splits);
 		else
 			trees.computeRFDist(rfdist, &treeset2);
@@ -1386,7 +1386,7 @@ void testInputFile(Params &params) {
 		cout << "The split system is weakly compatible." << endl;
 	else
 		cout << "The split system is NOT weakly compatible." << endl;
-	
+
 }
 
 /**MINH ANH: for some statistics about the branches on the input tree*/
@@ -1395,7 +1395,7 @@ void branchStats(Params &params){
 	mytree.drawTree(cout,WT_TAXON_ID + WT_INT_NODE);
 	//report to output file
 	string output;
-	if (params.out_file) 
+	if (params.out_file)
 		output = params.out_file;
 	else {
 		if (params.out_prefix)
@@ -1404,11 +1404,11 @@ void branchStats(Params &params){
 			output = params.user_file;
 		output += ".stats";
 	}
-	
+
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
-		out.open(output.c_str());		
+		out.open(output.c_str());
 		mytree.printBrInfo(out);
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, output);
@@ -1450,13 +1450,13 @@ void compare(Params &params){
 	try {
 		ofstream out1;
 		out1.exceptions(ios::failbit | ios::badbit);
-		out1.open(drawFile.c_str());		
+		out1.open(drawFile.c_str());
 		mytree.drawTree(out1,WT_TAXON_ID + WT_INT_NODE);
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, drawFile);
 	}
 	cout << "Tree with branchID (nodeID) was printed to: " << drawFile << endl;
-		
+
 
 	MTreeSet trees(params.user_file,params.is_rooted, params.tree_burnin);
 	DoubleMatrix brMatrix;
@@ -1465,9 +1465,9 @@ void compare(Params &params){
 	mytree.comparedTo(trees, brMatrix, RFs, BSDs);
 	int numTree = trees.size();
 	int numNode = mytree.nodeNum;
-	
+
 	string output;
-	if (params.out_file) 
+	if (params.out_file)
 		output = params.out_file;
 	else {
 		if (params.out_prefix)
@@ -1480,7 +1480,7 @@ void compare(Params &params){
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
-		out.open(output.c_str());		
+		out.open(output.c_str());
 		//print the header
 		out << "tree  " ;
 		for (int nodeID = 0; nodeID < numNode; nodeID++ )
@@ -1567,7 +1567,7 @@ void processNCBITree(Params &params) {
 	NCBITree tree;
 	Node *dad = tree.readNCBITree(params.user_file, params.ncbi_taxid, params.ncbi_taxon_level, params.ncbi_ignore_level);
 	if (params.ncbi_names_file) tree.readNCBINames(params.ncbi_names_file);
-	
+
 	cout << "Dad ID: " << dad->name << " Root ID: " << tree.root->name << endl;
 	string str = params.user_file;
 	str += ".tree";
@@ -1612,7 +1612,7 @@ int main(int argc, char *argv[])
 	cout << cbegin << " a= " << a << " c= " << c << endl;
 	cout << "time: " << double(cend-cbegin)/CLOCKS_PER_SEC << endl;
 	return 0;*/
-	
+
 /*	stringstream ss("(T0:0.1,(T1:0.1,(T2:0.1,(T3:0.1,T4:0.1):0.1):0.1):0.1,T5:0.1);");
 	MTree tree;
 	bool is_rooted = false;
@@ -1633,7 +1633,6 @@ int main(int argc, char *argv[])
 
 	printCopyright(cout);
 
-	
 	Params params;
 	parseArg(argc, argv, params);
 
@@ -1688,18 +1687,18 @@ int main(int argc, char *argv[])
 	} else if (params.consensus_type != CT_NONE) {
 		MExtTree tree;
 		switch (params.consensus_type) {
-			case CT_CONSENSUS_TREE: 
-				computeConsensusTree(params.user_file, params.tree_burnin, params.split_threshold, 
-					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file); 
+			case CT_CONSENSUS_TREE:
+				computeConsensusTree(params.user_file, params.tree_burnin, params.split_threshold,
+					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file);
 				break;
-			case CT_CONSENSUS_NETWORK: 
-				computeConsensusNetwork(params.user_file, params.tree_burnin, params.split_threshold, 
-					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file); 
+			case CT_CONSENSUS_NETWORK:
+				computeConsensusNetwork(params.user_file, params.tree_burnin, params.split_threshold,
+					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file);
 				break;
-			case CT_ASSIGN_SUPPORT: 
-				assignBootstrapSupport(params.user_file, params.tree_burnin, 
-					params.second_tree, params.is_rooted, params.out_file, 
-					params.out_prefix, tree, params.tree_weight_file, &params); 
+			case CT_ASSIGN_SUPPORT:
+				assignBootstrapSupport(params.user_file, params.tree_burnin,
+					params.second_tree, params.is_rooted, params.out_file,
+					params.out_prefix, tree, params.tree_weight_file, &params);
 				break;
 			case CT_NONE: break;
 			/**MINH ANH: for some comparison*/
@@ -1711,22 +1710,22 @@ int main(int argc, char *argv[])
 			if (params.budget_file) {
 				//if (params.budget < 0) params.run_mode = PD_USER_SET;
 			} else {
-				if (params.sub_size < 1 && params.pd_proportion == 0.0) 
+				if (params.sub_size < 1 && params.pd_proportion == 0.0)
 					params.run_mode = PD_USER_SET;
 			}
 			// input is a tree, check if it is a reserve selection -> convert to splits
 			if (params.run_mode != PD_USER_SET) params.multi_tree = true;
 		}
-		
-		
-		if (params.intype == IN_NEWICK && !params.find_all && params.budget_file == NULL && 
-			params.find_pd_min == false && params.calc_pdgain == false && 
+
+
+		if (params.intype == IN_NEWICK && !params.find_all && params.budget_file == NULL &&
+			params.find_pd_min == false && params.calc_pdgain == false &&
 			params.run_mode != LINEAR_PROGRAMMING && params.multi_tree == false)
 			runPDTree(params);
 		else if (params.intype == IN_NEXUS || params.intype == IN_NEWICK) {
 			if (params.run_mode == LINEAR_PROGRAMMING && params.find_pd_min)
 				outError("Current linear programming does not support finding minimal PD sets!");
-			if (params.find_all && params.run_mode == LINEAR_PROGRAMMING) 
+			if (params.find_all && params.run_mode == LINEAR_PROGRAMMING)
 				params.binary_programming = true;
 			runPDSplit(params);
 		} else {

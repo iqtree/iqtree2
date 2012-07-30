@@ -273,8 +273,8 @@ void reportReferences(ofstream &out, string &original_model) {
 }
 
 void reportAlignment(ofstream &out, Alignment &alignment) {
-	out <<  "Input data: "  << alignment.getNSeq() << " sequences with " << 
-			alignment.getNSite() << " " << ((alignment.num_states == 2) ? "binary" : ((alignment.num_states == 4) ? "nucleotide" : "amino-acid")) << 
+	out <<  "Input data: "  << alignment.getNSeq() << " sequences with " <<
+			alignment.getNSite() << " " << ((alignment.num_states == 2) ? "binary" : ((alignment.num_states == 4) ? "nucleotide" : "amino-acid")) <<
 			" sites" << endl <<
 			"Number of constant sites: " << round(alignment.frac_const_sites * alignment.getNSite()) <<
 			" (= " << alignment.frac_const_sites * 100 << "% of all sites)" << endl <<
@@ -300,7 +300,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 			}
 	} else { // non-reversible model
 		for (i = 0, k = 0; i < tree.aln->num_states; i++)
-			for (j = 0; j < tree.aln->num_states; j++) 
+			for (j = 0; j < tree.aln->num_states; j++)
 				if (i!=j) {
 				out << "  " << tree.aln->convertStateBack(i) << "-" << tree.aln->convertStateBack(j) << ": " << rate_mat[k];
 				if (tree.aln->num_states <= 4) out << endl;
@@ -308,8 +308,8 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 					if (k % 5 == 4) out << endl;
 				k++;
 			}
-		
-	} 
+
+	}
 
 
 	if (tree.aln->num_states > 4) out << endl;
@@ -357,7 +357,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 			out << q_mat[k];
 		}
 		out << endl;
-	} 
+	}
 	out << endl;
 	delete [] q_mat;
 
@@ -410,7 +410,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 	tree.drawTree(out);
 
 	out << "Log-likehood of the tree: " << fixed << tree_lh << " (s.e. " << sqrt(lh_variance) << ")" << endl
-		<< "Unconstrained log-likelihood (without tree): " << tree.aln->computeUnconstrainedLogL() << endl 
+		<< "Unconstrained log-likelihood (without tree): " << tree.aln->computeUnconstrainedLogL() << endl
 		<< "Total tree length: " << tree.treeLength() << endl << endl
 		<< "Tree in newick format:" << endl << endl;
 
@@ -448,11 +448,11 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         out.exceptions(ios::failbit | ios::badbit);
         out.open(outfile.c_str());
         out << "IQ-TREE " << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << " built " << __DATE__ << endl << endl;
-        if (params.partition_file) 
+        if (params.partition_file)
                out << "Partition file name: " << params.partition_file << endl;
-        if (params.aln_file) 
+        if (params.aln_file)
                out << "Input file name: " << params.aln_file << endl;
-               
+
 		if (params.user_file)
 			out << "User tree file name: " << params.user_file << endl;
 		out << "Type of analysis: ";
@@ -469,7 +469,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 
         out << "SEQUENCE ALIGNMENT" << endl << "------------------" << endl << endl;
         if (tree.isSuperTree()) {
-			out << "Input data: " << alignment.getNSeq() << " taxa with " << 
+			out << "Input data: " << alignment.getNSeq() << " taxa with " <<
 					alignment.getNSite() << " partitions" << endl << endl;
         	PhyloSuperTree *stree = (PhyloSuperTree*)&tree;
         	int part = 0;
@@ -526,12 +526,12 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
                 "Stopping rule: " << ((params.stop_condition == SC_STOP_PREDICT) ? "Yes" : "No") << endl <<
                 "Number of iterations: " << tree.stop_rule.getNumIterations() << endl <<
                 "Probability of deleting sequences: " << params.p_delete << endl <<
-                "Number of representative leaves: " << params.k_representative << endl << 
+                "Number of representative leaves: " << params.k_representative << endl <<
                 "NNI log-likelihood cutoff: " << tree.getNNICutoff() << endl << endl;
 
 		if (params.compute_ml_tree) {
 			out << "MAXIMUM LIKELIHOOD TREE" << endl << "-----------------------" << endl << endl;
-	
+
 			tree.setRootNode(params.root);
 			out << "NOTE: Tree is UNROOTED although outgroup taxon '" <<
 					tree.root->name << "' is drawn at root" << endl;
@@ -554,11 +554,11 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 					else root_name = (*it)->aln->getSeqName(0);
 					(*it)->root = (*it)->findNodeName(root_name);
 					assert((*it)->root);
-					reportTree(out, params, *(*it),(*it)->computeLikelihood(), 
+					reportTree(out, params, *(*it),(*it)->computeLikelihood(),
 						(*it)->computeLogLVariance());
 				}
 			}
-		
+
 
 		}
         /*
@@ -577,7 +577,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 			if (params.split_threshold == 0.0) out << " (extended consensus)";
 			if (params.split_threshold == 0.5) out << " (majority-rule consensus)";
 			if (params.split_threshold >= 0.99) out << " (strict consensus)";
-			
+
         	out << endl << "Branch lengths are optimized by maximum likelihood on original alignment" << endl;
             out << "Numbers in parentheses are bootstrap supports (%)" << endl << endl;
 
@@ -597,7 +597,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 			tree.sortTaxa();
         	tree.drawTree(out);
         	out << endl << "Consensus tree in newick format: " << endl << endl;
-	        tree.printResultTree(params, out);
+	        tree.printResultTree(out);
         	out << endl << endl;
 		}
 
@@ -630,7 +630,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
     }
 	if (tree.getRate()->getGammaShape() > 0)
         cout << "  Gamma-distributed rates:  " << params.out_prefix << ".rate" << endl;
-		
+
 
     if (tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0)
         cout << "  Site-rates by MH model:   " << params.out_prefix << ".rate" << endl;
@@ -687,7 +687,7 @@ void printSiteLh(const char*filename, IQPTree &tree, double *ptn_lh = NULL, bool
 			out << tree.aln->getNSite() << endl;
 		}
 		out << "Site_Lh   ";
-		for (i = 0; i < tree.aln->getNSite(); i++) 
+		for (i = 0; i < tree.aln->getNSite(); i++)
 			out << " " << pattern_lh[tree.aln->getPatternID(i)];
 		out << endl;
 		out.close();
@@ -720,6 +720,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         tree.dist_matrix = new double[alignment->getNSeq() * alignment->getNSeq()];
         memset(tree.dist_matrix, 0, sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
     }*/
+    clock_t begin_time = clock();
+    params.startTime = begin_time;
     if (params.dist_file) {
         cout << "Reading distance matrix file " << params.dist_file << " ..." << endl;
     } else {
@@ -771,9 +773,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
             printf("Time used: %8.6f seconds.\n", (double) params.run_time / CLOCKS_PER_SEC);
         }
     }
-    
+
     if (params.model_name == "WHTEST") {
-    	if (alignment->num_states != 4) 
+    	if (alignment->num_states != 4)
     		outError("Weiss & von Haeseler test of model homogeneity only works for DNA");
     	params.model_name="GTR+G";
     }
@@ -793,7 +795,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		}
     } catch (string str) {
     	outError(str);
-    } 
+    }
     tree.setModel(tree.getModelFactory()->model);
     tree.setRate(tree.getModelFactory()->site_rate);
     tree.setStartLambda(params.lambda);
@@ -803,6 +805,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     clock_t t_tree_search_start, t_tree_search_end;
     t_tree_search_start = clock();
     cout << endl;
+	tree.setParams(params);
     cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
     cout << "Model of evolution: " << tree.getModelName() << " (" << model_df << " free parameters)" << endl;
     cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
@@ -810,7 +813,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << "Lambda for local search: " << params.lambda << endl;
     if (params.speed_conf != 1.0) {
         cout <<"Confidence value for speed up NNI: ";
-		if (params.new_heuristic) cout << "Using 50%*"<< params.speed_conf <<endl; else cout << "N" << params.speed_conf << " * delta" << params.speed_conf <<endl;
+		if (params.new_heuristic)
+			cout << "Using 50%*"<< params.speed_conf <<endl;
+		else cout << "N" << params.speed_conf << " * delta" << params.speed_conf <<endl;
     } else {
         cout <<"Speed up NNI: disabled " << endl;
     }
@@ -857,7 +862,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         stringstream best_tree_string;
         tree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
         cout << "Computing ML distances based on estimated model parameters...";
-        clock_t begin_time = clock();
         double *ml_dist = NULL;
         longest_dist = tree.computeDist(params, alignment, ml_dist, dist_file);
         cout << " " << double(clock() - begin_time) / CLOCKS_PER_SEC << " sec" << endl;
@@ -866,7 +870,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 			cout << "Some ML distances are too long, using old distances..." << endl;
 	    } else {
 			memmove(tree.dist_matrix, ml_dist, sizeof(double)*alignment->getNSeq()*alignment->getNSeq());
-	    
+
 			if (!params.user_file) {
 				tree.computeBioNJ(params, alignment, dist_file); // create BioNJ tree
 				tree.fixNegativeBranch(fixed_length);
@@ -883,20 +887,18 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 						((PhyloSuperTree*)&tree)->mapTrees();
 						tree.optimizeAllBranches();
 					}
-					
 					tree.curScore = tree.computeLikelihood();
 					cout << "Backup log-likelihood: " << tree.curScore << endl;
 				}
+				double elapsedTime = getEslapsedTime(params.startTime);
+				cout << "Time elapsed: " << elapsedTime << endl;
 			}
         }
     }
 
     /* do NNI with likelihood function */
-
 	//bool saved_estimate_nni = estimate_nni_cutoff;
 	//estimate_nni_cutoff = false; // do not estimate NNI cutoff based on initial BIONJ tree
-
-	tree.setParams(params);
 
     if (params.min_iterations > 0) {
         cout << endl;
@@ -904,17 +906,19 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         //cout << "Current tree likelihood: " << tree.optimizeNNIBranches() << endl;
         //tree.optimizeAllBranches();
         clock_t nniBeginClock, nniEndClock;
-        nniBeginClock = clock();        
+        nniBeginClock = clock();
         tree.optimizeNNI();
         //tree.optimizeNNINew();
         nniEndClock = clock();
-        cout << "Time elapsed :" << (double) (nniEndClock - nniBeginClock) / CLOCKS_PER_SEC << "s" << endl;
+        cout << "First NNI search required :" << (double) (nniEndClock - nniBeginClock) / CLOCKS_PER_SEC << "s" << endl;
         if (tree.curScore > bestTreeScore + TOL_LIKELIHOOD) {
             bestTreeScore = tree.curScore ;
             cout << "Found new best tree log-likelihood : " << bestTreeScore << endl;
         } else {
             cout << "The local search cannot improve the tree likelihood :( " << endl;
         }
+		double elapsedTime = getEslapsedTime(params.startTime);
+		cout << "CPU time elapsed: " << elapsedTime << endl;
     }
 
 	//estimate_nni_cutoff = saved_estimate_nni;
@@ -924,11 +928,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		WHTest(params, tree);
 	}
 
-    
+
     /*double sum_scaling = 1.0;
     if (!tree.checkEqualScalingFactor(sum_scaling))
             cout << "Scaling factor not equal along the tree" << endl;*/
-     
+
     NodeVector pruned_taxa;
     StrVector linked_name;
     double *saved_dist_mat = tree.dist_matrix;
@@ -944,7 +948,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         tree.setRootNode(params.root);
         tree.computePatternLikelihood(pattern_lh, &tree.curScore);
         num_low_support = tree.testAllBranches(params.aLRT_threshold, tree.curScore, pattern_lh, params.aLRT_replicates, params.localbp_replicates);
-        tree.printResultTree(params);
+        tree.printResultTree();
         cout << "  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
         cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
 
@@ -1003,12 +1007,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
             cout << params.min_iterations << endl;
         else cout << "predicted in [" << params.min_iterations << "," <<
                 params.max_iterations << "] (confidence " << params.stop_confidence << ")" << endl;
-        cout << "Important quartet assessed on     : " << ((params.iqp_assess_quartet == IQP_DISTANCE) ? 
+        cout << "Important quartet assessed on     : " << ((params.iqp_assess_quartet == IQP_DISTANCE) ?
         	"Distance" : ((params.iqp_assess_quartet == IQP_PARSIMONY) ? "Parsimony" : "Bootstrap")) << endl;
        	cout << "SSE instructions                  : " << ((tree.sse)? "Yes" : "No") << endl;
 		cout << "Branch length optimization method : " << ((tree.optimize_by_newton) ? "Newton" : "Brent") << endl;
         cout << endl;
-        tree.doIQPNNI(params);
+        tree.doIQPNNI();
     } else {
         /* do SPR with likelihood function */
         if (params.tree_spr)
@@ -1073,8 +1077,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 			site_lh_file += ".mhsitelh";
 			printSiteLh(site_lh_file.c_str(), tree);
 		}
-		
-    	
     }
 
     if (!tree.isSuperTree() && (params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
@@ -1090,7 +1092,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		string out_file = params.out_prefix;
 		out_file += ".alrt";
 		tree.writeInternalNodeNames(out_file);
-	
+
 		cout << "Support values written to " << out_file << endl;*/
     }
 
@@ -1124,12 +1126,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << "CPU time used for tree reconstruction: " << treeSearchTime << " (" << convert_time(treeSearchTime) << ") "<< "s" << endl;
     cout << "CPU total time used: " << (double) params.run_time / CLOCKS_PER_SEC << " (" << convert_time((double) params.run_time / CLOCKS_PER_SEC) << " )"<< "s" << endl;
     //printf( "Total time used: %8.6f seconds.\n", (double) params.run_time / CLOCKS_PER_SEC );
-    
-    tree.printResultTree(params);    
+
+    tree.printResultTree();
     if (params.out_file)
         tree.printTree(params.out_file);
         //tree.printTree(params.out_file,WT_BR_LEN_FIXED_WIDTH);
-	
+
     else {
         //tree.printTree(cout);
         //cout << endl;
@@ -1198,7 +1200,6 @@ void evaluateTrees(Params &params, IQPTree *tree) {
 }
 
 void runPhyloAnalysis(Params &params) {
-
 	Alignment *alignment;
 	IQPTree *tree;
 	if (params.partition_file) {
@@ -1220,17 +1221,17 @@ void runPhyloAnalysis(Params &params) {
 			Alignment out_aln;
 		    Alignment masked_aln(params.gap_masked_aln, params.sequence_type, params.intype);
 			out_aln.createGapMaskedAlignment(&masked_aln, alignment);
-        	out_aln.printPhylip(params.aln_output, false, params.aln_site_list, 
+        	out_aln.printPhylip(params.aln_output, false, params.aln_site_list,
         		params.aln_nogaps, params.ref_seq_name);
 			string str = params.gap_masked_aln;
 			str += ".sitegaps";
 			out_aln.printSiteGaps(str.c_str());
 		} else
 		if (params.aln_output_format == ALN_PHYLIP)
-        	alignment->printPhylip(params.aln_output, false, params.aln_site_list, 
+        	alignment->printPhylip(params.aln_output, false, params.aln_site_list,
         		params.aln_nogaps, params.ref_seq_name);
         else if (params.aln_output_format == ALN_FASTA)
-        	alignment->printFasta(params.aln_output, false, params.aln_site_list, 
+        	alignment->printFasta(params.aln_output, false, params.aln_site_list,
         	params.aln_nogaps, params.ref_seq_name);
     } else if (params.gbo_replicates > 0 && params.user_file && params.second_tree) {
     	runGuidedBootstrap(params, alignment, *tree);
@@ -1293,7 +1294,7 @@ void runPhyloAnalysis(Params &params) {
 				double prob;
 				bootstrap_alignment->multinomialProb(*alignment, prob);
 				ofstream boot_lh;
-				if (sample == 0) 
+				if (sample == 0)
 					boot_lh.open(bootlh_name.c_str());
 				else
 					boot_lh.open(bootlh_name.c_str(), ios_base::out | ios_base::app);
@@ -1334,7 +1335,7 @@ void runPhyloAnalysis(Params &params) {
         }
 
 		if (params.consensus_type == CT_CONSENSUS_TREE) {
-	
+
 			cout << endl << "===> COMPUTE CONSENSUS TREE FROM " <<
 					params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
 			computeConsensusTree(boottrees_name.c_str(), 0, -1,
@@ -1349,7 +1350,7 @@ void runPhyloAnalysis(Params &params) {
             cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
             MExtTree ext_tree;
             assignBootstrapSupport(boottrees_name.c_str(), 0,
-                    treefile_name.c_str(), false, treefile_name.c_str(), 
+                    treefile_name.c_str(), false, treefile_name.c_str(),
                     params.out_prefix, ext_tree, NULL);
             tree->copyTree(&ext_tree);
             reportPhyloAnalysis(params, original_model, *alignment, *tree);
@@ -1379,8 +1380,8 @@ void runPhyloAnalysis(Params &params) {
 }
 
 void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, bool rooted,
-        const char *output_tree, const char *out_prefix, MExtTree &mytree, 
-        const char* tree_weight_file, Params *params) 
+        const char *output_tree, const char *out_prefix, MExtTree &mytree,
+        const char* tree_weight_file, Params *params)
 {
     //bool rooted = false;
     // read the tree file
@@ -1433,7 +1434,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
     }
     //sg.report(cout);
 	cout << "Rescaling split weights by " << scale << endl;
-	if (params->scaling_factor < 0) 
+	if (params->scaling_factor < 0)
 	  sg.scaleWeight(scale, true);
 	else {
 	  sg.scaleWeight(scale, false, params->numeric_precision);

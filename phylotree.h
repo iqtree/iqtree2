@@ -1,7 +1,7 @@
 //
 // C++ Interface: phylotree
 //
-// Description: 
+// Description:
 //
 //
 // Author: BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>, (C) 2008
@@ -115,7 +115,7 @@ struct NNIMove {
     NeighborVec::iterator node2Nei_it;
 
     double score;
-    
+
     int swap_id;
 
     bool operator<(const NNIMove & rhs) const {
@@ -142,7 +142,9 @@ public:
      * Constructor with given alignment
      * @param alignment
      */
-    PhyloTree(Alignment *alignment);
+    PhyloTree(Alignment *aln);
+
+    void init();
 
     /**
             destructor
@@ -331,7 +333,7 @@ public:
      */
     void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
-    void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, 
+    void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL,
     	double *pattern_scale = NULL);
 
     template<int NSTATES>
@@ -350,7 +352,7 @@ public:
     template<int NSTATES>
     inline double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
-    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, 
+    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad,
     	double *pattern_lh = NULL, double *pattern_rate = NULL);
 
 
@@ -365,13 +367,13 @@ public:
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
             Otherwise, copy the pattern_lh attribute
-            @param pattern_lh (OUT) pattern log-likelihoods, 
+            @param pattern_lh (OUT) pattern log-likelihoods,
                             assuming pattern_lh has the size of the number of patterns
      */
 	void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
 
 	/**
-		Compute the variance in tree log-likelihood 
+		Compute the variance in tree log-likelihood
 		(Kishino & Hasegawa 1989, JME 29:170-179)
 		@param pattern_lh pattern log-likelihoods, will be computed if NULL
 		@param tree_lh tree log-likelihood, will be computed if ZERO
@@ -561,8 +563,8 @@ public:
             @return the likelihood of the tree
      */
     double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL
-		/*,ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL, ostream *site_lh = NULL, 
-    	StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL, 
+		/*,ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL, ostream *site_lh = NULL,
+    	StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
     	int *max_trees = NULL, double *logl_cutoff = NULL*/
 	);
 
@@ -576,9 +578,9 @@ public:
             @return the likelihood of the tree
      */
     double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL
-    /*,	ostream *out = NULL, int brtype = 0, 
-    	ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL, 
-    	vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL, 
+    /*,	ostream *out = NULL, int brtype = 0,
+    	ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL,
+    	vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
     	int *max_trees = NULL, double *logl_cutoff = NULL
 	*/);
 
@@ -628,7 +630,7 @@ public:
             @return the longest distance
      */
     double computeDist(double *dist_mat);
-    
+
     /**
             compute observed distance matrix, assume dist_mat is allocated by memory of size num_seqs * num_seqs.
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
@@ -745,7 +747,7 @@ public:
             Test one branch of the tree with aLRT SH-like interpretation
      */
     double testOneBranch(
-            double best_score, double *pattern_lh, int reps, int lbp_reps, 
+            double best_score, double *pattern_lh, int reps, int lbp_reps,
             PhyloNode *node1, PhyloNode *node2, double &lbp_support);
 
     /**
@@ -818,6 +820,11 @@ public:
      */
     bool sse;
 
+    /*
+     * 		Store the all the parameters for the program
+     */
+    Params* params;
+
 
     /**
             assign the leaf names with the alignment sequence names, using the leaf ID for assignment.
@@ -829,8 +836,8 @@ public:
 protected:
 
 	/**
-		internal pattern log-likelihoods, always stored after calling computeLikelihood() 
-		or related functions. Note that scaling factors are not incorporated here. 
+		internal pattern log-likelihoods, always stored after calling computeLikelihood()
+		or related functions. Note that scaling factors are not incorporated here.
 		If you want to get real pattern log-likelihoods, please use computePatternLikelihood()
 	*/
 	double *_pattern_lh;
@@ -878,7 +885,7 @@ protected:
      */
     double *central_partial_lh;
 
-	
+
     /**
             the main memory storing all scaling event numbers for all neighbors of the tree.
             The variable scale_num in PhyloNeighbor will be assigned to a region inside this variable.
@@ -895,7 +902,7 @@ protected:
 		TRUE to discard saturated for Meyer & von Haeseler (2003) model
 	*/
 	bool discard_saturated_site;
-    
+
     /**
      * Number of category
      */
@@ -999,10 +1006,10 @@ protected:
             @param bits_entry the content of the block at index
      */
     void setBitsBlock(UINT* &bit_vec, int index, UINT *bits_entry);
-	
+
 	virtual void saveCurrentTree(double logl) {} // save current tree
 
-	
+
 };
 
 #endif
