@@ -1,0 +1,202 @@
+IQ-TREE 0.9 built Jul 30 2012
+
+Input file name: examples/example.phy
+Type of analysis: tree reconstruction
+Random seed number: 245835
+
+REFERENCES
+----------
+
+A manuscript describing IQTREE is currently under preparation.
+
+*** Please always cite: 
+
+Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space
+and stopping in time. Mol. Biol. Evol., 21(8):1565-1571.
+
+*** If you use the parallel version, please cite: 
+
+Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)
+pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies.
+Bioinformatics, 21:3794-3796.
+
+SEQUENCE ALIGNMENT
+------------------
+
+Input data: 44 sequences with 384 nucleotide sites
+Number of constant sites: 40 (= 10.4167% of all sites)
+Number of site patterns: 355
+
+SUBSTITUTION PROCESS
+--------------------
+
+Model of substitution: HKY
+
+Rate parameter R:
+
+  A-C: 1
+  A-G: 1.51729
+  A-T: 1
+  C-G: 1
+  C-T: 1.51729
+  G-T: 1
+
+State frequencies: (empirical counts from alignment)
+
+  pi(A) = 0.248672
+  pi(C) = 0.261687
+  pi(G) = 0.250996
+  pi(T) = 0.238645
+
+Rate matrix Q:
+
+  A  -1.00256  0.297738    0.4333  0.271522
+  C   0.28293  -0.980484  0.285574  0.411979
+  G  0.429288  0.297738  -0.998548  0.271522
+  T   0.28293  0.451756  0.285574  -1.02026
+
+RATE HETEROGENEITY
+------------------
+
+Model of rate heterogeneity: Uniform
+
+TREE SEARCH
+-----------
+
+Stopping rule: No
+Number of iterations: 10
+Probability of deleting sequences: 0.5
+Number of representative leaves: 4
+NNI log-likelihood cutoff: -1e+06
+
+MAXIMUM LIKELIHOOD TREE
+-----------------------
+
+NOTE: Tree is UNROOTED although outgroup taxon 'FL-1-103' is drawn at root
+
++-------FL-1-103
+70
+|  +-----OSH-1-103
++--71
+|  |  +---CEU-1-103
+|  +--72
+|     |                      +-------TH-1-103
+|     |                   +--76
+|     |                   |  |  +----SI-1-103
+|     |                   |  +--77
+|     |                   |     +------LU-1-103
+|     |                +--74
+|     |                |  |    +----CAb1-103
+|     |                |  +----75
+|     |                |       +--------SU-1-103
+|     +----------------73
+|                      +----CAa1-103
+|
+|                                                     +---RP-56-175
+|                                                  +--52
+|                                                  |  +----A-14-133
+|                                               +--51
+|                                               |  +--YBN-56-175
+|                                            +--50
+|                                            |  +-----SA-60-179
+|                                         +--49
+|                                         |  |  +----BR-60-179
+|                                         |  +--53
+|                                         |     +-----HI-60-179
+|                                      +--48
+|                                      |  |     +------PR-57-176
+|                                      |  |  +--47
+|                                      |  |  |  +---SCR-58-177
+|                                      |  +--46
+|                                      |     |     +--CPL-58-177
+|                                      |     |  +--45
+|                                      |     |  |  +--LTU-59-178
+|                                      |     +--44
+|                                      |        +--TSP-58-177
+|                                   +--54
+|                                   |  |  +----AN-56-175
+|                                   |  +--85
+|                                   |     +----ANA-56-175
+|                                +--55
+|                                |  +--PY-61-180
+|                            +---56
+|                            |   |      +---TH-52-170
+|                            |   +------57
+|                            |          +---LA-68-186
+|                         +--58
+|                         |  +--MGI-58-176
+|                +--------59
+|                |        |  +----ZE-48-166
+|                |        +--60
+|                |           |  +----EAT-48-166
+|                |           +--61
+|                |              +---YSA-46-164
+|             +--62
+|             |  |     +------GR-854-978
+|             |  |  +--82
+|             |  |  |  +-----MO-29-154
+|             |  +--81
+|             |     |            +-----OE-36-161
+|             |     |  +---------84
+|             |     |  |         +------EME-43-168
+|             |     +--83
+|             |        +--LRE-46-171
+|          +--63
+|          |  |          +-----P6-2-107
+|          |  +----------78
+|          |             |  +---HO-1-106
+|          |             +--79
+|          |                |       +---SP-1-106
+|          |                +-------80
+|          |                        +---------------------PA-1-105
++----------64
+           |             +-----------NE-2-109
+           |        +----69
+           |        |    +--------IFE-2-109
+           |     +--66
+           |     |  |      +---HS-9-115
+           |     |  |   +--68
+           |     |  |   |  +---------IFE-8-115
+           |     |  +---67
+           |     |      +--RVI-7-114
+           +-----65
+                 +----------RVI-5-112
+
+Log-likehood of the tree: -11836.614810 (s.e. 328.539566)
+Unconstrained log-likelihood (without tree): -2211.109915
+Total tree length: 10.263518
+
+Tree in newick format:
+
+(FL-1-103:0.203563,(OSH-1-103:0.158777,(CEU-1-103:0.108622,(((TH-1-103:0.186589,(SI-1-103:0.120189,LU-1-103:0.177919):0.056664):0.033934,(CAb1-103:0.133892,SU-1-103:0.230908):0.124951):0.091787,CAa1-103:0.130561):0.399586):0.067828):0.033310,(((((((((((((RP-56-175:0.097692,A-14-133:0.135578):0.085791,YBN-56-175:0.051463):0.032770,SA-60-179:0.151610):0.029934,(BR-60-179:0.131972,HI-60-179:0.156691):0.041380):0.020122,((PR-57-176:0.168585,SCR-58-177:0.106595):0.060107,((CPL-58-177:0.085849,LTU-59-178:0.048808):0.035545,TSP-58-177:0.069025):0.061228):0.042506):0.024476,(AN-56-175:0.133413,ANA-56-175:0.132468):0.062143):0.042133,PY-61-180:0.050872):0.059476,(TH-52-170:0.111910,LA-68-186:0.096627):0.172443):0.099140,MGI-58-176:0.073317):0.034754,(ZE-48-166:0.129063,(EAT-48-166:0.120487,YSA-46-164:0.101612):0.045771):0.034825):0.229727,((GR-854-978:0.165634,MO-29-154:0.140437):0.034802,((OE-36-161:0.156800,EME-43-168:0.168468):0.247697,LRE-46-171:0.085695):0.043458):0.052210):0.086474,(P6-2-107:0.162155,(HO-1-106:0.098379,(SP-1-106:0.109284,PA-1-105:0.512109):0.187140):0.091201):0.274855):0.065682,(((NE-2-109:0.278569,IFE-2-109:0.225946):0.123713,((HS-9-115:0.096956,IFE-8-115:0.253064):0.027328,RVI-7-114:0.086895):0.107098):0.082090,RVI-5-112:0.271861):0.140926):0.259605);
+
+TIME STAMP
+----------
+
+Date and time: Mon Jul 30 11:35:26 2012
+Running time: 1.43 seconds
+
+CREDITS
+-------
+
+Some parts of the code were taken from TREE-PUZZLE package:
+
+Heiko A. Schmidt, Korbinian Strimmer, Martin Vingron, and Arndt von Haeseler
+(2002) TREE-PUZZLE: maximum likelihood phylogenetic analysis using quartets
+and parallel computing. Bioinformatics, 18(3):502-504.
+
+The source codes to construct the BIONJ tree were taken from BIONJ software:
+
+Oliver Gascuel (1997) BIONJ: an improved version of the NJ algorithm
+based on a simple model of sequence data. Mol. Bio. Evol., 14:685-695.
+
+The Nexus file parser was taken from the Nexus Class Library:
+
+Paul O. Lewis (2003) NCL: a C++ class library for interpreting data files in
+NEXUS format. Bioinformatics, 19(17):2330-2331.
+
+The Modeltest 3.7 source codes were taken from:
+
+David Posada and Keith A. Crandall (1998) MODELTEST: testing the model of
+DNA substitution. Bioinformatics, 14(9):817-8.
+

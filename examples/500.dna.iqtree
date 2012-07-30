@@ -1,0 +1,1117 @@
+IQ-TREE 0.9 built Jul  2 2012
+
+Input file name: ../examples/500.dna
+Type of analysis: tree reconstruction
+Random seed number: 12345
+
+REFERENCES
+----------
+
+A manuscript describing IQTREE is currently under preparation.
+
+*** Please always cite: 
+
+Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space
+and stopping in time. Mol. Biol. Evol., 21(8):1565-1571.
+
+*** If you use the parallel version, please cite: 
+
+Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)
+pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies.
+Bioinformatics, 21:3794-3796.
+
+SEQUENCE ALIGNMENT
+------------------
+
+Input data: 500 sequences with 1398 nucleotide sites
+Number of constant sites: 367 (= 26.2518% of all sites)
+Number of site patterns: 1193
+
+SUBSTITUTION PROCESS
+--------------------
+
+Model of substitution: HKY
+
+Rate parameter R:
+
+  A-C: 1
+  A-G: 3.54767
+  A-T: 1
+  C-G: 1
+  C-T: 3.54767
+  G-T: 1
+
+State frequencies: (empirical counts from alignment)
+
+  pi(A) = 0.271503
+  pi(C) = 0.193209
+  pi(G) = 0.246783
+  pi(T) = 0.288505
+
+Rate matrix Q:
+
+  A  -0.990495  0.141004  0.638941  0.210551
+  C  0.198142  -1.12521  0.180102  0.746964
+  G  0.702943  0.141004   -1.0545  0.210551
+  T  0.198142  0.500234  0.180102  -0.878478
+
+RATE HETEROGENEITY
+------------------
+
+Model of rate heterogeneity: Uniform
+
+TREE SEARCH
+-----------
+
+Stopping rule: No
+Number of iterations: 1000
+Probability of deleting sequences: 0.1
+Number of representative leaves: 4
+NNI log-likelihood cutoff: -1e+06
+
+MAXIMUM LIKELIHOOD TREE
+-----------------------
+
+NOTE: Tree is UNROOTED although outgroup taxon 'Nicotiana' is drawn at root
+
+WARNING: 7 branches of ZERO lengths and should be treated with caution!
+         Such branches are denoted by '***' in the figure
+
++---Nicotiana
+500
+|                                                                                                   +---Galphimia
+|                                                                                               +---874
+|                                                                                               |   +---Acridocar
+|                                                                                           +---873
+|                                                                                           |   |   +---Thryallis
+|                                                                                           |   +---875
+|                                                                                           |       |   +---Mascagnia
+|                                                                                           |       +---876
+|                                                                                           |           +---Dicella
+|                                                                                       +---872
+|                                                                                       |   +---Byrsonima
+|                                                                                   +---870
+|                                                                                   |   |   +----Euphorbia
+|                                                                                   |   +---871
+|                                                                                   |       +------Passiflor
+|                                                                               +---869
+|                                                                               |   +-----Ochna
+|                                                                           +---868
+|                                                                           |   +---Humiria
+|                                                                       +---867
+|                                                                       |   +----------Drypetes
+|                                                                   +---866
+|                                                                   |   |           +----Trigonia
+|                                                                   |   |       +---879
+|                                                                   |   |       |   |   +---Liccania
+|                                                                   |   |       |   +---880
+|                                                                   |   |       |       +---Chrysobal
+|                                                                   |   |   +---878
+|                                                                   |   |   |   |   +-----Rheinward
+|                                                                   |   |   |   +---881
+|                                                                   |   |   |       +-------Viola
+|                                                                   |   +---877
+|                                                                   |       +------Erythroxy
+|                                                               +---862
+|                                                               |   |       +---Euonymus
+|                                                               |   |   +---865
+|                                                               |   |   |   +---Brexia
+|                                                               |   +---863
+|                                                               |       |   +---Lepuropet
+|                                                               |       +---864
+|                                                               |           +---Parnassia
+|                                                           +---860
+|                                                           |   |   +------Krameria
+|                                                           |   +---861
+|                                                           |       +----------Guaicum
+|                                                       +---859
+|                                                       |   |                       +----Sargentod
+|                                                       |   |                   +---921
+|                                                       |   |                   |   |   +----Pisum
+|                                                       |   |                   |   +---922
+|                                                       |   |                   |       +------Medicago
+|                                                       |   |               +---920
+|                                                       |   |               |   +-----Albizzia
+|                                                       |   |           +---919
+|                                                       |   |           |   +-----Bauhinia
+|                                                       |   |       +---918
+|                                                       |   |       |   |   +---Securidac
+|                                                       |   |       |   +---923
+|                                                       |   |       |       +---Polygala
+|                                                       |   |   +---889
+|                                                       |   |   |   |                   +---Coriaria
+|                                                       |   |   |   |               +---912
+|                                                       |   |   |   |               |   |    +---Luffa
+|                                                       |   |   |   |               |   +----913
+|                                                       |   |   |   |               |        |   +---Cucurbita
+|                                                       |   |   |   |               |        +---914
+|                                                       |   |   |   |               |            +---Cucumis
+|                                                       |   |   |   |           +---911
+|                                                       |   |   |   |           |   |   +---Octomeles
+|                                                       |   |   |   |           |   +---915
+|                                                       |   |   |   |           |       +---Tetramele
+|                                                       |   |   |   |       +---910
+|                                                       |   |   |   |       |   |       +---Dcannabin
+|                                                       |   |   |   |       |   |   +---917
+|                                                       |   |   |   |       |   |   |   +***Datglomer
+|                                                       |   |   |   |       |   +---916
+|                                                       |   |   |   |       |       +-----Begonia
+|                                                       |   |   |   |   +---901
+|                                                       |   |   |   |   |   |           +---Myrica
+|                                                       |   |   |   |   |   |       +---904
+|                                                       |   |   |   |   |   |       |   |       +---Betula
+|                                                       |   |   |   |   |   |       |   |   +---906
+|                                                       |   |   |   |   |   |       |   |   |   +---Casuarina
+|                                                       |   |   |   |   |   |       |   +---905
+|                                                       |   |   |   |   |   |       |       +---Carya
+|                                                       |   |   |   |   |   |   +---903
+|                                                       |   |   |   |   |   |   |   |       +---Chrysolep
+|                                                       |   |   |   |   |   |   |   |   +---908
+|                                                       |   |   |   |   |   |   |   |   |   +---Trigonoba
+|                                                       |   |   |   |   |   |   |   +---907
+|                                                       |   |   |   |   |   |   |       +---FagusAm
+|                                                       |   |   |   |   |   +---902
+|                                                       |   |   |   |   |       |   +---NothofBal
+|                                                       |   |   |   |   |       +---909
+|                                                       |   |   |   |   |           +---NothoDom
+|                                                       |   |   |   +---890
+|                                                       |   |   |       |                   +---Celtis
+|                                                       |   |   |       |               +---895
+|                                                       |   |   |       |               |   +---Humulus
+|                                                       |   |   |       |           +---894
+|                                                       |   |   |       |           |   +---Trema
+|                                                       |   |   |       |       +---893
+|                                                       |   |   |       |       |   |   +---Boehmeria
+|                                                       |   |   |       |       |   +---896
+|                                                       |   |   |       |       |       |   +----Ficustrig
+|                                                       |   |   |       |       |       +---897
+|                                                       |   |   |       |       |           +---Morus
+|                                                       |   |   |       |   +---892
+|                                                       |   |   |       |   |   +---Rhamnus
+|                                                       |   |   |       +---891
+|                                                       |   |   |           |           +---Photinia
+|                                                       |   |   |           |       +---900
+|                                                       |   |   |           |       |   +---Prunus
+|                                                       |   |   |           |   +---899
+|                                                       |   |   |           |   |   +---Spirea
+|                                                       |   |   |           +---898
+|                                                       |   |   |               +------Geum
+|                                                       |   +---882
+|                                                       |       |           +---Cephalot
+|                                                       |       |       +---888
+|                                                       |       |       |   +---Platythec
+|                                                       |       |   +---885
+|                                                       |       |   |   |       +---Bauera
+|                                                       |       |   |   |   +---887
+|                                                       |       |   |   |   |   +---Ceratopet
+|                                                       |       |   |   +---886
+|                                                       |       |   |       +---Eucryphia
+|                                                       |       +---883
+|                                                       |           |   +-------Oxalisdil
+|                                                       |           +---884
+|                                                       |               +---Averrhoa
+|                                                   +---804
+|                                                   |   |                                               +---Oenothera
+|                                                   |   |                                           +---826
+|                                                   |   |                                           |   +---Clarkia
+|                                                   |   |                                       +---825
+|                                                   |   |                                       |   +----Epilobium
+|                                                   |   |                                   +---824
+|                                                   |   |                                   |   +---Circaea
+|                                                   |   |                               +---823
+|                                                   |   |                               |   +---Lopezia2
+|                                                   |   |                           +---822
+|                                                   |   |                           |   +---Hauya
+|                                                   |   |                       +---821
+|                                                   |   |                       |   +---Ludwigia2
+|                                                   |   |                   +---818
+|                                                   |   |                   |   |       +----Lythrum
+|                                                   |   |                   |   |   +---820
+|                                                   |   |                   |   |   |   +---Trapa
+|                                                   |   |                   |   +---819
+|                                                   |   |                   |       +---Punica
+|                                                   |   |               +---817
+|                                                   |   |               |   |       +----Mouriri
+|                                                   |   |               |   |   +---828
+|                                                   |   |               |   |   |   +----Osbeckia
+|                                                   |   |               |   +---827
+|                                                   |   |               |       +---Heteropyx
+|                                                   |   |           +---816
+|                                                   |   |           |   |   +---Quisquali
+|                                                   |   |           |   +---829
+|                                                   |   |           |       +---Terminali
+|                                                   |   |       +---815
+|                                                   |   |       |   +----Qualea
+|                                                   |   |   +---814
+|                                                   |   |   |   |                   +---Leitneria
+|                                                   |   |   |   |               +---836
+|                                                   |   |   |   |               |   +---Ailanthus
+|                                                   |   |   |   |           +---835
+|                                                   |   |   |   |           |   +------Poncirus
+|                                                   |   |   |   |       +---834
+|                                                   |   |   |   |       |   +---Bursera
+|                                                   |   |   |   |   +---831
+|                                                   |   |   |   |   |   |       +---Acer
+|                                                   |   |   |   |   |   |   +---833
+|                                                   |   |   |   |   |   |   |   +---Cupaniops
+|                                                   |   |   |   |   |   +---832
+|                                                   |   |   |   |   |       +---Schinus
+|                                                   |   |   |   +---830
+|                                                   |   |   |       |                   +---Bombax
+|                                                   |   |   |       |               +---857
+|                                                   |   |   |       |               |   |   +---Gossrobin
+|                                                   |   |   |       |               |   +---858
+|                                                   |   |   |       |               |       +---Thespesia
+|                                                   |   |   |       |           +---856
+|                                                   |   |   |       |           |   +---Tilia
+|                                                   |   |   |       |       +---855
+|                                                   |   |   |       |       |   +---Theobroma
+|                                                   |   |   |       |   +---853
+|                                                   |   |   |       |   |   |      +---Shoreazel
+|                                                   |   |   |       |   |   +------854
+|                                                   |   |   |       |   |          +---Shoreasti
+|                                                   |   |   |       +---837
+|                                                   |   |   |           |           +---Moringa
+|                                                   |   |   |           |       +---840
+|                                                   |   |   |           |       |   +----Carica
+|                                                   |   |   |           |   +---839
+|                                                   |   |   |           |   |   |                               +---Stanleya
+|                                                   |   |   |           |   |   |                           +---850
+|                                                   |   |   |           |   |   |                           |   +---Brassica
+|                                                   |   |   |           |   |   |                       +---849
+|                                                   |   |   |           |   |   |                       |   +---Cleome
+|                                                   |   |   |           |   |   |                   +---848
+|                                                   |   |   |           |   |   |                   |   +---Capparis
+|                                                   |   |   |           |   |   |               +---847
+|                                                   |   |   |           |   |   |               |   +-----Reseda
+|                                                   |   |   |           |   |   |           +---846
+|                                                   |   |   |           |   |   |           |   +---Tovaria
+|                                                   |   |   |           |   |   |       +---844
+|                                                   |   |   |           |   |   |       |   |   +----Koeberlin
+|                                                   |   |   |           |   |   |       |   +---845
+|                                                   |   |   |           |   |   |       |       +--------Batis
+|                                                   |   |   |           |   |   |   +---842
+|                                                   |   |   |           |   |   |   |   |   +---Limnanthe
+|                                                   |   |   |           |   |   |   |   +---843
+|                                                   |   |   |           |   |   |   |       +---Floerkea
+|                                                   |   |   |           |   |   +---841
+|                                                   |   |   |           |   |       +------Setchella
+|                                                   |   |   |           +---838
+|                                                   |   |   |               |       +---Bretschne
+|                                                   |   |   |               |   +---852
+|                                                   |   |   |               |   |   +---Akania
+|                                                   |   |   |               +---851
+|                                                   |   |   |                   +---Tropaeolu
+|                                                   |   +---805
+|                                                   |       |       +---Crossosom
+|                                                   |       |   +---807
+|                                                   |       |   |   |       +---Pelargoni
+|                                                   |       |   |   |   +---809
+|                                                   |       |   |   |   |   |   +---Geranium
+|                                                   |       |   |   |   |   +---810
+|                                                   |       |   |   |   |       +---Monsonia
+|                                                   |       |   |   +---808
+|                                                   |       |   |       +----Hypseocha
+|                                                   |       +---806
+|                                                   |           |       +---Greyia
+|                                                   |           |   +---813
+|                                                   |           |   |   +---Francoa
+|                                                   |           +---811
+|                                                   |               |   +---Viviania
+|                                                   |               +---812
+|                                                   |                   +-------Wendtiagr
+|                                               +---781
+|                                               |   |                +---Dianthus
+|                                               |   |            +---785
+|                                               |   |            |   |       +---Atriplex
+|                                               |   |            |   |   +---787
+|                                               |   |            |   |   |   +---Spinacia
+|                                               |   |            |   +---786
+|                                               |   |            |       +-------Amaranthu
+|                                               |   |       +----784
+|                                               |   |       |    |           +---Basella
+|                                               |   |       |    |       +---790
+|                                               |   |       |    |       |   |   +---Portulaca
+|                                               |   |       |    |       |   +---791
+|                                               |   |       |    |       |       +---Alluaudia
+|                                               |   |       |    |   +---789
+|                                               |   |       |    |   |   |   +-----Mollugo
+|                                               |   |       |    |   |   +---792
+|                                               |   |       |    |   |       |       +---Phytolacc
+|                                               |   |       |    |   |       |   +---794
+|                                               |   |       |    |   |       |   |   |   +---Mirabilus
+|                                               |   |       |    |   |       |   |   +---795
+|                                               |   |       |    |   |       |   |       +---Rivina
+|                                               |   |       |    |   |       +---793
+|                                               |   |       |    |   |           +------Trianthem
+|                                               |   |       |    +---788
+|                                               |   |       |        +---Stegonosp
+|                                               |   |   +---783
+|                                               |   |   |   |           +--------Plumbago
+|                                               |   |   |   |       +---801
+|                                               |   |   |   |       |   +------Rheum
+|                                               |   |   |   |   +---800
+|                                               |   |   |   |   |   +---Nepenthes
+|                                               |   |   |   +---796
+|                                               |   |   |       |            +---D.filifor
+|                                               |   |   |       |       +----799
+|                                               |   |   |       |       |    +---D.spathul
+|                                               |   |   |       |   +---798
+|                                               |   |   |       |   |   +-----D.petiola
+|                                               |   |   |       +---797
+|                                               |   |   |           +------Dionaea
+|                                               |   +---782
+|                                               |       |       +--------Phoradend
+|                                               |       |   +---803
+|                                               |       |   |   +------Schoepfia
+|                                               |       +---802
+|                                               |           +---Osyris
+|                                           +---588
+|                                           |   |                                                        +---Victoria
+|                                           |   |                                                    +---726
+|                                           |   |                                                    |   +---Nymphaea
+|                                           |   |                                               +----722
+|                                           |   |                                               |    |   +---Barclaya
+|                                           |   |                                               |    +---723
+|                                           |   |                                               |        |   +---Nuphar
+|                                           |   |                                               |        +---724
+|                                           |   |                                               |            |   +---Brasenia
+|                                           |   |                                               |            +---725
+|                                           |   |                                               |                +---Cabomba
+|                                           |   |                                           +---721
+|                                           |   |                                           |   +----Amborella
+|                                           |   |                                       +---720
+|                                           |   |                                       |   |       +---Schisandr
+|                                           |   |                                       |   |   +---728
+|                                           |   |                                       |   |   |   +---Illicium
+|                                           |   |                                       |   +---727
+|                                           |   |                                       |       +---Austrobai
+|                                           |   |                                   +---719
+|                                           |   |                                   |   |   +----Hedyosmum
+|                                           |   |                                   |   +---729
+|                                           |   |                                   |       |   +---Chloranth
+|                                           |   |                                   |       +---730
+|                                           |   |                                   |           +---Sarcandra
+|                                           |   |                               +---699
+|                                           |   |                               |   |             +---Canella-A
+|                                           |   |                               |   |       +-----718
+|                                           |   |                               |   |       |     +-----Canella-B
+|                                           |   |                               |   |   +---715
+|                                           |   |                               |   |   |   |       +---Drimys
+|                                           |   |                               |   |   |   |   +---717
+|                                           |   |                               |   |   |   |   |   +---Belliolum
+|                                           |   |                               |   |   |   +---716
+|                                           |   |                               |   |   |       +---Tasmannia
+|                                           |   |                               |   +---700
+|                                           |   |                               |       |                               +---Magnsalic
+|                                           |   |                               |       |                           +---712
+|                                           |   |                               |       |                           |   +---Talauma
+|                                           |   |                               |       |                       +---711
+|                                           |   |                               |       |                       |   +***Michelia
+|                                           |   |                               |       |                   +---709
+|                                           |   |                               |       |                   |   |   +---Manglieti
+|                                           |   |                               |       |                   |   +---710
+|                                           |   |                               |       |                   |       +---Talasinga
+|                                           |   |                               |       |               +---708
+|                                           |   |                               |       |               |   +---Magnhypol
+|                                           |   |                               |       |           +---707
+|                                           |   |                               |       |           |   |    +---Liriodtul
+|                                           |   |                               |       |           |   +----713
+|                                           |   |                               |       |           |        +---Liriodchi
+|                                           |   |                               |       |       +---706
+|                                           |   |                               |       |       |   |   +---Degeneria
+|                                           |   |                               |       |       |   +---714
+|                                           |   |                               |       |       |       +---Galbulimi
+|                                           |   |                               |       |   +---702
+|                                           |   |                               |       |   |   |   +---Eupomatia
+|                                           |   |                               |       |   |   +---703
+|                                           |   |                               |       |   |       |       +---Annona
+|                                           |   |                               |       |   |       |   +---705
+|                                           |   |                               |       |   |       |   |   +---Asimina
+|                                           |   |                               |       |   |       +---704
+|                                           |   |                               |       |   |           +---Cananga
+|                                           |   |                               |       +---701
+|                                           |   |                               |           +---Knema
+|                                           |   |                           +---698
+|                                           |   |                           |   |               +---Cinnamomu
+|                                           |   |                           |   |           +---735
+|                                           |   |                           |   |           |   +---Persea
+|                                           |   |                           |   |       +---734
+|                                           |   |                           |   |       |   +---Hedycarya
+|                                           |   |                           |   |   +***733
+|                                           |   |                           |   |   |   |   +---Idiosperm
+|                                           |   |                           |   |   |   +---736
+|                                           |   |                           |   |   |       |   +---Calycchin
+|                                           |   |                           |   |   |       +---737
+|                                           |   |                           |   |   |           +---Chimonant
+|                                           |   |                           |   +---731
+|                                           |   |                           |       |   +----Hernandia
+|                                           |   |                           |       +---732
+|                                           |   |                           |           +---Gyrocarpu
+|                                           |   |                       +***605
+|                                           |   |                       |   |                                   +---Cypirapea
+|                                           |   |                       |   |                               +---640
+|                                           |   |                       |   |                               |   |   +---Neuwiedia
+|                                           |   |                       |   |                               |   +---641
+|                                           |   |                       |   |                               |       +---Oncidium
+|                                           |   |                       |   |                           +---639
+|                                           |   |                       |   |                           |   |   +---Curculigo
+|                                           |   |                       |   |                           |   +---642
+|                                           |   |                       |   |                           |       +---Hypoxis
+|                                           |   |                       |   |                       +---623
+|                                           |   |                       |   |                       |   |       +---Lomandra
+|                                           |   |                       |   |                       |   |   +---625
+|                                           |   |                       |   |                       |   |   |   |               +---Scilla
+|                                           |   |                       |   |                       |   |   |   |           +---630
+|                                           |   |                       |   |                       |   |   |   |           |   |   +---Hemerocal
+|                                           |   |                       |   |                       |   |   |   |           |   +---631
+|                                           |   |                       |   |                       |   |   |   |           |       +----Chlorophy
+|                                           |   |                       |   |                       |   |   |   |       +---628
+|                                           |   |                       |   |                       |   |   |   |       |   |   +----Bowiea
+|                                           |   |                       |   |                       |   |   |   |       |   +---629
+|                                           |   |                       |   |                       |   |   |   |       |       +---Clivia
+|                                           |   |                       |   |                       |   |   |   |   +---627
+|                                           |   |                       |   |                       |   |   |   |   |   |   +---Sansevier
+|                                           |   |                       |   |                       |   |   |   |   |   +---632
+|                                           |   |                       |   |                       |   |   |   |   |       |   +---Danae
+|                                           |   |                       |   |                       |   |   |   |   |       +---633
+|                                           |   |                       |   |                       |   |   |   |   |           +---Nolinalin
+|                                           |   |                       |   |                       |   |   |   +---626
+|                                           |   |                       |   |                       |   |   |       |   +---Xanthorrh
+|                                           |   |                       |   |                       |   |   |       +---634
+|                                           |   |                       |   |                       |   |   |           |   +---Kniphofia
+|                                           |   |                       |   |                       |   |   |           +---635
+|                                           |   |                       |   |                       |   |   |               |   +---Aloe
+|                                           |   |                       |   |                       |   |   |               +---636
+|                                           |   |                       |   |                       |   |   |                   +---Haworthia
+|                                           |   |                       |   |                       |   +---624
+|                                           |   |                       |   |                       |       |       +---Iris
+|                                           |   |                       |   |                       |       |   +---638
+|                                           |   |                       |   |                       |       |   |   +---Anomathec
+|                                           |   |                       |   |                       |       +---637
+|                                           |   |                       |   |                       |           +---Cyanastru
+|                                           |   |                       |   |                   +---622
+|                                           |   |                       |   |                   |   |                                         +---Avena
+|                                           |   |                       |   |                   |   |                                     +---659
+|                                           |   |                       |   |                   |   |                                     |   |   +---Triticum
+|                                           |   |                       |   |                   |   |                                     |   +---660
+|                                           |   |                       |   |                   |   |                                     |       +---Aegilops
+|                                           |   |                       |   |                   |   |                                 +---657
+|                                           |   |                       |   |                   |   |                                 |   |   +---Cenchrus
+|                                           |   |                       |   |                   |   |                                 |   +---658
+|                                           |   |                       |   |                   |   |                                 |       +---Neurachne
+|                                           |   |                       |   |                   |   |                       +---------656
+|                                           |   |                       |   |                   |   |                       |         |   +---Oryza
+|                                           |   |                       |   |                   |   |                       |         +---661
+|                                           |   |                       |   |                   |   |                       |             +---Bambusa
+|                                           |   |                       |   |                   |   |                   +---655
+|                                           |   |                       |   |                   |   |                   |   +-------Elegia
+|                                           |   |                       |   |                   |   |               +---654
+|                                           |   |                       |   |                   |   |               |   +----Flagellar
+|                                           |   |                       |   |                   |   |           +---646
+|                                           |   |                       |   |                   |   |           |   |           +------Juncus
+|                                           |   |                       |   |                   |   |           |   |       +---649
+|                                           |   |                       |   |                   |   |           |   |       |   |          +---Oxychloe
+|                                           |   |                       |   |                   |   |           |   |       |   |      +---651
+|                                           |   |                       |   |                   |   |           |   |       |   |      |   +---Cyperus
+|                                           |   |                       |   |                   |   |           |   |       |   +------650
+|                                           |   |                       |   |                   |   |           |   |       |          +---Carex
+|                                           |   |                       |   |                   |   |           |   |   +---648
+|                                           |   |                       |   |                   |   |           |   |   |   +----Prionium
+|                                           |   |                       |   |                   |   |           |   +---647
+|                                           |   |                       |   |                   |   |           |       |       +-----------Lachnocau
+|                                           |   |                       |   |                   |   |           |       |   +---653
+|                                           |   |                       |   |                   |   |           |       |   |   +---Typha
+|                                           |   |                       |   |                   |   |           |       +---652
+|                                           |   |                       |   |                   |   |           |           +---Sparganiu
+|                                           |   |                       |   |                   |   |       +---645
+|                                           |   |                       |   |                   |   |       |   |   +----Stegolepi
+|                                           |   |                       |   |                   |   |       |   +---662
+|                                           |   |                       |   |                   |   |       |       |   +---Tillandsi
+|                                           |   |                       |   |                   |   |       |       +---663
+|                                           |   |                       |   |                   |   |       |           |   +---Ananas
+|                                           |   |                       |   |                   |   |       |           +---664
+|                                           |   |                       |   |                   |   |       |               +---Puya
+|                                           |   |                       |   |                   |   |   +---644
+|                                           |   |                       |   |                   |   |   |   |                   +----Commelina
+|                                           |   |                       |   |                   |   |   |   |               +---682
+|                                           |   |                       |   |                   |   |   |   |               |   |        +---Tradesca
+|                                           |   |                       |   |                   |   |   |   |               |   |    +---684
+|                                           |   |                       |   |                   |   |   |   |               |   |    |   +---Zebrina
+|                                           |   |                       |   |                   |   |   |   |               |   +----683
+|                                           |   |                       |   |                   |   |   |   |               |        +---Campelia
+|                                           |   |                       |   |                   |   |   |   |           +---681
+|                                           |   |                       |   |                   |   |   |   |           |   +-----Pontederi
+|                                           |   |                       |   |                   |   |   |   |       +---680
+|                                           |   |                       |   |                   |   |   |   |       |   +----Philydrum
+|                                           |   |                       |   |                   |   |   |   |   +---679
+|                                           |   |                       |   |                   |   |   |   |   |   +------Anigozant
+|                                           |   |                       |   |                   |   |   |   +---665
+|                                           |   |                       |   |                   |   |   |       |           +---Ravenala
+|                                           |   |                       |   |                   |   |   |       |       +---676
+|                                           |   |                       |   |                   |   |   |       |       |   |   +-----Strelitzi
+|                                           |   |                       |   |                   |   |   |       |       |   +---677
+|                                           |   |                       |   |                   |   |   |       |       |       +--------Phenakosp
+|                                           |   |                       |   |                   |   |   |       |   +---675
+|                                           |   |                       |   |                   |   |   |       |   |   |   +---Maranta
+|                                           |   |                       |   |                   |   |   |       |   |   +---678
+|                                           |   |                       |   |                   |   |   |       |   |       +----Calathea
+|                                           |   |                       |   |                   |   |   |       +---666
+|                                           |   |                       |   |                   |   |   |           |               +---Hedychium
+|                                           |   |                       |   |                   |   |   |           |           +---672
+|                                           |   |                       |   |                   |   |   |           |           |   +---Riedelea
+|                                           |   |                       |   |                   |   |   |           |       +---670
+|                                           |   |                       |   |                   |   |   |           |       |   |   +-----Zingiber
+|                                           |   |                       |   |                   |   |   |           |       |   +---671
+|                                           |   |                       |   |                   |   |   |           |       |       +---Globba
+|                                           |   |                       |   |                   |   |   |           |   +---669
+|                                           |   |                       |   |                   |   |   |           |   |   |   +---Heliconia
+|                                           |   |                       |   |                   |   |   |           |   |   +---673
+|                                           |   |                       |   |                   |   |   |           |   |       |   +---Costus
+|                                           |   |                       |   |                   |   |   |           |   |       +---674
+|                                           |   |                       |   |                   |   |   |           |   |           +------Tapeinoch
+|                                           |   |                       |   |                   |   |   |           +---667
+|                                           |   |                       |   |                   |   |   |               |   +---Musa
+|                                           |   |                       |   |                   |   |   |               +---668
+|                                           |   |                       |   |                   |   |   |                   +---Orchidant
+|                                           |   |                       |   |                   |   +---643
+|                                           |   |                       |   |                   |       |               +---Chamaedor
+|                                           |   |                       |   |                   |       |           +---688
+|                                           |   |                       |   |                   |       |           |   +---Drymophlo
+|                                           |   |                       |   |                   |       |       +---687
+|                                           |   |                       |   |                   |       |       |   +---Nypa
+|                                           |   |                       |   |                   |       |   +---686
+|                                           |   |                       |   |                   |       |   |   +---Serenoa
+|                                           |   |                       |   |                   |       +---685
+|                                           |   |                       |   |                   |           |   +---Dioscorea
+|                                           |   |                       |   |                   |           +---689
+|                                           |   |                       |   |                   |               +---Tacca
+|                                           |   |                       |   |               +---618
+|                                           |   |                       |   |               |   |           +---Pandanus
+|                                           |   |                       |   |               |   |       +---621
+|                                           |   |                       |   |               |   |       |   +---Freycinet
+|                                           |   |                       |   |               |   |   +---620
+|                                           |   |                       |   |               |   |   |   +---Sphaerade
+|                                           |   |                       |   |               |   +---619
+|                                           |   |                       |   |               |       +-----Vellozia
+|                                           |   |                       |   |           +---609
+|                                           |   |                       |   |           |   |       +----Smilax
+|                                           |   |                       |   |           |   |   +---615
+|                                           |   |                       |   |           |   |   |   |   +---Calochort
+|                                           |   |                       |   |           |   |   |   +---616
+|                                           |   |                       |   |           |   |   |       |   +---Lilium
+|                                           |   |                       |   |           |   |   |       +---617
+|                                           |   |                       |   |           |   |   |           +---Medeola
+|                                           |   |                       |   |           |   +---610
+|                                           |   |                       |   |           |       |           +---Colchicum
+|                                           |   |                       |   |           |       |       +---613
+|                                           |   |                       |   |           |       |       |   +---Burchardi
+|                                           |   |                       |   |           |       |   +---612
+|                                           |   |                       |   |           |       |   |   +-----Alstroeme
+|                                           |   |                       |   |           |       +---611
+|                                           |   |                       |   |           |           |   +----Veratrum
+|                                           |   |                       |   |           |           +---614
+|                                           |   |                       |   |           |               +---Chamaelir
+|                                           |   |                       |   |       +---608
+|                                           |   |                       |   |       |   +--------Aletris
+|                                           |   |                       |   |   +---607
+|                                           |   |                       |   |   |   |       +---Pleea
+|                                           |   |                       |   |   |   |   +---691
+|                                           |   |                       |   |   |   |   |   |              +---Sagittari
+|                                           |   |                       |   |   |   |   |   |         +----694
+|                                           |   |                       |   |   |   |   |   |         |    +---Sagittlat
+|                                           |   |                       |   |   |   |   |   |   +-----693
+|                                           |   |                       |   |   |   |   |   |   |     +---Alisma
+|                                           |   |                       |   |   |   |   |   +---692
+|                                           |   |                       |   |   |   |   |       +----------Potamoget
+|                                           |   |                       |   |   |   +---690
+|                                           |   |                       |   |   |       |       +---Spathiphy
+|                                           |   |                       |   |   |       |   +---696
+|                                           |   |                       |   |   |       |   |   |   +------Pistia
+|                                           |   |                       |   |   |       |   |   +---697
+|                                           |   |                       |   |   |       |   |       +-----Lemna
+|                                           |   |                       |   |   |       +---695
+|                                           |   |                       |   |   |           +---Gymnostac
+|                                           |   |                       |   +---606
+|                                           |   |                       |       +-------Acorus
+|                                           |   |                   +---597
+|                                           |   |                   |   |           +---Asarum
+|                                           |   |                   |   |       +---601
+|                                           |   |                   |   |       |   +---Saruma
+|                                           |   |                   |   |   +---599
+|                                           |   |                   |   |   |   |   +------Lactoris
+|                                           |   |                   |   |   |   +---600
+|                                           |   |                   |   |   |       +-----Aristoloc
+|                                           |   |                   |   +---598
+|                                           |   |                   |       |       +---Saururus
+|                                           |   |                   |       |   +---603
+|                                           |   |                   |       |   |   +---Houttuyni
+|                                           |   |                   |       +---602
+|                                           |   |                   |           |     +---Piper
+|                                           |   |                   |           +-----604
+|                                           |   |                   |                 +----Peperomia
+|                                           |   |               +---596
+|                                           |   |               |   |   +------Ceratophy
+|                                           |   |               |   +---738
+|                                           |   |               |       |                    +---Cycas
+|                                           |   |               |       |                +---744
+|                                           |   |               |       |                |   |               +---Bowenia
+|                                           |   |               |       |                |   |           +---748
+|                                           |   |               |       |                |   |           |   |   +---Zamia
+|                                           |   |               |       |                |   |           |   +---749
+|                                           |   |               |       |                |   |           |       +---Chigua
+|                                           |   |               |       |                |   |       +---747
+|                                           |   |               |       |                |   |       |   +---Encephala
+|                                           |   |               |       |                |   |   +---746
+|                                           |   |               |       |                |   |   |   +---Stangeria
+|                                           |   |               |       |                |   +---745
+|                                           |   |               |       |                |       +---Dioon
+|                                           |   |               |       |            +---743
+|                                           |   |               |       |            |   +---Ginkgobil
+|                                           |   |               |       |        +---742
+|                                           |   |               |       |        |   |           +------Sciadopit
+|                                           |   |               |       |        |   |       +---761
+|                                           |   |               |       |        |   |       |   |       +---Taxusbrev
+|                                           |   |               |       |        |   |       |   |   +---763
+|                                           |   |               |       |        |   |       |   |   |   +---Cephalota
+|                                           |   |               |       |        |   |       |   +---762
+|                                           |   |               |       |        |   |       |       |       +---Athrotaxi
+|                                           |   |               |       |        |   |       |       |   +---765
+|                                           |   |               |       |        |   |       |       |   |   |       +-----Callitris
+|                                           |   |               |       |        |   |       |       |   |   |   +---767
+|                                           |   |               |       |        |   |       |       |   |   |   |   +---Widdringt
+|                                           |   |               |       |        |   |       |       |   |   +---766
+|                                           |   |               |       |        |   |       |       |   |       |   +---Metasequo
+|                                           |   |               |       |        |   |       |       |   |       +---768
+|                                           |   |               |       |        |   |       |       |   |           +---Sequoiade
+|                                           |   |               |       |        |   |       |       +---764
+|                                           |   |               |       |        |   |       |           +----Taxodium
+|                                           |   |               |       |        |   |   +---760
+|                                           |   |               |       |        |   |   |   +---------Podocarpu
+|                                           |   |               |       |        |   +---750
+|                                           |   |               |       |        |       |                        +---Abies
+|                                           |   |               |       |        |       |                    +---757
+|                                           |   |               |       |        |       |                    |   +---Keteleeri
+|                                           |   |               |       |        |       |                +---755
+|                                           |   |               |       |        |       |                |   |   +---Pseudolar
+|                                           |   |               |       |        |       |                |   +---756
+|                                           |   |               |       |        |       |                |       +---Tsuga
+|                                           |   |               |       |        |       |            +---754
+|                                           |   |               |       |        |       |            |   +---Cedrus
+|                                           |   |               |       |        |       |        +---753
+|                                           |   |               |       |        |       |        |   |   +---Pseudotsu
+|                                           |   |               |       |        |       |        |   +---758
+|                                           |   |               |       |        |       |        |       +---Larix
+|                                           |   |               |       |        |       |    +---752
+|                                           |   |               |       |        |       |    |   |   +---Pinus_gri
+|                                           |   |               |       |        |       |    |   +---759
+|                                           |   |               |       |        |       |    |       +---Pinus_rad
+|                                           |   |               |       |        |       +----751
+|                                           |   |               |       |        |            +---Picea_pun
+|                                           |   |               |       +--------739
+|                                           |   |               |                |            +-----------Gnetum
+|                                           |   |               |                |        +---741
+|                                           |   |               |                |        |   +-------Welwitsch
+|                                           |   |               |                +--------740
+|                                           |   |               |                         +-------------Ephedra
+|                                           |   |           +---595
+|                                           |   |           |   |           +---Akebia
+|                                           |   |           |   |       +---771
+|                                           |   |           |   |       |   |       +----Mahonia
+|                                           |   |           |   |       |   |   +---773
+|                                           |   |           |   |       |   |   |   |   +----Caulophyl
+|                                           |   |           |   |       |   |   |   +---774
+|                                           |   |           |   |       |   |   |       |       +---Ranunculu
+|                                           |   |           |   |       |   |   |       |   +---776
+|                                           |   |           |   |       |   |   |       |   |   +---Xanthorhi
+|                                           |   |           |   |       |   |   |       +---775
+|                                           |   |           |   |       |   |   |           +---Caltha
+|                                           |   |           |   |       |   +---772
+|                                           |   |           |   |       |       +----Cocculus
+|                                           |   |           |   |   +---770
+|                                           |   |           |   |   |   +---Euptelea
+|                                           |   |           |   +---769
+|                                           |   |           |       |       +----Dicentra
+|                                           |   |           |       |   +---778
+|                                           |   |           |       |   |   +-----Papaver
+|                                           |   |           |       +---777
+|                                           |   |           |           +---Sanguinar
+|                                           |   |       +---591
+|                                           |   |       |   |       +-----Sabia
+|                                           |   |       |   |   +---594
+|                                           |   |       |   |   |   +-----Lambertia
+|                                           |   |       |   +---592
+|                                           |   |       |       |   +---Nelumbo
+|                                           |   |       |       +---593
+|                                           |   |       |           +---Platanus
+|                                           |   |   +---590
+|                                           |   |   |   |       +---Trochoden
+|                                           |   |   |   |   +---780
+|                                           |   |   |   |   |   +---Tetracent
+|                                           |   |   |   +---779
+|                                           |   |   |       +----Pachysand
+|                                           |   +---589
+|                                           |       +----Gunnera
+|                                       +---568
+|                                       |   |                           +---Pterost
+|                                       |   |                       +---578
+|                                       |   |                       |   +---Itea
+|                                       |   |                   +---575
+|                                       |   |                   |   |   +---Boykinia
+|                                       |   |                   |   +---576
+|                                       |   |                   |       |   +---Heuchera
+|                                       |   |                   |       +---577
+|                                       |   |                   |           +---Saxifrag
+|                                       |   |               +---574
+|                                       |   |               |   |   +--------Paeonia
+|                                       |   |               |   +---579
+|                                       |   |               |       +---Ribes
+|                                       |   |           +---573
+|                                       |   |           |   |       +---Tetracarp
+|                                       |   |           |   |   +---584
+|                                       |   |           |   |   |   |   +----Myriophyl
+|                                       |   |           |   |   |   +---585
+|                                       |   |           |   |   |       +---Penthorum
+|                                       |   |           |   +---580
+|                                       |   |           |       |           +---Sedum
+|                                       |   |           |       |       +---583
+|                                       |   |           |       |       |   +---Dudleya
+|                                       |   |           |       |   +---582
+|                                       |   |           |       |   |   +---Kalanchoe
+|                                       |   |           |       +---581
+|                                       |   |           |           +-------Crassula
+|                                       |   |       +---572
+|                                       |   |       |   +---Cercidiph
+|                                       |   |   +---571
+|                                       |   |   |   |       +---Altingia
+|                                       |   |   |   |   +---587
+|                                       |   |   |   |   |   +---Liquidori
+|                                       |   |   |   +***586
+|                                       |   |   |       +---Rhodoleia
+|                                       |   +---569
+|                                       |       |   +---Daphniphy
+|                                       |       +---570
+|                                       |           +---Hamamelis
+|                                   +---567
+|                                   |   |   +-----Dillenia
+|                                   |   +---924
+|                                   |       +----Vitis
+|                               +---553
+|                               |   |                   +---Cornuskou
+|                               |   |               +---566
+|                               |   |               |   +---Cornuscan
+|                               |   |           +---565
+|                               |   |           |   +---Cornuswal
+|                               |   |       +---564
+|                               |   |       |   +---Cornusflo
+|                               |   |   +---563
+|                               |   |   |   +---Alangium
+|                               |   +---554
+|                               |       |           +---Nyssa
+|                               |       |       +---557
+|                               |       |       |   |   +---Davidia
+|                               |       |       |   +---558
+|                               |       |       |       +---Camptoth
+|                               |       |   +---556
+|                               |       |   |   +---Diplopana
+|                               |       +---555
+|                               |           |       +---Decumaria
+|                               |           |   +---562
+|                               |           |   |   +---Hydrangm
+|                               |           +---559
+|                               |               |       +---Carpenter
+|                               |               |   +---561
+|                               |               |   |   +---Philadel
+|                               |               +---560
+|                               |                   +---Deutzia
+|                           +---552
+|                           |   |                           +---Clavija
+|                           |   |                       +---935
+|                           |   |                       |   |   +----Anagallis
+|                           |   |                       |   +---936
+|                           |   |                       |       +---Ardisia
+|                           |   |                   +---934
+|                           |   |                   |   |   +---Styrax
+|                           |   |                   |   +---937
+|                           |   |                   |       +---Clethra
+|                           |   |               +---930
+|                           |   |               |   |       +----Symplocus
+|                           |   |               |   |   +---932
+|                           |   |               |   |   |   +---Camellia
+|                           |   |               |   +***931
+|                           |   |               |       |   +---Manilkara
+|                           |   |               |       +---933
+|                           |   |               |           +---Chrysophy
+|                           |   |           +---929
+|                           |   |           |   |   +---Diospyros
+|                           |   |           |   +---938
+|                           |   |           |       +-----Diapensia
+|                           |   |       +---928
+|                           |   |       |   |                           +---Cassiope
+|                           |   |       |   |                       +---953
+|                           |   |       |   |                       |   |   +---Befaria
+|                           |   |       |   |                       |   +---954
+|                           |   |       |   |                       |       |       +---Ceratiola
+|                           |   |       |   |                       |       |   +---956
+|                           |   |       |   |                       |       |   |   +---Rhododend
+|                           |   |       |   |                       |       +---955
+|                           |   |       |   |                       |           +-----Erica
+|                           |   |       |   |                   +---947
+|                           |   |       |   |                   |   |           +---Chamaedap
+|                           |   |       |   |                   |   |       +---951
+|                           |   |       |   |                   |   |       |   +---Gaultheri
+|                           |   |       |   |                   |   |   +---949
+|                           |   |       |   |                   |   |   |   |   +---Daboecia
+|                           |   |       |   |                   |   |   |   +---950
+|                           |   |       |   |                   |   |   |       +---Vaccinium
+|                           |   |       |   |                   |   +---948
+|                           |   |       |   |                   |       |   +----Pentachon
+|                           |   |       |   |                   |       +---952
+|                           |   |       |   |                   |           +---Epacris
+|                           |   |       |   |               +---945
+|                           |   |       |   |               |   |   +-----Pyrola
+|                           |   |       |   |               |   +---946
+|                           |   |       |   |               |       +---Arbutus
+|                           |   |       |   |           +---944
+|                           |   |       |   |           |   +---Enkianthu
+|                           |   |       |   |       +---941
+|                           |   |       |   |       |   |       +---Sarraceni
+|                           |   |       |   |       |   |   +---943
+|                           |   |       |   |       |   |   |   +---Heliampho
+|                           |   |       |   |       |   +---942
+|                           |   |       |   |       |       +---Roridula
+|                           |   |       |   |   +---940
+|                           |   |       |   |   |   +---Cyrilla
+|                           |   |       |   +---939
+|                           |   |       |       +---Actinidia
+|                           |   |   +---926
+|                           |   |   |   |   +---Fouquieri
+|                           |   |   |   +---927
+|                           |   |   |       +---Polemoniu
+|                           |   +---925
+|                           |       +------Impatiens
+|                       +---551
+|                       |   |                           +---Adoxa
+|                       |   |                       +---992
+|                       |   |                       |   +---Sambucus
+|                       |   |                   +---991
+|                       |   |                   |   +---Viburnum
+|                       |   |               +---988
+|                       |   |               |   |   +---Symphoric
+|                       |   |               |   +---989
+|                       |   |               |       |   +-----Valeriana
+|                       |   |               |       +---990
+|                       |   |               |           +---Dipsacus
+|                       |   |           +---981
+|                       |   |           |   |               +---Hedera
+|                       |   |           |   |           +---987
+|                       |   |           |   |           |   +---Araliaspi
+|                       |   |           |   |       +---984
+|                       |   |           |   |       |   |       +---Coriandru
+|                       |   |           |   |       |   |   +---986
+|                       |   |           |   |       |   |   |   +---Apiumgrav
+|                       |   |           |   |       |   +---985
+|                       |   |           |   |       |       +---Saniculgr
+|                       |   |           |   |   +---983
+|                       |   |           |   |   |   +---Pittospor
+|                       |   |           |   +---982
+|                       |   |           |       +---Griselin
+|                       |   |       +---980
+|                       |   |       |   +---Berzelia
+|                       |   |   +---958
+|                       |   |   |   |                       +---Boopis
+|                       |   |   |   |                   +---965
+|                       |   |   |   |                   |   |           +---Dimorphot
+|                       |   |   |   |                   |   |       +---974
+|                       |   |   |   |                   |   |       |   |   +---Felicia
+|                       |   |   |   |                   |   |       |   +---975
+|                       |   |   |   |                   |   |       |       |   +---Achillea
+|                       |   |   |   |                   |   |       |       +---976
+|                       |   |   |   |                   |   |       |           +---Senecio
+|                       |   |   |   |                   |   |   +---973
+|                       |   |   |   |                   |   |   |   |   +---Tagetes
+|                       |   |   |   |                   |   |   |   +---977
+|                       |   |   |   |                   |   |   |       |   +---Chromolae
+|                       |   |   |   |                   |   |   |       +---978
+|                       |   |   |   |                   |   |   |           +---Eupatoriu
+|                       |   |   |   |                   |   +---966
+|                       |   |   |   |                   |       |               +---Gerbera
+|                       |   |   |   |                   |       |           +---970
+|                       |   |   |   |                   |       |           |   |   +---Vernonia
+|                       |   |   |   |                   |       |           |   +---971
+|                       |   |   |   |                   |       |           |       +---Piptocarp
+|                       |   |   |   |                   |       |       +---969
+|                       |   |   |   |                   |       |       |   |   +---Tragopogo
+|                       |   |   |   |                   |       |       |   +---972
+|                       |   |   |   |                   |       |       |       +---Cichorium
+|                       |   |   |   |                   |       |   +---968
+|                       |   |   |   |                   |       |   |   +---Cacosmia
+|                       |   |   |   |                   |       +---967
+|                       |   |   |   |                   |           +---Carthamnu
+|                       |   |   |   |               +---964
+|                       |   |   |   |               |   +-----Scaevola
+|                       |   |   |   |           +---963
+|                       |   |   |   |           |   +----Villarsia
+|                       |   |   |   |       +---961
+|                       |   |   |   |       |   |   +---Menyanthe
+|                       |   |   |   |       |   +---962
+|                       |   |   |   |       |       +----Corokia
+|                       |   |   |   |   +---960
+|                       |   |   |   |   |   |   +-----Lobelia
+|                       |   |   |   |   |   +---979
+|                       |   |   |   |   |       +-----Campanula
+|                       |   |   |   +---959
+|                       |   |   |       +---Escalloni
+|                       |   +---957
+|                       |       |       +---Helwingia
+|                       |       |   +---994
+|                       |       |   |   +---Phyllonom
+|                       |       +---993
+|                       |           +---Ilexcrena
+|                   +---548
+|                   |   |       +---Acuba
+|                   |   |   +---550
+|                   |   |   |   +---Garrya
+|                   |   +---549
+|                   |       +------Eucommia
+|               +---506
+|               |   |                                               +---Digitalis
+|               |   |                                           +---518
+|               |   |                                           |   +----Callitric
+|               |   |                                       +---517
+|               |   |                                       |   +---Antirrhin
+|               |   |                                   +---516
+|               |   |                                   |   |   +---Sesamum
+|               |   |                                   |   +---519
+|               |   |                                   |       |                           +---Justicodo
+|               |   |                                   |       |                       +---526
+|               |   |                                   |       |                       |   +---Hypostes
+|               |   |                                   |       |                   +---525
+|               |   |                                   |       |                   |   +---Ruttya
+|               |   |                                   |       |               +---524
+|               |   |                                   |       |               |   +---Thunbergi
+|               |   |                                   |       |           +---523
+|               |   |                                   |       |           |   |   +---Aphelandr
+|               |   |                                   |       |           |   +---527
+|               |   |                                   |       |           |       +---Acanthus
+|               |   |                                   |       |       +---522
+|               |   |                                   |       |       |   +---Ruellia
+|               |   |                                   |       |   +---521
+|               |   |                                   |       |   |   |   +---Barleria
+|               |   |                                   |       |   |   +---528
+|               |   |                                   |       |   |       +---Lepidagat
+|               |   |                                   |       +---520
+|               |   |                                   |           +---Nelsonia
+|               |   |                               +---515
+|               |   |                               |   +---Streptoca
+|               |   |                           +***514
+|               |   |                           |   +---Proboscid
+|               |   |                       +---513
+|               |   |                       |   |                           +---Lamiumpur
+|               |   |                       |   |                       +---536
+|               |   |                       |   |                       |   +---Physosteg
+|               |   |                       |   |                   +---535
+|               |   |                       |   |                   |   +---Pogostemo
+|               |   |                       |   |               +---534
+|               |   |                       |   |               |   +---Scutellar
+|               |   |                       |   |           +---533
+|               |   |                       |   |           |   |       +---Teucrium
+|               |   |                       |   |           |   |   +---538
+|               |   |                       |   |           |   |   |   +---Clerodend
+|               |   |                       |   |           |   +---537
+|               |   |                       |   |           |       +---Prostanth
+|               |   |                       |   |       +---531
+|               |   |                       |   |       |   |   +---Salvia
+|               |   |                       |   |       |   +---532
+|               |   |                       |   |       |       +---Callicarp
+|               |   |                       |   |   +---530
+|               |   |                       |   |   |   +----Verbena
+|               |   |                       |   +---529
+|               |   |                       |       +---Harpogoph
+|               |   |                   +---512
+|               |   |                   |   |       +-----Utricular
+|               |   |                   |   |   +---540
+|               |   |                   |   |   |   +---Pinguicul
+|               |   |                   |   +---539
+|               |   |                   |       +------Byblis
+|               |   |               +---511
+|               |   |               |   +---Buddleja
+|               |   |           +---510
+|               |   |           |   +---Catalpa
+|               |   |       +---509
+|               |   |       |   |   +-----Jasminum
+|               |   |       |   +---541
+|               |   |       |       +---Ligustrum
+|               |   |   +---508
+|               |   |   |   +----Vahlia
+|               |   +---507
+|               |       |       +----Gentiana
+|               |       |   +---543
+|               |       |   |   +---Exacum
+|               |       +---542
+|               |           |                +---Apocynum
+|               |           |           +----547
+|               |           |           |    +---Asclepias
+|               |           |       +---546
+|               |           |       |   +-----Spigelia
+|               |           |   +---545
+|               |           |   |   +---Gelsemium
+|               |           +---544
+|               |               +--------------Pentas
+|           +---505
+|           |   |   +--------Borago
+|           |   +---995
+|           |       |   +---Heliotrop
+|           |       +---996
+|           |           |   +---Hydrophyl
+|           |           +---997
+|           |               +---Eriodicty
+|       +---504
+|       |   +------Montinia
+|   +---502
+|   |   |    +---Convolvul
+|   |   +----503
+|   |        +---Ipomoea
++---501
+|   +---Petunia
+|
++---Lycopersi
+
+Log-likehood of the tree: -99990.909986 (s.e. 3636.798090)
+Unconstrained log-likelihood (without tree): -9556.543241
+Total tree length: 12.431686
+
+Tree in newick format:
+
+(Nicotiana:0.003804,(((((((((((((((((((((((((Galphimia:0.014611,Acridocar:0.010044):0.003315,(Thryallis:0.007569,(Mascagnia:0.008294,Dicella:0.006844):0.002151):0.002527):0.003524,Byrsonima:0.010677):0.013285,(Euphorbia:0.027132,Passiflor:0.037116):0.005712):0.001568,Ochna:0.029428):0.002660,Humiria:0.008734):0.002059,Drypetes:0.055019):0.000960,(((Trigonia:0.026924,(Liccania:0.007164,Chrysobal:0.004900):0.022897):0.010286,(Rheinward:0.034161,Viola:0.043069):0.011285):0.001300,Erythroxy:0.034534):0.002880):0.006626,((Euonymus:0.012824,Brexia:0.007926):0.008868,(Lepuropet:0.016701,Parnassia:0.008727):0.016979):0.021285):0.003751,(Krameria:0.036041,Guaicum:0.055402):0.016387):0.001725,((((((Sargentod:0.026125,(Pisum:0.025348,Medicago:0.036967):0.010809):0.021293,Albizzia:0.033793):0.005008,Bauhinia:0.029949):0.002437,(Securidac:0.016181,Polygala:0.024076):0.023693):0.009991,(((((Coriaria:0.012134,(Luffa:0.003926,(Cucurbita:0.005256,Cucumis:0.009939):0.004204):0.027910):0.003998,(Octomeles:0.003845,Tetramele:0.009832):0.009310):0.002763,((Dcannabin:0.008674,Datglomer:0.000001):0.007529,Begonia:0.029911):0.003497):0.010271,(((Myrica:0.017698,((Betula:0.005450,Casuarina:0.020406):0.007591,Carya:0.007231):0.001414):0.004149,((Chrysolep:0.007032,Trigonoba:0.007403):0.016635,FagusAm:0.014813):0.003092):0.002810,(NothofBal:0.016445,NothoDom:0.006010):0.021559):0.005840):0.002531,(((((Celtis:0.014730,Humulus:0.024197):0.002086,Trema:0.017342):0.004069,(Boehmeria:0.021264,(Ficustrig:0.027978,Morus:0.019261):0.007461):0.003143):0.009509,Rhamnus:0.022143):0.003756,(((Photinia:0.015391,Prunus:0.006774):0.003537,Spirea:0.015124):0.004935,Geum:0.038005):0.009539):0.007621):0.001309):0.002384,(((Cephalot:0.020778,Platythec:0.019773):0.002255,((Bauera:0.015822,Ceratopet:0.005501):0.004084,Eucryphia:0.004894):0.007899):0.003885,(Oxalisdil:0.040312,Averrhoa:0.008935):0.006957):0.010456):0.001493):0.006040,((((((((((((Oenothera:0.010010,Clarkia:0.009712):0.000902,Epilobium:0.024885):0.011885,Circaea:0.019014):0.004715,Lopezia2:0.013707):0.002087,Hauya:0.006709):0.005671,Ludwigia2:0.015118):0.005817,((Lythrum:0.026489,Trapa:0.021303):0.007074,Punica:0.011917):0.004398):0.007518,((Mouriri:0.025246,Osbeckia:0.025240):0.017676,Heteropyx:0.007992):0.005157):0.001011,(Quisquali:0.009252,Terminali:0.009034):0.016546):0.003263,Qualea:0.029223):0.011768,(((((Leitneria:0.015253,Ailanthus:0.011611):0.010515,Poncirus:0.035591):0.005562,Bursera:0.019047):0.004107,((Acer:0.016570,Cupaniops:0.014673):0.010180,Schinus:0.018694):0.004918):0.017612,(((((Bombax:0.004808,(Gossrobin:0.008679,Thespesia:0.005747):0.009851):0.003036,Tilia:0.019108):0.003500,Theobroma:0.009852):0.012637,(Shoreazel:0.009870,Shoreasti:0.006918):0.034596):0.008029,(((Moringa:0.007370,Carica:0.024921):0.005360,((((((((Stanleya:0.009047,Brassica:0.014987):0.014032,Cleome:0.012920):0.002962,Capparis:0.010832):0.007204,Reseda:0.031777):0.000843,Tovaria:0.012910):0.005416,(Koeberlin:0.026241,Batis:0.044607):0.004202):0.006343,(Limnanthe:0.009395,Floerkea:0.003067):0.024377):0.004931,Setchella:0.035328):0.014269):0.002243,((Bretschne:0.005484,Akania:0.001708):0.003640,Tropaeolu:0.012577):0.007451):0.011082):0.001779):0.005513):0.003079,((Crossosom:0.022908,((Pelargoni:0.021949,(Geranium:0.023535,Monsonia:0.021133):0.012579):0.014709,Hypseocha:0.024899):0.014671):0.004073,((Greyia:0.002269,Francoa:0.006495):0.013500,(Viviania:0.022649,Wendtiagr:0.043734):0.015792):0.005575):0.002524):0.001360):0.007336,((((Dianthus:0.022785,((Atriplex:0.021296,Spinacia:0.018526):0.005652,Amaranthu:0.039367):0.013592):0.006479,(((Basella:0.017989,(Portulaca:0.022880,Alluaudia:0.006727):0.001489):0.004630,(Mollugo:0.033394,((Phytolacc:0.017798,(Mirabilus:0.021656,Rivina:0.019804):0.004916):0.007909,Trianthem:0.036179):0.006379):0.004540):0.004464,Stegonosp:0.008198):0.007953):0.025786,(((Plumbago:0.044519,Rheum:0.035732):0.021884,Nepenthes:0.019678):0.004745,(((D.filifor:0.012197,D.spathul:0.015177):0.026836,D.petiola:0.032193):0.009397,Dionaea:0.034462):0.018280):0.005505):0.018749,((Phoradend:0.046942,Schoepfia:0.038716):0.006596,Osyris:0.018421):0.012146):0.002769):0.000781,((((((((((((((Victoria:0.005612,Nymphaea:0.003549):0.001246,(Barclaya:0.004850,(Nuphar:0.001951,(Brasenia:0.005688,Cabomba:0.013463):0.010375):0.001682):0.001545):0.028199,Amborella:0.028519):0.009399,((Schisandr:0.008391,Illicium:0.013324):0.010802,Austrobai:0.020427):0.007005):0.007238,(Hedyosmum:0.025156,(Chloranth:0.006265,Sarcandra:0.014422):0.006474):0.007851):0.002409,(((Canella-A:0.008934,Canella-B:0.033856):0.032507,((Drimys:0.004764,Belliolum:0.010355):0.001408,Tasmannia:0.003862):0.015214):0.004950,((((((((Magnsalic:0.002144,Talauma:0.000713):0.000715,Michelia:0.000001):0.000824,(Manglieti:0.000716,Talasinga:0.005021):0.001317):0.000787,Magnhypol:0.002185):0.006680,(Liriodtul:0.005928,Liriodchi:0.001351):0.024796):0.004176,(Degeneria:0.009300,Galbulimi:0.017816):0.002219):0.001552,(Eupomatia:0.018033,((Annona:0.017370,Asimina:0.008102):0.016784,Cananga:0.017684):0.012496):0.003734):0.001219,Knema:0.016847):0.005559):0.002720):0.001374,((((Cinnamomu:0.003835,Persea:0.020292):0.009808,Hedycarya:0.016439):0.000235,(Idiosperm:0.009366,(Calycchin:0.004313,Chimonant:0.001422):0.007094):0.010258):0.000001,(Hernandia:0.024910,Gyrocarpu:0.020387):0.006532):0.005688):0.000733,(((((((((Cypirapea:0.006948,(Neuwiedia:0.019339,Oncidium:0.018776):0.004536):0.014247,(Curculigo:0.016923,Hypoxis:0.016073):0.014219):0.002027,((Lomandra:0.022241,((((Scilla:0.009790,(Hemerocal:0.018754,Chlorophy:0.027247):0.008605):0.004172,(Bowiea:0.026210,Clivia:0.009309):0.002015):0.000960,(Sansevier:0.017288,(Danae:0.010515,Nolinalin:0.005563):0.003668):0.006459):0.001778,(Xanthorrh:0.013230,(Kniphofia:0.018308,(Aloe:0.004588,Haworthia:0.000742):0.008620):0.016733):0.005737):0.001866):0.006394,((Iris:0.016009,Anomathec:0.014357):0.006131,Cyanastru:0.019940):0.003647):0.011291):0.004149,(((((((((Avena:0.009305,(Triticum:0.000946,Aegilops:0.004460):0.009824):0.014732,(Cenchrus:0.008669,Neurachne:0.013925):0.016606):0.006924,(Oryza:0.012635,Bambusa:0.008885):0.002983):0.052063,Elegia:0.042705):0.010812,Flagellar:0.027274):0.007662,(((Juncus:0.038190,((Oxychloe:0.007426,Cyperus:0.021668):0.004781,Carex:0.005688):0.035450):0.013591,Prionium:0.028836):0.014867,((Lachnocau:0.063501,Typha:0.011251):0.005505,Sparganiu:0.011404):0.005526):0.001935):0.004748,(Stegolepi:0.025949,(Tillandsi:0.005126,(Ananas:0.004358,Puya:0.005921):0.002472):0.011295):0.002104):0.007299,(((((Commelina:0.028174,((Tradesca:0.009085,Zebrina:0.006361):0.003298,Campelia:0.023808):0.024761):0.022293,Pontederi:0.030262):0.009997,Philydrum:0.026681):0.004170,Anigozant:0.036608):0.006782,(((Ravenala:0.018975,(Strelitzi:0.032658,Phenakosp:0.046868):0.006325):0.006054,(Maranta:0.012566,Calathea:0.025722):0.004195):0.002068,((((Hedychium:0.007299,Riedelea:0.017270):0.004218,(Zingiber:0.032823,Globba:0.022333):0.008566):0.015459,(Heliconia:0.019221,(Costus:0.021330,Tapeinoch:0.037910):0.011997):0.002316):0.002884,(Musa:0.023763,Orchidant:0.021565):0.007201):0.005453):0.014037):0.004861):0.003992,((((Chamaedor:0.006057,Drymophlo:0.004806):0.001976,Nypa:0.009769):0.001129,Serenoa:0.003622):0.010368,(Dioscorea:0.020196,Tacca:0.020176):0.022306):0.001635):0.002984):0.003358,(((Pandanus:0.003643,Freycinet:0.011493):0.009439,Sphaerade:0.008158):0.009686,Vellozia:0.034081):0.006373):0.000864,((Smilax:0.026565,(Calochort:0.015762,(Lilium:0.013717,Medeola:0.014938):0.010487):0.003543):0.011477,(((Colchicum:0.013293,Burchardi:0.011946):0.019082,Alstroeme:0.030218):0.018902,(Veratrum:0.027762,Chamaelir:0.016190):0.007165):0.000858):0.007326):0.001722,Aletris:0.046522):0.010401,((Pleea:0.022779,(((Sagittari:0.016045,Sagittlat:0.006984):0.028044,Alisma:0.017857):0.029631,Potamoget:0.055986):0.019897):0.002508,((Spathiphy:0.013764,(Pistia:0.034481,Lemna:0.033603):0.008478):0.016456,Gymnostac:0.015863):0.009735):0.003659):0.006963,Acorus:0.039672):0.012298):0.000001,(((Asarum:0.007994,Saruma:0.002828):0.015651,(Lactoris:0.034832,Aristoloc:0.033261):0.007903):0.005847,((Saururus:0.011037,Houttuyni:0.013482):0.006780,(Piper:0.012065,Peperomia:0.026177):0.031806):0.019025):0.006680):0.007173,(Ceratophy:0.038673,((((Cycas:0.023270,((((Bowenia:0.014483,(Zamia:0.003083,Chigua:0.002758):0.013642):0.000719,Encephala:0.002868):0.001447,Stangeria:0.013722):0.000800,Dioon:0.006390):0.010033):0.017968,Ginkgobil:0.021373):0.005940,(((Sciadopit:0.037465,((Taxusbrev:0.020710,Cephalota:0.023467):0.003301,((Athrotaxi:0.008750,((Callitris:0.029959,Widdringt:0.013008):0.017667,(Metasequo:0.008220,Sequoiade:0.003911):0.006809):0.002985):0.000492,Taxodium:0.026201):0.011419):0.017535):0.005331,Podocarpu:0.051464):0.010938,((((((Abies:0.004658,Keteleeri:0.013899):0.004671,(Pseudolar:0.007089,Tsuga:0.020060):0.002737):0.003362,Cedrus:0.012270):0.002557,(Pseudotsu:0.005589,Larix:0.009593):0.006333):0.002006,(Pinus_gri:0.010462,Pinus_rad:0.010689):0.008290):0.002602,Picea_pun:0.016265):0.026392):0.007952):0.021772,((Gnetum:0.061634,Welwitsch:0.039689):0.023858,Ephedra:0.072461):0.048568):0.047183):0.011992):0.013800,(((Akebia:0.023947,((Mahonia:0.027948,(Caulophyl:0.028711,((Ranunculu:0.021439,Xanthorhi:0.021271):0.002512,Caltha:0.017700):0.011477):0.005373):0.006395,Cocculus:0.025974):0.001138):0.003788,Euptelea:0.016006):0.003646,((Dicentra:0.026466,Papaver:0.034090):0.007031,Sanguinar:0.011546):0.005558):0.004612):0.001404,((Sabia:0.032371,Lambertia:0.029958):0.004729,(Nelumbo:0.012286,Platanus:0.012142):0.003424):0.003406):0.004537,((Trochoden:0.011214,Tetracent:0.007677):0.015630,Pachysand:0.025682):0.002729):0.004155,Gunnera:0.025974):0.002827):0.001553,(((((((Pterost:0.006739,Itea:0.015757):0.008399,(Boykinia:0.008650,(Heuchera:0.009013,Saxifrag:0.011632):0.001381):0.005104):0.001757,(Paeonia:0.048682,Ribes:0.014605):0.006605):0.002023,((Tetracarp:0.017175,(Myriophyl:0.026682,Penthorum:0.015501):0.004505):0.010246,(((Sedum:0.012341,Dudleya:0.008935):0.006896,Kalanchoe:0.010151):0.005899,Crassula:0.040499):0.024110):0.007822):0.002385,Cercidiph:0.009414):0.002866,((Altingia:0.003489,Liquidori:0.001197):0.008293,Rhodoleia:0.007194):0.000001):0.001510,(Daphniphy:0.017386,Hamamelis:0.008045):0.001391):0.006125):0.001464,(Dillenia:0.031365,Vitis:0.026642):0.004864):0.004187,(((((Cornuskou:0.018000,Cornuscan:0.021672):0.005169,Cornuswal:0.012058):0.001496,Cornusflo:0.009382):0.008451,Alangium:0.023045):0.004874,(((Nyssa:0.008699,(Davidia:0.006364,Camptoth:0.007532):0.001455):0.001084,Diplopana:0.006154):0.004638,((Decumaria:0.008790,Hydrangm:0.008730):0.001303,((Carpenter:0.005089,Philadel:0.008830):0.002171,Deutzia:0.016235):0.001774):0.008496):0.001083):0.004012):0.002078,(((((((Clavija:0.023823,(Anagallis:0.026459,Ardisia:0.015281):0.020327):0.012567,(Styrax:0.018274,Clethra:0.013109):0.004089):0.001755,((Symplocus:0.024831,Camellia:0.009233):0.001541,(Manilkara:0.002881,Chrysophy:0.002865):0.012370):0.000001):0.001357,(Diospyros:0.014129,Diapensia:0.029765):0.002965):0.001269,(((((((Cassiope:0.013346,(Befaria:0.010878,((Ceratiola:0.018151,Rhododend:0.003594):0.000758,Erica:0.032234):0.000696):0.009188):0.003256,(((Chamaedap:0.018153,Gaultheri:0.008595):0.006297,(Daboecia:0.012515,Vaccinium:0.008495):0.002880):0.005435,(Pentachon:0.025249,Epacris:0.014306):0.008716):0.008773):0.005694,(Pyrola:0.033789,Arbutus:0.018103):0.001923):0.009330,Enkianthu:0.018761):0.004603,((Sarraceni:0.009120,Heliampho:0.015719):0.011150,Roridula:0.017234):0.004250):0.002760,Cyrilla:0.019062):0.001442,Actinidia:0.017252):0.001134):0.002619,(Fouquieri:0.011023,Polemoniu:0.023629):0.001436):0.003080,Impatiens:0.036158):0.005961):0.001507,(((((((Adoxa:0.013458,Sambucus:0.004135):0.006884,Viburnum:0.006962):0.004338,(Symphoric:0.018518,(Valeriana:0.032023,Dipsacus:0.017923):0.006872):0.010415):0.002978,((((Hedera:0.014359,Araliaspi:0.007484):0.002483,((Coriandru:0.008122,Apiumgrav:0.008873):0.017483,Saniculgr:0.013347):0.005118):0.001520,Pittospor:0.014574):0.003962,Griselin:0.010350):0.006783):0.000745,Berzelia:0.017971):0.001096,((((((Boopis:0.013320,(((Dimorphot:0.020428,(Felicia:0.015962,(Achillea:0.019692,Senecio:0.015820):0.002429):0.001504):0.002099,(Tagetes:0.009407,(Chromolae:0.016516,Eupatoriu:0.004623):0.002007):0.006702):0.002279,((((Gerbera:0.010015,(Vernonia:0.007238,Piptocarp:0.003578):0.005926):0.005360,(Tragopogo:0.009812,Cichorium:0.005372):0.005034):0.001418,Cacosmia:0.010417):0.002327,Carthamnu:0.011325):0.003154):0.008108):0.002089,Scaevola:0.029959):0.007214,Villarsia:0.026600):0.003499,(Menyanthe:0.012558,Corokia:0.026293):0.002640):0.006663,(Lobelia:0.032249,Campanula:0.033345):0.019867):0.008604,Escalloni:0.017000):0.002700):0.004383,((Helwingia:0.014871,Phyllonom:0.012533):0.003825,Ilexcrena:0.019331):0.007228):0.002361):0.002555,((Acuba:0.009067,Garrya:0.005598):0.006688,Eucommia:0.035021):0.005807):0.013511,((((((((((((Digitalis:0.010258,Callitric:0.027174):0.004064,Antirrhin:0.011933):0.006157,(Sesamum:0.008510,(((((((Justicodo:0.006834,Hypostes:0.012125):0.006242,Ruttya:0.008829):0.012138,Thunbergi:0.021057):0.002413,(Aphelandr:0.009368,Acanthus:0.012340):0.011566):0.002147,Ruellia:0.022987):0.003195,(Barleria:0.009618,Lepidagat:0.013186):0.009255):0.001257,Nelsonia:0.011914):0.004486):0.001791):0.002338,Streptoca:0.023200):0.001533,Proboscid:0.005695):0.000001,(((((((Lamiumpur:0.023803,Physosteg:0.014944):0.002384,Pogostemo:0.022652):0.003434,Scutellar:0.020645):0.002421,((Teucrium:0.007645,Clerodend:0.021424):0.004620,Prostanth:0.020396):0.000910):0.005837,(Salvia:0.024130,Callicarp:0.012256):0.002198):0.004752,Verbena:0.028563):0.001401,Harpogoph:0.005623):0.002238):0.000772,((Utricular:0.029332,Pinguicul:0.023044):0.005683,Byblis:0.036728):0.002851):0.000722,Buddleja:0.004543):0.000663,Catalpa:0.008480):0.006416,(Jasminum:0.029598,Ligustrum:0.013290):0.004429):0.010935,Vahlia:0.024997):0.003278,((Gentiana:0.026268,Exacum:0.021013):0.011814,((((Apocynum:0.005215,Asclepias:0.004012):0.026457,Spigelia:0.033727):0.003315,Gelsemium:0.016306):0.003402,Pentas:0.074412):0.002290):0.010269):0.002810):0.003373,(Borago:0.048251,(Heliotrop:0.022176,(Hydrophyl:0.016624,Eriodicty:0.009715):0.003175):0.007414):0.016501):0.007887,Montinia:0.037787):0.008812,(Convolvul:0.016757,Ipomoea:0.013341):0.024834):0.018680,Petunia:0.018268):0.007534,Lycopersi:0.009173);
+
+TIME STAMP
+----------
+
+Date and time: Mon Jul  2 19:03:06 2012
+Running time: 2980.2 seconds
+
+CREDITS
+-------
+
+Some parts of the code were taken from TREE-PUZZLE package:
+
+Heiko A. Schmidt, Korbinian Strimmer, Martin Vingron, and Arndt von Haeseler
+(2002) TREE-PUZZLE: maximum likelihood phylogenetic analysis using quartets
+and parallel computing. Bioinformatics, 18(3):502-504.
+
+The source codes to construct the BIONJ tree were taken from BIONJ software:
+
+Oliver Gascuel (1997) BIONJ: an improved version of the NJ algorithm
+nased on a simple model of sequence data. Mol. Bio. Evol., 14:685-695.
+
+The Nexus file parser was taken from the Nexus Class Library:
+
+Paul O. Lewis (2003) NCL: a C++ class library for interpreting data files in
+NEXUS format. Bioinformatics, 19(17):2330-2331.
+
+The Modeltest 3.7 source codes were taken from:
+
+David Posada and Keith A. Crandall (1998) MODELTEST: testing the model of
+DNA substitution. Bioinformatics, 14(9):817-8.
+
