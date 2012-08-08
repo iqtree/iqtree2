@@ -31,7 +31,7 @@
 const double MIN_BRANCH_LEN = 0.000001;
 const double MAX_BRANCH_LEN = 9.0;
 const double TOL_BRANCH_LEN = 0.00001;
-const double TOL_LIKELIHOOD = 0.0001;
+const double TOL_LIKELIHOOD = 0.000001;
 const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
 const static double SCALING_THRESHOLD_INVER = 1/SCALING_THRESHOLD;
 const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
@@ -107,14 +107,16 @@ struct SwapNNIParam {
  */
 struct NNIMove {
     PhyloNode *node1;
-    //Neighbor *node1Nei;
     NeighborVec::iterator node1Nei_it;
 
     PhyloNode *node2;
-    //Neighbor *node2Nei;
     NeighborVec::iterator node2Nei_it;
 
+    // log-likelihood of the NNI Tree
     double score;
+
+    // delta log-likelihood
+    double delta;
 
     int swap_id;
 

@@ -735,8 +735,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		longest_dist = tree.computeObsDist(params, alignment, tree.dist_matrix, dist_file);
 		assert(longest_dist <= 1.0);
     }
+    // start the search with user-defined tree
     if (params.user_file) {
-        // start the search with user-defined tree
         cout << "Reading user tree file " << params.user_file << " ..." << endl;
         bool myrooted = params.is_rooted;
         tree.readTree(params.user_file, myrooted);
@@ -779,9 +779,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     		outError("Weiss & von Haeseler test of model homogeneity only works for DNA");
     	params.model_name="GTR+G";
     }
+
     assert(tree.aln);
     tree.optimize_by_newton = params.optimize_by_newton;
     tree.sse = params.SSE;
+
     if (params.speed_conf == 1.0)
         tree.disableHeuristic();
     else
@@ -811,6 +813,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
     cout << "Random seed: " << params.ran_seed << endl;
     cout << "Lambda for local search: " << params.lambda << endl;
+
     if (params.speed_conf != 1.0) {
         cout <<"Confidence value for speed up NNI: ";
 		if (params.new_heuristic)
@@ -890,7 +893,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 					tree.curScore = tree.computeLikelihood();
 					cout << "Backup log-likelihood: " << tree.curScore << endl;
 				}
-				double elapsedTime = getEslapsedTime(params.startTime);
+				double elapsedTime = getCPUTime(params.startTime);
 				cout << "Time elapsed: " << elapsedTime << endl;
 			}
         }
@@ -911,13 +914,13 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         //tree.optimizeNNINew();
         nniEndClock = clock();
         cout << "First NNI search required :" << (double) (nniEndClock - nniBeginClock) / CLOCKS_PER_SEC << "s" << endl;
-        if (tree.curScore > bestTreeScore + TOL_LIKELIHOOD) {
+        if (tree.curScore > bestTreeScore) {
             bestTreeScore = tree.curScore ;
             cout << "Found new best tree log-likelihood : " << bestTreeScore << endl;
         } else {
             cout << "The local search cannot improve the tree likelihood :( " << endl;
         }
-		double elapsedTime = getEslapsedTime(params.startTime);
+		double elapsedTime = getCPUTime(params.startTime);
 		cout << "CPU time elapsed: " << elapsedTime << endl;
     }
 
@@ -1016,7 +1019,20 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     } else {
         /* do SPR with likelihood function */
         if (params.tree_spr)
-            tree.optimizeSPRBranches();
+            //tree.optimizeSPRBranches();
+        	for (int i=1; i<=5; i++) {
+        		cout << "Doing SPR Search" << endl;
+            	double spr_score = tree.optimizeSPR();
+            	if (spr_score < tree.curScore) {
+            		cout << "SPR search did not found any better tree" << endl;
+            		break;
+            	} else {
+            		tree.curScore = spr_score;
+            		cout << "Found new BETTER SCORE by SPR: " << spr_score << endl;
+            		double nni_score = tree.optimizeNNI();
+            		cout << "Score by NNI: " << nni_score << endl;
+            	}
+        	}
     }
 
     if (!pruned_taxa.empty()) {
@@ -1123,7 +1139,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     t_end = clock();
     params.run_time = (t_end - t_begin);
     cout << endl;
-    cout << "CPU time used for tree reconstruction: " << treeSearchTime << " (" << convert_time(treeSearchTime) << ") "<< "s" << endl;
+    cout << "CPU time used for tree reconstruction: " << treeSearchTime << "s (" << convert_time(treeSearchTime) << ") "<< endl;
     cout << "CPU total time used: " << (double) params.run_time / CLOCKS_PER_SEC << " (" << convert_time((double) params.run_time / CLOCKS_PER_SEC) << " )"<< "s" << endl;
     //printf( "Total time used: %8.6f seconds.\n", (double) params.run_time / CLOCKS_PER_SEC );
 

@@ -14,7 +14,6 @@
 #include "bionj.h"
 //#include "rateheterogeneity.h"
 #include "alignmentpairwise.h"
-//#include "acml_mv/acml_mv.h"
 #include <algorithm>
 #include <limits>
 
@@ -1959,7 +1958,6 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad)
     if (dad && !dad->isLeaf()) {
         assert(dad->degree() == 3);
         // assign the sibling of node, with respect to dad
-
         FOR_NEIGHBOR_DECLARE(dad, node, it) {
             if (!sibling1) {
                 dad1_nei = (PhyloNeighbor*) (*it);
@@ -1972,6 +1970,7 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad)
             }
         }
         // remove the subtree leading to node
+        // TODO: (Tung) How about removing subtree leading to the 2 silbings
         double sum_len = sibling1_len + sibling2_len;
         sibling1->updateNeighbor(dad, sibling2, sum_len);
         sibling2->updateNeighbor(dad, sibling1, sum_len);
@@ -1987,7 +1986,10 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad)
             spr_path.push_back(sibling1_nei);
             double score = swapSPR(cur_score, 1, node, dad, sibling1, sibling2, (PhyloNode*) (*it)->node, sibling1, spr_path);
             // if likelihood score improves, return
-            if (score > cur_score) return score;
+            if (score > cur_score) {
+            	cout << "Found new BETTER SCORE by SPR: " << score << endl;
+            	return score;
+            }
             spr_path.pop_back();
         }
 
@@ -1995,7 +1997,10 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad)
             spr_path.push_back(sibling2_nei);
             double score = swapSPR(cur_score, 1, node, dad, sibling1, sibling2, (PhyloNode*) (*it)->node, sibling2, spr_path);
             // if likelihood score improves, return
-            if (score > cur_score) return score;
+            if (score > cur_score) {
+            	cout << "Found new BETTER SCORE by SPR: " << score << endl;
+            	return score;
+            }
             spr_path.pop_back();
         }
         // if likelihood does not imporve, swap back
@@ -2014,7 +2019,9 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad)
     }
     return cur_score;
 }
-
+/**
+        move the subtree (dad1-node1) to the branch (dad2-node2)
+ */
 double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
                           PhyloNode *orig_node1, PhyloNode *orig_node2,
                           PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path) {
@@ -2023,41 +2030,65 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
     PhyloNeighbor *dad1_nei = (PhyloNeighbor*) dad1->findNeighbor(node1);
     double node1_dad1_len = node1_nei->length;
     PhyloNeighbor *node2_nei = (PhyloNeighbor*) node2->findNeighbor(dad2);
+    PhyloNeighbor *dad2_nei = (PhyloNeighbor*) dad2->findNeighbor(node2);
+
+    double* node1dad1_lh_save = node1_nei->partial_lh;
+    double* dad1node1_lh_save = dad1_nei->partial_lh;
+    double* node2dad2_lh_save = node2_nei->partial_lh;
+    double* dad2node2_lh_save = dad2_nei->partial_lh;
+    double len2 = node2_nei->length;
+    double newLen2 = sqrt(len2);
+
 
     if (dad2) {
         // now, connect (node1-dad1) to the branch (node2-dad2)
         bool first = true;
-        PhyloNeighbor *node2_nei = (PhyloNeighbor*) node2->findNeighbor(dad2);
-        PhyloNeighbor *dad2_nei = (PhyloNeighbor*) dad2->findNeighbor(node2);
-        double len2 = node2_nei->length;
+        //PhyloNeighbor *node2_nei = (PhyloNeighbor*) node2->findNeighbor(dad2);
+        //PhyloNeighbor *dad2_nei = (PhyloNeighbor*) dad2->findNeighbor(node2);
+        //double len2 = node2_nei->length;
 
         FOR_NEIGHBOR_IT(dad1, node1, it) {
+        	// Finding new 2 neighbors for dad1 that are not node1
             if (first) {
                 (*it)->node = dad2;
-                (*it)->length = len2 / 2;
-                dad2->updateNeighbor(node2, dad1, len2 / 2);
+                //(*it)->length = len2 / 2;
+                (*it)->length = newLen2;
+                dad2->updateNeighbor(node2, dad1, newLen2);
                 first = false;
             } else {
                 (*it)->node = node2;
-                (*it)->length = len2 / 2;
-                node2->updateNeighbor(dad2, dad1, len2 / 2);
+                (*it)->length = newLen2;
+                node2->updateNeighbor(dad2, dad1, newLen2);
             }
+            // clear all partial likelihood leading from
+            // dad1 to the new neighbors
             ((PhyloNeighbor*) (*it))->clearPartialLh();
         }
+
+        // clear partial likelihood from node2 to dad1
         node2_nei->clearPartialLh();
+        // clear partial likelihood from dad2 to dad1
         dad2_nei->clearPartialLh();
+        // clear partial likelihood from dad1 to node1
         node1_nei->clearPartialLh();
+
+        // set new legnth as suggested by Alexis
+        node1_nei->length = 0.9;
+
+        // clear all partial likelihood from the removal point
+        // to the insertion point
         vector<PhyloNeighbor*>::iterator it2;
         for (it2 = spr_path.begin(); it2 != spr_path.end(); it2++)
             (*it2)->clearPartialLh();
-        clearAllPartialLH();
+        //clearAllPartialLH();
+
         // optimize relevant branches
         double score;
-
         /* testing different branch optimization */
         score = optimizeOneBranch(node1, dad1);
-        //score = optimizeOneBranch(dad2, dad1);
-        //score = optimizeOneBranch(node2, dad1);
+        score = optimizeOneBranch(dad2, dad1);
+        score = optimizeOneBranch(node2, dad1);
+
         /*
         PhyloNode *cur_node = dad2;
         for (int i = spr_path.size()-1; i >= 0; i--) {
@@ -2069,15 +2100,19 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
 
         // if score improves, return
         if (score > cur_score) return score;
+
         // else, swap back
         node2->updateNeighbor(dad1, dad2, len2);
         dad2->updateNeighbor(dad1, node2, len2);
-        node2_nei->clearPartialLh();
-        dad2_nei->clearPartialLh();
+        //node2_nei->clearPartialLh();
+        //dad2_nei->clearPartialLh();
+        node2_nei->partial_lh = node2dad2_lh_save;
+        dad2_nei->partial_lh = dad2node2_lh_save;
         node1_nei->length = node1_dad1_len;
         dad1_nei->length = node1_dad1_len;
 
         // add to candiate SPR moves
+        // Tung : why adding negative SPR move ?
         spr_moves.add(node1, dad1, node2, dad2, score);
     }
     if (cur_depth >= spr_radius) return cur_score;
@@ -2174,11 +2209,12 @@ double PhyloTree::assessSPRMove(double cur_score, const SPRMove &spr) {
 double PhyloTree::optimizeSPR() {
     double cur_score = computeLikelihood();
     //spr_radius = leafNum / 5;
-    spr_radius = 2;
+    spr_radius = 10;
     for (int i = 0; i < 100; i++) {
         spr_moves.clear();
         double score = optimizeSPR(cur_score, (PhyloNode*) root->neighbors[0]->node);
         clearAllPartialLH();
+        // why this?
         if (score <= cur_score) {
             for (SPRMoves::iterator it = spr_moves.begin(); it != spr_moves.end(); it++) {
                 //cout << (*it).score << endl;
@@ -2187,13 +2223,16 @@ double PhyloTree::optimizeSPR() {
                 if (score > cur_score) break;
             }
             if (score <= cur_score) break;
+        } else {
+            cur_score = optimizeAllBranches(1);
+            cout.precision(10);
+            cout << "SPR " << i + 1 << " : " << cur_score << endl;
+            break;
+            cur_score = score;
         }
-        cout.precision(10);
-        cout << "SPR " << i + 1 << " : " << score << endl;
-        //cur_score = score;
-        cur_score = optimizeAllBranches();
     }
-    return optimizeAllBranches();
+    return cur_score;
+    //return optimizeAllBranches();
 }
 
 double PhyloTree::optimizeSPRBranches() {

@@ -60,6 +60,13 @@ public:
 	inline void clearPartialLh() { partial_lh_computed = 0; }
 
 	/**
+	 *  tell that the partial likelihood vector is computed
+	 */
+	inline void unclearPartialLh() {
+		partial_lh_computed = 1;
+	}
+
+	/**
 		clear all partial likelihood recursively in forward direction
 		@param dad dad of this neighbor
 	*/

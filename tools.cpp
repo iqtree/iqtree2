@@ -637,8 +637,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.nni_opt_5branches = false;
 	params.testNNI = false;
 	params.do_compression = false;
+
 	params.new_heuristic = false;
 	params.write_best_trees = false;
+	params.vns_search = false;
+	params.speedup_iter = 100;
 
 	params.avh_test = 0;
 
@@ -1375,6 +1378,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.new_heuristic = true;
 			} else if (strcmp(argv[cnt], "-wbt") == 0)	{
 				params.write_best_trees = true;
+			} else if (strcmp(argv[cnt], "-vns") == 0) {
+				params.vns_search = true;
+			} else if (strcmp(argv[cnt], "-sp_iter") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sp_iter <number_iteration>";
+				params.speedup_iter = convert_int(argv[cnt]);
 			} else if (strcmp(argv[cnt], "-avh") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1556,6 +1566,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -sr <#iterations>    Stopping rule with max. #iterations (default: off)" << endl
 			<< "  -sc <confidence>     Confidence value for stopping rule (default: 0.95)" << endl
 			<< "  -spc <level>         Speed up confidence level for NNI adaptive search (default 0.95)" << endl
+			<< "  -sp_iter <number>    Number of iterations before the speed-up heuristic is started" << endl
 			<< "  -lmd <lambda>        lambda parameter for the PhyML search (default 0.75)" << endl
 			<< "  -nosse               Disable SSE instructions" << endl
 			<< "  -wt                  Writing all intermediate trees into .treels file" << endl

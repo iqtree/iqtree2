@@ -29,8 +29,6 @@
 #include "stoprule.h"
 #include "mtreeset.h"
 
-#define SPEED_UP_AFTER_ITER_NUM 100
-
 typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;
 typedef std::multiset< int, std::less< int > > MultiSetInt;
@@ -173,6 +171,15 @@ public:
     double doIQP();
 
     /**
+     * 	   perform a variable neighborhood search using
+     * 	   NNI and SPR as the 2 alternative neighborhood
+     *
+     */
+    double doVNS();
+
+    bool containPosNNI( vector<NNIMove> posNNIs);
+
+    /**
      * Perturb the tree for the next round of local search by swaping position of 2 random leaves
      * @param nbDist The minimum distance between the 2 nodes that are swapped
      * @param nbTimes Number of times that the swap operations are carried out
@@ -231,8 +238,9 @@ public:
 	/**
 	 		apply nni2apply NNIs from the non-conflicting NNI list
 	 		@param nni2apply number of NNIs to apply from the list
+	 		@param neg_nni to apply negative NNIs or not
 	*/
-	void applyNNIs (int nni2apply);
+	void applyNNIs (int nni2apply, bool neg_nni);
 
 	/**
 	 		generate non conflicting NNI moves.

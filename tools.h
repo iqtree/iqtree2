@@ -327,6 +327,21 @@ struct NNIInfo {
         program parameters, everything is specified here
  */
 struct Params {
+
+	/**
+	 *  the speed up heuristic will be used after
+	 *  speedup_iter iteration
+	 */
+	int speedup_iter;
+
+	/**
+	 *   option for doing a VNS search
+	 */
+	bool vns_search;
+
+	/**
+	 *  starting time of the program
+	 */
 	clock_t startTime;
 
 	/**
@@ -1048,7 +1063,7 @@ struct Params {
 	*/
 	bool nni_sort;
 
-	/** 
+	/**
 		TRUE to optimize 5 branches around NNI
 	*/
 	bool nni_opt_5branches;
@@ -1380,7 +1395,7 @@ void parseAreaName(char *area_names, set<string> &areas);
  */
 void get2RandNumb(const int size, int &first, int &second);
 
-inline double getEslapsedTime(clock_t startTime) {
+inline double getCPUTime(clock_t startTime) {
 	return double(clock() - startTime) / CLOCKS_PER_SEC;
 }
 
