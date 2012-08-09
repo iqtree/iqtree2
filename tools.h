@@ -1046,6 +1046,12 @@ struct Params {
 		FALSE to call runGuidedBootstrap() at the end */
 	bool online_bootstrap;
 
+	/** minimal correlation coefficient for bootstrap stopping rule */
+	double min_correlation; 
+
+	/** number of iterations between bootstrap stopping rule check */
+	int step_iterations;
+	
 	/****** variables for NNI cutoff heuristics ******/
 
 	/**

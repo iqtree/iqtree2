@@ -30,8 +30,8 @@
 
 const double MIN_BRANCH_LEN = 0.000001;
 const double MAX_BRANCH_LEN = 9.0;
-const double TOL_BRANCH_LEN = 0.1;
-const double TOL_LIKELIHOOD = 0.1;
+const double TOL_BRANCH_LEN = 0.0001; // TUNG: PLEASE DO NOT CHANGE THIS VARIABLE TO SOMETHING STUPID LIKE 0.1
+const double TOL_LIKELIHOOD = 0.0001;
 const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
 const static double SCALING_THRESHOLD_INVER = 1/SCALING_THRESHOLD;
 const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);

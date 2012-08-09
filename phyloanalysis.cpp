@@ -783,7 +783,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     assert(tree.aln);
     tree.optimize_by_newton = params.optimize_by_newton;
     tree.sse = params.SSE;
-
+	if (params.gbo_replicates) params.speed_conf = 1.0;
     if (params.speed_conf == 1.0)
         tree.disableHeuristic();
     else

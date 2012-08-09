@@ -422,7 +422,7 @@ MTreeSet::~MTreeSet()
 }
 
 
-void MTreeSet::computeRFDist(int *rfdist, int mode) {
+void MTreeSet::computeRFDist(int *rfdist, int mode, double weight_threshold) {
 	// exit if less than 2 trees
 	if (size() < 2)
 		return;
@@ -462,11 +462,16 @@ void MTreeSet::computeRFDist(int *rfdist, int mode) {
 		if (mode == RF_ADJACENT_PAIR) end_it = hsit+2;
 		int id2 = id+1;
 		for (vector<SplitIntMap*>::iterator hsit2 = hsit+1; hsit2 != end_it; hsit2++, id2++) {
-			int common_splits = 0;
-			for (SplitIntMap::iterator spit = (*hsit2)->begin(); spit != (*hsit2)->end(); spit++) {
-				if ((*hsit)->findSplit(spit->first)) common_splits++;
+			int diff_splits = 0;
+			SplitIntMap::iterator spit;
+			for (spit = (*hsit2)->begin(); spit != (*hsit2)->end(); spit++) {
+				if (spit->first->getWeight() >= weight_threshold && !(*hsit)->findSplit(spit->first)) diff_splits++;
 			}
-			int rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
+			for (spit = (*hsit)->begin(); spit != (*hsit)->end(); spit++) {
+				if (spit->first->getWeight() >= weight_threshold && !(*hsit2)->findSplit(spit->first)) diff_splits++;
+			}
+			//int rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
+			int rf_val = diff_splits;
 			if (mode == RF_ADJACENT_PAIR) 
 				rfdist[id] = rf_val;
 			else {

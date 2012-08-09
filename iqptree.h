@@ -546,7 +546,7 @@ public:
 	DoubleVector boot_logl;
 
 	/** Set of splits occuring in bootstrap trees */
-	SplitGraph *boot_splits;
+	vector<SplitGraph*> boot_splits;
 
 	/** Corresponding map for set of splits occuring in bootstrap trees */
 	//SplitIntMap boot_splits_map;
@@ -560,7 +560,7 @@ public:
 	void summarizeBootstrap(SplitGraph &sg);
 
 	/** @return TRUE if stopping criterion is met */
-	bool checkBootstrapStopping(SplitGraph &sg);
+	bool checkBootstrapStopping();
 
 protected:
 	/**** NNI cutoff heuristic *****/

@@ -552,7 +552,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.test_input = TEST_NONE;
 	params.tree_burnin = 0;
 	params.split_threshold = 0.0;
-	params.split_weight_threshold = 0.0;
+	params.split_weight_threshold = -1000;
 	params.split_weight_summary = SW_SUM;
 	params.gurobi_format = false;
 	params.gurobi_threads = 1;
@@ -630,6 +630,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.max_candidate_trees = 0;
 	params.distinct_trees = true;
 	params.online_bootstrap = true;
+	params.min_correlation = 0.99;
+	params.step_iterations = 100;
 	//const double INF_NNI_CUTOFF = -1000000.0;
 	params.nni_cutoff = -1000000.0;
 	params.estimate_nni_cutoff = false;
@@ -981,7 +983,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt],"-tw") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -t <split_weight_threshold>";
+					throw "Use -tw <split_weight_threshold>";
 				params.split_weight_threshold = convert_double(argv[cnt]);
 				if (params.split_weight_threshold < 0)
 					throw "Split weight threshold is negative";
@@ -1356,6 +1358,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -bmax <max_candidate_trees>";
 				params.max_candidate_trees = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-bcor") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bcor <min_correlation>";
+				params.min_correlation = convert_double(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-nstep") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nstep <step_iterations>";
+				params.step_iterations = convert_int(argv[cnt]);
+				if (params.step_iterations < 10 || params.step_iterations % 2 == 1)
+					throw "At least step size of 10 and even number please";
 			} else if (strcmp(argv[cnt], "-boff") == 0) {
 				params.online_bootstrap = false;
 			} else if (strcmp(argv[cnt], "-nodiff") == 0) {
@@ -1527,11 +1541,16 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl
 			<< "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
 			<< "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment)" << endl
-			<< endl << "NON-PARAMETRIC BOOTSTRAP:" << endl
+			<< endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
 			<< "  -b <#replicates>     Bootstrap + ML tree + consensus tree (default: none)" << endl
 			<< "  -bc <#replicates>    Bootstrap + consensus tree" << endl
 			<< "  -bo <#replicates>    Bootstrap only" << endl
 			<< "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
+			<< endl << "ULTRA-FAST BOOTSTRAP:" << endl
+			<< "  -bb <#replicates>    Ultra-fast bootstrap" << endl
+			<< "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
+			<< "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
+			<< "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
 			<< endl << "SUBSTITUTION MODEL:" << endl
 			<< "  -m <substitution_model_name>" << endl
 			<< "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl

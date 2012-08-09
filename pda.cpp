@@ -1345,7 +1345,7 @@ void computeRFDist(Params &params) {
 	} else {
 		rfdist = new int [n*n];
 		memset(rfdist, 0, n*n* sizeof(int));
-		trees.computeRFDist(rfdist, params.rf_dist_mode);
+		trees.computeRFDist(rfdist, params.rf_dist_mode, params.split_weight_threshold);
 	}
 
 	if (verbose_mode >= VB_MED) printRFDist(cout, rfdist, n, m, params.rf_dist_mode);

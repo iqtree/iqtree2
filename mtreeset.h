@@ -131,9 +131,10 @@ public:
 	/**
 		compute the Robinson-Foulds distance between trees
 		@param rfdist (OUT) RF distance
-		@param mode 
+		@param mode RF_ALL_PAIR or RF_ADJACENT_PAIR
+		@param weight_threshold minimum weight cutoff
 	*/
-	void computeRFDist(int *rfdist, int mode = RF_ALL_PAIR);
+	void computeRFDist(int *rfdist, int mode = RF_ALL_PAIR, double weight_threshold = -1000);
 
 	/**
 		compute the Robinson-Foulds distance between trees
