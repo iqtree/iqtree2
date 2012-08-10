@@ -1408,11 +1408,16 @@ double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
 
 double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
     //double tree_lh = optimizeChildBranches(node, dad);
-    double tree_lh = 0.0;
+    double tree_lh = -DBL_MAX;
 
     FOR_NEIGHBOR_IT(node, dad, it) {
         //if (!(*it)->node->isLeaf())
-        tree_lh = optimizeAllBranches((PhyloNode*) (*it)->node, node);
+    	double new_tree_lh = optimizeAllBranches((PhyloNode*) (*it)->node, node);
+    	/*
+    	if (new_tree_lh < tree_lh)
+    		cout << "Wrong " << __func__ << endl;
+    		*/
+    	tree_lh = new_tree_lh;
     }
     if (dad) tree_lh = optimizeOneBranch(node, dad);
     return tree_lh;
@@ -2077,6 +2082,7 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
 
         // clear all partial likelihood from the removal point
         // to the insertion point
+        // TODO: (TUNG) This is probably not necessary
         vector<PhyloNeighbor*>::iterator it2;
         for (it2 = spr_path.begin(); it2 != spr_path.end(); it2++)
             (*it2)->clearPartialLh();
@@ -2122,6 +2128,7 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         double score = swapSPR(cur_score, cur_depth + 1, node1, dad1, orig_node1, orig_node2, (PhyloNode*) (*it)->node, node2, spr_path);
         if (score > cur_score) return score;
     }
+
     spr_path.pop_back();
     return cur_score;
 }

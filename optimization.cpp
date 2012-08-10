@@ -388,8 +388,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 	if (rts < x1) rts = x1;
 	if (rts > x2) rts = x2;
 	fold = fm = computeFuncDerv(rts,f,df);
-	if (df > 0.0 && fabs(f) < xacc) return rts;
-
+	if (df >= 0.0 && fabs(f) < xacc) return rts;
 	if (f < 0.0) {
 		xl = rts;
 		xh = x2;

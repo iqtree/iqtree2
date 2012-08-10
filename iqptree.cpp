@@ -1055,7 +1055,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         	}
 
             /* tree cannot be worse if only 1 NNI is applied */
-            if ( nni2apply == 1) {
+            if ( nni2apply == 1 && newScore < curScore - TOL_LIKELIHOOD) {
                 cout << "THIS IS A BUG !!!" << endl;
                 cout << "The tree likelihood is supposed to be greater or equal than " << vec_nonconf_nni.at(0).score << endl;
                 cout << "Tree likelihood before the swap is " << curScore << endl;
@@ -1397,6 +1397,11 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     //double myLH = computeLikelihood();
     //double lh_branch=computeLikelihoodBranch((PhyloNeighbor*) node1->findNeighbor(node2), (PhyloNode*) node1);
     double bestScore = optimizeOneBranch(node1, node2, false);
+    if (bestScore < curScore) {
+    	bestScore = curScore;
+    	node12_it->length = node12_len[0];
+    	node21_it->length = node12_len[0];
+    }
     treelhs[0] = bestScore;
     node12_len[1] = node12_it->length;
 
