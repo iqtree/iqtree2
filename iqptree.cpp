@@ -69,8 +69,10 @@ void IQPTree::setParams(Params &params) {
 		if (!params.gbo_replicates) {
 			if ( aln->getNSeq() < 100 )
 				params.min_iterations = 200;
-			else
+			else  
 				params.min_iterations = aln->getNSeq() * 2;
+                        if ( params.iteration_multiple > 1 )
+                          params.min_iterations = aln->getNSeq() * params.iteration_multiple;
 		} else {
 			params.min_iterations = 100;
 			params.max_iterations = 1000;
@@ -907,6 +909,11 @@ double IQPTree::doIQPNNI() {
             best_tree_string.seekp(0, ios::beg);
             printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
             //cout << best_tree_string.str() << endl;
+            if (params->write_best_trees) {
+                ostringstream iter_string;
+                iter_string << cur_iteration;
+                printResultTree(iter_string.str());
+            }
             printResultTree();
             stop_rule.addImprovedIteration(cur_iteration);
 
@@ -1928,11 +1935,16 @@ void IQPTree::setRootNode(char *my_root) {
     assert(root);
 }
 
-void IQPTree::printResultTree() {
+void IQPTree::printResultTree(string suffix) {
     setRootNode(params->root);
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
-    printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+    if (suffix.compare("") != 0) {
+      string iter_tree_name = tree_file_name + "." + suffix;
+      printTree(iter_tree_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+    } else {
+      printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+    }
     //printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH);
 }
 

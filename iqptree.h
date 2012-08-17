@@ -100,8 +100,7 @@ public:
             print tree to .treefile
             @param params program parameters, field root is taken
      */
-    void printResultTree();
-
+    void printResultTree(string suffix = "");
     /**
             print tree to out
             @param params program parameters, field root is taken

@@ -348,7 +348,10 @@ struct Params {
 	 *		write all current best trees to file
 	 */
 	bool write_best_trees;
-
+        /**
+        *  Number iteration = num_taxa * iteration_multiple
+        */
+        int iteration_multiple;
     /**
              input file name
      */

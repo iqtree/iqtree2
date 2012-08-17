@@ -642,6 +642,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 	params.new_heuristic = false;
 	params.write_best_trees = false;
+        params.iteration_multiple = 1;
 	params.vns_search = false;
 	params.speedup_iter = 100;
 
@@ -1392,6 +1393,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.new_heuristic = true;
 			} else if (strcmp(argv[cnt], "-wbt") == 0)	{
 				params.write_best_trees = true;
+                        } else if (strcmp(argv[cnt], "-x") == 0) {
+                                cnt++;
+                                if (cnt >= argc)
+                                  throw "Use -x <iteration_multiple>";
+                                params.iteration_multiple = convert_int(argv[cnt]);
 			} else if (strcmp(argv[cnt], "-vns") == 0) {
 				params.vns_search = true;
 			} else if (strcmp(argv[cnt], "-sp_iter") == 0) {
