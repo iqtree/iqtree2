@@ -31,7 +31,9 @@ set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g2")
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g2")
 
-#set(CMAKE_BUILD_TYPE "Release")
+if (NOT CMAKE_BUILD_TYPE) 
+	set(CMAKE_BUILD_TYPE "Release")
+endif()
 
 add_subdirectory(ncl)
 add_subdirectory(whtest)
