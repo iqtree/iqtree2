@@ -632,6 +632,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.online_bootstrap = true;
 	params.min_correlation = 0.99;
 	params.step_iterations = 100;
+	params.store_candidate_trees = true;
 	//const double INF_NNI_CUTOFF = -1000000.0;
 	params.nni_cutoff = -1000000.0;
 	params.estimate_nni_cutoff = false;
@@ -1349,6 +1350,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.gbo_replicates = convert_int(argv[cnt]);
 				params.avoid_duplicated_trees = true;
 				if (params.gbo_replicates < 1000) throw "#replicates must be >= 1000";
+				params.consensus_type = CT_CONSENSUS_TREE;
 			} else if (strcmp(argv[cnt], "-bs") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1373,6 +1375,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "At least step size of 10 and even number please";
 			} else if (strcmp(argv[cnt], "-boff") == 0) {
 				params.online_bootstrap = false;
+			} else if (strcmp(argv[cnt], "-nostore") == 0) {
+				params.store_candidate_trees = false;
 			} else if (strcmp(argv[cnt], "-nodiff") == 0) {
 				params.distinct_trees = false;
 			} else if (strcmp(argv[cnt], "-norell") == 0) {
@@ -1557,6 +1561,9 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
 			<< "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
+			<< endl << "SINGLE BRANCH TEST:" << endl
+			<< "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
+			<< "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
 			<< endl << "SUBSTITUTION MODEL:" << endl
 			<< "  -m <substitution_model_name>" << endl
 			<< "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl

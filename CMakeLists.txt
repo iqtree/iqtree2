@@ -20,6 +20,8 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 
 add_definitions(-DIQ_TREE)
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused -static-libstdc++")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused -static-libgcc")
 
@@ -29,7 +31,7 @@ set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g2")
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g2")
 
-set(CMAKE_BUILD_TYPE "Release")
+#set(CMAKE_BUILD_TYPE "Release")
 
 add_subdirectory(ncl)
 add_subdirectory(whtest)

@@ -1689,7 +1689,7 @@ int main(int argc, char *argv[])
 		switch (params.consensus_type) {
 			case CT_CONSENSUS_TREE:
 				computeConsensusTree(params.user_file, params.tree_burnin, params.split_threshold,
-					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file);
+					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file, &params);
 				break;
 			case CT_CONSENSUS_NETWORK:
 				computeConsensusNetwork(params.user_file, params.tree_burnin, params.split_threshold,

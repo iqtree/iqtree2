@@ -533,6 +533,8 @@ double IQPTree::doIQP() {
     	*/
     	curScore = optimizeAllBranches(1);
     }
+	//cout << "IQP log-likelihood: " << curScore << endl;
+	//cout << "computeLikelihood(): " << computeLikelihood() << endl;
     if (enable_parsimony) {
 		cur_pars_score = computeParsimony();
 		if (verbose_mode >= VB_MAX) {
@@ -740,16 +742,20 @@ double IQPTree::doIQPNNI() {
 
 		// estimate logl_cutoff
 		if (params->avoid_duplicated_trees && max_candidate_trees > 0 && treels_logl.size() > 1000) {
-			int num_entries = max_candidate_trees * cur_iteration / stop_rule.getNumIterations();
+			int num_entries = floor(max_candidate_trees * ((double)cur_iteration / stop_rule.getNumIterations()));
 			if (num_entries < treels_logl.size() * 0.9) {
 				DoubleVector logl = treels_logl;
 				nth_element(logl.begin(), logl.begin() + (treels_logl.size()-num_entries), logl.end());
 				logl_cutoff = logl[treels_logl.size()-num_entries] - 1.0;
 			} else logl_cutoff = 0.0;
 
-			if (cur_iteration%10==0)
-			cout << treels_logl.size() << " trees, logl_cutoff= " << logl_cutoff << 
-				" duplicates= " << duplication_counter << " (" << (100*duplication_counter)/treels_logl.size() << "%)"<< endl;
+			if (cur_iteration%10==0) {
+				cout << treels.size() << " trees, " << treels_logl.size() << " logls, logl_cutoff= " << logl_cutoff;
+				if (params->store_candidate_trees) 
+					cout << " duplicates= " << duplication_counter << " (" << 100*((double)duplication_counter/treels_logl.size()) << "%)"<< endl;
+				else
+					cout << endl;
+			}
 		}
 
 		if (estimate_nni_cutoff && nni_info.size() >= 500) {
@@ -938,14 +944,14 @@ double IQPTree::doIQPNNI() {
 			SplitGraph *sg = new SplitGraph;
 			summarizeBootstrap(*sg);
 			boot_splits.push_back(sg);
-			max_candidate_trees = treels.size()*(stop_rule.getNumIterations()) / cur_iteration;
+			max_candidate_trees = treels_logl.size()*(stop_rule.getNumIterations()) / cur_iteration;
 			cout << "Setting tau = " << max_candidate_trees << endl;
 		}
         if (cur_iteration == stop_rule.getNumIterations() && params->gbo_replicates && !boot_splits.empty() && stop_rule.getNumIterations()+params->step_iterations <= params->max_iterations) {
 			//SplitGraph *sg = new SplitGraph;
 			//summarizeBootstrap(*sg);
 			if (!checkBootstrapStopping()) {
-				max_candidate_trees = treels.size()*(stop_rule.getNumIterations()+params->step_iterations)/stop_rule.getNumIterations();
+				max_candidate_trees = treels_logl.size()*(stop_rule.getNumIterations()+params->step_iterations)/stop_rule.getNumIterations();
 				stop_rule.setIterationNum(stop_rule.getNumIterations()+params->step_iterations, params->max_iterations);
 				cout << "INFO: Increase number of iterations to " << stop_rule.getNumIterations() << " tau = " << max_candidate_trees << endl;
 				//delete boot_splits;
@@ -1403,6 +1409,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     bool zero = false;
     //double myLH = computeLikelihood();
     //double lh_branch=computeLikelihoodBranch((PhyloNeighbor*) node1->findNeighbor(node2), (PhyloNode*) node1);
+	//curScore = computeLikelihood();
     double bestScore = optimizeOneBranch(node1, node2, false);
     if (bestScore < curScore) {
     	bestScore = curScore;
@@ -1619,9 +1626,13 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
 
 void IQPTree::saveCurrentTree(double cur_logl) {
 	ostringstream ostr;
-	printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
-	string tree_str = ostr.str();
-	StringIntMap::iterator it = treels.find(tree_str);
+	string tree_str;
+	StringIntMap::iterator it = treels.end();
+	if (params->store_candidate_trees) {
+		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+		tree_str = ostr.str();
+		it = treels.find(tree_str);
+	}
 	int tree_index = -1;
 	if (it != treels.end()) {// already in treels
 		duplication_counter++;
@@ -1648,7 +1659,7 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 	} else {
 		if (logl_cutoff != 0.0 && cur_logl <= logl_cutoff + 1e-4) return;
 		tree_index = treels_logl.size();
-		treels[tree_str] = treels_logl.size();
+		if (params->store_candidate_trees) treels[tree_str] = tree_index;
 		treels_logl.push_back(cur_logl);
 		if (verbose_mode >= VB_MED)
 			cout << "Add    treels_logl[" << tree_index << "] := " << cur_logl << endl;
@@ -1670,6 +1681,17 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 			double rell = 0.0;
 			for (int ptn = 0; ptn < nptn; ptn++) rell += pattern_lh[ptn] * boot_samples[sample][ptn];
 			if (rell > boot_logl[sample]) {
+				if (tree_str == "") {
+					printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+					tree_str = ostr.str();
+					it = treels.find(tree_str);
+					if (it != treels.end()) {
+						tree_index = it->second; 
+					} else {
+						tree_index = treels.size();
+						treels[tree_str] = tree_index;
+					} 
+				}
 				boot_logl[sample] = rell;
 				boot_trees[sample] = tree_index;
 				updated++;
@@ -1806,7 +1828,7 @@ void IQPTree::summarizeBootstrap(Params &params)
 {
 	MTreeSet trees;
 	IntVector tree_weights;
-	tree_weights.resize(treels.size(), 0);
+	tree_weights.resize(treels_logl.size(), 0);
 	for (int sample = 0; sample < boot_trees.size(); sample++)
 		tree_weights[boot_trees[sample]]++;
 	trees.init(treels, rooted, tree_weights);
@@ -1817,7 +1839,7 @@ void IQPTree::summarizeBootstrap(SplitGraph &sg)
 {
 	MTreeSet trees;
 	IntVector tree_weights;
-	tree_weights.resize(treels.size(), 0);
+	tree_weights.resize(treels_logl.size(), 0);
 	for (int sample = 0; sample < boot_trees.size(); sample++)
 		tree_weights[boot_trees[sample]]++;
 	trees.init(treels, rooted, tree_weights);
@@ -1866,6 +1888,7 @@ double computeCorrelation(IntVector &ix, IntVector &iy) {
 		f2 += (x[i]) * (x[i]);
 		f3 += (y[i]) * (y[i]);
 	}
+	if (f2 == 0.0 || f3 == 0.0) return 1.0;
 	return f1 / (sqrt(f2) * sqrt(f3));
 }
 
@@ -1912,7 +1935,7 @@ bool IQPTree::checkBootstrapStopping() {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(outfile.c_str());
-        out << "tau=" << max_candidate_trees/2 << "\ttau=" << treels.size() << endl;
+        out << "tau=" << max_candidate_trees/2 << "\ttau=" << treels_logl.size() << endl;
 		for (int i = 0; i < split_supports.size(); i++)
 			out << split_supports[i] << "\t" << split_supports_new[i] << endl;
         out.close();

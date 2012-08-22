@@ -1055,6 +1055,9 @@ struct Params {
 	/** number of iterations between bootstrap stopping rule check */
 	int step_iterations;
 	
+	/** TRUE to store all candidate trees in memory */
+	bool store_candidate_trees;
+	
 	/****** variables for NNI cutoff heuristics ******/
 
 	/**

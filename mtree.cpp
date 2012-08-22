@@ -847,6 +847,22 @@ inline int splitnumtaxacmp(const Split* a, const Split* b)
 }
 
 void MTree::convertToTree(SplitGraph &sg) {
+    SplitGraph::iterator it;
+    int taxid;
+    int count;
+	BoolVector has_tax;
+	has_tax.resize(sg.getNTaxa(), false);
+	// first add trivial splits if not existed
+	for (it = sg.begin(); it != sg.end(); it++) {
+		taxid = (*it)->trivial();
+		if (taxid >= 0) has_tax[taxid] = true;
+	}
+	for (count = 0; count < has_tax.size(); count++)
+		if (!has_tax[count]) {
+			Split *sp = new Split(sg.getNTaxa());
+			sp->addTaxon(count);
+			sg.push_back(sp);
+		}
     // sort splits by the number of taxa they contain
     sort(sg.begin(), sg.end(), splitnumtaxacmp);
 
@@ -860,11 +876,8 @@ void MTree::convertToTree(SplitGraph &sg) {
     vector<Split*> cladetaxa;
     leaves.resize(leafNum, NULL);
     cladetaxa.resize(leafNum, NULL);
-    SplitGraph::iterator it;
-    int taxid;
-    int count = 0;
     // first add all trivial splits into tree
-    for (it = sg.begin(); it != sg.end(); it++, count++) {
+    for (it = sg.begin(), count = 0; it != sg.end(); it++, count++) {
         //(*it)->report(cout);
         taxid = (*it)->trivial();
         if (taxid < 0) break;

@@ -572,7 +572,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 
 		if (params.consensus_type == CT_CONSENSUS_TREE) {
         	out << "CONSENSUS TREE" << endl << "--------------" << endl << endl;
-        	out << "Consensus tree is constructed from " << params.num_bootstrap_samples << " bootstrap trees" << endl
+        	out << "Consensus tree is constructed from " << (params.num_bootstrap_samples ? params.num_bootstrap_samples : params. gbo_replicates) << " bootstrap trees" << endl
 				<< "Branches with bootstrap support >" << floor(params.split_threshold * 1000)/10 << "% are kept";
 			if (params.split_threshold == 0.0) out << " (extended consensus)";
 			if (params.split_threshold == 0.5) out << " (majority-rule consensus)";
@@ -897,6 +897,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 				cout << "Time elapsed: " << elapsedTime << endl;
 			}
         }
+        delete [] ml_dist;
     }
 
     /* do NNI with likelihood function */
@@ -1256,6 +1257,15 @@ void runPhyloAnalysis(Params &params) {
     } else if (params.num_bootstrap_samples == 0) {
 		alignment->checkGappySeq();
         runPhyloAnalysis(params, original_model, alignment, *tree);
+		if (params.gbo_replicates && params.online_bootstrap) {
+
+			cout << endl << "Computing consensus tree..." << endl;
+			string splitsfile = params.out_prefix;
+			splitsfile += ".splits";
+			//cout << splitsfile << endl;
+			computeConsensusTree(splitsfile.c_str(), 0, -1,
+					params.split_threshold, NULL, params.out_prefix, NULL, &params);
+		}
         if (original_model != "TESTONLY")
             reportPhyloAnalysis(params, original_model, *alignment, *tree);
         if (params.treeset_file) {
@@ -1355,7 +1365,7 @@ void runPhyloAnalysis(Params &params) {
 			cout << endl << "===> COMPUTE CONSENSUS TREE FROM " <<
 					params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
 			computeConsensusTree(boottrees_name.c_str(), 0, -1,
-					params.split_threshold, NULL, params.out_prefix, NULL);
+					params.split_threshold, NULL, params.out_prefix, NULL, &params);
 		}
 
         if (params.compute_ml_tree) {
@@ -1367,7 +1377,7 @@ void runPhyloAnalysis(Params &params) {
             MExtTree ext_tree;
             assignBootstrapSupport(boottrees_name.c_str(), 0,
                     treefile_name.c_str(), false, treefile_name.c_str(),
-                    params.out_prefix, ext_tree, NULL);
+                    params.out_prefix, ext_tree, NULL, &params);
             tree->copyTree(&ext_tree);
             reportPhyloAnalysis(params, original_model, *alignment, *tree);
         }  else if (params.consensus_type == CT_CONSENSUS_TREE) {
@@ -1489,31 +1499,80 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 }
 
 void computeConsensusTree(const char *input_trees, int burnin, double cutoff, double weight_threshold,
-        const char *output_tree, const char *out_prefix, const char *tree_weight_file) {
+        const char *output_tree, const char *out_prefix, const char *tree_weight_file, Params *params) {
     bool rooted = false;
 
     // read the bootstrap tree file
+	/*
     MTreeSet boot_trees(input_trees, rooted, burnin, tree_weight_file);
     string first_taxname = boot_trees.front()->root->name;
     //if (params.root) first_taxname = params.root;
 
     SplitGraph sg;
 
-    boot_trees.convertSplits(sg, cutoff, SW_COUNT, weight_threshold);
+    boot_trees.convertSplits(sg, cutoff, SW_COUNT, weight_threshold);*/
+	
+	
     //sg.report(cout);
+
+    SplitGraph sg;
+    SplitIntMap hash_ss;
+    // make the taxa name
+    //vector<string> taxname;
+    //taxname.resize(mytree.leafNum);
+    //mytree.getTaxaName(taxname);
+
+    // read the bootstrap tree file
+	double scale=100.0;
+	if (params->scaling_factor > 0) scale = params->scaling_factor;
+
+    MTreeSet boot_trees;
+    if (params && detectInputFile((char*)input_trees) == IN_NEXUS) {
+		 char *user_file = params->user_file;
+		params->user_file = (char*)input_trees;
+		sg.init(*params);
+		params->user_file = user_file;
+		for (SplitGraph::iterator it = sg.begin(); it != sg.end(); it++)
+			hash_ss.insertSplit((*it), (*it)->getWeight());
+/*		StrVector sgtaxname;
+		sg.getTaxaName(sgtaxname);
+		i = 0;
+		for (StrVector::iterator sit = sgtaxname.begin(); sit != sgtaxname.end(); sit++, i++) {
+			Node *leaf = mytree.findLeafName(*sit);
+			if (!leaf) outError("Tree does not contain taxon ", *sit);
+			leaf->id = i;
+		}*/
+		scale /= sg.maxWeight();
+    } else {
+    	boot_trees.init(input_trees, rooted, burnin, tree_weight_file);
+    	boot_trees.convertSplits(sg, cutoff, SW_COUNT, weight_threshold);
+    	scale /= boot_trees.sumTreeWeights();
+		cout << sg.size() << " splits found" << endl;
+    }
+    //sg.report(cout);
+	cout << "Rescaling split weights by " << scale << endl;
+	if (params->scaling_factor < 0)
+	  sg.scaleWeight(scale, true);
+	else {
+	  sg.scaleWeight(scale, false, params->numeric_precision);
+	}
+
 
     cout << "Creating greedy consensus tree..." << endl;
     MTree mytree;
     SplitGraph maxsg;
     sg.findMaxCompatibleSplits(maxsg);
-    //maxsg.saveFile(cout);
+    
+    if (verbose_mode >= VB_MED) maxsg.saveFile(cout);
     cout << "convert compatible split system into tree..." << endl;
     mytree.convertToTree(maxsg);
-    Node *node = mytree.findLeafName(first_taxname);
+    //cout << "done" << endl;
+    string taxname = sg.getTaxa()->GetTaxonLabel(0);
+    Node *node = mytree.findLeafName(taxname);
     if (node) mytree.root = node;
-    mytree.scaleLength(100.0 / boot_trees.sumTreeWeights(), true);
+   // mytree.scaleLength(100.0 / boot_trees.sumTreeWeights(), true);
 
-    mytree.getTaxaID(maxsg.getSplitsBlock()->getCycle());
+   // mytree.getTaxaID(maxsg.getSplitsBlock()->getCycle());
     //maxsg.saveFile(cout);
 
     string out_file;
