@@ -35,6 +35,7 @@ const double TOL_LIKELIHOOD = 0.1;
 const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
 const static double SCALING_THRESHOLD_INVER = 1/SCALING_THRESHOLD;
 const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
+const int SPR_DEPTH = 2;
 
 using namespace Eigen;
 
@@ -122,6 +123,7 @@ struct NNIMove {
 
     bool operator<(const NNIMove & rhs) const {
         return score > rhs.score;
+    	//return delta > rhs.delta;
     }
 
 };
@@ -718,6 +720,18 @@ public:
     double optimizeSPR(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
+     *  original implementation by Minh
+     */
+    double optimizeSPR_old(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
+     *  original implementation by Minh
+     */
+    double swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
+                              PhyloNode *orig_node1, PhyloNode *orig_node2,
+                              PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path);
+
+    /**
             move the subtree (dad1-node1) to the branch (dad2-node2)
      */
     double swapSPR(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
@@ -821,6 +835,11 @@ public:
      *      TRUE if the loglikelihood is computed using SSE
      */
     bool sse;
+
+    /**
+     * Current score of the tree;
+     */
+    double curScore;
 
     /*
      * 		Store the all the parameters for the program

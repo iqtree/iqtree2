@@ -924,7 +924,7 @@ double IQPTree::doIQPNNI() {
             stop_rule.addImprovedIteration(cur_iteration);
 
             // Variable Neighborhood search idea, reset k_delete if tree is better
-            resetKDelete();
+            //resetKDelete();
         } else {
             /* take back the current best tree */
             best_tree_string.seekg(0, ios::beg);
@@ -935,10 +935,9 @@ double IQPTree::doIQPNNI() {
             clearAllPartialLH();
 
             // Variable Neighborhood search idea, increase k_delete if tree is not better
-            increaseKDelete();
-
-            if (curScore > bestScore - 1e-4) // if goes back, increase k_delete once more
-                increaseKDelete();
+            //increaseKDelete();
+            //if (curScore > bestScore - 1e-4) // if goes back, increase k_delete once more
+                //increaseKDelete();
         }
         if ((cur_iteration) % (params->step_iterations/2) == 0 && params->gbo_replicates) {
 			SplitGraph *sg = new SplitGraph;
@@ -1089,7 +1088,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     } while (true);
 
     if (foundBetterTree) {
-    	curScore = optimizeAllBranches(1);
+    	//curScore = optimizeAllBranches(1);
         if (enableHeuris) {
             vecNumNNI.push_back(nni_count);
         }
@@ -1387,6 +1386,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     NNIMove noMove;
     NNIMove nnimoves[2];
     noMove.score = 0;
+
     /*
      *  array contain log-likelihood of 3 trees
      *  treelhs[0]: current tree
@@ -1404,6 +1404,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
      *  2. Element: the optimized length after the 1.NNI
      *  3.Element: the optimized length after the 2.NNI
      */
+
     double node12_len[4];
     node12_len[0] = node12_it->length;
     bool zero = false;
@@ -1590,6 +1591,8 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     // restore the partial likelihood vector
     node12_it->partial_lh = node1_lh_save;
     node21_it->partial_lh = node2_lh_save;
+    node12_it->unclearPartialLh();
+    node21_it->unclearPartialLh();
     node12_it->scale_num = node1_scale_save;
     node21_it->scale_num = node2_scale_save;
     node12_it->lh_scale_factor = node1_lh_scale;

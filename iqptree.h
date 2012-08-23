@@ -367,11 +367,6 @@ public:
     StopRule stop_rule;
 
     /**
-     * Current score of the tree;
-     */
-    double curScore;
-
-    /**
      *      Parsimony scores, used for linear regression
      */
     double* pars_scores;

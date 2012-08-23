@@ -1019,21 +1019,23 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         tree.doIQPNNI();
     } else {
         /* do SPR with likelihood function */
-        if (params.tree_spr)
-            //tree.optimizeSPRBranches();
-        	for (int i=1; i<=5; i++) {
-        		cout << "Doing SPR Search" << endl;
-            	double spr_score = tree.optimizeSPR();
-            	if (spr_score < tree.curScore) {
-            		cout << "SPR search did not found any better tree" << endl;
-            		break;
-            	} else {
-            		tree.curScore = spr_score;
-            		cout << "Found new BETTER SCORE by SPR: " << spr_score << endl;
-            		double nni_score = tree.optimizeNNI();
-            		cout << "Score by NNI: " << nni_score << endl;
-            	}
-        	}
+		if (params.tree_spr) {
+			//tree.optimizeSPRBranches();
+			cout << "Doing SPR Search" << endl;
+			cout << "Start tree.optimizeSPR()" << endl;
+			double spr_score = tree.optimizeSPR();
+			cout << "Finish tree.optimizeSPR()" << endl;
+			//double spr_score = tree.optimizeSPR(tree.curScore, (PhyloNode*) tree.root->neighbors[0]->node);
+			if (spr_score <= tree.curScore) {
+				cout << "SPR search did not found any better tree" << endl;
+			} else {
+				tree.curScore = spr_score;
+				cout << "Found new BETTER SCORE by SPR: " << spr_score << endl;
+				double nni_score = tree.optimizeNNI();
+				cout << "Score by NNI: " << nni_score << endl;
+			}
+		}
+
     }
 
     if (!pruned_taxa.empty()) {
