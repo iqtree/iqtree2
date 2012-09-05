@@ -161,10 +161,11 @@ inline void separator(ostream &out, int type = 0) {
 
 void printCopyright(ostream &out) {
 #ifdef IQ_TREE
- 	out << "IQ-TREE beta version " << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << " built " << __DATE__;
+ 	out << "IQ-TREE beta version "; 
 #else
- 	out << "PDA - Phylogenetic Diversity Analyzer version " << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << " built " << __DATE__;
+ 	out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
+out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH << " built " << __DATE__;
 #ifdef DEBUG
 	out << " - debug mode";
 #endif

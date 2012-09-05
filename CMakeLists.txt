@@ -4,6 +4,7 @@ project(iqtree)
 # The version number.
 set (iqtree_VERSION_MAJOR 0)
 set (iqtree_VERSION_MINOR 9)
+set (iqtree_VERSION_PATCH 0)
 
 
 include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
@@ -109,11 +110,35 @@ else (WIN32)
 target_link_libraries(iqtree ncl whtest modeltest lp z dl)
 endif (WIN32)
 
+##############################################################
+# add the install targets
+##############################################################
+install (TARGETS iqtree DESTINATION bin)
+install (FILES "${PROJECT_SOURCE_DIR}/examples/example.phy" DESTINATION examples)
+#install (FILES "${PROJECT_BINARY_DIR}/iqtree_config.h"        
+#         DESTINATION include)
+
+##############################################################
 # build a CPack driven installer package
+##############################################################
 include (InstallRequiredSystemLibraries)
 set (CPACK_RESOURCE_FILE_LICENSE  
      "${CMAKE_CURRENT_SOURCE_DIR}/License.txt")
-set (CPACK_PACKAGE_VERSION_MAJOR "${Tutorial_VERSION_MAJOR}")
-set (CPACK_PACKAGE_VERSION_MINOR "${Tutorial_VERSION_MINOR}")
+set (CPACK_PACKAGE_VERSION_MAJOR "${iqtree_VERSION_MAJOR}")
+set (CPACK_PACKAGE_VERSION_MINOR "${iqtree_VERSION_MINOR}")
+set (CPACK_PACKAGE_VERSION_PATCH "${iqtree_VERSION_PATCH}")
+if(WIN32)
+  set(CPACK_GENERATOR "ZIP")
+  set(CPACK_SOURCE_GENERATOR "ZIP")
+else(WIN32)
+  set(CPACK_GENERATOR "TGZ")
+  set(CPACK_SOURCE_GENERATOR "TGZ")
+endif(WIN32)
+#set(CPACK_SOURCE_PACKAGE_FILE_NAME
+#  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
+set(CPACK_SOURCE_IGNORE_FILES
+  "/build/;/debug/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;${CPACK_SOURCE_IGNORE_FILES}")
+
 include (CPack)
 
+add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)
