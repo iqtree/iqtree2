@@ -64,7 +64,7 @@ void SplitGraph::init(Params &params)
 	mtrees = NULL;
 	if (params.intype == IN_NEWICK) {
 		// read the input file, can contain more than 1 tree
-		mtrees = new MTreeSet(params.user_file, params.is_rooted, params.tree_burnin);
+		mtrees = new MTreeSet(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
 		//mtree = new MTree(params.user_file, params.is_rooted);
 
 		if (params.is_rooted) {
@@ -98,7 +98,7 @@ void SplitGraph::init(Params &params)
 		if (trees->GetNumTrees() > 0) { 
 			if (getNSplits() > 0) 
 				outError("Ambiguous input file, pls only specify either SPLITS block or TREES block");
-			convertFromTreesBlock(params.tree_burnin, params.split_threshold, params.split_weight_threshold);
+			convertFromTreesBlock(params.tree_burnin, params.tree_max_count, params.split_threshold, params.split_weight_threshold);
 		}
 
 	}
@@ -204,7 +204,7 @@ SplitGraph::~SplitGraph()
 }
 
 
-void SplitGraph::convertFromTreesBlock(int burnin, double split_threshold, double weight_threshold) {
+void SplitGraph::convertFromTreesBlock(int burnin, int max_count, double split_threshold, double weight_threshold) {
 	cout << trees->GetNumTrees() << " tree(s) loaded" << endl;
 	if (burnin >= trees->GetNumTrees())
 		outError("Burnin value is too large");
@@ -212,7 +212,7 @@ void SplitGraph::convertFromTreesBlock(int burnin, double split_threshold, doubl
 	cout << burnin << " beginning tree(s) discarded" << endl;
 	mtrees = new MTreeSet();
 	
-	for (int i = burnin; i < trees->GetNumTrees(); i++) {
+	for (int i = burnin; i < trees->GetNumTrees() && (i < burnin+max_count); i++) {
 		stringstream strs(trees->GetTranslatedTreeDescription(i), ios::in | ios::out | ios::app);
 		strs << ";";
 		MTree *tree = mtrees->newTree();

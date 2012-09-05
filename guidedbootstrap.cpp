@@ -604,7 +604,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQPTree &tree)
         trees_logl = &tree.treels_logl;
         if (!params.distinct_trees) {
             // read in trees file
-            trees.init(params.user_file, params.is_rooted, params.tree_burnin);
+            trees.init(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
 
             if (pattern_lhs->size() != trees.size())
                 outError("Different number of sitelh vectors");
@@ -854,7 +854,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQPTree &tree)
             }
         }
     } else if (params.distinct_trees) {
-        trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL, &final_tree_weights, params.do_compression);
+        trees.init(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count, NULL, &final_tree_weights, params.do_compression);
         // assuming user_file contains species ID (instead of full name)
         trees.assignLeafID();
         //trees.init(params.user_file, params.is_rooted, params.tree_burnin, NULL);

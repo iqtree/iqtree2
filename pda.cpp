@@ -1320,7 +1320,7 @@ void computeRFDist(Params &params) {
 
 	string filename = params.out_prefix;
 	filename += ".rfdist";
-	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin);
+	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
 	int n = trees.size(), m = trees.size();
 	int *rfdist;
 	int *incomp_splits = NULL;
@@ -1329,7 +1329,7 @@ void computeRFDist(Params &params) {
 	string treename = params.out_prefix;
 	treename += ".rftree";
 	if (params.rf_dist_mode == RF_TWO_TREE_SETS) {
-		MTreeSet treeset2(params.second_tree, params.is_rooted, params.tree_burnin);
+		MTreeSet treeset2(params.second_tree, params.is_rooted, params.tree_burnin, params.tree_max_count);
 		cout << "Computing Robinson-Foulds distances between two sets of trees" << endl;
 		m = treeset2.size();
 		rfdist = new int [n*m];
@@ -1458,7 +1458,7 @@ void compare(Params &params){
 	cout << "Tree with branchID (nodeID) was printed to: " << drawFile << endl;
 
 
-	MTreeSet trees(params.user_file,params.is_rooted, params.tree_burnin);
+	MTreeSet trees(params.user_file,params.is_rooted, params.tree_burnin, params.tree_max_count);
 	DoubleMatrix brMatrix;
 	DoubleVector BSDs;
 	IntVector RFs;
@@ -1688,15 +1688,15 @@ int main(int argc, char *argv[])
 		MExtTree tree;
 		switch (params.consensus_type) {
 			case CT_CONSENSUS_TREE:
-				computeConsensusTree(params.user_file, params.tree_burnin, params.split_threshold,
+				computeConsensusTree(params.user_file, params.tree_burnin, params.tree_max_count, params.split_threshold,
 					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file, &params);
 				break;
 			case CT_CONSENSUS_NETWORK:
-				computeConsensusNetwork(params.user_file, params.tree_burnin, params.split_threshold,
+				computeConsensusNetwork(params.user_file, params.tree_burnin, params.tree_max_count, params.split_threshold,
 					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file);
 				break;
 			case CT_ASSIGN_SUPPORT:
-				assignBootstrapSupport(params.user_file, params.tree_burnin,
+				assignBootstrapSupport(params.user_file, params.tree_burnin, params.tree_max_count, 
 					params.second_tree, params.is_rooted, params.out_file,
 					params.out_prefix, tree, params.tree_weight_file, &params);
 				break;

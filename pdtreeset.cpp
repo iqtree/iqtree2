@@ -30,7 +30,7 @@ PDTreeSet::PDTreeSet(Params &params) {
 }
 
 void PDTreeSet::init(Params &params) {
-	MTreeSet::init(params.user_file, params.is_rooted, params.tree_burnin);
+	MTreeSet::init(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
 
 	if (isRootedTrees()) {
 		params.sub_size++;

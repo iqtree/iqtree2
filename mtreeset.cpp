@@ -25,12 +25,13 @@ MTreeSet::MTreeSet()
 {
 }
 
-MTreeSet::MTreeSet(const char *userTreeFile, bool &is_rooted, int burnin, const char *tree_weight_file) {
-	init(userTreeFile, is_rooted, burnin, tree_weight_file);
+MTreeSet::MTreeSet(const char *userTreeFile, bool &is_rooted, 
+	int burnin, int max_count, const char *tree_weight_file) {
+	init(userTreeFile, is_rooted, burnin, max_count, tree_weight_file);
 }
 
 
-void readIntVector(const char *file_name, int burnin, IntVector &vec) {
+void readIntVector(const char *file_name, int burnin, int max_count, IntVector &vec) {
 	cout << "Reading integer vector file " << file_name << " ..." << endl;
 	try {
 		ifstream in;
@@ -44,9 +45,10 @@ void readIntVector(const char *file_name, int burnin, IntVector &vec) {
 			if(!(in >> i)) break;
 			if (burnin > 0) 
 				burnin--;
-			else 
+			else if (max_count > 0) {
 				vec.push_back(i);
-			
+				max_count--;
+			}
 		}
 		in.clear();
 		// set the failbit again
@@ -57,14 +59,14 @@ void readIntVector(const char *file_name, int burnin, IntVector &vec) {
 	}
 }
 
-void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin, 
+void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin, int max_count,
 	const char *tree_weight_file, IntVector *weights, bool compressed) 
 {
-	readTrees(userTreeFile, is_rooted, burnin, weights, compressed);
+	readTrees(userTreeFile, is_rooted, burnin, max_count, weights, compressed);
 	checkConsistency();
 
 	if (tree_weight_file) 
-		readIntVector(tree_weight_file, burnin, tree_weights);
+		readIntVector(tree_weight_file, burnin, max_count, tree_weights);
 /*	else if (!weights)
 		tree_weights.resize(size(), 1);*/
 
@@ -101,7 +103,9 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 	//tree_weights.resize(size(), 1);
 }
 
-void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, IntVector *weights, bool compressed) {
+void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int max_count,
+	IntVector *weights, bool compressed) 
+{
 	cout << "Reading tree(s) file " << infile << " ..." << endl;
 	int count, omitted;
 /*	IntVector ok_trees;
@@ -129,7 +133,7 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, IntVec
 			if (in->eof())
 				throw "Burnin value is too large.";
 		}
-		for (count = 1, omitted = 0; !in->eof(); count++) {
+		for (count = 1, omitted = 0; !in->eof() && count <= max_count; count++) {
 			if (!weights || weights->at(count-1)) {
 				//cout << "Reading tree " << count << " ..." << endl;
 				MTree *tree = newTree();
@@ -161,7 +165,7 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, IntVec
 			in->exceptions(ios::failbit | ios::badbit);
 
 		}
-		cout << count-omitted << ((front()->rooted) ? " rooted" : " un-rooted") << " tree(s) loaded" << endl;
+		cout << size() << ((front()->rooted) ? " rooted" : " un-rooted") << " tree(s) loaded" << endl;
 		if (omitted) cout << omitted << " tree(s) omitted" << endl;
 		//in->exceptions(ios::failbit | ios::badbit);
 		if (compressed) ((igzstream*)in)->close(); else ((ifstream*)in)->close();

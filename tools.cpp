@@ -551,6 +551,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.quad_programming = false;
 	params.test_input = TEST_NONE;
 	params.tree_burnin = 0;
+	params.tree_max_count = 1000000;
 	params.split_threshold = 0.0;
 	params.split_weight_threshold = -1000;
 	params.split_weight_summary = SW_SUM;
@@ -975,6 +976,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_burnin = convert_int(argv[cnt]);
 				if (params.tree_burnin < 0)
 					throw "Burnin value must not be negative";
+			} else if (strcmp(argv[cnt],"-tm") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -tm <tree_max_count>";
+				params.tree_max_count = convert_int(argv[cnt]);
+				if (params.tree_max_count < 0)
+					throw "tree_max_count must not be negative";
 			} else if (strcmp(argv[cnt],"-t") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1375,7 +1383,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "At least step size of 10 and even number please";
 			} else if (strcmp(argv[cnt], "-boff") == 0) {
 				params.online_bootstrap = false;
-			} else if (strcmp(argv[cnt], "-nostore") == 0) {
+			} else if (strcmp(argv[cnt], "-nostore") == 0 || strcmp(argv[cnt], "-memsave") == 0) {
 				params.store_candidate_trees = false;
 			} else if (strcmp(argv[cnt], "-nodiff") == 0) {
 				params.distinct_trees = false;

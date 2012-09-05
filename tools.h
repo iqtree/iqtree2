@@ -712,6 +712,11 @@ struct Params {
     int tree_burnin;
 
     /**
+            maximum number of trees to consider (for e.g. consensus tree construction)
+     */
+    int tree_max_count;
+
+	/**
             threshold of split frequency, splits appear less than threshold will be discarded
      */
     double split_threshold;

@@ -752,7 +752,7 @@ double IQPTree::doIQPNNI() {
 			if (cur_iteration%10==0) {
 				cout << treels.size() << " trees, " << treels_logl.size() << " logls, logl_cutoff= " << logl_cutoff;
 				if (params->store_candidate_trees) 
-					cout << " duplicates= " << duplication_counter << " (" << 100*((double)duplication_counter/treels_logl.size()) << "%)"<< endl;
+					cout << " duplicates= " << duplication_counter << " (" << (int)round(100*((double)duplication_counter/treels_logl.size())) << "%)"<< endl;
 				else
 					cout << endl;
 			}
@@ -873,15 +873,15 @@ double IQPTree::doIQPNNI() {
 
         if (!skipped) {
             cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap ":"Iteration ") << cur_iteration << " / LogL: " << curScore
-            	<< " / CPU time elapsed: " << cputime_secs << "s";
+            	<< " / CPU time elapsed: " << (int)round(cputime_secs) << "s";
            if (cur_iteration > 10 && cputime_secs > 10)
-           		cout <<	" (" << cputime_remaining << "s left)";
+           		cout <<	" (" << (int)round(cputime_remaining) << "s left)";
            cout << endl;
         } else {
             cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap ":"Iteration ") << cur_iteration << " skipped after " << nni_count << " NNI / LogL: " << curScore
-            	<< " / CPU time elapsed: " << cputime_secs << "s";
+            	<< " / CPU time elapsed: " << (int)round(cputime_secs) << "s";
            if (cur_iteration > 10 && cputime_secs > 10)
-           		cout <<	" (" << cputime_remaining << "s left)";
+           		cout <<	" (" << (int)round(cputime_remaining) << "s left)";
            cout << endl;
 		}
 
@@ -1642,7 +1642,8 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 		tree_index = it->second;
 		if (cur_logl <= treels_logl[it->second]+1e-4) {
 			if (cur_logl < treels_logl[it->second]-5.0)
-			cout << "Current lh " << cur_logl << " is much worse than expected " << treels_logl[it->second] << endl;
+			if (verbose_mode >= VB_MED) 
+				cout << "Current lh " << cur_logl << " is much worse than expected " << treels_logl[it->second] << endl;
 			return;
 		}
 		if (verbose_mode >= VB_MAX)

@@ -42,11 +42,12 @@ void evaluateTrees(Params &params, IQPTree *tree);
 	and print resulting tree to output_tree. 
 	@param input_trees collection of input trees to infer split supports
 	@param burnin the number trees at the beginning of input_trees to be discarded
+	@param max_count max number of trees to load
 	@param target_tree tree to assign support value
 	@param output_tree (OUT, OVERWRITE IF EXIST) Resulting will be written to this file. If NULL,
 		output_tree will be named target_tree appended with ".suptree"
 */
-void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, 
+void assignBootstrapSupport(const char *input_trees, int burnin, int max_count, const char *target_tree, 
 	bool rooted, const char *output_tree, const char *out_prefix, MExtTree &mytree, 
 	const char* tree_weight_file, Params *params);
 
@@ -56,12 +57,13 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 	@param phylo_tree used to optimize branch lengths of the consensus tree. Can be NULL
 	@param input_trees collection of input trees to infer split supports
 	@param burnin the number trees at the beginning of input_trees to be discarded
+	@param max_count max number of trees to load
 	@param cutoff only incorporate those splits that have support values more than cutoff
 	@param weight_threshold minimum weight cutoff
 	@param output_tree (OUT, OVERWRITE IF EXIST) Resulting consensus tree will be written to this file. If NULL,
 		output_tree will be named input_trees appended with ".contree"
 */
-void computeConsensusTree(const char *input_trees, int burnin, double cutoff, double weight_threshold,
+void computeConsensusTree(const char *input_trees, int burnin, int max_count, double cutoff, double weight_threshold,
 	const char *output_tree, const char *out_prefix, const char* tree_weight_file, Params *params);
 
 /**
@@ -69,12 +71,13 @@ void computeConsensusTree(const char *input_trees, int burnin, double cutoff, do
 	print consensus network to output_tree
 	@param input_trees collection of input trees to infer split supports
 	@param burnin the number trees at the beginning of input_trees to be discarded
+	@param max_count max number of trees to load
 	@param cutoff only incorporate those splits that have support values more than cutoff
 	@param weight_threshold minimum weight cutoff
 	@param output_tree (OUT, OVERWRITE IF EXIST) Resulting consensus tree will be written to this file. If NULL,
 		output_tree will be named input_trees appended with ".connetwork"
 */
-void computeConsensusNetwork(const char *input_trees, int burnin, double cutoff, double weight_threshold,
+void computeConsensusNetwork(const char *input_trees, int burnin, int max_count, double cutoff, double weight_threshold,
 	const char *output_tree, const char *out_prefix, const char* tree_weight_file);
 
 

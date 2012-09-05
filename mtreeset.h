@@ -40,16 +40,19 @@ public:
 		@param userTreeFile the name of the user trees
 		@param is_rooted (IN/OUT) true if tree is rooted
 		@param burnin the number of beginning trees to be discarded
+		@param max_count max number of trees to load
 	*/
-	MTreeSet(const char *userTreeFile, bool &is_rooted, int burnin, const char *tree_weight_file = NULL);
+	MTreeSet(const char *userTreeFile, bool &is_rooted, int burnin, int max_count, 
+		const char *tree_weight_file = NULL);
 
 	/**
 		initialize the tree from a NEWICK tree file
 		@param userTreeFile the name of the user tree
 		@param is_rooted (IN/OUT) true if tree is rooted
 		@param burnin the number of beginning trees to be discarded
+		@param max_count max number of trees to load
 	*/
-	void init(const char *userTreeFile, bool &is_rooted, int burnin, 
+	void init(const char *userTreeFile, bool &is_rooted, int burnin, int max_count, 
 		const char *tree_weight_file = NULL, IntVector *weights = NULL, bool compressed = false);
 
 	void init(StringIntMap &treels, bool &is_rooted, IntVector &weights);
@@ -60,8 +63,10 @@ public:
 		@param userTreeFile the name of the user trees
 		@param is_rooted (IN/OUT) true if tree is rooted
 		@param burnin the number of beginning trees to be discarded
+		@param max_count max number of trees to load
 	*/
-	void readTrees(const char *userTreeFile, bool &is_rooted, int burnin, IntVector *weights = NULL, bool compressed = false);
+	void readTrees(const char *userTreeFile, bool &is_rooted, int burnin, int max_count,
+		IntVector *weights = NULL, bool compressed = false);
 
 	/**
 		assign the leaf IDs with their names for all trees

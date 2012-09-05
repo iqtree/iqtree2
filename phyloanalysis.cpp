@@ -258,14 +258,19 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 }
 
 void reportReferences(ofstream &out, string &original_model) {
-	out << "A manuscript describing IQTREE is currently under preparation." << endl << endl <<
-		"*** Please always cite: " << endl << endl <<
+	out << "Two manuscripts are currently under preparation:" << endl << endl <<
+		"Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2012) Ultra-fast" << endl <<
+		"approximation for phylogenetic bootstrap. Submitted." << endl << endl <<
+		"Lam-Tung Nguyen, Heiko A. Schmidt, Bui Quang Minh, and Arndt von Haeseler (2012)" << endl <<
+		"IQ-TREE: Efficient algorithm for phylogenetic inference by maximum likelihood" << endl <<
+		"and important quartet puzzling. In prep." << endl << endl <<
+		"For the original IQPNNI algorithm please cite: " << endl << endl <<
 		"Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space" << endl <<
-		"and stopping in time. Mol. Biol. Evol., 21(8):1565-1571." << endl << endl <<
-		"*** If you use the parallel version, please cite: " << endl << endl <<
+		"and stopping in time. Mol. Biol. Evol., 21(8):1565-1571." << endl << endl;
+/*		"*** If you use the parallel version, please cite: " << endl << endl <<
 		"Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)" << endl <<
 		"pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies." << endl <<
-		"Bioinformatics, 21:3794-3796." << endl << endl;
+		"Bioinformatics, 21:3794-3796." << endl << endl;*/
 
 	if (original_model == "TEST" || original_model == "TESTONLY")
 		out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl
@@ -641,6 +646,13 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
     if (params.write_intermediate_trees)
 		cout << "  All intermediate trees:   " << params.out_prefix << ".treels" << endl;
 
+	if (params.gbo_replicates) {
+		cout << endl 
+			 <<"Ultra-fast bootstrap approximation results written to:" << endl
+			 << "  Split support values:     " << params.out_prefix << ".splits" << endl
+			 << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
+	}
+	
 /*	if (original_model == "WHTEST")
 		cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
     cout << endl;
@@ -1175,7 +1187,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
 void evaluateTrees(Params &params, IQPTree *tree) {
 	if (!params.treeset_file) return;
-	MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin);
+	MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
 	//if (trees.size() == 1) return;
 	string tree_file = params.treeset_file;
 	tree_file += ".eval";
@@ -1265,7 +1277,7 @@ void runPhyloAnalysis(Params &params) {
 			string splitsfile = params.out_prefix;
 			splitsfile += ".splits";
 			//cout << splitsfile << endl;
-			computeConsensusTree(splitsfile.c_str(), 0, -1,
+			computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
 					params.split_threshold, NULL, params.out_prefix, NULL, &params);
 		}
         if (original_model != "TESTONLY")
@@ -1366,7 +1378,7 @@ void runPhyloAnalysis(Params &params) {
 
 			cout << endl << "===> COMPUTE CONSENSUS TREE FROM " <<
 					params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
-			computeConsensusTree(boottrees_name.c_str(), 0, -1,
+			computeConsensusTree(boottrees_name.c_str(), 0, 1e6, -1,
 					params.split_threshold, NULL, params.out_prefix, NULL, &params);
 		}
 
@@ -1377,7 +1389,7 @@ void runPhyloAnalysis(Params &params) {
 
             cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
             MExtTree ext_tree;
-            assignBootstrapSupport(boottrees_name.c_str(), 0,
+            assignBootstrapSupport(boottrees_name.c_str(), 0, 1e6,
                     treefile_name.c_str(), false, treefile_name.c_str(),
                     params.out_prefix, ext_tree, NULL, &params);
             tree->copyTree(&ext_tree);
@@ -1407,7 +1419,7 @@ void runPhyloAnalysis(Params &params) {
 	delete alignment;
 }
 
-void assignBootstrapSupport(const char *input_trees, int burnin, const char *target_tree, bool rooted,
+void assignBootstrapSupport(const char *input_trees, int burnin, int max_count, const char *target_tree, bool rooted,
         const char *output_tree, const char *out_prefix, MExtTree &mytree,
         const char* tree_weight_file, Params *params)
 {
@@ -1456,7 +1468,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 		}
 		scale /= sg.maxWeight();
     } else {
-    	boot_trees.init(input_trees, rooted, burnin, tree_weight_file);
+    	boot_trees.init(input_trees, rooted, burnin, max_count, tree_weight_file);
     	boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
     	scale /= boot_trees.sumTreeWeights();
     }
@@ -1500,7 +1512,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, const char *tar
 
 }
 
-void computeConsensusTree(const char *input_trees, int burnin, double cutoff, double weight_threshold,
+void computeConsensusTree(const char *input_trees, int burnin, int max_count, double cutoff, double weight_threshold,
         const char *output_tree, const char *out_prefix, const char *tree_weight_file, Params *params) {
     bool rooted = false;
 
@@ -1546,7 +1558,7 @@ void computeConsensusTree(const char *input_trees, int burnin, double cutoff, do
 		}*/
 		scale /= sg.maxWeight();
     } else {
-    	boot_trees.init(input_trees, rooted, burnin, tree_weight_file);
+    	boot_trees.init(input_trees, rooted, burnin, max_count, tree_weight_file);
     	boot_trees.convertSplits(sg, cutoff, SW_COUNT, weight_threshold);
     	scale /= boot_trees.sumTreeWeights();
 		cout << sg.size() << " splits found" << endl;
@@ -1594,12 +1606,12 @@ void computeConsensusTree(const char *input_trees, int burnin, double cutoff, do
 
 }
 
-void computeConsensusNetwork(const char *input_trees, int burnin, double cutoff, double weight_threshold,
+void computeConsensusNetwork(const char *input_trees, int burnin, int max_count, double cutoff, double weight_threshold,
         const char *output_tree, const char *out_prefix, const char* tree_weight_file) {
     bool rooted = false;
 
     // read the bootstrap tree file
-    MTreeSet boot_trees(input_trees, rooted, burnin,tree_weight_file);
+    MTreeSet boot_trees(input_trees, rooted, burnin, max_count, tree_weight_file);
 
     SplitGraph sg;
     //SplitIntMap hash_ss;

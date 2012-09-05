@@ -143,7 +143,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
             } else {
                 // ambiguous character, for DNA, RNA
                 state = state - (NSTATES - 1);
-                for (int state2 = 0; state2 < NSTATES; state2++)
+                for (int state2 = 0; state2 < NSTATES && state2 <= 6; state2++)
                     if (state & (1 << state2)) {
                         cat = 0;
                         double *_par_lh_site = partial_lh_site + state2;

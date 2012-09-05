@@ -363,6 +363,8 @@ void buildStateMap(char *map, SeqType seq_type) {
         for (int i = 0; i < 20; i++)
             map[(int)symbols_protein[i]] = i;
         map[(int)symbols_protein[20]] = STATE_UNKNOWN;
+		map['B'] = 4+8+19; // N or D
+		map['Z'] = 32+64+19; // Q or E
         return;
     case SEQ_MULTISTATE:
         for (int i = 0; i <= STATE_UNKNOWN; i++)
@@ -435,6 +437,8 @@ char Alignment::convertState(char state, SeqType seq_type) {
         }
         return state;
     case SEQ_PROTEIN: // Protein
+		if (state == 'B') return 4+8+19;
+		if (state == 'Z') return 32+64+19;
         loc = strchr(symbols_protein, state);
 
         if (!loc) return STATE_INVALID; // unrecognize character
@@ -499,6 +503,8 @@ char Alignment::convertStateBack(char state) {
     case 20: // Protein
         if (state < 20)
             return symbols_protein[(int)state];
+		else if (state == 4+8+19) return 'B';
+		else if (state == 32+64+19) return 'Z';
         else
             return '-';
     default:
