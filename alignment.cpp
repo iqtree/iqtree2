@@ -1007,7 +1007,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
 
     // parse the lower bound of the range
     int d = strtol(str, &endptr, 10);
-    if ((d == 0 && ((long) endptr - (const long) str) == 0) || abs(d) == HUGE_VALL) {
+    if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL) {
         string err = "Expecting integer, but found \"";
         err += str;
         err += "\" instead";
@@ -1022,7 +1022,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
     // parse the upper bound of the range
     str = endptr+1;
     d = strtol(str, &endptr, 10);
-    if ((d == 0 && ((long) endptr - (const long) str) == 0) || abs(d) == HUGE_VALL) {
+    if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL) {
         string err = "Expecting integer, but found \"";
         err += str;
         err += "\" instead";
@@ -1036,7 +1036,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
     // parse the step size of the range
     str = endptr+1;
     d = strtol(str, &endptr, 10);
-    if ((d == 0 && ((long) endptr - (const long) str) == 0) || abs(d) == HUGE_VALL) {
+    if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL) {
         string err = "Expecting integer, but found \"";
         err += str;
         err += "\" instead";

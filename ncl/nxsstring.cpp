@@ -687,7 +687,7 @@ long NxsString::ConvertToLong() const
 	const char *b = c_str();
 	char *endP;
 	long l = strtol(b, &endP, 10);
-	if ((l == 0 && ((long) endP - (const long) b) == 0))
+	if (l == 0 && endP == b)
 		throw NxsX_NotANumber();
 	return l;
 	}
@@ -707,7 +707,7 @@ double NxsString::ConvertToDouble() const
 		const char *b = c_str();
 		char *endP;
 		double d = strtod(b, &endP);
-		if ((d == 0.0 && ((long) endP - (const long) b) == 0))
+		if (d == 0.0 && endP == b)
 			throw NxsX_NotANumber();
 		if (d == HUGE_VAL)
 			return DBL_MAX;

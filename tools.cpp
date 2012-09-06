@@ -195,9 +195,9 @@ bool fileExists(string strFilename) {
 
 int convert_int(const char *str) throw (string) {
 	char *endptr;
-	long i = strtol(str, &endptr, 10);
+	int i = strtol(str, &endptr, 10);
 
-	if ((i == 0 && ((long) endptr - (const long) str) == 0) || abs(i) == HUGE_VALL || *endptr != 0) {
+	if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL || *endptr != 0) {
 		string err = "Expecting integer, but found \"";
 		err += str;
 		err += "\" instead";
@@ -210,7 +210,7 @@ int convert_int(const char *str) throw (string) {
 double convert_double(const char *str) throw (string) {
 	char *endptr;
 	double d = strtod(str, &endptr);
-	if ((d == 0.0 && ((long) endptr - (const long) str) == 0) || fabs(d) == HUGE_VALF || *endptr != 0) {
+	if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || *endptr != 0) {
 		string err = "Expecting floating-point number, but found \"";
 		err += str;
 		err += "\" instead";
@@ -235,7 +235,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size) thro
 
 	// parse the lower bound of the range
 	int d = strtol(str, &endptr, 10);
-	if ((d == 0 && ((long) endptr - (const long) str) == 0) || abs(d) == HUGE_VALL || (*endptr != 0 && *endptr != ':')) {
+	if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL || (*endptr != 0 && *endptr != ':')) {
 		string err = "Expecting integer, but found \"";
 		err += str;
 		err += "\" instead";
@@ -250,7 +250,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size) thro
 	// parse the upper bound of the range
 	str = endptr+1;
 	d = strtol(str, &endptr, 10);
-	if ((d == 0 && ((long) endptr - (const long) str) == 0) || abs(d) == HUGE_VALL || (*endptr != 0 && *endptr != ':')) {
+	if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL || (*endptr != 0 && *endptr != ':')) {
 		string err = "Expecting integer, but found \"";
 		err += str;
 		err += "\" instead";
@@ -264,7 +264,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size) thro
 	// parse the step size of the range
 	str = endptr+1;
 	d = strtol(str, &endptr, 10);
-	if ((d == 0 && ((long) endptr - (const long) str) == 0) || abs(d) == HUGE_VALL || *endptr != 0) {
+	if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL || *endptr != 0) {
 		string err = "Expecting integer, but found \"";
 		err += str;
 		err += "\" instead";
@@ -283,7 +283,7 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
 
 	// parse the lower bound of the range
 	double d = strtod(str, &endptr);
-	if ((d == 0.0 && ((long) endptr - (const long) str) == 0) || fabs(d) == HUGE_VALF || (*endptr != 0 && *endptr != ':')) {
+	if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || (*endptr != 0 && *endptr != ':')) {
 		string err = "Expecting floating-point number, but found \"";
 		err += str;
 		err += "\" instead";
@@ -298,7 +298,7 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
 	// parse the upper bound of the range
 	str = endptr+1;
 	d = strtod(str, &endptr);
-	if ((d == 0.0 && ((long) endptr - (const long) str) == 0) || fabs(d) == HUGE_VALF || (*endptr != 0 && *endptr != ':')) {
+	if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || (*endptr != 0 && *endptr != ':')) {
 		string err = "Expecting floating-point number, but found \"";
 		err += str;
 		err += "\" instead";
@@ -312,7 +312,7 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
 	// parse the step size of the range
 	str = endptr+1;
 	d = strtod(str, &endptr);
-	if ((d == 0.0 && ((long) endptr - (const long) str) == 0) || fabs(d) == HUGE_VALF || *endptr != 0) {
+	if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || *endptr != 0) {
 		string err = "Expecting floating-point number, but found \"";
 		err += str;
 		err += "\" instead";
