@@ -32,7 +32,7 @@ configure_file (
   )
 # add the binary tree to the search path for include files
 # so that we will find TutorialConfig.h
-include_directories("${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/zlib-1.2.7")
+include_directories("${PROJECT_BINARY_DIR}" "${PROJECT_SOURCE_DIR}/zlib-1.2.7")
 
 add_definitions(-DIQ_TREE)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused")
