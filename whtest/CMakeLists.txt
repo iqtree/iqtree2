@@ -1,3 +1,6 @@
+
+include_directories("${PROJECT_BINARY_DIR}")
+
 add_library(whtest 
 eigen.c  
 eigen_sym.c  
