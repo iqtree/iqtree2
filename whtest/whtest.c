@@ -23,7 +23,7 @@
 #include <config.h>
 #endif
 
-#include "iqtree_config.h"
+#include <iqtree_config.h>
  
 
 #include <stdio.h>
