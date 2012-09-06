@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 ######## prefer static linking 
 set(BUILD_SHARED_LIBS OFF)
 IF(WIN32)
-set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-static")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 ENDIF(WIN32)
 
 IF(WIN32)
