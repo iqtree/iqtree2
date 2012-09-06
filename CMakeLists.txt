@@ -1,5 +1,17 @@
 cmake_minimum_required(VERSION 2.6)
 
+######## prefer static linking 
+set(BUILD_SHARED_LIBS OFF)
+IF(WIN32)
+set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-static")
+ENDIF(WIN32)
+
+IF(WIN32)
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+ELSE(WIN32)
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+ENDIF(WIN32)
+
 project(iqtree)
 # The version number.
 set (iqtree_VERSION_MAJOR 0)
@@ -35,12 +47,6 @@ set(CMAKE_C_FLAGS_DEBUG "-O0 -g2")
 if (NOT CMAKE_BUILD_TYPE) 
 	set(CMAKE_BUILD_TYPE "Release")
 endif()
-
-IF(WIN32)
-    SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-ELSE(WIN32)
-    SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-ENDIF(WIN32)
 
 add_subdirectory(ncl)
 add_subdirectory(whtest)
