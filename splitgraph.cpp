@@ -548,7 +548,7 @@ void SplitGraph::scaleWeight(double norm, bool make_int, int precision) {
 		else if (precision < 0)
 			(*itg)->setWeight( (*itg)->getWeight()*norm);
 		else 
-			(*itg)->setWeight( round((*itg)->getWeight()*norm*pow(10,precision))/pow(10,precision));
+			(*itg)->setWeight( round((*itg)->getWeight()*norm*pow((double)10.0,precision))/pow((double)10.0,precision));
 }
 
 bool SplitGraph::containSplit(Split &sp) {
