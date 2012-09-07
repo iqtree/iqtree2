@@ -1,18 +1,16 @@
 cmake_minimum_required(VERSION 2.6)
 
-######## prefer static linking 
 set(BUILD_SHARED_LIBS OFF)
-IF(WIN32)
-#IF(NOT APPLE)
-#	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-#ENDIF(NOT APPLE)
-ENDIF(WIN32)
 
-IF(WIN32)
-    SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-ELSE(WIN32)
-    SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-ENDIF(WIN32)
+######## NOTE: run cmake with option "-DIQ_STATIC to build static library 
+IF(IQ_STATIC)
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
+	IF(WIN32)
+    		SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+	ELSE(WIN32)
+    		SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+	ENDIF(WIN32)
+ENDIF(IQ_STATIC)
 
 project(iqtree)
 # The version number.
@@ -35,10 +33,10 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 
 add_definitions(-DIQ_TREE)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused")
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused -static-libstdc++")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused -static-libgcc")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused -static-libstdc++")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused -static-libgcc")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
