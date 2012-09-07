@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 2.6)
 
 ######## prefer static linking 
 set(BUILD_SHARED_LIBS OFF)
-#IF(WIN32)
-IF(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-ENDIF(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
-#ENDIF(WIN32)
+IF(WIN32)
+#IF(NOT APPLE)
+#	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+#ENDIF(NOT APPLE)
+ENDIF(WIN32)
 
 IF(WIN32)
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
@@ -32,7 +32,7 @@ configure_file (
   )
 # add the binary tree to the search path for include files
 # so that we will find TutorialConfig.h
-include_directories("${PROJECT_BINARY_DIR}" "${PROJECT_SOURCE_DIR}/zlib-1.2.7")
+include_directories("${PROJECT_BINARY_DIR}")
 
 add_definitions(-DIQ_TREE)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused")
@@ -54,7 +54,6 @@ add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(modeltest)
 add_subdirectory(lp)
-add_subdirectory(zlib-1.2.7)
 
 add_executable(iqtree
 alignment.cpp
@@ -120,9 +119,9 @@ lpwrapper.c
 modeltest_wrapper.c)
 
 if (WIN32)
-target_link_libraries(iqtree ncl whtest modeltest lp zlibstatic)
+target_link_libraries(iqtree ncl whtest modeltest lp z)
 else (WIN32)
-target_link_libraries(iqtree ncl whtest modeltest lp zlibstatic dl)
+target_link_libraries(iqtree ncl whtest modeltest lp z dl)
 endif (WIN32)
 
 ##############################################################
