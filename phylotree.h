@@ -240,6 +240,15 @@ public:
      */
     virtual Node* newNode(int node_id, int node_name);
 
+	/**
+	 *		@return number of alignment patterns
+	*/
+	virtual int getAlnNPattern() { return aln->getNPattern(); }
+
+	/**
+	 *		@return number of alignment sites
+	*/
+	virtual int getAlnNSite() { return aln->getNSite(); }
 
     /**
             this function return the parsimony or likelihood score of the tree. Default is
@@ -374,7 +383,7 @@ public:
             @param pattern_lh (OUT) pattern log-likelihoods,
                             assuming pattern_lh has the size of the number of patterns
      */
-	void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
+	virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
 
 	/**
 		Compute the variance in tree log-likelihood

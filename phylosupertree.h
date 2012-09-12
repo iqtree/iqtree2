@@ -89,6 +89,15 @@ public:
      */
     virtual Node* newNode(int node_id, int node_name);
 
+	/**
+	 *		@return number of alignment patterns
+	*/
+	virtual int getAlnNPattern();
+
+	/**
+	 *		@return number of alignment sites
+	*/
+	virtual int getAlnNSite();
 
     /**
             compute the distance between 2 sequences.
@@ -118,6 +127,14 @@ public:
             @return tree likelihood
      */
     virtual double computeLikelihood(double *pattern_lh = NULL);
+
+    /**
+            compute pattern likelihoods only if the accumulated scaling factor is non-zero.
+            Otherwise, copy the pattern_lh attribute
+            @param pattern_lh (OUT) pattern log-likelihoods,
+                            assuming pattern_lh has the size of the number of patterns
+     */
+	virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
 
     /**
             optimize all branch lengths of the tree

@@ -101,6 +101,20 @@ Node* PhyloSuperTree::newNode(int node_id, int node_name) {
     return (Node*) (new SuperNode(node_id, node_name));
 }
 
+int PhyloSuperTree::getAlnNPattern() {
+	int num = 0;
+	for (iterator it = begin(); it != end(); it++)
+		num += (*it)->getAlnNPattern();
+	return num;
+}
+
+int PhyloSuperTree::getAlnNSite() {
+	int num = 0;
+	for (iterator it = begin(); it != end(); it++)
+		num += (*it)->getAlnNSite();
+	return num;
+}
+
 double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist) {
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0)
@@ -125,7 +139,9 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 		if (((SuperNeighbor*)*it)->link_neighbors[part]) {
 			part_vec.push_back(((SuperNeighbor*)*it)->link_neighbors[part]);
 			child_part_vec.push_back(((SuperNeighbor*)(*it)->node->findNeighbor(node))->link_neighbors[part]);
-			assert(child_part_vec.back()->node == child_part_vec.front()->node);
+			/*if (child_part_vec.size() > 1 && child_part_vec.back()->id == child_part_vec.front()->id)
+				cout<<"HERE" << endl;*/
+			assert(child_part_vec.back()->node == child_part_vec.front()->node || child_part_vec.back()->id == child_part_vec.front()->id);
 		}
 	}
 	if (part_vec.empty()) return;
@@ -160,6 +176,7 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 			node = (SuperNode*) root; 
 		else 
 			node = (SuperNode*)root->neighbors[0]->node;
+		assert(node);
 		if (node->isLeaf()) // two-taxa tree
 			dad = (SuperNode*)node->neighbors[0]->node;
 	}
@@ -243,6 +260,10 @@ void PhyloSuperTree::mapTrees() {
 			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
 			if (id >=0) part_taxa[i] = my_taxa[id];
 		}
+		if (verbose_mode >= VB_DEBUG) {
+			cout << "Subtree for partition " << part << endl;
+			(*it)->drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
+		}
 		linkTree(part, part_taxa);
 	}
 	if (verbose_mode >= VB_DEBUG) printMapInfo();
@@ -253,6 +274,14 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	for (iterator it = begin(); it != end(); it++)
 		tree_lh += (*it)->computeLikelihood();
 	return tree_lh;
+}
+
+void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_logl) {
+	int offset = 0;
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->computePatternLikelihood(pattern_lh + offset);
+		offset += (*it)->aln->getNPattern();
+	}
 }
 
 double PhyloSuperTree::optimizeAllBranches(int iterations, double tolerance) {

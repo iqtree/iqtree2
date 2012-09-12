@@ -95,6 +95,18 @@ void SuperAlignment::checkGappySeq() {
 		}
 }
 
+void SuperAlignment::getPatternFreq(IntVector &pattern_freq) {
+	if (!isSuperAlignment()) outError("Internal error: ", __func__);
+	int offset = 0;
+	if (!pattern_freq.empty()) pattern_freq.resize(0);
+	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
+		IntVector freq;
+		(*it)->getPatternFreq(freq);
+		pattern_freq.insert(pattern_freq.end(), freq.begin(), freq.end());
+		offset += freq.size();
+	}
+}
+
 void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq) {
 	if (!aln->isSuperAlignment()) outError("Internal error: ", __func__);
 	if (pattern_freq) outError("Unsupported yet.", __func__);
@@ -107,6 +119,18 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
 		partitions.push_back(boot_aln);
 	}
 	taxa_index = super_aln->taxa_index;
+}
+
+void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq) {
+	if (!isSuperAlignment()) outError("Internal error: ", __func__);
+	int offset = 0;
+	if (!pattern_freq.empty()) pattern_freq.resize(0);
+	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
+		IntVector freq;
+		(*it)->createBootstrapAlignment(freq);
+		pattern_freq.insert(pattern_freq.end(), freq.begin(), freq.end());
+		offset += freq.size();
+	}
 }
 
 double SuperAlignment::computeObsDist(int seq1, int seq2) {

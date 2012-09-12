@@ -188,6 +188,11 @@ public:
 	inline Pattern getPattern(int site) { return at(site_pattern[site]); }
 
 	/**
+	 * @param freq (OUT) vector of site-pattern frequencies
+	*/
+	virtual void getPatternFreq(IntVector &freq);
+
+	/**
 		@param i sequence index
 		@return sequence name
 	*/
@@ -258,7 +263,7 @@ public:
 		resampling pattern frequency by a non-parametric bootstrap 
 		@param pattern_freq resampled pattern frequencies
 	*/
-	void createBootstrapAlignment(IntVector &pattern_freq);
+	virtual void createBootstrapAlignment(IntVector &pattern_freq);
 
 	/**
 		create a gap masked alignment from an input alignment. Gap patterns of masked_aln 

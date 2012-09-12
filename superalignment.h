@@ -50,6 +50,11 @@ public:
 	virtual bool isSuperAlignment() { return true; }
 
 	/**
+	 * @param freq (OUT) vector of site-pattern frequencies
+	*/
+	virtual void getPatternFreq(IntVector &pattern_freq);
+
+	/**
 		Quit if some sequences contain only gaps or missing data
 	*/
 	virtual void checkGappySeq();
@@ -59,6 +64,12 @@ public:
 		@param aln input alignment
 	*/
 	virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL);
+
+	/**
+		resampling pattern frequency by a non-parametric bootstrap 
+		@param pattern_freq resampled pattern frequencies
+	*/
+	virtual void createBootstrapAlignment(IntVector &pattern_freq);
 
 	/**
 		compute the observed distance (number of different pairs of positions per site) 

@@ -895,51 +895,55 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl) {
 
 double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
     int i;
-    int nptn = aln->getNPattern();
-    int nsite = aln->getNSite();
+    int nptn = getAlnNPattern();
+    int nsite = getAlnNSite();
     double *pattern_lh = ptn_lh;
     if (!ptn_lh) {
         pattern_lh = new double[nptn];
         computePatternLikelihood(pattern_lh);
     }
+    IntVector pattern_freq;
+    aln->getPatternFreq(pattern_freq);
     if (tree_lh == 0.0) {
-        for (i = 0; i < nptn; i++) tree_lh += pattern_lh[i] * aln->at(i).frequency;
+        for (i = 0; i < nptn; i++) tree_lh += pattern_lh[i] * pattern_freq[i];
     }
     double avg_site_lh = tree_lh / nsite;
     double variance = 0.0;
     for (i = 0; i < nptn; i++) {
         double diff = (pattern_lh[i] - avg_site_lh);
-        variance +=  diff * diff * aln->at(i).frequency;
+        variance +=  diff * diff * pattern_freq[i];
     }
     if (!ptn_lh) delete [] pattern_lh;
-    return variance * nsite / (nsite-1);
+    return variance * (nsite / (nsite-1));
 }
 
 double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_lh) {
     int i;
-    int nptn = aln->getNPattern();
-    int nsite = aln->getNSite();
+    int nptn = getAlnNPattern();
+    int nsite = getAlnNSite();
     double *pattern_lh = ptn_lh;
     if (!ptn_lh) {
         pattern_lh = new double[nptn];
         computePatternLikelihood(pattern_lh);
     }
-
+    IntVector pattern_freq;
+    aln->getPatternFreq(pattern_freq);
+    
     double avg_site_lh_diff = 0.0;
     for (i = 0; i < nptn; i++)
-        avg_site_lh_diff += (pattern_lh[i]-pattern_lh_other[i]) * aln->at(i).frequency;
+        avg_site_lh_diff += (pattern_lh[i]-pattern_lh_other[i]) * pattern_freq[i];
     avg_site_lh_diff /= nsite;
     double variance = 0.0;
     for (i = 0; i < nptn; i++) {
         double diff = (pattern_lh[i]- pattern_lh_other[i] - avg_site_lh_diff);
-        variance += diff * diff * aln->at(i).frequency;
+        variance += diff * diff * pattern_freq[i];
     }
     if (!ptn_lh) delete [] pattern_lh;
-    return variance * nsite / (nsite-1);
+    return variance * (nsite / (nsite-1));
 }
 
 double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh) {
-    double *pattern_lh_other = new double[aln->getNPattern()];
+    double *pattern_lh_other = new double[getAlnNPattern()];
     other_tree->computePatternLikelihood(pattern_lh_other);
     return computeLogLDiffVariance(pattern_lh_other, pattern_lh);
     delete [] pattern_lh_other;

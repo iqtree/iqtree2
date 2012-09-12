@@ -1093,7 +1093,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             vecNumNNI.push_back(nni_count);
         }
     } else {
-        cout << "Local search could not find any better tree !!!" << endl;
+        if (verbose_mode >= VB_MED) cout << "Local search could not find any better tree !!!" << endl;
     }
 
 	if (save_all_trees == 2 && params->nni_opt_5branches) {

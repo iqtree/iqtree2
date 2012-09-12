@@ -540,10 +540,14 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 			tree.setRootNode(params.root);
 			out << "NOTE: Tree is UNROOTED although outgroup taxon '" <<
 					tree.root->name << "' is drawn at root" << endl;
-			if (params.aLRT_replicates > 0 || (params.num_bootstrap_samples && params.compute_ml_tree)) {
+			if (params.partition_file) 
+				out << "NOTE: Branch lengths are weighted average over all partitions" << endl <<
+					   "      (weighted by the number of sites in the partitions)" << endl;
+			if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
 				out << "Numbers in parentheses are ";
-				if (params.aLRT_replicates > 0) out << "SH-like aLRT supports";
-				if (params.num_bootstrap_samples && params.compute_ml_tree) out << " / bootstrap supports";
+				if (params.aLRT_replicates > 0) out << "SH-aLRT supports";
+				if (params.num_bootstrap_samples && params.compute_ml_tree) out << " standard bootstrap supports";
+				if (params.gbo_replicates) out << " ultra-fast bootstrap supports";
 				out << " (%)" << endl;
 			}
 			out << endl;
@@ -632,6 +636,8 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         cout << "  Juke-Cantor distances:    " << params.out_prefix << ".jcdist" << endl;
         if (params.compute_ml_dist)
             cout << "  Likelihood distances:     " << params.out_prefix << ".mldist" << endl;
+        if (params.partition_file)
+            cout << "  Concatenated alignment:   " << params.out_prefix << ".concat" << endl;
     }
 	if (tree.getRate()->getGammaShape() > 0)
         cout << "  Gamma-distributed rates:  " << params.out_prefix << ".rate" << endl;
@@ -684,7 +690,7 @@ void printSiteLh(const char*filename, IQPTree &tree, double *ptn_lh = NULL, bool
 	int i;
 	double *pattern_lh;
 	if (!ptn_lh) {
-		pattern_lh = new double[tree.aln->getNPattern()];
+		pattern_lh = new double[tree.getAlnNPattern()];
 		tree.computePatternLikelihood(pattern_lh);
 	} else pattern_lh = ptn_lh;
 
@@ -696,11 +702,22 @@ void printSiteLh(const char*filename, IQPTree &tree, double *ptn_lh = NULL, bool
 		}
 		else {
 			out.open(filename);
-			out << tree.aln->getNSite() << endl;
+			out << tree.getAlnNSite() << endl;
 		}
 		out << "Site_Lh   ";
-		for (i = 0; i < tree.aln->getNSite(); i++)
-			out << " " << pattern_lh[tree.aln->getPatternID(i)];
+		if (!tree.isSuperTree()) {
+			for (i = 0; i < tree.getAlnNSite(); i++)
+				out << " " << pattern_lh[tree.aln->getPatternID(i)];
+		} else {
+			PhyloSuperTree *stree = (PhyloSuperTree*)(&tree);
+			int offset = 0;
+			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++) {
+				for (i = 0; i < (*it)->aln->getNSite(); i++)
+					out << " " << pattern_lh[(*it)->aln->getPatternID(i) + offset];
+				offset += (*it)->getAlnNPattern();
+			}
+			assert(offset == tree.getAlnNPattern());
+		} 
 		out << endl;
 		out.close();
 		if (!append) cout << "Site log-likelihoods printed to " << filename << endl;
@@ -956,7 +973,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     int num_low_support;
     clock_t mytime;
 
-    pattern_lh = new double[tree.aln->getNPattern()];
+    pattern_lh = new double[tree.getAlnNPattern()];
 
     if (params.aLRT_threshold <= 100 && (params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
         mytime = clock();
@@ -985,7 +1002,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         tree.curScore = tree.optimizeNNI();
         cout << "Log-likelihood after optimizing partial tree: " << tree.curScore << endl;
         /*
-        pattern_lh = new double[tree.aln->getNPattern()];
+        pattern_lh = new double[tree.getAlnSize()];
         double score = tree.computeLikelihood(pattern_lh);
         num_low_support = tree.testAllBranches(params.aLRT_threshold, score, pattern_lh, params.aLRT_replicates);
         tree.drawTree(cout);

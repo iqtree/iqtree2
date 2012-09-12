@@ -1496,6 +1496,13 @@ void Alignment::printSiteGaps(const char *filename) {
     }
 }
 
+void Alignment::getPatternFreq(IntVector &freq) {
+	freq.resize(getNPattern());
+	int cnt = 0;
+	for (iterator it = begin(); it < end(); it++, cnt++)
+		freq[cnt] = (*it).frequency;
+}
+
 //added by MA
 void Alignment::multinomialProb(Alignment refAlign, double &prob)
 {
