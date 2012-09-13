@@ -219,7 +219,7 @@ int		useAICc, useBL, useBIC;
 int		lastModelConfidence;
 float 	averagingConfidenceInterval;	
 double	cumConfidenceWeight;
-
+FILE    *infile;
 
 /* Parameter estimates for the selected model */
 float fA, fC, fG, fT;
@@ -261,7 +261,7 @@ int run_modeltest(int argc, char **argv)
 	PrintOS(stdout);
 	ParseArgs(argc, argv);
 	
-	file_id = isatty(fileno(stdin));
+	file_id = isatty(fileno(infile));
 	if (file_id)
 		{
 		fprintf(stderr, "\n\nNo input file\n\n");
@@ -447,7 +447,8 @@ static void ParseArgs(int argc,char **argv)
 {
 	int i;
 	char flag; 
- 
+	infile = stdin;
+	
 	for (i=1; i<argc; i++)
 	{
 		argv[i]++;
@@ -512,7 +513,12 @@ static void ParseArgs(int argc,char **argv)
 	        PrintUsage();
 	        exit(1);
 	        break;
-	
+		  case 'i': /* BQM: input file */ 
+				  if (!(infile = fopen(argv[i], "r")))
+					  fprintf(stderr,"Cannot open %s\n", argv[i]);
+			  break;
+				  
+				  
 	      default:
 	        fprintf(stderr,"Unknown argument on the command line '%c'\n",flag);
 	        PrintUsage();
@@ -528,24 +534,24 @@ static int RecognizeInputFormat()
 {
 	int iochar;
 		
-	if (stdin == NULL)   
+	if (infile == NULL)   
 		{
 		fprintf(stderr,"Error opening the input file");
 		exit(0);
 		}
 		
-	iochar=getc(stdin);
+	iochar=getc(infile);
 	
 	if (iochar == (int)'T')    /* In the Paup matrix, in the first line there is the word 'Tree'*/
 		{
-		ungetc(iochar,stdin);
+		ungetc(iochar,infile);
 		printf("\nInput format: PAUP* scores file \n");
 		format=0;
 		if (!ReadPaupScores()) return 0;
 		}
 	else 
 		{
-		ungetc(iochar,stdin);
+		ungetc(iochar,infile);
 		printf("\nInput format: raw log likelihood scores \n");
 		format=1;
 		if (!ReadScores()) return 0;
@@ -562,14 +568,14 @@ static int ReadPaupScores()
 	char 	string [120];
 	i=0;
 
-	while (!feof(stdin))
+	while (!feof(infile))
 		{
-		iochar=	getc(stdin);
+		iochar=	getc(infile);
 
 		if (isdigit(iochar))    
 			{
-			ungetc(iochar,stdin);
-			scanf("%f", &score[i]);
+			ungetc(iochar,infile);
+			fscanf(infile,"%f", &score[i]);
 			if (DEBUGLEVEL >= 2)
 				fprintf(stdout,"\nINFO:   Storing %f in score[%d]", score[i],i);
 			i++;
@@ -577,8 +583,8 @@ static int ReadPaupScores()
 				
 		if (isalpha (iochar))    
 			{
-			ungetc(iochar,stdin);
-			scanf("%s",string);
+			ungetc(iochar,infile);
+			fscanf(infile,"%s",string);
 			if (DEBUGLEVEL >= 2)
 				fprintf(stdout,"\nINFO:   Reading string %s", string);			
 			if (strcmp(string,"infinity") == 0)
@@ -591,10 +597,10 @@ static int ReadPaupScores()
 			}
 		}		
 
-	if (ferror(stdin))
+	if (ferror(infile))
 		{ 
 		perror ("Modeltest");
-		clearerr(stdin);
+		clearerr(infile);
 		}
 
 	Initialize();
@@ -907,9 +913,9 @@ static int ReadScores()
 	i=0;
 	score[NUM_MODELS-1]= 0;
 
-	while (!feof(stdin) && i < NUM_MODELS)
+	while (!feof(infile) && i < NUM_MODELS)
 		{
-		int items = scanf("%f", &score[i]);
+		int items = fscanf(infile,"%f", &score[i]);
 		if (items < 1 || items == EOF) return 0;
 		i++;
 		}
@@ -1198,23 +1204,23 @@ static void RatioCalc()
 	int df;
 
 	printf("\nPlease, input the POSITIVE log likelihood score corresponding to \nthe null model> ");
-	scanf("%f", &score1);
+	fscanf(infile,"%f", &score1);
 
 	while (score1 < 0)
 		{
 		printf("\nBad Input: the program doesn't accept negative likelihood scores");
 		printf("\n\nPlease, input the POSITIVE log likelihood score corresponding to \nthe null model> ");
-		scanf("%f", &score1);
+		fscanf(infile,"%f", &score1);
 		}
 
 	printf("\nPlease, input the POSITIVE log likelihood score corresponding to \nthe alternative model> ");
-	scanf("%f", &score2);
+	fscanf(infile,"%f", &score2);
 
 	while (score2 < 0)
 		{
 		printf("Bad Input: the program doesn't accept negative likelihood scores");
 		printf("\nPlease, input the POSITIVE log likelihood score corresponding to \nthe alternative model> ");
-		scanf("%f", &score2);
+		fscanf(infile,"%f", &score2);
 		}
 
 	if (score1 < score2) 
@@ -1225,13 +1231,13 @@ static void RatioCalc()
 		}
 
 	printf("\nPlease, input the number of degrees of freedom> ");
-	scanf("%d", &df);
+	fscanf(infile,"%d", &df);
 
 	while (df < 1)
 		{
 		printf("\nThe number of degrees of freedom should be at least 1");
 		printf("\nPlease, input the number of degrees of freedom> ");
-		scanf("%d", &df);
+		fscanf(infile,"%d", &df);
 		}
 
 	ratio = 2*(score1-score2);

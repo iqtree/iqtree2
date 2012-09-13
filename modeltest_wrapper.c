@@ -28,6 +28,9 @@
 extern char* modelIC;
 extern char *modelhLRT;
 
+void startLogFile();
+void endLogFile();
+
 int modeltest(char *args, const char *score_file, const char *out_file, char *LRT_model, char *IC_model) {
 	char *argv[10];
 	int i, argc = 1;
@@ -42,6 +45,9 @@ int modeltest(char *args, const char *score_file, const char *out_file, char *LR
 		argc++;
 		pch = strtok (NULL, " ");
 	}
+	argv[argc] = malloc(strlen(score_file)+4);
+	sprintf(argv[argc],"-i%s", score_file);
+	argc++;
 /*
 	for (i = 1; i < argc; i++)
 		printf("%s ", argv[i]);
@@ -53,20 +59,21 @@ int modeltest(char *args, const char *score_file, const char *out_file, char *LR
 
 	/* CAUTION: Current version will destroy stdin */
 
-
+	/*endLogFile();*/
+	
 #ifdef WIN32
 	freopen(out_file, "a", stdout);
-	freopen(score_file, "r", stdin);
+/*	freopen(score_file, "r", stdin);*/
 #else
     fflush(stdout);
     fgetpos(stdout, &pos);
     fd = dup(fileno(stdout));
     freopen(out_file, "a", stdout);
 
-    fflush(stdin);
+/*    fflush(stdin);
     fgetpos(stdin, &pos_in);
     fd_in = dup(fileno(stdin));
-    freopen(score_file, "r", stdin);
+    freopen(score_file, "r", stdin);*/
 #endif
 
 	if (!stdin || !stdout) {
@@ -78,22 +85,23 @@ int modeltest(char *args, const char *score_file, const char *out_file, char *LR
 
 #ifdef WIN32
 	freopen("CON", "w", stdout);
-	freopen("CON", "r", stdin);
+	/*freopen("CON", "r", stdin);*/
 #else
     fflush(stdout);
     dup2(fd, fileno(stdout));
     close(fd);
     clearerr(stdout);
-    fsetpos(stdout, &pos);        /* for C9X */
+    fsetpos(stdout, &pos);        
 
-    fflush(stdin);
+/*    fflush(stdin);
     dup2(fd_in, fileno(stdin));
     close(fd_in);
     clearerr(stdin);
-    fsetpos(stdin, &pos_in);        /* for C9X */
+    fsetpos(stdin, &pos_in);*/
 
 #endif
 
+	/*startLogFile();*/
 	strcpy(IC_model, modelIC);
 	strcpy(LRT_model, modelhLRT);
 	Free();

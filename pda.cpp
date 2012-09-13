@@ -1640,6 +1640,14 @@ int outstreambuf::overflow( int c) { // used for output buffer only
 outstreambuf _out_buf;
 string _log_file;
 
+extern "C" void startLogFile() {
+	_out_buf.open(_log_file.c_str());
+}
+
+extern "C" void endLogFile() {
+	_out_buf.close();
+}
+
 void funcExit(void) {
 	_out_buf.close();
 }
@@ -1705,7 +1713,7 @@ int main(int argc, char *argv[])
 
 	_log_file = params.out_prefix;
 	_log_file += ".log";
-	_out_buf.open(_log_file.c_str());
+	startLogFile();
 	atexit(funcExit);
 	signal(SIGABRT, &funcAbort);
 	printCopyright(cout);

@@ -71,7 +71,7 @@ string modelTest(Params &params, PhyloTree *in_tree) {
     string fscore_name = params.out_prefix;
     string fmodel_name = params.out_prefix;
 
-    char model_arg[40] = "";
+    char model_arg[400] = "";
     fscore_name += ".modelscore";
     fmodel_name += ".modeltest";
     ofstream fmodel_test(fmodel_name.c_str());
