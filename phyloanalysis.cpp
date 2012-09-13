@@ -234,6 +234,7 @@ string modelTest(Params &params, PhyloTree *in_tree) {
         modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
         cout << "  BIC_t:   " << IC_model << endl;
         model_list.insert(IC_model);
+		cout.flush();
     } else {
         // FOR protein: no modeltest exists yet
         model_list.insert(best_model);
@@ -658,7 +659,8 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
 			 << "  Split support values:     " << params.out_prefix << ".splits" << endl
 			 << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
 	}
-	
+
+	cout <<     "  Screen log file:          " << params.out_prefix << ".log" << endl;
 /*	if (original_model == "WHTEST")
 		cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
     cout << endl;

@@ -1589,11 +1589,10 @@ void processNCBITree(Params &params) {
 	}
 }
 
-/* write simultaneously to cout and a file */
-
+/* write simultaneously to cout/cerr and a file */
 class outstreambuf : public streambuf {
 public:
-    outstreambuf* open( const char* name);
+    outstreambuf* open( const char* name, ios::openmode mode = ios::out);
     outstreambuf* close();
     ~outstreambuf() { close(); }
     
@@ -1603,11 +1602,12 @@ protected:
 	streambuf *cerr_buf;
 	streambuf *fout_buf;
     virtual int     overflow( int c = EOF);
+    virtual int     sync();
 };
 
 
-outstreambuf* outstreambuf::open( const char* name) {
-    fout.open(name);
+outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
+    fout.open(name, mode);
 	if (!fout.is_open()) {
 		cout << "Could not open " << name << " for logging" << endl;
 		return NULL;
@@ -1637,6 +1637,11 @@ int outstreambuf::overflow( int c) { // used for output buffer only
 	return c;
 }
 
+int outstreambuf::sync() { // used for output buffer only
+	cout_buf->pubsync();
+	return fout_buf->pubsync();
+}
+
 outstreambuf _out_buf;
 string _log_file;
 
@@ -1644,12 +1649,16 @@ extern "C" void startLogFile() {
 	_out_buf.open(_log_file.c_str());
 }
 
+extern "C" void appendLogFile() {
+	_out_buf.open(_log_file.c_str(), ios::app);
+}
+
 extern "C" void endLogFile() {
 	_out_buf.close();
 }
 
 void funcExit(void) {
-	_out_buf.close();
+	endLogFile();
 }
 
 extern "C" void funcAbort(int signal_number)
@@ -1817,8 +1826,6 @@ int main(int argc, char *argv[])
 			outError("Unknown file input format");
 		}
 	}
-	
-	cout << "Screen output has also been written to " << _log_file << endl;
 	
 	return EXIT_SUCCESS;
 }
