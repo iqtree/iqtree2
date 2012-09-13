@@ -704,20 +704,11 @@ void printSiteLh(const char*filename, IQPTree &tree, double *ptn_lh = NULL, bool
 			out.open(filename);
 			out << tree.getAlnNSite() << endl;
 		}
+		IntVector pattern_index;
+		tree.aln->getSitePatternIndex(pattern_index);
 		out << "Site_Lh   ";
-		if (!tree.isSuperTree()) {
-			for (i = 0; i < tree.getAlnNSite(); i++)
-				out << " " << pattern_lh[tree.aln->getPatternID(i)];
-		} else {
-			PhyloSuperTree *stree = (PhyloSuperTree*)(&tree);
-			int offset = 0;
-			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++) {
-				for (i = 0; i < (*it)->aln->getNSite(); i++)
-					out << " " << pattern_lh[(*it)->aln->getPatternID(i) + offset];
-				offset += (*it)->getAlnNPattern();
-			}
-			assert(offset == tree.getAlnNPattern());
-		} 
+		for (i = 0; i < tree.getAlnNSite(); i++)
+			out << " " << pattern_lh[pattern_index[i]];
 		out << endl;
 		out.close();
 		if (!append) cout << "Site log-likelihoods printed to " << filename << endl;
@@ -1127,11 +1118,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		}
     }
 
-    if (!tree.isSuperTree() && (params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
+    if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
         mytime = clock();
         cout << endl;
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
         tree.setRootNode(params.root);
+		//if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
         num_low_support = tree.testAllBranches(params.aLRT_threshold, myscore, pattern_lh, params.aLRT_replicates, params.localbp_replicates);
         //cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
         cout << "CPU Time used:  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
@@ -1159,7 +1151,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		}
 	}
 
-    if (!tree.isSuperTree() && params.gbo_replicates > 0) {
+    if (params.gbo_replicates > 0) {
 		if (!params.online_bootstrap)
 			runGuidedBootstrap(params, alignment, tree);
 		else

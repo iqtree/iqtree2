@@ -153,11 +153,6 @@ public:
     virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
 
     /**
-            search all positive NNI move on the current tree and save them on the possilbleNNIMoves list            
-     */
-    virtual void genNNIMoves(PhyloNode *node = NULL, PhyloNode *dad = NULL);
-
-    /**
             search the best swap for a branch
             @return NNIMove The best Move/Swap
             @param cur_score the current score of the tree before the swaps
@@ -189,7 +184,10 @@ public:
 
 	void printMapInfo();
 	
-	void initPartitionInfo();
+	/**
+	 * initialize partition information for super tree
+	*/
+	virtual void initPartitionInfo();
 
 	/**
 		partition information

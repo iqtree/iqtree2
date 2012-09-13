@@ -368,6 +368,13 @@ public:
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad,
     	double *pattern_lh = NULL, double *pattern_rate = NULL);
 
+    /**
+            compute tree likelihood when a branch length collapses to zero
+            @param dad_branch the branch leading to the subtree
+            @param dad its dad, used to direct the tranversal
+            @return tree likelihood
+     */
+    virtual double computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             compute the tree likelihood
@@ -862,6 +869,11 @@ public:
             @param dad dad of the node, used to direct the search
      */
     void assignLeafNames(Node *node = NULL, Node *dad = NULL);
+
+	/**
+	 * initialize partition information for super tree
+	*/
+	virtual void initPartitionInfo() {}
 
 protected:
 

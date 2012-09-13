@@ -348,11 +348,6 @@ void PhyloSuperTree::initPartitionInfo() {
 	}
 }
 
-void PhyloSuperTree::genNNIMoves(PhyloNode *node, PhyloNode *dad) {
-	initPartitionInfo();
-	IQPTree::genNNIMoves(node, dad);
-}
-
 NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh_contribution) {
     NNIMove myMove;
     myMove.score = 0;
@@ -378,7 +373,8 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, do
 	}
 
 	double bestScore = optimizeOneBranch(node1, node2, false);
-
+	double nonNNIScore = bestScore;
+	
 	int part = 0;
 	double nni1_score = 0.0, nni2_score = 0.0;
 	for (iterator it = begin(); it != end(); it++, part++) {
@@ -429,6 +425,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, do
 		nni2_score += part_info[part].nni2_score[brid];
 	}
 	if (nni1_score > bestScore+TOL_LIKELIHOOD) {
+		myMove.delta = nni1_score - nonNNIScore;
 		bestScore = nni1_score;
 		myMove.swap_id = 1;
 		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
@@ -439,6 +436,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, do
 	}
 
 	if (nni2_score > bestScore+TOL_LIKELIHOOD) {
+		myMove.delta = nni2_score - nonNNIScore;
 		bestScore = nni2_score;
 		myMove.swap_id = 2;
 		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);

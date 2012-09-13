@@ -60,6 +60,9 @@ Multiple Sequence Alignment. Stored by a vector of site-patterns
 */
 class Alignment : public vector<Pattern>
 {
+	
+	friend class SuperAlignment;
+	
 public:
 
 	/**
@@ -186,6 +189,11 @@ public:
 	inline int getPatternID(int site) { return site_pattern[site]; }
 
 	inline Pattern getPattern(int site) { return at(site_pattern[site]); }
+
+	/**
+	 * @param pattern_index (OUT) vector of size = alignment length storing pattern index of all sites
+	*/
+	virtual void getSitePatternIndex(IntVector &pattern_index) { pattern_index = site_pattern; }
 
 	/**
 	 * @param freq (OUT) vector of site-pattern frequencies

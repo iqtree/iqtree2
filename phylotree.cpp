@@ -1055,6 +1055,19 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
     return tree_lh;
 }
 
+double PhyloTree::computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	double lh_zero_branch;
+	double saved_len = dad_branch->length;
+	PhyloNeighbor *node_branch = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
+	dad_branch->length = 0.0;
+	node_branch->length = 0.0;
+	lh_zero_branch = computeLikelihoodBranch(dad_branch, dad);
+	// restore branch length
+	dad_branch->length = saved_len;
+	node_branch->length = saved_len;
+	return lh_zero_branch;
+}
+
 void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
     // don't recompute the likelihood
     if (dad_branch->partial_lh_computed & 1)
@@ -1430,7 +1443,7 @@ double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
 }
 
 double PhyloTree::optimizeAllBranches(int iterations, double tolerance) {
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VB_MAX)
         cout << "Optimizing branch lenths (max " << iterations << " loops)..." << endl;
     double tree_lh = computeLikelihood();
     //cout << tree_lh << endl;
@@ -1443,7 +1456,7 @@ double PhyloTree::optimizeAllBranches(int iterations, double tolerance) {
         	cout << "Wrong " << new_tree_lh <<" "<< new_tree_lh2 << endl;
         	exit(1);
         }*/
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VB_MAX) {
             cout << "BRANCH LEN " << i + 1 << " : ";
             cout.precision(10);
             cout << new_tree_lh << endl;
@@ -2504,30 +2517,7 @@ void PhyloTree::computeNNIPatternLh(
     // recompute pattern scaling factors if necessary
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
-//    double *ptn_scale = NULL;
-//    int nptn = aln->getNPattern();
-//    double new_scale[nptn];
-    //double sum_scaling = node12_it->lh_scale_factor + node21_it->lh_scale_factor;
     NeighborVec::iterator it;
-    /*    ptn_scale = new double[nptn];
-        memset(ptn_scale, 0, sizeof (double) * nptn);
-
-
-        FOR_NEIGHBOR(node1, node2, it)
-        if (((PhyloNeighbor*) * it)->lh_scale_factor < 0.0) {
-    //        ((PhyloNeighbor*) * it)->clearForwardPartialLh(node1);
-    //        computePartialLikelihood((PhyloNeighbor*) (*it), node1, ptn_scale);
-            for (int i = 0; i < nptn; i++)
-    			ptn_scale[i] += max(UBYTE(0),((PhyloNeighbor*) (*it))->scale_num[i]) * LOG_SCALING_THRESHOLD;
-        }
-        FOR_NEIGHBOR(node2, node1, it)
-        if (((PhyloNeighbor*) * it)->lh_scale_factor < 0.0) {
-    //        ((PhyloNeighbor*) * it)->clearForwardPartialLh(node2);
-    //        computePartialLikelihood((PhyloNeighbor*) (*it), node2, ptn_scale);
-            for (int i = 0; i < nptn; i++)
-    			ptn_scale[i] += max(UBYTE(0),((PhyloNeighbor*) (*it))->scale_num[i]) * LOG_SCALING_THRESHOLD;
-        }
-    */
     const int IT_NUM = 6;
 
     NeighborVec::iterator saved_it[IT_NUM];
@@ -2621,39 +2611,8 @@ void PhyloTree::computeNNIPatternLh(
             result_lh = pattern_lh3;
             lh3 = new_score;
         }
-        /*
-                memcpy(new_scale, ptn_scale, sizeof (double) * nptn);
-
-                node12_it->clearPartialLh();
-                node21_it->clearPartialLh();
-
-                computePartialLikelihood(node12_it, node1, new_scale);
-                computePartialLikelihood(node21_it, node2, new_scale);
-        */
         old_score = new_score;
-        // compute the score of the swapped topology
-        //new_score = computeLikelihoodBranch(node2_lastnei, node2, result_lh);
-        //double x[aln->getNPattern()];
-        //new_score = computeLikelihoodBranch(node12_it, node1, result_lh);
         computePatternLikelihood(result_lh);
-
-        /*        if (ptn_scale) {
-                    double check_score = 0.0;
-                    for (i = 0; i < nptn; i++) {
-                        result_lh[i] += new_scale[i];
-                        check_score += result_lh[i] * aln->at(i).frequency;
-                    }
-                    // make sure that the pattern likelihoods were just computed correctly
-                    if (!(fabs(new_score - check_score) < 1e-3))
-                        cout << new_score << " " << check_score << endl;
-                    assert(fabs(new_score - check_score) < 1e-3);
-                }*/
-        /*
-                        if (fabs(new_score - old_score) > TOL_LIKELIHOOD)
-                                cout << "something wrong" << endl;
-                        for (i = 0; i < aln->getNPattern(); i++)
-                                if (fabs(result_lh[i] - x[i]) > TOL_LIKELIHOOD)
-                                        cout << "wrong " << i << endl;*/
         // swap back and recover the branch lengths
         node1->updateNeighbor(node1_it, node1_nei);
         node1_nei->node->updateNeighbor(node2, node1);
@@ -2675,25 +2634,19 @@ void PhyloTree::computeNNIPatternLh(
     (*it)->length = (*it)->node->findNeighbor(node1)->length;
     FOR_NEIGHBOR(node2, node1, it)
     (*it)->length = (*it)->node->findNeighbor(node2)->length;
-//    if (ptn_scale) delete [] ptn_scale;
 }
 
 void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
-    int nsite = aln->getNSite();
-    int nptn = aln->getNPattern();
+    int nsite = getAlnNSite();
+    int nptn = getAlnNPattern();
     memset(lh_new, 0, sizeof (double) * 3);
-    int freq[nptn], i;
-    memset(freq, 0, nptn * sizeof (int));
-    for (i = 0; i < nsite; i++) {
-        int site_id = floor(((double) (rand()) / RAND_MAX) * nsite);
-        if (site_id >= nsite) site_id--;
-        int ptn_id = aln->getPatternID(site_id);
-        freq[ptn_id]++;
-    }
+    int i;
+	IntVector boot_freq;
+	aln->createBootstrapAlignment(boot_freq);
     for (i = 0; i < nptn; i++) {
-        lh_new[0] += freq[i] * pat_lh[0][i];
-        lh_new[1] += freq[i] * pat_lh[1][i];
-        lh_new[2] += freq[i] * pat_lh[2][i];
+        lh_new[0] += boot_freq[i] * pat_lh[0][i];
+        lh_new[1] += boot_freq[i] * pat_lh[1][i];
+        lh_new[2] += boot_freq[i] * pat_lh[2][i];
     }
 }
 
@@ -2707,8 +2660,8 @@ double PhyloTree::testOneBranch(
     double *pat_lh[NUM_NNI];
     lh[0] = best_score;
     pat_lh[0] = pattern_lh;
-    pat_lh[1] = new double[aln->getNPattern()];
-    pat_lh[2] = new double[aln->getNPattern()];
+    pat_lh[1] = new double[getAlnNPattern()];
+    pat_lh[2] = new double[getAlnNPattern()];
     computeNNIPatternLh(best_score, lh[1], pat_lh[1], lh[2], pat_lh[2], node1, node2);
     double aLRT;
     if (lh[1] > lh[2])

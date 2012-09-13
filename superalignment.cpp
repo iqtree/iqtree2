@@ -95,6 +95,15 @@ void SuperAlignment::checkGappySeq() {
 		}
 }
 
+void SuperAlignment::getSitePatternIndex(IntVector &pattern_index) {
+	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
+		int offset = pattern_index.size();
+		pattern_index.insert(pattern_index.end(), (*it)->site_pattern.begin(), (*it)->site_pattern.end());
+		for (int i = offset; i < pattern_index.size(); i++)
+			pattern_index[i] += offset;
+	}
+}
+
 void SuperAlignment::getPatternFreq(IntVector &pattern_freq) {
 	if (!isSuperAlignment()) outError("Internal error: ", __func__);
 	int offset = 0;

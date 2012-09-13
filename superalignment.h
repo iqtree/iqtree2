@@ -50,6 +50,11 @@ public:
 	virtual bool isSuperAlignment() { return true; }
 
 	/**
+	 * @param pattern_index (OUT) vector of size = alignment length storing pattern index of all sites
+	*/
+	virtual void getSitePatternIndex(IntVector &pattern_index);
+
+	/**
 	 * @param freq (OUT) vector of site-pattern frequencies
 	*/
 	virtual void getPatternFreq(IntVector &pattern_freq);

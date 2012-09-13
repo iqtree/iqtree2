@@ -1024,6 +1024,7 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             savedBranLens.clear();
             posNNIs.clear();
             saveBranLens(); // save all current branch lengths
+            initPartitionInfo(); // for super tree
 			if (!nni_sort) {
 				genNNIMoves(); // generate all positive NNI moves
 			}
@@ -1306,14 +1307,8 @@ void IQPTree::genNNIMovesSort() {
 		IntBranchInfo int_branch;
 		PhyloNeighbor *node12_it = (PhyloNeighbor*) nodes1[i]->findNeighbor(nodes2[i]);
 		PhyloNeighbor *node21_it = (PhyloNeighbor*) nodes2[i]->findNeighbor(nodes1[i]);
-		double stored_len = node12_it->length;
-		node12_it->length = 0.0;
-		node21_it->length = 0.0;
-		int_branch.lh_contribution = cur_lh - computeLikelihoodBranch(node12_it, (PhyloNode*) nodes1[i]);
+		int_branch.lh_contribution = cur_lh - computeLikelihoodZeroBranch(node12_it, (PhyloNode*) nodes1[i]);
 		if (int_branch.lh_contribution < 0.0) int_branch.lh_contribution = 0.0;
-		// restore branch length
-		node12_it->length = stored_len;
-		node21_it->length = stored_len;
 		if (int_branch.lh_contribution < fabs(nni_cutoff)) {
 			int_branch.node1 = (PhyloNode*) nodes1[i];
 			int_branch.node2 = (PhyloNode*) nodes2[i];
@@ -1424,12 +1419,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     double lh_zero_branch;
     if (lh_contribution < 0.0) {
 		// compute likelikelihood if branch length collapse to zero
-		node12_it->length = 0.0;
-		node21_it->length = 0.0;
-		lh_zero_branch = computeLikelihoodBranch(node12_it, (PhyloNode*) node1);
-		// restore branch length
-		node12_it->length = node12_len[1];
-		node21_it->length = node12_len[1];
+		lh_zero_branch = computeLikelihoodZeroBranch(node12_it, (PhyloNode*) node1);
 	} else {
 		lh_zero_branch = bestScore - lh_contribution;
 	}
@@ -1540,7 +1530,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
             // compute the score of the swapped topology
             double newScore = optimizeOneBranch(node1, node2, false);
             treelhs[nniNr-1] = newScore;
-            double delta = newScore - bestScore;
+            double delta = newScore - bestScore; // BQM: bug: bestScore is changed below, not the score of current tree
 
         	if (save_all_trees == 2) {
         		saveCurrentTree(newScore); // BQM: for new bootstrap
@@ -1671,7 +1661,7 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 
 	if (write_intermediate_trees) printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
 
-	double *pattern_lh = new double[aln->getNPattern()];
+	double *pattern_lh = new double[getAlnNPattern()];
 	computePatternLikelihood(pattern_lh, &cur_logl);
 
 	if (boot_samples.empty()) {
@@ -1679,7 +1669,7 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 		treels_ptnlh.push_back(pattern_lh);
 	} else {
 		// online bootstrap
-		int nptn = aln->getNPattern();
+		int nptn = getAlnNPattern();
 		int updated = 0;
 		for (int sample = 0; sample < boot_samples.size(); sample++) {
 			double rell = 0.0;
@@ -1720,9 +1710,11 @@ void IQPTree::saveCurrentTree(double cur_logl) {
 		aln->multinomialProb(pattern_lh, prob);
 		out_treelh << "\t" << prob << endl;
 
+		IntVector pattern_index;
+		aln->getSitePatternIndex(pattern_index);
 		out_sitelh << "Site_Lh   ";
-		for (int i = 0; i < aln->getNSite(); i++)
-			out_sitelh << "\t" << pattern_lh[aln->getPatternID(i)];
+		for (int i = 0; i < getAlnNSite(); i++)
+			out_sitelh << " " << pattern_lh[pattern_index[i]];
 		out_sitelh << endl;
 	}
 	if (!boot_samples.empty()) delete [] pattern_lh;
