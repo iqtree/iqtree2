@@ -27,6 +27,7 @@
 //#include "Eigen/Core"
 #include "phylotree.h"
 #include <signal.h>
+#include <stdio.h>
 #include <streambuf>
 #include <iostream>
 #include <cstdlib>
