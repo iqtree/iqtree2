@@ -26,6 +26,8 @@
 
 //#include "Eigen/Core"
 #include "phylotree.h"
+#include <signal.h>
+#include <streambuf>
 #include <iostream>
 #include <cstdlib>
 #include <errno.h>
@@ -1587,6 +1589,72 @@ void processNCBITree(Params &params) {
 	}
 }
 
+/* write simultaneously to cout and a file */
+
+class outstreambuf : public streambuf {
+public:
+    outstreambuf* open( const char* name);
+    outstreambuf* close();
+    ~outstreambuf() { close(); }
+    
+protected:
+	ofstream fout;
+	streambuf *cout_buf;
+	streambuf *cerr_buf;
+	streambuf *fout_buf;
+    virtual int     overflow( int c = EOF);
+};
+
+
+outstreambuf* outstreambuf::open( const char* name) {
+    fout.open(name);
+	if (!fout.is_open()) {
+		cout << "Could not open " << name << " for logging" << endl;
+		return NULL;
+	}
+	cout_buf = cout.rdbuf();
+	cerr_buf = cerr.rdbuf();
+	fout_buf = fout.rdbuf();
+	cout.rdbuf(this);
+	cerr.rdbuf(this);
+    return this;
+}
+
+outstreambuf* outstreambuf::close() {
+    if ( fout.is_open()) {
+        sync();
+        cout.rdbuf(cout_buf);
+        cerr.rdbuf(cerr_buf);
+		fout.close();
+        return this;
+    }
+    return NULL;
+}
+
+int outstreambuf::overflow( int c) { // used for output buffer only
+	if (cout_buf->sputc(c) == EOF) return EOF;
+	if (fout_buf->sputc(c) == EOF) return EOF;
+	return c;
+}
+
+outstreambuf _out_buf;
+string _log_file;
+
+void funcExit(void) {
+	_out_buf.close();
+}
+
+extern "C" void funcAbort(int signal_number)
+{
+    /*Your code goes here. You can output debugging info.
+      If you return from this function, and it was called 
+      because abort() was called, your program will exit or crash anyway
+      (with a dialog box on Windows).
+     */
+	cout << endl << "SOFTWARE ABORTED! FOR BUGS REPORT SEND DEVELOPERS LOG-FILE " << _log_file << endl;
+	funcExit();
+}
+
 /********************************************************
 	main function
 ********************************************************/
@@ -1632,14 +1700,22 @@ int main(int argc, char *argv[])
 
 	return 0;*/
 
-	printCopyright(cout);
-
 	Params params;
 	parseArg(argc, argv, params);
 
-	cout << "Running machine: ";
-	cout.flush();
-	system("hostname");
+	_log_file = params.out_prefix;
+	_log_file += ".log";
+	_out_buf.open(_log_file.c_str());
+	atexit(funcExit);
+	signal(SIGABRT, &funcAbort);
+	printCopyright(cout);
+
+	FILE *pfile = popen("hostname","r");
+	char hostname[100];
+	fgets(hostname, sizeof(hostname), pfile);
+	pclose(pfile);
+
+	cout << "Running machine: " << hostname;
 	cout << "Running arguments: " << endl;
 	for (int i = 0; i < argc; i++)
 		cout << " " << argv[i];
@@ -1733,5 +1809,8 @@ int main(int argc, char *argv[])
 			outError("Unknown file input format");
 		}
 	}
+	
+	cout << "Screen output has also been written to " << _log_file << endl;
+	
 	return EXIT_SUCCESS;
 }
