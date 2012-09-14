@@ -78,18 +78,30 @@ void Alignment::checkSeqName() {
     }
     if (!ok) outError("Please rename sequences listed above!");
     if (verbose_mode >= VB_MIN) {
-        int max_len = getMaxSeqNameLength();
+        int max_len = getMaxSeqNameLength()+1;
+        cout << "ID   ";
         cout.width(max_len);
-        cout << left << "Name" << " #Ungappy+unambiguous chars" << endl;
+        cout << left << "Sequence" << " #Gap/Ambiguity" << endl;
         int num_problem_seq = 0;
+        int total_gaps = 0;
         for (int i = 0; i < seq_names.size(); i++) {
-            int num_proper_chars = countProperChar(i);
-            int percent_proper_chars = num_proper_chars*100 / getNSite();
+            int num_gaps = getNSite() - countProperChar(i);
+            total_gaps += num_gaps;
+            double percent_gaps = round(((double)num_gaps / getNSite())*1000)/10;
+			cout.width(4);
+			cout << i+1 << " ";
             cout.width(max_len);
-            cout << left << seq_names[i] << " " << num_proper_chars << " (" << percent_proper_chars << "%)" << endl;
-            if (percent_proper_chars < 50) num_problem_seq++;
+            cout << left << seq_names[i] << " " << num_gaps << " (" << percent_gaps << "%)";
+            if (percent_gaps > 50) {
+				cout << " !!!";
+				num_problem_seq++;
+			}
+			cout << endl;
         }
-        if (num_problem_seq) cout << "WARNING: " << num_problem_seq << " sequences contain less than 50% proper characters" << endl;
+        if (num_problem_seq) cout << "WARNING: " << num_problem_seq << " sequences contain more than 50% gaps/ambiguity" << endl;
+        cout << "**** ";
+        cout.width(max_len);
+        cout << left << "TOTAL" << " " << total_gaps << " (" << ((double)total_gaps/getNSite())/getNSeq()*100 << "%)" << endl;
     }
 }
 
@@ -146,8 +158,8 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
         outError("Alignment must have at least 3 sequences");
 
     checkSeqName();
-    cout << "Alignment contains " << getNSeq() << " sequences with " << getNSite() <<
-         " characters and " << getNPattern() << " patterns"<< endl;
+    cout << "Alignment has " << getNSeq() << " sequences with " << getNSite() <<
+         " columns and " << getNPattern() << " patterns"<< endl;
     //cout << "Number of character states is " << num_states << endl;
     //cout << "Number of patterns = " << size() << endl;
     countConstSite();
@@ -1477,7 +1489,10 @@ void Alignment::convfreq(double *stateFrqArr) {
 	maxfreq = 0.0;
 	for (i = 0; i < num_states; i++) {
 		freq = stateFrqArr[i];
-		if (freq < MIN_FREQUENCY) { stateFrqArr[i] = MIN_FREQUENCY; zero_states++; }
+		if (freq < MIN_FREQUENCY) { 
+			stateFrqArr[i] = MIN_FREQUENCY; 
+			cout << "WARNING: " << convertStateBack(i) << " is not present in alignment that may cause numerical problems" << endl;
+		}
 		if (freq > maxfreq) {
 			maxfreq = freq;
 			maxi = i;

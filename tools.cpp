@@ -117,7 +117,7 @@ void outError(const char *error, string msg) {
  */
 void outWarning(const char *warn)
 {
-	cerr << "*WARNING* " << warn << endl;
+	cerr << "WARNING: " << warn << endl;
 }
 
 void outWarning(string warn)
@@ -1553,7 +1553,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 	cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS] [<treefile>] " << endl << endl;
 	cout << "GENERAL OPTIONS:" << endl
 			<< "  -?                   Printing this help dialog" << endl
-			<< "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP or NEXUS format"  << endl
+			<< "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP/FASTA/NEXUS format"  << endl
 			<< "  -z <tree_files>      Evaluate all trees in the given file"  << endl
 			<< "  -st <BIN|DNA|AA>     Binary, DNA, or Protein sequences (default: auto-detect)"  << endl
 			<< "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl

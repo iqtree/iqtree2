@@ -209,6 +209,12 @@ public:
 	void drawTree2(ostream &out, int brtype, double brscale, IntVector &sub_tree_br, 
 		Node *node = NULL, Node *dad = NULL);
 
+	/**
+	 * @param tree the other tree to compare with
+	 * @return TRUE if this tree is topologically equal to tree
+	*/
+	bool equalTopology(MTree *tree);
+	
 /********************************************************
 	READ TREE FROM FILE
 ********************************************************/

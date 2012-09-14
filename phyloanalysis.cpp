@@ -369,7 +369,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 
 }
 
-void reportRate(ofstream &out, Params &params, PhyloTree &tree) {
+void reportRate(ofstream &out, PhyloTree &tree) {
 	int i;
 	RateHeterogeneity *rate_model = tree.getRate();
 	out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
@@ -408,7 +408,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 	int zero_branches = tree.countZeroBranches();
 	if (zero_branches > 0) {
 		out << "WARNING: " << zero_branches << " branches of ZERO lengths and should be treated with caution!" << endl;
-		cout << endl << "*WARNING*: " << zero_branches  << " branches of ZERO lengths and should be treated with caution!" << endl;
+		cout << endl << "WARNING: " << zero_branches  << " branches of ZERO lengths and should be treated with caution!" << endl;
 		out << "         Such branches are denoted by '***' in the figure" << endl << endl;
 	}
 	tree.sortTaxa();
@@ -504,10 +504,10 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         	int part = 0;
         	for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
         		out << "FOR PARTITION " << stree->part_info[part].name <<":" << endl << endl;
-        		reportRate(out, params, *(*it));
+        		reportRate(out, *(*it));
         	}
         } else
-        	reportRate(out, params, tree);
+        	reportRate(out, tree);
 
         // Bootstrap analysis:
         //Display as outgroup: a
@@ -881,6 +881,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << endl;
     cout << "Optimizing model parameters and branch lengths" << endl;
     double bestTreeScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
+    cout.precision(10);
     cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 
     //Update tree score
@@ -941,6 +942,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         clock_t nniBeginClock, nniEndClock;
         nniBeginClock = clock();
         tree.optimizeNNI();
+		tree.curScore = tree.optimizeAllBranches(100, 0.0001);
         //tree.optimizeNNINew();
         nniEndClock = clock();
         cout << "First NNI search required :" << (double) (nniEndClock - nniBeginClock) / CLOCKS_PER_SEC << "s" << endl;

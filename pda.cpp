@@ -1752,8 +1752,14 @@ int main(int argc, char *argv[])
 		cout << " " << argv[i];
 	cout << endl;
 
-	cout << "Seed:    " << params.ran_seed << endl << endl;
+	cout << "Seed:    " << params.ran_seed << endl;
 	srand(params.ran_seed);
+
+	time_t cur_time;
+	time(&cur_time);
+
+	char *date_str;
+	cout << "Time:    " << ctime(&cur_time) << endl;
 
 	// call the main function
 	if (params.tree_gen != NONE) {

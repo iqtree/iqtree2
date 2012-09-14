@@ -713,9 +713,14 @@ double IQPTree::doIQPNNI() {
 
     //printTree(treels_name.c_str(), WT_NEWLINE | WT_BR_LEN);
 
+	setRootNode(params->root);
     // keep the best tree into a string
     stringstream best_tree_string;
     printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+
+    stringstream best_tree_topo_ss;
+    printTree(best_tree_topo_ss, WT_TAXON_ID + WT_SORT_TAXA);
+    string best_tree_topo = best_tree_topo_ss.str();
 
     // write tree's loglikelihood to a file (if nni_lh option is enabled)
     ofstream lh_file;
@@ -909,22 +914,31 @@ double IQPTree::doIQPNNI() {
         //printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_BR_LEN);
 
 
-        if (curScore > bestScore) {
-            cout << "BETTER TREE FOUND: " << curScore << endl;
-            bestScore = curScore;
-            best_tree_string.seekp(0, ios::beg);
-            printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-            //cout << best_tree_string.str() << endl;
-            if (params->write_best_trees) {
-                ostringstream iter_string;
-                iter_string << cur_iteration;
-                printResultTree(iter_string.str());
-            }
-            printResultTree();
-            stop_rule.addImprovedIteration(cur_iteration);
+        if (curScore > bestScore + 0.0001) {
+			stringstream cur_tree_topo_ss;
+			printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
+			if (cur_tree_topo_ss.str() != best_tree_topo) {
+				best_tree_topo = cur_tree_topo_ss.str();
+				cout << "BETTER TREE FOUND: " << curScore << endl;
+				bestScore = curScore;
+				best_tree_string.seekp(0, ios::beg);
+				printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+				//cout << best_tree_string.str() << endl;
+				if (params->write_best_trees) {
+					ostringstream iter_string;
+					iter_string << cur_iteration;
+					printResultTree(iter_string.str());
+				}
+				printResultTree();
+				stop_rule.addImprovedIteration(cur_iteration);
 
-            // Variable Neighborhood search idea, reset k_delete if tree is better
-            //resetKDelete();
+				// Variable Neighborhood search idea, reset k_delete if tree is better
+				//resetKDelete();
+			} else {
+				// higher likelihood but the same tree topology
+				bestScore = curScore = optimizeAllBranches(100, 0.0001);
+				cout << "UPDATE BEST LOG-LIKELIHOOD: " << bestScore << endl;
+			} 
         } else {
             /* take back the current best tree */
             best_tree_string.seekg(0, ios::beg);
@@ -1770,7 +1784,7 @@ void IQPTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 	if (!boot_splits.empty()) {
 		// check the stopping criterion for ultra-fast bootstrap
 		if (!checkBootstrapStopping())
-			cout << "**WARNING**: bootstrap analysis did not converge, rerun with higher number of iterations" << endl;
+			cout << "WARNING: bootstrap analysis did not converge, rerun with higher number of iterations" << endl;
 
 	}
 	// compute the percentage of appearance

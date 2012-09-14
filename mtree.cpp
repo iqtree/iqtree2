@@ -1265,6 +1265,15 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
     }
 }
 
+bool MTree::equalTopology(MTree *tree) {
+	assert(root->isLeaf());
+	Node *root2 = tree->findLeafName(root->name);
+	if (!root2) return false;
+	ostringstream ostr, ostr2;
+	printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+	tree->printTree(ostr2, WT_TAXON_ID | WT_SORT_TAXA, root2);
+	return ostr.str() == ostr2.str();
+}
 
 void MTree::calcDist(char *filename) {
     vector<string> taxname;

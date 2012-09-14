@@ -48,15 +48,16 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		else model_str = "JC";
 	}
 	string::size_type posfreq;
+	StateFreqType freq_type = params.freq_type;
 	if ((posfreq = model_str.find("+F")) != string::npos) {
 		if (model_str.substr(posfreq,3) == "+Fc") 
-			params.freq_type = FREQ_EMPIRICAL;
+			freq_type = FREQ_EMPIRICAL;
 		else if (model_str.substr(posfreq,3) == "+Fu")
-			params.freq_type = FREQ_USER_DEFINED;
+			freq_type = FREQ_USER_DEFINED;
 		else if (model_str.substr(posfreq,3) == "+Fq")
-			params.freq_type = FREQ_EQUAL;
+			freq_type = FREQ_EQUAL;
 		else if (model_str.substr(posfreq,3) == "+Fo")
-			params.freq_type = FREQ_ESTIMATE;
+			freq_type = FREQ_ESTIMATE;
 		else outError("Unknown state frequency type ",model_str.substr(posfreq));
 		model_str = model_str.substr(0, posfreq);
 	}
@@ -64,29 +65,30 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	/* create site-rate heterogeneity */
 	if (pos != string::npos) {
 		string rate_str = model_str.substr(pos);
+		int num_rate_cats = params.num_rate_cats;
 		if (rate_str.substr(0,4) == "+I+G") {
 			if (rate_str.length() > 4 && rate_str[4] != '+') {
-				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
-				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
+				num_rate_cats = convert_int(rate_str.substr(4).c_str());
+				if (num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
-			site_rate = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, params.p_invar_sites, tree);
+			site_rate = new RateGammaInvar(num_rate_cats, params.gamma_shape, params.gamma_median, params.p_invar_sites, tree);
 		} else if (rate_str.substr(0,2) == "+I") {
 			site_rate = new RateInvar(params.p_invar_sites, tree);
 		} else if (rate_str.substr(0,2) == "+G") {
 			if (rate_str.length() > 2 && rate_str[2] != '+') {
-				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
-				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
+				num_rate_cats = convert_int(rate_str.substr(2).c_str());
+				if (num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
-			site_rate = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, tree);
+			site_rate = new RateGamma(num_rate_cats, params.gamma_shape, params.gamma_median, tree);
 		} else if (rate_str.substr(0,2) == "+M") {
 			tree->sse = false;
 			params.rate_mh_type = true;
 			if (rate_str.length() > 2 && rate_str[2] != '+') {
-				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
-				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else params.num_rate_cats = -1;
-			if (params.num_rate_cats >= 0)
-				site_rate = new RateMeyerDiscrete(params.num_rate_cats, params.mcat_type, 
+				num_rate_cats = convert_int(rate_str.substr(2).c_str());
+				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else num_rate_cats = -1;
+			if (num_rate_cats >= 0)
+				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
 					params.rate_file, tree, params.rate_mh_type);
 			else
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
@@ -95,11 +97,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			tree->sse = false;
 			params.rate_mh_type = false;
 			if (rate_str.length() > 2 && rate_str[2] != '+') {
-				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
-				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else params.num_rate_cats = -1;
-			if (params.num_rate_cats >= 0)
-				site_rate = new RateMeyerDiscrete(params.num_rate_cats, params.mcat_type, 
+				num_rate_cats = convert_int(rate_str.substr(2).c_str());
+				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else num_rate_cats = -1;
+			if (num_rate_cats >= 0)
+				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
 					params.rate_file, tree, params.rate_mh_type);
 			else
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
@@ -107,17 +109,17 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		} else if (rate_str.substr(0,4) == "+NGS") {
 			tree->sse = false;
 			if (rate_str.length() > 4 && rate_str[4] != '+') {
-				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
-				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else params.num_rate_cats = -1;
-			site_rate = new NGSRateCat(tree, params.num_rate_cats);
+				num_rate_cats = convert_int(rate_str.substr(4).c_str());
+				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else num_rate_cats = -1;
+			site_rate = new NGSRateCat(tree, num_rate_cats);
 			site_rate->setTree(tree);
 		} else if (rate_str.substr(0,4) == "+NGF") {
 			tree->sse = false;
 			if (rate_str.length() > 4 && rate_str[4] != '+') {
-				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
-				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else params.num_rate_cats = -1;
+				num_rate_cats = convert_int(rate_str.substr(4).c_str());
+				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else num_rate_cats = -1;
 			site_rate = new NGSRate(tree);
 			site_rate->setTree(tree);
 		} else
@@ -130,23 +132,23 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 
 	/* create substitution model */
 
-	if (model_str == "JC" || model_str == "Poisson"/*&& (params.freq_type == FREQ_UNKNOWN || params.freq_type == FREQ_EQUAL)*/) {
+	if (model_str == "JC" || model_str == "Poisson") {
 		 model = new SubstModel(tree->aln->num_states);
 	} else if (model_str == "GTR") {
 		model = new GTRModel(tree);
-		((GTRModel*)model)->init(params.freq_type);
+		((GTRModel*)model)->init(freq_type);
 	} else if (model_str == "UNREST") {
-		params.freq_type = FREQ_EQUAL;
+		freq_type = FREQ_EQUAL;
 		params.optimize_by_newton = false;
 		tree->optimize_by_newton = false;
 		model = new ModelNonRev(tree);
-		((ModelNonRev*)model)->init(params.freq_type);
+		((ModelNonRev*)model)->init(freq_type);
 	} else if (tree->aln->num_states == 2) {
-		model = new ModelBIN(model_str.c_str(), params.freq_type, tree);
+		model = new ModelBIN(model_str.c_str(), freq_type, tree);
 	} else if (tree->aln->num_states == 4) {
-		model = new ModelDNA(model_str.c_str(), params.freq_type, tree);
+		model = new ModelDNA(model_str.c_str(), freq_type, tree);
 	} else if (tree->aln->num_states == 20) {
-		model = new ModelProtein(model_str.c_str(), params.freq_type, tree);
+		model = new ModelProtein(model_str.c_str(), freq_type, tree);
 	} else {
 		outError("Unsupported model type");
 	}
@@ -173,6 +175,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 	else {
 		cur_lh = tree->optimizeAllBranches(1);
 	}
+	cout.precision(10);
 	if (verbose_mode >= VB_MED || write_info) 
 		cout << "Initial log-likelihood: " << cur_lh << endl;
 	int i;
@@ -220,7 +223,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 	time(&cur_time);
 	double elapsed_secs = difftime(cur_time,begin_time);
 	if (write_info)
-		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec) to finish" << endl << endl;
+		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
 	startStoringTransMatrix();
 	return cur_lh;
 }
