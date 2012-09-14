@@ -1670,8 +1670,17 @@ extern "C" void funcAbort(int signal_number)
       because abort() was called, your program will exit or crash anyway
       (with a dialog box on Windows).
      */
-	cout << endl << "SOFTWARE ABORTED! FOR BUGS REPORT SEND DEVELOPERS LOG-FILE " << _log_file << endl;
+	cout << endl << "*** IQ-TREE CRASHES WITH SIGNAL ";
+	switch (signal_number) {
+		case SIGABRT: cout << "ABORTED"; break;
+		case SIGFPE:  cout << "ERRONEOUS NUMERIC"; break;
+		case SIGILL:  cout << "ILLEGAL INSTRUCTION"; break;
+		case SIGSEGV: cout << "SEGMENTATION FAULT"; break;
+	}
+	cout << endl << "*** For bug report please send developers:" << endl << "***    Log file: " << _log_file;
+	cout << endl << "***    Alignment files (if possible)" << endl;
 	funcExit();
+	signal(signal_number, SIG_DFL);
 }
 
 /********************************************************
@@ -1727,6 +1736,9 @@ int main(int argc, char *argv[])
 	startLogFile();
 	atexit(funcExit);
 	signal(SIGABRT, &funcAbort);
+	signal(SIGFPE, &funcAbort);
+	signal(SIGILL, &funcAbort);
+	signal(SIGSEGV, &funcAbort);
 	printCopyright(cout);
 
 	FILE *pfile = popen("hostname","r");
@@ -1734,13 +1746,13 @@ int main(int argc, char *argv[])
 	fgets(hostname, sizeof(hostname), pfile);
 	pclose(pfile);
 
-	cout << "Running machine: " << hostname;
-	cout << "Running arguments: " << endl;
+	cout << "Host:    " << hostname;
+	cout << "Command:";
 	for (int i = 0; i < argc; i++)
 		cout << " " << argv[i];
 	cout << endl;
 
-	cout << "Random number generator seed: " << params.ran_seed << endl << endl;
+	cout << "Seed:    " << params.ran_seed << endl << endl;
 	srand(params.ran_seed);
 
 	// call the main function

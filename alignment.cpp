@@ -18,6 +18,9 @@ char symbols_dna[]     = "ACGT";
 char symbols_rna[]     = "ACGU";
 char symbols_binary[]  = "01";
 
+const double MIN_FREQUENCY          = 0.0001;
+const double MIN_FREQUENCY_DIFF     = 0.00001;
+
 Alignment::Alignment()
         : vector<Pattern>()
 {
@@ -1374,6 +1377,8 @@ void Alignment::computeStateFreq (double *stateFrqArr) {
     // for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
     // std::cout << stateFrqArr[stateNo_] << endl;
 
+	convfreq(stateFrqArr);
+
     if (verbose_mode >= VB_DEBUG) {
         cout << "Empirical state frequencies: ";
         for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
@@ -1462,6 +1467,38 @@ void Alignment::computeEmpiricalRateNonRev (double *rates) {
             if (j != i) rates[k++] = rates_mat[i*num_states+j];
 
 }
+
+void Alignment::convfreq(double *stateFrqArr) {
+	int i, j, maxi=0;
+	double freq, maxfreq, sum;
+	int zero_states = 0;
+
+	sum = 0.0;
+	maxfreq = 0.0;
+	for (i = 0; i < num_states; i++) {
+		freq = stateFrqArr[i];
+		if (freq < MIN_FREQUENCY) { stateFrqArr[i] = MIN_FREQUENCY; zero_states++; }
+		if (freq > maxfreq) {
+			maxfreq = freq;
+			maxi = i;
+		}
+
+		sum += stateFrqArr[i];
+	}
+	stateFrqArr[maxi] += 1.0 - sum;
+
+	for (i = 0; i < num_states - 1; i++) {
+		for (j = i + 1; j < num_states; j++) {
+			if (stateFrqArr[i] == stateFrqArr[j]) {
+				stateFrqArr[i] += MIN_FREQUENCY_DIFF;
+				stateFrqArr[j] -= MIN_FREQUENCY_DIFF;
+			}
+		}
+	}
+	if (zero_states) {
+		cout << "WARNING: " << zero_states << " states not present in alignment that might cause numerical instability" << endl;
+	}
+} /* convfreq */
 
 double Alignment::computeUnconstrainedLogL() {
     int nptn = size();

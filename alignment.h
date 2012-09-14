@@ -380,6 +380,12 @@ public:
 	virtual void computeStateFreq(double *state_freq);
 
 	/**
+	* Make all frequencies a little different and non-zero
+	* @param stateFrqArr (IN/OUT) state frequencies
+	*/
+	void convfreq(double *stateFrqArr);
+
+	/**
 		compute empirical rates between state pairs
 		@param rates (OUT) vector of size num_states*(num_states-1)/2 for the rates
 	*/

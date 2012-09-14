@@ -225,7 +225,7 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		}
 	}
 	if (error) {
-		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
+		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation! (gap=" << fabs(zero) << ")" << endl;
 		cout << "Rate matrix R: " << endl;
 		for (i = 0; i < num_state; i++) {
 			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
