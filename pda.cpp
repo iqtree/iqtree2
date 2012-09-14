@@ -28,6 +28,7 @@
 #include "phylotree.h"
 #include <signal.h>
 #include <stdio.h>
+#include <cstdio>
 #include <streambuf>
 #include <iostream>
 #include <cstdlib>
