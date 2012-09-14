@@ -1148,17 +1148,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 			else if (strcmp(argv[cnt],"-f") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -f <EQ | EM | ES | UD>";
-				if (strcmp(argv[cnt],"EQ") == 0)
+					throw "Use -f <c | o | u | q>";
+				if (strcmp(argv[cnt],"q") == 0)
 					params.freq_type = FREQ_EQUAL;
-				else if (strcmp(argv[cnt],"EM") == 0)
+				else if (strcmp(argv[cnt],"c") == 0)
 					params.freq_type = FREQ_EMPIRICAL;
-				else if (strcmp(argv[cnt],"ES") == 0)
+				else if (strcmp(argv[cnt],"o") == 0)
 					params.freq_type = FREQ_ESTIMATE;
-				else if (strcmp(argv[cnt],"UD") == 0)
+				else if (strcmp(argv[cnt],"u") == 0)
 					params.freq_type = FREQ_USER_DEFINED;
 				else
-					throw "Use -f <EQ | EM | ES | UD>";
+					throw "Use -f <c | o | u | q>";
 
 			} else if (strcmp(argv[cnt],"-c") == 0) {
 				cnt++;
@@ -1573,24 +1573,25 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
 			<< "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
 			<< endl << "SUBSTITUTION MODEL:" << endl
-			<< "  -m <substitution_model_name>" << endl
+			<< "  -m <model_name>" << endl
 			<< "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
 			<< "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
 			<< "                       specification, e.g., '010010' is equiv. to HKY" << endl
-			<< "              Protein: Poisson (default), WAG, cpREV, mtREV, PAM, mtMAM, JTT," << endl
+			<< "              Protein: WAG (default), Poisson, cpREV, mtREV, PAM, mtMAM, JTT," << endl
 			<< "                       LG, mtART, mtZOA, VT, or rtREV" << endl
 			<< "               Binary: JC-like" << endl
 			<< "            Modeltest: TEST or TESTONLY to select model with Modeltest." << endl
 			<< "                       TESTONLY will stop the run after finishing Modeltest" << endl
 			<< "            Otherwise: Name of file containing user-model parameters" << endl
 			<< "                       (rate parameters and state frequencies)" << endl
-			<< "  -f <EQ|EM|ES|UD>     EQual, EMpirical, EStimated, or User-Defined state" << endl
-			<< "                       frequency (default: detected from model name)" << endl
+			<< "  -m <model_name>+Fc or +Fo or +Fu or +Fq (default: auto)"<< endl
+			<< "                       counted, optimized, user-defined, equal state frequency" << endl
 			<< endl << "RATE HETEROGENEITY:" << endl
-			<< "  -m <substitution_model_name>+I or +G[n] or +I+G[n]" << endl
+			<< "  -m <model_name>+I or +G[n] or +I+G[n]" << endl
 			<< "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl
 			<< "                       categories for Gamma rates (default: n=4)" << endl
 			<< "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
+			<< "  -gmean               Computing mean for Gamma rate category (default: median)" << endl
 			<< "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
 			<< "  -mh                  Computing site-specific rates to .mhrate file using" << endl
 			<< "                       Meyer & von Haeseler (2003) method" << endl
@@ -1605,8 +1606,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -n <#iterations>     Number of iterations  (default: auto)" << endl
 			<< "  -sr <#iterations>    Stopping rule with max. #iterations (default: off)" << endl
 			<< "  -sc <confidence>     Confidence value for stopping rule (default: 0.95)" << endl
-			<< "  -spc <level>         Speed up confidence level for NNI adaptive search (default 0.95)" << endl
-			<< "  -sp_iter <number>    Number of iterations before the speed-up heuristic is started" << endl
+			<< "  -spc <level>         Confidence level for NNI adaptive search (default 0.95)" << endl
+			<< "  -sp_iter <number>    #iterations before NNI adaptive heuristic is started" << endl
 			<< "  -lmd <lambda>        lambda parameter for the PhyML search (default 0.75)" << endl
 			<< "  -nosse               Disable SSE instructions" << endl
 			<< "  -wt                  Writing all intermediate trees into .treels file" << endl

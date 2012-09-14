@@ -831,9 +831,16 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << endl;
 	tree.setParams(params);
     cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
-    cout << "Model of evolution: " << tree.getModelName() << " (" << model_df << " free parameters)" << endl;
+    cout << "Model of evolution: " << tree.getModelName() << " with ";
+    switch (tree.getModel()->getFreqType()) {
+		case FREQ_EQUAL: cout << "equal"; break;
+		case FREQ_EMPIRICAL: cout << "counted"; break;
+		case FREQ_USER_DEFINED: cout << "user-defined"; break;
+		case FREQ_ESTIMATE: cout << "optimized"; break;
+		default: outError("Wrong specified state frequencies");
+	}
+	cout << " frequencies (" << model_df << " free parameters)" << endl;
     cout << "Fixed branch lengths: " << ((params.fixed_branch_length) ? "Yes" : "No") << endl;
-    cout << "Random seed: " << params.ran_seed << endl;
     cout << "Lambda for local search: " << params.lambda << endl;
 
     if (params.speed_conf != 1.0) {

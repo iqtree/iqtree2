@@ -74,6 +74,9 @@ void GTRModel::init(StateFreqType type) {
 	case FREQ_EMPIRICAL:
 		phylo_tree->aln->computeStateFreq(state_freq);
 		break;
+	case FREQ_USER_DEFINED:
+		if (state_freq[0] == 0.0) outError("State frequencies not specified");
+		break;
 	default: break;
 	}
 	decomposeRateMatrix();

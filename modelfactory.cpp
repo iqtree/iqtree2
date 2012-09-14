@@ -47,21 +47,33 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		else if (tree->aln->num_states == 20) model_str = "WAG";
 		else model_str = "JC";
 	}
+	string::size_type posfreq;
+	if ((posfreq = model_str.find("+F")) != string::npos) {
+		if (model_str.substr(posfreq,3) == "+Fc") 
+			params.freq_type = FREQ_EMPIRICAL;
+		else if (model_str.substr(posfreq,3) == "+Fu")
+			params.freq_type = FREQ_USER_DEFINED;
+		else if (model_str.substr(posfreq,3) == "+Fq")
+			params.freq_type = FREQ_EQUAL;
+		else if (model_str.substr(posfreq,3) == "+Fo")
+			params.freq_type = FREQ_ESTIMATE;
+		else outError("Unknown state frequency type ",model_str.substr(posfreq));
+		model_str = model_str.substr(0, posfreq);
+	}
 	string::size_type pos = model_str.find('+');
-
 	/* create site-rate heterogeneity */
 	if (pos != string::npos) {
 		string rate_str = model_str.substr(pos);
-		if (rate_str == "+I") {
-			site_rate = new RateInvar(params.p_invar_sites, tree);
-		} else if (rate_str.substr(0,4) == "+I+G" || rate_str.substr(0,4) == "+G+I") {
-			if (rate_str.length() > 4) {
+		if (rate_str.substr(0,4) == "+I+G") {
+			if (rate_str.length() > 4 && rate_str[4] != '+') {
 				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
 				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
 			site_rate = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, params.p_invar_sites, tree);
+		} else if (rate_str.substr(0,2) == "+I") {
+			site_rate = new RateInvar(params.p_invar_sites, tree);
 		} else if (rate_str.substr(0,2) == "+G") {
-			if (rate_str.length() > 2) {
+			if (rate_str.length() > 2 && rate_str[2] != '+') {
 				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
 				if (params.num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
@@ -69,7 +81,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		} else if (rate_str.substr(0,2) == "+M") {
 			tree->sse = false;
 			params.rate_mh_type = true;
-			if (rate_str.length() > 2) {
+			if (rate_str.length() > 2 && rate_str[2] != '+') {
 				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
 				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else params.num_rate_cats = -1;
@@ -79,11 +91,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			else
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
 			site_rate->setTree(tree);
-		} else if (rate_str.substr(0,4) == "+CAT") {
+		} else if (rate_str.substr(0,2) == "+D") {
 			tree->sse = false;
 			params.rate_mh_type = false;
-			if (rate_str.length() > 4) {
-				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
+			if (rate_str.length() > 2 && rate_str[2] != '+') {
+				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
 				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else params.num_rate_cats = -1;
 			if (params.num_rate_cats >= 0)
@@ -92,18 +104,18 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			else
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
 			site_rate->setTree(tree);
-		} else if (rate_str.substr(0,3) == "+FC") {
+		} else if (rate_str.substr(0,4) == "+NGS") {
 			tree->sse = false;
-			if (rate_str.length() > 3) {
-				params.num_rate_cats = convert_int(rate_str.substr(3).c_str());
+			if (rate_str.length() > 4 && rate_str[4] != '+') {
+				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
 				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else params.num_rate_cats = -1;
 			site_rate = new NGSRateCat(tree, params.num_rate_cats);
 			site_rate->setTree(tree);
-		} else if (rate_str.substr(0,2) == "+F") {
+		} else if (rate_str.substr(0,4) == "+NGF") {
 			tree->sse = false;
-			if (rate_str.length() > 2) {
-				params.num_rate_cats = convert_int(rate_str.substr(2).c_str());
+			if (rate_str.length() > 4 && rate_str[4] != '+') {
+				params.num_rate_cats = convert_int(rate_str.substr(4).c_str());
 				if (params.num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else params.num_rate_cats = -1;
 			site_rate = new NGSRate(tree);
