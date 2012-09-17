@@ -33,7 +33,7 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2) : Ali
     num_states = tree->aln->num_states;
     pair_freq = NULL;
 
-    if (tree->getRate()->isSiteSpecificRate()) return;
+    if (tree->getRate()->isSiteSpecificRate() || tree->getModel()->isSiteSpecificModel()) return;
 
     // categorized rates
     if (tree->getRate()->getPtnCat(0) >= 0) {
@@ -120,6 +120,18 @@ double AlignmentPairwise::computeFunction(double value) {
         return lh;
     }
 
+    if (tree->getModel()->isSiteSpecificModel()) {
+        for (i = 0; i < nptn; i++) {
+            int state1 = tree->aln->at(i)[seq_id1];
+            int state2 = tree->aln->at(i)[seq_id2];
+            if (state1 >= num_states || state2 >= num_states) continue;
+            double trans = tree->getModel()->computeTrans(value, i, state1, state2);
+            lh -= log(trans) * tree->aln->at(i).frequency;
+
+        }
+		return lh;
+	}
+    
     double *trans_mat = new double[trans_size];
 
     // categorized rates
@@ -176,6 +188,25 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
             double rate_sqr = rate_val * rate_val;
             double derv1, derv2;
             double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
+            lh -= log(trans) * tree->aln->at(i).frequency;
+            double d1 = derv1 / trans;
+            df -= rate_val * d1 * tree->aln->at(i).frequency;
+            ddf -= rate_sqr * (derv2/trans - d1*d1) * tree->aln->at(i).frequency;
+
+        }
+        return lh;
+    }
+
+    
+    if (tree->getModel()->isSiteSpecificModel()) {
+        for (i = 0; i < nptn; i++) {
+            int state1 = tree->aln->at(i)[seq_id1];
+            int state2 = tree->aln->at(i)[seq_id2];
+            if (state1 >= num_states || state2 >= num_states) continue;
+            double rate_val = site_rate->getPtnRate(i);
+            double rate_sqr = rate_val * rate_val;
+            double derv1, derv2;
+            double trans = tree->getModel()->computeTrans(value * rate_val, i, state1, state2, derv1, derv2);
             lh -= log(trans) * tree->aln->at(i).frequency;
             double d1 = derv1 / trans;
             df -= rate_val * d1 * tree->aln->at(i).frequency;

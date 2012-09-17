@@ -22,7 +22,7 @@
 #include <assert.h>
 #include <string.h>
 
-GTRModel::GTRModel(PhyloTree *tree)
+GTRModel::GTRModel(PhyloTree *tree, bool count_rates)
  : SubstModel(tree->aln->num_states), Optimization(), EigenDecomposition()
 {
 	int i;
@@ -50,7 +50,10 @@ GTRModel::GTRModel(PhyloTree *tree)
 		
 	eigen_coeff = new double[ncoeff];
 
-	phylo_tree->aln->computeEmpiricalRate(rates);
+	if (count_rates) 
+		phylo_tree->aln->computeEmpiricalRate(rates);
+	else
+		for (i=0; i < nrate; i++) rates[i] = 1.0;
 	//eigen_coeff_derv1 = new double[ncoeff];
 	//eigen_coeff_derv2 = new double[ncoeff];
 	num_params = getNumRateEntries() - 1;
@@ -239,6 +242,12 @@ void GTRModel::computeTransDervFreq(double time, double rate_val, double* trans_
 void GTRModel::getRateMatrix(double *rate_mat) {
 	int nrate = getNumRateEntries();
 	memcpy(rate_mat, rates, nrate * sizeof(double));
+}
+
+void GTRModel::setRateMatrix(double* rate_mat)
+{
+	int nrate = getNumRateEntries();
+	memcpy(rates, rate_mat, nrate * sizeof(double));
 }
 
 void GTRModel::getStateFrequency(double *freq) {

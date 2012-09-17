@@ -21,7 +21,8 @@
 
 ModelSet::ModelSet(PhyloTree *tree) : GTRModel(tree)
 {
-
+	name = "SSF";
+	full_name = "Site-specific state-frequency model (unpublished)";
 }
 
 void ModelSet::computeTransMatrix(double time, double* trans_matrix)
@@ -60,6 +61,15 @@ void ModelSet::computeTransDervFreq(double time, double rate_val, double* trans_
 	}
 }
 
+double ModelSet::computeTrans(double time, int site, int state1, int state2) {
+	return at(site)->computeTrans(time, state1, state2);
+}
+
+double ModelSet::computeTrans(double time, int site, int state1, int state2, double &derv1, double &derv2) {
+	return at(site)->computeTrans(time, state1, state2, derv1, derv2);
+	
+}
+
 int ModelSet::getNDim()
 {
 	assert(size());
@@ -77,19 +87,24 @@ void ModelSet::writeInfo(ostream& out)
 	}
 }
 
+void ModelSet::decomposeRateMatrix()
+{
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->decomposeRateMatrix();
+}
+
 
 void ModelSet::getVariables(double* variables)
 {
 	assert(size());
-	front()->getVariables(variables);
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->getVariables(variables);
 }
 
 void ModelSet::setVariables(double* variables)
 {
 	assert(size());
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->setVariables(variables);
-	}
+	front()->setVariables(variables);
 }
 
 

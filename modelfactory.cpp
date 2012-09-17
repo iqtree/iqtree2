@@ -39,26 +39,26 @@ ModelFactory::ModelFactory() {
 	is_storing = false;
 }
 
-SubstModel* ModelFactory::createModel(string model_str, StateFreqType freq_type, PhyloTree* tree)
+SubstModel* ModelFactory::createModel(string model_str, StateFreqType freq_type, PhyloTree* tree, bool count_rates)
 {
 	SubstModel *model = NULL;
 	if ((model_str == "JC" || model_str == "Poisson")) {
 		model = new SubstModel(tree->aln->num_states);
 	} else if (model_str == "GTR") {
-		model = new GTRModel(tree);
+		model = new GTRModel(tree, count_rates);
 		((GTRModel*)model)->init(freq_type);
 	} else if (model_str == "UNREST") {
 		freq_type = FREQ_EQUAL;
 		//params.optimize_by_newton = false;
 		tree->optimize_by_newton = false;
-		model = new ModelNonRev(tree);
+		model = new ModelNonRev(tree, count_rates);
 		((ModelNonRev*)model)->init(freq_type);
 	} else if (tree->aln->num_states == 2) {
-		model = new ModelBIN(model_str.c_str(), freq_type, tree);
+		model = new ModelBIN(model_str.c_str(), freq_type, tree, count_rates);
 	} else if (tree->aln->num_states == 4) {
-		model = new ModelDNA(model_str.c_str(), freq_type, tree);
+		model = new ModelDNA(model_str.c_str(), freq_type, tree, count_rates);
 	} else if (tree->aln->num_states == 20) {
-		model = new ModelProtein(model_str.c_str(), freq_type, tree);
+		model = new ModelProtein(model_str.c_str(), freq_type, tree, count_rates);
 	} else {
 		outError("Unsupported model type");
 	}
@@ -170,15 +170,22 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		model = new ModelSet(tree);
 		((ModelSet*)model)->init(params.freq_type);
 		
-		double state_freq[tree->aln->num_states];
-		model->getStateFrequency(state_freq);
-
+		double state_freq[model->num_states];
+		double rates[model->getNumRateEntries()];
 		for (int i = 0; i < tree->getAlnNSite(); i++) {
-			GTRModel *modeli = (GTRModel*)createModel(model_str, FREQ_UNKNOWN, tree);
+			GTRModel *modeli;
+			if (i == 0) {
+				modeli = (GTRModel*)createModel(model_str, params.freq_type, tree, true);
+				modeli->getStateFrequency(state_freq);
+				modeli->getRateMatrix(rates);
+			} else {
+				modeli = (GTRModel*)createModel(model_str, FREQ_UNKNOWN, tree, false);
+				modeli->setStateFrequency(state_freq);
+				modeli->setRateMatrix(rates);
+			}
 			if (((IngoTree*)tree)->getSiteFreq(i)[0] != 0.0)
 				modeli->setStateFrequency ( ((IngoTree*)tree)->getSiteFreq(i) );
-			else
-				modeli->setStateFrequency(state_freq);
+
 			modeli->init(FREQ_USER_DEFINED);
 			((ModelSet*)model)->push_back(modeli);
 		}

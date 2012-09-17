@@ -51,7 +51,7 @@ public:
 	
 	ModelFactory();
 
-	SubstModel *createModel(string model_str, StateFreqType freq_type, PhyloTree *tree);
+	SubstModel *createModel(string model_str, StateFreqType freq_type, PhyloTree *tree, bool count_rates = true);
 	
 	/**
 		get the name of the model

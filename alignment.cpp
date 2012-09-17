@@ -1472,7 +1472,7 @@ void Alignment::computeEmpiricalRate (double *rates) {
             if (rates[k-1] == 0) rates[k-1] = 1e-4;
         }
     rates[k-1] = 1;
-    if (verbose_mode >= VB_DEBUG) {
+    if (verbose_mode >= VB_MED) {
         cout << "Empirical rates: ";
         for (k = 0; k < num_states*(num_states-1)/2; k++)
             cout << rates[k] << " ";

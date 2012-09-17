@@ -45,7 +45,7 @@ public:
 		constructor
 		@param tree associated tree for the model
 	*/
-    GTRModel(PhyloTree *tree);
+    GTRModel(PhyloTree *tree, bool count_rates = true);
 	
 	/**
 		init the model and decompose the rate matrix. This function should always be called
@@ -133,6 +133,12 @@ public:
 		@param rate_mat (OUT) upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
 	*/
 	virtual void getRateMatrix(double *rate_mat);
+
+	/**
+		Set the rate matrix.
+		@param rate_mat upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
+	*/
+	virtual void setRateMatrix(double *rate_mat);
 
 	/**
 		compute the state frequency vector

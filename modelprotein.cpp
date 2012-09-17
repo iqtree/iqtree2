@@ -652,8 +652,8 @@ void get_Dayhoff(double **q, double *f) {
 } /* dayhoff data */
 
 
-ModelProtein::ModelProtein(const char *model_name, StateFreqType freq, PhyloTree *tree)
- : GTRModel(tree)
+ModelProtein::ModelProtein(const char *model_name, StateFreqType freq, PhyloTree *tree, bool count_rates)
+ : GTRModel(tree, count_rates)
 {
 	init(model_name, freq);
 }

@@ -20,14 +20,18 @@
 #include "modelnonrev.h"
 //#include "whtest/eigen.h"
 
-ModelNonRev::ModelNonRev(PhyloTree *tree)
-        : GTRModel(tree)
+ModelNonRev::ModelNonRev(PhyloTree *tree, bool count_rates)
+        : GTRModel(tree, false)
 {
     num_params = getNumRateEntries() - 1;
     delete [] rates;
     rates = new double [num_params+1];
     memset(rates, 0, sizeof(double) * (num_params+1));
-    phylo_tree->aln->computeEmpiricalRateNonRev(rates);
+	if (count_rates)
+		phylo_tree->aln->computeEmpiricalRateNonRev(rates);
+	else 
+		for (int i = 0; i <= num_params; i++) 
+			rates[i] = 1.0;
     name = "UNREST";
     full_name = "Unrestricted model (non-reversible)";
     rate_matrix = new double[num_states*num_states];

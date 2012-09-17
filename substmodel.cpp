@@ -57,6 +57,10 @@ double SubstModel::computeTrans(double time, int state1, int state2) {
 	return 1.0 - non_diagonal * (num_states - 1);*/
 }
 
+double SubstModel::computeTrans(double time, int site, int state1, int state2) {
+	return computeTrans(time, state1, state2);
+}
+
 double SubstModel::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
 	double coef = -double(num_states) / (num_states-1);
 	double expt = exp(time * coef);
@@ -69,6 +73,10 @@ double SubstModel::computeTrans(double time, int state1, int state2, double &der
 	derv1 = -expt;
 	derv2 = derv1 * coef;
 	return (1.0 + (num_states-1)*expt) / num_states;
+}
+
+double SubstModel::computeTrans(double time, int site, int state1, int state2, double &derv1, double &derv2) {
+	return computeTrans(time, state1, state2, derv1, derv2);
 }
 
 void SubstModel::getRateMatrix(double *rate_mat) {

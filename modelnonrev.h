@@ -31,7 +31,7 @@ The general non-reversible model
 class ModelNonRev : public GTRModel
 {
 public:
-    ModelNonRev(PhyloTree *tree);
+    ModelNonRev(PhyloTree *tree, bool count_rates = true);
 
 	/**
 		@return TRUE if model is time-reversible, FALSE otherwise

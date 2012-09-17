@@ -37,7 +37,7 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelDNA(const char *model_name, StateFreqType freq, PhyloTree *tree);
+    ModelDNA(const char *model_name, StateFreqType freq, PhyloTree *tree, bool count_rates = true);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it

@@ -46,6 +46,7 @@
 #include "partitionmodel.h"
 #include "guidedbootstrap.h"
 #include "ingotree.h"
+#include "modelset.h"
 
 const int DNA_MODEL_NUM = 14;
 clock_t t_begin, t_end;
@@ -293,7 +294,10 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 	out << "Rate parameter R:" << endl << endl;
 
 	double *rate_mat = new double[tree.aln->num_states * tree.aln->num_states];
-	tree.getModel()->getRateMatrix(rate_mat);
+	if (!tree.getModel()->isSiteSpecificModel())
+		tree.getModel()->getRateMatrix(rate_mat);
+	else
+		((ModelSet*)tree.getModel())->front()->getRateMatrix(rate_mat);
 	int k;
 	if (tree.aln->num_states > 4) out << fixed;
 	if (tree.getModel()->isReversible()) {
@@ -323,50 +327,53 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 	delete [] rate_mat;
 
 	out << endl << "State frequencies: ";
-	if (!tree.getModel()->isReversible()) out << "(inferred from Q matrix)" << endl; else
-	switch (tree.getModel()->getFreqType()) {
-		case FREQ_EMPIRICAL:
-			out << "(empirical counts from alignment)" << endl;
-			break;
-		case FREQ_ESTIMATE:
-			out << "(estimated with maximum likelihood)" << endl;
-			break;
-		case FREQ_USER_DEFINED:
-			out << "(user-defined)" << endl;
-			break;
-		case FREQ_EQUAL:
-			out << "(equal frequencies)" << endl;
-			break;
-		default:
-			break;
-	}
-	out << endl;
-
-	double *state_freqs = new double[tree.aln->num_states];
-	tree.getModel()->getStateFrequency(state_freqs);
-	for (i = 0; i < tree.aln->num_states; i++)
-		out << "  pi(" << tree.aln->convertStateBack(i) << ") = " << state_freqs[i] << endl;
-	delete [] state_freqs;
-	out << endl;
-
-
-	// report Q matrix
-	double *q_mat = new double[tree.aln->num_states * tree.aln->num_states];
-	tree.getModel()->getQMatrix(q_mat);
-
-	out << "Rate matrix Q:" << endl << endl;
-	for (i = 0, k = 0; i < tree.aln->num_states; i++) {
-		out << "  " << tree.aln->convertStateBack(i);
-		for (j = 0; j < tree.aln->num_states; j++, k++) {
-			out << "  ";
-			out.width(8);
-			out << q_mat[k];
+	if (tree.getModel()->isSiteSpecificModel())
+		out << "(site specific frequencies)" << endl << endl;
+	else {
+		if (!tree.getModel()->isReversible()) 
+			out << "(inferred from Q matrix)" << endl; 
+		else
+		switch (tree.getModel()->getFreqType()) {
+			case FREQ_EMPIRICAL:
+				out << "(empirical counts from alignment)" << endl;
+				break;
+			case FREQ_ESTIMATE:
+				out << "(estimated with maximum likelihood)" << endl;
+				break;
+			case FREQ_USER_DEFINED:
+				out << "(user-defined)" << endl;
+				break;
+			case FREQ_EQUAL:
+				out << "(equal frequencies)" << endl;
+				break;
+			default:
+				break;
 		}
 		out << endl;
-	}
-	out << endl;
-	delete [] q_mat;
 
+		double *state_freqs = new double[tree.aln->num_states];
+		tree.getModel()->getStateFrequency(state_freqs);
+		for (i = 0; i < tree.aln->num_states; i++)
+			out << "  pi(" << tree.aln->convertStateBack(i) << ") = " << state_freqs[i] << endl;
+		delete [] state_freqs;
+		out << endl;
+		// report Q matrix
+		double *q_mat = new double[tree.aln->num_states * tree.aln->num_states];
+		tree.getModel()->getQMatrix(q_mat);
+
+		out << "Rate matrix Q:" << endl << endl;
+		for (i = 0, k = 0; i < tree.aln->num_states; i++) {
+			out << "  " << tree.aln->convertStateBack(i);
+			for (j = 0; j < tree.aln->num_states; j++, k++) {
+				out << "  ";
+				out.width(8);
+				out << q_mat[k];
+			}
+			out << endl;
+		}
+		out << endl;
+		delete [] q_mat;
+	}
 }
 
 void reportRate(ofstream &out, PhyloTree &tree) {

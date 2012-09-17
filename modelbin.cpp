@@ -19,8 +19,8 @@
  ***************************************************************************/
 #include "modelbin.h"
 
-ModelBIN::ModelBIN(const char *model_name, StateFreqType freq, PhyloTree *tree)
-: GTRModel(tree) {
+ModelBIN::ModelBIN(const char *model_name, StateFreqType freq, PhyloTree *tree, bool count_rates)
+: GTRModel(tree, count_rates) {
 	assert(num_states == 2); // make sure that you create model for DNA
 	StateFreqType def_freq = FREQ_UNKNOWN;
 	name = model_name;
