@@ -1099,6 +1099,13 @@ struct Params {
 
 	/** precision when printing out for floating-point number */
 	int numeric_precision;
+	
+	/** file containing state-frequencies per site for site-specific state frequency model
+	 * each line has n+1 entries (n=number of states):
+	 * site_ID state1_freq state2_freq ... staten_freq 
+	 * where site_ID is from 1 to m (m=number of sites)
+	 */
+	char *site_freq_file;
 };
 
 /**

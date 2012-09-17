@@ -106,7 +106,7 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 		}
 	}
 	
-	if (freq == FREQ_UNKNOWN || def_freq == FREQ_EQUAL) freq = def_freq;
+	if (/*freq == FREQ_UNKNOWN || */ def_freq == FREQ_EQUAL) freq = def_freq;
 	GTRModel::init(freq);
 }
 

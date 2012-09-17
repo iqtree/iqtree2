@@ -650,6 +650,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 	params.avh_test = 0;
 
+	params.site_freq_file = NULL;
+	
 	struct timeval tv;
 	struct timezone tz;
 	// initialize random seed based on current time
@@ -1159,7 +1161,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.freq_type = FREQ_USER_DEFINED;
 				else
 					throw "Use -f <c | o | u | q>";
-
+			} else if (strcmp(argv[cnt],"-fs") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -fs <site_freq_file>";
+				params.site_freq_file = argv[cnt];
+				params.SSE = false;
 			} else if (strcmp(argv[cnt],"-c") == 0) {
 				cnt++;
 				if (cnt >= argc)

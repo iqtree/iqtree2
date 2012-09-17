@@ -344,7 +344,7 @@ public:
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
      */
-    void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+    virtual void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
     void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL,
     	double *pattern_scale = NULL);
@@ -360,7 +360,7 @@ public:
                             assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
-    double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
     template<int NSTATES>
     inline double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);

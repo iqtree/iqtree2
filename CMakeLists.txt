@@ -66,6 +66,7 @@ gurobiwrapper.cpp
 gzstream.cpp
 hashsplitset.cpp
 iqptree.cpp
+ingotree.cpp
 maalignment.cpp
 matree.cpp
 mexttree.cpp
@@ -74,6 +75,7 @@ modeldna.cpp
 modelfactory.cpp
 modelnonrev.cpp
 modelprotein.cpp
+modelset.cpp
 mpdablock.cpp
 msetsblock.cpp
 msplitsblock.cpp

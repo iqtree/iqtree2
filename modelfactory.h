@@ -51,6 +51,8 @@ public:
 	
 	ModelFactory();
 
+	SubstModel *createModel(string model_str, StateFreqType freq_type, PhyloTree *tree);
+	
 	/**
 		get the name of the model
 	*/
@@ -77,6 +79,13 @@ public:
 	*/
 	void computeTransMatrix(double time, double *trans_matrix);
 
+	/**
+	 * wrapper for computing transition matrix times state frequency vector
+	 * @param time time between two events
+	 * @param state_freq state frequency vector
+	 * @param trans_matrix (OUT) the transition matrix between all pairs of states.
+	 * 	Assume trans_matrix has size of num_states * num_states.
+	 */
 	void computeTransMatrixFreq(double time, double *state_freq, double *trans_matrix);
 
 	/**

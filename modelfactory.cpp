@@ -26,9 +26,11 @@
 #include "modeldna.h"
 #include "modelprotein.h"
 #include "modelbin.h"
+#include "modelset.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
 #include "ngs.h"
+#include "ingotree.h"
 
 ModelFactory::ModelFactory() { 
 	model = NULL; 
@@ -36,6 +38,33 @@ ModelFactory::ModelFactory() {
 	store_trans_matrix = false;
 	is_storing = false;
 }
+
+SubstModel* ModelFactory::createModel(string model_str, StateFreqType freq_type, PhyloTree* tree)
+{
+	SubstModel *model = NULL;
+	if ((model_str == "JC" || model_str == "Poisson")) {
+		model = new SubstModel(tree->aln->num_states);
+	} else if (model_str == "GTR") {
+		model = new GTRModel(tree);
+		((GTRModel*)model)->init(freq_type);
+	} else if (model_str == "UNREST") {
+		freq_type = FREQ_EQUAL;
+		//params.optimize_by_newton = false;
+		tree->optimize_by_newton = false;
+		model = new ModelNonRev(tree);
+		((ModelNonRev*)model)->init(freq_type);
+	} else if (tree->aln->num_states == 2) {
+		model = new ModelBIN(model_str.c_str(), freq_type, tree);
+	} else if (tree->aln->num_states == 4) {
+		model = new ModelDNA(model_str.c_str(), freq_type, tree);
+	} else if (tree->aln->num_states == 20) {
+		model = new ModelProtein(model_str.c_str(), freq_type, tree);
+	} else {
+		outError("Unsupported model type");
+	}
+	return model;
+}
+
 
 ModelFactory::ModelFactory(Params &params, PhyloTree *tree) { 
 	store_trans_matrix = params.store_trans_matrix;
@@ -132,27 +161,28 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 
 	/* create substitution model */
 
-	if (model_str == "JC" || model_str == "Poisson") {
-		 model = new SubstModel(tree->aln->num_states);
-	} else if (model_str == "GTR") {
-		model = new GTRModel(tree);
-		((GTRModel*)model)->init(freq_type);
-	} else if (model_str == "UNREST") {
-		freq_type = FREQ_EQUAL;
-		params.optimize_by_newton = false;
-		tree->optimize_by_newton = false;
-		model = new ModelNonRev(tree);
-		((ModelNonRev*)model)->init(freq_type);
-	} else if (tree->aln->num_states == 2) {
-		model = new ModelBIN(model_str.c_str(), freq_type, tree);
-	} else if (tree->aln->num_states == 4) {
-		model = new ModelDNA(model_str.c_str(), freq_type, tree);
-	} else if (tree->aln->num_states == 20) {
-		model = new ModelProtein(model_str.c_str(), freq_type, tree);
-	} else {
-		outError("Unsupported model type");
-	}
+	if (!params.site_freq_file) {
+		model = createModel(model_str, freq_type, tree);
+	} else { 
+		// site-specific model
+		if (model_str == "JC" || model_str == "Possion") 
+			outError("JC is not suitable for site-specific model");
+		model = new ModelSet(tree);
+		((ModelSet*)model)->init(params.freq_type);
+		
+		double state_freq[tree->aln->num_states];
+		model->getStateFrequency(state_freq);
 
+		for (int i = 0; i < tree->getAlnNSite(); i++) {
+			GTRModel *modeli = (GTRModel*)createModel(model_str, FREQ_UNKNOWN, tree);
+			if (((IngoTree*)tree)->getSiteFreq(i)[0] != 0.0)
+				modeli->setStateFrequency ( ((IngoTree*)tree)->getSiteFreq(i) );
+			else
+				modeli->setStateFrequency(state_freq);
+			modeli->init(FREQ_USER_DEFINED);
+			((ModelSet*)model)->push_back(modeli);
+		}
+	} 
 	tree->discardSaturatedSite(params.discard_saturated_site);
 
 }
@@ -253,7 +283,7 @@ double ModelFactory::computeTrans(double time, int state1, int state2, double &d
 }
 
 void ModelFactory::computeTransMatrix(double time, double *trans_matrix) {
-	if (!store_trans_matrix || !is_storing) {
+	if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
 		model->computeTransMatrix(time, trans_matrix);
 		return;
 	}
@@ -274,6 +304,10 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix) {
 }
 
 void ModelFactory::computeTransMatrixFreq(double time, double *state_freq, double *trans_matrix) {
+	if (model->isSiteSpecificModel()) {
+		model->computeTransMatrixFreq(time, trans_matrix);
+		return;
+	}
 	int nstates = model->num_states;
 	computeTransMatrix(time, trans_matrix);
 	for (int state1 = 0; state1 < nstates; state1++) {
@@ -285,7 +319,7 @@ void ModelFactory::computeTransMatrixFreq(double time, double *state_freq, doubl
 
 void ModelFactory::computeTransDerv(double time, double *trans_matrix, 
 	double *trans_derv1, double *trans_derv2) {
-	if (!store_trans_matrix || !is_storing) {
+	if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
 		model->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
 		return;
 	}
@@ -309,6 +343,10 @@ void ModelFactory::computeTransDerv(double time, double *trans_matrix,
 void ModelFactory::computeTransDervFreq(double time, double rate_val, double *state_freq, double *trans_matrix, 
 		double *trans_derv1, double *trans_derv2) 
 {
+	if (model->isSiteSpecificModel()) {
+		model->computeTransDervFreq(time, rate_val, trans_matrix, trans_derv1, trans_derv2);
+		return;
+	}
 	int nstates = model->num_states;	
 	double rate_sqr = rate_val*rate_val;
 	computeTransDerv(time * rate_val, trans_matrix, trans_derv1, trans_derv2);

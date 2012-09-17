@@ -43,10 +43,21 @@ public:
 	virtual bool isReversible() { return true; };
 	
 	/**
+	 * @return TRUE if this is a site-specific model, FALSE otherwise
+	 */
+	virtual bool isSiteSpecificModel() { return false; }
+	
+	/**
 		@return the number of rate entries, equal to the number of elements
 			in the upper-diagonal of the rate matrix (since model is reversible)
 	*/
 	virtual int getNumRateEntries() { return num_states*(num_states-1)/2; }
+
+	/**
+	 * get the size of transition matrix, default is num_states*num_states.
+	 * can be changed for e.g. site-specific model
+	 */
+	virtual int getTransMatrixSize() { return num_states * num_states; }
 
 	/**
 		compute the transition probability matrix. One should override this function when defining new model.
@@ -56,6 +67,14 @@ public:
 			Assume trans_matrix has size of num_states * num_states.
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix);
+
+	/**
+	 * wrapper for computing transition matrix times state frequency vector
+	 * @param time time between two events
+	 * @param trans_matrix (OUT) the transition matrix between all pairs of states.
+	 * 	Assume trans_matrix has size of num_states * num_states.
+	 */
+	virtual void computeTransMatrixFreq(double time, double *trans_matrix);
 
 	/**
 		compute the transition probability between two states. 
@@ -127,6 +146,16 @@ public:
 	virtual void computeTransDerv(double time, double *trans_matrix, 
 		double *trans_derv1, double *trans_derv2);
 
+	/**
+		compute the transition probability matrix.and the derivative 1 and 2 times state frequency vector
+		@param time time between two events
+		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
+			Assume trans_matrix has size of num_states * num_states.
+		@param trans_derv1 (OUT) the 1st derivative matrix between all pairs of states. 
+		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
+	*/
+	virtual void computeTransDervFreq(double time, double rate_val, double *trans_matrix, 
+		double *trans_derv1, double *trans_derv2);
 
 	/**
 		optimize model parameters. One should override this function when defining new model.

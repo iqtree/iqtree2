@@ -62,9 +62,10 @@ void GTRModel::setTree(PhyloTree *tree) {
 
 
 void GTRModel::init(StateFreqType type) {
+	if (type == FREQ_UNKNOWN) return;
 	int i;
 	freq_type = type;
-	assert(freq_type != FREQ_UNKNOWN);
+	//assert(freq_type != FREQ_UNKNOWN);
 	switch (freq_type) {
 	case FREQ_EQUAL:
 		for (i = 0; i < num_states; i++)
@@ -139,6 +140,16 @@ void GTRModel::computeTransMatrix(double time, double *trans_matrix) {
 	}
 }
 
+void GTRModel::computeTransMatrixFreq(double time, double* trans_matrix)
+{
+	computeTransMatrix(time, trans_matrix);
+	for (int state1 = 0; state1 < num_states; state1++) {
+		double *trans_mat_state = trans_matrix + (state1 * num_states);
+		for (int state2 = 0; state2 < num_states; state2++)
+			trans_mat_state[state2] *= state_freq[state1];
+	}
+}
+
 double GTRModel::computeTrans(double time, int state1, int state2) {
 	double evol_time = time / total_num_subst;
 	int i;
@@ -207,6 +218,24 @@ void GTRModel::computeTransDerv(double time, double *trans_matrix,
 	}
 }
 
+void GTRModel::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
+{
+	int nstates = num_states;
+	double rate_sqr = rate_val*rate_val;
+	computeTransDerv(time * rate_val, trans_matrix, trans_derv1, trans_derv2);
+	for (int state1 = 0; state1 < nstates; state1++) {
+		double *trans_mat_state = trans_matrix + (state1 * nstates);
+		double *trans_derv1_state = trans_derv1 + (state1 * nstates);
+		double *trans_derv2_state = trans_derv2 + (state1 * nstates);
+		for (int state2 = 0; state2 < nstates; state2++) {
+			trans_mat_state[state2] *= state_freq[state1];
+			trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
+			trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
+		}
+	}
+}
+
+
 void GTRModel::getRateMatrix(double *rate_mat) {
 	int nrate = getNumRateEntries();
 	memcpy(rate_mat, rates, nrate * sizeof(double));
@@ -216,6 +245,12 @@ void GTRModel::getStateFrequency(double *freq) {
 	assert(state_freq);
 	assert(freq_type != FREQ_UNKNOWN);
 	memcpy(freq, state_freq, sizeof(double) * num_states);
+}
+
+void GTRModel::setStateFrequency(double* freq)
+{
+	assert(state_freq);
+	memcpy(state_freq, freq, sizeof(double) * num_states);
 }
 
 void GTRModel::getQMatrix(double *q_mat) {

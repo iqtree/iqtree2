@@ -32,6 +32,18 @@ void SubstModel::computeTransMatrix(double time, double *trans_matrix) {
 			trans_matrix[i] = non_diagonal;
 }
 
+void SubstModel::computeTransMatrixFreq(double time, double* trans_matrix)
+{
+	computeTransMatrix(time, trans_matrix);
+	for (int state1 = 0; state1 < num_states; state1++) {
+		double *trans_mat_state = trans_matrix + (state1 * num_states);
+		for (int state2 = 0; state2 < num_states; state2++)
+			trans_mat_state[state2] /= num_states;
+	}
+	
+}
+
+
 double SubstModel::computeTrans(double time, int state1, int state2) {
 	double expt = exp(-time * num_states / (num_states-1));
 	if (state1 != state2) {
@@ -128,6 +140,23 @@ void SubstModel::computeTransDerv(double time, double *trans_matrix,
 
 }
 
+void SubstModel::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
+{
+	int nstates = num_states;
+	double rate_sqr = rate_val*rate_val;
+	computeTransDerv(time * rate_val, trans_matrix, trans_derv1, trans_derv2);
+	for (int state1 = 0; state1 < nstates; state1++) {
+		double *trans_mat_state = trans_matrix + (state1 * nstates);
+		double *trans_derv1_state = trans_derv1 + (state1 * nstates);
+		double *trans_derv2_state = trans_derv2 + (state1 * nstates);
+		for (int state2 = 0; state2 < nstates; state2++) {
+			trans_mat_state[state2] /= num_states;
+			trans_derv1_state[state2] *= (rate_val/num_states);
+			trans_derv2_state[state2] *= (rate_sqr/num_states);
+		}
+	}
+
+}
 
 double *SubstModel::newTransMatrix() {
 	return new double[num_states * num_states];

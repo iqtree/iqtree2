@@ -915,6 +915,7 @@ double IQPTree::doIQPNNI() {
 
 
         if (curScore > bestScore + 0.0001) {
+			curScore = optimizeAllBranches(100, 0.0001);
 			stringstream cur_tree_topo_ss;
 			printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
 			if (cur_tree_topo_ss.str() != best_tree_topo) {
@@ -936,7 +937,7 @@ double IQPTree::doIQPNNI() {
 				//resetKDelete();
 			} else {
 				// higher likelihood but the same tree topology
-				bestScore = curScore = optimizeAllBranches(100, 0.0001);
+				bestScore = curScore;
 				cout << "UPDATE BEST LOG-LIKELIHOOD: " << bestScore << endl;
 			} 
         } else {

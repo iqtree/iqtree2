@@ -130,6 +130,11 @@ public:
 	*/
     void extractDataBlock(NxsCharactersBlock *data_block);
 
+	/**
+	 * un-group site-patterns, i.e., making #sites = #patterns and pattern frequency = 1 for all patterns
+	 */
+	void ungroupSitePattern();
+	
 
 /****************************************************************************
 	output alignment 
@@ -476,5 +481,9 @@ protected:
 	*/
 	void getAppearance(char state, double *state_app);
 };
+
+
+void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id);
+
 
 #endif

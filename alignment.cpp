@@ -315,6 +315,20 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
     return gaps_only;
 }
 
+void Alignment::ungroupSitePattern()
+{
+	vector<Pattern> stored_pat = (*this);
+	clear();
+	for (int i = 0; i < getNSite(); i++) {
+		Pattern pat = stored_pat[getPatternID(i)];
+		pat.frequency = 1;
+		push_back(pat);
+		site_pattern[i] = i;
+	}
+	pattern_index.clear();
+}
+
+
 /**
 	detect the data type of the input sequences
 	@param sequences vector of strings
@@ -1063,10 +1077,9 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
 
 }
 
-void Alignment::extractSites(Alignment *aln, const char* spec) {
+void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
     int i;
     char *str = (char*)spec;
-    IntVector site_id;
     try {
         for (; *str != 0; ) {
             int lower, upper, step;
@@ -1087,6 +1100,11 @@ void Alignment::extractSites(Alignment *aln, const char* spec) {
     } catch (string err) {
         outError(err);
     }
+}
+
+void Alignment::extractSites(Alignment *aln, const char* spec) {
+    IntVector site_id;
+    extractSiteID(aln, spec, site_id);
     extractSites(aln, site_id);
 }
 
@@ -1391,7 +1409,7 @@ void Alignment::computeStateFreq (double *stateFrqArr) {
 
 	convfreq(stateFrqArr);
 
-    if (verbose_mode >= VB_DEBUG) {
+    if (verbose_mode >= VB_MED) {
         cout << "Empirical state frequencies: ";
         for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
             cout << stateFrqArr[stateNo_] << " ";

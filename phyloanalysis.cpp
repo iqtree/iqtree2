@@ -45,6 +45,7 @@
 #include "whtest_wrapper.h"
 #include "partitionmodel.h"
 #include "guidedbootstrap.h"
+#include "ingotree.h"
 
 const int DNA_MODEL_NUM = 14;
 clock_t t_begin, t_end;
@@ -274,8 +275,7 @@ void reportReferences(ofstream &out, string &original_model) {
 		"Bioinformatics, 21:3794-3796." << endl << endl;*/
 
 	if (original_model == "TEST" || original_model == "TESTONLY")
-		out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl
-			<< "(see CREDITS section for the citation)" << endl << endl;
+		out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl << endl;
 }
 
 void reportAlignment(ofstream &out, Alignment &alignment) {
@@ -453,7 +453,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(outfile.c_str());
-        out << "IQ-TREE " << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << " built " << __DATE__ << endl << endl;
+        out << "IQ-TREE " << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH << " built " << __DATE__ << endl << endl;
         if (params.partition_file)
                out << "Partition file name: " << params.partition_file << endl;
         if (params.aln_file)
@@ -620,7 +620,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         out << "TIME STAMP" << endl << "----------" << endl << endl << "Date and time: " << date_str <<
                 "Running time: " << (double) params.run_time / CLOCKS_PER_SEC << " seconds" << endl << endl;
 
-		reportCredits(out);
+		//reportCredits(out); // not needed, now in the manual
         out.close();
 
     } catch (ios::failure) {
@@ -1256,6 +1256,9 @@ void runPhyloAnalysis(Params &params) {
 	if (params.partition_file) {
 		tree = new PhyloSuperTree(params);
 		alignment = tree->aln;
+	} else if (params.site_freq_file) {
+		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
+		tree = new IngoTree(alignment, params.site_freq_file);
 	} else {
 		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
 		tree = new IQPTree(alignment);
