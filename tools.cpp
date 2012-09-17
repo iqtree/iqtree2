@@ -555,7 +555,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.split_threshold = 0.0;
 	params.split_weight_threshold = -1000;
 	params.split_weight_summary = SW_SUM;
-	params.gurobi_format = false;
+	params.gurobi_format = true;
 	params.gurobi_threads = 1;
 	params.num_bootstrap_samples = 0;
 

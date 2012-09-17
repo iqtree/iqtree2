@@ -120,7 +120,7 @@ double AlignmentPairwise::computeFunction(double value) {
         return lh;
     }
 
-    double trans_mat[trans_size];
+    double *trans_mat = new double[trans_size];
 
     // categorized rates
     if (site_rate->getPtnCat(0) >= 0) {
@@ -132,10 +132,11 @@ double AlignmentPairwise::computeFunction(double value) {
                     lh -= pair_pos[i] * log(trans_mat[i]);
                 }
         }
+        delete [] trans_mat;
         return lh;
     }
 
-    double sum_trans_mat[trans_size];
+    double *sum_trans_mat = new double[trans_size];
 
     if (tree->getModelFactory()->site_rate->getGammaShape() == 0.0)
         tree->getModelFactory()->computeTransMatrix(value, sum_trans_mat);
@@ -150,6 +151,8 @@ double AlignmentPairwise::computeFunction(double value) {
     for (i = 0; i < trans_size; i++) {
         lh -= pair_freq[i] * log(sum_trans_mat[i]);
     }
+    delete [] sum_trans_mat;
+    delete [] trans_mat;
     // negative log-likelihood (for minimization)
     return lh;
 }
@@ -182,7 +185,9 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
         return lh;
     }
 
-    double trans_mat[trans_size], trans_derv1[trans_size], trans_derv2[trans_size];
+    double *trans_mat = new double[trans_size];
+	double *trans_derv1 = new double[trans_size];
+	double *trans_derv2 = new double[trans_size];
 
     // categorized rates
     if (site_rate->getPtnCat(0) >= 0) {
@@ -201,11 +206,16 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
             df -= derv1 * rate_val;
             ddf -= derv2 * rate_val * rate_val;
         }
+        delete [] trans_derv2;
+		delete [] trans_derv1;
+		delete [] trans_mat;
         return lh;
     }
 
 
-    double sum_trans[trans_size],sum_derv1[trans_size], sum_derv2[trans_size];
+    double *sum_trans = new double[trans_size];
+	double *sum_derv1 = new double[trans_size];
+	double *sum_derv2 = new double[trans_size];
     memset(sum_trans, 0, sizeof(double) * trans_size);
     memset(sum_derv1, 0, sizeof(double) * trans_size);
     memset(sum_derv2, 0, sizeof(double) * trans_size);
@@ -229,6 +239,12 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
             df -= pair_freq[i] * d1;
             ddf -= pair_freq[i] * (sum_derv2[i]/sum_trans[i] - d1 * d1);
         }
+    delete [] sum_derv2;
+	delete [] sum_derv1;
+	delete [] sum_trans;
+	delete [] trans_derv2;
+	delete [] trans_derv1;
+	delete [] trans_mat;
     // negative log-likelihood (for minimization)
     return lh;
 }

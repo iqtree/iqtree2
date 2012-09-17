@@ -435,9 +435,9 @@ void printLPVersion(bool gurobi_format) {
 	if (gurobi_format)
 		cout << "Using GUROBI" << endl;
 	else {
-		int lp_majorversion, lp_minorversion, lp_release, lp_build;
-		lp_solve_version_info(&lp_majorversion, &lp_minorversion, &lp_release, &lp_build);
-		cout << "Using LP_SOLVE " << lp_majorversion << "." << lp_minorversion << "." << lp_release << "." << lp_build << endl;
+		//int lp_majorversion, lp_minorversion, lp_release, lp_build;
+		//lp_solve_version_info(&lp_majorversion, &lp_minorversion, &lp_release, &lp_build);
+		//cout << "Using LP_SOLVE " << lp_majorversion << "." << lp_minorversion << "." << lp_release << "." << lp_build << endl;
 	}
 }
 

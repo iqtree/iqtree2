@@ -44,7 +44,7 @@ extern "C" {
 */
 int lp_solve(char *filename, int ntaxa, double *score, double *variables, int verbose_mode);
 
-int lp_demo();
+/*int lp_demo();*/
 
 void lp_solve_version_info(int *majorversion, int *minorversion, int *release, int *build);
 

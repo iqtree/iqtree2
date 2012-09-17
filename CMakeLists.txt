@@ -3,14 +3,20 @@ cmake_minimum_required(VERSION 2.6)
 set(BUILD_SHARED_LIBS OFF)
 
 ######## NOTE: run cmake with option "-DIQ_STATIC to build static library 
-IF(IQ_STATIC)
+IF(BUILD_STATIC)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
 	IF(WIN32)
     		SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 	ELSE(WIN32)
     		SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 	ENDIF(WIN32)
-ENDIF(IQ_STATIC)
+ENDIF(BUILD_STATIC)
+
+if (BUILD32) 
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+endif (BUILD32) 
+
 
 project(iqtree)
 # The version number.
@@ -33,8 +39,8 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 
 add_definitions(-DIQ_TREE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused -pedantic")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused -pedantic")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused -static-libstdc++")
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused -static-libgcc")
 
@@ -51,7 +57,6 @@ endif()
 add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(modeltest)
-add_subdirectory(lp)
 
 add_executable(iqtree
 alignment.cpp
@@ -119,9 +124,9 @@ lpwrapper.c
 modeltest_wrapper.c)
 
 if (WIN32)
-target_link_libraries(iqtree ncl whtest modeltest lp z)
+target_link_libraries(iqtree ncl whtest modeltest z)
 else (WIN32)
-target_link_libraries(iqtree ncl whtest modeltest lp z dl)
+target_link_libraries(iqtree ncl whtest modeltest z dl)
 endif (WIN32)
 
 ##############################################################

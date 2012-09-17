@@ -1359,9 +1359,9 @@ void Alignment::computeStateFreq (double *stateFrqArr) {
     int stateNo_;
     int nState_ = num_states;
     int nseqs = getNSeq();
-    double timeAppArr_[num_states];
-    double siteAppArr_[num_states]; //App = appearance
-    double newSiteAppArr_[num_states];
+    double *timeAppArr_ = new double[num_states];
+    double *siteAppArr_ = new double[num_states]; //App = appearance
+    double *newSiteAppArr_ = new double[num_states];
 
     for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
         stateFrqArr [ stateNo_ ] = 1.0 / nState_;
@@ -1415,7 +1415,10 @@ void Alignment::computeStateFreq (double *stateFrqArr) {
             cout << stateFrqArr[stateNo_] << " ";
         cout << endl;
     }
-
+	delete [] newSiteAppArr_;
+	delete [] siteAppArr_;
+	delete [] timeAppArr_;
+	
 }
 
 void Alignment::getAppearance(char state, double *state_app) {
@@ -1483,7 +1486,7 @@ void Alignment::computeEmpiricalRate (double *rates) {
 }
 
 void Alignment::computeEmpiricalRateNonRev (double *rates) {
-    double rates_mat[num_states*num_states];
+    double *rates_mat = new double[num_states*num_states];
     int i, j, k;
 
     computeEmpiricalRate(rates);
@@ -1495,6 +1498,7 @@ void Alignment::computeEmpiricalRateNonRev (double *rates) {
     for (i = 0, k = 0; i < num_states; i++)
         for (j = 0; j < num_states; j++)
             if (j != i) rates[k++] = rates_mat[i*num_states+j];
+	delete [] rates_mat;
 
 }
 

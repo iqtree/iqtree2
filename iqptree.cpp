@@ -1837,6 +1837,7 @@ void IQPTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 
 void IQPTree::summarizeBootstrap(Params &params)
 {
+	cout << "Summarizing from " << treels.size() << " candidate trees..." << endl;
 	MTreeSet trees;
 	IntVector tree_weights;
 	tree_weights.resize(treels_logl.size(), 0);
