@@ -320,18 +320,25 @@ public:
 	void generateCircular(Params &params);
 
 	/**
-		save split systems to a file
+		save split systems to a file in NEXUS format
 		@param out output stream
 		@param omit_trivial TRUE to omit trivial splits, FALSE otherwise
 	*/
-	void saveFile(ostream &out, bool omit_trivial = false);
+	void saveFileNexus(ostream &out, bool omit_trivial = false);
+
+	/**
+		save split systems to a file in star-dot format (eg **...*)
+		@param out output stream
+		@param omit_trivial TRUE to omit trivial splits, FALSE otherwise
+	*/
+	void saveFileStarDot(ostream &out, bool omit_trivial = false);
 
 	/**
 		save split systems to a file
 		@param out output file name
 		@param omit_trivial TRUE to omit trivial splits, FALSE otherwise
 	*/
-	void saveFile(const char* out_file, bool omit_trivial = false);
+	void saveFile(const char* out_file, InputType file_format, bool omit_trivial = false);
 
 	/**
 		calculate the distance matrix, print to file in phylip format

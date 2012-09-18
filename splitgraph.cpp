@@ -77,7 +77,7 @@ void SplitGraph::init(Params &params)
 		mtrees->convertSplits(*this, params.split_threshold, SW_SUM, params.split_weight_threshold);
 
 		if (verbose_mode >= VB_DEBUG)
-			saveFile(cout);
+			saveFileStarDot(cout);
 	} else {
 		createBlocks();
 		if (params.is_rooted) 
@@ -486,11 +486,11 @@ void SplitGraph::generateCircular(Params &params) {
 		outError(ERR_WRITE_OUTPUT, params.user_file);
 	}
 
-	saveFile(out);
+	saveFileNexus(out);
 	out.close();
 } 
 
-void SplitGraph::saveFile(ostream &out, bool omit_trivial) {
+void SplitGraph::saveFileNexus(ostream &out, bool omit_trivial) {
 	int ntaxa = getNTaxa();
 	int i;
 	out << "#nexus" << endl << endl;
@@ -529,12 +529,32 @@ void SplitGraph::saveFile(ostream &out, bool omit_trivial) {
 	}
 }
 
-void SplitGraph::saveFile(const char* out_file, bool omit_trivial) {
+void SplitGraph::saveFileStarDot(ostream &out, bool omit_trivial) {
+	int ntaxa = getNTaxa();
+	int i;
+	for (iterator it = begin(); it != end(); it++) {
+		if (omit_trivial && (*it)->trivial() >= 0) continue;
+		bool swap_code = !(*it)->containTaxon(0);
+		if (swap_code) {
+			for (i = 0; i < ntaxa; i++)
+				out << (((*it)->containTaxon(i)) ? '.' : '*');
+		} else {
+			for (i = 0; i < ntaxa; i++)
+				out << (((*it)->containTaxon(i)) ? '*' : '.');
+		}
+		out << "\t" << (*it)->weight << endl;
+	}
+}
+
+void SplitGraph::saveFile(const char* out_file, InputType file_format, bool omit_trivial) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(out_file);
-        saveFile(out, omit_trivial);
+        if (file_format == IN_NEXUS) 
+			saveFileNexus(out, omit_trivial);
+		else
+			saveFileStarDot(out, omit_trivial);
         out.close();
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, out_file);

@@ -1607,7 +1607,7 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count, do
     SplitGraph maxsg;
     sg.findMaxCompatibleSplits(maxsg);
     
-    if (verbose_mode >= VB_MED) maxsg.saveFile(cout);
+    if (verbose_mode >= VB_MED) maxsg.saveFileStarDot(cout);
     cout << "convert compatible split system into tree..." << endl;
     mytree.convertToTree(maxsg);
     //cout << "done" << endl;
@@ -1661,7 +1661,7 @@ void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
     }
 
 
-    sg.saveFile(out_file.c_str());
+    sg.saveFile(out_file.c_str(), IN_NEXUS);
     cout << "Consensus network printed to " << out_file << endl;
 
 }

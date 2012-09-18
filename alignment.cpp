@@ -399,6 +399,8 @@ void buildStateMap(char *map, SeqType seq_type) {
         for (int i = 0; i <= STATE_UNKNOWN; i++)
             map[i] = i;
         return;
+	case SEQ_CODON:
+		return;
     default:
         return;
     }
@@ -619,6 +621,12 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         } else if (strcmp(sequence_type, "MULTI") == 0) {
             cout << "Multi-state data with " << num_states << " alphabets" << endl;
             user_seq_type = SEQ_MULTISTATE;
+        } else if (strcmp(sequence_type, "CODON") == 0) {
+            num_states = 61;
+            user_seq_type = SEQ_CODON;
+            if (seq_type != SEQ_DNA) 
+				outWarning("You want to use codon models but the sequences were not detected as DNA");
+			seq_type = user_seq_type;
         } else
             throw "Invalid sequence type.";
         if (user_seq_type != seq_type && seq_type != SEQ_UNKNOWN)

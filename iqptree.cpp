@@ -1788,8 +1788,16 @@ void IQPTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 			cout << "WARNING: bootstrap analysis did not converge, rerun with higher number of iterations" << endl;
 
 	}
+
+    sg.scaleWeight(1.0 / trees.sumTreeWeights(), false, 4);
+    string out_file;
+    out_file = params.out_prefix;
+    out_file += ".splits";
+	sg.saveFile(out_file.c_str(), IN_OTHER, true);
+    cout << "Split supports printed to star-dot file " << out_file << endl;
+
 	// compute the percentage of appearance
-    sg.scaleWeight(100.0 / trees.sumTreeWeights(), true);
+    sg.scaleWeight(100.0, true);
     //	printSplitSet(sg, hash_ss);
     //sg.report(cout);
     cout << "Creating bootstrap support values..." << endl;
@@ -1812,8 +1820,6 @@ void IQPTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     initializeAllPartialLh();
     clearAllPartialLH();
 
-    string out_file;
-
     if (!save_all_trees) {
         out_file = params.out_prefix;
         out_file += ".suptree";
@@ -1823,9 +1829,8 @@ void IQPTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     }
 
     out_file = params.out_prefix;
-    out_file += ".splits";
-
-    sg.saveFile(out_file.c_str(), true);
+    out_file += ".splits.nex";
+	sg.saveFile(out_file.c_str(), IN_NEXUS, true);
     cout << "Split supports printed to NEXUS file " << out_file << endl;
 
     out_file = params.out_prefix;
