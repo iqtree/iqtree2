@@ -1305,7 +1305,7 @@ void runPhyloAnalysis(Params &params) {
 
 			cout << endl << "Computing consensus tree..." << endl;
 			string splitsfile = params.out_prefix;
-			splitsfile += ".splits";
+			splitsfile += ".splits.nex";
 			//cout << splitsfile << endl;
 			computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
 					params.split_threshold, NULL, params.out_prefix, NULL, &params);

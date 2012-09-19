@@ -586,7 +586,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	//params.freq_type = FREQ_UNKNOWN;
 	params.num_rate_cats = 4;
 	params.gamma_shape = -1.0;
-	params.gamma_median = true;
+	params.gamma_median = false;
 	params.p_invar_sites = -1.0;
 	params.optimize_by_newton = true;
 	params.fixed_branch_length = false;
@@ -1181,6 +1181,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (params.gamma_shape < 0) throw "Wrong number of gamma shape parameter (alpha)";
 			} else if (strcmp(argv[cnt],"-gmean") == 0) {
 				params.gamma_median = false;
+			} else if (strcmp(argv[cnt],"-gmedian") == 0) {
+				params.gamma_median = true;
 			} else if (strcmp(argv[cnt],"-i") == 0) {
 				cnt++;
 				if (cnt >= argc)

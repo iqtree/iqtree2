@@ -43,6 +43,7 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 	name = "+G";
 	name += convertIntToString(ncategory);
 	full_name = "Gamma";
+	full_name += " with " + convertIntToString(ncategory) + " categories";
 	computeRates();
 }
 
@@ -132,8 +133,8 @@ double RateGamma::optimizeParameters() {
 }
 
 void RateGamma::writeInfo(ostream &out) {
-	out << "Gamma shape parameter: " << gamma_shape << endl;
-	out << "Number of categories: " << ncategory << endl;
+	out << "Gamma shape: " << gamma_shape << " (" << (cut_median ? "median" : "mean") << " rate per category)" << endl;
+	//out << "Number of categories: " << ncategory << endl;
 }
 
 void RateGamma::writeParameters(ostream &out) {
