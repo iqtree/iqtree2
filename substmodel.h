@@ -87,15 +87,15 @@ public:
 	virtual double computeTrans(double time, int state1, int state2);
 
 	/**
-		compute the transition probability between two states at a specific site 
+		compute the transition probability between two states at a specific model ID, useful for partition model 
 		One should override this function when defining new model.
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)
 		@param time time between two events
-		@param site site ID
+		@param model_id model ID
 		@param state1 first state
 		@param state2 second state
 	*/
-	virtual double computeTrans(double time, int site, int state1, int state2);
+	virtual double computeTrans(double time, int model_id, int state1, int state2);
 
 	/**
 		compute the transition probability and its 1st and 2nd derivatives between two states. 
@@ -109,20 +109,26 @@ public:
 	*/
 	virtual double computeTrans(double time, int state1, int state2, double &derv1, double &derv2);
 
-
 	/**
-		compute the transition probability and its 1st and 2nd derivatives between two states at a specific site
+		compute the transition probability and its 1st and 2nd derivatives between two states at a specific model ID
 		One should override this function when defining new model.
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)
 		@param time time between two events
-		@param site site ID
+		@param model_id model ID
 		@param state1 first state
 		@param state2 second state
 		@param derv1 (OUT) 1st derivative
 		@param derv2 (OUT) 2nd derivative
 	*/
-	virtual double computeTrans(double time, int site, int state1, int state2, double &derv1, double &derv2);
+	virtual double computeTrans(double time, int model_id, int state1, int state2, double &derv1, double &derv2);
+
+	/**
+	 * @return pattern ID to model ID map, useful for e.g., partition model
+	 * @param ptn pattern ID of the alignment
+	 */
+	virtual int getPtnModelID(int ptn) { return 0; }
 	
+
 	/**
 		Get the rate matrix. One should override this function when defining new model.
 		The default is equal rate of 1 (JC Model), valid for all kind of data.

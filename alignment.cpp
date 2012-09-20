@@ -328,6 +328,25 @@ void Alignment::ungroupSitePattern()
 	pattern_index.clear();
 }
 
+void Alignment::regroupSitePattern(int groups, IntVector& site_group)
+{
+	vector<Pattern> stored_pat = (*this);
+	IntVector stored_site_pattern = site_pattern;
+	clear();
+	int count = 0;
+	for (int g = 0; g < groups; g++) {
+		pattern_index.clear();
+		for (int i = 0; i < site_group.size(); i++) 
+		if (site_group[i] == g) {
+			count++;
+			Pattern pat = stored_pat[stored_site_pattern[i]];
+			addPattern(pat, i);
+		}
+	}
+	assert(count == stored_site_pattern.size());
+	pattern_index.clear();
+}
+
 
 /**
 	detect the data type of the input sequences

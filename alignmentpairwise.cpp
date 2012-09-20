@@ -102,6 +102,7 @@ double AlignmentPairwise::computeFunction(double value) {
 
     RateHeterogeneity *site_rate = tree->getRate();
     int ncat = site_rate->getNDiscreteRate();
+    SubstModel *model = tree->getModel();
     int trans_size = tree->getModel()->getTransMatrixSize();
     int cat, i;
     int nptn = tree->aln->getNPattern();
@@ -125,7 +126,7 @@ double AlignmentPairwise::computeFunction(double value) {
             int state1 = tree->aln->at(i)[seq_id1];
             int state2 = tree->aln->at(i)[seq_id2];
             if (state1 >= num_states || state2 >= num_states) continue;
-            double trans = tree->getModel()->computeTrans(value, i, state1, state2);
+            double trans = tree->getModel()->computeTrans(value, model->getPtnModelID(i), state1, state2);
             lh -= log(trans) * tree->aln->at(i).frequency;
 
         }
@@ -172,6 +173,7 @@ double AlignmentPairwise::computeFunction(double value) {
 double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
     RateHeterogeneity *site_rate = tree->getRate();
     int ncat = site_rate->getNDiscreteRate();
+    SubstModel *model = tree->getModel();
     int trans_size = tree->getModel()->getTransMatrixSize();
     int cat, i;
     int nptn = tree->aln->getNPattern();
@@ -206,7 +208,7 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
             double rate_val = site_rate->getPtnRate(i);
             double rate_sqr = rate_val * rate_val;
             double derv1, derv2;
-            double trans = tree->getModel()->computeTrans(value * rate_val, i, state1, state2, derv1, derv2);
+            double trans = tree->getModel()->computeTrans(value * rate_val,model->getPtnModelID(i), state1, state2, derv1, derv2);
             lh -= log(trans) * tree->aln->at(i).frequency;
             double d1 = derv1 / trans;
             df -= rate_val * d1 * tree->aln->at(i).frequency;

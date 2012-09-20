@@ -168,11 +168,19 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		if (model_str == "JC" || model_str == "Possion") 
 			outError("JC is not suitable for site-specific model");
 		model = new ModelSet(tree);
-		((ModelSet*)model)->init(params.freq_type);
-		
+		ModelSet *models = (ModelSet*)model; // assign pointer for convenience
+		models->init(params.freq_type);
+		IntVector site_model;
+		vector<double*> freq_vec;
+		readSiteFreq(tree->aln, params.site_freq_file, site_model, freq_vec);
+		tree->aln->regroupSitePattern(freq_vec.size(), site_model);
+		int i;
+		models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
+		for (i = 0; i < tree->aln->getNSite(); i++)
+			models->pattern_model_map[tree->aln->getPatternID(i)] = site_model[i];
 		double state_freq[model->num_states];
 		double rates[model->getNumRateEntries()];
-		for (int i = 0; i < tree->getAlnNSite(); i++) {
+		for (i = 0; i < freq_vec.size(); i++) {
 			GTRModel *modeli;
 			if (i == 0) {
 				modeli = (GTRModel*)createModel(model_str, params.freq_type, tree, true);
@@ -183,17 +191,73 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				modeli->setStateFrequency(state_freq);
 				modeli->setRateMatrix(rates);
 			}
-			if (((IngoTree*)tree)->getSiteFreq(i)[0] != 0.0)
-				modeli->setStateFrequency ( ((IngoTree*)tree)->getSiteFreq(i) );
+			if (freq_vec[i])
+				modeli->setStateFrequency (freq_vec[i]);
 
 			modeli->init(FREQ_USER_DEFINED);
 			((ModelSet*)model)->push_back(modeli);
 		}
+		cout << "Alignment is divided into " << models->size() << " partitions" << endl;
 	} 
 	tree->discardSaturatedSite(params.discard_saturated_site);
 
 }
 
+void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
+{
+	cout << "Reading site-specific state frequency file " << site_freq_file << " ..." << endl;
+	site_model.resize(aln->getNSite(), -1);
+	try {
+		ifstream in;
+		in.exceptions(ios::failbit | ios::badbit);
+		in.open(site_freq_file);
+		double freq;
+		string site_spec;
+		int specified_sites = 0;
+		in.exceptions(ios::badbit);
+		for (int model_id = 0; !in.eof(); model_id++) {
+			// remove the failbit
+			in >> site_spec;
+			if (in.eof()) break;
+			IntVector site_id;
+			extractSiteID(aln, site_spec.c_str(), site_id);
+			specified_sites += site_id.size();
+			if (site_id.size() == 0) throw "No site ID specified";
+			for (IntVector::iterator it = site_id.begin(); it != site_id.end(); it++) {
+				if (site_model[*it] != -1) throw "Duplicated site ID";
+				site_model[*it] = model_id;
+			}
+			double *site_freq_entry = new double[aln->num_states];
+			double sum = 0;
+			for (int i = 0; i < aln->num_states; i++) {
+				in >> freq;
+				if (freq <= 0.0 || freq >= 1.0) throw "Invalid frequency entry";
+				site_freq_entry[i] = freq;
+				sum += freq;
+			}
+			if (fabs(sum-1.0) > 1e-4) throw "Frequencies do not sum up to 1";
+			freq_vec.push_back(site_freq_entry);
+		}
+		if (specified_sites < site_model.size()) {
+			// there are some unspecified sites
+			cout << site_model.size() - specified_sites << " unspecified sites will get default frequencies" << endl;
+			for (int i = 0; i < site_model.size(); i++)
+				if (site_model[i] == -1) 
+					site_model[i] = freq_vec.size();
+			freq_vec.push_back(NULL);
+		}
+		in.clear();
+		// set the failbit again
+		in.exceptions(ios::failbit | ios::badbit);
+		in.close();
+	} catch (const char* str) {
+		outError(str);
+	} catch (string str) {
+		outError(str);
+	} catch(ios::failure) {
+		outError(ERR_READ_INPUT);
+	}
+}
 
 double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 	assert(model);

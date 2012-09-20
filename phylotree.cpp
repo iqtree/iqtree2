@@ -1018,7 +1018,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
             if (dad_state < nstates) { // single state
                 // external node
                 double *trans_state = trans_mat + ((not_ptn_cat ? cat : ptn_cat) * trans_size + dad_offset);
-				if (model->isSiteSpecificModel()) trans_state += (nstates * nstates * ptn);
+				if (model->isSiteSpecificModel()) trans_state += (nstates * nstates * model->getPtnModelID(ptn));
                 for (state2 = 0; state2 < nstates; state2++)
                     lh_cat += partial_lh_child[state2] * trans_state[state2];
             } else {
@@ -1026,7 +1026,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
                 for (state1 = 0; state1 < nstates; state1++) {
                     double lh_state = 0.0; // likelihood of state1
                     double *trans_state = trans_mat + ((not_ptn_cat ? cat : ptn_cat) * trans_size + state1 * nstates);
-					if (model->isSiteSpecificModel()) trans_state += (nstates * nstates * ptn);
+					if (model->isSiteSpecificModel()) trans_state += (nstates * nstates * model->getPtnModelID(ptn));
                     for (state2 = 0; state2 < nstates; state2++)
                         lh_state += partial_lh_child[state2] * trans_state[state2];
                     lh_cat += lh_state * partial_lh_site[state1];
@@ -1168,7 +1168,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                         for (int state = 0; state < nstates; state++) {
                             double lh_child = 0.0;
                             double *trans_state = trans_mat + ((not_ptn_cat ? cat : ptn_cat) * trans_size + state * nstates);
-                            if (model->isSiteSpecificModel()) trans_state += (nstates * nstates * ptn);
+                            if (model->isSiteSpecificModel()) trans_state += (nstates * nstates * model->getPtnModelID(ptn));
                             for (int state2 = 0; state2 < nstates; state2++)
                                 lh_child += trans_state[state2] * partial_lh_child[state2];
 
@@ -1305,7 +1305,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
             if (dad_state < nstates) {
                 // external node
                 int cat2 = (not_ptn_cat ? cat : ptn_cat) * trans_size + dad_offset;
-				if (model->isSiteSpecificModel()) cat2 += (nstates * nstates * ptn);
+				if (model->isSiteSpecificModel()) cat2 += (nstates * nstates * model->getPtnModelID(ptn));
                 double *trans_state = trans_mat + cat2;
                 double *derv1_state = trans_derv1 + cat2;
                 double *derv2_state = trans_derv2 + cat2;
@@ -1321,7 +1321,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
                     double lh_state_derv1 = 0.0;
                     double lh_state_derv2 = 0.0;
                     int cat2 = (not_ptn_cat ? cat : ptn_cat) * trans_size + state1 * nstates;
-					if (model->isSiteSpecificModel()) cat2 += (nstates * nstates * ptn);
+					if (model->isSiteSpecificModel()) cat2 += (nstates * nstates * model->getPtnModelID(ptn));
                     double *trans_state = trans_mat + cat2;
                     double *derv1_state = trans_derv1 + cat2;
                     double *derv2_state = trans_derv2 + cat2;

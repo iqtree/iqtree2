@@ -61,12 +61,19 @@ void ModelSet::computeTransDervFreq(double time, double rate_val, double* trans_
 	}
 }
 
-double ModelSet::computeTrans(double time, int site, int state1, int state2) {
-	return at(site)->computeTrans(time, state1, state2);
+int ModelSet::getPtnModelID(int ptn)
+{
+	assert(ptn >= 0 && ptn < pattern_model_map.size());
+    return pattern_model_map[ptn];
 }
 
-double ModelSet::computeTrans(double time, int site, int state1, int state2, double &derv1, double &derv2) {
-	return at(site)->computeTrans(time, state1, state2, derv1, derv2);
+
+double ModelSet::computeTrans(double time, int model_id, int state1, int state2) {
+	return at(model_id)->computeTrans(time, state1, state2);
+}
+
+double ModelSet::computeTrans(double time, int model_id, int state1, int state2, double &derv1, double &derv2) {
+	return at(model_id)->computeTrans(time, state1, state2, derv1, derv2);
 	
 }
 
@@ -79,9 +86,12 @@ int ModelSet::getNDim()
 void ModelSet::writeInfo(ostream& out)
 {
 	assert(size());
-	if (verbose_mode >= VB_MAX) {
-		for (iterator it = begin(); it != end(); it++)
+	if (verbose_mode >= VB_MED) {
+		int i = 1;
+		for (iterator it = begin(); it != end(); it++, i++) {
+			out << "Partition " << i << ":" << endl;
 			(*it)->writeInfo(out);
+		}
 	} else {
 		front()->writeInfo(out);
 	}

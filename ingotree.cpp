@@ -22,17 +22,17 @@
 IngoTree::IngoTree(Alignment *alignment, char *site_freq_file): IQPTree(alignment)
 {
 	assert(site_freq_file);
-	readSiteFreq(site_freq_file);
-	cout << "Ungroup site-patterns..." << endl;
-	aln->ungroupSitePattern();
+	//readSiteFreq(site_freq_file);
+	//cout << "Ungroup site-patterns..." << endl;
+	//aln->ungroupSitePattern();
 }
 
 IngoTree::~IngoTree()
 {
-	if (site_freq) delete [] site_freq;
+	//if (site_freq) delete [] site_freq;
 }
 
-void IngoTree::readSiteFreq(char* site_freq_file)
+/*void IngoTree::readSiteFreq(char* site_freq_file)
 {
 	cout << "Reading site-specific state frequency file " << site_freq_file << " ..." << endl;
 	site_freq = new double[getAlnNSite() * aln->num_states];
@@ -83,3 +83,4 @@ double* IngoTree::getSiteFreq(int site)
 {
 	return site_freq + (site * aln->num_states);
 }
+*/

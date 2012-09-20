@@ -37,19 +37,19 @@ public:
 	/** read in site-specific state frequency
 	 *  @param site_freq_file input file name
 	 */
-	void readSiteFreq(char *site_freq_file);
+	//void readSiteFreq(char *site_freq_file);
 	
 
 	/**
 	 * @param site site ID
 	 * @return site state frequency vector for a site
 	 */
-	double *getSiteFreq(int site);
+	//double *getSiteFreq(int site);
 	
     ~IngoTree();
 	
 protected:
-	double *site_freq;
+	//double *site_freq;
 	
 };
 

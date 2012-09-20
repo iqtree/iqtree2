@@ -134,7 +134,15 @@ public:
 	 * un-group site-patterns, i.e., making #sites = #patterns and pattern frequency = 1 for all patterns
 	 */
 	void ungroupSitePattern();
+
 	
+	/**
+	 * re-group site-patterns
+	 * @param groups number of groups
+	 * @param site_group group ID (0, 1, ...ngroups-1; must be continuous) of all sites
+	 */
+	void regroupSitePattern(int groups, IntVector &site_group);
+
 
 /****************************************************************************
 	output alignment 
