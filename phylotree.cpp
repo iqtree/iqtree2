@@ -980,7 +980,8 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
     int block = ncat * nstates;
     int trans_size = model->getTransMatrixSize();
     int ptn, cat, state1, state2;
-    int discrete_cat = site_rate->getNDiscreteRate();
+	int nptn = aln->size();
+	int discrete_cat = site_rate->getNDiscreteRate();
     double trans_mat[discrete_cat * trans_size];
     double state_freq[nstates];
     model->getStateFrequency(state_freq);
@@ -995,7 +996,11 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
 
     bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
 
-    for (ptn = 0; ptn < aln->size(); ptn++) {
+
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: tree_lh) private(ptn, cat, state1, state2)
+#endif
+    for (ptn = 0; ptn < nptn; ptn++) {
         double lh_ptn = 0.0; // likelihood of the pattern
         double rate_ptn = 0.0;
         int dad_state = 1000; // just something big enough
@@ -1140,6 +1145,10 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
 
             bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
 
+			double sum_scale = 0.0;
+#ifdef _OPENMP
+			#pragma omp parallel for reduction(+: sum_scale) private(ptn, cat, partial_lh_site)
+#endif
             for (ptn = 0; ptn < nptn; ptn++)
                 if (((PhyloNeighbor*) (*it))->scale_num[ptn] >= 0) {
                     // avoid the case that all child partial likelihoods equal 1.0
@@ -1187,12 +1196,14 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                      */
                     for (cat = 0; cat < block; cat++)
                         partial_lh_site[cat] /= SCALING_THRESHOLD;
-                    dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
+                    sum_scale += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
                     dad_branch->scale_num[ptn] += 1;
                     if (pattern_scale)
                         pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
                 }
+            dad_branch->lh_scale_factor += sum_scale;
         }
+        
         //for (cat = ncat - 1; cat >= 0; cat--)
         //  delete [] trans_mat[cat];
     }
@@ -1228,6 +1239,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     int nstates = aln->num_states;
     int block = ncat * nstates;
     int trans_size = model->getTransMatrixSize();
+	int nptn = aln->size();
     int ptn, cat, state1, state2;
 
     int discrete_cat = site_rate->getNDiscreteRate();
@@ -1265,7 +1277,13 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     double derv1_frac;
     double derv2_frac;
 
-    for (ptn = 0; ptn < aln->size(); ptn++) {
+	double my_df = 0.0;
+	double my_ddf = 0.0;
+	
+#ifdef _OPENMP
+//#pragma omp parallel for reduction(+: tree_lh, my_df, my_ddf) private(ptn, cat, state1, state2, derv1_frac, derv2_frac)
+#endif
+     for (ptn = 0; ptn < nptn; ptn++) {
         int ptn_cat = site_rate->getPtnCat(ptn);
         if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getPtnRate(ptn) >= MAX_SITE_RATE)
             continue;
@@ -1361,18 +1379,20 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         double freq = (*aln)[ptn].frequency;
         double tmp1 = derv1_frac * freq;
         double tmp2 = derv2_frac * freq;
-        df += tmp1;
-        ddf += tmp2 - tmp1 * derv1_frac;
+        my_df += tmp1;
+        my_ddf += tmp2 - tmp1 * derv1_frac;
         lh_ptn = log(lh_ptn);
         tree_lh += lh_ptn * freq;
         _pattern_lh[ptn] = lh_ptn;
-		if (!isnormal(lh_ptn) || !isnormal(df) || !isnormal(ddf))
+		if (!isnormal(lh_ptn) || !isnormal(my_df) || !isnormal(my_ddf))
 			outError("Abnormal ", __func__);
 
     }
     //for (cat = ncat-1; cat >= 0; cat--)
     //delete trans_mat[cat];
     //delete state_freq;
+    df = my_df;
+    ddf = my_ddf;
     return tree_lh;
 }
 

@@ -649,8 +649,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.speedup_iter = 100;
 
 	params.avh_test = 0;
-
 	params.site_freq_file = NULL;
+#ifdef _OPENMP
+	params.num_threads = 0;
+#endif
 	
 	struct timeval tv;
 	struct timezone tz;
@@ -1431,6 +1433,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -avh <arndt_#bootstrap>";
 				params.avh_test = convert_int(argv[cnt]);
+#ifdef _OPENMP
+			} else if (strcmp(argv[cnt], "-omp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -omp <num_threads>";
+				params.num_threads = convert_int(argv[cnt]);
+				if (params.num_threads < 1)
+					throw "At least 1 thread please";
+#endif
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

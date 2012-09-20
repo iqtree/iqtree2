@@ -1106,6 +1106,11 @@ struct Params {
 	 * where site_ID is from 1 to m (m=number of sites)
 	 */
 	char *site_freq_file;
+	
+#ifdef _OPENMP
+	int num_threads;
+#endif
+	
 };
 
 /**

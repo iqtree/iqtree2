@@ -3,20 +3,24 @@ cmake_minimum_required(VERSION 2.6)
 set(BUILD_SHARED_LIBS OFF)
 
 ######## NOTE: run cmake with option "-DIQ_STATIC to build static library 
-IF(BUILD_STATIC)
+IF($ENV{STATIC})
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
 	IF(WIN32)
     		SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 	ELSE(WIN32)
     		SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 	ENDIF(WIN32)
-ENDIF(BUILD_STATIC)
+ENDIF($ENV{STATIC})
 
-if (BUILD32) 
+if ($ENV{B32}) 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-endif (BUILD32) 
+endif ($ENV{B32}) 
 
+if ($ENV{OMP}) 
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
+endif ($ENV{OMP}) 
 
 project(iqtree)
 # The version number.

@@ -51,6 +51,10 @@
 #include "maalignment.h" //added by MA
 #include "ncbitree.h"
 
+#ifdef _OPENMP
+	#include <omp.h>
+#endif
+
 using namespace std;
 
 
@@ -165,7 +169,11 @@ inline void separator(ostream &out, int type = 0) {
 
 void printCopyright(ostream &out) {
 #ifdef IQ_TREE
- 	out << "IQ-TREE beta version "; 
+ 	out << "IQ-TREE";
+	#ifdef _OPENMP
+	out << "-OpenMP";
+	#endif
+ 	out << " beta version "; 
 #else
  	out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
@@ -1759,8 +1767,14 @@ int main(int argc, char *argv[])
 	time(&cur_time);
 
 	char *date_str;
-	cout << "Time:    " << ctime(&cur_time) << endl;
+	cout << "Time:    " << ctime(&cur_time);
 
+#ifdef _OPENMP
+	if (params.num_threads) omp_set_num_threads(params.num_threads);
+	cout << "Threads: " << omp_get_max_threads() << endl;
+#endif
+	cout << endl;
+	
 	// call the main function
 	if (params.tree_gen != NONE) {
 		generateRandomTree(params);
