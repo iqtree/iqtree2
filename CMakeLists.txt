@@ -75,7 +75,6 @@ gurobiwrapper.cpp
 gzstream.cpp
 hashsplitset.cpp
 iqptree.cpp
-ingotree.cpp
 maalignment.cpp
 matree.cpp
 mexttree.cpp

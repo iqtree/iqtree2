@@ -333,6 +333,8 @@ void Alignment::regroupSitePattern(int groups, IntVector& site_group)
 	vector<Pattern> stored_pat = (*this);
 	IntVector stored_site_pattern = site_pattern;
 	clear();
+	site_pattern.clear();
+	site_pattern.resize(stored_site_pattern.size(), -1);
 	int count = 0;
 	for (int g = 0; g < groups; g++) {
 		pattern_index.clear();
@@ -344,7 +346,12 @@ void Alignment::regroupSitePattern(int groups, IntVector& site_group)
 		}
 	}
 	assert(count == stored_site_pattern.size());
+	count = 0;
+	for (iterator it = begin(); it != end(); it++)
+		count += it->frequency;
+	assert(count == getNSite());
 	pattern_index.clear();
+	//printPhylip("/dev/stdout");
 }
 
 

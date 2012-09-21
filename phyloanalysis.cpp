@@ -45,7 +45,6 @@
 #include "whtest_wrapper.h"
 #include "partitionmodel.h"
 #include "guidedbootstrap.h"
-#include "ingotree.h"
 #include "modelset.h"
 
 const int DNA_MODEL_NUM = 14;
@@ -1263,9 +1262,6 @@ void runPhyloAnalysis(Params &params) {
 	if (params.partition_file) {
 		tree = new PhyloSuperTree(params);
 		alignment = tree->aln;
-	} else if (params.site_freq_file) {
-		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
-		tree = new IngoTree(alignment, params.site_freq_file);
 	} else {
 		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
 		tree = new IQPTree(alignment);

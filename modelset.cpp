@@ -64,6 +64,7 @@ void ModelSet::computeTransDervFreq(double time, double rate_val, double* trans_
 int ModelSet::getPtnModelID(int ptn)
 {
 	assert(ptn >= 0 && ptn < pattern_model_map.size());
+	assert(pattern_model_map[ptn] >= 0 && pattern_model_map[ptn] < size());
     return pattern_model_map[ptn];
 }
 

@@ -30,7 +30,6 @@
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
 #include "ngs.h"
-#include "ingotree.h"
 
 ModelFactory::ModelFactory() { 
 	model = NULL; 
@@ -174,10 +173,14 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		vector<double*> freq_vec;
 		readSiteFreq(tree->aln, params.site_freq_file, site_model, freq_vec);
 		tree->aln->regroupSitePattern(freq_vec.size(), site_model);
+		//tree->aln->ungroupSitePattern();
+		tree->setAlignment(tree->aln);
 		int i;
 		models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
-		for (i = 0; i < tree->aln->getNSite(); i++)
+		for (i = 0; i < tree->aln->getNSite(); i++) {
 			models->pattern_model_map[tree->aln->getPatternID(i)] = site_model[i];
+			//cout << "site " << i << " ptn " << tree->aln->getPatternID(i) << " -> model " << site_model[i] << endl;
+		}
 		double state_freq[model->num_states];
 		double rates[model->getNumRateEntries()];
 		for (i = 0; i < freq_vec.size(); i++) {
@@ -195,9 +198,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				modeli->setStateFrequency (freq_vec[i]);
 
 			modeli->init(FREQ_USER_DEFINED);
-			((ModelSet*)model)->push_back(modeli);
+			models->push_back(modeli);
 		}
-		cout << "Alignment is divided into " << models->size() << " partitions" << endl;
+		cout << "Alignment is divided into " << models->size() << " partitions with " << tree->aln->getNPattern() << " patterns" << endl;
+		for (vector<double*>::reverse_iterator it = freq_vec.rbegin(); it != freq_vec.rend(); it++)
+			if (*it) delete [] (*it);
 	} 
 	tree->discardSaturatedSite(params.discard_saturated_site);
 
