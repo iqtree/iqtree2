@@ -61,6 +61,7 @@ endif()
 add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(modeltest)
+add_subdirectory(sprng)
 
 add_executable(iqtree
 alignment.cpp
@@ -127,9 +128,9 @@ lpwrapper.c
 modeltest_wrapper.c)
 
 if (WIN32)
-target_link_libraries(iqtree ncl whtest modeltest z)
+target_link_libraries(iqtree ncl whtest modeltest z sprng)
 else (WIN32)
-target_link_libraries(iqtree ncl whtest modeltest z dl)
+target_link_libraries(iqtree ncl whtest modeltest z sprng dl)
 endif (WIN32)
 
 ##############################################################

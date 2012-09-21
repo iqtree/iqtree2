@@ -38,6 +38,8 @@
 #include "ncl/ncl.h"
 #include "msetsblock.h"
 
+#define SPRNG
+#include "sprng/sprng.h"
 
 
 #define USE_HASH_MAP

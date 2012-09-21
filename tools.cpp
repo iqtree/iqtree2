@@ -1736,3 +1736,193 @@ inline T quantile(const vector<T>& v, const double q) {
 	vector<T> w(size);
 	std::copy(v, v.begin() + size, w.begin());
 }
+
+#ifndef SPRNG
+
+/******************************************************************************/
+/* random numbers generator  (Numerical recipes)                              */
+/******************************************************************************/
+
+/* variable */
+long _idum;
+
+/* definitions */
+#define IM1 2147483563
+#define IM2 2147483399
+#define AM (1.0/IM1)
+#define IMM1 (IM1-1)
+#define IA1 40014
+#define IA2 40692
+#define IQ1 53668
+#define IQ2 52774
+#define IR1 12211
+#define IR2 3791
+#define NTAB 32
+#define NDIV (1+IMM1/NTAB)
+#define EPS 1.2e-7
+#define RNMX (1.0-EPS)
+
+double randomunitintervall()
+/* Long period (> 2e18) random number generator. Returns a uniform random
+   deviate between 0.0 and 1.0 (exclusive of endpoint values).
+
+   Source:
+   Press et al., "Numerical recipes in C", Cambridge University Press, 1992
+   (chapter 7 "Random numbers", ran2 random number generator) */
+{
+	int j;
+	long k;
+	static long _idum2=123456789;
+	static long iy=0;
+	static long iv[NTAB];
+	double temp;
+
+	if (_idum <= 0) {
+		if (-(_idum) < 1)
+			_idum=1;
+		else
+			_idum=-(_idum);
+		_idum2=(_idum);
+		for (j=NTAB+7;j>=0;j--) {
+			k=(_idum)/IQ1;
+			_idum=IA1*(_idum-k*IQ1)-k*IR1;
+			if (_idum < 0)
+				_idum += IM1;
+			if (j < NTAB)
+				iv[j] = _idum;
+		}
+		iy=iv[0];
+	}
+	k=(_idum)/IQ1;
+	_idum=IA1*(_idum-k*IQ1)-k*IR1;
+	if (_idum < 0)
+		_idum += IM1;
+	k=_idum2/IQ2;
+	_idum2=IA2*(_idum2-k*IQ2)-k*IR2;
+	if (_idum2 < 0)
+		_idum2 += IM2;
+	j=iy/NDIV;
+	iy=iv[j]-_idum2;
+	iv[j] = _idum;
+	if (iy < 1)
+		iy += IMM1;
+	if ((temp=AM*iy) > RNMX)
+		return RNMX;
+	else
+		return temp;
+} /* randomunitintervall */
+
+#undef IM1
+#undef IM2
+#undef AM
+#undef IMM1
+#undef IA1
+#undef IA2
+#undef IQ1
+#undef IQ2
+#undef IR1
+#undef IR2
+#undef NTAB
+#undef NDIV
+#undef EPS
+#undef RNMX
+
+
+int initrandom(int seed)   /* RAND4 */
+{
+   srand((unsigned) time(NULL));
+   if (seed < 0) 
+	seed = rand();
+   _idum=-(long) seed;
+#  ifndef PARALLEL
+	   cout << "Using RAND4 Random Number Generator" << endl;
+#	   ifdef RANDVERBOSE1
+	      cout << "!!! random seed set to " << seed << "!!!" << endl;
+#	   endif  /* RANDVERBOSE1 */
+#  else /* PARALLEL */
+	   {
+	   int n;
+	   if (PP_IamMaster) {
+	     cout << "Using RAND4 Random Number Generator with leapfrog method" << endl;
+	   }
+	   for (n=0; n<PP_Myid; n++)
+		(void) randomunitintervall();
+#	   ifdef RANDVERBOSE1
+	      cout << "(" << PP_Myid << ") !!! random seed set to " << seed << ", " << n << " drawn !!!" << endl;
+#	   endif  /* RANDVERBOSE1 */
+	   }
+#  endif
+   return (seed);
+}  /* initrandom */ 
+
+/******************/
+
+#else /* USE_SPRNG */
+
+/******************/
+
+int *randstream;
+
+int initrandom(int seed)
+{
+   srand((unsigned) time(NULL));
+   if (seed < 0) 
+	seed = make_sprng_seed();
+#  ifndef PARALLEL
+	   cout << "Using SPRNG -- Scalable Parallel Random Number Generator" << endl;
+	   randstream = init_sprng(0,1,seed,SPRNG_DEFAULT); /*init stream*/
+
+#	   ifdef RANDVERBOSE1
+	      cout << "!!! random seed set to " << seed << " !!!" << endl;
+	      cout << " Printing information about new stream" << endl;
+	      print_sprng(randstream);
+#	   endif /* RANDVERBOSE 1 */
+#  else /* PARALLEL */
+	   if (PP_IamMaster) {
+	     cout << "Using SPRNG -- Scalable Parallel Random Number Generator" << endl;
+	   }
+	   /* MPI_Bcast(&seed, 1, MPI_UNSIGNED, PP_MyMaster, MPI_COMM_WORLD); */
+	   randstream = init_sprng(PP_Myid,PP_NumProcs,seed,SPRNG_DEFAULT); /*initialize stream*/
+#	   ifdef RANDVERBOSE1
+	      cout << "(" << PP_Myid << ") !!! random seed set to " << seed << " !!!" << endl;
+	      cout << " Printing information about new stream" << endl;
+	      print_sprng(randstream);
+#	   endif  /* RANDVERBOSE1 */
+#  endif /* PARALLEL */
+   return (seed);
+}  /* initrandom */ 
+
+
+#endif /* USE_SPRNG */
+
+/******************/
+
+
+/* returns a random integer in the range [0; n - 1] */
+int randominteger(int n)
+{
+#  ifndef FIXEDINTRAND
+#	ifndef PARALLEL
+#	   ifdef SPRNG
+		return (int) floor(sprng(randstream)*n);
+#	   else /* NO_SPRNG */
+		int t;
+		t = (int) floor(randomunitintervall()*n);
+		return t;
+#	   endif /* NO_SPRNG */
+#	else /* NOT PARALLEL */
+#	   ifdef SPRNG
+		return (int) floor(sprng(randstream)*n);
+#	   else /* NO_SPRNG */
+		int m;
+		for (m=1; m<PP_NumProcs; m++)
+			(void) randomunitintervall();
+		PP_randn+=(m-1); PP_rand++;
+		return (int) floor(randomunitintervall()*n);
+#	   endif /* NO_SPRNG */
+#	endif /* NOT PARALLEL */
+#  else /* FIXEDINTRAND */
+	fprintf(stderr, "!!! fixed \"random\" integers for testing purposes !!!\n");
+	return (int)0;
+#  endif /* FIXEDINTRAND */
+} /* randominteger */
