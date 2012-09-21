@@ -23,7 +23,7 @@
 */
 
 #include "ngs.h"
-#include "modeltest_wrapper.h"
+//#include "modeltest_wrapper.h"
 
 /****************************************************************************
         NGSAlignment

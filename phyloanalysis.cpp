@@ -35,7 +35,7 @@
 #include "rategamma.h"
 #include "rateinvar.h"
 #include "rategammainvar.h"
-#include "modeltest_wrapper.h"
+//#include "modeltest_wrapper.h"
 #include "modelprotein.h"
 #include "stoprule.h"
 
@@ -59,242 +59,213 @@ string aa_model_names[AA_MODEL_NUM] ={"Dayhoff", "mtMAM", "JTT", "WAG", "cpREV",
     "mtART", "mtZOA", "VT", "LG"};
 
 /**
+ * check if the model file contains correct information
+ * @param model_file model file names
+ * @param model_name (OUT) vector of model names
+ * @param lh_scores (OUT) vector of tree log-likelihoods
+ * @param df_vec (OUT) vector of degrees of freedom (or K)
+ * @return TRUE if success, FALSE failed.
+ */
+bool checkModelFile(string model_file, StrVector &model_names, DoubleVector &lh_scores, IntVector &df_vec) {
+	if (!fileExists(model_file)) return false;
+    cout << model_file << " exists, checking this file" << endl;
+	ifstream in;
+	try {
+		in.exceptions(ios::failbit | ios::badbit);
+		in.open(model_file.c_str());
+		in.exceptions(ios::badbit);
+		string str;
+		in >> str;
+		if (str != "Model") throw false;
+		in >> str;
+		if (str != "df") throw false;
+		in >> str;
+		if (str != "LnL") throw false;
+		while (!in.eof()) {
+			in >> str;
+			if (in.eof()) break;
+			model_names.push_back(str);
+			int df;
+			double logl;
+			in >> df >> logl;
+			df_vec.push_back(df);
+			lh_scores.push_back(logl);
+			//cout << str << " " << df << " " << logl << endl;
+		}
+		in.clear();
+		// set the failbit again
+		in.exceptions(ios::failbit | ios::badbit);
+		in.close();
+	} catch (bool ret) {
+		in.close();
+		return ret;
+	} catch (ios::failure) {
+		outError("Cannot read file ", model_file);
+	}
+	return true;
+}
+	
+/**
         testing the best-fit model
         return in params.freq_type and params.rate_type
  */
 string modelTest(Params &params, PhyloTree *in_tree) {
     int nstates = in_tree->aln->num_states;
     if (nstates != 4 && nstates != 20)
-        outError("Modeltest only works for DNA or Protein");
-    char LRT_model[10];
-    char IC_model[10];
-    multiset<string> model_list;
-    string fscore_name = params.out_prefix;
-    string fmodel_name = params.out_prefix;
+        outError("Test of best-fit models only works for DNA or Protein");
     string fmodel_str = params.out_prefix;
-
-    char model_arg[400] = "";
-    fscore_name += ".modelscore";
-    fmodel_name += ".modeltest";
     fmodel_str += ".model";
    
-    ofstream fmodel_test(fmodel_name.c_str());
-    fmodel_test.close();
+    int num_models = (nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM;
     int model, rate_type;
 
     string best_model;
-    double best_lh = -1000000000.0;
-
-    bool fscore_ok = false;
-
-    if (nstates == 4) {
-        ifstream fscore_test(fscore_name.c_str());
-        if (fscore_test.is_open()) {
-            fscore_test.close();
-            cout << fscore_name << " exists, checking this file" << endl;
-            /* check if this works */
-            if (modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model) == EXIT_FAILURE) {
-                cout << "Score file is invalid, assessing all models again" << endl;
-                fmodel_test.open(fmodel_name.c_str());
-                fmodel_test.close();
-            } else fscore_ok = true;
-        }
-    }
-    if (!fscore_ok) {
-        /* first compute the likelihood score for all available models */
-        ofstream fscore(fscore_name.c_str());
-        if (!fscore.is_open())
-            outError("cannot write to .modelscore file!");
-        fscore << "Tree ";
-		ofstream fmodel(fmodel_str.c_str());
-        if (!fmodel.is_open())
-            outError("cannot write to ", fmodel_str);
-
-        PhyloTree *tree_homo = new PhyloTree();
-        tree_homo->optimize_by_newton = params.optimize_by_newton;
-        tree_homo->sse = params.SSE;
-        tree_homo->copyPhyloTree(in_tree);
-
-        PhyloTree *tree_hetero = new PhyloTree();
-        tree_hetero->optimize_by_newton = params.optimize_by_newton;
-        tree_hetero->sse = params.SSE;
-        tree_hetero->copyPhyloTree(in_tree);
-
-        RateHeterogeneity * rate_class[4];
-        rate_class[0] = new RateHeterogeneity();
-        rate_class[1] = new RateInvar(-1, NULL);
-        rate_class[2] = new RateGamma(params.num_rate_cats, -1, params.gamma_median, NULL);
-        rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1, params.gamma_median, -1, NULL);
-        GTRModel *subst_model;
-        if (nstates == 4)
-            subst_model = new ModelDNA("JC", FREQ_UNKNOWN, in_tree);
-        else
-            subst_model = new ModelProtein("WAG", FREQ_UNKNOWN, in_tree);
-
-        ModelFactory *model_fac = new ModelFactory();
-
-        int num_models = (nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM;
-		int ssize = in_tree->aln->getNSite(); // sample size
-		if (params.model_test_sample_size) ssize = params.model_test_sample_size;
-        cout << "Testing " << num_models * 4 << ((nstates == 4) ? " DNA" : " protein") << " models (sample size: " << ssize << ") ..." << endl;
-		cout << "Model        -LnL         df AIC          AICc         BIC" << endl;
+	StrVector model_names;
+	DoubleVector lh_scores;
+	IntVector df_vec;
+	/* first check the model file */
+	bool ok_model_file = checkModelFile(fmodel_str, model_names, lh_scores, df_vec);
+	ok_model_file &= (model_names.size() == num_models*4);
+	ofstream fmodel;
+	if (!ok_model_file) {
+		model_names.clear();
+		lh_scores.clear();
+		df_vec.clear();
+		fmodel.open(fmodel_str.c_str());
+		if (!fmodel.is_open())
+			outError("cannot write to ", fmodel_str);
 		fmodel << "Model\tdf\tLnL" << endl;
 		fmodel.precision(4);
 		fmodel << fixed;
-		DoubleVector AIC_scores;
-		DoubleVector AICc_scores;
-		DoubleVector BIC_scores;
-		StrVector model_names;
-		
-        for (model = 0; model < num_models; model++) {
-            for (rate_type = 0; rate_type <= 3; rate_type += 1) {
-                // initialize tree
-                PhyloTree *tree;
-                if (rate_type == 0) {
-                    tree = tree_homo;
-                } else if (rate_type == 1) {
-                    tree = tree_homo;
-                } else if (rate_type == 2) {
-                    tree = tree_hetero;
-                } else {
-                    tree = tree_hetero;
-                }
-                // initialize model
-                subst_model->init(((nstates == 4) ? dna_model_names[model].c_str() : aa_model_names[model].c_str()), FREQ_UNKNOWN);
-                subst_model->setTree(tree);
-                tree->setModel(subst_model);
-                // initialize rate
-                tree->setRate(rate_class[rate_type]);
-                rate_class[rate_type]->setTree(tree);
+	} else {
+		cout << fmodel_str << " seems to be a correct model file" << endl;
+	} 
 
-                // initialize model factory
-                tree->setModelFactory(model_fac);
-                model_fac->model = subst_model;
-                model_fac->site_rate = rate_class[rate_type];
+	PhyloTree *tree_homo = new PhyloTree();
+	tree_homo->optimize_by_newton = params.optimize_by_newton;
+	tree_homo->sse = params.SSE;
+	tree_homo->copyPhyloTree(in_tree);
 
+	PhyloTree *tree_hetero = new PhyloTree();
+	tree_hetero->optimize_by_newton = params.optimize_by_newton;
+	tree_hetero->sse = params.SSE;
+	tree_hetero->copyPhyloTree(in_tree);
 
-                // print some infos
-                // clear all likelihood values
-                tree->clearAllPartialLH();
+	RateHeterogeneity * rate_class[4];
+	rate_class[0] = new RateHeterogeneity();
+	rate_class[1] = new RateInvar(-1, NULL);
+	rate_class[2] = new RateGamma(params.num_rate_cats, -1, params.gamma_median, NULL);
+	rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1, params.gamma_median, -1, NULL);
+	GTRModel *subst_model;
+	if (nstates == 4)
+		subst_model = new ModelDNA("JC", FREQ_UNKNOWN, in_tree);
+	else
+		subst_model = new ModelProtein("WAG", FREQ_UNKNOWN, in_tree);
 
-                // optimize model parameters
-                double cur_lh = tree->getModelFactory()->optimizeParameters(false, false);
-				int df = subst_model->getNDim() + rate_class[rate_type]->getNDim();
-				double AIC_score = -2*cur_lh + 2 * df;
-				double AICc_score = AIC_score + 2.0*df*(df+1)/(ssize -df-1);
-				double BIC_score = -2*cur_lh + df * log(ssize);
-				AIC_scores.push_back(AIC_score);
-				AICc_scores.push_back(AICc_score);
-				BIC_scores.push_back(BIC_score);
-                //cout << "===> Testing ";
-                cout.width(12);
-                string str;
-                str = subst_model->name;
-                str += rate_class[rate_type]->name;
-                model_names.push_back(str);
-                cout << left << str << " ";
-                cout.precision(3);
-                cout.width(12);
-                cout << fixed;
-                cout << -cur_lh << " ";
-				cout.width(2);
-				cout << df << " ";
-				cout.width(12);
-				cout << AIC_score << " ";
-				cout.width(12);
-				cout << AICc_score << " " << BIC_score;
-				cout << endl;
-	            fscore << str << endl;
-                fscore.precision(10);
-                fscore << "1\t" << -cur_lh;
-                fscore.precision(6);
-                subst_model->writeParameters(fscore);
-                rate_class[rate_type]->writeParameters(fscore);
-                fscore << endl;
+	ModelFactory *model_fac = new ModelFactory();
+
+	int ssize = in_tree->aln->getNSite(); // sample size
+	if (params.model_test_sample_size) ssize = params.model_test_sample_size;
+	cout << "Testing " << num_models * 4 << ((nstates == 4) ? " DNA" : " protein") << " models (sample size: " << ssize << ") ..." << endl;
+	cout << "Model        -LnL         df AIC          AICc         BIC" << endl;
+	DoubleVector AIC_scores;
+	DoubleVector AICc_scores;
+	DoubleVector BIC_scores;
+	
+	for (model = 0; model < num_models; model++) {
+		for (rate_type = 0; rate_type <= 3; rate_type += 1) {
+			// initialize tree
+			PhyloTree *tree;
+			if (rate_type == 0) {
+				tree = tree_homo;
+			} else if (rate_type == 1) {
+				tree = tree_homo;
+			} else if (rate_type == 2) {
+				tree = tree_hetero;
+			} else {
+				tree = tree_hetero;
+			}
+			// initialize model
+			subst_model->init(((nstates == 4) ? dna_model_names[model].c_str() : aa_model_names[model].c_str()), FREQ_UNKNOWN);
+			subst_model->setTree(tree);
+			tree->setModel(subst_model);
+			// initialize rate
+			tree->setRate(rate_class[rate_type]);
+			rate_class[rate_type]->setTree(tree);
+
+			// initialize model factory
+			tree->setModelFactory(model_fac);
+			model_fac->model = subst_model;
+			model_fac->site_rate = rate_class[rate_type];
+
+			string str;
+			str = subst_model->name;
+			str += rate_class[rate_type]->name;
+
+			// print some infos
+			// clear all likelihood values
+			tree->clearAllPartialLH();
+
+			// optimize model parameters
+			int df = subst_model->getNDim() + rate_class[rate_type]->getNDim();
+			double cur_lh;
+			if (!ok_model_file) {
+				cur_lh = tree->getModelFactory()->optimizeParameters(false, false);
+				model_names.push_back(str);
 				fmodel << str << "\t" << df << "\t" << cur_lh << endl;
-                if (cur_lh > best_lh) {
-                    best_lh = cur_lh;
-                    best_model = subst_model->name + rate_class[rate_type]->name;
-                }
+			} else {
+				// sanity check
+				if (str != model_names[model*4+rate_type] || df != df_vec[model*4+rate_type])
+					outError("Incorrect model file, please delete it and rerun again: ", fmodel_str); 
+				cur_lh = lh_scores[model*4 + rate_type];
+			}
+			double AIC_score = -2*cur_lh + 2 * df;
+			double AICc_score = AIC_score + 2.0*df*(df+1)/(ssize -df-1);
+			double BIC_score = -2*cur_lh + df * log(ssize);
+			AIC_scores.push_back(AIC_score);
+			AICc_scores.push_back(AICc_score);
+			BIC_scores.push_back(BIC_score);
+			cout.width(12);
+			cout << left << str << " ";
+			cout.precision(3);
+			cout.width(12);
+			cout << fixed;
+			cout << -cur_lh << " ";
+			cout.width(2);
+			cout << df << " ";
+			cout.width(12);
+			cout << AIC_score << " ";
+			cout.width(12);
+			cout << AICc_score << " " << BIC_score;
+			cout << endl;
+			tree->setModel(NULL);
+			tree->setModelFactory(NULL);
+			tree->setRate(NULL);
 
-                tree->setModel(NULL);
-                tree->setModelFactory(NULL);
-                tree->setRate(NULL);
+		}
+	}
+	cout.unsetf(ios::fixed);
+	int model_aic = min_element(AIC_scores.begin(), AIC_scores.end()) - AIC_scores.begin();
+	cout << "Akaike Information Criterion:           " << model_names[model_aic] << endl;
+	int model_aicc = min_element(AICc_scores.begin(), AICc_scores.end()) - AICc_scores.begin();
+	cout << "Corrected Akaike Information Criterion: " << model_names[model_aicc] << endl;
+	int model_bic = min_element(BIC_scores.begin(), BIC_scores.end()) - BIC_scores.begin();
+	cout << "Bayesian Information Criterion:         " << model_names[model_bic] << endl;
+	switch (params.model_test_criterion) {
+		case MTC_AIC: best_model = model_names[model_aic]; break;
+		case MTC_AICC: best_model = model_names[model_aicc]; break;
+		case MTC_BIC: best_model = model_names[model_bic]; break;
+	}
+	delete model_fac;
+	delete subst_model;
+	for (rate_type = 3; rate_type >= 0; rate_type--)
+		delete rate_class[rate_type];
+	delete tree_hetero;
+	delete tree_homo;
 
-            }
-        }
-        model = min_element(AIC_scores.begin(), AIC_scores.end()) - AIC_scores.begin();
-        cout << "Akaike Information Criterion:           " << model_names[model] << endl;
-        model = min_element(AICc_scores.begin(), AICc_scores.end()) - AICc_scores.begin();
-        cout << "Corrected Akaike Information Criterion: " << model_names[model] << endl;
-        model = min_element(BIC_scores.begin(), BIC_scores.end()) - BIC_scores.begin();
-        cout << "Bayesian Information Criterion:         " << model_names[model] << endl;
-        delete model_fac;
-        delete subst_model;
-        for (rate_type = 3; rate_type >= 0; rate_type--)
-            delete rate_class[rate_type];
-        delete tree_hetero;
-        delete tree_homo;
-
-
-        fscore.close();
-		fmodel.close();
-
-        /* now do the modeltest */
-        if (nstates == 4)
-            modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
-    }
-
-    if (nstates == 4) {
-        cout << "Performing ModelTest 3.7 (Posada and Crandall, 1998) ..." << endl;
-        cout << "  LRT:     " << LRT_model << endl;
-        cout << "  AIC:     " << IC_model << endl;
-        model_list.insert(LRT_model);
-        model_list.insert(IC_model);
-
-        /* applying other tests */
-        sprintf(model_arg, " -n%d", in_tree->aln->getNSite());
-        modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
-        cout << "  AICc:    " << IC_model << endl;
-        model_list.insert(IC_model);
-
-        sprintf(model_arg, " -n%d -t%d", in_tree->aln->getNSite(), in_tree->aln->getNSeq());
-        modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
-        cout << "  AICc_t:  " << IC_model << endl;
-        model_list.insert(IC_model);
-
-
-        sprintf(model_arg, "-n%d -b ", in_tree->aln->getNSite());
-        modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
-        cout << "  BIC:     " << IC_model << endl;
-        model_list.insert(IC_model);
-
-        sprintf(model_arg, "-n%d -t%d -b", in_tree->aln->getNSite(), in_tree->aln->getNSeq());
-        modeltest(model_arg, fscore_name.c_str(), fmodel_name.c_str(), LRT_model, IC_model);
-        cout << "  BIC_t:   " << IC_model << endl;
-        model_list.insert(IC_model);
-		cout.flush();
-    } else {
-        // FOR protein: no modeltest exists yet
-        model_list.insert(best_model);
-    }
-    /* use the model that is most frequently selected */
-    if (model_list.size() > 1) {
-        cout << "Tests do not agree on one single model" << endl;
-        int max = 0;
-
-        for (multiset<string>::iterator it = model_list.begin(); it != model_list.end(); it++)
-            if (model_list.count(*it) > max) {
-                max = model_list.count(*it);
-                best_model = (*it);
-            }
-        cout << "Use the model that is most frequently selected: " << best_model << endl;
-    } else {
-        cout << "Best model: " << (*model_list.begin()) << endl;
-    }
-
+	if (!ok_model_file) fmodel.close();
+	cout << "Best-fit model: " << best_model << endl;
     return best_model;
-    //return "GTR";
 }
 
 void reportReferences(ofstream &out, string &original_model) {

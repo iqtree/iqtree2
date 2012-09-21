@@ -21,7 +21,7 @@
 #include "phylotree.h"
 #include "ratemeyerdiscrete.h"
 //#include "kmeans/KMeans.h"
-#include "modeltest_wrapper.h"
+//#include "modeltest_wrapper.h"
 
 /************************************************
 	Huy's k-means dynamic programming algorithm
@@ -501,7 +501,7 @@ double RateMeyerDiscrete::classifyRates(double tree_lh) {
 		new_tree_lh = phylo_tree->optimizeAllBranches();
 		cout << "For " << ncategory << " categories, LogL = " << new_tree_lh;
 		double lh_diff = 2*(tree_lh - new_tree_lh);
-		double df = (nptn - ncategory);
+		int df = (nptn - ncategory);
 		double pval = computePValueChiSquare(lh_diff, df);
 		cout << ", p-value = " << pval;
 		cout << endl;

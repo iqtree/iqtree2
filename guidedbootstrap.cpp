@@ -34,7 +34,7 @@
 #include "rategamma.h"
 #include "rateinvar.h"
 #include "rategammainvar.h"
-#include "modeltest_wrapper.h"
+//#include "modeltest_wrapper.h"
 #include "modelprotein.h"
 #include "stoprule.h"
 

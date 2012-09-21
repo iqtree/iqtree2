@@ -60,7 +60,7 @@ endif()
 
 add_subdirectory(ncl)
 add_subdirectory(whtest)
-add_subdirectory(modeltest)
+#add_subdirectory(modeltest)
 add_subdirectory(sprng)
 
 add_executable(iqtree
@@ -125,12 +125,13 @@ tinatree.cpp
 tools.cpp
 whtest_wrapper.cpp
 lpwrapper.c
-modeltest_wrapper.c)
+#modeltest_wrapper.c
+)
 
 if (WIN32)
-target_link_libraries(iqtree ncl whtest modeltest z sprng)
+target_link_libraries(iqtree ncl whtest z sprng)
 else (WIN32)
-target_link_libraries(iqtree ncl whtest modeltest z sprng dl)
+target_link_libraries(iqtree ncl whtest z sprng dl)
 endif (WIN32)
 
 ##############################################################

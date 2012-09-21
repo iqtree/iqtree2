@@ -1437,4 +1437,12 @@ inline double getCPUTime(clock_t startTime) {
 	return double(clock() - startTime) / CLOCKS_PER_SEC;
 }
 
+/**
+	compute p-value for a chi-square value
+	@param chi_square chi-square value
+	@param df degree of freedom
+	@return p-value
+*/
+double computePValueChiSquare (double x, int df);
+
 #endif
