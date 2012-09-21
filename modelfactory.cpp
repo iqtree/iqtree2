@@ -190,7 +190,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {
-				modeli = (GTRModel*)createModel(model_str, FREQ_UNKNOWN, tree, false);
+				modeli = (GTRModel*)createModel(model_str, FREQ_EQUAL, tree, false);
 				modeli->setStateFrequency(state_freq);
 				modeli->setRateMatrix(rates);
 			}

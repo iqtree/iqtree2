@@ -297,6 +297,8 @@ enum AlnFormat {
 	ALN_PHYLIP, ALN_FASTA
 };
 
+enum ModelTestCriterion {MTC_AIC, MTC_AICC, MTC_BIC};
+
 /**
         Stopping condition type
  */
@@ -1113,6 +1115,11 @@ struct Params {
 	int num_threads;
 #endif
 	
+	/** either MTC_AIC, MTC_AICc, MTC_BIC */
+	ModelTestCriterion model_test_criterion;
+	
+	/** sample size for AICc and BIC */
+	int model_test_sample_size; 
 };
 
 /**

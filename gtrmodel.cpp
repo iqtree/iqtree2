@@ -65,10 +65,10 @@ void GTRModel::setTree(PhyloTree *tree) {
 
 
 void GTRModel::init(StateFreqType type) {
-	if (type == FREQ_UNKNOWN) return;
+	//if (type == FREQ_UNKNOWN) return;
 	int i;
 	freq_type = type;
-	//assert(freq_type != FREQ_UNKNOWN);
+	assert(freq_type != FREQ_UNKNOWN);
 	switch (freq_type) {
 	case FREQ_EQUAL:
 		for (i = 0; i < num_states; i++)

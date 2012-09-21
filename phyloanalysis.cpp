@@ -71,10 +71,13 @@ string modelTest(Params &params, PhyloTree *in_tree) {
     multiset<string> model_list;
     string fscore_name = params.out_prefix;
     string fmodel_name = params.out_prefix;
+    string fmodel_str = params.out_prefix;
 
     char model_arg[400] = "";
     fscore_name += ".modelscore";
     fmodel_name += ".modeltest";
+    fmodel_str += ".model";
+   
     ofstream fmodel_test(fmodel_name.c_str());
     fmodel_test.close();
     int model, rate_type;
@@ -102,8 +105,10 @@ string modelTest(Params &params, PhyloTree *in_tree) {
         ofstream fscore(fscore_name.c_str());
         if (!fscore.is_open())
             outError("cannot write to .modelscore file!");
-
         fscore << "Tree ";
+		ofstream fmodel(fmodel_str.c_str());
+        if (!fmodel.is_open())
+            outError("cannot write to ", fmodel_str);
 
         PhyloTree *tree_homo = new PhyloTree();
         tree_homo->optimize_by_newton = params.optimize_by_newton;
@@ -129,8 +134,18 @@ string modelTest(Params &params, PhyloTree *in_tree) {
         ModelFactory *model_fac = new ModelFactory();
 
         int num_models = (nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM;
-
-        cout << "Tesing " << num_models * 4 << ((nstates == 4) ? " DNA" : " protein") << " models..." << endl;
+		int ssize = in_tree->aln->getNSite(); // sample size
+		if (params.model_test_sample_size) ssize = params.model_test_sample_size;
+        cout << "Testing " << num_models * 4 << ((nstates == 4) ? " DNA" : " protein") << " models (sample size: " << ssize << ") ..." << endl;
+		cout << "Model        -LnL         df AIC          AICc         BIC" << endl;
+		fmodel << "Model\tdf\tLnL" << endl;
+		fmodel.precision(4);
+		fmodel << fixed;
+		DoubleVector AIC_scores;
+		DoubleVector AICc_scores;
+		DoubleVector BIC_scores;
+		StrVector model_names;
+		
         for (model = 0; model < num_models; model++) {
             for (rate_type = 0; rate_type <= 3; rate_type += 1) {
                 // initialize tree
@@ -164,22 +179,39 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 
                 // optimize model parameters
                 double cur_lh = tree->getModelFactory()->optimizeParameters(false, false);
-                cout << "===> Testing ";
+				int df = subst_model->getNDim() + rate_class[rate_type]->getNDim();
+				double AIC_score = -2*cur_lh + 2 * df;
+				double AICc_score = AIC_score + 2.0*df*(df+1)/(ssize -df-1);
+				double BIC_score = -2*cur_lh + df * log(ssize);
+				AIC_scores.push_back(AIC_score);
+				AICc_scores.push_back(AICc_score);
+				BIC_scores.push_back(BIC_score);
+                //cout << "===> Testing ";
                 cout.width(12);
                 string str;
                 str = subst_model->name;
                 str += rate_class[rate_type]->name;
-                cout << left << str << " (df=" << subst_model->getNDim() + rate_class[rate_type]->getNDim() << ")";
-                cout.precision(10);
-                cout << ":  Log-likelihood " << cur_lh << endl;
-                fscore << str << endl;
+                model_names.push_back(str);
+                cout << left << str << " ";
+                cout.precision(3);
+                cout.width(12);
+                cout << fixed;
+                cout << -cur_lh << " ";
+				cout.width(2);
+				cout << df << " ";
+				cout.width(12);
+				cout << AIC_score << " ";
+				cout.width(12);
+				cout << AICc_score << " " << BIC_score;
+				cout << endl;
+	            fscore << str << endl;
                 fscore.precision(10);
                 fscore << "1\t" << -cur_lh;
                 fscore.precision(6);
                 subst_model->writeParameters(fscore);
                 rate_class[rate_type]->writeParameters(fscore);
                 fscore << endl;
-
+				fmodel << str << "\t" << df << "\t" << cur_lh << endl;
                 if (cur_lh > best_lh) {
                     best_lh = cur_lh;
                     best_model = subst_model->name + rate_class[rate_type]->name;
@@ -191,7 +223,12 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 
             }
         }
-
+        model = min_element(AIC_scores.begin(), AIC_scores.end()) - AIC_scores.begin();
+        cout << "Akaike Information Criterion:           " << model_names[model] << endl;
+        model = min_element(AICc_scores.begin(), AICc_scores.end()) - AICc_scores.begin();
+        cout << "Corrected Akaike Information Criterion: " << model_names[model] << endl;
+        model = min_element(BIC_scores.begin(), BIC_scores.end()) - BIC_scores.begin();
+        cout << "Bayesian Information Criterion:         " << model_names[model] << endl;
         delete model_fac;
         delete subst_model;
         for (rate_type = 3; rate_type >= 0; rate_type--)
@@ -201,6 +238,7 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 
 
         fscore.close();
+		fmodel.close();
 
         /* now do the modeltest */
         if (nstates == 4)

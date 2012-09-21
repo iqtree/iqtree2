@@ -653,6 +653,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 #ifdef _OPENMP
 	params.num_threads = 0;
 #endif
+	params.model_test_criterion = MTC_BIC;
+	params.model_test_sample_size = 0;
 	
 	struct timeval tv;
 	struct timezone tz;
@@ -1433,6 +1435,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -avh <arndt_#bootstrap>";
 				params.avh_test = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-AIC") == 0) {
+				params.model_test_criterion = MTC_AIC;
+			} else if (strcmp(argv[cnt], "-AICc") == 0) {
+				params.model_test_criterion = MTC_AICC;
+			} else if (strcmp(argv[cnt], "-ms") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ms <model_test_sample_size>";
+				params.model_test_sample_size = convert_int(argv[cnt]);
 #ifdef _OPENMP
 			} else if (strcmp(argv[cnt], "-omp") == 0) {
 				cnt++;
