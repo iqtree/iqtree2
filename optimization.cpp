@@ -388,7 +388,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 	if (rts < x1) rts = x1;
 	if (rts > x2) rts = x2;
 	fold = fm = computeFuncDerv(rts,f,df);
-	if (!isnormal(fm) || !isnormal(f) || !isnormal(df)) nrerror("Wrong computeFuncDerv");
+	if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) nrerror("Wrong computeFuncDerv");
 	if (df >= 0.0 && fabs(f) < xacc) return rts;
 	if (f < 0.0) {
 		xl = rts;
@@ -420,7 +420,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 		if (fabs(dx) < 0.01) { fm = computeFunction(rts); return rts; }
 		fold = fm;
 		fm = computeFuncDerv(rts,f,df);
-		if (!isnormal(fm) || !isnormal(f) || !isnormal(df)) nrerror("Wrong computeFuncDerv");
+		if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) nrerror("Wrong computeFuncDerv");
 		if (df > 0.0 && fabs(f) < xacc) return rts;
 		if (f < 0.0)
 			xl=rts;
@@ -830,7 +830,7 @@ double Optimization::minimizeNewton(double xmin, double xguess, double xmax, dou
 
 	for (j=1;j<=JMAX;j++) {
 		f = computeFuncDerv(rtn,df,ddf);
-		if (!isnormal(f)) 
+		if (!isfinite(f)) 
 			return 0;
 		if (j == 1) fstart = f;
 		if (ddf == 0.0) break;

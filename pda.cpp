@@ -1771,7 +1771,10 @@ int main(int argc, char *argv[])
 
 #ifdef _OPENMP
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
-	cout << "Threads: " << omp_get_max_threads() << endl;
+	int max_threads = omp_get_max_threads();
+	int max_procs = omp_get_num_procs();
+	cout << "Threads: " << max_threads << " (" << max_procs << " CPU cores detected)" << endl;
+	if (max_threads > max_procs) outWarning("You have specified more threads than CPU cores available");
 #endif
 	cout << endl;
 	

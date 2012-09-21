@@ -982,8 +982,8 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
     int ptn, cat, state1, state2;
 	int nptn = aln->size();
 	int discrete_cat = site_rate->getNDiscreteRate();
-    double trans_mat[discrete_cat * trans_size];
-    double state_freq[nstates];
+    double *trans_mat = new double[discrete_cat * trans_size];
+    double *state_freq = new double[nstates];
     model->getStateFrequency(state_freq);
 
     if (!site_rate->isSiteSpecificRate())
@@ -1052,6 +1052,8 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         tree_lh += lh_ptn * aln->at(ptn).frequency;
     }
     if (pattern_lh) memmove(pattern_lh, _pattern_lh, aln->size()*sizeof(double));
+    delete [] state_freq;
+    delete [] trans_mat;
     //for (cat = ncat-1; cat >= 0; cat--)
     //delete trans_mat[cat];
     //delete state_freq;
@@ -1126,7 +1128,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
     } else {
         /* internal node */
         int discrete_cat = site_rate->getNDiscreteRate();
-        double trans_mat[discrete_cat * trans_size];
+        double *trans_mat = new double[discrete_cat * trans_size];
         //for (cat = 0; cat < discrete_cat; cat++) trans_mat[cat] = model->newTransMatrix();
         for (ptn = 0; ptn < lh_size; ptn++) {
             dad_branch->partial_lh[ptn] = 1.0;
@@ -1203,7 +1205,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                 }
             dad_branch->lh_scale_factor += sum_scale;
         }
-        
+        delete [] trans_mat;
         //for (cat = ncat - 1; cat >= 0; cat--)
         //  delete [] trans_mat[cat];
     }
@@ -1244,10 +1246,10 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
 
     int discrete_cat = site_rate->getNDiscreteRate();
 
-    double trans_mat[discrete_cat * trans_size];
-    double trans_derv1[discrete_cat * trans_size];
-    double trans_derv2[discrete_cat * trans_size];
-    double state_freq[nstates];
+    double *trans_mat = new double[discrete_cat * trans_size];
+    double *trans_derv1 = new double[discrete_cat * trans_size];
+    double *trans_derv2 = new double[discrete_cat * trans_size];
+    double *state_freq = new double[nstates];
     model->getStateFrequency(state_freq);
 
     if (!site_rate->isSiteSpecificRate())
@@ -1281,7 +1283,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
 	double my_ddf = 0.0;
 	
 #ifdef _OPENMP
-//#pragma omp parallel for reduction(+: tree_lh, my_df, my_ddf) private(ptn, cat, state1, state2, derv1_frac, derv2_frac)
+#pragma omp parallel for reduction(+: tree_lh, my_df, my_ddf) private(ptn, cat, state1, state2, derv1_frac, derv2_frac)
 #endif
      for (ptn = 0; ptn < nptn; ptn++) {
         int ptn_cat = site_rate->getPtnCat(ptn);
@@ -1384,10 +1386,16 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         lh_ptn = log(lh_ptn);
         tree_lh += lh_ptn * freq;
         _pattern_lh[ptn] = lh_ptn;
-		if (!isnormal(lh_ptn) || !isnormal(my_df) || !isnormal(my_ddf))
-			outError("Abnormal ", __func__);
+		if (!isfinite(lh_ptn) || !isfinite(my_df) || !isfinite(my_ddf)) {
+			cout << "Abnormal " << __func__;
+			abort();
+		}
 
     }
+    delete [] state_freq;
+    delete [] trans_derv2;
+    delete [] trans_derv1;
+	delete [] trans_mat;
     //for (cat = ncat-1; cat >= 0; cat--)
     //delete trans_mat[cat];
     //delete state_freq;
@@ -1618,17 +1626,42 @@ double PhyloTree::correctDist(double *dist_mat) {
 double PhyloTree::computeDist(double *dist_mat) {
     int nseqs = aln->getNSeq();
     int pos = 0;
+    int num_pairs = nseqs * (nseqs-1) / 2;
     double longest_dist = 0.0;
+	int *row_id = new int[num_pairs];
+	int *col_id = new int[num_pairs];
+	row_id[0] = 0;
+	col_id[0] = 1;
+    for (pos = 1; pos < num_pairs; pos++) {
+		row_id[pos] = row_id[pos-1];
+		col_id[pos] = col_id[pos-1]+1;
+		if (col_id[pos] >= nseqs) {
+			row_id[pos]++;
+			col_id[pos] = row_id[pos]+1;
+		}
+	}
+	// compute the upper-triangle of distance matrix
+#ifdef _OPENMP
+	#pragma omp parallel for private(pos)
+#endif
+	for (pos = 0; pos < num_pairs; pos++) {
+		int seq1 = row_id[pos];
+		int seq2 = col_id[pos];
+		int sym_pos = seq1*nseqs + seq2;
+		dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos]);
+	}
+	// copy upper-triangle into lower-triangle and set diagonal = 0
     for (int seq1 = 0; seq1 < nseqs; seq1++)
-        for (int seq2 = 0; seq2 < nseqs; seq2++, pos++) {
+        for (int seq2 = 0; seq2 <= seq1; seq2++) {
+			pos = seq1 * nseqs + seq2;
             if (seq1 == seq2)
                 dist_mat[pos] = 0.0;
-            else if (seq2 > seq1) {
-                dist_mat[pos] = computeDist(seq1, seq2, dist_mat[pos]);
-            } else dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
+            else dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
             if (dist_mat[pos] > longest_dist)
                 longest_dist = dist_mat[pos];
         }
+    delete [] col_id;
+    delete [] row_id;
     /*
         if (longest_dist > MAX_GENETIC_DIST * 0.99)
             outWarning("Some distances are saturated. Please check your alignment again");*/
@@ -2678,7 +2711,7 @@ void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
 double PhyloTree::testOneBranch(
     double best_score, double *pattern_lh, int reps, int lbp_reps,
     PhyloNode *node1, PhyloNode *node2, double &lbp_support) {
-    int NUM_NNI = 3;
+    const int NUM_NNI = 3;
     double lh[NUM_NNI];
     double *pat_lh[NUM_NNI];
     lh[0] = best_score;

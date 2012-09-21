@@ -241,6 +241,7 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 				sum += freq;
 			}
 			if (fabs(sum-1.0) > 1e-4) throw "Frequencies do not sum up to 1";
+			aln->convfreq(site_freq_entry); // regularize frequencies (eg if some freq = 0)
 			freq_vec.push_back(site_freq_entry);
 		}
 		if (specified_sites < site_model.size()) {
