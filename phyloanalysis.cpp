@@ -47,16 +47,16 @@
 #include "guidedbootstrap.h"
 #include "modelset.h"
 
-const int DNA_MODEL_NUM = 14;
+const int DNA_MODEL_NUM = 22;
 clock_t t_begin, t_end;
 
-string dna_model_names[DNA_MODEL_NUM] ={"JC", "F81", "K80", "HKY", "TNef", "TN", "K81", "K81uf",
-    "TIMef", "TIM", "TVMef", "TVM", "SYM", "GTR"};
+string dna_model_names[DNA_MODEL_NUM] ={"JC", "F81", "K80", "HKY", "TNe", "TN", "K81", "K81u", "TPM2", "TPM2u",
+    "TPM3", "TPM3u", "TIMe", "TIM", "TIM2e", "TIM2", "TIM3e", "TIM3", "TVMe", "TVM", "SYM", "GTR"};
 
-const int AA_MODEL_NUM = 11;
+const int AA_MODEL_NUM = 18;
 
 string aa_model_names[AA_MODEL_NUM] ={"Dayhoff", "mtMAM", "JTT", "WAG", "cpREV", "mtREV", "rtREV",
-    "mtART", "mtZOA", "VT", "LG"};
+    "mtART", "mtZOA", "VT", "LG", "DCMut", "PMB", "HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62"};
 
 /**
  * check if the model file contains correct information
@@ -167,7 +167,7 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 	int ssize = in_tree->aln->getNSite(); // sample size
 	if (params.model_test_sample_size) ssize = params.model_test_sample_size;
 	cout << "Testing " << num_models * 4 << ((nstates == 4) ? " DNA" : " protein") << " models (sample size: " << ssize << ") ..." << endl;
-	cout << "Model        -LnL         df AIC          AICc         BIC" << endl;
+	cout << "Model         -LnL         df AIC          AICc         BIC" << endl;
 	DoubleVector AIC_scores;
 	DoubleVector AICc_scores;
 	DoubleVector BIC_scores;
@@ -225,7 +225,7 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 			AIC_scores.push_back(AIC_score);
 			AICc_scores.push_back(AICc_score);
 			BIC_scores.push_back(BIC_score);
-			cout.width(12);
+			cout.width(13);
 			cout << left << str << " ";
 			cout.precision(3);
 			cout.width(12);

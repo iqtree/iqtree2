@@ -1608,8 +1608,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
 			<< "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
 			<< "                       specification, e.g., '010010' is equiv. to HKY" << endl
-			<< "              Protein: WAG (default), Poisson, cpREV, mtREV, PAM, mtMAM, JTT," << endl
-			<< "                       LG, mtART, mtZOA, VT, or rtREV" << endl
+			<< "              Protein: WAG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
+			<< "                       JTT, LG, mtART, mtZOA, VT, or rtREV" << endl
 			<< "               Binary: JC-like" << endl
 			<< "            Modeltest: TEST or TESTONLY to select model with Modeltest." << endl
 			<< "                       TESTONLY will stop the run after finishing Modeltest" << endl

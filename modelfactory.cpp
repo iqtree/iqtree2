@@ -41,9 +41,14 @@ ModelFactory::ModelFactory() {
 SubstModel* ModelFactory::createModel(string model_str, StateFreqType freq_type, PhyloTree* tree, bool count_rates)
 {
 	SubstModel *model = NULL;
-	if ((model_str == "JC" || model_str == "Poisson")) {
+	if ((model_str == "JC" && tree->aln->num_states == 4) || 
+		(model_str == "Poisson" && tree->aln->num_states == 20) ||
+		(model_str == "JC2" && tree->aln->num_states == 2)) 
+	{
 		model = new SubstModel(tree->aln->num_states);
-	} else if (model_str == "GTR") {
+	} else 
+	if ((model_str == "GTR" && tree->aln->num_states == 4) ||
+		(model_str == "GTR2" && tree->aln->num_states == 2)) {
 		model = new GTRModel(tree, count_rates);
 		((GTRModel*)model)->init(freq_type);
 	} else if (model_str == "UNREST") {

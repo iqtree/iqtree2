@@ -57,7 +57,7 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 		setRateType("012210");
 		def_freq = FREQ_EQUAL;
 		full_name = "K3P (Kimura, 1981)";
-	} else if (strcmp(model_name, "K81uf") == 0) {
+	} else if (strcmp(model_name, "K81uf") == 0 || strcmp(model_name, "K81u") == 0) {
 		setRateType("012210");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "K3P unequal frequencies (Kimura, 1981)";
@@ -66,24 +66,56 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 		setRateType("010020");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TN (Tamura and Nei, 1993)";
-	} else if (strcmp(model_name, "TNef") == 0 || strcmp(model_name, "TrNef") == 0) {
+	} else if (strcmp(model_name, "TNef") == 0 || strcmp(model_name, "TrNef") == 0 || strcmp(model_name, "TNe") == 0 || strcmp(model_name, "TrNe") == 0) {
 		name = "TNef";
 		setRateType("010020");
 		def_freq = FREQ_EQUAL;
 		full_name = "TN equal frequencies (Tamura and Nei, 1993)";
-	} else if (strcmp(model_name, "TIM") == 0) {
+	} else if (strcmp(model_name, "TPM2") == 0) {
+		setRateType("010212");		
+		def_freq = FREQ_ESTIMATE;
+		full_name = "TPM2 ()";
+	} else if (strcmp(model_name, "TPM2u") == 0 || strcmp(model_name, "TPM2uf") == 0) {
+		setRateType("010212");		
+		def_freq = FREQ_ESTIMATE;
+		full_name = "TPM2 unequal frequencies ()";
+	} else if (strcmp(model_name, "TPM3") == 0) {
+		setRateType("012012");		
+		def_freq = FREQ_ESTIMATE;
+		full_name = "TPM3 ()";
+	} else if (strcmp(model_name, "TPM3u") == 0 || strcmp(model_name, "TPM3uf") == 0) {
+		setRateType("012012");		
+		def_freq = FREQ_ESTIMATE;
+		full_name = "TPM3 unequal frequencies ()";
+	} else if (strcmp(model_name, "TIM") == 0 || strcmp(model_name, "TIM1") == 0) {
 		setRateType("012230");		
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TIM ()";
-	} else if (strcmp(model_name, "TIMef") == 0) {
+	} else if (strcmp(model_name, "TIMef") == 0 || strcmp(model_name, "TIMe") == 0 || strcmp(model_name, "TIM1ef") == 0 || strcmp(model_name, "TIM1e") == 0) {
 		setRateType("012230");		
 		def_freq = FREQ_EQUAL;
 		full_name = "TIM equal frequencies";
+	} else if (strcmp(model_name, "TIM2") == 0) {
+		setRateType("010232");
+		def_freq = FREQ_ESTIMATE;
+		full_name = "TIM2 ()";
+	} else if (strcmp(model_name, "TIM2ef") == 0 || strcmp(model_name, "TIM2e") == 0) {
+		setRateType("010232");		
+		def_freq = FREQ_EQUAL;
+		full_name = "TIM2 equal frequencies";
+	} else if (strcmp(model_name, "TIM3") == 0) {
+		setRateType("012032");
+		def_freq = FREQ_ESTIMATE;
+		full_name = "TIM3 ()";
+	} else if (strcmp(model_name, "TIM3ef") == 0 || strcmp(model_name, "TIM3e") == 0) {
+		setRateType("012032");		
+		def_freq = FREQ_EQUAL;
+		full_name = "TIM3 equal frequencies";
 	} else if (strcmp(model_name, "TVM") == 0) {
 		setRateType("412310");		
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TVM";
-	} else if (strcmp(model_name, "TVMef") == 0) {
+	} else if (strcmp(model_name, "TVMef") == 0 || strcmp(model_name, "TVMe") == 0) {
 		setRateType("412310");		
 		def_freq = FREQ_EQUAL;
 		full_name = "TVM equal frequencies";
