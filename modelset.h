@@ -30,7 +30,7 @@ class ModelSet : public GTRModel, public vector<GTRModel*>
 {
 
 public:
-    ModelSet(PhyloTree *tree);
+    ModelSet(const char *model_name, PhyloTree *tree);
 	/**
 	 * @return TRUE if this is a site-specific model, FALSE otherwise
 	 */

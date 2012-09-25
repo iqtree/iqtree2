@@ -171,7 +171,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		// site-specific model
 		if (model_str == "JC" || model_str == "Possion") 
 			outError("JC is not suitable for site-specific model");
-		model = new ModelSet(tree);
+		model = new ModelSet(model_str.c_str(), tree);
 		ModelSet *models = (ModelSet*)model; // assign pointer for convenience
 		models->init(params.freq_type);
 		IntVector site_model;

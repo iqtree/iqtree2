@@ -19,10 +19,11 @@
 
 #include "modelset.h"
 
-ModelSet::ModelSet(PhyloTree *tree) : GTRModel(tree)
+ModelSet::ModelSet(const char *model_name, PhyloTree *tree) : GTRModel(tree)
 {
-	name = "SSF";
-	full_name = "Site-specific state-frequency model (unpublished)";
+	name = full_name = model_name;
+	name += "+SSF";
+	full_name += "+site-specific state-frequency model (unpublished)";
 }
 
 void ModelSet::computeTransMatrix(double time, double* trans_matrix)
