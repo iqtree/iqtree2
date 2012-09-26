@@ -42,7 +42,7 @@ SubstModel* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 {
 	SubstModel *model = NULL;
 	if ((model_str == "JC" && tree->aln->num_states == 4) || 
-		(model_str == "Poisson" && tree->aln->num_states == 20) ||
+		(model_str == "POISSON" && tree->aln->num_states == 20) ||
 		(model_str == "JC2" && tree->aln->num_states == 2)) 
 	{
 		model = new SubstModel(tree->aln->num_states);
@@ -83,13 +83,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	string::size_type posfreq;
 	StateFreqType freq_type = params.freq_type;
 	if ((posfreq = model_str.find("+F")) != string::npos) {
-		if (model_str.substr(posfreq,3) == "+Fc") 
+		if (model_str.substr(posfreq,3) == "+FC" || model_str.substr(posfreq,2) == "+F") 
 			freq_type = FREQ_EMPIRICAL;
-		else if (model_str.substr(posfreq,3) == "+Fu")
+		else if (model_str.substr(posfreq,3) == "+FU")
 			freq_type = FREQ_USER_DEFINED;
-		else if (model_str.substr(posfreq,3) == "+Fq")
+		else if (model_str.substr(posfreq,3) == "+FQ")
 			freq_type = FREQ_EQUAL;
-		else if (model_str.substr(posfreq,3) == "+Fo")
+		else if (model_str.substr(posfreq,3) == "+FO")
 			freq_type = FREQ_ESTIMATE;
 		else outError("Unknown state frequency type ",model_str.substr(posfreq));
 		model_str = model_str.substr(0, posfreq);
@@ -169,7 +169,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		model = createModel(model_str, freq_type, tree);
 	} else { 
 		// site-specific model
-		if (model_str == "JC" || model_str == "Possion") 
+		if (model_str == "JC" || model_str == "POSSION") 
 			outError("JC is not suitable for site-specific model");
 		model = new ModelSet(model_str.c_str(), tree);
 		ModelSet *models = (ModelSet*)model; // assign pointer for convenience

@@ -32,98 +32,115 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 	StateFreqType def_freq = FREQ_UNKNOWN;
 	name = model_name;
 	full_name = model_name;
-
-	if (strcmp(model_name, "JC") == 0 || strcmp(model_name, "JC69") == 0) {
+	string name_upper = model_name;
+	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
+		(*it) = toupper(*it);
+	if (name_upper == "JC" || name_upper == "JC69") {
 		name = "JC";
 		setRateType("000000");
 		def_freq = FREQ_EQUAL;
 		full_name = "JC (Juke and Cantor, 1969)";
-	} else if (strcmp(model_name, "F81") == 0) {
+	} else if (name_upper == "F81") {
+		name = "F81";
 		setRateType("000000");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "F81 (Felsenstein, 1981)";
-	} else if (strcmp(model_name, "K2P") == 0 || strcmp(model_name, "K80") == 0) {
+	} else if (name_upper == "K2P" || name_upper == "K80") {
 		name = "K2P";
 		setRateType("010010");
 		def_freq = FREQ_EQUAL;
 		full_name = "K2P (Kimura, 1980)";
-	} else if (strcmp(model_name, "HKY") == 0 || strcmp(model_name, "HKY85") == 0) {
+	} else if (name_upper == "HKY" || name_upper == "HKY85") {
 		name = "HKY";
 		setRateType("010010");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "HKY (Hasegawa, Kishino and Yano, 1985)";
-	} else if (strcmp(model_name, "K3P") == 0 || strcmp(model_name, "K81") == 0) {
+	} else if (name_upper == "K3P" || name_upper == "K81") {
 		name = "K3P";
 		setRateType("012210");
 		def_freq = FREQ_EQUAL;
 		full_name = "K3P (Kimura, 1981)";
-	} else if (strcmp(model_name, "K81uf") == 0 || strcmp(model_name, "K81u") == 0) {
+	} else if (name_upper == "K81UF" || name_upper == "K81U") {
+		name = "K3Pu";
 		setRateType("012210");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "K3P unequal frequencies (Kimura, 1981)";
-	} else if (strcmp(model_name, "TN") == 0 || strcmp(model_name, "TrN") == 0 || strcmp(model_name, "TN93") == 0) {
+	} else if (name_upper == "TN" || name_upper == "TRN" || name_upper == "TN93") {
 		name = "TN";
 		setRateType("010020");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TN (Tamura and Nei, 1993)";
-	} else if (strcmp(model_name, "TNef") == 0 || strcmp(model_name, "TrNef") == 0 || strcmp(model_name, "TNe") == 0 || strcmp(model_name, "TrNe") == 0) {
-		name = "TNef";
+	} else if (name_upper == "TNEF" || name_upper == "TRNEF" || name_upper == "TNE" || name_upper == "TRNE") {
+		name = "TNe";
 		setRateType("010020");
 		def_freq = FREQ_EQUAL;
 		full_name = "TN equal frequencies (Tamura and Nei, 1993)";
-	} else if (strcmp(model_name, "TPM2") == 0) {
+	} else if (name_upper == "TPM2") {
+		name = "TPM2";
 		setRateType("010212");		
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM2 ()";
-	} else if (strcmp(model_name, "TPM2u") == 0 || strcmp(model_name, "TPM2uf") == 0) {
+	} else if (name_upper == "TPM2U" || name_upper == "TPM2UF") {
+		name = "TPM2u";
 		setRateType("010212");		
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM2 unequal frequencies ()";
-	} else if (strcmp(model_name, "TPM3") == 0) {
+	} else if (name_upper == "TPM3") {
+		name = "TPM3";
 		setRateType("012012");		
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM3 ()";
-	} else if (strcmp(model_name, "TPM3u") == 0 || strcmp(model_name, "TPM3uf") == 0) {
+	} else if (name_upper == "TPM3U" || name_upper == "TPM3UF") {
+		name = "TPM3u";
 		setRateType("012012");		
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM3 unequal frequencies ()";
-	} else if (strcmp(model_name, "TIM") == 0 || strcmp(model_name, "TIM1") == 0) {
+	} else if (name_upper == "TIM" || name_upper == "TIM1") {
+		name = "TIM";
 		setRateType("012230");		
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TIM ()";
-	} else if (strcmp(model_name, "TIMef") == 0 || strcmp(model_name, "TIMe") == 0 || strcmp(model_name, "TIM1ef") == 0 || strcmp(model_name, "TIM1e") == 0) {
+	} else if (name_upper == "TIMEF" || name_upper == "TIME" || name_upper == "TIM1EF" || name_upper == "TIM1E") {
+		name = "TIMe";
 		setRateType("012230");		
 		def_freq = FREQ_EQUAL;
 		full_name = "TIM equal frequencies";
-	} else if (strcmp(model_name, "TIM2") == 0) {
+	} else if (name_upper == "TIM2") {
+		name = "TIM2";
 		setRateType("010232");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TIM2 ()";
-	} else if (strcmp(model_name, "TIM2ef") == 0 || strcmp(model_name, "TIM2e") == 0) {
+	} else if (name_upper == "TIM2EF" || name_upper == "TIM2E") {
+		name = "TIM2e";
 		setRateType("010232");		
 		def_freq = FREQ_EQUAL;
 		full_name = "TIM2 equal frequencies";
-	} else if (strcmp(model_name, "TIM3") == 0) {
+	} else if (name_upper == "TIM3") {
+		name = "TIM3";
 		setRateType("012032");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TIM3 ()";
-	} else if (strcmp(model_name, "TIM3ef") == 0 || strcmp(model_name, "TIM3e") == 0) {
+	} else if (name_upper == "TIM3EF" || name_upper == "TIM3E") {
+		name = "TIM3e";
 		setRateType("012032");		
 		def_freq = FREQ_EQUAL;
 		full_name = "TIM3 equal frequencies";
-	} else if (strcmp(model_name, "TVM") == 0) {
+	} else if (name_upper == "TVM") {
+		name = "TVM";
 		setRateType("412310");		
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TVM";
-	} else if (strcmp(model_name, "TVMef") == 0 || strcmp(model_name, "TVMe") == 0) {
+	} else if (name_upper == "TVMEF" || name_upper == "TVME") {
+		name = "TVMe";
 		setRateType("412310");		
 		def_freq = FREQ_EQUAL;
 		full_name = "TVM equal frequencies";
-	} else if (strcmp(model_name, "SYM") == 0) {
+	} else if (name_upper == "SYM") {
+		name = "SYM";
 		setRateType("123450");
 		def_freq = FREQ_EQUAL;
 		full_name = "SYM (Zharkihk, 1994)";
-	} else if (strcmp(model_name, "GTR") == 0 || strcmp(model_name, "REV") == 0) {
+	} else if (name_upper == "GTR" || name_upper == "REV") {
 		name = "GTR";
 		setRateType("123450");
 		def_freq = FREQ_ESTIMATE;

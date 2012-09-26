@@ -35,7 +35,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
   int i, j;
   double scaler;
 
-  if (prot_model == "Dayhoff")
+  if (prot_model == "DAYHOFF")
 	  {	
 	    daa[ 1*20+ 0] =   27.00; daa[ 2*20+ 0] =   98.00; daa[ 2*20+ 1] =   32.00; daa[ 3*20+ 0] =  120.00;
 	    daa[ 3*20+ 1] =    0.00; daa[ 3*20+ 2] =  905.00; daa[ 4*20+ 0] =   36.00; daa[ 4*20+ 1] =   23.00;
@@ -93,7 +93,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
 	    f[12] = 0.014000; f[13] = 0.040000; f[14] = 0.051000; f[15] = 0.070000;
 	    f[16] = 0.058000; f[17] = 0.011000; f[18] = 0.030000; f[19] = 0.064000;
 	  }
-	else if (prot_model == "DCMut") 
+	else if (prot_model == "DCMUT") 
 	  {	
 	    daa[ 1*20+ 0] =   26.78280; daa[ 2*20+ 0] =   98.44740; daa[ 2*20+ 1] =   32.70590; daa[ 3*20+ 0] =  119.98050; 
 	    daa[ 3*20+ 1] =    0.00000; daa[ 3*20+ 2] =  893.15150; daa[ 4*20+ 0] =   36.00160; daa[ 4*20+ 1] =   23.23740; 
@@ -208,7 +208,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
 	    f[12] = 0.02400; f[13] = 0.04000; f[14] = 0.05100; f[15] = 0.06900;
 	    f[16] = 0.05800; f[17] = 0.01400; f[18] = 0.03200; f[19] = 0.06600;
 	  }
-	else if (prot_model == "mtREV") 
+	else if (prot_model == "MTREV") 
 	  {
 	    daa[ 1*20+ 0] =   23.18; daa[ 2*20+ 0] =   26.95; daa[ 2*20+ 1] =   13.24; daa[ 3*20+ 0] =   17.67;
 	    daa[ 3*20+ 1] =    1.90; daa[ 3*20+ 2] =  794.38; daa[ 4*20+ 0] =   59.93; daa[ 4*20+ 1] =  103.33;
@@ -339,7 +339,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
 	    f[12] = 0.02000; f[13] = 0.03800; f[14] = 0.04600; f[15] = 0.07000;
 	    f[16] = 0.06100; f[17] = 0.01400; f[18] = 0.03500; f[19] = 0.07100;   
 	  }
-	else if (prot_model == "rtREV") 
+	else if (prot_model == "RTREV") 
 	  {
 	    daa[1*20+0]= 34;         daa[2*20+0]= 51;         daa[2*20+1]= 35;         daa[3*20+0]= 10;         
 	    daa[3*20+1]= 30;         daa[3*20+2]= 384;        daa[4*20+0]= 439;        daa[4*20+1]= 92;         
@@ -396,7 +396,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
 	    f[12]= 0.015;           f[13]= 0.0287;          f[14]= 0.0681;          f[15]= 0.0488;          
 	    f[16]= 0.0622;          f[17]= 0.0251;          f[18]= 0.0318;          f[19]= 0.0619;	    	    
 	  }
-	else if (prot_model == "cpREV") 
+	else if (prot_model == "CPREV") 
 	  {
 	    daa[1*20+0]= 105;        daa[2*20+0]= 227;        daa[2*20+1]= 357;        daa[3*20+0]= 175;        
 	    daa[3*20+1]= 43;         daa[3*20+2]= 4435;       daa[4*20+0]= 669;        daa[4*20+1]= 823;        
@@ -668,7 +668,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
 	    f[18]= 0.0323746050281867;
 	    f[19]= 0.0669190817443274;
 	  }
-	else if (prot_model == "Blosum62") 
+	else if (prot_model == "BLOSUM62") 
 	  {
 	    daa[1*20+0]= 0.735790389698;  daa[2*20+0]= 0.485391055466;  daa[2*20+1]= 1.297446705134;  
 	    daa[3*20+0]= 0.543161820899;  
@@ -749,7 +749,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
 	    f[12]= 0.025;                f[13]= 0.047;                f[14]= 0.039;                f[15]= 0.057;                
 	    f[16]= 0.051;                f[17]= 0.013;                f[18]= 0.032;                f[19]= 0.073;
 	  }
-	else if (prot_model == "mtMAM") 
+	else if (prot_model == "MTMAM") 
 	  {
 	    daa[1*20+0]= 32;              daa[2*20+0]= 2;    daa[2*20+1]= 4;               daa[3*20+0]= 11;
 	    daa[3*20+1]= 0;               daa[3*20+2]= 864;  daa[4*20+0]= 0;               daa[4*20+1]= 186;
@@ -886,7 +886,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
 	    f[18] = 0.03415; 
 	    f[19] = 0.06915; 	   
 	  }	  
-	else if (prot_model == "mtART") 
+	else if (prot_model == "MTART") 
 	  {
 	   
 
@@ -1102,7 +1102,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
            f[18]= 0.039443;
            f[19]= 0.057700;
 	  }
-	else if (prot_model == "mtZOA") 
+	else if (prot_model == "MTZOA") 
 	  {
            daa[1*20+0]=   3.3;
            daa[2*20+0]=   1.7;
@@ -1530,7 +1530,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
            f[18]= 0.036;
            f[19]= 0.071;
 	  }
-	else if (prot_model == "HIVb") 
+	else if (prot_model == "HIVB") 
 	  {
            daa[1*20+0]=   0.30750700;
            daa[2*20+0]=   0.00500000;
@@ -1744,7 +1744,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
            f[18]= 0.028;
            f[19]= 0.062;
 	  }
-	else if (prot_model == "HIVw") 
+	else if (prot_model == "HIVW") 
 	  {
            daa[1*20+0]=   0.0744808;
            daa[2*20+0]=   0.6175090;
@@ -1958,7 +1958,7 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
            f[18]= 0.021;
            f[19]= 0.051;
 	  }
-	else if (prot_model == "JTTDCMut") 
+	else if (prot_model == "JTTDCMUT") 
 	  {
            daa[1*20+0]=   0.531678;
            daa[2*20+0]=   0.557967;
@@ -3054,7 +3054,11 @@ void ModelProtein::init(const char *model_name, StateFreqType freq) {
 	//string model_str;
 	//bool user_model = false;
 	double daa[400];
-	if (initProtMat(state_freq, daa, name)) {
+	string name_upper = model_name;
+	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
+		(*it) = toupper(*it);
+
+	if (initProtMat(state_freq, daa, name_upper)) {
 		int i, j, k;
 		for (i = 0, k = 0; i < num_states-1; i++)
 			for (j = i+1; j < num_states; j++)

@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.6)
 set(BUILD_SHARED_LIBS OFF)
 
 ######## NOTE: run cmake with option "-DIQ_STATIC to build static library 
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+
 IF($ENV{STATIC})
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
 	IF(WIN32)

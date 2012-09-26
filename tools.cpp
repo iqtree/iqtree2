@@ -1607,15 +1607,16 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -m <model_name>" << endl
 			<< "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
 			<< "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
-			<< "                       specification, e.g., '010010' is equiv. to HKY" << endl
+			<< "                       specification, e.g., '010010' = HKY" << endl
 			<< "              Protein: WAG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
-			<< "                       JTT, LG, mtART, mtZOA, VT, or rtREV" << endl
-			<< "               Binary: JC-like" << endl
+			<< "                       JTT, LG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
+			<< "                       HIVw, JTTDCMut, FLU, Blosum62" << endl
+			<< "               Binary: JC2 (default), GTR2" << endl
 			<< "            Modeltest: TEST or TESTONLY to select model with Modeltest." << endl
 			<< "                       TESTONLY will stop the run after finishing Modeltest" << endl
 			<< "            Otherwise: Name of file containing user-model parameters" << endl
 			<< "                       (rate parameters and state frequencies)" << endl
-			<< "  -m <model_name>+Fc or +Fo or +Fu or +Fq (default: auto)"<< endl
+			<< "  -m <model_name>+F or +FO or +FU or +FQ (default: auto)"<< endl
 			<< "                       counted, optimized, user-defined, equal state frequency" << endl
 			<< endl << "RATE HETEROGENEITY:" << endl
 			<< "  -m <model_name>+I or +G[n] or +I+G[n]" << endl
