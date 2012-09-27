@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 2.6)
 
 set(BUILD_SHARED_LIBS OFF)
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  message("Warning: 32-bit version is not completely working")
+else()
+  message("Info: Compiling on 64-bit system")
+endif()
+
+
 ######## NOTE: run cmake with option "-DIQ_STATIC to build static library 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
 
@@ -28,7 +35,7 @@ project(iqtree)
 # The version number.
 set (iqtree_VERSION_MAJOR 0)
 set (iqtree_VERSION_MINOR 9)
-set (iqtree_VERSION_PATCH 0)
+set (iqtree_VERSION_PATCH 1)
 
 
 include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
@@ -47,8 +54,6 @@ include_directories("${PROJECT_BINARY_DIR}")
 add_definitions(-DIQ_TREE)
  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused -pedantic")
  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused -pedantic")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused -static-libstdc++")
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused -static-libgcc")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
