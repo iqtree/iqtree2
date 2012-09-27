@@ -2,12 +2,6 @@ cmake_minimum_required(VERSION 2.6)
 
 set(BUILD_SHARED_LIBS OFF)
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-  message("Warning: 32-bit version is not completely working")
-else()
-  message("Info: Compiling on 64-bit system")
-endif()
-
 
 ######## NOTE: run cmake with option "-DIQ_STATIC to build static library 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
@@ -52,8 +46,8 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 
 add_definitions(-DIQ_TREE)
- set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused -pedantic")
- set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wno-sign-compare -Wno-unused -pedantic")
+ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-deprecated -Wno-sign-compare -Wno-unused -pedantic")
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=gnu99 -Wall -Wno-sign-compare -Wno-unused -pedantic")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
@@ -64,6 +58,13 @@ set(CMAKE_C_FLAGS_DEBUG "-O0 -g2")
 if (NOT CMAKE_BUILD_TYPE) 
 	set(CMAKE_BUILD_TYPE "Release")
 endif()
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  message("Warning: 32-bit version is not completely working")
+else(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  message("Info: Compiling on 64-bit system")
+endif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+
 
 add_subdirectory(ncl)
 add_subdirectory(whtest)

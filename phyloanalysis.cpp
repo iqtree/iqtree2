@@ -47,6 +47,7 @@
 #include "guidedbootstrap.h"
 #include "modelset.h"
 
+//const int DNA_MODEL_NUM = 14;
 clock_t t_begin, t_end;
 
 const int BIN_MODEL_NUM = 2;
@@ -55,6 +56,8 @@ string bin_model_names[BIN_MODEL_NUM] = {"JC2","GTR2"};
 const int DNA_MODEL_NUM = 22;
 string dna_model_names[DNA_MODEL_NUM] ={"JC", "F81", "K80", "HKY", "TNe", "TN", "K81", "K81u", "TPM2", "TPM2u",
     "TPM3", "TPM3u", "TIMe", "TIM", "TIM2e", "TIM2", "TIM3e", "TIM3", "TVMe", "TVM", "SYM", "GTR"};
+/*string dna_model_names[DNA_MODEL_NUM] ={"JC", "F81", "K80", "HKY", "TNe", "TN", "K81", "K81u", 
+	"TIMe", "TIM", "TVMe", "TVM", "SYM", "GTR"};*/
 
 const int AA_MODEL_NUM = 18;
 string aa_model_names[AA_MODEL_NUM] ={"Dayhoff", "mtMAM", "JTT", "WAG", "cpREV", "mtREV", "rtREV",
