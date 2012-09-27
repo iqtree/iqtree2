@@ -1463,9 +1463,18 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     double node1_len = node1_nei->length;
     int nniNr = 1;
     int chosenSwap = 1;
-    node12_it->partial_lh = tmp_partial_lh1;
-    node21_it->partial_lh = tmp_partial_lh2;
-
+	
+	// make alignment 16
+	if (((int)tmp_partial_lh1) % 16 == 0)
+		node12_it->partial_lh = tmp_partial_lh1;
+	else 
+		node12_it->partial_lh = tmp_partial_lh1 + 1;
+	
+	if (((int)tmp_partial_lh2) % 16 == 0)
+		node21_it->partial_lh = tmp_partial_lh2;
+	else
+		node21_it->partial_lh = tmp_partial_lh2 + 1;
+		
     node12_it->scale_num = tmp_scale_num1;
     node21_it->scale_num = tmp_scale_num2;
 

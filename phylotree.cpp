@@ -732,7 +732,9 @@ void PhyloTree::growTreeMP(Alignment *alignment) {
 
 void PhyloTree::initializeAllPartialLh() {
     int index;
-    block_size = alnSize * numStates * site_rate->getNRate();
+    int mem_size = ((alnSize % 2) == 0) ? alnSize : (alnSize+1);
+    block_size = mem_size * numStates * site_rate->getNRate();
+    //block_size = alnSize * numStates * site_rate->getNRate();
     if (!tmp_partial_lh1)
         tmp_partial_lh1 = newPartialLh();
     if (!tmp_partial_lh2)
@@ -753,9 +755,10 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
         if (!central_partial_lh) {
+			int mem_size = (leafNum - 1) * 4 * block_size + 2;
             if (verbose_mode >= VB_MED)
-                cout << "Allocating " << (leafNum - 1) * 4 * block_size * sizeof (double) << " bytes for partial likelihood vectors" << endl;
-            central_partial_lh = new double[(leafNum-1)*4*block_size];
+                cout << "Allocating " <<  mem_size * sizeof (double) << " bytes for partial likelihood vectors" << endl;
+            central_partial_lh = new double[mem_size];
             if (!central_partial_lh)
                 outError("Not enough memory for partial likelihood vectors");
 
@@ -777,15 +780,18 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         index = 0;
     }
     if (dad) {
+        // make memory alignment 16
+		int mem_shift = 0;
+		if (((int)central_partial_lh) % 16 != 0) mem_shift = 1;
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
         PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
         //assert(!nei->partial_lh);
-        nei->partial_lh = central_partial_lh + (index * block_size);
+        nei->partial_lh = central_partial_lh + (index * block_size + mem_shift);
         nei->scale_num = central_scale_num + (index * scale_block_size);
         nei->partial_pars = central_partial_pars + (index * pars_block_size);
         nei = (PhyloNeighbor*) dad->findNeighbor(node);
         //assert(!nei->partial_lh);
-        nei->partial_lh = central_partial_lh + ((index + 1) * block_size);
+        nei->partial_lh = central_partial_lh + ((index + 1) * block_size + mem_shift);
         nei->scale_num = central_scale_num + ((index + 1) * scale_block_size);
         nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
         index += 2;
@@ -796,7 +802,8 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 }
 
 double *PhyloTree::newPartialLh() {
-    return new double[aln->size() * aln->num_states * site_rate->getNRate()];
+	double *ret = new double[aln->size() * aln->num_states * site_rate->getNRate() + 1];
+    return ret;
 }
 
 UBYTE *PhyloTree::newScaleNum() {
