@@ -177,7 +177,8 @@ void printCopyright(ostream &out) {
 #else
  	out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
-out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH << " built " << __DATE__;
+out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH 
+	<< " " << 8*sizeof(void*) << "-bit" << " built " << __DATE__;
 #ifdef DEBUG
 	out << " - debug mode";
 #endif
