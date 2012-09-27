@@ -53,7 +53,7 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
     double *trans_state;
     double p_invar = site_rate->getPInvar();
     double p_var_cat = (1.0 - p_invar) / (double) numCat;
-    EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
+    EIGEN_ALIGN16 double *trans_mat = new double[numCat * tranSize];
     EIGEN_ALIGN16 double state_freq[NSTATES];
     model->getStateFrequency(state_freq);
     for (cat = 0; cat < numCat; cat++) {
@@ -89,7 +89,7 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
     if (pattern_lh) {
         memmove(pattern_lh, _pattern_lh, alnSize*sizeof(double));
     }
-
+	delete [] trans_mat;
     return tree_lh;
 }
 
@@ -159,7 +159,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
         }
     } else {
         // internal node
-        EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
+        EIGEN_ALIGN16 double *trans_mat = new double[numCat * tranSize];
         for (ptn = 0; ptn < lh_size; ++ptn)
             dad_branch->partial_lh[ptn] = 1.0;
 #ifdef IGNORE_GAP_LH
@@ -220,6 +220,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
                     }
                 }
         }
+        delete [] trans_mat;
     }
 
     dad_branch->partial_lh_computed |= 1;
@@ -264,9 +265,9 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     double p_var_cat = (1.0 - p_invar) / (double) numCat;
     double state_freq[NSTATES];
     model->getStateFrequency(state_freq);
-    EIGEN_ALIGN16 double trans_mat[numCat * tranSize];
-    EIGEN_ALIGN16 double trans_derv1[numCat * tranSize];
-    EIGEN_ALIGN16 double trans_derv2[numCat * tranSize];
+    EIGEN_ALIGN16 double *trans_mat = new double[numCat * tranSize];
+    EIGEN_ALIGN16 double *trans_derv1 = new double[numCat * tranSize];
+    EIGEN_ALIGN16 double *trans_derv2 = new double[numCat * tranSize];
     int discrete_cat = site_rate->getNDiscreteRate();
     if (!site_rate->isSiteSpecificRate())
         for (cat = 0; cat < discrete_cat; cat++) {
@@ -358,6 +359,9 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         tree_lh += lh_ptn * freq;
         _pattern_lh[ptn] = lh_ptn;
     }
+    delete [] trans_derv2;
+    delete [] trans_derv1;
+    delete [] trans_mat;
     return tree_lh;
 }
 
