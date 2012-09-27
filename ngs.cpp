@@ -286,8 +286,9 @@ NGSRateCat::NGSRateCat(PhyloTree *tree, int ncat) {
     proportion = new double[ncategory];
     int i;
     for (i = 0; i < ncategory; i++) {
-        rates[i] = (double)rand()/RAND_MAX;
+        rates[i] = random_double();
         proportion[i] = 1.0/ncategory;
+		
     }
 
     sum_pair_freq = new double[tree->aln->num_states * tree->aln->num_states];

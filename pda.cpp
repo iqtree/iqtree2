@@ -1697,45 +1697,6 @@ extern "C" void funcAbort(int signal_number)
 int main(int argc, char *argv[])
 {
 
-/*	cout << "time_t: " << sizeof(time_t) << endl
-		<< "clock_t: " << sizeof(clock_t) << endl
-		<< "CLOCKS_PER_SEC: "<< CLOCKS_PER_SEC << endl;
-
-	//test_eigen();
-
-	srand(0);
-	double a=(double)rand()/RAND_MAX, b=0, c=0;
-	int maxj = 0;
-	clock_t cbegin = clock();
-	if (cbegin==0) { b=1.2345; maxj=1000000000;}
-	//for (int i = 1; i < 100; i++)
-	for (int j = 1; j < maxj; j++) {
-		c+=a/b;
-		//a=rand();
-	}
-	clock_t cend = clock();
-	cout << cbegin << " a= " << a << " c= " << c << endl;
-	cout << "time: " << double(cend-cbegin)/CLOCKS_PER_SEC << endl;
-	return 0;*/
-
-/*	stringstream ss("(T0:0.1,(T1:0.1,(T2:0.1,(T3:0.1,T4:0.1):0.1):0.1):0.1,T5:0.1);");
-	MTree tree;
-	bool is_rooted = false;
-	tree.readTree(ss, is_rooted);
-	tree.drawTree(cout);
-	if (argc != 2) return 0;
-	string tax_cov(argv[1]);
-	for (string::iterator it = tax_cov.begin(); it != tax_cov.end(); it++)
-		(*it) -= '0';
-	MTree tree2;
-	tree2.copyTree(&tree, tax_cov);
-	cout << "new tree has " << tree2.leafNum << " leaves and " << tree2.nodeNum - tree2.leafNum << " internal nodes" << endl;
-	tree2.drawTree(cout);
-	tree2.printTree(cout);
-	cout << endl;
-
-	return 0;*/
-
 	Params params;
 	parseArg(argc, argv, params);
 
@@ -1760,8 +1721,8 @@ int main(int argc, char *argv[])
 		cout << " " << argv[i];
 	cout << endl;
 
-	cout << "Seed:    " << params.ran_seed << endl;
-	srand(params.ran_seed);
+	cout << "Seed:    " << params.ran_seed <<  " ";
+	init_random(params.ran_seed);
 
 	time_t cur_time;
 	time(&cur_time);

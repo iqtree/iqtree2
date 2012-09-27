@@ -78,6 +78,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	if (model_str == "") {
 		if (tree->aln->num_states == 4) model_str = "HKY";
 		else if (tree->aln->num_states == 20) model_str = "WAG";
+		else if (tree->aln->num_states == 2) model_str = "JC2";
 		else model_str = "JC";
 	}
 	string::size_type posfreq;

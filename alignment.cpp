@@ -1157,8 +1157,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
         pattern_freq->resize(aln->getNPattern(), 0);
     }
     for (site = 0; site < nsite; site++) {
-        int site_id = floor((((double)rand())/RAND_MAX) * nsite);
-        if (site_id >= nsite) site_id = nsite-1;
+        int site_id = random_int(nsite);
         int ptn_id = aln->getPatternID(site_id);
         Pattern pat = aln->at(ptn_id);
         addPattern(pat, site);
@@ -1173,8 +1172,7 @@ void Alignment::createBootstrapAlignment(IntVector &pattern_freq) {
     pattern_freq.resize(getNPattern(), 0);
     int site, nsite = getNSite();
     for (site = 0; site < nsite; site++) {
-        int site_id = floor((((double)rand())/RAND_MAX) * nsite);
-        if (site_id >= nsite) site_id = nsite-1;
+        int site_id = random_int(nsite);
         int ptn_id = getPatternID(site_id);
         pattern_freq[ptn_id]++;
     }

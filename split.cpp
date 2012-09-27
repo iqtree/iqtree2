@@ -411,7 +411,7 @@ void Split::randomize(int size) {
 		if (step == MAX_STEP - 1) prob = 1.0;
 		// now scan through all elements, pick up at random
 		for (cnt = 0; cnt < ntaxa && num < size; cnt++)
-			if (!containTaxon(cnt) && ( ((double)(rand()) / RAND_MAX) <= prob )) {
+			if (!containTaxon(cnt) && ( random_double() <= prob )) {
 				addTaxon(cnt);
 				num++;
 			}

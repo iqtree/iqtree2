@@ -1445,4 +1445,31 @@ inline double getCPUTime(clock_t startTime) {
 */
 double computePValueChiSquare (double x, int df);
 
+/*--------------------------------------------------------------*/
+/* random number generator */
+/*--------------------------------------------------------------*/
+
+/**
+ * initialize the random number generator
+ * @param seed seed for generator
+ */
+int init_random(int seed);
+
+/**
+ * returns a random integer in the range [0; n - 1] 
+ * @param n upper-bound of random number
+ */
+int random_int(int n);
+
+/**
+ * returns a random integer in the range [0; RAND_MAX - 1] 
+ * = random_int(RAND_MAX)
+ */
+int random_int();
+
+/**
+ * returns a random floating-point nuber in the range [0; 1) 
+ */
+double random_double();
+
 #endif

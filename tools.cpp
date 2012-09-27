@@ -127,17 +127,17 @@ void outWarning(string warn)
 
 
 double randomLen(Params &params) {
-	double ran = static_cast<double> (rand () % 999 + 1) / 1000;
+	double ran = static_cast<double> (random_int(999) + 1) / 1000;
 	double len = - params.mean_len * log (ran);
 
 	if (len < params.min_len) {
-		int fac = rand () % 1000;
+		int fac = random_int(1000);
 		double delta = static_cast<double> (fac)  / 1000.0; //delta < 1.0
 		len = params.min_len + delta / 1000.0;
 	}
 
 	if (len > params.max_len) {
-		int fac = rand () % 1000;
+		int fac = random_int (1000);
 		double delta = static_cast<double> (fac)  / 1000.0; //delta < 1.0
 		len = params.max_len - delta / 1000.0;
 	}
@@ -482,9 +482,9 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
 
 void get2RandNumb(const int size, int &first, int &second) {
     // pick a random element
-    first = floor((((double) rand()) / RAND_MAX) * size);
+    first = random_int(size);
     // pick a random element from what's left (there is one fewer to choose from)...
-    second = floor((((double) rand()) / RAND_MAX) * (size-1));
+    second = random_int(size-1);
     // ...and adjust second choice to take into account the first choice
     if (second >= first) {
         ++second;
@@ -1749,8 +1749,20 @@ inline T quantile(const vector<T>& v, const double q) {
 	std::copy(v, v.begin() + size, w.begin());
 }
 
-#ifndef SPRNG
+#define RAN_STANDARD 1
+#define RAN_SPRNG    2
+#define RAN_RAND4    3
 
+#define RAN_TYPE 2
+
+#if RAN_TYPE == RAN_STANDARD
+int init_random(int seed) {
+	srand(seed);
+	cout << "Using rand() Standard Random Number Generator" << endl;
+	return seed;
+}
+
+#elif RAN_TYPE == RAN_RAND4
 /******************************************************************************/
 /* random numbers generator  (Numerical recipes)                              */
 /******************************************************************************/
@@ -1840,17 +1852,14 @@ double randomunitintervall()
 #undef RNMX
 
 
-int initrandom(int seed)   /* RAND4 */
+int init_random(int seed)   /* RAND4 */
 {
-   srand((unsigned) time(NULL));
-   if (seed < 0) 
-	seed = rand();
+//    srand((unsigned) time(NULL));
+//    if (seed < 0) 
+// 	seed = rand();
    _idum=-(long) seed;
 #  ifndef PARALLEL
 	   cout << "Using RAND4 Random Number Generator" << endl;
-#	   ifdef RANDVERBOSE1
-	      cout << "!!! random seed set to " << seed << "!!!" << endl;
-#	   endif  /* RANDVERBOSE1 */
 #  else /* PARALLEL */
 	   {
 	   int n;
@@ -1859,9 +1868,9 @@ int initrandom(int seed)   /* RAND4 */
 	   }
 	   for (n=0; n<PP_Myid; n++)
 		(void) randomunitintervall();
-#	   ifdef RANDVERBOSE1
+		if (verbose_mode >= VB_MED) {
 	      cout << "(" << PP_Myid << ") !!! random seed set to " << seed << ", " << n << " drawn !!!" << endl;
-#	   endif  /* RANDVERBOSE1 */
+		}
 	   }
 #  endif
    return (seed);
@@ -1869,37 +1878,33 @@ int initrandom(int seed)   /* RAND4 */
 
 /******************/
 
-#else /* USE_SPRNG */
+#else /* SPRNG */
 
 /******************/
 
 int *randstream;
 
-int initrandom(int seed)
+int init_random(int seed)
 {
-   srand((unsigned) time(NULL));
+//    srand((unsigned) time(NULL));
    if (seed < 0) 
 	seed = make_sprng_seed();
 #  ifndef PARALLEL
 	   cout << "Using SPRNG -- Scalable Parallel Random Number Generator" << endl;
 	   randstream = init_sprng(0,1,seed,SPRNG_DEFAULT); /*init stream*/
-
-#	   ifdef RANDVERBOSE1
-	      cout << "!!! random seed set to " << seed << " !!!" << endl;
-	      cout << " Printing information about new stream" << endl;
+		if (verbose_mode >= VB_MED) {
 	      print_sprng(randstream);
-#	   endif /* RANDVERBOSE 1 */
+		}
 #  else /* PARALLEL */
 	   if (PP_IamMaster) {
 	     cout << "Using SPRNG -- Scalable Parallel Random Number Generator" << endl;
 	   }
 	   /* MPI_Bcast(&seed, 1, MPI_UNSIGNED, PP_MyMaster, MPI_COMM_WORLD); */
 	   randstream = init_sprng(PP_Myid,PP_NumProcs,seed,SPRNG_DEFAULT); /*initialize stream*/
-#	   ifdef RANDVERBOSE1
+		if (verbose_mode >= VB_MED) {
 	      cout << "(" << PP_Myid << ") !!! random seed set to " << seed << " !!!" << endl;
-	      cout << " Printing information about new stream" << endl;
 	      print_sprng(randstream);
-#	   endif  /* RANDVERBOSE1 */
+		}
 #  endif /* PARALLEL */
    return (seed);
 }  /* initrandom */ 
@@ -1911,33 +1916,39 @@ int initrandom(int seed)
 
 
 /* returns a random integer in the range [0; n - 1] */
-int randominteger(int n)
+int random_int(int n)
+{
+	return (int) floor(random_double() * n);
+} /* randominteger */
+
+double random_double()
 {
 #  ifndef FIXEDINTRAND
 #	ifndef PARALLEL
-#	   ifdef SPRNG
-		return (int) floor(sprng(randstream)*n);
+#	   if RAN_TYPE == RAN_STANDARD
+		return ((double)rand())/((double)RAND_MAX+1);
+#	   elif RAN_TYPE == RAN_SPRNG
+		return sprng(randstream);
 #	   else /* NO_SPRNG */
-		int t;
-		t = (int) floor(randomunitintervall()*n);
-		return t;
+		return randomunitintervall();
 #	   endif /* NO_SPRNG */
 #	else /* NOT PARALLEL */
-#	   ifdef SPRNG
-		return (int) floor(sprng(randstream)*n);
+#	   if RAN_TYPE == RAN_SPRNG
+		return sprng(randstream);
 #	   else /* NO_SPRNG */
 		int m;
 		for (m=1; m<PP_NumProcs; m++)
 			(void) randomunitintervall();
 		PP_randn+=(m-1); PP_rand++;
-		return (int) floor(randomunitintervall()*n);
+		return randomunitintervall();
 #	   endif /* NO_SPRNG */
 #	endif /* NOT PARALLEL */
 #  else /* FIXEDINTRAND */
 	fprintf(stderr, "!!! fixed \"random\" integers for testing purposes !!!\n");
-	return (int)0;
+	return 0.0;
 #  endif /* FIXEDINTRAND */
-} /* randominteger */
+
+}
 
 /* Following part is taken from ModelTest software */
 #define	BIGX            20.0                                 /* max value to represent exp (x) */

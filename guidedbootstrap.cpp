@@ -757,8 +757,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQPTree &tree)
                         diff_tree_ids.push_back(diff_tree_ids[max_logl - logl.begin()]);
                         prob_vec.push_back(prob);
                     } else {
-                        int max_rand = floor(((double)rand() / RAND_MAX)*num_max);
-                        if (max_rand >= num_max) max_rand = num_max - 1;
+                        int max_rand = random_int(num_max);
                         for (j = 0; j < ndiff && max_rand >= 0; j++)
                             if (logl[j] >= logl_cutoff) {
                                 max_rand--;

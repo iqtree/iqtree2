@@ -47,14 +47,16 @@
 #include "guidedbootstrap.h"
 #include "modelset.h"
 
-const int DNA_MODEL_NUM = 22;
 clock_t t_begin, t_end;
 
+const int BIN_MODEL_NUM = 2;
+string bin_model_names[BIN_MODEL_NUM] = {"JC2","GTR2"};
+
+const int DNA_MODEL_NUM = 22;
 string dna_model_names[DNA_MODEL_NUM] ={"JC", "F81", "K80", "HKY", "TNe", "TN", "K81", "K81u", "TPM2", "TPM2u",
     "TPM3", "TPM3u", "TIMe", "TIM", "TIM2e", "TIM2", "TIM3e", "TIM3", "TVMe", "TVM", "SYM", "GTR"};
 
 const int AA_MODEL_NUM = 18;
-
 string aa_model_names[AA_MODEL_NUM] ={"Dayhoff", "mtMAM", "JTT", "WAG", "cpREV", "mtREV", "rtREV",
     "mtART", "mtZOA", "VT", "LG", "DCMut", "PMB", "HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62"};
 
@@ -111,12 +113,12 @@ bool checkModelFile(string model_file, StrVector &model_names, DoubleVector &lh_
  */
 string modelTest(Params &params, PhyloTree *in_tree) {
     int nstates = in_tree->aln->num_states;
-    if (nstates != 4 && nstates != 20)
+    if (nstates != 2 && nstates != 4 && nstates != 20)
         outError("Test of best-fit models only works for DNA or Protein");
     string fmodel_str = params.out_prefix;
     fmodel_str += ".model";
    
-    int num_models = (nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM;
+    int num_models = (nstates == 2) ? BIN_MODEL_NUM : ( (nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM);
     int model, rate_type;
 
     string best_model;
@@ -186,7 +188,7 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 				tree = tree_hetero;
 			}
 			// initialize model
-			subst_model->init(((nstates == 4) ? dna_model_names[model].c_str() : aa_model_names[model].c_str()), FREQ_UNKNOWN);
+			subst_model->init((nstates == 2) ? bin_model_names[model].c_str() : ((nstates == 4) ? dna_model_names[model].c_str() : aa_model_names[model].c_str()), FREQ_UNKNOWN);
 			subst_model->setTree(tree);
 			tree->setModel(subst_model);
 			// initialize rate
@@ -283,8 +285,8 @@ void reportReferences(ofstream &out, string &original_model) {
 		"pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies." << endl <<
 		"Bioinformatics, 21:3794-3796." << endl << endl;*/
 
-	if (original_model == "TEST" || original_model == "TESTONLY")
-		out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl << endl;
+// 	if (original_model == "TEST" || original_model == "TESTONLY")
+// 		out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl << endl;
 }
 
 void reportAlignment(ofstream &out, Alignment &alignment) {

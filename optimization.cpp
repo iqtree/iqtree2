@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+//#include "tools.h"
 
 
 using namespace std;
@@ -550,6 +551,7 @@ void Optimization::lnsrch(int n, double xold[], double fold, double g[], double 
 
 
 const int MAX_ITER = 3;
+extern double random_double();
 
 double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[], bool bound_check[], double gtol) {
 	int i, iter;
@@ -585,7 +587,7 @@ double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[]
 			
 		do {
 			for (i = 1; i <= ndim; i++) {
-				guess[i] = ((double)(rand())/RAND_MAX) * (upper[i] - lower[i])/3 + lower[i];
+				guess[i] = random_double() * (upper[i] - lower[i])/3 + lower[i];
 			}
 		} while (false);
 		cout << "Restart estimation at the boundary... " << std::endl;

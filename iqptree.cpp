@@ -224,8 +224,7 @@ RepresentLeafSet* IQPTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves
                 else if ((*lit[0])->height > (*lit[1])->height)
                     id = 1;
                 else { // tie, choose at random
-                    id = floor((((double)rand()) / RAND_MAX)*2);
-					if (id > 1) id = 1;
+					id = random_int(2);
                 }
             } else
                 if (lit[0] != leaves_it[0]->end())
@@ -277,8 +276,7 @@ void IQPTree::deleteLeaves(PhyloNodeVector &del_leaves) {
     if (num_delete > taxa.size() - 4) num_delete = taxa.size() - 4;
     // now try to randomly delete some taxa of the probability of p_delete
     for (i = 0; i < num_delete;) {
-        int id = floor((((double) rand()) / RAND_MAX) * taxa.size());
-        if (id >= taxa.size()) id = taxa.size()-1;
+        int id = random_int(taxa.size());
         if (!taxa[id]) continue;
         else i++;
         PhyloNode *taxon = (PhyloNode*) taxa[id];
@@ -331,8 +329,7 @@ int IQPTree::assessQuartetParsimony(Node *leaf0, Node *leaf1, Node *leaf2,
             score[2] += (*it).frequency;
     }
     if (score[0] == score[1] && score[0] == score[2]) {
-    	int id = floor(((double) (rand()) / RAND_MAX) * 3);
-    	if (id > 2) id = 2;
+    	int id = random_int(3);
         return id;
     }
     if (score[0] > score[1] && score[0] > score[2])
@@ -481,8 +478,7 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
         if (verbose_mode >= VB_DEBUG)
             cout << "Best bonus " << best_bonus << " " << best_nodes[0]->id << " " << best_dads[0]->id << endl;
         assert(best_nodes.size() == best_dads.size());
-        int node_id = floor((((double) rand()) / RAND_MAX) * best_nodes.size());
-        if (node_id >= best_nodes.size()) node_id = best_nodes.size()-1;
+        int node_id = random_int(best_nodes.size());
         if (best_nodes.size() > 1 && verbose_mode >= VB_DEBUG)
             cout << best_nodes.size()
             << " branches show the same best bonus, branch nr. "
@@ -549,17 +545,6 @@ double IQPTree::doIQP() {
     return curScore;
 }
 
-/*void get2RandNumb(const int size, int &first, int &second) {
-    // pick a random element
-    first = floor((((double) rand()) / RAND_MAX) * size);
-    // pick a random element from what's left (there is one fewer to choose from)...
-    second = floor((((double) rand()) / RAND_MAX) * (size-1));
-    // ...and adjust second choice to take into account the first choice
-    if (second >= first) {
-        ++second;
-    }
-}*/
-
 double IQPTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
     assert( node1->isLeaf() );
     assert( node2->isLeaf() );
@@ -589,8 +574,7 @@ double IQPTree::perturb(int times) {
         NodeVector taxa;
         // get the vector of taxa
         getTaxa(taxa);
-        int taxonid1 = floor((((double) rand()) / RAND_MAX) * taxa.size());
-        if (taxonid1 >= taxa.size()) taxonid1--;
+        int taxonid1 = random_int(taxa.size());
         PhyloNode *taxon1 = (PhyloNode*) taxa[taxonid1];
         PhyloNode *taxon2;
         int dists[taxa.size()];
@@ -1616,7 +1600,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     	double prob1 = 	1 / (1 + exp(treelhs[0] - treelhs[1]) + exp(treelhs[2] - treelhs[1]));
     	double prob2 = 	1 / (1 + exp(treelhs[0] - treelhs[2]) + exp(treelhs[1] - treelhs[2]));
     	double prob0 = 1 - prob1 - prob2;
-    		double accept_prob = (double) rand() / RAND_MAX;
+    		double accept_prob = random_double();
     		if ( accept_prob <= prob0 ) {
     			return noMove;
     		} else if ( accept_prob <= prob0 + prob1 ) {

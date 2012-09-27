@@ -47,8 +47,7 @@ void MExtTree::setZeroInternalBranches(int num_zero_len) {
 	getInternalBranches(nodes, nodes2);
 	if (num_zero_len > nodes.size()) outError("The specified number of zero branches is too much");
 	for (int i = 0; i < num_zero_len;) {
-		int id = floor(((double) rand() / RAND_MAX) * nodes.size());
-		if (id >= nodes.size()) id = nodes.size()-1;
+		int id = random_int(nodes.size());
 		if (!nodes[id]) continue;
 		i++;
 		nodes[id]->findNeighbor(nodes2[id])->length = 0.0;
@@ -98,7 +97,7 @@ void MExtTree::generateCaterpillar(int size) {
 	for (i = 0; i < 3; i++)
 	{
 		node = newNode();
-		len = (double)(rand())/RAND_MAX;
+		len = random_double();
 		root->addNeighbor(node, len);
 		node->addNeighbor(root, len);
 		myleaves.push_back(node);
@@ -114,14 +113,14 @@ void MExtTree::generateCaterpillar(int size) {
 		innodes.push_back(node);
 		// add the first leaf
 		Node *newleaf = newNode();
-		len = (double)(rand())/RAND_MAX;
+		len = random_double();
 		node->addNeighbor(newleaf, len);
 		newleaf->addNeighbor(node, len);
 		myleaves[index] = newleaf;
 
 		// add the second leaf
 		newleaf = newNode();
-		len = (double)(rand())/RAND_MAX;
+		len = random_double();
 		node->addNeighbor(newleaf, len);
 		newleaf->addNeighbor(node, len);
 		myleaves.push_back(newleaf);
@@ -151,7 +150,7 @@ void MExtTree::generateBalanced(int size) {
 	myleaves.push_back(root);
 	// create initial tree with 2 leaves
 	node = newNode();
-	len = (double)(rand())/RAND_MAX;
+	len = random_double();
 	root->addNeighbor(node, len);
 	node->addNeighbor(root, len);
 	myleaves.push_back(node);
@@ -167,14 +166,14 @@ void MExtTree::generateBalanced(int size) {
 			node = myleaves[index];
 			// add the first leaf
 			Node *newleaf = newNode();
-			len = (double)(rand())/RAND_MAX;
+			len = random_double();
 			node->addNeighbor(newleaf, len);
 			newleaf->addNeighbor(node, len);
 			myleaves[index] = newleaf;
 	
 			// add the second leaf
 			newleaf = newNode();
-			len = (double)(rand())/RAND_MAX;
+			len = random_double();
 			node->addNeighbor(newleaf, len);
 			newleaf->addNeighbor(node, len);
 			myleaves.push_back(newleaf);
@@ -209,7 +208,7 @@ void MExtTree::generateUniform(int size, bool binary)
 	root = newNode(0, "0");
 	// create initial tree with 2 leaves
 	node = newNode(1, "1");
-	len = (double)(rand())/RAND_MAX;
+	len = random_double();
 	root->addNeighbor(node, len);
 	node->addNeighbor(root, len);
 
@@ -223,8 +222,7 @@ void MExtTree::generateUniform(int size, bool binary)
 	for (i = 2; i < size; i++)
 	{
 		int index;
-		index = (int)floor(((double)(rand())/RAND_MAX) * (2*i-3));
-		if (index >= 2*i-3) index = 2*i-4;
+		index = random_int(2*i-3);
 		//cout << "step " << i << " left = " << leftend[index]->id << " right = " << rightend[index]->id << endl;
 
 		// add an internal node
@@ -233,7 +231,7 @@ void MExtTree::generateUniform(int size, bool binary)
 		node = leftend[index];
 		for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
 			if ((*it)->node == rightend[index]) {
-				len = (double)(rand())/RAND_MAX;
+				len = random_double();
 				(*it)->node = newnode;
 				(*it)->length = len;
 				newnode->addNeighbor(node, len);
@@ -244,7 +242,7 @@ void MExtTree::generateUniform(int size, bool binary)
 		node = rightend[index];
 		for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
 			if ((*it)->node == leftend[index]) {
-				len = (double)(rand())/RAND_MAX;
+				len = random_double();
 				(*it)->node = newnode;
 				(*it)->length = len;
 				newnode->addNeighbor(node, len);
@@ -254,7 +252,7 @@ void MExtTree::generateUniform(int size, bool binary)
 
 		// add a new leaf
 		Node *newleaf = newNode(i, i);
-		len = (double)(rand())/RAND_MAX;
+		len = random_double();
 		newnode->addNeighbor(newleaf, len);
 		newleaf->addNeighbor(newnode, len);
 
@@ -296,8 +294,7 @@ void MExtTree::generateYuleHarding(Params &params, bool binary) {
 
 	innodes.push_back(root);
 	// create initial tree with 3 leaves
-	for (i = 0; i < 3; i++)
-	{
+	for (i = 0; i < 3; i++) {
 		node = newNode();
 		len = randomLen(params);
 		root->addNeighbor(node, len);
@@ -310,12 +307,9 @@ void MExtTree::generateYuleHarding(Params &params, bool binary) {
 	{
 		int index;
 		if (binary) {
-			index = (int)floor(((double)(rand())/RAND_MAX) * i);
-			if (index >= i) index = i-1;
+			index = random_int(i);
 		} else {
-			index = (int)floor(((double)(rand())/RAND_MAX) * (i + innodes.size()));
-			if (index >= i+innodes.size()) 
-				index = i+innodes.size()-1;
+ 			index = random_int(i + innodes.size());
 		}
 		if (index < i) {
 			node = myleaves[index];

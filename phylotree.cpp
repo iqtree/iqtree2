@@ -1750,7 +1750,6 @@ int PhyloTree::fixNegativeBranch(double fixed_length, Node *node, Node *dad) {
         if ((*it)->length <= 0.0) { // negative branch length detected
             if (verbose_mode == VB_DEBUG)
                 cout << "Negative branch length " << (*it)->length << " was set to ";
-            //(*it)->length = ((double)(rand())/RAND_MAX)*0.1+TOL_BRANCH_LEN;
             (*it)->length = fixed_length;
             if (verbose_mode == VB_DEBUG)
                 cout << (*it)->length << endl;

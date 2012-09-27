@@ -340,7 +340,7 @@ void SplitGraph::generateTaxaSet(char *filename, int size, int overlap, int time
 		int i;
 		for (i = 0; i < total; i++) {
 			int rnum;
-			do { rnum = rand() % ntaxa; } while (occur[rnum]);
+			do { rnum = random_int(ntaxa); } while (occur[rnum]);
 			ranvec.push_back(rnum);
 			occur[rnum] = true;
 		}
@@ -471,7 +471,7 @@ void SplitGraph::generateCircular(Params &params) {
 	// randomly insert internal splits
 	for (i = 0; i < ntaxa-2 && getNSplits() < num_splits; i++)
 		for (j = i+1; j < ntaxa && j < ntaxa-3+i; j++) {
-			double choice = (double) rand() / RAND_MAX;
+			double choice = random_double();
 			if (choice > threshold) continue;
 			double weight = randomLen(params);
 			Split *sp = new Split(ntaxa, weight);
