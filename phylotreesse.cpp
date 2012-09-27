@@ -55,7 +55,7 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
     double p_var_cat = (1.0 - p_invar) / (double) numCat;
     EIGEN_ALIGN16 double *trans_mat_orig = new double[numCat * tranSize + 1];
     double *trans_mat = trans_mat_orig;
-	if (((int)trans_mat) % 16 != 0) trans_mat = trans_mat + 1;
+	if (((intptr_t)trans_mat) % 16 != 0) trans_mat = trans_mat + 1;
     EIGEN_ALIGN16 double state_freq[NSTATES];
     model->getStateFrequency(state_freq);
     for (cat = 0; cat < numCat; cat++) {
@@ -163,7 +163,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
         // internal node
         EIGEN_ALIGN16 double *trans_mat_orig = new double[numCat * tranSize + 2];
         double *trans_mat = trans_mat_orig;
-        if (((int)trans_mat) % 16 != 0) trans_mat = trans_mat + 1;
+        if (((intptr_t)trans_mat) % 16 != 0) trans_mat = trans_mat + 1;
         for (ptn = 0; ptn < lh_size; ++ptn)
             dad_branch->partial_lh[ptn] = 1.0;
 #ifdef IGNORE_GAP_LH
@@ -274,9 +274,9 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     double *trans_derv2_orig EIGEN_ALIGN16 = new double[numCat * tranSize + 1];
 	// make alignment 16
 	double *trans_mat = trans_mat_orig, *trans_derv1 = trans_derv1_orig, *trans_derv2 = trans_derv2_orig;
-	if (((int)trans_mat) % 16 != 0) trans_mat = trans_mat + 1;
-	if (((int)trans_derv1) % 16 != 0) trans_derv1 = trans_derv1 + 1;
-	if (((int)trans_derv2) % 16 != 0) trans_derv2 = trans_derv2 + 1;
+	if (((intptr_t)trans_mat) % 16 != 0) trans_mat = trans_mat + 1;
+	if (((intptr_t)trans_derv1) % 16 != 0) trans_derv1 = trans_derv1 + 1;
+	if (((intptr_t)trans_derv2) % 16 != 0) trans_derv2 = trans_derv2 + 1;
 
 	int discrete_cat = site_rate->getNDiscreteRate();
     if (!site_rate->isSiteSpecificRate())

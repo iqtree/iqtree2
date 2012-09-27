@@ -782,7 +782,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
     if (dad) {
         // make memory alignment 16
 		int mem_shift = 0;
-		if (((int)central_partial_lh) % 16 != 0) mem_shift = 1;
+		if (((intptr_t)central_partial_lh) % 16 != 0) mem_shift = 1;
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
         PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
         //assert(!nei->partial_lh);
