@@ -36,14 +36,16 @@ void EigenDecomposition::eigensystem(
 	double **rate_params, double *state_freq, 
 	double *eval, double **evec, double **inv_evec, int num_state) 
 {
-	double forg[num_state], evali[num_state];
-	double new_forg[num_state], eval_new[num_state];
-	double *a[num_state];
-	double *b[num_state];
-	double *evec_new[num_state];
+	double *forg = new double[num_state];
+	double *evali = new double[num_state];
+	double *new_forg = new double[num_state];
+	double *eval_new = new double[num_state];
+	double **a = (double**)new double[num_state];
+	double **b = (double**)new double[num_state];
+	double **evec_new = (double**)new double[num_state];
+	int *ordr = new int[num_state + 1];
 	int i, j, k, error, new_num, inew, jnew;
 	double zero;
-	int ordr[num_state + 1];
 
 
 	for (i=0; i < num_state; i++)
@@ -136,7 +138,15 @@ void EigenDecomposition::eigensystem(
 		delete [] b[i];
 	for (i=num_state-1; i>= 0; i--)
 		delete [] a[i];
-
+	delete [] ordr;
+	delete [] evec_new;
+	delete [] b;
+	delete [] a;
+	delete [] eval_new;
+	delete [] new_forg;
+	delete [] evali;
+	delete [] forg;
+	
 	luinverse(evec, inv_evec, num_state); /* inverse eigenvectors are in Ievc */
 	//checkevector(evec, inv_evec, num_state); /* check whether inversion was OK */
 
@@ -146,9 +156,13 @@ void EigenDecomposition::eigensystem(
 void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_freq, 
 	double *eval, double **evec, double **inv_evec, int num_state)
 {
-	double forg[num_state], new_forg[num_state], forg_sqrt[num_state], off_diag[num_state], eval_new[num_state];
-	double *a[num_state];
-	double *b[num_state];
+	double *forg = new double[num_state];
+	double *new_forg = new double[num_state];
+	double *forg_sqrt = new double[num_state];
+	double *off_diag = new double[num_state];
+	double *eval_new = new double[num_state];
+	double **a = (double**)new double[num_state];
+	double **b = (double**)new double[num_state];
 	int i, j, k, error, new_num, inew, jnew;
 	double zero;
 
@@ -242,6 +256,14 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	for (i=num_state-1; i>= 0; i--)
 		delete [] a[i];
 
+	delete [] b;
+	delete [] a;
+	delete [] eval_new;
+	delete [] off_diag;
+	delete [] forg_sqrt;
+	delete [] new_forg;
+	delete [] forg;
+	
 } // eigensystem_new
 
 EigenDecomposition::~EigenDecomposition()
@@ -257,7 +279,7 @@ void EigenDecomposition::computeRateMatrix(double **a, double *stateFrqArr_, int
 */
 	int i, j;
 	double delta, temp, sum;
-	double m[num_state];
+	double *m = new double[num_state];
 
 	
 	for (i = 0; i < num_state; i++) {
@@ -283,6 +305,7 @@ void EigenDecomposition::computeRateMatrix(double **a, double *stateFrqArr_, int
 				a[i][j] = delta * (-m[i]);
 		}
 	}
+	delete [] m;
 } /* onepamratematrix */
 
 void EigenDecomposition::eliminateZero(double **mat, double *forg, int num, 
@@ -929,9 +952,9 @@ void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
 	double eps = 1.0e-20; /* ! */
 	int i, j, k, l, maxi=0, idx, ix, jx;
 	double sum, tmp, maxb, aw;
-	int index[size];
+	int *index = new int[size];
 	double *wk;
-	double *omtrx[size];
+	double **omtrx = (double**) new double[size];
 
 	for (i = 0; i < size; i++)
 		omtrx[i] = new double[size];
@@ -1022,11 +1045,13 @@ void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
 	wk = NULL;
 	for (i = size-1; i >= 0; i--)
 		delete [] omtrx[i];
+	delete [] omtrx;
+	delete [] index;
 } /* luinverse */
 
 void EigenDecomposition::checkevector(double **evec, double **ivec, int nn) {
 	int i, j, ia, ib, ic, error;
-	double *matx[nn];
+	double **matx = (double**) new double [nn];
 	double sum;
 
 	for (i = 0; i < nn; i++)
@@ -1059,4 +1084,5 @@ void EigenDecomposition::checkevector(double **evec, double **ivec, int nn) {
 
 	for (i = nn-1; i >= 0; i--)
 		delete [] matx[i];
+	delete [] matx;
 } /* checkevector */

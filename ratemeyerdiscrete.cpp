@@ -281,8 +281,8 @@ double RateMeyerDiscrete::computeFunction(double value) {
 	int i, j, k, state1, state2;
 	SubstModel *model = phylo_tree->getModel();
     int trans_size = nstate * nstate;
-	double trans_mat[trans_size];
-	int pair_freq[trans_size];
+	double *trans_mat = new double[trans_size];
+	int *pair_freq = new int[trans_size];
 
 	for (i = 0; i < nseq-1; i++) 
 		for (j = i+1; j < nseq; j++) {
@@ -297,6 +297,8 @@ double RateMeyerDiscrete::computeFunction(double value) {
 			for (k = 0; k < trans_size; k++) if (pair_freq[k])
 				lh -= pair_freq[k] * log(trans_mat[k]);
 		}
+	delete [] pair_freq;
+	delete [] trans_mat;
 	return lh;
 }
 
@@ -309,10 +311,12 @@ double RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf)
 	int i, j, k, state1, state2;
 	SubstModel *model = phylo_tree->getModel();
     int trans_size = nstate * nstate;
-	double trans_mat[trans_size], trans_derv1[trans_size], trans_derv2[trans_size];
+	double *trans_mat = new double[trans_size];
+	double *trans_derv1 = new double[trans_size];
+	double *trans_derv2 = new double[trans_size];
 	df = ddf = 0.0;
 
-	int pair_freq[trans_size];
+	int *pair_freq = new int[trans_size];
 
 	for (i = 0; i < nseq-1; i++) 
 		for (j = i+1; j < nseq; j++) {
@@ -338,6 +342,10 @@ double RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf)
 			df -= derv1 * dist;
 			ddf -= derv2 * dist * dist;
 		}
+	delete [] pair_freq;
+	delete [] trans_derv2;
+	delete [] trans_derv1;
+	delete [] trans_mat;
 	return lh;
 
 /*	double lh = 0.0, derv1, derv2;
@@ -425,8 +433,8 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
 
 	// clustering the rates with k-means
 	//AddKMeansLogging(&cout, false);
-	double points[nptn];
-	int weights[nptn];
+	double *points = new double[nptn];
+	int *weights = new int[nptn];
 	int i;
 	if (!ptn_cat) ptn_cat = new int[nptn];
 	for (i = 0; i < nptn; i++) {
@@ -455,6 +463,9 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
 	phylo_tree->clearAllPartialLH();
 	double cur_lh = phylo_tree->computeLikelihood();
 
+	delete [] weights;
+	delete [] points;
+	
 	if (mcat_type & MCAT_MEAN)
 		return cur_lh;
 

@@ -577,7 +577,7 @@ double IQPTree::perturb(int times) {
         int taxonid1 = random_int(taxa.size());
         PhyloNode *taxon1 = (PhyloNode*) taxa[taxonid1];
         PhyloNode *taxon2;
-        int dists[taxa.size()];
+        int *dists = new int[taxa.size()];
         int minDist = 1000000;
         for (int i = 0; i < taxa.size(); i++) {
             if (i == taxonid1)
@@ -604,6 +604,7 @@ double IQPTree::perturb(int times) {
         //taxa.erase( taxa.begin() + taxaID2 -1 );
 
         times--;
+        delete [] dists;
     }
     curScore = optimizeAllBranches(1);
     return curScore;
@@ -1348,7 +1349,7 @@ void IQPTree::genNNIMovesSort() {
 }
 
 void IQPTree::estimateNNICutoff(Params* params) {
-	double delta[nni_info.size()];
+	double *delta = new double[nni_info.size()];
 	int i;
 	for (i = 0; i < nni_info.size(); i++) {
 		double lh_score[4];
@@ -1373,6 +1374,7 @@ void IQPTree::estimateNNICutoff(Params* params) {
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, file_name);
 	}
+	delete [] delta;
 }
 
 NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh_contribution) {

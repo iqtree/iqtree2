@@ -457,23 +457,23 @@ double kMeansOneDim(int n, int ncat, double *data, double *center, int *cluster)
 	/**
 		dynamic programming cost matrix, c[i][j] = cost of i clusters for {x1...xj}
 	*/
-	double *c[k]; 
+	double **c = (double**) new double[k]; 
 	/**
 		id is used to trace back the minimal solution
 	*/
-	double *id[k]; 
+	double **id = (double**) new double[k]; 
 	/** 
 		c1[i][j] = cost of 1 cluster for {xi...xj}
 	*/
-	double *c1[n];
+	double **c1 = (double**) new double[n];
 	/** 
 		m1[i][j] = mean of {xi...xj}
 	*/
-	double *m1[n];
+	double **m1 = (double**) new double[n];
 	
-	double x[n]; // sorted data points
+	double *x = new double[n]; // sorted data points
 
-	double h[n]; // Hartigan index
+	double *h = new double[n]; // Hartigan index
 
 	// allocate memory 
 	for (i = 0; i < k; i++) c[i] = new double[n];
@@ -522,7 +522,7 @@ double kMeansOneDim(int n, int ncat, double *data, double *center, int *cluster)
 	}
 
 	double min_cost = c[k-1][n-1];
-	int bound[k+1];
+	int *bound = new int[k+1];
 	// now trace back
 	bound[k] = n-1;
 	for (i = k-1; i >= 0; i--) {
@@ -537,9 +537,18 @@ double kMeansOneDim(int n, int ncat, double *data, double *center, int *cluster)
 	}
 
 	// free memory
+	delete [] bound;
 	for (i = n-1; i >= 0; i--) delete [] m1[i];
 	for (i = n-1; i >= 0; i--) delete [] c1[i];
 	for (i = k-1; i >= 0; i--) delete [] id[i];
 	for (i = k-1; i >= 0; i--) delete [] c[i];
+
+	delete [] h;
+	delete [] x;
+	delete [] m1;
+	delete [] c1;
+	delete [] id;
+	delete [] c;
+		
 	return min_cost;
 }

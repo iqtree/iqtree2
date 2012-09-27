@@ -129,7 +129,7 @@ void ModelNonRev::decomposeRateMatrix() {
     int i, j, k;
     double sum;
     //double m[num_states];
-    double space[num_states*(num_states+1)];
+    double *space = new double[num_states*(num_states+1)];
 
     for (i = 0; i < num_states; i++)
         state_freq[i] = 1.0/num_states;
@@ -159,6 +159,7 @@ void ModelNonRev::decomposeRateMatrix() {
             rate_matrix[i*num_states+j] *= delta;
         }
     }
+    delete [] space;
 }
 
 
@@ -248,9 +249,10 @@ void ModelNonRev::computeTransMatrix(double time, double *trans_matrix) {
 }
 
 double ModelNonRev::computeTrans(double time, int state1, int state2) {
-    double trans_matrix[num_states*num_states];
+    double *trans_matrix = new double[num_states*num_states];
     memcpy(trans_matrix, rate_matrix, num_states*num_states*sizeof(double));
     matexp(trans_matrix, time, num_states, TimeSquare, temp_space);
     double trans = trans_matrix[state1*num_states+state2];
+    delete [] trans_matrix;
     return trans;
 }

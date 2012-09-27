@@ -111,7 +111,7 @@ void GTRModel::writeInfo(ostream &out) {
 void GTRModel::computeTransMatrix(double time, double *trans_matrix) {
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
-	double exptime[num_states];
+	double *exptime = new double[num_states];
 	int i, j, k;
 
 	for (i = 0; i < num_states; i++)
@@ -141,6 +141,7 @@ void GTRModel::computeTransMatrix(double time, double *trans_matrix) {
 			sum += trans_row[j];
 		trans_row[i] = 1.0 - sum; // update diagonal entry
 	}
+	delete [] exptime;
 }
 
 void GTRModel::computeTransMatrixFreq(double time, double* trans_matrix)
@@ -189,7 +190,7 @@ void GTRModel::computeTransDerv(double time, double *trans_matrix,
 	/* compute P(t) */
 
 	double evol_time = time / total_num_subst;
-	double exptime[num_states];
+	double *exptime = new double[num_states];
 	int i, j, k;
 
 	for (i = 0; i < num_states; i++)
@@ -219,6 +220,7 @@ void GTRModel::computeTransDerv(double time, double *trans_matrix,
 			}
 		}
 	}
+	delete [] exptime;
 }
 
 void GTRModel::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
@@ -263,7 +265,7 @@ void GTRModel::setStateFrequency(double* freq)
 }
 
 void GTRModel::getQMatrix(double *q_mat) {
-	double *rate_matrix[num_states];
+	double **rate_matrix = (double**) new double[num_states];
 	int i, j, k = 0;
 
 	for (i = 0; i < num_states; i++)
@@ -283,6 +285,7 @@ void GTRModel::getQMatrix(double *q_mat) {
 
 	for (i = num_states-1; i >= 0; i--)
 		delete [] rate_matrix[i];
+	delete [] rate_matrix;
 
 }
 
@@ -401,7 +404,7 @@ double GTRModel::optimizeParameters() {
 
 
 void GTRModel::decomposeRateMatrix(){
-	double *rate_matrix[num_states];
+	double **rate_matrix = (double**) new double[num_states];
 	int i, j, k = 0;
 
 	for (i = 0; i < num_states; i++)
@@ -436,6 +439,7 @@ void GTRModel::decomposeRateMatrix(){
 
 	for (i = num_states-1; i >= 0; i--)
 		delete [] rate_matrix[i];
+	delete [] rate_matrix;
 } 
 
 void GTRModel::readRates(istream &in) throw(const char*) {

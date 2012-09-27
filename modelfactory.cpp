@@ -187,8 +187,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			models->pattern_model_map[tree->aln->getPatternID(i)] = site_model[i];
 			//cout << "site " << i << " ptn " << tree->aln->getPatternID(i) << " -> model " << site_model[i] << endl;
 		}
-		double state_freq[model->num_states];
-		double rates[model->getNumRateEntries()];
+		double *state_freq = new double[model->num_states];
+		double *rates = new double[model->getNumRateEntries()];
 		for (i = 0; i < freq_vec.size(); i++) {
 			GTRModel *modeli;
 			if (i == 0) {
@@ -206,6 +206,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			modeli->init(FREQ_USER_DEFINED);
 			models->push_back(modeli);
 		}
+		delete [] rates;
+		delete [] state_freq;
 		cout << "Alignment is divided into " << models->size() << " partitions with " << tree->aln->getNPattern() << " patterns" << endl;
 		for (vector<double*>::reverse_iterator it = freq_vec.rbegin(); it != freq_vec.rend(); it++)
 			if (*it) delete [] (*it);
