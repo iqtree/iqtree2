@@ -38,7 +38,7 @@
 	# include <sys/times.h>
 	# include <unistd.h>
 	#endif
-#endif // HAVE_GETRUSAGE
+#endif /* HAVE_GETRUSAGE */
 
 /*********************************************
  * gettimeofday()
@@ -55,7 +55,7 @@
 		t->tv_sec=timebuffer.time;
 		t->tv_usec=1000*timebuffer.millitm;
 	}
-	#else // UNIX
+	#else /* UNIX */
 	#include <sys/time.h>
 	void gettimeofday(struct timeval* t, void* timezone) {
 		time_t cur_time;
@@ -64,7 +64,7 @@
 		t->tv_usec = 0;
 	}
 	#endif
-#endif // HAVE_GETTIMEOFDAY
+#endif /* HAVE_GETTIMEOFDAY */
 
 
 
@@ -113,7 +113,7 @@ inline double getCPUTime() {
  */
 inline double getRealTime() {
 	struct timeval tv;
-	if (gettimeofday(&tv, NULL)) return -1.0; // error
+	if (gettimeofday(&tv, NULL)) return -1.0; /* error */
 	return (tv.tv_sec + (double)tv.tv_usec / 1.0e6);
 }
 

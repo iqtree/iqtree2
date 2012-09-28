@@ -1,5 +1,5 @@
 
-//#include "lp/lp_lib.h"
+/*#include "lp/lp_lib.h"*/
 #include "lpwrapper.h"
 
 /*
@@ -23,7 +23,7 @@ void __WINAPI msgfunction(lprec *lp, void *userhandle, int msg)
 */
 
 void lp_solve_version_info(int *majorversion, int *minorversion, int *release, int *build) {
-	//lp_solve_version(majorversion, minorversion, release, build);
+	/*lp_solve_version(majorversion, minorversion, release, build);*/
 }
 
 int lp_solve(char *filename, int ntaxa, double *score, double *variables, int verbose_mode) {

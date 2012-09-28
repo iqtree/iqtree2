@@ -25,9 +25,9 @@
 #include <iqtree_config.h>
 
 //#include "Eigen/Core"
+#include <stdio.h>
 #include "phylotree.h"
 #include <signal.h>
-#include <stdio.h>
 #include <cstdio>
 #include <streambuf>
 #include <iostream>
