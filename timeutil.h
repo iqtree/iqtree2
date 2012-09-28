@@ -175,9 +175,12 @@ int getrusage (int who, struct rusage *usage_p)
  * with correction for OpenMP
  */
 inline double getCPUTime() {
+#ifdef HAVE_GETRUSAGE
 	struct rusage usage;
 	getrusage(RUSAGE_SELF, &usage);
 	return (usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1.0e6);
+#else
+#endif
 }
 
 /**
