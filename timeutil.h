@@ -62,7 +62,7 @@
  ********************************************/
 #ifndef HAVE_GETRUSAGE
 /* Specification.  */
-#include <sys/resource.h>
+//#include <sys/resource.h>
 //#include <sys/time.h>
 
 #include <errno.h>
