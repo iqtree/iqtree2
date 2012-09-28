@@ -50,6 +50,7 @@
 #include "gss.h"
 #include "maalignment.h" //added by MA
 #include "ncbitree.h"
+#include "timeutil.h"
 
 #ifdef _OPENMP
 	#include <omp.h>
@@ -445,7 +446,7 @@ void runPDTree(Params &params)
 		return;
 	}
 
-	clock_t t_begin, t_end;
+	double t_begin, t_end;
 	//char filename[300];
 	//int idx;
 
@@ -453,7 +454,7 @@ void runPDTree(Params &params)
 
 	if (params.run_mode == PD_USER_SET) {
 		// compute score of user-defined sets
-		t_begin = clock();
+		t_begin = getCPUTime();
 		cout << "Computing PD score for user-defined set of taxa..." << endl;
 		PDTree tree(params);
 		PDRelatedMeasures pd_more;
@@ -464,7 +465,7 @@ void runPDTree(Params &params)
 		if (params.complement_area != NULL)
 			tree.calcPDComplementarity(taxa_set, params.complement_area, pd_more.PDComplementarity);
 
-		t_end = clock();
+		t_end = getCPUTime();
 		params.run_time = (t_end-t_begin);
 		summarizeTree(params, tree, taxa_set, pd_more);
 		return;
@@ -502,15 +503,15 @@ void runPDTree(Params &params)
 
 		if (detected_greedy) {
 			params.detected_mode = GREEDY;
-			t_begin=clock();
+			t_begin=getCPUTime();
 			cout << endl << "Greedy Algorithm..." << endl;
 
 			taxa_set.clear();
 			test_greedy.run(params, taxa_set);
 
-			t_end=clock();
+			t_end=getCPUTime();
 			params.run_time = (t_end-t_begin);
-			printf("Time used: %8.6f seconds.\n", (double)params.run_time / CLOCKS_PER_SEC);
+			printf("Time used: %8.6f seconds.\n", (double)params.run_time);
 			if (params.min_size == params.sub_size)
 				printf("Resulting tree length = %10.4f\n", taxa_set[0].score);
 
@@ -540,14 +541,14 @@ void runPDTree(Params &params)
 			return;
 		}
 		params.detected_mode = PRUNING;
-		t_begin=clock();
+		t_begin=getCPUTime();
 		cout << endl << "Pruning Algorithm..." << endl;
 		taxa_set.clear();
 		test_pruning.run(params, taxa_set);
 
-		t_end=clock();
+		t_end=getCPUTime();
 		params.run_time = (t_end-t_begin) ;
-		printf("Time used: %8.6f seconds.\n", (double)params.run_time / CLOCKS_PER_SEC);
+		printf("Time used: %8.6f seconds.\n", (double)params.run_time);
 		if (params.min_size == params.sub_size)
 			printf("Resulting tree length = %10.4f\n", taxa_set[0].score);
 
@@ -1057,8 +1058,8 @@ void runPDSplit(Params &params) {
 	PDRelatedMeasures pd_more;
 
 	// begining time of the algorithm run
-	time_t time_begin = clock();
-	time(&time_begin);
+	double time_begin = getCPUTime();
+	//time(&time_begin);
 	// check parameters
 	if (sg.isPDArea()) {
 		if (sg.isBudgetConstraint()) {
@@ -1115,9 +1116,9 @@ void runPDSplit(Params &params) {
 	}
 
 	// ending time
-	time_t time_end;
-	time(&time_end);
-	params.run_time = difftime(time_end, time_begin);
+	double time_end = getCPUTime();
+	//time(&time_end);
+	params.run_time = time_end - time_begin;
 
 	cout << "Time used: " << (double) (params.run_time) << " seconds." << endl;
 
@@ -1740,8 +1741,6 @@ int main(int argc, char *argv[])
 
 	time_t cur_time;
 	time(&cur_time);
-
-	char *date_str;
 	cout << "Time:    " << ctime(&cur_time);
 
 #ifdef _OPENMP
@@ -1838,6 +1837,9 @@ int main(int argc, char *argv[])
 			outError("Unknown file input format");
 		}
 	}
-	
+
+	time(&cur_time);
+	cout << "Date and Time: " << ctime(&cur_time);
+
 	return EXIT_SUCCESS;
 }

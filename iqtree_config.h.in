@@ -5,3 +5,9 @@
 
 // does the platform provide gettimeofday functions?
 #cmakedefine HAVE_GETTIMEOFDAY
+// does the platform provide getrusage functions?
+#cmakedefine HAVE_GETRUSAGE
+// does the platform provide popen functions?
+#cmakedefine HAVE_POPEN
+// does the platform provide pclose functions?
+#cmakedefine HAVE_PCLOSE

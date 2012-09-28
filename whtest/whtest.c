@@ -23,8 +23,8 @@
 #include <config.h>
 #endif
 
-#include <iqtree_config.h>
- 
+/*#include <iqtree_config.h>*/
+#include "../timeutil.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +36,7 @@
 #include "whtest_sub.h"
 #include "random.h"
 #include "tools.h"
-
+/*
 #ifdef WIN32
 #include <sys/timeb.h>
 #include <sys/types.h>
@@ -58,7 +58,7 @@ void gettimeofday(struct timeval* t, void* timezone)
 	}
   #endif
 #endif
-
+*/
 
 #ifdef PARALLEL
 int mpi_myrank;

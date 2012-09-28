@@ -346,10 +346,13 @@ struct Params {
 	bool vns_search;
 
 	/**
-	 *  starting time of the program
+	 *  starting CPU time of the program
 	 */
-	clock_t startTime;
+	double startTime;
 
+	/** starting real time of the program */
+	double start_real_time;
+	
 	/**
 	 *		write all current best trees to file
 	 */
@@ -631,7 +634,7 @@ struct Params {
     /**
             run time of the algorithm
      */
-    long run_time;
+    double run_time;
 
     /**
             limit on the number of optimal PD sets
@@ -1435,9 +1438,10 @@ void parseAreaName(char *area_names, set<string> &areas);
  */
 void get2RandNumb(const int size, int &first, int &second);
 
+/*
 inline double getCPUTime(clock_t startTime) {
 	return double(clock() - startTime) / CLOCKS_PER_SEC;
-}
+}*/
 
 /**
 	compute p-value for a chi-square value

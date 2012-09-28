@@ -47,6 +47,7 @@
 //#include "zpipe.h"
 #include "gzstream.h"
 #include "guidedbootstrap.h"
+#include "timeutil.h"
 
 void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs, DoubleVector &trees_logl)
 {
@@ -588,7 +589,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQPTree &tree)
 
     int i, j;
 
-    clock_t begin_time = clock();
+    double begin_time = getCPUTime();
 
     MTreeSet trees;
     vector<double*> *pattern_lhs = NULL;
@@ -936,9 +937,9 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQPTree &tree)
     	delete trees_logl;
     }*/
 
-    clock_t end_time = clock();
+    double end_time = getCPUTime();
 
-    cout << "Time for guided bootstrap: " << (end_time-begin_time)/CLOCKS_PER_SEC << " seconds" << endl << endl;
+    cout << "Time for guided bootstrap: " << (end_time-begin_time) << " seconds" << endl << endl;
     //delete [] rfdist;
 }
 

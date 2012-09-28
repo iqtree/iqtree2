@@ -660,10 +660,8 @@ int create(const char *inputFile, const char *outputFile) {
   int r;                                  /* number of subtrees          */
   int n;                                  /* number of taxa              */
   int x, y;
-  clock_t clock_start, clock_end;
   float t;
 
-  clock_start=clock();
 
   /*   Allocation of memories    */
 
@@ -786,9 +784,6 @@ int create(const char *inputFile, const char *outputFile) {
   fclose(input);
   fclose(output);
 
-  clock_end=clock(); i=(int)(t=(clock_end*1.0-clock_start)/CLOCKS_PER_SEC);
-/*   printf("\nTime used  %d:%d:%.3f\n", i/3600,(i%3600)/60, t-(i/60)*60); */
-//  printf("?Time %f\n",t);
   return 0;
 }
 };

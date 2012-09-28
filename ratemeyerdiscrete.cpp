@@ -426,7 +426,6 @@ void RateMeyerDiscrete::normalizeRates() {
 }
 
 double RateMeyerDiscrete::classifyRatesKMeans() {
-	//clock_t begin_time = clock();
 
 	assert(ncategory > 0);
 	int nptn = size();
@@ -487,7 +486,7 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
 			break;
 		}
 	}
-	cout << double(clock() - begin_time ) / CLOCKS_PER_SEC << " seconds" << endl;*/
+	*/
 	return cur_lh;
 }
 

@@ -46,9 +46,10 @@
 #include "partitionmodel.h"
 #include "guidedbootstrap.h"
 #include "modelset.h"
+#include "timeutil.h"
 
 //const int DNA_MODEL_NUM = 14;
-clock_t t_begin, t_end;
+double t_begin, t_end;
 
 const int BIN_MODEL_NUM = 2;
 string bin_model_names[BIN_MODEL_NUM] = {"JC2","GTR2"};
@@ -638,7 +639,7 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         date_str = ctime(&cur_time);
         out.unsetf(ios_base::fixed);
         out << "TIME STAMP" << endl << "----------" << endl << endl << "Date and time: " << date_str <<
-                "Running time: " << (double) params.run_time / CLOCKS_PER_SEC << " seconds" << endl << endl;
+                "Running time: " << (double) params.run_time << " seconds" << endl << endl;
 
 		//reportCredits(out); // not needed, now in the manual
         out.close();
@@ -762,8 +763,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         tree.dist_matrix = new double[alignment->getNSeq() * alignment->getNSeq()];
         memset(tree.dist_matrix, 0, sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
     }*/
-    clock_t begin_time = clock();
+    double begin_time = getCPUTime();
     params.startTime = begin_time;
+    params.start_real_time = getRealTime();
     if (params.dist_file) {
         cout << "Reading distance matrix file " << params.dist_file << " ..." << endl;
     } else {
@@ -803,16 +805,16 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
             cout << endl;
         }
     }
-    t_begin = clock();
+    t_begin = getCPUTime();
     bool test_only = params.model_name == "TESTONLY";
     /* initialize substitution model */
     if (params.model_name == "TEST" || params.model_name == "TESTONLY") {
         params.model_name = modelTest(params, &tree);
         if (test_only) {
             return;
-            t_end = clock();
+            t_end = getCPUTime();
             params.run_time = (t_end - t_begin);
-            printf("Time used: %8.6f seconds.\n", (double) params.run_time / CLOCKS_PER_SEC);
+            printf("Time used: %8.6f seconds.\n", (double) params.run_time);
         }
     }
 
@@ -846,8 +848,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 	if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
 
     int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
-    clock_t t_tree_search_start, t_tree_search_end;
-    t_tree_search_start = clock();
+    double t_tree_search_start, t_tree_search_end;
+    t_tree_search_start = getCPUTime();
     cout << endl;
 	tree.setParams(params);
     cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
@@ -917,7 +919,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         cout << "Computing ML distances based on estimated model parameters...";
         double *ml_dist = NULL;
         longest_dist = tree.computeDist(params, alignment, ml_dist, dist_file);
-        cout << " " << double(clock() - begin_time) / CLOCKS_PER_SEC << " sec" << endl;
+        cout << " " << (getCPUTime() - begin_time) << " sec" << endl;
 
 	    if (longest_dist > MAX_GENETIC_DIST * 0.99) {
 			cout << "Some ML distances are too long, using old distances..." << endl;
@@ -943,7 +945,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 					tree.curScore = tree.computeLikelihood();
 					cout << "Backup log-likelihood: " << tree.curScore << endl;
 				}
-				double elapsedTime = getCPUTime(params.startTime);
+				double elapsedTime = getCPUTime() - params.startTime;
 				cout << "Time elapsed: " << elapsedTime << endl;
 			}
         }
@@ -959,20 +961,20 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         cout << "Performing local search with NNI moves ... " << endl;
         //cout << "Current tree likelihood: " << tree.optimizeNNIBranches() << endl;
         //tree.optimizeAllBranches();
-        clock_t nniBeginClock, nniEndClock;
-        nniBeginClock = clock();
+        double nniBeginClock, nniEndClock;
+        nniBeginClock = getCPUTime();
         tree.optimizeNNI();
 		tree.curScore = tree.optimizeAllBranches(100, 0.0001);
         //tree.optimizeNNINew();
-        nniEndClock = clock();
-        cout << "First NNI search required :" << (double) (nniEndClock - nniBeginClock) / CLOCKS_PER_SEC << "s" << endl;
+        nniEndClock = getCPUTime();
+        cout << "First NNI search required :" << (double) (nniEndClock - nniBeginClock)  << "s" << endl;
         if (tree.curScore > bestTreeScore) {
             bestTreeScore = tree.curScore ;
             cout << "Found new best tree log-likelihood : " << bestTreeScore << endl;
         } else {
             cout << "The local search cannot improve the tree likelihood :( " << endl;
         }
-		double elapsedTime = getCPUTime(params.startTime);
+		double elapsedTime = getCPUTime() - params.startTime;
 		cout << "CPU time elapsed: " << elapsedTime << endl;
     }
 
@@ -993,18 +995,18 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     double *saved_dist_mat = tree.dist_matrix;
     double *pattern_lh;
     int num_low_support;
-    clock_t mytime;
+    double mytime;
 
     pattern_lh = new double[tree.getAlnNPattern()];
 
     if (params.aLRT_threshold <= 100 && (params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
-        mytime = clock();
+        mytime = getCPUTime();
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
         tree.setRootNode(params.root);
         tree.computePatternLikelihood(pattern_lh, &tree.curScore);
         num_low_support = tree.testAllBranches(params.aLRT_threshold, tree.curScore, pattern_lh, params.aLRT_replicates, params.localbp_replicates);
         tree.printResultTree();
-        cout << "  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
+        cout << "  " << getCPUTime() - mytime << " sec." << endl;
         cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
 
         //tree.drawTree(cout);
@@ -1112,8 +1114,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << endl;
     cout.precision(10);
     cout << "BEST SCORE FOUND : " << tree.getBestScore() << endl;
-    t_tree_search_end = clock();
-    double treeSearchTime = (double) (t_tree_search_end - t_tree_search_start) / CLOCKS_PER_SEC;
+    t_tree_search_end = getCPUTime();
+    double treeSearchTime = (t_tree_search_end - t_tree_search_start);
 
     /* root the tree at the first sequence */
     tree.root = tree.findLeafName(alignment->getSeqName(0));
@@ -1150,14 +1152,14 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     }
 
     if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
-        mytime = clock();
+        mytime = getCPUTime();
         cout << endl;
         cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
         tree.setRootNode(params.root);
 		//if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
         num_low_support = tree.testAllBranches(params.aLRT_threshold, myscore, pattern_lh, params.aLRT_replicates, params.localbp_replicates);
         //cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
-        cout << "CPU Time used:  " << (((double) clock()) - mytime) / CLOCKS_PER_SEC << " sec." << endl;
+        cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
         //delete [] pattern_lh;
 /*
 		string out_file = params.out_prefix;
@@ -1191,12 +1193,13 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 
 	cout << "Total tree length: " << tree.treeLength() << endl;
 
-    t_end = clock();
+    t_end = getCPUTime();
     params.run_time = (t_end - t_begin);
     cout << endl;
     cout << "CPU time used for tree reconstruction: " << treeSearchTime << "s (" << convert_time(treeSearchTime) << ") "<< endl;
-    cout << "CPU total time used: " << (double) params.run_time / CLOCKS_PER_SEC << " (" << convert_time((double) params.run_time / CLOCKS_PER_SEC) << " )"<< "s" << endl;
-    //printf( "Total time used: %8.6f seconds.\n", (double) params.run_time / CLOCKS_PER_SEC );
+    cout << "CPU total time used: " << (double) params.run_time  << " (" << convert_time((double) params.run_time) << " )"<< "s" << endl;
+    cout << "Wall-clock total time used: " << getRealTime()-params.start_real_time << " (" << convert_time(getRealTime()-params.start_real_time) << " )"<< "s" << endl;
+    //printf( "Total time used: %8.6f seconds.\n", (double) params.run_time );
 
     tree.printResultTree();
     if (params.out_file)
@@ -1357,7 +1360,7 @@ void runPhyloAnalysis(Params &params) {
             outError(ERR_WRITE_OUTPUT, bootaln_name);
         }
 
-		clock_t start_time = clock();
+		double start_time = getCPUTime();
 
         // do bootstrap analysis
         for (int sample = 0; sample < params.num_bootstrap_samples; sample++) {
@@ -1446,7 +1449,7 @@ void runPhyloAnalysis(Params &params) {
             reportPhyloAnalysis(params, original_model, *alignment, *tree);
         } else    cout << endl;
 
-		cout << "CPU total time for bootstrap: " << (clock() - start_time) / CLOCKS_PER_SEC << " seconds." << endl << endl;
+		cout << "CPU total time for bootstrap: " << (getCPUTime() - start_time)  << " seconds." << endl << endl;
 		cout << "Non-parametric bootstrap results written to:" << endl
 			<< "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl
 			<< "  Bootstrap trees:          " << params.out_prefix << ".boottrees" << endl;

@@ -20,10 +20,11 @@
 #include "iqptree.h"
 #include "phylosupertree.h"
 #include "mexttree.h"
+#include "timeutil.h"
 
 //TODO Only to test
 int cntBranches = 0;
-extern clock_t t_begin;
+extern double t_begin;
 
 IQPTree::IQPTree() : PhyloTree() {
 	init();
@@ -508,7 +509,7 @@ void IQPTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 double IQPTree::doIQP() {
     if (verbose_mode >= VB_DEBUG)
         drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
-    clock_t time_begin = clock();
+    //double time_begin = getCPUTime();
     PhyloNodeVector del_leaves;
     deleteLeaves(del_leaves);
     reinsertLeaves(del_leaves);
@@ -540,8 +541,8 @@ double IQPTree::doIQP() {
 			//cout << endl;
 		}
 	}
-    //clock_t time_end = clock();
-    //cout << "IQP Time: " << (double) (time_end - time_begin) / CLOCKS_PER_SEC << endl;
+    //double time_end = getCPUTime();
+    //cout << "IQP Time: " << (time_end - time_begin)<< endl;
     return curScore;
 }
 
@@ -629,15 +630,9 @@ double IQPTree::perturb(int times) {
 //        }
 //
 //        cout.precision(10);
-//        clock_t startClock = clock();
 //        perturb(perturbLevel);
-//        clock_t endClock = clock();
-//        cout << "Perturbing Time = " << (double) (endClock - startClock) / CLOCKS_PER_SEC << endl;
 //
-//        startClock = clock();
 //        optimizeNNI();
-//        endClock = clock();
-//        cout << "NNI Time = " << (double) (endClock - startClock) / CLOCKS_PER_SEC << endl;
 //
 //        cout.precision(15);
 //        cout << "Iteration " << i << " / Log-Likelihood: "
@@ -780,12 +775,6 @@ double IQPTree::doIQPNNI() {
 		setRootNode(params->root);
 
 /*        cout.precision(15);
-		if (verbose_mode >= VB_MAX) {
-			cout << "IQP score : " << iqp_score << endl;
-			printf("Total time used for IQP : %8.6f seconds. \n",
-					(double) (-startClock + endClock) / CLOCKS_PER_SEC);
-		}
-
 		if (verbose_mode >= VB_DEBUG) {
 			string iqp_tree = tree_file_name + "IQP" + convertIntToString(
 					cur_iteration);
@@ -795,7 +784,7 @@ double IQPTree::doIQPNNI() {
 
         int skipped = 0;
         int nni_count = 0;
-        clock_t nnitime_begin = clock();
+        double nnitime_begin = getCPUTime();
         if (enableHeuris) {
 			if (cur_iteration > params->speedup_iter) {
 				if (!params->new_heuristic) {
@@ -826,8 +815,8 @@ double IQPTree::doIQPNNI() {
         } else {
             optimizeNNI();
         }
-        //clock_t nnitime_end = clock();
-        //cout << "NNI Time:" << (double) (nnitime_end - nnitime_begin) / CLOCKS_PER_SEC << endl;
+        //double nnitime_end = getCPUTime();
+        //cout << "NNI Time:" <<  (nnitime_end - nnitime_begin)  << endl;
         //cout << "CPU time elapsed: " << getEslapsedTime(params->startTime) << endl;
 
 		if (iqp_assess_quartet == IQP_BOOTSTRAP) {
@@ -854,7 +843,7 @@ double IQPTree::doIQPNNI() {
         cout.precision(6);
         time(&cur_time);
         double elapsed_secs = difftime(cur_time, begin_time);
-        double cputime_secs = getCPUTime(params->startTime);
+        double cputime_secs = getCPUTime() - params->startTime;
         double cputime_remaining = (stop_rule.getNumIterations() - cur_iteration) *
         		cputime_secs / (cur_iteration - 1);
         double remaining_secs = (stop_rule.getNumIterations() - cur_iteration) *
