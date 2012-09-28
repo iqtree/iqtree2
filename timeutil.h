@@ -26,8 +26,9 @@
 
 #ifdef HAVE_GETRUSAGE
 #include <sys/resource.h>
-#include <sys/time.h>
 #endif
+
+#include <sys/time.h>
 
 /*********************************************
  * gettimeofday()
