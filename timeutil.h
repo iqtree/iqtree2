@@ -23,8 +23,11 @@
 
 #include <iqtree_config.h>
 #include <stdlib.h>
+
+#ifdef HAVE_GETRUSAGE
 #include <sys/resource.h>
 #include <sys/time.h>
+#endif
 
 /*********************************************
  * gettimeofday()
