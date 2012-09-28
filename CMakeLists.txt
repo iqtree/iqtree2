@@ -38,6 +38,7 @@ set (iqtree_VERSION_PATCH 1)
 
 include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
 check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
+check_function_exists (getrusage HAVE_GETRUSAGE)
 
 # configure a header file to pass some of the CMake settings
 # to the source code
