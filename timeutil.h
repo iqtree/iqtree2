@@ -24,11 +24,21 @@
 #include <iqtree_config.h>
 #include <stdlib.h>
 
-#ifdef HAVE_GETRUSAGE
-#include <sys/resource.h>
-#endif
-
+#include <errno.h>
+#include <string.h>
+#include <stdint.h>
 #include <sys/time.h>
+
+#ifdef HAVE_GETRUSAGE
+	#include <sys/resource.h>
+#else 
+	#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+	# include <windows.h>
+	#else
+	# include <sys/times.h>
+	# include <unistd.h>
+	#endif
+#endif // HAVE_GETRUSAGE
 
 /*********************************************
  * gettimeofday()
@@ -58,118 +68,6 @@
 
 
 
-/*********************************************
- * getrusage()
- ********************************************/
-#ifndef HAVE_GETRUSAGE
-/* Specification.  */
-//#include <sys/resource.h>
-//#include <sys/time.h>
-
-#include <errno.h>
-#include <string.h>
-
-/* Get uint64_t.  */
-#include <stdint.h>
-
-#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
-# include <windows.h>
-#else
-# include <sys/times.h>
-# include <unistd.h>
-#endif
-
-int getrusage (int who, struct rusage *usage_p)
-{
-  if (who == RUSAGE_SELF || who == RUSAGE_CHILDREN)
-    {
-      /* Clear all unsupported members of 'struct rusage'.  */
-      memset (usage_p, '\0', sizeof (struct rusage));
-
-#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
-      if (who == RUSAGE_SELF)
-        {
-          /* Fill in the ru_utime and ru_stime members.  */
-          FILETIME creation_time;
-          FILETIME exit_time;
-          FILETIME kernel_time;
-          FILETIME user_time;
-
-          if (GetProcessTimes (GetCurrentProcess (),
-                               &creation_time, &exit_time,
-                               &kernel_time, &user_time))
-            {
-              /* Convert to microseconds, rounding.  */
-              uint64_t kernel_usec =
-                ((((uint64_t) kernel_time.dwHighDateTime << 32)
-                  | (uint64_t) kernel_time.dwLowDateTime)
-                 + 5) / 10;
-              uint64_t user_usec =
-                ((((uint64_t) user_time.dwHighDateTime << 32)
-                  | (uint64_t) user_time.dwLowDateTime)
-                 + 5) / 10;
-
-              usage_p->ru_utime.tv_sec = user_usec / 1000000U;
-              usage_p->ru_utime.tv_usec = user_usec % 1000000U;
-              usage_p->ru_stime.tv_sec = kernel_usec / 1000000U;
-              usage_p->ru_stime.tv_usec = kernel_usec % 1000000U;
-            }
-        }
-#else // UNIX
-      /* Fill in the ru_utime and ru_stime members.  */
-      {
-        struct tms time;
-
-        if (times (&time) != (clock_t) -1)
-          {
-            /* Number of clock ticks per second.  */
-            unsigned int clocks_per_second = sysconf (_SC_CLK_TCK);
-
-            if (clocks_per_second > 0)
-              {
-                clock_t user_ticks;
-                clock_t system_ticks;
-
-                uint64_t user_usec;
-                uint64_t system_usec;
-
-                if (who == RUSAGE_CHILDREN)
-                  {
-                    user_ticks   = time.tms_cutime;
-                    system_ticks = time.tms_cstime;
-                  }
-                else
-                  {
-                    user_ticks   = time.tms_utime;
-                    system_ticks = time.tms_stime;
-                  }
-
-                user_usec =
-                  (((uint64_t) user_ticks * (uint64_t) 1000000U)
-                   + clocks_per_second / 2) / clocks_per_second;
-                system_usec =
-                  (((uint64_t) system_ticks * (uint64_t) 1000000U)
-                   + clocks_per_second / 2) / clocks_per_second;
-
-                usage_p->ru_utime.tv_sec = user_usec / 1000000U;
-                usage_p->ru_utime.tv_usec = user_usec % 1000000U;
-                usage_p->ru_stime.tv_sec = system_usec / 1000000U;
-                usage_p->ru_stime.tv_usec = system_usec % 1000000U;
-              }
-          }
-      }
-#endif
-
-      return 0;
-    }
-  else
-    {
-      errno = EINVAL;
-      return -1;
-    }
-}
-#endif // HAVE_GETRUSAGE
-
 /**
  * @return CPU time in seconds since program was started (corrrect up to micro-seconds)
  * with correction for OpenMP
@@ -179,8 +77,35 @@ inline double getCPUTime() {
 	struct rusage usage;
 	getrusage(RUSAGE_SELF, &usage);
 	return (usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1.0e6);
+#elif (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+	/* Fill in the ru_utime and ru_stime members.  */
+	FILETIME creation_time;
+	FILETIME exit_time;
+	FILETIME kernel_time;
+	FILETIME user_time;
+
+	if (GetProcessTimes (GetCurrentProcess (),
+						&creation_time, &exit_time,
+						&kernel_time, &user_time))
+	{
+		/* Convert to microseconds, rounding.  */
+		uint64_t user_usec = ((((uint64_t) user_time.dwHighDateTime << 32) | (uint64_t) user_time.dwLowDateTime) + 5) / 10;
+		return (double)user_usec / 1.0e6;
+	}
 #else
+	/* Fill in the ru_utime and ru_stime members.  */
+	struct tms time;
+
+	if (times (&time) != (clock_t) -1) {
+		unsigned int clocks_per_second = sysconf (_SC_CLK_TCK);
+		if (clocks_per_second > 0) {
+			uint64_t user_usec;
+			user_usec =	(((uint64_t) time.tms_utime * (uint64_t) 1000000U) + clocks_per_second / 2) / clocks_per_second;
+			return (double)user_usec / 1.0e6;
+		}
+	}
 #endif
+	abort();
 }
 
 /**
