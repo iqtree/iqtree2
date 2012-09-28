@@ -21,6 +21,7 @@
 #ifndef TOOLS_H
 #define TOOLS_H
 
+#include <iqtree_config.h>
 #include <vector>
 #include <string>
 #include <set>
@@ -30,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <stdint.h>
 
 //#include <sys/time.h>
 //#include <time.h>

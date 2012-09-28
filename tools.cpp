@@ -26,7 +26,7 @@ VerboseMode verbose_mode;
 	WIN32 does not define gettimeofday() function.
 	Here declare it extra for WIN32 only.
  */
-#if defined(WIN32)
+#if defined(WIN32) && !defined(HAVE_GETTIMEOFDAY)
 #include <sys/timeb.h>
 #include <sys/types.h>
 #include <winsock.h>
