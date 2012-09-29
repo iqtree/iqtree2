@@ -28,6 +28,9 @@
 #include <string.h>
 #include <stdint.h>
 #include <sys/time.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #ifdef HAVE_GETRUSAGE
 	#include <sys/resource.h>
@@ -112,9 +115,13 @@ inline double getCPUTime() {
  * @return real wall-clock time in seconds since Epoch (correct up to micro-seconds)
  */
 inline double getRealTime() {
+#ifdef _OPENMP
+	return omp_get_wtime();
+#else
 	struct timeval tv;
 	if (gettimeofday(&tv, NULL)) return -1.0; /* error */
 	return (tv.tv_sec + (double)tv.tv_usec / 1.0e6);
+#endif
 }
 
 #endif

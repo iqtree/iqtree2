@@ -1758,7 +1758,7 @@ inline T quantile(const vector<T>& v, const double q) {
 #if RAN_TYPE == RAN_STANDARD
 int init_random(int seed) {
 	srand(seed);
-	cout << "Using rand() Standard Random Number Generator" << endl;
+	cout << "(Using rand() - Standard Random Number Generator)" << endl;
 	return seed;
 }
 
@@ -1859,12 +1859,12 @@ int init_random(int seed)   /* RAND4 */
 // 	seed = rand();
    _idum=-(long) seed;
 #  ifndef PARALLEL
-	   cout << "Using RAND4 Random Number Generator" << endl;
+	   cout << "(Using RAND4 Random Number Generator)" << endl;
 #  else /* PARALLEL */
 	   {
 	   int n;
 	   if (PP_IamMaster) {
-	     cout << "Using RAND4 Random Number Generator with leapfrog method" << endl;
+	     cout << "(Using RAND4 Random Number Generator with leapfrog method)" << endl;
 	   }
 	   for (n=0; n<PP_Myid; n++)
 		(void) randomunitintervall();
@@ -1890,14 +1890,14 @@ int init_random(int seed)
    if (seed < 0) 
 	seed = make_sprng_seed();
 #  ifndef PARALLEL
-	   cout << "Using SPRNG -- Scalable Parallel Random Number Generator" << endl;
+	   cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
 	   randstream = init_sprng(0,1,seed,SPRNG_DEFAULT); /*init stream*/
 		if (verbose_mode >= VB_MED) {
 	      print_sprng(randstream);
 		}
 #  else /* PARALLEL */
 	   if (PP_IamMaster) {
-	     cout << "Using SPRNG -- Scalable Parallel Random Number Generator" << endl;
+	     cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
 	   }
 	   /* MPI_Bcast(&seed, 1, MPI_UNSIGNED, PP_MyMaster, MPI_COMM_WORLD); */
 	   randstream = init_sprng(PP_Myid,PP_NumProcs,seed,SPRNG_DEFAULT); /*initialize stream*/

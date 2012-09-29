@@ -290,7 +290,6 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 	else {
 		cur_lh = tree->optimizeAllBranches(1);
 	}
-	cout.precision(10);
 	if (verbose_mode >= VB_MED || write_info) 
 		cout << "Initial log-likelihood: " << cur_lh << endl;
 	int i;

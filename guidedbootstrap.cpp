@@ -309,7 +309,6 @@ void printTrees(const char *ofile, IQPTree &tree, IntVector *weights, bool compr
             ((ogzstream*)out)->close();
             struct stat st;
             stat(ofile, &st);
-            cout.precision(3);
             cout << "Compression ratio: " << ((double)st.st_size/uncompress)
                  << " (" << uncompress << " -> " << st.st_size << " bytes)" << endl;
         }
@@ -1128,7 +1127,6 @@ void runAvHTest(Params &params, Alignment *alignment, IQPTree &tree) {
     params.aLRT_replicates = saved_aLRT_replicates;
 
     double logn = log(params.avh_test);
-    cout.precision(5);
     if (verbose_mode >= VB_MED) {
         for (int j = 0; j < boot_freqs.size(); j++) {
             cout << "p=" << alignment->multinomialProb(*boot_freqs[j])

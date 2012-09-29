@@ -89,8 +89,8 @@ void GTRModel::init(StateFreqType type) {
 void GTRModel::writeInfo(ostream &out) {
 	if (num_states != 4) return;
 	out << "Rate parameters:" << endl;
-	out.precision(4);
-	out << fixed;
+	//out.precision(3);
+	//out << fixed;
 	out << "  A-C: " << rates[0];
 	out << "  A-G: " << rates[1];
 	out << "  A-T: " << rates[2];
@@ -105,7 +105,7 @@ void GTRModel::writeInfo(ostream &out) {
 	out << "  G: " << state_freq[2];
 	out << "  T: " << state_freq[3];
 	out << endl;
-	out.unsetf(ios::fixed);
+	//out.unsetf(ios::fixed);
 }
 
 void GTRModel::computeTransMatrix(double time, double *trans_matrix) {

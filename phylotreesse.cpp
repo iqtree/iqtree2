@@ -67,7 +67,11 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
                 trans_mat_state[state2] *= state_freq[state1];
         }
     }
-    for (ptn = 0; ptn < alnSize; ++ptn) {
+
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: tree_lh) private(ptn, cat)
+#endif
+     for (ptn = 0; ptn < alnSize; ++ptn) {
         double lh_ptn = 0.0; // likelihood of the pattern
         for (cat = 0; cat < numCat; cat++) {
             partial_lh_site = node_branch->partial_lh + (ptn * block + cat * NSTATES);
@@ -102,12 +106,12 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
         return;
     Node *node = dad_branch->node;
     int ptn, cat;
-    double *trans_state;
+    //double *trans_state;
     double *partial_lh_site;
     double *partial_lh_child;
-    double *partial_lh_block;
-    bool do_scale = true;
-    double freq;
+    //double *partial_lh_block;
+    //bool do_scale = true;
+    //double freq;
     dad_branch->lh_scale_factor = 0.0;
     memset(dad_branch->scale_num, 0, aln->size() * sizeof (UBYTE));
 
@@ -178,24 +182,35 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
             }
             partial_lh_site = dad_branch->partial_lh;
             partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh;
-            for (ptn = 0; ptn < alnSize; ++ptn)
+			double sum_scale = 0.0;
+#ifdef _OPENMP
+			#pragma omp parallel for reduction(+: sum_scale) private(ptn, cat, partial_lh_site, partial_lh_child)
+#endif
+             for (ptn = 0; ptn < alnSize; ++ptn)
 #ifdef IGNORE_GAP_LH
                 if (((PhyloNeighbor*) (*it))->scale_num[ptn] < 0) {
-                    partial_lh_site += NSTATES * numCat;
+#ifndef _OPENMP
+					partial_lh_site += NSTATES * numCat;
                     partial_lh_child += NSTATES * numCat;
+#endif
                 } else
 #endif
                 {
 #ifdef IGNORE_GAP_LH
                     if (dad_branch->scale_num[ptn] < 0) dad_branch->scale_num[ptn] = 0;
 #endif
-                    dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
-                    partial_lh_block = partial_lh_site;
-                    freq = ptn_freqs[ptn];
-                    trans_state = trans_mat;
+#ifdef _OPENMP
+					int lh_offset = ptn*block;
+					partial_lh_site = dad_branch->partial_lh + lh_offset;
+					partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + lh_offset;
+#endif
+                     dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
+                    double *partial_lh_block = partial_lh_site;
+                    double freq = ptn_freqs[ptn];
+                    double *trans_state = trans_mat;
                     cat = 0;
-                    do_scale = true;
-                    while (true) {
+                    bool do_scale = true;
+                   while (true) {
                         ++cat;
                         MappedRowVec(NSTATES) ei_partial_lh_child(partial_lh_child);
                         MappedRowVec(NSTATES) ei_partial_lh_site(partial_lh_site);
@@ -217,12 +232,13 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
                     if (do_scale) {
                         Map<VectorXd, Aligned> ei_lh_block(partial_lh_block, block);
                         ei_lh_block *= SCALING_THRESHOLD_INVER;
-                        dad_branch->lh_scale_factor += LOG_SCALING_THRESHOLD * freq;
+                        sum_scale += LOG_SCALING_THRESHOLD * freq;
                         dad_branch->scale_num[ptn] += 1;
                         if (pattern_scale)
                             pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
                     }
                 }
+            dad_branch->lh_scale_factor += sum_scale;
         }
         delete [] trans_mat_orig;
     }
@@ -289,12 +305,24 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         }
     bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
     int dad_state = STATE_UNKNOWN;
+	double my_df = 0.0;
+	double my_ddf = 0.0;
+#ifdef _OPENMP
+	#pragma omp parallel for reduction(+: tree_lh, my_df, my_ddf) private(cat, partial_lh_child, partial_lh_site,\
+		lh_ptn, lh_ptn_derv1, lh_ptn_derv2, derv1_frac, derv2_frac, dad_state, trans_state, derv1_state, derv2_state)
+#endif
     for (int ptn = 0 ; ptn < alnSize; ++ptn) {
-        lh_ptn = 0.0;
+#ifdef _OPENMP
+		int lh_offset = ptn*block;
+		partial_lh_site = node_branch->partial_lh + lh_offset;
+		partial_lh_child = dad_branch->partial_lh + lh_offset;
+#endif
+		lh_ptn = 0.0;
         lh_ptn_derv1 = 0.0;
         lh_ptn_derv2 = 0.0;
         double freq = ptn_freqs[ptn];
         int padding = 0;
+		dad_state = STATE_UNKNOWN; // FOR TUNG: This is missing in your codes!
         if (dad->isLeaf()) {
             dad_state = (*aln)[ptn][dad->id];
         }
@@ -304,9 +332,7 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
             trans_state = trans_mat + padding;
             derv1_state = trans_derv1 + padding;
             derv2_state = trans_derv2 + padding;
-            cat = 0;
-            while (true) {
-                ++cat;
+            for (cat = 0; cat < numCat; cat++) {
                 MappedVec(NSTATES) ei_partial_lh_child(partial_lh_child);
                 MappedVec(NSTATES) ei_trans_state(trans_state);
                 MappedVec(NSTATES) ei_derv1_state(derv1_state);
@@ -316,20 +342,16 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
                 lh_ptn_derv2 += ei_partial_lh_child.dot(ei_derv2_state);
                 partial_lh_child += NSTATES;
                 partial_lh_site += NSTATES;
-                if ( cat == numCat )
-                    break;
                 trans_state += tranSize;
                 derv1_state += tranSize;
                 derv2_state += tranSize;
             }
         } else {
             // internal node, or external node but ambiguous character
-            cat = 0;
             trans_state = trans_mat;
             derv1_state = trans_derv1;
             derv2_state = trans_derv2;
-            while (true) {
-                ++cat;
+			for (cat = 0; cat < numCat; cat++) {
                 MappedRowVec(NSTATES) ei_partial_lh_site(partial_lh_site);
                 MappedRowVec(NSTATES) ei_partial_lh_child(partial_lh_child);
                 MappedMat(NSTATES) ei_trans_state(trans_state);
@@ -340,8 +362,6 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
                 lh_ptn_derv2 += (ei_partial_lh_child * ei_derv2_state).dot(ei_partial_lh_site);
                 partial_lh_site += NSTATES;
                 partial_lh_child += NSTATES;
-                if (cat == numCat)
-                    break;
                 trans_state += tranSize;
                 derv1_state += tranSize;
                 derv2_state += tranSize;
@@ -363,8 +383,8 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         }
         double tmp1 = derv1_frac * freq;
         double tmp2 = derv2_frac * freq;
-        df += tmp1;
-        ddf += tmp2 - tmp1 * derv1_frac;
+        my_df += tmp1;
+        my_ddf += tmp2 - tmp1 * derv1_frac;
         lh_ptn = log(lh_ptn);
         tree_lh += lh_ptn * freq;
         _pattern_lh[ptn] = lh_ptn;
@@ -372,6 +392,8 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     delete [] trans_derv2_orig;
     delete [] trans_derv1_orig;
     delete [] trans_mat_orig;
+	df = my_df;
+	ddf = my_ddf;
     return tree_lh;
 }
 

@@ -234,8 +234,8 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 			cout.width(13);
 			cout << left << str << " ";
 			cout.precision(3);
-			cout.width(12);
 			cout << fixed;
+			cout.width(12);
 			cout << -cur_lh << " ";
 			cout.width(2);
 			cout << df << " ";
@@ -250,7 +250,7 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 
 		}
 	}
-	cout.unsetf(ios::fixed);
+	//cout.unsetf(ios::fixed);
 	int model_aic = min_element(AIC_scores.begin(), AIC_scores.end()) - AIC_scores.begin();
 	cout << "Akaike Information Criterion:           " << model_names[model_aic] << endl;
 	int model_aicc = min_element(AICc_scores.begin(), AICc_scores.end()) - AICc_scores.begin();
@@ -638,8 +638,9 @@ void reportPhyloAnalysis(Params &params, string &original_model, Alignment &alig
         char *date_str;
         date_str = ctime(&cur_time);
         out.unsetf(ios_base::fixed);
-        out << "TIME STAMP" << endl << "----------" << endl << endl << "Date and time: " << date_str <<
-                "Running time: " << (double) params.run_time << " seconds" << endl << endl;
+        out << "TIME STAMP" << endl << "----------" << endl << endl << "Date and time: " << date_str
+            << "CPU time used: " << (double) params.run_time << " seconds" << endl 
+            << "Wall time used: " << getRealTime() - params.start_real_time << " seconds" << endl << endl;
 
 		//reportCredits(out); // not needed, now in the manual
         out.close();
@@ -884,7 +885,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 //		tree.searchNNI();
 //	}
 
-    cout.precision(10);
     //cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
     if (params.parsimony) {
         tree.enable_parsimony = true;
@@ -903,7 +903,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     cout << endl;
     cout << "Optimizing model parameters and branch lengths" << endl;
     double bestTreeScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
-    cout.precision(10);
     cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 
     //Update tree score
@@ -1112,7 +1111,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     } else
         tree.setBestScore(tree.curScore);
     cout << endl;
-    cout.precision(10);
     cout << "BEST SCORE FOUND : " << tree.getBestScore() << endl;
     t_tree_search_end = getCPUTime();
     double treeSearchTime = (t_tree_search_end - t_tree_search_start);
@@ -1196,9 +1194,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     t_end = getCPUTime();
     params.run_time = (t_end - t_begin);
     cout << endl;
-    cout << "CPU time used for tree reconstruction: " << treeSearchTime << "s (" << convert_time(treeSearchTime) << ") "<< endl;
-    cout << "CPU total time used: " << (double) params.run_time  << " (" << convert_time((double) params.run_time) << " )"<< "s" << endl;
-    cout << "Wall-clock total time used: " << getRealTime()-params.start_real_time << " (" << convert_time(getRealTime()-params.start_real_time) << " )"<< "s" << endl;
+    cout << "CPU time used for tree reconstruction: " << treeSearchTime << " sec (" << convert_time(treeSearchTime) << ")"<< endl;
+    cout << "CPU total time used: " << (double) params.run_time  << " sec (" << convert_time((double) params.run_time) << ")"<< endl;
+    cout << "Wall-clock total time used: " << getRealTime()-params.start_real_time << " sec (" << convert_time(getRealTime()-params.start_real_time) << ")"<< endl;
     //printf( "Total time used: %8.6f seconds.\n", (double) params.run_time );
 
     tree.printResultTree();

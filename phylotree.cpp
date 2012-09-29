@@ -1496,7 +1496,6 @@ double PhyloTree::optimizeAllBranches(int iterations, double tolerance) {
         }*/
         if (verbose_mode >= VB_MAX) {
             cout << "BRANCH LEN " << i + 1 << " : ";
-            cout.precision(10);
             cout << new_tree_lh << endl;
         }
         if (new_tree_lh <= tree_lh + tolerance)
@@ -2498,7 +2497,6 @@ double PhyloTree::optimizeSPR() {
             if (score <= cur_score) break;
         } else {
             cur_score = optimizeAllBranches();
-            cout.precision(10);
             cout << "SPR " << i + 1 << " : " << cur_score << endl;
             cur_score = score;
         }

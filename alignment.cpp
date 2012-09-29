@@ -87,11 +87,13 @@ void Alignment::checkSeqName() {
         for (int i = 0; i < seq_names.size(); i++) {
             int num_gaps = getNSite() - countProperChar(i);
             total_gaps += num_gaps;
-            double percent_gaps = round(((double)num_gaps / getNSite())*1000)/10;
+            double percent_gaps = ((double)num_gaps / getNSite())*100.0;
 			cout.width(4);
 			cout << i+1 << " ";
             cout.width(max_len);
-            cout << left << seq_names[i] << " " << num_gaps << " (" << percent_gaps << "%)";
+            cout << left << seq_names[i] << " ";
+			cout.width(4);
+			cout << num_gaps << " (" << percent_gaps << "%)";
             if (percent_gaps > 50) {
 				cout << " !!!";
 				num_problem_seq++;

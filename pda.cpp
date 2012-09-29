@@ -1751,6 +1751,8 @@ int main(int argc, char *argv[])
 	if (max_threads > max_procs) outWarning("You have specified more threads than CPU cores available");
 #endif
 	cout << endl;
+	cout.precision(3);
+	cout << fixed;
 	
 	// call the main function
 	if (params.tree_gen != NONE) {

@@ -840,7 +840,6 @@ double IQPTree::doIQPNNI() {
             lh_file << endl;
         }
 
-        cout.precision(6);
         time(&cur_time);
         double elapsed_secs = difftime(cur_time, begin_time);
         double cputime_secs = getCPUTime() - params->startTime;
@@ -949,7 +948,7 @@ double IQPTree::doIQPNNI() {
     }
 
     int predicted_iteration = stop_rule.getPredictedIteration();
-    cout.unsetf(ios::fixed);
+    //cout.unsetf(ios::fixed);
 
     if (predicted_iteration > cur_iteration) {
         cout << endl << "WARNING: " << predicted_iteration
