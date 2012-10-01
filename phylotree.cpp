@@ -756,7 +756,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
         if (!central_partial_lh) {
-			int64_t mem_size = ((int64_t)leafNum - 1) * 4 * (int64_t)block_size + 2;
+			uint64_t mem_size = ((uint64_t)leafNum - 1) * 4 * (uint64_t)block_size + 2;
             //if (verbose_mode >= VB_MIN)
                 cout << "Note: Requiring " <<  (double)mem_size * sizeof (double) / (1024*1024) << " MB memory for partial likelihoods" << endl;
 			if (mem_size >= getTotalSystemMemory())

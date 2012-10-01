@@ -127,21 +127,44 @@ inline double getRealTime() {
 #if defined _WIN32 || defined __WIN32__ || defined WIN32
 
 #include <windows.h>
-inline size_t getTotalSystemMemory()
+inline uint64_t getTotalSystemMemory()
 {
     MEMORYSTATUSEX status;
     status.dwLength = sizeof(status);
     GlobalMemoryStatusEx(&status);
     return status.ullTotalPhys;
 }
+
+#elif defined __APPLE__ || defined __MACH__
+
+#include <sys/types.h>
+#include <sys/sysctl.h>
+
+inline uint64_t getTotalSystemMemory()
+{
+	int mib[2];
+	uint64_t physical_memory;
+	mib[0] = CTL_HW;
+	mib[1] = HW_MEMSIZE;
+	length = sizeof(uint64_t);
+	sysctl(mib, 2, &physical_memory, &length, NULL, 0);
+	return physical_memory;
+}
 #else
 
 #include <unistd.h>
-inline size_t getTotalSystemMemory()
+#include <sys/types.h>
+#include <sys/sysinfo.h>
+
+inline uint64_t getTotalSystemMemory()
 {
-    long pages = sysconf(_SC_PHYS_PAGES);
-    long page_size = sysconf(_SC_PAGE_SIZE);
-    return pages * page_size;
+/*    size_t pages = sysconf(_SC_PHYS_PAGES);
+    size_t page_size = sysconf(_SC_PAGE_SIZE);
+    return pages * page_size;*/
+    struct sysinfo memInfo;
+	sysinfo (&memInfo);
+	int64_t totalram = memInfo.totalram;
+	return (totalram * memInfo.mem_unit);
 }
 
 #endif /* WIN32 */
