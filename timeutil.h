@@ -146,7 +146,7 @@ inline uint64_t getTotalSystemMemory()
 	uint64_t physical_memory;
 	mib[0] = CTL_HW;
 	mib[1] = HW_MEMSIZE;
-	length = sizeof(uint64_t);
+	size_t length = sizeof(uint64_t);
 	sysctl(mib, 2, &physical_memory, &length, NULL, 0);
 	return physical_memory;
 }
@@ -167,6 +167,6 @@ inline uint64_t getTotalSystemMemory()
 	return (totalram * memInfo.mem_unit);
 }
 
-#endif /* WIN32 */
+#endif /* for declaring getTotalSystemMemory() */
 
 #endif
