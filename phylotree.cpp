@@ -16,6 +16,7 @@
 #include "alignmentpairwise.h"
 #include <algorithm>
 #include <limits>
+#include "timeutil.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
@@ -755,9 +756,11 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
         if (!central_partial_lh) {
-			int mem_size = (leafNum - 1) * 4 * block_size + 2;
-            if (verbose_mode >= VB_MED)
-                cout << "Allocating " <<  mem_size * sizeof (double) << " bytes for partial likelihood vectors" << endl;
+			int64_t mem_size = ((int64_t)leafNum - 1) * 4 * (int64_t)block_size + 2;
+            //if (verbose_mode >= VB_MIN)
+                cout << "Note: Requiring " <<  (double)mem_size * sizeof (double) / (1024*1024) << " MB memory for partial likelihoods" << endl;
+			if (mem_size >= getTotalSystemMemory())
+				outWarning("Degrade performance due to smaller RAM size, please switch to another computer with larger RAM");
             central_partial_lh = new double[mem_size];
             if (!central_partial_lh)
                 outError("Not enough memory for partial likelihood vectors");
@@ -802,7 +805,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 }
 
 double *PhyloTree::newPartialLh() {
-	double *ret = new double[aln->size() * aln->num_states * site_rate->getNRate() + 1];
+	double *ret = new double[aln->size() * aln->num_states * site_rate->getNRate() + 2];
     return ret;
 }
 
@@ -2017,7 +2020,7 @@ double PhyloTree::optimizeNNI() {
 }
 
 double PhyloTree::optimizeNNIBranches() {
-    if (verbose_mode > VB_MIN)
+    if (verbose_mode >= VB_MED)
         cout << "Search with Nearest Neighbor Interchange (NNI) using ML..." << endl;
     double cur_score = computeLikelihood();
     for (int i = 0; i < 100; i++) {

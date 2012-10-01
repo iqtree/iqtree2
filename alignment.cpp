@@ -77,7 +77,7 @@ void Alignment::checkSeqName() {
         }
     }
     if (!ok) outError("Please rename sequences listed above!");
-    if (verbose_mode >= VB_MIN) {
+    /*if (verbose_mode >= VB_MIN)*/ {
         int max_len = getMaxSeqNameLength()+1;
         cout << "ID   ";
         cout.width(max_len);
@@ -105,6 +105,38 @@ void Alignment::checkSeqName() {
         cout.width(max_len);
         cout << left << "TOTAL" << " " << total_gaps << " (" << ((double)total_gaps/getNSite())/getNSeq()*100 << "%)" << endl;
     }
+}
+
+int Alignment::checkIdenticalSeq()
+{
+	int num_identical = 0;
+    IntVector checked;
+    checked.resize(getNSeq(), 0);
+	for (int seq1 = 0; seq1 < getNSeq(); seq1++) {
+        if (checked[seq1]) continue;
+		bool first = true;
+		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
+			bool equal_seq = true;
+			for (iterator it = begin(); it != end(); it++)
+				if  ((*it)[seq1] != (*it)[seq2]) {
+					equal_seq = false;
+					break;
+				}
+			if (equal_seq) {
+				if (first)
+					cerr << "WARNING: Identical sequences " << getSeqName(seq1); 
+				cerr << ", " << getSeqName(seq2);
+				num_identical++;
+				checked[seq2] = 1;
+				first = false;
+			}
+		}
+		checked[seq1] = 1;
+		if (!first) cerr << endl;
+	}
+	if (num_identical)
+		outWarning("Some identical sequences found that should be discarded before the analysis");
+	return num_identical;
 }
 
 bool Alignment::isGapOnlySeq(int seq_id) {
@@ -162,6 +194,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     checkSeqName();
     cout << "Alignment has " << getNSeq() << " sequences with " << getNSite() <<
          " columns and " << getNPattern() << " patterns"<< endl;
+	checkIdenticalSeq();
     //cout << "Number of character states is " << num_states << endl;
     //cout << "Number of patterns = " << size() << endl;
     countConstSite();
@@ -971,7 +1004,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     pattern_index.clear();
     int site = 0;
     VerboseMode save_mode = verbose_mode;
-    verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     for (iterator pit = aln->begin(); pit != aln->end(); pit++) {
         Pattern pat;
         int true_char = 0;
@@ -1003,7 +1036,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     pattern_index.clear();
     int site = 0;
     VerboseMode save_mode = verbose_mode;
-    verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     for (i = 0; i != ptn_id.size(); i++) {
         assert(ptn_id[i] >= 0 && ptn_id[i] < aln->getNPattern());
         Pattern pat = aln->at(ptn_id[i]);
@@ -1029,7 +1062,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     pattern_index.clear();
     int site = 0;
     VerboseMode save_mode = verbose_mode;
-    verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     for (i = 0; i != ptn_freq.size(); i++)
         if (ptn_freq[i]) {
             assert(ptn_freq[i] > 0);
@@ -1054,7 +1087,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     clear();
     pattern_index.clear();
     VerboseMode save_mode = verbose_mode;
-    verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     for (i = 0; i != site_id.size(); i++) {
         if (site_id[i] < 0 || site_id[i] >= aln->getNSite())
             throw "Site ID out of bound";
@@ -1153,7 +1186,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     clear();
     pattern_index.clear();
     VerboseMode save_mode = verbose_mode;
-    verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     if (pattern_freq) {
         pattern_freq->resize(0);
         pattern_freq->resize(aln->getNPattern(), 0);
@@ -1197,7 +1230,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
         name_map.push_back(seq_id);
     }
     VerboseMode save_mode = verbose_mode;
-    verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     for (site = 0; site < nsite; site++) {
         int ptn_id = aln->getPatternID(site);
         Pattern pat = aln->at(ptn_id);
@@ -1223,7 +1256,7 @@ void Alignment::concatenateAlignment(Alignment *aln) {
         name_map.push_back(seq_id);
     }
     VerboseMode save_mode = verbose_mode;
-    verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     for (site = 0; site < nsite; site++) {
         Pattern pat = aln->at(aln->getPatternID(site));
         Pattern new_pat = pat;
@@ -1242,7 +1275,7 @@ void Alignment::copyAlignment(Alignment *aln) {
     clear();
     pattern_index.clear();
     VerboseMode save_mode = verbose_mode;
-    verbose_mode = VB_MIN; // to avoid printing gappy sites in addPattern
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     for (site = 0; site < nsite; site++) {
         int site_id = site;
         int ptn_id = aln->getPatternID(site_id);

@@ -815,7 +815,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
             return;
             t_end = getCPUTime();
             params.run_time = (t_end - t_begin);
-            printf("Time used: %8.6f seconds.\n", (double) params.run_time);
+            cout << "Time used: " << params.run_time << " seconds." << endl;
         }
     }
 

@@ -122,7 +122,7 @@ void NGSAlignment::computeStateFreq (double *stateFrqArr) {
     for (i = 0; i < num_states; i++) sum_count += state_count[i];
     if (sum_count == 0) throw "Empty data observed";
     for (i = 0; i < num_states; i++) stateFrqArr[i] = double(state_count[i]) / sum_count;
-    if (verbose_mode >= VB_MIN) {
+    /*if (verbose_mode >= VB_MIN)*/ {
         cout << "Empirical state frequencies: ";
         for (i = 0; i < num_states; i++)
             cout << stateFrqArr[i] << " ";
@@ -164,7 +164,7 @@ void NGSAlignment::computeEmpiricalRate (double *rates) {
     for (i = 0; i < num_states-1; i++)
         for (j = i+1; j < num_states; j++)
             rates[k++] = (pair_rates[i][j] + pair_rates[j][i]) / last_rate;
-    if (verbose_mode >= VB_MIN) {
+    /*if (verbose_mode >= VB_MIN)*/ {
         cout << "Empirical rates: ";
         for (k = 0; k < num_states*(num_states-1)/2; k++)
             cout << rates[k] << " ";

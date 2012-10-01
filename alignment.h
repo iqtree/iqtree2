@@ -232,9 +232,14 @@ public:
 
 	/**
 		check proper and undupplicated sequence names
-		
 	*/
 	void checkSeqName();
+
+	/**
+	 * check identical sequences
+	 * @return the number of sequences that are identical to one of the sequences
+	*/
+	int checkIdenticalSeq();
 
 	/**
 		Quit if some sequences contain only gaps or missing data

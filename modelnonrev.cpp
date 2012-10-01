@@ -71,7 +71,7 @@ int matinv (double x[], int n, int m, double space[])
             }
         det *= x[irow[i]*m+i];
         if (xmax < ee)   {
-            printf("\nxmax = %.4e close to zero at %3d!\t\n", xmax,i+1);
+            cout << endl << "xmax = " << xmax << " close to zero at " << i+1 << "!\t" << endl;
             exit(-1);
         }
         if (irow[i] != i) {

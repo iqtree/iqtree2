@@ -511,9 +511,9 @@ void runPDTree(Params &params)
 
 			t_end=getCPUTime();
 			params.run_time = (t_end-t_begin);
-			printf("Time used: %8.6f seconds.\n", (double)params.run_time);
+			cout << "Time used: " << params.run_time << " seconds." << endl;
 			if (params.min_size == params.sub_size)
-				printf("Resulting tree length = %10.4f\n", taxa_set[0].score);
+				cout << "Resulting tree length = " << taxa_set[0].score << endl;
 
 			if (params.nr_output > 0)
 				printTaxaSet(params, taxa_set, GREEDY);
@@ -548,9 +548,9 @@ void runPDTree(Params &params)
 
 		t_end=getCPUTime();
 		params.run_time = (t_end-t_begin) ;
-		printf("Time used: %8.6f seconds.\n", (double)params.run_time);
+		cout << "Time used: " << params.run_time << " seconds.\n";
 		if (params.min_size == params.sub_size)
-			printf("Resulting tree length = %10.4f\n", taxa_set[0].score);
+			cout << "Resulting tree length = " << taxa_set[0].score << endl;
 
 		if (params.nr_output > 0)
 			printTaxaSet(params, taxa_set, PRUNING);
@@ -1657,13 +1657,15 @@ outstreambuf* outstreambuf::close() {
 }
 
 int outstreambuf::overflow( int c) { // used for output buffer only
-	if (cout_buf->sputc(c) == EOF) return EOF;
+	if (verbose_mode >= VB_MIN)
+		if (cout_buf->sputc(c) == EOF) return EOF;
 	if (fout_buf->sputc(c) == EOF) return EOF;
 	return c;
 }
 
 int outstreambuf::sync() { // used for output buffer only
-	cout_buf->pubsync();
+	if (verbose_mode >= VB_MIN)
+		cout_buf->pubsync();
 	return fout_buf->pubsync();
 }
 
@@ -1743,6 +1745,8 @@ int main(int argc, char *argv[])
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
 
+	cout << "Memory:  " << getTotalSystemMemory()/(1024.0*1024*1024) << " GB RAM detected" << endl;
+	
 #ifdef _OPENMP
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
 	int max_threads = omp_get_max_threads();

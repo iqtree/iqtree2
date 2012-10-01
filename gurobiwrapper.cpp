@@ -76,7 +76,7 @@ int gurobi_solve(char *filename, int ntaxa, double *score, double *variables, in
 			if (str[0] != 'x') continue;
 			int index = convert_int(str.substr(1).c_str());
 			if (index < 0 || index >= ntaxa) {
-				printf("Index x_%d is not in the range!\n", index);
+				cout << "Index x_" << index << " is not in the range!" << endl;
 				ret = 6;
 				break;
 			}

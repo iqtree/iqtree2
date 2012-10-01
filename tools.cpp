@@ -676,11 +676,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				usage_iqtree(argv, false);
 			} else if (strcmp(argv[cnt],"-hh") == 0 || strcmp(argv[cnt],"-hhh") == 0) {
 				usage(argv, true);
-			} else if (strcmp(argv[cnt],"-v") == 0) {
+			} else if (strcmp(argv[cnt],"-v0") == 0) {
+				verbose_mode = VB_QUIET;
+			} else if (strcmp(argv[cnt],"-v") == 0 || strcmp(argv[cnt],"-v1") == 0) {
 				verbose_mode = VB_MED;
-			} else if (strcmp(argv[cnt],"-vv") == 0) {
+			} else if (strcmp(argv[cnt],"-vv") == 0 || strcmp(argv[cnt],"-v2") == 0) {
 				verbose_mode = VB_MAX;
-			} else if (strcmp(argv[cnt],"-vvv") == 0) {
+			} else if (strcmp(argv[cnt],"-vvv") == 0 || strcmp(argv[cnt],"-v3") == 0) {
 				verbose_mode = VB_DEBUG;
 			} else if (strcmp(argv[cnt],"-k") == 0) {
 				cnt++;
@@ -1504,7 +1506,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 	}
 }
 
+extern void printCopyright(ostream &out);
+
 void usage(char* argv[], bool full_command) {
+	printCopyright(cout);
 	cout << "Usage: " << argv[0] << " [OPTIONS] <file_name> [<output_file>]" << endl;
 	cout << "GENERAL OPTIONS:" << endl;
 	cout << "  -h                Print this help dialog. Use -hh to display all options." << endl;
@@ -1581,6 +1586,7 @@ void usage(char* argv[], bool full_command) {
 }
 
 void usage_iqtree(char* argv[], bool full_command) {
+	printCopyright(cout);
 	cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS] [<treefile>] " << endl << endl;
 	cout << "GENERAL OPTIONS:" << endl
 			<< "  -?                   Printing this help dialog" << endl
@@ -1944,7 +1950,7 @@ double random_double()
 #	   endif /* NO_SPRNG */
 #	endif /* NOT PARALLEL */
 #  else /* FIXEDINTRAND */
-	fprintf(stderr, "!!! fixed \"random\" integers for testing purposes !!!\n");
+	cerr << "!!! fixed \"random\" integers for testing purposes !!!" << endl;
 	return 0.0;
 #  endif /* FIXEDINTRAND */
 
