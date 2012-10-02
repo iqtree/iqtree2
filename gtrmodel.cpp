@@ -462,7 +462,7 @@ void GTRModel::readStateFreq(istream &in) throw(const char*) {
 	}
 	double sum = 0.0;
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
-	if (fabs(sum-1.0) > 1e-3)
+	if (fabs(sum-1.0) > 1e-2)
 		throw "State frequencies do not sum up to 1.0";
 }
 

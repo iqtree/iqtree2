@@ -72,6 +72,8 @@ struct SPR_compare {
     }
 };
 
+
+
 class SPRMoves : public set<SPRMove, SPR_compare> {
 public:
     void add(PhyloNode *prune_node, PhyloNode *prune_dad,
@@ -122,8 +124,8 @@ struct NNIMove {
     int swap_id;
 
     bool operator<(const NNIMove & rhs) const {
-        return score > rhs.score;
-    	//return delta > rhs.delta;
+        //return score > rhs.score;
+    	return (delta > rhs.delta);
     }
 
 };

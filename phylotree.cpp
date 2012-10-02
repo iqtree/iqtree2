@@ -762,6 +762,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 			if (mem_size >= getTotalSystemMemory())
 				outWarning("Degrade performance due to smaller RAM size, please switch to another computer with larger RAM");
             central_partial_lh = new double[mem_size];
+            //central_partial_lh = (double*) Eigen::internal::conditional_aligned_malloc<true>((leafNum-1)*4*block_size);
             if (!central_partial_lh)
                 outError("Not enough memory for partial likelihood vectors");
 

@@ -1466,6 +1466,8 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     node12_it->scale_num = tmp_scale_num1;
     node21_it->scale_num = tmp_scale_num2;
 
+    double bestDelta = 0;
+
     // Swap NNI
     FOR_NEIGHBOR_IT(node2, node1, node2_it) {
         nniNr = nniNr + 1;
@@ -1528,7 +1530,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
             // compute the score of the swapped topology
             double newScore = optimizeOneBranch(node1, node2, false);
             treelhs[nniNr-1] = newScore;
-            double delta = newScore - bestScore; // BQM: bug: bestScore is changed below, not the score of current tree
+            double delta = newScore - treelhs[0];
 
         	if (save_all_trees == 2) {
         		saveCurrentTree(newScore); // BQM: for new bootstrap
@@ -1547,11 +1549,11 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
 			nnimoves[nniNr - 2].node2 = node2;
 			nnimoves[nniNr - 2].delta = delta;
 
-			// If score is better, save the NNI move
-            if (newScore > bestScore) {
-            	bestScore = newScore;
-                chosenSwap = nniNr;
-            }
+			if (nnimoves[nniNr - 2].delta > bestDelta) {
+				bestDelta = nnimoves[nniNr - 2].delta;
+				chosenSwap = nniNr;
+			}
+
         } else {
             //cout << "pars filtered" << endl;
         }
@@ -1589,13 +1591,15 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     mapOptBranLens.insert(BranLenMap::value_type(key, node12_len[chosenSwap]));
 
     if (estimate_nni_cutoff) nni_info.push_back(nni);
-    // if a possitive NNI is found
+    // if a positive NNI is found
     if (chosenSwap > 1) {
-    	return nnimoves[chosenSwap - 2];
+    	return (nnimoves[chosenSwap - 2]);
     } else {
-    	return noMove;
+    	return (noMove);
     	// if no possitive NNI is found
+
     	// accept an NNI with probability
+    	/*
     	double prob1 = 	1 / (1 + exp(treelhs[0] - treelhs[1]) + exp(treelhs[2] - treelhs[1]));
     	double prob2 = 	1 / (1 + exp(treelhs[0] - treelhs[2]) + exp(treelhs[1] - treelhs[2]));
     	double prob0 = 1 - prob1 - prob2;
@@ -1611,6 +1615,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
     				cout << "Accepting a worse NNI with prob = " << prob2 << endl;
     			return nnimoves[1];
     	}
+    	*/
     }
     return noMove;
 }
