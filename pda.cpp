@@ -51,6 +51,7 @@
 #include "maalignment.h" //added by MA
 #include "ncbitree.h"
 #include "timeutil.h"
+#include <unistd.h>
 
 #ifdef _OPENMP
 	#include <omp.h>
@@ -1727,12 +1728,13 @@ int main(int argc, char *argv[])
 	signal(SIGSEGV, &funcAbort);
 	printCopyright(cout);
 
-	FILE *pfile = popen("hostname","r");
+	//FILE *pfile = popen("hostname","r");
 	char hostname[100];
-	fgets(hostname, sizeof(hostname), pfile);
-	pclose(pfile);
+	gethostname(hostname, 100);
+	//fgets(hostname, sizeof(hostname), pfile);
+	//pclose(pfile);
 
-	cout << "Host:    " << hostname;
+	cout << "Host:    " << hostname << endl;
 	cout << "Command:";
 	for (int i = 0; i < argc; i++)
 		cout << " " << argv[i];
