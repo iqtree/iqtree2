@@ -759,7 +759,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 			uint64_t mem_size = ((uint64_t)leafNum - 1) * 4 * (uint64_t)block_size + 2;
             //if (verbose_mode >= VB_MIN)
                 cout << "Note: Requiring " <<  (double)mem_size * sizeof (double) / (1024*1024) << " MB memory for partial likelihoods" << endl;
-			if (mem_size >= getTotalSystemMemory())
+			if (mem_size >= getMemorySize())
 				outWarning("Degrade performance due to smaller RAM size, please switch to another computer with larger RAM");
             central_partial_lh = new double[mem_size];
             //central_partial_lh = (double*) Eigen::internal::conditional_aligned_malloc<true>((leafNum-1)*4*block_size);

@@ -24,6 +24,12 @@
 
 #include <iqtree_config.h>
 
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+//#include <winsock2.h>
+//#include <windows.h>
+//extern __declspec(dllexport) int gethostname(char *name, int namelen);
+#endif
+
 //#include "Eigen/Core"
 #include <stdio.h>
 #include "phylotree.h"
@@ -56,6 +62,7 @@
 #ifdef _OPENMP
 	#include <omp.h>
 #endif
+
 
 using namespace std;
 
@@ -1730,7 +1737,14 @@ int main(int argc, char *argv[])
 
 	//FILE *pfile = popen("hostname","r");
 	char hostname[100];
-	gethostname(hostname, 100);
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+    gethostname(hostname, sizeof(hostname));
+    WSACleanup();
+#else
+	gethostname(hostname, sizeof(hostname));
+#endif
 	//fgets(hostname, sizeof(hostname), pfile);
 	//pclose(pfile);
 
@@ -1747,7 +1761,7 @@ int main(int argc, char *argv[])
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
 
-	cout << "Memory:  " << getTotalSystemMemory()/(1024.0*1024*1024) << " GB RAM detected" << endl;
+	cout << "Memory:  " << getMemorySize()/(1024.0*1024*1024) << " GB RAM detected" << endl;
 	
 #ifdef _OPENMP
 	if (params.num_threads) omp_set_num_threads(params.num_threads);

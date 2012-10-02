@@ -149,7 +149,7 @@ lpwrapper.c
 )
 
 if (WIN32)
-target_link_libraries(iqtree ncl whtest z sprng)
+target_link_libraries(iqtree ncl whtest z sprng ws2_32)
 else (WIN32)
 target_link_libraries(iqtree ncl whtest z sprng dl)
 endif (WIN32)
