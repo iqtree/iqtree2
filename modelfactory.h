@@ -141,7 +141,7 @@ public:
 	/**
 		 destructor
 	*/
-    ~ModelFactory();
+    virtual ~ModelFactory();
 
 
 	/**

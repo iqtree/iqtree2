@@ -1097,7 +1097,7 @@ void runPDSplit(Params &params) {
 			cout << endl << "======= START BOOTSTRAP ANALYSIS =======" << endl;
 			MTreeSet *mtrees = sg.getMTrees();
 			if (mtrees->size() < 100)
-				cout << "Warning: bootstrap may be unstable with less than 100 trees" << endl;
+				cout << "WARNING: bootstrap may be unstable with less than 100 trees" << endl;
 			vector<string> taxname;
 			sg.getTaxaName(taxname);
 			i = 1;

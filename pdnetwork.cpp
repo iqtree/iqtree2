@@ -1450,7 +1450,7 @@ bool PDNetwork::checkAreaCoverage() {
 		return true;
 	}
 
-	cout << "Warning: some taxa are not covered by any area including: ";
+	cout << "WARNING: some taxa are not covered by any area including: ";
 	for (int i = 0; i < ntaxa; i++)
 		if (!tax_cover.containTaxon(i)) cout << taxa->GetTaxonLabel(i) << " ";
 	cout << endl;

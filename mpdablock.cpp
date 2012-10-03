@@ -243,7 +243,7 @@ void MPdaBlock::Read(NxsToken &token)
 			for (int i = 0; i < ntax; i++)
 				if (costs[i] < 0) {
 					costs[i] = 0;
-					cout << "Warning: taxon " << sgraph->getTaxa()->GetTaxonLabel(i)
+					cout << "WARNING: taxon " << sgraph->getTaxa()->GetTaxonLabel(i)
 						<< "has no cost! set to 0." << endl;
 				}
 		}	// if (token.Equals("TAXCOSTS"))
@@ -327,7 +327,7 @@ void MPdaBlock::readBudgetFile(Params &params) {
 	for (i = 0; i < ntaxa; i++)
 		if (costs[i] < 0) {
 			costs[i] = 0;
-			cout << "Warning: taxon " << sgraph->getTaxa()->GetTaxonLabel(i)
+			cout << "WARNING: taxon " << sgraph->getTaxa()->GetTaxonLabel(i)
 				<< "has no cost! set to 0." << endl;
 		}
 	cost_constrained = true;
@@ -376,7 +376,7 @@ void MPdaBlock::readBudgetAreaFile(Params &params) {
 	for (i = 0; i < nareas; i++)
 		if (costs[i] < 0) {
 			costs[i] = 0;
-			cout << "Warning: area " << sgraph->getSetsBlock()->getSet(i)->name
+			cout << "WARNING: area " << sgraph->getSetsBlock()->getSet(i)->name
 				<< "has no cost! set to 0." << endl;
 		}
 	cost_constrained = true;

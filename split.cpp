@@ -418,7 +418,7 @@ void Split::randomize(int size) {
 	}
 	//report(cout);
 	if (num >= size) return;
-	cerr << "Warning: random set has less than " << size << "taxa." << endl;
+	cerr << "WARNING: random set has less than " << size << "taxa." << endl;
 }
 
 
