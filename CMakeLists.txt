@@ -181,7 +181,9 @@ endif(WIN32)
 #set(CPACK_SOURCE_PACKAGE_FILE_NAME
 #  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 set(CPACK_SOURCE_IGNORE_FILES
-  "/build/;/debug/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;${CPACK_SOURCE_IGNORE_FILES}")
+  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;${CPACK_SOURCE_IGNORE_FILES}")
+
+set(CPACK_STRIP_FILES TRUE)
 
 include (CPack)
 
