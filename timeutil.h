@@ -32,6 +32,12 @@
 #include <omp.h>
 #endif
 
+#if (defined _WIN32 || defined __WIN32__ || defined WIN32) 
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x500
+#endif
+#endif
+
 #ifdef HAVE_GETRUSAGE
 	#include <sys/resource.h>
 #else 
@@ -125,7 +131,6 @@ inline double getRealTime() {
 }
 /*
 #if defined _WIN32 || defined __WIN32__ || defined WIN32
-
 #include <windows.h>
 #include <winbase.h>
 inline uint64_t getTotalSystemMemory()
@@ -199,6 +204,7 @@ inline uint64_t getMemorySize( )
 #if defined(_WIN32) && (defined(__CYGWIN__) || defined(__CYGWIN32__))
 	/* Cygwin under Windows. ------------------------------------ */
 	/* New 64-bit MEMORYSTATUSEX isn't available.  Use old 32.bit */
+#warning "getMemorySize() will be wrong if RAM is actually > 4GB"
 	MEMORYSTATUS status;
 	status.dwLength = sizeof(status);
 	GlobalMemoryStatus( &status );

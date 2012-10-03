@@ -7,6 +7,8 @@
 /* does the platform provide getrusage functions? */
 #cmakedefine HAVE_GETRUSAGE
 /* does the platform provide popen functions? */
-#cmakedefine HAVE_POPEN
+/*#cmakedefine HAVE_POPEN*/
 /* does the platform provide pclose functions? */
-#cmakedefine HAVE_PCLOSE
+/*#cmakedefine HAVE_PCLOSE*/
+/* does the platform provide GlobalMemoryStatusEx functions? */
+#cmakedefine HAVE_GLOBALMEMORYSTATUSEX
