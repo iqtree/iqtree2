@@ -784,7 +784,7 @@ double IQPTree::doIQPNNI() {
 
         int skipped = 0;
         int nni_count = 0;
-        double nnitime_begin = getCPUTime();
+        //double nnitime_begin = getCPUTime();
         if (enableHeuris) {
 			if (cur_iteration > params->speedup_iter) {
 				if (!params->new_heuristic) {
@@ -845,8 +845,8 @@ double IQPTree::doIQPNNI() {
         double cputime_secs = getCPUTime() - params->startTime;
         double cputime_remaining = (stop_rule.getNumIterations() - cur_iteration) *
         		cputime_secs / (cur_iteration - 1);
-        double remaining_secs = (stop_rule.getNumIterations() - cur_iteration) *
-                elapsed_secs / (cur_iteration - 1);
+        /*double remaining_secs = (stop_rule.getNumIterations() - cur_iteration) *
+                elapsed_secs / (cur_iteration - 1);*/
         cout.setf(ios::fixed, ios::floatfield);
 
         if (!skipped) {
@@ -1294,7 +1294,7 @@ void IQPTree::genNNIMovesSort() {
 	for (i = 0; i < leafNum-3; i++) {
 		IntBranchInfo int_branch;
 		PhyloNeighbor *node12_it = (PhyloNeighbor*) nodes1[i]->findNeighbor(nodes2[i]);
-		PhyloNeighbor *node21_it = (PhyloNeighbor*) nodes2[i]->findNeighbor(nodes1[i]);
+		//PhyloNeighbor *node21_it = (PhyloNeighbor*) nodes2[i]->findNeighbor(nodes1[i]);
 		int_branch.lh_contribution = cur_lh - computeLikelihoodZeroBranch(node12_it, (PhyloNode*) nodes1[i]);
 		if (int_branch.lh_contribution < 0.0) int_branch.lh_contribution = 0.0;
 		if (int_branch.lh_contribution < fabs(nni_cutoff)) {
@@ -1391,7 +1391,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh
 
     double node12_len[4];
     node12_len[0] = node12_it->length;
-    bool zero = false;
+    //bool zero = false;
     //double myLH = computeLikelihood();
     //double lh_branch=computeLikelihoodBranch((PhyloNeighbor*) node1->findNeighbor(node2), (PhyloNode*) node1);
 	//curScore = computeLikelihood();

@@ -108,7 +108,7 @@ unsigned NxsCharactersBlock::ApplyExset(
 	assert(charPos != NULL);
 
 	int num_excluded = 0;
-	int k;
+	unsigned k;
 
 	NxsUnsignedSet::const_iterator i;
 	for (i = exset.begin(); i != exset.end(); i++)
@@ -630,7 +630,7 @@ void NxsCharactersBlock::HandleCharstatelabels(
 		//
 		int n = atoi(token.GetToken().c_str());
 
-		if (n < 1 || n > ncharTotal || n <= currChar)
+		if (n < 1 || n > (int)ncharTotal || n <= (int)currChar)
 			{
 			errormsg = "Invalid character number (";
 			errormsg += token.GetToken();
@@ -652,7 +652,7 @@ void NxsCharactersBlock::HandleCharstatelabels(
 		// reading in the information but don't actually save any of it
 		//
 		currChar++;
-		assert(n == currChar);
+		assert(n == (int)currChar);
 		if (IsEliminated(currChar-1))
 			save = false;
 
@@ -1121,7 +1121,7 @@ void NxsCharactersBlock::HandleFormat(
 			token.StripWhitespace();
 			unsigned numNewSymbols = token.GetTokenLength();
 
-			if (numNewSymbols > maxNewStates)
+			if ((int)numNewSymbols > maxNewStates)
 				{
 				errormsg = "SYMBOLS defines ";
 				errormsg += numNewSymbols;
@@ -1140,7 +1140,7 @@ void NxsCharactersBlock::HandleFormat(
 			/* BQM: erase used symbols */
 			NxsString told = t;
 			t="";
-			for (int i = 0; i < tlen; i++)
+			for (unsigned i = 0; i < tlen; i++)
 				{
 				if (!IsInSymbols(told[i]) && told[i] > 32)
 					{
@@ -1657,8 +1657,8 @@ bool NxsCharactersBlock::HandleNextState(
 		else	// either uncertainty or polymorphism
 			{
 			bool tildeFound = false;
-			int first = UINT_MAX;
-			int last;
+			unsigned first = UINT_MAX;
+			unsigned last;
 			for (;;)
 				{
 				// OPEN ISSUE: What about newlines if interleaving? I'm assuming
@@ -1711,7 +1711,7 @@ bool NxsCharactersBlock::HandleNextState(
 						throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 						}
 
-					for (int k = first+1; k <= last; k++)
+					for (unsigned k = first+1; k <= last; k++)
 						matrix->AddState(i, j, k);
 
 					tildeFound = false;
@@ -1799,10 +1799,10 @@ void NxsCharactersBlock::HandleStdMatrix(
 	assert(charPos != NULL);
 	assert(taxonPos != NULL);
 
-	int i = 0, j, currChar = 0;
-	int firstChar = 0;
-	int lastChar = ncharTotal;
-	int nextFirst = 0;
+	unsigned i = 0, j, currChar = 0;
+	unsigned firstChar = 0;
+	unsigned lastChar = ncharTotal;
+	unsigned nextFirst = 0;
 	int page = 0;
 
 	for (;;)
@@ -1991,10 +1991,10 @@ void NxsCharactersBlock::HandleTransposedMatrix(
 	assert(charPos != NULL);
 	assert(taxonPos != NULL);
 
-	int i = 0, j, currChar;
-	int firstTaxon = 0;
-	int lastTaxon = ntaxTotal;
-	int nextFirst = 0;
+	unsigned i = 0, j, currChar;
+	unsigned firstTaxon = 0;
+	unsigned lastTaxon = ntaxTotal;
+	unsigned nextFirst = 0;
 	int page = 0;
 
 	for (;;)
@@ -2800,7 +2800,7 @@ void NxsCharactersBlock::ShowStateLabels(
 			out << missing;
 		else if (n == 1) 
 			{
-			unsigned s = matrix->GetState(i, j);
+			int s = matrix->GetState(i, j);
 			bool use_matchchar = false;
 			if (first_taxon >= 0 && i > first_taxon) 
 				{
@@ -2839,7 +2839,7 @@ void NxsCharactersBlock::ShowStateLabels(
 				out << "  (";
 			else
 				out << "  {";
-			for (int k = 0; k < n; k++)
+			for (unsigned k = 0; k < n; k++)
 				{
 				unsigned s = matrix->GetState(i, j, k);
 				NxsStringVectorMap::const_iterator ci = charStates.find(j);

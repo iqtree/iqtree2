@@ -315,14 +315,14 @@ int cmatinv( complex x[], int n, int m, double space[])
 */
    int i,j,k, *irow=(int*) space;
    double xmaxsize, ee=1e-20;
-   complex xmax, t,t1;
+   complex /*xmax,*/ t,t1;
 
    FOR(i,n)  {
        xmaxsize = 0.;
        for (j=i; j<n; j++) {
           if ( xmaxsize < csize (x[j*m+i]))  {
                xmaxsize = csize (x[j*m+i]);
-               xmax = x[j*m+i];
+               /*xmax = x[j*m+i];*/
                irow[i] = j;
           }
        }

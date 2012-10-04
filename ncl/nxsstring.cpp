@@ -751,7 +751,7 @@ bool SetToShortestAbbreviation(
 		//
 		for (;moreChars;)
 			{
-			int prevInd = 0;
+			size_t prevInd = 0;
 			for (; prevInd < upperCasePortion.size(); prevInd++)
 				{
 				if (pref == upperCasePortion[prevInd])
@@ -788,7 +788,7 @@ bool SetToShortestAbbreviation(
 					}
 				else
 					{
-					int j;
+					unsigned j;
 					for (j = 0; j < prefLen; j++)
 						{
 						if (pref[j] != upperCasePortion[prevInd][j])
@@ -826,7 +826,7 @@ bool SetToShortestAbbreviation(
 
 	for (i = 0; i < strVec.size(); i++)
 		{
-		for (int j = 0; j < upperCasePortion[i].size(); j++)
+		for (size_t j = 0; j < upperCasePortion[i].size(); j++)
 			strVec[i][j] = upperCasePortion[i][j];
 		}
 
@@ -841,7 +841,7 @@ NxsStringVector GetVecOfPossibleAbbrevMatches(
   const NxsStringVector	&possMatches)	/* vector of possible matches */
 	{
 	NxsStringVector matches;
-	for (int i = 0; i < possMatches.size(); i++)
+	for (size_t i = 0; i < possMatches.size(); i++)
 		{
 		if (testStr.Abbreviates(possMatches[i]))
 			matches.push_back(possMatches[i]);

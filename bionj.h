@@ -660,7 +660,7 @@ int create(const char *inputFile, const char *outputFile) {
   int r;                                  /* number of subtrees          */
   int n;                                  /* number of taxa              */
   int x, y;
-  float t;
+  //float t;
 
 
   /*   Allocation of memories    */

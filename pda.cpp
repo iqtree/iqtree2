@@ -1761,7 +1761,9 @@ int main(int argc, char *argv[])
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
 
-	cout << "Memory:  " << getMemorySize()/(1024.0*1024*1024) << " GB RAM detected" << endl;
+	cout.precision(3);
+	cout << fixed;
+	cout << "Memory:  " << ((getMemorySize()/1024.0)/1024)/1024 << " GB RAM detected" << endl;
 	
 #ifdef _OPENMP
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
@@ -1770,9 +1772,8 @@ int main(int argc, char *argv[])
 	cout << "Threads: " << max_threads << " (" << max_procs << " CPU cores detected)" << endl;
 	if (max_threads > max_procs) outWarning("You have specified more threads than CPU cores available");
 #endif
+	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl;
-	cout.precision(3);
-	cout << fixed;
 	
 	// call the main function
 	if (params.tree_gen != NONE) {

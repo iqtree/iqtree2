@@ -126,7 +126,7 @@ void NxsTaxaBlock::Read(
 				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 				}
 
-			for (unsigned i = 0; i < nominal_ntax; i++)
+			for (unsigned i = 0; (int)i < nominal_ntax; i++)
 				{
 				token.GetNextToken();
 				//@pol should check to make sure this is not punctuation

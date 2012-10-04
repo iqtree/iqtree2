@@ -29,7 +29,7 @@ Alignment::Alignment()
 }
 
 string &Alignment::getSeqName(int i) {
-    assert(i >= 0 && i < seq_names.size());
+    assert(i >= 0 && i < (int)seq_names.size());
     return seq_names[i];
 }
 

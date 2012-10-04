@@ -115,7 +115,7 @@ void NxsDiscreteMatrix::AddState(
   unsigned value)		/* the additional state to be added */
 	{
 	unsigned oldns = GetNumStates(d);
-	int k, newlen;
+	unsigned k, newlen;
 
 	unsigned *tmp = d.states;
 

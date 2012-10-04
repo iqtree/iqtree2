@@ -962,7 +962,7 @@ protected:
      */
     int lh_size;
 
-    int block_size;
+    size_t block_size;
 
     /**
      * Vector to store pattern frequency
@@ -994,7 +994,7 @@ protected:
     /**
             @return size of the bits block vector for one node
      */
-    int getBitsBlockSize();
+    size_t getBitsBlockSize();
 
     /**
             allocate new memory for a bit block vector

@@ -223,7 +223,7 @@ string PhyloTree::getModelName() {
 
 
 
-int PhyloTree::getBitsBlockSize() {
+size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
     return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
 }
@@ -733,7 +733,7 @@ void PhyloTree::growTreeMP(Alignment *alignment) {
 
 void PhyloTree::initializeAllPartialLh() {
     int index;
-    int mem_size = ((alnSize % 2) == 0) ? alnSize : (alnSize+1);
+    size_t mem_size = ((alnSize % 2) == 0) ? alnSize : (alnSize+1);
     block_size = mem_size * numStates * site_rate->getNRate();
     //block_size = alnSize * numStates * site_rate->getNRate();
     if (!tmp_partial_lh1)
@@ -750,17 +750,20 @@ void PhyloTree::initializeAllPartialLh() {
 }
 
 void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
-    int pars_block_size = getBitsBlockSize();
-    int scale_block_size = aln->size();
+    size_t pars_block_size = getBitsBlockSize();
+    size_t scale_block_size = aln->size();
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
         if (!central_partial_lh) {
 			uint64_t mem_size = ((uint64_t)leafNum - 1) * 4 * (uint64_t)block_size + 2;
             //if (verbose_mode >= VB_MIN)
-                cout << "Note: Requiring " <<  (double)mem_size * sizeof (double) / (1024*1024) << " MB memory for partial likelihoods" << endl;
-			if (mem_size >= getMemorySize())
-				outWarning("Degrade performance due to smaller RAM size, please switch to another computer with larger RAM");
+                cout << "Note: This run requires " <<  (double)mem_size * sizeof (double) / (1024.0*1024) << " MB memory for partial likelihood vectors" << endl;
+			if (mem_size >= getMemorySize()) {
+				cout << "********************* IMPORTANT WARNING *******************" << endl;
+				outWarning("Size of partial likelihood vectors exceeds your RAM size");
+				outWarning("Pease switch to another computer with larger RAM");
+			}
             central_partial_lh = new double[mem_size];
             //central_partial_lh = (double*) Eigen::internal::conditional_aligned_malloc<true>((leafNum-1)*4*block_size);
             if (!central_partial_lh)
@@ -785,7 +788,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
     }
     if (dad) {
         // make memory alignment 16
-		int mem_shift = 0;
+		size_t mem_shift = 0;
 		if (((intptr_t)central_partial_lh) % 16 != 0) mem_shift = 1;
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
         PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
@@ -988,10 +991,11 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
     double p_invar = site_rate->getPInvar();
     double p_var_cat = (1.0 - p_invar) / (double) ncat;
     int nstates = aln->num_states;
-    int block = ncat * nstates;
+    size_t block = ncat * nstates;
     int trans_size = model->getTransMatrixSize();
-    int ptn, cat, state1, state2;
-	int nptn = aln->size();
+    size_t ptn; // for big data size > 4GB memory required
+    int cat, state1, state2;
+	size_t nptn = aln->size();
 	int discrete_cat = site_rate->getNDiscreteRate();
     double *trans_mat = new double[discrete_cat * trans_size];
     double *state_freq = new double[nstates];
@@ -1023,7 +1027,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
             model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getPtnRate(ptn), state_freq, trans_mat);
         for (cat = 0; cat < ncat; cat++) {
             double lh_cat = 0.0; // likelihood of the pattern's category
-            int lh_offset = cat * nstates + ptn*block;
+            size_t lh_offset = cat * nstates + ptn*block;
             double *partial_lh_site = node_branch->partial_lh + lh_offset;
             double *partial_lh_child = dad_branch->partial_lh + lh_offset;
             if (dad_state < nstates) { // single state
@@ -1089,14 +1093,14 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
     if (dad_branch->partial_lh_computed & 1)
         return;
     Node *node = dad_branch->node;
-    int ptn, cat;
+    size_t ptn, cat;
     int ncat = site_rate->getNRate();
     int nstates = aln->num_states;
-    int block = nstates * site_rate->getNRate();
+    size_t block = nstates * site_rate->getNRate();
     int trans_size = model->getTransMatrixSize();
-    int lh_size = aln->size() * block;
+    size_t lh_size = aln->size() * block;
     double *partial_lh_site;
-    int nptn = aln->size();
+    size_t nptn = aln->size();
 
     dad_branch->lh_scale_factor = 0.0;
     memset(dad_branch->scale_num, 0, aln->size() * sizeof (UBYTE));
@@ -1175,7 +1179,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                         model_factory->computeTransMatrix((*it)->length * site_rate->getPtnRate(ptn), trans_mat);
 
                     for (cat = 0; cat < ncat; cat++) {
-                        int lh_offset = cat * nstates + ptn*block;
+                        size_t lh_offset = cat * nstates + ptn*block;
                         partial_lh_site = dad_branch->partial_lh + lh_offset;
                         double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + lh_offset;
                         for (int state = 0; state < nstates; state++) {
@@ -1250,10 +1254,10 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     double p_invar = site_rate->getPInvar();
     double p_var_cat = (1.0 - p_invar) / (double) ncat;
     int nstates = aln->num_states;
-    int block = ncat * nstates;
+    size_t block = ncat * nstates;
     int trans_size = model->getTransMatrixSize();
-	int nptn = aln->size();
-    int ptn, cat, state1, state2;
+	size_t nptn = aln->size();
+    size_t ptn, cat, state1, state2;
 
     int discrete_cat = site_rate->getNDiscreteRate();
 
@@ -1312,7 +1316,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
             model_factory->computeTransDervFreq(dad_branch->length, site_rate->getPtnRate(ptn), state_freq,
                                                 trans_mat, trans_derv1, trans_derv2);
         for (cat = 0; cat < ncat; cat++) {
-            int lh_offset = cat * nstates + ptn*block;
+            size_t lh_offset = cat * nstates + ptn*block;
             double *partial_lh_site = node_branch->partial_lh + lh_offset;
             double *partial_lh_child = dad_branch->partial_lh + lh_offset;
             if (dad_state < nstates) {
@@ -1927,7 +1931,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
                 }
             }
         }
-        double *pattern_lh = NULL;
+        //double *pattern_lh = NULL;
         /*if (treels) {
             if (!duplicated_tree) {
                 (*treels)[tree_str] = treels_ptnlh->size();
@@ -2281,10 +2285,10 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
     PhyloNeighbor *node2_nei = (PhyloNeighbor*) node2->findNeighbor(dad2);
     PhyloNeighbor *dad2_nei = (PhyloNeighbor*) dad2->findNeighbor(node2);
 
-    double* node1dad1_lh_save = node1_nei->partial_lh;
-    double* dad1node1_lh_save = dad1_nei->partial_lh;
-    double node1dad1_scale = node1_nei->lh_scale_factor;
-    double dad1node1_scale = dad1_nei->lh_scale_factor;
+    //double* node1dad1_lh_save = node1_nei->partial_lh;
+    //double* dad1node1_lh_save = dad1_nei->partial_lh;
+    //double node1dad1_scale = node1_nei->lh_scale_factor;
+    //double dad1node1_scale = dad1_nei->lh_scale_factor;
 
     double* node2dad2_lh_save = node2_nei->partial_lh;
     double* dad2node2_lh_save = dad2_nei->partial_lh;
@@ -2614,7 +2618,7 @@ void PhyloTree::computeNNIPatternLh(
     node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 
-    PhyloNeighbor *node2_lastnei = NULL;
+   // PhyloNeighbor *node2_lastnei = NULL;
 
     // save the first found neighbor of node 1 (excluding node2) in node1_it
     FOR_NEIGHBOR_DECLARE(node1, node2, node1_it) break;
@@ -2656,7 +2660,7 @@ void PhyloTree::computeNNIPatternLh(
                 //((PhyloNeighbor*)(*saved_it[id]))->clearPartialLh();
                 ((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
                 new_score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
-                node2_lastnei = (PhyloNeighbor*) (*it);
+                //node2_lastnei = (PhyloNeighbor*) (*it);
             }
             node12_it->clearPartialLh();
             if (new_score < old_score + TOL_LIKELIHOOD) break;
@@ -2701,7 +2705,7 @@ void PhyloTree::computeNNIPatternLh(
 }
 
 void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
-    int nsite = getAlnNSite();
+    //int nsite = getAlnNSite();
     int nptn = getAlnNPattern();
     memset(lh_new, 0, sizeof (double) * 3);
     int i;

@@ -505,7 +505,7 @@ void Compute_Qij_tij()
 
 	int e, i, j, k, l, index_paar;
 
-	double P[16], EigenWert[4], T1[16], U[16], V[16], T2[16];
+	double /*P[16],*/ EigenWert[4], T1[16], U[16], V[16], T2[16];
 	DMat20 HMat, EigenVec, EigenVecInv;
 	DVec20 PiVec;
 
@@ -523,7 +523,7 @@ void Compute_Qij_tij()
 			for ( k = 0; k < 4; k++ ) {
 				PiVec[k] = H[i][j][k][4];
 				for ( l = 0; l < 4; l++ ) {		/* P_ij(t) = Pi^(-1)*H_ij */
-					P[4*k+l] = H[i][j][k][l] / H[i][j][k][4];
+					/*P[4*k+l] = H[i][j][k][l] / H[i][j][k][4];*/
 					HMat[k][l] = H[i][j][k][l];
 				}
 			}

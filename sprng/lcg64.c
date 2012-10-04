@@ -124,7 +124,7 @@ int gennum,param,seed,total_gen;
 /*      of gennum in [0,total_gen) each call                              */
   struct rngen *genptr;
   int i;
-  double tempdbl;
+  /*double tempdbl;*/
   if (total_gen <= 0) /* Is total_gen valid ? */
   {
     total_gen = 1;
@@ -207,7 +207,8 @@ int gennum,param,seed,total_gen;
 #endif  
 
   for(i=0; i<127*genptr->stream_number; i++)
-    tempdbl = get_rn_dbl((int *) genptr);
+    get_rn_dbl((int *) genptr);
+    /*tempdbl = get_rn_dbl((int *) genptr);*/
   
   NGENS++;			/* NGENS = # of streams */
   

@@ -330,7 +330,7 @@ bool NxsDistancesBlock::HandleNextPass(
 
 		// Now deal with the row of distance values
 		//
-		int true_j = 0;
+		unsigned true_j = 0;
 		for (j = 0; j < ntax; j++)
 			{
 			if (i == ntax - 1 && j == ntax - 1)
@@ -492,7 +492,7 @@ void NxsDistancesBlock::HandleTaxlabelsCommand(
 		throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 		}
 
-	for (int i = 0; i < ntax; i++)
+	for (unsigned i = 0; i < ntax; i++)
 		{
 		token.GetNextToken();
 		taxa->AddTaxonLabel(token.GetToken());
@@ -672,14 +672,14 @@ void NxsDistancesBlock::Report(
 
 	out.setf(ios::fixed, ios::floatfield);
 	out.setf(ios::showpoint);
-	for (int i = 0; i < ntax; i++)
+	for (unsigned i = 0; i < ntax; i++)
 		{
 		if (labels)
 			out << setw(20) << taxa->GetTaxonLabel(i);
 		else
 			out << "\t\t";
 
-		for (int j = 0; j < ntax; j++)
+		for (unsigned j = 0; j < ntax; j++)
 			{
 			if (triangle == NxsDistancesBlockEnum(upper) && j < i)
 				{

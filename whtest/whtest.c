@@ -148,7 +148,6 @@ void WHT_allocateMemory() {
 }
 
 void WHT_setSequenceSite(int seqid, int siteid, char c) {
-	int i;
 	if (c>4) c = 4;
 	seqData[seqid][siteid] = c;
 }
@@ -214,7 +213,7 @@ void usage(char *prog_name) {
 void parseArg( int argc,char **argv ) {
 	int i;
 	int arg_i;
-	char *alpha_arg = NULL;
+	/*char *alpha_arg = NULL;*/
 
 	if (isMasterProc()) {
 
@@ -251,7 +250,7 @@ void parseArg( int argc,char **argv ) {
 			p_value_cutoff = atof ( argv[arg_i] );
 		} else if (strcmp(argv[arg_i], "-a") == 0) {
 			arg_i++;
-			alpha_arg = argv[arg_i];
+			/*alpha_arg = argv[arg_i];*/
 			alpha = atof ( argv[arg_i] );
 		} else if (strcmp(argv[arg_i], "-seed") == 0) {
 			arg_i++;
