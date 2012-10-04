@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "memory.h"
 
 #define CHECK_MASK 0x1c		/* Assumes exactly last two bits are 0 ... */
