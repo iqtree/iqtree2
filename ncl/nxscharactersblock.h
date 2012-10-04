@@ -246,7 +246,7 @@ class NxsCharactersBlock
 		virtual unsigned		TaxonLabelToNumber(NxsString s);
 		virtual unsigned		GetMaxObsNumStates();
 		virtual unsigned		GetObsNumStates(unsigned j);
-		virtual void			DebugShowMatrix(ostream &out, bool use_matchchar, const char *marginText = NULL);
+		virtual void			DebugShowMatrix(ostream &out, bool use_matchchar, const char *marginText = 0);
 		virtual void			Report(ostream &out);
 		virtual void			Reset();
 
@@ -380,7 +380,7 @@ inline NxsString NxsCharactersBlock::GetCharLabel(
 inline unsigned NxsCharactersBlock::GetCharPos(
   unsigned origCharIndex)	/* original index of character in range [0..`ncharTotal' - 1) */
 	{
-	assert(charPos != NULL);
+	assert(charPos);
 	assert(origCharIndex >= 0);
 	assert(origCharIndex < ncharTotal);
 
@@ -403,7 +403,7 @@ inline char NxsCharactersBlock::GetGapSymbol()
 inline unsigned NxsCharactersBlock::GetTaxPos(
   unsigned origTaxonIndex)	/* original index of taxon */
 	{
-	assert(taxonPos != NULL);
+	assert(taxonPos);
 	assert(origTaxonIndex >= 0);
 	assert(origTaxonIndex < ntaxTotal);
 
@@ -581,7 +581,7 @@ inline char NxsCharactersBlock::GetState(
   unsigned j,	/* the character in range [0..`nchar') */
   unsigned k)	/* the 0-offset index of the state to return */
 	{
-	assert(symbols != NULL);
+	assert(symbols);
 	char state_char = '\0';
 
 	//unsigned symbolsLen = strlen(symbols);
@@ -672,7 +672,7 @@ inline bool NxsCharactersBlock::IsGapState(
   unsigned i,	/* the taxon, in range [0..`ntax') */
   unsigned j)	/* the character, in range [0..`nchar') */
 	{
-	assert(matrix != NULL);
+	assert(matrix);
 	return matrix->IsGap(i, j);
 	}
 
@@ -700,7 +700,7 @@ inline bool NxsCharactersBlock::IsMissingState(
   unsigned i,	/* the taxon, in range [0..`ntax') */
   unsigned j)	/* the character, in range [0..`nchar') */
 	{
-	assert(matrix != NULL);
+	assert(matrix);
 	return matrix->IsMissing(i, j);
 	}
 
@@ -713,7 +713,7 @@ inline bool NxsCharactersBlock::IsPolymorphic(
   unsigned i,	/* the taxon in range [0..`ntax') */
   unsigned j)	/* the character in range [0..`nchar') */
 	{
-	assert(matrix != NULL);
+	assert(matrix);
 	return matrix->IsPolymorphic(i, j);
 	}
 
@@ -764,7 +764,7 @@ inline void NxsCharactersBlock::ShowStates(
 	assert(i < ntax);
 	assert(j >= 0);
 	assert(j < nchar);
-	assert(matrix != NULL);
+	assert(matrix);
 
 	char s[NCL_MAX_STATES + 3];
 	WriteStates(matrix->GetDiscreteDatum(i, j), s, NCL_MAX_STATES + 3);

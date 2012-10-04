@@ -242,7 +242,7 @@ inline bool NxsToken::IsPunctuation(
 	//  o allows `<> inside taxset names
 	//
 	bool is_punctuation = false;
-	if (strchr(punctuation, ch) != NULL)
+	if (strchr(punctuation, ch))
 		is_punctuation = true;
 	if (labileFlags & tildeIsPunctuation  && ch == '~')
 		is_punctuation = true;
@@ -265,7 +265,7 @@ inline bool NxsToken::IsWhitespace(
 
 	// If ch is found in the whitespace array, it's whitespace
 	//
-	if (strchr(whitespace, ch) != NULL)
+	if (strchr(whitespace, ch))
 		ws = true;
 
 	// Unless of course ch is the newline character and we're currently

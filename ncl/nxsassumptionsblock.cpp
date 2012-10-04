@@ -25,7 +25,7 @@
 NxsAssumptionsBlock::NxsAssumptionsBlock(
   NxsTaxaBlock *t)	/* pointer to the taxa block */
 	{
-	assert(t != NULL);
+	assert(t);
 	taxa			= t;
 	charBlockPtr	= NULL;
 	id				= "ASSUMPTIONS";
@@ -44,7 +44,7 @@ NxsAssumptionsBlock::~NxsAssumptionsBlock()
 void NxsAssumptionsBlock::ReplaceTaxaBlockPtr(
   NxsTaxaBlock *tb)	/* pointer to new NxsTaxaBlock object */
 	{
-	assert(tb != NULL);
+	assert(tb);
 	taxa = tb;
 	}
 
@@ -170,7 +170,7 @@ NxsString NxsAssumptionsBlock::GetDefExSetName()
 void NxsAssumptionsBlock::ApplyExSet(
   NxsString nm)	/* the name of the exclusion set to apply */
 	{
-	assert(charBlockPtr != NULL);
+	assert(charBlockPtr);
 	charBlockPtr->ApplyExset(exsets[nm]);
 	}
 
@@ -207,7 +207,7 @@ void NxsAssumptionsBlock::HandleCharset(
 		throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 		}
 
-	assert(charBlockPtr != NULL);
+	assert(charBlockPtr);
 	NxsCharactersBlock &charBlock = *charBlockPtr;
 	NxsUnsignedSet s;
 	int totalChars = charBlock.GetNCharTotal();
@@ -274,7 +274,7 @@ void NxsAssumptionsBlock::HandleExset(
 		throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 		}
 
-	assert(charBlockPtr != NULL);
+	assert(charBlockPtr);
 	NxsCharactersBlock &charBlock = *charBlockPtr;
 	NxsUnsignedSet s;
 	int totalChars = charBlock.GetNCharTotal();

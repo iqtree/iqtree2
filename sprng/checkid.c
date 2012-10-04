@@ -26,7 +26,7 @@ int *ptr;
   if(ptr == NULL)
     return NULL;
   
-  bucket = (((long) ptr)&CHECK_MASK)>>2;
+  bucket = (((uintptr_t) ptr)&CHECK_MASK)>>2;
   next = checklist[bucket].next;
   
   while(next != NULL)
@@ -62,7 +62,7 @@ int *ptr;
   if(ptr == NULL)
     return NULL;
   
-  bucket = (((long) ptr)&CHECK_MASK)>>2;
+  bucket = (((uintptr_t) ptr)&CHECK_MASK)>>2;
   next = &checklist[bucket];
   
   while(next->next != NULL)
@@ -100,7 +100,7 @@ int *ptr;
     return NULL;
  
   
-  bucket = (((long) ptr)&CHECK_MASK)>>2;
+  bucket = (((uintptr_t) ptr)&CHECK_MASK)>>2;
   
   temp = (Checklisttype *) mymalloc(sizeof(Checklisttype));
   if(temp == NULL)
