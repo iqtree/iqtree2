@@ -23,8 +23,8 @@
 
 
 const double MIN_RATE = 1e-6;
-const double MIN_GAMMA_SHAPE = 0.001;
-const double MAX_GAMMA_SHAPE = 10000.0;
+const double MIN_GAMMA_SHAPE = 0.01;
+const double MAX_GAMMA_SHAPE = 100.0;
 const double TOL_GAMMA_SHAPE = 0.001;
 
 RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : RateHeterogeneity()
@@ -32,7 +32,8 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 	ncategory = ncat;
 	phylo_tree = tree;
 	cut_median = median;
-	gamma_shape = MAX_GAMMA_SHAPE-1.0;
+	//gamma_shape = MAX_GAMMA_SHAPE-1.0;
+	gamma_shape = 2.0;
 	fix_gamma_shape = false;
 	if (shape >= 0) {
 		gamma_shape = shape;

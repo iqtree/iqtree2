@@ -800,7 +800,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     double fixed_length = 0.001;
     int fixed_number = tree.fixNegativeBranch(fixed_length);
     if (fixed_number) {
-        cout << "WARNING: " << fixed_number << " branches have non-positive lengths and initialized to " << fixed_length << endl;
+        cout << "WARNING: " << fixed_number << " branches have non-positive lengths and initialized to random numbers" << endl;
         if (verbose_mode >= VB_DEBUG) {
             tree.printTree(cout);
             cout << endl;
