@@ -29,6 +29,7 @@
 #include "modelset.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
+#include "ratekategory.h"
 #include "ngs.h"
 
 ModelFactory::ModelFactory() { 
@@ -156,6 +157,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			} else num_rate_cats = -1;
 			site_rate = new NGSRate(tree);
 			site_rate->setTree(tree);
+		} else if (rate_str.substr(0,2) == "+K") {
+			if (rate_str.length() > 2 && rate_str[2] != '+') {
+				num_rate_cats = convert_int(rate_str.substr(2).c_str());
+				if (num_rate_cats < 1) outError("Wrong number of rate categories");
+			}
+			site_rate = new RateKategory(num_rate_cats, tree);
 		} else
 			outError("Invalid rate heterogeneity type");
 		model_str = model_str.substr(0, pos);

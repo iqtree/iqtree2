@@ -402,7 +402,7 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 			out << "  0         0              " << rate_model->getPInvar() << endl;
 		int cats = rate_model->getNDiscreteRate();
 		DoubleVector prop;
-		if (rate_model->getGammaShape() > 0)
+		if (rate_model->getGammaShape() > 0 || rate_model->getPtnCat(0) < 0)
 			prop.resize(cats, (1.0 - rate_model->getPInvar()) / rate_model->getNRate());
 		else {
 			prop.resize(cats, 0.0);

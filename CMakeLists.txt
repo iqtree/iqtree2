@@ -134,6 +134,7 @@ rateheterogeneity.cpp
 rateinvar.cpp
 ratemeyerdiscrete.cpp
 ratemeyerhaeseler.cpp
+ratekategory.cpp
 split.cpp
 splitgraph.cpp
 splitset.cpp
