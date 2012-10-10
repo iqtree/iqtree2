@@ -266,6 +266,19 @@ public:
      ****************************************************************************/
 
     /**
+            initialize partial_pars vector of all PhyloNeighbors, allocating central_partial_pars
+     */
+    virtual void initializeAllPartialPars();
+
+    /**
+            initialize partial_pars vector of all PhyloNeighbors, allocating central_partial_pars
+            @param node the current node
+            @param dad dad of the node, used to direct the search
+            @param index the index
+     */
+    virtual void initializeAllPartialPars(int &index, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
             compute the tree parsimony score
             @return tree likelihood
      */
@@ -283,9 +296,10 @@ public:
             compute tree parsimony score on a branch
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
+            @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
             @return tree likelihood
      */
-    int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
 	void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 

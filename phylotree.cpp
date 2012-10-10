@@ -222,6 +222,40 @@ string PhyloTree::getModelName() {
  ****************************************************************************/
 
 
+void PhyloTree::initializeAllPartialPars() {
+    int index;
+    initializeAllPartialPars(index);
+    assert(index == (nodeNum - 1)*2);
+}
+
+void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode *dad) {
+    size_t pars_block_size = getBitsBlockSize();
+    if (!node) {
+        node = (PhyloNode*) root;
+        // allocate the big central partial pars memory
+        if (!central_partial_pars) {
+            if (verbose_mode >= VB_MED)
+                cout << "Allocating " << (leafNum - 1)*4 * pars_block_size * sizeof (UINT) << " bytes for partial parsimony vectors" << endl;
+            central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
+            if (!central_partial_pars)
+                outError("Not enough memory for partial parsimony vectors");
+        }
+        index = 0;
+    }
+    if (dad) {
+        // make memory alignment 16
+        // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
+        PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
+        nei->partial_pars = central_partial_pars + (index * pars_block_size);
+        nei = (PhyloNeighbor*) dad->findNeighbor(node);
+        nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
+        index += 2;
+        assert(index < nodeNum * 2 - 1);
+    }
+    FOR_NEIGHBOR_IT(node, dad, it)
+    initializeAllPartialLh(index, (PhyloNode*) (*it)->node, node);
+}
+
 
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
@@ -427,12 +461,12 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
     delete [] bits_entry;
 }
 
-int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     assert(node_branch);
     if (!central_partial_pars)
-        initializeAllPartialLh();
+        initializeAllPartialPars();
     // swap node and dad if dad is a leaf
     if (node->isLeaf()) {
         PhyloNode *tmp_node = dad;
@@ -453,21 +487,19 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad)
     int entry_size = getBitsEntrySize();
     //int nstates = aln->num_states;
     int i, ptn;
-    int tree_pars = node_branch->partial_pars[pars_size - 1] + dad_branch->partial_pars[pars_size - 1];
+    int tree_pars = 0;
     UINT *partial_pars = newBitsBlock();
     UINT *bits_entry = new UINT[entry_size];
     for (i = 0; i < pars_size - 1; i++)
         partial_pars[i] = (node_branch->partial_pars[i] & dad_branch->partial_pars[i]);
 
     for (ptn = 0; ptn < aln->size(); ptn++) {
-        /*
-        for (i = 0; i < aln->getNSeq(); i++)
-                cout << aln->convertStateBack(aln->at(ptn)[i]);
-        cout << endl;*/
         getBitsBlock(partial_pars, ptn, bits_entry);
         if (isEmptyBitsEntry(bits_entry))
             tree_pars += aln->at(ptn).frequency;
     }
+    if (branch_subst) *branch_subst = tree_pars;
+    tree_pars += node_branch->partial_pars[pars_size - 1] + dad_branch->partial_pars[pars_size - 1];
     delete [] bits_entry;
     delete [] partial_pars;
     return tree_pars;
@@ -1762,11 +1794,21 @@ int PhyloTree::fixNegativeBranch(double fixed_length, Node *node, Node *dad) {
 
     FOR_NEIGHBOR_IT(node, dad, it) {
         if ((*it)->length <= 0.0) { // negative branch length detected
-            if (verbose_mode == VB_DEBUG)
+			int branch_subst;
+			computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
+			double branch_length = (branch_subst > 0) ? ((double)branch_subst/getAlnNSite()) : (1.0 / getAlnNSite());
+			/*
+			double z = (double)aln->num_states / (aln->num_states-1);
+			double x = 1.0 - (z * branch_length);
+			if (x <= 0) {
+				branch_length = 1.0;
+			} else branch_length = -log(x) / z;*/
+            if (verbose_mode >= VB_DEBUG)
                 cout << "Negative branch length " << (*it)->length << " was set to ";
             //(*it)->length = fixed_length;
-            (*it)->length = random_double()+0.1;
-            if (verbose_mode == VB_DEBUG)
+            //(*it)->length = random_double()+0.1;
+			(*it)->length = branch_length;
+            if (verbose_mode >= VB_DEBUG)
                 cout << (*it)->length << endl;
             // set the backward branch length
             (*it)->node->findNeighbor(node)->length = (*it)->length;
