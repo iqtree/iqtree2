@@ -178,7 +178,7 @@ int MTree::countZeroInternalBranches(Node *node, Node *dad) {
     if (node == NULL) node = root;
     FOR_NEIGHBOR_IT(node, dad, it) {
         if ((*it)->length <= 1e-6 && !((Node*) (*it)->node)->isLeaf() && !node->isLeaf()) count++;
-        count += countZeroBranches((*it)->node, node);
+        count += countZeroInternalBranches((*it)->node, node);
     }
     return count;
 
