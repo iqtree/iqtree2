@@ -428,7 +428,9 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 
 	int zero_branches = tree.countZeroBranches();
 	if (zero_branches > 0) {
+		int zero_internal_branches = tree.countZeroInternalBranches();
 		out << "WARNING: " << zero_branches << " branches of ZERO lengths and should be treated with caution!" << endl;
+		out << "WARNING: " << zero_internal_branches << " internal branches of ZERO lengths and should be treated with caution" << endl;
 		cout << endl << "WARNING: " << zero_branches  << " branches of ZERO lengths and should be treated with caution!" << endl;
 		out << "         Such branches are denoted by '***' in the figure" << endl << endl;
 	}
@@ -970,6 +972,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         if (tree.curScore > bestTreeScore) {
             bestTreeScore = tree.curScore ;
             cout << "Found new best tree log-likelihood : " << bestTreeScore << endl;
+            double modelLH = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
+            bestTreeScore = modelLH;
+            tree.curScore = modelLH;
+            cout << "Optimize model parameters : " << modelLH << endl;
         } else {
             cout << "The local search cannot improve the tree likelihood :( " << endl;
         }

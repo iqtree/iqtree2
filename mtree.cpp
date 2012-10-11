@@ -172,6 +172,17 @@ int MTree::countZeroBranches(Node *node, Node *dad) {
     }
     return count;
 }
+
+int MTree::countZeroInternalBranches(Node *node, Node *dad) {
+    int count = 0;
+    if (node == NULL) node = root;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if ((*it)->length <= 1e-6 && !((Node*) (*it)->node)->isLeaf() && !node->isLeaf()) count++;
+        count += countZeroBranches((*it)->node, node);
+    }
+    return count;
+
+}
 void MTree::printTree(const char *ofile, int brtype)
 {
     try {

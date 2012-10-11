@@ -659,6 +659,7 @@ double IQPTree::perturb(int times) {
 //}
 
 double IQPTree::doIQPNNI() {
+	double bestIQPScore = -DBL_MAX + 100;
 	if (testNNI) {
 		string str = params->out_prefix;
 		str += ".nni";
@@ -888,12 +889,15 @@ double IQPTree::doIQPNNI() {
 
 
         if (curScore > bestScore + 0.0001) {
-			curScore = optimizeAllBranches(100, 0.0001);
+			//curScore = optimizeAllBranches(100, 0.0001);
 			stringstream cur_tree_topo_ss;
 			printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
 			if (cur_tree_topo_ss.str() != best_tree_topo) {
+				double modelLH = getModelFactory()->optimizeParameters(params->fixed_branch_length);
 				best_tree_topo = cur_tree_topo_ss.str();
 				cout << "BETTER TREE FOUND: " << curScore << endl;
+				cout << "Optimize model parameters: " << modelLH << endl;
+				curScore = modelLH;
 				bestScore = curScore;
 				best_tree_string.seekp(0, ios::beg);
 				printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);

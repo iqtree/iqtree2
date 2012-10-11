@@ -113,6 +113,13 @@ public:
 	*/
 	int countZeroBranches(Node *node = NULL, Node *dad = NULL);
 
+	/**
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+		@return the number of internal branches with zero length ( <= 1e-6)
+	*/
+	int countZeroInternalBranches(Node *node = NULL, Node *dad = NULL);
+
 /********************************************************
 	PRINT INFORMATION
 ********************************************************/
