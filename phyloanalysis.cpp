@@ -425,10 +425,16 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 }
 
 void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, double lh_variance) {
-
-	int zero_branches = tree.countZeroBranches();
+	double epsilon =  1.0 / tree.aln->getNSite();
+	double totalLen = tree.treeLength();
+	out << "Total tree length = " << totalLen << endl;
+	double totalLenInternal = tree.treeLengthInternal(epsilon);
+	out << "Total internal tree length = " << totalLenInternal << endl;
+	out << "Total internal branch length / Total tree length = " << totalLenInternal / totalLen << endl;
+	out << "ZERO BRANCH EPSILON = " << epsilon << endl;
+	int zero_branches = tree.countZeroBranches(NULL, NULL, epsilon);
 	if (zero_branches > 0) {
-		int zero_internal_branches = tree.countZeroInternalBranches();
+		int zero_internal_branches = tree.countZeroInternalBranches(NULL, NULL, epsilon);
 		out << "WARNING: " << zero_branches << " branches of ZERO lengths and should be treated with caution!" << endl;
 		out << "WARNING: " << zero_internal_branches << " internal branches of ZERO lengths and should be treated with caution" << endl;
 		cout << endl << "WARNING: " << zero_branches  << " branches of ZERO lengths and should be treated with caution!" << endl;

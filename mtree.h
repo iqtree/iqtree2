@@ -109,16 +109,16 @@ public:
 	/**
 		@param node the starting node, NULL to start from the root
 		@param dad dad of the node, used to direct the search
-		@return the number of branches with zero length ( <= 1e-6)
+		@return the number of branches with zero length ( <= epsilon)
 	*/
-	int countZeroBranches(Node *node = NULL, Node *dad = NULL);
+	int countZeroBranches(Node *node = NULL, Node *dad = NULL, double epsilon = 0.000001);
 
 	/**
 		@param node the starting node, NULL to start from the root
 		@param dad dad of the node, used to direct the search
-		@return the number of internal branches with zero length ( <= 1e-6)
+		@return the number of internal branches with zero length ( <= epsilon)
 	*/
-	int countZeroInternalBranches(Node *node = NULL, Node *dad = NULL);
+	int countZeroInternalBranches(Node *node = NULL, Node *dad = NULL, double epsilon = 0.000001);
 
 /********************************************************
 	PRINT INFORMATION
@@ -269,6 +269,13 @@ public:
 		@param dad dad of the node, used to direct the search
 	*/
 	double treeLength(Node *node = NULL, Node *dad = NULL);
+
+	/**
+		@return sum length of all internal branches
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+	*/
+	double treeLengthInternal(double epsilon, Node *node = NULL, Node *dad = NULL);
 
 	/**
 		@return maximum path length from root node to taxa

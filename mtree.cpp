@@ -163,22 +163,22 @@ void MTree::printInfo(Node *node, Node *dad)
     }
 }
 
-int MTree::countZeroBranches(Node *node, Node *dad) {
+int MTree::countZeroBranches(Node *node, Node *dad, double epsilon) {
     int count = 0;
     if (node == NULL) node = root;
     FOR_NEIGHBOR_IT(node, dad, it) {
-        if ((*it)->length <= 2e-6) count++;
-        count += countZeroBranches((*it)->node, node);
+        if ((*it)->length <= epsilon) count++;
+        count += countZeroBranches((*it)->node, node, epsilon);
     }
     return count;
 }
 
-int MTree::countZeroInternalBranches(Node *node, Node *dad) {
+int MTree::countZeroInternalBranches(Node *node, Node *dad, double epsilon) {
     int count = 0;
     if (node == NULL) node = root;
     FOR_NEIGHBOR_IT(node, dad, it) {
-        if ((*it)->length <= 1e-6 && !((Node*) (*it)->node)->isLeaf() && !node->isLeaf()) count++;
-        count += countZeroInternalBranches((*it)->node, node);
+        if ((*it)->length <= epsilon && !(*it)->node->isLeaf() && !node->isLeaf()) count++;
+        count += countZeroInternalBranches((*it)->node, node, epsilon);
     }
     return count;
 
@@ -661,6 +661,26 @@ double MTree::treeLength(Node *node, Node *dad)
     double sum = 0;
     FOR_NEIGHBOR_IT(node, dad, it) {
         sum += (*it)->length + treeLength((*it)->node, node);
+    }
+    return sum;
+}
+
+double MTree::treeLengthInternal( double epsilon, Node *node, Node *dad)
+{
+    if (!node) node = root;
+    double sum = 0;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+    	if (!(*it)->node->isLeaf() && !node->isLeaf())
+    	{
+    		if (treeLength((*it)->node, node) > epsilon) {
+    			sum += (*it)->length + treeLengthInternal(epsilon, (*it)->node, node);
+    		}
+    	}
+    	else {
+    		if (treeLength((*it)->node, node) > epsilon) {
+    			sum += treeLengthInternal(epsilon, (*it)->node, node);
+    		}
+    	}
     }
     return sum;
 }
