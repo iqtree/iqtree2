@@ -572,6 +572,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.concatenate_aln = NULL;
 	params.aln_nogaps = false;
 	params.parsimony = false;
+	params.parsimony_tree = false;
 	params.tree_spr = false;
 	params.nexus_output = false;
 	params.k_representative = 4;
@@ -1081,6 +1082,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.concatenate_aln = argv[cnt];
 			} else if (strcmp(argv[cnt],"-nogap") == 0) {
 				params.aln_nogaps = true;
+			} else if (strcmp(argv[cnt],"-par") == 0) {
+				// maximum parsimony
+				params.parsimony_tree = true;
 			} else if (strcmp(argv[cnt],"-pars") == 0) {
 				// maximum parsimony
 				params.parsimony = true;

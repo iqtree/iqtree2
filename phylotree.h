@@ -321,7 +321,7 @@ public:
      */
     int computeParsimonyScore(int ptn, int &states, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
-
+	
     /****************************************************************************
             likelihood function
      ****************************************************************************/
@@ -474,7 +474,26 @@ public:
      ****************************************************************************/
 
     /**
-            grow the tree by step-wise addition
+            FAST VERSION: used internally by computeParsimonyTree() to find the best target branch to add into the tree
+            @param added_node node to add
+            @param target_node (OUT) one end of the best branch found
+            @param target_dad (OUT) the other end of the best branch found
+            @param node the current node
+            @param dad dad of the node, used to direct the search
+            @return the parsimony score of the tree
+     */
+    int addTaxonMPFast(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad);
+
+
+	/** 
+	 * FAST VERSION: compute parsimony tree by step-wise addition
+	 * @param out_prefix prefix for .parstree file
+	 * @param alignment input alignment
+	 */
+	void computeParsimonyTree(const char *out_prefix, Alignment *alignment);
+	
+    /**
+            SLOW VERSION: grow the tree by step-wise addition
             @param alignment input alignment
      */
     void growTreeMP(Alignment *alignment);

@@ -788,6 +788,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         bool myrooted = params.is_rooted;
         tree.readTree(params.user_file, myrooted);
         tree.setAlignment(alignment);
+    } else if (params.parsimony_tree) {
+		tree.computeParsimonyTree(params.out_prefix, alignment);
     } else {
         tree.computeBioNJ(params, alignment, dist_file); // create BioNJ tree
     }
@@ -802,7 +804,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
     double fixed_length = 0.001;
     int fixed_number = tree.fixNegativeBranch(fixed_length);
     if (fixed_number) {
-        cout << "WARNING: " << fixed_number << " branches have no or non-positive lengths and initialized with parsimony" << endl;
+        cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
         if (verbose_mode >= VB_DEBUG) {
             tree.printTree(cout);
             cout << endl;

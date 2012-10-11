@@ -440,6 +440,11 @@ struct Params {
     bool parsimony;
 
     /**
+            compute random step-wise addition parsimony tree instead of BIONJ
+     */
+    bool parsimony_tree;
+
+    /**
              output file name
      */
     char *out_file;
