@@ -265,6 +265,12 @@ public:
             Parsimony function
      ****************************************************************************/
 
+	/**
+	 * 		Return the approximated branch length estimation using corrected parsimony branch length
+	 * 		This is usually used as the starting point before using Newton-Raphson
+	 */
+	double computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
     /**
             initialize partial_pars vector of all PhyloNeighbors, allocating central_partial_pars
      */
@@ -280,7 +286,7 @@ public:
 
     /**
             compute the tree parsimony score
-            @return tree likelihood
+            @return parsimony score of the tree
      */
     int computeParsimony();
 
@@ -297,7 +303,7 @@ public:
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
             @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
-            @return tree likelihood
+            @return parsimony score of the tree
      */
     int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
@@ -424,6 +430,18 @@ public:
 		@param pattern_lh pattern log-likelihoods of current tree, will be computed if NULL
 	*/
 	double computeLogLDiffVariance(double *pattern_lh_other, double *pattern_lh = NULL);
+
+	/**
+	 *  Estimate the observed branch length between dad_branch and dad analytically.
+	 *	The ancestral states of the 2 nodes are first computed (Yang, 2006).
+	 *	Branch length are then computed using analytical formula.
+	 *	@param dad_branch must be an internal node
+	 *	@param dad must be an internal node
+	 *	@return estimated branch length or -1.0 if one of the 2 nodes is leaf
+	 */
+	double computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+	double correctBranchLengthF81(double observedBran, double alpha = -1.0);
 
 	/**
 		Compute the variance in log-likelihood difference
@@ -991,6 +1009,11 @@ protected:
     int block;
 
     /**
+     *  State frequencies of nucleotide or amino acids
+     */
+    double* state_freqs;
+
+    /**
      * Size of the partial likelihood (multiple of double)
      */
     int lh_size;
@@ -1009,10 +1032,19 @@ protected:
 
     /**
      * Temporary partial likelihood array: used when swapping branch and recalculate the
-     * likelihood --> avoid calling malloc
+     * likelihood --> avoid calling malloc everytime
      */
     double *tmp_partial_lh1;
     double *tmp_partial_lh2;
+
+    /**
+     *  Temporary array containing anscentral states.
+     *  Used to avoid calling malloc
+     */
+
+    double *tmp_anscentral_state_prob1;
+    double *tmp_anscentral_state_prob2;
+
     /**
      * Temporary scale num array: used when swapping branch and recalculate the
      * likelihood --> avoid calling malloc

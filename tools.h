@@ -335,6 +335,16 @@ struct NNIInfo {
 struct Params {
 
 	/**
+	 *  Turn on parsimony branch legnth estimation
+	 */
+	bool parbran;
+
+	/**
+	 *  option to turn on raxml library
+	 */
+	bool raxmllib;
+
+	/**
 	 *  the speed up heuristic will be used after
 	 *  speedup_iter iteration
 	 */

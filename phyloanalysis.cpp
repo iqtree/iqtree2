@@ -788,6 +788,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
 		longest_dist = tree.computeObsDist(params, alignment, tree.dist_matrix, dist_file);
 		assert(longest_dist <= 1.0);
     }
+
     // start the search with user-defined tree
     if (params.user_file) {
         cout << "Reading user tree file " << params.user_file << " ..." << endl;
@@ -796,8 +797,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         tree.setAlignment(alignment);
     } else if (params.parsimony_tree) {
 		tree.computeParsimonyTree(params.out_prefix, alignment);
-    } else {
+    } else if (!params.raxmllib) {
         tree.computeBioNJ(params, alignment, dist_file); // create BioNJ tree
+    } else {
+    	// Using raxml library
+    	/* Read binary alignment file */
     }
     if (params.root) {
         string str = params.root;

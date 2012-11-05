@@ -56,13 +56,16 @@ void PhyloTree::init() {
     aln = NULL;
     model = NULL;
     site_rate = NULL;
-    optimize_by_newton = false;
+    optimize_by_newton = true;
     central_partial_lh = NULL;
     central_scale_num = NULL;
     central_partial_pars = NULL;
     model_factory = NULL;
     tmp_partial_lh1 = NULL;
     tmp_partial_lh2 = NULL;
+    tmp_anscentral_state_prob1 = NULL;
+    tmp_anscentral_state_prob2 = NULL;
+    state_freqs = NULL;
     tmp_scale_num1 = NULL;
     tmp_scale_num2 = NULL;
     discard_saturated_site = true;
@@ -108,7 +111,13 @@ PhyloTree::~PhyloTree() {
         delete [] tmp_partial_lh1;
     if (tmp_partial_lh2)
         delete [] tmp_partial_lh2;
+    if (tmp_anscentral_state_prob1)
+    	delete [] tmp_anscentral_state_prob1;
+    if (tmp_anscentral_state_prob2)
+    	delete [] tmp_anscentral_state_prob2;
     if (_pattern_lh) delete [] _pattern_lh;
+    if (state_freqs)
+    	delete [] state_freqs;
 }
 
 void PhyloTree::assignLeafNames(Node *node, Node *dad) {
@@ -180,6 +189,8 @@ void PhyloTree::rollBack(istream &best_tree_string) {
 
 void PhyloTree::setModel(SubstModel *amodel) {
     model = amodel;
+    state_freqs = new double[numStates];
+    model->getStateFrequency(state_freqs);
 }
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
@@ -221,6 +232,21 @@ string PhyloTree::getModelName() {
         Parsimony function
  ****************************************************************************/
 
+double PhyloTree::computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+//	double corrected_bran = 0;
+//	int parbran;
+//	int parscore = computeParsimonyBranch(node21_it, node2, &parbran);
+//	if (site_rate->getGammaShape() != 0) {
+//		corrected_bran = (aln->num_states - 1.0) / aln->num_states
+//				* site_rate->getGammaShape()
+//				* (pow( 1.0 - aln->num_states / (aln->num_states - 1.0) * ((double) parbran / aln->getNSite()),
+//						-1.0 / site_rate->getGammaShape()) - 1.0);
+//	} else {
+//		corrected_bran = -((aln->num_states - 1.0) / aln->num_states)
+//				* log(1.0 - (aln->num_states / (aln->num_states - 1.0)) * ((double) parbran / aln->getNSite()));
+//	}
+//	return corrected_bran;
+}
 
 void PhyloTree::initializeAllPartialPars() {
     int index = 0;
@@ -496,7 +522,7 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
     for (i = 0; i < pars_size - 1; i++)
         partial_pars[i] = (node_branch->partial_pars[i] & dad_branch->partial_pars[i]);
 
-    for (ptn = 0; ptn < aln->size(); ptn++) 
+    for (ptn = 0; ptn < aln->size(); ptn++)
     if (!aln->at(ptn).is_const) {
         getBitsBlock(partial_pars, ptn, bits_entry);
         if (isEmptyBitsEntry(bits_entry))
@@ -535,7 +561,7 @@ void PhyloTree::printParsimonyStates(PhyloNeighbor *dad_branch, PhyloNode *dad) 
         getBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
 		if (aln->at(ptn).is_const) {
 			int state = aln->at(ptn)[0];
-			if (state < aln->num_states) 
+			if (state < aln->num_states)
 				setBitsEntry(bits_entry, state);
 			else {
 				memset(bits_entry, 0, sizeof(UINT) * getBitsEntrySize());
@@ -704,7 +730,7 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
 		taxon_order[i] = i;
 	// randomize the addition order
 	random_shuffle(taxon_order.begin(), taxon_order.end(), p_myrandom);
-	
+
     // create initial tree with 3 taxa
     for (leafNum = 0; leafNum < 3; leafNum++) {
         if (verbose_mode >= VB_MAX)
@@ -766,7 +792,7 @@ int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& targe
 {
     Neighbor *dad_nei = dad->findNeighbor(node);
 	Node *added_taxon = added_node->neighbors[0]->node;
-	
+
     // now insert the new node in the middle of the branch node-dad
     double len = dad_nei->length;
     node->updateNeighbor(dad, added_node, len / 2.0);
@@ -909,6 +935,10 @@ void PhyloTree::initializeAllPartialLh() {
     //block_size = alnSize * numStates * site_rate->getNRate();
     if (!tmp_partial_lh1)
         tmp_partial_lh1 = newPartialLh();
+    if (!tmp_anscentral_state_prob1)
+    	tmp_anscentral_state_prob1 = new double[alnSize];
+    if (!tmp_anscentral_state_prob2)
+    	tmp_anscentral_state_prob2 = new double[alnSize];
     if (!tmp_partial_lh2)
         tmp_partial_lh2 = newPartialLh();
     if (!tmp_scale_num1)
@@ -1132,6 +1162,83 @@ double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern
     other_tree->computePatternLikelihood(pattern_lh_other);
     return computeLogLDiffVariance(pattern_lh_other, pattern_lh);
     delete [] pattern_lh_other;
+}
+
+double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch,
+		PhyloNode *dad) {
+	double obsLen = 0.0;
+	int sum = 0;
+	PhyloNode *node = (PhyloNode*) dad_branch->node;
+	PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+	assert(node_branch);
+	if (node->isLeaf() || dad->isLeaf()) {
+		return -1.0;
+	}
+	if ((dad_branch->partial_lh_computed & 1) == 0)
+		computePartialLikelihood(dad_branch, dad);
+	if ((node_branch->partial_lh_computed & 1) == 0)
+		computePartialLikelihood(node_branch, node);
+	// now combine likelihood at the branch
+	int nstates = aln->num_states;
+	size_t block = numCat * nstates;
+	size_t nptn = aln->size();
+	size_t ptn;
+	int cat, state;
+	double *partial_lh_site = node_branch->partial_lh;
+	double *partial_lh_child = dad_branch->partial_lh;
+
+	for (ptn = 0; ptn < nptn; ptn++) {
+		tmp_anscentral_state_prob1[ptn] = 0.0;
+		tmp_anscentral_state_prob2[ptn] = 0.0;
+
+		// Compute the probability of each state for the current site
+		for (state = 0; state < nstates; state++) {
+			for (cat = 0; cat < numCat; cat++) {
+				tmp_anscentral_state_prob1[ptn * nstates + state] +=
+						partial_lh_site[ptn * block + nstates * cat + state];
+				tmp_anscentral_state_prob2[ptn * nstates + state] +=
+						partial_lh_site[ptn * block + nstates * cat + state];
+			}
+		}
+		double bestProb1 = -1.0;
+		double bestProb2 = -1.0;
+		int state1 = 0;
+		int state2 = 0;
+		for (state = 0; state < nstates; state++) {
+			if (tmp_anscentral_state_prob1[ptn * nstates + state] > bestProb1) {
+				bestProb1 = tmp_anscentral_state_prob1[ptn * nstates + state];
+				state1 = state;
+			}
+			if (tmp_anscentral_state_prob2[ptn * nstates + state] > bestProb2) {
+				bestProb2 = tmp_anscentral_state_prob2[ptn * nstates + state];
+				state2 = state;
+			}
+		}
+
+		if (state1 == state2) {
+			sum += 1 * aln->at(ptn).frequency;
+		}
+	}
+
+	obsLen = 1.0 - 1.0 / aln->getNSite() * sum;
+	return obsLen;
+}
+
+double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
+	double H = 0.0;
+	double correctedBranLen;
+	for (int i = 0; i < numStates; i++) {
+		H += state_freqs[i] * (1 - state_freqs[i]);
+	}
+
+	// no gamma
+	if (alpha == -1.0) {
+		correctedBranLen = -H * log(1 - observedBran/H);
+	} else {
+		correctedBranLen = H * alpha * ( pow(1 - observedBran/H, -1/alpha) - 1 );
+	}
+
+	return correctedBranLen;
 }
 
 double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh, double *pattern_rate) {
@@ -1619,7 +1726,6 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
     double ferror, optx;
     if (optimize_by_newton) // Newton-Raphson method
         optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
-    	//optx = minimizeNewtonTung(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
     else // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
     if (current_len == optx) // if nothing changes, return

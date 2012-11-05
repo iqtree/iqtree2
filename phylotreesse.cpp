@@ -303,7 +303,6 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
             double rate_val = site_rate->getRate(cat);
             model_factory->computeTransDervFreq(dad_branch->length, rate_val, state_freq, trans_cat, derv1_cat, derv2_cat);
         }
-    bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
     int dad_state = STATE_UNKNOWN;
 	double my_df = 0.0;
 	double my_ddf = 0.0;

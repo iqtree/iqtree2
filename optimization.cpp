@@ -418,7 +418,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 			rts -= dx;
 			if (temp == rts) return rts;
 		}
-		if (fabs(dx) < 0.01) { fm = computeFunction(rts); return rts; }
+		if (fabs(dx) < xacc) { fm = computeFunction(rts); return rts; }
 		fold = fm;
 		fm = computeFuncDerv(rts,f,df);
 		if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) nrerror("Wrong computeFuncDerv");
@@ -431,41 +431,6 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 	nrerror("Maximum number of iterations exceeded in minimizeNewton");
 	return 0.0;
 }
-
-double Optimization::minimizeNewtonTung(double x1, double xguess, double x2, double xacc, double &fm) {
-	double length = xguess;
-	double epsilon = 0.001;
-	double original_length = length;
-	double old_length = length;
-	double old_lh = 0;
-	bool done = false;
-	bool better = false;
-	int it = 1;
-	int ite = 0;
-	double f,df;
-
-	while ( it < 4 && ite < 20 && !done ) {
-		double lh = computeFuncDerv(length,f,df);
-		if (lh > old_lh) {
-			old_length = length;
-			old_lh = lh;
-			better = true;
-			it = it + 1;
-		}
-		if (better) {
-			length = length + f/fabs(df);
-		} else {
-			length = (length + 19*old_length)/20.0;
-		}
-		ite = ite + 1;
-		if (fabs(length - old_length) < epsilon) {
-			done = true;
-		}
-	}
-	fm = old_lh;
-	return length;
-}
-
 
 /*****************************************************
 	Multi dimensional optimization with BFGS method

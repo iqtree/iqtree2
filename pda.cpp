@@ -1806,8 +1806,9 @@ int main(int argc, char *argv[])
 				guidedBootstrap(params);
 			if (params.second_align)
 				computeMulProb(params);
-		} else
+		} else {
 			runPhyloAnalysis(params);
+		}
 	} else if (params.ngs_file || params.ngs_mapped_reads) {
 		runNGSAnalysis(params);
 	} else if (params.pdtaxa_file && params.gene_scale_factor >=0.0 && params.gene_pvalue_file) {

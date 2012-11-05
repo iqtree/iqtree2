@@ -645,9 +645,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 	params.new_heuristic = false;
 	params.write_best_trees = false;
-        params.iteration_multiple = 1;
+    params.iteration_multiple = 1;
 	params.vns_search = false;
 	params.speedup_iter = 100;
+	params.raxmllib = false;
+	params.parbran = false;
 
 	params.avh_test = 0;
 	params.site_freq_file = NULL;
@@ -1422,6 +1424,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.do_compression = true;
 			} else if (strcmp(argv[cnt], "-newheu") == 0) {
 				params.new_heuristic = true;
+			} else if (strcmp(argv[cnt], "-raxml") == 0) {
+				params.raxmllib = true;
+			} else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
+				params.parbran = true;
 			} else if (strcmp(argv[cnt], "-wbt") == 0)	{
 				params.write_best_trees = true;
                         } else if (strcmp(argv[cnt], "-x") == 0) {
