@@ -1735,6 +1735,11 @@ int main(int argc, char *argv[])
 	signal(SIGSEGV, &funcAbort);
 	printCopyright(cout);
 
+	double x=1e-100;
+	double y=1e-101;
+	if (x > y) cout << "ok!" << endl;
+	else cout << "shit!" << endl;
+	
 	//FILE *pfile = popen("hostname","r");
 	char hostname[100];
 #if defined WIN32 || defined _WIN32 || defined __WIN32__

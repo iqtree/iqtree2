@@ -936,9 +936,9 @@ void PhyloTree::initializeAllPartialLh() {
     if (!tmp_partial_lh1)
         tmp_partial_lh1 = newPartialLh();
     if (!tmp_anscentral_state_prob1)
-    	tmp_anscentral_state_prob1 = new double[alnSize];
+    	tmp_anscentral_state_prob1 = new double[alnSize * numStates];
     if (!tmp_anscentral_state_prob2)
-    	tmp_anscentral_state_prob2 = new double[alnSize];
+    	tmp_anscentral_state_prob2 = new double[alnSize * numStates];
     if (!tmp_partial_lh2)
         tmp_partial_lh2 = newPartialLh();
     if (!tmp_scale_num1)
@@ -1186,41 +1186,43 @@ double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch,
 	int cat, state;
 	double *partial_lh_site = node_branch->partial_lh;
 	double *partial_lh_child = dad_branch->partial_lh;
+	double *tmp_state_freq = new double[nstates];
+	model->getStateFrequency(tmp_state_freq);
 
 	for (ptn = 0; ptn < nptn; ptn++) {
-		tmp_anscentral_state_prob1[ptn] = 0.0;
-		tmp_anscentral_state_prob2[ptn] = 0.0;
-
 		// Compute the probability of each state for the current site
-		for (state = 0; state < nstates; state++) {
-			for (cat = 0; cat < numCat; cat++) {
-				tmp_anscentral_state_prob1[ptn * nstates + state] +=
-						partial_lh_site[ptn * block + nstates * cat + state];
-				tmp_anscentral_state_prob2[ptn * nstates + state] +=
-						partial_lh_site[ptn * block + nstates * cat + state];
-			}
-		}
 		double bestProb1 = -1.0;
 		double bestProb2 = -1.0;
 		int state1 = 0;
 		int state2 = 0;
 		for (state = 0; state < nstates; state++) {
-			if (tmp_anscentral_state_prob1[ptn * nstates + state] > bestProb1) {
-				bestProb1 = tmp_anscentral_state_prob1[ptn * nstates + state];
+			tmp_anscentral_state_prob1[state] = 0.0;
+			tmp_anscentral_state_prob2[state] = 0.0;
+			for (cat = 0; cat < numCat; cat++) {
+				tmp_anscentral_state_prob1[state] +=
+						partial_lh_site[ptn * block + nstates * cat + state];
+				tmp_anscentral_state_prob2[state] +=
+						partial_lh_child[ptn * block + nstates * cat + state];
+			}
+			tmp_anscentral_state_prob1[state] *= tmp_state_freq[state];
+			tmp_anscentral_state_prob2[state] *= tmp_state_freq[state];
+			if (tmp_anscentral_state_prob1[state] > bestProb1) {
+				bestProb1 = tmp_anscentral_state_prob1[state];
 				state1 = state;
 			}
-			if (tmp_anscentral_state_prob2[ptn * nstates + state] > bestProb2) {
-				bestProb2 = tmp_anscentral_state_prob2[ptn * nstates + state];
+			if (tmp_anscentral_state_prob2[state] > bestProb2) {
+				bestProb2 = tmp_anscentral_state_prob2[state];
 				state2 = state;
 			}
 		}
-
-		if (state1 == state2) {
-			sum += 1 * aln->at(ptn).frequency;
+		
+		if (state1 != state2) {
+			sum += aln->at(ptn).frequency;
 		}
 	}
 
-	obsLen = 1.0 - 1.0 / aln->getNSite() * sum;
+	obsLen = ((double)sum / aln->getNSite());
+	delete [] tmp_state_freq;
 	return obsLen;
 }
 

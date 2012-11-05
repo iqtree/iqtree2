@@ -1529,6 +1529,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 				//node12_it->length = 0.9;
 				//node21_it->length = 0.9;
 			}
+			cout << "cur_bran = " << node12_it->length << endl;
 			cout << "corrected_bran = " << corrected_bran << endl;
 			node12_it->length = corrected_bran;
 			node21_it->length = corrected_bran;
