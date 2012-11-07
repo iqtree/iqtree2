@@ -443,6 +443,8 @@ public:
 
 	double correctBranchLengthF81(double observedBran, double alpha = -1.0);
 
+	double estimateBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
 	/**
 		Compute the variance in log-likelihood difference
 		between the current tree and another tree.

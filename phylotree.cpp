@@ -936,9 +936,9 @@ void PhyloTree::initializeAllPartialLh() {
     if (!tmp_partial_lh1)
         tmp_partial_lh1 = newPartialLh();
     if (!tmp_anscentral_state_prob1)
-    	tmp_anscentral_state_prob1 = new double[alnSize * numStates];
+    	tmp_anscentral_state_prob1 = new double[numStates];
     if (!tmp_anscentral_state_prob2)
-    	tmp_anscentral_state_prob2 = new double[alnSize * numStates];
+    	tmp_anscentral_state_prob2 = new double[numStates];
     if (!tmp_partial_lh2)
         tmp_partial_lh2 = newPartialLh();
     if (!tmp_scale_num1)
@@ -1164,8 +1164,12 @@ double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern
     delete [] pattern_lh_other;
 }
 
-double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch,
-		PhyloNode *dad) {
+double PhyloTree::estimateBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	double observedBran = computeObservedBranchLength(dad_branch, dad);
+	return correctBranchLengthF81(observedBran);
+}
+
+double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 	double obsLen = 0.0;
 	int sum = 0;
 	PhyloNode *node = (PhyloNode*) dad_branch->node;
@@ -1189,12 +1193,14 @@ double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch,
 	double *tmp_state_freq = new double[nstates];
 	model->getStateFrequency(tmp_state_freq);
 
+	int* validStates1 = new int[numStates];
+	int* validStates2 = new int[numStates];
 	for (ptn = 0; ptn < nptn; ptn++) {
 		// Compute the probability of each state for the current site
 		double bestProb1 = -1.0;
 		double bestProb2 = -1.0;
-		int state1 = 0;
-		int state2 = 0;
+    int state1 = 0;
+    int state2 = 0;
 		for (state = 0; state < nstates; state++) {
 			tmp_anscentral_state_prob1[state] = 0.0;
 			tmp_anscentral_state_prob2[state] = 0.0;
@@ -1215,11 +1221,28 @@ double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch,
 				state2 = state;
 			}
 		}
-		
-		if (state1 != state2) {
+		bool sameState = false;
+		for (state = 0; state < nstates; state++) {
+			validStates1[state] = 0;
+			validStates2[state] = 0;
+			if (tmp_anscentral_state_prob1[state] >= bestProb1 * 0.9999) {
+				validStates1[state] = 1;
+			}
+			if (tmp_anscentral_state_prob2[state] >= bestProb2 * 0.9999) {
+				validStates2[state] = 1;
+			}
+			if (validStates1[state] == validStates2[state] && validStates2[state] == 1) {
+				sameState = true;
+				break;
+			}
+		}
+
+		if (!sameState) {
 			sum += aln->at(ptn).frequency;
 		}
 	}
+	delete [] validStates1;
+	delete [] validStates2;
 
 	obsLen = ((double)sum / aln->getNSite());
 	delete [] tmp_state_freq;

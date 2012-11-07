@@ -380,7 +380,7 @@ double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double x
 
 double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm)
 {
-	const int MAXIT = 100;
+	const int MAXIT = 50;
 	int j;
 	double df,dx,dxold,f;
 	double temp,xh,xl,rts, fold;

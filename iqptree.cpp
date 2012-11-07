@@ -1382,6 +1382,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 	 *  treelhs[2]: 2.NNI tree
 	 */
 	double treelhs[3];
+	double estTreeLH[3];
 	PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
 	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 
@@ -1396,17 +1397,24 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 	double node12_len[4];
 	node12_len[0] = node12_it->length;
 
+	double estBran1 = estimateBranchLength(node21_it, node2);
+	node12_it->length = estBran1;
+	node21_it->length = estBran1;
+	estTreeLH[0] = computeLikelihoodBranch(node21_it, node2);
+
 	double bestScore = optimizeOneBranch(node1, node2, false);
 
 	// This is done because it could happen that even after
 	// optimizing branch length bestScore < curScore
 	// Why is it, could it be a BUG?
 	if (bestScore < curScore - 1.0E-6) {
+		/*
 		cout.precision(15);
 		cout << "Likelihood of the tree reduced after optimizing branch length"
 				<< endl;
 		cout << "curScore = " << curScore << endl;
 		cout << "LH after branOPT = " << bestScore << endl;
+		*/
 		bestScore = curScore;
 		node12_it->length = node12_len[0];
 		node21_it->length = node12_len[0];
@@ -1483,12 +1491,13 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 	node21_it->scale_num = tmp_scale_num2;
 
 	double bestDelta = 0;
+	int lhCount = 0;
 
-	// Swap NNI
+	/************************ Swap NNI ********************************/
 	for (NeighborVec::iterator node2_it = (node2)->neighbors.begin();
 			node2_it != (node2)->neighbors.end(); node2_it++)
 		if ((*node2_it)->node != (node1)) {
-			nniNr = nniNr + 1;
+			nniNr++;
 			Neighbor *node2_nei = *node2_it;
 			double node2_len = node2_nei->length;
 			node1->updateNeighbor(node1_it, node2_nei);
@@ -1500,47 +1509,27 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 			node21_it->clearPartialLh();
 
 			/* compute the score of the swapped topology */
-			double corrected_bran = 0;
-			// Using the approximated
-			if (params->parbran) {
-				int parbran;
-				int parscore = computeParsimonyBranch(node21_it, node2, &parbran);
-				cout << "parbran = " << parbran << endl;
-				if (site_rate->getGammaShape() != 0) {
-					corrected_bran = (aln->num_states - 1.0) / aln->num_states
-							* site_rate->getGammaShape()
-							* (pow( 1.0 - aln->num_states / (aln->num_states - 1.0) * ((double) parbran / aln->getNSite()),
-									-1.0 / site_rate->getGammaShape()) - 1.0);
-				} else {
-					corrected_bran = -((aln->num_states - 1.0) / aln->num_states)
-							* log(1.0 - (aln->num_states / (aln->num_states - 1.0)) * ((double) parbran / aln->getNSite()));
-				}
-				cout << "Approximated branch length = " << corrected_bran << endl;
-				cout << "Unoptimized branch length = " << node12_it->length << endl;
-				cout << "LH before branch optimization = " <<  computeLikelihoodBranch(node21_it, node2) << endl;
-				node12_it->length = corrected_bran;
-				node21_it->length = corrected_bran;
-				cout << "LH after branch estimation using Parsimony = " <<  computeLikelihoodBranch(node21_it, node2) << endl;
+			double estBran2 = estimateBranchLength(node21_it, node2);
+			node12_it->length = estBran2;
+			node21_it->length = estBran2;
+			lhCount++;
+			estTreeLH[lhCount] = computeLikelihoodBranch(node21_it, node2);
+			node12_it->length = node12_len[0];
+			node21_it->length = node12_len[0];
 
-			} else {
-				double obsBran = computeObservedBranchLength(node21_it, node2);
-				cout << "obsBran = " << obsBran << endl;
-				corrected_bran = correctBranchLengthF81(obsBran);
-				//node12_it->length = 0.9;
-				//node21_it->length = 0.9;
-			}
-			cout << "cur_bran = " << node12_it->length << endl;
-			cout << "corrected_bran = " << corrected_bran << endl;
-			node12_it->length = corrected_bran;
-			node21_it->length = corrected_bran;
-			//cout << "LH after branch estimation = " << computeLikelihoodBranch(node21_it, node2) << endl;
 			double newScore = optimizeOneBranch(node1, node2, false);
-			cout << "Newton-Raphson branch length = " << node12_it->length
-					<< endl;
-			cout << "LH after branch optimization = " << newScore << endl;
-			cout << endl;
 
-			//exit(0);
+			if (estTreeLH[lhCount] > estTreeLH[0]) {
+				if (newScore < treelhs[0]) {
+					cout << "FALSE order" << endl;
+					cout << "estimate LH of current tree = " << estTreeLH[0] << endl;
+					cout << "estimate LH of NNI tree = " << estTreeLH[lhCount] << endl;
+					cout << "Newton-Rapshon LH of current tree = " << treelhs[0] << endl;
+					cout << "Newton-Raphson LH of NNI tree = " << newScore << endl;
+				}
+
+			}
+
 			treelhs[nniNr-1] = newScore;
 			double delta = newScore - treelhs[0];
 
@@ -1551,6 +1540,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 			nni.br_len[nniNr] = node12_it->length;
 
 			if (testNNI) outNNI << "\t" << newScore;
+
 			// Save the branch length of the NNI nniNr
 			node12_len[nniNr] = node12_it->length;
 
