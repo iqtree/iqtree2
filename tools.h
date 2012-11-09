@@ -1111,6 +1111,9 @@ struct Params {
 
 	/** print some output info for NNI */
 	bool testNNI;
+    
+    /** TRUE to do approximate NNIs with approximate branch lengths before a normal NNI */
+    bool approximate_nni;
 
 
 	/** TRUE to compress big file using zlib */

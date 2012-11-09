@@ -889,7 +889,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignme
         cout <<"Speed up NNI: disabled " << endl;
     }
 	cout << "NNI cutoff: " << params.nni_cutoff << endl;
-
+    cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No") << endl;
 
 //    if (params.parsimony) {
 //		int score = tree.computeParsimonyScore();

@@ -1046,7 +1046,9 @@ protected:
 
     double *tmp_anscentral_state_prob1;
     double *tmp_anscentral_state_prob2;
-
+    /** pattern-specific rates */
+    double *tmp_ptn_rates;
+    
     /**
      * Temporary scale num array: used when swapping branch and recalculate the
      * likelihood --> avoid calling malloc

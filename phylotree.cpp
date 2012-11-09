@@ -65,6 +65,7 @@ void PhyloTree::init() {
     tmp_partial_lh2 = NULL;
     tmp_anscentral_state_prob1 = NULL;
     tmp_anscentral_state_prob2 = NULL;
+    tmp_ptn_rates = NULL;
     state_freqs = NULL;
     tmp_scale_num1 = NULL;
     tmp_scale_num2 = NULL;
@@ -115,6 +116,8 @@ PhyloTree::~PhyloTree() {
     	delete [] tmp_anscentral_state_prob1;
     if (tmp_anscentral_state_prob2)
     	delete [] tmp_anscentral_state_prob2;
+    if (tmp_ptn_rates)
+    	delete [] tmp_ptn_rates;
     if (_pattern_lh) delete [] _pattern_lh;
     if (state_freqs)
     	delete [] state_freqs;
@@ -231,7 +234,7 @@ string PhyloTree::getModelName() {
 /****************************************************************************
         Parsimony function
  ****************************************************************************/
-
+/*
 double PhyloTree::computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 //	double corrected_bran = 0;
 //	int parbran;
@@ -247,7 +250,7 @@ double PhyloTree::computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, Phy
 //	}
 //	return corrected_bran;
 }
-
+*/
 void PhyloTree::initializeAllPartialPars() {
     int index = 0;
     initializeAllPartialPars(index);
@@ -939,6 +942,8 @@ void PhyloTree::initializeAllPartialLh() {
     	tmp_anscentral_state_prob1 = new double[numStates];
     if (!tmp_anscentral_state_prob2)
     	tmp_anscentral_state_prob2 = new double[numStates];
+    if (!tmp_ptn_rates)
+    	tmp_ptn_rates = new double[alnSize];
     if (!tmp_partial_lh2)
         tmp_partial_lh2 = newPartialLh();
     if (!tmp_scale_num1)
@@ -1147,7 +1152,7 @@ double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_
     double avg_site_lh_diff = 0.0;
     for (i = 0; i < nptn; i++)
         avg_site_lh_diff += (pattern_lh[i]-pattern_lh_other[i]) * pattern_freq[i];
-    avg_site_lh_diff /= nsite;
+    avg_site_lh_diff /= nsite;	
     double variance = 0.0;
     for (i = 0; i < nptn; i++) {
         double diff = (pattern_lh[i]- pattern_lh_other[i] - avg_site_lh_diff);
@@ -1166,18 +1171,18 @@ double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern
 
 double PhyloTree::estimateBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 	double observedBran = computeObservedBranchLength(dad_branch, dad);
-	return correctBranchLengthF81(observedBran);
+	return correctBranchLengthF81(observedBran, site_rate->getGammaShape());
 }
 
 double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 	double obsLen = 0.0;
-	int sum = 0;
 	PhyloNode *node = (PhyloNode*) dad_branch->node;
 	PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
 	assert(node_branch);
+    /*
 	if (node->isLeaf() || dad->isLeaf()) {
 		return -1.0;
-	}
+	}*/
 	if ((dad_branch->partial_lh_computed & 1) == 0)
 		computePartialLikelihood(dad_branch, dad);
 	if ((node_branch->partial_lh_computed & 1) == 0)
@@ -1188,63 +1193,50 @@ double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNo
 	size_t nptn = aln->size();
 	size_t ptn;
 	int cat, state;
-	double *partial_lh_site = node_branch->partial_lh;
-	double *partial_lh_child = dad_branch->partial_lh;
 	double *tmp_state_freq = new double[nstates];
+    //computeLikelihoodBranchNaive(dad_branch, dad, NULL, tmp_ptn_rates);
+    //double sum_rates = 0.0;
+    //for (ptn = 0; ptn < nptn; ptn++)
+    //    sum_rates += tmp_ptn_rates[ptn] * aln->at(ptn).frequency;
+    //cout << "sum_rates = " << sum_rates << endl;
+    
 	model->getStateFrequency(tmp_state_freq);
 
-	int* validStates1 = new int[numStates];
-	int* validStates2 = new int[numStates];
+    double cutoff = 0.2 / nstates;
 	for (ptn = 0; ptn < nptn; ptn++) {
 		// Compute the probability of each state for the current site
-		double bestProb1 = -1.0;
-		double bestProb2 = -1.0;
-    int state1 = 0;
-    int state2 = 0;
-		for (state = 0; state < nstates; state++) {
-			tmp_anscentral_state_prob1[state] = 0.0;
-			tmp_anscentral_state_prob2[state] = 0.0;
-			for (cat = 0; cat < numCat; cat++) {
-				tmp_anscentral_state_prob1[state] +=
-						partial_lh_site[ptn * block + nstates * cat + state];
-				tmp_anscentral_state_prob2[state] +=
-						partial_lh_child[ptn * block + nstates * cat + state];
-			}
-			tmp_anscentral_state_prob1[state] *= tmp_state_freq[state];
-			tmp_anscentral_state_prob2[state] *= tmp_state_freq[state];
-			if (tmp_anscentral_state_prob1[state] > bestProb1) {
-				bestProb1 = tmp_anscentral_state_prob1[state];
-				state1 = state;
-			}
-			if (tmp_anscentral_state_prob2[state] > bestProb2) {
-				bestProb2 = tmp_anscentral_state_prob2[state];
-				state2 = state;
-			}
-		}
-		bool sameState = false;
-		for (state = 0; state < nstates; state++) {
-			validStates1[state] = 0;
-			validStates2[state] = 0;
-			if (tmp_anscentral_state_prob1[state] >= bestProb1 * 0.9999) {
-				validStates1[state] = 1;
-			}
-			if (tmp_anscentral_state_prob2[state] >= bestProb2 * 0.9999) {
-				validStates2[state] = 1;
-			}
-			if (validStates1[state] == validStates2[state] && validStates2[state] == 1) {
-				sameState = true;
-				break;
-			}
-		}
-
-		if (!sameState) {
-			sum += aln->at(ptn).frequency;
-		}
+        double sum_prob1 = 0.0, sum_prob2 = 0.0;
+        size_t offset = ptn*block;
+        double *partial_lh_site = node_branch->partial_lh + (offset);
+        double *partial_lh_child = dad_branch->partial_lh + (offset);
+        for (state = 0; state < nstates; state++) {
+            tmp_anscentral_state_prob1[state] = 0.0;
+            tmp_anscentral_state_prob2[state] = 0.0;
+            for (cat = 0; cat < numCat; cat++) {
+				tmp_anscentral_state_prob1[state] += partial_lh_site[nstates * cat + state];
+				tmp_anscentral_state_prob2[state] += partial_lh_child[nstates * cat + state];
+			 }
+            tmp_anscentral_state_prob1[state] *= tmp_state_freq[state];
+            tmp_anscentral_state_prob2[state] *= tmp_state_freq[state];
+            sum_prob1 += tmp_anscentral_state_prob1[state];
+            sum_prob2 += tmp_anscentral_state_prob2[state];
+        }
+        bool sameState = false;
+        for (state = 0; state < nstates; state++) {
+            tmp_anscentral_state_prob1[state] /= sum_prob1;
+            tmp_anscentral_state_prob2[state] /= sum_prob2;
+            if (tmp_anscentral_state_prob1[state] > cutoff && tmp_anscentral_state_prob2[state] > cutoff) {
+                sameState = true;
+                break;
+            }
+        }
+        if (!sameState) {
+            obsLen += aln->at(ptn).frequency;
+        }
+        
 	}
-	delete [] validStates1;
-	delete [] validStates2;
-
-	obsLen = ((double)sum / aln->getNSite());
+	obsLen /= getAlnNSite();
+    if (obsLen < MIN_BRANCH_LEN) obsLen = MIN_BRANCH_LEN;
 	delete [] tmp_state_freq;
 	return obsLen;
 }
@@ -1255,12 +1247,15 @@ double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
 	for (int i = 0; i < numStates; i++) {
 		H += state_freqs[i] * (1 - state_freqs[i]);
 	}
-
+    observedBran = 1.0 - observedBran/H;
 	// no gamma
-	if (alpha == -1.0) {
-		correctedBranLen = -H * log(1 - observedBran/H);
+    if (observedBran <= 0.0) return MAX_BRANCH_LEN;
+
+	if (alpha <= 0.0) {
+		correctedBranLen = -H * log(observedBran);
 	} else {
-		correctedBranLen = H * alpha * ( pow(1 - observedBran/H, -1/alpha) - 1 );
+       //if (verbose_mode >= VB_MAX) cout << "alpha: " << alpha << endl;
+		correctedBranLen = H * alpha * ( pow(observedBran, -1/alpha) - 1 );
 	}
 
 	return correctedBranLen;
@@ -2181,7 +2176,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
     if (nni_param) node1_it = node1->findNeighborIt(nni_param->node1_nei->node);
     Neighbor *node1_nei = *node1_it;
     double node1_len = node1_nei->length;
-    NeighborVec::iterator node1_nei_it = node1_nei->node->findNeighborIt(node1);
+    //NeighborVec::iterator node1_nei_it = node1_nei->node->findNeighborIt(node1);
 
 
     // Neighbors of node2 which are not node1
@@ -2201,7 +2196,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
         // do the NNI swap
         Neighbor *node2_nei = *node2_it;
         // TUNG unused variable ?
-        NeighborVec::iterator node2_nei_it = node2_nei->node->findNeighborIt(node2);
+        //NeighborVec::iterator node2_nei_it = node2_nei->node->findNeighborIt(node2);
 
         double node2_len = node2_nei->length;
 

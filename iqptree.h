@@ -228,13 +228,13 @@ public:
     /**
             search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
      */
-    void genNNIMoves(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void genNNIMoves(bool approx_nni, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
             search all positive NNI move on the current tree and save them
 	 		on the possilbleNNIMoves list
      */
-    void genNNIMovesSort();
+    void genNNIMovesSort(bool approx_nni);
 
 	/**
 	 		apply nni2apply NNIs from the non-conflicting NNI list
@@ -256,7 +256,7 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, double lh_contribution = -1.0);
 
     /**
             distance matrix, used for IQP algorithm

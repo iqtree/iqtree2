@@ -6,9 +6,9 @@ set(BUILD_SHARED_LIBS OFF)
 ######## NOTE: run cmake with option "-DIQ_STATIC to build static library 
 if (WIN32)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-else (WIN32)
+elseif (NOT APPLE) 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
-endif(WIN32)
+endif()
 
 IF($ENV{STATIC})
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")

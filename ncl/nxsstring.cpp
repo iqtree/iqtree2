@@ -628,7 +628,7 @@ NxsString NxsString::ToHex(
 	{
 	NxsString s;
 	char decod[] = "0123456789ABCDEF";
-	for (unsigned i = nFours - 1; i >= 0 ; i--)
+	for (int i = nFours - 1; i >= 0 ; i--)
 		{
 		unsigned long k = (p >> (4*i));
 		unsigned long masked = (k & 0x000f);

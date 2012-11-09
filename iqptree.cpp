@@ -659,7 +659,7 @@ double IQPTree::perturb(int times) {
 //}
 
 double IQPTree::doIQPNNI() {
-	double bestIQPScore = -DBL_MAX + 100;
+	//double bestIQPScore = -DBL_MAX + 100;
 	if (testNNI) {
 		string str = params->out_prefix;
 		str += ".nni";
@@ -1017,10 +1017,10 @@ double IQPTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             saveBranLens(); // save all current branch lengths
             initPartitionInfo(); // for super tree
 			if (!nni_sort) {
-				genNNIMoves(); // generate all positive NNI moves
+				genNNIMoves(params->approximate_nni); // generate all positive NNI moves
 			}
 			else {
-				genNNIMovesSort();
+				genNNIMovesSort(params->approximate_nni);
 			}
             if ( !containPosNNI(posNNIs) ) { // no more positive NNI moves
                 if (nni_round == 1)
@@ -1268,24 +1268,24 @@ void IQPTree::changeAllBranches(PhyloNode *node, PhyloNode *dad) {
 
 }
 
-void IQPTree::genNNIMoves(PhyloNode *node, PhyloNode *dad) {
+void IQPTree::genNNIMoves(bool approx_nni, PhyloNode *node, PhyloNode *dad) {
     if (!node) {
         node = (PhyloNode*) root;
     }
     // internal Branch
     if (!node->isLeaf() && dad && !dad->isLeaf()) {
-        NNIMove myMove = getBestNNIForBran(node, dad);
+        NNIMove myMove = getBestNNIForBran(node, dad, approx_nni);
         if (myMove.score != 0) {
             addPositiveNNIMove(myMove);
         }
     }
     FOR_NEIGHBOR_IT(node, dad, it) {
-        genNNIMoves((PhyloNode*) (*it)->node, node);
+        genNNIMoves(approx_nni, (PhyloNode*) (*it)->node, node);
     }
 
 }
 
-void IQPTree::genNNIMovesSort() {
+void IQPTree::genNNIMovesSort(bool approx_nni) {
 	NodeVector nodes1, nodes2;
 	int i;
 	double cur_lh = curScore;
@@ -1310,7 +1310,7 @@ void IQPTree::genNNIMovesSort() {
 	for (vector<IntBranchInfo>::iterator it = int_branches.begin(); it != int_branches.end(); it++)
 	if (it->lh_contribution >= 0.0) // evaluate NNI if branch contribution is big enough
 	{
-		NNIMove myMove = getBestNNIForBran(it->node1, it->node2, it->lh_contribution);
+		NNIMove myMove = getBestNNIForBran(it->node1, it->node2, approx_nni, it->lh_contribution);
 		if (myMove.score != 0) {
             addPositiveNNIMove(myMove);
 			if (!estimate_nni_cutoff)
@@ -1368,7 +1368,7 @@ void IQPTree::estimateNNICutoff(Params* params) {
 	delete [] delta;
 }
 
-NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
+NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni,
 		double lh_contribution) {
 	assert(node1->degree() == 3 && node2->degree() == 3);
 	NNIMove noMove;
@@ -1382,7 +1382,7 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 	 *  treelhs[2]: 2.NNI tree
 	 */
 	double treelhs[3];
-	double estTreeLH[3];
+	//double approxTreeLH[3];
 	PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
 	PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 
@@ -1396,13 +1396,16 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 
 	double node12_len[4];
 	node12_len[0] = node12_it->length;
-
-	double estBran1 = estimateBranchLength(node21_it, node2);
-	node12_it->length = estBran1;
-	node21_it->length = estBran1;
-	estTreeLH[0] = computeLikelihoodBranch(node21_it, node2);
-
-	double bestScore = optimizeOneBranch(node1, node2, false);
+    double bestScore;
+    
+    if (approx_nni) {
+        double aprroxBran1 = estimateBranchLength(node21_it, node2);
+        node12_it->length = aprroxBran1;
+        node21_it->length = aprroxBran1;
+        bestScore = computeLikelihoodBranch(node21_it, node2);
+    } else {
+        bestScore = optimizeOneBranch(node1, node2, false);
+    }
 
 	// This is done because it could happen that even after
 	// optimizing branch length bestScore < curScore
@@ -1507,28 +1510,40 @@ NNIMove IQPTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 			// clear partial likelihood vector
 			node12_it->clearPartialLh();
 			node21_it->clearPartialLh();
+            lhCount++;
+            double newScore;
+            if (verbose_mode >= VB_MAX) cout << "current branch length: " << node12_len[0] << endl;
 
 			/* compute the score of the swapped topology */
-			double estBran2 = estimateBranchLength(node21_it, node2);
-			node12_it->length = estBran2;
-			node21_it->length = estBran2;
-			lhCount++;
-			estTreeLH[lhCount] = computeLikelihoodBranch(node21_it, node2);
-			node12_it->length = node12_len[0];
-			node21_it->length = node12_len[0];
-
-			double newScore = optimizeOneBranch(node1, node2, false);
-
-			if (estTreeLH[lhCount] > estTreeLH[0]) {
+           if (approx_nni) {
+               double estBran2 = estimateBranchLength(node21_it, node2);
+               node12_it->length = estBran2;
+               node21_it->length = estBran2;
+               if (verbose_mode >= VB_MAX) cout << "approx branch length: " << estBran2 << endl;
+                
+               //approxTreeLH[lhCount] = computeLikelihoodBranch(node21_it, node2);
+               newScore = computeLikelihoodBranch(node21_it, node2);
+               //if (newScore <= treelhs[0])
+               //    newScore = optimizeOneBranch(node1, node2, false);
+           } else {
+			
+               node12_it->length = node12_len[0];
+               node21_it->length = node12_len[0];
+           
+               newScore = optimizeOneBranch(node1, node2, false);
+           }
+           if (verbose_mode >= VB_MAX) cout << "optimal branch length: " << node12_it->length << endl;
+            /*
+			if (approxTreeLH[lhCount] > approxTreeLH[0]) {
 				if (newScore < treelhs[0]) {
-					cout << "FALSE order" << endl;
-					cout << "estimate LH of current tree = " << estTreeLH[0] << endl;
-					cout << "estimate LH of NNI tree = " << estTreeLH[lhCount] << endl;
-					cout << "Newton-Rapshon LH of current tree = " << treelhs[0] << endl;
-					cout << "Newton-Raphson LH of NNI tree = " << newScore << endl;
+					cout << "FALSE POSITIVE" << endl;
+					cout << "approx LH of current tree = " << approxTreeLH[0] << endl;
+					cout << "approx LH of NNI tree = " << approxTreeLH[lhCount] << endl;
+					cout << "optimal LH of current tree = " << treelhs[0] << endl;
+					cout << "optimal LH of NNI tree = " << newScore << endl;
 				}
 
-			}
+			}*/
 
 			treelhs[nniNr-1] = newScore;
 			double delta = newScore - treelhs[0];
@@ -2056,6 +2071,6 @@ void IQPTree::printIntermediateTree(int brtype) {
 	}
 	int x = save_all_trees;
 	save_all_trees = 2;
-	genNNIMoves();
+	genNNIMoves(params->approximate_nni);
 	save_all_trees = x;
 }

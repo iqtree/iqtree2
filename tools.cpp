@@ -641,6 +641,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.nni_sort = false;
 	params.nni_opt_5branches = false;
 	params.testNNI = false;
+    params.approximate_nni = false;
 	params.do_compression = false;
 
 	params.new_heuristic = false;
@@ -1335,6 +1336,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.gene_pvalue_file = argv[cnt];
 			} else if (strcmp(argv[cnt], "-nnitest") == 0) {
 				params.testNNI = true;
+			} else if (strcmp(argv[cnt], "-anni") == 0) {
+				params.approximate_nni = true;
 			} else if (strcmp(argv[cnt], "-nnicut") == 0) {
 				params.estimate_nni_cutoff = true;
 				//nni_cutoff = -5.41/2;
@@ -1758,9 +1761,9 @@ inline T quantile(const vector<T>& v, const double q) {
 	unsigned int size = v.size();
 	if (q <= 0) return *std::min_element(v.begin(), v.end());
 	if (q >= 1) return *std::max_element(v.begin(), v.end());
-	double pos = (size - 1) * q;
-	unsigned int ind = (unsigned int)(pos);
-	double delta = pos - ind;
+	//double pos = (size - 1) * q;
+	//unsigned int ind = (unsigned int)(pos);
+	//double delta = pos - ind;
 	vector<T> w(size);
 	std::copy(v, v.begin() + size, w.begin());
 }

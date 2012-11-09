@@ -2802,7 +2802,7 @@ void NxsCharactersBlock::ShowStateLabels(
 			{
 			int s = matrix->GetState(i, j);
 			bool use_matchchar = false;
-			if (first_taxon >= 0 && i > first_taxon) 
+			if (first_taxon != UINT_MAX /*BQM: modified from '>= 0' */ && i > first_taxon)
 				{
 				int firsts = matrix->GetState(first_taxon, j);
 				if (firsts == s)
@@ -2862,7 +2862,7 @@ void NxsCharactersBlock::ShowStateLabels(
 
 	else
 		{
-		if (first_taxon >= 0 && i > first_taxon) 
+		if (first_taxon != UINT_MAX /*BQM: modified from '>= 0' */ && i > first_taxon)
 			{
 			char s[NCL_MAX_STATES + 3];
 			WriteStates(matrix->GetDiscreteDatum(i, j), s, NCL_MAX_STATES + 3);

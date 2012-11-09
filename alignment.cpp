@@ -421,40 +421,40 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
 
 void buildStateMap(char *map, SeqType seq_type) {
     memset(map, STATE_INVALID, NUM_CHAR);
-    map['?'] = STATE_UNKNOWN;
-    map['-'] = STATE_UNKNOWN;
-    map['.'] = STATE_UNKNOWN;
+    map[(unsigned char)'?'] = STATE_UNKNOWN;
+    map[(unsigned char)'-'] = STATE_UNKNOWN;
+    map[(unsigned char)'.'] = STATE_UNKNOWN;
 
     switch (seq_type) {
     case SEQ_BINARY:
-        map['0'] = 0;
-        map['1'] = 1;
+        map[(unsigned char)'0'] = 0;
+        map[(unsigned char)'1'] = 1;
         return;
     case SEQ_DNA: // DNA
-        map['A'] = 0;
-        map['C'] = 1;
-        map['G'] = 2;
-        map['T'] = 3;
-        map['U'] = 3;
-        map['R'] = 1+4+3; // A or G, Purine
-        map['Y'] = 2+8+3; // C or T, Pyrimidine
-        map['N'] = STATE_UNKNOWN;
-        map['X'] = STATE_UNKNOWN;
-        map['W'] = 1+8+3; // A or T, Weak
-        map['S'] = 2+4+3; // G or C, Strong
-        map['M'] = 1+2+3; // A or C, Amino
-        map['K'] = 4+8+3; // G or T, Keto
-        map['B'] = 2+4+8+3; // C or G or T
-        map['H'] = 1+2+8+3; // A or C or T
-        map['D'] = 1+4+8+3; // A or G or T
-        map['V'] = 1+2+4+3; // A or G or C
+        map[(unsigned char)'A'] = 0;
+        map[(unsigned char)'C'] = 1;
+        map[(unsigned char)'G'] = 2;
+        map[(unsigned char)'T'] = 3;
+        map[(unsigned char)'U'] = 3;
+        map[(unsigned char)'R'] = 1+4+3; // A or G, Purine
+        map[(unsigned char)'Y'] = 2+8+3; // C or T, Pyrimidine
+        map[(unsigned char)'N'] = STATE_UNKNOWN;
+        map[(unsigned char)'X'] = STATE_UNKNOWN;
+        map[(unsigned char)'W'] = 1+8+3; // A or T, Weak
+        map[(unsigned char)'S'] = 2+4+3; // G or C, Strong
+        map[(unsigned char)'M'] = 1+2+3; // A or C, Amino
+        map[(unsigned char)'K'] = 4+8+3; // G or T, Keto
+        map[(unsigned char)'B'] = 2+4+8+3; // C or G or T
+        map[(unsigned char)'H'] = 1+2+8+3; // A or C or T
+        map[(unsigned char)'D'] = 1+4+8+3; // A or G or T
+        map[(unsigned char)'V'] = 1+2+4+3; // A or G or C
         return;
     case SEQ_PROTEIN: // Protein
         for (int i = 0; i < 20; i++)
             map[(int)symbols_protein[i]] = i;
         map[(int)symbols_protein[20]] = STATE_UNKNOWN;
-		map['B'] = 4+8+19; // N or D
-		map['Z'] = 32+64+19; // Q or E
+		map[(unsigned char)'B'] = 4+8+19; // N or D
+		map[(unsigned char)'Z'] = 32+64+19; // Q or E
         return;
     case SEQ_MULTISTATE:
         for (int i = 0; i <= STATE_UNKNOWN; i++)
