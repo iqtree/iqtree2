@@ -890,12 +890,12 @@ public:
     /**
      *      size of the alignment (used to avoid calling aln->size())
      */
-    int alnSize;
+    //int alnSize;
 
     /**
      *      number of states ( used to avoid calling aln->num_states() )
      */
-    int numStates;
+    //int numStates;
 
     /**
             TRUE if you want to optimize branch lengths by Newton-Raphson method
@@ -1003,34 +1003,34 @@ protected:
     /**
      * Number of category
      */
-    int numCat;
+    //int numCat;
 
     /**
      * Size of likelihood block for 1 pattern
      */
-    int block;
+    //int block;
 
     /**
      *  State frequencies of nucleotide or amino acids
      */
-    double* state_freqs;
+    //double* state_freqs;
 
     /**
      * Size of the partial likelihood (multiple of double)
      */
-    int lh_size;
+    //int lh_size;
 
-    size_t block_size;
+    //size_t block_size;
 
     /**
      * Vector to store pattern frequency
      */
-    ArrayXd ptn_freqs;
+    //ArrayXd ptn_freqs;
 
     /**
      * Size of the transition matrix
      */
-    int tranSize;
+    //int tranSize;
 
     /**
      * Temporary partial likelihood array: used when swapping branch and recalculate the
@@ -1047,7 +1047,7 @@ protected:
     double *tmp_anscentral_state_prob1;
     double *tmp_anscentral_state_prob2;
     /** pattern-specific rates */
-    double *tmp_ptn_rates;
+    //double *tmp_ptn_rates;
     
     /**
      * Temporary scale num array: used when swapping branch and recalculate the

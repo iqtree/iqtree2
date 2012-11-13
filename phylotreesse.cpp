@@ -52,7 +52,15 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
     double *partial_lh_child;
     double *trans_state;
     double p_invar = site_rate->getPInvar();
+    int numCat = site_rate->getNRate();
+    int numStates = model->num_states;
+    int tranSize = numStates * numStates;
+    int alnSize = getAlnNPattern();
+    int block = numStates * numCat;
+
     double p_var_cat = (1.0 - p_invar) / (double) numCat;
+
+
     EIGEN_ALIGN16 double *trans_mat_orig = new double[numCat * tranSize + 1];
     double *trans_mat = trans_mat_orig;
 	if (((intptr_t)trans_mat) % 16 != 0) trans_mat = trans_mat + 1;
@@ -88,7 +96,7 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
         }
         lh_ptn = log(lh_ptn);
-        tree_lh += lh_ptn * ptn_freqs[ptn];
+        tree_lh += lh_ptn * (aln->at(ptn).frequency);
         _pattern_lh[ptn] = lh_ptn;
         // BQM: pattern_lh contains the LOG-likelihood, not likelihood
     }
@@ -114,6 +122,14 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
     //double freq;
     dad_branch->lh_scale_factor = 0.0;
     memset(dad_branch->scale_num, 0, aln->size() * sizeof (UBYTE));
+
+    int numCat = site_rate->getNRate();
+    int numStates = model->num_states;
+    int tranSize = numStates * numStates;
+    int alnSize = getAlnNPattern();
+    int block = numStates * numCat;
+    size_t lh_size = aln->size() * block;
+
 
     if (node->isLeaf() && dad) {
         // external node
@@ -206,7 +222,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
 #endif
                      dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
                     double *partial_lh_block = partial_lh_site;
-                    double freq = ptn_freqs[ptn];
+                    double freq = aln->at(ptn).frequency;
                     double *trans_state = trans_mat;
                     cat = 0;
                     bool do_scale = true;
@@ -282,6 +298,14 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     double *derv1_state;
     double *derv2_state;
     double p_invar = site_rate->getPInvar();
+
+    int numCat = site_rate->getNRate();
+    int numStates = model->num_states;
+    int tranSize = numStates * numStates;
+    int alnSize = getAlnNPattern();
+    int block = numStates * numCat;
+    size_t lh_size = aln->size() * block;
+
     double p_var_cat = (1.0 - p_invar) / (double) numCat;
     double state_freq[NSTATES];
     model->getStateFrequency(state_freq);
@@ -319,7 +343,7 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
 		lh_ptn = 0.0;
         lh_ptn_derv1 = 0.0;
         lh_ptn_derv2 = 0.0;
-        double freq = ptn_freqs[ptn];
+        double freq = aln->at(ptn).frequency;
         int padding = 0;
 		dad_state = STATE_UNKNOWN; // FOR TUNG: This is missing in your codes!
         if (dad->isLeaf()) {

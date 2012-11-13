@@ -217,7 +217,12 @@ public:
 		full name of the model
 	*/
 	string full_name;
-
+	
+	/**
+	 state frequencies
+	 */
+	double *state_freq;
+	
 	/**
 		destructor
 	*/

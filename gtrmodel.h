@@ -266,12 +266,6 @@ protected:
 	*/
 	int num_params;
 
-
-	/**
-		state frequencies
-	*/
-	double *state_freq;
-	
 	/**
 		state frequency type
 	*/

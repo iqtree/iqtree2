@@ -65,8 +65,8 @@ void PhyloTree::init() {
     tmp_partial_lh2 = NULL;
     tmp_anscentral_state_prob1 = NULL;
     tmp_anscentral_state_prob2 = NULL;
-    tmp_ptn_rates = NULL;
-    state_freqs = NULL;
+    //tmp_ptn_rates = NULL;
+   //state_freqs = NULL;
     tmp_scale_num1 = NULL;
     tmp_scale_num2 = NULL;
     discard_saturated_site = true;
@@ -77,13 +77,13 @@ void PhyloTree::init() {
 PhyloTree::PhyloTree(Alignment *aln) : MTree() {
 	init();
     this->aln = aln;
-    alnSize = aln->size();
-    numStates = aln->num_states;
-    tranSize = numStates * numStates;
-    ptn_freqs.resize(alnSize);
-    for (int ptn = 0; ptn < alnSize; ++ptn) {
-        ptn_freqs[ptn] = (*aln)[ptn].frequency;
-    }
+    //alnSize = aln->size();
+    //numStates = aln->num_states;
+    //tranSize = numStates * numStates;
+    //ptn_freqs.resize(alnSize);
+    //for (int ptn = 0; ptn < alnSize; ++ptn) {
+    //    ptn_freqs[ptn] = (*aln)[ptn].frequency;
+    //}
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {
@@ -116,11 +116,11 @@ PhyloTree::~PhyloTree() {
     	delete [] tmp_anscentral_state_prob1;
     if (tmp_anscentral_state_prob2)
     	delete [] tmp_anscentral_state_prob2;
-    if (tmp_ptn_rates)
-    	delete [] tmp_ptn_rates;
+    //if (tmp_ptn_rates)
+    //	delete [] tmp_ptn_rates;
     if (_pattern_lh) delete [] _pattern_lh;
-    if (state_freqs)
-    	delete [] state_freqs;
+    //if (state_freqs)
+    //	delete [] state_freqs;
 }
 
 void PhyloTree::assignLeafNames(Node *node, Node *dad) {
@@ -156,16 +156,16 @@ void PhyloTree::copyPhyloTree(PhyloTree *tree) {
 
 void PhyloTree::setAlignment(Alignment *alignment) {
     aln = alignment;
-    alnSize = aln->size();
-    ptn_freqs.resize(alnSize);
-    numStates = aln->num_states;
-    tranSize = numStates * numStates;
-    ptn_freqs.resize(alnSize);
-    for (int ptn = 0; ptn < alnSize; ++ptn) {
-        ptn_freqs[ptn] = (*aln)[ptn].frequency;
-    }
-    block = aln->num_states * numCat;
-    lh_size = aln->size() * block;
+    //alnSize = aln->size();
+    //ptn_freqs.resize(alnSize);
+    //numStates = aln->num_states;
+    //tranSize = numStates * numStates;
+    //ptn_freqs.resize(alnSize);
+    //for (int ptn = 0; ptn < alnSize; ++ptn) {
+    //    ptn_freqs[ptn] = (*aln)[ptn].frequency;
+    //}
+    //block = aln->num_states * numCat;
+    //lh_size = aln->size() * block;
 
     int nseq = aln->getNSeq();
     for (int seq = 0; seq < nseq; seq++) {
@@ -192,8 +192,8 @@ void PhyloTree::rollBack(istream &best_tree_string) {
 
 void PhyloTree::setModel(SubstModel *amodel) {
     model = amodel;
-    state_freqs = new double[numStates];
-    model->getStateFrequency(state_freqs);
+    //state_freqs = new double[numStates];
+    //model->getStateFrequency(state_freqs);
 }
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
@@ -203,11 +203,11 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
 void PhyloTree::setRate(RateHeterogeneity *rate) {
     site_rate = rate;
     if (!rate) return;
-    numCat = site_rate->getNRate();
-    if (aln) {
-        block = aln->num_states * numCat;
-        lh_size = aln->size() * block;
-    }
+    //numCat = site_rate->getNRate();
+    //if (aln) {
+    //    block = aln->num_states * numCat;
+    //    lh_size = aln->size() * block;
+    //}
 }
 
 RateHeterogeneity *PhyloTree::getRate() {
@@ -933,8 +933,9 @@ void PhyloTree::growTreeMP(Alignment *alignment) {
 
 void PhyloTree::initializeAllPartialLh() {
     int index;
-    size_t mem_size = ((alnSize % 2) == 0) ? alnSize : (alnSize+1);
-    block_size = mem_size * numStates * site_rate->getNRate();
+	int numStates = model->num_states;
+    //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite()+1);
+    //size_t block_size = mem_size * numStates * site_rate->getNRate();
     //block_size = alnSize * numStates * site_rate->getNRate();
     if (!tmp_partial_lh1)
         tmp_partial_lh1 = newPartialLh();
@@ -942,8 +943,8 @@ void PhyloTree::initializeAllPartialLh() {
     	tmp_anscentral_state_prob1 = new double[numStates];
     if (!tmp_anscentral_state_prob2)
     	tmp_anscentral_state_prob2 = new double[numStates];
-    if (!tmp_ptn_rates)
-    	tmp_ptn_rates = new double[alnSize];
+    //if (!tmp_ptn_rates)
+    //	tmp_ptn_rates = new double[alnSize];
     if (!tmp_partial_lh2)
         tmp_partial_lh2 = newPartialLh();
     if (!tmp_scale_num1)
@@ -958,6 +959,8 @@ void PhyloTree::initializeAllPartialLh() {
 void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
     size_t pars_block_size = getBitsBlockSize();
     size_t scale_block_size = aln->size();
+    size_t block_size = ((getAlnNPattern() % 2) == 0) ? getAlnNPattern() : (getAlnNPattern()+1);
+    block_size = block_size * model->num_states * site_rate->getNRate();	
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
@@ -968,7 +971,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 			if (mem_size >= getMemorySize()) {
 				cout << "********************* IMPORTANT WARNING *******************" << endl;
 				outWarning("Size of partial likelihood vectors exceeds your RAM size");
-				outWarning("Pease switch to another computer with larger RAM");
+				outWarning("Please switch to another computer with larger RAM");
 			}
             central_partial_lh = new double[mem_size];
             //central_partial_lh = (double*) Eigen::internal::conditional_aligned_malloc<true>((leafNum-1)*4*block_size);
@@ -1189,6 +1192,7 @@ double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNo
 		computePartialLikelihood(node_branch, node);
 	// now combine likelihood at the branch
 	int nstates = aln->num_states;
+	int numCat = site_rate->getNRate();
 	size_t block = numCat * nstates;
 	size_t nptn = aln->size();
 	size_t ptn;
@@ -1244,8 +1248,8 @@ double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNo
 double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
 	double H = 0.0;
 	double correctedBranLen;
-	for (int i = 0; i < numStates; i++) {
-		H += state_freqs[i] * (1 - state_freqs[i]);
+	for (int i = 0; i < model->num_states; i++) {
+		H += model->state_freq[i] * (1 - model->state_freq[i]);
 	}
     observedBran = 1.0 - observedBran/H;
 	// no gamma

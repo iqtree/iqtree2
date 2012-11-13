@@ -35,7 +35,7 @@ GTRModel::GTRModel(PhyloTree *tree, bool count_rates)
 	
 	rates = new double[nrate];
 	memset(rates, 0, sizeof(double) * nrate);
-	state_freq = new double[num_states];
+
 	freq_type = FREQ_UNKNOWN;
 	
 	eigenvalues = new double[num_states];
@@ -501,6 +501,5 @@ void GTRModel::freeMem()
 
 	delete [] eigenvalues;
 
-	if (state_freq) delete [] state_freq;
 	if (rates) delete [] rates;
 }

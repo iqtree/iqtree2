@@ -17,6 +17,9 @@ SubstModel::SubstModel(int nstates)
 	num_states = nstates;
 	name = "JC";
 	full_name = "JC (Juke and Cantor, 1969)";
+	state_freq = new double[num_states];
+	for (int i = 0; i < num_states; i++)
+		state_freq[i] = 1.0 / num_states;
 }
 
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)
@@ -172,6 +175,7 @@ double *SubstModel::newTransMatrix() {
 
 SubstModel::~SubstModel()
 {
+	if (state_freq) delete [] state_freq;
 }
 
 
