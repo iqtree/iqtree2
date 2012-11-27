@@ -58,6 +58,9 @@
 #include "ncbitree.h"
 #include "timeutil.h"
 #include <unistd.h>
+#include <stdlib.h>
+#include <sys/resource.h>
+
 
 #ifdef _OPENMP
 	#include <omp.h>

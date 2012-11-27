@@ -20,7 +20,7 @@
 #ifndef PHYLOSUPERTREE_H
 #define PHYLOSUPERTREE_H
 
-#include "iqptree.h"
+#include "iqtree.h"
 #include "supernode.h"
 #include "superalignment.h"
 
@@ -50,7 +50,7 @@ Phylogenetic tree for partition model (multi-gene alignment)
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class PhyloSuperTree : public IQPTree, public vector<PhyloTree* >
+class PhyloSuperTree : public IQTree, public vector<PhyloTree* >
 {
 public:
 	/** 
@@ -141,7 +141,7 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int iterations = 100, double tolerance = TOL_LIKELIHOOD);
+    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD);
 
     /**
             optimize one branch length by ML

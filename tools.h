@@ -344,6 +344,8 @@ struct Params {
 	 */
 	bool raxmllib;
 
+	char *binary_aln_file;
+
 	/**
 	 *  the speed up heuristic will be used after
 	 *  speedup_iter iteration
@@ -1433,6 +1435,11 @@ bool overwriteFile(char *filename);
         @param full_command TRUE to print all available commands, FALSE to print normal usage dialog
  */
 void usage(char* argv[], bool full_command);
+
+/**
+ *   Print a string into a file
+ */
+void printString2File(string myString, string  filename);
 
 /**
  * print usage for iq-tree

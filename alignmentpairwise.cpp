@@ -102,7 +102,7 @@ double AlignmentPairwise::computeFunction(double value) {
 
     RateHeterogeneity *site_rate = tree->getRate();
     int ncat = site_rate->getNDiscreteRate();
-    SubstModel *model = tree->getModel();
+    ModelSubst *model = tree->getModel();
     int trans_size = tree->getModel()->getTransMatrixSize();
     int cat, i;
     int nptn = tree->aln->getNPattern();
@@ -173,7 +173,7 @@ double AlignmentPairwise::computeFunction(double value) {
 double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
     RateHeterogeneity *site_rate = tree->getRate();
     int ncat = site_rate->getNDiscreteRate();
-    SubstModel *model = tree->getModel();
+    ModelSubst *model = tree->getModel();
     int trans_size = tree->getModel()->getTransMatrixSize();
     int cat, i;
     int nptn = tree->aln->getNPattern();

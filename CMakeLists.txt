@@ -54,19 +54,19 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 
 add_definitions(-DIQ_TREE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-sign-compare -Wno-deprecated -pedantic")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=c99 -Wall -Wno-sign-compare -pedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-sign-compare -Wno-deprecated -pedantic -g -march=native -fomit-frame-pointer -funroll-loops -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=c99 -Wall -Wno-sign-compare -pedantic -g -march=native -fomit-frame-pointer -funroll-loops -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
 
 #if (NOT WIN32)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 #endif(NOT WIN32)
  
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_C_FLAGS_RELEASE "-O3")
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g2")
-set(CMAKE_C_FLAGS_DEBUG "-O0 -g2")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0")
+set(CMAKE_C_FLAGS_DEBUG "-O0")
 
 if (NOT CMAKE_BUILD_TYPE) 
 	set(CMAKE_BUILD_TYPE "Release")
@@ -78,7 +78,7 @@ else(CMAKE_SIZEOF_VOID_P EQUAL 4)
   message("Info: Compiling on 64-bit system")
 endif(CMAKE_SIZEOF_VOID_P EQUAL 4)
 
-
+add_subdirectory(phylolib)
 add_subdirectory(ncl)
 add_subdirectory(whtest)
 #add_subdirectory(modeltest)
@@ -96,7 +96,7 @@ guidedbootstrap.cpp
 gurobiwrapper.cpp
 gzstream.cpp
 hashsplitset.cpp
-iqptree.cpp
+iqtree.cpp
 maalignment.cpp
 matree.cpp
 mexttree.cpp
@@ -106,6 +106,7 @@ modelfactory.cpp
 modelnonrev.cpp
 modelprotein.cpp
 modelset.cpp
+modelsubst.cpp
 mpdablock.cpp
 msetsblock.cpp
 msplitsblock.cpp
@@ -139,7 +140,6 @@ split.cpp
 splitgraph.cpp
 splitset.cpp
 stoprule.cpp
-substmodel.cpp
 superalignment.cpp
 superalignmentpairwise.cpp
 supernode.cpp
@@ -153,7 +153,7 @@ lpwrapper.c
 if (WIN32)
 target_link_libraries(iqtree ncl whtest z sprng ws2_32)
 else (WIN32)
-target_link_libraries(iqtree ncl whtest z sprng)
+target_link_libraries(iqtree phylolib ncl whtest z sprng)
 endif (WIN32)
 
 ##############################################################

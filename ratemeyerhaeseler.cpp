@@ -407,7 +407,7 @@ double RateMeyerHaeseler::computeFunction(double value) {
 	int nstate = phylo_tree->getModel()->num_states;
 	int i, j, state1, state2;
 	double lh = 0.0;
-	SubstModel *model = phylo_tree->getModel();
+	ModelSubst *model = phylo_tree->getModel();
 	Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
 	
 	for (i = 0; i < nseq-1; i++) if ((state1 = pat->at(i)) < nstate) 
@@ -422,7 +422,7 @@ double RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf)
 	int i, j, state1, state2;
 	double lh = 0.0;
 	double trans, derv1, derv2;
-	SubstModel *model = phylo_tree->getModel();
+	ModelSubst *model = phylo_tree->getModel();
 	Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
 	df = ddf = 0.0;
 	for (i = 0; i < nseq-1; i++) if ((state1 = pat->at(i)) < nstate) 
@@ -439,7 +439,7 @@ double RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf)
 }
 
 
-void RateMeyerHaeseler::runIterativeProc(Params &params, IQPTree &tree) {
+void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 	int i;
 	if (verbose_mode >= VB_MED) {
 		ofstream out("x");

@@ -23,7 +23,7 @@
 #include <string.h>
 
 GTRModel::GTRModel(PhyloTree *tree, bool count_rates)
- : SubstModel(tree->aln->num_states), Optimization(), EigenDecomposition()
+ : ModelSubst(tree->aln->num_states), Optimization(), EigenDecomposition()
 {
 	int i;
 	int nrate = getNumRateEntries();

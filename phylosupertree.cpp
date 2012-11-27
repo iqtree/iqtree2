@@ -22,12 +22,12 @@
 #include "superalignmentpairwise.h"
 
 PhyloSuperTree::PhyloSuperTree()
- : IQPTree()
+ : IQTree()
 {
 }
 
 
-PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree) :  IQPTree(alignment) {
+PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree) :  IQTree(alignment) {
 	part_info = super_tree->part_info;
 	for (vector<Alignment*>::iterator it = alignment->partitions.begin(); it != alignment->partitions.end(); it++) {
 		PhyloTree *tree = new PhyloTree((*it));
@@ -36,7 +36,7 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 	aln = alignment;
 }
 
-PhyloSuperTree::PhyloSuperTree(Params &params) :  IQPTree() {
+PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
 	try {
 		ifstream in;
@@ -284,11 +284,11 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 	}
 }
 
-double PhyloSuperTree::optimizeAllBranches(int iterations, double tolerance) {
+double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance) {
 	double tree_lh = 0.0;
 	for (iterator it = begin(); it != end(); it++)
-		tree_lh += (*it)->optimizeAllBranches(iterations, tolerance);
-	if (iterations >= 100) computeBranchLengths();
+		tree_lh += (*it)->optimizeAllBranches(my_iterations, tolerance);
+	if (my_iterations >= 100) computeBranchLengths();
 	return tree_lh;
 }
 
@@ -521,7 +521,7 @@ void PhyloSuperTree::restoreAllBranLen(PhyloNode *node, PhyloNode *dad) {
 }
 
 void PhyloSuperTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
-	IQPTree::reinsertLeaves(del_leaves);
+	IQTree::reinsertLeaves(del_leaves);
 	mapTrees();
 }
 

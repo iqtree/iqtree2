@@ -21,7 +21,7 @@
 #define MODELFACTORY_H
 
 #include "tools.h"
-#include "substmodel.h"
+#include "modelsubst.h"
 #include "rateheterogeneity.h"
 
 /**
@@ -59,7 +59,7 @@ public:
 	 * @param count_rates TRUE to assign rates counted from alignment, FALSE to not initialize rates
 	 * @return substitution model created
 	 */
-	SubstModel *createModel(string model_str, StateFreqType freq_type, PhyloTree *tree, bool count_rates = true);
+	ModelSubst *createModel(string model_str, StateFreqType freq_type, PhyloTree *tree, bool count_rates = true);
 
 	/**
 	 * read site specific state frequency vectors from a file to create corresponding model (Ingo's idea)
@@ -154,7 +154,7 @@ public:
 	/**
 		pointer to the model, will not be deleted when deleting ModelFactory object
 	*/
-	SubstModel *model;
+	ModelSubst *model;
 
 
 	/**

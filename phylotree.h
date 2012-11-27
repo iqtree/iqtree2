@@ -21,7 +21,7 @@
 #include "Eigen/Core"
 #include "mtree.h"
 #include "alignment.h"
-#include "substmodel.h"
+#include "modelsubst.h"
 #include "modelfactory.h"
 #include "phylonode.h"
 #include "optimization.h"
@@ -189,7 +189,7 @@ public:
             set the substitution model, important to compute the likelihood
             @param amodel associated substitution model
      */
-    void setModel(SubstModel *amodel);
+    void setModel(ModelSubst *amodel);
 
     /**
             set the model factory
@@ -216,7 +216,7 @@ public:
      */
     string getModelName();
 
-    SubstModel *getModel() {
+    ModelSubst *getModel() {
         return model;
     }
 
@@ -591,7 +591,7 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int iterations = 100, double tolerance = TOL_LIKELIHOOD);
+    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD);
 
     /**
             inherited from Optimization class, to return to likelihood of the tree
@@ -943,7 +943,7 @@ protected:
     /**
             associated substitution model
      */
-    SubstModel *model;
+    ModelSubst *model;
 
     /**
             Model factory includes SubstModel and RateHeterogeneity

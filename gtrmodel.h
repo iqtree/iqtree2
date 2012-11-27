@@ -22,7 +22,7 @@
 
 #define EIGEN
 #include "phylotree.h"
-#include "substmodel.h"
+#include "modelsubst.h"
 #include "optimization.h"
 #include "alignment.h"
 #include "eigendecomposition.h"
@@ -35,7 +35,7 @@ This works for all kind of data, not only DNA
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class GTRModel : public SubstModel, public Optimization, public EigenDecomposition
+class GTRModel : public ModelSubst, public Optimization, public EigenDecomposition
 {
 	
 	friend class ModelSet;

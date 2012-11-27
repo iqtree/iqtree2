@@ -190,7 +190,7 @@ void PhyloTree::rollBack(istream &best_tree_string) {
     initializeAllPartialLh();
 }
 
-void PhyloTree::setModel(SubstModel *amodel) {
+void PhyloTree::setModel(ModelSubst *amodel) {
     model = amodel;
     //state_freqs = new double[numStates];
     //model->getStateFrequency(state_freqs);
@@ -1789,12 +1789,12 @@ double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
     return tree_lh;
 }
 
-double PhyloTree::optimizeAllBranches(int iterations, double tolerance) {
+double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance) {
     if (verbose_mode >= VB_MAX)
-        cout << "Optimizing branch lenths (max " << iterations << " loops)..." << endl;
+        cout << "Optimizing branch lenths (max " << my_iterations << " loops)..." << endl;
     double tree_lh = computeLikelihood();
     //cout << tree_lh << endl;
-    for (int i = 0; i < iterations; i++) {
+    for (int i = 0; i < my_iterations; i++) {
         double new_tree_lh = optimizeAllBranches((PhyloNode*) root);
         /*
         clearAllPartialLH();

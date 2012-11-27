@@ -543,14 +543,13 @@ void MTree::initializeTree(Node *node, Node* dad)
 void MTree::parseFile(istream &infile, char &ch, Node* &root, double &branch_len)
 {
     Node *node;
-    int maxlen = 100;
-    char seqname[100];
+    int maxlen = 10000;
+    char seqname[10000];
     int seqlen;
     double brlen;
     branch_len = -1.0;
 
     root = newNode();
-
 
     if (ch == '(') {
         // internal node

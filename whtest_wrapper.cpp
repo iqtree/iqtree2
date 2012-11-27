@@ -47,7 +47,7 @@ int WHTest_old(Params &params, PhyloTree &tree) {
 	return WHTest_run(argc, argv);
 }
 
-int WHTest(Params &params, IQPTree &tree) {
+int WHTest(Params &params, IQTree &tree) {
 
 	int i, j;
 	int retval;

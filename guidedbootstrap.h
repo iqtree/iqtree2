@@ -22,7 +22,7 @@
 #define GUIDED_BOOTSTRAP_H
 
 #include "tools.h"
-#include "iqptree.h"
+#include "iqtree.h"
 #include "alignment.h"
 
 struct hashfunc_IntVector {
@@ -78,8 +78,8 @@ typedef vector<IntVector*> IntVectorCollection;
 /**
 	run guided bootstrap
 */
-void runGuidedBootstrap(Params &params, Alignment *alignment, IQPTree &tree);
+void runGuidedBootstrap(Params &params, Alignment *alignment, IQTree &tree);
 
-void runAvHTest(Params &params, Alignment *alignment, IQPTree &tree);
+void runAvHTest(Params &params, Alignment *alignment, IQTree &tree);
 
 #endif

@@ -279,7 +279,7 @@ double RateMeyerDiscrete::computeFunction(double value) {
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
 	int i, j, k, state1, state2;
-	SubstModel *model = phylo_tree->getModel();
+	ModelSubst *model = phylo_tree->getModel();
     int trans_size = nstate * nstate;
 	double *trans_mat = new double[trans_size];
 	int *pair_freq = new int[trans_size];
@@ -309,7 +309,7 @@ double RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf)
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
 	int i, j, k, state1, state2;
-	SubstModel *model = phylo_tree->getModel();
+	ModelSubst *model = phylo_tree->getModel();
     int trans_size = nstate * nstate;
 	double *trans_mat = new double[trans_size];
 	double *trans_derv1 = new double[trans_size];

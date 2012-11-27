@@ -415,7 +415,7 @@ double NGSTree::computeLikelihood(double *pattern_lh) {
     return -((NGSAlignment*)aln)->computeFunction(1.0);
 }
 
-double NGSTree::optimizeAllBranches(int iterations, double tolerance) {
+double NGSTree::optimizeAllBranches(int my_iterations, double tolerance) {
     return computeLikelihood();
 }
 

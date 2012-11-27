@@ -26,7 +26,7 @@
 #include "phyloanalysis.h"
 #include "alignment.h"
 #include "superalignment.h"
-#include "iqptree.h"
+#include "iqtree.h"
 #include "gtrmodel.h"
 #include "modeldna.h"
 #include "myreader.h"
@@ -279,7 +279,7 @@ void computeExpectedLhWeights(Alignment *aln, vector<double*> &pattern_lhs,
         (*sh_pval)[j] /= num_replicates;
 }
 
-void printTrees(const char *ofile, IQPTree &tree, IntVector *weights, bool compression)
+void printTrees(const char *ofile, IQTree &tree, IntVector *weights, bool compression)
 {
     int count = 0;
     try {
@@ -320,7 +320,7 @@ void printTrees(const char *ofile, IQPTree &tree, IntVector *weights, bool compr
     }
 }
 
-void printPatternLh(const char *ofile, IQPTree *tree, bool compression) {
+void printPatternLh(const char *ofile, IQTree *tree, bool compression) {
     int count = 0, i;
     int scale = 1000;
     try {
@@ -370,7 +370,7 @@ void printPatternLh(const char *ofile, IQPTree *tree, bool compression) {
     }
 }
 
-void readPatternLh(const char *infile, IQPTree *tree, bool compression) {
+void readPatternLh(const char *infile, IQTree *tree, bool compression) {
     int count = 0, i;
     int ntrees, nsite, nptn, scale;
     double max_tol = 0.0;
@@ -430,7 +430,7 @@ void readPatternLh(const char *infile, IQPTree *tree, bool compression) {
     }
 }
 
-void computeAllPatternLh(Params &params, IQPTree &tree) {
+void computeAllPatternLh(Params &params, IQTree &tree) {
     /* this part copied from phyloanalysis.cpp */
     tree.optimize_by_newton = params.optimize_by_newton;
     tree.sse = params.SSE;
@@ -550,7 +550,7 @@ void computeAllPatternLh(Params &params, IQPTree &tree) {
     tree.clearAllPartialLH();
 }
 
-void readTrees(Params &params, Alignment *alignment, IQPTree &tree) {
+void readTrees(Params &params, Alignment *alignment, IQTree &tree) {
     if (!params.user_file) {
         outError("You have to specify user tree file");
     }
@@ -584,7 +584,7 @@ void readTrees(Params &params, Alignment *alignment, IQPTree &tree) {
     }
 }
 
-void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQPTree &tree) {
+void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) {
 
     int i, j;
 
@@ -942,7 +942,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQPTree &tree)
     //delete [] rfdist;
 }
 
-void runGuidedBootstrap(Params &params, Alignment *alignment, IQPTree &tree) {
+void runGuidedBootstrap(Params &params, Alignment *alignment, IQTree &tree) {
     if (!params.check_gbo_sample_size) {
         runGuidedBootstrapReal(params, alignment, tree);
         return;
@@ -1009,7 +1009,7 @@ void generateMultinorm(IntVector &x, int n, int k, int i, int sum) {
     }
 }
 
-void runAvHTest(Params &params, Alignment *alignment, IQPTree &tree) {
+void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     // collection of distinct bootstrapped site-pattern frequency vectors
     IntVectorCollection boot_freqs;
     // number of times the bootstrap alignments were resampled
@@ -1087,7 +1087,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQPTree &tree) {
         Alignment *boot_aln = new Alignment;
         boot_aln->extractPatternFreqs(alignment, *boot_freqs[id]);
 
-        IQPTree boot_tree(boot_aln);
+        IQTree boot_tree(boot_aln);
         runPhyloAnalysis(params, orig_model, boot_aln, boot_tree);
         boot_tree.setRootNode(params.root);
         stringstream ss;

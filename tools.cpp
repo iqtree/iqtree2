@@ -387,6 +387,16 @@ void readInitTaxaFile(Params &params, int ntaxa, StrVector &tax_name) {
 	readStringFile(params.initial_file, ntaxa, tax_name);
 }
 
+void printString2File(string myString, string filename) {
+	  ofstream myfile(filename.c_str());
+	  if (myfile.is_open()) {
+		  myfile << myString;
+		  myfile.close();
+	  } else {
+		  cout << "Unable to open file " << filename << endl;
+	  }
+}
+
 void readInitAreaFile(Params &params, int nareas, StrVector &area_name) {
 	cout << "Reading initial area file " << params.initial_area_file << " ..." << endl;
 	readStringFile(params.initial_area_file, nareas, area_name);
@@ -651,6 +661,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.speedup_iter = 100;
 	params.raxmllib = false;
 	params.parbran = false;
+	params.binary_aln_file = NULL;
 
 	params.avh_test = 0;
 	params.site_freq_file = NULL;
@@ -1427,17 +1438,24 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.do_compression = true;
 			} else if (strcmp(argv[cnt], "-newheu") == 0) {
 				params.new_heuristic = true;
-			} else if (strcmp(argv[cnt], "-raxml") == 0) {
+			// Enable RAxML kernel
+			} else if (strcmp(argv[cnt], "-rax") == 0) {
 				params.raxmllib = true;
+			// Binary alignment for RAxML kernel
+			} else if (strcmp(argv[cnt], "-ba") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ba <binary_alignment_file>";
+				params.binary_aln_file = argv[cnt];
 			} else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
 				params.parbran = true;
-			} else if (strcmp(argv[cnt], "-wbt") == 0)	{
+			} else if (strcmp(argv[cnt], "-wbt") == 0) {
 				params.write_best_trees = true;
-                        } else if (strcmp(argv[cnt], "-x") == 0) {
-                                cnt++;
-                                if (cnt >= argc)
-                                  throw "Use -x <iteration_multiple>";
-                                params.iteration_multiple = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-x") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -x <iteration_multiple>";
+				params.iteration_multiple = convert_int(argv[cnt]);
 			} else if (strcmp(argv[cnt], "-vns") == 0) {
 				params.vns_search = true;
 			} else if (strcmp(argv[cnt], "-sp_iter") == 0) {

@@ -22,7 +22,7 @@
 
 #include "rateheterogeneity.h"
 #include "tools.h"
-#include "iqptree.h"
+#include "iqtree.h"
 
 
 /**
@@ -128,7 +128,7 @@ public:
 	virtual double computeFuncDerv(double value, double &df, double &ddf);
 
 
-	void runIterativeProc(Params &params, IQPTree &tree);
+	void runIterativeProc(Params &params, IQTree &tree);
 
 	/**
 		distance matrix inferred from the path lengths of the tree (not from the sequences)

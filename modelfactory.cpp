@@ -39,14 +39,14 @@ ModelFactory::ModelFactory() {
 	is_storing = false;
 }
 
-SubstModel* ModelFactory::createModel(string model_str, StateFreqType freq_type, PhyloTree* tree, bool count_rates)
+ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type, PhyloTree* tree, bool count_rates)
 {
-	SubstModel *model = NULL;
+	ModelSubst *model = NULL;
 	if ((model_str == "JC" && tree->aln->num_states == 4) || 
 		(model_str == "POISSON" && tree->aln->num_states == 20) ||
 		(model_str == "JC2" && tree->aln->num_states == 2)) 
 	{
-		model = new SubstModel(tree->aln->num_states);
+		model = new ModelSubst(tree->aln->num_states);
 	} else 
 	if ((model_str == "GTR" && tree->aln->num_states == 4) ||
 		(model_str == "GTR2" && tree->aln->num_states == 2)) {
