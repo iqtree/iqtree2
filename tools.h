@@ -335,6 +335,16 @@ struct NNIInfo {
 struct Params {
 
 	/**
+	 *
+	 */
+	double maxtime;
+
+	/**
+	 *  Turn on tabu function for IQP (Memory for removed nodes)
+	 */
+	bool tabu;
+
+	/**
 	 *  Turn on parsimony branch legnth estimation
 	 */
 	bool parbran;

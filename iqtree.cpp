@@ -61,6 +61,7 @@ void IQTree::init() {
 	duplication_counter = 0;
 	raxmlTree = NULL;
 	//boot_splits = new SplitGraph;
+	//initLeafFrequency();
 }
 
 IQTree::IQTree(Alignment *aln) :
@@ -283,6 +284,23 @@ RepresentLeafSet* IQTree::findRepresentLeaves(
  clearRepresentLeaves(leaves_vec, (*it)->node, node);
  }
  }*/
+
+void IQTree::initLeafFrequency(PhyloNode *node, PhyloNode *dad) {
+    if (!node) node = (PhyloNode*) root;
+    if (node->isLeaf()) {
+    	node_freq my_node_freq (node, 0);
+    	node_freqs.push_back(my_node_freq);
+    }
+	for (NeighborVec::iterator it = node->neighbors.begin();
+			it != node->neighbors.end(); it++)
+		if ((*it)->node != dad) {
+			initLeafFrequency((PhyloNode*) (*it)->node, node);
+		}
+}
+
+void IQTree::deleteNonTabuLeaves(PhyloNodeVector &del_leaves) {
+
+}
 
 void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
 	NodeVector taxa;
@@ -544,14 +562,20 @@ double IQTree::doIQP(bool optimizeBran) {
 						| WT_BR_ID);
 	//double time_begin = getCPUTime();
 	PhyloNodeVector del_leaves;
-	deleteLeaves(del_leaves);
+
+	if (params->tabu) {
+		deleteNonTabuLeaves(del_leaves);
+	} else {
+		deleteLeaves(del_leaves);
+	}
+
 	reinsertLeaves(del_leaves);
-	// just to make sure IQP does it right
-	setAlignment(aln);
-	clearAllPartialLH();
 
 	// if phylolib is not enable then branch lengths are optimized using IQTree's kernel
 	if (optimizeBran) {
+		// just to make sure IQP does it right
+		setAlignment(aln);
+		clearAllPartialLH();
 		if (params->gbo_replicates)
 			curScore = optimizeAllBranches(3, 1.0);
 		else {
@@ -769,9 +793,16 @@ double IQTree::doIQPNNI() {
 	}
 	stop_rule.addImprovedIteration(1);
 	int cur_iteration;
+	bool maxTimeReached = false;
 	for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration);
 			cur_iteration++) {
-
+		if (params->maxtime > 0.00) {
+			double min_elapsed = (getCPUTime() - params->startTime)/60;
+			if (min_elapsed > params->maxtime) {
+				maxTimeReached = true;
+				break;
+			}
+		}
 		// estimate logl_cutoff
 		if (params->avoid_duplicated_trees && max_candidate_trees > 0
 				&& treels_logl.size() > 1000) {
@@ -1078,6 +1109,9 @@ double IQTree::doIQPNNI() {
 				//boot_splits = sg;
 			} //else delete sg;
 		}
+	}
+	if (maxTimeReached) {
+		cout << "Maximal running time of " << params->maxtime << " minutes reached" << endl;
 	}
 
 	int predicted_iteration = stop_rule.getPredictedIteration();

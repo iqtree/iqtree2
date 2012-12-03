@@ -569,7 +569,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.gurobi_threads = 1;
 	params.num_bootstrap_samples = 0;
 
-
 	params.aln_file = NULL;
 	params.treeset_file = NULL;
 	params.siteLL_file = NULL; //added by MA
@@ -662,7 +661,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.raxmllib = false;
 	params.parbran = false;
 	params.binary_aln_file = NULL;
-
+	params.maxtime = 0.00;
+	params.tabu = false;
 	params.avh_test = 0;
 	params.site_freq_file = NULL;
 #ifdef _OPENMP
@@ -1442,6 +1442,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 			} else if (strcmp(argv[cnt], "-rax") == 0) {
 				params.raxmllib = true;
 			// Binary alignment for RAxML kernel
+			} else if (strcmp(argv[cnt], "-maxtime") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -maxtime <time_in_minutes>";
+				params.maxtime = convert_double(argv[cnt]);
 			} else if (strcmp(argv[cnt], "-ba") == 0) {
 				cnt++;
 				if (cnt >= argc)

@@ -118,18 +118,35 @@ double doNNISearch(tree* tr) {
 //#endif
 			// Just do the topological change
 			doOneNNI(tr, nonConfNNIList[i].p, nonConfNNIList[i].nniType, FALSE);
-			newviewGeneric(tr, nonConfNNIList[i].p, FALSE);
-			newviewGeneric(tr, nonConfNNIList[i].p->back, FALSE);
 			// Apply the store branch length
 			int j;
 			for (j = 0; j < tr->numBranches; j++) {
 				nonConfNNIList[i].p->z[j] = nonConfNNIList[i].z[j];
 				nonConfNNIList[i].p->back->z[j] = nonConfNNIList[i].z[j];
 			}
+			newviewGeneric(tr, nonConfNNIList[i].p, FALSE);
+			newviewGeneric(tr, nonConfNNIList[i].p->back, FALSE);
+			if (numNNI2Apply == 1) {
+				update(tr, p);
+			}
+//			evaluateGeneric(tr, p, FALSE);
+//			if (tr->likelihood < curScore) {
+//				doOneNNI(tr, nonConfNNIList[i].p, nonConfNNIList[i].nniType, FALSE);
+//				int j;
+//				for (j = 0; j < tr->numBranches; j++) {
+//					nonConfNNIList[i].p->z[j] = nonConfNNIList[i].z0[j];
+//					nonConfNNIList[i].p->back->z[j] = nonConfNNIList[i].z0[j];
+//				}
+//				newviewGeneric(tr, nonConfNNIList[i].p, FALSE);
+//				newviewGeneric(tr, nonConfNNIList[i].p->back, FALSE);
+//			} else {
+//				curScore = tr->likelihood;
+//			}
+
 		}
+
 		// Re-optimize all branches
 		smoothTree(tr, 1);
-		//modOpt(tr, 0.1);
 		evaluateGeneric(tr, tr->start, FALSE);
 		if (tr->likelihood < curScore) {
 			printf("Tree likelihood gets worse after applying %d NNI\n", numNNI2Apply);
@@ -137,7 +154,8 @@ double doNNISearch(tree* tr) {
 			printf("newScore = %30.20f\n", tr->likelihood);
 			if (numNNI2Apply == 1) {
 				printf("This is a BUG: Tree gets worse when 1 NNI is applied?\n");
-				exit(1);
+				printf("Tree supposed to get LH greater than or equal %30.20f\n", nonConfNNIList[0].likelihood);
+				return tr->likelihood;
 			}
 			printf("Rolling back the tree\n");
 			for (i = numNNI2Apply-1; i >=0; i--) {
@@ -235,7 +253,7 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH) {
 	//update(tr, p);
 	//evaluateGeneric(tr, p, FALSE);
 	//printf("Current tree LH = %f \n", tr->likelihood);
-	//double lh0 = tr->likelihood;
+	//curLH = tr->likelihood;
 	double lh0 = curLH;
 	//printf("zNew: %f \n", getBranchLength(tr, 0, p));
 
@@ -462,8 +480,6 @@ int test_nni(int argc, char * argv[])
 
 void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* cnt, int* cnt_nni, double curLH) {
 	if ( ! isTip(p->number, tr->mxtips) ) {
-		//newviewGeneric(tr, p, FALSE);
-		//newviewGeneric(tr, p->back, FALSE);
 		nniList[*cnt] = getBestNNIForBran(tr, p, curLH);
 		if (nniList[*cnt].deltaLH != 0.0) {
 			*cnt_nni = *cnt_nni + 1;

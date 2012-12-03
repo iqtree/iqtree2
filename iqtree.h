@@ -498,6 +498,12 @@ protected:
     vector<NNIMove> vec_nonconf_nni;
 
     /**
+     *  Data structure to store how many time a leaf has been removed
+     */
+    typedef pair<PhyloNode*, int> node_freq;
+    vector<node_freq> node_freqs;
+
+    /**
             Data structure (of type Map) which stores all the optimal
 			branch lengths for all branches in the tree
      */
@@ -516,6 +522,11 @@ protected:
             number of representative leaves for IQP step
      */
     int k_represent;
+
+    /**
+     *  Initialize the node frequency list (node_freqs)
+     */
+    void initLeafFrequency(PhyloNode* node = NULL, PhyloNode* dad = NULL);
 
 public:
 	/****** following variables are for ultra-fast bootstrap *******/
@@ -590,7 +601,10 @@ protected:
 
 	ofstream outNNI;
 protected:
+
+
 	bool print_tree_lh;
+
 	int write_intermediate_trees;
 
 	ofstream out_treels, out_treelh, out_sitelh, out_treebetter;
@@ -618,6 +632,8 @@ protected:
             @param del_leaves (OUT) the list of deleted leaves
      */
     void deleteLeaves(PhyloNodeVector &del_leaves);
+
+    void deleteNonTabuLeaves(PhyloNodeVector &del_leaves);
 
     /**
             reinsert the whole list of leaves back into the tree
