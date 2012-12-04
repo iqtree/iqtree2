@@ -794,6 +794,7 @@ double IQTree::doIQPNNI() {
 	stop_rule.addImprovedIteration(1);
 	int cur_iteration;
 	bool maxTimeReached = false;
+	bool speedupMsg = false;
 	for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration);
 			cur_iteration++) {
 		if (params->maxtime > 0.00) {
@@ -888,6 +889,10 @@ double IQTree::doIQPNNI() {
 		if (enableHeuris) {
 			if (!params->raxmllib) {
 				if (cur_iteration > params->speedup_iter) {
+					if (!speedupMsg) {
+						speedupMsg = true;
+						cout << "Speed up heuristic enabled!" << endl;
+					}
 					if (!params->new_heuristic) {
 						nni_count_est = estN95();
 						nni_delta_est = estDelta95();
