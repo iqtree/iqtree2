@@ -990,30 +990,6 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 		cout << "NNI cutoff: " << params.nni_cutoff << endl;
 		cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No")
 				<< endl;
-//	} else {
-//		extern const char** protModels;
-//		char* raxmodel;
-//		char* baseFreq;
-//		switch (iqtree.raxmlTree->partitionData[0].dataType) {
-//		case DNA_DATA:
-//			raxmodel = "GTR (DNA)";
-//			baseFreq = "Estimated";
-//			break;
-//		case AA_DATA:
-//			raxmodel =
-//					(char*) protModels[iqtree.raxmlTree->partitionData[0].protModels];
-//			strcat(raxmodel, " (Protein)");
-//			baseFreq =
-//					(iqtree.raxmlTree->partitionData[0].protFreqs == 1) ?
-//							(char*) "Empirical" : (char*) "Fixed";
-//			break;
-//		default:
-//			assert(0);
-//		}
-//		printf("Model of evolution: %s\n", raxmodel);
-//		printf("Base frequencies: %s \n", baseFreq);
-//	}
-
 }
 
 double doModelOptimization(IQTree& iqtree, Params& params) {
@@ -1448,8 +1424,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.setBestScore(
 				iqtree.getModelFactory()->optimizeParameters(
 						params.fixed_branch_length));
-	} else
+	} else {
 		iqtree.setBestScore(iqtree.curScore);
+	}
 	cout << endl;
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
 	t_tree_search_end = getCPUTime();

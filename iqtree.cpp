@@ -1142,6 +1142,7 @@ double IQTree::doIQPNNI() {
  Fast Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
+	double oldCurScore = curScore;
 	bool resetLamda = true;
 	bool foundBetterTree = true;
 	curLambda = startLambda;
@@ -1235,7 +1236,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 			}
 
 			/* tree cannot be worse if only 1 NNI is applied */
-			if (nni2apply == 1 && newScore < curScore - TOL_LIKELIHOOD) {
+			if (nni2apply == 1 && newScore < curScore) {
 				cout << "THIS IS A BUG !!!" << endl;
 				cout
 						<< "The tree likelihood is supposed to be greater or equal than "
@@ -1243,7 +1244,17 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 				cout << "Tree likelihood before the swap is " << curScore
 						<< endl;
 				cout << "Obtained tree likelihood is " << newScore << endl;
-				exit(1);
+				if (curScore <= oldCurScore)
+					foundBetterTree = false;
+				// restore the tree by reverting all NNIs
+				if (nni_round == 1)
+					applyNNIs(nni2apply, true);
+				else
+					applyNNIs(nni2apply, false);
+
+				// restore the branch lengths
+				restoreAllBranLen();
+				break;
 			}
 
 			// restore the tree by reverting all NNIs
@@ -1259,7 +1270,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 	} while (true);
 
 	if (foundBetterTree) {
-		curScore = optimizeAllBranches();
+		curScore = optimizeAllBranches(1);
 		if (enableHeuris) {
 			vecNumNNI.push_back(nni_count);
 		}

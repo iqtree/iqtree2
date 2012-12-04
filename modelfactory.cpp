@@ -324,7 +324,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info) {
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);
 		}
-		if (new_lh > cur_lh + 1e-3) {
+		if (new_lh > cur_lh + 1e-6) {
 			if (!fixed_len)
 				cur_lh = tree->optimizeAllBranches(i<5 ? i : 5);  // loop only 5 times in total
 			else
