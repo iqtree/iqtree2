@@ -171,7 +171,7 @@ public:
             @param paramters given through command line and others
             @return current likelihood
      */
-    double doIQP(bool optimizeBran = true);
+    double doIQP();
 
     /**
      * 	   perform a variable neighborhood search using
@@ -228,8 +228,11 @@ public:
 
     /**
      * 		Do fastNNI using RAxML kernel
+     * 		@param beginHeu whether the heuristic is started
+     * 		@param skipped (OUT) 1 if current iteration is skipped, otherwise 0
+     *      @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    double optimizeNNIRax();
+    double optimizeNNIRax(bool beginHeu=false, int *skipped = NULL, int *nni_count = NULL);
 
 
     /**

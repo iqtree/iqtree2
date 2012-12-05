@@ -555,7 +555,7 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 						| WT_BR_ID);
 }
 
-double IQTree::doIQP(bool optimizeBran) {
+double IQTree::doIQP() {
 	if (verbose_mode >= VB_DEBUG)
 		drawTree(cout,
 				WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE
@@ -571,11 +571,13 @@ double IQTree::doIQP(bool optimizeBran) {
 
 	reinsertLeaves(del_leaves);
 
-	// if phylolib is not enable then branch lengths are optimized using IQTree's kernel
-	if (optimizeBran) {
+	if (params->raxmllib) {
+		// otherwise branch lengths will be optimized using phylolib's kernel
+		curScore = 0.00;
+	} else {
 		// just to make sure IQP does it right
 		setAlignment(aln);
-		clearAllPartialLH();
+		//clearAllPartialLH();
 		if (params->gbo_replicates)
 			curScore = optimizeAllBranches(3, 1.0);
 		else {
@@ -589,12 +591,8 @@ double IQTree::doIQP(bool optimizeBran) {
 			 //curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
 			 }
 			 */
-
-			curScore = optimizeAllBranches(1);
 		}
-	} else {
-		// otherwise branch lengths will be optimized using phylolib's kernel
-		curScore = 0.00;
+			curScore = optimizeAllBranches(1);
 	}
 
 	//cout << "IQP log-likelihood: " << curScore << endl;
@@ -862,9 +860,9 @@ double IQTree::doIQPNNI() {
 			curScore = iqp_score = optimizeAllBranches();
 		} else {
 			if (!params->raxmllib) {
-				curScore = doIQP(true);
+				curScore = doIQP();
 			} else {
-				doIQP(false);
+				doIQP();
 				stringstream iqp_tree_string;
 				printTree(iqp_tree_string);
 				treeReadTopologyString( (char*) iqp_tree_string.str().c_str(), raxmlTree);
@@ -887,11 +885,10 @@ double IQTree::doIQPNNI() {
 		int skipped = 0;
 		int nni_count = 0;
 		if (enableHeuris) {
-			if (!params->raxmllib) {
 				if (cur_iteration > params->speedup_iter) {
 					if (!speedupMsg) {
 						speedupMsg = true;
-						cout << "Speed up heuristic enabled!" << endl;
+						cout << "SPEED UP HEURISTIC ENABLED!" << endl;
 					}
 					if (!params->new_heuristic) {
 						nni_count_est = estN95();
@@ -910,25 +907,27 @@ double IQTree::doIQPNNI() {
 							nni_count_est = nni_count_estMedian;
 							nni_delta_est = nni_delta_est95;
 						}
-
+						//nni_count_est = estN95();
+						//nni_delta_est = estDelta95();
 					}
 					if (cur_iteration % 10 == 0)
 						cout << "Estimated number of NNIs: " << nni_count_est
 								<< ", delta-logl per NNI: " << nni_delta_est
 								<< endl;
-					optimizeNNI(true, &skipped, &nni_count);
+					if (params->raxmllib) {
+						curScore = optimizeNNIRax(true, &skipped, &nni_count);
+					} else {
+						curScore = optimizeNNI(true, &skipped, &nni_count);
+					}
 				} else {
-					optimizeNNI();
+					if (params->raxmllib){
+						curScore = optimizeNNIRax();
+					} else {
+						curScore = optimizeNNI();
+					}
 				}
-			} else {
-				// Start NNI search using Phylolib kernel
-				curScore = optimizeNNIRax();
-			}
-
 		} else {
-			if (!params->raxmllib) {
-				optimizeNNI();
-			} else {
+			if (params->raxmllib) {
 				// Start NNI search using Phylolib kernel
 				curScore = optimizeNNIRax();
 				// read in new tree
@@ -939,6 +938,8 @@ double IQTree::doIQPNNI() {
 				stringstream mytree;
 				mytree << raxmlTree->tree_string;
 				readTree(mytree, rooted);
+			} else {
+				curScore = optimizeNNI();
 			}
 		}
 
@@ -964,7 +965,6 @@ double IQTree::doIQPNNI() {
 		}
 
 		time(&cur_time);
-		double elapsed_secs = difftime(cur_time, begin_time);
 		double cputime_secs = getCPUTime() - params->startTime;
 		double cputime_remaining =
 				(stop_rule.getNumIterations() - cur_iteration) * cputime_secs
@@ -1031,11 +1031,6 @@ double IQTree::doIQPNNI() {
 				freeNode();
 				readTree(mytree, rooted);
 				setAlignment(aln);
-				//initializeAllPartialLh();
-				//clearAllPartialLH();
-				//cout << "Recomputed score by IQTree : " << optimizeAllBranches() << endl;
-				//printTree(cout);
-				//cout << endl;
 			}
 
 			//curScore = optimizeAllBranches(100, 0.0001);
@@ -1071,9 +1066,10 @@ double IQTree::doIQPNNI() {
 			freeNode();
 			readTree(best_tree_string, rooted);
 			assignLeafNames();
-			initializeAllPartialLh();
-			clearAllPartialLH();
-
+			if (!params->raxmllib) {
+				initializeAllPartialLh();
+				clearAllPartialLH();
+			}
 			//cout << "Rollback tree topology ..." << endl;
 			//cout << best_tree_string.str() << endl;
 			//printTree(cout);
@@ -1292,22 +1288,48 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 	return curScore;
 }
 
-double IQTree::optimizeNNIRax() {
+double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 	int nniRound = 1;
 	double curLH = raxmlTree->likelihood;
+	//cout << "LH IQP Tree = " << curLH << endl;
+	int nniApplied = 0;
 	while (true) {
-		double newLH = doNNISearch(raxmlTree);
+		if (beginHeu) {
+			double maxScore = curLH
+					+ nni_delta_est * (nni_count_est - nniApplied);
+			if (maxScore < curLH) {
+				beginHeu = false;
+			} else {
+				if (maxScore <= bestScore) {
+					if (skipped)
+						*skipped = 1;
+					//cout << "nni_delta_est = " << nni_delta_est << endl;
+					//cout << "nni_count_est = " << nni_count_est << endl;
+					//cout << "nniApplied = " << nniApplied << endl;
+					return curLH;
+				}
+			}
+		}
+		int nni_count = 0;
+		double deltaNNI = 0.0;
+		double newLH = doNNISearch(raxmlTree, &nni_count, &deltaNNI);
 		if (newLH == 0.0) {
 			break;
 		} else {
-			//printf("Likelihood after doing NNI round %d = %f\n", nniRound, newLH);
-			//if (newLH - curLH < 0.001)
-			//break;
+			//cout << "NNI round " << nniRound << "  improvement : " << newLH -curLH << endl;
 			curLH = newLH;
 			nniRound++;
+			//cout << "deltaNNI = " << deltaNNI << endl;
+			//cout << "nni_count = " << nni_count << endl;
+			vecImpProNNI.push_back(deltaNNI);
+			nniApplied += nni_count;
+			if (nni_count_ret) {
+				*nni_count_ret = nniApplied;
+			}
 		}
-
 	}
+	//cout << "nniApplied = " << nniApplied << endl;
+	vecNumNNI.push_back(nniApplied);
 	// Re-optimize all branches
 	smoothTree(raxmlTree, 1);
 	evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);

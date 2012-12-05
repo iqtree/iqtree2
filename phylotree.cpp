@@ -1748,8 +1748,12 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
     assert(current_it_back);
     double current_len = current_it->length;
     double ferror, optx;
-    if (optimize_by_newton) // Newton-Raphson method
-        optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
+    if (optimize_by_newton) { // Newton-Raphson method
+    	if (!params->raxmllib)
+    		optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
+    	else
+    		optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, MIN_BRANCH_LEN, negative_lh);
+	}
     else // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
     if (current_len == optx) // if nothing changes, return

@@ -932,8 +932,8 @@ void createFirstNNITree(Params &params, IQTree &iqtree,
 			mytree.seekg(0, ios::beg);
 			iqtree.freeNode();
 		    iqtree.readTree(mytree, iqtree.rooted);
-		    iqtree.initializeAllPartialLh();
-		    iqtree.clearAllPartialLH();
+		    //iqtree.initializeAllPartialLh();
+		    //iqtree.clearAllPartialLH();
 		    iqtree.setAlignment(alignment);
 
 		}
@@ -999,7 +999,7 @@ double doModelOptimization(IQTree& iqtree, Params& params) {
 		cout << endl;
 		cout << "Optimizing model parameters and branch lengths" << endl;
 		bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
-				params.fixed_branch_length);
+				params.fixed_branch_length, true, 0.1);
 		cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 	} else {
 		cout << "Optimizing model parameters and branch lengths" << endl;
@@ -1153,7 +1153,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.setAlignment(alignment);
 	} else if (params.parsimony_tree) {
 		iqtree.computeParsimonyTree(params.out_prefix, alignment);
-		iqtree.computeBioNJ(params, alignment, dist_file); // create BioNJ tree
+		//iqtree.computeBioNJ(params, alignment, dist_file); // create BioNJ tree
 	} else if (params.raxmllib){
 		// Using raxml library
 		computeParsimonyTreeRax(params, iqtree, alignment);
