@@ -28,8 +28,15 @@ typedef struct {
  */
 nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH);
 
-
-double doNNISearch(tree* tr);
+/*
+ * 	do 1round of fast NNI
+ *  return new tree log-likelihood if found improving NNI otherwise 0.0
+ *
+ *  @param tr: the tree data strucutre
+ *  @param nni_count: pointer to the number of NNI that has been apply (OUT parameter)
+ *  @param deltaNNI: pointer to the average improvement made by one NNI (OUT parameters)
+ */
+double doNNISearch(tree* tr, int* nni_count, double* deltaNNI);
 
 double doOneNNI(tree * tr, nodeptr p, int swap, int optBran);
 
@@ -38,12 +45,6 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int optBran);
  *  evaluate all possible NNI moves
  */
 void evalAllNNI(tree* tr);
-
-/*
- *  do a full round of fast NNI
- *  return new tree log-likelihood if found improving NNI otherwise 0.0
- */
-double doNNISearch(tree* tr);
 
 /*
  *  cnt: number of internal branches that have been visited

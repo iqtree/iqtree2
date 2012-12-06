@@ -3,13 +3,6 @@
 #include <sys/resource.h>
 
 #include "axml.h"
-/*
-#ifndef GLOBAL_VARIABLES_DEFINITION
-#define GLOBAL_VARIABLES_DEFINITION
-#include "globalVariables.h"
-#endif
-*/
-
 #define GLOBAL_VARIABLES_DEFINITION
 #include "globalVariables.h"
 #include "nnisearch.h"
@@ -21,8 +14,7 @@ int cmp_nni(const void* nni1, const void* nni2) {
 	return (int) (1000000.f*myNNI1->deltaLH - 1000000.f*myNNI2->deltaLH);
 }
 
-
-double doNNISearch(tree* tr) {
+double doNNISearch(tree* tr, int* nni_count, double* deltaNNI) {
 	double curScore = tr->likelihood;
 
 	/* Initialize the NNI list */
@@ -40,11 +32,6 @@ double doNNISearch(tree* tr) {
 		q = q->next;
 	}
 
-#ifdef DEBUG_MAX
-	printf("Number of internal branches traversed = %d \n", cnt);
-	printf("Number of positive NNI found = %d \n", cnt_nni);
-#endif
-
 	if (cnt_nni == 0)
 		return 0.0;
 
@@ -57,22 +44,8 @@ double doNNISearch(tree* tr) {
 		}
 	}
 
-#ifdef DEBUG_MAX
-	puts("Before sorting");
-	for (i = 0; i < cnt_nni; i++) {
-		printf("NNI %d has delta = %f \n", i, impNNIList[i].deltaLH);
-	}
-	puts("After sorting");
-#endif
-
 	// sort impNNIList
 	qsort(impNNIList, cnt_nni, sizeof(nniMove), cmp_nni);
-
-#ifdef DEBUG_MAX
-	for (i = 0; i < cnt_nni; i++) {
-		printf("NNI %d has delta = %f \n", i, impNNIList[i].deltaLH);
-	}
-#endif
 
 	// creating a list of non-conflicting positive NNI
 	nniMove* nonConfNNIList = (nniMove*) calloc( cnt_nni, sizeof(nniMove) );
@@ -107,15 +80,11 @@ double doNNISearch(tree* tr) {
 	// Applying non-conflicting NNI moves
 	double delta = 1.0; // portion of NNI moves to apply
 	int notImproved;
+	int numNNI2Apply;
 	do {
 		notImproved = FALSE;
-		//printf("numNonConflictNNI = %d \n", numNonConflictNNI);
-		int numNNI2Apply = ceil(numNonConflictNNI * delta);
-		//printf("numNNI2Apply = %d \n", numNNI2Apply);
+		numNNI2Apply = ceil(numNonConflictNNI * delta);
 		for (i = 0; i < numNNI2Apply; i++) {
-//#ifdef DEBUG_MAX
-			//printf("Doing an improving NNI %d - %d with deltaLH = %f \n", nonConfNNIList[i].p->number, nonConfNNIList[i].p->back->number, nonConfNNIList[i].deltaLH);
-//#endif
 			// Just do the topological change
 			doOneNNI(tr, nonConfNNIList[i].p, nonConfNNIList[i].nniType, FALSE);
 			// Apply the store branch length
@@ -126,23 +95,6 @@ double doNNISearch(tree* tr) {
 			}
 			newviewGeneric(tr, nonConfNNIList[i].p, FALSE);
 			newviewGeneric(tr, nonConfNNIList[i].p->back, FALSE);
-			if (numNNI2Apply == 1) {
-				update(tr, p);
-			}
-//			evaluateGeneric(tr, p, FALSE);
-//			if (tr->likelihood < curScore) {
-//				doOneNNI(tr, nonConfNNIList[i].p, nonConfNNIList[i].nniType, FALSE);
-//				int j;
-//				for (j = 0; j < tr->numBranches; j++) {
-//					nonConfNNIList[i].p->z[j] = nonConfNNIList[i].z0[j];
-//					nonConfNNIList[i].p->back->z[j] = nonConfNNIList[i].z0[j];
-//				}
-//				newviewGeneric(tr, nonConfNNIList[i].p, FALSE);
-//				newviewGeneric(tr, nonConfNNIList[i].p->back, FALSE);
-//			} else {
-//				curScore = tr->likelihood;
-//			}
-
 		}
 
 		// Re-optimize all branches
@@ -155,7 +107,20 @@ double doNNISearch(tree* tr) {
 			if (numNNI2Apply == 1) {
 				printf("This is a BUG: Tree gets worse when 1 NNI is applied?\n");
 				printf("Tree supposed to get LH greater than or equal %30.20f\n", nonConfNNIList[0].likelihood);
-				return tr->likelihood;
+				printf("Rolling back the tree\n");
+				for (i = numNNI2Apply-1; i >=0; i--) {
+					doOneNNI(tr, nonConfNNIList[i].p, nonConfNNIList[i].nniType,
+							FALSE);
+					// Restore the branch length
+					int j;
+					for (j = 0; j < tr->numBranches; j++) {
+						nonConfNNIList[i].p->z[j] = nonConfNNIList[i].z0[j];
+						nonConfNNIList[i].p->back->z[j] = nonConfNNIList[i].z0[j];
+					}
+					newviewGeneric(tr, nonConfNNIList[i].p, FALSE);
+					newviewGeneric(tr, nonConfNNIList[i].p->back, FALSE);
+				}
+				return 0.00;
 			}
 			printf("Rolling back the tree\n");
 			for (i = numNNI2Apply-1; i >=0; i--) {
@@ -171,8 +136,6 @@ double doNNISearch(tree* tr) {
 				newviewGeneric(tr, nonConfNNIList[i].p, FALSE);
 				newviewGeneric(tr, nonConfNNIList[i].p->back, FALSE);
 			}
-			//evaluateGeneric(tr, tr->start, FALSE);
-			//printf("Tree likelihood after rolling back = %f \n", tr->likelihood);
 			notImproved = TRUE;
 			delta = delta * 0.5;
 		}
@@ -181,7 +144,8 @@ double doNNISearch(tree* tr) {
 	free(nniList);
 	free(impNNIList);
 	free(nonConfNNIList);
-
+	*nni_count = numNNI2Apply;
+	*deltaNNI = (tr->likelihood - curScore) / numNNI2Apply;
 	return tr->likelihood;
 }
 
@@ -362,7 +326,7 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH) {
 
 }
 
-int test_nni(int argc, char * argv[])
+/*int test_nni(int argc, char * argv[])
 {
 	struct rusage usage;
 	struct timeval start, end;
@@ -377,12 +341,12 @@ int test_nni(int argc, char * argv[])
 	}
 	tr = (tree *)malloc(sizeof(tree));
 
-	/* read the binary input, setup tree, initialize model with alignment */
+	 read the binary input, setup tree, initialize model with alignment
 	read_msa(tr,argv[1]);
 
 	tr->randomNumberSeed = 665;
 
-	/* Create random tree */
+	 Create random tree
 	//makeRandomTree(tr);
 	//printf("RANDOM TREE: Number of taxa: %d\n", tr->mxtips);
 	//printf("RANDOM TREE: Number of partitions: %d\n", tr->NumberOfModels);
@@ -398,7 +362,7 @@ int test_nni(int argc, char * argv[])
 	//printf("PARSIMONY TREE: Number of taxa: %d\n", tr->mxtips);
 	//printf("PARSIMONY TREE: Number of partitions: %d\n", tr->NumberOfModels);
 
-	/* compute the LH of the full tree */
+	 compute the LH of the full tree
 	//printf ("Virtual root: %d\n", tr->start->number);
 
 	int printBranchLengths=TRUE;
@@ -411,7 +375,7 @@ int test_nni(int argc, char * argv[])
 	fprintf(parTreeFile, "%s\n", tr->tree_string);
 	fclose(parTreeFile);
 
-	/* Model optimization */
+	 Model optimization
 	printf("Optimizing model parameters and branch lengths ... \n");
 	getrusage(RUSAGE_SELF, &usage);
 	start_tmp = usage.ru_utime;
@@ -422,7 +386,7 @@ int test_nni(int argc, char * argv[])
 	evaluateGeneric(tr, tr->start, FALSE);
 	printf("Likelihood of the parsimony tree: %f\n", tr->likelihood);
 
-	/* 8 rounds of branch length optimization */
+	 8 rounds of branch length optimization
 	//smoothTree(tr, 32);
 	//evaluateGeneric(tr, tr->start, TRUE);
 	//printf("Likelihood after branch length optimization: %f\n", tr->likelihood);
@@ -476,7 +440,8 @@ int test_nni(int argc, char * argv[])
 	//printTopology(tr, TRUE);
 	fclose(treefile);
 	return (0);
-}
+}*/
+
 
 void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* cnt, int* cnt_nni, double curLH) {
 	if ( ! isTip(p->number, tr->mxtips) ) {
