@@ -577,7 +577,7 @@ double IQTree::doIQP() {
 	} else {
 		// just to make sure IQP does it right
 		setAlignment(aln);
-		//clearAllPartialLH();
+		clearAllPartialLH();
 		if (params->gbo_replicates)
 			curScore = optimizeAllBranches(3, 1.0);
 		else {
@@ -1291,7 +1291,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 	int nniRound = 1;
 	double curLH = raxmlTree->likelihood;
-	//cout << "LH IQP Tree = " << curLH << endl;
+	cout << "LH IQP Tree = " << curLH << endl;
 	int nniApplied = 0;
 	while (true) {
 		if (beginHeu) {
@@ -1316,7 +1316,8 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 		if (newLH == 0.0) {
 			break;
 		} else {
-			//cout << "NNI round " << nniRound << "  improvement : " << newLH -curLH << endl;
+			cout << "NNI round " << nniRound << "  LH : " << newLH << endl;
+			cout << "NNI round " << nniRound << "  improvement : " << newLH -curLH << endl;
 			curLH = newLH;
 			nniRound++;
 			//cout << "deltaNNI = " << deltaNNI << endl;
