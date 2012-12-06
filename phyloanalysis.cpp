@@ -1273,13 +1273,15 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	//Update tree score
 	iqtree.curScore = bestTreeScore;
 
-	int printBranchLengths = TRUE;
-	Tree2String(iqtree.raxmlTree->tree_string, iqtree.raxmlTree,
-			iqtree.raxmlTree->start->back, printBranchLengths, TRUE, 0, 0,
-			0, SUMMARIZE_LH, 0, 0);
-	stringstream mytree;
-	mytree << iqtree.raxmlTree->tree_string;
-	iqtree.readTree(mytree, iqtree.rooted);
+	if (params.raxmllib) {
+		int printBranchLengths = TRUE;
+		Tree2String(iqtree.raxmlTree->tree_string, iqtree.raxmlTree,
+				iqtree.raxmlTree->start->back, printBranchLengths, TRUE, 0, 0,
+				0, SUMMARIZE_LH, 0, 0);
+		stringstream mytree;
+		mytree << iqtree.raxmlTree->tree_string;
+		iqtree.readTree(mytree, iqtree.rooted);
+	}
 
 	if (iqtree.isSuperTree())
 		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
