@@ -592,7 +592,8 @@ double IQTree::doIQP() {
 			 }
 			 */
 		}
-			curScore = optimizeAllBranches(1);
+			curScore = optimizeAllBranches(3, 1.0);
+			cout << "IQP log-likelihood: " << curScore << endl;
 	}
 
 	//cout << "IQP log-likelihood: " << curScore << endl;
@@ -866,21 +867,21 @@ double IQTree::doIQPNNI() {
 				stringstream iqp_tree_string;
 				printTree(iqp_tree_string);
 				treeReadTopologyString( (char*) iqp_tree_string.str().c_str(), raxmlTree);
-				smoothTree(raxmlTree, 1);
-				evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
+				evaluateGeneric(raxmlTree, raxmlTree->start, TRUE);
+				smoothTree(raxmlTree, 10);
+				//evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
 				curScore = raxmlTree->likelihood;
 			}
 		}
 
 		setRootNode(params->root);
 
-		/*        cout.precision(15);
-		 if (verbose_mode >= VB_DEBUG) {
-		 string iqp_tree = tree_file_name + "IQP" + convertIntToString(
-		 cur_iteration);
-		 printTree(iqp_tree.c_str());
-		 }
-		 */
+		 //cout.precision(15);
+		if (verbose_mode >= VB_DEBUG) {
+			string iqp_tree = tree_file_name + "IQP" + convertIntToString(
+					cur_iteration);
+			printTree(iqp_tree.c_str());
+		}
 
 		int skipped = 0;
 		int nni_count = 0;

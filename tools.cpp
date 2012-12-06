@@ -653,7 +653,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.approximate_nni = false;
 	params.do_compression = false;
 
-	params.new_heuristic = true;
+	params.new_heuristic = false;
 	params.write_best_trees = false;
     params.iteration_multiple = 1;
 	params.vns_search = false;

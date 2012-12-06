@@ -1148,9 +1148,22 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	// start the search with user-defined tree
 	if (params.user_file) {
 		cout << "Reading user tree file " << params.user_file << " ..." << endl;
-		bool myrooted = params.is_rooted;
-		iqtree.readTree(params.user_file, myrooted);
-		iqtree.setAlignment(alignment);
+			bool myrooted = params.is_rooted;
+			iqtree.readTree(params.user_file, myrooted);
+			iqtree.setAlignment(alignment);
+			if (params.raxmllib) {
+				// Create tree data structure for RAxML kernel
+				iqtree.raxmlTree = (tree*) (malloc(sizeof(tree)));
+				/* read the binary input, setup tree, initialize model with alignment */
+				read_msa(iqtree.raxmlTree, params.binary_aln_file);
+				stringstream iqp_tree_string;
+				iqtree.printTree(iqp_tree_string);
+				treeReadTopologyString( (char*) iqp_tree_string.str().c_str(), iqtree.raxmlTree);
+				evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, TRUE);
+				cout << "Log-Likelihood of user tree: " << iqtree.raxmlTree->likelihood << endl;
+				//smoothTree(raxmlTree, 1);
+			}
+
 	} else if (params.parsimony_tree) {
 		iqtree.computeParsimonyTree(params.out_prefix, alignment);
 		//iqtree.computeBioNJ(params, alignment, dist_file); // create BioNJ tree
@@ -1259,6 +1272,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	//Update tree score
 	iqtree.curScore = bestTreeScore;
+
+	int printBranchLengths = TRUE;
+	Tree2String(iqtree.raxmlTree->tree_string, iqtree.raxmlTree,
+			iqtree.raxmlTree->start->back, printBranchLengths, TRUE, 0, 0,
+			0, SUMMARIZE_LH, 0, 0);
+	stringstream mytree;
+	mytree << iqtree.raxmlTree->tree_string;
+	iqtree.readTree(mytree, iqtree.rooted);
 
 	if (iqtree.isSuperTree())
 		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
@@ -1427,6 +1448,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	} else {
 		iqtree.setBestScore(iqtree.curScore);
 	}
+
 	cout << endl;
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
 	t_tree_search_end = getCPUTime();
@@ -1436,12 +1458,16 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	iqtree.root = iqtree.findLeafName(alignment->getSeqName(0));
 	assert(iqtree.root);
 
-	double myscore = iqtree.getBestScore();
-	iqtree.computePatternLikelihood(pattern_lh, &myscore);
-	//tree.computeLikelihood(pattern_lh);
+	double myscore;
+	if (!params.raxmllib) {
+		myscore = iqtree.getBestScore();
+		iqtree.computePatternLikelihood(pattern_lh, &myscore);
+		//tree.computeLikelihood(pattern_lh);
 
-	// compute logl variance
-	iqtree.logl_variance = iqtree.computeLogLVariance();
+		// compute logl variance
+		iqtree.logl_variance = iqtree.computeLogLVariance();
+	}
+
 
 	if (params.print_site_lh) {
 		string site_lh_file = params.out_prefix;
