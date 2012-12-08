@@ -21,4 +21,5 @@ char *Tree2String(char *treestr, tree *tr, nodeptr p, boolean printBranchLengths
 
 extern void treeReadTopologyString(char *treeString, tree *tr);
 
+
 #endif /* TREEIO_H_ */

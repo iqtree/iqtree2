@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/resource.h>
 
 #include "axml.h"
@@ -7,6 +8,16 @@
 #include "globalVariables.h"
 #include "nnisearch.h"
 #include "phylolib.h"
+
+int treeReadLenString(const char *buffer, tree *tr, boolean readBranches,
+		boolean readNodeLabels, boolean topologyOnly) {
+	FILE *stream;
+
+	stream = fmemopen(buffer, strlen(buffer), "r");
+	treeReadLen(stream, tr, readBranches, readNodeLabels, topologyOnly);
+	fclose(stream);
+
+}
 
 int cmp_nni(const void* nni1, const void* nni2) {
 	nniMove* myNNI1 = (nniMove*) nni1;

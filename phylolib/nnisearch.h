@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+extern int treeReadLenString (const char *buffer, tree *tr, boolean readBranches, boolean readNodeLabels, boolean topologyOnly);
+
 
 typedef struct {
 	tree* tr;
