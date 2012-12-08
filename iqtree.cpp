@@ -591,9 +591,10 @@ double IQTree::doIQP() {
 			 //curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
 			 }
 			 */
+			curScore = optimizeAllBranches(1);
+			//cout << "IQP log-likelihood: " << curScore << endl;
 		}
-			curScore = optimizeAllBranches(3, 1.0);
-			cout << "IQP log-likelihood: " << curScore << endl;
+
 	}
 
 	//cout << "IQP log-likelihood: " << curScore << endl;
@@ -864,11 +865,37 @@ double IQTree::doIQPNNI() {
 				curScore = doIQP();
 			} else {
 				doIQP();
+				//printTree( (string(params->out_prefix) + ".iqp_before." + convertIntToString(cur_iteration)).c_str() );
 				stringstream iqp_tree_string;
+
+				// TODO: only works for 1 partition
+				transformBranchLenRAX(raxmlTree->fracchange);
 				printTree(iqp_tree_string);
-				treeReadTopologyString( (char*) iqp_tree_string.str().c_str(), raxmlTree);
-				evaluateGeneric(raxmlTree, raxmlTree->start, TRUE);
-				smoothTree(raxmlTree, 10);
+				//treeReadTopologyStr0ing( (char*) iqp_tree_string.str().c_str(), raxmlTree);
+				treeReadLenString(iqp_tree_string.str().c_str(), raxmlTree, TRUE, FALSE, FALSE);
+
+				/*
+				Tree2String(raxmlTree->tree_string, raxmlTree,
+						raxmlTree->start->back, TRUE, TRUE, 0, 0,
+						0, SUMMARIZE_LH, 0, 0);
+				printString2File(string(raxmlTree->tree_string),
+						(string(params->out_prefix) + ".iqp_before_raxstring." + convertIntToString(cur_iteration)).c_str());
+						*/
+				//modOpt(raxmlTree, 0.1);
+
+				//evaluateGeneric(raxmlTree, raxmlTree->start, TRUE);
+				//cout << "LH before smoothTree" << raxmlTree->likelihood << endl;
+				smoothTree(raxmlTree, 1);
+				evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
+
+				/*
+				Tree2String(raxmlTree->tree_string, raxmlTree,
+						raxmlTree->start->back, TRUE, TRUE, 0, 0,
+						0, SUMMARIZE_LH, 0, 0);
+				ofstream mytree((string(params->out_prefix) + ".iqp_after." +  convertIntToString(cur_iteration) ).c_str());
+				mytree << raxmlTree->tree_string;
+				mytree.close();
+				*/
 				//evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
 				curScore = raxmlTree->likelihood;
 			}
@@ -932,13 +959,18 @@ double IQTree::doIQPNNI() {
 				// Start NNI search using Phylolib kernel
 				curScore = optimizeNNIRax();
 				// read in new tree
+				/*
 				int printBranchLengths = TRUE;
 				Tree2String(raxmlTree->tree_string, raxmlTree,
 						raxmlTree->start->back, printBranchLengths, TRUE, 0, 0,
 						0, SUMMARIZE_LH, 0, 0);
-				stringstream mytree;
+				//if (verbose_mode >= VB_MED)
+					//cout << raxmlTree->tree_string << endl;
+				/*stringstream mytree;
 				mytree << raxmlTree->tree_string;
 				readTree(mytree, rooted);
+				*/
+
 			} else {
 				curScore = optimizeNNI();
 			}
@@ -1292,7 +1324,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 	int nniRound = 1;
 	double curLH = raxmlTree->likelihood;
-	cout << "LH IQP Tree = " << curLH << endl;
+	//cout << "LH IQP Tree = " << curLH << endl;
 	int nniApplied = 0;
 	while (true) {
 		if (beginHeu) {
@@ -1317,8 +1349,8 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 		if (newLH == 0.0) {
 			break;
 		} else {
-			cout << "NNI round " << nniRound << "  LH : " << newLH << endl;
-			cout << "NNI round " << nniRound << "  improvement : " << newLH -curLH << endl;
+			//cout << "NNI round " << nniRound << "  LH : " << newLH << endl;
+			//cout << "NNI round " << nniRound << "  improvement : " << newLH -curLH << endl;
 			curLH = newLH;
 			nniRound++;
 			//cout << "deltaNNI = " << deltaNNI << endl;

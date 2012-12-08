@@ -760,7 +760,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    int fixNegativeBranch(double fixed_length, Node *node = NULL, Node *dad = NULL);
+    int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
 
     /****************************************************************************

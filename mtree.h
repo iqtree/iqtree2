@@ -383,6 +383,14 @@ public:
 	void scaleLength(double norm, bool make_int = false, Node *node = NULL, Node *dad = NULL);
 
 	/**
+		scale the length of all branches for RAxML internal presentation
+		@param norm normalized factor
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+	*/
+	void transformBranchLenRAX(double factor, Node *node = NULL, Node *dad = NULL);
+
+	/**
 		scale the clade supports of all internal nodes to a norm factor
 		@param norm normalized factor
 		@param make_int TRUE to round lengths to int, FALSE otherwise

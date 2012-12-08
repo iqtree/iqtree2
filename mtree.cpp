@@ -1000,6 +1000,18 @@ void MTree::scaleLength(double norm, bool make_int, Node *node, Node *dad) {
     }
 }
 
+void MTree::transformBranchLenRAX(double factor, Node *node, Node *dad) {
+    if (!node) node = root;
+    FOR_NEIGHBOR_DECLARE(node, NULL, it) {
+        (*it)->length /= factor;
+        (*it)->length = exp(-(*it)->length);
+    }
+
+    FOR_NEIGHBOR(node, dad, it) {
+    	transformBranchLenRAX(factor, (*it)->node, node);
+    }
+}
+
 void MTree::scaleCladeSupport(double norm, bool make_int, Node *node, Node *dad) {
     if (!node) node = root;
     if (!node->isLeaf() && !node->name.empty()) {

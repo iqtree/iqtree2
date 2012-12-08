@@ -334,6 +334,11 @@ struct NNIInfo {
  */
 struct Params {
 
+	/*
+	 *  Option to compare BIONJ and Parsimony Tree
+	 */
+	bool par_vs_bionj;
+
 	/**
 	 *
 	 */

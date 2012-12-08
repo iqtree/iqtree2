@@ -388,13 +388,13 @@ void readInitTaxaFile(Params &params, int ntaxa, StrVector &tax_name) {
 }
 
 void printString2File(string myString, string filename) {
-	  ofstream myfile(filename.c_str());
-	  if (myfile.is_open()) {
-		  myfile << myString;
-		  myfile.close();
-	  } else {
-		  cout << "Unable to open file " << filename << endl;
-	  }
+	ofstream myfile(filename.c_str());
+	if (myfile.is_open()) {
+		myfile << myString;
+		myfile.close();
+	} else {
+		cout << "Unable to open file " << filename << endl;
+	}
 }
 
 void readInitAreaFile(Params &params, int nareas, StrVector &area_name) {
@@ -491,14 +491,14 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
 }
 
 void get2RandNumb(const int size, int &first, int &second) {
-    // pick a random element
-    first = random_int(size);
-    // pick a random element from what's left (there is one fewer to choose from)...
-    second = random_int(size-1);
-    // ...and adjust second choice to take into account the first choice
-    if (second >= first) {
-        ++second;
-    }
+	// pick a random element
+	first = random_int(size);
+	// pick a random element from what's left (there is one fewer to choose from)...
+	second = random_int(size-1);
+	// ...and adjust second choice to take into account the first choice
+	if (second >= first) {
+		++second;
+	}
 }
 void parseArg(int argc, char *argv[], Params &params) {
 	int cnt;
@@ -650,18 +650,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.nni_sort = false;
 	params.nni_opt_5branches = false;
 	params.testNNI = false;
-    params.approximate_nni = false;
+	params.approximate_nni = false;
 	params.do_compression = false;
 
 	params.new_heuristic = false;
 	params.write_best_trees = false;
-    params.iteration_multiple = 1;
+	params.iteration_multiple = 1;
 	params.vns_search = false;
 	params.speedup_iter = 50;
 	params.raxmllib = false;
 	params.parbran = false;
 	params.binary_aln_file = NULL;
 	params.maxtime = 0.00;
+	params.par_vs_bionj = false;
 	params.tabu = false;
 	params.avh_test = 0;
 	params.site_freq_file = NULL;
@@ -670,7 +671,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
 	params.model_test_criterion = MTC_BIC;
 	params.model_test_sample_size = 0;
-	
+
 	struct timeval tv;
 	struct timezone tz;
 	// initialize random seed based on current time
@@ -1438,20 +1439,24 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.do_compression = true;
 			} else if (strcmp(argv[cnt], "-newheu") == 0) {
 				params.new_heuristic = true;
-			// Enable RAxML kernel
-			} else if (strcmp(argv[cnt], "-rax") == 0) {
-				params.raxmllib = true;
-			// Binary alignment for RAxML kernel
+				// Enable RAxML kernel
 			} else if (strcmp(argv[cnt], "-maxtime") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -maxtime <time_in_minutes>";
 				params.maxtime = convert_double(argv[cnt]);
+			} else if(strcmp(argv[cnt], "-best_start") == 0) {
+				params.par_vs_bionj = true;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -best_start <binary_alignment_file>";
+				params.binary_aln_file = argv[cnt];
 			} else if (strcmp(argv[cnt], "-ba") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -ba <binary_alignment_file>";
 				params.binary_aln_file = argv[cnt];
+				params.raxmllib = true;
 			} else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
 				params.parbran = true;
 			} else if (strcmp(argv[cnt], "-wbt") == 0) {
@@ -1524,9 +1529,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 	} // for
 	if (!params.user_file && !params.aln_file && !params.ngs_file && !params.ngs_mapped_reads && !params.partition_file)
 #ifdef IQ_TREE
-				usage_iqtree(argv, false);
+		usage_iqtree(argv, false);
 #else
-				usage(argv, false);
+	usage(argv, false);
 #endif
 	if (!params.out_prefix) {
 		if (params.partition_file)
@@ -1896,26 +1901,26 @@ double randomunitintervall()
 
 int init_random(int seed)   /* RAND4 */
 {
-//    srand((unsigned) time(NULL));
-//    if (seed < 0) 
-// 	seed = rand();
-   _idum=-(long) seed;
+	//    srand((unsigned) time(NULL));
+	//    if (seed < 0)
+	// 	seed = rand();
+	_idum=-(long) seed;
 #  ifndef PARALLEL
-	   cout << "(Using RAND4 Random Number Generator)" << endl;
+	cout << "(Using RAND4 Random Number Generator)" << endl;
 #  else /* PARALLEL */
-	   {
-	   int n;
-	   if (PP_IamMaster) {
-	     cout << "(Using RAND4 Random Number Generator with leapfrog method)" << endl;
-	   }
-	   for (n=0; n<PP_Myid; n++)
-		(void) randomunitintervall();
-		if (verbose_mode >= VB_MED) {
-	      cout << "(" << PP_Myid << ") !!! random seed set to " << seed << ", " << n << " drawn !!!" << endl;
+	{
+		int n;
+		if (PP_IamMaster) {
+			cout << "(Using RAND4 Random Number Generator with leapfrog method)" << endl;
 		}
-	   }
+		for (n=0; n<PP_Myid; n++)
+			(void) randomunitintervall();
+		if (verbose_mode >= VB_MED) {
+			cout << "(" << PP_Myid << ") !!! random seed set to " << seed << ", " << n << " drawn !!!" << endl;
+		}
+	}
 #  endif
-   return (seed);
+	return (seed);
 }  /* initrandom */ 
 
 /******************/
@@ -1928,27 +1933,27 @@ int *randstream;
 
 int init_random(int seed)
 {
-//    srand((unsigned) time(NULL));
-   if (seed < 0) 
-	seed = make_sprng_seed();
+	//    srand((unsigned) time(NULL));
+	if (seed < 0)
+		seed = make_sprng_seed();
 #  ifndef PARALLEL
-	   cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
-	   randstream = init_sprng(0,1,seed,SPRNG_DEFAULT); /*init stream*/
-		if (verbose_mode >= VB_MED) {
-	      print_sprng(randstream);
-		}
+	cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
+	randstream = init_sprng(0,1,seed,SPRNG_DEFAULT); /*init stream*/
+	if (verbose_mode >= VB_MED) {
+		print_sprng(randstream);
+	}
 #  else /* PARALLEL */
-	   if (PP_IamMaster) {
-	     cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
-	   }
-	   /* MPI_Bcast(&seed, 1, MPI_UNSIGNED, PP_MyMaster, MPI_COMM_WORLD); */
-	   randstream = init_sprng(PP_Myid,PP_NumProcs,seed,SPRNG_DEFAULT); /*initialize stream*/
-		if (verbose_mode >= VB_MED) {
-	      cout << "(" << PP_Myid << ") !!! random seed set to " << seed << " !!!" << endl;
-	      print_sprng(randstream);
-		}
+	if (PP_IamMaster) {
+		cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
+	}
+	/* MPI_Bcast(&seed, 1, MPI_UNSIGNED, PP_MyMaster, MPI_COMM_WORLD); */
+	randstream = init_sprng(PP_Myid,PP_NumProcs,seed,SPRNG_DEFAULT); /*initialize stream*/
+	if (verbose_mode >= VB_MED) {
+		cout << "(" << PP_Myid << ") !!! random seed set to " << seed << " !!!" << endl;
+		print_sprng(randstream);
+	}
 #  endif /* PARALLEL */
-   return (seed);
+	return (seed);
 }  /* initrandom */ 
 
 
@@ -1968,21 +1973,21 @@ double random_double()
 #  ifndef FIXEDINTRAND
 #	ifndef PARALLEL
 #	   if RAN_TYPE == RAN_STANDARD
-		return ((double)rand())/((double)RAND_MAX+1);
+	return ((double)rand())/((double)RAND_MAX+1);
 #	   elif RAN_TYPE == RAN_SPRNG
-		return sprng(randstream);
+	return sprng(randstream);
 #	   else /* NO_SPRNG */
-		return randomunitintervall();
+	return randomunitintervall();
 #	   endif /* NO_SPRNG */
 #	else /* NOT PARALLEL */
 #	   if RAN_TYPE == RAN_SPRNG
-		return sprng(randstream);
+	return sprng(randstream);
 #	   else /* NO_SPRNG */
-		int m;
-		for (m=1; m<PP_NumProcs; m++)
-			(void) randomunitintervall();
-		PP_randn+=(m-1); PP_rand++;
-		return randomunitintervall();
+	int m;
+	for (m=1; m<PP_NumProcs; m++)
+		(void) randomunitintervall();
+	PP_randn+=(m-1); PP_rand++;
+	return randomunitintervall();
 #	   endif /* NO_SPRNG */
 #	endif /* NOT PARALLEL */
 #  else /* FIXEDINTRAND */
@@ -2007,90 +2012,90 @@ ALGORITHM:	Adapted from a polynomial approximation in:
 		Note:
 			This routine has six digit accuracy, so it is only useful for absolute
 			z values < 6.  For z values >= to 6.0, Normalz() returns 0.0.
-*/
+ */
 
 double Normalz (double z)        /*VAR returns cumulative probability from -oo to z VAR normal z value */
 {	double 	y, x, w;
-	
-	if (z == 0.0)
-		x = 0.0;
-	else
-		{
-		y = 0.5 * fabs (z);
-		if (y >= (Z_MAX * 0.5))
-			x = 1.0;
-		else if (y < 1.0)
-			{
-			w = y*y;
-			x = ((((((((0.000124818987 * w
+
+if (z == 0.0)
+	x = 0.0;
+else
+{
+	y = 0.5 * fabs (z);
+	if (y >= (Z_MAX * 0.5))
+		x = 1.0;
+	else if (y < 1.0)
+	{
+		w = y*y;
+		x = ((((((((0.000124818987 * w
 				-0.001075204047) * w +0.005198775019) * w
 				-0.019198292004) * w +0.059054035642) * w
 				-0.151968751364) * w +0.319152932694) * w
 				-0.531923007300) * w +0.797884560593) * y * 2.0;
-			}
-		else
-			{
-			y -= 2.0;
-			x = (((((((((((((-0.000045255659 * y
+	}
+	else
+	{
+		y -= 2.0;
+		x = (((((((((((((-0.000045255659 * y
 				+0.000152529290) * y -0.000019538132) * y
 				-0.000676904986) * y +0.001390604284) * y
 				-0.000794620820) * y -0.002034254874) * y
 				+0.006549791214) * y -0.010557625006) * y
 				+0.011630447319) * y -0.009279453341) * y
 				+0.005353579108) * y -0.002141268741) * y
-					+0.000535310849) * y +0.999936657524;
-				}
-			}
-	return (z > 0.0 ? ((x + 1.0) * 0.5) : ((1.0 - x) * 0.5));	
+				+0.000535310849) * y +0.999936657524;
+	}
+}
+return (z > 0.0 ? ((x + 1.0) * 0.5) : ((1.0 - x) * 0.5));
 }
 
 /**************  ChiSquare: probability of chi square value *************/
 /*ALGORITHM Compute probability of chi square value.
 Adapted from: 	Hill, I. D. and Pike, M. C.  Algorithm 299.Collected Algorithms for the CACM 1967 p. 243
 Updated for rounding errors based on remark inACM TOMS June 1985, page 185. Found in Perlman.lib*/
-	
+
 double computePValueChiSquare (double x, int df)  /* x: obtained chi-square value,  df: degrees of freedom */
 {
 	double	a, y, s;
 	double	e, c, z;
 	int 	even;         /* true if df is an even number */
-	
+
 	if (x <= 0.0 || df < 1)
 		return (1.0);
-	
+
 	y= 1;
-	
+
 	a = 0.5 * x;
 	even = (2*(df/2)) == df;
 	if (df > 1)
 		y = ex (-a);
 	s = (even ? y : (2.0 * Normalz (-sqrt(x))));
 	if (df > 2)
-		{
+	{
 		x = 0.5 * (df - 1.0);
 		z = (even ? 1.0 : 0.5);
 		if (a > BIGX)
-			{
-   		e = (even ? 0.0 : LOG_SQRT_PI);
+		{
+			e = (even ? 0.0 : LOG_SQRT_PI);
 			c = log (a);
 			while (z <= x)
-				{
+			{
 				e = log (z) + e;
 				s += ex (c*z-a-e);
 				z += 1.0;
-				}
-			return (s);
 			}
+			return (s);
+		}
 		else
-			{
+		{
 			e = (even ? 1.0 : (I_SQRT_PI / sqrt (a)));
 			c = 0.0;
 			while (z <= x)
-				{
+			{
 				e = e * (a / z);
 				c = c + e;
 				z += 1.0;
-				}
+			}
 			return (c * y + s);
 		}
 	}
@@ -2098,4 +2103,4 @@ double computePValueChiSquare (double x, int df)  /* x: obtained chi-square valu
 		return (s);
 }
 
-	
+

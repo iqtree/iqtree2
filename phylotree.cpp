@@ -784,7 +784,7 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     setAlignment(alignment);
     initializeAllPartialPars();
 	clearAllPartialLH();
-	fixNegativeBranch(0);
+	fixNegativeBranch(true);
 	cout << "Time taken: " << getCPUTime() - start_time << " sec" << endl;
 	string file_name = out_prefix;
 	file_name += ".parstree";
@@ -2061,12 +2061,12 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
     setAlignment(alignment);
 }
 
-int PhyloTree::fixNegativeBranch(double fixed_length, Node *node, Node *dad) {
+int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     if (!node) node = root;
     int fixed = 0;
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-        if ((*it)->length <= 0.0) { // negative branch length detected
+        if ((*it)->length <= 0.0 || force) { // negative branch length detected
 			int branch_subst;
 			int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
 			// first compute the observed parsimony distance
@@ -2086,7 +2086,7 @@ int PhyloTree::fixNegativeBranch(double fixed_length, Node *node, Node *dad) {
             (*it)->node->findNeighbor(node)->length = (*it)->length;
             fixed++;
         }
-        fixed += fixNegativeBranch(fixed_length, (*it)->node, node);
+        fixed += fixNegativeBranch(force, (*it)->node, node);
     }
     return fixed;
 }
