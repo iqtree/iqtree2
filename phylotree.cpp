@@ -2049,7 +2049,6 @@ double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &
 void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_file) {
     string bionj_file = params.out_prefix;
     bionj_file += ".bionj";
-
     cout << "Computing BIONJ tree..." << endl;
     BioNj bionj;
     bionj.create(dist_file.c_str(), bionj_file.c_str());
