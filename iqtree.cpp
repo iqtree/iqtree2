@@ -797,12 +797,10 @@ double IQTree::doIQPNNI() {
 	bool speedupMsg = false;
 	for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration);
 			cur_iteration++) {
-		if (params->maxtime > 0.00) {
-			double min_elapsed = (getCPUTime() - params->startTime)/60;
-			if (min_elapsed > params->maxtime) {
-				maxTimeReached = true;
-				break;
-			}
+		double min_elapsed = (getCPUTime() - params->startTime)/60;
+		if (min_elapsed > params->maxtime) {
+			maxTimeReached = true;
+			break;
 		}
 		// estimate logl_cutoff
 		if (params->avoid_duplicated_trees && max_candidate_trees > 0
@@ -966,7 +964,7 @@ double IQTree::doIQPNNI() {
 						0, SUMMARIZE_LH, 0, 0);
 				//if (verbose_mode >= VB_MED)
 					//cout << raxmlTree->tree_string << endl;
-				/*stringstream mytree;
+				stringstream mytree;
 				mytree << raxmlTree->tree_string;
 				readTree(mytree, rooted);
 				*/

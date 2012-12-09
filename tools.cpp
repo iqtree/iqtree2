@@ -657,11 +657,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.write_best_trees = false;
 	params.iteration_multiple = 1;
 	params.vns_search = false;
-	params.speedup_iter = 50;
+	params.speedup_iter = 100;
 	params.raxmllib = false;
 	params.parbran = false;
 	params.binary_aln_file = NULL;
-	params.maxtime = 0.00;
+	params.maxtime = 1000000;
 	params.par_vs_bionj = false;
 	params.tabu = false;
 	params.avh_test = 0;
