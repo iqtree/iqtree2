@@ -30,6 +30,8 @@
 #include "mtreeset.h"
 
 #include "phylolib/axml.h"
+#include "phylolib/nnisearch.h"
+
 
 typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;
@@ -57,6 +59,7 @@ struct nodeheightcmp {
         return (s1->height) < (s2->height);
     }
 };
+
 
 struct IntBranchInfo {
 	PhyloNode *node1;
@@ -494,6 +497,11 @@ protected:
      */
     vector<NNIMove> posNNIs;
 
+    /**
+     *  data structure to store delta LH (in NNICUT heuristic)
+     */
+    NNICUT nnicut;
+
 
     /**
             List contains non-conflicting NNI moves for the current tree;
@@ -706,6 +714,8 @@ protected:
             @param dad dad of 'node', used to direct the recursion
      */
     void findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, Node *node = NULL, Node *dad = NULL);
+
+    void estDeltaMin();
 
 };
 

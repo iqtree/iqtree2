@@ -21,7 +21,6 @@
 #include "phylosupertree.h"
 #include "mexttree.h"
 #include "timeutil.h"
-#include "phylolib/nnisearch.h"
 
 //TODO Only to test
 int cntBranches = 0;
@@ -62,6 +61,8 @@ void IQTree::init() {
 	raxmlTree = NULL;
 	//boot_splits = new SplitGraph;
 	//initLeafFrequency();
+	nnicut.num_delta = 0;
+	nnicut.delta_min = DBL_MAX;
 }
 
 IQTree::IQTree(Alignment *aln) :
@@ -154,6 +155,8 @@ void IQTree::setParams(Params &params) {
 		}
 		cout << "Max candidate trees (tau): " << max_candidate_trees << endl;
 	}
+
+	nnicut.doNNICut = params.estimate_nni_cutoff;
 }
 
 IQTree::~IQTree() {
@@ -1320,6 +1323,11 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 }
 
 double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
+	if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
+		estDeltaMin();
+		cout << "delta_min = " << nnicut.delta_min << endl;
+		//exit(1);
+	}
 	int nniRound = 1;
 	double curLH = raxmlTree->likelihood;
 	//cout << "LH IQP Tree = " << curLH << endl;
@@ -1343,7 +1351,7 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 		}
 		int nni_count = 0;
 		double deltaNNI = 0.0;
-		double newLH = doNNISearch(raxmlTree, &nni_count, &deltaNNI);
+		double newLH = doNNISearch(raxmlTree, &nni_count, &deltaNNI, &nnicut);
 		if (newLH == 0.0) {
 			break;
 		} else {
@@ -1457,6 +1465,12 @@ inline double IQTree::estDelta95() {
 		int index = floor(vecImpProNNI.size() * speed_conf);
 		return vecImpProNNI[index];
 	}
+}
+
+void IQTree::estDeltaMin() {
+	sort(nnicut.delta, nnicut.delta + MAX_NUM_DELTA);
+	int index = floor(MAX_NUM_DELTA * speed_conf);
+	nnicut.delta_min = nnicut.delta[index];
 }
 
 void IQTree::changeBranLen(PhyloNode *node1, PhyloNode *node2, double newlen) {
@@ -1631,6 +1645,8 @@ void IQTree::estimateNNICutoff(Params* params) {
 		memmove(lh_score, nni_info[i].lh_score, 4 * sizeof(double));
 		std::sort(lh_score + 1, lh_score + 4); // sort in ascending order
 		delta[i] = lh_score[0] - lh_score[2];
+		if (verbose_mode >= VB_MED)
+		cout << i << ": " << lh_score[0] << " " << lh_score[1] << " " << lh_score[2] << " " << lh_score[3] << endl;
 	}
 	std::sort(delta, delta + nni_info.size());
 	nni_cutoff = delta[nni_info.size() / 20];

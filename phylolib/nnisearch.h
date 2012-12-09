@@ -8,6 +8,15 @@ extern "C" {
 extern int treeReadLenString (const char *buffer, tree *tr, boolean readBranches, boolean readNodeLabels, boolean topologyOnly);
 
 
+#define MAX_NUM_DELTA 1000
+
+typedef struct {
+	double delta[MAX_NUM_DELTA];
+	int num_delta;
+	double delta_min;
+	int doNNICut;
+} NNICUT;
+
 typedef struct {
 	tree* tr;
 	nodeptr p;
@@ -28,7 +37,7 @@ typedef struct {
  *  @param curLH the curren log-likelihood of the tree
  *  @return the best NNI move found for this branch or nothing
  */
-nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH);
+nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut);
 
 /*
  * 	do 1round of fast NNI
@@ -38,7 +47,7 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH);
  *  @param nni_count: pointer to the number of NNI that has been apply (OUT parameter)
  *  @param deltaNNI: pointer to the average improvement made by one NNI (OUT parameters)
  */
-double doNNISearch(tree* tr, int* nni_count, double* deltaNNI);
+double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut);
 
 double doOneNNI(tree * tr, nodeptr p, int swap, int optBran);
 
@@ -52,7 +61,7 @@ void evalAllNNI(tree* tr);
  *  cnt: number of internal branches that have been visited
  *  cnt_nni: number of positive NNI found
  */
-void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* cnt_bran, int* cnt_nni, double curLH);
+void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* cnt_bran, int* cnt_nni, double curLH, NNICUT* nnicut);
 /*
  *  Save the likelihood vector of p and q to the 2 pointer p_lhsave and
  *  q_lhsave.

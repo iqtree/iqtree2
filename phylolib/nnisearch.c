@@ -8,15 +8,16 @@
 #include "globalVariables.h"
 #include "nnisearch.h"
 #include "phylolib.h"
+#include <math.h>
 
 int treeReadLenString(const char *buffer, tree *tr, boolean readBranches,
 		boolean readNodeLabels, boolean topologyOnly) {
 	FILE *stream;
 
-	stream = fmemopen(buffer, strlen(buffer), "r");
-	treeReadLen(stream, tr, readBranches, readNodeLabels, topologyOnly);
+	stream = fmemopen((char*)buffer, strlen(buffer), "r");
+	int lcount = treeReadLen(stream, tr, readBranches, readNodeLabels, topologyOnly);
 	fclose(stream);
-
+	return lcount;
 }
 
 int cmp_nni(const void* nni1, const void* nni2) {
@@ -25,7 +26,15 @@ int cmp_nni(const void* nni1, const void* nni2) {
 	return (int) (1000000.f*myNNI1->deltaLH - 1000000.f*myNNI2->deltaLH);
 }
 
-double doNNISearch(tree* tr, int* nni_count, double* deltaNNI) {
+int compareDouble (const void * a, const void * b)
+{
+  if (*(double*)a > *(double*)b) return 1;
+  else if (*(double*)a < *(double*)b) return -1;
+  else return 0;
+}
+
+
+double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut) {
 	double curScore = tr->likelihood;
 
 	/* Initialize the NNI list */
@@ -39,7 +48,7 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI) {
 	int cnt_nni = 0; // number of positive NNI found
 
 	while ( q != p ) {
-		evalNNIForSubtree(tr, q->back, nniList, &cnt, &cnt_nni, curScore);
+		evalNNIForSubtree(tr, q->back, nniList, &cnt, &cnt_nni, curScore, nnicut);
 		q = q->next;
 	}
 
@@ -204,10 +213,18 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int optBran) {
 	}
 }
 
-nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH) {
+nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 	nodeptr q = p->back;
 	assert ( ! isTip(p->number, tr->mxtips) );
 	assert ( ! isTip(q->number, tr->mxtips) );
+	int i;
+	nniMove nni0; // nni0 means no NNI move is done
+	nni0.p = p;
+	nni0.nniType = 0;
+	nni0.deltaLH = 0;
+	for (i = 0; i < tr->numBranches; i++) {
+		nni0.z[i] = p->z[i];
+	}
 
 #ifdef DEBUG_MAX
 	Tree2String(tr->tree_string, tr, tr->start->back, TRUE, FALSE, 0, 0, 0, SUMMARIZE_LH, 0,0);
@@ -216,7 +233,6 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH) {
 
 	/* Backup the current branch length */
 	double z0[NUM_BRANCHES];
-	int i;
 	for(i = 0; i < tr->numBranches; i++) {
 		z0[i] = p->z[i];
 	}
@@ -230,19 +246,31 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH) {
 	//printf("Current tree LH = %f \n", tr->likelihood);
 	//curLH = tr->likelihood;
 	double lh0 = curLH;
+	double multiLH = 0.0;
+	if (nnicut->doNNICut) {
+		// compute likelihood of the multifurcating tree
+		for(i = 0; i < tr->numBranches; i++) {
+			p->z[i] = 1.0;
+			p->back->z[i] = 1.0;
+		}
+		// now compute the log-likelihood
+		newviewGeneric(tr, p, FALSE);
+		newviewGeneric(tr, p->back, FALSE);
+		evaluateGeneric(tr, p, FALSE);
+		multiLH = tr->likelihood;
+		//printf("curLH - multiLH : %f - %f \n", curLH, multiLH);
+		for(i = 0; i < tr->numBranches; i++) {
+			p->z[i] = z0[i];
+			p->back->z[i] = z0[i];
+		}
+		if (curLH - multiLH > nnicut->delta_min)
+			return nni0;
+	}
 	//printf("zNew: %f \n", getBranchLength(tr, 0, p));
 
 #ifdef DEBUG_MAX
 	printf("lh0: %f \n", lh0);
 #endif
-
-	nniMove nni0; // nni0 means no NNI move is done
-	nni0.p = p;
-	nni0.nniType = 0;
-	nni0.deltaLH = 0;
-	for (i = 0; i < tr->numBranches; i++) {
-		nni0.z[i] = p->z[i];
-	}
 
 	/* TODO Save the likelihood vector at node p and q */
 	//saveLHVector(p, q, p_lhsave, q_lhsave);
@@ -310,6 +338,23 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH) {
 		p->z[i] = z0[i];
 		p->back->z[i] = z0[i];
 	}
+
+	if (nnicut->doNNICut && (nnicut->num_delta) < MAX_NUM_DELTA) {
+		double lh_array[3];
+		lh_array[0] = curLH;
+		lh_array[1] = lh1;
+		lh_array[2] = lh2;
+
+		qsort(lh_array, 3, sizeof(double), compareDouble);
+
+		double deltaLH = lh_array[1] - multiLH;
+		nnicut->delta[nnicut->num_delta] = deltaLH;
+		(nnicut->num_delta)++;
+		//printf("num_delta = %d ", nnicut->num_delta);
+		//printf("LH array = %f %f %f  multiLH = %f \n", lh_array[0], lh_array[1], lh_array[2], multiLH);
+
+	}
+
 
 #ifdef DEBUG_MAX
 	printf("Restore topology\n");
@@ -454,16 +499,16 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH) {
 }*/
 
 
-void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* cnt, int* cnt_nni, double curLH) {
+void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* cnt, int* cnt_nni, double curLH, NNICUT* nnicut) {
 	if ( ! isTip(p->number, tr->mxtips) ) {
-		nniList[*cnt] = getBestNNIForBran(tr, p, curLH);
+		nniList[*cnt] = getBestNNIForBran(tr, p, curLH, nnicut);
 		if (nniList[*cnt].deltaLH != 0.0) {
 			*cnt_nni = *cnt_nni + 1;
 		}
 		*cnt = *cnt + 1;
 		nodeptr q = p->next;
 		while ( q != p ) {
-			evalNNIForSubtree(tr, q->back, nniList, cnt, cnt_nni, curLH);
+			evalNNIForSubtree(tr, q->back, nniList, cnt, cnt_nni, curLH, nnicut);
 			q = q->next;
 		}
 	}
