@@ -49,6 +49,8 @@
 #include "timeutil.h"
 
 #include "phylolib/phylolib.h"
+#include "phylolib/nnisearch.h"
+
 
 //const int DNA_MODEL_NUM = 14;
 double t_begin, t_end;
@@ -1326,15 +1328,44 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	if (params.raxmllib) {
 		// Read best tree into phylolib kernel
 		stringstream bestTreeString;
+		iqtree.transformBranchLenRAX(iqtree.raxmlTree->fracchange);
 		iqtree.printTree(bestTreeString);
-		treeReadTopologyString((char*) bestTreeString.str().c_str(),
-				iqtree.raxmlTree);
+		//iqtree.printTree(bestTreeString, WT_BR_LEN);
+		treeReadLenString(bestTreeString.str().c_str(), iqtree.raxmlTree, TRUE, FALSE, FALSE);
+		//treeReadLenString(bestTreeString.str().c_str(), iqtree.raxmlTree, FALSE, FALSE, TRUE);
+
+		// Read in model parameters values here
+		if (iqtree.aln->num_states == 4) {
+			// set alpha value
+			double alpha = iqtree.getRate()->getGammaShape();
+			cout << "alpha = " << alpha << endl;
+			double *rate_param = new double[iqtree.aln->num_states * iqtree.aln->num_states];
+			iqtree.getModel()->getRateMatrix(rate_param);
+			for (int i = 0; i < 6; i++) {
+				cout << rate_param[i] << endl;
+				//cout << "tr->numberOfModels : " << iqtree.raxmlTree->NumberOfModels << endl;
+				for(int model = 0; model < iqtree.raxmlTree->NumberOfModels; model++) {
+					iqtree.raxmlTree->partitionData[model].substRates[i] = rate_param[i];
+					iqtree.raxmlTree->partitionData[model].alpha = alpha;
+				}
+			}
+			delete [] rate_param;
+		}
 
 		cout << "Optimizing model parameters and branch lengths using phylolib"
 				<< endl;
 		double t_modOpt_start = getCPUTime();
+		evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, TRUE);
 		modOpt(iqtree.raxmlTree, 0.1);
-		evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, FALSE);
+		//evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, TRUE);
+		//smoothTree(iqtree.raxmlTree, 32);
+		//evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, FALSE);
+		for(int model = 0; model < iqtree.raxmlTree->NumberOfModels; model++) {
+			for (int i=0; i<6; i++)
+				cout << iqtree.raxmlTree->partitionData[model].substRates[i] << endl;
+			cout << "raxml alpha :" << iqtree.raxmlTree->partitionData[model].alpha << endl;
+		}
+
 		double t_modOpt = getCPUTime() - t_modOpt_start;
 		cout << "Log-likelihood of the current tree: "
 				<< iqtree.raxmlTree->likelihood << endl;
