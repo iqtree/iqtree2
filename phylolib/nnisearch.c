@@ -226,20 +226,11 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 		nni0.z[i] = p->z[i];
 	}
 
-#ifdef DEBUG_MAX
-	Tree2String(tr->tree_string, tr, tr->start->back, TRUE, FALSE, 0, 0, 0, SUMMARIZE_LH, 0,0);
-	fprintf(stderr, "%s\n", tr->tree_string);
-#endif
-
 	/* Backup the current branch length */
 	double z0[NUM_BRANCHES];
 	for(i = 0; i < tr->numBranches; i++) {
 		z0[i] = p->z[i];
 	}
-#ifdef DEBUG_MAX
-	double lhOld = tr->likelihood;
-	printf("lhOld: %f \n", lhOld);
-#endif
 
 	//update(tr, p);
 	//evaluateGeneric(tr, p, FALSE);
@@ -266,11 +257,6 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 		if (curLH - multiLH > nnicut->delta_min)
 			return nni0;
 	}
-	//printf("zNew: %f \n", getBranchLength(tr, 0, p));
-
-#ifdef DEBUG_MAX
-	printf("lh0: %f \n", lh0);
-#endif
 
 	/* TODO Save the likelihood vector at node p and q */
 	//saveLHVector(p, q, p_lhsave, q_lhsave);
@@ -289,11 +275,6 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 	nni1.likelihood = lh1;
 	nni1.deltaLH = lh1 - lh0;
 
-#ifdef DEBUG_MAX
-	printf("Delta likelihood of the 1.NNI move: %f\n", nni1.deltaLH);
-	//printTopology(tr, TRUE);
-#endif
-
 	/* Restore previous NNI move */
 	doOneNNI(tr, p, 1, FALSE);
 	/* Restore the old branch length */
@@ -301,14 +282,6 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 		p->z[i] = z0[i];
 		p->back->z[i] = z0[i];
 	}
-
-#ifdef DEBUG_MAX
-	printf("Restore topology\n");
-	Tree2String(tr->tree_string, tr, tr->start->back, TRUE, FALSE, 0, 0, 0, SUMMARIZE_LH, 0,0);
-	fprintf(stderr, "%s\n", tr->tree_string);
-	evaluateGeneric(tr, tr->start, TRUE);
-	printf("Likelihood after restoring from NNI 1: %f\n", tr->likelihood);
-#endif
 
 	/* Try to do an NNI move of type 2 */
 	double lh2 = doOneNNI(tr, p, 2, TRUE);
@@ -323,11 +296,6 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 	}
 	nni2.likelihood = lh2;
 	nni2.deltaLH = lh2 - lh0;
-
-#ifdef DEBUG_MAX
-	printf("Delta likelihood of the 2.NNI move: %f\n", nni2.deltaLH);
-	//printTopology(tr, TRUE);
-#endif
 
 	/* Restore previous NNI move */
 	doOneNNI(tr, p, 2, FALSE);
@@ -348,21 +316,12 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 		qsort(lh_array, 3, sizeof(double), compareDouble);
 
 		double deltaLH = lh_array[1] - multiLH;
+		if (deltaLH > nnicut->delta_min) {
+			printf("%f %f %f %f\n", multiLH, curLH, lh1, lh2);
+		}
 		nnicut->delta[nnicut->num_delta] = deltaLH;
 		(nnicut->num_delta)++;
-		//printf("num_delta = %d ", nnicut->num_delta);
-		//printf("LH array = %f %f %f  multiLH = %f \n", lh_array[0], lh_array[1], lh_array[2], multiLH);
-
 	}
-
-
-#ifdef DEBUG_MAX
-	printf("Restore topology\n");
-	Tree2String(tr->tree_string, tr, tr->start->back, TRUE, FALSE, 0, 0, 0, SUMMARIZE_LH, 0,0);
-	fprintf(stderr, "%s\n", tr->tree_string);
-	evaluateGeneric(tr, tr->start, TRUE);
-	printf("Likelihood after restoring from NNI 2: %f\n", tr->likelihood);
-#endif
 
 	if (nni1.deltaLH > 0 && nni1.deltaLH >= nni2.deltaLH) {
 		return nni1;
@@ -373,9 +332,6 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 	} else {
 		return nni0;
 	}
-
-
-	/******************** NNI part *******************************/
 
 	/* Restore the likelihood vector */
 	//restoreLHVector(p,q, p_lhsave, q_lhsave);

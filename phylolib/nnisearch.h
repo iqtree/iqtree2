@@ -8,7 +8,7 @@ extern "C" {
 extern int treeReadLenString (const char *buffer, tree *tr, boolean readBranches, boolean readNodeLabels, boolean topologyOnly);
 
 
-#define MAX_NUM_DELTA 1000
+#define MAX_NUM_DELTA 10000
 
 typedef struct {
 	double delta[MAX_NUM_DELTA];

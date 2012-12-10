@@ -959,19 +959,6 @@ double IQTree::doIQPNNI() {
 			if (params->raxmllib) {
 				// Start NNI search using Phylolib kernel
 				curScore = optimizeNNIRax();
-				// read in new tree
-				/*
-				int printBranchLengths = TRUE;
-				Tree2String(raxmlTree->tree_string, raxmlTree,
-						raxmlTree->start->back, printBranchLengths, TRUE, 0, 0,
-						0, SUMMARIZE_LH, 0, 0);
-				//if (verbose_mode >= VB_MED)
-					//cout << raxmlTree->tree_string << endl;
-				stringstream mytree;
-				mytree << raxmlTree->tree_string;
-				readTree(mytree, rooted);
-				*/
-
 			} else {
 				curScore = optimizeNNI();
 			}
@@ -1077,8 +1064,6 @@ double IQTree::doIQPNNI() {
 				bestScore = curScore;
 				best_tree_string.seekp(0, ios::beg);
 				printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-				//printTree(cout);
-				//cout << best_tree_string.str() << endl;
 				if (params->write_best_trees) {
 					ostringstream iter_string;
 					iter_string << cur_iteration;
@@ -1326,7 +1311,6 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 	if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
 		estDeltaMin();
 		cout << "delta_min = " << nnicut.delta_min << endl;
-		//exit(1);
 	}
 	int nniRound = 1;
 	double curLH = raxmlTree->likelihood;
@@ -1469,7 +1453,7 @@ inline double IQTree::estDelta95() {
 
 void IQTree::estDeltaMin() {
 	sort(nnicut.delta, nnicut.delta + MAX_NUM_DELTA);
-	int index = floor(MAX_NUM_DELTA * speed_conf);
+	int index = floor(MAX_NUM_DELTA * 0.95);
 	nnicut.delta_min = nnicut.delta[index];
 }
 
