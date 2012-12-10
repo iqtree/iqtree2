@@ -1057,8 +1057,8 @@ void computeParsimonyTreeRax(Params& params, IQTree& iqtree,
 	iqtree.raxmlTree = (tree*) (malloc(sizeof(tree)));
 	/* read the binary input, setup tree, initialize model with alignment */
 	read_msa(iqtree.raxmlTree, params.binary_aln_file);
-	//iqtree.raxmlTree->randomNumberSeed = params.ran_seed;
-	iqtree.raxmlTree->randomNumberSeed = 665;
+	iqtree.raxmlTree->randomNumberSeed = params.ran_seed;
+	//iqtree.raxmlTree->randomNumberSeed = 665;
 	double t_parsimony_start = getCPUTime();
 	makeParsimonyTree(iqtree.raxmlTree);
 	cout << "CPU total time for creating parsimony tree: "
@@ -1276,8 +1276,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			iqtree.curScore = iqtree.computeLikelihood();
 
 		cout << "Log-likelihood of the BIONJ tree: " << iqtree.curScore << endl;
-		if (iqtree.curScore < bestTreeScore - 1e-5) {
-			cout << "The new tree is worse, rolling back the first tree..."
+		if (iqtree.curScore < bestTreeScore + 5) {
+			cout << "The new tree is not significantly better or worse, rolling back the first tree..."
 					<< endl;
 			iqtree.rollBack(best_tree_string);
 			if (iqtree.isSuperTree()) {
