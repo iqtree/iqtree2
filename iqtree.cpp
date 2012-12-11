@@ -1238,7 +1238,12 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 		double newScore = optimizeAllBranches(1);
 		if (newScore > curScore) {
 			if (enableHeuris) {
-				vecImpProNNI.push_back((newScore - curScore) / nni2apply);
+				if ( vecImpProNNI.size() < 1000 ) {
+					vecImpProNNI.push_back((newScore - curScore) / nni2apply);
+				} else {
+					vecImpProNNI.erase( vecImpProNNI.begin() );
+					vecImpProNNI.push_back((newScore - curScore) / nni2apply);
+				}
 			}
 			nni_count += nni2apply;
 			if (nni_count_ret)
@@ -1292,7 +1297,12 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 	if (foundBetterTree) {
 		curScore = optimizeAllBranches(1);
 		if (enableHeuris) {
-			vecNumNNI.push_back(nni_count);
+			if ( vecNumNNI.size() < 1000 ) {
+				vecNumNNI.push_back(nni_count);
+			} else {
+				vecNumNNI.erase( vecNumNNI.begin() );
+				vecNumNNI.push_back(nni_count);
+			}
 		}
 	} else {
 		if (verbose_mode >= VB_MED)
@@ -1345,7 +1355,14 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 			nniRound++;
 			//cout << "deltaNNI = " << deltaNNI << endl;
 			//cout << "nni_count = " << nni_count << endl;
-			vecImpProNNI.push_back(deltaNNI);
+			if (enableHeuris) {
+				if ( vecNumNNI.size() < 1000 ) {
+					vecImpProNNI.push_back(deltaNNI);
+				} else {
+					vecImpProNNI.erase( vecImpProNNI.begin() );
+					vecImpProNNI.push_back(deltaNNI);
+				}
+			}
 			nniApplied += nni_count;
 			if (nni_count_ret) {
 				*nni_count_ret = nniApplied;
@@ -1353,7 +1370,15 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 		}
 	}
 	//cout << "nniApplied = " << nniApplied << endl;
-	vecNumNNI.push_back(nniApplied);
+	if (enableHeuris) {
+		if ( vecNumNNI.size() < 1000 ) {
+			vecNumNNI.push_back(nniApplied);
+		} else {
+			vecNumNNI.erase( vecNumNNI.begin() );
+			vecNumNNI.push_back(nniApplied);
+		}
+	}
+
 	// Re-optimize all branches
 	smoothTree(raxmlTree, 1);
 	evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
@@ -1688,24 +1713,25 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 		node21_it->length = aprroxBran1;
 		bestScore = computeLikelihoodBranch(node21_it, node2);
 	} else {
-		bestScore = optimizeOneBranch(node1, node2, false);
+		//bestScore = optimizeOneBranch(node1, node2, false);
+		bestScore = curScore;
 	}
 
 	// This is done because it could happen that even after
 	// optimizing branch length bestScore < curScore
 	// Why is it, could it be a BUG?
+	/*
 	if (bestScore < curScore - 1.0E-6) {
-		/*
 		 cout.precision(15);
 		 cout << "Likelihood of the tree reduced after optimizing branch length"
 		 << endl;
 		 cout << "curScore = " << curScore << endl;
 		 cout << "LH after branOPT = " << bestScore << endl;
-		 */
 		bestScore = curScore;
 		node12_it->length = node12_len[0];
 		node21_it->length = node12_len[0];
 	}
+	*/
 	treelhs[0] = bestScore;
 	node12_len[1] = node12_it->length;
 
@@ -1854,7 +1880,7 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 			nnimoves[nniNr - 2].node2 = node2;
 			nnimoves[nniNr - 2].delta = delta;
 
-			if (nnimoves[nniNr - 2].delta > bestDelta) {
+			if (nnimoves[nniNr - 2].delta > bestDelta + 1e-6) {
 				bestDelta = nnimoves[nniNr - 2].delta;
 				chosenSwap = nniNr;
 			}
