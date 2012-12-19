@@ -930,6 +930,12 @@ public:
 	*/
 	virtual void initPartitionInfo() {}
 
+	/**
+	 * print transition matrix for all branches
+	 * 
+	 */
+	void printTransMatrices(Node *node = NULL, Node *dad = NULL);
+	
 protected:
 
 	/**

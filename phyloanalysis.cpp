@@ -1253,6 +1253,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	// Optimize model parameters for the parsimony tree
 	double bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
 			params.fixed_branch_length, true, 0.1);
+	iqtree.curScore = bestTreeScore;
 
 	// Save current tree to a string
 	stringstream best_tree_string;
@@ -1573,8 +1574,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	double myscore;
 	if (!params.raxmllib) {
 		myscore = iqtree.getBestScore();
-		iqtree.computePatternLikelihood(pattern_lh, &myscore);
-		//tree.computeLikelihood(pattern_lh);
+		//iqtree.computePatternLikelihood(pattern_lh, &myscore);
+		iqtree.computeLikelihood(pattern_lh);
 
 		// compute logl variance
 		iqtree.logl_variance = iqtree.computeLogLVariance();
@@ -1686,6 +1687,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	 tree.getRate()->writeSiteRates(rate_file.c_str());
 	 }*/
 
+	if (verbose_mode >= VB_DEBUG)
+		iqtree.printTransMatrices();
+	
 }
 
 void evaluateTrees(Params &params, IQTree *tree) {

@@ -1137,6 +1137,7 @@ double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
         variance +=  diff * diff * pattern_freq[i];
     }
     if (!ptn_lh) delete [] pattern_lh;
+	if (nsite <=1) return 0.0;
     return variance * (nsite / (nsite-1));
 }
 
@@ -1162,6 +1163,7 @@ double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_
         variance += diff * diff * pattern_freq[i];
     }
     if (!ptn_lh) delete [] pattern_lh;
+	if (nsite <= 1) return 0.0;
     return variance * (nsite / (nsite-1));
 }
 
@@ -2065,7 +2067,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     int fixed = 0;
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-        if ((*it)->length <= 0.0 || force) { // negative branch length detected
+        if ((*it)->length < 0.0 || force) { // negative branch length detected
 			int branch_subst;
 			int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
 			// first compute the observed parsimony distance
@@ -3291,4 +3293,24 @@ void PhyloTree::randomizeNeighbors(Node *node, Node *dad) {
     randomizeNeighbors((*it)->node, node);
 
     random_shuffle(node->neighbors.begin(), node->neighbors.end());
+}
+
+void PhyloTree::printTransMatrices(Node *node, Node *dad) {
+	if (!node) node = root;
+	int nstates = aln->num_states;
+	
+	if (dad) {
+		double *trans_cat = new double [nstates * nstates];
+		model_factory->computeTransMatrix(dad->findNeighbor(node)->length * site_rate->getRate(0), trans_cat);
+		cout << "Transition matrix " << node->name << " to " << dad->name << endl;  
+		for (int i = 0; i < nstates; i++) {
+			for (int j = 0; j < nstates; j++) {
+				cout << "\t" << trans_cat[i*nstates+j];
+			}
+			cout << endl;
+		}
+		delete [] trans_cat;
+	}
+	FOR_NEIGHBOR_IT(node, dad, it) 
+		printTransMatrices((*it)->node, node);
 }
