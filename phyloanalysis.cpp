@@ -1023,8 +1023,8 @@ double doModelOptimization(IQTree& iqtree, Params& params) {
 	return bestTreeScore;
 }
 
-void computeMLDist(double longest_dist, string dist_file, double begin_time,
-		IQTree& iqtree, Params& params, Alignment* alignment) {
+void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
+		IQTree& iqtree, Params& params, Alignment* alignment, double &bestTreeScore) {
 	stringstream best_tree_string;
 	iqtree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
 	cout << "Computing ML distances based on estimated model parameters...";
@@ -1262,7 +1262,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	// Compute maximum likelihood distance
 	if (!params.dist_file && params.compute_ml_dist) {
 		computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params,
-				alignment);
+				alignment, bestTreeScore);
 	}
 
 	if (!params.user_file) {
@@ -1277,8 +1277,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			iqtree.curScore = iqtree.computeLikelihood();
 
 		cout << "Log-likelihood of the BIONJ tree: " << iqtree.curScore << endl;
-		if (iqtree.curScore < bestTreeScore + 5) {
-			cout << "The new tree is not significantly better or worse, rolling back the first tree..."
+		if (iqtree.curScore < bestTreeScore - 1e-5) {
+			cout << "rolling back the first tree..."
 					<< endl;
 			iqtree.rollBack(best_tree_string);
 			if (iqtree.isSuperTree()) {
@@ -1291,7 +1291,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		double elapsedTime = getCPUTime() - params.startTime;
 		cout << "Time elapsed: " << elapsedTime << endl;
 	}
-
 
 	double t_tree_search_start, t_tree_search_end;
 	t_tree_search_start = getCPUTime();
