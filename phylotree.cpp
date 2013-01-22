@@ -2087,6 +2087,10 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
             (*it)->node->findNeighbor(node)->length = (*it)->length;
             fixed++;
         }
+        if ((*it)->length <= 0.0) {
+        	(*it)->length = 1e-6;
+        	(*it)->node->findNeighbor(node)->length = (*it)->length;
+        }
         fixed += fixNegativeBranch(force, (*it)->node, node);
     }
     return fixed;

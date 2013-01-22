@@ -130,6 +130,18 @@ struct NNIMove {
 
 };
 
+struct LeafFreq {
+
+	PhyloNode* leaf;
+
+	int freq;
+
+	bool operator<(const LeafFreq & rhs) const {
+		return ( freq < rhs.freq );
+	}
+};
+
+
 /**
 Phylogenetic Tree class
 
