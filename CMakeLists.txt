@@ -33,7 +33,7 @@ project(iqtree)
 # The version number.
 set (iqtree_VERSION_MAJOR 0)
 set (iqtree_VERSION_MINOR 9)
-set (iqtree_VERSION_PATCH 1)
+set (iqtree_VERSION_PATCH 2)
 
 
 include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)

@@ -1160,6 +1160,9 @@ struct Params {
 	
 	/** sample size for AICc and BIC */
 	int model_test_sample_size; 
+	
+	/** root state, for Tina's zoombie domain */
+	char *root_state;
 };
 
 /**

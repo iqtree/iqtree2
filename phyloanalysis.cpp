@@ -71,6 +71,55 @@ string aa_model_names[AA_MODEL_NUM] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62" };
 
 /**
+ * print site log likelihoods to a fileExists
+ * @param filename output file name
+ * @param tree phylogenetic tree
+ * @param ptn_lh pattern log-likelihoods, will be computed if NULL
+ * @param append TRUE to append to existing file, FALSE otherwise
+ * @param linename name of the line, default "Site_Lh" if NULL
+ */
+void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
+		bool append = false, const char *linename = NULL) {
+	int i;
+	double *pattern_lh;
+	if (!ptn_lh) {
+		pattern_lh = new double[tree->getAlnNPattern()];
+		tree->computePatternLikelihood(pattern_lh);
+	} else
+		pattern_lh = ptn_lh;
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		if (append) {
+			out.open(filename, ios::out | ios::app);
+		} else {
+			out.open(filename);
+			out << 1 << " " << tree->getAlnNSite() << endl;
+		}
+		IntVector pattern_index;
+		tree->aln->getSitePatternIndex(pattern_index);
+		if (!linename)
+			out << "Site_Lh   ";
+		else {
+			out.width(10);
+			out << left << linename;
+		}
+		for (i = 0; i < tree->getAlnNSite(); i++)
+			out << " " << pattern_lh[pattern_index[i]];
+		out << endl;
+		out.close();
+		if (!append)
+			cout << "Site log-likelihoods printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+
+	if (!ptn_lh)
+		delete[] pattern_lh;
+}
+
+/**
  * check if the model file contains correct information
  * @param model_file model file names
  * @param model_name (OUT) vector of model names
@@ -133,6 +182,9 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 		outError("Test of best-fit models only works for DNA or Protein");
 	string fmodel_str = params.out_prefix;
 	fmodel_str += ".model";
+	string sitelh_file = params.out_prefix;
+	sitelh_file += ".sitelh";
+	in_tree->params = &params;
 
 	int num_models =
 			(nstates == 2) ?
@@ -145,8 +197,8 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 	DoubleVector lh_scores;
 	IntVector df_vec;
 	/* first check the model file */
-	bool ok_model_file = checkModelFile(fmodel_str, model_names, lh_scores,
-			df_vec);
+	bool ok_model_file = (params.print_site_lh) ? false : 
+		checkModelFile(fmodel_str, model_names, lh_scores, df_vec);
 	ok_model_file &= (model_names.size() == num_models * 4);
 	ofstream fmodel;
 	if (!ok_model_file) {
@@ -196,6 +248,15 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 			<< " models (sample size: " << ssize << ") ..." << endl;
 	cout << "Model         -LnL         df AIC          AICc         BIC"
 			<< endl;
+	
+	if (params.print_site_lh) {
+		ofstream sitelh_out(sitelh_file.c_str());
+		if (!sitelh_out.is_open())
+			outError("Cannot write to file ", sitelh_file);
+		sitelh_out << num_models*4 << " " << in_tree->getAlnNSite() << endl;
+		sitelh_out.close();
+	}
+	
 	DoubleVector AIC_scores;
 	DoubleVector AICc_scores;
 	DoubleVector BIC_scores;
@@ -222,6 +283,8 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 									aa_model_names[model].c_str()),
 					FREQ_UNKNOWN);
 			subst_model->setTree(tree);
+			tree->params = &params;
+
 			tree->setModel(subst_model);
 			// initialize rate
 			tree->setRate(rate_class[rate_type]);
@@ -248,6 +311,8 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 						false);
 				model_names.push_back(str);
 				fmodel << str << "\t" << df << "\t" << cur_lh << endl;
+				const char *model_name = (params.print_site_lh) ? str.c_str() : NULL;
+				printSiteLh(sitelh_file.c_str(), tree, NULL, true, model_name);
 			} else {
 				// sanity check
 				if (str != model_names[model * 4 + rate_type]
@@ -317,6 +382,8 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 	if (!ok_model_file)
 		fmodel.close();
 	cout << "Best-fit model: " << best_model << endl;
+	if (params.print_site_lh)
+		cout << "Site log-likelihoods per model printed to " << sitelh_file << endl;
 	return best_model;
 }
 
@@ -880,41 +947,6 @@ void checkZeroDist(Alignment *aln, double *dist) {
 	}
 }
 
-void printSiteLh(const char*filename, IQTree &tree, double *ptn_lh = NULL,
-		bool append = false) {
-	int i;
-	double *pattern_lh;
-	if (!ptn_lh) {
-		pattern_lh = new double[tree.getAlnNPattern()];
-		tree.computePatternLikelihood(pattern_lh);
-	} else
-		pattern_lh = ptn_lh;
-
-	try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		if (append) {
-			out.open(filename, ios::out | ios::app);
-		} else {
-			out.open(filename);
-			out << tree.getAlnNSite() << endl;
-		}
-		IntVector pattern_index;
-		tree.aln->getSitePatternIndex(pattern_index);
-		out << "Site_Lh   ";
-		for (i = 0; i < tree.getAlnNSite(); i++)
-			out << " " << pattern_lh[pattern_index[i]];
-		out << endl;
-		out.close();
-		if (!append)
-			cout << "Site log-likelihoods printed to " << filename << endl;
-	} catch (ios::failure) {
-		outError(ERR_WRITE_OUTPUT, filename);
-	}
-
-	if (!ptn_lh)
-		delete[] pattern_lh;
-}
 
 void createFirstNNITree(Params &params, IQTree &iqtree, double bestTreeScore,
 		Alignment* alignment) {
@@ -1246,13 +1278,16 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	// degree of freedom
 	int model_df = iqtree.getModel()->getNDim() + iqtree.getRate()->getNDim();
-
-	cout << "Optimize model parameters ... " << endl;
+	cout << endl;
+	cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
+	printAnalysisInfo(model_df, iqtree, params);
 
 	iqtree.setParams(params);
+	cout << "Optimize model parameters ... " << endl;
+
 	// Optimize model parameters for the parsimony tree
 	double bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
-			params.fixed_branch_length, true, 0.1);
+			params.fixed_branch_length, true, TOL_LIKELIHOOD);
 	iqtree.curScore = bestTreeScore;
 
 	// Save current tree to a string
@@ -1294,9 +1329,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	double t_tree_search_start, t_tree_search_end;
 	t_tree_search_start = getCPUTime();
-	cout << endl;
-	cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
-	printAnalysisInfo(model_df, iqtree, params);
 
 	//cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
 	if (params.parsimony) {
@@ -1583,7 +1615,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	if (params.print_site_lh) {
 		string site_lh_file = params.out_prefix;
 		site_lh_file += ".sitelh";
-		printSiteLh(site_lh_file.c_str(), iqtree, pattern_lh);
+		printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
 	}
 
 	if (params.mvh_site_rate) {
@@ -1600,7 +1632,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		if (params.print_site_lh) {
 			string site_lh_file = params.out_prefix;
 			site_lh_file += ".mhsitelh";
-			printSiteLh(site_lh_file.c_str(), iqtree);
+			printSiteLh(site_lh_file.c_str(), &iqtree);
 		}
 	}
 
@@ -1686,9 +1718,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	 tree.getRate()->writeSiteRates(rate_file.c_str());
 	 }*/
 
-	if (verbose_mode >= VB_DEBUG)
+/*	if (verbose_mode >= VB_DEBUG)
 		iqtree.printTransMatrices();
-	
+	*/
 }
 
 void evaluateTrees(Params &params, IQTree *tree) {
@@ -1706,7 +1738,12 @@ void evaluateTrees(Params &params, IQTree *tree) {
 	string score_file = params.treeset_file;
 	score_file += ".treelh";
 	ofstream scoreout(score_file.c_str());
-	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++) {
+	string site_lh_file = params.treeset_file;
+	site_lh_file += ".sitelh";
+	ofstream site_lh_out(site_lh_file.c_str());
+	site_lh_out << trees.size() << " " << tree->getAlnNSite() << endl;
+	int tree_index = 0;
+	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++, tree_index++) {
 		cout << "Tree " << (it - trees.begin()) + 1;
 		tree->copyTree(*it);
 		//int fixed_number = tree->fixNegativeBranch(fixed_length);
@@ -1722,11 +1759,9 @@ void evaluateTrees(Params &params, IQTree *tree) {
 		} else
 			tree->curScore = tree->computeLikelihood();
 		cout << " / LogL: " << tree->curScore << endl;
+		string tree_name = "Tree" + convertIntToString(tree_index+1);
 		if (params.print_site_lh) {
-			string site_lh_file = params.treeset_file;
-			site_lh_file += ".sitelh";
-			printSiteLh(site_lh_file.c_str(), *tree, NULL,
-					(it != trees.begin()));
+			printSiteLh(site_lh_file.c_str(), tree, NULL, true, tree_name.c_str());
 		}
 		scoreout << tree->curScore << endl;
 	}
@@ -2083,6 +2118,7 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 	if (params && detectInputFile((char*) input_trees) == IN_NEXUS) {
 		char *user_file = params->user_file;
 		params->user_file = (char*) input_trees;
+		params->split_weight_summary = SW_COUNT; // count number of splits
 		sg.init(*params);
 		params->user_file = user_file;
 		for (SplitGraph::iterator it = sg.begin(); it != sg.end(); it++)

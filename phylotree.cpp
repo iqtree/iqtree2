@@ -71,7 +71,7 @@ void PhyloTree::init() {
     tmp_scale_num2 = NULL;
     discard_saturated_site = true;
     _pattern_lh = NULL;
-
+	root_state = STATE_UNKNOWN;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree() {
@@ -966,7 +966,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         // allocate the big central partial likelihoods memory
         if (!central_partial_lh) {
 			uint64_t mem_size = ((uint64_t)leafNum - 1) * 4 * (uint64_t)block_size + 2;
-            //if (verbose_mode >= VB_MIN)
+            if (verbose_mode >= VB_MIN)
                 cout << "Note: This run requires " <<  (double)mem_size * sizeof (double) / (1024.0*1024) << " MB memory for partial likelihood vectors" << endl;
 			if (mem_size >= getMemorySize()) {
 				cout << "********************* IMPORTANT WARNING *******************" << endl;
@@ -1037,10 +1037,10 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     current_it_back = (PhyloNeighbor*) nei->node->findNeighbor(root);
     assert(current_it_back);
 //    double sum_scaling = nei->lh_scale_factor;
-//    double check = 0.0;
+//    double check = 0.0; 
     /*    if (pattern_lh) {
             if (sum_scaling < 0.0) {
-                ptn_scale = new double[nptn];
+                ptn_scale   qqqqqq= new double[nptn];
                 memset(ptn_scale, 0, sizeof (double) * nptn);
                 for (int i = 0; i < nptn; i++) {
                 	ptn_scale[i] = max(nei->scale_num[i],UBYTE(0)) * LOG_SCALING_THRESHOLD;
@@ -1052,7 +1052,16 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
                 //clearAllPartialLh();
             }
         }*/
-    double score = computeLikelihoodBranch(nei, (PhyloNode*) root, pattern_lh);
+	double score;
+	string root_name = ROOT_NAME;
+	Node *vroot = findLeafName(root_name);
+	if (root_state != STATE_UNKNOWN && vroot) {
+		if (verbose_mode >= VB_DEBUG)
+			cout << __func__ << " HIT ROOT STATE " << endl;
+		score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*)vroot);
+	} else {
+		score = computeLikelihoodBranch(nei, (PhyloNode*) root, pattern_lh);
+	}
     if (pattern_lh && nei->lh_scale_factor < 0.0) {
         int nptn = aln->getNPattern();
         //double check_score = 0.0;
@@ -1067,6 +1076,22 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
         //delete [] ptn_scale;
     }
     return score;
+}
+
+double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	double score = computeLikelihoodBranchNaive(dad_branch, dad);
+	if (verbose_mode >= VB_DEBUG) {
+		printTransMatrices(dad_branch->node, dad);
+		/*
+		FOR_NEIGHBOR_IT(dad_branch->node, dad, it) {
+			PhyloNeighbor *pit = (PhyloNeighbor*)(*it);
+			cout << pit->node->name << "\t" << pit->partial_lh[0] << endl;
+			
+		}*/
+	}
+	double state_freq[aln->num_states];
+	model->getStateFrequency(state_freq);
+	return score - log(state_freq[root_state]);
 }
 
 void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl) {
@@ -1275,7 +1300,8 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
     if (!central_partial_lh)
         initializeAllPartialLh();
     // swap node and dad if dad is a leaf
-    if (node->isLeaf()) {
+    // NEW: swap if root_state is given
+    if (node->isLeaf() || (node->name == ROOT_NAME && root_state != STATE_UNKNOWN)) {
         PhyloNode *tmp_node = dad;
         dad = node;
         node = tmp_node;
@@ -1284,6 +1310,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         node_branch = tmp_nei;
         //cout << "swapped\n";
     }
+    
     if ((dad_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihood(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
@@ -1324,8 +1351,13 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         double rate_ptn = 0.0;
         int dad_state = 1000; // just something big enough
         int ptn_cat = site_rate->getPtnCat(ptn);
-        if (dad->isLeaf())
+		if (dad->name == ROOT_NAME && root_state != STATE_UNKNOWN) {
+			dad_state = root_state;
+			if (verbose_mode >= VB_DEBUG)
+				cout << __func__ << ": root state " << aln->convertStateBack(root_state) << endl;
+		} else if (dad->isLeaf()) {
             dad_state = (*aln)[ptn][dad->id];
+		}
         int dad_offset = dad_state * nstates;
         if (site_rate->isSiteSpecificRate())
             model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getPtnRate(ptn), state_freq, trans_mat);
@@ -1481,7 +1513,6 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                     int ptn_cat = site_rate->getPtnCat(ptn);
                     if (site_rate->isSiteSpecificRate())
                         model_factory->computeTransMatrix((*it)->length * site_rate->getPtnRate(ptn), trans_mat);
-
                     for (cat = 0; cat < ncat; cat++) {
                         size_t lh_offset = cat * nstates + ptn*block;
                         partial_lh_site = dad_branch->partial_lh + lh_offset;
@@ -1537,7 +1568,8 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     assert(node_branch);
     // swap node and dad if dad is a leaf
-    if (node->isLeaf()) {
+    // NEW: swap if root_state is given
+    if (node->isLeaf() || (node->name == ROOT_NAME && root_state != STATE_UNKNOWN)) {
         PhyloNode *tmp_node = dad;
         dad = node;
         node = tmp_node;
@@ -1613,9 +1645,11 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         double lh_ptn_derv2 = 0.0;
         int dad_state = STATE_UNKNOWN;
 
-        if (dad->isLeaf())
+		if (dad->name == ROOT_NAME && root_state != STATE_UNKNOWN)
+			dad_state = root_state;
+        else if (dad->isLeaf())
             dad_state = (*aln)[ptn][dad->id];
-        int dad_offset = dad_state * nstates;
+		int dad_offset = dad_state * nstates;
         if (site_rate->isSiteSpecificRate())
             model_factory->computeTransDervFreq(dad_branch->length, site_rate->getPtnRate(ptn), state_freq,
                                                 trans_mat, trans_derv1, trans_derv2);
@@ -3306,7 +3340,7 @@ void PhyloTree::printTransMatrices(Node *node, Node *dad) {
 	if (dad) {
 		double *trans_cat = new double [nstates * nstates];
 		model_factory->computeTransMatrix(dad->findNeighbor(node)->length * site_rate->getRate(0), trans_cat);
-		cout << "Transition matrix " << node->name << " to " << dad->name << endl;  
+		cout << "Transition matrix " << dad->name << " to " << node->name <<  endl;  
 		for (int i = 0; i < nstates; i++) {
 			for (int j = 0; j < nstates; j++) {
 				cout << "\t" << trans_cat[i*nstates+j];

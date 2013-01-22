@@ -544,6 +544,15 @@ char Alignment::convertState(char state, SeqType seq_type) {
     }
 }
 
+char Alignment::convertState(char state) {
+	switch (num_states) {
+		case 2: return convertState(state, SEQ_BINARY);
+		case 4: return convertState(state, SEQ_DNA);
+		case 20: return convertState(state, SEQ_PROTEIN);
+		default: return STATE_INVALID;
+	}
+}
+
 char Alignment::convertStateBack(char state) {
     if (state == STATE_UNKNOWN) return '-';
     if (state == STATE_INVALID) return '?';

@@ -33,6 +33,7 @@ MTreeSet::MTreeSet(const char *userTreeFile, bool &is_rooted,
 
 void readIntVector(const char *file_name, int burnin, int max_count, IntVector &vec) {
 	cout << "Reading integer vector file " << file_name << " ..." << endl;
+	vec.clear();
 	try {
 		ifstream in;
 		in.exceptions(ios::failbit | ios::badbit);

@@ -98,7 +98,8 @@ void SplitGraph::init(Params &params)
 		if (trees->GetNumTrees() > 0) { 
 			if (getNSplits() > 0) 
 				outError("Ambiguous input file, pls only specify either SPLITS block or TREES block");
-			convertFromTreesBlock(params.tree_burnin, params.tree_max_count, params.split_threshold, params.split_weight_threshold);
+			convertFromTreesBlock(params.tree_burnin, params.tree_max_count, params.split_threshold, 
+				params.split_weight_summary, params.split_weight_threshold, params.tree_weight_file);
 		}
 
 	}
@@ -204,7 +205,8 @@ SplitGraph::~SplitGraph()
 }
 
 
-void SplitGraph::convertFromTreesBlock(int burnin, int max_count, double split_threshold, double weight_threshold) {
+void SplitGraph::convertFromTreesBlock(int burnin, int max_count, double split_threshold, 
+	int split_weight_summary, double weight_threshold, const char *tree_weight_file) {
 	cout << trees->GetNumTrees() << " tree(s) loaded" << endl;
 	if (burnin >= trees->GetNumTrees())
 		outError("Burnin value is too large");
@@ -219,10 +221,19 @@ void SplitGraph::convertFromTreesBlock(int burnin, int max_count, double split_t
 		bool myrooted = trees->IsRootedTree(i);
 		tree->readTree(strs, myrooted);
 		mtrees->push_back(tree);
+		mtrees->tree_weights.push_back(1);
 	}
 	mtrees->checkConsistency();
 	//SplitIntMap hash_ss;
-	mtrees->convertSplits(*this, split_threshold, SW_SUM, weight_threshold);
+	
+	if (tree_weight_file) 
+		readIntVector(tree_weight_file, burnin, max_count, mtrees->tree_weights);
+/*	else if (!weights)
+		tree_weights.resize(size(), 1);*/
+
+	if (mtrees->size() != mtrees->tree_weights.size())
+		outError("Tree file and tree weight file have different number of entries");	
+	mtrees->convertSplits(*this, split_threshold, split_weight_summary, weight_threshold);
 }
 
 

@@ -671,6 +671,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
 	params.model_test_criterion = MTC_BIC;
 	params.model_test_sample_size = 0;
+	params.root_state = NULL;
 
 	struct timeval tv;
 	struct timezone tz;
@@ -1496,6 +1497,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (params.num_threads < 1)
 					throw "At least 1 thread please";
 #endif
+			} else if (strcmp(argv[cnt], "-rootstate") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rootstate <rootstate>";
+				params.root_state = argv[cnt];
+				params.SSE = false;
 			} else if (argv[cnt][0] == '-') {
 				string err = "Invalid \"";
 				err += argv[cnt];

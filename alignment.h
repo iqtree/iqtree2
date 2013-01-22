@@ -150,8 +150,17 @@ public:
 	SeqType detectSequenceType(StrVector &sequences);
 
 	virtual char convertState(char state, SeqType seq_type);
+	
+	/** 
+	 * convert state if the number of states (num_states is known)
+	 * @param state input char to convert
+	 * @return output char from 0 to 0-num_states or STATE_INVALID or STATE_UNKNOWN
+	 */
+	char convertState(char state);
+
 	virtual void convertStateStr(string &str, SeqType seq_type);
 
+	
 	char convertStateBack(char state);
 
 	/**

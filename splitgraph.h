@@ -102,7 +102,8 @@ public:
 		@param split_threshold only keep those splits which appear more than this threshold 
 		@param weight_threshold minimum weight cutoff
 	*/
-	void convertFromTreesBlock(int burnin, int max_count, double split_threshold, double weight_threshold);
+	void convertFromTreesBlock(int burnin, int max_count, double split_threshold, 
+		int split_weight_summary, double weight_threshold, const char *tree_weight_file);
 
 /********************************************************
 	PRINT INFORMATION

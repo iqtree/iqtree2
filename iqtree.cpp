@@ -157,6 +157,13 @@ void IQTree::setParams(Params &params) {
 	}
 
 	nnicut.doNNICut = params.estimate_nni_cutoff;
+	if (params.root_state) {
+		if (strlen(params.root_state) != 1) 
+			outError("Root state must have exactly 1 character");
+		root_state = aln->convertState(params.root_state[0]);
+		if (root_state < 0 || root_state >= aln->num_states) 
+			outError("Invalid root state");
+	}
 }
 
 IQTree::~IQTree() {

@@ -410,6 +410,14 @@ public:
      */
     virtual double computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
+	/**
+            compute likelihood of rooted tree with virtual root (FOR TINA)
+            @param dad_branch the branch leading to the subtree
+            @param dad its dad, used to direct the tranversal
+            @return tree likelihood
+     */
+    virtual double computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
     /**
             compute the tree likelihood
             @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
@@ -950,6 +958,9 @@ public:
 	
 protected:
 
+	/** converted root state, for Tina's zoombie domain */
+	char root_state;
+	
 	/**
 		internal pattern log-likelihoods, always stored after calling computeLikelihood()
 		or related functions. Note that scaling factors are not incorporated here.
