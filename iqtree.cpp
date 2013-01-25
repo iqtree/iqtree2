@@ -63,6 +63,10 @@ void IQTree::init() {
 	//initLeafFrequency();
 	nnicut.num_delta = 0;
 	nnicut.delta_min = DBL_MAX;
+//	if (params->tabu){
+//		initLeafFrequency();
+//	}
+
 }
 
 IQTree::IQTree(Alignment *aln) :
@@ -298,8 +302,10 @@ RepresentLeafSet* IQTree::findRepresentLeaves(
 void IQTree::initLeafFrequency(PhyloNode *node, PhyloNode *dad) {
     if (!node) node = (PhyloNode*) root;
     if (node->isLeaf()) {
-    	node_freq my_node_freq (node, 0);
-    	node_freqs.push_back(my_node_freq);
+    	LeafFreq leaf_freq;
+    	leaf_freq.leaf = node;
+    	leaf_freq.freq = 0;
+    	leaf_freqs.push_back(leaf_freq);
     }
 	for (NeighborVec::iterator it = node->neighbors.begin();
 			it != node->neighbors.end(); it++)
@@ -309,7 +315,29 @@ void IQTree::initLeafFrequency(PhyloNode *node, PhyloNode *dad) {
 }
 
 void IQTree::deleteNonTabuLeaves(PhyloNodeVector &del_leaves) {
-
+	// sort node frequency
+	sort(leaf_freqs.begin(), leaf_freqs.end());
+	// shuffle the sorted list first
+	int cur_freq = leaf_freqs[0].freq;
+	int startIndex = 0;
+	int endIndex = 0;
+	int leafCnt = 0;
+	while (true) {
+		while (leaf_freqs[endIndex].freq == cur_freq) {
+			endIndex++;
+		}
+		random_shuffle ( leaf_freqs.begin() + startIndex, leaf_freqs.begin() + endIndex - 1 );
+		do {
+			del_leaves.push_back( leaf_freqs[leafCnt].leaf );
+			leaf_freqs[leafCnt].freq++;
+			leafCnt++;
+		} while (leafCnt < k_delete);
+		if (leafCnt == k_delete) {
+			break;
+		}
+		startIndex = endIndex;
+		cur_freq = leaf_freqs[endIndex].freq;
+	}
 }
 
 void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
@@ -578,7 +606,11 @@ double IQTree::doIQP() {
 	} else {
 		deleteLeaves(del_leaves);
 	}
-
+	/*
+	for (int i = 0; i < del_leaves.size(); i++)
+		cout << del_leaves[i]->id << " ";
+	cout << endl;
+	*/
 	reinsertLeaves(del_leaves);
 
 	if (params->raxmllib) {
@@ -895,6 +927,7 @@ double IQTree::doIQPNNI() {
 				//cout << "LH before smoothTree" << raxmlTree->likelihood << endl;
 				smoothTree(raxmlTree, 1);
 				evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
+				cout << "IQP LH = " << raxmlTree->likelihood << endl;
 
 				/*
 				Tree2String(raxmlTree->tree_string, raxmlTree,

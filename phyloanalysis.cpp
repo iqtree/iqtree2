@@ -983,11 +983,13 @@ void createFirstNNITree(Params &params, IQTree &iqtree, double bestTreeScore,
 		bestTreeScore = iqtree.curScore;
 		cout << "Found new best tree log-likelihood : " << bestTreeScore
 				<< endl;
-		//cout << "Recompute by IQTree: " << iqtree.optimizeAllBranches() << endl;
 	} else {
 		cout << "The local search cannot improve the tree likelihood :( "
 				<< endl;
 	}
+	string treeFileName = params.out_prefix;
+	treeFileName += ".treefile";
+	iqtree.printTree(treeFileName.c_str());
 	double elapsedTime = getCPUTime() - params.startTime;
 	cout << "CPU time elapsed: " << elapsedTime << endl;
 }

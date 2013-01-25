@@ -37,6 +37,7 @@ typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;
 typedef std::multiset< int, std::less< int > > MultiSetInt;
 
+
 /**
         nodeheightcmp, for building k-representative leaf set
  */
@@ -71,6 +72,7 @@ inline int int_branch_cmp (const IntBranchInfo a, const IntBranchInfo b)
 {
 	return (a.lh_contribution < b.lh_contribution);
 }
+
 
 /**
         Representative Leaf Set, stored as a multiset template of STL,
@@ -511,8 +513,7 @@ protected:
     /**
      *  Data structure to store how many time a leaf has been removed
      */
-    typedef pair<PhyloNode*, int> node_freq;
-    vector<node_freq> node_freqs;
+    vector<LeafFreq> leaf_freqs;
 
     /**
             Data structure (of type Map) which stores all the optimal

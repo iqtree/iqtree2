@@ -1458,6 +1458,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -ba <binary_alignment_file>";
 				params.binary_aln_file = argv[cnt];
 				params.raxmllib = true;
+			} else if (strcmp(argv[cnt], "-tabu") == 0) {
+				params.tabu = true;
 			} else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
 				params.parbran = true;
 			} else if (strcmp(argv[cnt], "-wbt") == 0) {
