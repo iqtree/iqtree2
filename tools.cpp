@@ -1446,6 +1446,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -maxtime <time_in_minutes>";
 				params.maxtime = convert_double(argv[cnt]);
+				params.min_iterations = 1000000;
 			} else if(strcmp(argv[cnt], "-best_start") == 0) {
 				params.par_vs_bionj = true;
 				cnt++;
