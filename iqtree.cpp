@@ -837,7 +837,7 @@ double IQTree::doIQPNNI() {
 	int cur_iteration;
 	bool maxTimeReached = false;
 	bool speedupMsg = false;
-	for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration);
+	for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration) || !maxTimeReached;
 			cur_iteration++) {
 		double min_elapsed = (getCPUTime() - params->startTime)/60;
 		if (min_elapsed > params->maxtime) {
