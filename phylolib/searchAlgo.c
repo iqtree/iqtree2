@@ -46,6 +46,18 @@
 
 #include "axml.h"
 
+
+
+/** @file searchAlgo.c
+    
+    @brief Collection of routines for performing likelihood computation and branch optimization.
+
+    Detailed description to appear soon.
+*/
+
+
+
+
 extern double accumulatedTime;
 
 extern char seq_file[1024];
@@ -86,16 +98,22 @@ boolean initrav (tree *tr, nodeptr p)
 
 
 
+/** @brief Optimize the length of a specific branch
 
-
-
-boolean update(tree *tr, nodeptr p)
+    Optimize the length of the branch connecting \a p and \a p->back
+    for each partition (\a tr->numBranches) in tree \a tr.
+ 
+    @param tr
+      The tree structure
+ 
+    @param p
+      Endpoints of branch to be optimized 
+*/
+void update(tree *tr, nodeptr p)
 {       
   nodeptr  q; 
-  boolean smoothedPartitions[NUM_BRANCHES];
   int i;
   double   z[NUM_BRANCHES], z0[NUM_BRANCHES];
-  double _deltaz;
 
   q = p->back;   
 
@@ -107,43 +125,42 @@ boolean update(tree *tr, nodeptr p)
   else
     makenewzGeneric(tr, p, q, z0, newzpercycle, z, FALSE);
 
-  for(i = 0; i < tr->numBranches; i++)    
-    smoothedPartitions[i]  = tr->partitionSmoothed[i];
-
   for(i = 0; i < tr->numBranches; i++)
   {         
     if(!tr->partitionConverged[i])
     {	  
-      _deltaz = deltaz;
-
-      if(ABS(z[i] - z0[i]) > _deltaz)  
+      if(ABS(z[i] - z0[i]) > deltaz)  
       {	      
-        smoothedPartitions[i] = FALSE;       
+        tr->partitionSmoothed[i] = FALSE;
       }	 
-
 
       p->z[i] = q->z[i] = z[i];	 
     }
   }
-
-  for(i = 0; i < tr->numBranches; i++)    
-    tr->partitionSmoothed[i]  = smoothedPartitions[i];
-
-  return TRUE;
 }
 
-boolean smooth (tree *tr, nodeptr p)
+/** @brief Branch length optimization of specific branches
+
+    Optimize the length of branches that have \a p as an endpoint 
+
+    @param tr
+      The tree structure
+
+    @param p
+      Endpoint of branches to be optimized
+*/
+void smooth (tree *tr, nodeptr p)
 {
   nodeptr  q;
 
-  if (! update(tr, p))               return FALSE; /*  Adjust branch */
+  update(tr, p);    /*  Adjust branch */
 
   if (! isTip(p->number, tr->mxtips)) 
   {                                  /*  Adjust descendants */
     q = p->next;
     while (q != p) 
     {
-      if (! smooth(tr, q->back))   return FALSE;
+      smooth(tr, q->back);
       q = q->next;
     }	
 
@@ -152,10 +169,21 @@ boolean smooth (tree *tr, nodeptr p)
     else
       newviewGeneric(tr, p, FALSE);     
   }
-
-  return TRUE;
 } 
 
+/**  @brief Check whether the branches in all partitions have been optimized
+ 
+     Check if all branches in all partitions have reached the threshold for
+     optimization. If at least one branch can be optimized further return \b FALSE.
+
+     @param tr
+       The tree structure
+
+     @return
+       If at least one branch can be further optimized return \b FALSE,
+       otherwise \b TRUE.
+             
+*/
 static boolean allSmoothed(tree *tr)
 {
   int i;
@@ -173,8 +201,18 @@ static boolean allSmoothed(tree *tr)
 }
 
 
-/* do maxtimes rounds of branch length optimization */
-boolean smoothTree (tree *tr, int maxtimes)
+/** @brief Wrapper function for branch length optimization of the tree
+  
+    Perform \a maxtimes rounds of branch length optimization by running smooth()
+    on all neighbour nodes of node \a tr->start.
+
+    @param tr
+      The tree structure
+
+    @param maxtimes
+      Number of optimization rounds to perform
+*/
+void smoothTree (tree *tr, int maxtimes)
 {
 	nodeptr  p, q;
 	int i, count = 0;
@@ -188,37 +226,46 @@ boolean smoothTree (tree *tr, int maxtimes)
 		for(i = 0; i < tr->numBranches; i++)
 			tr->partitionSmoothed[i] = TRUE;
 
-		if (! smooth(tr, p->back))       return FALSE;
+		smooth(tr, p->back);
 		if (!isTip(p->number, tr->mxtips))
 		{
 			q = p->next;
 			while (q != p)
 			{
-				if (! smooth(tr, q->back))   return FALSE;
+				smooth(tr, q->back);
 				q = q->next;
 			}
 		}
-
 		count++;
 
-		if (allSmoothed(tr))
-			break;
+		if (allSmoothed(tr)) break;
 	}
 
 	for(i = 0; i < tr->numBranches; i++)
 		tr->partitionConverged[i] = FALSE;
-
-	return TRUE;
 } 
 
 
+/** @brief Optimize the branch length of edges around a specific node
+    
+    Optimize \a maxtimes the branch length of all (3) edges around a given node 
+    \a p of a tree \a tr.
 
-boolean localSmooth (tree *tr, nodeptr p, int maxtimes)
+    @param tr
+      The tree structure
+
+    @param p
+      The node around which to optimize the edges
+
+    @param maxtimes
+      Number of optimization rounds to perform
+*/
+void localSmooth (tree *tr, nodeptr p, int maxtimes)
 { 
   nodeptr  q;
   int i;
 
-  if (isTip(p->number, tr->mxtips)) return FALSE;
+  if (isTip(p->number, tr->mxtips)) return;
 
   for(i = 0; i < tr->numBranches; i++)	
     tr->partitionConverged[i] = FALSE;	
@@ -231,7 +278,7 @@ boolean localSmooth (tree *tr, nodeptr p, int maxtimes)
     q = p;
     do 
     {
-      if (! update(tr, q)) return FALSE;
+      update(tr, q);
       q = q->next;
     } 
     while (q != p);
@@ -245,14 +292,20 @@ boolean localSmooth (tree *tr, nodeptr p, int maxtimes)
     tr->partitionSmoothed[i] = FALSE; 
     tr->partitionConverged[i] = FALSE;
   }
-
-  return TRUE;
 }
 
 
 
 
+/** @brief Reset an \a infoList
 
+    Resets an \a infoList by setting elements \a node and \a likelihood
+    of each element of the \a bestInfo list structure to \b NULL and
+    \a unlikely, respectively.
+
+    @param iList
+      The given \a infoList.
+*/
 static void resetInfoList(infoList *iList)
 {
   int 
@@ -267,6 +320,19 @@ static void resetInfoList(infoList *iList)
   }    
 }
 
+/** @brief Initialize an \a infoList
+
+    Initialize an \a infoList by creating a \a bestInfo list structure
+    of \a n elements and setting the attributes \a node and \a likelihood
+    of each element of the \a bestInfo list structure to \b NULL and
+    \a unlikely, respectively.
+
+    @param iList
+      The given \a infoList.
+
+    @param n
+      Number of elements to be created in the \a bestInfo list.
+*/
 static void initInfoList(infoList *iList, size_t n)
 {
   int 
@@ -283,12 +349,37 @@ static void initInfoList(infoList *iList, size_t n)
   }
 }
 
+/** @brief Deallocate the contents of an \a infoList
+    
+    Deallocate the contents of a given \a infoList by freeing
+    the memory used by its \a bestInfo list structure.
+
+    @param iList
+      The \a infoList to be used.
+*/
 static void freeInfoList(infoList *iList)
 { 
   free(iList->list);   
 }
 
 
+/** @brief Insert a record in an \a infoList
+
+    Insert the pair \a likelihood and \node into the \a bestList \a list
+    of \a iList \b only if there already exists a pair in \a list 
+    which has the \a likelihood attribute smaller than the given \a 
+    likelihoodby. The insertion is done by replacing the smallest
+    likelihood pair with the new pair.
+
+    @param node
+      The given node
+
+    @param likelihood
+      The given likelihood
+
+    @param iList
+      The given \a infoList where the record will possibly be appended.
+*/
 static void insertInfoList(nodeptr node, double likelihood, infoList *iList)
 {
   int 
@@ -319,36 +410,67 @@ static void insertInfoList(nodeptr node, double likelihood, infoList *iList)
 }
 
 
-boolean smoothRegion (tree *tr, nodeptr p, int region)
+/** @brief  Optimize branch lengths of region
+
+    Optimize the branch lenghts of only a specific region. The branch optimization starts
+    at a node \a p and is carried out in all nodes with distance upto \a region from \a p.
+
+    @param tr
+      The tree structure.
+    
+    @param p
+      Node to start branch optimization from.
+
+    @param region
+      The allowed node distance from \p for which to still perform branch optimization.
+*/
+void smoothRegion (tree *tr, nodeptr p, int region)
 { 
   nodeptr  q;
 
-  if (! update(tr, p))               return FALSE; /*  Adjust branch */
+  update(tr, p); /*  Adjust branch */
 
-  if(region > 0)
+  if (region > 0)
   {
     if (!isTip(p->number, tr->mxtips)) 
     {                                 
       q = p->next;
       while (q != p) 
       {
-        if (! smoothRegion(tr, q->back, --region))   return FALSE;
+        smoothRegion(tr, q->back, --region);
         q = q->next;
       }	
 
       newviewGeneric(tr, p, FALSE);
     }
   }
-
-  return TRUE;
 }
 
-boolean regionalSmooth (tree *tr, nodeptr p, int maxtimes, int region)
+
+/** @brief Wrapper function for optimizing the branch length of a region \a maxtimes times
+
+    Optimize the branch lengths of a specific region \a maxtimes times. The branch optimization
+    starts at a given node \a p and is carried out in all nodes with distance upto \a region
+    from \a p.
+
+    @param tr
+      The tree structure.
+
+    @param p
+      Node to start branch optimization from.
+
+    @param maxtimes
+      Number of times to perform branch optimization.
+
+    @pram region
+      The allwed node distance from \p for which to still perform branch optimization.
+*/
+void regionalSmooth (tree *tr, nodeptr p, int maxtimes, int region)
 {
   nodeptr  q;
   int i;
 
-  if (isTip(p->number, tr->mxtips)) return FALSE;            /* Should be an error */
+  if (isTip(p->number, tr->mxtips)) return;            /* Should be an error */
 
   for(i = 0; i < tr->numBranches; i++)
     tr->partitionConverged[i] = FALSE;
@@ -361,7 +483,7 @@ boolean regionalSmooth (tree *tr, nodeptr p, int maxtimes, int region)
     q = p;
     do 
     {
-      if (! smoothRegion(tr, q, region)) return FALSE;
+      smoothRegion(tr, q, region);
       q = q->next;
     } 
     while (q != p);
@@ -371,17 +493,35 @@ boolean regionalSmooth (tree *tr, nodeptr p, int maxtimes, int region)
   }
 
   for(i = 0; i < tr->numBranches; i++)
-    tr->partitionSmoothed[i] = FALSE;
-  for(i = 0; i < tr->numBranches; i++)
-    tr->partitionConverged[i] = FALSE;
-
-  return TRUE;
-} /* localSmooth */
+    tr->partitionSmoothed[i] = tr->partitionConverged[i] = FALSE;
+} 
 
 
 
 
+/* @brief Split the tree into two components and optimize new branch length
 
+   Split the tree into two components. The disconnection point is node \a p.
+   First, a branch length is computed for the newly created branch between nodes
+   \a p->next->back and \a p->next->next->back and then the two nodes are
+   connected (hookup). Disconnection is done by setting \a p->next->next->back
+   and \a p->next->back to \b NULL.
+
+   @param tr
+     The tree structure
+
+   @param p
+     The node at which the tree should be decomposed into two components.
+
+   @param numBranches
+     Number of branches per partition
+
+   @return q
+     the node after \a p
+
+   @todo
+     Why do we return this node?
+*/
 nodeptr  removeNodeBIG (tree *tr, nodeptr p, int numBranches)
 {  
   double   zqr[NUM_BRANCHES], result[NUM_BRANCHES];
@@ -406,6 +546,27 @@ nodeptr  removeNodeBIG (tree *tr, nodeptr p, int numBranches)
   return  q; 
 }
 
+/** @brief Split the tree into two components and recompute likelihood
+
+    Split the tree into two component. The disconnection point is node \a p.
+    Set the branch length of the new node between \a p->next->back and
+    \a p->next->next->back to \a tr->currentZQR and then decompose the tree
+    into two components by setting \a p->next->back and \a p->next->next->back
+    to \b NULL.
+
+    @param tr
+      The tree structure
+
+    @param p
+      The node at which the tree should be decomposed into two components.
+
+    @return q
+      the node after \a p
+
+    @todo
+      Why do we return this node? Why do we set to tr->currentZQR and not compute
+      new optimized length?
+*/
 nodeptr  removeNodeRestoreBIG (tree *tr, nodeptr p)
 {
   nodeptr  q, r;
@@ -448,6 +609,11 @@ boolean insertBIG (tree *tr, nodeptr p, nodeptr q, int numBranches)
       defaultArray[i] = defaultz;
 
     makenewzGeneric(tr, q, r, qz, iterations, zqr, FALSE);           
+    /* the branch lengths values will be estimated using q, r and s
+     * q-s are not connected, but both q and s have a valid LH vector , so we can call makenewzGeneric  to get a value for
+     * lzsum, which is then use to generate reasonable starting values e1, e2, e3 for the new branches we create after the       insertion
+     */
+
     makenewzGeneric(tr, q, s, defaultArray, iterations, zqs, FALSE);                  
     makenewzGeneric(tr, r, s, defaultArray, iterations, zrs, FALSE);
 
@@ -1029,7 +1195,12 @@ static void myfread(void *ptr, size_t size, size_t nmemb, FILE *stream)
 
 
 
+/** @brief Write tree to file
 
+    Serialize tree to a file. 
+
+    @todo Document this
+*/
 static void writeTree(tree *tr, FILE *f)
 {
   int 
@@ -1046,6 +1217,12 @@ static void writeTree(tree *tr, FILE *f)
 
 int ckpCount = 0;
 
+/** @brief Write a checkpoint
+
+    Is checkpoint enabled?
+
+    @todo fill this up
+*/
 static void writeCheckpoint(tree *tr, int state)
 {
   int   
@@ -2109,9 +2286,8 @@ cleanup:
 boolean 
 treeEvaluate (tree *tr, int maxSmoothIterations)       /* Evaluate a user tree */
 {
-  boolean result;
-  result = smoothTree(tr, maxSmoothIterations); /* former (32 * smoothFactor) */
-  assert(result); 
+  
+  smoothTree(tr, maxSmoothIterations); /* former (32 * smoothFactor) */
 
   evaluateGeneric(tr, tr->start, FALSE);   
   
@@ -2119,7 +2295,12 @@ treeEvaluate (tree *tr, int maxSmoothIterations)       /* Evaluate a user tree *
   return TRUE;
 }
 
-/* Perform an NNI move. swap can be either 1 or 2 */
+/** @brief Perform an NNI move
+
+    Modify the topology of tree \a tr by performing an NNI (Neighbour Neighbor
+    Interchange) move at node \a p. Perform one of the two possible NNI moves
+    based on whether \a swap is set to 1 or 2.
+*/
 void NNI(tree * tr, nodeptr p, int swap)
 {
   nodeptr       q, tmp;

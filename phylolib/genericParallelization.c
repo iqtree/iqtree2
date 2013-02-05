@@ -7,6 +7,20 @@
 #include "genericParallelization.h"
 #include "axml.h"
 
+/** @file genericParallelization.c
+    
+    @brief Generic master-worker parallelization with either pthreads or MPI. 
+    
+    Worker threads/processes mostly work on a local
+    tree. Implementationwise, MPI operations are abstracted as good as
+    possible via defines (that translate to no-ops or memcpy-calls in
+    the pthreads version).
+
+    @todo the code still contains many memory copy operations that
+    could be executed more efficiently in-place  
+*/
+
+
 
 extern unsigned int* mask32; 
 extern volatile int jobCycle; 
@@ -19,27 +33,29 @@ double timeBuffer[NUM_PAR_JOBS];
 double timePerRegion[NUM_PAR_JOBS]; 
 #endif
 
-void initializePartitionData(tree *localTree);
-void initMemorySavingAndRecom(tree *tr); 
-char* getJobName(int tmp); 
+
+extern void initializePartitionData(tree *localTree);
+extern void initMemorySavingAndRecom(tree *tr);
+extern char* getJobName(int tmp); 
 
 extern double *globalResult; 
 extern volatile char *barrierBuffer;
-void pinToCore(int tid);
 
-/*****************/
-/* MPI specific  */
-/*****************/
+
 #ifdef _FINE_GRAIN_MPI
 extern MPI_Datatype TRAVERSAL_MPI; 
 
 
+/** @brief pthreads helper function for adding bytes to buffer.    
+ */ 
 inline char* addBytes(char *buf, void *toAdd, int numBytes)
 {
   memcpy(buf, toAdd, numBytes);  
   return buf + numBytes;  
 }
 
+/** @brief pthreads helper function for removing byets from buffer. 
+ */ 
 inline char* popBytes(char *buf, void *result, int numBytes)
 {
   memcpy(result, buf, numBytes); 
@@ -47,6 +63,10 @@ inline char* popBytes(char *buf, void *result, int numBytes)
 }
 
 
+/** @brief Sets up the MPI environment. 
+ *  @param argc   initial argc from main
+ *  @param argv   initial argv from main
+ */
 void initMPI(int argc, char *argv[])
 {  
   MPI_Init(&argc, &argv);
@@ -59,11 +79,17 @@ void initMPI(int argc, char *argv[])
 }
 
 
-/* this is the trap for the mpi worker processes   */
+/** @brief Traps worker threads.    
+    
+    @note only relevant for the phtreads version. The master thread
+    passes through.
+
+    @param tr the tree 
+
+ */ 
 boolean workerTrap(tree *tr)
 {
-  /* :KLUDGE: for broadcasting, we need to know, if the tree structure
-     already has been initialized */  
+  /// @note for the broadcasting, we need to, if the tree structure has already been initialized 
   treeIsInitialized = FALSE; 
 
   if(NOT MASTER_P) 
@@ -79,18 +105,16 @@ boolean workerTrap(tree *tr)
 }
 
 
-/* 
-   This seems to be a very safe method to define your own mpi
+#define ELEMS_IN_TRAV_INFO  9
+/** @brief Creates a datastructure for sending the traversal descriptor.
+    
+    @note This seems to be a very safe method to define your own mpi
    datatypes (often there are problems with padding). But it is not
    entirely for the weak of heart...
-*/
-
-#define ELEMS_IN_TRAV_INFO  9
+ */ 
 void defineTraversalInfoMPI()
 {
-  /* :TODO: in the best case, add all defined datatypes to an array in tree */
   MPI_Datatype *result  = &TRAVERSAL_MPI; 
-
 
   int i ; 
   MPI_Aint base; 
@@ -99,22 +123,22 @@ void defineTraversalInfoMPI()
   MPI_Datatype type[ELEMS_IN_TRAV_INFO+1] = {MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_DOUBLE, MPI_DOUBLE, MPI_INT, MPI_INT, MPI_INT, MPI_UB}; 
   traversalInfo desc[2]; 
 
-  MPI_Address( desc, disp);
-  MPI_Address( &(desc[0].pNumber), disp + 1 );
-  MPI_Address( &(desc[0].qNumber), disp + 2 );  
-  MPI_Address( &(desc[0].rNumber), disp + 3); 
-  MPI_Address( desc[0].qz, disp + 4 );
-  MPI_Address( desc[0].rz, disp + 5 );
-  MPI_Address( &(desc[0].slot_p), disp + 6);
-  MPI_Address( &(desc[0].slot_q), disp + 7);
-  MPI_Address( &(desc[0].slot_r), disp + 8);
-  MPI_Address( desc + 1, disp + 9);
+  MPI_Get_address( desc, disp);
+  MPI_Get_address( &(desc[0].pNumber), disp + 1 );
+  MPI_Get_address( &(desc[0].qNumber), disp + 2 );  
+  MPI_Get_address( &(desc[0].rNumber), disp + 3); 
+  MPI_Get_address( desc[0].qz, disp + 4 );
+  MPI_Get_address( desc[0].rz, disp + 5 );
+  MPI_Get_address( &(desc[0].slot_p), disp + 6);
+  MPI_Get_address( &(desc[0].slot_q), disp + 7);
+  MPI_Get_address( &(desc[0].slot_r), disp + 8);
+  MPI_Get_address( desc + 1, disp + 9);
 
   base = disp[0]; 
   for(i = 0; i < ELEMS_IN_TRAV_INFO+1; ++i)
     disp[i] -= base;
 
-  MPI_Type_struct( ELEMS_IN_TRAV_INFO+1 , blocklen, disp, type, result);
+  MPI_Type_create_struct( ELEMS_IN_TRAV_INFO+1 , blocklen, disp, type, result);
   MPI_Type_commit(result);
 }
 
@@ -128,6 +152,9 @@ void defineTraversalInfoMPI()
 #ifdef _USE_PTHREADS
 
 #ifndef _PORTABLE_PTHREADS
+/** @brief Pins a thread to a core (for efficiency). 
+    @param tid the thread id
+ */ 
 void pinToCore(int tid)
 {
   cpu_set_t cpuset;
@@ -145,6 +172,9 @@ void pinToCore(int tid)
 }
 #endif
 
+/**  @brief Starts the worker threads. 
+     @param tr
+ */ 
 void startPthreads(tree *tr)
 {
   pthread_t *threads;
@@ -188,7 +218,7 @@ void startPthreads(tree *tr)
 #endif
 
 #ifdef MEASURE_TIME_PARALLEL
-void reduceTimesWorkerRegions(tree *tr, double *mins, double *maxs)
+static void reduceTimesWorkerRegions(tree *tr, double *mins, double *maxs)
 {
   int tid = tr->threadID; 
   int i,j ; 
@@ -224,7 +254,7 @@ void reduceTimesWorkerRegions(tree *tr, double *mins, double *maxs)
 }
 
 
-void printParallelTimePerRegion(double *mins, double *maxs)
+static void printParallelTimePerRegion(double *mins, double *maxs)
 {
   int i; 
   double allTime = 0; 
@@ -249,6 +279,12 @@ void printParallelTimePerRegion(double *mins, double *maxs)
 
 /* function that computes per-site log likelihoods in pthreads */
 
+/** @brief worker threads evaluate the likelihood on their sites. 
+    @param tr the tree
+    @param likelihood array (?)  
+    @param n number of threads
+    @param tid thread id 
+ */ 
 void perSiteLogLikelihoodsPthreads(tree *tr, double *lhs, int n, int tid)
 {
   size_t 
@@ -308,7 +344,11 @@ void perSiteLogLikelihoodsPthreads(tree *tr, double *lhs, int n, int tid)
     }
 }
 
-
+/** @brief Check, if partition is assign to this worker.
+    @param localTree the local tree 
+    @param tid the thread id
+    @param model the partition id
+ */ 
 boolean isThisMyPartition(tree *localTree, int tid, int model)
 { 
   if(localTree->partitionAssignment[model] == tid)
@@ -317,6 +357,13 @@ boolean isThisMyPartition(tree *localTree, int tid, int model)
     return FALSE;
 }
 
+
+/** @brief Computes partition size for all partitions (in case full partitions are assigns to workers). 
+
+    @param localTree the local tree 
+    
+    @param tid thread id    
+ */ 
 void computeFractionMany(tree *localTree, int tid)
 {
   int
@@ -340,7 +387,12 @@ void computeFractionMany(tree *localTree, int tid)
 }
 
 
-
+/** @brief Computes partition size for all partitions (for cyclic distribution of sites)
+    
+    @param localTree the local tree 
+    @param tid thread id
+    @param n number of workers
+ */ 
 void computeFraction(tree *localTree, int tid, int n)
 {
   int
@@ -361,7 +413,10 @@ void computeFraction(tree *localTree, int tid, int n)
 
 
 
-
+/** @brief Compare partition sizes. 
+    @param p1 pointer to a partition
+    @param p2 pointer to another partition
+ */ 
 static int partCompare(const void *p1, const void *p2)
 {
   partitionType 
@@ -380,14 +435,21 @@ static int partCompare(const void *p1, const void *p2)
 }
 
 
-/* 
-   tr->manyPartitions is set to TRUE if the user has indicated via -Q that there are substantially more partitions 
-   than threads/cores available. In that case we do not distribute sites from each partition in a cyclic fashion to the cores 
-   , but distribute entire partitions to cores. 
-   Achieving a good balance of alignment sites to cores boils down to the multi-processor scheduling problem known from theoretical comp. sci.
-   which is NP-complete.
-   We have implemented very simple "standard" heuristics for solving the multiprocessor scheduling problem that turn out to work very well
-   and are cheap to compute. 
+/** @brief Top-level function for the multi processor scheduling scheme (assigns full partitions to workers). 
+    
+   tr->manyPartitions is set to TRUE if the user has indicated via -Q
+   that there are substantially more partitions than threads/cores
+   available. In that case we do not distribute sites from each
+   partition in a cyclic fashion to the cores , but distribute entire
+   partitions to cores.  Achieving a good balance of alignment sites
+   to cores boils down to the multi-processor scheduling problem known
+   from theoretical comp. sci.  which is NP-complete.  We have
+   implemented very simple "standard" heuristics for solving the
+   multiprocessor scheduling problem that turn out to work very well
+   and are cheap to compute.
+   
+   @param tr tree 
+   @param worker id 
 */
 
 void multiprocessorScheduling(tree *tr, int tid)
@@ -503,13 +565,20 @@ void multiprocessorScheduling(tree *tr, int tid)
 
 
 
-/* 
-   here again we collect the first and secdon derivatives from the various threads 
-   and sum them up. It's similar to what we do in evaluateGeneric() 
-   with the only difference that we have to collect two values (firsrt and second derivative) 
-   instead of onyly one (the log likelihood
+/** @brief Reduce the first and second derivative of the likelihood
+    function.
+    
+    We collect the first and second derivatives from the various
+    threads and sum them up. It's similar to what we do in
+    evaluateGeneric() with the only difference that we have to collect
+    two values (firsrt and second derivative) instead of onyly one (the
+    log likelihood
 
-   Note: operates on global reduction buffers 
+   @warning operates on global reduction buffers \a globalResult
+   
+   @param tr tree 
+   @param dlnLdlz first derivative
+   @param d2lnLdlz2 second derivative
 */
 void branchLength_parallelReduce(tree *tr, double *dlnLdlz,  double *d2lnLdlz2 ) 
 {
@@ -539,10 +608,17 @@ void branchLength_parallelReduce(tree *tr, double *dlnLdlz,  double *d2lnLdlz2 )
 
 
 
-/* 
-   reads from buffer or writes rates (doubles) into buffer 
-   returns number  of elems written / read 
-   countOnly: simply return the number of elements 
+/** @brief Read from buffer or writes rates into buffer.  Return
+    number of elems written.
+    
+   @param buf the buffer
+   @param srcTar pointer to either source or destination array  
+   @param tr tree 
+   @param n number of workers 
+   @param tid process id 
+   @param read TRUE, if read-mode  
+   @param countOnly  if TRUE, simply return the number of elements 
+
 */
 static int doublesToBuffer(double *buf, double *srcTar, tree *tr, int n, int tid, boolean read, boolean countOnly)
 {
@@ -591,12 +667,17 @@ static int doublesToBuffer(double *buf, double *srcTar, tree *tr, int n, int tid
 }
 
 
-
+/** @brief broadcast rates after rate optimization. 
+    
+    @param tr tree 
+    @param localTree local tree 
+    @param n number of workers 
+    @param tid worker id 
+    
+    @todo mpi_alltoallv/w may be more efficient, but it is a hell to set up
+ */ 
 void broadcastAfterRateOpt(tree *tr, tree *localTree, int n, int tid)
 {				  
-  /*  aberer: mpi_alltoallv/w may be more efficient, but it is a
-      hell to set up */
-
   int
     num1 = 0,
     num2 = 0,
@@ -648,7 +729,14 @@ void broadcastAfterRateOpt(tree *tr, tree *localTree, int n, int tid)
 }
 
 
-
+/** @brief Collect doubles from workers to master.
+    
+    @param dst destination array
+    @param src source array
+    @param tr tree 
+    @param n number of workers 
+    @param tid worker id 
+ */
 static void collectDouble(double *dst, double *src, tree *tr, int n, int tid)
 {
   int i; 
@@ -698,7 +786,11 @@ static void collectDouble(double *dst, double *src, tree *tr, int n, int tid)
 #endif
 }
 
-
+/** @brief broadcast a new alpha (for the GAMMA model)
+    @param localTree local tree 
+    @param tr tree 
+    @param tid worker id 
+ */
 static void broadCastAlpha(tree *localTree, tree *tr, int tid)
 {
   int 
@@ -721,6 +813,13 @@ static void broadCastAlpha(tree *localTree, tree *tr, int tid)
 }
 
 
+
+/** @brief Master broadcasts rates.
+    
+    @param localTree local tree 
+    @param tr tree 
+    @param tid worker id     
+ */ 
 static void broadCastRates(tree *localTree, tree *tr, int tid)
 {
   int 
@@ -735,14 +834,7 @@ static void broadCastRates(tree *localTree, tree *tr, int tid)
       bufSize += (pl->eignLength + pl->evLength + pl->eiLength + pl->tipVectorLength) * sizeof(double) ; 
     }
 #endif      
-  
-  /* 
-     the usual game: MPI version writes everything into a buffer that
-     is broadcasted; pthreads version uses direct assignment. 
-
-     TODO memcpy still is more efficient
-  */
-  
+ 
   char bufDbl[bufSize], 
     *bufPtrDbl = bufDbl; 
   RECV_BUF(bufDbl, bufSize, MPI_BYTE);
@@ -765,6 +857,11 @@ static void broadCastRates(tree *localTree, tree *tr, int tid)
 }
 
 
+/** @brief likelihood evaluation call with subsequent reduce operation. 
+
+    @param localTree local tree 
+    @param tid worker id 
+ */ 
 static void reduceEvaluateIterative(tree *localTree, int tid)
 {
   int model;
@@ -803,13 +900,18 @@ static void reduceEvaluateIterative(tree *localTree, int tid)
 
 
 
-/* the one below is a hack we are re-assigning the local pointer to the global one
-   the memcpy version below is just for testing and preparing the
-   fine-grained MPI BlueGene version */
-/* TODO: we should reset this at some point, the excplicit copy is just done for testing */
+/*@ @brief Broadcast the traversal descriptor to worker threads. 
+
+  The one below is a hack we are re-assigning the local pointer to
+  the global one the memcpy version below is just for testing and
+  preparing the fine-grained MPI BlueGene version
+
+  @param localTree local tree 
+  @param tr tree 
+*/
 inline static void broadcastTraversalInfo(tree *localTree, tree *tr)
 {
-  /* TODO these two regions could be joined */
+  /* @todo these two regions could be joined */
 #ifdef _USE_PTHREADS
   /* memcpy -> memmove (see ticket #43). This function is sometimes called with localTree == tr,
    * in which case some memcpy implementations can corrupt the buffers.
@@ -867,6 +969,10 @@ inline static void broadcastTraversalInfo(tree *localTree, tree *tr)
 }
 
 
+/** @brief helper that yields a string representation of a parallel region. 
+    
+    @param type type of parallel region
+ */ 
 char* getJobName(int type)
 {
   switch(type)  
@@ -908,14 +1014,24 @@ char* getJobName(int type)
 }
 
 
-/* this function here handles all parallel regions in the Pthreads version, when we enter 
-   this function masterBarrier() has ben called by the master thread from within the sequential 
-   part of the program, tr is the tree at the master thread, localTree the tree at the worker threads
+/**
+   @brief Generic entry point for parallel regions (mostly broadcasts
+   traversal descriptor first).
 
-   While this is not necessary, adress spaces of threads are indeed separated for easier transition to 
-   a distributed memory paradigm 
+   This function here handles all parallel regions in the Pthreads
+   version, when we enter this function masterBarrier() has ben called
+   by the master thread from within the sequential part of the
+   program, tr is the tree at the master thread, localTree the tree at
+   the worker threads
+
+   While this is not necessary, adress spaces of threads are indeed
+   separated for easier transition to a distributed memory paradigm
+   
+   @param tr tree 
+   @param localTree local tree 
+   @param tid worker id 
+   @param n number of workers 
 */
-
 boolean execFunction(tree *tr, tree *localTree, int tid, int n)
 {
   int
@@ -1237,6 +1353,13 @@ boolean execFunction(tree *tr, tree *localTree, int tid, int n)
 }
 
 
+
+
+/**
+   @brief a buziness thread for pthread worker. 
+   
+   @param tData a struct with basic thread info 
+ */ 
 void *likelihoodThread(void *tData)
 {
   threadData *td = (threadData*)tData;
@@ -1286,12 +1409,18 @@ void *likelihoodThread(void *tData)
 
 
 
-/* 
+/**
+   @brief Cleanup step once the master barrier succeeded. 
+
    This is master specific code called once the barrier is
    passed. Stuff such as reduction operations.  If we execute this
    here, we can keep the code mostly free from parallel -specific
    code.
+   
+   @param jobType type of parallel region
+   @param tr tree 
 */
+
 void masterPostBarrier(int jobType, tree *tr)
 {
   assert(tr->threadID == 0); 
@@ -1332,6 +1461,12 @@ void masterPostBarrier(int jobType, tree *tr)
 }
 
 
+/**
+   @brief a generic master barrier that serves as an entry point for parallel parts of the code.
+
+   @param jobType type of parallel region 
+   @param tr tree 
+ */ 
 void masterBarrier(int jobType, tree *tr)
 {
 #ifdef MEASURE_TIME_PARALLEL
@@ -1381,7 +1516,13 @@ void masterBarrier(int jobType, tree *tr)
 
 #if (defined(_FINE_GRAIN_MPI) || defined(_USE_PTHREADS))
 
-/* encapsulated this, s.t. it becomes more clear, that the pthread-master must not execute this */
+/**
+   @brief Tree  initialization function  for workers.
+
+   @param tr tree 
+   @param localTree local tree 
+   @param tid worker id 
+ */ 
 static void assignAndInitPart1(tree *localTree, tree *tr, int *tid)
 {
   size_t
@@ -1456,6 +1597,12 @@ static void assignAndInitPart1(tree *localTree, tree *tr, int *tid)
 #endif
 
 
+/**
+   @brief Distribute y-vectors during initialization. 
+
+   @param tr tree 
+   @param localTree local tree 
+ */ 
 void distributeYVectors(tree *localTree, tree *tr)
 {
   size_t 
@@ -1518,7 +1665,12 @@ void distributeYVectors(tree *localTree, tree *tr)
 
 
 
+/**
+   @brief Distribute the weights in the alignment ot workers. 
 
+   @param tr tree 
+   @param localTree local tree 
+ */ 
 void distributeWeights(tree *localTree, tree *tr)
 {
   int tid = localTree->threadID; 
@@ -1563,6 +1715,13 @@ void distributeWeights(tree *localTree, tree *tr)
 }
 
 
+/**
+   @brief Initialize the partitioning scheme (master function).
+   @param tr tree 
+   @param localTree local tree 
+   @param tid worker id    
+   @param n number of workers 
+ */ 
 void initializePartitionsMaster(tree *tr, tree *localTree, int tid, int n)
 { 
   size_t

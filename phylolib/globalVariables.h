@@ -184,6 +184,6 @@ extern char * secondaryModelList[21];
 extern double masterTime;
 extern char logFileName[1024];
 extern char * secondaryModelList[21];
-extern unsigned int * mask32;
+//extern const unsigned int * mask32;
 
 #endif

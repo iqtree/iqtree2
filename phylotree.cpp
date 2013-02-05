@@ -717,7 +717,7 @@ ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
 
 void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment)
 {
-    cout << "Computing parsiony tree by random stepwise addition..." << endl;
+    cout << "Computing parsimony tree by random stepwise addition..." << endl;
 	double start_time = getCPUTime();
     aln = alignment;
     int size = aln->getNSeq();
@@ -750,7 +750,7 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
             cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree";
 		initializeAllPartialPars();
 		clearAllPartialLH();
-        // allocate a new taxon and a new ajedcent internal node
+        // allocate a new taxon and a new adjacent internal node
         new_taxon = newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
         Node *added_node = newNode();
         added_node->addNeighbor(new_taxon, -1.0);

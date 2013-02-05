@@ -19,7 +19,4 @@ It make things much easier for the integration with other software.
 char *Tree2String(char *treestr, tree *tr, nodeptr p, boolean printBranchLengths, boolean printNames, boolean printLikelihood,
 		  boolean rellTree, boolean finalPrint, int perGene, boolean branchLabelSupport, boolean printSHSupport);
 
-extern void treeReadTopologyString(char *treeString, tree *tr);
-
-
 #endif /* TREEIO_H_ */

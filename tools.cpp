@@ -664,6 +664,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.maxtime = 1000000;
 	params.par_vs_bionj = false;
 	params.tabu = false;
+	params.random_restart = false;
 	params.avh_test = 0;
 	params.site_freq_file = NULL;
 #ifdef _OPENMP
@@ -1461,6 +1462,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.raxmllib = true;
 			} else if (strcmp(argv[cnt], "-tabu") == 0) {
 				params.tabu = true;
+			} else if (strcmp(argv[cnt], "-random_restart") == 0) {
+				params.random_restart = true;
 			} else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
 				params.parbran = true;
 			} else if (strcmp(argv[cnt], "-wbt") == 0) {

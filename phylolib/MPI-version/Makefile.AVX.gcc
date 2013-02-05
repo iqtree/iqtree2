@@ -1,0 +1,45 @@
+# Makefile August 2006 by Alexandros Stamatakis
+# Makefile cleanup October 2006, Courtesy of Peter Cordes <peter@cordes.ca>
+
+CC = mpicc
+
+CFLAGS = -D__SIM_SSE3 -D__AVX -D_OPTIMIZED_FUNCTIONS -msse3 -D_GNU_SOURCE -O2 -fomit-frame-pointer -funroll-loops #-Wall -pedantic -Wunused-parameter -Wredundant-decls  -Wreturn-type  -Wswitch-default -Wunused-value -Wimplicit  -Wimplicit-function-declaration  -Wimplicit-int -Wimport  -Wunused  -Wunused-function  -Wunused-label -Wno-int-to-pointer-cast -Wbad-function-cast  -Wmissing-declarations -Wmissing-prototypes  -Wnested-externs  -Wold-style-definition -Wstrict-prototypes  -Wdeclaration-after-statement -Wpointer-sign -Wextra -Wredundant-decls -Wunused -Wunused-function -Wunused-parameter -Wunused-value  -Wunused-variable -Wformat  -Wformat-nonliteral -Wparentheses -Wsequence-point -Wuninitialized -Wundef -Wbad-function-cast
+
+
+LIBRARIES = -lm -mavx
+
+RM = rm -f
+
+objs    = axml.o  randomTree.o optimizeModel.o trash.o searchAlgo.o topologies.o fastDNAparsimony.o treeIO.o models.o evaluatePartialGenericSpecial.o evaluateGenericSpecial.o newviewGenericSpecial.o makenewzGenericSpecial.o bipartitionList.o restartHashTable.o avxLikelihood.o
+
+all : raxmlLight-AVX
+
+GLOBAL_DEPS = axml.h globalVariables.h
+
+raxmlLight-AVX : $(objs)
+	$(CC) -o raxmlLight-AVX $(objs) $(LIBRARIES) 
+
+avxLikelihood.o : avxLikelihood.c $(GLOBAL_DEPS)
+	$(CC) $(CFLAGS) -mavx -c -o avxLikelihood.o avxLikelihood.c
+fastDNAparsimony.o : fastDNAparsimony.c  $(GLOBAL_DEPS)
+		   $(CC) $(CFLAGS) -mavx -c -o fastDNAparsimony.o fastDNAparsimony.c		   
+
+bipartitionList.o : bipartitionList.c $(GLOBAL_DEPS)
+evaluatePartialSpecialGeneric.o : evaluatePartialSpecialGeneric.c $(GLOBAL_DEPS)
+optimizeModel.o : optimizeModel.c $(GLOBAL_DEPS)
+trash.o : trash.c $(GLOBAL_DEPS)
+axml.o : axml.c $(GLOBAL_DEPS)
+searchAlgo.o : searchAlgo.c $(GLOBAL_DEPS)
+topologies.o : topologies.c $(GLOBAL_DEPS)
+treeIO.o : treeIO.c $(GLOBAL_DEPS)
+models.o : models.c $(GLOBAL_DEPS)
+evaluatePartialGenericSpecial.o : evaluatePartialGenericSpecial.c $(GLOBAL_DEPS)
+evaluateGenericSpecial.o : evaluateGenericSpecial.c $(GLOBAL_DEPS)
+newviewGenericSpecial.o : newviewGenericSpecial.c $(GLOBAL_DEPS)
+makenewzGenericSpecial.o : makenewzGenericSpecial.c $(GLOBAL_DEPS)
+restartHashTable.o : restartHashTable.c $(GLOBAL_DEPS)
+randomTree.o : randomTree.c $(GLOBAL_DEPS)
+
+
+clean : 
+	$(RM) *.o raxmlLight-AVX

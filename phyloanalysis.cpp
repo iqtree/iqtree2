@@ -48,8 +48,8 @@
 #include "modelset.h"
 #include "timeutil.h"
 
-#include "phylolib/phylolib.h"
-#include "phylolib/nnisearch.h"
+#include "phylolib.h"
+#include "nnisearch.h"
 
 
 //const int DNA_MODEL_NUM = 14;
@@ -1094,7 +1094,10 @@ void computeParsimonyTreeRax(Params& params, IQTree& iqtree,
 	iqtree.raxmlTree->randomNumberSeed = params.ran_seed;
 	//iqtree.raxmlTree->randomNumberSeed = 665;
 	double t_parsimony_start = getCPUTime();
-	makeParsimonyTree(iqtree.raxmlTree);
+	//makeParsimonyTree(iqtree.raxmlTree);
+	allocateParsimonyDataStructures(iqtree.raxmlTree);
+	makeParsimonyTreeFast(iqtree.raxmlTree);
+	freeParsimonyDataStructures(iqtree.raxmlTree);
 	cout << "CPU total time for creating parsimony tree: "
 			<< (getCPUTime() - t_parsimony_start) << " seconds." << endl;
 	/*
@@ -1180,10 +1183,13 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		}
 		// Create parsimony tree using IQ-Tree kernel
 	} else if (params.parsimony_tree) {
+		cout << endl;
+		cout << "CREATING PARSIMONY TREE BY IQTree ..." << endl;
 		iqtree.computeParsimonyTree(params.out_prefix, alignment);
 		// If phylolib is enabled or the starting tree is chosen between parsimony and bionj
 	} else if (params.raxmllib || params.par_vs_bionj) {
-		cout << "Creating parsimony tree  ... " << endl;
+		cout << endl;
+		cout << "CREATING PARSIMONY TREE .. " << endl;
 		// Create parsimony tree using phylolib
 		computeParsimonyTreeRax(params, iqtree, alignment);
 
@@ -1365,7 +1371,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.transformBranchLenRAX(iqtree.raxmlTree->fracchange);
 		iqtree.printTree(bestTreeString);
 		//iqtree.printTree(bestTreeString, WT_BR_LEN);
-		treeReadLenString(bestTreeString.str().c_str(), iqtree.raxmlTree, TRUE, FALSE, FALSE);
+		treeReadLenString(bestTreeString.str().c_str(), iqtree.raxmlTree, TRUE, FALSE, TRUE);
 		//treeReadLenString(bestTreeString.str().c_str(), iqtree.raxmlTree, FALSE, FALSE, TRUE);
 
 		// Read in model parameters values here
@@ -1543,7 +1549,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		cout << "Branch length optimization method : "
 				<< ((iqtree.optimize_by_newton) ? "Newton" : "Brent") << endl;
 		cout << endl;
-		iqtree.doIQPNNI();
+		if (params.random_restart) {
+			iqtree.doRandomRestart();
+		} else {
+			iqtree.doIQPNNI();
+		}
 		iqtree.setAlignment(alignment);
 		//iqtree.printTree(cout);
 	} else {

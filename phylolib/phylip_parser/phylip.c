@@ -396,7 +396,6 @@ pl_phylip_parse (const char * phyfile, int type)
      free (rawdata);
      return (0);
    }
-  printf ("Read phylip header\n");
   
   switch (type)
    {

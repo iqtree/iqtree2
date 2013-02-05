@@ -1,0 +1,15 @@
+SRC = main.c functions.c
+OBJ = $(SRC:.c=.o)
+CC  = gcc
+CFLAGS = -g -Wall -I$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/ -D_USE_GPU -msse3 -O3 -fomit-frame-pointer -funroll-loops -lOpenCL 
+
+all: main
+
+main: $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) 
+
+clean:
+	rm -f main $(OBJ) *~ 
+
+$(OBJ) : functions.h Makefile.GPU
+

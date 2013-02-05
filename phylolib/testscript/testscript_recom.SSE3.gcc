@@ -1,0 +1,136 @@
+#! /bin/sh
+# EDIT BELOW ACCORDINGLY
+# This is the stable version of the library
+LIBPHYLOLIKEVER="0.0.0"
+# This is the URL from where you will download the current stable version of the library
+LIBPHYLOLIKEURL="http://sco.h-its.org/exelixis/libphylolike"
+# This is the working directory you want to run the test from                                             
+WORKINGDIR=`pwd`                                                                                          
+# This is where you keep the version being developed by yourself                                          
+cd ..                                                                                                     
+LOCALVER=`pwd`                                                                                            
+cd ${WORKINGDIR}   
+# NO NEED TO EDIT BEYOND THIS POINT
+# Choose an identification number for the output of the developed version
+OUTPUTID1="developed"
+# Choose an identification number for the output of the stable version
+OUTPUTID2="stable"
+
+WGET="`which wget`"
+if [ -z "$WGET" ] ; then
+	echo "\n"
+        echo " Error: programme wget not found!!!"
+	echo "\n"
+        exit 1
+fi
+
+TAR="`which tar`"
+if [ -z "$TAR" ] ; then
+	echo "\n"
+        echo " Error: programme tar not found!!!"
+	echo "\n"
+        exit 1
+fi
+
+BZIP2="`which bzip2`"
+if [ -z "$BZIP2" ] ; then
+	echo "\n"
+        echo " Error: programme bzip2 not found!!!"
+	echo "\n"
+        exit 1
+fi
+
+echo "\nFound programmes:"
+echo " ${WGET}"
+echo " ${TAR}"
+echo " ${BZIP2}"
+
+if [ ! -f ${LOCALVER}/raxmlLight ] ; then
+        echo " Building ${LIBPHYLOLIKELOC}/raxmlLight ...";
+        cd ${LOCALVER}
+        make clean -f Makefile.SSE3.gcc
+        make -f Makefile.SSE3.gcc
+fi
+
+if [ ! -f ${LOCALVER}/raxmlLight ] ; then
+	echo "\n";
+        echo " Error: failed to build ${LOCALVER}/raxmlLight. Please check the messages above!!!";
+	echo "\n";
+        exit 1
+fi
+
+if [ ! -f ${WORKINGDIR}/libphylolike-${LIBPHYLOLIKEVER}/raxmlLight ] ; then
+        cd ${WORKINGDIR}
+        echo " Building ${WORKINGDIR}/libphylolike-${LIBPHYLOLIKEVER}/raxmlLight ...";
+        ${WGET} ${LIBPHYLOLIKEURL}/libphylolike-${LIBPHYLOLIKEVER}.tar.bz2
+        ${BZIP2} -d libphylolike-${LIBPHYLOLIKEVER}.tar.bz2
+        ${TAR} -xvf libphylolike-${LIBPHYLOLIKEVER}.tar
+        rm libphylolike-${LIBPHYLOLIKEVER}.tar
+        cd ${WORKINGDIR}/libphylolike-${LIBPHYLOLIKEVER}
+        make clean -f Makefile.SSE3.gcc
+        make -f Makefile.SSE3.gcc
+fi
+
+if [ ! -f ${WORKINGDIR}/libphylolike-${LIBPHYLOLIKEVER}/raxmlLight ] ; then
+	echo "\n"
+        echo " Error: failed to build ${WORKINGDIR}/libphylolike-${LIBPHYLOLIKEVER}/raxmlLight. Please check the messages above!!!"
+	echo "\n"
+        exit 1
+fi
+
+echo "\n"
+echo "Installed programme:"
+echo " ${WORKINGDIR}/libphylolike-${LIBPHYLOLIKEVER}/raxmlLight"
+
+if [ $# -eq 0 ] ; then
+	echo "\n"
+	echo " usage: sh testscript.SSE3.gcc [raxml options]"
+	echo "\n"
+	exit 1
+fi
+
+#Clear up the previous mess you have made
+cd ${WORKINGDIR}
+find . -type f -iname "RAxML_*.${OUTPUTID1}*" -exec rm {} \;
+find . -type f -iname "RAxML_*.${OUTPUTID2}*" -exec rm {} \;
+
+#Run the two versions from the working dir you chose
+cd ${WORKINGDIR}
+echo "\nRunning LOCAL\n"
+${LOCALVER}/raxmlLight $@ -L 0.5 -n ${OUTPUTID1}
+echo "\nRunning STABLE\n"
+${WORKINGDIR}/libphylolike-${LIBPHYLOLIKEVER}/raxmlLight $@ -n ${OUTPUTID2}
+echo "\n"
+echo " Testscript finished successfully. Check the messages below."
+echo "\n"
+
+#Check the likelihoods
+LIKELIHOOD1=`grep -i "Likelihood   :" RAxML_info.${OUTPUTID1}`
+LIKELIHOOD2=`grep -i "Likelihood   :" RAxML_info.${OUTPUTID2}`
+
+if [ "$LIKELIHOOD1" != "$LIKELIHOOD2" ] ; then
+        echo "\n Error: the computed likelihoods are different!!!"
+        echo "  $LIKELIHOOD1 (${OUTPUTID2} version)"
+        echo "  $LIKELIHOOD2 (${OUTPUTID1} version)"
+        exit 1
+else
+        echo "\n The computed likelihoods are identical!"
+        echo "  $LIKELIHOOD1"
+fi
+
+#Check the trees
+TREE1=`cat ${WORKINGDIR}/RAxML_result.${OUTPUTID1}`
+TREE2=`cat ${WORKINGDIR}/RAxML_result.${OUTPUTID2}`
+
+if [ "$TREE1" != "$TREE2" ] ; then
+	echo "\n Error: the computed trees are different!!!"
+	echo "  diff <tree_${OUTPUTID2}_version> <tree_${OUTPUTID1}_version>:"
+        diff ${WORKINGDIR}/RAxML_result.${OUTPUTID1} ${WORKINGDIR}/RAxML_result.${OUTPUTID2}
+        exit 1
+else
+	echo "\n The computed trees are identical!"
+fi
+
+echo "\n"
+
+exit 0

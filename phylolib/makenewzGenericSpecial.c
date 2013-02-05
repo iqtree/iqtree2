@@ -49,6 +49,14 @@
 /*#include <tmmintrin.h>*/
 #endif
 
+
+/** @file makenewzGenericSpecial.c
+ *  
+ *  @brief Branch length optimization
+ */
+
+
+
 /* pointers to reduction buffers for storing and gathering the first and second derivative 
    of the likelihood in Pthreads and MPI */
 
@@ -56,7 +64,6 @@
 void branchLength_parallelReduce(tree *tr, double *dlnLdlz,  double *d2lnLdlz2 ) ; 
 extern double *globalResult;
 #endif
-
 
 
 extern const unsigned int mask32[32];
@@ -595,11 +602,23 @@ static void coreGAMMA_FLEX(int upper, double *sumtable, volatile double *ext_dln
 
 void sumGAMMA_FLEX_reorder(int tipCase, double *sumtable, double *x1, double *x2, double *tipVector,
     unsigned char *tipX1, unsigned char *tipX2, int n, const int states);
-/* the function below is called only once at the very beginning of each Newton-Raphson procedure for optimizing barnch lengths.
-   It initially invokes an iterative newview call to get a consistent pair of vectors at the left and the right end of the 
-   branch and thereafter invokes the one-time only precomputation of values (sumtable) that can be re-used in each Newton-Raphson 
-   iteration. Once this function has been called we can execute the actual NR procedure */
 
+/** @brief Precompute values (sumtable) from the 2 likelihood vectors of a given branch
+ *
+ * @warning These precomputations are stored in \a tr->partitionData[model].sumBuffer, which is used by function \a execCore
+ *
+ * @param tr
+ *   Tree structure
+ *
+ * @warning the given branch is implicitly defined in \a tr by these nodes:
+ * pNumber = tr->td[0].ti[0].pNumber;
+ * qNumber = tr->td[0].ti[0].qNumber;
+ *
+ *
+ * @note This function should be called only once at the very beginning of each Newton-Raphson procedure for optimizing barnch lengths. It initially invokes an iterative newview call to get a consistent pair of vectors at the left and the right end of the branch and thereafter invokes the one-time only precomputation of values (sumtable) that can be re-used in each Newton-Raphson iteration. Once this function has been called we can execute the actual NR procedure
+ *
+ *
+ */
 void makenewzIterative(tree *tr)
 {
   int 
@@ -710,11 +729,22 @@ void makenewzIterative(tree *tr)
 }
 
 
-
-/* this function actually computes the first and second derivatives of the likelihood for a given branch stored 
-   in tr->coreLZ[model] Note that in the parallel case coreLZ must always be broadcasted together with the 
-   traversal descriptor, at least for optimizing branch lengths */
-
+/** @brief Compute first and second derivatives of the likelihood with respect to a given branch length 
+ *
+ * @param tr
+ *   Tree structure
+ *
+ * @param _dlnLdlz 
+ *   First derivative dl/dlz
+ *
+ * @param _d2lnLdlz2
+ *   Second derivative d(dl/dlz)/dlz
+ *
+ * @warning \a makenewzIterative should have been called to precompute \a tr->partitionData[model].sumBuffer at the given branch
+ *
+ * @note  this function actually computes the first and second derivatives of the likelihood for a given branch stored in tr->coreLZ[model] Note that in the parallel case coreLZ must always be broadcasted together with the traversal descriptor, at least for optimizing branch lengths 
+ *
+ */
 void execCore(tree *tr, volatile double *_dlnLdlz, volatile double *_d2lnLdlz2)
 {
   int model, branchIndex;
@@ -1034,10 +1064,36 @@ static void topLevelMakenewz(tree *tr, double *z0, int _maxiter, double *result)
     result[i] = z[i];
 }
 
-/* function called from RAxML to optimize a given branch with current branch lengths z0 
-   between nodes p and q.
-   The new branch lengths will be stored in result */
 
+/** @brief Optimize branch length value(s) of a given branch with the Newton-Raphtson procedure 
+ *
+ * @warning A given branch may have one or several branch length values (up to NUM_BRANCHES), usually the later refers to partition-specific branch length values. Thus z0 and result represent collections rather than double values. The number of branch length values is given by \a tr->numBranches 
+ *
+ * @param tr
+ *   Tree structure
+ *
+ * @param p
+ *   One node that defines the branch (p->z)
+ *
+ * @param q
+ *   The other node side of the branch (usually p->back), but the branch length can be estimated even if p and q are
+ *   not connected, e.g. before the insertion of a subtree.
+ *
+ * @param z0 
+ *   Initial branch length value(s) for the given branch \a p->z 
+ *
+ * @param maxiter 
+ *   Maximum number of iterations in the Newton-Raphson procedure 
+ *
+ * @param result 
+ *   Resulting branch length value(s) for the given branch \a p->z 
+ *
+ * @param mask 
+ *   Specifies if a mask to track partition convergence (\a tr->partitionConverged) is being used.
+ *
+ * @sa typical values for \a maxiter are constants \a iterations and \a newzpercycle
+ * @note Requirement: q->z == p->z
+ */
 void makenewzGeneric(tree *tr, nodeptr p, nodeptr q, double *z0, int maxiter, double *result, boolean mask)
 {
   int i;

@@ -69,7 +69,7 @@ compact_sites (struct msa_sites * ms)
   ms->site = tmp;
 }
 
-static struct phylip_data *
+struct phylip_data *
 transpose (struct msa_sites * ms)
 {
   struct phylip_data * pd;

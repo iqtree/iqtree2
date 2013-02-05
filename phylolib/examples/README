@@ -1,0 +1,14 @@
+Some examples for using the library
+
+Alignment/
+           likelihood.c - BL optimization, evaluation of the LH 
+           Reading a binary file containing and aligment / model 
+           Marginal ancestral state computation 
+
+Model/
+           --   Change during runtime the models assigned to each site (see ticket #23)
+
+Tree/
+  read.c   --   Reading and printing a randomly generated tree
+  nni.c    --   Performing an NNI move in a randomly generated tree
+

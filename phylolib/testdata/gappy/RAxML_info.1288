@@ -1,0 +1,47 @@
+
+
+This is RAxML version 7.3.1 released by Alexandros Stamatakis in May 2012.
+
+With greatly appreciated code contributions by:
+Andre Aberer (HITS)
+Simon Berger (HITS)
+Nick Pattengale (Sandia)
+Wayne Pfeiffer (SDSC)
+Akifumi S. Tanabe (Univ. Tsukuba)
+
+
+Alignment has 1430 distinct alignment patterns
+
+Proportion of gaps and completely undetermined characters in this alignment: 29.27%
+
+RAxML rapid hill-climbing mode
+
+Using 1 distinct models/data partitions with joint branch length optimization
+
+
+Executing 1 inferences on the original alignment using 1 distinct randomized MP trees
+
+All free model parameters will be estimated by RAxML
+ML estimate of 25 per site rate categories
+
+Likelihood of final tree will be evaluated and optimized under GAMMA
+
+GAMMA Model parameters will be estimated up to an accuracy of 0.1000000000 Log Likelihood units
+
+Partition: 0
+Alignment Patterns: 1430
+Name: No Name Provided
+DataType: DNA
+Substitution Matrix: GTR
+
+
+
+
+RAxML was called as follows:
+
+raxmlHPC -s 1288_gappy.phy -y -m GTRCAT -n 1288 -p 12345 
+
+
+Partition: 0 with name: No Name Provided
+Base frequencies: 0.255 0.248 0.229 0.267 
+

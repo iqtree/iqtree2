@@ -49,6 +49,12 @@
 
 #include "cycle.h"
 
+/** @file newviewGenericSpecial.c
+ *  
+ *  @brief Likelihood computations at non root nodes
+ */
+
+
 double g_cyc1 = 0.0;
 double g_cyc2 = 0.0;
 
@@ -75,6 +81,37 @@ extern const unsigned int mask32[32];
 
 /* generic function for computing the P matrices, for computing the conditional likelihood at a node p, given child nodes q and r 
    we compute P(z1) and P(z2) here */
+
+/** @brief Computation of P matrix
+ *
+ * Generic function for computing the P matrices, for computing the conditional likelihood at a node p, given child nodes q and r 
+   we compute P(z1) and P(z2) here 
+ *
+ *The following value is computed here: 
+ *\f[
+ * EI\cdot exp( EIGN \cdot z)
+ * \f]
+ * to fill up the P matrix.
+ * 
+ * @param z1
+ *   Branch length leading to left child
+ * 
+ * @param z2
+ *   Branch length leading to right child
+ * 
+ * @param EIGN
+ *   Eigenvalues of Q-matrix
+ * 
+ * @param EI
+ *   Right eigenvectors of Q-matrix
+ * 
+ * @param left
+ *   Contribution of left sided subtree
+ * 
+ * @param right
+ *   Contribution of right sided subtree
+ * 
+ */
 
 void makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, boolean saveMem, int maxCat, const int states)
 {
@@ -173,7 +210,17 @@ void makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int nu
    conditional likelihood arrays at p, given child nodes q and r. Once again we need 
    two generic function implementations, one for CAT and one for GAMMA */
 
-
+/** @brief Computation of conditional likelihood arrays for CAT
+ *
+ *This is a generic, slow but readable function implementations for computing the 
+   conditional likelihood arrays at p, given child nodes q and r.
+ * 
+ * @param tipvector
+ *   Vector contining sums of left eigenvectors for likelihood computation at tips.
+ *
+ *
+ *
+ */
 
 static void newviewCAT_FLEX(int tipCase, double *extEV,
     int *cptr,
@@ -389,7 +436,17 @@ static void newviewCAT_FLEX(int tipCase, double *extEV,
   *scalerIncrement = addScale;
 }
 
-
+/** @brief Computation of conditional likelihood arrays for GAMMA
+ *
+ *This is a generic, slow but readable function implementations for computing the 
+   conditional likelihood arrays at p, given child nodes q and r.
+ * 
+ * @param tipvector
+ *   Vector contining sums of left eigenvectors for likelihood computation at tips.
+ *
+ *
+ *
+ */
 static void newviewGAMMA_FLEX(int tipCase,
     double *x1, double *x2, double *x3, double *extEV, double *tipVector,
     unsigned char *tipX1, unsigned char *tipX2,
@@ -650,7 +707,14 @@ static void newviewGAMMA_FLEX(int tipCase,
 
 /* The function below computes partial traversals only down to the point/node in the tree where the 
    conditional likelihhod vector summarizing a subtree is already oriented in the correct direction */
-
+/** @brief Computes partial traversals
+ *
+ *The function computes partial traversals only down to the point/node in the tree where the 
+   conditional likelihhod vector summarizing a subtree is already oriented in the correct direction 
+ *
+ *
+ *
+ */
 void computeTraversalInfo(nodeptr p, traversalInfo *ti, int *counter, int maxTips, int numBranches, boolean partialTraversal, recompVectors *rvec, boolean useRecom)
 {
   /* if it's a tip we don't do anything */
@@ -955,7 +1019,17 @@ void newviewCAT_FLEX_reorder(int tipCase, double *extEV,
 
 void newviewGAMMA_FLEX_reorder(int tipCase, double *x1, double *x2, double *x3, double *extEV, double *tipVector, int *ex3, unsigned char *tipX1, unsigned char *tipX2, int n, double *left, double *right, int *wgt, int *scalerIncrement, const int states, const int maxStateValue);
 
-
+/** @brief Iterates over the length of the traversal descriptor and computes the conditional likelihhod
+ *
+ * @param tr
+ *   Tree structure
+ *
+ * @note This function just iterates over the length of the traversal descriptor and 
+   computes the conditional likelihhod arrays in the order given by the descriptor.
+   So in a sense, this function has no clue that there is any tree-like structure 
+   in the traversal descriptor, it just operates on an array of structs of given length
+ * 
+ */
 
 void newviewIterative (tree *tr, int startIndex)
 {
@@ -1434,7 +1508,15 @@ void computeTraversal(tree *tr, nodeptr p, boolean partialTraversal)
    it re-computes the vector at node p (regardless of whether it's orientation is 
    correct and then it also re-computes reciursively the likelihood arrays 
    in the subtrees of p as needed and if needed */
-
+/** @brief Re-computes the vector at node p
+ *
+ * This is the generic function that could be called from the user program 
+   it re-computes the vector at node p (regardless of whether it's orientation is 
+   correct) and re-computes, reciursively, the likelihood arrays 
+   in the subtrees of p as needed and if needed 
+ *
+ *
+ */
 void newviewGeneric (tree *tr, nodeptr p, boolean masked)
 {  
   /* if it's a tip there is nothing to do */
@@ -1521,6 +1603,10 @@ void newviewGeneric (tree *tr, nodeptr p, boolean masked)
 
 /* function to compute the marginal ancestral probability vector at a node p for CAT/PSR model */
 
+/** @brief Function to compute the marginal ancestral probability vector at a node p for CAT/PSR model
+ *
+ *
+ */
 static void ancestralCat(double *x3, double *ancestralBuffer, double *diagptable, const int n, const int numStates, int *cptr)
 { 
   double 
@@ -1567,7 +1653,10 @@ static void ancestralCat(double *x3, double *ancestralBuffer, double *diagptable
 /* compute marginal ancestral states for GAMMA models,
    for the euqation to obtain marginal ancestral states 
    see Ziheng Yang's book */
-
+/** @brief Function to compute the marginal ancestral probability vector at a node p for GAMMA model
+ *
+ *
+ */
 static void ancestralGamma(double *x3, double *ancestralBuffer, double *diagptable, const int n, const int numStates, const int gammaStates)
 {
   int 
@@ -1620,7 +1709,10 @@ static void ancestralGamma(double *x3, double *ancestralBuffer, double *diagptab
 }
 
 /* compute dedicated zero branch length P matrix */
-
+/** @brief Compute dedicated zero branch length P matrix
+ *
+ *
+ */
 static void calc_diagp_Ancestral(double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, const int numStates)
 {
   int 
@@ -1660,7 +1752,10 @@ static void calc_diagp_Ancestral(double *rptr, double *EI,  double *EIGN, int nu
 }
 
 /* a ver simple iterative function, we only access the conditional likelihood vector at node p */
-
+/** @brief A very simple iterative function, we only access the conditional likelihood vector at node p
+ *
+ *
+ */
 void newviewAncestralIterative(tree *tr)
 {
   traversalInfo 
@@ -1828,7 +1923,10 @@ void newviewGenericAncestral(tree *tr, nodeptr p)
 }
 
 /* returns the character representation of an enumerated DNA or AA state */
-
+/** @brief Returns the character representation of an enumerated DNA or AA state
+ *
+ *  @return character representation of an enumerated DNA or AA state
+ */
 static char getStateCharacter(int dataType, int state)
 {
   char 
@@ -1851,7 +1949,10 @@ static char getStateCharacter(int dataType, int state)
 
 /* printing function, here you can see how one can store the ancestral probabilities in a dedicated 
    data structure */
-
+/** @brief Printing function
+ *
+ * @note  Here one can see how to store the ancestral probabilities in a dedicated data structure
+ */
 void printAncestralState(nodeptr p, boolean printStates, boolean printProbs, tree *tr)
 {
 #ifdef _USE_PTHREADS
@@ -1989,8 +2090,16 @@ void printAncestralState(nodeptr p, boolean printStates, boolean printProbs, tre
 }
 
 /* optimized function implementations */
+
 #if 1
 //#ifdef _OPTIMIZED_FUNCTIONS
+
+/** @brief Optimized function implementations for conditional likelihood implementation
+ *
+ * Optimized unrolled, and vectorized versions of the above generi cfunctions 
+   for computing the conditional likelihood at p given child nodes q and r. The procedure is the same as for the slow generic implementations.
+ *
+ */
 
 static void newviewGTRGAMMA_GAPPED_SAVE(int tipCase,
     double *x1_start, double *x2_start, double *x3_start,

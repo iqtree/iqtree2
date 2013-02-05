@@ -28,6 +28,11 @@
  *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
  */
 
+/** @file utils.c
+ *  
+ *  @brief Miscellaneous general utility and helper functions
+ */
+
 #ifdef WIN32
 #include <direct.h>
 #endif
@@ -66,8 +71,12 @@
 #include "phylip_parser/lexer.h"
 #include "phylip_parser/phylip.h"
 #include "phylip_parser/xalloc.h"
+#include "phylip_parser/msa_sites.h"
+
+
 #include "globalVariables.h"
 
+extern unsigned int mask32[32];
 
 
 /***************** UTILITY FUNCTIONS **************************/
@@ -96,28 +105,32 @@ void read_phylip_msa(tree * tr, const char * filename, int format, int type)
       model;
 
   struct phylip_data * pd;
+  struct msa_sites * ms;
   double **empiricalFrequencies;
 
-  pd = parse_phylip (filename, format);
+  pd = pl_phylip_parse (filename, format);
+
+  ms = construct_msa_sites (pd, SITES_CREATE | SITES_COMPUTE_WEIGHTS);
+
+  free_phylip_struct (pd);
+  pd = transpose (ms);
+  free_sites_struct (ms);
+
+
 
   tr->mxtips                 = pd->taxa;
   tr->originalCrunchedLength = pd->seqlen;
   tr->NumberOfModels         = 1;
+  tr->numBranches            = 1;
 
   setupTree(tr, TRUE);
 
   tr->gapyness               = 0.03;   /* number of undetermined chars / alignment size */
 
-    tr->numBranches = 1;
+  tr->aliaswgt = pl_phylip_deldups (&pd);
+  tr->originalCrunchedLength = pd->seqlen;
 
-    /* If we use the RF-based convergence criterion we will need to allocate some hash tables.
-       let's not worry about this right now, because it is indeed RAxML-specific */
-
-  tr->aliaswgt = (int *)malloc((size_t)tr->originalCrunchedLength * sizeof(int));
-  for (i = 0;i < tr->originalCrunchedLength; ++i)
-   {
-     tr->aliaswgt[i] = 1;
-   }
+  pl_phylip_subst (pd, DNA_DATA);          /* TODO: Change to reflect the input type */
 
   tr->rateCategory           =  (int *)    malloc((size_t)tr->originalCrunchedLength * sizeof(int));
 
@@ -161,12 +174,12 @@ void read_phylip_msa(tree * tr, const char * filename, int format, int type)
     pInfo
       *p = &(tr->partitionData[model]);
 
-    p->states             =  4;   /* according to the type */
-    p->maxTipStates       = 16;   /* according to the type */
+    p->states             =  4;   /* TODO: according to the type */
+    p->maxTipStates       = 16;   /* TODO: according to the type */
     p->lower              =  0;
     p->upper              = pd->seqlen;
     p->width              = p->upper - p->lower;
-    p->dataType           =   DNA_DATA; /* dna type */
+    p->dataType           =   DNA_DATA; /* TODO: dna type */
     p->protModels         =   2;
     p->autoProtModels     =   0;
     p->protFreqs          =   0;
@@ -193,193 +206,156 @@ void read_phylip_msa(tree * tr, const char * filename, int format, int type)
   tr->yVector = (char **) malloc(sizeof(char*) * (tr->mxtips+1));
  for (i=0; i < tr->mxtips; ++i)
         tr->yVector[i+1] = pd->seq[i]; //(unsigned char **)malloc(sizeof(unsigned char *) * ((size_t)(tr->mxtips + 1)));
-  for (i = 1; i <= pd->taxa; ++ i)
-   {
-     printf ("%s\n", tr->yVector[i]);
-   }
  
- for (i = 1; i <= pd->taxa; ++ i)
-  {
-    for (j = 0; j < pd->seqlen; ++ j)
-     {
-       switch (tr->yVector[i][j])
-        {
-          case 'A':
-          case 'a':
-            tr->yVector[i][j] = 1;
-            break;
-          case 'C':
-          case 'c':
-            tr->yVector[i][j] = 2;
-            break;
-
-          case 'G':
-          case 'g':
-            tr->yVector[i][j] = 4;
-            break;
-
-          case 'T':
-          case 't':
-            tr->yVector[i][j] = 8;
-            break;
-
-          case '-':
-            tr->yVector[i][j] = 15;
-            break;
-
-
-        }
-     }
-  }
-
-/*
-  for(i = 1; i <= (size_t)tr->mxtips; i++)
-    tr->yVector[i] = &y[(i - 1) *  (size_t)tr->originalCrunchedLength];
-*/
-  //myBinFread(y, sizeof(unsigned char), ((size_t)tr->originalCrunchedLength) * ((size_t)tr->mxtips), byteFile);
-
-  /* Initialize the model */
-  //printf("Here 1!\n");
-  initializePartitionsSequential(tr); 
-  //printf("Here 2!\n");
-  //initModel(tr, empiricalFrequencies);
-
+ #ifndef _USE_PTHREADS
+ #ifndef _FINE_GRAIN_MPI
+  //initializePartitionsSequential(tr); 
+  initializePartitions (tr, tr, 0, 0);
+ #endif
+ #endif
 }
 #endif
 
-void read_msa(tree *tr, const char *filename) {
-	size_t i, model;
+/** @brief Read MSA from a file and setup the tree
+ *
+ *  Reads the MSA from \a filename and constructs the
+ *  the tree \a tr and sets up partition and model data
+ *
+ *  @todo This will be soon replaced by \a read_phylip_msa
+ *
+ *  @param tr
+ *    Pointer to the tree to be set up
+ *
+ *  @param filename
+ *    Filename containing the MSA
+ *
+ */
+void read_msa(tree *tr, const char *filename)
+  {
+    size_t
+      i,
+      model;
 
-	unsigned char *y;
-	double **empiricalFrequencies;
+    unsigned char *y;
+  double **empiricalFrequencies;
 
-	FILE *byteFile = myfopen(filename, "rb");
+    FILE
+      *byteFile = myfopen(filename, "rb");
 
-	/* read the alignment info */
-	myBinFread(&(tr->mxtips), sizeof(int), 1, byteFile);
-	myBinFread(&(tr->originalCrunchedLength), sizeof(int), 1, byteFile);
-	myBinFread(&(tr->NumberOfModels), sizeof(int), 1, byteFile);
 
-	/* initialize topology */
+    /* read the alignment info */
+    myBinFread(&(tr->mxtips),                 sizeof(int), 1, byteFile);
+    myBinFread(&(tr->originalCrunchedLength), sizeof(int), 1, byteFile);
+    myBinFread(&(tr->NumberOfModels),         sizeof(int), 1, byteFile);
 
-	/* Joint branch length estimate is activated by default */
-	/*
-	 if(adef->perGeneBranchLengths)
-	 tr->numBranches = tr->NumberOfModels;
-	 else
-	 tr->numBranches = 1;
-	 */
-	tr->numBranches = 1;
+    /* initialize topology */
 
-	setupTree(tr, TRUE);
+    /* Joint branch length estimate is activated by default */
+    /*
+    if(adef->perGeneBranchLengths)
+      tr->numBranches = tr->NumberOfModels;
+    else
+      tr->numBranches = 1;
+    */
+    tr->numBranches = 1;
+    setupTree(tr, TRUE);
+    
+    myBinFread(&(tr->gapyness),            sizeof(double), 1, byteFile);
 
-	myBinFread(&(tr->gapyness), sizeof(double), 1, byteFile);
+    /* If we use the RF-based convergence criterion we will need to allocate some hash tables.
+       let's not worry about this right now, because it is indeed RAxML-specific */
 
-	/* If we use the RF-based convergence criterion we will need to allocate some hash tables.
-	 let's not worry about this right now, because it is indeed RAxML-specific */
+    tr->aliaswgt                   = (int *)malloc((size_t)tr->originalCrunchedLength * sizeof(int));
+    myBinFread(tr->aliaswgt, sizeof(int), tr->originalCrunchedLength, byteFile);
 
-	tr->aliaswgt = (int *) malloc(
-			(size_t) tr->originalCrunchedLength * sizeof(int));
-	myBinFread(tr->aliaswgt, sizeof(int), tr->originalCrunchedLength, byteFile);
+    tr->rateCategory    = (int *)    malloc((size_t)tr->originalCrunchedLength * sizeof(int));
+    tr->patrat          = (double*)  malloc((size_t)tr->originalCrunchedLength * sizeof(double));
+    tr->patratStored    = (double*)  malloc((size_t)tr->originalCrunchedLength * sizeof(double));
+    tr->lhs             = (double*)  malloc((size_t)tr->originalCrunchedLength * sizeof(double));
 
-	tr->rateCategory = (int *) malloc(
-			(size_t) tr->originalCrunchedLength * sizeof(int));
-	tr->patrat = (double*) malloc(
-			(size_t) tr->originalCrunchedLength * sizeof(double));
-	tr->patratStored = (double*) malloc(
-			(size_t) tr->originalCrunchedLength * sizeof(double));
-	tr->lhs = (double*) malloc(
-			(size_t) tr->originalCrunchedLength * sizeof(double));
+    tr->executeModel   = (boolean *)malloc(sizeof(boolean) * (size_t)tr->NumberOfModels);
 
-	tr->executeModel = (boolean *) malloc(
-			sizeof(boolean) * (size_t) tr->NumberOfModels);
+    for(i = 0; i < (size_t)tr->NumberOfModels; i++)
+      tr->executeModel[i] = TRUE;
 
-	for (i = 0; i < (size_t) tr->NumberOfModels; i++)
-		tr->executeModel[i] = TRUE;
 
-	/* data structures for convergence criterion need to be initialized after! setupTree */
-	if (tr->searchConvergenceCriterion) {
-		tr->bitVectors = initBitVector(tr->mxtips, &(tr->vLength));
-		tr->h = initHashTable(tr->mxtips * 4);
-	}
 
-	/* read tip names */
-	for (i = 1; i <= (size_t) tr->mxtips; i++) {
-		int len;
-		myBinFread(&len, sizeof(int), 1, byteFile);
-		tr->nameList[i] = (char*) malloc(sizeof(char) * (size_t) len);
-		myBinFread(tr->nameList[i], sizeof(char), len, byteFile);
-		/*printf("%s \n", tr->nameList[i]);*/
-	}
+    /* data structures for convergence criterion need to be initialized after! setupTree */
+    if(tr->searchConvergenceCriterion)
+    {
+      tr->bitVectors = initBitVector(tr->mxtips, &(tr->vLength));
+      tr->h = initHashTable(tr->mxtips * 4);
+    }
 
-	for (i = 1; i <= (size_t) tr->mxtips; i++)
-		addword(tr->nameList[i], tr->nameHash, i);
+    /* read tip names */
+    for(i = 1; i <= (size_t)tr->mxtips; i++)
+    {
+      int len;
+      myBinFread(&len, sizeof(int), 1, byteFile);
+      tr->nameList[i] = (char*)malloc(sizeof(char) * (size_t)len);
+      myBinFread(tr->nameList[i], sizeof(char), len, byteFile);
+      /*printf("%s \n", tr->nameList[i]);*/
+    }
 
-	/* read partition info (boudaries, data type) */
-	empiricalFrequencies = (double **) malloc(
-			sizeof(double *) * (size_t) tr->NumberOfModels);
-	for (model = 0; model < (size_t) tr->NumberOfModels; model++) {
-		int len;
+    for(i = 1; i <= (size_t)tr->mxtips; i++)
+      addword(tr->nameList[i], tr->nameHash, i);
 
-		pInfo *p = &(tr->partitionData[model]);
+    /* read partition info (boudaries, data type) */
+    empiricalFrequencies = (double **)malloc(sizeof(double *) * (size_t)tr->NumberOfModels);
+    for(model = 0; model < (size_t)tr->NumberOfModels; model++)
+    {
+      int
+        len;
 
-		myBinFread(&(p->states), sizeof(int), 1, byteFile);
-		myBinFread(&(p->maxTipStates), sizeof(int), 1, byteFile);
-		myBinFread(&(p->lower), sizeof(int), 1, byteFile);
-		myBinFread(&(p->upper), sizeof(int), 1, byteFile);
-		myBinFread(&(p->width), sizeof(int), 1, byteFile);
-		myBinFread(&(p->dataType), sizeof(int), 1, byteFile);
-		myBinFread(&(p->protModels), sizeof(int), 1, byteFile);
-		myBinFread(&(p->autoProtModels), sizeof(int), 1, byteFile);
-		myBinFread(&(p->protFreqs), sizeof(int), 1, byteFile);
-		myBinFread(&(p->nonGTR), sizeof(boolean), 1, byteFile);
-		myBinFread(&(p->numberOfCategories), sizeof(int), 1, byteFile);
+      pInfo
+        *p = &(tr->partitionData[model]);
 
-		/* later on if adding secondary structure data
+      myBinFread(&(p->states),             sizeof(int), 1, byteFile);
+      myBinFread(&(p->maxTipStates),       sizeof(int), 1, byteFile);
+      myBinFread(&(p->lower),              sizeof(int), 1, byteFile);
+      myBinFread(&(p->upper),              sizeof(int), 1, byteFile);
+      myBinFread(&(p->width),              sizeof(int), 1, byteFile);
+      myBinFread(&(p->dataType),           sizeof(int), 1, byteFile);
+      myBinFread(&(p->protModels),         sizeof(int), 1, byteFile);
+      myBinFread(&(p->autoProtModels),     sizeof(int), 1, byteFile);
+      myBinFread(&(p->protFreqs),          sizeof(int), 1, byteFile);
+      myBinFread(&(p->nonGTR),             sizeof(boolean), 1, byteFile);
+      myBinFread(&(p->numberOfCategories), sizeof(int), 1, byteFile);
 
-		 int    *symmetryVector;
-		 int    *frequencyGrouping;
-		 */
+      /* later on if adding secondary structure data
 
-		myBinFread(&len, sizeof(int), 1, byteFile);
-		p->partitionName = (char*) malloc(sizeof(char) * (size_t) len);
-		myBinFread(p->partitionName, sizeof(char), len, byteFile);
+         int    *symmetryVector;
+         int    *frequencyGrouping;
+         */
 
-		empiricalFrequencies[model] = (double *) malloc(
-				sizeof(double) * (size_t) tr->partitionData[model].states);
-		myBinFread(empiricalFrequencies[model], sizeof(double),
-				tr->partitionData[model].states, byteFile);
-	}
-	/* Read all characters from tips */
-	y = (unsigned char *) malloc(
-			sizeof(unsigned char) * ((size_t) tr->originalCrunchedLength)
-					* ((size_t) tr->mxtips));
+      myBinFread(&len, sizeof(int), 1, byteFile);
+      p->partitionName = (char*)malloc(sizeof(char) * (size_t)len);
+      myBinFread(p->partitionName, sizeof(char), len, byteFile);
 
-	tr->yVector = (unsigned char **) malloc(
-			sizeof(unsigned char *) * ((size_t) (tr->mxtips + 1)));
+      empiricalFrequencies[model] = (double *)malloc(sizeof(double) * (size_t)tr->partitionData[model].states);
+      myBinFread(empiricalFrequencies[model], sizeof(double), tr->partitionData[model].states, byteFile);
+    }
+    /* Read all characters from tips */
+    y = (unsigned char *)malloc(sizeof(unsigned char) * ((size_t)tr->originalCrunchedLength) * ((size_t)tr->mxtips));
 
-	for (i = 1; i <= (size_t) tr->mxtips; i++)
-		tr->yVector[i] = &y[(i - 1) * (size_t) tr->originalCrunchedLength];
+    tr->yVector = (unsigned char **)malloc(sizeof(unsigned char *) * ((size_t)(tr->mxtips + 1)));
 
-	myBinFread(y, sizeof(unsigned char),
-			((size_t) tr->originalCrunchedLength) * ((size_t) tr->mxtips),
-			byteFile);
+    for(i = 1; i <= (size_t)tr->mxtips; i++)
+      tr->yVector[i] = &y[(i - 1) *  (size_t)tr->originalCrunchedLength];
 
-	/* Initialize the model */
-	//printf("Here 1!\n");
-	initializePartitionsSequential(tr);
-	//printf("Here 2!\n");
-	initModel(tr, empiricalFrequencies);
+    myBinFread(y, sizeof(unsigned char), ((size_t)tr->originalCrunchedLength) * ((size_t)tr->mxtips), byteFile);
 
-	fclose(byteFile);
-}
+    /* Initialize the model */
+    //printf("Here 1!\n");
+    initializePartitionsSequential(tr); 
+    //printf("Here 2!\n");
+    initModel(tr, empiricalFrequencies);
 
-void makeParsimonyTree(tree *tr)
-{
-  allocateParsimonyDataStructures(tr);
-  makeParsimonyTreeFast(tr);
-  freeParsimonyDataStructures(tr);
-}
+
+    fclose(byteFile);
+  }
+
+
 
 void myBinFread(void *ptr, size_t size, size_t nmemb, FILE *byteFile)
 {  
@@ -741,6 +717,17 @@ FILE *myfopen(const char *path, const char *mode)
 /******************************some functions for the likelihood computation ****************************/
 
 
+/** @brief Check whether a node is a tip.
+  * 
+  * @param number
+  *  Node number to be checked
+  *
+  * @param maxTips
+  *  Number of tips in the tree
+  *
+  * @return
+  *   \b TRUE if tip, \b FALSE otherwise
+  */
 boolean isTip(int number, int maxTips)
 {
   assert(number > 0);
@@ -765,7 +752,20 @@ void getxnode (nodeptr p)
 }
 
 
-/* connects node p with q and assigns the branch lengths z */
+/** @brief Connect two nodes and assign branch lengths 
+  * 
+  * Connect the two nodes \a p and \a q in each partition \e i with a branch of
+  * length \a z[i]
+  *
+  * @param p
+  *   Node \a p
+  * 
+  * @param q
+  *   Node \a q
+  *
+  * @param numBranches
+  *   Number of partitions
+  */
 void hookup (nodeptr p, nodeptr q, double *z, int numBranches)
 {
   int i;
@@ -851,6 +851,8 @@ boolean setupTree (tree *tr, boolean doInit)
 
   for(i = 0; i < tr->NumberOfModels; i++)    
     tr->perPartitionLH[i] = 0.0;	    
+
+
 
   tips  = (size_t)tr->mxtips;
   inter = (size_t)(tr->mxtips - 1);
@@ -1325,22 +1327,22 @@ void initializePartitionsSequential(tree *tr)
     assert(tr->partitionData[model].width == tr->partitionData[model].upper - tr->partitionData[model].lower);
 
   initializePartitionData(tr); 
-  
+
   /* figure in tip sequence data per-site pattern weights */ 
   for(model = 0; model < (size_t)tr->NumberOfModels; model++)
+  {
+    size_t
+      j;
+    size_t lower = tr->partitionData[model].lower;
+    size_t width = tr->partitionData[model].upper - lower;
+
+    for(j = 1; j <= (size_t)tr->mxtips; j++)
     {
-      size_t
-	j;
-	size_t lower = tr->partitionData[model].lower;
-	size_t width = tr->partitionData[model].upper - lower;
+      tr->partitionData[model].yVector[j] = &(tr->yVector[j][tr->partitionData[model].lower]);
+    }
 
-      for(j = 1; j <= (size_t)tr->mxtips; j++)
-      {
-	tr->partitionData[model].yVector[j] = &(tr->yVector[j][tr->partitionData[model].lower]);
-        }
-
-      memcpy((void*)(&(tr->partitionData[model].wgt[0])),         (void*)(&(tr->aliaswgt[lower])),      sizeof(int) * width);            
-    }  
+    memcpy((void*)(&(tr->partitionData[model].wgt[0])),         (void*)(&(tr->aliaswgt[lower])),      sizeof(int) * width);            
+  }  
 
   initMemorySavingAndRecom(tr);
 }

@@ -1,0 +1,50 @@
+Original phylip file 
+
+       p1 p2 p1 p3 p4
+sites  1  2  1  3  4
+
+
+Partition description
+DNA, gene1 = 1-5
+DNA, gene2 = 6-7, 9-23
+
+First we store the original alignment, this is parsed from the phylip (oA)
+set of patterns   p = [p1 p2 p3 p4]    // each pattern points to the sequence tip data
+pattern occurece oA = [1 2 1 3 4]      // the alignment coordinates, 5 sites with  4 different patterns
+// sth like can be useful partition assignment= [1 1 1 1 0]      // here all sites have been assignd to partition 1, the last one has not been assigned anywhere, we may allow to assign one single column to several partitions  
+
+pattern of site 3 is p[oA[2]] 
+
+// Reading the alignment
+phylip oA <- parse_phylip(alignment.phy)    // this is what the start - end coordinates refer to
+patterns p <- find_patterns(oA)
+
+// Operations on partitions
+partition_struct *partition <- def_partition(oA, p, start, end, stride)                  // declare a new partition
+partition_struct *partition <- extend_partition(oA, p, partition, start, end, stride)    // adds a new segment to an existing partition
+void free_partition(partition)
+
+
+struct partition
+{
+  patterns = [ p1 p2 p3]   // hard copy of the tip data
+  weights =  [  1  2  3]
+}
+
+struct partition_list
+{
+  partition *partitions;
+  int number_of_partitions;
+}
+
+
+//helper functions (not important now)
+is_valid()                                 // checks that the current paritions cover the full alignment (all weights sum up to n sites), and each column from the alignement is used in only on partition, and all columns have asigned at least once and only once
+merge_partitions(partition1, partition2)
+
+
+
+
+
+
+

@@ -22,8 +22,6 @@
 #include "mexttree.h"
 #include "timeutil.h"
 
-//TODO Only to test
-int cntBranches = 0;
 extern double t_begin;
 
 IQTree::IQTree() :
@@ -33,10 +31,8 @@ IQTree::IQTree() :
 
 void IQTree::init() {
 	k_represent = 0;
-	//p_delete = 0.0;
 	k_delete = k_delete_min = k_delete_max = k_delete_stay = 0;
 	dist_matrix = NULL;
-	//bonus_values = NULL;
 	nni_count_est = 0.0;
 	nni_delta_est = 0;
 	curScore = 0.0; // Current score of the tree
@@ -72,6 +68,28 @@ void IQTree::init() {
 IQTree::IQTree(Alignment *aln) :
 		PhyloTree(aln) {
 	init();
+}
+
+double IQTree::computeParsimonyTreePhylolib() {
+	allocateParsimonyDataStructures(raxmlTree);
+	makeParsimonyTreeFast(raxmlTree);
+	freeParsimonyDataStructures(raxmlTree);
+
+	smoothTree(raxmlTree, 32);
+	evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
+
+	return raxmlTree->likelihood;
+
+	/*
+	 int printBranchLengths = TRUE;
+	 Tree2String(iqtree.raxmlTree->tree_string, iqtree.raxmlTree,
+	 iqtree.raxmlTree->start->back, printBranchLengths, TRUE, 0, 0, 0,
+	 SUMMARIZE_LH, 0, 0);
+	 string parsimony_tree_file = params.out_prefix;
+	 parsimony_tree_file += ".parsimonyTree";
+	 printString2File(string(iqtree.raxmlTree->tree_string),
+	 parsimony_tree_file);
+	 */
 }
 
 void IQTree::setParams(Params &params) {
@@ -533,6 +551,18 @@ void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec,
 
 }
 
+void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
+	PhyloNodeVector::iterator it_leaf;
+	assert(root->isLeaf());
+	initializeAllPartialPars();
+	clearAllPartialLH();
+	for (it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
+
+	}
+
+}
+
+
 void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 	PhyloNodeVector::iterator it_leaf;
 
@@ -593,6 +623,17 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 						| WT_BR_ID);
 }
 
+double IQTree::doParsimonyReinsertion() {
+	PhyloNodeVector del_leaves;
+	if (params->tabu) {
+		deleteNonTabuLeaves(del_leaves);
+	} else {
+		deleteLeaves(del_leaves);
+	}
+	reinsertLeavesByParsimony(del_leaves);
+}
+
+
 double IQTree::doIQP() {
 	if (verbose_mode >= VB_DEBUG)
 		drawTree(cout,
@@ -634,7 +675,6 @@ double IQTree::doIQP() {
 			 }
 			 */
 			curScore = optimizeAllBranches(1);
-			//cout << "IQP log-likelihood: " << curScore << endl;
 		}
 
 	}
@@ -767,6 +807,59 @@ double IQTree::perturb(int times) {
 //    return bestScore;
 //}
 
+
+double IQTree::doRandomRestart() {
+	int cur_iteration;
+	bool maxTimeReached = false;
+	setRootNode(params->root);
+	// keep the best tree into a string
+	stringstream best_tree_string;
+	printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+	stringstream best_tree_topo_ss;
+	printTree(best_tree_topo_ss, WT_TAXON_ID + WT_SORT_TAXA);
+	string best_tree_topo = best_tree_topo_ss.str();
+	for (cur_iteration = 2; cur_iteration < params->min_iterations; cur_iteration++) {
+		double min_elapsed = (getCPUTime() - params->startTime)/60;
+		if (min_elapsed > params->maxtime) {
+			maxTimeReached = true;
+			break;
+		}
+		double parsimonyLH = computeParsimonyTreePhylolib();
+		cout << "Parsimony score: " << parsimonyLH << endl;
+		curScore = optimizeNNIRax();
+		if (curScore > bestScore) {
+			stringstream cur_tree_topo_ss;
+			printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
+			if (cur_tree_topo_ss.str() != best_tree_topo) {
+				cout << "BETTER TREE FOUND: " << curScore << endl;
+				bestScore = curScore;
+				best_tree_string.seekp(0, ios::beg);
+				printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+				printResultTree();
+			} else {
+				// higher likelihood but the same tree topology
+				bestScore = curScore;
+				cout << "UPDATE BEST LOG-LIKELIHOOD: " << bestScore << endl;
+			}
+		}
+		double cputime_secs = getCPUTime() - params->startTime;
+		cout << "Iteration " << cur_iteration << " / LogL: " << curScore << " / CPU time elapsed: "
+				<< (int) round(cputime_secs) << "s" << endl;;
+
+	}
+
+	// read in new tree
+	int printBranchLengths = TRUE;
+	Tree2String(raxmlTree->tree_string, raxmlTree,
+			raxmlTree->start->back, printBranchLengths, TRUE, 0, 0,
+			0, SUMMARIZE_LH, 0, 0);
+	stringstream mytree;
+	mytree << raxmlTree->tree_string;
+	freeNode();
+	readTree(mytree, rooted);
+	setAlignment(aln);
+}
+
 double IQTree::doIQPNNI() {
 	//double bestIQPScore = -DBL_MAX + 100;
 	if (testNNI) {
@@ -837,7 +930,7 @@ double IQTree::doIQPNNI() {
 	int cur_iteration;
 	bool maxTimeReached = false;
 	bool speedupMsg = false;
-	for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration) || !maxTimeReached;
+	for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration);
 			cur_iteration++) {
 		double min_elapsed = (getCPUTime() - params->startTime)/60;
 		if (min_elapsed > params->maxtime) {
@@ -901,45 +994,28 @@ double IQTree::doIQPNNI() {
 			clearAllPartialLH();
 			curScore = iqp_score = optimizeAllBranches();
 		} else {
-			if (!params->raxmllib) {
-				curScore = doIQP();
+			if (params->reinsert_par) {
+				curScore = doParsimonyReinsertion();
 			} else {
-				doIQP();
-				//printTree( (string(params->out_prefix) + ".iqp_before." + convertIntToString(cur_iteration)).c_str() );
-				stringstream iqp_tree_string;
+				if (!params->raxmllib) {
+					curScore = doIQP();
+				} else {
+					doIQP();
+					//printTree( (string(params->out_prefix) + ".iqp_before." + convertIntToString(cur_iteration)).c_str() );
+					stringstream iqp_tree_string;
 
-				// TODO: only works for 1 partition
-				transformBranchLenRAX(raxmlTree->fracchange);
-				printTree(iqp_tree_string);
-				//treeReadTopologyStr0ing( (char*) iqp_tree_string.str().c_str(), raxmlTree);
-				treeReadLenString(iqp_tree_string.str().c_str(), raxmlTree, TRUE, FALSE, FALSE);
+					// TODO: only works for 1 partition
+					transformBranchLenRAX(raxmlTree->fracchange);
 
-				/*
-				Tree2String(raxmlTree->tree_string, raxmlTree,
-						raxmlTree->start->back, TRUE, TRUE, 0, 0,
-						0, SUMMARIZE_LH, 0, 0);
-				printString2File(string(raxmlTree->tree_string),
-						(string(params->out_prefix) + ".iqp_before_raxstring." + convertIntToString(cur_iteration)).c_str());
-						*/
-				//modOpt(raxmlTree, 0.1);
-
-				//evaluateGeneric(raxmlTree, raxmlTree->start, TRUE);
-				//cout << "LH before smoothTree" << raxmlTree->likelihood << endl;
-				smoothTree(raxmlTree, 1);
-				evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
-				cout << "IQP LH = " << raxmlTree->likelihood << endl;
-
-				/*
-				Tree2String(raxmlTree->tree_string, raxmlTree,
-						raxmlTree->start->back, TRUE, TRUE, 0, 0,
-						0, SUMMARIZE_LH, 0, 0);
-				ofstream mytree((string(params->out_prefix) + ".iqp_after." +  convertIntToString(cur_iteration) ).c_str());
-				mytree << raxmlTree->tree_string;
-				mytree.close();
-				*/
-				//evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
-				curScore = raxmlTree->likelihood;
+					printTree(iqp_tree_string);
+					treeReadLenString(iqp_tree_string.str().c_str(), raxmlTree, TRUE, FALSE, TRUE);
+					smoothTree(raxmlTree, 1);
+					evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
+					cout << "IQP LH = " << raxmlTree->likelihood << endl;
+					curScore = raxmlTree->likelihood;
+				}
 			}
+
 		}
 
 		setRootNode(params->root);

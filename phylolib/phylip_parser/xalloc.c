@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdarg.h>
+/* #include <error.h>  MacOS issues  */   
 #include "xalloc.h"
 
 
 void
 xalloc_die (void)
 {
-  error (EXIT_FAILURE, 0, "%s", "memory exhausted");
+/*  error (EXIT_FAILURE, 0, "%s", "memory exhausted");   MacOS issues */
 
   abort();
 }

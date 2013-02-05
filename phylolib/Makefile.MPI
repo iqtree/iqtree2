@@ -1,0 +1,43 @@
+# a makefile for MPI, initially working with SSE only 
+
+QUIET=@
+CCACHE=ccache
+CC = $(QUIET) $(CCACHE) mpicc 
+CXX = $(QUIET) $(CCACHE) mpic++ 
+
+SSE_FLAGS = -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS  -msse3
+# OPTIMIZE :=  -O2 -fomit-frame-pointer -funroll-loops
+CFLAGS = -D_FINE_GRAIN_MPI $(SSE_FLAGS) -D_GNU_SOURCE -g -std=c11 $(OPTIMIZE)   
+LIBRARIES = -lm
+RM = $(QUIET)rm -f
+
+EXCLUDE := avxLikelihood.c bayes.c
+tmp := $(filter-out $(EXCLUDE) %_flymake.cpp %_flymake.hpp %_flymake_master.cpp,$(wildcard *.c))
+TARGET := raxmlLight-MPI
+OBJS := $(tmp:.c=.o)
+
+
+
+all : $(TARGET)
+
+GLOBAL_DEPS = axml.h globalVariables.h
+
+$(TARGET) : $(OBJS)  
+	@echo "[LD]" $@
+	$(CC) -o raxmlLight-MPI $(OBJS) $(LIBRARIES) 
+
+%.o : %.c $(GLOBAL_DEPS)
+	@echo "[MPICC]" $@ 
+	$(CC) $(CFLAGS)  -c $< 
+
+%.o : %.cpp $(GLOBAL_DEPS)
+	@echo "[MPIXX]" $@
+	$(CXX) $(CFLAGS)-c  $< 
+
+check-syntax:
+	$(CC) $(CFLAGS) -Wall -Wextra -pedantic -fsyntax-only $(CHK_SOURCES) 
+
+
+clean : 
+	@echo "[CLEAN]"
+	$(RM)  $(OBJS)  $(TARGET)

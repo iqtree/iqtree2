@@ -335,6 +335,11 @@ struct NNIInfo {
 struct Params {
 
 	/*
+	 *  reinsert leaves back to tree using parsimony
+	 */
+	bool reinsert_par;
+
+	/*
 	 *  Option to compare BIONJ and Parsimony Tree
 	 */
 	bool par_vs_bionj;
@@ -348,6 +353,11 @@ struct Params {
 	 *  Turn on tabu function for IQP (Memory for removed nodes)
 	 */
 	bool tabu;
+
+	/**
+	 *   Option for doing random restart
+	 */
+	bool random_restart;
 
 	/**
 	 *  Turn on parsimony branch legnth estimation

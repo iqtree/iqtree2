@@ -174,49 +174,61 @@ int countTips(nodeptr p, int numsp)
 }
 
 
-double getBranchLength(tree *tr, int perGene, nodeptr p) {
-	double z = 0.0, x = 0.0;
+double getBranchLength(tree *tr, int perGene, nodeptr p)
+{
+  double 
+    z = 0.0,
+    x = 0.0;
 
-	assert(perGene != NO_BRANCHES);
+  assert(perGene != NO_BRANCHES);
+	      
+  if(tr->numBranches == 1)
+    {
+      assert(tr->fracchange != -1.0);
+      z = p->z[0];
+      if (z < zmin) 
+	z = zmin;      	 
+      
+      x = -log(z) * tr->fracchange;           
+    }
+  else
+    {
+      if(perGene == SUMMARIZE_LH)
+	{
+	  int 
+	    i;
+	  
+	  double 
+	    avgX = 0.0;
+		      
+	  for(i = 0; i < tr->numBranches; i++)
+	    {
+	      assert(tr->partitionContributions[i] != -1.0);
+	      assert(tr->fracchanges[i] != -1.0);
+	      z = p->z[i];
+	      if(z < zmin) 
+		z = zmin;      	 
+	      x = -log(z) * tr->fracchanges[i];
+	      avgX += x * tr->partitionContributions[i];
+	    }
 
-	if (tr->numBranches == 1) {
-		assert(tr->fracchange != -1.0);
-		z = p->z[0];
-		if (z < zmin)
-			z = zmin;
-
-		x = -log(z) * tr->fracchange;
-	} else {
-		if (perGene == SUMMARIZE_LH) {
-			int i;
-
-			double avgX = 0.0;
-
-			for (i = 0; i < tr->numBranches; i++) {
-				assert(tr->partitionContributions[i] != -1.0);
-				assert(tr->fracchanges[i] != -1.0);
-				z = p->z[i];
-				if (z < zmin)
-					z = zmin;
-				x = -log(z) * tr->fracchanges[i];
-				avgX += x * tr->partitionContributions[i];
-			}
-
-			x = avgX;
-		} else {
-			assert(tr->fracchanges[perGene] != -1.0);
-			assert(perGene >= 0 && perGene < tr->numBranches);
-
-			z = p->z[perGene];
-
-			if (z < zmin)
-				z = zmin;
-
-			x = -log(z) * tr->fracchanges[perGene];
-		}
+	  x = avgX;
 	}
+      else
+	{	
+	  assert(tr->fracchanges[perGene] != -1.0);
+	  assert(perGene >= 0 && perGene < tr->numBranches);
+	  
+	  z = p->z[perGene];
+	  
+	  if(z < zmin) 
+	    z = zmin;      	 
+	  
+	  x = -log(z) * tr->fracchanges[perGene];	  
+	}
+    }
 
-	return x;
+  return x;
 }
 
 
@@ -773,8 +785,6 @@ static boolean addElementLen (FILE *fp, tree *tr, nodeptr p, boolean readBranchL
       
       /*printf("Branch %8.20f %d\n", branch, tr->numBranches);*/
       hookup(p, q, &branch, tr->numBranches);
-      /*printf("Stored branch %8.20f\n", p->z[0]);*/
-
     }
   else
     {
@@ -936,10 +946,9 @@ int treeReadLen (FILE *fp, tree *tr, boolean readBranches, boolean readNodeLabel
   
   while((ch = treeGetCh(fp)) != '(');
       
-  /*
   if(!topologyOnly)
     assert(readBranches == FALSE && readNodeLabels == FALSE);
-  */
+  
        
   if (! addElementLen(fp, tr, p, readBranches, readNodeLabels, &lcount))                 
     assert(0);
@@ -1002,6 +1011,13 @@ int treeReadLen (FILE *fp, tree *tr, boolean readBranches, boolean readNodeLabel
   
   return lcount;
 }
+
+
+
+
+
+
+
 
 void getStartingTree(tree *tr)
 {

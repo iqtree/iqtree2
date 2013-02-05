@@ -1,0 +1,34 @@
+tiny.aa.binary			7 sequences x 125 bp
+tiny.aa.model
+tiny.aa.singlegene.binary
+
+tiny.dna.binary			7 sequences x 1200bp
+tiny.dna.model
+tiny.dna.singlegene.binary
+
+small.aa.binary			500 sequences x 4bp
+small.aa.model
+small.aa.singlegene.binary
+
+small.dna.binary		500 sequences x 4bp
+small.dna.model
+small.dna.singlegene.binary
+
+medium.aa.binary		500 sequences x 500bp
+medium.aa.model
+medium.aa.singlegene.binary
+
+medium.dna.binary		500 sequences x 500bp
+medium.dna.model
+medium.dna.singlegene.binary
+
+large.aa.binary			1000 sequences x 1000bp
+large.aa.model
+large.aa.singlegene.binary
+
+large.dna.binary		1000 sequences x 1000bp
+large.dna.model
+large.dna.singlegene.binary
+
+gappy.dna.binary    50 x 2527bp  
+gappy.startingTree.dna.tree

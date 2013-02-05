@@ -29,8 +29,12 @@
  *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
  */
 
-#ifndef AXML_H
-#define AXML_H
+/** @file axml.h
+  * @brief contains various important functions
+  * @todo this file will at some point be gone
+  */
+#ifndef AXML_H_
+#define AXML_H_
 
 #include <assert.h>
 #include <stdint.h>
@@ -61,6 +65,7 @@ extern "C" {
 #define BYTE_ALIGNMENT 1
 #endif
 #endif
+
 
 #include "genericParallelization.h"
 
@@ -105,8 +110,7 @@ extern "C" {
 
 #define badRear         -1
 
-//#define NUM_BRANCHES     16
-#define NUM_BRANCHES     1
+#define NUM_BRANCHES     16
 
 #define TRUE             1
 #define FALSE            0
@@ -454,11 +458,15 @@ typedef struct ratec
 }
   rateCategorize;
 
-
+/** @brief To be commented
+  *
+  * The rest is her
+  * @todo remove this line when finished commenting
+  */
 typedef struct
 {
-  int tipCase;
-  int pNumber;
+  int tipCase;                  /**< @brief What is this? */
+  int pNumber;                  /**< @brief Or this */
   int qNumber;
   int rNumber;
   double qz[NUM_BRANCHES];
@@ -978,7 +986,9 @@ typedef  struct  {
   int              categories;
 
   double           coreLZ[NUM_BRANCHES];
-  int              numBranches;
+  int              numBranches;                 /* Number of length values per branch. 
+                                                   Currently can be only 1 or number of
+                                                   partitions */
   
   
  
@@ -1307,14 +1317,14 @@ extern FILE *myfopen(const char *path, const char *mode);
 
 extern boolean initrav ( tree *tr, nodeptr p );
 extern void initravPartition ( tree *tr, nodeptr p, int model );
-extern boolean update ( tree *tr, nodeptr p );
-extern boolean smooth ( tree *tr, nodeptr p );
-extern boolean smoothTree ( tree *tr, int maxtimes );
-extern boolean localSmooth ( tree *tr, nodeptr p, int maxtimes );
+extern void update ( tree *tr, nodeptr p );
+extern void smooth ( tree *tr, nodeptr p );
+extern void smoothTree ( tree *tr, int maxtimes );
+extern void localSmooth ( tree *tr, nodeptr p, int maxtimes );
 extern boolean localSmoothMulti(tree *tr, nodeptr p, int maxtimes, int model);
 
-extern boolean smoothRegion ( tree *tr, nodeptr p, int region );
-extern boolean regionalSmooth ( tree *tr, nodeptr p, int maxtimes, int region );
+extern void smoothRegion ( tree *tr, nodeptr p, int region );
+extern void regionalSmooth ( tree *tr, nodeptr p, int maxtimes, int region );
 extern nodeptr removeNodeBIG ( tree *tr, nodeptr p, int numBranches);
 extern nodeptr removeNodeRestoreBIG ( tree *tr, nodeptr p );
 extern boolean insertBIG ( tree *tr, nodeptr p, nodeptr q, int numBranches);
@@ -1589,5 +1599,6 @@ boolean modelExists(char *model, tree *tr);
 } /* extern "C" */
 #endif
 
-#endif
+#endif /* AXML_H_ */
+
 

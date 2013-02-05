@@ -30,8 +30,8 @@
 #include "mtreeset.h"
 
 #include "phylolib/axml.h"
-#include "phylolib/nnisearch.h"
-
+#include "nnisearch.h"
+#include "phylolib.h"
 
 typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;
@@ -102,6 +102,11 @@ public:
     virtual ~IQTree();
 
     void init();
+
+    /**
+     *   Create a parsimony tree using phylolib
+     */
+    double computeParsimonyTreePhylolib();
 
 	void setParams(Params& params);
 
@@ -216,6 +221,11 @@ public:
             @return best likelihood found
      */
     double doIQPNNI();
+
+    /**
+     * 		Perform random restart heuristic
+     */
+    double doRandomRestart();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
