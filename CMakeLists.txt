@@ -81,7 +81,6 @@ endif(CMAKE_SIZEOF_VOID_P EQUAL 4)
 add_subdirectory(phylolib)
 add_subdirectory(ncl)
 add_subdirectory(whtest)
-#add_subdirectory(modeltest)cmake
 add_subdirectory(sprng)
 
 add_executable(iqtree

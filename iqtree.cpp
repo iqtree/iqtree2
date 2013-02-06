@@ -557,7 +557,10 @@ void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
 	initializeAllPartialPars();
 	clearAllPartialLH();
 	for (it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
-
+		initializeAllPartialPars();
+		clearAllPartialLH();
+        Node *target_node = NULL;
+        Node *target_dad = NULL;
 	}
 
 }
