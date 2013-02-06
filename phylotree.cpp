@@ -1089,9 +1089,10 @@ double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *
 			
 		}*/
 	}
-	double state_freq[aln->num_states];
+	double* state_freq = new double[aln->num_states];
 	model->getStateFrequency(state_freq);
 	return score - log(state_freq[root_state]);
+	delete [] state_freq;
 }
 
 void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl) {
