@@ -693,7 +693,7 @@ double IQTree::doIQP() {
 		}
 	}
 	//double time_end = getCPUTime();
-	//cout << "IQP Time: " << (time_end - time_begin)<< endl;
+	//cout << "IQP Time: " << (time_end - time_begin) << endl;
 	return curScore;
 }
 
@@ -931,13 +931,12 @@ double IQTree::doIQPNNI() {
 	}
 	stop_rule.addImprovedIteration(1);
 	int cur_iteration;
-	bool maxTimeReached = false;
 	bool speedupMsg = false;
 	for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration);
 			cur_iteration++) {
 		double min_elapsed = (getCPUTime() - params->startTime)/60;
 		if (min_elapsed > params->maxtime) {
-			maxTimeReached = true;
+		  cout << "Maximal running time of " << params->maxtime << " minutes reached" << endl;
 			break;
 		}
 		// estimate logl_cutoff
@@ -1014,7 +1013,7 @@ double IQTree::doIQPNNI() {
 					treeReadLenString(iqp_tree_string.str().c_str(), raxmlTree, TRUE, FALSE, TRUE);
 					smoothTree(raxmlTree, 1);
 					evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
-					cout << "IQP LH = " << raxmlTree->likelihood << endl;
+					cout << "IQP log-likelihood = " << raxmlTree->likelihood << endl;
 					curScore = raxmlTree->likelihood;
 				}
 			}
@@ -1248,9 +1247,6 @@ double IQTree::doIQPNNI() {
 				//boot_splits = sg;
 			} //else delete sg;
 		}
-	}
-	if (maxTimeReached) {
-		cout << "Maximal running time of " << params->maxtime << " minutes reached" << endl;
 	}
 
 	int predicted_iteration = stop_rule.getPredictedIteration();
