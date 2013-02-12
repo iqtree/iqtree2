@@ -54,8 +54,8 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 
 add_definitions(-DIQ_TREE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-sign-compare -Wno-deprecated -pedantic -g -march=native -fomit-frame-pointer -funroll-loops -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=c99 -Wall -Wno-sign-compare -pedantic -g -march=native -fomit-frame-pointer -funroll-loops -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-sign-compare -Wno-deprecated -pedantic -g -fomit-frame-pointer -funroll-loops -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=c99 -Wall -Wno-sign-compare -pedantic -g -fomit-frame-pointer -funroll-loops -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
 
 #if (NOT WIN32)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
