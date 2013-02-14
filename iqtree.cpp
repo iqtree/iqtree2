@@ -554,13 +554,36 @@ void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec,
 void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
 	PhyloNodeVector::iterator it_leaf;
 	assert(root->isLeaf());
-	initializeAllPartialPars();
-	clearAllPartialLH();
 	for (it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
+		//cout << "Add leaf " << (*it_leaf)->id << " to the tree" << endl;
 		initializeAllPartialPars();
 		clearAllPartialLH();
         Node *target_node = NULL;
         Node *target_dad = NULL;
+        Node *added_node = (*it_leaf)->neighbors[0]->node;
+        Node *node1 = NULL;
+        Node *node2 = NULL;
+        Node *leaf = NULL;
+
+        for (int i = 0; i < 3; i++) {
+        	if (added_node->neighbors[i]->node->id == (*it_leaf)->id) {
+        		leaf = added_node->neighbors[i]->node;
+        	} else if (!node1) {
+        		node1 = added_node->neighbors[i]->node;
+        	} else {
+        		node2 = added_node->neighbors[i]->node;
+        	}
+        }
+        //cout << "(" << node1->id << ", " << node2->id << ")" << "----" << "(" << added_node->id << "," << leaf->id << ")" << endl;
+        added_node->updateNeighbor(node1, (Node*) 1);
+        added_node->updateNeighbor(node2, (Node*) 2);
+
+        addTaxonMPFast(added_node, target_node, target_dad, root->neighbors[0]->node, root);
+        target_node->updateNeighbor(target_dad, added_node, -1.0);
+        target_dad->updateNeighbor(target_node, added_node, -1.0);
+        added_node->updateNeighbor((Node*) 1, target_node, -1.0);
+        added_node->updateNeighbor((Node*) 2, target_dad, -1.0);
+
 	}
 
 }
@@ -626,7 +649,7 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 						| WT_BR_ID);
 }
 
-double IQTree::doParsimonyReinsertion() {
+void IQTree::doParsimonyReinsertion() {
 	PhyloNodeVector del_leaves;
 	if (params->tabu) {
 		deleteNonTabuLeaves(del_leaves);
@@ -634,6 +657,7 @@ double IQTree::doParsimonyReinsertion() {
 		deleteLeaves(del_leaves);
 	}
 	reinsertLeavesByParsimony(del_leaves);
+	fixNegativeBranch(false);
 }
 
 
@@ -997,10 +1021,13 @@ double IQTree::doIQPNNI() {
 			curScore = iqp_score = optimizeAllBranches();
 		} else {
 			if (params->reinsert_par) {
-				curScore = doParsimonyReinsertion();
+				doParsimonyReinsertion();
+				curScore = optimizeAllBranches(1);
+				cout << "LH Pars = " << curScore << endl;
 			} else {
 				if (!params->raxmllib) {
 					curScore = doIQP();
+					cout << "LH IQP = " << curScore << endl;
 				} else {
 					doIQP();
 					//printTree( (string(params->out_prefix) + ".iqp_before." + convertIntToString(cur_iteration)).c_str() );

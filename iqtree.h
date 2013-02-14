@@ -665,7 +665,7 @@ protected:
 
     void reinsertLeavesByParsimony(PhyloNodeVector &del_leaves);
 
-    double doParsimonyReinsertion();
+    void doParsimonyReinsertion();
 
 
     /**

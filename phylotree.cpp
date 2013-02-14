@@ -794,12 +794,26 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
 int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& target_dad, Node* node, Node* dad)
 {
     Neighbor *dad_nei = dad->findNeighbor(node);
-	Node *added_taxon = added_node->neighbors[0]->node;
+	//Node *added_taxon = added_node->neighbors[0]->node;
+    Node *added_taxon;
+    for (int i = 0; i < 3; i++) {
+    	if (added_node->neighbors[i]->node != (Node*) 1 && added_node->neighbors[i]->node != (Node*) 2)
+    		added_taxon = added_node->neighbors[i]->node;
+    }
+
+//    Node *added_taxon;
+//    for (NeighborVec::iterator it = (added_node)->neighbors.begin(); it != (added_node)->neighbors.end(); it++) {
+//    	if ( (*it)->node->isLeaf() ) {
+//    		added_taxon = (*it)->node;
+//    	}
+//    }
 
     // now insert the new node in the middle of the branch node-dad
     double len = dad_nei->length;
     node->updateNeighbor(dad, added_node, len / 2.0);
     dad->updateNeighbor(node, added_node, len / 2.0);
+    Node *node1 = NULL;
+    Node *node2 = NULL;
     added_node->updateNeighbor((Node*) 1, node, len / 2.0);
     added_node->updateNeighbor((Node*) 2, dad, len / 2.0);
 	((PhyloNeighbor*)added_node->findNeighbor(node))->partial_pars = ((PhyloNeighbor*)dad->findNeighbor(added_node))->partial_pars;

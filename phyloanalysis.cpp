@@ -832,9 +832,9 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 
 			tree.freeNode();
 			tree.readTree(con_file.c_str(), rooted);
-			tree.fixNegativeBranch(false);
 			tree.setAlignment(tree.aln);
 			tree.initializeAllPartialLh();
+			tree.fixNegativeBranch(false);
 			if (tree.isSuperTree())
 				((PhyloSuperTree*) &tree)->mapTrees();
 			tree.optimizeAllBranches();

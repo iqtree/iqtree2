@@ -662,6 +662,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.parbran = false;
 	params.binary_aln_file = NULL;
 	params.maxtime = 1000000;
+	params.reinsert_par = false;
 	params.par_vs_bionj = false;
 	params.tabu = false;
 	params.random_restart = false;
@@ -1460,6 +1461,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -ba <binary_alignment_file>";
 				params.binary_aln_file = argv[cnt];
 				params.raxmllib = true;
+			} else if (strcmp(argv[cnt], "-pars_ins") == 0) {
+				params.reinsert_par = true;
 			} else if (strcmp(argv[cnt], "-tabu") == 0) {
 				params.tabu = true;
 			} else if (strcmp(argv[cnt], "-random_restart") == 0) {
