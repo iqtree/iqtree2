@@ -18,33 +18,34 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "phylotree.h"
-
+#include "gtrmodel.h"
 
 /* BQM: to ignore all-gapp subtree at an alignment site */
 #define IGNORE_GAP_LH
 
 template<int NSTATES>
-inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node; // Node A
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad); // Node B
-    assert(node_branch);
-    if (!central_partial_lh)
-        initializeAllPartialLh();
-    // swap node and dad if dad is a leaf
-    if (node->isLeaf()) {
-        PhyloNode *tmp_node = dad;
-        dad = node;
-        node = tmp_node;
-        PhyloNeighbor *tmp_nei = dad_branch;
-        dad_branch = node_branch;
-        node_branch = tmp_nei;
-        //cout << "swapped\n";
-    }
-    if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodSSE<NSTATES> (dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodSSE<NSTATES> (node_branch, node);
-    // now combine likelihood at the branch
+inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch,
+		PhyloNode *dad, double *pattern_lh) {
+	PhyloNode *node = (PhyloNode*) dad_branch->node; // Node A
+	PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad); // Node B
+	assert(node_branch);
+	if (!central_partial_lh)
+		initializeAllPartialLh();
+	// swap node and dad if dad is a leaf
+	if (node->isLeaf()) {
+		PhyloNode *tmp_node = dad;
+		dad = node;
+		node = tmp_node;
+		PhyloNeighbor *tmp_nei = dad_branch;
+		dad_branch = node_branch;
+		node_branch = tmp_nei;
+		//cout << "swapped\n";
+	}
+	if ((dad_branch->partial_lh_computed & 1) == 0)
+		computePartialLikelihoodSSE<NSTATES>(dad_branch, dad);
+	if ((node_branch->partial_lh_computed & 1) == 0)
+		computePartialLikelihoodSSE<NSTATES>(node_branch, node);
+	// now combine likelihood at the branch
 
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     int ptn, cat, state1, state2;
@@ -104,7 +105,7 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
         memmove(pattern_lh, _pattern_lh, alnSize*sizeof(double));
     }
 	delete [] trans_mat_orig;
-    return tree_lh;
+	return tree_lh;
 }
 
 template<int NSTATES>
@@ -139,15 +140,15 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
             char state;
             partial_lh_site = dad_branch->partial_lh + (ptn * block);
 
-            if (node->name == ROOT_NAME) {
-                state = STATE_UNKNOWN;
-            } else {
-                state = (aln->at(ptn))[node->id];
-            }
+			if (node->name == ROOT_NAME) {
+				state = STATE_UNKNOWN;
+			} else {
+				state = (aln->at(ptn))[node->id];
+			}
 
-            if (state == STATE_UNKNOWN) {
+			if (state == STATE_UNKNOWN) {
 #ifdef IGNORE_GAP_LH
-                dad_branch->scale_num[ptn] = -1;
+				dad_branch->scale_num[ptn] = -1;
 #endif
                 for (int state2 = 0; state2 < block; state2++) {
                     partial_lh_site[state2] = 1.0;
@@ -187,7 +188,8 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
         for (ptn = 0; ptn < lh_size; ++ptn)
             dad_branch->partial_lh[ptn] = 1.0;
 #ifdef IGNORE_GAP_LH
-        for (ptn = 0; ptn < alnSize; ptn++) dad_branch->scale_num[ptn] = -1;
+		for (ptn = 0; ptn < alnSize; ptn++)
+			dad_branch->scale_num[ptn] = -1;
 #endif
         FOR_NEIGHBOR_IT(node, dad, it)
         if ((*it)->node->name != ROOT_NAME) {
@@ -211,9 +213,10 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
 #endif
                 } else
 #endif
-                {
+					{
 #ifdef IGNORE_GAP_LH
-                    if (dad_branch->scale_num[ptn] < 0) dad_branch->scale_num[ptn] = 0;
+						if (dad_branch->scale_num[ptn] < 0)
+							dad_branch->scale_num[ptn] = 0;
 #endif
 #ifdef _OPENMP
 					int lh_offset = ptn*block;
@@ -259,11 +262,11 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
         delete [] trans_mat_orig;
     }
 
-    dad_branch->partial_lh_computed |= 1;
+	dad_branch->partial_lh_computed |= 1;
 }
 
 /****************************************************************************
-        computing derivatives of likelihood function
+ computing derivatives of likelihood function
  ****************************************************************************/
 template<int NSTATES>
 inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
@@ -420,23 +423,98 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     return tree_lh;
 }
 
-double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
-    if (sse) {
-        switch (aln->num_states) {
-        case 2:
-            return computeLikelihoodBranchSSE <2> (dad_branch, dad, pattern_lh);
-        case 4:
-            return computeLikelihoodBranchSSE <4> (dad_branch, dad, pattern_lh);
-        case 20:
-            return computeLikelihoodBranchSSE <20> (dad_branch, dad, pattern_lh);
-        default:
-            return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
-        }
-    } else {
-        return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
-    }
+
+inline double PhyloTree::computeFuncDervNew(double value, double &df, double &ddf) {
+	current_it->length = value;
+	current_it_back->length = value;
+	// Precompute theta vector
+	if (sse) {
+		if (!theta_computed) {
+			switch (aln->num_states) {
+			case 2:
+				computeThetaVector<2>(current_it,
+						(PhyloNode*) current_it_back->node);
+				break;
+			case 4:
+				computeThetaVector<4>(current_it,
+						(PhyloNode*) current_it_back->node);
+				break;
+			case 20:
+				computeThetaVector<20>(current_it,
+						(PhyloNode*) current_it_back->node);
+				break;
+			default:
+				cout << "Invalid number of states : " << aln->num_states << endl;
+				exit(1);
+			}
+			theta_computed = true;
+		}
+	} else {
+		if (!theta_computed) {
+			computeThetaVectorNaive(current_it,(PhyloNode*) current_it_back->node);
+			theta_computed = true;
+		}
+	}
+
+	//double f = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+	double lh = -computeLikelihoodDervNew(current_it,
+			(PhyloNode*) current_it_back->node, df, ddf);
+	//double lh = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+
+	//double df2, ddf2;
+	//double f = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df2, ddf2);
+	df = -df;
+	ddf = -ddf;
+	return lh;
 }
 
+void PhyloTree::computeThetaVectorNaive(PhyloNeighbor *dad_branch,
+		PhyloNode *dad) {
+	//cout << "Computing theta vector " << endl;
+	PhyloNode *node = (PhyloNode*) dad_branch->node;
+	PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+	assert(node_branch);
+	// swap node and dad if node is a leaf
+	if (node->isLeaf()) {
+		PhyloNode *tmp_node = dad;
+		dad = node;
+		node = tmp_node;
+		PhyloNeighbor *tmp_nei = dad_branch;
+		dad_branch = node_branch;
+		node_branch = tmp_nei;
+	}
+	if ((dad_branch->partial_lh_computed & 1) == 0)
+		computePartialLikelihood(dad_branch, dad);
+	if ((node_branch->partial_lh_computed & 1) == 0)
+		computePartialLikelihood(node_branch, node);
+	double *partial_lh_site = node_branch->partial_lh;
+	double *partial_lh_child = dad_branch->partial_lh;
+	double *theta_ptn = theta_all;
+	int dad_state = STATE_UNKNOWN;
+	double state_freq[alnSize];
+	model->getStateFrequency(state_freq);
+	int num_cat = site_rate->getNRate();
+	GTRModel* gtr_model = reinterpret_cast<GTRModel *>(model);
+	double* eigen_coff = gtr_model->getEigenCoeff();
+	for (int ptn = 0; ptn < alnSize; ++ptn) {
+		for (int k = 0; k < num_cat; ++k) {
+			for (int i = 0; i < numStates; ++i) {
+				 double theta_tmp2 = 0;
+				 for (int xa=0; xa < numStates; ++xa) {
+					double theta_tmp = 0;
+					for (int xb=0; xb < numStates; ++xb) {
+						theta_tmp += partial_lh_child[xb] * eigen_coff[xa*numStates*numStates+xb*numStates+i];
+					}
+					theta_tmp2 += theta_tmp * state_freq[xa] * partial_lh_site[xa];
+				 }
+				 *theta_ptn = theta_tmp2;
+				 theta_ptn++;
+			} // for i states
+			partial_lh_child += numStates;
+			partial_lh_site += numStates;
+		} //for k categories
+	} // for ptn
+}
 
 void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
 	if (sse) {
@@ -455,19 +533,225 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
     }
 }
 
-double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-    if (sse) {
-        switch (aln->num_states) {
-        case 2:
-            return computeLikelihoodDervSSE < 2 > (dad_branch, dad, df, ddf);
-        case 4:
-            return computeLikelihoodDervSSE < 4 > (dad_branch, dad, df, ddf);
-        case 20:
-            return computeLikelihoodDervSSE < 20 > (dad_branch, dad, df, ddf);
-        default:
-            return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
-        }
-    } else {
-        return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
-    }
+void PhyloTree::initiateMyEigenCoeff() {
+	assert(model);
+	GTRModel* gtr_model = reinterpret_cast<GTRModel *>(model);
+	double* eigen_coff = gtr_model->getEigenCoeff();
+	if (!myEigenCoeff)
+		myEigenCoeff = new double[numStates * numStates * numStates];
+	int i = 0;
+	for (int j = 0; j < numStates; ++j)
+		for (int xa = 0; xa < numStates; ++xa)
+			for (int xb = 0; xb < numStates; ++xb) {
+				myEigenCoeff[i] = eigen_coff[xa * numStates * numStates
+						+ xb * numStates + j];
+				++i;
+			}
+}
+
+double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch,
+		PhyloNode *dad, double *pattern_lh) {
+	if (sse) {
+		switch (aln->num_states) {
+		case 2:
+			return computeLikelihoodBranchSSE<2>(dad_branch, dad, pattern_lh);
+		case 4:
+			return computeLikelihoodBranchSSE<4>(dad_branch, dad, pattern_lh);
+		case 20:
+			return computeLikelihoodBranchSSE<20>(dad_branch, dad, pattern_lh);
+		default:
+			return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
+		}
+	} else {
+		return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
+	}
+
+}
+
+void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch,
+		PhyloNode *dad, double *pattern_scale) {
+	if (sse) {
+		switch (aln->num_states) {
+		case 2:
+			return computePartialLikelihoodSSE<2>(dad_branch, dad,
+					pattern_scale);
+		case 4:
+			return computePartialLikelihoodSSE<4>(dad_branch, dad,
+					pattern_scale);
+		case 20:
+			return computePartialLikelihoodSSE<20>(dad_branch, dad,
+					pattern_scale);
+		default:
+			return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
+		}
+	} else {
+		return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
+	}
+}
+
+double PhyloTree::computeLikelihoodDervNewNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+	return 0;
+}
+
+/*
+ * This function is called millions times. So it is not a good idea to
+ * have a if and switch here.
+ */
+double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch,
+		PhyloNode *dad, double &df, double &ddf) {
+	if (sse) {
+		switch (aln->num_states) {
+		case 2:
+			return computeLikelihoodDervSSE<2>(dad_branch, dad, df, ddf);
+		case 4:
+			return computeLikelihoodDervSSE<4>(dad_branch, dad, df, ddf);
+		case 20:
+			return computeLikelihoodDervSSE<20>(dad_branch, dad, df, ddf);
+		default:
+			return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
+		}
+	} else {
+		return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
+	}
+}
+
+double PhyloTree::computeLikelihoodDervNew(PhyloNeighbor *dad_branch,
+		PhyloNode *dad, double &df, double &ddf) {
+	if (sse) {
+		switch (aln->num_states) {
+		case 2:
+			return computeLikelihoodDervSSENew<2>(dad_branch, dad, df, ddf);
+		case 4:
+			return computeLikelihoodDervSSENew<4>(dad_branch, dad, df, ddf);
+		case 20:
+			return computeLikelihoodDervSSENew<20>(dad_branch, dad, df, ddf);
+		default:
+			return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
+		}
+	} else {
+		return computeLikelihoodDervNewNaive(dad_branch, dad, df, ddf);
+	}
+}
+
+template<int NSTATES>
+double PhyloTree::computeLikelihoodDervSSENew(PhyloNeighbor *dad_branch,
+		PhyloNode *dad, double &df, double &ddf) {
+	PhyloNode *node = (PhyloNode*) dad_branch->node;
+	PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+	assert(node_branch);
+	// swap node and dad if node is a leaf
+	if (node->isLeaf()) {
+		PhyloNode *tmp_node = dad;
+		dad = node;
+		node = tmp_node;
+		PhyloNeighbor *tmp_nei = dad_branch;
+		dad_branch = node_branch;
+		node_branch = tmp_nei;
+	}
+	// now combine likelihood at the branch
+	double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+	double lh_ptn = 0.0;
+	double lh_ptn_derv1 = 0.0;
+	double lh_ptn_derv2 = 0.0;
+	double p_invar = site_rate->getPInvar();
+	double p_var_cat = (1.0 - p_invar) / (double) numCat;
+	double derv1_frac;
+	double derv2_frac;
+	double state_freq[NSTATES];
+	model->getStateFrequency(state_freq);
+	int num_states = aln->num_states;
+	int discrete_cat = site_rate->getNDiscreteRate();
+	Map<Matrix<double, Dynamic, 1> , Aligned> ei_rates(site_rate->getRates(),
+			discrete_cat);
+	Map<Matrix<double, 1, NSTATES> , Aligned> ei_eigenvalues(
+			dynamic_cast<GTRModel*>(model)->getEigenvalues());
+	Matrix(NSTATES) ei_rates_times_lambdas = ei_rates * ei_eigenvalues;
+	Matrix(NSTATES) expo_time =
+			(ei_rates_times_lambdas * dad_branch->length).array().exp();
+	Matrix(NSTATES) expo_time_derv1 = expo_time.cwiseProduct(
+			ei_rates_times_lambdas);
+	Matrix(NSTATES) expo_time_derv2 = expo_time_derv1.cwiseProduct(
+			ei_rates_times_lambdas);
+	double *theta_ptn = theta_all;
+
+	for (int ptn = 0; ptn < alnSize; ++ptn) {
+		lh_ptn = 0.0;
+		lh_ptn_derv1 = 0.0;
+		lh_ptn_derv2 = 0.0;
+		/*
+		 for (int k = 0; k < discrete_cat; k++) {
+		 for (int i = 0; i < num_states; i++) {
+		 double x =theta_ptn[k*num_states+i] *
+		 exp(site_rate->getRates()[k]*dad_branch->length*dynamic_cast<GTRModel*> (model)->getEigenvalues()[i]);
+		 //cout << exp(site_rate->getRates()[k]*dad_branch->length*dynamic_cast<GTRModel*> (model)->getEigenvalues()[i]) << " ";
+		 lh_ptn += x;
+		 //cout << x << " ";
+		 //cout << theta_ptn[k*num_states+i] << " ";
+		 double y = x * site_rate->getRates()[k] * dynamic_cast<GTRModel*> (model)->getEigenvalues()[i];
+		 //cout << y << " ";
+		 //cout << site_rate->getRates()[k] * dynamic_cast<GTRModel*> (model)->getEigenvalues()[i] << " ";
+		 lh_ptn_derv1 += y;
+		 lh_ptn_derv2 += y*site_rate->getRates()[k] * dynamic_cast<GTRModel*> (model)->getEigenvalues()[i];
+
+		 }
+		 }
+		 */
+
+		Map<Matrix<double, Dynamic, Dynamic, RowMajor> , Aligned> ei_theta_ptn(
+				theta_ptn, discrete_cat, NSTATES);
+		//Map<Matrix<double, NSTATES, NSTATES, RowMajor>, Aligned> ei_theta_ptn(theta_ptn);
+		//cout << "ei_theta_ptn" << endl;
+		//cout << ei_theta_ptn << endl;
+		//ArrayXXd ei_theta_times_expo = ei_theta_ptn * expo_time;
+
+		lh_ptn = ei_theta_ptn.cwiseProduct(expo_time).sum();
+		lh_ptn_derv1 = ei_theta_ptn.cwiseProduct(expo_time_derv1).sum();
+		lh_ptn_derv2 = ei_theta_ptn.cwiseProduct(expo_time_derv2).sum();
+
+		/*
+		 for (int cat = 0; cat < discrete_cat; ++cat) {
+		 MappedRowVec(NSTATES) ei_theta_ptn_cat(theta_ptn);
+		 lh_ptn += ei_theta_ptn_cat.dot(expo_time.row(cat));
+		 lh_ptn_derv1 += ei_theta_ptn_cat.dot(expo_time_derv1.row(cat));
+		 lh_ptn_derv2 += ei_theta_ptn_cat.dot(expo_time_derv2.row(cat));
+		 theta_ptn += NSTATES;
+		 }
+		 */
+
+		/*
+		 ArrayXXd ei_theta_times_expo_derv1 = ei_rates_times_lambdas * ei_theta_times_expo;
+		 ArrayXXd ei_theta_times_expo_derv1 = ei_theta_ptn.cwiseProduct(expo_time_derv1);
+
+		 ArrayXXd ei_theta_times_expo_derv2 = ei_theta_ptn.cwiseProduct(expo_time_derv2);
+		 lh_ptn = ei_theta_times_expo.sum();
+		 lh_ptn_derv1 = ei_theta_times_expo_derv1.sum();
+		 lh_ptn_derv2 = (ei_theta_times_expo_derv1 * ei_rates_times_lambdas).sum();
+		 */
+		theta_ptn += NSTATES * discrete_cat;
+
+		lh_ptn = lh_ptn * p_var_cat;
+		if ((*aln)[ptn].is_const && (*aln)[ptn][0] < NSTATES) {
+			lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+		}
+
+		double pad = p_var_cat / lh_ptn;
+		if (std::isinf(pad)) {
+			lh_ptn_derv1 *= p_var_cat;
+			lh_ptn_derv2 *= p_var_cat;
+			derv1_frac = lh_ptn_derv1 / lh_ptn;
+			derv2_frac = lh_ptn_derv2 / lh_ptn;
+		} else {
+			derv1_frac = lh_ptn_derv1 * pad;
+			derv2_frac = lh_ptn_derv2 * pad;
+		}
+		double tmp1 = derv1_frac * ptn_freqs[ptn];
+		double tmp2 = derv2_frac * ptn_freqs[ptn];
+		df += tmp1;
+		ddf += tmp2 - tmp1 * derv1_frac;
+		lh_ptn = log(lh_ptn);
+		tree_lh += lh_ptn * ptn_freqs[ptn];
+		_pattern_lh[ptn] = lh_ptn;
+	}
+	return tree_lh;
+
 }
