@@ -91,6 +91,11 @@ public:
 	virtual double getRate(int category) { return 1.0; }
 
 	/**
+	 *  return pointer to rate array
+	 */
+	virtual double* getRates() { return NULL; }
+
+	/**
 		get the rate of a specified site-pattern. Default returns 1.0 since it is homogeneous model
 		@param ptn pattern ID 
 		@return the rate of the specified site-pattern
@@ -174,7 +179,7 @@ protected:
 		phylogenetic tree associated
 	*/
 	PhyloTree *phylo_tree;
-	
 
+	
 };
 #endif

@@ -22,11 +22,11 @@
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
 
 /****************************************************************************
-        SPRMoves class
+ SPRMoves class
  ****************************************************************************/
 
-void SPRMoves::add(PhyloNode *prune_node, PhyloNode *prune_dad,
-                   PhyloNode *regraft_node, PhyloNode *regraft_dad, double score) {
+void SPRMoves::add(PhyloNode *prune_node, PhyloNode *prune_dad, PhyloNode *regraft_node, PhyloNode *regraft_dad,
+        double score) {
     if (size() >= MAX_SPR_MOVES && score <= rbegin()->score)
         return;
     if (size() >= MAX_SPR_MOVES) {
@@ -44,12 +44,12 @@ void SPRMoves::add(PhyloNode *prune_node, PhyloNode *prune_dad,
 }
 
 /****************************************************************************
-        PhyloTree class
+ PhyloTree class
  ****************************************************************************/
 
-PhyloTree::PhyloTree()
-        : MTree() {
-	init();
+PhyloTree::PhyloTree() :
+        MTree() {
+    init();
 }
 
 void PhyloTree::init() {
@@ -66,16 +66,17 @@ void PhyloTree::init() {
     tmp_anscentral_state_prob1 = NULL;
     tmp_anscentral_state_prob2 = NULL;
     //tmp_ptn_rates = NULL;
-   //state_freqs = NULL;
+    //state_freqs = NULL;
     tmp_scale_num1 = NULL;
     tmp_scale_num2 = NULL;
     discard_saturated_site = true;
     _pattern_lh = NULL;
-	root_state = STATE_UNKNOWN;
+    root_state = STATE_UNKNOWN;
 }
 
-PhyloTree::PhyloTree(Alignment *aln) : MTree() {
-	init();
+PhyloTree::PhyloTree(Alignment *aln) :
+        MTree() {
+    init();
     this->aln = aln;
     //alnSize = aln->size();
     //numStates = aln->num_states;
@@ -92,65 +93,74 @@ void PhyloTree::discardSaturatedSite(bool val) {
 
 PhyloTree::~PhyloTree() {
     if (central_partial_lh)
-        delete [] central_partial_lh;
+        delete[] central_partial_lh;
     central_partial_lh = NULL;
     if (central_scale_num)
-        delete [] central_scale_num;
+        delete[] central_scale_num;
     central_scale_num = NULL;
 
     if (central_partial_pars)
-        delete [] central_partial_pars;
+        delete[] central_partial_pars;
     central_partial_pars = NULL;
-    if (model_factory) delete model_factory;
-    if (model) delete model;
-    if (site_rate) delete site_rate;
+    if (model_factory)
+        delete model_factory;
+    if (model)
+        delete model;
+    if (site_rate)
+        delete site_rate;
     if (tmp_scale_num1)
-        delete [] tmp_scale_num1;
+        delete[] tmp_scale_num1;
     if (tmp_scale_num2)
-        delete [] tmp_scale_num2;
+        delete[] tmp_scale_num2;
     if (tmp_partial_lh1)
-        delete [] tmp_partial_lh1;
+        delete[] tmp_partial_lh1;
     if (tmp_partial_lh2)
-        delete [] tmp_partial_lh2;
+        delete[] tmp_partial_lh2;
     if (tmp_anscentral_state_prob1)
-    	delete [] tmp_anscentral_state_prob1;
+        delete[] tmp_anscentral_state_prob1;
     if (tmp_anscentral_state_prob2)
-    	delete [] tmp_anscentral_state_prob2;
+        delete[] tmp_anscentral_state_prob2;
     //if (tmp_ptn_rates)
     //	delete [] tmp_ptn_rates;
-    if (_pattern_lh) delete [] _pattern_lh;
+    if (_pattern_lh)
+        delete[] _pattern_lh;
     //if (state_freqs)
     //	delete [] state_freqs;
+    if (theta_all)
+        delete[] theta_all;
 }
 
 void PhyloTree::assignLeafNames(Node *node, Node *dad) {
-    if (!node) node = root;
+    if (!node)
+        node = root;
     if (node->isLeaf()) {
         node->id = atoi(node->name.c_str());
         assert(node->id >= 0 && node->id < leafNum);
         node->name = aln->getSeqName(node->id).c_str();
     }
-    FOR_NEIGHBOR_IT(node, dad, it)
-    assignLeafNames((*it)->node, node);
+    FOR_NEIGHBOR_IT(node, dad, it)assignLeafNames((*it)->node, node);
 }
 
 void PhyloTree::copyTree(MTree *tree) {
     MTree::copyTree(tree);
-    if (!aln) return;
+    if (!aln)
+        return;
     // reset the ID with alignment
     setAlignment(aln);
 }
 
 void PhyloTree::copyTree(MTree *tree, string &taxa_set) {
     MTree::copyTree(tree, taxa_set);
-    if (!aln) return;
+    if (!aln)
+        return;
     // reset the ID with alignment
     setAlignment(aln);
 }
 
 void PhyloTree::copyPhyloTree(PhyloTree *tree) {
     MTree::copyTree(tree);
-    if (!tree->aln) return;
+    if (!tree->aln)
+        return;
     setAlignment(tree->aln);
 }
 
@@ -202,7 +212,8 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
 
 void PhyloTree::setRate(RateHeterogeneity *rate) {
     site_rate = rate;
-    if (!rate) return;
+    if (!rate)
+        return;
     //numCat = site_rate->getNRate();
     //if (aln) {
     //    block = aln->num_states * numCat;
@@ -223,7 +234,8 @@ Node* PhyloTree::newNode(int node_id, int node_name) {
 }
 
 void PhyloTree::clearAllPartialLH() {
-    if (!root) return;
+    if (!root)
+        return;
     ((PhyloNode*) root->neighbors[0]->node)->clearAllPartialLh((PhyloNode*) root);
 }
 
@@ -232,25 +244,25 @@ string PhyloTree::getModelName() {
 }
 
 /****************************************************************************
-        Parsimony function
+ Parsimony function
  ****************************************************************************/
 /*
-double PhyloTree::computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-//	double corrected_bran = 0;
-//	int parbran;
-//	int parscore = computeParsimonyBranch(node21_it, node2, &parbran);
-//	if (site_rate->getGammaShape() != 0) {
-//		corrected_bran = (aln->num_states - 1.0) / aln->num_states
-//				* site_rate->getGammaShape()
-//				* (pow( 1.0 - aln->num_states / (aln->num_states - 1.0) * ((double) parbran / aln->getNSite()),
-//						-1.0 / site_rate->getGammaShape()) - 1.0);
-//	} else {
-//		corrected_bran = -((aln->num_states - 1.0) / aln->num_states)
-//				* log(1.0 - (aln->num_states / (aln->num_states - 1.0)) * ((double) parbran / aln->getNSite()));
-//	}
-//	return corrected_bran;
-}
-*/
+ double PhyloTree::computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+ //	double corrected_bran = 0;
+ //	int parbran;
+ //	int parscore = computeParsimonyBranch(node21_it, node2, &parbran);
+ //	if (site_rate->getGammaShape() != 0) {
+ //		corrected_bran = (aln->num_states - 1.0) / aln->num_states
+ //				* site_rate->getGammaShape()
+ //				* (pow( 1.0 - aln->num_states / (aln->num_states - 1.0) * ((double) parbran / aln->getNSite()),
+ //						-1.0 / site_rate->getGammaShape()) - 1.0);
+ //	} else {
+ //		corrected_bran = -((aln->num_states - 1.0) / aln->num_states)
+ //				* log(1.0 - (aln->num_states / (aln->num_states - 1.0)) * ((double) parbran / aln->getNSite()));
+ //	}
+ //	return corrected_bran;
+ }
+ */
 void PhyloTree::initializeAllPartialPars() {
     int index = 0;
     initializeAllPartialPars(index);
@@ -263,9 +275,9 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
         node = (PhyloNode*) root;
         // allocate the big central partial pars memory
         if (!central_partial_pars) {
-			int memsize = (aln->getNSeq()-1) * 4 * pars_block_size;
+            int memsize = (aln->getNSeq() - 1) * 4 * pars_block_size;
             if (verbose_mode >= VB_MED)
-                cout << "Allocating " << memsize * sizeof (UINT) << " bytes for partial parsimony vectors" << endl;
+                cout << "Allocating " << memsize * sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
             central_partial_pars = new UINT[memsize];
             if (!central_partial_pars)
                 outError("Not enough memory for partial parsimony vectors");
@@ -282,10 +294,8 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
         index += 2;
         //assert(index < nodeNum * 2 - 1);
     }
-    FOR_NEIGHBOR_IT(node, dad, it)
-    initializeAllPartialPars(index, (PhyloNode*) (*it)->node, node);
+    FOR_NEIGHBOR_IT(node, dad, it)initializeAllPartialPars(index, (PhyloNode*) (*it)->node, node);
 }
-
 
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
@@ -318,17 +328,20 @@ void PhyloTree::getBitsBlock(UINT *bit_vec, int index, UINT* &bits_entry) {
     int id;
     for (id = 0; rest_bits >= UINT_BITS; id++, rest_bits -= UINT_BITS, bit_pos_begin++) {
         bits_entry[id] = part1;
-        if (bit_off_begin > 0) bits_entry[id] |= (bit_vec[bit_pos_begin+1] << (UINT_BITS - bit_off_begin));
-        part1 = (bit_vec[bit_pos_begin+1] >> bit_off_begin);
+        if (bit_off_begin > 0)
+            bits_entry[id] |= (bit_vec[bit_pos_begin + 1] << (UINT_BITS - bit_off_begin));
+        part1 = (bit_vec[bit_pos_begin + 1] >> bit_off_begin);
     }
     if (bit_pos_begin == bit_pos_end) {
         bits_entry[id] = (bit_vec[bit_pos_begin] >> bit_off_begin) & ((1 << rest_bits) - 1);
         return;
     }
     UINT part2 = bit_vec[bit_pos_end];
-    if (bit_off_end < UINT_BITS) part2 &= ((1 << bit_off_end) - 1);
+    if (bit_off_end < UINT_BITS)
+        part2 &= ((1 << bit_off_end) - 1);
     bits_entry[id] = part1;
-    if (bit_off_begin > 0) bits_entry[id] |= (part2 << (UINT_BITS - bit_off_begin));
+    if (bit_off_begin > 0)
+        bits_entry[id] |= (part2 << (UINT_BITS - bit_off_begin));
 }
 
 void PhyloTree::setBitsBlock(UINT* &bit_vec, int index, UINT *bits_entry) {
@@ -357,26 +370,30 @@ void PhyloTree::setBitsBlock(UINT* &bit_vec, int index, UINT *bits_entry) {
     int rest_bits = nstates - len1;
     int id;
     for (id = 0; rest_bits >= UINT_BITS; bit_pos_begin++, id++, rest_bits -= UINT_BITS) {
-        bit_vec[bit_pos_begin+1] = (bits_entry[id+1] << bit_off_begin);
-        if (len1 < UINT_BITS) bit_vec[bit_pos_begin+1] |= (bits_entry[id] >> len1);
+        bit_vec[bit_pos_begin + 1] = (bits_entry[id + 1] << bit_off_begin);
+        if (len1 < UINT_BITS)
+            bit_vec[bit_pos_begin + 1] |= (bits_entry[id] >> len1);
     }
 
     assert(bit_pos_begin == bit_pos_end-1);
     // clear bit from 0 to bit_off_end
     bit_vec[bit_pos_end] &= ~((1 << bit_off_end) - 1);
     // now set the bit the value
-    if (len1 < UINT_BITS) bit_vec[bit_pos_end] |= (bits_entry[id] >> len1);
+    if (len1 < UINT_BITS)
+        bit_vec[bit_pos_end] |= (bits_entry[id] >> len1);
     rest_bits -= bit_off_begin;
-    if  (rest_bits > 0)
-        bit_vec[bit_pos_end] |= (bits_entry[id+1] << bit_off_begin);
+    if (rest_bits > 0)
+        bit_vec[bit_pos_end] |= (bits_entry[id + 1] << bit_off_begin);
 }
 
 bool PhyloTree::isEmptyBitsEntry(UINT *bits_entry) {
     int rest_bits = aln->num_states;
     int i;
     for (i = 0; rest_bits >= UINT_BITS; rest_bits -= UINT_BITS, i++)
-        if (bits_entry[i]) return false;
-    if (bits_entry[i] & ((1 << rest_bits)-1)) return false;
+        if (bits_entry[i])
+            return false;
+    if (bits_entry[i] & ((1 << rest_bits) - 1))
+        return false;
     return true;
 }
 
@@ -393,21 +410,21 @@ void PhyloTree::setBitsEntry(UINT* &bits_entry, int id) {
     bits_entry[bit_pos] |= (1 << bit_off);
 }
 
-
 bool PhyloTree::getBitsEntry(UINT* &bits_entry, int id) {
     int bit_pos = id >> BITS_DIV;
     int bit_off = id & BITS_MODULO;
-    if (bits_entry[bit_pos] & (1 << bit_off)) return true;
+    if (bits_entry[bit_pos] & (1 << bit_off))
+        return true;
     return false;
 }
 
-
 void setBitsAll(UINT* &bit_vec, int num) {
     //int id;
-    int size = num/UINT_BITS;
+    int size = num / UINT_BITS;
     memset(bit_vec, 255, size * sizeof(UINT));
     num &= BITS_MODULO;
-    if (num) bit_vec[size] = (1 << num) - 1;
+    if (num)
+        bit_vec[size] = (1 << num) - 1;
 }
 
 void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
@@ -428,44 +445,43 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
     if (node->isLeaf() && dad) {
         // external node
         setBitsAll(dad_branch->partial_pars, nstates * aln->size());
-        dad_branch->partial_pars[pars_size-1] = 0;
-        for (ptn = 0; ptn < aln->size(); ptn++) 
-		if (!aln->at(ptn).is_const) {
-            char state;
-            if (node->name == ROOT_NAME) {
-                state = STATE_UNKNOWN;
-            } else {
-                assert(node->id < aln->getNSeq());
-                state = (aln->at(ptn))[node->id];
+        dad_branch->partial_pars[pars_size - 1] = 0;
+        for (ptn = 0; ptn < aln->size(); ptn++)
+            if (!aln->at(ptn).is_const) {
+                char state;
+                if (node->name == ROOT_NAME) {
+                    state = STATE_UNKNOWN;
+                } else {
+                    assert(node->id < aln->getNSeq());
+                    state = (aln->at(ptn))[node->id];
+                }
+                if (state == STATE_UNKNOWN) {
+                    // fill all entries with bit 1
+                    //setBitsBlock(dad_branch->partial_pars, ptn, (1 << nstates) - 1);
+                } else if (state < nstates) {
+                    memset(bits_entry, 0, sizeof(UINT) * entry_size);
+                    setBitsEntry(bits_entry, state);
+                    setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
+                } else {
+                    // ambiguous character, for DNA, RNA
+                    state = state - (nstates - 1);
+                    memset(bits_entry, 0, sizeof(UINT) * entry_size);
+                    bits_entry[0] = state;
+                    setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
+                }
             }
-            if (state == STATE_UNKNOWN) {
-                // fill all entries with bit 1
-                //setBitsBlock(dad_branch->partial_pars, ptn, (1 << nstates) - 1);
-            } else if (state < nstates) {
-                memset(bits_entry, 0, sizeof(UINT) * entry_size);
-                setBitsEntry(bits_entry, state);
-                setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
-            } else {
-                // ambiguous character, for DNA, RNA
-                state = state - (nstates - 1);
-                memset(bits_entry, 0, sizeof(UINT) * entry_size);
-                bits_entry[0] = state;
-                setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
-            }
-        }
     } else {
         // internal node
         //memset(dad_branch->partial_pars, 127, pars_size * sizeof(int));
         UINT *partial_pars_dad = dad_branch->partial_pars;
         UINT *partial_pars_child1 = NULL, *partial_pars_child2 = NULL;
         // take the intersection of two child states (with &= bit operation)
-        FOR_NEIGHBOR_IT(node, dad, it)
-        if ((*it)->node->name != ROOT_NAME) {
+        FOR_NEIGHBOR_IT(node, dad, it)if ((*it)->node->name != ROOT_NAME) {
             computePartialParsimony((PhyloNeighbor*) (*it), (PhyloNode*) node);
             if (!partial_pars_child1)
-                partial_pars_child1 = ((PhyloNeighbor*) (*it))->partial_pars;
+            partial_pars_child1 = ((PhyloNeighbor*) (*it))->partial_pars;
             else
-                partial_pars_child2 = ((PhyloNeighbor*) (*it))->partial_pars;
+            partial_pars_child2 = ((PhyloNeighbor*) (*it))->partial_pars;
         }
         assert(partial_pars_child1 && partial_pars_child2);
         // take the intersection of two bits block
@@ -473,24 +489,24 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
             partial_pars_dad[i] = partial_pars_child1[i] & partial_pars_child2[i];
         int partial_pars = partial_pars_child1[pars_size - 1] + partial_pars_child2[pars_size - 1];
         // now check if some intersection is empty, change to union (Fitch algorithm) and increase the parsimony score
-        for (ptn = 0; ptn < aln->size(); ptn++) 
-		if (!aln->at(ptn).is_const) {
-            getBitsBlock(partial_pars_dad, ptn, bits_entry);
-            if (isEmptyBitsEntry(bits_entry)) {
-                getBitsBlock(partial_pars_child1, ptn, bits_entry1);
-                getBitsBlock(partial_pars_child2, ptn, bits_entry2);
-                unionBitsEntry(bits_entry1, bits_entry2, bits_entry);
-                //cout << bits_entry[0] << " " << bits_entry[1] << endl;
-                setBitsBlock(partial_pars_dad, ptn, bits_entry);
-                partial_pars += aln->at(ptn).frequency;
+        for (ptn = 0; ptn < aln->size(); ptn++)
+            if (!aln->at(ptn).is_const) {
+                getBitsBlock(partial_pars_dad, ptn, bits_entry);
+                if (isEmptyBitsEntry(bits_entry)) {
+                    getBitsBlock(partial_pars_child1, ptn, bits_entry1);
+                    getBitsBlock(partial_pars_child2, ptn, bits_entry2);
+                    unionBitsEntry(bits_entry1, bits_entry2, bits_entry);
+                    //cout << bits_entry[0] << " " << bits_entry[1] << endl;
+                    setBitsBlock(partial_pars_dad, ptn, bits_entry);
+                    partial_pars += aln->at(ptn).frequency;
+                }
             }
-        }
         partial_pars_dad[pars_size - 1] = partial_pars;
     }
     dad_branch->partial_lh_computed |= 2;
-    delete [] bits_entry2;
-    delete [] bits_entry1;
-    delete [] bits_entry;
+    delete[] bits_entry2;
+    delete[] bits_entry1;
+    delete[] bits_entry;
 }
 
 int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
@@ -526,15 +542,16 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
         partial_pars[i] = (node_branch->partial_pars[i] & dad_branch->partial_pars[i]);
 
     for (ptn = 0; ptn < aln->size(); ptn++)
-    if (!aln->at(ptn).is_const) {
-        getBitsBlock(partial_pars, ptn, bits_entry);
-        if (isEmptyBitsEntry(bits_entry))
-            tree_pars += aln->at(ptn).frequency;
-    }
-    if (branch_subst) *branch_subst = tree_pars;
+        if (!aln->at(ptn).is_const) {
+            getBitsBlock(partial_pars, ptn, bits_entry);
+            if (isEmptyBitsEntry(bits_entry))
+                tree_pars += aln->at(ptn).frequency;
+        }
+    if (branch_subst)
+        *branch_subst = tree_pars;
     tree_pars += node_branch->partial_pars[pars_size - 1] + dad_branch->partial_pars[pars_size - 1];
-    delete [] bits_entry;
-    delete [] partial_pars;
+    delete[] bits_entry;
+    delete[] partial_pars;
     return tree_pars;
 }
 
@@ -544,14 +561,15 @@ int PhyloTree::computeParsimony() {
 
 void PhyloTree::printParsimonyStates(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     if (!dad) {
-        dad = (PhyloNode*)root;
-        dad_branch = (PhyloNeighbor*)root->neighbors[0];
+        dad = (PhyloNode*) root;
+        dad_branch = (PhyloNeighbor*) root->neighbors[0];
         cout << "Parsimonious states for every node and site: " << endl;
     }
     int site;
     cout << "States for node ";
     int max_len = aln->getMaxSeqNameLength();
-    if (max_len < 3) max_len = 3;
+    if (max_len < 3)
+        max_len = 3;
     cout.width(max_len);
     if (!dad_branch->node->name.empty())
         cout << left << dad_branch->node->name;
@@ -562,15 +580,16 @@ void PhyloTree::printParsimonyStates(PhyloNeighbor *dad_branch, PhyloNode *dad) 
     for (site = 0; site < aln->getNSite(); site++) {
         int ptn = aln->getPatternID(site);
         getBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
-		if (aln->at(ptn).is_const) {
-			int state = aln->at(ptn)[0];
-			if (state < aln->num_states)
-				setBitsEntry(bits_entry, state);
-			else {
-				memset(bits_entry, 0, sizeof(UINT) * getBitsEntrySize());
-                bits_entry[0] = state - (aln->num_states - 1);;
-			}
-		}
+        if (aln->at(ptn).is_const) {
+            int state = aln->at(ptn)[0];
+            if (state < aln->num_states)
+                setBitsEntry(bits_entry, state);
+            else {
+                memset(bits_entry, 0, sizeof(UINT) * getBitsEntrySize());
+                bits_entry[0] = state - (aln->num_states - 1);
+                ;
+            }
+        }
         cout << "{";
         bool first = true;
         for (int i = 0; i < aln->num_states; i++)
@@ -581,15 +600,15 @@ void PhyloTree::printParsimonyStates(PhyloNeighbor *dad_branch, PhyloNode *dad) 
         cout << "}\t";
     }
     cout << endl;
-    delete [] bits_entry;
-    FOR_NEIGHBOR_IT(dad_branch->node, dad, it)
-    printParsimonyStates((PhyloNeighbor*)(*it), (PhyloNode*)(dad_branch->node));
+    delete[] bits_entry;
+    FOR_NEIGHBOR_IT(dad_branch->node, dad, it)printParsimonyStates((PhyloNeighbor*)(*it), (PhyloNode*)(dad_branch->node));
 }
 
 int PhyloTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, PhyloNode *dad) {
     int score = 0;
     states = 0;
-    if (!node) node = (PhyloNode*) root;
+    if (!node)
+        node = (PhyloNode*) root;
     if (node->degree() > 3)
         outError("Does not work with multifurcating tree");
     if (verbose_mode == VB_DEBUG)
@@ -620,13 +639,13 @@ int PhyloTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, Phyl
             intersect_states = states;
         }
 
-        FOR_NEIGHBOR_IT(node, dad, it) {
-            int states_child;
-            int score_child = computeParsimonyScore(ptn, states_child, (PhyloNode*) ((*it)->node), node);
-            union_states |= states_child;
-            intersect_states &= states_child;
-            score += score_child;
-        }
+        FOR_NEIGHBOR_IT(node, dad, it){
+        int states_child;
+        int score_child = computeParsimonyScore(ptn, states_child, (PhyloNode*) ((*it)->node), node);
+        union_states |= states_child;
+        intersect_states &= states_child;
+        score += score_child;
+    }
         if (intersect_states)
             states = intersect_states;
         else {
@@ -650,47 +669,49 @@ int PhyloTree::computeParsimonyScore() {
 }
 
 /****************************************************************************
-        Nearest Neighbor Interchange with parsimony
+ Nearest Neighbor Interchange with parsimony
  ****************************************************************************/
 
 double PhyloTree::swapNNI(double cur_score, PhyloNode *node1, PhyloNode *node2) {
     assert(node1->degree() == 3 && node2->degree() == 3);
     FOR_NEIGHBOR_DECLARE(node1, node2, it1)
-    break;
+        break;
     Node *node1_nei = (*it1)->node;
 
-    FOR_NEIGHBOR_IT(node2, node1, it2) {
-        // do the NNI swap
-        Node *node2_nei = (*it2)->node;
-        node1->updateNeighbor(node1_nei, node2_nei);
-        node1_nei->updateNeighbor(node1, node2);
-        node2->updateNeighbor(node2_nei, node1_nei);
-        node2_nei->updateNeighbor(node2, node1);
+    FOR_NEIGHBOR_IT(node2, node1, it2){
+    // do the NNI swap
+    Node *node2_nei = (*it2)->node;
+    node1->updateNeighbor(node1_nei, node2_nei);
+    node1_nei->updateNeighbor(node1, node2);
+    node2->updateNeighbor(node2_nei, node1_nei);
+    node2_nei->updateNeighbor(node2, node1);
 
-        // compute the score of the swapped topology
-        double score = computeParsimonyScore();
-        // if better: return
-        if (score < cur_score) return score;
-        // else, swap back
-        node1->updateNeighbor(node2_nei, node1_nei);
-        node1_nei->updateNeighbor(node2, node1);
-        node2->updateNeighbor(node1_nei, node2_nei);
-        node2_nei->updateNeighbor(node1, node2);
-    }
+    // compute the score of the swapped topology
+    double score = computeParsimonyScore();
+    // if better: return
+    if (score < cur_score) return score;
+    // else, swap back
+    node1->updateNeighbor(node2_nei, node1_nei);
+    node1_nei->updateNeighbor(node2, node1);
+    node2->updateNeighbor(node1_nei, node2_nei);
+    node2_nei->updateNeighbor(node1, node2);
+}
     return cur_score;
 }
 
 double PhyloTree::searchNNI(double cur_score, PhyloNode *node, PhyloNode *dad) {
-    if (!node) node = (PhyloNode*) root;
+    if (!node)
+        node = (PhyloNode*) root;
     if (!node->isLeaf() && dad && !dad->isLeaf()) {
         double score = swapNNI(cur_score, node, dad);
-        if (score < cur_score) return score;
+        if (score < cur_score)
+            return score;
     }
 
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        double score = searchNNI(cur_score, (PhyloNode*) (*it)->node, node);
-        if (score < cur_score) return score;
-    }
+    FOR_NEIGHBOR_IT(node, dad, it){
+    double score = searchNNI(cur_score, (PhyloNode*) (*it)->node, node);
+    if (score < cur_score) return score;
+}
     return cur_score;
 }
 
@@ -699,26 +720,28 @@ void PhyloTree::searchNNI() {
     double cur_score = computeParsimonyScore();
     do {
         double score = searchNNI(cur_score);
-        if (score >= cur_score) break;
+        if (score >= cur_score)
+            break;
         cout << "Better score found: " << score << endl;
         cur_score = score;
     } while (true);
 }
 
 /****************************************************************************
-        Stepwise addition (greedy) by maximum parsimony
+ Stepwise addition (greedy) by maximum parsimony
  ****************************************************************************/
 
 // random generator function:
-ptrdiff_t myrandom (ptrdiff_t i) { return random_int(i);}
+ptrdiff_t myrandom(ptrdiff_t i) {
+    return random_int(i);
+}
 
 // pointer object to it:
 ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
 
-void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment)
-{
+void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
     cout << "Computing parsimony tree by random stepwise addition..." << endl;
-	double start_time = getCPUTime();
+    double start_time = getCPUTime();
     aln = alignment;
     int size = aln->getNSeq();
     if (size < 3)
@@ -727,12 +750,12 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     root = newNode();
     Node *new_taxon;
 
-	IntVector taxon_order;
-	taxon_order.resize(size);
-	for (int i = 0; i < size; i++)
-		taxon_order[i] = i;
-	// randomize the addition order
-	random_shuffle(taxon_order.begin(), taxon_order.end(), p_myrandom);
+    IntVector taxon_order;
+    taxon_order.resize(size);
+    for (int i = 0; i < size; i++)
+        taxon_order[i] = i;
+    // randomize the addition order
+    random_shuffle(taxon_order.begin(), taxon_order.end(), p_myrandom);
 
     // create initial tree with 3 taxa
     for (leafNum = 0; leafNum < 3; leafNum++) {
@@ -744,19 +767,19 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     }
     root = findNodeID(taxon_order[0]);
 
-	// stepwise adding the next taxon
+    // stepwise adding the next taxon
     for (leafNum = 3; leafNum < size; leafNum++) {
         if (verbose_mode >= VB_MAX)
             cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree";
-		initializeAllPartialPars();
-		clearAllPartialLH();
+        initializeAllPartialPars();
+        clearAllPartialLH();
         // allocate a new taxon and a new adjacent internal node
         new_taxon = newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
         Node *added_node = newNode();
         added_node->addNeighbor(new_taxon, -1.0);
         new_taxon->addNeighbor(added_node, -1.0);
-		((PhyloNeighbor*)added_node->findNeighbor(new_taxon))->partial_pars = newBitsBlock();
-		((PhyloNeighbor*)new_taxon->findNeighbor(added_node))->partial_pars = newBitsBlock();
+        ((PhyloNeighbor*) added_node->findNeighbor(new_taxon))->partial_pars = newBitsBlock();
+        ((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_pars = newBitsBlock();
         // preserve two neighbors
         added_node->addNeighbor((Node*) 1, -1.0);
         added_node->addNeighbor((Node*) 2, -1.0);
@@ -764,8 +787,8 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
         Node *target_node = NULL;
         Node *target_dad = NULL;
         int score = addTaxonMPFast(added_node, target_node, target_dad, root->neighbors[0]->node, root);
-		delete [] ((PhyloNeighbor*)new_taxon->findNeighbor(added_node))->partial_pars;
-		delete [] ((PhyloNeighbor*)added_node->findNeighbor(new_taxon))->partial_pars;
+        delete[] ((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_pars;
+        delete[] ((PhyloNeighbor*) added_node->findNeighbor(new_taxon))->partial_pars;
         if (verbose_mode >= VB_MAX)
             cout << ", score = " << score << endl;
         // now insert the new node in the middle of the branch node-dad
@@ -783,22 +806,21 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     nodeNum = 2 * leafNum - 2;
     setAlignment(alignment);
     initializeAllPartialPars();
-	clearAllPartialLH();
-	fixNegativeBranch(true);
-	cout << "Time taken: " << getCPUTime() - start_time << " sec" << endl;
-	string file_name = out_prefix;
-	file_name += ".parstree";
-	printTree(file_name.c_str(), WT_BR_LEN | WT_NEWLINE);
+    clearAllPartialLH();
+    fixNegativeBranch(true);
+    cout << "Time taken: " << getCPUTime() - start_time << " sec" << endl;
+    string file_name = out_prefix;
+    file_name += ".parstree";
+    printTree(file_name.c_str(), WT_BR_LEN | WT_NEWLINE);
 }
 
-int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& target_dad, Node* node, Node* dad)
-{
+int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& target_dad, Node* node, Node* dad) {
     Neighbor *dad_nei = dad->findNeighbor(node);
-	//Node *added_taxon = added_node->neighbors[0]->node;
+    //Node *added_taxon = added_node->neighbors[0]->node;
     Node *added_taxon;
     for (int i = 0; i < 3; i++) {
-    	if (added_node->neighbors[i]->node != (Node*) 1 && added_node->neighbors[i]->node != (Node*) 2)
-    		added_taxon = added_node->neighbors[i]->node;
+        if (added_node->neighbors[i]->node != (Node*) 1 && added_node->neighbors[i]->node != (Node*) 2)
+            added_taxon = added_node->neighbors[i]->node;
     }
 
 //    Node *added_taxon;
@@ -812,18 +834,20 @@ int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& targe
     double len = dad_nei->length;
     node->updateNeighbor(dad, added_node, len / 2.0);
     dad->updateNeighbor(node, added_node, len / 2.0);
-    Node *node1 = NULL;
-    Node *node2 = NULL;
     added_node->updateNeighbor((Node*) 1, node, len / 2.0);
     added_node->updateNeighbor((Node*) 2, dad, len / 2.0);
-	((PhyloNeighbor*)added_node->findNeighbor(node))->partial_pars = ((PhyloNeighbor*)dad->findNeighbor(added_node))->partial_pars;
-	((PhyloNeighbor*)added_node->findNeighbor(dad))->partial_pars = ((PhyloNeighbor*)node->findNeighbor(added_node))->partial_pars;
-	((PhyloNeighbor*)added_node->findNeighbor(node))->partial_lh_computed = ((PhyloNeighbor*)dad->findNeighbor(added_node))->partial_lh_computed;
-	((PhyloNeighbor*)added_node->findNeighbor(dad))->partial_lh_computed = ((PhyloNeighbor*)node->findNeighbor(added_node))->partial_lh_computed;
+    ((PhyloNeighbor*) added_node->findNeighbor(node))->partial_pars =
+            ((PhyloNeighbor*) dad->findNeighbor(added_node))->partial_pars;
+    ((PhyloNeighbor*) added_node->findNeighbor(dad))->partial_pars =
+            ((PhyloNeighbor*) node->findNeighbor(added_node))->partial_pars;
+    ((PhyloNeighbor*) added_node->findNeighbor(node))->partial_lh_computed = ((PhyloNeighbor*) dad->findNeighbor(
+            added_node))->partial_lh_computed;
+    ((PhyloNeighbor*) added_node->findNeighbor(dad))->partial_lh_computed = ((PhyloNeighbor*) node->findNeighbor(
+            added_node))->partial_lh_computed;
     // compute the likelihood
     //clearAllPartialLh();
-	((PhyloNeighbor*)added_taxon->findNeighbor(added_node))->clearPartialLh();
-    int best_score = computeParsimonyBranch((PhyloNeighbor*)added_node->neighbors[0], (PhyloNode*)added_node);
+    ((PhyloNeighbor*) added_taxon->findNeighbor(added_node))->clearPartialLh();
+    int best_score = computeParsimonyBranch((PhyloNeighbor*) added_node->neighbors[0], (PhyloNode*) added_node);
     target_node = node;
     target_dad = dad;
     // remove the added node
@@ -834,20 +858,19 @@ int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& targe
 
     // now tranverse the tree downwards
 
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        Node *target_node2;
-        Node *target_dad2;
-        double score = addTaxonMPFast(added_node, target_node2, target_dad2, (*it)->node, node);
-        if (score < best_score) {
-            best_score = score;
-            target_node = target_node2;
-            target_dad = target_dad2;
-        }
+    FOR_NEIGHBOR_IT(node, dad, it){
+    Node *target_node2;
+    Node *target_dad2;
+    double score = addTaxonMPFast(added_node, target_node2, target_dad2, (*it)->node, node);
+    if (score < best_score) {
+        best_score = score;
+        target_node = target_node2;
+        target_dad = target_dad2;
     }
+}
     return best_score;
 
 }
-
 
 int PhyloTree::addTaxonMP(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad) {
     Neighbor *dad_nei = dad->findNeighbor(node);
@@ -871,16 +894,16 @@ int PhyloTree::addTaxonMP(Node *added_node, Node* &target_node, Node* &target_da
 
     // now tranverse the tree downwards
 
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        Node *target_node2;
-        Node *target_dad2;
-        double score = addTaxonMP(added_node, target_node2, target_dad2, (*it)->node, node);
-        if (score < best_score) {
-            best_score = score;
-            target_node = target_node2;
-            target_dad = target_dad2;
-        }
+    FOR_NEIGHBOR_IT(node, dad, it){
+    Node *target_node2;
+    Node *target_dad2;
+    double score = addTaxonMP(added_node, target_node2, target_dad2, (*it)->node, node);
+    if (score < best_score) {
+        best_score = score;
+        target_node = target_node2;
+        target_dad = target_dad2;
     }
+}
     return best_score;
 }
 
@@ -920,7 +943,6 @@ void PhyloTree::growTreeMP(Alignment *alignment) {
         added_node->addNeighbor((Node*) 1, 1.0);
         added_node->addNeighbor((Node*) 2, 1.0);
 
-
         Node *target_node = NULL;
         Node *target_dad = NULL;
         int score = addTaxonMP(added_node, target_node, target_dad, root->neighbors[0]->node, root);
@@ -942,21 +964,20 @@ void PhyloTree::growTreeMP(Alignment *alignment) {
 }
 
 /****************************************************************************
-        likelihood function
+ likelihood function
  ****************************************************************************/
 
 void PhyloTree::initializeAllPartialLh() {
     int index;
-	int numStates = model->num_states;
-    //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite()+1);
-    //size_t block_size = mem_size * numStates * site_rate->getNRate();
-    //block_size = alnSize * numStates * site_rate->getNRate();
+    int numStates = model->num_states;
+    size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite()+1);
+    size_t block_size = mem_size * numStates * site_rate->getNRate();
     if (!tmp_partial_lh1)
         tmp_partial_lh1 = newPartialLh();
     if (!tmp_anscentral_state_prob1)
-    	tmp_anscentral_state_prob1 = new double[numStates];
+        tmp_anscentral_state_prob1 = new double[numStates];
     if (!tmp_anscentral_state_prob2)
-    	tmp_anscentral_state_prob2 = new double[numStates];
+        tmp_anscentral_state_prob2 = new double[numStates];
     //if (!tmp_ptn_rates)
     //	tmp_ptn_rates = new double[alnSize];
     if (!tmp_partial_lh2)
@@ -965,7 +986,10 @@ void PhyloTree::initializeAllPartialLh() {
         tmp_scale_num1 = newScaleNum();
     if (!tmp_scale_num2)
         tmp_scale_num2 = newScaleNum();
-    if (!_pattern_lh) _pattern_lh = new double [aln->size()];
+    if (!_pattern_lh)
+        _pattern_lh = new double[aln->size()];
+    if (!theta_all)
+        theta_all = new double[block_size];
     initializeAllPartialLh(index);
     assert(index == (nodeNum - 1)*2);
 }
@@ -973,20 +997,21 @@ void PhyloTree::initializeAllPartialLh() {
 void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
     size_t pars_block_size = getBitsBlockSize();
     size_t scale_block_size = aln->size();
-    size_t block_size = ((getAlnNPattern() % 2) == 0) ? getAlnNPattern() : (getAlnNPattern()+1);
-    block_size = block_size * model->num_states * site_rate->getNRate();	
+    size_t block_size = ((getAlnNPattern() % 2) == 0) ? getAlnNPattern() : (getAlnNPattern() + 1);
+    block_size = block_size * model->num_states * site_rate->getNRate();
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
         if (!central_partial_lh) {
-			uint64_t mem_size = ((uint64_t)leafNum - 1) * 4 * (uint64_t)block_size + 2;
+            uint64_t mem_size = ((uint64_t) leafNum - 1) * 4 * (uint64_t) block_size + 2;
             if (verbose_mode >= VB_MIN)
-                cout << "Note: This run requires " <<  (double)mem_size * sizeof (double) / (1024.0*1024) << " MB memory for partial likelihood vectors" << endl;
-			if (mem_size >= getMemorySize()) {
-				cout << "********************* IMPORTANT WARNING *******************" << endl;
-				outWarning("Size of partial likelihood vectors exceeds your RAM size");
-				outWarning("Please switch to another computer with larger RAM");
-			}
+                cout << "Note: This run requires " << (double) mem_size * sizeof(double) / (1024.0 * 1024)
+                        << " MB memory for partial likelihood vectors" << endl;
+            if (mem_size >= getMemorySize()) {
+                cout << "********************* IMPORTANT WARNING *******************" << endl;
+                outWarning("Size of partial likelihood vectors exceeds your RAM size");
+                outWarning("Please switch to another computer with larger RAM");
+            }
             central_partial_lh = new double[mem_size];
             //central_partial_lh = (double*) Eigen::internal::conditional_aligned_malloc<true>((leafNum-1)*4*block_size);
             if (!central_partial_lh)
@@ -995,15 +1020,17 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         }
         if (!central_scale_num) {
             if (verbose_mode >= VB_MED)
-                cout << "Allocating " << (leafNum - 1)*4*scale_block_size*sizeof (UBYTE) << " bytes for scale num vectors" << endl;
-            central_scale_num = new UBYTE[(leafNum-1)*4*scale_block_size];
+                cout << "Allocating " << (leafNum - 1) * 4 * scale_block_size * sizeof(UBYTE)
+                        << " bytes for scale num vectors" << endl;
+            central_scale_num = new UBYTE[(leafNum - 1) * 4 * scale_block_size];
             if (!central_scale_num)
                 outError("Not enough memory for scale num vectors");
         }
         if (!central_partial_pars) {
             if (verbose_mode >= VB_MED)
-                cout << "Allocating " << (leafNum - 1)*4 * pars_block_size * sizeof (UINT) << " bytes for partial parsimony vectors" << endl;
-            central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
+                cout << "Allocating " << (leafNum - 1) * 4 * pars_block_size * sizeof(UINT)
+                        << " bytes for partial parsimony vectors" << endl;
+            central_partial_pars = new UINT[(leafNum - 1) * 4 * pars_block_size];
             if (!central_partial_pars)
                 outError("Not enough memory for partial parsimony vectors");
         }
@@ -1011,8 +1038,9 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
     }
     if (dad) {
         // make memory alignment 16
-		size_t mem_shift = 0;
-		if (((intptr_t)central_partial_lh) % 16 != 0) mem_shift = 1;
+        size_t mem_shift = 0;
+        if (((intptr_t) central_partial_lh) % 16 != 0)
+            mem_shift = 1;
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
         PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
         //assert(!nei->partial_lh);
@@ -1027,12 +1055,11 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         index += 2;
         assert(index < nodeNum * 2 - 1);
     }
-    FOR_NEIGHBOR_IT(node, dad, it)
-    initializeAllPartialLh(index, (PhyloNode*) (*it)->node, node);
+    FOR_NEIGHBOR_IT(node, dad, it)initializeAllPartialLh(index, (PhyloNode*) (*it)->node, node);
 }
 
 double *PhyloTree::newPartialLh() {
-	double *ret = new double[aln->size() * aln->num_states * site_rate->getNRate() + 2];
+    double *ret = new double[aln->size() * aln->num_states * site_rate->getNRate() + 2];
     return ret;
 }
 
@@ -1053,67 +1080,67 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
 //    double sum_scaling = nei->lh_scale_factor;
 //    double check = 0.0; 
     /*    if (pattern_lh) {
-            if (sum_scaling < 0.0) {
-                ptn_scale   qqqqqq= new double[nptn];
-                memset(ptn_scale, 0, sizeof (double) * nptn);
-                for (int i = 0; i < nptn; i++) {
-                	ptn_scale[i] = max(nei->scale_num[i],UBYTE(0)) * LOG_SCALING_THRESHOLD;
-                	check += ptn_scale[i] * aln->at(i).frequency;
-                }
-                if (fabs(check-sum_scaling) > 1e-3) {
-                	outError("sum_scaling does not match", __func__);
-                }
-                //clearAllPartialLh();
-            }
-        }*/
-	double score;
-	string root_name = ROOT_NAME;
-	Node *vroot = findLeafName(root_name);
-	if (root_state != STATE_UNKNOWN && vroot) {
-		if (verbose_mode >= VB_DEBUG)
-			cout << __func__ << " HIT ROOT STATE " << endl;
-		score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*)vroot);
-	} else {
-		score = computeLikelihoodBranch(nei, (PhyloNode*) root, pattern_lh);
-	}
+     if (sum_scaling < 0.0) {
+     ptn_scale   qqqqqq= new double[nptn];
+     memset(ptn_scale, 0, sizeof (double) * nptn);
+     for (int i = 0; i < nptn; i++) {
+     ptn_scale[i] = max(nei->scale_num[i],UBYTE(0)) * LOG_SCALING_THRESHOLD;
+     check += ptn_scale[i] * aln->at(i).frequency;
+     }
+     if (fabs(check-sum_scaling) > 1e-3) {
+     outError("sum_scaling does not match", __func__);
+     }
+     //clearAllPartialLh();
+     }
+     }*/
+    double score;
+    string root_name = ROOT_NAME;
+    Node *vroot = findLeafName(root_name);
+    if (root_state != STATE_UNKNOWN && vroot) {
+        if (verbose_mode >= VB_DEBUG)
+            cout << __func__ << " HIT ROOT STATE " << endl;
+        score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
+    } else {
+        score = computeLikelihoodBranch(nei, (PhyloNode*) root, pattern_lh);
+    }
     if (pattern_lh && nei->lh_scale_factor < 0.0) {
         int nptn = aln->getNPattern();
         //double check_score = 0.0;
         for (int i = 0; i < nptn; i++) {
-            pattern_lh[i] += max(nei->scale_num[i],UBYTE(0)) * LOG_SCALING_THRESHOLD;
+            pattern_lh[i] += max(nei->scale_num[i], UBYTE(0)) * LOG_SCALING_THRESHOLD;
             //check_score += (pattern_lh[i] * (aln->at(i).frequency));
         }
         /*       if (fabs(score - check_score) > 1e-6) {
-               	cout << "score = " << score << " check_score = " << check_score << endl;
-               	outError("Scaling error ", __func__);
-               }*/
+         cout << "score = " << score << " check_score = " << check_score << endl;
+         outError("Scaling error ", __func__);
+         }*/
         //delete [] ptn_scale;
     }
     return score;
 }
 
 double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	double score = computeLikelihoodBranchNaive(dad_branch, dad);
-	if (verbose_mode >= VB_DEBUG) {
-		printTransMatrices(dad_branch->node, dad);
-		/*
-		FOR_NEIGHBOR_IT(dad_branch->node, dad, it) {
-			PhyloNeighbor *pit = (PhyloNeighbor*)(*it);
-			cout << pit->node->name << "\t" << pit->partial_lh[0] << endl;
-			
-		}*/
-	}
-	double* state_freq = new double[aln->num_states];
-	model->getStateFrequency(state_freq);
-	return score - log(state_freq[root_state]);
-	delete [] state_freq;
+    double score = computeLikelihoodBranchNaive(dad_branch, dad);
+    if (verbose_mode >= VB_DEBUG) {
+        printTransMatrices(dad_branch->node, dad);
+        /*
+         FOR_NEIGHBOR_IT(dad_branch->node, dad, it) {
+         PhyloNeighbor *pit = (PhyloNeighbor*)(*it);
+         cout << pit->node->name << "\t" << pit->partial_lh[0] << endl;
+
+         }*/
+    }
+    double* state_freq = new double[aln->num_states];
+    model->getStateFrequency(state_freq);
+    return score - log(state_freq[root_state]);
+    delete[] state_freq;
 }
 
 void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl) {
     /*	if (!dad_branch) {
-    		dad_branch = (PhyloNeighbor*) root->neighbors[0];
-    		dad = (PhyloNode*) root;
-    	}*/
+     dad_branch = (PhyloNeighbor*) root->neighbors[0];
+     dad = (PhyloNode*) root;
+     }*/
     int nptn = aln->getNPattern();
     //PhyloNeighbor *node_branch = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
     //double sum_scaling = dad_branch->lh_scale_factor + node_branch->lh_scale_factor;
@@ -1121,27 +1148,29 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl) {
     if (sum_scaling < 0.0) {
         for (int i = 0; i < nptn; i++) {
             //ptn_lh[i] = _pattern_lh[i] + (max(UBYTE(0),dad_branch->scale_num[i])+max(UBYTE(0),node_branch->scale_num[i])) * LOG_SCALING_THRESHOLD;
-            ptn_lh[i] = _pattern_lh[i] + (max(UBYTE(0),current_it->scale_num[i])+max(UBYTE(0),current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
+            ptn_lh[i] = _pattern_lh[i]
+                    + (max(UBYTE(0), current_it->scale_num[i]) + max(UBYTE(0), current_it_back->scale_num[i]))
+                            * LOG_SCALING_THRESHOLD;
         }
 
         /*
-        		double *ptn_scale = new double[nptn];
-        		memset(ptn_scale, 0, sizeof (double) * nptn);
-        		if (dad_branch->lh_scale_factor != 0.0) {
-        			dad_branch->clearForwardPartialLh(dad);
-        			computePartialLikelihood(dad_branch, dad, ptn_scale);
-        		}
-        		if (node_branch->lh_scale_factor != 0.0) {
-        			node_branch->clearForwardPartialLh(dad_branch->node);
-        			computePartialLikelihood(node_branch, (PhyloNode*)dad_branch->node, ptn_scale);
-        		}
-                for (int i = 0; i < nptn; i++) {
-                    _pattern_lh[i] += ptn_scale[i];
-                }
-                delete [] ptn_scale;
-        */
+         double *ptn_scale = new double[nptn];
+         memset(ptn_scale, 0, sizeof (double) * nptn);
+         if (dad_branch->lh_scale_factor != 0.0) {
+         dad_branch->clearForwardPartialLh(dad);
+         computePartialLikelihood(dad_branch, dad, ptn_scale);
+         }
+         if (node_branch->lh_scale_factor != 0.0) {
+         node_branch->clearForwardPartialLh(dad_branch->node);
+         computePartialLikelihood(node_branch, (PhyloNode*)dad_branch->node, ptn_scale);
+         }
+         for (int i = 0; i < nptn; i++) {
+         _pattern_lh[i] += ptn_scale[i];
+         }
+         delete [] ptn_scale;
+         */
     } else
-        memmove(ptn_lh, _pattern_lh, nptn*sizeof(double));
+        memmove(ptn_lh, _pattern_lh, nptn * sizeof(double));
     if (cur_logl) {
         double check_score = 0.0;
         for (int i = 0; i < nptn; i++) {
@@ -1168,17 +1197,20 @@ double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
     IntVector pattern_freq;
     aln->getPatternFreq(pattern_freq);
     if (tree_lh == 0.0) {
-        for (i = 0; i < nptn; i++) tree_lh += pattern_lh[i] * pattern_freq[i];
+        for (i = 0; i < nptn; i++)
+            tree_lh += pattern_lh[i] * pattern_freq[i];
     }
     double avg_site_lh = tree_lh / nsite;
     double variance = 0.0;
     for (i = 0; i < nptn; i++) {
         double diff = (pattern_lh[i] - avg_site_lh);
-        variance +=  diff * diff * pattern_freq[i];
+        variance += diff * diff * pattern_freq[i];
     }
-    if (!ptn_lh) delete [] pattern_lh;
-	if (nsite <=1) return 0.0;
-    return variance * (nsite / (nsite-1));
+    if (!ptn_lh)
+        delete[] pattern_lh;
+    if (nsite <= 1)
+        return 0.0;
+    return variance * (nsite / (nsite - 1));
 }
 
 double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_lh) {
@@ -1192,76 +1224,78 @@ double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_
     }
     IntVector pattern_freq;
     aln->getPatternFreq(pattern_freq);
-    
+
     double avg_site_lh_diff = 0.0;
     for (i = 0; i < nptn; i++)
-        avg_site_lh_diff += (pattern_lh[i]-pattern_lh_other[i]) * pattern_freq[i];
-    avg_site_lh_diff /= nsite;	
+        avg_site_lh_diff += (pattern_lh[i] - pattern_lh_other[i]) * pattern_freq[i];
+    avg_site_lh_diff /= nsite;
     double variance = 0.0;
     for (i = 0; i < nptn; i++) {
-        double diff = (pattern_lh[i]- pattern_lh_other[i] - avg_site_lh_diff);
+        double diff = (pattern_lh[i] - pattern_lh_other[i] - avg_site_lh_diff);
         variance += diff * diff * pattern_freq[i];
     }
-    if (!ptn_lh) delete [] pattern_lh;
-	if (nsite <= 1) return 0.0;
-    return variance * (nsite / (nsite-1));
+    if (!ptn_lh)
+        delete[] pattern_lh;
+    if (nsite <= 1)
+        return 0.0;
+    return variance * (nsite / (nsite - 1));
 }
 
 double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh) {
     double *pattern_lh_other = new double[getAlnNPattern()];
     other_tree->computePatternLikelihood(pattern_lh_other);
     return computeLogLDiffVariance(pattern_lh_other, pattern_lh);
-    delete [] pattern_lh_other;
+    delete[] pattern_lh_other;
 }
 
 double PhyloTree::estimateBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	double observedBran = computeObservedBranchLength(dad_branch, dad);
-	return correctBranchLengthF81(observedBran, site_rate->getGammaShape());
+    double observedBran = computeObservedBranchLength(dad_branch, dad);
+    return correctBranchLengthF81(observedBran, site_rate->getGammaShape());
 }
 
 double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	double obsLen = 0.0;
-	PhyloNode *node = (PhyloNode*) dad_branch->node;
-	PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-	assert(node_branch);
+    double obsLen = 0.0;
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    assert(node_branch);
     /*
-	if (node->isLeaf() || dad->isLeaf()) {
-		return -1.0;
-	}*/
-	if ((dad_branch->partial_lh_computed & 1) == 0)
-		computePartialLikelihood(dad_branch, dad);
-	if ((node_branch->partial_lh_computed & 1) == 0)
-		computePartialLikelihood(node_branch, node);
-	// now combine likelihood at the branch
-	int nstates = aln->num_states;
-	int numCat = site_rate->getNRate();
-	size_t block = numCat * nstates;
-	size_t nptn = aln->size();
-	size_t ptn;
-	int cat, state;
-	double *tmp_state_freq = new double[nstates];
+     if (node->isLeaf() || dad->isLeaf()) {
+     return -1.0;
+     }*/
+    if ((dad_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihood(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihood(node_branch, node);
+    // now combine likelihood at the branch
+    int nstates = aln->num_states;
+    int numCat = site_rate->getNRate();
+    size_t block = numCat * nstates;
+    size_t nptn = aln->size();
+    size_t ptn;
+    int cat, state;
+    double *tmp_state_freq = new double[nstates];
     //computeLikelihoodBranchNaive(dad_branch, dad, NULL, tmp_ptn_rates);
     //double sum_rates = 0.0;
     //for (ptn = 0; ptn < nptn; ptn++)
     //    sum_rates += tmp_ptn_rates[ptn] * aln->at(ptn).frequency;
     //cout << "sum_rates = " << sum_rates << endl;
-    
-	model->getStateFrequency(tmp_state_freq);
+
+    model->getStateFrequency(tmp_state_freq);
 
     double cutoff = 0.2 / nstates;
-	for (ptn = 0; ptn < nptn; ptn++) {
-		// Compute the probability of each state for the current site
+    for (ptn = 0; ptn < nptn; ptn++) {
+        // Compute the probability of each state for the current site
         double sum_prob1 = 0.0, sum_prob2 = 0.0;
-        size_t offset = ptn*block;
+        size_t offset = ptn * block;
         double *partial_lh_site = node_branch->partial_lh + (offset);
         double *partial_lh_child = dad_branch->partial_lh + (offset);
         for (state = 0; state < nstates; state++) {
             tmp_anscentral_state_prob1[state] = 0.0;
             tmp_anscentral_state_prob2[state] = 0.0;
             for (cat = 0; cat < numCat; cat++) {
-				tmp_anscentral_state_prob1[state] += partial_lh_site[nstates * cat + state];
-				tmp_anscentral_state_prob2[state] += partial_lh_child[nstates * cat + state];
-			 }
+                tmp_anscentral_state_prob1[state] += partial_lh_site[nstates * cat + state];
+                tmp_anscentral_state_prob2[state] += partial_lh_child[nstates * cat + state];
+            }
             tmp_anscentral_state_prob1[state] *= tmp_state_freq[state];
             tmp_anscentral_state_prob2[state] *= tmp_state_freq[state];
             sum_prob1 += tmp_anscentral_state_prob1[state];
@@ -1279,39 +1313,42 @@ double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNo
         if (!sameState) {
             obsLen += aln->at(ptn).frequency;
         }
-        
-	}
-	obsLen /= getAlnNSite();
-    if (obsLen < MIN_BRANCH_LEN) obsLen = MIN_BRANCH_LEN;
-	delete [] tmp_state_freq;
-	return obsLen;
+
+    }
+    obsLen /= getAlnNSite();
+    if (obsLen < MIN_BRANCH_LEN)
+        obsLen = MIN_BRANCH_LEN;
+    delete[] tmp_state_freq;
+    return obsLen;
 }
 
 double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
-	double H = 0.0;
-	double correctedBranLen;
-	for (int i = 0; i < model->num_states; i++) {
-		H += model->state_freq[i] * (1 - model->state_freq[i]);
-	}
-    observedBran = 1.0 - observedBran/H;
-	// no gamma
-    if (observedBran <= 0.0) return MAX_BRANCH_LEN;
+    double H = 0.0;
+    double correctedBranLen;
+    for (int i = 0; i < model->num_states; i++) {
+        H += model->state_freq[i] * (1 - model->state_freq[i]);
+    }
+    observedBran = 1.0 - observedBran / H;
+    // no gamma
+    if (observedBran <= 0.0)
+        return MAX_BRANCH_LEN;
 
-	if (alpha <= 0.0) {
-		correctedBranLen = -H * log(observedBran);
-	} else {
-       //if (verbose_mode >= VB_MAX) cout << "alpha: " << alpha << endl;
-		correctedBranLen = H * alpha * ( pow(observedBran, -1/alpha) - 1 );
-	}
+    if (alpha <= 0.0) {
+        correctedBranLen = -H * log(observedBran);
+    } else {
+        //if (verbose_mode >= VB_MAX) cout << "alpha: " << alpha << endl;
+        correctedBranLen = H * alpha * (pow(observedBran, -1 / alpha) - 1);
+    }
 
-	return correctedBranLen;
+    return correctedBranLen;
 }
 
-double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh, double *pattern_rate) {
+double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh,
+        double *pattern_rate) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     assert(node_branch);
-	assert(!site_rate->isSiteSpecificRate() || !model->isSiteSpecificModel());
+    assert(!site_rate->isSiteSpecificRate() || !model->isSiteSpecificModel());
     if (!central_partial_lh)
         initializeAllPartialLh();
     // swap node and dad if dad is a leaf
@@ -1325,7 +1362,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         node_branch = tmp_nei;
         //cout << "swapped\n";
     }
-    
+
     if ((dad_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihood(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
@@ -1341,8 +1378,8 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
     int trans_size = model->getTransMatrixSize();
     size_t ptn; // for big data size > 4GB memory required
     int cat, state1, state2;
-	size_t nptn = aln->size();
-	int discrete_cat = site_rate->getNDiscreteRate();
+    size_t nptn = aln->size();
+    int discrete_cat = site_rate->getNDiscreteRate();
     double *trans_mat = new double[discrete_cat * trans_size];
     double *state_freq = new double[nstates];
     model->getStateFrequency(state_freq);
@@ -1354,9 +1391,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
             model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getRate(cat), state_freq, trans_cat);
         }
 
-
     bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
-
 
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh) private(ptn, cat, state1, state2)
@@ -1366,25 +1401,27 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         double rate_ptn = 0.0;
         int dad_state = 1000; // just something big enough
         int ptn_cat = site_rate->getPtnCat(ptn);
-		if (dad->name == ROOT_NAME && root_state != STATE_UNKNOWN) {
-			dad_state = root_state;
-			if (verbose_mode >= VB_DEBUG)
-				cout << __func__ << ": root state " << aln->convertStateBack(root_state) << endl;
-		} else if (dad->isLeaf()) {
+        if (dad->name == ROOT_NAME && root_state != STATE_UNKNOWN) {
+            dad_state = root_state;
+            if (verbose_mode >= VB_DEBUG)
+                cout << __func__ << ": root state " << aln->convertStateBack(root_state) << endl;
+        } else if (dad->isLeaf()) {
             dad_state = (*aln)[ptn][dad->id];
-		}
+        }
         int dad_offset = dad_state * nstates;
         if (site_rate->isSiteSpecificRate())
-            model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getPtnRate(ptn), state_freq, trans_mat);
+            model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getPtnRate(ptn), state_freq,
+                    trans_mat);
         for (cat = 0; cat < ncat; cat++) {
             double lh_cat = 0.0; // likelihood of the pattern's category
-            size_t lh_offset = cat * nstates + ptn*block;
+            size_t lh_offset = cat * nstates + ptn * block;
             double *partial_lh_site = node_branch->partial_lh + lh_offset;
             double *partial_lh_child = dad_branch->partial_lh + lh_offset;
             if (dad_state < nstates) { // single state
                 // external node
                 double *trans_state = trans_mat + ((not_ptn_cat ? cat : ptn_cat) * trans_size + dad_offset);
-				if (model->isSiteSpecificModel()) trans_state += (nstates * nstates * model->getPtnModelID(ptn));
+                if (model->isSiteSpecificModel())
+                    trans_state += (nstates * nstates * model->getPtnModelID(ptn));
                 for (state2 = 0; state2 < nstates; state2++)
                     lh_cat += partial_lh_child[state2] * trans_state[state2];
             } else {
@@ -1392,16 +1429,19 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
                 for (state1 = 0; state1 < nstates; state1++) {
                     double lh_state = 0.0; // likelihood of state1
                     double *trans_state = trans_mat + ((not_ptn_cat ? cat : ptn_cat) * trans_size + state1 * nstates);
-					if (model->isSiteSpecificModel()) trans_state += (nstates * nstates * model->getPtnModelID(ptn));
+                    if (model->isSiteSpecificModel())
+                        trans_state += (nstates * nstates * model->getPtnModelID(ptn));
                     for (state2 = 0; state2 < nstates; state2++)
                         lh_state += partial_lh_child[state2] * trans_state[state2];
                     lh_cat += lh_state * partial_lh_site[state1];
                 }
             }
             lh_ptn += lh_cat;
-            if (pattern_rate) rate_ptn += lh_cat * site_rate->getRate(cat);
+            if (pattern_rate)
+                rate_ptn += lh_cat * site_rate->getRate(cat);
         }
-        if (pattern_rate) pattern_rate[ptn] = rate_ptn / lh_ptn;
+        if (pattern_rate)
+            pattern_rate[ptn] = rate_ptn / lh_ptn;
         lh_ptn *= p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
@@ -1417,9 +1457,10 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
             continue;
         tree_lh += lh_ptn * aln->at(ptn).frequency;
     }
-    if (pattern_lh) memmove(pattern_lh, _pattern_lh, aln->size()*sizeof(double));
-    delete [] state_freq;
-    delete [] trans_mat;
+    if (pattern_lh)
+        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
+    delete[] state_freq;
+    delete[] trans_mat;
     //for (cat = ncat-1; cat >= 0; cat--)
     //delete trans_mat[cat];
     //delete state_freq;
@@ -1427,16 +1468,16 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
 }
 
 double PhyloTree::computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	double lh_zero_branch;
-	double saved_len = dad_branch->length;
-	PhyloNeighbor *node_branch = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
-	dad_branch->length = 0.0;
-	node_branch->length = 0.0;
-	lh_zero_branch = computeLikelihoodBranch(dad_branch, dad);
-	// restore branch length
-	dad_branch->length = saved_len;
-	node_branch->length = saved_len;
-	return lh_zero_branch;
+    double lh_zero_branch;
+    double saved_len = dad_branch->length;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) dad_branch->node->findNeighbor(dad);
+    dad_branch->length = 0.0;
+    node_branch->length = 0.0;
+    lh_zero_branch = computeLikelihoodBranch(dad_branch, dad);
+    // restore branch length
+    dad_branch->length = saved_len;
+    node_branch->length = saved_len;
+    return lh_zero_branch;
 }
 
 void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
@@ -1454,14 +1495,14 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
     size_t nptn = aln->size();
 
     dad_branch->lh_scale_factor = 0.0;
-    memset(dad_branch->scale_num, 0, aln->size() * sizeof (UBYTE));
+    memset(dad_branch->scale_num, 0, aln->size() * sizeof(UBYTE));
 
     assert(dad_branch->partial_lh);
     //if (!dad_branch->partial_lh)
     //	dad_branch->partial_lh = newPartialLh();
     if (node->isLeaf() && dad) {
         /* external node */
-        memset(dad_branch->partial_lh, 0, lh_size * sizeof (double));
+        memset(dad_branch->partial_lh, 0, lh_size * sizeof(double));
         for (ptn = 0; ptn < nptn; ptn++) {
             char state;
             partial_lh_site = dad_branch->partial_lh + (ptn * block);
@@ -1482,7 +1523,8 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                     partial_lh_site[cat * nstates + state] = 1.0;
             } else {
                 // ambiguous character, for DNA, RNA
-				if (verbose_mode >= VB_MED) cout << "Process ambiguous char " << (int)state << endl;
+                if (verbose_mode >= VB_MED)
+                    cout << "Process ambiguous char " << (int) state << endl;
                 state = state - (nstates - 1);
                 for (int state2 = 0; state2 < nstates && state2 <= 6; state2++)
                     if (state & (1 << state2)) {
@@ -1499,78 +1541,78 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
         for (ptn = 0; ptn < lh_size; ptn++) {
             dad_branch->partial_lh[ptn] = 1.0;
         }
-        for (ptn = 0; ptn < nptn; ptn++) dad_branch->scale_num[ptn] = -1;
+        for (ptn = 0; ptn < nptn; ptn++)
+            dad_branch->scale_num[ptn] = -1;
 
-        FOR_NEIGHBOR_IT(node, dad, it)
-        if ((*it)->node->name != ROOT_NAME) {
+        FOR_NEIGHBOR_IT(node, dad, it)if ((*it)->node->name != ROOT_NAME) {
             computePartialLikelihoodNaive((PhyloNeighbor*) (*it), (PhyloNode*) node, pattern_scale);
 
             dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
 
             if (!site_rate->isSiteSpecificRate())
-                for (cat = 0; cat < discrete_cat; cat++)
-                    model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), trans_mat + (cat * trans_size));
+            for (cat = 0; cat < discrete_cat; cat++)
+            model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), trans_mat + (cat * trans_size));
 
             bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
 
-			double sum_scale = 0.0;
+            double sum_scale = 0.0;
 #ifdef _OPENMP
-			#pragma omp parallel for reduction(+: sum_scale) private(ptn, cat, partial_lh_site)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, cat, partial_lh_site)
 #endif
             for (ptn = 0; ptn < nptn; ptn++)
-                if (((PhyloNeighbor*) (*it))->scale_num[ptn] >= 0) {
-                    // avoid the case that all child partial likelihoods equal 1.0
-                    //double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + (ptn*block);
-                    //if (partial_lh_child[0] < 0.0) continue;
-                    //
-                    if (dad_branch->scale_num[ptn] < 0) dad_branch->scale_num[ptn] = 0;
-                    dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
-                    int ptn_cat = site_rate->getPtnCat(ptn);
-                    if (site_rate->isSiteSpecificRate())
-                        model_factory->computeTransMatrix((*it)->length * site_rate->getPtnRate(ptn), trans_mat);
-                    for (cat = 0; cat < ncat; cat++) {
-                        size_t lh_offset = cat * nstates + ptn*block;
-                        partial_lh_site = dad_branch->partial_lh + lh_offset;
-                        double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + lh_offset;
-                        for (int state = 0; state < nstates; state++) {
-                            double lh_child = 0.0;
-                            double *trans_state = trans_mat + ((not_ptn_cat ? cat : ptn_cat) * trans_size + state * nstates);
-                            if (model->isSiteSpecificModel()) trans_state += (nstates * nstates * model->getPtnModelID(ptn));
-                            for (int state2 = 0; state2 < nstates; state2++)
-                                lh_child += trans_state[state2] * partial_lh_child[state2];
+            if (((PhyloNeighbor*) (*it))->scale_num[ptn] >= 0) {
+                // avoid the case that all child partial likelihoods equal 1.0
+                //double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + (ptn*block);
+                //if (partial_lh_child[0] < 0.0) continue;
+                //
+                if (dad_branch->scale_num[ptn] < 0) dad_branch->scale_num[ptn] = 0;
+                dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
+                int ptn_cat = site_rate->getPtnCat(ptn);
+                if (site_rate->isSiteSpecificRate())
+                model_factory->computeTransMatrix((*it)->length * site_rate->getPtnRate(ptn), trans_mat);
+                for (cat = 0; cat < ncat; cat++) {
+                    size_t lh_offset = cat * nstates + ptn*block;
+                    partial_lh_site = dad_branch->partial_lh + lh_offset;
+                    double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + lh_offset;
+                    for (int state = 0; state < nstates; state++) {
+                        double lh_child = 0.0;
+                        double *trans_state = trans_mat + ((not_ptn_cat ? cat : ptn_cat) * trans_size + state * nstates);
+                        if (model->isSiteSpecificModel()) trans_state += (nstates * nstates * model->getPtnModelID(ptn));
+                        for (int state2 = 0; state2 < nstates; state2++)
+                        lh_child += trans_state[state2] * partial_lh_child[state2];
 
-                            partial_lh_site[state] *= lh_child;
-                        }
+                        partial_lh_site[state] *= lh_child;
                     }
-                    // check if one should scale partial likelihoods
-                    bool do_scale = true;
-                    partial_lh_site = dad_branch->partial_lh + (ptn * block);
-                    for (cat = 0; cat < block; cat++)
-                        if (partial_lh_site[cat] > SCALING_THRESHOLD) {
-                            do_scale = false;
-                            break;
-                        }
-                    if (!do_scale) continue;
-                    // now do the likelihood scaling
-                    /*
-                    double lh_max = partial_lh_site[0];
-                    for (cat = 1; cat < block; cat++)
-                            if (lh_max < partial_lh_site[cat]) lh_max = partial_lh_site[cat];
-                    for (cat = 0; cat < block; cat++)
-                            partial_lh_site[cat] /= lh_max;
-                    dad_branch->lh_scale_factor += log(lh_max) * (*aln)[ptn].frequency;
-
-                     */
-                    for (cat = 0; cat < block; cat++)
-                        partial_lh_site[cat] /= SCALING_THRESHOLD;
-                    sum_scale += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
-                    dad_branch->scale_num[ptn] += 1;
-                    if (pattern_scale)
-                        pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
                 }
+                // check if one should scale partial likelihoods
+                bool do_scale = true;
+                partial_lh_site = dad_branch->partial_lh + (ptn * block);
+                for (cat = 0; cat < block; cat++)
+                if (partial_lh_site[cat] > SCALING_THRESHOLD) {
+                    do_scale = false;
+                    break;
+                }
+                if (!do_scale) continue;
+                // now do the likelihood scaling
+                /*
+                 double lh_max = partial_lh_site[0];
+                 for (cat = 1; cat < block; cat++)
+                 if (lh_max < partial_lh_site[cat]) lh_max = partial_lh_site[cat];
+                 for (cat = 0; cat < block; cat++)
+                 partial_lh_site[cat] /= lh_max;
+                 dad_branch->lh_scale_factor += log(lh_max) * (*aln)[ptn].frequency;
+
+                 */
+                for (cat = 0; cat < block; cat++)
+                partial_lh_site[cat] /= SCALING_THRESHOLD;
+                sum_scale += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
+                dad_branch->scale_num[ptn] += 1;
+                if (pattern_scale)
+                pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
+            }
             dad_branch->lh_scale_factor += sum_scale;
         }
-        delete [] trans_mat;
+        delete[] trans_mat;
         //for (cat = ncat - 1; cat >= 0; cat--)
         //  delete [] trans_mat[cat];
     }
@@ -1607,7 +1649,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     int nstates = aln->num_states;
     size_t block = ncat * nstates;
     int trans_size = model->getTransMatrixSize();
-	size_t nptn = aln->size();
+    size_t nptn = aln->size();
     size_t ptn, cat, state1, state2;
 
     int discrete_cat = site_rate->getNDiscreteRate();
@@ -1626,32 +1668,33 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
             double *derv2_cat = trans_derv2 + (cat * trans_size);
             double rate_val = site_rate->getRate(cat);
             //double rate_sqr = rate_val * rate_val;
-            model_factory->computeTransDervFreq(dad_branch->length, rate_val, state_freq, trans_cat, derv1_cat, derv2_cat);
+            model_factory->computeTransDervFreq(dad_branch->length, rate_val, state_freq, trans_cat, derv1_cat,
+                    derv2_cat);
             /*
-            for (state1 = 0; state1 < nstates; state1++) {
-            double *trans_mat_state = trans_cat + (state1 * nstates);
-            double *trans_derv1_state = derv1_cat + (state1 * nstates);
-            double *trans_derv2_state = derv2_cat + (state1 * nstates);
+             for (state1 = 0; state1 < nstates; state1++) {
+             double *trans_mat_state = trans_cat + (state1 * nstates);
+             double *trans_derv1_state = derv1_cat + (state1 * nstates);
+             double *trans_derv2_state = derv2_cat + (state1 * nstates);
 
-            for (state2 = 0; state2 < nstates; state2++) {
-            trans_mat_state[state2] *= state_freq[state1];
-            trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
-            trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
-            }
-            }*/
+             for (state2 = 0; state2 < nstates; state2++) {
+             trans_mat_state[state2] *= state_freq[state1];
+             trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
+             trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
+             }
+             }*/
         }
 
     bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
     double derv1_frac;
     double derv2_frac;
 
-	double my_df = 0.0;
-	double my_ddf = 0.0;
-	
+    double my_df = 0.0;
+    double my_ddf = 0.0;
+
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh, my_df, my_ddf) private(ptn, cat, state1, state2, derv1_frac, derv2_frac)
 #endif
-     for (ptn = 0; ptn < nptn; ptn++) {
+    for (ptn = 0; ptn < nptn; ptn++) {
         int ptn_cat = site_rate->getPtnCat(ptn);
         if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getPtnRate(ptn) >= MAX_SITE_RATE)
             continue;
@@ -1660,22 +1703,23 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         double lh_ptn_derv2 = 0.0;
         int dad_state = STATE_UNKNOWN;
 
-		if (dad->name == ROOT_NAME && root_state != STATE_UNKNOWN)
-			dad_state = root_state;
+        if (dad->name == ROOT_NAME && root_state != STATE_UNKNOWN)
+            dad_state = root_state;
         else if (dad->isLeaf())
             dad_state = (*aln)[ptn][dad->id];
-		int dad_offset = dad_state * nstates;
+        int dad_offset = dad_state * nstates;
         if (site_rate->isSiteSpecificRate())
-            model_factory->computeTransDervFreq(dad_branch->length, site_rate->getPtnRate(ptn), state_freq,
-                                                trans_mat, trans_derv1, trans_derv2);
+            model_factory->computeTransDervFreq(dad_branch->length, site_rate->getPtnRate(ptn), state_freq, trans_mat,
+                    trans_derv1, trans_derv2);
         for (cat = 0; cat < ncat; cat++) {
-            size_t lh_offset = cat * nstates + ptn*block;
+            size_t lh_offset = cat * nstates + ptn * block;
             double *partial_lh_site = node_branch->partial_lh + lh_offset;
             double *partial_lh_child = dad_branch->partial_lh + lh_offset;
             if (dad_state < nstates) {
                 // external node
                 int cat2 = (not_ptn_cat ? cat : ptn_cat) * trans_size + dad_offset;
-				if (model->isSiteSpecificModel()) cat2 += (nstates * nstates * model->getPtnModelID(ptn));
+                if (model->isSiteSpecificModel())
+                    cat2 += (nstates * nstates * model->getPtnModelID(ptn));
                 double *trans_state = trans_mat + cat2;
                 double *derv1_state = trans_derv1 + cat2;
                 double *derv2_state = trans_derv2 + cat2;
@@ -1691,7 +1735,8 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
                     double lh_state_derv1 = 0.0;
                     double lh_state_derv2 = 0.0;
                     int cat2 = (not_ptn_cat ? cat : ptn_cat) * trans_size + state1 * nstates;
-					if (model->isSiteSpecificModel()) cat2 += (nstates * nstates * model->getPtnModelID(ptn));
+                    if (model->isSiteSpecificModel())
+                        cat2 += (nstates * nstates * model->getPtnModelID(ptn));
                     double *trans_state = trans_mat + cat2;
                     double *derv1_state = trans_derv1 + cat2;
                     double *derv2_state = trans_derv2 + cat2;
@@ -1707,31 +1752,30 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
             }
         }
         /*		if (p_invar > 0.0) {
-        			lh_ptn *= p_var_cat;
-        			lh_ptn_derv1 *= p_var_cat;
-        			lh_ptn_derv2 *= p_var_cat;
-        			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-        				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
-        			}
-        			assert(lh_ptn > 0);
-        			double derv1_frac = lh_ptn_derv1 / lh_ptn;
-        			double derv2_frac = lh_ptn_derv2 / lh_ptn;
-        			tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
-        			df += derv1_frac * (*aln)[ptn].frequency;
-        			ddf += (derv2_frac - derv1_frac * derv1_frac) * (*aln)[ptn].frequency;
-        		} else {
-        			double derv1_frac = lh_ptn_derv1 / lh_ptn;
-        			double derv2_frac = lh_ptn_derv2 / lh_ptn;
-        			lh_ptn *= p_var_cat;
-        			assert(lh_ptn > 0);
-        			tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
-        			df += derv1_frac * (*aln)[ptn].frequency;
-        			ddf += (derv2_frac - derv1_frac * derv1_frac) * (*aln)[ptn].frequency;
+         lh_ptn *= p_var_cat;
+         lh_ptn_derv1 *= p_var_cat;
+         lh_ptn_derv2 *= p_var_cat;
+         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
+         lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+         }
+         assert(lh_ptn > 0);
+         double derv1_frac = lh_ptn_derv1 / lh_ptn;
+         double derv2_frac = lh_ptn_derv2 / lh_ptn;
+         tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
+         df += derv1_frac * (*aln)[ptn].frequency;
+         ddf += (derv2_frac - derv1_frac * derv1_frac) * (*aln)[ptn].frequency;
+         } else {
+         double derv1_frac = lh_ptn_derv1 / lh_ptn;
+         double derv2_frac = lh_ptn_derv2 / lh_ptn;
+         lh_ptn *= p_var_cat;
+         assert(lh_ptn > 0);
+         tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
+         df += derv1_frac * (*aln)[ptn].frequency;
+         ddf += (derv2_frac - derv1_frac * derv1_frac) * (*aln)[ptn].frequency;
 
-        		}
-        */
+         }
+         */
         // Tung beo's trick
-
         lh_ptn = lh_ptn * p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
@@ -1754,16 +1798,16 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         lh_ptn = log(lh_ptn);
         tree_lh += lh_ptn * freq;
         _pattern_lh[ptn] = lh_ptn;
-		if (!isfinite(lh_ptn) || !isfinite(my_df) || !isfinite(my_ddf)) {
-			cout << "Abnormal " << __func__;
-			abort();
-		}
+        if (!isfinite(lh_ptn) || !isfinite(my_df) || !isfinite(my_ddf)) {
+            cout << "Abnormal " << __func__;
+            abort();
+        }
 
     }
-    delete [] state_freq;
-    delete [] trans_derv2;
-    delete [] trans_derv1;
-	delete [] trans_mat;
+    delete[] state_freq;
+    delete[] trans_derv2;
+    delete[] trans_derv1;
+    delete[] trans_mat;
     //for (cat = ncat-1; cat >= 0; cat--)
     //delete trans_mat[cat];
     //delete state_freq;
@@ -1773,7 +1817,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
 }
 
 /****************************************************************************
-        Branch length optimization by maximum likelihood
+ Branch length optimization by maximum likelihood
  ****************************************************************************/
 
 double PhyloTree::computeFunction(double value) {
@@ -1785,7 +1829,17 @@ double PhyloTree::computeFunction(double value) {
 double PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
     current_it->length = value;
     current_it_back->length = value;
-    double lh = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+    double lh;
+    if (params->fast_branch_opt) {
+        // Pre-compute Theta vector
+        if (!theta_computed) {
+            computeTheta(current_it, (PhyloNode*) current_it_back->node);
+            theta_computed = true;
+        }
+        lh = -computeLikelihoodDervFast(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+    } else {
+        lh = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+    }
     df = -df;
     ddf = -ddf;
     return lh;
@@ -1799,13 +1853,14 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
     assert(current_it_back);
     double current_len = current_it->length;
     double ferror, optx;
+    theta_computed = false;
     if (optimize_by_newton) { // Newton-Raphson method
-    	if (!params->raxmllib)
-    		optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
-    	else
-    		optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, MIN_BRANCH_LEN, negative_lh);
-	}
-    else // Brent method
+        if (!params->raxmllib)
+            optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
+        else
+            optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, MIN_BRANCH_LEN, negative_lh);
+    } else
+        // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
     if (current_len == optx) // if nothing changes, return
         return -negative_lh;
@@ -1821,9 +1876,9 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
 double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
     double tree_lh = 0.0;
 
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        tree_lh = optimizeOneBranch((PhyloNode*) node, (PhyloNode*) (*it)->node);
-    }
+    FOR_NEIGHBOR_IT(node, dad, it){
+    tree_lh = optimizeOneBranch((PhyloNode*) node, (PhyloNode*) (*it)->node);
+}
     return tree_lh;
 }
 
@@ -1831,35 +1886,39 @@ double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
     //double tree_lh = optimizeChildBranches(node, dad);
     double tree_lh = -DBL_MAX;
 
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        //if (!(*it)->node->isLeaf())
-    	double new_tree_lh = optimizeAllBranches((PhyloNode*) (*it)->node, node);
-    	/*
-    	if (new_tree_lh < tree_lh)
-    		cout << "Wrong " << __func__ << endl;
-    		*/
-    	tree_lh = new_tree_lh;
-    }
-    if (dad) tree_lh = optimizeOneBranch(node, dad);
+    FOR_NEIGHBOR_IT(node, dad, it){
+    //if (!(*it)->node->isLeaf())
+    double new_tree_lh = optimizeAllBranches((PhyloNode*) (*it)->node, node);
+    /*
+     if (new_tree_lh < tree_lh)
+     cout << "Wrong " << __func__ << endl;
+     */
+    tree_lh = new_tree_lh;
+}
+    if (dad)
+        tree_lh = optimizeOneBranch(node, dad);
     return tree_lh;
 }
 
 double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance) {
     if (verbose_mode >= VB_MAX)
-        cout << "Optimizing branch lenths (max " << my_iterations << " loops)..." << endl;
+        cout << "Optimizing branch lengths (max " << my_iterations << " loops)..." << endl;
     double tree_lh = computeLikelihood();
+    if (verbose_mode >= VB_MAX) {
+    	cout << "Initial tree log-likelihood: " << tree_lh << endl;
+    }
     //cout << tree_lh << endl;
     for (int i = 0; i < my_iterations; i++) {
         double new_tree_lh = optimizeAllBranches((PhyloNode*) root);
         /*
-        clearAllPartialLH();
-        double new_tree_lh2 = computeLikelihood();
-        if (fabs(new_tree_lh - new_tree_lh2) > TOL_LIKELIHOOD) {
-        	cout << "Wrong " << new_tree_lh <<" "<< new_tree_lh2 << endl;
-        	exit(1);
-        }*/
+         clearAllPartialLH();
+         double new_tree_lh2 = computeLikelihood();
+         if (fabs(new_tree_lh - new_tree_lh2) > TOL_LIKELIHOOD) {
+         cout << "Wrong " << new_tree_lh <<" "<< new_tree_lh2 << endl;
+         exit(1);
+         }*/
         if (verbose_mode >= VB_MAX) {
-            cout << "BRANCH LEN " << i + 1 << " : ";
+            cout << "Likelihood after iteration " << i + 1 << " : ";
             cout << new_tree_lh << endl;
         }
         if (new_tree_lh <= tree_lh + tolerance)
@@ -1870,7 +1929,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance) {
 }
 
 /****************************************************************************
-        Stepwise addition (greedy) by maximum likelihood
+ Stepwise addition (greedy) by maximum likelihood
  ****************************************************************************/
 
 double PhyloTree::addTaxonML(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad) {
@@ -1895,16 +1954,16 @@ double PhyloTree::addTaxonML(Node *added_node, Node* &target_node, Node* &target
 
     // now tranverse the tree downwards
 
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        Node *target_node2;
-        Node *target_dad2;
-        double score = addTaxonML(added_node, target_node2, target_dad2, (*it)->node, node);
-        if (score > best_score) {
-            best_score = score;
-            target_node = target_node2;
-            target_dad = target_dad2;
-        }
+    FOR_NEIGHBOR_IT(node, dad, it){
+    Node *target_node2;
+    Node *target_dad2;
+    double score = addTaxonML(added_node, target_node2, target_dad2, (*it)->node, node);
+    if (score > best_score) {
+        best_score = score;
+        target_node = target_node2;
+        target_dad = target_dad2;
     }
+}
     return best_score;
 }
 
@@ -1942,7 +2001,6 @@ void PhyloTree::growTreeML(Alignment *alignment) {
         added_node->addNeighbor((Node*) 1, 1.0);
         added_node->addNeighbor((Node*) 2, 1.0);
 
-
         Node *target_node = NULL;
         Node *target_dad = NULL;
         addTaxonML(added_node, target_node, target_dad, root->neighbors[0]->node, root);
@@ -1962,14 +2020,15 @@ void PhyloTree::growTreeML(Alignment *alignment) {
 }
 
 /****************************************************************************
-        Distance function
+ Distance function
  ****************************************************************************/
 
 double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0)
         initial_dist = aln->computeDist(seq1, seq2);
-    if (!model_factory || !site_rate) return initial_dist;
+    if (!model_factory || !site_rate)
+        return initial_dist;
 
     // now optimize the distance based on the model and site rate
     AlignmentPairwise aln_pair(this, seq1, seq2);
@@ -1979,62 +2038,65 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
 double PhyloTree::correctDist(double *dist_mat) {
     int i, j, k, pos;
     int n = aln->getNSeq();
-    int nsqr = n*n;
+    int nsqr = n * n;
     // use Floyd algorithm to find shortest path between all pairs of taxa
     for (k = 0; k < n; k++)
         for (i = 0, pos = 0; i < n; i++)
             for (j = 0; j < n; j++, pos++) {
-                double tmp = dist_mat[i*n+k] + dist_mat[k*n+j];
-                if (dist_mat[pos] > tmp) dist_mat[pos] = tmp;
+                double tmp = dist_mat[i * n + k] + dist_mat[k * n + j];
+                if (dist_mat[pos] > tmp)
+                    dist_mat[pos] = tmp;
             }
     double longest_dist = 0.0;
     for (i = 0; i < nsqr; i++)
-        if (dist_mat[i] > longest_dist) longest_dist = dist_mat[i];
+        if (dist_mat[i] > longest_dist)
+            longest_dist = dist_mat[i];
     return longest_dist;
 }
 
 double PhyloTree::computeDist(double *dist_mat) {
     int nseqs = aln->getNSeq();
     int pos = 0;
-    int num_pairs = nseqs * (nseqs-1) / 2;
+    int num_pairs = nseqs * (nseqs - 1) / 2;
     double longest_dist = 0.0;
-	int *row_id = new int[num_pairs];
-	int *col_id = new int[num_pairs];
-	row_id[0] = 0;
-	col_id[0] = 1;
+    int *row_id = new int[num_pairs];
+    int *col_id = new int[num_pairs];
+    row_id[0] = 0;
+    col_id[0] = 1;
     for (pos = 1; pos < num_pairs; pos++) {
-		row_id[pos] = row_id[pos-1];
-		col_id[pos] = col_id[pos-1]+1;
-		if (col_id[pos] >= nseqs) {
-			row_id[pos]++;
-			col_id[pos] = row_id[pos]+1;
-		}
-	}
-	// compute the upper-triangle of distance matrix
+        row_id[pos] = row_id[pos - 1];
+        col_id[pos] = col_id[pos - 1] + 1;
+        if (col_id[pos] >= nseqs) {
+            row_id[pos]++;
+            col_id[pos] = row_id[pos] + 1;
+        }
+    }
+    // compute the upper-triangle of distance matrix
 #ifdef _OPENMP
-	#pragma omp parallel for private(pos)
+#pragma omp parallel for private(pos)
 #endif
-	for (pos = 0; pos < num_pairs; pos++) {
-		int seq1 = row_id[pos];
-		int seq2 = col_id[pos];
-		int sym_pos = seq1*nseqs + seq2;
-		dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos]);
-	}
-	// copy upper-triangle into lower-triangle and set diagonal = 0
+    for (pos = 0; pos < num_pairs; pos++) {
+        int seq1 = row_id[pos];
+        int seq2 = col_id[pos];
+        int sym_pos = seq1 * nseqs + seq2;
+        dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos]);
+    }
+    // copy upper-triangle into lower-triangle and set diagonal = 0
     for (int seq1 = 0; seq1 < nseqs; seq1++)
         for (int seq2 = 0; seq2 <= seq1; seq2++) {
-			pos = seq1 * nseqs + seq2;
+            pos = seq1 * nseqs + seq2;
             if (seq1 == seq2)
                 dist_mat[pos] = 0.0;
-            else dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
+            else
+                dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
             if (dist_mat[pos] > longest_dist)
                 longest_dist = dist_mat[pos];
         }
-    delete [] col_id;
-    delete [] row_id;
+    delete[] col_id;
+    delete[] row_id;
     /*
-        if (longest_dist > MAX_GENETIC_DIST * 0.99)
-            outWarning("Some distances are saturated. Please check your alignment again");*/
+     if (longest_dist > MAX_GENETIC_DIST * 0.99)
+     outWarning("Some distances are saturated. Please check your alignment again");*/
     return correctDist(dist_mat);
 }
 
@@ -2049,7 +2111,7 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
 
     if (!dist_mat) {
         dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
-        memset(dist_mat, 0, sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
+        memset(dist_mat, 0, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
     }
     if (!params.dist_file) {
         longest_dist = computeDist(dist_mat);
@@ -2071,7 +2133,8 @@ double PhyloTree::computeObsDist(double *dist_mat) {
                 dist_mat[pos] = 0.0;
             else if (seq2 > seq1) {
                 dist_mat[pos] = aln->computeObsDist(seq1, seq2);
-            } else dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
+            } else
+                dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
             if (dist_mat[pos] > longest_dist)
                 longest_dist = dist_mat[pos];
         }
@@ -2086,7 +2149,7 @@ double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &
 
     if (!dist_mat) {
         dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
-        memset(dist_mat, 0, sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
+        memset(dist_mat, 0, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
     }
     longest_dist = computeObsDist(dist_mat);
     alignment->printDist(dist_file.c_str(), dist_mat);
@@ -2094,7 +2157,7 @@ double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &
 }
 
 /****************************************************************************
-        compute BioNJ tree, a more accurate extension of Neighbor-Joining
+ compute BioNJ tree, a more accurate extension of Neighbor-Joining
  ****************************************************************************/
 
 void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_file) {
@@ -2105,48 +2168,51 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
     bionj.create(dist_file.c_str(), bionj_file.c_str());
     bool my_rooted = false;
     bool non_empty_tree = (root != NULL);
-    if (root) freeNode();
+    if (root)
+        freeNode();
     readTree(bionj_file.c_str(), my_rooted);
-    if (non_empty_tree) initializeAllPartialLh();
+    if (non_empty_tree)
+        initializeAllPartialLh();
     setAlignment(alignment);
 }
 
 int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
-    if (!node) node = root;
+    if (!node)
+        node = root;
     int fixed = 0;
 
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        if ((*it)->length < 0.0 || force) { // negative branch length detected
-			int branch_subst;
-			int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
-			// first compute the observed parsimony distance
-			double branch_length = (branch_subst > 0) ? ((double)branch_subst/getAlnNSite()) : (1.0 / getAlnNSite());
-			// now correct Juke-Cantor formula
-			double z = (double)aln->num_states / (aln->num_states-1);
-			double x = 1.0 - (z * branch_length);
-			if (x > 0) branch_length = -log(x) / z;
-            if (verbose_mode >= VB_DEBUG)
-                cout << "Negative branch length " << (*it)->length << " was set to ";
-            //(*it)->length = fixed_length;
-            //(*it)->length = random_double()+0.1;
-			(*it)->length = branch_length;
-            if (verbose_mode >= VB_DEBUG)
-                cout << (*it)->length << " parsimony = " << pars_score << endl;
-            // set the backward branch length
-            (*it)->node->findNeighbor(node)->length = (*it)->length;
-            fixed++;
-        }
-        if ((*it)->length <= 0.0) {
-        	(*it)->length = 1e-6;
-        	(*it)->node->findNeighbor(node)->length = (*it)->length;
-        }
-        fixed += fixNegativeBranch(force, (*it)->node, node);
+    FOR_NEIGHBOR_IT(node, dad, it){
+    if ((*it)->length < 0.0 || force) { // negative branch length detected
+        int branch_subst;
+        int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
+        // first compute the observed parsimony distance
+        double branch_length = (branch_subst > 0) ? ((double)branch_subst/getAlnNSite()) : (1.0 / getAlnNSite());
+        // now correct Juke-Cantor formula
+        double z = (double)aln->num_states / (aln->num_states-1);
+        double x = 1.0 - (z * branch_length);
+        if (x > 0) branch_length = -log(x) / z;
+        if (verbose_mode >= VB_DEBUG)
+        cout << "Negative branch length " << (*it)->length << " was set to ";
+        //(*it)->length = fixed_length;
+        //(*it)->length = random_double()+0.1;
+        (*it)->length = branch_length;
+        if (verbose_mode >= VB_DEBUG)
+        cout << (*it)->length << " parsimony = " << pars_score << endl;
+        // set the backward branch length
+        (*it)->node->findNeighbor(node)->length = (*it)->length;
+        fixed++;
     }
+    if ((*it)->length <= 0.0) {
+        (*it)->length = 1e-6;
+        (*it)->node->findNeighbor(node)->length = (*it)->length;
+    }
+    fixed += fixNegativeBranch(force, (*it)->node, node);
+}
     return fixed;
 }
 
 /****************************************************************************
-        Nearest Neighbor Interchange by maximum likelihood
+ Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 
 double PhyloTree::doNNI(NNIMove move) {
@@ -2159,18 +2225,17 @@ double PhyloTree::doNNI(NNIMove move) {
 
     // TODO MINH
     /*	Node *nodeA = node1Nei->node;
-    	Node *nodeB = node2Nei->node;
+     Node *nodeB = node2Nei->node;
 
-        NeighborVec::iterator nodeA_it = nodeA->findNeighborIt(node1);
-        NeighborVec::iterator nodeB_it = nodeB->findNeighborIt(node2);
-        Neighbor *nodeANei = *(nodeA_it);
-        Neighbor *nodeBNei = *(nodeB_it);
-    	*node1Nei_it = node2Nei;
-    	*nodeB_it = nodeANei;
-    	*node2Nei_it = node1Nei;
-    	*nodeA_it = nodeBNei;*/
+     NeighborVec::iterator nodeA_it = nodeA->findNeighborIt(node1);
+     NeighborVec::iterator nodeB_it = nodeB->findNeighborIt(node2);
+     Neighbor *nodeANei = *(nodeA_it);
+     Neighbor *nodeBNei = *(nodeB_it);
+     *node1Nei_it = node2Nei;
+     *nodeB_it = nodeANei;
+     *node2Nei_it = node1Nei;
+     *nodeA_it = nodeBNei;*/
     // END TODO MINH
-
     assert(node1->degree() == 3 && node2->degree() == 3);
     // do the NNI swap
     node1->updateNeighbor(node1Nei_it, node2Nei);
@@ -2181,16 +2246,16 @@ double PhyloTree::doNNI(NNIMove move) {
 
     // BQM check branch ID
     /*
-    	if (node1->findNeighbor(nodeB)->id != nodeB->findNeighbor(node1)->id) {
-    		cout << node1->findNeighbor(nodeB)->id << "<->" << nodeB->findNeighbor(node1)->id << endl;
-    		cout << node1->id << "," << nodeB->id << endl;
-    		outError("Wrong ID");
-    	}
-    	if (node2->findNeighbor(nodeA)->id != nodeA->findNeighbor(node2)->id) {
-    		cout << node2->findNeighbor(nodeA)->id << "<->" << nodeA->findNeighbor(node2)->id << endl;
-    		cout << node2->id << "," << nodeA->id << endl;
-    		outError("Wrong ID");
-    	}*/
+     if (node1->findNeighbor(nodeB)->id != nodeB->findNeighbor(node1)->id) {
+     cout << node1->findNeighbor(nodeB)->id << "<->" << nodeB->findNeighbor(node1)->id << endl;
+     cout << node1->id << "," << nodeB->id << endl;
+     outError("Wrong ID");
+     }
+     if (node2->findNeighbor(nodeA)->id != nodeA->findNeighbor(node2)->id) {
+     cout << node2->findNeighbor(nodeA)->id << "<->" << nodeA->findNeighbor(node2)->id << endl;
+     cout << node2->id << "," << nodeA->id << endl;
+     outError("Wrong ID");
+     }*/
 
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
@@ -2210,9 +2275,9 @@ double PhyloTree::doNNI(NNIMove move) {
 }
 
 double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param/*,
-                                ostream *out, int brtype, ostream *out_lh, ostream *site_lh,
-                                StringIntMap *treels, vector<double*> *treels_ptnlh, DoubleVector *treels_logl,
-                                int *max_trees, double *logl_cutoff*/) {
+ ostream *out, int brtype, ostream *out_lh, ostream *site_lh,
+ StringIntMap *treels, vector<double*> *treels_ptnlh, DoubleVector *treels_logl,
+ int *max_trees, double *logl_cutoff*/) {
     assert(node1->degree() == 3 && node2->degree() == 3);
 
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
@@ -2234,17 +2299,18 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 
     // TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
     FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
-    break;
-    if (nni_param) node1_it = node1->findNeighborIt(nni_param->node1_nei->node);
+        break;
+    if (nni_param)
+        node1_it = node1->findNeighborIt(nni_param->node1_nei->node);
     Neighbor *node1_nei = *node1_it;
     double node1_len = node1_nei->length;
     //NeighborVec::iterator node1_nei_it = node1_nei->node->findNeighborIt(node1);
 
-
     // Neighbors of node2 which are not node1
 
     vector<NeighborVec::iterator> node2_its;
-    FOR_NEIGHBOR_DECLARE(node2, node1, node2_it) node2_its.push_back(node2_it);
+    FOR_NEIGHBOR_DECLARE(node2, node1, node2_it)
+        node2_its.push_back(node2_it);
     assert(node2_its.size() == 2);
     if (nni_param && nni_param->node2_nei != (*node2_its[0])) {
         node2_it = node2_its[0];
@@ -2270,16 +2336,16 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
         bool duplicated_tree = false;
         string tree_str;
         /*if (treels) {
-            stringstream ostr;
-            printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
-            tree_str = ostr.str();
-            StringIntMap::iterator it = treels->find(tree_str);
-            if (it != treels->end()) {// already in treels
-                duplicated_tree = true;
-            } else {
-                //cout << __func__ << ": new tree" << endl;
-            }
-        }*/
+         stringstream ostr;
+         printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+         tree_str = ostr.str();
+         StringIntMap::iterator it = treels->find(tree_str);
+         if (it != treels->end()) {// already in treels
+         duplicated_tree = true;
+         } else {
+         //cout << __func__ << ": new tree" << endl;
+         }
+         }*/
 
         double score = 0;
 
@@ -2291,7 +2357,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
             // compute the score of the swapped topology
             score = optimizeOneBranch(node1, node2, false);
             if (nni_param) {
-                if (cnt==0) {
+                if (cnt == 0) {
                     nni_param->nni1_score = score;
                     nni_param->nni1_brlen = node12_it->length;
                 } else {
@@ -2302,31 +2368,31 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
         }
         //double *pattern_lh = NULL;
         /*if (treels) {
-            if (!duplicated_tree) {
-                (*treels)[tree_str] = treels_ptnlh->size();
-                pattern_lh = new double[aln->getNPattern()];
-                computePatternLikelihood(pattern_lh);
-                treels_ptnlh->push_back(pattern_lh);
-                treels_logl->push_back(score);
-                //}
-                //cout << tree_str << endl;
-            }
-        } else if (out_lh) {
-            pattern_lh = new double[aln->getNPattern()];
-            computePatternLikelihood(pattern_lh);
-        }
-        if (out && !duplicated_tree) printTree(*out, brtype);
-        if (out_lh && !duplicated_tree) {
-            (*out_lh) << score;
-            double prob;
-            aln->multinomialProb(pattern_lh, prob);
-            (*out_lh) << "\t" << prob << endl;
-            (*site_lh) << "Site_Lh   ";
-            for (int i = 0; i < aln->getNSite(); i++)
-                (*site_lh) << "\t" << pattern_lh[aln->getPatternID(i)];
-            (*site_lh) << endl;
-            if (!treels) delete [] pattern_lh;
-        }*/
+         if (!duplicated_tree) {
+         (*treels)[tree_str] = treels_ptnlh->size();
+         pattern_lh = new double[aln->getNPattern()];
+         computePatternLikelihood(pattern_lh);
+         treels_ptnlh->push_back(pattern_lh);
+         treels_logl->push_back(score);
+         //}
+         //cout << tree_str << endl;
+         }
+         } else if (out_lh) {
+         pattern_lh = new double[aln->getNPattern()];
+         computePatternLikelihood(pattern_lh);
+         }
+         if (out && !duplicated_tree) printTree(*out, brtype);
+         if (out_lh && !duplicated_tree) {
+         (*out_lh) << score;
+         double prob;
+         aln->multinomialProb(pattern_lh, prob);
+         (*out_lh) << "\t" << prob << endl;
+         (*site_lh) << "Site_Lh   ";
+         for (int i = 0; i < aln->getNSite(); i++)
+         (*site_lh) << "\t" << pattern_lh[aln->getPatternID(i)];
+         (*site_lh) << endl;
+         if (!treels) delete [] pattern_lh;
+         }*/
         // if better: return
         if (score > cur_score) {
             node2->clearReversePartialLh(node1);
@@ -2348,10 +2414,10 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
     }
 
     // restore the partial likelihood vector
-    delete [] node21_it->scale_num;
-    delete [] node12_it->scale_num;
-    delete [] node21_it->partial_lh;
-    delete [] node12_it->partial_lh;
+    delete[] node21_it->scale_num;
+    delete[] node12_it->scale_num;
+    delete[] node21_it->partial_lh;
+    delete[] node12_it->partial_lh;
     node12_it->partial_lh = node1_lh_save;
     node21_it->partial_lh = node2_lh_save;
     node12_it->scale_num = node1_scale_save;
@@ -2362,21 +2428,22 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 }
 
 double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad/*, ostream *out,
-                              int brtype, ostream *out_lh, ostream *site_lh, StringIntMap *treels,
-                              vector<double*> *treels_ptnlh, DoubleVector *treels_logl, int *max_trees, double *logl_cutoff*/)
-{
-    if (!node) node = (PhyloNode*) root;
+ int brtype, ostream *out_lh, ostream *site_lh, StringIntMap *treels,
+ vector<double*> *treels_ptnlh, DoubleVector *treels_logl, int *max_trees, double *logl_cutoff*/) {
+    if (!node)
+        node = (PhyloNode*) root;
     if (!node->isLeaf() && dad && !dad->isLeaf()) {
         double score = swapNNIBranch(cur_score, node, dad/*, out, brtype, NULL, out_lh, site_lh,
-                                     treels, treels_ptnlh, treels_logl, max_trees, logl_cutoff*/);
-        if (score > cur_score) return score;
+         treels, treels_ptnlh, treels_logl, max_trees, logl_cutoff*/);
+        if (score > cur_score)
+            return score;
     }
 
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node/*, out, brtype,
-                                   out_lh, site_lh, treels, treels_ptnlh, treels_logl, max_trees, logl_cutoff*/);
-        if (score > cur_score) return score;
-    }
+    FOR_NEIGHBOR_IT(node, dad, it){
+    double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node/*, out, brtype,
+             out_lh, site_lh, treels, treels_ptnlh, treels_logl, max_trees, logl_cutoff*/);
+    if (score > cur_score) return score;
+}
     return cur_score;
 }
 
@@ -2384,7 +2451,8 @@ double PhyloTree::optimizeNNI() {
     double cur_score = computeLikelihood();
     for (int i = 0; i < 100; i++) {
         double score = optimizeNNI(cur_score);
-        if (score <= cur_score) break;
+        if (score <= cur_score)
+            break;
         if (verbose_mode > VB_MED)
             cout << "NNI " << i + 1 << " : " << score << endl;
         //cur_score = score;
@@ -2399,18 +2467,20 @@ double PhyloTree::optimizeNNIBranches() {
     double cur_score = computeLikelihood();
     for (int i = 0; i < 100; i++) {
         double score = optimizeNNI();
-        if (score <= cur_score + TOL_LIKELIHOOD) break;
+        if (score <= cur_score + TOL_LIKELIHOOD)
+            break;
         cur_score = score;
     }
     return cur_score;
 }
 
 /****************************************************************************
-        Subtree Pruning and Regrafting by maximum likelihood
+ Subtree Pruning and Regrafting by maximum likelihood
  ****************************************************************************/
 
 double PhyloTree::optimizeSPR_old(double cur_score, PhyloNode *node, PhyloNode *dad) {
-    if (!node) node = (PhyloNode*) root;
+    if (!node)
+        node = (PhyloNode*) root;
     PhyloNeighbor *dad1_nei = NULL;
     PhyloNeighbor *dad2_nei = NULL;
     PhyloNode *sibling1 = NULL;
@@ -2444,19 +2514,25 @@ double PhyloTree::optimizeSPR_old(double cur_score, PhyloNode *node, PhyloNode *
         // now try to move the subtree to somewhere else
         vector<PhyloNeighbor*> spr_path;
 
-        FOR_NEIGHBOR(sibling1, sibling2, it) {
+        FOR_NEIGHBOR(sibling1, sibling2, it)
+        {
             spr_path.push_back(sibling1_nei);
-            double score = swapSPR_old(cur_score, 1, node, dad, sibling1, sibling2, (PhyloNode*) (*it)->node, sibling1, spr_path);
+            double score = swapSPR_old(cur_score, 1, node, dad, sibling1, sibling2, (PhyloNode*) (*it)->node, sibling1,
+                    spr_path);
             // if likelihood score improves, return
-            if (score > cur_score) return score;
+            if (score > cur_score)
+                return score;
             spr_path.pop_back();
         }
 
-        FOR_NEIGHBOR(sibling2, sibling1, it) {
+        FOR_NEIGHBOR(sibling2, sibling1, it)
+        {
             spr_path.push_back(sibling2_nei);
-            double score = swapSPR_old(cur_score, 1, node, dad, sibling1, sibling2, (PhyloNode*) (*it)->node, sibling2, spr_path);
+            double score = swapSPR_old(cur_score, 1, node, dad, sibling1, sibling2, (PhyloNode*) (*it)->node, sibling2,
+                    spr_path);
             // if likelihood score improves, return
-            if (score > cur_score) return score;
+            if (score > cur_score)
+                return score;
             spr_path.pop_back();
         }
         // if likelihood does not imporve, swap back
@@ -2469,19 +2545,18 @@ double PhyloTree::optimizeSPR_old(double cur_score, PhyloNode *node, PhyloNode *
         clearAllPartialLH();
     }
 
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        double score = optimizeSPR_old(cur_score, (PhyloNode*) (*it)->node, node);
-        if (score > cur_score) return score;
-    }
+    FOR_NEIGHBOR_IT(node, dad, it){
+    double score = optimizeSPR_old(cur_score, (PhyloNode*) (*it)->node, node);
+    if (score > cur_score) return score;
+}
     return cur_score;
 }
 
 /**
-        move the subtree (dad1-node1) to the branch (dad2-node2)
+ move the subtree (dad1-node1) to the branch (dad2-node2)
  */
-double PhyloTree::swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
-                          PhyloNode *orig_node1, PhyloNode *orig_node2,
-                          PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path) {
+double PhyloTree::swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1, PhyloNode *orig_node1,
+        PhyloNode *orig_node2, PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path) {
     PhyloNeighbor *node1_nei = (PhyloNeighbor*) node1->findNeighbor(dad1);
     PhyloNeighbor *dad1_nei = (PhyloNeighbor*) dad1->findNeighbor(node1);
     double node1_dad1_len = node1_nei->length;
@@ -2494,19 +2569,19 @@ double PhyloTree::swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1,
         PhyloNeighbor *dad2_nei = (PhyloNeighbor*) dad2->findNeighbor(node2);
         double len2 = node2_nei->length;
 
-        FOR_NEIGHBOR_IT(dad1, node1, it) {
-            if (first) {
-                (*it)->node = dad2;
-                (*it)->length = len2 / 2;
-                dad2->updateNeighbor(node2, dad1, len2 / 2);
-                first = false;
-            } else {
-                (*it)->node = node2;
-                (*it)->length = len2 / 2;
-                node2->updateNeighbor(dad2, dad1, len2 / 2);
-            }
-            ((PhyloNeighbor*) (*it))->clearPartialLh();
+        FOR_NEIGHBOR_IT(dad1, node1, it){
+        if (first) {
+            (*it)->node = dad2;
+            (*it)->length = len2 / 2;
+            dad2->updateNeighbor(node2, dad1, len2 / 2);
+            first = false;
+        } else {
+            (*it)->node = node2;
+            (*it)->length = len2 / 2;
+            node2->updateNeighbor(dad2, dad1, len2 / 2);
         }
+        ((PhyloNeighbor*) (*it))->clearPartialLh();
+    }
         node2_nei->clearPartialLh();
         dad2_nei->clearPartialLh();
         node1_nei->clearPartialLh();
@@ -2522,16 +2597,16 @@ double PhyloTree::swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1,
         //score = optimizeOneBranch(dad2, dad1);
         //score = optimizeOneBranch(node2, dad1);
         /*
-        PhyloNode *cur_node = dad2;
-        for (int i = spr_path.size()-1; i >= 0; i--) {
-                score = optimizeOneBranch(cur_node, (PhyloNode*)spr_path[i]->node);
-                cur_node = (PhyloNode*)spr_path[i]->node;
-        }
+         PhyloNode *cur_node = dad2;
+         for (int i = spr_path.size()-1; i >= 0; i--) {
+         score = optimizeOneBranch(cur_node, (PhyloNode*)spr_path[i]->node);
+         cur_node = (PhyloNode*)spr_path[i]->node;
+         }
          */
         //score = optimizeAllBranches(dad1);
-
         // if score improves, return
-        if (score > cur_score) return score;
+        if (score > cur_score)
+            return score;
         // else, swap back
         node2->updateNeighbor(dad1, dad2, len2);
         dad2->updateNeighbor(dad1, node2, len2);
@@ -2543,22 +2618,22 @@ double PhyloTree::swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1,
         // add to candiate SPR moves
         spr_moves.add(node1, dad1, node2, dad2, score);
     }
-    if (cur_depth >= spr_radius) return cur_score;
+    if (cur_depth >= spr_radius)
+        return cur_score;
     spr_path.push_back(node2_nei);
 
-    FOR_NEIGHBOR_IT(node2, dad2, it) {
-        double score = swapSPR(cur_score, cur_depth + 1, node1, dad1, orig_node1, orig_node2, (PhyloNode*) (*it)->node, node2, spr_path);
-        if (score > cur_score) return score;
-    }
+    FOR_NEIGHBOR_IT(node2, dad2, it){
+    double score = swapSPR(cur_score, cur_depth + 1, node1, dad1, orig_node1, orig_node2, (PhyloNode*) (*it)->node, node2, spr_path);
+    if (score > cur_score) return score;
+}
     spr_path.pop_back();
     return cur_score;
 
 }
 
-
-
 double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad) {
-    if (!node) node = (PhyloNode*) root;
+    if (!node)
+        node = (PhyloNode*) root;
     PhyloNeighbor *dad1_nei = NULL;
     PhyloNeighbor *dad2_nei = NULL;
     PhyloNode *sibling1 = NULL;
@@ -2593,60 +2668,61 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node, PhyloNode *dad)
         sibling1_nei->clearPartialLh();
         sibling2_nei->clearPartialLh();
 
-		// now try to move the subtree to somewhere else
-		vector<PhyloNeighbor*> spr_path;
+        // now try to move the subtree to somewhere else
+        vector<PhyloNeighbor*> spr_path;
 
-		FOR_NEIGHBOR(sibling1, sibling2, it) {
-			spr_path.push_back(sibling1_nei);
-			double score = swapSPR(cur_score, 1, node, dad, sibling1, sibling2,
-					(PhyloNode*) (*it)->node, sibling1, spr_path);
-			// if likelihood score improves, return
-			if (score > cur_score) {
-				cout << "cur_score = " << cur_score << endl;
-				cout << "Found new BETTER SCORE by SPR: " << score << endl;
-				return score;
-			}
-			spr_path.pop_back();
-		}
-		FOR_NEIGHBOR(sibling2, sibling1, it) {
-			spr_path.push_back(sibling2_nei);
-			double score = swapSPR(cur_score, 1, node, dad, sibling1, sibling2,
-					(PhyloNode*) (*it)->node, sibling2, spr_path);
-			// if likelihood score improves, return
-			if (score > cur_score) {
-				cout << "cur_score = " << cur_score << endl;
-				cout << "Found new BETTER SCORE by SPR: " << score << endl;
-				return score;
-			}
-			spr_path.pop_back();
-		}
-		// if likelihood does not imporve, swap back
-		sibling1->updateNeighbor(sibling2, dad, sibling1_len);
-		sibling2->updateNeighbor(sibling1, dad, sibling2_len);
-		dad1_nei->node = sibling1;
-		dad1_nei->length = sibling1_len;
-		dad2_nei->node = sibling2;
-		dad2_nei->length = sibling2_len;
-		delete [] sibling1_nei->partial_lh;
-		delete [] sibling2_nei->partial_lh;
-		sibling1_nei->partial_lh = sibling1_partial_lh;
-		sibling2_nei->partial_lh = sibling2_partial_lh;
-		//clearAllPartialLH();
+        FOR_NEIGHBOR(sibling1, sibling2, it)
+        {
+            spr_path.push_back(sibling1_nei);
+            double score = swapSPR(cur_score, 1, node, dad, sibling1, sibling2, (PhyloNode*) (*it)->node, sibling1,
+                    spr_path);
+            // if likelihood score improves, return
+            if (score > cur_score) {
+                cout << "cur_score = " << cur_score << endl;
+                cout << "Found new BETTER SCORE by SPR: " << score << endl;
+                return score;
+            }
+            spr_path.pop_back();
+        }
+        FOR_NEIGHBOR(sibling2, sibling1, it)
+        {
+            spr_path.push_back(sibling2_nei);
+            double score = swapSPR(cur_score, 1, node, dad, sibling1, sibling2, (PhyloNode*) (*it)->node, sibling2,
+                    spr_path);
+            // if likelihood score improves, return
+            if (score > cur_score) {
+                cout << "cur_score = " << cur_score << endl;
+                cout << "Found new BETTER SCORE by SPR: " << score << endl;
+                return score;
+            }
+            spr_path.pop_back();
+        }
+        // if likelihood does not imporve, swap back
+        sibling1->updateNeighbor(sibling2, dad, sibling1_len);
+        sibling2->updateNeighbor(sibling1, dad, sibling2_len);
+        dad1_nei->node = sibling1;
+        dad1_nei->length = sibling1_len;
+        dad2_nei->node = sibling2;
+        dad2_nei->length = sibling2_len;
+        delete[] sibling1_nei->partial_lh;
+        delete[] sibling2_nei->partial_lh;
+        sibling1_nei->partial_lh = sibling1_partial_lh;
+        sibling2_nei->partial_lh = sibling2_partial_lh;
+        //clearAllPartialLH();
 
-	}
-
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        double score = optimizeSPR(cur_score, (PhyloNode*) (*it)->node, node);
-        if (score > cur_score) return score;
     }
+
+    FOR_NEIGHBOR_IT(node, dad, it){
+    double score = optimizeSPR(cur_score, (PhyloNode*) (*it)->node, node);
+    if (score > cur_score) return score;
+}
     return cur_score;
 }
 /**
-        move the subtree (dad1-node1) to the branch (dad2-node2)
+ move the subtree (dad1-node1) to the branch (dad2-node2)
  */
-double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
-                          PhyloNode *orig_node1, PhyloNode *orig_node2,
-                          PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path) {
+double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1, PhyloNode *orig_node1,
+        PhyloNode *orig_node2, PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path) {
 
     PhyloNeighbor *node1_nei = (PhyloNeighbor*) node1->findNeighbor(dad1);
     PhyloNeighbor *dad1_nei = (PhyloNeighbor*) dad1->findNeighbor(node1);
@@ -2674,25 +2750,25 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         //PhyloNeighbor *dad2_nei = (PhyloNeighbor*) dad2->findNeighbor(node2);
         //double len2 = node2_nei->length;
 
-        FOR_NEIGHBOR_IT(dad1, node1, it) {
-        	// Finding new 2 neighbors for dad1 that are not node1
-            if (first) {
-                (*it)->node = dad2;
-                //(*it)->length = len2 / 2;
-                (*it)->length = newLen2;
-                dad2->updateNeighbor(node2, dad1, newLen2);
-                first = false;
-            } else {
-                (*it)->node = node2;
-                (*it)->length = newLen2;
-                node2->updateNeighbor(dad2, dad1, newLen2);
-            }
-            // clear all partial likelihood leading from
-            // dad1 to the new neighbors
-            ((PhyloNeighbor*) (*it))->clearPartialLh();
+        FOR_NEIGHBOR_IT(dad1, node1, it){
+        // Finding new 2 neighbors for dad1 that are not node1
+        if (first) {
+            (*it)->node = dad2;
+            //(*it)->length = len2 / 2;
+            (*it)->length = newLen2;
+            dad2->updateNeighbor(node2, dad1, newLen2);
+            first = false;
+        } else {
+            (*it)->node = node2;
+            (*it)->length = newLen2;
+            node2->updateNeighbor(dad2, dad1, newLen2);
         }
+        // clear all partial likelihood leading from
+        // dad1 to the new neighbors
+        ((PhyloNeighbor*) (*it))->clearPartialLh();
+    }
 
-        // clear partial likelihood from node2 to dad1
+    // clear partial likelihood from node2 to dad1
         node2_nei->clearPartialLh();
         // clear partial likelihood from dad2 to dad1
         dad2_nei->clearPartialLh();
@@ -2707,9 +2783,9 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         vector<PhyloNeighbor*>::iterator it2;
         vector<double*> saved_partial_lhs(spr_path.size());
         for (it2 = spr_path.begin(); it2 != spr_path.end(); it2++) {
-        	saved_partial_lhs.push_back((*it2)->partial_lh);
-        	(*it2)->partial_lh = newPartialLh();
-        	(*it2)->clearPartialLh();
+            saved_partial_lhs.push_back((*it2)->partial_lh);
+            (*it2)->partial_lh = newPartialLh();
+            (*it2)->clearPartialLh();
         }
 
         // optimize relevant branches
@@ -2721,20 +2797,18 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         score = optimizeOneBranch(node2, dad1);
         score = optimizeOneBranch(orig_node1, orig_node2);
 
-
         /*
-        PhyloNode *cur_node = dad2;
-        for (int i = spr_path.size()-1; i >= 0; i--) {
-                score = optimizeOneBranch(cur_node, (PhyloNode*)spr_path[i]->node);
-                cur_node = (PhyloNode*)spr_path[i]->node;
-        }
+         PhyloNode *cur_node = dad2;
+         for (int i = spr_path.size()-1; i >= 0; i--) {
+         score = optimizeOneBranch(cur_node, (PhyloNode*)spr_path[i]->node);
+         cur_node = (PhyloNode*)spr_path[i]->node;
+         }
          */
         //score = optimizeAllBranches(dad1);
-
         // if score improves, return
         if (score > cur_score) {
-        	cout << score << endl;
-        	return score;
+            cout << score << endl;
+            return score;
         }
 
         // else, swap back
@@ -2753,23 +2827,24 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         dad1_nei->length = node1_dad1_len;
         int index = 0;
         for (it2 = spr_path.begin(); it2 != spr_path.end(); it2++) {
-        	delete [] (*it2)->partial_lh;
-        	(*it2)->partial_lh = saved_partial_lhs.at(index);
-        	(*it2)->unclearPartialLh();
-        	index++;
+            delete[] (*it2)->partial_lh;
+            (*it2)->partial_lh = saved_partial_lhs.at(index);
+            (*it2)->unclearPartialLh();
+            index++;
         }
 
         // add to candiate SPR moves
         // Tung : why adding negative SPR move ?
         spr_moves.add(node1, dad1, node2, dad2, score);
     }
-    if (cur_depth >= spr_radius) return cur_score;
+    if (cur_depth >= spr_radius)
+        return cur_score;
     spr_path.push_back(node2_nei);
 
-    FOR_NEIGHBOR_IT(node2, dad2, it) {
-        double score = swapSPR(cur_score, cur_depth + 1, node1, dad1, orig_node1, orig_node2, (PhyloNode*) (*it)->node, node2, spr_path);
-        if (score > cur_score) return score;
-    }
+    FOR_NEIGHBOR_IT(node2, dad2, it){
+    double score = swapSPR(cur_score, cur_depth + 1, node1, dad1, orig_node1, orig_node2, (PhyloNode*) (*it)->node, node2, spr_path);
+    if (score > cur_score) return score;
+}
     spr_path.pop_back();
     return cur_score;
 }
@@ -2814,7 +2889,8 @@ double PhyloTree::assessSPRMove(double cur_score, const SPRMove &spr) {
     //PhyloNeighbor *dad2_nei = (PhyloNeighbor*) dad2->findNeighbor(node2);
     double len2 = node2_nei->length;
 
-    FOR_NEIGHBOR(dad, node, it) {
+    FOR_NEIGHBOR(dad, node, it)
+    {
         if (first) {
             (*it)->node = dad2;
             (*it)->length = len2 / 2;
@@ -2834,7 +2910,8 @@ double PhyloTree::assessSPRMove(double cur_score, const SPRMove &spr) {
     score = optimizeAllBranches(dad);
 
     // if score improves, return
-    if (score > cur_score) return score;
+    if (score > cur_score)
+        return score;
     // else, swap back
     node2->updateNeighbor(dad, dad2, len2);
     dad2->updateNeighbor(dad, node2, len2);
@@ -2859,7 +2936,7 @@ double PhyloTree::optimizeSPR() {
     //spr_radius = leafNum / 5;
     spr_radius = 10;
     for (int i = 0; i < 100; i++) {
-    	cout << "i = " << i << endl;
+        cout << "i = " << i << endl;
         spr_moves.clear();
         double score = optimizeSPR_old(cur_score, (PhyloNode*) root->neighbors[0]->node);
         clearAllPartialLH();
@@ -2869,9 +2946,11 @@ double PhyloTree::optimizeSPR() {
                 //cout << (*it).score << endl;
                 score = assessSPRMove(cur_score, *it);
                 // if likelihood score improves, apply to SPR
-                if (score > cur_score) break;
+                if (score > cur_score)
+                    break;
             }
-            if (score <= cur_score) break;
+            if (score <= cur_score)
+                break;
         } else {
             cur_score = optimizeAllBranches();
             cout << "SPR " << i + 1 << " : " << cur_score << endl;
@@ -2887,7 +2966,8 @@ double PhyloTree::optimizeSPRBranches() {
     double cur_score = computeLikelihood();
     for (int i = 0; i < 100; i++) {
         double score = optimizeSPR();
-        if (score <= cur_score + TOL_LIKELIHOOD) break;
+        if (score <= cur_score + TOL_LIKELIHOOD)
+            break;
         cur_score = score;
     }
     return cur_score;
@@ -2898,22 +2978,22 @@ void PhyloTree::pruneSubtree(PhyloNode *node, PhyloNode *dad, PruningInfo &info)
     info.node = node;
     info.dad = dad;
 
-    FOR_NEIGHBOR_IT(dad, node, it) {
-        if (first) {
-            info.dad_it_left = it;
-            info.dad_nei_left = (*it);
-            info.dad_lh_left = ((PhyloNeighbor*) (*it))->partial_lh;
-            info.left_node = (*it)->node;
-            info.left_len = (*it)->length;
-            first = false;
-        } else {
-            info.dad_it_right = it;
-            info.dad_nei_right = (*it);
-            info.dad_lh_right = ((PhyloNeighbor*) (*it))->partial_lh;
-            info.right_node = (*it)->node;
-            info.right_len = (*it)->length;
-        }
+    FOR_NEIGHBOR_IT(dad, node, it){
+    if (first) {
+        info.dad_it_left = it;
+        info.dad_nei_left = (*it);
+        info.dad_lh_left = ((PhyloNeighbor*) (*it))->partial_lh;
+        info.left_node = (*it)->node;
+        info.left_len = (*it)->length;
+        first = false;
+    } else {
+        info.dad_it_right = it;
+        info.dad_nei_right = (*it);
+        info.dad_lh_right = ((PhyloNeighbor*) (*it))->partial_lh;
+        info.right_node = (*it)->node;
+        info.right_len = (*it)->length;
     }
+}
     info.left_it = info.left_node->findNeighborIt(dad);
     info.right_it = info.right_node->findNeighborIt(dad);
     info.left_nei = (*info.left_it);
@@ -2925,8 +3005,7 @@ void PhyloTree::pruneSubtree(PhyloNode *node, PhyloNode *dad, PruningInfo &info)
     ((PhyloNeighbor*) info.dad_nei_left)->partial_lh = newPartialLh();
 }
 
-void PhyloTree::regraftSubtree(PruningInfo &info,
-                               PhyloNode *in_node, PhyloNode *in_dad) {
+void PhyloTree::regraftSubtree(PruningInfo &info, PhyloNode *in_node, PhyloNode *in_dad) {
     NeighborVec::iterator in_node_it = in_node->findNeighborIt(in_dad);
     NeighborVec::iterator in_dad_it = in_dad->findNeighborIt(in_node);
     Neighbor *in_dad_nei = (*in_dad_it);
@@ -2940,15 +3019,11 @@ void PhyloTree::regraftSubtree(PruningInfo &info,
 }
 
 /****************************************************************************
-        Approximate Likelihood Ratio Test with SH-like interpretation
+ Approximate Likelihood Ratio Test with SH-like interpretation
  ****************************************************************************/
 
-
-void PhyloTree::computeNNIPatternLh(
-    double cur_lh,
-    double &lh2, double *pattern_lh2,
-    double &lh3, double *pattern_lh3,
-    PhyloNode *node1, PhyloNode *node2) {
+void PhyloTree::computeNNIPatternLh(double cur_lh, double &lh2, double *pattern_lh2, double &lh3, double *pattern_lh3,
+        PhyloNode *node1, PhyloNode *node2) {
     assert(node1->degree() == 3 && node2->degree() == 3);
 
     // recompute pattern scaling factors if necessary
@@ -2960,19 +3035,20 @@ void PhyloTree::computeNNIPatternLh(
     NeighborVec::iterator saved_it[IT_NUM];
     int id = 0;
 
-    FOR_NEIGHBOR(node1, node2, it) {
+    FOR_NEIGHBOR(node1, node2, it)
+    {
         saved_it[id++] = (*it)->node->findNeighborIt(node1);
     } else {
         saved_it[id++] = it;
     }
 
-    FOR_NEIGHBOR(node2, node1, it) {
+    FOR_NEIGHBOR(node2, node1, it)
+    {
         saved_it[id++] = (*it)->node->findNeighborIt(node2);
     } else {
         saved_it[id++] = it;
     }
     assert(id == IT_NUM);
-
 
     Neighbor * saved_nei[IT_NUM];
     // save Neighbor and allocate new Neighbor pointer
@@ -2987,99 +3063,100 @@ void PhyloTree::computeNNIPatternLh(
     node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 
-   // PhyloNeighbor *node2_lastnei = NULL;
+    // PhyloNeighbor *node2_lastnei = NULL;
 
     // save the first found neighbor of node 1 (excluding node2) in node1_it
-    FOR_NEIGHBOR_DECLARE(node1, node2, node1_it) break;
+    FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
+        break;
     Neighbor *node1_nei = *node1_it;
 
     bool first = true;
 
-    FOR_NEIGHBOR_IT(node2, node1, node2_it) {
-        /* do the NNI swap */
-        Neighbor *node2_nei = *node2_it;
-        node1->updateNeighbor(node1_it, node2_nei);
-        node2_nei->node->updateNeighbor(node2, node1);
+    FOR_NEIGHBOR_IT(node2, node1, node2_it){
+    /* do the NNI swap */
+    Neighbor *node2_nei = *node2_it;
+    node1->updateNeighbor(node1_it, node2_nei);
+    node2_nei->node->updateNeighbor(node2, node1);
 
-        node2->updateNeighbor(node2_it, node1_nei);
-        node1_nei->node->updateNeighbor(node1, node2);
+    node2->updateNeighbor(node2_it, node1_nei);
+    node1_nei->node->updateNeighbor(node1, node2);
 
-        // re-optimize five adjacent branches
-        double old_score = -INFINITY, new_score = old_score;
+    // re-optimize five adjacent branches
+    double old_score = -INFINITY, new_score = old_score;
 
-        // clear partial likelihood vector
-        node12_it->clearPartialLh();
+    // clear partial likelihood vector
+    node12_it->clearPartialLh();
+    node21_it->clearPartialLh();
+    int i;
+    for (i = 0; i < 2; i++) {
+
+        new_score = optimizeOneBranch(node1, node2, false);
+
+        FOR_NEIGHBOR(node1, node2, it) {
+            //for (id = 0; id < IT_NUM; id++)
+            //((PhyloNeighbor*)(*saved_it[id]))->clearPartialLh();
+            ((PhyloNeighbor*) (*it)->node->findNeighbor(node1))->clearPartialLh();
+            new_score = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false);
+        }
+
         node21_it->clearPartialLh();
-        int i;
-        for (i = 0; i < 2; i++) {
 
-            new_score = optimizeOneBranch(node1, node2, false);
-
-            FOR_NEIGHBOR(node1, node2, it) {
-                //for (id = 0; id < IT_NUM; id++)
-                //((PhyloNeighbor*)(*saved_it[id]))->clearPartialLh();
-                ((PhyloNeighbor*) (*it)->node->findNeighbor(node1))->clearPartialLh();
-                new_score = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false);
-            }
-
-            node21_it->clearPartialLh();
-
-            FOR_NEIGHBOR(node2, node1, it) {
-                //for (id = 0; id < IT_NUM; id++)
-                //((PhyloNeighbor*)(*saved_it[id]))->clearPartialLh();
-                ((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
-                new_score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
-                //node2_lastnei = (PhyloNeighbor*) (*it);
-            }
-            node12_it->clearPartialLh();
-            if (new_score < old_score + TOL_LIKELIHOOD) break;
-            old_score = new_score;
+        FOR_NEIGHBOR(node2, node1, it) {
+            //for (id = 0; id < IT_NUM; id++)
+            //((PhyloNeighbor*)(*saved_it[id]))->clearPartialLh();
+            ((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
+            new_score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
+            //node2_lastnei = (PhyloNeighbor*) (*it);
         }
-        saveCurrentTree(new_score); // BQM: for new bootstrap
-
-        //new_score = optimizeOneBranch(node1, node2, false);
-        if (new_score > cur_lh + TOL_LIKELIHOOD)
-            cout << "Alternative NNI shows better likelihood " << new_score << " > " << cur_lh << endl;
-        double *result_lh;
-        if (first) {
-            result_lh = pattern_lh2;
-            lh2 = new_score;
-        } else {
-            result_lh = pattern_lh3;
-            lh3 = new_score;
-        }
+        node12_it->clearPartialLh();
+        if (new_score < old_score + TOL_LIKELIHOOD) break;
         old_score = new_score;
-        computePatternLikelihood(result_lh);
-        // swap back and recover the branch lengths
-        node1->updateNeighbor(node1_it, node1_nei);
-        node1_nei->node->updateNeighbor(node2, node1);
-        node2->updateNeighbor(node2_it, node2_nei);
-        node2_nei->node->updateNeighbor(node1, node2);
-        first = false;
     }
+    saveCurrentTree(new_score); // BQM: for new bootstrap
 
-    // restore the Neighbor*
+    //new_score = optimizeOneBranch(node1, node2, false);
+    if (new_score > cur_lh + TOL_LIKELIHOOD)
+    cout << "Alternative NNI shows better likelihood " << new_score << " > " << cur_lh << endl;
+    double *result_lh;
+    if (first) {
+        result_lh = pattern_lh2;
+        lh2 = new_score;
+    } else {
+        result_lh = pattern_lh3;
+        lh3 = new_score;
+    }
+    old_score = new_score;
+    computePatternLikelihood(result_lh);
+    // swap back and recover the branch lengths
+    node1->updateNeighbor(node1_it, node1_nei);
+    node1_nei->node->updateNeighbor(node2, node1);
+    node2->updateNeighbor(node2_it, node2_nei);
+    node2_nei->node->updateNeighbor(node1, node2);
+    first = false;
+}
+
+// restore the Neighbor*
     for (id = 0; id < IT_NUM; id++) {
-        delete [] ((PhyloNeighbor*) * saved_it[id])->scale_num;
-        delete [] ((PhyloNeighbor*) * saved_it[id])->partial_lh;
+        delete[] ((PhyloNeighbor*) *saved_it[id])->scale_num;
+        delete[] ((PhyloNeighbor*) *saved_it[id])->partial_lh;
         delete (*saved_it[id]);
         (*saved_it[id]) = saved_nei[id];
     }
 
     // restore the length of 4 branches around node1, node2
     FOR_NEIGHBOR(node1, node2, it)
-    (*it)->length = (*it)->node->findNeighbor(node1)->length;
+        (*it)->length = (*it)->node->findNeighbor(node1)->length;
     FOR_NEIGHBOR(node2, node1, it)
-    (*it)->length = (*it)->node->findNeighbor(node2)->length;
+        (*it)->length = (*it)->node->findNeighbor(node2)->length;
 }
 
 void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
     //int nsite = getAlnNSite();
     int nptn = getAlnNPattern();
-    memset(lh_new, 0, sizeof (double) * 3);
+    memset(lh_new, 0, sizeof(double) * 3);
     int i;
-	IntVector boot_freq;
-	aln->createBootstrapAlignment(boot_freq);
+    IntVector boot_freq;
+    aln->createBootstrapAlignment(boot_freq);
     for (i = 0; i < nptn; i++) {
         lh_new[0] += boot_freq[i] * pat_lh[0][i];
         lh_new[1] += boot_freq[i] * pat_lh[1][i];
@@ -3089,9 +3166,8 @@ void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
 
 // Implementation of testBranch follows Guindon et al. (2010)
 
-double PhyloTree::testOneBranch(
-    double best_score, double *pattern_lh, int reps, int lbp_reps,
-    PhyloNode *node1, PhyloNode *node2, double &lbp_support) {
+double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps, int lbp_reps, PhyloNode *node1,
+        PhyloNode *node2, double &lbp_support) {
     const int NUM_NNI = 3;
     double lh[NUM_NNI];
     double *pat_lh[NUM_NNI];
@@ -3108,62 +3184,71 @@ double PhyloTree::testOneBranch(
 
     int support = 0;
 
-	lbp_support = 0.0;
-	int times = max(reps, lbp_reps);
+    lbp_support = 0.0;
+    int times = max(reps, lbp_reps);
 
     for (int i = 0; i < times; i++) {
         double lh_new[NUM_NNI];
         // resampling estimated log-likelihood (RELL)
         resampleLh(pat_lh, lh_new);
-		if (lh_new[0] > lh_new[1] && lh_new[0] > lh_new[2]) lbp_support += 1.0;
+        if (lh_new[0] > lh_new[1] && lh_new[0] > lh_new[2])
+            lbp_support += 1.0;
         double cs[NUM_NNI], cs_best, cs_2nd_best;
         cs[0] = lh_new[0] - lh[0];
         cs[1] = lh_new[1] - lh[1];
         cs[2] = lh_new[2] - lh[2];
         if (cs[0] >= cs[1] && cs[0] >= cs[2]) {
             cs_best = cs[0];
-            if (cs[1] > cs[2]) cs_2nd_best = cs[1];
-            else cs_2nd_best = cs[2];
+            if (cs[1] > cs[2])
+                cs_2nd_best = cs[1];
+            else
+                cs_2nd_best = cs[2];
         } else if (cs[1] >= cs[2]) {
             cs_best = cs[1];
-            if (cs[0] > cs[2]) cs_2nd_best = cs[0];
-            else cs_2nd_best = cs[2];
+            if (cs[0] > cs[2])
+                cs_2nd_best = cs[0];
+            else
+                cs_2nd_best = cs[2];
         } else {
             cs_best = cs[2];
-            if (cs[0] > cs[1]) cs_2nd_best = cs[0];
-            else cs_2nd_best = cs[1];
+            if (cs[0] > cs[1])
+                cs_2nd_best = cs[0];
+            else
+                cs_2nd_best = cs[1];
         }
-        if (aLRT > (cs_best - cs_2nd_best) + 0.05) support++;
+        if (aLRT > (cs_best - cs_2nd_best) + 0.05)
+            support++;
     }
-    delete [] pat_lh[2];
-    delete [] pat_lh[1];
+    delete[] pat_lh[2];
+    delete[] pat_lh[1];
     lbp_support /= times;
     return ((double) support) / times;
 }
 
-int PhyloTree::testAllBranches(int threshold, double best_score, double *pattern_lh,
-                               int reps, int lbp_reps, PhyloNode *node, PhyloNode *dad) {
+int PhyloTree::testAllBranches(int threshold, double best_score, double *pattern_lh, int reps, int lbp_reps,
+        PhyloNode *node, PhyloNode *dad) {
     int num_low_support = 0;
     if (!node) {
         node = (PhyloNode*) root;
         root->neighbors[0]->node->name = "";
     }
     if (dad && !node->isLeaf() && !dad->isLeaf()) {
-		double lbp_support;
-        int support = round(testOneBranch(best_score, pattern_lh, reps, lbp_reps, node, dad, lbp_support)*100);
+        double lbp_support;
+        int support = round(testOneBranch(best_score, pattern_lh, reps, lbp_reps, node, dad, lbp_support) * 100);
         node->name = convertIntToString(support);
-        if (lbp_reps) node->name += "/" + convertIntToString(round(lbp_support*100));
-        if (support < threshold) num_low_support = 1;
+        if (lbp_reps)
+            node->name += "/" + convertIntToString(round(lbp_support * 100));
+        if (support < threshold)
+            num_low_support = 1;
         ((PhyloNeighbor*) node->findNeighbor(dad))->partial_pars[0] = support;
         ((PhyloNeighbor*) dad->findNeighbor(node))->partial_pars[0] = support;
     }
-    FOR_NEIGHBOR_IT(node, dad, it)
-    num_low_support += testAllBranches(threshold, best_score, pattern_lh, reps, lbp_reps, (PhyloNode*) (*it)->node, node);
+    FOR_NEIGHBOR_IT(node, dad, it)num_low_support += testAllBranches(threshold, best_score, pattern_lh, reps, lbp_reps, (PhyloNode*) (*it)->node, node);
     return num_low_support;
 }
 
 /****************************************************************************
-        Collapse stable (highly supported) clades by one representative
+ Collapse stable (highly supported) clades by one representative
  ****************************************************************************/
 
 void PhyloTree::deleteLeaf(Node *leaf) {
@@ -3173,51 +3258,50 @@ void PhyloTree::deleteLeaf(Node *leaf) {
     Node *node2 = NULL;
     double sum_len = 0.0;
 
-    FOR_NEIGHBOR_IT(near_node, leaf, it) {
-        sum_len += (*it)->length;
-        if (!node1)
-            node1 = (*it)->node;
-        else
-            node2 = (*it)->node;
-    }
-    // make sure that the returned node1 and node2 are correct
+    FOR_NEIGHBOR_IT(near_node, leaf, it){
+    sum_len += (*it)->length;
+    if (!node1)
+    node1 = (*it)->node;
+    else
+    node2 = (*it)->node;
+}
+// make sure that the returned node1 and node2 are correct
     assert(node1 && node2);
     // update the neighbor
     node1->updateNeighbor(near_node, node2, sum_len);
     node2->updateNeighbor(near_node, node1, sum_len);
 }
 
-void PhyloTree::reinsertLeaf(Node *leaf, Node *node,
-                             Node *dad) {
+void PhyloTree::reinsertLeaf(Node *leaf, Node *node, Node *dad) {
     bool first = true;
     Node *adjacent_node = leaf->neighbors[0]->node;
     Neighbor *nei = node->findNeighbor(dad);
     double len = nei->length;
 
-    FOR_NEIGHBOR_IT(adjacent_node, leaf, it) {
-        if (first) {
-            (*it)->node = node;
-            (*it)->length = len / 2;
-            node->updateNeighbor(dad, adjacent_node, len / 2);
-        } else {
-            (*it)->node = dad;
-            (*it)->length = len / 2;
-            dad->updateNeighbor(node, adjacent_node, len / 2);
-        }
-        first = false;
+    FOR_NEIGHBOR_IT(adjacent_node, leaf, it){
+    if (first) {
+        (*it)->node = node;
+        (*it)->length = len / 2;
+        node->updateNeighbor(dad, adjacent_node, len / 2);
+    } else {
+        (*it)->node = dad;
+        (*it)->length = len / 2;
+        dad->updateNeighbor(node, adjacent_node, len / 2);
     }
+    first = false;
+}
 }
 
 bool PhyloTree::isSupportedNode(PhyloNode* node, int min_support) {
-    FOR_NEIGHBOR_IT(node, NULL, it)
-    if (!(*it)->node->isLeaf())
-        if (((PhyloNeighbor*) * it)->partial_pars[0] < min_support) {
-            return false;
-        }
+    FOR_NEIGHBOR_IT(node, NULL, it)if (!(*it)->node->isLeaf())
+    if (((PhyloNeighbor*) * it)->partial_pars[0] < min_support) {
+        return false;
+    }
     return true;
 }
 
-int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa, StrVector &linked_name, double* &dist_mat) {
+int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa, StrVector &linked_name,
+        double* &dist_mat) {
     NodeVector taxa;
     NodeVector::iterator tax_it;
     StrVector::iterator linked_it;
@@ -3234,22 +3318,25 @@ int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa, Str
                 PhyloNode *near_node = (PhyloNode*) taxon->neighbors[0]->node;
                 Node *adj_taxon = NULL;
                 FOR_NEIGHBOR_DECLARE(near_node, taxon, it)
-                if ((*it)->node->isLeaf()) {
-                    adj_taxon = (*it)->node;
-                    break;
-                }
+                    if ((*it)->node->isLeaf()) {
+                        adj_taxon = (*it)->node;
+                        break;
+                    }
                 // if it is not a cherry
-                if (!adj_taxon) continue;
+                if (!adj_taxon)
+                    continue;
                 assert(linked_taxid[adj_taxon->id] < 0);
                 PhyloNeighbor *near_nei = NULL;
                 FOR_NEIGHBOR(near_node, taxon, it)
-                if ((*it)->node != adj_taxon) {
-                    near_nei = (PhyloNeighbor*) (*it);
-                    break;
-                }
+                    if ((*it)->node != adj_taxon) {
+                        near_nei = (PhyloNeighbor*) (*it);
+                        break;
+                    }
                 assert(near_nei);
                 // continue if the cherry is not stable, or distance between two taxa is near ZERO
-                if (!isSupportedNode((PhyloNode*) near_nei->node, min_support) && dist_mat[taxon->id * ntaxa + adj_taxon->id] > 2e-6) continue;
+                if (!isSupportedNode((PhyloNode*) near_nei->node, min_support)
+                        && dist_mat[taxon->id * ntaxa + adj_taxon->id] > 2e-6)
+                    continue;
                 // now do the taxon pruning
                 Node *pruned_taxon = taxon, *stayed_taxon = adj_taxon;
                 // prune the taxon that is far away
@@ -3263,15 +3350,17 @@ int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa, Str
                 linked_name.push_back(stayed_taxon->name);
                 num_pruned_taxa++;
                 // do not prune more than n-4 taxa
-                if (pruned_taxa.size() >= ntaxa - 4) break;
+                if (pruned_taxa.size() >= ntaxa - 4)
+                    break;
             }
     } while (num_pruned_taxa && pruned_taxa.size() < ntaxa - 4);
 
-    if (pruned_taxa.empty()) return 0;
-
+    if (pruned_taxa.empty())
+        return 0;
 
     if (verbose_mode >= VB_MED)
-        for (tax_it = pruned_taxa.begin(), linked_it = linked_name.begin(); tax_it != pruned_taxa.end(); tax_it++, linked_it++)
+        for (tax_it = pruned_taxa.begin(), linked_it = linked_name.begin(); tax_it != pruned_taxa.end();
+                tax_it++, linked_it++)
             cout << "Delete " << (*tax_it)->name << " from " << (*linked_it) << endl;
 
     // set root to the first taxon which was not deleted
@@ -3284,7 +3373,8 @@ int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa, Str
     IntVector stayed_id;
     int i, j;
     for (i = 0; i < taxa.size(); i++)
-        if (linked_taxid[i] < 0) stayed_id.push_back(i);
+        if (linked_taxid[i] < 0)
+            stayed_id.push_back(i);
     assert(stayed_id.size() + pruned_taxa.size() == leafNum);
     Alignment *pruned_aln = new Alignment();
     pruned_aln->extractSubAlignment(aln, stayed_id, 2); // at least 2 informative characters
@@ -3292,7 +3382,7 @@ int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa, Str
     initializeTree();
     setAlignment(pruned_aln);
 
-    double *pruned_dist = new double [leafNum * leafNum];
+    double *pruned_dist = new double[leafNum * leafNum];
     for (i = 0; i < leafNum; i++)
         for (j = 0; j < leafNum; j++)
             pruned_dist[i * leafNum + j] = dist_mat[stayed_id[i] * ntaxa + stayed_id[j]];
@@ -3323,47 +3413,47 @@ int PhyloTree::restoreStableClade(Alignment *original_aln, NodeVector &pruned_ta
     return 0;
 }
 
-
 bool PhyloTree::checkEqualScalingFactor(double &sum_scaling, PhyloNode *node, PhyloNode *dad) {
-    if (!node) node = (PhyloNode*) root;
+    if (!node)
+        node = (PhyloNode*) root;
     if (dad) {
-        double scaling = ((PhyloNeighbor*) node->findNeighbor(dad))->lh_scale_factor +
-                         ((PhyloNeighbor*) dad->findNeighbor(node))->lh_scale_factor;
-        if (sum_scaling > 0) sum_scaling = scaling;
+        double scaling = ((PhyloNeighbor*) node->findNeighbor(dad))->lh_scale_factor
+                + ((PhyloNeighbor*) dad->findNeighbor(node))->lh_scale_factor;
+        if (sum_scaling > 0)
+            sum_scaling = scaling;
         if (fabs(sum_scaling - scaling) > 1e-6) {
             cout << sum_scaling << " " << scaling << endl;
             return false;
         }
     }
-    FOR_NEIGHBOR_IT(node, dad, it)
-    if (!checkEqualScalingFactor(sum_scaling, (PhyloNode*) (*it)->node, node)) return false;
+    FOR_NEIGHBOR_IT(node, dad, it)if (!checkEqualScalingFactor(sum_scaling, (PhyloNode*) (*it)->node, node)) return false;
     return true;
 }
 
 void PhyloTree::randomizeNeighbors(Node *node, Node *dad) {
-    if (!node) node = root;
-    FOR_NEIGHBOR_IT(node, dad, it)
-    randomizeNeighbors((*it)->node, node);
+    if (!node)
+        node = root;
+    FOR_NEIGHBOR_IT(node, dad, it)randomizeNeighbors((*it)->node, node);
 
     random_shuffle(node->neighbors.begin(), node->neighbors.end());
 }
 
 void PhyloTree::printTransMatrices(Node *node, Node *dad) {
-	if (!node) node = root;
-	int nstates = aln->num_states;
-	
-	if (dad) {
-		double *trans_cat = new double [nstates * nstates];
-		model_factory->computeTransMatrix(dad->findNeighbor(node)->length * site_rate->getRate(0), trans_cat);
-		cout << "Transition matrix " << dad->name << " to " << node->name <<  endl;  
-		for (int i = 0; i < nstates; i++) {
-			for (int j = 0; j < nstates; j++) {
-				cout << "\t" << trans_cat[i*nstates+j];
-			}
-			cout << endl;
-		}
-		delete [] trans_cat;
-	}
-	FOR_NEIGHBOR_IT(node, dad, it) 
-		printTransMatrices((*it)->node, node);
+    if (!node)
+        node = root;
+    int nstates = aln->num_states;
+
+    if (dad) {
+        double *trans_cat = new double[nstates * nstates];
+        model_factory->computeTransMatrix(dad->findNeighbor(node)->length * site_rate->getRate(0), trans_cat);
+        cout << "Transition matrix " << dad->name << " to " << node->name << endl;
+        for (int i = 0; i < nstates; i++) {
+            for (int j = 0; j < nstates; j++) {
+                cout << "\t" << trans_cat[i * nstates + j];
+            }
+            cout << endl;
+        }
+        delete[] trans_cat;
+    }
+    FOR_NEIGHBOR_IT(node, dad, it)printTransMatrices((*it)->node, node);
 }

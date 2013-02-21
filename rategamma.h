@@ -64,6 +64,11 @@ public:
 	*/
 	virtual double getRate(int category) { return rates[category]; }
 
+	/**
+	 * 	return pointer to the rate array
+	 */
+	virtual double* getRates() { return rates; }
+
 	/** discrete Gamma according to Yang 1994 (JME 39:306-314) and using median cutting point
 		It takes 'ncategory' and 'gamma_shape' variables as input. On output, it write to 'rates' variable.
 	*/

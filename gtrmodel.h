@@ -232,6 +232,20 @@ public:
 	*/
 	virtual void decomposeRateMatrix();
 
+	double *getEigenCoeff() const;
+
+	double *getEigenvalues() const;
+
+	double **getEigenvectors() const;
+
+	double **getInverseEigenvectors() const;
+
+	void setEigenCoeff(double *eigenCoeff);
+
+	void setEigenvalues(double *eigenvalues);
+
+	void setEigenvectors(double **eigenvectors);
+
 protected:
 
 	/**

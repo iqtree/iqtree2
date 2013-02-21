@@ -503,3 +503,38 @@ void GTRModel::freeMem()
 
 	if (rates) delete [] rates;
 }
+
+double *GTRModel::getEigenCoeff() const
+{
+    return eigen_coeff;
+}
+
+double *GTRModel::getEigenvalues() const
+{
+    return eigenvalues;
+}
+
+double **GTRModel::getEigenvectors() const
+{
+    return eigenvectors;
+}
+
+double** GTRModel::getInverseEigenvectors() const {
+	return inv_eigenvectors;
+}
+
+void GTRModel::setEigenCoeff(double *eigenCoeff)
+{
+    eigen_coeff = eigenCoeff;
+}
+
+void GTRModel::setEigenvalues(double *eigenvalues)
+{
+    this->eigenvalues = eigenvalues;
+}
+
+void GTRModel::setEigenvectors(double **eigenvectors)
+{
+    this->eigenvectors = eigenvectors;
+}
+

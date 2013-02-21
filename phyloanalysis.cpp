@@ -1041,6 +1041,7 @@ double doModelOptimization(IQTree& iqtree, Params& params) {
 		bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
 				params.fixed_branch_length, true, 0.1);
 		cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
+		iqtree.initiateMyEigenCoeff();
 	} else {
 		cout << "Optimizing model parameters and branch lengths" << endl;
 		double t_modOpt_start = getCPUTime();

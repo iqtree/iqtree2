@@ -663,6 +663,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.binary_aln_file = NULL;
 	params.maxtime = 1000000;
 	params.reinsert_par = false;
+	params.fast_branch_opt = false;
 	params.par_vs_bionj = false;
 	params.tabu = false;
 	params.random_restart = false;
@@ -1465,6 +1466,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.reinsert_par = true;
 			} else if (strcmp(argv[cnt], "-tabu") == 0) {
 				params.tabu = true;
+			} else if (strcmp(argv[cnt], "-fast_bran") == 0) {
+				params.fast_branch_opt = true;
 			} else if (strcmp(argv[cnt], "-random_restart") == 0) {
 				params.random_restart = true;
 			} else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation

@@ -334,6 +334,12 @@ struct NNIInfo {
  */
 struct Params {
 
+	/**
+	 * 	Option to turn on the fast branch length optimization trick learnt
+	 * 	from RAxML
+	 */
+	bool fast_branch_opt;
+
 	/*
 	 *  reinsert leaves back to tree using parsimony
 	 */
