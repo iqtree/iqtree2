@@ -93,6 +93,13 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 
 }
 
+void PhyloSuperTree::setParams(Params &params) {
+	IQTree::setParams(params);
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->params = &params;
+	
+}
+
 Node* PhyloSuperTree::newNode(int node_id, const char* node_name) {
     return (Node*) (new SuperNode(node_id, node_name));
 }
@@ -348,7 +355,7 @@ void PhyloSuperTree::initPartitionInfo() {
 	}
 }
 
-NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh_contribution) {
+NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, double lh_contribution) {
     NNIMove myMove;
     myMove.score = 0;
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));

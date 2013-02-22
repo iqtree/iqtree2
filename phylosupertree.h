@@ -71,6 +71,11 @@ public:
 
     ~PhyloSuperTree();
 
+		/**
+	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
+	 */
+	virtual void setParams(Params& params);
+	
 	virtual bool isSuperTree() { return true; }
 
     /**
@@ -159,7 +164,7 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, double lh_contribution = -1.0);
 
     /**
             Do an NNI

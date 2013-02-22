@@ -108,7 +108,10 @@ public:
      */
     double computeParsimonyTreePhylolib();
 
-	void setParams(Params& params);
+	/**
+	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
+	 */
+	virtual void setParams(Params& params);
 
     /**
             print tree to .treefile
