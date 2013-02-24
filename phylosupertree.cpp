@@ -84,10 +84,10 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	}
 	aln = new SuperAlignment(this);
 	string str = params.out_prefix;
-	str += ".part";
-	aln->printPhylip(str.c_str());
+	//str += ".part";
+	//aln->printPhylip(str.c_str());
 	str = params.out_prefix;
-	str += ".concat";
+	str += ".conaln";
 	((SuperAlignment*)aln)->printCombinedAlignment(str.c_str());
 	cout << endl;
 
@@ -569,3 +569,6 @@ void PhyloSuperTree::computeBranchLengths() {
 	}
 }
 
+string PhyloSuperTree::getModelName() {
+	return (string)"Partition model";
+}

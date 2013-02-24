@@ -228,7 +228,7 @@ public:
     /**
      * 		Perform random restart heuristic
      */
-    double doRandomRestart();
+    void doRandomRestart();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood

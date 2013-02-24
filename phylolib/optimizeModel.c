@@ -29,7 +29,7 @@
  *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
  */
 
-#ifndef WIN32
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <unistd.h>
 #endif
 
@@ -318,7 +318,7 @@ static void freeLinkageList( linkageList* ll)
 
 /* function that evaluates the change to a parameter */
 
-static void evaluateChange(tree *tr, int rateNumber, double *value, double *result, boolean* converged, int whichFunction, int numberOfModels, linkageList *ll)
+static void evaluateChange(tree *tr, int rateNumber, double *value, double *result, pl_boolean* converged, int whichFunction, int numberOfModels, linkageList *ll)
 { 
   int i, k, pos;
 
@@ -484,8 +484,8 @@ static void brentGeneric(double *ax, double *bx, double *cx, double *fb, double 
     *x     = (double *)malloc(sizeof(double) * numberOfModels),
     *xm    = (double *)malloc(sizeof(double) * numberOfModels),
     *e     = (double *)malloc(sizeof(double) * numberOfModels);
-  boolean *converged = (boolean *)malloc(sizeof(boolean) * numberOfModels);
-  boolean allConverged;
+  pl_boolean *converged = (pl_boolean *)malloc(sizeof(pl_boolean) * numberOfModels);
+  pl_boolean allConverged;
   
   for(i = 0; i < numberOfModels; i++)    
     converged[i] = FALSE;
@@ -696,8 +696,8 @@ static int brakGeneric(double *param, double *ax, double *bx, double *cx, double
     *state    = (int *)malloc(sizeof(int) * numberOfModels),
     *endState = (int *)malloc(sizeof(int) * numberOfModels);
 
-  boolean *converged = (boolean *)malloc(sizeof(boolean) * numberOfModels);
-  boolean allConverged;
+  pl_boolean *converged = (pl_boolean *)malloc(sizeof(pl_boolean) * numberOfModels);
+  pl_boolean allConverged;
 
   for(i = 0; i < numberOfModels; i++)
     converged[i] = FALSE;
@@ -1272,7 +1272,7 @@ static void optRates(tree *tr, double modelEpsilon, linkageList *ll, int numberO
 
 /* figure out if all AA models have been assigned a joint GTR matrix */
 
-static boolean AAisGTR(tree *tr)
+static pl_boolean AAisGTR(tree *tr)
 {
   int i, count = 0;
 
@@ -1579,7 +1579,7 @@ void optRateCatPthreads(tree *tr, double lower_spacing, double upper_spacing, do
       int 
 	localIndex = 0;
 
-      boolean 
+      pl_boolean 
 	execute = ((tr->manyPartitions && isThisMyPartition(tr, tid, model)) || (!tr->manyPartitions));
 
       if(execute)
@@ -1746,7 +1746,7 @@ static void optRateCatModel(tree *tr, int model, double lower_spacing, double up
    of 1.0
 */
 
-void updatePerSiteRates(tree *tr, boolean scaleRates)
+void updatePerSiteRates(tree *tr, pl_boolean scaleRates)
 {
   int 
     i,

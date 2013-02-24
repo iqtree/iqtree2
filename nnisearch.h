@@ -5,8 +5,32 @@
 extern "C" {
 #endif
 
-extern int treeReadLenString (const char *buffer, tree *tr, boolean readBranches, boolean readNodeLabels, boolean topologyOnly);
+#include <stdio.h>
+#include <stdlib.h>
 
+
+/*--------------------------------------------------------------*/
+/* portable version for fmemopen */
+/*--------------------------------------------------------------*/
+
+#if defined __APPLE__ || defined __MACH__
+struct fmem {
+    size_t pos;
+    size_t size;
+    char *buffer;
+};
+typedef struct fmem fmem_t;
+
+/* simple, but portable version of fmemopen for OS X / BSD */
+FILE * fmemopen(void *buf, size_t size, const char *mode);
+
+#endif /* APPLE */
+
+
+/**
+ * TODO: read tree from string in memory
+ */
+ int treeReadLenString (const char *buffer, tree *tr, pl_boolean readBranches, pl_boolean readNodeLabels, pl_boolean topologyOnly);
 
 #define MAX_NUM_DELTA 10000
 
@@ -68,6 +92,8 @@ void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* cnt_bran, int
  *  Should I use memcpy or just copy the pointer ?
  */
 //void saveLHVector(nodeptr p, nodeptr q, double* p_lhsave, double* q_lhsave);
+
+
 
 
 #ifdef __cplusplus

@@ -835,7 +835,7 @@ double IQTree::perturb(int times) {
 //}
 
 
-double IQTree::doRandomRestart() {
+void IQTree::doRandomRestart() {
 	int cur_iteration;
 	bool maxTimeReached = false;
 	setRootNode(params->root);
@@ -2317,12 +2317,13 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 	out_file += ".splits.nex";
 	sg.saveFile(out_file.c_str(), IN_NEXUS, true);
 	cout << "Split supports printed to NEXUS file " << out_file << endl;
-
+	/*
 	out_file = params.out_prefix;
 	out_file += ".supval";
 	writeInternalNodeNames(out_file);
 
 	cout << "Support values written to " << out_file << endl;
+	*/
 }
 
 void IQTree::summarizeBootstrap(Params &params) {
@@ -2432,6 +2433,7 @@ bool IQTree::checkBootstrapStopping() {
 	double corr = computeCorrelation(split_supports, split_supports_new);
 	cout << "Correlation coefficient: " << corr << endl;
 	// printing supports into file
+	/*
 	string outfile = params->out_prefix;
 	outfile += ".splitsup";
 	try {
@@ -2447,6 +2449,7 @@ bool IQTree::checkBootstrapStopping() {
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, outfile);
 	}
+	*/
 	return (corr >= params->min_correlation);
 }
 

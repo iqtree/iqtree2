@@ -32,16 +32,18 @@
  *  
  *  @brief Miscellaneous general utility and helper functions
  */
-
+/*
 #ifdef WIN32
 #include <direct.h>
 #endif
-
-#ifndef WIN32
+*/
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <unistd.h>
+#else
+#include <direct.h>
 #endif
 
 #include <math.h>
@@ -138,7 +140,7 @@ void read_phylip_msa(tree * tr, const char * filename, int format, int type)
   tr->patratStored           =  (double *) malloc ((size_t)tr->originalCrunchedLength * sizeof (double));
   tr->lhs                    =  (double *) malloc ((size_t)tr->originalCrunchedLength * sizeof (double));
 
-  tr->executeModel   = (boolean *)malloc(sizeof(boolean) * (size_t)tr->NumberOfModels);
+  tr->executeModel   = (pl_boolean *)malloc(sizeof(pl_boolean) * (size_t)tr->NumberOfModels);
 
 
 
@@ -273,7 +275,7 @@ void read_msa(tree *tr, const char *filename)
     tr->patratStored    = (double*)  malloc((size_t)tr->originalCrunchedLength * sizeof(double));
     tr->lhs             = (double*)  malloc((size_t)tr->originalCrunchedLength * sizeof(double));
 
-    tr->executeModel   = (boolean *)malloc(sizeof(boolean) * (size_t)tr->NumberOfModels);
+    tr->executeModel   = (pl_boolean *)malloc(sizeof(pl_boolean) * (size_t)tr->NumberOfModels);
 
     for(i = 0; i < (size_t)tr->NumberOfModels; i++)
       tr->executeModel[i] = TRUE;
@@ -319,7 +321,7 @@ void read_msa(tree *tr, const char *filename)
       myBinFread(&(p->protModels),         sizeof(int), 1, byteFile);
       myBinFread(&(p->autoProtModels),     sizeof(int), 1, byteFile);
       myBinFread(&(p->protFreqs),          sizeof(int), 1, byteFile);
-      myBinFread(&(p->nonGTR),             sizeof(boolean), 1, byteFile);
+      myBinFread(&(p->nonGTR),             sizeof(pl_boolean), 1, byteFile);
       myBinFread(&(p->numberOfCategories), sizeof(int), 1, byteFile);
 
       /* later on if adding secondary structure data
@@ -392,7 +394,10 @@ void *malloc_aligned(size_t size)
   assert(0);
 #endif
 
-
+/* BQM: fix for WIN32 */
+#elif defined WIN32 || defined _WIN32 || defined __WIN32__
+  ptr = _aligned_malloc(size, BYTE_ALIGNMENT);
+/* BQM: END */
 #else
   res = posix_memalign( &ptr, BYTE_ALIGNMENT, size );
 
@@ -439,7 +444,7 @@ void printBothOpen(const char* format, ... )
   fclose(f);
 }
 
-void printResult(tree *tr, analdef *adef, boolean finalPrint)
+void printResult(tree *tr, analdef *adef, pl_boolean finalPrint)
 {
   FILE *logFile;
   char temporaryFileName[1024] = "";
@@ -728,7 +733,7 @@ FILE *myfopen(const char *path, const char *mode)
   * @return
   *   \b TRUE if tip, \b FALSE otherwise
   */
-boolean isTip(int number, int maxTips)
+pl_boolean isTip(int number, int maxTips)
 {
   assert(number > 0);
 
@@ -794,7 +799,7 @@ void hookupDefault (nodeptr p, nodeptr q, int numBranches)
 
 
 
-boolean whitechar (int ch)
+pl_boolean whitechar (int ch)
 {
   return (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r');
 }
@@ -823,7 +828,7 @@ static unsigned int KISS32(void)
 }
 
 /* removed the static keyword for using this function in the examples */
-boolean setupTree (tree *tr, boolean doInit)
+pl_boolean setupTree (tree *tr, pl_boolean doInit)
 {
   nodeptr  p0, p, q;
   int
@@ -873,7 +878,7 @@ boolean setupTree (tree *tr, boolean doInit)
 
   tr->td[0].count = 0;
   tr->td[0].ti    = (traversalInfo *)malloc(sizeof(traversalInfo) * (size_t)tr->mxtips);
-  tr->td[0].executeModel = (boolean *)malloc(sizeof(boolean) * (size_t)tr->NumberOfModels);
+  tr->td[0].executeModel = (pl_boolean *)malloc(sizeof(pl_boolean) * (size_t)tr->NumberOfModels);
   tr->td[0].parameterValues = (double *)malloc(sizeof(double) * (size_t)tr->NumberOfModels);
 
   for(i = 0; i < tr->NumberOfModels; i++)
@@ -950,7 +955,7 @@ boolean setupTree (tree *tr, boolean doInit)
 
   tr->vLength = 0;
 
-  tr->h = (hashtable*)NULL;
+  tr->h = (pl_hashtable*)NULL;
 
   tr->nameHash = initStringHashTable(10 * tr->mxtips);
 
@@ -960,7 +965,7 @@ boolean setupTree (tree *tr, boolean doInit)
 }
 
 
-boolean modelExists(char *model, tree *tr)
+pl_boolean modelExists(char *model, tree *tr)
 {
   /********** BINARY ********************/
 

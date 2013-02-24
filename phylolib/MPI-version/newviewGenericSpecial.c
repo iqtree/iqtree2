@@ -70,7 +70,7 @@ extern const unsigned int mask32[32];
 /* generic function for computing the P matrices, for computing the conditional likelihood at a node p, given child nodes q and r 
    we compute P(z1) and P(z2) here */
 
-static void makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, boolean saveMem, int maxCat, const int states)
+static void makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, pl_boolean saveMem, int maxCat, const int states)
 {
   int 
     i, 
@@ -643,7 +643,7 @@ static void newviewGAMMA_FLEX(int tipCase,
 /* The function below computes partial traversals only down to the point/node in the tree where the 
    conditional likelihhod vector summarizing a subtree is already oriented in the correct direction */
 
-void computeTraversalInfo(nodeptr p, traversalInfo *ti, int *counter, int maxTips, int numBranches, boolean partialTraversal)
+void computeTraversalInfo(nodeptr p, traversalInfo *ti, int *counter, int maxTips, int numBranches, pl_boolean partialTraversal)
 {
   /* if it's a tip we don't do anything */
 
@@ -1209,7 +1209,7 @@ void newviewIterative (tree *tr, int startIndex)
    correct and then it also re-computes reciursively the likelihood arrays 
    in the subtrees of p as needed and if needed */
 
-void newviewGeneric (tree *tr, nodeptr p, boolean masked)
+void newviewGeneric (tree *tr, nodeptr p, pl_boolean masked)
 {  
   /* if it's a tip there is nothing to do */
 
@@ -3119,12 +3119,12 @@ static void newviewGTRCAT( int tipCase,  double *EV,  int *cptr,
   *scalerIncrement = addScale;
 }
 
-static inline boolean isGap(unsigned int *x, int pos)
+static inline pl_boolean isGap(unsigned int *x, int pos)
 {
   return (x[pos / 32] & mask32[pos % 32]);
 }
 
-static inline boolean noGap(unsigned int *x, int pos)
+static inline pl_boolean noGap(unsigned int *x, int pos)
 {
   return (!(x[pos / 32] & mask32[pos % 32]));
 }

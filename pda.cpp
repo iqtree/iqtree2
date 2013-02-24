@@ -28,6 +28,8 @@
 //#include <winsock2.h>
 //#include <windows.h>
 //extern __declspec(dllexport) int gethostname(char *name, int namelen);
+#else
+#include <sys/resource.h>
 #endif
 
 //#include "Eigen/Core"
@@ -59,7 +61,6 @@
 #include "timeutil.h"
 #include <unistd.h>
 #include <stdlib.h>
-#include <sys/resource.h>
 
 
 #ifdef _OPENMP
@@ -1737,12 +1738,12 @@ int main(int argc, char *argv[])
 	signal(SIGILL, &funcAbort);
 	signal(SIGSEGV, &funcAbort);
 	printCopyright(cout);
-
+	/*
 	double x=1e-100;
 	double y=1e-101;
 	if (x > y) cout << "ok!" << endl;
 	else cout << "shit!" << endl;
-	
+	*/
 	//FILE *pfile = popen("hostname","r");
 	char hostname[100];
 #if defined WIN32 || defined _WIN32 || defined __WIN32__

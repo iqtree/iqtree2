@@ -87,7 +87,7 @@ entry *initEntry(void)
   return e;
 } 
 
-hashtable *initHashTable(hashNumberType n)
+pl_hashtable *initHashTable(hashNumberType n)
 {
   /* 
      init with primes 
@@ -104,7 +104,7 @@ hashtable *initHashTable(hashNumberType n)
 					      4194304, 8388608, 16777216, 33554432, 67108864, 134217728,
 					      268435456, 536870912, 1073741824, 2147483648U};
   
-  hashtable *h = (hashtable*)malloc(sizeof(hashtable));
+  pl_hashtable *h = (pl_hashtable*)malloc(sizeof(pl_hashtable));
   
   hashNumberType
     tableSize,
@@ -135,7 +135,7 @@ hashtable *initHashTable(hashNumberType n)
 
 
 
-void freeHashTable(hashtable *h)
+void freeHashTable(pl_hashtable *h)
 {
   hashNumberType
     i,
@@ -178,7 +178,7 @@ void freeHashTable(hashtable *h)
 
 
 
-void cleanupHashTable(hashtable *h, int state)
+void cleanupHashTable(pl_hashtable *h, int state)
 {
   hashNumberType
     k,
@@ -382,8 +382,8 @@ static void newviewBipartitions(unsigned int **bitVectors, nodeptr p, int numsp,
 
 
 
-static void insertHashRF(unsigned int *bitVector, hashtable *h, unsigned int vectorLength, int treeNumber, int treeVectorLength, hashNumberType position, int support, 
-			 boolean computeWRF)
+static void insertHashRF(unsigned int *bitVector, pl_hashtable *h, unsigned int vectorLength, int treeNumber, int treeVectorLength, hashNumberType position, int support, 
+			 pl_boolean computeWRF)
 {     
   if(h->table[position] != NULL)
     {
@@ -469,8 +469,8 @@ static void insertHashRF(unsigned int *bitVector, hashtable *h, unsigned int vec
 
 
 
-void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, hashtable *h, int treeNumber, int function, branchInfo *bInf, 
-			     int *countBranches, int treeVectorLength, boolean traverseOnly, boolean computeWRF)
+void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, pl_hashtable *h, int treeNumber, int function, branchInfo *bInf, 
+			     int *countBranches, int treeVectorLength, pl_boolean traverseOnly, pl_boolean computeWRF)
 {
   if(isTip(p->number, numsp))
     return;
@@ -538,7 +538,7 @@ void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, un
 
 
 
-double convergenceCriterion(hashtable *h, int mxtips)
+double convergenceCriterion(pl_hashtable *h, int mxtips)
 {
   int      
     rf = 0; 

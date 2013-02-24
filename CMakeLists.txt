@@ -54,8 +54,8 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 
 add_definitions(-DIQ_TREE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-sign-compare -Wno-deprecated -pedantic -g -fomit-frame-pointer -funroll-loops -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=c99 -Wall -Wno-sign-compare -pedantic -g -fomit-frame-pointer -funroll-loops -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-sign-compare -Wno-deprecated -pedantic -fomit-frame-pointer -funroll-loops -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=c99 -Wall -Wno-sign-compare -pedantic -fomit-frame-pointer -funroll-loops -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
 
 #if (NOT WIN32)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
@@ -65,15 +65,15 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=c99 -Wall -Wno-sign-compare -ped
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O0")
-set(CMAKE_C_FLAGS_DEBUG "-O0")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 
 if (NOT CMAKE_BUILD_TYPE) 
 	set(CMAKE_BUILD_TYPE "Release")
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-  message("Warning: 32-bit version is not completely working")
+  message("Info: Compiling on 32-bit system")
 else(CMAKE_SIZEOF_VOID_P EQUAL 4)
   message("Info: Compiling on 64-bit system")
 endif(CMAKE_SIZEOF_VOID_P EQUAL 4)
@@ -147,11 +147,12 @@ tools.cpp
 whtest_wrapper.cpp
 lpwrapper.c
 #modeltest_wrapper.c
+fmemopen.c
 nnisearch.c
 )
 
 if (WIN32)
-target_link_libraries(iqtree ncl whtest z sprng ws2_32)
+target_link_libraries(iqtree phylolib ncl whtest z sprng ws2_32)
 else (WIN32)
 target_link_libraries(iqtree phylolib ncl whtest z sprng)
 endif (WIN32)

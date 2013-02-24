@@ -150,7 +150,7 @@ static void smoothFreqs(const int n, double *pfreqs, double *dst, pInfo *partiti
 }
 	    
 
-static void genericBaseFrequencies(tree *tr, const int numFreqs, rawdata *rdta, cruncheddata *cdta, int lower, int upper, int model, boolean smoothFrequencies,
+static void genericBaseFrequencies(tree *tr, const int numFreqs, rawdata *rdta, cruncheddata *cdta, int lower, int upper, int model, pl_boolean smoothFrequencies,
 				   const unsigned int *bitMask)
 {
   double 
@@ -223,7 +223,7 @@ static void genericBaseFrequencies(tree *tr, const int numFreqs, rawdata *rdta, 
     smoothFreqs(numFreqs, pfreqs,  tr->partitionData[model].frequencies, &(tr->partitionData[model]));	   
   else    
     {
-      boolean 
+      pl_boolean 
 	zeroFreq = FALSE;
 
       char 

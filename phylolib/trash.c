@@ -1,4 +1,4 @@
-#ifndef WIN32
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/time.h>

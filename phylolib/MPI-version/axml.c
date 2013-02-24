@@ -184,7 +184,7 @@ void printBothOpen(const char* format, ... )
 
 
 
-boolean getSmoothFreqs(int dataType)
+pl_boolean getSmoothFreqs(int dataType)
 {
   assert(MIN_MODEL < dataType && dataType < MAX_MODEL);
 
@@ -394,7 +394,7 @@ FILE *myfopen(const char *path, const char *mode)
 /******************************some functions for the likelihood computation ****************************/
 
 
-boolean isTip(int number, int maxTips)
+pl_boolean isTip(int number, int maxTips)
 {
   assert(number > 0);
 
@@ -460,7 +460,7 @@ void hookupDefault (nodeptr p, nodeptr q, int numBranches)
 
 
 
-boolean whitechar (int ch)
+pl_boolean whitechar (int ch)
 {
   return (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r');
 }
@@ -497,7 +497,7 @@ static unsigned int KISS32(void)
   return (x+y+w);
 }
 
-static boolean setupTree (tree *tr)
+static pl_boolean setupTree (tree *tr)
 {
   nodeptr  p0, p, q;
   int
@@ -548,7 +548,7 @@ static boolean setupTree (tree *tr)
             
   tr->td[0].count = 0;
   tr->td[0].ti    = (traversalInfo *)malloc(sizeof(traversalInfo) * tr->mxtips);
-  tr->td[0].executeModel = (boolean *)malloc(sizeof(boolean) * tr->NumberOfModels);
+  tr->td[0].executeModel = (pl_boolean *)malloc(sizeof(pl_boolean) * tr->NumberOfModels);
   tr->td[0].parameterValues = (double *)malloc(sizeof(double) * tr->NumberOfModels);
   
   for(i = 0; i < tr->NumberOfModels; i++)
@@ -629,7 +629,7 @@ static boolean setupTree (tree *tr)
 
   tr->vLength = 0;
 
-  tr->h = (hashtable*)NULL;
+  tr->h = (pl_hashtable*)NULL;
   
   tr->nameHash = initStringHashTable(10 * tr->mxtips);
 
@@ -973,7 +973,7 @@ static void analyzeRunId(char id[128])
 
 static void get_args(int argc, char *argv[], analdef *adef, tree *tr)
 {
-  boolean
+  pl_boolean
     bad_opt    =FALSE,
     resultDirSet = FALSE;
 
@@ -993,7 +993,7 @@ static void get_args(int argc, char *argv[], analdef *adef, tree *tr)
     treeSet = 0,   
     modelSet = 0;
 
-  boolean 
+  pl_boolean 
     byteFileSet = FALSE;
 
 
@@ -1449,7 +1449,7 @@ static void printModelAndProgramInfo(tree *tr, analdef *adef, int argc, char *ar
     }
 }
 
-void printResult(tree *tr, analdef *adef, boolean finalPrint)
+void printResult(tree *tr, analdef *adef, pl_boolean finalPrint)
 {
   if(processID == 0)
     {
@@ -1637,7 +1637,7 @@ static void finalizeInfoFile(tree *tr, analdef *adef)
 
 
 
-boolean isThisMyPartition(tree *tr, int tid, int model)
+pl_boolean isThisMyPartition(tree *tr, int tid, int model)
 { 
   assert(tr->manyPartitions);
 
@@ -1782,7 +1782,7 @@ static void multiprocessorScheduling(tree *tr, int tid)
     
   for(model = 0; model < tr->NumberOfModels; model++)
     {        
-      boolean 
+      pl_boolean 
 	exists = FALSE;
 
       for(s = 0; s < arrayLength; s++)
@@ -2153,7 +2153,7 @@ static void initializeTree(tree *tr, analdef *adef)
   tr->patratStored    = (double*)  malloc(tr->originalCrunchedLength * sizeof(double)); 
   tr->lhs             = (double*)  malloc(tr->originalCrunchedLength * sizeof(double)); 
   
-  tr->executeModel   = (boolean *)malloc(sizeof(boolean) * tr->NumberOfModels);
+  tr->executeModel   = (pl_boolean *)malloc(sizeof(pl_boolean) * tr->NumberOfModels);
   
   for(i = 0; i < (size_t)tr->NumberOfModels; i++)
     tr->executeModel[i] = TRUE;
@@ -2194,7 +2194,7 @@ static void initializeTree(tree *tr, analdef *adef)
       myBinFread(&(p->protModels),         sizeof(int), 1, byteFile);
       myBinFread(&(p->autoProtModels),     sizeof(int), 1, byteFile);
       myBinFread(&(p->protFreqs),          sizeof(int), 1, byteFile);
-      myBinFread(&(p->nonGTR),             sizeof(boolean), 1, byteFile);
+      myBinFread(&(p->nonGTR),             sizeof(pl_boolean), 1, byteFile);
       myBinFread(&(p->numberOfCategories), sizeof(int), 1, byteFile);	 
       
       /* later on if adding secondary structure data

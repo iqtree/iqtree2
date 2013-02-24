@@ -28,7 +28,7 @@
  *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
  */
 
-#ifndef WIN32
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -45,7 +45,7 @@
 #include "axml.h"
 
 
-static boolean treeNeedString(const char *fp, char c1, int *position)
+static pl_boolean treeNeedString(const char *fp, char c1, int *position)
 {
   char 
     c2 = fp[(*position)++];
@@ -72,7 +72,7 @@ static boolean treeNeedString(const char *fp, char c1, int *position)
 
 
 
-static boolean treeLabelEndString (char ch)
+static pl_boolean treeLabelEndString (char ch)
 {
   switch(ch) 
     {   
@@ -94,12 +94,12 @@ static boolean treeLabelEndString (char ch)
   return FALSE;
 } 
 
-static boolean  treeGetLabelString (const char *fp, char *lblPtr, int maxlen, int *position)
+static pl_boolean  treeGetLabelString (const char *fp, char *lblPtr, int maxlen, int *position)
 {
   char 
     ch;
   
-  boolean  
+  pl_boolean  
     done, 
     lblfound;
 
@@ -134,13 +134,13 @@ static boolean  treeGetLabelString (const char *fp, char *lblPtr, int maxlen, in
   return lblfound;
 }
 
-static boolean  treeFlushLabelString(const char *fp, int *position)
+static pl_boolean  treeFlushLabelString(const char *fp, int *position)
 { 
   return  treeGetLabelString(fp, (char *) NULL, (int) 0, position);
 } 
 
 
-static boolean treeProcessLengthString (const char *fp, double *dptr, int *position)
+static pl_boolean treeProcessLengthString (const char *fp, double *dptr, int *position)
 { 
   (*position)++;
   
@@ -207,7 +207,7 @@ static int treeFindTipNameString (const char *fp, tree *tr, int *position)
   return  n;
 } 
 
-static boolean addElementLenString(const char *fp, tree *tr, nodeptr p, int *position)
+static pl_boolean addElementLenString(const char *fp, tree *tr, nodeptr p, int *position)
 {
   nodeptr  
     q;

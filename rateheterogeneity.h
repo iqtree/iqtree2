@@ -157,6 +157,8 @@ public:
 	*/
 	void writeSiteRates(const char *file_name);
 
+	void writeSiteRates(ostream &out);
+
 	/**
 		name of the rate heterogeneity type
 	*/

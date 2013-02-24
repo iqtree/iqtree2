@@ -35,7 +35,7 @@ static void sitesort(rawdata *rdta, cruncheddata *cdta, tree *tr, analdef *adef)
     *index, 
     *category = (int*)NULL;
 
-  boolean  flip, tied;
+  pl_boolean  flip, tied;
   unsigned char  **data;
 
   /*
@@ -136,7 +136,7 @@ static void checkTaxonName(char *buffer, int len)
 
   for(i = 0; i < len - 1; i++)
   {
-    boolean valid;
+    pl_boolean valid;
 
     switch(buffer[i])
     {
@@ -172,7 +172,7 @@ static void checkTaxonName(char *buffer, int len)
 
 
 
-static boolean getdata(FILE *INFILE, rawdata *rdta, char **nameList)
+static pl_boolean getdata(FILE *INFILE, rawdata *rdta, char **nameList)
 {
   int   
     i, 
@@ -182,7 +182,7 @@ static boolean getdata(FILE *INFILE, rawdata *rdta, char **nameList)
     ch, my_i, meaning,
     len;
 
-  boolean  
+  pl_boolean  
     allread, 
     firstpass;
 

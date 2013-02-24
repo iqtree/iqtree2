@@ -153,7 +153,7 @@ static int checkerPars(tree *tr, nodeptr p)
     }
 }
 
-static boolean tipHomogeneityCheckerPars(tree *tr, nodeptr p, int grouping)
+static pl_boolean tipHomogeneityCheckerPars(tree *tr, nodeptr p, int grouping)
 {
   if(isTip(p->number, tr->mxtips))
     {
@@ -182,7 +182,7 @@ static void getxnodeLocal (nodeptr p)
 
 }
 
-static void computeTraversalInfoParsimony(nodeptr p, int *ti, int *counter, int maxTips, boolean full)
+static void computeTraversalInfoParsimony(nodeptr p, int *ti, int *counter, int maxTips, pl_boolean full)
 {        
   nodeptr 
     q = p->next->back,
@@ -1109,7 +1109,7 @@ static unsigned int evaluateParsimonyIterativeFast(tree *tr)
 
 
 
-static unsigned int evaluateParsimony(tree *tr, nodeptr p, boolean full)
+static unsigned int evaluateParsimony(tree *tr, nodeptr p, pl_boolean full)
 {
   volatile unsigned int result;
   nodeptr q = p->back;
@@ -1220,7 +1220,7 @@ static void buildSimpleTree (tree *tr, int ip, int iq, int ir)
 }
 
 
-static void testInsertParsimony (tree *tr, nodeptr p, nodeptr q, boolean saveBranches)
+static void testInsertParsimony (tree *tr, nodeptr p, nodeptr q, pl_boolean saveBranches)
 { 
   unsigned int 
     mp;
@@ -1228,7 +1228,7 @@ static void testInsertParsimony (tree *tr, nodeptr p, nodeptr q, boolean saveBra
   nodeptr  
     r = q->back;   
 
-  boolean 
+  pl_boolean 
     doIt = TRUE;
     
   if(tr->grouped)
@@ -1310,7 +1310,7 @@ static void restoreTreeParsimony(tree *tr, nodeptr p, nodeptr q)
 }
 
 
-static void addTraverseParsimony (tree *tr, nodeptr p, nodeptr q, int mintrav, int maxtrav, boolean doAll, boolean saveBranches)
+static void addTraverseParsimony (tree *tr, nodeptr p, nodeptr q, int mintrav, int maxtrav, pl_boolean doAll, pl_boolean saveBranches)
 {        
   if (doAll || (--mintrav <= 0))               
     testInsertParsimony(tr, p, q, saveBranches);	                 
@@ -1362,7 +1362,7 @@ static nodeptr  removeNodeParsimony (nodeptr p, tree *tr)
   return  q;
 }
 
-static int rearrangeParsimony(tree *tr, nodeptr p, int mintrav, int maxtrav, boolean doAll)  
+static int rearrangeParsimony(tree *tr, nodeptr p, int mintrav, int maxtrav, pl_boolean doAll)  
 {   
   nodeptr  
     p1, 
@@ -1374,7 +1374,7 @@ static int rearrangeParsimony(tree *tr, nodeptr p, int mintrav, int maxtrav, boo
   int      
     mintrav2; 
 
-  boolean 
+  pl_boolean 
     doP = TRUE,
     doQ = TRUE;
            
@@ -1546,7 +1546,7 @@ static boolean isInformative2(tree *tr, int site)
 }
 */
 
-static boolean isInformative(tree *tr, int dataType, int site)
+static pl_boolean isInformative(tree *tr, int dataType, int site)
 {
   int
     informativeCounter = 0,

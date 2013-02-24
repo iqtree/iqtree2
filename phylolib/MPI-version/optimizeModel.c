@@ -245,7 +245,7 @@ static void freeLinkageList( linkageList* ll)
 
 
 
-static void evaluateChange(tree *tr, int rateNumber, double *value, double *result, boolean* converged, int whichFunction, int numberOfModels, linkageList *ll)
+static void evaluateChange(tree *tr, int rateNumber, double *value, double *result, pl_boolean* converged, int whichFunction, int numberOfModels, linkageList *ll)
 { 
   int i, k, pos;
 
@@ -383,8 +383,8 @@ static void brentGeneric(double *ax, double *bx, double *cx, double *fb, double 
     *x     = (double *)malloc(sizeof(double) * numberOfModels),
     *xm    = (double *)malloc(sizeof(double) * numberOfModels),
     *e     = (double *)malloc(sizeof(double) * numberOfModels);
-  boolean *converged = (boolean *)malloc(sizeof(boolean) * numberOfModels);
-  boolean allConverged;
+  pl_boolean *converged = (pl_boolean *)malloc(sizeof(pl_boolean) * numberOfModels);
+  pl_boolean allConverged;
   
   for(i = 0; i < numberOfModels; i++)    
     converged[i] = FALSE;
@@ -595,8 +595,8 @@ static int brakGeneric(double *param, double *ax, double *bx, double *cx, double
     *state    = (int *)malloc(sizeof(int) * numberOfModels),
     *endState = (int *)malloc(sizeof(int) * numberOfModels);
 
-  boolean *converged = (boolean *)malloc(sizeof(boolean) * numberOfModels);
-  boolean allConverged;
+  pl_boolean *converged = (pl_boolean *)malloc(sizeof(pl_boolean) * numberOfModels);
+  pl_boolean allConverged;
 
   for(i = 0; i < numberOfModels; i++)
     converged[i] = FALSE;
@@ -1124,7 +1124,7 @@ static void optRates(tree *tr, double modelEpsilon, linkageList *ll, int numberO
   free(startRates);
 }
 
-static boolean AAisGTR(tree *tr)
+static pl_boolean AAisGTR(tree *tr)
 {
   int i, count = 0;
 
@@ -1795,7 +1795,7 @@ static void gatherCatsMaster(tree *tr, int tid, int n)
 
 
 
-static void updatePerSiteRatesManyPartitions(tree *tr, boolean scaleRates)
+static void updatePerSiteRatesManyPartitions(tree *tr, pl_boolean scaleRates)
 {
   int 
     i,
@@ -2246,7 +2246,7 @@ static void broadcastRatesFewPartitions(tree *tr, int tid)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-static void updatePerSiteRatesFewPartitions(tree *tr, boolean scaleRates)
+static void updatePerSiteRatesFewPartitions(tree *tr, pl_boolean scaleRates)
 {  
   int 
     i,
@@ -2466,7 +2466,7 @@ static void updatePerSiteRatesFewPartitions(tree *tr, boolean scaleRates)
   broadcastRatesFewPartitions(tr, processID);
 }
 
-void updatePerSiteRates(tree *tr, boolean scaleRates)
+void updatePerSiteRates(tree *tr, pl_boolean scaleRates)
 {
   if(tr->rateHetModel != CAT)
     return;
@@ -2549,7 +2549,7 @@ static void optimizeRateCategories(tree *tr, int _maxCategories)
            
       for(model = 0; model < tr->NumberOfModels; model++)
 	{    
-	  boolean 
+	  pl_boolean 
 	    execute;
 	  
 	  if(tr->manyPartitions)

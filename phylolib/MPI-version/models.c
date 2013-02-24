@@ -3440,7 +3440,7 @@ l4:
 
 
 
-void makeGammaCats(double alpha, double *gammaRates, int K, boolean useMedian)
+void makeGammaCats(double alpha, double *gammaRates, int K, pl_boolean useMedian)
 {
   int 
     i;

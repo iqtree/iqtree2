@@ -177,9 +177,13 @@ bool checkModelFile(string model_file, StrVector &model_names,
  return in params.freq_type and params.rate_type
  */
 string modelTest(Params &params, PhyloTree *in_tree) {
+	if (in_tree->isSuperTree()) {
+		// select model for each partition
+		return (string)"JC";
+	}
 	int nstates = in_tree->aln->num_states;
 	if (nstates != 2 && nstates != 4 && nstates != 20)
-		outError("Test of best-fit models only works for DNA or Protein");
+		outError("Test of best-fit models only works for Binary/DNA/Protein");
 	string fmodel_str = params.out_prefix;
 	fmodel_str += ".model";
 	string sitelh_file = params.out_prefix;
@@ -388,14 +392,15 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 }
 
 void reportReferences(ofstream &out, string &original_model) {
-	out << "Two manuscripts are currently under preparation:" << endl << endl
-			<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2012) Ultra-fast"
-			<< endl << "approximation for phylogenetic bootstrap. Submitted."
-			<< endl << endl
-			<< "Lam-Tung Nguyen, Heiko A. Schmidt, Bui Quang Minh, and Arndt von Haeseler (2012)"
+	out 
+			<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast"
+			<< endl << "approximation for phylogenetic bootstrap. Mol. Biol. Evol., in press."
+			<< endl 
+			/*
+			<< endl << "Lam-Tung Nguyen, Heiko A. Schmidt, Bui Quang Minh, and Arndt von Haeseler (2012)"
 			<< endl
 			<< "IQ-TREE: Efficient algorithm for phylogenetic inference by maximum likelihood"
-			<< endl << "and important quartet puzzling. In prep." << endl
+			<< endl << "and important quartet puzzling. In prep." << endl*/
 			<< endl << "For the original IQPNNI algorithm please cite: " << endl
 			<< endl
 			<< "Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space"
@@ -557,7 +562,7 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 
 void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh,
 		double lh_variance) {
-	double epsilon = 1.0 / tree.aln->getNSite();
+	double epsilon = 1.0 / tree.getAlnNSite();
 	double totalLen = tree.treeLength();
 	out << "Total tree length = " << totalLen << endl;
 	double totalLenInternal = tree.treeLengthInternal(epsilon);
@@ -769,7 +774,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				if (params.num_bootstrap_samples && params.compute_ml_tree)
 					out << " standard bootstrap supports";
 				if (params.gbo_replicates)
-					out << " ultra-fast bootstrap supports";
+					out << " ultrafast bootstrap supports";
 				out << " (%)" << endl;
 			}
 			out << endl;
@@ -888,7 +893,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					<< ".mldist" << endl;
 		if (params.partition_file)
 			cout << "  Concatenated alignment:   " << params.out_prefix
-					<< ".concat" << endl;
+					<< ".conaln" << endl;
 	}
 	if (tree.getRate()->getGammaShape() > 0)
 		cout << "  Gamma-distributed rates:  " << params.out_prefix << ".rate"
@@ -908,7 +913,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< endl;
 
 	if (params.gbo_replicates) {
-		cout << endl << "Ultra-fast bootstrap approximation results written to:"
+		cout << endl << "Ultrafast bootstrap approximation results written to:"
 				<< endl << "  Split support values:     " << params.out_prefix
 				<< ".splits" << endl << "  Consensus tree:           "
 				<< params.out_prefix << ".contree" << endl;
@@ -996,24 +1001,29 @@ void createFirstNNITree(Params &params, IQTree &iqtree, double bestTreeScore,
 
 void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 //	if (!params.raxmllib) {
-	cout << "Model of evolution: " << iqtree.getModelName() << " with ";
-	switch (iqtree.getModel()->getFreqType()) {
-	case FREQ_EQUAL:
-		cout << "equal";
-		break;
-	case FREQ_EMPIRICAL:
-		cout << "counted";
-		break;
-	case FREQ_USER_DEFINED:
-		cout << "user-defined";
-		break;
-	case FREQ_ESTIMATE:
-		cout << "optimized";
-		break;
-	default:
-		outError("Wrong specified state frequencies");
+	cout << "Model of evolution: ";
+	if (iqtree.isSuperTree()) {
+		cout << iqtree.getModelName() << endl;
+	} else {
+		cout << iqtree.getModelName() << " with ";
+		switch (iqtree.getModel()->getFreqType()) {
+		case FREQ_EQUAL:
+			cout << "equal";
+			break;
+		case FREQ_EMPIRICAL:
+			cout << "counted";
+			break;
+		case FREQ_USER_DEFINED:
+			cout << "user-defined";
+			break;
+		case FREQ_ESTIMATE:
+			cout << "optimized";
+			break;
+		default:
+			outError("Wrong specified state frequencies");
+		}
+		cout << " frequencies (" << model_df << " free parameters)" << endl;
 	}
-	cout << " frequencies (" << model_df << " free parameters)" << endl;
 	cout << "Fixed branch lengths: "
 			<< ((params.fixed_branch_length) ? "Yes" : "No") << endl;
 	cout << "Lambda for local search: " << params.lambda << endl;
@@ -1029,7 +1039,7 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	}
 	cout << "NNI cutoff: " << params.nni_cutoff << endl;
 	cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No")
-			<< endl;
+			<< endl << endl;
 }
 
 double doModelOptimization(IQTree& iqtree, Params& params) {
@@ -1676,11 +1686,19 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	if (iqtree.isSuperTree()) {
 		PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
 		int part = 0;
-		for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end();
-				it++, part++) {
-			rate_file = params.out_prefix;
-			rate_file = rate_file + "." + stree->part_info[part].name + ".rate";
-			(*it)->getRate()->writeSiteRates(rate_file.c_str());
+		try {
+			ofstream out;
+			out.exceptions(ios::failbit | ios::badbit);
+			out.open(rate_file.c_str());
+			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end();
+					it++, part++) {
+				out << "SITE RATES FOR PARTITION " << stree->part_info[part].name << ":" << endl;
+				(*it)->getRate()->writeSiteRates(out);
+			}
+			cout << "Site rates printed to " << rate_file << endl;
+			out.close();
+		} catch (ios::failure) {
+			outError(ERR_WRITE_OUTPUT, rate_file);
 		}
 	}
 
@@ -2087,7 +2105,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
 	mytree.printTree(out_file.c_str());
 	cout << "Tree with assigned bootstrap support written to " << out_file
 			<< endl;
-
+	/*
 	if (out_prefix)
 		out_file = out_prefix;
 	else
@@ -2096,7 +2114,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
 	mytree.writeInternalNodeNames(out_file);
 
 	cout << "Support values written to " << out_file << endl;
-
+	*/
 }
 
 void computeConsensusTree(const char *input_trees, int burnin, int max_count,

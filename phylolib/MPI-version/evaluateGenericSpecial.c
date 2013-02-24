@@ -664,7 +664,7 @@ void evaluateIterative(tree *tr)
 
 
 
-void evaluateGeneric (tree *tr, nodeptr p, boolean fullTraversal)
+void evaluateGeneric (tree *tr, nodeptr p, pl_boolean fullTraversal)
 {
   /* now this may be the entry point of the library to compute 
      the log like at a branch defined by p and p->back == q */
@@ -792,7 +792,7 @@ void evaluateGeneric (tree *tr, nodeptr p, boolean fullTraversal)
 
 #ifdef _OPTIMIZED_FUNCTIONS
 
-static inline boolean isGap(unsigned int *x, int pos)
+static inline pl_boolean isGap(unsigned int *x, int pos)
 {
   return (x[pos / 32] & mask32[pos % 32]);
 }

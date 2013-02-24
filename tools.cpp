@@ -2122,4 +2122,3 @@ double computePValueChiSquare (double x, int df)  /* x: obtained chi-square valu
 		return (s);
 }
 
-

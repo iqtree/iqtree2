@@ -62,7 +62,7 @@ extern char seq_file[1024];
 
 extern char *protModels[12];
 
-static boolean lineContainsOnlyWhiteChars(char *line)
+static pl_boolean lineContainsOnlyWhiteChars(char *line)
 {
   int i, n = strlen(line);
 
@@ -124,7 +124,7 @@ static void analyzeIdentifier(char **ch, int modelNumber, tree *tr)
     }
   else
     {
-      boolean found = FALSE;
+      pl_boolean found = FALSE;
       i = 0;
       while(ident[i] != ',')
 	{
@@ -827,7 +827,7 @@ void handleExcludeFile(tree *tr, analdef *adef, rawdata *rdta)
 	      
       for(i = 0; i < tr->NumberOfModels; i++)
 	{
-	  boolean modelStillExists = FALSE;
+	  pl_boolean modelStillExists = FALSE;
 		  
 	  for(j = 1; (j <= rdta->sites) && (!modelStillExists); j++)
 	    {

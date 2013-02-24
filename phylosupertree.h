@@ -199,6 +199,10 @@ public:
 	*/
 	vector<PartitionInfo> part_info; 
 
+    /**
+            get the name of the model
+    */
+    virtual string getModelName();
 	
 
 };

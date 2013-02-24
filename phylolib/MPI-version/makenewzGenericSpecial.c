@@ -848,9 +848,9 @@ static void topLevelMakenewz(tree *tr, double *z0, int _maxiter, double *result)
   double   z[NUM_BRANCHES], zprev[NUM_BRANCHES], zstep[NUM_BRANCHES];
   volatile double  dlnLdlz[NUM_BRANCHES], d2lnLdlz2[NUM_BRANCHES];
   int i, maxiter[NUM_BRANCHES], model;
-  boolean firstIteration = TRUE;
-  boolean outerConverged[NUM_BRANCHES];
-  boolean loopConverged;
+  pl_boolean firstIteration = TRUE;
+  pl_boolean outerConverged[NUM_BRANCHES];
+  pl_boolean loopConverged;
 
 
   /* figure out if this is on a per partition basis or jointly across all partitions */
@@ -1061,10 +1061,10 @@ static void topLevelMakenewz(tree *tr, double *z0, int _maxiter, double *result)
    between nodes p and q.
    The new branch lengths will be stored in result */
 
-void makenewzGeneric(tree *tr, nodeptr p, nodeptr q, double *z0, int maxiter, double *result, boolean mask)
+void makenewzGeneric(tree *tr, nodeptr p, nodeptr q, double *z0, int maxiter, double *result, pl_boolean mask)
 {
   int i;
-  boolean originalExecute[NUM_BRANCHES];
+  pl_boolean originalExecute[NUM_BRANCHES];
 
   /* the first entry of the traversal descriptor stores the node pair that defines 
      the branch */
@@ -1110,7 +1110,7 @@ void makenewzGeneric(tree *tr, nodeptr p, nodeptr q, double *z0, int maxiter, do
 /* below are, once again the optimized functions */
 
 #ifdef _OPTIMIZED_FUNCTIONS
-static inline boolean isGap(unsigned int *x, int pos)
+static inline pl_boolean isGap(unsigned int *x, int pos)
 {
   return (x[pos / 32] & mask32[pos % 32]);
 }

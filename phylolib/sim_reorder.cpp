@@ -24,7 +24,7 @@ namespace sim_reorder {
  we compute P(z1) and P(z2) here */
 
 void makeP(double z1, double z2, double *rptr, double *EI, double *EIGN,
-        int numberOfCategories, double *left, double *right, boolean saveMem,
+        int numberOfCategories, double *left, double *right, pl_boolean saveMem,
         int maxCat, const int states) {
     int i, j, k,
     /* square of the number of states = P-matrix size */

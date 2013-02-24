@@ -8,6 +8,10 @@
 #ifndef PHYLOLIB_H_
 #define PHYLOLIB_H_
 
+//#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,5 +23,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+
 
 #endif /* PHYLOLIB_H_ */

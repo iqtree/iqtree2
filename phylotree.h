@@ -226,7 +226,7 @@ public:
     /**
             get the name of the model
      */
-    string getModelName();
+    virtual string getModelName();
 
     ModelSubst *getModel() {
         return model;
@@ -683,7 +683,7 @@ public:
             search by a nearest neigbor interchange
             @return the likelihood of the tree
      */
-    virtual double optimizeNNI();
+    double optimizeNNI();
 
     /**
             search by a nearest neigbor interchange

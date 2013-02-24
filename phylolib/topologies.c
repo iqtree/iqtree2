@@ -29,7 +29,7 @@
  *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
  */
 
-#ifndef WIN32
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -207,7 +207,7 @@ static topol  *setupTopol (int maxtips)
   topol   *tpl;
 
   if (! (tpl = (topol *) malloc(sizeof(topol))) || 
-      ! (tpl->links = (connptr) malloc((2*maxtips-3) * sizeof(connect))))
+      ! (tpl->links = (connptr) malloc((2*maxtips-3) * sizeof(pl_connect))))
     {
       printf("ERROR: Unable to get topology memory");
       tpl = (topol *) NULL;
@@ -331,7 +331,7 @@ static void saveTree (tree *tr, topol *tpl)
 } /* saveTree */
 
 
-static boolean restoreTree (topol *tpl, tree *tr)
+static pl_boolean restoreTree (topol *tpl, tree *tr)
 { 
   connptr  r;
   nodeptr  p, p0;    
@@ -430,7 +430,7 @@ void resetBestTree (bestlist *bt)
 } /* resetBestTree */
 
 
-boolean  freeBestTree(bestlist *bt)
+pl_boolean  freeBestTree(bestlist *bt)
 { /* freeBestTree */
   while (bt->ninit >= 0)  freeTopol(bt->byScore[(bt->ninit)--]);
     

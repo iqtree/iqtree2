@@ -27,7 +27,7 @@
  *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
  */
 
-#ifndef WIN32
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <unistd.h>
 #endif
 
@@ -113,7 +113,7 @@ extern const unsigned int mask32[32];
  * 
  */
 
-void makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, boolean saveMem, int maxCat, const int states)
+void makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, pl_boolean saveMem, int maxCat, const int states)
 {
   int 
     i, 
@@ -715,7 +715,7 @@ static void newviewGAMMA_FLEX(int tipCase,
  *
  *
  */
-void computeTraversalInfo(nodeptr p, traversalInfo *ti, int *counter, int maxTips, int numBranches, boolean partialTraversal, recompVectors *rvec, boolean useRecom)
+void computeTraversalInfo(nodeptr p, traversalInfo *ti, int *counter, int maxTips, int numBranches, pl_boolean partialTraversal, recompVectors *rvec, pl_boolean useRecom)
 {
   /* if it's a tip we don't do anything */
 
@@ -1489,7 +1489,7 @@ void newviewIterative (tree *tr, int startIndex)
 
 }
 
-void computeTraversal(tree *tr, nodeptr p, boolean partialTraversal) 
+void computeTraversal(tree *tr, nodeptr p, pl_boolean partialTraversal) 
 {
   /* Only if we apply recomputations we need the additional step of updating the subtree lengths */
   if(tr->useRecom)
@@ -1517,7 +1517,7 @@ void computeTraversal(tree *tr, nodeptr p, boolean partialTraversal)
  *
  *
  */
-void newviewGeneric (tree *tr, nodeptr p, boolean masked)
+void newviewGeneric (tree *tr, nodeptr p, pl_boolean masked)
 {  
   /* if it's a tip there is nothing to do */
 
@@ -1953,7 +1953,7 @@ static char getStateCharacter(int dataType, int state)
  *
  * @note  Here one can see how to store the ancestral probabilities in a dedicated data structure
  */
-void printAncestralState(nodeptr p, boolean printStates, boolean printProbs, tree *tr)
+void printAncestralState(nodeptr p, pl_boolean printStates, pl_boolean printProbs, tree *tr)
 {
 #ifdef _USE_PTHREADS
   size_t 
@@ -1998,7 +1998,7 @@ void printAncestralState(nodeptr p, boolean printStates, boolean printProbs, tre
 	    equal = 1.0 / (double)states,
 	    max = -1.0;
 	    
-	  boolean
+	  pl_boolean
 	    approximatelyEqual = TRUE;
 
 	  int
@@ -3936,12 +3936,12 @@ static void newviewGTRCAT( int tipCase,  double *EV,  int *cptr,
   *scalerIncrement = addScale;
 }
 
-static inline boolean isGap(unsigned int *x, int pos)
+static inline pl_boolean isGap(unsigned int *x, int pos)
 {
   return (x[pos / 32] & mask32[pos % 32]);
 }
 
-static inline boolean noGap(unsigned int *x, int pos)
+static inline pl_boolean noGap(unsigned int *x, int pos)
 {
   return (!(x[pos / 32] & mask32[pos % 32]));
 }

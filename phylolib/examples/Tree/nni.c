@@ -10,11 +10,11 @@ void makeRandomTree(tree *tr);
 
 #ifdef __cplusplus
 extern "C" {
-boolean setupTree (tree *tr);
+pl_boolean setupTree (tree *tr);
 nodeptr pickRandomSubtree(tree *tr);
 }
 #else
-boolean setupTree (tree *tr);
+pl_boolean setupTree (tree *tr);
 #endif
 
 int  printBranchLengths;

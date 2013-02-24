@@ -27,16 +27,18 @@
  *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands of taxa and mixed models".
  *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
  */
-
+/*
 #ifdef WIN32
 #include <direct.h>
 #endif
-
-#ifndef WIN32
+*/
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <unistd.h>
+#else
+#include <direct.h>
 #endif
 
 #include <math.h>
@@ -588,7 +590,7 @@ static int mygetopt(int argc, char **argv, char *opts, int *optind, char **optar
 
 static void get_args(int argc, char *argv[], analdef *adef, tree *tr)
 {
-  boolean
+  pl_boolean
     bad_opt    =FALSE,
                resultDirSet = FALSE;
 
@@ -608,7 +610,7 @@ static void get_args(int argc, char *argv[], analdef *adef, tree *tr)
            treeSet = 0,
            modelSet = 0;
 
-  boolean
+  pl_boolean
     byteFileSet = FALSE;
 
 
@@ -908,7 +910,7 @@ static void initAdef(analdef *adef)
 /***************** UTILITY FUNCTIONS **************************/
 
 
-boolean getSmoothFreqs(int dataType)
+pl_boolean getSmoothFreqs(int dataType)
 {
   assert(MIN_MODEL < dataType && dataType < MAX_MODEL);
 
@@ -1101,7 +1103,7 @@ int main (int argc, char *argv[])
     tr->patratStored    = (double*)  malloc((size_t)tr->originalCrunchedLength * sizeof(double)); 
     tr->lhs             = (double*)  malloc((size_t)tr->originalCrunchedLength * sizeof(double)); 
 
-    tr->executeModel   = (boolean *)malloc(sizeof(boolean) * (size_t)tr->NumberOfModels);
+    tr->executeModel   = (pl_boolean *)malloc(sizeof(pl_boolean) * (size_t)tr->NumberOfModels);
 
     for(i = 0; i < (size_t)tr->NumberOfModels; i++)
       tr->executeModel[i] = TRUE;
@@ -1154,7 +1156,7 @@ int main (int argc, char *argv[])
       myBinFread(&(p->protModels),         sizeof(int), 1, byteFile);
       myBinFread(&(p->autoProtModels),     sizeof(int), 1, byteFile);
       myBinFread(&(p->protFreqs),          sizeof(int), 1, byteFile);
-      myBinFread(&(p->nonGTR),             sizeof(boolean), 1, byteFile);
+      myBinFread(&(p->nonGTR),             sizeof(pl_boolean), 1, byteFile);
       myBinFread(&(p->numberOfCategories), sizeof(int), 1, byteFile); 
 
       /* later on if adding secondary structure data

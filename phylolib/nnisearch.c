@@ -10,8 +10,8 @@
 #include "phylolib.h"
 #include <math.h>
 
-int treeReadLenString(const char *buffer, tree *tr, boolean readBranches,
-		boolean readNodeLabels, boolean topologyOnly) {
+int treeReadLenString(const char *buffer, tree *tr, pl_boolean readBranches,
+		pl_boolean readNodeLabels, pl_boolean topologyOnly) {
 	FILE *stream;
 
 	stream = fmemopen((char*)buffer, strlen(buffer), "r");

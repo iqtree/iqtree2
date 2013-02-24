@@ -29,7 +29,7 @@
  *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
  */
 
-#ifndef WIN32
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -3437,7 +3437,7 @@ l4:
 
 
 
-void makeGammaCats(double alpha, double *gammaRates, int K, boolean useMedian)
+void makeGammaCats(double alpha, double *gammaRates, int K, pl_boolean useMedian)
 {
   int 
     i;

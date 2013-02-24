@@ -126,7 +126,7 @@ static void state_free(state *s)
   free(s);
 }
 
-static char *Tree2StringRecomREC(char *treestr, tree *tr, nodeptr q, boolean printBranchLengths)
+static char *Tree2StringRecomREC(char *treestr, tree *tr, nodeptr q, pl_boolean printBranchLengths)
 {
   char  *nameptr;            
   double z;
@@ -192,13 +192,13 @@ static double exp_pdf(double lambda, double x)
   return (lambda * exp(-(lambda * x))); 
 }
 
-static void printSimpleTree(tree *tr, boolean printBranchLengths, analdef *adef)
+static void printSimpleTree(tree *tr, pl_boolean printBranchLengths, analdef *adef)
 {
   Tree2String(tr->tree_string, tr, tr->start->back, printBranchLengths, 1, 0, 0, 0, SUMMARIZE_LH, 0,0);
   fprintf(stderr, "%s\n", tr->tree_string);
 }
 
-static void printRecomTree(tree *tr, boolean printBranchLengths, char *title)
+static void printRecomTree(tree *tr, pl_boolean printBranchLengths, char *title)
 {
   FILE *nwfile;
   nwfile = myfopen("tmp.nw", "w+");
@@ -356,7 +356,7 @@ static nodeptr selectRandomInnerSubtree(tree *tr)
   return p;
 }
 
-static boolean simpleNodeProposal(state * instate)
+static pl_boolean simpleNodeProposal(state * instate)
 {
   //prior is flat for these moves
   instate->newprior = 1;
@@ -445,7 +445,7 @@ static showNNI_move(nodeptr p)
       q->next->next->back->number,  q->next->next->back->z[0]);
 }
 //setting this out to allow for other types of setting
-static void set_branch_length_sliding_window(nodeptr p, int numBranches,state * s, boolean record_tmp_bl)
+static void set_branch_length_sliding_window(nodeptr p, int numBranches,state * s, pl_boolean record_tmp_bl)
 {
   int i;
   double new_value;
@@ -475,7 +475,7 @@ static void hookupBL(nodeptr p, nodeptr q, nodeptr bl_p, state *s)
    set_branch_length_sliding_window(bl_p, s->tr->numBranches, s, FALSE);
    hookup(p, q, bl_p->z, s->tr->numBranches);
 }
-static boolean stNNIproposal(state *s)
+static pl_boolean stNNIproposal(state *s)
 {
   //s->newprior = 1;
   s->bl_prior = 0;
@@ -499,7 +499,7 @@ static boolean stNNIproposal(state *s)
   recordNNIBranchInfo(p, s->tr->numBranches);
   /* do only one type of NNI, nni1 */
   double randprop = (double)rand()/(double)RAND_MAX;
-  boolean changeBL = TRUE;
+  pl_boolean changeBL = TRUE;
   if (randprop < 1.0 / 3.0)
   {
     s->whichNNI = 1;
@@ -614,7 +614,7 @@ reset_stNNI(state *s)
 /* end NNI topologycal prop */
 
 
-static void traverse_branches(nodeptr p, int *count, state * s, boolean resetBL)
+static void traverse_branches(nodeptr p, int *count, state * s, pl_boolean resetBL)
 {
   nodeptr q;
   //printf("current BL at %db%d: %f\n", p->number, p->back->number, p->z[0]);
@@ -637,7 +637,7 @@ static void traverse_branches(nodeptr p, int *count, state * s, boolean resetBL)
   }
 }
 
-static void update_all_branches(state * s, boolean resetBL)
+static void update_all_branches(state * s, pl_boolean resetBL)
 {
   int updated_branches = 0;
   assert(isTip(s->tr->start->number, s->tr->mxtips));
@@ -656,7 +656,7 @@ static void set_start_bl(state * instate)
  * should be sliding window proposal
  */
 
-static boolean simpleBranchLengthProposal(state * instate)
+static pl_boolean simpleBranchLengthProposal(state * instate)
 {
    
   //for each branch get the current branch length
@@ -821,7 +821,7 @@ static prop proposal(state * instate)
 /* so here the idea would be to randomly choose among proposals? we can use typedef enum to label each, and return that */ 
 {
   double randprop = (double)rand()/(double)RAND_MAX;
-  boolean proposalSuccess;
+  pl_boolean proposalSuccess;
   //double start_LH = evaluateGeneric(instate->tr, instate->tr->start); /* for validation */
   prop proposal_type;
   //simple proposal
@@ -967,8 +967,8 @@ void mcmc(tree *tr, analdef *adef)
   int accepted_spr = 0, accepted_nni = 0, accepted_bl = 0, accepted_model = 0, accepted_gamma = 0, inserts = 0;
   int rejected_spr = 0, rejected_nni = 0, rejected_bl = 0, rejected_model = 0, rejected_gamma = 0;
   int num_moves = 10000;
-  boolean proposalAccepted;
-  boolean proposalSuccess;
+  pl_boolean proposalAccepted;
+  pl_boolean proposalSuccess;
   prop which_proposal;
   double testr;
   double acceptance;
@@ -1122,7 +1122,7 @@ void mcmc(tree *tr, analdef *adef)
     {
       t = gettime(); 
       printBothOpen("sampled at iter %d, tr LH %f, startLH %f, prior %f, incr %f\n",j, tr->likelihood, tr->startLH, curstate->curprior, tr->likelihood - tr->startLH);
-      boolean printBranchLengths = TRUE;
+      pl_boolean printBranchLengths = TRUE;
       /*printSimpleTree(tr, printBranchLengths, adef);*/
       //TODO: print some parameters to a file 
       printStateFile(j,curstate);

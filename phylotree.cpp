@@ -72,6 +72,7 @@ void PhyloTree::init() {
     discard_saturated_site = true;
     _pattern_lh = NULL;
     root_state = STATE_UNKNOWN;
+	theta_all = NULL;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) :

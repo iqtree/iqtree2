@@ -67,7 +67,7 @@ void restore_vector(tree *tr, nodeptr p, likelihood_vector *v)
   }
 }
 
-boolean same_vector(tree *tr, nodeptr p, likelihood_vector *v)
+pl_boolean same_vector(tree *tr, nodeptr p, likelihood_vector *v)
 {
   int i, model;
   for(model=0; model<tr->NumberOfModels; model++)

@@ -38,8 +38,7 @@ RateHeterogeneity::~RateHeterogeneity()
 {
 }
 
-
-void RateHeterogeneity::writeSiteRates(const char *file_name) {
+void RateHeterogeneity::writeSiteRates(ostream &out) {
 	DoubleVector pattern_rates;
 	IntVector pattern_cat;
 	computePatternRates(pattern_rates, pattern_cat);
@@ -48,22 +47,31 @@ void RateHeterogeneity::writeSiteRates(const char *file_name) {
 	int nsite = phylo_tree->aln->getNSite();
 	int i;
 	
+	out.setf(ios::fixed,ios::floatfield);
+	out.precision(5);
+	out << "Site\tRate";
+	if (!pattern_cat.empty()) out << "\tCategory\tCategorized_rate";
+	out << endl;
+	for (i = 0; i < nsite; i++) {
+		int ptn = phylo_tree->aln->getPatternID(i);
+		out << i+1 << "\t";
+		if (pattern_rates[ptn] >= MAX_SITE_RATE) out << "100.0"; else out << pattern_rates[ptn];
+		if (!pattern_cat.empty()) out << "\t" << pattern_cat[ptn]+1 << "\t" << getRate(pattern_cat[ptn]);
+		out << endl;
+	}
+}
+
+void RateHeterogeneity::writeSiteRates(const char *file_name) {
+	DoubleVector pattern_rates;
+	IntVector pattern_cat;
+	computePatternRates(pattern_rates, pattern_cat);
+	if (pattern_rates.empty()) return;
+
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(file_name);
-		out.setf(ios::fixed,ios::floatfield);
-		out.precision(5);
-		out << "Site\tRate";
-		if (!pattern_cat.empty()) out << "\tCategory\tCategorized_rate";
-		out << endl;
-		for (i = 0; i < nsite; i++) {
-			int ptn = phylo_tree->aln->getPatternID(i);
-			out << i+1 << "\t";
-			if (pattern_rates[ptn] >= MAX_SITE_RATE) out << "100.0"; else out << pattern_rates[ptn];
-			if (!pattern_cat.empty()) out << "\t" << pattern_cat[ptn]+1 << "\t" << getRate(pattern_cat[ptn]);
-			out << endl;
-		}
+		writeSiteRates(out);
 		out.close();
 		cout << "Site rates printed to " << file_name << endl;
 	} catch (ios::failure) {

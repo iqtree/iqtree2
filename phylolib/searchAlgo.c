@@ -28,7 +28,7 @@
  *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
  */
 
-#ifndef WIN32
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -69,7 +69,7 @@ extern partitionLengths pLengths[MAX_MODEL];
 extern char binaryCheckpointName[1024];
 extern char binaryCheckpointInputName[1024];
 
-boolean initrav (tree *tr, nodeptr p)
+pl_boolean initrav (tree *tr, nodeptr p)
 { 
   nodeptr  q;
 
@@ -184,10 +184,10 @@ void smooth (tree *tr, nodeptr p)
        otherwise \b TRUE.
              
 */
-static boolean allSmoothed(tree *tr)
+static pl_boolean allSmoothed(tree *tr)
 {
   int i;
-  boolean result = TRUE;
+  pl_boolean result = TRUE;
 
   for(i = 0; i < tr->numBranches; i++)
   {
@@ -585,7 +585,7 @@ nodeptr  removeNodeRestoreBIG (tree *tr, nodeptr p)
 }
 
 
-boolean insertBIG (tree *tr, nodeptr p, nodeptr q, int numBranches)
+pl_boolean insertBIG (tree *tr, nodeptr p, nodeptr q, int numBranches)
 {
   nodeptr  r, s;
   int i;
@@ -676,7 +676,7 @@ boolean insertBIG (tree *tr, nodeptr p, nodeptr q, int numBranches)
   return  TRUE;
 }
 
-boolean insertRestoreBIG (tree *tr, nodeptr p, nodeptr q)
+pl_boolean insertRestoreBIG (tree *tr, nodeptr p, nodeptr q)
 {
   nodeptr  r, s;
 
@@ -784,11 +784,11 @@ static void restoreTopologyOnly(tree *tr, bestlist *bt)
 }
 
 
-boolean testInsertBIG (tree *tr, nodeptr p, nodeptr q)
+pl_boolean testInsertBIG (tree *tr, nodeptr p, nodeptr q)
 {
   double  qz[NUM_BRANCHES], pz[NUM_BRANCHES];
   nodeptr  r;
-  boolean doIt = TRUE;
+  pl_boolean doIt = TRUE;
   double startLH = tr->endLH;
   int i;
 
@@ -883,7 +883,7 @@ int rearrangeBIG(tree *tr, nodeptr p, int mintrav, int maxtrav)
   double   p1z[NUM_BRANCHES], p2z[NUM_BRANCHES], q1z[NUM_BRANCHES], q2z[NUM_BRANCHES];
   nodeptr  p1, p2, q, q1, q2;
   int      mintrav2, i;  
-  boolean doP = TRUE, doQ = TRUE;
+  pl_boolean doP = TRUE, doQ = TRUE;
 
   if (maxtrav < 1 || mintrav > maxtrav)  return 0;
   q = p->back;
@@ -1115,7 +1115,7 @@ static double treeOptimizeRapid(tree *tr, int mintrav, int maxtrav, analdef *ade
 
 
 
-boolean testInsertRestoreBIG (tree *tr, nodeptr p, nodeptr q)
+pl_boolean testInsertRestoreBIG (tree *tr, nodeptr p, nodeptr q)
 {    
   if(tr->thoroughInsertion)
   {
@@ -1357,7 +1357,7 @@ static void readTree(tree *tr, FILE *f)
     size_t         
       offset;
 
-    boolean 
+    pl_boolean 
       addIt;
 
     if(startAddress > tr->nodeBaseAddress)
@@ -1621,7 +1621,7 @@ int determineRearrangementSetting(tree *tr,  analdef *adef, bestlist *bestT, bes
   double 
     startLH = tr->likelihood; 
 
-  boolean 
+  pl_boolean 
     impr   = TRUE,
            cutoff = tr->doCutoff;
 
@@ -1728,7 +1728,7 @@ int determineRearrangementSetting(tree *tr,  analdef *adef, bestlist *bestT, bes
 
 
 
-void computeBIGRAPID (tree *tr, analdef *adef, boolean estimateModel) 
+void computeBIGRAPID (tree *tr, analdef *adef, pl_boolean estimateModel) 
 {   
   int
     i,
@@ -2283,7 +2283,7 @@ cleanup:
 
 
 /* The number of maximum smoothing iterations is given explicitely */
-boolean 
+pl_boolean 
 treeEvaluate (tree *tr, int maxSmoothIterations)       /* Evaluate a user tree */
 {
   

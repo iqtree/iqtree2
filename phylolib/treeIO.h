@@ -16,7 +16,7 @@ It make things much easier for the integration with other software.
 
 #include "axml.h"
 
-char *Tree2String(char *treestr, tree *tr, nodeptr p, boolean printBranchLengths, boolean printNames, boolean printLikelihood,
-		  boolean rellTree, boolean finalPrint, int perGene, boolean branchLabelSupport, boolean printSHSupport);
+char *Tree2String(char *treestr, tree *tr, nodeptr p, pl_boolean printBranchLengths, pl_boolean printNames, pl_boolean printLikelihood,
+		  pl_boolean rellTree, pl_boolean finalPrint, int perGene, pl_boolean branchLabelSupport, pl_boolean printSHSupport);
 
 #endif /* TREEIO_H_ */

@@ -1,17 +1,22 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/resource.h>
-
 #include "phylolib/axml.h"
 #define GLOBAL_VARIABLES_DEFINITION
 #include "phylolib/globalVariables.h"
 #include "nnisearch.h"
 #include "phylolib.h"
 #include <math.h>
+#include "fmemopen.h"
 
-int treeReadLenString(const char *buffer, tree *tr, boolean readBranches,
-		boolean readNodeLabels, boolean topologyOnly) {
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
+#include <sys/resource.h>
+#endif
+
+
+int treeReadLenString(const char *buffer, tree *tr, pl_boolean readBranches,
+		pl_boolean readNodeLabels, pl_boolean topologyOnly) {
 	FILE *stream;
 
 	stream = fmemopen((char*)buffer, strlen(buffer), "r");
@@ -469,7 +474,3 @@ void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* cnt, int* cnt
 		}
 	}
 }
-
-
-
-

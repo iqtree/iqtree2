@@ -173,7 +173,7 @@ void printBothOpenMPI(const char* format, ... )
 }
 
 
-boolean getSmoothFreqs(int dataType)
+pl_boolean getSmoothFreqs(int dataType)
 {
   assert(MIN_MODEL < dataType && dataType < MAX_MODEL);
 
@@ -398,7 +398,7 @@ static void getnums (rawdata *rdta)
 
 
 
-boolean whitechar (int ch)
+pl_boolean whitechar (int ch)
 {
   return (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r');
 }
@@ -470,7 +470,7 @@ static unsigned int KISS32(void)
   return (x+y+w);
 }
 
-static boolean setupTree (tree *tr, analdef *adef)
+static pl_boolean setupTree (tree *tr, analdef *adef)
 {
   nodeptr  p0, p, q;
   int
@@ -576,7 +576,7 @@ static boolean setupTree (tree *tr, analdef *adef)
 
   tr->vLength = 0;
 
-  tr->h = (hashtable*)NULL;
+  tr->h = (pl_hashtable*)NULL;
 
 
   return TRUE;
@@ -589,7 +589,7 @@ static void checkTaxonName(char *buffer, int len)
 
   for(i = 0; i < len - 1; i++)
     {
-      boolean valid;
+      pl_boolean valid;
 
       switch(buffer[i])
 	{
@@ -623,7 +623,7 @@ static void checkTaxonName(char *buffer, int len)
   assert(buffer[len - 1] == '\0');
 }
 
-static boolean getdata(analdef *adef, rawdata *rdta, tree *tr)
+static pl_boolean getdata(analdef *adef, rawdata *rdta, tree *tr)
 {
   int   
     i, 
@@ -638,7 +638,7 @@ static boolean getdata(analdef *adef, rawdata *rdta, tree *tr)
     meaningGeneric32[256],
     meaningGeneric64[256];
   
-  boolean  
+  pl_boolean  
     allread, 
     firstpass;
   
@@ -1455,7 +1455,7 @@ static void sitesort(rawdata *rdta, cruncheddata *cdta, tree *tr, analdef *adef)
     *index, 
     *category = (int*)NULL;
 
-  boolean  flip, tied;
+  pl_boolean  flip, tied;
   unsigned char  **data;
 
   if(adef->useSecondaryStructure)
@@ -1526,7 +1526,7 @@ static void sitesort(rawdata *rdta, cruncheddata *cdta, tree *tr, analdef *adef)
 static void sitecombcrunch (rawdata *rdta, cruncheddata *cdta, tree *tr, analdef *adef)
 {
   int  i, sitei, j, sitej, k;
-  boolean  tied;
+  pl_boolean  tied;
   int 
     *aliasModel = (int*)NULL,
     *aliasSuperModel = (int*)NULL;
@@ -1654,7 +1654,7 @@ static void sitecombcrunch (rawdata *rdta, cruncheddata *cdta, tree *tr, analdef
 }
 
 
-static boolean makeweights (analdef *adef, rawdata *rdta, cruncheddata *cdta, tree *tr)
+static pl_boolean makeweights (analdef *adef, rawdata *rdta, cruncheddata *cdta, tree *tr)
 {
   int  i;
 
@@ -1679,7 +1679,7 @@ static boolean makeweights (analdef *adef, rawdata *rdta, cruncheddata *cdta, tr
 
 
 
-static boolean makevalues(rawdata *rdta, cruncheddata *cdta, tree *tr, analdef *adef)
+static pl_boolean makevalues(rawdata *rdta, cruncheddata *cdta, tree *tr, analdef *adef)
 {
   int  
     i, 
@@ -2063,7 +2063,7 @@ static void analyzeRunId(char id[128])
 
 static void get_args(int argc, char *argv[], analdef *adef, tree *tr)
 {
-  boolean
+  pl_boolean
     bad_opt    =FALSE,
     resultDirSet = FALSE;
 
@@ -2422,7 +2422,7 @@ static void smoothFreqs(const int n, double *pfreqs, double *dst, pInfo *partiti
 }
 	    
 
-static void genericBaseFrequencies(tree *tr, const int numFreqs, rawdata *rdta, cruncheddata *cdta, int lower, int upper, int model, boolean smoothFrequencies,
+static void genericBaseFrequencies(tree *tr, const int numFreqs, rawdata *rdta, cruncheddata *cdta, int lower, int upper, int model, pl_boolean smoothFrequencies,
 				   const unsigned int *bitMask)
 {
   double 
@@ -2495,7 +2495,7 @@ static void genericBaseFrequencies(tree *tr, const int numFreqs, rawdata *rdta, 
     smoothFreqs(numFreqs, pfreqs,  tr->partitionData[model].frequencies, &(tr->partitionData[model]));	   
   else    
     {
-      boolean 
+      pl_boolean 
 	zeroFreq = FALSE;
 
       char 
@@ -2722,7 +2722,7 @@ int main (int argc, char *argv[])
 	myBinFwrite(&(p->protModels),         sizeof(int), 1);
 	myBinFwrite(&(p->autoProtModels),     sizeof(int), 1);
 	myBinFwrite(&(p->protFreqs),          sizeof(int), 1);
-	myBinFwrite(&(p->nonGTR),             sizeof(boolean), 1);
+	myBinFwrite(&(p->nonGTR),             sizeof(pl_boolean), 1);
 	myBinFwrite(&(p->numberOfCategories), sizeof(int), 1);	 
 	
 	/* later on if adding secondary structure data

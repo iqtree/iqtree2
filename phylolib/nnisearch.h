@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-extern int treeReadLenString (const char *buffer, tree *tr, boolean readBranches, boolean readNodeLabels, boolean topologyOnly);
+extern int treeReadLenString (const char *buffer, tree *tr, pl_boolean readBranches, pl_boolean readNodeLabels, pl_boolean topologyOnly);
 
 
 #define MAX_NUM_DELTA 10000

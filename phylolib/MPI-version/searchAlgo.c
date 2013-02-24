@@ -64,7 +64,7 @@ extern char binaryCheckpointInputName[1024];
 
 extern int processID;
 
-boolean initrav (tree *tr, nodeptr p)
+pl_boolean initrav (tree *tr, nodeptr p)
 { 
   nodeptr  q;
   
@@ -96,10 +96,10 @@ boolean initrav (tree *tr, nodeptr p)
 
 
 
-boolean update(tree *tr, nodeptr p)
+pl_boolean update(tree *tr, nodeptr p)
 {       
   nodeptr  q; 
-  boolean smoothedPartitions[NUM_BRANCHES];
+  pl_boolean smoothedPartitions[NUM_BRANCHES];
   int i;
   double   z[NUM_BRANCHES], z0[NUM_BRANCHES];
   double _deltaz;
@@ -143,7 +143,7 @@ boolean update(tree *tr, nodeptr p)
 
 
 
-boolean smooth (tree *tr, nodeptr p)
+pl_boolean smooth (tree *tr, nodeptr p)
 {
   nodeptr  q;
   
@@ -166,10 +166,10 @@ boolean smooth (tree *tr, nodeptr p)
   return TRUE;
 } 
 
-static boolean allSmoothed(tree *tr)
+static pl_boolean allSmoothed(tree *tr)
 {
   int i;
-  boolean result = TRUE;
+  pl_boolean result = TRUE;
   
   for(i = 0; i < tr->numBranches; i++)
     {
@@ -184,7 +184,7 @@ static boolean allSmoothed(tree *tr)
 
 
 
-boolean smoothTree (tree *tr, int maxtimes)
+pl_boolean smoothTree (tree *tr, int maxtimes)
 {
   nodeptr  p, q;   
   int i, count = 0;
@@ -225,7 +225,7 @@ boolean smoothTree (tree *tr, int maxtimes)
 
 
 
-boolean localSmooth (tree *tr, nodeptr p, int maxtimes)
+pl_boolean localSmooth (tree *tr, nodeptr p, int maxtimes)
 { 
   nodeptr  q;
   int i;
@@ -326,7 +326,7 @@ void insertInfoList(nodeptr node, double likelihood)
 }
 
 
-boolean smoothRegion (tree *tr, nodeptr p, int region)
+pl_boolean smoothRegion (tree *tr, nodeptr p, int region)
 { 
   nodeptr  q;
   
@@ -350,7 +350,7 @@ boolean smoothRegion (tree *tr, nodeptr p, int region)
   return TRUE;
 }
 
-boolean regionalSmooth (tree *tr, nodeptr p, int maxtimes, int region)
+pl_boolean regionalSmooth (tree *tr, nodeptr p, int maxtimes, int region)
   {
     nodeptr  q;
     int i;
@@ -431,7 +431,7 @@ nodeptr  removeNodeRestoreBIG (tree *tr, nodeptr p)
 }
 
 
-boolean insertBIG (tree *tr, nodeptr p, nodeptr q, int numBranches)
+pl_boolean insertBIG (tree *tr, nodeptr p, nodeptr q, int numBranches)
 {
   nodeptr  r, s;
   int i;
@@ -518,7 +518,7 @@ boolean insertBIG (tree *tr, nodeptr p, nodeptr q, int numBranches)
   return  TRUE;
 }
 
-boolean insertRestoreBIG (tree *tr, nodeptr p, nodeptr q)
+pl_boolean insertRestoreBIG (tree *tr, nodeptr p, nodeptr q)
 {
   nodeptr  r, s;
   
@@ -628,11 +628,11 @@ static void restoreTopologyOnly(tree *tr, bestlist *bt, bestlist *bestML)
 }
 
 
-boolean testInsertBIG (tree *tr, nodeptr p, nodeptr q)
+pl_boolean testInsertBIG (tree *tr, nodeptr p, nodeptr q)
 {
   double  qz[NUM_BRANCHES], pz[NUM_BRANCHES];
   nodeptr  r;
-  boolean doIt = TRUE;
+  pl_boolean doIt = TRUE;
   double startLH = tr->endLH;
   int i;
   
@@ -730,7 +730,7 @@ int rearrangeBIG(tree *tr, nodeptr p, int mintrav, int maxtrav)
   double   p1z[NUM_BRANCHES], p2z[NUM_BRANCHES], q1z[NUM_BRANCHES], q2z[NUM_BRANCHES];
   nodeptr  p1, p2, q, q1, q2;
   int      mintrav2, i;  
-  boolean doP = TRUE, doQ = TRUE;
+  pl_boolean doP = TRUE, doQ = TRUE;
   
   if (maxtrav < 1 || mintrav > maxtrav)  return 0;
   q = p->back;
@@ -964,7 +964,7 @@ double treeOptimizeRapid(tree *tr, int mintrav, int maxtrav, analdef *adef, best
 
 
 
-boolean testInsertRestoreBIG (tree *tr, nodeptr p, nodeptr q)
+pl_boolean testInsertRestoreBIG (tree *tr, nodeptr p, nodeptr q)
 {    
   if(Thorough)
     {
@@ -1167,7 +1167,7 @@ static void readTree(tree *tr, FILE *f)
     size_t         
       offset;
 
-    boolean 
+    pl_boolean 
       addIt;
 
     if(startAddress > tr->nodeBaseAddress)
@@ -1355,7 +1355,7 @@ int determineRearrangementSetting(tree *tr,  analdef *adef, bestlist *bestT, bes
   double 
     startLH = tr->likelihood; 
   
-  boolean 
+  pl_boolean 
     impr   = TRUE,
     cutoff = tr->doCutoff;
    
@@ -1499,7 +1499,7 @@ int determineRearrangementSetting(tree *tr,  analdef *adef, bestlist *bestT, bes
 
 
 
-void computeBIGRAPID (tree *tr, analdef *adef, boolean estimateModel) 
+void computeBIGRAPID (tree *tr, analdef *adef, pl_boolean estimateModel) 
 {   
   int
     i,
@@ -2219,9 +2219,9 @@ void computeBIGRAPID (tree *tr, analdef *adef, boolean estimateModel)
 
 
 
-boolean treeEvaluate (tree *tr, double smoothFactor)       /* Evaluate a user tree */
+pl_boolean treeEvaluate (tree *tr, double smoothFactor)       /* Evaluate a user tree */
 {
-  boolean result;
+  pl_boolean result;
 
  
   result = smoothTree(tr, (int)((double)smoothings * smoothFactor));

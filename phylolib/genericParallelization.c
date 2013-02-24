@@ -25,7 +25,7 @@
 extern unsigned int* mask32; 
 extern volatile int jobCycle; 
 extern volatile int threadJob; 
-extern boolean treeIsInitialized; 
+extern pl_boolean treeIsInitialized; 
 
 #ifdef MEASURE_TIME_PARALLEL
 extern double masterTimePerPhase; 
@@ -87,7 +87,7 @@ void initMPI(int argc, char *argv[])
     @param tr the tree 
 
  */ 
-boolean workerTrap(tree *tr)
+pl_boolean workerTrap(tree *tr)
 {
   /// @note for the broadcasting, we need to, if the tree structure has already been initialized 
   treeIsInitialized = FALSE; 
@@ -239,7 +239,7 @@ static void reduceTimesWorkerRegions(tree *tr, double *mins, double *maxs)
     {      
       for(j = 0; j < NUM_PAR_JOBS; ++j)
 	{
-	  boolean isFirst = TRUE; 
+	  pl_boolean isFirst = TRUE; 
 	  for(i = 0; i < tr->numberOfThreads; ++i)
 	    {	      
 	      double num = timeBuffer[i * NUM_PAR_JOBS + j]; 
@@ -300,7 +300,7 @@ void perSiteLogLikelihoodsPthreads(tree *tr, double *lhs, int n, int tid)
 	 or when -Q is not activated figure out which sites have been assigned to the 
 	 current thread */
 
-      boolean 
+      pl_boolean 
 	execute = ((tr->manyPartitions && isThisMyPartition(tr, tid, model)) || (!tr->manyPartitions));
 
       /* if the entire partition has been assigned to this thread (-Q) or if -Q is not activated 
@@ -349,7 +349,7 @@ void perSiteLogLikelihoodsPthreads(tree *tr, double *lhs, int n, int tid)
     @param tid the thread id
     @param model the partition id
  */ 
-boolean isThisMyPartition(tree *localTree, int tid, int model)
+pl_boolean isThisMyPartition(tree *localTree, int tid, int model)
 { 
   if(localTree->partitionAssignment[model] == tid)
     return TRUE;
@@ -468,7 +468,7 @@ void multiprocessorScheduling(tree *tr, int tid)
 
       for(model = 0; model < tr->NumberOfModels; model++)
 	{        
-	  boolean 
+	  pl_boolean 
 	    exists = FALSE;
 
 	  for(s = 0; s < arrayLength; s++)
@@ -620,7 +620,7 @@ void branchLength_parallelReduce(tree *tr, double *dlnLdlz,  double *d2lnLdlz2 )
    @param countOnly  if TRUE, simply return the number of elements 
 
 */
-static int doublesToBuffer(double *buf, double *srcTar, tree *tr, int n, int tid, boolean read, boolean countOnly)
+static int doublesToBuffer(double *buf, double *srcTar, tree *tr, int n, int tid, pl_boolean read, pl_boolean countOnly)
 {
   int 
     model,
@@ -921,7 +921,7 @@ inline static void broadcastTraversalInfo(tree *localTree, tree *tr)
   localTree->td[0].count =                   tr->td[0].count ;
   localTree->td[0].traversalHasChanged =     tr->td[0].traversalHasChanged;
 
-  memmove(localTree->td[0].executeModel,    tr->td[0].executeModel,    sizeof(boolean) * localTree->NumberOfModels);
+  memmove(localTree->td[0].executeModel,    tr->td[0].executeModel,    sizeof(pl_boolean) * localTree->NumberOfModels);
   memmove(localTree->td[0].parameterValues, tr->td[0].parameterValues, sizeof(double) * localTree->NumberOfModels);
   
   if(localTree->td[0].traversalHasChanged)
@@ -1032,7 +1032,7 @@ char* getJobName(int type)
    @param tid worker id 
    @param n number of workers 
 */
-boolean execFunction(tree *tr, tree *localTree, int tid, int n)
+pl_boolean execFunction(tree *tr, tree *localTree, int tid, int n)
 {
   int
     i,
@@ -1567,7 +1567,7 @@ static void assignAndInitPart1(tree *localTree, tree *tr, int *tid)
       localTree->partitionContributions  = (double*)malloc(sizeof(double)   * (size_t)localTree->NumberOfModels);
       localTree->partitionData           = (pInfo*)malloc(sizeof(pInfo)     * (size_t)localTree->NumberOfModels);
       localTree->td[0].ti              = (traversalInfo *)malloc(sizeof(traversalInfo) * (size_t)localTree->mxtips);
-      localTree->td[0].executeModel    = (boolean *)malloc(sizeof(boolean) * (size_t)localTree->NumberOfModels);
+      localTree->td[0].executeModel    = (pl_boolean *)malloc(sizeof(pl_boolean) * (size_t)localTree->NumberOfModels);
       localTree->td[0].parameterValues = (double *)malloc(sizeof(double) * (size_t)localTree->NumberOfModels);
       localTree->patrat       = (double*)malloc(sizeof(double) * (size_t)localTree->originalCrunchedLength);
       localTree->patratStored = (double*)malloc(sizeof(double) * (size_t)localTree->originalCrunchedLength);            
