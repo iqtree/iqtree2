@@ -1311,7 +1311,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	if (!params.user_file) {
 		iqtree.computeBioNJ(params, alignment, dist_file);
-		iqtree.fixNegativeBranch(false);
+		iqtree.fixNegativeBranch(true);
 		if (iqtree.isSuperTree())
 			((PhyloSuperTree*) (&iqtree))->mapTrees();
 

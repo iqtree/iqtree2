@@ -1027,7 +1027,9 @@ double IQTree::doIQPNNI() {
 			} else {
 				if (!params->raxmllib) {
 					curScore = doIQP();
-					cout << "LH IQP = " << curScore << endl;
+					if (verbose_mode >= VB_MED) {
+						cout << "LH IQP = " << curScore << endl;
+					}
 				} else {
 					doIQP();
 					//printTree( (string(params->out_prefix) + ".iqp_before." + convertIntToString(cur_iteration)).c_str() );

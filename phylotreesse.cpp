@@ -44,8 +44,8 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
         computePartialLikelihoodSSE<NSTATES>(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihoodSSE<NSTATES>(node_branch, node);
-    // now combine likelihood at the branch
 
+    // now combine likelihood at the branch
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     int ptn, cat, state1, state2;
     double *partial_lh_site;
@@ -464,6 +464,7 @@ void PhyloTree::computeThetaNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
         computePartialLikelihood(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihood(node_branch, node);
+
     double *partial_lh_site = node_branch->partial_lh;
     double *partial_lh_child = dad_branch->partial_lh;
     double *theta_ptn = theta_all;
@@ -474,80 +475,34 @@ void PhyloTree::computeThetaNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     GTRModel* gtr_model = reinterpret_cast<GTRModel *>(model);
     //double* eigen_coff = gtr_model->getEigenCoeff();
     double** inv_eigen_vector = gtr_model->getInverseEigenvectors();
-    //double** eigen_vector = gtr_model->getInverseEigenvectors();
+    double** eigen_vector = gtr_model->getEigenvectors();
+	double* partial_lh_child_ptn = partial_lh_child;
+	double* partial_lh_site_ptn = partial_lh_site;
 
 	int numStates = aln->num_states;
 	for (int ptn = 0; ptn < alnSize; ++ptn) {
-		for (int k = 0; k < num_cat; ++k) {
-			for (int i = 0; i < numStates; ++i) {
+	    for (int i = 0; i < numStates; ++i) {
+	    	partial_lh_child_ptn = partial_lh_child + ptn * numStates * num_cat;
+	    	partial_lh_site_ptn = partial_lh_site + ptn * numStates * num_cat;
+		    for (int c = 0; c < num_cat; ++c) {
 				double term1 = 0;
 				double term2 = 0;
 				for (int x = 0; x < numStates; ++x) {
 					// Compute Sigma_x pi_x u_xi L^h_a(x,c)
-					term1 += inv_eigen_vector[i][x] * partial_lh_site[x];
-					term2 += inv_eigen_vector[i][x] * partial_lh_child[x];
+					term1 += inv_eigen_vector[i][x] * partial_lh_site_ptn[x];
+				    //term1 += state_freq[x] * partial_lh_site[x] * eigen_vector[x][i];
+					term2 += inv_eigen_vector[i][x] * partial_lh_child_ptn[x];
 				}
+	            partial_lh_child_ptn += numStates;
+	            partial_lh_site_ptn += numStates;
 				*theta_ptn = term1 * term2;
 				theta_ptn++;
-
-			} // for i states
-			partial_lh_child += numStates;
-			partial_lh_site += numStates;
-
-		} //for k categories
-	} // for ptn
+			}
+		}
+	}
 	delete[] state_freq;
 }
-/*
-void PhyloTree::computeThetaNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    //cout << "Computing theta vector " << endl;
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    assert(node_branch);
-    // swap node and dad if node is a leaf
-    if (node->isLeaf()) {
-        PhyloNode *tmp_node = dad;
-        dad = node;
-        node = tmp_node;
-        PhyloNeighbor *tmp_nei = dad_branch;
-        dad_branch = node_branch;
-        node_branch = tmp_nei;
-    }
-    if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihood(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihood(node_branch, node);
-    double *partial_lh_site = node_branch->partial_lh;
-    double *partial_lh_child = dad_branch->partial_lh;
-    double *theta_ptn = theta_all;
-    int alnSize = aln->getNPattern();
-    double* state_freq = new double[alnSize];
-    model->getStateFrequency(state_freq);
-    int num_cat = site_rate->getNRate();
-    GTRModel* gtr_model = reinterpret_cast<GTRModel *>(model);
-    double* eigen_coff = gtr_model->getEigenCoeff();
-    int numStates = aln->num_states;
-    for (int ptn = 0; ptn < alnSize; ++ptn) {
-        for (int k = 0; k < num_cat; ++k) {
-            for (int i = 0; i < numStates; ++i) {
-                double theta_tmp2 = 0;
-                for (int xa = 0; xa < numStates; ++xa) {
-                    double theta_tmp = 0;
-                    for (int xb = 0; xb < numStates; ++xb) {
-                        theta_tmp += partial_lh_child[xb] * eigen_coff[xa * numStates * numStates + xb * numStates + i];
-                    }
-                    theta_tmp2 += theta_tmp * state_freq[xa] * partial_lh_site[xa];
-                }
-                *theta_ptn = theta_tmp2;
-                theta_ptn++;
-            } // for i states
-            partial_lh_child += numStates;
-            partial_lh_site += numStates;
-        } //for k categories
-    } // for ptn
-    delete [] state_freq;
-}
-*/
+
 void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
     if (sse) {
         switch (aln->num_states) {
@@ -632,7 +587,8 @@ double PhyloTree::computeLikelihoodDervFast(PhyloNeighbor *dad_branch, PhyloNode
         case 20:
             return computeLikelihoodDervFastSSE<20>(dad_branch, dad, df, ddf);
         default:
-            return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
+            cout << "Bad number of states: " << aln->num_states << endl;
+            exit(1);
         }
     } else {
         return computeLikelihoodDervFastNaive(dad_branch, dad, df, ddf);
@@ -643,80 +599,81 @@ double PhyloTree::computeLikelihoodDervFastNaive(PhyloNeighbor *dad_branch, Phyl
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     assert(node_branch);
-    // swap node and dad if node is a leaf
-    if (node->isLeaf()) {
+    // swap node and dad if dad is a leaf
+    // NEW: swap if root_state is given
+    if (node->isLeaf() || (node->name == ROOT_NAME && root_state != STATE_UNKNOWN)) {
         PhyloNode *tmp_node = dad;
         dad = node;
         node = tmp_node;
         PhyloNeighbor *tmp_nei = dad_branch;
         dad_branch = node_branch;
         node_branch = tmp_nei;
+        //cout << "swapped\n";
     }
+    if ((dad_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihoodNaive(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihoodNaive(node_branch, node);
+
     // now combine likelihood at the branch
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     double lh_ptn = 0.0;
     double lh_ptn_derv1 = 0.0;
     double lh_ptn_derv2 = 0.0;
+    double my_df = 0.0;
+    double my_ddf = 0.0;
     double p_invar = site_rate->getPInvar();
-    int numCat = site_rate->getNRate();
-    double p_var_cat = (1.0 - p_invar) / (double) numCat;
+    int ncat = site_rate->getNRate();
+    double p_var_cat = (1.0 - p_invar) / (double) ncat;
     double derv1_frac;
     double derv2_frac;
-    int num_states = aln->num_states;
-    double* state_freq = new double[num_states];
+    int nstates = aln->num_states;
+    double* state_freq = new double[nstates];
     model->getStateFrequency(state_freq);
     int discrete_cat = site_rate->getNDiscreteRate();
     double *theta_ptn = theta_all;
-    int num_patterns = aln->getNPattern();
-    double exp_part;
-    double* rates = site_rate->getRates();
-    double* eigenValues = dynamic_cast<GTRModel*>(model)->getEigenvalues();
-    int block1 = discrete_cat * num_states;
-    // array containing eigenvalue_i * rate_c
-    double* er = new double[ block1 ];
-    double* exp_er = new double[ block1 ];
-    for (int i = 0; i < num_states; i++)
+    size_t nptn = aln->getNPattern();
+    double t = dad_branch->length;
+
+    double* rates = new double[discrete_cat];
+    for (int i = 0; i < discrete_cat; i++) {
+    	rates[i] = site_rate->getRate(i);
+    }
+    //double* rates = site_rate->getRates();
+    double* lambda = dynamic_cast<GTRModel*>(model)->getEigenvalues();
+    int block = discrete_cat * nstates;
+    // array containing lambda_i * r_c
+    double* lambda_r = new double[ block ];
+    // array containing exp(lambda_i * r_c * t)
+    double* exp_part = new double[ block ];
+    // array containing square of lambda_i * r_c
+    double* lambda_r_sqr = new double[ block ];
+
+    // now initialize all the arrays (pre-computation before coming to the big loop)
+    for (int i = 0; i < nstates; i++)
     	for (int c = 0; c < discrete_cat; c++) {
-    		er[ i * num_states + c ] = eigenValues[i] * rates[c];
-    		exp_er [ i * num_states + c ] = exp(er[ i * num_states + c ]);
+    		lambda_r[ i * nstates + c ] = lambda[i] * rates[c];
+    		lambda_r_sqr[ i * nstates + c ] = lambda_r[ i * nstates + c ] * lambda_r[ i * nstates + c ];
+    		exp_part [ i * nstates + c ] = exp( lambda_r[ i * nstates + c ] * t);
     	}
 
-    int pointer_jump = num_states * discrete_cat;
-    for (int ptn = 0; ptn < num_patterns; ++ptn) {
+    int pointer_jump = nstates * discrete_cat;
+    for (int ptn = 0; ptn < nptn; ++ptn) {
         lh_ptn = 0.0;
         lh_ptn_derv1 = 0.0;
         lh_ptn_derv2 = 0.0;
-        for (int i = 0; i < num_states; i++)
+        for (int i = 0; i < nstates; i++)
         	for (int c = 0; c < discrete_cat; c++) {
-        		double tmp = er[ i * num_states + c ] * pow(exp_er [ i * num_states + c ], dad_branch->length);
-        		lh_ptn_derv1 +=  er[ i * num_states + c ] * pow(exp_er [ i * num_states + c ], dad_branch->length);
-        		lh_ptn_derv2 +=  er[ i * num_states + c ] * pow(exp_er [ i * num_states + c ], dad_branch->length);
+        		double base = exp_part[ i * nstates + c ] * theta_ptn[ i * nstates + c ];
+        		lh_ptn += base;
+        		lh_ptn_derv1 +=  lambda_r[ i * nstates + c ] * base;
+        		lh_ptn_derv2 +=  lambda_r_sqr[ i * nstates + c ] * base;
         	}
-
-
-        for (int k = 0; k < discrete_cat; k++) {
-            for (int i = 0; i < num_states; i++) {
-                exp_part = exp(rates[k] * dad_branch->length * eigenValues[i]);
-                double x = theta_ptn[k * num_states + i] * exp_part;
-                //cout << exp(site_rate->getRates()[k]*dad_branch->length*dynamic_cast<GTRModel*> (model)->getEigenvalues()[i]) << " ";
-                lh_ptn += x;
-                //cout << x << " ";
-                //cout << theta_ptn[k*num_states+i] << " ";
-                double y = x * rates[k] * eigenValues[i];
-                //cout << y << " ";
-                //cout << site_rate->getRates()[k] * dynamic_cast<GTRModel*> (model)->getEigenvalues()[i] << " ";
-                lh_ptn_derv1 += y;
-                lh_ptn_derv2 += y * rates[k] * eigenValues[i];
-            }
-        }
-
         theta_ptn += pointer_jump;
-
         lh_ptn = lh_ptn * p_var_cat;
-        if ((*aln)[ptn].is_const && (*aln)[ptn][0] < num_states) {
+        if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
         }
-
         double pad = p_var_cat / lh_ptn;
         if (std::isinf(pad)) {
             lh_ptn_derv1 *= p_var_cat;
@@ -727,14 +684,23 @@ double PhyloTree::computeLikelihoodDervFastNaive(PhyloNeighbor *dad_branch, Phyl
             derv1_frac = lh_ptn_derv1 * pad;
             derv2_frac = lh_ptn_derv2 * pad;
         }
-        double tmp1 = derv1_frac * aln->at(ptn).frequency;
-        double tmp2 = derv2_frac * aln->at(ptn).frequency;
-        df += tmp1;
-        ddf += tmp2 - tmp1 * derv1_frac;
+        double freq = (*aln)[ptn].frequency;
+        double tmp1 = derv1_frac * freq;
+        double tmp2 = derv2_frac * freq;
+        my_df += tmp1;
+        my_ddf += tmp2 - tmp1 * derv1_frac;
         lh_ptn = log(lh_ptn);
+        //cout << "lh_ptn = " << lh_ptn << endl;
         tree_lh += lh_ptn * aln->at(ptn).frequency;
         _pattern_lh[ptn] = lh_ptn;
     }
+    delete [] lambda_r;
+    delete [] lambda_r_sqr;
+    delete [] exp_part;
+    delete [] rates;
+    delete [] state_freq;
+    df = my_df;
+    ddf = my_ddf;
     return tree_lh;
 }
 
@@ -763,10 +729,13 @@ double PhyloTree::computeLikelihoodDervFastSSE(PhyloNeighbor *dad_branch, PhyloN
     double derv1_frac;
     double derv2_frac;
     double state_freq[NSTATES];
-    model->getStateFrequency(state_freq);
-
     int discrete_cat = site_rate->getNDiscreteRate();
-    Map<Matrix<double, Dynamic, 1>, Aligned> ei_rates(site_rate->getRates(), discrete_cat);
+    model->getStateFrequency(state_freq);
+    double* rates = new double[discrete_cat];
+    for (int i = 0; i < numCat; i++) {
+    	rates[i] = site_rate->getRate(i);
+    }
+    Map<Matrix<double, Dynamic, 1>, Aligned> ei_rates(rates, discrete_cat);
     Map<Matrix<double, 1, NSTATES>, Aligned> ei_eigenvalues(dynamic_cast<GTRModel*>(model)->getEigenvalues());
     Matrix(NSTATES)ei_rates_times_lambdas = ei_rates * ei_eigenvalues;
     Matrix(NSTATES)expo_time =

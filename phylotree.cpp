@@ -1132,7 +1132,7 @@ double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *
     }
     double* state_freq = new double[aln->num_states];
     model->getStateFrequency(state_freq);
-    return score - log(state_freq[root_state]);
+    return score - log(state_freq[ (int) root_state]);
     delete[] state_freq;
 }
 
@@ -1639,8 +1639,8 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         computePartialLikelihoodNaive(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihoodNaive(node_branch, node);
-    // now combine likelihood at the branch
 
+    // now combine likelihood at the branch
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     df = ddf = 0.0;
     int ncat = site_rate->getNRate();
@@ -1683,6 +1683,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
              }
              }*/
         }
+
 
     bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
     double derv1_frac;
@@ -1796,6 +1797,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         my_df += tmp1;
         my_ddf += tmp2 - tmp1 * derv1_frac;
         lh_ptn = log(lh_ptn);
+        //cout << "lh_ptn = " << lh_ptn << endl;
         tree_lh += lh_ptn * freq;
         _pattern_lh[ptn] = lh_ptn;
         if (!isfinite(lh_ptn) || !isfinite(my_df) || !isfinite(my_ddf)) {
@@ -1883,21 +1885,22 @@ double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
 }
 
 double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
-    //double tree_lh = optimizeChildBranches(node, dad);
-    double tree_lh = -DBL_MAX;
+	//double tree_lh = optimizeChildBranches(node, dad);
+	double tree_lh = -DBL_MAX;
 
-    FOR_NEIGHBOR_IT(node, dad, it){
-    //if (!(*it)->node->isLeaf())
-    double new_tree_lh = optimizeAllBranches((PhyloNode*) (*it)->node, node);
-    /*
-     if (new_tree_lh < tree_lh)
-     cout << "Wrong " << __func__ << endl;
-     */
-    tree_lh = new_tree_lh;
-}
-    if (dad)
-        tree_lh = optimizeOneBranch(node, dad);
-    return tree_lh;
+	for (NeighborVec::iterator it = (node)->neighbors.begin(); it != (node)->neighbors.end(); it++)
+		if ((*it)->node != (dad)) {
+			//if (!(*it)->node->isLeaf())
+			double new_tree_lh = optimizeAllBranches((PhyloNode*) (*it)->node, node);
+			/*
+			 if (new_tree_lh < tree_lh)
+			 cout << "Wrong " << __func__ << endl;
+			 */
+			tree_lh = new_tree_lh;
+		}
+	if (dad)
+		tree_lh = optimizeOneBranch(node, dad);
+	return tree_lh;
 }
 
 double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance) {
