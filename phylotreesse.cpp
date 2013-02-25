@@ -475,7 +475,6 @@ void PhyloTree::computeThetaNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     GTRModel* gtr_model = reinterpret_cast<GTRModel *>(model);
     //double* eigen_coff = gtr_model->getEigenCoeff();
     double** inv_eigen_vector = gtr_model->getInverseEigenvectors();
-    double** eigen_vector = gtr_model->getEigenvectors();
 	double* partial_lh_child_ptn = partial_lh_child;
 	double* partial_lh_site_ptn = partial_lh_site;
 
@@ -490,12 +489,12 @@ void PhyloTree::computeThetaNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 				for (int x = 0; x < numStates; ++x) {
 					// Compute Sigma_x pi_x u_xi L^h_a(x,c)
 					term1 += inv_eigen_vector[i][x] * partial_lh_site_ptn[x];
-				    //term1 += state_freq[x] * partial_lh_site[x] * eigen_vector[x][i];
 					term2 += inv_eigen_vector[i][x] * partial_lh_child_ptn[x];
 				}
 	            partial_lh_child_ptn += numStates;
 	            partial_lh_site_ptn += numStates;
 				*theta_ptn = term1 * term2;
+				//cout << "theta_ptn : " << *theta_ptn << endl;
 				theta_ptn++;
 			}
 		}
@@ -650,25 +649,27 @@ double PhyloTree::computeLikelihoodDervFastNaive(PhyloNeighbor *dad_branch, Phyl
     double* lambda_r_sqr = new double[ block ];
 
     // now initialize all the arrays (pre-computation before coming to the big loop)
-    for (int i = 0; i < nstates; i++)
+    for (int i = 0; i < nstates; i++) {
     	for (int c = 0; c < discrete_cat; c++) {
-    		lambda_r[ i * nstates + c ] = lambda[i] * rates[c];
-    		lambda_r_sqr[ i * nstates + c ] = lambda_r[ i * nstates + c ] * lambda_r[ i * nstates + c ];
-    		exp_part [ i * nstates + c ] = exp( lambda_r[ i * nstates + c ] * t);
+    		lambda_r[ i * discrete_cat + c ] = lambda[i] * rates[c];
+    		lambda_r_sqr[ i * discrete_cat + c ] = lambda_r[ i * discrete_cat + c ] * lambda_r[ i * discrete_cat + c ];
+    		exp_part [ i * discrete_cat + c ] = exp( lambda_r[ i * discrete_cat + c ] * t);
     	}
+    }
 
     int pointer_jump = nstates * discrete_cat;
     for (int ptn = 0; ptn < nptn; ++ptn) {
         lh_ptn = 0.0;
         lh_ptn_derv1 = 0.0;
         lh_ptn_derv2 = 0.0;
-        for (int i = 0; i < nstates; i++)
+        for (int i = 0; i < nstates; i++) {
         	for (int c = 0; c < discrete_cat; c++) {
-        		double base = exp_part[ i * nstates + c ] * theta_ptn[ i * nstates + c ];
+        		double base = exp_part[ i * discrete_cat + c ] * theta_ptn[ i * discrete_cat + c ];
         		lh_ptn += base;
-        		lh_ptn_derv1 +=  lambda_r[ i * nstates + c ] * base;
-        		lh_ptn_derv2 +=  lambda_r_sqr[ i * nstates + c ] * base;
+        		lh_ptn_derv1 +=  lambda_r[ i * discrete_cat + c ] * base;
+        		lh_ptn_derv2 +=  lambda_r_sqr[ i * discrete_cat + c ] * base;
         	}
+        }
         theta_ptn += pointer_jump;
         lh_ptn = lh_ptn * p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
@@ -690,8 +691,10 @@ double PhyloTree::computeLikelihoodDervFastNaive(PhyloNeighbor *dad_branch, Phyl
         my_df += tmp1;
         my_ddf += tmp2 - tmp1 * derv1_frac;
         lh_ptn = log(lh_ptn);
+        //cout << lh_ptn << endl;
         //cout << "lh_ptn = " << lh_ptn << endl;
         tree_lh += lh_ptn * aln->at(ptn).frequency;
+        //cout << tree_lh << endl;
         _pattern_lh[ptn] = lh_ptn;
     }
     delete [] lambda_r;
