@@ -433,15 +433,16 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
     if (dad_branch->partial_lh_computed & 2)
         return;
     Node *node = dad_branch->node;
-    assert(node->degree() <= 3);
+    //assert(node->degree() <= 3);
     int ptn;
     int nstates = aln->num_states;
     int pars_size = getBitsBlockSize();
     int entry_size = getBitsEntrySize();
     assert(dad_branch->partial_pars);
     UINT *bits_entry = new UINT[entry_size];
-    UINT *bits_entry1 = new UINT[entry_size];
-    UINT *bits_entry2 = new UINT[entry_size];
+    UINT *bits_entry_child = new UINT[entry_size];
+    //UINT *bits_entry1 = new UINT[entry_size];
+    //UINT *bits_entry2 = new UINT[entry_size];
 
     if (node->isLeaf() && dad) {
         // external node
@@ -473,23 +474,49 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
             }
     } else {
         // internal node
-        //memset(dad_branch->partial_pars, 127, pars_size * sizeof(int));
+        memset(dad_branch->partial_pars, 127, pars_size * sizeof(int));
         UINT *partial_pars_dad = dad_branch->partial_pars;
-        UINT *partial_pars_child1 = NULL, *partial_pars_child2 = NULL;
+        int partial_pars = 0;
+        //UINT *partial_pars_child1 = NULL, *partial_pars_child2 = NULL;
         // take the intersection of two child states (with &= bit operation)
         FOR_NEIGHBOR_IT(node, dad, it)if ((*it)->node->name != ROOT_NAME) {
             computePartialParsimony((PhyloNeighbor*) (*it), (PhyloNode*) node);
+            /*
             if (!partial_pars_child1)
             partial_pars_child1 = ((PhyloNeighbor*) (*it))->partial_pars;
             else
             partial_pars_child2 = ((PhyloNeighbor*) (*it))->partial_pars;
+            */
+            UINT *partial_pars_child = ((PhyloNeighbor*) (*it))->partial_pars;
+            for (int i = 0; i < pars_size - 1; i++)
+                partial_pars_dad[i] &= partial_pars_child[i];
+            partial_pars += partial_pars_child[pars_size-1];
         }
-        assert(partial_pars_child1 && partial_pars_child2);
+        //assert(partial_pars_child1 && partial_pars_child2);
         // take the intersection of two bits block
-        for (int i = 0; i < pars_size - 1; i++)
-            partial_pars_dad[i] = partial_pars_child1[i] & partial_pars_child2[i];
-        int partial_pars = partial_pars_child1[pars_size - 1] + partial_pars_child2[pars_size - 1];
+        //for (int i = 0; i < pars_size - 1; i++)
+        //    partial_pars_dad[i] = partial_pars_child1[i] & partial_pars_child2[i];
+        //int partial_pars = partial_pars_child1[pars_size - 1] + partial_pars_child2[pars_size - 1];
         // now check if some intersection is empty, change to union (Fitch algorithm) and increase the parsimony score
+        memset(bits_entry, 0, entry_size * sizeof(UINT));
+        for (ptn = 0; ptn < aln->size(); ptn++)
+            if (!aln->at(ptn).is_const) {
+                getBitsBlock(partial_pars_dad, ptn, bits_entry);
+                if (isEmptyBitsEntry(bits_entry)) {
+                	FOR_NEIGHBOR_IT(node, dad, it2) if ((*it2)->node->name != ROOT_NAME) {
+                		UINT *partial_pars_child = ((PhyloNeighbor*) (*it2))->partial_pars;
+                        getBitsBlock(partial_pars_child, ptn, bits_entry_child);
+                        unionBitsEntry(bits_entry, bits_entry_child, bits_entry);
+                	}
+                    //getBitsBlock(partial_pars_child2, ptn, bits_entry2);
+                    //unionBitsEntry(bits_entry1, bits_entry2, bits_entry);
+                    //cout << bits_entry[0] << " " << bits_entry[1] << endl;
+                    setBitsBlock(partial_pars_dad, ptn, bits_entry);
+                    partial_pars += aln->at(ptn).frequency;
+                }
+            }
+
+        /*
         for (ptn = 0; ptn < aln->size(); ptn++)
             if (!aln->at(ptn).is_const) {
                 getBitsBlock(partial_pars_dad, ptn, bits_entry);
@@ -501,12 +528,13 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
                     setBitsBlock(partial_pars_dad, ptn, bits_entry);
                     partial_pars += aln->at(ptn).frequency;
                 }
-            }
+            }*/
         partial_pars_dad[pars_size - 1] = partial_pars;
     }
     dad_branch->partial_lh_computed |= 2;
-    delete[] bits_entry2;
-    delete[] bits_entry1;
+    //delete[] bits_entry2;
+    //delete[] bits_entry1;
+    delete[] bits_entry_child;
     delete[] bits_entry;
 }
 
@@ -2202,6 +2230,31 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         (*it)->length = branch_length;
         if (verbose_mode >= VB_DEBUG)
         cout << (*it)->length << " parsimony = " << pars_score << endl;
+        // set the backward branch length
+        (*it)->node->findNeighbor(node)->length = (*it)->length;
+        fixed++;
+    }
+    if ((*it)->length <= 0.0) {
+        (*it)->length = 1e-6;
+        (*it)->node->findNeighbor(node)->length = (*it)->length;
+    }
+    fixed += fixNegativeBranch(force, (*it)->node, node);
+}
+    return fixed;
+}
+
+int PhyloTree::fixNegativeBranch2(bool force, Node *node, Node *dad) {
+    if (!node)
+        node = root;
+    int fixed = 0;
+
+    FOR_NEIGHBOR_IT(node, dad, it){
+    if ((*it)->length < 0.0 || force) { // negative branch length detected
+        if (verbose_mode >= VB_DEBUG)
+        cout << "Negative branch length " << (*it)->length << " was set to ";
+        (*it)->length = random_double()+0.1;
+        if (verbose_mode >= VB_DEBUG)
+        	cout << (*it)->length << endl;
         // set the backward branch length
         (*it)->node->findNeighbor(node)->length = (*it)->length;
         fixed++;

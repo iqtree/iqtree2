@@ -817,6 +817,7 @@ public:
      */
     int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
+    int fixNegativeBranch2(bool force = false, Node *node = NULL, Node *dad = NULL);
 
     /****************************************************************************
             Subtree Pruning and Regrafting by maximum likelihood

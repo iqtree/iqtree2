@@ -38,12 +38,7 @@ RateHeterogeneity::~RateHeterogeneity()
 {
 }
 
-void RateHeterogeneity::writeSiteRates(ostream &out) {
-	DoubleVector pattern_rates;
-	IntVector pattern_cat;
-	computePatternRates(pattern_rates, pattern_cat);
-	if (pattern_rates.empty()) return;
-
+void RateHeterogeneity::writeSiteRates(ostream &out, DoubleVector &pattern_rates, IntVector &pattern_cat) {
 	int nsite = phylo_tree->aln->getNSite();
 	int i;
 	
@@ -61,6 +56,14 @@ void RateHeterogeneity::writeSiteRates(ostream &out) {
 	}
 }
 
+void RateHeterogeneity::writeSiteRates(ostream &out) {
+	DoubleVector pattern_rates;
+	IntVector pattern_cat;
+	computePatternRates(pattern_rates, pattern_cat);
+	if (pattern_rates.empty()) return;
+	writeSiteRates(out, pattern_rates, pattern_cat);
+}
+
 void RateHeterogeneity::writeSiteRates(const char *file_name) {
 	DoubleVector pattern_rates;
 	IntVector pattern_cat;
@@ -71,7 +74,7 @@ void RateHeterogeneity::writeSiteRates(const char *file_name) {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(file_name);
-		writeSiteRates(out);
+		writeSiteRates(out, pattern_rates, pattern_cat);
 		out.close();
 		cout << "Site rates printed to " << file_name << endl;
 	} catch (ios::failure) {

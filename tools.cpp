@@ -675,6 +675,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.model_test_criterion = MTC_BIC;
 	params.model_test_sample_size = 0;
 	params.root_state = NULL;
+	params.print_bootaln = false;
 
 	struct timeval tv;
 	struct timezone tz;
@@ -1323,6 +1324,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Local bootstrap (LBP) replicates must be at least 1000";
 			} else if (strcmp(argv[cnt],"-wsl") == 0) {
 				params.print_site_lh = true;
+			} else if (strcmp(argv[cnt],"-wba") == 0) {
+				params.print_bootaln = true;
 			} else if (strcmp(argv[cnt],"-wtl") == 0) {
 				params.print_tree_lh = true;
 			} else if (strcmp(argv[cnt],"-ns") == 0) {

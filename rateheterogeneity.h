@@ -159,6 +159,8 @@ public:
 
 	void writeSiteRates(ostream &out);
 
+	void writeSiteRates(ostream &out, DoubleVector &pattern_rates, IntVector &pattern_cat);
+
 	/**
 		name of the rate heterogeneity type
 	*/

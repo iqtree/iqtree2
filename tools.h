@@ -1179,6 +1179,8 @@ struct Params {
 	
 	/** root state, for Tina's zoombie domain */
 	char *root_state;
+
+	bool print_bootaln;
 };
 
 /**

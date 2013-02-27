@@ -316,7 +316,8 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 				model_names.push_back(str);
 				fmodel << str << "\t" << df << "\t" << cur_lh << endl;
 				const char *model_name = (params.print_site_lh) ? str.c_str() : NULL;
-				printSiteLh(sitelh_file.c_str(), tree, NULL, true, model_name);
+				if (params.print_site_lh)
+					printSiteLh(sitelh_file.c_str(), tree, NULL, true, model_name);
 			} else {
 				// sanity check
 				if (str != model_names[model * 4 + rate_type]
@@ -604,31 +605,32 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh,
 
 void reportCredits(ofstream &out) {
 	out << "CREDITS" << endl << "-------" << endl << endl
-			<< "Some parts of the code were taken from TREE-PUZZLE package:"
+			<< "Some parts of the code were taken from the following packages/libraries:"
 			<< endl << endl
-			<< "Heiko A. Schmidt, Korbinian Strimmer, Martin Vingron, and Arndt von Haeseler"
-			<< endl
-			<< "(2002) TREE-PUZZLE: maximum likelihood phylogenetic analysis using quartets"
-			<< endl << "and parallel computing. Bioinformatics, 18(3):502-504."
-			<< endl << endl
+			<< "Schmidt HA, Strimmer K, Vingron M, and von Haeseler A (2002)" << endl
+			<< "TREE-PUZZLE: maximum likelihood phylogenetic analysis using quartets" << endl
+			<< "and parallel computing. Bioinformatics, 18(3):502-504." << endl << endl
 
-			<< "The source codes to construct the BIONJ tree were taken from BIONJ software:"
-			<< endl << endl
-			<< "Oliver Gascuel (1997) BIONJ: an improved version of the NJ algorithm"
-			<< endl
-			<< "based on a simple model of sequence data. Mol. Bio. Evol., 14:685-695."
-			<< endl << endl
+			//<< "The source code to construct the BIONJ tree were taken from BIONJ software:"
+			//<< endl << endl
+			<< "Gascuel O (1997) BIONJ: an improved version of the NJ algorithm" << endl
+			<< "based on a simple model of sequence data. Mol. Bio. Evol., 14:685-695." << endl << endl
 
-			<< "The Nexus file parser was taken from the Nexus Class Library:"
-			<< endl << endl
-			<< "Paul O. Lewis (2003) NCL: a C++ class library for interpreting data files in"
-			<< endl << "NEXUS format. Bioinformatics, 19(17):2330-2331." << endl
-			<< endl
+			//<< "The Nexus file parser was taken from the Nexus Class Library:"
+			//<< endl << endl
+			<< "Paul O. Lewis (2003) NCL: a C++ class library for interpreting data files in" << endl
+			<< "NEXUS format. Bioinformatics, 19(17):2330-2331." << endl << endl
 
+			<< "Mascagni M and Srinivasan A (2000) Algorithm 806: SPRNG: A Scalable Library" << endl
+			<< "for Pseudorandom Number Generation. ACM Transactions on Mathematical Software," << endl
+			<< "26: 436-461." << endl << endl
+
+			<< "Guennebaud G, Jacob B, et al. (2010) Eigen v3. http://eigen.tuxfamily.org" << endl << endl;
+			/*
 			<< "The Modeltest 3.7 source codes were taken from:" << endl << endl
 			<< "David Posada and Keith A. Crandall (1998) MODELTEST: testing the model of"
 			<< endl << "DNA substitution. Bioinformatics, 14(9):817-8." << endl
-			<< endl;
+			*/
 }
 
 void reportPhyloAnalysis(Params &params, string &original_model,
@@ -1890,6 +1892,7 @@ void runPhyloAnalysis(Params &params) {
 		}
 
 		// empty the bootaln file
+		if (params.print_bootaln)
 		try {
 			ofstream tree_out;
 			tree_out.exceptions(ios::failbit | ios::badbit);
@@ -1932,7 +1935,8 @@ void runPhyloAnalysis(Params &params) {
 						(PhyloSuperTree*) tree);
 			else
 				boot_tree = new IQTree(bootstrap_alignment);
-			bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+			if (params.print_bootaln)
+				bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
 			runPhyloAnalysis(params, original_model, bootstrap_alignment,
 					*boot_tree);
 			// read in the output tree file
@@ -2005,9 +2009,11 @@ void runPhyloAnalysis(Params &params) {
 
 		cout << "CPU total time for bootstrap: " << (getCPUTime() - start_time)
 				<< " seconds." << endl << endl;
-		cout << "Non-parametric bootstrap results written to:" << endl
-				<< "  Bootstrap alignments:     " << params.out_prefix
-				<< ".bootaln" << endl << "  Bootstrap trees:          "
+		cout << "Non-parametric bootstrap results written to:" << endl;
+		if (params.print_bootaln)
+			cout << "  Bootstrap alignments:     " << params.out_prefix
+				<< ".bootaln" << endl;
+		cout << "  Bootstrap trees:          "
 				<< params.out_prefix << ".boottrees" << endl;
 		if (params.consensus_type == CT_CONSENSUS_TREE)
 			cout << "  Consensus tree:           " << params.out_prefix
