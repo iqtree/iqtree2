@@ -1439,7 +1439,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 	} while (true);
 
 	if (foundBetterTree) {
-		curScore = optimizeAllBranches(1);
+		//curScore = optimizeAllBranches(1);
 		if (enableHeuris) {
 			if ( vecNumNNI.size() < 1000 ) {
 				vecNumNNI.push_back(nni_count);
@@ -1920,8 +1920,8 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
 	// save parsimony vector
 	UINT *node1_pars_save = node12_it->partial_pars;
 	UINT *node2_pars_save = node21_it->partial_pars;
-	node12_it->partial_pars = newBitsBlock();
-	node21_it->partial_pars = newBitsBlock();
+	//node12_it->partial_pars = newBitsBlock();
+	//node21_it->partial_pars = newBitsBlock();
 	// save the first found neighbor of node 1 (excluding node2) in node1_it
 	NeighborVec::iterator node1_it;
 	for (node1_it = (node1)->neighbors.begin();

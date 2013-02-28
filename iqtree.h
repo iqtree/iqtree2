@@ -608,13 +608,13 @@ public:
 	/** @return TRUE if stopping criterion is met */
 	bool checkBootstrapStopping();
 
+	int nni_round;
 protected:
 	/**** NNI cutoff heuristic *****/
 	/**
 	*/
 	vector<NNIInfo> nni_info;
 
-	int nni_round;
 
 	bool estimate_nni_cutoff;
 

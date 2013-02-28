@@ -963,7 +963,8 @@ void createFirstNNITree(Params &params, IQTree &iqtree, double bestTreeScore,
 	nniBeginClock = getCPUTime();
 	if (!params.raxmllib) {
 		iqtree.optimizeNNI();
-		iqtree.curScore = iqtree.optimizeAllBranches(100, 0.0001);
+		cout << iqtree.nni_round << " NNI rounds carried out" << endl;
+		//iqtree.curScore = iqtree.optimizeAllBranches(100, 0.0001);
 	} else {
 		iqtree.curScore = iqtree.optimizeNNIRax();
 		// read in new tree
