@@ -1004,13 +1004,14 @@ void PhyloTree::initializeAllPartialLh() {
     size_t block_size = mem_size * numStates * site_rate->getNRate();
     if (!tmp_partial_lh1) {        
         tmp_partial_lh1 = newPartialLh();
-        if (((intptr_t) tmp_partial_lh1) % 16 != 0)        
-            tmp_partial_lh1 = tmp_partial_lh1 + 1;
+        // FOR TUNG: below is wrong because you lost the actual pointer to be deleted afterwards
+        //if (((intptr_t) tmp_partial_lh1) % 16 != 0)
+        //    tmp_partial_lh1 = tmp_partial_lh1 + 1;
     }
     if (!tmp_partial_lh2) {
         tmp_partial_lh2 = newPartialLh();
-        if (((intptr_t) tmp_partial_lh2) % 16 != 0)
-            tmp_partial_lh2 = tmp_partial_lh2 + 1;
+        //if (((intptr_t) tmp_partial_lh2) % 16 != 0)
+        //    tmp_partial_lh2 = tmp_partial_lh2 + 1;
     }     
         
     if (!tmp_anscentral_state_prob1)

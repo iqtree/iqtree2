@@ -954,6 +954,7 @@ double IQTree::doIQPNNI() {
     stop_rule.addImprovedIteration(1);
     int cur_iteration;
     bool speedupMsg = false;
+    double prev_time = 0.0;
     for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration);
             cur_iteration++) {
         double min_elapsed = (getCPUTime() - params->startTime) / 60;
@@ -1139,7 +1140,7 @@ double IQTree::doIQPNNI() {
         cout.setf(ios::fixed, ios::floatfield);
 
         // NNI search was skipped according to the speed up heuristics
-        if (verbose_mode >= VB_MED) {
+        if (cputime_secs >= prev_time + 10) {
             if (!skipped) {
                 cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << cur_iteration << " / LogL: " << curScore << " / CPU time elapsed: " << (int) round(cputime_secs) << "s";
                 if (cur_iteration > 10 && cputime_secs > 10)
@@ -1155,6 +1156,7 @@ double IQTree::doIQPNNI() {
                     cout << " (" << (int) round(cputime_remaining) << "s left)";
                 cout << endl;
             }
+            prev_time = cputime_secs;
         }
 
         /*
@@ -2122,8 +2124,16 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
     int nniNr = 0;
     int chosenSwap = 0;
 
-    node12_it->partial_lh = tmp_partial_lh1;
-    node21_it->partial_lh = tmp_partial_lh2;
+	// make alignment 16
+	if (((intptr_t) tmp_partial_lh1) % 16 == 0)
+		node12_it->partial_lh = tmp_partial_lh1;
+	else
+		node12_it->partial_lh = tmp_partial_lh1 + 1;
+
+	if (((intptr_t) tmp_partial_lh2) % 16 == 0)
+		node21_it->partial_lh = tmp_partial_lh2;
+	else
+		node21_it->partial_lh = tmp_partial_lh2 + 1;
 
     node12_it->scale_num = tmp_scale_num1;
     node21_it->scale_num = tmp_scale_num2;
