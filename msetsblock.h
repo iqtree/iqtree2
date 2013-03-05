@@ -41,6 +41,28 @@ public:
 typedef vector<TaxaSetName*> TaxaSetNameVector;
 
 /**
+ * a charset
+ */
+class CharSet {
+public:
+	/** charset name */
+	string name;
+
+	/** positions specification, e.g., 1-500\3 501-502 */
+	string position_spec;
+
+	/** name of model associated with charset, e.g., GTR+G */
+	string model_name;
+
+	/** alignment name */
+	string aln_file;
+
+	/** sequence type */
+	string sequence_type;
+};
+
+
+/**
 Sets Block of Nexus file parser
 
 @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler
@@ -91,6 +113,15 @@ public:
 		@return ID of the area with that name, -1 if not found
 	*/
 	int findArea(string &name);
+
+
+	/** list of charsets with (possible) models */
+	vector<CharSet* > charsets;
+
+	/**
+	 * return CharSet with a name from charsets, NULL if not found
+	 */
+	CharSet *findCharSet(string name);
 
 protected:
 

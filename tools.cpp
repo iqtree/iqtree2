@@ -1181,13 +1181,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -f <c | o | u | q>";
-				if (strcmp(argv[cnt],"q") == 0)
+				if (strcmp(argv[cnt],"q") == 0 || strcmp(argv[cnt],"EQ") == 0)
 					params.freq_type = FREQ_EQUAL;
-				else if (strcmp(argv[cnt],"c") == 0)
+				else if (strcmp(argv[cnt],"c") == 0 || strcmp(argv[cnt],"EM") == 0)
 					params.freq_type = FREQ_EMPIRICAL;
-				else if (strcmp(argv[cnt],"o") == 0)
+				else if (strcmp(argv[cnt],"o") == 0 || strcmp(argv[cnt],"ES") == 0)
 					params.freq_type = FREQ_ESTIMATE;
-				else if (strcmp(argv[cnt],"u") == 0)
+				else if (strcmp(argv[cnt],"u") == 0 || strcmp(argv[cnt],"UD") == 0)
 					params.freq_type = FREQ_USER_DEFINED;
 				else
 					throw "Use -f <c | o | u | q>";
@@ -1654,11 +1654,14 @@ void usage_iqtree(char* argv[], bool full_command) {
 	cout << "GENERAL OPTIONS:" << endl
 			<< "  -?                   Printing this help dialog" << endl
 			<< "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP/FASTA/NEXUS format"  << endl
-			<< "  -z <tree_files>      Evaluate all trees in the given file"  << endl
+			<< "  -z <trees_file>      Compute log-likelihoods for all trees in the given file"  << endl
 			<< "  -st <BIN|DNA|AA>     Binary, DNA, or Protein sequences (default: auto-detect)"  << endl
 			<< "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl
 			<< "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
 			<< "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment)" << endl
+#ifdef _OPENMP
+			<< "  -omp <#cpu_cores>    Number of cores/threads to use (default: all cores)" << endl
+#endif
 			<< endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
 			<< "  -b <#replicates>     Bootstrap + ML tree + consensus tree (default: none)" << endl
 			<< "  -bc <#replicates>    Bootstrap + consensus tree" << endl
@@ -1681,8 +1684,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "                       JTT, LG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
 			<< "                       HIVw, JTTDCMut, FLU, Blosum62" << endl
 			<< "               Binary: JC2 (default), GTR2" << endl
-			<< "            Modeltest: TEST or TESTONLY to select model with Modeltest." << endl
-			<< "                       TESTONLY will stop the run after finishing Modeltest" << endl
+			<< "      Model selection: TEST or TESTONLY to auto-select the best-fit model." << endl
+			<< "                       TESTONLY will stop the run after model selection" << endl
 			<< "            Otherwise: Name of file containing user-model parameters" << endl
 			<< "                       (rate parameters and state frequencies)" << endl
 			<< "  -m <model_name>+F or +FO or +FU or +FQ (default: auto)"<< endl
@@ -1726,6 +1729,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -sup <target_tree>   Assigning support values for <target_tree> to .suptree" << endl
 			<< endl << "ROBINSON-FOULDS DISTANCE:" << endl
 			<< "  -rf_all              Computing all-to-all RF distances of trees in <treefile>" << endl
+			<< "  -rf <treefile2>      Computing all RF distances between two sets of trees" << endl
+			<< "                       stored in <treefile> and <treefile2>" << endl
 			<< "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
 			<< endl << "MISCELLANEOUS:" << endl
 			<< "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl

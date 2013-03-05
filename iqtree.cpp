@@ -2106,6 +2106,10 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
     double node1_lh_scale = node12_it->lh_scale_factor;
     double node2_lh_scale = node21_it->lh_scale_factor;
 
+    // BQM: 2013-03-05: this was not proper stored!
+    int node1_partial_lh_computed = node12_it->partial_lh_computed;
+    int node2_partial_lh_computed = node21_it->partial_lh_computed;
+
     // Randomly select a neighbor of node1 (which is not node2). This is used for swapping NNI
     NeighborVec::iterator node1_it;
     for (node1_it = (node1)->neighbors.begin(); node1_it != (node1)->neighbors.end(); node1_it++) {
@@ -2200,8 +2204,11 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
     // restore the partial likelihood vector
     node12_it->partial_lh = node1_lh_save;
     node21_it->partial_lh = node2_lh_save;
-    node12_it->unclearPartialLh();
-    node21_it->unclearPartialLh();
+    //node12_it->unclearPartialLh(); // wrong
+    //node21_it->unclearPartialLh(); // wrong
+    // BQM: 2013-03-05: now properly restored!
+    node12_it->partial_lh_computed = node1_partial_lh_computed;
+    node21_it->partial_lh_computed = node2_partial_lh_computed;
     node12_it->scale_num = node1_scale_save;
     node21_it->scale_num = node2_scale_save;
     node12_it->lh_scale_factor = node1_lh_scale;

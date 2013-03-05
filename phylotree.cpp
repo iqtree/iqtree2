@@ -1384,8 +1384,8 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         double *pattern_rate) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    assert(node_branch);
-    assert(!site_rate->isSiteSpecificRate() || !model->isSiteSpecificModel());
+    //assert(node_branch);
+    //assert(!site_rate->isSiteSpecificRate() || !model->isSiteSpecificModel());
     if (!central_partial_lh)
         initializeAllPartialLh();
     // swap node and dad if dad is a leaf
@@ -1487,7 +1487,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         if (lh_ptn <= 0.0)
             cout << "Negative likelihood: " << lh_ptn << " " << site_rate->getPtnRate(ptn) << endl;
         //#endif
-        assert(lh_ptn > 0);
+        //assert(lh_ptn > 0); // assert removed as OpenMP code on MacOSX does not compile
         lh_ptn = log(lh_ptn);
         _pattern_lh[ptn] = lh_ptn;
         if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getPtnRate(ptn) >= MAX_SITE_RATE)

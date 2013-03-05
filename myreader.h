@@ -20,7 +20,7 @@
 
 #include <iostream>
 #include <fstream>
-#include "node.h"
+//#include "node.h"
 #include "ncl/ncl.h"
 
 /**
@@ -138,5 +138,6 @@ public:
 	{
 		//cout << msg << endl;
 	}
+
 
 };

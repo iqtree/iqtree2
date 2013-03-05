@@ -3114,7 +3114,7 @@ void ModelProtein::init(const char *model_name, StateFreqType freq) {
 	}*/
 
 	num_params = 0;
-	assert(freq != FREQ_ESTIMATE);
+	//assert(freq != FREQ_ESTIMATE);
 	if (freq == FREQ_UNKNOWN) freq = FREQ_USER_DEFINED;
 	GTRModel::init(freq);
 }

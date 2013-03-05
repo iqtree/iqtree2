@@ -20,6 +20,8 @@
 #include "phylosupertree.h"
 #include "superalignment.h"
 #include "superalignmentpairwise.h"
+#include "msetsblock.h"
+#include "myreader.h"
 
 PhyloSuperTree::PhyloSuperTree()
  : IQTree()
@@ -36,16 +38,13 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 	aln = alignment;
 }
 
-PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
-	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
+void PhyloSuperTree::readPartition(Params &params) {
 	try {
 		ifstream in;
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(params.partition_file);
 		in.exceptions(ios::badbit);
-
 		Params origin_params = params;
-		//memcpy(&origin_params, &params, sizeof(params));
 		PartitionInfo info;
 
 		while (!in.eof()) {
@@ -58,7 +57,7 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 			getline(in, info.sequence_type, ',');
 			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
 			getline(in, info.position_spec);
-			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" << 
+			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
 			part_info.push_back(info);
 			Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
@@ -82,6 +81,53 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	} catch (string str) {
 		outError(str);
 	}
+
+
+}
+
+void PhyloSuperTree::readPartitionNexus(Params &params) {
+	Params origin_params = params;
+	MSetsBlock *sets_block = new MSetsBlock();
+    MyReader nexus(params.partition_file);
+    nexus.Add(sets_block);
+    MyToken token(nexus.inf);
+    nexus.Execute(token);
+
+    for (vector<CharSet*>::iterator it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
+    	if ((*it)->model_name != "") {
+			PartitionInfo info;
+			info.name = (*it)->name;
+			info.model_name = (*it)->model_name;
+			info.aln_file = (*it)->aln_file;
+			if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
+			info.sequence_type = (*it)->sequence_type;
+			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
+			info.position_spec = (*it)->position_spec;
+
+			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
+				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
+			part_info.push_back(info);
+			Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
+			if (!info.position_spec.empty() && info.position_spec != "*") {
+				Alignment *new_aln = new Alignment();
+				new_aln->extractSites(part_aln, info.position_spec.c_str());
+				delete part_aln;
+				part_aln = new_aln;
+			}
+			PhyloTree *tree = new PhyloTree(part_aln);
+			push_back(tree);
+			params = origin_params;
+    	}
+
+}
+PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
+	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
+	if (detectInputFile(params.partition_file) == IN_NEXUS)
+		readPartitionNexus(params);
+	else
+		readPartition(params);
+	if (part_info.empty())
+		outError("No partition found");
 	aln = new SuperAlignment(this);
 	string str = params.out_prefix;
 	//str += ".part";

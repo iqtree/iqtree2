@@ -84,7 +84,7 @@ class NxsToken
 		void			Writeln(ostream &out);
 
 		virtual void	OutputComment(const NxsString &msg);
-
+		void GetNextContiguousToken(char stop_char); // Added by BQM
 	protected:
 
 		void			AppendToComment(char ch);
@@ -481,5 +481,46 @@ inline void NxsToken::Writeln(
 	{
 	out << token << endl;
 	}
+
+/**
+ * Added by BQM: return the contiguous string (including white space) as token
+ * until hitting stop_char
+ * @param stop_char a character to stop reading in
+ */
+inline void NxsToken::GetNextContiguousToken(char stop_char) {
+	ResetToken();
+
+	char ch = ' ';
+	if (saved == '\0' || IsWhitespace(saved))
+	{
+		// Skip leading whitespace
+		//
+		while( IsWhitespace(ch) && !atEOF)
+			ch = GetNextChar();
+		saved = ch;
+	}
+	for (;;) {
+
+		// Get next character either from saved or from input stream.
+		//
+		if (saved != '\0')
+			{
+			ch = saved;
+			saved = '\0';
+			}
+		else
+			ch = GetNextChar();
+
+		// Break now if we've hit EOF.
+		//
+		if (atEOF)
+			break;
+		if (ch == stop_char) {
+			saved = ch;
+			break;
+		}
+		AppendToToken(ch);
+	}
+}
 
 #endif

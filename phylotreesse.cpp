@@ -338,7 +338,7 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
 #endif
     for (int ptn = 0; ptn < alnSize; ++ptn) {
 #ifdef _OPENMP
-        int lh_offset = ptn*block;
+        int lh_offset = ptn*numCat*numStates;
         partial_lh_site = node_branch->partial_lh + lh_offset;
         partial_lh_child = dad_branch->partial_lh + lh_offset;
 #endif

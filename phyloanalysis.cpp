@@ -1341,8 +1341,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				((PhyloSuperTree*) (&iqtree))->mapTrees();
 				iqtree.optimizeAllBranches();
 			}
-			//iqtree.curScore = iqtree.computeLikelihood();
-                        iqtree.curScore = iqtree.optimizeAllBranches();
+			iqtree.curScore = iqtree.computeLikelihood();
+            //            iqtree.curScore = iqtree.optimizeAllBranches();
 			cout << "Backup log-likelihood: " << iqtree.curScore << endl;
 		}
 		double elapsedTime = getCPUTime() - params.startTime;

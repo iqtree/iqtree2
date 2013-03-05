@@ -71,7 +71,13 @@ public:
 
     ~PhyloSuperTree();
 
-		/**
+    /** read partition model file */
+    void readPartition(Params &params);
+
+    /** read partition model file in NEXUS format */
+    void readPartitionNexus(Params &params);
+
+	/**
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */
 	virtual void setParams(Params& params);

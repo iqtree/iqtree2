@@ -5,9 +5,16 @@ set(BUILD_SHARED_LIBS OFF)
 
 ######## NOTE: run cmake with option "-DIQ_STATIC to build static library 
 if (WIN32)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 elseif (NOT APPLE) 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+endif()
+
+if (APPLE) 
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmacosx-version-min=10.6")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mmacosx-version-min=10.6")
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 endif()
 
 IF($ENV{STATIC})
@@ -54,16 +61,16 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 
 add_definitions(-DIQ_TREE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wno-unused-function -Wall -Wno-sign-compare -Wno-deprecated -pedantic -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=c99 -Wno-unused-function -Wall -Wno-sign-compare -pedantic -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-sign-compare -Wno-deprecated -pedantic -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=c99 -Wall -Wno-sign-compare -pedantic -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
 
 #if (NOT WIN32)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 #endif(NOT WIN32)
  
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -g0")
-set(CMAKE_C_FLAGS_RELEASE "-O2 -g0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
@@ -156,6 +163,12 @@ target_link_libraries(iqtree phylolib ncl whtest z sprng ws2_32)
 else (WIN32)
 target_link_libraries(iqtree phylolib ncl whtest z sprng)
 endif (WIN32)
+
+# strip the release build
+if (CMAKE_BUILD_TYPE STREQUAL "Release") 
+	message("Info: executable will be stripped after linking")
+	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
+endif()
 
 ##############################################################
 # add the install targets

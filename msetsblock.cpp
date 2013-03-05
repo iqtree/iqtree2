@@ -97,8 +97,8 @@ void MSetsBlock::Read(NxsToken &token)
 				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 			}
 
-				token.SetLabileFlagBit(NxsToken::preserveUnderscores);
-				token.GetNextToken();
+			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
+			token.GetNextToken();
 			do {
 				myset->taxlist.push_back(token.GetToken());
 				token.SetLabileFlagBit(NxsToken::preserveUnderscores);
@@ -115,6 +115,119 @@ void MSetsBlock::Read(NxsToken &token)
 
 		} // if (token.Equals("TAXSET"))
 
+		else if (token.Equals("CHARSET"))
+		{
+			// This should be the NTAX keyword
+			//
+			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
+			token.GetNextToken();
+
+
+			//sets.resize(sets.size()+1);
+			CharSet *myset = new CharSet;
+			charsets.push_back(myset);
+			myset->aln_file = "";
+			myset->model_name = "";
+			myset->position_spec = "";
+			myset->sequence_type = "";
+
+			myset->name = token.GetToken();
+
+			token.GetNextToken();
+			if (!token.Equals("="))
+			{
+				errormsg = "Expecting '=', but found ";
+				errormsg += token.GetToken();
+				errormsg += " instead";
+				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
+			}
+
+			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
+			token.GetNextContiguousToken(';');
+			myset->position_spec = token.GetToken();
+
+			// separate position_spec into alignment name if ':' exists
+			size_t pos = myset->position_spec.find(':');
+			if (pos != string::npos) {
+				myset->aln_file = myset->position_spec.substr(0, pos);
+				myset->position_spec = myset->position_spec.substr(pos+1);
+			}
+
+			token.GetNextToken();
+			if (!token.Equals(";"))
+			{
+				errormsg = "Expecting ';' to terminate PARAMETERS command, but found ";
+				errormsg += token.GetToken();
+				errormsg += " instead";
+				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
+			}
+
+		} // if (token.Equals("CHARSET"))
+		else if (token.Equals("CHARPARTITION"))
+		{
+			// This should be the NTAX keyword
+			//
+			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
+			token.GetNextToken();
+			string name = token.GetToken();
+			token.GetNextToken();
+			if (!token.Equals("="))
+			{
+				errormsg = "Expecting '=', but found ";
+				errormsg += token.GetToken();
+				errormsg += " instead";
+				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
+			}
+			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
+			token.GetNextToken();
+			do {
+				string model_name = "";
+				do {
+					model_name += token.GetToken();
+					token.SetLabileFlagBit(NxsToken::preserveUnderscores);
+					token.GetNextToken();
+				}  while (!token.AtEOF() && !token.Equals(":"));
+
+				if (!token.Equals(":"))
+				{
+					errormsg = "Expecting ':', but found ";
+					errormsg += token.GetToken();
+					errormsg += " instead";
+					throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
+				}
+				token.SetLabileFlagBit(NxsToken::preserveUnderscores);
+				token.GetNextToken();
+				string charset_name = token.GetToken();
+				CharSet *myset = findCharSet(charset_name);
+				if (!myset)
+				{
+					errormsg = "CharSet ";
+					errormsg += token.GetToken();
+					errormsg += " not found";
+					throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
+				}
+				myset->model_name = model_name;
+				token.GetNextToken();
+				if (!token.Equals(",") && !token.Equals(";"))
+				{
+					errormsg = "Expecting ',' or ';', but found ";
+					errormsg += token.GetToken();
+					errormsg += " instead";
+					throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
+				}
+				if (token.Equals(";"))
+					break;
+				else
+					token.GetNextToken();
+			} while (!token.AtEOF() && !token.Equals(";"));
+			if (!token.Equals(";"))
+			{
+				errormsg = "Expecting ';' to terminate PARAMETERS command, but found ";
+				errormsg += token.GetToken();
+				errormsg += " instead";
+				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
+			}
+		}
 		else if (token.Equals("END") || token.Equals("ENDBLOCK"))
 		{
 			// Get the semicolon following END
@@ -148,6 +261,12 @@ void MSetsBlock::Read(NxsToken &token)
 		}	// token not END, ENDBLOCK, COST
 	}	// GetNextToken loop
 
+}
+
+CharSet *MSetsBlock::findCharSet(string name) {
+	for (vector<CharSet*>::iterator it = charsets.begin(); it != charsets.end(); it++)
+		if ((*it)->name == name) return (*it);
+	return NULL;
 }
 
 int MSetsBlock::findArea(string &name) {

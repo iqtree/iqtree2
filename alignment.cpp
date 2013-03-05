@@ -1170,7 +1170,7 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
             if (step < 1) throw "Wrong step size";
             for (i = lower; i <= upper; i+=step)
                 site_id.push_back(i);
-            if (*str == ',') str++;
+            if (*str == ',' || *str == ' ') str++;
             else break;
         }
     } catch (const char* err) {

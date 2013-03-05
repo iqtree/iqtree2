@@ -210,7 +210,7 @@ void printCopyright(ostream &out) {
 #endif
 
 #ifdef IQ_TREE
-	out << endl << "Copyright (c) 2011 Nguyen Lam Tung, Bui Quang Minh, and Arndt von Haeseler." << endl << endl;
+	out << endl << "Copyright (c) 2011-2013 Nguyen Lam Tung, Bui Quang Minh, and Arndt von Haeseler." << endl << endl;
 #else
 	out << endl << "Copyright (c) 2006-2008 Bui Quang Minh, Steffen Klaere and Arndt von Haeseler." << endl << endl;
 #endif
