@@ -236,11 +236,7 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 	for(i = 0; i < tr->numBranches; i++) {
 		z0[i] = p->z[i];
 	}
-
-	//update(tr, p);
-	//evaluateGeneric(tr, p, FALSE);
-	//printf("Current tree LH = %f \n", tr->likelihood);
-	//curLH = tr->likelihood;
+        
 	double lh0 = curLH;
 	double multiLH = 0.0;
 	if (nnicut->doNNICut) {
@@ -250,7 +246,8 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 			p->back->z[i] = 1.0;
 		}
 		// now compute the log-likelihood
-		newviewGeneric(tr, p, FALSE);
+                // This is actually time consuming!!!
+		newviewGeneric(tr, p, FALSE); 
 		newviewGeneric(tr, p->back, FALSE);
 		evaluateGeneric(tr, p, FALSE);
 		multiLH = tr->likelihood;
@@ -259,6 +256,8 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 			p->z[i] = z0[i];
 			p->back->z[i] = z0[i];
 		}
+                // If the log-likelihood of the zero branch configuration is some delta log-likelihood smaller than 
+                // the log-likelihood of the current tree then it is very likely that there no better NNI tree
 		if (curLH - multiLH > nnicut->delta_min)
 			return nni0;
 	}
