@@ -33,7 +33,7 @@ const double MAX_BRANCH_LEN = 9.0;
 const double TOL_BRANCH_LEN = 0.001;
 const double TOL_LIKELIHOOD = 0.1;
 const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
-const static double SCALING_THRESHOLD_INVER = 1/SCALING_THRESHOLD;
+const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
 const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
 const int SPR_DEPTH = 2;
 
@@ -72,8 +72,6 @@ struct SPR_compare {
     }
 };
 
-
-
 class SPRMoves : public set<SPRMove, SPR_compare> {
 public:
     void add(PhyloNode *prune_node, PhyloNode *prune_dad,
@@ -97,17 +95,36 @@ struct PruningInfo {
 };
 
 struct SwapNNIParam {
-	double nni1_score;
-	double nni1_brlen;
-	double nni2_score;
-	double nni2_brlen;
-	Neighbor* node1_nei;
-	Neighbor* node2_nei;
+    double nni1_score;
+    double nni1_brlen;
+    double nni2_score;
+    double nni2_brlen;
+    Neighbor* node1_nei;
+    Neighbor* node2_nei;
 };
 
 /**
         NNISwap, define a NNI Swap or Move
  */
+//struct NNIMove {
+//    PhyloNode *node1;
+//    NeighborVec::iterator node1Nei_it;
+//
+//    PhyloNode *node2;
+//    NeighborVec::iterator node2Nei_it;
+//
+//    // log-likelihood of the NNI Tree
+//    double loglh;
+//
+//    int swap_id;
+//
+//    bool operator<(const NNIMove & rhs) const {
+//        //return score > rhs.score;
+//    	return (loglh > rhs.loglh);
+//    }
+//
+//};
+
 struct NNIMove {
     PhyloNode *node1;
     NeighborVec::iterator node1Nei_it;
@@ -116,31 +133,29 @@ struct NNIMove {
     NeighborVec::iterator node2Nei_it;
 
     // log-likelihood of the NNI Tree
-    double score;
-
-    // delta log-likelihood
-    double delta;
+    double loglh;
 
     int swap_id;
-
+    
+    //positive value for a positive NNI
+    double delta;
+    
     bool operator<(const NNIMove & rhs) const {
-        //return score > rhs.score;
-    	return (delta > rhs.delta);
+        return loglh > rhs.loglh;
+        //return delta > rhs.delta;
     }
 
 };
 
 struct LeafFreq {
+    PhyloNode* leaf;
 
-	PhyloNode* leaf;
+    int freq;
 
-	int freq;
-
-	bool operator<(const LeafFreq & rhs) const {
-		return ( freq < rhs.freq );
-	}
+    bool operator<(const LeafFreq & rhs) const {
+        return ( freq < rhs.freq);
+    }
 };
-
 
 /**
 Phylogenetic Tree class
@@ -175,12 +190,12 @@ public:
             @param tree the tree to copy
      */
     virtual void copyTree(MTree *tree);
-	/**
-		copy the sub-tree structure into this tree
-		@param tree the tree to copy
-		@param taxa_set 0-1 string of length leafNum (1 to keep the leaf)
-	*/
-	virtual void copyTree(MTree *tree, string &taxa_set);
+    /**
+            copy the sub-tree structure into this tree
+            @param tree the tree to copy
+            @param taxa_set 0-1 string of length leafNum (1 to keep the leaf)
+     */
+    virtual void copyTree(MTree *tree, string &taxa_set);
 
 
     /**
@@ -221,7 +236,7 @@ public:
      */
     RateHeterogeneity *getRate();
 
-	void discardSaturatedSite(bool val);
+    void discardSaturatedSite(bool val);
 
     /**
             get the name of the model
@@ -236,7 +251,9 @@ public:
         return model_factory;
     }
 
-	virtual bool isSuperTree() { return false; }
+    virtual bool isSuperTree() {
+        return false;
+    }
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -254,15 +271,19 @@ public:
      */
     virtual Node* newNode(int node_id, int node_name);
 
-	/**
-	 *		@return number of alignment patterns
-	*/
-	virtual int getAlnNPattern() { return aln->getNPattern(); }
+    /**
+     *		@return number of alignment patterns
+     */
+    virtual int getAlnNPattern() {
+        return aln->getNPattern();
+    }
 
-	/**
-	 *		@return number of alignment sites
-	*/
-	virtual int getAlnNSite() { return aln->getNSite(); }
+    /**
+     *		@return number of alignment sites
+     */
+    virtual int getAlnNSite() {
+        return aln->getNSite();
+    }
 
     /**
             this function return the parsimony or likelihood score of the tree. Default is
@@ -277,11 +298,11 @@ public:
             Parsimony function
      ****************************************************************************/
 
-	/**
-	 * 		Return the approximated branch length estimation using corrected parsimony branch length
-	 * 		This is usually used as the starting point before using Newton-Raphson
-	 */
-	double computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    /**
+     * 		Return the approximated branch length estimation using corrected parsimony branch length
+     * 		This is usually used as the starting point before using Newton-Raphson
+     */
+    double computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             initialize partial_pars vector of all PhyloNeighbors, allocating central_partial_pars
@@ -319,7 +340,7 @@ public:
      */
     int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
-	void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
+    void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
 
     /**
@@ -339,7 +360,7 @@ public:
      */
     int computeParsimonyScore(int ptn, int &states, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
-	
+
     /****************************************************************************
             likelihood function
      ****************************************************************************/
@@ -381,7 +402,7 @@ public:
     virtual void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
     void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL,
-    	double *pattern_scale = NULL);
+            double *pattern_scale = NULL);
 
     template<int NSTATES>
     inline void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
@@ -400,7 +421,7 @@ public:
     inline double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad,
-    	double *pattern_lh = NULL, double *pattern_rate = NULL);
+            double *pattern_lh = NULL, double *pattern_rate = NULL);
 
     /**
             compute tree likelihood when a branch length collapses to zero
@@ -410,11 +431,11 @@ public:
      */
     virtual double computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-	/**
-            compute likelihood of rooted tree with virtual root (FOR TINA)
-            @param dad_branch the branch leading to the subtree
-            @param dad its dad, used to direct the tranversal
-            @return tree likelihood
+    /**
+        compute likelihood of rooted tree with virtual root (FOR TINA)
+        @param dad_branch the branch leading to the subtree
+        @param dad its dad, used to direct the tranversal
+        @return tree likelihood
      */
     virtual double computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
@@ -432,47 +453,47 @@ public:
             @param pattern_lh (OUT) pattern log-likelihoods,
                             assuming pattern_lh has the size of the number of patterns
      */
-	virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
+    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
 
-	/**
-		Compute the variance in tree log-likelihood
-		(Kishino & Hasegawa 1989, JME 29:170-179)
-		@param pattern_lh pattern log-likelihoods, will be computed if NULL
-		@param tree_lh tree log-likelihood, will be computed if ZERO
-	*/
-	double computeLogLVariance(double *pattern_lh = NULL, double tree_lh = 0.0);
+    /**
+            Compute the variance in tree log-likelihood
+            (Kishino & Hasegawa 1989, JME 29:170-179)
+            @param pattern_lh pattern log-likelihoods, will be computed if NULL
+            @param tree_lh tree log-likelihood, will be computed if ZERO
+     */
+    double computeLogLVariance(double *pattern_lh = NULL, double tree_lh = 0.0);
 
-	/**
-		Compute the variance in log-likelihood difference
-		between the current tree and another tree.
-		(Kishino & Hasegawa 1989, JME 29:170-179)
-		@param pattern_lh_other pattern log-likelihoods of the other tree
-		@param pattern_lh pattern log-likelihoods of current tree, will be computed if NULL
-	*/
-	double computeLogLDiffVariance(double *pattern_lh_other, double *pattern_lh = NULL);
+    /**
+            Compute the variance in log-likelihood difference
+            between the current tree and another tree.
+            (Kishino & Hasegawa 1989, JME 29:170-179)
+            @param pattern_lh_other pattern log-likelihoods of the other tree
+            @param pattern_lh pattern log-likelihoods of current tree, will be computed if NULL
+     */
+    double computeLogLDiffVariance(double *pattern_lh_other, double *pattern_lh = NULL);
 
-	/**
-	 *  Estimate the observed branch length between dad_branch and dad analytically.
-	 *	The ancestral states of the 2 nodes are first computed (Yang, 2006).
-	 *	Branch length are then computed using analytical formula.
-	 *	@param dad_branch must be an internal node
-	 *	@param dad must be an internal node
-	 *	@return estimated branch length or -1.0 if one of the 2 nodes is leaf
-	 */
-	double computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    /**
+     *  Estimate the observed branch length between dad_branch and dad analytically.
+     *	The ancestral states of the 2 nodes are first computed (Yang, 2006).
+     *	Branch length are then computed using analytical formula.
+     *	@param dad_branch must be an internal node
+     *	@param dad must be an internal node
+     *	@return estimated branch length or -1.0 if one of the 2 nodes is leaf
+     */
+    double computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-	double correctBranchLengthF81(double observedBran, double alpha = -1.0);
+    double correctBranchLengthF81(double observedBran, double alpha = -1.0);
 
-	double estimateBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double estimateBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-	/**
-		Compute the variance in log-likelihood difference
-		between the current tree and another tree.
-		(Kishino & Hasegawa 1989, JME 29:170-179)
-		@param other_tree the other tree to compare
-		@param pattern_lh pattern log-likelihoods of current tree, will be computed if NULL
-	*/
-	double computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh = NULL);
+    /**
+            Compute the variance in log-likelihood difference
+            between the current tree and another tree.
+            (Kishino & Hasegawa 1989, JME 29:170-179)
+            @param other_tree the other tree to compare
+            @param pattern_lh pattern log-likelihoods of current tree, will be computed if NULL
+     */
+    double computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh = NULL);
 
     /**
             Roll back the tree saved with only Taxon IDs and branch lengths.
@@ -526,13 +547,13 @@ public:
     int addTaxonMPFast(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad);
 
 
-	/** 
-	 * FAST VERSION: compute parsimony tree by step-wise addition
-	 * @param out_prefix prefix for .parstree file
-	 * @param alignment input alignment
-	 */
-	void computeParsimonyTree(const char *out_prefix, Alignment *alignment);
-	
+    /** 
+     * FAST VERSION: compute parsimony tree by step-wise addition
+     * @param out_prefix prefix for .parstree file
+     * @param alignment input alignment
+     */
+    void computeParsimonyTree(const char *out_prefix, Alignment *alignment);
+
     /**
             SLOW VERSION: grow the tree by step-wise addition
             @param alignment input alignment
@@ -693,10 +714,10 @@ public:
             @return the likelihood of the tree
      */
     double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL
-		/*,ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL, ostream *site_lh = NULL,
-    	StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
-    	int *max_trees = NULL, double *logl_cutoff = NULL*/
-	);
+            /*,ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL, ostream *site_lh = NULL,
+    StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
+    int *max_trees = NULL, double *logl_cutoff = NULL*/
+            );
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
@@ -708,11 +729,11 @@ public:
             @return the likelihood of the tree
      */
     double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL
-    /*,	ostream *out = NULL, int brtype = 0,
-    	ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL,
-    	vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
-    	int *max_trees = NULL, double *logl_cutoff = NULL
-	*/);
+            /*,	ostream *out = NULL, int brtype = 0,
+                ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL,
+                vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
+                int *max_trees = NULL, double *logl_cutoff = NULL
+             */);
 
     /**
             Do an NNI
@@ -766,7 +787,7 @@ public:
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
             @return the longest distance
      */
-	double computeObsDist(double *dist_mat);
+    double computeObsDist(double *dist_mat);
 
     /**
             compute distance matrix, allocating memory if necessary
@@ -785,16 +806,16 @@ public:
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
             @param dist_file (OUT) name of the distance file
             @return the longest distance
-	*/
+     */
     double computeObsDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file);
 
-	/**
-		correct the distances to follow metric property of triangle inequalities.
-		Using the Floyd alogrithm.
-		@param dist_mat (IN/OUT) the shortest path between all pairs of taxa
-        @return the longest distance
-	*/
-	double correctDist(double *dist_mat);
+    /**
+            correct the distances to follow metric property of triangle inequalities.
+            Using the Floyd alogrithm.
+            @param dist_mat (IN/OUT) the shortest path between all pairs of taxa
+    @return the longest distance
+     */
+    double correctDist(double *dist_mat);
 
     /****************************************************************************
             compute BioNJ tree, a more accurate extension of Neighbor-Joining
@@ -855,8 +876,8 @@ public:
      *  original implementation by Minh
      */
     double swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
-                              PhyloNode *orig_node1, PhyloNode *orig_node2,
-                              PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path);
+            PhyloNode *orig_node1, PhyloNode *orig_node2,
+            PhyloNode *node2, PhyloNode *dad2, vector<PhyloNeighbor*> &spr_path);
 
     /**
             move the subtree (dad1-node1) to the branch (dad2-node2)
@@ -929,10 +950,10 @@ public:
 
     int restoreStableClade(Alignment *original_aln, NodeVector &pruned_taxa, StrVector &linked_name);
 
-	/**
-		randomize the neighbor orders of all nodes
-	*/
-	void randomizeNeighbors(Node *node = NULL, Node *dad = NULL);
+    /**
+            randomize the neighbor orders of all nodes
+     */
+    void randomizeNeighbors(Node *node = NULL, Node *dad = NULL);
 
     /****************************************************************************
             Public variables
@@ -981,28 +1002,29 @@ public:
      */
     void assignLeafNames(Node *node = NULL, Node *dad = NULL);
 
-	/**
-	 * initialize partition information for super tree
-	*/
-	virtual void initPartitionInfo() {}
+    /**
+     * initialize partition information for super tree
+     */
+    virtual void initPartitionInfo() {
+    }
 
-	/**
-	 * print transition matrix for all branches
-	 * 
-	 */
-	void printTransMatrices(Node *node = NULL, Node *dad = NULL);
-	
+    /**
+     * print transition matrix for all branches
+     * 
+     */
+    void printTransMatrices(Node *node = NULL, Node *dad = NULL);
+
 protected:
 
-	/** converted root state, for Tina's zoombie domain */
-	char root_state;
-	
-	/**
-		internal pattern log-likelihoods, always stored after calling computeLikelihood()
-		or related functions. Note that scaling factors are not incorporated here.
-		If you want to get real pattern log-likelihoods, please use computePatternLikelihood()
-	*/
-	double *_pattern_lh;
+    /** converted root state, for Tina's zoombie domain */
+    char root_state;
+
+    /**
+            internal pattern log-likelihoods, always stored after calling computeLikelihood()
+            or related functions. Note that scaling factors are not incorporated here.
+            If you want to get real pattern log-likelihoods, please use computePatternLikelihood()
+     */
+    double *_pattern_lh;
 
 
     /**
@@ -1052,7 +1074,7 @@ protected:
             the main memory storing all scaling event numbers for all neighbors of the tree.
             The variable scale_num in PhyloNeighbor will be assigned to a region inside this variable.
      */
-	UBYTE *central_scale_num;
+    UBYTE *central_scale_num;
 
     /**
             the main memory storing all partial parsimony states for all neighbors of the tree.
@@ -1060,42 +1082,10 @@ protected:
      */
     UINT *central_partial_pars;
 
-	/**
-		TRUE to discard saturated for Meyer & von Haeseler (2003) model
-	*/
-	bool discard_saturated_site;
-
     /**
-     * Number of category
+            TRUE to discard saturated for Meyer & von Haeseler (2003) model
      */
-    //int numCat;
-
-    /**
-     * Size of likelihood block for 1 pattern
-     */
-    //int block;
-
-    /**
-     *  State frequencies of nucleotide or amino acids
-     */
-    //double* state_freqs;
-
-    /**
-     * Size of the partial likelihood (multiple of double)
-     */
-    //int lh_size;
-
-    //size_t block_size;
-
-    /**
-     * Vector to store pattern frequency
-     */
-    //ArrayXd ptn_freqs;
-
-    /**
-     * Size of the transition matrix
-     */
-    //int tranSize;
+    bool discard_saturated_site;
 
     /**
      * Temporary partial likelihood array: used when swapping branch and recalculate the
@@ -1113,7 +1103,7 @@ protected:
     double *tmp_anscentral_state_prob2;
     /** pattern-specific rates */
     //double *tmp_ptn_rates;
-    
+
     /**
      * Temporary scale num array: used when swapping branch and recalculate the
      * likelihood --> avoid calling malloc
@@ -1141,33 +1131,33 @@ protected:
      */
     int getBitsEntrySize();
 
-	/**
-		@param bits_entry
-		@return TRUE if bits_entry contains all 0s, FALSE otherwise
-	*/
-	bool isEmptyBitsEntry(UINT *bits_entry);
+    /**
+            @param bits_entry
+            @return TRUE if bits_entry contains all 0s, FALSE otherwise
+     */
+    bool isEmptyBitsEntry(UINT *bits_entry);
 
-	/**
-		@param bits_entry1
-		@param bits_entry1
-		@param bits_union (OUT) union of bits_entry1 and bits_entry2
-	*/
-	void unionBitsEntry(UINT *bits_entry1, UINT *bits_entry2, UINT* &bits_union);
+    /**
+            @param bits_entry1
+            @param bits_entry1
+            @param bits_union (OUT) union of bits_entry1 and bits_entry2
+     */
+    void unionBitsEntry(UINT *bits_entry1, UINT *bits_entry2, UINT* &bits_union);
 
-	/**
-		set a single bit to 1
-		@param bits_entry
-		@param id index of the bit in the entry to set to 1
-	*/
-	void setBitsEntry(UINT* &bits_entry, int id);
+    /**
+            set a single bit to 1
+            @param bits_entry
+            @param id index of the bit in the entry to set to 1
+     */
+    void setBitsEntry(UINT* &bits_entry, int id);
 
-	/**
-		get a single bit content
-		@param bits_entry
-		@param id index of the bit in the entry
-		@return TRUE if bit ID is 1, FALSE otherwise
-	*/
-	bool getBitsEntry(UINT* &bits_entry, int id);
+    /**
+            get a single bit content
+            @param bits_entry
+            @param id index of the bit in the entry
+            @return TRUE if bit ID is 1, FALSE otherwise
+     */
+    bool getBitsEntry(UINT* &bits_entry, int id);
 
     /**
             get bit blocks, each block span num_state bits
@@ -1185,7 +1175,8 @@ protected:
      */
     void setBitsBlock(UINT* &bit_vec, int index, UINT *bits_entry);
 
-	virtual void saveCurrentTree(double logl) {} // save current tree
+    virtual void saveCurrentTree(double logl) {
+    } // save current tree
 
 
 };

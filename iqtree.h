@@ -267,9 +267,8 @@ public:
 	/**
 	 		apply nni2apply NNIs from the non-conflicting NNI list
 	 		@param nni2apply number of NNIs to apply from the list
-	 		@param neg_nni to apply negative NNIs or not
 	*/
-	void applyNNIs (int nni2apply, bool neg_nni);
+	void applyNNIs (int nni2apply);
 
 	/**
 	 		generate non conflicting NNI moves.

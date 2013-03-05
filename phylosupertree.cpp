@@ -357,7 +357,7 @@ void PhyloSuperTree::initPartitionInfo() {
 
 NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, double lh_contribution) {
     NNIMove myMove;
-    myMove.score = 0;
+    myMove.loglh = 0;
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
 	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
 	assert(nei1 && nei2);
@@ -437,7 +437,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 		myMove.swap_id = 1;
 		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
 		myMove.node2Nei_it = node2->findNeighborIt(node2_nei->node);
-		myMove.score = bestScore;
+		myMove.loglh = bestScore;
 		myMove.node1 = node1;
 		myMove.node2 = node2;
 	}
@@ -448,7 +448,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 		myMove.swap_id = 2;
 		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
 		myMove.node2Nei_it = node2->findNeighborIt(node2_nei_other->node);
-		myMove.score = bestScore;
+		myMove.loglh = bestScore;
 		myMove.node1 = node1;
 		myMove.node2 = node2;
 	}

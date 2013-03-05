@@ -72,7 +72,7 @@ void PhyloTree::init() {
     discard_saturated_site = true;
     _pattern_lh = NULL;
     root_state = STATE_UNKNOWN;
-	theta_all = NULL;
+    theta_all = NULL;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) :
@@ -1001,16 +1001,22 @@ void PhyloTree::initializeAllPartialLh() {
     int numStates = model->num_states;
     size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite()+1);
     size_t block_size = mem_size * numStates * site_rate->getNRate();
-    if (!tmp_partial_lh1)
+    if (!tmp_partial_lh1) {
         tmp_partial_lh1 = newPartialLh();
+        if (((intptr_t) tmp_partial_lh1) % 16 != 0)        
+            tmp_partial_lh1 = tmp_partial_lh1 + 1;
+    }
+    if (!tmp_partial_lh2) {
+        tmp_partial_lh2 = newPartialLh();
+        if (((intptr_t) tmp_partial_lh2) % 16 != 0)
+            tmp_partial_lh2 = tmp_partial_lh2 + 1;
+    }        
     if (!tmp_anscentral_state_prob1)
         tmp_anscentral_state_prob1 = new double[numStates];
     if (!tmp_anscentral_state_prob2)
         tmp_anscentral_state_prob2 = new double[numStates];
     //if (!tmp_ptn_rates)
-    //	tmp_ptn_rates = new double[alnSize];
-    if (!tmp_partial_lh2)
-        tmp_partial_lh2 = newPartialLh();
+    //	tmp_ptn_rates = new double[alnSize]
     if (!tmp_scale_num1)
         tmp_scale_num1 = newScaleNum();
     if (!tmp_scale_num2)
