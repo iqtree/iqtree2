@@ -1340,10 +1340,10 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
                 }
             }
             curLambda = startLambda;
-            vec_nonconf_nni.clear();
-            mapOptBranLens.clear();
-            savedBranLens.clear();
-            posNNIs.clear();
+            vec_nonconf_nni.clear(); // Vector containing non-conflicting positive NNIs
+            mapOptBranLens.clear(); // Vector containing branch length of the positive NNIs
+            savedBranLens.clear(); // Vector containing all current branch of the tree
+            posNNIs.clear(); // Vector containing all positive NNIs
             saveBranLens(); // save all current branch lengths
             initPartitionInfo(); // for super tree
             if (!nni_sort) {
@@ -1357,6 +1357,10 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 
             /* sort all positive NNI moves (descending) */
             sort(posNNIs.begin(), posNNIs.end());
+//            for (int i = 0; i < posNNIs.size(); i++) {
+//                cout << posNNIs[i].loglh << " ";
+//            }
+//            cout << endl;
             /* remove conflicting NNIs */
             genNonconfNNIs();
             nonconf_nni = vec_nonconf_nni.size();

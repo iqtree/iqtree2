@@ -1335,14 +1335,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 		cout << "Log-likelihood of the BIONJ tree: " << iqtree.curScore << endl;
 		if (iqtree.curScore < bestTreeScore - 1e-5) {
-			cout << "rolling back the first tree..."
-					<< endl;
+			cout << "Rolling back the first tree..." << endl;
 			iqtree.rollBack(best_tree_string);
 			if (iqtree.isSuperTree()) {
 				((PhyloSuperTree*) (&iqtree))->mapTrees();
 				iqtree.optimizeAllBranches();
 			}
-			iqtree.curScore = iqtree.computeLikelihood();
+			//iqtree.curScore = iqtree.computeLikelihood();
+                        iqtree.curScore = iqtree.optimizeAllBranches();
 			cout << "Backup log-likelihood: " << iqtree.curScore << endl;
 		}
 		double elapsedTime = getCPUTime() - params.startTime;

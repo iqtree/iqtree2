@@ -199,6 +199,7 @@ void PhyloTree::rollBack(istream &best_tree_string) {
     readTree(best_tree_string, rooted);
     assignLeafNames();
     initializeAllPartialLh();
+    clearAllPartialLH();
 }
 
 void PhyloTree::setModel(ModelSubst *amodel) {
@@ -1001,7 +1002,7 @@ void PhyloTree::initializeAllPartialLh() {
     int numStates = model->num_states;
     size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite()+1);
     size_t block_size = mem_size * numStates * site_rate->getNRate();
-    if (!tmp_partial_lh1) {
+    if (!tmp_partial_lh1) {        
         tmp_partial_lh1 = newPartialLh();
         if (((intptr_t) tmp_partial_lh1) % 16 != 0)        
             tmp_partial_lh1 = tmp_partial_lh1 + 1;
@@ -1010,7 +1011,8 @@ void PhyloTree::initializeAllPartialLh() {
         tmp_partial_lh2 = newPartialLh();
         if (((intptr_t) tmp_partial_lh2) % 16 != 0)
             tmp_partial_lh2 = tmp_partial_lh2 + 1;
-    }        
+    }     
+        
     if (!tmp_anscentral_state_prob1)
         tmp_anscentral_state_prob1 = new double[numStates];
     if (!tmp_anscentral_state_prob2)
