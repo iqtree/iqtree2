@@ -1766,16 +1766,21 @@ void evaluateTrees(Params &params, IQTree *tree) {
 	string tree_file = params.treeset_file;
 	tree_file += ".eval";
 	ofstream treeout;
-	if (!params.fixed_branch_length) {
+	//if (!params.fixed_branch_length) {
 		treeout.open(tree_file.c_str());
-	}
+	//}
 	string score_file = params.treeset_file;
 	score_file += ".treelh";
-	ofstream scoreout(score_file.c_str());
+	ofstream scoreout;
+	if (params.print_tree_lh)
+		scoreout.open(score_file.c_str());
 	string site_lh_file = params.treeset_file;
 	site_lh_file += ".sitelh";
-	ofstream site_lh_out(site_lh_file.c_str());
-	site_lh_out << trees.size() << " " << tree->getAlnNSite() << endl;
+	if (params.print_site_lh) {
+		ofstream site_lh_out(site_lh_file.c_str());
+		site_lh_out << trees.size() << " " << tree->getAlnNSite() << endl;
+		site_lh_out.close();
+	}
 	int tree_index = 0;
 	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++, tree_index++) {
 		cout << "Tree " << (it - trees.begin()) + 1;
@@ -1787,25 +1792,31 @@ void evaluateTrees(Params &params, IQTree *tree) {
 			((PhyloSuperTree*) tree)->mapTrees();
 		if (!params.fixed_branch_length) {
 			tree->curScore = tree->optimizeAllBranches();
-			treeout << "[ lh=" << tree->curScore << " ]";
-			tree->printTree(treeout);
-			treeout << endl;
-		} else
+		} else {
 			tree->curScore = tree->computeLikelihood();
+		}
+		treeout << "[ lh=" << tree->curScore << " ]";
+		tree->printTree(treeout);
+		treeout << endl;
+
 		cout << " / LogL: " << tree->curScore << endl;
 		string tree_name = "Tree" + convertIntToString(tree_index+1);
 		if (params.print_site_lh) {
 			printSiteLh(site_lh_file.c_str(), tree, NULL, true, tree_name.c_str());
 		}
-		scoreout << tree->curScore << endl;
+		//scoreout << tree->curScore << endl;
 	}
-	if (!params.fixed_branch_length) {
-		treeout.close();
-		cout << "Trees with optimized branch lengths printed to " << tree_file
-				<< endl;
+	treeout.close();
+	cout << endl << "Tree evaluation results written to:" << endl
+		     << "  Trees:                " << tree_file << endl;
+	if (params.print_tree_lh) {
+		scoreout.close();
+		cout << "  Tree log-likelihoods: " << score_file << endl;
 	}
-	scoreout.close();
-	cout << "Tree log-likelihoods printed to " << score_file << endl;
+	if (params.print_site_lh) {
+		cout << "  Site log-likelihoods: " << site_lh_file << endl;
+	}
+	cout << endl;
 }
 
 void runPhyloAnalysis(Params &params) {

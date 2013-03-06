@@ -916,7 +916,7 @@ double IQTree::doIQPNNI() {
     if (params->write_intermediate_trees)
         out_treels.open(treels_name.c_str());
 
-    if (params->write_intermediate_trees && save_all_trees == 1) {
+    if (params->write_intermediate_trees && save_all_trees != 2) {
         printIntermediateTree(
                 WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
     }
@@ -1175,7 +1175,7 @@ double IQTree::doIQPNNI() {
          }
          */
 
-        if (params->write_intermediate_trees && save_all_trees == 1) {
+        if (params->write_intermediate_trees && save_all_trees != 2) {
             printIntermediateTree(
                     WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
         }

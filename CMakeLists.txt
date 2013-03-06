@@ -1,3 +1,7 @@
+#########################################################
+# IQ-TREE cmake build definition
+#########################################################
+
 cmake_minimum_required(VERSION 2.6)
 
 set(BUILD_SHARED_LIBS OFF)
@@ -6,23 +10,28 @@ if (NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release")
 endif()
 
+# Detect platforms, tested for Windows, Mac OS X, and Unix-like
 if (WIN32)
 	message("Target OS     : Windows")
+	# build as static binary to run on most machines
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 elseif (APPLE) 
 	message("Target OS     : Mac OS X")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmacosx-version-min=10.6")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mmacosx-version-min=10.6")
+	# to be compatible back to Mac OS X 10.6
+	add_definitions("-mmacosx-version-min=10.6") 
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.6")
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 elseif (UNIX) 
 	message("Target OS     : Unix")
+	# build as static binary to run on most machines
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 else()
+	# Note that IQ-TREE has NOT been tested on other platforms
 	message("Target OS     : Unknown")
 endif()
 
-
+# verbose for 32 or 64 bit platform
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
 	message("Target binary : possibly 32-bit")
 	#SET(EXE_SUFFIX "-32bit")
@@ -34,6 +43,7 @@ else()
 	#SET(EXE_SUFFIX "")
 endif()
 
+# change the executable name if compiled for OpenMP parallel version
 if (CMAKE_CXX_FLAGS MATCHES "openmp")
 	message("Parallel      : OpenMP")
 	SET(EXE_SUFFIX "-omp")
@@ -48,7 +58,7 @@ set (iqtree_VERSION_MAJOR 0)
 set (iqtree_VERSION_MINOR 9)
 set (iqtree_VERSION_PATCH 3)
 
-
+# check existence of a few basic functions
 include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
 check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
 check_function_exists (getrusage HAVE_GETRUSAGE)
@@ -60,8 +70,9 @@ configure_file (
   "${PROJECT_SOURCE_DIR}/iqtree_config.h.in"
   "${PROJECT_BINARY_DIR}/iqtree_config.h"
   )
+
 # add the binary tree to the search path for include files
-# so that we will find TutorialConfig.h
+# so that we will find iqtree_config.h
 include_directories("${PROJECT_BINARY_DIR}")
 
 add_definitions(-DIQ_TREE)
@@ -74,11 +85,13 @@ set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 
+# subdirectories containing necessary libraries for the build 
 add_subdirectory(phylolib)
 add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
 
+# the main executable
 add_executable(iqtree
 alignment.cpp
 alignmentpairwise.cpp
@@ -148,13 +161,14 @@ nnisearch.c
 )
 
 
-
+# link special lib for WIN32
 if (WIN32)
 	target_link_libraries(iqtree phylolib ncl whtest z sprng ws2_32)
 else (WIN32)
 	target_link_libraries(iqtree phylolib ncl whtest z sprng)
 endif (WIN32)
 
+# setup the executable name properly
 set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
 # strip the release build
@@ -197,6 +211,9 @@ endif(WIN32)
 #  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 set(CPACK_SOURCE_IGNORE_FILES
   "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;${CPACK_SOURCE_IGNORE_FILES}")
+
+set(CPACK_PACKAGE_FILE_NAME 
+	"${CMAKE_PROJECT_NAME}${EXE_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${CMAKE_SYSTEM_NAME}")
 
 set(CPACK_STRIP_FILES TRUE)
 
