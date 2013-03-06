@@ -2,39 +2,45 @@ cmake_minimum_required(VERSION 2.6)
 
 set(BUILD_SHARED_LIBS OFF)
 
-
-######## NOTE: run cmake with option "-DIQ_STATIC to build static library 
-if (WIN32)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-    SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-elseif (NOT APPLE) 
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+if (NOT CMAKE_BUILD_TYPE) 
+	set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-if (APPLE) 
+if (WIN32)
+	message("Target OS     : Windows")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+elseif (APPLE) 
+	message("Target OS     : Mac OS X")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmacosx-version-min=10.6")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mmacosx-version-min=10.6")
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+elseif (UNIX) 
+	message("Target OS     : Unix")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+else()
+	message("Target OS     : Unknown")
 endif()
 
-IF($ENV{STATIC})
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-	IF(WIN32)
-    		SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-	ELSE(WIN32)
-    		SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-	ENDIF(WIN32)
-ENDIF($ENV{STATIC})
 
-if ($ENV{B32}) 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-endif ($ENV{B32}) 
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+	message("Target binary : possibly 32-bit")
+	#SET(EXE_SUFFIX "-32bit")
+elseif(CMAKE_CXX_FLAGS MATCHES "m32")
+	message("Target binary : 32-bit")
+	#SET(EXE_SUFFIX "-32bit")
+else()
+	message("Target binary : 64-bit")
+	#SET(EXE_SUFFIX "")
+endif()
 
-if ($ENV{OMP}) 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
-endif ($ENV{OMP}) 
+if (CMAKE_CXX_FLAGS MATCHES "openmp")
+	message("Parallel      : OpenMP")
+	SET(EXE_SUFFIX "-omp")
+else()
+	message("Parallel      : None")
+	SET(EXE_SUFFIX "")
+endif()
 
 project(iqtree)
 # The version number.
@@ -46,8 +52,6 @@ set (iqtree_VERSION_PATCH 3)
 include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
 check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
 check_function_exists (getrusage HAVE_GETRUSAGE)
-#check_function_exists (popen HAVE_POPEN)
-#check_function_exists (pclose HAVE_PCLOSE)
 check_function_exists (GlobalMemoryStatusEx HAVE_GLOBALMEMORYSTATUSEX)
 
 # configure a header file to pass some of the CMake settings
@@ -64,26 +68,11 @@ add_definitions(-DIQ_TREE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-sign-compare -Wno-deprecated -pedantic -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=c99 -Wall -Wno-sign-compare -pedantic -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
 
-#if (NOT WIN32)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
-#endif(NOT WIN32)
- 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
-
-if (NOT CMAKE_BUILD_TYPE) 
-	set(CMAKE_BUILD_TYPE "Release")
-endif()
-
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-  message("Info: Compiling on 32-bit system")
-else(CMAKE_SIZEOF_VOID_P EQUAL 4)
-  message("Info: Compiling on 64-bit system")
-endif(CMAKE_SIZEOF_VOID_P EQUAL 4)
 
 add_subdirectory(phylolib)
 add_subdirectory(ncl)
@@ -158,15 +147,19 @@ fmemopen.c
 nnisearch.c
 )
 
+
+
 if (WIN32)
-target_link_libraries(iqtree phylolib ncl whtest z sprng ws2_32)
+	target_link_libraries(iqtree phylolib ncl whtest z sprng ws2_32)
 else (WIN32)
-target_link_libraries(iqtree phylolib ncl whtest z sprng)
+	target_link_libraries(iqtree phylolib ncl whtest z sprng)
 endif (WIN32)
+
+set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
 # strip the release build
 if (CMAKE_BUILD_TYPE STREQUAL "Release") 
-	message("Info: executable will be stripped after linking")
+	message("Builde mode   : Release + Strip")
 	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
 endif()
 
@@ -175,6 +168,12 @@ endif()
 ##############################################################
 install (TARGETS iqtree DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/examples/example.phy" DESTINATION examples)
+if (WIN32)
+	if (EXE_SUFFIX MATCHES "omp")
+		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
+		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
+	endif()
+endif()
 #install (FILES "${PROJECT_BINARY_DIR}/iqtree_config.h"        
 #         DESTINATION include)
 
