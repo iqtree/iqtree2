@@ -392,6 +392,362 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 	return best_model;
 }
 
+
+
+struct TreeInfo {
+	double logl; // log likelihood
+	double rell_bp; // bootstrap proportion by RELL method
+	bool rell_confident; // confidence set for RELL-BP
+	double sh_pvalue; // p-value by Shimodaira-Hasegawa test
+	double kh_pvalue; // p-value by Kishino-Hasegawa test
+	double elw_value; // ELW - expected likelihood weights test
+	bool elw_confident; // to represent confidence set of ELW test
+};
+
+int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVector &distinct_ids) {
+	StringIntMap treels;
+	try {
+		ifstream in;
+		in.exceptions(ios::failbit | ios::badbit);
+		in.open(filename);
+		// remove the failbit
+		in.exceptions(ios::badbit);
+		int tree_id;
+		for (tree_id = 0; !in.eof(); tree_id++) {
+			tree->freeNode();
+			tree->readTree(in, rooted);
+			tree->setAlignment(tree->aln);
+			tree->setRootNode((char*)tree->aln->getSeqName(0).c_str());
+		    StringIntMap::iterator it = treels.end();
+		    ostringstream ostr;
+		    tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+		    it = treels.find(ostr.str());
+		    if (it != treels.end()) { // already in treels
+		    	distinct_ids.push_back(it->second);
+		    } else {
+		    	distinct_ids.push_back(-1);
+		    	treels[ostr.str()] = tree_id;
+		    }
+			char ch;
+			in.exceptions(ios::goodbit);
+			(in) >> ch;
+			if (in.eof()) break;
+			in.unget();
+			in.exceptions(ios::failbit | ios::badbit);
+
+		}
+		in.close();
+	} catch (ios::failure) {
+		outError("Cannot read file ", filename);
+	}
+	return treels.size();
+}
+
+void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids)
+{
+	if (!params.treeset_file)
+		return;
+	cout << endl;
+	//MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
+	cout << "Reading trees in " << params.treeset_file << " ..." << endl;
+	int ntrees = countDistinctTrees(params.treeset_file, params.is_rooted, tree, distinct_ids);
+	if (ntrees < distinct_ids.size()) {
+		cout << "WARNING: " << distinct_ids.size() << " trees detected but only " << ntrees << " distinct trees will be evaluated" << endl;
+	} else {
+		cout << ntrees << " distinct trees detected" << endl;
+	}
+	if (ntrees == 0) return;
+	ifstream in(params.treeset_file);
+
+	//if (trees.size() == 1) return;
+	string tree_file = params.treeset_file;
+	tree_file += ".trees";
+	ofstream treeout;
+	//if (!params.fixed_branch_length) {
+		treeout.open(tree_file.c_str());
+	//}
+	string score_file = params.treeset_file;
+	score_file += ".treelh";
+	ofstream scoreout;
+	if (params.print_tree_lh)
+		scoreout.open(score_file.c_str());
+	string site_lh_file = params.treeset_file;
+	site_lh_file += ".sitelh";
+	if (params.print_site_lh) {
+		ofstream site_lh_out(site_lh_file.c_str());
+		site_lh_out << ntrees << " " << tree->getAlnNSite() << endl;
+		site_lh_out.close();
+	}
+
+	double time_start = getCPUTime();
+
+	int *boot_samples = NULL;
+	int boot;
+	//double *saved_tree_lhs = NULL;
+	double *tree_lhs = NULL;
+	double *pattern_lh = NULL;
+	double *orig_tree_lh = NULL;
+	double *max_lh = NULL;
+	int nptn = tree->getAlnNPattern();
+	if (params.topotest_replicates) {
+		size_t mem_size = (size_t)params.topotest_replicates*nptn*sizeof(int) +
+				ntrees*params.topotest_replicates*sizeof(double) +
+				(nptn + ntrees*3 + params.topotest_replicates*2)*sizeof(double) +
+				ntrees*sizeof(TreeInfo);
+		cout << "Note: " << ((double)mem_size/1024)/1024 << " MB of RAM required!" << endl;
+		if (mem_size > getMemorySize()-100000)
+			outWarning("The required memory does not fit in RAM!");
+		cout << "Creating " << params.topotest_replicates << " bootstrap replicates..." << endl;
+		if (!(boot_samples = new int [params.topotest_replicates*nptn]))
+			outError(ERR_NO_MEMORY);
+		for (boot = 0; boot < params.topotest_replicates; boot++)
+			tree->aln->createBootstrapAlignment(boot_samples + (boot*nptn));
+		//if (!(saved_tree_lhs = new double [ntrees * params.topotest_replicates]))
+		//	outError(ERR_NO_MEMORY);
+		if (!(tree_lhs = new double [ntrees * params.topotest_replicates]))
+			outError(ERR_NO_MEMORY);
+		if (!(pattern_lh = new double[nptn]))
+			outError(ERR_NO_MEMORY);
+		if (!(orig_tree_lh = new double[ntrees]))
+			outError(ERR_NO_MEMORY);
+		if (!(max_lh = new double[params.topotest_replicates]))
+			outError(ERR_NO_MEMORY);
+	}
+	int tree_index, tid;
+	info.resize(ntrees);
+	//for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++, tree_index++) {
+	for (tree_index = 0, tid = 0; tree_index < distinct_ids.size(); tree_index++) {
+
+		cout << "Tree " << tree_index + 1;
+		if (distinct_ids[tree_index] >= 0) {
+			cout << " / identical to tree " << distinct_ids[tree_index]+1 << endl;
+			// ignore tree
+			char ch;
+			do {
+				in >> ch;
+			} while (!in.eof() && ch != ';');
+			continue;
+		}
+		tree->freeNode();
+		tree->readTree(in, params.is_rooted);
+		tree->setAlignment(tree->aln);
+		tree->initializeAllPartialLh();
+		tree->fixNegativeBranch(false);
+		if (tree->isSuperTree())
+			((PhyloSuperTree*) tree)->mapTrees();
+		if (!params.fixed_branch_length) {
+			tree->curScore = tree->optimizeAllBranches(100, 0.001);
+		} else {
+			tree->curScore = tree->computeLikelihood();
+		}
+		treeout << "[ tree " << tree_index+1 << " lh=" << tree->curScore << " ]";
+		tree->printTree(treeout);
+		treeout << endl;
+		if (params.print_tree_lh)
+			scoreout << tree->curScore << endl;
+
+		cout << " / LogL: " << tree->curScore << endl;
+
+		if (pattern_lh)
+			tree->computePatternLikelihood(pattern_lh, &(tree->curScore));
+		if (params.print_site_lh) {
+			string tree_name = "Tree" + convertIntToString(tree_index+1);
+			printSiteLh(site_lh_file.c_str(), tree, pattern_lh, true, tree_name.c_str());
+		}
+		info[tid].logl = tree->curScore;
+
+		if (!params.topotest_replicates) {
+			tid++;
+			continue;
+		}
+		// now compute RELL scores
+		orig_tree_lh[tid] = tree->curScore;
+		double *tree_lhs_offset = tree_lhs + (tid*params.topotest_replicates);
+		for (boot = 0; boot < params.topotest_replicates; boot++) {
+			double lh = 0.0;
+			int *this_boot_sample = boot_samples + (boot*nptn);
+			for (int ptn = 0; ptn < nptn; ptn++)
+				lh += pattern_lh[ptn] * this_boot_sample[ptn];
+			tree_lhs_offset[boot] = lh;
+		}
+		tid++;
+	}
+
+	assert(tid == ntrees);
+
+	if (params.topotest_replicates) {
+
+		double *tree_probs = new double[ntrees];
+		memset(tree_probs, 0, ntrees*sizeof(double));
+		int *tree_ranks = new int[ntrees];
+
+		/* perform RELL BP method */
+		cout << "Performing RELL test..." << endl;
+		int *maxtid = new int[params.topotest_replicates];
+		double *maxL = new double[params.topotest_replicates];
+		memset(maxtid, 0, params.topotest_replicates*sizeof(int));
+		memcpy(maxL, tree_lhs, params.topotest_replicates*sizeof(double));
+
+		for (tid = 1; tid < ntrees; tid++) {
+			double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
+			for (boot = 0; boot < params.topotest_replicates; boot++)
+				if (tree_lhs_offset[boot] > maxL[boot]) {
+					maxL[boot] = tree_lhs_offset[boot];
+					maxtid[boot] = tid;
+				}
+		}
+		for (boot = 0; boot < params.topotest_replicates; boot++)
+			tree_probs[maxtid[boot]] += 1.0;
+		for (tid = 0; tid < ntrees; tid++) {
+			tree_probs[tid] /= params.topotest_replicates;
+			info[tid].rell_confident = false;
+			info[tid].rell_bp = tree_probs[tid];
+		}
+		sort_index(tree_probs, tree_probs + ntrees, tree_ranks);
+		double prob_sum = 0.0;
+		// obtain the confidence set
+		for (tid = ntrees-1; tid >= 0; tid--) {
+			info[tree_ranks[tid]].rell_confident = true;
+			prob_sum += tree_probs[tree_ranks[tid]];
+			if (prob_sum > 0.95) break;
+		}
+
+		// sanity check
+		for (tid = 0, prob_sum = 0.0; tid < ntrees; tid++)
+			prob_sum += tree_probs[tid];
+		if (fabs(prob_sum-1.0) > 0.01)
+			outError("Internal error: Wrong ", __func__);
+
+
+		delete [] maxL;
+		delete [] maxtid;
+
+		/* now do the SH test */
+		cout << "Performing SH test..." << endl;
+		// SH centering step
+		for (boot = 0; boot < params.topotest_replicates; boot++)
+			max_lh[boot] = -DBL_MAX;
+		double *avg_lh = new double[ntrees];
+		for (tid = 0; tid < ntrees; tid++) {
+			avg_lh[tid] = 0.0;
+			double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
+			for (boot = 0; boot < params.topotest_replicates; boot++)
+				avg_lh[tid] += tree_lhs_offset[boot];
+			avg_lh[tid] /= params.topotest_replicates;
+			for (boot = 0; boot < params.topotest_replicates; boot++) {
+				max_lh[boot] = max(max_lh[boot], tree_lhs_offset[boot] - avg_lh[tid]);
+			}
+		}
+
+		double orig_max_lh = orig_tree_lh[0];
+		int orig_max_id = 0;
+		for (tid = 1; tid < ntrees; tid++)
+			if (orig_max_lh < orig_tree_lh[tid]) {
+				orig_max_lh = orig_tree_lh[tid];
+				orig_max_id = tid;
+			}
+
+		double *max_kh = tree_lhs + (orig_max_id * params.topotest_replicates);
+
+		// SH compute p-value
+		for (tid = 0; tid < ntrees; tid++) {
+			double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
+			// SH compute original deviation from max_lh
+			info[tid].kh_pvalue = 0.0;
+			info[tid].sh_pvalue = 0.0;
+			double orig_diff = orig_max_lh - orig_tree_lh[tid] - avg_lh[tid];
+			for (boot = 0; boot < params.topotest_replicates; boot++) {
+				if (max_lh[boot] - tree_lhs_offset[boot] >= orig_diff)
+					info[tid].sh_pvalue += 1.0;
+				double max_kh_here = max(max_kh[boot]-avg_lh[orig_max_id], tree_lhs_offset[boot]-avg_lh[tid]);
+				if (max_kh_here - tree_lhs_offset[boot] >= orig_diff)
+					info[tid].kh_pvalue += 1.0;
+
+			}
+			info[tid].sh_pvalue /= params.topotest_replicates;
+			info[tid].kh_pvalue /= params.topotest_replicates;
+		}
+
+		/* now to ELW - Expected Likelihood Weight method */
+		cout << "Performing ELW test..." << endl;
+
+		for (boot = 0; boot < params.topotest_replicates; boot++)
+			max_lh[boot] = -DBL_MAX;
+		for (tid = 0; tid < ntrees; tid++) {
+			double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
+			for (boot = 0; boot < params.topotest_replicates; boot++)
+				max_lh[boot] = max(max_lh[boot], tree_lhs_offset[boot]);
+		}
+		double *sumL = new double[params.topotest_replicates];
+		memset(sumL, 0, sizeof(double) * params.topotest_replicates);
+		for (tid = 0; tid < ntrees; tid++) {
+			double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
+			for (boot = 0; boot < params.topotest_replicates; boot++) {
+				tree_lhs_offset[boot] = exp(tree_lhs_offset[boot] - max_lh[boot]);
+				sumL[boot] += tree_lhs_offset[boot];
+			}
+		}
+		for (tid = 0; tid < ntrees; tid++) {
+			double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
+			tree_probs[tid] = 0.0;
+			for (boot = 0; boot < params.topotest_replicates; boot++) {
+				tree_probs[tid] += (tree_lhs_offset[boot] / sumL[boot]);
+			}
+			tree_probs[tid] /= params.topotest_replicates;
+			info[tid].elw_confident = false;
+			info[tid].elw_value = tree_probs[tid];
+		}
+
+		sort_index(tree_probs, tree_probs + ntrees, tree_ranks);
+		prob_sum = 0.0;
+		// obtain the confidence set
+		for (tid = ntrees-1; tid >= 0; tid--) {
+			info[tree_ranks[tid]].elw_confident = true;
+			prob_sum += tree_probs[tree_ranks[tid]];
+			if (prob_sum > 0.95) break;
+		}
+
+		// sanity check
+		for (tid = 0, prob_sum = 0.0; tid < ntrees; tid++)
+			prob_sum += tree_probs[tid];
+		if (fabs(prob_sum-1.0) > 0.01)
+			outError("Internal error: Wrong ", __func__);
+		delete [] sumL;
+
+		delete [] tree_ranks;
+		delete [] tree_probs;
+
+	}
+	if (max_lh)
+		delete [] max_lh;
+	if (orig_tree_lh)
+		delete [] orig_tree_lh;
+	if (pattern_lh)
+		delete [] pattern_lh;
+	if (tree_lhs)
+		delete [] tree_lhs;
+	//if (saved_tree_lhs)
+	//	delete [] saved_tree_lhs;
+	if (boot_samples)
+		delete [] boot_samples;
+
+	if (params.print_tree_lh) {
+		scoreout.close();
+	}
+
+	treeout.close();
+	in.close();
+
+	cout << "Time for evaluating all trees: " << getCPUTime() - time_start << " sec." << endl;
+
+}
+
+void evaluateTrees(Params &params, IQTree *tree) {
+	vector<TreeInfo> info;
+	IntVector distinct_ids;
+	evaluateTrees(params, tree, info, distinct_ids);
+}
+
 void reportReferences(ofstream &out, string &original_model) {
 	out 
 			<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast"
@@ -854,6 +1210,86 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			out << endl << endl;
 		}
 
+		/* evaluate user trees */
+		vector<TreeInfo> info;
+		IntVector distinct_trees;
+		if (params.treeset_file) {
+			evaluateTrees(params, &tree, info, distinct_trees);
+			out.precision(3);
+
+			out << endl << "USER TREES" << endl << "----------" << endl << endl;
+			out << "See " << params.treeset_file << ".trees for trees with branch lengths." << endl << endl;
+			if (params.topotest_replicates) {
+				out << "Tree       logL    deltaL  bp-RELL    p-KH     p-SH    c-ELW" << endl;
+				out << "---------------------------------------------------------------" << endl;
+			} else {
+				out << "Tree       logL    deltaL" << endl;
+				out << "-------------------------" << endl;
+
+			}
+			double maxL = -DBL_MAX;
+			int tid, orig_id;
+			for (tid = 0; tid < info.size(); tid++)
+				if (info[tid].logl > maxL) maxL = info[tid].logl;
+			for (orig_id = 0, tid = 0; orig_id < distinct_trees.size(); orig_id++) {
+				out.width(4);
+				out << right << orig_id+1 << " ";
+				if (distinct_trees[orig_id] >= 0) {
+					out << " = tree " << distinct_trees[orig_id]+1 << endl;
+					continue;
+				}
+				out.width(12);
+				out << info[tid].logl << " ";
+				out.width(7);
+				out << maxL - info[tid].logl;
+				if (!params.topotest_replicates) {
+					out << endl;
+					tid++;
+					continue;
+				}
+				out << "  ";
+				out.width(6);
+				out << info[tid].rell_bp;
+				if (info[tid].rell_confident)
+					out << " + ";
+				else
+					out << " - ";
+				out.width(6);
+				out << right << info[tid].kh_pvalue;
+				if (info[tid].kh_pvalue < 0.05)
+					out << " - ";
+				else
+					out << " + ";
+				out.width(6);
+				out << right << info[tid].sh_pvalue;
+				if (info[tid].sh_pvalue < 0.05)
+					out << " -  ";
+				else
+					out << " +  ";
+				out << info[tid].elw_value;
+				if (info[tid].elw_confident)
+					out << " +";
+				else
+					out << " -";
+				out << endl;
+				tid++;
+			}
+			out << endl;
+
+			if (params.topotest_replicates) {
+				out <<  "deltaL  : logL difference from the maximal logl in the set." << endl
+					 << "bp-RELL : bootstrap proportion using RELL method (Kishino et al. 1990)." << endl
+					 << "p-KH    : p-value of one sided Kishino-Hasegawa test (1989)." << endl
+					 << "p-SH    : p-value of Shimodaira-Hasegawa test (2000)." << endl
+					 << "c-ELW   : Expected Likelihood Weight (Strimmer & Rambaut 2002)." << endl << endl
+					 << "Plus signs denote the confidence sets. Minus signs denote significant"  << endl
+					 << "exclusion. All tests used 5% significance level and performed "<< endl
+					 << params.topotest_replicates << " resamplings using the RELL method."<<endl;
+			}
+			out << endl;
+		}
+
+
 		time_t cur_time;
 		time(&cur_time);
 
@@ -921,6 +1357,16 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< params.out_prefix << ".contree" << endl;
 	}
 
+	if (params.treeset_file) {
+		cout << "  Evaluated user trees:     " << params.treeset_file << ".trees" << endl;
+
+		if (params.print_tree_lh) {
+			cout << "  Tree log-likelihoods:   " << params.treeset_file << ".treelh" << endl;
+		}
+		if (params.print_site_lh) {
+			cout << "  Site log-likelihoods:     " << params.treeset_file << ".sitelh" << endl;
+		}
+	}
 	cout << "  Screen log file:          " << params.out_prefix << ".log"
 			<< endl;
 	/*	if (original_model == "WHTEST")
@@ -1757,68 +2203,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	*/
 }
 
-void evaluateTrees(Params &params, IQTree *tree) {
-	if (!params.treeset_file)
-		return;
-	MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin,
-			params.tree_max_count);
-	//if (trees.size() == 1) return;
-	string tree_file = params.treeset_file;
-	tree_file += ".eval";
-	ofstream treeout;
-	//if (!params.fixed_branch_length) {
-		treeout.open(tree_file.c_str());
-	//}
-	string score_file = params.treeset_file;
-	score_file += ".treelh";
-	ofstream scoreout;
-	if (params.print_tree_lh)
-		scoreout.open(score_file.c_str());
-	string site_lh_file = params.treeset_file;
-	site_lh_file += ".sitelh";
-	if (params.print_site_lh) {
-		ofstream site_lh_out(site_lh_file.c_str());
-		site_lh_out << trees.size() << " " << tree->getAlnNSite() << endl;
-		site_lh_out.close();
-	}
-	int tree_index = 0;
-	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++, tree_index++) {
-		cout << "Tree " << (it - trees.begin()) + 1;
-		tree->copyTree(*it);
-		//int fixed_number = tree->fixNegativeBranch(fixed_length);
-		tree->fixNegativeBranch(false);
-		tree->initializeAllPartialLh();
-		if (tree->isSuperTree())
-			((PhyloSuperTree*) tree)->mapTrees();
-		if (!params.fixed_branch_length) {
-			tree->curScore = tree->optimizeAllBranches();
-		} else {
-			tree->curScore = tree->computeLikelihood();
-		}
-		treeout << "[ lh=" << tree->curScore << " ]";
-		tree->printTree(treeout);
-		treeout << endl;
-
-		cout << " / LogL: " << tree->curScore << endl;
-		string tree_name = "Tree" + convertIntToString(tree_index+1);
-		if (params.print_site_lh) {
-			printSiteLh(site_lh_file.c_str(), tree, NULL, true, tree_name.c_str());
-		}
-		//scoreout << tree->curScore << endl;
-	}
-	treeout.close();
-	cout << endl << "Tree evaluation results written to:" << endl
-		     << "  Trees:                " << tree_file << endl;
-	if (params.print_tree_lh) {
-		scoreout.close();
-		cout << "  Tree log-likelihoods: " << score_file << endl;
-	}
-	if (params.print_site_lh) {
-		cout << "  Site log-likelihoods: " << site_lh_file << endl;
-	}
-	cout << endl;
-}
-
 void runPhyloAnalysis(Params &params) {
 	Alignment *alignment;
 	IQTree *tree;
@@ -1878,9 +2262,6 @@ void runPhyloAnalysis(Params &params) {
 		}
 		if (original_model != "TESTONLY")
 			reportPhyloAnalysis(params, original_model, *alignment, *tree);
-		if (params.treeset_file) {
-			evaluateTrees(params, tree);
-		}
 	} else {
 		// turn off aLRT test
 		int saved_aLRT_replicates = params.aLRT_replicates;

@@ -1222,6 +1222,16 @@ void Alignment::createBootstrapAlignment(IntVector &pattern_freq) {
     }
 }
 
+void Alignment::createBootstrapAlignment(int *pattern_freq) {
+    int site, nsite = getNSite();
+    memset(pattern_freq, 0, getNPattern()*sizeof(int));
+    for (site = 0; site < nsite; site++) {
+        int site_id = random_int(nsite);
+        int ptn_id = getPatternID(site_id);
+        pattern_freq[ptn_id]++;
+    }
+}
+
 void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) {
     if (masked_aln->getNSeq() != aln->getNSeq()) outError("Different number of sequences in masked alignment");
     if (masked_aln->getNSite() != aln->getNSite()) outError("Different number of sites in masked alignment");

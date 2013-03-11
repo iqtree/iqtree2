@@ -142,6 +142,16 @@ void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq) {
 	}
 }
 
+
+void SuperAlignment::createBootstrapAlignment(int *pattern_freq) {
+	if (!isSuperAlignment()) outError("Internal error: ", __func__);
+	int offset = 0;
+	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
+		(*it)->createBootstrapAlignment(pattern_freq + offset);
+		offset += (*it)->getNPattern();
+	}
+}
+
 double SuperAlignment::computeObsDist(int seq1, int seq2) {
 	int site;
 	int diff_pos = 0, total_pos = 0;

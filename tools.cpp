@@ -571,6 +571,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 	params.aln_file = NULL;
 	params.treeset_file = NULL;
+	params.topotest_replicates = 0;
 	params.siteLL_file = NULL; //added by MA
 	params.partition_file = NULL;
 	params.sequence_type = NULL;
@@ -1044,6 +1045,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -aln, -z <user_trees_file>";
 				params.treeset_file = argv[cnt];
+			} else if (strcmp(argv[cnt],"-zb") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -zb <#replicates>";
+				params.topotest_replicates = convert_int(argv[cnt]);
+				if (params.topotest_replicates < 1000)
+					throw "Please specify at least 1000 replicates";
 			} else if (strcmp(argv[cnt],"-sp") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2129,4 +2137,5 @@ double computePValueChiSquare (double x, int df)  /* x: obtained chi-square valu
 	else
 		return (s);
 }
+
 

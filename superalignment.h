@@ -76,6 +76,8 @@ public:
 	*/
 	virtual void createBootstrapAlignment(IntVector &pattern_freq);
 
+	virtual void createBootstrapAlignment(int *pattern_freq);
+
 	/**
 		compute the observed distance (number of different pairs of positions per site) 
 			between two sequences

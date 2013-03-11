@@ -300,6 +300,8 @@ public:
 	*/
 	virtual void createBootstrapAlignment(IntVector &pattern_freq);
 
+	virtual void createBootstrapAlignment(int *pattern_freq);
+
 	/**
 		create a gap masked alignment from an input alignment. Gap patterns of masked_aln 
 			will be superimposed into aln to create the current alignment object.

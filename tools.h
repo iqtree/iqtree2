@@ -424,6 +424,9 @@ struct Params {
      */
     char *treeset_file;
 
+    /** number of bootstrap replicates for tree topology test */
+    int topotest_replicates;
+
     /**
             file specifying partition model
      */
@@ -1539,5 +1542,57 @@ int random_int();
  */
 double random_double();
 
+/**
+ * generic function for sorting by index
+ */
+template <class T>
+void quicksort_index(T* arr, int* index, int left, int right) {
+      int i = left, j = right, tmp2;
+      T tmp, pivot = arr[(left + right) / 2];
+
+      /* partition */
+      while (i <= j) {
+            while (arr[i] < pivot)
+                  i++;
+            while (pivot < arr[j])
+                  j--;
+            if (i <= j) {
+                  tmp = arr[i];
+                  arr[i] = arr[j];
+                  arr[j] = tmp;
+                  tmp2 = index[i];
+                  index[i] = index[j];
+                  index[j] = tmp2;
+                  i++;
+                  j--;
+            }
+      };
+
+      /* recursion */
+      if (left < j)
+            quicksort_index(arr, index, left, j);
+      if (i < right)
+            quicksort_index(arr, index, i, right);
+}
+
+/**
+ * generic function for sorting by index preseving entries in [first,last)
+ * @param first first element
+ * @param last last element
+ * @param index (OUT) ordered index of elements from smallest to largest
+ */
+template <class T>
+void sort_index(T* first, T* last, int *index) {
+	T* x;
+	int i;
+	T* arr = new T[last-first];
+	for (x = first, i = 0; x!=last; x++, i++) {
+		index[i] = i;
+		arr[i] = *x;
+	}
+	assert(last-first == i);
+	quicksort_index(arr, index, 0, (last-first)-1);
+	delete [] arr;
+}
 
 #endif
