@@ -37,6 +37,7 @@
 #include "rategammainvar.h"
 //#include "modeltest_wrapper.h"
 #include "modelprotein.h"
+#include "modelbin.h"
 #include "stoprule.h"
 
 #include "mtreeset.h"
@@ -176,7 +177,7 @@ bool checkModelFile(string model_file, StrVector &model_names,
  testing the best-fit model
  return in params.freq_type and params.rate_type
  */
-string modelTest(Params &params, PhyloTree *in_tree) {
+string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_info) {
 	if (in_tree->isSuperTree()) {
 		// select model for each partition
 		return (string)"JC";
@@ -237,7 +238,9 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 	rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1,
 			params.gamma_median, -1, NULL);
 	GTRModel *subst_model;
-	if (nstates == 4)
+	if (nstates == 2)
+		subst_model = new ModelBIN("JC2", FREQ_UNKNOWN, in_tree);
+	else if (nstates == 4)
 		subst_model = new ModelDNA("JC", FREQ_UNKNOWN, in_tree);
 	else
 		subst_model = new ModelProtein("WAG", FREQ_UNKNOWN, in_tree);
@@ -261,9 +264,11 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 		sitelh_out.close();
 	}
 	
-	DoubleVector AIC_scores;
-	DoubleVector AICc_scores;
-	DoubleVector BIC_scores;
+	double* AIC_scores = new double[num_models*4];
+	double* AICc_scores = new double[num_models*4];
+	double* BIC_scores = new double[num_models*4];
+	double* LogL_scores = new double[num_models*4];
+	int *model_rank = new int[num_models*4];
 
 	for (model = 0; model < num_models; model++) {
 		for (rate_type = 0; rate_type <= 3; rate_type += 1) {
@@ -308,7 +313,7 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 			tree->clearAllPartialLH();
 
 			// optimize model parameters
-			int df = subst_model->getNDim() + rate_class[rate_type]->getNDim();
+			int df = subst_model->getNDim() + rate_class[rate_type]->getNDim() + tree->branchNum;
 			double cur_lh;
 			if (!ok_model_file) {
 				cur_lh = tree->getModelFactory()->optimizeParameters(false,
@@ -331,9 +336,10 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 			double AICc_score = AIC_score
 					+ 2.0 * df * (df + 1) / (ssize - df - 1);
 			double BIC_score = -2 * cur_lh + df * log(ssize);
-			AIC_scores.push_back(AIC_score);
-			AICc_scores.push_back(AICc_score);
-			BIC_scores.push_back(BIC_score);
+			LogL_scores[model*4 + rate_type] = cur_lh;
+			AIC_scores[model*4 + rate_type] = AIC_score;
+			AICc_scores[model*4 + rate_type] = AICc_score;
+			BIC_scores[model*4 + rate_type] = BIC_score;
 			cout.width(13);
 			cout << left << str << " ";
 			cout.precision(3);
@@ -354,18 +360,86 @@ string modelTest(Params &params, PhyloTree *in_tree) {
 		}
 	}
 	//cout.unsetf(ios::fixed);
-	int model_aic = min_element(AIC_scores.begin(), AIC_scores.end())
-			- AIC_scores.begin();
+	int model_aic = min_element(AIC_scores, AIC_scores + (num_models*4)) - AIC_scores;
 	cout << "Akaike Information Criterion:           " << model_names[model_aic]
 			<< endl;
-	int model_aicc = min_element(AICc_scores.begin(), AICc_scores.end())
-			- AICc_scores.begin();
+	int model_aicc = min_element(AICc_scores, AICc_scores + (num_models*4)) - AICc_scores;
 	cout << "Corrected Akaike Information Criterion: "
 			<< model_names[model_aicc] << endl;
-	int model_bic = min_element(BIC_scores.begin(), BIC_scores.end())
-			- BIC_scores.begin();
+	int model_bic = min_element(BIC_scores, BIC_scores + (num_models*4)) - BIC_scores;
 	cout << "Bayesian Information Criterion:         " << model_names[model_bic]
 			<< endl;
+
+	/* computing model weights */
+	double AIC_sum = 0.0, AICc_sum = 0.0, BIC_sum = 0.0;
+	if (params.model_test_criterion == MTC_BIC) {
+		sort_index(BIC_scores, BIC_scores + (num_models*4), model_rank);
+	} else if (params.model_test_criterion == MTC_AIC) {
+		sort_index(AIC_scores, AIC_scores + (num_models*4), model_rank);
+	} else {
+		sort_index(AICc_scores, AICc_scores + (num_models*4), model_rank);
+	}
+
+	for (model = 0; model < num_models*4; model++) {
+		ModelInfo info;
+		info.name = model_names[model_rank[model]];
+		info.logl = LogL_scores[model_rank[model]];
+		info.AIC_score = AIC_scores[model_rank[model]];
+		info.AICc_score = AICc_scores[model_rank[model]];
+		info.BIC_score = BIC_scores[model_rank[model]];
+		info.AIC_weight = exp(-0.5*(info.AIC_score-AIC_scores[model_aic]));
+		info.AICc_weight = exp(-0.5*(info.AICc_score-AICc_scores[model_aicc]));
+		info.BIC_weight = exp(-0.5*(info.BIC_score-BIC_scores[model_bic]));
+		info.AIC_conf = false;
+		info.AICc_conf = false;
+		info.BIC_conf = false;
+		model_info.push_back(info);
+		AIC_sum += info.AIC_weight;
+		AICc_sum += info.AICc_weight;
+		BIC_sum += info.BIC_weight;
+	}
+
+	vector<ModelInfo>::iterator it;
+	for (it = model_info.begin(); it != model_info.end(); it++) {
+		it->AIC_weight /= AIC_sum;
+		it->AICc_weight /= AICc_sum;
+		it->BIC_weight /= BIC_sum;
+	}
+
+	/* compute confidence set for BIC */
+	AIC_sum = 0.0; AICc_sum = 0.0; BIC_sum = 0.0;
+	for (it = model_info.begin(), model = 0; it != model_info.end(); it++, model++) {
+		BIC_scores[model] = it->BIC_score;
+		AIC_scores[model] = it->AIC_score;
+		AICc_scores[model] = it->AICc_score;
+	}
+	sort_index(BIC_scores, BIC_scores+(num_models*4), model_rank);
+	for (model = 0; model < num_models*4; model++) {
+		model_info[model_rank[model]].BIC_conf = true;
+		BIC_sum += model_info[model_rank[model]].BIC_weight;
+		if (BIC_sum > 0.95) break;
+	}
+	/* compute confidence set for AIC */
+	sort_index(AIC_scores, AIC_scores+(num_models*4), model_rank);
+	for (model = 0; model < num_models*4; model++) {
+		model_info[model_rank[model]].AIC_conf = true;
+		AIC_sum += model_info[model_rank[model]].AIC_weight;
+		if (AIC_sum > 0.95) break;
+	}
+
+	/* compute confidence set for AICc */
+	sort_index(AICc_scores, AICc_scores+(num_models*4), model_rank);
+	for (model = 0; model < num_models*4; model++) {
+		model_info[model_rank[model]].AICc_conf = true;
+		AICc_sum += model_info[model_rank[model]].AICc_weight;
+		if (AICc_sum > 0.95) break;
+	}
+
+	delete [] model_rank;
+	delete [] LogL_scores;
+	delete [] BIC_scores;
+	delete [] AICc_scores;
+	delete [] AIC_scores;
 	switch (params.model_test_criterion) {
 	case MTC_AIC:
 		best_model = model_names[model_aic];
@@ -786,6 +860,42 @@ void reportAlignment(ofstream &out, Alignment &alignment) {
 			<< endl;
 }
 
+void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &model_info) {
+
+	out << "Best-fit model according to "
+		<< ((params.model_test_criterion == MTC_BIC) ? "BIC" :
+			((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc"))
+		<< ": " << model_info[0].name << endl << endl;
+
+	out << "List of models sorted by "
+		<< ((params.model_test_criterion == MTC_BIC) ? "BIC" :
+			((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc"))
+		<< " scores: " << endl << endl;
+	out << "Model             LogL        AIC       w-AIC     AICc     w-AICc      BIC      w-BIC" << endl
+		<< "-------------------------------------------------------------------------------------" << endl;
+	for (vector<ModelInfo>::iterator it = model_info.begin(); it != model_info.end(); it++) {
+		out.width(13);
+		out << left << it->name << " ";
+		out.width(11);
+		out << right << it->logl << " ";
+		out.width(11);
+		out	<< it->AIC_score << ((it->AIC_conf) ? " + " : " - ") << it->AIC_weight << " ";
+		out.width(11);
+		out << it->AICc_score << ((it->AICc_conf) ? " + " : " - ") << it->AICc_weight << " ";
+		out.width(11);
+		out << it->BIC_score  << ((it->BIC_conf) ? " + " : " - ") << it->BIC_weight;
+		out << endl;
+	}
+	out << endl;
+	out <<  "AIC, w-AIC   : Akaike information criterion scores and weights." << endl
+		 << "AICc, w-AICc : Corrected AIC scores and weights." << endl
+		 << "BIC, w-BIC   : Bayesian information criterion scores and weights." << endl << endl
+
+		 << "Plus signs denote the 95% confidence sets." << endl
+		 << "Minus signs denote significant exclusion." <<endl;
+	out << endl;
+}
+
 void reportModel(ofstream &out, PhyloTree &tree) {
 	int i, j;
 	out << "Model of substitution: " << tree.getModel()->name << endl << endl;
@@ -990,7 +1100,7 @@ void reportCredits(ofstream &out) {
 }
 
 void reportPhyloAnalysis(Params &params, string &original_model,
-		Alignment &alignment, IQTree &tree) {
+		Alignment &alignment, IQTree &tree, vector<ModelInfo> &model_info) {
 	string outfile = params.out_prefix;
 
 	outfile += ".iqtree";
@@ -1037,6 +1147,14 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			}
 		} else
 			reportAlignment(out, alignment);
+
+		out.precision(3);
+		out << fixed;
+
+		if (!model_info.empty()) {
+			out << "MODEL SELECTION" << endl << "---------------" << endl << endl;
+			reportModelSelection(out, params, model_info);
+		}
 
 		out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
 				<< endl;
@@ -1573,7 +1691,7 @@ void computeParsimonyTreeRax(Params& params, IQTree& iqtree,
 }
 
 void runPhyloAnalysis(Params &params, string &original_model,
-		Alignment *alignment, IQTree &iqtree) {
+		Alignment *alignment, IQTree &iqtree, vector<ModelInfo> &model_info) {
 	/*
 	 cout << "Computing parsimony score..." << endl;
 	 for (int i = 0; i < trees_block->GetNumTrees(); i++) {
@@ -1693,12 +1811,15 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	bool test_only = params.model_name == "TESTONLY";
 	/* initialize substitution model */
 	if (params.model_name == "TEST" || params.model_name == "TESTONLY") {
-		params.model_name = modelTest(params, &iqtree);
+		params.model_name = modelTest(params, &iqtree, model_info);
 		if (test_only) {
+			/*
 			return;
 			t_end = getCPUTime();
 			params.run_time = (t_end - t_begin);
 			cout << "Time used: " << params.run_time << " seconds." << endl;
+			*/
+			params.min_iterations = 0;
 		}
 	}
 
@@ -2206,6 +2327,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 void runPhyloAnalysis(Params &params) {
 	Alignment *alignment;
 	IQTree *tree;
+	vector<ModelInfo> model_info;
 	if (params.partition_file) {
 		tree = new PhyloSuperTree(params);
 		alignment = tree->aln;
@@ -2249,7 +2371,7 @@ void runPhyloAnalysis(Params &params) {
 		runAvHTest(params, alignment, *tree);
 	} else if (params.num_bootstrap_samples == 0) {
 		alignment->checkGappySeq();
-		runPhyloAnalysis(params, original_model, alignment, *tree);
+		runPhyloAnalysis(params, original_model, alignment, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
 
 			cout << endl << "Computing consensus tree..." << endl;
@@ -2260,8 +2382,8 @@ void runPhyloAnalysis(Params &params) {
 					params.split_threshold, NULL, params.out_prefix, NULL,
 					&params);
 		}
-		if (original_model != "TESTONLY")
-			reportPhyloAnalysis(params, original_model, *alignment, *tree);
+		//if (original_model != "TESTONLY")
+			reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
 	} else {
 		// turn off aLRT test
 		int saved_aLRT_replicates = params.aLRT_replicates;
@@ -2331,7 +2453,7 @@ void runPhyloAnalysis(Params &params) {
 			if (params.print_bootaln)
 				bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
 			runPhyloAnalysis(params, original_model, bootstrap_alignment,
-					*boot_tree);
+					*boot_tree, model_info);
 			// read in the output tree file
 			string tree_str;
 			try {
@@ -2356,7 +2478,7 @@ void runPhyloAnalysis(Params &params) {
 			}
 			if (params.num_bootstrap_samples == 1)
 				reportPhyloAnalysis(params, original_model,
-						*bootstrap_alignment, *boot_tree);
+						*bootstrap_alignment, *boot_tree, model_info);
 			delete bootstrap_alignment;
 		}
 
@@ -2374,7 +2496,7 @@ void runPhyloAnalysis(Params &params) {
 			cout << endl << "===> START ANALYSIS ON THE ORIGINAL ALIGNMENT"
 					<< endl << endl;
 			params.aLRT_replicates = saved_aLRT_replicates;
-			runPhyloAnalysis(params, original_model, alignment, *tree);
+			runPhyloAnalysis(params, original_model, alignment, *tree, model_info);
 
 			cout << endl
 					<< "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT"
@@ -2384,19 +2506,19 @@ void runPhyloAnalysis(Params &params) {
 					treefile_name.c_str(), false, treefile_name.c_str(),
 					params.out_prefix, ext_tree, NULL, &params);
 			tree->copyTree(&ext_tree);
-			reportPhyloAnalysis(params, original_model, *alignment, *tree);
+			reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
 		} else if (params.consensus_type == CT_CONSENSUS_TREE) {
 			int mi = params.min_iterations;
 			STOP_CONDITION sc = params.stop_condition;
 			params.min_iterations = 0;
 			params.stop_condition = SC_FIXED_ITERATION;
-			runPhyloAnalysis(params, original_model, alignment, *tree);
+			runPhyloAnalysis(params, original_model, alignment, *tree, model_info);
 			params.min_iterations = mi;
 			params.stop_condition = sc;
 			tree->setIQPIterations(params.stop_condition,
 					params.stop_confidence, params.min_iterations,
 					params.max_iterations);
-			reportPhyloAnalysis(params, original_model, *alignment, *tree);
+			reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
 		} else
 			cout << endl;
 

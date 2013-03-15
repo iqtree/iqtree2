@@ -20,19 +20,25 @@
 #include "modelbin.h"
 
 ModelBIN::ModelBIN(const char *model_name, StateFreqType freq, PhyloTree *tree, bool count_rates)
-: GTRModel(tree, count_rates) {
-	assert(num_states == 2); // make sure that you create model for DNA
+: GTRModel(tree, count_rates)
+{
+	init(model_name, freq);
+}
+
+void ModelBIN::init(const char *model_name, StateFreqType freq)
+{
+	assert(num_states == 2); // make sure that you create model for Binary data
 	StateFreqType def_freq = FREQ_UNKNOWN;
 	name = model_name;
 	full_name = model_name;
-
-	//cout << "User-specified model "<< model_name << endl;
-	readParameters(model_name);
-	//name += " (user-defined)";
+	if (name == "JC2") {
+		freq = FREQ_EQUAL;
+	} else if (name == "GTR2") {
+		freq = FREQ_ESTIMATE;
+	} else {
+		readParameters(model_name);
+	}
 	if (freq == FREQ_UNKNOWN || def_freq == FREQ_EQUAL) freq = def_freq;
 	GTRModel::init(freq);
-
 }
-
-
 

@@ -1031,6 +1031,8 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     MTreeSet boot_trees;
     int id;
 
+    vector<ModelInfo> model_info;
+
     cout << "Checking Arndt curiosity for " << params.avh_test << " bootstrap replicates ..." << endl;
 
     // generate all distinct bootstrap alignments
@@ -1088,7 +1090,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
         boot_aln->extractPatternFreqs(alignment, *boot_freqs[id]);
 
         IQTree boot_tree(boot_aln);
-        runPhyloAnalysis(params, orig_model, boot_aln, boot_tree);
+        runPhyloAnalysis(params, orig_model, boot_aln, boot_tree, model_info);
         boot_tree.setRootNode(params.root);
         stringstream ss;
         boot_tree.printTree(ss, WT_SORT_TAXA);
@@ -1120,7 +1122,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     out_file += ".trees";
     boot_trees.printTrees(out_file.c_str(),WT_SORT_TAXA);
     params.min_iterations = 0;
-    runPhyloAnalysis(params, orig_model, alignment, tree);
+    runPhyloAnalysis(params, orig_model, alignment, tree, model_info);
     params.treeset_file = (char*)out_file.c_str();
     evaluateTrees(params, &tree);
 

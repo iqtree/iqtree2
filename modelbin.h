@@ -38,6 +38,12 @@ public:
 	*/
     ModelBIN(const char *model_name, StateFreqType freq, PhyloTree *tree, bool count_rates = true);
 
+	/**
+		initialization, called automatically by the constructor, no need to call it
+		@param model_name model name, e.g., JC, HKY.
+		@param freq state frequency type
+	*/
+	virtual void init(const char *model_name, StateFreqType freq);
 
 };
 

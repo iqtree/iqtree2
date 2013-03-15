@@ -77,22 +77,22 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 		full_name = "TN equal frequencies (Tamura and Nei, 1993)";
 	} else if (name_upper == "TPM2") {
 		name = "TPM2";
-		setRateType("010212");		
+		setRateType("121020");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM2 ()";
 	} else if (name_upper == "TPM2U" || name_upper == "TPM2UF") {
 		name = "TPM2u";
-		setRateType("010212");		
+		setRateType("121020");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM2 unequal frequencies ()";
 	} else if (name_upper == "TPM3") {
 		name = "TPM3";
-		setRateType("012012");		
+		setRateType("120120");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM3 ()";
 	} else if (name_upper == "TPM3U" || name_upper == "TPM3UF") {
 		name = "TPM3u";
-		setRateType("012012");		
+		setRateType("120120");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM3 unequal frequencies ()";
 	} else if (name_upper == "TIM" || name_upper == "TIM1") {
@@ -107,22 +107,22 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 		full_name = "TIM equal frequencies";
 	} else if (name_upper == "TIM2") {
 		name = "TIM2";
-		setRateType("010232");
+		setRateType("121030");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TIM2 ()";
 	} else if (name_upper == "TIM2EF" || name_upper == "TIM2E") {
 		name = "TIM2e";
-		setRateType("010232");		
+		setRateType("121030");
 		def_freq = FREQ_EQUAL;
 		full_name = "TIM2 equal frequencies";
 	} else if (name_upper == "TIM3") {
 		name = "TIM3";
-		setRateType("012032");
+		setRateType("120130");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TIM3 ()";
 	} else if (name_upper == "TIM3EF" || name_upper == "TIM3E") {
 		name = "TIM3e";
-		setRateType("012032");		
+		setRateType("120130");
 		def_freq = FREQ_EQUAL;
 		full_name = "TIM3 equal frequencies";
 	} else if (name_upper == "TVM") {
@@ -167,16 +167,22 @@ bool ModelDNA::setRateType(const char *rate_str) {
 	int num_ch = strlen(rate_str);
 	int i;
 
-	if (num_ch != getNumRateEntries())
+	if (num_ch != getNumRateEntries()) {
+		//outError("Model specification has wrong length!");
 		return false;
-	if (rate_str[num_ch-1] != '0')
+	}
+	if (rate_str[num_ch-1] != '0') {
+		//outError("Model specification must end with '0'");
 		return false;
+	}
 	for (i = 0; i < num_ch; i++) {
 		if (rate_str[i] > last_type) last_type = rate_str[i];
 		if (rate_str[i] < first_type) first_type = rate_str[i];
 	}
-	if (first_type != rate_str[num_ch-1])
+	if (first_type != rate_str[num_ch-1]) {
+		//outError("Model specification must contain digits!");
 		return false;
+	}
 
 	num_params = last_type - first_type;
 	param_spec = "";

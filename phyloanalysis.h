@@ -27,13 +27,23 @@
 class PhyloTree;
 class IQTree;
 
+struct ModelInfo {
+	string name;
+	double logl;
+	double AIC_score, AICc_score, BIC_score;
+	double AIC_weight, AICc_weight, BIC_weight;
+	bool AIC_conf, AICc_conf, BIC_conf;
+};
+
+
 /**
 	main function to carry out phylogenetic inference
 	@param params program parameters
 */
 void runPhyloAnalysis(Params &params);
 
-void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignment, IQTree &tree);
+void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignment,
+		IQTree &tree, vector<ModelInfo> &model_info);
 
 void evaluateTrees(Params &params, IQTree *tree);
 
