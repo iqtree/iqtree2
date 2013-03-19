@@ -161,8 +161,8 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 
 
 bool ModelDNA::setRateType(const char *rate_str) {
-	char first_type = 127;
-	char last_type = 0;
+	//char first_type = 127;
+	//char last_type = 0;
 	//char t = first_type;
 	int num_ch = strlen(rate_str);
 	int i;
@@ -171,6 +171,7 @@ bool ModelDNA::setRateType(const char *rate_str) {
 		//outError("Model specification has wrong length!");
 		return false;
 	}
+	/*
 	if (rate_str[num_ch-1] != '0') {
 		//outError("Model specification must end with '0'");
 		return false;
@@ -188,7 +189,22 @@ bool ModelDNA::setRateType(const char *rate_str) {
 	param_spec = "";
 	for (i = 0; i < num_ch; i++) {
 		param_spec.push_back(rate_str[i]-first_type);
+	}*/
+
+	map<char,char> param_k;
+	num_params = 0;
+	param_spec = "";
+	param_k[rate_str[num_ch-1]] = 0;
+	for (i = 0; i < num_ch; i++) {
+		if (param_k.find(rate_str[i]) == param_k.end()) {
+			num_params++;
+			param_k[rate_str[i]] = (char)num_params;
+			param_spec.push_back(num_params);
+		} else {
+			param_spec.push_back(param_k[rate_str[i]]);
+		}
 	}
+
 	assert(param_spec.length() == num_ch);
 	double *avg_rates = new double[num_params+1];
 	int *num_rates = new int[num_params+1];

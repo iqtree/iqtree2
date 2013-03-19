@@ -85,13 +85,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	string::size_type posfreq;
 	StateFreqType freq_type = params.freq_type;
 	if ((posfreq = model_str.find("+F")) != string::npos) {
-		if (model_str.substr(posfreq,3) == "+FC" || model_str.substr(posfreq,2) == "+F") 
+		if (model_str.substr(posfreq) == "+FC" || model_str.substr(posfreq) == "+Fc" || model_str.substr(posfreq) == "+F")
 			freq_type = FREQ_EMPIRICAL;
-		else if (model_str.substr(posfreq,3) == "+FU")
+		else if (model_str.substr(posfreq) == "+FU" || model_str.substr(posfreq) == "+Fu")
 			freq_type = FREQ_USER_DEFINED;
-		else if (model_str.substr(posfreq,3) == "+FQ")
+		else if (model_str.substr(posfreq) == "+FQ" || model_str.substr(posfreq) == "+Fq")
 			freq_type = FREQ_EQUAL;
-		else if (model_str.substr(posfreq,3) == "+FO")
+		else if (model_str.substr(posfreq) == "+FO" || model_str.substr(posfreq) == "+Fo")
 			freq_type = FREQ_ESTIMATE;
 		else outError("Unknown state frequency type ",model_str.substr(posfreq));
 		model_str = model_str.substr(0, posfreq);

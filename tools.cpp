@@ -1748,6 +1748,9 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
 			<< endl << "MISCELLANEOUS:" << endl
 			<< "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
+			<< endl << "TREE TOPOLOGY TEST:" << endl
+			<< "  -zb <#replicates>    BP,KH,SH,ELW tests with RELL for trees passed via -z" << endl
+			<< "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
 			<< endl;
 
 	if (full_command) {
