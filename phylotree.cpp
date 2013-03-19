@@ -1248,7 +1248,7 @@ double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
         delete[] pattern_lh;
     if (nsite <= 1)
         return 0.0;
-    return variance * (nsite / (nsite - 1));
+    return variance * ((double)nsite / (nsite - 1.0));
 }
 
 double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_lh) {
@@ -1276,7 +1276,7 @@ double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_
         delete[] pattern_lh;
     if (nsite <= 1)
         return 0.0;
-    return variance * (nsite / (nsite - 1));
+    return variance * ((double)nsite / (nsite - 1.0));
 }
 
 double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh) {

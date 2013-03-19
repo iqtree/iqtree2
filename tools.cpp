@@ -572,6 +572,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.aln_file = NULL;
 	params.treeset_file = NULL;
 	params.topotest_replicates = 0;
+	params.do_weighted_test = false;
+	params.do_au_test = false;
 	params.siteLL_file = NULL; //added by MA
 	params.partition_file = NULL;
 	params.sequence_type = NULL;
@@ -1052,6 +1054,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.topotest_replicates = convert_int(argv[cnt]);
 				if (params.topotest_replicates < 1000)
 					throw "Please specify at least 1000 replicates";
+			} else if (strcmp(argv[cnt],"-zw") == 0) {
+				params.do_weighted_test = true;
+			} else if (strcmp(argv[cnt],"-zau") == 0) {
+				params.do_au_test = true;
 			} else if (strcmp(argv[cnt],"-sp") == 0) {
 				cnt++;
 				if (cnt >= argc)

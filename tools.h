@@ -427,6 +427,12 @@ struct Params {
     /** number of bootstrap replicates for tree topology test */
     int topotest_replicates;
 
+    /** true to perform weighted SH and KH test */
+    bool do_weighted_test;
+
+    /** true to do the approximately unbiased (AU) test */
+    bool do_au_test;
+
     /**
             file specifying partition model
      */

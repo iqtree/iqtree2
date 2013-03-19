@@ -1,1 +1,0 @@
-./parser -m DNA -s ../testdata/49 -q ../testdata/49.model -n 49

@@ -470,10 +470,13 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 
 struct TreeInfo {
 	double logl; // log likelihood
+	double se; // standard error of deltaL (logl difference to max), or square root of variance
 	double rell_bp; // bootstrap proportion by RELL method
 	bool rell_confident; // confidence set for RELL-BP
 	double sh_pvalue; // p-value by Shimodaira-Hasegawa test
+	double wsh_pvalue; // p-value by weighted Shimodaira-Hasegawa test
 	double kh_pvalue; // p-value by Kishino-Hasegawa test
+	double wkh_pvalue; // p-value by weighted Kishino-Hasegawa test
 	double elw_value; // ELW - expected likelihood weights test
 	bool elw_confident; // to represent confidence set of ELW test
 };
@@ -560,14 +563,17 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	//double *saved_tree_lhs = NULL;
 	double *tree_lhs = NULL;
 	double *pattern_lh = NULL;
+	double *pattern_lhs = NULL;
 	double *orig_tree_lh = NULL;
 	double *max_lh = NULL;
+	double *lhdiff_weights = NULL;
 	int nptn = tree->getAlnNPattern();
-	if (params.topotest_replicates) {
+	if (params.topotest_replicates && ntrees > 1) {
 		size_t mem_size = (size_t)params.topotest_replicates*nptn*sizeof(int) +
 				ntrees*params.topotest_replicates*sizeof(double) +
 				(nptn + ntrees*3 + params.topotest_replicates*2)*sizeof(double) +
-				ntrees*sizeof(TreeInfo);
+				ntrees*sizeof(TreeInfo) +
+				params.do_weighted_test*(ntrees * nptn * sizeof(double) + ntrees*ntrees*sizeof(double));
 		cout << "Note: " << ((double)mem_size/1024)/1024 << " MB of RAM required!" << endl;
 		if (mem_size > getMemorySize()-100000)
 			outWarning("The required memory does not fit in RAM!");
@@ -580,6 +586,12 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		//	outError(ERR_NO_MEMORY);
 		if (!(tree_lhs = new double [ntrees * params.topotest_replicates]))
 			outError(ERR_NO_MEMORY);
+		if (params.do_weighted_test) {
+			if (!(lhdiff_weights = new double [ntrees * ntrees]))
+				outError(ERR_NO_MEMORY);
+			if (!(pattern_lhs = new double[ntrees* nptn]))
+				outError(ERR_NO_MEMORY);
+		}
 		if (!(pattern_lh = new double[nptn]))
 			outError(ERR_NO_MEMORY);
 		if (!(orig_tree_lh = new double[ntrees]))
@@ -587,7 +599,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		if (!(max_lh = new double[params.topotest_replicates]))
 			outError(ERR_NO_MEMORY);
 	}
-	int tree_index, tid;
+	int tree_index, tid, tid2;
 	info.resize(ntrees);
 	//for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++, tree_index++) {
 	for (tree_index = 0, tid = 0; tree_index < distinct_ids.size(); tree_index++) {
@@ -622,15 +634,18 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 
 		cout << " / LogL: " << tree->curScore << endl;
 
-		if (pattern_lh)
+		if (pattern_lh) {
 			tree->computePatternLikelihood(pattern_lh, &(tree->curScore));
+			if (params.do_weighted_test)
+				memcpy(pattern_lhs + tid*nptn, pattern_lh, nptn*sizeof(double));
+		}
 		if (params.print_site_lh) {
 			string tree_name = "Tree" + convertIntToString(tree_index+1);
 			printSiteLh(site_lh_file.c_str(), tree, pattern_lh, true, tree_name.c_str());
 		}
 		info[tid].logl = tree->curScore;
 
-		if (!params.topotest_replicates) {
+		if (!params.topotest_replicates || ntrees <= 1) {
 			tid++;
 			continue;
 		}
@@ -649,8 +664,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 
 	assert(tid == ntrees);
 
-	if (params.topotest_replicates) {
-
+	if (params.topotest_replicates && ntrees > 1) {
 		double *tree_probs = new double[ntrees];
 		memset(tree_probs, 0, ntrees*sizeof(double));
 		int *tree_ranks = new int[ntrees];
@@ -697,7 +711,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		delete [] maxtid;
 
 		/* now do the SH test */
-		cout << "Performing SH test..." << endl;
+		cout << "Performing KH and SH test..." << endl;
 		// SH centering step
 		for (boot = 0; boot < params.topotest_replicates; boot++)
 			max_lh[boot] = -DBL_MAX;
@@ -715,13 +729,21 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 
 		double orig_max_lh = orig_tree_lh[0];
 		int orig_max_id = 0;
+		double orig_2ndmax_lh = -DBL_MAX;
+		int orig_2ndmax_id = -1;
+		// find the max tree ID
 		for (tid = 1; tid < ntrees; tid++)
 			if (orig_max_lh < orig_tree_lh[tid]) {
 				orig_max_lh = orig_tree_lh[tid];
 				orig_max_id = tid;
 			}
+		// find the 2nd max tree ID
+		for (tid = 0; tid < ntrees; tid++)
+			if (tid != orig_max_id && orig_2ndmax_lh < orig_tree_lh[tid]) {
+				orig_2ndmax_lh = orig_tree_lh[tid];
+				orig_2ndmax_id = tid;
+			}
 
-		double *max_kh = tree_lhs + (orig_max_id * params.topotest_replicates);
 
 		// SH compute p-value
 		for (tid = 0; tid < ntrees; tid++) {
@@ -729,19 +751,69 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 			// SH compute original deviation from max_lh
 			info[tid].kh_pvalue = 0.0;
 			info[tid].sh_pvalue = 0.0;
-			double orig_diff = orig_max_lh - orig_tree_lh[tid] - avg_lh[tid];
+			int max_id = (tid != orig_max_id) ? orig_max_id : orig_2ndmax_id;
+			double orig_diff = orig_tree_lh[max_id] - orig_tree_lh[tid] - avg_lh[tid];
+			double *max_kh = tree_lhs + (max_id * params.topotest_replicates);
 			for (boot = 0; boot < params.topotest_replicates; boot++) {
-				if (max_lh[boot] - tree_lhs_offset[boot] >= orig_diff)
+				if (max_lh[boot] - tree_lhs_offset[boot] > orig_diff)
 					info[tid].sh_pvalue += 1.0;
-				double max_kh_here = max(max_kh[boot]-avg_lh[orig_max_id], tree_lhs_offset[boot]-avg_lh[tid]);
-				if (max_kh_here - tree_lhs_offset[boot] >= orig_diff)
+				//double max_kh_here = max(max_kh[boot]-avg_lh[max_id], tree_lhs_offset[boot]-avg_lh[tid]);
+				double max_kh_here = (max_kh[boot]-avg_lh[max_id]);
+				if (max_kh_here - tree_lhs_offset[boot] > orig_diff)
 					info[tid].kh_pvalue += 1.0;
-
 			}
 			info[tid].sh_pvalue /= params.topotest_replicates;
 			info[tid].kh_pvalue /= params.topotest_replicates;
 		}
 
+		if (params.do_weighted_test) {
+
+			cout << "Computing pairwise logl difference variance ..." << endl;
+			/* computing lhdiff_weights as 1/sqrt(lhdiff_variance) */
+			for (tid = 0; tid < ntrees; tid++) {
+				double *pattern_lh1 = pattern_lhs + (tid * nptn);
+				lhdiff_weights[tid*ntrees+tid] = 0.0;
+				for (tid2 = tid+1; tid2 < ntrees; tid2++) {
+					double lhdiff_variance = tree->computeLogLDiffVariance(pattern_lh1, pattern_lhs + (tid2*nptn));
+					lhdiff_weights[tid*ntrees+tid2] = 1.0/sqrt(lhdiff_variance);
+					lhdiff_weights[tid2*ntrees+tid] = lhdiff_weights[tid*ntrees+tid2];
+				}
+			}
+
+			// Weighted KH and SH test
+			cout << "Performing WKH and WSH test..." << endl;
+			for (tid = 0; tid < ntrees; tid++) {
+				double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
+				info[tid].wkh_pvalue = 0.0;
+				info[tid].wsh_pvalue = 0.0;
+				double worig_diff = -DBL_MAX;
+				int max_id = -1;
+				for (tid2 = 0; tid2 < ntrees; tid2++)
+					if (tid2 != tid) {
+						double wdiff = (orig_tree_lh[tid2] - orig_tree_lh[tid])*lhdiff_weights[tid*ntrees+tid2];
+						if (wdiff > worig_diff) {
+							worig_diff = wdiff;
+							max_id = tid2;
+						}
+					}
+				for (boot = 0; boot < params.topotest_replicates; boot++) {
+					double wmax_diff = -DBL_MAX;
+					for (tid2 = 0; tid2 < ntrees; tid2++)
+						if (tid2 != tid)
+							wmax_diff = max(wmax_diff,
+									(tree_lhs[tid2*params.topotest_replicates+boot] - avg_lh[tid2] -
+									tree_lhs_offset[boot] + avg_lh[tid]) * lhdiff_weights[tid*ntrees+tid2]);
+					if (wmax_diff > worig_diff)
+						info[tid].wsh_pvalue += 1.0;
+					wmax_diff = (tree_lhs[max_id*params.topotest_replicates+boot] - avg_lh[max_id] -
+							tree_lhs_offset[boot] + avg_lh[tid]);
+					if (wmax_diff >  orig_tree_lh[max_id] - orig_tree_lh[tid])
+						info[tid].wkh_pvalue += 1.0;
+				}
+				info[tid].wsh_pvalue /= params.topotest_replicates;
+				info[tid].wkh_pvalue /= params.topotest_replicates;
+			}
+		}
 		/* now to ELW - Expected Likelihood Weight method */
 		cout << "Performing ELW test..." << endl;
 
@@ -798,6 +870,10 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		delete [] orig_tree_lh;
 	if (pattern_lh)
 		delete [] pattern_lh;
+	if (pattern_lhs)
+		delete [] pattern_lhs;
+	if (lhdiff_weights)
+		delete [] lhdiff_weights;
 	if (tree_lhs)
 		delete [] tree_lhs;
 	//if (saved_tree_lhs)
@@ -1148,7 +1224,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		} else
 			reportAlignment(out, alignment);
 
-		out.precision(3);
+		out.precision(4);
 		out << fixed;
 
 		if (!model_info.empty()) {
@@ -1333,15 +1409,21 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		IntVector distinct_trees;
 		if (params.treeset_file) {
 			evaluateTrees(params, &tree, info, distinct_trees);
-			out.precision(3);
+			out.precision(4);
 
 			out << endl << "USER TREES" << endl << "----------" << endl << endl;
 			out << "See " << params.treeset_file << ".trees for trees with branch lengths." << endl << endl;
-			if (params.topotest_replicates) {
-				out << "Tree       logL    deltaL  bp-RELL    p-KH     p-SH    c-ELW" << endl;
-				out << "---------------------------------------------------------------" << endl;
+			if (params.topotest_replicates && info.size() > 1) {
+				if (params.do_weighted_test) {
+					out << "Tree      logL    deltaL  bp-RELL    p-KH     p-SH    p-WKH    p-WSH    c-ELW" << endl;
+					out << "-------------------------------------------------------------------------------" << endl;
+				} else {
+					out << "Tree      logL    deltaL  bp-RELL    p-KH     p-SH    c-ELW" << endl;
+					out << "-------------------------------------------------------------" << endl;
+
+				}
 			} else {
-				out << "Tree       logL    deltaL" << endl;
+				out << "Tree      logL    deltaL" << endl;
 				out << "-------------------------" << endl;
 
 			}
@@ -1350,21 +1432,23 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			for (tid = 0; tid < info.size(); tid++)
 				if (info[tid].logl > maxL) maxL = info[tid].logl;
 			for (orig_id = 0, tid = 0; orig_id < distinct_trees.size(); orig_id++) {
-				out.width(4);
+				out.width(3);
 				out << right << orig_id+1 << " ";
 				if (distinct_trees[orig_id] >= 0) {
 					out << " = tree " << distinct_trees[orig_id]+1 << endl;
 					continue;
 				}
+				out.precision(3);
 				out.width(12);
 				out << info[tid].logl << " ";
 				out.width(7);
 				out << maxL - info[tid].logl;
-				if (!params.topotest_replicates) {
+				if (!params.topotest_replicates || info.size() <= 1) {
 					out << endl;
 					tid++;
 					continue;
 				}
+				out.precision(4);
 				out << "  ";
 				out.width(6);
 				out << info[tid].rell_bp;
@@ -1381,9 +1465,24 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				out.width(6);
 				out << right << info[tid].sh_pvalue;
 				if (info[tid].sh_pvalue < 0.05)
-					out << " -  ";
+					out << " - ";
 				else
-					out << " +  ";
+					out << " + ";
+				if (params.do_weighted_test) {
+					out.width(6);
+					out << right << info[tid].wkh_pvalue;
+					if (info[tid].wkh_pvalue < 0.05)
+						out << " - ";
+					else
+						out << " + ";
+					out.width(6);
+					out << right << info[tid].wsh_pvalue;
+					if (info[tid].wsh_pvalue < 0.05)
+						out << " - ";
+					else
+						out << " + ";
+				}
+				out.width(6);
 				out << info[tid].elw_value;
 				if (info[tid].elw_confident)
 					out << " +";
@@ -1398,10 +1497,15 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				out <<  "deltaL  : logL difference from the maximal logl in the set." << endl
 					 << "bp-RELL : bootstrap proportion using RELL method (Kishino et al. 1990)." << endl
 					 << "p-KH    : p-value of one sided Kishino-Hasegawa test (1989)." << endl
-					 << "p-SH    : p-value of Shimodaira-Hasegawa test (2000)." << endl
-					 << "c-ELW   : Expected Likelihood Weight (Strimmer & Rambaut 2002)." << endl << endl
-					 << "Plus signs denote the confidence sets. Minus signs denote significant"  << endl
-					 << "exclusion. All tests used 5% significance level and performed "<< endl
+					 << "p-SH    : p-value of Shimodaira-Hasegawa test (2000)." << endl;
+				if (params.do_weighted_test) {
+					out << "p-WKH   : p-value of weighted KH test." << endl
+					 << "p-WSH   : p-value of weighted SH test." << endl;
+				}
+				out	 << "c-ELW   : Expected Likelihood Weight (Strimmer & Rambaut 2002)." << endl << endl
+					 << "Plus signs denote the 95% confidence sets." << endl
+					 << "Minus signs denote significant exclusion."  << endl
+					 << "All tests performed "
 					 << params.topotest_replicates << " resamplings using the RELL method."<<endl;
 			}
 			out << endl;
