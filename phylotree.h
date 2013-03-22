@@ -148,7 +148,7 @@ struct NNIMove {
 };
 
 struct LeafFreq {
-    PhyloNode* leaf;
+    int leaf_id;
 
     int freq;
 

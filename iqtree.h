@@ -523,7 +523,8 @@ protected:
     vector<NNIMove> vec_nonconf_nni;
 
     /**
-     *  Data structure to store how many time a leaf has been removed
+     *      Data structure to store how many times a leaf has been removed.
+     *      LeafFreq is a struct that contains leaf_id and leaf_frequency          
      */
     vector<LeafFreq> leaf_freqs;
 

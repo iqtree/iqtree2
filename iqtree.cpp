@@ -24,8 +24,7 @@
 
 extern double t_begin;
 
-IQTree::IQTree() :
-PhyloTree() {
+IQTree::IQTree() : PhyloTree() {
     init();
 }
 
@@ -59,14 +58,9 @@ void IQTree::init() {
     //initLeafFrequency();
     nnicut.num_delta = 0;
     nnicut.delta_min = DBL_MAX;
-    //	if (params->tabu){
-    //		initLeafFrequency();
-    //	}
-
 }
 
-IQTree::IQTree(Alignment *aln) :
-PhyloTree(aln) {
+IQTree::IQTree(Alignment *aln) : PhyloTree(aln) {
     init();
 }
 
@@ -321,12 +315,11 @@ void IQTree::initLeafFrequency(PhyloNode *node, PhyloNode *dad) {
     if (!node) node = (PhyloNode*) root;
     if (node->isLeaf()) {
         LeafFreq leaf_freq;
-        leaf_freq.leaf = node;
+        leaf_freq.leaf_id = node->id;
         leaf_freq.freq = 0;
         leaf_freqs.push_back(leaf_freq);
     }
-    for (NeighborVec::iterator it = node->neighbors.begin();
-            it != node->neighbors.end(); it++)
+    for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
         if ((*it)->node != dad) {
             initLeafFrequency((PhyloNode*) (*it)->node, node);
         }
@@ -335,27 +328,50 @@ void IQTree::initLeafFrequency(PhyloNode *node, PhyloNode *dad) {
 void IQTree::deleteNonTabuLeaves(PhyloNodeVector &del_leaves) {
     // sort node frequency
     sort(leaf_freqs.begin(), leaf_freqs.end());
-    // shuffle the sorted list first
+    NodeVector taxa;
+    // get the vector of taxa
+    getTaxa(taxa);
+    
+    // shuffle the sorted list first so that leaves with the same frequency have the same
+    // chance of being removed 
     int cur_freq = leaf_freqs[0].freq;
+    
+    //cout << "size: " << leaf_freqs.size() << endl;
+    //cout << "Before randomize" << endl;
+    /*
+    for (size_t i = 0; i < leaf_freqs.size(); i++) {
+        cout << leaf_freqs[i].leaf_id << ":" << leaf_freqs[i].freq << " ";
+    }
+    cout << endl;
+     */
     int startIndex = 0;
     int endIndex = 0;
-    int leafCnt = 0;
     while (true) {
-        while (leaf_freqs[endIndex].freq == cur_freq) {
+        while (leaf_freqs[endIndex].freq == cur_freq && endIndex < leaf_freqs.size()) {
             endIndex++;
         }
-        random_shuffle(leaf_freqs.begin() + startIndex, leaf_freqs.begin() + endIndex - 1);
-        do {
-            del_leaves.push_back(leaf_freqs[leafCnt].leaf);
-            leaf_freqs[leafCnt].freq++;
-            leafCnt++;
-        } while (leafCnt < k_delete);
-        if (leafCnt == k_delete) {
+        random_shuffle(leaf_freqs.begin() + startIndex, leaf_freqs.begin() + endIndex);
+        if (endIndex == leaf_freqs.size())
             break;
-        }
         startIndex = endIndex;
         cur_freq = leaf_freqs[endIndex].freq;
     }
+    /*
+    cout << "After randomize" << endl;
+    for (size_t i = 0; i < leaf_freqs.size(); i++) {
+        cout << leaf_freqs[i].leaf_id << ":" << leaf_freqs[i].freq << " ";
+    }
+    cout << endl;
+     */
+    int leafCnt = 0;
+    do {
+        PhyloNode *taxon = (PhyloNode*) taxa[leaf_freqs[leafCnt].leaf_id];
+        del_leaves.push_back(taxon);
+        leaf_freqs[leafCnt].freq++;
+        leafCnt++;
+        deleteLeaf(taxon);
+    } while (leafCnt < k_delete);
+    root = taxa[leaf_freqs[leafCnt].leaf_id];        
 }
 
 void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
@@ -640,7 +656,7 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
                 delete (*rit);
             }
     }
-    initializeTree(); // BQM: re-index nodes and branches s.t. ping-pong neighbors have the same ID
+    //initializeTree(); // BQM: re-index nodes and branches s.t. ping-pong neighbors have the same ID
 
     if (verbose_mode >= VB_DEBUG)
         drawTree(cout,
@@ -656,7 +672,7 @@ void IQTree::doParsimonyReinsertion() {
         deleteLeaves(del_leaves);
     }
     reinsertLeavesByParsimony(del_leaves);
-    fixNegativeBranch(false);
+    fixNegativeBranch(true);
 }
 
 double IQTree::doIQP() {
@@ -691,14 +707,13 @@ double IQTree::doIQP() {
         else {
 
             // optimize branches at the reinsertion point
-            /*
              for (PhyloNodeVector::iterator dit = del_leaves.begin(); dit != del_leaves.end(); dit++) {
              PhyloNode *adj_node = (PhyloNode*)(*dit)->neighbors[0]->node;
              FOR_NEIGHBOR_IT(adj_node, (*dit), it)
              curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*it)->node);
              //curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
              }
-             */
+             
             curScore = optimizeAllBranches(1);
         }
 
@@ -955,6 +970,9 @@ double IQTree::doIQPNNI() {
     int cur_iteration;
     bool speedupMsg = false;
     double prev_time = 0.0;
+    if (params->tabu) {
+        initLeafFrequency();
+    }
     for (cur_iteration = 2; !stop_rule.meetStopCondition(cur_iteration);
             cur_iteration++) {
         double min_elapsed = (getCPUTime() - params->startTime) / 60;
@@ -1017,7 +1035,7 @@ double IQTree::doIQPNNI() {
         } else {
             if (params->reinsert_par) {
                 doParsimonyReinsertion();
-                curScore = optimizeAllBranches(1);
+                curScore = optimizeAllBranches();
                 cout << "LH Pars = " << curScore << endl;
             } else {
                 if (!params->raxmllib) {
@@ -1035,9 +1053,9 @@ double IQTree::doIQPNNI() {
 
                     printTree(iqp_tree_string);
                     treeReadLenString(iqp_tree_string.str().c_str(), raxmlTree, TRUE, FALSE, TRUE);
-                    smoothTree(raxmlTree, 1);
+                    smoothTree(raxmlTree, 3);
                     evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
-                    cout << "IQP log-likelihood = " << raxmlTree->likelihood << endl;
+                    //cout << "IQP log-likelihood = " << raxmlTree->likelihood << endl;
                     curScore = raxmlTree->likelihood;
                 }
             }
@@ -1140,6 +1158,7 @@ double IQTree::doIQPNNI() {
         cout.setf(ios::fixed, ios::floatfield);
 
         // NNI search was skipped according to the speed up heuristics
+       
         if (cputime_secs >= prev_time + 10) {
             if (!skipped) {
                 cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << cur_iteration << " / LogL: " << curScore << " / CPU time elapsed: " << (int) round(cputime_secs) << "s";
@@ -1158,6 +1177,7 @@ double IQTree::doIQPNNI() {
             }
             prev_time = cputime_secs;
         }
+        
 
         /*
          if (verbose_mode >= VB_DEBUG) {
@@ -2124,17 +2144,19 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
     int nniNr = 0;
     int chosenSwap = 0;
 
-	// make alignment 16
-	if (((intptr_t) tmp_partial_lh1) % 16 == 0)
-		node12_it->partial_lh = tmp_partial_lh1;
-	else
-		node12_it->partial_lh = tmp_partial_lh1 + 1;
+    // make alignment 16
+    if (((intptr_t) tmp_partial_lh1) % 16 == 0)
+        node12_it->partial_lh = tmp_partial_lh1;
+    else
+        node12_it->partial_lh = tmp_partial_lh1 + 1;
 
-	if (((intptr_t) tmp_partial_lh2) % 16 == 0)
-		node21_it->partial_lh = tmp_partial_lh2;
-	else
-		node21_it->partial_lh = tmp_partial_lh2 + 1;
+    if (((intptr_t) tmp_partial_lh2) % 16 == 0)
+        node21_it->partial_lh = tmp_partial_lh2;
+    else
+        node21_it->partial_lh = tmp_partial_lh2 + 1;
 
+//    node12_it->partial_lh = tmp_partial_lh1;
+//    node21_it->partial_lh = tmp_partial_lh2;
     node12_it->scale_num = tmp_scale_num1;
     node21_it->scale_num = tmp_scale_num2;
 

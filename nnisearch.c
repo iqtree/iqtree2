@@ -126,9 +126,9 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut) {
 		smoothTree(tr, 1);
 		evaluateGeneric(tr, tr->start, FALSE);
 		if (tr->likelihood < curScore) {
-			printf("Tree likelihood gets worse after applying %d NNI\n", numNNI2Apply);
-			printf("curScore = %30.20f\n", curScore);
-			printf("newScore = %30.20f\n", tr->likelihood);
+			//printf("Tree likelihood gets worse after applying %d NNI\n", numNNI2Apply);
+			//printf("curScore = %30.20f\n", curScore);
+			//printf("newScore = %30.20f\n", tr->likelihood);
 			if (numNNI2Apply == 1) {
 				printf("This is a BUG: Tree gets worse when 1 NNI is applied?\n");
 				printf("Tree supposed to get LH greater than or equal %30.20f\n", nonConfNNIList[0].likelihood);
@@ -147,9 +147,9 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut) {
 				}
 				return 0.00;
 			}
-			printf("Rolling back the tree\n");
+			//printf("Rolling back the tree\n");
 			for (i = numNNI2Apply-1; i >=0; i--) {
-				printf("Swaping back node (%d) -- (%d) \n", nonConfNNIList[i].p->number, nonConfNNIList[i].p->back->number);
+				//printf("Swaping back node (%d) -- (%d) \n", nonConfNNIList[i].p->number, nonConfNNIList[i].p->back->number);
 				doOneNNI(tr, nonConfNNIList[i].p, nonConfNNIList[i].nniType,
 						FALSE);
 				// Restore the branch length
@@ -327,11 +327,11 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 		(nnicut->num_delta)++;
 	}
 
-	if (nni1.deltaLH > 1e-6 && nni1.deltaLH > nni2.deltaLH) {
+	if (nni1.deltaLH > 1e-3 && nni1.deltaLH > nni2.deltaLH) {
 		return nni1;
-	} else if (nni1.deltaLH > 1e-6 && nni1.deltaLH < nni2.deltaLH ){
+	} else if (nni1.deltaLH > 1e-3 && nni1.deltaLH < nni2.deltaLH ){
 		return nni2;
-	} else if (nni1.deltaLH < 1e-6 && nni2.deltaLH > 1e-6) {
+	} else if (nni1.deltaLH < 0 && nni2.deltaLH > 1e-3) {
 		return nni2;
 	} else {
 		return nni0;

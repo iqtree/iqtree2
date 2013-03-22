@@ -1811,12 +1811,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	 */
 
 	/* initialize tree, either by user tree or BioNJ tree */
-	/*
-	 if (!tree.dist_matrix) {
-	 tree.dist_matrix = new double[alignment->getNSeq() * alignment->getNSeq()];
-	 memset(tree.dist_matrix, 0, sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
-	 }*/
-
 	double longest_dist;
 	string dist_file;
 	double begin_time = getCPUTime();
@@ -1843,27 +1837,22 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	// start the search with user-defined tree
 	if (params.user_file) {
-		cout << "Reading user tree file " << params.user_file << " ..." << endl;
-		bool myrooted = params.is_rooted;
-		iqtree.readTree(params.user_file, myrooted);
-		iqtree.setAlignment(alignment);
-		if (params.raxmllib) {
-			//TODO This need to be edited since phylolib does not read the tree branch length correctly
-			// Create tree data structure for RAxML kernel
-			iqtree.raxmlTree = (tree*) (malloc(sizeof(tree)));
-			/* read the binary input, setup tree, initialize model with alignment */
-			read_msa(iqtree.raxmlTree, params.binary_aln_file);
-			stringstream iqp_tree_string;
-			iqtree.printTree(iqp_tree_string);
-			treeReadTopologyString((char*) iqp_tree_string.str().c_str(),
-					iqtree.raxmlTree);
-			smoothTree(iqtree.raxmlTree, 32);
-			evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, FALSE);
-			cout << "Log-Likelihood of user tree: "
-					<< iqtree.raxmlTree->likelihood << endl;
-			//smoothTree(raxmlTree, 1);
-		}
-		// Create parsimony tree using IQ-Tree kernel
+            cout << endl;
+            cout << "Reading user tree file " << params.user_file << " ..." << endl;
+            bool myrooted = params.is_rooted;
+            iqtree.readTree(params.user_file, myrooted);
+            iqtree.setAlignment(alignment);
+            if (params.raxmllib) {			
+                    // Create tree data structure for RAxML kernel
+                    iqtree.raxmlTree = (tree*) (malloc(sizeof(tree)));
+                    /* read the binary input, setup tree, initialize model with alignment */
+                    read_msa(iqtree.raxmlTree, params.binary_aln_file);
+                    iqtree.transformBranchLenRAX(iqtree.raxmlTree->fracchange);
+                    stringstream iqp_tree_string;
+                    iqtree.printTree(iqp_tree_string);
+                    treeReadTopologyString((char*) iqp_tree_string.str().c_str(), iqtree.raxmlTree);
+            }
+            // Create parsimony tree using IQ-Tree kernel
 	} else if (params.parsimony_tree) {
 		cout << endl;
 		cout << "CREATING PARSIMONY TREE BY IQTree ..." << endl;
@@ -1992,7 +1981,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params,
 				alignment, bestTreeScore);
 	}
-
+/*
 	if (!params.user_file) {
 		iqtree.computeBioNJ(params, alignment, dist_file);
 		iqtree.fixNegativeBranch(true);
@@ -2019,6 +2008,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		double elapsedTime = getCPUTime() - params.startTime;
 		cout << "Time elapsed: " << elapsedTime << endl;
 	}
+ */
 
 	double t_tree_search_start, t_tree_search_end;
 	t_tree_search_start = getCPUTime();
@@ -2060,7 +2050,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		//treeReadLenString(bestTreeString.str().c_str(), iqtree.raxmlTree, FALSE, FALSE, TRUE);
 
 		// Read in model parameters values here
-		/*
+		
+                /*
 		if (iqtree.aln->num_states == 4) {
 			// set alpha value
 			double alpha = iqtree.getRate()->getGammaShape();
@@ -2088,7 +2079,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			}
 			delete [] rate_param;
 		}
-		 */
+                evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, TRUE);
+                cout << "Log-likelihood after initializing parameters to phylolib: " << iqtree.raxmlTree->likelihood << endl;
+                exit(1);
+		*/ 
+                cout << endl;
 		cout << "Optimizing model parameters and branch lengths using phylolib"
 				<< endl;
 		double t_modOpt_start = getCPUTime();
