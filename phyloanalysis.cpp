@@ -1842,6 +1842,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
             bool myrooted = params.is_rooted;
             iqtree.readTree(params.user_file, myrooted);
             iqtree.setAlignment(alignment);
+            iqtree.fixNegativeBranch(false);
             if (params.raxmllib) {			
                     // Create tree data structure for RAxML kernel
                     iqtree.raxmlTree = (tree*) (malloc(sizeof(tree)));
@@ -1875,7 +1876,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.setAlignment(alignment);
 		string parsimony_tree_file = string(params.out_prefix) + ".parsimony";
 		iqtree.printTree(parsimony_tree_file.c_str(), 0);
-		iqtree.fixNegativeBranch(true);
+		iqtree.fixNegativeBranch(false);
 	} else {
 		// This is the old default option: using BIONJ as starting tree
 		iqtree.computeBioNJ(params, alignment, dist_file);
@@ -1891,7 +1892,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
     /* Fix if negative branch lengths detected */
     //double fixed_length = 0.001;
-    int fixed_number = iqtree.fixNegativeBranch(true);
+    int fixed_number = iqtree.fixNegativeBranch(false);
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
         if (verbose_mode >= VB_DEBUG) {

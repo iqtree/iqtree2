@@ -327,11 +327,11 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 		(nnicut->num_delta)++;
 	}
 
-	if (nni1.deltaLH > 1e-3 && nni1.deltaLH > nni2.deltaLH) {
+	if (nni1.deltaLH > 0.0 && nni1.deltaLH > nni2.deltaLH) {
 		return nni1;
-	} else if (nni1.deltaLH > 1e-3 && nni1.deltaLH < nni2.deltaLH ){
+	} else if (nni1.deltaLH > 0.0 && nni1.deltaLH < nni2.deltaLH ){
 		return nni2;
-	} else if (nni1.deltaLH < 0 && nni2.deltaLH > 1e-3) {
+	} else if (nni1.deltaLH < 0.0 && nni2.deltaLH > 0.0) {
 		return nni2;
 	} else {
 		return nni0;
