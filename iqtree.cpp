@@ -656,7 +656,7 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
                 delete (*rit);
             }
     }
-    //initializeTree(); // BQM: re-index nodes and branches s.t. ping-pong neighbors have the same ID
+    initializeTree(); // BQM: re-index nodes and branches s.t. ping-pong neighbors have the same ID
 
     if (verbose_mode >= VB_DEBUG)
         drawTree(cout,
@@ -1451,11 +1451,18 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
 
+    if (verbose_mode >= VB_MED) {
+        cout << "Number of NNI applied = " << nni_count << endl;
+        cout << "Number of NNI rounds = " << nni_round << endl;
+    }
     if (save_all_trees == 2 && params->nni_opt_5branches) {
         curScore = optimizeAllBranches();
         saveCurrentTree(curScore); // BQM: for new bootstrap
         saveNNITrees(); // optimize 5 branches around NNI, this makes program slower
     }
+    
+    
+    
     return curScore;
 }
 
@@ -1511,7 +1518,10 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
             }
         }
     }
-    //cout << "nniApplied = " << nniApplied << endl;
+    if (verbose_mode >= VB_MED) {
+            cout << "Number of NNI applied = " << nniApplied << endl;
+            cout << "Number of NNI rounds = " << nniRound << endl;
+    }
     if (enableHeuris) {
         if (vecNumNNI.size() < 1000) {
             vecNumNNI.push_back(nniApplied);

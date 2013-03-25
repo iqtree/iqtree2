@@ -1631,8 +1631,6 @@ void createFirstNNITree(Params &params, IQTree &iqtree, double bestTreeScore,
 	nniBeginClock = getCPUTime();
 	if (!params.raxmllib) {
 		iqtree.optimizeNNI();
-		cout << iqtree.nni_round << " NNI rounds carried out" << endl;
-		//iqtree.curScore = iqtree.optimizeAllBranches(100, 0.0001);
 	} else {
 		iqtree.curScore = iqtree.optimizeNNIRax();
 		// read in new tree
@@ -1816,6 +1814,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	double begin_time = getCPUTime();
 	params.startTime = begin_time;
 	params.start_real_time = getRealTime();
+            string bionj_file = params.out_prefix;
+            bionj_file += ".bionj";
 
 	// Compute JC distances or read them from user file
 	if (params.dist_file) {
@@ -1891,7 +1891,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
     /* Fix if negative branch lengths detected */
     //double fixed_length = 0.001;
-    int fixed_number = iqtree.fixNegativeBranch(false);
+    int fixed_number = iqtree.fixNegativeBranch(true);
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
         if (verbose_mode >= VB_DEBUG) {
@@ -1981,7 +1981,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params,
 				alignment, bestTreeScore);
 	}
-/*
+
 	if (!params.user_file) {
 		iqtree.computeBioNJ(params, alignment, dist_file);
 		iqtree.fixNegativeBranch(true);
@@ -1997,23 +1997,22 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		if (iqtree.curScore < bestTreeScore - 1e-5) {
 			cout << "Rolling back the first tree..." << endl;
 			iqtree.rollBack(best_tree_string);
+                                    // write the bionj back to a file
+                                    iqtree.printTree(bionj_file.c_str());
 			if (iqtree.isSuperTree()) {
 				((PhyloSuperTree*) (&iqtree))->mapTrees();
 				iqtree.optimizeAllBranches();
 			}
 			iqtree.curScore = iqtree.computeLikelihood();
-            //            iqtree.curScore = iqtree.optimizeAllBranches();
 			cout << "Backup log-likelihood: " << iqtree.curScore << endl;
 		}
 		double elapsedTime = getCPUTime() - params.startTime;
 		cout << "Time elapsed: " << elapsedTime << endl;
 	}
- */
-
+            
 	double t_tree_search_start, t_tree_search_end;
 	t_tree_search_start = getCPUTime();
-
-	//cout << "User tree has likelihood score of " << tree.computeLikelihood() << endl;
+            
 	if (params.parsimony) {
 		iqtree.enable_parsimony = true;
 		iqtree.pars_scores = new double[3000];
@@ -2026,18 +2025,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.cur_pars_score = iqtree.computeParsimony();
 		//cout << "Fast parsimony score: " << tree.cur_pars_score << endl;
 	}
-
-	/*
-	 if (params.raxmllib) {
-	 int printBranchLengths = TRUE;
-	 Tree2String(iqtree.raxmlTree->tree_string, iqtree.raxmlTree,
-	 iqtree.raxmlTree->start->back, printBranchLengths, TRUE, 0, 0,
-	 0, SUMMARIZE_LH, 0, 0);
-	 stringstream mytree;
-	 mytree << iqtree.raxmlTree->tree_string;
-	 iqtree.readTree(mytree, iqtree.rooted);
-	 }
-	 */
 
 	/* OPTIMIZE MODEL PARAMETERS */
 	if (params.raxmllib) {
