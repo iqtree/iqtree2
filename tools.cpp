@@ -588,6 +588,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.tree_spr = false;
 	params.nexus_output = false;
 	params.k_representative = 4;
+    params.loglh_epsilon = 0.0;
 	params.p_delete = 0.0;
 	params.min_iterations = -1;
 	params.max_iterations = 1;
@@ -1485,7 +1486,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tabu = true;
 			} else if (strcmp(argv[cnt], "-fast_bran") == 0) {
 				params.fast_branch_opt = true;
-			} else if (strcmp(argv[cnt], "-random_restart") == 0) {
+			} else if (strcmp(argv[cnt], "-eps") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -eps <log-likelihood epsilon>";                
+                params.loglh_epsilon = convert_double(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-random_restart") == 0) {
 				params.random_restart = true;
 			} else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
 				params.parbran = true;

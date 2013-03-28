@@ -2222,8 +2222,8 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
             nniMoves[nniNr].node1 = node1;
             nniMoves[nniNr].node2 = node2;
             nniMoves[nniNr].delta = treelhs[nniNr] - treelhs[0];
-
-            if (nniMoves[nniNr].loglh > bestLH) {
+            
+            if (nniMoves[nniNr].loglh > bestLH + params->loglh_epsilon) {
                 bestLH = nniMoves[nniNr].loglh;
                 chosenSwap = nniNr;
             }

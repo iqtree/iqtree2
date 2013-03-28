@@ -333,10 +333,13 @@ struct NNIInfo {
         program parameters, everything is specified here
  */
 struct Params {
-
+    /**
+     *  epsilon value used to compare log-likelihood between trees
+     */
+    bool loglh_epsilon;
 	/**
-	 * 	Option to turn on the fast branch length optimization trick learnt
-	 * 	from RAxML
+	 *   Option to turn on the fast branch length optimization trick learnt
+	 *   from RAxML
 	 */
 	bool fast_branch_opt;
 
