@@ -4,6 +4,12 @@
 
 cmake_minimum_required(VERSION 2.6)
 
+project(iqtree)
+# The version number.
+set (iqtree_VERSION_MAJOR 0)
+set (iqtree_VERSION_MINOR 9)
+set (iqtree_VERSION_PATCH 4)
+
 set(BUILD_SHARED_LIBS OFF)
 
 if (NOT CMAKE_BUILD_TYPE) 
@@ -51,12 +57,6 @@ else()
 	message("Parallel      : None")
 	SET(EXE_SUFFIX "")
 endif()
-
-project(iqtree)
-# The version number.
-set (iqtree_VERSION_MAJOR 0)
-set (iqtree_VERSION_MINOR 9)
-set (iqtree_VERSION_PATCH 4)
 
 # check existence of a few basic functions
 include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)

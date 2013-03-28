@@ -79,6 +79,11 @@ public:
 	virtual void createBootstrapAlignment(int *pattern_freq);
 
 	/**
+	 * shuffle alignment by randomizing the order of sites
+	 */
+	virtual void shuffleAlignment();
+
+	/**
 		compute the observed distance (number of different pairs of positions per site) 
 			between two sequences
 		@param seq1 index of sequence 1

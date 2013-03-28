@@ -363,6 +363,17 @@ void MExtTree::generateStarTree(Params &params) {
 
 }
 
+void MExtTree::generateRandomBranchLengths(Params &params, Node *node, Node *dad) {
+	if (!node) node = root;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		double len = randomLen(params);
+		(*it)->length = len;
+		(*it)->node->findNeighbor(node)->length = len;
+		generateRandomBranchLengths(params, (*it)->node, node);
+	}
+}
+
+
 void MExtTree::setLeavesName(NodeVector &myleaves) {
 	for (int i = 0; i < myleaves.size(); i++)
 	{

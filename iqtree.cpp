@@ -2191,7 +2191,7 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
             nniMoves[nniNr].node2 = node2;
             nniMoves[nniNr].delta = treelhs[nniNr] - treelhs[0];
 
-            if (nniMoves[nniNr].loglh > bestLH) {
+            if (nniMoves[nniNr].loglh > bestLH + TOL_LIKELIHOOD) {
                 bestLH = nniMoves[nniNr].loglh;
                 chosenSwap = nniNr;
             }
@@ -2451,7 +2451,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 
     out_file = params.out_prefix;
     out_file += ".splits.nex";
-    sg.saveFile(out_file.c_str(), IN_NEXUS, true);
+    sg.saveFile(out_file.c_str(), IN_NEXUS, false);
     cout << "Split supports printed to NEXUS file " << out_file << endl;
     /*
     out_file = params.out_prefix;

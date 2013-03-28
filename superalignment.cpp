@@ -152,6 +152,17 @@ void SuperAlignment::createBootstrapAlignment(int *pattern_freq) {
 	}
 }
 
+/**
+ * shuffle alignment by randomizing the order of sites
+ */
+void SuperAlignment::shuffleAlignment() {
+	if (!isSuperAlignment()) outError("Internal error: ", __func__);
+	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
+		(*it)->shuffleAlignment();
+	}
+}
+
+
 double SuperAlignment::computeObsDist(int seq1, int seq2) {
 	int site;
 	int diff_pos = 0, total_pos = 0;

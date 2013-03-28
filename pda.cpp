@@ -89,6 +89,12 @@ void generateRandomTree(Params &params)
 			if (!overwriteFile(params.user_file)) return;
 			ofstream out;
 			out.open(params.user_file);
+			MTree itree;
+
+			if (params.second_tree) {
+				cout << "Generating random branch lengths on tree " << params.second_tree << " ..." << endl;
+				itree.readTree(params.second_tree, params.is_rooted);
+			} else
 			switch (params.tree_gen) {
 			case YULE_HARDING:
 				cout << "Generating random Yule-Harding tree..." << endl;
@@ -116,7 +122,12 @@ void generateRandomTree(Params &params)
 			}
 			for (int i = 0; i < params.repeated_time; i++) {
 				MExtTree mtree;
-				mtree.generateRandomTree(params.tree_gen, params);
+				if (itree.root) {
+					mtree.copyTree(&itree);
+					mtree.generateRandomBranchLengths(params);
+				} else {
+					mtree.generateRandomTree(params.tree_gen, params);
+				}
 				if (params.num_zero_len) {
 					mtree.setZeroInternalBranches(params.num_zero_len);
 					MExtTree collapsed_tree;

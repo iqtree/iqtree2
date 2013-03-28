@@ -947,8 +947,8 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 		<< ((params.model_test_criterion == MTC_BIC) ? "BIC" :
 			((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc"))
 		<< " scores: " << endl << endl;
-	out << "Model             LogL        AIC       w-AIC     AICc     w-AICc      BIC      w-BIC" << endl
-		<< "-------------------------------------------------------------------------------------" << endl;
+	out << "Model             LogL          AIC      w-AIC      AICc     w-AICc       BIC      w-BIC" << endl
+		<< "----------------------------------------------------------------------------------------" << endl;
 	for (vector<ModelInfo>::iterator it = model_info.begin(); it != model_info.end(); it++) {
 		out.width(13);
 		out << left << it->name << " ";

@@ -1262,6 +1262,12 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     countConstSite();
 }
 
+void Alignment::shuffleAlignment() {
+    if (isSuperAlignment()) outError("Internal error: ", __func__);
+    random_shuffle(site_pattern.begin(), site_pattern.end());
+}
+
+
 void Alignment::concatenateAlignment(Alignment *aln) {
     if (getNSeq() != aln->getNSeq()) outError("Different number of sequences in two alignments");
     if (num_states != aln->num_states) outError("Different number of states in two alignments");

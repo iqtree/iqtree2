@@ -100,6 +100,12 @@ public:
 	void generateStarTree(Params &params);
 
 	/**
+	 * generate random branch lengths on the given topology
+	 * 		@param params program parameters
+	 */
+	void generateRandomBranchLengths(Params &params, Node* node = NULL, Node *dad = NULL);
+
+	/**
 		set the leaf ID and names when generating random tree
 		@param myleaves vector of leaves
 	*/

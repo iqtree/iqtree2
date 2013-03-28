@@ -311,6 +311,11 @@ public:
 	void createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln);
 
 	/**
+	 * shuffle alignment by randomizing the order of sites
+	 */
+	virtual void shuffleAlignment();
+
+	/**
 		concatenate an alignment into the current alignment object
 		@param aln an alignment of the same number of sequences and sequence names    
 	*/
