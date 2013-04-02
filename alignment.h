@@ -253,7 +253,12 @@ public:
 	/**
 		Quit if some sequences contain only gaps or missing data
 	*/
-	virtual void checkGappySeq();
+	virtual void checkGappySeq(bool force_error = true);
+
+	/**
+	 * return a new alignment if some sequence is totally gappy, or this if all sequence are okey
+	 */
+	Alignment *removeGappySeq();
 
 	/**
 		@return TRUE if seq_id contains only gaps or missing characters

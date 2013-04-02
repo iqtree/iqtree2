@@ -42,6 +42,7 @@ ModelFactory::ModelFactory() {
 ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type, PhyloTree* tree, bool count_rates)
 {
 	ModelSubst *model = NULL;
+	cout << "Numstates: " << tree->aln->num_states << endl;
 	if ((model_str == "JC" && tree->aln->num_states == 4) || 
 		(model_str == "POISSON" && tree->aln->num_states == 20) ||
 		(model_str == "JC2" && tree->aln->num_states == 2)) 

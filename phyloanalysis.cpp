@@ -1838,7 +1838,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		cout << "Some distances are too long, computing observed distances..."
 			<< endl;
 		longest_dist = iqtree.computeObsDist(params, alignment, iqtree.dist_matrix, dist_file);
-		assert(longest_dist <= 1.0);
+		//assert(longest_dist <= 1.0);
 	}
 
 	// start the search with user-defined tree
@@ -2133,6 +2133,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	if (params.min_iterations > 0) {
 		createFirstNNITree(params, iqtree, iqtree.curScore, alignment);
+		if (iqtree.isSuperTree())
+			((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+
 	}
 
 	//estimate_nni_cutoff = saved_estimate_nni;
@@ -2277,6 +2280,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				<< iqtree.curScore << endl;
 	}
 
+	if (iqtree.isSuperTree()) ((PhyloSuperTree*) &iqtree)->mapTrees();
+
 	if (params.min_iterations) {
 		cout << endl;
 		iqtree.setAlignment(alignment);
@@ -2289,6 +2294,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	} else {
 		iqtree.setBestScore(iqtree.curScore);
 	}
+
+	if (iqtree.isSuperTree()) ((PhyloSuperTree*) &iqtree)->computeBranchLengths();
 
 	cout << endl;
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
@@ -2803,6 +2810,8 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 		sg.scaleWeight(scale, false, params->numeric_precision);
 	}
 
+
+
 	cout << "Creating greedy consensus tree..." << endl;
 	MTree mytree;
 	SplitGraph maxsg;
@@ -2837,6 +2846,20 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 	mytree.printTree(out_file.c_str(), WT_BR_CLADE);
 	cout << "Consensus tree written to " << out_file << endl;
 
+	if (output_tree)
+		out_file = output_tree;
+	else {
+		if (out_prefix)
+			out_file = out_prefix;
+		else
+			out_file = input_trees;
+		out_file += ".splits";
+	}
+
+    //sg.scaleWeight(0.01, false, 4);
+    sg.saveFile(out_file.c_str(), IN_OTHER, true);
+    cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
+
 }
 
 void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
@@ -2867,5 +2890,18 @@ void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
 
 	sg.saveFile(out_file.c_str(), IN_NEXUS);
 	cout << "Consensus network printed to " << out_file << endl;
+
+	if (output_tree)
+		out_file = output_tree;
+	else {
+		if (out_prefix)
+			out_file = out_prefix;
+		else
+			out_file = input_trees;
+		out_file += ".splits";
+	}
+
+	sg.saveFile(out_file.c_str(), IN_OTHER, true);
+    cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
 
 }

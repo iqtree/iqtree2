@@ -148,7 +148,21 @@ bool Alignment::isGapOnlySeq(int seq_id) {
     return true;
 }
 
-void Alignment::checkGappySeq() {
+Alignment *Alignment::removeGappySeq() {
+	IntVector keep_seqs;
+	int i, nseq = getNSeq();
+	for (i = 0; i < nseq; i++)
+		if (! isGapOnlySeq(i)) {
+			keep_seqs.push_back(i);
+		}
+	if (keep_seqs.size() == nseq)
+		return this;
+	Alignment *aln = new Alignment;
+	aln->extractSubAlignment(this, keep_seqs, 0);
+	return aln;
+}
+
+void Alignment::checkGappySeq(bool force_error) {
     int nseq = getNSeq(), i;
     int wrong_seq = 0;
     for (i = 0; i < nseq; i++)
@@ -1106,6 +1120,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     verbose_mode = save_mode;
     countConstSite();
     cout << getNSite() << " positions were extracted" << endl;
+    cout << __func__ << " " << num_states << endl;
 }
 
 void convert_range(const char *str, int &lower, int &upper, int &step_size, char* &endptr) throw (string) {

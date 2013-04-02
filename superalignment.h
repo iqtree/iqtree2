@@ -49,6 +49,8 @@ public:
 
 	virtual bool isSuperAlignment() { return true; }
 
+	void linkSubAlignment(int part);
+
 	/**
 	 * @param pattern_index (OUT) vector of size = alignment length storing pattern index of all sites
 	*/
@@ -62,7 +64,7 @@ public:
 	/**
 		Quit if some sequences contain only gaps or missing data
 	*/
-	virtual void checkGappySeq();
+	//virtual void checkGappySeq(bool force_error = true);
 
 	/**
 		create a non-parametric bootstrap alignment from an input alignment

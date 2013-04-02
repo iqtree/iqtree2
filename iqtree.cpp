@@ -1117,6 +1117,8 @@ double IQTree::doIQPNNI() {
             clearAllPartialLH();
             curScore = optimizeAllBranches();
         }
+    	if (isSuperTree())
+    		((PhyloSuperTree*) this)->computeBranchLengths();
 
         if (params->nni_lh && lh_file.is_open()) {
             lh_file << cur_iteration;

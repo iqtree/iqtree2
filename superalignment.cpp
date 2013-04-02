@@ -33,6 +33,7 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 	for (site = 0, it = super_tree->begin(); it != super_tree->end(); it++, site++) {
 		partitions.push_back((*it)->aln);
 		int nseq = (*it)->aln->getNSeq();
+		cout << "nseq  = " << nseq << endl;
 		for (seq = 0; seq < nseq; seq++) {
 			int id = getSeqID((*it)->aln->getSeqName(seq));
 			if (id < 0) {
@@ -41,7 +42,8 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 				IntVector vec(nsite, -1);
 				vec[site] = seq;
 				taxa_index.push_back(vec);
-			} else taxa_index[id][site] = seq;
+			} else
+				taxa_index[id][site] = seq;
 		}
 	}
 	num_states = 2; // binary type because the super alignment presents the presence/absence of taxa in the partitions
@@ -62,6 +64,19 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 	countConstSite();
 }
 
+void SuperAlignment::linkSubAlignment(int part) {
+	assert(taxa_index.size() == getNSeq());
+	int nseq = getNSeq(), seq;
+	for (seq = 0; seq < nseq; seq++) {
+		int id = partitions[part]->getSeqID(getSeqName(seq));
+		if (id < 0)
+			taxa_index[seq][part] = -1;
+		else
+			taxa_index[seq][part] = id;
+	}
+}
+
+/*
 void SuperAlignment::checkGappySeq() {
 	int nseq = getNSeq(), part = 0, i;
 	IntVector gap_only_seq;
@@ -82,7 +97,9 @@ void SuperAlignment::checkGappySeq() {
 			aln->extractSubAlignment((*it), keep_seqs, 0);
 			delete (*it);
 			(*it) = aln;
+			linkSubAlignment(part);
 		}
+		cout << __func__ << " num_states = " << (*it)->num_states << endl;
 	}
 	int wrong_seq = 0;
 	for (i = 0; i < nseq; i++)
@@ -94,7 +111,7 @@ void SuperAlignment::checkGappySeq() {
 		outError("Some sequences (see above) are problematic, please check your alignment again");
 		}
 }
-
+*/
 void SuperAlignment::getSitePatternIndex(IntVector &pattern_index) {
 	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
 		int offset = pattern_index.size();

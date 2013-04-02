@@ -114,7 +114,9 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 				delete part_aln;
 				part_aln = new_aln;
 			}
-			PhyloTree *tree = new PhyloTree(part_aln);
+			Alignment *new_aln = part_aln->removeGappySeq();
+			if (new_aln != part_aln) delete part_aln;
+			PhyloTree *tree = new PhyloTree(new_aln);
 			push_back(tree);
 			params = origin_params;
     	}
@@ -579,6 +581,8 @@ void PhyloSuperTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 }
 
 void PhyloSuperTree::computeBranchLengths() {
+	if (verbose_mode >= VB_DEBUG)
+		cout << "Assigning branch lengths for full tree with weighted average..." << endl;
 	int part = 0, i;
 	NodeVector nodes1, nodes2;
 	getBranches(nodes1, nodes2);

@@ -171,6 +171,9 @@ bool ModelDNA::setRateType(const char *rate_str) {
 		//outError("Model specification has wrong length!");
 		return false;
 	}
+	// only accept string of digits
+	for (i = 0; i < num_ch; i++)
+		if (!isdigit(rate_str[i])) return false;
 	/*
 	if (rate_str[num_ch-1] != '0') {
 		//outError("Model specification must end with '0'");
