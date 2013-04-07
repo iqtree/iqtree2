@@ -2415,7 +2415,7 @@ void runPhyloAnalysis(Params &params) {
     vector<ModelInfo> model_info;
     if (params.partition_file) {
         tree = new PhyloSuperTree(params);
-        alignment = tree->aln;c
+        alignment = tree->aln;
     } else {
         alignment = new Alignment(params.aln_file, params.sequence_type,
                 params.intype);

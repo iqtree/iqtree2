@@ -129,7 +129,7 @@ public:
      * print phylolib tree to a file. 
      * @param suffix suffix string for the tree file
      */
-    void printPhylolibTree(char* suffix);
+    void printPhylolibTree(const char* suffix);
     
     
     /**

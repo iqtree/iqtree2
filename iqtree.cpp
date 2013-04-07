@@ -2682,7 +2682,7 @@ void IQTree::printPhylolibModelParams(char* suffix) {
     }
 }
 
-void IQTree::printPhylolibTree(char* suffix) {
+void IQTree::printPhylolibTree(const char* suffix) {
     pl_boolean printBranchLengths = TRUE;
     Tree2String(raxmlTree->tree_string, raxmlTree, raxmlTree->start->back, printBranchLengths, 1, 0, 0, 0, SUMMARIZE_LH, 0, 0);
     char phylolibTree[1024];
