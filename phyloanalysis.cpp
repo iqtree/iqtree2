@@ -1628,6 +1628,7 @@ void createFirstNNITree(Params &params, IQTree &iqtree, double bestTreeScore,
     cout << "Performing local search with NNI moves ... " << endl;
     cout.precision(10);
     cout << "Log-likelihood epsilon = " << params.loglh_epsilon << endl;
+    cout.precision(4);
     double nniBeginClock, nniEndClock;
     nniBeginClock = getCPUTime();
     if (!params.phylolib) {
