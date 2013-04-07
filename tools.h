@@ -336,7 +336,7 @@ struct Params {
     /**
      *  epsilon value used to compare log-likelihood between trees
      */
-    bool loglh_epsilon;
+    double loglh_epsilon;
 	/**
 	 *   Option to turn on the fast branch length optimization trick learnt
 	 *   from RAxML
@@ -376,7 +376,7 @@ struct Params {
 	/**
 	 *  option to turn on raxml library
 	 */
-	bool raxmllib;
+	bool phylolib;
 
 	char *binary_aln_file;
 

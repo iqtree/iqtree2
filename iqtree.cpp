@@ -695,7 +695,7 @@ double IQTree::doIQP() {
      */
     reinsertLeaves(del_leaves);
 
-    if (params->raxmllib) {
+    if (params->phylolib) {
         // otherwise branch lengths will be optimized using phylolib's kernel
         curScore = 0.00;
     } else {
@@ -1038,7 +1038,7 @@ double IQTree::doIQPNNI() {
                 curScore = optimizeAllBranches();
                 cout << "LH Pars = " << curScore << endl;
             } else {
-                if (!params->raxmllib) {
+                if (!params->phylolib) {
                     curScore = doIQP();
                     if (verbose_mode >= VB_MED) {
                         cout << "LH IQP = " << curScore << endl;
@@ -1053,8 +1053,9 @@ double IQTree::doIQPNNI() {
 
                     printTree(iqp_tree_string);
                     treeReadLenString(iqp_tree_string.str().c_str(), raxmlTree, TRUE, FALSE, TRUE);
-                    smoothTree(raxmlTree, 3);
+                    smoothTree(raxmlTree, 1);
                     evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
+                    //evaluateGeneric(raxmlTree, raxmlTree->start, TRUE);
                     //cout << "IQP log-likelihood = " << raxmlTree->likelihood << endl;
                     curScore = raxmlTree->likelihood;
                 }
@@ -1106,20 +1107,20 @@ double IQTree::doIQPNNI() {
                             << endl;
                 }
 
-                if (params->raxmllib) {
+                if (params->phylolib) {
                     curScore = optimizeNNIRax(true, &skipped, &nni_count);
                 } else {
                     curScore = optimizeNNI(true, &skipped, &nni_count);
                 }
             } else {
-                if (params->raxmllib) {
+                if (params->phylolib) {
                     curScore = optimizeNNIRax();
                 } else {
                     curScore = optimizeNNI();
                 }
             }
         } else {
-            if (params->raxmllib) {
+            if (params->phylolib) {
                 // Start NNI search using Phylolib kernel
                 curScore = optimizeNNIRax();
             } else {
@@ -1203,7 +1204,7 @@ double IQTree::doIQPNNI() {
         //printTree(treels_name.c_str(), WT_NEWLINE | WT_APPEND | WT_BR_LEN);
 
         if (curScore > bestScore) {
-            if (params->raxmllib) {
+            if (params->phylolib) {
                 // read in new tree
                 int printBranchLengths = TRUE;
                 Tree2String(raxmlTree->tree_string, raxmlTree,
@@ -1248,7 +1249,7 @@ double IQTree::doIQPNNI() {
             freeNode();
             readTree(best_tree_string, rooted);
             assignLeafNames();
-            if (!params->raxmllib) {
+            if (!params->phylolib) {
                 initializeAllPartialLh();
                 clearAllPartialLH();
             }
@@ -2653,6 +2654,43 @@ void IQTree::printResultTree(string suffix) {
 void IQTree::printResultTree(ostream &out) {
     setRootNode(params->root);
     printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+}
+
+void IQTree::printPhylolibModelParams(char* suffix) {
+    char phyloliModelFile[1024];
+    strcpy(phyloliModelFile, params->out_prefix);
+    strcat(phyloliModelFile, suffix);
+    ofstream modelfile;
+    modelfile.open(phyloliModelFile);
+    for (int model = 0; model < raxmlTree->NumberOfModels; model++) {
+        cout << "Rate parameters: "; 
+        for (int i = 0; i < 6; i++) {
+            cout << raxmlTree->partitionData[model].substRates[i] << " ";
+            modelfile << raxmlTree->partitionData[model].substRates[i] << " ";
+        }
+        cout << endl;
+        modelfile << endl;
+        cout << "Base frequencies: ";
+        for (int i = 0; i < aln->num_states; i++) {
+            cout << raxmlTree->partitionData[model].frequencies[i] << " ";
+            modelfile << raxmlTree->partitionData[model].frequencies[i] << " ";
+        }
+        cout << endl;
+        modelfile << endl;
+        cout << "Gamma shape :" << raxmlTree->partitionData[model].alpha << endl;
+        modelfile << raxmlTree->partitionData[model].alpha << endl;
+    }
+}
+
+void IQTree::printPhylolibTree(char* suffix) {
+    pl_boolean printBranchLengths = TRUE;
+    Tree2String(raxmlTree->tree_string, raxmlTree, raxmlTree->start->back, printBranchLengths, 1, 0, 0, 0, SUMMARIZE_LH, 0, 0);
+    char phylolibTree[1024];
+    strcpy(phylolibTree, params->out_prefix);
+    strcat(phylolibTree, suffix);
+    FILE *phylolib_tree = fopen(phylolibTree, "w");
+    fprintf(phylolib_tree, "%s", raxmlTree->tree_string);
+    cout << "Tree optimized by Phylolib was written to " << phylolibTree << endl;
 }
 
 void IQTree::printIntermediateTree(int brtype) {

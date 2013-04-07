@@ -124,6 +124,19 @@ public:
             @param out (OUT) output stream
      */
     void printResultTree(ostream &out);
+    
+    /**
+     * print phylolib tree to a file. 
+     * @param suffix suffix string for the tree file
+     */
+    void printPhylolibTree(char* suffix);
+    
+    
+    /**
+     *  print model parameters of Phylolib(rates, base frequencies, alpha) to stdout and 
+     *  to file
+     */
+    void printPhylolibModelParams(char* suffix);
 
 	/**
 		print intermediate tree

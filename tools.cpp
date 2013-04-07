@@ -588,7 +588,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.tree_spr = false;
 	params.nexus_output = false;
 	params.k_representative = 4;
-    params.loglh_epsilon = 0.0;
+    params.loglh_epsilon = 0.0001;
 	params.p_delete = 0.0;
 	params.min_iterations = -1;
 	params.max_iterations = 1;
@@ -662,7 +662,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.iteration_multiple = 1;
 	params.vns_search = false;
 	params.speedup_iter = 100;
-	params.raxmllib = false;
+	params.phylolib = false;
 	params.parbran = false;
 	params.binary_aln_file = NULL;
 	params.maxtime = 1000000;
@@ -1117,7 +1117,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.concatenate_aln = argv[cnt];
 			} else if (strcmp(argv[cnt],"-nogap") == 0) {
 				params.aln_nogaps = true;
-			} else if (strcmp(argv[cnt],"-par") == 0) {
+			} else if (strcmp(argv[cnt],"-parstree") == 0) {
 				// maximum parsimony
 				params.parsimony_tree = true;
 			} else if (strcmp(argv[cnt],"-pars") == 0) {
@@ -1479,7 +1479,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -ba <binary_alignment_file>";
 				params.binary_aln_file = argv[cnt];
-				params.raxmllib = true;
+				params.phylolib = true;
 			} else if (strcmp(argv[cnt], "-pars_ins") == 0) {
 				params.reinsert_par = true;
 			} else if (strcmp(argv[cnt], "-tabu") == 0) {
