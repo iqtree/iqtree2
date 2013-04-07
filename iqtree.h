@@ -136,7 +136,7 @@ public:
      *  print model parameters of Phylolib(rates, base frequencies, alpha) to stdout and 
      *  to file
      */
-    void printPhylolibModelParams(char* suffix);
+    void printPhylolibModelParams(const char* suffix);
 
 	/**
 		print intermediate tree

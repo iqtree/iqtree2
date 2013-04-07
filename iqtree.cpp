@@ -2656,7 +2656,7 @@ void IQTree::printResultTree(ostream &out) {
     printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 }
 
-void IQTree::printPhylolibModelParams(char* suffix) {
+void IQTree::printPhylolibModelParams(const char* suffix) {
     char phyloliModelFile[1024];
     strcpy(phyloliModelFile, params->out_prefix);
     strcat(phyloliModelFile, suffix);

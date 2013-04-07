@@ -2378,7 +2378,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
     //printf( "Total time used: %8.6f seconds.\n", (double) params.run_time );
 
     iqtree.printResultTree();
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VB_MED && params.phylolib) {
         iqtree.printPhylolibTree(".phylolibtree_end");
     }
     if (params.out_file)
