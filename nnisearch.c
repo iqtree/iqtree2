@@ -329,11 +329,11 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
         (nnicut->num_delta)++;
     }
 
-    if (nni1.deltaLH > 1e-6 && nni1.deltaLH > nni2.deltaLH) {
+    if (nni1.deltaLH > TOL_LIKELIHOOD_PHYLOLIB && nni1.deltaLH > nni2.deltaLH) {
         return nni1;
-    } else if (nni1.deltaLH > 1e-6 && nni1.deltaLH < nni2.deltaLH) {
+    } else if (nni1.deltaLH > TOL_LIKELIHOOD_PHYLOLIB && nni1.deltaLH < nni2.deltaLH) {
         return nni2;
-    } else if (nni1.deltaLH < 1e-6 && nni2.deltaLH > 1e-6) {
+    } else if (nni1.deltaLH < TOL_LIKELIHOOD_PHYLOLIB && nni2.deltaLH > TOL_LIKELIHOOD_PHYLOLIB) {
         return nni2;
     } else {
         return nni0;
