@@ -60,7 +60,7 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 		setRateType("012210");
 		def_freq = FREQ_EQUAL;
 		full_name = "K3P (Kimura, 1981)";
-	} else if (name_upper == "K81UF" || name_upper == "K81U") {
+	} else if (name_upper == "K81UF" || name_upper == "K81U" || name_upper == "K3PU") {
 		name = "K3Pu";
 		setRateType("012210");
 		def_freq = FREQ_ESTIMATE;

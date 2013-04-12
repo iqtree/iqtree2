@@ -172,6 +172,7 @@ void IQTree::setParams(Params &params) {
         boot_samples.resize(params.gbo_replicates);
         boot_logl.resize(params.gbo_replicates, -DBL_MAX);
         boot_trees.resize(params.gbo_replicates, -1);
+        boot_counts.resize(params.gbo_replicates, 0);
         for (int i = 0; i < params.gbo_replicates; i++) {
             aln->createBootstrapAlignment(boot_samples[i]);
         }
@@ -1022,7 +1023,7 @@ double IQTree::doIQPNNI() {
             } else {
                 if (!params->raxmllib) {
                     curScore = doIQP();
-                    if (verbose_mode >= VB_MED) {
+                    if (verbose_mode >= VB_MAX) {
                         cout << "LH IQP = " << curScore << endl;
                     }
                 } else {
@@ -2301,7 +2302,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
             double rell = 0.0;
             for (int ptn = 0; ptn < nptn; ptn++)
                 rell += pattern_lh[ptn] * boot_samples[sample][ptn];
-            if (rell > boot_logl[sample]) {
+            if (rell > boot_logl[sample] + 1e-2 || (rell > boot_logl[sample] - 1e-2 && random_double() <= 1.0/(boot_counts[sample]+1))) {
                 if (tree_str == "") {
                     printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
                     tree_str = ostr.str();
@@ -2313,10 +2314,17 @@ void IQTree::saveCurrentTree(double cur_logl) {
                         treels[tree_str] = tree_index;
                     }
                 }
+                if (rell <= boot_logl[sample] + 1e-2) {
+                	boot_counts[sample]++;
+                } else {
+                	boot_counts[sample] = 1;
+                }
                 boot_logl[sample] = rell;
                 boot_trees[sample] = tree_index;
                 updated++;
-            }
+            } /*else if (verbose_mode >= VB_MED && rell > boot_logl[sample] - 0.01) {
+            	cout << "Info: multiple RELL score trees detected" << endl;
+            }*/
         }
         if (updated && verbose_mode >= VB_MED)
             cout << updated << " boot trees updated" << endl;

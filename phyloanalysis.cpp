@@ -520,6 +520,8 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
 	return treels.size();
 }
 
+const double TOL_RELL_SCORE = 0.01;
+
 void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids)
 {
 	if (!params.treeset_file)
@@ -679,8 +681,11 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		for (tid = 1; tid < ntrees; tid++) {
 			double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
 			for (boot = 0; boot < params.topotest_replicates; boot++)
-				if (tree_lhs_offset[boot] > maxL[boot]) {
+				if (tree_lhs_offset[boot] > maxL[boot] + TOL_RELL_SCORE) {
 					maxL[boot] = tree_lhs_offset[boot];
+					maxtid[boot] = tid;
+				} else if (tree_lhs_offset[boot] > maxL[boot] - TOL_RELL_SCORE && random_double() < 0.2) {
+					maxL[boot] = max(maxL[boot],tree_lhs_offset[boot]);
 					maxtid[boot] = tid;
 				}
 		}

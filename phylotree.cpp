@@ -3342,7 +3342,9 @@ void PhyloTree::reinsertLeaf(Node *leaf, Node *node, Node *dad) {
     bool first = true;
     Node *adjacent_node = leaf->neighbors[0]->node;
     Neighbor *nei = node->findNeighbor(dad);
-    double len = nei->length;
+    //double len = nei->length;
+    double len = max(nei->length, MIN_BRANCH_LEN*2);
+    // to avoid too small branch length when reinserting leaf
 
     FOR_NEIGHBOR_IT(adjacent_node, leaf, it){
     if (first) {

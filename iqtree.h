@@ -587,6 +587,9 @@ public:
 	/** newick string of corresponding bootstrap trees */
 	IntVector boot_trees;
 
+	/** number of multiple optimal trees per replicate */
+	IntVector boot_counts;
+
 	/** corresponding RELL log-likelihood */
 	DoubleVector boot_logl;
 
