@@ -239,11 +239,11 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 			params.gamma_median, -1, NULL);
 	GTRModel *subst_model;
 	if (nstates == 2)
-		subst_model = new ModelBIN("JC2", FREQ_UNKNOWN, in_tree);
+		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
 	else if (nstates == 4)
-		subst_model = new ModelDNA("JC", FREQ_UNKNOWN, in_tree);
+		subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", in_tree);
 	else
-		subst_model = new ModelProtein("WAG", FREQ_UNKNOWN, in_tree);
+		subst_model = new ModelProtein("WAG", "", FREQ_UNKNOWN, "", in_tree);
 
 	ModelFactory *model_fac = new ModelFactory();
 

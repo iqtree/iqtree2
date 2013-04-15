@@ -1357,7 +1357,20 @@ bool copyFile(const char SRC[], const char DEST[]);
  */
 bool fileExists(string strFilename);
 
+/**
+        convert string to int, with error checking
+        @param str original string
+        @return the number
+ */
 int convert_int(const char *str) throw (string);
+
+/**
+        convert string to int, with error checking
+        @param str original string
+        @param end_pos end position
+        @return the number
+ */
+int convert_int(const char *str, int &end_pos) throw (string);
 
 /**
         convert string to double, with error checking
@@ -1365,6 +1378,14 @@ int convert_int(const char *str) throw (string);
         @return the double
  */
 double convert_double(const char *str) throw (string);
+
+/**
+        convert string to double, with error checking
+        @param str original string
+        @param end_pos end position
+        @return the double
+ */
+double convert_double(const char *str, int &end_pos) throw (string);
 
 /**
  * Convert seconds to hour, minute, second
