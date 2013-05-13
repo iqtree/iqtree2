@@ -2138,7 +2138,9 @@ double PhyloTree::computeDist(double *dist_mat) {
     /*
      if (longest_dist > MAX_GENETIC_DIST * 0.99)
      outWarning("Some distances are saturated. Please check your alignment again");*/
-    return correctDist(dist_mat);
+
+    return longest_dist;
+    //return correctDist(dist_mat);
 }
 
 double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file) {
@@ -2179,7 +2181,8 @@ double PhyloTree::computeObsDist(double *dist_mat) {
             if (dist_mat[pos] > longest_dist)
                 longest_dist = dist_mat[pos];
         }
-    return correctDist(dist_mat);
+    return longest_dist;
+    //return correctDist(dist_mat);
 }
 
 double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file) {

@@ -663,6 +663,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.ncbi_names_file = NULL;
 	params.ncbi_ignore_level = NULL;
 	params.gbo_replicates = 0;
+	params.ufboot_epsilon = 0.1;
 	params.check_gbo_sample_size = 0;
 	params.use_rell_method = true;
 	params.use_elw_method = false;
@@ -1443,6 +1444,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.avoid_duplicated_trees = true;
 				if (params.gbo_replicates < 1000) throw "#replicates must be >= 1000";
 				params.consensus_type = CT_CONSENSUS_TREE;
+			} else if (strcmp(argv[cnt], "-beps") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -beps <epsilon>";
+				params.ufboot_epsilon = convert_double(argv[cnt]);
+				if (params.ufboot_epsilon <= 0.0)
+					throw "Epsilon must be positive";
 			} else if (strcmp(argv[cnt], "-bs") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1465,6 +1473,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.step_iterations = convert_int(argv[cnt]);
 				if (params.step_iterations < 10 || params.step_iterations % 2 == 1)
 					throw "At least step size of 10 and even number please";
+				params.min_iterations = params.step_iterations;
 			} else if (strcmp(argv[cnt], "-boff") == 0) {
 				params.online_bootstrap = false;
 			} else if (strcmp(argv[cnt], "-nostore") == 0 || strcmp(argv[cnt], "-memsave") == 0) {
@@ -1712,6 +1721,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -bb <#replicates>    Ultra-fast bootstrap" << endl
 			<< "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
 			<< "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
+			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
 			<< "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
 			<< endl << "SINGLE BRANCH TEST:" << endl
 			<< "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl

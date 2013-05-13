@@ -1085,6 +1085,11 @@ struct Params {
 	*/
 	int gbo_replicates;
 
+	/* interval (l-epsilon,l+epsilon) indicates tie for bootstrap tree
+	 * in this case, one tree is picked up at random
+	 */
+	double ufboot_epsilon;
+
 	/**
 		TRUE to check with different max_candidate_trees
 	*/

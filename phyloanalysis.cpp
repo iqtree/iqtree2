@@ -520,7 +520,7 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
 	return treels.size();
 }
 
-const double TOL_RELL_SCORE = 0.01;
+//const double TOL_RELL_SCORE = 0.01;
 
 void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids)
 {
@@ -675,18 +675,23 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		cout << "Performing RELL test..." << endl;
 		int *maxtid = new int[params.topotest_replicates];
 		double *maxL = new double[params.topotest_replicates];
+		int *maxcount = new int[params.topotest_replicates];
 		memset(maxtid, 0, params.topotest_replicates*sizeof(int));
 		memcpy(maxL, tree_lhs, params.topotest_replicates*sizeof(double));
-
+		for (boot = 0; boot < params.topotest_replicates; boot++)
+			maxcount[boot] = 1;
 		for (tid = 1; tid < ntrees; tid++) {
 			double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
 			for (boot = 0; boot < params.topotest_replicates; boot++)
-				if (tree_lhs_offset[boot] > maxL[boot] + TOL_RELL_SCORE) {
+				if (tree_lhs_offset[boot] > maxL[boot] + params.ufboot_epsilon) {
 					maxL[boot] = tree_lhs_offset[boot];
 					maxtid[boot] = tid;
-				} else if (tree_lhs_offset[boot] > maxL[boot] - TOL_RELL_SCORE && random_double() < 0.2) {
+					maxcount[boot] = 1;
+				} else if (tree_lhs_offset[boot] > maxL[boot] - params.ufboot_epsilon &&
+						random_double() <= 1.0/(maxcount[boot]+1)) {
 					maxL[boot] = max(maxL[boot],tree_lhs_offset[boot]);
 					maxtid[boot] = tid;
+					maxcount[boot]++;
 				}
 		}
 		for (boot = 0; boot < params.topotest_replicates; boot++)
@@ -711,7 +716,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		if (fabs(prob_sum-1.0) > 0.01)
 			outError("Internal error: Wrong ", __func__);
 
-
+		delete [] maxcount;
 		delete [] maxL;
 		delete [] maxtid;
 
@@ -2822,7 +2827,7 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 	SplitGraph maxsg;
 	sg.findMaxCompatibleSplits(maxsg);
 
-	if (verbose_mode >= VB_MED)
+	if (verbose_mode >= VB_MAX)
 		maxsg.saveFileStarDot(cout);
 	cout << "convert compatible split system into tree..." << endl;
 	mytree.convertToTree(maxsg);

@@ -78,7 +78,7 @@ void generateRandomTree(Params &params)
 		outError(ERR_FEW_TAXA);
 	}
 
-	//cout << "Random number seed: " << params.ran_seed << endl << endl;
+	////cout << "Random number seed: " << params.ran_seed << endl << endl;
 
 	SplitGraph sg;
 
