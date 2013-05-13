@@ -1950,43 +1950,51 @@ void runPhyloAnalysis(Params &params, string &original_model,
     if (iqtree.isSuperTree())
         ((PhyloSuperTree*) & iqtree)->mapTrees();
 
-    // degree of freedom
-    int model_df = iqtree.getModel()->getNDim() + iqtree.getRate()->getNDim();
-    cout << endl;
-    cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
-    printAnalysisInfo(model_df, iqtree, params);
-
-    iqtree.setParams(params);
-    cout << "Optimize model parameters ... " << endl;
-
-    // Optimize model parameters for the parsimony tree
-    double bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
-            params.fixed_branch_length, true, TOL_LIKELIHOOD);
-    iqtree.curScore = bestTreeScore;
-
-    // Save current tree to a string
+    double bestTreeScore = -1.0;
+    // string to store the current tree with taxon id and branch lengths
     stringstream best_tree_string;
-    iqtree.printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-
-    // Compute maximum likelihood distance
-    if (!params.dist_file && params.compute_ml_dist) {
-        computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params,
-                alignment, bestTreeScore);
+    iqtree.setParams(params);
+    
+    if (!params.leastSquareBranch) {
+        // degree of freedom
+        int model_df = iqtree.getModel()->getNDim() + iqtree.getRate()->getNDim();
+        cout << endl;
+        cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
+        printAnalysisInfo(model_df, iqtree, params);        
+        cout << "Optimize model parameters ... " << endl;
+        // Optimize model parameters and branch lengths using ML for the initial tree
+        double bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
+                params.fixed_branch_length, true, TOL_LIKELIHOOD);
+        iqtree.curScore = bestTreeScore;        
+        iqtree.printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+        // Compute maximum likelihood distance
+        if (!params.dist_file && params.compute_ml_dist) {
+            computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params,
+                    alignment, bestTreeScore);
+        }
     }
-
+    
+    // Recreate the BIONJ tree using the newly computed ML distances
     if (!params.user_file && !params.phylolib) {
         iqtree.computeBioNJ(params, alignment, dist_file);
-        iqtree.fixNegativeBranch(true);
+        int fixed_number = iqtree.fixNegativeBranch(false);
+        if (fixed_number) {
+            cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
+            if (verbose_mode >= VB_DEBUG) {
+                iqtree.printTree(cout);
+                cout << endl;
+            }
+        }
         if (iqtree.isSuperTree())
             ((PhyloSuperTree*) (&iqtree))->mapTrees();
 
-        if (!params.fixed_branch_length)
+        if (!params.fixed_branch_length && !params.leastSquareBranch) {
             iqtree.curScore = iqtree.optimizeAllBranches();
-        else
+        } else {
             iqtree.curScore = iqtree.computeLikelihood();
-
+        }
         cout << "Log-likelihood of the BIONJ tree: " << iqtree.curScore << endl;
-        if (iqtree.curScore < bestTreeScore - 1e-5) {
+        if (iqtree.curScore < (bestTreeScore - params.loglh_epsilon) && !params.leastSquareBranch) {
             cout << "Rolling back the first tree..." << endl;
             iqtree.rollBack(best_tree_string);
             // write the bionj back to a file
@@ -2001,7 +2009,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
         double elapsedTime = getCPUTime() - params.startTime;
         cout << "Time elapsed: " << elapsedTime << endl;
     }
-
+    
+    if (!params.fixed_branch_length && params.leastSquareBranch) {
+        cout << "Computing Least Square branch lengths " << endl;
+        iqtree.optimizeAllBranchesLS();
+        iqtree.curScore = iqtree.computeLikelihood();
+        iqtree.printResultTree("LeastSquareTree");
+    }
+    
     double t_tree_search_start, t_tree_search_end;
     t_tree_search_start = getCPUTime();
 
@@ -2189,7 +2204,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
     /* evaluating all trees in user tree file */
 
     /* DO IQPNNI */
-    if (params.k_representative > 0/* && params.min_iterations >= 1*/) {
+    if (params.k_representative > 0 && params.min_iterations >= 1) {
         cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS"
                 << endl;
         cout << "Number of representative leaves   : "

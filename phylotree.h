@@ -12,7 +12,7 @@
 
 #ifndef PHYLOTREE_H
 #define PHYLOTREE_H
-//#define NDEBUG
+#define NDEBUG
 #define EIGEN_NO_AUTOMATIC_RESIZING
 #define EIGEN_CACHEFRIENDLY_PRODUCT_THRESHOLD 80
 #define EIGEN_UNROLLING_LIMIT 1000
@@ -43,6 +43,10 @@ using namespace Eigen;
  *  Row Major Array For Eigen
  */
 typedef Array<double, Dynamic, Dynamic, RowMajor> RowMajorArrayXXd;
+
+
+typedef std::map< string, double > StringDoubleMap;
+typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 
 #define MappedMat(NSTATES) Map<Matrix<double, NSTATES, NSTATES>, Aligned>
 #define MappedArr2D(NSTATES) Map<Array<double, NSTATES, NSTATES>, Aligned>
@@ -136,10 +140,10 @@ struct NNIMove {
     double loglh;
 
     int swap_id;
-    
+
     //positive value for a positive NNI
     double delta;
-    
+
     bool operator<(const NNIMove & rhs) const {
         return loglh > rhs.loglh;
         //return delta > rhs.delta;
@@ -473,14 +477,45 @@ public:
     double computeLogLDiffVariance(double *pattern_lh_other, double *pattern_lh = NULL);
 
     /**
-     *  Estimate the observed branch length between dad_branch and dad analytically.
+     *  \brief Estimate the observed branch length between \a dad_branch and \a dad analytically.
      *	The ancestral states of the 2 nodes are first computed (Yang, 2006).
      *	Branch length are then computed using analytical formula.
-     *	@param dad_branch must be an internal node
-     *	@param dad must be an internal node
+     *	@param[in] dad_branch must be an internal node
+     *	@param[in] dad must be an internal node
      *	@return estimated branch length or -1.0 if one of the 2 nodes is leaf
      */
     double computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    /**
+     * \brief Approximate the branch legnth between \a dad_branch and \a dad using Least Square instead
+     * of Newton Raphson
+     * @param[in] dad_branch
+     * @param[in] dad
+     * @return approximated branch length
+     */
+    double computeLeastSquareBranLen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    /**
+     * \brief calculate the inter subtree distances \f$ D_{XY} \f$ for all pairs of subtrees X and Y.
+     * \f$ D_{XY} = \sum\limits_{j=1}^{n_Xn_Y} d^j_{XY}\f$
+     */
+    void computeAllSubtreeDists(PhyloNode *dad = NULL, PhyloNode *node = NULL);
+
+    /**
+     * Update all subtree distances that are affect by doing an NNI on branch (node1-node2)
+     * @param node1 
+     * @param node2 
+     */
+    void updateSubtreeDists(PhyloNode* node1, PhyloNode *node2);
+    
+    /**
+     * Compute all pairwise distance of subtree rooted at \a source and other subtrees
+     */
+    void computeSubtreeDists();
+
+    void getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, PhyloNode* node = NULL, PhyloNode* dad = NULL);
+
+    void computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* nei1, PhyloNode* nei2, PhyloNode* node, PhyloNode* dad);
 
     double correctBranchLengthF81(double observedBran, double alpha = -1.0);
 
@@ -547,7 +582,7 @@ public:
     int addTaxonMPFast(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad);
 
 
-    /** 
+    /**
      * FAST VERSION: compute parsimony tree by step-wise addition
      * @param out_prefix prefix for .parstree file
      * @param alignment input alignment
@@ -627,6 +662,14 @@ public:
             @return the likelihood of the tree
      */
     double optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL);
+    
+    /**
+     * optimize all branch lengths at the subtree rooted at node step-by-step.
+     * Using Least Squares instead of Newton Raphson.
+     * @param node the current node
+     * @param dad dad of the node, used to direct the search
+     */
+    void optimizeAllBranchesLS(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
             optimize all branch lengths of the tree
@@ -653,7 +696,18 @@ public:
             @return negative of likelihood (for minimization)
      */
     virtual double computeFuncDerv(double value, double &df, double &ddf);
-
+    
+     /****************************************************************************
+            Branch length optimization by Least Squares
+     ****************************************************************************/
+    
+    /**
+     * Estimate the current branch using least squares
+     * @param node1 first node of the branch
+     * @param node2 second node of the branch
+     * @return 
+     */
+    double optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2);
 
     /****************************************************************************
             Auxilary functions and varialbes for speeding up branch length optimization (RAxML Trick)
@@ -965,6 +1019,11 @@ public:
     Alignment *aln;
 
     /**
+     * Distance matrix
+     */
+    double *dist_matrix;
+
+    /**
      *      size of the alignment (used to avoid calling aln->size())
      */
     //int alnSize;
@@ -1010,11 +1069,29 @@ public:
 
     /**
      * print transition matrix for all branches
-     * 
+     *
      */
     void printTransMatrices(Node *node = NULL, Node *dad = NULL);
 
 protected:
+    
+    /**
+     *  is the subtree distance matrix need to be computed or updated
+     */
+    bool subTreeDistComputed;
+
+    /**
+     * Map data structure to store distance between subtree.
+     * The key is a string which is constructed by concatenating IDs of
+     * the 2 nodes, e.g. 15-16
+     */
+    StringDoubleMap subTreeDists;
+
+    /**
+     * A list containing all the marked list. This is used in the dynamic programming
+     * algorithm for compute inter subtree distances
+     */
+    IntPhyloNodeMap markedNodeList;
 
     /** converted root state, for Tina's zoombie domain */
     char root_state;

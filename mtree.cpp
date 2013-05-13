@@ -709,6 +709,29 @@ void MTree::getTaxa(NodeVector &taxa, Node *node, Node *dad) {
     }
 }
 
+void MTree::getAllNodesInSubtree(Node *node, Node *dad, NodeVector &nodeList) {
+    assert(node && dad);
+    nodeList.push_back(node);
+    if (node->isLeaf()) {
+        return;
+    }
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        getAllNodesInSubtree((*it)->node, node, nodeList);
+    }
+}
+
+int MTree::getNumTaxa(Node *node, Node *dad) {
+    if (!node) node = root;
+    if (node->isLeaf()) {
+        return 1;
+    }
+    int numLeaf = 0;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        numLeaf += getNumTaxa((*it)->node, node);
+    }
+    return numLeaf;
+}
+
 void MTree::getInternalNodes(NodeVector &nodes, Node *node, Node *dad) {
     if (!node) node = root;
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)

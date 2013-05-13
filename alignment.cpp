@@ -165,6 +165,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 
     cout << "Reading alignment file " << filename << " ..." << endl;
     intype = detectInputFile(filename);
+    phylip_file = filename;
 
     try {
 
@@ -1392,23 +1393,57 @@ void Alignment::printDist(const char *file_name, double *dist_mat) {
 }
 
 double Alignment::readDist(istream &in, double *dist_mat) {
-    double longest_dist = 0.0;
+    double longest_dist = 0.0;    
     int nseqs;
     in >> nseqs;
     if (nseqs != getNSeq())
         throw "Distance file has different number of taxa";
-    int pos = 0, seq1, seq2;
-    for (seq1 = 0; seq1 < nseqs; seq1 ++)  {
+    double *tmp_dist_mat = new double[nseqs * nseqs];
+    std::map< string, int > map_seqName_ID;
+    int pos = 0, seq1, seq2, id = 0;
+    // read in distances to a temporary array
+    for (seq1 = 0; seq1 < nseqs; seq1++)  {
         string seq_name;
         in >> seq_name;
+        // assign taxa name to integer id
+        map_seqName_ID[seq_name] = id++;
+        /*
         if (seq_name != getSeqName(seq1))
             throw "Sequence name " + seq_name + " is different from " + getSeqName(seq1);
-        for (seq2 = 0; seq2 < nseqs; seq2 ++) {
+        for (seq2 = 0; seq2 < nseqs; seq2++) {
             in >> dist_mat[pos++];
             if (dist_mat[pos-1] > longest_dist)
                 longest_dist = dist_mat[pos-1];
         }
+         */
+        for (seq2 = 0; seq2 < nseqs; seq2++) {
+            in >> tmp_dist_mat[pos++];
+            //cout << tmp_dist_mat[pos - 1] << "  ";
+            if (tmp_dist_mat[pos - 1] > longest_dist)
+                longest_dist = tmp_dist_mat[pos - 1];
+        }
+        //cout << endl;        
     }
+    //cout << "Internal distance matrix: " << endl;
+    // Now initialize internal distance matrix
+    for (seq1 = 0; seq1 < nseqs; seq1++) {
+        for (seq2 = 0; seq2 < nseqs; seq2++) {
+            string seq1Name = getSeqName(seq1);
+            string seq2Name = getSeqName(seq2);
+            if (map_seqName_ID.count(seq1Name) == 0) {
+                throw "Could not find taxa name " + seq1Name;
+            }
+            if (map_seqName_ID.count(seq2Name) == 0) {
+                throw "Could not find taxa name " + seq2Name;
+            }
+            int seq1_tmp_id = map_seqName_ID[seq1Name];
+            int seq2_tmp_id = map_seqName_ID[seq2Name];
+            dist_mat[seq1 * nseqs + seq2] = tmp_dist_mat[seq1_tmp_id * nseqs + seq2_tmp_id];
+            //cout << dist_mat[seq1 * nseqs + seq2] << "  ";
+        }
+        //cout << endl;
+    }
+            
     // check for symmetric matrix
     for (seq1 = 0; seq1 < nseqs-1; seq1++) {
         if (dist_mat[seq1*nseqs+seq1] != 0.0)
@@ -1417,6 +1452,9 @@ double Alignment::readDist(istream &in, double *dist_mat) {
             if (dist_mat[seq1*nseqs+seq2] != dist_mat[seq2*nseqs+seq1])
                 throw "Distance between " + getSeqName(seq1) + " and " + getSeqName(seq2) + " is not symmetric";
     }
+    
+    string dist_file = string(phylip_file) + ".userdist";
+    printDist(dist_file.c_str(), dist_mat);
     return longest_dist;
 }
 
