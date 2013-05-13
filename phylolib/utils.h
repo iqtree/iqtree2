@@ -18,6 +18,10 @@ It make things much easier for the integration with other software.
 
 void myBinFread(void *ptr, size_t size, size_t nmemb, FILE *byteFile);
 
+void init_default(tree *tr)
+
+void initializePartitionsSequential(tree *tr)
+
 void read_msa(tree *tr, const char *filename);
 
 void makeParsimonyTree(tree *tr);
