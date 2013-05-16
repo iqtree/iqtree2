@@ -1051,7 +1051,7 @@ double IQTree::doIQPNNI() {
 
                     printTree(iqp_tree_string);
                     treeReadLenString(iqp_tree_string.str().c_str(), raxmlTree, TRUE, FALSE, TRUE);
-                    smoothTree(raxmlTree, 64);
+                    smoothTree(raxmlTree, params->numSmoothTree);
                     evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
                     //evaluateGeneric(raxmlTree, raxmlTree->start, TRUE);
                     //cout << "IQP log-likelihood = " << raxmlTree->likelihood << endl;
@@ -1958,6 +1958,10 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
                 double newCentralBranch = optimizeOneBranchLS(node1, node2);
                 if (newCentralBranch < 0.0) {
                     cout << "NEGATIVE LEAST SQUARE BRANCH : " << newCentralBranch << endl;
+                    stringstream ss;
+                    ss << std::setprecision(6) << newCentralBranch;
+                    string treefile_name = "neg_bran_" + ss.str() + ".tree";
+                    printTree(treefile_name.c_str(), WT_INT_NODE | WT_SORT_TAXA | WT_BR_LEN);
                     treelhs[nniNr] = -DBL_MAX;
                     double nrscore = optimizeOneBranch(node1, node2, false);
                     double nrBranch = node1_node2_nei->length;

@@ -337,6 +337,11 @@ struct NNIInfo {
 struct Params {
     
     /**
+     *  Number of smoothTree iteration carried out in Phylolib for IQP Tree
+     */
+    int numSmoothTree;
+
+    /**
      *   compute least square branches for a given tree
      */
     bool leastSquareBranch;

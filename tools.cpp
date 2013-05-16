@@ -586,6 +586,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.nexus_output = false;
     params.k_representative = 4;
     params.loglh_epsilon = 0.0001;
+    params.numSmoothTree = 1;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.p_delete = 0.0;
@@ -1484,6 +1485,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
+            } else if (strcmp(argv[cnt], "-smooth") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -smooth <num_iterations>";
+                params.numSmoothTree = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-lsnni") == 0) {
                 params.leastSquareNNI = true;
             } else if (strcmp(argv[cnt], "-eps") == 0) {
