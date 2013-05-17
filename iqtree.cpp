@@ -1048,13 +1048,14 @@ double IQTree::doIQPNNI() {
 
                     // TODO: only works for 1 partition
                     transformBranchLenRAX(raxmlTree->fracchange);
-
                     printTree(iqp_tree_string);
                     treeReadLenString(iqp_tree_string.str().c_str(), raxmlTree, TRUE, FALSE, TRUE);
                     smoothTree(raxmlTree, params->numSmoothTree);
                     evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
                     //evaluateGeneric(raxmlTree, raxmlTree->start, TRUE);
-                    //cout << "IQP log-likelihood = " << raxmlTree->likelihood << endl;
+                    if (verbose_mode >= VB_MED) {
+                    	cout << "IQP log-likelihood = " << raxmlTree->likelihood << endl;
+                    }
                     curScore = raxmlTree->likelihood;
                 }
             }
@@ -1155,10 +1156,14 @@ double IQTree::doIQPNNI() {
         /*double remaining_secs = (stop_rule.getNumIterations() - cur_iteration) *
          elapsed_secs / (cur_iteration - 1);*/
         cout.setf(ios::fixed, ios::floatfield);
+        bool printLog = false;
+        if (cputime_secs >= prev_time + 10)
+        	printLog = true;
+        if (verbose_mode >= VB_MED)
+        	printLog = true;
 
-        // NNI search was skipped according to the speed up heuristics
-
-        if (cputime_secs >= prev_time + 10) {
+        if (printLog) {
+        	// NNI search was skipped according to the speed up heuristics
             if (!skipped) {
                 cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << cur_iteration << " / LogL: " << curScore << " / CPU time elapsed: " << (int) round(cputime_secs) << "s";
                 if (cur_iteration > 10 && cputime_secs > 10)
