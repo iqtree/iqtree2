@@ -76,8 +76,11 @@ public:
 		@param xguess first guess
 		@param tolerance tolerance of x-value to stop the iterations
 		@param fx (OUT) function value at the minimum x found
+		@param var (OUT) variance estimate of x
 	*/
 	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f);
+
+	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f, double &d2l);
 
 	double minimizeNewtonTung(double x1, double xguess, double x2, double xacc, double &fm);
 

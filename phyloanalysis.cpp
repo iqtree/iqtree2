@@ -1747,7 +1747,8 @@ void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
     iqtree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
     cout << "Computing ML distances based on estimated model parameters...";
     double *ml_dist = NULL;
-    longest_dist = iqtree.computeDist(params, alignment, ml_dist, dist_file);
+    double *ml_var = NULL;
+    longest_dist = iqtree.computeDist(params, alignment, ml_dist, ml_var, dist_file);
     cout << " " << (getCPUTime() - begin_time) << " sec" << endl;
     if (longest_dist > MAX_GENETIC_DIST * 0.99) {
         cout << "Some ML distances are too long, using old distances..."
@@ -1755,8 +1756,11 @@ void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
     } else {
         memmove(iqtree.dist_matrix, ml_dist,
                 sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
+        memmove(iqtree.var_matrix, ml_var,
+                        sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
     }
     delete[] ml_dist;
+    delete[] ml_var;
 }
 
 void computeParsimonyTreeRax(Params& params, IQTree& iqtree, Alignment *alignment) {
@@ -1829,7 +1833,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
     }
 
-    longest_dist = iqtree.computeDist(params, alignment, iqtree.dist_matrix, dist_file);
+    longest_dist = iqtree.computeDist(params, alignment, iqtree.dist_matrix, iqtree.var_matrix, dist_file);
     checkZeroDist(alignment, iqtree.dist_matrix);
     if (longest_dist > MAX_GENETIC_DIST * 0.99) {
         cout << "Some distances are too long, computing observed distances..."

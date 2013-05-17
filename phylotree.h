@@ -824,17 +824,21 @@ public:
             @param seq1 index of sequence 1
             @param seq2 index of sequence 2
             @param initial_dist initial distance
+            @param (OUT) variance of distance between seq1 and seq2
             @return distance between seq1 and seq2
      */
+
+    virtual double computeDist(int seq1, int seq2, double initial_dist, double &var);
+
     virtual double computeDist(int seq1, int seq2, double initial_dist);
 
-
     /**
-            compute distance matrix, assume dist_mat is allocated by memory of size num_seqs * num_seqs.
+            compute distance and variance matrix, assume dist_mat and var_mat are allocated by memory of size num_seqs * num_seqs.
             @param dist_mat (OUT) distance matrix between all pairs of sequences in the alignment
+            @param var_mat (OUT) variance matrix for distance matrix
             @return the longest distance
      */
-    double computeDist(double *dist_mat);
+    double computeDist(double *dist_mat, double *var_mat);
 
     /**
             compute observed distance matrix, assume dist_mat is allocated by memory of size num_seqs * num_seqs.
@@ -851,7 +855,7 @@ public:
             @param dist_file (OUT) name of the distance file
             @return the longest distance
      */
-    double computeDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file);
+    double computeDist(Params &params, Alignment *alignment, double* &dist_mat, double* &var_mat, string &dist_file);
 
     /**
             compute observed distance matrix, allocating memory if necessary
@@ -1022,6 +1026,11 @@ public:
      * Distance matrix
      */
     double *dist_matrix;
+
+    /**
+     * Variance matrix
+     */
+    double *var_matrix;
 
     /**
      *      size of the alignment (used to avoid calling aln->size())

@@ -32,6 +32,7 @@ void IQTree::init() {
     k_represent = 0;
     k_delete = k_delete_min = k_delete_max = k_delete_stay = 0;
     dist_matrix = NULL;
+    var_matrix = NULL;
     nni_count_est = 0.0;
     nni_delta_est = 0;
     curScore = 0.0; // Current score of the tree
@@ -189,6 +190,10 @@ IQTree::~IQTree() {
     if (dist_matrix)
         delete[] dist_matrix;
     dist_matrix = NULL;
+
+    if (var_matrix)
+        delete[] var_matrix;
+    var_matrix = NULL;
 
     for (vector<double*>::reverse_iterator it = treels_ptnlh.rbegin();
             it != treels_ptnlh.rend(); it++)

@@ -2420,7 +2420,7 @@ void PhyloTree::growTreeML(Alignment *alignment) {
  Distance function
  ****************************************************************************/
 
-double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
+double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d2l) {
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0)
         initial_dist = aln->computeDist(seq1, seq2);
@@ -2430,7 +2430,12 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
     // now optimize the distance based on the model and site rate
     AlignmentPairwise aln_pair(this, seq1, seq2);
 
-    return aln_pair.optimizeDist(initial_dist);
+    return aln_pair.optimizeDist(initial_dist, d2l);
+}
+
+double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
+    double var;
+    return computeDist(seq1, seq2, initial_dist, var);
 }
 
 double PhyloTree::correctDist(double *dist_mat) {
@@ -2453,13 +2458,21 @@ double PhyloTree::correctDist(double *dist_mat) {
     return longest_dist;
 }
 
-double PhyloTree::computeDist(double *dist_mat) {
+double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     int nseqs = aln->getNSeq();
     int pos = 0;
     int num_pairs = nseqs * (nseqs - 1) / 2;
     double longest_dist = 0.0;
+    double d2l;
     int *row_id = new int[num_pairs];
     int *col_id = new int[num_pairs];
+
+    bool OLS=true;
+    bool FIRST_TAYLOR=false;
+    bool FITCH_MARGOLIASH=false;
+    bool SECOND_TAYLOR=false;
+    bool PAUPLIN=false;
+
     row_id[0] = 0;
     col_id[0] = 1;
     for (pos = 1; pos < num_pairs; pos++) {
@@ -2474,12 +2487,19 @@ double PhyloTree::computeDist(double *dist_mat) {
 #ifdef _OPENMP
 #pragma omp parallel for private(pos)
 #endif
+    if (PAUPLIN) calcDist(var_mat, true);
     for (pos = 0; pos < num_pairs; pos++) {
         int seq1 = row_id[pos];
         int seq2 = col_id[pos];
         int sym_pos = seq1 * nseqs + seq2;
-        dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos]);
+        dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
+        if (OLS) var_mat[sym_pos] = 1.0;
+        else if (FIRST_TAYLOR) var_mat[sym_pos] = dist_mat[sym_pos];
+        else if (FITCH_MARGOLIASH) var_mat[sym_pos] = dist_mat[sym_pos]*dist_mat[sym_pos];
+        else if (SECOND_TAYLOR) var_mat[sym_pos] = -1.0/d2l;
+        else if (PAUPLIN) var_mat[sym_pos] = pow(2.0, var_mat[sym_pos]);
     }
+
     // copy upper-triangle into lower-triangle and set diagonal = 0
     for (int seq1 = 0; seq1 < nseqs; seq1++)
         for (int seq2 = 0; seq2 <= seq1; seq2++) {
@@ -2502,7 +2522,7 @@ double PhyloTree::computeDist(double *dist_mat) {
     return longest_dist;
 }
 
-double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file) {
+double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dist_mat, double* &var_mat, string &dist_file) {
     double longest_dist = 0.0;
     aln = alignment;
     dist_file = params.out_prefix;
@@ -2514,9 +2534,11 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
     if (!dist_mat) {
         dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
         memset(dist_mat, 0, sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
+        var_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
+        memset(var_mat, 1, sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
     }
     if (!params.dist_file) {
-        longest_dist = computeDist(dist_mat);
+        longest_dist = computeDist(dist_mat, var_mat);
         alignment->printDist(dist_file.c_str(), dist_mat);
     } else {
         longest_dist = alignment->readDist(params.dist_file, dist_mat);

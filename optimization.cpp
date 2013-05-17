@@ -378,17 +378,18 @@ double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double x
 	return optx;
 }
 
-double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm)
+double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm, double &d2l)
 {
 	const int MAXIT = 32;
 	int j;
 	double df,dx,dxold,f;
 	double temp,xh,xl,rts, fold;
 
-	rts=xguess;
+	rts = xguess;
 	if (rts < x1) rts = x1;
 	if (rts > x2) rts = x2;
 	fold = fm = computeFuncDerv(rts,f,df);
+	d2l = df;
 	if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) {
 		nrerror("Wrong computeFuncDerv");
 	}
@@ -424,14 +425,25 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 		fold = fm;
 		fm = computeFuncDerv(rts,f,df);
 		if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) nrerror("Wrong computeFuncDerv");
-		if (df > 0.0 && fabs(f) < xacc) return rts;
+		if (df > 0.0 && fabs(f) < xacc) {
+			d2l = df;
+			return rts;
+		}
 		if (f < 0.0)
 			xl=rts;
 		else
 			xh=rts;
 	}
 	nrerror("Maximum number of iterations exceeded in minimizeNewton");
+	d2l = 0.0;
 	return 0.0;
+}
+
+double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm)
+{
+	double var;
+	double optx = minimizeNewton(x1, xguess, x2, xacc, fm, var);
+	return optx;
 }
 
 /*****************************************************

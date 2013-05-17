@@ -469,7 +469,7 @@ public:
             calculate the pairwise distances on the tree, print the matrix to file (in phylip format)
             @param filename file name
      */
-    void calcDist(char *filename);
+    void calcDist(char *filename, bool unit_length = false);
 
     /**
             calculate the pairwise distances on the tree
@@ -477,7 +477,7 @@ public:
             @param dad dad of the node, used to direct the search
             @param dist (OUT) distance matrix
      */
-    void calcDist(double* &dist, Node *node = NULL, Node *dad = NULL);
+    void calcDist(double* &dist, bool unit_length = false, Node *node = NULL, Node *dad = NULL);
 
     /**
             calculate the pairwise distances on the tree
@@ -487,7 +487,7 @@ public:
             @param cur_len current length from aroot to node
             @param dist (OUT) distance matrix
      */
-    void calcDist(Node *aroot, double cur_len, double* &dist, Node *node, Node *dad);
+    void calcDist(Node *aroot, double cur_len, double* &dist, Node *node, Node *dad, bool unit_length = false);
 
     /********************************************************
             PROPERTIES OF TREE
