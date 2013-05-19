@@ -26,7 +26,7 @@ FILE * fmemopen(void *buf, size_t size, const char *mode);
 
 #endif /* APPLE */
 
-const double TOL_LIKELIHOOD_PHYLOLIB = 1e-6;
+
 /**
  * TODO: read tree from string in memory
  */

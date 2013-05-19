@@ -13,6 +13,20 @@
 #if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/resource.h>
 #endif
+/**
+        verbose mode, determine how verbose should the screen be printed.
+ */
+enum VerboseMode {
+    VB_QUIET, VB_MIN, VB_MED, VB_MAX, VB_DEBUG
+};
+
+/**
+        verbose level on the screen
+ */
+extern int verbose_mode;
+
+double TOL_LIKELIHOOD_PHYLOLIB;
+int numSmoothTree;
 
 int treeReadLenString(const char *buffer, tree *tr, pl_boolean readBranches,
         pl_boolean readNodeLabels, pl_boolean topologyOnly) {
@@ -27,7 +41,12 @@ int treeReadLenString(const char *buffer, tree *tr, pl_boolean readBranches,
 int cmp_nni(const void* nni1, const void* nni2) {
     nniMove* myNNI1 = (nniMove*) nni1;
     nniMove* myNNI2 = (nniMove*) nni2;
-    return (int) (1000000.f * myNNI1->deltaLH - 1000000.f * myNNI2->deltaLH);
+    if (myNNI1->likelihood > myNNI2->likelihood)
+    	return 1;
+    else if (myNNI1->likelihood < myNNI2->likelihood)
+    	return -1;
+    else
+    	return 0;
 }
 
 int compareDouble(const void * a, const void * b) {
@@ -69,11 +88,21 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut) {
     // sort impNNIList
     qsort(impNNIList, cnt_nni, sizeof (nniMove), cmp_nni);
 
+    if (verbose_mode >= VB_MED)
+    {
+    	int i;
+    	for (i = cnt_nni-1; i >= 0; i--) {
+    		printf("Log-likelihood of positive NNI %d : %10.6f \n", cnt_nni - i - 1, impNNIList[i].likelihood);
+    	}
+    }
+
     // creating a list of non-conflicting positive NNI
     nniMove* nonConfNNIList = (nniMove*) calloc(cnt_nni, sizeof (nniMove));
 
     // the best NNI will always be taken
     nonConfNNIList[0] = impNNIList[cnt_nni - 1];
+
+
 
     // Filter out conflicting NNI
     int numNonConflictNNI = 1; // size of the non-conflicting NNI list;
@@ -98,6 +127,13 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut) {
             numNonConflictNNI++;
         }
     }
+    if (verbose_mode >= VB_MED)
+    {
+    	int i;
+    	for (i = 0; i < numNonConflictNNI; i++) {
+    		printf("Log-likelihood of non-conflicting NNI %d : %10.6f \n", i, nonConfNNIList[i].likelihood);
+    	}
+    }
 
     // Applying non-conflicting NNI moves
     double delta = 1.0; // portion of NNI moves to apply
@@ -120,7 +156,7 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut) {
         }
 
         // Re-optimize all branches
-        smoothTree(tr, 1);
+        smoothTree(tr, numSmoothTree);
         evaluateGeneric(tr, tr->start, FALSE);
         if (tr->likelihood < curScore) {
             //printf("Tree likelihood gets worse after applying %d NNI\n", numNNI2Apply);

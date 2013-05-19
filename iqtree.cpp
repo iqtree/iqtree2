@@ -1390,17 +1390,27 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 
             /* sort all positive NNI moves (descending) */
             sort(posNNIs.begin(), posNNIs.end());
+            if (verbose_mode >= VB_MED) {
+            	for (int i = 0; i < posNNIs.size(); i++) {
+            		cout << "Log-likelihood of positive NNI " << i << " : " << posNNIs[i].loglh << endl;
+            	}
+            }
 
             /* remove conflicting NNIs */
             genNonconfNNIs();
             nonconf_nni = vec_nonconf_nni.size();
+            if (verbose_mode >= VB_MED) {
+            	for (int i = 0; i < vec_nonconf_nni.size(); i++) {
+            		cout << "Log-likelihood of non-conflicting NNI " << i << " : " << vec_nonconf_nni[i].loglh << endl;
+            	}
+            }
         }
         nni2apply = ceil(nonconf_nni * curLambda);
         if (nni2apply == 1)
             curLambda = 0.0;
         //changeAllBranches();
         applyNNIs(nni2apply);
-        double newScore = optimizeAllBranches(1);
+        double newScore = optimizeAllBranches(params->numSmoothTree);
         if (newScore > curScore) {
             if (enableHeuris) {
                 if (vecImpProNNI.size() < 1000) {
@@ -1411,6 +1421,13 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
                 }
             }
             nni_count += nni2apply;
+            if (verbose_mode >= VB_MED) {
+            	cout << nni2apply << " NNIs has been done" << endl;
+            	cout << "Log-likelihood of current tree = " << newScore << endl;
+            	stringstream filename;
+            	filename << (params->out_prefix) << "iqtreeTree." << nni_round;
+            	printTree(filename.str().c_str());
+            }
             if (nni_count_ret)
                 *nni_count_ret = nni_count;
             curScore = newScore; // Update the current score
@@ -1475,6 +1492,9 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     return curScore;
 }
 
+extern "C" double TOL_LIKELIHOOD_PHYLOLIB;
+extern "C" int numSmoothTree;
+
 double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
     if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
         estDeltaMin();
@@ -1503,6 +1523,8 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
         }
         int nni_count = 0;
         double deltaNNI = 0.0;
+        TOL_LIKELIHOOD_PHYLOLIB= params->loglh_epsilon;
+        numSmoothTree = params->numSmoothTree;
         double newLH = doNNISearch(raxmlTree, &nni_count, &deltaNNI, &nnicut);
         if (newLH == 0.0) {
             break;
@@ -1522,6 +1544,13 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
                 }
             }
             nniApplied += nni_count;
+            if (verbose_mode >= VB_MED) {
+            	cout << nni_count << " NNIs has been done" << endl;
+            	cout << "Log-likelihood of current tree = " << newLH << endl;
+            	stringstream suffix;
+            	suffix << "phylolibTree." << nniRound;
+            	printPhylolibTree(suffix.str().c_str());
+            }
             if (nni_count_ret) {
                 *nni_count_ret = nniApplied;
             }
