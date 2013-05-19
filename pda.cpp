@@ -74,10 +74,13 @@ using namespace std;
 
 void generateRandomTree(Params &params)
 {
-	if (params.sub_size < 3) {
+	if (params.sub_size < 3 && !params.aln_file) {
 		outError(ERR_FEW_TAXA);
 	}
 
+	if (!params.user_file) {
+		outError("Please specify an output tree file name");
+	}
 	////cout << "Random number seed: " << params.ran_seed << endl << endl;
 
 	SplitGraph sg;

@@ -74,7 +74,7 @@ public:
     /** read partition model file */
     void readPartition(Params &params);
 
-    /** read partition model file in NEXUS format */
+    /** read partition model file in NEXUS format into variable info */
     void readPartitionNexus(Params &params);
 
 	/**

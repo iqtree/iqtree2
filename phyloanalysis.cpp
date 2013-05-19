@@ -290,7 +290,7 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 							((nstates == 4) ?
 									dna_model_names[model].c_str() :
 									aa_model_names[model].c_str()),
-					FREQ_UNKNOWN);
+					"", FREQ_UNKNOWN, "");
 			subst_model->setTree(tree);
 			tree->params = &params;
 
@@ -2449,8 +2449,11 @@ void runPhyloAnalysis(Params &params) {
 	Alignment *alignment;
 	IQTree *tree;
 	vector<ModelInfo> model_info;
+	// read in alignment
 	if (params.partition_file) {
+		// initialize supertree stuff if user specify partition file with -sp option
 		tree = new PhyloSuperTree(params);
+		// this alignment will actually be of type SuperAlignment
 		alignment = tree->aln;
 	} else {
 		alignment = new Alignment(params.aln_file, params.sequence_type,
@@ -2467,6 +2470,7 @@ void runPhyloAnalysis(Params &params) {
 	}
 
 	if (params.aln_output) {
+		// convert alignment to other format and write to output file
 		if (params.gap_masked_aln) {
 			Alignment out_aln;
 			Alignment masked_aln(params.gap_masked_aln, params.sequence_type,
@@ -2487,10 +2491,13 @@ void runPhyloAnalysis(Params &params) {
 					params.ref_seq_name);
 	} else if (params.gbo_replicates > 0 && params.user_file
 			&& params.second_tree) {
+		// run one of the UFBoot analysis
 		runGuidedBootstrap(params, alignment, *tree);
 	} else if (params.avh_test) {
+		// run one of the wondering test for Arndt
 		runAvHTest(params, alignment, *tree);
 	} else if (params.num_bootstrap_samples == 0) {
+		// the main Maximum likelihood tree reconstruction
 		alignment->checkGappySeq();
 		runPhyloAnalysis(params, original_model, alignment, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
@@ -2506,6 +2513,7 @@ void runPhyloAnalysis(Params &params) {
 		//if (original_model != "TESTONLY")
 			reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
 	} else {
+		// the classical non-parameter bootstrap (SBS)
 		// turn off aLRT test
 		int saved_aLRT_replicates = params.aLRT_replicates;
 		params.aLRT_replicates = 0;

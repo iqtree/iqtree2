@@ -175,7 +175,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 		rates[j] = 1.0;
 	for (i = 0; i < nrates && end_pos < str.length(); i++) {
 		int new_end_pos;
-		double rate;
+		double rate = 0;
 		try {
 			rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
 		} catch (string str) {

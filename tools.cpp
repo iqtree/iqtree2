@@ -663,7 +663,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.ncbi_names_file = NULL;
 	params.ncbi_ignore_level = NULL;
 	params.gbo_replicates = 0;
-	params.ufboot_epsilon = 0.1;
+	params.ufboot_epsilon = 0.5;
 	params.check_gbo_sample_size = 0;
 	params.use_rell_method = true;
 	params.use_elw_method = false;
@@ -846,6 +846,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -r <num_taxa>";
 				params.sub_size = convert_int(argv[cnt]);
 				params.tree_gen = YULE_HARDING;
+			} else if (strcmp(argv[cnt],"-rs") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rs <alignment_file>";
+				params.tree_gen = YULE_HARDING;
+				params.aln_file = argv[cnt];
 			} else if (strcmp(argv[cnt],"-rstar") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1723,6 +1729,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
 			<< "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
+			<< "  -beps <epsilon>      Bootstrap trees in [maxlh-eps,maxlh+eps] are chosen" << endl
+			<< "                       at random (default: 0.5)" << endl
 			<< endl << "SINGLE BRANCH TEST:" << endl
 			<< "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
 			<< "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
