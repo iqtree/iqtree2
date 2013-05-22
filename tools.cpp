@@ -675,6 +675,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.min_correlation = 0.99;
 	params.step_iterations = 100;
 	params.store_candidate_trees = true;
+	params.print_ufboot_trees = false;
 	//const double INF_NNI_CUTOFF = -1000000.0;
 	params.nni_cutoff = -1000000.0;
 	params.estimate_nni_cutoff = false;
@@ -1457,6 +1458,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.ufboot_epsilon = convert_double(argv[cnt]);
 				if (params.ufboot_epsilon <= 0.0)
 					throw "Epsilon must be positive";
+			} else if (strcmp(argv[cnt], "-wbt") == 0) {
+				params.print_ufboot_trees = true;
 			} else if (strcmp(argv[cnt], "-bs") == 0) {
 				cnt++;
 				if (cnt >= argc)

@@ -1587,6 +1587,9 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< endl << "  Split support values:     " << params.out_prefix
 				<< ".splits" << endl << "  Consensus tree:           "
 				<< params.out_prefix << ".contree" << endl;
+		if (params.print_ufboot_trees)
+			cout << "  UFBoot trees:             " << params.out_prefix << ".ufboot" << endl;
+
 	}
 
 	if (params.treeset_file) {
@@ -1758,9 +1761,10 @@ void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
 	longest_dist = iqtree.computeDist(params, alignment, ml_dist, dist_file);
 	cout << " " << (getCPUTime() - begin_time) << " sec" << endl;
 	if (longest_dist > MAX_GENETIC_DIST * 0.99) {
-		cout << "Some ML distances are too long, using old distances..."
-				<< endl;
-	} else {
+		outWarning("Some pairwise ML distances are too long (saturated)");
+		//cout << "Some ML distances are too long, using old distances..." << endl;
+	} //else
+	{
 		memmove(iqtree.dist_matrix, ml_dist,
 				sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
 	}
@@ -1845,9 +1849,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	longest_dist = iqtree.computeDist(params, alignment, iqtree.dist_matrix, dist_file);
 	checkZeroDist(alignment, iqtree.dist_matrix);
 	if (longest_dist > MAX_GENETIC_DIST * 0.99) {
-		cout << "Some distances are too long, computing observed distances..."
-			<< endl;
-		longest_dist = iqtree.computeObsDist(params, alignment, iqtree.dist_matrix, dist_file);
+		outWarning("Some pairwise distances are too long (saturated)");
+		//cout << "Some distances are too long, computing observed distances..." << endl;
+		//longest_dist = iqtree.computeObsDist(params, alignment, iqtree.dist_matrix, dist_file);
 		//assert(longest_dist <= 1.0);
 	}
 

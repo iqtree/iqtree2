@@ -564,11 +564,11 @@ void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
         Node *added_node = (*it_leaf)->neighbors[0]->node;
         Node *node1 = NULL;
         Node *node2 = NULL;
-        Node *leaf;
+        //Node *leaf;
 
         for (int i = 0; i < 3; i++) {
             if (added_node->neighbors[i]->node->id == (*it_leaf)->id) {
-                leaf = added_node->neighbors[i]->node;
+                //leaf = added_node->neighbors[i]->node;
             } else if (!node1) {
                 node1 = added_node->neighbors[i]->node;
             } else {
@@ -2379,7 +2379,7 @@ void IQTree::saveNNITrees(PhyloNode *node, PhyloNode *dad) {
 
 void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     int sum_weights = trees.sumTreeWeights();
-    int i;
+    int i, j;
     if (verbose_mode >= VB_MAX) {
         for (i = 0; i < trees.size(); i++)
             if (trees.tree_weights[i] > 0)
@@ -2466,6 +2466,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     out_file += ".splits.nex";
     sg.saveFile(out_file.c_str(), IN_NEXUS, false);
     cout << "Split supports printed to NEXUS file " << out_file << endl;
+
     /*
     out_file = params.out_prefix;
     out_file += ".supval";
@@ -2473,6 +2474,25 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 
     cout << "Support values written to " << out_file << endl;
      */
+
+    string filename = params.out_prefix;
+    filename += ".ufboot";
+    ofstream out(filename.c_str());
+    if (params.print_ufboot_trees) {
+    	for (i = 0; i < trees.size(); i++) {
+    		NodeVector taxa;
+    		// change the taxa name from ID to real name
+    		trees[i]->getOrderedTaxa(taxa);
+    		for (j = 0; j < taxa.size(); j++)
+    			taxa[j]->name = aln->getSeqName(taxa[j]->id);
+    		// now print to file
+    		for (j = 0; j < trees.tree_weights[i]; j++)
+    			trees[i]->printTree(out, WT_NEWLINE);
+    	}
+    }
+    out.close();
+    cout << "UFBoot trees printed to " << filename << endl;
+
 }
 
 void IQTree::summarizeBootstrap(Params &params) {
@@ -2480,8 +2500,9 @@ void IQTree::summarizeBootstrap(Params &params) {
             << endl;
     MTreeSet trees;
     IntVector tree_weights;
+    int sample;
     tree_weights.resize(treels_logl.size(), 0);
-    for (int sample = 0; sample < boot_trees.size(); sample++)
+    for (sample = 0; sample < boot_trees.size(); sample++)
         tree_weights[boot_trees[sample]]++;
     trees.init(treels, rooted, tree_weights);
     summarizeBootstrap(params, trees);
