@@ -33,7 +33,7 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 	for (site = 0, it = super_tree->begin(); it != super_tree->end(); it++, site++) {
 		partitions.push_back((*it)->aln);
 		int nseq = (*it)->aln->getNSeq();
-		cout << "nseq  = " << nseq << endl;
+		//cout << "nseq  = " << nseq << endl;
 		for (seq = 0; seq < nseq; seq++) {
 			int id = getSeqID((*it)->aln->getSeqName(seq));
 			if (id < 0) {

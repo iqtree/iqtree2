@@ -1119,8 +1119,8 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     }
     verbose_mode = save_mode;
     countConstSite();
-    cout << getNSite() << " positions were extracted" << endl;
-    cout << __func__ << " " << num_states << endl;
+    //cout << getNSite() << " positions were extracted" << endl;
+    //cout << __func__ << " " << num_states << endl;
 }
 
 void convert_range(const char *str, int &lower, int &upper, int &step_size, char* &endptr) throw (string) {

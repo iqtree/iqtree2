@@ -93,13 +93,20 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
     MyToken token(nexus.inf);
     nexus.Execute(token);
 
+    Alignment *super_aln = NULL;
+    if (params.aln_file) {
+    	super_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
+    }
+
     for (vector<CharSet*>::iterator it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
     	if ((*it)->model_name != "") {
 			PartitionInfo info;
 			info.name = (*it)->name;
 			info.model_name = (*it)->model_name;
 			info.aln_file = (*it)->aln_file;
-			if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
+			//if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
+			if (info.aln_file == "" && !params.aln_file)
+				outError("No input data for partition ", info.name);
 			info.sequence_type = (*it)->sequence_type;
 			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
 			info.position_spec = (*it)->position_spec;
@@ -107,20 +114,28 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
 			part_info.push_back(info);
-			Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
+			Alignment *part_aln;
+			if (info.aln_file != "") {
+				part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
+			} else {
+				part_aln = super_aln;
+			}
 			if (!info.position_spec.empty() && info.position_spec != "*") {
 				Alignment *new_aln = new Alignment();
 				new_aln->extractSites(part_aln, info.position_spec.c_str());
-				delete part_aln;
+				if (part_aln != super_aln) delete part_aln;
 				part_aln = new_aln;
 			}
 			Alignment *new_aln = part_aln->removeGappySeq();
-			if (new_aln != part_aln) delete part_aln;
+			if (part_aln != new_aln && part_aln != super_aln) delete part_aln;
 			PhyloTree *tree = new PhyloTree(new_aln);
 			push_back(tree);
 			params = origin_params;
+			cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
     	}
 
+    if (super_aln)
+    	delete super_aln;
 }
 PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	cout << "Reading partition model file " << params.partition_file << " ..." << endl;

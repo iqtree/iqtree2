@@ -476,7 +476,7 @@ inline bool NxsString::IsNexusPunctuation(
   const char c)	/* the character in question */
   const
 	{
-	return (strchr("()[]{}/\\,;:=*\'\"`-+<>", c) != NULL);
+	return (strchr("()[]{}/\\,;:=*\'\"`-+<>", c) != 0);
 	}
 
 /*--------------------------------------------------------------------------------------------------------------------------

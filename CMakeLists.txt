@@ -24,9 +24,9 @@ if (WIN32)
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 elseif (APPLE) 
 	message("Target OS     : Mac OS X")
-	# to be compatible back to Mac OS X 10.4
-	add_definitions("-mmacosx-version-min=10.4") 
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.4")
+	# to be compatible back to Mac OS X 10.6
+	add_definitions("-mmacosx-version-min=10.6") 
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.6")
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 elseif (UNIX) 
 	message("Target OS     : Unix")
@@ -35,6 +35,13 @@ elseif (UNIX)
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
 	message("Target OS     : Unknown")
+endif()
+
+if (CMAKE_COMPILER_IS_GNUCXX) 
+	message("Compiler      : GNU Compiler (gcc)")
+	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+else()
+	message("Compiler      : Unknown")
 endif()
 
 # verbose for 32 or 64 bit platform
