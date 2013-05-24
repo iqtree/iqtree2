@@ -17,6 +17,10 @@ char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
 char symbols_dna[]     = "ACGT";
 char symbols_rna[]     = "ACGU";
 char symbols_binary[]  = "01";
+// genetic code from tri-nucleotides to amino-acids
+// from AAA, AAC, AAG, AAT, ..., TTT to amino-acids
+char genetic_code_standard [] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVVXYXYSSSSXCWCLFLF";
+char codon_table[61]; // index from 61 non-stop codons to 64 codons
 
 const double MIN_FREQUENCY          = 0.0001;
 const double MIN_FREQUENCY_DIFF     = 0.00001;
@@ -445,6 +449,7 @@ void buildStateMap(char *map, SeqType seq_type) {
         map[(unsigned char)'1'] = 1;
         return;
     case SEQ_DNA: // DNA
+	case SEQ_CODON:
         map[(unsigned char)'A'] = 0;
         map[(unsigned char)'C'] = 1;
         map[(unsigned char)'G'] = 2;
@@ -474,8 +479,6 @@ void buildStateMap(char *map, SeqType seq_type) {
         for (int i = 0; i <= STATE_UNKNOWN; i++)
             map[i] = i;
         return;
-	case SEQ_CODON:
-		return;
     default:
         return;
     }
@@ -567,6 +570,8 @@ char Alignment::convertState(char state) {
 	}
 }
 
+
+
 char Alignment::convertStateBack(char state) {
     if (state == STATE_UNKNOWN) return '-';
     if (state == STATE_INVALID) return '?';
@@ -627,6 +632,21 @@ char Alignment::convertStateBack(char state) {
     }
 }
 
+string Alignment::convertStateBackStr(char state) {
+	string str;
+	if (num_states != 61) {
+		str = convertStateBack(state);
+	} else {
+		// special treatment for codon data
+		if (state >= num_states) return "???";
+		int state_back = codon_table[(int)state];
+		str = symbols_dna[state_back/16];
+		str += symbols_dna[(state_back%16)/4];
+		str += symbols_dna[state_back%4];
+	}
+	return str;
+}
+
 void Alignment::convertStateStr(string &str, SeqType seq_type) {
     for (string::iterator it = str.begin(); it != str.end(); it++)
         (*it) = convertState(*it, seq_type);
@@ -635,9 +655,6 @@ void Alignment::convertStateStr(string &str, SeqType seq_type) {
 int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
     int seq_id;
     ostringstream err_str;
-    site_pattern.resize(nsite, -1);
-    clear();
-    pattern_index.clear();
 
     if (nseq != seq_names.size()) throw "Different number of sequences than specified";
 
@@ -727,16 +744,53 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
 
     Pattern pat;
     pat.resize(nseq);
-    for (site = 0; site < nsite; site++) {
+    int step = ((seq_type == SEQ_CODON) ? 3 : 1);
+    if (nsite % step != 0)
+    	outError("Number of sites is not multiple of 3");
+    site_pattern.resize(nsite/step, -1);
+    clear();
+    pattern_index.clear();
+
+    char non_stop_codon[64];
+    // build index from 64 codons to 61 non-stop codons
+    if (seq_type == SEQ_CODON) {
+    	// special treatment for codon sequences
+        char *genetic_code = genetic_code_standard;
+        assert(strlen(genetic_code) == 64);
+        int state = 0;
+        for (site = 0; site < strlen(genetic_code); site++) {
+        	if (genetic_code[site] != 'X') {
+        		non_stop_codon[site] = state++;
+        		codon_table[(int)non_stop_codon[site]] = site;
+        	} else {
+        		non_stop_codon[site] = STATE_INVALID;
+        	}
+        }
+        assert(state == 61);
+        cout << "Converting into codon tables..." << endl;
+    }
+    for (site = 0; site < nsite; site+=step) {
         for (seq = 0; seq < nseq; seq++) {
             //char state = convertState(sequences[seq][site], seq_type);
             char state = char_to_state[(int)(sequences[seq][site])];
-            if (state == STATE_INVALID)
-                err_str << "Sequence " << seq_names[seq] << " has invalid character " <<
-                sequences[seq][site] << " at site " << site+1 << "\n";
+            if (seq_type == SEQ_CODON) {
+            	char state2 = char_to_state[(int)(sequences[seq][site+1])];
+            	char state3 = char_to_state[(int)(sequences[seq][site+2])];
+            	if (state < 4 && state2 < 4 && state3 < 4) {
+            		state = non_stop_codon[state*16 + state2*4 + state3];
+            	} else if (state == STATE_UNKNOWN && state2 == STATE_UNKNOWN && state3 == STATE_UNKNOWN) {
+            		state = STATE_UNKNOWN;
+            	} else
+            		state = STATE_INVALID;
+            }
+            if (state == STATE_INVALID) {
+                err_str << "Sequence " << seq_names[seq] << " has invalid character " << sequences[seq][site];
+            	if (seq_type == SEQ_CODON) err_str << sequences[seq][site+1] << sequences[seq][site+2];
+            	err_str << " at site " << site+1 << endl;
+            }
             pat[seq] = state;
         }
-        num_gaps_only += addPattern(pat, site);
+        num_gaps_only += addPattern(pat, site/step);
     }
     if (num_gaps_only)
         cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous chars." << endl;
@@ -975,7 +1029,7 @@ void Alignment::printPhylip(const char *file_name, bool append, const char *aln_
             int j = 0;
             for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
                 if (kept_sites[j])
-                    out << convertStateBack(at(*i)[seq_id]);
+                    out << convertStateBackStr(at(*i)[seq_id]);
             out << endl;
         }
         out.close();
@@ -1004,7 +1058,7 @@ void Alignment::printFasta(const char *file_name, bool append, const char *aln_s
             int j = 0;
             for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
                 if (kept_sites[j])
-                    out << convertStateBack(at(*i)[seq_id]);
+                    out << convertStateBackStr(at(*i)[seq_id]);
             out << endl;
         }
         out.close();
@@ -1620,7 +1674,7 @@ void Alignment::convfreq(double *stateFrqArr) {
 		freq = stateFrqArr[i];
 		if (freq < MIN_FREQUENCY) { 
 			stateFrqArr[i] = MIN_FREQUENCY; 
-			cout << "WARNING: " << convertStateBack(i) << " is not present in alignment that may cause numerical problems" << endl;
+			cout << "WARNING: " << convertStateBackStr(i) << " is not present in alignment that may cause numerical problems" << endl;
 		}
 		if (freq > maxfreq) {
 			maxfreq = freq;

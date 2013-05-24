@@ -38,6 +38,7 @@
 //#include "modeltest_wrapper.h"
 #include "modelprotein.h"
 #include "modelbin.h"
+#include "modelcodon.h"
 #include "stoprule.h"
 
 #include "mtreeset.h"
@@ -237,13 +238,17 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 			NULL);
 	rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1,
 			params.gamma_median, -1, NULL);
-	GTRModel *subst_model;
+	GTRModel *subst_model = NULL;
 	if (nstates == 2)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
 	else if (nstates == 4)
 		subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", in_tree);
-	else
+	else if (nstates == 20)
 		subst_model = new ModelProtein("WAG", "", FREQ_UNKNOWN, "", in_tree);
+	else if (nstates == 61)
+		subst_model = new ModelCodon("YN98", "", FREQ_UNKNOWN, "", in_tree);
+
+	assert(subst_model);
 
 	ModelFactory *model_fac = new ModelFactory();
 
@@ -938,7 +943,7 @@ void reportAlignment(ofstream &out, Alignment &alignment) {
 			<< alignment.getNSite() << " "
 			<< ((alignment.num_states == 2) ?
 					"binary" :
-					((alignment.num_states == 4) ? "nucleotide" : "amino-acid"))
+					((alignment.num_states == 4) ? "nucleotide" : (alignment.num_states == 20) ? "amino-acid" : "codon"))
 			<< " sites" << endl << "Number of constant sites: "
 			<< round(alignment.frac_const_sites * alignment.getNSite())
 			<< " (= " << alignment.frac_const_sites * 100 << "% of all sites)"
@@ -998,8 +1003,8 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 	if (tree.getModel()->isReversible()) {
 		for (i = 0, k = 0; i < tree.aln->num_states - 1; i++)
 			for (j = i + 1; j < tree.aln->num_states; j++, k++) {
-				out << "  " << tree.aln->convertStateBack(i) << "-"
-						<< tree.aln->convertStateBack(j) << ": " << rate_mat[k];
+				out << "  " << tree.aln->convertStateBackStr(i) << "-"
+						<< tree.aln->convertStateBackStr(j) << ": " << rate_mat[k];
 				if (tree.aln->num_states <= 4)
 					out << endl;
 				else if (k % 5 == 4)
@@ -1009,8 +1014,8 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 		for (i = 0, k = 0; i < tree.aln->num_states; i++)
 			for (j = 0; j < tree.aln->num_states; j++)
 				if (i != j) {
-					out << "  " << tree.aln->convertStateBack(i) << "-"
-							<< tree.aln->convertStateBack(j) << ": "
+					out << "  " << tree.aln->convertStateBackStr(i) << "-"
+							<< tree.aln->convertStateBackStr(j) << ": "
 							<< rate_mat[k];
 					if (tree.aln->num_states <= 4)
 						out << endl;
@@ -1054,26 +1059,28 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 		double *state_freqs = new double[tree.aln->num_states];
 		tree.getModel()->getStateFrequency(state_freqs);
 		for (i = 0; i < tree.aln->num_states; i++)
-			out << "  pi(" << tree.aln->convertStateBack(i) << ") = "
+			out << "  pi(" << tree.aln->convertStateBackStr(i) << ") = "
 					<< state_freqs[i] << endl;
 		delete[] state_freqs;
 		out << endl;
-		// report Q matrix
-		double *q_mat = new double[tree.aln->num_states * tree.aln->num_states];
-		tree.getModel()->getQMatrix(q_mat);
+		if (tree.aln->num_states <= 20) {
+			// report Q matrix
+			double *q_mat = new double[tree.aln->num_states * tree.aln->num_states];
+			tree.getModel()->getQMatrix(q_mat);
 
-		out << "Rate matrix Q:" << endl << endl;
-		for (i = 0, k = 0; i < tree.aln->num_states; i++) {
-			out << "  " << tree.aln->convertStateBack(i);
-			for (j = 0; j < tree.aln->num_states; j++, k++) {
-				out << "  ";
-				out.width(8);
-				out << q_mat[k];
+			out << "Rate matrix Q:" << endl << endl;
+			for (i = 0, k = 0; i < tree.aln->num_states; i++) {
+				out << "  " << tree.aln->convertStateBackStr(i);
+				for (j = 0; j < tree.aln->num_states; j++, k++) {
+					out << "  ";
+					out.width(8);
+					out << q_mat[k];
+				}
+				out << endl;
 			}
 			out << endl;
+			delete[] q_mat;
 		}
-		out << endl;
-		delete[] q_mat;
 	}
 }
 

@@ -152,7 +152,7 @@ void MaAlignment::printPatObsExpFre(const char *fileName, const IntVector expect
 		for ( int i = 0; i < patNum; i++ )
 		{
 			for ( seqID = 0; seqID < seqNum; seqID++ ){
-				out << convertStateBack(at(i)[seqID]);
+				out << convertStateBackStr(at(i)[seqID]);
 			}
 			out << "\t" << logLL[i] << "\t" << (*this)[i].frequency << "\t" << expectedNorFre[i] << endl;
 		}

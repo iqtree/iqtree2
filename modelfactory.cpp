@@ -26,6 +26,7 @@
 #include "modeldna.h"
 #include "modelprotein.h"
 #include "modelbin.h"
+#include "modelcodon.h"
 #include "modelset.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
@@ -58,7 +59,8 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 
 	if ((model_str == "JC" && tree->aln->num_states == 4) || 
 		(model_str == "POISSON" && tree->aln->num_states == 20) ||
-		(model_str == "JC2" && tree->aln->num_states == 2)) 
+		(model_str == "JC2" && tree->aln->num_states == 2) ||
+		(model_str == "JC61" && tree->aln->num_states == 61))
 	{
 		model = new ModelSubst(tree->aln->num_states);
 	} else 
@@ -83,6 +85,8 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 		model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->num_states == 20) {
 		model = new ModelProtein(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
+	} else if (tree->aln->num_states == 61) {
+		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else {
 		outError("Unsupported model type");
 	}
@@ -100,6 +104,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		if (tree->aln->num_states == 4) model_str = "HKY";
 		else if (tree->aln->num_states == 20) model_str = "WAG";
 		else if (tree->aln->num_states == 2) model_str = "JC2";
+		else if (tree->aln->num_states == 61) model_str = "JC61";
 		else model_str = "JC";
 	}
 	string::size_type posfreq;

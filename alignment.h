@@ -160,8 +160,21 @@ public:
 
 	virtual void convertStateStr(string &str, SeqType seq_type);
 
-	
+	/**
+	 * convert from internal state to user-readable state (e.g., to ACGT for DNA)
+	 * Note: does not work for codon data
+	 * @param state internal state code
+	 * @return user-readable state
+	 */
 	char convertStateBack(char state);
+
+	/**
+	 * convert from internal state to user-readable state (e.g., to ACGT for DNA)
+	 * Note: work for all data
+	 * @param state internal state code
+	 * @return user-readable state string
+	 */
+	string convertStateBackStr(char state);
 
 	/**
 		get alignment site range from the residue range relative to a sequence

@@ -568,8 +568,9 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
         case 20:
             return computeLikelihoodDervSSE<20>(dad_branch, dad, df, ddf);
         default:
-            cout << "Wrong number of states: " << aln->num_states << endl;
-            return -1.0;
+            return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
+            //cout << "Wrong number of states: " << aln->num_states << endl;
+            //return -1.0;
         }
     } else {
         return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
@@ -586,8 +587,9 @@ double PhyloTree::computeLikelihoodDervFast(PhyloNeighbor *dad_branch, PhyloNode
         case 20:
             return computeLikelihoodDervFastSSE<20>(dad_branch, dad, df, ddf);
         default:
-            cout << "Bad number of states: " << aln->num_states << endl;
-            exit(1);
+            return computeLikelihoodDervFastNaive(dad_branch, dad, df, ddf);
+            //cout << "Bad number of states: " << aln->num_states << endl;
+            //exit(1);
         }
     } else {
         return computeLikelihoodDervFastNaive(dad_branch, dad, df, ddf);

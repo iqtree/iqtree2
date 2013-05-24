@@ -239,7 +239,7 @@ void SuperAlignment::printCombinedAlignment(const char *file_name, bool append) 
 				int nsite = (*pit)->getNSite();
 				if (part_seq_id >= 0) {
 					for (int i = 0; i < nsite; i++)
-						out << (*pit)->convertStateBack((*pit)->getPattern(i) [part_seq_id]);
+						out << (*pit)->convertStateBackStr((*pit)->getPattern(i) [part_seq_id]);
 				} else {
 					string str(nsite, '?');
 					out << str;

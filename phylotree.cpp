@@ -1442,7 +1442,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         if (dad->name == ROOT_NAME && root_state != STATE_UNKNOWN) {
             dad_state = root_state;
             if (verbose_mode >= VB_DEBUG)
-                cout << __func__ << ": root state " << aln->convertStateBack(root_state) << endl;
+                cout << __func__ << ": root state " << aln->convertStateBackStr(root_state) << endl;
         } else if (dad->isLeaf()) {
             dad_state = (*aln)[ptn][dad->id];
         }
