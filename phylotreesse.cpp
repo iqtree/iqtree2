@@ -438,8 +438,8 @@ void PhyloTree::computeTheta(PhyloNeighbor *dad_branch, PhyloNode *dad) {
         case 20:
             return computeThetaSSE<20>(dad_branch, dad);
         default:
-            cout << "Wrong number of states: "<< aln->num_states << endl;
-            exit(1);
+            computeThetaNaive(dad_branch, dad);
+            break;
         }
     } else {
         computeThetaNaive(dad_branch, dad);
@@ -511,6 +511,10 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
             return computePartialLikelihoodSSE<4>(dad_branch, dad, pattern_scale);
         case 20:
             return computePartialLikelihoodSSE<20>(dad_branch, dad, pattern_scale);
+        /*
+        case 61:
+            return computePartialLikelihoodSSE<61>(dad_branch, dad, pattern_scale);
+        */
         default:
             return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
         }
@@ -545,6 +549,10 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
             return computeLikelihoodBranchSSE<4>(dad_branch, dad, pattern_lh);
         case 20:
             return computeLikelihoodBranchSSE<20>(dad_branch, dad, pattern_lh);
+        /*
+        case 61:
+            return computeLikelihoodBranchSSE<61>(dad_branch, dad, pattern_lh);
+        */
         default:
             return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
         }
@@ -567,6 +575,10 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
             return computeLikelihoodDervSSE<4>(dad_branch, dad, df, ddf);
         case 20:
             return computeLikelihoodDervSSE<20>(dad_branch, dad, df, ddf);
+        /*
+        case 61:
+            return computeLikelihoodDervSSE<61>(dad_branch, dad, df, ddf);
+        */
         default:
             return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
             //cout << "Wrong number of states: " << aln->num_states << endl;

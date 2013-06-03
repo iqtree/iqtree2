@@ -35,7 +35,7 @@
 const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double MAX_BRANCH_LEN = 9.0;
 const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
-const double TOL_LIKELIHOOD = 0.0001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
+const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
 const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
 const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
@@ -48,6 +48,7 @@ using namespace Eigen;
  */
 typedef Array<double, Dynamic, Dynamic, RowMajor> RowMajorArrayXXd;
 
+/*
 #define MappedMat(NSTATES) Map<Matrix<double, NSTATES, NSTATES>, Aligned>
 #define MappedArr2D(NSTATES) Map<Array<double, NSTATES, NSTATES>, Aligned>
 #define MappedRowVec(NSTATES) Map<Matrix<double, 1, NSTATES>, Aligned>
@@ -55,6 +56,15 @@ typedef Array<double, Dynamic, Dynamic, RowMajor> RowMajorArrayXXd;
 #define Matrix(NSTATES) Matrix<double, NSTATES, NSTATES>
 #define RowVector(NSTATES) Matrix<double, 1, NSTATES>
 #define MappedRowArr2DDyn Map<Array<double, Dynamic, Dynamic, RowMajor>, Aligned>
+*/
+
+#define MappedMat(NSTATES) Map<Matrix<double, NSTATES, NSTATES> >
+#define MappedArr2D(NSTATES) Map<Array<double, NSTATES, NSTATES> >
+#define MappedRowVec(NSTATES) Map<Matrix<double, 1, NSTATES> >
+#define MappedVec(NSTATES) Map<Matrix<double, NSTATES, 1> >
+#define Matrix(NSTATES) Matrix<double, NSTATES, NSTATES>
+#define RowVector(NSTATES) Matrix<double, 1, NSTATES>
+#define MappedRowArr2DDyn Map<Array<double, Dynamic, Dynamic, RowMajor> >
 
 const int MAX_SPR_MOVES = 20;
 

@@ -245,8 +245,8 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 		subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", in_tree);
 	else if (nstates == 20)
 		subst_model = new ModelProtein("WAG", "", FREQ_UNKNOWN, "", in_tree);
-	else if (nstates == 61)
-		subst_model = new ModelCodon("YN98", "", FREQ_UNKNOWN, "", in_tree);
+	else if (in_tree->aln->codon_table)
+		subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", in_tree);
 
 	assert(subst_model);
 
@@ -1709,6 +1709,15 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 			break;
 		case FREQ_ESTIMATE:
 			cout << "optimized";
+			break;
+		case FREQ_CODON_1x4:
+			cout << "counted 1x4";
+			break;
+		case FREQ_CODON_3x4:
+			cout << "counted 3x4";
+			break;
+		case FREQ_CODON_3x4C:
+			cout << "counted 3x4-corrected";
 			break;
 		default:
 			outError("Wrong specified state frequencies");

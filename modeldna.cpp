@@ -19,6 +19,11 @@
  ***************************************************************************/
 #include "modeldna.h"
 
+ModelDNA::ModelDNA(PhyloTree *tree, bool count_rates)
+: GTRModel(tree, count_rates)
+{
+}
+
 ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
 : GTRModel(tree, count_rates)
 {
@@ -173,16 +178,25 @@ void ModelDNA::readRates(string str) throw(const char*) {
 	int i, j;
 	for (j = 0; j < param_spec.length(); j++)
 		rates[j] = 1.0;
+	num_params = 0;
 	for (i = 0; i < nrates && end_pos < str.length(); i++) {
 		int new_end_pos;
 		double rate = 0;
-		try {
-			rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
-		} catch (string str) {
-			outError(str);
+		if (str[end_pos] == '?') {
+			param_fixed[i+1] = false;
+			end_pos++;
+			rate = i + 0.4;
+			num_params++;
+		} else {
+			param_fixed[i+1] = true;
+			try {
+				rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+			} catch (string str) {
+				outError(str);
+			}
+			end_pos += new_end_pos;
 		}
-		end_pos += new_end_pos;
-		if (rate <= 0.0)
+		if (rate < 0.0)
 			outError("Negative rates found");
 		if (i == nrates-1 && end_pos < str.length())
 			outError("String too long ", str);
@@ -195,8 +209,6 @@ void ModelDNA::readRates(string str) throw(const char*) {
 			if (param_spec[j] == i+1)
 				rates[j] = rate;
 	}
-	num_params = 0;
-
 }
 
 bool ModelDNA::setRateType(const char *rate_str) {
@@ -236,6 +248,7 @@ bool ModelDNA::setRateType(const char *rate_str) {
 	map<char,char> param_k;
 	num_params = 0;
 	param_spec = "";
+	// last entry get ID of 0 for easy management
 	param_k[rate_str[num_ch-1]] = 0;
 	for (i = 0; i < num_ch; i++) {
 		if (param_k.find(rate_str[i]) == param_k.end()) {
@@ -267,6 +280,8 @@ bool ModelDNA::setRateType(const char *rate_str) {
 			cout << rates[i] << " ";
 		cout << endl;
 	}
+	param_fixed.resize(num_params+1, false);
+	param_fixed[0] = true; // fix the last entry
 	delete [] num_rates;
 	delete [] avg_rates;
 	return true;
@@ -302,9 +317,14 @@ void ModelDNA::getVariables(double *variables) {
 	int i;
 	if (num_params > 0) {
 		int num_all = param_spec.length();
+		if (verbose_mode >= VB_MAX) {
+			for (i = 1; i <= num_params; i++)
+				cout << "  estimated variables[" << i << "] = " << variables[i] << endl;
+		}
 		for (i = 0; i < num_all; i++)
-			if (param_spec[i] > 0)
+			if (!param_fixed[param_spec[i]]) {
 				rates[i] = variables[(int)param_spec[i]];
+			}
 	}
 	if (freq_type == FREQ_ESTIMATE) {
 		int ndim = getNDim();
@@ -320,7 +340,7 @@ void ModelDNA::setVariables(double *variables) {
 	if (num_params > 0) {
 		int num_all = param_spec.length();
 		for (int i = 0; i < num_all; i++)
-			if (param_spec[i] > 0)
+			if (!param_fixed[param_spec[i]])
 				variables[(int)param_spec[i]] = rates[i];
 	}
 	if (freq_type == FREQ_ESTIMATE) {

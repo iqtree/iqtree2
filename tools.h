@@ -288,7 +288,8 @@ enum TestType {
         State frequency type
  */
 enum StateFreqType {
-    FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, FREQ_ESTIMATE
+    FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, FREQ_ESTIMATE,
+    FREQ_CODON_1x4, FREQ_CODON_3x4, FREQ_CODON_3x4C // special frequency for codon model
 };
 
 /**

@@ -17,10 +17,32 @@ char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
 char symbols_dna[]     = "ACGT";
 char symbols_rna[]     = "ACGU";
 char symbols_binary[]  = "01";
-// genetic code from tri-nucleotides to amino-acids
-// from AAA, AAC, AAG, AAT, ..., TTT to amino-acids
-char genetic_code_standard [] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVVXYXYSSSSXCWCLFLF";
-char codon_table[61]; // index from 61 non-stop codons to 64 codons
+// genetic code from tri-nucleotides (AAA, AAC, AAG, AAT, ..., TTT) to amino-acids
+// Source: http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi
+// Base1:                AAAAAAAAAAAAAAAACCCCCCCCCCCCCCCCGGGGGGGGGGGGGGGGTTTTTTTTTTTTTTTT
+// Base2:                AAAACCCCGGGGTTTTAAAACCCCGGGGTTTTAAAACCCCGGGGTTTTAAAACCCCGGGGTTTT
+// Base3:                ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT
+char genetic_code1[]  = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSS*CWCLFLF"; // Standard
+char genetic_code2[]  = "KNKNTTTT*S*SMIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Vertebrate Mitochondrial
+char genetic_code3[]  = "KNKNTTTTRSRSMIMIQHQHPPPPRRRRTTTTEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Yeast Mitochondrial
+char genetic_code4[]  = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Mold, Protozoan, etc.
+char genetic_code5[]  = "KNKNTTTTSSSSMIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Invertebrate Mitochondrial
+char genetic_code6[]  = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVVQYQYSSSS*CWCLFLF"; // Ciliate, Dasycladacean and Hexamita Nuclear
+// note: tables 7 and 8 are not available in NCBI
+char genetic_code9[]  = "NNKNTTTTSSSSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Echinoderm and Flatworm Mitochondrial
+char genetic_code10[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSCCWCLFLF"; // Euplotid Nuclear
+char genetic_code11[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSS*CWCLFLF"; // Bacterial, Archaeal and Plant Plastid
+char genetic_code12[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLSLEDEDAAAAGGGGVVVV*Y*YSSSS*CWCLFLF"; // Alternative Yeast Nuclear
+char genetic_code13[] = "KNKNTTTTGSGSMIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Ascidian Mitochondrial
+char genetic_code14[] = "NNKNTTTTSSSSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVVYY*YSSSSWCWCLFLF"; // Alternative Flatworm Mitochondrial
+char genetic_code15[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*YQYSSSS*CWCLFLF"; // Blepharisma Nuclear
+char genetic_code16[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*YLYSSSS*CWCLFLF"; // Chlorophycean Mitochondrial
+// note: tables 17-20 are not available in NCBI
+char genetic_code21[] = "NNKNTTTTSSSSMIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Trematode Mitochondrial
+char genetic_code22[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*YLY*SSS*CWCLFLF"; // Scenedesmus obliquus mitochondrial
+char genetic_code23[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSS*CWC*FLF"; // Thraustochytrium Mitochondrial
+char genetic_code24[] = "KNKNTTTTSSKSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Pterobranchia mitochondrial
+char genetic_code25[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSGCWCLFLF"; // Candidate Division SR1 and Gracilibacteria
 
 const double MIN_FREQUENCY          = 0.0001;
 const double MIN_FREQUENCY_DIFF     = 0.00001;
@@ -30,6 +52,9 @@ Alignment::Alignment()
 {
     num_states = 0;
     frac_const_sites = 0.0;
+    codon_table = NULL;
+    genetic_code = NULL;
+    non_stop_codon = NULL;
 }
 
 string &Alignment::getSeqName(int i) {
@@ -628,17 +653,19 @@ char Alignment::convertStateBack(char state) {
         else
             return '-';
     default:
-        return '?';
+    	// unknown
+        return '*';
     }
 }
 
 string Alignment::convertStateBackStr(char state) {
 	string str;
-	if (num_states != 61) {
+	if (num_states <= 20) {
 		str = convertStateBack(state);
 	} else {
-		// special treatment for codon data
+		// codon data
 		if (state >= num_states) return "???";
+		assert(codon_table);
 		int state_back = codon_table[(int)state];
 		str = symbols_dna[state_back/16];
 		str += symbols_dna[(state_back%16)/4];
@@ -652,9 +679,70 @@ void Alignment::convertStateStr(string &str, SeqType seq_type) {
         (*it) = convertState(*it, seq_type);
 }
 
+void Alignment::initCodon(char *sequence_type) {
+    // build index from 64 codons to non-stop codons
+	int transl_table = 1;
+	if (strlen(sequence_type) > 5) {
+		try {
+			transl_table = convert_int(sequence_type+5);
+		} catch (string str) {
+			outError("Wrong genetic code ", sequence_type);
+		}
+		switch (transl_table) {
+		case 1: genetic_code = genetic_code1; break;
+		case 2: genetic_code = genetic_code2; break;
+		case 3: genetic_code = genetic_code3; break;
+		case 4: genetic_code = genetic_code4; break;
+		case 5: genetic_code = genetic_code5; break;
+		case 6: genetic_code = genetic_code6; break;
+		case 9: genetic_code = genetic_code9; break;
+		case 10: genetic_code = genetic_code10; break;
+		case 11: genetic_code = genetic_code11; break;
+		case 12: genetic_code = genetic_code12; break;
+		case 13: genetic_code = genetic_code13; break;
+		case 14: genetic_code = genetic_code14; break;
+		case 15: genetic_code = genetic_code15; break;
+		case 16: genetic_code = genetic_code16; break;
+		case 21: genetic_code = genetic_code21; break;
+		case 22: genetic_code = genetic_code22; break;
+		case 23: genetic_code = genetic_code23; break;
+		case 24: genetic_code = genetic_code24; break;
+		case 25: genetic_code = genetic_code25; break;
+		default:
+			outError("Wrong genetic code ", sequence_type);
+			break;
+		}
+	} else {
+		genetic_code = genetic_code1;
+	}
+	assert(strlen(genetic_code) == 64);
+	cout << "Converting to codon sequences with genetic code " << transl_table << " ..." << endl;
+
+	int codon;
+	num_states = 0;
+	for (codon = 0; codon < strlen(genetic_code); codon++)
+		if (genetic_code[codon] != '*')
+			num_states++; // only count non-stop codons
+	codon_table = new char[num_states];
+	non_stop_codon = new char[strlen(genetic_code)];
+	int state = 0;
+	for (int codon = 0; codon < strlen(genetic_code); codon++) {
+		if (genetic_code[codon] != '*') {
+			non_stop_codon[codon] = state++;
+			codon_table[(int)non_stop_codon[codon]] = codon;
+		} else {
+			non_stop_codon[codon] = STATE_INVALID;
+		}
+	}
+}
+
 int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
     int seq_id;
     ostringstream err_str;
+    codon_table = NULL;
+    genetic_code = NULL;
+    non_stop_codon = NULL;
+
 
     if (nseq != seq_names.size()) throw "Different number of sequences than specified";
 
@@ -708,8 +796,8 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         if (!sequence_type)
             throw "Unknown sequence type.";
     }
-    SeqType user_seq_type;
     if (sequence_type && strcmp(sequence_type,"") != 0) {
+        SeqType user_seq_type;
         if (strcmp(sequence_type, "BIN") == 0) {
             num_states = 2;
             user_seq_type = SEQ_BINARY;
@@ -722,12 +810,11 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         } else if (strcmp(sequence_type, "MULTI") == 0) {
             cout << "Multi-state data with " << num_states << " alphabets" << endl;
             user_seq_type = SEQ_MULTISTATE;
-        } else if (strcmp(sequence_type, "CODON") == 0) {
-            num_states = 61;
-            user_seq_type = SEQ_CODON;
+        } else if (strncmp(sequence_type, "CODON", 5) == 0) {
             if (seq_type != SEQ_DNA) 
-				outWarning("You want to use codon models but the sequences were not detected as DNA");
-			seq_type = user_seq_type;
+        		outWarning("You want to use codon models but the sequences were not detected as DNA");
+            seq_type = user_seq_type = SEQ_CODON;
+        	initCodon(sequence_type);
         } else
             throw "Invalid sequence type.";
         if (user_seq_type != seq_type && seq_type != SEQ_UNKNOWN)
@@ -739,7 +826,6 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     int site, seq, num_gaps_only = 0;
 
     char char_to_state[NUM_CHAR];
-
     buildStateMap(char_to_state, seq_type);
 
     Pattern pat;
@@ -751,37 +837,34 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     clear();
     pattern_index.clear();
 
-    char non_stop_codon[64];
-    // build index from 64 codons to 61 non-stop codons
-    if (seq_type == SEQ_CODON) {
-    	// special treatment for codon sequences
-        char *genetic_code = genetic_code_standard;
-        assert(strlen(genetic_code) == 64);
-        int state = 0;
-        for (site = 0; site < strlen(genetic_code); site++) {
-        	if (genetic_code[site] != 'X') {
-        		non_stop_codon[site] = state++;
-        		codon_table[(int)non_stop_codon[site]] = site;
-        	} else {
-        		non_stop_codon[site] = STATE_INVALID;
-        	}
-        }
-        assert(state == 61);
-        cout << "Converting into codon tables..." << endl;
-    }
     for (site = 0; site < nsite; site+=step) {
         for (seq = 0; seq < nseq; seq++) {
             //char state = convertState(sequences[seq][site], seq_type);
             char state = char_to_state[(int)(sequences[seq][site])];
             if (seq_type == SEQ_CODON) {
+            	// special treatment for codon
             	char state2 = char_to_state[(int)(sequences[seq][site+1])];
             	char state3 = char_to_state[(int)(sequences[seq][site+2])];
             	if (state < 4 && state2 < 4 && state3 < 4) {
             		state = non_stop_codon[state*16 + state2*4 + state3];
-            	} else if (state == STATE_UNKNOWN && state2 == STATE_UNKNOWN && state3 == STATE_UNKNOWN) {
-            		state = STATE_UNKNOWN;
-            	} else
+            		if (state == STATE_INVALID) {
+                        err_str << "Sequence " << seq_names[seq] << " has stop codon " <<
+                        		sequences[seq][site] << sequences[seq][site+1] << sequences[seq][site+2] <<
+                        		" at site " << site+1 << endl;
+                        state = STATE_UNKNOWN;
+            		}
+            	} else if (state == STATE_INVALID || state2 == STATE_INVALID || state3 == STATE_INVALID) {
             		state = STATE_INVALID;
+            	} else {
+            		if (state != STATE_UNKNOWN || state2 != STATE_UNKNOWN || state3 != STATE_UNKNOWN) {
+            			ostringstream warn_str;
+                        warn_str << "Sequence " << seq_names[seq] << " has ambiguous character " <<
+                        		sequences[seq][site] << sequences[seq][site+1] << sequences[seq][site+2] <<
+                        		" at site " << site+1 << endl;
+                        outWarning(warn_str.str());
+            		}
+            		state = STATE_UNKNOWN;
+            	}
             }
             if (state == STATE_INVALID) {
                 err_str << "Sequence " << seq_names[seq] << " has invalid character " << sequences[seq][site];
@@ -1397,6 +1480,14 @@ int Alignment::countProperChar(int seq_id) {
 
 Alignment::~Alignment()
 {
+	if (codon_table) {
+		delete [] codon_table;
+		codon_table = NULL;
+	}
+	if (non_stop_codon) {
+		delete [] non_stop_codon;
+		non_stop_codon = NULL;
+	}
 }
 
 double Alignment::computeObsDist(int seq1, int seq2) {
@@ -1602,6 +1693,80 @@ void Alignment::getAppearance(char state, double *state_app) {
         }
 }
 
+void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq) {
+	int nseqs = getNSeq();
+	int i, j;
+
+	if (freq == FREQ_CODON_1x4) {
+		memset(ntfreq, 0, sizeof(double)*4);
+		for (iterator it = begin(); it != end(); it++) {
+			for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
+				int codon = codon_table[(int)(*it)[seq]];
+				int nt1 = codon / 16;
+				int nt2 = (codon % 16) / 4;
+				int nt3 = codon % 4;
+				ntfreq[nt1] += (*it).frequency;
+				ntfreq[nt2] += (*it).frequency;
+				ntfreq[nt3] += (*it).frequency;
+			}
+		}
+		double sum = 0;
+		for (i = 0; i < 4; i++)
+			sum += ntfreq[i];
+		for (i = 0; i < 4; i++)
+			ntfreq[i] /= sum;
+		if (verbose_mode >= VB_MED) {
+			for (i = 0; i < 4; i++)
+				cout << "  " << symbols_dna[i] << ": " << ntfreq[i];
+			cout << endl;
+		}
+		memcpy(ntfreq+4, ntfreq, sizeof(double)*4);
+		memcpy(ntfreq+8, ntfreq, sizeof(double)*4);
+		sum = 0;
+		for (i = 0; i < num_states; i++) {
+			int codon = codon_table[i];
+			state_freq[i] = ntfreq[codon/16] * ntfreq[(codon%16)/4] * ntfreq[codon%4];
+			sum += state_freq[i];
+		}
+		for (i = 0; i < num_states; i++)
+			state_freq[i] /= sum;
+	} else if (freq == FREQ_CODON_3x4) {
+		// F3x4 frequency model
+		memset(ntfreq, 0, sizeof(double)*12);
+		for (iterator it = begin(); it != end(); it++) {
+			for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
+				int codon = codon_table[(int)(*it)[seq]];
+				int nt1 = codon / 16;
+				int nt2 = (codon % 16) / 4;
+				int nt3 = codon % 4;
+				ntfreq[nt1] += (*it).frequency;
+				ntfreq[4+nt2] += (*it).frequency;
+				ntfreq[8+nt3] += (*it).frequency;
+			}
+		}
+		for (j = 0; j < 12; j+=4) {
+			double sum = 0;
+			for (i = 0; i < 4; i++)
+				sum += ntfreq[i+j];
+			for (i = 0; i < 4; i++)
+				ntfreq[i+j] /= sum;
+			if (verbose_mode >= VB_MED) {
+				for (i = 0; i < 4; i++)
+					cout << "  " << symbols_dna[i] << ": " << ntfreq[i+j];
+				cout << endl;
+			}
+		}
+		double sum = 0;
+		for (i = 0; i < num_states; i++) {
+			int codon = codon_table[i];
+			state_freq[i] = ntfreq[codon/16] * ntfreq[4+(codon%16)/4] * ntfreq[8+codon%4];
+			sum += state_freq[i];
+		}
+		for (i = 0; i < num_states; i++)
+			state_freq[i] /= sum;
+	}
+	convfreq(state_freq);
+}
 
 void Alignment::computeEmpiricalRate (double *rates) {
     int i, j, k;

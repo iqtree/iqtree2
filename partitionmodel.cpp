@@ -47,10 +47,15 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree)
 double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, double epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     double tree_lh = 0.0;
-    int part = 0;
-    for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++, part++) {
-        cout << "Optimizing " << (*it)->getModelName() << " parameters for partition " << tree->part_info[part].name << endl;
-        tree_lh += (*it)->getModelFactory()->optimizeParameters(fixed_len, write_info, epsilon);
+    int ntrees = tree->size();
+
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(+: tree_lh)
+	#endif
+    for (int part = 0; part < ntrees; part++) {
+        cout << "Optimizing " << tree->at(part)->getModelName() <<
+        		" parameters for partition " << tree->part_info[part].name << endl;
+        tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info, epsilon);
     }
     //return ModelFactory::optimizeParameters(fixed_len, write_info);
     return tree_lh;

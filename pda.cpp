@@ -1794,6 +1794,7 @@ int main(int argc, char *argv[])
 	int max_procs = omp_get_num_procs();
 	cout << "Threads: " << max_threads << " (" << max_procs << " CPU cores detected)" << endl;
 	if (max_threads > max_procs) outWarning("You have specified more threads than CPU cores available");
+	omp_set_nested(false); // don't allow nested OpenMP parallelism
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl;

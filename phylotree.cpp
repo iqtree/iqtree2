@@ -1561,8 +1561,10 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                     partial_lh_site[cat * nstates + state] = 1.0;
             } else {
                 // ambiguous character, for DNA, RNA
-                if (verbose_mode >= VB_MED)
+            	/*
+                if (verbose_mode >= VB_DEBUG)
                     cout << "Process ambiguous char " << (int) state << endl;
+                    */
                 state = state - (nstates - 1);
                 for (int state2 = 0; state2 < nstates && state2 <= 6; state2++)
                     if (state & (1 << state2)) {

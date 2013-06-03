@@ -2300,10 +2300,18 @@ void IQTree::saveCurrentTree(double cur_logl) {
         // online bootstrap
         int nptn = getAlnNPattern();
         int updated = 0;
-        for (int sample = 0; sample < boot_samples.size(); sample++) {
+        int nsamples = boot_samples.size();
+
+        for (int sample = 0; sample < nsamples; sample++) {
             double rell = 0.0;
+
+            // TODO: The following parallel is not very efficient, should wrap the above loop
+			#ifdef _OPENMP
+			#pragma omp parallel for reduction(+: rell)
+			#endif
             for (int ptn = 0; ptn < nptn; ptn++)
                 rell += pattern_lh[ptn] * boot_samples[sample][ptn];
+
             if (rell > boot_logl[sample] + params->ufboot_epsilon ||
             	(rell > boot_logl[sample] - params->ufboot_epsilon && random_double() <= 1.0/(boot_counts[sample]+1))) {
                 if (tree_str == "") {

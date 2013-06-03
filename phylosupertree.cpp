@@ -341,8 +341,12 @@ void PhyloSuperTree::mapTrees() {
 
 double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	double tree_lh = 0.0;
-	for (iterator it = begin(); it != end(); it++)
-		tree_lh += (*it)->computeLikelihood();
+	int ntrees = size();
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(+: tree_lh)
+	#endif
+	for (int i = 0; i < ntrees; i++)
+		tree_lh += at(i)->computeLikelihood();
 	return tree_lh;
 }
 
@@ -356,8 +360,13 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 
 double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance) {
 	double tree_lh = 0.0;
-	for (iterator it = begin(); it != end(); it++)
-		tree_lh += (*it)->optimizeAllBranches(my_iterations, tolerance);
+	int ntrees = size();
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(+: tree_lh)
+	#endif
+	for (int i = 0; i < ntrees; i++)
+		tree_lh += at(i)->optimizeAllBranches(my_iterations, tolerance);
+
 	if (my_iterations >= 100) computeBranchLengths();
 	return tree_lh;
 }
@@ -371,21 +380,24 @@ PhyloSuperTree::~PhyloSuperTree()
 
 
 double PhyloSuperTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH) {
-	int part = 0;
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
 	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
 	assert(nei1 && nei2);
 	double tree_lh = 0.0;
-	for (iterator it = begin(); it != end(); it++, part++) {
+	int ntrees = size();
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(+: tree_lh)
+	#endif
+	for (int part = 0; part < ntrees; part++) {
 		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 		double score;
 		if (part_info[part].cur_score == 0.0) 
-			part_info[part].cur_score = (*it)->computeLikelihood();
+			part_info[part].cur_score = at(part)->computeLikelihood();
 		if (nei1_part && nei2_part) {
 			if (part_info[part].opt_score[nei1_part->id] == 0.0) {
 				part_info[part].cur_brlen[nei1_part->id] = nei1_part->length;
-				part_info[part].opt_score[nei1_part->id] = (*it)->optimizeOneBranch((PhyloNode*)nei1_part->node, (PhyloNode*)nei2_part->node, clearLH);
+				part_info[part].opt_score[nei1_part->id] = at(part)->optimizeOneBranch((PhyloNode*)nei1_part->node, (PhyloNode*)nei2_part->node, clearLH);
 				part_info[part].opt_brlen[nei1_part->id] = nei1_part->length;
 			}
 			score = part_info[part].opt_score[nei1_part->id];
@@ -445,11 +457,15 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 	double bestScore = optimizeOneBranch(node1, node2, false);
 	double nonNNIScore = bestScore;
 	
-	int part = 0;
 	double nni1_score = 0.0, nni2_score = 0.0;
-	for (iterator it = begin(); it != end(); it++, part++) {
+	int ntrees = size();
+
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(+: nni1_score, nni2_score)
+	#endif
+	for (int part = 0; part < ntrees; part++) {
 		if (part_info[part].cur_score == 0.0) 
-			part_info[part].cur_score = (*it)->computeLikelihood();
+			part_info[part].cur_score = at(part)->computeLikelihood();
 		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 		if (!nei1_part || !nei2_part) {
@@ -461,7 +477,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 		if (part_info[part].opt_score[brid] == 0.0) {
 			double cur_len = nei1_part->length;
 			part_info[part].cur_brlen[brid] = cur_len;
-			part_info[part].opt_score[brid] = (*it)->optimizeOneBranch((PhyloNode*)nei1_part->node, (PhyloNode*)nei2_part->node, false);
+			part_info[part].opt_score[brid] = at(part)->optimizeOneBranch((PhyloNode*)nei1_part->node, (PhyloNode*)nei2_part->node, false);
 			part_info[part].opt_brlen[brid] = nei1_part->length;
 			// restore branch lengths
 			nei1_part->length = cur_len;
@@ -484,7 +500,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 			SwapNNIParam nni_param;
 			nni_param.node1_nei = node1_nei->link_neighbors[part];
 			nni_param.node2_nei = node2_nei->link_neighbors[part];
-			(*it)->swapNNIBranch(0.0, (PhyloNode*)nei2_part->node, (PhyloNode*)nei1_part->node, &nni_param);
+			at(part)->swapNNIBranch(0.0, (PhyloNode*)nei2_part->node, (PhyloNode*)nei1_part->node, &nni_param);
 
 			part_info[part].nni1_score[brid] = nni_param.nni1_score;
 			part_info[part].nni2_score[brid] = nni_param.nni2_score;

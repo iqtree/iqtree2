@@ -33,6 +33,12 @@ class ModelDNA : public GTRModel
 public:
 	/**
 		constructor
+		@param tree associated tree for the model
+	*/
+    ModelDNA(PhyloTree *tree, bool count_rates = true);
+
+	/**
+		constructor
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
@@ -92,6 +98,8 @@ protected:
 	*/
 	string param_spec;
 	
+	/** vector of boolean, TRUE if corresponding parameter is fixed and FALSE otherwise */
+	vector<bool> param_fixed;
 
 };
 

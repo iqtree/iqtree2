@@ -60,7 +60,7 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 	if ((model_str == "JC" && tree->aln->num_states == 4) || 
 		(model_str == "POISSON" && tree->aln->num_states == 20) ||
 		(model_str == "JC2" && tree->aln->num_states == 2) ||
-		(model_str == "JC61" && tree->aln->num_states == 61))
+		(model_str == "JCC" && tree->aln->codon_table))
 	{
 		model = new ModelSubst(tree->aln->num_states);
 	} else 
@@ -85,7 +85,7 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 		model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->num_states == 20) {
 		model = new ModelProtein(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->num_states == 61) {
+	} else if (tree->aln->codon_table) {
 		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else {
 		outError("Unsupported model type");
@@ -104,7 +104,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		if (tree->aln->num_states == 4) model_str = "HKY";
 		else if (tree->aln->num_states == 20) model_str = "WAG";
 		else if (tree->aln->num_states == 2) model_str = "JC2";
-		else if (tree->aln->num_states == 61) model_str = "JC61";
+		else if (tree->aln->codon_table) model_str = "JCC";
 		else model_str = "JC";
 	}
 	string::size_type posfreq;
@@ -128,6 +128,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			freq_type = FREQ_EQUAL;
 		else if (model_str.substr(posfreq) == "+FO" || model_str.substr(posfreq) == "+Fo")
 			freq_type = FREQ_ESTIMATE;
+		else if (model_str.substr(posfreq) == "+F1x4")
+			freq_type = FREQ_CODON_1x4;
+		else if (model_str.substr(posfreq) == "+F3x4")
+			freq_type = FREQ_CODON_3x4;
+		else if (model_str.substr(posfreq) == "+F3x4C" || model_str.substr(posfreq) == "+F3x4c")
+			freq_type = FREQ_CODON_3x4C;
 		else outError("Unknown state frequency type ",model_str.substr(posfreq));
 		model_str = model_str.substr(0, posfreq);
 	}
