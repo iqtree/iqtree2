@@ -4,6 +4,12 @@
 
 cmake_minimum_required(VERSION 2.6)
 
+project(iqtree)
+# The version number.
+set (iqtree_VERSION_MAJOR 0)
+set (iqtree_VERSION_MINOR 9)
+set (iqtree_VERSION_PATCH 5)
+
 set(BUILD_SHARED_LIBS OFF)
 
 if (NOT CMAKE_BUILD_TYPE) 
@@ -31,6 +37,13 @@ else()
 	message("Target OS     : Unknown")
 endif()
 
+if (CMAKE_COMPILER_IS_GNUCXX) 
+	message("Compiler      : GNU Compiler (gcc)")
+	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+else()
+	message("Compiler      : Unknown")
+endif()
+
 # verbose for 32 or 64 bit platform
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
 	message("Target binary : possibly 32-bit")
@@ -51,12 +64,6 @@ else()
 	message("Parallel      : None")
 	SET(EXE_SUFFIX "")
 endif()
-
-project(iqtree)
-# The version number.
-set (iqtree_VERSION_MAJOR 0)
-set (iqtree_VERSION_MINOR 9)
-set (iqtree_VERSION_PATCH 4)
 
 # check existence of a few basic functions
 include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
@@ -158,6 +165,7 @@ lpwrapper.c
 #modeltest_wrapper.c
 fmemopen.c
 nnisearch.c
+#modelcodon.cpp
 )
 
 
