@@ -144,6 +144,12 @@ struct NNIMove {
     //positive value for a positive NNI
     double delta;
 
+    // length of the central branch before NNI
+    double oldLen;
+
+    // length of the central branch after NNI
+    double newLen;
+
     bool operator<(const NNIMove & rhs) const {
         return loglh > rhs.loglh;
         //return delta > rhs.delta;
@@ -496,17 +502,10 @@ public:
     double computeLeastSquareBranLen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
-     * \brief calculate the inter subtree distances \f$ D_{XY} \f$ for all pairs of subtrees X and Y.
-     * \f$ D_{XY} = \sum\limits_{j=1}^{n_Xn_Y} d^j_{XY}\f$
-     */
-    void computeAllSubtreeDists(PhyloNode *dad = NULL, PhyloNode *node = NULL);
-
-    /**
      * Update all subtree distances that are affect by doing an NNI on branch (node1-node2)
-     * @param node1 
-     * @param node2 
+     * @param nni NNI move that is carried out
      */
-    void updateSubtreeDists(PhyloNode* node1, PhyloNode *node2);
+    void updateSubtreeDists(NNIMove &nni);
     
     /**
      * Compute all pairwise distance of subtree rooted at \a source and other subtrees
@@ -791,8 +790,9 @@ public:
 
     /**
             Do an NNI
+            @param move reference to an NNI move object containing information about the move
      */
-    virtual double doNNI(NNIMove move);
+    virtual void doNNI(NNIMove &move);
 
     /****************************************************************************
             Stepwise addition (greedy) by maximum likelihood

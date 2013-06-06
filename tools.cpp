@@ -585,10 +585,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_spr = false;
     params.nexus_output = false;
     params.k_representative = 4;
-    params.loglh_epsilon = 0.0001;
+    params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
+    params.nni5Branches = false;
+    params.nniThresHold = 0.1;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
+    params.ls_var_type = OLS;
+    params.fast_eval = false;
     params.p_delete = 0.0;
     params.min_iterations = -1;
     params.max_iterations = 1;
@@ -1485,6 +1489,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
+            } else if (strcmp(argv[cnt], "-fiveBran") == 0) {
+            	params.nni5Branches = true;
+            } else if (strcmp(argv[cnt], "-nniThreshold") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            		throw "Use -nniThreshold <threshold>";
+            	params.nniThresHold = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-smooth") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1492,6 +1503,25 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.numSmoothTree = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-lsnni") == 0) {
                 params.leastSquareNNI = true;
+            } else if (strcmp(argv[cnt], "-fast_eval") == 0) {
+                params.fast_eval = true;
+            } else if(strcmp(argv[cnt], "-ls_var") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -ls_var <ols|first_taylor|fitch_margoliash|second_taylor|pauplin>";
+                if (strcmp(argv[cnt], "ols") == 0) {
+                    params.ls_var_type = OLS;
+                } else if (strcmp(argv[cnt], "first_taylor") == 0) {
+                    params.ls_var_type = FIRST_TAYLOR;
+                } else if (strcmp(argv[cnt], "fitch_margoliash") == 0) {
+                    params.ls_var_type = FITCH_MARGOLIASH;
+                } else if (strcmp(argv[cnt], "second_taylor") == 0) {
+                    params.ls_var_type = SECOND_TAYLOR;
+                } else if (strcmp(argv[cnt], "pauplin") == 0) {
+                    params.ls_var_type = PAUPLIN;
+                } else {
+                    throw "Use -ls_var <ols|first_taylor|fitch_margoliash|second_taylor|pauplin>";
+                }
             } else if (strcmp(argv[cnt], "-eps") == 0) {
                 cnt++;
                 if (cnt >= argc)

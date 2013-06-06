@@ -438,21 +438,24 @@ public:
         return nni_cutoff;
     }
 
+    /**
+     *  Tree data structure for RAxML kernel
+     */
     tree* raxmlTree;
 
 protected:
+
+    /**
+     *  Current IQPNNI iteration number
+     */
+    int curIQPIteration;
     /**
             criterion to assess important quartet
      */
     IQP_ASSESS_QUARTET iqp_assess_quartet;
 
     /**
-     *  Tree data structure for RAxML kernel
-     */
-
-
-    /**
-       The lamda number for NNI search (described in PhyML Paper)
+       The lambda number for NNI search (described in PhyML Paper)
      */
     double startLambda;
 

@@ -1634,7 +1634,7 @@ void createFirstNNITree(Params &params, IQTree &iqtree, double bestTreeScore,
     if (!params.phylolib) {
         iqtree.optimizeNNI();
     } else {
-        iqtree.curScore = iqtree.optimizeNNIRax();             
+        iqtree.curScore = iqtree.optimizeNNIRax();
         // read in new tree
         int printBranchLengths = TRUE;
         Tree2String(iqtree.raxmlTree->tree_string, iqtree.raxmlTree,
@@ -1720,13 +1720,13 @@ double doModelOptimization(IQTree& iqtree, Params& params) {
     double bestTreeScore;
     if (!params.phylolib) {
         cout << endl;
-        cout << "Optimizing model parameters and branch lengths" << endl;
+        cout << "Optimizing model parameters and branch lengths using IQTree kernel" << endl;
         bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
                 params.fixed_branch_length, true, 0.1);
         cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
         iqtree.initiateMyEigenCoeff();
     } else {
-        cout << "Optimizing model parameters and branch lengths" << endl;
+        cout << "Optimizing model parameters and branch lengths using Phylolib kernel" << endl;
         double t_modOpt_start = getCPUTime();
         modOpt(iqtree.raxmlTree, 0.1);
         evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, FALSE);
@@ -2092,17 +2092,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
         cout << "Optimizing model parameters and branch lengths using Phylolib"
                 << endl;
         double t_modOpt_start = getCPUTime();
-        //evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, TRUE);
-        //smoothTree(iqtree.raxmlTree, 32);
+        evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, TRUE);
         modOpt(iqtree.raxmlTree, 0.1);
         evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, FALSE);
-        if (verbose_mode >= VB_MED) {
-            // Write phylolib model parameters to a file
-            iqtree.printPhylolibModelParams(".phylolibmodels");
-            
-            // Write phylolib tree to a file:
-            iqtree.printPhylolibTree(".phylolibtree_start");
-        }
+        // Write phylolib model parameters to a file
+        cout << "Printing phylolib model file" << endl;
+        iqtree.printPhylolibModelParams(".phylolib.models");
+        // Write phylolib tree to a file:
+        iqtree.printPhylolibTree(".phylolib.start_tree");
 
         double t_modOpt = getCPUTime() - t_modOpt_start;
         cout << "Phylolib: log-likelihood of the current tree: "
@@ -2129,6 +2126,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
     //bool saved_estimate_nni = estimate_nni_cutoff;
     //estimate_nni_cutoff = false; // do not estimate NNI cutoff based on initial BIONJ tree
 
+    if (params.leastSquareNNI) {
+    	iqtree.computeSubtreeDists();
+    }
     if (params.min_iterations > 0) {
         createFirstNNITree(params, iqtree, iqtree.curScore, alignment);
     }

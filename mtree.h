@@ -588,6 +588,8 @@ protected:
      */
     inline string nodePair2String(Node* node1, Node* node2) {
         string key("");
+        assert(node1->id);
+        assert(node2->id);
         if (node1->id < node2->id) {
             key += convertIntToString(node1->id) + "-"
                     + convertIntToString(node2->id);

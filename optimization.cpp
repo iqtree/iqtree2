@@ -413,12 +413,14 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 			dxold=dx;
 			dx=0.5*(xh-xl);
 			rts=xl+dx;
+            d2l = df;
 			if (xl == rts) return rts;
 		} else {
 			dxold=dx;
 			dx=f/df;
 			temp=rts;
 			rts -= dx;
+			d2l = df;
 			if (temp == rts) return rts;
 		}
 		if (fabs(dx) < xacc) { fm = computeFunction(rts); return rts; }
@@ -434,6 +436,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 		else
 			xh=rts;
 	}
+	//return rts;
 	nrerror("Maximum number of iterations exceeded in minimizeNewton");
 	d2l = 0.0;
 	return 0.0;

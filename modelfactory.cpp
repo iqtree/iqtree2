@@ -100,6 +100,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	/* create site-rate heterogeneity */
 	if (pos != string::npos) {
 		string rate_str = model_str.substr(pos);
+		model_str = model_str.substr(0, pos);
 		int num_rate_cats = params.num_rate_cats;
 		if (rate_str.substr(0,4) == "+I+G") {
 			if (rate_str.length() > 4 && rate_str[4] != '+') {
@@ -165,7 +166,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			site_rate = new RateKategory(num_rate_cats, tree);
 		} else
 			outError("Invalid rate heterogeneity type");
-		model_str = model_str.substr(0, pos);
+		//model_str = model_str.substr(0, pos);
 	} else {
 		site_rate = new RateHeterogeneity();
 		site_rate->setTree(tree);

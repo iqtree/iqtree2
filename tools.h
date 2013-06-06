@@ -314,6 +314,10 @@ enum IQP_ASSESS_QUARTET {
     IQP_DISTANCE, IQP_PARSIMONY, IQP_BOOTSTRAP
 };
 
+enum LEAST_SQUARE_VAR {
+    OLS, FIRST_TAYLOR, FITCH_MARGOLIASH, SECOND_TAYLOR, PAUPLIN
+};
+
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model
 const int MCAT_MEAN = 2; // take the mean of rates for each category for Meyer & von Haeseler model
 const int MCAT_PATTERN = 4; // categorize site-patterns instead of sites for Meyer & von Haeseler model
@@ -335,6 +339,27 @@ struct NNIInfo {
         program parameters, everything is specified here
  */
 struct Params {
+
+    /**
+     *  Evaluating NNI without re-optimizing the central branch
+     */
+    bool fast_eval;
+
+    /**
+     *  Different type of Least Square variances
+     */
+	LEAST_SQUARE_VAR ls_var_type;
+
+	/**
+	 *  Threshold (likelihood difference between NNI and current tree)
+	 *  to start optimizing 5 branches
+	 */
+	double nniThresHold;
+
+	/**
+	 *  Optimize 5 branches on NNI tree
+	 */
+	bool nni5Branches;
     
     /**
      *  Number of smoothTree iteration carried out in Phylolib for IQP Tree
@@ -1621,5 +1646,6 @@ void sort_index(T* first, T* last, int *index) {
     quicksort_index(arr, index, 0, (last - first) - 1);
     delete [] arr;
 }
+
 
 #endif

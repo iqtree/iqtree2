@@ -1425,7 +1425,8 @@ double Alignment::readDist(istream &in, double *dist_mat) {
         //cout << endl;        
     }
     //cout << "Internal distance matrix: " << endl;
-    // Now initialize internal distance matrix
+    // Now initialize the internal distance matrix, in which the sequence order is the same
+    // as in the alignment
     for (seq1 = 0; seq1 < nseqs; seq1++) {
         for (seq2 = 0; seq2 < nseqs; seq2++) {
             string seq1Name = getSeqName(seq1);
