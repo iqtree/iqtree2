@@ -72,7 +72,7 @@ extern "C" {
 #define MAX_TIP_EV     0.999999999 /* max tip vector value, sum of EVs needs to be smaller than 1.0, otherwise the numerics break down */
 #define MAX_LOCAL_SMOOTHING_ITERATIONS     32          /* maximum iterations of smoothings per insert in the */
 #define iterations     10          /* maximum iterations of iterations per insert */
-#define newzpercycle   100           /* iterations of makenewz per tree traversal */
+#define newzpercycle   2           /* iterations of makenewz per tree traversal */
 #define nmlngth        256         /* number of characters in species name */
 #define deltaz         0.00001     /* test of net branch length change in update */
 #define defaultz       0.9         /* value of z assigned as starting point */
