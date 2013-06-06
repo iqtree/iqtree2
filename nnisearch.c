@@ -9,6 +9,7 @@
 #include "phylolib.h"
 #include <math.h>
 #include "fmemopen.h"
+//#include "tools.h"
 
 #if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/resource.h>
@@ -24,6 +25,7 @@ enum VerboseMode {
         verbose level on the screen
  */
 extern int verbose_mode;
+
 
 double TOL_LIKELIHOOD_PHYLOLIB;
 int numSmoothTree;
@@ -55,7 +57,7 @@ int compareDouble(const void * a, const void * b) {
     else return 0;
 }
 
-double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut) {
+double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut, int numSmooth) {
     double curScore = tr->likelihood;
 
     /* Initialize the NNI list */
@@ -88,7 +90,7 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut) {
     // sort impNNIList
     qsort(impNNIList, cnt_nni, sizeof (nniMove), cmp_nni);
 
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VB_DEBUG)
     {
     	int i;
     	for (i = cnt_nni-1; i >= 0; i--) {
@@ -127,12 +129,16 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut) {
             numNonConflictNNI++;
         }
     }
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VB_DEBUG)
     {
     	int i;
     	for (i = 0; i < numNonConflictNNI; i++) {
     		printf("Log-likelihood of non-conflicting NNI %d : %10.6f \n", i, nonConfNNIList[i].likelihood);
+    		printf("Log-likelihood before NNI : %10.6f \n", nonConfNNIList[i].likelihood - nonConfNNIList[i].deltaLH);
+    		printf("Old branch length : %10.6f \n", nonConfNNIList[i].z0[0]);
+    		printf("New branch length : %10.6f \n", nonConfNNIList[i].z[0]);
     	}
+
     }
 
     // Applying non-conflicting NNI moves
@@ -156,8 +162,7 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut) {
         }
 
         // Re-optimize all branches
-        smoothTree(tr, numSmoothTree);
-        evaluateGeneric(tr, tr->start, FALSE);
+        treeEvaluate(tr, numSmooth);
         if (tr->likelihood < curScore) {
             //printf("Tree likelihood gets worse after applying %d NNI\n", numNNI2Apply);
             //printf("curScore = %30.20f\n", curScore);
@@ -207,6 +212,35 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut) {
     return tr->likelihood;
 }
 
+void optimizeOneBranches(tree* tr, nodeptr p, int numNRStep) {
+    nodeptr  q;
+    int i;
+    double   z[NUM_BRANCHES], z0[NUM_BRANCHES];
+
+    q = p->back;
+
+    for(i = 0; i < tr->numBranches; i++)
+      z0[i] = q->z[i];
+
+    if(tr->numBranches > 1)
+      makenewzGeneric(tr, p, q, z0, numNRStep, z, TRUE);
+    else
+      makenewzGeneric(tr, p, q, z0, numNRStep, z, FALSE);
+
+    for(i = 0; i < tr->numBranches; i++)
+    {
+      if(!tr->partitionConverged[i])
+      {
+        if(ABS(z[i] - z0[i]) > deltaz)
+        {
+          tr->partitionSmoothed[i] = FALSE;
+        }
+
+        p->z[i] = q->z[i] = z[i];
+      }
+    }
+}
+
 double doOneNNI(tree * tr, nodeptr p, int swap, int optBran) {
     nodeptr q;
     nodeptr tmp;
@@ -240,7 +274,7 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int optBran) {
     if (optBran) {
         newviewGeneric(tr, p, FALSE);
         newviewGeneric(tr, q, FALSE);
-        update(tr, p);
+        optimizeOneBranches(tr, p, 100);
 //        int i;
 //        double z[NUM_BRANCHES], z0[NUM_BRANCHES];
 //        for (i = 0; i < tr->numBranches; i++)
@@ -368,6 +402,18 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
     if (nni1.deltaLH > TOL_LIKELIHOOD_PHYLOLIB && nni1.deltaLH > nni2.deltaLH) {
         return nni1;
     } else if (nni1.deltaLH > TOL_LIKELIHOOD_PHYLOLIB && nni1.deltaLH < nni2.deltaLH) {
+//        if (verbose_mode >= VB_DEBUG) {
+//            printf("Both NNIs are positive. NNI 1 has log-lh = %10.6f and NNI 2 has log-lh = %10.6f \n", nni1.likelihood, nni2.likelihood);
+//            if ( ABS(nni1.likelihood - nni2.likelihood) < 0.1 ) {
+//                float p = (float) rand() / RAND_MAX;
+//                printf("Probability = %10.6f \n", p);
+//                if (  p < 0.5 ) {
+//                    return nni1;
+//                } else {
+//                    return nni2;
+//                }
+//            }
+//        }
         return nni2;
     } else if (nni1.deltaLH < TOL_LIKELIHOOD_PHYLOLIB && nni2.deltaLH > TOL_LIKELIHOOD_PHYLOLIB) {
         return nni2;
