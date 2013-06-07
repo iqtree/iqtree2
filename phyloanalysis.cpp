@@ -2491,7 +2491,21 @@ void runPhyloAnalysis(Params &params) {
 
 	if (params.aln_output) {
 		// convert alignment to other format and write to output file
-		if (params.gap_masked_aln) {
+		if (params.num_bootstrap_samples || params.print_bootaln) {
+			// create bootstrap alignment
+			Alignment* bootstrap_alignment;
+			cout << "Creating bootstrap alignment..." << endl;
+			if (alignment->isSuperAlignment())
+				bootstrap_alignment = new SuperAlignment;
+			else
+				bootstrap_alignment = new Alignment;
+			bootstrap_alignment->createBootstrapAlignment(alignment);
+			delete alignment;
+			alignment = bootstrap_alignment;
+		}
+		if (alignment->isSuperAlignment()) {
+			((SuperAlignment*)alignment)->printCombinedAlignment(params.aln_output);
+		} else if (params.gap_masked_aln) {
 			Alignment out_aln;
 			Alignment masked_aln(params.gap_masked_aln, params.sequence_type,
 					params.intype);
