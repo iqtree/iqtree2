@@ -2262,9 +2262,7 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
     double ferror, optx;
     theta_computed = false;
     if (optimize_by_newton) { // Newton-Raphson method
-        if (!params->phylolib) {
             optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
-        }
     } else
         // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
