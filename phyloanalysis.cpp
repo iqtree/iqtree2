@@ -38,6 +38,7 @@
 //#include "modeltest_wrapper.h"
 #include "modelprotein.h"
 #include "modelbin.h"
+#include "modelcodon.h"
 #include "stoprule.h"
 
 #include "mtreeset.h"
@@ -238,13 +239,17 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
             NULL);
     rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1,
             params.gamma_median, -1, NULL);
-    GTRModel *subst_model;
+	GTRModel *subst_model = NULL;
     if (nstates == 2)
-        subst_model = new ModelBIN("JC2", FREQ_UNKNOWN, in_tree);
+		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
     else if (nstates == 4)
-        subst_model = new ModelDNA("JC", FREQ_UNKNOWN, in_tree);
-    else
-        subst_model = new ModelProtein("WAG", FREQ_UNKNOWN, in_tree);
+		subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", in_tree);
+	else if (nstates == 20)
+		subst_model = new ModelProtein("WAG", "", FREQ_UNKNOWN, "", in_tree);
+	else if (in_tree->aln->codon_table)
+		subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", in_tree);
+
+	assert(subst_model);
 
     ModelFactory *model_fac = new ModelFactory();
 
@@ -291,7 +296,7 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
                     ((nstates == 4) ?
                     dna_model_names[model].c_str() :
                     aa_model_names[model].c_str()),
-                    FREQ_UNKNOWN);
+					"", FREQ_UNKNOWN, "");
             subst_model->setTree(tree);
             tree->params = &params;
 
@@ -521,7 +526,10 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
     return treels.size();
 }
 
-void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids) {
+//const double TOL_RELL_SCORE = 0.01;
+
+void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids)
+{
     if (!params.treeset_file)
         return;
     cout << endl;
@@ -673,15 +681,23 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
         cout << "Performing RELL test..." << endl;
         int *maxtid = new int[params.topotest_replicates];
         double *maxL = new double[params.topotest_replicates];
+		int *maxcount = new int[params.topotest_replicates];
         memset(maxtid, 0, params.topotest_replicates * sizeof (int));
         memcpy(maxL, tree_lhs, params.topotest_replicates * sizeof (double));
-
+		for (boot = 0; boot < params.topotest_replicates; boot++)
+			maxcount[boot] = 1;
         for (tid = 1; tid < ntrees; tid++) {
             double *tree_lhs_offset = tree_lhs + (tid * params.topotest_replicates);
             for (boot = 0; boot < params.topotest_replicates; boot++)
-                if (tree_lhs_offset[boot] > maxL[boot]) {
+				if (tree_lhs_offset[boot] > maxL[boot] + params.ufboot_epsilon) {
                     maxL[boot] = tree_lhs_offset[boot];
                     maxtid[boot] = tid;
+					maxcount[boot] = 1;
+				} else if (tree_lhs_offset[boot] > maxL[boot] - params.ufboot_epsilon &&
+						random_double() <= 1.0/(maxcount[boot]+1)) {
+					maxL[boot] = max(maxL[boot],tree_lhs_offset[boot]);
+					maxtid[boot] = tid;
+					maxcount[boot]++;
                 }
         }
         for (boot = 0; boot < params.topotest_replicates; boot++)
@@ -706,7 +722,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
         if (fabs(prob_sum - 1.0) > 0.01)
             outError("Internal error: Wrong ", __func__);
 
-
+		delete [] maxcount;
         delete [] maxL;
         delete [] maxtid;
 
@@ -928,7 +944,7 @@ void reportAlignment(ofstream &out, Alignment &alignment) {
             << alignment.getNSite() << " "
             << ((alignment.num_states == 2) ?
             "binary" :
-            ((alignment.num_states == 4) ? "nucleotide" : "amino-acid"))
+					((alignment.num_states == 4) ? "nucleotide" : (alignment.num_states == 20) ? "amino-acid" : "codon"))
             << " sites" << endl << "Number of constant sites: "
             << round(alignment.frac_const_sites * alignment.getNSite())
             << " (= " << alignment.frac_const_sites * 100 << "% of all sites)"
@@ -948,7 +964,7 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
             ((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc"))
             << " scores: " << endl << endl;
     out << "Model             LogL        AIC       w-AIC     AICc     w-AICc      BIC      w-BIC" << endl
-            << "-------------------------------------------------------------------------------------" << endl;
+		<< "----------------------------------------------------------------------------------------" << endl;
     for (vector<ModelInfo>::iterator it = model_info.begin(); it != model_info.end(); it++) {
         out.width(13);
         out << left << it->name << " ";
@@ -988,8 +1004,8 @@ void reportModel(ofstream &out, PhyloTree &tree) {
     if (tree.getModel()->isReversible()) {
         for (i = 0, k = 0; i < tree.aln->num_states - 1; i++)
             for (j = i + 1; j < tree.aln->num_states; j++, k++) {
-                out << "  " << tree.aln->convertStateBack(i) << "-"
-                        << tree.aln->convertStateBack(j) << ": " << rate_mat[k];
+				out << "  " << tree.aln->convertStateBackStr(i) << "-"
+						<< tree.aln->convertStateBackStr(j) << ": " << rate_mat[k];
                 if (tree.aln->num_states <= 4)
                     out << endl;
                 else if (k % 5 == 4)
@@ -999,8 +1015,8 @@ void reportModel(ofstream &out, PhyloTree &tree) {
         for (i = 0, k = 0; i < tree.aln->num_states; i++)
             for (j = 0; j < tree.aln->num_states; j++)
                 if (i != j) {
-                    out << "  " << tree.aln->convertStateBack(i) << "-"
-                            << tree.aln->convertStateBack(j) << ": "
+					out << "  " << tree.aln->convertStateBackStr(i) << "-"
+							<< tree.aln->convertStateBackStr(j) << ": "
                             << rate_mat[k];
                     if (tree.aln->num_states <= 4)
                         out << endl;
@@ -1044,17 +1060,18 @@ void reportModel(ofstream &out, PhyloTree &tree) {
         double *state_freqs = new double[tree.aln->num_states];
         tree.getModel()->getStateFrequency(state_freqs);
         for (i = 0; i < tree.aln->num_states; i++)
-            out << "  pi(" << tree.aln->convertStateBack(i) << ") = "
+			out << "  pi(" << tree.aln->convertStateBackStr(i) << ") = "
             << state_freqs[i] << endl;
         delete[] state_freqs;
         out << endl;
+		if (tree.aln->num_states <= 20) {
         // report Q matrix
         double *q_mat = new double[tree.aln->num_states * tree.aln->num_states];
         tree.getModel()->getQMatrix(q_mat);
 
         out << "Rate matrix Q:" << endl << endl;
         for (i = 0, k = 0; i < tree.aln->num_states; i++) {
-            out << "  " << tree.aln->convertStateBack(i);
+				out << "  " << tree.aln->convertStateBackStr(i);
             for (j = 0; j < tree.aln->num_states; j++, k++) {
                 out << "  ";
                 out.width(8);
@@ -1065,6 +1082,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
         out << endl;
         delete[] q_mat;
     }
+}
 }
 
 void reportRate(ofstream &out, PhyloTree &tree) {
@@ -1577,6 +1595,9 @@ void reportPhyloAnalysis(Params &params, string &original_model,
                 << endl << "  Split support values:     " << params.out_prefix
                 << ".splits" << endl << "  Consensus tree:           "
                 << params.out_prefix << ".contree" << endl;
+		if (params.print_ufboot_trees)
+			cout << "  UFBoot trees:             " << params.out_prefix << ".ufboot" << endl;
+
     }
 
     if (params.treeset_file) {
@@ -1692,6 +1713,15 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
             case FREQ_ESTIMATE:
                 cout << "optimized";
                 break;
+		case FREQ_CODON_1x4:
+			cout << "counted 1x4";
+			break;
+		case FREQ_CODON_3x4:
+			cout << "counted 3x4";
+			break;
+		case FREQ_CODON_3x4C:
+			cout << "counted 3x4-corrected";
+			break;
             default:
                 outError("Wrong specified state frequencies");
         }
@@ -1751,9 +1781,10 @@ void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
     longest_dist = iqtree.computeDist(params, alignment, ml_dist, ml_var, dist_file);
     cout << " " << (getCPUTime() - begin_time) << " sec" << endl;
     if (longest_dist > MAX_GENETIC_DIST * 0.99) {
-        cout << "Some ML distances are too long, using old distances..."
-                << endl;
-    } else {
+		outWarning("Some pairwise ML distances are too long (saturated)");
+		//cout << "Some ML distances are too long, using old distances..." << endl;
+	} //else
+	{
         memmove(iqtree.dist_matrix, ml_dist,
                 sizeof (double) * alignment->getNSeq() * alignment->getNSeq());
         memmove(iqtree.var_matrix, ml_var,
@@ -1836,10 +1867,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
     longest_dist = iqtree.computeDist(params, alignment, iqtree.dist_matrix, iqtree.var_matrix, dist_file);
     checkZeroDist(alignment, iqtree.dist_matrix);
     if (longest_dist > MAX_GENETIC_DIST * 0.99) {
-        cout << "Some distances are too long, computing observed distances..."
-                << endl;
-        longest_dist = iqtree.computeObsDist(params, alignment, iqtree.dist_matrix, dist_file);
-        assert(longest_dist <= 1.0);
+		outWarning("Some pairwise distances are too long (saturated)");
+		//cout << "Some distances are too long, computing observed distances..." << endl;
+		//longest_dist = iqtree.computeObsDist(params, alignment, iqtree.dist_matrix, dist_file);
+		//assert(longest_dist <= 1.0);
     }
 
     // start the search with user-defined tree
@@ -2131,6 +2162,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
     }
     if (params.min_iterations > 0) {
         createFirstNNITree(params, iqtree, iqtree.curScore, alignment);
+		if (iqtree.isSuperTree())
+			((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+
     }
 
     //estimate_nni_cutoff = saved_estimate_nni;
@@ -2275,6 +2309,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
                 << iqtree.curScore << endl;
     }
 
+	if (iqtree.isSuperTree()) ((PhyloSuperTree*) &iqtree)->mapTrees();
+
     if (params.min_iterations) {
         cout << endl;
         iqtree.setAlignment(alignment);
@@ -2287,6 +2323,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
     } else {
         iqtree.setBestScore(iqtree.curScore);
     }
+
+	if (iqtree.isSuperTree()) ((PhyloSuperTree*) &iqtree)->computeBranchLengths();
 
     cout << endl;
     cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
@@ -2433,8 +2471,11 @@ void runPhyloAnalysis(Params &params) {
     Alignment *alignment;
     IQTree *tree;
     vector<ModelInfo> model_info;
+	// read in alignment
     if (params.partition_file) {
+		// initialize supertree stuff if user specify partition file with -sp option
         tree = new PhyloSuperTree(params);
+		// this alignment will actually be of type SuperAlignment
         alignment = tree->aln;
     } else {
         alignment = new Alignment(params.aln_file, params.sequence_type,
@@ -2451,6 +2492,7 @@ void runPhyloAnalysis(Params &params) {
     }
 
     if (params.aln_output) {
+		// convert alignment to other format and write to output file
         if (params.gap_masked_aln) {
             Alignment out_aln;
             Alignment masked_aln(params.gap_masked_aln, params.sequence_type,
@@ -2471,10 +2513,13 @@ void runPhyloAnalysis(Params &params) {
                 params.ref_seq_name);
     } else if (params.gbo_replicates > 0 && params.user_file
             && params.second_tree) {
+		// run one of the UFBoot analysis
         runGuidedBootstrap(params, alignment, *tree);
     } else if (params.avh_test) {
+		// run one of the wondering test for Arndt
         runAvHTest(params, alignment, *tree);
     } else if (params.num_bootstrap_samples == 0) {
+		// the main Maximum likelihood tree reconstruction
         alignment->checkGappySeq();
         runPhyloAnalysis(params, original_model, alignment, *tree, model_info);
         if (params.gbo_replicates && params.online_bootstrap) {
@@ -2490,6 +2535,7 @@ void runPhyloAnalysis(Params &params) {
         //if (original_model != "TESTONLY")
         reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
     } else {
+		// the classical non-parameter bootstrap (SBS)
         // turn off aLRT test
         int saved_aLRT_replicates = params.aLRT_replicates;
         params.aLRT_replicates = 0;
@@ -2804,12 +2850,14 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
         sg.scaleWeight(scale, false, params->numeric_precision);
     }
 
+
+
     cout << "Creating greedy consensus tree..." << endl;
     MTree mytree;
     SplitGraph maxsg;
     sg.findMaxCompatibleSplits(maxsg);
 
-    if (verbose_mode >= VB_MED)
+	if (verbose_mode >= VB_MAX)
         maxsg.saveFileStarDot(cout);
     cout << "convert compatible split system into tree..." << endl;
     mytree.convertToTree(maxsg);
@@ -2837,6 +2885,20 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 
     mytree.printTree(out_file.c_str(), WT_BR_CLADE);
     cout << "Consensus tree written to " << out_file << endl;
+
+	if (output_tree)
+		out_file = output_tree;
+	else {
+		if (out_prefix)
+			out_file = out_prefix;
+		else
+			out_file = input_trees;
+		out_file += ".splits";
+	}
+
+    //sg.scaleWeight(0.01, false, 4);
+    sg.saveFile(out_file.c_str(), IN_OTHER, true);
+    cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
 
 }
 
@@ -2868,5 +2930,18 @@ void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
 
     sg.saveFile(out_file.c_str(), IN_NEXUS);
     cout << "Consensus network printed to " << out_file << endl;
+
+	if (output_tree)
+		out_file = output_tree;
+	else {
+		if (out_prefix)
+			out_file = out_prefix;
+		else
+			out_file = input_trees;
+		out_file += ".splits";
+	}
+
+	sg.saveFile(out_file.c_str(), IN_OTHER, true);
+    cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
 
 }

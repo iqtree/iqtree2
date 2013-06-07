@@ -26,11 +26,15 @@
 #include "modeldna.h"
 #include "modelprotein.h"
 #include "modelbin.h"
+#include "modelcodon.h"
 #include "modelset.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
 #include "ratekategory.h"
 #include "ngs.h"
+
+const char OPEN_BRACKET = '{';
+const char CLOSE_BRACKET = '}';
 
 ModelFactory::ModelFactory() { 
 	model = NULL; 
@@ -39,18 +43,35 @@ ModelFactory::ModelFactory() {
 	is_storing = false;
 }
 
-ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type, PhyloTree* tree, bool count_rates)
+ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type, string freq_params,
+		PhyloTree* tree, bool count_rates)
 {
 	ModelSubst *model = NULL;
+	//cout << "Numstates: " << tree->aln->num_states << endl;
+	string model_params;
+	size_t pos = model_str.find(OPEN_BRACKET);
+	if (pos != string::npos) {
+		if (model_str.find(CLOSE_BRACKET) != model_str.length()-1)
+			outError("Close bracket not found at the end of ", model_str);
+		model_params = model_str.substr(pos+1, model_str.length()-pos-2);
+		model_str = model_str.substr(0, pos);
+	}
+
 	if ((model_str == "JC" && tree->aln->num_states == 4) || 
 		(model_str == "POISSON" && tree->aln->num_states == 20) ||
-		(model_str == "JC2" && tree->aln->num_states == 2)) 
+		(model_str == "JC2" && tree->aln->num_states == 2) ||
+		(model_str == "JCC" && tree->aln->codon_table))
 	{
 		model = new ModelSubst(tree->aln->num_states);
 	} else 
 	if ((model_str == "GTR" && tree->aln->num_states == 4) ||
-		(model_str == "GTR2" && tree->aln->num_states == 2)) {
+		(model_str == "GTR2" && tree->aln->num_states == 2) ||
+		(model_str == "GTR20" && tree->aln->num_states == 20)) {
 		model = new GTRModel(tree, count_rates);
+		if (freq_params != "")
+			((GTRModel*)model)->readStateFreq(freq_params);
+		if (model_params != "")
+			((GTRModel*)model)->readRates(model_params);
 		((GTRModel*)model)->init(freq_type);
 	} else if (model_str == "UNREST") {
 		freq_type = FREQ_EQUAL;
@@ -59,14 +80,17 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 		model = new ModelNonRev(tree, count_rates);
 		((ModelNonRev*)model)->init(freq_type);
 	} else if (tree->aln->num_states == 2) {
-		model = new ModelBIN(model_str.c_str(), freq_type, tree, count_rates);
+		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->num_states == 4) {
-		model = new ModelDNA(model_str.c_str(), freq_type, tree, count_rates);
+		model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->num_states == 20) {
-		model = new ModelProtein(model_str.c_str(), freq_type, tree, count_rates);
+		model = new ModelProtein(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
+	} else if (tree->aln->codon_table) {
+		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else {
 		outError("Unsupported model type");
 	}
+
 	return model;
 }
 
@@ -80,12 +104,23 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		if (tree->aln->num_states == 4) model_str = "HKY";
 		else if (tree->aln->num_states == 20) model_str = "WAG";
 		else if (tree->aln->num_states == 2) model_str = "JC2";
+		else if (tree->aln->codon_table) model_str = "JCC";
 		else model_str = "JC";
 	}
 	string::size_type posfreq;
 	StateFreqType freq_type = params.freq_type;
+	size_t close_bracket;
+	string freq_params;
 	if ((posfreq = model_str.find("+F")) != string::npos) {
-		if (model_str.substr(posfreq) == "+FC" || model_str.substr(posfreq) == "+Fc" || model_str.substr(posfreq) == "+F")
+		if (model_str.length() > posfreq+2 && model_str[posfreq+2] == OPEN_BRACKET) {
+			close_bracket = model_str.find(CLOSE_BRACKET, posfreq);
+			if (close_bracket == string::npos)
+				outError("Close bracket not found in ", model_str);
+			if (close_bracket != model_str.length()-1)
+				outError("Wrong close bracket position ", model_str);
+			freq_type = FREQ_USER_DEFINED;
+			freq_params = model_str.substr(posfreq+3, close_bracket-posfreq-3);
+		} else if (model_str.substr(posfreq) == "+FC" || model_str.substr(posfreq) == "+Fc" || model_str.substr(posfreq) == "+F")
 			freq_type = FREQ_EMPIRICAL;
 		else if (model_str.substr(posfreq) == "+FU" || model_str.substr(posfreq) == "+Fu")
 			freq_type = FREQ_USER_DEFINED;
@@ -93,34 +128,62 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			freq_type = FREQ_EQUAL;
 		else if (model_str.substr(posfreq) == "+FO" || model_str.substr(posfreq) == "+Fo")
 			freq_type = FREQ_ESTIMATE;
+		else if (model_str.substr(posfreq) == "+F1x4")
+			freq_type = FREQ_CODON_1x4;
+		else if (model_str.substr(posfreq) == "+F3x4")
+			freq_type = FREQ_CODON_3x4;
+		else if (model_str.substr(posfreq) == "+F3x4C" || model_str.substr(posfreq) == "+F3x4c")
+			freq_type = FREQ_CODON_3x4C;
 		else outError("Unknown state frequency type ",model_str.substr(posfreq));
 		model_str = model_str.substr(0, posfreq);
 	}
-	string::size_type pos = model_str.find('+');
+	string::size_type posI = model_str.find("+I");
+	string::size_type posG = model_str.find("+G");
+	string::size_type posX;
 	/* create site-rate heterogeneity */
-	if (pos != string::npos) {
-		string rate_str = model_str.substr(pos);
-		model_str = model_str.substr(0, pos);
-		int num_rate_cats = params.num_rate_cats;
-		if (rate_str.substr(0,4) == "+I+G") {
-			if (rate_str.length() > 4 && rate_str[4] != '+') {
-				num_rate_cats = convert_int(rate_str.substr(4).c_str());
+	int num_rate_cats = params.num_rate_cats;
+	double gamma_shape = params.gamma_shape;
+	double p_invar_sites = params.p_invar_sites;
+	if (posI != string::npos) {
+		if (model_str.length() > posI+2 && model_str[posI+2] == OPEN_BRACKET) {
+			close_bracket = model_str.find(CLOSE_BRACKET, posI);
+			if (close_bracket == string::npos)
+				outError("Close bracket not found in ", model_str);
+			p_invar_sites = convert_double(model_str.substr(posI+3, close_bracket-posI-3).c_str());
+			if (p_invar_sites <= 0 || p_invar_sites >= 1)
+				outError("p_invar must be in (0,1)");
+		} else if (model_str.length() > posI+2 && model_str[posI+2] != '+')
+			outError("Wrong model name ", model_str);
+	}
+	if (posG != string::npos) {
+		int end_pos = 0;
+		if (model_str.length() > posG+2 && isdigit(model_str[posG+2])) {
+			num_rate_cats = convert_int(model_str.substr(posG+2).c_str(), end_pos);
 				if (num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
-			site_rate = new RateGammaInvar(num_rate_cats, params.gamma_shape, params.gamma_median, params.p_invar_sites, tree);
-		} else if (rate_str.substr(0,2) == "+I") {
-			site_rate = new RateInvar(params.p_invar_sites, tree);
-		} else if (rate_str.substr(0,2) == "+G") {
-			if (rate_str.length() > 2 && rate_str[2] != '+') {
-				num_rate_cats = convert_int(rate_str.substr(2).c_str());
-				if (num_rate_cats < 1) outError("Wrong number of rate categories");
-			}
-			site_rate = new RateGamma(num_rate_cats, params.gamma_shape, params.gamma_median, tree);
-		} else if (rate_str.substr(0,2) == "+M") {
+		if (model_str.length() > posG+2+end_pos && model_str[posG+2+end_pos] == OPEN_BRACKET) {
+			close_bracket = model_str.find(CLOSE_BRACKET, posG);
+			if (close_bracket == string::npos)
+				outError("Close bracket not found in ", model_str);
+			gamma_shape = convert_double(model_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
+			if (gamma_shape < 0.01 || gamma_shape > 100)
+				outError("Gamma shape must be in [0.01,100]");
+		} else if (model_str.length() > posG+2+end_pos && model_str[posG+2+end_pos] != '+')
+			outError("Wrong model name ", model_str);
+	}
+	if (model_str.find('+') != string::npos) {
+		//string rate_str = model_str.substr(pos);
+		if (posI != string::npos && posG != string::npos) {
+			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median, p_invar_sites, tree);
+		} else if (posI != string::npos) {
+			site_rate = new RateInvar(p_invar_sites, tree);
+		} else if (posG != string::npos) {
+			site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
+		} else if ((posX = model_str.find("+M")) != string::npos) {
 			tree->sse = false;
 			params.rate_mh_type = true;
-			if (rate_str.length() > 2 && rate_str[2] != '+') {
-				num_rate_cats = convert_int(rate_str.substr(2).c_str());
+			if (model_str.length() > posX+2 && isdigit(model_str[posX+2])) {
+				num_rate_cats = convert_int(model_str.substr(posX+2).c_str());
 				if (num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else num_rate_cats = -1;
 			if (num_rate_cats >= 0)
@@ -129,11 +192,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			else
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
 			site_rate->setTree(tree);
-		} else if (rate_str.substr(0,2) == "+D") {
+		} else if ((posX = model_str.find("+D")) != string::npos) {
 			tree->sse = false;
 			params.rate_mh_type = false;
-			if (rate_str.length() > 2 && rate_str[2] != '+') {
-				num_rate_cats = convert_int(rate_str.substr(2).c_str());
+			if (model_str.length() > posX+2 && isdigit(model_str[posX+2])) {
+				num_rate_cats = convert_int(model_str.substr(posX+2).c_str());
 				if (num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else num_rate_cats = -1;
 			if (num_rate_cats >= 0)
@@ -142,31 +205,31 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			else
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
 			site_rate->setTree(tree);
-		} else if (rate_str.substr(0,4) == "+NGS") {
+		} else if ((posX = model_str.find("+NGS")) != string::npos) {
 			tree->sse = false;
-			if (rate_str.length() > 4 && rate_str[4] != '+') {
-				num_rate_cats = convert_int(rate_str.substr(4).c_str());
+			if (model_str.length() > posX+4 && isdigit(model_str[posX+4])) {
+				num_rate_cats = convert_int(model_str.substr(posX+4).c_str());
 				if (num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else num_rate_cats = -1;
 			site_rate = new NGSRateCat(tree, num_rate_cats);
 			site_rate->setTree(tree);
-		} else if (rate_str.substr(0,4) == "+NGF") {
+		} else if ((posX = model_str.find("+NGS")) != string::npos) {
 			tree->sse = false;
-			if (rate_str.length() > 4 && rate_str[4] != '+') {
-				num_rate_cats = convert_int(rate_str.substr(4).c_str());
+			if (model_str.length() > posX+4 && isdigit(model_str[posX+4])) {
+				num_rate_cats = convert_int(model_str.substr(posX+4).c_str());
 				if (num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else num_rate_cats = -1;
 			site_rate = new NGSRate(tree);
 			site_rate->setTree(tree);
-		} else if (rate_str.substr(0,2) == "+K") {
-			if (rate_str.length() > 2 && rate_str[2] != '+') {
-				num_rate_cats = convert_int(rate_str.substr(2).c_str());
+		} else if ((posX = model_str.find("+K")) != string::npos) {
+			if (model_str.length() > posX+2 && isdigit(model_str[posX+2])) {
+				num_rate_cats = convert_int(model_str.substr(posX+2).c_str());
 				if (num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
 			site_rate = new RateKategory(num_rate_cats, tree);
 		} else
 			outError("Invalid rate heterogeneity type");
-		//model_str = model_str.substr(0, pos);
+		model_str = model_str.substr(0, model_str.find('+'));
 	} else {
 		site_rate = new RateHeterogeneity();
 		site_rate->setTree(tree);
@@ -175,7 +238,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	/* create substitution model */
 
 	if (!params.site_freq_file) {
-		model = createModel(model_str, freq_type, tree);
+		model = createModel(model_str, freq_type, freq_params, tree);
 	} else { 
 		// site-specific model
 		if (model_str == "JC" || model_str == "POSSION") 
@@ -200,11 +263,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		for (i = 0; i < freq_vec.size(); i++) {
 			GTRModel *modeli;
 			if (i == 0) {
-				modeli = (GTRModel*)createModel(model_str, params.freq_type, tree, true);
+				modeli = (GTRModel*)createModel(model_str, params.freq_type, "", tree, true);
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {
-				modeli = (GTRModel*)createModel(model_str, FREQ_EQUAL, tree, false);
+				modeli = (GTRModel*)createModel(model_str, FREQ_EQUAL, "", tree, false);
 				modeli->setStateFrequency(state_freq);
 				modeli->setRateMatrix(rates);
 			}

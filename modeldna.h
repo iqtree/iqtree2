@@ -33,19 +33,31 @@ class ModelDNA : public GTRModel
 public:
 	/**
 		constructor
+		@param tree associated tree for the model
+	*/
+    ModelDNA(PhyloTree *tree, bool count_rates = true);
+
+	/**
+		constructor
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelDNA(const char *model_name, StateFreqType freq, PhyloTree *tree, bool count_rates = true);
+    ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates = true);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 	*/
-	virtual void init(const char *model_name, StateFreqType freq);
+	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
+	/**
+		Read the rate parameters from a comma-separated string
+		It will throw error messages if failed
+		@param in input stream
+	*/
+	virtual void readRates(string str) throw(const char*);
 
 	/**
 		set the substitution rate parameters by a specification
@@ -86,6 +98,8 @@ protected:
 	*/
 	string param_spec;
 	
+	/** vector of boolean, TRUE if corresponding parameter is fixed and FALSE otherwise */
+	vector<bool> param_fixed;
 
 };
 

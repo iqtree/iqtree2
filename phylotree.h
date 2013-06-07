@@ -12,10 +12,14 @@
 
 #ifndef PHYLOTREE_H
 #define PHYLOTREE_H
-#define NDEBUG
+//#define NDEBUG
+// comented out this for Mac
+
+// PLEASE DONT TOUCH THESE VARIABLES ANYMORE!
 #define EIGEN_NO_AUTOMATIC_RESIZING
-#define EIGEN_CACHEFRIENDLY_PRODUCT_THRESHOLD 80
-#define EIGEN_UNROLLING_LIMIT 1000
+//#define EIGEN_CACHEFRIENDLY_PRODUCT_THRESHOLD 32 // PLEASE DONT TOUCH THESE VARIABLES ANYMORE!
+//#define EIGEN_UNROLLING_LIMIT 1000 // PLEASE DONT TOUCH THESE VARIABLES ANYMORE!
+
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (512*256)
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (8*512*512)
 #include "Eigen/Core"
@@ -28,10 +32,10 @@
 #include "rateheterogeneity.h"
 
 
-const double MIN_BRANCH_LEN = 0.000001;
+const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double MAX_BRANCH_LEN = 9.0;
-const double TOL_BRANCH_LEN = 0.000001;
-const double TOL_LIKELIHOOD = 0.0001;
+const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
+const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
 const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
 const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
@@ -48,13 +52,13 @@ typedef Array<double, Dynamic, Dynamic, RowMajor> RowMajorArrayXXd;
 typedef std::map< string, double > StringDoubleMap;
 typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 
-#define MappedMat(NSTATES) Map<Matrix<double, NSTATES, NSTATES>, Aligned>
-#define MappedArr2D(NSTATES) Map<Array<double, NSTATES, NSTATES>, Aligned>
-#define MappedRowVec(NSTATES) Map<Matrix<double, 1, NSTATES>, Aligned>
-#define MappedVec(NSTATES) Map<Matrix<double, NSTATES, 1>, Aligned>
+#define MappedMat(NSTATES) Map<Matrix<double, NSTATES, NSTATES> >
+#define MappedArr2D(NSTATES) Map<Array<double, NSTATES, NSTATES> >
+#define MappedRowVec(NSTATES) Map<Matrix<double, 1, NSTATES> >
+#define MappedVec(NSTATES) Map<Matrix<double, NSTATES, 1> >
 #define Matrix(NSTATES) Matrix<double, NSTATES, NSTATES>
 #define RowVector(NSTATES) Matrix<double, 1, NSTATES>
-#define MappedRowArr2DDyn Map<Array<double, Dynamic, Dynamic, RowMajor>, Aligned>
+#define MappedRowArr2DDyn Map<Array<double, Dynamic, Dynamic, RowMajor> >
 
 const int MAX_SPR_MOVES = 20;
 

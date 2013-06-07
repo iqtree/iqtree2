@@ -274,7 +274,7 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int optBran) {
     if (optBran) {
         newviewGeneric(tr, p, FALSE);
         newviewGeneric(tr, q, FALSE);
-        optimizeOneBranches(tr, p, 10);
+        optimizeOneBranches(tr, p, 100);
 //        int i;
 //        double z[NUM_BRANCHES], z0[NUM_BRANCHES];
 //        for (i = 0; i < tr->numBranches; i++)

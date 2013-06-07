@@ -1430,9 +1430,7 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
 
 void PhyloTree::updateSubtreeDists(NNIMove &nnimove) {
 	assert(subTreeDistComputed);
-	assert(!node1->isLeaf() && !node2->isLeaf());
 	PhyloNode *nodeA = NULL, *nodeB = NULL, *nodeC = NULL, *nodeD = NULL;
-
 	PhyloNode *node1 = nnimove.node1;
 	PhyloNode *node2 = nnimove.node2;
 	NeighborVec::iterator node1Nei_it = nnimove.node1Nei_it;
@@ -1476,7 +1474,7 @@ void PhyloTree::updateSubtreeDists(NNIMove &nnimove) {
         double distD = subTreeDists.find(nodePair2String((*it), nodeD))->second;
         double newDist = distB + distD;
         StringDoubleMap::iterator dist_it = subTreeDists.find(key);
-        assert(dist_it != subTreeDist.end());
+        assert(dist_it != subTreeDists.end());
         dist_it->second = newDist;
     }
 
@@ -1486,7 +1484,7 @@ void PhyloTree::updateSubtreeDists(NNIMove &nnimove) {
         double distA = subTreeDists.find(nodePair2String((*it), nodeA))->second;
         double newDist = distC + distA;
         StringDoubleMap::iterator dist_it = subTreeDists.find(key);
-        assert(dist_it != subTreeDist.end());
+        assert(dist_it != subTreeDists.end());
         dist_it->second = newDist;
     }
 
@@ -1496,7 +1494,7 @@ void PhyloTree::updateSubtreeDists(NNIMove &nnimove) {
         double distB = subTreeDists.find(nodePair2String((*it), nodeB))->second;
         double newDist = distD + distB;
         StringDoubleMap::iterator dist_it = subTreeDists.find(key);
-        assert(dist_it != subTreeDist.end());
+        assert(dist_it != subTreeDists.end());
         dist_it->second = newDist;
     }
 
@@ -1506,7 +1504,7 @@ void PhyloTree::updateSubtreeDists(NNIMove &nnimove) {
         double distC = subTreeDists.find(nodePair2String((*it), nodeC))->second;
         double newDist = distA + distC;
         StringDoubleMap::iterator dist_it = subTreeDists.find(key);
-        assert(dist_it != subTreeDist.end());
+        assert(dist_it != subTreeDists.end());
         dist_it->second = newDist;
     }
 
@@ -1804,7 +1802,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         if (dad->name == ROOT_NAME && root_state != STATE_UNKNOWN) {
             dad_state = root_state;
             if (verbose_mode >= VB_DEBUG)
-                cout << __func__ << ": root state " << aln->convertStateBack(root_state) << endl;
+                cout << __func__ << ": root state " << aln->convertStateBackStr(root_state) << endl;
         } else if (dad->isLeaf()) {
             dad_state = (*aln)[ptn][dad->id];
         }
@@ -1925,8 +1923,10 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                     partial_lh_site[cat * nstates + state] = 1.0;
             } else {
                 // ambiguous character, for DNA, RNA
-                if (verbose_mode >= VB_MED)
+            	/*
+                if (verbose_mode >= VB_DEBUG)
                     cout << "Process ambiguous char " << (int) state << endl;
+                    */
                 state = state - (nstates - 1);
                 for (int state2 = 0; state2 < nstates && state2 <= 6; state2++)
                     if (state & (1 << state2)) {
@@ -2604,7 +2604,8 @@ double PhyloTree::computeObsDist(double *dist_mat) {
             if (dist_mat[pos] > longest_dist)
                 longest_dist = dist_mat[pos];
         }
-    return correctDist(dist_mat);
+    return longest_dist;
+    //return correctDist(dist_mat);
 }
 
 double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &dist_mat, string &dist_file) {
@@ -3812,7 +3813,9 @@ void PhyloTree::reinsertLeaf(Node *leaf, Node *node, Node *dad) {
     bool first = true;
     Node *adjacent_node = leaf->neighbors[0]->node;
     Neighbor *nei = node->findNeighbor(dad);
-    double len = nei->length;
+    //double len = nei->length;
+    double len = max(nei->length, MIN_BRANCH_LEN*2);
+    // to avoid too small branch length when reinserting leaf
 
     FOR_NEIGHBOR_IT(adjacent_node, leaf, it){
     if (first) {

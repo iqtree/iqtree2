@@ -19,14 +19,19 @@
  ***************************************************************************/
 #include "modeldna.h"
 
-ModelDNA::ModelDNA(const char *model_name, StateFreqType freq, PhyloTree *tree, bool count_rates)
+ModelDNA::ModelDNA(PhyloTree *tree, bool count_rates)
 : GTRModel(tree, count_rates)
 {
-	init(model_name, freq);
+}
+
+ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
+: GTRModel(tree, count_rates)
+{
+	init(model_name, model_params, freq, freq_params);
 }
 
 
-void ModelDNA::init(const char *model_name, StateFreqType freq)
+void ModelDNA::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
 	assert(num_states == 4); // make sure that you create model for DNA
 	StateFreqType def_freq = FREQ_UNKNOWN;
@@ -60,7 +65,7 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 		setRateType("012210");
 		def_freq = FREQ_EQUAL;
 		full_name = "K3P (Kimura, 1981)";
-	} else if (name_upper == "K81UF" || name_upper == "K81U") {
+	} else if (name_upper == "K81UF" || name_upper == "K81U" || name_upper == "K3PU") {
 		name = "K3Pu";
 		setRateType("012210");
 		def_freq = FREQ_ESTIMATE;
@@ -154,11 +159,57 @@ void ModelDNA::init(const char *model_name, StateFreqType freq)
 			//name += " (user-defined)";
 		}
 	}
-	
+
+	if (freq_params != "") {
+		readStateFreq(freq_params);
+	}
+	if (model_params != "") {
+		readRates(model_params);
+	}
+
 	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
 	GTRModel::init(freq);
 }
 
+
+void ModelDNA::readRates(string str) throw(const char*) {
+	int nrates = *max_element(param_spec.begin(), param_spec.end());
+	int end_pos = 0;
+	int i, j;
+	for (j = 0; j < param_spec.length(); j++)
+		rates[j] = 1.0;
+	num_params = 0;
+	for (i = 0; i < nrates && end_pos < str.length(); i++) {
+		int new_end_pos;
+		double rate = 0;
+		if (str[end_pos] == '?') {
+			param_fixed[i+1] = false;
+			end_pos++;
+			rate = i + 0.4;
+			num_params++;
+		} else {
+			param_fixed[i+1] = true;
+			try {
+				rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+			} catch (string str) {
+				outError(str);
+			}
+			end_pos += new_end_pos;
+		}
+		if (rate < 0.0)
+			outError("Negative rates found");
+		if (i == nrates-1 && end_pos < str.length())
+			outError("String too long ", str);
+		if (i < nrates-1 && end_pos >= str.length())
+			outError("Unexpected end of string ", str);
+		if (end_pos < str.length() && str[end_pos] != ',')
+			outError("Comma to separate rates not found in ", str);
+		end_pos++;
+		for (j = 0; j < param_spec.length(); j++)
+			if (param_spec[j] == i+1)
+				rates[j] = rate;
+	}
+}
 
 bool ModelDNA::setRateType(const char *rate_str) {
 	//char first_type = 127;
@@ -171,6 +222,9 @@ bool ModelDNA::setRateType(const char *rate_str) {
 		//outError("Model specification has wrong length!");
 		return false;
 	}
+	// only accept string of digits
+	for (i = 0; i < num_ch; i++)
+		if (!isdigit(rate_str[i])) return false;
 	/*
 	if (rate_str[num_ch-1] != '0') {
 		//outError("Model specification must end with '0'");
@@ -194,6 +248,7 @@ bool ModelDNA::setRateType(const char *rate_str) {
 	map<char,char> param_k;
 	num_params = 0;
 	param_spec = "";
+	// last entry get ID of 0 for easy management
 	param_k[rate_str[num_ch-1]] = 0;
 	for (i = 0; i < num_ch; i++) {
 		if (param_k.find(rate_str[i]) == param_k.end()) {
@@ -225,6 +280,8 @@ bool ModelDNA::setRateType(const char *rate_str) {
 			cout << rates[i] << " ";
 		cout << endl;
 	}
+	param_fixed.resize(num_params+1, false);
+	param_fixed[0] = true; // fix the last entry
 	delete [] num_rates;
 	delete [] avg_rates;
 	return true;
@@ -258,10 +315,17 @@ void ModelDNA::writeParameters(ostream &out) {
 
 void ModelDNA::getVariables(double *variables) {
 	int i;
-	int num_all = param_spec.length();
-	for (i = 0; i < num_all; i++)
-		if (param_spec[i] > 0)
-			rates[i] = variables[(int)param_spec[i]];
+	if (num_params > 0) {
+		int num_all = param_spec.length();
+		if (verbose_mode >= VB_MAX) {
+			for (i = 1; i <= num_params; i++)
+				cout << "  estimated variables[" << i << "] = " << variables[i] << endl;
+		}
+		for (i = 0; i < num_all; i++)
+			if (!param_fixed[param_spec[i]]) {
+				rates[i] = variables[(int)param_spec[i]];
+			}
+	}
 	if (freq_type == FREQ_ESTIMATE) {
 		int ndim = getNDim();
 		memcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
@@ -273,10 +337,12 @@ void ModelDNA::getVariables(double *variables) {
 }
 
 void ModelDNA::setVariables(double *variables) {
-	int num_all = param_spec.length();
-	for (int i = 0; i < num_all; i++)
-		if (param_spec[i] > 0)
-			variables[(int)param_spec[i]] = rates[i];
+	if (num_params > 0) {
+		int num_all = param_spec.length();
+		for (int i = 0; i < num_all; i++)
+			if (!param_fixed[param_spec[i]])
+				variables[(int)param_spec[i]] = rates[i];
+	}
 	if (freq_type == FREQ_ESTIMATE) {
 		int ndim = getNDim();
 		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));

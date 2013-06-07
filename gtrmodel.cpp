@@ -452,6 +452,32 @@ void GTRModel::readRates(istream &in) throw(const char*) {
 	}
 }
 
+void GTRModel::readRates(string str) throw(const char*) {
+	int nrates = getNumRateEntries();
+	int end_pos = 0;
+	cout << __func__ << " " << str << endl;
+	for (int i = 0; i < nrates; i++) {
+		int new_end_pos;
+		try {
+			rates[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+		} catch (string str) {
+			outError(str);
+		}
+		end_pos += new_end_pos;
+		if (rates[i] <= 0.0)
+			outError("Negative rates found");
+		if (i == nrates-1 && end_pos < str.length())
+			outError("String too long ", str);
+		if (i < nrates-1 && end_pos >= str.length())
+			outError("Unexpected end of string ", str);
+		if (end_pos < str.length() && str[end_pos] != ',')
+			outError("Comma to separate rates not found in ", str);
+		end_pos++;
+	}
+	num_params = 0;
+
+}
+
 void GTRModel::readStateFreq(istream &in) throw(const char*) {
 	int i;
 	for (i = 0; i < num_states; i++) {
@@ -464,6 +490,28 @@ void GTRModel::readStateFreq(istream &in) throw(const char*) {
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
 	if (fabs(sum-1.0) > 1e-2)
 		throw "State frequencies do not sum up to 1.0";
+}
+
+void GTRModel::readStateFreq(string str) throw(const char*) {
+	int i;
+	int end_pos = 0;
+	for (i = 0; i < num_states; i++) {
+		int new_end_pos;
+		state_freq[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+		end_pos += new_end_pos;
+		//cout << i << " " << state_freq[i] << endl;
+		if (state_freq[i] < 0.0 || state_freq[i] > 1)
+			outError("State frequency must be in [0,1] in ", str);
+		if (i == num_states-1 && end_pos < str.length())
+			outError("Unexpected end of string ", str);
+		if (end_pos < str.length() && str[end_pos] != ',')
+			outError("Comma to separate state frequencies not found in ", str);
+		end_pos++;
+	}
+	double sum = 0.0;
+	for (i = 0; i < num_states; i++) sum += state_freq[i];
+	if (fabs(sum-1.0) > 1e-2)
+		outError("State frequencies do not sum up to 1.0 in ", str);
 }
 
 void GTRModel::readParameters(const char *file_name) { 

@@ -85,6 +85,28 @@ public:
 
 
 	/**
+		To AVOID 'hides overloaded virtual functions
+		compute the transition probability between two states
+		@param time time between two events
+		@param state1 first state
+		@param state2 second state
+	*/
+	virtual double computeTrans(double time, int state1, int state2) { return 0; }
+
+	/**
+		To AVOID 'hides overloaded virtual functions
+		compute the transition probability between two states
+		@param time time between two events
+		@param state1 first state
+		@param state2 second state
+		@param derv1 (OUT) 1st derivative
+		@param derv2 (OUT) 2nd derivative
+	*/
+	virtual double computeTrans(double time, int state1, int state2, double &derv1, double &derv2) { return 0; }
+
+
+
+	/**
 		compute the transition probability between two states at a specific site 
 		One should override this function when defining new model.
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)

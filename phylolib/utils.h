@@ -26,4 +26,6 @@ void read_msa(tree *tr, const char *filename);
 
 void makeParsimonyTree(tree *tr);
 
+pl_boolean setupTree (tree *tr, pl_boolean doInit);
+
 #endif /* UTILS_H_ */

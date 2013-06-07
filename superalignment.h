@@ -25,8 +25,9 @@
 class PhyloSuperTree;
 
 /**
-Super alignment representing m partitions for a total of n sequences. It has the form:
-		Site_1 Site_2 ... Site_m
+Super alignment representing presence/absence of sequences in
+k partitions for a total of n sequences. It has the form:
+		Site_1 Site_2 ... Site_k
 Seq_1     1      0    ...   1
 Seq_2     0      1    ...   0
 ...      ...
@@ -42,31 +43,45 @@ So data is binary.
 class SuperAlignment : public Alignment
 {
 public:
+	/** constructor initialize from a supertree */
     SuperAlignment(PhyloSuperTree *super_tree);
+
+	/** constructor initialize empty alignment */
     SuperAlignment();
 
+    /** destructor */
     ~SuperAlignment();
 
+    /** return that this is a super-alignment structure */
 	virtual bool isSuperAlignment() { return true; }
 
 	/**
+	 * create taxa_index from super-alignment to sub-alignment
+	 * @param part index of sub-alignment
+	 */
+	void linkSubAlignment(int part);
+
+	/**
 	 * @param pattern_index (OUT) vector of size = alignment length storing pattern index of all sites
+	 * the index of sites in 2nd, 3rd,... genes have to be increased by the number of patterns in previous genes
+	 * so that all indices are distinguishable
 	*/
 	virtual void getSitePatternIndex(IntVector &pattern_index);
 
 	/**
-	 * @param freq (OUT) vector of site-pattern frequencies
+	 * @param freq (OUT) vector of site-pattern frequencies for all sub-alignments
 	*/
 	virtual void getPatternFreq(IntVector &pattern_freq);
 
 	/**
 		Quit if some sequences contain only gaps or missing data
 	*/
-	virtual void checkGappySeq();
+	//virtual void checkGappySeq(bool force_error = true);
 
 	/**
-		create a non-parametric bootstrap alignment from an input alignment
+		create a non-parametric bootstrap alignment by resampling sites within partitions
 		@param aln input alignment
+		@param pattern_freq (OUT) if not NULL, will store the resampled pattern frequencies
 	*/
 	virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL);
 
@@ -76,10 +91,19 @@ public:
 	*/
 	virtual void createBootstrapAlignment(IntVector &pattern_freq);
 
+	/**
+		resampling pattern frequency by a non-parametric bootstrap
+		@param pattern_freq resampled pattern frequencies
+	*/
 	virtual void createBootstrapAlignment(int *pattern_freq);
 
 	/**
-		compute the observed distance (number of different pairs of positions per site) 
+	 * shuffle alignment by randomizing the order of sites over all sub-alignments
+	 */
+	virtual void shuffleAlignment();
+
+	/**
+		compute the observed (Hamming) distance (number of different pairs of positions per site)
 			between two sequences
 		@param seq1 index of sequence 1
 		@param seq2 index of sequence 2
@@ -95,6 +119,11 @@ public:
 	*/
 	virtual double computeDist(int seq1, int seq2);
 
+	/**
+	 * print the super-alignment to a file
+	 * @param filename
+	 * @param append TRUE to append to this file, false to write new file
+	 */
 	void printCombinedAlignment(const char *filename, bool append = false);
 
 	/**
@@ -108,7 +137,7 @@ public:
 	vector<Alignment*> partitions;
 
 	/**
-		matrix represents the index of taxon i in partition j
+		matrix represents the index of taxon i in partition j, -1 if the taxon is not present
 	*/
 	vector<IntVector> taxa_index;
 

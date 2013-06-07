@@ -163,10 +163,23 @@ public:
 
     virtual void convertStateStr(string &str, SeqType seq_type);
 
-
+	/**
+	 * convert from internal state to user-readable state (e.g., to ACGT for DNA)
+	 * Note: does not work for codon data
+	 * @param state internal state code
+	 * @return user-readable state
+	 */
     char convertStateBack(char state);
 
     /**
+	 * convert from internal state to user-readable state (e.g., to ACGT for DNA)
+	 * Note: work for all data
+	 * @param state internal state code
+	 * @return user-readable state string
+	 */
+	string convertStateBackStr(char state);
+
+	/**
             get alignment site range from the residue range relative to a sequence
             @param seq_id reference sequence
             @param residue_left (IN/OUT) left of range
@@ -266,7 +279,12 @@ public:
     /**
             Quit if some sequences contain only gaps or missing data
      */
-    virtual void checkGappySeq();
+	virtual void checkGappySeq(bool force_error = true);
+
+	/**
+	 * return a new alignment if some sequence is totally gappy, or this if all sequence are okey
+	 */
+	Alignment *removeGappySeq();
 
     /**
             @return TRUE if seq_id contains only gaps or missing characters
@@ -326,6 +344,11 @@ public:
     void createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln);
 
     /**
+	 * shuffle alignment by randomizing the order of sites
+	 */
+	virtual void shuffleAlignment();
+
+	/**
             concatenate an alignment into the current alignment object
             @param aln an alignment of the same number of sequences and sequence names    
      */
@@ -432,6 +455,15 @@ public:
     void convfreq(double *stateFrqArr);
 
     /**
+	 * compute special empirical frequencies for codon alignment: 1x4, 3x4, 3x4C
+	 * @param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with
+	 * at least num_states entries.
+	 * @param freq either FREQ_CODON_1x4, FREQ_CODON_3x4, or FREQ_CODON_3x4C
+	 * @param ntfreq (OUT) nucleotide frequencies, assuming of size 4 for F1x4 and of size 12 for F3x4.
+	 */
+	void computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq);
+
+	/**
             compute empirical rates between state pairs
             @param rates (OUT) vector of size num_states*(num_states-1)/2 for the rates
      */
@@ -468,6 +500,25 @@ public:
             fraction of constant sites
      */
     double frac_const_sites;
+
+	/**
+	 *  map from 64 codon to non-stop codon index
+	 */
+    char *non_stop_codon;
+
+	/**
+	 * For codon sequences: index of 61 non-stop codons to 64 codons
+	 * For other sequences: NULL
+	 */
+	char *codon_table;
+
+	/**
+	 * For codon_sequences: 64 amino-acid letters for genetic code of AAA,AAC,AAG,AAT,...,TTT
+	 * For other sequences: NULL
+	 */
+	char *genetic_code;
+
+
 
     /** Added by MA
             Compute the probability of this alignment according to the multinomial distribution with parameters determined by the reference alignment
@@ -520,12 +571,20 @@ protected:
      */
     PatternIntMap pattern_index;
 
+
     /**
             get the appearance for a state, helpful for ambigious states
             @param state the state index
             @param state_app (OUT) state appearance
      */
     void getAppearance(char state, double *state_app);
+
+	/**
+	 * special initialization for codon sequences, e.g., setting #states, genetic_code
+	 * @param sequence_type user-defined sequence type
+	 */
+	void initCodon(char *sequence_type);
+
 };
 
 

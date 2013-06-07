@@ -19,13 +19,13 @@
  ***************************************************************************/
 #include "modelbin.h"
 
-ModelBIN::ModelBIN(const char *model_name, StateFreqType freq, PhyloTree *tree, bool count_rates)
+ModelBIN::ModelBIN(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
 : GTRModel(tree, count_rates)
 {
-	init(model_name, freq);
+	init(model_name, model_params, freq, freq_params);
 }
 
-void ModelBIN::init(const char *model_name, StateFreqType freq)
+void ModelBIN::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
 	assert(num_states == 2); // make sure that you create model for Binary data
 	StateFreqType def_freq = FREQ_UNKNOWN;

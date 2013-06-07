@@ -74,7 +74,7 @@ public:
     /** read partition model file */
     void readPartition(Params &params);
 
-    /** read partition model file in NEXUS format */
+    /** read partition model file in NEXUS format into variable info */
     void readPartitionNexus(Params &params);
 
 	/**
@@ -121,14 +121,31 @@ public:
 
 
 	/**
-		TODO: create sub-trees of the current super-tree
+		create sub-trees T|Y_1,...,T|Y_k of the current super-tree T
+		and map F={f_1,...,f_k} the edges of supertree T to edges of subtrees T|Y_i
 	*/
 	void mapTrees();
 
+	/*
+	 * create one map f_i from supertree T to subtree indexed by part (called by mapTrees)
+	 * @param part index of subtree
+	 * @param part_taxa vector of taxa of T that are present in subtree
+	 * @param node the current node of the post-order tree traversal
+	 * @param dad the dad of that node used to direct the traversal
+	 */
 	void linkTree(int part, NodeVector &part_taxa, SuperNode *node = NULL, SuperNode *dad = NULL);
 
+	/**
+	 * Given current supertree T and subtrees T|Y_1,...,T|Y_k, build all maps f_1,...,f_k
+	 */
 	void linkTrees();
 
+	/**
+	 * link a branch from supertree to subtree (called by linkTree)
+	 * @param part index of subtree
+	 * @param nei pointer to branch
+	 * @param dad_nei pointer to reverse branch
+	 */
 	void linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei);
 
     /**
@@ -148,14 +165,15 @@ public:
 	virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
 
     /**
-            optimize all branch lengths of the tree
+            optimize all branch lengths of all subtrees, then compute branch lengths
+            of supertree as weighted average over all subtrees
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD);
 
     /**
-            optimize one branch length by ML
+            optimize one branch length by ML by optimizing all mapped branches of subtrees
             @param node1 1st end node of the branch
             @param node2 2nd end node of the branch
             @param clearLH true to clear the partial likelihood, otherwise false
@@ -173,17 +191,20 @@ public:
     virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, double lh_contribution = -1.0);
 
     /**
-            Do an NNI
+            Do an NNI on the supertree and synchronize all subtrees respectively
+            @param move the single NNI
      */
     virtual double doNNI(NNIMove move);
 
     /**
      * 	 Restore the branch lengths from the saved values
+	 * @param node the current node of the post-order tree traversal
+	 * @param dad the dad of that node used to direct the traversal
      */
     virtual void restoreAllBranLen(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
-            reinsert the whole list of leaves back into the tree
+            reinsert the whole list of leaves back into the supertree then call mapTrees
             @param del_leaves the list of deleted leaves, returned by deleteLeaves() function
      */
     virtual void reinsertLeaves(PhyloNodeVector &del_leaves);
@@ -193,6 +214,9 @@ public:
 	*/
 	void computeBranchLengths();
 
+	/**
+	 * print debug information about all maps
+	 */
 	void printMapInfo();
 	
 	/**

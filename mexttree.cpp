@@ -18,8 +18,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "mexttree.h"
+#include "alignment.h"
 
 void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool binary) {
+	Alignment *alignment = NULL;
+	if (params.aln_file) {
+		// generate random tree with leaf sets taken from an alignment
+		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
+		params.sub_size = alignment->getNSeq();
+	}
+	if (params.sub_size < 3) {
+		outError(ERR_FEW_TAXA);
+	}
 	switch (tree_type) {
 	case YULE_HARDING: 
 		generateYuleHarding(params, binary);
@@ -39,7 +49,12 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 	default:
 		break;
 	}
-
+	if (!alignment) return;
+	NodeVector taxa;
+	getTaxa(taxa);
+	assert(taxa.size() == params.sub_size);
+	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
+		(*it)->name = alignment->getSeqName((*it)->id);
 }
 
 void MExtTree::setZeroInternalBranches(int num_zero_len) {
@@ -362,6 +377,17 @@ void MExtTree::generateStarTree(Params &params) {
 	}
 
 }
+
+void MExtTree::generateRandomBranchLengths(Params &params, Node *node, Node *dad) {
+	if (!node) node = root;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		double len = randomLen(params);
+		(*it)->length = len;
+		(*it)->node->findNeighbor(node)->length = len;
+		generateRandomBranchLengths(params, (*it)->node, node);
+	}
+}
+
 
 void MExtTree::setLeavesName(NodeVector &myleaves) {
 	for (int i = 0; i < myleaves.size(); i++)

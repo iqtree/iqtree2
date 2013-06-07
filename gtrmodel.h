@@ -59,7 +59,7 @@ public:
 		@param model_name name of the model
 		@param freq_type state frequency type, can be FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, or FREQ_ESTIMATE
 	*/
-	virtual void init(const char *model_name, StateFreqType freq_type) {}
+	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params) {}
 
 	/**
 		destructor
@@ -78,13 +78,27 @@ public:
 		@param in input stream
 	*/
 	virtual void readRates(istream &in) throw(const char*);
-	
+
+	/**
+		Read the rate parameters from a comma-separated string
+		It will throw error messages if failed
+		@param in input stream
+	*/
+	virtual void readRates(string str) throw(const char*);
+
 	/**
 		Read state frequencies from an input stream. 
 		It will throw error messages if failed
 		@param in input stream
 	*/
 	virtual void readStateFreq(istream &in) throw(const char*);
+
+	/**
+		Read state frequencies from comma-separated string
+		It will throw error messages if failed
+		@param str input string
+	*/
+	virtual void readStateFreq(string str) throw(const char*);
 
 	/**
 		read model parameters from a file

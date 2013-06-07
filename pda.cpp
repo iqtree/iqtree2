@@ -74,11 +74,14 @@ using namespace std;
 
 void generateRandomTree(Params &params)
 {
-	if (params.sub_size < 3) {
+	if (params.sub_size < 3 && !params.aln_file) {
 		outError(ERR_FEW_TAXA);
 	}
 
-	//cout << "Random number seed: " << params.ran_seed << endl << endl;
+	if (!params.user_file) {
+		outError("Please specify an output tree file name");
+	}
+	////cout << "Random number seed: " << params.ran_seed << endl << endl;
 
 	SplitGraph sg;
 
@@ -89,6 +92,12 @@ void generateRandomTree(Params &params)
 			if (!overwriteFile(params.user_file)) return;
 			ofstream out;
 			out.open(params.user_file);
+			MTree itree;
+
+			if (params.second_tree) {
+				cout << "Generating random branch lengths on tree " << params.second_tree << " ..." << endl;
+				itree.readTree(params.second_tree, params.is_rooted);
+			} else
 			switch (params.tree_gen) {
 			case YULE_HARDING:
 				cout << "Generating random Yule-Harding tree..." << endl;
@@ -116,7 +125,12 @@ void generateRandomTree(Params &params)
 			}
 			for (int i = 0; i < params.repeated_time; i++) {
 				MExtTree mtree;
-				mtree.generateRandomTree(params.tree_gen, params);
+				if (itree.root) {
+					mtree.copyTree(&itree);
+					mtree.generateRandomBranchLengths(params);
+				} else {
+					mtree.generateRandomTree(params.tree_gen, params);
+				}
 				if (params.num_zero_len) {
 					mtree.setZeroInternalBranches(params.num_zero_len);
 					MExtTree collapsed_tree;
@@ -1780,6 +1794,7 @@ int main(int argc, char *argv[])
 	int max_procs = omp_get_num_procs();
 	cout << "Threads: " << max_threads << " (" << max_procs << " CPU cores detected)" << endl;
 	if (max_threads > max_procs) outWarning("You have specified more threads than CPU cores available");
+	omp_set_nested(false); // don't allow nested OpenMP parallelism
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl;

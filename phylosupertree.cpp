@@ -93,13 +93,20 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
     MyToken token(nexus.inf);
     nexus.Execute(token);
 
+    Alignment *super_aln = NULL;
+    if (params.aln_file) {
+    	super_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
+    }
+
     for (vector<CharSet*>::iterator it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
     	if ((*it)->model_name != "") {
 			PartitionInfo info;
 			info.name = (*it)->name;
 			info.model_name = (*it)->model_name;
 			info.aln_file = (*it)->aln_file;
-			if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
+			//if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
+			if (info.aln_file == "" && !params.aln_file)
+				outError("No input data for partition ", info.name);
 			info.sequence_type = (*it)->sequence_type;
 			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
 			info.position_spec = (*it)->position_spec;
@@ -107,18 +114,28 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
 			part_info.push_back(info);
-			Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
+			Alignment *part_aln;
+			if (info.aln_file != "") {
+				part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
+			} else {
+				part_aln = super_aln;
+			}
 			if (!info.position_spec.empty() && info.position_spec != "*") {
 				Alignment *new_aln = new Alignment();
 				new_aln->extractSites(part_aln, info.position_spec.c_str());
-				delete part_aln;
+				if (part_aln != super_aln) delete part_aln;
 				part_aln = new_aln;
 			}
-			PhyloTree *tree = new PhyloTree(part_aln);
+			Alignment *new_aln = part_aln->removeGappySeq();
+			if (part_aln != new_aln && part_aln != super_aln) delete part_aln;
+			PhyloTree *tree = new PhyloTree(new_aln);
 			push_back(tree);
 			params = origin_params;
+			cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
     	}
 
+    if (super_aln)
+    	delete super_aln;
 }
 PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
@@ -324,8 +341,12 @@ void PhyloSuperTree::mapTrees() {
 
 double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	double tree_lh = 0.0;
-	for (iterator it = begin(); it != end(); it++)
-		tree_lh += (*it)->computeLikelihood();
+	int ntrees = size();
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(+: tree_lh)
+	#endif
+	for (int i = 0; i < ntrees; i++)
+		tree_lh += at(i)->computeLikelihood();
 	return tree_lh;
 }
 
@@ -339,8 +360,13 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 
 double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance) {
 	double tree_lh = 0.0;
-	for (iterator it = begin(); it != end(); it++)
-		tree_lh += (*it)->optimizeAllBranches(my_iterations, tolerance);
+	int ntrees = size();
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(+: tree_lh)
+	#endif
+	for (int i = 0; i < ntrees; i++)
+		tree_lh += at(i)->optimizeAllBranches(my_iterations, tolerance);
+
 	if (my_iterations >= 100) computeBranchLengths();
 	return tree_lh;
 }
@@ -354,21 +380,24 @@ PhyloSuperTree::~PhyloSuperTree()
 
 
 double PhyloSuperTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH) {
-	int part = 0;
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
 	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
 	assert(nei1 && nei2);
 	double tree_lh = 0.0;
-	for (iterator it = begin(); it != end(); it++, part++) {
+	int ntrees = size();
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(+: tree_lh)
+	#endif
+	for (int part = 0; part < ntrees; part++) {
 		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 		double score;
 		if (part_info[part].cur_score == 0.0) 
-			part_info[part].cur_score = (*it)->computeLikelihood();
+			part_info[part].cur_score = at(part)->computeLikelihood();
 		if (nei1_part && nei2_part) {
 			if (part_info[part].opt_score[nei1_part->id] == 0.0) {
 				part_info[part].cur_brlen[nei1_part->id] = nei1_part->length;
-				part_info[part].opt_score[nei1_part->id] = (*it)->optimizeOneBranch((PhyloNode*)nei1_part->node, (PhyloNode*)nei2_part->node, clearLH);
+				part_info[part].opt_score[nei1_part->id] = at(part)->optimizeOneBranch((PhyloNode*)nei1_part->node, (PhyloNode*)nei2_part->node, clearLH);
 				part_info[part].opt_brlen[nei1_part->id] = nei1_part->length;
 			}
 			score = part_info[part].opt_score[nei1_part->id];
@@ -428,11 +457,15 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 	double bestScore = optimizeOneBranch(node1, node2, false);
 	double nonNNIScore = bestScore;
 	
-	int part = 0;
 	double nni1_score = 0.0, nni2_score = 0.0;
-	for (iterator it = begin(); it != end(); it++, part++) {
+	int ntrees = size();
+
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(+: nni1_score, nni2_score)
+	#endif
+	for (int part = 0; part < ntrees; part++) {
 		if (part_info[part].cur_score == 0.0) 
-			part_info[part].cur_score = (*it)->computeLikelihood();
+			part_info[part].cur_score = at(part)->computeLikelihood();
 		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 		if (!nei1_part || !nei2_part) {
@@ -444,7 +477,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 		if (part_info[part].opt_score[brid] == 0.0) {
 			double cur_len = nei1_part->length;
 			part_info[part].cur_brlen[brid] = cur_len;
-			part_info[part].opt_score[brid] = (*it)->optimizeOneBranch((PhyloNode*)nei1_part->node, (PhyloNode*)nei2_part->node, false);
+			part_info[part].opt_score[brid] = at(part)->optimizeOneBranch((PhyloNode*)nei1_part->node, (PhyloNode*)nei2_part->node, false);
 			part_info[part].opt_brlen[brid] = nei1_part->length;
 			// restore branch lengths
 			nei1_part->length = cur_len;
@@ -467,7 +500,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 			SwapNNIParam nni_param;
 			nni_param.node1_nei = node1_nei->link_neighbors[part];
 			nni_param.node2_nei = node2_nei->link_neighbors[part];
-			(*it)->swapNNIBranch(0.0, (PhyloNode*)nei2_part->node, (PhyloNode*)nei1_part->node, &nni_param);
+			at(part)->swapNNIBranch(0.0, (PhyloNode*)nei2_part->node, (PhyloNode*)nei1_part->node, &nni_param);
 
 			part_info[part].nni1_score[brid] = nni_param.nni1_score;
 			part_info[part].nni2_score[brid] = nni_param.nni2_score;
@@ -579,6 +612,8 @@ void PhyloSuperTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 }
 
 void PhyloSuperTree::computeBranchLengths() {
+	if (verbose_mode >= VB_DEBUG)
+		cout << "Assigning branch lengths for full tree with weighted average..." << endl;
 	int part = 0, i;
 	NodeVector nodes1, nodes2;
 	getBranches(nodes1, nodes2);

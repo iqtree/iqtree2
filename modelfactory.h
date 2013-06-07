@@ -55,11 +55,13 @@ public:
 	 * create a substitution model
 	 * @param model_str model nme
 	 * @param freq_type state frequency type
+	 * @param freq_params frequency parameters
 	 * @param tree associated phylo tree
 	 * @param count_rates TRUE to assign rates counted from alignment, FALSE to not initialize rates
 	 * @return substitution model created
 	 */
-	ModelSubst *createModel(string model_str, StateFreqType freq_type, PhyloTree *tree, bool count_rates = true);
+	ModelSubst *createModel(string model_str, StateFreqType freq_type, string freq_params,
+			PhyloTree *tree, bool count_rates = true);
 
 	/**
 	 * read site specific state frequency vectors from a file to create corresponding model (Ingo's idea)
