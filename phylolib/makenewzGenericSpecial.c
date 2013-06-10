@@ -1038,7 +1038,6 @@ static void topLevelMakenewz(tree *tr, double *z0, int _maxiter, double *result)
           outerConverged[i] = FALSE;
         }
         else {
-          printf("NR steps = %d \n", _maxiter - maxiter[i]);
           outerConverged[i] = TRUE;
         }
       }
