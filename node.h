@@ -43,73 +43,74 @@ using namespace std;
 class Node;
 
 /**
-	Neighbor list of a node in the tree
-*/
+    Neighbor list of a node in the tree
+ */
 class Neighbor {
 public:
 
-	/**
-		the other end of the branch
-	*/
-	Node *node;
+    /**
+        the other end of the branch
+     */
+    Node *node;
 
-	/**
-		branch length
-	*/
-	double length;
+    /**
+        branch length
+     */
+    double length;
 
-	/**
-		branch ID
-	*/
-	int id;
+    /**
+        branch ID
+     */
+    int id;
 
-	/**
-		construct class with a node and length
-		@param anode the other end of the branch
-		@param alength length of branch
-	*/
-	Neighbor(Node *anode, double alength) {
-		node = anode;
-		length = alength;
-		id = -1;
-	}
+    /**
+        construct class with a node and length
+        @param anode the other end of the branch
+        @param alength length of branch
+     */
+    Neighbor(Node *anode, double alength) {
+        node = anode;
+        length = alength;
+        id = -1;
+    }
 
-	/**
-		construct class with a node and length
-		@param anode the other end of the branch
-		@param alength length of branch
-		@param id branch ID
-	*/
-	Neighbor(Node *anode, double alength, int aid) {
-		node = anode;
-		length = alength;
-		id = aid;
-	}
+    /**
+        construct class with a node and length
+        @param anode the other end of the branch
+        @param alength length of branch
+        @param id branch ID
+     */
+    Neighbor(Node *anode, double alength, int aid) {
+        node = anode;
+        length = alength;
+        id = aid;
+    }
 
-	/**
-		construct class with another Neighbor
-		@param nei another Neighbor
-	*/
-	Neighbor(Neighbor *nei) {
-		node = nei->node;
-		length = nei->length;
-		id = nei->id;
-	}
+    /**
+        construct class with another Neighbor
+        @param nei another Neighbor
+     */
+    Neighbor(Neighbor *nei) {
+        node = nei->node;
+        length = nei->length;
+        id = nei->id;
+    }
 
-	/**
-		destructor
-	*/
-	virtual ~Neighbor() {}
+    /**
+        destructor
+     */
+    virtual ~Neighbor() {
+    }
 };
 
 /**
-	Neighbor vector
-*/
+    Neighbor vector
+ */
 typedef vector<Neighbor*> NeighborVec;
 
 /**
-	Node vector
-*/
+    Node vector
+ */
 typedef vector<Node*> NodeVector;
 
 /*--------------------------------------------------------------*/
@@ -118,185 +119,187 @@ typedef vector<Node*> NodeVector;
 /**
 A Node in the tree
 @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler
-*/
-class Node{
+ */
+class Node {
 public:
-	/**
-		node id.
-	*/
-	int id;
-	
-	/**
-		node name
-	*/
-	string name;
+    /**
+        node id.
+     */
+    int id;
 
-	/**
-		list of neighbors
-	*/
-	NeighborVec neighbors;
+    /**
+        node name
+     */
+    string name;
 
- 	/** 
-		the height of subtree rooted at this node, used for greedy algorithm
-	*/
-	double height;
+    /**
+        list of neighbors
+     */
+    NeighborVec neighbors;
 
- 	/** 
-		child of maximal height of subtree rooted at this node, used for greedy algorithm
-	*/
-	Neighbor *highestNei;
+    /**
+        the height of subtree rooted at this node, used for greedy algorithm
+     */
+    double height;
 
-
-        /**
-         *      List of closest leaves to the current node.
-         */
-        NodeVector closestLeaves;
+    /**
+        child of maximal height of subtree rooted at this node, used for greedy algorithm
+     */
+    Neighbor *highestNei;
 
 
-	/**
-		constructor 
-	*/
-	Node() { id = -1; height = -1; };
+    /**
+     *      List of closest leaves to the current node.
+     */
+    NodeVector closestLeaves;
+
+    /**
+        constructor
+     */
+    Node() {
+        id = -1;
+        height = -1;
+    };
 
 
-	/**
-		constructor 
-		@param aid id of this node
-	*/
-	Node(int aid);
+    /**
+        constructor
+        @param aid id of this node
+     */
+    Node(int aid);
 
-	/**
-		constructor 
-		@param aid id of this node
-		@param aname name of this node
-	*/
-	Node(int aid, int aname);
+    /**
+        constructor
+        @param aid id of this node
+        @param aname name of this node
+     */
+    Node(int aid, int aname);
 
-	/**
-		constructor 
-		@param aid id of this node
-		@param aname name of this node
-	*/
-	Node(int aid, const char *aname);
+    /**
+        constructor
+        @param aid id of this node
+        @param aname name of this node
+     */
+    Node(int aid, const char *aname);
 
-	/**
-		destructor 
-	*/
-	virtual ~Node();
+    /**
+        destructor
+     */
+    virtual ~Node();
 
-	/**
-		used for the destructor
-	*/
-	virtual void deleteNode();
-
-	
-	/**
-		@return true of this is a leaf
-	*/
-	bool isLeaf();
-
-	/**
-		@return TRUE if this node is a cherry, FALSE otherwise
-	*/
-	bool isCherry();
-
-	/**
-		@return the number of adjacent nodes
-	*/
-	int degree();
-
-	/** calculate the height of the subtree rooted at this node, 
-	 	given the dad. Also return the lowestLeaf.
-		@param dad the dad of this node
-		@return the leaf at the lowest level. Also modify the height, highestNei of this class.
-	*/
-	Node *calcHeight(Node *dad = NULL);
+    /**
+        used for the destructor
+     */
+    virtual void deleteNode();
 
 
-        /**
-         * Calculate the distance between 2 nodes. Only for binary tree.
-         * @param parner the other node
-         * @return the distance
-         */
-        int calDist(Node *parner, Node *dad = NULL, int curLen = 0);
+    /**
+        @return true of this is a leaf
+     */
+    bool isLeaf();
 
-	/** calculate the longest path in the subtree (version 2: more efficient)
-		@param node1 the returned node1 of the one end of the path
-		@param node2 the returned node2 of the one end of the path
-		@return the length of the longest path
-	*/
-	double longestPath2 (Node* &node1, Node* &node2);
+    /**
+        @return TRUE if this node is a cherry, FALSE otherwise
+     */
+    bool isCherry();
 
-	/**
-		@param node the target node
-		@return the iterator to the neighbor that has the node. If not found, return NULL
-	*/
-	Neighbor *findNeighbor(Node *node);
+    /**
+        @return the number of adjacent nodes
+     */
+    int degree();
 
-	/**
-		@param node the target node
-		@return the iterator to the neighbor that has the node. If not found, return neighbors.end()
-	*/
-	NeighborVec::iterator findNeighborIt(Node *node);
+    /** calculate the height of the subtree rooted at this node,
+        given the dad. Also return the lowestLeaf.
+        @param dad the dad of this node
+        @return the leaf at the lowest level. Also modify the height, highestNei of this class.
+     */
+    Node *calcHeight(Node *dad = NULL);
 
-	/**
-		update the neighbor node with the newnode
-		@param node old neighbor node
-		@param newnode new neighbor node
-		@param newlen new length applied for the corresponding branch
-	*/
-	void updateNeighbor(Node* node, Node *newnode, double newlen);
 
-	/**
-		update the neighbor node with the newnode
-		@param node old neighbor node
-		@param newnode new neighbor node
-		@return length applied for the corresponding branch
-	*/
-	double updateNeighbor(Node* node, Node *newnode);
+    /**
+     * Calculate the distance between 2 nodes. Only for binary tree.
+     * @param parner the other node
+     * @return the distance
+     */
+    int calDist(Node *parner, Node *dad = NULL, int curLen = 0);
 
-	/**
-		update the neighbor node with the newnode
-		@param nei_it iterator to the neighbor
-		@param newnei new neighbor 
-	*/
-	void updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei);
+    /** calculate the longest path in the subtree (version 2: more efficient)
+        @param node1 the returned node1 of the one end of the path
+        @param node2 the returned node2 of the one end of the path
+        @return the length of the longest path
+     */
+    double longestPath2(Node* &node1, Node* &node2);
 
-	/**
-		update the neighbor node with the newnode
-		@param nei_it iterator to the neighbor
-		@param newnei new neighbor 
-		@param newlen new branch length
-	*/
-	void updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei, double newlen);
+    /**
+        @param node the target node
+        @return the iterator to the neighbor that has the node. If not found, return NULL
+     */
+    Neighbor *findNeighbor(Node *node);
 
-	/**
-		update the neighbor node with the newnode
-		@param node old neighbor node
-		@param newnei new neighbor 
-	*/
-	void updateNeighbor(Node *node, Neighbor *newnei);
+    /**
+        @param node the target node
+        @return the iterator to the neighbor that has the node. If not found, return neighbors.end()
+     */
+    NeighborVec::iterator findNeighborIt(Node *node);
 
-	/**
-		update the neighbor node with the newnode
-		@param node old neighbor node
-		@param newnei new neighbor 
-		@param newlen new branch length
-	*/
-	void updateNeighbor(Node *node, Neighbor *newnei, double newlen);
+    /**
+        update the neighbor node with the newnode
+        @param node old neighbor node
+        @param newnode new neighbor node
+        @param newlen new length applied for the corresponding branch
+     */
+    void updateNeighbor(Node* node, Node *newnode, double newlen);
 
-	/**
-		add a neighbor
-		@param node the neighbor node
-		@param length branch length
-		@param id branch ID
-	*/
-	virtual void addNeighbor(Node *node, double length, int id = -1);
+    /**
+        update the neighbor node with the newnode
+        @param node old neighbor node
+        @param newnode new neighbor node
+        @return length applied for the corresponding branch
+     */
+    double updateNeighbor(Node* node, Node *newnode);
+
+    /**
+        update the neighbor node with the newnode
+        @param nei_it iterator to the neighbor
+        @param newnei new neighbor
+     */
+    void updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei);
+
+    /**
+        update the neighbor node with the newnode
+        @param nei_it iterator to the neighbor
+        @param newnei new neighbor
+        @param newlen new branch length
+     */
+    void updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei, double newlen);
+
+    /**
+        update the neighbor node with the newnode
+        @param node old neighbor node
+        @param newnei new neighbor
+     */
+    void updateNeighbor(Node *node, Neighbor *newnei);
+
+    /**
+        update the neighbor node with the newnode
+        @param node old neighbor node
+        @param newnei new neighbor
+        @param newlen new branch length
+     */
+    void updateNeighbor(Node *node, Neighbor *newnei, double newlen);
+
+    /**
+        add a neighbor
+        @param node the neighbor node
+        @param length branch length
+        @param id branch ID
+     */
+    virtual void addNeighbor(Node *node, double length, int id = -1);
 };
 
 /*
-	some macros to transverse neighbors of a node
-*/
+    some macros to transverse neighbors of a node
+ */
 #define FOR_NEIGHBOR(mynode, mydad, it) \
 	for (it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); it++) \
 		if ((*it)->node != (mydad))
@@ -317,60 +320,56 @@ public:
 /*--------------------------------------------------------------*/
 
 /**
-	nodecmp, for pruning algorithm
-*/
-struct nodecmp
-{
-	/**
-		nodecmp, for pruning algorithm
-	*/
-  bool operator()(const Node* s1, const Node* s2) const
-  {
-    return (s1->neighbors[0]->length) < (s2->neighbors[0]->length);
-  }
+    nodecmp, for pruning algorithm
+ */
+struct nodecmp {
+
+    /**
+        nodecmp, for pruning algorithm
+     */
+    bool operator()(const Node* s1, const Node* s2) const {
+        return (s1->neighbors[0]->length) < (s2->neighbors[0]->length);
+    }
 };
 
-
-inline int nodenamecmp (const Node* a, const Node* b)
-{
-	return (a->name < b->name);
+inline int nodenamecmp(const Node* a, const Node* b) {
+    return (a->name < b->name);
 }
 
 /**
-	set of leaves, sorted in ascending order by the length of the incident branch.
-	For pruning algorithm
-*/
+    set of leaves, sorted in ascending order by the length of the incident branch.
+    For pruning algorithm
+ */
 typedef multiset<Node*, nodecmp> LeafSet;
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
 /**
-	map from leaf name to node class
-*/
+    map from leaf name to node class
+ */
 typedef map<const string, Node*> LeafMapName;
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
 /**
-	neighborcmp, for greedy algorithm
-*/
-struct neighborcmp
-{
-	/**
-		neighborcmp, for greedy algorithm
-	*/
-  bool operator()(const Neighbor* s1, const Neighbor* s2) const
-  {
-    return  ((s1->length + s1->node->height) > (s2->length + s2->node->height));
-  }
+    neighborcmp, for greedy algorithm
+ */
+struct neighborcmp {
+
+    /**
+        neighborcmp, for greedy algorithm
+     */
+    bool operator()(const Neighbor* s1, const Neighbor* s2) const {
+        return ((s1->length + s1->node->height) > (s2->length + s2->node->height));
+    }
 };
 
 /**
-	set of branches, sorted in descending order by the height of the corresponding subtree.
-	For greedy algorithm.
-*/
+    set of branches, sorted in descending order by the height of the corresponding subtree.
+    For greedy algorithm.
+ */
 typedef multiset<Neighbor*, neighborcmp> NeighborSet;
 
 

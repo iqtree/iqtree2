@@ -37,7 +37,6 @@ typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;
 typedef std::multiset< int, std::less< int > > MultiSetInt;
 
-
 /**
         nodeheightcmp, for building k-representative leaf set
  */
@@ -61,16 +60,14 @@ struct nodeheightcmp {
     }
 };
 
-
 struct IntBranchInfo {
-	PhyloNode *node1;
-	PhyloNode *node2;
-	double lh_contribution; // log-likelihood contribution of this branch: L(T)-L(T|e=0)
+    PhyloNode *node1;
+    PhyloNode *node2;
+    double lh_contribution; // log-likelihood contribution of this branch: L(T)-L(T|e=0)
 };
 
-inline int int_branch_cmp (const IntBranchInfo a, const IntBranchInfo b)
-{
-	return (a.lh_contribution < b.lh_contribution);
+inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
+    return (a.lh_contribution < b.lh_contribution);
 }
 
 
@@ -108,10 +105,10 @@ public:
      */
     double computeParsimonyTreePhylolib();
 
-	/**
-	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
-	 */
-	virtual void setParams(Params& params);
+    /**
+     * setup all necessary parameters  (declared as virtual needed for phylosupertree)
+     */
+    virtual void setParams(Params& params);
 
     /**
             print tree to .treefile
@@ -125,10 +122,23 @@ public:
      */
     void printResultTree(ostream &out);
 
-	/**
-		print intermediate tree
-	*/
-	void printIntermediateTree(int brtype);
+    /**
+     * print phylolib tree to a file.
+     * @param suffix suffix string for the tree file
+     */
+    void printPhylolibTree(const char* suffix);
+
+
+    /**
+     *  print model parameters of Phylolib(rates, base frequencies, alpha) to stdout and
+     *  to file
+     */
+    void printPhylolibModelParams(const char* suffix);
+
+    /**
+        print intermediate tree
+     */
+    void printIntermediateTree(int brtype);
 
     void setRootNode(char *my_root);
 
@@ -136,7 +146,7 @@ public:
             set k-representative parameter
             @param k_rep k-representative
      */
-   // void setRepresentNum(int k_rep);
+    // void setRepresentNum(int k_rep);
 
     /**
             set the probability of deleteing sequences for IQP algorithm
@@ -193,7 +203,7 @@ public:
      */
     double doVNS();
 
-    bool containPosNNI( vector<NNIMove> posNNIs);
+    bool containPosNNI(vector<NNIMove> posNNIs);
 
     /**
      * Perturb the tree for the next round of local search by swaping position of 2 random leaves
@@ -235,14 +245,14 @@ public:
      ****************************************************************************/
 
 
-	/**
+    /**
             This implement the fastNNI algorithm proposed in PHYML paper
             TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
             @return best likelihood found
             @param skipped (OUT) 1 if current iteration is skipped, otherwise 0
             @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    double optimizeNNI(bool beginHeu=false, int *skipped = NULL, int *nni_count = NULL);
+    double optimizeNNI(bool beginHeu = false, int *skipped = NULL, int *nni_count = NULL);
 
     /**
      * 		Do fastNNI using RAxML kernel
@@ -250,7 +260,7 @@ public:
      * 		@param skipped (OUT) 1 if current iteration is skipped, otherwise 0
      *      @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    double optimizeNNIRax(bool beginHeu=false, int *skipped = NULL, int *nni_count = NULL);
+    double optimizeNNIRax(bool beginHeu = false, int *skipped = NULL, int *nni_count = NULL);
 
 
     /**
@@ -260,35 +270,31 @@ public:
 
     /**
             search all positive NNI move on the current tree and save them
-	 		on the possilbleNNIMoves list
+            on the possilbleNNIMoves list
      */
     void genNNIMovesSort(bool approx_nni);
 
-	/**
-	 		apply nni2apply NNIs from the non-conflicting NNI list
-	 		@param nni2apply number of NNIs to apply from the list
-	*/
-	void applyNNIs (int nni2apply);
-
-	/**
-	 		generate non conflicting NNI moves.
-	 		moves are saved in vec_nonconf_nni
-	 */
-	void genNonconfNNIs();
+    /**
+            apply nni2apply NNIs from the non-conflicting NNI list
+            @param nni2apply number of NNIs to apply from the list
+     */
+    void applyNNIs(int nni2apply);
 
     /**
-            search the best swap for a branch
-            @return NNIMove The best Move/Swap
-            @param cur_score the current score of the tree before the swaps
-            @param node1 1 of the 2 nodes on the branch
-            @param node2 1 of the 2 nodes on the branch
+            generate non conflicting NNI moves.
+            moves are saved in vec_nonconf_nni
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, double lh_contribution = -1.0);
+    void genNonconfNNIs();
 
     /**
-            distance matrix, used for IQP algorithm
+       search for the best NNI move corresponding to this branch
+       @return NNIMove The best Move/Swap
+       @param node1 1 of the 2 nodes on the branch
+       @param node2 1 of the 2 nodes on the branch
+     * @param approx_nni evaluate NNI based on "Bayes"
+     * @param useLS evaluate NNI based on Least Square
      */
-    double *dist_matrix;
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
 
     /**
             add a NNI move to the list of possible NNI moves;
@@ -316,7 +322,7 @@ public:
 
     /**
             Described in PhyML paper: apply change to branch that does not
-	 		correspond to a swap with the following formula l = l + lamda(la - l)
+            correspond to a swap with the following formula l = l + lamda(la - l)
             @param node1 the first node of the branch
             @param node2 the second node of the branch
      */
@@ -324,8 +330,8 @@ public:
 
     /**
             Change all branch length according to the computed values during
-	 * 		NNI evaluation. There might be branches that are not be affected
-	 * 		since tree topology is changed after doing NNI
+     * 		NNI evaluation. There might be branches that are not be affected
+     * 		since tree topology is changed after doing NNI
      */
     void changeAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
@@ -342,14 +348,14 @@ public:
                                                            details)
      * @return the estimated value
      */
-	inline double estNMedian(void);
+    inline double estNMedian(void);
 
-	 /**
+    /**
      * Estimate the median of the distribution of N (see paper for more d
-                                                           details)
+                                                          details)
      * @return the estimated value
      */
-	inline double estDeltaMedian(void);
+    inline double estDeltaMedian(void);
 
     /**
      * Estimate the 95% quantile of the distribution of DELTA (see paper for
@@ -357,11 +363,6 @@ public:
      * @return the estimated value
      */
     inline double estDelta95(void);
-
-	/**
-	 * 	Convert a branch into to string
-	 * */
-	inline string bran2string(PhyloNode* node1, PhyloNode* node2);
 
     /**
      *
@@ -400,10 +401,10 @@ public:
      */
     double* pars_scores;
 
-	/**
-		Log-likelihood variastring IQPTree::bran2string(PhyloNode* node1, PhyloNode* node2)nce
-	*/
-	double logl_variance;
+    /**
+        Log-likelihood variastring IQPTree::bran2string(PhyloNode* node1, PhyloNode* node2)nce
+     */
+    double logl_variance;
 
     /**
      *      The coressponding log-likelihood score from computed indendently from the parsimony
@@ -433,31 +434,35 @@ public:
         return startLambda;
     }
 
+    inline double getNNICutoff() {
+        return nni_cutoff;
+    }
 
-	inline double getNNICutoff() { return nni_cutoff; }
-
-	tree* raxmlTree;
+    /**
+     *  Tree data structure for RAxML kernel
+     */
+    tree* raxmlTree;
 
 protected:
+
+    /**
+     *  Current IQPNNI iteration number
+     */
+    int curIQPIteration;
     /**
             criterion to assess important quartet
      */
     IQP_ASSESS_QUARTET iqp_assess_quartet;
 
     /**
-     *  Tree data structure for RAxML kernel
-     */
-
-
-    /**
-       The lamda number for NNI search (described in PhyML Paper)
+       The lambda number for NNI search (described in PhyML Paper)
      */
     double startLambda;
 
-	/**
-	 * current lambda value in use
-	*/
-	double curLambda;
+    /**
+     * current lambda value in use
+     */
+    double curLambda;
 
     /**
      * Array that stores the frequency that each taxa has been choosen to be swapped
@@ -523,19 +528,20 @@ protected:
     vector<NNIMove> vec_nonconf_nni;
 
     /**
-     *  Data structure to store how many time a leaf has been removed
+     *      Data structure to store how many times a leaf has been removed.
+     *      LeafFreq is a struct that contains leaf_id and leaf_frequency
      */
     vector<LeafFreq> leaf_freqs;
 
     /**
             Data structure (of type Map) which stores all the optimal
-			branch lengths for all branches in the tree
+            branch lengths for all branches in the tree
      */
     BranLenMap mapOptBranLens;
 
     /**
      * 	Data structure (of type Map) used to store the original branch
-		lengths of the tree
+        lengths of the tree
      */
     BranLenMap savedBranLens;
 
@@ -553,96 +559,96 @@ protected:
     void initLeafFrequency(PhyloNode* node = NULL, PhyloNode* dad = NULL);
 
 public:
-	/****** following variables are for ultra-fast bootstrap *******/
-	/** 2 to save all trees, 1 to save intermediate trees */
-	int save_all_trees;
+    /****** following variables are for ultra-fast bootstrap *******/
+    /** 2 to save all trees, 1 to save intermediate trees */
+    int save_all_trees;
 
-	/** TRUE to save also branch lengths into treels_newick */
-	bool save_all_br_lens;
+    /** TRUE to save also branch lengths into treels_newick */
+    bool save_all_br_lens;
 
-	/**
-		this keeps the list of intermediate trees.
-		it will be activated if params.avoid_duplicated_trees is TRUE.
-	*/
-	StringIntMap treels;
+    /**
+        this keeps the list of intermediate trees.
+        it will be activated if params.avoid_duplicated_trees is TRUE.
+     */
+    StringIntMap treels;
 
-	/** pattern log-likelihood vector for each treels */
-	vector<double* > treels_ptnlh;
+    /** pattern log-likelihood vector for each treels */
+    vector<double* > treels_ptnlh;
 
-	/** tree log-likelihood for each treels */
-	DoubleVector treels_logl;
+    /** tree log-likelihood for each treels */
+    DoubleVector treels_logl;
 
-	/** NEWICK string for each treels */
-	StrVector treels_newick;
+    /** NEWICK string for each treels */
+    StrVector treels_newick;
 
-	/** maximum number of distinct candidate trees (tau parameter) */
-	int max_candidate_trees;
+    /** maximum number of distinct candidate trees (tau parameter) */
+    int max_candidate_trees;
 
-	/** log-likelihood threshold (l_min) */
-	double logl_cutoff;
+    /** log-likelihood threshold (l_min) */
+    double logl_cutoff;
 
-	/** vector of bootstrap alignments generated */
-	vector<IntVector> boot_samples;
+    /** vector of bootstrap alignments generated */
+    vector<IntVector> boot_samples;
 
-	/** newick string of corresponding bootstrap trees */
-	IntVector boot_trees;
+    /** newick string of corresponding bootstrap trees */
+    IntVector boot_trees;
 
 	/** number of multiple optimal trees per replicate */
 	IntVector boot_counts;
 
-	/** corresponding RELL log-likelihood */
-	DoubleVector boot_logl;
+    /** corresponding RELL log-likelihood */
+    DoubleVector boot_logl;
 
-	/** Set of splits occuring in bootstrap trees */
-	vector<SplitGraph*> boot_splits;
+    /** Set of splits occuring in bootstrap trees */
+    vector<SplitGraph*> boot_splits;
 
-	/** Corresponding map for set of splits occuring in bootstrap trees */
-	//SplitIntMap boot_splits_map;
+    /** Corresponding map for set of splits occuring in bootstrap trees */
+    //SplitIntMap boot_splits_map;
 
-	/** summarize all bootstrap trees */
-	void summarizeBootstrap(Params &params, MTreeSet &trees);
+    /** summarize all bootstrap trees */
+    void summarizeBootstrap(Params &params, MTreeSet &trees);
 
-	void summarizeBootstrap(Params &params);
+    void summarizeBootstrap(Params &params);
 
-	/** summarize bootstrap trees into split set */
-	void summarizeBootstrap(SplitGraph &sg);
+    /** summarize bootstrap trees into split set */
+    void summarizeBootstrap(SplitGraph &sg);
 
-	/** @return TRUE if stopping criterion is met */
-	bool checkBootstrapStopping();
+    /** @return TRUE if stopping criterion is met */
+    bool checkBootstrapStopping();
 
-	int nni_round;
+    int nni_round;
 protected:
-	/**** NNI cutoff heuristic *****/
-	/**
-	*/
-	vector<NNIInfo> nni_info;
+    /**** NNI cutoff heuristic *****/
+    /**
+     */
+    vector<NNIInfo> nni_info;
 
 
-	bool estimate_nni_cutoff;
+    bool estimate_nni_cutoff;
 
-	double nni_cutoff;
+    double nni_cutoff;
 
-	bool nni_sort;
+    bool nni_sort;
 
-	bool testNNI;
+    bool testNNI;
 
-	ofstream outNNI;
+    ofstream outNNI;
 protected:
 
 
-	bool print_tree_lh;
+    bool print_tree_lh;
 
-	int write_intermediate_trees;
+    int write_intermediate_trees;
 
-	ofstream out_treels, out_treelh, out_sitelh, out_treebetter;
+    ofstream out_treels, out_treelh, out_sitelh, out_treebetter;
 
-	void estimateNNICutoff(Params* params);
+    void estimateNNICutoff(Params* params);
 
-	virtual void saveCurrentTree(double logl); // save current tree
+    virtual void saveCurrentTree(double logl); // save current tree
 
-	void saveNNITrees(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void saveNNITrees(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
-	int duplication_counter;
+    int duplication_counter;
 
     /**
             number of IQPNNI iterations

@@ -159,8 +159,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		int end_pos = 0;
 		if (model_str.length() > posG+2 && isdigit(model_str[posG+2])) {
 			num_rate_cats = convert_int(model_str.substr(posG+2).c_str(), end_pos);
-			if (num_rate_cats < 1) outError("Wrong number of rate categories");
-		}
+				if (num_rate_cats < 1) outError("Wrong number of rate categories");
+			}
 		if (model_str.length() > posG+2+end_pos && model_str[posG+2+end_pos] == OPEN_BRACKET) {
 			close_bracket = model_str.find(CLOSE_BRACKET, posG);
 			if (close_bracket == string::npos)

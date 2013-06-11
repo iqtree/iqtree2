@@ -378,17 +378,18 @@ double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double x
 	return optx;
 }
 
-double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm)
+double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm, double &d2l)
 {
 	const int MAXIT = 64;
 	int j;
 	double df,dx,dxold,f;
 	double temp,xh,xl,rts, fold, finit;
 
-	rts=xguess;
+	rts = xguess;
 	if (rts < x1) rts = x1;
 	if (rts > x2) rts = x2;
 	finit = fold = fm = computeFuncDerv(rts,f,df);
+	d2l = df;
 	if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) {
 		nrerror("Wrong computeFuncDerv");
 	}
@@ -412,28 +413,32 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 			dxold=dx;
 			dx=0.5*(xh-xl);
 			rts=xl+dx;
-			if (xl == rts) //return rts;
-				goto return_ok;
+            d2l = df;
+			if (xl == rts) return rts;
 		} else {
 			dxold=dx;
 			dx=f/df;
 			temp=rts;
 			rts -= dx;
-			if (temp == rts) //return rts;
-				goto return_ok;
+			d2l = df;
+			if (temp == rts) return rts;
 		}
-		if (fabs(dx) < xacc) { fm = computeFunction(rts); /*return rts;*/ goto return_ok; }
+		if (fabs(dx) < xacc) { fm = computeFunction(rts); return rts; }
 		fold = fm;
 		fm = computeFuncDerv(rts,f,df);
 		if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) nrerror("Wrong computeFuncDerv");
-		if (df > 0.0 && fabs(f) < xacc) //return rts;
-			goto return_ok;
+		if (df > 0.0 && fabs(f) < xacc) {
+			d2l = df;
+			return rts;
+		}
 		if (f < 0.0)
 			xl=rts;
 		else
 			xh=rts;
 	}
+	//return rts;
 	nrerror("Maximum number of iterations exceeded in minimizeNewton");
+	d2l = 0.0;
 	return 0.0;
 return_ok:
 	if (fm > finit) {
@@ -443,6 +448,13 @@ return_ok:
 		return xguess;
 	}
 	return rts;
+}
+
+double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm)
+{
+	double var;
+	double optx = minimizeNewton(x1, xguess, x2, xacc, fm, var);
+	return optx;
 }
 
 /*****************************************************

@@ -60,10 +60,15 @@ public:
 	virtual double computeFuncDerv(double value, double &df, double &ddf);
 
 	/**
-		compute the ML distance between two sequences
+		compute the ML distance and variance between two sequences
+		@param initial_dist initial guess
+		@param (OUT) second derivative of likelihood function evaluated at ML distance
 		@return the ML distance
 	*/
 	double optimizeDist(double initial_dist);
+
+	double optimizeDist(double initial_dist, double &d2l);
+
 
 	/**
 		add a pattern into the alignment

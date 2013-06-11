@@ -1034,10 +1034,12 @@ static void topLevelMakenewz(tree *tr, double *z0, int _maxiter, double *result)
         maxiter[i] = maxiter[i] - 1;
 
         /* check if the outer loop has converged */
-        if(maxiter[i] > 0 && (ABS(z[i] - zprev[i]) > zstep[i]))
+        if(maxiter[i] > 0 && (ABS(z[i] - zprev[i]) > zstep[i])) {
           outerConverged[i] = FALSE;
-        else
+        }
+        else {
           outerConverged[i] = TRUE;
+        }
       }
     }
 

@@ -71,7 +71,9 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut);
  *  @param nni_count: pointer to the number of NNI that has been apply (OUT parameter)
  *  @param deltaNNI: pointer to the average improvement made by one NNI (OUT parameters)
  */
-double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut);
+double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut, int numSmooth);
+
+void optimizeOneBranches(tree* tr, nodeptr p, int numNRStep);
 
 double doOneNNI(tree * tr, nodeptr p, int swap, int optBran);
 

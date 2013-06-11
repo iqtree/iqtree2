@@ -282,20 +282,29 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
     return lh;
 }
 
-double AlignmentPairwise::optimizeDist(double initial_dist) {
+double AlignmentPairwise::optimizeDist(double initial_dist, double &d2l) {
     // initial guess of the distance using Juke-Cantor correction
     double dist = initial_dist;
 
-    // if no model or rate is specified, return the JC distance
+    d2l = -1.0;
+
+    // if no model or rate is specified, return the JC distance and set variance to const
     if (!tree->getModelFactory() || !tree->getRate()) return dist;
 
     double negative_lh, ferror;
     if (tree->optimize_by_newton) // Newton-Raphson method
-        dist = minimizeNewton(1e-6, dist, MAX_GENETIC_DIST, 1e-6, negative_lh);
+        dist = minimizeNewton(1e-6, dist, MAX_GENETIC_DIST, 1e-6, negative_lh, d2l);
     else // Brent method
         dist = minimizeOneDimen(1e-6, dist, MAX_GENETIC_DIST, 1e-6, &negative_lh, &ferror);
+
     return dist;
 }
+
+double AlignmentPairwise::optimizeDist(double initial_dist) {
+	double d2l;
+	return optimizeDist(initial_dist, d2l);
+}
+
 
 AlignmentPairwise::~AlignmentPairwise()
 {
