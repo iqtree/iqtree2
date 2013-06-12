@@ -288,7 +288,8 @@ public:
 
     /**
        search for the best NNI move corresponding to this branch
-       @return NNIMove The best Move/Swap
+       @return NNIMove the best NNI, this NNI could be worse than the current tree
+       according to the evaluation scheme in use
        @param node1 1 of the 2 nodes on the branch
        @param node2 1 of the 2 nodes on the branch
      * @param approx_nni evaluate NNI based on "Bayes"

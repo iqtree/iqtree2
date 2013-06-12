@@ -3812,22 +3812,21 @@ void PhyloTree::reinsertLeaf(Node *leaf, Node *node, Node *dad) {
     Node *adjacent_node = leaf->neighbors[0]->node;
     Neighbor *nei = node->findNeighbor(dad);
     //double len = nei->length;
-    double len = max(nei->length, MIN_BRANCH_LEN*2);
+    double len = max(nei->length, MIN_BRANCH_LEN * 2);
     // to avoid too small branch length when reinserting leaf
 
     FOR_NEIGHBOR_IT(adjacent_node, leaf, it){
-    if (first) {
-        (*it)->node = node;
-        (*it)->length = len / 2;
-        node->updateNeighbor(dad, adjacent_node, len / 2);
-    } else {
-        (
-                *it)->node = dad;
-        (*it)->length = len / 2;
-        dad->updateNeighbor(node, adjacent_node, len / 2);
+        if (first) {
+            (*it)->node = node;
+            (*it)->length = len / 2;
+            node->updateNeighbor(dad, adjacent_node, len / 2);
+        } else {
+            (*it)->node = dad;
+            (*it)->length = len / 2;
+            dad->updateNeighbor(node, adjacent_node, len / 2);
+        }
+        first = false;
     }
-    first = false;
-}
 }
 
 bool PhyloTree::isSupportedNode(PhyloNode* node, int min_support) {
