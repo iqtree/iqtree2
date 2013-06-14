@@ -1537,8 +1537,6 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 void IQTree::applyNNIs(int nni2apply) {
     if (verbose_mode >= VB_DEBUG) {
         for (int i = 0; i < nni2apply; i++) {
-            PhyloNode *node1 = vec_nonconf_nni.at(i).node1;
-            PhyloNode *node2 = vec_nonconf_nni.at(i).node2;
             NeighborVec::iterator node1Nei_it = vec_nonconf_nni.at(i).node1Nei_it;
             NeighborVec::iterator node2Nei_it = vec_nonconf_nni.at(i).node2Nei_it;
             Neighbor *node1Nei = *(node1Nei_it);
@@ -1580,7 +1578,6 @@ void IQTree::applyNNIs(int nni2apply) {
                 changeBranLen(node1, node2, bran_it->second);
             }
         }
-
     }
 }
 
