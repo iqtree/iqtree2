@@ -1353,7 +1353,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             /* remove conflicting NNIs */
             genNonconfNNIs();
             nonconf_nni = vec_nonconf_nni.size();
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VB_DEBUG) {
                 for (int i = 0; i < vec_nonconf_nni.size(); i++) {
                     cout << "Log-likelihood of non-conflicting NNI " << i << " : " << vec_nonconf_nni[i].loglh << endl;
                 }
@@ -1429,7 +1429,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             }
         }
     } else {
-        if (verbose_mode >= VB_MAX)
+        if (verbose_mode >= VB_MED)
             cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
 
