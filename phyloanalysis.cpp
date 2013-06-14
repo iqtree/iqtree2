@@ -1915,7 +1915,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
     /* Fix if negative branch lengths detected */
     //double fixed_length = 0.001;
-    int fixed_number = iqtree.fixNegativeBranch(true);
+    int fixed_number = iqtree.fixNegativeBranch(false);
     string initial_tree_file = string(params.out_prefix) + ".initial_tree";
     iqtree.printTree(initial_tree_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 
