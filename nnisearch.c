@@ -336,7 +336,7 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
     } else {
         lh1 = doOneNNI(tr, p, 1, NO_BRAN_OPT);
         double delta = lh1 - lh0;
-        if (delta > 0 || ABS(delta) < 0.1) {
+        if (ABS(delta) < 0.1) {
            localSmooth(tr, p, 1);
            localSmooth(tr, q, 1);
            evaluateGeneric(tr, p, FALSE);
@@ -380,7 +380,7 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
     } else {
         lh2 = doOneNNI(tr, p, 2, NO_BRAN_OPT);
         double delta = lh2 - lh0;
-        if (delta > 0 || ABS(delta) < 0.1) {
+        if (ABS(delta) < 0.1) {
            localSmooth(tr, p, 1);
            localSmooth(tr, q, 1);
            evaluateGeneric(tr, p, FALSE);
