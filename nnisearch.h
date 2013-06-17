@@ -8,9 +8,14 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 
+const int TOPO_ONLY = 0;
+const int NO_BRAN_OPT = 1;
+const int ONE_BRAN_OPT = 2;
+const int THOROUGH_OPT = 4;
+
 
 /*--------------------------------------------------------------*/
-/* portable version for fmemopen */
+/* portable version for fmemopenevalType */
 /*--------------------------------------------------------------*/
 
 #if defined __APPLE__ || defined __MACH__
@@ -45,8 +50,11 @@ typedef struct {
 	tree* tr;
 	nodeptr p;
 	int nniType;
-	double z[NUM_BRANCHES]; // optimize branch lengths
-	double z0[NUM_BRANCHES]; // unoptimized branch lengths
+    double z0[NUM_BRANCHES]; // p
+    double z1[NUM_BRANCHES]; // p->next
+    double z2[NUM_BRANCHES]; // p->next->next
+    double z3[NUM_BRANCHES]; // q->next
+    double z4[NUM_BRANCHES]; // q->next->next
 	double likelihood;
 	double deltaLH;
 } nniMove;
@@ -63,11 +71,11 @@ typedef struct {
  */
 nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut);
 
-/*
- * 	do 1round of fast NNI
+/**
+ * 	do 1 round of fast NNI
  *  return new tree log-likelihood if found improving NNI otherwise 0.0
  *
- *  @param tr: the tree data strucutre
+ *  @param tr: the tree data structure
  *  @param nni_count: pointer to the number of NNI that has been apply (OUT parameter)
  *  @param deltaNNI: pointer to the average improvement made by one NNI (OUT parameters)
  */
@@ -75,9 +83,15 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut, i
 
 void optimizeOneBranches(tree* tr, nodeptr p, int numNRStep);
 
-double doOneNNI(tree * tr, nodeptr p, int swap, int optBran);
+/**
+ *  @brief Do 1 NNI move.
+ *  @param[in] tr: the tree data structure
+ *  @param[in] swap: represents one of the 2 NNI moves. Could be either 0 or 1
+ *  @param[in] evalType: NO_NR, WITH_ONE_NR, WITH_FIVE_NR
+ */
+double doOneNNI(tree * tr, nodeptr p, int swap, int evalType);
 
-/*
+/**
  *  Go through all 2(n-3) internal branches of the tree and
  *  evaluate all possible NNI moves
  */

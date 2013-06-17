@@ -1459,6 +1459,12 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
     double curLH = raxmlTree->likelihood;
     //cout << "LH IQP Tree = " << curLH << endl;
     int nniApplied = 0;
+    TOL_LIKELIHOOD_PHYLOLIB = params->loglh_epsilon;
+    numSmoothTree = params->numSmoothTree;
+    if (params->fast_eval)
+        fast_eval = 1;
+    else
+        fast_eval = 0;
     while (true) {
         if (beginHeu) {
             double maxScore = curLH + nni_delta_est * (nni_count_est - nniApplied);
@@ -1477,13 +1483,6 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
         }
         int nni_count = 0;
         double deltaNNI = 0.0;
-        TOL_LIKELIHOOD_PHYLOLIB = params->loglh_epsilon;
-        numSmoothTree = params->numSmoothTree;
-        if (params->fast_eval) {
-            fast_eval = 1;
-        } else {
-            fast_eval = 0;
-        }
         double newLH = doNNISearch(raxmlTree, &nni_count, &deltaNNI, &nnicut, numSmoothTree);
         if (newLH == 0.0) {
             break;

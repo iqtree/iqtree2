@@ -100,12 +100,10 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut, i
     }
 
     // creating a list of non-conflicting positive NNI
-    nniMove* nonConfNNIList = (nniMove*) calloc(cnt_nni, sizeof (nniMove));
+    nniMove* nonConfNNIList = (nniMove*) malloc(cnt_nni * sizeof (nniMove));
 
     // the best NNI will always be taken
     nonConfNNIList[0] = impNNIList[cnt_nni - 1];
-
-
 
     // Filter out conflicting NNI
     int numNonConflictNNI = 1; // size of the non-conflicting NNI list;
@@ -136,8 +134,6 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut, i
     	for (i = 0; i < numNonConflictNNI; i++) {
     		printf("Log-likelihood of non-conflicting NNI %d : %10.6f \n", i, nonConfNNIList[i].likelihood);
     		printf("Log-likelihood before NNI : %10.6f \n", nonConfNNIList[i].likelihood - nonConfNNIList[i].deltaLH);
-    		printf("Old branch length : %10.6f \n", nonConfNNIList[i].z0[0]);
-    		printf("New branch length : %10.6f \n", nonConfNNIList[i].z[0]);
     	}
 
     }
@@ -151,12 +147,20 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut, i
         numNNI2Apply = ceil(numNonConflictNNI * delta);
         for (i = 0; i < numNNI2Apply; i++) {
             // Just do the topological change
-            doOneNNI(tr, nonConfNNIList[i].p, nonConfNNIList[i].nniType, FALSE);
+            doOneNNI(tr, nonConfNNIList[i].p, nonConfNNIList[i].nniType, TOPO_ONLY);
             // Apply the store branch length
             int j;
             for (j = 0; j < tr->numBranches; j++) {
-                nonConfNNIList[i].p->z[j] = nonConfNNIList[i].z[j];
-                nonConfNNIList[i].p->back->z[j] = nonConfNNIList[i].z[j];
+                nonConfNNIList[i].p->z[j] = nonConfNNIList[i].z0[j];
+                nonConfNNIList[i].p->back->z[j] = nonConfNNIList[i].z0[j];
+                nonConfNNIList[i].p->next->z[j] = nonConfNNIList[i].z1[j];
+                nonConfNNIList[i].p->next->back->z[j] = nonConfNNIList[i].z1[j];
+                nonConfNNIList[i].p->next->next->z[j] = nonConfNNIList[i].z2[j];
+                nonConfNNIList[i].p->next->next->back->z[j] = nonConfNNIList[i].z2[j];
+                nonConfNNIList[i].p->back->next->z[j] = nonConfNNIList[i].z3[j];
+                nonConfNNIList[i].p->back->next->back->z[j] = nonConfNNIList[i].z3[j];
+                nonConfNNIList[i].p->back->next->next->z[j] = nonConfNNIList[i].z4[j];
+                nonConfNNIList[i].p->back->next->next->back->z[j] = nonConfNNIList[i].z4[j];
             }
             newviewGeneric(tr, nonConfNNIList[i].p, FALSE);
             newviewGeneric(tr, nonConfNNIList[i].p->back, FALSE);
@@ -239,7 +243,7 @@ void optimizeOneBranches(tree* tr, nodeptr p, int numNRStep) {
     }
 }
 
-double doOneNNI(tree * tr, nodeptr p, int swap, int optBran) {
+double doOneNNI(tree * tr, nodeptr p, int swap, int evalType) {
     nodeptr q;
     nodeptr tmp;
 
@@ -260,25 +264,21 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int optBran) {
         tmp = p->next->next->back;
         hookup(p->next->next, q->next->back, q->next->z, tr->numBranches);
         hookup(q->next, tmp, tmp->z, tr->numBranches);
-        //hookup(p->next->next, q->next->back, q->next->z, tr->numBranches);
-        //hookup(q->next, tmp, tmp->z, tr->numBranches);
     }
 
     assert(pNum == p->number);
     assert(qNum == q->number);
 
-    if (optBran) {
+    if (evalType == TOPO_ONLY) {
+        return 0.0;
+    } else {
         newviewGeneric(tr, p, FALSE);
         newviewGeneric(tr, q, FALSE);
-        if (!fast_eval) {
-            optimizeOneBranches(tr, p, 100);
+        if (evalType == ONE_BRAN_OPT) {
+            optimizeOneBranches(tr, p, 32);
         }
         evaluateGeneric(tr, p, FALSE);
         return tr->likelihood;
-    } else {
-        //newviewGeneric(tr, p, FALSE);
-        //newviewGeneric(tr, q, FALSE);
-        return -1.0;
     }
 }
 
@@ -290,106 +290,151 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
     nniMove nni0; // nni0 means no NNI move is done
     nni0.p = p;
     nni0.nniType = 0;
-    nni0.deltaLH = 0;
+    nni0.deltaLH = 0.0;
+    nni0.likelihood = curLH;
     for (i = 0; i < tr->numBranches; i++) {
-        nni0.z[i] = p->z[i];
-    }
-
-    /* Backup the current branch length */
-    double z0[NUM_BRANCHES];
-    for (i = 0; i < tr->numBranches; i++) {
-        z0[i] = p->z[i];
+        nni0.z0[i] = p->z[i];
+        nni0.z1[i] = p->next->z[i];
+        nni0.z2[i] = p->next->next->z[i];
+        nni0.z3[i] = q->next->z[i];
+        nni0.z4[i] = q->next->next->z[i];
     }
 
     double lh0 = curLH;
     double multiLH = 0.0;
-    if (nnicut->doNNICut) {
-        // compute likelihood of the multifurcating tree
-        for (i = 0; i < tr->numBranches; i++) {
-            p->z[i] = 1.0;
-            p->back->z[i] = 1.0;
-        }
-        // now compute the log-likelihood
-        // This is actually time consuming!!!
-        newviewGeneric(tr, p, FALSE);
-        newviewGeneric(tr, p->back, FALSE);
-        evaluateGeneric(tr, p, FALSE);
-        multiLH = tr->likelihood;
-        //printf("curLH - multiLH : %f - %f \n", curLH, multiLH);
-        for (i = 0; i < tr->numBranches; i++) {
-            p->z[i] = z0[i];
-            p->back->z[i] = z0[i];
-        }
-        // If the log-likelihood of the zero branch configuration is some delta log-likelihood smaller than 
-        // the log-likelihood of the current tree then it is very likely that there no better NNI tree
-        if (curLH - multiLH > nnicut->delta_min)
-            return nni0;
-    }
+//    if (nnicut->doNNICut) {
+//        // compute likelihood of the multifurcating tree
+//        for (i = 0; i < tr->numBranches; i++) {
+//            p->z[i] = 1.0;
+//            p->back->z[i] = 1.0;
+//        }
+//        // now compute the log-likelihood
+//        // This is actually time consuming!!!
+//        newviewGeneric(tr, p, FALSE);
+//        newviewGeneric(tr, p->back, FALSE);
+//        evaluateGeneric(tr, p, FALSE);
+//        multiLH = tr->likelihood;
+//        //printf("curLH - multiLH : %f - %f \n", curLH, multiLH);
+//        for (i = 0; i < tr->numBranches; i++) {
+//            p->z[i] = z0[i];
+//            p->back->z[i] = z0[i];
+//        }
+//        // If the log-likelihood of the zero branch configuration is some delta log-likelihood smaller than
+//        // the log-likelihood of the current tree then it is very likely that there no better NNI tree
+//        if (curLH - multiLH > nnicut->delta_min)
+//            return nni0;
+//    }
 
     /* TODO Save the likelihood vector at node p and q */
     //saveLHVector(p, q, p_lhsave, q_lhsave);
     /* Save the scaling factor */
 
     // Now try to do an NNI move of type 1
-    double lh1 = doOneNNI(tr, p, 1, TRUE);
+    double lh1;
+    if (!fast_eval) {
+        lh1 = doOneNNI(tr, p, 1, ONE_BRAN_OPT);
+    } else {
+        lh1 = doOneNNI(tr, p, 1, NO_BRAN_OPT);
+        double delta = lh1 - lh0;
+        if (delta > 0 || ABS(delta) < 0.1) {
+           localSmooth(tr, p, 1);
+           localSmooth(tr, q, 1);
+           evaluateGeneric(tr, p, FALSE);
+           lh1 = tr->likelihood;
+        }
+    }
     nniMove nni1;
     nni1.p = p;
     nni1.nniType = 1;
-    // Store the optimized und unoptimized central branch length
+    // Store the optimized and unoptimized central branch length
     for (i = 0; i < tr->numBranches; i++) {
-        nni1.z[i] = p->z[i];
-        nni1.z0[i] = z0[i];
+        nni1.z0[i] = p->z[i];
+        nni1.z1[i] = p->next->z[i];
+        nni1.z2[i] = p->next->next->z[i];
+        nni1.z3[i] = q->next->z[i];
+        nni1.z4[i] = q->next->next->z[i];
     }
     nni1.likelihood = lh1;
     nni1.deltaLH = lh1 - lh0;
 
     /* Restore previous NNI move */
-    doOneNNI(tr, p, 1, FALSE);
+    doOneNNI(tr, p, 1, TOPO_ONLY);
     /* Restore the old branch length */
     for (i = 0; i < tr->numBranches; i++) {
-        p->z[i] = z0[i];
-        p->back->z[i] = z0[i];
+        p->z[i] = nni0.z0[i];
+        q->z[i] =  nni0.z0[i];
+        p->next->z[i] =  nni0.z1[i];
+        p->next->back->z[i] =  nni0.z1[i];
+        p->next->next->z[i] =  nni0.z2[i];
+        p->next->next->back->z[i] =  nni0.z2[i];
+        q->next->z[i] =  nni0.z3[i];
+        q->next->back->z[i] =  nni0.z3[i];
+        q->next->next->z[i] =  nni0.z4[i];
+        q->next->next->back->z[i] =  nni0.z4[i];
     }
 
     /* Try to do an NNI move of type 2 */
-    double lh2 = doOneNNI(tr, p, 2, TRUE);
+    double lh2;
+    if (!fast_eval) {
+        lh2 = doOneNNI(tr, p, 2, ONE_BRAN_OPT);
+    } else {
+        lh2 = doOneNNI(tr, p, 2, NO_BRAN_OPT);
+        double delta = lh2 - lh0;
+        if (delta > 0 || ABS(delta) < 0.1) {
+           localSmooth(tr, p, 1);
+           localSmooth(tr, q, 1);
+           evaluateGeneric(tr, p, FALSE);
+           lh2 = tr->likelihood;
+        }
+    }
     // Create the nniMove struct to store this move
     nniMove nni2;
     nni2.p = p;
     nni2.nniType = 2;
     // Store the optimized and unoptimized central branch length
     for (i = 0; i < tr->numBranches; i++) {
-        nni2.z[i] = p->z[i];
-        nni2.z0[i] = z0[i];
+        nni2.z0[i] = p->z[i];
+        nni2.z1[i] = p->next->z[i];
+        nni2.z2[i] = p->next->next->z[i];
+        nni2.z3[i] = q->next->z[i];
+        nni2.z4[i] = q->next->next->z[i];
     }
     nni2.likelihood = lh2;
     nni2.deltaLH = lh2 - lh0;
 
     /* Restore previous NNI move */
-    doOneNNI(tr, p, 2, FALSE);
+    doOneNNI(tr, p, 2, TOPO_ONLY);
     newviewGeneric(tr, p, FALSE);
     newviewGeneric(tr, p->back, FALSE);
     /* Restore the old branch length */
     for (i = 0; i < tr->numBranches; i++) {
-        p->z[i] = z0[i];
-        p->back->z[i] = z0[i];
+        p->z[i] = nni0.z0[i];
+        q->z[i] =  nni0.z0[i];
+        p->next->z[i] =  nni0.z1[i];
+        p->next->back->z[i] =  nni0.z1[i];
+        p->next->next->z[i] =  nni0.z2[i];
+        p->next->next->back->z[i] =  nni0.z2[i];
+        q->next->z[i] =  nni0.z3[i];
+        q->next->back->z[i] =  nni0.z3[i];
+        q->next->next->z[i] =  nni0.z4[i];
+        q->next->next->back->z[i] =  nni0.z4[i];
     }
 
-    if (nnicut->doNNICut && (nnicut->num_delta) < MAX_NUM_DELTA) {
-        double lh_array[3];
-        lh_array[0] = curLH;
-        lh_array[1] = lh1;
-        lh_array[2] = lh2;
-
-        qsort(lh_array, 3, sizeof (double), compareDouble);
-
-        double deltaLH = lh_array[1] - multiLH;
-        if (deltaLH > nnicut->delta_min) {
-            printf("%f %f %f %f\n", multiLH, curLH, lh1, lh2);
-        }
-        nnicut->delta[nnicut->num_delta] = deltaLH;
-        (nnicut->num_delta)++;
-    }
+//    if (nnicut->doNNICut && (nnicut->num_delta) < MAX_NUM_DELTA) {
+//        double lh_array[3];
+//        lh_array[0] = curLH;
+//        lh_array[1] = lh1;
+//        lh_array[2] = lh2;
+//
+//        qsort(lh_array, 3, sizeof (double), compareDouble);
+//
+//        double deltaLH = lh_array[1] - multiLH;
+//        if (deltaLH > nnicut->delta_min) {
+//            printf("%f %f %f %f\n", multiLH, curLH, lh1, lh2);
+//        }
+//        nnicut->delta[nnicut->num_delta] = deltaLH;
+//        (nnicut->num_delta)++;
+//    }
 
     if (nni1.deltaLH > TOL_LIKELIHOOD_PHYLOLIB && nni1.deltaLH > nni2.deltaLH) {
         return nni1;
@@ -538,7 +583,7 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
 void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* cnt, int* cnt_nni, double curLH, NNICUT* nnicut) {
     if (!isTip(p->number, tr->mxtips)) {
         nniList[*cnt] = getBestNNIForBran(tr, p, curLH, nnicut);
-        if (nniList[*cnt].deltaLH != 0.0) {
+        if (nniList[*cnt].deltaLH > 0.0) {
             *cnt_nni = *cnt_nni + 1;
         }
         *cnt = *cnt + 1;
