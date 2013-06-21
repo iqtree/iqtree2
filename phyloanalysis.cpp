@@ -1915,7 +1915,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
     /* Fix if negative branch lengths detected */
     //double fixed_length = 0.001;
-    int fixed_number = iqtree.fixNegativeBranch(true);
+    int fixed_number = iqtree.fixNegativeBranch(false);
     string initial_tree_file = string(params.out_prefix) + ".initial_tree";
     iqtree.printTree(initial_tree_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 
@@ -1985,10 +1985,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
     if (iqtree.isSuperTree())
         ((PhyloSuperTree*) & iqtree)->mapTrees();
 
-    double bestTreeScore = -1.0;
     // string to store the current tree with taxon id and branch lengths
     stringstream best_tree_string;
     iqtree.setParams(params);
+    double bestTreeScore;
     
     if (!params.leastSquareBranch) {
         // degree of freedom
@@ -1998,7 +1998,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
         printAnalysisInfo(model_df, iqtree, params);        
         cout << "Optimize model parameters ... " << endl;
         // Optimize model parameters and branch lengths using ML for the initial tree
-        double bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
+        bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
                 params.fixed_branch_length, true, TOL_LIKELIHOOD);
         iqtree.curScore = bestTreeScore;        
         iqtree.printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);

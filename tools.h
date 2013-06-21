@@ -346,6 +346,8 @@ struct Params {
      */
     bool fast_eval;
 
+    int evalType;
+
     /**
      *  Different type of Least Square variances
      */

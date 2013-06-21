@@ -1358,7 +1358,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             /* remove conflicting NNIs */
             genNonconfNNIs();
             nonconf_nni = vec_nonconf_nni.size();
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VB_DEBUG) {
                 for (int i = 0; i < vec_nonconf_nni.size(); i++) {
                     cout << "Log-likelihood of non-conflicting NNI " << i << " : " << vec_nonconf_nni[i].loglh << endl;
                 }
@@ -1434,7 +1434,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             }
         }
     } else {
-        if (verbose_mode >= VB_MAX)
+        if (verbose_mode >= VB_MED)
             cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
 
@@ -1463,6 +1463,12 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
     double curLH = raxmlTree->likelihood;
     //cout << "LH IQP Tree = " << curLH << endl;
     int nniApplied = 0;
+    TOL_LIKELIHOOD_PHYLOLIB = params->loglh_epsilon;
+    numSmoothTree = params->numSmoothTree;
+    if (params->fast_eval)
+        fast_eval = 1;
+    else
+        fast_eval = 0;
     while (true) {
         if (beginHeu) {
             double maxScore = curLH + nni_delta_est * (nni_count_est - nniApplied);
@@ -1481,8 +1487,6 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
         }
         int nni_count = 0;
         double deltaNNI = 0.0;
-        TOL_LIKELIHOOD_PHYLOLIB = params->loglh_epsilon;
-        numSmoothTree = params->numSmoothTree;
         double newLH = doNNISearch(raxmlTree, &nni_count, &deltaNNI, &nnicut, numSmoothTree);
         if (newLH == 0.0) {
             break;
@@ -1536,8 +1540,6 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 void IQTree::applyNNIs(int nni2apply) {
     if (verbose_mode >= VB_DEBUG) {
         for (int i = 0; i < nni2apply; i++) {
-            PhyloNode *node1 = vec_nonconf_nni.at(i).node1;
-            PhyloNode *node2 = vec_nonconf_nni.at(i).node2;
             NeighborVec::iterator node1Nei_it = vec_nonconf_nni.at(i).node1Nei_it;
             NeighborVec::iterator node2Nei_it = vec_nonconf_nni.at(i).node2Nei_it;
             Neighbor *node1Nei = *(node1Nei_it);
@@ -1579,7 +1581,6 @@ void IQTree::applyNNIs(int nni2apply) {
                 changeBranLen(node1, node2, bran_it->second);
             }
         }
-
     }
 }
 
