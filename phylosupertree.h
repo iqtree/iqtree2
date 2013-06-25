@@ -97,8 +97,7 @@ public:
             @param initial_dist initial distance
             @return distance between seq1 and seq2
      */
-    virtual double computeDist(int seq1, int seq2, double initial_dist);
-
+    virtual double computeDist(int seq1, int seq2, double initial_dist, double &var);
 
 	/**
 		create sub-trees T|Y_1,...,T|Y_k of the current super-tree T

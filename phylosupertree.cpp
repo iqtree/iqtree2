@@ -186,16 +186,16 @@ int PhyloSuperTree::getAlnNSite() {
 	return num;
 }
 
-double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist) {
+double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist, double &var) {
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0)
         initial_dist = aln->computeDist(seq1, seq2);
-    if (initial_dist == MAX_GENETIC_DIST) return initial_dist;
-    if (!model_factory || !site_rate) return initial_dist;
+    if (initial_dist == MAX_GENETIC_DIST) return initial_dist; // MANUEL: here no d2l is return
+    if (!model_factory || !site_rate) return initial_dist; // MANUEL: here no d2l is return
 
     // now optimize the distance based on the model and site rate
     SuperAlignmentPairwise aln_pair(this, seq1, seq2);
-    return aln_pair.optimizeDist(initial_dist);
+    return aln_pair.optimizeDist(initial_dist, var);
 }
 
 void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei) {

@@ -2454,8 +2454,9 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0)
         initial_dist = aln->computeDist(seq1, seq2);
+
     if (!model_factory || !site_rate)
-        return initial_dist;
+        return initial_dist; // MANUEL: here no d2l is return
 
     // now optimize the distance based on the model and site rate
     AlignmentPairwise aln_pair(this, seq1, seq2);
