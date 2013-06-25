@@ -219,20 +219,6 @@ int convert_int(const char *str, int &end_pos) throw (string) {
 	return i;
 }
 
-int convert_int(const char *str, int &end_pos) throw (string) {
-	char *endptr;
-	int i = strtol(str, &endptr, 10);
-
-	if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL) {
-		string err = "Expecting integer, but found \"";
-		err += str;
-		err += "\" instead";
-		throw err;
-	}
-	end_pos = endptr - str;
-	return i;
-}
-
 double convert_double(const char *str) throw (string) {
     char *endptr;
     double d = strtod(str, &endptr);
@@ -243,19 +229,6 @@ double convert_double(const char *str) throw (string) {
         throw err;
     }
     return d;
-}
-
-double convert_double(const char *str, int &end_pos) throw (string) {
-	char *endptr;
-	double d = strtod(str, &endptr);
-	if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF) {
-		string err = "Expecting floating-point number, but found \"";
-		err += str;
-		err += "\" instead";
-		throw err;
-	}
-	end_pos = endptr - str;
-	return d;
 }
 
 double convert_double(const char *str, int &end_pos) throw (string) {

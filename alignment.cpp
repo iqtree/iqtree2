@@ -675,22 +675,6 @@ string Alignment::convertStateBackStr(char state) {
 	return str;
 }
 
-string Alignment::convertStateBackStr(char state) {
-	string str;
-	if (num_states <= 20) {
-		str = convertStateBack(state);
-	} else {
-		// codon data
-		if (state >= num_states) return "???";
-		assert(codon_table);
-		int state_back = codon_table[(int)state];
-		str = symbols_dna[state_back/16];
-		str += symbols_dna[(state_back%16)/4];
-		str += symbols_dna[state_back%4];
-	}
-	return str;
-}
-
 void Alignment::convertStateStr(string &str, SeqType seq_type) {
     for (string::iterator it = str.begin(); it != str.end(); it++)
         (*it) = convertState(*it, seq_type);

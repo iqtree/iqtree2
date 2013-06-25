@@ -1340,7 +1340,7 @@ bool MTree::equalTopology(MTree *tree) {
 	return ostr.str() == ostr2.str();
 }
 
-void MTree::calcDist(char *filename, bool unit_length) {
+void MTree::calcDist(char *filename) {
     vector<string> taxname;
     int i, j;
 
@@ -1348,7 +1348,7 @@ void MTree::calcDist(char *filename, bool unit_length) {
     taxname.resize(leafNum);
     double *dist = new double [leafNum * leafNum];
     // calculate the distances
-    calcDist(dist, unit_length);
+    calcDist(dist);
     // get the taxa name
     getTaxaName(taxname);
 
@@ -1374,7 +1374,7 @@ void MTree::calcDist(char *filename, bool unit_length) {
     delete [] dist;
 }
 
-void MTree::calcDist(double* &dist, bool unit_length, Node *node, Node *dad) {
+void MTree::calcDist(double* &dist, Node *node, Node *dad) {
     if (!node) node = root;
     if (node->isLeaf()) {
         calcDist(node, 0.0, dist, node, NULL);
@@ -1386,7 +1386,7 @@ void MTree::calcDist(double* &dist, bool unit_length, Node *node, Node *dad) {
     }
 }
 
-void MTree::calcDist(Node *aroot, double cur_len, double* &dist, Node *node, Node *dad, bool unit_length) {
+void MTree::calcDist(Node *aroot, double cur_len, double* &dist, Node *node, Node *dad) {
     double branch_length;
 	if (!node) node = root;
     if (node->isLeaf()) {
@@ -1396,7 +1396,7 @@ void MTree::calcDist(Node *aroot, double cur_len, double* &dist, Node *node, Nod
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
     //if ((*it)->node != dad)	{
     FOR_NEIGHBOR_IT(node, dad, it) {
-    	if (unit_length) branch_length = 1; else branch_length = (*it)->length;
+    	branch_length = (*it)->length;
         calcDist(aroot, cur_len + branch_length, dist, (*it)->node, node);
     }
 

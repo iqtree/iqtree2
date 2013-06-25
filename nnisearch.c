@@ -29,6 +29,7 @@ extern int verbose_mode;
 
 double TOL_LIKELIHOOD_PHYLOLIB;
 int numSmoothTree;
+int fast_eval;
 
 int treeReadLenString(const char *buffer, tree *tr, pl_boolean readBranches,
         pl_boolean readNodeLabels, pl_boolean topologyOnly) {
@@ -168,9 +169,6 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut, i
         // Re-optimize all branches
         treeEvaluate(tr, numSmooth);
         if (tr->likelihood < curScore) {
-            //printf("Tree likelihood gets worse after applying %d NNI\n", numNNI2Apply);
-            //printf("curScore = %30.20f\n", curScore);
-            //printf("newScore = %30.20f\n", tr->likelihood);
             if (numNNI2Apply == 1) {
                 printf("This is a BUG: Tree gets worse when 1 NNI is applied?\n");
                 printf("Tree supposed to get LH greater than or equal %30.20f\n", nonConfNNIList[0].likelihood);
@@ -262,8 +260,6 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int evalType) {
         tmp = p->next->back;
         hookup(p->next, q->next->back, q->next->z, tr->numBranches);
         hookup(q->next, tmp, tmp->z, tr->numBranches);
-        //hookupDefault(p->next, q->next->back, tr->numBranches);
-        //hookupDefault(q->next, tmp, tr->numBranches);
     } else {
         tmp = p->next->next->back;
         hookup(p->next->next, q->next->back, q->next->z, tr->numBranches);
@@ -278,8 +274,8 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int evalType) {
     } else {
         newviewGeneric(tr, p, FALSE);
         newviewGeneric(tr, q, FALSE);
-        if (evalType == ONE_BRAN_OPT) {
-            optimizeOneBranches(tr, p, 32);
+        if (!fast_eval) {
+            optimizeOneBranches(tr, p, 100);
         }
         evaluateGeneric(tr, p, FALSE);
         return tr->likelihood;

@@ -188,13 +188,13 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
 
     /**
             Do an NNI on the supertree and synchronize all subtrees respectively
             @param move the single NNI
      */
-    virtual double doNNI(NNIMove move);
+    virtual void doNNI(NNIMove &move);
 
     /**
      * 	 Restore the branch lengths from the saved values

@@ -430,7 +430,7 @@ void PhyloSuperTree::initPartitionInfo() {
 	}
 }
 
-NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, double lh_contribution) {
+NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, bool useLS, double lh_contribution) {
     NNIMove myMove;
     myMove.loglh = 0;
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
@@ -535,7 +535,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 	return myMove;
 }
 
-double PhyloSuperTree::doNNI(NNIMove move) {
+void PhyloSuperTree::doNNI(NNIMove &move) {
 	SuperNeighbor *nei1 = (SuperNeighbor*)move.node1->findNeighbor(move.node2);
 	SuperNeighbor *nei2 = (SuperNeighbor*)move.node2->findNeighbor(move.node1);
 	SuperNeighbor *node1_nei = (SuperNeighbor*)*move.node1Nei_it;
@@ -577,8 +577,6 @@ double PhyloSuperTree::doNNI(NNIMove move) {
 	} 
 
 	//linkTrees();
-
-	return 0;
 }
 
 void PhyloSuperTree::linkTrees() {

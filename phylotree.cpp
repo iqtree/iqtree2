@@ -74,19 +74,13 @@ void PhyloTree::init() {
     root_state = STATE_UNKNOWN;
     theta_all = NULL;
     subTreeDistComputed = false;
+    dist_matrix = NULL;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) :
         MTree() {
     init();
     this->aln = aln;
-    //alnSize = aln->size();
-    //numStates = aln->num_states;
-    //tranSize = numStates * numStates;
-    //ptn_freqs.resize(alnSize);
-    //for (int ptn = 0; ptn < alnSize; ++ptn) {
-    //    ptn_freqs[ptn] = (*aln)[ptn].frequency;
-    //}
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {
@@ -130,6 +124,8 @@ PhyloTree::~PhyloTree() {
     //	delete [] state_freqs;
     if (theta_all)
         delete[] theta_all;
+    if (dist_matrix)
+    	delete[] dist_matrix;
 }
 
 void PhyloTree::assignLeafNames(Node *node, Node *dad) {
@@ -3812,22 +3808,21 @@ void PhyloTree::reinsertLeaf(Node *leaf, Node *node, Node *dad) {
     Node *adjacent_node = leaf->neighbors[0]->node;
     Neighbor *nei = node->findNeighbor(dad);
     //double len = nei->length;
-    double len = max(nei->length, MIN_BRANCH_LEN*2);
+    double len = max(nei->length, MIN_BRANCH_LEN * 2);
     // to avoid too small branch length when reinserting leaf
 
     FOR_NEIGHBOR_IT(adjacent_node, leaf, it){
-    if (first) {
-        (*it)->node = node;
-        (*it)->length = len / 2;
-        node->updateNeighbor(dad, adjacent_node, len / 2);
-    } else {
-        (
-                *it)->node = dad;
-        (*it)->length = len / 2;
-        dad->updateNeighbor(node, adjacent_node, len / 2);
+        if (first) {
+            (*it)->node = node;
+            (*it)->length = len / 2;
+            node->updateNeighbor(dad, adjacent_node, len / 2);
+        } else {
+            (*it)->node = dad;
+            (*it)->length = len / 2;
+            dad->updateNeighbor(node, adjacent_node, len / 2);
+        }
+        first = false;
     }
-    first = false;
-}
 }
 
 bool PhyloTree::isSupportedNode(PhyloNode* node, int min_support) {
