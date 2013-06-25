@@ -120,6 +120,12 @@ public:
      */
     int countZeroInternalBranches(Node *node = NULL, Node *dad = NULL, double epsilon = 0.000001);
 
+	/**
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+		@return the number of long branches
+	*/
+	int countLongBranches(Node *node = NULL, Node *dad = NULL, double epsilon = 8.8);
     /********************************************************
             PRINT INFORMATION
      ********************************************************/
@@ -208,12 +214,12 @@ public:
      */
     int sortTaxa(Node *node = NULL, Node *dad = NULL);
 
-    void drawTree(ostream &out, int brtype = WT_BR_SCALE + WT_INT_NODE);
+	void drawTree(ostream &out, int brtype = WT_BR_SCALE + WT_INT_NODE, double zero_epsilon = 2e-6);
 
-    void drawTree(ostream &out, int brtype, double brscale, IntVector &sub_tree_br,
+	void drawTree(ostream &out, int brtype, double brscale, IntVector &sub_tree_br, double zero_epsilon,
             Node *node = NULL, Node *dad = NULL);
 
-    void drawTree2(ostream &out, int brtype, double brscale, IntVector &sub_tree_br,
+	void drawTree2(ostream &out, int brtype, double brscale, IntVector &sub_tree_br, double zero_epsilon,
             Node *node = NULL, Node *dad = NULL);
 
     /**
@@ -314,6 +320,14 @@ public:
             @param taxa (OUT) vector of taxa
      */
     void getTaxa(NodeVector &taxa, Node *node = NULL, Node *dad = NULL);
+
+	/**
+		get the descending taxa below the node
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+		@param taxa (OUT) vector of taxa
+	*/
+	void getTaxa(Split &taxa, Node *node = NULL, Node *dad = NULL);
 
     /**
             get the descending taxa below the node
@@ -432,14 +446,14 @@ public:
             convert the tree into the split system
             @param sg (OUT) resulting split graph
      */
-    void convertSplits(SplitGraph &sg, NodeVector *nodes = NULL);
+	void convertSplits(SplitGraph &sg, NodeVector *nodes = NULL, Node *node = NULL, Node *dad = NULL);
 
     /**
             convert the tree into the split system
             @param taxname certain taxa name
             @param sg (OUT) resulting split graph
      */
-    void convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *nodes = NULL);
+	void convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *nodes = NULL, Node *node = NULL, Node *dad = NULL);
 
     /**
             convert the tree into the split system, iterative procedure
@@ -488,6 +502,20 @@ public:
             @param dist (OUT) distance matrix
      */
     void calcDist(Node *aroot, double cur_len, double* &dist, Node *node, Node *dad);
+/********************************************************
+	STATISTICS
+********************************************************/
+
+	void extractQuadSubtrees(vector<Split*> &subtrees, Node *node = NULL, Node *dad = NULL);
+
+	/**
+	 * for each branch, assign how many times this branch appears in the input set of trees.
+	 * Work fine also when the trees do not have the same taxon set.
+	 * @param trees_file set of trees in NEWICK
+	 */
+	void assignBranchSupport(const char *trees_file);
+
+	void assignBranchSupport(istream &in);
 
     /********************************************************
             PROPERTIES OF TREE

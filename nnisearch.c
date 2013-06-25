@@ -301,7 +301,7 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
     }
 
     double lh0 = curLH;
-    double multiLH = 0.0;
+//    double multiLH = 0.0;
 //    if (nnicut->doNNICut) {
 //        // compute likelihood of the multifurcating tree
 //        for (i = 0; i < tr->numBranches; i++) {

@@ -714,6 +714,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_test_sample_size = 0;
     params.root_state = NULL;
     params.print_bootaln = false;
+	params.print_subaln = false;
 
     struct timeval tv;
     struct timezone tz;
@@ -949,6 +950,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -sup <target_tree_file>";
                 params.second_tree = argv[cnt];
                 params.consensus_type = CT_ASSIGN_SUPPORT;
+			} else if (strcmp(argv[cnt],"-sup2") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sup2 <target_tree_file>";
+				params.second_tree = argv[cnt];
+				params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
             } else if (strcmp(argv[cnt], "-treew") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1378,6 +1385,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.print_site_lh = true;
             } else if (strcmp(argv[cnt], "-wba") == 0) {
                 params.print_bootaln = true;
+			} else if (strcmp(argv[cnt],"-wsa") == 0) {
+				params.print_subaln = true;
             } else if (strcmp(argv[cnt], "-wtl") == 0) {
                 params.print_tree_lh = true;
             } else if (strcmp(argv[cnt], "-ns") == 0) {

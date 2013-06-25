@@ -845,7 +845,7 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
 int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& target_dad, Node* node, Node* dad) {
     Neighbor *dad_nei = dad->findNeighbor(node);
     //Node *added_taxon = added_node->neighbors[0]->node;
-    Node *added_taxon;
+    Node *added_taxon = NULL;
     for (int i = 0; i < 3; i++) {
         if (added_node->neighbors[i]->node != (Node*) 1 && added_node->neighbors[i]->node != (Node*) 2)
             added_taxon = added_node->neighbors[i]->node;
@@ -1315,7 +1315,7 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
     }
     double A, B, C, D;
     A = B = C = D = 0;
-    PhyloNode *nodeA, *nodeB, *nodeC, *nodeD;
+    PhyloNode *nodeA = NULL, *nodeB = NULL, *nodeC = NULL, *nodeD = NULL;
     double lsBranch;
 
     // One of the node is a leaf
@@ -1528,12 +1528,10 @@ void PhyloTree::computeSubtreeDists() {
             // if the node is an internal node then all of its child nodes should be marked
             // source_nei1 and source_nei2 are the 2 marked child node
             // nextNode is the other node, used for traversal
-            PhyloNode* source_nei1;
-            PhyloNode* source_nei2;
+            PhyloNode* source_nei1 = NULL;
+            PhyloNode* source_nei2 = NULL;
             PhyloNode* nextNode;
             if (!(*it)->isLeaf()) {
-                source_nei1 = NULL;
-                source_nei2 = NULL;
                 // select the 2 marked child nodes
                 for (NeighborVec::iterator it2 = (*it)->neighbors.begin(); it2 != (*it)->neighbors.end(); ++it2) {
                     if (markedNodeList.find((*it2)->node->id) != markedNodeList.end()) {

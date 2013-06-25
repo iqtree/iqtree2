@@ -22,6 +22,27 @@
 
 #include "alignment.h"
 
+
+struct PartitionInfo {
+	string name; // partition name
+	string model_name; // model name
+	string aln_file; // alignment file associated
+	string sequence_type; // sequence type (DNA/AA/BIN)
+	string position_spec; // position specification, e.g., "1-100\1 1-100\2"
+
+	double cur_score; // current log-likelihood
+
+	DoubleVector null_score; // log-likelihood of each branch collapsed to zero
+	DoubleVector opt_score; // optimized log-likelihood for every branch
+	DoubleVector nni1_score; // log-likelihood for 1st NNI for every branch
+	DoubleVector nni2_score; // log-likelihood for 2nd NNI for every branch
+
+	DoubleVector cur_brlen; // current branch lengths
+	DoubleVector opt_brlen; // optimized branch lengths for every branch
+	DoubleVector nni1_brlen; // branch length for 1st NNI for every branch
+	DoubleVector nni2_brlen; // branch length for 2nd NNI for every branch
+};
+
 class PhyloSuperTree;
 
 /**
@@ -127,9 +148,20 @@ public:
 	void printCombinedAlignment(const char *filename, bool append = false);
 
 	/**
+	 * print all sub alignments into files with prefix, suffix is the charset name
+	 * @param prefix prefix of output files
+	 */
+	void printSubAlignments(Params &params, vector<PartitionInfo> &part_info);
+
+	/**
 		@return unconstrained log-likelihood (without a tree)
 	*/
 	virtual double computeUnconstrainedLogL();
+
+	/**
+	 * @return proportion of missing data in super alignment
+	 */
+	double computeMissingData();
 
 	/**
 		actual partition alignments

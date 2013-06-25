@@ -441,6 +441,20 @@ bool Split::containAny(IntVector &tax_id) {
 	return false;
 }
 
+Split *Split::extractSubSplit(Split &taxa_mask) {
+	assert(taxa_mask.getNTaxa() == getNTaxa());
+	Split *sp = new Split(taxa_mask.countTaxa());
+	int id = 0;
+	for (int tax = 0; tax < ntaxa; tax++)
+	if (taxa_mask.containTaxon(tax)) {
+		if (containTaxon(tax))
+			sp->addTaxon(id);
+		id++;
+	}
+	assert(id == sp->getNTaxa());
+	return sp;
+}
+
 
 /**
 	Solve k-means problem for one-dimensional data with dynamic programming

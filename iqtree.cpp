@@ -570,7 +570,7 @@ void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
         Node *added_node = (*it_leaf)->neighbors[0]->node;
         Node *node1 = NULL;
         Node *node2 = NULL;
-        Node *leaf = NULL;
+        //Node *leaf;
         for (int i = 0; i < 3; i++) {
             if (added_node->neighbors[i]->node->id == (*it_leaf)->id) {
                 //leaf = added_node->neighbors[i]->node;
@@ -654,7 +654,7 @@ void IQTree::doParsimonyReinsertion() {
         deleteLeaves(del_leaves);
     }
     reinsertLeavesByParsimony(del_leaves);
-    fixNegativeBranch(true);
+    fixNegativeBranch(false);
 }
 
 double IQTree::doIQP() {
@@ -683,12 +683,14 @@ double IQTree::doIQP() {
             curScore = optimizeAllBranches(3, 1.0);
         else {
             // optimize branches at the reinsertion point
+            /*
             for (PhyloNodeVector::iterator dit = del_leaves.begin(); dit != del_leaves.end(); dit++) {
                 PhyloNode *adj_node = (PhyloNode*) (*dit)->neighbors[0]->node;
                 FOR_NEIGHBOR_IT(adj_node, (*dit), it)
                 	curScore = optimizeOneBranch(adj_node, (PhyloNode*) (*it)->node);
                 curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
             }
+             */
             curScore = optimizeAllBranches(1);
         }
 
@@ -2510,16 +2512,18 @@ void IQTree::printResultTree(string suffix) {
     tree_file_name += ".treefile";
     if (suffix.compare("") != 0) {
         string iter_tree_name = tree_file_name + "." + suffix;
-        printTree(iter_tree_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+        printTree(iter_tree_name.c_str(),
+                WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
     } else {
-        printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+        printTree(tree_file_name.c_str(),
+                WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
     }
     //printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH);
 }
 
 void IQTree::printResultTree(ostream &out) {
     setRootNode(params->root);
-    printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+    printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
 }
 
 void IQTree::printPhylolibModelParams(const char* suffix) {

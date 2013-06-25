@@ -44,6 +44,16 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree)
     }
 }
 
+int PartitionModel::getNParameters() {
+    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+	int df = 0;
+    for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++) {
+    	df += (*it)->getModelFactory()->getNParameters();
+    }
+    return df;
+}
+
+
 double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, double epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     double tree_lh = 0.0;
@@ -54,7 +64,8 @@ double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, doubl
 	#endif
     for (int part = 0; part < ntrees; part++) {
         cout << "Optimizing " << tree->at(part)->getModelName() <<
-        		" parameters for partition " << tree->part_info[part].name << endl;
+        		" parameters for partition " << tree->part_info[part].name <<
+        		" (" << tree->at(part)->getModelFactory()->getNParameters() << " free parameters)" << endl;
         tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info, epsilon);
     }
     //return ModelFactory::optimizeParameters(fixed_len, write_info);

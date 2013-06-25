@@ -223,6 +223,12 @@ public:
 	 */
 	double *state_freq;
 	
+
+	/**
+		state frequency type
+	*/
+	StateFreqType freq_type;
+
 	/**
 		destructor
 	*/

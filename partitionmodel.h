@@ -44,6 +44,11 @@ public:
 
     ~PartitionModel();
 
+    /**
+     * @return #parameters of the model + # branches
+     */
+    virtual int getNParameters();
+
 	/**
 		optimize model parameters and tree branch lengths
 		@param fixed_len TRUE to fix branch lengths, default is false

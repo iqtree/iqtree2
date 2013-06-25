@@ -183,6 +183,18 @@ int MTree::countZeroInternalBranches(Node *node, Node *dad, double epsilon) {
     return count;
 
 }
+
+int MTree::countLongBranches(Node *node, Node *dad, double upper_limit) {
+    int count = 0;
+    if (node == NULL) node = root;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if ((*it)->length >= upper_limit) count++;
+        count += countLongBranches((*it)->node, node, upper_limit);
+    }
+    return count;
+}
+
+
 void MTree::printTree(const char *ofile, int brtype)
 {
     try {
@@ -857,16 +869,17 @@ void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *
         if (sp->shouldInvert())
             sp->invert();
 		 /* ignore nodes with degree of 2 because such split will be added before */
-        if (node->degree() != 2) 
+        if (node->degree() != 2) {
 		  sg.push_back(sp);
-        if (nodes) nodes->push_back((*it)->node);
+          if (nodes) nodes->push_back((*it)->node);
+        }
         has_child = true;
     }
     if (!has_child)
         resp->addTaxon(node->id);
 }
 
-void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *nodes) {
+void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *nodes, Node *node, Node *dad) {
     if (!sg.taxa) {
         sg.taxa = new NxsTaxaBlock();
         for (vector<string>::iterator it = taxname.begin(); it != taxname.end(); it++)
@@ -881,17 +894,17 @@ void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *n
     getTaxaID(sg.splits->cycle);
     // make the splits
     Split sp(leafNum);
-    convertSplits(sg, &sp, nodes);
+    convertSplits(sg, &sp, nodes, node, dad);
 }
 
-void MTree::convertSplits(SplitGraph &sg, NodeVector *nodes) {
+void MTree::convertSplits(SplitGraph &sg, NodeVector *nodes, Node *node, Node *dad) {
 
     // make the taxa name
     vector<string> taxname;
     taxname.resize(leafNum);
     getTaxaName(taxname);
 
-    convertSplits(taxname, sg, nodes);
+    convertSplits(taxname, sg, nodes, node, dad);
 }
 
 inline int splitnumtaxacmp(const Split* a, const Split* b)
@@ -1165,7 +1178,7 @@ void MTree::setExtendedFigChar() {
 	fig_char[4] = '\\';
 }
 
-void MTree::drawTree(ostream &out, int brtype) {
+void MTree::drawTree(ostream &out, int brtype, double zero_epsilon) {
     IntVector sub_tree_br;
     if (verbose_mode >= VB_DEBUG) {
         printTree(cout);
@@ -1177,13 +1190,13 @@ void MTree::drawTree(ostream &out, int brtype) {
     //if (verbose_mode >= VB_DEBUG)
     //cout << "Tree depth: " << scale<< endl;
     if (brtype & WT_INT_NODE)
-        drawTree2(out, brtype, scale, sub_tree_br);
+        drawTree2(out, brtype, scale, sub_tree_br, zero_epsilon);
     else
-        drawTree(out, brtype, scale, sub_tree_br);
+        drawTree(out, brtype, scale, sub_tree_br, zero_epsilon);
     out << endl;
 }
 
-void MTree::drawTree(ostream &out, int brtype, double brscale, IntVector &subtree_br, Node *node, Node *dad) {
+void MTree::drawTree(ostream &out, int brtype, double brscale, IntVector &subtree_br, double zero_epsilon, Node *node, Node *dad) {
     int i, br_len = 3;
     if (!node) {
         node = root;
@@ -1218,7 +1231,7 @@ void MTree::drawTree(ostream &out, int brtype, double brscale, IntVector &subtre
         if (cnt == descendant_cnt-1)
             subtree_br.back() = -subtree_br.back();
 
-        drawTree(out, brtype, brscale, subtree_br, (*it)->node, node);
+        drawTree(out, brtype, brscale, subtree_br, zero_epsilon, (*it)->node, node);
         cnt++;
         if (cnt == descendant_cnt) break;
         for (IntVector::iterator it = subtree_br.begin()+1; it != subtree_br.end(); it++)
@@ -1231,7 +1244,7 @@ void MTree::drawTree(ostream &out, int brtype, double brscale, IntVector &subtre
     subtree_br.pop_back();
 }
 
-void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtree_br, Node *node, Node *dad) {
+void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtree_br, double zero_epsilon, Node *node, Node *dad) {
     int i, br_len = 3;
     IntVector::iterator ii;
     bool zero_length = false;
@@ -1245,7 +1258,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
             br_len = floor(node->findNeighbor(dad)->length * brscale)-1;
             if (br_len < 2) br_len = 2;
         }
-        if (node->findNeighbor(dad)->length <= 2e-6) zero_length = true;
+        if (node->findNeighbor(dad)->length <= zero_epsilon) zero_length = true;
     }
     if (node->isLeaf()) {
         for (ii = subtree_br.begin()+1; ii != subtree_br.end(); ii++) {
@@ -1281,7 +1294,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
             br_len = -br_len;
         subtree_br.push_back(br_len);
 
-        drawTree2(out, brtype, brscale, subtree_br, (*it)->node, node);
+        drawTree2(out, brtype, brscale, subtree_br, zero_epsilon, (*it)->node, node);
         subtree_br.pop_back();
         if (br_len > 1000) br_len -= 1000;
         cnt++;
@@ -1494,4 +1507,175 @@ void MTree::assignLeafID(Node *node, Node *dad) {
     }
     FOR_NEIGHBOR_IT(node, dad, it)
     assignLeafID((*it)->node, node);
+}
+
+void MTree::getTaxa(Split &taxa, Node *node, Node *dad) {
+	if (!node) node = root;
+	if (node->isLeaf()) {
+		taxa.addTaxon(node->id);
+	}
+	FOR_NEIGHBOR_IT(node, dad, it)
+		getTaxa(taxa, (*it)->node, node);
+}
+
+
+void MTree::extractQuadSubtrees(vector<Split*> &subtrees, Node *node, Node *dad) {
+	if (!node) node = root;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		extractQuadSubtrees(subtrees, (*it)->node, node);
+		if ((*it)->node->isLeaf()) continue;
+		// internal branch
+		assert(node->degree() == 3 && (*it)->node->degree() == 3);
+		int cnt = 0;
+		Node *child = (*it)->node;
+		FOR_NEIGHBOR_DECLARE(child, node, it2) {
+			Split *sp = new Split(leafNum);
+			getTaxa(*sp, (*it2)->node, child);
+			subtrees.push_back(sp);
+			cnt += sp->countTaxa();
+		}
+		FOR_NEIGHBOR(node, child, it2) {
+			Split *sp = new Split(leafNum);
+			getTaxa(*sp, (*it2)->node, node);
+			subtrees.push_back(sp);
+			cnt += sp->countTaxa();
+		}
+		assert(cnt == leafNum);
+	}
+}
+
+
+void MTree::assignBranchSupport(const char *trees_file) {
+	cout << "Reading input trees file " << trees_file << endl;
+	try {
+		ifstream in;
+        in.exceptions(ios::failbit | ios::badbit);
+        in.open(trees_file);
+        assignBranchSupport(in);
+		in.close();
+	} catch (ios::failure) {
+		outError(ERR_READ_INPUT, trees_file);
+	}
+}
+
+void MTree::assignBranchSupport(istream &in) {
+	SplitGraph mysg;
+	NodeVector mynodes;
+	convertSplits(mysg, &mynodes, root->neighbors[0]->node);
+	vector<Split*> subtrees;
+	extractQuadSubtrees(subtrees, root->neighbors[0]->node);
+	IntVector decisive_counts;
+	decisive_counts.resize(mynodes.size(), 0);
+	StrVector occurence_trees; // list of tree IDs where each split occurs
+	if (verbose_mode >= VB_MED)
+		occurence_trees.resize(mynodes.size());
+	SplitGraph::iterator sit;
+	for (sit = mysg.begin(); sit != mysg.end(); sit++)
+		(*sit)->setWeight(0.0);
+	int ntrees, taxid;
+	for (ntrees = 1; !in.eof(); ntrees++) {
+		MTree tree;
+		bool is_rooted = false;
+
+		// read in the tree and convert into split system for indexing
+		tree.readTree(in, is_rooted);
+		if (verbose_mode >= VB_DEBUG)
+			cout << ntrees << " " << endl;
+		StrVector taxname;
+		tree.getTaxaName(taxname);
+		// create the map from taxa between 2 trees
+		Split taxa_mask(leafNum);
+		for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
+			taxid = mysg.findLeafName(*it);
+			if (taxid < 0)
+				outError("Taxon not found in full tree: ", *it);
+			taxa_mask.addTaxon(taxid);
+		}
+		// make the taxa ordering right before converting to split system
+		taxname.clear();
+		int smallid;
+		for (taxid = 0, smallid = 0; taxid < leafNum; taxid++)
+			if (taxa_mask.containTaxon(taxid)) {
+				taxname.push_back(mysg.getTaxa()->GetTaxonLabel(taxid));
+				string name = (string)mysg.getTaxa()->GetTaxonLabel(taxid);
+				tree.findLeafName(name)->id = smallid++;
+			}
+		assert(taxname.size() == tree.leafNum);
+
+		SplitGraph sg;
+		//NodeVector nodes;
+		tree.convertSplits(sg);
+		SplitIntMap hash_ss;
+		for (sit = sg.begin(); sit != sg.end(); sit++)
+			hash_ss.insertSplit((*sit), 1);
+
+		// now scan through all splits in current tree
+		int id, qid;
+		for (sit = mysg.begin(), id = 0, qid = 0; sit != mysg.end(); sit++, id++)
+		if ((*sit)->trivial() < 0) // it is an internal split
+		{
+
+			bool decisive = true;
+			for (int i = 0; i < 4; i++) {
+				if (!taxa_mask.overlap(*subtrees[qid+i])) {
+					decisive = false;
+					break;
+				}
+			}
+			qid += 4;
+			if (!decisive) continue;
+
+			decisive_counts[id]++;
+			Split *subsp = (*sit)->extractSubSplit(taxa_mask);
+			if (subsp->shouldInvert())
+				subsp->invert();
+			Split *sp = hash_ss.findSplit(subsp);
+			if (sp && sp->trivial() < 0) {
+				(*sit)->setWeight((*sit)->getWeight()+1.0);
+				if (verbose_mode >= VB_MED)
+					occurence_trees[id] += convertIntToString(ntrees) + " ";
+				if (verbose_mode >= VB_MAX) {
+					for (taxid = 0; taxid < (*sit)->getNTaxa(); taxid++)
+						if ((*sit)->containTaxon(taxid))
+							cout << " " << mysg.getTaxa()->GetTaxonLabel(taxid);
+					cout << " --> ";
+					for (taxid = 0; taxid < sp->getNTaxa(); taxid++)
+						if (sp->containTaxon(taxid))
+							cout << " " << taxname[taxid];
+					cout << endl;
+				}
+			}
+			delete subsp;
+		}
+
+		char ch;
+		in.exceptions(ios::goodbit);
+		(in) >> ch;
+		if (in.eof()) break;
+		in.unget();
+		in.exceptions(ios::failbit | ios::badbit);
+
+	}
+
+	cout << ntrees << " trees read" << endl;
+
+	for (int i = 0; i < mysg.size(); i++)
+	if (!mynodes[i]->isLeaf())
+	{
+		stringstream tmp;
+		if (!mynodes[i]->name.empty())
+			tmp << "/";
+		if (mysg[i]->getWeight() == 0.0)
+			tmp << "0";
+		else
+			tmp << round((mysg[i]->getWeight()/decisive_counts[i])*1000)/10;
+		if (verbose_mode >= VB_MED)
+			tmp << "%" << decisive_counts[i];
+		if (!mynodes[i]->isLeaf()) mynodes[i]->name.append(tmp.str());
+		if (verbose_mode >= VB_MED) {
+			cout << mynodes[i]->name << " " << occurence_trees[i] << endl;
+		}
+	}
+	for (vector<Split*>::reverse_iterator it = subtrees.rbegin(); it != subtrees.rend(); it++)
+		delete (*it);
 }

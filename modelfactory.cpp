@@ -287,6 +287,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 
 }
 
+int ModelFactory::getNParameters() {
+	int df = model->getNDim() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
+	if (model->freq_type == FREQ_EMPIRICAL) df += model->num_states-1;
+	return df;
+}
 void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
 {
 	cout << "Reading site-specific state frequency file " << site_freq_file << " ..." << endl;

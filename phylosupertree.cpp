@@ -152,6 +152,7 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	str = params.out_prefix;
 	str += ".conaln";
 	((SuperAlignment*)aln)->printCombinedAlignment(str.c_str());
+	cout << "Degree of missing data: " << ((SuperAlignment*)aln)->computeMissingData() << endl;
 	cout << endl;
 
 }

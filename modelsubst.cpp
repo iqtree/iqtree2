@@ -20,6 +20,7 @@ ModelSubst::ModelSubst(int nstates)
 	state_freq = new double[num_states];
 	for (int i = 0; i < num_states; i++)
 		state_freq[i] = 1.0 / num_states;
+	freq_type = FREQ_EQUAL;
 }
 
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)

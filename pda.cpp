@@ -1853,6 +1853,9 @@ int main(int argc, char *argv[])
 					params.second_tree, params.is_rooted, params.out_file,
 					params.out_prefix, tree, params.tree_weight_file, &params);
 				break;
+			case CT_ASSIGN_SUPPORT_EXTENDED:
+				assignBranchSupportNew(params);
+				break;
 			case CT_NONE: break;
 			/**MINH ANH: for some comparison*/
 			case COMPARE: compare(params); break; //MA

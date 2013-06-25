@@ -688,3 +688,10 @@ void SplitGraph::getTaxaName(vector<string> &taxname) {
 	for (int i = 0; i < getNTaxa(); i++)
 		taxname.push_back(taxa->GetTaxonLabel(i));
 }
+
+int SplitGraph::findLeafName(string &name) {
+	for (int i = 0; i < getNTaxa(); i++)
+		if (taxa->GetTaxonLabel(i) == name)
+			return i;
+	return -1;
+}

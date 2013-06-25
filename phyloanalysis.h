@@ -62,6 +62,12 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count, 
 	const char* tree_weight_file, Params *params);
 
 /**
+ * assign branch supports from params.user_tree trees file to params.second_tree
+ * @param params program parameters
+ */
+void assignBranchSupportNew(Params &params);
+
+/**
 	Compute the consensus tree from the collection of trees from input_trees
 	and print resulting tree to output_tree. 
 	@param phylo_tree used to optimize branch lengths of the consensus tree. Can be NULL

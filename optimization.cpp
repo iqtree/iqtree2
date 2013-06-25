@@ -440,7 +440,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 	nrerror("Maximum number of iterations exceeded in minimizeNewton");
 	d2l = 0.0;
 	return 0.0;
-return_ok:
+//return_ok:
 	if (fm > finit) {
 		//cout.precision(10);
 		//cout << "revert xguess, fm=" << fm << " finit=" << finit << endl;

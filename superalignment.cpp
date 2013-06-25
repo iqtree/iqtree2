@@ -254,10 +254,41 @@ void SuperAlignment::printCombinedAlignment(const char *file_name, bool append) 
 	}	
 }
 
+void SuperAlignment::printSubAlignments(Params &params, vector<PartitionInfo> &part_info) {
+	vector<Alignment*>::iterator pit;
+	string filename;
+	int part;
+	assert(part_info.size() == partitions.size());
+	for (pit = partitions.begin(), part = 0; pit != partitions.end(); pit++, part++) {
+		if (params.aln_output)
+			filename = params.aln_output;
+		else
+			filename = params.out_prefix;
+		filename += "." + part_info[part].name;
+		 if (params.aln_output_format == ALN_PHYLIP)
+			(*pit)->printPhylip(filename.c_str(), false, NULL, params.aln_nogaps, NULL);
+		else if (params.aln_output_format == ALN_FASTA)
+			(*pit)->printFasta(filename.c_str(), false, NULL, params.aln_nogaps, NULL);
+	}
+}
+
 double SuperAlignment::computeUnconstrainedLogL() {
 	double logl = 0.0;
 	vector<Alignment*>::iterator pit;
 	for (pit = partitions.begin(); pit != partitions.end(); pit++)
 		logl += (*pit)->computeUnconstrainedLogL();
 	return logl;
+}
+
+double SuperAlignment::computeMissingData() {
+	double ret = 0.0;
+	int len = 0;
+	vector<Alignment*>::iterator pit;
+	for (pit = partitions.begin(); pit != partitions.end(); pit++) {
+		ret += (*pit)->getNSeq() * (*pit)->getNSite();
+		len += (*pit)->getNSite();
+	}
+	ret /= getNSeq() * len;
+	return 1.0 - ret;
+
 }

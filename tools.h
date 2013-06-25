@@ -277,7 +277,7 @@ extern VerboseMode verbose_mode;
  */
 enum ConsensusType {
     CT_NONE, CT_CONSENSUS_TREE, CT_CONSENSUS_NETWORK,
-    CT_ASSIGN_SUPPORT, COMPARE
+    CT_ASSIGN_SUPPORT, CT_ASSIGN_SUPPORT_EXTENDED, COMPARE
 };
 
 enum TestType {
@@ -1246,7 +1246,13 @@ struct Params {
     /** root state, for Tina's zoombie domain */
     char *root_state;
 
-    bool print_bootaln;
+	/**
+	 * TRUE to print bootstrap alignments, default: false
+	 */
+	bool print_bootaln;
+
+	/** true to print sub alignments of super alignment, default: false */
+	bool print_subaln;
 };
 
 /**

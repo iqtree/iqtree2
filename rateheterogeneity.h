@@ -172,12 +172,12 @@ public:
 	*/
 	string full_name;
 
-protected:
-
 	/**
 		phylogenetic tree associated
 	*/
 	PhyloTree *phylo_tree;
+
+protected:
 
 	
 };

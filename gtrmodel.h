@@ -295,11 +295,6 @@ protected:
 	int num_params;
 
 	/**
-		state frequency type
-	*/
-	StateFreqType freq_type;
-
-	/**
 		eigenvalues of the rate matrix Q
 	*/
 	double *eigenvalues;

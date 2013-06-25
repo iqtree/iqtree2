@@ -261,6 +261,8 @@ public:
 	*/
 	void randomize(int size);
 
+	Split *extractSubSplit(Split &taxa_mask);
+
 protected:
 	/**
 		number of taxa

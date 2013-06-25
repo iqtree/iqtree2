@@ -190,6 +190,12 @@ public:
 	 */
 	double maxWeight();
 	
+	/**
+	 * @param name a name string
+	 * @return ID of leaf corresponding to name, -1 if not found
+	 */
+	int findLeafName(string &name);
+
 /********************************************************
 	compatibility
 ********************************************************/

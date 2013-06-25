@@ -75,7 +75,7 @@ public:
 	/**
 		get the name of the model
 	*/
-	string getModelName();
+	//string getModelName();
 
 	void writeInfo(ostream &out);
 
@@ -145,6 +145,10 @@ public:
 	*/
     virtual ~ModelFactory();
 
+    /**
+     * @return #parameters of the model + # branches
+     */
+    virtual int getNParameters();
 
 	/**
 		optimize model parameters and tree branch lengths
