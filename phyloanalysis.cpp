@@ -1696,34 +1696,36 @@ void createFirstNNITree(Params &params, IQTree &iqtree, double bestTreeScore,
 	double nniBeginClock, nniEndClock;
 	nniBeginClock = getCPUTime();
     if (!params.phylolib) {
-		iqtree.optimizeNNI();
-	} else {
-		iqtree.curScore = iqtree.optimizeNNIRax();
-		// read in new tree
-		int printBranchLengths = TRUE;
-		Tree2String(iqtree.raxmlTree->tree_string, iqtree.raxmlTree,
-				iqtree.raxmlTree->start->back, printBranchLengths, TRUE, 0, 0,
-				0, SUMMARIZE_LH, 0, 0);
+        iqtree.optimizeNNI();
+    } else {
+        iqtree.curScore = iqtree.optimizeNNIRax();
+        //treeEvaluate(iqtree.raxmlTree, 16);
+        //iqtree.curScore = iqtree.raxmlTree->likelihood;
+        // read in new tree
+        int printBranchLengths = TRUE;
+        Tree2String(iqtree.phyloTree->tree_string, iqtree.phyloTree,
+                iqtree.phyloTree->start->back, printBranchLengths, TRUE, 0, 0,
+                0, SUMMARIZE_LH, 0, 0);
 
-		stringstream mytree;
-		mytree << iqtree.raxmlTree->tree_string;
-		mytree.seekg(0, ios::beg);
-		iqtree.freeNode();
-		iqtree.readTree(mytree, iqtree.rooted);
-		//iqtree.initializeAllPartialLh();
-		//iqtree.clearAllPartialLH();
-		iqtree.setAlignment(alignment);
+        stringstream mytree;
+        mytree << iqtree.phyloTree->tree_string;
+        mytree.seekg(0, ios::beg);
+        iqtree.freeNode();
+        iqtree.readTree(mytree, iqtree.rooted);
+        //iqtree.initializeAllPartialLh();
+        //iqtree.clearAllPartialLH();
+        iqtree.setAlignment(alignment);
 
-	}
-	nniEndClock = getCPUTime();
-	cout << "First NNI search required :"
-			<< (double) (nniEndClock - nniBeginClock) << "s" << endl;
+    }
+    nniEndClock = getCPUTime();
+    cout << "First NNI search required :"
+            << (double) (nniEndClock - nniBeginClock) << "s" << endl;
 
-	if (iqtree.curScore > bestTreeScore) {
-		bestTreeScore = iqtree.curScore;
-		cout << "Found new best tree log-likelihood : " << bestTreeScore
-				<< endl;
-	} else {
+    if (iqtree.curScore > bestTreeScore) {
+        bestTreeScore = iqtree.curScore;
+        cout << "Found new best tree log-likelihood : " << bestTreeScore
+                << endl;
+    } else {
         cout << "The local search could not improve the tree likelihood :( "
 				<< endl;
 	}
@@ -1800,14 +1802,14 @@ double doModelOptimization(IQTree& iqtree, Params& params) {
 	} else {
         cout << "Optimizing model parameters and branch lengths using Phylolib kernel" << endl;
 		double t_modOpt_start = getCPUTime();
-		modOpt(iqtree.raxmlTree, 0.1);
-		evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, FALSE);
+		modOpt(iqtree.phyloTree, 0.1);
+		evaluateGeneric(iqtree.phyloTree, iqtree.phyloTree->start, FALSE);
 		double t_modOpt = getCPUTime() - t_modOpt_start;
 		cout << "Log-likelihood of the current tree: "
-				<< iqtree.raxmlTree->likelihood << endl;
+				<< iqtree.phyloTree->likelihood << endl;
 		cout << "Time required for model optimizations: " << t_modOpt
 				<< " seconds" << endl;
-		bestTreeScore = iqtree.raxmlTree->likelihood;
+		bestTreeScore = iqtree.phyloTree->likelihood;
 		//iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
 	}
 	return bestTreeScore;
@@ -1848,16 +1850,16 @@ void computeParsimonyTreeRax(Params& params, IQTree& iqtree, Alignment *alignmen
 		}
 	}
 	// Create tree data structure for RAxML kernel
-	iqtree.raxmlTree = (tree*) (malloc(sizeof(tree)));
+	iqtree.phyloTree = (tree*) (malloc(sizeof(tree)));
 	/* read the binary input, setup tree, initialize model with alignment */
-	read_msa(iqtree.raxmlTree, params.binary_aln_file);
-	iqtree.raxmlTree->randomNumberSeed = params.ran_seed;
+	read_msa(iqtree.phyloTree, params.binary_aln_file);
+	iqtree.phyloTree->randomNumberSeed = params.ran_seed;
 	//iqtree.raxmlTree->randomNumberSeed = 665;
 	double t_parsimony_start = getCPUTime();
 	//makeParsimonyTree(iqtree.raxmlTree);
-	allocateParsimonyDataStructures(iqtree.raxmlTree);
-	makeParsimonyTreeFast(iqtree.raxmlTree);
-	freeParsimonyDataStructures(iqtree.raxmlTree);
+	allocateParsimonyDataStructures(iqtree.phyloTree);
+	makeParsimonyTreeFast(iqtree.phyloTree);
+	freeParsimonyDataStructures(iqtree.phyloTree);
 	cout << "CPU total time for creating parsimony tree: "
 			<< (getCPUTime() - t_parsimony_start) << " seconds." << endl;
 	/*
@@ -1937,11 +1939,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 		// Read in the parsimony tree
 		int printBranchLengths = TRUE;
-		Tree2String(iqtree.raxmlTree->tree_string, iqtree.raxmlTree,
-				iqtree.raxmlTree->start->back, printBranchLengths, TRUE, 0, 0,
+		Tree2String(iqtree.phyloTree->tree_string, iqtree.phyloTree,
+				iqtree.phyloTree->start->back, printBranchLengths, TRUE, 0, 0,
 				0, SUMMARIZE_LH, 0, 0);
 		stringstream mytree;
-		mytree << iqtree.raxmlTree->tree_string;
+		mytree << iqtree.phyloTree->tree_string;
 		iqtree.readTree(mytree, iqtree.rooted);
 		iqtree.setAlignment(alignment);
 	} else {
@@ -2114,19 +2116,19 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
     /* OPTIMIZE MODEL PARAMETERS */
     if (params.phylolib) {
-        if (!iqtree.raxmlTree) {
+        if (!iqtree.phyloTree) {
             // Create tree data structure for RAxML kernel
-            iqtree.raxmlTree = (tree*) (malloc(sizeof(tree)));	
+            iqtree.phyloTree = (tree*) (malloc(sizeof(tree)));	
             /* read the binary input, setup tree, initialize model with alignment */
-            read_msa(iqtree.raxmlTree, params.binary_aln_file); 
+            read_msa(iqtree.phyloTree, params.binary_aln_file); 
 	 }
 
 		// Read best tree into phylolib kernel
 		stringstream bestTreeString;
-		iqtree.transformBranchLenRAX(iqtree.raxmlTree->fracchange);
+		iqtree.transformBranchLenRAX(iqtree.phyloTree->fracchange);
 		iqtree.printTree(bestTreeString);
 		//iqtree.printTree(bestTreeString, WT_BR_LEN);
-		treeReadLenString(bestTreeString.str().c_str(), iqtree.raxmlTree, TRUE, FALSE, TRUE);
+		treeReadLenString(bestTreeString.str().c_str(), iqtree.phyloTree, TRUE, FALSE, TRUE);
 		//treeReadLenString(bestTreeString.str().c_str(), iqtree.raxmlTree, FALSE, FALSE, TRUE);
 
 		// Read in model parameters values here
@@ -2166,9 +2168,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
         cout << "Optimizing model parameters and branch lengths using Phylolib"
 				<< endl;
 		double t_modOpt_start = getCPUTime();
-        evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, TRUE);
-		modOpt(iqtree.raxmlTree, 0.1);
-		evaluateGeneric(iqtree.raxmlTree, iqtree.raxmlTree->start, FALSE);
+        evaluateGeneric(iqtree.phyloTree, iqtree.phyloTree->start, TRUE);
+		modOpt(iqtree.phyloTree, 0.1);
+		evaluateGeneric(iqtree.phyloTree, iqtree.phyloTree->start, FALSE);
         // Write phylolib model parameters to a file
         cout << "Printing phylolib model file" << endl;
         iqtree.printPhylolibModelParams(".phylolib.models");
@@ -2177,10 +2179,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 		double t_modOpt = getCPUTime() - t_modOpt_start;
         cout << "Phylolib: log-likelihood of the current tree: "
-				<< iqtree.raxmlTree->likelihood << endl;
+				<< iqtree.phyloTree->likelihood << endl;
         cout << "Phylolib: time required for model optimizations: " << t_modOpt
 				<< " seconds" << endl;
-		bestTreeScore = iqtree.raxmlTree->likelihood;
+		bestTreeScore = iqtree.phyloTree->likelihood;
 		params.maxtime += t_modOpt / 60.0;
 
 		//Update tree score
@@ -2292,6 +2294,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				<< params.k_representative << endl;
 		cout << "Probability of deleting sequences : " << iqtree.getProbDelete()
 				<< endl;
+		cout << "Number of leaves to be deleted: " << iqtree.getDelete() << endl;
 		cout << "Number of iterations              : ";
 		if (params.stop_condition == SC_FIXED_ITERATION)
 			cout << params.min_iterations << endl;

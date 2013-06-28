@@ -56,7 +56,7 @@ void IQTree::init() {
     len_scale = 10000;
     save_all_br_lens = false;
     duplication_counter = 0;
-    raxmlTree = NULL;
+    phyloTree = NULL;
     //boot_splits = new SplitGraph;
     //initLeafFrequency();
     nnicut.num_delta = 0;
@@ -70,14 +70,14 @@ IQTree::IQTree(Alignment *aln) :
 }
 
 double IQTree::computeParsimonyTreePhylolib() {
-    allocateParsimonyDataStructures(raxmlTree);
-    makeParsimonyTreeFast(raxmlTree);
-    freeParsimonyDataStructures(raxmlTree);
+    allocateParsimonyDataStructures(phyloTree);
+    makeParsimonyTreeFast(phyloTree);
+    freeParsimonyDataStructures(phyloTree);
 
-    smoothTree(raxmlTree, 32);
-    evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
+    smoothTree(phyloTree, 32);
+    evaluateGeneric(phyloTree, phyloTree->start, FALSE);
 
-    return raxmlTree->likelihood;
+    return phyloTree->likelihood;
 
     /*
      int printBranchLengths = TRUE;
@@ -203,8 +203,8 @@ IQTree::~IQTree() {
     for (vector<SplitGraph*>::reverse_iterator it2 = boot_splits.rbegin(); it2 != boot_splits.rend(); it2++)
         delete (*it2);
     //if (boot_splits) delete boot_splits;
-    if (raxmlTree)
-        delete raxmlTree;
+    if (phyloTree)
+        delete phyloTree;
 }
 
 double IQTree::getProbDelete() {
@@ -366,13 +366,13 @@ void IQTree::deleteNonTabuLeaves(PhyloNodeVector &del_leaves) {
      cout << endl;
      */
     int leafCnt = 0;
-    do {
+    while (leafCnt < k_delete) {
         PhyloNode *taxon = (PhyloNode*) taxa[leaf_freqs[leafCnt].leaf_id];
         del_leaves.push_back(taxon);
         leaf_freqs[leafCnt].freq++;
         leafCnt++;
         deleteLeaf(taxon);
-    } while (leafCnt < k_delete);
+    }
     root = taxa[leaf_freqs[leafCnt].leaf_id];
 }
 
@@ -863,10 +863,10 @@ void IQTree::doRandomRestart() {
 
     // read in new tree
     int printBranchLengths = TRUE;
-    Tree2String(raxmlTree->tree_string, raxmlTree, raxmlTree->start->back, printBranchLengths, TRUE, 0, 0, 0,
+    Tree2String(phyloTree->tree_string, phyloTree, phyloTree->start->back, printBranchLengths, TRUE, 0, 0, 0,
             SUMMARIZE_LH, 0, 0);
     stringstream mytree;
-    mytree << raxmlTree->tree_string;
+    mytree << phyloTree->tree_string;
     freeNode();
     readTree(mytree, rooted);
     setAlignment(aln);
@@ -1015,16 +1015,16 @@ double IQTree::doIQPNNI() {
                     }
                     stringstream iqp_tree_string;
                     // TODO: only works for 1 partition
-                    transformBranchLenRAX(raxmlTree->fracchange);
+                    transformBranchLenRAX(phyloTree->fracchange);
                     printTree(iqp_tree_string);
-                    treeReadLenString(iqp_tree_string.str().c_str(), raxmlTree, TRUE, FALSE, TRUE);
+                    treeReadLenString(iqp_tree_string.str().c_str(), phyloTree, TRUE, FALSE, TRUE);
                     //printPhylolibTree(".iqp_tree.phylolib");
-                    evaluateGeneric(raxmlTree, raxmlTree->start, TRUE);
-                    treeEvaluate(raxmlTree, params->numSmoothTree);
+                    evaluateGeneric(phyloTree, phyloTree->start, TRUE);
+                    treeEvaluate(phyloTree, params->numSmoothTree);
                     if (verbose_mode >= VB_MED) {
-                        cout << "IQP log-likelihood = " << raxmlTree->likelihood << endl;
+                        cout << "IQP log-likelihood = " << phyloTree->likelihood << endl;
                     }
-                    curScore = raxmlTree->likelihood;
+                    curScore = phyloTree->likelihood;
                 }
             }
 
@@ -1171,16 +1171,21 @@ double IQTree::doIQPNNI() {
 
         if (curScore > bestScore) {
             if (params->phylolib) {
+            	//treeEvaluate(raxmlTree, 16);
+            	//curScore = raxmlTree->likelihood;
                 // read in new tree
                 int printBranchLengths = TRUE;
-                Tree2String(raxmlTree->tree_string, raxmlTree, raxmlTree->start->back, printBranchLengths, TRUE, 0, 0,
+                Tree2String(phyloTree->tree_string, phyloTree, phyloTree->start->back, printBranchLengths, TRUE, 0, 0,
                         0, SUMMARIZE_LH, 0, 0);
                 stringstream mytree;
-                mytree << raxmlTree->tree_string;
+                mytree << phyloTree->tree_string;
                 //cout << mytree.str() << endl;
+                mytree.seekg(0, ios::beg);
                 freeNode();
                 readTree(mytree, rooted);
+                setRootNode(params->root);
                 setAlignment(aln);
+                //assignLeafNames();
             }
 
             //curScore = optimizeAllBranches(100, 0.0001);
@@ -1459,7 +1464,7 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
         cout << "delta_min = " << nnicut.delta_min << endl;
     }
     int nniRound = 1;
-    double curLH = raxmlTree->likelihood;
+    double curLH = phyloTree->likelihood;
     //cout << "LH IQP Tree = " << curLH << endl;
     int nniApplied = 0;
     TOL_LIKELIHOOD_PHYLOLIB = params->loglh_epsilon;
@@ -1491,7 +1496,7 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
         } else {
             fast_eval = 0;
         }
-        double newLH = doNNISearch(raxmlTree, &nni_count, &deltaNNI, &nnicut, numSmoothTree);
+        double newLH = doNNISearch(phyloTree, &nni_count, &deltaNNI, &nnicut, numSmoothTree);
         if (newLH == 0.0) {
             break;
         } else {
@@ -1536,9 +1541,9 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
     }
 
     // Re-optimize all branches
-    smoothTree(raxmlTree, 1);
-    evaluateGeneric(raxmlTree, raxmlTree->start, FALSE);
-    return raxmlTree->likelihood;
+    smoothTree(phyloTree, 1);
+    evaluateGeneric(phyloTree, phyloTree->start, FALSE);
+    return phyloTree->likelihood;
 }
 
 void IQTree::applyNNIs(int nni2apply) {
@@ -1655,6 +1660,14 @@ inline double IQTree::estDelta95() {
         int index = floor(vecImpProNNI.size() * speed_conf);
         return vecImpProNNI[index];
     }
+}
+
+int IQTree::getDelete() const {
+	return k_delete;
+}
+
+void IQTree::setDelete(int _delete) {
+	k_delete = _delete;
 }
 
 void IQTree::estDeltaMin() {
@@ -2532,35 +2545,35 @@ void IQTree::printPhylolibModelParams(const char* suffix) {
     strcat(phyloliModelFile, suffix);
     ofstream modelfile;
     modelfile.open(phyloliModelFile);
-    for (int model = 0; model < raxmlTree->NumberOfModels; model++) {
+    for (int model = 0; model < phyloTree->NumberOfModels; model++) {
         cout << "Rate parameters: ";
         for (int i = 0; i < 6; i++) {
-            cout << raxmlTree->partitionData[model].substRates[i] << " ";
-            modelfile << raxmlTree->partitionData[model].substRates[i] << " ";
+            cout << phyloTree->partitionData[model].substRates[i] << " ";
+            modelfile << phyloTree->partitionData[model].substRates[i] << " ";
         }
         cout << endl;
         modelfile << endl;
         cout << "Base frequencies: ";
         for (int i = 0; i < aln->num_states; i++) {
-            cout << raxmlTree->partitionData[model].frequencies[i] << " ";
-            modelfile << raxmlTree->partitionData[model].frequencies[i] << " ";
+            cout << phyloTree->partitionData[model].frequencies[i] << " ";
+            modelfile << phyloTree->partitionData[model].frequencies[i] << " ";
         }
         cout << endl;
         modelfile << endl;
-        cout << "Gamma shape :" << raxmlTree->partitionData[model].alpha << endl;
-        modelfile << raxmlTree->partitionData[model].alpha << endl;
+        cout << "Gamma shape :" << phyloTree->partitionData[model].alpha << endl;
+        modelfile << phyloTree->partitionData[model].alpha << endl;
     }
 }
 
 void IQTree::printPhylolibTree(const char* suffix) {
     pl_boolean printBranchLengths = TRUE;
-    Tree2String(raxmlTree->tree_string, raxmlTree, raxmlTree->start->back, printBranchLengths, 1, 0, 0, 0, SUMMARIZE_LH,
+    Tree2String(phyloTree->tree_string, phyloTree, phyloTree->start->back, printBranchLengths, 1, 0, 0, 0, SUMMARIZE_LH,
             0, 0);
     char phylolibTree[1024];
     strcpy(phylolibTree, params->out_prefix);
     strcat(phylolibTree, suffix);
     FILE *phylolib_tree = fopen(phylolibTree, "w");
-    fprintf(phylolib_tree, "%s", raxmlTree->tree_string);
+    fprintf(phylolib_tree, "%s", phyloTree->tree_string);
     cout << "Tree optimized by Phylolib was written to " << phylolibTree << endl;
 }
 

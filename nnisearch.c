@@ -168,6 +168,7 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut, i
 
         // Re-optimize all branches
         treeEvaluate(tr, numSmooth);
+        //treeEvaluate(tr, 32);
         if (tr->likelihood < curScore) {
             if (numNNI2Apply == 1) {
                 printf("This is a BUG: Tree gets worse when 1 NNI is applied?\n");
@@ -335,13 +336,16 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
         lh1 = doOneNNI(tr, p, 1, ONE_BRAN_OPT);
     } else {
         lh1 = doOneNNI(tr, p, 1, NO_BRAN_OPT);
+        /*
         double delta = lh1 - lh0;
         if (delta < 0.0 && ABS(delta) < 0.1) {
-           localSmooth(tr, p, 1);
-           localSmooth(tr, q, 1);
+           optimizeOneBranches(tr, p, 100);
+           //localSmooth(tr, p, 1);
+           //localSmooth(tr, q, 1);
            evaluateGeneric(tr, p, FALSE);
            lh1 = tr->likelihood;
         }
+        */
     }
     nniMove nni1;
     nni1.p = p;

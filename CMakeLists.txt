@@ -31,7 +31,7 @@ elseif (APPLE)
 elseif (UNIX) 
 	message("Target OS     : Unix")
 	# build as static binary to run on most machines
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
 	message("Target OS     : Unknown")

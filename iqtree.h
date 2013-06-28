@@ -442,7 +442,7 @@ public:
     /**
      *  Tree data structure for RAxML kernel
      */
-    tree* raxmlTree;
+    tree* phyloTree;
 
 protected:
 
@@ -616,6 +616,8 @@ public:
 
     /** @return TRUE if stopping criterion is met */
     bool checkBootstrapStopping();
+	int getDelete() const;
+	void setDelete(int _delete);
 
     int nni_round;
 protected:
