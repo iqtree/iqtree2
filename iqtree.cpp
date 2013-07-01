@@ -74,8 +74,7 @@ double IQTree::computeParsimonyTreePhylolib() {
     makeParsimonyTreeFast(phyloTree);
     freeParsimonyDataStructures(phyloTree);
 
-    smoothTree(phyloTree, 32);
-    evaluateGeneric(phyloTree, phyloTree->start, FALSE);
+    treeEvaluate(phyloTree, 32);
 
     return phyloTree->likelihood;
 
@@ -1541,8 +1540,7 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
     }
 
     // Re-optimize all branches
-    smoothTree(phyloTree, 1);
-    evaluateGeneric(phyloTree, phyloTree->start, FALSE);
+    treeEvaluate(phyloTree, 1);
     return phyloTree->likelihood;
 }
 

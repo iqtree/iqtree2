@@ -532,7 +532,8 @@ char Alignment::convertState(char state, SeqType seq_type) {
             return 1;
         default:
             return STATE_INVALID;
-        }
+        		}
+		break;
     case SEQ_DNA: // DNA
         switch (state) {
         case 'A':
