@@ -22,10 +22,6 @@
 #include <math.h>
 
 
-const double MIN_RATE = 1e-6;
-const double MIN_GAMMA_SHAPE = 0.01;
-const double MAX_GAMMA_SHAPE = 100.0;
-const double TOL_GAMMA_SHAPE = 0.001;
 
 RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : RateHeterogeneity()
 {
@@ -135,7 +131,8 @@ double RateGamma::optimizeParameters() {
 }
 
 void RateGamma::writeInfo(ostream &out) {
-	out << "Gamma shape: " << gamma_shape << " (" << (cut_median ? "median" : "mean") << " rate per category)" << endl;
+	out << "Gamma shape alpha: " << gamma_shape << endl;
+	//out << " (" << (cut_median ? "median" : "mean") << " rate per category)" << endl;
 	//out << "Number of categories: " << ncategory << endl;
 }
 

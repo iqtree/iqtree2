@@ -2357,10 +2357,10 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
      cout << "Support values written to " << out_file << endl;
      */
 
-    string filename = params.out_prefix;
-    filename += ".ufboot";
-    ofstream out(filename.c_str());
     if (params.print_ufboot_trees) {
+        string filename = params.out_prefix;
+        filename += ".ufboot";
+        ofstream out(filename.c_str());
     	for (i = 0; i < trees.size(); i++) {
     		NodeVector taxa;
     		// change the taxa name from ID to real name
@@ -2371,9 +2371,9 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     		for (j = 0; j < trees.tree_weights[i]; j++)
     			trees[i]->printTree(out, WT_NEWLINE);
     	}
+        out.close();
+        cout << "UFBoot trees printed to " << filename << endl;
     }
-    out.close();
-    cout << "UFBoot trees printed to " << filename << endl;
 
 }
 

@@ -22,6 +22,11 @@
 
 #include "rateheterogeneity.h"
 
+const double MIN_RATE = 1e-6;
+const double MIN_GAMMA_SHAPE = 0.01;
+const double MAX_GAMMA_SHAPE = 100.0;
+const double TOL_GAMMA_SHAPE = 0.001;
+
 class PhyloTree;
 /**
 Discrete gamma distributed site-rate model from Yang 1994
@@ -46,6 +51,10 @@ public:
 
 	virtual double getGammaShape() { return gamma_shape; }
 
+	/**
+		@return TRUE to use median rate for discrete categories, FALSE to use mean rate instead
+	*/
+	bool isCutMedian() { return cut_median; }
 
 	/**
 		@return the number of rate categories

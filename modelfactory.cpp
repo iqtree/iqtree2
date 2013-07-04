@@ -32,6 +32,7 @@
 #include "ratemeyerdiscrete.h"
 #include "ratekategory.h"
 #include "ngs.h"
+#include <string>
 
 const char OPEN_BRACKET = '{';
 const char CLOSE_BRACKET = '}';
@@ -166,8 +167,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			if (close_bracket == string::npos)
 				outError("Close bracket not found in ", model_str);
 			gamma_shape = convert_double(model_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
-			if (gamma_shape < 0.01 || gamma_shape > 100)
-				outError("Gamma shape must be in [0.01,100]");
+			if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
+				stringstream str;
+				str << "Gamma shape parameter " << gamma_shape << "out of range ["
+						<< MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]" << endl;
+				outError(str.str());
+			}
 		} else if (model_str.length() > posG+2+end_pos && model_str[posG+2+end_pos] != '+')
 			outError("Wrong model name ", model_str);
 	}

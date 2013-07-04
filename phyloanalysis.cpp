@@ -258,7 +258,7 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 	cout << "Testing " << num_models * 4
 			<< ((nstates == 4) ? " DNA" : " protein")
 			<< " models (sample size: " << ssize << ") ..." << endl;
-	cout << "Model         -LnL         df AIC          AICc         BIC"
+	cout << "Model         -LnL         df  AIC          AICc         BIC"
 			<< endl;
 	
 	if (params.print_site_lh) {
@@ -351,7 +351,7 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 			cout << fixed;
 			cout.width(12);
 			cout << -cur_lh << " ";
-			cout.width(2);
+			cout.width(3);
 			cout << df << " ";
 			cout.width(12);
 			cout << AIC_score << " ";
@@ -1115,6 +1115,10 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 			out.width(14);
 			out << left << rate_model->getRate(i) << " " << prop[i];
 			out << endl;
+		}
+		if (rate_model->getGammaShape() > 0) {
+			out << " Relative rates are computed as " << ((dynamic_cast<RateGamma*>(rate_model)->isCutMedian()) ? "median" : "mean") <<
+				"of the portion of the Gamma distribution falling in the category." << endl;
 		}
 	}
 	/*
