@@ -383,6 +383,7 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
         lh2 = doOneNNI(tr, p, 2, ONE_BRAN_OPT);
     } else {
         lh2 = doOneNNI(tr, p, 2, NO_BRAN_OPT);
+        /*
         double delta = lh2 - lh0;
         if (delta < 0.0 && ABS(delta) < 0.1) {
            localSmooth(tr, p, 1);
@@ -390,6 +391,7 @@ nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut) {
            evaluateGeneric(tr, p, FALSE);
            lh2 = tr->likelihood;
         }
+        */
     }
     // Create the nniMove struct to store this move
     nniMove nni2;

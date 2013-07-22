@@ -672,6 +672,12 @@ protected:
     void deleteNonTabuLeaves(PhyloNodeVector &del_leaves);
 
     /**
+     * 		randomly select a leaf and then delete k closes leaves
+     * 		@param del_leaves (OUT) the list of deleted leaves
+     */
+    void deleteSubTree(PhyloNodeVector &del_leaves);
+
+    /**
             reinsert the whole list of leaves back into the tree
             @param del_leaves the list of deleted leaves, returned by deleteLeaves() function
      */

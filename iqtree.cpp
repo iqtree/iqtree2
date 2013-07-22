@@ -118,7 +118,7 @@ void IQTree::setParams(Params &params) {
     }
     //tree.setProbDelete(params.p_delete);
     if (params.p_delete != 0.0) {
-        k_delete = k_delete_min = k_delete_max = round(params.p_delete * leafNum);
+        k_delete = k_delete_min = k_delete_max = ceil(params.p_delete * leafNum);
     } else {
         k_delete = k_delete_min = 10;
         k_delete_max = leafNum / 2;
@@ -324,6 +324,12 @@ void IQTree::initLeafFrequency(PhyloNode *node, PhyloNode *dad) {
         if ((*it)->node != dad) {
             initLeafFrequency((PhyloNode*) (*it)->node, node);
         }
+}
+
+void IQTree::deleteSubTree(PhyloNodeVector &del_leaves) {
+    NodeVector taxa;
+    // get the vector of taxa
+    getTaxa(taxa);
 }
 
 void IQTree::deleteNonTabuLeaves(PhyloNodeVector &del_leaves) {
@@ -664,6 +670,9 @@ double IQTree::doIQP() {
 
     if (params->tabu) {
         deleteNonTabuLeaves(del_leaves);
+    } else if (params->del_sub) {
+    	// delete all leaves of a subtree
+    	deleteSubTree(del_leaves);
     } else {
         deleteLeaves(del_leaves);
     }

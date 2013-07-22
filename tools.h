@@ -341,6 +341,8 @@ struct NNIInfo {
  */
 struct Params {
 
+	bool del_sub;
+
     /**
      *  Evaluating NNI without re-optimizing the central branch
      */

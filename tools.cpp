@@ -704,6 +704,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.fast_branch_opt = false;
     params.par_vs_bionj = false;
     params.tabu = false;
+    params.del_sub = false;
     params.random_restart = false;
     params.avh_test = 0;
     params.site_freq_file = NULL;
