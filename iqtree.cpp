@@ -1028,7 +1028,7 @@ double IQTree::doIQPNNI() {
                     treeReadLenString(iqp_tree_string.str().c_str(), phyloTree, TRUE, FALSE, TRUE);
                     //printPhylolibTree(".iqp_tree.phylolib");
                     evaluateGeneric(phyloTree, phyloTree->start, TRUE);
-                    treeEvaluate(phyloTree, params->numSmoothTree);
+                    treeEvaluate(phyloTree, 2);
                     if (verbose_mode >= VB_MED) {
                         cout << "IQP log-likelihood = " << phyloTree->likelihood << endl;
                     }
