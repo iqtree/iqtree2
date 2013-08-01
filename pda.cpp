@@ -1351,14 +1351,15 @@ void calcDistribution(Params &params) {
 
 void printRFDist(ostream &out, int *rfdist, int n, int m, int rf_dist_mode) {
 	int i, j;
-	out << n << endl;
 	if (rf_dist_mode == RF_ADJACENT_PAIR) {
 		out << "XXX        ";
+		out << 1 << " " << n << endl;
 		for (i = 0; i < n; i++)
 			out << " " << rfdist[i];
 		out << endl;
 	} else {
 		// all pairs
+		out << n << " " << m << endl;
 		for (i = 0; i < n; i++)  {
 			out << "Tree" << i << "      ";
 			for (j = 0; j < m; j++)
@@ -1368,12 +1369,70 @@ void printRFDist(ostream &out, int *rfdist, int n, int m, int rf_dist_mode) {
 	}
 }
 
+void computeRFDistExtended(const char *trees1, const char *trees2, const char *filename) {
+	cout << "Reading input trees 1 file " << trees1 << endl;
+	int ntrees = 0, ntrees2 = 0;
+	int *rfdist_raw = NULL;
+	try {
+		ifstream in;
+        in.exceptions(ios::failbit | ios::badbit);
+        in.open(trees1);
+    	IntVector rfdist;
+    	for (ntrees = 1; !in.eof(); ntrees++) {
+    		MTree tree;
+    		bool is_rooted = false;
+
+    		// read in the tree and convert into split system for indexing
+    		tree.readTree(in, is_rooted);
+    		if (verbose_mode >= VB_DEBUG)
+    			cout << ntrees << " " << endl;
+    		IntVector dist;
+    		tree.computeRFDist(trees2, dist);
+    		ntrees2 = dist.size();
+    		rfdist.insert(rfdist.end(), dist.begin(), dist.end());
+    		char ch;
+    		in.exceptions(ios::goodbit);
+    		(in) >> ch;
+    		if (in.eof()) break;
+    		in.unget();
+    		in.exceptions(ios::failbit | ios::badbit);
+
+    	}
+
+		in.close();
+		assert(ntrees * ntrees2 == rfdist.size());
+		rfdist_raw = new int[rfdist.size()];
+		copy(rfdist.begin(), rfdist.end(), rfdist_raw);
+
+	} catch (ios::failure) {
+		outError(ERR_READ_INPUT, trees1);
+	}
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+		printRFDist(out, rfdist_raw, ntrees, ntrees2, RF_TWO_TREE_SETS_EXTENDED);
+		out.close();
+		cout << "Robinson-Foulds distances printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+
+}
+
 void computeRFDist(Params &params) {
 
 	if (!params.user_file) outError("User tree file not provided");
 
 	string filename = params.out_prefix;
 	filename += ".rfdist";
+
+	if (params.rf_dist_mode == RF_TWO_TREE_SETS_EXTENDED) {
+		computeRFDistExtended(params.user_file, params.second_tree, filename.c_str());
+		return;
+	}
+
 	MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
 	int n = trees.size(), m = trees.size();
 	int *rfdist;

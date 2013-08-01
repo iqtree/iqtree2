@@ -2358,7 +2358,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				<< iqtree.curScore << endl;
 	}
 
-	if (iqtree.isSuperTree()) ((PhyloSuperTree*) &iqtree)->mapTrees();
+	if (iqtree.isSuperTree())
+		((PhyloSuperTree*) &iqtree)->mapTrees();
 
 	if (params.min_iterations) {
 		cout << endl;
@@ -2373,7 +2374,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.setBestScore(iqtree.curScore);
 	}
 
-	if (iqtree.isSuperTree()) ((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+	if (iqtree.isSuperTree())
+		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
 
 	cout << endl;
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;

@@ -1679,3 +1679,102 @@ void MTree::assignBranchSupport(istream &in) {
 	for (vector<Split*>::reverse_iterator it = subtrees.rbegin(); it != subtrees.rend(); it++)
 		delete (*it);
 }
+
+void MTree::computeRFDist(const char *trees_file, IntVector &dist) {
+	cout << "Reading input trees file " << trees_file << endl;
+	try {
+		ifstream in;
+        in.exceptions(ios::failbit | ios::badbit);
+        in.open(trees_file);
+        computeRFDist(in, dist);
+		in.close();
+	} catch (ios::failure) {
+		outError(ERR_READ_INPUT, trees_file);
+	}
+}
+
+void MTree::computeRFDist(istream &in, IntVector &dist) {
+	SplitGraph mysg;
+	convertSplits(mysg, NULL, root->neighbors[0]->node);
+	SplitGraph::iterator sit;
+	for (sit = mysg.begin(); sit != mysg.end(); sit++)
+		(*sit)->setWeight(0.0);
+	int ntrees, taxid;
+	for (ntrees = 1; !in.eof(); ntrees++) {
+		MTree tree;
+		bool is_rooted = false;
+
+		// read in the tree and convert into split system for indexing
+		tree.readTree(in, is_rooted);
+		if (verbose_mode >= VB_DEBUG)
+			cout << ntrees << " " << endl;
+		StrVector taxname;
+		tree.getTaxaName(taxname);
+		// create the map from taxa between 2 trees
+		Split taxa_mask(leafNum);
+		for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
+			taxid = mysg.findLeafName(*it);
+			if (taxid < 0)
+				outError("Taxon not found in full tree: ", *it);
+			taxa_mask.addTaxon(taxid);
+		}
+		// make the taxa ordering right before converting to split system
+		taxname.clear();
+		int smallid;
+		for (taxid = 0, smallid = 0; taxid < leafNum; taxid++)
+			if (taxa_mask.containTaxon(taxid)) {
+				taxname.push_back(mysg.getTaxa()->GetTaxonLabel(taxid));
+				string name = (string)mysg.getTaxa()->GetTaxonLabel(taxid);
+				tree.findLeafName(name)->id = smallid++;
+			}
+		assert(taxname.size() == tree.leafNum);
+
+		SplitGraph sg;
+		//NodeVector nodes;
+		tree.convertSplits(sg);
+		SplitIntMap hash_ss;
+		for (sit = sg.begin(); sit != sg.end(); sit++)
+			hash_ss.insertSplit((*sit), 1);
+
+		// now scan through all splits in current tree
+		int common_splits = 0;
+		for (sit = mysg.begin(); sit != mysg.end(); sit++)
+		if ((*sit)->trivial() < 0) // it is an internal split
+		{
+
+			Split *subsp = (*sit)->extractSubSplit(taxa_mask);
+			if (subsp->shouldInvert())
+				subsp->invert();
+			Split *sp = hash_ss.findSplit(subsp);
+			if (sp) {
+				common_splits++;
+				//(*sit)->setWeight((*sit)->getWeight()+1.0);
+				if (verbose_mode >= VB_MAX) {
+					for (taxid = 0; taxid < (*sit)->getNTaxa(); taxid++)
+						if ((*sit)->containTaxon(taxid))
+							cout << " " << mysg.getTaxa()->GetTaxonLabel(taxid);
+					cout << " --> ";
+					for (taxid = 0; taxid < sp->getNTaxa(); taxid++)
+						if (sp->containTaxon(taxid))
+							cout << " " << taxname[taxid];
+					cout << endl;
+				}
+			}
+			delete subsp;
+		}
+
+		//cout << "common_splits = " << common_splits << endl;
+		dist.push_back(common_splits);
+		char ch;
+		in.exceptions(ios::goodbit);
+		(in) >> ch;
+		if (in.eof()) break;
+		in.unget();
+		in.exceptions(ios::failbit | ios::badbit);
+
+	}
+
+	cout << ntrees << " trees read" << endl;
+
+
+}

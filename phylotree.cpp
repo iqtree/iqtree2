@@ -3576,7 +3576,8 @@ void PhyloTree::computeNNIPatternLh(double cur_lh, double &lh2, double *pattern_
     // save Neighbor and allocate new Neighbor pointer
     for (id = 0; id < IT_NUM; id++) {
         saved_nei[id] = (*saved_it[id]);
-        *saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
+        /** NOTE BUG DOWN HERE! */
+        *saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length); // BUG for PhyloSuperTree!
         ((PhyloNeighbor*) (*saved_it[id]))->partial_lh = newPartialLh();
         ((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
     }

@@ -1361,6 +1361,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -rf <second_tree>";
                 params.second_tree = argv[cnt];
+            } else if (strcmp(argv[cnt], "-rf2") == 0) {
+                params.rf_dist_mode = RF_TWO_TREE_SETS_EXTENDED;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -rf2 <second_tree>";
+                params.second_tree = argv[cnt];
             } else if (strcmp(argv[cnt], "-aLRT") == 0) {
                 cnt++;
                 if (cnt + 1 >= argc)

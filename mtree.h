@@ -517,6 +517,16 @@ public:
 
 	void assignBranchSupport(istream &in);
 
+	/**
+	 * compute robinson foulds distance between this tree and a set of trees.
+	 * Work fine also when the trees do not have the same taxon set.
+	 * @param trees_file set of trees in NEWICK
+	 * @param dist (OUT) distance vector
+	 */
+	void computeRFDist(const char *trees_file, IntVector &dist);
+
+	void computeRFDist(istream &in, IntVector &dist);
+
     /********************************************************
             PROPERTIES OF TREE
      ********************************************************/
