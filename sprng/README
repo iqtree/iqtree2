@@ -1,0 +1,7 @@
+The original source files are from the SPRNG (Scalable Pseudo Random 
+Number Generator) library package.
+
+Mascagni, Michael and Srinivasan, Ashok (2000)
+  SPRNG: A Scalable Library for Pseudorandom Number Generation.
+  ACM Trans. Math. Software, 26:436-461, DOI: 10.1145/358407.358427
+
