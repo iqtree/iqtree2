@@ -199,6 +199,11 @@ public:
     bool isLeaf();
 
     /**
+     *  @return TRUE if this node is a leaf in a cherry
+     */
+    bool isInCherry();
+
+    /**
         @return TRUE if this node is a cherry, FALSE otherwise
      */
     bool isCherry();

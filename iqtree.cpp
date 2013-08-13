@@ -326,10 +326,59 @@ void IQTree::initLeafFrequency(PhyloNode *node, PhyloNode *dad) {
         }
 }
 
-void IQTree::deleteSubTree(PhyloNodeVector &del_leaves) {
-    NodeVector taxa;
-    // get the vector of taxa
-    getTaxa(taxa);
+void IQTree::clearLeafFrequency() {
+	for (vector<LeafFreq>::iterator it = leaf_freqs.begin(); it != leaf_freqs.end(); it++) {
+		(*it).freq = 0;
+	}
+}
+
+void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
+    NodeVector cherry_taxa;
+    NodeVector noncherry_taxa;
+    // get the vector of non cherry taxa
+    getNonCherryLeaves(noncherry_taxa, cherry_taxa);
+    root = NULL;
+    int num_taxa = aln->getNSeq();
+    int num_delete = k_delete;
+    if (num_delete > num_taxa - 4)
+        num_delete = num_taxa - 4;
+    if (verbose_mode >= VB_DEBUG) {
+        cout << "Deleting " << num_delete << " leaves" << endl;
+    }
+	vector<unsigned int> indices_noncherry(noncherry_taxa.size());
+	//iota(indices_noncherry.begin(), indices_noncherry.end(), 0);
+	unsigned int startValue = 0;
+	for (vector<unsigned int>::iterator it = indices_noncherry.begin(); it != indices_noncherry.end(); ++it) {
+		(*it) = startValue;
+		++startValue;
+	}
+	random_shuffle(indices_noncherry.begin(), indices_noncherry.end());
+	int i;
+	for (i = 0; i < num_delete && i < noncherry_taxa.size(); i++) {
+		PhyloNode *taxon = (PhyloNode*) noncherry_taxa[indices_noncherry[i]];
+		del_leaves.push_back(taxon);
+		deleteLeaf(taxon);
+		//cout << taxon->id << ", ";
+	}
+	int j = 0;
+	if (i < num_delete) {
+		vector<unsigned int> indices_cherry(cherry_taxa.size());
+		//iota(indices_cherry.begin(), indices_cherry.end(), 0);
+		startValue = 0;
+		for (vector<unsigned int>::iterator it = indices_cherry.begin(); it != indices_cherry.end(); ++it) {
+			(*it) = startValue;
+			++startValue;
+		}
+		random_shuffle(indices_cherry.begin(), indices_cherry.end());
+		while (i < num_delete) {
+			PhyloNode *taxon = (PhyloNode*) cherry_taxa[indices_cherry[j]];
+			del_leaves.push_back(taxon);
+			deleteLeaf(taxon);
+			i++;
+			j++;
+		}
+	}
+	root = cherry_taxa[j];
 }
 
 void IQTree::deleteNonTabuLeaves(PhyloNodeVector &del_leaves) {
@@ -403,9 +452,12 @@ void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
             i++;
         PhyloNode *taxon = (PhyloNode*) taxa[id];
         del_leaves.push_back(taxon);
+        //cout << taxon->name << " ";
         deleteLeaf(taxon);
         taxa[id] = NULL;
     }
+    //cout << endl;
+    //cout << endl;
     // set root to the first taxon which was not deleted
     for (i = 0; i < taxa.size(); i++)
         if (taxa[i]) {
@@ -670,9 +722,9 @@ double IQTree::doIQP() {
 
     if (params->tabu) {
         deleteNonTabuLeaves(del_leaves);
-    } else if (params->del_sub) {
+    } else if (params->cherry) {
     	// delete all leaves of a subtree
-    	deleteSubTree(del_leaves);
+    	deleteNonCherryLeaves(del_leaves);
     } else {
         deleteLeaves(del_leaves);
     }
@@ -990,7 +1042,7 @@ double IQTree::doIQPNNI() {
         Alignment *saved_aln = aln;
 
         // randomize the neighbor orders for all nodes
-        randomizeNeighbors();
+        //randomizeNeighbors();
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // create bootstrap sample
@@ -1212,6 +1264,7 @@ double IQTree::doIQPNNI() {
                     printResultTree(iter_string.str());
                 }
                 printResultTree();
+                clearLeafFrequency();
                 stop_rule.addImprovedIteration(cur_iteration);
 
                 // Variable Neighborhood search idea, reset k_delete if tree is better

@@ -342,7 +342,7 @@ struct NNIInfo {
  */
 struct Params {
 
-	bool del_sub;
+	bool cherry;
 
     /**
      *  Evaluating NNI without re-optimizing the central branch
@@ -403,7 +403,7 @@ struct Params {
     bool par_vs_bionj;
 
     /**
-     *
+     *  Maximum running time of the tree search in minutes
      */
     double maxtime;
 
@@ -423,7 +423,7 @@ struct Params {
     bool parbran;
 
     /**
-     *  option to turn on raxml library
+     *  option to turn on phylogenetic library
      */
     bool phylolib;
 
@@ -1599,6 +1599,15 @@ void get2RandNumb(const int size, int &first, int &second);
 inline double getCPUTime(clock_t startTime) {
         return double(clock() - startTime) / CLOCKS_PER_SEC;
 }*/
+
+
+/**
+ *  Fills the range [first, last) with sequentially increasing values,
+ *  starting with value and repetitively evaluating ++value.
+ *  Introduced in C++11 --> this is a reimplementation
+ */
+template<class ForwardIterator, class T>
+void iota( ForwardIterator first, ForwardIterator last, T value );
 
 /**
         compute p-value for a chi-square value

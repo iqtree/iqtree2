@@ -54,6 +54,18 @@ bool Node::isLeaf() {
     return neighbors.size() <= 1;
 }
 
+bool Node::isInCherry() {
+	if (this->isLeaf()) {
+		if (neighbors[0]->node->isCherry()) {
+			return true;
+		} else {
+			return false;
+		}
+	} else {
+		return false;
+	}
+}
+
 bool Node::isCherry() {
     int num_leaves = 0;
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)

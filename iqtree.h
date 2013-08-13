@@ -559,6 +559,8 @@ protected:
      */
     void initLeafFrequency(PhyloNode* node = NULL, PhyloNode* dad = NULL);
 
+    void clearLeafFrequency();
+
 public:
     /****** following variables are for ultra-fast bootstrap *******/
     /** 2 to save all trees, 1 to save intermediate trees */
@@ -672,10 +674,11 @@ protected:
     void deleteNonTabuLeaves(PhyloNodeVector &del_leaves);
 
     /**
-     * 		randomly select a leaf and then delete k closes leaves
+     * 		delete a set of leaves from tree
+     * 		non-cherry leaves are selected first
      * 		@param del_leaves (OUT) the list of deleted leaves
      */
-    void deleteSubTree(PhyloNodeVector &del_leaves);
+    void deleteNonCherryLeaves(PhyloNodeVector &del_leaves);
 
     /**
             reinsert the whole list of leaves back into the tree
