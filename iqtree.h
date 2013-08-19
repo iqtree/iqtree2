@@ -449,7 +449,7 @@ protected:
     /**
      *  Current IQPNNI iteration number
      */
-    int curIQPIteration;
+    int curIQPIter;
     /**
             criterion to assess important quartet
      */
