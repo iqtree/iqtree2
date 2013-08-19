@@ -27,6 +27,7 @@ SuperAlignment::SuperAlignment()
 SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
  : Alignment()
 {
+
 	int site, seq, nsite = super_tree->size();
 	PhyloSuperTree::iterator it;
 	map<string,int> name_map;

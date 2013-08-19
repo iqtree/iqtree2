@@ -208,7 +208,6 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 
     cout << "Reading alignment file " << filename << " ..." << endl;
     intype = detectInputFile(filename);
-    phylip_file = filename;
 
     try {
 
@@ -1621,8 +1620,10 @@ double Alignment::readDist(istream &in, double *dist_mat) {
                 throw "Distance between " + getSeqName(seq1) + " and " + getSeqName(seq2) + " is not symmetric";
     }
     
-    string dist_file = string(phylip_file) + ".userdist";
-    printDist(dist_file.c_str(), dist_mat);
+    /*
+    string dist_file = params.out_prefix;
+    dist_file += ".userdist";
+    printDist(dist_file.c_str(), dist_mat);*/
     return longest_dist;
 }
 

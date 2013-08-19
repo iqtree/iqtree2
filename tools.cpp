@@ -1798,8 +1798,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "SUBSTITUTION MODEL:" << endl
             << "  -m <model_name>" << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
-            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-letter model" << endl
-            << "                       specification, e.g., '010010' = HKY" << endl
+            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-digit model" << endl
+            << "                       specification (e.g., 010010 = HKY)" << endl
             << "              Protein: WAG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
             << "                       JTT, LG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
             << "                       HIVw, JTTDCMut, FLU, Blosum62" << endl
@@ -1815,7 +1815,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl
             << "                       categories for Gamma rates (default: n=4)" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
-            << "  -gmean               Computing mean for Gamma rate category (default: median)" << endl
+            << "  -gmedian             Computing mean for Gamma rate category (default: mean)" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl

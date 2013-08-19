@@ -1117,8 +1117,8 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 			out << endl;
 		}
 		if (rate_model->getGammaShape() > 0) {
-			out << " Relative rates are computed as " << ((dynamic_cast<RateGamma*>(rate_model)->isCutMedian()) ? "median" : "mean") <<
-				"of the portion of the Gamma distribution falling in the category." << endl;
+			out << "Relative rates are computed as " << ((dynamic_cast<RateGamma*>(rate_model)->isCutMedian()) ? "median" : "mean") <<
+				" of the portion of the Gamma distribution falling in the category." << endl;
 		}
 	}
 	/*
@@ -1966,6 +1966,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
     /* Fix if negative branch lengths detected */
     //double fixed_length = 0.001;
     int fixed_number = iqtree.fixNegativeBranch(false);
+    // Question: for what do you need this initial_tree file?
     string initial_tree_file = string(params.out_prefix) + ".initial_tree";
     iqtree.printTree(initial_tree_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
     if (fixed_number) {

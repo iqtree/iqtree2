@@ -551,10 +551,6 @@ public:
 
 protected:
 
-    /**
-     *  name of the file, from which the alignment was originally read in
-     */
-    char* phylip_file;
 
     /**
             sequence names
