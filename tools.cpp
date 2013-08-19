@@ -1551,7 +1551,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
-            } else if (strcmp(argv[cnt], "-fiveBran") == 0) {
+            } else if (strcmp(argv[cnt], "-fivebran") == 0) {
             	params.nni5Branches = true;
             } else if (strcmp(argv[cnt], "-nniThreshold") == 0) {
             	cnt++;
