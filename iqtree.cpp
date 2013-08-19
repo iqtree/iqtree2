@@ -1381,7 +1381,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         applyNNIs(nni2apply);
         double newScore = optimizeAllBranches(params->numSmoothTree);
         if (newScore > curScore) {
-            if (enableHeuris) {
+            if (enableHeuris && curIQPIter > 1) {
                 if (vecImpProNNI.size() < 1000) {
                     vecImpProNNI.push_back((newScore - curScore) / nni2apply);
                 } else {
@@ -1435,7 +1435,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 
     bool foundBetterTree = (curScore > oldLH) ? true : false;
     if (foundBetterTree) {
-        if (enableHeuris) {
+        if (enableHeuris && curIQPIter > 1) {
             if (vecNumNNI.size() < 1000) {
                 vecNumNNI.push_back(nni_count);
             } else {
@@ -1457,7 +1457,6 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         saveCurrentTree(curScore); // BQM: for new bootstrap
         saveNNITrees(); // optimize 5 branches around NNI, this makes program slower
     }
-
     return curScore;
 }
 
