@@ -134,9 +134,10 @@ void SuperAlignment::getPatternFreq(IntVector &pattern_freq) {
 	}
 }
 
-void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq) {
+void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq, const char *spec) {
 	if (!aln->isSuperAlignment()) outError("Internal error: ", __func__);
 	if (pattern_freq) outError("Unsupported yet.", __func__);
+	if (spec) outError("Unsupported yet.", __func__);
 	Alignment::copyAlignment(aln);
 	SuperAlignment *super_aln = (SuperAlignment*) aln;
 	if (!partitions.empty()) outError("Internal error: ", __func__);
@@ -148,8 +149,10 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
 	taxa_index = super_aln->taxa_index;
 }
 
-void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq) {
+void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq, const char *spec) {
 	if (!isSuperAlignment()) outError("Internal error: ", __func__);
+	if (spec) outError("Unsupported yet.", __func__);
+
 	int offset = 0;
 	if (!pattern_freq.empty()) pattern_freq.resize(0);
 	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
@@ -161,8 +164,10 @@ void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq) {
 }
 
 
-void SuperAlignment::createBootstrapAlignment(int *pattern_freq) {
+void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spec) {
 	if (!isSuperAlignment()) outError("Internal error: ", __func__);
+	if (spec) outError("Unsupported yet.", __func__);
+
 	int offset = 0;
 	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
 		(*it)->createBootstrapAlignment(pattern_freq + offset);

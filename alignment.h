@@ -324,16 +324,27 @@ public:
     /**
             create a non-parametric bootstrap alignment from an input alignment
             @param aln input alignment
+            @param pattern_freq (OUT) resampled pattern frequencies if not NULL
+            @param spec bootstrap specification of the form "l1:b1,l2:b2,...,lk:bk"
+            	to randomly draw b1 sites from the first l1 sites, etc. Note that l1+l2+...+lk
+            	must equal m, where m is the alignment length. Otherwise, an error will occur.
+            	If spec == NULL, a standard procedure is applied, i.e., randomly draw m sites.
      */
-    virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL);
+    virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL, const char *spec = NULL);
 
     /**
             resampling pattern frequency by a non-parametric bootstrap 
-            @param pattern_freq resampled pattern frequencies
+            @param pattern_freq (OUT) resampled pattern frequencies
+            @param spec bootstrap specification, see above
      */
-    virtual void createBootstrapAlignment(IntVector &pattern_freq);
+    virtual void createBootstrapAlignment(IntVector &pattern_freq, const char *spec = NULL);
 
-    virtual void createBootstrapAlignment(int *pattern_freq);
+    /**
+            resampling pattern frequency by a non-parametric bootstrap
+            @param pattern_freq (OUT) resampled pattern frequencies
+            @param spec bootstrap specification, see above
+     */
+    virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL);
 
     /**
             create a gap masked alignment from an input alignment. Gap patterns of masked_aln 

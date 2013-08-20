@@ -590,7 +590,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		if (!(boot_samples = new int [params.topotest_replicates*nptn]))
 			outError(ERR_NO_MEMORY);
 		for (boot = 0; boot < params.topotest_replicates; boot++)
-			tree->aln->createBootstrapAlignment(boot_samples + (boot*nptn));
+			tree->aln->createBootstrapAlignment(boot_samples + (boot*nptn), params.bootstrap_spec);
 		//if (!(saved_tree_lhs = new double [ntrees * params.topotest_replicates]))
 		//	outError(ERR_NO_MEMORY);
 		if (!(tree_lhs = new double [ntrees * params.topotest_replicates]))
@@ -2553,7 +2553,7 @@ void runPhyloAnalysis(Params &params) {
 				bootstrap_alignment = new SuperAlignment;
 			else
 				bootstrap_alignment = new Alignment;
-			bootstrap_alignment->createBootstrapAlignment(alignment);
+			bootstrap_alignment->createBootstrapAlignment(alignment, NULL, params.bootstrap_spec);
 			delete alignment;
 			alignment = bootstrap_alignment;
 		}
@@ -2650,7 +2650,7 @@ void runPhyloAnalysis(Params &params) {
 				bootstrap_alignment = new SuperAlignment;
 			else
 				bootstrap_alignment = new Alignment;
-			bootstrap_alignment->createBootstrapAlignment(alignment);
+			bootstrap_alignment->createBootstrapAlignment(alignment, NULL, params.bootstrap_spec);
 			if (params.print_tree_lh) {
 				double prob;
 				bootstrap_alignment->multinomialProb(*alignment, prob);

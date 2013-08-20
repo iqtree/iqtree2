@@ -3686,7 +3686,7 @@ void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
     memset(lh_new, 0, sizeof(double) * 3);
     int i;
     IntVector boot_freq;
-    aln->createBootstrapAlignment(boot_freq);
+    aln->createBootstrapAlignment(boot_freq, params->bootstrap_spec);
     for (i = 0; i < nptn; i++) {
 
         lh_new[0] += boot_freq[i] * pat_lh[0][i];

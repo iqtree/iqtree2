@@ -219,6 +219,25 @@ int convert_int(const char *str, int &end_pos) throw (string) {
 	return i;
 }
 
+void convert_int_vec(const char *str, IntVector &vec) throw (string) {
+    char *beginptr = (char*)str, *endptr;
+    vec.clear();
+    do {
+		int i = strtol(beginptr, &endptr, 10);
+
+		if ((i == 0 && endptr == beginptr) || abs(i) == HUGE_VALL) {
+			string err = "Expecting integer, but found \"";
+			err += beginptr;
+			err += "\" instead";
+			throw err;
+		}
+		vec.push_back(i);
+		if (*endptr == ',') endptr++;
+		beginptr = endptr;
+    } while (*endptr != 0);
+}
+
+
 double convert_double(const char *str) throw (string) {
     char *endptr;
     double d = strtod(str, &endptr);
@@ -592,6 +611,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.gurobi_format = true;
     params.gurobi_threads = 1;
     params.num_bootstrap_samples = 0;
+    params.bootstrap_spec = NULL;
 
     params.aln_file = NULL;
     params.treeset_file = NULL;
@@ -1327,6 +1347,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Wrong number of bootstrap samples";
                 if (params.num_bootstrap_samples == 1) params.compute_ml_tree = false;
                 if (params.num_bootstrap_samples == 1) params.consensus_type = CT_NONE;
+            } else if (strcmp(argv[cnt], "-bspec") == 0) {
+            	cnt++;
+                if (cnt >= argc)
+                    throw "Use -bspec <bootstrap_specification>";
+            	params.bootstrap_spec = argv[cnt];
             } else if (strcmp(argv[cnt], "-bc") == 0) {
                 params.multi_tree = true;
                 params.compute_ml_tree = false;
@@ -1771,6 +1796,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     cout << "GENERAL OPTIONS:" << endl
             << "  -?                   Printing this help dialog" << endl
             << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP/FASTA/NEXUS format" << endl
+            << "  -sp <partition_file> Partition model specification in NEXUS format" << endl
             << "  -z <trees_file>      Compute log-likelihoods for all trees in the given file" << endl
             << "  -st <BIN|DNA|AA>     Binary, DNA, or Protein sequences (default: auto-detect)" << endl
             << "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl
