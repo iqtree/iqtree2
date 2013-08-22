@@ -2569,7 +2569,12 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
         dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
         memset(dist_mat, 0, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
         var_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
-        memset(var_mat, 1, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
+        // BUG!
+        //memset(var_mat, 1, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());
+        int nseq = alignment->getNSeq();
+        for (int i = 0; i < nseq; i++)
+        	for (int j = 0; j < nseq; j++)
+        		var_mat[i*nseq+j] = 1.0;
     }
     if (!params.dist_file) {
         longest_dist = computeDist(dist_mat, var_mat);
@@ -3681,7 +3686,7 @@ void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
     memset(lh_new, 0, sizeof(double) * 3);
     int i;
     IntVector boot_freq;
-    aln->createBootstrapAlignment(boot_freq);
+    aln->createBootstrapAlignment(boot_freq, params->bootstrap_spec);
     for (i = 0; i < nptn; i++) {
 
         lh_new[0] += boot_freq[i] * pat_lh[0][i];

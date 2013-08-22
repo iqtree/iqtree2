@@ -208,7 +208,6 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 
     cout << "Reading alignment file " << filename << " ..." << endl;
     intype = detectInputFile(filename);
-    phylip_file = filename;
 
     try {
 
@@ -1340,7 +1339,7 @@ void Alignment::extractSites(Alignment *aln, const char* spec) {
     extractSites(aln, site_id);
 }
 
-void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq) {
+void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq, const char *spec) {
     if (aln->isSuperAlignment()) outError("Internal error: ", __func__);
     int site, nsite = aln->getNSite();
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
@@ -1354,35 +1353,81 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
         pattern_freq->resize(0);
         pattern_freq->resize(aln->getNPattern(), 0);
     }
-    for (site = 0; site < nsite; site++) {
-        int site_id = random_int(nsite);
-        int ptn_id = aln->getPatternID(site_id);
-        Pattern pat = aln->at(ptn_id);
-        addPattern(pat, site);
-        if (pattern_freq) ((*pattern_freq)[ptn_id])++;
+    if (spec) {
+    	// special bootstrap
+    	IntVector site_vec;
+    	convert_int_vec(spec, site_vec);
+    	if (site_vec.size() % 2 != 0)
+    		outError("Bootstrap specification length is not divisible by 2");
+    	nsite = 0;
+    	int part, begin_site = 0, out_site = 0;
+    	for (part = 0; part < site_vec.size(); part+=2)
+    		nsite += site_vec[part+1];
+    	site_pattern.resize(nsite, -1);
+    	for (part = 0; part < site_vec.size(); part += 2) {
+    		if (begin_site + site_vec[part] > aln->getNSite())
+    			outError("Sum of lengths exceeded alignment length");
+    		for (site = 0; site < site_vec[part+1]; site++) {
+    			int site_id = random_int(site_vec[part]) + begin_site;
+    			int ptn_id = aln->getPatternID(site_id);
+    			Pattern pat = aln->at(ptn_id);
+    			addPattern(pat, site + out_site);
+    			if (pattern_freq) ((*pattern_freq)[ptn_id])++;
+    		}
+    		begin_site += site_vec[part];
+    		out_site += site_vec[part+1];
+    	}
+    } else {
+    	// standard bootstrap
+		for (site = 0; site < nsite; site++) {
+			int site_id = random_int(nsite);
+			int ptn_id = aln->getPatternID(site_id);
+			Pattern pat = aln->at(ptn_id);
+			addPattern(pat, site);
+			if (pattern_freq) ((*pattern_freq)[ptn_id])++;
+		}
     }
     verbose_mode = save_mode;
     countConstSite();
 }
 
-void Alignment::createBootstrapAlignment(IntVector &pattern_freq) {
-    pattern_freq.resize(0);
-    pattern_freq.resize(getNPattern(), 0);
-    int site, nsite = getNSite();
-    for (site = 0; site < nsite; site++) {
-        int site_id = random_int(nsite);
-        int ptn_id = getPatternID(site_id);
-        pattern_freq[ptn_id]++;
-    }
+void Alignment::createBootstrapAlignment(IntVector &pattern_freq, const char *spec) {
+	int nptn = getNPattern();
+    pattern_freq.resize(nptn, 0);
+    int *internal_freq = new int [nptn];
+    createBootstrapAlignment(internal_freq, spec);
+    for (int i = 0; i < nptn; i++)
+    	pattern_freq[i] = internal_freq[i];
+    delete [] internal_freq;
 }
 
-void Alignment::createBootstrapAlignment(int *pattern_freq) {
+void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec) {
     int site, nsite = getNSite();
     memset(pattern_freq, 0, getNPattern()*sizeof(int));
-    for (site = 0; site < nsite; site++) {
-        int site_id = random_int(nsite);
-        int ptn_id = getPatternID(site_id);
-        pattern_freq[ptn_id]++;
+    if (spec) {
+    	// special bootstrap
+    	IntVector site_vec;
+    	convert_int_vec(spec, site_vec);
+    	if (site_vec.size() % 2 != 0)
+    		outError("Bootstrap specification length is not divisible by 2");
+    	int part, begin_site = 0, out_site = 0;
+    	for (part = 0; part < site_vec.size(); part += 2) {
+    		if (begin_site + site_vec[part] > getNSite())
+    			outError("Sum of lengths exceeded alignment length");
+    		for (site = 0; site < site_vec[part+1]; site++) {
+    			int site_id = random_int(site_vec[part]) + begin_site;
+    			int ptn_id = getPatternID(site_id);
+    			pattern_freq[ptn_id]++;
+    		}
+    		begin_site += site_vec[part];
+    		out_site += site_vec[part+1];
+    	}
+    } else {
+		for (site = 0; site < nsite; site++) {
+			int site_id = random_int(nsite);
+			int ptn_id = getPatternID(site_id);
+			pattern_freq[ptn_id]++;
+    }
     }
 }
 
@@ -1621,8 +1666,10 @@ double Alignment::readDist(istream &in, double *dist_mat) {
                 throw "Distance between " + getSeqName(seq1) + " and " + getSeqName(seq2) + " is not symmetric";
     }
     
-    string dist_file = string(phylip_file) + ".userdist";
-    printDist(dist_file.c_str(), dist_mat);
+    /*
+    string dist_file = params.out_prefix;
+    dist_file += ".userdist";
+    printDist(dist_file.c_str(), dist_mat);*/
     return longest_dist;
 }
 

@@ -205,7 +205,8 @@ inline double computeRELL(double *pattern_lh, IntVector &pattern_freq) {
 	computing Expected Likelihood Weights (ELW) of trees by Strimmer & Rambaut (2002)
 */
 void computeExpectedLhWeights(Alignment *aln, vector<double*> &pattern_lhs,
-                              IntVector &treeids, int num_replicates, DoubleVector &elw, DoubleVector *sh_pval = NULL) {
+                              IntVector &treeids, int num_replicates, DoubleVector &elw,
+                              const char* spec, DoubleVector *sh_pval = NULL) {
     cout << "Computing Expected Likelihood Weights (ELW) with " << num_replicates << " replicates ..." << endl;
     int i, j, ntrees = treeids.size();
     elw.resize(treeids.size(), 0.0);
@@ -213,7 +214,7 @@ void computeExpectedLhWeights(Alignment *aln, vector<double*> &pattern_lhs,
     // general RELL logl
     for (i = 0; i < num_replicates; i++) {
         IntVector pattern_freq;
-        aln->createBootstrapAlignment(pattern_freq);
+        aln->createBootstrapAlignment(pattern_freq, spec);
         DoubleVector logl;
         logl.resize(treeids.size(), 0.0);
         j = 0;
@@ -693,7 +694,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) 
     if (params.use_elw_method) { 	// compute ELW weights
 
         DoubleVector elw, sh_pval;
-        computeExpectedLhWeights(alignment, (*pattern_lhs), diff_tree_ids, params.gbo_replicates, elw, &sh_pval);
+        computeExpectedLhWeights(alignment, (*pattern_lhs), diff_tree_ids, params.gbo_replicates, elw, params.bootstrap_spec, &sh_pval);
         string elw_file_name = params.out_prefix;
         elw_file_name += ".elw";
         ofstream elw_file(elw_file_name.c_str());
@@ -731,7 +732,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) 
         // generate bootstrap samples
         for (i = 0; i < params.gbo_replicates; i++) {
             IntVector pattern_freq;
-            alignment->createBootstrapAlignment(pattern_freq);
+            alignment->createBootstrapAlignment(pattern_freq, params.bootstrap_spec);
             double prob;
             if (params.use_weighted_bootstrap)
                 prob = alignment->multinomialProb(pattern_freq);
@@ -1060,7 +1061,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     int diff_boot_aln = 0;
     for (id = 0; id < params.avh_test; id++) {
         IntVector *boot_freq = new IntVector;
-        alignment->createBootstrapAlignment(*boot_freq);
+        alignment->createBootstrapAlignment(*boot_freq, params.bootstrap_spec);
         IntVectorMap::iterator it = boot_map.find(boot_freq);
         if (it == boot_map.end()) { // not found
             outError(__func__);
