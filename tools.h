@@ -491,6 +491,11 @@ struct Params {
     char *partition_file;
 
     /**
+     * 		defines the relation between edge lengths in supertree and subtrees
+     */
+    char *partition_type;
+
+    /**
             B, D, or P for Binary, DNA, or Protein sequences
      */
     char *sequence_type;

@@ -664,7 +664,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    double optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL);
+    virtual double optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL);
     
     /**
      * optimize all branch lengths at the subtree rooted at node step-by-step.

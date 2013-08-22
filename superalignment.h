@@ -31,14 +31,15 @@ struct PartitionInfo {
 	string position_spec; // position specification, e.g., "1-100\1 1-100\2"
 
 	double cur_score; // current log-likelihood
+	double part_rate; // partition heterogeneity rate
 
 	DoubleVector null_score; // log-likelihood of each branch collapsed to zero
-	DoubleVector opt_score; // optimized log-likelihood for every branch
+	DoubleVector opt_score;  // optimized log-likelihood for every branch
 	DoubleVector nni1_score; // log-likelihood for 1st NNI for every branch
 	DoubleVector nni2_score; // log-likelihood for 2nd NNI for every branch
 
-	DoubleVector cur_brlen; // current branch lengths
-	DoubleVector opt_brlen; // optimized branch lengths for every branch
+	DoubleVector cur_brlen;  // current branch lengths
+	DoubleVector opt_brlen;  // optimized branch lengths for every branch
 	DoubleVector nni1_brlen; // branch length for 1st NNI for every branch
 	DoubleVector nni2_brlen; // branch length for 2nd NNI for every branch
 };

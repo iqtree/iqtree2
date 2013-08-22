@@ -412,6 +412,7 @@ double PhyloSuperTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, boo
 void PhyloSuperTree::initPartitionInfo() {
 	int part = 0;
 	for (iterator it = begin(); it != end(); it++, part++) {
+		part_info[part].part_rate = 1.0;
 		part_info[part].cur_score = 0.0;
 		part_info[part].null_score.clear();
 		part_info[part].null_score.resize((*it)->branchNum, 0.0);

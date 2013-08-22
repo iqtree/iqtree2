@@ -103,7 +103,7 @@ public:
 		create sub-trees T|Y_1,...,T|Y_k of the current super-tree T
 		and map F={f_1,...,f_k} the edges of supertree T to edges of subtrees T|Y_i
 	*/
-	void mapTrees();
+	virtual void mapTrees();
 
 	/*
 	 * create one map f_i from supertree T to subtree indexed by part (called by mapTrees)

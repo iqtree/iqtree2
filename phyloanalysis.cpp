@@ -2524,8 +2524,13 @@ void runPhyloAnalysis(Params &params) {
 	vector<ModelInfo> model_info;
 	// read in alignment
 	if (params.partition_file) {
-		// initialize supertree stuff if user specify partition file with -sp option
-		tree = new PhyloSuperTree(params);
+		if(strcmp(params.partition_type,"p")==0){
+			// initialize supertree - Proportional Edges case, "-spt p" option
+			tree = new PhyloSuperTreePlen(params);
+		} else {
+			// initialize supertree stuff if user specifies partition file with -sp option
+			tree = new PhyloSuperTree(params);
+		}
 		// this alignment will actually be of type SuperAlignment
 		alignment = tree->aln;
 	} else {
