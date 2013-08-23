@@ -169,7 +169,7 @@ void IQTree::setParams(Params &params) {
         boot_trees.resize(params.gbo_replicates, -1);
         boot_counts.resize(params.gbo_replicates, 0);
         for (int i = 0; i < params.gbo_replicates; i++) {
-            aln->createBootstrapAlignment(boot_samples[i]);
+            aln->createBootstrapAlignment(boot_samples[i], params.bootstrap_spec);
         }
         cout << "Max candidate trees (tau): " << max_candidate_trees << endl;
     }
@@ -999,7 +999,7 @@ double IQTree::doIQPNNI() {
                 bootstrap_alignment = new SuperAlignment;
             else
                 bootstrap_alignment = new Alignment;
-            bootstrap_alignment->createBootstrapAlignment(aln);
+            bootstrap_alignment->createBootstrapAlignment(aln, NULL, params->bootstrap_spec);
             setAlignment(bootstrap_alignment);
             initializeAllPartialLh();
             clearAllPartialLH();

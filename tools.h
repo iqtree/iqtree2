@@ -960,6 +960,13 @@ struct Params {
      */
     int num_bootstrap_samples;
 
+    /** bootstrap specification of the form "l1:b1,l2:b2,...,lk:bk"
+        to randomly draw b1 sites from the first l1 sites, etc. Note that l1+l2+...+lk
+        must equal m, where m is the alignment length. Otherwise, an error will occur.
+        The default bootstrap_spec == NULL, a standard procedure is applied, i.e., randomly draw m sites.
+    */
+    char *bootstrap_spec;
+
     /**
             1 if output all intermediate trees from every IQPNNI iteration
             2 if output all intermediate trees + 1-NNI-away trees
@@ -1437,6 +1444,8 @@ int convert_int(const char *str) throw (string);
         @return the number
  */
 int convert_int(const char *str, int &end_pos) throw (string);
+
+void convert_int_vec(const char *str, IntVector &vec) throw (string);
 
 /**
         convert string to double, with error checking
