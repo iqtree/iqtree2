@@ -169,6 +169,7 @@ lpwrapper.c
 fmemopen.c
 nnisearch.c
 modelcodon.cpp
+phylotesting.cpp
 )
 
 
