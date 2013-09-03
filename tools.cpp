@@ -1806,12 +1806,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -omp <#cpu_cores>    Number of cores/threads to use (default: all cores)" << endl
 #endif
             << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
-            << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (default: none)" << endl
+            << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
             << "  -bo <#replicates>    Bootstrap only" << endl
             << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
             << endl << "ULTRA-FAST BOOTSTRAP:" << endl
-            << "  -bb <#replicates>    Ultra-fast bootstrap" << endl
+            << "  -bb <#replicates>    Ultra-fast bootstrap (>=1000)" << endl
             << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
             << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl

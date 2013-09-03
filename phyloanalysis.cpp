@@ -1447,7 +1447,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			cout << "predicted in [" << params.min_iterations << ","
 					<< params.max_iterations << "] (confidence "
 					<< params.stop_confidence << ")" << endl;
-		cout << "Important quartet assessed on     : "
+		cout << "Important quartets assessed on    : "
 				<< ((params.iqp_assess_quartet == IQP_DISTANCE) ?
 						"Distance" :
 						((params.iqp_assess_quartet == IQP_PARSIMONY) ?

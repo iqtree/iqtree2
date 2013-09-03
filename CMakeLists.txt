@@ -100,6 +100,7 @@ add_subdirectory(phylolib)
 add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
+add_subdirectory(zlib-1.2.7)
 
 # the main executable
 add_executable(iqtree
@@ -175,9 +176,9 @@ phylotesting.cpp
 
 # link special lib for WIN32
 if (WIN32)
-	target_link_libraries(iqtree phylolib ncl whtest z sprng ws2_32)
+	target_link_libraries(iqtree phylolib ncl whtest zlibstatic sprng ws2_32)
 else (WIN32)
-	target_link_libraries(iqtree phylolib ncl whtest z sprng)
+	target_link_libraries(iqtree phylolib ncl whtest zlibstatic sprng)
 endif (WIN32)
 
 # setup the executable name properly
