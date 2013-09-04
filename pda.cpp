@@ -1756,6 +1756,8 @@ int outstreambuf::sync() { // used for output buffer only
 
 outstreambuf _out_buf;
 string _log_file;
+int _exit_wait_optn = FALSE;
+
 
 extern "C" void startLogFile() {
 	_out_buf.open(_log_file.c_str());
@@ -1770,6 +1772,12 @@ extern "C" void endLogFile() {
 }
 
 void funcExit(void) {
+	if(_exit_wait_optn) {
+		printf("\npress [return] to finish: ");
+		fflush(stdout);
+		while (getchar() != '\n');
+	}
+	
 	endLogFile();
 }
 
@@ -1793,11 +1801,168 @@ extern "C" void funcAbort(int signal_number)
 	signal(signal_number, SIG_DFL);
 }
 
+extern "C" void getintargv(int *argc, char **argv[]) 
+{
+	int    done;
+	int    count;
+	int    n;
+	int    l;
+	char   ch;
+	char  *argtmp;
+	char **argstr;
+
+	argtmp = (char  *)calloc(10100, sizeof(char));
+	argstr = (char **)calloc(100, sizeof(char*));
+	for(n=0; n<100; n++) {
+		argstr[n] = &(argtmp[n * 100]);
+	}
+	n=1;
+
+	fprintf(stdout, "\nYou seem to have click-started this program,");
+	fprintf(stdout, "\ndo you want to enter commandline parameters: [y]es, [n]o: ");
+	fflush(stdout);
+
+	/* read one char */
+	ch = getc(stdin);
+	if (ch != '\n') {
+		do ;
+		while (getc(stdin) != '\n');
+	}
+	ch = (char) tolower((int) ch);
+
+	if (ch == 'y') {
+		done=FALSE;
+
+		fprintf(stdout, "\nEnter single parameter [! for none]: ");
+		fflush(stdout);
+		count = fscanf(stdin, "%s", argstr[n]);
+		do ;
+		while (getc(stdin) != '\n');
+
+		if(argstr[0][0] == '!') {
+			count = 0;
+		} else {
+			if (strlen(argstr[n]) > 100) {
+				fprintf(stdout, "\nParameter too long!!!\n");
+			} else {
+				n++;
+			}
+		}
+
+		while(!done) {
+			fprintf(stdout, "\nCurrent commandline: ");
+			for(l=1; l<n; l++) {
+				fprintf(stdout, "%s ", argstr[l]);
+			}
+			fprintf(stdout, "\nQuit [q]; confirm [y]%s%s%s: ",
+				(n<99 ? ", extend [e]" : ""),
+				(n>1 ? ", delete last [l]" : ""),
+				(n>1 ? ", delete all [a]" : ""));
+			fflush(stdout);
+
+			/* read one char */
+			ch = getc(stdin);
+			/* ch = getchar(); */
+			if (ch != '\n') {
+				do ;
+				while (getc(stdin) != '\n');
+				/* while (getchar() != '\n'); */
+			}
+			ch = (char) tolower((int) ch);
+		
+			switch (ch) {
+				case 'y': 
+					done=TRUE;
+					break;
+				case 'e': 
+					fprintf(stdout, "\nEnter single parameter [! for none]: ");
+					fflush(stdout);
+					count = fscanf(stdin, "%s", argstr[n]);
+					do ;
+					while (getc(stdin) != '\n');
+		
+					if(argstr[0][0] == '!') {
+						count = 0;
+					} else {
+						if (strlen(argstr[n]) > 100) {
+							fprintf(stdout, "\nParameter too long!!!\n");
+						} else {
+							n++;
+						}
+					}
+					break;
+				case 'l': 
+					if (n>1) n--;
+					break;
+				case 'a': 
+					n=1;
+					break;
+				case 'q': 
+   					// tp_exit(0, NULL, FALSE, __FILE__, __LINE__, _exit_wait_optn);
+					if(_exit_wait_optn) {
+						printf("\npress [return] to finish: ");
+						fflush(stdout);
+						while (getchar() != '\n');
+					}
+					exit(0);
+					break;
+			}
+		}
+	}
+
+	*argc = n;
+	*argv = argstr;
+} /* getintargv */
+
+
+
 /********************************************************
 	main function
 ********************************************************/
 int main(int argc, char *argv[])
 {
+
+	/*************************/
+	{ /* local scope */
+		int found=FALSE;              /* "click" found in cmd name? */
+		int n, dummyint;
+		char *tmpstr;
+		int     intargc; 
+		char  **intargv; 
+		intargc = 0; 
+		intargv = NULL; 
+		
+		for (n = strlen(argv[0]) - 5; 
+		    (n >= 0) && !found && (argv[0][n] != '/')
+		             && (argv[0][n] != '\\'); n--) {
+
+			tmpstr = &(argv[0][n]);
+			dummyint = 0;
+			(void)sscanf(tmpstr, "click%n", &dummyint);
+			if (dummyint == 5) found = TRUE;
+			else {
+				dummyint = 0;
+				(void)sscanf(tmpstr, "CLICK%n", &dummyint);
+				if (dummyint == 5) found = TRUE;
+				else {
+					dummyint = 0;
+					(void)sscanf(tmpstr, "Click%n", &dummyint);
+					if (dummyint == 5) found = TRUE;
+				}
+			}
+		}
+		if(found) _exit_wait_optn = TRUE;
+
+		if (_exit_wait_optn) { // get commandline parameters from keyboard
+			getintargv(&intargc, &intargv); 
+			fprintf(stdout, "\n\n");
+			if(intargc > 1) { // if there were option entered, use them as argc/argv
+				argc = intargc; 
+				argv = intargv; 
+			} 
+		}
+	} /* local scope */
+	/*************************/
 
 	Params params;
 	parseArg(argc, argv, params);

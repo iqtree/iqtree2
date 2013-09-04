@@ -31,7 +31,7 @@ elseif (APPLE)
 elseif (UNIX) 
 	message("Target OS     : Unix")
 	# build as static binary to run on most machines
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
 	message("Target OS     : Unknown")
@@ -81,6 +81,8 @@ configure_file (
 # add the binary tree to the search path for include files
 # so that we will find iqtree_config.h
 include_directories("${PROJECT_BINARY_DIR}")
+include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
+
 
 add_definitions(-DIQ_TREE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-unused-function -Wno-sign-compare -Wno-deprecated -pedantic -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
@@ -100,6 +102,7 @@ add_subdirectory(phylolib)
 add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
+add_subdirectory(zlib-1.2.7)
 
 # the main executable
 add_executable(iqtree
@@ -169,14 +172,15 @@ lpwrapper.c
 fmemopen.c
 nnisearch.c
 modelcodon.cpp
+phylotesting.cpp
 )
 
 
 # link special lib for WIN32
 if (WIN32)
-	target_link_libraries(iqtree phylolib ncl whtest z sprng ws2_32)
+	target_link_libraries(iqtree phylolib ncl whtest zlibstatic sprng ws2_32)
 else (WIN32)
-	target_link_libraries(iqtree phylolib ncl whtest z sprng)
+	target_link_libraries(iqtree phylolib ncl whtest zlibstatic sprng)
 endif (WIN32)
 
 # setup the executable name properly

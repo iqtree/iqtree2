@@ -30,6 +30,7 @@ extern int verbose_mode;
 double TOL_LIKELIHOOD_PHYLOLIB;
 int numSmoothTree;
 int fast_eval;
+int fivebran;
 
 int treeReadLenString(const char *buffer, tree *tr, pl_boolean readBranches,
         pl_boolean readNodeLabels, pl_boolean topologyOnly) {
@@ -213,6 +214,10 @@ double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut, i
     *nni_count = numNNI2Apply;
     *deltaNNI = (tr->likelihood - curScore) / numNNI2Apply;
     return tr->likelihood;
+}
+
+void optimizeFiveBranches(tree* tr, nodeptr p) {
+
 }
 
 void optimizeOneBranches(tree* tr, nodeptr p, int numNRStep) {
