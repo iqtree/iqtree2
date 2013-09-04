@@ -728,11 +728,7 @@ double IQTree::doIQP() {
     } else {
         deleteLeaves(del_leaves);
     }
-    /*
-     for (int i = 0; i < del_leaves.size(); i++)
-     cout << del_leaves[i]->id << " ";
-     cout << endl;
-     */
+
     reinsertLeaves(del_leaves);
 
     if (!params->phylolib) {
@@ -1074,13 +1070,13 @@ double IQTree::doIQPNNI() {
                         printTree((string(params->out_prefix) + ".iqp." + convertIntToString(cur_iteration)).c_str());
                     }
                     stringstream iqp_tree_string;
-                    // TODO: only works for 1 partition
+                    //TODO: only works for 1 partition
                     transformBranchLenRAX(phyloTree->fracchange);
                     printTree(iqp_tree_string);
                     treeReadLenString(iqp_tree_string.str().c_str(), phyloTree, TRUE, FALSE, TRUE);
                     //printPhylolibTree(".iqp_tree.phylolib");
                     evaluateGeneric(phyloTree, phyloTree->start, TRUE);
-                    treeEvaluate(phyloTree, 2);
+                    treeEvaluate(phyloTree, 1);
                     if (verbose_mode >= VB_MED) {
                         cout << "IQP log-likelihood = " << phyloTree->likelihood << endl;
                     }

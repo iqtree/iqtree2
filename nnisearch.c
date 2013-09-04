@@ -276,7 +276,8 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int evalType) {
         newviewGeneric(tr, p, FALSE);
         newviewGeneric(tr, q, FALSE);
         if (!fast_eval) {
-            optimizeOneBranches(tr, p, 100);
+            //optimizeOneBranches(tr, p, 100);
+        	update(tr,p);
         }
         evaluateGeneric(tr, p, FALSE);
         return tr->likelihood;
