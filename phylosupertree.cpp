@@ -322,7 +322,8 @@ void PhyloSuperTree::mapTrees() {
 	for (iterator it = begin(); it != end(); it++, part++) {
 		string taxa_set = ((SuperAlignment*)aln)->getPattern(part);
 		(*it)->copyTree(this, taxa_set);
-		(*it)->initializeAllPartialLh();
+		if ((*it)->getModel())
+			(*it)->initializeAllPartialLh();
 		NodeVector my_taxa, part_taxa;
 		(*it)->getOrderedTaxa(my_taxa);
 		part_taxa.resize(leafNum, NULL);

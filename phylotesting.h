@@ -15,11 +15,13 @@ class IQTree;
 
 
 struct ModelInfo {
-	string name;
-	double logl;
-	double AIC_score, AICc_score, BIC_score;
-	double AIC_weight, AICc_weight, BIC_weight;
-	bool AIC_conf, AICc_conf, BIC_conf;
+	string set_name; // subset name
+	string name; // model name
+	double logl; // tree log likelihood
+	int df;      // #parameters
+	double AIC_score, AICc_score, BIC_score;    // scores
+	double AIC_weight, AICc_weight, BIC_weight; // weights
+	bool AIC_conf, AICc_conf, BIC_conf;         // in confidence set?
 };
 
 
@@ -40,9 +42,10 @@ struct TreeInfo {
 /**
  testing the best-fit model
  return in params.freq_type and params.rate_type
+ @param set_name for partitioned analysis
  @return name of best-fit-model
  */
-string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_info);
+string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_info, string set_name = "");
 
 /**
  * print site log likelihoods to a fileExists
