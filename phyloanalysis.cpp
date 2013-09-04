@@ -1561,7 +1561,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		}
 	}
 
-	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
+	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0) && !iqtree.isSuperTree()) {
 		mytime = getCPUTime();
 		cout << endl;
 		cout << "Testing tree branches by SH-like aLRT with "
