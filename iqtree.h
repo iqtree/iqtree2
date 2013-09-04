@@ -512,6 +512,7 @@ protected:
      */
     double bestScore;
 
+
     /**
             The list of positive NNI moves for the current tree;
      */
