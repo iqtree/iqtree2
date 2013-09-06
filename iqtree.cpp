@@ -169,7 +169,7 @@ void IQTree::setParams(Params &params) {
         boot_trees.resize(params.gbo_replicates, -1);
         boot_counts.resize(params.gbo_replicates, 0);
         for (int i = 0; i < params.gbo_replicates; i++) {
-            aln->createBootstrapAlignment(boot_samples[i]);
+            aln->createBootstrapAlignment(boot_samples[i], params.bootstrap_spec);
         }
         cout << "Max candidate trees (tau): " << max_candidate_trees << endl;
     }
@@ -1000,6 +1000,7 @@ double IQTree::doIQPNNI() {
         initLeafFrequency();
     }
     for (curIQPIter = 2; !stop_rule.meetStopCondition(curIQPIter); curIQPIter++) {
+        //curIQPIter = cur_iteration;
         double min_elapsed = (getCPUTime() - params->startTime) / 60;
         if (min_elapsed > params->maxtime) {
             cout << "Maximal running time of " << params->maxtime << " minutes reached" << endl;
@@ -1048,7 +1049,7 @@ double IQTree::doIQPNNI() {
                 bootstrap_alignment = new SuperAlignment;
             else
                 bootstrap_alignment = new Alignment;
-            bootstrap_alignment->createBootstrapAlignment(aln);
+            bootstrap_alignment->createBootstrapAlignment(aln, NULL, params->bootstrap_spec);
             setAlignment(bootstrap_alignment);
             initializeAllPartialLh();
             clearAllPartialLH();
@@ -1076,7 +1077,7 @@ double IQTree::doIQPNNI() {
                     treeReadLenString(iqp_tree_string.str().c_str(), phyloTree, TRUE, FALSE, TRUE);
                     //printPhylolibTree(".iqp_tree.phylolib");
                     evaluateGeneric(phyloTree, phyloTree->start, TRUE);
-                    treeEvaluate(phyloTree, 1);
+                    treeEvaluate(phyloTree, 2);
                     if (verbose_mode >= VB_MED) {
                         cout << "IQP log-likelihood = " << phyloTree->likelihood << endl;
                     }
@@ -1203,6 +1204,22 @@ double IQTree::doIQPNNI() {
             prev_time = cputime_secs;
         }
 
+        /*
+         if (verbose_mode >= VB_DEBUG) {
+         if (abs(curScore - bestScore) <= 0.0001) {
+         cout << "Found tree with the same score as best score" << endl;
+         if (!copyFile(
+         tree_file_name.c_str(),
+         (tree_file_name + ".bestTree" + convertIntToString(
+         cur_iteration)).c_str()))
+         cout << "Tree file could not be copied successfully";
+         printTree(
+         (tree_file_name + ".sameScoreBestTree"
+         + convertIntToString(cur_iteration)).c_str());
+         }
+         }
+         */
+
         if (params->write_intermediate_trees && save_all_trees != 2) {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
         }
@@ -1211,12 +1228,15 @@ double IQTree::doIQPNNI() {
 
         if (curScore > bestScore) {
             if (params->phylolib) {
+            	//treeEvaluate(raxmlTree, 16);
+            	//curScore = raxmlTree->likelihood;
                 // read in new tree
                 int printBranchLengths = TRUE;
                 Tree2String(phyloTree->tree_string, phyloTree, phyloTree->start->back, printBranchLengths, TRUE, 0, 0,
                         0, SUMMARIZE_LH, 0, 0);
                 stringstream mytree;
                 mytree << phyloTree->tree_string;
+                //cout << mytree.str() << endl;
                 mytree.seekg(0, ios::beg);
                 freeNode();
                 readTree(mytree, rooted);
@@ -1224,6 +1244,8 @@ double IQTree::doIQPNNI() {
                 setAlignment(aln);
                 //assignLeafNames();
             }
+
+            //curScore = optimizeAllBranches(100, 0.0001);
             stringstream cur_tree_topo_ss;
             printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
             if (cur_tree_topo_ss.str() != best_tree_topo) {
@@ -1383,6 +1405,14 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             }
 
             if (posNNIs.size() == 0) {
+//                if (params->fast_eval) {
+//                    if (verbose_mode >= VB_MED) {
+//                        cout << "Turn on Newton Raphson ... " << endl;
+//                    }
+//                    params->fast_eval = false;
+//                    params->nni5Branches = true;
+//                    continue;
+//                }
                 break;
             }
 
@@ -1403,7 +1433,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         double newScore = optimizeAllBranches(params->numSmoothTree);
         if (newScore > curScore) {
             if (enableHeuris && curIQPIter > 1) {
-                if (vecImpProNNI.size() < 1000) {
+                if (vecImpProNNI.size() < 10000) {
                     vecImpProNNI.push_back((newScore - curScore) / nni2apply);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());
@@ -1456,9 +1486,8 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 
     bool foundBetterTree = (curScore > oldLH) ? true : false;
     if (foundBetterTree) {
-    	// Only collect stats after the first NNI
         if (enableHeuris && curIQPIter > 1) {
-            if (vecNumNNI.size() < 1000) {
+            if (vecNumNNI.size() < 10000) {
                 vecNumNNI.push_back(nni_count);
             } else {
                 vecNumNNI.erase(vecNumNNI.begin());
@@ -1479,7 +1508,6 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         saveCurrentTree(curScore); // BQM: for new bootstrap
         saveNNITrees(); // optimize 5 branches around NNI, this makes program slower
     }
-
     return curScore;
 }
 
@@ -1536,7 +1564,7 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
             //cout << "deltaNNI = " << deltaNNI << endl;
             //cout << "nni_count = " << nni_count << endl;
             if (enableHeuris && curIQPIter > 1) {
-                if (vecImpProNNI.size() < 10000) {
+                if (vecImpProNNI.size() < 100000) {
                     vecImpProNNI.push_back(deltaNNI);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());

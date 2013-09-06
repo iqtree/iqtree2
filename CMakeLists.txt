@@ -2,7 +2,7 @@
 # IQ-TREE cmake build definition
 #########################################################
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 
 project(iqtree)
 # The version number.
@@ -39,6 +39,9 @@ endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX) 
 	message("Compiler      : GNU Compiler (gcc)")
+	#if (CMAKE_BUILD_TYPE STREQUAL "Release") 
+	#	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")  ## Strip binary
+	#endif()
 	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 else()
 	message("Compiler      : Unknown")
@@ -63,6 +66,10 @@ if (CMAKE_CXX_FLAGS MATCHES "openmp")
 else()
 	message("Parallel      : None")
 	SET(EXE_SUFFIX "")
+endif()
+
+if (CMAKE_BUILD_TYPE STREQUAL "Release") 
+	message("Builde mode   : Release + Strip")
 endif()
 
 # check existence of a few basic functions
@@ -188,7 +195,6 @@ set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
 # strip the release build
 if (CMAKE_BUILD_TYPE STREQUAL "Release") 
-	message("Builde mode   : Release + Strip")
 	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
 endif()
 
@@ -225,7 +231,7 @@ endif(WIN32)
 #set(CPACK_SOURCE_PACKAGE_FILE_NAME
 #  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 set(CPACK_SOURCE_IGNORE_FILES
-  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;${CPACK_SOURCE_IGNORE_FILES}")
+  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;${CPACK_SOURCE_IGNORE_FILES}")
 
 set(CPACK_PACKAGE_FILE_NAME 
 	"${CMAKE_PROJECT_NAME}${EXE_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${CMAKE_SYSTEM_NAME}")

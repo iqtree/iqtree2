@@ -56,7 +56,7 @@
 void reportReferences(ofstream &out, string &original_model) {
 	out 
 			<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast"
-			<< endl << "approximation for phylogenetic bootstrap. Mol. Biol. Evol., in press."
+			<< endl << "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195."
 			<< endl 
 			/*
 			<< endl << "Lam-Tung Nguyen, Heiko A. Schmidt, Bui Quang Minh, and Arndt von Haeseler (2012)"
@@ -67,7 +67,7 @@ void reportReferences(ofstream &out, string &original_model) {
 			<< endl
 			<< "Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space"
 			<< endl
-			<< "and stopping in time. Mol. Biol. Evol., 21(8):1565-1571."
+			<< "and stopping in time. Mol. Biol. Evol., 21:1565-1571."
 			<< endl << endl;
 	/*		"*** If you use the parallel version, please cite: " << endl << endl <<
 	 "Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)" << endl <<
@@ -91,20 +91,41 @@ void reportAlignment(ofstream &out, Alignment &alignment) {
 			<< endl;
 }
 
-void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &model_info) {
-
+void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &model_info, bool is_partitioned) {
 	out << "Best-fit model according to "
 		<< ((params.model_test_criterion == MTC_BIC) ? "BIC" :
-			((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc"))
-		<< ": " << model_info[0].name << endl << endl;
+			((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc")) << ": ";
+	vector<ModelInfo>::iterator it;
+	if (is_partitioned) {
+		string set_name = "";
+		for (it = model_info.begin(); it != model_info.end(); it++) {
+			if (it->set_name != set_name) {
+				if (set_name != "")
+					out << ",";
+				out << it->name << ":" << it->set_name;
+				set_name = it->set_name;
+			}
+		}
+	} else {
+		out << model_info[0].name;
+	}
 
-	out << "List of models sorted by "
+	out << endl << endl << "List of models sorted by "
 		<< ((params.model_test_criterion == MTC_BIC) ? "BIC" :
 			((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc"))
 		<< " scores: " << endl << endl;
-	out << "Model             LogL          AIC      w-AIC      AICc     w-AICc       BIC      w-BIC" << endl
-		<< "----------------------------------------------------------------------------------------" << endl;
-	for (vector<ModelInfo>::iterator it = model_info.begin(); it != model_info.end(); it++) {
+	if (is_partitioned)
+		out << "Charset   ";
+	out << "Model             LogL          AIC      w-AIC      AICc     w-AICc       BIC      w-BIC" << endl;
+	if (is_partitioned)
+		out << "----------";
+
+	out << "----------------------------------------------------------------------------------------" << endl;
+	for (it = model_info.begin(); it != model_info.end(); it++) {
+		if (is_partitioned) {
+			out.width(9);
+			out << left << it->set_name << " ";
+		}
 		out.width(13);
 		out << left << it->name << " ";
 		out.width(11);
@@ -427,7 +448,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 
 		if (!model_info.empty()) {
 			out << "MODEL SELECTION" << endl << "---------------" << endl << endl;
-			reportModelSelection(out, params, model_info);
+			reportModelSelection(out, params, model_info, tree.isSuperTree());
 		}
 
 		out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
@@ -1108,7 +1129,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	bool test_only = params.model_name == "TESTONLY";
 	/* initialize substitution model */
 	if (params.model_name == "TEST" || params.model_name == "TESTONLY") {
-		params.model_name = modelTest(params, &iqtree, model_info);
+		params.model_name = testModel(params, &iqtree, model_info);
 		if (test_only) {
 			/*
 			return;
@@ -1122,8 +1143,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	if (params.model_name == "WHTEST") {
 		if (alignment->num_states != 4)
-			outError(
-					"Weiss & von Haeseler test of model homogeneity only works for DNA");
+			outError("Weiss & von Haeseler test of model homogeneity only works for DNA");
 		params.model_name = "GTR+G";
 	}
 
@@ -1139,8 +1159,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	try {
 		if (!iqtree.getModelFactory()) {
 			if (iqtree.isSuperTree())
-				iqtree.setModelFactory(
-						new PartitionModel(params, (PhyloSuperTree*) &iqtree));
+				iqtree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*) &iqtree));
 			else {
 				/*
 				if (params.raxmllib && alignment->num_states == 4) {
@@ -1548,7 +1567,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		}
 	}
 
-	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
+	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0) && !iqtree.isSuperTree()) {
 		mytime = getCPUTime();
 		cout << endl;
 		cout << "Testing tree branches by SH-like aLRT with "

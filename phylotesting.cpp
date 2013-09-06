@@ -96,8 +96,46 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
  * @param df_vec (OUT) vector of degrees of freedom (or K)
  * @return TRUE if success, FALSE failed.
  */
-bool checkModelFile(string model_file, StrVector &model_names,
-		DoubleVector &lh_scores, IntVector &df_vec) {
+
+bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos) {
+	if (!in.is_open()) return false;
+	in.exceptions(ios::badbit);
+	string str;
+	if (is_partitioned) {
+		in >> str;
+		if (str != "Charset")
+			return false;
+	}
+	in >> str;
+	if (str != "Model")
+		return false;
+	in >> str;
+	if (str != "df")
+		return false;
+	in >> str;
+	if (str != "LnL")
+		return false;
+	getline(in, str);
+	while (!in.eof()) {
+		in >> str;
+		if (in.eof())
+			break;
+		ModelInfo info;
+		if (is_partitioned) {
+			info.set_name = str;
+			in >> str;
+		}
+		info.name = str;
+		in >> info.df >> info.logl;
+		infos.push_back(info);
+		getline(in, str);
+		//cout << str << " " << df << " " << logl << endl;
+	}
+	in.clear();
+	return true;
+}
+
+bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &infos) {
 	if (!fileExists(model_file))
 		return false;
 	cout << model_file << " exists, checking this file" << endl;
@@ -105,32 +143,8 @@ bool checkModelFile(string model_file, StrVector &model_names,
 	try {
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(model_file.c_str());
-		in.exceptions(ios::badbit);
-		string str;
-		in >> str;
-		if (str != "Model")
+		if (!checkModelFile(in, is_partitioned, infos))
 			throw false;
-		in >> str;
-		if (str != "df")
-			throw false;
-		in >> str;
-		if (str != "LnL")
-			throw false;
-		getline(in, str);
-		while (!in.eof()) {
-			in >> str;
-			if (in.eof())
-				break;
-			model_names.push_back(str);
-			int df;
-			double logl;
-			in >> df >> logl;
-			df_vec.push_back(df);
-			lh_scores.push_back(logl);
-			getline(in, str);
-			//cout << str << " " << df << " " << logl << endl;
-		}
-		in.clear();
 		// set the failbit again
 		in.exceptions(ios::failbit | ios::badbit);
 		in.close();
@@ -143,12 +157,53 @@ bool checkModelFile(string model_file, StrVector &model_names,
 	return true;
 }
 
-string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_info) {
-	if (in_tree->isSuperTree()) {
-		// select model for each partition
-		return (string)"JC";
+bool checkPartitionModel(PhyloSuperTree *in_tree, vector<ModelInfo> &model_info) {
+	PhyloSuperTree::iterator it;
+	int i, all_models = 0;
+	for (it = in_tree->begin(), i = 0; it != in_tree->end(); it++, i++) {
+		int count = 0;
+		for (vector<ModelInfo>::iterator mit = model_info.begin(); mit != model_info.end(); mit++)
+			if (mit->set_name == in_tree->part_info[i].name)
+				count++;
+		int nstates = (*it)->aln->num_states;
+		int num_models = (nstates == 2) ? BIN_MODEL_NUM :
+						((nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM);
+		if (count != num_models * 4) {
+			return false;
+		}
+		all_models += count;
 	}
+	return (all_models == model_info.size());
+}
+
+string testPartitionModel(Params &params, PhyloSuperTree *in_tree, vector<ModelInfo> &model_info) {
+	in_tree->mapTrees();
+	int i = 0;
+	PhyloSuperTree::iterator it;
+
+	vector<ModelInfo> res_info;
+
+	for (it = in_tree->begin(), i = 0; it != in_tree->end(); it++, i++) {
+		vector<ModelInfo> part_model_info;
+		for (vector<ModelInfo>::iterator mit = model_info.begin(); mit != model_info.end(); mit++)
+			if (mit->set_name == in_tree->part_info[i].name)
+				part_model_info.push_back(*mit);
+		//string str = "";
+		cout << "-->Testing model for partition " << in_tree->part_info[i].name << " ..." << endl;
+		string model = testModel(params, (*it), part_model_info, in_tree->part_info[i].name);
+		in_tree->part_info[i].model_name = model;
+		res_info.insert(res_info.end(), part_model_info.begin(), part_model_info.end());
+	}
+	//cout << "Best-fit partition model: " << models << endl;
+	model_info = res_info;
+	return string("");
+}
+
+
+string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_info, string set_name) {
 	int nstates = in_tree->aln->num_states;
+	if (in_tree->isSuperTree())
+		nstates = ((PhyloSuperTree*)in_tree)->front()->aln->num_states;
 	if (nstates != 2 && nstates != 4 && nstates != 20)
 		outError("Test of best-fit models only works for Binary/DNA/Protein");
 	string fmodel_str = params.out_prefix;
@@ -162,31 +217,54 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 	int model, rate_type;
 
 	string best_model;
-	StrVector model_names;
-	DoubleVector lh_scores;
-	IntVector df_vec;
 	/* first check the model file */
-	bool ok_model_file = (params.print_site_lh) ? false :
-		checkModelFile(fmodel_str, model_names, lh_scores, df_vec);
-	ok_model_file &= (model_names.size() == num_models * 4);
+	bool ok_model_file = false;
+	if (!params.print_site_lh) {
+		if (set_name == "")
+			ok_model_file = checkModelFile(fmodel_str, in_tree->isSuperTree(), model_info);
+		else
+			ok_model_file = true;
+	}
+	if (in_tree->isSuperTree()) {
+		ok_model_file &= checkPartitionModel((PhyloSuperTree*)in_tree, model_info);
+	} else {
+		ok_model_file &= (model_info.size() == num_models * 4);
+	}
 	ofstream fmodel;
-	if (!ok_model_file) {
-		model_names.clear();
-		lh_scores.clear();
-		df_vec.clear();
-		fmodel.open(fmodel_str.c_str());
+	if (ok_model_file) {
+		if (set_name == "")
+			cout << fmodel_str << " seems to be a correct model file" << endl;
+	} else {
+		model_info.clear();
+		if (set_name == "")
+			fmodel.open(fmodel_str.c_str());
+		else
+			fmodel.open(fmodel_str.c_str(), ios::app);
 		if (!fmodel.is_open())
 			outError("cannot write to ", fmodel_str);
-		fmodel << "Model\tdf\tLnL";
-		if (nstates == 2)
-			fmodel << "\t0\t1";
-		else if (nstates == 4)
-			fmodel << "\tA-C\tA-G\tA-T\tC-G\tC-T\tG-T\tA\tC\tG\tT";
-		fmodel << "\talpha\tpinv" << endl;
+
+		if (set_name == "") {
+			// print header
+			if (in_tree->isSuperTree())
+				fmodel << "Charset\t";
+			fmodel << "Model\tdf\tLnL";
+			if (nstates == 2)
+				fmodel << "\t0\t1";
+			else if (nstates == 4)
+				fmodel << "\tA-C\tA-G\tA-T\tC-G\tC-T\tG-T\tA\tC\tG\tT";
+			fmodel << "\talpha\tpinv" << endl;
+		}
+
 		fmodel.precision(4);
 		fmodel << fixed;
-	} else {
-		cout << fmodel_str << " seems to be a correct model file" << endl;
+	}
+
+	if (in_tree->isSuperTree()) {
+		// select model for each partition
+		if (!ok_model_file)
+			fmodel.close();
+		testPartitionModel(params, (PhyloSuperTree*)in_tree, model_info);
+		return "";
 	}
 
 	PhyloTree *tree_homo = new PhyloTree();
@@ -236,12 +314,6 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 		sitelh_out.close();
 	}
 
-	double* AIC_scores = new double[num_models*4];
-	double* AICc_scores = new double[num_models*4];
-	double* BIC_scores = new double[num_models*4];
-	double* LogL_scores = new double[num_models*4];
-	int *model_rank = new int[num_models*4];
-
 	for (model = 0; model < num_models; model++) {
 		for (rate_type = 0; rate_type <= 3; rate_type += 1) {
 			// initialize tree
@@ -280,14 +352,23 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 			// clear all likelihood values
 			tree->clearAllPartialLH();
 
+			ModelInfo info;
+
 			// optimize model parameters
-			int df = subst_model->getNDim() + rate_class[rate_type]->getNDim() + tree->branchNum;
-			double cur_lh;
-			if (!ok_model_file) {
-				cur_lh = tree->getModelFactory()->optimizeParameters(false, false);
-				model_names.push_back(str);
+			info.set_name = set_name;
+			info.df = subst_model->getNDim() + rate_class[rate_type]->getNDim() + tree->branchNum;
+			info.name = str;
+			if (ok_model_file) {
+				// sanity check
+				if (info.name != model_info[model * 4 + rate_type].name || info.df != model_info[model * 4 + rate_type].df)
+					outError("Incorrect model file, please delete it and rerun again: ", fmodel_str);
+				info.logl = model_info[model * 4 + rate_type].logl;
+			} else {
+				info.logl = tree->getModelFactory()->optimizeParameters(false, false);
 				// print information to .model file
-				fmodel << str << "\t" << df << "\t" << cur_lh;
+				if (set_name != "")
+					fmodel << set_name << "\t";
+				fmodel << str << "\t" << info.df << "\t" << info.logl;
 				if (nstates == 4) {
 					int nrates = tree->getModel()->getNumRateEntries();
 					double *rate_mat = new double[nrates];
@@ -312,31 +393,27 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 				const char *model_name = (params.print_site_lh) ? str.c_str() : NULL;
 				if (params.print_site_lh)
 					printSiteLh(sitelh_file.c_str(), tree, NULL, true, model_name);
-			} else {
-				// sanity check
-				if (str != model_names[model * 4 + rate_type] || df != df_vec[model * 4 + rate_type])
-					outError("Incorrect model file, please delete it and rerun again: ", fmodel_str);
-				cur_lh = lh_scores[model * 4 + rate_type];
 			}
-			double AIC_score = -2 * cur_lh + 2 * df;
-			double AICc_score = AIC_score + 2.0 * df * (df + 1) / (ssize - df - 1);
-			double BIC_score = -2 * cur_lh + df * log(ssize);
-			LogL_scores[model*4 + rate_type] = cur_lh;
-			AIC_scores[model*4 + rate_type] = AIC_score;
-			AICc_scores[model*4 + rate_type] = AICc_score;
-			BIC_scores[model*4 + rate_type] = BIC_score;
+			info.AIC_score = -2 * info.logl + 2 * info.df;
+			info.AICc_score = info.AIC_score + 2.0 * info.df * (info.df + 1) / (ssize - info.df - 1);
+			info.BIC_score = -2 * info.logl + info.df * log(ssize);
+			if (ok_model_file) {
+				model_info[model*4 + rate_type] = info;
+			} else {
+				model_info.push_back(info);
+			}
 			cout.width(13);
 			cout << left << str << " ";
 			cout.precision(3);
 			cout << fixed;
 			cout.width(12);
-			cout << -cur_lh << " ";
+			cout << -info.logl << " ";
 			cout.width(3);
-			cout << df << " ";
+			cout << info.df << " ";
 			cout.width(12);
-			cout << AIC_score << " ";
+			cout << info.AIC_score << " ";
 			cout.width(12);
-			cout << AICc_score << " " << BIC_score;
+			cout << info.AICc_score << " " << info.BIC_score;
 			cout << endl;
 			tree->setModel(NULL);
 			tree->setModelFactory(NULL);
@@ -345,69 +422,58 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 		}
 	}
 	//cout.unsetf(ios::fixed);
-	int model_aic = min_element(AIC_scores, AIC_scores + (num_models*4)) - AIC_scores;
-	cout << "Akaike Information Criterion:           " << model_names[model_aic]
-			<< endl;
-	int model_aicc = min_element(AICc_scores, AICc_scores + (num_models*4)) - AICc_scores;
-	cout << "Corrected Akaike Information Criterion: "
-			<< model_names[model_aicc] << endl;
-	int model_bic = min_element(BIC_scores, BIC_scores + (num_models*4)) - BIC_scores;
-	cout << "Bayesian Information Criterion:         " << model_names[model_bic]
-			<< endl;
+	int model_aic = 0, model_aicc = 0, model_bic = 0;
+	vector<ModelInfo>::iterator it;
+	for (it = model_info.begin(), model = 0; it != model_info.end(); it++, model++) {
+		if ((*it).AIC_score < model_info[model_aic].AIC_score)
+			model_aic = model;
+		if ((*it).AICc_score < model_info[model_aicc].AICc_score)
+			model_aicc = model;
+		if ((*it).BIC_score < model_info[model_bic].BIC_score)
+			model_bic = model;
+	}
+	cout << "Akaike Information Criterion:           " << model_info[model_aic].name << endl;
+	cout << "Corrected Akaike Information Criterion: " << model_info[model_aicc].name << endl;
+	cout << "Bayesian Information Criterion:         " << model_info[model_bic].name << endl;
 
 	/* computing model weights */
 	double AIC_sum = 0.0, AICc_sum = 0.0, BIC_sum = 0.0;
-	if (params.model_test_criterion == MTC_BIC) {
-		sort_index(BIC_scores, BIC_scores + (num_models*4), model_rank);
-	} else if (params.model_test_criterion == MTC_AIC) {
-		sort_index(AIC_scores, AIC_scores + (num_models*4), model_rank);
-	} else {
-		sort_index(AICc_scores, AICc_scores + (num_models*4), model_rank);
+	for (it = model_info.begin(); it != model_info.end(); it++) {
+		it->AIC_weight = exp(-0.5*(it->AIC_score-model_info[model_aic].AIC_score));
+		it->AICc_weight = exp(-0.5*(it->AICc_score-model_info[model_aicc].AICc_score));
+		it->BIC_weight = exp(-0.5*(it->BIC_score-model_info[model_bic].BIC_score));
+		it->AIC_conf = false;
+		it->AICc_conf = false;
+		it->BIC_conf = false;
+		AIC_sum += it->AIC_weight;
+		AICc_sum += it->AICc_weight;
+		BIC_sum += it->BIC_weight;
 	}
-
-	for (model = 0; model < num_models*4; model++) {
-		ModelInfo info;
-		info.name = model_names[model_rank[model]];
-		info.logl = LogL_scores[model_rank[model]];
-		info.AIC_score = AIC_scores[model_rank[model]];
-		info.AICc_score = AICc_scores[model_rank[model]];
-		info.BIC_score = BIC_scores[model_rank[model]];
-		info.AIC_weight = exp(-0.5*(info.AIC_score-AIC_scores[model_aic]));
-		info.AICc_weight = exp(-0.5*(info.AICc_score-AICc_scores[model_aicc]));
-		info.BIC_weight = exp(-0.5*(info.BIC_score-BIC_scores[model_bic]));
-		info.AIC_conf = false;
-		info.AICc_conf = false;
-		info.BIC_conf = false;
-		model_info.push_back(info);
-		AIC_sum += info.AIC_weight;
-		AICc_sum += info.AICc_weight;
-		BIC_sum += info.BIC_weight;
-	}
-
-	vector<ModelInfo>::iterator it;
 	for (it = model_info.begin(); it != model_info.end(); it++) {
 		it->AIC_weight /= AIC_sum;
 		it->AICc_weight /= AICc_sum;
 		it->BIC_weight /= BIC_sum;
 	}
 
+	int *model_rank = new int[num_models*4];
+	double *scores = new double[model_info.size()];
+
 	/* compute confidence set for BIC */
     AIC_sum = 0.0;
     AICc_sum = 0.0;
     BIC_sum = 0.0;
-	for (it = model_info.begin(), model = 0; it != model_info.end(); it++, model++) {
-		BIC_scores[model] = it->BIC_score;
-		AIC_scores[model] = it->AIC_score;
-		AICc_scores[model] = it->AICc_score;
-	}
-	sort_index(BIC_scores, BIC_scores+(num_models*4), model_rank);
-	for (model = 0; model < num_models*4; model++) {
+	for (model = 0; model < model_info.size(); model++)
+		scores[model] = model_info[model].BIC_score;
+	sort_index(scores, scores+model_info.size(), model_rank);
+	for (model = 0; model < model_info.size(); model++) {
 		model_info[model_rank[model]].BIC_conf = true;
 		BIC_sum += model_info[model_rank[model]].BIC_weight;
 		if (BIC_sum > 0.95) break;
 	}
 	/* compute confidence set for AIC */
-	sort_index(AIC_scores, AIC_scores+(num_models*4), model_rank);
+	for (model = 0; model < model_info.size(); model++)
+		scores[model] = model_info[model].AIC_score;
+	sort_index(scores, scores+model_info.size(), model_rank);
 	for (model = 0; model < num_models*4; model++) {
 		model_info[model_rank[model]].AIC_conf = true;
 		AIC_sum += model_info[model_rank[model]].AIC_weight;
@@ -415,29 +481,43 @@ string modelTest(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 	}
 
 	/* compute confidence set for AICc */
-	sort_index(AICc_scores, AICc_scores+(num_models*4), model_rank);
+	for (model = 0; model < model_info.size(); model++)
+		scores[model] = model_info[model].AICc_score;
+	sort_index(scores, scores+model_info.size(), model_rank);
 	for (model = 0; model < num_models*4; model++) {
 		model_info[model_rank[model]].AICc_conf = true;
 		AICc_sum += model_info[model_rank[model]].AICc_weight;
 		if (AICc_sum > 0.95) break;
 	}
 
-	delete [] model_rank;
-	delete [] LogL_scores;
-	delete [] BIC_scores;
-	delete [] AICc_scores;
-	delete [] AIC_scores;
+	/* sort models by their scores */
 	switch (params.model_test_criterion) {
 	case MTC_AIC:
-		best_model = model_names[model_aic];
+		for (model = 0; model < model_info.size(); model++)
+			scores[model] = model_info[model].AIC_score;
+		best_model = model_info[model_aic].name;
 		break;
 	case MTC_AICC:
-		best_model = model_names[model_aicc];
+		for (model = 0; model < model_info.size(); model++)
+			scores[model] = model_info[model].AICc_score;
+		best_model = model_info[model_aicc].name;
 		break;
 	case MTC_BIC:
-		best_model = model_names[model_bic];
+		for (model = 0; model < model_info.size(); model++)
+			scores[model] = model_info[model].BIC_score;
+		best_model = model_info[model_bic].name;
 		break;
 	}
+	sort_index(scores, scores + model_info.size(), model_rank);
+
+	vector<ModelInfo> sorted_info;
+	for (model = 0; model < model_info.size(); model++)
+		sorted_info.push_back(model_info[model_rank[model]]);
+	model_info = sorted_info;
+
+	delete [] model_rank;
+	delete [] scores;
+
 	delete model_fac;
 	delete subst_model;
 	for (rate_type = 3; rate_type >= 0; rate_type--)
