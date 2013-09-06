@@ -1382,7 +1382,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         double newScore = optimizeAllBranches(params->numSmoothTree);
         if (newScore > curScore) {
             if (enableHeuris && curIQPIter > 1) {
-                if (vecImpProNNI.size() < 1000) {
+                if (vecImpProNNI.size() < 10000) {
                     vecImpProNNI.push_back((newScore - curScore) / nni2apply);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());
@@ -1436,7 +1436,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     bool foundBetterTree = (curScore > oldLH) ? true : false;
     if (foundBetterTree) {
         if (enableHeuris && curIQPIter > 1) {
-            if (vecNumNNI.size() < 1000) {
+            if (vecNumNNI.size() < 10000) {
                 vecNumNNI.push_back(nni_count);
             } else {
                 vecNumNNI.erase(vecNumNNI.begin());
@@ -1512,8 +1512,8 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
             nniRound++;
             //cout << "deltaNNI = " << deltaNNI << endl;
             //cout << "nni_count = " << nni_count << endl;
-            if (enableHeuris) {
-                if (vecNumNNI.size() < 1000) {
+            if (enableHeuris && curIQPIter > 1) {
+                if (vecImpProNNI.size() < 100000) {
                     vecImpProNNI.push_back(deltaNNI);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());
@@ -1537,8 +1537,8 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
         cout << "Number of NNI applied = " << nniApplied << endl;
         cout << "Number of NNI rounds = " << nniRound << endl;
     }
-    if (enableHeuris) {
-        if (vecNumNNI.size() < 1000) {
+    if (enableHeuris && curIQPIter > 1) {
+        if (vecNumNNI.size() < 10000) {
             vecNumNNI.push_back(nniApplied);
         } else {
             vecNumNNI.erase(vecNumNNI.begin());
