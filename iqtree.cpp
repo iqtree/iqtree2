@@ -1514,6 +1514,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 extern "C" double TOL_LIKELIHOOD_PHYLOLIB;
 extern "C" int numSmoothTree;
 extern "C" int fast_eval;
+extern "C" int fivebran;
 
 double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
     if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
@@ -1530,6 +1531,10 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
         fast_eval = 1;
     else
         fast_eval = 0;
+    if (params->nni5Branches)
+    	fivebran = 1;
+    else
+    	fivebran = 0;
     while (true) {
         if (beginHeu) {
             double maxScore = curLH + nni_delta_est * (nni_count_est - nniApplied);
