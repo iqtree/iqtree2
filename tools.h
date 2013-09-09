@@ -1416,6 +1416,8 @@ const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
  */
 string convertIntToString(int number);
 
+string convertDoubleToString(double number);
+
 /**
  *
  * @param SRC

@@ -17,6 +17,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
+#include <stdarg.h>
 #include "phylotree.h"
 #include "superalignment.h"
 #include "phylosupertree.h"
@@ -297,4 +299,57 @@ double SuperAlignment::computeMissingData() {
 	ret /= getNSeq() * len;
 	return 1.0 - ret;
 
+}
+
+Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
+	string union_taxa;
+	int nsites = 0, nstates = 0, i;
+	for (i = 0; i < ids.size(); i++) {
+		int id = ids[i];
+		if (id < 0 || id >= partitions.size())
+			outError("Internal error ", __func__);
+		if (nstates == 0) nstates = partitions[id]->num_states;
+		if (nstates != partitions[id]->num_states)
+			outError("Cannot concatenate sub-alignments of different type");
+
+		string taxa_set = getPattern(id);
+		nsites += partitions[id]->getNSite();
+		if (i == 0) union_taxa = taxa_set; else {
+			for (int j = 0; j < union_taxa.length(); j++)
+				if (taxa_set[j] == 1) union_taxa[j] = 1;
+		}
+	}
+
+	Alignment *aln = new Alignment;
+	for (i = 0; i < union_taxa.length(); i++)
+		if (union_taxa[i] == 1) {
+			aln->seq_names.push_back(getSeqName(i));
+		}
+	aln->num_states = nstates;
+	aln->site_pattern.resize(nsites, -1);
+    aln->clear();
+    aln->pattern_index.clear();
+
+    int site = 0;
+    for (i = 0; i < ids.size(); i++) {
+    	int id = ids[i];
+		string taxa_set = getPattern(id);
+    	for (Alignment::iterator it = partitions[id]->begin(); it != partitions[id]->end(); it++, site++) {
+    		Pattern pat;
+    		int part_seq = 0;
+    		for (int seq = 0; seq < union_taxa.size(); seq++)
+    			if (union_taxa[seq] == 1) {
+    				char ch = STATE_UNKNOWN;
+    				if (taxa_set[seq] == 1) {
+    					ch = (*it)[part_seq++];
+    				}
+    				pat.push_back(ch);
+    			}
+    		assert(part_seq == partitions[id]->getNSeq());
+    		aln->addPattern(pat, site, (*it).frequency);
+    	}
+    }
+    aln->countConstSite();
+
+	return aln;
 }

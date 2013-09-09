@@ -113,8 +113,10 @@ void IQTree::setParams(Params &params) {
             params.p_delete = 0.3;
         else if (aln->getNSeq() < 200)
             params.p_delete = 0.2;
-        else
+        else if (aln->getNSeq() < 400)
             params.p_delete = 0.1;
+        else
+            params.p_delete = 0.05;
     }
     //tree.setProbDelete(params.p_delete);
     if (params.p_delete != 0.0) {

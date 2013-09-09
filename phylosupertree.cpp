@@ -98,8 +98,19 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
     	super_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
     }
 
-    for (vector<CharSet*>::iterator it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
+    bool empty_partition = true;
+    vector<CharSet*>::iterator it;
+    for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
     	if ((*it)->model_name != "") {
+    		empty_partition = false;
+    		break;
+    	}
+    if (empty_partition) {
+    	cout << "NOTE: No CharPartition defined, use all CharSets" << endl;
+    }
+
+    for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
+    	if (empty_partition || (*it)->model_name != "") {
 			PartitionInfo info;
 			info.name = (*it)->name;
 			info.model_name = (*it)->model_name;
@@ -653,3 +664,22 @@ void PhyloSuperTree::computeBranchLengths() {
 string PhyloSuperTree::getModelName() {
 	return (string)"Partition model";
 }
+
+PhyloTree *PhyloSuperTree::extractSubtree(IntVector &ids) {
+	string union_taxa;
+	int i;
+	for (i = 0; i < ids.size(); i++) {
+		int id = ids[i];
+		if (id < 0 || id >= size())
+			outError("Internal error ", __func__);
+		string taxa_set = aln->getPattern(id);
+		if (i == 0) union_taxa = taxa_set; else {
+			for (int j = 0; j < union_taxa.length(); j++)
+				if (taxa_set[j] == 1) union_taxa[j] = 1;
+		}
+	}
+	PhyloTree *tree = new PhyloTree;
+	tree->copyTree(this, union_taxa);
+	return tree;
+}
+

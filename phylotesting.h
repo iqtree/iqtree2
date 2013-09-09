@@ -40,6 +40,11 @@ struct TreeInfo {
 
 
 /**
+ * computing AIC, AICc, and BIC scores
+ */
+void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC);
+
+/**
  testing the best-fit model
  return in params.freq_type and params.rate_type
  @param set_name for partitioned analysis

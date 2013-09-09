@@ -212,7 +212,12 @@ public:
             get the name of the model
     */
     virtual string getModelName();
-	
+	/**
+	 * extract subtree containing all taxa from partition IDs
+	 * @param ids partitions IDs
+	 * @return subtree
+	 */
+    PhyloTree *extractSubtree(IntVector &ids);
 
 };
 

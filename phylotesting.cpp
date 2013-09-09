@@ -47,6 +47,34 @@ string aa_model_names[AA_MODEL_NUM] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "mtART", "mtZOA", "VT", "LG", "DCMut", "PMB",
 		"HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62" };
 
+void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC) {
+	AIC = -2 * tree_lh + 2 * df;
+	AICc = AIC + 2.0 * df * (df + 1) / (ssize - df - 1);
+	BIC = -2 * tree_lh + df * log(ssize);
+}
+
+double computeInformationScore(double tree_lh, int df, int ssize, ModelTestCriterion mtc) {
+	double AIC, AICc, BIC;
+	computeInformationScores(tree_lh, df, ssize, AIC, AICc, BIC);
+	if (mtc == MTC_AIC)
+		return AIC;
+	if (mtc == MTC_AICC)
+		return AICc;
+	if (mtc == MTC_BIC)
+		return BIC;
+	return 0.0;
+}
+
+string criterionName(ModelTestCriterion mtc) {
+	if (mtc == MTC_AIC)
+		return "AIC";
+	if (mtc == MTC_AICC)
+		return "AICc";
+	if (mtc == MTC_BIC)
+		return "BIC";
+	return "";
+}
+
 void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 		bool append, const char *linename) {
 	int i;
@@ -173,32 +201,183 @@ bool checkPartitionModel(PhyloSuperTree *in_tree, vector<ModelInfo> &model_info)
 		}
 		all_models += count;
 	}
-	return (all_models == model_info.size());
+	return true;
 }
 
-string testPartitionModel(Params &params, PhyloSuperTree *in_tree, vector<ModelInfo> &model_info) {
+void replaceModelInfo(vector<ModelInfo> &model_info, vector<ModelInfo> &new_info) {
+	vector<ModelInfo>::iterator first_info = model_info.end(), last_info = model_info.end();
+	// scan through models for this partition, assuming the information occurs consecutively
+	for (vector<ModelInfo>::iterator mit = model_info.begin(); mit != model_info.end(); mit++)
+		if (mit->set_name == new_info.front().set_name) {
+			if (first_info == model_info.end()) first_info = mit;
+		} else if (first_info != model_info.end()) {
+			last_info = mit;
+			break;
+		}
+	if (first_info != model_info.end()) {
+		model_info.erase(first_info, last_info);
+	}
+	model_info.insert(model_info.end(), new_info.begin(), new_info.end());
+}
+
+void extractModelInfo(string set_name, vector<ModelInfo> &model_info, vector<ModelInfo> &part_model_info) {
+	for (vector<ModelInfo>::iterator mit = model_info.begin(); mit != model_info.end(); mit++)
+		if (mit->set_name == set_name)
+			part_model_info.push_back(*mit);
+}
+
+/**
+ * select models for all partitions
+ * @param model_info (IN/OUT) all model information
+ * @return total number of parameters
+ */
+void testPartitionModel(Params &params, PhyloSuperTree *in_tree, vector<ModelInfo> &model_info) {
 	in_tree->mapTrees();
 	int i = 0;
 	PhyloSuperTree::iterator it;
+	DoubleVector lhvec;
+	DoubleVector dfvec;
+	double lhsum = 0.0;
+	int dfsum = 0;
+	int ssize = in_tree->getAlnNSite();
+	int nr_model = 1;
 
-	vector<ModelInfo> res_info;
+	cout << "Selecting models for " << in_tree->size() << " charsets using " << criterionName(params.model_test_criterion) << "..." << endl;
+	cout << " No. AIC         AICc        BIC         Charset" << endl;
 
 	for (it = in_tree->begin(), i = 0; it != in_tree->end(); it++, i++) {
+		// scan through models for this partition, assuming the information occurs consecutively
 		vector<ModelInfo> part_model_info;
-		for (vector<ModelInfo>::iterator mit = model_info.begin(); mit != model_info.end(); mit++)
-			if (mit->set_name == in_tree->part_info[i].name)
-				part_model_info.push_back(*mit);
-		//string str = "";
-		cout << "-->Testing model for partition " << in_tree->part_info[i].name << " ..." << endl;
-		string model = testModel(params, (*it), part_model_info, in_tree->part_info[i].name);
-		in_tree->part_info[i].model_name = model;
-		res_info.insert(res_info.end(), part_model_info.begin(), part_model_info.end());
-	}
-	//cout << "Best-fit partition model: " << models << endl;
-	model_info = res_info;
-	return string("");
-}
+		extractModelInfo(in_tree->part_info[i].name, model_info, part_model_info);
 
+		cout.width(4);
+		cout << right << nr_model++ << " ";
+		string model = testModel(params, (*it), part_model_info, in_tree->part_info[i].name);
+		cout << endl;
+		in_tree->part_info[i].model_name = model;
+		replaceModelInfo(model_info, part_model_info);
+		lhvec.push_back(part_model_info[0].logl);
+		dfvec.push_back(part_model_info[0].df);
+		lhsum += lhvec.back();
+		dfsum += dfvec.back();
+	}
+
+	if (params.model_name.substr(params.model_name.length()-6) != "SCHEME") {
+		return;
+	}
+
+	/* following implements the greedy algorithm of Lanfear et al. (2012) */
+	int part1, part2;
+	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
+	cout << "Full partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (lh=" << lhsum << "  df=" << dfsum << ")" << endl;
+	SuperAlignment *super_aln = ((SuperAlignment*)in_tree->aln);
+	vector<IntVector> gene_sets;
+	gene_sets.resize(in_tree->size());
+	StrVector model_names;
+	model_names.resize(in_tree->size());
+	StrVector greedy_model_trees;
+	greedy_model_trees.resize(in_tree->size());
+	for (i = 0; i < gene_sets.size(); i++) {
+		gene_sets[i].push_back(i);
+		model_names[i] = in_tree->part_info[i].model_name;
+		greedy_model_trees[i] = in_tree->part_info[i].name;
+	}
+	while (gene_sets.size() >= 2) {
+		// stepwise merging charsets
+		double new_score = DBL_MAX;
+		double opt_lh = 0.0;
+		int opt_df = 0;
+		int opt_part1 = 0, opt_part2 = 1;
+		IntVector opt_merged_set;
+		string opt_set_name = "";
+		string opt_model_name = "";
+		for (part1 = 0; part1 < gene_sets.size()-1; part1++)
+			for (part2 = part1+1; part2 < gene_sets.size(); part2++) {
+				IntVector merged_set;
+				merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());
+				merged_set.insert(merged_set.end(), gene_sets[part2].begin(), gene_sets[part2].end());
+				string set_name = "";
+				for (i = 0; i < merged_set.size(); i++) {
+					if (i > 0)
+						set_name += "+";
+					set_name += in_tree->part_info[merged_set[i]].name;
+				}
+				Alignment *aln = super_aln->concatenateAlignments(merged_set);
+				PhyloTree *tree = in_tree->extractSubtree(merged_set);
+				tree->setAlignment(aln);
+				vector<ModelInfo> part_model_info;
+				extractModelInfo(set_name, model_info, part_model_info);
+
+				cout.width(4);
+				cout << right << nr_model++ << " ";
+				string model = testModel(params, tree, part_model_info, set_name);
+				replaceModelInfo(model_info, part_model_info);
+
+				double lhnew = lhsum - lhvec[part1] - lhvec[part2] + part_model_info[0].logl;
+				int dfnew = dfsum - dfvec[part1] - dfvec[part2] + part_model_info[0].df;
+				double score = computeInformationScore(lhnew, dfnew, ssize, params.model_test_criterion);
+				cout << "\t" << score << endl;
+				if (score < new_score) {
+					new_score = score;
+					opt_part1 = part1;
+					opt_part2 = part2;
+					opt_lh = part_model_info[0].logl;
+					opt_df = part_model_info[0].df;
+					opt_merged_set = merged_set;
+					opt_set_name = set_name;
+					opt_model_name = model;
+				}
+				delete tree;
+				delete aln;
+			}
+		if (new_score >= inf_score) break;
+		inf_score = new_score;
+
+		lhsum = lhsum - lhvec[opt_part1] - lhvec[opt_part2] + opt_lh;
+		dfsum = dfsum - dfvec[opt_part1] - dfvec[opt_part2] + opt_df;
+		cout << "Merging " << opt_set_name << " with " << criterionName(params.model_test_criterion) << " score: " << new_score << " (lh=" << lhsum << "  df=" << dfsum << ")" << endl;
+		// change entry opt_part1 to merged one
+		gene_sets[opt_part1] = opt_merged_set;
+		lhvec[opt_part1] = opt_lh;
+		dfvec[opt_part1] = opt_df;
+		model_names[opt_part1] = opt_model_name;
+		greedy_model_trees[opt_part1] = "(" + greedy_model_trees[opt_part1] + "," + greedy_model_trees[opt_part2] + ")" +
+				convertIntToString(in_tree->size()-gene_sets.size()+1) + ":" + convertDoubleToString(inf_score);
+
+		// delete entry opt_part2
+		lhvec.erase(lhvec.begin() + opt_part2);
+		dfvec.erase(dfvec.begin() + opt_part2);
+		gene_sets.erase(gene_sets.begin() + opt_part2);
+		model_names.erase(model_names.begin() + opt_part2);
+		greedy_model_trees.erase(greedy_model_trees.begin() + opt_part2);
+	}
+
+	string final_model_tree;
+	if (greedy_model_trees.size() == 1)
+		final_model_tree = greedy_model_trees[0];
+	else {
+		final_model_tree = "(";
+		for (i = 0; i < greedy_model_trees.size(); i++) {
+			if (i>0)
+				final_model_tree += ",";
+			final_model_tree += greedy_model_trees[i];
+		}
+		final_model_tree += ")";
+	}
+
+	cout << "BEST-FIT PARTITION MODEL: " << endl;
+	cout << "  charpartition " << criterionName(params.model_test_criterion) << " = ";
+	for (i = 0; i < gene_sets.size(); i++) {
+		if (i > 0)
+			cout << ", ";
+		cout << model_names[i] << ":";
+		for (int j = 0; j < gene_sets[i].size(); j++) {
+			cout << " " << in_tree->part_info[gene_sets[i][j]].name;
+		}
+	}
+	cout << ";" << endl;
+	cout << "Agglomerative model selection: " << final_model_tree << endl;
+}
 
 string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_info, string set_name) {
 	int nstates = in_tree->aln->num_states;
@@ -301,11 +480,12 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 	int ssize = in_tree->aln->getNSite(); // sample size
 	if (params.model_test_sample_size)
 		ssize = params.model_test_sample_size;
-	cout << "Testing " << num_models * 4
+	if (set_name == "") {
+		cout << "Testing " << num_models * 4
 			<< ((nstates == 2) ? "binary" : ((nstates == 4) ? " DNA" : " protein"))
 			<< " models (sample size: " << ssize << ") ..." << endl;
-	cout << "Model         -LnL         df  AIC          AICc         BIC" << endl;
-
+		cout << "Model         -LnL         df  AIC          AICc         BIC" << endl;
+	}
 	if (params.print_site_lh) {
 		ofstream sitelh_out(sitelh_file.c_str());
 		if (!sitelh_out.is_open())
@@ -358,11 +538,17 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 			info.set_name = set_name;
 			info.df = subst_model->getNDim() + rate_class[rate_type]->getNDim() + tree->branchNum;
 			info.name = str;
+			int model_id = -1;
+			for (int i = 0; i < model_info.size(); i++)
+				if (info.name == model_info[i].name && info.df == model_info[i].df) {
+					model_id = i;
+					break;
+				}
 			if (ok_model_file) {
 				// sanity check
-				if (info.name != model_info[model * 4 + rate_type].name || info.df != model_info[model * 4 + rate_type].df)
+				if (model_id < 0)
 					outError("Incorrect model file, please delete it and rerun again: ", fmodel_str);
-				info.logl = model_info[model * 4 + rate_type].logl;
+				info.logl = model_info[model_id].logl;
 			} else {
 				info.logl = tree->getModelFactory()->optimizeParameters(false, false);
 				// print information to .model file
@@ -394,14 +580,17 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 				if (params.print_site_lh)
 					printSiteLh(sitelh_file.c_str(), tree, NULL, true, model_name);
 			}
-			info.AIC_score = -2 * info.logl + 2 * info.df;
-			info.AICc_score = info.AIC_score + 2.0 * info.df * (info.df + 1) / (ssize - info.df - 1);
-			info.BIC_score = -2 * info.logl + info.df * log(ssize);
+			computeInformationScores(info.logl, info.df, ssize, info.AIC_score, info.AICc_score, info.BIC_score);
 			if (ok_model_file) {
-				model_info[model*4 + rate_type] = info;
+				model_info[model_id] = info;
 			} else {
 				model_info.push_back(info);
 			}
+			tree->setModel(NULL);
+			tree->setModelFactory(NULL);
+			tree->setRate(NULL);
+
+			if (set_name != "") continue;
 			cout.width(13);
 			cout << left << str << " ";
 			cout.precision(3);
@@ -415,9 +604,6 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 			cout.width(12);
 			cout << info.AICc_score << " " << info.BIC_score;
 			cout << endl;
-			tree->setModel(NULL);
-			tree->setModelFactory(NULL);
-			tree->setRate(NULL);
 
 		}
 	}
@@ -432,9 +618,19 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 		if ((*it).BIC_score < model_info[model_bic].BIC_score)
 			model_bic = model;
 	}
-	cout << "Akaike Information Criterion:           " << model_info[model_aic].name << endl;
-	cout << "Corrected Akaike Information Criterion: " << model_info[model_aicc].name << endl;
-	cout << "Bayesian Information Criterion:         " << model_info[model_bic].name << endl;
+	if (set_name == "") {
+		cout << "Akaike Information Criterion:           " << model_info[model_aic].name << endl;
+		cout << "Corrected Akaike Information Criterion: " << model_info[model_aicc].name << endl;
+		cout << "Bayesian Information Criterion:         " << model_info[model_bic].name << endl;
+	} else {
+		cout.width(11);
+		cout << left << model_info[model_aic].name << " ";
+		cout.width(11);
+		cout << left << model_info[model_aicc].name << " ";
+		cout.width(11);
+		cout << left << model_info[model_bic].name << " ";
+		cout << set_name;
+	}
 
 	/* computing model weights */
 	double AIC_sum = 0.0, AICc_sum = 0.0, BIC_sum = 0.0;
@@ -527,7 +723,9 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 
 	if (!ok_model_file)
 		fmodel.close();
-	cout << "Best-fit model: " << best_model << endl;
+	if (set_name == "") {
+		cout << "Best-fit model: " << best_model << endl;
+	}
 	if (params.print_site_lh)
 		cout << "Site log-likelihoods per model printed to " << sitelh_file << endl;
 	return best_model;
