@@ -179,6 +179,14 @@ public:
 	*/
 	vector<IntVector> taxa_index;
 
+	/**
+	 * concatenate subset of alignments
+	 * @param ids IDs of sub-alignments
+	 * @return concatenated alignment
+	 */
+    Alignment *concatenateAlignments(IntVector &ids);
+
+
 };
 
 #endif

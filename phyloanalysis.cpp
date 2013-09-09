@@ -327,9 +327,8 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh,
 	tree.drawTree(out, WT_BR_SCALE + WT_INT_NODE, epsilon);
 	int df = tree.getModelFactory()->getNParameters();
 	int ssize = tree.getAlnNSite();
-	double AIC_score = -2 * tree_lh + 2 * df;
-	double AICc_score = AIC_score + 2.0 * df * (df + 1) / (ssize - df - 1);
-	double BIC_score = -2 * tree_lh + df * log(ssize);
+	double AIC_score, AICc_score, BIC_score;
+	computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
 
 	out << "Log-likelihood of the tree: " << fixed << tree_lh << " (s.e. "
 			<< sqrt(lh_variance) << ")" << endl
@@ -454,15 +453,20 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
 				<< endl;
 		if (tree.isSuperTree()) {
-			out
-					<< "Full partition model with separate branch lengths and models between partitions"
-					<< endl << endl;
+			out	<< "Full partition model with separate branch lengths and models between partitions" << endl << endl;
 			PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
-			int part = 0;
-			for (PhyloSuperTree::iterator it = stree->begin();
-					it != stree->end(); it++, part++) {
-				out << "FOR PARTITION " << stree->part_info[part].name << ":"
-						<< endl << endl;
+			PhyloSuperTree::iterator it;
+			int part;
+
+			out << "Charset      Model      " << endl
+				<< "------------------------" << endl;
+			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
+				out.width(12);
+				out << left << stree->part_info[part].name << " " << (*it)->getModelName() << endl;
+			}
+			out << endl;
+			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
+				out << "FOR PARTITION " << stree->part_info[part].name << ":" << endl << endl;
 				reportModel(out, *(*it));
 				reportRate(out, *(*it));
 			}
@@ -1139,9 +1143,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
     }
 
 	t_begin = getCPUTime();
-	bool test_only = params.model_name == "TESTONLY";
+	bool test_only = params.model_name.substr(0,8) == "TESTONLY";
 	/* initialize substitution model */
-	if (params.model_name == "TEST" || params.model_name == "TESTONLY") {
+	if (params.model_name.substr(0,4) == "TEST") {
 		params.model_name = testModel(params, &iqtree, model_info);
 		if (test_only) {
 			/*
