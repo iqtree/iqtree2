@@ -328,10 +328,59 @@ void IQTree::initLeafFrequency(PhyloNode *node, PhyloNode *dad) {
         }
 }
 
-void IQTree::deleteSubTree(PhyloNodeVector &del_leaves) {
-    NodeVector taxa;
-    // get the vector of taxa
-    getTaxa(taxa);
+void IQTree::clearLeafFrequency() {
+	for (vector<LeafFreq>::iterator it = leaf_freqs.begin(); it != leaf_freqs.end(); it++) {
+		(*it).freq = 0;
+	}
+}
+
+void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
+    NodeVector cherry_taxa;
+    NodeVector noncherry_taxa;
+    // get the vector of non cherry taxa
+    getNonCherryLeaves(noncherry_taxa, cherry_taxa);
+    root = NULL;
+    int num_taxa = aln->getNSeq();
+    int num_delete = k_delete;
+    if (num_delete > num_taxa - 4)
+        num_delete = num_taxa - 4;
+    if (verbose_mode >= VB_DEBUG) {
+        cout << "Deleting " << num_delete << " leaves" << endl;
+    }
+	vector<unsigned int> indices_noncherry(noncherry_taxa.size());
+	//iota(indices_noncherry.begin(), indices_noncherry.end(), 0);
+	unsigned int startValue = 0;
+	for (vector<unsigned int>::iterator it = indices_noncherry.begin(); it != indices_noncherry.end(); ++it) {
+		(*it) = startValue;
+		++startValue;
+	}
+	random_shuffle(indices_noncherry.begin(), indices_noncherry.end());
+	int i;
+	for (i = 0; i < num_delete && i < noncherry_taxa.size(); i++) {
+		PhyloNode *taxon = (PhyloNode*) noncherry_taxa[indices_noncherry[i]];
+		del_leaves.push_back(taxon);
+		deleteLeaf(taxon);
+		//cout << taxon->id << ", ";
+	}
+	int j = 0;
+	if (i < num_delete) {
+		vector<unsigned int> indices_cherry(cherry_taxa.size());
+		//iota(indices_cherry.begin(), indices_cherry.end(), 0);
+		startValue = 0;
+		for (vector<unsigned int>::iterator it = indices_cherry.begin(); it != indices_cherry.end(); ++it) {
+			(*it) = startValue;
+			++startValue;
+		}
+		random_shuffle(indices_cherry.begin(), indices_cherry.end());
+		while (i < num_delete) {
+			PhyloNode *taxon = (PhyloNode*) cherry_taxa[indices_cherry[j]];
+			del_leaves.push_back(taxon);
+			deleteLeaf(taxon);
+			i++;
+			j++;
+		}
+	}
+	root = cherry_taxa[j];
 }
 
 void IQTree::deleteNonTabuLeaves(PhyloNodeVector &del_leaves) {
@@ -672,9 +721,9 @@ double IQTree::doIQP() {
 
     if (params->tabu) {
         deleteNonTabuLeaves(del_leaves);
-    } else if (params->del_sub) {
+    } else if (params->cherry) {
     	// delete all leaves of a subtree
-    	deleteSubTree(del_leaves);
+    	deleteNonCherryLeaves(del_leaves);
     } else {
         deleteLeaves(del_leaves);
     }
@@ -833,7 +882,7 @@ double IQTree::perturb(int times) {
 //}
 
 void IQTree::doRandomRestart() {
-    int cur_iteration;
+    int curIQPIter;
     setRootNode(params->root);
     // keep the best tree into a string
     stringstream best_tree_string;
@@ -841,7 +890,7 @@ void IQTree::doRandomRestart() {
     stringstream best_tree_topo_ss;
     printTree(best_tree_topo_ss, WT_TAXON_ID + WT_SORT_TAXA);
     string best_tree_topo = best_tree_topo_ss.str();
-    for (cur_iteration = 2; cur_iteration < params->min_iterations; cur_iteration++) {
+    for (curIQPIter = 2; curIQPIter < params->min_iterations; curIQPIter++) {
         double min_elapsed = (getCPUTime() - params->startTime) / 60;
         if (min_elapsed > params->maxtime) {
             break;
@@ -865,7 +914,7 @@ void IQTree::doRandomRestart() {
             }
         }
         double cputime_secs = getCPUTime() - params->startTime;
-        cout << "Iteration " << cur_iteration << " / LogL: " << curScore << " / CPU time elapsed: "
+        cout << "Iteration " << curIQPIter << " / LogL: " << curScore << " / CPU time elapsed: "
                 << (int) round(cputime_secs) << "s" << endl;
         ;
 
@@ -946,6 +995,7 @@ double IQTree::doIQPNNI() {
         }
     }
     stop_rule.addImprovedIteration(1);
+
     bool speedupMsg = false;
     double prev_time = 0.0;
     if (params->tabu) {
@@ -1128,8 +1178,8 @@ double IQTree::doIQPNNI() {
         time(&cur_time);
         double cputime_secs = getCPUTime() - params->startTime;
         double cputime_remaining = (stop_rule.getNumIterations() - curIQPIter) * cputime_secs / (curIQPIter - 1);
-        /*double remaining_secs = (stop_rule.getNumIterations() - cur_iteration) *
-         elapsed_secs / (cur_iteration - 1);*/
+        /*double remaining_secs = (stop_rule.getNumIterations() - curIQPIter) *
+         elapsed_secs / (curIQPIter - 1);*/
         cout.setf(ios::fixed, ios::floatfield);
         bool printLog = false;
         if (cputime_secs >= prev_time + 10)
@@ -1213,6 +1263,7 @@ double IQTree::doIQPNNI() {
                     printResultTree(iter_string.str());
                 }
                 printResultTree();
+                clearLeafFrequency();
                 stop_rule.addImprovedIteration(curIQPIter);
 
                 // Variable Neighborhood search idea, reset k_delete if tree is better
@@ -1384,7 +1435,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         double newScore = optimizeAllBranches(params->numSmoothTree);
         if (newScore > curScore) {
             if (enableHeuris && curIQPIter > 1) {
-                if (vecImpProNNI.size() < 1000) {
+                if (vecImpProNNI.size() < 10000) {
                     vecImpProNNI.push_back((newScore - curScore) / nni2apply);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());
@@ -1438,7 +1489,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     bool foundBetterTree = (curScore > oldLH) ? true : false;
     if (foundBetterTree) {
         if (enableHeuris && curIQPIter > 1) {
-            if (vecNumNNI.size() < 1000) {
+            if (vecNumNNI.size() < 10000) {
                 vecNumNNI.push_back(nni_count);
             } else {
                 vecNumNNI.erase(vecNumNNI.begin());
@@ -1465,6 +1516,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 extern "C" double TOL_LIKELIHOOD_PHYLOLIB;
 extern "C" int numSmoothTree;
 extern "C" int fast_eval;
+extern "C" int fivebran;
 
 double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
     if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
@@ -1481,6 +1533,10 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
         fast_eval = 1;
     else
         fast_eval = 0;
+    if (params->nni5Branches)
+    	fivebran = 1;
+    else
+    	fivebran = 0;
     while (true) {
         if (beginHeu) {
             double maxScore = curLH + nni_delta_est * (nni_count_est - nniApplied);
@@ -1514,8 +1570,8 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
             nniRound++;
             //cout << "deltaNNI = " << deltaNNI << endl;
             //cout << "nni_count = " << nni_count << endl;
-            if (enableHeuris) {
-                if (vecNumNNI.size() < 1000) {
+            if (enableHeuris && curIQPIter > 1) {
+                if (vecImpProNNI.size() < 100000) {
                     vecImpProNNI.push_back(deltaNNI);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());
@@ -1539,8 +1595,8 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
         cout << "Number of NNI applied = " << nniApplied << endl;
         cout << "Number of NNI rounds = " << nniRound << endl;
     }
-    if (enableHeuris) {
-        if (vecNumNNI.size() < 1000) {
+    if (enableHeuris && curIQPIter > 1) {
+        if (vecNumNNI.size() < 10000) {
             vecNumNNI.push_back(nniApplied);
         } else {
             vecNumNNI.erase(vecNumNNI.begin());

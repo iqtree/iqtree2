@@ -11,7 +11,7 @@ extern "C" {
 const int TOPO_ONLY = 0;
 const int NO_BRAN_OPT = 1;
 const int ONE_BRAN_OPT = 2;
-const int THOROUGH_OPT = 4;
+const int FIVE_BRAN_OPT = 4;
 
 
 /*--------------------------------------------------------------*/
@@ -88,8 +88,9 @@ void optimizeOneBranches(tree* tr, nodeptr p, int numNRStep);
  *  @param[in] tr: the tree data structure
  *  @param[in] swap: represents one of the 2 NNI moves. Could be either 0 or 1
  *  @param[in] evalType: NO_NR, WITH_ONE_NR, WITH_FIVE_NR
+ *  @param[in] curLH: current log-likelihood of the tree
  */
-double doOneNNI(tree * tr, nodeptr p, int swap, int evalType);
+double doOneNNI(tree * tr, nodeptr p, int swap, int evalType, double curLH);
 
 /**
  *  Go through all 2(n-3) internal branches of the tree and

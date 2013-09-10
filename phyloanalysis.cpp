@@ -866,8 +866,6 @@ void createFirstNNITree(Params &params, IQTree &iqtree, double bestTreeScore,
         iqtree.optimizeNNI();
     } else {
         iqtree.curScore = iqtree.optimizeNNIRax();
-        //treeEvaluate(iqtree.raxmlTree, 16);
-        //iqtree.curScore = iqtree.raxmlTree->likelihood;
         // read in new tree
         int printBranchLengths = TRUE;
         Tree2String(iqtree.phyloTree->tree_string, iqtree.phyloTree,
@@ -1021,7 +1019,6 @@ void computeParsimonyTreeRax(Params& params, IQTree& iqtree, Alignment *alignmen
 	/* read the binary input, setup tree, initialize model with alignment */
 	read_msa(iqtree.phyloTree, params.binary_aln_file);
 	iqtree.phyloTree->randomNumberSeed = params.ran_seed;
-	//iqtree.raxmlTree->randomNumberSeed = 665;
 	double t_parsimony_start = getCPUTime();
 	//makeParsimonyTree(iqtree.raxmlTree);
 	allocateParsimonyDataStructures(iqtree.phyloTree);
@@ -1029,16 +1026,6 @@ void computeParsimonyTreeRax(Params& params, IQTree& iqtree, Alignment *alignmen
 	freeParsimonyDataStructures(iqtree.phyloTree);
 	cout << "CPU total time for creating parsimony tree: "
 			<< (getCPUTime() - t_parsimony_start) << " seconds." << endl;
-	/*
-	 int printBranchLengths = TRUE;
-	 Tree2String(iqtree.raxmlTree->tree_string, iqtree.raxmlTree,
-	 iqtree.raxmlTree->start->back, printBranchLengths, TRUE, 0, 0, 0,
-	 SUMMARIZE_LH, 0, 0);
-	 string parsimony_tree_file = params.out_prefix;
-	 parsimony_tree_file += ".parsimonyTree";
-	 printString2File(string(iqtree.raxmlTree->tree_string),
-	 parsimony_tree_file);
-	 */
 }
 
 void runPhyloAnalysis(Params &params, string &original_model,

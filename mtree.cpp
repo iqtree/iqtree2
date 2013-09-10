@@ -709,6 +709,20 @@ double MTree::treeDepth(Node *node, Node *dad)
     return maxsum;
 }
 
+void MTree::getNonCherryLeaves(NodeVector &noncherry, NodeVector &cherry, Node *node, Node *dad) {
+    if (!node) node = root;
+    if (node->isLeaf()) {
+    	if (node->isInCherry()) {
+    		cherry.push_back(node);
+    	} else {
+            noncherry.push_back(node);
+    	}
+    }
+    FOR_NEIGHBOR_IT(node, dad, it) {
+    	getNonCherryLeaves(noncherry, cherry, (*it)->node, node);
+    }
+}
+
 void MTree::getTaxa(NodeVector &taxa, Node *node, Node *dad) {
     if (!node) node = root;
     if (node->isLeaf()) {

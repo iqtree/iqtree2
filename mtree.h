@@ -299,6 +299,7 @@ public:
 
     /**
      * get all node within a subtree
+     * TODO: This is probably identical with getTaxa
      * @param node root of the subtree
      * @param dad node to define the subtree
      * @param nodeList (OUT) vector containing all nodes of the subtree
@@ -320,6 +321,15 @@ public:
             @param taxa (OUT) vector of taxa
      */
     void getTaxa(NodeVector &taxa, Node *node = NULL, Node *dad = NULL);
+
+    /**
+     	get all descending taxa which are in non-cherry position
+  		@param node the starting node, NULL to start from the root
+        @param dad dad of the node, used to direct the search
+        @param noncherry (OUT) vector of non-cherry taxa
+        @param cherry (OUT) vector of cherry taxa
+     */
+    void getNonCherryLeaves(NodeVector &noncherry, NodeVector &cherry, Node *node = NULL, Node *dad = NULL);
 
 	/**
 		get the descending taxa below the node
