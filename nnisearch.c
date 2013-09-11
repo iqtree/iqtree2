@@ -256,9 +256,6 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int evalType, double curLH) {
 
 	//printTopology(tr, TRUE);
 
-	int pNum = p->number;
-	int qNum = q->number;
-
 	if (swap == 1) {
 		tmp = p->next->back;
 		hookup(p->next, q->next->back, q->next->z, tr->numBranches);
@@ -284,37 +281,22 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int evalType, double curLH) {
 		newviewGeneric(tr, q, FALSE);
 		newviewGeneric(tr, p, FALSE);
 		update(tr, p);
-
-		evaluateGeneric(tr, p, FALSE);
-//		printf("log-likelihood of bran 1: %f \n", tr->likelihood);
-		if ( tr->likelihood + 10.0 < curLH ) {
-			return tr->likelihood;
-		}
-
 		nodeptr r; // temporary node poiter
 		// optimize 2 branches at node p
 		r = p->next;
 		newviewGeneric(tr, r, FALSE);
 		update(tr, r);
-//		evaluateGeneric(tr, r, FALSE);
-//		printf("log-likelihood of bran 2: %f \n", tr->likelihood);
 		r = p->next->next;
 		newviewGeneric(tr, r, FALSE);
 		update(tr, r);
-//		evaluateGeneric(tr, r, FALSE);
-//		printf("log-likelihood of bran 3: %f \n", tr->likelihood);
-
 		// optimize 2 branches at node q
 		r = q->next;
 		newviewGeneric(tr, r, FALSE);
 		update(tr, r);
-//		evaluateGeneric(tr, r, FALSE);
-//		printf("log-likelihood of bran 4: %f \n", tr->likelihood);
 		r = q->next->next;
 		newviewGeneric(tr, r, FALSE);
 		update(tr, r);
 		evaluateGeneric(tr, r, FALSE);
-//		printf("log-likelihood of bran 5: %f \n\n", tr->likelihood);
 	}
 	return tr->likelihood;
 
