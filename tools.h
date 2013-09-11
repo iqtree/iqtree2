@@ -900,6 +900,9 @@ struct Params {
      */
     string model_name;
 
+    /** set of models for testing */
+    char *model_set;
+
     /**
             TRUE to store transition matrix into a hash table for computation efficiency
      */

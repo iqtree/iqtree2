@@ -653,6 +653,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_condition = SC_FIXED_ITERATION;
     params.stop_confidence = 0.95;
     params.model_name = "";
+    params.model_set = NULL;
     params.store_trans_matrix = false;
     params.freq_type = FREQ_EMPIRICAL;
     //params.freq_type = FREQ_UNKNOWN;
@@ -1228,6 +1229,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -mod <model_name>";
                 params.model_name = argv[cnt];
+            } else if (strcmp(argv[cnt], "-mset") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -mset <model_set>";
+                params.model_set = argv[cnt];
             } else if (strcmp(argv[cnt], "-mh") == 0) {
                 params.mvh_site_rate = true;
                 params.discard_saturated_site = false;

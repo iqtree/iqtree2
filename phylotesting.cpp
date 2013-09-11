@@ -30,22 +30,27 @@
 #include "timeutil.h"
 
 
-//const int DNA_MODEL_NUM = 14;
+const char* bin_model_names[] = { "JC2", "GTR2" };
 
-const int BIN_MODEL_NUM = 2;
-string bin_model_names[BIN_MODEL_NUM] = { "JC2", "GTR2" };
-
-const int DNA_MODEL_NUM = 22;
-string dna_model_names[DNA_MODEL_NUM] = { "JC", "F81", "K80", "HKY", "TNe",
+const char* dna_model_names[] = { "JC", "F81", "K80", "HKY", "TNe",
 		"TN", "K81", "K81u", "TPM2", "TPM2u", "TPM3", "TPM3u", "TIMe", "TIM",
 		"TIM2e", "TIM2", "TIM3e", "TIM3", "TVMe", "TVM", "SYM", "GTR" };
-/*string dna_model_names[DNA_MODEL_NUM] ={"JC", "F81", "K80", "HKY", "TNe", "TN", "K81", "K81u",
- "TIMe", "TIM", "TVMe", "TVM", "SYM", "GTR"};*/
 
-const int AA_MODEL_NUM = 18;
-string aa_model_names[AA_MODEL_NUM] = { "Dayhoff", "mtMAM", "JTT", "WAG",
+const char* dna_model_names_old[] ={"JC", "F81", "K80", "HKY", "TNe",
+ 	 	 "TN", "K81", "K81u", "TIMe", "TIM", "TVMe", "TVM", "SYM", "GTR"};
+
+const char* dna_model_names_rax[] ={"GTR"};
+
+const char* aa_model_names[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "mtART", "mtZOA", "VT", "LG", "DCMut", "PMB",
 		"HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62" };
+
+const char *aa_model_names_old[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
+		"cpREV", "mtREV", "rtREV", "mtART", "VT", "LG", "DCMut",
+		"HIVb", "HIVw", "Blosum62" };
+
+const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
+		"cpREV", "mtREV", "rtREV", "VT", "LG", "DCMut", "Blosum62" };
 
 void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC) {
 	AIC = -2 * tree_lh + 2 * df;
@@ -185,7 +190,52 @@ bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &i
 	return true;
 }
 
-bool checkPartitionModel(PhyloSuperTree *in_tree, vector<ModelInfo> &model_info) {
+/**
+ * get the list of model
+ * @param nmodels (OUT) number of models
+ * @return array of model names
+ */
+char **getModelList(Params &params, int nstates, int &nmodels) {
+	if (nstates == 2) {
+		nmodels = sizeof(bin_model_names) / sizeof(char*);
+		return (char**)bin_model_names;
+	} else if (nstates == 4) {
+		if (params.model_set == NULL) {
+			nmodels = sizeof(dna_model_names) / sizeof(char*);
+			return (char**)dna_model_names;
+		} else if (strcmp(params.model_set, "OLD") == 0) {
+			nmodels = sizeof(dna_model_names_old) / sizeof(char*);
+			return (char**)dna_model_names_old;
+		} else if (strcmp(params.model_set, "RAXML") == 0) {
+			nmodels = sizeof(dna_model_names_rax) / sizeof(char*);
+			return (char**)dna_model_names_rax;
+		} else {
+			outError("Wrong -mset option");
+			nmodels = 0;
+			return NULL;
+		}
+	} else if (nstates == 20) {
+		if (params.model_set == NULL) {
+			nmodels = sizeof(aa_model_names) / sizeof(char*);
+			return (char**)aa_model_names;
+		} else if (strcmp(params.model_set, "OLD") == 0) {
+			nmodels = sizeof(aa_model_names_old) / sizeof(char*);
+			return (char**)aa_model_names_old;
+		} else if (strcmp(params.model_set, "RAXML") == 0) {
+			nmodels = sizeof(aa_model_names_rax) / sizeof(char*);
+			return (char**)aa_model_names_rax;
+		} else {
+			outError("Wrong -mset option");
+			nmodels = 0;
+			return NULL;
+		}
+	} else {
+		nmodels = 0;
+		return NULL;
+	}
+}
+
+bool checkPartitionModel(Params &params, PhyloSuperTree *in_tree, vector<ModelInfo> &model_info) {
 	PhyloSuperTree::iterator it;
 	int i, all_models = 0;
 	for (it = in_tree->begin(), i = 0; it != in_tree->end(); it++, i++) {
@@ -194,8 +244,8 @@ bool checkPartitionModel(PhyloSuperTree *in_tree, vector<ModelInfo> &model_info)
 			if (mit->set_name == in_tree->part_info[i].name)
 				count++;
 		int nstates = (*it)->aln->num_states;
-		int num_models = (nstates == 2) ? BIN_MODEL_NUM :
-						((nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM);
+		int num_models;
+		getModelList(params, nstates, num_models);
 		if (count != num_models * 4) {
 			return false;
 		}
@@ -262,7 +312,7 @@ void testPartitionModel(Params &params, PhyloSuperTree *in_tree, vector<ModelInf
 		dfsum += dfvec.back();
 	}
 
-	if (params.model_name.substr(params.model_name.length()-6) != "SCHEME") {
+	if (params.model_name.find("LINK") == string::npos) {
 		return;
 	}
 
@@ -391,8 +441,8 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 	sitelh_file += ".sitelh";
 	in_tree->params = &params;
 
-	int num_models = (nstates == 2) ? BIN_MODEL_NUM :
-					((nstates == 4) ? DNA_MODEL_NUM : AA_MODEL_NUM);
+	int num_models;
+	char **model_names = getModelList(params, nstates, num_models);
 	int model, rate_type;
 
 	string best_model;
@@ -405,7 +455,7 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 			ok_model_file = true;
 	}
 	if (in_tree->isSuperTree()) {
-		ok_model_file &= checkPartitionModel((PhyloSuperTree*)in_tree, model_info);
+		ok_model_file &= checkPartitionModel(params, (PhyloSuperTree*)in_tree, model_info);
 	} else {
 		ok_model_file &= (model_info.size() == num_models * 4);
 	}
@@ -508,9 +558,7 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 				tree = tree_hetero;
 			}
 			// initialize model
-			subst_model->init((nstates == 2) ? bin_model_names[model].c_str() :
-							((nstates == 4) ? dna_model_names[model].c_str() : aa_model_names[model].c_str()),
-					"", FREQ_UNKNOWN, "");
+			subst_model->init(model_names[model], "", FREQ_UNKNOWN, "");
 			subst_model->setTree(tree);
 			tree->params = &params;
 
@@ -550,7 +598,10 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 					outError("Incorrect model file, please delete it and rerun again: ", fmodel_str);
 				info.logl = model_info[model_id].logl;
 			} else {
+				VerboseMode saved_mode = verbose_mode;
+				verbose_mode = VB_QUIET;
 				info.logl = tree->getModelFactory()->optimizeParameters(false, false);
+				verbose_mode = saved_mode;
 				// print information to .model file
 				if (set_name != "")
 					fmodel << set_name << "\t";
