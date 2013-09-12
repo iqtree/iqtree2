@@ -1133,6 +1133,15 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	bool test_only = params.model_name.substr(0,8) == "TESTONLY";
 	/* initialize substitution model */
 	if (params.model_name.substr(0,4) == "TEST") {
+		if (iqtree.isSuperTree())
+			((PhyloSuperTree*) &iqtree)->mapTrees();
+		uint64_t mem_size = iqtree.getMemoryRequired();
+		mem_size *= (params.num_rate_cats+1);
+	    cout << "NOTE: MODEL SELECTION REQUIRES AT LEAST " << ((double) mem_size * sizeof(double) / 1024.0) / 1024 << " MB MEMORY!" << endl;
+	    if (mem_size >= getMemorySize()) {
+	    	outError("Memory required exceeds your computer RAM size!");
+	    }
+
 		params.model_name = testModel(params, &iqtree, model_info);
 		if (test_only) {
 			/*
@@ -1194,6 +1203,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	cout << endl;
 	cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
 	printAnalysisInfo(model_df, iqtree, params);
+
+	uint64_t mem_size = iqtree.getMemoryRequired();
+    cout << "NOTE: THE ANALYSIS REQUIRES AT LEAST " << ((double) mem_size * sizeof(double) / 1024.0) / 1024 << " MB MEMORY!" << endl;
+    if (mem_size >= getMemorySize()) {
+    	outError("Memory required exceeds your computer RAM size!");
+    }
 
 	cout << "Optimize model parameters ... " << endl;
 

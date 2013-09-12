@@ -1086,6 +1086,12 @@ public:
      */
     void printTransMatrices(Node *node = NULL, Node *dad = NULL);
 
+    /**
+     * compute the memory size required for storing partial likelihood vectors
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequired();
+
 protected:
     
     /**

@@ -282,7 +282,6 @@ void extractModelInfo(string set_name, vector<ModelInfo> &model_info, vector<Mod
  * @return total number of parameters
  */
 void testPartitionModel(Params &params, PhyloSuperTree *in_tree, vector<ModelInfo> &model_info) {
-	in_tree->mapTrees();
 	int i = 0;
 	PhyloSuperTree::iterator it;
 	DoubleVector lhvec;
@@ -509,10 +508,8 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 	RateHeterogeneity * rate_class[4];
 	rate_class[0] = new RateHeterogeneity();
 	rate_class[1] = new RateInvar(-1, NULL);
-	rate_class[2] = new RateGamma(params.num_rate_cats, -1, params.gamma_median,
-			NULL);
-	rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1,
-			params.gamma_median, -1, NULL);
+	rate_class[2] = new RateGamma(params.num_rate_cats, -1, params.gamma_median, NULL);
+	rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1, params.gamma_median, -1, NULL);
 	GTRModel *subst_model = NULL;
 	if (nstates == 2)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
@@ -598,10 +595,7 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 					outError("Incorrect model file, please delete it and rerun again: ", fmodel_str);
 				info.logl = model_info[model_id].logl;
 			} else {
-				VerboseMode saved_mode = verbose_mode;
-				verbose_mode = VB_QUIET;
 				info.logl = tree->getModelFactory()->optimizeParameters(false, false);
-				verbose_mode = saved_mode;
 				// print information to .model file
 				if (set_name != "")
 					fmodel << set_name << "\t";

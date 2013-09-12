@@ -219,6 +219,12 @@ public:
 	 */
     PhyloTree *extractSubtree(IntVector &ids);
 
+    /**
+     * compute the memory size required for storing partial likelihood vectors
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequired();
+
 };
 
 #endif

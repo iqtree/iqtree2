@@ -683,3 +683,10 @@ PhyloTree *PhyloSuperTree::extractSubtree(IntVector &ids) {
 	return tree;
 }
 
+uint64_t PhyloSuperTree::getMemoryRequired() {
+	uint64_t mem_size = PhyloTree::getMemoryRequired();
+	for (iterator it = begin(); it != end(); it++)
+		mem_size += (*it)->getMemoryRequired();
+	return mem_size;
+}
+
