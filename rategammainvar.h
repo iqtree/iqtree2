@@ -36,7 +36,7 @@ public:
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
 	*/
-    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, PhyloTree *tree);
+    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, bool simultaneous, PhyloTree *tree);
 
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize
@@ -58,6 +58,12 @@ public:
 	*/
 	virtual int getNDim() { return RateInvar::getNDim() + RateGamma::getNDim(); }
 
+	/**
+		the target function which needs to be optimized
+		@param x the input vector x
+		@return the function value at x
+	*/
+	virtual double targetFunk(double x[]);
 
 	/**
 		write information
@@ -71,6 +77,23 @@ public:
 	*/
 	virtual void writeParameters(ostream &out);
 
+protected:
+
+	/**
+		this function is served for the multi-dimension optimization. It should pack the model parameters
+		into a vector that is index from 1 (NOTE: not from 0)
+		@param variables (OUT) vector of variables, indexed from 1
+	*/
+	virtual void setVariables(double *variables);
+
+	/**
+		this function is served for the multi-dimension optimization. It should assign the model parameters
+		from a vector of variables that is index from 1 (NOTE: not from 0)
+		@param variables vector of variables, indexed from 1
+	*/
+	virtual void getVariables(double *variables);
+
+	bool optimize_gamma_invar_by_bfgs;
 private:
 	
 	/**

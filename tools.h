@@ -934,6 +934,9 @@ struct Params {
      */
     double p_invar_sites;
 
+    /** TRUE to optimize gamma shape and p_invar simultaneously by BFGS, default: FALSE */
+    bool optimize_gamma_invar_by_bfgs;
+
     /**
             TRUE if you want to optimize branch lengths by Newton-Raphson method
      */

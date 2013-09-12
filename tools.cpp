@@ -661,6 +661,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.gamma_shape = -1.0;
     params.gamma_median = false;
     params.p_invar_sites = -1.0;
+    params.optimize_gamma_invar_by_bfgs = false;
     params.optimize_by_newton = true;
     params.fixed_branch_length = false;
     params.iqp_assess_quartet = IQP_DISTANCE;
@@ -1313,6 +1314,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (params.p_invar_sites < 0) throw "Wrong number of proportion of invariable sites";
             } else if (strcmp(argv[cnt], "-brent") == 0) {
                 params.optimize_by_newton = false;
+            } else if (strcmp(argv[cnt], "-ginvar") == 0) {
+                params.optimize_gamma_invar_by_bfgs = true;
+            } else if (strcmp(argv[cnt], "-brent_ginvar") == 0) {
+                params.optimize_gamma_invar_by_bfgs = false;
             } else if (strcmp(argv[cnt], "-fixbr") == 0) {
                 params.fixed_branch_length = true;
             } else if (strcmp(argv[cnt], "-sr") == 0) {

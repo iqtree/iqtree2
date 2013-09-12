@@ -509,7 +509,7 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 	rate_class[0] = new RateHeterogeneity();
 	rate_class[1] = new RateInvar(-1, NULL);
 	rate_class[2] = new RateGamma(params.num_rate_cats, -1, params.gamma_median, NULL);
-	rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1, params.gamma_median, -1, NULL);
+	rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1, params.gamma_median, -1, params.optimize_gamma_invar_by_bfgs, NULL);
 	GTRModel *subst_model = NULL;
 	if (nstates == 2)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);

@@ -30,6 +30,8 @@ class for rate heterogeneity with a fraction of invariable sites
 */
 class RateInvar : virtual public RateHeterogeneity
 {
+	friend class RateGammaInvar;
+
 public:
 	/**
 		constructor
