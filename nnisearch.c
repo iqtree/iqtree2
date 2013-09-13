@@ -266,8 +266,8 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int evalType, double curLH) {
 		hookup(q->next, tmp, tmp->z, tr->numBranches);
 	}
 
-	assert(pNum == p->number);
-	assert(qNum == q->number);
+	//assert(pNum == p->number);
+	//assert(qNum == q->number);
 
 	if (evalType == TOPO_ONLY) {
 		return 0.0;

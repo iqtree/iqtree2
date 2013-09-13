@@ -2174,6 +2174,11 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
          }
          */
         // Tung beo's trick
+        if (lh_ptn<=0) {
+            cout << "Abnormal " << __func__;
+            abort();
+        }
+
         lh_ptn = lh_ptn * p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
