@@ -203,6 +203,8 @@ public:
 	*/
 	virtual void initPartitionInfo();
 
+	int getMaxPartNameLength();
+
 	/**
 		partition information
 	*/

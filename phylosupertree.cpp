@@ -93,9 +93,9 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
     MyToken token(nexus.inf);
     nexus.Execute(token);
 
-    Alignment *super_aln = NULL;
+    Alignment *input_aln = NULL;
     if (params.aln_file) {
-    	super_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
+    	input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
     }
 
     bool empty_partition = true;
@@ -129,24 +129,24 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 			if (info.aln_file != "") {
 				part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
 			} else {
-				part_aln = super_aln;
+				part_aln = input_aln;
 			}
 			if (!info.position_spec.empty() && info.position_spec != "*") {
 				Alignment *new_aln = new Alignment();
 				new_aln->extractSites(part_aln, info.position_spec.c_str());
-				if (part_aln != super_aln) delete part_aln;
+				if (part_aln != input_aln) delete part_aln;
 				part_aln = new_aln;
 			}
 			Alignment *new_aln = part_aln->removeGappySeq();
-			if (part_aln != new_aln && part_aln != super_aln) delete part_aln;
+			if (part_aln != new_aln && part_aln != input_aln) delete part_aln;
 			PhyloTree *tree = new PhyloTree(new_aln);
 			push_back(tree);
 			params = origin_params;
 			cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
     	}
 
-    if (super_aln)
-    	delete super_aln;
+    if (input_aln)
+    	delete input_aln;
 }
 PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
@@ -441,6 +441,13 @@ void PhyloSuperTree::initPartitionInfo() {
 
 		(*it)->getBranchLengths(part_info[part].cur_brlen);
 	}
+}
+
+int PhyloSuperTree::getMaxPartNameLength() {
+	int namelen = 0;
+	for (vector<PartitionInfo>::iterator it = part_info.begin(); it != part_info.end(); it++)
+		namelen = max((int)it->name.length(), namelen);
+	return namelen;
 }
 
 NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, bool useLS, double lh_contribution) {

@@ -50,7 +50,7 @@ void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, do
  @param set_name for partitioned analysis
  @return name of best-fit-model
  */
-string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_info, string set_name = "");
+string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, string set_name = "");
 
 /**
  * print site log likelihoods to a fileExists

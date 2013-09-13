@@ -91,6 +91,17 @@ void reportAlignment(ofstream &out, Alignment &alignment) {
 			<< endl;
 }
 
+void pruneModelInfo(vector<ModelInfo> &model_info, PhyloSuperTree *tree) {
+	vector<ModelInfo> res_info;
+	for (vector<PartitionInfo>::iterator it = tree->part_info.begin(); it != tree->part_info.end(); it++) {
+		for (vector<ModelInfo>::iterator mit = model_info.begin(); mit != model_info.end(); mit++)
+			if (mit->set_name == it->name)
+				res_info.push_back(*mit);
+	}
+	model_info = res_info;
+
+}
+
 void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &model_info, bool is_partitioned) {
 	out << "Best-fit model according to "
 		<< ((params.model_test_criterion == MTC_BIC) ? "BIC" :
@@ -115,16 +126,19 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 			((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc"))
 		<< " scores: " << endl << endl;
 	if (is_partitioned)
-		out << "Charset   ";
+		out << "  ID  ";
 	out << "Model             LogL          AIC      w-AIC      AICc     w-AICc       BIC      w-BIC" << endl;
 	if (is_partitioned)
 		out << "----------";
 
 	out << "----------------------------------------------------------------------------------------" << endl;
+	int setid = 1;
 	for (it = model_info.begin(); it != model_info.end(); it++) {
+		if (it != model_info.begin() && it->set_name != (it-1)->set_name)
+			setid++;
 		if (is_partitioned) {
-			out.width(9);
-			out << left << it->set_name << " ";
+			out.width(4);
+			out << right << setid << "  ";
 		}
 		out.width(13);
 		out << left << it->name << " ";
@@ -416,12 +430,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					<< tree.getAlnNSite() << " total sites ("
 					<< ((SuperAlignment*)tree.aln)->computeMissingData()*100 << "% missing data)" << endl << endl;
 			PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
-			int namelen = 0;
+			int namelen = stree->getMaxPartNameLength();
 			int part;
-			for (part = 0; part < stree->part_info.size(); part++)
-				namelen = max((int)stree->part_info[part].name.length(), namelen);
 			out.width(namelen+7);
 			out << left << "  ID  Name" << " #Seqs  #Sites  #Patterns  #Const_Sites" << endl;
+			out << string(namelen+46, '-') << endl;
 			part = 0;
 			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
 				//out << "FOR PARTITION " << stree->part_info[part].name << ":" << endl << endl;
@@ -429,9 +442,9 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				out.width(4);
 				out << right << part+1 << "  ";
 				out.width(namelen);
-				out << stree->part_info[part].name << "  ";
+				out << left << stree->part_info[part].name << "  ";
 				out.width(5);
-				out << (*it)->aln->getNSeq() << "  ";
+				out << right << (*it)->aln->getNSeq() << "  ";
 				out.width(6);
 				out << (*it)->aln->getNSite() << "  ";
 				out.width(6);
@@ -447,6 +460,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 
 		if (!model_info.empty()) {
 			out << "MODEL SELECTION" << endl << "---------------" << endl << endl;
+			if (tree.isSuperTree())
+				pruneModelInfo(model_info, (PhyloSuperTree*)&tree);
 			reportModelSelection(out, params, model_info, tree.isSuperTree());
 		}
 
@@ -458,11 +473,12 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			PhyloSuperTree::iterator it;
 			int part;
 
-			out << "Charset      Model      " << endl
-				<< "------------------------" << endl;
+			out << "  ID  Model" << endl;
+			out << "-----------------" << endl;
 			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
-				out.width(12);
-				out << left << stree->part_info[part].name << " " << (*it)->getModelName() << endl;
+				out.width(4);
+				out << right << (part+1) << "  ";
+				out << left << (*it)->getModelName() << endl;
 			}
 			out << endl;
 			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
@@ -1029,7 +1045,7 @@ void computeParsimonyTreeRax(Params& params, IQTree& iqtree, Alignment *alignmen
 }
 
 void runPhyloAnalysis(Params &params, string &original_model,
-		Alignment *alignment, IQTree &iqtree, vector<ModelInfo> &model_info) {
+		Alignment* &alignment, IQTree &iqtree, vector<ModelInfo> &model_info) {
 	double t_begin, t_end;
 
 	/*
@@ -1143,6 +1159,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	    }
 
 		params.model_name = testModel(params, &iqtree, model_info);
+		alignment = iqtree.aln;
 		if (test_only) {
 			/*
 			return;
@@ -1695,16 +1712,13 @@ void runPhyloAnalysis(Params &params) {
 		// this alignment will actually be of type SuperAlignment
 		alignment = tree->aln;
 	} else {
-		alignment = new Alignment(params.aln_file, params.sequence_type,
-				params.intype);
+		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
 		tree = new IQTree(alignment);
 	}
 	string original_model = params.model_name;
 	if (params.concatenate_aln) {
-		Alignment aln(params.concatenate_aln, params.sequence_type,
-				params.intype);
-		cout << "Concatenating " << params.aln_file << " with "
-				<< params.concatenate_aln << " ..." << endl;
+		Alignment aln(params.concatenate_aln, params.sequence_type, params.intype);
+		cout << "Concatenating " << params.aln_file << " with " << params.concatenate_aln << " ..." << endl;
 		alignment->concatenateAlignment(&aln);
 	}
 

@@ -276,12 +276,47 @@ void extractModelInfo(string set_name, vector<ModelInfo> &model_info, vector<Mod
 			part_model_info.push_back(*mit);
 }
 
+void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, StrVector &model_names) {
+	cout << "Merging into " << gene_sets.size() << " partitions..." << endl;
+	vector<IntVector>::iterator it;
+	SuperAlignment *super_aln = (SuperAlignment*)super_tree->aln;
+	vector<PartitionInfo> part_info;
+	vector<PhyloTree*> tree_vec;
+	for (it = gene_sets.begin(); it != gene_sets.end(); it++) {
+		PartitionInfo info;
+		info.name = "";
+		for (IntVector::iterator i = it->begin(); i != it->end(); i++) {
+			if (i != it->begin())
+				info.name += "+";
+			info.name += super_tree->part_info[*i].name;
+		}
+		info.model_name = model_names[it-gene_sets.begin()];
+		info.aln_file = "";
+		info.sequence_type = "";
+		info.position_spec = "";
+		part_info.push_back(info);
+		Alignment *aln = super_aln->concatenateAlignments(*it);
+		PhyloTree *tree = super_tree->extractSubtree(*it);
+		tree->setAlignment(aln);
+		tree_vec.push_back(tree);
+	}
+
+	for (PhyloSuperTree::reverse_iterator tit = super_tree->rbegin(); tit != super_tree->rend(); tit++)
+		delete (*tit);
+	super_tree->clear();
+	super_tree->insert(super_tree->end(), tree_vec.begin(), tree_vec.end());
+	super_tree->part_info = part_info;
+
+	delete super_tree->aln;
+	super_tree->aln = new SuperAlignment(super_tree);
+}
+
 /**
  * select models for all partitions
  * @param model_info (IN/OUT) all model information
  * @return total number of parameters
  */
-void testPartitionModel(Params &params, PhyloSuperTree *in_tree, vector<ModelInfo> &model_info) {
+void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInfo> &model_info) {
 	int i = 0;
 	PhyloSuperTree::iterator it;
 	DoubleVector lhvec;
@@ -341,7 +376,9 @@ void testPartitionModel(Params &params, PhyloSuperTree *in_tree, vector<ModelInf
 		string opt_set_name = "";
 		string opt_model_name = "";
 		for (part1 = 0; part1 < gene_sets.size()-1; part1++)
-			for (part2 = part1+1; part2 < gene_sets.size(); part2++) {
+			for (part2 = part1+1; part2 < gene_sets.size(); part2++)
+			if (super_aln->partitions[gene_sets[part1][0]]->num_states == super_aln->partitions[gene_sets[part2][0]]->num_states) {
+				// only merge partitions of the same data type
 				IntVector merged_set;
 				merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());
 				merged_set.insert(merged_set.end(), gene_sets[part2].begin(), gene_sets[part2].end());
@@ -426,9 +463,10 @@ void testPartitionModel(Params &params, PhyloSuperTree *in_tree, vector<ModelInf
 	}
 	cout << ";" << endl;
 	cout << "Agglomerative model selection: " << final_model_tree << endl;
+	mergePartitions(in_tree, gene_sets, model_names);
 }
 
-string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_info, string set_name) {
+string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, string set_name) {
 	int nstates = in_tree->aln->num_states;
 	if (in_tree->isSuperTree())
 		nstates = ((PhyloSuperTree*)in_tree)->front()->aln->num_states;
@@ -531,7 +569,7 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 		cout << "Testing " << num_models * 4
 			<< ((nstates == 2) ? "binary" : ((nstates == 4) ? " DNA" : " protein"))
 			<< " models (sample size: " << ssize << ") ..." << endl;
-		cout << "Model         -LnL         df  AIC          AICc         BIC" << endl;
+		cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
 	if (params.print_site_lh) {
 		ofstream sitelh_out(sitelh_file.c_str());
@@ -636,6 +674,8 @@ string testModel(Params &params, PhyloTree *in_tree, vector<ModelInfo> &model_in
 			tree->setRate(NULL);
 
 			if (set_name != "") continue;
+			cout.width(3);
+			cout << right << model*4 + rate_type+1 << "  ";
 			cout.width(13);
 			cout << left << str << " ";
 			cout.precision(3);
