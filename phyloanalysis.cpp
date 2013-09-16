@@ -134,6 +134,7 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 	out << "----------------------------------------------------------------------------------------" << endl;
 	int setid = 1;
 	for (it = model_info.begin(); it != model_info.end(); it++) {
+		if (it->AIC_score == DBL_MAX) continue;
 		if (it != model_info.begin() && it->set_name != (it-1)->set_name)
 			setid++;
 		if (is_partitioned) {

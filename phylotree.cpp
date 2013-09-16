@@ -239,7 +239,10 @@ void PhyloTree::clearAllPartialLH() {
 }
 
 string PhyloTree::getModelName() {
-    return model->name + site_rate->name;
+	if (model->getFreqType() == FREQ_EMPIRICAL)
+		return model->name + site_rate->name + "+F";
+	else
+		return model->name + site_rate->name;
 }
 
 /****************************************************************************
