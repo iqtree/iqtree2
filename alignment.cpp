@@ -1407,20 +1407,43 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec) {
     if (spec) {
     	// special bootstrap
     	IntVector site_vec;
-    	convert_int_vec(spec, site_vec);
-    	if (site_vec.size() % 2 != 0)
-    		outError("Bootstrap specification length is not divisible by 2");
-    	int part, begin_site = 0, out_site = 0;
-    	for (part = 0; part < site_vec.size(); part += 2) {
-    		if (begin_site + site_vec[part] > getNSite())
-    			outError("Sum of lengths exceeded alignment length");
-    		for (site = 0; site < site_vec[part+1]; site++) {
-    			int site_id = random_int(site_vec[part]) + begin_site;
-    			int ptn_id = getPatternID(site_id);
-    			pattern_freq[ptn_id]++;
+    	if (strncmp(spec, "GENE,", 5) == 0) {
+    		// resampling genes instead of sites
+    		convert_int_vec(spec+5, site_vec);
+    		int i;
+    		IntVector begin_site;
+    		for (i = 0, site = 0; i < site_vec.size(); i++) {
+    			begin_site.push_back(site);
+    			site += site_vec[i];
+    			//cout << "site = " << site_vec[i] << endl;
     		}
-    		begin_site += site_vec[part];
-    		out_site += site_vec[part+1];
+    		if (site > getNSite())
+    			outError("Sum of lengths exceeded alignment length");
+
+    		for (i = 0; i < site_vec.size(); i++) {
+    			int part = random_int(site_vec.size());
+    			for (site = begin_site[part]; site < begin_site[part] + site_vec[part]; site++) {
+    				int ptn = getPatternID(site);
+    				pattern_freq[ptn]++;
+    			}
+    		}
+    	} else {
+    		// resampling within genes
+    		convert_int_vec(spec, site_vec);
+        	if (site_vec.size() % 2 != 0)
+        		outError("Bootstrap specification length is not divisible by 2");
+        	int part, begin_site = 0, out_site = 0;
+        	for (part = 0; part < site_vec.size(); part += 2) {
+        		if (begin_site + site_vec[part] > getNSite())
+        			outError("Sum of lengths exceeded alignment length");
+        		for (site = 0; site < site_vec[part+1]; site++) {
+        			int site_id = random_int(site_vec[part]) + begin_site;
+        			int ptn_id = getPatternID(site_id);
+        			pattern_freq[ptn_id]++;
+        		}
+        		begin_site += site_vec[part];
+        		out_site += site_vec[part+1];
+        	}
     	}
     } else {
 		for (site = 0; site < nsite; site++) {
