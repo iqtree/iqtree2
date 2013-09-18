@@ -1045,9 +1045,9 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     int num_multi = 0;
     do {
         num_multi++;
-        /*cout << num_multi << ": ";
+        cout << num_multi << ": ";
         for (id = 0; id < afreq.size(); id++) cout << afreq[id] << " ";
-        cout << endl;*/
+        cout << endl;
         IntVector *boot_freq = new IntVector;
         *boot_freq = afreq;
         boot_map[boot_freq] = boot_freqs.size();
