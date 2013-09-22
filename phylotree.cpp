@@ -2860,12 +2860,16 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
             // compute the score of the swapped topology
             score = optimizeOneBranch(node1, node2, false);
             if (nni_param) {
+            	if (verbose_mode >= VB_MAX)
+            		printTree(cout, WT_BR_LEN + WT_NEWLINE);
                 if (cnt == 0) {
                     nni_param->nni1_score = score;
                     nni_param->nni1_brlen = node12_it->length;
+                    computePatternLikelihood(nni_param->nni1_ptnlh, &score);
                 } else {
                     nni_param->nni2_score = score;
                     nni_param->nni2_brlen = node12_it->length;
+                    computePatternLikelihood(nni_param->nni2_ptnlh, &score);
                 }
             }
         }

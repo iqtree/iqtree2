@@ -957,18 +957,19 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	ifstream in(params.treeset_file);
 
 	//if (trees.size() == 1) return;
-	string tree_file = params.treeset_file;
+	//string tree_file = params.treeset_file;
+	string tree_file = params.out_prefix;
 	tree_file += ".trees";
 	ofstream treeout;
 	//if (!params.fixed_branch_length) {
 		treeout.open(tree_file.c_str());
 	//}
-	string score_file = params.treeset_file;
+	string score_file = params.out_prefix;
 	score_file += ".treelh";
 	ofstream scoreout;
 	if (params.print_tree_lh)
 		scoreout.open(score_file.c_str());
-	string site_lh_file = params.treeset_file;
+	string site_lh_file = params.out_prefix;
 	site_lh_file += ".sitelh";
 	if (params.print_site_lh) {
 		ofstream site_lh_out(site_lh_file.c_str());

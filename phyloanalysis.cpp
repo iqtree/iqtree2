@@ -827,13 +827,13 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 	}
 
 	if (params.treeset_file) {
-		cout << "  Evaluated user trees:     " << params.treeset_file << ".trees" << endl;
+		cout << "  Evaluated user trees:     " << params.out_prefix << ".trees" << endl;
 
 		if (params.print_tree_lh) {
-			cout << "  Tree log-likelihoods:   " << params.treeset_file << ".treelh" << endl;
+			cout << "  Tree log-likelihoods:   " << params.out_prefix << ".treelh" << endl;
 		}
 		if (params.print_site_lh) {
-			cout << "  Site log-likelihoods:     " << params.treeset_file << ".sitelh" << endl;
+			cout << "  Site log-likelihoods:     " << params.out_prefix << ".sitelh" << endl;
 		}
 	}
 	cout << "  Screen log file:          " << params.out_prefix << ".log"
@@ -1393,6 +1393,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();
     }
+    iqtree.setRootNode(params.root); // Important for NNI below
+
 	if (params.min_iterations > 0) {
 		createFirstNNITree(params, iqtree, iqtree.curScore, alignment);
 		if (iqtree.isSuperTree())

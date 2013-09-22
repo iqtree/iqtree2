@@ -110,6 +110,8 @@ struct SwapNNIParam {
     double nni2_brlen;
     Neighbor* node1_nei;
     Neighbor* node2_nei;
+    double *nni1_ptnlh;
+    double *nni2_ptnlh;
 };
 
 /**
@@ -178,6 +180,9 @@ Phylogenetic Tree class
         @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
  */
 class PhyloTree : public MTree, public Optimization {
+
+	friend class PhyloSuperTree;
+
 public:
     /**
        default constructor ( everything is initialized to NULL)
