@@ -342,6 +342,11 @@ struct NNIInfo {
  */
 struct Params {
 
+	/**
+	 *  Carry out iterated local search using NNI only.
+	 *  From the local maximum, apply some negative NNIs and the continue with the local search
+	 */
+	bool ilsnni;
 
 	bool cherry;
 

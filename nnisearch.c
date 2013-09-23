@@ -26,11 +26,13 @@ enum VerboseMode {
  */
 extern int verbose_mode;
 
-
+/* program options */
 double TOL_LIKELIHOOD_PHYLOLIB;
 int numSmoothTree;
 int fast_eval;
 int fivebran;
+/* program options */
+
 
 int treeReadLenString(const char *buffer, tree *tr, pl_boolean readBranches,
         pl_boolean readNodeLabels, pl_boolean topologyOnly) {
