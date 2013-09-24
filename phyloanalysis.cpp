@@ -203,12 +203,12 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 
 		}
 
-		if (tree.aln->num_states > 4)
+		//if (tree.aln->num_states > 4)
 			out << endl;
 		out.unsetf(ios_base::fixed);
 		delete[] rate_mat;
 	}
-	out << endl << "State frequencies: ";
+	out << "State frequencies: ";
 	if (tree.getModel()->isSiteSpecificModel())
 		out << "(site specific frequencies)" << endl << endl;
 	else {
@@ -763,10 +763,10 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		date_str = ctime(&cur_time);
 		out.unsetf(ios_base::fixed);
 		out << "TIME STAMP" << endl << "----------" << endl << endl
-				<< "Date and time: " << date_str << "CPU time used: "
-				<< (double) params.run_time << " seconds" << endl
-				<< "Wall time used: " << getRealTime() - params.start_real_time
-				<< " seconds" << endl << endl;
+				<< "Date and time: " << date_str << "Total CPU time used: "
+				<< (double) params.run_time << " seconds (" << convert_time(params.run_time) << ")" << endl
+				<< "Total wall-clock time used: " << getRealTime() - params.start_real_time
+				<< " seconds (" << convert_time(getRealTime() - params.start_real_time) << ")" << endl << endl;
 
 		//reportCredits(out); // not needed, now in the manual
 		out.close();
@@ -1041,7 +1041,7 @@ void computeParsimonyTreeRax(Params& params, IQTree& iqtree, Alignment *alignmen
 	allocateParsimonyDataStructures(iqtree.phyloTree);
 	makeParsimonyTreeFast(iqtree.phyloTree);
 	freeParsimonyDataStructures(iqtree.phyloTree);
-	cout << "CPU total time for creating parsimony tree: "
+	cout << "Total CPU time for creating parsimony tree: "
 			<< (getCPUTime() - t_parsimony_start) << " seconds." << endl;
 }
 
@@ -1663,9 +1663,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	cout << endl;
 	cout << "CPU time used for tree reconstruction: " << treeSearchTime
 			<< " sec (" << convert_time(treeSearchTime) << ")" << endl;
-	cout << "CPU total time used: " << (double) params.run_time << " sec ("
+	cout << "Total CPU time used: " << (double) params.run_time << " sec ("
 			<< convert_time((double) params.run_time) << ")" << endl;
-	cout << "Wall-clock total time used: "
+	cout << "Total wall-clock time used: "
 			<< getRealTime() - params.start_real_time << " sec ("
 			<< convert_time(getRealTime() - params.start_real_time) << ")"
 			<< endl;
@@ -1924,7 +1924,7 @@ void runPhyloAnalysis(Params &params) {
 		} else
 			cout << endl;
 
-		cout << "CPU total time for bootstrap: " << (getCPUTime() - start_time)
+		cout << "Total CPU time for bootstrap: " << (getCPUTime() - start_time)
 				<< " seconds." << endl << endl;
 		cout << "Non-parametric bootstrap results written to:" << endl;
 		if (params.print_bootaln)

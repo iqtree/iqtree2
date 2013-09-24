@@ -275,7 +275,7 @@ string convert_time(const double sec) {
     int mins = (sec_int % 3600) / 60;
     int hours = sec_int / 3600;
     stringstream ss;
-    ss << hours << ":" << mins << ":" << secs;
+    ss << hours << "h:" << mins << "m:" << secs << "s";
     return ss.str();
 }
 
