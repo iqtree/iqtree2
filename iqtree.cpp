@@ -1740,14 +1740,14 @@ void IQTree::estDeltaMin() {
 }
 
 void IQTree::changeBranLen(PhyloNode *node1, PhyloNode *node2, double newlen) {
-    (PhyloNeighbor*) node1->findNeighbor(node2)->length = newlen;
-    (PhyloNeighbor*) node2->findNeighbor(node1)->length = newlen;
+    node1->findNeighbor(node2)->length = newlen;
+    node2->findNeighbor(node1)->length = newlen;
     node1->clearReversePartialLh(node2);
     node2->clearReversePartialLh(node1);
 }
 
 double IQTree::getBranLen(PhyloNode *node1, PhyloNode *node2) {
-    return (PhyloNeighbor*) node1->findNeighbor(node2)->length;
+    return  node1->findNeighbor(node2)->length;
 }
 
 void IQTree::saveBranLens(PhyloNode *node, PhyloNode *dad) {
@@ -1771,9 +1771,9 @@ void IQTree::restoreAllBranLen(PhyloNode *node, PhyloNode *dad) {
     }
     if (dad) {
         string key = nodePair2String(node, dad);
-        (PhyloNeighbor*) bran_it = (PhyloNeighbor*) node->findNeighbor(dad);
+        Neighbor* bran_it = node->findNeighbor(dad);
         assert(bran_it);
-        (PhyloNeighbor*) bran_it_back = (PhyloNeighbor*) dad->findNeighbor(node);
+        Neighbor* bran_it_back = dad->findNeighbor(node);
         assert(bran_it_back);
         assert(savedBranLens.count(key));
         bran_it->length = savedBranLens[key];
