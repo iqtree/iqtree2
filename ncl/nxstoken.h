@@ -521,6 +521,13 @@ inline void NxsToken::GetNextContiguousToken(char stop_char) {
 		}
 		AppendToToken(ch);
 	}
+	// Skip ending whitespace
+	if (token.empty()) return;
+	NxsString::iterator last = token.end();
+	while (last != token.begin() && IsWhitespace(*(last-1))) {
+		last--;
+	}
+	if (last != token.end()) token.erase(last, token.end());
 }
 
 #endif

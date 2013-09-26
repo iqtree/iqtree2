@@ -480,11 +480,12 @@ void PhyloSuperTree::initPartitionInfo() {
 		if (!part_info[part].mem_ptnlh)
 			part_info[part].mem_ptnlh = new double[nptn * ((*it)->branchNum * 3 + 1)];
 
-		part_info[part].nni1_ptnlh.resize((*it)->branchNum, NULL);
 		vector<double*>::iterator dit;
 		double *offset = part_info[part].mem_ptnlh;
 		part_info[part].cur_ptnlh = offset;
 		offset += nptn;
+
+		part_info[part].nni1_ptnlh.resize((*it)->branchNum, NULL);
 		for (dit = part_info[part].nni1_ptnlh.begin(); dit != part_info[part].nni1_ptnlh.end(); dit++, offset += nptn)
 			(*dit) = offset;
 		part_info[part].nni2_ptnlh.resize((*it)->branchNum, NULL);
@@ -507,6 +508,11 @@ int PhyloSuperTree::getMaxPartNameLength() {
 NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, bool useLS, double lh_contribution) {
     NNIMove myMove;
     myMove.loglh = 0;
+
+    /*
+    if (node1->id == 84 && node2->id == 83) {
+    	cout << "here" << endl;
+    }*/
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
 	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
 	assert(nei1 && nei2);
@@ -616,6 +622,12 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 	if (save_all_trees != 2) return myMove;
 
 	// for bootstrap now
+    //now setup pattern likelihoods per partition
+    //DoubleVector save_lh_factor, save_lh_factor_back;
+    //save_lh_factor.resize(ntrees, 0);
+    //save_lh_factor_back.resize(ntrees, 0);
+	double *save_lh_factor = new double [ntrees];
+	double *save_lh_factor_back = new double [ntrees];
 	int nnino = 0;
 	FOR_NEIGHBOR(node2, node1, node2_it) {
 
@@ -626,10 +638,6 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
         node2->updateNeighbor(node2_it, node1_nei);
         node1_nei->node->updateNeighbor(node1, node2);
 
-        //now setup pattern likelihoods per partition
-        DoubleVector save_lh_factor, save_lh_factor_back;
-        save_lh_factor.resize(ntrees);
-        save_lh_factor_back.resize(ntrees);
         for (part = 0; part < ntrees; part++) {
     		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
     		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
@@ -676,7 +684,8 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 
 	}
 
-
+	delete [] save_lh_factor_back;
+	delete [] save_lh_factor;
 	return myMove;
 }
 

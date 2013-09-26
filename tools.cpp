@@ -275,7 +275,7 @@ string convert_time(const double sec) {
     int mins = (sec_int % 3600) / 60;
     int hours = sec_int / 3600;
     stringstream ss;
-    ss << hours << ":" << mins << ":" << secs;
+    ss << hours << "h:" << mins << "m:" << secs << "s";
     return ss.str();
 }
 
@@ -642,7 +642,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5Branches = false;
+    params.nni5Branches = true;
     params.nniThresHold = 0.1;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
@@ -710,7 +710,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.online_bootstrap = true;
     params.min_correlation = 0.99;
     params.step_iterations = 100;
-    params.store_candidate_trees = true;
+    params.store_candidate_trees = false;
 	params.print_ufboot_trees = false;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;
@@ -1560,6 +1560,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.online_bootstrap = false;
             } else if (strcmp(argv[cnt], "-nostore") == 0 || strcmp(argv[cnt], "-memsave") == 0) {
                 params.store_candidate_trees = false;
+            } else if (strcmp(argv[cnt], "-storetrees") == 0) {
+                params.store_candidate_trees = true;
             } else if (strcmp(argv[cnt], "-nodiff") == 0) {
                 params.distinct_trees = false;
             } else if (strcmp(argv[cnt], "-norell") == 0) {
@@ -1609,6 +1611,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.leastSquareBranch = true;
             } else if (strcmp(argv[cnt], "-fivebran") == 0) {
             	params.nni5Branches = true;
+            } else if (strcmp(argv[cnt], "-onebran") == 0) {
+            	params.nni5Branches = false;
             } else if (strcmp(argv[cnt], "-nniThreshold") == 0) {
             	cnt++;
             	if (cnt >= argc)
