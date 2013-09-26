@@ -2113,6 +2113,7 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
                     for (id = 0; id < IT_NUM; id++) {
                         delete[] ((PhyloNeighbor*) *saved_it[id])->scale_num;
                         delete[] ((PhyloNeighbor*) *saved_it[id])->partial_lh;
+
                         delete (*saved_it[id]);
                         (*saved_it[id]) = saved_nei[id];
                     }
@@ -2122,6 +2123,12 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
                         (*it)->length = (*it)->node->findNeighbor(node1)->length;
                     FOR_NEIGHBOR(node2, node1, it)
                         (*it)->length = (*it)->node->findNeighbor(node2)->length;
+            	}
+            	// update _pattern_lh vector for bootstrap
+            	current_it = node1_node2_nei;
+            	current_it_back = node2_node1_nei;
+            	if (save_all_trees == 2) {
+            		computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
             	}
 
             } else {
