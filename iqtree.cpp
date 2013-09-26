@@ -163,7 +163,7 @@ void IQTree::setParams(Params &params) {
     setRootNode(params.root);
 
     if (params.online_bootstrap && params.gbo_replicates > 0) {
-        cout << "Generating " << params.gbo_replicates << " samples for ultra-fast bootstrap..." << endl;
+        cout << "Generating " << params.gbo_replicates << " samples for ultrafast bootstrap..." << endl;
         boot_samples.resize(params.gbo_replicates);
         boot_logl.resize(params.gbo_replicates, -DBL_MAX);
         boot_trees.resize(params.gbo_replicates, -1);

@@ -496,6 +496,12 @@ struct Params {
     char *partition_type;
 
     /**
+     * 		used for partition model with proportional branch lengths,
+     * 		indicates whether rates are fixed, if yes, they should be specified in partition_file
+     */
+    char *partition_fixed_rates;
+
+    /**
             B, D, or P for Binary, DNA, or Protein sequences
      */
     char *sequence_type;

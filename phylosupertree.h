@@ -191,7 +191,7 @@ public:
 	/**
 		compute the weighted average of branch lengths over partitions
 	*/
-	void computeBranchLengths();
+	virtual void computeBranchLengths();
 
 	/**
 	 * print debug information about all maps

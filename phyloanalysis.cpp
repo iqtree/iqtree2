@@ -24,6 +24,7 @@
 #include <iqtree_config.h>
 #include "phylotree.h"
 #include "phylosupertree.h"
+#include "phylosupertreeplen.h"
 #include "phyloanalysis.h"
 #include "alignment.h"
 #include "superalignment.h"
@@ -1257,6 +1258,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					<< alignment.getNSite() << " partitions and "
 					<< tree.getAlnNSite() << " total sites ("
 					<< ((SuperAlignment*)tree.aln)->computeMissingData()*100 << "% missing data)" << endl << endl;
+
 			PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
 			int namelen = 0;
 			int part;
@@ -2011,10 +2013,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.setSpeed_conf(params.speed_conf);
 	try {
 		if (!iqtree.getModelFactory()) {
-			if (iqtree.isSuperTree())
-				iqtree.setModelFactory(
-						new PartitionModel(params, (PhyloSuperTree*) &iqtree));
-			else {
+			if (iqtree.isSuperTree()){
+				if(params.partition_type){
+					iqtree.setModelFactory(
+							new PartitionModelPlen(params, (PhyloSuperTreePlen*) &iqtree));
+				} else
+					iqtree.setModelFactory(
+							new PartitionModel(params, (PhyloSuperTree*) &iqtree));
+			} else {
 				/*
 				if (params.raxmllib && alignment->num_states == 4) {
 					// phylolib only supports GTR+G. Therefore the model will be force to GTR+G
@@ -2033,7 +2039,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	iqtree.setRate(iqtree.getModelFactory()->site_rate);
 	iqtree.setStartLambda(params.lambda);
 	if (iqtree.isSuperTree())
-		((PhyloSuperTree*) &iqtree)->mapTrees();
+			((PhyloSuperTree*) &iqtree)->mapTrees();
+
     // string to store the current tree with taxon id and branch lengths
     stringstream best_tree_string;
     iqtree.setParams(params);
@@ -2051,6 +2058,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
     bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
 			params.fixed_branch_length, true, TOL_LIKELIHOOD);
 
+
 	// Save current tree to a string
     iqtree.curScore = bestTreeScore;
 	iqtree.printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
@@ -2060,6 +2068,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params,
 				alignment, bestTreeScore);
 	}
+/*    if(iqtree.isSuperTree())
+    	for (int part = 0; part < ((PhyloSuperTree*) &iqtree)->size(); part++){
+    		cout<<"Partition "<<part<<" rate: "<<((PhyloSuperTree*) &iqtree)->part_info[part].part_rate<<endl;
+        	((PhyloSuperTree*) &iqtree)->at(part)->printTree(cout);
+        	cout<<endl;
+    	}*/
 
     // Recreate the BIONJ tree using the newly computed ML distances
 	if (!params.user_file) {
@@ -2072,23 +2086,32 @@ void runPhyloAnalysis(Params &params, string &original_model,
                 cout << endl;
             }
         }
-		if (iqtree.isSuperTree())
-			((PhyloSuperTree*) (&iqtree))->mapTrees();
+    	if (iqtree.isSuperTree() ){
+    		if(params.partition_type)
+    			((PhyloSuperTreePlen*) &iqtree)->mapTrees();
+    		else
+    			((PhyloSuperTree*) &iqtree)->mapTrees();
+    	}
 
         if (!params.fixed_branch_length && !params.leastSquareBranch) {
 			iqtree.curScore = iqtree.optimizeAllBranches();
         } else {
 			iqtree.curScore = iqtree.computeLikelihood();
-
         }
         cout << "Log-likelihood of the BIONJ tree created from ML distances: " << iqtree.curScore << endl;
         if (iqtree.curScore < (bestTreeScore - params.loglh_epsilon) && !params.leastSquareBranch) {
 			cout << "Rolling back the first tree..." << endl;
 			iqtree.rollBack(best_tree_string);
 			if (iqtree.isSuperTree()) {
-				((PhyloSuperTree*) (&iqtree))->mapTrees();
-				iqtree.optimizeAllBranches();
+				if(params.partition_type){
+					((PhyloSuperTreePlen*) (&iqtree))->mapTrees();
+					iqtree.optimizeAllBranches();
+				}else{
+					((PhyloSuperTree*) (&iqtree))->mapTrees();
+					iqtree.optimizeAllBranches();
+				}
 			}
+
 			iqtree.curScore = iqtree.computeLikelihood();
 			cout << "Backup log-likelihood: " << iqtree.curScore << endl;
 		}
@@ -2199,6 +2222,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	if (iqtree.isSuperTree())
 		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+
 	/*
 	 if ((tree.getModel()->name == "JC") && tree.getRate()->getNDim() == 0)
 	 params.compute_ml_dist = false;*/
@@ -2360,7 +2384,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	}
 
 	if (iqtree.isSuperTree())
-		((PhyloSuperTree*) &iqtree)->mapTrees();
+			((PhyloSuperTree*) &iqtree)->mapTrees();
 
 	if (params.min_iterations) {
 		cout << endl;
@@ -2525,7 +2549,7 @@ void runPhyloAnalysis(Params &params) {
 	vector<ModelInfo> model_info;
 	// read in alignment
 	if (params.partition_file) {
-		if(strcmp(params.partition_type,"p")==0){
+		if(params.partition_type){
 			// initialize supertree - Proportional Edges case, "-spt p" option
 			tree = new PhyloSuperTreePlen(params);
 		} else {
@@ -2669,11 +2693,17 @@ void runPhyloAnalysis(Params &params) {
 				boot_lh.close();
 			}
 			IQTree *boot_tree;
-			if (alignment->isSuperAlignment())
-				boot_tree = new PhyloSuperTree(
-						(SuperAlignment*) bootstrap_alignment,
-						(PhyloSuperTree*) tree);
-			else
+			if (alignment->isSuperAlignment()){
+				if(params.partition_type){
+					boot_tree = new PhyloSuperTreePlen(
+											(SuperAlignment*) bootstrap_alignment,
+											(PhyloSuperTree*) tree);
+				} else {
+					boot_tree = new PhyloSuperTree(
+											(SuperAlignment*) bootstrap_alignment,
+											(PhyloSuperTree*) tree);
+				}
+			} else
 				boot_tree = new IQTree(bootstrap_alignment);
 			if (params.print_bootaln)
 				bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
