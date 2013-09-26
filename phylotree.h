@@ -1147,10 +1147,12 @@ protected:
 
     /**
             current branch iterator, used by computeFunction() to optimize branch lengths
+            and by computePatternLikelihood() to compute all pattern likelihoods
      */
     PhyloNeighbor *current_it;
     /**
             current branch iterator of the other end, used by computeFunction() to optimize branch lengths
+            and by computePatternLikelihood() to compute all pattern likelihoods
      */
     PhyloNeighbor *current_it_back;
 
