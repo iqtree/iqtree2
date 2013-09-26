@@ -36,7 +36,8 @@ const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEAS
 const double MAX_BRANCH_LEN = 9.0;
 const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
-const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
+//const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
+const static double SCALING_THRESHOLD = 1e-100;
 const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
 const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
 const int SPR_DEPTH = 2;
@@ -109,6 +110,8 @@ struct SwapNNIParam {
     double nni2_brlen;
     Neighbor* node1_nei;
     Neighbor* node2_nei;
+    double *nni1_ptnlh;
+    double *nni2_ptnlh;
 };
 
 /**
@@ -177,6 +180,9 @@ Phylogenetic Tree class
         @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
  */
 class PhyloTree : public MTree, public Optimization {
+
+	friend class PhyloSuperTree;
+
 public:
     /**
        default constructor ( everything is initialized to NULL)
@@ -1085,6 +1091,12 @@ public:
      *
      */
     void printTransMatrices(Node *node = NULL, Node *dad = NULL);
+
+    /**
+     * compute the memory size required for storing partial likelihood vectors
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequired();
 
 protected:
     

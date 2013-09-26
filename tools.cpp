@@ -150,6 +150,12 @@ string convertIntToString(int number) {
     return ss.str(); //return a string with the contents of the stream
 }
 
+string convertDoubleToString(double number) {
+    stringstream ss; //create a stringstream
+    ss << number; //add number to the stream
+    return ss.str(); //return a string with the contents of the stream
+}
+
 //From Tung
 
 bool copyFile(const char SRC[], const char DEST[]) {
@@ -649,6 +655,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_condition = SC_FIXED_ITERATION;
     params.stop_confidence = 0.95;
     params.model_name = "";
+    params.model_set = NULL;
     params.store_trans_matrix = false;
     params.freq_type = FREQ_EMPIRICAL;
     //params.freq_type = FREQ_UNKNOWN;
@@ -656,6 +663,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.gamma_shape = -1.0;
     params.gamma_median = false;
     params.p_invar_sites = -1.0;
+    params.optimize_gamma_invar_by_bfgs = false;
     params.optimize_by_newton = true;
     params.fixed_branch_length = false;
     params.iqp_assess_quartet = IQP_DISTANCE;
@@ -726,7 +734,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.fast_branch_opt = false;
     params.par_vs_bionj = false;
     params.tabu = false;
-    params.del_sub = false;
+    params.cherry = false;
     params.random_restart = false;
     params.avh_test = 0;
     params.site_freq_file = NULL;
@@ -1234,6 +1242,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -mod <model_name>";
                 params.model_name = argv[cnt];
+            } else if (strcmp(argv[cnt], "-mset") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -mset <model_set>";
+                params.model_set = argv[cnt];
             } else if (strcmp(argv[cnt], "-mh") == 0) {
                 params.mvh_site_rate = true;
                 params.discard_saturated_site = false;
@@ -1313,6 +1326,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (params.p_invar_sites < 0) throw "Wrong number of proportion of invariable sites";
             } else if (strcmp(argv[cnt], "-brent") == 0) {
                 params.optimize_by_newton = false;
+            } else if (strcmp(argv[cnt], "-ginvar") == 0) {
+                params.optimize_gamma_invar_by_bfgs = true;
+            } else if (strcmp(argv[cnt], "-brent_ginvar") == 0) {
+                params.optimize_gamma_invar_by_bfgs = false;
             } else if (strcmp(argv[cnt], "-fixbr") == 0) {
                 params.fixed_branch_length = true;
             } else if (strcmp(argv[cnt], "-sr") == 0) {
@@ -1584,6 +1601,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-tabu") == 0) {
                 params.tabu = true;
+            } else if (strcmp(argv[cnt], "-cherry") == 0) {
+            	params.cherry = true;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
@@ -1818,12 +1837,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -omp <#cpu_cores>    Number of cores/threads to use (default: all cores)" << endl
 #endif
             << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
-            << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (default: none)" << endl
+            << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
             << "  -bo <#replicates>    Bootstrap only" << endl
             << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
             << endl << "ULTRA-FAST BOOTSTRAP:" << endl
-            << "  -bb <#replicates>    Ultra-fast bootstrap" << endl
+            << "  -bb <#replicates>    Ultra-fast bootstrap (>=1000)" << endl
             << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
             << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
@@ -2226,6 +2245,7 @@ double Normalz(double z) /*VAR returns cumulative probability from -oo to z VAR 
     }
     return (z > 0.0 ? ((x + 1.0) * 0.5) : ((1.0 - x) * 0.5));
 }
+
 
 /**************  ChiSquare: probability of chi square value *************/
 

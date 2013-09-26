@@ -179,7 +179,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	if (model_str.find('+') != string::npos) {
 		//string rate_str = model_str.substr(pos);
 		if (posI != string::npos && posG != string::npos) {
-			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median, p_invar_sites, tree);
+			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
+					p_invar_sites, params.optimize_gamma_invar_by_bfgs, tree);
 		} else if (posI != string::npos) {
 			site_rate = new RateInvar(p_invar_sites, tree);
 		} else if (posG != string::npos) {

@@ -203,6 +203,8 @@ public:
 	*/
 	virtual void initPartitionInfo();
 
+	int getMaxPartNameLength();
+
 	/**
 		partition information
 	*/
@@ -212,7 +214,18 @@ public:
             get the name of the model
     */
     virtual string getModelName();
-	
+	/**
+	 * extract subtree containing all taxa from partition IDs
+	 * @param ids partitions IDs
+	 * @return subtree
+	 */
+    PhyloTree *extractSubtree(IntVector &ids);
+
+    /**
+     * compute the memory size required for storing partial likelihood vectors
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequired();
 
 };
 

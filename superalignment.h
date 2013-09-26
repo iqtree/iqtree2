@@ -42,6 +42,12 @@ struct PartitionInfo {
 	DoubleVector opt_brlen;  // optimized branch lengths for every branch
 	DoubleVector nni1_brlen; // branch length for 1st NNI for every branch
 	DoubleVector nni2_brlen; // branch length for 2nd NNI for every branch
+
+	double *mem_ptnlh; // total memory allocated for all pattern likelihood vectors
+	double *cur_ptnlh; // current pattern likelihoods of the tree
+	vector<double* > opt_ptnlh; // pattern likelihoods of tree where one branch is optimized
+	vector<double* > nni1_ptnlh; // pattern likelihoods of 1st NNI tree
+	vector<double* > nni2_ptnlh; // pattern likelihoods of 2nd NNI tree
 };
 
 class PhyloSuperTree;
@@ -179,6 +185,14 @@ public:
 		matrix represents the index of taxon i in partition j, -1 if the taxon is not present
 	*/
 	vector<IntVector> taxa_index;
+
+	/**
+	 * concatenate subset of alignments
+	 * @param ids IDs of sub-alignments
+	 * @return concatenated alignment
+	 */
+    Alignment *concatenateAlignments(IntVector &ids);
+
 
 };
 

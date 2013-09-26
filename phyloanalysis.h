@@ -23,18 +23,10 @@
 
 #include "tools.h"
 #include "mexttree.h"
+#include "phylotesting.h"
 
 class PhyloTree;
 class IQTree;
-
-struct ModelInfo {
-	string name;
-	double logl;
-	double AIC_score, AICc_score, BIC_score;
-	double AIC_weight, AICc_weight, BIC_weight;
-	bool AIC_conf, AICc_conf, BIC_conf;
-};
-
 
 /**
 	main function to carry out phylogenetic inference
@@ -42,10 +34,8 @@ struct ModelInfo {
 */
 void runPhyloAnalysis(Params &params);
 
-void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignment,
+void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignment,
 		IQTree &tree, vector<ModelInfo> &model_info);
-
-void evaluateTrees(Params &params, IQTree *tree);
 
 /**
 	take the collection of trees from input_trees, it assign support values to target_tree

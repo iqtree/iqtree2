@@ -342,7 +342,8 @@ struct NNIInfo {
  */
 struct Params {
 
-	bool del_sub;
+
+	bool cherry;
 
     /**
      *  Evaluating NNI without re-optimizing the central branch
@@ -403,7 +404,7 @@ struct Params {
     bool par_vs_bionj;
 
     /**
-     *
+     *  Maximum running time of the tree search in minutes
      */
     double maxtime;
 
@@ -423,7 +424,7 @@ struct Params {
     bool parbran;
 
     /**
-     *  option to turn on raxml library
+     *  option to turn on phylogenetic library
      */
     bool phylolib;
 
@@ -910,6 +911,9 @@ struct Params {
      */
     string model_name;
 
+    /** set of models for testing */
+    char *model_set;
+
     /**
             TRUE to store transition matrix into a hash table for computation efficiency
      */
@@ -940,6 +944,9 @@ struct Params {
             proportion of invariable sites
      */
     double p_invar_sites;
+
+    /** TRUE to optimize gamma shape and p_invar simultaneously by BFGS, default: FALSE */
+    bool optimize_gamma_invar_by_bfgs;
 
     /**
             TRUE if you want to optimize branch lengths by Newton-Raphson method
@@ -1426,6 +1433,8 @@ const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
  */
 string convertIntToString(int number);
 
+string convertDoubleToString(double number);
+
 /**
  *
  * @param SRC
@@ -1456,6 +1465,11 @@ int convert_int(const char *str) throw (string);
  */
 int convert_int(const char *str, int &end_pos) throw (string);
 
+/**
+        convert comma-separated string to integer vector, with error checking
+        @param str original string with integers separated by comma
+        @param vec (OUT) integer vector
+ */
 void convert_int_vec(const char *str, IntVector &vec) throw (string);
 
 /**
@@ -1619,6 +1633,15 @@ void get2RandNumb(const int size, int &first, int &second);
 inline double getCPUTime(clock_t startTime) {
         return double(clock() - startTime) / CLOCKS_PER_SEC;
 }*/
+
+
+/**
+ *  Fills the range [first, last) with sequentially increasing values,
+ *  starting with value and repetitively evaluating ++value.
+ *  Introduced in C++11 --> this is a reimplementation
+ */
+template<class ForwardIterator, class T>
+void iota( ForwardIterator first, ForwardIterator last, T value );
 
 /**
         compute p-value for a chi-square value

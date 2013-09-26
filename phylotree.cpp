@@ -239,7 +239,10 @@ void PhyloTree::clearAllPartialLH() {
 }
 
 string PhyloTree::getModelName() {
-    return model->name + site_rate->name;
+	if (model->getFreqType() == FREQ_EMPIRICAL)
+		return model->name + site_rate->name + "+F";
+	else
+		return model->name + site_rate->name;
 }
 
 /****************************************************************************
@@ -1030,24 +1033,25 @@ void PhyloTree::initializeAllPartialLh() {
     assert(index == (nodeNum - 1) * 2);
 }
 
+uint64_t PhyloTree::getMemoryRequired() {
+	uint64_t block_size = ((aln->getNPattern() % 2) == 0) ? aln->getNPattern() : (aln->getNPattern() + 1);
+    block_size = block_size * aln->num_states;
+    if (site_rate)
+    	block_size *= site_rate->getNRate();
+    uint64_t mem_size = ((uint64_t) leafNum - 1) * 4 * block_size + 2;
+    return mem_size;
+}
+
 void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
     size_t pars_block_size = getBitsBlockSize();
     size_t scale_block_size = aln->size();
-    size_t block_size = ((getAlnNPattern() % 2) == 0) ? getAlnNPattern() : (getAlnNPattern() + 1);
+    size_t block_size = ((aln->getNPattern() % 2) == 0) ? aln->getNPattern() : (aln->getNPattern() + 1);
     block_size = block_size * model->num_states * site_rate->getNRate();
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
         if (!central_partial_lh) {
             uint64_t mem_size = ((uint64_t) leafNum - 1) * 4 * (uint64_t) block_size + 2;
-            if (verbose_mode >= VB_MIN)
-                cout << "Note: This run requires " << (double) mem_size * sizeof(double) / (1024.0 * 1024)
-                        << " MB memory for partial likelihood vectors" << endl;
-            if (mem_size >= getMemorySize()) {
-                cout << "********************* IMPORTANT WARNING *******************" << endl;
-                outWarning("Size of partial likelihood vectors exceeds your RAM size");
-                outWarning("Please switch to another computer with larger RAM");
-            }
             central_partial_lh = new double[mem_size];
             //central_partial_lh = (double*) Eigen::internal::conditional_aligned_malloc<true>((leafNum-1)*4*block_size);
             if (!central_partial_lh)
@@ -2173,6 +2177,11 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
          }
          */
         // Tung beo's trick
+        if (lh_ptn<=0) {
+            cout << "Abnormal " << __func__;
+            abort();
+        }
+
         lh_ptn = lh_ptn * p_var_cat;
         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
             lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
@@ -2851,12 +2860,16 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
             // compute the score of the swapped topology
             score = optimizeOneBranch(node1, node2, false);
             if (nni_param) {
+            	if (verbose_mode >= VB_MAX)
+            		printTree(cout, WT_BR_LEN + WT_NEWLINE);
                 if (cnt == 0) {
                     nni_param->nni1_score = score;
                     nni_param->nni1_brlen = node12_it->length;
+                    computePatternLikelihood(nni_param->nni1_ptnlh, &score);
                 } else {
                     nni_param->nni2_score = score;
                     nni_param->nni2_brlen = node12_it->length;
+                    computePatternLikelihood(nni_param->nni2_ptnlh, &score);
                 }
             }
         }

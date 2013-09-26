@@ -35,6 +35,9 @@ Discrete gamma distributed site-rate model from Yang 1994
 */
 class RateGamma: virtual public RateHeterogeneity
 {
+
+	friend class RateGammaInvar;
+
 public:
 	/**
 		constructor

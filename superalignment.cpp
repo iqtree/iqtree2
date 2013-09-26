@@ -17,6 +17,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
+#include <stdarg.h>
 #include "phylotree.h"
 #include "superalignment.h"
 #include "phylosupertree.h"
@@ -151,8 +153,17 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
 
 void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq, const char *spec) {
 	if (!isSuperAlignment()) outError("Internal error: ", __func__);
-	if (spec && strncmp(spec, "GENE", 4) != 0) outError("Unsupported yet.", __func__);
+	int nptn = 0;
+	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
+		nptn += (*it)->getNPattern();
+	}
+	pattern_freq.resize(0);
+	int *internal_freq = new int[nptn];
+	createBootstrapAlignment(internal_freq, spec);
+	pattern_freq.insert(pattern_freq.end(), internal_freq, internal_freq + nptn);
+	delete [] internal_freq;
 
+/*	if (spec && strncmp(spec, "GENE", 4) != 0) outError("Unsupported yet.", __func__);
 
 	int offset = 0;
 	if (!pattern_freq.empty()) pattern_freq.resize(0);
@@ -168,8 +179,8 @@ void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq, const cha
 		pattern_freq.resize(nptn, 0);
 		for (int i = 0; i < partitions.size(); i++) {
 			int part = random_int(partitions.size());
-			for (int j = part_pos[i]; j < part_pos[i] + partitions[part]->getNPattern(); j++)
-				pattern_freq[j] += partitions[part]->at(j).frequency;
+			for (int j = 0; j < partitions[part]->getNPattern(); j++)
+				pattern_freq[j + part_pos[part]] += partitions[part]->at(j).frequency;
 		}
 	} else {
 		// resampling sites within genes
@@ -179,15 +190,14 @@ void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq, const cha
 			pattern_freq.insert(pattern_freq.end(), freq.begin(), freq.end());
 			offset += freq.size();
 		}
-	}
+	}*/
 }
 
 
 void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spec) {
 	if (!isSuperAlignment()) outError("Internal error: ", __func__);
-	if (spec && strncmp(spec, "GENE", 4) != 0) outError("Unsupported yet.", __func__);
+	if (spec && strncmp(spec, "GENE", 4) != 0) outError("Unsupported yet. ", __func__);
 
-	int offset = 0;
 	if (spec && strncmp(spec, "GENE", 4) == 0) {
 		// resampling whole genes
 		int nptn = 0;
@@ -199,11 +209,22 @@ void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spe
 		memset(pattern_freq, 0, nptn * sizeof(int));
 		for (int i = 0; i < partitions.size(); i++) {
 			int part = random_int(partitions.size());
-			for (int j = part_pos[i]; j < part_pos[i] + partitions[part]->getNPattern(); j++)
-				pattern_freq[j] += partitions[part]->at(j).frequency;
+			Alignment *aln = partitions[part];
+			if (strncmp(spec,"GENESITE",8) == 0) {
+				// then resampling sites in resampled gene
+				for (int j = 0; j < aln->getNSite(); j++) {
+					int ptn_id = aln->getPatternID(random_int(aln->getNPattern()));
+					pattern_freq[ptn_id + part_pos[part]]++;
+				}
+
+			} else {
+				for (int j = 0; j < aln->getNPattern(); j++)
+					pattern_freq[j + part_pos[part]] += aln->at(j).frequency;
+			}
 		}
 	} else {
 		// resampling sites within genes
+		int offset = 0;
 		for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
 			(*it)->createBootstrapAlignment(pattern_freq + offset);
 			offset += (*it)->getNPattern();
@@ -333,4 +354,57 @@ double SuperAlignment::computeMissingData() {
 	ret /= getNSeq() * len;
 	return 1.0 - ret;
 
+}
+
+Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
+	string union_taxa;
+	int nsites = 0, nstates = 0, i;
+	for (i = 0; i < ids.size(); i++) {
+		int id = ids[i];
+		if (id < 0 || id >= partitions.size())
+			outError("Internal error ", __func__);
+		if (nstates == 0) nstates = partitions[id]->num_states;
+		if (nstates != partitions[id]->num_states)
+			outError("Cannot concatenate sub-alignments of different type");
+
+		string taxa_set = getPattern(id);
+		nsites += partitions[id]->getNSite();
+		if (i == 0) union_taxa = taxa_set; else {
+			for (int j = 0; j < union_taxa.length(); j++)
+				if (taxa_set[j] == 1) union_taxa[j] = 1;
+		}
+	}
+
+	Alignment *aln = new Alignment;
+	for (i = 0; i < union_taxa.length(); i++)
+		if (union_taxa[i] == 1) {
+			aln->seq_names.push_back(getSeqName(i));
+		}
+	aln->num_states = nstates;
+	aln->site_pattern.resize(nsites, -1);
+    aln->clear();
+    aln->pattern_index.clear();
+
+    int site = 0;
+    for (i = 0; i < ids.size(); i++) {
+    	int id = ids[i];
+		string taxa_set = getPattern(id);
+    	for (Alignment::iterator it = partitions[id]->begin(); it != partitions[id]->end(); it++, site++) {
+    		Pattern pat;
+    		int part_seq = 0;
+    		for (int seq = 0; seq < union_taxa.size(); seq++)
+    			if (union_taxa[seq] == 1) {
+    				char ch = STATE_UNKNOWN;
+    				if (taxa_set[seq] == 1) {
+    					ch = (*it)[part_seq++];
+    				}
+    				pat.push_back(ch);
+    			}
+    		assert(part_seq == partitions[id]->getNSeq());
+    		aln->addPattern(pat, site, (*it).frequency);
+    	}
+    }
+    aln->countConstSite();
+
+	return aln;
 }

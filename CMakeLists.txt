@@ -2,7 +2,7 @@
 # IQ-TREE cmake build definition
 #########################################################
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 
 project(iqtree)
 # The version number.
@@ -39,6 +39,9 @@ endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX) 
 	message("Compiler      : GNU Compiler (gcc)")
+	#if (CMAKE_BUILD_TYPE STREQUAL "Release") 
+	#	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")  ## Strip binary
+	#endif()
 	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 else()
 	message("Compiler      : Unknown")
@@ -65,6 +68,10 @@ else()
 	SET(EXE_SUFFIX "")
 endif()
 
+if (CMAKE_BUILD_TYPE STREQUAL "Release") 
+	message("Builde mode   : Release + Strip")
+endif()
+
 # check existence of a few basic functions
 include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
 check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
@@ -81,6 +88,8 @@ configure_file (
 # add the binary tree to the search path for include files
 # so that we will find iqtree_config.h
 include_directories("${PROJECT_BINARY_DIR}")
+include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
+
 
 add_definitions(-DIQ_TREE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-unused-function -Wno-sign-compare -Wno-deprecated -pedantic -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
@@ -100,6 +109,7 @@ add_subdirectory(phylolib)
 add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
+add_subdirectory(zlib-1.2.7)
 
 # the main executable
 add_executable(iqtree
@@ -170,14 +180,15 @@ fmemopen.c
 nnisearch.c
 modelcodon.cpp
 phylosupertreeplen.cpp
+phylotesting.cpp
 )
 
 
 # link special lib for WIN32
 if (WIN32)
-	target_link_libraries(iqtree phylolib ncl whtest z sprng ws2_32)
+	target_link_libraries(iqtree phylolib ncl whtest zlibstatic sprng ws2_32)
 else (WIN32)
-	target_link_libraries(iqtree phylolib ncl whtest z sprng)
+	target_link_libraries(iqtree phylolib ncl whtest zlibstatic sprng)
 endif (WIN32)
 
 # setup the executable name properly
@@ -185,7 +196,6 @@ set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
 # strip the release build
 if (CMAKE_BUILD_TYPE STREQUAL "Release") 
-	message("Builde mode   : Release + Strip")
 	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
 endif()
 
@@ -222,7 +232,7 @@ endif(WIN32)
 #set(CPACK_SOURCE_PACKAGE_FILE_NAME
 #  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 set(CPACK_SOURCE_IGNORE_FILES
-  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;${CPACK_SOURCE_IGNORE_FILES}")
+  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;${CPACK_SOURCE_IGNORE_FILES}")
 
 set(CPACK_PACKAGE_FILE_NAME 
 	"${CMAKE_PROJECT_NAME}${EXE_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${CMAKE_SYSTEM_NAME}")

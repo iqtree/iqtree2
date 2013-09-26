@@ -113,8 +113,10 @@ void IQTree::setParams(Params &params) {
             params.p_delete = 0.3;
         else if (aln->getNSeq() < 200)
             params.p_delete = 0.2;
-        else
+        else if (aln->getNSeq() < 400)
             params.p_delete = 0.1;
+        else
+            params.p_delete = 0.05;
     }
     //tree.setProbDelete(params.p_delete);
     if (params.p_delete != 0.0) {
@@ -326,10 +328,59 @@ void IQTree::initLeafFrequency(PhyloNode *node, PhyloNode *dad) {
         }
 }
 
-void IQTree::deleteSubTree(PhyloNodeVector &del_leaves) {
-    NodeVector taxa;
-    // get the vector of taxa
-    getTaxa(taxa);
+void IQTree::clearLeafFrequency() {
+	for (vector<LeafFreq>::iterator it = leaf_freqs.begin(); it != leaf_freqs.end(); it++) {
+		(*it).freq = 0;
+	}
+}
+
+void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
+    NodeVector cherry_taxa;
+    NodeVector noncherry_taxa;
+    // get the vector of non cherry taxa
+    getNonCherryLeaves(noncherry_taxa, cherry_taxa);
+    root = NULL;
+    int num_taxa = aln->getNSeq();
+    int num_delete = k_delete;
+    if (num_delete > num_taxa - 4)
+        num_delete = num_taxa - 4;
+    if (verbose_mode >= VB_DEBUG) {
+        cout << "Deleting " << num_delete << " leaves" << endl;
+    }
+	vector<unsigned int> indices_noncherry(noncherry_taxa.size());
+	//iota(indices_noncherry.begin(), indices_noncherry.end(), 0);
+	unsigned int startValue = 0;
+	for (vector<unsigned int>::iterator it = indices_noncherry.begin(); it != indices_noncherry.end(); ++it) {
+		(*it) = startValue;
+		++startValue;
+	}
+	random_shuffle(indices_noncherry.begin(), indices_noncherry.end());
+	int i;
+	for (i = 0; i < num_delete && i < noncherry_taxa.size(); i++) {
+		PhyloNode *taxon = (PhyloNode*) noncherry_taxa[indices_noncherry[i]];
+		del_leaves.push_back(taxon);
+		deleteLeaf(taxon);
+		//cout << taxon->id << ", ";
+	}
+	int j = 0;
+	if (i < num_delete) {
+		vector<unsigned int> indices_cherry(cherry_taxa.size());
+		//iota(indices_cherry.begin(), indices_cherry.end(), 0);
+		startValue = 0;
+		for (vector<unsigned int>::iterator it = indices_cherry.begin(); it != indices_cherry.end(); ++it) {
+			(*it) = startValue;
+			++startValue;
+		}
+		random_shuffle(indices_cherry.begin(), indices_cherry.end());
+		while (i < num_delete) {
+			PhyloNode *taxon = (PhyloNode*) cherry_taxa[indices_cherry[j]];
+			del_leaves.push_back(taxon);
+			deleteLeaf(taxon);
+			i++;
+			j++;
+		}
+	}
+	root = cherry_taxa[j];
 }
 
 void IQTree::deleteNonTabuLeaves(PhyloNodeVector &del_leaves) {
@@ -670,9 +721,9 @@ double IQTree::doIQP() {
 
     if (params->tabu) {
         deleteNonTabuLeaves(del_leaves);
-    } else if (params->del_sub) {
+    } else if (params->cherry) {
     	// delete all leaves of a subtree
-    	deleteSubTree(del_leaves);
+    	deleteNonCherryLeaves(del_leaves);
     } else {
         deleteLeaves(del_leaves);
     }
@@ -831,7 +882,7 @@ double IQTree::perturb(int times) {
 //}
 
 void IQTree::doRandomRestart() {
-    int cur_iteration;
+    int curIQPIter;
     setRootNode(params->root);
     // keep the best tree into a string
     stringstream best_tree_string;
@@ -839,7 +890,7 @@ void IQTree::doRandomRestart() {
     stringstream best_tree_topo_ss;
     printTree(best_tree_topo_ss, WT_TAXON_ID + WT_SORT_TAXA);
     string best_tree_topo = best_tree_topo_ss.str();
-    for (cur_iteration = 2; cur_iteration < params->min_iterations; cur_iteration++) {
+    for (curIQPIter = 2; curIQPIter < params->min_iterations; curIQPIter++) {
         double min_elapsed = (getCPUTime() - params->startTime) / 60;
         if (min_elapsed > params->maxtime) {
             break;
@@ -863,7 +914,7 @@ void IQTree::doRandomRestart() {
             }
         }
         double cputime_secs = getCPUTime() - params->startTime;
-        cout << "Iteration " << cur_iteration << " / LogL: " << curScore << " / CPU time elapsed: "
+        cout << "Iteration " << curIQPIter << " / LogL: " << curScore << " / CPU time elapsed: "
                 << (int) round(cputime_secs) << "s" << endl;
         ;
 
@@ -944,6 +995,7 @@ double IQTree::doIQPNNI() {
         }
     }
     stop_rule.addImprovedIteration(1);
+
     bool speedupMsg = false;
     double prev_time = 0.0;
     if (params->tabu) {
@@ -1126,8 +1178,8 @@ double IQTree::doIQPNNI() {
         time(&cur_time);
         double cputime_secs = getCPUTime() - params->startTime;
         double cputime_remaining = (stop_rule.getNumIterations() - curIQPIter) * cputime_secs / (curIQPIter - 1);
-        /*double remaining_secs = (stop_rule.getNumIterations() - cur_iteration) *
-         elapsed_secs / (cur_iteration - 1);*/
+        /*double remaining_secs = (stop_rule.getNumIterations() - curIQPIter) *
+         elapsed_secs / (curIQPIter - 1);*/
         cout.setf(ios::fixed, ios::floatfield);
         bool printLog = false;
         if (cputime_secs >= prev_time + 10)
@@ -1211,6 +1263,7 @@ double IQTree::doIQPNNI() {
                     printResultTree(iter_string.str());
                 }
                 printResultTree();
+                clearLeafFrequency();
                 stop_rule.addImprovedIteration(curIQPIter);
 
                 // Variable Neighborhood search idea, reset k_delete if tree is better
@@ -1382,7 +1435,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         double newScore = optimizeAllBranches(params->numSmoothTree);
         if (newScore > curScore) {
             if (enableHeuris && curIQPIter > 1) {
-                if (vecImpProNNI.size() < 1000) {
+                if (vecImpProNNI.size() < 10000) {
                     vecImpProNNI.push_back((newScore - curScore) / nni2apply);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());
@@ -1436,7 +1489,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     bool foundBetterTree = (curScore > oldLH) ? true : false;
     if (foundBetterTree) {
         if (enableHeuris && curIQPIter > 1) {
-            if (vecNumNNI.size() < 1000) {
+            if (vecNumNNI.size() < 10000) {
                 vecNumNNI.push_back(nni_count);
             } else {
                 vecNumNNI.erase(vecNumNNI.begin());
@@ -1463,6 +1516,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 extern "C" double TOL_LIKELIHOOD_PHYLOLIB;
 extern "C" int numSmoothTree;
 extern "C" int fast_eval;
+extern "C" int fivebran;
 
 double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
     if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
@@ -1479,6 +1533,10 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
         fast_eval = 1;
     else
         fast_eval = 0;
+    if (params->nni5Branches)
+    	fivebran = 1;
+    else
+    	fivebran = 0;
     while (true) {
         if (beginHeu) {
             double maxScore = curLH + nni_delta_est * (nni_count_est - nniApplied);
@@ -1512,8 +1570,8 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
             nniRound++;
             //cout << "deltaNNI = " << deltaNNI << endl;
             //cout << "nni_count = " << nni_count << endl;
-            if (enableHeuris) {
-                if (vecNumNNI.size() < 1000) {
+            if (enableHeuris && curIQPIter > 1) {
+                if (vecImpProNNI.size() < 100000) {
                     vecImpProNNI.push_back(deltaNNI);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());
@@ -1537,8 +1595,8 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
         cout << "Number of NNI applied = " << nniApplied << endl;
         cout << "Number of NNI rounds = " << nniRound << endl;
     }
-    if (enableHeuris) {
-        if (vecNumNNI.size() < 1000) {
+    if (enableHeuris && curIQPIter > 1) {
+        if (vecNumNNI.size() < 10000) {
             vecNumNNI.push_back(nniApplied);
         } else {
             vecNumNNI.erase(vecNumNNI.begin());
@@ -1994,75 +2052,78 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
                 treelhs[nniNr] = computeLikelihoodBranch(node1_node2_nei, node1);
             } else if (params->nni5Branches) {
                 treelhs[nniNr] = optimizeOneBranch(node1, node2, false);
-                if (verbose_mode >= VB_DEBUG)
-                    cout << "Log-likelihood: " << treelhs[nniNr] << endl;
-                NeighborVec::iterator it;
-                const int IT_NUM = 6;
-
-                NeighborVec::iterator saved_it[IT_NUM];
-                int id = 0;
-
-                FOR_NEIGHBOR(node1, node2, it)
-                {
-                    saved_it[id++] = (*it)->node->findNeighborIt(node1);
-                } else {
-                    saved_it[id++] = it;
-                }
-
-                FOR_NEIGHBOR(node2, node1, it)
-                {
-                    saved_it[id++] = (*it)->node->findNeighborIt(node2);
-                } else {
-                    saved_it[id++] = it;
-                }
-                assert(id == IT_NUM);
-
-                Neighbor * saved_nei[IT_NUM];
-                // save Neighbor and allocate new Neighbor pointer
-                for (id = 0; id < IT_NUM; id++) {
-                    saved_nei[id] = (*saved_it[id]);
-                    *saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
-                    ((PhyloNeighbor*) (*saved_it[id]))->partial_lh = newPartialLh();
-                    ((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
-                }
-
-                // get the Neighbor again since it is replaced for saving purpose
-                PhyloNeighbor* node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
-                PhyloNeighbor* node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
-
-                FOR_NEIGHBOR(node1, node2, it)
-                {
-                    ((PhyloNeighbor*) (*it)->node->findNeighbor(node1))->clearPartialLh();
-                    treelhs[nniNr] = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false);
+            	if (treelhs[nniNr] > curScore - 5 && treelhs[nniNr] < curScore) {
                     if (verbose_mode >= VB_DEBUG)
                         cout << "Log-likelihood: " << treelhs[nniNr] << endl;
-                }
+                    NeighborVec::iterator it;
+                    const int IT_NUM = 6;
 
-                node21_it->clearPartialLh();
+                    NeighborVec::iterator saved_it[IT_NUM];
+                    int id = 0;
 
-                FOR_NEIGHBOR(node2, node1, it)
-                {
-                    ((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
-                    treelhs[nniNr] = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
-                    //node2_lastnei = (PhyloNeighbor*) (*it);
-                    if (verbose_mode >= VB_DEBUG)
-                        cout << "Log-likelihood: " << treelhs[nniNr] << endl;
-                }
-                node12_it->clearPartialLh();
+                    FOR_NEIGHBOR(node1, node2, it)
+                    {
+                        saved_it[id++] = (*it)->node->findNeighborIt(node1);
+                    } else {
+                        saved_it[id++] = it;
+                    }
 
-                // restore the Neighbor*
-                for (id = 0; id < IT_NUM; id++) {
-                    delete[] ((PhyloNeighbor*) *saved_it[id])->scale_num;
-                    delete[] ((PhyloNeighbor*) *saved_it[id])->partial_lh;
-                    delete (*saved_it[id]);
-                    (*saved_it[id]) = saved_nei[id];
-                }
+                    FOR_NEIGHBOR(node2, node1, it)
+                    {
+                        saved_it[id++] = (*it)->node->findNeighborIt(node2);
+                    } else {
+                        saved_it[id++] = it;
+                    }
+                    assert(id == IT_NUM);
 
-                // restore the length of 4 branches around node1, node2
-                FOR_NEIGHBOR(node1, node2, it)
-                    (*it)->length = (*it)->node->findNeighbor(node1)->length;
-                FOR_NEIGHBOR(node2, node1, it)
-                    (*it)->length = (*it)->node->findNeighbor(node2)->length;
+                    Neighbor * saved_nei[IT_NUM];
+                    // save Neighbor and allocate new Neighbor pointer
+                    for (id = 0; id < IT_NUM; id++) {
+                        saved_nei[id] = (*saved_it[id]);
+                        *saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
+                        ((PhyloNeighbor*) (*saved_it[id]))->partial_lh = newPartialLh();
+                        ((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
+                    }
+
+                    // get the Neighbor again since it is replaced for saving purpose
+                    PhyloNeighbor* node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
+                    PhyloNeighbor* node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
+
+                    FOR_NEIGHBOR(node1, node2, it)
+                    {
+                        ((PhyloNeighbor*) (*it)->node->findNeighbor(node1))->clearPartialLh();
+                        treelhs[nniNr] = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false);
+                        if (verbose_mode >= VB_DEBUG)
+                            cout << "Log-likelihood: " << treelhs[nniNr] << endl;
+                    }
+
+                    node21_it->clearPartialLh();
+
+                    FOR_NEIGHBOR(node2, node1, it)
+                    {
+                        ((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
+                        treelhs[nniNr] = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
+                        //node2_lastnei = (PhyloNeighbor*) (*it);
+                        if (verbose_mode >= VB_DEBUG)
+                            cout << "Log-likelihood: " << treelhs[nniNr] << endl;
+                    }
+                    node12_it->clearPartialLh();
+
+                    // restore the Neighbor*
+                    for (id = 0; id < IT_NUM; id++) {
+                        delete[] ((PhyloNeighbor*) *saved_it[id])->scale_num;
+                        delete[] ((PhyloNeighbor*) *saved_it[id])->partial_lh;
+                        delete (*saved_it[id]);
+                        (*saved_it[id]) = saved_nei[id];
+                    }
+
+                    // restore the length of 4 branches around node1, node2
+                    FOR_NEIGHBOR(node1, node2, it)
+                        (*it)->length = (*it)->node->findNeighbor(node1)->length;
+                    FOR_NEIGHBOR(node2, node1, it)
+                        (*it)->length = (*it)->node->findNeighbor(node2)->length;
+            	}
+
             } else {
                 treelhs[nniNr] = optimizeOneBranch(node1, node2, false);
             }
