@@ -9,6 +9,8 @@
 #define PHYLOSUPERTREEPLEN_H_
 
 #include "phylosupertree.h"
+#include "partitionmodel.h"
+#include "superalignmentpairwise.h"
 
 /**
 Edge lengths in subtrees are proportional to edge lengths in a supertree.
@@ -84,6 +86,7 @@ public:
      * @return #parameters of the model + # branches
      */
     virtual int getNParameters();
+    virtual int getNDim();
 
 	/**
 		optimize model parameters and tree branch lengths
@@ -135,9 +138,6 @@ public:
 	virtual double computeFuncDerv(double value, double &df, double &ddf);
 	virtual double computeFunction(double value);
 
-    //// CHECK THIS ///////////////////////////////////////////////////////////////////////////
-
-
     /**
             optimize all branch lengths of all subtrees, then compute branch lengths
             of supertree as weighted average over all subtrees
@@ -162,19 +162,24 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
 
     /**
             Do an NNI on the supertree and synchronize all subtrees respectively
             @param move the single NNI
      */
-    virtual double doNNI(NNIMove move);
+    virtual void doNNI(NNIMove &move);
 
 	/**
 		compute the weighted average of branch lengths over partitions
 	*/
 	virtual void computeBranchLengths();
 
+    /**
+     * 		indicates whether partition rates are fixed or not
+     */
+
+    bool fixed_rates;
 };
 
 
