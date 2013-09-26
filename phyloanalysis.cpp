@@ -1191,7 +1191,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.setSpeed_conf(params.speed_conf);
 	try {
 		if (!iqtree.getModelFactory()) {
-<<<<<<< HEAD
 			if (iqtree.isSuperTree()){
 				if(params.partition_type){
 					iqtree.setModelFactory(
@@ -1200,11 +1199,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 					iqtree.setModelFactory(
 							new PartitionModel(params, (PhyloSuperTree*) &iqtree));
 			} else {
-=======
-			if (iqtree.isSuperTree())
-				iqtree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*) &iqtree));
-			else {
->>>>>>> 04f5d5acf2c2791b4cc39eaefd561aa801d19ae6
 				/*
 				if (params.raxmllib && alignment->num_states == 4) {
 					// phylolib only supports GTR+G. Therefore the model will be force to GTR+G
