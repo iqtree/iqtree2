@@ -43,8 +43,8 @@ void IQTree::init() {
     enable_parsimony = false;
     enableHeuris = true; // This is set true when the heuristic started (after N iterations)
     linRegModel = NULL;
-    nni_round = 1;
     estimate_nni_cutoff = false;
+    nni_steps = 0;
     nni_cutoff = -1e6;
     nni_sort = false;
     testNNI = false;
@@ -750,7 +750,7 @@ double IQTree::doIQP() {
                 curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
             }
              */
-            curScore = optimizeAllBranches(1);
+            curScore = optimizeAllBranches(params->numSmoothTree);
         }
 
     }
@@ -1195,7 +1195,7 @@ double IQTree::doIQPNNI() {
             // NNI search was skipped according to the speed up heuristics
             if (!skipped) {
                 cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIQPIter
-                        << " / LogL: " << curScore << " / NNIs: " << nni_count << " / CPU time: " << (int) round(cputime_secs) << "s";
+                        << " / LogL: " << curScore << " / NNIs: " << nni_count << " / NNI steps: " << nni_steps << " / CPU time: " << (int) round(cputime_secs) << "s";
                 if (curIQPIter > 10 && cputime_secs > 10)
                     cout << " (" << (int) round(cputime_remaining) << "s left)";
                 cout << endl;
@@ -1356,7 +1356,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     curLambda = startLambda;
     if (skipped) // variable indicates whether the NNI search is skipped or not (due to the heuristic)
         *skipped = 0;
-    nni_round = 0; // number of NNI round
+    nni_steps = 0; // number of NNI round
     int nni_count = 0;
     if (nni_count_ret)
         *nni_count_ret = nni_count;
@@ -1370,9 +1370,9 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             if (save_all_trees == 2) {
                 saveCurrentTree(curScore); // BQM: for new bootstrap
             }
-            ++nni_round;
+            ++nni_steps;
             if (verbose_mode >= VB_DEBUG) {
-                cout << "Doing NNI round " << nni_round << endl;
+                cout << "Doing NNI round " << nni_steps << endl;
                 if (isSuperTree()) {
                     ((PhyloSuperTree*) this)->printMapInfo();
                 }
@@ -1421,7 +1421,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
                 }
             }
         }
-        nni2apply = ceil(nonconf_nni * curLambda);
+        nni2apply = floor(nonconf_nni * curLambda);
         if (nni2apply == 0)
         	nni2apply = 1;
         applyNNIs(nni2apply);
@@ -1443,7 +1443,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             }
             if (verbose_mode >= VB_DEBUG) {
                 stringstream filename;
-                filename << (params->out_prefix) << ".nniTree_round_" << nni_round;
+                filename << (params->out_prefix) << ".nniTree_round_" << nni_steps;
                 printTree(filename.str().c_str());
             }
             if (nni_count_ret)
@@ -1462,18 +1462,8 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             }
 
             //if (verbose_mode >= VB_MED) {
-            cout << "Applying " << nni2apply << " NNIs for lambda = " << curLambda << " decreases logl from " <<
-            		oldScore << " to " << curScore << endl;
-            /*
-                cout << "Log-likelihood of best NNI " << vec_nonconf_nni.at(0).newloglh << endl;
-                cout << "New tree log-likelihood " << newScore << endl;
-    			cout << "Tree log-likelihood is not as good as expected at NNI round " << nni_round <<". ";
-    			cout << "Number of NNI moves applied: " << nni2apply << ". ";
-    			cout << "Roll back tree and .";
-    			cout << "Tree log-likelihood is expected to be equal or higher than: ";
-    			cout << vec_nonconf_nni.at(0).newloglh << endl;
-			*/
-            //}
+            cout << "logl=" << curScore << " after applying " << nni2apply << " NNIs for lambda = " << curLambda << " is worse than logl="
+            		<<  vec_nonconf_nni.at(0).newloglh << " of the best NNI. Roll back tree ..." << endl;
             curLambda = curLambda * 0.5;
             // restore the tree by reverting all NNIs
             applyNNIs(nni2apply, false);
@@ -1494,13 +1484,9 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             }
         }
     } else {
-        if (verbose_mode >= VB_MED)
-            cout << "NNI search could not find any better tree for this iteration!" << endl;
+        cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
 
-    if (verbose_mode >= VB_MED) {
-        cout << nni_count << " NNIs applied after " << nni_round << " rounds" << endl;
-    }
     if (save_all_trees == 2 && params->nni_opt_5branches) {
         curScore = optimizeAllBranches();
         saveCurrentTree(curScore); // BQM: for new bootstrap

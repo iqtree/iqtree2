@@ -880,7 +880,8 @@ void createFirstNNITree(Params &params, IQTree &iqtree, double bestTreeScore,
 	double nniBeginClock, nniEndClock;
 	nniBeginClock = getCPUTime();
     if (!params.phylolib) {
-    	iqtree.curScore = iqtree.optimizeNNI();
+    	iqtree.optimizeNNI();
+    	iqtree.curScore = iqtree.optimizeAllBranches();
     } else {
         iqtree.curScore = iqtree.optimizeNNIRax();
         // read in new tree
