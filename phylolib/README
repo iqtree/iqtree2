@@ -1,0 +1,26 @@
+First instance of the RAxML-Light based likelihood computation library 
+
+I have commented the main functions top down:
+
+go to axml.c and start with main() 
+
+from there branch off to 
+
+computeBIGRAPID() 
+
+in searchAlgo.c 
+
+Then have a look at the likelihood function implementations
+evaluateGenericSpecial.c
+newviewGenericSpecial.c
+makenewzGeneric.c 
+
+in the above order.
+
+
+*************************************************************
+USAGE example for Bayes (-b)
+-g number of generation
+
+./raxmlBayes -g 80 -s testdata/small.dna.singlegene.binary -m PSR -n TEST_small -b
+

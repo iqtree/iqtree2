@@ -1,0 +1,14 @@
+#define iqtree_VERSION_MAJOR @iqtree_VERSION_MAJOR@
+#define iqtree_VERSION_MINOR @iqtree_VERSION_MINOR@
+#define iqtree_VERSION_PATCH @iqtree_VERSION_PATCH@
+
+/* does the platform provide gettimeofday functions? */
+#cmakedefine HAVE_GETTIMEOFDAY
+/* does the platform provide getrusage functions? */
+#cmakedefine HAVE_GETRUSAGE
+/* does the platform provide popen functions? */
+/*#cmakedefine HAVE_POPEN*/
+/* does the platform provide pclose functions? */
+/*#cmakedefine HAVE_PCLOSE*/
+/* does the platform provide GlobalMemoryStatusEx functions? */
+#cmakedefine HAVE_GLOBALMEMORYSTATUSEX
