@@ -497,7 +497,7 @@ int PhyloSuperTree::getMaxPartNameLength() {
 NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, bool useLS, double lh_contribution) {
     NNIMove myMove;
 <<<<<<< HEAD
-    myMove.newloglh = 0;
+    //myMove.newloglh = 0;
 =======
     myMove.loglh = 0;
 
@@ -590,24 +590,39 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 		nni1_score += part_info[part].nni1_score[brid];
 		nni2_score += part_info[part].nni2_score[brid];
 	}
+<<<<<<< HEAD
+	if (nni1_score > nni2_score) {
+=======
 	if (nni1_score > bestScore+TOL_LIKELIHOOD) {
 		myMove.delta = nni1_score - nonNNIScore;
+>>>>>>> 29dcf30407adfb41c04aca0bf9034397536d87ee
 		bestScore = nni1_score;
 		myMove.swap_id = 1;
 		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
 		myMove.node2Nei_it = node2->findNeighborIt(node2_nei->node);
+<<<<<<< HEAD
 		myMove.newloglh = bestScore;
+		myMove.node1 = node1;
+		myMove.node2 = node2;
+	} else  {
+=======
+		myMove.loglh = bestScore;
 		myMove.node1 = node1;
 		myMove.node2 = node2;
 	}
 
 	if (nni2_score > bestScore+TOL_LIKELIHOOD) {
 		myMove.delta = nni2_score - nonNNIScore;
+>>>>>>> 29dcf30407adfb41c04aca0bf9034397536d87ee
 		bestScore = nni2_score;
 		myMove.swap_id = 2;
 		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
 		myMove.node2Nei_it = node2->findNeighborIt(node2_nei_other->node);
+<<<<<<< HEAD
 		myMove.newloglh = bestScore;
+=======
+		myMove.loglh = bestScore;
+>>>>>>> 29dcf30407adfb41c04aca0bf9034397536d87ee
 		myMove.node1 = node1;
 		myMove.node2 = node2;
 	}
