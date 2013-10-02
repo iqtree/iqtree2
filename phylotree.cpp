@@ -2252,14 +2252,14 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
 
     current_it->length = optx;
     current_it_back->length = optx;
-    curScore = -negative_lh;
+    //curScore = -negative_lh;
 
     if (clearLH && current_len != optx) {
         node1->clearReversePartialLh(node2);
         node2->clearReversePartialLh(node1);
     }
 
-    return curScore;
+    return -negative_lh;
 }
 
 double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
