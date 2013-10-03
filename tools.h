@@ -1226,9 +1226,9 @@ struct Params {
     bool nni_sort;
 
     /**
-            TRUE to optimize 5 branches around NNI
+            Obsolete: TRUE to optimize 5 branches around NNI
      */
-    bool nni_opt_5branches;
+    //bool nni_opt_5branches;
 
     /** print some output info for NNI */
     bool testNNI;

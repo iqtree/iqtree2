@@ -1486,11 +1486,12 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
 
+    /*
     if (save_all_trees == 2 && params->nni_opt_5branches) {
         curScore = optimizeAllBranches();
         saveCurrentTree(curScore); // BQM: for new bootstrap
         saveNNITrees(); // optimize 5 branches around NNI, this makes program slower
-    }
+    }*/
     return curScore;
 }
 
@@ -2038,6 +2039,10 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
 				//computePatternLikelihood(nni_param->nni2_ptnlh, &score);
 			}
 		}
+		if (save_all_trees == 2) {
+			saveCurrentTree(score); // BQM: for new bootstrap
+		}
+
         // else, swap back, also recover the branch lengths
 		node1->updateNeighbor(node1_it, node1_nei);
 		node1_nei->node->updateNeighbor(node2, node1);
