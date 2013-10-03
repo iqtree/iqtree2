@@ -202,7 +202,10 @@ int PhyloSuperTree::getAlnNSite() {
 double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist, double &var) {
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0)
-        initial_dist = aln->computeDist(seq1, seq2);
+    	if (params->compute_obs_dist)
+            initial_dist = aln->computeObsDist(seq1, seq2);
+    	else
+    		initial_dist = aln->computeDist(seq1, seq2);
     if (initial_dist == MAX_GENETIC_DIST) return initial_dist; // MANUEL: here no d2l is return
     if (!model_factory || !site_rate) return initial_dist; // MANUEL: here no d2l is return
 
@@ -409,6 +412,7 @@ PhyloSuperTree::~PhyloSuperTree()
 	for (vector<PartitionInfo>::reverse_iterator pit = part_info.rbegin(); pit != part_info.rend(); pit++)
 		if (pit->mem_ptnlh)
 			delete [] pit->mem_ptnlh;
+	part_info.clear();
 
 	for (reverse_iterator it = rbegin(); it != rend(); it++)
 		delete (*it);

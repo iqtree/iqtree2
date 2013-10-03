@@ -2442,7 +2442,10 @@ void PhyloTree::growTreeML(Alignment *alignment) {
 double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d2l) {
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0)
-        initial_dist = aln->computeDist(seq1, seq2);
+    	if (params->compute_obs_dist)
+            initial_dist = aln->computeObsDist(seq1, seq2);
+    	else
+    		initial_dist = aln->computeDist(seq1, seq2);
 
     if (!model_factory || !site_rate)
         return initial_dist; // MANUEL: here no d2l is return
@@ -2549,9 +2552,12 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
     double longest_dist = 0.0;
     aln = alignment;
     dist_file = params.out_prefix;
-    if (!model_factory)
-        dist_file += ".jcdist";
-    else
+    if (!model_factory) {
+        if (params.compute_obs_dist)
+        	dist_file += ".obsdist";
+        else
+        	dist_file += ".jcdist";
+    } else
         dist_file += ".mldist";
 
     if (!dist_mat) {

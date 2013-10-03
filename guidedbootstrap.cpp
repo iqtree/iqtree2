@@ -457,7 +457,7 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
     /* optimize model parameters */
     cout << endl;
     cout << "Optimizing model parameters" << endl;
-    double bestTreeScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
+    double bestTreeScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD);
     cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 
     //Update tree score

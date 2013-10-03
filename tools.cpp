@@ -572,6 +572,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.areas_boundary_file = NULL;
     params.boundary_modifier = 1.0;
     params.dist_file = NULL;
+    params.compute_obs_dist = false;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.budget_file = NULL;
@@ -877,6 +878,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.dist_file = argv[cnt];
             } else if (strcmp(argv[cnt], "-djc") == 0) {
                 params.compute_ml_dist = false;
+            } else if (strcmp(argv[cnt], "-dobs") == 0) {
+                params.compute_obs_dist = true;
             } else if (strcmp(argv[cnt], "-r") == 0) {
                 cnt++;
                 if (cnt >= argc)

@@ -655,6 +655,11 @@ struct Params {
     char *dist_file;
 
     /**
+            TRUE to compute the observed distances instead of Juke-Cantor distances, default: FALSE
+     */
+    bool compute_obs_dist;
+
+    /**
             TRUE to compute the maximum-likelihood distances
      */
     bool compute_ml_dist;

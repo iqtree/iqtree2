@@ -332,6 +332,7 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 		info.aln_file = "";
 		info.sequence_type = "";
 		info.position_spec = "";
+		info.mem_ptnlh = NULL;
 		part_info.push_back(info);
 		Alignment *aln = super_aln->concatenateAlignments(*it);
 		PhyloTree *tree = super_tree->extractSubtree(*it);
@@ -702,7 +703,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		if (model_id >= 0) {
 			info.logl = model_info[model_id].logl;
 		} else {
-			info.logl = tree->getModelFactory()->optimizeParameters(false, false);
+			info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD);
 			// print information to .model file
 			if (!fmodel.is_open()) {
 				fmodel.open(fmodel_str.c_str(), ios::app);

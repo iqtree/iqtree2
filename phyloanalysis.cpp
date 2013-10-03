@@ -977,8 +977,7 @@ double doModelOptimization(IQTree& iqtree, Params& params) {
     if (!params.phylolib) {
 		cout << endl;
         cout << "Optimizing model parameters and branch lengths using IQTree kernel" << endl;
-		bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
-				params.fixed_branch_length, true, 0.1);
+		bestTreeScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, 0.1);
 		cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 		iqtree.initiateMyEigenCoeff();
 	} else {
@@ -1077,10 +1076,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	if (params.dist_file) {
 		cout << "Reading distance matrix file " << params.dist_file << " ..."
 				<< endl;
-	} else {
+	} else if (!params.compute_obs_dist) {
 		cout << "Computing Juke-Cantor distances..." << endl;
+	} else
+		cout << "Computing observed distances..." << endl;
 
-	}
 
     longest_dist = iqtree.computeDist(params, alignment, iqtree.dist_matrix, iqtree.var_matrix, dist_file);
 	checkZeroDist(alignment, iqtree.dist_matrix);
@@ -1158,8 +1158,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	    if (mem_size >= getMemorySize()) {
 	    	outError("Memory required exceeds your computer RAM size!");
 	    }
-
 		params.model_name = testModel(params, &iqtree, model_info);
+		cout << "CPU time for model selection: " << getCPUTime() - t_begin << " seconds." << endl;
 		alignment = iqtree.aln;
 		if (test_only) {
 			/*
@@ -1231,8 +1231,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	cout << "Optimize model parameters ... " << endl;
 
     // Optimize model parameters and branch lengths using ML for the initial tree
-    bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
-			params.fixed_branch_length, true, TOL_LIKELIHOOD);
+    bestTreeScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD);
 
 	// Save current tree to a string
     iqtree.curScore = bestTreeScore;
@@ -1266,14 +1265,13 @@ void runPhyloAnalysis(Params &params, string &original_model,
         }
         cout << "Log-likelihood of the BIONJ tree created from ML distances: " << iqtree.curScore << endl;
         if (iqtree.curScore < (bestTreeScore - params.loglh_epsilon) && !params.leastSquareBranch) {
-			cout << "Rolling back the first tree..." << endl;
 			iqtree.rollBack(best_tree_string);
 			if (iqtree.isSuperTree()) {
 				((PhyloSuperTree*) (&iqtree))->mapTrees();
 				iqtree.optimizeAllBranches();
 			}
 			iqtree.curScore = iqtree.computeLikelihood();
-			cout << "Backup log-likelihood: " << iqtree.curScore << endl;
+			cout << "Rolling back the first tree with log-likelihood: " << iqtree.curScore << endl;
 		}
 		double elapsedTime = getCPUTime() - params.startTime;
 		cout << "Time elapsed: " << elapsedTime << endl;
@@ -1484,7 +1482,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				<< params.k_representative << endl;
 		cout << "Probability of deleting sequences : " << iqtree.getProbDelete()
 				<< endl;
-		cout << "Number of leaves to be deleted: " << iqtree.getDelete() << endl;
+		cout << "Number of leaves to be deleted    : " << iqtree.getDelete() << endl;
 		cout << "Number of iterations              : ";
 		if (params.stop_condition == SC_FIXED_ITERATION)
 			cout << params.min_iterations << endl;

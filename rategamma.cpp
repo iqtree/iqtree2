@@ -141,7 +141,7 @@ void RateGamma::writeParameters(ostream &out) {
 }
 
 void RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
-	cout << "Computing Gamma site rates by empirical Bayes..." << endl;
+	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 	int npattern = phylo_tree->aln->getNPattern();
 	double *ptn_rates = new double[npattern];
 	phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0], 
