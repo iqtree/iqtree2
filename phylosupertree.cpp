@@ -523,7 +523,6 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 	}
 
 	double bestScore = optimizeOneBranch(node1, node2, false);
-	double nonNNIScore = bestScore;
 	
 	double nni1_score = 0.0, nni2_score = 0.0;
 	int ntrees = size(), part;

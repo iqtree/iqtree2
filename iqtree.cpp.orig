@@ -43,8 +43,8 @@ void IQTree::init() {
     enable_parsimony = false;
     enableHeuris = true; // This is set true when the heuristic started (after N iterations)
     linRegModel = NULL;
-    nni_round = 1;
     estimate_nni_cutoff = false;
+    nni_steps = 0;
     nni_cutoff = -1e6;
     nni_sort = false;
     testNNI = false;
@@ -752,7 +752,7 @@ double IQTree::doIQP() {
                 curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
             }
              */
-            curScore = optimizeAllBranches(1);
+            curScore = optimizeAllBranches(params->numSmoothTree);
         }
 
     }
@@ -1197,7 +1197,7 @@ double IQTree::doIQPNNI() {
             // NNI search was skipped according to the speed up heuristics
             if (!skipped) {
                 cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIQPIter
-                        << " / LogL: " << curScore << " / NNIs: " << nni_count << " / CPU time: " << (int) round(cputime_secs) << "s";
+                        << " / LogL: " << curScore << " / NNIs: " << nni_count << " / NNI steps: " << nni_steps << " / CPU time: " << (int) round(cputime_secs) << "s";
                 if (curIQPIter > 10 && cputime_secs > 10)
                     cout << " (" << (int) round(cputime_remaining) << "s left)";
                 cout << endl;
@@ -1355,7 +1355,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     curLambda = startLambda;
     if (skipped) // variable indicates whether the NNI search is skipped or not (due to the heuristic)
         *skipped = 0;
-    nni_round = 0; // number of NNI round
+    nni_steps = 0; // number of NNI round
     int nni_count = 0;
     if (nni_count_ret)
         *nni_count_ret = nni_count;
@@ -1369,15 +1369,9 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             if (save_all_trees == 2) {
                 saveCurrentTree(curScore); // BQM: for new bootstrap
             }
-            ++nni_round;
+            ++nni_steps;
             if (verbose_mode >= VB_DEBUG) {
-                cout << "Doing NNI round " << nni_round << endl;
-<<<<<<< HEAD
-                if (verbose_mode >= VB_DEBUG) {
-                    //drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
-                }
-=======
->>>>>>> 5886814122ca91a5323d290cf61003408f5b7765
+                cout << "Doing NNI round " << nni_steps << endl;
                 if (isSuperTree()) {
                     ((PhyloSuperTree*) this)->printMapInfo();
                 }
@@ -1426,7 +1420,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
                 }
             }
         }
-        nni2apply = ceil(nonconf_nni * curLambda);
+        nni2apply = floor(nonconf_nni * curLambda);
         if (nni2apply == 0)
         	nni2apply = 1;
         applyNNIs(nni2apply);
@@ -1448,7 +1442,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             }
             if (verbose_mode >= VB_DEBUG) {
                 stringstream filename;
-                filename << (params->out_prefix) << ".nniTree_round_" << nni_round;
+                filename << (params->out_prefix) << ".nniTree_round_" << nni_steps;
                 printTree(filename.str().c_str());
             }
             if (nni_count_ret)
@@ -1467,18 +1461,8 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             }
 
             //if (verbose_mode >= VB_MED) {
-            cout << "Applying " << nni2apply << " NNIs for lambda = " << curLambda << " decreases logl from " <<
-            		oldScore << " to " << curScore << endl;
-            /*
-                cout << "Log-likelihood of best NNI " << vec_nonconf_nni.at(0).newloglh << endl;
-                cout << "New tree log-likelihood " << newScore << endl;
-    			cout << "Tree log-likelihood is not as good as expected at NNI round " << nni_round <<". ";
-    			cout << "Number of NNI moves applied: " << nni2apply << ". ";
-    			cout << "Roll back tree and .";
-    			cout << "Tree log-likelihood is expected to be equal or higher than: ";
-    			cout << vec_nonconf_nni.at(0).newloglh << endl;
-			*/
-            //}
+            cout << "logl=" << curScore << " after applying " << nni2apply << " NNIs for lambda = " << curLambda << " is worse than logl="
+            		<<  vec_nonconf_nni.at(0).newloglh << " of the best NNI. Roll back tree ..." << endl;
             curLambda = curLambda * 0.5;
             // restore the tree by reverting all NNIs
             applyNNIs(nni2apply, false);
@@ -1499,13 +1483,9 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             }
         }
     } else {
-        if (verbose_mode >= VB_MED)
-            cout << "NNI search could not find any better tree for this iteration!" << endl;
+        cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
 
-    if (verbose_mode >= VB_MED) {
-        cout << nni_count << " NNIs applied after " << nni_round << " rounds" << endl;
-    }
     if (save_all_trees == 2 && params->nni_opt_5branches) {
         curScore = optimizeAllBranches();
         saveCurrentTree(curScore); // BQM: for new bootstrap
@@ -1613,21 +1593,9 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
 void IQTree::applyNNIs(int nni2apply, bool changeBran) {
     for (int i = 0; i < nni2apply; i++) {
         doNNI(vec_nonconf_nni.at(i));
-<<<<<<< HEAD
-        if (!params->leastSquareNNI && !params->fast_eval) {
-            PhyloNode* node1 = vec_nonconf_nni.at(i).node1;
-            PhyloNode* node2 = vec_nonconf_nni.at(i).node2;
-            string key = nodePair2String(node1, node2);
-            BranLenMap::iterator bran_it = mapOptBranLens.find(key);
-            if (bran_it != mapOptBranLens.end()) {
-            	// NOTE: please uncomment this after debugging
-                //changeBranLen(node1, node2, bran_it->second);
-            }
-=======
         if (!params->leastSquareNNI && !params->fast_eval && changeBran) {
             // apply new branch lengths
             applyNNIBranches(vec_nonconf_nni.at(i));
->>>>>>> 5886814122ca91a5323d290cf61003408f5b7765
         }
     }
 }
@@ -1991,126 +1959,6 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
         break;
 
     Neighbor *node1_nei = *node1_it;
-<<<<<<< HEAD
-    double node1_len = node1_nei->length;
-    int nniNr = 0;
-    int chosenSwap = nniNr;
-
-    // make alignment 16
-    if (((intptr_t) tmp_partial_lh1) % 16 == 0)
-        node1_node2_nei->partial_lh = tmp_partial_lh1;
-    else
-        node1_node2_nei->partial_lh = tmp_partial_lh1 + 1;
-
-    if (((intptr_t) tmp_partial_lh2) % 16 == 0)
-        node2_node1_nei->partial_lh = tmp_partial_lh2;
-    else
-        node2_node1_nei->partial_lh = tmp_partial_lh2 + 1;
-
-    node1_node2_nei->scale_num = tmp_scale_num1;
-    node2_node1_nei->scale_num = tmp_scale_num2;
-
-    double bestLH = treelhs[0];
-
-    /************************ Swap NNI ********************************/
-    for (NeighborVec::iterator node2_it = (node2)->neighbors.begin(); node2_it != (node2)->neighbors.end(); node2_it++)
-        if ((*node2_it)->node != (node1)) {
-            nniNr++;
-            Neighbor *node2_nei = *node2_it;
-            double node2_len = node2_nei->length;
-            node1->updateNeighbor(node1_it, node2_nei);
-            node2_nei->node->updateNeighbor(node2, node1);
-            node2->updateNeighbor(node2_it, node1_nei);
-            node1_nei->node->updateNeighbor(node1, node2);
-            // clear partial likelihood vector
-            node1_node2_nei->clearPartialLh();
-            node2_node1_nei->clearPartialLh();
-
-            /* compute the score of the swapped topology */
-            if (approx_nni) {
-                double estBran2 = estimateBranchLength(node2_node1_nei, node2);
-                node1_node2_nei->length = estBran2;
-                node2_node1_nei->length = estBran2;
-                if (verbose_mode >= VB_MAX)
-                    cout << "approx branch length: " << estBran2 << endl;
-                treelhs[nniNr] = computeLikelihoodBranch(node2_node1_nei, node2);
-            } else if (useLS) {
-                double LSBranch = optimizeOneBranchLS(node1, node2);
-                if (LSBranch < 0.0) {
-                    if (verbose_mode >= VB_DEBUG) {
-                        cout << "NEGATIVE LEAST SQUARE BRANCH : " << LSBranch << endl;
-                    }
-                    node1_node2_nei->length = -LSBranch;
-                    node2_node1_nei->length = -LSBranch;
-                    treelhs[nniNr] = computeLikelihoodBranch(node1_node2_nei, node1);
-                } else {
-                    node1_node2_nei->length = LSBranch;
-                    node2_node1_nei->length = LSBranch;
-                    treelhs[nniNr] = computeLikelihoodBranch(node1_node2_nei, node1);
-                }
-            } else if (params->fast_eval) {
-                treelhs[nniNr] = computeLikelihoodBranch(node1_node2_nei, node1);
-            } else if (params->nni5Branches) {
-                treelhs[nniNr] = optimizeOneBranch(node1, node2, false);
-            	//if (treelhs[nniNr] > curScore - 5 && treelhs[nniNr] < curScore)
-                {
-                    NeighborVec::iterator it;
-                    const int IT_NUM = 6;
-
-                    NeighborVec::iterator saved_it[IT_NUM];
-                    int id = 0;
-
-                    FOR_NEIGHBOR(node1, node2, it)
-                    {
-                        saved_it[id++] = (*it)->node->findNeighborIt(node1);
-                    } else {
-                        saved_it[id++] = it;
-                    }
-
-                    FOR_NEIGHBOR(node2, node1, it)
-                    {
-                        saved_it[id++] = (*it)->node->findNeighborIt(node2);
-                    } else {
-                        saved_it[id++] = it;
-                    }
-                    assert(id == IT_NUM);
-
-                    Neighbor * saved_nei[IT_NUM];
-                    // save Neighbor and allocate new Neighbor pointer
-                    for (id = 0; id < IT_NUM; id++) {
-                        saved_nei[id] = (*saved_it[id]);
-                        *saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
-                        ((PhyloNeighbor*) (*saved_it[id]))->partial_lh = newPartialLh();
-                        ((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
-                    }
-
-                    // get the Neighbor again since it is replaced for saving purpose
-                    PhyloNeighbor* node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
-                    PhyloNeighbor* node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
-
-                    FOR_NEIGHBOR(node1, node2, it)
-                    {
-                        ((PhyloNeighbor*) (*it)->node->findNeighbor(node1))->clearPartialLh();
-                        treelhs[nniNr] = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false);
-                    }
-
-                    node21_it->clearPartialLh();
-
-                    FOR_NEIGHBOR(node2, node1, it)
-                    {
-                        ((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
-                        treelhs[nniNr] = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
-                        //node2_lastnei = (PhyloNeighbor*) (*it);
-                    }
-                    node12_it->clearPartialLh();
-                    //if (verbose_mode >= VB_DEBUG)
-                    //    cout << "Log-likelihood after 5 branches: " << treelhs[nniNr] << endl;
-
-                    // restore the Neighbor*
-                    for (id = 0; id < IT_NUM; id++) {
-                        delete[] ((PhyloNeighbor*) *saved_it[id])->scale_num;
-                        delete[] ((PhyloNeighbor*) *saved_it[id])->partial_lh;
-=======
     // Neighbors of node2 which are not node1
 
     vector<NeighborVec::iterator> node2_its;
@@ -2130,7 +1978,6 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
 		nniMoves[nniNr].oldloglh = curScore;
 		nniMoves[nniNr].newloglh = curScore;
 	}
->>>>>>> 5886814122ca91a5323d290cf61003408f5b7765
 
     int cnt;
     for (cnt = 0; cnt < node2_its.size(); cnt++) {

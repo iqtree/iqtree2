@@ -1533,6 +1533,7 @@ void PhyloTree::computeSubtreeDists() {
             } else {
                 nextNode = (PhyloNode*) (*it)->neighbors[0]->node;
             }
+            // warning: 'nextNode' may be used uninitialized in this function
             computeAllSubtreeDistForOneNode((*it), source_nei1, source_nei2, (*it), nextNode);
             markedNodeList.insert(IntPhyloNodeMap::value_type((*it)->id, (*it)));
         }

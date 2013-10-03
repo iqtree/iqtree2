@@ -636,7 +636,7 @@ public:
 	int getDelete() const;
 	void setDelete(int _delete);
 
-    int nni_round;
+    int nni_steps;
 protected:
     /**** NNI cutoff heuristic *****/
     /**
