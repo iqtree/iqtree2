@@ -741,7 +741,8 @@ double IQTree::doIQP() {
         setAlignment(aln);
         clearAllPartialLH();
         if (params->gbo_replicates)
-            curScore = optimizeAllBranches(3, 1.0);
+            //curScore = optimizeAllBranches(3, 1.0);
+        	curScore = optimizeAllBranches(params->numSmoothTree);
         else {
             // optimize branches at the reinsertion point
             /*

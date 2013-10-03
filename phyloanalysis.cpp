@@ -1496,6 +1496,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 						"Distance" :
 						((params.iqp_assess_quartet == IQP_PARSIMONY) ?
 								"Parsimony" : "Bootstrap")) << endl;
+		cout << "NNI assessed on                   : " << ((params.nni5Branches) ? "5 branches" : "1 branch") << endl;
 		cout << "SSE instructions                  : "
 				<< ((iqtree.sse) ? "Yes" : "No") << endl;
 		cout << "Branch length optimization method : "
