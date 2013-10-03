@@ -2244,21 +2244,21 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
     double current_len = current_it->length;
     double ferror, optx;
     theta_computed = false;
-    if (optimize_by_newton) { // Newton-Raphson method
-            optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
-    } else
+    if (optimize_by_newton) // Newton-Raphson method
+    	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
+    else
         // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
-    if (current_len == optx) // if nothing changes, return
-        return -negative_lh;
 
     current_it->length = optx;
     current_it_back->length = optx;
+    //curScore = -negative_lh;
 
-    if (clearLH) {
+    if (clearLH && current_len != optx) {
         node1->clearReversePartialLh(node2);
         node2->clearReversePartialLh(node1);
     }
+
     return -negative_lh;
 }
 
@@ -2706,7 +2706,7 @@ int PhyloTree::fixNegativeBranch2(bool force, Node *node, Node *dad) {
  Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 
-void PhyloTree::doNNI(NNIMove &move) {
+void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
     PhyloNode *node1 = move.node1;
     PhyloNode *node2 = move.node2;
     NeighborVec::iterator node1Nei_it = move.node1Nei_it;
@@ -2751,12 +2751,14 @@ void PhyloTree::doNNI(NNIMove &move) {
     PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
-    // clear partial likelihood vector
-    node12_it->clearPartialLh();
-    node21_it->clearPartialLh();
+    if (clearLH) {
+        // clear partial likelihood vector
+        node12_it->clearPartialLh();
+        node21_it->clearPartialLh();
 
-    node2->clearReversePartialLh(node1);
-    node1->clearReversePartialLh(node2);
+        node2->clearReversePartialLh(node1);
+        node1->clearReversePartialLh(node2);
+    }
 
     if (params->leastSquareNNI) {
     	updateSubtreeDists(move);

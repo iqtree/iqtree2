@@ -641,14 +641,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5Branches = true;
+    params.nni5Branches = false;
     params.nniThresHold = 0.1;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
     params.fast_eval = false;
     params.evalType = 2;
-    params.p_delete = 0.0;
+    params.p_delete = -1;
     params.min_iterations = -1;
     params.max_iterations = 1;
     params.stop_condition = SC_FIXED_ITERATION;
