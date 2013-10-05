@@ -1086,7 +1086,7 @@ double IQTree::doIQPNNI() {
                     //printPhylolibTree(".iqp_tree.phylolib");
                     evaluateGeneric(phyloTree, phyloTree->start, TRUE);
                     //evaluateGeneric(phyloTree, phyloTree->start, FALSE);
-                    treeEvaluate(phyloTree, 2);
+                    treeEvaluate(phyloTree, 1);
                     if (verbose_mode >= VB_MED) {
                         cout << "IQP log-likelihood = " << phyloTree->likelihood << endl;
                     }
@@ -1260,7 +1260,12 @@ double IQTree::doIQPNNI() {
             if (cur_tree_topo_ss.str() != best_tree_topo) {
                 best_tree_topo = cur_tree_topo_ss.str();
                 cout << "BETTER TREE FOUND at iteration " << curIQPIter << ": " << curScore << endl;
-                curScore = optimizeAllBranches();
+                if (params->phylolib) {
+                	treeEvaluate(phyloTree, 32);
+                	curScore = phyloTree->likelihood;
+                } else {
+                    curScore = optimizeAllBranches();
+                }
                 //cout << "Saving new better tree ..." << endl;
                 bestScore = curScore;
                 best_tree_string.seekp(0, ios::beg);
@@ -1544,7 +1549,7 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
             fast_eval = 0;
         }
         double newLH = doNNISearch(phyloTree, &nni_count, &deltaNNI, &nnicut, numSmoothTree);
-        if (newLH == 0.0) {
+        if (newLH == -1.0) {
             break;
         } else {
             //cout << "NNI round " << nniRound << "  LH : " << newLH << endl;

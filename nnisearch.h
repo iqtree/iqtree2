@@ -56,7 +56,6 @@ typedef struct {
     double z3[NUM_BRANCHES]; // q->next
     double z4[NUM_BRANCHES]; // q->next->next
 	double likelihood;
-	double deltaLH;
 } nniMove;
 
 
@@ -75,7 +74,7 @@ int evalNNIForBran(tree* tr, nodeptr p,  nniMove* nniList, int* numBran, double 
 
 /**
  * 	do 1 round of fastNNI
- *  return new tree log-likelihood if found improving NNI otherwise 0.0
+ *  return new tree log-likelihood if found improving NNI otherwise -1.0
  *
  *  @param tr: the tree data structure
  *  @param nni_count: pointer to the number of NNI that has been apply (OUT parameter)
@@ -97,9 +96,8 @@ void optimizeOneBranches(tree* tr, nodeptr p, int numNRStep);
  *  @param[in] tr: the tree data structure
  *  @param[in] swap: represents one of the 2 NNI moves. Could be either 0 or 1
  *  @param[in] evalType: NO_NR, WITH_ONE_NR, WITH_FIVE_NR
- *  @param[in] curLH: current log-likelihood of the tree
  */
-double doOneNNI(tree * tr, nodeptr p, int swap, int evalType, double curLH);
+double doOneNNI(tree * tr, nodeptr p, int swap, int evalType);
 
 /**
  *  Go through all 2(n-3) internal branches of the tree and
