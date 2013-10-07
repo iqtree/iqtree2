@@ -1242,7 +1242,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
     bestTreeScore = iqtree.getModelFactory()->optimizeParameters(
 			params.fixed_branch_length, true, TOL_LIKELIHOOD);
 
-
 	// Save current tree to a string
     iqtree.curScore = bestTreeScore;
 	iqtree.printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);

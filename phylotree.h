@@ -182,6 +182,7 @@ Phylogenetic Tree class
 class PhyloTree : public MTree, public Optimization {
 
 	friend class PhyloSuperTree;
+	friend class PhyloSuperTreePlen;
 
 public:
     /**
@@ -791,7 +792,7 @@ public:
             @param nni_param (OUT) if not NULL: swapping information returned
             @return the likelihood of the tree
      */
-    double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL
+    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL
             /*,	ostream *out = NULL, int brtype = 0,
                 ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL,
                 vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,

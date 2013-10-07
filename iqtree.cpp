@@ -19,6 +19,7 @@
  ***************************************************************************/
 #include "iqtree.h"
 #include "phylosupertree.h"
+#include "phylosupertreeplen.h"
 #include "mexttree.h"
 #include "timeutil.h"
 

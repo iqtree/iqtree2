@@ -170,6 +170,17 @@ public:
      */
     virtual void doNNI(NNIMove &move);
 
+    /**
+            This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
+            If a swap shows better score, return the swapped tree and the score.
+            @param cur_score current likelihood score
+            @param node1 1st end node of the branch
+            @param node2 2nd end node of the branch
+            @param nni_param (OUT) if not NULL: swapping information returned
+            @return the likelihood of the tree
+     */
+    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL);
+
 	/**
 		compute the weighted average of branch lengths over partitions
 	*/
