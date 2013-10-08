@@ -201,11 +201,12 @@ int PhyloSuperTree::getAlnNSite() {
 
 double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist, double &var) {
     // if no model or site rate is specified, return JC distance
-    if (initial_dist == 0.0)
+    if (initial_dist == 0.0) {
     	if (params->compute_obs_dist)
             initial_dist = aln->computeObsDist(seq1, seq2);
     	else
     		initial_dist = aln->computeDist(seq1, seq2);
+    }
     if (initial_dist == MAX_GENETIC_DIST) return initial_dist; // MANUEL: here no d2l is return
     if (!model_factory || !site_rate) return initial_dist; // MANUEL: here no d2l is return
 
@@ -386,7 +387,7 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 		}
 		if (fabs(sum_logl - *cur_logl) > 0.001) {
             cout << *cur_logl << " " << sum_logl << endl;
-            outError("Wrong ", __func__);
+            outError("Wrong PhyloSuperTree::", __func__);
 		}
 	}
 }
@@ -531,14 +532,17 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 	#pragma omp parallel for reduction(+: nni1_score, nni2_score) private(part)
 	#endif
 	for (part = 0; part < ntrees; part++) {
-		if (part_info[part].cur_score == 0.0) 
+		if (part_info[part].cur_score == 0.0)  {
 			part_info[part].cur_score = at(part)->computeLikelihood();
+			at(part)->computePatternLikelihood(part_info[part].cur_ptnlh, &part_info[part].cur_score);
+		}
 		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 		if (!nei1_part || !nei2_part) {
 			nni1_score += part_info[part].cur_score;
 			nni2_score += part_info[part].cur_score;
-			at(part)->computePatternLikelihood(part_info[part].cur_ptnlh, &part_info[part].cur_score);
+			// BUG: moved this line to above
+			//at(part)->computePatternLikelihood(part_info[part].cur_ptnlh, &part_info[part].cur_score);
 			continue;
 		}
 		int brid = nei1_part->id;
@@ -672,14 +676,14 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 	return myMove;
 }
 
-void PhyloSuperTree::doNNI(NNIMove &move) {
+void PhyloSuperTree::doNNI(NNIMove &move, bool clearLH) {
 	SuperNeighbor *nei1 = (SuperNeighbor*)move.node1->findNeighbor(move.node2);
 	SuperNeighbor *nei2 = (SuperNeighbor*)move.node2->findNeighbor(move.node1);
 	SuperNeighbor *node1_nei = (SuperNeighbor*)*move.node1Nei_it;
 	SuperNeighbor *node2_nei = (SuperNeighbor*)*move.node2Nei_it;
 	int part = 0;
 	iterator it;
-	PhyloTree::doNNI(move);
+	PhyloTree::doNNI(move, clearLH);
 
 	for (it = begin(), part = 0; it != end(); it++, part++) {
 		bool is_nni = true;
@@ -703,13 +707,17 @@ void PhyloSuperTree::doNNI(NNIMove &move) {
 		part_move.node2 = (PhyloNode*)nei1_part->node;
 		part_move.node1Nei_it = part_move.node1->findNeighborIt(node1_nei->link_neighbors[part]->node);
 		part_move.node2Nei_it = part_move.node2->findNeighborIt(node2_nei->link_neighbors[part]->node);
-
 		if (move.swap_id == 1) 
+			part_move.newLen[0] = part_info[part].nni1_brlen[brid];
+		else
+			part_move.newLen[0] = part_info[part].nni2_brlen[brid];
+
+		if (move.swap_id == 1)
 			nei1_part->length = nei2_part->length = part_info[part].nni1_brlen[brid];
 		else
 			nei1_part->length = nei2_part->length = part_info[part].nni2_brlen[brid];
 
-		(*it)->doNNI(part_move);
+		(*it)->doNNI(part_move, clearLH);
 
 	} 
 

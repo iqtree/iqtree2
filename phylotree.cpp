@@ -1196,9 +1196,9 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl) {
         for (int i = 0; i < nptn; i++) {
             check_score += (ptn_lh[i] * (aln->at(i).frequency));
         }
-        if (fabs(check_score - *cur_logl) > 0.001) {
+        if (fabs(check_score - *cur_logl) > 0.01) {
             cout << *cur_logl << " " << check_score << endl;
-            outError("Wrong ", __func__);
+            outError("Wrong PhyloTree::", __func__);
         }
     }
     //double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
