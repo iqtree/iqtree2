@@ -232,6 +232,8 @@ const int WT_NEWLINE = 128;
 const int WT_BR_LEN_FIXED_WIDTH = 256;
 const int WT_BR_ID = 512;
 const int WT_BR_LEN_ROUNDING = 1024;
+const int TRUE = 1;
+const int FALSE = 0;
 
 /**
         when computing Robinson-Foulds distances
@@ -431,7 +433,7 @@ struct Params {
     /**
      *  option to turn on phylogenetic library
      */
-    bool phylolib;
+    bool pll;
 
     char *binary_aln_file;
 
