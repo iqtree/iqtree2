@@ -181,6 +181,13 @@ public:
      */
     virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL);
 
+    /**
+     *	used in swapNNIBranch to update link_neighbors of other SuperNeighbors that point to the same branch on SubTree as (node,dad)
+     *	@param saved_link_dad_nei   pointer to link_neighbor dad_nei
+     */
+    void linkCheck(int part, Node* node, Node* dad, PhyloNeighbor* saved_link_dad_nei);
+    void linkCheckRe(int part, Node* node, Node* dad, PhyloNeighbor* saved_link_dad_nei,PhyloNeighbor* saved_link_node_nei);
+
 	/**
 		compute the weighted average of branch lengths over partitions
 	*/

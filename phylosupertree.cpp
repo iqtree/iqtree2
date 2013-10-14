@@ -230,34 +230,66 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 	vector<PhyloNeighbor*> child_part_vec;
 
 	FOR_NEIGHBOR_DECLARE(node, dad, it) {
+		//cout<<"nei"<<(*it)->node->name<<","<<(*it)->node->id;
 		if (((SuperNeighbor*)*it)->link_neighbors[part]) {
+			//cout<<" has link_nei "<<((SuperNeighbor*)*it)->link_neighbors[part]->node->id<<endl;
 			part_vec.push_back(((SuperNeighbor*)*it)->link_neighbors[part]);
 			child_part_vec.push_back(((SuperNeighbor*)(*it)->node->findNeighbor(node))->link_neighbors[part]);
+			//cout<<"child"<<((SuperNeighbor*)(*it)->node->findNeighbor(node))->link_neighbors[part]->node->name<<((SuperNeighbor*)(*it)->node->findNeighbor(node))->link_neighbors[part]->node->id<<endl;
 			/*if (child_part_vec.size() > 1 && child_part_vec.back()->id == child_part_vec.front()->id)
 				cout<<"HERE" << endl;*/
 			assert(child_part_vec.back()->node == child_part_vec.front()->node || child_part_vec.back()->id == child_part_vec.front()->id);
 		}
+		 /* else{
+			cout<<" no link_nei"<<endl;
+		}*/
 	}
-	if (part_vec.empty()) return;
+
+	if (part_vec.empty())
+		{
+		/*cout<<"part_vec is EMPTY"<<endl;
+		if (child_part_vec.empty())
+			cout<<"child_vec is empty"<<endl;
+		else
+			cout<<"child_vec is NOT empty"<<endl;
+		*/
+		return;}
 	if (part_vec.size() == 1) {
 		nei->link_neighbors[part] = child_part_vec[0];
 		dad_nei->link_neighbors[part] = part_vec[0];
+		/*cout<<"part_vec.size() = 1 !!!"<<endl;
+		if(child_part_vec[0]){
+		//cout<<"DAD_part:"<<child_part_vec[0]->node->id<<endl;
+		cout<<"NODE_part:"<<part_vec[0]->node->id<<endl;}
+		else
+			cout<<"NO CHILD VECTOR!!!!!"<<endl;
+		*/
+
 		return;
 	}
 	if (part_vec[0] == child_part_vec[1]) {
 		// ping-pong, out of sub-tree
+		//cout<<"out of Sub Tree!!!!"<<endl;
 		assert(part_vec[1] == child_part_vec[0]);
 		return;
 	}
 	PhyloNode *node_part = (PhyloNode*) child_part_vec[0]->node;
 	PhyloNode *dad_part = NULL;
 	FOR_NEIGHBOR(node_part, NULL, it) {
-		bool appear = false;
-		for (vector<PhyloNeighbor*>::iterator it2 = part_vec.begin(); it2 != part_vec.end(); it2++)
-			if ((*it2) == (*it)) { appear = true; break; }
+		bool appear = false;int i = 0;
+		//cout<<"NEI of "<<node_part->id<<" in the scope:"<<(*it)->node->id <<" name "<<(*it)->node->name <<endl;
+		for (vector<PhyloNeighbor*>::iterator it2 = part_vec.begin(); it2 != part_vec.end(); it2++){
+			//cout<<"part_vec["<<i++<<"]="<<(*it2)->node->id<<" name "<<(*it2)->node->name<<endl;
+			if ((*it2) == (*it)) {
+				//cout<<"appeared "<<(*it)->node->id<<endl;
+				appear = true; break;
+			}
+		}
 		if (!appear) {
+			//cout<<"DAD couldn't find this one among part_vec:"<<(*it)->node->id<<endl;
 			assert(!dad_part);
 			dad_part = (PhyloNode*)(*it)->node;
+			//cout<<"DAD:"<<(*it)->node->id<<endl;
 		}
 	}
 	nei->link_neighbors[part] = (PhyloNeighbor*)node_part->findNeighbor(dad_part);
