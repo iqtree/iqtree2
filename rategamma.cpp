@@ -29,7 +29,7 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 	phylo_tree = tree;
 	cut_median = median;
 	//gamma_shape = MAX_GAMMA_SHAPE-1.0;
-	gamma_shape = 2.0;
+	gamma_shape = 1.0;
 	fix_gamma_shape = false;
 	if (shape >= 0) {
 		gamma_shape = shape;
