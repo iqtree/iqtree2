@@ -8,6 +8,7 @@
 #include "phylosupertreeplen.h"
 #include "superalignmentpairwise.h"
 #include <string.h>
+#include "timeutil.h"
 
 /**********************************************************
  * class SuperAlignmentPairwisePlen
@@ -78,9 +79,17 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
    /* for (int part = 0; part < ntrees; part++) {
     	cout << "LIKELIHOOD | Partition "<<part<<" | "<<tree->at(part)->computeLikelihood()<<endl;
     }*/
-    tree_lh = tree->computeLikelihood();
-	cout<<"Initial likelihood: "<<tree_lh<<endl;
-    for(int i = 1; i < 100; i++){
+    //tree_lh = tree->computeLikelihood();
+	if (fixed_len)
+		tree_lh = tree->computeLikelihood();
+	else {
+		tree_lh = tree->optimizeAllBranches(1);
+	}
+
+    cout<<"Initial log-likelihood: "<<tree_lh<<endl;
+	double begin_time = getCPUTime();
+	int i;
+    for(i = 1; i < 100; i++){
     	tol = max(tol/2, epsilon);
     	cur_lh = 0.0;
     	for (int part = 0; part < ntrees; part++) {
@@ -104,14 +113,14 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	}
 
     	// Optimizing branch lengths
-    	int my_iter = min(5,i);
+    	int my_iter = min(5,i+1);
 
     	//cout<<"BEFORE BRANCH OPTIMIZATION"<<endl;
         //tree->printTree(cout);
     	if(!fixed_len){
     		cur_lh = tree->optimizeAllBranches(my_iter,tol);
     	}
-    	cout<<"Current likelihood at step "<<i<<": "<<cur_lh<<endl;
+    	cout<<"Current log-likelihood at step "<<i<<": "<<cur_lh<<endl;
     	if(fabs(cur_lh-tree_lh) < epsilon)
     		break;
 
@@ -125,6 +134,7 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	//tree->at(part)->printTree(cout);
     	//cout<<endl;
     }
+	cout << "Parameters optimization took " << i-1 << " rounds (" << getCPUTime()-begin_time << " sec)" << endl << endl;
 
     //exit(2);
     return tree_lh;

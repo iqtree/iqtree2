@@ -182,8 +182,11 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 
 void PhyloSuperTree::setParams(Params &params) {
 	IQTree::setParams(params);
-	for (iterator it = begin(); it != end(); it++)
+	for (iterator it = begin(); it != end(); it++) {
 		(*it)->params = &params;
+		(*it)->sse = params.SSE;
+		(*it)->optimize_by_newton = params.optimize_by_newton;
+	}
 	
 }
 
