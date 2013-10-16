@@ -342,6 +342,11 @@ struct NNIInfo {
  */
 struct Params {
 
+	/**
+	 *  Carry out iterated local search using NNI only.
+	 *  From the local maximum, apply some negative NNIs and the continue with the local search
+	 */
+	bool ilsnni;
 
 	bool cherry;
 
@@ -664,6 +669,11 @@ struct Params {
             output file to store the distance matrix
      */
     char *dist_file;
+
+    /**
+            TRUE to compute the observed distances instead of Juke-Cantor distances, default: FALSE
+     */
+    bool compute_obs_dist;
 
     /**
             TRUE to compute the maximum-likelihood distances
@@ -1232,9 +1242,9 @@ struct Params {
     bool nni_sort;
 
     /**
-            TRUE to optimize 5 branches around NNI
+            Obsolete: TRUE to optimize 5 branches around NNI
      */
-    bool nni_opt_5branches;
+    //bool nni_opt_5branches;
 
     /** print some output info for NNI */
     bool testNNI;

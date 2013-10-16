@@ -114,27 +114,6 @@ struct SwapNNIParam {
     double *nni2_ptnlh;
 };
 
-/**
-        NNISwap, define a NNI Swap or Move
- */
-//struct NNIMove {
-//    PhyloNode *node1;
-//    NeighborVec::iterator node1Nei_it;
-//
-//    PhyloNode *node2;
-//    NeighborVec::iterator node2Nei_it;
-//
-//    // log-likelihood of the NNI Tree
-//    double loglh;
-//
-//    int swap_id;
-//
-//    bool operator<(const NNIMove & rhs) const {
-//        //return score > rhs.score;
-//    	return (loglh > rhs.loglh);
-//    }
-//
-//};
 
 struct NNIMove {
     PhyloNode *node1;
@@ -143,25 +122,24 @@ struct NNIMove {
     PhyloNode *node2;
     NeighborVec::iterator node2Nei_it;
 
-    // log-likelihood of the NNI Tree
-    double loglh;
+    // log-likelihood of the tree before applying the NNI
+    double oldloglh;
+
+    // log-likelihood of the tree after applying the NNI
+    double newloglh;
 
     int swap_id;
 
-    //positive value for a positive NNI
-    double delta;
+    // old branch lengths of 5 branches before doing NNI
+    double oldLen[5];
 
-    // length of the central branch before NNI
-    double oldLen;
-
-    // length of the central branch after NNI
-    double newLen;
+    // new branch lengths of 5 branches corresponding to the NNI
+    double newLen[5];
 
     bool operator<(const NNIMove & rhs) const {
-        return loglh > rhs.loglh;
+        return newloglh > rhs.newloglh;
         //return delta > rhs.delta;
     }
-
 };
 
 struct LeafFreq {
@@ -801,8 +779,9 @@ public:
     /**
             Do an NNI
             @param move reference to an NNI move object containing information about the move
+            @param clearLH decides whether or not the partial likelihood should be cleared
      */
-    virtual void doNNI(NNIMove &move);
+    virtual void doNNI(NNIMove &move, bool clearLH = true);
 
     /****************************************************************************
             Stepwise addition (greedy) by maximum likelihood
@@ -1147,10 +1126,12 @@ protected:
 
     /**
             current branch iterator, used by computeFunction() to optimize branch lengths
+            and by computePatternLikelihood() to compute all pattern likelihoods
      */
     PhyloNeighbor *current_it;
     /**
             current branch iterator of the other end, used by computeFunction() to optimize branch lengths
+            and by computePatternLikelihood() to compute all pattern likelihoods
      */
     PhyloNeighbor *current_it_back;
 

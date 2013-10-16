@@ -572,6 +572,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.areas_boundary_file = NULL;
     params.boundary_modifier = 1.0;
     params.dist_file = NULL;
+    params.compute_obs_dist = false;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.budget_file = NULL;
@@ -642,14 +643,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5Branches = true;
+    params.nni5Branches = false;
     params.nniThresHold = 0.1;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
     params.fast_eval = false;
     params.evalType = 2;
-    params.p_delete = 0.0;
+    params.p_delete = -1;
     params.min_iterations = -1;
     params.max_iterations = 1;
     params.stop_condition = SC_FIXED_ITERATION;
@@ -716,7 +717,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.nni_cutoff = -1000000.0;
     params.estimate_nni_cutoff = false;
     params.nni_sort = false;
-    params.nni_opt_5branches = false;
+    //params.nni_opt_5branches = false;
     params.testNNI = false;
     params.approximate_nni = false;
     params.do_compression = false;
@@ -735,6 +736,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.par_vs_bionj = false;
     params.tabu = false;
     params.cherry = false;
+    params.ilsnni = false;
     params.random_restart = false;
     params.avh_test = 0;
     params.site_freq_file = NULL;
@@ -879,6 +881,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.dist_file = argv[cnt];
             } else if (strcmp(argv[cnt], "-djc") == 0) {
                 params.compute_ml_dist = false;
+            } else if (strcmp(argv[cnt], "-dobs") == 0) {
+                params.compute_obs_dist = true;
             } else if (strcmp(argv[cnt], "-r") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1492,8 +1496,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (params.nni_cutoff >= 0) throw "cutoff value for -nnicutval must be negative";
             } else if (strcmp(argv[cnt], "-nnisort") == 0) {
                 params.nni_sort = true;
-            } else if (strcmp(argv[cnt], "-nni5") == 0) {
-                params.nni_opt_5branches = true;
             } else if (strcmp(argv[cnt], "-plog") == 0) {
                 params.gene_pvalue_loga = true;
             } else if (strcmp(argv[cnt], "-dmp") == 0) {
@@ -1524,6 +1526,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.avoid_duplicated_trees = true;
                 if (params.gbo_replicates < 1000) throw "#replicates must be >= 1000";
                 params.consensus_type = CT_CONSENSUS_TREE;
+                params.nni5Branches = true;
 			} else if (strcmp(argv[cnt], "-beps") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1605,13 +1608,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.tabu = true;
             } else if (strcmp(argv[cnt], "-cherry") == 0) {
             	params.cherry = true;
+            } else if (strcmp(argv[cnt], "-ilsnni") == 0) {
+            	params.ilsnni = true;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
-            } else if (strcmp(argv[cnt], "-fivebran") == 0) {
+            } else if (strcmp(argv[cnt], "-fivebran") == 0 || strcmp(argv[cnt], "-nni5") == 0) {
             	params.nni5Branches = true;
-            } else if (strcmp(argv[cnt], "-onebran") == 0) {
+            } else if (strcmp(argv[cnt], "-onebran") == 0 || strcmp(argv[cnt], "-nni1") == 0) {
             	params.nni5Branches = false;
             } else if (strcmp(argv[cnt], "-nniThreshold") == 0) {
             	cnt++;

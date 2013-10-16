@@ -202,7 +202,7 @@ static int  cmpTipVal (void *v1, void *v2)
 
 /*  These are the only routines that need to UNDERSTAND topologies */
 
-static topol  *setupTopol (int maxtips)
+topol  *setupTopol (int maxtips)
 {
   topol   *tpl;
 
@@ -311,7 +311,7 @@ static nodeptr  minTreeTip (nodeptr  p, int numsp)
 }
 
 
-static void saveTree (tree *tr, topol *tpl)
+void saveTree (tree *tr, topol *tpl)
 /*  Save a tree topology in a standard order so that first branches
  *  from a node contain lower value tips than do second branches from
  *  the node.  The root tip should have the lowest value of all.
@@ -331,7 +331,7 @@ static void saveTree (tree *tr, topol *tpl)
 } /* saveTree */
 
 
-static pl_boolean restoreTree (topol *tpl, tree *tr)
+pl_boolean restoreTree (topol *tpl, tree *tr)
 { 
   connptr  r;
   nodeptr  p, p0;    
