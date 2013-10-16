@@ -468,7 +468,7 @@ double RateMeyerDiscrete::classifyRatesKMeans() {
 	if (mcat_type & MCAT_MEAN)
 		return cur_lh;
 
-	return phylo_tree->getModelFactory()->optimizeParameters(false,false);
+	return phylo_tree->getModelFactory()->optimizeParameters(false,false, TOL_LIKELIHOOD);
 
 	// optimize category rates again by ML
 /*	for (int k = 0; k < 100; k++) {

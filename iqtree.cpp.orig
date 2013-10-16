@@ -19,7 +19,6 @@
  ***************************************************************************/
 #include "iqtree.h"
 #include "phylosupertree.h"
-#include "phylosupertreeplen.h"
 #include "mexttree.h"
 #include "timeutil.h"
 
@@ -742,8 +741,7 @@ double IQTree::doIQP() {
         setAlignment(aln);
         clearAllPartialLH();
         if (params->gbo_replicates)
-            //curScore = optimizeAllBranches(3, 1.0);
-        	curScore = optimizeAllBranches(params->numSmoothTree);
+            curScore = optimizeAllBranches(3, 1.0);
         else {
             // optimize branches at the reinsertion point
             /*
@@ -1087,7 +1085,7 @@ double IQTree::doIQPNNI() {
                     //printPhylolibTree(".iqp_tree.phylolib");
                     evaluateGeneric(phyloTree, phyloTree->start, TRUE);
                     //evaluateGeneric(phyloTree, phyloTree->start, FALSE);
-                    treeEvaluate(phyloTree, 1);
+                    treeEvaluate(phyloTree, 2);
                     if (verbose_mode >= VB_MED) {
                         cout << "IQP log-likelihood = " << phyloTree->likelihood << endl;
                     }
@@ -1261,12 +1259,7 @@ double IQTree::doIQPNNI() {
             if (cur_tree_topo_ss.str() != best_tree_topo) {
                 best_tree_topo = cur_tree_topo_ss.str();
                 cout << "BETTER TREE FOUND at iteration " << curIQPIter << ": " << curScore << endl;
-                if (params->phylolib) {
-                	treeEvaluate(phyloTree, 32);
-                	curScore = phyloTree->likelihood;
-                } else {
-                    curScore = optimizeAllBranches();
-                }
+                curScore = optimizeAllBranches();
                 //cout << "Saving new better tree ..." << endl;
                 bestScore = curScore;
                 best_tree_string.seekp(0, ios::beg);
@@ -1383,7 +1376,6 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
                     ((PhyloSuperTree*) this)->printMapInfo();
                 }
             }
-
             if (beginHeu) {
                 double maxScore = curScore + nni_delta_est * (nni_count_est - nni_count);
                 if (maxScore < curScore)
@@ -1457,11 +1449,9 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
                 *nni_count_ret = nni_count;
             resetLamda = true;
         } else {
-
             /* tree cannot be worse if only 1 NNI is applied */
             if (nni2apply == 1) {
                 cout << "Error: logl=" << curScore << " < " << oldScore << endl;
-
                 // restore the tree by reverting all NNIs
                 applyNNIs(nni2apply, false);
                 // restore the branch lengths
@@ -1496,12 +1486,11 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
 
-    /*
     if (save_all_trees == 2 && params->nni_opt_5branches) {
         curScore = optimizeAllBranches();
         saveCurrentTree(curScore); // BQM: for new bootstrap
         saveNNITrees(); // optimize 5 branches around NNI, this makes program slower
-    }*/
+    }
     return curScore;
 }
 
@@ -1553,7 +1542,7 @@ double IQTree::optimizeNNIRax(bool beginHeu, int *skipped, int *nni_count_ret) {
             fast_eval = 0;
         }
         double newLH = doNNISearch(phyloTree, &nni_count, &deltaNNI, &nnicut, numSmoothTree);
-        if (newLH == -1.0) {
+        if (newLH == 0.0) {
             break;
         } else {
             //cout << "NNI round " << nniRound << "  LH : " << newLH << endl;
@@ -2049,10 +2038,6 @@ NNIMove IQTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool appro
 				//computePatternLikelihood(nni_param->nni2_ptnlh, &score);
 			}
 		}
-		if (save_all_trees == 2) {
-			saveCurrentTree(score); // BQM: for new bootstrap
-		}
-
         // else, swap back, also recover the branch lengths
 		node1->updateNeighbor(node1_it, node1_nei);
 		node1_nei->node->updateNeighbor(node2, node1);

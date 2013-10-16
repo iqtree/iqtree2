@@ -376,21 +376,16 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		cout << "Initial log-likelihood: " << cur_lh << endl;
 	int i;
 	bool optimize_rate = true;
+	//double cur_epsilon = epsilon*100;
 	for (i = 2; i < 100; i++) {
 		double model_lh = model->optimizeParameters();
-		//if (model_lh != 0.0) cur_lh = model_lh;
-/*
-		if (model_lh != 0.0 && !fixed_len)
-			model_lh = optimizeAllBranches(3); */
 		double rate_lh = 0.0;
 		if (optimize_rate) {
 			rate_lh = site_rate->optimizeParameters();
 			if (rate_lh < model_lh+1e-6 && model_lh != 0.0) optimize_rate = false;
 		}
-/*		if (rate_lh != 0.0 && !fixed_len)
-			rate_lh = optimizeAllBranches(2);*/
 		if (model_lh == 0.0 && rate_lh == 0.0) {
-			if (!fixed_len) cur_lh = tree->optimizeAllBranches();
+			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, epsilon);
 			break;
 		}
 		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
@@ -401,14 +396,14 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		}
 		if (new_lh > cur_lh + epsilon) {
 			if (!fixed_len)
-				cur_lh = tree->optimizeAllBranches(i<5 ? i : 5);  // loop only 5 times in total
+				cur_lh = tree->optimizeAllBranches(min(i,3), epsilon);  // loop only 5 times in total
 			else
 				cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)
 				cout << "Current log-likelihood: " << cur_lh << endl;
 		} else {
 			site_rate->classifyRates(new_lh);
-			if (!fixed_len) cur_lh = tree->optimizeAllBranches();
+			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, epsilon);
 			break;
 		}
 	}

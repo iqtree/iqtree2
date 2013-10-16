@@ -56,30 +56,38 @@ typedef struct {
     double z3[NUM_BRANCHES]; // q->next
     double z4[NUM_BRANCHES]; // q->next->next
 	double likelihood;
-	double deltaLH;
 } nniMove;
 
+
+
 /*
- *  Find the best NNI move for the current branch
- *  Return NULL if no positive NNI is found
- *  Otherwise return the best positive NNI move found
- *
+ *  Evaluate NNI moves for the current internal branch
  *  @param tr the current tree data structure
  *  @param p the node representing the current branch
+ *  @param nniList array containing evaluated NNI moves
+ *  @param numBran number of branches that have been evaluated
+ *  @param numPosNNI
  *  @param curLH the curren log-likelihood of the tree
- *  @return the best NNI move found for this branch or nothing
+ *  @return 1 if a positive NNI is found, 0 otherwise
  */
-nniMove getBestNNIForBran(tree* tr, nodeptr p, double curLH, NNICUT* nnicut);
+int evalNNIForBran(tree* tr, nodeptr p,  nniMove* nniList, int* numBran, double curLH, NNICUT* nnicut);
 
 /**
- * 	do 1 round of fast NNI
- *  return new tree log-likelihood if found improving NNI otherwise 0.0
+ * 	do 1 round of fastNNI
+ *  return new tree log-likelihood if found improving NNI otherwise -1.0
  *
  *  @param tr: the tree data structure
  *  @param nni_count: pointer to the number of NNI that has been apply (OUT parameter)
  *  @param deltaNNI: pointer to the average improvement made by one NNI (OUT parameters)
  */
 double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut, int numSmooth);
+
+/**
+ *  perturb the current tree by randomly carrying some negative NNI moves
+ *  @param[in] tr the tree
+ *  @param[in] nniList list of all possible NNIs
+ */
+double pertub(tree* tr, nniMove* nniList);
 
 void optimizeOneBranches(tree* tr, nodeptr p, int numNRStep);
 
@@ -88,9 +96,8 @@ void optimizeOneBranches(tree* tr, nodeptr p, int numNRStep);
  *  @param[in] tr: the tree data structure
  *  @param[in] swap: represents one of the 2 NNI moves. Could be either 0 or 1
  *  @param[in] evalType: NO_NR, WITH_ONE_NR, WITH_FIVE_NR
- *  @param[in] curLH: current log-likelihood of the tree
  */
-double doOneNNI(tree * tr, nodeptr p, int swap, int evalType, double curLH);
+double doOneNNI(tree * tr, nodeptr p, int swap, int evalType);
 
 /**
  *  Go through all 2(n-3) internal branches of the tree and
@@ -99,10 +106,20 @@ double doOneNNI(tree * tr, nodeptr p, int swap, int evalType, double curLH);
 void evalAllNNI(tree* tr);
 
 /*
- *  cnt: number of internal branches that have been visited
- *  cnt_nni: number of positive NNI found
+ * 	@brief evaluate all NNIs within the subtree specified by node p
+ * 	populates the list containing all possible NNI moves
+ * 	@param[in] p node pointer that specify the subtree
+ * 	@param[out] nniList list of evaluated NNI moves
+ * 	@param[out] numBran number of internal branches that have been visited
+ *  @param[out] numPosNNI number of positive NNI found
  */
-void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* cnt_bran, int* cnt_nni, double curLH, NNICUT* nnicut);
+void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* numBran, int* numPosNNI, double curLH, NNICUT* nnicut);
+
+/*
+ *  @brief return the array which can be used to store evaluated NNI moves
+ */
+nniMove *getNNIList(tree* tr);
+
 /*
  *  Save the likelihood vector of p and q to the 2 pointer p_lhsave and
  *  q_lhsave.

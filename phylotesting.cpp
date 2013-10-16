@@ -52,6 +52,8 @@ const char *aa_model_names_old[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "VT", "LG", "DCMut", "Blosum62" };
 
+const double TOL_LIKELIHOOD_MODELTEST = 0.01;
+
 void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC) {
 	AIC = -2 * tree_lh + 2 * df;
 	AICc = AIC + 2.0 * df * (df + 1) / (ssize - df - 1);
@@ -236,17 +238,16 @@ void getModelList(Params &params, int nstates, StrVector &models) {
 		model_names = NULL;
 	}
 	if (nmodels == 0) return;
-	const char *rate_options[] = {"", "+F", "+I", "+I+F", "+G", "+G+F", "+I+G", "+I+G+F"};
-	bool test_options[] = {true, false, true, false, true, false, true, false};
+	const char *rate_options[] = {  "", "+I",  "+F", "+I+F", "+G", "+I+G", "+G+F", "+I+G+F"};
+	bool test_options[] =        {true, true, false,  false, true,   true,  false,    false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	const char *must_options[] = {"+I", "+G", "+F"};
 	const char *can_options[] = {"+i", "+g", "+f"};
 	int i, j;
-	for (j = 0; j < sizeof(must_options)/sizeof(char*); j++)
-	if (params.model_name.find(must_options[j]) != string::npos) {
+	if (nstates == 20) {
+		// test all options for protein, incl. +F
 		for (i = 0; i < noptions; i++)
-			if (strstr(rate_options[i], must_options[j]) == NULL)
-				test_options[i] = false;
+			test_options[i] = true;
 	}
 	for (j = 0; j < sizeof(can_options)/sizeof(char*); j++)
 	if (params.model_name.find(can_options[j]) != string::npos) {
@@ -254,7 +255,12 @@ void getModelList(Params &params, int nstates, StrVector &models) {
 			if (strstr(rate_options[i], must_options[j]) != NULL)
 				test_options[i] = true;
 	}
-
+	for (j = 0; j < sizeof(must_options)/sizeof(char*); j++)
+	if (params.model_name.find(must_options[j]) != string::npos) {
+		for (i = 0; i < noptions; i++)
+			if (strstr(rate_options[i], must_options[j]) == NULL)
+				test_options[i] = false;
+	}
 	for (i = 0; i < nmodels; i++)
 		for (j = 0; j < noptions; j++)
 			if (test_options[j])
@@ -332,6 +338,7 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 		info.aln_file = "";
 		info.sequence_type = "";
 		info.position_spec = "";
+		info.mem_ptnlh = NULL;
 		part_info.push_back(info);
 		Alignment *aln = super_aln->concatenateAlignments(*it);
 		PhyloTree *tree = super_tree->extractSubtree(*it);
@@ -702,7 +709,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		if (model_id >= 0) {
 			info.logl = model_info[model_id].logl;
 		} else {
-			info.logl = tree->getModelFactory()->optimizeParameters(false, false);
+			info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST);
 			// print information to .model file
 			if (!fmodel.is_open()) {
 				fmodel.open(fmodel_str.c_str(), ios::app);
