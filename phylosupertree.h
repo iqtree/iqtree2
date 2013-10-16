@@ -173,7 +173,7 @@ public:
             Do an NNI on the supertree and synchronize all subtrees respectively
             @param move the single NNI
      */
-    virtual void doNNI(NNIMove &move);
+    virtual void doNNI(NNIMove &move, bool clearLH = true);
 
     /**
      * 	 Restore the branch lengths from the saved values

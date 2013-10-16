@@ -415,7 +415,7 @@ double PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf
 NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, bool useLS, double lh_contribution)
 {
     NNIMove myMove;
-    myMove.loglh = 0;
+    myMove.newloglh = 0;
 
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
 	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
@@ -458,30 +458,26 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 	this->swapNNIBranch(0.0, (PhyloNode*)nei2->node, (PhyloNode*)nei1->node, &nni_param);
 
 	// Choose NNI move for SuperTree===========================================
-	if (nni_param.nni1_score > bestScore + TOL_LIKELIHOOD) {
-		myMove.delta = nni_param.nni1_score - nonNNIScore;
+	if (nni_param.nni1_score > nni_param.nni2_score) {
 		bestScore = nni_param.nni1_score;
 		myMove.swap_id = 1;
 		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
 		myMove.node2Nei_it = node2->findNeighborIt(node2_nei->node);
-		myMove.loglh = bestScore;
+		myMove.newloglh = bestScore;
 		myMove.node1 = node1;
 		myMove.node2 = node2;
-		myMove.newLen = nni_param.nni1_brlen;
-		myMove.oldLen = oldLEN;
-	}
-
-	if (nni_param.nni2_score > bestScore + TOL_LIKELIHOOD) {
-		myMove.delta = nni_param.nni2_score - nonNNIScore;
+		myMove.newLen[0] = nni_param.nni1_brlen;
+		myMove.oldLen[0] = oldLEN;
+	} else {
 		bestScore = nni_param.nni2_score;
 		myMove.swap_id = 2;
 		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
 		myMove.node2Nei_it = node2->findNeighborIt(node2_nei_other->node);
-		myMove.loglh = bestScore;
+		myMove.newloglh = bestScore;
 		myMove.node1 = node1;
 		myMove.node2 = node2;
-		myMove.newLen = nni_param.nni2_brlen;
-		myMove.oldLen = oldLEN;
+		myMove.newLen[0] = nni_param.nni2_brlen;
+		myMove.oldLen[0] = oldLEN;
 	}
 	// ========================================================================
 
