@@ -391,7 +391,6 @@ double PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 			if (nei1_part && nei2_part) {
-				double oldlen = nei1_part->length;
 				nei1_part->length += lambda*part_info[part].part_rate;
 				nei2_part->length += lambda*part_info[part].part_rate;
 				if(nei1_part->length<-1e-4){
@@ -441,7 +440,6 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 	}
 
 	double bestScore = optimizeOneBranch(node1, node2, false);
-	double nonNNIScore = bestScore;
 	double oldLEN = node1->findNeighbor(node2)->length;
 
 	int ntrees = size(), part;
@@ -547,7 +545,7 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 	return myMove;
 }
 
-void PhyloSuperTreePlen::doNNI(NNIMove &move)
+void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 {
 	checkBranchLen();
 	//cout<<endl<<"I did NNI on Super Tree!!:)"<<endl;
@@ -600,9 +598,9 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move)
 	}
 //	cout<<endl<<endl<<"BEFORE I DID NNI o.O"<<endl<<endl;
 //	printMapInfo();
-	PhyloTree::doNNI(move);
-	nei1->length = move.newLen;
-	nei2->length = move.newLen;
+	PhyloTree::doNNI(move,clearLH);
+	nei1->length = move.newLen[0];
+	nei2->length = move.newLen[0];
 
 	for (it = begin(), part = 0; it != end(); it++, part++) {
 		if (!is_nni[part]) {
@@ -610,7 +608,7 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move)
 			linkBranch(part, nei1, nei2);
 			//cout<<endl<<endl<<"AFTER RELINK in I DID NNI o.O"<<endl<<endl;
 			//printMapInfo();
-		} else { (*it)->doNNI(part_move[part]); }
+		} else { (*it)->doNNI(part_move[part],clearLH); }
 
 		mapBranchLen();
 

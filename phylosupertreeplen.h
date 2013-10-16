@@ -168,7 +168,7 @@ public:
             Do an NNI on the supertree and synchronize all subtrees respectively
             @param move the single NNI
      */
-    virtual void doNNI(NNIMove &move);
+    virtual void doNNI(NNIMove &move, bool clearLH = true);
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
