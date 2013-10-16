@@ -29,7 +29,7 @@
 #include "stoprule.h"
 #include "mtreeset.h"
 
-#include "phylolib/axml.h"
+#include "pll/src/pll.h"
 #include "nnisearch.h"
 #include "phylolib.h"
 
@@ -101,11 +101,6 @@ public:
     void init();
 
     /**
-     *   Create a parsimony tree using phylolib
-     */
-    double computeParsimonyTreePhylolib();
-
-    /**
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)
      */
     virtual void setParams(Params& params);
@@ -133,7 +128,7 @@ public:
      *  print model parameters of Phylolib(rates, base frequencies, alpha) to stdout and
      *  to file
      */
-    void printPhylolibModelParams(const char* suffix);
+    //void printPhylolibModelParams(const char* suffix);
 
     /**
         print intermediate tree
@@ -235,11 +230,6 @@ public:
      */
     double doIQPNNI();
 
-    /**
-     * 		Perform random restart heuristic
-     */
-    void doRandomRestart();
-
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
      ****************************************************************************/
@@ -260,7 +250,7 @@ public:
      * 		@param skipped (OUT) 1 if current iteration is skipped, otherwise 0
      *      @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    double optimizeNNIRax(bool beginHeu = false, int *skipped = NULL, int *nni_count = NULL);
+    double pllOptimizeNNI(bool beginHeu = false, int *skipped = NULL, int *nni_count = NULL);
 
 
     /**
@@ -454,9 +444,24 @@ public:
     }
 
     /**
-     *  Tree data structure for RAxML kernel
+     *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
      */
-    tree* phyloTree;
+    pllInstance *pllInst;
+
+    /**
+     *	PLL data structure for alignment
+     */
+    pllAlignmentData *pllAlignment;
+
+    /**
+     *  PLL data structure for storing phylognetic analysis options
+     */
+    pllInstanceAttr pllAttr;
+
+    /**
+     *  PLL partition list
+     */
+    partitionList * pllPartitions;
 
 protected:
 

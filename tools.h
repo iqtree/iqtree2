@@ -406,9 +406,9 @@ struct Params {
     bool reinsert_par;
 
     /*
-     *  Option to compare BIONJ and Parsimony Tree
+     *  Option to evaluate 10 different starting tree and take the best
      */
-    bool par_vs_bionj;
+    bool bestStart;
 
     /**
      *  Maximum running time of the tree search in minutes
@@ -419,11 +419,6 @@ struct Params {
      *  Turn on tabu function for IQP (Memory for removed nodes)
      */
     bool tabu;
-
-    /**
-     *   Option for doing random restart
-     */
-    bool random_restart;
 
     /**
      *  Turn on parsimony branch length estimation
@@ -665,6 +660,11 @@ struct Params {
             TRUE to compute the observed distances instead of Juke-Cantor distances, default: FALSE
      */
     bool compute_obs_dist;
+
+    /**
+            TRUE to compute the Juke-Cantor distances, default: FALSE
+     */
+    bool compute_jc_dist;
 
     /**
             TRUE to compute the maximum-likelihood distances

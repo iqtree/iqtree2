@@ -369,6 +369,11 @@ public:
     virtual void initializeAllPartialLh();
 
     /**
+            de-allocate central_partial_lh
+     */
+    virtual void deleteAllPartialLh();
+
+    /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
             @param node the current node
             @param dad dad of the node, used to direct the search

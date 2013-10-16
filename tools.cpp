@@ -573,6 +573,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.boundary_modifier = 1.0;
     params.dist_file = NULL;
     params.compute_obs_dist = false;
+    params.compute_jc_dist = false;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.budget_file = NULL;
@@ -725,17 +726,16 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.iteration_multiple = 1;
     params.vns_search = false;
     params.speedup_iter = 100;
-    params.phylolib = false;
+    params.pll = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
     params.reinsert_par = false;
     params.fast_branch_opt = false;
-    params.par_vs_bionj = false;
+    params.bestStart = true;
     params.tabu = false;
     params.cherry = false;
     params.ilsnni = false;
-    params.random_restart = false;
     params.avh_test = 0;
     params.site_freq_file = NULL;
 #ifdef _OPENMP
@@ -1578,8 +1578,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -maxtime <time_in_minutes>";
                 params.maxtime = convert_double(argv[cnt]);
                 params.min_iterations = 1000000;
-            } else if (strcmp(argv[cnt], "-best_start") == 0) {
-                params.par_vs_bionj = true;
+            } else if (strcmp(argv[cnt], "-beststart") == 0) {
+                params.bestStart = true;
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -best_start <binary_alignment_file>";
@@ -1589,7 +1589,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -ba <binary_alignment_file>";
                 params.binary_aln_file = argv[cnt];
-                params.phylolib = true;
+                params.pll = true;
             } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-tabu") == 0) {
@@ -1642,8 +1642,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -eps <log-likelihood epsilon>";
                 params.loglh_epsilon = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-random_restart") == 0) {
-                params.random_restart = true;
             } else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
                 params.parbran = true;
             } else if (strcmp(argv[cnt], "-wbt") == 0) {

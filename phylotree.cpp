@@ -1033,6 +1033,13 @@ void PhyloTree::initializeAllPartialLh() {
     assert(index == (nodeNum - 1) * 2);
 }
 
+void PhyloTree::deleteAllPartialLh() {
+	if (central_partial_lh) {
+		delete [] central_partial_lh;
+	}
+	central_partial_lh = NULL;
+}
+
 uint64_t PhyloTree::getMemoryRequired() {
 	uint64_t block_size = ((aln->getNPattern() % 2) == 0) ? aln->getNPattern() : (aln->getNPattern() + 1);
     block_size = block_size * aln->num_states;
@@ -2442,11 +2449,12 @@ void PhyloTree::growTreeML(Alignment *alignment) {
 
 double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d2l) {
     // if no model or site rate is specified, return JC distance
-    if (initial_dist == 0.0)
+    if (initial_dist == 0.0) {
     	if (params->compute_obs_dist)
             initial_dist = aln->computeObsDist(seq1, seq2);
     	else
     		initial_dist = aln->computeDist(seq1, seq2);
+    }
 
     if (!model_factory || !site_rate)
         return initial_dist; // MANUEL: here no d2l is return

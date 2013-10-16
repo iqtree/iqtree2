@@ -7,6 +7,7 @@ extern "C" {
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "pll/src/pll.h"
 
 const int TOPO_ONLY = 0;
 const int NO_BRAN_OPT = 1;
@@ -31,11 +32,32 @@ FILE * fmemopen(void *buf, size_t size, const char *mode);
 
 #endif /* APPLE */
 
+#define IQTREE_NEWZPERCYCLE		10
+
+typedef struct {
+	pllInstance* tr;
+	nodeptr p;
+	int nniType;
+    double z0[PLL_NUM_BRANCHES]; // p
+    double z1[PLL_NUM_BRANCHES]; // p->next
+    double z2[PLL_NUM_BRANCHES]; // p->next->next
+    double z3[PLL_NUM_BRANCHES]; // q->next
+    double z4[PLL_NUM_BRANCHES]; // q->next->next
+	double likelihood;
+} NNIMOVE;
+
+int cmp_nni(const void* nni1, const void* nni2);
+
+int compareDouble(const void * a, const void * b);
+
+NNIMOVE *getNonConflictNNIList(pllInstance* tr);
+
+void _update(pllInstance *tr, partitionList *pr, nodeptr p);
 
 /**
  * TODO: read tree from string in memory
  */
- int treeReadLenString (const char *buffer, tree *tr, pl_boolean readBranches, pl_boolean readNodeLabels, pl_boolean topologyOnly);
+ int treeReadLenString (const char *buffer, pllInstance *tr, boolean readBranches, boolean readNodeLabels, boolean topologyOnly);
 
 #define MAX_NUM_DELTA 10000
 
@@ -46,23 +68,11 @@ typedef struct {
 	int doNNICut;
 } NNICUT;
 
-typedef struct {
-	tree* tr;
-	nodeptr p;
-	int nniType;
-    double z0[NUM_BRANCHES]; // p
-    double z1[NUM_BRANCHES]; // p->next
-    double z2[NUM_BRANCHES]; // p->next->next
-    double z3[NUM_BRANCHES]; // q->next
-    double z4[NUM_BRANCHES]; // q->next->next
-	double likelihood;
-} nniMove;
-
-
 
 /*
  *  Evaluate NNI moves for the current internal branch
  *  @param tr the current tree data structure
+ *  @param pr partition data structure
  *  @param p the node representing the current branch
  *  @param nniList array containing evaluated NNI moves
  *  @param numBran number of branches that have been evaluated
@@ -70,55 +80,62 @@ typedef struct {
  *  @param curLH the curren log-likelihood of the tree
  *  @return 1 if a positive NNI is found, 0 otherwise
  */
-int evalNNIForBran(tree* tr, nodeptr p,  nniMove* nniList, int* numBran, double curLH, NNICUT* nnicut);
+int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,  NNIMOVE* nniList, int* numBran, double curLH);
 
 /**
  * 	do 1 round of fastNNI
  *  return new tree log-likelihood if found improving NNI otherwise -1.0
  *
- *  @param tr: the tree data structure
- *  @param nni_count: pointer to the number of NNI that has been apply (OUT parameter)
- *  @param deltaNNI: pointer to the average improvement made by one NNI (OUT parameters)
+ *  @param[in] tr the tree data structure
+ *  @param[in] pr partition data structure
+ *  @param[out] nni_count pointer to the number of NNI that has been apply (OUT parameter)
+ *  @param[out] deltaNNI pointer to the average improvement made by one NNI (OUT parameters)
  */
-double doNNISearch(tree* tr, int* nni_count, double* deltaNNI, NNICUT* nnicut, int numSmooth);
+double doNNISearch(pllInstance* tr, partitionList *pr, int* nni_count, double* deltaNNI);
 
 /**
  *  perturb the current tree by randomly carrying some negative NNI moves
  *  @param[in] tr the tree
  *  @param[in] nniList list of all possible NNIs
  */
-double pertub(tree* tr, nniMove* nniList);
+double pertub(pllInstance* tr, NNIMOVE* nniList);
 
-void optimizeOneBranches(tree* tr, nodeptr p, int numNRStep);
+//void optimizeOneBranches(pllInstance* tr, nodeptr p, int numNRStep);
 
 /**
  *  @brief Do 1 NNI move.
  *  @param[in] tr: the tree data structure
+ *  @param[in] pr partition data structure
  *  @param[in] swap: represents one of the 2 NNI moves. Could be either 0 or 1
  *  @param[in] evalType: NO_NR, WITH_ONE_NR, WITH_FIVE_NR
  */
-double doOneNNI(tree * tr, nodeptr p, int swap, int evalType);
+double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, int evalType);
 
 /**
  *  Go through all 2(n-3) internal branches of the tree and
  *  evaluate all possible NNI moves
  */
-void evalAllNNI(tree* tr);
+void evalAllNNI(pllInstance* tr);
 
 /*
  * 	@brief evaluate all NNIs within the subtree specified by node p
  * 	populates the list containing all possible NNI moves
+ *
+ * 	@param[in] tr: the tree data structure
+ * 	@param[in] pr partition data structure
  * 	@param[in] p node pointer that specify the subtree
  * 	@param[out] nniList list of evaluated NNI moves
  * 	@param[out] numBran number of internal branches that have been visited
  *  @param[out] numPosNNI number of positive NNI found
  */
-void evalNNIForSubtree(tree* tr, nodeptr p, nniMove* nniList, int* numBran, int* numPosNNI, double curLH, NNICUT* nnicut);
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, NNIMOVE* nniList, int* numBran, int* numPosNNI, double curLH);
 
 /*
  *  @brief return the array which can be used to store evaluated NNI moves
+ *
+ *  @param[in] tr: the tree data structure
  */
-nniMove *getNNIList(tree* tr);
+NNIMOVE *getNNIList(pllInstance* tr);
 
 /*
  *  Save the likelihood vector of p and q to the 2 pointer p_lhsave and
