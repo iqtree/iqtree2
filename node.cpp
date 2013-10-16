@@ -163,7 +163,7 @@ double Node::longestPath2(Node* &node1, Node* &node2) {
 }
 
 Neighbor *Node::findNeighbor(Node *node) {
-    int size = neighbors.size();
+	int size = neighbors.size();
     for (int i = 0; i < size; i++)
         if (neighbors[i]->node == node) return neighbors[i];
     /*

@@ -56,7 +56,7 @@ void PhyloSuperTree::readPartition(Params &params) {
 			if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
 			getline(in, info.sequence_type, ',');
 			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
-			if(params.partition_fixed_rates){
+			if(params.partition_type == 'd'){
 				string rate;
 				getline(in, rate,',');
 				info.part_rate = atof(rate.c_str());
@@ -276,7 +276,8 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 	PhyloNode *node_part = (PhyloNode*) child_part_vec[0]->node;
 	PhyloNode *dad_part = NULL;
 	FOR_NEIGHBOR(node_part, NULL, it) {
-		bool appear = false;int i = 0;
+		bool appear = false;
+		//int i = 0;
 		//cout<<"NEI of "<<node_part->id<<" in the scope:"<<(*it)->node->id <<" name "<<(*it)->node->name <<endl;
 		for (vector<PhyloNeighbor*>::iterator it2 = part_vec.begin(); it2 != part_vec.end(); it2++){
 			//cout<<"part_vec["<<i++<<"]="<<(*it2)->node->id<<" name "<<(*it2)->node->name<<endl;

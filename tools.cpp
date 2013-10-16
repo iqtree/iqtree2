@@ -626,8 +626,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.do_au_test = false;
     params.siteLL_file = NULL; //added by MA
     params.partition_file = NULL;
-    params.partition_fixed_rates = NULL;
-    params.partition_type = NULL;
+    params.partition_type = 0;
     params.sequence_type = NULL;
     params.aln_output = NULL;
     params.aln_site_list = NULL;
@@ -1141,16 +1140,18 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -sp <partition_file>";
                 params.partition_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-spt") == 0) {
+            } else if (strcmp(argv[cnt], "-spp") == 0) {
             	cnt++;
             	if (cnt >= argc)
-            	    throw "Use -spt <type of partition model>";
-                params.partition_type = argv[cnt];
-            } else if (strcmp(argv[cnt], "-spt_rate") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -spt_rate <fixed_rates>";
-                params.partition_fixed_rates = argv[cnt];
+            	    throw "Use -spp <type of partition model>";
+                params.partition_file = argv[cnt];
+                params.partition_type = 'p';
+            } else if (strcmp(argv[cnt], "-spj") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            	    throw "Use -spj <type of partition model>";
+                params.partition_file = argv[cnt];
+                params.partition_type = 'j';
             } else if (strcmp(argv[cnt], "-sf") == 0) {
                 cnt++;
                 if (cnt >= argc)

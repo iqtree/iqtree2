@@ -193,6 +193,12 @@ public:
 	*/
 	virtual void computeBranchLengths();
 
+	bool checkBranchLen();
+	void mapBranchLen();
+	virtual void printMapInfo();
+
+	virtual void restoreAllBranLen(PhyloNode *node, PhyloNode *dad);
+
     /**
      * 		indicates whether partition rates are fixed or not
      */

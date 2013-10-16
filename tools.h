@@ -493,14 +493,12 @@ struct Params {
 
     /**
      * 		defines the relation between edge lengths in supertree and subtrees
+     * 		0 for separate edge length (default)
+     * 		p for proportional edge length
+     * 		j for joint edge length
      */
-    char *partition_type;
+    char partition_type;
 
-    /**
-     * 		used for partition model with proportional branch lengths,
-     * 		indicates whether rates are fixed, if yes, they should be specified in partition_file
-     */
-    char *partition_fixed_rates;
 
     /**
             B, D, or P for Binary, DNA, or Protein sequences

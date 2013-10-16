@@ -196,7 +196,7 @@ public:
 	/**
 	 * print debug information about all maps
 	 */
-	void printMapInfo();
+	virtual void printMapInfo();
 	
 	/**
 	 * initialize partition information for super tree

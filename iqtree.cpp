@@ -1376,6 +1376,7 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
                     ((PhyloSuperTree*) this)->printMapInfo();
                 }
             }
+
             if (beginHeu) {
                 double maxScore = curScore + nni_delta_est * (nni_count_est - nni_count);
                 if (maxScore < curScore)
@@ -1460,18 +1461,19 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         } else {
             curLambda = curLambda / 2;
             if (verbose_mode >= VB_MAX) {
-                cout << " Tree score gets worse at NNI round: " << nni_round;
-                cout << " Number of NNI moves applied: " << nni2apply;
-                cout << " Rollback tree with new lambda = " << curLambda << endl;
+            	cout<<endl;
+            	cout << " Tree score gets worse at NNI round: " << nni_round;
+            	cout << " Number of NNI moves applied: " << nni2apply;
+            	cout << " Rollback tree with new lambda = " << curLambda << endl;
             }
 
             /* tree cannot be worse if only 1 NNI is applied */
             if (nni2apply == 1 && newScore < curScore) {
-                cout << "THIS IS A BUG !!!" << endl;
-                cout << "The tree likelihood is supposed to be greater or equal than " << vec_nonconf_nni.at(0).loglh
-                        << endl;
-                cout << "Tree likelihood before the swap is " << curScore << endl;
-                cout << "Obtained tree likelihood is " << newScore << endl;
+//                cout << "THIS IS A BUG !!!" << endl;
+//                cout << "The tree likelihood is supposed to be greater or equal than " << vec_nonconf_nni.at(0).loglh
+//                        << endl;
+//                cout << "Tree likelihood before the swap is " << curScore << endl;
+//                cout << "Obtained tree likelihood is " << newScore << endl;
                 // restore the tree by reverting all NNIs
                 applyNNIs(nni2apply);
                 // restore the branch lengths
