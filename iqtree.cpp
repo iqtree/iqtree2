@@ -1409,7 +1409,8 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 
             /* sort all positive NNI moves (descending) */
             sort(posNNIs.begin(), posNNIs.end());
-            if (verbose_mode >= VB_DEBUG) {
+            if (verbose_mode >= VB_MED) {
+            	cout << "curScore: " << curScore << endl;
                 for (int i = 0; i < posNNIs.size(); i++) {
                     cout << "Log-likelihood of positive NNI " << i << " : " << posNNIs[i].newloglh << endl;
                 }

@@ -923,7 +923,8 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
 		    StringIntMap::iterator it = treels.end();
 		    ostringstream ostr;
 		    tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
-		    it = treels.find(ostr.str());
+		    //it = treels.find(ostr.str());
+		    it = treels.end(); // for now just include duplicated trees!!
 		    if (it != treels.end()) { // already in treels
 		    	distinct_ids.push_back(it->second);
 		    } else {
