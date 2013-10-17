@@ -561,9 +561,15 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 	return myMove;
 }
 
+void PhyloSuperTreePlen::applyNNIs(int nni2apply, bool changeBran) {
+	IQTree::applyNNIs(nni2apply, changeBran);
+	mapBranchLen();
+}
+
+
 void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 {
-	checkBranchLen();
+	//checkBranchLen();
 	//cout<<endl<<"I did NNI on Super Tree!!:)"<<endl;
 	SuperNeighbor *nei1 = (SuperNeighbor*)move.node1->findNeighbor(move.node2);
 	SuperNeighbor *nei2 = (SuperNeighbor*)move.node2->findNeighbor(move.node1);
@@ -641,13 +647,13 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 //
 //		}
 	}
-	mapBranchLen();
+	//mapBranchLen();
 
 //	cout<<endl<<endl<<"AFTER I DID NNI o.O"<<endl<<endl;
 //	printMapInfo();
 //	printTree(cout);
 //	cout<<endl;
-	checkBranchLen();
+	//checkBranchLen();
 
 }
 
@@ -1265,7 +1271,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 //				printMapInfo();
 //			}
 		}
-		mapBranchLen();
+		//mapBranchLen();
 		checkBranchLen();
 	} // end of for(cnt)
 
@@ -1318,7 +1324,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 			}
 		}
-		mapBranchLen();
+		//mapBranchLen();
+		checkBranchLen();
 //------------------------------------------------------------------------------------------------------------------------------------------------
 //		cout<<endl<<endl<<"THE END OF SWAPNNI func"<<endl<<endl;
 //		printMapInfo();
@@ -1402,6 +1409,7 @@ bool PhyloSuperTreePlen::checkBranchLen(){
 
 	}
 	delete [] checkVAL;
+
 	return true;
 }
 

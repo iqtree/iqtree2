@@ -888,7 +888,9 @@ void createFirstNNITree(Params &params, IQTree &iqtree, double bestTreeScore,
 	double nniBeginClock, nniEndClock;
 	nniBeginClock = getCPUTime();
     if (!params.phylolib) {
-    	iqtree.optimizeNNI();
+    	int skipped, nni_count;
+    	iqtree.optimizeNNI(false, &skipped, &nni_count);
+    	cout << nni_count << " NNIs applied" << endl;
     	iqtree.curScore = iqtree.optimizeAllBranches();
     } else {
         iqtree.curScore = iqtree.optimizeNNIRax();

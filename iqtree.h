@@ -279,7 +279,7 @@ public:
             @param nni2apply number of NNIs to apply from the list
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    void applyNNIs(int nni2apply, bool changeBran = true);
+    virtual void applyNNIs(int nni2apply, bool changeBran = true);
 
     /**
      *   Apply 5 new branch lengths stored in the NNI move
