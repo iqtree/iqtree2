@@ -227,6 +227,11 @@ public:
      */
     virtual uint64_t getMemoryRequired();
 
+    /**
+     * count the number of super branches that map to no branches in gene trees
+     */
+    int countEmptyBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
 };
 
 #endif

@@ -874,3 +874,22 @@ uint64_t PhyloSuperTree::getMemoryRequired() {
 	return mem_size;
 }
 
+int PhyloSuperTree::countEmptyBranches(PhyloNode *node, PhyloNode *dad) {
+	int count = 0;
+    if (!node)
+        node = (PhyloNode*)root;
+
+    FOR_NEIGHBOR_IT(node, dad, it) {
+    	SuperNeighbor *nei = (SuperNeighbor*)(*it);
+    	bool isempty = true;
+    	for (PhyloNeighborVec::iterator nit = nei->link_neighbors.begin(); nit != nei->link_neighbors.end(); nit++)
+    		if ((*nit)) {
+    			isempty = false;
+    			break;
+    		}
+    	if (isempty) count++;
+    	count += countEmptyBranches((PhyloNode*)(*it)->node, node);
+    }
+    return count;
+}
+

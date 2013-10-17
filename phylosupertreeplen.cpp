@@ -79,6 +79,9 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
    /* for (int part = 0; part < ntrees; part++) {
     	cout << "LIKELIHOOD | Partition "<<part<<" | "<<tree->at(part)->computeLikelihood()<<endl;
     }*/
+
+    tree->initPartitionInfo(); // FOR OLGA: needed here
+
     //tree_lh = tree->computeLikelihood();
 	if (fixed_len)
 		tree_lh = tree->computeLikelihood();
@@ -318,7 +321,7 @@ void PhyloSuperTreePlen::mapTrees() {
 }
 
 double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double tolerance) {
-	initPartitionInfo();
+	//initPartitionInfo(); // OLGA: not needed here
 	//cout<<"Optimizing all branches"<<endl;
 	return PhyloTree::optimizeAllBranches(my_iterations,tolerance);
 }
@@ -620,8 +623,6 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 			//printMapInfo();
 		} else { (*it)->doNNI(part_move[part],clearLH); }
 
-		mapBranchLen();
-
 //		PhyloNeighbor* nei1_part_new = nei1->link_neighbors[part];
 //		PhyloNeighbor* nei2_part_new = nei2->link_neighbors[part];
 //		if(nei1_part_new){
@@ -637,6 +638,8 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 //
 //		}
 	}
+	mapBranchLen();
+
 //	cout<<endl<<endl<<"AFTER I DID NNI o.O"<<endl<<endl;
 //	printMapInfo();
 //	printTree(cout);
@@ -688,6 +691,13 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		for(part = 0; part < ntrees; part++)
 			((SuperNeighbor*)*saved_it[id])->link_neighbors.push_back(NULL);
 	}
+
+
+	/* Minh bug fix: save the cur_score */
+	double *saved_cur_score = new double[part_info.size()];
+	for (i = 0; i < part_info.size(); i++)
+		saved_cur_score[i] = part_info[i].cur_score;
+
 	/*------------------------------------------------------------------------------------
 	 * Saved original neighbors:
 	 * saved_nei[0] - node2 as a neighbor of node1
@@ -1014,6 +1024,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 		double score = optimizeOneBranch(node1, node2, false);
 
+
 //		cout<<endl<<endl<<"AFTER OPTIMIZATION"<<endl<<endl;;
 //		printMapInfo();
 		checkBranchLen();
@@ -1056,6 +1067,11 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    	}
 	    }
 		// %%%%%%%%%%%%%%%%%%%%%%%%%%%  END of nni5branch  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+		/* Minh bug fix: restore the cur_score */
+		for (i = 0; i < part_info.size(); i++)
+			part_info[i].cur_score = saved_cur_score[i];
+
 
 	    // *************************** STORE INFO ABOUT NNI ***************************
 	    // Store information about this NNI for partitions, this is used for bootstrap...
@@ -1307,6 +1323,10 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		//double new_brlen_last = node1->findNeighbor(node2)->length;
 		//if(old_brlen == new_brlen_last)
 		//	cout<<"SwapNNI:before and after trial branch length of node1-node2 is the same"<<endl;
+
+	// Minh: delete memory
+	delete [] saved_cur_score;
+
 	return cur_score;
 }
 

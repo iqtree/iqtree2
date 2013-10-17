@@ -581,6 +581,12 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 
 			if (tree.isSuperTree()) {
 				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+				int empty_branches = stree->countEmptyBranches();
+				if (empty_branches) {
+					stringstream ss;
+					ss << empty_branches << " undefined branch lengths in the overall tree!";
+					outWarning(ss.str());
+				}
 				int part = 0;
 				for (PhyloSuperTree::iterator it = stree->begin();
 						it != stree->end(); it++, part++) {
