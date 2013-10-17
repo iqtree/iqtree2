@@ -1493,7 +1493,8 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             }
         }
     } else {
-        cout << "NNI search could not find any better tree for this iteration!" << endl;
+    	if (verbose_mode >= VB_DEBUG)
+    		cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
 
     /*
