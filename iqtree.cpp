@@ -1432,6 +1432,12 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
         if (nni2apply == 0)
         	nni2apply = 1;
         applyNNIs(nni2apply);
+        if(isSuperTree()){
+        	for(int part = 0; part < ((PhyloSuperTree*)this)->size(); part++){
+        		((PhyloSuperTree*)this)->part_info[part].cur_score = 0.0;
+        	}
+        }
+
         curScore = optimizeAllBranches(1);
 
         if (curScore > oldScore && curScore >= vec_nonconf_nni.at(0).newloglh ) {
