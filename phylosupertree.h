@@ -158,7 +158,7 @@ public:
             @param clearLH true to clear the partial likelihood, otherwise false
             @return likelihood score
      */
-    virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
+    //virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
 
     /**
             search the best swap for a branch

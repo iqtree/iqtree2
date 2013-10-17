@@ -80,12 +80,15 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	cout << "LIKELIHOOD | Partition "<<part<<" | "<<tree->at(part)->computeLikelihood()<<endl;
     }*/
 
-    tree->initPartitionInfo(); // FOR OLGA: needed here
+    //tree->initPartitionInfo(); // FOR OLGA: needed here
 
     //tree_lh = tree->computeLikelihood();
-	if (fixed_len)
+	if (fixed_len) {
+    	for(int part = 0; part < ntrees; part++){
+    		tree->part_info[part].cur_score = 0.0;
+    	}
 		tree_lh = tree->computeLikelihood();
-	else {
+	} else {
 		tree_lh = tree->optimizeAllBranches(1);
 	}
 
@@ -323,6 +326,9 @@ void PhyloSuperTreePlen::mapTrees() {
 double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double tolerance) {
 	//initPartitionInfo(); // OLGA: not needed here
 	//cout<<"Optimizing all branches"<<endl;
+	for(int part = 0; part < size(); part++){
+		part_info[part].cur_score = 0.0;
+	}
 	return PhyloTree::optimizeAllBranches(my_iterations,tolerance);
 }
 
@@ -1376,9 +1382,9 @@ bool PhyloSuperTreePlen::checkBranchLen(){
 	NodeVector nodes1,nodes2;
 	int i;
 	getBranches(nodes1, nodes2);
+	double *checkVAL = new double[branchNum];
 	for(int part = 0; part < size(); part++){
-		double checkVAL[at(part)->branchNum];
-		memset(checkVAL,0,at(part)->branchNum*sizeof(double));
+		memset(checkVAL, 0, at(part)->branchNum*sizeof(double));
 		for (i = 0; i < nodes1.size(); i++){
 			if(((SuperNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part])
 				checkVAL[((SuperNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part]->id] += nodes1[i]->findNeighbor(nodes2[i])->length * part_info[part].part_rate;
@@ -1395,6 +1401,7 @@ bool PhyloSuperTreePlen::checkBranchLen(){
 			}
 
 	}
+	delete [] checkVAL;
 	return true;
 }
 
@@ -1403,8 +1410,8 @@ void PhyloSuperTreePlen::mapBranchLen()
 	NodeVector nodes1,nodes2;
 	int i;
 	getBranches(nodes1, nodes2);
+	double *checkVAL = new double[branchNum];
 	for(int part = 0; part < size(); part++){
-		double checkVAL[at(part)->branchNum];
 		memset(checkVAL,0,at(part)->branchNum*sizeof(double));
 		for (i = 0; i < nodes1.size(); i++){
 			if(((SuperNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part])
@@ -1417,6 +1424,7 @@ void PhyloSuperTreePlen::mapBranchLen()
 			nodes2_sub[j]->findNeighbor(nodes1_sub[j])->length = checkVAL[nodes1_sub[j]->findNeighbor(nodes2_sub[j])->id];
 		}
 	}
+	delete [] checkVAL;
 }
 
 void PhyloSuperTreePlen::printMapInfo() {

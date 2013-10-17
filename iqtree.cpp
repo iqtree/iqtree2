@@ -1466,7 +1466,8 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
 
             /* tree cannot be worse if only 1 NNI is applied */
             if (nni2apply == 1) {
-                cout << "Error: logl=" << curScore << " < " << oldScore << endl;
+            	if (curScore < vec_nonconf_nni.at(0).newloglh - 0.001)
+            		cout << "Error: logl=" << curScore << " < " << vec_nonconf_nni.at(0).newloglh << endl;
 
                 // restore the tree by reverting all NNIs
                 applyNNIs(nni2apply, false);

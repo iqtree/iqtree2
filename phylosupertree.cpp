@@ -466,7 +466,7 @@ PhyloSuperTree::~PhyloSuperTree()
 	clear();
 }
 
-
+/*
 double PhyloSuperTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH) {
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
 	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
@@ -494,7 +494,7 @@ double PhyloSuperTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, boo
 		tree_lh += score;
 	}
 	return tree_lh;
-}
+}*/
 
 void PhyloSuperTree::initPartitionInfo() {
 	int part = 0;
