@@ -726,7 +726,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.iteration_multiple = 1;
     params.vns_search = false;
     params.speedup_iter = 100;
-    params.pll = false;
+    params.pll = true;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
@@ -1584,11 +1584,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -best_start <binary_alignment_file>";
                 params.binary_aln_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-ba") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -ba <binary_alignment_file>";
-                params.binary_aln_file = argv[cnt];
+            } else if (strcmp(argv[cnt], "-pll") == 0) {
                 params.pll = true;
             } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;

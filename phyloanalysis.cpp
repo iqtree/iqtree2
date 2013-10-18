@@ -54,10 +54,10 @@
 #include "nnisearch.h"
 
 void reportReferences(ofstream &out, string &original_model) {
-	out 
+	out
 			<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast"
 			<< endl << "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195."
-			<< endl 
+			<< endl
 			/*
 			<< endl << "Lam-Tung Nguyen, Heiko A. Schmidt, Bui Quang Minh, and Arndt von Haeseler (2012)"
 			<< endl
@@ -954,8 +954,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		Alignment* &alignment, IQTree &iqtree, vector<ModelInfo> &model_info) {
 	double t_begin, t_end;
 	t_begin = getCPUTime();
-	/* Initialized all data strucutre for PLL*/
+
+	// 10 parsimony trees
 	string parsTreeStrings[10];
+
+	/* Initialized all data strucutre for PLL*/
 	/* Set the PLL instance attributes */
 	// TODO Check whether this initialization already contains memory allocation for likelihood vector
 	// Sometimes we don't use PLL afterwards and therefore don't need to waste the memory
@@ -1007,21 +1010,13 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	/* eliminate duplicate sites from the alignment and update weights vector */
 	pllAlignmentRemoveDups(iqtree.pllAlignment, iqtree.pllPartitions);
 
-	// TODO: This might have bug
-	//pllTreeInitTopologyForAlignment(iqtree.pllInst, iqtree.pllAlignment);
-	pllNewickTree *newick = pllNewickParseFile("example.phy.modelTree");
-	if (!pllValidateNewick(newick)) /* check whether the valid newick tree is also a tree that can be processed with our nodeptr structure */
-	{
-		outError("Invalid phylogenetic tree\n");
-	}
-	pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+	pllTreeInitTopologyForAlignment(iqtree.pllInst, iqtree.pllAlignment);
 
 	/* Connect the alignment and partition structure with the tree structure */
 	if (!pllLoadAlignment(iqtree.pllInst, iqtree.pllAlignment,
 			iqtree.pllPartitions, PLL_DEEP_COPY)) {
 		outError("Incompatible tree/alignment combination");
 	}
-
 
 	/*
 	 cout << "Computing parsimony score..." << endl;
@@ -1099,6 +1094,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
             Tree2String(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
             mytree.str(iqtree.pllInst->tree_string);
             parsTreeStrings[i] = mytree.str();
+            //cout << "Parsimony score " << i << ": " << iqtree.pllInst->bestParsimony << endl;;
         }
         double tParsEnd = getCPUTime();
         cout << "CPU time for constructing parsimony trees: " << tParsEnd - tParsBegin << endl;
@@ -1110,6 +1106,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		// This is the old default option: using BIONJ as starting tree
 		iqtree.computeBioNJ(params, alignment, dist_file);
 	}
+
+	/* At this point IQTree already has a initial tree, which is either an user input tree or the tree is generated */
 
 	if (params.root) {
 		string str = params.root;
@@ -1256,86 +1254,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
     }
 	*/
 
-	/* deallocate partial likelihood within IQTree kernel to save memory */
-	iqtree.deleteAllPartialLh();
-
-	/* feed the optimized from IQTree to PLL */
-	stringstream iqp_tree_string;
-	iqtree.printTree(iqp_tree_string);
-	cout << iqp_tree_string.str() << endl;
-	pllNewickTree *startTree = pllNewickParseString(iqp_tree_string.str().c_str());
-	//pllTreeInitTopologyNewick(iqtree.pllInst, startTree, PLL_FALSE);
-
-	/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
-	pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-	if (iqtree.aln->num_states == 4) {
-		// get the alpha parameter
-		double alpha = iqtree.getRate()->getGammaShape();
-		// get the rate parameters
-		// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
-		double *rate_param = new double[6];
-		iqtree.getModel()->getRateMatrix(rate_param);
-		// get the state frequencies
-		double *state_freqs = new double[iqtree.aln->num_states];
-		iqtree.getModel()->getStateFrequency(state_freqs);
-
-		/* put them into PLL */
-		stringstream linkagePattern;
-		/* Initialize the model. Note that this function will also perform a full
-		 tree traversal and evaluate the likelihood of the tree. Therefore, you
-		 have the guarantee that tr->likelihood the valid likelihood */
-		pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-		int partNr;
-		for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions - 1; partNr++) {
-			linkagePattern << partNr << ",";
-		}
-		linkagePattern << partNr;
-		cout << "Linking pattern : " << linkagePattern.str().c_str() << endl;
-	    pllLinkAlphaParameters(linkagePattern.str().c_str(), iqtree.pllPartitions);
-	    pllLinkFrequencies(linkagePattern.str().c_str(), iqtree.pllPartitions);
-	    pllLinkRates(linkagePattern.str().c_str(), iqtree.pllPartitions);
-
-	    for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions; partNr++) {
-		    pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions, iqtree.pllInst);
-		    pllSetFixedBaseFrequencies(state_freqs, 4, partNr, iqtree.pllPartitions, iqtree.pllInst);
-		    pllSetFixedSubstitutionMatrix(rate_param, 6, partNr, iqtree.pllPartitions, iqtree.pllInst);
-	    }
-		delete [] rate_param;
-		delete [] state_freqs;
-	} else if(iqtree.aln->num_states == 20) {
-		double alpha = iqtree.getRate()->getGammaShape();
-		double *state_freqs = new double[iqtree.aln->num_states];
-		int partNr;
-	    for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions; partNr++) {
-		    pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions, iqtree.pllInst);
-		    pllSetFixedBaseFrequencies(state_freqs, 20, partNr, iqtree.pllPartitions, iqtree.pllInst);
-	    }
-	    delete [] state_freqs;
-	} else {
-		if (params.pll) {
-			outError("Phylogenetic likelihood library current does not support data type other than DNA or Protein");
-		}
-	}
-
-	// TODO Just for testing. Delete this later
-	pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-	pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-
-    boolean printBranchLengths = PLL_TRUE;
-    Tree2String(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, printBranchLengths, 1, 0, 0, 0, PLL_SUMMARIZE_LH, 0,0);
-	cout << iqtree.pllInst->tree_string << endl;
-	pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-	cout << "logl before model parameters optimization: " << iqtree.pllInst->likelihood << endl;
-
-	pllTreeInitTopologyNewick(iqtree.pllInst, startTree, PLL_FALSE);
-	pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-	cout << "logl before model parameters optimization: " << iqtree.pllInst->likelihood << endl;
+	/* TODO: uncomment this after everything is correct */
+	// deallocate partial likelihood within IQTree kernel to save memory when PLL is used */
+	// iqtree.deleteAllPartialLh();
 
 
-	pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, 0.000001);
-    cout << "TO DELETE: Log-likelihood after initializing parameters to phylolib: " << iqtree.pllInst->likelihood << endl;
-    // TODO Just for testing. Delete this later
-    
+
     if (!params.fixed_branch_length && params.leastSquareBranch) {
         cout << "Computing Least Square branch lengths " << endl;
         iqtree.optimizeAllBranchesLS();
@@ -1360,34 +1284,101 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	}
 
 	if (params.min_iterations > 0) {
-		/* Now create 10 independent NNI trees from the 10 initial parsimony tree */
+		/* Now do fastNNI on 10 parsimony trees to determine the best one */
 		double bestLH = -DBL_MAX;
 		string bestTreeString;
-		for (int i = 0; i < 10; i++) {
-			double evalStart = getCPUTime();
-			// read in the parsimony tree
-			pllNewickTree *parsTree = pllNewickParseString(parsTreeStrings[i].c_str());
-			pllTreeInitTopologyNewick (iqtree.pllInst, parsTree, PLL_TRUE);
-			pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-			pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 16);
-			double treeLH = iqtree.pllOptimizeNNI();
-			cout << "Initial tree " << i + 1 << ": " << treeLH << " / CPU time: " << getCPUTime() - evalStart << endl;
-			if (treeLH > bestLH) {
-				bestLH = treeLH;
+	    for (int i = 0; i < 10; i++) {
+	    	pllNewickTree *newick;
+	    	if (i == 0) {
+	    		stringstream optimizedTree;
+	    		iqtree.printTree(optimizedTree);
+	    		newick = pllNewickParseString(optimizedTree.str().c_str());
+	        	pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+	    	} else {
+	        	newick = pllNewickParseString(parsTreeStrings[i].c_str());
+	        	pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
+	    	}
+	    	if (!pllLoadAlignment(iqtree.pllInst, iqtree.pllAlignment, iqtree.pllPartitions, PLL_DEEP_COPY)) {
+	    		fprintf(stderr, "Incompatible tree/alignment combination\n");
+	    		exit (1);
+	    	}
+			// TODO: Here the likelihood is also compute, so check whether it is needed
+			pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
+
+	    	/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
+
+	    	if (iqtree.aln->num_states == 4) {
+	    		// get the alpha parameter
+	    		double alpha = iqtree.getRate()->getGammaShape();
+	    		// get the rate parameters
+	    		// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
+	    		double *rate_param = new double[6];
+	    		iqtree.getModel()->getRateMatrix(rate_param);
+	    		// get the state frequencies
+	    		double *state_freqs = new double[iqtree.aln->num_states];
+	    		iqtree.getModel()->getStateFrequency(state_freqs);
+
+	    		/* put them into PLL */
+	    		stringstream linkagePattern;
+	    		int partNr;
+	    		for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions - 1; partNr++) {
+	    			linkagePattern << partNr << ",";
+	    		}
+	    		linkagePattern << partNr;
+	    	    pllLinkAlphaParameters(linkagePattern.str().c_str(), iqtree.pllPartitions);
+	    	    pllLinkFrequencies(linkagePattern.str().c_str(), iqtree.pllPartitions);
+	    	    pllLinkRates(linkagePattern.str().c_str(), iqtree.pllPartitions);
+
+	    	    for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions; partNr++) {
+	    		    pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions, iqtree.pllInst);
+	    		    pllSetFixedBaseFrequencies(state_freqs, 4, partNr, iqtree.pllPartitions, iqtree.pllInst);
+	    		    pllSetFixedSubstitutionMatrix(rate_param, 6, partNr, iqtree.pllPartitions, iqtree.pllInst);
+	    	    }
+	    		delete [] rate_param;
+	    		delete [] state_freqs;
+	    	} else if(iqtree.aln->num_states == 20) {
+	    		double alpha = iqtree.getRate()->getGammaShape();
+	    		double *state_freqs = new double[iqtree.aln->num_states];
+	    		int partNr;
+	    	    for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions; partNr++) {
+	    		    pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions, iqtree.pllInst);
+	    		    pllSetFixedBaseFrequencies(state_freqs, 20, partNr, iqtree.pllPartitions, iqtree.pllInst);
+	    	    }
+	    	    delete [] state_freqs;
+	    	} else {
+	    		if (params.pll) {
+	    			outError("Phylogenetic likelihood library current does not support data type other than DNA or Protein");
+	    		}
+	    	}
+	    	if ( i == 0) {
+	        	pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+	        	pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
+	    	} else {
+				pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
+				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
+				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 64);
+			}
+	    	cout << "logl of parsimony tree " << i << ": " << iqtree.pllInst->likelihood << endl;
+	    	delete newick;
+	    	/* Now do NNI */
+	    	double treeLH = iqtree.pllOptimizeNNI();
+	    	cout << "logl of fastNNI " << i << ": " << treeLH << endl;
+	    	if ( treeLH > bestLH ) {
+	    		bestLH = treeLH;
 				Tree2String (iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 				bestTreeString = string(iqtree.pllInst->tree_string);
-			}
-		}
+	    	}
+	    }
 
-		/* PLL: read in the best tree */
-		pllNewickTree *bestTree = pllNewickParseString(bestTreeString.c_str());
-		pllTreeInitTopologyNewick (iqtree.pllInst, bestTree, PLL_FALSE);
+	    cout << "Best loglh = " << bestLH << endl;
+	    //cout << bestTreeString << endl;
 
 		/* IQTree kernel: read in the best tree */
 		stringstream bestTreeStream;
 		bestTreeStream.str(bestTreeString);
 		iqtree.readTree(bestTreeStream, iqtree.rooted);
 		iqtree.setAlignment(alignment);
+		iqtree.curScore = bestLH;
 
 		/* FOR PARTITION MODEL */
 		if (iqtree.isSuperTree())

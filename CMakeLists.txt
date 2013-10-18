@@ -91,12 +91,12 @@ include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
 set(LIBPLL_CFLAGS "-c -fomit-frame-pointer -funroll-loops -Wall -Wredundant-decls  -Wreturn-type  -Wswitch-default -Wimplicit  -Wimplicit-function-declaration  -Wimplicit-int -Wimport -Wunused-label -Wno-int-to-pointer-cast -Wbad-function-cast  -Wmissing-declarations -Wmissing-prototypes  -Wnested-externs -Wstrict-prototypes -Wpointer-sign -Wextra -Wredundant-decls -Wunused -Wunused-function -Wunused-parameter -Wunused-value  -Wunused-variable -Wformat  -Wformat-nonliteral -Wparentheses -Wsequence-point -Wuninitialized -Wundef") 
-set(LIBPLL_SSE3_CFLAGS "-D__SSE3 -msse3")
+set(LIBPLL_SSE3_CFLAGS "-D__AVX -D__SSE3 -msse3 -mavx")
 add_definitions(-DIQ_TREE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-unused-function -Wno-sign-compare -Wno-deprecated -pedantic -D_GNU_SOURCE")
 set(CMAKE_C_FLAGS "-std=c99 ${CMAKE_C_FLAGS} ${LIBPLL_CFLAGS} ${LIBPLL_SSE3_CFLAGS}")
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG -g0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -g0")
 set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG -g0")
 
 set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O2 -DNDEBUG -fno-omit-frame-pointer -pg")

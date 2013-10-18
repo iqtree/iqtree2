@@ -67,7 +67,8 @@ int compareDouble(const void * a, const void * b) {
 NNIMOVE *getNNIList(pllInstance* tr) {
 	static NNIMOVE* nniList;
 	if (nniList == NULL) {
-		nniList = (NNIMOVE*) malloc(2 * (tr->ntips - 3) * sizeof(NNIMOVE));
+		nniList = (NNIMOVE*) malloc(2 * (tr->mxtips - 3) * sizeof(NNIMOVE));
+		assert( nniList != NULL );
 	}
 	return nniList;
 }
@@ -75,7 +76,8 @@ NNIMOVE *getNNIList(pllInstance* tr) {
 NNIMOVE *getNonConflictNNIList(pllInstance* tr) {
 	static NNIMOVE* nonConfNNIList;
 	if (nonConfNNIList == NULL) {
-		nonConfNNIList = (NNIMOVE*) malloc((tr->ntips - 3) * sizeof(NNIMOVE));
+		nonConfNNIList = (NNIMOVE*) malloc((tr->mxtips - 3) * sizeof(NNIMOVE));
+		assert( nonConfNNIList != NULL );
 	}
 	return nonConfNNIList;
 }
@@ -109,7 +111,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, int* nni_count, double* d
 
 	int totalNNIs = numBran;
 	/* Make sure all 2n-6 NNIs were evalauted */
-	assert( totalNNIs == (2 * (tr->ntips - 3)));
+	assert( totalNNIs == (2 * (tr->mxtips - 3)));
 	/* Sort the NNI list ascendingly according to the log-likelihood */
 	qsort(nniList, totalNNIs, sizeof(NNIMOVE), cmp_nni);
 
