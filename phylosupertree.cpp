@@ -149,7 +149,11 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 				if (part_aln != input_aln) delete part_aln;
 				part_aln = new_aln;
 			}
-			Alignment *new_aln = part_aln->removeGappySeq();
+			Alignment *new_aln;
+			if (params.remove_empty_seq)
+				new_aln = part_aln->removeGappySeq();
+			else
+				new_aln = part_aln;
 			if (part_aln != new_aln && part_aln != input_aln) delete part_aln;
 			PhyloTree *tree = new PhyloTree(new_aln);
 			push_back(tree);

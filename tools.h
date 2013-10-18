@@ -504,6 +504,8 @@ struct Params {
      */
     char partition_type;
 
+    /** remove all-gap sequences in partition model to account for terrace default: TRUE */
+    bool remove_empty_seq;
 
     /**
             B, D, or P for Binary, DNA, or Protein sequences

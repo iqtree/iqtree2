@@ -628,6 +628,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.siteLL_file = NULL; //added by MA
     params.partition_file = NULL;
     params.partition_type = 0;
+    params.remove_empty_seq = true;
     params.sequence_type = NULL;
     params.aln_output = NULL;
     params.aln_site_list = NULL;
@@ -1156,6 +1157,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             	    throw "Use -spj <type of partition model>";
                 params.partition_file = argv[cnt];
                 params.partition_type = 'j';
+            } else if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
+            	params.remove_empty_seq = false;
             } else if (strcmp(argv[cnt], "-sf") == 0) {
                 cnt++;
                 if (cnt >= argc)
