@@ -524,9 +524,9 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 				FOR_NEIGHBOR(node2, node1, nit) {
 					if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
 				}
-				if (!is_nni)
-					memcpy(at(part)->_pattern_lh, part_info[part].opt_ptnlh[brid], at(part)->getAlnNPattern() * sizeof(double));
-				else if (nnino == 0)
+				if (!is_nni) {
+					//memcpy(at(part)->_pattern_lh, part_info[part].opt_ptnlh[brid], at(part)->getAlnNPattern() * sizeof(double));
+				} else if (nnino == 0)
 					memcpy(at(part)->_pattern_lh, part_info[part].nni1_ptnlh[brid], at(part)->getAlnNPattern() * sizeof(double));
 				else
 					memcpy(at(part)->_pattern_lh, part_info[part].nni2_ptnlh[brid], at(part)->getAlnNPattern() * sizeof(double));
@@ -844,6 +844,13 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				node2_link_nei[part]->node->updateNeighbor(node2_link[part], node1_link[part]);
 				node2_link[part]->updateNeighbor(node2_link_it[part], node1_link_nei[part]);
 				node1_link_nei[part]->node->updateNeighbor(node1_link[part], node2_link[part]);
+
+				nei1_new_part[part] = nei1_new->link_neighbors[part];
+				nei2_new_part[part] = nei2_new->link_neighbors[part];
+				if(nei1_new_part[part]){
+					nei1_new_part[part]->clearPartialLh();
+					nei2_new_part[part]->clearPartialLh();
+				}
 			} else {
 				/*
 				 * If it is not NNI on SubTree, but branch is linked to some branch on SubTree, RELINK
@@ -874,6 +881,23 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				// Relink the branch if it does not correspond to NNI for partition
 				linkBranch(part, nei1_new, nei2_new);
 
+				// Minh sanity check that old and newly relinked branches MUST be adjacent in subtree!
+				int common_nodes = 0;
+				if (nei1_new->link_neighbors[part] && saved_nei[0]->link_neighbors[part]) {
+					if (nei1_new->link_neighbors[part]->node == saved_nei[0]->link_neighbors[part]->node) common_nodes++;
+					if (nei1_new->link_neighbors[part]->node == saved_nei[1]->link_neighbors[part]->node) common_nodes++;
+					if (nei2_new->link_neighbors[part]->node == saved_nei[0]->link_neighbors[part]->node) common_nodes++;
+					if (nei2_new->link_neighbors[part]->node == saved_nei[1]->link_neighbors[part]->node ) common_nodes++;
+					if (common_nodes == 0) {
+						printMapInfo();
+						cout << "common_nodes = " << common_nodes << endl;
+						cout << nei1_new->link_neighbors[part]->node->id << " " << nei2_new->link_neighbors[part]->node->id << " "
+							 << saved_nei[0]->link_neighbors[part]->node->id << " " << saved_nei[1]->link_neighbors[part]->node->id << endl;
+						outError("linkBranch failed in ", __func__);
+					}
+				}
+
+				// If the branch linked to some subbranch or if it was linked to nothing and after relinking it links to some non empty subbranch
 				if(nei1_new->link_neighbors[part]){ // otherwise it's NULL
 					sub_saved_nei1[part] = nei1_new->link_neighbors[part];
 					sub_saved_nei2[part] = nei2_new->link_neighbors[part];
@@ -887,26 +911,46 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 						*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, sub_saved_nei1[part]->length + old_brlen * part_info[part].part_rate);
 						((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
 						((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = at(part)->newScaleNum();
+
+						PhyloNeighbor *savednei = (id == 0) ? sub_saved_nei1[part] : sub_saved_nei2[part];
+						if (savednei->partial_lh_computed) {
+							if (saved_nei[0]->link_neighbors[part] && common_nodes == 1) {
+								// Minh: for efficiency, if previous branch maps to some new branch, reuse partial_lh if it does not look to old branch
+								if (nei_link != saved_nei[0]->link_neighbors[part]->node && nei_link != saved_nei[1]->link_neighbors[part]->node) {
+									PhyloNeighbor *thisnei = ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]));
+									memcpy(thisnei->partial_lh, savednei->partial_lh, at(part)->getPartialLhBytes());
+									memcpy(thisnei->scale_num , savednei->scale_num , at(part)->getScaleNumBytes());
+									thisnei->lh_scale_factor = savednei->lh_scale_factor;
+									thisnei->partial_lh_computed = savednei->partial_lh_computed;
+								}
+							} else {
+								// Minh: for efficency, if previous branch maps to NULL or after relinking it maps to the same branch, reuse partial_lh
+								PhyloNeighbor *thisnei = ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]));
+								memcpy(thisnei->partial_lh, savednei->partial_lh, at(part)->getPartialLhBytes());
+								memcpy(thisnei->scale_num , savednei->scale_num , at(part)->getScaleNumBytes());
+								thisnei->lh_scale_factor = savednei->lh_scale_factor;
+								thisnei->partial_lh_computed = savednei->partial_lh_computed;
+								//if (thisnei->partial_lh_computed)
+									//cout << "yh" << endl;
+							}
+						}
+
 						(*sub_saved_it[part*6 + id])->id = sub_saved_nei1[part]->id;
 
 						// update link_neighbor[part]
 						((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
+
 					}
 					linkCheck(part,node1,node2,sub_saved_nei2[part]);
 					linkCheck(part,node2,node1,sub_saved_nei1[part]);
 
 					// optimization on 5 branches!!!!!
 				}else{
+					// If the branch was linked to some subbranch or if it was linked to empty subbranch and after relink it maps to empty subbranch
 					if(saved_nei[0]->link_neighbors[part])
 						part_info[part].cur_score = at(part)->computeLikelihoodBranch(saved_nei[0]->link_neighbors[part],(PhyloNode*)saved_nei[1]->link_neighbors[part]->node);
 				}
 			} // end RELINK
-			nei1_new_part[part] = nei1_new->link_neighbors[part];
-			nei2_new_part[part] = nei2_new->link_neighbors[part];
-			if(nei1_new_part[part]){
-				nei1_new_part[part]->clearPartialLh();
-				nei2_new_part[part]->clearPartialLh();
-			}
 		} // end of part loop
 
 /*===============================================================================================================================*
@@ -1224,6 +1268,17 @@ void PhyloSuperTreePlen::printMapInfo() {
 			cout << endl;
 		}
 	}
+}
+
+
+void PhyloSuperTreePlen::initPartitionInfo() {
+
+	//PhyloSuperTree::initPartitionInfo();
+	for (int part = 0; part < size(); part++){
+		if(part_info[part].part_rate == 0.0) { part_info[part].part_rate = 1.0; }
+		part_info[part].cur_score = 0.0;
+	}
+
 }
 
 void PhyloSuperTreePlen::computeBranchLengths()
