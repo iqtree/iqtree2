@@ -1527,6 +1527,12 @@ void PhyloSuperTreePlen::printMapInfo() {
 	}
 }
 
+void PhyloSuperTreePlen::initPartitionInfo() {
+	PhyloSuperTree::initPartitionInfo();
+	for (int part = 0; part < size(); part++)
+		at(part)->computeAllPartialLh();
+}
+
 /* Some case with negative branch:
  * seed 291475,10x1000.03
  * seed 981244,10x1000.05

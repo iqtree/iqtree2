@@ -206,6 +206,11 @@ public:
 
 	virtual void restoreAllBranLen(PhyloNode *node, PhyloNode *dad);
 
+	/**
+	 * initialize partition information for super tree
+	*/
+	virtual void initPartitionInfo();
+
     /**
      * 		indicates whether partition rates are fixed or not
      */
