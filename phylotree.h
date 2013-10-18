@@ -384,14 +384,25 @@ public:
     void clearAllPartialLH();
 
     /**
+     * compute all partial likelihoods if not computed before
+     */
+    void computeAllPartialLh(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
             allocate memory for a partial likelihood vector
      */
     double *newPartialLh();
+
+    /** get the number of bytes occupied by partial_lh */
+    int getPartialLhBytes();
 
     /**
             allocate memory for a scale num vector
      */
     UBYTE *newScaleNum();
+
+    /** get the number of bytes occupied by scale_num */
+    int getScaleNumBytes();
 
     /**
             compute the partial likelihood at a subtree

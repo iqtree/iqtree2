@@ -239,6 +239,18 @@ void PhyloTree::clearAllPartialLH() {
     ((PhyloNode*) root->neighbors[0]->node)->clearAllPartialLh((PhyloNode*) root);
 }
 
+void PhyloTree::computeAllPartialLh(PhyloNode *node, PhyloNode *dad) {
+	if (!node) node = (PhyloNode*)root;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		if ((((PhyloNeighbor*)*it)->partial_lh_computed & 1) == 0)
+			computePartialLikelihood((PhyloNeighbor*)*it, node);
+		PhyloNeighbor *rev = (PhyloNeighbor*) (*it)->node->findNeighbor(node);
+		if ((rev->partial_lh_computed & 1) == 0)
+			computePartialLikelihood(rev, (PhyloNode*)(*it)->node);
+		computeAllPartialLh((PhyloNode*)(*it)->node, node);
+	}
+}
+
 string PhyloTree::getModelName() {
 	if (model->getFreqType() == FREQ_EMPIRICAL)
 		return model->name + site_rate->name + "+F";
@@ -1102,6 +1114,14 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 double *PhyloTree::newPartialLh() {
     double *ret = new double[aln->size() * aln->num_states * site_rate->getNRate() + 2];
     return ret;
+}
+
+int PhyloTree::getPartialLhBytes() {
+	return (aln->size() * aln->num_states * site_rate->getNRate() + 2) * sizeof(double);
+}
+
+int PhyloTree::getScaleNumBytes() {
+	return (aln->size()) * sizeof(UBYTE);
 }
 
 UBYTE *PhyloTree::newScaleNum() {
@@ -2443,12 +2463,12 @@ void PhyloTree::growTreeML(Alignment *alignment) {
 
 double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d2l) {
     // if no model or site rate is specified, return JC distance
-    if (initial_dist == 0.0)
+    if (initial_dist == 0.0) {
     	if (params->compute_obs_dist)
             initial_dist = aln->computeObsDist(seq1, seq2);
     	else
     		initial_dist = aln->computeDist(seq1, seq2);
-
+    }
     if (!model_factory || !site_rate)
         return initial_dist; // MANUEL: here no d2l is return
 

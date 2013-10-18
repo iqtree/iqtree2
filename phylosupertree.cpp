@@ -504,15 +504,15 @@ void PhyloSuperTree::initPartitionInfo() {
 		part_info[part].cur_score = 0.0;
 		part_info[part].null_score.clear();
 		part_info[part].null_score.resize((*it)->branchNum, 0.0);
-		part_info[part].opt_score.clear();
-		part_info[part].opt_score.resize((*it)->branchNum, 0.0);	
+		//part_info[part].opt_score.clear();
+		//part_info[part].opt_score.resize((*it)->branchNum, 0.0);
 		part_info[part].nni1_score.clear();
 		part_info[part].nni1_score.resize((*it)->branchNum, 0.0);	
 		part_info[part].nni2_score.clear();
 		part_info[part].nni2_score.resize((*it)->branchNum, 0.0);
 
 		part_info[part].cur_brlen.resize((*it)->branchNum, 0.0);
-		part_info[part].opt_brlen.resize((*it)->branchNum, 0.0);
+		//part_info[part].opt_brlen.resize((*it)->branchNum, 0.0);
 		part_info[part].nni1_brlen.resize((*it)->branchNum, 0.0);
 		part_info[part].nni2_brlen.resize((*it)->branchNum, 0.0);
 
@@ -520,7 +520,7 @@ void PhyloSuperTree::initPartitionInfo() {
 
 		int nptn = (*it)->getAlnNPattern();
 		if (!part_info[part].mem_ptnlh)
-			part_info[part].mem_ptnlh = new double[nptn * ((*it)->branchNum * 3 + 1)];
+			part_info[part].mem_ptnlh = new double[nptn * ((*it)->branchNum * 2 + 1)];
 
 		vector<double*>::iterator dit;
 		double *offset = part_info[part].mem_ptnlh;
@@ -533,10 +533,11 @@ void PhyloSuperTree::initPartitionInfo() {
 		part_info[part].nni2_ptnlh.resize((*it)->branchNum, NULL);
 		for (dit = part_info[part].nni2_ptnlh.begin(); dit != part_info[part].nni2_ptnlh.end(); dit++, offset += nptn)
 			(*dit) = offset;
+		/*
 		part_info[part].opt_ptnlh.resize((*it)->branchNum, NULL);
 		for (dit = part_info[part].opt_ptnlh.begin(); dit != part_info[part].opt_ptnlh.end(); dit++, offset += nptn)
 			(*dit) = offset;
-
+		*/
 	}
 }
 

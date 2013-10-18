@@ -524,9 +524,9 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 				FOR_NEIGHBOR(node2, node1, nit) {
 					if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
 				}
-				if (!is_nni)
-					memcpy(at(part)->_pattern_lh, part_info[part].opt_ptnlh[brid], at(part)->getAlnNPattern() * sizeof(double));
-				else if (nnino == 0)
+				if (!is_nni) {
+					//memcpy(at(part)->_pattern_lh, part_info[part].opt_ptnlh[brid], at(part)->getAlnNPattern() * sizeof(double));
+				} else if (nnino == 0)
 					memcpy(at(part)->_pattern_lh, part_info[part].nni1_ptnlh[brid], at(part)->getAlnNPattern() * sizeof(double));
 				else
 					memcpy(at(part)->_pattern_lh, part_info[part].nni2_ptnlh[brid], at(part)->getAlnNPattern() * sizeof(double));
@@ -890,6 +890,13 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					cout<<"node1_link_nei: "<<node1_link_nei[part]->node->name<<" id:"<<node1_link_nei[part]->node->id<<endl;
 					cout<<"node2_link_nei: "<<node2_link_nei[part]->node->name<<" id:"<<node2_link_nei[part]->node->id<<endl;
 				}
+				nei1_new_part[part] = nei1_new->link_neighbors[part];
+				nei2_new_part[part] = nei2_new->link_neighbors[part];
+				if(nei1_new_part[part]){
+					nei1_new_part[part]->clearPartialLh();
+					nei2_new_part[part]->clearPartialLh();
+				}
+
 			} else {
 				/*
 				 * If it is not NNI on SubTree, but branch is linked to some branch on SubTree, RELINK
@@ -947,6 +954,21 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 				// Relink the branch if it does not correspond to NNI for partition
 				linkBranch(part, nei1_new, nei2_new);
+				// Minh sanity check that old and newly relinked branches MUST be adjacent in subtree!
+				int common_nodes = 0;
+				if (nei1_new->link_neighbors[part] && saved_nei[0]->link_neighbors[part]) {
+					if (nei1_new->link_neighbors[part]->node == saved_nei[0]->link_neighbors[part]->node) common_nodes++;
+					if (nei1_new->link_neighbors[part]->node == saved_nei[1]->link_neighbors[part]->node) common_nodes++;
+					if (nei2_new->link_neighbors[part]->node == saved_nei[0]->link_neighbors[part]->node) common_nodes++;
+					if (nei2_new->link_neighbors[part]->node == saved_nei[1]->link_neighbors[part]->node ) common_nodes++;
+					if (common_nodes == 0) {
+						printMapInfo();
+						cout << "common_nodes = " << common_nodes << endl;
+						cout << nei1_new->link_neighbors[part]->node->id << " " << nei2_new->link_neighbors[part]->node->id << " "
+							 << saved_nei[0]->link_neighbors[part]->node->id << " " << saved_nei[1]->link_neighbors[part]->node->id << endl;
+						outError("linkBranch failed in ", __func__);
+					}
+				}
 
 				if(nei1_new->link_neighbors[part]){ // otherwise it's NULL
 					sub_saved_nei1[part] = nei1_new->link_neighbors[part];
@@ -978,10 +1000,36 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 						*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, sub_saved_nei1[part]->length + old_brlen * part_info[part].part_rate);
 						((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
 						((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = at(part)->newScaleNum();
+
+						PhyloNeighbor *savednei = (id == 0) ? sub_saved_nei1[part] : sub_saved_nei2[part];
+						if (savednei->partial_lh_computed) {
+							if (saved_nei[0]->link_neighbors[part] && common_nodes == 1) {
+								// Minh: for efficiency, if previous branch maps to some branch, reuse partial_lh if it does not look to old branch
+								if (nei_link != saved_nei[0]->link_neighbors[part]->node && nei_link != saved_nei[1]->link_neighbors[part]->node) {
+
+									PhyloNeighbor *thisnei = ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]));
+									memcpy(thisnei->partial_lh, savednei->partial_lh, at(part)->getPartialLhBytes());
+									memcpy(thisnei->scale_num , savednei->scale_num , at(part)->getScaleNumBytes());
+									thisnei->lh_scale_factor = savednei->lh_scale_factor;
+									thisnei->partial_lh_computed = savednei->partial_lh_computed;
+								}
+							} else {
+								// Minh: for efficency, if previous branch maps to NULL, reuse partial_lh
+								PhyloNeighbor *thisnei = ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]));
+								memcpy(thisnei->partial_lh, savednei->partial_lh, at(part)->getPartialLhBytes());
+								memcpy(thisnei->scale_num , savednei->scale_num , at(part)->getScaleNumBytes());
+								thisnei->lh_scale_factor = savednei->lh_scale_factor;
+								thisnei->partial_lh_computed = savednei->partial_lh_computed;
+								//if (thisnei->partial_lh_computed)
+									//cout << "yh" << endl;
+							}
+						}
+
 						(*sub_saved_it[part*6 + id])->id = sub_saved_nei1[part]->id;
 
 						// update link_neighbor[part]
 						((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
+
 					}
 
 //						if(nei1_new->link_neighbors[part] == (PhyloNeighbor*)(*sub_saved_it[part*6+0]))	{cout<<"YESSSS"<<endl;}
@@ -994,6 +1042,15 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					//cout<<"================================"<<endl;
 					linkCheck(part,node2,node1,sub_saved_nei1[part]);
 					//cout<<"================================"<<endl;
+
+
+					nei1_new_part[part] = nei1_new->link_neighbors[part];
+					nei2_new_part[part] = nei2_new->link_neighbors[part];
+					/*if(nei1_new_part[part] && saved_nei[0]->link_neighbors[part]){
+						nei1_new_part[part]->clearPartialLh();
+						nei2_new_part[part]->clearPartialLh();
+					}*/
+
 
 //						cout<<"AFTER RELINKING, NEW"<<endl;
 //						cout<<"ne1_new -> "<<nei1_new->link_neighbors[part]->node->name<<","<<nei1_new->link_neighbors[part]->node->id<<endl;
@@ -1010,15 +1067,11 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 //						else{cout<<"NEIN!!!!"<<endl;}
 //						if(nei2_new->link_neighbors[part] == NULL){cout<<"YESSSS, link_nei is NULL"<<endl;}
 //						else{cout<<"NEIN!!!"<<endl;}
+					nei1_new_part[part] = nei1_new->link_neighbors[part];
+					nei2_new_part[part] = nei2_new->link_neighbors[part];
 				}
 			} // end RELINK
 
-			nei1_new_part[part] = nei1_new->link_neighbors[part];
-			nei2_new_part[part] = nei2_new->link_neighbors[part];
-			if(nei1_new_part[part]){
-				nei1_new_part[part]->clearPartialLh();
-				nei2_new_part[part]->clearPartialLh();
-			}
 			//part_info[part].cur_score = 0.0;
 
 		} // end of part loop
