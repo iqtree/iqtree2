@@ -211,11 +211,22 @@ public:
 	*/
 	virtual void initPartitionInfo();
 
+	void printNNIcasesNUM();
+
     /**
      * 		indicates whether partition rates are fixed or not
      */
 
     bool fixed_rates;
+
+    /*
+     * 1 - # of is_nni on subtree
+     * 2 - # of relink branch to an empty one
+     * 3 - # of empty to empty
+     * 4 - # of relink branch to a  new one (50% saving on these cases compared to the previous implementation)
+     * 5 - # of relink branch to an old one + relink empty to some branch (100% saving on these cases)
+     */
+    int allNNIcases_computed[5];
 };
 
 

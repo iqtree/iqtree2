@@ -1981,6 +1981,9 @@ void runPhyloAnalysis(Params &params) {
 		cout << endl;
 	}
 
+	//if(params.partition_type)
+	//	((PhyloSuperTreePlen*)tree)->printNNIcasesNUM();
+
 	delete tree;
 	delete alignment;
 }
