@@ -1325,9 +1325,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	    			linkagePattern << partNr << ",";
 	    		}
 	    		linkagePattern << partNr;
-	    	    pllLinkAlphaParameters(linkagePattern.str().c_str(), iqtree.pllPartitions);
-	    	    pllLinkFrequencies(linkagePattern.str().c_str(), iqtree.pllPartitions);
-	    	    pllLinkRates(linkagePattern.str().c_str(), iqtree.pllPartitions);
+	    		char *pattern = new char [linkagePattern.str().length()+1];
+	    		strcpy (pattern, linkagePattern.str().c_str());
+	    	    pllLinkAlphaParameters( pattern, iqtree.pllPartitions);
+	    	    pllLinkFrequencies( pattern, iqtree.pllPartitions);
+	    	    pllLinkRates( pattern, iqtree.pllPartitions);
+	    	    delete [] pattern;
 
 	    	    for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions; partNr++) {
 	    		    pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions, iqtree.pllInst);

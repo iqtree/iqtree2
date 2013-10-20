@@ -1038,9 +1038,12 @@ double IQTree::doIQPNNI() {
 			    			linkagePattern << partNr << ",";
 			    		}
 			    		linkagePattern << partNr;
-			    	    pllLinkAlphaParameters(linkagePattern.str().c_str(), pllPartitions);
-			    	    pllLinkFrequencies(linkagePattern.str().c_str(), pllPartitions);
-			    	    pllLinkRates(linkagePattern.str().c_str(), pllPartitions);
+			    		char *pattern = new char [linkagePattern.str().length()+1];
+			    		strcpy (pattern, linkagePattern.str().c_str());
+			    	    pllLinkAlphaParameters( pattern, pllPartitions);
+			    	    pllLinkFrequencies( pattern, pllPartitions);
+			    	    pllLinkRates( pattern, pllPartitions);
+			    	    delete [] pattern;
 
 			    	    for (partNr = 0; partNr < pllPartitions->numberOfPartitions; partNr++) {
 			    		    pllSetFixedAlpha(alpha, partNr, pllPartitions, pllInst);
