@@ -34,6 +34,17 @@ FILE * fmemopen(void *buf, size_t size, const char *mode);
 
 #define IQTREE_NEWZPERCYCLE		10
 
+/* This is the info you need to copy the vector*/
+typedef struct
+{
+  int node_number;
+  int num_partitions;
+  size_t *partition_sizes;
+  double **lh_values;
+  int **expVector;
+} LH_VECTOR;
+
+
 typedef struct {
 	pllInstance* tr;
 	nodeptr p;
@@ -45,6 +56,8 @@ typedef struct {
     double z4[PLL_NUM_BRANCHES]; // q->next->next
 	double likelihood;
 } NNIMOVE;
+
+LH_VECTOR backup_likelihood_pointers(pllInstance *tr, partitionList *pr, nodeptr p);
 
 int cmp_nni(const void* nni1, const void* nni2);
 

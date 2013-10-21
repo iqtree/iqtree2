@@ -191,13 +191,6 @@ public:
      */
     double doIQP();
 
-    /**
-     * 	   perform a variable neighborhood search using
-     * 	   NNI and SPR as the 2 alternative neighborhood
-     *
-     */
-    double doVNS();
-
     bool containPosNNI(vector<NNIMove> posNNIs);
 
     /**
@@ -242,7 +235,7 @@ public:
             @param skipped (OUT) 1 if current iteration is skipped, otherwise 0
             @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    double optimizeNNI(bool beginHeu = false, int *skipped = NULL, int *nni_count = NULL);
+    double optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu = false, int *skipped = NULL);
 
     /**
      * 		Do fastNNI using RAxML kernel
@@ -250,7 +243,7 @@ public:
      * 		@param skipped (OUT) 1 if current iteration is skipped, otherwise 0
      *      @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    double pllOptimizeNNI(bool beginHeu = false, int *skipped = NULL, int *nni_count = NULL);
+    double pllOptimizeNNI(int &nniCount, int &nniSteps, bool beginHeu = false, int *skipped = NULL);
 
 
     /**
@@ -641,7 +634,6 @@ public:
 	int getDelete() const;
 	void setDelete(int _delete);
 
-    int nni_steps;
 protected:
     /**** NNI cutoff heuristic *****/
     /**

@@ -44,7 +44,6 @@ void IQTree::init() {
     enableHeuris = true; // This is set true when the heuristic started (after N iterations)
     linRegModel = NULL;
     estimate_nni_cutoff = false;
-    nni_steps = 0;
     nni_cutoff = -1e6;
     nni_sort = false;
     testNNI = false;
@@ -526,10 +525,6 @@ double IQTree::computePartialBonus(Node *node, Node* dad) {
     return node_nei->lh_scale_factor;
 }
 
-double IQTree::doVNS() {
-    curScore = optimizeNNI(false);
-    return curScore;
-}
 
 bool IQTree::containPosNNI(vector<NNIMove> posNNIs) {
     for (vector<NNIMove>::iterator iter = posNNIs.begin(); iter != posNNIs.end(); iter++) {
@@ -1090,7 +1085,8 @@ double IQTree::doIQPNNI() {
         }
 
         int skipped = 0;
-        int nni_count = 0;
+        int nni_count;
+        int nni_steps;
         if (enableHeuris) {
             if (curIQPIter > params->speedup_iter) {
                 if (!speedupMsg) {
@@ -1124,23 +1120,23 @@ double IQTree::doIQPNNI() {
                 }
 
                 if (params->pll) {
-                    curScore = pllOptimizeNNI(true, &skipped, &nni_count);
+                    curScore = pllOptimizeNNI(nni_count, nni_steps, true, &skipped);
                 } else {
-                    curScore = optimizeNNI(true, &skipped, &nni_count);
+                    curScore = optimizeNNI(nni_count, nni_steps, true, &skipped);
                 }
             } else {
                 if (params->pll) {
-                    curScore = pllOptimizeNNI(false, &skipped, &nni_count);
+                    curScore = pllOptimizeNNI(nni_count, nni_steps, false, &skipped);
                 } else {
-                    curScore = optimizeNNI(false, &skipped, &nni_count);
+                    curScore = optimizeNNI(nni_count, nni_steps, false, &skipped);
                 }
             }
         } else {
             if (params->pll) {
                 // Start NNI search using Phylolib kernel
-                curScore = pllOptimizeNNI(false, &skipped, &nni_count);
+                curScore = pllOptimizeNNI(nni_count, nni_steps, false, &skipped);
             } else {
-                curScore = optimizeNNI(false, &skipped, &nni_count);
+                curScore = optimizeNNI(nni_count, nni_steps, false, &skipped);
             }
         }
 
@@ -1246,7 +1242,7 @@ double IQTree::doIQPNNI() {
                 best_tree_topo = cur_tree_topo_ss.str();
                 cout << "BETTER TREE FOUND at iteration " << curIQPIter << ": " << curScore << endl;
                 if (params->pll) {
-                	pllTreeEvaluate(pllInst, pllPartitions, 32);
+                	pllTreeEvaluate(pllInst, pllPartitions, 8);
                 	curScore = pllInst->likelihood;
                 } else {
                     curScore = optimizeAllBranches();
@@ -1341,26 +1337,22 @@ double IQTree::doIQPNNI() {
 /****************************************************************************
  Fast Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
-double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
+double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *skipped) {
     bool resetLamda = true; // variable indicates whether lambda should be reset
     curLambda = startLambda;
     if (skipped) // variable indicates whether the NNI search is skipped or not (due to the heuristic)
         *skipped = 0;
-    nni_steps = 0; // number of NNI round
-    int nni_count = 0;
-    if (nni_count_ret)
-        *nni_count_ret = nni_count;
+    nni_count = 0;
 
-    int nni2apply = 0; // number of nni to be applied in this round
+    int nni2apply = 0; // number of nni to be applied in each NNI steps
     int nonconf_nni = 0; // number of non-conflicting NNIs found in this round
-    int MAXSTEPS = 100;
-    for (int steps=1; steps <= MAXSTEPS; steps++) {
+    int MAXSTEPS = 1000;
+    for (nni_steps=1; nni_steps <= MAXSTEPS; nni_steps++) {
     	double oldScore = curScore;
         if (resetLamda) { // tree get improved, lamda reset
             if (save_all_trees == 2) {
                 saveCurrentTree(curScore); // BQM: for new bootstrap
             }
-            ++nni_steps;
             if (verbose_mode >= VB_DEBUG) {
                 cout << "Doing NNI round " << nni_steps << endl;
                 if (isSuperTree()) {
@@ -1436,8 +1428,6 @@ double IQTree::optimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
                 filename << (params->out_prefix) << ".nniTree_round_" << nni_steps;
                 printTree(filename.str().c_str());
             }
-            if (nni_count_ret)
-                *nni_count_ret = nni_count;
             resetLamda = true;
         } else {
             /* tree cannot be worse if only 1 NNI is applied */
@@ -1491,15 +1481,15 @@ extern "C" int numSmoothTree;
 extern "C" int fast_eval;
 extern "C" int fivebran;
 
-double IQTree::pllOptimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
+double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, int *skipped) {
     if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
         estDeltaMin();
         cout << "delta_min = " << nnicut.delta_min << endl;
     }
-    int nniRound = 1;
+    totalNNICount = 0;
+    nniSteps = 0;
     double curLH = pllInst->likelihood;
     //cout << "LH IQP Tree = " << curLH << endl;
-    int nniApplied = 0;
     TOL_LIKELIHOOD_PHYLOLIB = params->loglh_epsilon;
     numSmoothTree = params->numSmoothTree;
     if (params->fast_eval)
@@ -1510,9 +1500,10 @@ double IQTree::pllOptimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
     	fivebran = 1;
     else
     	fivebran = 0;
-    while (true) {
+    const int MAX_NNI_STEPS = 1000;
+    for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
         if (beginHeu) {
-            double maxScore = curLH + nni_delta_est * (nni_count_est - nniApplied);
+            double maxScore = curLH + nni_delta_est * (nni_count_est - totalNNICount);
             if (maxScore < curLH) {
                 beginHeu = false;
             } else {
@@ -1540,18 +1531,17 @@ double IQTree::pllOptimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
             //cout << "NNI round " << nniRound << "  LH : " << newLH << endl;
             //cout << "NNI round " << nniRound << "  improvement : " << newLH -curLH << endl;
             curLH = newLH;
-            nniRound++;
             //cout << "deltaNNI = " << deltaNNI << endl;
             //cout << "nni_count = " << nni_count << endl;
             if (enableHeuris && curIQPIter > 1) {
-                if (vecImpProNNI.size() < 100000) {
+                if (vecImpProNNI.size() < 10000) {
                     vecImpProNNI.push_back(deltaNNI);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());
                     vecImpProNNI.push_back(deltaNNI);
                 }
             }
-            nniApplied += nni_count;
+            totalNNICount += nni_count;
             if (verbose_mode >= VB_DEBUG) {
                 cout << nni_count << " NNIs has been done" << endl;
                 cout << "Log-likelihood of current tree = " << newLH << endl;
@@ -1559,21 +1549,16 @@ double IQTree::pllOptimizeNNI(bool beginHeu, int *skipped, int *nni_count_ret) {
                 //suffix << ".IQP_" << curIQPIter << ".phylolibTree." << nniRound;
                 //printPhylolibTree(suffix.str().c_str());
             }
-            if (nni_count_ret) {
-                *nni_count_ret = nniApplied;
-            }
+
         }
     }
-    if (verbose_mode >= VB_MED) {
-        cout << "Number of NNI applied = " << nniApplied << endl;
-        cout << "Number of NNI rounds = " << nniRound << endl;
-    }
+
     if (enableHeuris && curIQPIter > 1) {
         if (vecNumNNI.size() < 10000) {
-            vecNumNNI.push_back(nniApplied);
+            vecNumNNI.push_back(totalNNICount);
         } else {
             vecNumNNI.erase(vecNumNNI.begin());
-            vecNumNNI.push_back(nniApplied);
+            vecNumNNI.push_back(totalNNICount);
         }
     }
 

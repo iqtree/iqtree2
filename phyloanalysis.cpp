@@ -1359,13 +1359,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	    	} else {
 				pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
 				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 64);
+				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 2);
 			}
 	    	cout << "logl of parsimony tree " << i << ": " << iqtree.pllInst->likelihood << endl;
 	    	delete newick;
 	    	/* Now do NNI */
-	    	double treeLH = iqtree.pllOptimizeNNI();
-	    	cout << "logl of fastNNI " << i << ": " << treeLH << endl;
+	    	int nni_count, nni_steps;
+	    	double treeLH = iqtree.pllOptimizeNNI(nni_count, nni_steps);
+	    	cout << "logl of fastNNI " << i << ": " << treeLH << "(NNIs: " << nni_count << " / NNI steps: " << nni_steps << endl;
 	    	if ( treeLH > bestLH ) {
 	    		bestLH = treeLH;
 				Tree2String (iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
@@ -1457,7 +1458,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.clearAllPartialLH();
 		iqtree.curScore = iqtree.optimizeAllBranches();
 		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
-		iqtree.curScore = iqtree.optimizeNNI();
+		int nni_count, nni_steps;
+		iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
 		cout << "Log-likelihood after optimizing partial tree: "
 				<< iqtree.curScore << endl;
 		/*
@@ -1518,11 +1520,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			//double spr_score = tree.optimizeSPR(tree.curScore, (PhyloNode*) tree.root->neighbors[0]->node);
 			if (spr_score <= iqtree.curScore) {
 				cout << "SPR search did not found any better tree" << endl;
-			} else {
-				iqtree.curScore = spr_score;
-				cout << "Found new BETTER SCORE by SPR: " << spr_score << endl;
-				double nni_score = iqtree.optimizeNNI();
-				cout << "Score by NNI: " << nni_score << endl;
 			}
 		}
 
@@ -1538,7 +1535,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.clearAllPartialLH();
 		iqtree.curScore = iqtree.optimizeAllBranches();
 		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
-		iqtree.curScore = iqtree.optimizeNNI();
+		int nni_count, nni_steps;
+		iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
 		cout << "Log-likelihood	after reoptimizing full tree: "
 				<< iqtree.curScore << endl;
 	}

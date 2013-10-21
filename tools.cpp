@@ -682,7 +682,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_tree_lh = false;
     params.nni_lh = false;
     params.lambda = 1;
-    params.speed_conf = 0.95;
+    params.speed_conf = 1.0;
     params.whtest_simulations = 1000;
     params.mcat_type = MCAT_LOG + MCAT_PATTERN;
     params.rate_file = NULL;
@@ -721,7 +721,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.approximate_nni = false;
     params.do_compression = false;
 
-    params.new_heuristic = false;
+    params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
     params.vns_search = false;

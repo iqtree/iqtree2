@@ -200,6 +200,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, int* nni_count, double* d
 			} else {
 				rollBack = PLL_TRUE;
 			}
+			/* Only apply the best NNI after the tree has been rolled back */
 			numNNI = 1;
 		} else {
 			if (rollBack) {
@@ -207,7 +208,6 @@ double doNNISearch(pllInstance* tr, partitionList *pr, int* nni_count, double* d
 			}
 			break;
 		}
-
 	}
 	*nni_count = numNNI;
 	*deltaNNI = (tr->likelihood - initLH) / numNNI;
@@ -351,12 +351,33 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 //	return result;
 //}
 
+LH_VECTOR backup_likelihood_pointers(pllInstance *tr, partitionList *pr, nodeptr p) {
+	assert(tr->useRecom == PLL_FALSE);
+	LH_VECTOR v;
+	int p_slot = p->number - tr->mxtips - 1;
+	v.node_number = p->number;
+	v.num_partitions = pr->numberOfPartitions;
+	v.lh_values = (double **)malloc(v.num_partitions * sizeof(double *));
+
+	size_t rateHet, states, width, vector_size, requiredExpLength;
+	rateHet = discreteRateCategories(tr->rateHetModel);
+	int model;
+	for (model = 0; model < pr->numberOfPartitions; model++) {
+		width = (size_t) pr->partitionData[model]->width;
+		states = (size_t) pr->partitionData[model]->states;
+		vector_size = virtual_width(width) * rateHet * states * sizeof(double);
+	    requiredExpLength  = width * sizeof(int);
+
+		v.lh_values[model] = pr->partitionData[model]->xVector[p_slot];
+		v.expVector[model] = pr->partitionData[model]->expVector[p_slot];
+		pr->partitionData[model]->xVector[p_slot] = (double *) malloc(sizeof(double) * vector_size);
+		pr->partitionData[model]->expVector[p_slot] = (int*)rax_malloc_aligned(requiredExpLength);
+	}
+	return v;
+}
+
 int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, NNIMOVE* nniList, int* numBran, double curLH) {
 	nodeptr q = p->back;
-	/* determine whether the partial likelihood is computed at p and q or not */
-	boolean p_computed = p->x;
-	boolean q_computed = q->x;
-	assert(p_computed || q_computed);
 	assert(!isTip(p->number, tr->mxtips));
 	assert(!isTip(q->number, tr->mxtips));
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
