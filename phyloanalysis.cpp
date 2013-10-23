@@ -980,11 +980,17 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	iqtree.pllAttr.randomNumberSeed = params.ran_seed;
 	iqtree.pllAttr.numberOfThreads = 8; /* This only affects the pthreads version */
 
+	if ( iqtree.pllInst != NULL ) {
+		pllDestroyInstance(iqtree.pllInst);
+	}
 	/* Create a PLL instance */
 	iqtree.pllInst = pllCreateInstance(&iqtree.pllAttr);
 
 	/* Read in the alignment file */
-	iqtree.pllAlignment = pllParseAlignmentFile(PLL_FORMAT_PHYLIP, params.aln_file);
+	string pllAln = params.out_prefix;
+	pllAln += ".pllaln";
+	alignment->printPhylip(pllAln.c_str());
+	iqtree.pllAlignment = pllParseAlignmentFile(PLL_FORMAT_PHYLIP, pllAln.c_str());
 
 	/* Read in the partition information */
 	pllQueue *partitionInfo;
@@ -1406,17 +1412,19 @@ void runPhyloAnalysis(Params &params, string &original_model,
 					pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
 					pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 100);
 				}
-		    	cout << "logl of parsimony tree " << i << ": " << iqtree.pllInst->likelihood << endl;
 		    	delete newick;
 	    	}
 
 	    	/* Now do NNI */
 	    	int nni_count, nni_steps;
 	    	double treeLH;
-	    	if ( params.pll )
+	    	if ( params.pll ) {
+		    	cout << "logl of parsimony tree " << i << ": " << iqtree.pllInst->likelihood << endl;
 	    		treeLH = iqtree.pllOptimizeNNI(nni_count, nni_steps);
-	    	else
+	    	} else {
+		    	cout << "logl of parsimony tree " << i << ": " << iqtree.curScore << endl;
 	    		treeLH = iqtree.optimizeNNI(nni_count, nni_steps);
+	    	}
 	    	cout << "logl of fastNNI " << i << ": " << treeLH << " (NNIs: " << nni_count << " / NNI steps: " << nni_steps << ")" << endl;
 	    	if ( treeLH > bestLH ) {
 	    		bestLH = treeLH;
