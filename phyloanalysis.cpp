@@ -918,7 +918,9 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	}
 	cout << "NNI cutoff: " << params.nni_cutoff << endl;
 	cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No")
-			<< endl << endl;
+			<< endl;
+	cout << "Phylogenetic likelihood library: " << (params.pll ? "Yes" : "No") << endl;
+	cout << endl;
 }
 
 void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
