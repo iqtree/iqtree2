@@ -724,7 +724,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.vns_search = false;
+    params.pertubSize = 10;
     params.speedup_iter = 100;
     params.pll = true;
     params.parbran = false;
@@ -2192,8 +2192,8 @@ double random_double() {
 #define	BIGX            20.0                                 /* max value to represent exp (x) */
 #define	LOG_SQRT_PI     0.5723649429247000870717135          /* log (sqrt (pi)) */
 #define	I_SQRT_PI       0.5641895835477562869480795          /* 1 / sqrt (pi) */
-#define	Z_MAX           6.0                                  /* maximum meaningful z value */ 
-#define	ex(x)           (((x) < -BIGX) ? 0.0 : exp (x))   
+#define	Z_MAX           6.0                                  /* maximum meaningful z value */
+#define	ex(x)           (((x) < -BIGX) ? 0.0 : exp (x))
 
 /************** Normalz: probability of normal z value *********************/
 

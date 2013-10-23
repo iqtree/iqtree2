@@ -345,6 +345,11 @@ struct NNIInfo {
 struct Params {
 
 	/**
+	 *  Default number of NNI used for perturbing the tree
+	 */
+	int pertubSize;
+
+	/**
 	 *  Carry out iterated local search using NNI only.
 	 *  From the local maximum, apply some negative NNIs and the continue with the local search
 	 */
@@ -374,7 +379,7 @@ struct Params {
 	 *  Optimize 5 branches on NNI tree
 	 */
 	bool nni5Branches;
-    
+
     /**
      *  Number of smoothTree iteration carried out in Phylolib for IQP Tree
      */
@@ -384,12 +389,12 @@ struct Params {
      *   compute least square branches for a given tree
      */
     bool leastSquareBranch;
-    
+
     /**
      *  use Least Square to evaluate NNI
      */
     bool leastSquareNNI;
-    
+
     /**
      *  epsilon value used to compare log-likelihood between trees
      */
@@ -1257,7 +1262,7 @@ struct Params {
 
     /** file containing state-frequencies per site for site-specific state frequency model
      * each line has n+1 entries (n=number of states):
-     * site_ID state1_freq state2_freq ... staten_freq 
+     * site_ID state1_freq state2_freq ... staten_freq
      * where site_ID is from 1 to m (m=number of sites)
      */
     char *site_freq_file;
@@ -1663,19 +1668,19 @@ double computePValueChiSquare(double x, int df);
 int init_random(int seed);
 
 /**
- * returns a random integer in the range [0; n - 1] 
+ * returns a random integer in the range [0; n - 1]
  * @param n upper-bound of random number
  */
 int random_int(int n);
 
 /**
- * returns a random integer in the range [0; RAND_MAX - 1] 
+ * returns a random integer in the range [0; RAND_MAX - 1]
  * = random_int(RAND_MAX)
  */
 int random_int();
 
 /**
- * returns a random floating-point nuber in the range [0; 1) 
+ * returns a random floating-point nuber in the range [0; 1)
  */
 double random_double();
 

@@ -55,7 +55,7 @@ typedef struct {
     double z3[PLL_NUM_BRANCHES]; // q->next
     double z4[PLL_NUM_BRANCHES]; // q->next->next
 	double likelihood;
-} NNIMOVE;
+} pllNNIMove;
 
 LH_VECTOR backup_likelihood_pointers(pllInstance *tr, partitionList *pr, nodeptr p);
 
@@ -63,7 +63,7 @@ int cmp_nni(const void* nni1, const void* nni2);
 
 int compareDouble(const void * a, const void * b);
 
-NNIMOVE *getNonConflictNNIList(pllInstance* tr);
+pllNNIMove *getNonConflictNNIList(pllInstance* tr);
 
 void _update(pllInstance *tr, partitionList *pr, nodeptr p);
 
@@ -93,7 +93,18 @@ typedef struct {
  *  @param curLH the curren log-likelihood of the tree
  *  @return 1 if a positive NNI is found, 0 otherwise
  */
-int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,  NNIMOVE* nniList, int* numBran, double curLH);
+int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,  pllNNIMove* nniList, int* numBran, double curLH);
+
+/**
+ * Perturb the best tree
+ *
+ * Given the best tree, apply some NNIs to escape local optimum
+ * @param tr
+ * @param pr
+ * @param nnis list of all NNI to apply
+ * @return
+ */
+double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis);
 
 /**
  * 	do 1 round of fastNNI
@@ -104,14 +115,14 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,  NNIMOVE* nniL
  *  @param[out] nni_count pointer to the number of NNI that has been apply (OUT parameter)
  *  @param[out] deltaNNI pointer to the average improvement made by one NNI (OUT parameters)
  */
-double doNNISearch(pllInstance* tr, partitionList *pr, int* nni_count, double* deltaNNI);
+double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove** nniList, int* nni_count, double* deltaNNI);
 
 /**
  *  perturb the current tree by randomly carrying some negative NNI moves
  *  @param[in] tr the tree
  *  @param[in] nniList list of all possible NNIs
  */
-double pertub(pllInstance* tr, NNIMOVE* nniList);
+double pertub(pllInstance* tr, pllNNIMove* nniList);
 
 //void optimizeOneBranches(pllInstance* tr, nodeptr p, int numNRStep);
 
@@ -141,14 +152,14 @@ void evalAllNNI(pllInstance* tr);
  * 	@param[out] numBran number of internal branches that have been visited
  *  @param[out] numPosNNI number of positive NNI found
  */
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, NNIMOVE* nniList, int* numBran, int* numPosNNI, double curLH);
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nniList, int* numBran, int* numPosNNI, double curLH);
 
 /*
  *  @brief return the array which can be used to store evaluated NNI moves
  *
  *  @param[in] tr: the tree data structure
  */
-NNIMOVE *getNNIList(pllInstance* tr);
+pllNNIMove *getNNIList(pllInstance* tr);
 
 /*
  *  Save the likelihood vector of p and q to the 2 pointer p_lhsave and

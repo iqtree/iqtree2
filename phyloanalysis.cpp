@@ -1366,7 +1366,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	    	/* Now do NNI */
 	    	int nni_count, nni_steps;
 	    	double treeLH = iqtree.pllOptimizeNNI(nni_count, nni_steps);
-	    	cout << "logl of fastNNI " << i << ": " << treeLH << "(NNIs: " << nni_count << " / NNI steps: " << nni_steps << endl;
+	    	cout << "logl of fastNNI " << i << ": " << treeLH << " (NNIs: " << nni_count << " / NNI steps: " << nni_steps << ")" << endl;
 	    	if ( treeLH > bestLH ) {
 	    		bestLH = treeLH;
 				Tree2String (iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);

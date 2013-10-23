@@ -223,6 +223,8 @@ public:
      */
     double doIQPNNI();
 
+    double doIteratedNNI();
+
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
      ****************************************************************************/
@@ -461,7 +463,7 @@ protected:
     /**
      *  Current IQPNNI iteration number
      */
-    int curIQPIter;
+    int curIteration;
     /**
             criterion to assess important quartet
      */
@@ -481,6 +483,17 @@ protected:
      * Array that stores the frequency that each taxa has been choosen to be swapped
      */
     map<int, int> freqList;
+
+    /*
+     *  This is nniList of generated from the best fastNNI
+     */
+    vector<pllNNIMove> nni_for_pertub;
+
+    /*
+     *  nniList of the most recent fastNNI
+     */
+    vector<pllNNIMove> curNNIList;
+
 
     /**
      * Taxa set
@@ -518,12 +531,6 @@ protected:
      *  Vector contains approximated improvement pro NNI at each iterations
      */
     vector<double> vecImpProNNI;
-
-    /**
-     * The current best score found
-     */
-    double bestScore;
-
 
     /**
             The list of positive NNI moves for the current tree;
@@ -575,6 +582,11 @@ protected:
     void clearLeafFrequency();
 
 public:
+    /**
+     * The current best score found
+     */
+    double bestScore;
+
     /****** following variables are for ultra-fast bootstrap *******/
     /** 2 to save all trees, 1 to save intermediate trees */
     int save_all_trees;
