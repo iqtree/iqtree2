@@ -24,7 +24,7 @@
 
 const double MIN_RATE = 1e-6;
 const double MIN_GAMMA_SHAPE = 0.01;
-const double MAX_GAMMA_SHAPE = 100.0;
+const double MAX_GAMMA_SHAPE = 10000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
 
 class PhyloTree;
