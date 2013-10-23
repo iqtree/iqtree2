@@ -356,7 +356,7 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 	}
 }
 
-double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double epsilon) {
+double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon) {
 	assert(model);
 	assert(site_rate);
 
@@ -377,16 +377,16 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		cout << "Initial log-likelihood: " << cur_lh << endl;
 	int i;
 	bool optimize_rate = true;
-	//double cur_epsilon = epsilon*100;
-	for (i = 2; i < 100; i++) {
-		double model_lh = model->optimizeParameters();
+	double param_epsilon = logl_epsilon; // epsilon for parameters starts at epsilon for logl
+	for (i = 2; i < 100; i++, param_epsilon/=2.0) {
+		double model_lh = model->optimizeParameters(param_epsilon);
 		double rate_lh = 0.0;
 		if (optimize_rate) {
-			rate_lh = site_rate->optimizeParameters();
+			rate_lh = site_rate->optimizeParameters(param_epsilon);
 			if (rate_lh < model_lh+1e-6 && model_lh != 0.0) optimize_rate = false;
 		}
 		if (model_lh == 0.0 && rate_lh == 0.0) {
-			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, epsilon);
+			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
 			break;
 		}
 		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
@@ -395,16 +395,16 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);
 		}
-		if (new_lh > cur_lh + epsilon) {
+		if (new_lh > cur_lh + logl_epsilon) {
 			if (!fixed_len)
-				cur_lh = tree->optimizeAllBranches(min(i,3), epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+				cur_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 			else
 				cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)
 				cout << "Current log-likelihood: " << cur_lh << endl;
 		} else {
 			site_rate->classifyRates(new_lh);
-			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, epsilon);
+			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
 			break;
 		}
 	}

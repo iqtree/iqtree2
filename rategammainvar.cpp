@@ -79,15 +79,15 @@ double RateGammaInvar::targetFunk(double x[]) {
 }
 
 
-double RateGammaInvar::optimizeParameters() {
+double RateGammaInvar::optimizeParameters(double epsilon) {
 
 
 	if (!optimize_gamma_invar_by_bfgs) {
 		double tree_lh;
 		cur_optimize = 1;
-		tree_lh = RateInvar::optimizeParameters();
+		tree_lh = RateInvar::optimizeParameters(epsilon);
 		cur_optimize = 0;
-		tree_lh = RateGamma::optimizeParameters();
+		tree_lh = RateGamma::optimizeParameters(epsilon);
 		phylo_tree->clearAllPartialLH();
 		return tree_lh;
 	}
@@ -123,7 +123,7 @@ double RateGammaInvar::optimizeParameters() {
 		bound_check[gid+1] = false;
 	}
 		//packData(variables, lower_bound, upper_bound, bound_check);
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, TOL_GAMMA_SHAPE);
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_GAMMA_SHAPE));
 
 	getVariables(variables);
 

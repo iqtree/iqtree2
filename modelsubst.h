@@ -192,9 +192,10 @@ public:
 	/**
 		optimize model parameters. One should override this function when defining new model.
 		The default does nothing since it is a Juke-Cantor type model, hence no parameters involved.
+		@param epsilon accuracy of the parameters during optimization
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters() { return 0.0; }
+	virtual double optimizeParameters(double epsilon) { return 0.0; }
 
 	/**
 		write information

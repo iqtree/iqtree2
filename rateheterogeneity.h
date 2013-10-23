@@ -120,7 +120,7 @@ public:
 		optimize parameters. Default does nothing
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters() { return 0.0; }
+	virtual double optimizeParameters(double epsilon) { return 0.0; }
 
 	/**
 		classify rates into categories, this is meant for the discrete MH model. 

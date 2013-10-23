@@ -54,7 +54,7 @@ public:
 		optimize parameters
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters();
+	virtual double optimizeParameters(double epsilon);
 
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize

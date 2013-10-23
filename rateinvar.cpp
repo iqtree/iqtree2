@@ -22,9 +22,9 @@
 RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
  : RateHeterogeneity()
 {
-	//if (tree)
-	//	p_invar = max(tree->aln->frac_const_sites / 2.0, MIN_PINVAR);
-	//else
+	if (tree)
+		p_invar = max(tree->aln->frac_const_sites, MIN_PINVAR);
+	else
 		p_invar = MIN_PINVAR;
 	fix_p_invar = false;
 	phylo_tree = tree;
@@ -42,14 +42,14 @@ double RateInvar::computeFunction(double p_invar_value) {
 	return -phylo_tree->computeLikelihood();
 }
 
-double RateInvar::optimizeParameters() {
+double RateInvar::optimizeParameters(double epsilon) {
 	if (fix_p_invar)
 		return -computeFunction(p_invar);
 	if (verbose_mode >= VB_MAX)
 		cout << "Optimizing proportion of invariable sites..." << endl;
 	double negative_lh;
 	double ferror;
-	p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, phylo_tree->aln->frac_const_sites, TOL_PINVAR, &negative_lh, &ferror);
+	p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, phylo_tree->aln->frac_const_sites, max(epsilon, TOL_PINVAR), &negative_lh, &ferror);
 	//p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, 1.0 - MIN_PINVAR, TOL_PINVAR, &negative_lh, &ferror);
 	//phylo_tree->clearAllPartialLh();
 	return -negative_lh;

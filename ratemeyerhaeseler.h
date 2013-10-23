@@ -96,7 +96,7 @@ public:
 		optimize parameters, the rates in this case
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters();
+	virtual double optimizeParameters(double epsilon);
 
 	/**
 		optimize rate of site

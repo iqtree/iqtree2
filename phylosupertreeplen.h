@@ -93,7 +93,7 @@ public:
 		@param fixed_len TRUE to fix branch lengths, default is false
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double epsilon = 1e-6);
+	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double epsilon = 0.001);
 
 	double optimizeGeneRate(double tol);
 

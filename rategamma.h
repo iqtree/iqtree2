@@ -101,7 +101,7 @@ public:
 		optimize parameters. Default is to optimize gamma shape 
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters();
+	virtual double optimizeParameters(double epsilon);
 
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize

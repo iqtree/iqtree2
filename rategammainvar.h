@@ -50,7 +50,7 @@ public:
 		optimize parameters
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters();
+	virtual double optimizeParameters(double epsilon);
 
 
 	/**

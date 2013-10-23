@@ -80,7 +80,7 @@ public:
 		optimize model parameters
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters();
+	virtual double optimizeParameters(double epsilon);
 
 	/**
 		return the number of dimensions
