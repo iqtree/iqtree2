@@ -1248,7 +1248,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	cout << "Optimize model parameters ... " << endl;
 
     // Optimize model parameters and branch lengths using ML for the initial tree
-    bestTreeScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD);
+    bestTreeScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT);
 
 	// Save current tree to a string
     iqtree.curScore = bestTreeScore;
@@ -1586,8 +1586,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.clearAllPartialLH();
 		cout << "Optimizing model parameters" << endl;
 		iqtree.setBestScore(
-				iqtree.getModelFactory()->optimizeParameters(
-						params.fixed_branch_length));
+				iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT));
 	} else {
 		iqtree.setBestScore(iqtree.curScore);
 	}

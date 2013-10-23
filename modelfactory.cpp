@@ -397,7 +397,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		}
 		if (new_lh > cur_lh + epsilon) {
 			if (!fixed_len)
-				cur_lh = tree->optimizeAllBranches(min(i,3), epsilon);  // loop only 5 times in total
+				cur_lh = tree->optimizeAllBranches(min(i,3), epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 			else
 				cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)

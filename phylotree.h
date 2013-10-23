@@ -36,6 +36,7 @@ const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEAS
 const double MAX_BRANCH_LEN = 9.0;
 const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
+const double TOL_LIKELIHOOD_PARAMOPT = 0.01; // BQM: newly introduced for ModelFactory::optimizeParameters
 //const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
 const static double SCALING_THRESHOLD = 1e-100;
 const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
