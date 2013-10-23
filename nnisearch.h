@@ -14,24 +14,6 @@ const int NO_BRAN_OPT = 1;
 const int ONE_BRAN_OPT = 2;
 const int FIVE_BRAN_OPT = 4;
 
-
-/*--------------------------------------------------------------*/
-/* portable version for fmemopenevalType */
-/*--------------------------------------------------------------*/
-
-#if defined __APPLE__ || defined __MACH__
-struct fmem {
-    size_t pos;
-    size_t size;
-    char *buffer;
-};
-typedef struct fmem fmem_t;
-
-/* simple, but portable version of fmemopen for OS X / BSD */
-FILE * fmemopen(void *buf, size_t size, const char *mode);
-
-#endif /* APPLE */
-
 #define IQTREE_NEWZPERCYCLE		10
 
 /* This is the info you need to copy the vector*/
@@ -70,7 +52,7 @@ void _update(pllInstance *tr, partitionList *pr, nodeptr p);
 /**
  * TODO: read tree from string in memory
  */
- int treeReadLenString (const char *buffer, pllInstance *tr, boolean readBranches, boolean readNodeLabels, boolean topologyOnly);
+ int treeReadLenString (const char *buffer, pllInstance *tr, pll_boolean readBranches, pll_boolean readNodeLabels, pll_boolean topologyOnly);
 
 #define MAX_NUM_DELTA 10000
 

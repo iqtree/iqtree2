@@ -6,7 +6,6 @@
 #include "pll/pll.h"
 #define GLOBAL_VARIABLES_DEFINITION
 #include "nnisearch.h"
-#include "fmemopen.h"
 
 #if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/resource.h>
@@ -33,18 +32,6 @@ int fivebran;
 //pllNNIMove* nniList;
 
 
-/*
- int treeReadLenString(const char *buffer, pllInstance *tr, boolean readBranches,
- boolean readNodeLabels, boolean topologyOnly) {
- FILE *stream;
-
- stream = fmemopen((char*) buffer, strlen(buffer), "r");
- int lcount = treeReadLen(stream, tr, readBranches, readNodeLabels,
- topologyOnly);
- fclose(stream);
- return lcount;
- }
- */
 
 int cmp_nni(const void* nni1, const void* nni2) {
 	pllNNIMove* myNNI1 = (pllNNIMove*) nni1;

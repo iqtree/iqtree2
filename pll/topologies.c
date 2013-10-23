@@ -259,7 +259,7 @@ topol  *setupTopol (int maxtips)
   topol   *tpl;
 
   if (! (tpl = (topol *) rax_malloc(sizeof(topol))) || 
-      ! (tpl->links = (connptr) rax_malloc((2*maxtips-3) * sizeof(connect))))
+      ! (tpl->links = (connptr) rax_malloc((2*maxtips-3) * sizeof(pll_connect))))
     {
       printf("ERROR: Unable to get topology memory");
       tpl = (topol *) NULL;
@@ -428,7 +428,7 @@ void saveTree (pllInstance *tr, topol *tpl, int numBranches)
      Remove the return value, unnecessary
 
 */
-boolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr)
+pll_boolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr)
 { 
   connptr  r;
   nodeptr  p, p0;    
@@ -552,7 +552,7 @@ void resetBestTree (bestlist *bt)
 } /* resetBestTree */
 
 
-boolean  freeBestTree(bestlist *bt)
+pll_boolean  freeBestTree(bestlist *bt)
 { /* freeBestTree */
   while (bt->ninit >= 0)  freeTopol(bt->byScore[(bt->ninit)--]);
     

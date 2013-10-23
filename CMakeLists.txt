@@ -177,7 +177,6 @@ tools.cpp
 whtest_wrapper.cpp
 lpwrapper.c
 #modeltest_wrapper.c
-fmemopen.c
 nnisearch.c
 modelcodon.cpp
 phylotesting.cpp

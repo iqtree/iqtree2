@@ -277,7 +277,7 @@ static void changeModelParameters(int index, int rateNumber, double value, int w
  *  @todo
  *     Removed argument modelEpsilon as it is not used in this function. Maybe more things can be refactored.
  */
-static void evaluateChange(pllInstance *tr, partitionList *pr, int rateNumber, double *value, double *result, boolean* converged, int whichFunction, int numberOfModels, linkageList *ll)
+static void evaluateChange(pllInstance *tr, partitionList *pr, int rateNumber, double *value, double *result, pll_boolean* converged, int whichFunction, int numberOfModels, linkageList *ll)
 //static void evaluateChange(pllInstance *tr, partitionList *pr, int rateNumber, double *value, double *result, boolean* converged, int whichFunction, int numberOfModels, linkageList *ll, double modelEpsilon)
 { 
   int 
@@ -438,8 +438,8 @@ static void brentGeneric(double *ax, double *bx, double *cx, double *fb, double 
     *x     = (double *)rax_malloc(sizeof(double) * numberOfModels),
     *xm    = (double *)rax_malloc(sizeof(double) * numberOfModels),
     *e     = (double *)rax_malloc(sizeof(double) * numberOfModels);
-  boolean *converged = (boolean *)rax_malloc(sizeof(boolean) * numberOfModels);
-  boolean allConverged;
+  pll_boolean *converged = (pll_boolean *)rax_malloc(sizeof(pll_boolean) * numberOfModels);
+  pll_boolean allConverged;
   
   for(i = 0; i < numberOfModels; i++)    
     converged[i] = PLL_FALSE;
@@ -701,8 +701,8 @@ static int brakGeneric(double *param, double *ax, double *bx, double *cx, double
     *state    = (int *)rax_malloc(sizeof(int) * numberOfModels),
     *endState = (int *)rax_malloc(sizeof(int) * numberOfModels);
 
-  boolean *converged = (boolean *)rax_malloc(sizeof(boolean) * numberOfModels);
-  boolean allConverged;
+  pll_boolean *converged = (pll_boolean *)rax_malloc(sizeof(pll_boolean) * numberOfModels);
+  pll_boolean allConverged;
 
   for(i = 0; i < numberOfModels; i++)
     converged[i] = PLL_FALSE;
@@ -1501,7 +1501,7 @@ static void optRates(pllInstance *tr, partitionList * pr, double modelEpsilon, l
   *   Return \b PLL_TRUE in case there exists at least one protein partition and all of
   *   protein partitions are assigned a joint GTR matrix. Otherwise return \b PLL_FALSE
   */
-static boolean AAisGTR(partitionList *pr)
+static pll_boolean AAisGTR(partitionList *pr)
 {
   int i, count = 0;
 
@@ -1720,7 +1720,7 @@ void optRateCatPthreads(pllInstance *tr, partitionList *pr, double lower_spacing
       int 
         localIndex = 0;
 
-      boolean 
+      pll_boolean 
         execute = ((tr->manyPartitions && isThisMyPartition(pr, tid, model)) || (!tr->manyPartitions));
 
       if(execute)
@@ -1903,7 +1903,7 @@ static void optRateCatModel(pllInstance *tr, partitionList *pr, int model, doubl
    of 1.0
 */
 
-void updatePerSiteRates(pllInstance *tr, partitionList *pr, boolean scaleRates)
+void updatePerSiteRates(pllInstance *tr, partitionList *pr, pll_boolean scaleRates)
 {
   int 
     i,

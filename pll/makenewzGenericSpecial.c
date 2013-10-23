@@ -908,9 +908,9 @@ static void topLevelMakenewz(pllInstance *tr, partitionList * pr, double *z0, in
   volatile double  dlnLdlz[PLL_NUM_BRANCHES], d2lnLdlz2[PLL_NUM_BRANCHES];
   int i, maxiter[PLL_NUM_BRANCHES], model;
   int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
-  boolean firstIteration = PLL_TRUE;
-  boolean outerConverged[PLL_NUM_BRANCHES];
-  boolean loopConverged;
+  pll_boolean firstIteration = PLL_TRUE;
+  pll_boolean outerConverged[PLL_NUM_BRANCHES];
+  pll_boolean loopConverged;
 
 
   /* figure out if this is on a per partition basis or jointly across all partitions */
@@ -1145,13 +1145,13 @@ static void topLevelMakenewz(pllInstance *tr, partitionList * pr, double *z0, in
  * @sa typical values for \a maxiter are constants \a iterations and \a PLL_NEWZPERCYCLE
  * @note Requirement: q->z == p->z
  */
-void makenewzGeneric(pllInstance *tr, partitionList * pr, nodeptr p, nodeptr q, double *z0, int maxiter, double *result, boolean mask)
+void makenewzGeneric(pllInstance *tr, partitionList * pr, nodeptr p, nodeptr q, double *z0, int maxiter, double *result, pll_boolean mask)
 {
   int i;
   //boolean originalExecute[PLL_NUM_BRANCHES];
   int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
 
-  boolean 
+  pll_boolean 
     p_recom = PLL_FALSE, /* if one of was missing, we will need to force recomputation */
     q_recom = PLL_FALSE;
 

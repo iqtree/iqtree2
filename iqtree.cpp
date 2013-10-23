@@ -2732,7 +2732,7 @@ void IQTree::printPhylolibModelParams(const char* suffix) {
 */
 
 void IQTree::printPhylolibTree(const char* suffix) {
-    boolean printBranchLengths = PLL_TRUE;
+    pll_boolean printBranchLengths = PLL_TRUE;
     Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths, 1, 0, 0, 0, PLL_SUMMARIZE_LH,
             0, 0);
     char phylolibTree[1024];
