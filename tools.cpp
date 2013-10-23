@@ -726,7 +726,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.iteration_multiple = 1;
     params.pertubSize = 10;
     params.speedup_iter = 100;
-    params.pll = true;
+    params.pll = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
