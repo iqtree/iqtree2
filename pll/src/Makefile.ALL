@@ -1,0 +1,54 @@
+MAKE = make
+RM = rm -f
+TARGET = libpll
+VERSION = 1.0.0
+ARCH1 = AVX
+ARCH2 = SSE3
+ARCH3 = AVX-PTHREADS
+ARCH4 = SSE3-PTHREADS
+ARCH5 = AVX-MPI
+ARCH6 = SSE3-MPI
+ARCH7 = ARM
+STATICLIB1 = $(TARGET)-$(ARCH1).a.$(VERSION)
+STATICLIB2 = $(TARGET)-$(ARCH2).a.$(VERSION)
+STATICLIB3 = $(TARGET)-$(ARCH3).a.$(VERSION)
+STATICLIB4 = $(TARGET)-$(ARCH4).a.$(VERSION)
+STATICLIB5 = $(TARGET)-$(ARCH5).a.$(VERSION)
+STATICLIB6 = $(TARGET)-$(ARCH6).a.$(VERSION)
+STATICLIB7 = $(TARGET)-$(ARCH7).a.$(VERSION)
+
+
+all: $(STATICLIB1) $(STATICLIB2) $(STATICLIB3) $(STATICLIB4) $(STATICLIB5) $(STATICLIB6) $(STATICLIB7)
+
+$(STATICLIB1): Makefile.$(ARCH1)
+	-$(RM) *.o
+	$(MAKE) -f $+
+
+$(STATICLIB2): Makefile.$(ARCH2)
+	-$(RM) *.o
+	$(MAKE) -f $+
+
+$(STATICLIB3): Makefile.$(ARCH3)
+	-$(RM) *.o
+	$(MAKE) -f $+
+
+$(STATICLIB4): Makefile.$(ARCH4)
+	-$(RM) *.o
+	$(MAKE) -f $+
+
+$(STATICLIB5): Makefile.$(ARCH5)
+	-$(RM) *.o
+	$(MAKE) -f $+
+
+$(STATICLIB6): Makefile.$(ARCH6)
+	-$(RM) *.o
+	$(MAKE) -f $+
+
+$(STATICLIB7): Makefile.$(ARCH7)
+	-$(RM) *.o
+	$(MAKE) -f $+
+
+clean:
+	-$(RM) *.a $(STATICLIB1) $(STATICLIB2) $(STATICLIB3) $(STATICLIB4) $(STATICLIB5) $(STATICLIB6) $(STATICLIB7)
+
+.PHONY: all clean
