@@ -714,6 +714,7 @@ double IQTree::doIQP() {
     if (!params->pll) {
         // just to make sure IQP does it right
         setAlignment(aln);
+        initializeAllPartialLh();
         clearAllPartialLH();
         if (params->gbo_replicates)
             //curScore = optimizeAllBranches(3, 1.0);
@@ -1014,10 +1015,12 @@ double IQTree::doIQPNNI() {
 					// TODO: Here the likelihood is also compute, so check whether it is needed
 					pllInitModel(pllInst, pllPartitions,pllAlignment);
 
+		    		double alpha = getRate()->getGammaShape();
+		    		if (alpha == 0.0)
+		    			alpha = PLL_ALPHA_MAX;
 			    	/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
 			    	if (aln->num_states == 4) {
 			    		// get the alpha parameter
-			    		double alpha = getRate()->getGammaShape();
 			    		// get the rate parameters
 			    		// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
 			    		double *rate_param = new double[6];
@@ -1048,7 +1051,6 @@ double IQTree::doIQPNNI() {
 			    		delete [] rate_param;
 			    		delete [] state_freqs;
 			    	} else if(aln->num_states == 20) {
-			    		double alpha = getRate()->getGammaShape();
 			    		double *state_freqs = new double[aln->num_states];
 			    		int partNr;
 			    	    for (partNr = 0; partNr < pllPartitions->numberOfPartitions; partNr++) {

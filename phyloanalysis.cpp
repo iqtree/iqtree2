@@ -1256,9 +1256,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
     }
 	*/
 
-	/* TODO: uncomment this after everything is correct */
 	// deallocate partial likelihood within IQTree kernel to save memory when PLL is used */
-	// iqtree.deleteAllPartialLh();
+	if (params.pll)
+		iqtree.deleteAllPartialLh();
 
 
 
@@ -1308,10 +1308,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
 
 	    	/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
-
+    		// get the alpha parameter
+    		double alpha = iqtree.getRate()->getGammaShape();
+    		if (alpha == 0.0)
+    			alpha = PLL_ALPHA_MAX;
 	    	if (iqtree.aln->num_states == 4) {
-	    		// get the alpha parameter
-	    		double alpha = iqtree.getRate()->getGammaShape();
 	    		// get the rate parameters
 	    		// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
 	    		double *rate_param = new double[6];
@@ -1342,7 +1343,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	    		delete [] rate_param;
 	    		delete [] state_freqs;
 	    	} else if(iqtree.aln->num_states == 20) {
-	    		double alpha = iqtree.getRate()->getGammaShape();
 	    		double *state_freqs = new double[iqtree.aln->num_states];
 	    		int partNr;
 	    	    for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions; partNr++) {
@@ -1358,10 +1358,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	    	if ( i == 0) {
 	        	pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
 	        	pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
+				//pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 100);
 	    	} else {
 				pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
 				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 2);
+				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 100);
 			}
 	    	cout << "logl of parsimony tree " << i << ": " << iqtree.pllInst->likelihood << endl;
 	    	delete newick;

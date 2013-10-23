@@ -1037,7 +1037,14 @@ void PhyloTree::deleteAllPartialLh() {
 	if (central_partial_lh) {
 		delete [] central_partial_lh;
 	}
+	if (central_scale_num) {
+		delete [] central_scale_num;
+	}
+	if (central_partial_pars)
+		delete [] central_partial_pars;
 	central_partial_lh = NULL;
+	central_scale_num = NULL;
+	central_partial_pars = NULL;
 }
 
 uint64_t PhyloTree::getMemoryRequired() {
