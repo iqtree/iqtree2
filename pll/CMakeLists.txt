@@ -1,6 +1,6 @@
 add_library(pll 
 #avxLikelihood.c
-mem_alloc.c
+#mem_alloc.c
 alignment.c
 bipartitionList.c
 evaluateGenericSpecial.c

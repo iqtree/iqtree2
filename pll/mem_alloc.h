@@ -2,27 +2,27 @@
 #define __mem_alloc_h
 #include <stddef.h>
 #include <stdlib.h>
-#ifndef __APPLE__
-#include <malloc.h>             // this is probably not necessary
+#ifdef __linux__
+#include <malloc.h>
 #endif
 #include "pll.h"
 
-//#define rax_memalign memalign
-//#define rax_malloc malloc
-//#define rax_realloc realloc
-//#define rax_free free
-//#define rax_posix_memalign posix_memalign
-//#define rax_calloc calloc
+#define rax_memalign memalign
+#define rax_malloc malloc
+#define rax_realloc realloc
+#define rax_free free
+#define rax_posix_memalign posix_memalign
+#define rax_calloc calloc
 //#define rax_malloc_aligned(x) memalign(PLL_BYTE_ALIGNMENT,x)
 
-void *rax_memalign(size_t align, size_t size);
-void *rax_malloc(size_t size);
-void *rax_realloc(void *p, size_t size);
-void rax_free(void *p);
-int rax_posix_memalign(void **p, size_t align, size_t size);
-void *rax_calloc(size_t n, size_t size);
-
-void *rax_malloc_aligned(size_t size);
+//void *rax_memalign(size_t align, size_t size);
+//void *rax_malloc(size_t size);
+//void *rax_realloc(void *p, size_t size);
+//void rax_free(void *p);
+//int rax_posix_memalign(void **p, size_t align, size_t size);
+//void *rax_calloc(size_t n, size_t size);
+//
+//void *rax_malloc_aligned(size_t size);
 
 
 #if 0

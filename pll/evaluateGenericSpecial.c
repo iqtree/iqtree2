@@ -87,11 +87,11 @@
 static double evaluateGTRGAMMAPROT_LG4(int *ex1, int *ex2, int *wptr,
                                        double *x1, double *x2,  
                                        double *tipVector[4], 
-                                       unsigned char *tipX1, int n, double *diagptable, const pll_boolean fastScaling);
+                                       unsigned char *tipX1, int n, double *diagptable, const boolean fastScaling);
 
 /* GAMMA for proteins with memory saving */
 
-static double evaluateGTRGAMMAPROT_GAPPED_SAVE (const pll_boolean fastScaling, int *ex1, int *ex2, int *wptr,
+static double evaluateGTRGAMMAPROT_GAPPED_SAVE (const boolean fastScaling, int *ex1, int *ex2, int *wptr,
                                                 double *x1, double *x2,  
                                                 double *tipVector, 
                                                 unsigned char *tipX1, int n, double *diagptable, 
@@ -100,45 +100,45 @@ static double evaluateGTRGAMMAPROT_GAPPED_SAVE (const pll_boolean fastScaling, i
 
 /* GAMMA for proteins */
 
-static double evaluateGTRGAMMAPROT (const pll_boolean fastScaling, int *ex1, int *ex2, int *wptr,
+static double evaluateGTRGAMMAPROT (const boolean fastScaling, int *ex1, int *ex2, int *wptr,
                                     double *x1, double *x2,  
                                     double *tipVector, 
                                     unsigned char *tipX1, int n, double *diagptable);
 
 /* CAT for proteins */
 
-static double evaluateGTRCATPROT (const pll_boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
+static double evaluateGTRCATPROT (const boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
                                   double *x1, double *x2, double *tipVector,
                                   unsigned char *tipX1, int n, double *diagptable_start);
 
 
 /* CAT for proteins with memory saving */
 
-static double evaluateGTRCATPROT_SAVE (const pll_boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
+static double evaluateGTRCATPROT_SAVE (const boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
                                        double *x1, double *x2, double *tipVector,
                                        unsigned char *tipX1, int n, double *diagptable_start, 
                                        double *x1_gapColumn, double *x2_gapColumn, unsigned int *x1_gap, unsigned int *x2_gap);
 
 /* analogous DNA fuctions */
 
-static double evaluateGTRCAT_SAVE (const pll_boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
+static double evaluateGTRCAT_SAVE (const boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
                                    double *x1_start, double *x2_start, double *tipVector,                     
                                    unsigned char *tipX1, int n, double *diagptable_start,
                                    double *x1_gapColumn, double *x2_gapColumn, unsigned int *x1_gap, unsigned int *x2_gap);
 
-static double evaluateGTRGAMMA_GAPPED_SAVE(const pll_boolean fastScaling, int *ex1, int *ex2, int *wptr,
+static double evaluateGTRGAMMA_GAPPED_SAVE(const boolean fastScaling, int *ex1, int *ex2, int *wptr,
                                            double *x1_start, double *x2_start, 
                                            double *tipVector, 
                                            unsigned char *tipX1, const int n, double *diagptable,
                                            double *x1_gapColumn, double *x2_gapColumn, unsigned int *x1_gap, unsigned int *x2_gap);
 
-static double evaluateGTRGAMMA(const pll_boolean fastScaling, int *ex1, int *ex2, int *wptr,
+static double evaluateGTRGAMMA(const boolean fastScaling, int *ex1, int *ex2, int *wptr,
                                double *x1_start, double *x2_start, 
                                double *tipVector, 
                                unsigned char *tipX1, const int n, double *diagptable);
 
 
-static double evaluateGTRCAT (const pll_boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
+static double evaluateGTRCAT (const boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
                               double *x1_start, double *x2_start, double *tipVector,                  
                               unsigned char *tipX1, int n, double *diagptable_start);
 
@@ -352,10 +352,10 @@ static void calcDiagptableFlex_LG4(double z, int numberOfCategories, double *rpt
     @return
       The evaluated log likelihood of the tree topology
 */
-static double evaluateGAMMA_FLEX(const pll_boolean fastScaling, int *ex1, int *ex2, int *wptr,
+static double evaluateGAMMA_FLEX(const boolean fastScaling, int *ex1, int *ex2, int *wptr,
                                  double *x1_start, double *x2_start, 
                                  double *tipVector, 
-                                 unsigned char *tipX1, const int n, double *diagptable, const int states, double *perSiteLikelihoods, pll_boolean getPerSiteLikelihoods)
+                                 unsigned char *tipX1, const int n, double *diagptable, const int states, double *perSiteLikelihoods, boolean getPerSiteLikelihoods)
 {
   double   
     sum = 0.0, 
@@ -522,10 +522,10 @@ static double evaluateGAMMA_FLEX(const pll_boolean fastScaling, int *ex1, int *e
     @todo
       Document x1_gapColumn, x2_gapColumn, x1_gap, x2_gap and add a brief description of how this technique works
 */
-static double evaluateGAMMA_FLEX_SAVE(const pll_boolean fastScaling, int *ex1, int *ex2, int *wptr,
+static double evaluateGAMMA_FLEX_SAVE(const boolean fastScaling, int *ex1, int *ex2, int *wptr,
                                       double *x1_start, double *x2_start, 
                                       double *tipVector, 
-                                      unsigned char *tipX1, const int n, double *diagptable, const int states, double *perSiteLikelihoods, pll_boolean getPerSiteLikelihoods,
+                                      unsigned char *tipX1, const int n, double *diagptable, const int states, double *perSiteLikelihoods, boolean getPerSiteLikelihoods,
                                       double *x1_gapColumn, double *x2_gapColumn, unsigned int *x1_gap, unsigned int *x2_gap)
 {
   double   
@@ -704,9 +704,9 @@ static double evaluateGAMMA_FLEX_SAVE(const pll_boolean fastScaling, int *ex1, i
     @return
       The evaluated log likelihood of the tree topology
 */
-static double evaluateCAT_FLEX (const pll_boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
+static double evaluateCAT_FLEX (const boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
                                 double *x1, double *x2, double *tipVector,
-                                unsigned char *tipX1, int n, double *diagptable_start, const int states, double *perSiteLikelihoods, pll_boolean getPerSiteLikelihoods)
+                                unsigned char *tipX1, int n, double *diagptable_start, const int states, double *perSiteLikelihoods, boolean getPerSiteLikelihoods)
 {
   double   
     sum = 0.0, 
@@ -818,9 +818,9 @@ static double evaluateCAT_FLEX (const pll_boolean fastScaling, int *ex1, int *ex
     @todo
       Comment on x1_gapColumn and x2_gapColumn
 */
-static double evaluateCAT_FLEX_SAVE (const pll_boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
+static double evaluateCAT_FLEX_SAVE (const boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
                                      double *x1, double *x2, double *tipVector,
-                                     unsigned char *tipX1, int n, double *diagptable_start, const int states, double *perSiteLikelihoods, pll_boolean getPerSiteLikelihoods,
+                                     unsigned char *tipX1, int n, double *diagptable_start, const int states, double *perSiteLikelihoods, boolean getPerSiteLikelihoods,
                                      double *x1_gapColumn, double *x2_gapColumn, unsigned int *x1_gap, unsigned int *x2_gap)
 {
   double   
@@ -964,7 +964,7 @@ static double evaluateCAT_FLEX_SAVE (const pll_boolean fastScaling, int *ex1, in
       that the edge we are referring to is an edge that leads to a tip, i.e. either
       p or q of the first entry of traversal descriptor are tips.
 */
-void pllEvaluateIterative(pllInstance *tr, partitionList *pr, pll_boolean getPerSiteLikelihoods)
+void pllEvaluateIterative(pllInstance *tr, partitionList *pr, boolean getPerSiteLikelihoods)
 {
   /* the branch lengths and node indices of the virtual root branch are always the first one that 
      are stored in the very important traversal array data structure that describes a partial or full tree traversal */
@@ -982,7 +982,7 @@ void pllEvaluateIterative(pllInstance *tr, partitionList *pr, pll_boolean getPer
     q_slot,
     model;
   
-  pll_boolean
+  boolean
     fastScaling = tr->fastScaling;
 
   /* the slots are the entries in xVector where the LH vector is available */
@@ -1409,7 +1409,7 @@ void pllEvaluateIterative(pllInstance *tr, partitionList *pr, pll_boolean getPer
       If \a getPerSiteLikelihoods is set to \b PLL_TRUE, then make sure that \a tr->fastScaling is set to
       \b PLL_FALSE, otherwise an assertion will fail.
 */
-void pllEvaluateGeneric (pllInstance *tr, partitionList *pr, nodeptr p, pll_boolean fullTraversal, pll_boolean getPerSiteLikelihoods)
+void pllEvaluateGeneric (pllInstance *tr, partitionList *pr, nodeptr p, boolean fullTraversal, boolean getPerSiteLikelihoods)
 {
   /* now this may be the entry point of the library to compute 
      the log like at a branch defined by p and p->back == q */
@@ -1421,7 +1421,7 @@ void pllEvaluateGeneric (pllInstance *tr, partitionList *pr, nodeptr p, pll_bool
     q = p->back; 
   
 
-  pll_boolean
+  boolean
         p_recom = PLL_FALSE, /* if one of was missing, we will need to force recomputation */
         q_recom = PLL_FALSE;
 
@@ -1724,7 +1724,7 @@ void perSiteLogLikelihoods(pllInstance *tr, partitionList *pr, double *logLikeli
 static double evaluateGTRGAMMAPROT_LG4(int *ex1, int *ex2, int *wptr,
                                        double *x1, double *x2,  
                                        double *tipVector[4], 
-                                       unsigned char *tipX1, int n, double *diagptable, const pll_boolean fastScaling)
+                                       unsigned char *tipX1, int n, double *diagptable, const boolean fastScaling)
 {
   double   sum = 0.0, term;        
   int     i, j, l;   
@@ -1823,7 +1823,7 @@ static double evaluateGTRGAMMAPROT_LG4(int *ex1, int *ex2, int *wptr,
     vectors \a x1 and \a x2. Please check ::evaluateGAMMA_FLEX_SAVE for more information and
     a description of the input parameters
 */
-static double evaluateGTRGAMMAPROT_GAPPED_SAVE (const pll_boolean fastScaling, int *ex1, int *ex2, int *wptr,
+static double evaluateGTRGAMMAPROT_GAPPED_SAVE (const boolean fastScaling, int *ex1, int *ex2, int *wptr,
                                                 double *x1, double *x2,  
                                                 double *tipVector, 
                                                 unsigned char *tipX1, int n, double *diagptable, 
@@ -1939,7 +1939,7 @@ static double evaluateGTRGAMMAPROT_GAPPED_SAVE (const pll_boolean fastScaling, i
     vectors \a x1 and \a x2. Please check ::evaluateGAMMA_FLEX for more information and
     a description of the common input parameters
 */
-static double evaluateGTRGAMMAPROT (const pll_boolean fastScaling, int *ex1, int *ex2, int *wptr,
+static double evaluateGTRGAMMAPROT (const boolean fastScaling, int *ex1, int *ex2, int *wptr,
                                     double *x1, double *x2,  
                                     double *tipVector, 
                                     unsigned char *tipX1, int n, double *diagptable)
@@ -2024,7 +2024,7 @@ static double evaluateGTRGAMMAPROT (const pll_boolean fastScaling, int *ex1, int
     vectors \a x1 and \a x2. Please check ::evaluateCAT_FLEX for more information and
     a description of the common input parameters
 */
-static double evaluateGTRCATPROT (const pll_boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
+static double evaluateGTRCATPROT (const boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
                                   double *x1, double *x2, double *tipVector,
                                   unsigned char *tipX1, int n, double *diagptable_start)
 {
@@ -2111,7 +2111,7 @@ static double evaluateGTRCATPROT (const pll_boolean fastScaling, int *ex1, int *
     vectors \a x1 and \a x2. Please check ::evaluateCAT_FLEX_SAVE for more information and
     a description of the common input parameters
 */
-static double evaluateGTRCATPROT_SAVE (const pll_boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
+static double evaluateGTRCATPROT_SAVE (const boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
                                        double *x1, double *x2, double *tipVector,
                                        unsigned char *tipX1, int n, double *diagptable_start, 
                                        double *x1_gapColumn, double *x2_gapColumn, unsigned int *x1_gap, unsigned int *x2_gap)
@@ -2228,7 +2228,7 @@ static double evaluateGTRCATPROT_SAVE (const pll_boolean fastScaling, int *ex1, 
     vectors \a x1 and \a x2. Please check ::evaluateCAT_FLEX_SAVE for more information and
     a description of the common input parameters
 */
-static double evaluateGTRCAT_SAVE (const pll_boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
+static double evaluateGTRCAT_SAVE (const boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
                                    double *x1_start, double *x2_start, double *tipVector,                     
                                    unsigned char *tipX1, int n, double *diagptable_start,
                                    double *x1_gapColumn, double *x2_gapColumn, unsigned int *x1_gap, unsigned int *x2_gap)
@@ -2353,7 +2353,7 @@ static double evaluateGTRCAT_SAVE (const pll_boolean fastScaling, int *ex1, int 
     vectors \a x1 and \a x2. Please check ::evaluateGAMMA_FLEX_SAVE for more information and
     a description of the common input parameters
 */
-static double evaluateGTRGAMMA_GAPPED_SAVE(const pll_boolean fastScaling, int *ex1, int *ex2, int *wptr,
+static double evaluateGTRGAMMA_GAPPED_SAVE(const boolean fastScaling, int *ex1, int *ex2, int *wptr,
                                            double *x1_start, double *x2_start, 
                                            double *tipVector, 
                                            unsigned char *tipX1, const int n, double *diagptable,
@@ -2494,7 +2494,7 @@ static double evaluateGTRGAMMA_GAPPED_SAVE(const pll_boolean fastScaling, int *e
     vectors \a x1 and \a x2. Please check ::evaluateGAMMA_FLEX for more information and
     a description of the common input parameters
 */
-static double evaluateGTRGAMMA(const pll_boolean fastScaling, int *ex1, int *ex2, int *wptr,
+static double evaluateGTRGAMMA(const boolean fastScaling, int *ex1, int *ex2, int *wptr,
                                double *x1_start, double *x2_start, 
                                double *tipVector, 
                                unsigned char *tipX1, const int n, double *diagptable)
@@ -2615,7 +2615,7 @@ static double evaluateGTRGAMMA(const pll_boolean fastScaling, int *ex1, int *ex2
     vectors \a x1 and \a x2. Please check ::evaluateCAT_FLEX for more information and
     a description of the common input parameters
 */
-static double evaluateGTRCAT (const pll_boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
+static double evaluateGTRCAT (const boolean fastScaling, int *ex1, int *ex2, int *cptr, int *wptr,
                               double *x1_start, double *x2_start, double *tipVector,                  
                               unsigned char *tipX1, int n, double *diagptable_start)
 {

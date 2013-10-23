@@ -419,17 +419,20 @@ static void coreCAT_FLEX(int upper, int numberOfCategories, double *sum,
     *d, 
 
     /* arrays to store stuff we can pre-compute */
-
-    *d_start = (double *)rax_malloc_aligned(numberOfCategories * states * sizeof(double)),
-    *e =(double *)rax_malloc_aligned(states * sizeof(double)),
-    *s = (double *)rax_malloc_aligned(states * sizeof(double)),
-    *dd = (double *)rax_malloc_aligned(states * sizeof(double)),
+    *d_start,
+    *e,
+    *s,
+    *dd,
     inv_Li, 
     dlnLidlz, 
     d2lnLidlz2,
     dlnLdlz = 0.0,
     d2lnLdlz2 = 0.0;
 
+  rax_posix_memalign ((void **) &d_start, PLL_BYTE_ALIGNMENT, numberOfCategories * states * sizeof(double));
+  rax_posix_memalign ((void **) &e,       PLL_BYTE_ALIGNMENT, (states * sizeof(double)));
+  rax_posix_memalign ((void **) &s,       PLL_BYTE_ALIGNMENT, states * sizeof(double));
+  rax_posix_memalign ((void **) &dd,      PLL_BYTE_ALIGNMENT, states * sizeof(double)),
   d = d_start;
 
   e[0] = 0.0;
@@ -908,9 +911,9 @@ static void topLevelMakenewz(pllInstance *tr, partitionList * pr, double *z0, in
   volatile double  dlnLdlz[PLL_NUM_BRANCHES], d2lnLdlz2[PLL_NUM_BRANCHES];
   int i, maxiter[PLL_NUM_BRANCHES], model;
   int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
-  pll_boolean firstIteration = PLL_TRUE;
-  pll_boolean outerConverged[PLL_NUM_BRANCHES];
-  pll_boolean loopConverged;
+  boolean firstIteration = PLL_TRUE;
+  boolean outerConverged[PLL_NUM_BRANCHES];
+  boolean loopConverged;
 
 
   /* figure out if this is on a per partition basis or jointly across all partitions */
@@ -1145,13 +1148,13 @@ static void topLevelMakenewz(pllInstance *tr, partitionList * pr, double *z0, in
  * @sa typical values for \a maxiter are constants \a iterations and \a PLL_NEWZPERCYCLE
  * @note Requirement: q->z == p->z
  */
-void makenewzGeneric(pllInstance *tr, partitionList * pr, nodeptr p, nodeptr q, double *z0, int maxiter, double *result, pll_boolean mask)
+void makenewzGeneric(pllInstance *tr, partitionList * pr, nodeptr p, nodeptr q, double *z0, int maxiter, double *result, boolean mask)
 {
   int i;
   //boolean originalExecute[PLL_NUM_BRANCHES];
   int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
 
-  pll_boolean 
+  boolean 
     p_recom = PLL_FALSE, /* if one of was missing, we will need to force recomputation */
     q_recom = PLL_FALSE;
 
@@ -2009,7 +2012,8 @@ static void coreGTRCAT(int upper, int numberOfCategories, double *sum,
   e2v[0]= _mm_load_pd(&e2[0]);
   e2v[1]= _mm_load_pd(&e2[2]);
 
-  d = d_start = (double *)rax_malloc_aligned(numberOfCategories * 4 * sizeof(double));
+  rax_posix_memalign ((void **) &d_start, PLL_BYTE_ALIGNMENT, numberOfCategories * 4 * sizeof(double));
+  d = d_start;
 
   dd1 = EIGN[1] * lz;
   dd2 = EIGN[2] * lz;
@@ -2228,7 +2232,8 @@ static void coreGTRCATPROT(double *EIGN, double lz, int numberOfCategories, doub
   double  dlnLdlz = 0.0;
   double  d2lnLdlz2 = 0.0;
 
-  d1 = d_start = (double *)rax_malloc_aligned(numberOfCategories * 20 * sizeof(double));
+  rax_posix_memalign ((void **)&d_start, PLL_BYTE_ALIGNMENT, numberOfCategories * 20 * sizeof(double));
+  d1 = d_start; 
 
   e[0] = 0.0;
   s[0] = 0.0; 

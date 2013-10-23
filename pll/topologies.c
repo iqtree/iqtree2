@@ -254,12 +254,12 @@ static int  cmpTipVal (void *v1, void *v2)
     @return
       Pointer to the allocated \a topol structure
 */
-topol  *setupTopol (int maxtips)
+static topol  *setupTopol (int maxtips)
 {
   topol   *tpl;
 
   if (! (tpl = (topol *) rax_malloc(sizeof(topol))) || 
-      ! (tpl->links = (connptr) rax_malloc((2*maxtips-3) * sizeof(pll_connect))))
+      ! (tpl->links = (connptr) rax_malloc((2*maxtips-3) * sizeof(connect))))
     {
       printf("ERROR: Unable to get topology memory");
       tpl = (topol *) NULL;
@@ -390,7 +390,7 @@ static nodeptr  minTreeTip (nodeptr  p, int numsp)
     Save the current tree topology in \a topol structure \a tpl.
 
 */
-void saveTree (pllInstance *tr, topol *tpl, int numBranches)
+static void saveTree (pllInstance *tr, topol *tpl, int numBranches)
 /*  Save a tree topology in a standard order so that first branches
  *  from a node contain lower value tips than do second branches from
  *  the node.  The root tip should have the lowest value of all.
@@ -428,7 +428,7 @@ void saveTree (pllInstance *tr, topol *tpl, int numBranches)
      Remove the return value, unnecessary
 
 */
-pll_boolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr)
+static boolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr)
 { 
   connptr  r;
   nodeptr  p, p0;    
@@ -552,7 +552,7 @@ void resetBestTree (bestlist *bt)
 } /* resetBestTree */
 
 
-pll_boolean  freeBestTree(bestlist *bt)
+boolean  freeBestTree(bestlist *bt)
 { /* freeBestTree */
   while (bt->ninit >= 0)  freeTopol(bt->byScore[(bt->ninit)--]);
     

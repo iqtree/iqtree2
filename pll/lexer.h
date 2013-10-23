@@ -22,6 +22,7 @@
 #define  PLL_SYM_EQUAL                 1 << 15
 #define  PLL_SYM_DASH                  1 << 16
 #define  PLL_SYM_SLASH                 1 << 17
+#define  PLL_SYM_PLUS                  1 << 18
 
 #define  PLL_TOKEN_NUMBER              1 << 0
 #define  PLL_TOKEN_STRING              1 << 1

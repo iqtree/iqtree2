@@ -8,7 +8,6 @@
 #ifndef __APPLE__
 #include <malloc.h>             // this is probably not necessary
 #endif
-#include "mem_alloc.h"
 
 #ifdef RAXML_USE_LLALLOC
 
@@ -93,10 +92,9 @@ void *rax_calloc(size_t n, size_t size) {
   return calloc(n,size);
 }
 
-//#define PLL_BYTE_ALIGNMENT 32
-
 void *rax_malloc_aligned(size_t size) 
 {
+  const size_t PLL_BYTE_ALIGNMENT = 32;
   return rax_memalign(PLL_BYTE_ALIGNMENT, size);
   
 }

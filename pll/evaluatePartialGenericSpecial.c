@@ -250,9 +250,8 @@ static double evaluatePartialCAT_FLEX(int i, double ki, int counter,  traversalI
        a single site, thus we allocate states * mxtips space for storing probability values.
        Essentially  only (states * (mxtips - 2)) space would be required, but I was to lazy 
        to think if it has to be -1 or -2 here */
-       
-    *lVector = (double *)rax_malloc_aligned(sizeof(double) * states * mxtips),
-    *d = (double *)rax_malloc_aligned(sizeof(double) * states),
+    * lVector,   
+    * d,
     lz, 
     term, 
     *x1, 
@@ -263,6 +262,8 @@ static double evaluatePartialCAT_FLEX(int i, double ki, int counter,  traversalI
   traversalInfo 
     *trav = &ti[0];
  
+  rax_posix_memalign ((void **)&lVector, PLL_BYTE_ALIGNMENT, sizeof(double) * states * mxtips);
+  rax_posix_memalign ((void **)&d,       PLL_BYTE_ALIGNMENT, sizeof(double) * states);
   /* make sure that at one end of the branch into which we have placed the virtual root 
      there actually is a tip!*/
 
@@ -773,11 +774,13 @@ static double evaluatePartialGTRGAMMAPROT(int i, int counter,  traversalInfo *ti
   double   *x1, *x2; 
   int scale = 0, k, l, j;
   double 
-    *lVector = (double *)rax_malloc_aligned(sizeof(double) * 80 * mxtips),
+    *lVector,
     myEI[400]  __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
 
   traversalInfo 
     *trav = &ti[0];
+
+  rax_posix_memalign ((void **)&lVector, PLL_BYTE_ALIGNMENT, sizeof(double) * 80 * mxtips);
 
   for(k = 0; k < 20; k++)
     {         
@@ -850,11 +853,13 @@ static double evaluatePartialGTRGAMMA(int i, int counter,  traversalInfo *ti, do
   double   *x1, *x2; 
   int scale = 0, k, l, j;
   double 
-    *lVector = (double *)rax_malloc_aligned(sizeof(double) * 16 * mxtips),
+    *lVector,
     myEI[16]  __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
 
   traversalInfo 
     *trav = &ti[0];
+
+  rax_posix_memalign ((void **)&lVector, PLL_BYTE_ALIGNMENT, sizeof(double) * 16 * mxtips);
 
   for(k = 0; k < 4; k++)
     {           
@@ -1008,12 +1013,12 @@ static double evaluatePartialGTRCAT(int i, double ki, int counter,  traversalInf
 {
   double lz, term;       
   double  d[3];
-  double   *x1, *x2; 
+  double   *x1, *x2, *lVector; 
   int scale = 0, k;
-  double *lVector = (double *)rax_malloc_aligned(sizeof(double) * 4 * mxtips);    
-
   traversalInfo *trav = &ti[0];
  
+  lVector = rax_posix_memalign ((void **) &lVector, PLL_BYTE_ALIGNMENT, sizeof(double) * 4 * mxtips);    
+
   assert(isTip(trav->pNumber, mxtips));
      
   x1 = &(tipVector[4 *  yVector[trav->pNumber][i]]);   
@@ -1158,12 +1163,13 @@ static double evaluatePartialGTRCATPROT(int i, double ki, int counter,  traversa
 {
   double lz, term;       
   double  d[20];
-  double   *x1, *x2; 
+  double   *x1, *x2, *lVector; 
   int scale = 0, k;
-  double *lVector = (double *)rax_malloc_aligned(sizeof(double) * 20 * mxtips);    
 
   traversalInfo *trav = &ti[0];
  
+  rax_posix_memalign ((void **)&lVector, PLL_BYTE_ALIGNMENT, sizeof(double) * 20 * mxtips);
+
   assert(isTip(trav->pNumber, mxtips));
      
   x1 = &(tipVector[20 *  yVector[trav->pNumber][i]]);   

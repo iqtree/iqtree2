@@ -16,7 +16,7 @@ int lex_table[PLL_ASCII_SIZE] = {
 /*      */ PLL_SYM_UNKNOWN, PLL_SYM_UNKNOWN, PLL_SYM_UNKNOWN,   PLL_SYM_UNKNOWN,
 /*  !"# */   PLL_SYM_SPACE, PLL_SYM_UNKNOWN, PLL_SYM_UNKNOWN,   PLL_SYM_UNKNOWN,
 /* $%&' */ PLL_SYM_UNKNOWN, PLL_SYM_UNKNOWN, PLL_SYM_UNKNOWN,   PLL_SYM_UNKNOWN,
-/* ()*+ */  PLL_SYM_OPAREN,  PLL_SYM_CPAREN, PLL_SYM_UNKNOWN,   PLL_SYM_UNKNOWN,
+/* ()*+ */  PLL_SYM_OPAREN,  PLL_SYM_CPAREN, PLL_SYM_UNKNOWN,      PLL_SYM_PLUS,
 /* ,-./ */   PLL_SYM_COMMA,    PLL_SYM_DASH,     PLL_SYM_DOT,     PLL_SYM_SLASH,
 /* 0123 */   PLL_SYM_DIGIT,   PLL_SYM_DIGIT,   PLL_SYM_DIGIT,     PLL_SYM_DIGIT,
 /* 4567 */   PLL_SYM_DIGIT,   PLL_SYM_DIGIT,   PLL_SYM_DIGIT,     PLL_SYM_DIGIT,
@@ -82,9 +82,10 @@ get_next_symbol (void)
 pllLexToken
 get_token (int * input)
 {
-  pllLexToken       token;
-  int               start_pos;
-  int               floating = 0;
+  pllLexToken token;
+  int
+    start_pos,
+    isFloating = 0;
 
   token.lexeme = rawtext + pos - 1;
   start_pos    = pos;
@@ -150,7 +151,7 @@ get_token (int * input)
 
        if (*input == PLL_SYM_DOT)
         {
-          floating = 1;
+          isFloating = 1;
           do
            {
              *input = get_next_symbol ();
@@ -160,18 +161,46 @@ get_token (int * input)
        if (*input != PLL_SYM_CHAR)
         {
           token.len   = pos - start_pos;
-          if (!floating)
+          if (!isFloating)
             token.tokenType = PLL_TOKEN_NUMBER;
           else
             token.tokenType = PLL_TOKEN_FLOAT;
         }
        else
         {
-          do {
-            *input = get_next_symbol();
-          } while (*input == PLL_SYM_CHAR || *input == PLL_SYM_DIGIT || *input == PLL_SYM_DOT);
-          token.len   = pos - start_pos;
-          token.tokenType = PLL_TOKEN_STRING;
+          /* check for E notation */
+          if (rawtext[pos - 1] == 'E' || rawtext[pos - 1] == 'e')
+           {
+             *input = get_next_symbol ();
+
+             if (*input == PLL_SYM_PLUS || *input == PLL_SYM_DASH || *input == PLL_SYM_DIGIT)
+              {
+                do
+                 {
+                   *input = get_next_symbol ();
+                 } while (*input == PLL_SYM_DIGIT);
+
+                if (*input != PLL_SYM_CHAR)
+                 {
+                   token.len = pos - start_pos;
+                   token.tokenType = PLL_TOKEN_FLOAT;
+                 }
+              }
+             else
+              {
+                token.len = pos - start_pos;
+                token.tokenType = PLL_TOKEN_STRING;
+              }
+           }
+
+          if (*input == PLL_SYM_CHAR)
+           {
+             do {
+               *input = get_next_symbol();
+             } while (*input == PLL_SYM_CHAR || *input == PLL_SYM_DIGIT || *input == PLL_SYM_DOT);
+             token.len   = pos - start_pos;
+             token.tokenType = PLL_TOKEN_STRING;
+           }
         }
 
        if (*input == PLL_SYM_LFCR) --token.len;
@@ -205,9 +234,8 @@ get_token (int * input)
        token.tokenType = PLL_TOKEN_NEWLINE;
        break;
      case PLL_SYM_UNKNOWN:
-       token.tokenType = PLL_TOKEN_UNKNOWN;
-       break;
      default:
+       token.tokenType = PLL_TOKEN_UNKNOWN;
        break;
    }
 

@@ -7,7 +7,7 @@
 #include "pll.h"
 
 /** @file part.c
-
+    
     @brief Collection of routines for parsing and processing a partition (model) file
 
     @defgroup parsePartitionFileGroup Reading and parsing partition (model) files
@@ -96,7 +96,7 @@ parse_partition (int * inp)
 
 
     /* read partition type */
-    if (token.tokenType != PLL_TOKEN_STRING)
+    if (token.tokenType != PLL_TOKEN_STRING) 
      {
        pllQueuePartitionsDestroy (&partitions);
        return (0);
@@ -114,14 +114,14 @@ parse_partition (int * inp)
        pi->protModels = PLL_FALSE;
        pi->protFreqs  = PLL_FALSE;
        pi->dataType   = PLL_DNA_DATA;
-       pi->optimizeBaseFrequencies = PLL_FALSE;
+       pi->optimizeBaseFrequencies = PLL_FALSE; 
      }
     else if (!strcmp (pi->partitionModel, "DNAX"))
      {
        pi->protModels = PLL_FALSE;
        pi->protFreqs  = PLL_FALSE;
        pi->dataType   = PLL_DNA_DATA;
-       pi->optimizeBaseFrequencies = PLL_TRUE;
+       pi->optimizeBaseFrequencies = PLL_TRUE; 
      }
     else
      {                  /* check for protein data */
@@ -168,7 +168,7 @@ parse_partition (int * inp)
     NEXT_TOKEN
     CONSUME(PLL_TOKEN_WHITESPACE)
 
-    if (token.tokenType != PLL_TOKEN_COMMA)
+    if (token.tokenType != PLL_TOKEN_COMMA) 
      {
        pllQueuePartitionsDestroy (&partitions);
        return (0);
@@ -177,7 +177,7 @@ parse_partition (int * inp)
     CONSUME(PLL_TOKEN_WHITESPACE)
 
     /* read partition name */
-    if (token.tokenType != PLL_TOKEN_STRING)
+    if (token.tokenType != PLL_TOKEN_STRING) 
      {
        pllQueuePartitionsDestroy (&partitions);
        return (0);
@@ -203,21 +203,21 @@ parse_partition (int * inp)
     while (1)
     {
       region = (pllPartitionRegion *) rax_malloc (sizeof (pllPartitionRegion));
-      if (token.tokenType != PLL_TOKEN_NUMBER)
+      if (token.tokenType != PLL_TOKEN_NUMBER) 
        {
          pllQueuePartitionsDestroy (&partitions);
          return (0);
        }
-      region->start  = region->end = atoi (token.lexeme);
+      region->start  = region->end = atoi (token.lexeme);  
       region->stride = 1;
       NEXT_TOKEN
       CONSUME(PLL_TOKEN_WHITESPACE)
-
+      
       if  (token.tokenType == PLL_TOKEN_DASH)
        {
          NEXT_TOKEN
          CONSUME(PLL_TOKEN_WHITESPACE)
-         if (token.tokenType != PLL_TOKEN_NUMBER)
+         if (token.tokenType != PLL_TOKEN_NUMBER) 
           {
             pllQueuePartitionsDestroy (&partitions);
             return (0);
@@ -234,7 +234,7 @@ parse_partition (int * inp)
           {
             NEXT_TOKEN
             CONSUME(PLL_TOKEN_WHITESPACE)
-            if (token.tokenType != PLL_TOKEN_NUMBER)
+            if (token.tokenType != PLL_TOKEN_NUMBER) 
              {
                pllQueuePartitionsDestroy (&partitions);
                return (0);
@@ -245,16 +245,16 @@ parse_partition (int * inp)
          CONSUME(PLL_TOKEN_WHITESPACE)
        }
        pllQueueAppend (pi->regionList, (void *)region);
-
+      
       if (token.tokenType != PLL_TOKEN_COMMA) break;
       NEXT_TOKEN
       CONSUME(PLL_TOKEN_WHITESPACE)
     }
    CONSUME(PLL_TOKEN_WHITESPACE | PLL_TOKEN_NEWLINE)
   }
-
+ 
  return (partitions);
-}
+} 
 
 /** @ingroup parsePartitionFileGroup
     @brief Dump a parsed partition file in the console
@@ -264,7 +264,7 @@ parse_partition (int * inp)
     @param partitions
       A queue structure that contains the parsed information
 */
-void
+void 
 pllPartitionDump (pllQueue * partitions)
 {
    struct pllQueueItem * elm;
@@ -305,7 +305,7 @@ pllPartitionDump (pllQueue * partitions)
 
     @param filename
       Name of the partition file
-
+    
     @return
       Queue structure with parsed information
 */
@@ -324,7 +324,7 @@ pllPartitionParse (const char * filename)
      return (0);
    }
 
-  /* printf ("%s\n\n", rawdata); */
+  printf ("%s\n\n", rawdata);
 
   n = strlen (rawdata);
 
@@ -334,7 +334,7 @@ pllPartitionParse (const char * filename)
   init_model_names();
   partitions = parse_partition (&input);
   destroy_model_names();
-
+  
   rax_free (rawdata);
   return (partitions);
 }

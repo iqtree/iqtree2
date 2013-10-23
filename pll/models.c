@@ -2901,7 +2901,7 @@ static void initProtMat(double f[20], int proteinMatrix, double *ext_initialRate
       I understand how fracchange is computed for each partition, but I dont know
       what is it for. Also what is tr->fracchange for?
 */
-void updateFracChange(pllInstance *tr, partitionList *pr)
+static void updateFracChange(pllInstance *tr, partitionList *pr)
 {   
   int numberOfModels = pr->numberOfPartitions;
   if(numberOfModels == 1)
@@ -3796,7 +3796,7 @@ l4:
     @todo
        Document this more.
 */
-void makeGammaCats(double alpha, double *gammaRates, int K, pll_boolean useMedian)
+void makeGammaCats(double alpha, double *gammaRates, int K, boolean useMedian)
 {
   int 
     i;
@@ -4221,67 +4221,72 @@ static void initializeBaseFreqs(partitionList *pr, double **empiricalFrequencies
   * @todo
   *   What is tr->optimizeRateCategoryInvocations = 1 ?
   */
-void initModel(pllInstance *tr, double **empiricalFrequencies, partitionList * partitions) {
-	int model, j;
-	double temp;
+void initModel(pllInstance *tr, double **empiricalFrequencies, partitionList * partitions)
+{  
+  int model, j;
+  double  temp;  
+     
+  tr->optimizeRateCategoryInvocations = 1;      
+  tr->numberOfInvariableColumns = 0;
+  tr->weightOfInvariableColumns = 0;	       
+  
+  for (j = 0; j < tr->originalCrunchedLength; j++) 
+    {
+      tr->patrat[j] = temp = 1.0;
+      tr->patratStored[j] = 1.0;
+      tr->rateCategory[j] = 0;           
+    } 
 
-	tr->optimizeRateCategoryInvocations = 1;
-	tr->numberOfInvariableColumns = 0;
-	tr->weightOfInvariableColumns = 0;
+  /* PSR (CAT) model init */
+  for(model = 0; model < partitions->numberOfPartitions; model++)
+    {            
+	  partitions->partitionData[model]->numberOfCategories = 1;
+	  partitions->partitionData[model]->perSiteRates[0] = 1.0;
+    }
+    
+  updatePerSiteRates(tr, partitions, PLL_FALSE);
+ 
+  setupSecondaryStructureSymmetries(tr, partitions);
+  
+  initRateMatrix(tr, partitions);
 
-	for (j = 0; j < tr->originalCrunchedLength; j++) {
-		tr->patrat[j] = temp = 1.0;
-		tr->patratStored[j] = 1.0;
-		tr->rateCategory[j] = 0;
-	}
+  initializeBaseFreqs(partitions, empiricalFrequencies);
+  
+  for(model = 0; model < partitions->numberOfPartitions; model++)
+   {
+     int
+       k;
 
-	/* PSR (CAT) model init */
-	for (model = 0; model < partitions->numberOfPartitions; model++) {
-		partitions->partitionData[model]->numberOfCategories = 1;
-		partitions->partitionData[model]->perSiteRates[0] = 1.0;
-	}
+     partitions->partitionData[model]->alpha = 1.0;
+     if(partitions->partitionData[model]->dataType == PLL_AA_DATA && partitions->partitionData[model]->protModels == PLL_AUTO)
+       partitions->partitionData[model]->autoProtModels = PLL_WAG; /* initialize by WAG per default */
+      
+     initReversibleGTR(tr, partitions, model); /* Decomposition of Q matrix */
+      /* GAMMA model init */
+     makeGammaCats(partitions->partitionData[model]->alpha, partitions->partitionData[model]->gammaRates, 4, tr->useMedian);
 
-	updatePerSiteRates(tr, partitions, PLL_FALSE);
+     for(k = 0; k < partitions->partitionData[model]->states; k++)
+       partitions->partitionData[model]->freqExponents[k] = 0.0;	
+   }                   		       
+  
+   
+  /* 
+     printf ("Fracchange: %f\n", tr->fracchange);
+     printf ("originalCrunchedLength: %d\n", tr->originalCrunchedLength);
+     printf ("num of parts: %d\n", partitions->numberOfPartitions);
+  */
 
-	setupSecondaryStructureSymmetries(tr, partitions);
-
-	initRateMatrix(tr, partitions);
-
-	initializeBaseFreqs(partitions, empiricalFrequencies);
-
-	for (model = 0; model < partitions->numberOfPartitions; model++) {
-		int k;
-
-		partitions->partitionData[model]->alpha = 1.0;
-		if (partitions->partitionData[model]->dataType == PLL_AA_DATA
-				&& partitions->partitionData[model]->protModels == PLL_AUTO)
-			partitions->partitionData[model]->autoProtModels = PLL_WAG; /* initialize by WAG per default */
-
-		initReversibleGTR(tr, partitions, model); /* Decomposition of Q matrix */
-		/* GAMMA model init */
-		makeGammaCats(partitions->partitionData[model]->alpha, partitions->partitionData[model]->gammaRates, 4,
-				tr->useMedian);
-
-		for (k = 0; k < partitions->partitionData[model]->states; k++)
-			partitions->partitionData[model]->freqExponents[k] = 0.0;
-	}
-
-	/*
-	 printf ("Fracchange: %f\n", tr->fracchange);
-	 printf ("originalCrunchedLength: %d\n", tr->originalCrunchedLength);
-	 printf ("num of parts: %d\n", partitions->numberOfPartitions);
-	 */
-
-	if (partitions->numberOfPartitions > 1) {
-		tr->fracchange = 0;
-		for (model = 0; model < partitions->numberOfPartitions; model++)
-			tr->fracchange += partitions->partitionData[model]->fracchange;
-
-		tr->fracchange /= ((double) partitions->numberOfPartitions);
-	}
+  if(partitions->numberOfPartitions > 1)
+    {
+      tr->fracchange = 0;
+      for(model = 0; model < partitions->numberOfPartitions; model++) 
+	tr->fracchange += partitions->partitionData[model]->fracchange;
+      
+      tr->fracchange /= ((double)partitions->numberOfPartitions);
+    }  
 
 #if (defined(_FINE_GRAIN_MPI) || defined(_USE_PTHREADS))
-	pllMasterBarrier(tr, partitions, PLL_THREAD_COPY_INIT_MODEL);
+  pllMasterBarrier(tr, partitions, PLL_THREAD_COPY_INIT_MODEL);
 #endif
 }
 
