@@ -191,6 +191,16 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     }
 }
 
+void PhyloTree::readTreeString(string &tree_string) {
+	stringstream str(tree_string);
+	freeNode();
+	readTree(str, rooted);
+	setAlignment(aln);
+	initializeAllPartialLh();
+	clearAllPartialLH();
+    fixNegativeBranch(false);
+}
+
 void PhyloTree::rollBack(istream &best_tree_string) {
     best_tree_string.seekg(0, ios::beg);
     freeNode();
