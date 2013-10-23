@@ -29,7 +29,7 @@
 #include "stoprule.h"
 #include "mtreeset.h"
 
-#include "pll/src/pll.h"
+#include "pll/pll.h"
 #include "nnisearch.h"
 #include "phylolib.h"
 

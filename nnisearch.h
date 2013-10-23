@@ -7,7 +7,7 @@ extern "C" {
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "pll/src/pll.h"
+#include "pll/pll.h"
 
 const int TOPO_ONLY = 0;
 const int NO_BRAN_OPT = 1;

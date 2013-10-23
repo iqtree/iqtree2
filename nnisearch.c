@@ -3,10 +3,9 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#include "pll/src/pll.h"
+#include "pll/pll.h"
 #define GLOBAL_VARIABLES_DEFINITION
 #include "nnisearch.h"
-//#include "phylolib.h"
 #include "fmemopen.h"
 
 #if !defined WIN32 && !defined _WIN32 && !defined __WIN32__

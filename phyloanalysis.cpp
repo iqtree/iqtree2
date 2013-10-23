@@ -50,7 +50,7 @@
 #include "modelset.h"
 #include "timeutil.h"
 
-#include "pll/src/pll.h"
+#include "pll/pll.h"
 #include "nnisearch.h"
 
 void reportReferences(ofstream &out, string &original_model) {

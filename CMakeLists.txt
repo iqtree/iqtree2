@@ -106,7 +106,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 
 # subdirectories containing necessary libraries for the build 
-add_subdirectory(pll/src)
+add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
