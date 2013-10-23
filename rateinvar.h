@@ -23,6 +23,9 @@
 #include "phylotree.h"
 #include "rateheterogeneity.h"
 
+const double MIN_PINVAR = 1e-6;
+const double TOL_PINVAR = 1e-6;
+
 /**
 class for rate heterogeneity with a fraction of invariable sites
 

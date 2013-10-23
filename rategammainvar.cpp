@@ -33,10 +33,12 @@ double RateGammaInvar::computeFunction(double value) {
 		gamma_shape = value;
 	else 
 		p_invar = value;
+	// need to compute rates again if p_inv or Gamma shape changes!
 	computeRates();
 	phylo_tree->clearAllPartialLH();
-	return -phylo_tree->computeLikelihood();	
+	return -phylo_tree->computeLikelihood();
 }
+
 void RateGammaInvar::writeInfo(ostream &out) {
 	RateInvar::writeInfo(out);
 	RateGamma::writeInfo(out);
@@ -69,17 +71,8 @@ void RateGammaInvar::getVariables(double *variables) {
 
 double RateGammaInvar::targetFunk(double x[]) {
 	assert(phylo_tree);
-	/*
-	int gid = RateGamma::getNDim();
-	if (gid == 1 && gamma_shape != x[1]) {
-		gamma_shape = x[1];
-		RateGamma::computeRates();
-		phylo_tree->clearAllPartialLH();
-	}
-	if (RateInvar::getNDim() == 1) {
-		p_invar = x[gid+1];
-	}*/
 	getVariables(x);
+	// need to compute rates again if p_inv or Gamma shape changes!
 	RateGamma::computeRates();
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
@@ -125,7 +118,7 @@ double RateGammaInvar::optimizeParameters() {
 		bound_check[1] = false;
 	}
 	if (RateInvar::getNDim() == 1) {
-		lower_bound[gid+1] = 1e-6;
+		lower_bound[gid+1] = MIN_PINVAR;
 		upper_bound[gid+1] = phylo_tree->aln->frac_const_sites;
 		bound_check[gid+1] = false;
 	}

@@ -33,6 +33,7 @@
 #include "ratekategory.h"
 #include "ngs.h"
 #include <string>
+#include "timeutil.h"
 
 const char OPEN_BRACKET = '{';
 const char CLOSE_BRACKET = '}';
@@ -359,9 +360,9 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	assert(model);
 	assert(site_rate);
 
-	time_t begin_time, cur_time;
-	time(&begin_time);
-
+	//time_t begin_time, cur_time;
+	//time(&begin_time);
+	double begin_time = getCPUTime();
 	double cur_lh;
 	PhyloTree *tree = site_rate->getTree();
 	assert(tree);
@@ -396,7 +397,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		}
 		if (new_lh > cur_lh + epsilon) {
 			if (!fixed_len)
-				cur_lh = tree->optimizeAllBranches(min(i,3), epsilon);  // loop only 5 times in total
+				cur_lh = tree->optimizeAllBranches(min(i,3), epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 			else
 				cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)
@@ -413,8 +414,9 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		model->writeInfo(cout);
 		site_rate->writeInfo(cout);
 	}
-	time(&cur_time);
-	double elapsed_secs = difftime(cur_time,begin_time);
+	//time(&cur_time);
+	//double elapsed_secs = difftime(cur_time,begin_time);
+	double elapsed_secs = getCPUTime() - begin_time;
 	if (write_info)
 		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
 	startStoringTransMatrix();

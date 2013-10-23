@@ -263,8 +263,38 @@ double SuperAlignment::computeObsDist(int seq1, int seq2) {
 	return ((double)diff_pos) / total_pos;
 }
 
+
 double SuperAlignment::computeDist(int seq1, int seq2) {
-	return computeObsDist(seq1, seq2);
+	if (partitions.empty()) return 0.0;
+	double obs_dist = computeObsDist(seq1, seq2);
+    int num_states = partitions[0]->num_states;
+    double z = (double)num_states / (num_states-1);
+    double x = 1.0 - (z * obs_dist);
+
+    if (x <= 0) {
+        /*		string str = "Too long distance between two sequences ";
+        		str += getSeqName(seq1);
+        		str += " and ";
+        		str += getSeqName(seq2);
+        		outWarning(str);*/
+        return MAX_GENETIC_DIST;
+    }
+
+    return -log(x) / z;
+    //return computeObsDist(seq1, seq2);
+	//  AVERAGE DISTANCE
+
+	double dist = 0;
+	int part = 0, num = 0;
+	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++, part++) {
+		int id1 = taxa_index[seq1][part];
+		int id2 = taxa_index[seq2][part];
+		if (id1 < 0 || id2 < 0) continue;
+		dist += (*it)->computeDist(id1, id2);
+	}
+	if (num == 0) // two sequences are not overlapping at all!
+		return MAX_GENETIC_DIST;
+	return dist / num;
 }
 
 SuperAlignment::~SuperAlignment()

@@ -75,6 +75,7 @@ void PhyloTree::init() {
     theta_all = NULL;
     subTreeDistComputed = false;
     dist_matrix = NULL;
+    sse = true; // FOR TUNG: you forgot to initialize this variable!
 }
 
 PhyloTree::PhyloTree(Alignment *aln) :
@@ -236,6 +237,18 @@ void PhyloTree::clearAllPartialLH() {
     if (!root)
         return;
     ((PhyloNode*) root->neighbors[0]->node)->clearAllPartialLh((PhyloNode*) root);
+}
+
+void PhyloTree::computeAllPartialLh(PhyloNode *node, PhyloNode *dad) {
+	if (!node) node = (PhyloNode*)root;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		if ((((PhyloNeighbor*)*it)->partial_lh_computed & 1) == 0)
+			computePartialLikelihood((PhyloNeighbor*)*it, node);
+		PhyloNeighbor *rev = (PhyloNeighbor*) (*it)->node->findNeighbor(node);
+		if ((rev->partial_lh_computed & 1) == 0)
+			computePartialLikelihood(rev, (PhyloNode*)(*it)->node);
+		computeAllPartialLh((PhyloNode*)(*it)->node, node);
+	}
 }
 
 string PhyloTree::getModelName() {
@@ -1117,6 +1130,14 @@ double *PhyloTree::newPartialLh() {
     return ret;
 }
 
+int PhyloTree::getPartialLhBytes() {
+	return (aln->size() * aln->num_states * site_rate->getNRate() + 2) * sizeof(double);
+}
+
+int PhyloTree::getScaleNumBytes() {
+	return (aln->size()) * sizeof(UBYTE);
+}
+
 UBYTE *PhyloTree::newScaleNum() {
     return new UBYTE[aln->size()];
 }
@@ -1210,9 +1231,9 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl) {
         for (int i = 0; i < nptn; i++) {
             check_score += (ptn_lh[i] * (aln->at(i).frequency));
         }
-        if (fabs(check_score - *cur_logl) > 0.001) {
+        if (fabs(check_score - *cur_logl) > 0.01) {
             cout << *cur_logl << " " << check_score << endl;
-            outError("Wrong ", __func__);
+            outError("Wrong PhyloTree::", __func__);
         }
     }
     //double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
@@ -2462,7 +2483,6 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d
     	else
     		initial_dist = aln->computeDist(seq1, seq2);
     }
-
     if (!model_factory || !site_rate)
         return initial_dist; // MANUEL: here no d2l is return
 

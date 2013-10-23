@@ -628,6 +628,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.do_au_test = false;
     params.siteLL_file = NULL; //added by MA
     params.partition_file = NULL;
+    params.partition_type = 0;
+    params.remove_empty_seq = true;
     params.sequence_type = NULL;
     params.aln_output = NULL;
     params.aln_site_list = NULL;
@@ -1143,6 +1145,20 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -sp <partition_file>";
                 params.partition_file = argv[cnt];
+            } else if (strcmp(argv[cnt], "-spp") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            	    throw "Use -spp <type of partition model>";
+                params.partition_file = argv[cnt];
+                params.partition_type = 'p';
+            } else if (strcmp(argv[cnt], "-spj") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            	    throw "Use -spj <type of partition model>";
+                params.partition_file = argv[cnt];
+                params.partition_type = 'j';
+            } else if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
+            	params.remove_empty_seq = false;
             } else if (strcmp(argv[cnt], "-sf") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1514,7 +1530,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.avoid_duplicated_trees = true;
                 if (params.gbo_replicates < 1000) throw "#replicates must be >= 1000";
                 params.consensus_type = CT_CONSENSUS_TREE;
-                params.nni5Branches = true;
+                //params.nni5Branches = true;
 			} else if (strcmp(argv[cnt], "-beps") == 0) {
 				cnt++;
 				if (cnt >= argc)

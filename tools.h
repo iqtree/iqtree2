@@ -499,6 +499,17 @@ struct Params {
     char *partition_file;
 
     /**
+     * 		defines the relation between edge lengths in supertree and subtrees
+     * 		0 for separate edge length (default)
+     * 		p for proportional edge length
+     * 		j for joint edge length
+     */
+    char partition_type;
+
+    /** remove all-gap sequences in partition model to account for terrace default: TRUE */
+    bool remove_empty_seq;
+
+    /**
             B, D, or P for Binary, DNA, or Protein sequences
      */
     char *sequence_type;

@@ -19,6 +19,7 @@
  ***************************************************************************/
 #include "iqtree.h"
 #include "phylosupertree.h"
+#include "phylosupertreeplen.h"
 #include "mexttree.h"
 #include "timeutil.h"
 
@@ -1361,6 +1362,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
                     ((PhyloSuperTree*) this)->printMapInfo();
                 }
             }
+
             if (beginHeu) {
                 double maxScore = curScore + nni_delta_est * (nni_count_est - nni_count);
                 if (maxScore < curScore)
@@ -1386,7 +1388,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
 
             /* sort all positive NNI moves (descending) */
             sort(posNNIs.begin(), posNNIs.end());
-            if (verbose_mode >= VB_DEBUG) {
+            if (verbose_mode >= VB_MED) {
+            	cout << "curScore: " << curScore << endl;
                 for (int i = 0; i < posNNIs.size(); i++) {
                     cout << "Log-likelihood of positive NNI " << i << " : " << posNNIs[i].newloglh << endl;
                 }
@@ -1409,6 +1412,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
         if (nni2apply == 0)
         	nni2apply = 1;
         applyNNIs(nni2apply);
+
         curScore = optimizeAllBranches(1);
 
         if (curScore > oldScore && curScore >= vec_nonconf_nni.at(0).newloglh ) {
@@ -1432,9 +1436,12 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
             }
             resetLamda = true;
         } else {
+
             /* tree cannot be worse if only 1 NNI is applied */
             if (nni2apply == 1) {
-                cout << "Error: logl=" << curScore << " < " << oldScore << endl;
+            	if (curScore < vec_nonconf_nni.at(0).newloglh - 0.001)
+            		cout << "Error: logl=" << curScore << " < " << vec_nonconf_nni.at(0).newloglh << endl;
+
                 // restore the tree by reverting all NNIs
                 applyNNIs(nni2apply, false);
                 // restore the branch lengths
@@ -1466,7 +1473,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
             }
         }
     } else {
-        cout << "NNI search could not find any better tree for this iteration!" << endl;
+    	if (verbose_mode >= VB_DEBUG)
+    		cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
 
     /*

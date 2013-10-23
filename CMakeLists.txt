@@ -181,6 +181,7 @@ lpwrapper.c
 #modeltest_wrapper.c
 nnisearch.c
 modelcodon.cpp
+phylosupertreeplen.cpp
 phylotesting.cpp
 )
 

@@ -103,7 +103,7 @@ public:
 		create sub-trees T|Y_1,...,T|Y_k of the current super-tree T
 		and map F={f_1,...,f_k} the edges of supertree T to edges of subtrees T|Y_i
 	*/
-	void mapTrees();
+	virtual void mapTrees();
 
 	/*
 	 * create one map f_i from supertree T to subtree indexed by part (called by mapTrees)
@@ -158,7 +158,7 @@ public:
             @param clearLH true to clear the partial likelihood, otherwise false
             @return likelihood score
      */
-    virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
+    //virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
 
     /**
             search the best swap for a branch
@@ -173,7 +173,7 @@ public:
             Do an NNI on the supertree and synchronize all subtrees respectively
             @param move the single NNI
      */
-    virtual void doNNI(NNIMove &move);
+    virtual void doNNI(NNIMove &move, bool clearLH = true);
 
     /**
      * 	 Restore the branch lengths from the saved values
@@ -191,12 +191,12 @@ public:
 	/**
 		compute the weighted average of branch lengths over partitions
 	*/
-	void computeBranchLengths();
+	virtual void computeBranchLengths();
 
 	/**
 	 * print debug information about all maps
 	 */
-	void printMapInfo();
+	virtual void printMapInfo();
 	
 	/**
 	 * initialize partition information for super tree
@@ -226,6 +226,11 @@ public:
      * @return memory size required in bytes
      */
     virtual uint64_t getMemoryRequired();
+
+    /**
+     * count the number of super branches that map to no branches in gene trees
+     */
+    int countEmptyBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 };
 

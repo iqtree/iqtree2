@@ -36,6 +36,7 @@ const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEAS
 const double MAX_BRANCH_LEN = 9.0;
 const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
+const double TOL_LIKELIHOOD_PARAMOPT = 0.01; // BQM: newly introduced for ModelFactory::optimizeParameters
 //const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
 const static double SCALING_THRESHOLD = 1e-100;
 const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
@@ -160,6 +161,7 @@ Phylogenetic Tree class
 class PhyloTree : public MTree, public Optimization {
 
 	friend class PhyloSuperTree;
+	friend class PhyloSuperTreePlen;
 
 public:
     /**
@@ -388,14 +390,25 @@ public:
     void clearAllPartialLH();
 
     /**
+     * compute all partial likelihoods if not computed before
+     */
+    void computeAllPartialLh(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
             allocate memory for a partial likelihood vector
      */
     double *newPartialLh();
+
+    /** get the number of bytes occupied by partial_lh */
+    int getPartialLhBytes();
 
     /**
             allocate memory for a scale num vector
      */
     UBYTE *newScaleNum();
+
+    /** get the number of bytes occupied by scale_num */
+    int getScaleNumBytes();
 
     /**
             compute the partial likelihood at a subtree
@@ -653,7 +666,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    double optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL);
+    virtual double optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL);
     
     /**
      * optimize all branch lengths at the subtree rooted at node step-by-step.
@@ -774,7 +787,7 @@ public:
             @param nni_param (OUT) if not NULL: swapping information returned
             @return the likelihood of the tree
      */
-    double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL
+    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL
             /*,	ostream *out = NULL, int brtype = 0,
                 ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL,
                 vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
