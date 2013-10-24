@@ -1245,7 +1245,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
     	outError("Memory required exceeds your computer RAM size!");
     }
 
-	cout << "Optimize model parameters ... " << endl;
+	cout << "Optimize model parameters (tolerace " << TOL_LIKELIHOOD_PARAMOPT << ")... " << endl;
 
     // Optimize model parameters and branch lengths using ML for the initial tree
     bestTreeScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT);

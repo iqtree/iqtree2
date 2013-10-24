@@ -84,8 +84,10 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 	} else if (tree->aln->num_states == 2) {
 		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->num_states == 4) {
+
 		model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->num_states == 20) {
+
 		model = new ModelProtein(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->codon_table) {
 		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
@@ -111,6 +113,16 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	}
 	string::size_type posfreq;
 	StateFreqType freq_type = params.freq_type;
+
+	if (freq_type == FREQ_UNKNOWN) {
+		switch (tree->aln->num_states) {
+		case 2: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
+		case 4: freq_type = FREQ_EMPIRICAL; break; // default for DNA: empirical frequencies from alignment
+		case 20: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
+		default: break;
+		}
+	}
+
 	size_t close_bracket;
 	string freq_params;
 	if ((posfreq = model_str.find("+F")) != string::npos) {
@@ -378,7 +390,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	int i;
 	bool optimize_rate = true;
 	double param_epsilon = logl_epsilon; // epsilon for parameters starts at epsilon for logl
-	for (i = 2; i < 100; i++, param_epsilon/=2.0) {
+	for (i = 2; i < 100; i++, param_epsilon/=4.0) {
 		double model_lh = model->optimizeParameters(param_epsilon);
 		double rate_lh = 0.0;
 		if (optimize_rate) {
@@ -397,9 +409,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		}
 		if (new_lh > cur_lh + logl_epsilon) {
 			if (!fixed_len)
-				cur_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
-			else
-				cur_lh = new_lh;
+				new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+			if (param_epsilon > (new_lh - cur_lh) * logl_epsilon)
+				param_epsilon = (new_lh - cur_lh) * logl_epsilon;
+			cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)
 				cout << "Current log-likelihood: " << cur_lh << endl;
 		} else {

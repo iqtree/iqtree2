@@ -658,8 +658,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_name = "";
     params.model_set = NULL;
     params.store_trans_matrix = false;
-    params.freq_type = FREQ_EMPIRICAL;
-    //params.freq_type = FREQ_UNKNOWN;
+    //params.freq_type = FREQ_EMPIRICAL;
+    params.freq_type = FREQ_UNKNOWN;
     params.num_rate_cats = 4;
     params.gamma_shape = -1.0;
     params.gamma_median = false;
