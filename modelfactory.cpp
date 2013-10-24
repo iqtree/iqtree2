@@ -442,7 +442,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		cur_lh = tree->optimizeAllBranches(1);
 	}
 	if (verbose_mode >= VB_MED || write_info) 
-		cout << "Initial log-likelihood: " << cur_lh << endl;
+		cout << "1. Initial log-likelihood: " << cur_lh << endl;
 	int i;
 	//bool optimize_rate = true;
 	double param_epsilon = logl_epsilon; // epsilon for parameters starts at epsilon for logl
@@ -476,7 +476,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 				param_epsilon = (new_lh - cur_lh) * logl_epsilon;
 			cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)
-				cout << "Current log-likelihood: " << cur_lh << endl;
+				cout << i << ". Current log-likelihood: " << cur_lh << endl;
 		} else {
 			site_rate->classifyRates(new_lh);
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
