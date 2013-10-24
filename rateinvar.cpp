@@ -42,6 +42,18 @@ double RateInvar::computeFunction(double p_invar_value) {
 	return -phylo_tree->computeLikelihood();
 }
 
+double RateInvar::targetFunk(double x[]) {
+	getVariables(x);
+	return -phylo_tree->computeLikelihood();
+}
+
+void RateInvar::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+	if (getNDim() == 0) return;
+	lower_bound[1] = MIN_PINVAR;
+	upper_bound[1] = phylo_tree->aln->frac_const_sites;
+	bound_check[1] = false;
+}
+
 double RateInvar::optimizeParameters(double epsilon) {
 	if (fix_p_invar)
 		return -computeFunction(p_invar);
@@ -63,3 +75,12 @@ void RateInvar::writeParameters(ostream &out) {
 	out << "\t" << p_invar;
 }
 
+void RateInvar::setVariables(double *variables) {
+	if (RateInvar::getNDim() == 0) return;
+	variables[1] = p_invar;
+}
+
+void RateInvar::getVariables(double *variables) {
+	if (RateInvar::getNDim() == 0) return;
+	p_invar = variables[1];
+}

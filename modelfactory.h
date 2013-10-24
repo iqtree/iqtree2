@@ -31,7 +31,7 @@ The values of the map contain 3 matricies consecutively: transition matrix, 1st,
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelFactory : public unordered_map<int, double*>
+class ModelFactory : public unordered_map<int, double*>, public Optimization
 {
 public:
 
@@ -177,6 +177,47 @@ public:
 		TRUE for storing process
 	*/
 	bool is_storing;
+
+
+	/**
+	 * optimize model and site_rate parameters
+	 */
+	double optimizeParametersOnly(double epsilon);
+
+	/************* FOLLOWING FUNCTIONS SERVE FOR JOINT OPTIMIZATION OF MODEL AND RATE PARAMETERS *******/
+
+	/**
+	 * TRUE to optimize all parameters simultaneously, default: FALSE
+	 */
+	bool joint_optimize;
+	/**
+		return the number of dimensions
+	*/
+	virtual int getNDim();
+
+	/**
+		the target function which needs to be optimized
+		@param x the input vector x
+		@return the function value at x
+	*/
+	virtual double targetFunk(double x[]);
+
+protected:
+
+	/**
+		this function is served for the multi-dimension optimization. It should pack the model parameters
+		into a vector that is index from 1 (NOTE: not from 0)
+		@param variables (OUT) vector of variables, indexed from 1
+	*/
+	virtual void setVariables(double *variables);
+
+	/**
+		this function is served for the multi-dimension optimization. It should assign the model parameters
+		from a vector of variables that is index from 1 (NOTE: not from 0)
+		@param variables vector of variables, indexed from 1
+	*/
+	virtual void getVariables(double *variables);
+
 };
 
 #endif

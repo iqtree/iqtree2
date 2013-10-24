@@ -12,7 +12,7 @@
 #include "modelsubst.h"
 #include "tools.h"
 
-ModelSubst::ModelSubst(int nstates)
+ModelSubst::ModelSubst(int nstates) : Optimization()
 {
 	num_states = nstates;
 	name = "JC";

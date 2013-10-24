@@ -42,6 +42,8 @@ class for among-site rate heterogeneity, the default is homogeneous (equal) rate
 
 class RateHeterogeneity : public Optimization
 {
+	friend class ModelFactory;
+
 public:
 	/**
 		constructor
@@ -117,6 +119,18 @@ public:
 	virtual double getGammaShape() { return 0.0; }
 
 	/**
+		the target function which needs to be optimized
+		@param x the input vector x
+		@return the function value at x
+	*/
+	virtual double targetFunk(double x[]);
+
+	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {}
+
+	/**
 		optimize parameters. Default does nothing
 		@return the best likelihood 
 	*/
@@ -178,6 +192,20 @@ public:
 	PhyloTree *phylo_tree;
 
 protected:
+
+	/**
+		this function is served for the multi-dimension optimization. It should pack the model parameters
+		into a vector that is index from 1 (NOTE: not from 0)
+		@param variables (OUT) vector of variables, indexed from 1
+	*/
+	virtual void setVariables(double *variables) {}
+
+	/**
+		this function is served for the multi-dimension optimization. It should assign the model parameters
+		from a vector of variables that is index from 1 (NOTE: not from 0)
+		@param variables vector of variables, indexed from 1
+	*/
+	virtual void getVariables(double *variables) {}
 
 	
 };

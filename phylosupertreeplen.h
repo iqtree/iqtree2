@@ -66,7 +66,7 @@ class SuperAlignmentPairwisePlen : public SuperAlignmentPairwise {
 
 };
 // ======================================================================================================
-class PartitionModelPlen : public PartitionModel, public Optimization
+class PartitionModelPlen : public PartitionModel
 {
 public:
     PartitionModelPlen();

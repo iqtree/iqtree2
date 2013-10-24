@@ -27,6 +27,9 @@
 #include "alignment.h"
 #include "eigendecomposition.h"
 
+const double MIN_RATE = 1e-4;
+const double TOL_RATE = 1e-4;
+const double MAX_RATE = 100;
 
 
 /**
@@ -35,7 +38,7 @@ This works for all kind of data, not only DNA
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class GTRModel : public ModelSubst, public Optimization, public EigenDecomposition
+class GTRModel : public ModelSubst, public EigenDecomposition
 {
 	
 	friend class ModelSet;

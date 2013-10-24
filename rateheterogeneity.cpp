@@ -81,3 +81,7 @@ void RateHeterogeneity::writeSiteRates(const char *file_name) {
 		outError(ERR_WRITE_OUTPUT, file_name);
 	}
 }
+
+double RateHeterogeneity::targetFunk(double x[]) {
+	return -phylo_tree->computeLikelihood();
+}

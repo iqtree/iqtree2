@@ -86,8 +86,8 @@ void RateGamma::computeRates() {
 
 	/* check for very small rates */
 	for (cat = 0; cat < ncategory; cat ++)
-		if (rates[cat] < MIN_RATE)
-			rates[cat] = MIN_RATE;
+		if (rates[cat] < MIN_GAMMA_RATE)
+			rates[cat] = MIN_GAMMA_RATE;
 }
 
 /*double RateGamma::cmpPerPointGamma (const double prob, const double shape) {
@@ -113,6 +113,31 @@ double RateGamma::computeFunction(double shape) {
 	computeRates();
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
+}
+
+double RateGamma::targetFunk(double x[]) {
+	getVariables(x);
+	computeRates();
+	phylo_tree->clearAllPartialLH();
+	return -phylo_tree->computeLikelihood();
+}
+
+
+void RateGamma::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+	if (getNDim() == 0) return;
+	lower_bound[1] = MIN_GAMMA_SHAPE;
+	upper_bound[1] = MAX_GAMMA_SHAPE;
+	bound_check[1] = false;
+}
+
+void RateGamma::setVariables(double *variables) {
+	if (getNDim() == 0) return;
+	variables[1] = gamma_shape;
+}
+
+void RateGamma::getVariables(double *variables) {
+	if (getNDim() == 0) return;
+	gamma_shape = variables[1];
 }
 
 double RateGamma::optimizeParameters(double epsilon) {

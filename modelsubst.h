@@ -14,6 +14,7 @@
 
 #include <string>
 #include "tools.h"
+#include "optimization.h"
 
 using namespace std;
 
@@ -22,8 +23,10 @@ Substitution model abstract class
 
 	@author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
 */
-class ModelSubst
+class ModelSubst: public Optimization
 {
+	friend class ModelFactory;
+
 public:
 	/**
 		constructor
@@ -189,6 +192,12 @@ public:
 	virtual void computeTransDervFreq(double time, double rate_val, double *trans_matrix, 
 		double *trans_derv1, double *trans_derv2);
 
+
+	/**
+		decompose the rate matrix into eigenvalues and eigenvectors
+	*/
+	virtual void decomposeRateMatrix() {}
+
 	/**
 		optimize model parameters. One should override this function when defining new model.
 		The default does nothing since it is a Juke-Cantor type model, hence no parameters involved.
@@ -234,6 +243,22 @@ public:
 		destructor
 	*/
     virtual ~ModelSubst();
+
+protected:
+
+	/**
+		this function is served for the multi-dimension optimization. It should pack the model parameters
+		into a vector that is index from 1 (NOTE: not from 0)
+		@param variables (OUT) vector of variables, indexed from 1
+	*/
+	virtual void setVariables(double *variables) {}
+
+	/**
+		this function is served for the multi-dimension optimization. It should assign the model parameters
+		from a vector of variables that is index from 1 (NOTE: not from 0)
+		@param variables vector of variables, indexed from 1
+	*/
+	virtual void getVariables(double *variables) {}
 
 };
 

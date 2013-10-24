@@ -22,12 +22,9 @@
 #include <assert.h>
 #include <string.h>
 
-const double MIN_RATE = 1e-4;
-const double TOL_RATE = 1e-4;
-const double MAX_RATE = 100;
 
 GTRModel::GTRModel(PhyloTree *tree, bool count_rates)
- : ModelSubst(tree->aln->num_states), Optimization(), EigenDecomposition()
+ : ModelSubst(tree->aln->num_states), EigenDecomposition()
 {
 	int i;
 	int nrate = getNumRateEntries();

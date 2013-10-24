@@ -22,7 +22,7 @@
 
 #include "rateheterogeneity.h"
 
-const double MIN_RATE = 1e-6;
+const double MIN_GAMMA_RATE = 1e-6;
 const double MIN_GAMMA_SHAPE = 0.01;
 const double MAX_GAMMA_SHAPE = 10000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
@@ -98,6 +98,18 @@ public:
 	virtual void computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
 
 	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+
+	/**
+		the target function which needs to be optimized
+		@param x the input vector x
+		@return the function value at x
+	*/
+	virtual double targetFunk(double x[]);
+
+	/**
 		optimize parameters. Default is to optimize gamma shape 
 		@return the best likelihood 
 	*/
@@ -128,6 +140,20 @@ public:
 	virtual void writeParameters(ostream &out);
 
 protected:
+
+	/**
+		this function is served for the multi-dimension optimization. It should pack the model parameters
+		into a vector that is index from 1 (NOTE: not from 0)
+		@param variables (OUT) vector of variables, indexed from 1
+	*/
+	virtual void setVariables(double *variables);
+
+	/**
+		this function is served for the multi-dimension optimization. It should assign the model parameters
+		from a vector of variables that is index from 1 (NOTE: not from 0)
+		@param variables vector of variables, indexed from 1
+	*/
+	virtual void getVariables(double *variables);
 
 	/**
 		number of rate categories

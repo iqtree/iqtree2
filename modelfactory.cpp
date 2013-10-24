@@ -43,6 +43,7 @@ ModelFactory::ModelFactory() {
 	site_rate = NULL;
 	store_trans_matrix = false;
 	is_storing = false;
+	joint_optimize = false;
 }
 
 ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type, string freq_params,
@@ -102,6 +103,7 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 ModelFactory::ModelFactory(Params &params, PhyloTree *tree) { 
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
+	joint_optimize = params.optimize_model_rate_joint;
 
 	string model_str = params.model_name;
 	if (model_str == "") {
@@ -117,9 +119,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	if (freq_type == FREQ_UNKNOWN) {
 		switch (tree->aln->num_states) {
 		case 2: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
-		case 4: freq_type = FREQ_EMPIRICAL; break; // default for DNA: empirical frequencies from alignment
 		case 20: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
-		default: break;
+		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA and others: counted frequencies from alignment
 		}
 	}
 
@@ -193,7 +194,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		//string rate_str = model_str.substr(pos);
 		if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
-					p_invar_sites, params.optimize_gamma_invar_by_bfgs, tree);
+					p_invar_sites, params.optimize_model_rate_joint, tree);
 		} else if (posI != string::npos) {
 			site_rate = new RateInvar(p_invar_sites, tree);
 		} else if (posG != string::npos) {
@@ -368,6 +369,61 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 	}
 }
 
+double ModelFactory::optimizeParametersOnly(double epsilon) {
+	if (!joint_optimize) {
+		double model_lh = model->optimizeParameters(epsilon);
+		double rate_lh = site_rate->optimizeParameters(epsilon);
+		if (rate_lh == 0.0) return model_lh;
+		return rate_lh;
+	}
+
+	int ndim = getNDim();
+
+	// return if nothing to be optimized
+	if (ndim == 0) return 0.0;
+
+	double *variables = new double[ndim+1];
+	double *upper_bound = new double[ndim+1];
+	double *lower_bound = new double[ndim+1];
+	bool *bound_check = new bool[ndim+1];
+	int i;
+	double score;
+
+	// setup the bounds for model
+	setVariables(variables);
+	int model_ndim = model->getNDim();
+	for (i = 1; i <= model_ndim; i++) {
+		//cout << variables[i] << endl;
+		lower_bound[i] = MIN_RATE;
+		upper_bound[i] = MAX_RATE;
+		bound_check[i] = false;
+	}
+
+	if (model->freq_type == FREQ_ESTIMATE) {
+		for (i = model_ndim-model->num_states+2; i <= model_ndim; i++)
+			upper_bound[i] = 1.0;
+	}
+
+	// setup the bounds for site_rate
+	site_rate->setBounds(lower_bound+model_ndim, upper_bound+model_ndim, bound_check+model_ndim);
+
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_RATE));
+
+	getVariables(variables);
+	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);
+	model->decomposeRateMatrix();
+	site_rate->phylo_tree->clearAllPartialLH();
+
+	delete [] bound_check;
+	delete [] lower_bound;
+	delete [] upper_bound;
+	delete [] variables;
+
+	return score;
+}
+
+
+
 double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon) {
 	assert(model);
 	assert(site_rate);
@@ -388,9 +444,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	if (verbose_mode >= VB_MED || write_info) 
 		cout << "Initial log-likelihood: " << cur_lh << endl;
 	int i;
-	bool optimize_rate = true;
+	//bool optimize_rate = true;
 	double param_epsilon = logl_epsilon; // epsilon for parameters starts at epsilon for logl
 	for (i = 2; i < 100; i++, param_epsilon/=4.0) {
+		/*
 		double model_lh = model->optimizeParameters(param_epsilon);
 		double rate_lh = 0.0;
 		if (optimize_rate) {
@@ -402,7 +459,12 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 			break;
 		}
 		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
-		
+		*/
+		double new_lh = optimizeParametersOnly(param_epsilon);
+		if (new_lh == 0.0) {
+			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
+			break;
+		}
 		if (verbose_mode >= VB_MED) {
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);
@@ -546,3 +608,29 @@ ModelFactory::~ModelFactory()
 		delete it->second;
 	clear();
 }
+
+/************* FOLLOWING SERVE FOR JOINT OPTIMIZATION OF MODEL AND RATE PARAMETERS *******/
+int ModelFactory::getNDim()
+{
+	return model->getNDim() + site_rate->getNDim();
+}
+
+double ModelFactory::targetFunk(double x[]) {
+	model->getVariables(x);
+	// need to compute rates again if p_inv or Gamma shape changes!
+	if (model->state_freq[model->num_states-1] < MIN_RATE) return 1.0e+12;
+	model->decomposeRateMatrix();
+	site_rate->phylo_tree->clearAllPartialLH();
+	return site_rate->targetFunk(x + model->getNDim());
+}
+
+void ModelFactory::setVariables(double *variables) {
+	model->setVariables(variables);
+	site_rate->setVariables(variables + model->getNDim());
+}
+
+void ModelFactory::getVariables(double *variables) {
+	model->getVariables(variables);
+	site_rate->getVariables(variables + model->getNDim());
+}
+
