@@ -259,15 +259,15 @@ NGSRate::NGSRate(PhyloTree *tree) {
 
 }
 
-double NGSRate::optimizeParameters() {
+double NGSRate::optimizeParameters(double epsilon) {
     int cat;
     double negative_lh;
     for (cat = 0; cat < ncategory; cat++) {
         optimizing_cat = cat;
         if (phylo_tree->optimize_by_newton)
-            rates[cat] = minimizeNewtonSafeMode(1e-6, rates[cat], 10.0, 1e-6, negative_lh);
+            rates[cat] = minimizeNewtonSafeMode(1e-6, rates[cat], 10.0, max(epsilon,1e-6), negative_lh);
         else
-            rates[cat] = minimizeOneDimenSafeMode(1e-6, rates[cat], 10.0, 1e-6, &negative_lh);
+            rates[cat] = minimizeOneDimenSafeMode(1e-6, rates[cat], 10.0, max(epsilon, 1e-6), &negative_lh);
     }
     return phylo_tree->computeLikelihood();
 }
@@ -342,7 +342,7 @@ double NGSRateCat::targetFunk(double x[]) {
 }
 
 
-double NGSRateCat::optimizeParameters() {
+double NGSRateCat::optimizeParameters(double epsilon) {
     int ndim = getNDim();
 
     // return if nothing to be optimized
@@ -369,7 +369,7 @@ double NGSRateCat::optimizeParameters() {
     for (i = ndim-ncategory+2; i <= ndim; i++)
         upper_bound[i] = 1.0;
     //packData(variables, lower_bound, upper_bound, bound_check);
-    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, 1e-6);
+    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, 1e-6));
 
     getVariables(variables);
 

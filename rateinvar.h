@@ -51,16 +51,28 @@ public:
 	virtual double getPInvar() { return p_invar; }
 
 	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+
+	/**
 		optimize parameters
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters();
+	virtual double optimizeParameters(double epsilon);
 
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize
 		p_invar parameter
 	*/
 	virtual double computeFunction(double p_invar_value);
+
+	/**
+		the target function which needs to be optimized
+		@param x the input vector x
+		@return the function value at x
+	*/
+	virtual double targetFunk(double x[]);
 
 
 	/**
@@ -92,6 +104,20 @@ public:
 	bool fix_p_invar;
 
 protected:
+
+	/**
+		this function is served for the multi-dimension optimization. It should pack the model parameters
+		into a vector that is index from 1 (NOTE: not from 0)
+		@param variables (OUT) vector of variables, indexed from 1
+	*/
+	virtual void setVariables(double *variables);
+
+	/**
+		this function is served for the multi-dimension optimization. It should assign the model parameters
+		from a vector of variables that is index from 1 (NOTE: not from 0)
+		@param variables vector of variables, indexed from 1
+	*/
+	virtual void getVariables(double *variables);
 
 };
 

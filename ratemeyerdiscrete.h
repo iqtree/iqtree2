@@ -90,7 +90,7 @@ public:
 		compute categorized rates from the "continuous" rate of the original Meyer & von Haeseler model.
 		The current implementation uses the k-means algorithm with k-means++ package.
 	*/
-	virtual double optimizeParameters();
+	virtual double optimizeParameters(double epsilon);
 
 	/**
 		classify rates into categories.
