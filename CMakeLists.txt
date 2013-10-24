@@ -96,7 +96,7 @@ add_definitions(-DIQ_TREE)
 
 set (COMBINED_FLAGS "-msse3 -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
-set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} ${COMBINED_FLAGS}")
+set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -std=c99 -Wno-deprecated ${COMBINED_FLAGS}")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0 -msse3")
 set(CMAKE_C_FLAGS_RELEASE "-O2 -g0 -fomit-frame-pointer -funroll-loops -D__SSE3 -msse3")

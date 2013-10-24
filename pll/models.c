@@ -3796,7 +3796,7 @@ l4:
     @todo
        Document this more.
 */
-void makeGammaCats(double alpha, double *gammaRates, int K, boolean useMedian)
+void makeGammaCats(double alpha, double *gammaRates, int K, pll_boolean useMedian)
 {
   int 
     i;

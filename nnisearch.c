@@ -396,7 +396,7 @@ LH_VECTOR backup_likelihood_pointers(pllInstance *tr, partitionList *pr, nodeptr
 		v.lh_values[model] = pr->partitionData[model]->xVector[p_slot];
 		v.expVector[model] = pr->partitionData[model]->expVector[p_slot];
 		pr->partitionData[model]->xVector[p_slot] = (double *) malloc(sizeof(double) * vector_size);
-		pr->partitionData[model]->expVector[p_slot] = (int*)rax_malloc_aligned(requiredExpLength);
+		//pr->partitionData[model]->expVector[p_slot] = (int*)rax_malloc_aligned(requiredExpLength);
 	}
 	return v;
 }

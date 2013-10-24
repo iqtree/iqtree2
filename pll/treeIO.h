@@ -16,7 +16,7 @@ It make things much easier for the integration with other software.
 
 #include "pll.h"
 
-char *Tree2String(char *treestr, tree *tr, nodeptr p, boolean printBranchLengths, boolean printNames, boolean printLikelihood,
-		  boolean rellTree, boolean finalPrint, int perGene, boolean branchLabelSupport, boolean printSHSupport);
+char *Tree2String(char *treestr, tree *tr, nodeptr p, pll_boolean printBranchLengths, pll_boolean printNames, pll_boolean printLikelihood,
+		  pll_boolean rellTree, pll_boolean finalPrint, int perGene, pll_boolean branchLabelSupport, pll_boolean printSHSupport);
 
 #endif /* TREEIO_H_ */

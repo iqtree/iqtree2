@@ -223,7 +223,10 @@ public:
      */
     double doIQPNNI();
 
-    double doIteratedNNI();
+    /*
+     *  perform a guided pertubation instead of doing IQP
+     */
+    double doGuidedPertubation();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood

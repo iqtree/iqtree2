@@ -546,7 +546,7 @@ public:
             Read the tree saved with Taxon Names and branch lengths.
             @param tree_string input stream to read from
      */
-    void readTreeString(string &tree_string);
+    void readTreeString(const string &tree_string);
 
     bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 

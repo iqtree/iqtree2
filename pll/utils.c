@@ -367,7 +367,7 @@ FILE *myfopen(const char *path, const char *mode)
     @return
       \b PLL_TRUE if tip, \b PLL_FALSE otherwise
   */
-boolean isTip(int number, int maxTips)
+pll_boolean isTip(int number, int maxTips)
 {
   assert(number > 0);
 
@@ -460,7 +460,7 @@ void hookupDefault (nodeptr p, nodeptr q)
 
 
 
-boolean whitechar (int ch)
+pll_boolean whitechar (int ch)
 {
   return (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r');
 }
@@ -1450,7 +1450,7 @@ pllAlignmentRemoveDups (pllAlignmentData * alignmentData, partitionList * pl)
       Array of size \a partition->states where the empirical frequencies for this partition are stored
 */
 static void
-genericBaseFrequencies (pInfo * partition, pllAlignmentData * alignmentData, boolean smoothFrequencies, const unsigned int * bitMask, double * pfreqs)
+genericBaseFrequencies (pInfo * partition, pllAlignmentData * alignmentData, pll_boolean smoothFrequencies, const unsigned int * bitMask, double * pfreqs)
 {
   double 
     wj, 
@@ -1662,11 +1662,15 @@ pllLoadAlignment (pllInstance * tr, pllAlignmentData * alignmentData, partitionL
 {
   int i;
   nodeptr node;
+  static int doSubst = 1;
 
   if (tr->mxtips != alignmentData->sequenceCount) return (0);
 
   /* Do the base substitution (from A,C,G....  ->   0,1,2,3....)*/
-  pllBaseSubstitute (alignmentData, partitions);
+  if ( doSubst ) {
+	  pllBaseSubstitute (alignmentData, partitions);
+	  doSubst = 0;
+  }
 
   tr->aliaswgt = (int *) rax_malloc (alignmentData->sequenceLength * sizeof (int));
   memcpy (tr->aliaswgt, alignmentData->siteWeights, alignmentData->sequenceLength * sizeof (int));
@@ -1876,7 +1880,7 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
   tr->td[0].count            = 0;
   tr->td[0].ti               = (traversalInfo *) rax_malloc (sizeof(traversalInfo) * (size_t)tr->mxtips);
   tr->td[0].parameterValues  = (double *) rax_malloc(sizeof(double) * (size_t)PLL_NUM_BRANCHES);
-  tr->td[0].executeModel     = (boolean *) rax_malloc (sizeof(boolean) * (size_t)PLL_NUM_BRANCHES);
+  tr->td[0].executeModel     = (pll_boolean *) rax_malloc (sizeof(pll_boolean) * (size_t)PLL_NUM_BRANCHES);
   tr->td[0].executeModel[0]  = PLL_TRUE;                                                                                                                                                                                                                                    
   for (i = 0; i < PLL_NUM_BRANCHES; ++ i) tr->td[0].executeModel[i] = PLL_TRUE;
 }

@@ -61,7 +61,7 @@
 
 double treeOptimizeRapid(pllInstance *tr, partitionList *pr, int mintrav, int maxtrav, bestlist *bt, infoList *iList);
 nniMove getBestNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, double curLH);
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, nniMove* nniList, int* cnt, int* cnt_nni, double curLH);
+void pllEvalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, nniMove* nniList, int* cnt, int* cnt_nni, double curLH);
 
 
 static int cmp_nni(const void* nni1, const void* nni2);
@@ -83,7 +83,7 @@ extern partitionLengths pLengths[PLL_MAX_MODEL];
 extern char binaryCheckpointName[1024];  /**< Binary checkpointing file */
 extern char binaryCheckpointInputName[1024];
 
-boolean initrav (pllInstance *tr, partitionList *pr, nodeptr p)
+pll_boolean initrav (pllInstance *tr, partitionList *pr, nodeptr p)
 { 
   nodeptr  q;
 
@@ -222,10 +222,10 @@ void smooth (pllInstance *tr, partitionList *pr, nodeptr p)
        otherwise \b PLL_TRUE.
              
 */
-static boolean allSmoothed(pllInstance *tr, int numBranches)
+static pll_boolean allSmoothed(pllInstance *tr, int numBranches)
 {
   int i;
-  boolean result = PLL_TRUE;
+  pll_boolean result = PLL_TRUE;
 
   for(i = 0; i < numBranches; i++)
   {
@@ -648,7 +648,7 @@ nodeptr  removeNodeRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p)
 
    @image html pll.png "The diagram shows in blue colors the new edges that are created and in red the edge that is removed" 
 */
-boolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+pll_boolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {
   nodeptr  r, s;
   int i;
@@ -754,7 +754,7 @@ boolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
    @todo
      What is the difference between this and insertBIG? 
 */
-boolean insertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+pll_boolean insertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {
   nodeptr  r, s;
 
@@ -869,7 +869,7 @@ static void restoreTopologyOnly(pllInstance *tr, bestlist *bt, int numBranches)
 
 /** @brief Test the 
 */
-boolean testInsertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+pll_boolean testInsertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {
 
   int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
@@ -1010,7 +1010,7 @@ int rearrangeBIG(pllInstance *tr, partitionList *pr, nodeptr p, int mintrav, int
   double   p1z[PLL_NUM_BRANCHES], p2z[PLL_NUM_BRANCHES], q1z[PLL_NUM_BRANCHES], q2z[PLL_NUM_BRANCHES];
   nodeptr  p1, p2, q, q1, q2;
   int      mintrav2, i;  
-  boolean doP = PLL_TRUE, doQ = PLL_TRUE;
+  pll_boolean doP = PLL_TRUE, doQ = PLL_TRUE;
   int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 
   if (maxtrav < 1 || mintrav > maxtrav)  return (0);
@@ -1262,7 +1262,7 @@ double treeOptimizeRapid(pllInstance *tr, partitionList *pr, int mintrav, int ma
 
 
 
-boolean testInsertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+pll_boolean testInsertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {    
   if(tr->thoroughInsertion)
   {
@@ -1522,7 +1522,7 @@ static void readTree(pllInstance *tr, partitionList *pr, FILE *f)
     size_t         
       offset;
 
-    boolean 
+    pll_boolean 
       addIt;
 
     if(startAddress > tr->nodeBaseAddress)
@@ -2021,7 +2021,7 @@ nniMove getBestNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,
 }
 
 /** @brief ??? Not sure */
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p,
+void pllEvalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p,
 		nniMove* nniList, int* cnt, int* cnt_nni, double curLH) {
 	if (!isTip(p->number, tr->mxtips)) {
 		nniList[*cnt] = getBestNNIForBran(tr, pr, p, curLH);
@@ -2031,7 +2031,7 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p,
 		*cnt = *cnt + 1;
 		nodeptr q = p->next;
 		while (q != p) {
-			evalNNIForSubtree(tr, pr, q->back, nniList, cnt, cnt_nni, curLH);
+			pllEvalNNIForSubtree(tr, pr, q->back, nniList, cnt, cnt_nni, curLH);
 			q = q->next;
 		}
 	}
@@ -2068,7 +2068,7 @@ int pllNniSearch(pllInstance * tr, partitionList *pr, int estimateModel) {
 	int cnt = 0; // number of visited internal branches during NNI evaluation
 	int cnt_nni = 0; // number of positive NNI found
 	while (q != p) {
-		evalNNIForSubtree(tr, pr, q->back, nniList, &cnt, &cnt_nni, curScore);
+		pllEvalNNIForSubtree(tr, pr, q->back, nniList, &cnt, &cnt_nni, curScore);
 		q = q->next;
 	}
 	if (cnt_nni == 0)

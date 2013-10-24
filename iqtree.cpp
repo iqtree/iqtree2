@@ -814,49 +814,14 @@ double IQTree::perturb(int times) {
     return curScore;
 }
 
-double IQTree::doIteratedNNI() {
-    time_t begin_time, cur_time;
-    time(&begin_time);
+double IQTree::doGuidedPertubation() {
 
-    string tree_file_name = params->out_prefix;
-    tree_file_name += ".treefile";
-    //printResultTree(params);
-    string treels_name = params->out_prefix;
-    treels_name += ".treels";
-    string out_lh_file = params->out_prefix;
-    out_lh_file += ".treelh";
-    string site_lh_file = params->out_prefix;
-    site_lh_file += ".sitelh";
+	// Select the top perturbSize NNI
+	vector<pllNNIMove> curNNIList;
+	for (int i = 0; i < params->pertubSize; i++) {
+		// select params->pertubSize best NNI in curNNIList
 
-    if (params->print_tree_lh) {
-        out_treelh.open(out_lh_file.c_str());
-        out_sitelh.open(site_lh_file.c_str());
-    }
-
-    if (params->write_intermediate_trees)
-        out_treels.open(treels_name.c_str());
-
-    if (params->write_intermediate_trees && save_all_trees != 2) {
-        printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
-    }
-
-    bestScore = curScore;
-
-    for (curIteration = 2; curIteration < params->min_iterations; curIteration++ ) {
-        double min_elapsed = (getCPUTime() - params->startTime) / 60;
-        if (min_elapsed > params->maxtime) {
-            cout << "Maximal running time of " << params->maxtime << " minutes reached" << endl;
-            break;
-        }
-
-        // Select the top perturbSize NNI
-        vector<pllNNIMove> perturbNNIs;
-        for ( int i = 0; i < params->pertubSize; i++ ) {
-
-        }
-
-    }
-
+	}
 
 }
 
