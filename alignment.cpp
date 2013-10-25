@@ -1353,9 +1353,63 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
         pattern_freq->resize(0);
         pattern_freq->resize(aln->getNPattern(), 0);
     }
-    if (spec) {
+	IntVector site_vec;
+    if (!spec) {
+		// standard bootstrap
+		for (site = 0; site < nsite; site++) {
+			int site_id = random_int(nsite);
+			int ptn_id = aln->getPatternID(site_id);
+			Pattern pat = aln->at(ptn_id);
+			addPattern(pat, site);
+			if (pattern_freq) ((*pattern_freq)[ptn_id])++;
+		}
+    } else if (strncmp(spec, "GENESITE,", 9) == 0) {
+		// resampling genes, then resampling sites within resampled genes
+		convert_int_vec(spec+9, site_vec);
+		int i;
+		IntVector begin_site;
+		for (i = 0, site = 0; i < site_vec.size(); i++) {
+			begin_site.push_back(site);
+			site += site_vec[i];
+			//cout << "site = " << site_vec[i] << endl;
+		}
+		if (site > getNSite())
+			outError("Sum of lengths exceeded alignment length");
+
+		for (i = 0; i < site_vec.size(); i++) {
+			int part = random_int(site_vec.size());
+			for (int j = 0; j < site_vec[part]; j++) {
+				site = random_int(site_vec[part]) + begin_site[part];
+				int ptn = aln->getPatternID(site);
+				Pattern pat = aln->at(ptn);
+				addPattern(pat, site);
+				if (pattern_freq) ((*pattern_freq)[ptn])++;
+			}
+		}
+    } else if (strncmp(spec, "GENE,", 5) == 0) {
+		// resampling genes instead of sites
+		convert_int_vec(spec+5, site_vec);
+		int i;
+		IntVector begin_site;
+		for (i = 0, site = 0; i < site_vec.size(); i++) {
+			begin_site.push_back(site);
+			site += site_vec[i];
+			//cout << "site = " << site_vec[i] << endl;
+		}
+		if (site > getNSite())
+			outError("Sum of lengths exceeded alignment length");
+
+		for (i = 0; i < site_vec.size(); i++) {
+			int part = random_int(site_vec.size());
+			for (site = begin_site[part]; site < begin_site[part] + site_vec[part]; site++) {
+				int ptn = aln->getPatternID(site);
+				Pattern pat = aln->at(ptn);
+				addPattern(pat, site);
+				if (pattern_freq) ((*pattern_freq)[ptn])++;
+			}
+		}
+    } else {
     	// special bootstrap
-    	IntVector site_vec;
     	convert_int_vec(spec, site_vec);
     	if (site_vec.size() % 2 != 0)
     		outError("Bootstrap specification length is not divisible by 2");
@@ -1377,15 +1431,6 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     		begin_site += site_vec[part];
     		out_site += site_vec[part+1];
     	}
-    } else {
-    	// standard bootstrap
-		for (site = 0; site < nsite; site++) {
-			int site_id = random_int(nsite);
-			int ptn_id = aln->getPatternID(site_id);
-			Pattern pat = aln->at(ptn_id);
-			addPattern(pat, site);
-			if (pattern_freq) ((*pattern_freq)[ptn_id])++;
-		}
     }
     verbose_mode = save_mode;
     countConstSite();

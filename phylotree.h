@@ -773,6 +773,20 @@ public:
     int *max_trees = NULL, double *logl_cutoff = NULL*/
             );
 
+
+    /**
+       search for the best NNI move corresponding to this branch
+       @return NNIMove the best NNI, this NNI could be worse than the current tree
+       according to the evaluation scheme in use
+       @param node1 1 of the 2 nodes on the branch
+       @param node2 1 of the 2 nodes on the branch
+     * @param approx_nni evaluate NNI based on "Bayes"
+     * @param useLS evaluate NNI based on Least Square
+     * @param nniMoves (IN/OUT) detailed information of the 2 NNIs, set .ptnlh to compute pattern likelihoods
+     */
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL,
+    		bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
+
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
             If a swap shows better score, return the swapped tree and the score.
@@ -1089,6 +1103,10 @@ public:
      * @return memory size required in bytes
      */
     virtual uint64_t getMemoryRequired();
+
+    /****** following variables are for ultra-fast bootstrap *******/
+    /** 2 to save all trees, 1 to save intermediate trees */
+    int save_all_trees;
 
 protected:
     

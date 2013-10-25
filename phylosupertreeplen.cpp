@@ -461,7 +461,7 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 	}
 
 	//double bestScore = optimizeOneBranch(node1, node2, false);
-	double oldLEN = node1->findNeighbor(node2)->length;
+	//double oldLEN = node1->findNeighbor(node2)->length;
 
 	int ntrees = size(), part;
 
@@ -513,27 +513,19 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
         node1_nei->node->updateNeighbor(node1, node2);
 
         for (part = 0; part < ntrees; part++) {
-    		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
-
-    		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
-    		if (!nei1_part || !nei2_part) {
-    			memcpy(at(part)->_pattern_lh, part_info[part].cur_ptnlh, at(part)->getAlnNPattern() * sizeof(double));
-    		} else {
-				int brid = nei1_part->id;
-				bool is_nni = true;
-				FOR_NEIGHBOR_DECLARE(node1, node2, nit) {
-					if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
-				}
-				FOR_NEIGHBOR(node2, node1, nit) {
-					if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
-				}
-				if (!is_nni) {
-					//memcpy(at(part)->_pattern_lh, part_info[part].opt_ptnlh[brid], at(part)->getAlnNPattern() * sizeof(double));
-				} else if (nnino == 0)
-					memcpy(at(part)->_pattern_lh, part_info[part].nni1_ptnlh[brid], at(part)->getAlnNPattern() * sizeof(double));
-				else
-					memcpy(at(part)->_pattern_lh, part_info[part].nni2_ptnlh[brid], at(part)->getAlnNPattern() * sizeof(double));
-    		}
+			bool is_nni = true;
+			FOR_NEIGHBOR_DECLARE(node1, NULL, nit) {
+				if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+			}
+			FOR_NEIGHBOR(node2, NULL, nit) {
+				if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
+			}
+			if (!is_nni) {
+				memcpy(at(part)->_pattern_lh, part_info[part].cur_ptnlh, at(part)->getAlnNPattern() * sizeof(double));
+			} else if (nnino == 0)
+				memcpy(at(part)->_pattern_lh, part_info[part].nni1_ptnlh, at(part)->getAlnNPattern() * sizeof(double));
+			else
+				memcpy(at(part)->_pattern_lh, part_info[part].nni2_ptnlh, at(part)->getAlnNPattern() * sizeof(double));
     		save_lh_factor[part] = at(part)->current_it->lh_scale_factor;
     		save_lh_factor_back[part] = at(part)->current_it_back->lh_scale_factor;
     		at(part)->current_it->lh_scale_factor = 0.0;
