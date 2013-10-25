@@ -123,19 +123,19 @@ struct NNIMove {
     PhyloNode *node2;
     NeighborVec::iterator node2Nei_it;
 
-    // log-likelihood of the tree before applying the NNI
-    double oldloglh;
-
     // log-likelihood of the tree after applying the NNI
     double newloglh;
 
     int swap_id;
 
     // old branch lengths of 5 branches before doing NNI
-    double oldLen[5];
+    //double oldLen[5];
 
     // new branch lengths of 5 branches corresponding to the NNI
     double newLen[5];
+
+    // pattern likelihoods
+    double *ptnlh;
 
     bool operator<(const NNIMove & rhs) const {
         return newloglh > rhs.newloglh;

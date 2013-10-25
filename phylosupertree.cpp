@@ -550,7 +550,7 @@ int PhyloSuperTree::getMaxPartNameLength() {
 	return namelen;
 }
 
-NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, bool useLS, double lh_contribution) {
+NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves, bool approx_nni, bool useLS, double lh_contribution) {
     NNIMove myMove;
     //myMove.newloglh = 0;
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
@@ -592,22 +592,9 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 		if (!nei1_part || !nei2_part) {
 			nni1_score += part_info[part].cur_score;
 			nni2_score += part_info[part].cur_score;
-			// BUG: moved this line to above
-			//at(part)->computePatternLikelihood(part_info[part].cur_ptnlh, &part_info[part].cur_score);
 			continue;
 		}
 		int brid = nei1_part->id;
-		/*
-		if (part_info[part].opt_score[brid] == 0.0) {
-			double cur_len = nei1_part->length;
-			part_info[part].cur_brlen[brid] = cur_len;
-			part_info[part].opt_score[brid] = at(part)->optimizeOneBranch((PhyloNode*)nei1_part->node, (PhyloNode*)nei2_part->node, false);
-			part_info[part].opt_brlen[brid] = nei1_part->length;
-			// restore branch lengths
-			nei1_part->length = cur_len;
-			nei2_part->length = cur_len;
-			at(part)->computePatternLikelihood(part_info[part].opt_ptnlh[brid], &part_info[part].opt_score[brid]);
-		}*/
 
 		bool is_nni = true;
 		FOR_NEIGHBOR_DECLARE(node1, node2, nit) {
@@ -619,8 +606,6 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 		if (!is_nni) {
 			nni1_score += part_info[part].cur_score;
 			nni2_score += part_info[part].cur_score;
-			//nni1_score += part_info[part].opt_score[brid];
-			//nni2_score += part_info[part].opt_score[brid];
 			continue;
 		}
 		if (part_info[part].nni1_score[brid] == 0.0) {
@@ -643,7 +628,6 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 		nni2_score += part_info[part].nni2_score[brid];
 	}
 	if (nni1_score > nni2_score) {
-		//bestScore = nni1_score;
 		myMove.swap_id = 1;
 		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
 		myMove.node2Nei_it = node2->findNeighborIt(node2_nei->node);
@@ -651,7 +635,6 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 		myMove.node1 = node1;
 		myMove.node2 = node2;
 	} else  {
-		//bestScore = nni2_score;
 		myMove.swap_id = 2;
 		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
 		myMove.node2Nei_it = node2->findNeighborIt(node2_nei_other->node);
@@ -664,9 +647,6 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bo
 
 	// for bootstrap now
     //now setup pattern likelihoods per partition
-    //DoubleVector save_lh_factor, save_lh_factor_back;
-    //save_lh_factor.resize(ntrees, 0);
-    //save_lh_factor_back.resize(ntrees, 0);
 	double *save_lh_factor = new double [ntrees];
 	double *save_lh_factor_back = new double [ntrees];
 	int nnino = 0;

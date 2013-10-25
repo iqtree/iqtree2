@@ -203,7 +203,7 @@ public:
      */
     double doVNS();
 
-    bool containPosNNI(vector<NNIMove> posNNIs);
+    //bool containPosNNI(vector<NNIMove> posNNIs);
 
     /**
      * Perturb the tree for the next round of local search by swaping position of 2 random leaves
@@ -292,7 +292,7 @@ public:
      *  This is called after an NNI is reverted.
      *  @param nnimove the NNI move currently in consideration
      */
-    void restoreNNIBranches(NNIMove nnimove);
+    //void restoreNNIBranches(NNIMove nnimove);
 
     /**
             generate non conflicting NNI moves.
@@ -308,8 +308,10 @@ public:
        @param node2 1 of the 2 nodes on the branch
      * @param approx_nni evaluate NNI based on "Bayes"
      * @param useLS evaluate NNI based on Least Square
+     * @param nniMoves (IN/OUT) detailed information of the 2 NNIs, set .ptnlh to compute pattern likelihoods
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL,
+    		bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
 
     /**
             add a NNI move to the list of possible NNI moves;

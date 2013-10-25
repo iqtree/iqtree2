@@ -432,7 +432,7 @@ double PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf
     return -tree_lh;
 }
 
-NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni, bool useLS, double lh_contribution)
+NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves, bool approx_nni, bool useLS, double lh_contribution)
 {
     NNIMove myMove;
     myMove.newloglh = 0;
@@ -485,7 +485,7 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 		myMove.node1 = node1;
 		myMove.node2 = node2;
 		myMove.newLen[0] = nni_param.nni1_brlen;
-		myMove.oldLen[0] = oldLEN;
+		//myMove.oldLen[0] = oldLEN;
 	} else {
 		myMove.swap_id = 2;
 		myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
@@ -494,7 +494,7 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 		myMove.node1 = node1;
 		myMove.node2 = node2;
 		myMove.newLen[0] = nni_param.nni2_brlen;
-		myMove.oldLen[0] = oldLEN;
+		//myMove.oldLen[0] = oldLEN;
 	}
 	// ========================================================================
 
