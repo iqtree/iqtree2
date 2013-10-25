@@ -226,7 +226,7 @@ public:
     /*
      *  perform a guided pertubation instead of doing IQP
      */
-    double doGuidedPertubation();
+    double pllDoGuidedPerturbation();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
@@ -464,6 +464,11 @@ public:
 protected:
 
     /**
+     *  Determine whether during tree search whether the diversification process should start
+     */
+    bool diversification;
+
+    /**
      *  Current IQPNNI iteration number
      */
     int curIteration;
@@ -488,12 +493,13 @@ protected:
     map<int, int> freqList;
 
     /*
-     *  This is nniList of generated from the best fastNNI
+     *  This is nniList of containing a sorted list of all NNIs (2n-6) evaluated in the last FastNNI
+     *  The last element (nni_for_pertub.end()) is the best NNI
      */
     vector<pllNNIMove> nni_for_pertub;
 
     /*
-     *  nniList of the most recent fastNNI
+     *  Contains list of unapplied NNIs during the pertubation steps
      */
     vector<pllNNIMove> curNNIList;
 
@@ -585,6 +591,12 @@ protected:
     void clearLeafFrequency();
 
 public:
+
+    /**
+     *  variable storing the current best tree topology
+     */
+    topol* pllBestTree;
+
     /**
      * The current best score found
      */

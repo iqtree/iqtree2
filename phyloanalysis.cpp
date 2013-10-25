@@ -1102,7 +1102,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
         stringstream mytree;
         for (int treeNr = 0; treeNr < 10; treeNr++) {
         	/* Set up the random seed for each parsimony tree */
-        	pars_seed = pars_seed + treeNr * 123456;
+        	pars_seed = pars_seed + treeNr * 100000;
         	iqtree.pllInst->randomNumberSeed = pars_seed;
             pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions);
             Tree2String(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
@@ -1563,6 +1563,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		cout << "Branch length optimization method : "
 				<< ((iqtree.optimize_by_newton) ? "Newton" : "Brent") << endl;
 		cout << endl;
+		saveTree( iqtree.pllInst, iqtree.pllBestTree, iqtree.pllPartitions->numberOfPartitions );
 		iqtree.doIQPNNI();
 		iqtree.setAlignment(alignment);
 	} else {

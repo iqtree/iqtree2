@@ -1411,6 +1411,16 @@ double randomLen(Params &params);
  */
 double logFac(const int num);
 
+/**
+ * Function to randomly select an element in a C++ container
+ *
+ * @param begin
+ * @param end
+ * @return
+ */
+template <typename I>
+I random_element(I begin, I end);
+
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 /*

@@ -76,6 +76,8 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis) {
 	int numBranches = pr->numberOfPartitions;
 	int i;
 	for (i = 0; i < numNNI; i++) {
+		if ( nnis[i].likelihood == 0.0 )
+			break;
 		/* First, do the topological change */
 		doOneNNI(tr, pr, nnis[i].p, nnis[i].nniType, TOPO_ONLY);
 		/* Then apply the new branch lengths */
@@ -222,6 +224,11 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove** out_nniList,
 				printf("ERROR: failed to roll back tree \n");
 				exit(1);
 			} else {
+				/*
+				printf("initLH = %10.4f\n", initLH);
+				pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+				printf("lolg after restoring = %10.4f\n", tr->likelihood);
+				*/
 				rollBack = PLL_TRUE;
 			}
 			/* Only apply the best NNI after the tree has been rolled back */
@@ -455,6 +462,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 	/* Restore previous NNI move */
 	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
 	/* Restore the old branch length */
+	/*
 	for (i = 0; i < numBranches; i++) {
 		p->z[i] = nni0.z0[i];
 		q->z[i] = nni0.z0[i];
@@ -467,6 +475,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 		q->next->next->z[i] = nni0.z4[i];
 		q->next->next->back->z[i] = nni0.z4[i];
 	}
+	*/
 
 	/* do an NNI move of type 2 */
 	double lh2;

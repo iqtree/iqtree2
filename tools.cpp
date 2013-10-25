@@ -665,7 +665,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.gamma_shape = -1.0;
     params.gamma_median = false;
     params.p_invar_sites = -1.0;
-    params.optimize_model_rate_joint = false;
+    params.optimize_model_rate_joint = true;
     params.optimize_by_newton = true;
     params.fixed_branch_length = false;
     params.iqp_assess_quartet = IQP_DISTANCE;
@@ -1994,6 +1994,18 @@ double logFac(const int num) {
     for (int i = 1; i <= num; i++)
         ret += log((double) i);
     return ret;
+}
+
+template <typename I>
+I random_element(I begin, I end)
+{
+    const unsigned long n = std::distance(begin, end);
+    const unsigned long divisor = (RAND_MAX + 1) / n;
+
+    unsigned long k;
+    do { k = std::rand() / divisor; } while (k >= n);
+
+    return std::advance(begin, k);
 }
 
 template <class T>
