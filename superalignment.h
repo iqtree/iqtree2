@@ -35,8 +35,8 @@ struct PartitionInfo {
 
 	DoubleVector null_score; // log-likelihood of each branch collapsed to zero
 	//DoubleVector opt_score;  // optimized log-likelihood for every branch
-	DoubleVector nni1_score; // log-likelihood for 1st NNI for every branch
-	DoubleVector nni2_score; // log-likelihood for 2nd NNI for every branch
+	//DoubleVector nni1_score; // log-likelihood for 1st NNI for every branch
+	//DoubleVector nni2_score; // log-likelihood for 2nd NNI for every branch
 
 	DoubleVector cur_brlen;  // current branch lengths
 	//DoubleVector opt_brlen;  // optimized branch lengths for every branch
@@ -45,9 +45,8 @@ struct PartitionInfo {
 
 	double *mem_ptnlh; // total memory allocated for all pattern likelihood vectors
 	double *cur_ptnlh; // current pattern likelihoods of the tree
-	//vector<double* > opt_ptnlh; // pattern likelihoods of tree where one branch is optimized
-	vector<double* > nni1_ptnlh; // pattern likelihoods of 1st NNI tree
-	vector<double* > nni2_ptnlh; // pattern likelihoods of 2nd NNI tree
+	double *nni1_ptnlh; // pattern likelihoods of 1st NNI tree
+	double *nni2_ptnlh; // pattern likelihoods of 2nd NNI tree
 };
 
 class PhyloSuperTree;

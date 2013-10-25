@@ -628,6 +628,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.siteLL_file = NULL; //added by MA
     params.partition_file = NULL;
     params.partition_type = 0;
+    params.remove_empty_seq = true;
     params.sequence_type = NULL;
     params.aln_output = NULL;
     params.aln_site_list = NULL;
@@ -657,13 +658,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_name = "";
     params.model_set = NULL;
     params.store_trans_matrix = false;
-    params.freq_type = FREQ_EMPIRICAL;
-    //params.freq_type = FREQ_UNKNOWN;
+    //params.freq_type = FREQ_EMPIRICAL;
+    params.freq_type = FREQ_UNKNOWN;
     params.num_rate_cats = 4;
     params.gamma_shape = -1.0;
     params.gamma_median = false;
     params.p_invar_sites = -1.0;
-    params.optimize_gamma_invar_by_bfgs = false;
+    params.optimize_model_rate_joint = false;
     params.optimize_by_newton = true;
     params.fixed_branch_length = false;
     params.iqp_assess_quartet = IQP_DISTANCE;
@@ -1156,6 +1157,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             	    throw "Use -spj <type of partition model>";
                 params.partition_file = argv[cnt];
                 params.partition_type = 'j';
+            } else if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
+            	params.remove_empty_seq = false;
             } else if (strcmp(argv[cnt], "-sf") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1331,10 +1334,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (params.p_invar_sites < 0) throw "Wrong number of proportion of invariable sites";
             } else if (strcmp(argv[cnt], "-brent") == 0) {
                 params.optimize_by_newton = false;
-            } else if (strcmp(argv[cnt], "-ginvar") == 0) {
-                params.optimize_gamma_invar_by_bfgs = true;
+            } else if (strcmp(argv[cnt], "-jointopt") == 0) {
+                params.optimize_model_rate_joint = true;
             } else if (strcmp(argv[cnt], "-brent_ginvar") == 0) {
-                params.optimize_gamma_invar_by_bfgs = false;
+                params.optimize_model_rate_joint = false;
             } else if (strcmp(argv[cnt], "-fixbr") == 0) {
                 params.fixed_branch_length = true;
             } else if (strcmp(argv[cnt], "-sr") == 0) {
@@ -1527,7 +1530,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.avoid_duplicated_trees = true;
                 if (params.gbo_replicates < 1000) throw "#replicates must be >= 1000";
                 params.consensus_type = CT_CONSENSUS_TREE;
-                params.nni5Branches = true;
+                //params.nni5Branches = true;
 			} else if (strcmp(argv[cnt], "-beps") == 0) {
 				cnt++;
 				if (cnt >= argc)

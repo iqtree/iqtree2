@@ -252,8 +252,8 @@ void RateMeyerDiscrete::computePatternRates(DoubleVector &pattern_rates, IntVect
 	return tree_lh;
 }*/
 
-double RateMeyerDiscrete::optimizeParameters() {
-	if (!is_categorized) return RateMeyerHaeseler::optimizeParameters();
+double RateMeyerDiscrete::optimizeParameters(double epsilon) {
+	if (!is_categorized) return RateMeyerHaeseler::optimizeParameters(epsilon);
 	phylo_tree->calcDist(dist_mat);
 	for (int i = 0; i < ncategory; i++)
 		optimizeCatRate(i);

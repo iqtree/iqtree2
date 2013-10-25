@@ -22,12 +22,9 @@
 #include <assert.h>
 #include <string.h>
 
-const double MIN_RATE = 1e-4;
-const double TOL_RATE = 1e-4;
-const double MAX_RATE = 100;
 
 GTRModel::GTRModel(PhyloTree *tree, bool count_rates)
- : ModelSubst(tree->aln->num_states), Optimization(), EigenDecomposition()
+ : ModelSubst(tree->aln->num_states), EigenDecomposition()
 {
 	int i;
 	int nrate = getNumRateEntries();
@@ -358,7 +355,7 @@ double GTRModel::targetFunk(double x[]) {
 }
 
 
-double GTRModel::optimizeParameters() {
+double GTRModel::optimizeParameters(double epsilon) {
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
@@ -390,7 +387,7 @@ double GTRModel::optimizeParameters() {
 			upper_bound[i] = 1.0;
 	}
 	//packData(variables, lower_bound, upper_bound, bound_check);
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, TOL_RATE);
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_RATE));
 
 	getVariables(variables);
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);

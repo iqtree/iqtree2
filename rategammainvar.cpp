@@ -24,7 +24,7 @@ RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median, double p_inv
 {
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
-	optimize_gamma_invar_by_bfgs = simultaneous;
+	joint_optimize = simultaneous;
 }
 
 
@@ -50,23 +50,15 @@ void RateGammaInvar::writeParameters(ostream &out) {
 }
 
 void RateGammaInvar::setVariables(double *variables) {
+	RateGamma::setVariables(variables);
 	int gid = RateGamma::getNDim();
-	if (gid == 1) {
-		variables[1] = gamma_shape;
-	}
-	if (RateInvar::getNDim() == 1) {
-		variables[gid+1] = p_invar;
-	}
+	RateInvar::setVariables(variables+gid);
 }
 
 void RateGammaInvar::getVariables(double *variables) {
 	int gid = RateGamma::getNDim();
-	if (gid == 1) {
-		gamma_shape = variables[1];
-	}
-	if (RateInvar::getNDim() == 1) {
-		p_invar = variables[gid+1];
-	}
+	RateGamma::getVariables(variables);
+	RateInvar::getVariables(variables+gid);
 }
 
 double RateGammaInvar::targetFunk(double x[]) {
@@ -78,16 +70,21 @@ double RateGammaInvar::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
+void RateGammaInvar::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+	int gid = RateGamma::getNDim();
+	RateGamma::setBounds(lower_bound, upper_bound, bound_check);
+	RateInvar::setBounds(lower_bound+gid, upper_bound+gid, bound_check+gid);
+}
 
-double RateGammaInvar::optimizeParameters() {
+double RateGammaInvar::optimizeParameters(double epsilon) {
 
 
-	if (!optimize_gamma_invar_by_bfgs) {
+	if (!joint_optimize) {
 		double tree_lh;
-		cur_optimize = 1;
-		tree_lh = RateInvar::optimizeParameters();
 		cur_optimize = 0;
-		tree_lh = RateGamma::optimizeParameters();
+		tree_lh = RateGamma::optimizeParameters(epsilon);
+		cur_optimize = 1;
+		tree_lh = RateInvar::optimizeParameters(epsilon);
 		phylo_tree->clearAllPartialLH();
 		return tree_lh;
 	}
@@ -111,19 +108,9 @@ double RateGammaInvar::optimizeParameters() {
 
 	// by BFGS algorithm
 	setVariables(variables);
-	int gid = RateGamma::getNDim();
-	if (gid == 1) {
-		lower_bound[1] = MIN_GAMMA_SHAPE;
-		upper_bound[1] = MAX_GAMMA_SHAPE;
-		bound_check[1] = false;
-	}
-	if (RateInvar::getNDim() == 1) {
-		lower_bound[gid+1] = MIN_PINVAR;
-		upper_bound[gid+1] = phylo_tree->aln->frac_const_sites;
-		bound_check[gid+1] = false;
-	}
-		//packData(variables, lower_bound, upper_bound, bound_check);
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, TOL_GAMMA_SHAPE);
+	setBounds(lower_bound, upper_bound, bound_check);
+
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_GAMMA_SHAPE));
 
 	getVariables(variables);
 

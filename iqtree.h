@@ -203,7 +203,7 @@ public:
      */
     double doVNS();
 
-    bool containPosNNI(vector<NNIMove> posNNIs);
+    //bool containPosNNI(vector<NNIMove> posNNIs);
 
     /**
      * Perturb the tree for the next round of local search by swaping position of 2 random leaves
@@ -292,24 +292,13 @@ public:
      *  This is called after an NNI is reverted.
      *  @param nnimove the NNI move currently in consideration
      */
-    void restoreNNIBranches(NNIMove nnimove);
+    //void restoreNNIBranches(NNIMove nnimove);
 
     /**
             generate non conflicting NNI moves.
             moves are saved in vec_nonconf_nni
      */
     void genNonconfNNIs();
-
-    /**
-       search for the best NNI move corresponding to this branch
-       @return NNIMove the best NNI, this NNI could be worse than the current tree
-       according to the evaluation scheme in use
-       @param node1 1 of the 2 nodes on the branch
-       @param node2 1 of the 2 nodes on the branch
-     * @param approx_nni evaluate NNI based on "Bayes"
-     * @param useLS evaluate NNI based on Least Square
-     */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
 
     /**
             add a NNI move to the list of possible NNI moves;
@@ -578,8 +567,6 @@ protected:
 
 public:
     /****** following variables are for ultra-fast bootstrap *******/
-    /** 2 to save all trees, 1 to save intermediate trees */
-    int save_all_trees;
 
     /** TRUE to save also branch lengths into treels_newick */
     bool save_all_br_lens;

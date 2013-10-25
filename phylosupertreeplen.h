@@ -66,7 +66,7 @@ class SuperAlignmentPairwisePlen : public SuperAlignmentPairwise {
 
 };
 // ======================================================================================================
-class PartitionModelPlen : public PartitionModel, public Optimization
+class PartitionModelPlen : public PartitionModel
 {
 public:
     PartitionModelPlen();
@@ -93,7 +93,7 @@ public:
 		@param fixed_len TRUE to fix branch lengths, default is false
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double epsilon = 1e-6);
+	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double epsilon = 0.001);
 
 	double optimizeGeneRate(double tol);
 
@@ -162,7 +162,7 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL, bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
 
     /**
             Do an NNI on the supertree and synchronize all subtrees respectively

@@ -1202,11 +1202,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		if (!iqtree.getModelFactory()) {
 			if (iqtree.isSuperTree()){
 				if(params.partition_type){
-					iqtree.setModelFactory(
-							new PartitionModelPlen(params, (PhyloSuperTreePlen*) &iqtree));
+					iqtree.setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) &iqtree));
 				} else
-					iqtree.setModelFactory(
-							new PartitionModel(params, (PhyloSuperTree*) &iqtree));
+					iqtree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*) &iqtree));
 			} else {
 				/*
 				if (params.raxmllib && alignment->num_states == 4) {
@@ -1245,10 +1243,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
     	outError("Memory required exceeds your computer RAM size!");
     }
 
-	cout << "Optimize model parameters ... " << endl;
+	cout << "Optimize model parameters " << (params.optimize_model_rate_joint ? "jointly":"")
+			<< " (tolerace " << TOL_LIKELIHOOD_PARAMOPT << ")... " << endl;
 
     // Optimize model parameters and branch lengths using ML for the initial tree
-    bestTreeScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD);
+    bestTreeScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT);
 
 	// Save current tree to a string
     iqtree.curScore = bestTreeScore;
@@ -1585,9 +1584,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.initializeAllPartialLh();
 		iqtree.clearAllPartialLH();
 		cout << "Optimizing model parameters" << endl;
-		iqtree.setBestScore(
-				iqtree.getModelFactory()->optimizeParameters(
-						params.fixed_branch_length));
+		iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT));
 	} else {
 		iqtree.setBestScore(iqtree.curScore);
 	}

@@ -45,12 +45,16 @@ public:
 	*/
 	virtual double computeFunction(double value);
 
+	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
 
 	/**
 		optimize parameters
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters();
+	virtual double optimizeParameters(double epsilon);
 
 
 	/**
@@ -77,6 +81,9 @@ public:
 	*/
 	virtual void writeParameters(ostream &out);
 
+	/** TRUE to jointly optimize gamma shape and p_invar using BFGS, default: FALSE */
+	bool joint_optimize;
+
 protected:
 
 	/**
@@ -93,7 +100,6 @@ protected:
 	*/
 	virtual void getVariables(double *variables);
 
-	bool optimize_gamma_invar_by_bfgs;
 private:
 	
 	/**
