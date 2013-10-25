@@ -1095,6 +1095,8 @@ MTree::~MTree()
 
 int MTree::freeNode(Node *node, Node *dad)
 {
+	if ( root == NULL )
+		return 0;
     if (!node) node = root;
     NeighborVec::reverse_iterator it;
     int num_nodes = 1;

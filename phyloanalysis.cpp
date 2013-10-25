@@ -966,13 +966,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	double t_begin, t_end;
 	t_begin = getCPUTime();
 
-	// 10 parsimony trees
-	string parsTreeString[10];
-
 	/* Initialized all data strucutre for PLL*/
 	/* Set the PLL instance attributes */
-	// TODO Check whether this initialization already contains memory allocation for likelihood vector
-	// Sometimes we don't use PLL afterwards and therefore don't need to waste the memory
 	iqtree.pllAttr.rateHetModel = PLL_GAMMA;
 	iqtree.pllAttr.fastScaling = PLL_FALSE;
 	iqtree.pllAttr.saveMemory = PLL_FALSE;
@@ -1096,28 +1091,20 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		cout << "CREATING PARSIMONY TREE BY IQTree ..." << endl;
 		iqtree.computeParsimonyTree(params.out_prefix, alignment);
     } else if (params.bestStart) {
-        cout << "Creating 10 different parsimony trees ... " << endl;
-        double tParsBegin = getCPUTime();
-        unsigned int pars_seed = params.ran_seed;
-        stringstream mytree;
-        for (int treeNr = 0; treeNr < 10; treeNr++) {
-        	/* Set up the random seed for each parsimony tree */
-        	pars_seed = pars_seed + treeNr * 100000;
-        	iqtree.pllInst->randomNumberSeed = pars_seed;
-            pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions);
-            Tree2String(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-            mytree.str(iqtree.pllInst->tree_string);
-			if (treeNr == 0) {
-				/* Take the first tree to optimize model parameters */
-				iqtree.readTree(mytree, iqtree.rooted);
-				iqtree.setAlignment(alignment);
-			}
-			parsTreeString[treeNr] = mytree.str();
-            cout << "Parsimony score " << treeNr + 1 << ": " << iqtree.pllInst->bestParsimony << endl;;
-        }
-        double tParsEnd = getCPUTime();
-        cout << "CPU time for constructing parsimony trees: " << tParsEnd - tParsBegin << endl;
-
+		// generate a parsimony tree for model optimization
+		/* Set up the random seed for each parsimony tree */
+		iqtree.pllInst->randomNumberSeed = params.ran_seed;
+		pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst,
+				iqtree.pllPartitions);
+		Tree2String(iqtree.pllInst->tree_string, iqtree.pllInst,
+				iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_FALSE,
+				PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH,
+				PLL_FALSE, PLL_FALSE);
+		/* Take the first tree to optimize model parameters */
+		stringstream parsTreeString;
+		parsTreeString << iqtree.pllInst->tree_string;
+		iqtree.readTree(parsTreeString, iqtree.rooted);
+		iqtree.setAlignment(alignment);
 	} else {
 		// This is the old default option: using BIONJ as starting tree
 		iqtree.computeBioNJ(params, alignment, dist_file);
@@ -1317,97 +1304,91 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		//cout << "Fast parsimony score: " << tree.cur_pars_score << endl;
 	}
 
+	// TODO: Here the likelihood is also compute, so check whether it is needed
+	pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
+	/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
+	// get the alpha parameter
+	double alpha = iqtree.getRate()->getGammaShape();
+	if (alpha == 0.0)
+		alpha = PLL_ALPHA_MAX;
+	if (iqtree.aln->num_states == 4) {
+		// get the rate parameters
+		// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
+		double *rate_param = new double[6];
+		iqtree.getModel()->getRateMatrix(rate_param);
+		// get the state frequencies
+		double *state_freqs = new double[iqtree.aln->num_states];
+		iqtree.getModel()->getStateFrequency(state_freqs);
+
+		/* put them into PLL */
+		stringstream linkagePattern;
+		int partNr;
+		for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions - 1;
+				partNr++) {
+			linkagePattern << partNr << ",";
+		}
+		linkagePattern << partNr;
+		char *pattern = new char[linkagePattern.str().length() + 1];
+		strcpy(pattern, linkagePattern.str().c_str());
+		pllLinkAlphaParameters(pattern, iqtree.pllPartitions);
+		pllLinkFrequencies(pattern, iqtree.pllPartitions);
+		pllLinkRates(pattern, iqtree.pllPartitions);
+		delete[] pattern;
+
+		for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions;
+				partNr++) {
+			pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions,
+					iqtree.pllInst);
+			pllSetFixedBaseFrequencies(state_freqs, 4, partNr,
+					iqtree.pllPartitions, iqtree.pllInst);
+			pllSetFixedSubstitutionMatrix(rate_param, 6, partNr,
+					iqtree.pllPartitions, iqtree.pllInst);
+		}
+		delete[] rate_param;
+		delete[] state_freqs;
+	} else if (iqtree.aln->num_states == 20) {
+		double *state_freqs = new double[iqtree.aln->num_states];
+		int partNr;
+		for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions;
+				partNr++) {
+			pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions,
+					iqtree.pllInst);
+			pllSetFixedBaseFrequencies(state_freqs, 20, partNr,
+					iqtree.pllPartitions, iqtree.pllInst);
+		}
+		delete[] state_freqs;
+	} else {
+		if (params.pll) {
+			outError("Phylogenetic likelihood library current does not support data type other than DNA or Protein");
+		}
+	}
 	if (params.min_iterations > 0) {
 		double initialTreeTime = getCPUTime();
-		/* Now do fastNNI on 10 parsimony trees to determine the best one */
+		/* Now generate 10 fastNNI tree and choose the best */
 		double bestLH = -DBL_MAX;
 		string bestTreeString;
 		for ( int treeNr = 0; treeNr < 10; treeNr++ ) {
-	    	pllNewickTree *newick;
-	    	if (treeNr == 0) {
-	    		if (params.pll) {
-		    		stringstream optimizedTree;
-		    		iqtree.printTree(optimizedTree);
-		    		newick = pllNewickParseString(optimizedTree.str().c_str());
-		        	pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-	    		}
-	    	} else {
-	    		if (params.pll) {
-		        	newick = pllNewickParseString( parsTreeString[treeNr].c_str() );
-		        	pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
-	    		} else {
-	    			iqtree.readTreeString( (parsTreeString[treeNr]) );
-	    			iqtree.curScore = iqtree.optimizeAllBranches();
-	    		}
-
-	    	}
-	    	if (!pllLoadAlignment(iqtree.pllInst, iqtree.pllAlignment, iqtree.pllPartitions, PLL_DEEP_COPY)) {
-	    		fprintf(stderr, "Incompatible tree/alignment combination\n");
-	    		exit (1);
-	    	}
-
-	    	if (params.pll) {
-				// TODO: Here the likelihood is also compute, so check whether it is needed
-				pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-		    	/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
-	    		// get the alpha parameter
-	    		double alpha = iqtree.getRate()->getGammaShape();
-	    		if (alpha == 0.0)
-	    			alpha = PLL_ALPHA_MAX;
-		    	if (iqtree.aln->num_states == 4) {
-		    		// get the rate parameters
-		    		// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
-		    		double *rate_param = new double[6];
-		    		iqtree.getModel()->getRateMatrix(rate_param);
-		    		// get the state frequencies
-		    		double *state_freqs = new double[iqtree.aln->num_states];
-		    		iqtree.getModel()->getStateFrequency(state_freqs);
-
-		    		/* put them into PLL */
-		    		stringstream linkagePattern;
-		    		int partNr;
-		    		for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions - 1; partNr++) {
-		    			linkagePattern << partNr << ",";
-		    		}
-		    		linkagePattern << partNr;
-		    		char *pattern = new char [linkagePattern.str().length()+1];
-		    		strcpy (pattern, linkagePattern.str().c_str());
-		    	    pllLinkAlphaParameters( pattern, iqtree.pllPartitions);
-		    	    pllLinkFrequencies( pattern, iqtree.pllPartitions);
-		    	    pllLinkRates( pattern, iqtree.pllPartitions);
-		    	    delete [] pattern;
-
-		    	    for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions; partNr++) {
-		    		    pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions, iqtree.pllInst);
-		    		    pllSetFixedBaseFrequencies(state_freqs, 4, partNr, iqtree.pllPartitions, iqtree.pllInst);
-		    		    pllSetFixedSubstitutionMatrix(rate_param, 6, partNr, iqtree.pllPartitions, iqtree.pllInst);
-		    	    }
-		    		delete [] rate_param;
-		    		delete [] state_freqs;
-		    	} else if(iqtree.aln->num_states == 20) {
-		    		double *state_freqs = new double[iqtree.aln->num_states];
-		    		int partNr;
-		    	    for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions; partNr++) {
-		    		    pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions, iqtree.pllInst);
-		    		    pllSetFixedBaseFrequencies(state_freqs, 20, partNr, iqtree.pllPartitions, iqtree.pllInst);
-		    	    }
-		    	    delete [] state_freqs;
-		    	} else {
-		    		if (params.pll) {
-		    			outError("Phylogenetic likelihood library current does not support data type other than DNA or Protein");
-		    		}
-		    	}
-		    	if ( treeNr == 0 ) {
-		        	pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-		        	pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-					//pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 100);
-		    	} else {
-					pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
-					pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-					pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 2);
+			if (treeNr != 0) {
+				iqtree.pllInst->randomNumberSeed = params.ran_seed + treeNr * 12345;
+				pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions);
+				if ( ! params.pll ) {
+					Tree2String(iqtree.pllInst->tree_string, iqtree.pllInst,
+							iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_FALSE,
+							PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH,
+							PLL_FALSE, PLL_FALSE);
+					string parsTreeString(iqtree.pllInst->tree_string);
+					iqtree.readTreeString( parsTreeString );
+					iqtree.setAlignment(alignment);
 				}
-		    	delete newick;
-	    	}
+			}
+
+			if (params.pll) {
+				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions,
+						iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
+				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 8);
+			} else {
+				iqtree.curScore = iqtree.optimizeAllBranches();
+			}
 
 	    	/* Now do NNI */
 	    	int nni_count, nni_steps;
