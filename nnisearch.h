@@ -84,9 +84,10 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,  pllNNIMove* n
  * @param tr
  * @param pr
  * @param nnis list of all NNI to apply
+ * @param numNNI size of the array nnis
  * @return
  */
-double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis);
+double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int numNNI);
 
 /**
  * 	do 1 round of fastNNI
@@ -97,7 +98,7 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis);
  *  @param[out] nni_count pointer to the number of NNI that has been apply (OUT parameter)
  *  @param[out] deltaNNI pointer to the average improvement made by one NNI (OUT parameters)
  */
-double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove** nniList, int* nni_count, double* deltaNNI);
+double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* nniList, int* nni_count, double* deltaNNI);
 
 /**
  *  perturb the current tree by randomly carrying some negative NNI moves

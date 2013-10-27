@@ -441,6 +441,22 @@ public:
         return nni_cutoff;
     }
 
+    /*
+     *  Contains a sorted list of all NNIs (2n-6) evaluated in the LAST BEST FastNNI
+     *  The last element (nni_for_pertub.end()) is the best NNI
+     */
+    vector<pllNNIMove> bestNNIList;
+
+    /**
+     *  Contains a sorted list of all NNIs (2n-6) evaluated in the LAST FastNNI
+     */
+    vector<pllNNIMove> curNNIList;
+
+    /*
+     *  Contains list of unapplied NNIs during the pertubation steps
+     */
+    vector<pllNNIMove> perturbNNIList;
+
     /**
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
      */
@@ -491,18 +507,6 @@ protected:
      * Array that stores the frequency that each taxa has been choosen to be swapped
      */
     map<int, int> freqList;
-
-    /*
-     *  This is nniList of containing a sorted list of all NNIs (2n-6) evaluated in the last FastNNI
-     *  The last element (nni_for_pertub.end()) is the best NNI
-     */
-    vector<pllNNIMove> nni_for_pertub;
-
-    /*
-     *  Contains list of unapplied NNIs during the pertubation steps
-     */
-    vector<pllNNIMove> curNNIList;
-
 
     /**
      * Taxa set
@@ -591,6 +595,11 @@ protected:
     void clearLeafFrequency();
 
 public:
+
+    /**
+     *  adjustPertubSize = ((n-3)/perturbSize + 1) * perturbSize
+     */
+    int intesifyPertubListSize;
 
     /**
      *  variable storing the current best tree topology

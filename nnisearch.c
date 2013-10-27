@@ -71,14 +71,13 @@ pllNNIMove *getNonConflictNNIList(pllInstance* tr) {
 	return nonConfNNIList;
 }
 
-double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis) {
-	int numNNI = sizeof(nnis) / sizeof(pllNNIMove);
+double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int numNNI) {
 	int numBranches = pr->numberOfPartitions;
 	int i;
+	printf("Perturbing %d NNIs \n", numNNI);
 	for (i = 0; i < numNNI; i++) {
-		if ( nnis[i].likelihood == 0.0 )
-			break;
 		/* First, do the topological change */
+		printf("Do pertubing NNI (%d - %d) with logl = %10.4f \n", nnis[i].p->number, nnis[i].p->back->number, nnis[i].likelihood);
 		doOneNNI(tr, pr, nnis[i].p, nnis[i].nniType, TOPO_ONLY);
 		/* Then apply the new branch lengths */
 		int j;
@@ -100,7 +99,7 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis) {
 	return tr->likelihood;
 }
 
-double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove** out_nniList, int* nni_count, double* deltaNNI) {
+double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, int* nni_count, double* deltaNNI) {
 	/* save the initial tree likelihood, used for comparison */
 	double initLH = tr->likelihood;
 
@@ -132,14 +131,9 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove** out_nniList,
 	assert(totalNNIs == (2 * (tr->mxtips - 3)));
 	/* Sort the NNI list ascendingly according to the log-likelihood */
 	qsort(nniList, totalNNIs, sizeof(pllNNIMove), cmp_nni);
-	*out_nniList = nniList;
-
-//	int nniListSize = 2 * (tr->mxtips - 3);
-//	assert ( out_nniList != NULL );
-//	int i;
-//	for ( i = 0; i < nniListSize; i++ ) {
-//		out_nniList[i] = nniList[i];
-//	}
+    for ( int i = 0; i < totalNNIs; i++) {
+    	out_nniList[i] = nniList[i];
+    }
 
 	/* Generate a list of independent positive NNI */
 	pllNNIMove* inNNIs = getNonConflictNNIList(tr);
@@ -653,7 +647,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 
 void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nniList, int* numBran, int* numPosNNI,
 		double curLH) {
-	if (!isTip(p->number, tr->mxtips)) {
+	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
 		int betterNNI = evalNNIForBran(tr, pr, p, nniList, numBran, curLH);
 		if (betterNNI) {
 			*numPosNNI = *numPosNNI + 1;
