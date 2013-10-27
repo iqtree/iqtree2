@@ -210,7 +210,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, 
 						tr->likelihood, inNNIs[0].likelihood);
 				exit(1);
 			}
-			printf("%d NNIs logl=%10.4f/best NNI logl= %10.4f. Roll back tree...\n", numNNI, tr->likelihood,
+			printf("%d NNIs logl=%10.4f/best NNI logl= %10.4f. Roll back tree...", numNNI, tr->likelihood,
 					inNNIs[0].likelihood);
 
 			/* restore all branch lengths */

@@ -1371,7 +1371,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		/* Now generate 10 fastNNI tree and choose the best */
 		double bestLH = -DBL_MAX;
 		string bestTreeString;
-		for ( int treeNr = 0; treeNr < 1; treeNr++ ) {
+		for ( int treeNr = 0; treeNr < 10; treeNr++ ) {
 			if (treeNr != 0) {
 				iqtree.pllInst->randomNumberSeed = params.ran_seed + treeNr * 12345;
 				pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions);
@@ -1408,10 +1408,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	    	if ( treeLH > bestLH ) {
 	    		bestLH = treeLH;
 	    		if ( params.pll ) {
-					Tree2String (iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-					bestTreeString = string(iqtree.pllInst->tree_string);
 					// do more branch length optimization
 					pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 8);
+					Tree2String (iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+					bestTreeString = string(iqtree.pllInst->tree_string);
 					iqtree.bestScore = iqtree.pllInst->likelihood;
 					if (iqtree.pllBestTree == NULL) {
 						iqtree.pllBestTree = setupTopol(iqtree.pllInst->mxtips);
@@ -1421,6 +1421,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 					iqtree.bestNNIList.assign(iqtree.curNNIList.begin(), iqtree.curNNIList.end());
 					iqtree.perturbNNIList.assign(iqtree.curNNIList.begin(), iqtree.curNNIList.end());
 	    		} else {
+	    			iqtree.curScore = iqtree.optimizeAllBranches();
 	    			stringstream str;
 	    			iqtree.printTree(str);
 	    			bestTreeString = str.str();

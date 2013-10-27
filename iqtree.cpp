@@ -1008,7 +1008,7 @@ double IQTree::doIQPNNI() {
             randomizeNeighbors();
         }
 
-
+        double startScore;
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // create bootstrap sample
             enableHeuris = false;
@@ -1030,6 +1030,7 @@ double IQTree::doIQPNNI() {
             } else {
                 if (!params->pll) {
                     curScore = doIQP();
+                    startScore = curScore;
                     if (verbose_mode >= VB_MAX) {
                         cout << "LH IQP = " << curScore << endl;
                     }
@@ -1112,6 +1113,7 @@ double IQTree::doIQPNNI() {
 								<< endl;
 					}
                     curScore = pllInst->likelihood;
+                    startScore = curScore;
                 }
             }
 
@@ -1220,7 +1222,7 @@ double IQTree::doIQPNNI() {
             // NNI search was skipped according to the speed up heuristics
             if (!skipped) {
                 cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIteration
-                        << " / LogL: " << curScore << " / NNIs: " << nni_count << " / NNI steps: " << nni_steps << " / CPU time: " << (int) round(cputime_secs) << "s";
+                        << " / Start logl: " << startScore << " - End LogL: " << curScore << " / NNIs: " << nni_count << " / NNI steps: " << nni_steps << " / CPU time: " << (int) round(cputime_secs) << "s";
                 if (curIteration > 10 && cputime_secs > 10)
                     cout << " (" << (int) round(cputime_remaining) << "s left)";
                 cout << endl;
@@ -1477,7 +1479,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
                 applyNNIs(nni2apply, false);
                 // restore the branch lengths
                 restoreAllBranLen();
-                curScore = computeLikelihood();
+                curScore = oldScore;
                 break;
             }
 
@@ -1514,6 +1516,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
         saveCurrentTree(curScore); // BQM: for new bootstrap
         saveNNITrees(); // optimize 5 branches around NNI, this makes program slower
     }*/
+    curScore = optimizeAllBranches(8);
     return curScore;
 }
 
@@ -1593,7 +1596,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
     }
 
     // Re-optimize all branches
-    pllTreeEvaluate(pllInst, pllPartitions, 64);
+    pllTreeEvaluate(pllInst, pllPartitions, 8);
 
     // copy the nniList
     curNNIList.assign(nniList, nniList + nniListSize);

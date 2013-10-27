@@ -3144,7 +3144,7 @@ int pllInitModel (pllInstance * tr, partitionList * partitions, pllAlignmentData
 
   rax_free(unlinked);
 
-  pllEvaluateGeneric (tr, partitions, tr->start, PLL_TRUE, PLL_FALSE);
+  //pllEvaluateGeneric (tr, partitions, tr->start, PLL_TRUE, PLL_FALSE);
 
   return PLL_TRUE;
 }
