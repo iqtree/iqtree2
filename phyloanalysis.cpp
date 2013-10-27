@@ -1308,64 +1308,69 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		//cout << "Fast parsimony score: " << tree.cur_pars_score << endl;
 	}
 
-	// TODO: Here the likelihood is also compute, so check whether it is needed
-	pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-	/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
-	// get the alpha parameter
-	double alpha = iqtree.getRate()->getGammaShape();
-	if (alpha == 0.0)
-		alpha = PLL_ALPHA_MAX;
-	if (iqtree.aln->num_states == 4) {
-		// get the rate parameters
-		// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
-		double *rate_param = new double[6];
-		iqtree.getModel()->getRateMatrix(rate_param);
-		// get the state frequencies
-		double *state_freqs = new double[iqtree.aln->num_states];
-		iqtree.getModel()->getStateFrequency(state_freqs);
+	if (params.pll) {
+		// TODO: Here the likelihood is also compute, so check whether it is needed
+		pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
+		/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
+		// get the alpha parameter
+		double alpha = iqtree.getRate()->getGammaShape();
+		if (alpha == 0.0)
+			alpha = PLL_ALPHA_MAX;
+		if (iqtree.aln->num_states == 4) {
+			// get the rate parameters
+			// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
+			double *rate_param = new double[6];
+			iqtree.getModel()->getRateMatrix(rate_param);
+			// get the state frequencies
+			double *state_freqs = new double[iqtree.aln->num_states];
+			iqtree.getModel()->getStateFrequency(state_freqs);
 
-		/* put them into PLL */
-		stringstream linkagePattern;
-		int partNr;
-		for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions - 1;
-				partNr++) {
-			linkagePattern << partNr << ",";
-		}
-		linkagePattern << partNr;
-		char *pattern = new char[linkagePattern.str().length() + 1];
-		strcpy(pattern, linkagePattern.str().c_str());
-		pllLinkAlphaParameters(pattern, iqtree.pllPartitions);
-		pllLinkFrequencies(pattern, iqtree.pllPartitions);
-		pllLinkRates(pattern, iqtree.pllPartitions);
-		delete[] pattern;
+			/* put them into PLL */
+			stringstream linkagePattern;
+			int partNr;
+			for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions - 1;
+					partNr++) {
+				linkagePattern << partNr << ",";
+			}
+			linkagePattern << partNr;
+			char *pattern = new char[linkagePattern.str().length() + 1];
+			strcpy(pattern, linkagePattern.str().c_str());
+			pllLinkAlphaParameters(pattern, iqtree.pllPartitions);
+			pllLinkFrequencies(pattern, iqtree.pllPartitions);
+			pllLinkRates(pattern, iqtree.pllPartitions);
+			delete[] pattern;
 
-		for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions;
-				partNr++) {
-			pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions,
-					iqtree.pllInst);
-			pllSetFixedBaseFrequencies(state_freqs, 4, partNr,
-					iqtree.pllPartitions, iqtree.pllInst);
-			pllSetFixedSubstitutionMatrix(rate_param, 6, partNr,
-					iqtree.pllPartitions, iqtree.pllInst);
-		}
-		delete[] rate_param;
-		delete[] state_freqs;
-	} else if (iqtree.aln->num_states == 20) {
-		double *state_freqs = new double[iqtree.aln->num_states];
-		int partNr;
-		for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions;
-				partNr++) {
-			pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions,
-					iqtree.pllInst);
-			pllSetFixedBaseFrequencies(state_freqs, 20, partNr,
-					iqtree.pllPartitions, iqtree.pllInst);
-		}
-		delete[] state_freqs;
-	} else {
-		if (params.pll) {
-			outError("Phylogenetic likelihood library current does not support data type other than DNA or Protein");
+			for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions;
+					partNr++) {
+				pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions,
+						iqtree.pllInst);
+				pllSetFixedBaseFrequencies(state_freqs, 4, partNr,
+						iqtree.pllPartitions, iqtree.pllInst);
+				pllSetFixedSubstitutionMatrix(rate_param, 6, partNr,
+						iqtree.pllPartitions, iqtree.pllInst);
+			}
+			delete[] rate_param;
+			delete[] state_freqs;
+		} else if (iqtree.aln->num_states == 20) {
+			double *state_freqs = new double[iqtree.aln->num_states];
+			int partNr;
+			for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions;
+					partNr++) {
+				pllSetFixedAlpha(alpha, partNr, iqtree.pllPartitions,
+						iqtree.pllInst);
+				pllSetFixedBaseFrequencies(state_freqs, 20, partNr,
+						iqtree.pllPartitions, iqtree.pllInst);
+			}
+			delete[] state_freqs;
+		} else {
+			if (params.pll) {
+				outError("Phylogenetic likelihood library current does not support data type other than DNA or Protein");
+			}
 		}
 	}
+
+
+
 	if (params.min_iterations > 0) {
 		double initialTreeTime = getCPUTime();
 		/* Now generate 10 fastNNI tree and choose the best */
@@ -1389,7 +1394,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			if (params.pll) {
 				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions,
 						iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 8);
+				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 64);
 			} else {
 				iqtree.curScore = iqtree.optimizeAllBranches();
 			}

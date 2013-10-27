@@ -1107,6 +1107,7 @@ double IQTree::doIQPNNI() {
 					pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
 					//pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
 					pllTreeEvaluate(pllInst, pllPartitions, 1);
+					pllNewickParseDestroy (&iqpTree);
 
 					if (verbose_mode >= VB_MED) {
 						cout << "IQP log-likelihood = " << pllInst->likelihood
@@ -1272,14 +1273,14 @@ double IQTree::doIQPNNI() {
 					bestNNIList.assign(curNNIList.begin(), curNNIList.end());
 					perturbNNIList.assign(curNNIList.begin(), curNNIList.end());
             	}
-                best_tree_topo = cur_tree_topo_ss.str();
-                cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore << endl;
                 if (!params->pll) {
                     curScore = optimizeAllBranches();
                 } else {
                 	pllTreeEvaluate(pllInst, pllPartitions, 8);
                 	curScore = pllInst->likelihood;
                 }
+                best_tree_topo = cur_tree_topo_ss.str();
+                cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore << endl;
                 //cout << "Saving new better tree ..." << endl;
                 bestScore = curScore;
                 best_tree_string.seekp(0, ios::beg);
@@ -1382,7 +1383,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
 
     int nni2apply = 0; // number of nni to be applied in each NNI steps
     int nonconf_nni = 0; // number of non-conflicting NNIs found in this round
-    int MAXSTEPS = 1000;
+    int MAXSTEPS = 50;
     for (nni_steps=1; nni_steps <= MAXSTEPS; nni_steps++) {
     	double oldScore = curScore;
         if (resetLamda) { // tree get improved, lamda reset
@@ -1449,6 +1450,9 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
         curScore = optimizeAllBranches(1);
 
         if (curScore > oldScore && curScore >= vec_nonconf_nni.at(0).newloglh ) {
+        	if (abs(curScore - oldScore) < 0.001) {
+        		break;
+        	}
             if (enableHeuris && curIteration > 1) {
                 if (vecImpProNNI.size() < 10000) {
                     vecImpProNNI.push_back((curScore - oldScore) / nni2apply);
@@ -1548,7 +1552,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
     	fivebran = 1;
     else
     	fivebran = 0;
-    const int MAX_NNI_STEPS = 1000;
+    const int MAX_NNI_STEPS = 50;
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
         if (beginHeu) {
             double maxScore = curLH + nni_delta_est * (nni_count_est - totalNNICount);
@@ -1572,6 +1576,8 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
         double newLH = doNNISearch(pllInst, pllPartitions, nniList, &nni_count, &deltaNNI);
         if (newLH == -1.0) {
             break;
+        } else if ( abs(newLH - curLH) < 0.001 ){
+        	break;
         } else {
             curLH = newLH;
             if (enableHeuris && curIteration > 1) {

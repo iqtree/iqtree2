@@ -1621,7 +1621,7 @@ extern void restoreTreeFast ( pllInstance *tr, partitionList *pr );
 extern pll_boolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr);
 extern topol  *setupTopol (int maxtips);
 extern void saveTree (pllInstance *tr, topol *tpl, int numBranches);
-
+extern void  freeTopol (topol *tpl);
 
 extern void pllTreeEvaluate ( pllInstance *tr, partitionList *pr, int maxSmoothIterations );
 

@@ -286,7 +286,7 @@ topol  *setupTopol (int maxtips)
     @param tpl
       The \a topol structure that is to be deallocated
 */
-static void  freeTopol (topol *tpl)
+void  freeTopol (topol *tpl)
 {
   rax_free(tpl->links);
   rax_free(tpl);

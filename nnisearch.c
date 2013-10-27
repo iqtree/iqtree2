@@ -169,10 +169,10 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, 
 
 	/* Applying all independent NNI moves */
 	int numNNI = numInNNI;
-	int MAXSTEPS = 100;
+	int MAXROCLBACK = 50;
 	int rollBack = PLL_FALSE;
 	int step;
-	for (step = 1; step <= MAXSTEPS; step++) {
+	for (step = 1; step <= MAXROCLBACK; step++) {
 		int i;
 		for (i = 0; i < numNNI; i++) {
 			/* First, do the topological change */
@@ -201,7 +201,6 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, 
 				pllNewviewGeneric(tr, pr, inNNIs[i].p->back, PLL_FALSE);
 			}
 		}
-		//pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 		pllTreeEvaluate(tr, pr, 1);
 		/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
 		if (tr->likelihood < inNNIs[0].likelihood) {
@@ -236,6 +235,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, 
 	}
 	*nni_count = numNNI;
 	*deltaNNI = (tr->likelihood - initLH) / numNNI;
+	freeTopol (savedTree);
 	//free(nniList);
 	return tr->likelihood;
 }
