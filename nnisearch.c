@@ -110,7 +110,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, 
 	saveTree(tr, savedTree, numBranches);
 
 	/* Initialize the NNI list that holds information about 2n-6 NNI moves */
-	pllNNIMove *nniList = (pllNNIMove*) malloc(2 * (tr->mxtips - 3) * sizeof(pllNNIMove));
+	pllNNIMove *nniList = (pllNNIMove*) rax_malloc(2 * (tr->mxtips - 3) * sizeof(pllNNIMove));
 
 	/* Now fill up the NNI list */
 	nodeptr p = tr->start->back;
@@ -136,7 +136,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, 
     }
 
 	/* Generate a list of independent positive NNI */
-	pllNNIMove* inNNIs = getNonConflictNNIList(tr);
+	pllNNIMove* inNNIs = (pllNNIMove*) malloc((tr->mxtips - 3) * sizeof(pllNNIMove));
 
 	/* The best NNI is the first to come to the list */
 	inNNIs[0] = nniList[totalNNIs - 1];
@@ -236,7 +236,8 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, 
 	*nni_count = numNNI;
 	*deltaNNI = (tr->likelihood - initLH) / numNNI;
 	freeTopol (savedTree);
-	//free(nniList);
+	rax_free(nniList);
+	rax_free(inNNIs);
 	return tr->likelihood;
 }
 

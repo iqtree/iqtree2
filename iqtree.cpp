@@ -1530,7 +1530,6 @@ extern "C" int fast_eval;
 extern "C" int fivebran;
 extern "C" pllNNIMove* nniList;
 
-
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, int *skipped) {
     if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
         estDeltaMin();
@@ -1581,7 +1580,8 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
         } else {
             curLH = newLH;
             if (enableHeuris && curIteration > 1) {
-                if (vecImpProNNI.size() < 10000) {
+            	cout << "Add stats for speedup heuristics " << endl;
+                if (vecImpProNNI.size() < 1000) {
                     vecImpProNNI.push_back(deltaNNI);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());
@@ -1593,7 +1593,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
     }
 
     if (enableHeuris && curIteration > 1) {
-        if (vecNumNNI.size() < 10000) {
+        if (vecNumNNI.size() < 1000) {
             vecNumNNI.push_back(totalNNICount);
         } else {
             vecNumNNI.erase(vecNumNNI.begin());
@@ -1606,7 +1606,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
 
     // copy the nniList
     curNNIList.assign(nniList, nniList + nniListSize);
-    delete [] nniList;
+    delete  nniList;
 
     return pllInst->likelihood;
 }

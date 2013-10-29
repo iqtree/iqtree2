@@ -738,6 +738,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tabu = false;
     params.cherry = false;
     params.ilsnni = false;
+    params.numParsimony = 10;
     params.avh_test = 0;
     params.site_freq_file = NULL;
 #ifdef _OPENMP
@@ -1594,6 +1595,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -maxtime <time_in_minutes>";
                 params.maxtime = convert_double(argv[cnt]);
                 params.min_iterations = 1000000;
+            } else if (strcmp(argv[cnt], "-numpars") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -numnni <number_of_parsimony_trees>";
+                params.numParsimony = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-beststart") == 0) {
                 params.bestStart = true;
                 cnt++;

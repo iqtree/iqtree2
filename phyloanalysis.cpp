@@ -1353,6 +1353,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			delete[] state_freqs;
 		} else if (iqtree.aln->num_states == 20) {
 			double *state_freqs = new double[iqtree.aln->num_states];
+			iqtree.getModel()->getStateFrequency(state_freqs);
 			int partNr;
 			for (partNr = 0; partNr < iqtree.pllPartitions->numberOfPartitions;
 					partNr++) {
@@ -1370,13 +1371,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	}
 
 
-
 	if (params.min_iterations > 0) {
 		double initialTreeTime = getCPUTime();
 		/* Now generate 10 fastNNI tree and choose the best */
 		double bestLH = -DBL_MAX;
 		string bestTreeString;
-		for ( int treeNr = 0; treeNr < 10; treeNr++ ) {
+		for ( int treeNr = 0; treeNr < params.numParsimony; treeNr++ ) {
 			if (treeNr != 0) {
 				iqtree.pllInst->randomNumberSeed = params.ran_seed + treeNr * 12345;
 				pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions);
@@ -1394,7 +1394,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			if (params.pll) {
 				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions,
 						iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 64);
+				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 2);
 			} else {
 				iqtree.curScore = iqtree.optimizeAllBranches();
 			}

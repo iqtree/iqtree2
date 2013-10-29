@@ -344,6 +344,8 @@ struct NNIInfo {
  */
 struct Params {
 
+	int numParsimony;
+
 	/**
 	 *  Default number of NNI used for perturbing the tree
 	 */
