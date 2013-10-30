@@ -522,10 +522,8 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 			}
 			if (!is_nni) {
 				memcpy(at(part)->_pattern_lh, part_info[part].cur_ptnlh, at(part)->getAlnNPattern() * sizeof(double));
-			} else if (nnino == 0)
-				memcpy(at(part)->_pattern_lh, part_info[part].nni1_ptnlh, at(part)->getAlnNPattern() * sizeof(double));
-			else
-				memcpy(at(part)->_pattern_lh, part_info[part].nni2_ptnlh, at(part)->getAlnNPattern() * sizeof(double));
+			} else
+				memcpy(at(part)->_pattern_lh, part_info[part].nniMoves[nnino].ptnlh, at(part)->getAlnNPattern() * sizeof(double));
     		save_lh_factor[part] = at(part)->current_it->lh_scale_factor;
     		save_lh_factor_back[part] = at(part)->current_it_back->lh_scale_factor;
     		at(part)->current_it->lh_scale_factor = 0.0;

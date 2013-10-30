@@ -282,12 +282,6 @@ public:
     virtual void applyNNIs(int nni2apply, bool changeBran = true);
 
     /**
-     *   Apply 5 new branch lengths stored in the NNI move
-     *   @param nnimove the NNI move currently in consideration
-     */
-    void applyNNIBranches(NNIMove nnimove);
-
-    /**
      *  Restore the old 5 branch lengths stored in the NNI move.
      *  This is called after an NNI is reverted.
      *  @param nnimove the NNI move currently in consideration

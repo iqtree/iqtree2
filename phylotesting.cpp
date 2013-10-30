@@ -338,7 +338,9 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 		info.aln_file = "";
 		info.sequence_type = "";
 		info.position_spec = "";
-		info.mem_ptnlh = NULL;
+		info.cur_ptnlh = NULL;
+		info.nniMoves[0].ptnlh = NULL;
+		info.nniMoves[1].ptnlh = NULL;
 		part_info.push_back(info);
 		Alignment *aln = super_aln->concatenateAlignments(*it);
 		PhyloTree *tree = super_tree->extractSubtree(*it);

@@ -1616,39 +1616,6 @@ void IQTree::applyNNIs(int nni2apply, bool changeBran) {
     }
 }
 
-void IQTree::applyNNIBranches(NNIMove nnimove) {
-	PhyloNode *node1 = nnimove.node1;
-	PhyloNode *node2 = nnimove.node2;
-	PhyloNeighbor *node1_node2_nei = (PhyloNeighbor*) node1->findNeighbor(
-			node2);
-	PhyloNeighbor *node2_node1_nei = (PhyloNeighbor*) node2->findNeighbor(
-			node1);
-	node1_node2_nei->length = nnimove.newLen[0];
-	node2_node1_nei->length = nnimove.newLen[0];
-	if (params->nni5Branches) {
-		int i = 1;
-		Neighbor* nei;
-		Neighbor* nei_back;
-		NeighborVec::iterator it;
-		FOR_NEIGHBOR(node1, node2, it)
-		{
-			nei = (*it)->node->findNeighbor(node1);
-			nei_back = (node1)->findNeighbor((*it)->node);
-			nei->length = nnimove.newLen[i];
-			nei_back->length = nnimove.newLen[i];
-			i++;
-		}
-		FOR_NEIGHBOR(node2, node1, it)
-		{
-			nei = (*it)->node->findNeighbor(node2);
-			nei_back = (node2)->findNeighbor((*it)->node);
-			nei->length = nnimove.newLen[i];
-			nei_back->length = nnimove.newLen[i];
-			i++;
-		}
-	}
-}
-
 /*
 void IQTree::restoreNNIBranches(NNIMove nnimove) {
 	PhyloNode *node1 = nnimove.node1;

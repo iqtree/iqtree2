@@ -348,8 +348,9 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh,
 
 	out << "Log-likelihood of the tree: " << fixed << tree_lh << " (s.e. "
 			<< sqrt(lh_variance) << ")" << endl
+			<< "Number of free parameters: " << df << endl
 			<< "Akaike information criterion (AIC) score: " << AIC_score << endl
-			<< "Corrected Akaike information criterion (AIC) score: " << AICc_score << endl
+			<< "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl
 			<< "Bayesian information criterion (BIC) score: " << BIC_score << endl
 			<< "Unconstrained log-likelihood (without tree): "
 			<< tree.aln->computeUnconstrainedLogL() << endl << endl
@@ -1243,8 +1244,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
     	outError("Memory required exceeds your computer RAM size!");
     }
 
-	cout << "Optimize model parameters " << (params.optimize_model_rate_joint ? "jointly":"")
-			<< " (tolerace " << TOL_LIKELIHOOD_PARAMOPT << ")... " << endl;
+	cout << "Optimize model parameters " << (params.optimize_model_rate_joint ? "jointly ":"")
+			<< "(tolerace " << TOL_LIKELIHOOD_PARAMOPT << ")... " << endl;
 
     // Optimize model parameters and branch lengths using ML for the initial tree
     bestTreeScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT);

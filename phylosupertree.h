@@ -176,6 +176,12 @@ public:
     virtual void doNNI(NNIMove &move, bool clearLH = true);
 
     /**
+     *   Apply 5 new branch lengths stored in the NNI move
+     *   @param nnimove the NNI move currently in consideration
+     */
+    virtual void applyNNIBranches(NNIMove nnimove);
+
+    /**
      * 	 Restore the branch lengths from the saved values
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
