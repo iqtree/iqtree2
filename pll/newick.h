@@ -20,14 +20,14 @@ typedef struct
 
     @todo Rename this to something more proper
 */
-struct item_t
+typedef struct
 {
-  int depth;                    /**< @brief Depth of the node in the tree, i.e. distance of node from root */
+  int depth;                    /**< @brief Distance of node from root */
   char * name;                  /**< @brief Name of the taxon represented by the node (in case it is a leaf) */
-  char * branch;                /**< @brief Branch length associated with the node, i.e. the branch leading to its parent */
+  char * branch;                /**< @brief Length of branch that leads to its parent */
   int leaf;                     /**< @brief \b PLL_TRUE if the node is a leaf, otherwise \b PLL_FALSE */
   int rank;                     /**< @brief Rank of the node, i.e. how many children it has */
-};
+} pllNewickNodeInfo;
 
 
 #endif

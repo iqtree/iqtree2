@@ -1882,6 +1882,169 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
 }
 
 
+/* @brief Check a parsed tree for inclusion in the current tree
+   
+   Check whether the set of leaves (taxa) of the parsed tree \a nTree is a
+   subset of the leaves of the currently loaded tree.
+
+   @param pInst
+     PLL instance
+
+   @param nTree
+     Parsed newick tree structure
+
+   @return
+     Returns \b PLL_TRUE in case it is a subset, otherwise \b PLL_FALSE
+*/
+static int
+checkTreeInclusion (pllInstance * pInst, pllNewickTree * nTree)
+{
+  pllStack * sList;
+  pllNewickNodeInfo * sItem;
+  void * dummy;
+
+  if (!pInst->nameHash) return (PLL_FALSE);
+
+  for (sList = nTree->tree; sList; sList = sList->next)
+   {
+     sItem = (pllNewickNodeInfo *) sList->item;
+     if (!sItem->rank)   /* leaf */
+      {
+        if (!pllHashSearch (pInst->nameHash, sItem->name, &dummy)) return (PLL_FALSE);
+      }
+   }
+
+  return (PLL_TRUE);
+}
+
+static void
+updateBranchLength (nodeptr p, double old_fracchange, double new_fracchange)
+{
+  double z;
+  int j;
+
+  for (j = 0; j < PLL_NUM_BRANCHES; ++ j)
+   {
+     z = exp ((log (p->z[j]) * old_fracchange) / new_fracchange);
+     if (z < PLL_ZMIN) z = PLL_ZMIN;
+     if (z > PLL_ZMAX) z = PLL_ZMAX;
+     p->z[j] = p->back->z[j] = z;
+   }
+}
+
+static void
+updateAllBranchLengthsRecursive (nodeptr p, int tips, double old_fracchange, double new_fracchange)
+{
+  updateBranchLength (p, old_fracchange, new_fracchange);
+
+  if (!isTip (p->number, tips))
+   {
+     updateAllBranchLengthsRecursive (p->next->back,       tips, old_fracchange, new_fracchange);
+     updateAllBranchLengthsRecursive (p->next->next->back, tips, old_fracchange, new_fracchange);
+   }
+}
+
+static void
+updateAllBranchLengths (pllInstance * tr, double old_fracchange, double new_fracchange)
+{
+  nodeptr p;
+
+  p = tr->start;
+  assert (isTip(p->number, tr->mxtips));
+
+  updateAllBranchLengthsRecursive (p->back, tr->mxtips, old_fracchange, new_fracchange);
+
+}
+
+
+/** @brief Relink the taxa
+    
+    Relink the taxa by performing a preorder traversal of the unrooted binary tree.
+    We assume that the tree is rooted such that the root is the only node of
+    out-degree 3 and in-degree 0, while all the other inner nodes have in-degree
+    1 and out-degree 2. Finally, the leaves have in-degree 1 and out-degree 0.
+
+    @param pInst
+      PLL instance
+
+    @param nTree
+      Parsed newick tree structure
+
+    @param taxaExist
+      Is the set of taxa of \a nTree a subset of the taxa of the current tree
+
+    @return
+*/
+static int
+linkTaxa (pllInstance * pInst, pllNewickTree * nTree, int taxaExist)
+{
+  nodeptr 
+    parent,
+    child;
+  pllStack 
+    * nodeStack = NULL,
+    * current;
+  int
+    i,
+    j,
+    inner = nTree->tips + 1,
+    leaf  = 1;
+  double z;
+  pllNewickNodeInfo * nodeInfo;
+
+  if (!taxaExist) pllTreeInitDefaults (pInst, nTree->tips);
+
+  /* Place the ternary root node 3 times on the stack such that later on
+     three nodes use it as their parent */
+  current = nTree->tree;
+  for (parent = pInst->nodep[inner], i  = 0; i < 3; ++ i, parent = parent->next)
+    pllStackPush (&nodeStack, parent);
+  ++ inner;
+
+  /* now traverse the rest of the nodes */
+  for (current = current->next; current; current = current->next)
+   {
+     parent   = (nodeptr) pllStackPop (&nodeStack);
+     nodeInfo = (pllNewickNodeInfo *) current->item;
+
+     /* if inner node place it twice on the stack (out-degree 2) */
+     if (nodeInfo->rank)
+      {
+        child = pInst->nodep[inner ++];
+        pllStackPush (&nodeStack, child->next);
+        pllStackPush (&nodeStack, child->next->next);
+      }
+     else /* check if taxon already exists, i.e. we loaded another tree topology */
+      {
+        if (taxaExist)
+         {
+           assert (pllHashSearch (pInst->nameHash, nodeInfo->name, (void **) &child));
+         }
+        else
+         {
+           child = pInst->nodep[leaf];
+           pInst->nameList[leaf] = strdup (nodeInfo->name);
+           pllHashAdd (pInst->nameHash, pInst->nameList[leaf], (void *) (pInst->nodep[leaf]));
+           ++ leaf;
+         }
+      }
+     assert (parent);
+     /* link parent and child */
+     parent->back = child;
+     child->back  = parent;
+
+     if (!taxaExist) pInst->fracchange = 1;
+
+     /* set the branch length */
+     z = exp ((-1 * atof (nodeInfo->branch)) / pInst->fracchange);
+     if (z < PLL_ZMIN) z = PLL_ZMIN;
+     if (z > PLL_ZMAX) z = PLL_ZMAX;
+     for (j = 0; j < PLL_NUM_BRANCHES; ++ j)
+       parent->z[j] = child->z[j] = z;
+   }
+  pllStackClear (&nodeStack);
+}
+
 /** @ingroup instanceLinkingGroup
     @brief Initializes the PLL tree topology according to a parsed newick tree
 
@@ -1898,85 +2061,109 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
       value.
 */
 void
-pllTreeInitTopologyNewick (pllInstance * tr, pllNewickTree * nt, int useDefaultz)
+pllTreeInitTopologyNewick (pllInstance * tr, pllNewickTree * newick, int useDefaultz)
 {
-  pllStack * nodeStack = NULL;
-  pllStack * head;
-  struct item_t * item;
-  int i, j, k;
-  
-/*
-  for (i = 0; i < partitions->numberOfPartitions; ++ i)
-   {
-     partitions->partitionData[i] = (pInfo *) rax_malloc (sizeof (pInfo));
-     partitions->partitionData[i]->partitionContribution = -1.0;
-     partitions->partitionData[i]->partitionLH           =  0.0;
-     partitions->partitionData[i]->fracchange            =  1.0;
-   }
-*/
-  
-  pllTreeInitDefaults (tr, nt->tips);
+  linkTaxa (tr, newick, tr->nameHash && checkTreeInclusion (tr, newick));
 
-  i = nt->tips + 1;
-  j = 1;
-  nodeptr v;
-  
-  
-  for (head = nt->tree; head; head = head->next)
-  {
-    item = (struct item_t *) head->item;
-    if (!nodeStack)
-     {
-       pllStackPush (&nodeStack, tr->nodep[i]);
-       pllStackPush (&nodeStack, tr->nodep[i]->next);
-       pllStackPush (&nodeStack, tr->nodep[i]->next->next);
-       ++i;
-     }
-    else
-     {
-       v = (nodeptr) pllStackPop (&nodeStack);
-       if (item->rank)  /* internal node */
-        {
-          v->back           = tr->nodep[i];
-          tr->nodep[i]->back = v; //t->nodep[v->number]
-          pllStackPush (&nodeStack, tr->nodep[i]->next);
-          pllStackPush (&nodeStack, tr->nodep[i]->next->next);
-          double z = exp((-1 * atof(item->branch))/tr->fracchange);
-          if(z < PLL_ZMIN) z = PLL_ZMIN;
-          if(z > PLL_ZMAX) z = PLL_ZMAX;
-          for (k = 0; k < PLL_NUM_BRANCHES; ++ k)
-             v->z[k] = tr->nodep[i]->z[k] = z;
-
-          ++ i;
-        }
-       else             /* leaf */
-        {
-          v->back           = tr->nodep[j];
-          tr->nodep[j]->back = v; //t->nodep[v->number];
-
-          double z = exp((-1 * atof(item->branch))/tr->fracchange);
-          if(z < PLL_ZMIN) z = PLL_ZMIN;
-          if(z > PLL_ZMAX) z = PLL_ZMAX;
-          for (k = 0; k < PLL_NUM_BRANCHES; ++ k)
-            v->z[k] = tr->nodep[j]->z[k] = z;
-            
-          //t->nameList[j] = strdup (item->name);
-          tr->nameList[j] = (char *) rax_malloc ((strlen (item->name) + 1) * sizeof (char));
-          strcpy (tr->nameList[j], item->name);
-          
-          pllHashAdd (tr->nameHash, tr->nameList[j], (void *) (tr->nodep[j]));
-          ++ j;
-        }
-     }
-  }
-  
   tr->start = tr->nodep[1];
-  
-  pllStackClear (&nodeStack);
 
-  if (useDefaultz == PLL_TRUE) 
+  if (useDefaultz == PLL_TRUE)
     resetBranches (tr);
 }
+
+//void
+//pllTreeInitTopologyNewick (pllInstance * tr, pllNewickTree * nt, int useDefaultz)
+//{
+//  pllStack * nodeStack = NULL;
+//  pllStack * head;
+//  pllNewickNodeInfo * item;
+//  int i, j, k;
+//  
+///*
+//  for (i = 0; i < partitions->numberOfPartitions; ++ i)
+//   {
+//     partitions->partitionData[i] = (pInfo *) rax_malloc (sizeof (pInfo));
+//     partitions->partitionData[i]->partitionContribution = -1.0;
+//     partitions->partitionData[i]->partitionLH           =  0.0;
+//     partitions->partitionData[i]->fracchange            =  1.0;
+//   }
+//*/
+// 
+//
+// if (tr->nameHash)
+//  {
+//    if (checkTreeInclusion (tr, nt))
+//     {
+//       printf ("It is a subset\n");
+//     }
+//    else
+//     {
+//       printf ("It is not a subset\n");
+//     }
+//  }
+//  
+//  pllTreeInitDefaults (tr, nt->tips);
+//
+//  i = nt->tips + 1;
+//  j = 1;
+//  nodeptr v;
+//  
+//  
+//  for (head = nt->tree; head; head = head->next)
+//  {
+//    item = (pllNewickNodeInfo *) head->item;
+//    if (!nodeStack)
+//     {
+//       pllStackPush (&nodeStack, tr->nodep[i]);
+//       pllStackPush (&nodeStack, tr->nodep[i]->next);
+//       pllStackPush (&nodeStack, tr->nodep[i]->next->next);
+//       ++i;
+//     }
+//    else
+//     {
+//       v = (nodeptr) pllStackPop (&nodeStack);
+//       if (item->rank)  /* internal node */
+//        {
+//          v->back           = tr->nodep[i];
+//          tr->nodep[i]->back = v; //t->nodep[v->number]
+//          pllStackPush (&nodeStack, tr->nodep[i]->next);
+//          pllStackPush (&nodeStack, tr->nodep[i]->next->next);
+//          double z = exp((-1 * atof(item->branch))/tr->fracchange);
+//          if(z < PLL_ZMIN) z = PLL_ZMIN;
+//          if(z > PLL_ZMAX) z = PLL_ZMAX;
+//          for (k = 0; k < PLL_NUM_BRANCHES; ++ k)
+//             v->z[k] = tr->nodep[i]->z[k] = z;
+//
+//          ++ i;
+//        }
+//       else             /* leaf */
+//        {
+//          v->back           = tr->nodep[j];
+//          tr->nodep[j]->back = v; //t->nodep[v->number];
+//
+//          double z = exp((-1 * atof(item->branch))/tr->fracchange);
+//          if(z < PLL_ZMIN) z = PLL_ZMIN;
+//          if(z > PLL_ZMAX) z = PLL_ZMAX;
+//          for (k = 0; k < PLL_NUM_BRANCHES; ++ k)
+//            v->z[k] = tr->nodep[j]->z[k] = z;
+//            
+//          //t->nameList[j] = strdup (item->name);
+//          tr->nameList[j] = (char *) rax_malloc ((strlen (item->name) + 1) * sizeof (char));
+//          strcpy (tr->nameList[j], item->name);
+//          
+//          pllHashAdd (tr->nameHash, tr->nameList[j], (void *) (tr->nodep[j]));
+//          ++ j;
+//        }
+//     }
+//  }
+//  
+//  tr->start = tr->nodep[1];
+//  
+//  pllStackClear (&nodeStack);
+//
+//  if (useDefaultz == PLL_TRUE) 
+//    resetBranches (tr);
+//}
 
 /** @brief Initialize PLL tree with a random topology
 
@@ -2556,7 +2743,15 @@ int pllSetSubstitutionRateMatrixSymmetries(char *string, partitionList * pr, int
   return result;
 }
 
-/** @brief Set the alpha parameter of the Gamma model to a fixed value for a partition
+/** @defgroup modelParamsGroup Model parameters setup and retrieval
+    
+    This set of functions is responsible for setting, retrieving, and optimizing
+    model parameters. It also contains functions for linking model parameters
+    across partitions.
+*/
+
+/** @ingroup modelParamsGroups
+    @brief Set the alpha parameter of the Gamma model to a fixed value for a partition
     
     Sets the alpha parameter of the gamma model of rate heterogeneity to a fixed value
     and disables the optimization of this parameter 
@@ -2580,6 +2775,7 @@ void pllSetFixedAlpha(double alpha, int model, partitionList * pr, pllInstance *
 {
   //make sure that we are swetting alpha for a partition within the current range 
   //of partitions
+  double old_fracchange = tr->fracchange;
 
   assert(model >= 0 && model < pr->numberOfPartitions);
 
@@ -2602,9 +2798,11 @@ void pllSetFixedAlpha(double alpha, int model, partitionList * pr, pllInstance *
   pr->partitionData[model]->optimizeAlphaParameter = PLL_FALSE;
 
   pr->dirty = PLL_FALSE;
+  updateAllBranchLengths (tr, old_fracchange, tr->fracchange);
 }
 
-/** @brief Set all base freuqncies to a fixed value for a partition
+/** @ingroup modelParamsGroups
+    @brief Set all base freuqncies to a fixed value for a partition
     
     Sets all base freuqencies of a partition to fixed values and disables 
     ML optimization of these parameters 
@@ -2612,7 +2810,7 @@ void pllSetFixedAlpha(double alpha, int model, partitionList * pr, pllInstance *
     @param f
       array containing the base frequencies
 
-    @param 
+    @param  length
       length of array f, this needs to be as long as the number of 
       states in the model, otherwise an assertion will fail!
 
@@ -2634,7 +2832,10 @@ void pllSetFixedBaseFrequencies(double *f, int length, int model, partitionList 
     i;
 
   double 
-    acc = 0.0;
+    acc = 0.0,
+    old_fracchange;
+
+  old_fracchange = tr->fracchange;
 
   //make sure that we are setting the base frequencies for a partition within the current range 
   //of partitions
@@ -2668,9 +2869,11 @@ void pllSetFixedBaseFrequencies(double *f, int length, int model, partitionList 
   pr->partitionData[model]->optimizeBaseFrequencies = PLL_FALSE;
 
   pr->dirty = PLL_TRUE;
+  updateAllBranchLengths (tr, old_fracchange, tr->fracchange);
 }
 
-/** @brief Set that the base freuqencies are optimized under ML
+/** @ingroup modelParamsGroups
+    @brief Set that the base freuqencies are optimized under ML
     
     The base freuqencies for partition model will be optimized under ML    
 
@@ -2745,7 +2948,8 @@ int pllSetOptimizeBaseFrequencies(int model, partitionList * pr, pllInstance *tr
 
 
 
-/** @brief Set all substitution rates to a fixed value for a specific partition
+/** @ingroup modelParamsGroups
+     @brief Set all substitution rates to a fixed value for a specific partition
     
     Sets all substitution rates of a partition to fixed values and disables 
     ML optimization of these parameters. It will automatically re-scale the relative rates  
@@ -2754,7 +2958,7 @@ int pllSetOptimizeBaseFrequencies(int model, partitionList * pr, pllInstance *tr
     @param f
       array containing the substitution rates
 
-    @param 
+    @param length
       length of array f, this needs to be as long as: (s * s - s) / 2,
       i.e., the number of upper diagonal entries of the Q matrix
 
@@ -2777,7 +2981,10 @@ void pllSetFixedSubstitutionMatrix(double *q, int length, int model, partitionLi
     numberOfRates; 
 
   double
-    scaler;
+    scaler,
+    old_fracchange;
+
+  old_fracchange = tr->fracchange;
 
   //make sure that we are setting the Q matrix for a partition within the current range 
   //of partitions
@@ -2820,12 +3027,13 @@ void pllSetFixedSubstitutionMatrix(double *q, int length, int model, partitionLi
   pr->partitionData[model]->optimizeSubstitutionRates = PLL_FALSE;
 
   pr->dirty = PLL_TRUE;
+  updateAllBranchLengths (tr, old_fracchange, tr->fracchange);
 }
 
 
 
 
-/* initializwe a parameter linkage list for a certain parameter type (can be whatever).
+/* initialize a parameter linkage list for a certain parameter type (can be whatever).
    the input is an integer vector that contaions NumberOfModels (numberOfPartitions) elements.
 
    if we want to have all alpha parameters unlinked and have say 4 partitions the input 
@@ -2833,6 +3041,8 @@ void pllSetFixedSubstitutionMatrix(double *q, int length, int model, partitionLi
    should look like this: {0, 1, 2, 0} 
 */
 
+/** @ingroup modelParamsGroups
+*/
 linkageList* initLinkageList(int *linkList, partitionList *pr)
 {
   int 
@@ -2943,7 +3153,6 @@ static linkageList* initLinkageListString(char *linkageString, partitionList * p
 	break;
       assert(j < pr->numberOfPartitions);
       list[j] = atoi(token);
-      //printf("%d: %s\n", j, token);
     }
   
   rax_free(ch);
@@ -2955,7 +3164,8 @@ static linkageList* initLinkageListString(char *linkageString, partitionList * p
   return l;
 }
 
-/** @brief Link alpha parameters across partitions
+/** @ingroup modelParamsGroups
+    @brief Link alpha parameters across partitions
     
     Links alpha paremeters across partitions (GAMMA model of rate heterogeneity)
 
@@ -2984,7 +3194,8 @@ int pllLinkAlphaParameters(char *string, partitionList *pr)
     return PLL_TRUE;
 }
 
-/** @brief Link base frequency parameters across partitions
+/** @ingroup modelParamsGroups
+    @brief Link base frequency parameters across partitions
     
     Links base frequency paremeters across partitions
 
@@ -3016,7 +3227,8 @@ int pllLinkFrequencies(char *string, partitionList *pr)
     return PLL_TRUE;
 }
 
-/** @brief Link Substitution matrices across partitions
+/** @ingroup modelParamsGroups
+    @brief Link Substitution matrices across partitions
     
     Links substitution matrices (Q matrices) across partitions
 
@@ -3048,7 +3260,8 @@ int pllLinkRates(char *string, partitionList *pr)
 
 
 
-/** @brief Initialize partitions according to model parameters
+/** @ingroup modelParamsGroups
+    @brief Initialize partitions according to model parameters
     
     Initializes partitions according to model parameters.
 
@@ -3070,6 +3283,7 @@ int pllInitModel (pllInstance * tr, partitionList * partitions, pllAlignmentData
   int
     i,
     *unlinked = (int *)rax_malloc(sizeof(int) * partitions->numberOfPartitions);
+  double old_fracchange = tr->fracchange;
 
   ef = pllBaseFrequenciesGTR (partitions, alignmentData);
 
@@ -3140,12 +3354,14 @@ int pllInitModel (pllInstance * tr, partitionList * partitions, pllAlignmentData
 
   rax_free(unlinked);
 
+  updateAllBranchLengths (tr, old_fracchange ? old_fracchange : 1,  tr->fracchange);
   pllEvaluateGeneric (tr, partitions, tr->start, PLL_TRUE, PLL_FALSE);
 
   return PLL_TRUE;
 }
-
-/** @brief Optimize all free model parameters of the likelihood model
+ 
+/** @ingroup modelParamsGroups
+    @brief Optimize all free model parameters of the likelihood model
     
     Initializes partitions according to model parameters.
 

@@ -34,7 +34,7 @@ pllStackPush (pllStack ** head, void * item)
 
 void * pllStackPop (pllStack ** head)
 {
-  struct item_t * item;
+  void * item;
   pllStack * tmp;
   if (!*head) return (NULL);
  
