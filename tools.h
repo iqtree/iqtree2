@@ -437,6 +437,11 @@ struct Params {
      */
     bool pll;
 
+    /**
+     *  Turn on model parameter optimization by PLL
+     */
+    bool pllModOpt;
+
     char *binary_aln_file;
 
     /**

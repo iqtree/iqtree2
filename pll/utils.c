@@ -2653,7 +2653,6 @@ void pllSetFixedBaseFrequencies(double *f, int length, int model, partitionList 
 
   for(i = 0; i < length; i++)
     acc += f[i];
-  printf("delta base freq: %10.15f\n", fabs(acc - 1.0));
   if(fabs(acc - 1.0) > 0.000001)
     assert(0);
 
@@ -3144,7 +3143,7 @@ int pllInitModel (pllInstance * tr, partitionList * partitions, pllAlignmentData
 
   rax_free(unlinked);
 
-  //pllEvaluateGeneric (tr, partitions, tr->start, PLL_TRUE, PLL_FALSE);
+  pllEvaluateGeneric (tr, partitions, tr->start, PLL_TRUE, PLL_FALSE);
 
   return PLL_TRUE;
 }

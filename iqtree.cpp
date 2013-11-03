@@ -751,6 +751,64 @@ double IQTree::doIQP() {
     return curScore;
 }
 
+void IQTree::inputModelParam2PLL() {
+	if (params->pll && !params->pllModOpt) {
+		// TODO: Here the likelihood is also compute, so check whether it is needed
+		pllInitModel(pllInst, pllPartitions, pllAlignment);
+		/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
+		// get the alpha parameter
+		double alpha = getRate()->getGammaShape();
+		if (alpha == 0.0)
+			alpha = PLL_ALPHA_MAX;
+		if (aln->num_states == 4) {
+			// get the rate parameters
+			// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
+			double *rate_param = new double[6];
+			getModel()->getRateMatrix(rate_param);
+			// get the state frequencies
+			double *state_freqs = new double[aln->num_states];
+			getModel()->getStateFrequency(state_freqs);
+
+			/* put them into PLL */
+			stringstream linkagePattern;
+			int partNr;
+			for (partNr = 0; partNr < pllPartitions->numberOfPartitions - 1; partNr++) {
+				linkagePattern << partNr << ",";
+			}
+			linkagePattern << partNr;
+			char *pattern = new char[linkagePattern.str().length() + 1];
+			strcpy(pattern, linkagePattern.str().c_str());
+			pllLinkAlphaParameters(pattern, pllPartitions);
+			pllLinkFrequencies(pattern, pllPartitions);
+			pllLinkRates(pattern, pllPartitions);
+			delete[] pattern;
+
+			for (partNr = 0; partNr < pllPartitions->numberOfPartitions; partNr++) {
+				pllSetFixedAlpha(alpha, partNr, pllPartitions, pllInst);
+				pllSetFixedBaseFrequencies(state_freqs, 4, partNr, pllPartitions, pllInst);
+				pllSetFixedSubstitutionMatrix(rate_param, 6, partNr, pllPartitions, pllInst);
+			}
+			delete[] rate_param;
+			delete[] state_freqs;
+		} else if (aln->num_states == 20) {
+			double *state_freqs = new double[aln->num_states];
+			getModel()->getStateFrequency(state_freqs);
+			int partNr;
+			for (partNr = 0; partNr < pllPartitions->numberOfPartitions; partNr++) {
+				pllSetFixedAlpha(alpha, partNr, pllPartitions, pllInst);
+				pllSetFixedBaseFrequencies(state_freqs, 20, partNr, pllPartitions, pllInst);
+			}
+			delete[] state_freqs;
+		} else {
+			if (params->pll) {
+				outError("Phylogenetic likelihood library current does not support data type other than DNA or Protein");
+			}
+		}
+	} else {
+		pllInitModel(pllInst, pllPartitions, pllAlignment);
+		modOpt(pllInst, pllPartitions, 0.1);
+	}
+}
 double IQTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
     assert(node1->isLeaf());
     assert(node2->isLeaf());

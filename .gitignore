@@ -2,3 +2,9 @@
 .settings
 .project
 examples
+pll/CMakeFiles/
+pll/Makefile
+pll/cmake_install.cmake
+pll/libpll.a
+pll_test/
+

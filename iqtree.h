@@ -191,6 +191,11 @@ public:
      */
     double doIQP();
 
+    /**
+     *   get model parameters from IQTree and input them into PLL
+     */
+    void inputModelParam2PLL();
+
     bool containPosNNI(vector<NNIMove> posNNIs);
 
     /**
