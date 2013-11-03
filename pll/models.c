@@ -3486,7 +3486,7 @@ void initReversibleGTR(pllInstance * tr, partitionList * pr, int model)
 	       {		 
 		 initProtMat(f, pr->partitionData[model]->protModels, &(pr->partitionData[model]->substRates_LG4[i][0]), i);
 		 
-		 if(!pr->partitionData[model]->protFreqs)	       	  	  
+		 if(!pr->partitionData[model]->protFreqs && !pr->partitionData[model]->optimizeBaseFrequencies)	       	  	  
 		   for(l = 0; l < 20; l++)		
 		     pr->partitionData[model]->frequencies_LG4[i][l] = f[l];
 		 else
@@ -3505,7 +3505,7 @@ void initReversibleGTR(pllInstance * tr, partitionList * pr, int model)
 	     /*if(adef->protEmpiricalFreqs && tr->NumberOfModels == 1)
 	       assert(tr->partitionData[model].protFreqs);*/
 	 
-              if(!pr->partitionData[model]->protFreqs)
+              if(!pr->partitionData[model]->protFreqs && !pr->partitionData[model]->optimizeBaseFrequencies)
                {	     	    
                  for(l = 0; l < 20; l++)		
                    frequencies[l] = f[l];
@@ -4194,11 +4194,30 @@ static void initializeBaseFreqs(partitionList *pr, double **empiricalFrequencies
 {
   size_t 
     model;
+  int
+    l,
+    numFreqs;
+  double f;
 
   for(model = 0; model < (size_t)pr->numberOfPartitions; model++)
     {
-      memcpy(pr->partitionData[model]->frequencies,          empiricalFrequencies[model], sizeof(double) * pr->partitionData[model]->states);
-      memcpy(pr->partitionData[model]->empiricalFrequencies, empiricalFrequencies[model], sizeof(double) * pr->partitionData[model]->states);
+      if(pr->partitionData[model]->optimizeBaseFrequencies)
+       {
+         //set all base frequencies to identical starting values 1.0 / numberOfDataStates
+         numFreqs = pr->partitionData[model]->states;
+         f = 1.0 / ((double)numFreqs);
+
+         for(l = 0; l < numFreqs; l++)
+          {
+            pr->partitionData[model]->frequencies[l]          = f;
+            pr->partitionData[model]->empiricalFrequencies[l] = f;
+          }
+       }
+      else
+       {
+         memcpy(pr->partitionData[model]->frequencies,          empiricalFrequencies[model], sizeof(double) * pr->partitionData[model]->states);
+         memcpy(pr->partitionData[model]->empiricalFrequencies, empiricalFrequencies[model], sizeof(double) * pr->partitionData[model]->states);
+       }
     }
 }
 

@@ -29,7 +29,7 @@
  */
 
 /** @file utils.c
- *
+ *  
  *  @brief Miscellaneous general utility and helper functions
  */
 #ifdef WIN32
@@ -63,7 +63,7 @@
 /*
    special bug fix, enforces denormalized numbers to be flushed to zero,
    without this program is a tiny bit faster though.
-#include <emmintrin.h>
+#include <emmintrin.h> 
 #define MM_DAZ_MASK    0x0040
 #define MM_DAZ_ON    0x0040
 #define MM_DAZ_OFF    0x0000
@@ -81,7 +81,7 @@ static void initializePartitionsSequential(pllInstance *tr, partitionList *pr);
 
 
 /** @defgroup instanceLinkingGroup Linking topology, partition scheme and alignment to the PLL instance
-
+    
     This set of functions handles the linking of topology, partition scheme and multiple sequence alignment
     with the PLL instance
 */
@@ -89,20 +89,20 @@ static void initializePartitionsSequential(pllInstance *tr, partitionList *pr);
 
 static char *
 my_strtok_r (char * s, const char * delim, char **save_ptr)
-{
+{  
   char *token;
-
+   
   /* Scan leading delimiters */
   if (s == NULL)
     s = *save_ptr;
-
+   
   s += strspn (s, delim);
   if (*s == '\0')
    {
      *save_ptr = s;
      return NULL;
    }
-
+   
   /* Find the end of the token. */
   token = s;
   s = strpbrk (token, delim);
@@ -114,9 +114,9 @@ my_strtok_r (char * s, const char * delim, char **save_ptr)
      *s = '\0';
      *save_ptr = s + 1;
    }
-
+   
   return token;
-}
+}  
 
 #if (defined(_SVID_SOURCE) || defined(_BSD_SOURCE) || defined(_POSIX_C_SOURCE) || defined(_XOPEN_SOURCE) || defined(_POSIX_SOURCE))
 #define STRTOK_R strtok_r
@@ -160,7 +160,7 @@ void printBothOpen(const char* format, ... )
   fclose(f);
 }
 
-/* Marked for deletion
+/* Marked for deletion 
 boolean getSmoothFreqs(int dataType)
 {
   assert(PLL_MIN_MODEL < dataType && dataType < PLL_MAX_MODEL);
@@ -194,7 +194,7 @@ int getUndetermined(int dataType)
 
 const partitionLengths *getPartitionLengths(pInfo *p)
 {
-  int
+  int 
     dataType  = p->dataType,
               states    = p->states,
               tipLength = p->maxTipStates;
@@ -213,12 +213,12 @@ const partitionLengths *getPartitionLengths(pInfo *p)
     pLength.symmetryVectorLength = (states * states - states) / 2;
     pLength.frequencyGroupingLength = states;
     pLength.nonGTR = PLL_FALSE;*/
-  return (&pLengths[dataType]);
+  return (&pLengths[dataType]); 
 }
 
 size_t discreteRateCategories(int rateHetModel)
 {
-  size_t
+  size_t 
     result;
 
   switch(rateHetModel)
@@ -293,13 +293,13 @@ double randum (long  *seed)
   return res;
 }
 
-/* Marked for deletion
+/* Marked for deletion 
 static int filexists(char *filename)
 {
-  FILE
+  FILE 
     *fp = fopen(filename,"rb");
 
-  int res;
+  int res; 
 
   if(fp)
   {
@@ -323,7 +323,7 @@ FILE *myfopen(const char *path, const char *mode)
     if(fp)
       return fp;
     else
-    {
+    {	  
       printf("\n Error: the file %s you want to open for reading does not exist, exiting ...\n\n", path);
       exit(-1);
       return (FILE *)NULL;
@@ -334,7 +334,7 @@ FILE *myfopen(const char *path, const char *mode)
     if(fp)
       return fp;
     else
-    {
+    {	 
       printf("\n Error: the file %s you want to open for writing or appending can not be opened [mode: %s], exiting ...\n\n",
           path, mode);
       exit(-1);
@@ -355,15 +355,15 @@ FILE *myfopen(const char *path, const char *mode)
 
 
 /** @brief Check whether a node is a tip.
-
+    
     Checks whether the node with number \a number is a tip.
-
+    
     @param number
      Node number to be checked
-
+   
     @param maxTips
      Number of tips in the tree
-
+   
     @return
       \b PLL_TRUE if tip, \b PLL_FALSE otherwise
   */
@@ -402,14 +402,14 @@ void getxnode (nodeptr p)
 }
 
 
-/** @brief Connect two nodes and assign branch lengths
-  *
+/** @brief Connect two nodes and assign branch lengths 
+  * 
   * Connect the two nodes \a p and \a q in each partition \e i with a branch of
   * length \a z[i]
   *
   * @param p
   *   Node \a p
-  *
+  * 
   * @param q
   *   Node \a q
   *
@@ -467,8 +467,8 @@ pll_boolean whitechar (int ch)
 /*
 static unsigned int KISS32(void)
 {
-  static unsigned int
-    x = 123456789,
+  static unsigned int 
+    x = 123456789, 
       y = 362436069,
       z = 21288629,
       w = 14921776,
@@ -477,12 +477,12 @@ static unsigned int KISS32(void)
   unsigned int t;
 
   x += 545925293;
-  y ^= (y<<13);
-  y ^= (y>>17);
+  y ^= (y<<13); 
+  y ^= (y>>17); 
   y ^= (y<<5);
-  t = z + w + c;
-  z = w;
-  c = (t>>31);
+  t = z + w + c; 
+  z = w; 
+  c = (t>>31); 
   w = t & 2147483647;
 
   return (x+y+w);
@@ -542,7 +542,7 @@ nodeptr pllGetRandomSubtree(pllInstance *tr)
   nodeptr p;
   do
   {
-    int exitDirection = rand() % 3;
+    int exitDirection = rand() % 3; 
     p = tr->nodep[(rand() % (tr->mxtips - 2)) + 1 + tr->mxtips];
     switch(exitDirection)
     {
@@ -562,16 +562,16 @@ nodeptr pllGetRandomSubtree(pllInstance *tr)
   assert(!isTip(p->number, tr->mxtips));
   return p;
 }
-/* small example program that executes ancestral state computations
+/* small example program that executes ancestral state computations 
    on the entire subtree rooted at p.
 
    Note that this is a post-order traversal.
 */
 
-
+  
 void computeAllAncestralVectors(nodeptr p, pllInstance *tr, partitionList *pr)
 {
-  /* if this is not a tip, for which evidently it does not make sense
+  /* if this is not a tip, for which evidently it does not make sense 
      to compute the ancestral sequence because we have the real one ....
   */
 
@@ -581,14 +581,14 @@ void computeAllAncestralVectors(nodeptr p, pllInstance *tr, partitionList *pr)
 
       computeAllAncestralVectors(p->next->back, tr, pr);
       computeAllAncestralVectors(p->next->next->back, tr, pr);
-
+      
       /* then compute the ancestral state at node p */
 
       pllNewviewGenericAncestral(tr, pr, p);
 
-      /* and print it to terminal, the two booleans that are set to PLL_TRUE here
-	 tell the function to print the marginal probabilities as well as
-	 a discrete inner sequence, that is, ACGT etc., always selecting and printing
+      /* and print it to terminal, the two booleans that are set to PLL_TRUE here 
+	 tell the function to print the marginal probabilities as well as 
+	 a discrete inner sequence, that is, ACGT etc., always selecting and printing 
 	 the state that has the highest probability */
 
       printAncestralState(p, PLL_TRUE, PLL_TRUE, tr, pr);
@@ -599,35 +599,35 @@ void computeAllAncestralVectors(nodeptr p, pllInstance *tr, partitionList *pr)
 
 void initializePartitionData(pllInstance *localTree, partitionList * localPartitions)
 {
-  /* in ancestralVectorWidth we store the total length in bytes (!) of
+  /* in ancestralVectorWidth we store the total length in bytes (!) of 
      one conditional likelihood array !
-     we need to know this length such that in the pthreads version the master thread can actually
+     we need to know this length such that in the pthreads version the master thread can actually 
      gather the scattered ancestral probabilities from the threads such that they can be printed to screen!
   */
 
-  size_t
+  size_t 
     maxCategories = (size_t)localTree->maxCategories;
 
-  size_t
+  size_t 
     ancestralVectorWidth = 0,
-    model;
+    model; 
 
-  int
+  int 
     tid  = localTree->threadID,
     innerNodes = localTree->mxtips - 2;
 
   if(tid > 0)
-      localTree->rateCategory    = (int *)    rax_calloc((size_t)localTree->originalCrunchedLength, sizeof(int));
+      localTree->rateCategory    = (int *)    rax_calloc((size_t)localTree->originalCrunchedLength, sizeof(int));	    
 
   for(model = 0; model < (size_t)localPartitions->numberOfPartitions; model++)
     {
-      size_t
+      size_t 
 	width = localPartitions->partitionData[model]->width;
 
-      const partitionLengths
+      const partitionLengths 
 	*pl = getPartitionLengths(localPartitions->partitionData[model]);
 
-      /*
+      /* 
 	 globalScaler needs to be 2 * localTree->mxtips such that scalers of inner AND tip nodes can be added without a case switch
 	 to this end, it must also be initialized with zeros -> calloc
       */
@@ -646,14 +646,14 @@ void initializePartitionData(pllInstance *localTree, partitionList * localPartit
       localPartitions->partitionData[model]->empiricalFrequencies       = (double*)rax_malloc((size_t)pl->frequenciesLength * sizeof(double));
       rax_posix_memalign ((void **)&(localPartitions->partitionData[model]->tipVector), PLL_BYTE_ALIGNMENT, (size_t)pl->tipVectorLength * sizeof(double));
       //localPartitions->partitionData[model]->partitionName      = NULL;   // very imporatant since it is deallocated in pllPartitionDestroy
-
-       if(localPartitions->partitionData[model]->dataType == PLL_AA_DATA && localPartitions->partitionData[model]->protModels == PLL_LG4)
-	{
-	  int
+      
+       if(localPartitions->partitionData[model]->dataType == PLL_AA_DATA && localPartitions->partitionData[model]->protModels == PLL_LG4)      
+	{	  	  
+	  int 
 	    k;
-
+	  
 	  for(k = 0; k < 4; k++)
-	    {
+	    {	    
 	      localPartitions->partitionData[model]->EIGN_LG4[k]              = (double*)rax_malloc(pl->eignLength * sizeof(double));
 	      rax_posix_memalign ((void **)&(localPartitions->partitionData[model]->EV_LG4[k]), PLL_BYTE_ALIGNMENT, pl->evLength * sizeof(double));
 	      localPartitions->partitionData[model]->EI_LG4[k]                = (double*)rax_malloc(pl->eiLength * sizeof(double));
@@ -677,16 +677,16 @@ void initializePartitionData(pllInstance *localTree, partitionList * localPartit
       localPartitions->partitionData[model]->xVector = (double **)rax_calloc(sizeof(double*), (size_t)localTree->mxtips);
 
 
-      /*
+      /* 
 	 Initializing the xVector array like this is absolutely required !!!!
 	 I don't know which programming genious removed this, but it must absolutely stay in here!!!!
       */
-
+      
       {
 	int k;
-
+	
 	for(k = 0; k < localTree->mxtips; k++)
-	      localPartitions->partitionData[model]->xVector[k] = (double*)NULL;
+	      localPartitions->partitionData[model]->xVector[k] = (double*)NULL;       
       }
 
 
@@ -709,19 +709,19 @@ void initializePartitionData(pllInstance *localTree, partitionList * localPartit
 	   localPartitions->partitionData[model]->expSpaceVector = (size_t *)NULL;
 	}
       else
-	{
+	{	 
 	  localPartitions->partitionData[model]->expVector      = (int **)rax_malloc(sizeof(int*) * innerNodes);
-
-	  /*
+	   
+	  /* 
 	     Initializing the expVector array like this is absolutely required !!!!
 	     Not doing this can (and did) cause segmentation faults !!!!
 	  */
-
+	  
 	  {
 	    int k;
 
 	    for(k = 0; k < innerNodes; k++)
-	      localPartitions->partitionData[model]->expVector[k] = (int*)NULL;
+	      localPartitions->partitionData[model]->expVector[k] = (int*)NULL; 
 	  }
 
 	  localPartitions->partitionData[model]->expSpaceVector = (size_t *)rax_calloc(innerNodes, sizeof(size_t));
@@ -758,7 +758,7 @@ void initializePartitionData(pllInstance *localTree, partitionList * localPartit
 	  localPartitions->partitionData[model]->gapVectorLength = 0;
 	  localPartitions->partitionData[model]->gapVector = (unsigned int*)NULL;
 	  localPartitions->partitionData[model]->gapColumn = (double*)NULL;
-	}
+	}              
     }
 }
 
@@ -770,11 +770,11 @@ int virtual_width( int n ) {
 
 void initMemorySavingAndRecom(pllInstance *tr, partitionList *pr)
 {
-  pllInstance
-    *localTree = tr;
+  pllInstance  
+    *localTree = tr; 
   partitionList
     *localPartitions = pr;
-  size_t model;
+  size_t model; 
 
   /* initialize gap bit vectors at tips when memory saving option is enabled */
 
@@ -782,7 +782,7 @@ void initMemorySavingAndRecom(pllInstance *tr, partitionList *pr)
     {
       for(model = 0; model < (size_t)localPartitions->numberOfPartitions; model++)
 	{
-	  int
+	  int        
 	    undetermined = getUndetermined(localPartitions->partitionData[model]->dataType);
 
 	  size_t
@@ -791,12 +791,12 @@ void initMemorySavingAndRecom(pllInstance *tr, partitionList *pr)
 	    width =  localPartitions->partitionData[model]->width;
 
 	  if(width > 0)
-	    {
+	    {	   	    	      	    	     
 	      for(j = 1; j <= (size_t)(localTree->mxtips); j++)
 		for(i = 0; i < width; i++)
 		  if(localPartitions->partitionData[model]->yVector[j][i] == undetermined)
 		    localPartitions->partitionData[model]->gapVector[localPartitions->partitionData[model]->gapVectorLength * j + i / 32] |= mask32[i % 32];
-	    }
+	    }     
 	}
     }
   /* recom */
@@ -869,7 +869,7 @@ void pllSetBranchLength (pllInstance *tr, nodeptr p, int partition_id, double bl
 }
 
 static void initializePartitionsSequential(pllInstance *tr, partitionList *pr)
-{
+{ 
   size_t
     model;
 
@@ -878,7 +878,7 @@ static void initializePartitionsSequential(pllInstance *tr, partitionList *pr)
 
   initializePartitionData(tr, pr);
 
-  /* figure in tip sequence data per-site pattern weights */
+  /* figure in tip sequence data per-site pattern weights */ 
   for(model = 0; model < (size_t)pr->numberOfPartitions; model++)
   {
     size_t
@@ -892,7 +892,7 @@ static void initializePartitionsSequential(pllInstance *tr, partitionList *pr)
     }
 
     memcpy((void*)(&(pr->partitionData[model]->wgt[0])),         (void*)(&(tr->aliaswgt[lower])),      sizeof(int) * width);
-  }
+  }  
 
   initMemorySavingAndRecom(tr, pr);
 }
@@ -910,26 +910,26 @@ static void initializePartitionsSequential(pllInstance *tr, partitionList *pr)
 
 static void freeLinkageList( linkageList* ll)
 {
-  int i;
+  int i;    
 
-  for(i = 0; i < ll->entries; i++)
-    rax_free(ll->ld[i].partitionList);
+  for(i = 0; i < ll->entries; i++)    
+    rax_free(ll->ld[i].partitionList);         
 
   rax_free(ll->ld);
-  rax_free(ll);
+  rax_free(ll);   
 }
 
 /** @brief free all data structures associated to a partition
-
+    
     frees all data structures allocated for this partition
 
     @param partitions
       the pointer to the partition list
 
-    @param tips
-       number of tips in the tree
+    @param tips  
+       number of tips in the tree      
 */
-void
+void 
 pllPartitionsDestroy (pllInstance * tr, partitionList ** partitions)
 {
   int i, j, tips;
@@ -953,7 +953,7 @@ if (MASTER_P) {
      pllMasterBarrier (tr, pl, PLL_THREAD_EXIT_GRACEFULLY);
 #endif
   freeLinkageList(pl->alphaList);
-  freeLinkageList(pl->freqList);
+  freeLinkageList(pl->freqList); 
   freeLinkageList(pl->rateList);
 #ifdef _FINE_GRAIN_MPI
 }
@@ -1024,7 +1024,7 @@ if (MASTER_P) {
 
     @param alignmentData
       The multiple sequence alignment
-
+    
     @return
       Returns \a 1 in case of success, otherwise \a 0
 */
@@ -1041,8 +1041,8 @@ pllPartitionsValidate (pllQueue * parts, pllAlignmentData * alignmentData)
 
   /* check if the list contains at least one partition */
   nparts = pllQueueSize (parts);
-  if (!nparts)
-    return (0);
+  if (!nparts)          
+    return (0);   
 
   /* boolean array for marking that a site was assigned a partition */
   used = (char *) rax_calloc (alignmentData->sequenceLength, sizeof (char));
@@ -1051,7 +1051,7 @@ pllPartitionsValidate (pllQueue * parts, pllAlignmentData * alignmentData)
   for (elm = parts->head; elm; elm = elm->next)
    {
      pi = (pllPartitionInfo *) elm->item;
-
+     
      for (regionItem = pi->regionList->head; regionItem; regionItem = regionItem->next)
       {
         region = (pllPartitionRegion *) regionItem->item;
@@ -1063,7 +1063,7 @@ pllPartitionsValidate (pllQueue * parts, pllAlignmentData * alignmentData)
               rax_free (used);
               return (0);
             }
-           used[i] = 1;
+           used[i] = 1; 
          }
       }
    }
@@ -1081,7 +1081,7 @@ pllPartitionsValidate (pllQueue * parts, pllAlignmentData * alignmentData)
 }
 
 /** @brief Swap two sites in a buffer
-
+    
     Swaps sites \a s1 and \a s2 in buffer \a buf which consists of \a nTaxa + 1
     taxa (i.e. rows), and the first row contains no information, i.e. it is not
     accessed.
@@ -1113,7 +1113,7 @@ swapSite (unsigned char ** buf, int s1, int s2, int nTaxa)
 }
 
 /** @brief Constructs the list of partitions according to the proposed partition scheme
-
+    
     A static function that construcs the \a partitionList structure according to
     the partition scheme \b AFTER the sites have been repositioned in contiguous
     regions according to the partition scheme.
@@ -1124,11 +1124,11 @@ swapSite (unsigned char ** buf, int s1, int s2, int nTaxa)
       bounds is a site that is not included in the partition
 
     @todo
-      Fix the bug in PLL
+      Fix the bug in PLL 
 
     @param nparts
       The number of partitions to be created
-
+      
 */
 static partitionList *
 createPartitions (pllQueue * parts, int * bounds)
@@ -1139,13 +1139,13 @@ createPartitions (pllQueue * parts, int * bounds)
   int i;
 
   pl = (partitionList *) rax_malloc (sizeof (partitionList));
-
+  
   // TODO: fix this
   pl->perGeneBranchLengths =      0;
 
   // TODO: change PLL_NUM_BRANCHES to number of partitions I guess
   pl->partitionData = (pInfo **) rax_calloc (PLL_NUM_BRANCHES, sizeof (pInfo *));
-
+  
   for (i = 0, elm = parts->head; elm; elm = elm->next, ++ i)
    {
      pi = (pllPartitionInfo *) elm->item;
@@ -1155,13 +1155,13 @@ createPartitions (pllQueue * parts, int * bounds)
      pl->partitionData[i]->upper = bounds[(i << 1) + 1];
      pl->partitionData[i]->width = bounds[(i << 1) + 1] - bounds[i << 1];
 
-     //the two flags below are required to allow users to set
-     //alpha parameters and substitution rates in the Q matrix
-     //to fixed values. These parameters will then not be optimized
+     //the two flags below are required to allow users to set 
+     //alpha parameters and substitution rates in the Q matrix 
+     //to fixed values. These parameters will then not be optimized 
      //in the model parameter optimization functions
-     //by default we assume that all parameters are being optimized, i.e.,
-     //this has to be explicitly set by the user
-
+     //by default we assume that all parameters are being optimized, i.e., 
+     //this has to be explicitly set by the user 
+     
      pl->partitionData[i]->optimizeAlphaParameter    = PLL_TRUE;
      pl->partitionData[i]->optimizeSubstitutionRates = PLL_TRUE;
 
@@ -1175,7 +1175,7 @@ createPartitions (pllQueue * parts, int * bounds)
       }
      else /* PLL_AA_DATA */
       {
-        pl->partitionData[i]->dataType                  = PLL_AA_DATA;
+        pl->partitionData[i]->dataType                  = PLL_AA_DATA; 
         pl->partitionData[i]->protModels                = pi->protModels;
 	if(pl->partitionData[i]->protModels != PLL_GTR)
 	  pl->partitionData[i]->optimizeSubstitutionRates = PLL_FALSE;
@@ -1184,7 +1184,7 @@ createPartitions (pllQueue * parts, int * bounds)
         pl->partitionData[i]->protModels                = pi->protModels;
         pl->partitionData[i]->optimizeBaseFrequencies   = pi->optimizeBaseFrequencies;
       }
-
+     
      pl->partitionData[i]->states                = pLengths[pl->partitionData[i]->dataType].states;
      pl->partitionData[i]->numberOfCategories    =        1;
      pl->partitionData[i]->autoProtModels        =        0;
@@ -1204,7 +1204,7 @@ createPartitions (pllQueue * parts, int * bounds)
 
 
 /** @ingroup instanceLinkingGroup
-    @brief Constructs the proposed partition scheme
+    @brief Constructs the proposed partition scheme 
 
     This function constructs the proposed partition scheme. It assumes
     that the partition scheme is correct.
@@ -1212,7 +1212,7 @@ createPartitions (pllQueue * parts, int * bounds)
     @note This function \b does \b not validate the partition scheme.
     The user must manually call the ::pllPartitionsValidate function
     for validation
-
+    
     @param parts
       A list of partitions suggested by the caller
 
@@ -1234,7 +1234,7 @@ partitionList * pllPartitionsCommit (pllQueue * parts, pllAlignmentData * alignm
   int * newBounds;
   int k, nparts;
 
-
+ 
 
   dst = k = 0;
   oi  = (int *) rax_malloc (alignmentData->sequenceLength * sizeof (int));
@@ -1247,7 +1247,7 @@ partitionList * pllPartitionsCommit (pllQueue * parts, pllAlignmentData * alignm
   for (elm = parts->head; elm; elm = elm->next, ++ k)
    {
      pi = (pllPartitionInfo *) elm->item;
-
+     
      newBounds[k << 1] = dst;   /* set the lower column for this partition */
      for (regionItem = pi->regionList->head; regionItem; regionItem = regionItem->next)
       {
@@ -1275,7 +1275,7 @@ partitionList * pllPartitionsCommit (pllQueue * parts, pllAlignmentData * alignm
   pl = createPartitions (parts, newBounds);
   pl->numberOfPartitions = nparts;
   pl->dirty = PLL_FALSE;
-
+  
   rax_free (newBounds);
   rax_free (oi);
 
@@ -1322,12 +1322,12 @@ copySite (unsigned char ** dst, unsigned char ** src, int to, int from, int nTax
 
     @param alignmentData
       The multiple sequence alignment
-
+    
     @param pl
       List of partitions
 
 */
-void
+void 
 pllAlignmentRemoveDups (pllAlignmentData * alignmentData, partitionList * pl)
 {
   int i, j, k, p;
@@ -1357,7 +1357,7 @@ pllAlignmentRemoveDups (pllAlignmentData * alignmentData, partitionList * pl)
       {
         for (j = 0; j < alignmentData->sequenceCount; ++ j)
          {
-           sites[p][i][j] = alignmentData->sequenceData[j + 1][pl->partitionData[p]->lower + i];
+           sites[p][i][j] = alignmentData->sequenceData[j + 1][pl->partitionData[p]->lower + i]; 
          }
         sites[p][i][j] = 0;
       }
@@ -1430,7 +1430,7 @@ pllAlignmentRemoveDups (pllAlignmentData * alignmentData, partitionList * pl)
 
 
 /** @brief Compute the empirical frequencies of a partition
-
+  
     Compute the empirical frequencies of partition \a partition and store them in
     \a pfreqs.
 
@@ -1452,93 +1452,93 @@ pllAlignmentRemoveDups (pllAlignmentData * alignmentData, partitionList * pl)
 static void
 genericBaseFrequencies (pInfo * partition, pllAlignmentData * alignmentData, pll_boolean smoothFrequencies, const unsigned int * bitMask, double * pfreqs)
 {
-  double
-    wj,
+  double 
+    wj, 
     acc,
-    sumf[64],
+    sumf[64],   
     temp[64];
-
-  int
-    i,
-    j,
-    k,
+ 
+  int     
+    i, 
+    j, 
+    k, 
     l,
     numFreqs,
     lower,
     upper;
 
-  unsigned char  *yptr;
+  unsigned char  *yptr;  
 
   numFreqs = partition->states;
   lower    = partition->lower;
   upper    = partition->upper;
 
-  for(l = 0; l < numFreqs; l++)
+  for(l = 0; l < numFreqs; l++)	    
     pfreqs[l] = 1.0 / ((double)numFreqs);
-
-  for (k = 1; k <= 8; k++)
-    {
+	  
+  for (k = 1; k <= 8; k++) 
+    {	     	   	    	      			
       for(l = 0; l < numFreqs; l++)
 	sumf[l] = 0.0;
-
-      for (i = 1; i <= alignmentData->sequenceCount; i++)
-	{
+	      
+      for (i = 1; i <= alignmentData->sequenceCount; i++) 
+	{		 
           yptr = alignmentData->sequenceData[i];
-
-	  for(j = lower; j < upper; j++)
+	  
+	  for(j = lower; j < upper; j++) 
 	    {
 	      unsigned int code = bitMask[yptr[j]];
 	      assert(code >= 1);
-
+	      
 	      for(l = 0; l < numFreqs; l++)
 		{
 		  if((code >> l) & 1)
 		    temp[l] = pfreqs[l];
 		  else
 		    temp[l] = 0.0;
-		}
-
+		}		      	      
+	      
 	      for(l = 0, acc = 0.0; l < numFreqs; l++)
 		{
 		  if(temp[l] != 0.0)
 		    acc += temp[l];
 		}
-
+	      
 	      wj = alignmentData->siteWeights[j] / acc;
-
+	      
 	      for(l = 0; l < numFreqs; l++)
 		{
-		  if(temp[l] != 0.0)
-		    sumf[l] += wj * temp[l];
+		  if(temp[l] != 0.0)		    
+		    sumf[l] += wj * temp[l];			     				   			     		   
 		}
 	    }
-	}
-
+	}	    	      
+      
       for(l = 0, acc = 0.0; l < numFreqs; l++)
 	{
 	  if(sumf[l] != 0.0)
 	    acc += sumf[l];
 	}
-
+	      
       for(l = 0; l < numFreqs; l++)
-	pfreqs[l] = sumf[l] / acc;
+	pfreqs[l] = sumf[l] / acc;	     
     }
 
    /* TODO: What is that? */
 /*
-  if(smoothFrequencies)
+  if(smoothFrequencies)         
    {;
-    smoothFreqs(numFreqs, pfreqs,  tr->partitionData[model].frequencies, &(tr->partitionData[model]));
+    smoothFreqs(numFreqs, pfreqs,  tr->partitionData[model].frequencies, &(tr->partitionData[model]));	   
    }
-  else
+  else    
     {
-      boolean
+      boolean 
 	zeroFreq = PLL_FALSE;
 
-      char
+      char 
 	typeOfData[1024];
 
-      getDataTypeString(tr, model, typeOfData);
+      getDataTypeString(tr, model, typeOfData);  
 
       for(l = 0; l < numFreqs; l++)
 	{
@@ -1557,11 +1557,11 @@ genericBaseFrequencies (pInfo * partition, pllAlignmentData * alignmentData, pll
 	{
 	  assert(pfreqs[l] > 0.0);
 	  tr->partitionData[model].frequencies[l] = pfreqs[l];
-	}
-    }
+	}     
+    }  
 */
 
-
+  
 }
 
 /** @brief Compute the empirical base frequencies for all partitions
@@ -1570,7 +1570,7 @@ genericBaseFrequencies (pInfo * partition, pllAlignmentData * alignmentData, pll
 
     @param pl
       Partition list
-
+    
     @param alignmentData
       Multiple sequence alignment
 
@@ -1585,19 +1585,19 @@ pllBaseFrequenciesGTR (partitionList * pl, pllAlignmentData * alignmentData)
     i,
     model;
 
-  double
+  double 
     **freqs = (double **) rax_malloc (pl->numberOfPartitions * sizeof (double *));
 
   for (model = 0; model < pl->numberOfPartitions; ++ model)
     {
       freqs[model] = (double *) rax_malloc (pl->partitionData[model]->states * sizeof (double));
-
+      
       switch  (pl->partitionData[model]->dataType)
 	{
         case PLL_AA_DATA:
         case PLL_DNA_DATA:
-          genericBaseFrequencies (pl->partitionData[model],
-                                  alignmentData,
+          genericBaseFrequencies (pl->partitionData[model], 
+                                  alignmentData, 
                                   pLengths[pl->partitionData[model]->dataType].smoothFrequencies,
                                   pLengths[pl->partitionData[model]->dataType].bitVector,
                                   freqs[model]
@@ -1612,7 +1612,7 @@ pllBaseFrequenciesGTR (partitionList * pl, pllAlignmentData * alignmentData)
 	  }
 	}
     }
-
+  
   return (freqs);
 }
 
@@ -1632,7 +1632,7 @@ pllEmpiricalFrequenciesDestroy (double *** empiricalFrequencies, int models)
 
 /** @ingroup instanceLinkingGroup
     @brief Load alignment to the PLL instance
-
+    
     Loads (copies) the parsed alignment to the PLL instance. Depending
     on how the \a bDeep flag is set, the alignment in the PLL instance
     is a deep or shallow copy of \a alignmentData
@@ -1640,7 +1640,7 @@ pllEmpiricalFrequenciesDestroy (double *** empiricalFrequencies, int models)
     @param tr
       The library instance
 
-    @param alignmentData
+    @param alignmentData 
       The multiple sequence alignment
 
     @param partitions
@@ -1651,7 +1651,7 @@ pllEmpiricalFrequenciesDestroy (double *** empiricalFrequencies, int models)
       If it is set to \b PLL_DEEP_COPY, then new memory will be allocated
       and the alignment will be copied there (deep copy). On the other
       hand, if \b PLL_SHALLOW_COPY is specified, only the pointers will be
-      copied and therefore, the alignment will be shared between the
+      copied and therefore, the alignment will be shared between the 
       alignment structure and the library instance (shallow copy).
 
     @return
@@ -1662,15 +1662,11 @@ pllLoadAlignment (pllInstance * tr, pllAlignmentData * alignmentData, partitionL
 {
   int i;
   nodeptr node;
-  static int doSubst = 1;
 
   if (tr->mxtips != alignmentData->sequenceCount) return (0);
 
   /* Do the base substitution (from A,C,G....  ->   0,1,2,3....)*/
-  if ( doSubst ) {
-	  pllBaseSubstitute (alignmentData, partitions);
-	  doSubst = 0;
-  }
+  pllBaseSubstitute (alignmentData, partitions);
 
   tr->aliaswgt = (int *) rax_malloc (alignmentData->sequenceLength * sizeof (int));
   memcpy (tr->aliaswgt, alignmentData->siteWeights, alignmentData->sequenceLength * sizeof (int));
@@ -1682,23 +1678,23 @@ pllLoadAlignment (pllInstance * tr, pllAlignmentData * alignmentData, partitionL
   tr->lhs                    = (double*) rax_malloc((size_t)tr->originalCrunchedLength * sizeof(double));
 
   /* allocate memory for the alignment */
-  tr->yVector    = (unsigned char **) rax_malloc ((alignmentData->sequenceCount + 1) * sizeof (unsigned char *));
+  tr->yVector    = (unsigned char **) rax_malloc ((alignmentData->sequenceCount + 1) * sizeof (unsigned char *));                                                                                                                                                                      
   tr->bDeep = bDeep;
 
   if (bDeep == PLL_DEEP_COPY)
    {
      tr->yVector[0] = (unsigned char *)  rax_malloc (sizeof (unsigned char) * (alignmentData->sequenceLength + 1) * alignmentData->sequenceCount);
-     for (i = 1; i <= alignmentData->sequenceCount; ++ i)
-      {
+     for (i = 1; i <= alignmentData->sequenceCount; ++ i) 
+      {                     
         tr->yVector[i] = (unsigned char *) (tr->yVector[0] + (i - 1) * (alignmentData->sequenceLength + 1) * sizeof (unsigned char));
         tr->yVector[i][alignmentData->sequenceLength] = 0;
-      }
+      }                     
    }
-
-  /* place sequences to tips */
-  for (i = 1; i <= alignmentData->sequenceCount; ++ i)
-   {
-     if (!pllHashSearch (tr->nameHash, alignmentData->sequenceLabels[i],(void **)&node))
+                         
+  /* place sequences to tips */                              
+  for (i = 1; i <= alignmentData->sequenceCount; ++ i)                      
+   {                     
+     if (!pllHashSearch (tr->nameHash, alignmentData->sequenceLabels[i],(void **)&node)) 
       {
         //rax_free (tr->originalCrunchedLength);
         rax_free (tr->rateCategory);
@@ -1719,7 +1715,7 @@ pllLoadAlignment (pllInstance * tr, pllAlignmentData * alignmentData, partitionL
 }
 
 /** @brief Create the main instance of PLL
-
+    
     Create an instance of the phylogenetic likelihood library
 
     @param rateHetModel
@@ -1733,13 +1729,13 @@ pllLoadAlignment (pllInstance * tr, pllAlignmentData * alignmentData, partitionL
 
     @param useRecom
       If set to \b PLL_TRUE, enables ancestral state recomputation
-
+    
     @todo
       Document fastScaling, rate heterogeneity and saveMemory and useRecom
 
     @note
-      Do not set \a saveMemory to when using \a useRecom as memory saving techniques
-      are not yet implemented for ancestral state recomputation.
+      Do not set \a saveMemory to when using \a useRecom as memory saving techniques 
+      are not yet implemented for ancestral state recomputation. 
 
     @return
       On success returns an instance to PLL, otherwise \b NULL
@@ -1758,7 +1754,7 @@ pllCreateInstance (pllInstanceAttr * attr)
   tr->fastScaling  = attr->fastScaling;
   tr->saveMemory   = attr->saveMemory;
   tr->useRecom     = attr->useRecom;
-
+  
   tr->randomNumberSeed = attr->randomNumberSeed;
 
   /* remove it from the library */
@@ -1778,8 +1774,8 @@ pllCreateInstance (pllInstanceAttr * attr)
 }
 
 /** @brief Initialize PLL tree structure with default values
-
-    Initialize PLL tree structure with default values and allocate
+    
+    Initialize PLL tree structure with default values and allocate 
     memory for its elements.
 
     @todo
@@ -1791,7 +1787,7 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
   int i, j;
   int inner;
 
-
+  
 
   /* TODO: make a proper static setupTree function */
 
@@ -1805,7 +1801,7 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
   tr->tree0 = (char*)rax_calloc((size_t)tr->treeStringLength, sizeof(char));
   tr->tree1 = (char*)rax_calloc((size_t)tr->treeStringLength, sizeof(char));
 
-
+  
   p0 = (nodeptr) rax_malloc ((tips + 3 * inner) * sizeof (node));
   assert (p0);
 
@@ -1815,7 +1811,7 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
   tr->nodep            = (nodeptr *) rax_malloc ((2 * tips) * sizeof (nodeptr));
   assert (tr->nameList && tr->nodep);
 
-  tr->nodep[0] = NULL;
+  tr->nodep[0] = NULL;          
 
 
   /* TODO: FIX THIS! */
@@ -1825,7 +1821,7 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
    {
      p = p0++;
 
-     //p->hash      = KISS32();
+     //p->hash      = KISS32();     
      p->x         = 0;
      p->xBips     = 0;
      p->number    = i;
@@ -1881,11 +1877,173 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
   tr->td[0].ti               = (traversalInfo *) rax_malloc (sizeof(traversalInfo) * (size_t)tr->mxtips);
   tr->td[0].parameterValues  = (double *) rax_malloc(sizeof(double) * (size_t)PLL_NUM_BRANCHES);
   tr->td[0].executeModel     = (pll_boolean *) rax_malloc (sizeof(pll_boolean) * (size_t)PLL_NUM_BRANCHES);
-  tr->td[0].executeModel[0]  = PLL_TRUE;
+  tr->td[0].executeModel[0]  = PLL_TRUE;                                                                                                                                                                                                                                    
   for (i = 0; i < PLL_NUM_BRANCHES; ++ i) tr->td[0].executeModel[i] = PLL_TRUE;
 }
 
 
+/* @brief Check a parsed tree for inclusion in the current tree
+
+   Check whether the set of leaves (taxa) of the parsed tree \a nTree is a
+   subset of the leaves of the currently loaded tree.
+
+   @param pInst
+     PLL instance
+
+   @param nTree
+     Parsed newick tree structure
+
+   @return
+     Returns \b PLL_TRUE in case it is a subset, otherwise \b PLL_FALSE
+*/
+static int
+checkTreeInclusion (pllInstance * pInst, pllNewickTree * nTree)
+{
+  pllStack * sList;
+  pllNewickNodeInfo * sItem;
+  void * dummy;
+  
+  if (!pInst->nameHash) return (PLL_FALSE);
+
+  for (sList = nTree->tree; sList; sList = sList->next)
+   {
+     sItem = (pllNewickNodeInfo *) sList->item;
+     if (!sItem->rank)   /* leaf */
+      {
+        if (!pllHashSearch (pInst->nameHash, sItem->name, &dummy)) return (PLL_FALSE);
+   }
+   }
+
+  return (PLL_TRUE);
+}
+
+static void
+updateBranchLength (nodeptr p, double old_fracchange, double new_fracchange)
+{
+  double z;
+  int j;
+
+  for (j = 0; j < PLL_NUM_BRANCHES; ++ j)
+   {
+     z = exp ((log (p->z[j]) * old_fracchange) / new_fracchange);
+     if (z < PLL_ZMIN) z = PLL_ZMIN;
+     if (z > PLL_ZMAX) z = PLL_ZMAX;
+     p->z[j] = p->back->z[j] = z;
+   }
+}
+
+static void
+updateAllBranchLengthsRecursive (nodeptr p, int tips, double old_fracchange, double new_fracchange)
+{
+  updateBranchLength (p, old_fracchange, new_fracchange);
+
+  if (!isTip (p->number, tips))
+   {
+     updateAllBranchLengthsRecursive (p->next->back,       tips, old_fracchange, new_fracchange);
+     updateAllBranchLengthsRecursive (p->next->next->back, tips, old_fracchange, new_fracchange);
+   }
+}
+
+static void
+updateAllBranchLengths (pllInstance * tr, double old_fracchange, double new_fracchange)
+{
+  nodeptr p;
+
+  p = tr->start;
+  assert (isTip(p->number, tr->mxtips));
+
+  updateAllBranchLengthsRecursive (p->back, tr->mxtips, old_fracchange, new_fracchange);
+
+}
+
+
+/** @brief Relink the taxa
+    
+    Relink the taxa by performing a preorder traversal of the unrooted binary tree.
+    We assume that the tree is rooted such that the root is the only node of
+    out-degree 3 and in-degree 0, while all the other inner nodes have in-degree
+    1 and out-degree 2. Finally, the leaves have in-degree 1 and out-degree 0.
+
+    @param pInst
+      PLL instance
+
+    @param nTree
+      Parsed newick tree structure
+
+    @param taxaExist
+      Is the set of taxa of \a nTree a subset of the taxa of the current tree
+
+    @return
+*/
+static int
+linkTaxa (pllInstance * pInst, pllNewickTree * nTree, int taxaExist)
+{
+  nodeptr 
+    parent,
+    child;
+  pllStack 
+    * nodeStack = NULL,
+    * current;
+  int
+    i,
+    j,
+    inner = nTree->tips + 1,
+    leaf  = 1;
+  double z;
+  pllNewickNodeInfo * nodeInfo;
+  
+  if (!taxaExist) pllTreeInitDefaults (pInst, nTree->tips);
+
+  /* Place the ternary root node 3 times on the stack such that later on
+     three nodes use it as their parent */
+  current = nTree->tree;
+  for (parent = pInst->nodep[inner], i  = 0; i < 3; ++ i, parent = parent->next)
+    pllStackPush (&nodeStack, parent);
+  ++ inner;
+  
+  
+  for (current = current->next; current; current = current->next)
+  {
+     parent   = (nodeptr) pllStackPop (&nodeStack);
+     nodeInfo = (pllNewickNodeInfo *) current->item;
+
+     /* if inner node place it twice on the stack (out-degree 2) */
+     if (nodeInfo->rank)
+     {
+        child = pInst->nodep[inner ++];
+        pllStackPush (&nodeStack, child->next);
+        pllStackPush (&nodeStack, child->next->next);
+     }
+    else
+     {
+        if (taxaExist)
+        {
+           assert (pllHashSearch (pInst->nameHash, nodeInfo->name, (void **) &child));
+        }
+       else             /* leaf */
+        {
+           child = pInst->nodep[leaf];
+           pInst->nameList[leaf] = strdup (nodeInfo->name);
+           pllHashAdd (pInst->nameHash, pInst->nameList[leaf], (void *) (pInst->nodep[leaf]));
+           ++ leaf;
+         }
+      }
+     assert (parent);
+
+     parent->back = child;
+     child->back  = parent;
+            
+     if (!taxaExist) pInst->fracchange = 1;
+ 
+          
+     z = exp ((-1 * atof (nodeInfo->branch)) / pInst->fracchange);
+     if (z < PLL_ZMIN) z = PLL_ZMIN;
+     if (z > PLL_ZMAX) z = PLL_ZMAX;
+     for (j = 0; j < PLL_NUM_BRANCHES; ++ j)
+       parent->z[j] = child->z[j] = z;
+        }
+  pllStackClear (&nodeStack);
+     }
 /** @ingroup instanceLinkingGroup
     @brief Initializes the PLL tree topology according to a parsed newick tree
 
@@ -1902,83 +2060,13 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
       value.
 */
 void
-pllTreeInitTopologyNewick (pllInstance * tr, pllNewickTree * nt, int useDefaultz)
+pllTreeInitTopologyNewick (pllInstance * tr, pllNewickTree * newick, int useDefaultz)
 {
-  pllStack * nodeStack = NULL;
-  pllStack * head;
-  struct item_t * item;
-  int i, j, k;
-
-/*
-  for (i = 0; i < partitions->numberOfPartitions; ++ i)
-   {
-     partitions->partitionData[i] = (pInfo *) rax_malloc (sizeof (pInfo));
-     partitions->partitionData[i]->partitionContribution = -1.0;
-     partitions->partitionData[i]->partitionLH           =  0.0;
-     partitions->partitionData[i]->fracchange            =  1.0;
-   }
-*/
-
-  pllTreeInitDefaults (tr, nt->tips);
-
-  i = nt->tips + 1;
-  j = 1;
-  nodeptr v;
-
-
-  for (head = nt->tree; head; head = head->next)
-  {
-    item = (struct item_t *) head->item;
-    if (!nodeStack)
-     {
-       pllStackPush (&nodeStack, tr->nodep[i]);
-       pllStackPush (&nodeStack, tr->nodep[i]->next);
-       pllStackPush (&nodeStack, tr->nodep[i]->next->next);
-       ++i;
-     }
-    else
-     {
-       v = (nodeptr) pllStackPop (&nodeStack);
-       if (item->rank)  /* internal node */
-        {
-          v->back           = tr->nodep[i];
-          tr->nodep[i]->back = v; //t->nodep[v->number]
-          pllStackPush (&nodeStack, tr->nodep[i]->next);
-          pllStackPush (&nodeStack, tr->nodep[i]->next->next);
-          double z = exp((-1 * atof(item->branch))/tr->fracchange);
-          if(z < PLL_ZMIN) z = PLL_ZMIN;
-          if(z > PLL_ZMAX) z = PLL_ZMAX;
-          for (k = 0; k < PLL_NUM_BRANCHES; ++ k)
-             v->z[k] = tr->nodep[i]->z[k] = z;
-
-          ++ i;
-        }
-       else             /* leaf */
-        {
-          v->back           = tr->nodep[j];
-          tr->nodep[j]->back = v; //t->nodep[v->number];
-
-          double z = exp((-1 * atof(item->branch))/tr->fracchange);
-          if(z < PLL_ZMIN) z = PLL_ZMIN;
-          if(z > PLL_ZMAX) z = PLL_ZMAX;
-          for (k = 0; k < PLL_NUM_BRANCHES; ++ k)
-            v->z[k] = tr->nodep[j]->z[k] = z;
-
-          //t->nameList[j] = strdup (item->name);
-          tr->nameList[j] = (char *) rax_malloc ((strlen (item->name) + 1) * sizeof (char));
-          strcpy (tr->nameList[j], item->name);
-
-          pllHashAdd (tr->nameHash, tr->nameList[j], (void *) (tr->nodep[j]));
-          ++ j;
-        }
-     }
-  }
-
+  linkTaxa (tr, newick, tr->nameHash && checkTreeInclusion (tr, newick));
+  
   tr->start = tr->nodep[1];
-
-  pllStackClear (&nodeStack);
-
-  if (useDefaultz == PLL_TRUE)
+  
+  if (useDefaultz == PLL_TRUE) 
     resetBranches (tr);
 }
 
@@ -1998,7 +2086,7 @@ pllTreeInitTopologyNewick (pllInstance * tr, pllNewickTree * nt, int useDefaultz
     @param nameList
       A set of \a tips names representing the taxa labels
 */
-void
+void 
 pllTreeInitTopologyRandom (pllInstance * tr, int tips, char ** nameList)
 {
   int i;
@@ -2010,18 +2098,18 @@ pllTreeInitTopologyRandom (pllInstance * tr, int tips, char ** nameList)
      strcpy (tr->nameList[i], nameList[i]);
      pllHashAdd (tr->nameHash, tr->nameList[i], (void *) (tr->nodep[i]));
    }
-
+  
 
   makeRandomTree (tr);
 }
 
 
-/** @brief Initialize a tree that corresponds to a given (already parsed) alignment
+/** @brief Initialize a tree that corresponds to a given (already parsed) alignment 
 
     Initializes the PLL tree such that it corresponds to the given alignment
 
     @todo
-      nothing
+      nothing 
 
     @param tr
       The PLL instance
@@ -2029,16 +2117,16 @@ pllTreeInitTopologyRandom (pllInstance * tr, int tips, char ** nameList)
     @param alignmentData
       Parsed alignment
 */
-void
+void 
 pllTreeInitTopologyForAlignment (pllInstance * tr, pllAlignmentData * alignmentData)
 {
   int
     tips = alignmentData->sequenceCount,
     i;
 
-  char
+  char 
     **nameList = alignmentData->sequenceLabels;
-
+  
   pllTreeInitDefaults (tr, tips);
 
   for (i = 1; i <= tips; ++ i)
@@ -2052,7 +2140,7 @@ pllTreeInitTopologyForAlignment (pllInstance * tr, pllAlignmentData * alignmentD
 
 /** @brief Compute a randomized stepwise addition oder parsimony tree
 
-    Implements the RAxML randomized stepwise addition order algorithm
+    Implements the RAxML randomized stepwise addition order algorithm 
 
     @todo
       check functions that are invoked for potential memory leaks!
@@ -2071,8 +2159,8 @@ void pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInstance * tr, partiti
 }
 
 /** @brief Encode the alignment data to the PLL numerical representation
-
-    Transforms the alignment to the PLL internal representation by substituting each base
+    
+    Transforms the alignment to the PLL internal representation by substituting each base 
     with a specific digit.
 
     @param alignmentData
@@ -2136,7 +2224,7 @@ pllBaseSubstitute (pllAlignmentData * alignmentData, partitionList * partitions)
   meaningDNA['x'] =
   meaningDNA['-'] =
   meaningDNA['?'] = 15;
-
+ 
   /* AA data */
 
   meaningAA['A'] =  0;  /* alanine */
@@ -2184,16 +2272,16 @@ pllBaseSubstitute (pllAlignmentData * alignmentData, partitionList * partitions)
   meaningAA['b'] =  20; /* asparagine, aspartic 2 and 3*/
   meaningAA['z'] =  21; /*21 glutamine glutamic 5 and 6*/
 
-  meaningAA['X'] =
-  meaningAA['x'] =
-  meaningAA['?'] =
-  meaningAA['*'] =
+  meaningAA['X'] = 
+  meaningAA['x'] = 
+  meaningAA['?'] = 
+  meaningAA['*'] = 
   meaningAA['-'] = 22;
 
   for (i = 0; i < partitions->numberOfPartitions; ++ i)
    {
      d = (partitions->partitionData[i]->dataType == PLL_DNA_DATA) ? meaningDNA : meaningAA;
-
+     
      for (j = 1; j <= alignmentData->sequenceCount; ++ j)
       {
         for (k = partitions->partitionData[i]->lower; k < partitions->partitionData[i]->upper; ++ k)
@@ -2205,7 +2293,7 @@ pllBaseSubstitute (pllAlignmentData * alignmentData, partitionList * partitions)
 }
 
 /** Clears the rearrangements history from PLL instance
-
+    
     Clears the rearrangements rollback information (history) from the PLL instance \a tr.
 
     @param tr
@@ -2235,7 +2323,7 @@ pllDestroyInstance (pllInstance * tr)
 
   for (i = 1; i <= tr->mxtips; ++ i)
     rax_free (tr->nameList[i]);
-
+  
   pllHashDestroy (&(tr->nameHash), PLL_FALSE);
   if (tr->yVector)
    {
@@ -2259,7 +2347,7 @@ pllDestroyInstance (pllInstance * tr)
   rax_free (tr->tree_string);
   rax_free (tr->tree0);
   rax_free (tr->tree1);
-
+  
   pllClearRearrangeHistory (tr);
 
   rax_free (tr);
@@ -2273,18 +2361,18 @@ pllDestroyInstance (pllInstance * tr)
 /* initializwe a parameter linkage list for a certain parameter type (can be whatever).
    the input is an integer vector that contaions NumberOfModels (numberOfPartitions) elements.
 
-   if we want to have all alpha parameters unlinked and have say 4 partitions the input
-   vector would look like this: {0, 1, 2, 3}, if we want to link partitions 0 and 3 the vector
-   should look like this: {0, 1, 2, 0}
+   if we want to have all alpha parameters unlinked and have say 4 partitions the input 
+   vector would look like this: {0, 1, 2, 3}, if we want to link partitions 0 and 3 the vector 
+   should look like this: {0, 1, 2, 0} 
 */
 
 
 
 static int init_Q_MatrixSymmetries(char *linkageString, partitionList * pr, int model)
 {
-  int
+  int 
     states = pr->partitionData[model]->states,
-    numberOfRates = ((states * states - states) / 2),
+    numberOfRates = ((states * states - states) / 2), 
     *list = (int *)rax_malloc(sizeof(int) * numberOfRates),
     j,
     max = -1;
@@ -2299,7 +2387,7 @@ static int init_Q_MatrixSymmetries(char *linkageString, partitionList * pr, int 
   strcpy (ch, linkageString);
 
 
-  for(j = 0, str1 = ch; ;j++, str1 = (char *)NULL)
+  for(j = 0, str1 = ch; ;j++, str1 = (char *)NULL) 
     {
       token = STRTOK_R(str1, ",", &saveptr);
       if(token == (char *)NULL)
@@ -2309,9 +2397,9 @@ static int init_Q_MatrixSymmetries(char *linkageString, partitionList * pr, int 
 	  errno = PLL_SUBSTITUTION_RATE_OUT_OF_BOUNDS;
 	  return PLL_FALSE;
 	}
-      list[j] = atoi(token);
+      list[j] = atoi(token);     
     }
-
+  
   rax_free(ch);
 
   for(j = 0; j < numberOfRates; j++)
@@ -2321,23 +2409,23 @@ static int init_Q_MatrixSymmetries(char *linkageString, partitionList * pr, int 
 	  errno = PLL_INVALID_Q_MATRIX_SYMMETRY;
 	  return PLL_FALSE;
 	}
-
+      
       if(!(list[j] <= max + 1))
 	{
 	  errno = PLL_Q_MATRIX_SYMMETRY_OUT_OF_BOUNDS;
 	  return PLL_FALSE;
 	}
-
+      
       if(list[j] > max)
 	max = list[j];
-    }
-
-  for(j = 0; j < numberOfRates; j++)
-    pr->partitionData[model]->symmetryVector[j] = list[j];
+    }  
+  
+  for(j = 0; j < numberOfRates; j++)  
+    pr->partitionData[model]->symmetryVector[j] = list[j];    
 
   //less than the maximum possible number of rate parameters
 
-  if(max < numberOfRates - 1)
+  if(max < numberOfRates - 1)    
     pr->partitionData[model]->nonGTR = PLL_TRUE;
 
   pr->partitionData[model]->optimizeSubstitutionRates = PLL_TRUE;
@@ -2349,41 +2437,41 @@ static int init_Q_MatrixSymmetries(char *linkageString, partitionList * pr, int 
 
 /** @brief Check parameter linkage across partitions for consistency
  *
- * Checks that linked alpha, substitution rate and frequency model parameters
- * across several partitions are consistent. E.g., when two partitions are linked
- * via the alpha parameter, the alpha parameter should either be set to the same
+ * Checks that linked alpha, substitution rate and frequency model parameters 
+ * across several partitions are consistent. E.g., when two partitions are linked 
+ * via the alpha parameter, the alpha parameter should either be set to the same 
  * fixed value or it should be estimated!
  *
  * @param pr
  *   List of partitions
  *
  * @todo
- *   Call this in more functions, right now it's only invoked in the wrapper
- *   for modOpt()
+ *   Call this in more functions, right now it's only invoked in the wrapper 
+ *   for modOpt() 
  */
 static int checkLinkageConsistency(partitionList *pr)
 {
   if(pr->dirty)
     {
-      int
+      int 
 	i;
-
-      linkageList
+      
+      linkageList 
 	*ll;
 
       /* first deal with rates */
 
       ll = pr->rateList;
-
+	
       for(i = 0; i < ll->entries; i++)
 	{
 	  int
 	    partitions = ll->ld[i].partitions,
 	    reference = ll->ld[i].partitionList[0];
-
+	  
 	  if(pr->partitionData[reference]->dataType == PLL_AA_DATA)
 	    {
-	      if(pr->partitionData[reference]->protModels == PLL_GTR || pr->partitionData[reference]->nonGTR)
+	      if(pr->partitionData[reference]->protModels == PLL_GTR || pr->partitionData[reference]->nonGTR)				  
 		{
 		  if(!(pr->partitionData[reference]->optimizeSubstitutionRates == PLL_TRUE))
 		    {
@@ -2391,14 +2479,14 @@ static int checkLinkageConsistency(partitionList *pr)
 		      return PLL_FALSE;
 		    }
 		}
-	      else
+	      else		
 		{
 		  if(!(pr->partitionData[reference]->optimizeSubstitutionRates == PLL_FALSE))
 		    {
 		      errno = PLL_INCONSISTENT_SUBST_RATE_OPTIMIZATION_SETTING;
 		      return PLL_FALSE;
 		    }
-		}
+		}		  
 	    }
 
 	  if(partitions > 1)
@@ -2406,16 +2494,16 @@ static int checkLinkageConsistency(partitionList *pr)
 	      int
 		j,
 		k;
-
+	      
 	      for(k = 1; k < partitions; k++)
 		{
-		  int
+		  int 
 		    index = ll->ld[i].partitionList[k];
-
+		  
 		  int
 		    states = pr->partitionData[index]->states,
 		    rates = ((states * states - states) / 2);
-
+		  
 		  if(!(pr->partitionData[reference]->nonGTR == pr->partitionData[index]->nonGTR))
 		    {
 		      errno = PLL_INCONSISTENT_SUBST_RATE_OPTIMIZATION_SETTING;
@@ -2426,12 +2514,12 @@ static int checkLinkageConsistency(partitionList *pr)
 		      errno = PLL_INCONSISTENT_SUBST_RATE_OPTIMIZATION_SETTING;
 		      return PLL_FALSE;
 		    }
-
-
+		
+		  
 		  if(pr->partitionData[reference]->nonGTR)
-		    {
-
-		      for(j = 0; j < rates; j++)
+		    {		   
+		      
+		      for(j = 0; j < rates; j++)			
 			{
 			  if(!(pr->partitionData[reference]->symmetryVector[j] == pr->partitionData[index]->symmetryVector[j]))
 			    {
@@ -2440,8 +2528,8 @@ static int checkLinkageConsistency(partitionList *pr)
 			    }
 			}
 		    }
-
-
+		  
+		 
 		  for(j = 0; j < rates; j++)
 		    {
 		      if(!(pr->partitionData[reference]->substRates[j] == pr->partitionData[index]->substRates[j]))
@@ -2450,10 +2538,10 @@ static int checkLinkageConsistency(partitionList *pr)
 			  return PLL_FALSE;
 			}
 		    }
-		}
+		}	    
 	    }
 	}
-
+      
       /* then deal with alpha parameters */
 
       ll = pr->alphaList;
@@ -2462,17 +2550,17 @@ static int checkLinkageConsistency(partitionList *pr)
 	{
 	  int
 	    partitions = ll->ld[i].partitions;
-
+	  
 	  if(partitions > 1)
 	    {
 	      int
-		k,
+		k, 
 		reference = ll->ld[i].partitionList[0];
-
+	      
 	      for(k = 1; k < partitions; k++)
 		{
-		  int
-		    index = ll->ld[i].partitionList[k];
+		  int 
+		    index = ll->ld[i].partitionList[k];		  		 
 
 		  if(!(pr->partitionData[reference]->optimizeAlphaParameter == pr->partitionData[index]->optimizeAlphaParameter))
 		    {
@@ -2484,7 +2572,7 @@ static int checkLinkageConsistency(partitionList *pr)
 		      errno = PLL_INCONSISTENT_ALPHA_VALUES_ACROSS_LINKED_PARTITIONS;
 		      return PLL_FALSE;
 		    }
-		}
+		}	    
 	    }
 	}
 
@@ -2494,21 +2582,21 @@ static int checkLinkageConsistency(partitionList *pr)
 
       for(i = 0; i < ll->entries; i++)
 	{
-	  int
+	  int	  
 	    partitions = ll->ld[i].partitions;
-
+	  
 	  if(partitions > 1)
 	    {
-	      int
-		k,
+	      int		
+		k, 
 		reference = ll->ld[i].partitionList[0];
-
+	      
 	      for(k = 1; k < partitions; k++)
 		{
 		  int
 		    j,
 		    index = ll->ld[i].partitionList[k],
-		    states = pr->partitionData[index]->states;
+		    states = pr->partitionData[index]->states;		  		 
 
 		  if(!(pr->partitionData[reference]->optimizeBaseFrequencies == pr->partitionData[index]->optimizeBaseFrequencies))
 		    {
@@ -2524,18 +2612,18 @@ static int checkLinkageConsistency(partitionList *pr)
 			  return PLL_FALSE;
 			}
 		    }
-		}
+		}	    
 	    }
 	}
-
+      
       pr->dirty = PLL_FALSE;
     }
 
   return PLL_TRUE;
 }
 /** @brief Set symmetries among parameters in the Q matrix
-
-    Allows to link some or all rate parameters in the Q-matrix
+    
+    Allows to link some or all rate parameters in the Q-matrix 
     for obtaining simpler models than GTR
 
     @param string
@@ -2543,7 +2631,7 @@ static int checkLinkageConsistency(partitionList *pr)
 
     @param pr
       List of partitions
-
+      
     @param model
       Index of the partition for which we want to set the Q matrix symmetries
 
@@ -2552,7 +2640,7 @@ static int checkLinkageConsistency(partitionList *pr)
 */
 int pllSetSubstitutionRateMatrixSymmetries(char *string, partitionList * pr, int model)
 {
-  int
+  int 
     result = init_Q_MatrixSymmetries(string, pr, model);
 
   pr->dirty = PLL_TRUE;
@@ -2560,10 +2648,18 @@ int pllSetSubstitutionRateMatrixSymmetries(char *string, partitionList * pr, int
   return result;
 }
 
-/** @brief Set the alpha parameter of the Gamma model to a fixed value for a partition
+/** @defgroup modelParamsGroup Model parameters setup and retrieval
+    
+    This set of functions is responsible for setting, retrieving, and optimizing
+    model parameters. It also contains functions for linking model parameters
+    across partitions.
+*/
 
+/** @ingroup modelParamsGroups
+    @brief Set the alpha parameter of the Gamma model to a fixed value for a partition
+    
     Sets the alpha parameter of the gamma model of rate heterogeneity to a fixed value
-    and disables the optimization of this parameter
+    and disables the optimization of this parameter 
 
     @param alpha
       alpha value
@@ -2573,31 +2669,32 @@ int pllSetSubstitutionRateMatrixSymmetries(char *string, partitionList * pr, int
 
     @param pr
       List of partitions
-
+      
     @param tr
-      Library instance for which we want to fix alpha
+      Library instance for which we want to fix alpha 
 
     @todo
       test if this works with the parallel versions
 */
 void pllSetFixedAlpha(double alpha, int model, partitionList * pr, pllInstance *tr)
 {
-  //make sure that we are swetting alpha for a partition within the current range
+  //make sure that we are swetting alpha for a partition within the current range 
   //of partitions
+  double old_fracchange = tr->fracchange;
 
   assert(model >= 0 && model < pr->numberOfPartitions);
 
   assert(alpha >= PLL_ALPHA_MIN && alpha <= PLL_ALPHA_MAX);
 
-  //set the alpha paremeter
-
+  //set the alpha paremeter 
+  
   pr->partitionData[model]->alpha = alpha;
 
   //do the discretization of the gamma curve
 
   makeGammaCats(pr->partitionData[model]->alpha, pr->partitionData[model]->gammaRates, 4, tr->useMedian);
 
-  //broadcast the changed parameters to all threads/MPI processes
+  //broadcast the changed parameters to all threads/MPI processes 
 
 #if (defined(_FINE_GRAIN_MPI) || defined(_USE_PTHREADS))
   pllMasterBarrier(tr, pr, PLL_THREAD_COPY_ALPHA);
@@ -2606,26 +2703,28 @@ void pllSetFixedAlpha(double alpha, int model, partitionList * pr, pllInstance *
   pr->partitionData[model]->optimizeAlphaParameter = PLL_FALSE;
 
   pr->dirty = PLL_FALSE;
+  updateAllBranchLengths (tr, old_fracchange, tr->fracchange);
 }
 
-/** @brief Set all base freuqncies to a fixed value for a partition
-
-    Sets all base freuqencies of a partition to fixed values and disables
-    ML optimization of these parameters
+/** @ingroup modelParamsGroups
+    @brief Set all base freuqncies to a fixed value for a partition
+    
+    Sets all base freuqencies of a partition to fixed values and disables 
+    ML optimization of these parameters 
 
     @param f
       array containing the base frequencies
 
-    @param
-      length of array f, this needs to be as long as the number of
+    @param  length
+      length of array f, this needs to be as long as the number of 
       states in the model, otherwise an assertion will fail!
 
     @param model
-      Index of the partition for which we want to set the frequencies
+      Index of the partition for which we want to set the frequencies 
 
     @param pr
       List of partitions
-
+      
     @param tr
       Library instance for which we want to fix the base frequencies
 
@@ -2634,55 +2733,61 @@ void pllSetFixedAlpha(double alpha, int model, partitionList * pr, pllInstance *
 */
 void pllSetFixedBaseFrequencies(double *f, int length, int model, partitionList * pr, pllInstance *tr)
 {
-  int
+  int 
     i;
 
-  double
-    acc = 0.0;
+  double 
+    acc = 0.0,
+    old_fracchange;
 
-  //make sure that we are setting the base frequencies for a partition within the current range
+  old_fracchange = tr->fracchange;
+
+  //make sure that we are setting the base frequencies for a partition within the current range 
   //of partitions
   assert(model >= 0 && model < pr->numberOfPartitions);
 
-  //make sure that the length of the input array f containing the frequencies
-  //is as long as the number of states in the model
+  //make sure that the length of the input array f containing the frequencies 
+  //is as long as the number of states in the model 
   assert(length == pr->partitionData[model]->states);
 
 
   //make sure that the base frequencies sum approximately to 1.0
-
+  
   for(i = 0; i < length; i++)
     acc += f[i];
+
   if(fabs(acc - 1.0) > 0.000001)
     assert(0);
 
-  //copy the base frequencies
+  //copy the base frequencies 
   memcpy(pr->partitionData[model]->frequencies, f, sizeof(double) * length);
 
-  //re-calculate the Q matrix
+  //re-calculate the Q matrix 
   initReversibleGTR(tr, pr, model);
 
 
-  //broadcast the new Q matrix to all threads/processes
+  //broadcast the new Q matrix to all threads/processes 
 #if (defined(_FINE_GRAIN_MPI) || defined(_USE_PTHREADS))
   pllMasterBarrier (tr, pr, PLL_THREAD_COPY_RATES);
 #endif
-
+  
   pr->partitionData[model]->optimizeBaseFrequencies = PLL_FALSE;
 
   pr->dirty = PLL_TRUE;
+  updateAllBranchLengths (tr, old_fracchange, tr->fracchange);
 }
 
-/** @brief Set that the base freuqencies are optimized under ML
-
-    The base freuqencies for partition model will be optimized under ML
+/** @ingroup modelParamsGroups
+    @brief Set that the base freuqencies are optimized under ML
+    
+    The base freuqencies for partition model will be optimized under ML    
 
     @param model
-      Index of the partition for which we want to optimize base frequencies
+      Index of the partition for which we want to optimize base frequencies 
 
     @param pr
       List of partitions
-
+      
     @param tr
       Library instance for which we want to fix the base frequencies
 
@@ -2695,11 +2800,11 @@ int pllSetOptimizeBaseFrequencies(int model, partitionList * pr, pllInstance *tr
     states,
     i;
 
-  double
+  double 
     initialFrequency,
     acc = 0.0;
 
-  //make sure that we are setting the base frequencies for a partition within the current range
+  //make sure that we are setting the base frequencies for a partition within the current range 
   //of partitions
   if(!(model >= 0 && model < pr->numberOfPartitions))
     {
@@ -2707,18 +2812,18 @@ int pllSetOptimizeBaseFrequencies(int model, partitionList * pr, pllInstance *tr
       return PLL_FALSE;
     }
 
-  //set the number of states/ferquencies in this partition
+  //set the number of states/ferquencies in this partition 
   states = pr->partitionData[model]->states;
 
   //set all frequencies to 1/states
-
+  
   initialFrequency = 1.0 / (double)states;
 
   for(i = 0; i < states; i++)
     pr->partitionData[model]->frequencies[i] = initialFrequency;
 
   //make sure that the base frequencies sum approximately to 1.0
-
+  
   for(i = 0; i < states; i++)
     acc += pr->partitionData[model]->frequencies[i];
 
@@ -2728,14 +2833,14 @@ int pllSetOptimizeBaseFrequencies(int model, partitionList * pr, pllInstance *tr
       return PLL_FALSE;
     }
 
-  //re-calculate the Q matrix
+  //re-calculate the Q matrix 
   initReversibleGTR(tr, pr, model);
 
-  //broadcast the new Q matrix to all threads/processes
+  //broadcast the new Q matrix to all threads/processes 
 #if (defined(_FINE_GRAIN_MPI) || defined(_USE_PTHREADS))
   pllMasterBarrier (tr, pr, PLL_THREAD_COPY_RATES);
 #endif
-
+  
   pr->partitionData[model]->optimizeBaseFrequencies = PLL_TRUE;
 
   pr->dirty = PLL_TRUE;
@@ -2748,16 +2853,17 @@ int pllSetOptimizeBaseFrequencies(int model, partitionList * pr, pllInstance *tr
 
 
 
-/** @brief Set all substitution rates to a fixed value for a specific partition
-
-    Sets all substitution rates of a partition to fixed values and disables
-    ML optimization of these parameters. It will automatically re-scale the relative rates
-    such that the last rate is 1.0
+/** @ingroup modelParamsGroups
+     @brief Set all substitution rates to a fixed value for a specific partition
+    
+    Sets all substitution rates of a partition to fixed values and disables 
+    ML optimization of these parameters. It will automatically re-scale the relative rates  
+    such that the last rate is 1.0 
 
     @param f
       array containing the substitution rates
 
-    @param
+    @param length
       length of array f, this needs to be as long as: (s * s - s) / 2,
       i.e., the number of upper diagonal entries of the Q matrix
 
@@ -2766,92 +2872,98 @@ int pllSetOptimizeBaseFrequencies(int model, partitionList * pr, pllInstance *tr
 
     @param pr
       List of partitions
-
+      
     @param tr
-      Library instance for which we want to fix the substitution rates
+      Library instance for which we want to fix the substitution rates 
 
     @todo
       test if this works with the parallel versions
 */
 void pllSetFixedSubstitutionMatrix(double *q, int length, int model, partitionList * pr,  pllInstance *tr)
 {
-  int
+  int 
     i,
-    numberOfRates;
+    numberOfRates; 
 
   double
-    scaler;
+    scaler,
+    old_fracchange;
 
-  //make sure that we are setting the Q matrix for a partition within the current range
+  old_fracchange = tr->fracchange;
+
+  //make sure that we are setting the Q matrix for a partition within the current range 
   //of partitions
   assert(model >= 0 && model < pr->numberOfPartitions);
 
   numberOfRates = (pr->partitionData[model]->states * pr->partitionData[model]->states - pr->partitionData[model]->states) / 2;
 
-  //  make sure that the length of the array containing the subsitution rates
+  //  make sure that the length of the array containing the subsitution rates 
   //  corresponds to the number of states in the model
 
   assert(length == numberOfRates);
 
   //automatically scale the last rate to 1.0 if this is not already the case
 
-  if(q[length - 1] != 1.0)
-    scaler = 1.0 / q[length - 1];
+  if(q[length - 1] != 1.0)    
+    scaler = 1.0 / q[length - 1]; 
   else
     scaler = 1.0;
 
-  //set the rates for the partition and make sure that they are within the allowed bounds
+  //set the rates for the partition and make sure that they are within the allowed bounds 
 
   for(i = 0; i < length; i++)
     {
       double
 	r = q[i] * scaler;
-
+      
       assert(r >= PLL_RATE_MIN && r <= PLL_RATE_MAX);
-
+      
       pr->partitionData[model]->substRates[i] = r;
     }
 
-  //re-calculate the Q matrix
+  //re-calculate the Q matrix 
   initReversibleGTR(tr, pr, model);
 
-  //broadcast the new Q matrix to all threads/processes
+  //broadcast the new Q matrix to all threads/processes 
 #if (defined(_FINE_GRAIN_MPI) || defined(_USE_PTHREADS))
   pllMasterBarrier (tr, pr, PLL_THREAD_COPY_RATES);
 #endif
-
+  
   pr->partitionData[model]->optimizeSubstitutionRates = PLL_FALSE;
 
   pr->dirty = PLL_TRUE;
+  updateAllBranchLengths (tr, old_fracchange, tr->fracchange);
 }
 
 
 
 
-/* initializwe a parameter linkage list for a certain parameter type (can be whatever).
+/* initialize a parameter linkage list for a certain parameter type (can be whatever).
    the input is an integer vector that contaions NumberOfModels (numberOfPartitions) elements.
 
-   if we want to have all alpha parameters unlinked and have say 4 partitions the input
-   vector would look like this: {0, 1, 2, 3}, if we want to link partitions 0 and 3 the vector
-   should look like this: {0, 1, 2, 0}
+   if we want to have all alpha parameters unlinked and have say 4 partitions the input 
+   vector would look like this: {0, 1, 2, 3}, if we want to link partitions 0 and 3 the vector 
+   should look like this: {0, 1, 2, 0} 
 */
 
+/** @ingroup modelParamsGroups
+*/
 linkageList* initLinkageList(int *linkList, partitionList *pr)
 {
-  int
+  int 
     k,
     partitions,
     numberOfModels = 0,
     i,
     pos;
-
-  linkageList
+  
+  linkageList 
     *ll = (linkageList*)rax_malloc(sizeof(linkageList));
-
-  /* figure out how many distinct parameters we need to estimate
-     in total, if all parameters are linked the result will be 1 if all
+    
+  /* figure out how many distinct parameters we need to estimate 
+     in total, if all parameters are linked the result will be 1 if all 
      are unlinked the result will be pr->numberOfPartitions */
-
+  
   for(i = 0; i < pr->numberOfPartitions; i++)
     {
       if(!(linkList[i] >= 0 && linkList[i] < pr->numberOfPartitions))
@@ -2872,11 +2984,11 @@ linkageList* initLinkageList(int *linkList, partitionList *pr)
     }
 
   numberOfModels++;
-
-  /* allocate the linkage list data structure that containes information which parameters of which partition are
+  
+  /* allocate the linkage list data structure that containes information which parameters of which partition are 
      linked with each other.
 
-     Note that we need a separate invocation of initLinkageList() and a separate linkage list
+     Note that we need a separate invocation of initLinkageList() and a separate linkage list 
      for each parameter type */
 
   ll->entries = numberOfModels;
@@ -2886,10 +2998,10 @@ linkageList* initLinkageList(int *linkList, partitionList *pr)
 
   for(i = 0; i < numberOfModels; i++)
     {
-      /*
+      /* 
 	 the valid flag is used for distinguishing between DNA and protein data partitions.
-	 This can be used to enable/disable parameter optimization for the paremeter
-	 associated to the corresponding partitions. This deature is used in optRatesGeneric
+	 This can be used to enable/disable parameter optimization for the paremeter 
+	 associated to the corresponding partitions. This deature is used in optRatesGeneric 
 	 to first optimize all DNA GTR rate matrices and then all PROT GTR rate matrices */
 
       ll->ld[i].valid = PLL_TRUE;
@@ -2899,15 +3011,15 @@ linkageList* initLinkageList(int *linkList, partitionList *pr)
 
       for(k = 0; k < pr->numberOfPartitions; k++)
 	if(linkList[k] == i)
-	  partitions++;
+	  partitions++;	    
 
       /* assign a list to store the partitions that share the parameter */
 
       ll->ld[i].partitions = partitions;
       ll->ld[i].partitionList = (int*)rax_malloc(sizeof(int) * partitions);
-
+      
       /* now store the respective partition indices in this list */
-
+      
       for(k = 0, pos = 0; k < pr->numberOfPartitions; k++)
 	if(linkList[k] == i)
 	  ll->ld[i].partitionList[pos++] = k;
@@ -2922,11 +3034,11 @@ linkageList* initLinkageList(int *linkList, partitionList *pr)
 
 static linkageList* initLinkageListString(char *linkageString, partitionList * pr)
 {
-  int
+  int 
     *list = (int*)rax_malloc(sizeof(int) * pr->numberOfPartitions),
     j;
 
-  linkageList
+  linkageList 
     *l;
 
   char
@@ -2935,11 +3047,11 @@ static linkageList* initLinkageListString(char *linkageString, partitionList * p
 //    *ch = strdup(linkageString),
     *ch,
     *token;
-
+  
   ch = (char *) rax_malloc (strlen (linkageString) + 1);
   strcpy (ch, linkageString);
 
-  for(j = 0, str1 = ch; ;j++, str1 = (char *)NULL)
+  for(j = 0, str1 = ch; ;j++, str1 = (char *)NULL) 
     {
       token = STRTOK_R(str1, ",", &saveptr);
       if(token == (char *)NULL)
@@ -2948,61 +3060,63 @@ static linkageList* initLinkageListString(char *linkageString, partitionList * p
       list[j] = atoi(token);
       //printf("%d: %s\n", j, token);
     }
-
+  
   rax_free(ch);
 
   l = initLinkageList(list, pr);
-
+  
   rax_free(list);
 
   return l;
 }
 
-/** @brief Link alpha parameters across partitions
-
+/** @ingroup modelParamsGroups
+    @brief Link alpha parameters across partitions
+    
     Links alpha paremeters across partitions (GAMMA model of rate heterogeneity)
 
     @param string
-      string describing the linkage pattern
+      string describing the linkage pattern    
 
     @param pr
       List of partitions
 
     @todo
-      test behavior/impact/mem-leaks of this when PSR model is used
+      test behavior/impact/mem-leaks of this when PSR model is used 
       it shouldn't do any harm, but it would be better to check!
 */
 int pllLinkAlphaParameters(char *string, partitionList *pr)
 {
   //assumes that it has already been assigned once
   freeLinkageList(pr->alphaList);
-
-  pr->alphaList = initLinkageListString(string, pr);
+  
+  pr->alphaList = initLinkageListString(string, pr); 
 
   pr->dirty = PLL_TRUE;
-
+  
   if(!pr->alphaList)
     return PLL_FALSE;
   else
     return PLL_TRUE;
 }
 
-/** @brief Link base frequency parameters across partitions
-
+/** @ingroup modelParamsGroups
+    @brief Link base frequency parameters across partitions
+    
     Links base frequency paremeters across partitions
 
     @param string
-      string describing the linkage pattern
+      string describing the linkage pattern    
 
     @param pr
       List of partitions
 
     @todo
-      semantics of this function not clear yet: right now this only has an effect
-      when we do a ML estimate of base frequencies
-      when we use empirical or model-defined (protein data) base frequencies, one could
-      maybe average over the per-partition frequencies, but the averages would need to be weighted
-      accodring on the number of patterns per partition
+      semantics of this function not clear yet: right now this only has an effect 
+      when we do a ML estimate of base frequencies 
+      when we use empirical or model-defined (protein data) base frequencies, one could 
+      maybe average over the per-partition frequencies, but the averages would need to be weighted 
+      accodring on the number of patterns per partition 
 */
 int pllLinkFrequencies(char *string, partitionList *pr)
 {
@@ -3019,12 +3133,13 @@ int pllLinkFrequencies(char *string, partitionList *pr)
     return PLL_TRUE;
 }
 
-/** @brief Link Substitution matrices across partitions
-
+/** @ingroup modelParamsGroups
+    @brief Link Substitution matrices across partitions
+    
     Links substitution matrices (Q matrices) across partitions
 
     @param string
-      string describing the linkage pattern
+      string describing the linkage pattern    
 
     @param pr
       List of partitions
@@ -3037,10 +3152,10 @@ int pllLinkRates(char *string, partitionList *pr)
 {
   //assumes that it has already been assigned once
   freeLinkageList(pr->rateList);
-
+  
   pr->rateList = initLinkageListString(string, pr);
-
-  pr->dirty = PLL_TRUE;
+  
+  pr->dirty = PLL_TRUE;  
 
   if(!pr->dirty)
     return PLL_FALSE;
@@ -3051,8 +3166,9 @@ int pllLinkRates(char *string, partitionList *pr)
 
 
 
-/** @brief Initialize partitions according to model parameters
-
+/** @ingroup modelParamsGroups
+    @brief Initialize partitions according to model parameters
+    
     Initializes partitions according to model parameters.
 
     @param tr
@@ -3063,30 +3179,31 @@ int pllLinkRates(char *string, partitionList *pr)
 
     @param alignmentData
       The parsed alignment
-
+    
     @return
       Returns \b PLL_TRUE in case of success, otherwise \b PLL_FALSE
 */
-int pllInitModel (pllInstance * tr, partitionList * partitions, pllAlignmentData * alignmentData)
+int pllInitModel (pllInstance * tr, partitionList * partitions, pllAlignmentData * alignmentData) 
 {
   double ** ef;
   int
     i,
     *unlinked = (int *)rax_malloc(sizeof(int) * partitions->numberOfPartitions);
+  double old_fracchange = tr->fracchange;
 
   ef = pllBaseFrequenciesGTR (partitions, alignmentData);
 
   if(!ef)
     return PLL_FALSE;
 
-
+  
 #if ! (defined(__ppc) || defined(__powerpc__) || defined(PPC))
 #if (defined(__AVX) || defined(__SSE3))
   _mm_setcsr( _mm_getcsr() | _MM_FLUSH_ZERO_ON);
 #endif
-#endif
+#endif 
 
-  masterTime = gettime();
+  masterTime = gettime();         
 #ifdef _USE_PTHREADS
   tr->threadID = 0;
 #ifndef _PORTABLE_PTHREADS
@@ -3097,59 +3214,61 @@ int pllInitModel (pllInstance * tr, partitionList * partitions, pllAlignmentData
 #endif
 
 #if (defined(_FINE_GRAIN_MPI) || defined(_USE_PTHREADS))
-  /*
+  /* 
      this main function is the master thread, so if we want to run RAxML with n threads,
      we use pllStartPthreads to start the n-1 worker threads */
-
+  
 #ifdef _USE_PTHREADS
   pllStartPthreads (tr, partitions);
 #endif
 
-  /* via pllMasterBarrier() we invoke parallel regions in which all Pthreads work on computing something, mostly likelihood
+  /* via pllMasterBarrier() we invoke parallel regions in which all Pthreads work on computing something, mostly likelihood 
      computations. Have a look at execFunction() in axml.c where we siwtch of the different types of parallel regions.
 
      Although not necessary, below we copy the info stored on tr->partitionData to corresponding copies in each thread.
-     While this is shared memory and we don't really need to copy stuff, it was implemented like this to allow for an easier
+     While this is shared memory and we don't really need to copy stuff, it was implemented like this to allow for an easier 
      transition to a distributed memory implementation (MPI).
      */
 #ifdef _FINE_GRAIN_MPI
   //MPI_Bcast (&(partitions->numberOfPartitions), 1, MPI_INT, MPI_ROOT, MPI_COMM_WORLD);
   MPI_Bcast (&(partitions->numberOfPartitions), 1, MPI_INT, 0, MPI_COMM_WORLD);
 #endif
-
+  
   /* mpi version now also uses the generic barrier */
   pllMasterBarrier (tr, partitions, PLL_THREAD_INIT_PARTITION);
 #else  /* SEQUENTIAL */
-  /*
-     allocate the required data structures for storing likelihood vectors etc
+  /* 
+     allocate the required data structures for storing likelihood vectors etc 
      */
 
   //initializePartitions(tr, tr, partitions, partitions, 0, 0);
   initializePartitionsSequential (tr, partitions);
 #endif
-
+  
   //initializePartitions (tr, tr, partitions, partitions, 0, 0);
-
+  
   initModel (tr, ef, partitions);
   pllEmpiricalFrequenciesDestroy (&ef, partitions->numberOfPartitions);
 
   for(i = 0; i < partitions->numberOfPartitions; i++)
     unlinked[i] = i;
 
-  //by default everything is unlinked initially
+  //by default everything is unlinked initially 
   partitions->alphaList = initLinkageList(unlinked, partitions);
   partitions->freqList  = initLinkageList(unlinked, partitions);
   partitions->rateList  = initLinkageList(unlinked, partitions);
 
   rax_free(unlinked);
 
+  updateAllBranchLengths (tr, old_fracchange ? old_fracchange : 1,  tr->fracchange);
   pllEvaluateGeneric (tr, partitions, tr->start, PLL_TRUE, PLL_FALSE);
 
   return PLL_TRUE;
 }
 
-/** @brief Optimize all free model parameters of the likelihood model
-
+/** @ingroup modelParamsGroups
+    @brief Optimize all free model parameters of the likelihood model
+    
     Initializes partitions according to model parameters.
 
     @param tr
@@ -3159,8 +3278,8 @@ int pllInitModel (pllInstance * tr, partitionList * partitions, pllAlignmentData
       List of partitions
 
     @param likelihoodEpsilon
-      Specifies up to which epsilon in likelihood values the iterative routine will
-      be optimizing the parameters
+      Specifies up to which epsilon in likelihood values the iterative routine will 
+      be optimizing the parameters  
 */
 int pllOptimizeModelParameters(pllInstance *tr, partitionList *pr, double likelihoodEpsilon)
 {
@@ -3177,7 +3296,7 @@ int pllOptimizeModelParameters(pllInstance *tr, partitionList *pr, double likeli
 }
 
 /** @brief Read the contents of a file
-
+    
     Reads the ile \a filename and return its content. In addition
     the size of the file is stored in the input variable \a filesize.
     The content of the variable \a filesize can be anything and will
@@ -3192,7 +3311,7 @@ int pllOptimizeModelParameters(pllInstance *tr, partitionList *pr, double likeli
     @return
       Contents of the file
 */
-char *
+char * 
 pllReadFile (const char * filename, long * filesize)
 {
   FILE * fp;
@@ -3210,7 +3329,7 @@ pllReadFile (const char * filename, long * filesize)
 
   *filesize = ftell (fp);
 
-  if (*filesize == -1)
+  if (*filesize == -1) 
    {
      fclose (fp);
      return (NULL);
@@ -3219,9 +3338,9 @@ pllReadFile (const char * filename, long * filesize)
 
   /* allocate buffer and read file contents */
   rawdata = (char *) rax_malloc (((*filesize) + 1) * sizeof (char));
-  if (rawdata)
+  if (rawdata) 
    {
-     if (fread (rawdata, sizeof (char), *filesize, fp) != (size_t) *filesize)
+     if (fread (rawdata, sizeof (char), *filesize, fp) != (size_t) *filesize) 
       {
         rax_free (rawdata);
         rawdata = NULL;

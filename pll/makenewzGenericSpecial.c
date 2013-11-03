@@ -495,7 +495,7 @@ static void coreCAT_FLEX(int upper, int numberOfCategories, double *sum,
     /* below we are implementing the other mathematical operations that are required 
        to obtain the deirivatives */
 
-    inv_Li = 1.0/ inv_Li;
+    inv_Li = 1.0 / PLL_FABS (inv_Li);
 
     dlnLidlz   *= inv_Li;
     d2lnLidlz2 *= inv_Li;
@@ -601,7 +601,7 @@ static void coreGAMMA_FLEX(int upper, double *sumtable, volatile double *ext_dln
 
 */
 
-    inv_Li = 1.0 / inv_Li;
+    inv_Li = 1.0 / PLL_FABS (inv_Li);
 
     dlnLidlz   *= inv_Li;
     d2lnLidlz2 *= inv_Li;
@@ -1963,7 +1963,7 @@ static void coreGTRGAMMA(const int upper, double *sumtable,
     _mm_storel_pd(&dlnLidlz, a1);
     _mm_storel_pd(&d2lnLidlz2, a2); 
 
-    inv_Li = 1.0 / inv_Li;
+    inv_Li = 1.0 / PLL_FABS (inv_Li);
 
     dlnLidlz   *= inv_Li;
     d2lnLidlz2 *= inv_Li;     
@@ -2049,7 +2049,7 @@ static void coreGTRCAT(int upper, int numberOfCategories, double *sum,
     _mm_storel_pd(&dlnLidlz, dlnLidlzv);                 
     _mm_storel_pd(&d2lnLidlz2, d2lnLidlz2v);      
 
-    inv_Li = 1.0/inv_Li;
+    inv_Li = 1.0 / PLL_FABS (inv_Li);
 
     dlnLidlz   *= inv_Li;
     d2lnLidlz2 *= inv_Li;
@@ -2127,7 +2127,7 @@ static void coreGTRGAMMAPROT_LG4(double *gammaRates, double *EIGN[4], double *su
       _mm_storel_pd(&dlnLidlz, a1);
       _mm_storel_pd(&d2lnLidlz2, a2);
 
-      inv_Li = 1.0 / inv_Li;
+      inv_Li = 1.0 / PLL_FABS (inv_Li);
 
       dlnLidlz   *= inv_Li;
       d2lnLidlz2 *= inv_Li;
@@ -2204,7 +2204,7 @@ static void coreGTRGAMMAPROT(double *gammaRates, double *EIGN, double *sumtable,
     _mm_storel_pd(&dlnLidlz, a1);
     _mm_storel_pd(&d2lnLidlz2, a2);
 
-    inv_Li = 1.0 / inv_Li;
+    inv_Li = 1.0 / PLL_FABS (inv_Li);
 
     dlnLidlz   *= inv_Li;
     d2lnLidlz2 *= inv_Li;
@@ -2282,7 +2282,7 @@ static void coreGTRCATPROT(double *EIGN, double lz, int numberOfCategories, doub
     _mm_storel_pd(&dlnLidlz, a1);                 
     _mm_storel_pd(&d2lnLidlz2, a2);
 
-    inv_Li = 1.0/inv_Li;
+    inv_Li = 1.0 / PLL_FABS (inv_Li);
 
     dlnLidlz   *= inv_Li;
     d2lnLidlz2 *= inv_Li;

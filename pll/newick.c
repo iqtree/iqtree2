@@ -22,7 +22,7 @@
 static int
 parse_newick (pllStack ** stack, int * inp)
 {
-  struct item_t * item = NULL;
+  pllNewickNodeInfo * item = NULL;
   int item_active = 0;
   pllLexToken token;
   int input;
@@ -64,7 +64,7 @@ parse_newick (pllStack ** stack, int * inp)
         memcpy (&prev_token, &token, sizeof (pllLexToken));
 
         /* push to the stack */
-        if (!item) item = (struct item_t *) rax_calloc (1, sizeof (struct item_t)); // possibly not nec
+        if (!item) item = (pllNewickNodeInfo *) rax_calloc (1, sizeof (pllNewickNodeInfo)); // possibly not nec
         //if (item->name   == NULL) item->name   = strdup ("INTERNAL_NODE");
         if (item->name == NULL) 
          {
@@ -93,7 +93,7 @@ parse_newick (pllStack ** stack, int * inp)
             prev_token.tokenType != PLL_TOKEN_CPAREN &&
             prev_token.tokenType != PLL_TOKEN_UNKNOWN &&
             prev_token.tokenType != PLL_TOKEN_COMMA) return (0);
-        if (!item) item = (struct item_t *) rax_calloc (1, sizeof (struct item_t));
+        if (!item) item = (pllNewickNodeInfo *) rax_calloc (1, sizeof (pllNewickNodeInfo));
         //item->name = strndup (token.lexeme, token.len);
         item->name = (char *) rax_malloc ((token.len + 1) * sizeof (char));
         strncpy (item->name, token.lexeme, token.len);
@@ -117,7 +117,7 @@ parse_newick (pllStack ** stack, int * inp)
               prev_token.tokenType != PLL_TOKEN_COLON  &&
               prev_token.tokenType != PLL_TOKEN_UNKNOWN &&
               prev_token.tokenType != PLL_TOKEN_COMMA) return (0);
-        if (!item) item = (struct item_t *) rax_calloc (1, sizeof (struct item_t));
+        if (!item) item = (pllNewickNodeInfo *) rax_calloc (1, sizeof (pllNewickNodeInfo));
         if (prev_token.tokenType == PLL_TOKEN_COLON)
          {
            //item->branch = strndup (token.lexeme, token.len);
@@ -163,7 +163,7 @@ parse_newick (pllStack ** stack, int * inp)
         memcpy (&prev_token, &token, sizeof (pllLexToken));
         
         /* push to the stack */
-        if (!item) item = (struct item_t *) rax_calloc (1, sizeof (struct item_t)); // possibly not nece
+        if (!item) item = (pllNewickNodeInfo *) rax_calloc (1, sizeof (pllNewickNodeInfo)); // possibly not nece
         //if (item->name   == NULL) item->name   = strdup ("INTERNAL_NODE");
         if (item->name == NULL) 
          {
@@ -187,7 +187,7 @@ parse_newick (pllStack ** stack, int * inp)
         printf ("PLL_TOKEN_SEMICOLON\n");
 #endif
         /* push to the stack */
-        if (!item) item = (struct item_t *) rax_calloc (1, sizeof (struct item_t));
+        if (!item) item = (pllNewickNodeInfo *) rax_calloc (1, sizeof (pllNewickNodeInfo));
         //if (item->name   == NULL) item->name   = strdup ("ROOT_NODE");
         if (item->name == NULL) 
          {
@@ -216,7 +216,7 @@ parse_newick (pllStack ** stack, int * inp)
   }
   if (item_active)
    {
-     if (!item) item = (struct item_t *) rax_calloc (1, sizeof (struct item_t));
+     if (!item) item = (pllNewickNodeInfo *) rax_calloc (1, sizeof (pllNewickNodeInfo));
      //if (item->name   == NULL) item->name   = strdup ("ROOT_NODE");
      if (item->name == NULL) 
       {
@@ -244,14 +244,14 @@ parse_newick (pllStack ** stack, int * inp)
 #ifdef __DEBUGGING_MODE
 void stack_dump(pllStack ** stack)
 {
-  struct item_t * item;
+  pllNewickNodeInfo * item;
   pllStack * head;
   int i;
 
   head = *stack;
   while (head)
    {
-     item = (struct item_t *) head->item;
+     item = (pllNewickNodeInfo *) head->item;
 
      for (i = 0; i < item->depth; ++ i) printf ("\t");
 
@@ -266,7 +266,7 @@ static void
 assign_ranks (pllStack * stack, int * nodes, int * leaves)
 {
   pllStack * head;
-  struct item_t * item, * tmp;
+  pllNewickNodeInfo * item, * tmp;
   pllStack * preorder = NULL;
   int children;
   int depth;
@@ -278,13 +278,13 @@ assign_ranks (pllStack * stack, int * nodes, int * leaves)
   while (head)
   {
     assert (head->item);
-    item = (struct item_t *) head->item;
+    item = (pllNewickNodeInfo *) head->item;
     
     if (item->leaf)  ++ (*leaves);
 
     if (preorder)
      {
-       tmp = (struct item_t *) preorder->item;
+       tmp = (pllNewickNodeInfo *) preorder->item;
        children = 0;
        while (item->depth < tmp->depth)
         {
@@ -296,7 +296,7 @@ assign_ranks (pllStack * stack, int * nodes, int * leaves)
            {
              ++ children;
              pllStackPop (&preorder);
-             tmp = (struct item_t *)preorder->item;
+             tmp = (pllNewickNodeInfo *)preorder->item;
            }
           tmp->rank += children;
         }
@@ -316,7 +316,7 @@ assign_ranks (pllStack * stack, int * nodes, int * leaves)
           ++ children;
           pllStackPop (&preorder);
           assert (preorder);
-          tmp = (struct item_t *)preorder->item;
+          tmp = (pllNewickNodeInfo *)preorder->item;
         }
        tmp->rank += children;
      }
@@ -328,15 +328,15 @@ assign_ranks (pllStack * stack, int * nodes, int * leaves)
   
   while (preorder->item != stack->item)
   {
-    item = (struct item_t *)pllStackPop (&preorder);
-    tmp  = (struct item_t *) preorder->item;
+    item = (pllNewickNodeInfo *)pllStackPop (&preorder);
+    tmp  = (pllNewickNodeInfo *) preorder->item;
     children = 1;
 
     while (tmp->depth == item->depth)
      {
        ++ children;
-       item = (struct item_t *) pllStackPop (&preorder);
-       tmp  = (struct item_t *) preorder->item;
+       item = (pllNewickNodeInfo *) pllStackPop (&preorder);
+       tmp  = (pllNewickNodeInfo *) preorder->item;
      }
     tmp->rank += children;
     children = 0;
@@ -367,7 +367,7 @@ int
 pllValidateNewick (pllNewickTree * t)
 {
   pllStack * head;
-  struct item_t * item;
+  pllNewickNodeInfo * item;
   int correct = 0;
  
  item = t->tree->item;
@@ -423,7 +423,7 @@ int
 pllNewickUnroot (pllNewickTree * t)
 {
   pllStack * tmp;
-  struct item_t * item;
+  pllNewickNodeInfo * item;
 
   item = t->tree->item;
   if (item->rank == 2)
@@ -508,9 +508,9 @@ pllNewickParseString (const char * newick)
 */
 void pllNewickParseDestroy (pllNewickTree ** t)
 {
-  struct item_t *  item;
+  pllNewickNodeInfo *  item;
 
-  while ((item = (struct item_t *)pllStackPop (&((*t)->tree))))
+  while ((item = (pllNewickNodeInfo *)pllStackPop (&((*t)->tree))))
    {
      rax_free (item->name);
      rax_free (item->branch);
