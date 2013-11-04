@@ -243,22 +243,32 @@ void getModelList(Params &params, int nstates, StrVector &models) {
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	const char *must_options[] = {"+I", "+G", "+F"};
 	const char *can_options[] = {"+i", "+g", "+f"};
+	const char *not_options[] = {"-I", "-G", "-F"};
 	int i, j;
 	if (nstates == 20) {
 		// test all options for protein, incl. +F
 		for (i = 0; i < noptions; i++)
 			test_options[i] = true;
 	}
+	// can-have option
 	for (j = 0; j < sizeof(can_options)/sizeof(char*); j++)
 	if (params.model_name.find(can_options[j]) != string::npos) {
 		for (i = 0; i < noptions; i++)
 			if (strstr(rate_options[i], must_options[j]) != NULL)
 				test_options[i] = true;
 	}
+	// must-have option
 	for (j = 0; j < sizeof(must_options)/sizeof(char*); j++)
 	if (params.model_name.find(must_options[j]) != string::npos) {
 		for (i = 0; i < noptions; i++)
 			if (strstr(rate_options[i], must_options[j]) == NULL)
+				test_options[i] = false;
+	}
+	// not-have option
+	for (j = 0; j < sizeof(not_options)/sizeof(char*); j++)
+	if (params.model_name.find(not_options[j]) != string::npos) {
+		for (i = 0; i < noptions; i++)
+			if (strstr(rate_options[i], must_options[j]))
 				test_options[i] = false;
 	}
 	for (i = 0; i < nmodels; i++)

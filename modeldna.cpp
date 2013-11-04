@@ -60,12 +60,13 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 		setRateType("010010");
 		def_freq = FREQ_ESTIMATE;
 		full_name = "HKY (Hasegawa, Kishino and Yano, 1985)";
-	} else if (name_upper == "K3P" || name_upper == "K81") {
+	} else if (name_upper == "K3P" || name_upper == "K81" || name_upper=="TPM1") {
 		name = "K3P";
 		setRateType("012210");
 		def_freq = FREQ_EQUAL;
 		full_name = "K3P (Kimura, 1981)";
-	} else if (name_upper == "K81UF" || name_upper == "K81U" || name_upper == "K3PU") {
+	} else if (name_upper == "K81UF" || name_upper == "K81U" || name_upper == "K3PU" ||
+			name_upper == "K3PUF" || name_upper=="TPM1UF" || name_upper=="TPM1U") {
 		name = "K3Pu";
 		setRateType("012210");
 		def_freq = FREQ_ESTIMATE;
