@@ -1104,67 +1104,7 @@ double IQTree::doIQPNNI() {
 					printTree(iqp_tree_string);
 					pllNewickTree *iqpTree = pllNewickParseString(iqp_tree_string.str().c_str());
 					pllTreeInitTopologyNewick(pllInst, iqpTree, PLL_FALSE);
-
-			    	if (!pllLoadAlignment(pllInst, pllAlignment, pllPartitions, PLL_DEEP_COPY)) {
-			    		fprintf(stderr, "Incompatible tree/alignment combination\n");
-			    		exit (1);
-			    	}
-
-					// TODO: Here the likelihood is also compute, so check whether it is needed
-					pllInitModel(pllInst, pllPartitions,pllAlignment);
-
-		    		double alpha = getRate()->getGammaShape();
-		    		if (alpha == 0.0)
-		    			alpha = PLL_ALPHA_MAX;
-			    	/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
-			    	if (aln->num_states == 4) {
-			    		// get the alpha parameter
-			    		// get the rate parameters
-			    		// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
-			    		double *rate_param = new double[6];
-			    		getModel()->getRateMatrix(rate_param);
-			    		// get the state frequencies
-			    		double *state_freqs = new double[aln->num_states];
-			    		getModel()->getStateFrequency(state_freqs);
-
-			    		/* put them into PLL */
-			    		stringstream linkagePattern;
-			    		int partNr;
-			    		for (partNr = 0; partNr < pllPartitions->numberOfPartitions - 1; partNr++) {
-			    			linkagePattern << partNr << ",";
-			    		}
-			    		linkagePattern << partNr;
-			    		char *pattern = new char [linkagePattern.str().length()+1];
-			    		strcpy (pattern, linkagePattern.str().c_str());
-			    	    pllLinkAlphaParameters( pattern, pllPartitions);
-			    	    pllLinkFrequencies( pattern, pllPartitions);
-			    	    pllLinkRates( pattern, pllPartitions);
-			    	    delete [] pattern;
-
-			    	    for (partNr = 0; partNr < pllPartitions->numberOfPartitions; partNr++) {
-			    		    pllSetFixedAlpha(alpha, partNr, pllPartitions, pllInst);
-			    		    pllSetFixedBaseFrequencies(state_freqs, 4, partNr, pllPartitions, pllInst);
-			    		    pllSetFixedSubstitutionMatrix(rate_param, 6, partNr, pllPartitions, pllInst);
-			    	    }
-			    		delete [] rate_param;
-			    		delete [] state_freqs;
-			    	} else if(aln->num_states == 20) {
-			    		double *state_freqs = new double[aln->num_states];
-			    		int partNr;
-			    	    for (partNr = 0; partNr < pllPartitions->numberOfPartitions; partNr++) {
-			    		    pllSetFixedAlpha(alpha, partNr, pllPartitions, pllInst);
-			    		    pllSetFixedBaseFrequencies(state_freqs, 20, partNr, pllPartitions, pllInst);
-			    	    }
-			    	    delete [] state_freqs;
-			    	} else {
-			    		if (params->pll) {
-			    			outError("Phylogenetic likelihood library current does not support data type other than DNA or Protein");
-			    		}
-			    	}
-
-					pllTreeInitTopologyNewick(pllInst, iqpTree, PLL_FALSE);
 					pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-					//pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
 					pllTreeEvaluate(pllInst, pllPartitions, 1);
 					pllNewickParseDestroy (&iqpTree);
 
@@ -1664,7 +1604,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
     }
 
     // Re-optimize all branches
-    pllTreeEvaluate(pllInst, pllPartitions, 8);
+    pllTreeEvaluate(pllInst, pllPartitions, 1);
 
     // copy the nniList
     curNNIList.assign(nniList, nniList + nniListSize);

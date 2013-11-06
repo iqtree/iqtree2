@@ -1289,9 +1289,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				if (params.pll) {
 					pllNewickTree *newick = pllNewickParseString(parsTree[treeNr].c_str());
 					pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-//					if (!pllLoadAlignment(iqtree.pllInst, iqtree.pllAlignment, iqtree.pllPartitions, PLL_SHALLOW_COPY)) {
-//						outError("Incompatible tree/alignment combination\n");
-//					}
 					pllNewickParseDestroy(&newick);
 					pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
 					pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 8);
