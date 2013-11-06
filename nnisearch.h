@@ -28,7 +28,7 @@ typedef struct
 
 
 typedef struct {
-	pllInstance* tr;
+	//pllInstance* tr;
 	nodeptr p;
 	int nniType;
     double z0[PLL_NUM_BRANCHES]; // p
@@ -41,7 +41,7 @@ typedef struct {
 
 LH_VECTOR backup_likelihood_pointers(pllInstance *tr, partitionList *pr, nodeptr p);
 
-int cmp_nni(const void* nni1, const void* nni2);
+static int cmp_nni(const void* nni1, const void* nni2);
 
 int compareDouble(const void * a, const void * b);
 
@@ -98,7 +98,7 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int num
  *  @param[out] nni_count pointer to the number of NNI that has been apply (OUT parameter)
  *  @param[out] deltaNNI pointer to the average improvement made by one NNI (OUT parameters)
  */
-double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* nniList, int* nni_count, double* deltaNNI);
+double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMove* nniList, int* nni_count, double* deltaNNI);
 
 /**
  *  perturb the current tree by randomly carrying some negative NNI moves

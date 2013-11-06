@@ -40,6 +40,7 @@ void IQTree::init() {
     curScore = 0.0; // Current score of the tree
     bestScore = -DBL_MAX; // Best score found so far
     pllBestTree = NULL;
+    pllTmpTree = NULL;
     curIteration = 1;
     cur_pars_score = -1;
     enable_parsimony = false;
@@ -754,7 +755,7 @@ double IQTree::doIQP() {
 void IQTree::inputModelParam2PLL() {
 	if (params->pll && !params->pllModOpt) {
 		// TODO: Here the likelihood is also compute, so check whether it is needed
-		pllInitModel(pllInst, pllPartitions, pllAlignment);
+		//pllInitModel(pllInst, pllPartitions, pllAlignment);
 		/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
 		// get the alpha parameter
 		double alpha = getRate()->getGammaShape();
@@ -1589,6 +1590,9 @@ extern "C" int fivebran;
 extern "C" pllNNIMove* nniList;
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, int *skipped) {
+	if (pllTmpTree == NULL) {
+		pllTmpTree = setupTopol(pllInst->mxtips);
+	}
     if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
         estDeltaMin();
         cout << "delta_min = " << nnicut.delta_min << endl;
@@ -1630,7 +1634,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
         } else {
             fast_eval = 0;
         }
-        double newLH = doNNISearch(pllInst, pllPartitions, nniList, &nni_count, &deltaNNI);
+        double newLH = doNNISearch(pllInst, pllPartitions, pllTmpTree, nniList, &nni_count, &deltaNNI);
         if (newLH == -1.0) {
             break;
         } else if ( abs(newLH - curLH) < 0.001 ){
@@ -1664,7 +1668,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
 
     // copy the nniList
     curNNIList.assign(nniList, nniList + nniListSize);
-    delete  nniList;
+    delete [] nniList;
 
     return pllInst->likelihood;
 }

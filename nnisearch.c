@@ -33,7 +33,7 @@ int fivebran;
 
 
 
-int cmp_nni(const void* nni1, const void* nni2) {
+static int cmp_nni(const void* nni1, const void* nni2) {
 	pllNNIMove* myNNI1 = (pllNNIMove*) nni1;
 	pllNNIMove* myNNI2 = (pllNNIMove*) nni2;
 	if (myNNI1->likelihood > myNNI2->likelihood)
@@ -99,18 +99,50 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int num
 	return tr->likelihood;
 }
 
-double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, int* nni_count, double* deltaNNI) {
+void quicksort_nni(pllNNIMove* arr,int left, int right) {
+    int i = left, j = right;
+    pllNNIMove tmp, pivot = arr[(left + right) / 2];
+
+    /* partition */
+    while (i <= j) {
+        while (arr[i].likelihood < pivot.likelihood)
+            i++;
+        while (pivot.likelihood < arr[j].likelihood)
+            j--;
+        if (i <= j) {
+            tmp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = tmp;
+
+            i++;
+            j--;
+        }
+    };
+
+    /* recursion */
+    if (left < j)
+        quicksort_nni(arr, left, j);
+    if (i < right)
+        quicksort_nni(arr, i, right);
+}
+
+
+
+double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMove* out_nniList, int* nni_count, double* deltaNNI) {
 	/* save the initial tree likelihood, used for comparison */
 	double initLH = tr->likelihood;
 
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 
 	/* data structure to store the initial tree topology + branch length */
-	topol* savedTree = setupTopol(tr->mxtips);
-	saveTree(tr, savedTree, numBranches);
+	saveTree(tr, curTree, numBranches);
 
 	/* Initialize the NNI list that holds information about 2n-6 NNI moves */
-	pllNNIMove *nniList = (pllNNIMove*) rax_malloc(2 * (tr->mxtips - 3) * sizeof(pllNNIMove));
+	//pllNNIMove *nniList = (pllNNIMove*) rax_malloc(2 * (tr->mxtips - 3) * sizeof(pllNNIMove));
+	pllNNIMove nniList[2 * (tr->mxtips - 3)];
+
+	//pllNNIMove *nniList2 = (pllNNIMove*) rax_malloc(2 * (tr->mxtips - 3) * sizeof(pllNNIMove));
+	//quicksort_nni(nniList2, 0, 2 * (tr->mxtips - 3)-1);
 
 	/* Now fill up the NNI list */
 	nodeptr p = tr->start->back;
@@ -131,13 +163,14 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, 
 	assert(totalNNIs == (2 * (tr->mxtips - 3)));
 	/* Sort the NNI list ascendingly according to the log-likelihood */
 	qsort(nniList, totalNNIs, sizeof(pllNNIMove), cmp_nni);
+	//quicksort_nni(nniList, 0, totalNNIs - 1);
     for ( int i = 0; i < totalNNIs; i++) {
     	out_nniList[i] = nniList[i];
     }
 
 	/* Generate a list of independent positive NNI */
-	pllNNIMove* inNNIs = (pllNNIMove*) malloc((tr->mxtips - 3) * sizeof(pllNNIMove));
-
+	//pllNNIMove* inNNIs = (pllNNIMove*) rax_malloc((tr->mxtips - 3) * sizeof(pllNNIMove));
+    pllNNIMove inNNIs[tr->mxtips - 3];
 	/* The best NNI is the first to come to the list */
 	inNNIs[0] = nniList[totalNNIs - 1];
 
@@ -213,7 +246,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, 
 					inNNIs[0].likelihood);
 
 			/* restore all branch lengths */
-			if (!restoreTree(savedTree, tr, pr)) {
+			if (!restoreTree(curTree, tr, pr)) {
 				printf("ERROR: failed to roll back tree \n");
 				exit(1);
 			} else {
@@ -235,9 +268,6 @@ double doNNISearch(pllInstance* tr, partitionList *pr, pllNNIMove* out_nniList, 
 	}
 	*nni_count = numNNI;
 	*deltaNNI = (tr->likelihood - initLH) / numNNI;
-	freeTopol (savedTree);
-	rax_free(nniList);
-	rax_free(inNNIs);
 	return tr->likelihood;
 }
 

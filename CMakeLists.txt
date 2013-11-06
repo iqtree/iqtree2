@@ -31,7 +31,9 @@ elseif (APPLE)
 elseif (UNIX) 
 	message("Target OS     : Unix")
 	# build as static binary to run on most machines
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+  if (CMAKE_BUILD_TYPE STREQUAL "Release") 	
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+  endif() 
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
 	message("Target OS     : Unknown")
@@ -101,11 +103,14 @@ set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -std=c99 -Wno-deprecated ${COMBINED_FLAGS}"
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0 -msse3")
 set(CMAKE_C_FLAGS_RELEASE "-O2 -g0 -fomit-frame-pointer -funroll-loops -D__SSE3 -msse3")
 
-set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O2 -DNDEBUG -fno-omit-frame-pointer -pg")
-set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O2 -DNDEBUG -fno-omit-frame-pointer -pg")
+set(CMAKE_CXX_FLAGS_PROFILE "-D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
+set(CMAKE_C_FLAGS_PROFILE "-D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-set(CMAKE_C_FLAGS_DEBUG "-O0 -g -D__SSE3")
+set(CMAKE_CXX_FLAGS_MEM "-g -O1 -D__SSE3 -msse3")
+set(CMAKE_C_FLAGS_MEM "-g -O1 -D__SSE3 -msse3")
+
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -D__SSE3 -msse3")
+set(CMAKE_C_FLAGS_DEBUG "-O0 -g -D__SSE3 -msse3")
 
 # subdirectories containing necessary libraries for the build 
 add_subdirectory(pll)

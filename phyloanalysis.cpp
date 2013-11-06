@@ -1267,9 +1267,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
 						PLL_SUMMARIZE_LH,
 						PLL_FALSE, PLL_FALSE);
 				string parsTreeString(iqtree.pllInst->tree_string);
+				//stringstream treestream;
+				//treestream << parsTreeString;
+				//iqtree.readTree(treestream, iqtree.rooted);
 				iqtree.readTreeString(parsTreeString);
-				iqtree.setAlignment(alignment);
-				iqtree.fixNegativeBranch(true);
+				//iqtree.setAlignment(alignment);
+				//iqtree.fixNegativeBranch(true);
 				stringstream tree;
 				iqtree.printTree(tree);
 				parsTree[treeNr] = tree.str();
@@ -1280,21 +1283,21 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			nni_count = 0;
 			nni_steps = 0;
 			string bestTreeString;
+			pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
+			iqtree.inputModelParam2PLL();
 			for (int treeNr = 0; treeNr < params.numParsimony; treeNr++) {
 				if (params.pll) {
 					pllNewickTree *newick = pllNewickParseString(parsTree[treeNr].c_str());
 					pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-					if (!pllLoadAlignment(iqtree.pllInst, iqtree.pllAlignment, iqtree.pllPartitions, PLL_SHALLOW_COPY)) {
-						outError("Incompatible tree/alignment combination\n");
-					}
-					iqtree.inputModelParam2PLL();
-					pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+//					if (!pllLoadAlignment(iqtree.pllInst, iqtree.pllAlignment, iqtree.pllPartitions, PLL_SHALLOW_COPY)) {
+//						outError("Incompatible tree/alignment combination\n");
+//					}
 					pllNewickParseDestroy(&newick);
 					pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
 					pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 8);
 					treeLH = iqtree.pllInst->likelihood;
 					cout << "logl of parsimony tree " << treeNr + 1 << ": " << treeLH << endl;
-					//treeLH = iqtree.pllOptimizeNNI(nni_count, nni_steps);
+					treeLH = iqtree.pllOptimizeNNI(nni_count, nni_steps);
 					cout << "logl of fastNNI " << treeNr + 1 << ": " << treeLH << " (NNIs: " << nni_count << " / NNI steps: " << nni_steps << ")" << endl;
 					if (treeLH > bestLH) {
 						bestLH = treeLH;
@@ -1341,6 +1344,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			/* IQTree kernel: read in the best tree */
 			iqtree.readTreeString(bestTreeString);
 			iqtree.curScore = bestLH;
+
+			delete [] parsTree;
 		}
 
 
