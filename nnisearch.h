@@ -116,7 +116,7 @@ double pertub(pllInstance* tr, pllNNIMove* nniList);
  *  @param[in] swap: represents one of the 2 NNI moves. Could be either 0 or 1
  *  @param[in] evalType: NO_NR, WITH_ONE_NR, WITH_FIVE_NR
  */
-double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, int evalType);
+double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, int evalType, double curLH);
 
 /**
  *  Go through all 2(n-3) internal branches of the tree and

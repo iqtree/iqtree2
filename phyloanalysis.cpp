@@ -1030,7 +1030,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	/* Connect the alignment and partition structure with the tree structure */
 	if (!pllLoadAlignment(iqtree.pllInst, iqtree.pllAlignment,
-			iqtree.pllPartitions, PLL_DEEP_COPY)) {
+			iqtree.pllPartitions, PLL_SHALLOW_COPY)) {
 		outError("Incompatible tree/alignment combination");
 	}
 
@@ -1062,8 +1062,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	// Compute JC distances or read them from user file
 	if (params.dist_file) {
-		cout << "Reading distance matrix file " << params.dist_file << " ..."
-				<< endl;
+		cout << "Reading distance matrix file " << params.dist_file << " ..." << endl;
 	} else if (params.compute_jc_dist && !params.bestStart) {
 		cout << "Computing Juke-Cantor distances..." << endl;
 	} else if (params.compute_obs_dist) {
@@ -1215,14 +1214,13 @@ void runPhyloAnalysis(Params &params, string &original_model,
     iqtree.curScore = bestTreeScore;
 	// Save current tree to a string
 	iqtree.printTree(initTree);
-	stringstream modOptTree;
-	modOptTree << params.out_prefix << ".modopt_tree";
-	iqtree.printTree(modOptTree.str().c_str());
+//	stringstream modOptTree;
+//	modOptTree << params.out_prefix << ".modopt_tree";
+//	iqtree.printTree(modOptTree.str().c_str());
 
 	// Compute maximum likelihood distance
 	if (!params.dist_file && params.compute_ml_dist) {
-		computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params,
-				alignment, bestTreeScore);
+		computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params, alignment, bestTreeScore);
 	}
 
 	// deallocate partial likelihood within IQTree kernel to save memory when PLL is used */
@@ -1294,8 +1292,13 @@ void runPhyloAnalysis(Params &params, string &original_model,
 					pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 8);
 					treeLH = iqtree.pllInst->likelihood;
 					cout << "logl of parsimony tree " << treeNr + 1 << ": " << treeLH << endl;
+//					stringstream parsNr;
+//					parsNr << treeNr;
+//					printString2File(parsTree[treeNr], string(params.out_prefix) + ".parsimony." + parsNr.str());
 					treeLH = iqtree.pllOptimizeNNI(nni_count, nni_steps);
 					cout << "logl of fastNNI " << treeNr + 1 << ": " << treeLH << " (NNIs: " << nni_count << " / NNI steps: " << nni_steps << ")" << endl;
+//					Tree2String (iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+//					printString2File(string(iqtree.pllInst->tree_string), string(params.out_prefix) + ".fastnni." + parsNr.str());
 					if (treeLH > bestLH) {
 						bestLH = treeLH;
 						Tree2String (iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
@@ -1444,7 +1447,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	/* evaluating all trees in user tree file */
 
 	/* DO IQPNNI */
-	if (params.k_representative > 0/* && params.min_iterations >= 1*/) {
+	if (params.k_representative > 0 /*&&  params.min_iterations > 1*/) {
 		cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS"
 				<< endl;
 		cout << "Number of representative leaves   : "
@@ -1532,14 +1535,15 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	assert(iqtree.root);
 
 	double myscore = 0.0;
-    if (!params.pll) {
-		myscore = iqtree.getBestScore();
-		//iqtree.computePatternLikelihood(pattern_lh, &myscore);
-		iqtree.computeLikelihood(pattern_lh);
 
-		// compute logl variance
-		iqtree.logl_variance = iqtree.computeLogLVariance();
-	}
+
+	myscore = iqtree.getBestScore();
+	//iqtree.computePatternLikelihood(pattern_lh, &myscore);
+	iqtree.computeLikelihood(pattern_lh);
+
+	// compute logl variance
+	iqtree.logl_variance = iqtree.computeLogLVariance();
+
 
 	if (params.print_site_lh) {
 		string site_lh_file = params.out_prefix;

@@ -78,7 +78,7 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int num
 	for (i = 0; i < numNNI; i++) {
 		/* First, do the topological change */
 		printf("Do pertubing NNI (%d - %d) with logl = %10.4f \n", nnis[i].p->number, nnis[i].p->back->number, nnis[i].likelihood);
-		doOneNNI(tr, pr, nnis[i].p, nnis[i].nniType, TOPO_ONLY);
+		doOneNNI(tr, pr, nnis[i].p, nnis[i].nniType, TOPO_ONLY, 0.00);
 		/* Then apply the new branch lengths */
 		int j;
 		for (j = 0; j < numBranches; j++) {
@@ -138,11 +138,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMov
 	saveTree(tr, curTree, numBranches);
 
 	/* Initialize the NNI list that holds information about 2n-6 NNI moves */
-	//pllNNIMove *nniList = (pllNNIMove*) rax_malloc(2 * (tr->mxtips - 3) * sizeof(pllNNIMove));
 	pllNNIMove nniList[2 * (tr->mxtips - 3)];
-
-	//pllNNIMove *nniList2 = (pllNNIMove*) rax_malloc(2 * (tr->mxtips - 3) * sizeof(pllNNIMove));
-	//quicksort_nni(nniList2, 0, 2 * (tr->mxtips - 3)-1);
 
 	/* Now fill up the NNI list */
 	nodeptr p = tr->start->back;
@@ -169,7 +165,6 @@ double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMov
     }
 
 	/* Generate a list of independent positive NNI */
-	//pllNNIMove* inNNIs = (pllNNIMove*) rax_malloc((tr->mxtips - 3) * sizeof(pllNNIMove));
     pllNNIMove inNNIs[tr->mxtips - 3];
 	/* The best NNI is the first to come to the list */
 	inNNIs[0] = nniList[totalNNIs - 1];
@@ -202,14 +197,14 @@ double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMov
 
 	/* Applying all independent NNI moves */
 	int numNNI = numInNNI;
-	int MAXROCLBACK = 50;
+	int MAXROLLBACK = 50;
 	int rollBack = PLL_FALSE;
 	int step;
-	for (step = 1; step <= MAXROCLBACK; step++) {
+	for (step = 1; step <= MAXROLLBACK; step++) {
 		int i;
 		for (i = 0; i < numNNI; i++) {
 			/* First, do the topological change */
-			doOneNNI(tr, pr, inNNIs[i].p, inNNIs[i].nniType, TOPO_ONLY);
+			doOneNNI(tr, pr, inNNIs[i].p, inNNIs[i].nniType, TOPO_ONLY, 0.00);
 			/* Then apply the new branch lengths */
 			int j;
 			for (j = 0; j < numBranches; j++) {
@@ -315,10 +310,9 @@ void _update(pllInstance *tr, partitionList *pr, nodeptr p) {
 	}
 }
 
-double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int evalType) {
+double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int evalType, double curLH) {
 	nodeptr q;
 	nodeptr tmp;
-
 	q = p->back;
 	assert(!isTip(q->number, tr->mxtips));
 	assert(!isTip(p->number, tr->mxtips));
@@ -357,6 +351,10 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 			pllNewviewGeneric(tr, pr, q, PLL_FALSE);
 		}
 		_update(tr, pr, p);
+//		pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//		if (tr->likelihood > curLH) {
+//			return tr->likelihood;
+//		}
 		//update(tr, pr, p);
 		nodeptr r; // temporary node poiter
 		// optimize 2 branches at node p
@@ -459,11 +457,11 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 	/* do an NNI move of type 1 */
 	double lh1;
 	if (!fast_eval && !fivebran) {
-		lh1 = doOneNNI(tr, pr, p, 1, ONE_BRAN_OPT);
+		lh1 = doOneNNI(tr, pr, p, 1, ONE_BRAN_OPT, curLH);
 	} else if (fivebran) {
-		lh1 = doOneNNI(tr, pr, p, 1, FIVE_BRAN_OPT);
+		lh1 = doOneNNI(tr, pr, p, 1, FIVE_BRAN_OPT, curLH);
 	} else {
-		lh1 = doOneNNI(tr, pr, p, 1, NO_BRAN_OPT);
+		lh1 = doOneNNI(tr, pr, p, 1, NO_BRAN_OPT, curLH);
 	}
 	pllNNIMove nni1;
 	nni1.p = p;
@@ -480,12 +478,12 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 
 	nniList[*numBran] = nni1;
 
-	if (nni1.likelihood > curLH + TOL_LIKELIHOOD_PHYLOLIB) {
+	if (nni1.likelihood > curLH) {
 		betterNNI = 1;
 	}
 
 	/* Restore previous NNI move */
-	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
+	doOneNNI(tr, pr, p, 1, TOPO_ONLY, curLH);
 	/* Restore the old branch length */
 	/*
 	for (i = 0; i < numBranches; i++) {
@@ -505,11 +503,11 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 	/* do an NNI move of type 2 */
 	double lh2;
 	if (!fast_eval && !fivebran) {
-		lh2 = doOneNNI(tr, pr, p, 2, ONE_BRAN_OPT);
+		lh2 = doOneNNI(tr, pr, p, 2, ONE_BRAN_OPT, curLH);
 	} else if (fivebran) {
-		lh2 = doOneNNI(tr, pr, p, 2, FIVE_BRAN_OPT);
+		lh2 = doOneNNI(tr, pr, p, 2, FIVE_BRAN_OPT, curLH);
 	} else {
-		lh2 = doOneNNI(tr, pr, p, 2, NO_BRAN_OPT);
+		lh2 = doOneNNI(tr, pr, p, 2, NO_BRAN_OPT, curLH);
 	}
 	// Create the nniMove struct to store this move
 	pllNNIMove nni2;
@@ -527,12 +525,12 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 
 	nniList[*numBran + 1] = nni2;
 
-	if (nni2.likelihood > curLH + TOL_LIKELIHOOD_PHYLOLIB) {
+	if (nni2.likelihood > curLH) {
 		betterNNI = 1;
 	}
 
 	/* Restore previous NNI move */
-	doOneNNI(tr, pr, p, 2, TOPO_ONLY);
+	doOneNNI(tr, pr, p, 2, TOPO_ONLY, curLH);
 	/* Restore the old branch length */
 	for (i = 0; i < numBranches; i++) {
 		p->z[i] = nni0.z0[i];
