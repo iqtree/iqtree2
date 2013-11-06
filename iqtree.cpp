@@ -702,17 +702,10 @@ double IQTree::doIQP() {
 
     if (params->tabu) {
         deleteNonTabuLeaves(del_leaves);
-    } else if (params->cherry) {
-    	// delete all leaves of a subtree
-    	deleteNonCherryLeaves(del_leaves);
-    } else {
+    }  else {
         deleteLeaves(del_leaves);
     }
-    /*
-     for (int i = 0; i < del_leaves.size(); i++)
-     cout << del_leaves[i]->id << " ";
-     cout << endl;
-     */
+
     reinsertLeaves(del_leaves);
 
     if (!params->pll) {

@@ -357,7 +357,10 @@ struct Params {
 	 */
 	bool ilsnni;
 
-	bool cherry;
+	/**
+	 *  Do random restart search
+	 */
+	bool random_restart;
 
     /**
      *  Evaluating NNI without re-optimizing the central branch

@@ -737,8 +737,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.fast_branch_opt = false;
     params.bestStart = true;
     params.tabu = false;
-    params.cherry = false;
     params.ilsnni = false;
+    params.random_restart = false;
     params.numParsimony = 10;
     params.avh_test = 0;
     params.site_freq_file = NULL;
@@ -1613,10 +1613,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-tabu") == 0) {
                 params.tabu = true;
-            } else if (strcmp(argv[cnt], "-cherry") == 0) {
-            	params.cherry = true;
             } else if (strcmp(argv[cnt], "-ilsnni") == 0) {
             	params.ilsnni = true;
+            } else if (strcmp(argv[cnt], "-rr") == 0) {
+            	params.random_restart = true;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {

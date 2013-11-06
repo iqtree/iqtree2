@@ -1248,14 +1248,22 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.cur_pars_score = iqtree.computeParsimony();
 	}
 
+	int numParsTree;
+	if (params.random_restart) {
+		numParsTree = iqtree.stop_rule.getNumIterations();
+		iqtree.stop_rule.setIterationNum(1,1);
+	} else {
+		numParsTree = params.numParsimony;
+	}
+
 	if (params.min_iterations > 0) {
 		double initTime = getCPUTime();
 		cout << "Choosing the best starting tree ... " << endl;
 		/* Now generate 10 fastNNI tree and choose the best */
-		string *parsTree = new string[params.numParsimony];
+		string *parsTree = new string[numParsTree];
 		parsTree[0] = initTree.str();
-		if (params.numParsimony > 1) {
-			for (int treeNr = 1; treeNr < params.numParsimony; treeNr++) {
+		if (numParsTree > 1) {
+			for (int treeNr = 1; treeNr < numParsTree; treeNr++) {
 				iqtree.pllInst->randomNumberSeed = params.ran_seed + treeNr * 12345;
 				pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions);
 				Tree2String(iqtree.pllInst->tree_string, iqtree.pllInst,
@@ -1283,7 +1291,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			string bestTreeString;
 			pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
 			iqtree.inputModelParam2PLL();
-			for (int treeNr = 0; treeNr < params.numParsimony; treeNr++) {
+			for (int treeNr = 0; treeNr < numParsTree; treeNr++) {
 				if (params.pll) {
 					pllNewickTree *newick = pllNewickParseString(parsTree[treeNr].c_str());
 					pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
@@ -1301,6 +1309,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 //					printString2File(string(iqtree.pllInst->tree_string), string(params.out_prefix) + ".fastnni." + parsNr.str());
 					if (treeLH > bestLH) {
 						bestLH = treeLH;
+						cout << "BETTER TREE FOUND: " << bestLH << endl;
 						Tree2String (iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 						bestTreeString = string(iqtree.pllInst->tree_string);
 						iqtree.bestScore = bestLH;
