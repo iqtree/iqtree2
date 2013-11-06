@@ -1508,7 +1508,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	/* evaluating all trees in user tree file */
 
 	/* DO IQPNNI */
-	if (params.k_representative > 0/* && params.min_iterations >= 1*/) {
+	if (params.k_representative > 0) {
 		cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS"
 				<< endl;
 		cout << "Number of representative leaves   : "
