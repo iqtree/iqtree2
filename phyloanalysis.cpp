@@ -1273,12 +1273,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 						PLL_SUMMARIZE_LH,
 						PLL_FALSE, PLL_FALSE);
 				string parsTreeString(iqtree.pllInst->tree_string);
-				//stringstream treestream;
-				//treestream << parsTreeString;
-				//iqtree.readTree(treestream, iqtree.rooted);
 				iqtree.readTreeString(parsTreeString);
-				//iqtree.setAlignment(alignment);
-				//iqtree.fixNegativeBranch(true);
 				stringstream tree;
 				iqtree.printTree(tree);
 				parsTree[treeNr] = tree.str();
