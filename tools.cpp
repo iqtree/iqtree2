@@ -726,7 +726,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.pertubSize = 10;
+    params.pertubSize = 15;
     params.speedup_iter = 100;
     params.pll = false;
     params.pllModOpt = false;
@@ -738,6 +738,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bestStart = true;
     params.tabu = false;
     params.ilsnni = false;
+    params.random_nni =false;
     params.random_restart = false;
     params.numParsimony = 10;
     params.avh_test = 0;
@@ -1617,6 +1618,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.ilsnni = true;
             } else if (strcmp(argv[cnt], "-rr") == 0) {
             	params.random_restart = true;
+            } else if (strcmp(argv[cnt], "-rd_nni") == 0) {
+            	params.random_nni = true;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {

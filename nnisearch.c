@@ -95,7 +95,7 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int num
 			pllNewviewGeneric(tr, pr, nnis[i].p->back, PLL_FALSE);
 		}
 	}
-	pllTreeEvaluate(tr, pr, 1);
+	pllTreeEvaluate(tr, pr, 16);
 	return tr->likelihood;
 }
 

@@ -344,6 +344,8 @@ struct NNIInfo {
  */
 struct Params {
 
+	bool random_nni;
+
 	int numParsimony;
 
 	/**

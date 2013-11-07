@@ -882,14 +882,14 @@ double IQTree::pllDoGuidedPerturbation() {
 
 	int pos = perturbNNIList.size();
 	// Select the top perturbSize NNI
-	for (int i = 0; i < params->pertubSize; i++) {
+	for (int i = 0; i < 10; i++) {
 		bool conflict;
 		do {
 			conflict = false;
 			// At diversification stage, choose NNI randomly
 			if (diversification) {
 				cout << "Start diversification " << endl;
-				exit(0);
+				//exit(0);
 				int max = perturbNNIList.size() - 1;
 				int min = 0;
 				pos = (rand() / ((double) RAND_MAX + 1)) * (max-min+1) + min; // formula to generate uniformly distributed numbers
@@ -1097,7 +1097,11 @@ double IQTree::doIQPNNI() {
 					printTree(iqp_tree_string);
 					pllNewickTree *iqpTree = pllNewickParseString(iqp_tree_string.str().c_str());
 					pllTreeInitTopologyNewick(pllInst, iqpTree, PLL_FALSE);
-					pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+					if (params->random_nni) {
+						pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
+					} else {
+						pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+					}
 					pllTreeEvaluate(pllInst, pllPartitions, 1);
 					pllNewickParseDestroy (&iqpTree);
 
