@@ -205,7 +205,11 @@ void Alignment::checkGappySeq(bool force_error) {
 }
 
 Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : vector<Pattern>() {
-
+    num_states = 0;
+    frac_const_sites = 0.0;
+    codon_table = NULL;
+    genetic_code = NULL;
+    non_stop_codon = NULL;
     cout << "Reading alignment file " << filename << " ..." << endl;
     intype = detectInputFile(filename);
 
