@@ -1105,10 +1105,6 @@ double IQTree::doIQPNNI() {
 					pllTreeEvaluate(pllInst, pllPartitions, 1);
 					pllNewickParseDestroy (&iqpTree);
 
-					if (verbose_mode >= VB_MED) {
-						cout << "IQP log-likelihood = " << pllInst->likelihood
-								<< endl;
-					}
                     curScore = pllInst->likelihood;
                     startScore = curScore;
                 }
@@ -1551,6 +1547,8 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
     else
     	fivebran = 0;
     const int MAX_NNI_STEPS = 50;
+    int nni_count = 0;
+    double deltaNNI = 0.0;
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
         if (beginHeu) {
             double maxScore = curLH + nni_delta_est * (nni_count_est - totalNNICount);
@@ -1564,8 +1562,6 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
                 }
             }
         }
-        int nni_count = 0;
-        double deltaNNI = 0.0;
         if (params->fast_eval) {
             fast_eval = 1;
         } else {
@@ -1588,6 +1584,8 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
                 }
             }
             totalNNICount += nni_count;
+            nni_count = 0;
+            deltaNNI = 0.0;
         }
     }
 
@@ -1600,8 +1598,17 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
         }
     }
 
-    // Re-optimize all branches
-    pllTreeEvaluate(pllInst, pllPartitions, 1);
+    if (abs(curLH - bestScore) < 1.0) {
+      /*
+      if (fast_eval) {
+        fivebran = 1;
+        doNNISearch(pllInst, pllPartitions, pllTmpTree, nniList, &nni_count, &deltaNNI);
+        fivebran = 0;
+      }
+      */
+      // Re-optimize all branches
+      pllTreeEvaluate(pllInst, pllPartitions, 1);
+    }
 
     // copy the nniList
     curNNIList.assign(nniList, nniList + nniListSize);

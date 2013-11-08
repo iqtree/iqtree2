@@ -342,6 +342,16 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 		_update(tr, pr, p);
 		//update(tr, pr, p);
 		pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_FALSE);
+	} else if (evalType == NO_BRAN_OPT) {
+		if (numBranches > 1 && !tr->useRecom) {
+			pllNewviewGeneric(tr, pr, p, PLL_TRUE);
+			pllNewviewGeneric(tr, pr, q, PLL_TRUE);
+
+		} else {
+			pllNewviewGeneric(tr, pr, p, PLL_FALSE);
+			pllNewviewGeneric(tr, pr, q, PLL_FALSE);
+		}
+		pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_FALSE);
 	} else { // 5 branches optimization
 		if (numBranches > 1 && !tr->useRecom) {
 			pllNewviewGeneric(tr, pr, p, PLL_TRUE);
@@ -531,19 +541,21 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 
 	/* Restore previous NNI move */
 	doOneNNI(tr, pr, p, 2, TOPO_ONLY, curLH);
-	/* Restore the old branch length */
-	for (i = 0; i < numBranches; i++) {
-		p->z[i] = nni0.z0[i];
-		q->z[i] = nni0.z0[i];
-		p->next->z[i] = nni0.z1[i];
-		p->next->back->z[i] = nni0.z1[i];
-		p->next->next->z[i] = nni0.z2[i];
-		p->next->next->back->z[i] = nni0.z2[i];
-		q->next->z[i] = nni0.z3[i];
-		q->next->back->z[i] = nni0.z3[i];
-		q->next->next->z[i] = nni0.z4[i];
-		q->next->next->back->z[i] = nni0.z4[i];
-	}
+  if (!fast_eval) {
+    /* Restore the old branch length */
+    for (i = 0; i < numBranches; i++) {
+      p->z[i] = nni0.z0[i];
+      q->z[i] = nni0.z0[i];
+      p->next->z[i] = nni0.z1[i];
+      p->next->back->z[i] = nni0.z1[i];
+      p->next->next->z[i] = nni0.z2[i];
+      p->next->next->back->z[i] = nni0.z2[i];
+      q->next->z[i] = nni0.z3[i];
+      q->next->back->z[i] = nni0.z3[i];
+      q->next->next->z[i] = nni0.z4[i];
+      q->next->next->back->z[i] = nni0.z4[i];
+    }
+  }
 	/* TODO: this should be replace replace by a function which restores the partial likelihood */
 	if (numBranches > 1 && !tr->useRecom) {
 		pllNewviewGeneric(tr, pr, p, PLL_TRUE);

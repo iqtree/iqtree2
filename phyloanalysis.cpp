@@ -1212,6 +1212,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
     bestTreeScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT);
 
     iqtree.curScore = bestTreeScore;
+    iqtree.bestScore = iqtree.curScore;
 	// Save current tree to a string
 	iqtree.printTree(initTree);
 //	stringstream modOptTree;
@@ -1278,8 +1279,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				iqtree.printTree(tree);
 				parsTree[treeNr] = tree.str();
 			}
-			double treeLH, bestLH;
-			bestLH = -DBL_MAX;
 			int nni_count, nni_steps;
 			nni_count = 0;
 			nni_steps = 0;
@@ -1293,21 +1292,20 @@ void runPhyloAnalysis(Params &params, string &original_model,
 					pllNewickParseDestroy(&newick);
 					pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
 					pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 8);
-					treeLH = iqtree.pllInst->likelihood;
-					cout << "logl of parsimony tree " << treeNr + 1 << ": " << treeLH << endl;
+					iqtree.curScore = iqtree.pllInst->likelihood;
+					cout << "logl of parsimony tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
 //					stringstream parsNr;
 //					parsNr << treeNr;
 //					printString2File(parsTree[treeNr], string(params.out_prefix) + ".parsimony." + parsNr.str());
-					treeLH = iqtree.pllOptimizeNNI(nni_count, nni_steps);
-					cout << "logl of fastNNI " << treeNr + 1 << ": " << treeLH << " (NNIs: " << nni_count << " / NNI steps: " << nni_steps << ")" << endl;
+					iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps);
+					cout << "logl of fastNNI " << treeNr + 1 << ": " << iqtree.curScore << " (NNIs: " << nni_count << " / NNI steps: " << nni_steps << ")" << endl;
 //					Tree2String (iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 //					printString2File(string(iqtree.pllInst->tree_string), string(params.out_prefix) + ".fastnni." + parsNr.str());
-					if (treeLH > bestLH) {
-						bestLH = treeLH;
-						cout << "BETTER TREE FOUND: " << bestLH << endl;
+					if (iqtree.curScore > iqtree.bestScore) {
+						iqtree.bestScore = iqtree.curScore;
+						cout << "BETTER TREE FOUND: " << iqtree.bestScore << endl;
 						Tree2String (iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 						bestTreeString = string(iqtree.pllInst->tree_string);
-						iqtree.bestScore = bestLH;
 						if (iqtree.pllBestTree == NULL) {
 							iqtree.pllBestTree = setupTopol(iqtree.pllInst->mxtips);
 						}
@@ -1322,20 +1320,19 @@ void runPhyloAnalysis(Params &params, string &original_model,
 					iqtree.readTree(parsTreeString, iqtree.rooted);
 					iqtree.setAlignment(alignment);
 					iqtree.initializeAllPartialLh();
-					treeLH = iqtree.optimizeAllBranches();
-					cout << "logl of parsimony tree " << treeNr + 1 << ": " << treeLH << endl;
-					treeLH = iqtree.optimizeNNI(nni_count, nni_steps);
-					cout << "logl of fastNNI " << treeNr + 1 << ": " << treeLH << " (NNIs: " << nni_count << " / NNI steps: " << nni_steps << ")" << endl;
-					if (treeLH > bestLH) {
-						bestLH = treeLH;
+					iqtree.curScore = iqtree.optimizeAllBranches();
+					cout << "logl of parsimony tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
+					iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
+					cout << "logl of fastNNI " << treeNr + 1 << ": " << iqtree.curScore << " (NNIs: " << nni_count << " / NNI steps: " << nni_steps << ")" << endl;
+					if (iqtree.curScore > iqtree.bestScore) {
+						iqtree.bestScore = iqtree.curScore;
 						stringstream tree;
 						iqtree.printTree(tree);
 						bestTreeString = tree.str();
-						iqtree.bestScore = bestLH;
 					}
 				}
 			}
-			cout << "Best loglh = " << bestLH << " / CPU time: " << getCPUTime() - initTime << endl;
+			cout << "Best loglh = " << iqtree.bestScore << " / CPU time: " << getCPUTime() - initTime << endl;
 			if (params.pll) {
 				/* Read in the best tree in PLL */
 				if (!restoreTree(iqtree.pllBestTree, iqtree.pllInst,
@@ -1347,7 +1344,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 			/* IQTree kernel: read in the best tree */
 			iqtree.readTreeString(bestTreeString);
-			iqtree.curScore = bestLH;
+			iqtree.curScore = iqtree.bestScore;
 
 			delete [] parsTree;
 		}

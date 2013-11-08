@@ -1640,7 +1640,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.numSmoothTree = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-lsnni") == 0) {
                 params.leastSquareNNI = true;
-            } else if (strcmp(argv[cnt], "-fast_eval") == 0) {
+            } else if (strcmp(argv[cnt], "-nni0") == 0) {
                 params.fast_eval = true;
             } else if(strcmp(argv[cnt], "-ls_var") == 0) {
                 cnt++;
