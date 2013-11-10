@@ -25,8 +25,8 @@ extern int verbose_mode;
 /* program options */
 double TOL_LIKELIHOOD_PHYLOLIB;
 int numSmoothTree;
-int fast_eval;
-int fivebran;
+int nni0;
+int nni5;
 /* program options */
 
 //pllNNIMove* nniList;
@@ -128,7 +128,7 @@ void quicksort_nni(pllNNIMove* arr,int left, int right) {
 
 
 
-double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMove* out_nniList, int* nni_count, double* deltaNNI) {
+double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMove* out_nniList, int searchType, int* nni_count, double* deltaNNI) {
 	/* save the initial tree likelihood, used for comparison */
 	double initLH = tr->likelihood;
 
@@ -146,7 +146,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMov
 	int numBran = 0; // number of visited internal branches during NNI evaluation
 	int numPosNNI = 0; // number of positive NNI branhces found
 	while (q != p) {
-		evalNNIForSubtree(tr, pr, q->back, nniList, &numBran, &numPosNNI, initLH);
+		evalNNIForSubtree(tr, pr, q->back, nniList, searchType, &numBran, &numPosNNI, initLH);
 		q = q->next;
 	}
 
@@ -441,7 +441,7 @@ LH_VECTOR backup_likelihood_pointers(pllInstance *tr, partitionList *pr, nodeptr
 	return v;
 }
 
-int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nniList, int* numBran, double curLH) {
+int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nniList, int searchType, int* numBran, double curLH) {
 	nodeptr q = p->back;
 	assert(!isTip(p->number, tr->mxtips));
 	assert(!isTip(q->number, tr->mxtips));
@@ -465,14 +465,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 	/* Save the scaling factor */
 
 	/* do an NNI move of type 1 */
-	double lh1;
-	if (!fast_eval && !fivebran) {
-		lh1 = doOneNNI(tr, pr, p, 1, ONE_BRAN_OPT, curLH);
-	} else if (fivebran) {
-		lh1 = doOneNNI(tr, pr, p, 1, FIVE_BRAN_OPT, curLH);
-	} else {
-		lh1 = doOneNNI(tr, pr, p, 1, NO_BRAN_OPT, curLH);
-	}
+	double lh1 = doOneNNI(tr, pr, p, 1, searchType, curLH);
 	pllNNIMove nni1;
 	nni1.p = p;
 	nni1.nniType = 1;
@@ -511,14 +504,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 	*/
 
 	/* do an NNI move of type 2 */
-	double lh2;
-	if (!fast_eval && !fivebran) {
-		lh2 = doOneNNI(tr, pr, p, 2, ONE_BRAN_OPT, curLH);
-	} else if (fivebran) {
-		lh2 = doOneNNI(tr, pr, p, 2, FIVE_BRAN_OPT, curLH);
-	} else {
-		lh2 = doOneNNI(tr, pr, p, 2, NO_BRAN_OPT, curLH);
-	}
+	double lh2 = doOneNNI(tr, pr, p, 2, searchType, curLH);
 	// Create the nniMove struct to store this move
 	pllNNIMove nni2;
 	nni2.p = p;
@@ -541,7 +527,6 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 
 	/* Restore previous NNI move */
 	doOneNNI(tr, pr, p, 2, TOPO_ONLY, curLH);
-  if (!fast_eval) {
     /* Restore the old branch length */
     for (i = 0; i < numBranches; i++) {
       p->z[i] = nni0.z0[i];
@@ -554,7 +539,6 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
       q->next->back->z[i] = nni0.z3[i];
       q->next->next->z[i] = nni0.z4[i];
       q->next->next->back->z[i] = nni0.z4[i];
-    }
   }
 	/* TODO: this should be replace replace by a function which restores the partial likelihood */
 	if (numBranches > 1 && !tr->useRecom) {
@@ -686,17 +670,17 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
  return (0);
  }*/
 
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nniList, int* numBran, int* numPosNNI,
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nniList, int searchType, int* numBran, int* numPosNNI,
 		double curLH) {
 	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
-		int betterNNI = evalNNIForBran(tr, pr, p, nniList, numBran, curLH);
+		int betterNNI = evalNNIForBran(tr, pr, p, nniList, searchType, numBran, curLH);
 		if (betterNNI) {
 			*numPosNNI = *numPosNNI + 1;
 		}
 		*numBran = *numBran + 2;
 		nodeptr q = p->next;
 		while (q != p) {
-			evalNNIForSubtree(tr, pr, q->back, nniList, numBran, numPosNNI, curLH);
+			evalNNIForSubtree(tr, pr, q->back, nniList, searchType, numBran, numPosNNI, curLH);
 			q = q->next;
 		}
 	}

@@ -75,7 +75,7 @@ typedef struct {
  *  @param curLH the curren log-likelihood of the tree
  *  @return 1 if a positive NNI is found, 0 otherwise
  */
-int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,  pllNNIMove* nniList, int* numBran, double curLH);
+int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,  pllNNIMove* nniList, int searchType, int* numBran, double curLH);
 
 /**
  * Perturb the best tree
@@ -95,10 +95,10 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int num
  *
  *  @param[in] tr the tree data structure
  *  @param[in] pr partition data structure
- *  @param[out] nni_count pointer to the number of NNI that has been apply (OUT parameter)
- *  @param[out] deltaNNI pointer to the average improvement made by one NNI (OUT parameters)
+ *  @param[out] nni_count number of NNI that have been applied
+ *  @param[out] deltaNNI average improvement made by one NNI
  */
-double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMove* nniList, int* nni_count, double* deltaNNI);
+double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMove* nniList, int searchType, int* nni_count, double* deltaNNI);
 
 /**
  *  perturb the current tree by randomly carrying some negative NNI moves
@@ -135,7 +135,7 @@ void evalAllNNI(pllInstance* tr);
  * 	@param[out] numBran number of internal branches that have been visited
  *  @param[out] numPosNNI number of positive NNI found
  */
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nniList, int* numBran, int* numPosNNI, double curLH);
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nniList, int searchType, int* numBran, int* numPosNNI, double curLH);
 
 /*
  *  @brief return the array which can be used to store evaluated NNI moves

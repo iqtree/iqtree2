@@ -367,7 +367,7 @@ struct Params {
     /**
      *  Evaluating NNI without re-optimizing the central branch
      */
-    bool fast_eval;
+    bool nni0;
 
     int evalType;
 
@@ -385,7 +385,12 @@ struct Params {
 	/**
 	 *  Optimize 5 branches on NNI tree
 	 */
-	bool nni5Branches;
+	bool nni5;
+
+	/**
+	 *  first use -nni0 and then use -nni5
+	 */
+	bool nni05;
 
     /**
      *  Number of smoothTree iteration carried out in Phylolib for IQP Tree

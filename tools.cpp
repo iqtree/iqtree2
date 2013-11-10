@@ -644,12 +644,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5Branches = false;
+    params.nni5 = false;
+    params.nni05 = false;
     params.nniThresHold = 0.1;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.fast_eval = false;
+    params.nni0 = false;
     params.evalType = 2;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -1625,9 +1626,11 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
             } else if (strcmp(argv[cnt], "-fivebran") == 0 || strcmp(argv[cnt], "-nni5") == 0) {
-            	params.nni5Branches = true;
+            	params.nni5 = true;
+            } else if (strcmp(argv[cnt], "-nni05") == 0) {
+            	params.nni05 = true;
             } else if (strcmp(argv[cnt], "-onebran") == 0 || strcmp(argv[cnt], "-nni1") == 0) {
-            	params.nni5Branches = false;
+            	params.nni5 = false;
             } else if (strcmp(argv[cnt], "-nniThreshold") == 0) {
             	cnt++;
             	if (cnt >= argc)
@@ -1641,7 +1644,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-lsnni") == 0) {
                 params.leastSquareNNI = true;
             } else if (strcmp(argv[cnt], "-nni0") == 0) {
-                params.fast_eval = true;
+                params.nni0 = true;
             } else if(strcmp(argv[cnt], "-ls_var") == 0) {
                 cnt++;
                 if (cnt >= argc)
