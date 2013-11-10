@@ -964,6 +964,7 @@ void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
 void runPhyloAnalysis(Params &params, string &original_model,
 		Alignment* &alignment, IQTree &iqtree, vector<ModelInfo> &model_info) {
 	// ilsnni only works with PLL enabled
+	std::cout.precision(6);
 	if (params.ilsnni) {
 		params.pll = true;
 	}
