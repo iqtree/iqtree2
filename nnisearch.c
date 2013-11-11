@@ -205,6 +205,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMov
 		for (i = 0; i < numNNI; i++) {
 			/* First, do the topological change */
 			doOneNNI(tr, pr, inNNIs[i].p, inNNIs[i].nniType, TOPO_ONLY, 0.00);
+			//printf(" Do NNI on branch: (%d-%d-%d) <-> (%d-%d-%d) \n", inNNIs[i].p->next->back->number,inNNIs[i].p->number, inNNIs[i].p->next->next->back->number,  inNNIs[i].p->back->next->back->number,inNNIs[i].p->back->number, inNNIs[i].p->back->next->next->back->number);
 			/* Then apply the new branch lengths */
 			int j;
 			for (j = 0; j < numBranches; j++) {
@@ -237,8 +238,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMov
 						tr->likelihood, inNNIs[0].likelihood);
 				exit(1);
 			}
-			printf("%d NNIs logl=%10.4f/best NNI logl= %10.4f. Roll back tree...", numNNI, tr->likelihood,
-					inNNIs[0].likelihood);
+			//printf("%d NNIs logl=%10.4f/best NNI logl= %10.4f. Roll back tree...", numNNI, tr->likelihood, inNNIs[0].likelihood);
 
 			/* restore all branch lengths */
 			if (!restoreTree(curTree, tr, pr)) {
@@ -255,9 +255,11 @@ double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMov
 			/* Only apply the best NNI after the tree has been rolled back */
 			numNNI = 1;
 		} else {
+			/*
 			if (rollBack) {
 				printf("New logl:%10.4f\n", tr->likelihood);
 			}
+			*/
 			break;
 		}
 	}
