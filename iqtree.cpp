@@ -1783,6 +1783,29 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
     return curLH;
 }
 
+void IQTree::pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns){
+	ofstream bfile("boot_samples.log");
+	bfile << "Original freq:" << endl;
+	int sum = 0;
+	for(int i = 0; i < pllAlignment->sequenceLength; i++){
+		bfile << setw(4) << pllInst->aliaswgt[i];
+		sum += pllInst->aliaswgt[i];
+	}
+	bfile << endl << "sum = " << sum << endl;
+
+	bfile << "Bootstrap freq:" << endl;
+
+	for(int i = 0; i < nsamples; i++){
+		sum = 0;
+		for(int j = 0; j < npatterns; j++){
+			bfile << setw(4) << pll_boot_samples[i][j];
+			sum += pll_boot_samples[i][j];
+		}
+		bfile << endl << "sum = "  << sum << endl;
+	}
+	bfile.close();
+
+}
 
 void IQTree::pllInitUFBootData(){
 	if(pllUFBootDataPtr == NULL){
@@ -1790,24 +1813,26 @@ void IQTree::pllInitUFBootData(){
 		pllUFBootDataPtr->boot_samples = NULL;
 
 		if(params->online_bootstrap && params->gbo_replicates > 0){
-			params->gbo_replicates = 2; // TEST!!!
+//			params->gbo_replicates = 2; // TEST!!!
 			pllUFBootDataPtr->params_ufboot_epsilon = params->ufboot_epsilon;
 
-			(pllUFBootDataPtr->treels).size = max_candidate_trees;
-			(pllUFBootDataPtr->treels).Items =
-					(pllHashItem **) malloc(max_candidate_trees * (sizeof(pllHashItem*)));
-			for(int i = 0; i < max_candidate_trees; i++) (pllUFBootDataPtr->treels).Items[i] = NULL;
+			pllUFBootDataPtr->treels = pllHashInit(max_candidate_trees);
 
 			pllUFBootDataPtr->candidate_trees_count = 0;
 
+			pllUFBootDataPtr->treels_size = max_candidate_trees; // track size of treels_logl, treels_newick, treels_ptnlh
+
 			pllUFBootDataPtr->treels_logl =
 					(double *) malloc(max_candidate_trees * (sizeof(double)));
+			if(!pllUFBootDataPtr->treels_logl) pllAlertMemoryError();
 
 			pllUFBootDataPtr->treels_newick =
 					(char **) malloc(max_candidate_trees * (sizeof(char *)));
+			if(!pllUFBootDataPtr->treels_newick) pllAlertMemoryError();
 
 			pllUFBootDataPtr->treels_ptnlh =
 					(double **) malloc(max_candidate_trees * (sizeof(double *)));
+			if(!pllUFBootDataPtr->treels_ptnlh) pllAlertMemoryError();
 
 			// aln->createBootstrapAlignment() must be called before this fragment
 			pllUFBootDataPtr->boot_samples =
@@ -1820,36 +1845,50 @@ void IQTree::pllInitUFBootData(){
 							boot_samples[i][pll2iqtree_pattern_index[j]];
 				}
 			}
+			if(!pllUFBootDataPtr->boot_samples) pllAlertMemoryError();
+
+//			pllLogBootSamples(pllUFBootDataPtr->boot_samples,
+//					params->gbo_replicates, pllAlignment->sequenceLength);
 
 			pllUFBootDataPtr->boot_logl =
 					(double *) malloc(params->gbo_replicates * (sizeof(double)));
+			if(!pllUFBootDataPtr->boot_logl) pllAlertMemoryError();
 
 			pllUFBootDataPtr->boot_counts =
 					(int *) malloc(params->gbo_replicates * (sizeof(int)));
 			for(int i = 0; i < params->gbo_replicates; i++)
 				pllUFBootDataPtr->boot_counts[i] = 0;
+			if(!pllUFBootDataPtr->boot_counts) pllAlertMemoryError();
 
 			pllUFBootDataPtr->boot_trees =
 					(int *) malloc(params->gbo_replicates * (sizeof(int)));
+			if(!pllUFBootDataPtr->boot_trees) pllAlertMemoryError();
 
 			pllUFBootDataPtr->random_doubles =
 					(double *) malloc(params->gbo_replicates * (sizeof(double)));
+			if(!pllUFBootDataPtr->random_doubles) pllAlertMemoryError();
 
+			pllUFBootDataPtr->duplication_counter = 0;
 		}
 	}
+	//pllUFBootDataPtr->params_store_candidate_trees = params->store_candidate_trees;
+	pllUFBootDataPtr->params_store_candidate_trees = PLL_TRUE; // TEST!!!!
+	pllUFBootDataPtr->params_online_bootstrap = params->online_bootstrap;
+	pllUFBootDataPtr->params_gbo_replicates = params->gbo_replicates;
+	pllUFBootDataPtr->max_candidate_trees = max_candidate_trees;
 	pllUFBootDataPtr->save_all_trees = save_all_trees;
 	pllUFBootDataPtr->save_all_br_lens = save_all_br_lens;
 	pllUFBootDataPtr->logl_cutoff = logl_cutoff;
-	pllUFBootDataPtr->duplication_counter = 0;
 	pllUFBootDataPtr->n_patterns = pllAlignment->sequenceLength;
-	pllUFBootDataPtr->params_online_bootstrap = params->online_bootstrap;
-	pllUFBootDataPtr->params_gbo_replicates = params->gbo_replicates;
-	pllUFBootDataPtr->params_store_candidate_trees = params->store_candidate_trees;
+
+
 	if(pllUFBootDataPtr->random_doubles)
 		for(int i = 0; i < params->gbo_replicates; i++)
 				pllUFBootDataPtr->random_doubles[i] = random_double();
 
-	// todo: consider resize pllUFBootDataPtr->treel.Items, spllUFBootDataPtr->treels_logl
+	if(pllUFBootDataPtr->candidate_trees_count > max_candidate_trees){
+		cout << "POTENTIAL TRAP!!!!!!!!!!!!!!!" << endl;
+	}
 }
 
 void IQTree::pllDestroyUFBootData(){
@@ -1858,15 +1897,25 @@ void IQTree::pllDestroyUFBootData(){
 		pll2iqtree_pattern_index = NULL;
 	}
 	if(params->online_bootstrap && params->gbo_replicates > 0){
-		free(pllUFBootDataPtr->treels.Items); // todo: free its content
+		pllHashDestroy(&(pllUFBootDataPtr->treels), PLL_TRUE);
 		free(pllUFBootDataPtr->treels_logl);
-		free(pllUFBootDataPtr->treels_newick); // todo: free its content
-		free(pllUFBootDataPtr->treels_ptnlh); // todo: free its content
+
+		for(int i = 0; i < pllUFBootDataPtr->treels_size; i++)
+			if(pllUFBootDataPtr->treels_newick[i])
+				free(pllUFBootDataPtr->treels_newick[i]);
+		free(pllUFBootDataPtr->treels_newick);
+
+		for(int i = 0; i < pllUFBootDataPtr->treels_size; i++)
+					if(pllUFBootDataPtr->treels_ptnlh[i])
+						free(pllUFBootDataPtr->treels_ptnlh[i]);
+		free(pllUFBootDataPtr->treels_ptnlh);
 
 		for(int i = 0; i < params->gbo_replicates; i++)
 			free(pllUFBootDataPtr->boot_samples[i]);
 		free(pllUFBootDataPtr->boot_samples);
+
 		free(pllUFBootDataPtr->boot_logl);
+		free(pllUFBootDataPtr->boot_counts);
 		free(pllUFBootDataPtr->boot_trees);
 		free(pllUFBootDataPtr->random_doubles);
 	}

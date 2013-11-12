@@ -163,12 +163,14 @@ typedef struct{
 	int params_gbo_replicates;
 	pll_boolean params_store_candidate_trees;
 	double params_ufboot_epsilon;
+	int max_candidate_trees;
+	int treels_size;
 	int save_all_trees;
 	pll_boolean save_all_br_lens;
 	double logl_cutoff;
 	int duplication_counter;
 	int n_patterns;
-	struct pllHashTable treels;
+	struct pllHashTable * treels;
 	unsigned int candidate_trees_count; /* counter of trees in pllHashTable */
 	double * treels_logl; // maintain size == treels.size
 	char ** treels_newick; // maintain size == treels.size
@@ -183,7 +185,8 @@ typedef struct{
 
 void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p);
 void pllComputePatternLikelihood(pllInstance* tr, double * ptnlh, double * cur_logl);
-
+void pllAlertMemoryError();
+void pllResizeUFBootData();
 
 #ifdef __cplusplus
 }

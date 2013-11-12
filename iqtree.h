@@ -513,6 +513,13 @@ public:
     */
    void pllBuildIQTreePatternIndex();
 
+   /**
+    * FOR TESTING:
+    * Write to log file the freq of pllAlignment sites, and
+    * freq of bootstrap site stored in pllUFBootDataPtr->boot_samples
+    */
+   void pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns);
+
 protected:
 
     /**

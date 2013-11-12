@@ -718,29 +718,35 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove
 }
 
 
- void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
- 	printf("pllSaveCurrentTree()\n");
- 	srand(gettime());
+void pllAlertMemoryError(){
+	printf("Memory error!!!!!!\n");;
+	exit(1);
+}
 
+void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
+	//return;
+	printf("\nBegin pllSaveCurrentTree()\n");
+	srand(gettime());
  	double cur_logl = tr->likelihood;
- 	unsigned int * tree_index_ptr = NULL;
- 	unsigned int tree_index = -1;
  	pll_boolean is_stored = PLL_FALSE;
-
+ 	struct pllHashItem * item_ptr = (struct pllHashItem *) malloc(sizeof(struct pllHashItem));
+ 	item_ptr->data = (int *) malloc(sizeof(int));
+ 	unsigned int tree_index = -1;
  	char * tree_str = NULL;
+	Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
+			PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+	tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
+	strcpy(tree_str, tr->tree_string);
 
  	if(pllUFBootDataPtr->params_store_candidate_trees){
- 		// get newick string of tree topology
- 		Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
- 				PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
- 		tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
- 		strcpy(tree_str, tr->tree_string);
- 		is_stored = pllHashSearch(&(pllUFBootDataPtr->treels), tree_str, &tree_index_ptr);
+ 		is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &item_ptr);
  	}
 
+ 	printf("tree_str: %s", tree_str);
  	if(is_stored){ // if found the tree_str
  		pllUFBootDataPtr->duplication_counter++;
- 		tree_index = *tree_index_ptr;
+ 		tree_index = *((int *)item_ptr->data);
+ 		printf("Found tree_index = %d\n", tree_index);
  		if (cur_logl <= pllUFBootDataPtr->treels_logl[tree_index] + 1e-4) {
  			if (cur_logl < pllUFBootDataPtr->treels_logl[tree_index] - 5.0)
  				if (verbose_mode >= VB_MED)
@@ -748,111 +754,130 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove
  							cur_logl, pllUFBootDataPtr->treels_logl[tree_index]);
  				return;
  		}
-         if (verbose_mode >= VB_MAX)
-         	printf("Updated logl %f to %f\n", pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
-         pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
+ 		if (verbose_mode >= VB_MAX)
+ 			printf("Updated logl %f to %f\n", pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
+ 		pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
 
-         if (pllUFBootDataPtr->save_all_br_lens) {
-         	Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
+ 		if (pllUFBootDataPtr->save_all_br_lens) {
+ 			Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
          			PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LENGTH, PLL_FALSE, PLL_FALSE);
          	char * tree_str_br_lens = (char *) malloc (strlen(tr->tree_string) + 1);
          	strcpy(tree_str_br_lens, tr->tree_string);
          	pllUFBootDataPtr->treels_newick[tree_index] = tree_str_br_lens;
-         }
-         if (pllUFBootDataPtr->boot_samples == NULL) {
-         	pllComputePatternLikelihood(tr, (pllUFBootDataPtr->treels_ptnlh)[tree_index], &cur_logl);
-             return;
-         }
-         if (verbose_mode >= VB_MAX)
-         	printf("Update treels_logl[%d] := %f\n", tree_index, cur_logl);
+ 		}
+ 		if (pllUFBootDataPtr->boot_samples == NULL) {
+			pllComputePatternLikelihood(tr, (pllUFBootDataPtr->treels_ptnlh)[tree_index], &cur_logl);
+			return;
+ 		}
+ 		if (verbose_mode >= VB_MAX)
+ 			printf("Update treels_logl[%d] := %f\n", tree_index, cur_logl);
  	} else {
-         if (pllUFBootDataPtr->logl_cutoff != 0.0 &&
-         		cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4)
-             return;
-         tree_index = pllUFBootDataPtr->candidate_trees_count;
-         pllUFBootDataPtr->candidate_trees_count++;
-         if (pllUFBootDataPtr->params_store_candidate_trees)
-         	pllHashAdd(&(pllUFBootDataPtr->treels), tree_str, &tree_index);
-         pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
-         if (verbose_mode >= VB_MAX)
-         	printf("Add    treels_logl[%d] := %f\n", tree_index, cur_logl);
-     }
+ 		printf("Not found\n");
+        if (pllUFBootDataPtr->logl_cutoff != 0.0 && cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4)
+        	return;
 
- 	/*if (write_intermediate_trees)
- 	        printTree(out_treels, WT_NEWLINE | WT_BR_LEN);*/
+        if(pllUFBootDataPtr->treels_size == pllUFBootDataPtr->candidate_trees_count)
+			pllResizeUFBootData();
+
+        tree_index = pllUFBootDataPtr->candidate_trees_count;
+        pllUFBootDataPtr->candidate_trees_count++;
+        if (pllUFBootDataPtr->params_store_candidate_trees){
+            *((int *)item_ptr->data) = tree_index;
+            item_ptr->str = tree_str;
+        	pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr);
+        	printf("pllHashAdd, index = %d\n", tree_index);
+        }
+        pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
+
+        if (verbose_mode >= VB_MAX)
+        	printf("Add    treels_logl[%d] := %f\n", tree_index, cur_logl);
+    }
+
+ 	//if (write_intermediate_trees)
+ 	//        printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
 
  	double *pattern_lh = (double *) malloc(pllUFBootDataPtr->n_patterns * sizeof(double));
+ 	if(!pattern_lh){
+ 		pllAlertMemoryError();
+ 		return;
+ 	}
  	pllComputePatternLikelihood(tr, pattern_lh, &cur_logl);
 
-     if (pllUFBootDataPtr->boot_samples == NULL) {
-         // for runGuidedBootstrap
-     	pllUFBootDataPtr->treels_ptnlh[tree_index] = pattern_lh;
-     } else {
-         // online bootstrap
-     	printf("Get into online bootstrap code ^^^^^^^^^^ \n");
-         int nptn = pllUFBootDataPtr->n_patterns;
-         int updated = 0;
-         int nsamples = pllUFBootDataPtr->params_gbo_replicates;
-         for (int sample = 0; sample < nsamples; sample++) {
-         	double rell = 0.0;
-         	for (int ptn = 0; ptn < nptn; ptn++)
- 				rell += pattern_lh[ptn] * pllUFBootDataPtr->boot_samples[sample][ptn];
+	if (pllUFBootDataPtr->boot_samples == NULL) {
+		// for runGuidedBootstrap
+		pllUFBootDataPtr->treels_ptnlh[tree_index] = pattern_lh;
+	} else {
+		// online bootstrap
+		printf("Get into online bootstrap code ^^^^^^^^^^ \n");
+		int nptn = pllUFBootDataPtr->n_patterns;
+		int updated = 0;
+		int nsamples = pllUFBootDataPtr->params_gbo_replicates;
+		for (int sample = 0; sample < nsamples; sample++) {
+			double rell = 0.0;
+			for (int ptn = 0; ptn < nptn; ptn++)
+				rell += pattern_lh[ptn] * pllUFBootDataPtr->boot_samples[sample][ptn];
 
-         	int rand_pos = (sample + rand()) % pllUFBootDataPtr->params_gbo_replicates;
+			int rand_pos = (sample + rand()) % nsamples;
 
- 			if (rell > pllUFBootDataPtr->boot_logl[sample] + pllUFBootDataPtr->params_ufboot_epsilon ||
- 				(rell > pllUFBootDataPtr->boot_logl[sample] - pllUFBootDataPtr->params_ufboot_epsilon &&
- 						pllUFBootDataPtr->random_doubles[rand_pos] <= 1.0/(pllUFBootDataPtr->boot_counts[sample]+1))) {
- 				if (tree_str == NULL) {
- 					Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
- 							PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
- 					tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
- 					strcpy(tree_str, tr->tree_string);
- 					is_stored = pllHashSearch(&(pllUFBootDataPtr->treels), tree_str, &tree_index_ptr);
- 					if(is_stored)
- 						tree_index = *tree_index_ptr;
- 					else{
- 						tree_index = pllUFBootDataPtr->candidate_trees_count;
- 						pllHashAdd(&(pllUFBootDataPtr->treels), tree_str, &tree_index);
- 						pllUFBootDataPtr->candidate_trees_count++;
- 					}
- 				}
- 				if (rell <= pllUFBootDataPtr->boot_logl[sample] +
- 						pllUFBootDataPtr->params_ufboot_epsilon) {
- 					pllUFBootDataPtr->boot_counts[sample]++;
- 				} else {
- 					pllUFBootDataPtr->boot_counts[sample] = 1;
- 				}
- 				if(rell > pllUFBootDataPtr->boot_logl[sample])
- 					pllUFBootDataPtr->boot_logl[sample] = rell;
- 				pllUFBootDataPtr->boot_trees[sample] = tree_index;
- 				updated++;
- 			} /*else if (verbose_mode >= VB_MED && rell > boot_logl[sample] - 0.01) {
- 				cout << "Info: multiple RELL score trees detected" << endl;
- 			}*/
- 		}
-         if (updated && verbose_mode >= VB_MAX)
-             printf("%d boot trees updated\n", updated);
-         /*
-          if (tree_index >= max_candidate_trees/2 && boot_splits->empty()) {
-          // summarize split support half way for stopping criterion
-          cout << "Summarizing current bootstrap supports..." << endl;
-          summarizeBootstrap(*boot_splits);
-          }*/
-     }
-     if (pllUFBootDataPtr->save_all_br_lens) {
- 		Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
- 				PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
- 		char * s = (char *) malloc (strlen(tr->tree_string) + 1);
- 		pllUFBootDataPtr->treels_newick[tree_index] = s;
-     }
+			if (rell > pllUFBootDataPtr->boot_logl[sample] + pllUFBootDataPtr->params_ufboot_epsilon ||
+				(rell > pllUFBootDataPtr->boot_logl[sample] - pllUFBootDataPtr->params_ufboot_epsilon &&
+					pllUFBootDataPtr->random_doubles[rand_pos] <=
+						1.0/(pllUFBootDataPtr->boot_counts[sample]+1))) {
+				if (strcmp(tree_str, "") == 0) {
+					Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
+							PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+					tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
+					strcpy(tree_str, tr->tree_string);
+					is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &item_ptr);
+					if(is_stored)
+						tree_index = *((int *)item_ptr->data);
+					else{
+						*((int *)item_ptr->data) = tree_index = pllUFBootDataPtr->candidate_trees_count;
+						item_ptr->str = tree_str;
+						pllHashAdd(pllUFBootDataPtr->treels, tree_str, &item_ptr);
+						pllUFBootDataPtr->candidate_trees_count++;
+					}
+				}
+				if (rell <= pllUFBootDataPtr->boot_logl[sample] +
+						pllUFBootDataPtr->params_ufboot_epsilon) {
+					pllUFBootDataPtr->boot_counts[sample]++;
+				} else {
+					pllUFBootDataPtr->boot_counts[sample] = 1;
+				}
+				if(rell > pllUFBootDataPtr->boot_logl[sample])
+					pllUFBootDataPtr->boot_logl[sample] = rell;
+				pllUFBootDataPtr->boot_trees[sample] = tree_index;
+				updated++;
+			}
+		}
+/*		if (updated && verbose_mode >= VB_MAX)
+		 printf("%d boot trees updated\n", updated);*/
+	}
+	if (pllUFBootDataPtr->save_all_br_lens) {
+		Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
+				PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+		char * s = (char *) malloc (strlen(tr->tree_string) + 1);
+		pllUFBootDataPtr->treels_newick[tree_index] = s;
+	}
 
- /*    if (pllUFBootDataPtr->boot_samples)
-         free(pattern_lh);*/
- }
+	printf("Freeing things at the end of pllSaveCurrentTree\n");
+
+	if(!pllUFBootDataPtr->params_store_candidate_trees){
+		free(tree_str);
+		free(item_ptr->data);
+		free(item_ptr);
+	}
+	if (pllUFBootDataPtr->boot_samples)
+		free(pattern_lh);
+
+	printf("Done freeing: max = %d, count = %d, size = %d\n",
+			pllUFBootDataPtr->max_candidate_trees,
+			pllUFBootDataPtr->candidate_trees_count,
+			pllUFBootDataPtr->treels_size);
+}
 
 
- void pllComputePatternLikelihood(pllInstance* tr, double * ptnlh, double * cur_logl){
+void pllComputePatternLikelihood(pllInstance* tr, double * ptnlh, double * cur_logl){
  	int i;
  	double tree_logl = 0;
  	for(i = 0; i < pllUFBootDataPtr->n_patterns; i++){
@@ -860,4 +885,30 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove
  		tree_logl += tr->lhs[i] * tr->aliaswgt[i];
  	}
  	*cur_logl = tree_logl;
- }
+}
+
+void pllResizeUFBootData(){
+	int count = pllUFBootDataPtr->candidate_trees_count;
+	pllUFBootDataPtr->treels_size = 2 * count;
+
+	double * rtreels_logl =
+			(double *) malloc(2 * count * (sizeof(double)));
+	if(!rtreels_logl) pllAlertMemoryError();
+	memcpy(rtreels_logl, pllUFBootDataPtr->treels_logl, count * sizeof(double));
+	free(pllUFBootDataPtr->treels_logl);
+	pllUFBootDataPtr->treels_logl = rtreels_logl;
+
+	char ** rtreels_newick =
+			(char **) malloc(2 * count * (sizeof(char *)));
+	if(!rtreels_newick) pllAlertMemoryError();
+	memcpy(rtreels_newick, pllUFBootDataPtr->treels_newick, count * sizeof(char *));
+	free(pllUFBootDataPtr->treels_newick);
+	pllUFBootDataPtr->treels_newick = rtreels_newick;
+
+	double ** rtreels_ptnlh =
+			(double **) malloc(2 * count * (sizeof(double *)));
+	if(!rtreels_ptnlh) pllAlertMemoryError();
+	memcpy(rtreels_ptnlh, pllUFBootDataPtr->treels_ptnlh, count * sizeof(double *));
+	free(pllUFBootDataPtr->treels_ptnlh);
+	pllUFBootDataPtr->treels_ptnlh = rtreels_ptnlh;
+}

@@ -125,7 +125,7 @@ extern "C" {
 /* 0.100000 0.00000052651925834844387815526344648331402709118265192955732345581054687500000000    */
 
 
-#define PLL_ALPHA_MIN                           0.02
+#define PLL_ALPHA_MIN                           0.001
 #define PLL_ALPHA_MAX                           1000.0
 
 #define PLL_RATE_MIN                            0.0000001
