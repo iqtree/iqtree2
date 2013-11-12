@@ -482,6 +482,37 @@ public:
      */
     partitionList * pllPartitions;
 
+
+    /**
+     * Do memory allocation and initialize parameter for UFBoot to run with PLL
+     */
+    void pllInitUFBootData();
+
+    /**
+     * Do memory deallocation for UFBoot data (PLL mode)
+     */
+    void pllDestroyUFBootData();
+
+    /**
+    * Substitute bases in seq according to PLL's rules
+    * @param seq: data of some sequence to be substituted
+    * @param dataType: PLL_DNA_DATA or PLL_AA_DATA
+    */
+   void pllBaseSubstitute (char *str, int dataType);
+
+   /*
+    * An array to map site index in pllAlignment into IQTree pattern index
+    * Born due to the order difference of these two
+    * Will be deallocated in pllDestroyUFBootData()
+    */
+   int * pll2iqtree_pattern_index;
+
+   /*
+    * Build pll2iqtree_pattern_index
+    * Must be called AFTER initializing PLL model
+    */
+   void pllBuildIQTreePatternIndex();
+
 protected:
 
     /**

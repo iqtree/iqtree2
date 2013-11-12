@@ -32,6 +32,14 @@ int nni5;
 //pllNNIMove* nniList;
 
 
+/*
+ * ****************************************************************************
+ * pllUFBoot area
+ * ****************************************************************************
+ */
+
+pllUFBootData * pllUFBootDataPtr = NULL;
+
 
 static int cmp_nni(const void* nni1, const void* nni2) {
 	pllNNIMove* myNNI1 = (pllNNIMove*) nni1;
@@ -343,7 +351,14 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 		}
 		_update(tr, pr, p);
 		//update(tr, pr, p);
-		pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_FALSE);
+		if((pllUFBootDataPtr->params_online_bootstrap == PLL_TRUE) &&
+				(pllUFBootDataPtr->params_gbo_replicates > 0)){
+			tr->fastScaling = PLL_FALSE;
+			pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
+			pllSaveCurrentTree(tr, pr, p);
+		}else{
+			pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_FALSE);
+		}
 	} else if (evalType == NO_BRAN_OPT) {
 		if (numBranches > 1 && !tr->useRecom) {
 			pllNewviewGeneric(tr, pr, p, PLL_TRUE);
@@ -353,7 +368,14 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 			pllNewviewGeneric(tr, pr, p, PLL_FALSE);
 			pllNewviewGeneric(tr, pr, q, PLL_FALSE);
 		}
-		pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_FALSE);
+		if((pllUFBootDataPtr->params_online_bootstrap == PLL_TRUE) &&
+						(pllUFBootDataPtr->params_gbo_replicates > 0)){
+			tr->fastScaling = PLL_FALSE;
+			pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
+			pllSaveCurrentTree(tr, pr, p);
+		}else{
+			pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_FALSE);
+		}
 	} else { // 5 branches optimization
 		if (numBranches > 1 && !tr->useRecom) {
 			pllNewviewGeneric(tr, pr, p, PLL_TRUE);
@@ -399,7 +421,14 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 			pllNewviewGeneric(tr, pr, r, PLL_FALSE);
 		_update(tr, pr, r);
 		//update(tr, pr, r);
-		pllEvaluateGeneric(tr, pr, r, PLL_FALSE, PLL_FALSE);
+		if((pllUFBootDataPtr->params_online_bootstrap == PLL_TRUE) &&
+						(pllUFBootDataPtr->params_gbo_replicates > 0)){
+			tr->fastScaling = PLL_FALSE;
+			pllEvaluateGeneric(tr, pr, r, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
+			pllSaveCurrentTree(tr, pr, r);
+		}else{
+			pllEvaluateGeneric(tr, pr, r, PLL_FALSE, PLL_FALSE);
+		}
 	}
 	return tr->likelihood;
 
@@ -687,3 +716,148 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove
 		}
 	}
 }
+
+
+ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
+ 	printf("pllSaveCurrentTree()\n");
+ 	srand(gettime());
+
+ 	double cur_logl = tr->likelihood;
+ 	unsigned int * tree_index_ptr = NULL;
+ 	unsigned int tree_index = -1;
+ 	pll_boolean is_stored = PLL_FALSE;
+
+ 	char * tree_str = NULL;
+
+ 	if(pllUFBootDataPtr->params_store_candidate_trees){
+ 		// get newick string of tree topology
+ 		Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
+ 				PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+ 		tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
+ 		strcpy(tree_str, tr->tree_string);
+ 		is_stored = pllHashSearch(&(pllUFBootDataPtr->treels), tree_str, &tree_index_ptr);
+ 	}
+
+ 	if(is_stored){ // if found the tree_str
+ 		pllUFBootDataPtr->duplication_counter++;
+ 		tree_index = *tree_index_ptr;
+ 		if (cur_logl <= pllUFBootDataPtr->treels_logl[tree_index] + 1e-4) {
+ 			if (cur_logl < pllUFBootDataPtr->treels_logl[tree_index] - 5.0)
+ 				if (verbose_mode >= VB_MED)
+ 					printf("Current lh %f is much worse than expected %f\n",
+ 							cur_logl, pllUFBootDataPtr->treels_logl[tree_index]);
+ 				return;
+ 		}
+         if (verbose_mode >= VB_MAX)
+         	printf("Updated logl %f to %f\n", pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
+         pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
+
+         if (pllUFBootDataPtr->save_all_br_lens) {
+         	Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
+         			PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LENGTH, PLL_FALSE, PLL_FALSE);
+         	char * tree_str_br_lens = (char *) malloc (strlen(tr->tree_string) + 1);
+         	strcpy(tree_str_br_lens, tr->tree_string);
+         	pllUFBootDataPtr->treels_newick[tree_index] = tree_str_br_lens;
+         }
+         if (pllUFBootDataPtr->boot_samples == NULL) {
+         	pllComputePatternLikelihood(tr, (pllUFBootDataPtr->treels_ptnlh)[tree_index], &cur_logl);
+             return;
+         }
+         if (verbose_mode >= VB_MAX)
+         	printf("Update treels_logl[%d] := %f\n", tree_index, cur_logl);
+ 	} else {
+         if (pllUFBootDataPtr->logl_cutoff != 0.0 &&
+         		cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4)
+             return;
+         tree_index = pllUFBootDataPtr->candidate_trees_count;
+         pllUFBootDataPtr->candidate_trees_count++;
+         if (pllUFBootDataPtr->params_store_candidate_trees)
+         	pllHashAdd(&(pllUFBootDataPtr->treels), tree_str, &tree_index);
+         pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
+         if (verbose_mode >= VB_MAX)
+         	printf("Add    treels_logl[%d] := %f\n", tree_index, cur_logl);
+     }
+
+ 	/*if (write_intermediate_trees)
+ 	        printTree(out_treels, WT_NEWLINE | WT_BR_LEN);*/
+
+ 	double *pattern_lh = (double *) malloc(pllUFBootDataPtr->n_patterns * sizeof(double));
+ 	pllComputePatternLikelihood(tr, pattern_lh, &cur_logl);
+
+     if (pllUFBootDataPtr->boot_samples == NULL) {
+         // for runGuidedBootstrap
+     	pllUFBootDataPtr->treels_ptnlh[tree_index] = pattern_lh;
+     } else {
+         // online bootstrap
+     	printf("Get into online bootstrap code ^^^^^^^^^^ \n");
+         int nptn = pllUFBootDataPtr->n_patterns;
+         int updated = 0;
+         int nsamples = pllUFBootDataPtr->params_gbo_replicates;
+         for (int sample = 0; sample < nsamples; sample++) {
+         	double rell = 0.0;
+         	for (int ptn = 0; ptn < nptn; ptn++)
+ 				rell += pattern_lh[ptn] * pllUFBootDataPtr->boot_samples[sample][ptn];
+
+         	int rand_pos = (sample + rand()) % pllUFBootDataPtr->params_gbo_replicates;
+
+ 			if (rell > pllUFBootDataPtr->boot_logl[sample] + pllUFBootDataPtr->params_ufboot_epsilon ||
+ 				(rell > pllUFBootDataPtr->boot_logl[sample] - pllUFBootDataPtr->params_ufboot_epsilon &&
+ 						pllUFBootDataPtr->random_doubles[rand_pos] <= 1.0/(pllUFBootDataPtr->boot_counts[sample]+1))) {
+ 				if (tree_str == NULL) {
+ 					Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
+ 							PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+ 					tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
+ 					strcpy(tree_str, tr->tree_string);
+ 					is_stored = pllHashSearch(&(pllUFBootDataPtr->treels), tree_str, &tree_index_ptr);
+ 					if(is_stored)
+ 						tree_index = *tree_index_ptr;
+ 					else{
+ 						tree_index = pllUFBootDataPtr->candidate_trees_count;
+ 						pllHashAdd(&(pllUFBootDataPtr->treels), tree_str, &tree_index);
+ 						pllUFBootDataPtr->candidate_trees_count++;
+ 					}
+ 				}
+ 				if (rell <= pllUFBootDataPtr->boot_logl[sample] +
+ 						pllUFBootDataPtr->params_ufboot_epsilon) {
+ 					pllUFBootDataPtr->boot_counts[sample]++;
+ 				} else {
+ 					pllUFBootDataPtr->boot_counts[sample] = 1;
+ 				}
+ 				if(rell > pllUFBootDataPtr->boot_logl[sample])
+ 					pllUFBootDataPtr->boot_logl[sample] = rell;
+ 				pllUFBootDataPtr->boot_trees[sample] = tree_index;
+ 				updated++;
+ 			} /*else if (verbose_mode >= VB_MED && rell > boot_logl[sample] - 0.01) {
+ 				cout << "Info: multiple RELL score trees detected" << endl;
+ 			}*/
+ 		}
+         if (updated && verbose_mode >= VB_MAX)
+             printf("%d boot trees updated\n", updated);
+         /*
+          if (tree_index >= max_candidate_trees/2 && boot_splits->empty()) {
+          // summarize split support half way for stopping criterion
+          cout << "Summarizing current bootstrap supports..." << endl;
+          summarizeBootstrap(*boot_splits);
+          }*/
+     }
+     if (pllUFBootDataPtr->save_all_br_lens) {
+ 		Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
+ 				PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+ 		char * s = (char *) malloc (strlen(tr->tree_string) + 1);
+ 		pllUFBootDataPtr->treels_newick[tree_index] = s;
+     }
+
+ /*    if (pllUFBootDataPtr->boot_samples)
+         free(pattern_lh);*/
+ }
+
+
+ void pllComputePatternLikelihood(pllInstance* tr, double * ptnlh, double * cur_logl){
+ 	int i;
+ 	double tree_logl = 0;
+ 	for(i = 0; i < pllUFBootDataPtr->n_patterns; i++){
+ 		ptnlh[i] = tr->lhs[i];
+ 		tree_logl += tr->lhs[i] * tr->aliaswgt[i];
+ 	}
+ 	*cur_logl = tree_logl;
+ }

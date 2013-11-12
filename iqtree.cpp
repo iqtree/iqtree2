@@ -802,7 +802,173 @@ void IQTree::inputModelParam2PLL() {
 		pllInitModel(pllInst, pllPartitions, pllAlignment);
 		modOpt(pllInst, pllPartitions, 0.1);
 	}
+	// Build pll2iqtree_pattern_index to map the sites in pllAlignment into pattern in aln
+	pllBuildIQTreePatternIndex();
 }
+
+
+void IQTree::pllBuildIQTreePatternIndex(){
+	pll2iqtree_pattern_index = new int[pllAlignment->sequenceLength];
+	char ** pll_aln = new char *[pllAlignment->sequenceCount];
+	for(int i = 0; i < pllAlignment->sequenceCount; i++)
+		pll_aln[i] = new char[pllAlignment->sequenceLength];
+
+	int pos;
+	for(int i = 0; i < pllAlignment->sequenceCount; i++){
+		pos = 0;
+		for(int model = 0; model < pllPartitions->numberOfPartitions; model++){
+			memcpy(&pll_aln[i][pos],
+					&pllAlignment->sequenceData[i + 1][pllPartitions->partitionData[model]->lower],
+					pllPartitions->partitionData[model]->width);
+			pos += pllPartitions->partitionData[model]->width;
+		}
+	}
+
+ 	char * pll_site = new char[pllAlignment->sequenceCount + 1];
+ 	char * site = new char[pllAlignment->sequenceCount + 1];
+	for(int i = 0; i < pllAlignment->sequenceLength; i++){
+		for(int j = 0; j < pllAlignment->sequenceCount; j++)
+			pll_site[j]= pll_aln[j][i];
+		pll_site[pllAlignment->sequenceCount] = '\0';
+
+		site[pllAlignment->sequenceCount] = '\0';
+		for(int k = 0; k < aln->size(); k++){
+			for(int p = 0; p < pllAlignment->sequenceCount; p++)
+				site[p] = aln->convertStateBack(aln->at(k)[p]);
+			pllBaseSubstitute(site, pllPartitions->partitionData[0]->dataType);
+			if(memcmp(pll_site,site, pllAlignment->sequenceCount) == 0){
+				pll2iqtree_pattern_index[i] = k;
+				cout << "original_aln_index[" << i << "] = " << k  << endl;
+			}
+		}
+	}
+
+	delete [] pll_site;
+	delete [] site;
+	for(int i = 0; i < pllAlignment->sequenceCount; i++)
+		delete [] pll_aln[i];
+	delete pll_aln;
+}
+
+/*
+ * Substitute bases in seq according to PLL's rules
+ * @param seq: data of some sequence to be substituted
+ * @param dataType: PLL_DNA_DATA or PLL_AA_DATA
+ */
+void IQTree::pllBaseSubstitute (char *seq, int dataType)
+{
+	char meaningDNA[256];
+	char  meaningAA[256];
+	char * d;
+
+	for (int i = 0; i < 256; ++ i)
+	{
+		meaningDNA[i] = -1;
+		meaningAA[i]  = -1;
+	}
+
+	/* DNA data */
+
+	meaningDNA['A'] =  1;
+	meaningDNA['B'] = 14;
+	meaningDNA['C'] =  2;
+	meaningDNA['D'] = 13;
+	meaningDNA['G'] =  4;
+	meaningDNA['H'] = 11;
+	meaningDNA['K'] = 12;
+	meaningDNA['M'] =  3;
+	meaningDNA['R'] =  5;
+	meaningDNA['S'] =  6;
+	meaningDNA['T'] =  8;
+	meaningDNA['U'] =  8;
+	meaningDNA['V'] =  7;
+	meaningDNA['W'] =  9;
+	meaningDNA['Y'] = 10;
+	meaningDNA['a'] =  1;
+	meaningDNA['b'] = 14;
+	meaningDNA['c'] =  2;
+	meaningDNA['d'] = 13;
+	meaningDNA['g'] =  4;
+	meaningDNA['h'] = 11;
+	meaningDNA['k'] = 12;
+	meaningDNA['m'] =  3;
+	meaningDNA['r'] =  5;
+	meaningDNA['s'] =  6;
+	meaningDNA['t'] =  8;
+	meaningDNA['u'] =  8;
+	meaningDNA['v'] =  7;
+	meaningDNA['w'] =  9;
+	meaningDNA['y'] = 10;
+
+	meaningDNA['N'] =
+	meaningDNA['n'] =
+	meaningDNA['O'] =
+	meaningDNA['o'] =
+	meaningDNA['X'] =
+	meaningDNA['x'] =
+	meaningDNA['-'] =
+	meaningDNA['?'] = 15;
+
+	/* AA data */
+
+	meaningAA['A'] =  0;  /* alanine */
+	meaningAA['R'] =  1;  /* arginine */
+	meaningAA['N'] =  2;  /*  asparagine*/
+	meaningAA['D'] =  3;  /* aspartic */
+	meaningAA['C'] =  4;  /* cysteine */
+	meaningAA['Q'] =  5;  /* glutamine */
+	meaningAA['E'] =  6;  /* glutamic */
+	meaningAA['G'] =  7;  /* glycine */
+	meaningAA['H'] =  8;  /* histidine */
+	meaningAA['I'] =  9;  /* isoleucine */
+	meaningAA['L'] =  10; /* leucine */
+	meaningAA['K'] =  11; /* lysine */
+	meaningAA['M'] =  12; /* methionine */
+	meaningAA['F'] =  13; /* phenylalanine */
+	meaningAA['P'] =  14; /* proline */
+	meaningAA['S'] =  15; /* serine */
+	meaningAA['T'] =  16; /* threonine */
+	meaningAA['W'] =  17; /* tryptophan */
+	meaningAA['Y'] =  18; /* tyrosine */
+	meaningAA['V'] =  19; /* valine */
+	meaningAA['B'] =  20; /* asparagine, aspartic 2 and 3*/
+	meaningAA['Z'] =  21; /*21 glutamine glutamic 5 and 6*/
+	meaningAA['a'] =  0;  /* alanine */
+	meaningAA['r'] =  1;  /* arginine */
+	meaningAA['n'] =  2;  /*  asparagine*/
+	meaningAA['d'] =  3;  /* aspartic */
+	meaningAA['c'] =  4;  /* cysteine */
+	meaningAA['q'] =  5;  /* glutamine */
+	meaningAA['e'] =  6;  /* glutamic */
+	meaningAA['g'] =  7;  /* glycine */
+	meaningAA['h'] =  8;  /* histidine */
+	meaningAA['i'] =  9;  /* isoleucine */
+	meaningAA['l'] =  10; /* leucine */
+	meaningAA['k'] =  11; /* lysine */
+	meaningAA['m'] =  12; /* methionine */
+	meaningAA['f'] =  13; /* phenylalanine */
+	meaningAA['p'] =  14; /* proline */
+	meaningAA['s'] =  15; /* serine */
+	meaningAA['t'] =  16; /* threonine */
+	meaningAA['w'] =  17; /* tryptophan */
+	meaningAA['y'] =  18; /* tyrosine */
+	meaningAA['v'] =  19; /* valine */
+	meaningAA['b'] =  20; /* asparagine, aspartic 2 and 3*/
+	meaningAA['z'] =  21; /*21 glutamine glutamic 5 and 6*/
+
+	meaningAA['X'] =
+	meaningAA['x'] =
+	meaningAA['?'] =
+	meaningAA['*'] =
+	meaningAA['-'] = 22;
+
+	d = (dataType == PLL_DNA_DATA) ? meaningDNA : meaningAA;
+	for (int i = 0; i < strlen(seq); ++ i)
+	{
+		seq[i] = d[seq[i]];
+	}
+}
+
 double IQTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
     assert(node1->isLeaf());
     assert(node2->isLeaf());
@@ -1311,29 +1477,35 @@ double IQTree::doIQPNNI() {
 			}
 
 		}
-		if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
-			SplitGraph *sg = new SplitGraph;
-			summarizeBootstrap(*sg);
-			boot_splits.push_back(sg);
-			if (params->max_candidate_trees == 0)
-				max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations()) / curIteration;
-			cout << "Setting tau = " << max_candidate_trees << endl;
-		}
-		if (curIteration == stop_rule.getNumIterations() && params->gbo_replicates && !boot_splits.empty()
-				&& stop_rule.getNumIterations() + params->step_iterations <= params->max_iterations) {
-			//SplitGraph *sg = new SplitGraph;
-			//summarizeBootstrap(*sg);
-			if (!checkBootstrapStopping()) {
+		// DTH: Split into non-pll and pll cases
+		if(!params->pll){
+			if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
+				SplitGraph *sg = new SplitGraph;
+				summarizeBootstrap(*sg);
+				boot_splits.push_back(sg);
 				if (params->max_candidate_trees == 0)
-					max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations() + params->step_iterations)
-							/ stop_rule.getNumIterations();
-				stop_rule.setIterationNum(stop_rule.getNumIterations() + params->step_iterations,
-						params->max_iterations);
-				cout << "INFO: Increase number of iterations to " << stop_rule.getNumIterations() << " tau = "
-						<< max_candidate_trees << endl;
-				//delete boot_splits;
-				//boot_splits = sg;
-			} //else delete sg;
+					max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations()) / curIteration;
+				cout << "Setting tau = " << max_candidate_trees << endl;
+			}
+			if (curIteration == stop_rule.getNumIterations() && params->gbo_replicates && !boot_splits.empty()
+					&& stop_rule.getNumIterations() + params->step_iterations <= params->max_iterations) {
+				//SplitGraph *sg = new SplitGraph;
+				//summarizeBootstrap(*sg);
+				if (!checkBootstrapStopping()) {
+					if (params->max_candidate_trees == 0)
+						max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations() + params->step_iterations)
+								/ stop_rule.getNumIterations();
+					stop_rule.setIterationNum(stop_rule.getNumIterations() + params->step_iterations,
+							params->max_iterations);
+					cout << "INFO: Increase number of iterations to " << stop_rule.getNumIterations() << " tau = "
+							<< max_candidate_trees << endl;
+					//delete boot_splits;
+					//boot_splits = sg;
+				} //else delete sg;
+			}
+		}else{
+			// DTH: TODO: handle pll case here
+
 		}
 	}
 
@@ -1354,6 +1526,9 @@ double IQTree::doIQPNNI() {
 		out_treelh.close();
 		out_sitelh.close();
 	}
+
+	// DTH: pllUFBoot deallocation
+	if(params->pll) pllDestroyUFBootData();
 
 	return bestScore;
 }
@@ -1517,8 +1692,10 @@ extern "C" int nni0;
 extern "C" int nni5;
 extern "C" int nni1;
 extern "C" pllNNIMove* nniList;
+extern "C" pllUFBootData * pllUFBootDataPtr;
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, int *skipped) {
+	pllInitUFBootData();
 	if (pllTmpTree == NULL) {
 		pllTmpTree = setupTopol(pllInst->mxtips);
 	}
@@ -1605,6 +1782,98 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
 
     return curLH;
 }
+
+
+void IQTree::pllInitUFBootData(){
+	if(pllUFBootDataPtr == NULL){
+		pllUFBootDataPtr = (pllUFBootData *) malloc(sizeof(pllUFBootData));
+		pllUFBootDataPtr->boot_samples = NULL;
+
+		if(params->online_bootstrap && params->gbo_replicates > 0){
+			params->gbo_replicates = 2; // TEST!!!
+			pllUFBootDataPtr->params_ufboot_epsilon = params->ufboot_epsilon;
+
+			(pllUFBootDataPtr->treels).size = max_candidate_trees;
+			(pllUFBootDataPtr->treels).Items =
+					(pllHashItem **) malloc(max_candidate_trees * (sizeof(pllHashItem*)));
+			for(int i = 0; i < max_candidate_trees; i++) (pllUFBootDataPtr->treels).Items[i] = NULL;
+
+			pllUFBootDataPtr->candidate_trees_count = 0;
+
+			pllUFBootDataPtr->treels_logl =
+					(double *) malloc(max_candidate_trees * (sizeof(double)));
+
+			pllUFBootDataPtr->treels_newick =
+					(char **) malloc(max_candidate_trees * (sizeof(char *)));
+
+			pllUFBootDataPtr->treels_ptnlh =
+					(double **) malloc(max_candidate_trees * (sizeof(double *)));
+
+			// aln->createBootstrapAlignment() must be called before this fragment
+			pllUFBootDataPtr->boot_samples =
+					(int **) malloc(params->gbo_replicates * sizeof(int *));
+			for(int i = 0; i < params->gbo_replicates; i++){
+				pllUFBootDataPtr->boot_samples[i] =
+						(int *) malloc(pllAlignment->sequenceLength * sizeof(int));
+				for(int j = 0; j < pllAlignment->sequenceLength; j++){
+					pllUFBootDataPtr->boot_samples[i][j] =
+							boot_samples[i][pll2iqtree_pattern_index[j]];
+				}
+			}
+
+			pllUFBootDataPtr->boot_logl =
+					(double *) malloc(params->gbo_replicates * (sizeof(double)));
+
+			pllUFBootDataPtr->boot_counts =
+					(int *) malloc(params->gbo_replicates * (sizeof(int)));
+			for(int i = 0; i < params->gbo_replicates; i++)
+				pllUFBootDataPtr->boot_counts[i] = 0;
+
+			pllUFBootDataPtr->boot_trees =
+					(int *) malloc(params->gbo_replicates * (sizeof(int)));
+
+			pllUFBootDataPtr->random_doubles =
+					(double *) malloc(params->gbo_replicates * (sizeof(double)));
+
+		}
+	}
+	pllUFBootDataPtr->save_all_trees = save_all_trees;
+	pllUFBootDataPtr->save_all_br_lens = save_all_br_lens;
+	pllUFBootDataPtr->logl_cutoff = logl_cutoff;
+	pllUFBootDataPtr->duplication_counter = 0;
+	pllUFBootDataPtr->n_patterns = pllAlignment->sequenceLength;
+	pllUFBootDataPtr->params_online_bootstrap = params->online_bootstrap;
+	pllUFBootDataPtr->params_gbo_replicates = params->gbo_replicates;
+	pllUFBootDataPtr->params_store_candidate_trees = params->store_candidate_trees;
+	if(pllUFBootDataPtr->random_doubles)
+		for(int i = 0; i < params->gbo_replicates; i++)
+				pllUFBootDataPtr->random_doubles[i] = random_double();
+
+	// todo: consider resize pllUFBootDataPtr->treel.Items, spllUFBootDataPtr->treels_logl
+}
+
+void IQTree::pllDestroyUFBootData(){
+	if(pll2iqtree_pattern_index){
+		delete [] pll2iqtree_pattern_index;
+		pll2iqtree_pattern_index = NULL;
+	}
+	if(params->online_bootstrap && params->gbo_replicates > 0){
+		free(pllUFBootDataPtr->treels.Items); // todo: free its content
+		free(pllUFBootDataPtr->treels_logl);
+		free(pllUFBootDataPtr->treels_newick); // todo: free its content
+		free(pllUFBootDataPtr->treels_ptnlh); // todo: free its content
+
+		for(int i = 0; i < params->gbo_replicates; i++)
+			free(pllUFBootDataPtr->boot_samples[i]);
+		free(pllUFBootDataPtr->boot_samples);
+		free(pllUFBootDataPtr->boot_logl);
+		free(pllUFBootDataPtr->boot_trees);
+		free(pllUFBootDataPtr->random_doubles);
+	}
+	free(pllUFBootDataPtr);
+	pllUFBootDataPtr = NULL;
+}
+
 
 void IQTree::applyNNIs(int nni2apply, bool changeBran) {
     for (int i = 0; i < nni2apply; i++) {

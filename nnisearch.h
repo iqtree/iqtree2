@@ -8,6 +8,7 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include "pll/pll.h"
+#include "pll/hash.h"
 
 const int TOPO_ONLY = 0;
 const int NO_BRAN_OPT = 1;
@@ -152,6 +153,36 @@ pllNNIMove *getNNIList(pllInstance* tr);
 //void saveLHVector(nodeptr p, nodeptr q, double* p_lhsave, double* q_lhsave);
 
 
+/*
+ * ****************************************************************************
+ * pllUFBoot area
+ * ****************************************************************************
+ */
+typedef struct{
+	pll_boolean params_online_bootstrap;
+	int params_gbo_replicates;
+	pll_boolean params_store_candidate_trees;
+	double params_ufboot_epsilon;
+	int save_all_trees;
+	pll_boolean save_all_br_lens;
+	double logl_cutoff;
+	int duplication_counter;
+	int n_patterns;
+	struct pllHashTable treels;
+	unsigned int candidate_trees_count; /* counter of trees in pllHashTable */
+	double * treels_logl; // maintain size == treels.size
+	char ** treels_newick; // maintain size == treels.size
+	double ** treels_ptnlh; // maintain size == treels.size
+	int ** boot_samples;
+	double * boot_logl;
+	int * boot_counts;
+	int * boot_trees;
+	double * random_doubles;
+} pllUFBootData;
+
+
+void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p);
+void pllComputePatternLikelihood(pllInstance* tr, double * ptnlh, double * cur_logl);
 
 
 #ifdef __cplusplus
