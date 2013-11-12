@@ -168,7 +168,6 @@ void IQTree::setParams(Params &params) {
         if (root_state < 0 || root_state >= aln->num_states)
             outError("Invalid root state");
     }
-    intesifyPertubListSize = ( (aln->getNSeq()-3)/params.pertubSize + 1) * params.pertubSize;
 }
 
 IQTree::~IQTree() {
@@ -870,63 +869,39 @@ double IQTree::perturb(int times) {
 
 double IQTree::pllDoGuidedPerturbation() {
 
-	// If we have all used the NNIs in perturbNNIList, reset it to bestNNIList
-	if (perturbNNIList.size() == bestNNIList.size() - intesifyPertubListSize) {
-		perturbNNIList = bestNNIList;
-		diversification = true;
-		//params->pertubSize = 20;
-	}
-
-	// List of NNI moves that are going to be applied in the next perturbation
+	// List of NNI moves that are going to be applied at this pertubation
 	vector<pllNNIMove> nni2perturb;
+	bool conflict;
 
-	int pos = perturbNNIList.size();
 	// Select the top perturbSize NNI
-	for (int i = 0; i < 10; i++) {
-		bool conflict;
-		do {
-			conflict = false;
-			// At diversification stage, choose NNI randomly
-			if (diversification) {
-				cout << "Start diversification " << endl;
-				//exit(0);
-				int max = perturbNNIList.size() - 1;
-				int min = 0;
-				pos = (rand() / ((double) RAND_MAX + 1)) * (max-min+1) + min; // formula to generate uniformly distributed numbers
-			} else {
-				// If at intensification step, simply take the next best NNI
-				pos--;
-			}
-			assert(pos >= 0);
-			// We don't have to check for conflict with the fist NNI in nni2perturb because the list is still empty;
-			if ( i == 0)
-				break;
-
-			// Now make sure that the to-be-added NNI does not conflict with other NNIs already in the list
-			for (int j = 0; j < nni2perturb.size(); j++) {
-				if (nni2perturb[j].p->number == perturbNNIList[pos].p->number || nni2perturb[j].p->number == perturbNNIList[pos].p->back->number) {
-					conflict = true;
-					break;
-				}
-				if (nni2perturb[j].p->back->number == perturbNNIList[pos].p->number || nni2perturb[j].p->back->number == perturbNNIList[pos].p->back->number) {
-					conflict = true;
-					break;
-				}
-			}
-			//cout << "Shit happened" << endl;
-		} while (conflict);
-
-		nni2perturb.push_back(perturbNNIList[pos]);
-		if (!diversification) {
-			perturbNNIList.erase(perturbNNIList.begin() + pos);
-		}
-	}
-	int curPerturbSize = nni2perturb.size();
-	pllNNIMove *_nni2perturb = &nni2perturb[0];
-
-	curScore = perturbTree(pllInst, pllPartitions, _nni2perturb, curPerturbSize);
-	//delete _nni2perturb;
-	return curScore;
+//	for (int i = 0; i < 10; i++) {
+//			conflict = false;
+//
+//			// Now make sure that the to-be-added NNI does not conflict with other NNIs already in the list
+//			for (int j = 0; j < nni2perturb.size(); j++) {
+//				if (nni2perturb[j].p->number == perturbNNIList[pos].p->number || nni2perturb[j].p->number == perturbNNIList[pos].p->back->number) {
+//					conflict = true;
+//					break;
+//				}
+//				if (nni2perturb[j].p->back->number == perturbNNIList[pos].p->number || nni2perturb[j].p->back->number == perturbNNIList[pos].p->back->number) {
+//					conflict = true;
+//					break;
+//				}
+//			}
+//			//cout << "Shit happened" << endl;
+//		} while (conflict);
+//
+//		nni2perturb.push_back(perturbNNIList[pos]);
+//		if (!diversification) {
+//			perturbNNIList.erase(perturbNNIList.begin() + pos);
+//		}
+//	}
+//	int curPerturbSize = nni2perturb.size();
+//	pllNNIMove *_nni2perturb = &nni2perturb[0];
+//
+//	curScore = perturbTree(pllInst, pllPartitions, _nni2perturb, curPerturbSize);
+//	//delete _nni2perturb;
+//	return curScore;
 }
 
 
@@ -1133,7 +1108,7 @@ double IQTree::doIQPNNI() {
 				} else {
 					double nni_count_est95 = estN95();
 					double nni_delta_est95 = estDelta95();
-					double nni_count_estMedian = estNMedian();
+					double nni_count_estMedian = getAvgNumNNI();
 					double nni_delta_estMedian = estDeltaMedian();
 					double maxScore1 = nni_delta_est95 * nni_count_estMedian;
 					double maxScore2 = nni_delta_estMedian * nni_count_est95;
@@ -1248,7 +1223,6 @@ double IQTree::doIQPNNI() {
 				setAlignment(aln);
 			}
 
-			//curScore = optimizeAllBranches(100, 0.0001);
 			stringstream cur_tree_topo_ss;
 			printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
 			if (cur_tree_topo_ss.str() != best_tree_topo) {
@@ -1261,7 +1235,6 @@ double IQTree::doIQPNNI() {
 
 					// update the bestNNIList and perturbNNIList
 					bestNNIList.assign(curNNIList.begin(), curNNIList.end());
-					perturbNNIList.assign(curNNIList.begin(), curNNIList.end());
 				}
 				if (!params->pll) {
 					curScore = optimizeAllBranches();
@@ -1539,7 +1512,6 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
     double deltaNNI;
     bool startNNI5 = false;
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
-    	//cout << "NNI step: " << nniSteps << endl;
         if (beginHeu) {
             double maxScore = curLH + nni_delta_est * (nni_count_est - totalNNICount);
             if (maxScore < curLH) {
@@ -1567,12 +1539,10 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
         } else {
         	newLH = doNNISearch(pllInst, pllPartitions, pllTmpTree, nniList, ONE_BRAN_OPT, &nni_count, &deltaNNI);
         }
-        if (newLH == -1.0) {
+        curLH = newLH;
+        if (nni_count == 0) {
             break;
-        } else if ( abs(newLH - curLH) < 0.001 ){
-        	break;
         } else {
-            curLH = newLH;
             if (enableHeuris && curIteration > 1) {
                 if (vecImpProNNI.size() < 1000) {
                     vecImpProNNI.push_back(deltaNNI);
@@ -1595,7 +1565,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
     }
 
     if (abs(curLH - bestScore) < 1.0 || curLH > bestScore) {
-      pllTreeEvaluate(pllInst, pllPartitions, 16);
+      pllTreeEvaluate(pllInst, pllPartitions, 8);
       curLH = pllInst->likelihood;
     }
 
@@ -1705,7 +1675,7 @@ double IQTree::estN95() {
     }
 }
 
-double IQTree::estNMedian() {
+double IQTree::getAvgNumNNI() {
     if (vecNumNNI.size() == 0) {
         return 0;
     } else {

@@ -666,7 +666,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.gamma_shape = -1.0;
     params.gamma_median = false;
     params.p_invar_sites = -1.0;
-    params.optimize_model_rate_joint = true;
+    params.optimize_model_rate_joint = false;
     params.optimize_by_newton = true;
     params.fixed_branch_length = false;
     params.iqp_assess_quartet = IQP_DISTANCE;

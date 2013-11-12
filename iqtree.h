@@ -356,14 +356,14 @@ public:
                                                            details)
      * @return the estimated value
      */
-    inline double estNMedian(void);
+    double getAvgNumNNI(void);
 
     /**
      * Estimate the median of the distribution of N (see paper for more d
                                                           details)
      * @return the estimated value
      */
-    inline double estDeltaMedian(void);
+    double estDeltaMedian(void);
 
     /**
      * Estimate the 95% quantile of the distribution of DELTA (see paper for
@@ -457,11 +457,6 @@ public:
      */
     vector<pllNNIMove> curNNIList;
 
-    /*
-     *  Contains list of unapplied NNIs during the pertubation steps
-     */
-    vector<pllNNIMove> perturbNNIList;
-
     /**
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
      */
@@ -481,6 +476,11 @@ public:
      *  PLL partition list
      */
     partitionList * pllPartitions;
+
+    /**
+     *  Vector contains number of NNIs used at each iterations
+     */
+    vector<int> vecNumNNI;
 
 protected:
 
@@ -540,10 +540,6 @@ protected:
      */
     double speed_conf;
 
-    /**
-     *  Vector contains number of NNIs used at each iterations
-     */
-    vector<int> vecNumNNI;
 
     /**
      *  Vector contains approximated improvement pro NNI at each iterations
@@ -600,11 +596,6 @@ protected:
     void clearLeafFrequency();
 
 public:
-
-    /**
-     *  adjustPertubSize = ((n-3)/perturbSize + 1) * perturbSize
-     */
-    int intesifyPertubListSize;
 
     /**
      *  variable storing the current best tree topology

@@ -1294,18 +1294,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 8);
 				iqtree.curScore = iqtree.pllInst->likelihood;
 				cout << "logl of starting tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
-//					stringstream parsNr;
-//					parsNr << treeNr;
-//					printString2File(parsTree[treeNr], string(params.out_prefix) + ".parsimony." + parsNr.str());
 				iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps);
 				cout << "logl of fastNNI " << treeNr + 1 << ": "
 						<< iqtree.curScore << " (NNIs: " << nni_count
 						<< " / NNI steps: " << nni_steps << ")" << endl;
-//					Tree2String (iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-//					printString2File(string(iqtree.pllInst->tree_string), string(params.out_prefix) + ".fastnni." + parsNr.str());
+				iqtree.vecNumNNI.push_back(nni_count);
 				if (iqtree.curScore > iqtree.bestScore) {
 					iqtree.bestScore = iqtree.curScore;
-					cout << "BETTER TREE FOUND: " << iqtree.bestScore << endl;
+					cout << "BETTER SCORE FOUND: " << iqtree.bestScore << endl;
 					Tree2String(iqtree.pllInst->tree_string, iqtree.pllInst,
 							iqtree.pllPartitions, iqtree.pllInst->start->back,
 							PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
@@ -1317,10 +1313,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 					saveTree(iqtree.pllInst, iqtree.pllBestTree,
 							iqtree.pllPartitions->numberOfPartitions);
 					// update the bestNNIList and perturbNNIList
-					iqtree.bestNNIList.assign(iqtree.curNNIList.begin(),
-							iqtree.curNNIList.end());
-					iqtree.perturbNNIList.assign(iqtree.curNNIList.begin(),
-							iqtree.curNNIList.end());
+					iqtree.bestNNIList.assign(iqtree.curNNIList.begin(), iqtree.curNNIList.end());
 				}
 			} else {
 				stringstream parsTreeString;
@@ -1359,6 +1352,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.curScore = iqtree.bestScore;
 
 		delete[] parsTree;
+
+		params.pertubSize = iqtree.getAvgNumNNI();
+		cout << "Average number of NNIs: " << params.pertubSize << endl;
 
 
 		/* FOR PARTITION MODEL */
@@ -1529,7 +1525,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.initializeAllPartialLh();
 		iqtree.clearAllPartialLH();
 		cout << "Optimizing model parameters" << endl;
-		iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, 0.0001));
+		iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, 0.001));
 	} else {
 		iqtree.setBestScore(iqtree.curScore);
 	}

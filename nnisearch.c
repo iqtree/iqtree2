@@ -152,7 +152,7 @@ double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMov
 
 	/* If no better NNI is found return -1.0 */
 	if (numPosNNI == 0)
-		return -1.0;
+		return initLH;
 
 	int totalNNIs = numBran;
 	/* Make sure all 2n-6 NNIs were evalauted */
