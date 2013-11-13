@@ -520,6 +520,13 @@ public:
     */
    void pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns);
 
+   /**
+    * Convert certain arrays in pllUFBootDataPtr
+    * into IQTree data structures
+    * to be usable in IQTree::summarizeBootstrap()
+    */
+   void pllConvertUFBootData2IQTree();
+
 protected:
 
     /**

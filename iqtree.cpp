@@ -1095,6 +1095,7 @@ double IQTree::pllDoGuidedPerturbation() {
 	return curScore;
 }
 
+extern "C" pllUFBootData * pllUFBootDataPtr;
 
 double IQTree::doIQPNNI() {
 	if (params->ilsnni) {
@@ -1477,7 +1478,8 @@ double IQTree::doIQPNNI() {
 			}
 
 		}
-		// DTH: Split into non-pll and pll cases
+
+		if(params->pll) pllConvertUFBootData2IQTree(); // DTH: make pllUFBootData usable in summarizeBootstrap
 		if(!params->pll){
 			if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
 				SplitGraph *sg = new SplitGraph;
@@ -1487,6 +1489,7 @@ double IQTree::doIQPNNI() {
 					max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations()) / curIteration;
 				cout << "Setting tau = " << max_candidate_trees << endl;
 			}
+
 			if (curIteration == stop_rule.getNumIterations() && params->gbo_replicates && !boot_splits.empty()
 					&& stop_rule.getNumIterations() + params->step_iterations <= params->max_iterations) {
 				//SplitGraph *sg = new SplitGraph;
@@ -1504,18 +1507,23 @@ double IQTree::doIQPNNI() {
 				} //else delete sg;
 			}
 		}else{
-			// DTH: TODO: handle pll case here
-
+			if(max_candidate_trees <= pllUFBootDataPtr->candidate_trees_count) break;
 		}
 	}
 
-	int predicted_iteration = stop_rule.getPredictedIteration();
-	//cout.unsetf(ios::fixed);
+	// DTH: Split into non-pll and pll cases
+	if(!params->pll){
+		int predicted_iteration = stop_rule.getPredictedIteration();
+		//cout.unsetf(ios::fixed);
 
-	if (predicted_iteration > curIteration) {
-		cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure that with a "
-				<< floor(params->stop_confidence * 100) << "% confidence" << endl
-				<< "         the IQPNNI search will not find a better tree" << endl;
+		if (predicted_iteration > curIteration) {
+			cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure that with a "
+					<< floor(params->stop_confidence * 100) << "% confidence" << endl
+					<< "         the IQPNNI search will not find a better tree" << endl;
+		}
+	}else{
+		// DTH: TODO: handle pll case here
+
 	}
 
 	if (testNNI)
@@ -1527,8 +1535,10 @@ double IQTree::doIQPNNI() {
 		out_sitelh.close();
 	}
 
+	cout << "Before calling pllDestroyUFBootData" << endl;
 	// DTH: pllUFBoot deallocation
 	if(params->pll) pllDestroyUFBootData();
+	cout << "Done with doIQPNNI, Error must be somewhere else" << endl;
 
 	return bestScore;
 }
@@ -1692,7 +1702,6 @@ extern "C" int nni0;
 extern "C" int nni5;
 extern "C" int nni1;
 extern "C" pllNNIMove* nniList;
-extern "C" pllUFBootData * pllUFBootDataPtr;
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, int *skipped) {
 	pllInitUFBootData();
@@ -1832,6 +1841,8 @@ void IQTree::pllInitUFBootData(){
 
 			pllUFBootDataPtr->treels_ptnlh =
 					(double **) malloc(max_candidate_trees * (sizeof(double *)));
+			for(int i = 0; i < max_candidate_trees; i++)
+				pllUFBootDataPtr->treels_ptnlh[i] = NULL;
 			if(!pllUFBootDataPtr->treels_ptnlh) pllAlertMemoryError();
 
 			// aln->createBootstrapAlignment() must be called before this fragment
@@ -1881,14 +1892,9 @@ void IQTree::pllInitUFBootData(){
 	pllUFBootDataPtr->logl_cutoff = logl_cutoff;
 	pllUFBootDataPtr->n_patterns = pllAlignment->sequenceLength;
 
-
 	if(pllUFBootDataPtr->random_doubles)
 		for(int i = 0; i < params->gbo_replicates; i++)
 				pllUFBootDataPtr->random_doubles[i] = random_double();
-
-	if(pllUFBootDataPtr->candidate_trees_count > max_candidate_trees){
-		cout << "POTENTIAL TRAP!!!!!!!!!!!!!!!" << endl;
-	}
 }
 
 void IQTree::pllDestroyUFBootData(){
@@ -1896,28 +1902,42 @@ void IQTree::pllDestroyUFBootData(){
 		delete [] pll2iqtree_pattern_index;
 		pll2iqtree_pattern_index = NULL;
 	}
+	cout << "Done freeing pll2iqtree_pattern_index" << endl;
 	if(params->online_bootstrap && params->gbo_replicates > 0){
 		pllHashDestroy(&(pllUFBootDataPtr->treels), PLL_TRUE);
+		cout << "Done pllHashDestroy" << endl;
+
 		free(pllUFBootDataPtr->treels_logl);
+		cout << "Done freeing treels_logl" << endl;
 
 		for(int i = 0; i < pllUFBootDataPtr->treels_size; i++)
 			if(pllUFBootDataPtr->treels_newick[i])
 				free(pllUFBootDataPtr->treels_newick[i]);
 		free(pllUFBootDataPtr->treels_newick);
+		cout << "Done freeing treels_newick" << endl;
 
 		for(int i = 0; i < pllUFBootDataPtr->treels_size; i++)
-					if(pllUFBootDataPtr->treels_ptnlh[i])
-						free(pllUFBootDataPtr->treels_ptnlh[i]);
+			if(pllUFBootDataPtr->treels_ptnlh[i])
+				free(pllUFBootDataPtr->treels_ptnlh[i]);
 		free(pllUFBootDataPtr->treels_ptnlh);
+		cout << "Done freeing treels_ptnlh" << endl;
 
 		for(int i = 0; i < params->gbo_replicates; i++)
 			free(pllUFBootDataPtr->boot_samples[i]);
 		free(pllUFBootDataPtr->boot_samples);
+		cout << "Done freeing boot_samples" << endl;
 
 		free(pllUFBootDataPtr->boot_logl);
+		cout << "Done freeing boot_logl" << endl;
+
 		free(pllUFBootDataPtr->boot_counts);
+		cout << "Done freeing boot_counts" << endl;
+
 		free(pllUFBootDataPtr->boot_trees);
+		cout << "Done freeing boot_trees" << endl;
+
 		free(pllUFBootDataPtr->random_doubles);
+		cout << "Done freeing random_doubles" << endl;
 	}
 	free(pllUFBootDataPtr);
 	pllUFBootDataPtr = NULL;
@@ -2928,6 +2948,31 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
      trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false);
      */
     trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false); // do not sort taxa
+}
+
+void IQTree::pllConvertUFBootData2IQTree(){
+	//treels_logl
+	treels_logl.clear();
+	for(int i = 0; i < pllUFBootDataPtr->candidate_trees_count; i++)
+		treels_logl.push_back(pllUFBootDataPtr->treels_logl[i]);
+
+	//boot_trees
+	boot_trees.clear();
+	for(int i = 0; i < params->gbo_replicates; i++)
+		boot_trees.push_back(pllUFBootDataPtr->boot_trees[i]);
+
+	//treels
+	treels.clear();
+	struct pllHashItem * hItem;
+	struct pllHashTable * hTable = pllUFBootDataPtr->treels;
+	for (int i = 0; i < hTable->size; ++ i){
+		hItem = hTable->Items[i];
+		while (hItem){
+			string k(hItem->str);
+			treels[k] = *((int *)hItem->data);
+			hItem = hItem->next;
+		}
+	}
 }
 
 double computeCorrelation(IntVector &ix, IntVector &iy) {

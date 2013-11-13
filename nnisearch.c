@@ -731,6 +731,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
  	pll_boolean is_stored = PLL_FALSE;
  	struct pllHashItem * item_ptr = (struct pllHashItem *) malloc(sizeof(struct pllHashItem));
  	item_ptr->data = (int *) malloc(sizeof(int));
+ 	item_ptr->next = NULL;
  	unsigned int tree_index = -1;
  	char * tree_str = NULL;
 	Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
@@ -752,6 +753,9 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
  				if (verbose_mode >= VB_MED)
  					printf("Current lh %f is much worse than expected %f\n",
  							cur_logl, pllUFBootDataPtr->treels_logl[tree_index]);
+				free(tree_str);
+				free(item_ptr->data);
+				free(item_ptr);
  				return;
  		}
  		if (verbose_mode >= VB_MAX)
@@ -767,14 +771,22 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
  		}
  		if (pllUFBootDataPtr->boot_samples == NULL) {
 			pllComputePatternLikelihood(tr, (pllUFBootDataPtr->treels_ptnlh)[tree_index], &cur_logl);
+			free(tree_str);
+			free(item_ptr->data);
+			free(item_ptr);
 			return;
  		}
  		if (verbose_mode >= VB_MAX)
  			printf("Update treels_logl[%d] := %f\n", tree_index, cur_logl);
+
  	} else {
  		printf("Not found\n");
-        if (pllUFBootDataPtr->logl_cutoff != 0.0 && cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4)
+        if (pllUFBootDataPtr->logl_cutoff != 0.0 && cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4){
+    		free(tree_str);
+    		free(item_ptr->data);
+    		free(item_ptr);
         	return;
+        }
 
         if(pllUFBootDataPtr->treels_size == pllUFBootDataPtr->candidate_trees_count)
 			pllResizeUFBootData();
@@ -867,8 +879,10 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 		free(item_ptr->data);
 		free(item_ptr);
 	}
-	if (pllUFBootDataPtr->boot_samples)
+	if (pllUFBootDataPtr->boot_samples){
 		free(pattern_lh);
+		pllUFBootDataPtr->treels_ptnlh[tree_index] = NULL;
+	}
 
 	printf("Done freeing: max = %d, count = %d, size = %d\n",
 			pllUFBootDataPtr->max_candidate_trees,
