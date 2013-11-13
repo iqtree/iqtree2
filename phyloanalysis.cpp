@@ -1209,11 +1209,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
     // Optimize model parameters and branch lengths using ML for the initial tree
     iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT);
     iqtree.bestScore = iqtree.curScore;
+
 	// Save current tree to a string
 	iqtree.printTree(initTree);
-//	stringstream modOptTree;
-//	modOptTree << params.out_prefix << ".modopt_tree";
-//	iqtree.printTree(modOptTree.str().c_str());
 
 	// Compute maximum likelihood distance
 	double bestTreeScore = iqtree.bestScore;
@@ -1258,7 +1256,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	if (params.min_iterations > 0) {
 		double initTime = getCPUTime();
-		/* Now generate 10 fastNNI tree and choose the best */
 		string *parsTree = new string[numParsTree];
 		parsTree[0] = initTree.str();
 		for (int treeNr = 1; treeNr < numParsTree; treeNr++) {
@@ -1281,17 +1278,25 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		nni_count = 0;
 		nni_steps = 0;
 		string bestTreeString;
+//		if (params.pll) {
+//			pllNewickTree *newick = pllNewickParseString(parsTree[0].c_str());
+//			pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+//			pllNewickParseDestroy(&newick);
+//			pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
+//			iqtree.inputModelParam2PLL();
+//		}
 		for (int treeNr = 0; treeNr < numParsTree; treeNr++) {
 			if (params.pll) {
 				pllNewickTree *newick = pllNewickParseString(parsTree[treeNr].c_str());
 				pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-				pllNewickParseDestroy(&newick);
 				if (treeNr == 0) {
 					pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
 					iqtree.inputModelParam2PLL();
+					pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
 				}
 				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
 				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 8);
+				pllNewickParseDestroy(&newick);
 				iqtree.curScore = iqtree.pllInst->likelihood;
 				cout << "logl of starting tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
 				iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps);

@@ -1409,12 +1409,16 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
 
         curScore = optimizeAllBranches(1);
 
+		if (verbose_mode >= VB_DEBUG) {
+			cout << "logl: " << curScore << " / NNIs: " << nni2apply << endl;
+		}
+
         if (curScore > oldScore && curScore >= vec_nonconf_nni.at(0).newloglh ) {
         	if (abs(curScore - oldScore) < 0.001) {
         		break;
         	}
             if (enableHeuris && curIteration > 1) {
-                if (vecImpProNNI.size() < 10000) {
+                if (vecImpProNNI.size() < 1000) {
                     vecImpProNNI.push_back((curScore - oldScore) / nni2apply);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());
@@ -1422,15 +1426,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
                 }
             }
             nni_count += nni2apply;
-            if (verbose_mode >= VB_DEBUG) {
-                cout << nni2apply << " NNIs has been done" << endl;
-                cout << "Log-likelihood of new tree = " << curScore << endl;
-            }
-            if (verbose_mode >= VB_DEBUG) {
-                stringstream filename;
-                filename << (params->out_prefix) << ".nniTree_round_" << nni_steps;
-                printTree(filename.str().c_str());
-            }
             resetLamda = true;
         } else {
 
@@ -1480,7 +1475,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
         saveCurrentTree(curScore); // BQM: for new bootstrap
         saveNNITrees(); // optimize 5 branches around NNI, this makes program slower
     }*/
-    curScore = optimizeAllBranches(8);
+    curScore = optimizeAllBranches(1);
     return curScore;
 }
 
@@ -1539,10 +1534,13 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
         } else {
         	newLH = doNNISearch(pllInst, pllPartitions, pllTmpTree, nniList, ONE_BRAN_OPT, &nni_count, &deltaNNI);
         }
-        curLH = newLH;
-        if (nni_count == 0) {
+        if (nni_count == 0 || abs(newLH - curLH) < 0.001) {
+        	curLH = newLH;
             break;
         } else {
+        	curLH = newLH;
+//        	cout.precision(10);
+//        	cout << "logl: " << curLH << " / NNIs: " << nni_count << endl;
             if (enableHeuris && curIteration > 1) {
                 if (vecImpProNNI.size() < 1000) {
                     vecImpProNNI.push_back(deltaNNI);
