@@ -172,9 +172,9 @@ typedef struct{
 	int n_patterns;
 	struct pllHashTable * treels;
 	unsigned int candidate_trees_count; /* counter of trees in pllHashTable */
-	double * treels_logl; // maintain size == treels.size
-	char ** treels_newick; // maintain size == treels.size
-	double ** treels_ptnlh; // maintain size == treels.size
+	double * treels_logl; // maintain size == treels_size
+	char ** treels_newick; // maintain size == treels_size
+	double ** treels_ptnlh; // maintain size == treels_size
 	int ** boot_samples;
 	double * boot_logl;
 	int * boot_counts;

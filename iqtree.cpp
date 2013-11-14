@@ -802,8 +802,11 @@ void IQTree::inputModelParam2PLL() {
 		pllInitModel(pllInst, pllPartitions, pllAlignment);
 		modOpt(pllInst, pllPartitions, 0.1);
 	}
-	// Build pll2iqtree_pattern_index to map the sites in pllAlignment into pattern in aln
-	pllBuildIQTreePatternIndex();
+
+	if(params->online_bootstrap && params->gbo_replicates > 0){
+		// Build pll2iqtree_pattern_index to map the sites in pllAlignment into pattern in aln
+		pllBuildIQTreePatternIndex();
+	}
 }
 
 
@@ -1480,10 +1483,12 @@ double IQTree::doIQPNNI() {
 		}
 
 		if(params->pll) pllConvertUFBootData2IQTree(); // DTH: make pllUFBootData usable in summarizeBootstrap
-		if(!params->pll){
+		//if(!params->pll){
 			if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
 				SplitGraph *sg = new SplitGraph;
+				cout << "Calling summarizeBootstrap" << endl;
 				summarizeBootstrap(*sg);
+				cout << "Done summarizeBootstrap" << endl;
 				boot_splits.push_back(sg);
 				if (params->max_candidate_trees == 0)
 					max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations()) / curIteration;
@@ -1506,9 +1511,9 @@ double IQTree::doIQPNNI() {
 					//boot_splits = sg;
 				} //else delete sg;
 			}
-		}else{
+/*		}else{
 			if(max_candidate_trees <= pllUFBootDataPtr->candidate_trees_count) break;
-		}
+		}*/
 	}
 
 	// DTH: Split into non-pll and pll cases
@@ -1820,14 +1825,12 @@ void IQTree::pllInitUFBootData(){
 	if(pllUFBootDataPtr == NULL){
 		pllUFBootDataPtr = (pllUFBootData *) malloc(sizeof(pllUFBootData));
 		pllUFBootDataPtr->boot_samples = NULL;
+		pllUFBootDataPtr->candidate_trees_count = 0;
 
 		if(params->online_bootstrap && params->gbo_replicates > 0){
-//			params->gbo_replicates = 2; // TEST!!!
 			pllUFBootDataPtr->params_ufboot_epsilon = params->ufboot_epsilon;
 
 			pllUFBootDataPtr->treels = pllHashInit(max_candidate_trees);
-
-			pllUFBootDataPtr->candidate_trees_count = 0;
 
 			pllUFBootDataPtr->treels_size = max_candidate_trees; // track size of treels_logl, treels_newick, treels_ptnlh
 
@@ -1883,6 +1886,7 @@ void IQTree::pllInitUFBootData(){
 		}
 	}
 	//pllUFBootDataPtr->params_store_candidate_trees = params->store_candidate_trees;
+	params->store_candidate_trees = TRUE; // TEST!!!!
 	pllUFBootDataPtr->params_store_candidate_trees = PLL_TRUE; // TEST!!!!
 	pllUFBootDataPtr->params_online_bootstrap = params->online_bootstrap;
 	pllUFBootDataPtr->params_gbo_replicates = params->gbo_replicates;
@@ -2932,16 +2936,19 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
     MTreeSet trees;
     IntVector tree_weights;
     tree_weights.resize(treels_logl.size(), 0);
+    cout << "Before the for loop" << endl;
     for (int sample = 0; sample < boot_trees.size(); sample++)
         tree_weights[boot_trees[sample]]++;
+    cout << "After the for loop" << endl;
     trees.init(treels, rooted, tree_weights);
+    cout << "Done trees.init" << endl;
     //SplitGraph sg;
     SplitIntMap hash_ss;
     // make the taxa name
     vector<string> taxname;
     taxname.resize(leafNum);
     getTaxaName(taxname);
-
+    cout << "Done getTaxaName" << endl;
     /*if (!tree.save_all_trees)
      trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
      else
@@ -2951,6 +2958,7 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
 }
 
 void IQTree::pllConvertUFBootData2IQTree(){
+	cout << "Begining pllConvertUFBootData2IQTree\n";
 	//treels_logl
 	treels_logl.clear();
 	for(int i = 0; i < pllUFBootDataPtr->candidate_trees_count; i++)
@@ -2962,17 +2970,29 @@ void IQTree::pllConvertUFBootData2IQTree(){
 		boot_trees.push_back(pllUFBootDataPtr->boot_trees[i]);
 
 	//treels
+	ofstream fout("treels.log");
 	treels.clear();
-	struct pllHashItem * hItem;
-	struct pllHashTable * hTable = pllUFBootDataPtr->treels;
-	for (int i = 0; i < hTable->size; ++ i){
-		hItem = hTable->Items[i];
-		while (hItem){
-			string k(hItem->str);
-			treels[k] = *((int *)hItem->data);
-			hItem = hItem->next;
+	if(pllUFBootDataPtr->candidate_trees_count > 0){
+		struct pllHashItem * hItem;
+		struct pllHashTable * hTable = pllUFBootDataPtr->treels;
+		for (int i = 0; i < hTable->size; ++ i){
+			hItem = hTable->Items[i];
+			while (hItem){
+				string k(hItem->str);
+				fout << *((int *)hItem->data) << endl;
+				treels[k] = *((int *)hItem->data);
+				hItem = hItem->next;
+			}
 		}
 	}
+
+
+	for (StringIntMap::iterator it = treels.begin(); it != treels.end(); it++){
+		fout << it->first << "\t" << it->second << endl;
+	}
+	fout.close();
+
+	cout << "Ending pllConvertUFBootData2IQTree\n";
 }
 
 double computeCorrelation(IntVector &ix, IntVector &iy) {

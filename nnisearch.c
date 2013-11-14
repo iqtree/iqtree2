@@ -728,10 +728,12 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 	printf("\nBegin pllSaveCurrentTree()\n");
 	srand(gettime());
  	double cur_logl = tr->likelihood;
- 	pll_boolean is_stored = PLL_FALSE;
+
  	struct pllHashItem * item_ptr = (struct pllHashItem *) malloc(sizeof(struct pllHashItem));
  	item_ptr->data = (int *) malloc(sizeof(int));
  	item_ptr->next = NULL;
+ 	item_ptr->str = NULL;
+
  	unsigned int tree_index = -1;
  	char * tree_str = NULL;
 	Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
@@ -739,8 +741,10 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 	tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
 	strcpy(tree_str, tr->tree_string);
 
+ 	pll_boolean is_stored = PLL_FALSE;
+
  	if(pllUFBootDataPtr->params_store_candidate_trees){
- 		is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &item_ptr);
+ 		is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
  	}
 
  	printf("tree_str: %s", tree_str);
@@ -753,10 +757,10 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
  				if (verbose_mode >= VB_MED)
  					printf("Current lh %f is much worse than expected %f\n",
  							cur_logl, pllUFBootDataPtr->treels_logl[tree_index]);
-				free(tree_str);
-				free(item_ptr->data);
-				free(item_ptr);
- 				return;
+/*			free(tree_str);
+			free(item_ptr->data);
+			free(item_ptr);*/
+			return;
  		}
  		if (verbose_mode >= VB_MAX)
  			printf("Updated logl %f to %f\n", pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
@@ -771,9 +775,9 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
  		}
  		if (pllUFBootDataPtr->boot_samples == NULL) {
 			pllComputePatternLikelihood(tr, (pllUFBootDataPtr->treels_ptnlh)[tree_index], &cur_logl);
-			free(tree_str);
+/*			free(tree_str);
 			free(item_ptr->data);
-			free(item_ptr);
+			free(item_ptr);*/
 			return;
  		}
  		if (verbose_mode >= VB_MAX)
@@ -782,9 +786,9 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
  	} else {
  		printf("Not found\n");
         if (pllUFBootDataPtr->logl_cutoff != 0.0 && cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4){
-    		free(tree_str);
+/*    		free(tree_str);
     		free(item_ptr->data);
-    		free(item_ptr);
+    		free(item_ptr);*/
         	return;
         }
 
@@ -796,7 +800,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
         if (pllUFBootDataPtr->params_store_candidate_trees){
             *((int *)item_ptr->data) = tree_index;
             item_ptr->str = tree_str;
-        	pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr);
+        	pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
         	printf("pllHashAdd, index = %d\n", tree_index);
         }
         pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
@@ -838,15 +842,16 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 				if (strcmp(tree_str, "") == 0) {
 					Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
 							PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+					free(tree_str);
 					tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
 					strcpy(tree_str, tr->tree_string);
-					is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &item_ptr);
+					is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
 					if(is_stored)
 						tree_index = *((int *)item_ptr->data);
 					else{
 						*((int *)item_ptr->data) = tree_index = pllUFBootDataPtr->candidate_trees_count;
 						item_ptr->str = tree_str;
-						pllHashAdd(pllUFBootDataPtr->treels, tree_str, &item_ptr);
+						pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
 						pllUFBootDataPtr->candidate_trees_count++;
 					}
 				}
