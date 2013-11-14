@@ -736,7 +736,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 
  	unsigned int tree_index = -1;
  	char * tree_str = NULL;
-	Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
+ 	pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
 			PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 	tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
 	strcpy(tree_str, tr->tree_string);
@@ -767,7 +767,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
  		pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
 
  		if (pllUFBootDataPtr->save_all_br_lens) {
- 			Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
+ 			pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
          			PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LENGTH, PLL_FALSE, PLL_FALSE);
          	char * tree_str_br_lens = (char *) malloc (strlen(tr->tree_string) + 1);
          	strcpy(tree_str_br_lens, tr->tree_string);
@@ -840,7 +840,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 					pllUFBootDataPtr->random_doubles[rand_pos] <=
 						1.0/(pllUFBootDataPtr->boot_counts[sample]+1))) {
 				if (strcmp(tree_str, "") == 0) {
-					Tree2String(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
+					pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
 							PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 					free(tree_str);
 					tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
@@ -906,6 +906,11 @@ void pllComputePatternLikelihood(pllInstance* tr, double * ptnlh, double * cur_l
  	*cur_logl = tree_logl;
 }
 
+/**
+ * DTH:
+ * Resize some of the arrays in UFBootData if they're full
+ * Along with update treels_size (to track the size of these arrays)
+ */
 void pllResizeUFBootData(){
 	int count = pllUFBootDataPtr->candidate_trees_count;
 	pllUFBootDataPtr->treels_size = 2 * count;
@@ -930,4 +935,92 @@ void pllResizeUFBootData(){
 	memcpy(rtreels_ptnlh, pllUFBootDataPtr->treels_ptnlh, count * sizeof(double *));
 	free(pllUFBootDataPtr->treels_ptnlh);
 	pllUFBootDataPtr->treels_ptnlh = rtreels_ptnlh;
+}
+
+
+/**
+ * DTH:
+ * (Based on function Tree2StringREC of PLL)
+ * Print out the tree topology with IQTree taxa ID (starts at 0) instead of PLL taxa ID (starts at 1)
+ * @param All are the same as in PLL's
+ */
+static char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pll_boolean printBranchLengths, pll_boolean printNames,
+			    pll_boolean printLikelihood, pll_boolean rellTree, pll_boolean finalPrint, int perGene, pll_boolean branchLabelSupport, pll_boolean printSHSupport)
+{
+	char * result = treestr; // DTH: added this var to be able to remove the '\n' at the end
+  char  *nameptr;
+
+  if(isTip(p->number, tr->mxtips))
+    {
+      if(printNames)
+	{
+	  nameptr = tr->nameList[p->number];
+	  sprintf(treestr, "%s", nameptr);
+	}
+      else
+	sprintf(treestr, "%d", p->number - 1);
+
+      while (*treestr) treestr++;
+    }
+  else
+    {
+      *treestr++ = '(';
+      treestr = pllTree2StringREC(treestr, tr, pr, p->next->back, printBranchLengths, printNames, printLikelihood, rellTree,
+			       finalPrint, perGene, branchLabelSupport, printSHSupport);
+      *treestr++ = ',';
+      treestr = pllTree2StringREC(treestr, tr, pr, p->next->next->back, printBranchLengths, printNames, printLikelihood, rellTree,
+			       finalPrint, perGene, branchLabelSupport, printSHSupport);
+      if(p == tr->start->back)
+	{
+	  *treestr++ = ',';
+	  treestr = pllTree2StringREC(treestr, tr, pr, p->back, printBranchLengths, printNames, printLikelihood, rellTree,
+				   finalPrint, perGene, branchLabelSupport, printSHSupport);
+	}
+      *treestr++ = ')';
+    }
+
+  if(p == tr->start->back)
+    {
+      if(printBranchLengths && !rellTree)
+	sprintf(treestr, ":0.0;\n");
+      else
+	sprintf(treestr, ";\n");
+    }
+  else
+    {
+      if(rellTree || branchLabelSupport || printSHSupport)
+	{
+	  if(( !isTip(p->number, tr->mxtips)) &&
+	     ( !isTip(p->back->number, tr->mxtips)))
+	    {
+	      assert(p->bInf != (branchInfo *)NULL);
+
+	      if(rellTree)
+		sprintf(treestr, "%d:%8.20f", p->bInf->support, p->z[0]);
+	      if(branchLabelSupport)
+		sprintf(treestr, ":%8.20f[%d]", p->z[0], p->bInf->support);
+	      if(printSHSupport)
+		sprintf(treestr, ":%8.20f[%d]", getBranchLength(tr, pr, perGene, p), p->bInf->support);
+
+	    }
+	  else
+	    {
+	      if(rellTree || branchLabelSupport)
+		sprintf(treestr, ":%8.20f", p->z[0]);
+	      if(printSHSupport)
+		sprintf(treestr, ":%8.20f", getBranchLength(tr, pr, perGene, p));
+	    }
+	}
+      else
+	{
+	  if(printBranchLengths)
+	    sprintf(treestr, ":%8.20f", getBranchLength(tr, pr, perGene, p));
+	  else
+	    sprintf(treestr, "%s", "\0");
+	}
+    }
+
+  if(result[strlen(result) - 1] == '\n') result[strlen(result) - 1] = '\0';
+  while (*treestr) treestr++;
+  return  treestr;
 }

@@ -1919,6 +1919,19 @@ extern "C" void getintargv(int *argc, char **argv[])
 /********************************************************
 	main function
 ********************************************************/
+/*
+int main(){
+	IQTree tree;
+	char * str = "(1, (2, 345));";
+	string k;
+	tree.pllConvertTaxaID2IQTreeForm(str, k);
+	cout << str << endl;
+	cout << k << endl;
+	cout << "WHAT" << endl;
+	return 0;
+}
+*/
+
 int main(int argc, char *argv[])
 {
 

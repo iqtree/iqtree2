@@ -2936,19 +2936,15 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
     MTreeSet trees;
     IntVector tree_weights;
     tree_weights.resize(treels_logl.size(), 0);
-    cout << "Before the for loop" << endl;
     for (int sample = 0; sample < boot_trees.size(); sample++)
         tree_weights[boot_trees[sample]]++;
-    cout << "After the for loop" << endl;
     trees.init(treels, rooted, tree_weights);
-    cout << "Done trees.init" << endl;
     //SplitGraph sg;
     SplitIntMap hash_ss;
     // make the taxa name
     vector<string> taxname;
     taxname.resize(leafNum);
-    getTaxaName(taxname);
-    cout << "Done getTaxaName" << endl;
+	getTaxaName(taxname);
     /*if (!tree.save_all_trees)
      trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
      else
@@ -2958,7 +2954,6 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
 }
 
 void IQTree::pllConvertUFBootData2IQTree(){
-	cout << "Begining pllConvertUFBootData2IQTree\n";
 	//treels_logl
 	treels_logl.clear();
 	for(int i = 0; i < pllUFBootDataPtr->candidate_trees_count; i++)
@@ -2970,7 +2965,6 @@ void IQTree::pllConvertUFBootData2IQTree(){
 		boot_trees.push_back(pllUFBootDataPtr->boot_trees[i]);
 
 	//treels
-	ofstream fout("treels.log");
 	treels.clear();
 	if(pllUFBootDataPtr->candidate_trees_count > 0){
 		struct pllHashItem * hItem;
@@ -2979,20 +2973,11 @@ void IQTree::pllConvertUFBootData2IQTree(){
 			hItem = hTable->Items[i];
 			while (hItem){
 				string k(hItem->str);
-				fout << *((int *)hItem->data) << endl;
 				treels[k] = *((int *)hItem->data);
 				hItem = hItem->next;
 			}
 		}
 	}
-
-
-	for (StringIntMap::iterator it = treels.begin(); it != treels.end(); it++){
-		fout << it->first << "\t" << it->second << endl;
-	}
-	fout.close();
-
-	cout << "Ending pllConvertUFBootData2IQTree\n";
 }
 
 double computeCorrelation(IntVector &ix, IntVector &iy) {

@@ -158,6 +158,12 @@ pllNNIMove *getNNIList(pllInstance* tr);
  * pllUFBoot area
  * ****************************************************************************
  */
+
+/**
+ * DTH:
+ * pllUFBootData struct
+ * This one keeps all info necessary to run UFBoot in PLL mode
+ */
 typedef struct{
 	pll_boolean params_online_bootstrap;
 	int params_gbo_replicates;
@@ -182,11 +188,47 @@ typedef struct{
 	double * random_doubles;
 } pllUFBootData;
 
-
+/**
+ * DTH:
+ * The PLL version of saveCurrentTree function
+ * @param tr: the tree (a pointer to a pllInstance)
+ * @param pr: pointer to a partitionList (this one keeps tons of tree info)
+ * @param p: root?
+ */
 void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p);
+
+/**
+ * DTH:
+ * Extract the array of site log likelihood to be kept in ptnlh
+ * And update *cur_log
+ * @param tr: the tree (pointer to an pllInstance)
+ * @param ptnlh: to-be-kept array of site log likelihood
+ * @param cur_logl: pointer to current tree log likelihood
+ */
 void pllComputePatternLikelihood(pllInstance* tr, double * ptnlh, double * cur_logl);
+
+/**
+ * DTH:
+ * Announce the memory allocation error (for debugging)
+ */
 void pllAlertMemoryError();
+
+/**
+ * DTH:
+ * Resize some of the arrays in UFBootData if they're full
+ * Along with update treels_size (to track the size of these arrays)
+ */
 void pllResizeUFBootData();
+
+/**
+ * DTH:
+ * (Based on function Tree2StringREC of PLL)
+ * Print out the tree topology with IQTree taxa ID (starts at 0) instead of PLL taxa ID (starts at 1)
+ * @param All are the same as in PLL's
+ */
+static char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pll_boolean printBranchLengths, pll_boolean printNames,
+			    pll_boolean printLikelihood, pll_boolean rellTree, pll_boolean finalPrint, int perGene, pll_boolean branchLabelSupport, pll_boolean printSHSupport);
+
 
 #ifdef __cplusplus
 }

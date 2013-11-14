@@ -1624,17 +1624,15 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		}
 	}
 
-	// DTH: split into non-pll and pll cases
-	if(!params.pll){
-		if (params.gbo_replicates > 0) {
-			if (!params.online_bootstrap)
-				runGuidedBootstrap(params, alignment, iqtree);
-			else
-				iqtree.summarizeBootstrap(params);
-		}
-	}else{
-		// DTH: TODO: handle the pll case here
+	// DTH: TODO: carefully watch the pll case here
+
+	if (params.gbo_replicates > 0) {
+		if (!params.online_bootstrap)
+			runGuidedBootstrap(params, alignment, iqtree);
+		else
+			iqtree.summarizeBootstrap(params);
 	}
+
 
 	cout << "Total tree length: " << iqtree.treeLength() << endl;
 
@@ -1759,20 +1757,17 @@ void runPhyloAnalysis(Params &params) {
 		alignment->checkGappySeq();
 		runPhyloAnalysis(params, original_model, alignment, *tree, model_info);
 
-		// DTH: split into non-pll and pll cases
-		if(!params.pll){
-			if (params.gbo_replicates && params.online_bootstrap) {
-				cout << endl << "Computing consensus tree..." << endl;
-				string splitsfile = params.out_prefix;
-				splitsfile += ".splits.nex";
-				//cout << splitsfile << endl;
-				computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
-						params.split_threshold, NULL, params.out_prefix, NULL,
-						&params);
-			}
-		}else{
-			// DTH TODO: handle computation of consensus for -pll mode !!!!!!!!!!
+		// DTH: TODO: carefully watch the -pll case
+		if (params.gbo_replicates && params.online_bootstrap) {
+			cout << endl << "Computing consensus tree..." << endl;
+			string splitsfile = params.out_prefix;
+			splitsfile += ".splits.nex";
+			//cout << splitsfile << endl;
+			computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
+					params.split_threshold, NULL, params.out_prefix, NULL,
+					&params);
 		}
+
 
 				//if (original_model != "TESTONLY")
 			reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
