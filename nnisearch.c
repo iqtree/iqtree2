@@ -226,7 +226,6 @@ double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMov
 				inNNIs[i].p->back->next->next->back->z[j] = inNNIs[i].z4[j];
 			}
 			/* Update the partial likelihood */
-			// TODO is it needed here? Calling newviewGeneric is very time consuming
 			if (numBranches > 1 && !tr->useRecom) {
 				pllNewviewGeneric(tr, pr, inNNIs[i].p, PLL_TRUE);
 				pllNewviewGeneric(tr, pr, inNNIs[i].p->back, PLL_TRUE);
@@ -521,17 +520,6 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
       q->next->next->z[i] = nni0.z4[i];
       q->next->next->back->z[i] = nni0.z4[i];
   }
-	/* TODO: this should be replace replace by a function which restores the partial likelihood */
-
-//	if (numBranches > 1 && !tr->useRecom) {
-//		pllNewviewGeneric(tr, pr, p, PLL_TRUE);
-//		pllNewviewGeneric(tr, pr, q, PLL_TRUE);
-//	} else {
-//		pllNewviewGeneric(tr, pr, p, PLL_FALSE);
-//		pllNewviewGeneric(tr, pr, q, PLL_FALSE);
-//	}
-
-
 	return betterNNI;
 }
 
