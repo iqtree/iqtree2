@@ -56,17 +56,9 @@ void PhyloSuperTree::readPartition(Params &params) {
 			if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
 			getline(in, info.sequence_type, ',');
 			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
-			if(params.partition_type == 'd'){
-				string rate;
-				getline(in, rate,',');
-				info.part_rate = atof(rate.c_str());
-				getline(in, info.position_spec);
-			} else {
-				getline(in, info.position_spec);
-				cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
-						info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
-			}
-
+			getline(in, info.position_spec);
+			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
+					info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
 			info.mem_ptnlh = NULL;
 			part_info.push_back(info);
 			Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
@@ -129,10 +121,7 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 				outError("No input data for partition ", info.name);
 			info.sequence_type = (*it)->sequence_type;
 			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
-
-			// OLGA: here add the stuff for fixed rates
 			info.position_spec = (*it)->position_spec;
-
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
 			info.mem_ptnlh = NULL;

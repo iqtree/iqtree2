@@ -699,6 +699,17 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ncbi_taxon_level = NULL;
     params.ncbi_names_file = NULL;
     params.ncbi_ignore_level = NULL;
+
+	params.eco_dag_file  = NULL;
+	params.eco_type = NULL;
+	params.eco_detail_file = NULL;
+	params.k_percent = 0;
+	params.diet_min = 0;
+	params.diet_max = 0;
+	params.diet_step = 0;
+	params.eco_weighted = false;
+	params.eco_run = 0;
+
     params.gbo_replicates = 0;
 	params.ufboot_epsilon = 0.5;
     params.check_gbo_sample_size = 0;
@@ -1435,7 +1446,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -aLRT <threshold%> <#replicates>";
                 params.aLRT_threshold = convert_int(argv[cnt]);
                 if (params.aLRT_threshold < 85 || params.aLRT_threshold > 101)
-                    throw "aLRT thresold must be between 85 and 100";
+                    throw "aLRT threshold must be between 85 and 100";
                 cnt++;
                 params.aLRT_replicates = convert_int(argv[cnt]);
                 if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0)
@@ -1522,6 +1533,28 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -dmpname <ncbi_names_file>";
                 params.ncbi_names_file = argv[cnt];
+			} else if (strcmp(argv[cnt], "-eco") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -eco <eco_dag_file>";
+				params.eco_dag_file = argv[cnt];
+			} else if (strcmp(argv[cnt], "-k%") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -k% <k in %>";
+				//convert_range(argv[cnt], params.k_percent, params.sub_size, params.step_size);
+				params.k_percent = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-diet") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -diet <d in %>";
+				convert_range(argv[cnt], params.diet_min, params.diet_max, params.diet_step);
+				//params.diet = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-ecoR") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ecoR <run number>";
+				params.eco_run = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-bb") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1742,7 +1775,9 @@ void parseArg(int argc, char *argv[], Params &params) {
         usage(argv, false);
 #endif
     if (!params.out_prefix) {
-        if (params.partition_file)
+    	if (params.eco_dag_file)
+    		params.out_prefix = params.eco_dag_file;
+    	else if (params.partition_file)
             params.out_prefix = params.partition_file;
         else if (params.aln_file)
             params.out_prefix = params.aln_file;

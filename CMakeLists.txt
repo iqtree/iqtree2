@@ -181,6 +181,9 @@ nnisearch.c
 modelcodon.cpp
 phylosupertreeplen.cpp
 phylotesting.cpp
+ecopd.cpp
+ecopdmtreeset.cpp
+graph.cpp
 )
 
 
