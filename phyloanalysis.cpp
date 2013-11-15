@@ -1258,34 +1258,27 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		double initTime = getCPUTime();
 		string *parsTree = new string[numParsTree];
 		parsTree[0] = initTree.str();
-		for (int treeNr = 1; treeNr < numParsTree; treeNr++) {
-			iqtree.pllInst->randomNumberSeed = params.ran_seed + treeNr * 12345;
-			pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst,
-					iqtree.pllPartitions);
-			Tree2String(iqtree.pllInst->tree_string, iqtree.pllInst,
-					iqtree.pllPartitions, iqtree.pllInst->start->back,
-					PLL_FALSE,
-					PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
-					PLL_SUMMARIZE_LH,
-					PLL_FALSE, PLL_FALSE);
-			string parsTreeString(iqtree.pllInst->tree_string);
-			iqtree.readTreeString(parsTreeString);
-			stringstream tree;
-			iqtree.printTree(tree);
-			parsTree[treeNr] = tree.str();
-		}
 		int nni_count, nni_steps;
 		nni_count = 0;
 		nni_steps = 0;
 		string bestTreeString;
-//		if (params.pll) {
-//			pllNewickTree *newick = pllNewickParseString(parsTree[0].c_str());
-//			pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-//			pllNewickParseDestroy(&newick);
-//			pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-//			iqtree.inputModelParam2PLL();
-//		}
+
 		for (int treeNr = 0; treeNr < numParsTree; treeNr++) {
+			if (treeNr >= 1) {
+				iqtree.pllInst->randomNumberSeed = params.ran_seed + treeNr * 12345;
+				pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions);
+				Tree2String(iqtree.pllInst->tree_string, iqtree.pllInst,
+						iqtree.pllPartitions, iqtree.pllInst->start->back,
+						PLL_FALSE,
+						PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
+						PLL_SUMMARIZE_LH,
+						PLL_FALSE, PLL_FALSE);
+				string parsTreeString(iqtree.pllInst->tree_string);
+				iqtree.readTreeString(parsTreeString);
+				stringstream tree;
+				iqtree.printTree(tree);
+				parsTree[treeNr] = tree.str();
+			}
 			if (params.pll) {
 				pllNewickTree *newick = pllNewickParseString(parsTree[treeNr].c_str());
 				pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
@@ -1339,6 +1332,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 					iqtree.printTree(tree);
 					bestTreeString = tree.str();
 				}
+			}
+			double min_elapsed = (getCPUTime() - begin_time) / 60;
+			if (min_elapsed > params.maxtime) {
+				cout << "Maximal running time of " << params.maxtime << " minutes reached" << endl;
+				break;
 			}
 		}
 		cout << "Best loglh = " << iqtree.bestScore << " / CPU time: "
