@@ -602,10 +602,6 @@ public:
      */
     topol* pllBestTree;
 
-    /**
-     *  Temporary tree topology. Used when rollback is needed.
-     */
-    topol* pllTmpTree;
 
     /**
      * The current best score found

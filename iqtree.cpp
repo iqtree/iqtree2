@@ -40,7 +40,6 @@ void IQTree::init() {
     curScore = 0.0; // Current score of the tree
     bestScore = -DBL_MAX; // Best score found so far
     pllBestTree = NULL;
-    pllTmpTree = NULL;
     curIteration = 1;
     cur_pars_score = -1;
     enable_parsimony = false;
@@ -1094,7 +1093,7 @@ double IQTree::doIQPNNI() {
 		}
 
 		int skipped = 0;
-		int nni_count;
+		int nni_count = 0;
 		int nni_steps;
 		if (enableHeuris) {
 			if (curIteration > params->speedup_iter) {
@@ -1487,23 +1486,22 @@ extern "C" int nni1;
 extern "C" pllNNIMove* nniList;
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, int *skipped) {
-	if (pllTmpTree == NULL) {
-		pllTmpTree = setupTopol(pllInst->mxtips);
-	}
     if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
         estDeltaMin();
         cout << "delta_min = " << nnicut.delta_min << endl;
     }
     int nniListSize = 2 * pllInst->mxtips - 6;
     pllNNIMove* nniList = new pllNNIMove[nniListSize];
-    totalNNICount = 0;
-    nniSteps = 0;
+    StrMap *quartetList;
+    quartetList = sm_new(pllInst->mxtips * 10);
     double curLH = pllInst->likelihood;
     //cout << "LH IQP Tree = " << curLH << endl;
     TOL_LIKELIHOOD_PHYLOLIB = params->loglh_epsilon;
     numSmoothTree = params->numSmoothTree;
     const int MAX_NNI_STEPS = 50;
     int nni_count;
+    totalNNICount = 0;
+    nniSteps = 0;
     double deltaNNI;
     bool startNNI5 = false;
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
@@ -1521,21 +1519,22 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
         }
         double newLH;
         if (params->nni5) {
-        	newLH = doNNISearch(pllInst, pllPartitions, pllTmpTree,  nniList, FIVE_BRAN_OPT,&nni_count, &deltaNNI);
+        	newLH = doNNISearch(pllInst, pllPartitions, FIVE_BRAN_OPT,&nni_count, &deltaNNI);
         } else if (params->nni05) {
         	if (nni_count == 1) {
         		startNNI5 = true;
         	}
 			if (startNNI5) {
-				newLH = doNNISearch(pllInst, pllPartitions, pllTmpTree, nniList, FIVE_BRAN_OPT, &nni_count, &deltaNNI);
+				newLH = doNNISearch(pllInst, pllPartitions, FIVE_BRAN_OPT, &nni_count, &deltaNNI);
 			} else {
-				newLH = doNNISearch(pllInst, pllPartitions, pllTmpTree, nniList, NO_BRAN_OPT, &nni_count, &deltaNNI);
+				newLH = doNNISearch(pllInst, pllPartitions, NO_BRAN_OPT, &nni_count, &deltaNNI);
 			}
         } else {
-        	newLH = doNNISearch(pllInst, pllPartitions, pllTmpTree, nniList, ONE_BRAN_OPT, &nni_count, &deltaNNI);
+        	newLH = doNNISearch(pllInst, pllPartitions, ONE_BRAN_OPT, &nni_count, &deltaNNI);
         }
         if (nni_count == 0 || abs(newLH - curLH) < 0.001) {
         	curLH = newLH;
+        	totalNNICount += nni_count;
             break;
         } else {
         	curLH = newLH;
@@ -1570,7 +1569,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
     // copy the nniList
     curNNIList.assign(nniList, nniList + nniListSize);
     delete [] nniList;
-
+    sm_delete(quartetList);
     return curLH;
 }
 

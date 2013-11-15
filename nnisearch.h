@@ -98,7 +98,7 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int num
  *  @param[out] nni_count number of NNI that have been applied
  *  @param[out] deltaNNI average improvement made by one NNI
  */
-double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMove* nniList, int searchType, int* nni_count, double* deltaNNI);
+double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, int* nni_count, double* deltaNNI);
 
 /**
  *  perturb the current tree by randomly carrying some negative NNI moves

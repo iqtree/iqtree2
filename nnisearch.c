@@ -126,15 +126,22 @@ void quicksort_nni(pllNNIMove* arr,int left, int right) {
         quicksort_nni(arr, i, right);
 }
 
+//TODO: Workaround for memory leak problem when calling setupTopol within doNNISearch
+topol *_setupTopol(pllInstance* tr) {
+	static topol* tree;
+	if (tree == NULL)
+		tree = setupTopol(tr->mxtips);
+	return tree;
+}
 
-
-double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMove* out_nniList, int searchType, int* nni_count, double* deltaNNI) {
+double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, int* nni_count, double* deltaNNI) {
 	/* save the initial tree likelihood, used for comparison */
 	double initLH = tr->likelihood;
 
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 
 	/* data structure to store the initial tree topology + branch length */
+	topol* curTree = _setupTopol(tr);
 	saveTree(tr, curTree, numBranches);
 
 	/* Initialize the NNI list that holds information about 2n-6 NNI moves */
@@ -166,9 +173,6 @@ double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMov
 	/* Sort the NNI list ascendingly according to the log-likelihood */
 	qsort(nniList, totalNNIs, sizeof(pllNNIMove), cmp_nni);
 	//quicksort_nni(nniList, 0, totalNNIs - 1);
-    for ( int i = 0; i < totalNNIs; i++) {
-    	out_nniList[i] = nniList[i];
-    }
 
 	/* Generate a list of independent positive NNI */
     pllNNIMove inNNIs[tr->mxtips - 3];
@@ -258,6 +262,8 @@ double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMov
 	}
 	*nni_count = numNNI;
 	*deltaNNI = (tr->likelihood - initLH) / numNNI;
+	//freeTopol(curTree);
+
 	return tr->likelihood;
 }
 
