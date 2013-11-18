@@ -727,7 +727,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.pertubSize = 0.1;
+    params.pertubSize = 0.5;
     params.speedup_iter = 100;
     params.pll = false;
     params.pllModOpt = false;
@@ -1237,10 +1237,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.p_delete = convert_double(argv[cnt]);
                 if (params.p_delete < 0.0 || params.p_delete > 1.0)
                     throw "Probability of deleting a leaf must be between 0 and 1";
-            } else if (strcmp(argv[cnt], "-perturb") == 0) {
+            } else if (strcmp(argv[cnt], "-ps") == 0) {
             	cnt++;
             	if (cnt >= argc)
-            		throw "Use -perturb <probability>";
+            		throw "Use -ps <probability>";
             	params.pertubSize = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
