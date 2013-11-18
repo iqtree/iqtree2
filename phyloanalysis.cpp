@@ -963,10 +963,6 @@ void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
 
 void runPhyloAnalysis(Params &params, string &original_model,
 		Alignment* &alignment, IQTree &iqtree, vector<ModelInfo> &model_info) {
-	// ilsnni only works with PLL enabled
-	if (params.ilsnni) {
-		params.pll = true;
-	}
 	double t_begin, t_end;
 	t_begin = getCPUTime();
 
@@ -1305,13 +1301,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 							PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
 							PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 					bestTreeString = string(iqtree.pllInst->tree_string);
-					if (iqtree.pllBestTree == NULL) {
-						iqtree.pllBestTree = setupTopol(iqtree.pllInst->mxtips);
-					}
-					saveTree(iqtree.pllInst, iqtree.pllBestTree,
-							iqtree.pllPartitions->numberOfPartitions);
-					// update the bestNNIList and perturbNNIList
-					iqtree.bestNNIList.assign(iqtree.curNNIList.begin(), iqtree.curNNIList.end());
+					iqtree.pllUpdateBestTree();
 				}
 			} else {
 				stringstream parsTreeString;
@@ -1339,12 +1329,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				break;
 			}
 		}
-		cout << "Best loglh = " << iqtree.bestScore << " / CPU time: "
-				<< getCPUTime() - initTime << endl;
+		cout << "Best loglh = " << iqtree.bestScore << " / CPU time: " << getCPUTime() - initTime << endl;
 		if (params.pll) {
 			/* Read in the best tree in PLL */
-			if (!restoreTree(iqtree.pllBestTree, iqtree.pllInst,
-					iqtree.pllPartitions)) {
+			if (!restoreTree(iqtree.pllBestTree, iqtree.pllInst, iqtree.pllPartitions)) {
 				outError("ERROR: failed to roll back tree \n");
 			}
 			iqtree.curScore = iqtree.bestScore;
@@ -1356,7 +1344,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 		delete[] parsTree;
 
-		params.pertubSize = iqtree.getAvgNumNNI();
 		cout << "Average number of NNIs: " << params.pertubSize << endl;
 
 
@@ -1459,14 +1446,15 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	/* DO IQPNNI */
 	if (params.k_representative > 0 /*&&  params.min_iterations > 1*/) {
-		cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS"
-				<< endl;
-		cout << "Number of representative leaves   : "
-				<< params.k_representative << endl;
-		cout << "Probability of deleting sequences : " << iqtree.getProbDelete()
-				<< endl;
-		cout << "Number of leaves to be deleted    : " << iqtree.getDelete() << endl;
-		cout << "Number of iterations              : ";
+		cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
+		if (!params.ilsnni && !params.random_nni) {
+			cout << "Number of representative leaves   		: " << params.k_representative << endl;
+			cout << "Probability of deleting sequences 		: " << iqtree.getProbDelete() << endl;
+			cout << "Number of leaves to be deleted    		: " << iqtree.getDelete() << endl;
+		} else if (params.ilsnni) {
+			cout << "Perturbation strength		: " << params.pertubSize << endl;
+		}
+		cout << "Number of iterations   		: ";
 		if (params.stop_condition == SC_FIXED_ITERATION)
 			cout << params.min_iterations << endl;
 		else

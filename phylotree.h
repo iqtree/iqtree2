@@ -143,6 +143,8 @@ struct NNIMove {
     }
 };
 
+
+
 struct LeafFreq {
     int leaf_id;
 
@@ -1044,16 +1046,6 @@ public:
      * Variance matrix
      */
     double *var_matrix;
-
-    /**
-     *      size of the alignment (used to avoid calling aln->size())
-     */
-    //int alnSize;
-
-    /**
-     *      number of states ( used to avoid calling aln->num_states() )
-     */
-    //int numStates;
 
     /**
             TRUE if you want to optimize branch lengths by Newton-Raphson method
