@@ -61,7 +61,7 @@ PDNetwork::PDNetwork(Params &params) : SplitGraph(params) {
 		initPDMin();
 
 	// read the initial set of taxa, incoporate info into the split system
-	if (params.initial_file != NULL)
+	if (params.initial_file != NULL && params.eco_dag_file == NULL)
 		readInitialSet(params);
 
 	if (!initialset.empty() && !isPDArea())
@@ -770,7 +770,6 @@ void PDNetwork::calcPDComplementarity(SplitSet &area_set, char *area_names,
 
 }
 
-
 void PDNetwork::transformLP2(Params &params, const char *outfile, int total_size, bool make_bin) {
 	Split included_tax(getNTaxa());
 	IntVector::iterator it2;
@@ -792,6 +791,23 @@ void PDNetwork::transformLP2(Params &params, const char *outfile, int total_size
 
 		out.close();
 		//cout << "Transformed LP problem printed to " << outfile << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, outfile);
+	}
+}
+
+//Olga:ECOpd split system
+void PDNetwork::transformEcoLP(Params &params, const char *outfile, int total_size) {
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(outfile);
+		vector<int> y_value;
+		y_value.resize(getNSplits(), -1);
+		lpObjectiveMaxSD(out, params, y_value, total_size);
+		lpSplitConstraint_TS(out, params, y_value, total_size);
+		out.close();
+
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, outfile);
 	}
@@ -1940,3 +1956,9 @@ void PDNetwork::checkYValue_Area(int total_size, vector<int> &y_value, vector<in
 	
 }
 
+void PDNetwork::speciesList(vector<string> *speciesNames)
+{
+	for(int i=0; i<getNTaxa();i++)
+		(*speciesNames).push_back(taxa->GetTaxonLabel(i));
+
+}

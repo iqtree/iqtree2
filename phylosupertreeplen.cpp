@@ -921,7 +921,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 								}
 							} else {
 								//allNNIcases_computed[4] += 1;
-								// Minh: for efficency, if previous branch maps to NULL or after relinking it maps to the same branch, reuse partial_lh
+								// Minh: for efficiency, if previous branch maps to NULL or after relinking it maps to the same branch, reuse partial_lh
 								PhyloNeighbor *thisnei = ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]));
 								memcpy(thisnei->partial_lh, savednei->partial_lh, at(part)->getPartialLhBytes());
 								memcpy(thisnei->scale_num , savednei->scale_num , at(part)->getScaleNumBytes());
@@ -1270,7 +1270,6 @@ void PhyloSuperTreePlen::printMapInfo() {
 		}
 	}
 }
-
 
 void PhyloSuperTreePlen::initPartitionInfo() {
 
