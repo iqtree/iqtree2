@@ -227,7 +227,7 @@ void printCopyright(ostream &out) {
 #endif
 
 #ifdef IQ_TREE
-	out << endl << "Copyright (c) 2011-2013 Nguyen Lam Tung, Bui Quang Minh, and Arndt von Haeseler." << endl << endl;
+	out << endl << "Copyright (c) 2011-2013 Nguyen Lam Tung, Olga Chernomor, Bui Quang Minh, and Arndt von Haeseler." << endl << endl;
 #else
 	out << endl << "Copyright (c) 2006-2008 Bui Quang Minh, Steffen Klaere and Arndt von Haeseler." << endl << endl;
 #endif
@@ -241,7 +241,7 @@ void printRunMode(ostream &out, RunMode run_mode) {
 		case BOTH_ALG: out << "Greedy and Pruning"; break;
 		case EXHAUSTIVE: out << "Exhaustive"; break;
 		case DYNAMIC_PROGRAMMING: out << "Dynamic Programming"; break;
-		case LINEAR_PROGRAMMING: out << "Linear Programming"; break;
+		case LINEAR_PROGRAMMING: out << "Integer Linear Programming"; break;
 		default: outError(ERR_INTERNAL);
 	}
 }
@@ -251,14 +251,17 @@ void printRunMode(ostream &out, RunMode run_mode) {
 */
 void summarizeHeader(ostream &out, Params &params, bool budget_constraint, InputType analysis_type) {
 	printCopyright(out);
-	out << "Input file name: " << params.user_file << endl;
-	out << "Input file format: " << ((params.intype == IN_NEWICK) ? "Newick" : ( (params.intype == IN_NEXUS) ? "Nexus" : "Unknown" )) << endl;
+	out << "Input tree/split network file name: " << params.user_file << endl;
+	if(params.eco_dag_file)
+		out << "Input food web file name: "<<params.eco_dag_file<<endl;
+ 	out << "Input file format: " << ((params.intype == IN_NEWICK) ? "Newick" : ( (params.intype == IN_NEXUS) ? "Nexus" : "Unknown" )) << endl;
 	if (params.initial_file != NULL)
 		out << "Initial taxa file: " << params.initial_file << endl;
 	if (params.param_file != NULL)
 		out << "Parameter file: " << params.param_file << endl;
 	out << endl;
-	out << "Type of PD: " << ((params.root != NULL || params.is_rooted) ? "Rooted": "Unrooted");
+	out << "Type of measure: " << ((params.root != NULL || params.is_rooted) ? "Rooted": "Unrooted") <<
+			(analysis_type== IN_NEWICK ? " phylogenetic diversity (PD)" : " split diversity (SD)");
 	if (params.root != NULL) out << " at " << params.root;
 	out << endl;
 	if (params.run_mode != CALC_DIST && params.run_mode != PD_USER_SET) {
@@ -270,20 +273,20 @@ void summarizeHeader(ostream &out, Params &params, bool budget_constraint, Input
 			printRunMode(out, params.detected_mode);
 		}
 		out << endl;
-		out << "Search option: " << ((params.find_all) ? "Multiple optimal PD sets" : "Single optimal PD set") << endl;
+		out << "Search option: " << ((params.find_all) ? "Multiple optimal sets" : "Single optimal set") << endl;
 	}
 	out << endl;
 	out << "Type of analysis: ";
 	switch (params.run_mode) {
-		case PD_USER_SET: out << "PD of user sets";
+		case PD_USER_SET: out << "PD/SD of user sets";
 			if (params.pdtaxa_file) out << " (" << params.pdtaxa_file << ")"; break;
 		case CALC_DIST: out << "Distance matrix computation"; break;
 		default:
 			out << ((budget_constraint) ? "Budget constraint " : "Subset size k ");
 			if (params.intype == IN_NEWICK)
-				out << ((analysis_type == IN_NEWICK) ? "on tree" : "on tree -> network");
+				out << ((analysis_type == IN_NEWICK) ? "on tree" : "on tree -> split network");
 			else
-				out << "on network";
+				out << "on split network";
 	}
 	out << endl;
 	//out << "Random number seed: " << params.ran_seed << endl;
@@ -1922,6 +1925,8 @@ extern "C" void getintargv(int *argc, char **argv[])
 *********************************************************************************************************************************/
 
 void processECOpd(Params &params) {
+	double startTime = getCPUTime();
+	params.detected_mode = LINEAR_PROGRAMMING;
 	cout<<"----------------------------------------------------------------------------------------"<<endl;
 	int i;
 	double score;
@@ -1929,11 +1934,16 @@ void processECOpd(Params &params) {
 	int threads = params.gurobi_threads;
 	params.gurobi_format=true;
 
-	string model_file,subFoodWeb;
+	string model_file,subFoodWeb,outFile;
+
 	model_file = params.out_prefix;
 	model_file += ".lp";
+
 	subFoodWeb = params.out_prefix;
 	subFoodWeb += ".subFoodWeb";
+
+	outFile = params.out_prefix;
+	outFile += ".pda";
 
 	//Defining the input phylo type: t - rooted/unrooted tree, n - split network
 	params.intype=detectInputFile(params.user_file);
@@ -2011,7 +2021,8 @@ void processECOpd(Params &params) {
 			cout<<"score = "<<score<<endl;
 		}
 		tree.dietConserved(variables);
-		tree.printResults(variables,score);
+		params.run_time = getCPUTime() - startTime;
+		tree.printResults((char*)outFile.c_str(),variables,score,params);
 		tree.printSubFoodWeb((char*)subFoodWeb.c_str(),variables);
 		delete[] variables;
 
@@ -2063,7 +2074,8 @@ void processECOpd(Params &params) {
 		ecoInfDAG.splitsNUM = splitSYS.getNSplits();
 		ecoInfDAG.totalSD = splitSYS.calcWeight();
 		ecoInfDAG.dietConserved(variables);
-		ecoInfDAG.printResults(variables, score);
+		params.run_time = getCPUTime() - startTime;
+		ecoInfDAG.printResults((char*)outFile.c_str(),variables, score,params);
 		ecoInfDAG.printSubFoodWeb((char*)subFoodWeb.c_str(),variables);
 		delete[] variables;
 	}

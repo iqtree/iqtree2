@@ -198,7 +198,9 @@ typedef unsigned int UINT;
         run mode of program
  */
 enum RunMode {
-    DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING, CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN, SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS //, GBO, MPRO
+    DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING,
+    CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN,
+    SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS //, GBO, MPRO
 }; //STATS and GBO added by MA (STATS for some statistics on tree, GBO = guided 'bootstrap'
 
 /**
@@ -1780,6 +1782,16 @@ void sort_index(T* first, T* last, int *index) {
     quicksort_index(arr, index, 0, (last - first) - 1);
     delete [] arr;
 }
+
+/**
+ * print the header of summary file
+ */
+void summarizeHeader(ostream &out, Params &params, bool budget_constraint, InputType analysis_type);
+
+/**
+ * print footer of summary file
+ */
+void summarizeFooter(ostream &out, Params &params);
 
 
 #endif
