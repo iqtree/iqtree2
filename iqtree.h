@@ -494,10 +494,12 @@ public:
     void pllDestroyUFBootData();
 
     /**
-    * Substitute bases in seq according to PLL's rules
-    * @param seq: data of some sequence to be substituted
-    * @param dataType: PLL_DNA_DATA or PLL_AA_DATA
-    */
+     * DTH:
+     * Substitute bases in seq according to PLL's rules
+     * This function should be updated if PLL's rules change.
+     * @param seq: data of some sequence to be substituted
+     * @param dataType: PLL_DNA_DATA or PLL_AA_DATA
+     */
    void pllBaseSubstitute (char *str, int dataType);
 
    /*

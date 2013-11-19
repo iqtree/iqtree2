@@ -841,7 +841,7 @@ void IQTree::pllBuildIQTreePatternIndex(){
 			pllBaseSubstitute(site, pllPartitions->partitionData[0]->dataType);
 			if(memcmp(pll_site,site, pllAlignment->sequenceCount) == 0){
 				pll2iqtree_pattern_index[i] = k;
-				cout << "original_aln_index[" << i << "] = " << k  << endl;
+//				cout << "original_aln_index[" << i << "] = " << k  << endl;
 			}
 		}
 	}
@@ -853,8 +853,10 @@ void IQTree::pllBuildIQTreePatternIndex(){
 	delete pll_aln;
 }
 
-/*
+/**
+ * DTH:
  * Substitute bases in seq according to PLL's rules
+ * This function should be updated if PLL's rules change.
  * @param seq: data of some sequence to be substituted
  * @param dataType: PLL_DNA_DATA or PLL_AA_DATA
  */
@@ -1483,52 +1485,42 @@ double IQTree::doIQPNNI() {
 		}
 
 		if(params->pll) pllConvertUFBootData2IQTree(); // DTH: make pllUFBootData usable in summarizeBootstrap
-		//if(!params->pll){
-			if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
-				SplitGraph *sg = new SplitGraph;
-				cout << "Calling summarizeBootstrap" << endl;
-				summarizeBootstrap(*sg);
-				cout << "Done summarizeBootstrap" << endl;
-				boot_splits.push_back(sg);
-				if (params->max_candidate_trees == 0)
-					max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations()) / curIteration;
-				cout << "Setting tau = " << max_candidate_trees << endl;
-			}
+		// DTH: Carefully watch the -pll case here
+		if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
+			SplitGraph *sg = new SplitGraph;
+			summarizeBootstrap(*sg);
+			boot_splits.push_back(sg);
+			if (params->max_candidate_trees == 0)
+				max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations()) / curIteration;
+			cout << "Setting tau = " << max_candidate_trees << endl;
+		}
 
-			if (curIteration == stop_rule.getNumIterations() && params->gbo_replicates && !boot_splits.empty()
-					&& stop_rule.getNumIterations() + params->step_iterations <= params->max_iterations) {
-				//SplitGraph *sg = new SplitGraph;
-				//summarizeBootstrap(*sg);
-				if (!checkBootstrapStopping()) {
-					if (params->max_candidate_trees == 0)
-						max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations() + params->step_iterations)
-								/ stop_rule.getNumIterations();
-					stop_rule.setIterationNum(stop_rule.getNumIterations() + params->step_iterations,
-							params->max_iterations);
-					cout << "INFO: Increase number of iterations to " << stop_rule.getNumIterations() << " tau = "
-							<< max_candidate_trees << endl;
-					//delete boot_splits;
-					//boot_splits = sg;
-				} //else delete sg;
-			}
-/*		}else{
-			if(max_candidate_trees <= pllUFBootDataPtr->candidate_trees_count) break;
-		}*/
+		if (curIteration == stop_rule.getNumIterations() && params->gbo_replicates && !boot_splits.empty()
+				&& stop_rule.getNumIterations() + params->step_iterations <= params->max_iterations) {
+			//SplitGraph *sg = new SplitGraph;
+			//summarizeBootstrap(*sg);
+			if (!checkBootstrapStopping()) {
+				if (params->max_candidate_trees == 0)
+					max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations() + params->step_iterations)
+							/ stop_rule.getNumIterations();
+				stop_rule.setIterationNum(stop_rule.getNumIterations() + params->step_iterations,
+						params->max_iterations);
+				cout << "INFO: Increase number of iterations to " << stop_rule.getNumIterations() << " tau = "
+						<< max_candidate_trees << endl;
+				//delete boot_splits;
+				//boot_splits = sg;
+			} //else delete sg;
+		}
 	}
 
-	// DTH: Split into non-pll and pll cases
-	if(!params->pll){
-		int predicted_iteration = stop_rule.getPredictedIteration();
-		//cout.unsetf(ios::fixed);
+	// DTH: Carefully watch the -pll case here
+	int predicted_iteration = stop_rule.getPredictedIteration();
+	//cout.unsetf(ios::fixed);
 
-		if (predicted_iteration > curIteration) {
-			cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure that with a "
-					<< floor(params->stop_confidence * 100) << "% confidence" << endl
-					<< "         the IQPNNI search will not find a better tree" << endl;
-		}
-	}else{
-		// DTH: TODO: handle pll case here
-
+	if (predicted_iteration > curIteration) {
+		cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure that with a "
+				<< floor(params->stop_confidence * 100) << "% confidence" << endl
+				<< "         the IQPNNI search will not find a better tree" << endl;
 	}
 
 	if (testNNI)
@@ -1540,10 +1532,8 @@ double IQTree::doIQPNNI() {
 		out_sitelh.close();
 	}
 
-	cout << "Before calling pllDestroyUFBootData" << endl;
 	// DTH: pllUFBoot deallocation
 	if(params->pll) pllDestroyUFBootData();
-	cout << "Done with doIQPNNI, Error must be somewhere else" << endl;
 
 	return bestScore;
 }
@@ -1835,59 +1825,62 @@ void IQTree::pllInitUFBootData(){
 			pllUFBootDataPtr->treels_size = max_candidate_trees; // track size of treels_logl, treels_newick, treels_ptnlh
 
 			pllUFBootDataPtr->treels_logl =
-					(double *) malloc(max_candidate_trees * (sizeof(double)));
+				(double *) malloc(max_candidate_trees * (sizeof(double)));
 			if(!pllUFBootDataPtr->treels_logl) pllAlertMemoryError();
+			//memset(pllUFBootDataPtr->treels_logl, 0, max_candidate_trees * (sizeof(double)));
 
 			pllUFBootDataPtr->treels_newick =
-					(char **) malloc(max_candidate_trees * (sizeof(char *)));
+				(char **) malloc(max_candidate_trees * (sizeof(char *)));
 			if(!pllUFBootDataPtr->treels_newick) pllAlertMemoryError();
+			memset(pllUFBootDataPtr->treels_newick, 0, max_candidate_trees * (sizeof(char *)));
+
 
 			pllUFBootDataPtr->treels_ptnlh =
-					(double **) malloc(max_candidate_trees * (sizeof(double *)));
-			for(int i = 0; i < max_candidate_trees; i++)
-				pllUFBootDataPtr->treels_ptnlh[i] = NULL;
+				(double **) malloc(max_candidate_trees * (sizeof(double *)));
 			if(!pllUFBootDataPtr->treels_ptnlh) pllAlertMemoryError();
+			memset(pllUFBootDataPtr->treels_ptnlh, 0, max_candidate_trees * (sizeof(double *)));
 
 			// aln->createBootstrapAlignment() must be called before this fragment
 			pllUFBootDataPtr->boot_samples =
-					(int **) malloc(params->gbo_replicates * sizeof(int *));
+				(int **) malloc(params->gbo_replicates * sizeof(int *));
+			if(!pllUFBootDataPtr->boot_samples) pllAlertMemoryError();
 			for(int i = 0; i < params->gbo_replicates; i++){
 				pllUFBootDataPtr->boot_samples[i] =
-						(int *) malloc(pllAlignment->sequenceLength * sizeof(int));
+					(int *) malloc(pllAlignment->sequenceLength * sizeof(int));
 				for(int j = 0; j < pllAlignment->sequenceLength; j++){
 					pllUFBootDataPtr->boot_samples[i][j] =
-							boot_samples[i][pll2iqtree_pattern_index[j]];
+						boot_samples[i][pll2iqtree_pattern_index[j]];
 				}
 			}
-			if(!pllUFBootDataPtr->boot_samples) pllAlertMemoryError();
 
 //			pllLogBootSamples(pllUFBootDataPtr->boot_samples,
 //					params->gbo_replicates, pllAlignment->sequenceLength);
 
 			pllUFBootDataPtr->boot_logl =
-					(double *) malloc(params->gbo_replicates * (sizeof(double)));
+				(double *) malloc(params->gbo_replicates * (sizeof(double)));
 			if(!pllUFBootDataPtr->boot_logl) pllAlertMemoryError();
+			for(int i = 0; i < params->gbo_replicates; i++)
+				pllUFBootDataPtr->boot_logl[i] = -DBL_MAX;
 
 			pllUFBootDataPtr->boot_counts =
-					(int *) malloc(params->gbo_replicates * (sizeof(int)));
-			for(int i = 0; i < params->gbo_replicates; i++)
-				pllUFBootDataPtr->boot_counts[i] = 0;
+				(int *) malloc(params->gbo_replicates * (sizeof(int)));
 			if(!pllUFBootDataPtr->boot_counts) pllAlertMemoryError();
+			memset(pllUFBootDataPtr->boot_counts, 0, params->gbo_replicates * (sizeof(int)));
 
 			pllUFBootDataPtr->boot_trees =
-					(int *) malloc(params->gbo_replicates * (sizeof(int)));
+				(int *) malloc(params->gbo_replicates * (sizeof(int)));
 			if(!pllUFBootDataPtr->boot_trees) pllAlertMemoryError();
 
 			pllUFBootDataPtr->random_doubles =
-					(double *) malloc(params->gbo_replicates * (sizeof(double)));
+				(double *) malloc(params->gbo_replicates * (sizeof(double)));
 			if(!pllUFBootDataPtr->random_doubles) pllAlertMemoryError();
 
 			pllUFBootDataPtr->duplication_counter = 0;
 		}
 	}
-	//pllUFBootDataPtr->params_store_candidate_trees = params->store_candidate_trees;
-	params->store_candidate_trees = TRUE; // TEST!!!!
-	pllUFBootDataPtr->params_store_candidate_trees = PLL_TRUE; // TEST!!!!
+	pllUFBootDataPtr->params_store_candidate_trees = params->store_candidate_trees;
+//	params->store_candidate_trees = TRUE; // TEST!!!!
+//	pllUFBootDataPtr->params_store_candidate_trees = PLL_TRUE; // TEST!!!!
 	pllUFBootDataPtr->params_online_bootstrap = params->online_bootstrap;
 	pllUFBootDataPtr->params_gbo_replicates = params->gbo_replicates;
 	pllUFBootDataPtr->max_candidate_trees = max_candidate_trees;
@@ -1898,7 +1891,7 @@ void IQTree::pllInitUFBootData(){
 
 	if(pllUFBootDataPtr->random_doubles)
 		for(int i = 0; i < params->gbo_replicates; i++)
-				pllUFBootDataPtr->random_doubles[i] = random_double();
+			pllUFBootDataPtr->random_doubles[i] = random_double();
 }
 
 void IQTree::pllDestroyUFBootData(){
@@ -1906,42 +1899,42 @@ void IQTree::pllDestroyUFBootData(){
 		delete [] pll2iqtree_pattern_index;
 		pll2iqtree_pattern_index = NULL;
 	}
-	cout << "Done freeing pll2iqtree_pattern_index" << endl;
+//	cout << "Done freeing pll2iqtree_pattern_index" << endl;
 	if(params->online_bootstrap && params->gbo_replicates > 0){
 		pllHashDestroy(&(pllUFBootDataPtr->treels), PLL_TRUE);
-		cout << "Done pllHashDestroy" << endl;
+//		cout << "Done pllHashDestroy" << endl;
 
 		free(pllUFBootDataPtr->treels_logl);
-		cout << "Done freeing treels_logl" << endl;
+//		cout << "Done freeing treels_logl" << endl;
 
-		for(int i = 0; i < pllUFBootDataPtr->treels_size; i++)
+		for(int i = 0; i < pllUFBootDataPtr->candidate_trees_count; i++)
 			if(pllUFBootDataPtr->treels_newick[i])
 				free(pllUFBootDataPtr->treels_newick[i]);
 		free(pllUFBootDataPtr->treels_newick);
-		cout << "Done freeing treels_newick" << endl;
+//		cout << "Done freeing treels_newick" << endl;
 
 		for(int i = 0; i < pllUFBootDataPtr->treels_size; i++)
 			if(pllUFBootDataPtr->treels_ptnlh[i])
 				free(pllUFBootDataPtr->treels_ptnlh[i]);
 		free(pllUFBootDataPtr->treels_ptnlh);
-		cout << "Done freeing treels_ptnlh" << endl;
+//		cout << "Done freeing treels_ptnlh" << endl;
 
 		for(int i = 0; i < params->gbo_replicates; i++)
 			free(pllUFBootDataPtr->boot_samples[i]);
 		free(pllUFBootDataPtr->boot_samples);
-		cout << "Done freeing boot_samples" << endl;
+//		cout << "Done freeing boot_samples" << endl;
 
 		free(pllUFBootDataPtr->boot_logl);
-		cout << "Done freeing boot_logl" << endl;
+//		cout << "Done freeing boot_logl" << endl;
 
 		free(pllUFBootDataPtr->boot_counts);
-		cout << "Done freeing boot_counts" << endl;
+//		cout << "Done freeing boot_counts" << endl;
 
 		free(pllUFBootDataPtr->boot_trees);
-		cout << "Done freeing boot_trees" << endl;
+//		cout << "Done freeing boot_trees" << endl;
 
 		free(pllUFBootDataPtr->random_doubles);
-		cout << "Done freeing random_doubles" << endl;
+//		cout << "Done freeing random_doubles" << endl;
 	}
 	free(pllUFBootDataPtr);
 	pllUFBootDataPtr = NULL;
@@ -2954,6 +2947,8 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
 }
 
 void IQTree::pllConvertUFBootData2IQTree(){
+	// duplication_counter
+	duplication_counter = pllUFBootDataPtr->duplication_counter;
 	//treels_logl
 	treels_logl.clear();
 	for(int i = 0; i < pllUFBootDataPtr->candidate_trees_count; i++)
