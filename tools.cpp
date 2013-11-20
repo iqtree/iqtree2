@@ -1796,70 +1796,63 @@ void usage(char* argv[], bool full_command) {
     printCopyright(cout);
     cout << "Usage: " << argv[0] << " [OPTIONS] <file_name> [<output_file>]" << endl;
     cout << "GENERAL OPTIONS:" << endl;
-    cout << "  -h                Print this help dialog. Use -hh to display all options." << endl;
-    cout << "  -?                Print help options for phylogenetic inference." << endl;
-    cout << "  <file_name>       User tree in NEWICK format or split network in NEXUS format." << endl;
-    cout << "  <output_file>     Output file to store results, default is '<file_name>.pda'." << endl;
-    cout << "  -k <num_taxa>     Find optimal PD set of size <num_taxa>." << endl;
-    cout << "  -k <min>:<max>    Find optimal PD sets of size from <min> to <max>." << endl;
+    cout << "  -h                Print this help dialog. Use -hh to display all options" << endl;
+    cout << "  -?                Print help options for phylogenetic inference" << endl;
+    cout << "  <file_name>       User tree in NEWICK format or split network in NEXUS format" << endl;
+    cout << "  <output_file>     Output file to store results, default is '<file_name>.pda'" << endl;
+    cout << "  -k <num_taxa>     Find optimal set of size <num_taxa>" << endl;
+    cout << "  -k <min>:<max>    Find optimal sets of size from <min> to <max>" << endl;
     cout << "  -k <min>:<max>:<step>" << endl;
-    cout << "    Find optimal PD sets of size <min>, <min>+<step>, <min>+2*<step>,..." << endl;
-    cout << "  -o <taxon>        Root name to compute rooted PD, default is unrooted. " << endl;
-    cout << "  -if <file>        File containing taxa to be included into PD set." << endl;
-    cout << "  -e <file>         File containing branch/split scale and taxa weights." << endl;
-    cout << "  -all              Identify multiple optimal PD sets." << endl;
-    cout << "  -lim <max_limit>  The maximum number of PD sets for each k if -a is specified." << endl;
-    cout << "  -min              Compute minimal PD sets, default is maximal PD sets." << endl;
-    cout << "  -1out             Also print taxa sets and scores to separate files." << endl;
-    cout << "  -oldout           Also print output compatible with version 0.3." << endl;
-    cout << "  -v                Verbose mode." << endl;
+    cout << "                    Find optimal sets of size min, min+step, min+2*step,..." << endl;
+    cout << "  -o <taxon>        Root name to compute rooted PD (default: unrooted)" << endl;
+    cout << "  -if <file>        File containing taxa to be included into optimal sets" << endl;
+    cout << "  -e <file>         File containing branch/split scale and taxa weights" << endl;
+    cout << "  -all              Identify all multiple optimal sets" << endl;
+    cout << "  -lim <max_limit>  The maximum number of optimal sets for each k if -a is specified" << endl;
+    cout << "  -min              Compute minimal sets (default: maximal)" << endl;
+    cout << "  -1out             Print taxa sets and scores to separate files" << endl;
+    cout << "  -oldout           Print output compatible with version 0.3" << endl;
+    cout << "  -v                Verbose mode" << endl;
     cout << endl;
-    cout << "OPTIONS FOR TREE:" << endl;
-    cout << "  -root             Make the tree ROOTED, default is unrooted." << endl;
-    cout << "    NOTE: this option and -o <taxon> cannot be both specified." << endl;
-    cout << "  -g, --greedy      Run greedy algorithm only." << endl;
-    cout << "  -pr, --pruning    Run pruning algorithm only." << endl;
-    cout << "    NOTE: by default, the program automatically chooses suitable algorithm." << endl;
+    cout << "OPTIONS FOR PHYLOGENETIC DIVERSITY (PD):" << endl;
+    cout << "  -root             Make the tree ROOTED, default is unrooted" << endl;
+    cout << "    NOTE: this option and -o <taxon> cannot be both specified" << endl;
+    cout << "  -g                Run greedy algorithm only (default: auto)" << endl;
+    cout << "  -pr               Run pruning algorithm only (default: auto)" << endl;
     cout << endl;
-    cout << "OPTIONS FOR SPLIT-NETWORK:" << endl;
-    cout << "  -exhaust          Force to use exhaustive search." << endl;
+    /*
+    cout << "OPTIONS FOR SPLIT DIVERSITY:" << endl;
+    cout << "  -exhaust          Force to use exhaustive search" << endl;
     cout << "    NOTE: by default, the program applies dynamic programming algorithm" << endl;
-    cout << "          on circular networks and exhaustive search on general networks." << endl;
-    cout << endl;
-    cout << "OPTIONS FOR BUDGET-CONSTRAINT:" << endl;
-    cout << "  -u <file>         File containing total budget and taxa preservation costs." << endl;
-    cout << "  -b <budget>       Total budget to conserve taxa." << endl;
-    cout << "  -b <min>:<max>    Find all PD sets with budget from <min> to <max>." << endl;
+    cout << "          on circular networks and exhaustive search on general networks" << endl;
+    cout << endl;*/
+    cout << "OPTIONS FOR BUDGET CONSTRAINTS:" << endl;
+    cout << "  -u <file>         File containing total budget and taxa preservation costs" << endl;
+    cout << "  -b <budget>       Total budget to conserve taxa" << endl;
+    cout << "  -b <min>:<max>    Find all sets with budget from <min> to <max>" << endl;
     cout << "  -b <min>:<max>:<step>" << endl;
-    cout << "    Find optimal PD sets with budget <min>, <min>+<step>, <min>+2*<step>,..." << endl;
+    cout << "                    Find optimal sets with budget min, min+step, min+2*step,..." << endl;
     cout << endl;
     cout << "OPTIONS FOR AREA ANALYSIS:" << endl;
-    cout << "  -ts <taxa_file>   Compute PD of areas (user-defined sets) in <taxa_file>." << endl;
-    cout << "  -excl             Compute area exclusive PD." << endl;
-    cout << "  -endem            Compute area endemic PD." << endl;
-    cout << "  -compl <areas>    Compute area PD-complementarity given the listed <areas>." << endl;
+    cout << "  -ts <taxa_file>   Compute/maximize PD/SD of areas (combine with -k to maximize)" << endl;
+    cout << "  -excl             Compute exclusive PD/SD" << endl;
+    cout << "  -endem            Compute endemic PD/SD" << endl;
+    cout << "  -compl <areas>    Compute complementary PD/SD given the listed <areas>" << endl;
     cout << endl;
 
-    if (!full_command) exit(0);
-
-    cout << "GENERATING RANDOM TREES:" << endl;
-    cout << "  -r <num_taxa>     Create a random tree under Yule-Harding model." << endl;
-    cout << "  -ru <num_taxa>    Create a random tree under Uniform model." << endl;
-    cout << "  -rcat <num_taxa>  Create a random caterpillar tree." << endl;
-    cout << "  -rbal <num_taxa>  Create a random balanced tree." << endl;
-    cout << "  -rcsg <num_taxa>  Create a random circular split network." << endl;
-    cout << "  -rlen <min_len> <mean_len> <max_len>  " << endl;
-    cout << "      minimum, mean, and maximum branch lengths of the random trees." << endl;
+    cout << "OPTIONS FOR VIABILITY CONSTRAINTS:" << endl;
+    cout << "  -eco <food_web>   File containing food web matrix" << endl;
+    cout << "  -k% <n>           Find optimal set of size relative the total number of taxa" << endl;
+    cout << "  -diet <min_diet>  Minimum diet portion (%) to be preserved for each predator" << endl;
     cout << endl;
+    //if (!full_command) exit(0);
 
     cout << "MISCELLANEOUS:" << endl;
-    cout << "  -dd <sample_size> Compute PD distribution of random sets of size k." << endl;
-    cout << "  -d <outfile>      Calculate the distance matrix inferred from tree." << endl;
-    cout << "  -seed <number>    Set the seed for random number generator." << endl;
-    cout << "  -stats <outfile>  Output some statistics about branch lengths on the tree." << endl;
-    cout << "  -comp <treefile> Compare the tree with each in the input trees." << endl;
-    cout << "  -gbo <site_ll_file> Compute and output the alignment of (normalized) expected frequencies given in site_ll_file." << endl;
-
+    cout << "  -dd <sample_size> Compute PD distribution of random sets of size k" << endl;
+    /*
+    cout << "  -gbo <sitelh_file> Compute and output the alignment of (normalized)" << endl;
+    cout << "                    expected frequencies given in site_ll_file" << endl;
+	*/
 
     //	cout << "  -rep <times>        Repeat algorithm a number of times." << endl;
     //	cout << "  -noout              Print no output file." << endl;
@@ -1957,12 +1950,28 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -rf <treefile2>      Computing all RF distances between two sets of trees" << endl
             << "                       stored in <treefile> and <treefile2>" << endl
             << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
-            << endl << "MISCELLANEOUS:" << endl
-            << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
             << endl << "TREE TOPOLOGY TEST:" << endl
             << "  -zb <#replicates>    BP,KH,SH,ELW tests with RELL for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
             << endl;
+
+			cout << "GENERATING RANDOM TREES:" << endl;
+			cout << "  -r <num_taxa>        Create a random tree under Yule-Harding model." << endl;
+			cout << "  -ru <num_taxa>       Create a random tree under Uniform model." << endl;
+			cout << "  -rcat <num_taxa>     Create a random caterpillar tree." << endl;
+			cout << "  -rbal <num_taxa>     Create a random balanced tree." << endl;
+			cout << "  -rcsg <num_taxa>     Create a random circular split network." << endl;
+			cout << "  -rlen <min_len> <mean_len> <max_len>  " << endl;
+			cout << "                       min, mean, and max branch lengths of random trees." << endl;
+
+			cout << endl << "MISCELLANEOUS:" << endl
+            << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl;
+		    cout << "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl;
+		    cout << "  -stats <outfile>     Output some statistics about branch lengths on the tree" << endl;
+		    cout << "  -comp <treefile>     Compare the tree with each in the input trees" << endl;
+
+
+			cout << endl;
 
     if (full_command) {
         //TODO Print other options here (to be added)
