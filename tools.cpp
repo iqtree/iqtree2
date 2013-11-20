@@ -1796,8 +1796,8 @@ void usage(char* argv[], bool full_command) {
     printCopyright(cout);
     cout << "Usage: " << argv[0] << " [OPTIONS] <file_name> [<output_file>]" << endl;
     cout << "GENERAL OPTIONS:" << endl;
-    cout << "  -h                Print this help dialog. Use -hh to display all options" << endl;
-    cout << "  -?                Print help options for phylogenetic inference" << endl;
+    cout << "  -hh               Print this help dialog" << endl;
+    cout << "  -h                Print help options for phylogenetic inference" << endl;
     cout << "  <file_name>       User tree in NEWICK format or split network in NEXUS format" << endl;
     cout << "  <output_file>     Output file to store results, default is '<file_name>.pda'" << endl;
     cout << "  -k <num_taxa>     Find optimal set of size <num_taxa>" << endl;
