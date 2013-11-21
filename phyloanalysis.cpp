@@ -1605,8 +1605,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	double myscore = 0.0;
     if (!params.phylolib) {
 		myscore = iqtree.getBestScore();
-		//iqtree.computePatternLikelihood(pattern_lh, &myscore);
-		iqtree.computeLikelihood(pattern_lh);
+		iqtree.computePatternLikelihood(pattern_lh, &myscore);
+		//iqtree.computeLikelihood(pattern_lh);
 
 		// compute logl variance
 		iqtree.logl_variance = iqtree.computeLogLVariance();

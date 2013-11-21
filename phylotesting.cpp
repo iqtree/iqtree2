@@ -919,7 +919,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	return best_model;
 }
 
-int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVector &distinct_ids) {
+int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVector &distinct_ids, bool exclude_duplicate) {
 	StringIntMap treels;
 	try {
 		ifstream in;
@@ -929,21 +929,29 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
 		in.exceptions(ios::badbit);
 		int tree_id;
 		for (tree_id = 0; !in.eof(); tree_id++) {
-			tree->freeNode();
-			tree->readTree(in, rooted);
-			tree->setAlignment(tree->aln);
-			tree->setRootNode((char*)tree->aln->getSeqName(0).c_str());
-		    StringIntMap::iterator it = treels.end();
-		    ostringstream ostr;
-		    tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
-		    //it = treels.find(ostr.str());
-		    it = treels.end(); // for now just include duplicated trees!!
-		    if (it != treels.end()) { // already in treels
-		    	distinct_ids.push_back(it->second);
-		    } else {
-		    	distinct_ids.push_back(-1);
-		    	treels[ostr.str()] = tree_id;
-		    }
+			if (exclude_duplicate) {
+				tree->freeNode();
+				tree->readTree(in, rooted);
+				tree->setAlignment(tree->aln);
+				tree->setRootNode((char*)tree->aln->getSeqName(0).c_str());
+				StringIntMap::iterator it = treels.end();
+				ostringstream ostr;
+				tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+				it = treels.find(ostr.str());
+				if (it != treels.end()) { // already in treels
+					distinct_ids.push_back(it->second);
+				} else {
+					distinct_ids.push_back(-1);
+					treels[ostr.str()] = tree_id;
+				}
+			} else {
+				// ignore tree
+				char ch;
+				do {
+					in >> ch;
+				} while (!in.eof() && ch != ';');
+				distinct_ids.push_back(-1);
+			}
 			char ch;
 			in.exceptions(ios::goodbit);
 			(in) >> ch;
@@ -956,7 +964,10 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
 	} catch (ios::failure) {
 		outError("Cannot read file ", filename);
 	}
-	return treels.size();
+	if (exclude_duplicate)
+		return treels.size();
+	else
+		return distinct_ids.size();
 }
 
 //const double TOL_RELL_SCORE = 0.01;
@@ -968,11 +979,11 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	cout << endl;
 	//MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
 	cout << "Reading trees in " << params.treeset_file << " ..." << endl;
-	int ntrees = countDistinctTrees(params.treeset_file, params.is_rooted, tree, distinct_ids);
+	int ntrees = countDistinctTrees(params.treeset_file, params.is_rooted, tree, distinct_ids, params.distinct_trees);
 	if (ntrees < distinct_ids.size()) {
 		cout << "WARNING: " << distinct_ids.size() << " trees detected but only " << ntrees << " distinct trees will be evaluated" << endl;
 	} else {
-		cout << ntrees << " distinct trees detected" << endl;
+		cout << ntrees << (params.distinct_trees ? " distinct" : "") << " trees detected" << endl;
 	}
 	if (ntrees == 0) return;
 	ifstream in(params.treeset_file);

@@ -718,7 +718,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.use_weighted_bootstrap = false;
     params.use_max_tree_per_bootstrap = true;
     params.max_candidate_trees = 0;
-    params.distinct_trees = true;
+    params.distinct_trees = false;
     params.online_bootstrap = true;
     params.min_correlation = 0.99;
     params.step_iterations = 100;
@@ -1604,6 +1604,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.store_candidate_trees = true;
             } else if (strcmp(argv[cnt], "-nodiff") == 0) {
                 params.distinct_trees = false;
+            } else if (strcmp(argv[cnt], "-treediff") == 0) {
+                params.distinct_trees = true;
             } else if (strcmp(argv[cnt], "-norell") == 0) {
                 params.use_rell_method = false;
             } else if (strcmp(argv[cnt], "-elw") == 0) {

@@ -410,8 +410,15 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: tree_lh)
 	#endif
-	for (int i = 0; i < ntrees; i++)
-		tree_lh += at(i)->computeLikelihood();
+	if (pattern_lh) {
+		for (int i = 0; i < ntrees; i++) {
+			tree_lh += at(i)->computeLikelihood(pattern_lh);
+			pattern_lh += at(i)->getAlnNPattern();
+		}
+	} else {
+		for (int i = 0; i < ntrees; i++)
+			tree_lh += at(i)->computeLikelihood();
+	}
 	return tree_lh;
 }
 
