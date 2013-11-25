@@ -184,7 +184,7 @@ tools.cpp
 whtest_wrapper.cpp
 lpwrapper.c
 #modeltest_wrapper.c
-nnisearch.c
+nnisearch.cpp
 modelcodon.cpp
 phylosupertreeplen.cpp
 phylotesting.cpp

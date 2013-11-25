@@ -1,9 +1,9 @@
 #ifndef NNISEARCH_H
 #define NNISEARCH_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,9 +28,10 @@ typedef struct
 
 
 typedef struct {
-	//pllInstance* tr;
 	nodeptr p;
+	pll_boolean selected; // whether or not this NNI is selected to be applied to the tree
 	int nniType;
+	char* idString;
     double z0[PLL_NUM_BRANCHES]; // p
     double z1[PLL_NUM_BRANCHES]; // p->next
     double z2[PLL_NUM_BRANCHES]; // p->next->next
@@ -48,11 +49,6 @@ int compareDouble(const void * a, const void * b);
 pllNNIMove *getNonConflictNNIList(pllInstance* tr);
 
 void _update(pllInstance *tr, partitionList *pr, nodeptr p);
-
-/**
- * TODO: read tree from string in memory
- */
- int treeReadLenString (const char *buffer, pllInstance *tr, pll_boolean readBranches, pll_boolean readNodeLabels, pll_boolean topologyOnly);
 
 #define MAX_NUM_DELTA 10000
 
@@ -96,10 +92,11 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int num
  *  @param[in] tr the tree data structure
  *  @param[in] pr partition data structure
  *  @param[out] nniList list containing information about the 2(n-3) evaluated NNIs
+ *  @param[in/out] tabuNNIs tabu list
  *  @param[out] nni_count number of NNI that have been applied
  *  @param[out] deltaNNI average improvement made by one NNI
  */
-double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, pllNNIMove *nniList, int* nni_count, double* deltaNNI);
+double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, pllNNIMove *nniList,struct pllHashTable *tabuNNIs, int* nni_count, double* deltaNNI);
 
 /**
  *  perturb the current tree by randomly carrying some negative NNI moves
@@ -107,8 +104,6 @@ double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, pllNNIMov
  *  @param[in] nniList list of all possible NNIs
  */
 double pertub(pllInstance* tr, pllNNIMove* nniList);
-
-//void optimizeOneBranches(pllInstance* tr, nodeptr p, int numNRStep);
 
 /**
  *  @brief Do 1 NNI move.
@@ -145,19 +140,10 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove
  */
 pllNNIMove *getNNIList(pllInstance* tr);
 
-/*
- *  Save the likelihood vector of p and q to the 2 pointer p_lhsave and
- *  q_lhsave.
- *  Should I use memcpy or just copy the pointer ?
- */
-//void saveLHVector(nodeptr p, nodeptr q, double* p_lhsave, double* q_lhsave);
 
-
-
-
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 
 #endif
 

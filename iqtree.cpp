@@ -1476,19 +1476,13 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
     return curScore;
 }
 
-extern "C" double TOL_LIKELIHOOD_PHYLOLIB;
-extern "C" int numSmoothTree;
-extern "C" int nni0;
-extern "C" int nni5;
-extern "C" int nni1;
+extern double TOL_LIKELIHOOD_PHYLOLIB;
+extern int numSmoothTree;
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, int *skipped) {
-    if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
-        estDeltaMin();
-        cout << "delta_min = " << nnicut.delta_min << endl;
-    }
     int nniListSize = 2 * pllInst->mxtips - 6;
     pllNNIMove *nniList = new pllNNIMove[nniListSize];
+    struct pllHashTable *tabuNNIs = pllHashInit (nniListSize);
     double curLH = pllInst->likelihood;
     TOL_LIKELIHOOD_PHYLOLIB = params->loglh_epsilon;
     numSmoothTree = params->numSmoothTree;
@@ -1513,20 +1507,20 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
         }
         double newLH;
         if (params->nni5) {
-        	newLH = doNNISearch(pllInst, pllPartitions, FIVE_BRAN_OPT, nniList, &nni_count, &deltaNNI);
+        	newLH = doNNISearch(pllInst, pllPartitions, FIVE_BRAN_OPT, nniList, tabuNNIs, &nni_count, &deltaNNI);
         } else if (params->nni05) {
         	if (nni_count == 1) {
         		startNNI5 = true;
         	}
 			if (startNNI5) {
-				newLH = doNNISearch(pllInst, pllPartitions, FIVE_BRAN_OPT, nniList, &nni_count, &deltaNNI);
+				newLH = doNNISearch(pllInst, pllPartitions, FIVE_BRAN_OPT, nniList, tabuNNIs, &nni_count, &deltaNNI);
 			} else {
-				newLH = doNNISearch(pllInst, pllPartitions, NO_BRAN_OPT, nniList, &nni_count, &deltaNNI);
+				newLH = doNNISearch(pllInst, pllPartitions, NO_BRAN_OPT, nniList, tabuNNIs, &nni_count, &deltaNNI);
 			}
         } else {
-        	newLH = doNNISearch(pllInst, pllPartitions, ONE_BRAN_OPT, nniList, &nni_count, &deltaNNI);
+        	newLH = doNNISearch(pllInst, pllPartitions, ONE_BRAN_OPT, nniList, tabuNNIs, &nni_count, &deltaNNI);
         }
-        if (nni_count == 0) {
+        if (nni_count == 0) { // no positive NNI was found
         	curLH = newLH;
             break;
         } else {
@@ -1556,14 +1550,9 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
       pllTreeEvaluate(pllInst, pllPartitions, 2);
       curLH = pllInst->likelihood;
     }
-    //cout << "***********OUTSIDE NNISEARCH*************************" << endl;
     curNNIList.assign(nniList, nniList + nniListSize);
-//    for(std::vector<pllNNIMove>::iterator it = curNNIList.begin(); it != curNNIList.end(); ++it) {
-//        cout << (*it).p->number << "<-->" << (*it).p->back->number << endl;
-//    }
-    //cout << "*************************************" << endl;
-    //exit(0);
     delete [] nniList;
+    pllHashDestroy (&tabuNNIs, PLL_TRUE);
     return curLH;
 }
 
