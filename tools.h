@@ -1055,9 +1055,11 @@ struct Params {
      */
     bool SSE;
     /**
-            TRUE to print site log-likelihood
+     	 	0: do not print anything
+            1: print site log-likelihood
+            2: print site log-likelihood per Gamma category
      */
-    bool print_site_lh;
+    int print_site_lh;
 
     /**
             TRUE to print tree log-likelihood

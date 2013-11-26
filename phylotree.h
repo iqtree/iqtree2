@@ -463,8 +463,11 @@ public:
             Otherwise, copy the pattern_lh attribute
             @param pattern_lh (OUT) pattern log-likelihoods,
                             assuming pattern_lh has the size of the number of patterns
+            @param cur_logl current log-likelihood (for sanity check)
+            @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
      */
-    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
+    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
+    		double *pattern_lh_cat = NULL);
 
     /**
             Compute the variance in tree log-likelihood
@@ -1144,6 +1147,12 @@ protected:
      */
     double *_pattern_lh;
 
+    /**
+            internal pattern likelihoods per category, always stored after calling computeLikelihood()
+            or related functions. Note that scaling factors are not incorporated here.
+            If you want to get real pattern likelihoods, please use computePatternLikelihood()
+     */
+    double *_pattern_lh_cat;
 
     /**
             associated substitution model

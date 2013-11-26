@@ -123,6 +123,51 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 		delete[] pattern_lh;
 }
 
+void printSiteLhCategory(const char*filename, PhyloTree *tree) {
+	double *pattern_lh, *pattern_lh_cat;
+	int i;
+	int discrete_cat = tree->getRate()->getNDiscreteRate();
+	pattern_lh = new double[tree->getAlnNPattern()];
+	pattern_lh_cat = new double[tree->getAlnNPattern()*(discrete_cat)];
+	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat);
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+		out << "Note : P(D|M) is the probability of site D given the model M (i.e., the site likelihood)" << endl;
+		out << "P(D|M,rr[x]) is the probability of site D given the model M and the relative rate" << endl;
+		out << "of evolution rr[x], where x is the class of rate to be considered." << endl;
+		out << "We have P(D|M) = \\sum_x P(x) x P(D|M,rr[x])." << endl << endl;
+		out << "Site   logP(D|M)       ";
+		for (i = 0; i < discrete_cat; i++) {
+			out << "logP(D|M,rr[" << i+1 << "]=" << tree->getRate()->getRate(i)<< ") ";
+		}
+		out << endl;
+		IntVector pattern_index;
+		tree->aln->getSitePatternIndex(pattern_index);
+		for (i = 0; i < tree->getAlnNSite(); i++) {
+			out.width(6);
+			out << left << i+1 << " ";
+			out.width(15);
+			out << pattern_lh[pattern_index[i]] << " ";
+			for (int j = 0; j < discrete_cat; j++) {
+				out.width(15);
+				out << pattern_lh_cat[pattern_index[i]*discrete_cat+j] << " ";
+			}
+			out << endl;
+		}
+		out.close();
+		cout << "Site log-likelihoods per category printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+
+	delete[] pattern_lh_cat;
+	delete[] pattern_lh;
+
+}
+
 /**
  * check if the model file contains correct information
  * @param model_file model file names

@@ -924,7 +924,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 
         } else { // read sequence contents
             if (seq_names[seq_id] == "") { // cut out the sequence name
-                string::size_type pos = line.find(' ');
+                string::size_type pos = line.find_first_of(" \t");
                 if (pos == string::npos) pos = 10; //  assume standard phylip
                 seq_names[seq_id] = line.substr(0, pos);
                 line.erase(0, pos);

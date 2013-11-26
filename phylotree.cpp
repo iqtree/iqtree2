@@ -71,6 +71,7 @@ void PhyloTree::init() {
     tmp_scale_num2 = NULL;
     discard_saturated_site = true;
     _pattern_lh = NULL;
+    _pattern_lh_cat = NULL;
     root_state = STATE_UNKNOWN;
     theta_all = NULL;
     subTreeDistComputed = false;
@@ -120,6 +121,8 @@ PhyloTree::~PhyloTree() {
         delete[] tmp_anscentral_state_prob2;
     //if (tmp_ptn_rates)
     //	delete [] tmp_ptn_rates;
+    if (_pattern_lh_cat)
+        delete[] _pattern_lh_cat;
     if (_pattern_lh)
         delete[] _pattern_lh;
     //if (state_freqs)
@@ -1041,6 +1044,8 @@ void PhyloTree::initializeAllPartialLh() {
         tmp_scale_num2 = newScaleNum();
     if (!_pattern_lh)
         _pattern_lh = new double[aln->size()];
+    if (!_pattern_lh_cat)
+        _pattern_lh_cat = new double[aln->size() * site_rate->getNDiscreteRate()];
     if (!theta_all)
         theta_all = new double[block_size];
     initializeAllPartialLh(index);
@@ -1198,21 +1203,37 @@ double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *
     delete[] state_freq;
 }
 
-void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl) {
+void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat) {
     /*	if (!dad_branch) {
      dad_branch = (PhyloNeighbor*) root->neighbors[0];
      dad = (PhyloNode*) root;
      }*/
     int nptn = aln->getNPattern();
+    int i;
+    int ncat = site_rate->getNDiscreteRate();
+    if (ptn_lh_cat) {
+    	// Right now only Naive version store _pattern_lh_cat!
+    	computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
+    }
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
     //double sum_scaling = 0.0;
     if (sum_scaling < 0.0) {
-        for (int i = 0; i < nptn; i++) {
+        for (i = 0; i < nptn; i++) {
         	ptn_lh[i] = _pattern_lh[i] + (max(UBYTE(0), current_it->scale_num[i]) +
             	max(UBYTE(0), current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
         }
-    } else
+    } else {
         memmove(ptn_lh, _pattern_lh, nptn * sizeof(double));
+    }
+    if (ptn_lh_cat) {
+    	int offset = 0;
+        for (i = 0; i < nptn; i++) {
+        	double scale = (max(UBYTE(0), current_it->scale_num[i]) +
+	            	max(UBYTE(0), current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
+        	for (int j = 0; j < ncat; j++, offset++)
+        		ptn_lh_cat[offset] = log(_pattern_lh_cat[offset]) + scale;
+        }
+    }
     if (cur_logl) {
         double check_score = 0.0;
         for (int i = 0; i < nptn; i++) {
@@ -1836,6 +1857,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
                 }
             }
             lh_ptn += lh_cat;
+            _pattern_lh_cat[ptn * ncat + cat] = lh_cat;
             if (pattern_rate)
                 rate_ptn += lh_cat * site_rate->getRate(cat);
         }

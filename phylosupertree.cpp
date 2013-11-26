@@ -422,14 +422,18 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	return tree_lh;
 }
 
-void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_logl) {
-	int offset = 0;
+void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_logl, double *ptn_lh_cat) {
+	int offset = 0, offset_lh_cat = 0;
 	iterator it;
 	for (it = begin(); it != end(); it++) {
-		(*it)->computePatternLikelihood(pattern_lh + offset);
+		if (ptn_lh_cat)
+			(*it)->computePatternLikelihood(pattern_lh + offset, NULL, ptn_lh_cat + offset_lh_cat);
+		else
+			(*it)->computePatternLikelihood(pattern_lh + offset);
 		offset += (*it)->aln->getNPattern();
+		offset_lh_cat += (*it)->aln->getNPattern() * (*it)->site_rate->getNDiscreteRate();
 	}
-	if (cur_logl) {
+	if (cur_logl) { // sanity check
 		double sum_logl = 0;
 		offset = 0;
 		for (it = begin(); it != end(); it++) {

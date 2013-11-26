@@ -679,7 +679,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_replicates = 0;
     params.localbp_replicates = 0;
     params.SSE = true;
-    params.print_site_lh = false;
+    params.print_site_lh = 0;
     params.print_tree_lh = false;
     params.nni_lh = false;
     params.lambda = 1;
@@ -1462,7 +1462,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (params.localbp_replicates < 1000 && params.localbp_replicates != 0)
                     throw "Local bootstrap (LBP) replicates must be at least 1000";
             } else if (strcmp(argv[cnt], "-wsl") == 0) {
-                params.print_site_lh = true;
+                params.print_site_lh = 1;
+            } else if (strcmp(argv[cnt], "-wslg") == 0) {
+                params.print_site_lh = 2;
             } else if (strcmp(argv[cnt], "-wba") == 0) {
                 params.print_bootaln = true;
 			} else if (strcmp(argv[cnt],"-wsa") == 0) {
@@ -1967,10 +1969,11 @@ void usage_iqtree(char* argv[], bool full_command) {
 			cout << "                       min, mean, and max branch lengths of random trees." << endl;
 
 			cout << endl << "MISCELLANEOUS:" << endl
-            << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl;
+            << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
+            << "  -wslg                Writing site log-likelihoods per Gamma category" << endl;
 		    cout << "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl;
-		    cout << "  -stats <outfile>     Output some statistics about branch lengths on the tree" << endl;
-		    cout << "  -comp <treefile>     Compare the tree with each in the input trees" << endl;
+		    cout << "  -stats <outfile>     Output some statistics about branch lengths" << endl;
+		    cout << "  -comp <treefile>     Compare tree with each in the input trees" << endl;
 
 
 			cout << endl;
