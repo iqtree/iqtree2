@@ -70,11 +70,6 @@ inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
     return (a.lh_contribution < b.lh_contribution);
 }
 
-inline bool comparePllNniMove(const pllNNIMove &a, const pllNNIMove &b)
-{
-    return a.likelihood < b.likelihood;
-}
-
 /**
         Representative Leaf Set, stored as a multiset template of STL,
         sorted in ascending order of leaf's height
@@ -254,11 +249,10 @@ public:
     /**
      * 		Do fastNNI using PLL
      *
-     *      @param nni_count (OUT) the number of single NNI moves proceeded so far
-     * 		@param beginHeu whether the heuristic is started
-     * 		@param skipped (OUT) 1 if current iteration is skipped, otherwise 0
+     *      @param nniCount (OUT) number of NNIs applied
+     * 		@param nniSteps (OUT) number of NNI steps done
      */
-    double pllOptimizeNNI(int &nniCount, int &nniSteps, bool beginHeu = false, int *skipped = NULL);
+    double pllOptimizeNNI(int &nniCount, int &nniSteps);
 
     /**
      *   update bestNNIList and best tree topology (for PLL only)

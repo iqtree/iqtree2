@@ -6,12 +6,6 @@
 #include "pll/pll.h"
 #define GLOBAL_VARIABLES_DEFINITION
 #include "nnisearch.h"
-#include <string>
-#include <sstream>
-#include <set>
-#include <map>
-#include <vector>
-using namespace std;
 
 #if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/resource.h>
@@ -34,10 +28,6 @@ int numSmoothTree;
 int nni0;
 int nni5;
 /* program options */
-
-//pllNNIMove* nniList;
-
-
 
 static int cmp_nni(const void* nni1, const void* nni2) {
 	pllNNIMove* myNNI1 = (pllNNIMove*) nni1;
@@ -140,7 +130,7 @@ topol *_setupTopol(pllInstance* tr) {
 	return tree;
 }
 
-double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, pllNNIMove *outNNIList, struct pllHashTable *tabuNNIs, int* nni_count, double* deltaNNI) {
+double doNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo) {
 	double initLH = tr->likelihood;
 	double finalLH = initLH;
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
@@ -149,17 +139,10 @@ double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, pllNNIMov
 	topol* curTree = _setupTopol(tr);
 	saveTree(tr, curTree, numBranches);
 
-	/* Initialize the NNI list that holds information about 2n-6 NNI moves */
-	pllNNIMove nniList[2 * (tr->mxtips - 3)];
-	//pllNNIMove *nniList = new pllNNIMove[2 * (tr->mxtips - 3)];
-
-	/* Now fill up the NNI list */
-	int numBran = 0; // number of visited internal branches during NNI evaluation
-	int numPosNNI = 0; // number of positive NNI branhces found
 	nodeptr p = tr->start->back;
 	nodeptr q = p->next;
 	while (q != p) {
-		evalNNIForSubtree(tr, pr, q->back, nniList, searchType, &numBran, &numPosNNI, initLH);
+		evalNNIForSubtree(tr, pr, q->back, searchinfo);
 		q = q->next;
 		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 		if (numBranches > 1 && !tr->useRecom) {
@@ -169,38 +152,29 @@ double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, pllNNIMov
 		}
 	}
 
-	int totalNNIs = numBran;
-	/* Make sure all 2n-6 NNIs were evalauted */
-	assert(totalNNIs == (2 * (tr->mxtips - 3)));
-	if (numPosNNI == 0) {
-		for (int i = 0; i < totalNNIs; i++) {
-			outNNIList[i] = nniList[i];
-		}
-		*nni_count = numPosNNI;
-	} else  {
+	if (searchinfo.curNumPosNNIs != 0) {
 		/* Sort the NNI list ascendingly according to the log-likelihood */
-		qsort(nniList, totalNNIs, sizeof(pllNNIMove), cmp_nni);
+		sort(searchinfo.nniList.begin(), searchinfo.nniList.end(), comparePLLNNIMove);
 		/* list of independent positive NNI */
-		pllNNIMove selected_nnis[tr->mxtips - 3];
-		//pllNNIMove *selected_nnis = new pllNNIMove[tr->mxtips - 3];
+		vector<pllNNIMove> selectedNNIs;
 		/* The best NNI is the first to come to the list */
-		selected_nnis[0] = nniList[totalNNIs - 1];
+		selectedNNIs.push_back(searchinfo.nniList.back());
 		/* Subsequently add positive NNIs that are non-conflicting with the previous ones */
-		int numInNNI = 1; // size of the existing non-conflicting NNIs in the list;
-		int k;
-		for (k = totalNNIs - 2; k > totalNNIs - numPosNNI - 1; k--) {
+		int totalNNIs = searchinfo.nniList.size();
+		int numPosNNI = searchinfo.curNumPosNNIs;
+		for (int k = totalNNIs - 2; k > totalNNIs - numPosNNI - 1; k--) {
 			int conflict = PLL_FALSE;
 			/* Go through all the existing non-conflicting NNIs to check whether the next NNI will conflict with one of them */
 			int j;
-			for (j = 0; j < numInNNI; j++) {
-				if (nniList[k].p->number == selected_nnis[j].p->number
-						|| nniList[k].p->number == selected_nnis[j].p->back->number) {
+			for (j = 0; j < selectedNNIs.size(); j++) {
+				if (searchinfo.nniList[k].p->number == selectedNNIs[j].p->number
+						|| searchinfo.nniList[k].p->number == selectedNNIs[j].p->back->number) {
 					conflict = PLL_TRUE;
 					break;
 				}
-				if (nniList[k].p->back->number == selected_nnis[j].p->number
-						|| nniList[k].p->back->number
-								== selected_nnis[j].p->back->number) {
+				if (searchinfo.nniList[k].p->back->number == selectedNNIs[j].p->number
+						|| searchinfo.nniList[k].p->back->number
+								== selectedNNIs[j].p->back->number) {
 					conflict = PLL_TRUE;
 					break;
 				}
@@ -208,26 +182,19 @@ double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, pllNNIMov
 			if (conflict) {
 				continue;
 			} else {
-				selected_nnis[numInNNI] = nniList[k];
-				nniList[k].selected = PLL_TRUE;
-				numInNNI++;
+				selectedNNIs.push_back(searchinfo.nniList[k]);
 			}
 		}
 
-		/* copy the nni list to the out variable */
-		for (int i = 0; i < totalNNIs; i++) {
-			outNNIList[i] = nniList[i];
-		}
-
 		/* Applying all independent NNI moves */
-		int numNNI = numInNNI;
+		searchinfo.curNumAppliedNNIs = selectedNNIs.size();
 		int MAXROLLBACK = 2;
 		int step;
 		for (step = 1; step <= MAXROLLBACK; step++) {
 			int i;
-			for (i = 0; i < numNNI; i++) {
+			for (i = 0; i < searchinfo.curNumAppliedNNIs; i++) {
 				/* do the topological change */
-				doOneNNI(tr, pr, selected_nnis[i].p, selected_nnis[i].nniType, TOPO_ONLY);
+				doOneNNI(tr, pr, selectedNNIs[i].p, selectedNNIs[i].nniType, TOPO_ONLY);
 //				printf(" Do NNI on branch: (%d-%d-%d) <-> (%d-%d-%d) / logl :%10.6f / length:%10.6f \n",
 //						nnis[i].p->next->back->number, nnis[i].p->number,
 //						nnis[i].p->next->next->back->number,
@@ -238,33 +205,33 @@ double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, pllNNIMov
 				/*  apply branch lengths */
 				int j;
 				for (j = 0; j < numBranches; j++) {
-					selected_nnis[i].p->z[j] = selected_nnis[i].z0[j];
-					selected_nnis[i].p->back->z[j] = selected_nnis[i].z0[j];
-					selected_nnis[i].p->next->z[j] = selected_nnis[i].z1[j];
-					selected_nnis[i].p->next->back->z[j] = selected_nnis[i].z1[j];
-					selected_nnis[i].p->next->next->z[j] = selected_nnis[i].z2[j];
-					selected_nnis[i].p->next->next->back->z[j] = selected_nnis[i].z2[j];
-					selected_nnis[i].p->back->next->z[j] = selected_nnis[i].z3[j];
-					selected_nnis[i].p->back->next->back->z[j] = selected_nnis[i].z3[j];
-					selected_nnis[i].p->back->next->next->z[j] = selected_nnis[i].z4[j];
-					selected_nnis[i].p->back->next->next->back->z[j] = selected_nnis[i].z4[j];
+					selectedNNIs[i].p->z[j] = selectedNNIs[i].z0[j];
+					selectedNNIs[i].p->back->z[j] = selectedNNIs[i].z0[j];
+					selectedNNIs[i].p->next->z[j] = selectedNNIs[i].z1[j];
+					selectedNNIs[i].p->next->back->z[j] = selectedNNIs[i].z1[j];
+					selectedNNIs[i].p->next->next->z[j] = selectedNNIs[i].z2[j];
+					selectedNNIs[i].p->next->next->back->z[j] = selectedNNIs[i].z2[j];
+					selectedNNIs[i].p->back->next->z[j] = selectedNNIs[i].z3[j];
+					selectedNNIs[i].p->back->next->back->z[j] = selectedNNIs[i].z3[j];
+					selectedNNIs[i].p->back->next->next->z[j] = selectedNNIs[i].z4[j];
+					selectedNNIs[i].p->back->next->next->back->z[j] = selectedNNIs[i].z4[j];
 				}
 				/* update partial likelihood */
 				if (numBranches > 1 && !tr->useRecom) {
-					pllNewviewGeneric(tr, pr, selected_nnis[i].p, PLL_TRUE);
-					pllNewviewGeneric(tr, pr, selected_nnis[i].p->back, PLL_TRUE);
+					pllNewviewGeneric(tr, pr, selectedNNIs[i].p, PLL_TRUE);
+					pllNewviewGeneric(tr, pr, selectedNNIs[i].p->back, PLL_TRUE);
 				} else {
-					pllNewviewGeneric(tr, pr, selected_nnis[i].p, PLL_FALSE);
-					pllNewviewGeneric(tr, pr, selected_nnis[i].p->back, PLL_FALSE);
+					pllNewviewGeneric(tr, pr, selectedNNIs[i].p, PLL_FALSE);
+					pllNewviewGeneric(tr, pr, selectedNNIs[i].p->back, PLL_FALSE);
 				}
 			}
 			pllTreeEvaluate(tr, pr, 1);
 			/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
-			if (tr->likelihood < selected_nnis[0].likelihood) {
-				if (numNNI == 1) {
+			if (tr->likelihood < selectedNNIs[0].likelihood) {
+				if (searchinfo.curNumAppliedNNIs == 1) {
 					printf(
 							"ERROR: new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
-							tr->likelihood, selected_nnis[0].likelihood);
+							tr->likelihood, selectedNNIs[0].likelihood);
 					exit(1);
 				}
 				if (!restoreTree(curTree, tr, pr)) {
@@ -272,27 +239,21 @@ double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, pllNNIMov
 					exit(1);
 				}
 				/* Only apply the best NNI after the tree has been rolled back */
-				numNNI = 1;
+				searchinfo.curNumAppliedNNIs  = 1;
 			} else {
-				if (tr->likelihood - initLH < 0.01) {
+				if (tr->likelihood - initLH < 0.1) {
 					if (!restoreTree(curTree, tr, pr)) {
 						printf("ERROR: failed to roll back tree \n");
 						exit(1);
 					}
-					for (int i = 0; i < totalNNIs; i++) {
-						outNNIList[i] = nniList[i];
-					}
-					numNNI = 0;
+					searchinfo.curNumAppliedNNIs = 0;
 				}
 				break;
 			}
-			//delete [] selected_nnis;
 		}
-		*nni_count = numNNI;
-		*deltaNNI = (tr->likelihood - initLH) / numNNI;
 		finalLH = tr->likelihood;
-		//delete [] nniList;
-		//printf("numNNI = %d / logl = %10.4f \n", numNNI, tr->likelihood);
+	} else {
+		searchinfo.curNumAppliedNNIs = 0;
 	}
 	return finalLH;
 }
@@ -457,17 +418,17 @@ string convertQuartet2String(nodeptr p) {
 	return res.str();
 }
 
-int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nniList, int searchType, int* numBran, double curLH) {
+int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
 	nodeptr q = p->back;
 	assert(!isTip(p->number, tr->mxtips));
 	assert(!isTip(q->number, tr->mxtips));
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
-	int betterNNI = 0;
+	int numPosNNI = 0;
 	int i;
 	pllNNIMove nni0; // dummy NNI to store backup information
 	nni0.p = p;
 	nni0.nniType = 0;
-	nni0.likelihood = curLH;
+	nni0.likelihood = searchinfo.curLogl;
 	for (i = 0; i < numBranches; i++) {
 		nni0.z0[i] = p->z[i];
 		nni0.z1[i] = p->next->z[i];
@@ -477,7 +438,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 	}
 
 	/* do an NNI move of type 1 */
-	double lh1 = doOneNNI(tr, pr, p, 1, searchType);
+	double lh1 = doOneNNI(tr, pr, p, 1, searchinfo.evalType);
 	pllNNIMove nni1;
 	nni1.p = p;
 	nni1.nniType = 1;
@@ -491,10 +452,12 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 	}
 	nni1.likelihood = lh1;
 
-	nniList[*numBran] = nni1;
+	searchinfo.nniList.push_back(nni1);
+	//nniList[*numBran] = nni1;
 
-	if (nni1.likelihood > curLH) {
-		betterNNI = 1;
+	if (nni1.likelihood > searchinfo.curLogl) {
+		numPosNNI++;
+		searchinfo.curNumPosNNIs++;
 	}
 
 	/* Restore previous NNI move */
@@ -514,7 +477,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 	}
 
 	/* do an NNI move of type 2 */
-	double lh2 = doOneNNI(tr, pr, p, 2, searchType);
+	double lh2 = doOneNNI(tr, pr, p, 2, searchinfo.evalType);
 	// Create the nniMove struct to store this move
 	pllNNIMove nni2;
 	nni2.p = p;
@@ -529,10 +492,11 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
 	}
 	nni2.likelihood = lh2;
 
-	nniList[*numBran + 1] = nni2;
-
-	if (nni2.likelihood > curLH) {
-		betterNNI = 1;
+	//nniList[*numBran + 1] = nni2;
+	searchinfo.nniList.push_back(nni2);
+	if (nni2.likelihood > searchinfo.curLogl) {
+		numPosNNI++;
+		searchinfo.curNumPosNNIs++;
 	}
 
 	/* Restore previous NNI move */
@@ -550,135 +514,13 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nn
       q->next->next->z[i] = nni0.z4[i];
       q->next->next->back->z[i] = nni0.z4[i];
   }
-	return betterNNI;
+	return numPosNNI;
 }
 
-/*int test_nni(int argc, char * argv[])
- {
- struct rusage usage;
- struct timeval start, end;
- struct timeval start_tmp, end_tmp;
- getrusage(RUSAGE_SELF, &usage);
- start = usage.ru_utime;
- tree        * tr;
- if (argc < 2)
- {
- fprintf (stderr, "syntax: %s [binary-alignment-file] [prefix] \n", argv[0]);
- return (1);
- }
- tr = (tree *)malloc(sizeof(tree));
-
- read the binary input, setup tree, initialize model with alignment
- read_msa(tr,argv[1]);
-
- tr->randomNumberSeed = 665;
-
- Create random tree
- //makeRandomTree(tr);
- //printf("RANDOM TREE: Number of taxa: %d\n", tr->mxtips);
- //printf("RANDOM TREE: Number of partitions: %d\n", tr->NumberOfModels);
-
- printf("Creating parsimony tree ...\n");
- getrusage(RUSAGE_SELF, &usage);
- start_tmp = usage.ru_utime;
- makeParsimonyTree(tr);
- getrusage(RUSAGE_SELF, &usage);
- end_tmp = usage.ru_utime;
- printf("Parsimony tree created in %f seconds \n", (double) end_tmp.tv_sec + end_tmp.tv_usec/1.0e6 - start_tmp.tv_sec - start_tmp.tv_usec/1.0e6);
-
- //printf("PARSIMONY TREE: Number of taxa: %d\n", tr->mxtips);
- //printf("PARSIMONY TREE: Number of partitions: %d\n", tr->NumberOfModels);
-
- compute the LH of the full tree
- //printf ("Virtual root: %d\n", tr->start->number);
-
- int printBranchLengths=TRUE;
- Tree2String(tr->tree_string, tr, tr->start->back, printBranchLengths, TRUE, 0, 0, 0, SUMMARIZE_LH, 0,0);
- //fprintf(stderr, "%s\n", tr->tree_string);
- char parTree[100];
- strcpy (parTree, argv[1]);
- strcat(parTree,".parsimony_tree");
- FILE *parTreeFile = fopen(parTree, "w");
- fprintf(parTreeFile, "%s\n", tr->tree_string);
- fclose(parTreeFile);
-
- Model optimization
- printf("Optimizing model parameters and branch lengths ... \n");
- getrusage(RUSAGE_SELF, &usage);
- start_tmp = usage.ru_utime;
- modOpt(tr, 0.1);
- getrusage(RUSAGE_SELF, &usage);
- end_tmp = usage.ru_utime;
- printf("Model parameters and branch lengths optimized in %f seconds \n", (double) end_tmp.tv_sec + end_tmp.tv_usec/1.0e6 - start_tmp.tv_sec - start_tmp.tv_usec/1.0e6);
- evaluateGeneric(tr, tr->start, FALSE);
- printf("Likelihood of the parsimony tree: %f\n", tr->likelihood);
-
- 8 rounds of branch length optimization
- //smoothTree(tr, 32);
- //evaluateGeneric(tr, tr->start, TRUE);
- //printf("Likelihood after branch length optimization: %f\n", tr->likelihood);
- //printBranchLengths=TRUE;
- //Tree2String(tr->tree_string, tr, tr->start->back, printBranchLengths, FALSE, 0, 0, 0, SUMMARIZE_LH, 0,0);
- //fprintf(stderr, "%s\n", tr->tree_string);
-
-
- int foundNNI=TRUE;
- int nniRound=1;
- printf("Starting the first NNI search ... \n");
- getrusage(RUSAGE_SELF, &usage);
- start_tmp = usage.ru_utime;
- double curLH = tr->likelihood;
- while (TRUE) {
- double newLH = doNNISearch(tr);
- if (newLH == 0.0) {
- break;
- } else {
- printf("Likelihood after doing NNI round %d = %f\n", nniRound, newLH);
- //if (newLH - curLH < 0.001)
- //break;
- curLH = newLH;
- nniRound++;
- }
-
- }
- getrusage(RUSAGE_SELF, &usage);
- end_tmp = usage.ru_utime;
- printf("First NNI search finished in %f seconds \n", (double) end_tmp.tv_sec + end_tmp.tv_usec/1.0e6 - start_tmp.tv_sec - start_tmp.tv_usec/1.0e6);
-
- printf("Optimizing model parameters and branch lengths ... \n");
- getrusage(RUSAGE_SELF, &usage);
- start_tmp = usage.ru_utime;
- modOpt(tr, 0.1);
- getrusage(RUSAGE_SELF, &usage);
- end_tmp = usage.ru_utime;
- printf("Model parameters and branch lengths optimized in %f seconds \n", (double) end_tmp.tv_sec + end_tmp.tv_usec/1.0e6 - start_tmp.tv_sec - start_tmp.tv_usec/1.0e6);
- evaluateGeneric(tr, tr->start, FALSE);
- printf("Likelihood after model optimization: %f\n", tr->likelihood);
- Tree2String(tr->tree_string, tr, tr->start->back, printBranchLengths, TRUE, 0, 0, 0, SUMMARIZE_LH, 0,0);
- char resultFile[100];
- strcpy (resultFile, argv[1]);
- strcat(resultFile,".result");
- FILE *treefile = fopen(resultFile, "w");
- fprintf(treefile, "%s\n", tr->tree_string);
- getrusage(RUSAGE_SELF, &usage);
- end = usage.ru_utime;
- printf("CPU time = %f seconds \n", (double) end.tv_sec + end.tv_usec/1.0e6 - start.tv_sec - start.tv_usec/1.0e6);
- printf("Result tree written to %s \n", resultFile);
- //printTopology(tr, TRUE);
- fclose(treefile);
- return (0);
- }*/
-
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove* nniList, int searchType, int* numBran, int* numPosNNI,
-		double curLH) {
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
 	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
-		int betterNNI = evalNNIForBran(tr, pr, p, nniList, searchType, numBran, curLH);
-		if (betterNNI) {
-			*numPosNNI = *numPosNNI + 1;
-		}
-		*numBran = *numBran + 2;
+		evalNNIForBran(tr, pr, p, searchinfo);
 		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
-
 		nodeptr q = p->next;
 		while (q != p) {
 			if (numBranches > 1 && !tr->useRecom) {
@@ -686,7 +528,7 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIMove
 			} else {
 				pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
 			}
-			evalNNIForSubtree(tr, pr, q->back, nniList, searchType, numBran, numPosNNI, curLH);
+			evalNNIForSubtree(tr, pr, q->back, searchinfo);
 			if (numBranches > 1 && !tr->useRecom) {
 				pllNewviewGeneric(tr, pr, p, PLL_TRUE);
 			} else {

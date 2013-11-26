@@ -883,7 +883,7 @@ double IQTree::pllDoGuidedPerturbation() {
 		candidateNNIs.push_back(bestNNIList[nni_index]);
 	}
 
-	sort(candidateNNIs.begin(), candidateNNIs.end(), comparePllNniMove);
+	sort(candidateNNIs.begin(), candidateNNIs.end(), comparePLLNNIMove);
 
 	vector<pllNNIMove> nni2perturb;
 
@@ -1129,21 +1129,20 @@ double IQTree::doIQPNNI() {
 				}
 
 				if (params->pll) {
-					curScore = pllOptimizeNNI(nni_count, nni_steps, true, &skipped);
+					curScore = pllOptimizeNNI(nni_count, nni_steps);
 				} else {
 					curScore = optimizeNNI(nni_count, nni_steps, true, &skipped);
 				}
 			} else {
 				if (params->pll) {
-					curScore = pllOptimizeNNI(nni_count, nni_steps, false, &skipped);
+					curScore = pllOptimizeNNI(nni_count, nni_steps);
 				} else {
 					curScore = optimizeNNI(nni_count, nni_steps, false, &skipped);
 				}
 			}
 		} else {
 			if (params->pll) {
-				// Start NNI search using Phylolib kernel
-				curScore = pllOptimizeNNI(nni_count, nni_steps, false, &skipped);
+				curScore = pllOptimizeNNI(nni_count, nni_steps);
 			} else {
 				curScore = optimizeNNI(nni_count, nni_steps, false, &skipped);
 			}
@@ -1476,84 +1475,53 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
     return curScore;
 }
 
-extern double TOL_LIKELIHOOD_PHYLOLIB;
-extern int numSmoothTree;
 
-double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, int *skipped) {
-    int nniListSize = 2 * pllInst->mxtips - 6;
-    pllNNIMove *nniList = new pllNNIMove[nniListSize];
-    struct pllHashTable *tabuNNIs = pllHashInit (nniListSize);
-    double curLH = pllInst->likelihood;
-    TOL_LIKELIHOOD_PHYLOLIB = params->loglh_epsilon;
-    numSmoothTree = params->numSmoothTree;
+double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps) {
+	SearchInfo searchinfo;
+	searchinfo.numAppliedNNIs = 0;
+	searchinfo.curLogl = pllInst->likelihood;
     const int MAX_NNI_STEPS = 50;
-    int nni_count;
     totalNNICount = 0;
     nniSteps = 0;
-    double deltaNNI;
     bool startNNI5 = false;
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
-        if (beginHeu) {
-            double maxScore = curLH + nni_delta_est * (nni_count_est - totalNNICount);
-            if (maxScore < curLH) {
-                beginHeu = false;
-            } else {
-                if (maxScore <= bestScore) {
-                    if (skipped)
-                        *skipped = 1;
-                    return curLH;
-                }
-            }
-        }
+        searchinfo.curNumPosNNIs = 0;
+        searchinfo.curNumNNISteps = nniSteps;
         double newLH;
         if (params->nni5) {
-        	newLH = doNNISearch(pllInst, pllPartitions, FIVE_BRAN_OPT, nniList, tabuNNIs, &nni_count, &deltaNNI);
+        	searchinfo.evalType = FIVE_BRAN_OPT;
+        	newLH = doNNISearch(pllInst, pllPartitions, searchinfo);
         } else if (params->nni05) {
-        	if (nni_count == 1) {
+        	if (searchinfo.curNumAppliedNNIs == 1) {
         		startNNI5 = true;
         	}
 			if (startNNI5) {
-				newLH = doNNISearch(pllInst, pllPartitions, FIVE_BRAN_OPT, nniList, tabuNNIs, &nni_count, &deltaNNI);
+				searchinfo.evalType = FIVE_BRAN_OPT;
+				newLH = doNNISearch(pllInst, pllPartitions, searchinfo);
 			} else {
-				newLH = doNNISearch(pllInst, pllPartitions, NO_BRAN_OPT, nniList, tabuNNIs, &nni_count, &deltaNNI);
+				searchinfo.evalType = NO_BRAN_OPT;
+				newLH = doNNISearch(pllInst, pllPartitions, searchinfo);
 			}
         } else {
-        	newLH = doNNISearch(pllInst, pllPartitions, ONE_BRAN_OPT, nniList, tabuNNIs, &nni_count, &deltaNNI);
+        	searchinfo.evalType = ONE_BRAN_OPT;
+        	newLH = doNNISearch(pllInst, pllPartitions, searchinfo);
         }
-        if (nni_count == 0) { // no positive NNI was found
-        	curLH = newLH;
+        if (searchinfo.curNumAppliedNNIs == 0) { // no positive NNI was found
+        	searchinfo.curLogl = newLH;
             break;
         } else {
-        	curLH = newLH;
-            if (enableHeuris && curIteration > 1) {
-                if (vecImpProNNI.size() < 1000) {
-                    vecImpProNNI.push_back(deltaNNI);
-                } else {
-                    vecImpProNNI.erase(vecImpProNNI.begin());
-                    vecImpProNNI.push_back(deltaNNI);
-                }
-            }
-            totalNNICount += nni_count;
+        	searchinfo.curLogl = newLH;
+        	searchinfo.numAppliedNNIs += searchinfo.curNumAppliedNNIs;
         }
     }
 
-    if (enableHeuris && curIteration > 1) {
-        if (vecNumNNI.size() < 1000) {
-            vecNumNNI.push_back(totalNNICount);
-        } else {
-            vecNumNNI.erase(vecNumNNI.begin());
-            vecNumNNI.push_back(totalNNICount);
-        }
-    }
-
-    if (abs(curLH - bestScore) < 1.0 || curLH > bestScore) {
+    if (abs(searchinfo.curLogl - bestScore) < 1.0 || searchinfo.curLogl > bestScore) {
       pllTreeEvaluate(pllInst, pllPartitions, 2);
-      curLH = pllInst->likelihood;
+      searchinfo.curLogl = pllInst->likelihood;
     }
-    curNNIList.assign(nniList, nniList + nniListSize);
-    delete [] nniList;
-    pllHashDestroy (&tabuNNIs, PLL_TRUE);
-    return curLH;
+    //curNNIList.assign(nniList, nniList + nniListSize);
+    totalNNICount = searchinfo.numAppliedNNIs;
+    return searchinfo.curLogl;
 }
 
 void IQTree::pllUpdateBestTree() {
@@ -1562,16 +1530,16 @@ void IQTree::pllUpdateBestTree() {
 	}
 	saveTree(pllInst, pllBestTree, pllPartitions->numberOfPartitions);
 	bestNNIList.assign(curNNIList.begin(), curNNIList.end());
-	sort(bestNNIList.begin(), bestNNIList.end(), comparePllNniMove);
+	sort(bestNNIList.begin(), bestNNIList.end(), comparePLLNNIMove);
 //	for (vector<pllNNIMove>::iterator it = bestNNIList.begin(); it != bestNNIList.end(); it++) {
 //		cout << (*it).likelihood << endl;
 //	}
 //	exit(0);
-	accumLHList.clear();
-	accumLHList.push_back(bestNNIList[1].likelihood - bestNNIList.front().likelihood);
-	for (int i = 2; i < bestNNIList.size(); i++) {
-		accumLHList.push_back(accumLHList.back() + bestNNIList[i].likelihood - bestNNIList.front().likelihood);
-	}
+//	accumLHList.clear();
+//	accumLHList.push_back(bestNNIList[1].likelihood - bestNNIList.front().likelihood);
+//	for (int i = 2; i < bestNNIList.size(); i++) {
+//		accumLHList.push_back(accumLHList.back() + bestNNIList[i].likelihood - bestNNIList.front().likelihood);
+//	}
 }
 
 void IQTree::applyNNIs(int nni2apply, bool changeBran) {
