@@ -31,7 +31,6 @@
 
 #include "pll/pll.h"
 #include "nnisearch.h"
-#include "strmap.h"
 
 typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;

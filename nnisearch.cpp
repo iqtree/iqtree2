@@ -10,17 +10,6 @@
 #if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/resource.h>
 #endif
-/**
- verbose mode, determine how verbose should the screen be printed.
- */
-enum VerboseMode {
-	VB_QUIET, VB_MIN, VB_MED, VB_MAX, VB_DEBUG
-};
-
-/**
- verbose level on the screen
- */
-extern int verbose_mode;
 
 /* program options */
 double TOL_LIKELIHOOD_PHYLOLIB;

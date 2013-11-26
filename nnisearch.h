@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "tools.h"
 #include "pll/pll.h"
 #include <string>
 #include <sstream>
@@ -70,8 +71,13 @@ typedef struct {
 	int doNNICut;
 } NNICUT;
 
+typedef unordered_map<string, pllNNIMove> quartetList;
+typedef quartetList::value_type ValuePair;
+
+
 typedef struct {
 	vector<pllNNIMove> nniList;
+	quartetList tabuQuartet;
 	double curLogl;
 	int evalType;
 	int numAppliedNNIs; // total number of applied NNIs sofar
