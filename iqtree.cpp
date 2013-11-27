@@ -1664,10 +1664,7 @@ extern "C" int nni1;
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, int *skipped) {
 	pllInitUFBootData();
-	if (pllTmpTree == NULL) {
-		pllTmpTree = setupTopol(pllInst->mxtips);
-	}
-    if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
+	if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
         estDeltaMin();
         cout << "delta_min = " << nnicut.delta_min << endl;
     }
