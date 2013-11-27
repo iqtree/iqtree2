@@ -22,6 +22,7 @@
 #include "phylosupertreeplen.h"
 #include "mexttree.h"
 #include "timeutil.h"
+#include <numeric>
 
 extern double t_begin;
 
@@ -40,7 +41,6 @@ void IQTree::init() {
     curScore = 0.0; // Current score of the tree
     bestScore = -DBL_MAX; // Best score found so far
     pllBestTree = NULL;
-    pllTmpTree = NULL;
     curIteration = 1;
     cur_pars_score = -1;
     enable_parsimony = false;
@@ -168,7 +168,6 @@ void IQTree::setParams(Params &params) {
         if (root_state < 0 || root_state >= aln->num_states)
             outError("Invalid root state");
     }
-    intesifyPertubListSize = ( (aln->getNSeq()-3)/params.pertubSize + 1) * params.pertubSize;
 }
 
 IQTree::~IQTree() {
@@ -1040,69 +1039,48 @@ double IQTree::perturb(int times) {
 }
 
 double IQTree::pllDoGuidedPerturbation() {
+	// List of NNI moves that are going to be applied at this pertubation
+	vector<pllNNIMove> candidateNNIs;
+	int numIntBran = aln->getNSeq() - 3;
+	int perturbSize = (int) (params->pertubSize * numIntBran);
+	double range = accumLHList.back() - accumLHList.front();
+	double min = accumLHList.front();
 
-	// If we have all used the NNIs in perturbNNIList, reset it to bestNNIList
-	if (perturbNNIList.size() == bestNNIList.size() - intesifyPertubListSize) {
-		perturbNNIList = bestNNIList;
-		diversification = true;
-		//params->pertubSize = 20;
+	for (int i = 0; i < perturbSize; i++) {
+		double num = range * ( (double)rand() / (double)RAND_MAX ) + min;
+		vector<double>::iterator up;
+		up = upper_bound(accumLHList.begin(), accumLHList.end(), num);
+		int nni_index = (up - accumLHList.begin()) + 1;
+		candidateNNIs.push_back(bestNNIList[nni_index]);
 	}
 
-	// List of NNI moves that are going to be applied in the next perturbation
+	sort(candidateNNIs.begin(), candidateNNIs.end(), comparePllNniMove);
+
 	vector<pllNNIMove> nni2perturb;
 
-	int pos = perturbNNIList.size();
-	// Select the top perturbSize NNI
-	for (int i = 0; i < 10; i++) {
-		bool conflict;
-		do {
-			conflict = false;
-			// At diversification stage, choose NNI randomly
-			if (diversification) {
-				cout << "Start diversification " << endl;
-				//exit(0);
-				int max = perturbNNIList.size() - 1;
-				int min = 0;
-				pos = (rand() / ((double) RAND_MAX + 1)) * (max-min+1) + min; // formula to generate uniformly distributed numbers
-			} else {
-				// If at intensification step, simply take the next best NNI
-				pos--;
-			}
-			assert(pos >= 0);
-			// We don't have to check for conflict with the fist NNI in nni2perturb because the list is still empty;
-			if ( i == 0)
-				break;
+    for (vector<pllNNIMove>::reverse_iterator it = candidateNNIs.rbegin(); it != candidateNNIs.rend(); ++it) {
+        bool choosen = true;
+        for (vector<pllNNIMove>::iterator it2 = nni2perturb.begin(); it2 != nni2perturb.end(); it2++) {
+            if ((*it).p->number == (*it2).p->number || (*it).p->number == (*it2).p->back->number
+                    || (*it).p->back->number == (*it2).p->number || (*it).p->back->number == (*it2).p->back->number) {
+                choosen = false;
+                break;
+            }
+        }
+        if (choosen) {
+            nni2perturb.push_back(*it);
+            //cout << nni2perturb.back().likelihood << endl;
+        }
+    }
 
-			// Now make sure that the to-be-added NNI does not conflict with other NNIs already in the list
-			for (int j = 0; j < nni2perturb.size(); j++) {
-				if (nni2perturb[j].p->number == perturbNNIList[pos].p->number || nni2perturb[j].p->number == perturbNNIList[pos].p->back->number) {
-					conflict = true;
-					break;
-				}
-				if (nni2perturb[j].p->back->number == perturbNNIList[pos].p->number || nni2perturb[j].p->back->number == perturbNNIList[pos].p->back->number) {
-					conflict = true;
-					break;
-				}
-			}
-			//cout << "Shit happened" << endl;
-		} while (conflict);
-
-		nni2perturb.push_back(perturbNNIList[pos]);
-		if (!diversification) {
-			perturbNNIList.erase(perturbNNIList.begin() + pos);
-		}
-	}
-	int curPerturbSize = nni2perturb.size();
-	pllNNIMove *_nni2perturb = &nni2perturb[0];
-
-	curScore = perturbTree(pllInst, pllPartitions, _nni2perturb, curPerturbSize);
-	//delete _nni2perturb;
+	curScore = perturbTree(pllInst, pllPartitions, &nni2perturb[0], nni2perturb.size());
 	return curScore;
 }
 
 extern "C" pllUFBootData * pllUFBootDataPtr;
 
 double IQTree::doIQPNNI() {
+	/*
 	if (params->ilsnni) {
 		// read in the tree topology from PLL
 		int printBranchLengths = PLL_TRUE;
@@ -1116,6 +1094,7 @@ double IQTree::doIQPNNI() {
 		setRootNode(params->root);
 		setAlignment(aln);
 	}
+	*/
 
 	//double bestIQPScore = -DBL_MAX + 100;
 	if (testNNI) {
@@ -1256,7 +1235,8 @@ double IQTree::doIQPNNI() {
 						cout << "LH IQP = " << curScore << endl;
 					}
 				} else if (params->ilsnni) {
-					pllDoGuidedPerturbation();
+					curScore = pllDoGuidedPerturbation();
+					iqpScore = curScore;
 				} else { // PLL enabled
 					doIQP();
 					stringstream iqp_tree_string;
@@ -1270,11 +1250,6 @@ double IQTree::doIQPNNI() {
 					}
 					pllTreeEvaluate(pllInst, pllPartitions, 1);
 					pllNewickParseDestroy(&iqpTree);
-
-//					int printBranchLengths = PLL_TRUE;
-//					Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths, PLL_TRUE, 0,
-//							0, 0, PLL_SUMMARIZE_LH, 0, 0);
-//					iqpTree(pllInst->tree_string);
 					curScore = pllInst->likelihood;
 					iqpScore = curScore;
 				}
@@ -1291,7 +1266,7 @@ double IQTree::doIQPNNI() {
 		}
 
 		int skipped = 0;
-		int nni_count;
+		int nni_count = 0;
 		int nni_steps;
 		if (enableHeuris) {
 			if (curIteration > params->speedup_iter) {
@@ -1305,7 +1280,7 @@ double IQTree::doIQPNNI() {
 				} else {
 					double nni_count_est95 = estN95();
 					double nni_delta_est95 = estDelta95();
-					double nni_count_estMedian = estNMedian();
+					double nni_count_estMedian = getAvgNumNNI();
 					double nni_delta_estMedian = estDeltaMedian();
 					double maxScore1 = nni_delta_est95 * nni_count_estMedian;
 					double maxScore2 = nni_delta_estMedian * nni_count_est95;
@@ -1405,7 +1380,7 @@ double IQTree::doIQPNNI() {
 			printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
 		}
 
-		if (curScore > bestScore + 1e-3) {
+		if (curScore > bestScore) {
 			if (params->pll) {
 				// read new best tree into IQTree's kernel
 				int printBranchLengths = PLL_TRUE;
@@ -1420,36 +1395,35 @@ double IQTree::doIQPNNI() {
 				setAlignment(aln);
 			}
 
-			//curScore = optimizeAllBranches(100, 0.0001);
+			best_tree_string.seekp(0, ios::beg);
+			printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+			if (params->write_best_trees) {
+				ostringstream iter_string;
+				iter_string << curIteration;
+				printResultTree(iter_string.str());
+			}
+			printResultTree();
+
 			stringstream cur_tree_topo_ss;
 			printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
 			if (cur_tree_topo_ss.str() != best_tree_topo) {
 				// Save the best tree topology
-				if (params->ilsnni) {
-					if (pllBestTree == NULL) {
-						pllBestTree = setupTopol(pllInst->mxtips);
-					}
-					saveTree(pllInst, pllBestTree, pllPartitions->numberOfPartitions);
-
-					// update the bestNNIList and perturbNNIList
-					bestNNIList.assign(curNNIList.begin(), curNNIList.end());
-					perturbNNIList.assign(curNNIList.begin(), curNNIList.end());
-				}
+				pllUpdateBestTree();
 				if (!params->pll) {
 					curScore = optimizeAllBranches();
+					//cout << "Saving new better tree ..." << endl;
+					best_tree_string.seekp(0, ios::beg);
+					printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+					if (params->write_best_trees) {
+						ostringstream iter_string;
+						iter_string << curIteration;
+						printResultTree(iter_string.str());
+					}
+					printResultTree();
 				}
+				bestScore = curScore;
 				best_tree_topo = cur_tree_topo_ss.str();
 				cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore << endl;
-				//cout << "Saving new better tree ..." << endl;
-				bestScore = curScore;
-				best_tree_string.seekp(0, ios::beg);
-				printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-				if (params->write_best_trees) {
-					ostringstream iter_string;
-					iter_string << curIteration;
-					printResultTree(iter_string.str());
-				}
-				printResultTree();
 				stop_rule.addImprovedIteration(curIteration);
 			} else {
 				// higher likelihood but the same tree topology
@@ -1473,13 +1447,9 @@ double IQTree::doIQPNNI() {
 					clearAllPartialLH();
 				}
 			} else {
-				//cout << "Restoring tree topology with logl = " << bestScore << endl;
 				if (!restoreTree(pllBestTree, pllInst, pllPartitions)) {
 					outError("ERROR: failed to roll back tree \n");
 				}
-				//pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-				//cout << "Recompute logl = " << pllInst->likelihood << endl;
-
 			}
 
 		}
@@ -1616,12 +1586,16 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
 
         curScore = optimizeAllBranches(1);
 
+		if (verbose_mode >= VB_DEBUG) {
+			cout << "logl: " << curScore << " / NNIs: " << nni2apply << endl;
+		}
+
         if (curScore > oldScore && curScore >= vec_nonconf_nni.at(0).newloglh ) {
         	if (abs(curScore - oldScore) < 0.001) {
         		break;
         	}
             if (enableHeuris && curIteration > 1) {
-                if (vecImpProNNI.size() < 10000) {
+                if (vecImpProNNI.size() < 1000) {
                     vecImpProNNI.push_back((curScore - oldScore) / nni2apply);
                 } else {
                     vecImpProNNI.erase(vecImpProNNI.begin());
@@ -1629,15 +1603,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
                 }
             }
             nni_count += nni2apply;
-            if (verbose_mode >= VB_DEBUG) {
-                cout << nni2apply << " NNIs has been done" << endl;
-                cout << "Log-likelihood of new tree = " << curScore << endl;
-            }
-            if (verbose_mode >= VB_DEBUG) {
-                stringstream filename;
-                filename << (params->out_prefix) << ".nniTree_round_" << nni_steps;
-                printTree(filename.str().c_str());
-            }
             resetLamda = true;
         } else {
 
@@ -1687,7 +1652,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
         saveCurrentTree(curScore); // BQM: for new bootstrap
         saveNNITrees(); // optimize 5 branches around NNI, this makes program slower
     }*/
-    curScore = optimizeAllBranches(8);
+    curScore = optimizeAllBranches(1);
     return curScore;
 }
 
@@ -1696,7 +1661,6 @@ extern "C" int numSmoothTree;
 extern "C" int nni0;
 extern "C" int nni5;
 extern "C" int nni1;
-extern "C" pllNNIMove* nniList;
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, int *skipped) {
 	pllInitUFBootData();
@@ -1708,19 +1672,17 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
         cout << "delta_min = " << nnicut.delta_min << endl;
     }
     int nniListSize = 2 * pllInst->mxtips - 6;
-    pllNNIMove* nniList = new pllNNIMove[nniListSize];
-    totalNNICount = 0;
-    nniSteps = 0;
+    pllNNIMove *nniList = new pllNNIMove[nniListSize];
     double curLH = pllInst->likelihood;
-    //cout << "LH IQP Tree = " << curLH << endl;
     TOL_LIKELIHOOD_PHYLOLIB = params->loglh_epsilon;
     numSmoothTree = params->numSmoothTree;
     const int MAX_NNI_STEPS = 50;
     int nni_count;
+    totalNNICount = 0;
+    nniSteps = 0;
     double deltaNNI;
     bool startNNI5 = false;
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
-    	//cout << "NNI step: " << nniSteps << endl;
         if (beginHeu) {
             double maxScore = curLH + nni_delta_est * (nni_count_est - totalNNICount);
             if (maxScore < curLH) {
@@ -1735,25 +1697,24 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
         }
         double newLH;
         if (params->nni5) {
-        	newLH = doNNISearch(pllInst, pllPartitions, pllTmpTree,  nniList, FIVE_BRAN_OPT,&nni_count, &deltaNNI);
+        	newLH = doNNISearch(pllInst, pllPartitions, FIVE_BRAN_OPT, nniList, &nni_count, &deltaNNI);
         } else if (params->nni05) {
         	if (nni_count == 1) {
         		startNNI5 = true;
         	}
 			if (startNNI5) {
-				newLH = doNNISearch(pllInst, pllPartitions, pllTmpTree, nniList, FIVE_BRAN_OPT, &nni_count, &deltaNNI);
+				newLH = doNNISearch(pllInst, pllPartitions, FIVE_BRAN_OPT, nniList, &nni_count, &deltaNNI);
 			} else {
-				newLH = doNNISearch(pllInst, pllPartitions, pllTmpTree, nniList, NO_BRAN_OPT, &nni_count, &deltaNNI);
+				newLH = doNNISearch(pllInst, pllPartitions, NO_BRAN_OPT, nniList, &nni_count, &deltaNNI);
 			}
         } else {
-        	newLH = doNNISearch(pllInst, pllPartitions, pllTmpTree, nniList, ONE_BRAN_OPT, &nni_count, &deltaNNI);
+        	newLH = doNNISearch(pllInst, pllPartitions, ONE_BRAN_OPT, nniList, &nni_count, &deltaNNI);
         }
-        if (newLH == -1.0) {
+        if (nni_count == 0) {
+        	curLH = newLH;
             break;
-        } else if ( abs(newLH - curLH) < 0.001 ){
-        	break;
         } else {
-            curLH = newLH;
+        	curLH = newLH;
             if (enableHeuris && curIteration > 1) {
                 if (vecImpProNNI.size() < 1000) {
                     vecImpProNNI.push_back(deltaNNI);
@@ -1776,15 +1737,36 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, 
     }
 
     if (abs(curLH - bestScore) < 1.0 || curLH > bestScore) {
-      pllTreeEvaluate(pllInst, pllPartitions, 16);
+      pllTreeEvaluate(pllInst, pllPartitions, 2);
       curLH = pllInst->likelihood;
     }
-
-    // copy the nniList
+    //cout << "***********OUTSIDE NNISEARCH*************************" << endl;
     curNNIList.assign(nniList, nniList + nniListSize);
+//    for(std::vector<pllNNIMove>::iterator it = curNNIList.begin(); it != curNNIList.end(); ++it) {
+//        cout << (*it).p->number << "<-->" << (*it).p->back->number << endl;
+//    }
+    //cout << "*************************************" << endl;
+    //exit(0);
     delete [] nniList;
-
     return curLH;
+}
+
+void IQTree::pllUpdateBestTree() {
+	if (pllBestTree == NULL) {
+		pllBestTree = setupTopol(pllInst->mxtips);
+	}
+	saveTree(pllInst, pllBestTree, pllPartitions->numberOfPartitions);
+	bestNNIList.assign(curNNIList.begin(), curNNIList.end());
+	sort(bestNNIList.begin(), bestNNIList.end(), comparePllNniMove);
+//	for (vector<pllNNIMove>::iterator it = bestNNIList.begin(); it != bestNNIList.end(); it++) {
+//		cout << (*it).likelihood << endl;
+//	}
+//	exit(0);
+	accumLHList.clear();
+	accumLHList.push_back(bestNNIList[1].likelihood - bestNNIList.front().likelihood);
+	for (int i = 2; i < bestNNIList.size(); i++) {
+		accumLHList.push_back(accumLHList.back() + bestNNIList[i].likelihood - bestNNIList.front().likelihood);
+	}
 }
 
 void IQTree::pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns){
@@ -1940,7 +1922,6 @@ void IQTree::pllDestroyUFBootData(){
 	pllUFBootDataPtr = NULL;
 }
 
-
 void IQTree::applyNNIs(int nni2apply, bool changeBran) {
     for (int i = 0; i < nni2apply; i++) {
         doNNI(vec_nonconf_nni.at(i));
@@ -2040,7 +2021,7 @@ double IQTree::estN95() {
     }
 }
 
-double IQTree::estNMedian() {
+double IQTree::getAvgNumNNI() {
     if (vecNumNNI.size() == 0) {
         return 0;
     } else {
@@ -2937,7 +2918,8 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
     // make the taxa name
     vector<string> taxname;
     taxname.resize(leafNum);
-	getTaxaName(taxname);
+    getTaxaName(taxname);
+
     /*if (!tree.save_all_trees)
      trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
      else

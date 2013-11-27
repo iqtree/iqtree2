@@ -188,6 +188,7 @@ nnisearch.c
 modelcodon.cpp
 phylosupertreeplen.cpp
 phylotesting.cpp
+strmap.c
 )
 
 

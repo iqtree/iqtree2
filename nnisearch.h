@@ -96,10 +96,11 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int num
  *
  *  @param[in] tr the tree data structure
  *  @param[in] pr partition data structure
+ *  @param[out] nniList list containing information about the 2(n-3) evaluated NNIs
  *  @param[out] nni_count number of NNI that have been applied
  *  @param[out] deltaNNI average improvement made by one NNI
  */
-double doNNISearch(pllInstance* tr, partitionList *pr, topol* curTree, pllNNIMove* nniList, int searchType, int* nni_count, double* deltaNNI);
+double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, pllNNIMove *nniList, int* nni_count, double* deltaNNI);
 
 /**
  *  perturb the current tree by randomly carrying some negative NNI moves
@@ -117,7 +118,7 @@ double pertub(pllInstance* tr, pllNNIMove* nniList);
  *  @param[in] swap: represents one of the 2 NNI moves. Could be either 0 or 1
  *  @param[in] evalType: NO_NR, WITH_ONE_NR, WITH_FIVE_NR
  */
-double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, int evalType, double curLH);
+double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, int evalType);
 
 /**
  *  Go through all 2(n-3) internal branches of the tree and

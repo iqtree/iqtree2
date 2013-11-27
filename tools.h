@@ -351,7 +351,8 @@ struct Params {
 	/**
 	 *  Default number of NNI used for perturbing the tree
 	 */
-	int pertubSize;
+	double pertubSize;
+
 
 	/**
 	 *  Carry out iterated local search using NNI only.

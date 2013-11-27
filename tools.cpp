@@ -644,7 +644,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5 = false;
+    params.nni5 = true;
     params.nni05 = false;
     params.nniThresHold = 0.1;
     params.leastSquareBranch = false;
@@ -666,7 +666,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.gamma_shape = -1.0;
     params.gamma_median = false;
     params.p_invar_sites = -1.0;
-    params.optimize_model_rate_joint = true;
+    params.optimize_model_rate_joint = false;
     params.optimize_by_newton = true;
     params.fixed_branch_length = false;
     params.iqp_assess_quartet = IQP_DISTANCE;
@@ -727,13 +727,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.pertubSize = 15;
+    params.pertubSize = 0.8;
     params.speedup_iter = 100;
     params.pll = false;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
-    params.maxtime = 1000000;
+    params.maxtime = 100000;
     params.reinsert_par = false;
     params.fast_branch_opt = false;
     params.bestStart = true;
@@ -1237,6 +1237,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.p_delete = convert_double(argv[cnt]);
                 if (params.p_delete < 0.0 || params.p_delete > 1.0)
                     throw "Probability of deleting a leaf must be between 0 and 1";
+            } else if (strcmp(argv[cnt], "-ps") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            		throw "Use -ps <probability>";
+            	params.pertubSize = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1617,10 +1622,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.tabu = true;
             } else if (strcmp(argv[cnt], "-ilsnni") == 0) {
             	params.ilsnni = true;
+            	params.pll = true;
             } else if (strcmp(argv[cnt], "-rr") == 0) {
             	params.random_restart = true;
             } else if (strcmp(argv[cnt], "-rd_nni") == 0) {
             	params.random_nni = true;
+            	params.p_delete = 0.0;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {

@@ -31,7 +31,7 @@
 
 #include "pll/pll.h"
 #include "nnisearch.h"
-#include "phylolib.h"
+#include "strmap.h"
 
 typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;
@@ -70,6 +70,10 @@ inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
     return (a.lh_contribution < b.lh_contribution);
 }
 
+inline bool comparePllNniMove(const pllNNIMove &a, const pllNNIMove &b)
+{
+    return a.likelihood < b.likelihood;
+}
 
 /**
         Representative Leaf Set, stored as a multiset template of STL,
@@ -248,14 +252,18 @@ public:
     double optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu = false, int *skipped = NULL);
 
     /**
-     * 		Do fastNNI using RAxML kernel
+     * 		Do fastNNI using PLL
+     *
+     *      @param nni_count (OUT) the number of single NNI moves proceeded so far
      * 		@param beginHeu whether the heuristic is started
      * 		@param skipped (OUT) 1 if current iteration is skipped, otherwise 0
-     *      @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
     double pllOptimizeNNI(int &nniCount, int &nniSteps, bool beginHeu = false, int *skipped = NULL);
 
-
+    /**
+     *   update bestNNIList and best tree topology (for PLL only)
+     */
+    void pllUpdateBestTree();
     /**
             search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
      */
@@ -356,14 +364,14 @@ public:
                                                            details)
      * @return the estimated value
      */
-    inline double estNMedian(void);
+    double getAvgNumNNI(void);
 
     /**
      * Estimate the median of the distribution of N (see paper for more d
                                                           details)
      * @return the estimated value
      */
-    inline double estDeltaMedian(void);
+    double estDeltaMedian(void);
 
     /**
      * Estimate the 95% quantile of the distribution of DELTA (see paper for
@@ -447,20 +455,17 @@ public:
     }
 
     /*
-     *  Contains a sorted list of all NNIs (2n-6) evaluated in the LAST BEST FastNNI
+     *  Contains a sorted list of all NNIs (2n-6) evaluated for the current best tree
      *  The last element (nni_for_pertub.end()) is the best NNI
      */
     vector<pllNNIMove> bestNNIList;
 
-    /**
-     *  Contains a sorted list of all NNIs (2n-6) evaluated in the LAST FastNNI
-     */
     vector<pllNNIMove> curNNIList;
 
-    /*
-     *  Contains list of unapplied NNIs during the pertubation steps
+    /**
+     *  vector contains accumulated likelihood of all (2n-6) NNIs
      */
-    vector<pllNNIMove> perturbNNIList;
+    vector<double> accumLHList;
 
     /**
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
@@ -481,6 +486,12 @@ public:
      *  PLL partition list
      */
     partitionList * pllPartitions;
+
+    /**
+     *  Vector contains number of NNIs used at each iterations
+     */
+    vector<int> vecNumNNI;
+
 
 
     /**
@@ -587,10 +598,6 @@ protected:
      */
     double speed_conf;
 
-    /**
-     *  Vector contains number of NNIs used at each iterations
-     */
-    vector<int> vecNumNNI;
 
     /**
      *  Vector contains approximated improvement pro NNI at each iterations
@@ -649,19 +656,10 @@ protected:
 public:
 
     /**
-     *  adjustPertubSize = ((n-3)/perturbSize + 1) * perturbSize
-     */
-    int intesifyPertubListSize;
-
-    /**
      *  variable storing the current best tree topology
      */
     topol* pllBestTree;
 
-    /**
-     *  Temporary tree topology. Used when rollback is needed.
-     */
-    topol* pllTmpTree;
 
     /**
      * The current best score found
