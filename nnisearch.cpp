@@ -234,15 +234,15 @@ double doNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo) {
 
 		}
 
-		//searchinfo.effectedNodes.clear();
+		//searchinfo.affectNodes.clear();
 		searchinfo.affectBranches.clear();
 		/* Applying all independent NNI moves */
 		searchinfo.curNumAppliedNNIs = selectedNNIs.size();
 		for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
 			/* do the topological change */
 			doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
-			//set<int> affectedNodes = getAffectedNodes(tr, (*it).p);
-			//searchinfo.effectedNodes.insert(affectedNodes.begin(), affectedNodes.end());
+//			set<int> affectedNodes = getAffectedNodes(tr, (*it).p);
+//			searchinfo.affectNodes.insert(affectedNodes.begin(), affectedNodes.end());
 			vector<string> aBranches = getAffectedBranches(tr, (*it).p);
 			searchinfo.affectBranches.insert(aBranches.begin(), aBranches.end());
 
@@ -637,7 +637,6 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo
 		// check whether evaluating this quartet is neccessary
 		if (globalParam->fastnni) {
 //			if (searchinfo.curNumNNISteps == 1 || containsAffectedNodes(p, searchinfo)) {
-//				//cout << "We don't need to evaluate this quartet / " << searchinfo.effectedNodes.size() << endl;
 //				evalNNIForBran(tr, pr, p, searchinfo);
 //			}
 			if (searchinfo.curNumNNISteps == 1 || isAffectedBranch(p, searchinfo)) {
