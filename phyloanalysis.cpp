@@ -1447,11 +1447,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	/* DO IQPNNI */
 	if (params.k_representative > 0 /*&&  params.min_iterations > 1*/) {
 		cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
-		if (!params.ilsnni && !params.random_nni) {
+		if (!params.inni && !params.random_nni) {
 			cout << "Number of representative leaves   		: " << params.k_representative << endl;
 			cout << "Probability of deleting sequences 		: " << iqtree.getProbDelete() << endl;
 			cout << "Number of leaves to be deleted    		: " << iqtree.getDelete() << endl;
-		} else if (params.ilsnni) {
+		} else if (params.inni) {
 			cout << "Perturbation strength		: " << params.pertubSize << endl;
 		}
 		cout << "Number of iterations   		: ";

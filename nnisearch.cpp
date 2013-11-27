@@ -16,6 +16,7 @@ double TOL_LIKELIHOOD_PHYLOLIB;
 int numSmoothTree;
 int nni0;
 int nni5;
+extern Params *globalParam;
 /* program options */
 
 static int cmp_nni(const void* nni1, const void* nni2) {
@@ -119,26 +120,93 @@ topol *_setupTopol(pllInstance* tr) {
 	return tree;
 }
 
+vector<string> getAffectedBranches(pllInstance* tr, nodeptr p) {
+	vector<string> res;
+	res.push_back(getBranString(p));
+	nodeptr q = p->back;
+	nodeptr p_nei = p->next;
+	nodeptr q_nei = q->next;
+	while (p_nei != p) {
+		res.push_back(getBranString(p_nei));
+		if (!isTip(p_nei->back->number, tr->mxtips)) {
+			res.push_back(getBranString(p_nei->back->next));
+			res.push_back(getBranString(p_nei->back->next->next));
+		}
+		p_nei = p_nei->next;
+	}
+	while (q_nei != q) {
+		res.push_back(getBranString(q_nei));
+		if (!isTip(q_nei->back->number, tr->mxtips)) {
+			res.push_back(getBranString(q_nei->back->next));
+			res.push_back(getBranString(q_nei->back->next->next));
+		}
+		q_nei = q_nei->next;
+	}
+	return res;
+}
+
+string getBranString(nodeptr p) {
+	stringstream branString;
+	nodeptr q = p->back;
+	if (p->number < q->number) {
+		branString << p->number << "-" << q->number;
+	} else {
+		branString << q->number << "-" << p->number;
+	}
+	return branString.str();
+}
+
+set<int> getAffectedNodes(pllInstance* tr, nodeptr p) {
+	set<int> nodeSet;
+	nodeptr q = p->back;
+	nodeptr p_nei = p->next;
+	nodeptr q_nei = q->next;
+	nodeSet.insert(p->number);
+	nodeSet.insert(q->number);
+	while (p_nei != p) {
+		nodeptr nei = p_nei->back;
+		if (isTip(nei->number, tr->mxtips)) {
+			nodeSet.insert(nei->number);
+		} else {
+			nodeSet.insert(nei->number);
+			nodeSet.insert(nei->next->back->number);
+			nodeSet.insert(nei->next->next->back->number);
+		}
+		p_nei = p_nei->next;
+	}
+	while (q_nei != q) {
+		nodeptr nei = q_nei->back;
+		if (isTip(nei->number, tr->mxtips)) {
+			nodeSet.insert(nei->number);
+		} else {
+			nodeSet.insert(nei->number);
+			nodeSet.insert(nei->next->back->number);
+			nodeSet.insert(nei->next->next->back->number);
+		}
+		q_nei = q_nei->next;
+	}
+	return nodeSet;
+}
+
+
 double doNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo) {
 	double initLH = tr->likelihood;
 	double finalLH = initLH;
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
-
 	/* data structure to store the initial tree topology + branch length */
 	topol* curTree = _setupTopol(tr);
 	saveTree(tr, curTree, numBranches);
-
 	nodeptr p = tr->start->back;
 	nodeptr q = p->next;
 	while (q != p) {
 		evalNNIForSubtree(tr, pr, q->back, searchinfo);
 		q = q->next;
-		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
-		if (numBranches > 1 && !tr->useRecom) {
-			pllNewviewGeneric(tr, pr,  q->back, PLL_TRUE);
-		} else {
-			pllNewviewGeneric(tr, pr,  q->back, PLL_FALSE);
-		}
+//		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
+//		if (numBranches > 1 && !tr->useRecom) {
+//			pllNewviewGeneric(tr, pr,  q->back, PLL_TRUE);
+//		} else {
+//			pllNewviewGeneric(tr, pr,  q->back, PLL_FALSE);
+//		}
 	}
 
 	if (searchinfo.curNumPosNNIs != 0) {
@@ -146,105 +214,126 @@ double doNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo) {
 		sort(searchinfo.nniList.begin(), searchinfo.nniList.end(), comparePLLNNIMove);
 		/* list of independent positive NNI */
 		vector<pllNNIMove> selectedNNIs;
-		/* The best NNI is the first to come to the list */
-		selectedNNIs.push_back(searchinfo.nniList.back());
-		/* Subsequently add positive NNIs that are non-conflicting with the previous ones */
-		int totalNNIs = searchinfo.nniList.size();
-		int numPosNNI = searchinfo.curNumPosNNIs;
-		for (int k = totalNNIs - 2; k > totalNNIs - numPosNNI - 1; k--) {
-			int conflict = PLL_FALSE;
-			/* Go through all the existing non-conflicting NNIs to check whether the next NNI will conflict with one of them */
-			int j;
-			for (j = 0; j < selectedNNIs.size(); j++) {
-				if (searchinfo.nniList[k].p->number == selectedNNIs[j].p->number
-						|| searchinfo.nniList[k].p->number == selectedNNIs[j].p->back->number) {
-					conflict = PLL_TRUE;
-					break;
+		for (vector<pllNNIMove>::reverse_iterator rit = searchinfo.nniList.rbegin(); rit != searchinfo.nniList.rend(); ++rit) {
+			if ((*rit).loglDelta > 0) {
+				bool conflict = false;
+				for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); ++it) {
+					if ((*rit).p->number == (*it).p->number || (*rit).p->number == (*it).p->back->number) {
+						conflict = true;
+						break;
+					}
+					if ((*rit).p->back->number == (*it).p->number || (*rit).p->back->number == (*it).p->back->number) {
+						conflict = true;
+						break;
+					}
 				}
-				if (searchinfo.nniList[k].p->back->number == selectedNNIs[j].p->number
-						|| searchinfo.nniList[k].p->back->number
-								== selectedNNIs[j].p->back->number) {
-					conflict = PLL_TRUE;
-					break;
+				if (!conflict) {
+					selectedNNIs.push_back((*rit));
 				}
 			}
-			if (conflict) {
-				continue;
-			} else {
-				selectedNNIs.push_back(searchinfo.nniList[k]);
-			}
+
 		}
 
+		//searchinfo.effectedNodes.clear();
+		searchinfo.affectBranches.clear();
 		/* Applying all independent NNI moves */
 		searchinfo.curNumAppliedNNIs = selectedNNIs.size();
-		int MAXROLLBACK = 2;
-		int step;
-		for (step = 1; step <= MAXROLLBACK; step++) {
-			int i;
-			for (i = 0; i < searchinfo.curNumAppliedNNIs; i++) {
-				/* do the topological change */
-				doOneNNI(tr, pr, selectedNNIs[i].p, selectedNNIs[i].nniType, TOPO_ONLY);
-//				printf(" Do NNI on branch: (%d-%d-%d) <-> (%d-%d-%d) / logl :%10.6f / length:%10.6f \n",
-//						nnis[i].p->next->back->number, nnis[i].p->number,
-//						nnis[i].p->next->next->back->number,
-//						nnis[i].p->back->next->back->number,
-//						nnis[i].p->back->number,
-//						nnis[i].p->back->next->next->back->number,
-//						nnis[i].likelihood, nnis[i].z0[0]);
-				/*  apply branch lengths */
-				int j;
-				for (j = 0; j < numBranches; j++) {
-					selectedNNIs[i].p->z[j] = selectedNNIs[i].z0[j];
-					selectedNNIs[i].p->back->z[j] = selectedNNIs[i].z0[j];
-					selectedNNIs[i].p->next->z[j] = selectedNNIs[i].z1[j];
-					selectedNNIs[i].p->next->back->z[j] = selectedNNIs[i].z1[j];
-					selectedNNIs[i].p->next->next->z[j] = selectedNNIs[i].z2[j];
-					selectedNNIs[i].p->next->next->back->z[j] = selectedNNIs[i].z2[j];
-					selectedNNIs[i].p->back->next->z[j] = selectedNNIs[i].z3[j];
-					selectedNNIs[i].p->back->next->back->z[j] = selectedNNIs[i].z3[j];
-					selectedNNIs[i].p->back->next->next->z[j] = selectedNNIs[i].z4[j];
-					selectedNNIs[i].p->back->next->next->back->z[j] = selectedNNIs[i].z4[j];
-				}
-				/* update partial likelihood */
-				if (numBranches > 1 && !tr->useRecom) {
-					pllNewviewGeneric(tr, pr, selectedNNIs[i].p, PLL_TRUE);
-					pllNewviewGeneric(tr, pr, selectedNNIs[i].p->back, PLL_TRUE);
-				} else {
-					pllNewviewGeneric(tr, pr, selectedNNIs[i].p, PLL_FALSE);
-					pllNewviewGeneric(tr, pr, selectedNNIs[i].p->back, PLL_FALSE);
-				}
-			}
-			pllTreeEvaluate(tr, pr, 1);
-			/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
-			if (tr->likelihood < selectedNNIs[0].likelihood) {
-				if (searchinfo.curNumAppliedNNIs == 1) {
-					printf(
-							"ERROR: new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
-							tr->likelihood, selectedNNIs[0].likelihood);
-					exit(1);
-				}
+		for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
+			/* do the topological change */
+			doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
+			//set<int> affectedNodes = getAffectedNodes(tr, (*it).p);
+			//searchinfo.effectedNodes.insert(affectedNodes.begin(), affectedNodes.end());
+			vector<string> aBranches = getAffectedBranches(tr, (*it).p);
+			searchinfo.affectBranches.insert(aBranches.begin(), aBranches.end());
+
+//				set<int>::iterator iter2;
+//				for (iter2 = affectedNodes.begin(); iter2 != affectedNodes.end(); iter2++) {
+//					cout << " " << *iter2;
+//				}
+//				cout << endl;
+//			string quartetString = convertQuartet2String((*it).p);
+//			cout << quartetString << " / old logl: " << initLH << "/ logl delta: " << (*it).loglDelta << endl;
+//				if (searchinfo.tabuList.find(quartetString) != searchinfo.tabuList.end()) {
+//					cout << "Quartet " << quartetString << " has already been used" << endl;
+//				} else {
+//					searchinfo.tabuList.insert(quartetEntry(quartetString, selectedNNIs[i]));
+//				}
+//				unordered_map<string, pllNNIMove>::iterator iter1 = searchinfo.negativeQuartets.find(quartetString);
+//				if (iter1 != searchinfo.negativeQuartets.end()) {
+//					cout << "A negative quartet applied: " << quartetString << " / old delta: " << iter1->second.loglDelta
+//							<< " / new delta: " << selectedNNIs[i].loglDelta
+//							<< endl;
+//					set<int> affectedNodes = getAffectedNodes(tr,selectedNNIs[i].p);
+//					set<int>::iterator iter2;
+//					for (iter2 = affectedNodes.begin(); iter2 != affectedNodes.end(); iter2++) {
+//						cout << " " << *iter2;
+//					}
+//					cout << endl;
+//				}
+
+			updateBranchLengthForNNI(tr, pr, (*it));
+
+		}
+		pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+		pllTreeEvaluate(tr, pr, 1);
+		/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
+		if (tr->likelihood < selectedNNIs.back().likelihood) {
+			if (selectedNNIs.size() == 1) {
+				printf("ERROR: new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
+						tr->likelihood, selectedNNIs[0].likelihood);
+				exit(1);
+			} else {
 				if (!restoreTree(curTree, tr, pr)) {
 					printf("ERROR: failed to roll back tree \n");
 					exit(1);
 				}
-				/* Only apply the best NNI after the tree has been rolled back */
-				searchinfo.curNumAppliedNNIs  = 1;
-			} else {
-				if (tr->likelihood - initLH < 0.1) {
-					if (!restoreTree(curTree, tr, pr)) {
-						printf("ERROR: failed to roll back tree \n");
-						exit(1);
-					}
-					searchinfo.curNumAppliedNNIs = 0;
+				doOneNNI(tr, pr, selectedNNIs.back().p, selectedNNIs.back().nniType, TOPO_ONLY);
+				updateBranchLengthForNNI(tr, pr, selectedNNIs.back());
+				pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+				pllTreeEvaluate(tr, pr, 1);
+				if (tr->likelihood < selectedNNIs.back().likelihood) {
+					printf("ERROR: (After rolling back) new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
+							tr->likelihood, selectedNNIs.front().likelihood);
+					exit(1);
 				}
-				break;
+				/* Only apply the best NNI after the tree has been rolled back */
+				searchinfo.curNumAppliedNNIs = 1;
 			}
+		}
+		if (tr->likelihood - initLH < 0.1) {
+			searchinfo.curNumAppliedNNIs = 0;
 		}
 		finalLH = tr->likelihood;
 	} else {
 		searchinfo.curNumAppliedNNIs = 0;
 	}
+	//cout << "NumNNI: " << searchinfo.curNumAppliedNNIs << " / logl: " << finalLH << endl;
 	return finalLH;
+}
+
+void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nni) {
+	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
+	/*  apply branch lengths */
+	for (int i = 0; i < numBranches; i++) {
+		nni.p->z[i] = nni.z0[i];
+		nni.p->back->z[i] = nni.z0[i];
+		nni.p->next->z[i] = nni.z1[i];
+		nni.p->next->back->z[i] = nni.z1[i];
+		nni.p->next->next->z[i] = nni.z2[i];
+		nni.p->next->next->back->z[i] = nni.z2[i];
+		nni.p->back->next->z[i] = nni.z3[i];
+		nni.p->back->next->back->z[i] = nni.z3[i];
+		nni.p->back->next->next->z[i] = nni.z4[i];
+		nni.p->back->next->next->back->z[i] = nni.z4[i];
+	}
+	/* update partial likelihood */
+//	if (numBranches > 1 && !tr->useRecom) {
+//		pllNewviewGeneric(tr, pr, nni.p, PLL_TRUE);
+//		pllNewviewGeneric(tr, pr, nni.p->back, PLL_TRUE);
+//	} else {
+//		pllNewviewGeneric(tr, pr, nni.p, PLL_FALSE);
+//		pllNewviewGeneric(tr, pr, nni.p->back, PLL_FALSE);
+//	}
 }
 
 /** @brief Optimize the length of a specific branch with variable number of Newton Raphson iterations
@@ -389,9 +478,9 @@ string convertQuartet2String(nodeptr p) {
 	stringstream right;
 	stringstream res;
 	if (pNr < qNr) {
-		middle << pNr << "-" << qNr;
+		middle << "-" << pNr << "-" << qNr << "-";
 	} else {
-		middle << qNr << "-" << pNr;
+		middle << "-" << qNr << "-" << pNr << "-";
 	}
 	if (pNei1Nr < pNei2Nr) {
 		left << pNei1Nr << "-" << pNei2Nr;
@@ -399,11 +488,11 @@ string convertQuartet2String(nodeptr p) {
 		left << pNei2Nr << "-" << pNei1Nr;
 	}
 	if (qNei1Nr < qNei2Nr) {
-		left << qNei1Nr << "-" << qNei2Nr;
+		right << qNei1Nr << "-" << qNei2Nr;
 	} else {
-		left << qNei2Nr << "-" << qNei1Nr;
+		right << qNei2Nr << "-" << qNei1Nr;
 	}
-	res << left << middle << right;
+	res << left.str() << middle.str() << right.str();
 	return res.str();
 }
 
@@ -440,6 +529,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		nni1.z4[i] = q->next->next->z[i];
 	}
 	nni1.likelihood = lh1;
+	nni1.loglDelta = lh1 - nni0.likelihood;
 
 	searchinfo.nniList.push_back(nni1);
 	//nniList[*numBran] = nni1;
@@ -480,6 +570,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		nni2.z4[i] = q->next->next->z[i];
 	}
 	nni2.likelihood = lh2;
+	nni2.loglDelta = lh2 - nni0.likelihood;
 
 	//nniList[*numBran + 1] = nni2;
 	searchinfo.nniList.push_back(nni2);
@@ -491,40 +582,87 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	/* Restore previous NNI move */
 	doOneNNI(tr, pr, p, 2, TOPO_ONLY);
     /* Restore the old branch length */
-    for (i = 0; i < numBranches; i++) {
-      p->z[i] = nni0.z0[i];
-      q->z[i] = nni0.z0[i];
-      p->next->z[i] = nni0.z1[i];
-      p->next->back->z[i] = nni0.z1[i];
-      p->next->next->z[i] = nni0.z2[i];
-      p->next->next->back->z[i] = nni0.z2[i];
-      q->next->z[i] = nni0.z3[i];
-      q->next->back->z[i] = nni0.z3[i];
-      q->next->next->z[i] = nni0.z4[i];
-      q->next->next->back->z[i] = nni0.z4[i];
-  }
+	for (i = 0; i < numBranches; i++) {
+		p->z[i] = nni0.z0[i];
+		q->z[i] = nni0.z0[i];
+		p->next->z[i] = nni0.z1[i];
+		p->next->back->z[i] = nni0.z1[i];
+		p->next->next->z[i] = nni0.z2[i];
+		p->next->next->back->z[i] = nni0.z2[i];
+		q->next->z[i] = nni0.z3[i];
+		q->next->back->z[i] = nni0.z3[i];
+		q->next->next->z[i] = nni0.z4[i];
+		q->next->next->back->z[i] = nni0.z4[i];
+	}
+	if (numBranches > 1 && !tr->useRecom) {
+		pllNewviewGeneric(tr, pr, p, PLL_TRUE);
+		pllNewviewGeneric(tr, pr, p->back, PLL_TRUE);
+	} else {
+		pllNewviewGeneric(tr, pr, p, PLL_FALSE);
+		pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
+	}
 	return numPosNNI;
+}
+
+bool isAffectedBranch(nodeptr p, SearchInfo &searchinfo) {
+	string branString = getBranString(p);
+	if (searchinfo.affectBranches.find(branString) != searchinfo.affectBranches.end()) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool containsAffectedNodes(nodeptr p, SearchInfo &searchinfo) {
+	bool res = false;
+	nodeptr q = p->back;
+	int id_list[6];
+	id_list[0] = p->number;
+	id_list[1] = q->number;
+	id_list[2] = p->next->back->number;
+	id_list[3] = p->next->next->back->number;
+	id_list[4] = q->next->back->number;
+	id_list[5] = q->next->next->back->number;
+	for (int i = 0; i < 6; i++) {
+		if (searchinfo.affectNodes.find(id_list[i]) != searchinfo.affectNodes.end()) {
+			res = true;
+			break;
+		}
+	}
+	return res;
 }
 
 void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
 	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
-		evalNNIForBran(tr, pr, p, searchinfo);
-		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
+		// check whether evaluating this quartet is neccessary
+		if (globalParam->fastnni) {
+//			if (searchinfo.curNumNNISteps == 1 || containsAffectedNodes(p, searchinfo)) {
+//				//cout << "We don't need to evaluate this quartet / " << searchinfo.effectedNodes.size() << endl;
+//				evalNNIForBran(tr, pr, p, searchinfo);
+//			}
+			if (searchinfo.curNumNNISteps == 1 || isAffectedBranch(p, searchinfo)) {
+				evalNNIForBran(tr, pr, p, searchinfo);
+			}
+		} else {
+			evalNNIForBran(tr, pr, p, searchinfo);
+		}
+//		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 		nodeptr q = p->next;
 		while (q != p) {
-			if (numBranches > 1 && !tr->useRecom) {
-				pllNewviewGeneric(tr, pr, p->back, PLL_TRUE);
-			} else {
-				pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
-			}
+//			if (recomputePartialLH) {
+//				if (numBranches > 1 && !tr->useRecom) {
+//					pllNewviewGeneric(tr, pr, p->back, PLL_TRUE);
+//				} else {
+//					pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
+//				}
+//			}
 			evalNNIForSubtree(tr, pr, q->back, searchinfo);
-			if (numBranches > 1 && !tr->useRecom) {
-				pllNewviewGeneric(tr, pr, p, PLL_TRUE);
-			} else {
-				pllNewviewGeneric(tr, pr, p, PLL_FALSE);
-			}
+//			if (numBranches > 1 && !tr->useRecom) {
+//				pllNewviewGeneric(tr, pr, p, PLL_TRUE);
+//			} else {
+//				pllNewviewGeneric(tr, pr, p, PLL_FALSE);
+//			}
 			q = q->next;
 		}
-
 	}
 }

@@ -738,7 +738,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.fast_branch_opt = false;
     params.bestStart = true;
     params.tabu = false;
-    params.ilsnni = false;
+    params.inni = false;
+    params.fastnni = false;
     params.random_nni =false;
     params.random_restart = false;
     params.numParsimony = 10;
@@ -1620,8 +1621,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-tabu") == 0) {
                 params.tabu = true;
-            } else if (strcmp(argv[cnt], "-ilsnni") == 0) {
-            	params.ilsnni = true;
+            } else if (strcmp(argv[cnt], "-inni") == 0) {
+            	params.inni = true;
+            	params.pll = true;
+            } else if (strcmp(argv[cnt], "-fastnni") == 0) {
+            	params.fastnni = true;
             	params.pll = true;
             } else if (strcmp(argv[cnt], "-rr") == 0) {
             	params.random_restart = true;

@@ -358,7 +358,12 @@ struct Params {
 	 *  Carry out iterated local search using NNI only.
 	 *  From the local maximum, apply some negative NNIs and the continue with the local search
 	 */
-	bool ilsnni;
+	bool inni;
+
+	/**
+	 *  only evaluate NNIs in affected regions
+	 */
+	bool fastnni;
 
 	/**
 	 *  Do random restart search

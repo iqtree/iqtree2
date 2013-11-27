@@ -24,7 +24,7 @@
 #include "timeutil.h"
 #include <numeric>
 
-extern double t_begin;
+Params *globalParam;
 
 IQTree::IQTree() :
         PhyloTree() {
@@ -129,6 +129,7 @@ void IQTree::setParams(Params &params) {
     testNNI = params.testNNI;
 
     this->params = &params;
+    globalParam = &params;
 
     write_intermediate_trees = params.write_intermediate_trees;
 
@@ -1031,7 +1032,7 @@ double IQTree::doIQPNNI() {
 		double iqp_score;
 		Alignment *saved_aln = aln;
 
-		if (!params->ilsnni) {
+		if (!params->inni) {
 			// randomize the neighbor orders for all nodes
 			randomizeNeighbors();
 		}
@@ -1062,7 +1063,7 @@ double IQTree::doIQPNNI() {
 					if (verbose_mode >= VB_MAX) {
 						cout << "LH IQP = " << curScore << endl;
 					}
-				} else if (params->ilsnni) {
+				} else if (params->inni) {
 					curScore = pllDoGuidedPerturbation();
 					iqpScore = curScore;
 				} else { // PLL enabled
@@ -1256,14 +1257,14 @@ double IQTree::doIQPNNI() {
 				// higher likelihood but the same tree topology
 				bestScore = curScore;
 				cout << "UPDATE BEST LOG-LIKELIHOOD: " << bestScore << endl;
-				if (params->ilsnni) {
+				if (params->inni) {
 					if (!restoreTree(pllBestTree, pllInst, pllPartitions)) {
 						outError("Failed to roll back tree best tree");
 					}
 				}
 			}
 		} else {
-			if (!params->ilsnni) {
+			if (!params->inni) {
 				/* take back the current best tree */
 				best_tree_string.seekg(0, ios::beg);
 				freeNode();
@@ -1487,6 +1488,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps) {
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
         searchinfo.curNumPosNNIs = 0;
         searchinfo.curNumNNISteps = nniSteps;
+        searchinfo.nniList.clear();
         double newLH;
         if (params->nni5) {
         	searchinfo.evalType = FIVE_BRAN_OPT;

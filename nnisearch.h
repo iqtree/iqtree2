@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <map>
 #include <vector>
+#include <unordered_set>
 using namespace std;
 
 const int TOPO_ONLY = 0;
@@ -45,14 +46,13 @@ typedef struct {
     double z3[PLL_NUM_BRANCHES]; // q->next
     double z4[PLL_NUM_BRANCHES]; // q->next->next
 	double likelihood;
+	double loglDelta;
 } pllNNIMove;
 
 inline bool comparePLLNNIMove(const pllNNIMove &a, const pllNNIMove &b)
 {
     return a.likelihood < b.likelihood;
 }
-
-LH_VECTOR backup_likelihood_pointers(pllInstance *tr, partitionList *pr, nodeptr p);
 
 static int cmp_nni(const void* nni1, const void* nni2);
 
@@ -71,13 +71,16 @@ typedef struct {
 	int doNNICut;
 } NNICUT;
 
-typedef unordered_map<string, pllNNIMove> quartetList;
-typedef quartetList::value_type ValuePair;
+//typedef unordered_map<string, pllNNIMove> quartetList;
+//typedef quartetList::value_type quartetEntry;
 
 
 typedef struct {
 	vector<pllNNIMove> nniList;
-	quartetList tabuQuartet;
+	//quartetList tabuList;
+	//quartetList negativeQuartets;
+	unordered_set<int> affectNodes; // Set of nodes that are affected by the previous NNIs
+	unordered_set<string> affectBranches;
 	double curLogl;
 	int evalType;
 	int numAppliedNNIs; // total number of applied NNIs sofar
@@ -86,8 +89,20 @@ typedef struct {
 	int curNumNNISteps;
 } SearchInfo;
 
+/**
+ * get all the nodes affected by the NNI
+ * @param p
+ * @return
+ */
+set<int> getAffectedNodes(pllInstance* tr, nodeptr p);
 
-/*
+string getBranString(nodeptr p);
+
+bool containsAffectedNodes(nodeptr p, SearchInfo &searchinfo);
+
+void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nni);
+
+/**
  *  Evaluate NNI moves for the current internal branch
  *  @param tr the current tree data structure
  *  @param pr partition data structure
@@ -137,13 +152,14 @@ double pertub(pllInstance* tr, pllNNIMove* nniList);
  */
 double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, int evalType);
 
+string convertQuartet2String(nodeptr p);
 /**
  *  Go through all 2(n-3) internal branches of the tree and
  *  evaluate all possible NNI moves
  */
 void evalAllNNI(pllInstance* tr);
 
-/*
+/**
  * 	@brief evaluate all NNIs within the subtree specified by node p
  * 	populates the list containing all possible NNI moves
  *
