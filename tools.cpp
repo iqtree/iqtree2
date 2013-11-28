@@ -730,6 +730,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pertubSize = 0.8;
     params.speedup_iter = 100;
     params.pll = false;
+    params.model_eps = 0.1;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -1617,6 +1618,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.binary_aln_file = argv[cnt];
             } else if (strcmp(argv[cnt], "-pll") == 0) {
                 params.pll = true;
+            } else if (strcmp(argv[cnt], "-me") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -me <model_epsilon>";
+                params.model_eps = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-tabu") == 0) {

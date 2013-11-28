@@ -353,6 +353,10 @@ struct Params {
 	 */
 	double pertubSize;
 
+	/**
+	 *  logl epsilon for the initial model parameter optimization
+	 */
+	double model_eps;
 
 	/**
 	 *  Carry out iterated local search using NNI only.

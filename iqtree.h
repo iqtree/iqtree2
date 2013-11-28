@@ -229,7 +229,7 @@ public:
     /*
      *  perform a guided pertubation instead of doing IQP
      */
-    double pllDoGuidedPerturbation();
+    double pllDoDirectPertubation();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
@@ -254,7 +254,7 @@ public:
     double pllOptimizeNNI(int &nniCount, int &nniSteps);
 
     /**
-     *   update bestNNIList and best tree topology (for PLL only)
+     *   update best tree topology (for PLL only)
      */
     void pllUpdateBestTree();
     /**

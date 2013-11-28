@@ -868,7 +868,7 @@ double IQTree::perturb(int times) {
     return curScore;
 }
 
-double IQTree::pllDoGuidedPerturbation() {
+double IQTree::pllDoDirectPertubation() {
 	// List of NNI moves that are going to be applied at this pertubation
 	vector<pllNNIMove> candidateNNIs;
 	int numIntBran = aln->getNSeq() - 3;
@@ -1064,7 +1064,7 @@ double IQTree::doIQPNNI() {
 						cout << "LH IQP = " << curScore << endl;
 					}
 				} else if (params->inni) {
-					curScore = pllDoGuidedPerturbation();
+					curScore = pllDoDirectPertubation();
 					iqpScore = curScore;
 				} else { // PLL enabled
 					doIQP();
@@ -1484,29 +1484,33 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps) {
     const int MAX_NNI_STEPS = 50;
     totalNNICount = 0;
     nniSteps = 0;
+    bool thoroughNNI = true;
     bool startNNI5 = false;
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
-        searchinfo.curNumPosNNIs = 0;
         searchinfo.curNumNNISteps = nniSteps;
         searchinfo.nniList.clear();
+        searchinfo.posNNIList.clear();
+        if (nniSteps > 1) {
+        	thoroughNNI = false;
+        }
         double newLH;
         if (params->nni5) {
         	searchinfo.evalType = FIVE_BRAN_OPT;
-        	newLH = doNNISearch(pllInst, pllPartitions, searchinfo);
+        	newLH = doNNISearch(pllInst, pllPartitions, thoroughNNI, searchinfo);
         } else if (params->nni05) {
         	if (searchinfo.curNumAppliedNNIs == 1) {
         		startNNI5 = true;
         	}
 			if (startNNI5) {
 				searchinfo.evalType = FIVE_BRAN_OPT;
-				newLH = doNNISearch(pllInst, pllPartitions, searchinfo);
+				newLH = doNNISearch(pllInst, pllPartitions, thoroughNNI, searchinfo);
 			} else {
 				searchinfo.evalType = NO_BRAN_OPT;
-				newLH = doNNISearch(pllInst, pllPartitions, searchinfo);
+				newLH = doNNISearch(pllInst, pllPartitions, thoroughNNI, searchinfo);
 			}
         } else {
         	searchinfo.evalType = ONE_BRAN_OPT;
-        	newLH = doNNISearch(pllInst, pllPartitions, searchinfo);
+        	newLH = doNNISearch(pllInst, pllPartitions, thoroughNNI, searchinfo);
         }
         if (searchinfo.curNumAppliedNNIs == 0) { // no positive NNI was found
         	searchinfo.curLogl = newLH;
@@ -1517,11 +1521,10 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps) {
         }
     }
 
-    if (abs(searchinfo.curLogl - bestScore) < 1.0 || searchinfo.curLogl > bestScore) {
+    if (abs(searchinfo.curLogl - bestScore) < 0.1 || searchinfo.curLogl > bestScore) {
       pllTreeEvaluate(pllInst, pllPartitions, 2);
       searchinfo.curLogl = pllInst->likelihood;
     }
-    //curNNIList.assign(nniList, nniList + nniListSize);
     totalNNICount = searchinfo.numAppliedNNIs;
     return searchinfo.curLogl;
 }

@@ -71,20 +71,14 @@ typedef struct {
 	int doNNICut;
 } NNICUT;
 
-//typedef unordered_map<string, pllNNIMove> quartetList;
-//typedef quartetList::value_type quartetEntry;
-
-
 typedef struct {
-	vector<pllNNIMove> nniList;
-	//quartetList tabuList;
-	//quartetList negativeQuartets;
+	unordered_map<string, pllNNIMove> nniList;
+	vector<pllNNIMove> posNNIList; // positive NNI list
 	unordered_set<int> affectNodes; // Set of nodes that are affected by the previous NNIs
 	unordered_set<string> affectBranches;
 	double curLogl;
 	int evalType;
 	int numAppliedNNIs; // total number of applied NNIs sofar
-	int curNumPosNNIs; // number of positive NNIs found in the current NNI step
 	int curNumAppliedNNIs; // number of applied NNIs at the current step
 	int curNumNNISteps;
 } SearchInfo;
@@ -134,14 +128,8 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int num
  *  @param[out] nni_count number of NNI that have been applied
  *  @param[out] deltaNNI average improvement made by one NNI
  */
-double doNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo);
+double doNNISearch(pllInstance* tr, partitionList *pr, bool thorough, SearchInfo &searchinfo);
 
-/**
- *  perturb the current tree by randomly carrying some negative NNI moves
- *  @param[in] tr the tree
- *  @param[in] nniList list of all possible NNIs
- */
-double pertub(pllInstance* tr, pllNNIMove* nniList);
 
 /**
  *  @brief Do 1 NNI move.
@@ -167,7 +155,7 @@ void evalAllNNI(pllInstance* tr);
  * 	@param[in] pr partition data structure
  * 	@param[in] p node pointer that specify the subtree
  */
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo);
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, bool thorough, SearchInfo &searchinfo);
 
 /*
  *  @brief return the array which can be used to store evaluated NNI moves

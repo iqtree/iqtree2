@@ -188,33 +188,38 @@ set<int> getAffectedNodes(pllInstance* tr, nodeptr p) {
 	return nodeSet;
 }
 
+void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, bool thorough, SearchInfo &searchinfo) {
+	nodeptr p = tr->start->back;
+	nodeptr q = p->next;
+	while (q != p) {
+		evalNNIForSubtree(tr, pr, q->back, thorough, searchinfo);
+		q = q->next;
+		//		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
+		//		if (numBranches > 1 && !tr->useRecom) {
+		//			pllNewviewGeneric(tr, pr,  q->back, PLL_TRUE);
+		//		} else {
+		//			pllNewviewGeneric(tr, pr,  q->back, PLL_FALSE);
+		//		}
+	}
 
-double doNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo) {
+}
+
+
+double doNNISearch(pllInstance* tr, partitionList *pr, bool thorough, SearchInfo &searchinfo) {
 	double initLH = tr->likelihood;
 	double finalLH = initLH;
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 	/* data structure to store the initial tree topology + branch length */
 	topol* curTree = _setupTopol(tr);
 	saveTree(tr, curTree, numBranches);
-	nodeptr p = tr->start->back;
-	nodeptr q = p->next;
-	while (q != p) {
-		evalNNIForSubtree(tr, pr, q->back, searchinfo);
-		q = q->next;
-//		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
-//		if (numBranches > 1 && !tr->useRecom) {
-//			pllNewviewGeneric(tr, pr,  q->back, PLL_TRUE);
-//		} else {
-//			pllNewviewGeneric(tr, pr,  q->back, PLL_FALSE);
-//		}
-	}
+	pllEvalAllNNIs(tr, pr, thorough, searchinfo);
 
-	if (searchinfo.curNumPosNNIs != 0) {
+	if (searchinfo.posNNIList.size() != 0) {
 		/* Sort the NNI list ascendingly according to the log-likelihood */
-		sort(searchinfo.nniList.begin(), searchinfo.nniList.end(), comparePLLNNIMove);
+		sort(searchinfo.posNNIList.begin(), searchinfo.posNNIList.end(), comparePLLNNIMove);
 		/* list of independent positive NNI */
 		vector<pllNNIMove> selectedNNIs;
-		for (vector<pllNNIMove>::reverse_iterator rit = searchinfo.nniList.rbegin(); rit != searchinfo.nniList.rend(); ++rit) {
+		for (vector<pllNNIMove>::reverse_iterator rit = searchinfo.posNNIList.rbegin(); rit != searchinfo.posNNIList.rend(); ++rit) {
 			if ((*rit).loglDelta > 0) {
 				bool conflict = false;
 				for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); ++it) {
@@ -531,12 +536,12 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	nni1.likelihood = lh1;
 	nni1.loglDelta = lh1 - nni0.likelihood;
 
-	searchinfo.nniList.push_back(nni1);
-	//nniList[*numBran] = nni1;
+	string quartetString = convertQuartet2String(p);
+	searchinfo.nniList.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, nni1));
 
 	if (nni1.likelihood > searchinfo.curLogl) {
 		numPosNNI++;
-		searchinfo.curNumPosNNIs++;
+		searchinfo.posNNIList.push_back(nni1);
 	}
 
 	/* Restore previous NNI move */
@@ -572,11 +577,12 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	nni2.likelihood = lh2;
 	nni2.loglDelta = lh2 - nni0.likelihood;
 
-	//nniList[*numBran + 1] = nni2;
-	searchinfo.nniList.push_back(nni2);
+	quartetString = convertQuartet2String(p);
+	searchinfo.nniList.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, nni2));
+
 	if (nni2.likelihood > searchinfo.curLogl) {
 		numPosNNI++;
-		searchinfo.curNumPosNNIs++;
+		searchinfo.posNNIList.push_back(nni2);
 	}
 
 	/* Restore previous NNI move */
@@ -632,14 +638,11 @@ bool containsAffectedNodes(nodeptr p, SearchInfo &searchinfo) {
 	return res;
 }
 
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, bool thorough, SearchInfo &searchinfo) {
 	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
-		// check whether evaluating this quartet is neccessary
-		if (globalParam->fastnni) {
-//			if (searchinfo.curNumNNISteps == 1 || containsAffectedNodes(p, searchinfo)) {
-//				evalNNIForBran(tr, pr, p, searchinfo);
-//			}
-			if (searchinfo.curNumNNISteps == 1 || isAffectedBranch(p, searchinfo)) {
+		if (!thorough) {
+			// check whether evaluating this quartet is neccessary
+			if (isAffectedBranch(p, searchinfo)) {
 				evalNNIForBran(tr, pr, p, searchinfo);
 			}
 		} else {
@@ -655,7 +658,7 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo
 //					pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
 //				}
 //			}
-			evalNNIForSubtree(tr, pr, q->back, searchinfo);
+			evalNNIForSubtree(tr, pr, q->back, thorough, searchinfo);
 //			if (numBranches > 1 && !tr->useRecom) {
 //				pllNewviewGeneric(tr, pr, p, PLL_TRUE);
 //			} else {
