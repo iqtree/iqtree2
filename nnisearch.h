@@ -40,6 +40,7 @@ typedef struct {
 	nodeptr p;
 	int nniType;
 	char* idString;
+	string quartetString;
     double z0[PLL_NUM_BRANCHES]; // p
     double z1[PLL_NUM_BRANCHES]; // p->next
     double z2[PLL_NUM_BRANCHES]; // p->next->next
@@ -73,6 +74,7 @@ typedef struct {
 
 typedef struct {
 	unordered_map<string, pllNNIMove> nniList;
+	unordered_map<string, pllNNIMove> tabuNNIs;
 	vector<pllNNIMove> posNNIList; // positive NNI list
 	unordered_set<int> affectNodes; // Set of nodes that are affected by the previous NNIs
 	unordered_set<string> affectBranches;

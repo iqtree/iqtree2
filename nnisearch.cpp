@@ -220,25 +220,32 @@ double doNNISearch(pllInstance* tr, partitionList *pr, bool thorough, SearchInfo
 		/* list of independent positive NNI */
 		vector<pllNNIMove> selectedNNIs;
 		for (vector<pllNNIMove>::reverse_iterator rit = searchinfo.posNNIList.rbegin(); rit != searchinfo.posNNIList.rend(); ++rit) {
-			if ((*rit).loglDelta > 0) {
+			doOneNNI(tr, pr, (*rit).p, (*rit).nniType, TOPO_ONLY);
+			string quartetString = convertQuartet2String((*rit).p);
+			doOneNNI(tr, pr, (*rit).p, (*rit).nniType, TOPO_ONLY);
+			if (searchinfo.tabuNNIs.find(quartetString) != searchinfo.tabuNNIs.end()) {
+				//cout << "Quartet " << quartetString << " has already been used / Skipped" << endl;
+				continue;
+			} else {
 				bool conflict = false;
 				for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); ++it) {
 					if ((*rit).p->number == (*it).p->number || (*rit).p->number == (*it).p->back->number) {
 						conflict = true;
 						break;
 					}
-					if ((*rit).p->back->number == (*it).p->number || (*rit).p->back->number == (*it).p->back->number) {
+					if ((*rit).p->back->number == (*it).p->number
+							|| (*rit).p->back->number
+									== (*it).p->back->number) {
 						conflict = true;
 						break;
 					}
 				}
 				if (!conflict) {
 					selectedNNIs.push_back((*rit));
+					searchinfo.tabuNNIs.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, (*rit)));
 				}
 			}
-
 		}
-
 		//searchinfo.affectNodes.clear();
 		searchinfo.affectBranches.clear();
 		/* Applying all independent NNI moves */
@@ -258,11 +265,11 @@ double doNNISearch(pllInstance* tr, partitionList *pr, bool thorough, SearchInfo
 //				cout << endl;
 //			string quartetString = convertQuartet2String((*it).p);
 //			cout << quartetString << " / old logl: " << initLH << "/ logl delta: " << (*it).loglDelta << endl;
-//				if (searchinfo.tabuList.find(quartetString) != searchinfo.tabuList.end()) {
-//					cout << "Quartet " << quartetString << " has already been used" << endl;
-//				} else {
-//					searchinfo.tabuList.insert(quartetEntry(quartetString, selectedNNIs[i]));
-//				}
+//			if (searchinfo.tabuNNIs.find(quartetString) != searchinfo.tabuNNIs.end()) {
+//				cout << "Quartet " << quartetString << " has already been used / Skipped" << endl;
+//			} else {
+//				searchinfo.tabuNNIs.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, (*it)));
+//			}
 //				unordered_map<string, pllNNIMove>::iterator iter1 = searchinfo.negativeQuartets.find(quartetString);
 //				if (iter1 != searchinfo.negativeQuartets.end()) {
 //					cout << "A negative quartet applied: " << quartetString << " / old delta: " << iter1->second.loglDelta
@@ -279,40 +286,50 @@ double doNNISearch(pllInstance* tr, partitionList *pr, bool thorough, SearchInfo
 			updateBranchLengthForNNI(tr, pr, (*it));
 
 		}
-		pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
-		pllTreeEvaluate(tr, pr, 1);
-		/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
-		if (tr->likelihood < selectedNNIs.back().likelihood) {
-			if (selectedNNIs.size() == 1) {
-				printf("ERROR: new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
-						tr->likelihood, selectedNNIs[0].likelihood);
-				exit(1);
-			} else {
-				if (!restoreTree(curTree, tr, pr)) {
-					printf("ERROR: failed to roll back tree \n");
+		if (selectedNNIs.size() != 0) {
+			pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+			pllTreeEvaluate(tr, pr, 1);
+			/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
+			if (tr->likelihood < selectedNNIs.back().likelihood) {
+				if (selectedNNIs.size() == 1) {
+					printf("ERROR: new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
+							tr->likelihood, selectedNNIs[0].likelihood);
 					exit(1);
+				} else {
+					cout << "Roll back tree ... " << endl;
+					if (!restoreTree(curTree, tr, pr)) {
+						printf("ERROR: failed to roll back tree \n");
+						exit(1);
+					}
+					doOneNNI(tr, pr, selectedNNIs.back().p, selectedNNIs.back().nniType, TOPO_ONLY);
+					updateBranchLengthForNNI(tr, pr, selectedNNIs.back());
+					pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+					pllTreeEvaluate(tr, pr, 1);
+					if (tr->likelihood < selectedNNIs.back().likelihood) {
+						printf("ERROR: (After rolling back) new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
+								tr->likelihood, selectedNNIs.front().likelihood);
+						exit(1);
+					}
+
+					//TODO Remove unused NNIs from tabu list
+					selectedNNIs.pop_back();
+					for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
+						searchinfo.tabuNNIs.erase((*it).quartetString);
+					}
+
+					/* Only apply the best NNI after the tree has been rolled back */
+					searchinfo.curNumAppliedNNIs = 1;
 				}
-				doOneNNI(tr, pr, selectedNNIs.back().p, selectedNNIs.back().nniType, TOPO_ONLY);
-				updateBranchLengthForNNI(tr, pr, selectedNNIs.back());
-				pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
-				pllTreeEvaluate(tr, pr, 1);
-				if (tr->likelihood < selectedNNIs.back().likelihood) {
-					printf("ERROR: (After rolling back) new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
-							tr->likelihood, selectedNNIs.front().likelihood);
-					exit(1);
-				}
-				/* Only apply the best NNI after the tree has been rolled back */
-				searchinfo.curNumAppliedNNIs = 1;
 			}
+			if (tr->likelihood - initLH < 0.1) {
+				searchinfo.curNumAppliedNNIs = 0;
+			}
+			finalLH = tr->likelihood;
 		}
-		if (tr->likelihood - initLH < 0.1) {
-			searchinfo.curNumAppliedNNIs = 0;
-		}
-		finalLH = tr->likelihood;
 	} else {
 		searchinfo.curNumAppliedNNIs = 0;
 	}
-	//cout << "NumNNI: " << searchinfo.curNumAppliedNNIs << " / logl: " << finalLH << endl;
+	cout << "Step: " << searchinfo.curNumNNISteps << " / NumNNI: " << searchinfo.curNumAppliedNNIs << " / logl: " << finalLH << endl;
 	return finalLH;
 }
 
@@ -537,6 +554,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	nni1.loglDelta = lh1 - nni0.likelihood;
 
 	string quartetString = convertQuartet2String(p);
+	nni1.quartetString = quartetString;
 	searchinfo.nniList.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, nni1));
 
 	if (nni1.likelihood > searchinfo.curLogl) {
@@ -578,6 +596,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	nni2.loglDelta = lh2 - nni0.likelihood;
 
 	quartetString = convertQuartet2String(p);
+	nni2.quartetString = quartetString;
 	searchinfo.nniList.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, nni2));
 
 	if (nni2.likelihood > searchinfo.curLogl) {

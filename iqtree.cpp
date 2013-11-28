@@ -1486,6 +1486,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps) {
     nniSteps = 0;
     bool thoroughNNI = true;
     bool startNNI5 = false;
+    searchinfo.tabuNNIs.clear();
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
         searchinfo.curNumNNISteps = nniSteps;
         searchinfo.nniList.clear();
