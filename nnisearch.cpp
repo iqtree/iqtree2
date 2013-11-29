@@ -188,11 +188,11 @@ set<int> getAffectedNodes(pllInstance* tr, nodeptr p) {
 	return nodeSet;
 }
 
-void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, bool thorough, SearchInfo &searchinfo) {
+void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo) {
 	nodeptr p = tr->start->back;
 	nodeptr q = p->next;
 	while (q != p) {
-		evalNNIForSubtree(tr, pr, q->back, thorough, searchinfo);
+		evalNNIForSubtree(tr, pr, q->back, searchinfo);
 		q = q->next;
 		//		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 		//		if (numBranches > 1 && !tr->useRecom) {
@@ -201,90 +201,111 @@ void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, bool thorough, SearchInf
 		//			pllNewviewGeneric(tr, pr,  q->back, PLL_FALSE);
 		//		}
 	}
-
 }
 
+/*
+void pllSaveQuartetForSubTree(pllInstance *tr, nodeptr p, SearchInfo &searchinfo) {
+	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
+			evalNNIForBran(tr, pr, p, searchinfo);
+		nodeptr q = p->next;
+		while (q != p) {
+			pllSaveQuartetForSubTree(tr, q->back, searchinfo);
+			q = q->next;
+		}
+	}
+}
 
-double doNNISearch(pllInstance* tr, partitionList *pr, bool thorough, SearchInfo &searchinfo) {
+void pllSaveAllQuartet(pllInstance *tr, SearchInfo &searchinfo) {
+	nodeptr p = tr->start->back;
+	nodeptr q = p->next;
+	while (q != p) {
+		pllSaveQuartetForSubTree(tr, q->back, searchinfo);
+	}
+}
+*/
+
+double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo) {
 	double initLH = tr->likelihood;
 	double finalLH = initLH;
+	bool applyAllNNI = true;
+	vector<pllNNIMove> selectedNNIs;
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 	/* data structure to store the initial tree topology + branch length */
 	topol* curTree = _setupTopol(tr);
 	saveTree(tr, curTree, numBranches);
-	pllEvalAllNNIs(tr, pr, thorough, searchinfo);
-
+	pllEvalAllNNIs(tr, pr, searchinfo);
 	if (searchinfo.posNNIList.size() != 0) {
-		/* Sort the NNI list ascendingly according to the log-likelihood */
 		sort(searchinfo.posNNIList.begin(), searchinfo.posNNIList.end(), comparePLLNNIMove);
-		/* list of independent positive NNI */
-		vector<pllNNIMove> selectedNNIs;
-		for (vector<pllNNIMove>::reverse_iterator rit = searchinfo.posNNIList.rbegin(); rit != searchinfo.posNNIList.rend(); ++rit) {
-			doOneNNI(tr, pr, (*rit).p, (*rit).nniType, TOPO_ONLY);
-			string quartetString = convertQuartet2String((*rit).p);
-			doOneNNI(tr, pr, (*rit).p, (*rit).nniType, TOPO_ONLY);
-			if (searchinfo.tabuNNIs.find(quartetString) != searchinfo.tabuNNIs.end()) {
-				//cout << "Quartet " << quartetString << " has already been used / Skipped" << endl;
-				continue;
-			} else {
-				bool conflict = false;
-				for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); ++it) {
-					if ((*rit).p->number == (*it).p->number || (*rit).p->number == (*it).p->back->number) {
-						conflict = true;
-						break;
-					}
-					if ((*rit).p->back->number == (*it).p->number
-							|| (*rit).p->back->number
-									== (*it).p->back->number) {
-						conflict = true;
-						break;
-					}
+		for (vector<pllNNIMove>::reverse_iterator rit = searchinfo.posNNIList.rbegin();
+				rit != searchinfo.posNNIList.rend(); ++rit) {
+			bool conflict = false;
+			for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); ++it) {
+				if ((*rit).p->number == (*it).p->number || (*rit).p->number == (*it).p->back->number) {
+					conflict = true;
+					break;
 				}
-				if (!conflict) {
-					selectedNNIs.push_back((*rit));
-					searchinfo.tabuNNIs.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, (*rit)));
+				if ((*rit).p->back->number == (*it).p->number || (*rit).p->back->number == (*it).p->back->number) {
+					conflict = true;
+					break;
 				}
 			}
+			if (!conflict) {
+				selectedNNIs.push_back((*rit));
+			}
+
 		}
 		//searchinfo.affectNodes.clear();
-		searchinfo.affectBranches.clear();
+		//searchinfo.affectBranches.clear();
 		/* Applying all independent NNI moves */
 		searchinfo.curNumAppliedNNIs = selectedNNIs.size();
 		for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
 			/* do the topological change */
 			doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
-//			set<int> affectedNodes = getAffectedNodes(tr, (*it).p);
-//			searchinfo.affectNodes.insert(affectedNodes.begin(), affectedNodes.end());
-			vector<string> aBranches = getAffectedBranches(tr, (*it).p);
-			searchinfo.affectBranches.insert(aBranches.begin(), aBranches.end());
 
-//				set<int>::iterator iter2;
-//				for (iter2 = affectedNodes.begin(); iter2 != affectedNodes.end(); iter2++) {
-//					cout << " " << *iter2;
-//				}
-//				cout << endl;
-//			string quartetString = convertQuartet2String((*it).p);
-//			cout << quartetString << " / old logl: " << initLH << "/ logl delta: " << (*it).loglDelta << endl;
-//			if (searchinfo.tabuNNIs.find(quartetString) != searchinfo.tabuNNIs.end()) {
-//				cout << "Quartet " << quartetString << " has already been used / Skipped" << endl;
-//			} else {
-//				searchinfo.tabuNNIs.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, (*it)));
-//			}
-//				unordered_map<string, pllNNIMove>::iterator iter1 = searchinfo.negativeQuartets.find(quartetString);
-//				if (iter1 != searchinfo.negativeQuartets.end()) {
-//					cout << "A negative quartet applied: " << quartetString << " / old delta: " << iter1->second.loglDelta
-//							<< " / new delta: " << selectedNNIs[i].loglDelta
-//							<< endl;
-//					set<int> affectedNodes = getAffectedNodes(tr,selectedNNIs[i].p);
-//					set<int>::iterator iter2;
-//					for (iter2 = affectedNodes.begin(); iter2 != affectedNodes.end(); iter2++) {
-//						cout << " " << *iter2;
-//					}
-//					cout << endl;
-//				}
+			/*
+			set<int> affectedNodes = getAffectedNodes(tr, (*it).p);
+			searchinfo.affectNodes.insert(affectedNodes.begin(),
+					affectedNodes.end());
+			vector<string> aBranches = getAffectedBranches(tr, (*it).p);
+			searchinfo.affectBranches.insert(aBranches.begin(),
+					aBranches.end());
+			set<int>::iterator iter2;
+			for (iter2 = affectedNodes.begin(); iter2 != affectedNodes.end();
+					iter2++) {
+				cout << " " << *iter2;
+			}
+			cout << endl;
+			string quartetString = convertQuartet2String((*it).p);
+			cout << quartetString << " / old logl: " << initLH
+					<< "/ logl delta: " << (*it).loglDelta << endl;
+			if (searchinfo.tabuNNIs.find(quartetString)
+					!= searchinfo.tabuNNIs.end()) {
+				cout << "Quartet " << quartetString
+						<< " has already been used / Skipped" << endl;
+			} else {
+				searchinfo.tabuNNIs.insert(
+						unordered_map<string, pllNNIMove>::value_type(
+								quartetString, (*it)));
+			}
+			unordered_map<string, pllNNIMove>::iterator iter1 =
+					searchinfo.negativeQuartets.find(quartetString);
+			if (iter1 != searchinfo.negativeQuartets.end()) {
+				cout << "A negative quartet applied: " << quartetString
+						<< " / old delta: " << iter1->second.loglDelta
+						<< " / new delta: " << selectedNNIs[i].loglDelta
+						<< endl;
+				set<int> affectedNodes = getAffectedNodes(tr,
+						selectedNNIs[i].p);
+				set<int>::iterator iter2;
+				for (iter2 = affectedNodes.begin();
+						iter2 != affectedNodes.end(); iter2++) {
+					cout << " " << *iter2;
+				}
+				cout << endl;
+			}
+			*/
 
 			updateBranchLengthForNNI(tr, pr, (*it));
-
 		}
 		if (selectedNNIs.size() != 0) {
 			pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
@@ -311,14 +332,9 @@ double doNNISearch(pllInstance* tr, partitionList *pr, bool thorough, SearchInfo
 						exit(1);
 					}
 
-					//TODO Remove unused NNIs from tabu list
-					selectedNNIs.pop_back();
-					for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
-						searchinfo.tabuNNIs.erase((*it).quartetString);
-					}
-
 					/* Only apply the best NNI after the tree has been rolled back */
 					searchinfo.curNumAppliedNNIs = 1;
+					applyAllNNI = false;
 				}
 			}
 			if (tr->likelihood - initLH < 0.1) {
@@ -329,7 +345,20 @@ double doNNISearch(pllInstance* tr, partitionList *pr, bool thorough, SearchInfo
 	} else {
 		searchinfo.curNumAppliedNNIs = 0;
 	}
-	cout << "Step: " << searchinfo.curNumNNISteps << " / NumNNI: " << searchinfo.curNumAppliedNNIs << " / logl: " << finalLH << endl;
+	if (verbose_mode >= VB_MED) {
+		cout << "Step: " << searchinfo.curNumNNISteps << " / NumNNI: " << searchinfo.curNumAppliedNNIs << " / logl: " << finalLH << endl;
+	}
+	// update tabu list
+	if (searchinfo.tabu) {
+		if (applyAllNNI) {
+			for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
+				pllSaveQuartet((*it).p, searchinfo);
+			}
+		} else {
+			pllSaveQuartet(selectedNNIs.back().p, searchinfo);
+		}
+	}
+
 	return finalLH;
 }
 
@@ -522,6 +551,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	nodeptr q = p->back;
 	assert(!isTip(p->number, tr->mxtips));
 	assert(!isTip(q->number, tr->mxtips));
+	bool recomputePartialLH = false;
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 	int numPosNNI = 0;
 	int i;
@@ -537,96 +567,117 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		nni0.z4[i] = q->next->next->z[i];
 	}
 
-	/* do an NNI move of type 1 */
-	double lh1 = doOneNNI(tr, pr, p, 1, searchinfo.evalType);
-	pllNNIMove nni1;
-	nni1.p = p;
-	nni1.nniType = 1;
-	// Store the optimized branch lengths
-	for (i = 0; i < numBranches; i++) {
-		nni1.z0[i] = p->z[i];
-		nni1.z1[i] = p->next->z[i];
-		nni1.z2[i] = p->next->next->z[i];
-		nni1.z3[i] = q->next->z[i];
-		nni1.z4[i] = q->next->next->z[i];
-	}
-	nni1.likelihood = lh1;
-	nni1.loglDelta = lh1 - nni0.likelihood;
-
-	string quartetString = convertQuartet2String(p);
-	nni1.quartetString = quartetString;
-	searchinfo.nniList.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, nni1));
-
-	if (nni1.likelihood > searchinfo.curLogl) {
-		numPosNNI++;
-		searchinfo.posNNIList.push_back(nni1);
-	}
-
-	/* Restore previous NNI move */
 	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
-	/* Restore the old branch length */
-	for (i = 0; i < numBranches; i++) {
-		p->z[i] = nni0.z0[i];
-		q->z[i] = nni0.z0[i];
-		p->next->z[i] = nni0.z1[i];
-		p->next->back->z[i] = nni0.z1[i];
-		p->next->next->z[i] = nni0.z2[i];
-		p->next->next->back->z[i] = nni0.z2[i];
-		q->next->z[i] = nni0.z3[i];
-		q->next->back->z[i] = nni0.z3[i];
-		q->next->next->z[i] = nni0.z4[i];
-		q->next->next->back->z[i] = nni0.z4[i];
+	string quartetString = convertQuartet2String(p);
+	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
+	if ( !searchinfo.tabu || searchinfo.tabuNNIs.find(quartetString) == searchinfo.tabuNNIs.end() ) {
+		/* do an NNI move of type 1 */
+		double lh1 = doOneNNI(tr, pr, p, 1, searchinfo.evalType);
+		pllNNIMove nni1;
+		nni1.p = p;
+		nni1.nniType = 1;
+		// Store the optimized branch lengths
+		for (i = 0; i < numBranches; i++) {
+			nni1.z0[i] = p->z[i];
+			nni1.z1[i] = p->next->z[i];
+			nni1.z2[i] = p->next->next->z[i];
+			nni1.z3[i] = q->next->z[i];
+			nni1.z4[i] = q->next->next->z[i];
+		}
+		nni1.likelihood = lh1;
+		nni1.loglDelta = lh1 - nni0.likelihood;
+
+		string quartetString = convertQuartet2String(p);
+		nni1.quartetString = quartetString;
+		searchinfo.nniList.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, nni1));
+
+		if (nni1.likelihood > searchinfo.curLogl) {
+			numPosNNI++;
+			searchinfo.posNNIList.push_back(nni1);
+		}
+
+		/* Restore previous NNI move */
+		doOneNNI(tr, pr, p, 1, TOPO_ONLY);
+		/* Restore the old branch length */
+		for (i = 0; i < numBranches; i++) {
+			p->z[i] = nni0.z0[i];
+			q->z[i] = nni0.z0[i];
+			p->next->z[i] = nni0.z1[i];
+			p->next->back->z[i] = nni0.z1[i];
+			p->next->next->z[i] = nni0.z2[i];
+			p->next->next->back->z[i] = nni0.z2[i];
+			q->next->z[i] = nni0.z3[i];
+			q->next->back->z[i] = nni0.z3[i];
+			q->next->next->z[i] = nni0.z4[i];
+			q->next->next->back->z[i] = nni0.z4[i];
+		}
+		recomputePartialLH = true;
 	}
 
-	/* do an NNI move of type 2 */
-	double lh2 = doOneNNI(tr, pr, p, 2, searchinfo.evalType);
-	// Create the nniMove struct to store this move
-	pllNNIMove nni2;
-	nni2.p = p;
-	nni2.nniType = 2;
-	// Store the optimized and unoptimized central branch length
-	for (i = 0; i < numBranches; i++) {
-		nni2.z0[i] = p->z[i];
-		nni2.z1[i] = p->next->z[i];
-		nni2.z2[i] = p->next->next->z[i];
-		nni2.z3[i] = q->next->z[i];
-		nni2.z4[i] = q->next->next->z[i];
-	}
-	nni2.likelihood = lh2;
-	nni2.loglDelta = lh2 - nni0.likelihood;
-
-	quartetString = convertQuartet2String(p);
-	nni2.quartetString = quartetString;
-	searchinfo.nniList.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, nni2));
-
-	if (nni2.likelihood > searchinfo.curLogl) {
-		numPosNNI++;
-		searchinfo.posNNIList.push_back(nni2);
-	}
-
-	/* Restore previous NNI move */
 	doOneNNI(tr, pr, p, 2, TOPO_ONLY);
-    /* Restore the old branch length */
-	for (i = 0; i < numBranches; i++) {
-		p->z[i] = nni0.z0[i];
-		q->z[i] = nni0.z0[i];
-		p->next->z[i] = nni0.z1[i];
-		p->next->back->z[i] = nni0.z1[i];
-		p->next->next->z[i] = nni0.z2[i];
-		p->next->next->back->z[i] = nni0.z2[i];
-		q->next->z[i] = nni0.z3[i];
-		q->next->back->z[i] = nni0.z3[i];
-		q->next->next->z[i] = nni0.z4[i];
-		q->next->next->back->z[i] = nni0.z4[i];
+	quartetString = convertQuartet2String(p);
+	doOneNNI(tr, pr, p, 2, TOPO_ONLY);
+	if ( !searchinfo.tabu || searchinfo.tabuNNIs.find(quartetString) == searchinfo.tabuNNIs.end()) {
+		/* do an NNI move of type 2 */
+		double lh2 = doOneNNI(tr, pr, p, 2, searchinfo.evalType);
+		// Create the nniMove struct to store this move
+		pllNNIMove nni2;
+		nni2.p = p;
+		nni2.nniType = 2;
+		// Store the optimized and unoptimized central branch length
+		for (i = 0; i < numBranches; i++) {
+			nni2.z0[i] = p->z[i];
+			nni2.z1[i] = p->next->z[i];
+			nni2.z2[i] = p->next->next->z[i];
+			nni2.z3[i] = q->next->z[i];
+			nni2.z4[i] = q->next->next->z[i];
+		}
+		nni2.likelihood = lh2;
+		nni2.loglDelta = lh2 - nni0.likelihood;
+
+		quartetString = convertQuartet2String(p);
+		nni2.quartetString = quartetString;
+		searchinfo.nniList.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, nni2));
+
+		if (nni2.likelihood > searchinfo.curLogl) {
+			numPosNNI++;
+			searchinfo.posNNIList.push_back(nni2);
+		}
+
+		/* Restore previous NNI move */
+		doOneNNI(tr, pr, p, 2, TOPO_ONLY);
+	    /* Restore the old branch length */
+		for (i = 0; i < numBranches; i++) {
+			p->z[i] = nni0.z0[i];
+			q->z[i] = nni0.z0[i];
+			p->next->z[i] = nni0.z1[i];
+			p->next->back->z[i] = nni0.z1[i];
+			p->next->next->z[i] = nni0.z2[i];
+			p->next->next->back->z[i] = nni0.z2[i];
+			q->next->z[i] = nni0.z3[i];
+			q->next->back->z[i] = nni0.z3[i];
+			q->next->next->z[i] = nni0.z4[i];
+			q->next->next->back->z[i] = nni0.z4[i];
+		}
+		recomputePartialLH = true;
 	}
-	if (numBranches > 1 && !tr->useRecom) {
-		pllNewviewGeneric(tr, pr, p, PLL_TRUE);
-		pllNewviewGeneric(tr, pr, p->back, PLL_TRUE);
-	} else {
-		pllNewviewGeneric(tr, pr, p, PLL_FALSE);
-		pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
+
+	if (recomputePartialLH) {
+		if (numBranches > 1 && !tr->useRecom) {
+			pllNewviewGeneric(tr, pr, p, PLL_TRUE);
+			pllNewviewGeneric(tr, pr, p->back, PLL_TRUE);
+		} else {
+			pllNewviewGeneric(tr, pr, p, PLL_FALSE);
+			pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
+		}
 	}
+
 	return numPosNNI;
+}
+
+void pllSaveQuartet(nodeptr p, SearchInfo &searchinfo) {
+	string quartetString = convertQuartet2String(p);
+	searchinfo.tabuNNIs.insert(quartetString);
 }
 
 bool isAffectedBranch(nodeptr p, SearchInfo &searchinfo) {
@@ -657,32 +708,27 @@ bool containsAffectedNodes(nodeptr p, SearchInfo &searchinfo) {
 	return res;
 }
 
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, bool thorough, SearchInfo &searchinfo) {
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
 	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
-		if (!thorough) {
-			// check whether evaluating this quartet is neccessary
-			if (isAffectedBranch(p, searchinfo)) {
-				evalNNIForBran(tr, pr, p, searchinfo);
-			}
-		} else {
-			evalNNIForBran(tr, pr, p, searchinfo);
-		}
+		evalNNIForBran(tr, pr, p, searchinfo);
 //		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 		nodeptr q = p->next;
 		while (q != p) {
-//			if (recomputePartialLH) {
-//				if (numBranches > 1 && !tr->useRecom) {
-//					pllNewviewGeneric(tr, pr, p->back, PLL_TRUE);
-//				} else {
-//					pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
-//				}
+
+//			if (numBranches > 1 && !tr->useRecom) {
+//				pllNewviewGeneric(tr, pr, p->back, PLL_TRUE);
+//			} else {
+//				pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
 //			}
-			evalNNIForSubtree(tr, pr, q->back, thorough, searchinfo);
+
+			evalNNIForSubtree(tr, pr, q->back, searchinfo);
+
 //			if (numBranches > 1 && !tr->useRecom) {
 //				pllNewviewGeneric(tr, pr, p, PLL_TRUE);
 //			} else {
 //				pllNewviewGeneric(tr, pr, p, PLL_FALSE);
 //			}
+
 			q = q->next;
 		}
 	}

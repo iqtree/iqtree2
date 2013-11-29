@@ -348,6 +348,8 @@ struct Params {
 
 	int numParsimony;
 
+	bool tabunni;
+
 	/**
 	 *  Default number of NNI used for perturbing the tree
 	 */

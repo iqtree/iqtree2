@@ -1211,6 +1211,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	// Compute maximum likelihood distance
 	double bestTreeScore = iqtree.bestScore;
+	if (params.inni || params.min_iterations == 1) {
+		params.compute_ml_dist = false;
+	}
 	if (!params.dist_file && params.compute_ml_dist) {
 		computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params, alignment, bestTreeScore);
 	}
@@ -1343,9 +1346,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.curScore = iqtree.bestScore;
 
 		delete[] parsTree;
-
-		cout << "Average number of NNIs: " << params.pertubSize << endl;
-
 
 		/* FOR PARTITION MODEL */
 		if (iqtree.isSuperTree())

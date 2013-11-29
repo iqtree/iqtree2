@@ -1483,43 +1483,42 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps) {
 	searchinfo.curLogl = pllInst->likelihood;
     const int MAX_NNI_STEPS = 50;
     totalNNICount = 0;
-    nniSteps = 0;
-    bool thoroughNNI = true;
     bool startNNI5 = false;
     searchinfo.tabuNNIs.clear();
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
         searchinfo.curNumNNISteps = nniSteps;
         searchinfo.nniList.clear();
         searchinfo.posNNIList.clear();
-        if (nniSteps > 1) {
-        	thoroughNNI = false;
-        }
         double newLH;
         if (params->nni5) {
         	searchinfo.evalType = FIVE_BRAN_OPT;
-        	newLH = doNNISearch(pllInst, pllPartitions, thoroughNNI, searchinfo);
+        	newLH = pllDoNNISearch(pllInst, pllPartitions, searchinfo);
         } else if (params->nni05) {
         	if (searchinfo.curNumAppliedNNIs == 1) {
         		startNNI5 = true;
         	}
 			if (startNNI5) {
 				searchinfo.evalType = FIVE_BRAN_OPT;
-				newLH = doNNISearch(pllInst, pllPartitions, thoroughNNI, searchinfo);
+				newLH = pllDoNNISearch(pllInst, pllPartitions, searchinfo);
 			} else {
 				searchinfo.evalType = NO_BRAN_OPT;
-				newLH = doNNISearch(pllInst, pllPartitions, thoroughNNI, searchinfo);
+				newLH = pllDoNNISearch(pllInst, pllPartitions, searchinfo);
 			}
         } else {
         	searchinfo.evalType = ONE_BRAN_OPT;
-        	newLH = doNNISearch(pllInst, pllPartitions, thoroughNNI, searchinfo);
+        	newLH = pllDoNNISearch(pllInst, pllPartitions, searchinfo);
         }
-        if (searchinfo.curNumAppliedNNIs == 0) { // no positive NNI was found
+        if (searchinfo.curNumAppliedNNIs == 0) { // no admissible NNI was found
         	searchinfo.curLogl = newLH;
             break;
         } else {
         	searchinfo.curLogl = newLH;
         	searchinfo.numAppliedNNIs += searchinfo.curNumAppliedNNIs;
         }
+    }
+
+    if (nniSteps == (MAX_NNI_STEPS + 1)) {
+    	cout << "WARNING: NNI search seems to run unusually too long and thus it was stopped!" << endl;
     }
 
     if (abs(searchinfo.curLogl - bestScore) < 0.1 || searchinfo.curLogl > bestScore) {

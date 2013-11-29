@@ -646,7 +646,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.numSmoothTree = 1;
     params.nni5 = true;
     params.nni05 = false;
-    params.nniThresHold = 0.1;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
@@ -730,7 +729,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pertubSize = 0.8;
     params.speedup_iter = 100;
     params.pll = false;
-    params.model_eps = 0.1;
+    params.model_eps = 0.01;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -738,9 +737,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.reinsert_par = false;
     params.fast_branch_opt = false;
     params.bestStart = true;
-    params.tabu = false;
     params.inni = false;
-    params.fastnni = false;
+    params.tabunni = false;
     params.random_nni =false;
     params.random_restart = false;
     params.numParsimony = 10;
@@ -1626,12 +1624,9 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-tabu") == 0) {
-                params.tabu = true;
+                params.tabunni = true;
             } else if (strcmp(argv[cnt], "-inni") == 0) {
             	params.inni = true;
-            	params.pll = true;
-            } else if (strcmp(argv[cnt], "-fastnni") == 0) {
-            	params.fastnni = true;
             	params.pll = true;
             } else if (strcmp(argv[cnt], "-rr") == 0) {
             	params.random_restart = true;
@@ -1648,11 +1643,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.nni05 = true;
             } else if (strcmp(argv[cnt], "-onebran") == 0 || strcmp(argv[cnt], "-nni1") == 0) {
             	params.nni5 = false;
-            } else if (strcmp(argv[cnt], "-nniThreshold") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            		throw "Use -nniThreshold <threshold>";
-            	params.nniThresHold = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-smooth") == 0) {
                 cnt++;
                 if (cnt >= argc)
