@@ -1218,10 +1218,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params, alignment, bestTreeScore);
 	}
 
-	// deallocate partial likelihood within IQTree kernel to save memory when PLL is used */
-	if (params.pll)
-		iqtree.deleteAllPartialLh();
-
     if (!params.fixed_branch_length && params.leastSquareBranch) {
         cout << "Computing Least Square branch lengths " << endl;
         iqtree.optimizeAllBranchesLS();
@@ -1344,6 +1340,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		/* IQTree kernel: read in the best tree */
 		iqtree.readTreeString(bestTreeString);
 		iqtree.curScore = iqtree.bestScore;
+
+		// deallocate partial likelihood within IQTree kernel to save memory when PLL is used */
+		if (params.pll)
+			iqtree.deleteAllPartialLh();
 
 		delete[] parsTree;
 

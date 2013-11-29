@@ -76,10 +76,11 @@ typedef struct {
 	unordered_map<string, pllNNIMove> nniList;
 	unordered_set<string> tabuNNIs;
 	vector<pllNNIMove> posNNIList; // positive NNI list
-	bool tabu;
+	bool tabunni;
 	unordered_set<int> affectNodes; // Set of nodes that are affected by the previous NNIs
 	unordered_set<string> affectBranches;
 	double curLogl;
+	int numUnevalQuartet; // number of unevaluated quartet because of tabu constraint
 	int evalType;
 	int numAppliedNNIs; // total number of applied NNIs sofar
 	int curNumAppliedNNIs; // number of applied NNIs at the current step
@@ -134,6 +135,11 @@ double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int num
  *  @param[out] deltaNNI average improvement made by one NNI
  */
 double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo);
+
+void pllUpdateTabuList(pllInstance *tr, SearchInfo &searchinfo);
+
+void pllSaveQuartetForSubTree(pllInstance* tr, nodeptr p, SearchInfo &searchinfo);
+
 
 
 /**

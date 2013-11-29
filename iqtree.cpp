@@ -1479,12 +1479,18 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps) {
 	SearchInfo searchinfo;
+	if (params->tabunni) {
+		searchinfo.tabunni = true;
+	    searchinfo.tabuNNIs.clear();
+	    searchinfo.numUnevalQuartet = 0;
+	} else {
+		searchinfo.tabunni = false;
+	}
 	searchinfo.numAppliedNNIs = 0;
 	searchinfo.curLogl = pllInst->likelihood;
     const int MAX_NNI_STEPS = 50;
     totalNNICount = 0;
     bool startNNI5 = false;
-    searchinfo.tabuNNIs.clear();
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
         searchinfo.curNumNNISteps = nniSteps;
         searchinfo.nniList.clear();
@@ -1526,6 +1532,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps) {
       searchinfo.curLogl = pllInst->likelihood;
     }
     totalNNICount = searchinfo.numAppliedNNIs;
+    //cout << "Number of unevaluated quartet: " << searchinfo.numUnevalQuartet << endl;
     return searchinfo.curLogl;
 }
 

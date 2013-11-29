@@ -225,9 +225,13 @@ void pllSaveAllQuartet(pllInstance *tr, SearchInfo &searchinfo) {
 */
 
 double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo) {
+	// update tabu list
+	if (searchinfo.tabunni) {
+		pllUpdateTabuList(tr, searchinfo);
+	}
+	//cout << "Tabu size: " << searchinfo.tabuNNIs.size() << endl;
 	double initLH = tr->likelihood;
 	double finalLH = initLH;
-	bool applyAllNNI = true;
 	vector<pllNNIMove> selectedNNIs;
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 	/* data structure to store the initial tree topology + branch length */
@@ -334,7 +338,6 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 
 					/* Only apply the best NNI after the tree has been rolled back */
 					searchinfo.curNumAppliedNNIs = 1;
-					applyAllNNI = false;
 				}
 			}
 			if (tr->likelihood - initLH < 0.1) {
@@ -348,18 +351,27 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	if (verbose_mode >= VB_MED) {
 		cout << "Step: " << searchinfo.curNumNNISteps << " / NumNNI: " << searchinfo.curNumAppliedNNIs << " / logl: " << finalLH << endl;
 	}
-	// update tabu list
-	if (searchinfo.tabu) {
-		if (applyAllNNI) {
-			for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
-				pllSaveQuartet((*it).p, searchinfo);
-			}
-		} else {
-			pllSaveQuartet(selectedNNIs.back().p, searchinfo);
+	return finalLH;
+}
+
+void pllUpdateTabuList(pllInstance *tr, SearchInfo &searchinfo) {
+	nodeptr p = tr->start->back;
+	nodeptr q = p->next;
+	while (q != p) {
+		pllSaveQuartetForSubTree(tr, q->back, searchinfo);
+		q = q->next;
+	}
+}
+
+void pllSaveQuartetForSubTree(pllInstance* tr, nodeptr p, SearchInfo &searchinfo) {
+	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
+		pllSaveQuartet(p, searchinfo);
+		nodeptr q = p->next;
+		while (q != p) {
+			pllSaveQuartetForSubTree(tr, q->back, searchinfo);
+			q = q->next;
 		}
 	}
-
-	return finalLH;
 }
 
 void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nni) {
@@ -570,7 +582,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
 	string quartetString = convertQuartet2String(p);
 	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
-	if ( !searchinfo.tabu || searchinfo.tabuNNIs.find(quartetString) == searchinfo.tabuNNIs.end() ) {
+	if ( !searchinfo.tabunni || searchinfo.tabuNNIs.find(quartetString) == searchinfo.tabuNNIs.end() ) {
 		/* do an NNI move of type 1 */
 		double lh1 = doOneNNI(tr, pr, p, 1, searchinfo.evalType);
 		pllNNIMove nni1;
@@ -612,12 +624,14 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 			q->next->next->back->z[i] = nni0.z4[i];
 		}
 		recomputePartialLH = true;
+	} else {
+		searchinfo.numUnevalQuartet++;
 	}
 
 	doOneNNI(tr, pr, p, 2, TOPO_ONLY);
 	quartetString = convertQuartet2String(p);
 	doOneNNI(tr, pr, p, 2, TOPO_ONLY);
-	if ( !searchinfo.tabu || searchinfo.tabuNNIs.find(quartetString) == searchinfo.tabuNNIs.end()) {
+	if ( !searchinfo.tabunni || searchinfo.tabuNNIs.find(quartetString) == searchinfo.tabuNNIs.end()) {
 		/* do an NNI move of type 2 */
 		double lh2 = doOneNNI(tr, pr, p, 2, searchinfo.evalType);
 		// Create the nniMove struct to store this move
@@ -660,6 +674,8 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 			q->next->next->back->z[i] = nni0.z4[i];
 		}
 		recomputePartialLH = true;
+	} else {
+		searchinfo.numUnevalQuartet++;
 	}
 
 	if (recomputePartialLH) {
