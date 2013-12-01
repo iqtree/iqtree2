@@ -48,6 +48,7 @@ typedef struct {
     double z4[PLL_NUM_BRANCHES]; // q->next->next
 	double likelihood;
 	double loglDelta;
+	double negLoglDelta;
 } pllNNIMove;
 
 inline bool comparePLLNNIMove(const pllNNIMove &a, const pllNNIMove &b)
@@ -73,7 +74,9 @@ typedef struct {
 } NNICUT;
 
 typedef struct {
-	unordered_map<string, pllNNIMove> nniList;
+	//unordered_map<string, pllNNIMove> nniList;
+	vector<pllNNIMove> nniList;
+	bool updateNNIList;
 	unordered_set<string> tabuNNIs;
 	vector<pllNNIMove> posNNIList; // positive NNI list
 	bool tabunni;
@@ -102,6 +105,10 @@ void pllSaveQuartet(nodeptr p, SearchInfo &searchinfo);
 
 void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nni);
 
+void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo);
+
+double pllDoRandNNIs(pllInstance *tr, partitionList *pr, int numNNI);
+
 /**
  *  Evaluate NNI moves for the current internal branch
  *  @param tr the current tree data structure
@@ -121,7 +128,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
  * @param numNNI size of the array nnis
  * @return
  */
-double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int numNNI);
+double pllPerturbTree(pllInstance *tr, partitionList *pr, vector<pllNNIMove> &nnis);
 
 /**
  * 	do 1 round of fastNNI
@@ -150,6 +157,11 @@ void pllSaveQuartetForSubTree(pllInstance* tr, nodeptr p, SearchInfo &searchinfo
  *  @param[in] evalType: NO_NR, WITH_ONE_NR, WITH_FIVE_NR
  */
 double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, int evalType);
+
+void pllGetAllInBran(pllInstance *tr, vector<nodeptr> &branlist);
+
+void pllGetAllInBranForSubtree(pllInstance *tr, nodeptr p, vector<nodeptr> &branlist);
+
 
 string convertQuartet2String(nodeptr p);
 /**

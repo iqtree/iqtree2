@@ -251,12 +251,12 @@ public:
      *      @param nniCount (OUT) number of NNIs applied
      * 		@param nniSteps (OUT) number of NNI steps done
      */
-    double pllOptimizeNNI(int &nniCount, int &nniSteps);
+    double pllOptimizeNNI(int &nniCount, int &nniSteps, SearchInfo &searchinfo);
 
     /**
      *   update best tree topology (for PLL only)
      */
-    void pllUpdateBestTree();
+    void pllUpdateBestTree(SearchInfo &searchinfo);
     /**
             search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
      */
@@ -451,9 +451,7 @@ public:
      *  Contains a sorted list of all NNIs (2n-6) evaluated for the current best tree
      *  The last element (nni_for_pertub.end()) is the best NNI
      */
-    vector<pllNNIMove> bestNNIList;
-
-    vector<pllNNIMove> curNNIList;
+    vector<pllNNIMove> nniListOfBestTree;
 
     /**
      *  vector contains accumulated likelihood of all (2n-6) NNIs

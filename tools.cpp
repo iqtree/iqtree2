@@ -726,10 +726,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.pertubSize = 0.8;
+    params.pertubSize = 0.2;
     params.speedup_iter = 100;
     params.pll = false;
-    params.model_eps = 0.01;
+    params.model_eps = 0.1;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;

@@ -19,17 +19,6 @@ int nni5;
 extern Params *globalParam;
 /* program options */
 
-static int cmp_nni(const void* nni1, const void* nni2) {
-	pllNNIMove* myNNI1 = (pllNNIMove*) nni1;
-	pllNNIMove* myNNI2 = (pllNNIMove*) nni2;
-	if (myNNI1->likelihood > myNNI2->likelihood)
-		return 1;
-	else if (myNNI1->likelihood < myNNI2->likelihood)
-		return -1;
-	else
-		return 0;
-}
-
 int compareDouble(const void * a, const void * b) {
 	if (*(double*) a > *(double*) b)
 		return 1;
@@ -57,28 +46,73 @@ pllNNIMove *getNonConflictNNIList(pllInstance* tr) {
 	return nonConfNNIList;
 }
 
-double perturbTree(pllInstance *tr, partitionList *pr, pllNNIMove *nnis, int numNNI) {
-	int numBranches = pr->numberOfPartitions;
-	int i;
-	//printf("Perturbing %d NNIs \n", numNNI);
-	for (i = 0; i < numNNI; i++) {
-		/* First, do the topological change */
-		//printf("Do pertubing NNI (%d - %d) with logl = %10.4f \n", nnis[i].p->number, nnis[i].p->back->number, nnis[i].likelihood);
-		doOneNNI(tr, pr, nnis[i].p, nnis[i].nniType, TOPO_ONLY);
-		/* Then apply the new branch lengths */
-		int j;
-		for (j = 0; j < numBranches; j++) {
-			nnis[i].p->z[j] = nnis[i].z0[j];
-			nnis[i].p->back->z[j] = nnis[i].z0[j];
-			nnis[i].p->next->z[j] = nnis[i].z1[j];
-			nnis[i].p->next->back->z[j] = nnis[i].z1[j];
-			nnis[i].p->next->next->z[j] = nnis[i].z2[j];
-			nnis[i].p->next->next->back->z[j] = nnis[i].z2[j];
-			nnis[i].p->back->next->z[j] = nnis[i].z3[j];
-			nnis[i].p->back->next->back->z[j] = nnis[i].z3[j];
-			nnis[i].p->back->next->next->z[j] = nnis[i].z4[j];
-			nnis[i].p->back->next->next->back->z[j] = nnis[i].z4[j];
+double pllDoRandNNIs(pllInstance *tr, partitionList *pr, int numNNI) {
+	int numInBrans = tr->mxtips - 3;
+	int numNNIinStep = (int) numInBrans / 5;
+
+	// devided in multiple round, each round collect 1/5 of numNNI
+	int cnt1 = 0;
+	unordered_set<int> selectedNodes;
+	vector<nodeptr> selectedBrans;
+	vector<nodeptr> brans;
+	do {
+		int cnt2 = 0;
+		selectedNodes.clear();
+		selectedBrans.clear();
+		brans.clear();
+		pllGetAllInBran(tr, brans);
+		assert(brans.size() == numInBrans);
+		while(cnt2 < numNNIinStep && cnt2 < numNNI) {
+			int branIndex = random_int(numInBrans);
+			if (selectedNodes.find(brans[branIndex]->number) == selectedNodes.end() &&
+					selectedNodes.find(brans[branIndex]->back->number) == selectedNodes.end()) {
+				selectedNodes.insert(brans[branIndex]->number);
+				selectedNodes.insert(brans[branIndex]->back->number);
+				selectedBrans.push_back(brans[branIndex]);
+				cnt2++;
+			}
 		}
+		for (vector<nodeptr>::iterator it = selectedBrans.begin(); it != selectedBrans.end(); ++it) {
+			int nniType = random_int(2);
+			doOneNNI(tr, pr, (*it), nniType, TOPO_ONLY);
+		}
+		cnt1 += selectedBrans.size();
+		if (numNNI - cnt1 < numNNIinStep) {
+			numNNIinStep = numNNI - cnt1;
+		}
+	} while (cnt1 < numNNI);
+	pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+	pllTreeEvaluate(tr, pr, 1);
+	return tr->likelihood;
+}
+
+void pllGetAllInBran(pllInstance *tr, vector<nodeptr> &branlist) {
+	nodeptr p = tr->start->back;
+	nodeptr q = p->next;
+	while (q != p) {
+		pllGetAllInBranForSubtree(tr, q->back, branlist);
+		q = q->next;
+	}
+}
+
+void pllGetAllInBranForSubtree(pllInstance *tr, nodeptr p, vector<nodeptr> &branlist) {
+	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
+		branlist.push_back(p);
+		nodeptr q = p->next;
+		while (q != p) {
+			pllGetAllInBranForSubtree(tr, q->back, branlist);
+			q = q->next;
+		}
+	}
+}
+
+double pllPerturbTree(pllInstance *tr, partitionList *pr, vector<pllNNIMove> &nnis) {
+	//printf("Perturbing %d NNIs \n", numNNI);
+	for (vector<pllNNIMove>::iterator it = nnis.begin(); it != nnis.end(); it++) {
+		printf("Do pertubing NNI (%d - %d) with logl = %10.4f \n", (*it).p->number, (*it).p->back->number, (*it).likelihood);
+		doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
+		updateBranchLengthForNNI(tr, pr, (*it));
+
 	}
 	pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 	pllTreeEvaluate(tr, pr, 1);
@@ -233,29 +267,40 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	double initLH = tr->likelihood;
 	double finalLH = initLH;
 	vector<pllNNIMove> selectedNNIs;
+	unordered_set<int> selectedNodes;
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 	/* data structure to store the initial tree topology + branch length */
 	topol* curTree = _setupTopol(tr);
 	saveTree(tr, curTree, numBranches);
 	pllEvalAllNNIs(tr, pr, searchinfo);
+
 	if (searchinfo.posNNIList.size() != 0) {
 		sort(searchinfo.posNNIList.begin(), searchinfo.posNNIList.end(), comparePLLNNIMove);
 		for (vector<pllNNIMove>::reverse_iterator rit = searchinfo.posNNIList.rbegin();
 				rit != searchinfo.posNNIList.rend(); ++rit) {
-			bool conflict = false;
-			for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); ++it) {
-				if ((*rit).p->number == (*it).p->number || (*rit).p->number == (*it).p->back->number) {
-					conflict = true;
-					break;
-				}
-				if ((*rit).p->back->number == (*it).p->number || (*rit).p->back->number == (*it).p->back->number) {
-					conflict = true;
-					break;
-				}
-			}
-			if (!conflict) {
+			if (selectedNodes.find((*rit).p->number) == selectedNodes.end()
+					&& selectedNodes.find((*rit).p->back->number) == selectedNodes.end()) {
 				selectedNNIs.push_back((*rit));
+				selectedNodes.insert((*rit).p->number);
+				selectedNodes.insert((*rit).p->back->number);
+			} else {
+				continue;
 			}
+
+//			bool conflict = false;
+//			for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); ++it) {
+//				if ((*rit).p->number == (*it).p->number || (*rit).p->number == (*it).p->back->number) {
+//					conflict = true;
+//					break;
+//				}
+//				if ((*rit).p->back->number == (*it).p->number || (*rit).p->back->number == (*it).p->back->number) {
+//					conflict = true;
+//					break;
+//				}
+//			}
+//			if (!conflict) {
+//				selectedNNIs.push_back((*rit));
+//			}
 
 		}
 		//searchinfo.affectNodes.clear();
@@ -342,15 +387,17 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 			}
 			if (tr->likelihood - initLH < 0.1) {
 				searchinfo.curNumAppliedNNIs = 0;
+				// Here we need to update searchinfo.nniList;
+				searchinfo.updateNNIList = true;
 			}
 			finalLH = tr->likelihood;
 		}
 	} else {
 		searchinfo.curNumAppliedNNIs = 0;
 	}
-	if (verbose_mode >= VB_MED) {
-		cout << "Step: " << searchinfo.curNumNNISteps << " / NumNNI: " << searchinfo.curNumAppliedNNIs << " / logl: " << finalLH << endl;
-	}
+//	if (verbose_mode >= VB_MED) {
+//		cout << "Step: " << searchinfo.curNumNNISteps << " / NumNNI: " << searchinfo.curNumAppliedNNIs << " / logl: " << finalLH << endl;
+//	}
 	return finalLH;
 }
 
@@ -444,7 +491,7 @@ void _update(pllInstance *tr, partitionList *pr, nodeptr p) {
 }
 
 double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int evalType) {
-	assert(swap == 1 || swap == 2);
+	assert(swap == 0 || swap == 1);
 	nodeptr q;
 	nodeptr tmp;
 	q = p->back;
@@ -579,15 +626,15 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		nni0.z4[i] = q->next->next->z[i];
 	}
 
-	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
+	doOneNNI(tr, pr, p, 0, TOPO_ONLY);
 	string quartetString = convertQuartet2String(p);
-	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
+	doOneNNI(tr, pr, p, 0, TOPO_ONLY);
 	if ( !searchinfo.tabunni || searchinfo.tabuNNIs.find(quartetString) == searchinfo.tabuNNIs.end() ) {
 		/* do an NNI move of type 1 */
-		double lh1 = doOneNNI(tr, pr, p, 1, searchinfo.evalType);
+		double lh1 = doOneNNI(tr, pr, p, 0, searchinfo.evalType);
 		pllNNIMove nni1;
 		nni1.p = p;
-		nni1.nniType = 1;
+		nni1.nniType = 0;
 		// Store the optimized branch lengths
 		for (i = 0; i < numBranches; i++) {
 			nni1.z0[i] = p->z[i];
@@ -598,18 +645,19 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		}
 		nni1.likelihood = lh1;
 		nni1.loglDelta = lh1 - nni0.likelihood;
+		nni1.negLoglDelta = -nni1.loglDelta;
 
 		string quartetString = convertQuartet2String(p);
 		nni1.quartetString = quartetString;
-		searchinfo.nniList.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, nni1));
+		searchinfo.nniList.push_back(nni1);
 
-		if (nni1.likelihood > searchinfo.curLogl) {
+		if (nni1.likelihood > searchinfo.curLogl + 1e-6) {
 			numPosNNI++;
 			searchinfo.posNNIList.push_back(nni1);
 		}
 
 		/* Restore previous NNI move */
-		doOneNNI(tr, pr, p, 1, TOPO_ONLY);
+		doOneNNI(tr, pr, p, 0, TOPO_ONLY);
 		/* Restore the old branch length */
 		for (i = 0; i < numBranches; i++) {
 			p->z[i] = nni0.z0[i];
@@ -628,16 +676,16 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		searchinfo.numUnevalQuartet++;
 	}
 
-	doOneNNI(tr, pr, p, 2, TOPO_ONLY);
+	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
 	quartetString = convertQuartet2String(p);
-	doOneNNI(tr, pr, p, 2, TOPO_ONLY);
+	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
 	if ( !searchinfo.tabunni || searchinfo.tabuNNIs.find(quartetString) == searchinfo.tabuNNIs.end()) {
 		/* do an NNI move of type 2 */
-		double lh2 = doOneNNI(tr, pr, p, 2, searchinfo.evalType);
+		double lh2 = doOneNNI(tr, pr, p, 1, searchinfo.evalType);
 		// Create the nniMove struct to store this move
 		pllNNIMove nni2;
 		nni2.p = p;
-		nni2.nniType = 2;
+		nni2.nniType = 1;
 		// Store the optimized and unoptimized central branch length
 		for (i = 0; i < numBranches; i++) {
 			nni2.z0[i] = p->z[i];
@@ -648,18 +696,19 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		}
 		nni2.likelihood = lh2;
 		nni2.loglDelta = lh2 - nni0.likelihood;
+		nni2.negLoglDelta = -nni2.loglDelta;
 
 		quartetString = convertQuartet2String(p);
 		nni2.quartetString = quartetString;
-		searchinfo.nniList.insert(unordered_map<string,pllNNIMove>::value_type(quartetString, nni2));
+		searchinfo.nniList.push_back(nni2);
 
-		if (nni2.likelihood > searchinfo.curLogl) {
+		if (nni2.likelihood > searchinfo.curLogl + 1e-6) {
 			numPosNNI++;
 			searchinfo.posNNIList.push_back(nni2);
 		}
 
 		/* Restore previous NNI move */
-		doOneNNI(tr, pr, p, 2, TOPO_ONLY);
+		doOneNNI(tr, pr, p, 1, TOPO_ONLY);
 	    /* Restore the old branch length */
 		for (i = 0; i < numBranches; i++) {
 			p->z[i] = nni0.z0[i];
