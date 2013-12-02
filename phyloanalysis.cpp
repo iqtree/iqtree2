@@ -1200,10 +1200,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
     }
 
 	cout << "Optimize model parameters " << (params.optimize_model_rate_joint ? "jointly":"")
-			<< " (tolerace " << TOL_LIKELIHOOD_PARAMOPT << ")... " << endl;
+			<< " (tolerace " << params.model_eps << ")... " << endl;
 
     // Optimize model parameters and branch lengths using ML for the initial tree
-    iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT);
+    iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
     iqtree.bestScore = iqtree.curScore;
 
 	// Save current tree to a string
@@ -1211,13 +1211,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	// Compute maximum likelihood distance
 	double bestTreeScore = iqtree.bestScore;
+	if (params.inni || params.min_iterations == 1) {
+		params.compute_ml_dist = false;
+	}
 	if (!params.dist_file && params.compute_ml_dist) {
 		computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params, alignment, bestTreeScore);
 	}
-
-	// deallocate partial likelihood within IQTree kernel to save memory when PLL is used */
-	if (params.pll)
-		iqtree.deleteAllPartialLh();
 
     if (!params.fixed_branch_length && params.leastSquareBranch) {
         cout << "Computing Least Square branch lengths " << endl;
@@ -1288,7 +1287,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				pllNewickParseDestroy(&newick);
 				iqtree.curScore = iqtree.pllInst->likelihood;
 				cout << "logl of starting tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
-				iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps);
+				SearchInfo searchinfo;
+				iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, searchinfo);
 				cout << "logl of fastNNI " << treeNr + 1 << ": "
 						<< iqtree.curScore << " (NNIs: " << nni_count
 						<< " / NNI steps: " << nni_steps << ")" << endl;
@@ -1301,7 +1301,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 							PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
 							PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 					bestTreeString = string(iqtree.pllInst->tree_string);
-					iqtree.pllUpdateBestTree();
+					iqtree.pllUpdateBestTree(searchinfo);
 				}
 			} else {
 				stringstream parsTreeString;
@@ -1342,10 +1342,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.readTreeString(bestTreeString);
 		iqtree.curScore = iqtree.bestScore;
 
+		// deallocate partial likelihood within IQTree kernel to save memory when PLL is used */
+		if (params.pll)
+			iqtree.deleteAllPartialLh();
+
 		delete[] parsTree;
-
-		cout << "Average number of NNIs: " << params.pertubSize << endl;
-
 
 		/* FOR PARTITION MODEL */
 		if (iqtree.isSuperTree())
@@ -1446,31 +1447,38 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	/* DO IQPNNI */
 	if (params.k_representative > 0 /*&&  params.min_iterations > 1*/) {
-		cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
-		if (!params.ilsnni && !params.random_nni) {
-			cout << "Number of representative leaves   		: " << params.k_representative << endl;
-			cout << "Probability of deleting sequences 		: " << iqtree.getProbDelete() << endl;
-			cout << "Number of leaves to be deleted    		: " << iqtree.getDelete() << endl;
-		} else if (params.ilsnni) {
-			cout << "Perturbation strength		: " << params.pertubSize << endl;
+		if (params.inni) {
+			cout << endl << "START ITERATED NNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
+		} else {
+			cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
 		}
-		cout << "Number of iterations   		: ";
+		if (!params.inni && !params.random_nni) {
+			cout << "Number of representative leaves  : " << params.k_representative << endl;
+			cout << "Probability of deleting sequences: " << iqtree.getProbDelete() << endl;
+			cout << "Number of leaves to be deleted   : " << iqtree.getDelete() << endl;
+		} else if (params.inni) {
+			cout << "Perturbation strength: " << params.pertubSize << endl;
+		}
+		cout << "Number of iterations: ";
 		if (params.stop_condition == SC_FIXED_ITERATION)
 			cout << params.min_iterations << endl;
 		else
 			cout << "predicted in [" << params.min_iterations << ","
 					<< params.max_iterations << "] (confidence "
 					<< params.stop_confidence << ")" << endl;
-		cout << "Important quartets assessed on    : "
-				<< ((params.iqp_assess_quartet == IQP_DISTANCE) ?
-						"Distance" :
-						((params.iqp_assess_quartet == IQP_PARSIMONY) ?
-								"Parsimony" : "Bootstrap")) << endl;
-		cout << "NNI assessed on                   : " << ((params.nni5) ? "5 branches" : "1 branch") << endl;
-		cout << "SSE instructions                  : "
+		if (!params.inni) {
+			cout << "Important quartets assessed on: "
+					<< ((params.iqp_assess_quartet == IQP_DISTANCE) ?
+							"Distance" : ((params.iqp_assess_quartet == IQP_PARSIMONY) ? "Parsimony" : "Bootstrap"))
+					<< endl;
+		}
+
+		cout << "NNI assessed on: " << ((params.nni5) ? "5 branches" : "1 branch") << endl;
+		cout << "SSE instructions: "
 				<< ((iqtree.sse) ? "Yes" : "No") << endl;
-		cout << "Branch length optimization method : "
+		cout << "Branch length optimization method   : "
 				<< ((iqtree.optimize_by_newton) ? "Newton" : "Brent") << endl;
+		cout << "Phylogenetic likelihood library(PLL): " << (params.pll ? "Yes" : "No") << endl;
 		cout << endl;
 		//saveTree( iqtree.pllInst, iqtree.pllBestTree, iqtree.pllPartitions->numberOfPartitions );
 		iqtree.doIQPNNI();
@@ -1516,6 +1524,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.initializeAllPartialLh();
 		iqtree.clearAllPartialLH();
 		cout << "Optimizing model parameters" << endl;
+		//iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps));
 		iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT));
 	} else {
 		iqtree.setBestScore(iqtree.curScore);

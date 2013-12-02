@@ -348,17 +348,33 @@ struct Params {
 
 	int numParsimony;
 
+	bool tabunni;
+
 	/**
 	 *  Default number of NNI used for perturbing the tree
 	 */
 	double pertubSize;
 
+	/**
+	 *  logl epsilon for the initial model parameter optimization
+	 */
+	double model_eps;
 
 	/**
 	 *  Carry out iterated local search using NNI only.
 	 *  From the local maximum, apply some negative NNIs and the continue with the local search
 	 */
-	bool ilsnni;
+	bool inni;
+
+	/**
+	 *  only valid for -inni: combine intensification and diversificaiton in perturbation steps
+	 */
+	bool hybrid;
+
+	/**
+	 *  only evaluate NNIs in affected regions
+	 */
+	bool fastnni;
 
 	/**
 	 *  Do random restart search

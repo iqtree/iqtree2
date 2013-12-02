@@ -31,7 +31,6 @@
 
 #include "pll/pll.h"
 #include "nnisearch.h"
-#include "strmap.h"
 
 typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;
@@ -68,11 +67,6 @@ struct IntBranchInfo {
 
 inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
     return (a.lh_contribution < b.lh_contribution);
-}
-
-inline bool comparePllNniMove(const pllNNIMove &a, const pllNNIMove &b)
-{
-    return a.likelihood < b.likelihood;
 }
 
 /**
@@ -235,7 +229,7 @@ public:
     /*
      *  perform a guided pertubation instead of doing IQP
      */
-    double pllDoGuidedPerturbation();
+    double pllDoDirectPertubation();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
@@ -254,16 +248,15 @@ public:
     /**
      * 		Do fastNNI using PLL
      *
-     *      @param nni_count (OUT) the number of single NNI moves proceeded so far
-     * 		@param beginHeu whether the heuristic is started
-     * 		@param skipped (OUT) 1 if current iteration is skipped, otherwise 0
+     *      @param nniCount (OUT) number of NNIs applied
+     * 		@param nniSteps (OUT) number of NNI steps done
      */
-    double pllOptimizeNNI(int &nniCount, int &nniSteps, bool beginHeu = false, int *skipped = NULL);
+    double pllOptimizeNNI(int &nniCount, int &nniSteps, SearchInfo &searchinfo);
 
     /**
-     *   update bestNNIList and best tree topology (for PLL only)
+     *   update best tree topology (for PLL only)
      */
-    void pllUpdateBestTree();
+    void pllUpdateBestTree(SearchInfo &searchinfo);
     /**
             search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
      */
@@ -458,9 +451,7 @@ public:
      *  Contains a sorted list of all NNIs (2n-6) evaluated for the current best tree
      *  The last element (nni_for_pertub.end()) is the best NNI
      */
-    vector<pllNNIMove> bestNNIList;
-
-    vector<pllNNIMove> curNNIList;
+    vector<pllNNIMove> nniListOfBestTree;
 
     /**
      *  vector contains accumulated likelihood of all (2n-6) NNIs
