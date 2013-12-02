@@ -1083,9 +1083,21 @@ double IQTree::doIQPNNI() {
 					}
 				} else if (params->inni) {
 					//curScore = pllDoDirectPertubation();
-					int numNNI = params->pertubSize * (aln->getNSeq() - 3);
-					curScore = pllDoRandNNIs(pllInst, pllPartitions, numNNI);
-					iqpScore = curScore;
+					if (params->hybrid) {
+						int smallPerturb = 0.2 * (aln->getNSeq() - 3);
+						int largePerturb = 0.8 * (aln->getNSeq() - 3);
+						int perturbType = random_int(2);
+						if (perturbType == 0) {
+							curScore = pllDoRandNNIs(pllInst, pllPartitions, smallPerturb);
+						} else {
+							curScore = pllDoRandNNIs(pllInst, pllPartitions, largePerturb);
+						}
+						iqpScore = curScore;
+					} else {
+						int numNNI = params->pertubSize * (aln->getNSeq() - 3);
+						curScore = pllDoRandNNIs(pllInst, pllPartitions, numNNI);
+						iqpScore = curScore;
+					}
 				} else { // PLL enabled
 					doIQP();
 					stringstream iqp_tree_string;

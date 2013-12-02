@@ -367,6 +367,11 @@ struct Params {
 	bool inni;
 
 	/**
+	 *  only valid for -inni: combine intensification and diversificaiton in perturbation steps
+	 */
+	bool hybrid;
+
+	/**
 	 *  only evaluate NNIs in affected regions
 	 */
 	bool fastnni;

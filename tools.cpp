@@ -738,6 +738,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.fast_branch_opt = false;
     params.bestStart = true;
     params.inni = false;
+    params.hybrid = false;
     params.tabunni = false;
     params.random_nni =false;
     params.random_restart = false;
@@ -1628,6 +1629,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-inni") == 0) {
             	params.inni = true;
             	params.pll = true;
+            } else if (strcmp(argv[cnt], "-hybrid") == 0) {
+            	params.hybrid = true;
+            	params.pll = true;
+            	params.inni = true;
             } else if (strcmp(argv[cnt], "-rr") == 0) {
             	params.random_restart = true;
             } else if (strcmp(argv[cnt], "-rd_nni") == 0) {
