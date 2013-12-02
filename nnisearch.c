@@ -152,6 +152,14 @@ double doNNISearch(pllInstance* tr, partitionList *pr, int searchType, pllNNIMov
 	topol* curTree = _setupTopol(tr);
 	saveTree(tr, curTree, numBranches);
 
+	/* DTH: mimic IQTREE::optimizeNNI 's first call to IQTREE::saveCurrentTree */
+	if((pllUFBootDataPtr->params_online_bootstrap == PLL_TRUE) &&
+			(pllUFBootDataPtr->params_gbo_replicates > 0)){
+		tr->fastScaling = PLL_FALSE;
+		pllEvaluateGeneric(tr, pr, tr->start, PLL_FALSE, PLL_TRUE);
+		pllSaveCurrentTree(tr, pr, tr->start);
+	}
+
 	/* Initialize the NNI list that holds information about 2n-6 NNI moves */
 	pllNNIMove nniList[2 * (tr->mxtips - 3)];
 
@@ -699,7 +707,6 @@ void pllAlertMemoryError(){
  * @param p: root?
  */
 void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
-//	printf("\nBegin pllSaveCurrentTree()\n");
 	srand(gettime());
  	double cur_logl = tr->likelihood;
 
@@ -715,17 +722,15 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 	tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
 	strcpy(tree_str, tr->tree_string);
 
- 	pll_boolean is_stored = PLL_FALSE;
+	pll_boolean is_stored = PLL_FALSE;
 
  	if(pllUFBootDataPtr->params_store_candidate_trees){
  		is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
  	}
 
-// 	printf("tree_str: %s", tree_str);
  	if(is_stored){ // if found the tree_str
  		pllUFBootDataPtr->duplication_counter++;
  		tree_index = *((int *)item_ptr->data);
-// 		printf("Found tree_index = %d\n", tree_index);
  		if (cur_logl <= pllUFBootDataPtr->treels_logl[tree_index] + 1e-4) {
  			if (cur_logl < pllUFBootDataPtr->treels_logl[tree_index] - 5.0)
  				if (verbose_mode >= VB_MED)
@@ -760,7 +765,6 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
  			printf("Update treels_logl[%d] := %f\n", tree_index, cur_logl);
 
  	} else {
-// 		printf("Not found\n");
         if (pllUFBootDataPtr->logl_cutoff != 0.0 && cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4){
 /*    		free(tree_str);
     		free(item_ptr->data);
@@ -777,7 +781,6 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
             *((int *)item_ptr->data) = tree_index;
             item_ptr->str = tree_str;
         	pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
-//        	printf("pllHashAdd, index = %d\n", tree_index);
         }
         pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
 
@@ -797,7 +800,6 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 		pllUFBootDataPtr->treels_ptnlh[tree_index] = pattern_lh;
 	} else {
 		// online bootstrap
-//		printf("Get into online bootstrap code ^^^^^^^^^^ \n");
 		int nptn = pllUFBootDataPtr->n_patterns;
 		int updated = 0;
 		int nsamples = pllUFBootDataPtr->params_gbo_replicates;
@@ -844,8 +846,6 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 		strcpy(s, tr->tree_string);
 		pllUFBootDataPtr->treels_newick[tree_index] = s;
 	}
-
-//	printf("Freeing things at the end of pllSaveCurrentTree\n");
 
 //	if(!pllUFBootDataPtr->params_store_candidate_trees){
 //		free(tree_str);

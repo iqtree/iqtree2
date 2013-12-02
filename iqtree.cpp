@@ -849,7 +849,7 @@ void IQTree::pllBuildIQTreePatternIndex(){
 	delete [] site;
 	for(int i = 0; i < pllAlignment->sequenceCount; i++)
 		delete [] pll_aln[i];
-	delete pll_aln;
+	delete [] pll_aln;
 }
 
 /**
@@ -1453,7 +1453,6 @@ double IQTree::doIQPNNI() {
 			}
 
 		}
-
 		if(params->pll) pllConvertUFBootData2IQTree(); // DTH: make pllUFBootData usable in summarizeBootstrap
 		// DTH: Carefully watch the -pll case here
 		if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
@@ -1664,6 +1663,7 @@ extern "C" int nni1;
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, bool beginHeu, int *skipped) {
 	pllInitUFBootData();
+
 	if (nnicut.num_delta == MAX_NUM_DELTA && nnicut.delta_min == DBL_MAX) {
         estDeltaMin();
         cout << "delta_min = " << nnicut.delta_min << endl;
