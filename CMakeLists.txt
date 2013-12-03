@@ -22,6 +22,7 @@ if (WIN32)
 	# build as static binary to run on most machines
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    add_definitions(-DWIN32)
 elseif (APPLE) 
 	message("Target OS     : Mac OS X")
 	# to be compatible back to Mac OS X 10.6

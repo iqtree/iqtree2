@@ -1307,14 +1307,14 @@ typedef struct conntyp {
     void            *valptr;      /**< pointer to value of subtree */
     int              descend;     /**< pointer to first connect of child */
     int              sibling;     /**< next connect from same parent */
-    } connect, *connptr;
+    } pllconnect, *connptr;
 
 /** @brief Single Topology
 *   */
 typedef  struct {
     double           likelihood;
     int              initialTreeNumber;
-    connect         *links;       /**< pointer to first connect (start) */
+    pllconnect         *links;       /**< pointer to first connect (start) */
     node            *start;
     int              nextlink;    /**< index of next available connect */
                                   /**< tr->start = tpl->links->p */
