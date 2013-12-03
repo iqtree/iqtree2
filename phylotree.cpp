@@ -195,6 +195,16 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     }
 }
 
+void PhyloTree::readTreeString(const string &tree_string) {
+	stringstream str(tree_string);
+	freeNode();
+	readTree(str, rooted);
+	setAlignment(aln);
+	initializeAllPartialLh();
+	clearAllPartialLH();
+    fixNegativeBranch(false);
+}
+
 void PhyloTree::rollBack(istream &best_tree_string) {
     best_tree_string.seekg(0, ios::beg);
     freeNode();
@@ -1050,6 +1060,20 @@ void PhyloTree::initializeAllPartialLh() {
         theta_all = new double[block_size];
     initializeAllPartialLh(index);
     assert(index == (nodeNum - 1) * 2);
+}
+
+void PhyloTree::deleteAllPartialLh() {
+	if (central_partial_lh) {
+		delete [] central_partial_lh;
+	}
+	if (central_scale_num) {
+		delete [] central_scale_num;
+	}
+	if (central_partial_pars)
+		delete [] central_partial_pars;
+	central_partial_lh = NULL;
+	central_scale_num = NULL;
+	central_partial_pars = NULL;
 }
 
 uint64_t PhyloTree::getMemoryRequired() {
@@ -2820,7 +2844,7 @@ void PhyloTree::applyNNIBranches(NNIMove nnimove) {
 	node1_node2_nei->length = nnimove.newLen[0];
 	node2_node1_nei->length = nnimove.newLen[0];
 	//return;
-	if (params->nni5Branches) {
+	if (params->nni5) {
 		int i = 1;
 		Neighbor* nei;
 		Neighbor* nei_back;
@@ -2849,7 +2873,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     assert(node1->degree() == 3 && node2->degree() == 3);
 
 	NeighborVec::iterator it;
-	int IT_NUM = (params->nni5Branches) ? 6 : 2;
+	int IT_NUM = (params->nni5) ? 6 : 2;
 
 	NeighborVec::iterator saved_it[6];
 	int id = 0;
@@ -2857,7 +2881,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	saved_it[id++] = node1->findNeighborIt(node2);
 	saved_it[id++] = node2->findNeighborIt(node1);
 
-	if (params->nni5Branches) {
+	if (params->nni5) {
 		FOR_NEIGHBOR(node1, node2, it)
 			saved_it[id++] = (*it)->node->findNeighborIt(node1);
 
@@ -2930,7 +2954,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
 
 		int i=1;
-        if (params->nni5Branches) {
+        if (params->nni5) {
 			FOR_NEIGHBOR(node1, node2, it)
 			{
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node1))->clearPartialLh();
@@ -3004,7 +3028,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
     assert(node1->degree() == 3 && node2->degree() == 3);
 
 	NeighborVec::iterator it;
-	int IT_NUM = (params->nni5Branches) ? 6 : 2;
+	int IT_NUM = (params->nni5) ? 6 : 2;
 
 	NeighborVec::iterator saved_it[6];
 	int id = 0;
@@ -3012,7 +3036,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 	saved_it[id++] = node1->findNeighborIt(node2);
 	saved_it[id++] = node2->findNeighborIt(node1);
 
-	if (params->nni5Branches) {
+	if (params->nni5) {
 		FOR_NEIGHBOR(node1, node2, it)
 			saved_it[id++] = (*it)->node->findNeighborIt(node1);
 
@@ -3071,7 +3095,7 @@ double PhyloTree::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *n
 		// compute the score of the swapped topology
 		double score = optimizeOneBranch(node1, node2, false);
 
-        if (params->nni5Branches) {
+        if (params->nni5) {
 			 if (verbose_mode >= VB_DEBUG)
 				 cout << "Log-likelihood: " << score << endl;
 

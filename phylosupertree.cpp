@@ -187,7 +187,7 @@ void PhyloSuperTree::setParams(Params &params) {
 		(*it)->sse = params.SSE;
 		(*it)->optimize_by_newton = params.optimize_by_newton;
 	}
-	
+
 }
 
 Node* PhyloSuperTree::newNode(int node_id, const char* node_name) {
@@ -306,9 +306,9 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 
 void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, SuperNode *dad) {
 	if (!node) {
-		if (!root->isLeaf()) 
-			node = (SuperNode*) root; 
-		else 
+		if (!root->isLeaf())
+			node = (SuperNode*) root;
+		else
 			node = (SuperNode*)root->neighbors[0]->node;
 		assert(node);
 		if (node->isLeaf()) // two-taxa tree
@@ -332,7 +332,7 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 			assert(node_part->isLeaf());
 			nei->link_neighbors[part] = (PhyloNeighbor*) node_part->neighbors[0];
 			dad_nei->link_neighbors[part] = (PhyloNeighbor*)dad_part->findNeighbor(node_part);
-		} 
+		}
 		return;
 	}
 
@@ -366,7 +366,7 @@ void PhyloSuperTree::printMapInfo() {
 			}
 			else cout << -1;
 			cout << ",";
-			if (nei1) 
+			if (nei1)
 				if (nei1->node->isLeaf())
 					cout << nei1->node->name;
 				else cout << nei1->node->id;
@@ -380,7 +380,7 @@ void PhyloSuperTree::printMapInfo() {
 void PhyloSuperTree::mapTrees() {
 	assert(root);
 	int part = 0;
-	if (verbose_mode >= VB_DEBUG) 
+	if (verbose_mode >= VB_DEBUG)
 		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 	for (iterator it = begin(); it != end(); it++, part++) {
 		string taxa_set = ((SuperAlignment*)aln)->getPattern(part);
@@ -496,7 +496,7 @@ double PhyloSuperTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, boo
 		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 		double score;
-		if (part_info[part].cur_score == 0.0) 
+		if (part_info[part].cur_score == 0.0)
 			part_info[part].cur_score = at(part)->computeLikelihood();
 		if (nei1_part && nei2_part) {
 			if (part_info[part].opt_score[nei1_part->id] == 0.0) {
@@ -505,7 +505,7 @@ double PhyloSuperTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, boo
 				part_info[part].opt_brlen[nei1_part->id] = nei1_part->length;
 			}
 			score = part_info[part].opt_score[nei1_part->id];
-		} else 
+		} else
 			score = part_info[part].cur_score;
 		tree_lh += score;
 	}
@@ -527,7 +527,7 @@ void PhyloSuperTree::initPartitionInfo() {
 
 		part_info[part].cur_brlen.resize((*it)->branchNum, 0.0);
 		//part_info[part].opt_brlen.resize((*it)->branchNum, 0.0);
-		if (params->nni5Branches) {
+		if (params->nni5) {
 			part_info[part].nni1_brlen.resize((*it)->branchNum * 5, 0.0);
 			part_info[part].nni2_brlen.resize((*it)->branchNum * 5, 0.0);
 		} else {
@@ -579,14 +579,14 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	SuperNeighbor *node2_nei_other = NULL;
 	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it) {
 		node1_nei = (SuperNeighbor*)(*node1_it);
-		break; 
+		break;
 	}
 	FOR_NEIGHBOR_DECLARE(node2, node1, node2_it) {
 		node2_nei = (SuperNeighbor*)(*node2_it);
 		break;
 	}
 
-	FOR_NEIGHBOR_IT(node2, node1, node2_it_other) 
+	FOR_NEIGHBOR_IT(node2, node1, node2_it_other)
 	if ((*node2_it_other) != node2_nei) {
 		node2_nei_other = (SuperNeighbor*)(*node2_it_other);
 		break;
@@ -659,7 +659,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		nni1_score += part_info[part].nniMoves[0].newloglh;
 		nni2_score += part_info[part].nniMoves[1].newloglh;
 		int numlen = 1;
-		if (params->nni5Branches) numlen = 5;
+		if (params->nni5) numlen = 5;
 		for (int i = 0; i < numlen; i++) {
 			part_info[part].nni1_brlen[brid*numlen + i] = part_info[part].nniMoves[0].newLen[i];
 			part_info[part].nni2_brlen[brid*numlen + i] = part_info[part].nniMoves[1].newLen[i];
@@ -756,7 +756,7 @@ void PhyloSuperTree::doNNI(NNIMove &move, bool clearLH) {
 		}
 		if (!is_nni) {
 			// relink the branch if it does not correspond to NNI for partition
-			linkBranch(part, nei1, nei2); 
+			linkBranch(part, nei1, nei2);
 			continue;
 		}
 
@@ -800,7 +800,7 @@ void PhyloSuperTree::applyNNIBranches(NNIMove move) {
 		part_move.node1 = (PhyloNode*)nei2_part->node;
 		part_move.node2 = (PhyloNode*)nei1_part->node;
 		int numlen = 1;
-		if (params->nni5Branches) numlen = 5;
+		if (params->nni5) numlen = 5;
 		if (move.swap_id == 1) {
 			for (int i = 0; i < numlen; i++)
 				part_move.newLen[i] = part_info[part].nni1_brlen[brid*numlen + i];
@@ -811,7 +811,7 @@ void PhyloSuperTree::applyNNIBranches(NNIMove move) {
 
 		(*it)->applyNNIBranches(part_move);
 
-	} 
+	}
 
 }
 

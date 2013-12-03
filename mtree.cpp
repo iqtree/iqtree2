@@ -272,7 +272,9 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
             out << node->name;
 
         if (brtype & WT_BR_LEN) {
-            double len = node->neighbors[0]->length;
+        	out.setf( std::ios::fixed, std:: ios::floatfield ); // some sofware does handle number format like '1.234e-6'
+            out.precision(15); // increase precision to avoid zero branch (like in RAxML)
+        	double len = node->neighbors[0]->length;
             if (brtype & WT_BR_SCALE) len *= len_scale;
             if (brtype & WT_BR_LEN_ROUNDING) len = round(len);
             if (brtype & WT_BR_LEN_FIXED_WIDTH)
@@ -1093,6 +1095,8 @@ MTree::~MTree()
 
 int MTree::freeNode(Node *node, Node *dad)
 {
+	if ( root == NULL )
+		return 0;
     if (!node) node = root;
     NeighborVec::reverse_iterator it;
     int num_nodes = 1;

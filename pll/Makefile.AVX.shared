@@ -1,0 +1,68 @@
+CC = gcc
+AR = ar
+CFLAGS = -fPIC -g -c -O2 -D__SSE3 -D__AVX -msse3 -fomit-frame-pointer -funroll-loops -Wall -Wunused-parameter -Wredundant-decls  -Wreturn-type  -Wswitch-default -Wunused-value -Wimplicit  -Wimplicit-function-declaration  -Wimplicit-int -Wimport  -Wunused-label -Wno-int-to-pointer-cast -Wbad-function-cast  -Wmissing-declarations -Wmissing-prototypes  -Wnested-externs  -Wold-style-definition -Wstrict-prototypes  -Wpointer-sign -Wextra -Wredundant-decls -Wunused -Wunused-parameter -Wunused-value  -Wunused-variable -Wformat  -Wformat-nonliteral -Wparentheses -Wsequence-point -Wuninitialized -Wunused-function -Wundef -Wunused
+ARFLAGS = rvs
+TARGET = libpll
+ARCH = AVX
+VERSION = 1.0.0
+STATICLIB = $(TARGET)-$(ARCH).a.$(VERSION)	# static library
+SHAREDOBJ = $(TARGET)-$(ARCH).so.$(VERSION)	# shared object
+GLOBAL_DEPS = pll.h globalVariables.h
+RM = rm -f
+
+OBJ = avxLikelihood.o evaluateGenericSpecial.o hash.o models.o queue.o restartHashTable.o stack.o treeIO.o evaluatePartialGenericSpecial.o makenewzGenericSpecial.o newviewGenericSpecial.o randomTree.o searchAlgo.o topologies.o utils.o bipartitionList.o fastDNAparsimony.o optimizeModel.o recom.o trash.o lexer.o common.o alignment.o fasta.o phylip.o ssort.o newick.o part.o
+
+all: $(SHAREDOBJ)
+
+$(SHAREDOBJ): $(OBJ)
+	@echo "==> Building PLL Library ($@)"
+	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJ)
+	ln -sf $(SHAREDOBJ) $(TARGET)-$(ARCH).so
+
+avxLikelihood.o : avxLikelihood.c $(GLOBAL_DEPS)
+	$(CC) $(CFLAGS) -mavx -c -o $@ $<
+
+fastDNAparsimony.o : fastDNAparsimony.c $(GLOBAL_DEPS)
+	$(CC) $(CFLAGS) -mavx -c -o $@ $<
+
+bipartitionList.o : bipartitionList.c $(GLOBAL_DEPS)
+evaluatePartialSpecialGeneric.o : evaluatePartialSpecialGeneric.c $(GLOBAL_DEPS)
+optimizeModel.o : optimizeModel.c $(GLOBAL_DEPS)
+trash.o : trash.c $(GLOBAL_DEPS)
+pll.o : pll.c $(GLOBAL_DEPS)
+searchAlgo.o : searchAlgo.c $(GLOBAL_DEPS)
+utils.o : utils.c $(GLOBAL_DEPS)
+topologies.o : topologies.c $(GLOBAL_DEPS)
+treeIO.o : treeIO.c $(GLOBAL_DEPS)
+models.o : models.c $(GLOBAL_DEPS)
+evaluatePartialGenericSpecial.o : evaluatePartialGenericSpecial.c $(GLOBAL_DEPS)
+evaluateGenericSpecial.o : evaluateGenericSpecial.c $(GLOBAL_DEPS)
+newviewGenericSpecial.o : newviewGenericSpecial.c $(GLOBAL_DEPS)
+makenewzGenericSpecial.o : makenewzGenericSpecial.c $(GLOBAL_DEPS)
+restartHashTable.o : restartHashTable.c $(GLOBAL_DEPS)
+randomTree.o : randomTree.c $(GLOBAL_DEPS)
+recom.o : recom.c  $(GLOBAL_DEPS)
+queue.o : queue.c $(GLOBAL_DEPS)
+stack.o : stack.c $(GLOBAL_DEPS)
+hash.o : hash.c $(GLOBAL_DEPS)
+lexer.o : lexer.c $(GLOBAL_DEPS)
+common.o: parser/common.c $(GLOBAL_DEPS)
+	$(CC) $(CFLAGS) -o $@ $<
+alignment.o: parser/alignment/alignment.c $(GLOBAL_DEPS)
+	$(CC) $(CFLAGS) -o $@ $<
+phylip.o: parser/alignment/phylip.c $(GLOBAL_DEPS)
+	$(CC) $(CFLAGS) -o $@ $<
+fasta.o: parser/alignment/fasta.c $(GLOBAL_DEPS)
+	$(CC) $(CFLAGS) -o $@ $<
+newick.o: parser/newick/newick.c $(GLOBAL_DEPS)
+	$(CC) $(CFLAGS) -o $@ $<
+part.o: parser/partition/part.c $(GLOBAL_DEPS)
+	$(CC) $(CFLAGS) -o $@ $<
+ssort.o : parser/ssort.c $(GLOBAL_DEPS)
+	$(CC) $(CFLAGS) -o $@ $<
+
+clean : 
+	-$(RM) *.o $(STATICLIB) $(SHAREDOBJ)
+
+.PHONY: all clean
+.INTERMEDIATE: $(OBJ)

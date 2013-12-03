@@ -31,9 +31,9 @@ elseif (APPLE)
 elseif (UNIX) 
 	message("Target OS     : Unix")
 	# build as static binary to run on most machines
-	if (CMAKE_BUILD_TYPE STREQUAL "Release") 
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-	endif()
+  if (CMAKE_BUILD_TYPE STREQUAL "Release") 	
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+  endif() 
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
 	message("Target OS     : Unknown")
@@ -92,22 +92,28 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
-
+#set(LIBPLL_CFLAGS "-Wall -Wredundant-decls  -Wreturn-type  -Wswitch-default -Wimplicit  -Wimplicit-function-declaration  -Wimplicit-int -Wimport -Wunused-label -Wno-int-to-pointer-cast -Wbad-function-cast  -Wmissing-declarations -Wmissing-prototypes  -Wnested-externs -Wstrict-prototypes -Wpointer-sign -Wextra -Wredundant-decls -Wunused -Wunused-function -Wunused-parameter -Wunused-value  -Wunused-variable -Wformat  -Wformat-nonliteral -Wparentheses -Wsequence-point -Wuninitialized -Wundef") 
+#set(LIBPLL_SSE3_CFLAGS "-fomit-frame-pointer -funroll-loops -D__SSE3 -msse3")
 add_definitions(-DIQ_TREE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++98 -Wall -Wno-unused-function -Wno-sign-compare -Wno-deprecated -pedantic -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -std=c99 -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -D__SIM_SSE3 -D_OPTIMIZED_FUNCTIONS")
+
+set (COMBINED_FLAGS "-msse3 -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
+set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -std=c99 -Wno-deprecated ${COMBINED_FLAGS}")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
+set(CMAKE_C_FLAGS_RELEASE "-O2 -g0 -fomit-frame-pointer -funroll-loops -D__SSE3")
 
-set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O2 -DNDEBUG -fno-omit-frame-pointer -pg")
-set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O2 -DNDEBUG -fno-omit-frame-pointer -pg")
+set(CMAKE_CXX_FLAGS_PROFILE "-D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
+set(CMAKE_C_FLAGS_PROFILE "-D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
+set(CMAKE_CXX_FLAGS_MEM "-g -O1 -D__SSE3 -msse3")
+set(CMAKE_C_FLAGS_MEM "-g -O1 -D__SSE3 -msse3")
+
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -D__SSE3 -msse3")
+set(CMAKE_C_FLAGS_DEBUG "-O0 -g -D__SSE3 -msse3")
 
 # subdirectories containing necessary libraries for the build 
-add_subdirectory(phylolib)
+add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
@@ -178,8 +184,7 @@ tools.cpp
 whtest_wrapper.cpp
 lpwrapper.c
 #modeltest_wrapper.c
-fmemopen.c
-nnisearch.c
+nnisearch.cpp
 modelcodon.cpp
 phylosupertreeplen.cpp
 phylotesting.cpp
@@ -191,9 +196,9 @@ graph.cpp
 
 # link special lib for WIN32
 if (WIN32)
-	target_link_libraries(iqtree phylolib ncl whtest zlibstatic sprng ws2_32)
+	target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32)
 else (WIN32)
-	target_link_libraries(iqtree phylolib ncl whtest zlibstatic sprng)
+	target_link_libraries(iqtree pll ncl whtest zlibstatic sprng m)
 endif (WIN32)
 
 # setup the executable name properly

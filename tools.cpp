@@ -573,6 +573,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.boundary_modifier = 1.0;
     params.dist_file = NULL;
     params.compute_obs_dist = false;
+    params.compute_jc_dist = false;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.budget_file = NULL;
@@ -643,12 +644,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5Branches = false;
-    params.nniThresHold = 0.1;
+    params.nni5 = true;
+    params.nni05 = false;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.fast_eval = false;
+    params.nni0 = false;
     params.evalType = 2;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -733,22 +734,26 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.approximate_nni = false;
     params.do_compression = false;
 
-    params.new_heuristic = false;
+    params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.vns_search = false;
+    params.pertubSize = 0.2;
     params.speedup_iter = 100;
-    params.phylolib = false;
+    params.pll = false;
+    params.model_eps = 0.01;
+    params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
-    params.maxtime = 1000000;
+    params.maxtime = 100000;
     params.reinsert_par = false;
     params.fast_branch_opt = false;
-    params.par_vs_bionj = false;
-    params.tabu = false;
-    params.cherry = false;
-    params.ilsnni = false;
+    params.bestStart = true;
+    params.inni = false;
+    params.hybrid = false;
+    params.tabunni = false;
+    params.random_nni =false;
     params.random_restart = false;
+    params.numParsimony = 10;
     params.avh_test = 0;
     params.site_freq_file = NULL;
 #ifdef _OPENMP
@@ -1244,6 +1249,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.p_delete = convert_double(argv[cnt]);
                 if (params.p_delete < 0.0 || params.p_delete > 1.0)
                     throw "Probability of deleting a leaf must be between 0 and 1";
+            } else if (strcmp(argv[cnt], "-ps") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            		throw "Use -ps <probability>";
+            	params.pertubSize = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1631,39 +1641,50 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -maxtime <time_in_minutes>";
                 params.maxtime = convert_double(argv[cnt]);
                 params.min_iterations = 1000000;
-            } else if (strcmp(argv[cnt], "-best_start") == 0) {
-                params.par_vs_bionj = true;
+            } else if (strcmp(argv[cnt], "-numpars") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -numnni <number_of_parsimony_trees>";
+                params.numParsimony = convert_int(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-beststart") == 0) {
+                params.bestStart = true;
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -best_start <binary_alignment_file>";
                 params.binary_aln_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-ba") == 0) {
+            } else if (strcmp(argv[cnt], "-pll") == 0) {
+                params.pll = true;
+            } else if (strcmp(argv[cnt], "-me") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -ba <binary_alignment_file>";
-                params.binary_aln_file = argv[cnt];
-                params.phylolib = true;
+                    throw "Use -me <model_epsilon>";
+                params.model_eps = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-tabu") == 0) {
-                params.tabu = true;
-            } else if (strcmp(argv[cnt], "-cherry") == 0) {
-            	params.cherry = true;
-            } else if (strcmp(argv[cnt], "-ilsnni") == 0) {
-            	params.ilsnni = true;
+                params.tabunni = true;
+            } else if (strcmp(argv[cnt], "-inni") == 0) {
+            	params.inni = true;
+            	params.pll = true;
+            } else if (strcmp(argv[cnt], "-hybrid") == 0) {
+            	params.hybrid = true;
+            	params.pll = true;
+            	params.inni = true;
+            } else if (strcmp(argv[cnt], "-rr") == 0) {
+            	params.random_restart = true;
+            } else if (strcmp(argv[cnt], "-rd_nni") == 0) {
+            	params.random_nni = true;
+            	params.p_delete = 0.0;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
             } else if (strcmp(argv[cnt], "-fivebran") == 0 || strcmp(argv[cnt], "-nni5") == 0) {
-            	params.nni5Branches = true;
+            	params.nni5 = true;
+            } else if (strcmp(argv[cnt], "-nni05") == 0) {
+            	params.nni05 = true;
             } else if (strcmp(argv[cnt], "-onebran") == 0 || strcmp(argv[cnt], "-nni1") == 0) {
-            	params.nni5Branches = false;
-            } else if (strcmp(argv[cnt], "-nniThreshold") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            		throw "Use -nniThreshold <threshold>";
-            	params.nniThresHold = convert_double(argv[cnt]);
+            	params.nni5 = false;
             } else if (strcmp(argv[cnt], "-smooth") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1671,8 +1692,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.numSmoothTree = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-lsnni") == 0) {
                 params.leastSquareNNI = true;
-            } else if (strcmp(argv[cnt], "-fast_eval") == 0) {
-                params.fast_eval = true;
+            } else if (strcmp(argv[cnt], "-nni0") == 0) {
+                params.nni0 = true;
             } else if(strcmp(argv[cnt], "-ls_var") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1695,8 +1716,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -eps <log-likelihood epsilon>";
                 params.loglh_epsilon = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-random_restart") == 0) {
-                params.random_restart = true;
             } else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
                 params.parbran = true;
             } else if (strcmp(argv[cnt], "-wbt") == 0) {
@@ -2051,6 +2070,18 @@ double logFac(const int num) {
     return ret;
 }
 
+template <typename I>
+I random_element(I begin, I end)
+{
+    const unsigned long n = std::distance(begin, end);
+    const unsigned long divisor = (RAND_MAX + 1) / n;
+
+    unsigned long k;
+    do { k = std::rand() / divisor; } while (k >= n);
+
+    return std::advance(begin, k);
+}
+
 template <class T>
 inline T quantile(const vector<T>& v, const double q) {
     unsigned int size = v.size();
@@ -2263,8 +2294,8 @@ double random_double() {
 #define	BIGX            20.0                                 /* max value to represent exp (x) */
 #define	LOG_SQRT_PI     0.5723649429247000870717135          /* log (sqrt (pi)) */
 #define	I_SQRT_PI       0.5641895835477562869480795          /* 1 / sqrt (pi) */
-#define	Z_MAX           6.0                                  /* maximum meaningful z value */ 
-#define	ex(x)           (((x) < -BIGX) ? 0.0 : exp (x))   
+#define	Z_MAX           6.0                                  /* maximum meaningful z value */
+#define	ex(x)           (((x) < -BIGX) ? 0.0 : exp (x))
 
 /************** Normalz: probability of normal z value *********************/
 

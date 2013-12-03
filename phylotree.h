@@ -143,6 +143,8 @@ struct NNIMove {
     }
 };
 
+
+
 struct LeafFreq {
     int leaf_id;
 
@@ -371,6 +373,11 @@ public:
     virtual void initializeAllPartialLh();
 
     /**
+            de-allocate central_partial_lh
+     */
+    virtual void deleteAllPartialLh();
+
+    /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
             @param node the current node
             @param dad dad of the node, used to direct the search
@@ -539,6 +546,12 @@ public:
             @param best_tree_string input stream to read from
      */
     void rollBack(istream &best_tree_string);
+
+    /**
+            Read the tree saved with Taxon Names and branch lengths.
+            @param tree_string input stream to read from
+     */
+    void readTreeString(const string &tree_string);
 
     bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
@@ -1056,16 +1069,6 @@ public:
      * Variance matrix
      */
     double *var_matrix;
-
-    /**
-     *      size of the alignment (used to avoid calling aln->size())
-     */
-    //int alnSize;
-
-    /**
-     *      number of states ( used to avoid calling aln->num_states() )
-     */
-    //int numStates;
 
     /**
             TRUE if you want to optimize branch lengths by Newton-Raphson method

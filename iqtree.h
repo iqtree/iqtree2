@@ -29,9 +29,8 @@
 #include "stoprule.h"
 #include "mtreeset.h"
 
-#include "phylolib/axml.h"
+#include "pll/pll.h"
 #include "nnisearch.h"
-#include "phylolib.h"
 
 typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;
@@ -70,7 +69,6 @@ inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
     return (a.lh_contribution < b.lh_contribution);
 }
 
-
 /**
         Representative Leaf Set, stored as a multiset template of STL,
         sorted in ascending order of leaf's height
@@ -101,11 +99,6 @@ public:
     void init();
 
     /**
-     *   Create a parsimony tree using phylolib
-     */
-    double computeParsimonyTreePhylolib();
-
-    /**
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)
      */
     virtual void setParams(Params& params);
@@ -133,7 +126,7 @@ public:
      *  print model parameters of Phylolib(rates, base frequencies, alpha) to stdout and
      *  to file
      */
-    void printPhylolibModelParams(const char* suffix);
+    //void printPhylolibModelParams(const char* suffix);
 
     /**
         print intermediate tree
@@ -197,11 +190,9 @@ public:
     double doIQP();
 
     /**
-     * 	   perform a variable neighborhood search using
-     * 	   NNI and SPR as the 2 alternative neighborhood
-     *
+     *   get model parameters from IQTree and input them into PLL
      */
-    double doVNS();
+    void inputModelParam2PLL();
 
     //bool containPosNNI(vector<NNIMove> posNNIs);
 
@@ -235,10 +226,10 @@ public:
      */
     double doIQPNNI();
 
-    /**
-     * 		Perform random restart heuristic
+    /*
+     *  perform a guided pertubation instead of doing IQP
      */
-    void doRandomRestart();
+    double pllDoDirectPertubation();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
@@ -252,17 +243,20 @@ public:
             @param skipped (OUT) 1 if current iteration is skipped, otherwise 0
             @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    double optimizeNNI(bool beginHeu = false, int *skipped = NULL, int *nni_count = NULL);
+    double optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu = false, int *skipped = NULL);
 
     /**
-     * 		Do fastNNI using RAxML kernel
-     * 		@param beginHeu whether the heuristic is started
-     * 		@param skipped (OUT) 1 if current iteration is skipped, otherwise 0
-     *      @param nni_count (OUT) the number of single NNI moves proceeded so far
+     * 		Do fastNNI using PLL
+     *
+     *      @param nniCount (OUT) number of NNIs applied
+     * 		@param nniSteps (OUT) number of NNI steps done
      */
-    double optimizeNNIRax(bool beginHeu = false, int *skipped = NULL, int *nni_count = NULL);
+    double pllOptimizeNNI(int &nniCount, int &nniSteps, SearchInfo &searchinfo);
 
-
+    /**
+     *   update best tree topology (for PLL only)
+     */
+    void pllUpdateBestTree(SearchInfo &searchinfo);
     /**
             search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
      */
@@ -346,14 +340,14 @@ public:
                                                            details)
      * @return the estimated value
      */
-    inline double estNMedian(void);
+    double getAvgNumNNI(void);
 
     /**
      * Estimate the median of the distribution of N (see paper for more d
                                                           details)
      * @return the estimated value
      */
-    inline double estDeltaMedian(void);
+    double estDeltaMedian(void);
 
     /**
      * Estimate the 95% quantile of the distribution of DELTA (see paper for
@@ -436,17 +430,53 @@ public:
         return nni_cutoff;
     }
 
-    /**
-     *  Tree data structure for RAxML kernel
+    /*
+     *  Contains a sorted list of all NNIs (2n-6) evaluated for the current best tree
+     *  The last element (nni_for_pertub.end()) is the best NNI
      */
-    tree* phyloTree;
+    vector<pllNNIMove> nniListOfBestTree;
+
+    /**
+     *  vector contains accumulated likelihood of all (2n-6) NNIs
+     */
+    vector<double> accumLHList;
+
+    /**
+     *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
+     */
+    pllInstance *pllInst;
+
+    /**
+     *	PLL data structure for alignment
+     */
+    pllAlignmentData *pllAlignment;
+
+    /**
+     *  PLL data structure for storing phylognetic analysis options
+     */
+    pllInstanceAttr pllAttr;
+
+    /**
+     *  PLL partition list
+     */
+    partitionList * pllPartitions;
+
+    /**
+     *  Vector contains number of NNIs used at each iterations
+     */
+    vector<int> vecNumNNI;
 
 protected:
 
     /**
+     *  Determine whether during tree search whether the diversification process should start
+     */
+    bool diversification;
+
+    /**
      *  Current IQPNNI iteration number
      */
-    int curIQPIter;
+    int curIteration;
     /**
             criterion to assess important quartet
      */
@@ -494,21 +524,11 @@ protected:
      */
     double speed_conf;
 
-    /**
-     *  Vector contains number of NNIs used at each iterations
-     */
-    vector<int> vecNumNNI;
 
     /**
      *  Vector contains approximated improvement pro NNI at each iterations
      */
     vector<double> vecImpProNNI;
-
-    /**
-     * The current best score found
-     */
-    double bestScore;
-
 
     /**
             The list of positive NNI moves for the current tree;
@@ -560,6 +580,18 @@ protected:
     void clearLeafFrequency();
 
 public:
+
+    /**
+     *  variable storing the current best tree topology
+     */
+    topol* pllBestTree;
+
+
+    /**
+     * The current best score found
+     */
+    double bestScore;
+
     /****** following variables are for ultra-fast bootstrap *******/
 
     /** TRUE to save also branch lengths into treels_newick */
@@ -617,7 +649,6 @@ public:
 	int getDelete() const;
 	void setDelete(int _delete);
 
-    int nni_steps;
 protected:
     /**** NNI cutoff heuristic *****/
     /**
