@@ -55,17 +55,22 @@
 #ifdef USE_HASH_MAP
 #if !defined(__GNUC__)
 #include <hash_map>
+#include <hash_set>
 using namespace stdext;
 #elif GCC_VERSION < 40300
 #include <ext/hash_map>
+#include <ext/hash_set>
 using namespace __gnu_cxx;
 #define unordered_map hash_map
+#define unordered_set hash_set
 #else
 #include <tr1/unordered_map>
+#include <tr1/unordered_set>
 using namespace std::tr1;
 #endif
 #else
 #include <map>
+#include <set>
 #endif
 
 

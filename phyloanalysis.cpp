@@ -2175,7 +2175,7 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 }
 
 void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
-		double cutoff, double weight_threshold, const char *output_tree,
+		double cutoff, int weight_summary, double weight_threshold, const char *output_tree,
 		const char *out_prefix, const char* tree_weight_file) {
 	bool rooted = false;
 
@@ -2186,7 +2186,7 @@ void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
 	SplitGraph sg;
 	//SplitIntMap hash_ss;
 
-	boot_trees.convertSplits(sg, cutoff, SW_SUM, weight_threshold);
+	boot_trees.convertSplits(sg, cutoff, weight_summary, weight_threshold);
 
 	string out_file;
 
