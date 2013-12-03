@@ -2238,7 +2238,7 @@ int main(int argc, char *argv[])
 				break;
 			case CT_CONSENSUS_NETWORK:
 				computeConsensusNetwork(params.user_file, params.tree_burnin, params.tree_max_count, params.split_threshold,
-					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file);
+					params.split_weight_summary, params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file);
 				break;
 			case CT_ASSIGN_SUPPORT:
 				assignBootstrapSupport(params.user_file, params.tree_burnin, params.tree_max_count, 

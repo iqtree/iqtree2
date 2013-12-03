@@ -401,6 +401,19 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 		delete isg;
 	}
 
+	if (weighting_type == SW_AVG_PRESENT) {
+		for (itg = sg.begin(); itg != sg.end(); itg++) {
+			int value = 0;
+			if (!hash_ss.findSplit(*itg, value))
+				outError("Internal error ", __func__);
+			(*itg)->setWeight((*itg)->getWeight() / value);
+		}
+	} else if (weighting_type == SW_AVG_ALL) {
+		for (itg = sg.begin(); itg != sg.end(); itg++) {
+			(*itg)->setWeight((*itg)->getWeight() / tree_weights.size());
+		}
+	}
+
 	int discarded = 0;	
 	for (itg = sg.begin(); itg != sg.end(); )  {
 		if ((*itg)->getWeight() <= weight_threshold) {

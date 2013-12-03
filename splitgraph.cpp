@@ -74,7 +74,7 @@ void SplitGraph::init(Params &params)
 		if (mtrees->isRooted() && params.root != NULL)
 			outError(ERR_CONFLICT_ROOT);
 		//SplitIntMap hash_ss;
-		mtrees->convertSplits(*this, params.split_threshold, SW_SUM, params.split_weight_threshold);
+		mtrees->convertSplits(*this, params.split_threshold, params.split_weight_summary, params.split_weight_threshold);
 
 		if (verbose_mode >= VB_DEBUG)
 			saveFileStarDot(cout);
