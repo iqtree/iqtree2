@@ -348,8 +348,9 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh,
 
 	out << "Log-likelihood of the tree: " << fixed << tree_lh << " (s.e. "
 			<< sqrt(lh_variance) << ")" << endl
+			<< "Number of free parameters: " << df << endl
 			<< "Akaike information criterion (AIC) score: " << AIC_score << endl
-			<< "Corrected Akaike information criterion (AIC) score: " << AICc_score << endl
+			<< "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl
 			<< "Bayesian information criterion (BIC) score: " << BIC_score << endl
 			<< "Unconstrained log-likelihood (without tree): "
 			<< tree.aln->computeUnconstrainedLogL() << endl << endl
@@ -1199,6 +1200,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
     	outError("Memory required exceeds your computer RAM size!");
     }
 
+
 	cout << "Optimize model parameters " << (params.optimize_model_rate_joint ? "jointly":"")
 			<< " (tolerace " << params.model_eps << ")... " << endl;
 
@@ -1512,7 +1514,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		int nni_count, nni_steps;
 		iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
 		cout << "Log-likelihood	after reoptimizing full tree: "
-				<< iqtree.curScore << endl;
+				<< iqtree.curScore << endl;		//iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps));
+
 	}
 
 	if (iqtree.isSuperTree())
@@ -1524,7 +1527,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.initializeAllPartialLh();
 		iqtree.clearAllPartialLH();
 		cout << "Optimizing model parameters" << endl;
-		//iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps));
 		iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT));
 	} else {
 		iqtree.setBestScore(iqtree.curScore);
@@ -1544,10 +1546,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	double myscore = 0.0;
 
-
 	myscore = iqtree.getBestScore();
-	//iqtree.computePatternLikelihood(pattern_lh, &myscore);
-	iqtree.computeLikelihood(pattern_lh);
+	iqtree.computePatternLikelihood(pattern_lh, &myscore);
 
 	// compute logl variance
 	iqtree.logl_variance = iqtree.computeLogLVariance();
@@ -1556,7 +1556,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	if (params.print_site_lh) {
 		string site_lh_file = params.out_prefix;
 		site_lh_file += ".sitelh";
-		printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
+		if (params.print_site_lh == 1)
+			printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
+		else
+			printSiteLhCategory(site_lh_file.c_str(), &iqtree);
 	}
 
 	if (params.mvh_site_rate) {

@@ -48,6 +48,7 @@ public:
 
 	friend class MTree;
 	friend class MTreeSet;
+	friend class ECOpd;
 
 /********************************************************
 	CONSTRUCTORs, INITIALIZATION AND DESTRUCTORs

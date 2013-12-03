@@ -63,6 +63,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
 		bool append = false, const char *linename = NULL);
 
+/**
+ * print site log likelihoods per category to a file
+ * @param filename output file name
+ * @param tree phylogenetic tree
+ */
+void printSiteLhCategory(const char*filename, PhyloTree *tree);
 
 /**
  * Evaluate user-trees with possibility of tree topology tests

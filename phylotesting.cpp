@@ -123,6 +123,51 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 		delete[] pattern_lh;
 }
 
+void printSiteLhCategory(const char*filename, PhyloTree *tree) {
+	double *pattern_lh, *pattern_lh_cat;
+	int i;
+	int discrete_cat = tree->getRate()->getNDiscreteRate();
+	pattern_lh = new double[tree->getAlnNPattern()];
+	pattern_lh_cat = new double[tree->getAlnNPattern()*(discrete_cat)];
+	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat);
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+		out << "Note : P(D|M) is the probability of site D given the model M (i.e., the site likelihood)" << endl;
+		out << "P(D|M,rr[x]) is the probability of site D given the model M and the relative rate" << endl;
+		out << "of evolution rr[x], where x is the class of rate to be considered." << endl;
+		out << "We have P(D|M) = \\sum_x P(x) x P(D|M,rr[x])." << endl << endl;
+		out << "Site   logP(D|M)       ";
+		for (i = 0; i < discrete_cat; i++) {
+			out << "logP(D|M,rr[" << i+1 << "]=" << tree->getRate()->getRate(i)<< ") ";
+		}
+		out << endl;
+		IntVector pattern_index;
+		tree->aln->getSitePatternIndex(pattern_index);
+		for (i = 0; i < tree->getAlnNSite(); i++) {
+			out.width(6);
+			out << left << i+1 << " ";
+			out.width(15);
+			out << pattern_lh[pattern_index[i]] << " ";
+			for (int j = 0; j < discrete_cat; j++) {
+				out.width(15);
+				out << pattern_lh_cat[pattern_index[i]*discrete_cat+j] << " ";
+			}
+			out << endl;
+		}
+		out.close();
+		cout << "Site log-likelihoods per category printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+
+	delete[] pattern_lh_cat;
+	delete[] pattern_lh;
+
+}
+
 /**
  * check if the model file contains correct information
  * @param model_file model file names
@@ -243,22 +288,32 @@ void getModelList(Params &params, int nstates, StrVector &models) {
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	const char *must_options[] = {"+I", "+G", "+F"};
 	const char *can_options[] = {"+i", "+g", "+f"};
+	const char *not_options[] = {"-I", "-G", "-F"};
 	int i, j;
 	if (nstates == 20) {
 		// test all options for protein, incl. +F
 		for (i = 0; i < noptions; i++)
 			test_options[i] = true;
 	}
+	// can-have option
 	for (j = 0; j < sizeof(can_options)/sizeof(char*); j++)
 	if (params.model_name.find(can_options[j]) != string::npos) {
 		for (i = 0; i < noptions; i++)
 			if (strstr(rate_options[i], must_options[j]) != NULL)
 				test_options[i] = true;
 	}
+	// must-have option
 	for (j = 0; j < sizeof(must_options)/sizeof(char*); j++)
 	if (params.model_name.find(must_options[j]) != string::npos) {
 		for (i = 0; i < noptions; i++)
 			if (strstr(rate_options[i], must_options[j]) == NULL)
+				test_options[i] = false;
+	}
+	// not-have option
+	for (j = 0; j < sizeof(not_options)/sizeof(char*); j++)
+	if (params.model_name.find(not_options[j]) != string::npos) {
+		for (i = 0; i < noptions; i++)
+			if (strstr(rate_options[i], must_options[j]))
 				test_options[i] = false;
 	}
 	for (i = 0; i < nmodels; i++)
@@ -338,7 +393,9 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 		info.aln_file = "";
 		info.sequence_type = "";
 		info.position_spec = "";
-		info.mem_ptnlh = NULL;
+		info.cur_ptnlh = NULL;
+		info.nniMoves[0].ptnlh = NULL;
+		info.nniMoves[1].ptnlh = NULL;
 		part_info.push_back(info);
 		Alignment *aln = super_aln->concatenateAlignments(*it);
 		PhyloTree *tree = super_tree->extractSubtree(*it);
@@ -907,7 +964,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	return best_model;
 }
 
-int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVector &distinct_ids) {
+int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVector &distinct_ids, bool exclude_duplicate) {
 	StringIntMap treels;
 	try {
 		ifstream in;
@@ -917,21 +974,29 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
 		in.exceptions(ios::badbit);
 		int tree_id;
 		for (tree_id = 0; !in.eof(); tree_id++) {
-			tree->freeNode();
-			tree->readTree(in, rooted);
-			tree->setAlignment(tree->aln);
-			tree->setRootNode((char*)tree->aln->getSeqName(0).c_str());
-		    StringIntMap::iterator it = treels.end();
-		    ostringstream ostr;
-		    tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
-		    //it = treels.find(ostr.str());
-		    it = treels.end(); // for now just include duplicated trees!!
-		    if (it != treels.end()) { // already in treels
-		    	distinct_ids.push_back(it->second);
-		    } else {
-		    	distinct_ids.push_back(-1);
-		    	treels[ostr.str()] = tree_id;
-		    }
+			if (exclude_duplicate) {
+				tree->freeNode();
+				tree->readTree(in, rooted);
+				tree->setAlignment(tree->aln);
+				tree->setRootNode((char*)tree->aln->getSeqName(0).c_str());
+				StringIntMap::iterator it = treels.end();
+				ostringstream ostr;
+				tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+				it = treels.find(ostr.str());
+				if (it != treels.end()) { // already in treels
+					distinct_ids.push_back(it->second);
+				} else {
+					distinct_ids.push_back(-1);
+					treels[ostr.str()] = tree_id;
+				}
+			} else {
+				// ignore tree
+				char ch;
+				do {
+					in >> ch;
+				} while (!in.eof() && ch != ';');
+				distinct_ids.push_back(-1);
+			}
 			char ch;
 			in.exceptions(ios::goodbit);
 			(in) >> ch;
@@ -944,7 +1009,10 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
 	} catch (ios::failure) {
 		outError("Cannot read file ", filename);
 	}
-	return treels.size();
+	if (exclude_duplicate)
+		return treels.size();
+	else
+		return distinct_ids.size();
 }
 
 //const double TOL_RELL_SCORE = 0.01;
@@ -956,11 +1024,11 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	cout << endl;
 	//MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
 	cout << "Reading trees in " << params.treeset_file << " ..." << endl;
-	int ntrees = countDistinctTrees(params.treeset_file, params.is_rooted, tree, distinct_ids);
+	int ntrees = countDistinctTrees(params.treeset_file, params.is_rooted, tree, distinct_ids, params.distinct_trees);
 	if (ntrees < distinct_ids.size()) {
 		cout << "WARNING: " << distinct_ids.size() << " trees detected but only " << ntrees << " distinct trees will be evaluated" << endl;
 	} else {
-		cout << ntrees << " distinct trees detected" << endl;
+		cout << ntrees << (params.distinct_trees ? " distinct" : "") << " trees detected" << endl;
 	}
 	if (ntrees == 0) return;
 	ifstream in(params.treeset_file);

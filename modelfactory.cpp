@@ -469,9 +469,9 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);
 		}
+		if (!fixed_len)
+			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 		if (new_lh > cur_lh + logl_epsilon) {
-			if (!fixed_len)
-				new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 			if (param_epsilon > (new_lh - cur_lh) * logl_epsilon)
 				param_epsilon = (new_lh - cur_lh) * logl_epsilon;
 			cur_lh = new_lh;
@@ -480,7 +480,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		} else {
 			site_rate->classifyRates(new_lh);
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
-			break;
+				break;
 		}
 	}
 	if (verbose_mode >= VB_MED || write_info)
