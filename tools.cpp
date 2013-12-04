@@ -644,7 +644,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5 = true;
+    params.nni5 = false;
     params.nni05 = false;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
@@ -737,7 +737,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.pertubSize = 0.2;
+    params.pertubSize = 1.0;
     params.speedup_iter = 100;
     params.pll = false;
     params.model_eps = 0.01;
