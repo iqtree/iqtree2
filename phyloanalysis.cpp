@@ -1242,7 +1242,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	}
 
 	int numParsTree;
-	if (params.random_restart) {
+	if (params.user_file) {
+		numParsTree = 1;
+	}else if (params.random_restart) {
 		numParsTree = iqtree.stop_rule.getNumIterations();
 		iqtree.stop_rule.setIterationNum(1,1);
 	} else if (params.user_file){
@@ -1258,7 +1260,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		int nni_count, nni_steps;
 		nni_count = 0;
 		nni_steps = 0;
-		string bestTreeString;
+		string bestTreeString = initTree.str();
+		pllNewickTree *newick = pllNewickParseString(parsTree[0].c_str());
+		pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+		pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
+		iqtree.inputModelParam2PLL();
+		pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+		pllNewickParseDestroy(&newick);
+		iqtree.pllUpdateBestTree();
 
 		for (int treeNr = 0; treeNr < numParsTree; treeNr++) {
 			if (treeNr >= 1) {
@@ -1279,11 +1288,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			if (params.pll) {
 				pllNewickTree *newick = pllNewickParseString(parsTree[treeNr].c_str());
 				pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-				if (treeNr == 0) {
-					pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-					iqtree.inputModelParam2PLL();
-					pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-				}
 				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
 				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 8);
 				pllNewickParseDestroy(&newick);
@@ -1294,7 +1298,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				cout << "logl of fastNNI " << treeNr + 1 << ": "
 						<< iqtree.curScore << " (NNIs: " << nni_count
 						<< " / NNI steps: " << nni_steps << ")" << endl;
-				iqtree.vecNumNNI.push_back(nni_count);
 				if (iqtree.curScore > iqtree.bestScore) {
 					iqtree.bestScore = iqtree.curScore;
 					cout << "BETTER SCORE FOUND: " << iqtree.bestScore << endl;
@@ -1303,7 +1306,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 							PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
 							PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 					bestTreeString = string(iqtree.pllInst->tree_string);
-					iqtree.pllUpdateBestTree(searchinfo);
+					iqtree.pllUpdateBestTree();
 				}
 			} else {
 				stringstream parsTreeString;

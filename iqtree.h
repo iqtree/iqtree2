@@ -256,7 +256,7 @@ public:
     /**
      *   update best tree topology (for PLL only)
      */
-    void pllUpdateBestTree(SearchInfo &searchinfo);
+    void pllUpdateBestTree();
     /**
             search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
      */

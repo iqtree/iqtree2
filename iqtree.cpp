@@ -1275,7 +1275,7 @@ double IQTree::doIQPNNI() {
 //					assert(!isTip((*it).p->number, pllInst->mxtips));
 //					assert(!isTip((*it).p->back->number, pllInst->mxtips));
 //				}
-				pllUpdateBestTree(searchinfo);
+				pllUpdateBestTree();
 				if (!params->pll) {
 					curScore = optimizeAllBranches();
 					//cout << "Saving new better tree ..." << endl;
@@ -1576,7 +1576,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
     return searchinfo.curLogl;
 }
 
-void IQTree::pllUpdateBestTree(SearchInfo &searchinfo) {
+void IQTree::pllUpdateBestTree() {
 	if (pllBestTree == NULL) {
 		pllBestTree = setupTopol(pllInst->mxtips);
 	}
