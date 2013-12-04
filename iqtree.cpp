@@ -928,22 +928,9 @@ double IQTree::pllDoDirectPertubation() {
 
 
 double IQTree::doIQPNNI() {
-	/*
-	if (params->ilsnni) {
-		// read in the tree topology from PLL
-		int printBranchLengths = PLL_TRUE;
-		Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths, PLL_TRUE, 0,
-				0, 0, PLL_SUMMARIZE_LH, 0, 0);
-		stringstream mytree;
-		mytree << pllInst->tree_string;
-		mytree.seekg(0, ios::beg);
-		freeNode();
-		readTree(mytree, rooted);
-		setRootNode(params->root);
-		setAlignment(aln);
+	if (params->inni) {
+		enableHeuris = false;
 	}
-	*/
-
 	//double bestIQPScore = -DBL_MAX + 100;
 	if (testNNI) {
 		string str = params->out_prefix;
