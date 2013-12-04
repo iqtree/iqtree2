@@ -1340,11 +1340,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			if (!restoreTree(iqtree.pllBestTree, iqtree.pllInst, iqtree.pllPartitions)) {
 				outError("ERROR: failed to roll back tree \n");
 			}
-			iqtree.curScore = iqtree.bestScore;
 		}
 
 		/* IQTree kernel: read in the best tree */
 		iqtree.readTreeString(bestTreeString);
+		// re-estimate model parameters for the best found local optimal tree
+//	    iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
+//	    iqtree.bestScore = iqtree.curScore;
+
 		iqtree.curScore = iqtree.bestScore;
 
 		// deallocate partial likelihood within IQTree kernel to save memory when PLL is used */
