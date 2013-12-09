@@ -1200,7 +1200,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
     	outError("Memory required exceeds your computer RAM size!");
     }
 
-
+    cout.precision(6);
 	cout << "Optimize model parameters " << (params.optimize_model_rate_joint ? "jointly":"")
 			<< " (tolerace " << params.model_eps << ")... " << endl;
 
@@ -1345,10 +1345,20 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		/* IQTree kernel: read in the best tree */
 		iqtree.readTreeString(bestTreeString);
 		// re-estimate model parameters for the best found local optimal tree
-//	    iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
-//	    iqtree.bestScore = iqtree.curScore;
-
-		iqtree.curScore = iqtree.bestScore;
+	    iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
+	    initTree.seekp(0, ios::beg);
+	    iqtree.printTree(initTree);
+		newick = pllNewickParseString(initTree.str().c_str());
+		pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+		iqtree.inputModelParam2PLL();
+		pllNewickParseDestroy(&newick);
+		pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
+	    cout << "Log-likelihood recomputed by PLL: " << iqtree.pllInst->likelihood << endl;
+	    if (abs(iqtree.pllInst->likelihood - iqtree.curScore) > 0.1) {
+	    	cout << "POSSIBLE ERROR: logl computed by PLL deviates too much from IQTree kernel" << endl;
+	    }
+		iqtree.curScore = iqtree.pllInst->likelihood;
+	    iqtree.bestScore = iqtree.curScore;
 
 		// deallocate partial likelihood within IQTree kernel to save memory when PLL is used */
 		if (params.pll)
@@ -1460,12 +1470,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		} else {
 			cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
 		}
-		if (!params.inni && !params.random_nni) {
+		if (!params.inni) {
 			cout << "Number of representative leaves  : " << params.k_representative << endl;
 			cout << "Probability of deleting sequences: " << iqtree.getProbDelete() << endl;
 			cout << "Number of leaves to be deleted   : " << iqtree.getDelete() << endl;
 		} else if (params.inni) {
-			cout << "Perturbation strength: " << params.pertubSize << endl;
+			cout << "Probability of weak perturbation: " << params.prob_weak << endl;
+			cout << "Weak perturbation: " << params.perturb_weak << endl;
+			cout << "Strong perturbation: " << params.perturb_strong << endl;
 		}
 		cout << "Number of iterations: ";
 		if (params.stop_condition == SC_FIXED_ITERATION)

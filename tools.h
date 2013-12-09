@@ -351,7 +351,11 @@ struct NNIInfo {
  */
 struct Params {
 
-	bool random_nni;
+	double prob_weak;
+
+	double perturb_weak;
+
+	double perturb_strong;
 
 	int numParsimony;
 
