@@ -999,6 +999,7 @@ double IQTree::doIQPNNI() {
 	if (params->tabu) {
 		initLeafFrequency();
 	}
+	bool usePerturbWeak = true;
 	//string iqpTree;
 	for (curIteration = 2; !stop_rule.meetStopCondition(curIteration); curIteration++) {
 		//curIQPIter = cur_iteration;
@@ -1072,13 +1073,16 @@ double IQTree::doIQPNNI() {
 				} else if (params->inni) {
 					//curScore = pllDoDirectPertubation();
 					if (params->hybrid) {
-						int smallPerturb = 0.2 * (aln->getNSeq() - 3);
-						int largePerturb = 0.8 * (aln->getNSeq() - 3);
-						int perturbType = random_int(2);
-						if (perturbType == 0) {
+						assert(params->perturb_weak < params->perturb_strong);
+						int smallPerturb = params->perturb_weak * (aln->getNSeq() - 3);
+						int largePerturb = params->perturb_strong * (aln->getNSeq() - 3);
+						double rand = random_double();
+						if (rand < params->prob_weak) {
 							curScore = pllDoRandNNIs(pllInst, pllPartitions, smallPerturb);
+							usePerturbWeak = true;
 						} else {
 							curScore = pllDoRandNNIs(pllInst, pllPartitions, largePerturb);
+							usePerturbWeak = false;
 						}
 						iqpScore = curScore;
 					} else {
@@ -1092,11 +1096,7 @@ double IQTree::doIQPNNI() {
 					printTree(iqp_tree_string);
 					pllNewickTree *iqpTree = pllNewickParseString(iqp_tree_string.str().c_str());
 					pllTreeInitTopologyNewick(pllInst, iqpTree, PLL_FALSE);
-					if (params->random_nni) {
-						pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
-					} else {
-						pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-					}
+					pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
 					pllTreeEvaluate(pllInst, pllPartitions, 1);
 					pllNewickParseDestroy(&iqpTree);
 					curScore = pllInst->likelihood;
@@ -1277,7 +1277,18 @@ double IQTree::doIQPNNI() {
 				}
 				bestScore = curScore;
 				best_tree_topo = cur_tree_topo_ss.str();
-				cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore << endl;
+				string perturbType;
+				if (usePerturbWeak && params->inni) {
+					perturbType="weak pertubation";
+				} else {
+					perturbType="strong pertubation";
+				}
+				if (params->inni) {
+					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
+					cout << " / "<< perturbType << endl;
+				} else {
+					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
+				}
 				stop_rule.addImprovedIteration(curIteration);
 			} else {
 				// higher likelihood but the same tree topology

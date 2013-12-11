@@ -644,7 +644,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5 = false;
+    params.nni5 = true;
     params.nni05 = false;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
@@ -738,6 +738,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_best_trees = false;
     params.iteration_multiple = 1;
     params.pertubSize = 1.0;
+    params.perturb_weak = 0.2;
+    params.perturb_strong = 0.8;
+    params.prob_weak = 0.5;
     params.speedup_iter = 100;
     params.pll = false;
     params.model_eps = 0.01;
@@ -751,9 +754,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.inni = false;
     params.hybrid = false;
     params.tabunni = false;
-    params.random_nni =false;
     params.random_restart = false;
-    params.numParsimony = 10;
+    params.numParsimony = 20;
     params.avh_test = 0;
     params.site_freq_file = NULL;
 #ifdef _OPENMP
@@ -1249,12 +1251,30 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.p_delete = convert_double(argv[cnt]);
                 if (params.p_delete < 0.0 || params.p_delete > 1.0)
                     throw "Probability of deleting a leaf must be between 0 and 1";
-            } else if (strcmp(argv[cnt], "-ps") == 0) {
+            } else if (strcmp(argv[cnt], "-psize") == 0) {
             	cnt++;
             	if (cnt >= argc)
-            		throw "Use -ps <probability>";
+            		throw "Use -psize <probability>";
             	params.pertubSize = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-n") == 0) {
+            } else if (strcmp(argv[cnt], "-pw") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            		throw "Use -pw <portion_of_nni>";
+            	params.perturb_weak = convert_double(argv[cnt]);
+            	params.hybrid = true;
+        	} else if (strcmp(argv[cnt], "-ps") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            		throw "Use -ps <portion_of_nni>";
+            	params.perturb_strong = convert_double(argv[cnt]);
+            	params.hybrid = true;
+        	} else if(strcmp(argv[cnt], "-pr_weak") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            		throw "Use -pr_weak <prob_weak_perturb>";
+            	params.prob_weak = convert_double(argv[cnt]);
+            	params.hybrid = true;
+        	} else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -n <#iterations>";
@@ -1672,9 +1692,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.inni = true;
             } else if (strcmp(argv[cnt], "-rr") == 0) {
             	params.random_restart = true;
-            } else if (strcmp(argv[cnt], "-rd_nni") == 0) {
-            	params.random_nni = true;
-            	params.p_delete = 0.0;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
