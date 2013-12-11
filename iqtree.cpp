@@ -1288,6 +1288,7 @@ double IQTree::doIQPNNI() {
 					cout << " / "<< perturbType << endl;
 				} else {
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
+					cout << endl;
 				}
 				stop_rule.addImprovedIteration(curIteration);
 			} else {

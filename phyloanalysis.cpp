@@ -985,13 +985,34 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	/* Read in the alignment file */
 	string pllAln = params.out_prefix;
 	pllAln += ".pllaln";
-	alignment->printPhylip(pllAln.c_str());
+	if (alignment->isSuperAlignment()) {
+		((SuperAlignment*)alignment)->printCombinedAlignment(pllAln.c_str());
+	} else {
+		alignment->printPhylip(pllAln.c_str());
+	}
 	iqtree.pllAlignment = pllParseAlignmentFile(PLL_FORMAT_PHYLIP, pllAln.c_str());
 
 	/* Read in the partition information */
 	pllQueue *partitionInfo;
-	if (params.partition_file) {
-		partitionInfo = pllPartitionParse(params.partition_file);
+	ofstream partFile;
+	string pllPartFile = string(params.out_prefix) + ".pll_partitions";
+	partFile.open(pllPartFile.c_str());
+	if (iqtree.isSuperTree()) {
+		PhyloSuperTree *siqtree = (PhyloSuperTree*) &iqtree;
+		int i = 0;
+		for (vector<PartitionInfo>::iterator it = siqtree->part_info.begin(); it !=
+				siqtree->part_info.end(); it++) {
+			i++;
+			if ((*it).sequence_type.compare("DNA") != 0) {
+				//cout << "HELLO DNA" << endl;
+				partFile << "DNA" << ", p" << i << " = "<< (*it).position_spec << endl;
+			} else if ((*it).sequence_type.compare("AA") != 0) {
+				partFile << (*it).model_name << ", p" << i << " = " << (*it).position_spec << endl;
+			} else {
+				partFile << (*it).model_name << ", p" << i << " = " << (*it).position_spec << endl;
+			}
+		}
+
 	} else {
 		/* create a partition file */
 		string model;
@@ -1000,14 +1021,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		} else if (alignment->num_states == 20) {
 			model = "WAG"; // TODO: Change this hard-coded model
 		}
-		ofstream partFile;
-		string filename = string(params.out_prefix) + ".partitions";
-		partFile.open(filename.c_str());
+
 		//partFile << model << ", p1 = " << "1-" << alignment->getNSite() << endl;
 		partFile << model << ", p1 = " << "1-" << iqtree.getAlnNSite() << endl;
-		partFile.close();
-		partitionInfo = pllPartitionParse(filename.c_str());
 	}
+	partFile.close();
+	partitionInfo = pllPartitionParse(pllPartFile.c_str());
 
 	/* Validate the partitions */
 	if (!pllPartitionsValidate(partitionInfo, iqtree.pllAlignment)) {
@@ -1315,6 +1334,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				parsTreeString << parsTree[treeNr];
 				iqtree.readTree(parsTreeString, iqtree.rooted);
 				iqtree.setAlignment(alignment);
+				if (iqtree.isSuperTree())
+						((PhyloSuperTree*) &iqtree)->mapTrees();
 				iqtree.initializeAllPartialLh();
 				iqtree.curScore = iqtree.optimizeAllBranches();
 				cout << "logl of starting tree " << treeNr + 1 << ": "
@@ -1346,20 +1367,25 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 		/* IQTree kernel: read in the best tree */
 		iqtree.readTreeString(bestTreeString);
+		if (iqtree.isSuperTree())
+				((PhyloSuperTree*) &iqtree)->mapTrees();
 		// re-estimate model parameters for the best found local optimal tree
 	    iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
-	    initTree.seekp(0, ios::beg);
-	    iqtree.printTree(initTree);
-		newick = pllNewickParseString(initTree.str().c_str());
-		pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-		iqtree.inputModelParam2PLL();
-		pllNewickParseDestroy(&newick);
-		pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-	    cout << "Log-likelihood recomputed by PLL: " << iqtree.pllInst->likelihood << endl;
-	    if (abs(iqtree.pllInst->likelihood - iqtree.curScore) > 0.1) {
-	    	cout << "POSSIBLE ERROR: logl computed by PLL deviates too much from IQTree kernel" << endl;
+	    if (params.pll) {
+		    initTree.seekp(0, ios::beg);
+		    iqtree.printTree(initTree);
+			newick = pllNewickParseString(initTree.str().c_str());
+			pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+			iqtree.inputModelParam2PLL();
+			pllNewickParseDestroy(&newick);
+			pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
+		    cout << "Log-likelihood recomputed by PLL: " << iqtree.pllInst->likelihood << endl;
+		    if (abs(iqtree.pllInst->likelihood - iqtree.curScore) > 0.1) {
+		    	cout << "POSSIBLE ERROR: logl computed by PLL deviates too much from IQTree kernel" << endl;
+		    }
+			iqtree.curScore = iqtree.pllInst->likelihood;
 	    }
-		iqtree.curScore = iqtree.pllInst->likelihood;
+
 	    iqtree.bestScore = iqtree.curScore;
 
 		// deallocate partial likelihood within IQTree kernel to save memory when PLL is used */

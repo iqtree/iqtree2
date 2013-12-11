@@ -33,17 +33,17 @@ Phylogenetic tree for partition model (multi-gene alignment)
 class PhyloSuperTree : public IQTree, public vector<PhyloTree* >
 {
 public:
-	/** 
+	/**
 		constructor
 	*/
     PhyloSuperTree();
 
-	/** 
+	/**
 		constructor
 	*/
     PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
-	/** 
+	/**
 		constructor
 	*/
     PhyloSuperTree(Params &params);
@@ -61,7 +61,7 @@ public:
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */
 	virtual void setParams(Params& params);
-	
+
 	virtual bool isSuperTree() { return true; }
 
     /**
@@ -170,7 +170,9 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL, bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
+    		NNIMove *nniMoves = NULL, bool approx_nni = false,
+    		bool useLS = false, double lh_contribution = -1.0);
 
     /**
             Do an NNI on the supertree and synchronize all subtrees respectively
@@ -206,7 +208,7 @@ public:
 	 * print debug information about all maps
 	 */
 	virtual void printMapInfo();
-	
+
 	/**
 	 * initialize partition information for super tree
 	*/
@@ -217,7 +219,7 @@ public:
 	/**
 		partition information
 	*/
-	vector<PartitionInfo> part_info; 
+	vector<PartitionInfo> part_info;
 
     /**
             get the name of the model
