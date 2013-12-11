@@ -928,22 +928,9 @@ double IQTree::pllDoDirectPertubation() {
 
 
 double IQTree::doIQPNNI() {
-	/*
-	if (params->ilsnni) {
-		// read in the tree topology from PLL
-		int printBranchLengths = PLL_TRUE;
-		Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths, PLL_TRUE, 0,
-				0, 0, PLL_SUMMARIZE_LH, 0, 0);
-		stringstream mytree;
-		mytree << pllInst->tree_string;
-		mytree.seekg(0, ios::beg);
-		freeNode();
-		readTree(mytree, rooted);
-		setRootNode(params->root);
-		setAlignment(aln);
+	if (params->inni) {
+		enableHeuris = false;
 	}
-	*/
-
 	//double bestIQPScore = -DBL_MAX + 100;
 	if (testNNI) {
 		string str = params->out_prefix;
@@ -1275,7 +1262,7 @@ double IQTree::doIQPNNI() {
 //					assert(!isTip((*it).p->number, pllInst->mxtips));
 //					assert(!isTip((*it).p->back->number, pllInst->mxtips));
 //				}
-				pllUpdateBestTree(searchinfo);
+				pllUpdateBestTree();
 				if (!params->pll) {
 					curScore = optimizeAllBranches();
 					//cout << "Saving new better tree ..." << endl;
@@ -1576,7 +1563,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
     return searchinfo.curLogl;
 }
 
-void IQTree::pllUpdateBestTree(SearchInfo &searchinfo) {
+void IQTree::pllUpdateBestTree() {
 	if (pllBestTree == NULL) {
 		pllBestTree = setupTopol(pllInst->mxtips);
 	}
