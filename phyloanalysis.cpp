@@ -967,70 +967,68 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	double t_begin, t_end;
 	t_begin = getCPUTime();
 
-	if (!params.partition_file) {
 		/* Initialized all data strucutre for PLL*/
-		/* Set the PLL instance attributes */
-		iqtree.pllAttr.rateHetModel = PLL_GAMMA;
-		iqtree.pllAttr.fastScaling = PLL_FALSE;
-		iqtree.pllAttr.saveMemory = PLL_FALSE;
-		iqtree.pllAttr.useRecom = PLL_FALSE;
-		iqtree.pllAttr.randomNumberSeed = params.ran_seed;
-		iqtree.pllAttr.numberOfThreads = 8; /* This only affects the pthreads version */
+	/* Set the PLL instance attributes */
+	iqtree.pllAttr.rateHetModel = PLL_GAMMA;
+	iqtree.pllAttr.fastScaling = PLL_FALSE;
+	iqtree.pllAttr.saveMemory = PLL_FALSE;
+	iqtree.pllAttr.useRecom = PLL_FALSE;
+	iqtree.pllAttr.randomNumberSeed = params.ran_seed;
+	iqtree.pllAttr.numberOfThreads = 8; /* This only affects the pthreads version */
 
-		if ( iqtree.pllInst != NULL ) {
-			pllDestroyInstance(iqtree.pllInst);
+	if (iqtree.pllInst != NULL) {
+		pllDestroyInstance(iqtree.pllInst);
+	}
+	/* Create a PLL instance */
+	iqtree.pllInst = pllCreateInstance(&iqtree.pllAttr);
+
+	/* Read in the alignment file */
+	string pllAln = params.out_prefix;
+	pllAln += ".pllaln";
+	alignment->printPhylip(pllAln.c_str());
+	iqtree.pllAlignment = pllParseAlignmentFile(PLL_FORMAT_PHYLIP, pllAln.c_str());
+
+	/* Read in the partition information */
+	pllQueue *partitionInfo;
+	if (params.partition_file) {
+		partitionInfo = pllPartitionParse(params.partition_file);
+	} else {
+		/* create a partition file */
+		string model;
+		if (alignment->num_states == 4) {
+			model = "DNA";
+		} else if (alignment->num_states == 20) {
+			model = "WAG"; // TODO: Change this hard-coded model
 		}
-		/* Create a PLL instance */
-		iqtree.pllInst = pllCreateInstance(&iqtree.pllAttr);
+		ofstream partFile;
+		string filename = string(params.out_prefix) + ".partitions";
+		partFile.open(filename.c_str());
+		//partFile << model << ", p1 = " << "1-" << alignment->getNSite() << endl;
+		partFile << model << ", p1 = " << "1-" << iqtree.getAlnNSite() << endl;
+		partFile.close();
+		partitionInfo = pllPartitionParse(filename.c_str());
+	}
 
-		/* Read in the alignment file */
-		string pllAln = params.out_prefix;
-		pllAln += ".pllaln";
-		alignment->printPhylip(pllAln.c_str());
-		iqtree.pllAlignment = pllParseAlignmentFile(PLL_FORMAT_PHYLIP, pllAln.c_str());
+	/* Validate the partitions */
+	if (!pllPartitionsValidate(partitionInfo, iqtree.pllAlignment)) {
+		fprintf(stderr, "Error: Partitions do not cover all sites\n");
+		exit(EXIT_FAILURE);
+	}
 
-		/* Read in the partition information */
-		pllQueue *partitionInfo;
-		if (params.partition_file) {
-			partitionInfo = pllPartitionParse(params.partition_file);
-		} else {
-			/* create a partition file */
-			string model;
-			if (alignment->num_states == 4) {
-				model = "DNA";
-			} else if (alignment->num_states == 20) {
-				model = "WAG"; // TODO: Change this hard-coded model
-			}
-			ofstream partFile;
-			string filename = string(params.out_prefix) + ".partitions";
-			partFile.open(filename.c_str());
-			partFile << model << ", p1 = " << "1-" << alignment->getNSite() << endl;
-			partFile.close();
-			partitionInfo = pllPartitionParse(filename.c_str());
-		}
+	/* Commit the partitions and build a partitions structure */
+	iqtree.pllPartitions = pllPartitionsCommit(partitionInfo, iqtree.pllAlignment);
 
-		/* Validate the partitions */
-		if (!pllPartitionsValidate(partitionInfo, iqtree.pllAlignment)) {
-			fprintf(stderr, "Error: Partitions do not cover all sites\n");
-			exit(EXIT_FAILURE);
-		}
+	/* We don't need the the intermedia partition queue structure anymore */
+	pllQueuePartitionsDestroy(&partitionInfo);
 
-		/* Commit the partitions and build a partitions structure */
-		iqtree.pllPartitions = pllPartitionsCommit(partitionInfo, iqtree.pllAlignment);
+	/* eliminate duplicate sites from the alignment and update weights vector */
+	pllAlignmentRemoveDups(iqtree.pllAlignment, iqtree.pllPartitions);
 
-		/* We don't need the the intermedia partition queue structure anymore */
-		pllQueuePartitionsDestroy(&partitionInfo);
+	pllTreeInitTopologyForAlignment(iqtree.pllInst, iqtree.pllAlignment);
 
-		/* eliminate duplicate sites from the alignment and update weights vector */
-		pllAlignmentRemoveDups(iqtree.pllAlignment, iqtree.pllPartitions);
-
-		pllTreeInitTopologyForAlignment(iqtree.pllInst, iqtree.pllAlignment);
-
-		/* Connect the alignment and partition structure with the tree structure */
-		if (!pllLoadAlignment(iqtree.pllInst, iqtree.pllAlignment,
-				iqtree.pllPartitions, PLL_SHALLOW_COPY)) {
-			outError("Incompatible tree/alignment combination");
-		}
+	/* Connect the alignment and partition structure with the tree structure */
+	if (!pllLoadAlignment(iqtree.pllInst, iqtree.pllAlignment, iqtree.pllPartitions, PLL_SHALLOW_COPY)) {
+		outError("Incompatible tree/alignment combination");
 	}
 
 
@@ -1063,7 +1061,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	// Compute JC distances or read them from user file
 	if (params.dist_file) {
 		cout << "Reading distance matrix file " << params.dist_file << " ..." << endl;
-	} else if (params.compute_jc_dist || params.partition_file) {
+	} else if (params.compute_jc_dist) {
 		cout << "Computing Juke-Cantor distances..." << endl;
 	} else if (params.compute_obs_dist) {
 		cout << "Computing observed distances..." << endl;
@@ -1092,7 +1090,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		cout << endl;
 		cout << "CREATING PARSIMONY TREE BY IQTree ..." << endl;
 		iqtree.computeParsimonyTree(params.out_prefix, alignment);
-    } else if (params.bestStart && !params.partition_file) {
+    } else if (params.bestStart) {
     	cout << "Creating an initial parsimony tree ... ";
     	double start = getCPUTime();
 		// generate a parsimony tree for model optimization
