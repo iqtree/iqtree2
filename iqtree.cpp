@@ -1285,10 +1285,11 @@ double IQTree::doIQPNNI() {
 				}
 				if (params->inni) {
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
-					cout << " / "<< perturbType << endl;
+					cout << " / "<< perturbType;
+					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
 				} else {
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
-					cout << endl;
+					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
 				}
 				stop_rule.addImprovedIteration(curIteration);
 			} else {
