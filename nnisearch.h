@@ -202,10 +202,6 @@ pllNNIMove *getNNIList(pllInstance* tr);
  * This one keeps all info necessary to run UFBoot in PLL mode
  */
 typedef struct{
-	pll_boolean params_online_bootstrap;
-	int params_gbo_replicates;
-	pll_boolean params_store_candidate_trees;
-	double params_ufboot_epsilon;
 	int max_candidate_trees;
 	int treels_size;
 	int save_all_trees;
@@ -222,7 +218,7 @@ typedef struct{
 	double * boot_logl;
 	int * boot_counts;
 	int * boot_trees;
-	double * random_doubles;
+//	double * random_doubles;
 } pllUFBootData;
 
 /**

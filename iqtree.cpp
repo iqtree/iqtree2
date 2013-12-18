@@ -1833,7 +1833,7 @@ void IQTree::pllInitUFBootData(){
 		pllUFBootDataPtr->candidate_trees_count = 0;
 
 		if(params->online_bootstrap && params->gbo_replicates > 0){
-			pllUFBootDataPtr->params_ufboot_epsilon = params->ufboot_epsilon;
+//			pllUFBootDataPtr->params_ufboot_epsilon = params->ufboot_epsilon;
 
 			pllUFBootDataPtr->treels = pllHashInit(max_candidate_trees);
 
@@ -1886,27 +1886,27 @@ void IQTree::pllInitUFBootData(){
 				(int *) malloc(params->gbo_replicates * (sizeof(int)));
 			if(!pllUFBootDataPtr->boot_trees) pllAlertMemoryError();
 
-			pllUFBootDataPtr->random_doubles =
-				(double *) malloc(params->gbo_replicates * (sizeof(double)));
-			if(!pllUFBootDataPtr->random_doubles) pllAlertMemoryError();
+//			pllUFBootDataPtr->random_doubles =
+//				(double *) malloc(params->gbo_replicates * (sizeof(double)));
+//			if(!pllUFBootDataPtr->random_doubles) pllAlertMemoryError();
 
 			pllUFBootDataPtr->duplication_counter = 0;
 		}
 	}
-	pllUFBootDataPtr->params_store_candidate_trees = params->store_candidate_trees;
+//	pllUFBootDataPtr->params_store_candidate_trees = params->store_candidate_trees;
 //	params->store_candidate_trees = TRUE; // TEST!!!!
 //	pllUFBootDataPtr->params_store_candidate_trees = PLL_TRUE; // TEST!!!!
-	pllUFBootDataPtr->params_online_bootstrap = params->online_bootstrap;
-	pllUFBootDataPtr->params_gbo_replicates = params->gbo_replicates;
+//	globalParam->online_bootstrap = params->online_bootstrap;
+//	pllUFBootDataPtr->params_gbo_replicates = params->gbo_replicates;
 	pllUFBootDataPtr->max_candidate_trees = max_candidate_trees;
 	pllUFBootDataPtr->save_all_trees = save_all_trees;
 	pllUFBootDataPtr->save_all_br_lens = save_all_br_lens;
 	pllUFBootDataPtr->logl_cutoff = logl_cutoff;
 	pllUFBootDataPtr->n_patterns = pllAlignment->sequenceLength;
 
-	if(pllUFBootDataPtr->random_doubles)
-		for(int i = 0; i < params->gbo_replicates; i++)
-			pllUFBootDataPtr->random_doubles[i] = random_double();
+//	if(pllUFBootDataPtr->random_doubles)
+//		for(int i = 0; i < params->gbo_replicates; i++)
+//			pllUFBootDataPtr->random_doubles[i] = random_double();
 }
 
 void IQTree::pllDestroyUFBootData(){
@@ -1948,7 +1948,7 @@ void IQTree::pllDestroyUFBootData(){
 		free(pllUFBootDataPtr->boot_trees);
 //		cout << "Done freeing boot_trees" << endl;
 
-		free(pllUFBootDataPtr->random_doubles);
+//		free(pllUFBootDataPtr->random_doubles);
 //		cout << "Done freeing random_doubles" << endl;
 	}
 	free(pllUFBootDataPtr);

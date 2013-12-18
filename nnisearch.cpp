@@ -233,8 +233,8 @@ set<int> getAffectedNodes(pllInstance* tr, nodeptr p) {
 
 void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo) {
 	/* DTH: mimic IQTREE::optimizeNNI 's first call to IQTREE::saveCurrentTree */
-	if((pllUFBootDataPtr->params_online_bootstrap == PLL_TRUE) &&
-			(pllUFBootDataPtr->params_gbo_replicates > 0)){
+	if((globalParam->online_bootstrap == PLL_TRUE) &&
+			(globalParam->gbo_replicates > 0)){
 		tr->fastScaling = PLL_FALSE;
 		pllEvaluateGeneric(tr, pr, tr->start, PLL_FALSE, PLL_TRUE);
 		pllSaveCurrentTree(tr, pr, tr->start);
@@ -538,8 +538,8 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 			pllNewviewGeneric(tr, pr, q, PLL_FALSE);
 		}
 		_update(tr, pr, p);
-		if((pllUFBootDataPtr->params_online_bootstrap == PLL_TRUE) &&
-				(pllUFBootDataPtr->params_gbo_replicates > 0)){
+		if((globalParam->online_bootstrap == PLL_TRUE) &&
+				(globalParam->gbo_replicates > 0)){
 			tr->fastScaling = PLL_FALSE;
 			pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
 			pllSaveCurrentTree(tr, pr, p);
@@ -555,8 +555,8 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 			pllNewviewGeneric(tr, pr, p, PLL_FALSE);
 			pllNewviewGeneric(tr, pr, q, PLL_FALSE);
 		}
-		if((pllUFBootDataPtr->params_online_bootstrap == PLL_TRUE) &&
-						(pllUFBootDataPtr->params_gbo_replicates > 0)){
+		if((globalParam->online_bootstrap == PLL_TRUE) &&
+						(globalParam->gbo_replicates > 0)){
 			tr->fastScaling = PLL_FALSE;
 			pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
 			pllSaveCurrentTree(tr, pr, p);
@@ -600,8 +600,8 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 		else
 			pllNewviewGeneric(tr, pr, r, PLL_FALSE);
 		_update(tr, pr, r);
-		if((pllUFBootDataPtr->params_online_bootstrap == PLL_TRUE) &&
-						(pllUFBootDataPtr->params_gbo_replicates > 0)){
+		if((globalParam->online_bootstrap == PLL_TRUE) &&
+						(globalParam->gbo_replicates > 0)){
 			tr->fastScaling = PLL_FALSE;
 			pllEvaluateGeneric(tr, pr, r, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
 			pllSaveCurrentTree(tr, pr, r);
@@ -873,7 +873,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 
 	pll_boolean is_stored = PLL_FALSE;
 
-	if(pllUFBootDataPtr->params_store_candidate_trees){
+	if(globalParam->store_candidate_trees){
 		is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
 	}
 
@@ -926,7 +926,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 
        tree_index = pllUFBootDataPtr->candidate_trees_count;
        pllUFBootDataPtr->candidate_trees_count++;
-       if (pllUFBootDataPtr->params_store_candidate_trees){
+       if (globalParam->store_candidate_trees){
            *((int *)item_ptr->data) = tree_index;
            item_ptr->str = tree_str;
        	pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
@@ -951,19 +951,18 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 		// online bootstrap
 		int nptn = pllUFBootDataPtr->n_patterns;
 		int updated = 0;
-		int nsamples = pllUFBootDataPtr->params_gbo_replicates;
+		int nsamples = globalParam->gbo_replicates;
 		for (int sample = 0; sample < nsamples; sample++) {
 			double rell = 0.0;
 			for (int ptn = 0; ptn < nptn; ptn++)
 				rell += pattern_lh[ptn] * pllUFBootDataPtr->boot_samples[sample][ptn];
 
-			int rand_pos = (sample + rand()) % nsamples;
+//			int rand_pos = (sample + rand()) % nsamples;
 
-			if (rell > pllUFBootDataPtr->boot_logl[sample] + pllUFBootDataPtr->params_ufboot_epsilon ||
-				(rell > pllUFBootDataPtr->boot_logl[sample] - pllUFBootDataPtr->params_ufboot_epsilon &&
-					pllUFBootDataPtr->random_doubles[rand_pos] <=
-						1.0/(pllUFBootDataPtr->boot_counts[sample]+1))) {
-				if (!pllUFBootDataPtr->params_store_candidate_trees){
+			if (rell > pllUFBootDataPtr->boot_logl[sample] + globalParam->ufboot_epsilon ||
+				(rell > pllUFBootDataPtr->boot_logl[sample] - globalParam->ufboot_epsilon &&
+					random_double() <= 1.0/(pllUFBootDataPtr->boot_counts[sample]+1))) {
+				if (!globalParam->store_candidate_trees){
 					is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
 					if(is_stored)
 						tree_index = *((int *)item_ptr->data);
@@ -974,7 +973,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 					}
 				}
 				if (rell <= pllUFBootDataPtr->boot_logl[sample] +
-						pllUFBootDataPtr->params_ufboot_epsilon) {
+						globalParam->ufboot_epsilon) {
 					pllUFBootDataPtr->boot_counts[sample]++;
 				} else {
 					pllUFBootDataPtr->boot_counts[sample] = 1;
@@ -996,7 +995,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 		pllUFBootDataPtr->treels_newick[tree_index] = s;
 	}
 
-//	if(!pllUFBootDataPtr->params_store_candidate_trees){
+//	if(!globalParam->store_candidate_trees){
 //		free(tree_str);
 //		free(item_ptr->data);
 //		free(item_ptr);
