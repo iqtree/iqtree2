@@ -30,7 +30,6 @@ MTreeSet::MTreeSet(const char *userTreeFile, bool &is_rooted,
 	init(userTreeFile, is_rooted, burnin, max_count, tree_weight_file);
 }
 
-
 void readIntVector(const char *file_name, int burnin, int max_count, IntVector &vec) {
 	cout << "Reading integer vector file " << file_name << " ..." << endl;
 	vec.clear();
@@ -400,6 +399,19 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
  			}
 		}
 		delete isg;
+	}
+
+	if (weighting_type == SW_AVG_PRESENT) {
+		for (itg = sg.begin(); itg != sg.end(); itg++) {
+			int value = 0;
+			if (!hash_ss.findSplit(*itg, value))
+				outError("Internal error ", __func__);
+			(*itg)->setWeight((*itg)->getWeight() / value);
+		}
+	} else if (weighting_type == SW_AVG_ALL) {
+		for (itg = sg.begin(); itg != sg.end(); itg++) {
+			(*itg)->setWeight((*itg)->getWeight() / tree_weights.size());
+		}
 	}
 
 	int discarded = 0;	

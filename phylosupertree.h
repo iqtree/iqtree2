@@ -33,17 +33,17 @@ Phylogenetic tree for partition model (multi-gene alignment)
 class PhyloSuperTree : public IQTree, public vector<PhyloTree* >
 {
 public:
-	/** 
+	/**
 		constructor
 	*/
     PhyloSuperTree();
 
-	/** 
+	/**
 		constructor
 	*/
     PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
-	/** 
+	/**
 		constructor
 	*/
     PhyloSuperTree(Params &params);
@@ -61,7 +61,7 @@ public:
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */
 	virtual void setParams(Params& params);
-	
+
 	virtual bool isSuperTree() { return true; }
 
     /**
@@ -140,8 +140,11 @@ public:
             Otherwise, copy the pattern_lh attribute
             @param pattern_lh (OUT) pattern log-likelihoods,
                             assuming pattern_lh has the size of the number of patterns
+            @param cur_logl current log-likelihood (for sanity check)
+            @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
      */
-	virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
+    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
+    		double *pattern_lh_cat = NULL);
 
     /**
             optimize all branch lengths of all subtrees, then compute branch lengths
@@ -167,13 +170,21 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
+    		NNIMove *nniMoves = NULL, bool approx_nni = false,
+    		bool useLS = false, double lh_contribution = -1.0);
 
     /**
             Do an NNI on the supertree and synchronize all subtrees respectively
             @param move the single NNI
      */
     virtual void doNNI(NNIMove &move, bool clearLH = true);
+
+    /**
+     *   Apply 5 new branch lengths stored in the NNI move
+     *   @param nnimove the NNI move currently in consideration
+     */
+    virtual void applyNNIBranches(NNIMove nnimove);
 
     /**
      * 	 Restore the branch lengths from the saved values
@@ -197,7 +208,7 @@ public:
 	 * print debug information about all maps
 	 */
 	virtual void printMapInfo();
-	
+
 	/**
 	 * initialize partition information for super tree
 	*/
@@ -208,7 +219,7 @@ public:
 	/**
 		partition information
 	*/
-	vector<PartitionInfo> part_info; 
+	vector<PartitionInfo> part_info;
 
     /**
             get the name of the model

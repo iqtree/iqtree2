@@ -22,6 +22,7 @@ if (WIN32)
 	# build as static binary to run on most machines
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    add_definitions(-DWIN32)
 elseif (APPLE) 
 	message("Target OS     : Mac OS X")
 	# to be compatible back to Mac OS X 10.6
@@ -97,11 +98,11 @@ include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 add_definitions(-DIQ_TREE)
 
 set (COMBINED_FLAGS "-msse3 -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wno-deprecated ${COMBINED_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
 set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -std=c99 -Wno-deprecated ${COMBINED_FLAGS}")
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0 -msse3 -funroll-loops")
-set(CMAKE_C_FLAGS_RELEASE "-O2 -g0 -fomit-frame-pointer -funroll-loops -D__SSE3 -msse3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
+set(CMAKE_C_FLAGS_RELEASE "-O2 -g0 -fomit-frame-pointer -funroll-loops -D__SSE3")
 
 set(CMAKE_CXX_FLAGS_PROFILE "-D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
 set(CMAKE_C_FLAGS_PROFILE "-D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
@@ -188,6 +189,9 @@ nnisearch.cpp
 modelcodon.cpp
 phylosupertreeplen.cpp
 phylotesting.cpp
+ecopd.cpp
+ecopdmtreeset.cpp
+graph.cpp
 )
 
 
@@ -211,6 +215,10 @@ endif()
 ##############################################################
 install (TARGETS iqtree DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/examples/example.phy" DESTINATION examples)
+install (FILES "${PROJECT_SOURCE_DIR}/examples/test.nex" DESTINATION examples)
+install (FILES "${PROJECT_SOURCE_DIR}/examples/test.budget" DESTINATION examples)
+install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.nex" DESTINATION examples)
+install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.budget" DESTINATION examples)
 if (WIN32)
 	if (EXE_SUFFIX MATCHES "omp")
 		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)

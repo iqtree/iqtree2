@@ -36,7 +36,7 @@ const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEAS
 const double MAX_BRANCH_LEN = 9.0;
 const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
-const double TOL_LIKELIHOOD_PARAMOPT = 0.01; // BQM: newly introduced for ModelFactory::optimizeParameters
+const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for ModelFactory::optimizeParameters
 //const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
 const static double SCALING_THRESHOLD = 1e-100;
 const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
@@ -123,19 +123,19 @@ struct NNIMove {
     PhyloNode *node2;
     NeighborVec::iterator node2Nei_it;
 
-    // log-likelihood of the tree before applying the NNI
-    double oldloglh;
-
     // log-likelihood of the tree after applying the NNI
     double newloglh;
 
     int swap_id;
 
     // old branch lengths of 5 branches before doing NNI
-    double oldLen[5];
+    //double oldLen[5];
 
     // new branch lengths of 5 branches corresponding to the NNI
     double newLen[5];
+
+    // pattern likelihoods
+    double *ptnlh;
 
     bool operator<(const NNIMove & rhs) const {
         return newloglh > rhs.newloglh;
@@ -470,8 +470,11 @@ public:
             Otherwise, copy the pattern_lh attribute
             @param pattern_lh (OUT) pattern log-likelihoods,
                             assuming pattern_lh has the size of the number of patterns
+            @param cur_logl current log-likelihood (for sanity check)
+            @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
      */
-    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
+    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
+    		double *pattern_lh_cat = NULL);
 
     /**
             Compute the variance in tree log-likelihood
@@ -786,6 +789,20 @@ public:
     int *max_trees = NULL, double *logl_cutoff = NULL*/
             );
 
+
+    /**
+       search for the best NNI move corresponding to this branch
+       @return NNIMove the best NNI, this NNI could be worse than the current tree
+       according to the evaluation scheme in use
+       @param node1 1 of the 2 nodes on the branch
+       @param node2 1 of the 2 nodes on the branch
+     * @param approx_nni evaluate NNI based on "Bayes"
+     * @param useLS evaluate NNI based on Least Square
+     * @param nniMoves (IN/OUT) detailed information of the 2 NNIs, set .ptnlh to compute pattern likelihoods
+     */
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL,
+    		bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
+
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
             If a swap shows better score, return the swapped tree and the score.
@@ -808,6 +825,12 @@ public:
             @param clearLH decides whether or not the partial likelihood should be cleared
      */
     virtual void doNNI(NNIMove &move, bool clearLH = true);
+
+    /**
+     *   Apply 5 new branch lengths stored in the NNI move
+     *   @param nnimove the NNI move currently in consideration
+     */
+    virtual void applyNNIBranches(NNIMove nnimove);
 
     /****************************************************************************
             Stepwise addition (greedy) by maximum likelihood
@@ -1093,6 +1116,10 @@ public:
      */
     virtual uint64_t getMemoryRequired();
 
+    /****** following variables are for ultra-fast bootstrap *******/
+    /** 2 to save all trees, 1 to save intermediate trees */
+    int save_all_trees;
+
 protected:
     
     /**
@@ -1123,6 +1150,12 @@ protected:
      */
     double *_pattern_lh;
 
+    /**
+            internal pattern likelihoods per category, always stored after calling computeLikelihood()
+            or related functions. Note that scaling factors are not incorporated here.
+            If you want to get real pattern likelihoods, please use computePatternLikelihood()
+     */
+    double *_pattern_lh_cat;
 
     /**
             associated substitution model

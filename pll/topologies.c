@@ -259,7 +259,7 @@ topol  *setupTopol (int maxtips)
   topol   *tpl;
 
   if (! (tpl = (topol *) rax_malloc(sizeof(topol))) || 
-      ! (tpl->links = (connptr) rax_malloc((2*maxtips-3) * sizeof(connect))))
+      ! (tpl->links = (connptr) rax_malloc((2*maxtips-3) * sizeof(pllconnect))))
     {
       printf("ERROR: Unable to get topology memory");
       tpl = (topol *) NULL;

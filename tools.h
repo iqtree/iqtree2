@@ -55,17 +55,22 @@
 #ifdef USE_HASH_MAP
 #if !defined(__GNUC__)
 #include <hash_map>
+#include <hash_set>
 using namespace stdext;
 #elif GCC_VERSION < 40300
 #include <ext/hash_map>
+#include <ext/hash_set>
 using namespace __gnu_cxx;
 #define unordered_map hash_map
+#define unordered_set hash_set
 #else
 #include <tr1/unordered_map>
+#include <tr1/unordered_set>
 using namespace std::tr1;
 #endif
 #else
 #include <map>
+#include <set>
 #endif
 
 
@@ -198,7 +203,9 @@ typedef unsigned int UINT;
         run mode of program
  */
 enum RunMode {
-    DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING, CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN, SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS //, GBO, MPRO
+    DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING,
+    CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN,
+    SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS //, GBO, MPRO
 }; //STATS and GBO added by MA (STATS for some statistics on tree, GBO = guided 'bootstrap'
 
 /**
@@ -344,7 +351,11 @@ struct NNIInfo {
  */
 struct Params {
 
-	bool random_nni;
+	double prob_weak;
+
+	double perturb_weak;
+
+	double perturb_strong;
 
 	int numParsimony;
 
@@ -1094,9 +1105,11 @@ struct Params {
      */
     bool SSE;
     /**
-            TRUE to print site log-likelihood
+     	 	0: do not print anything
+            1: print site log-likelihood
+            2: print site log-likelihood per Gamma category
      */
-    bool print_site_lh;
+    int print_site_lh;
 
     /**
             TRUE to print tree log-likelihood
@@ -1204,6 +1217,46 @@ struct Params {
             typically names.dmp from NCBI
      */
     const char *ncbi_names_file;
+
+    /**********************************************/
+    /******* variables for ECOpd analysis *********/
+
+	/**
+		eco_dag_file - contains the food web in matrix form (n species, nxn matrix), 0 for no connection, 1 for predation of j predator on i prey
+	*/
+	char *eco_dag_file;
+
+    /**
+		eco_detail_file - contains IDs of species present in the final set and/or species absent in the TREE or SPLIT system, but present in the food web
+	*/
+	const char *eco_detail_file;
+
+	/*
+	 * the type of the phylo input - tree or network
+	 */
+	const char *eco_type;
+
+	/*
+		k% - percent of species to be conserved
+	 */
+	int k_percent;
+
+    /*
+		diet - percent of species diet to be preserved for species survival
+	*/
+	int diet_min;
+	int diet_max;
+	int diet_step;
+
+    /*
+		eco_run - run number, used when random branch length is assigned to the edges of an input tree
+	*/
+	int eco_run;
+
+    /*
+		eco_weighted - indicates whether to treat the food web as weighted or not weighted
+	*/
+	bool eco_weighted;
 
     /**********************************************/
     /**** variables for ultra-fast bootstrap ******/
@@ -1791,6 +1844,16 @@ void sort_index(T* first, T* last, int *index) {
     quicksort_index(arr, index, 0, (last - first) - 1);
     delete [] arr;
 }
+
+/**
+ * print the header of summary file
+ */
+void summarizeHeader(ostream &out, Params &params, bool budget_constraint, InputType analysis_type);
+
+/**
+ * print footer of summary file
+ */
+void summarizeFooter(ostream &out, Params &params);
 
 
 #endif

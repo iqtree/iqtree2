@@ -116,11 +116,13 @@ void SuperAlignment::checkGappySeq() {
 }
 */
 void SuperAlignment::getSitePatternIndex(IntVector &pattern_index) {
+	int nptn = 0;
 	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
-		int offset = pattern_index.size();
+		int nsite = pattern_index.size();
 		pattern_index.insert(pattern_index.end(), (*it)->site_pattern.begin(), (*it)->site_pattern.end());
-		for (int i = offset; i < pattern_index.size(); i++)
-			pattern_index[i] += offset;
+		for (int i = nsite; i < pattern_index.size(); i++)
+			pattern_index[i] += nptn;
+		nptn += (*it)->getNPattern();
 	}
 }
 

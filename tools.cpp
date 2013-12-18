@@ -644,7 +644,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5 = true;
+    params.nni5 = false;
     params.nni05 = false;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
@@ -680,11 +680,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_replicates = 0;
     params.localbp_replicates = 0;
     params.SSE = true;
-    params.print_site_lh = false;
+    params.print_site_lh = 0;
     params.print_tree_lh = false;
     params.nni_lh = false;
     params.lambda = 1;
-    params.speed_conf = 1.0;
+    params.speed_conf = 0.95;
     params.whtest_simulations = 1000;
     params.mcat_type = MCAT_LOG + MCAT_PATTERN;
     params.rate_file = NULL;
@@ -700,6 +700,17 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ncbi_taxon_level = NULL;
     params.ncbi_names_file = NULL;
     params.ncbi_ignore_level = NULL;
+
+	params.eco_dag_file  = NULL;
+	params.eco_type = NULL;
+	params.eco_detail_file = NULL;
+	params.k_percent = 0;
+	params.diet_min = 0;
+	params.diet_max = 0;
+	params.diet_step = 0;
+	params.eco_weighted = false;
+	params.eco_run = 0;
+
     params.gbo_replicates = 0;
 	params.ufboot_epsilon = 0.5;
     params.check_gbo_sample_size = 0;
@@ -708,7 +719,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.use_weighted_bootstrap = false;
     params.use_max_tree_per_bootstrap = true;
     params.max_candidate_trees = 0;
-    params.distinct_trees = true;
+    params.distinct_trees = false;
     params.online_bootstrap = true;
     params.min_correlation = 0.99;
     params.step_iterations = 100;
@@ -726,10 +737,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.pertubSize = 0.2;
+    params.pertubSize = 1.0;
+    params.perturb_weak = 0.2;
+    params.perturb_strong = 0.8;
+    params.prob_weak = 0.5;
     params.speedup_iter = 100;
     params.pll = false;
-    params.model_eps = 0.1;
+    params.model_eps = 0.01;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -740,9 +754,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.inni = false;
     params.hybrid = false;
     params.tabunni = false;
-    params.random_nni =false;
     params.random_restart = false;
-    params.numParsimony = 10;
+    params.numParsimony = 20;
     params.avh_test = 0;
     params.site_freq_file = NULL;
 #ifdef _OPENMP
@@ -1238,12 +1251,30 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.p_delete = convert_double(argv[cnt]);
                 if (params.p_delete < 0.0 || params.p_delete > 1.0)
                     throw "Probability of deleting a leaf must be between 0 and 1";
-            } else if (strcmp(argv[cnt], "-ps") == 0) {
+            } else if (strcmp(argv[cnt], "-psize") == 0) {
             	cnt++;
             	if (cnt >= argc)
-            		throw "Use -ps <probability>";
+            		throw "Use -psize <probability>";
             	params.pertubSize = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-n") == 0) {
+            } else if (strcmp(argv[cnt], "-pw") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            		throw "Use -pw <portion_of_nni>";
+            	params.perturb_weak = convert_double(argv[cnt]);
+            	params.hybrid = true;
+        	} else if (strcmp(argv[cnt], "-ps") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            		throw "Use -ps <portion_of_nni>";
+            	params.perturb_strong = convert_double(argv[cnt]);
+            	params.hybrid = true;
+        	} else if(strcmp(argv[cnt], "-pr_weak") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            		throw "Use -pr_weak <prob_weak_perturb>";
+            	params.prob_weak = convert_double(argv[cnt]);
+            	params.hybrid = true;
+        	} else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -n <#iterations>";
@@ -1445,7 +1476,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -aLRT <threshold%> <#replicates>";
                 params.aLRT_threshold = convert_int(argv[cnt]);
                 if (params.aLRT_threshold < 85 || params.aLRT_threshold > 101)
-                    throw "aLRT thresold must be between 85 and 100";
+                    throw "aLRT threshold must be between 85 and 100";
                 cnt++;
                 params.aLRT_replicates = convert_int(argv[cnt]);
                 if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0)
@@ -1461,7 +1492,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (params.localbp_replicates < 1000 && params.localbp_replicates != 0)
                     throw "Local bootstrap (LBP) replicates must be at least 1000";
             } else if (strcmp(argv[cnt], "-wsl") == 0) {
-                params.print_site_lh = true;
+                params.print_site_lh = 1;
+            } else if (strcmp(argv[cnt], "-wslg") == 0) {
+                params.print_site_lh = 2;
             } else if (strcmp(argv[cnt], "-wba") == 0) {
                 params.print_bootaln = true;
 			} else if (strcmp(argv[cnt],"-wsa") == 0) {
@@ -1532,6 +1565,28 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -dmpname <ncbi_names_file>";
                 params.ncbi_names_file = argv[cnt];
+			} else if (strcmp(argv[cnt], "-eco") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -eco <eco_dag_file>";
+				params.eco_dag_file = argv[cnt];
+			} else if (strcmp(argv[cnt], "-k%") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -k% <k in %>";
+				//convert_range(argv[cnt], params.k_percent, params.sub_size, params.step_size);
+				params.k_percent = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-diet") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -diet <d in %>";
+				convert_range(argv[cnt], params.diet_min, params.diet_max, params.diet_step);
+				//params.diet = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-ecoR") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ecoR <run number>";
+				params.eco_run = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-bb") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1581,6 +1636,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.store_candidate_trees = true;
             } else if (strcmp(argv[cnt], "-nodiff") == 0) {
                 params.distinct_trees = false;
+            } else if (strcmp(argv[cnt], "-treediff") == 0) {
+                params.distinct_trees = true;
             } else if (strcmp(argv[cnt], "-norell") == 0) {
                 params.use_rell_method = false;
             } else if (strcmp(argv[cnt], "-elw") == 0) {
@@ -1635,9 +1692,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.inni = true;
             } else if (strcmp(argv[cnt], "-rr") == 0) {
             	params.random_restart = true;
-            } else if (strcmp(argv[cnt], "-rd_nni") == 0) {
-            	params.random_nni = true;
-            	params.p_delete = 0.0;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
@@ -1761,7 +1815,9 @@ void parseArg(int argc, char *argv[], Params &params) {
         usage(argv, false);
 #endif
     if (!params.out_prefix) {
-        if (params.partition_file)
+    	if (params.eco_dag_file)
+    		params.out_prefix = params.eco_dag_file;
+    	else if (params.partition_file)
             params.out_prefix = params.partition_file;
         else if (params.aln_file)
             params.out_prefix = params.aln_file;
@@ -1780,70 +1836,63 @@ void usage(char* argv[], bool full_command) {
     printCopyright(cout);
     cout << "Usage: " << argv[0] << " [OPTIONS] <file_name> [<output_file>]" << endl;
     cout << "GENERAL OPTIONS:" << endl;
-    cout << "  -h                Print this help dialog. Use -hh to display all options." << endl;
-    cout << "  -?                Print help options for phylogenetic inference." << endl;
-    cout << "  <file_name>       User tree in NEWICK format or split network in NEXUS format." << endl;
-    cout << "  <output_file>     Output file to store results, default is '<file_name>.pda'." << endl;
-    cout << "  -k <num_taxa>     Find optimal PD set of size <num_taxa>." << endl;
-    cout << "  -k <min>:<max>    Find optimal PD sets of size from <min> to <max>." << endl;
+    cout << "  -hh               Print this help dialog" << endl;
+    cout << "  -h                Print help options for phylogenetic inference" << endl;
+    cout << "  <file_name>       User tree in NEWICK format or split network in NEXUS format" << endl;
+    cout << "  <output_file>     Output file to store results, default is '<file_name>.pda'" << endl;
+    cout << "  -k <num_taxa>     Find optimal set of size <num_taxa>" << endl;
+    cout << "  -k <min>:<max>    Find optimal sets of size from <min> to <max>" << endl;
     cout << "  -k <min>:<max>:<step>" << endl;
-    cout << "    Find optimal PD sets of size <min>, <min>+<step>, <min>+2*<step>,..." << endl;
-    cout << "  -o <taxon>        Root name to compute rooted PD, default is unrooted. " << endl;
-    cout << "  -if <file>        File containing taxa to be included into PD set." << endl;
-    cout << "  -e <file>         File containing branch/split scale and taxa weights." << endl;
-    cout << "  -all              Identify multiple optimal PD sets." << endl;
-    cout << "  -lim <max_limit>  The maximum number of PD sets for each k if -a is specified." << endl;
-    cout << "  -min              Compute minimal PD sets, default is maximal PD sets." << endl;
-    cout << "  -1out             Also print taxa sets and scores to separate files." << endl;
-    cout << "  -oldout           Also print output compatible with version 0.3." << endl;
-    cout << "  -v                Verbose mode." << endl;
+    cout << "                    Find optimal sets of size min, min+step, min+2*step,..." << endl;
+    cout << "  -o <taxon>        Root name to compute rooted PD (default: unrooted)" << endl;
+    cout << "  -if <file>        File containing taxa to be included into optimal sets" << endl;
+    cout << "  -e <file>         File containing branch/split scale and taxa weights" << endl;
+    cout << "  -all              Identify all multiple optimal sets" << endl;
+    cout << "  -lim <max_limit>  The maximum number of optimal sets for each k if -a is specified" << endl;
+    cout << "  -min              Compute minimal sets (default: maximal)" << endl;
+    cout << "  -1out             Print taxa sets and scores to separate files" << endl;
+    cout << "  -oldout           Print output compatible with version 0.3" << endl;
+    cout << "  -v                Verbose mode" << endl;
     cout << endl;
-    cout << "OPTIONS FOR TREE:" << endl;
-    cout << "  -root             Make the tree ROOTED, default is unrooted." << endl;
-    cout << "    NOTE: this option and -o <taxon> cannot be both specified." << endl;
-    cout << "  -g, --greedy      Run greedy algorithm only." << endl;
-    cout << "  -pr, --pruning    Run pruning algorithm only." << endl;
-    cout << "    NOTE: by default, the program automatically chooses suitable algorithm." << endl;
+    cout << "OPTIONS FOR PHYLOGENETIC DIVERSITY (PD):" << endl;
+    cout << "  -root             Make the tree ROOTED, default is unrooted" << endl;
+    cout << "    NOTE: this option and -o <taxon> cannot be both specified" << endl;
+    cout << "  -g                Run greedy algorithm only (default: auto)" << endl;
+    cout << "  -pr               Run pruning algorithm only (default: auto)" << endl;
     cout << endl;
-    cout << "OPTIONS FOR SPLIT-NETWORK:" << endl;
-    cout << "  -exhaust          Force to use exhaustive search." << endl;
+    /*
+    cout << "OPTIONS FOR SPLIT DIVERSITY:" << endl;
+    cout << "  -exhaust          Force to use exhaustive search" << endl;
     cout << "    NOTE: by default, the program applies dynamic programming algorithm" << endl;
-    cout << "          on circular networks and exhaustive search on general networks." << endl;
-    cout << endl;
-    cout << "OPTIONS FOR BUDGET-CONSTRAINT:" << endl;
-    cout << "  -u <file>         File containing total budget and taxa preservation costs." << endl;
-    cout << "  -b <budget>       Total budget to conserve taxa." << endl;
-    cout << "  -b <min>:<max>    Find all PD sets with budget from <min> to <max>." << endl;
+    cout << "          on circular networks and exhaustive search on general networks" << endl;
+    cout << endl;*/
+    cout << "OPTIONS FOR BUDGET CONSTRAINTS:" << endl;
+    cout << "  -u <file>         File containing total budget and taxa preservation costs" << endl;
+    cout << "  -b <budget>       Total budget to conserve taxa" << endl;
+    cout << "  -b <min>:<max>    Find all sets with budget from <min> to <max>" << endl;
     cout << "  -b <min>:<max>:<step>" << endl;
-    cout << "    Find optimal PD sets with budget <min>, <min>+<step>, <min>+2*<step>,..." << endl;
+    cout << "                    Find optimal sets with budget min, min+step, min+2*step,..." << endl;
     cout << endl;
     cout << "OPTIONS FOR AREA ANALYSIS:" << endl;
-    cout << "  -ts <taxa_file>   Compute PD of areas (user-defined sets) in <taxa_file>." << endl;
-    cout << "  -excl             Compute area exclusive PD." << endl;
-    cout << "  -endem            Compute area endemic PD." << endl;
-    cout << "  -compl <areas>    Compute area PD-complementarity given the listed <areas>." << endl;
+    cout << "  -ts <taxa_file>   Compute/maximize PD/SD of areas (combine with -k to maximize)" << endl;
+    cout << "  -excl             Compute exclusive PD/SD" << endl;
+    cout << "  -endem            Compute endemic PD/SD" << endl;
+    cout << "  -compl <areas>    Compute complementary PD/SD given the listed <areas>" << endl;
     cout << endl;
 
-    if (!full_command) exit(0);
-
-    cout << "GENERATING RANDOM TREES:" << endl;
-    cout << "  -r <num_taxa>     Create a random tree under Yule-Harding model." << endl;
-    cout << "  -ru <num_taxa>    Create a random tree under Uniform model." << endl;
-    cout << "  -rcat <num_taxa>  Create a random caterpillar tree." << endl;
-    cout << "  -rbal <num_taxa>  Create a random balanced tree." << endl;
-    cout << "  -rcsg <num_taxa>  Create a random circular split network." << endl;
-    cout << "  -rlen <min_len> <mean_len> <max_len>  " << endl;
-    cout << "      minimum, mean, and maximum branch lengths of the random trees." << endl;
+    cout << "OPTIONS FOR VIABILITY CONSTRAINTS:" << endl;
+    cout << "  -eco <food_web>   File containing food web matrix" << endl;
+    cout << "  -k% <n>           Find optimal set of size relative the total number of taxa" << endl;
+    cout << "  -diet <min_diet>  Minimum diet portion (%) to be preserved for each predator" << endl;
     cout << endl;
+    //if (!full_command) exit(0);
 
     cout << "MISCELLANEOUS:" << endl;
-    cout << "  -dd <sample_size> Compute PD distribution of random sets of size k." << endl;
-    cout << "  -d <outfile>      Calculate the distance matrix inferred from tree." << endl;
-    cout << "  -seed <number>    Set the seed for random number generator." << endl;
-    cout << "  -stats <outfile>  Output some statistics about branch lengths on the tree." << endl;
-    cout << "  -comp <treefile> Compare the tree with each in the input trees." << endl;
-    cout << "  -gbo <site_ll_file> Compute and output the alignment of (normalized) expected frequencies given in site_ll_file." << endl;
-
+    cout << "  -dd <sample_size> Compute PD distribution of random sets of size k" << endl;
+    /*
+    cout << "  -gbo <sitelh_file> Compute and output the alignment of (normalized)" << endl;
+    cout << "                    expected frequencies given in site_ll_file" << endl;
+	*/
 
     //	cout << "  -rep <times>        Repeat algorithm a number of times." << endl;
     //	cout << "  -noout              Print no output file." << endl;
@@ -1941,12 +1990,29 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -rf <treefile2>      Computing all RF distances between two sets of trees" << endl
             << "                       stored in <treefile> and <treefile2>" << endl
             << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
-            << endl << "MISCELLANEOUS:" << endl
-            << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
             << endl << "TREE TOPOLOGY TEST:" << endl
             << "  -zb <#replicates>    BP,KH,SH,ELW tests with RELL for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
             << endl;
+
+			cout << "GENERATING RANDOM TREES:" << endl;
+			cout << "  -r <num_taxa>        Create a random tree under Yule-Harding model." << endl;
+			cout << "  -ru <num_taxa>       Create a random tree under Uniform model." << endl;
+			cout << "  -rcat <num_taxa>     Create a random caterpillar tree." << endl;
+			cout << "  -rbal <num_taxa>     Create a random balanced tree." << endl;
+			cout << "  -rcsg <num_taxa>     Create a random circular split network." << endl;
+			cout << "  -rlen <min_len> <mean_len> <max_len>  " << endl;
+			cout << "                       min, mean, and max branch lengths of random trees." << endl;
+
+			cout << endl << "MISCELLANEOUS:" << endl
+            << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
+            << "  -wslg                Writing site log-likelihoods per Gamma category" << endl;
+		    cout << "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl;
+		    cout << "  -stats <outfile>     Output some statistics about branch lengths" << endl;
+		    cout << "  -comp <treefile>     Compare tree with each in the input trees" << endl;
+
+
+			cout << endl;
 
     if (full_command) {
         //TODO Print other options here (to be added)
