@@ -737,13 +737,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.pertubSize = 1.0;
+    params.pertubSize = 0.5;
     params.perturb_weak = 0.2;
     params.perturb_strong = 0.8;
     params.prob_weak = 0.5;
     params.speedup_iter = 100;
     params.pll = false;
-    params.model_eps = 0.01;
+    params.model_eps = 0.1;
+    params.modOpt = false;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -1679,6 +1680,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -me <model_epsilon>";
                 params.model_eps = convert_double(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-modopt") == 0) {
+            	params.modOpt = true;
             } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-tabu") == 0) {

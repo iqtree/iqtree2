@@ -1073,7 +1073,7 @@ double IQTree::doIQPNNI() {
 				} else if (params->inni) {
 					//curScore = pllDoDirectPertubation();
 					if (params->hybrid) {
-						assert(params->perturb_weak < params->perturb_strong);
+						assert(params->perturb_weak <= params->perturb_strong);
 						int smallPerturb = params->perturb_weak * (aln->getNSeq() - 3);
 						int largePerturb = params->perturb_strong * (aln->getNSeq() - 3);
 						double rand = random_double();
@@ -1256,12 +1256,6 @@ double IQTree::doIQPNNI() {
 			stringstream cur_tree_topo_ss;
 			printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
 			if (cur_tree_topo_ss.str() != best_tree_topo) {
-				// Save the best tree topology
-//				for (vector<pllNNIMove>::iterator it = searchinfo.nniList.begin(); it != searchinfo.nniList.end(); it++) {
-//					cout << (*it).p->number << "-" << (*it).p->back->number << endl;
-//					assert(!isTip((*it).p->number, pllInst->mxtips));
-//					assert(!isTip((*it).p->back->number, pllInst->mxtips));
-//				}
 				pllUpdateBestTree();
 				if (!params->pll) {
 					curScore = optimizeAllBranches();
@@ -1287,6 +1281,11 @@ double IQTree::doIQPNNI() {
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
 					cout << " / "<< perturbType;
 					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
+					if (params->modOpt) {
+						initializeAllPartialLh();
+						getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 0.1);
+						inputModelParam2PLL();
+					}
 				} else {
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
 					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
@@ -1581,44 +1580,18 @@ void IQTree::pllUpdateBestTree() {
 		pllBestTree = setupTopol(pllInst->mxtips);
 	}
 	saveTree(pllInst, pllBestTree, pllPartitions->numberOfPartitions);
-//	if (!params->tabunni) {
-//		if (searchinfo.nniList.size() != 2*(aln->getNSeq()-3)) {
-//			cout << "OOOPs! nniList is not complete. Please update it" << endl;
-//			exit(1);
-//		}
-//	}
-//	if (params->inni) {
-//		if (searchinfo.updateNNIList) {
-//			searchinfo.nniList.clear();
-//			searchinfo.posNNIList.clear();
-//			pllEvalAllNNIs(pllInst, pllPartitions, searchinfo);
-//			searchinfo.updateNNIList = false;
-//			if (searchinfo.posNNIList.size() != 0) {
-//				cout << "OOOPs! There are still positive NNIs" << endl;
-//			}
-//		}
-//		nniListOfBestTree.assign(searchinfo.nniList.begin(), searchinfo.nniList.end());
-//		sort(nniListOfBestTree.begin(), nniListOfBestTree.end(), comparePLLNNIMove);
-//		if (searchinfo.posNNIList.size() != 0) {
-//			int numPos = searchinfo.posNNIList.size();
-//			// set negLoglDelta of positive NNI equal that of the best negative NNI
-//			double bestNegLoglDelta = nniListOfBestTree[nniListOfBestTree.size()-1-numPos].negLoglDelta;
-//			for (int i = 1; i <= numPos; i++) {
-//				nniListOfBestTree[nniListOfBestTree.size()-i].negLoglDelta = bestNegLoglDelta;
-//			}
-//		}
-//		accumLHList.clear();
-//		accumLHList.push_back(1.0/nniListOfBestTree[0].negLoglDelta);
-//		for (int i = 1; i < nniListOfBestTree.size(); i++) {
-//			accumLHList.push_back(accumLHList[i-1] + 1.0/nniListOfBestTree[i].negLoglDelta);
-//		}
-//	}
+	// read new best tree into IQTree's kernel
+	int printBranchLengths = PLL_TRUE;
+	Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths,
+			PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
+	stringstream mytree;
+	mytree << pllInst->tree_string;
+	mytree.seekg(0, ios::beg);
+	freeNode();
+	readTree(mytree, rooted);
+	setRootNode(params->root);
+	setAlignment(aln);
 
-//	cout << "acumLHList size = " << accumLHList.size() << endl;
-//	for (vector<double>::iterator it = accumLHList.begin(); it != accumLHList.end(); it++) {
-//		cout << (*it) << " ";
-//	}
-//	exit(0);
 }
 
 void IQTree::applyNNIs(int nni2apply, bool changeBran) {

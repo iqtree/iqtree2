@@ -1181,8 +1181,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	iqtree.sse = params.SSE;
 	if (params.gbo_replicates)
 		params.speed_conf = 1.0;
-	if (params.speed_conf == 1.0)
+	if (params.speed_conf == 1.0 || params.pll) {
 		iqtree.disableHeuristic();
+	}
 	else
 		iqtree.setSpeed_conf(params.speed_conf);
 	try {
@@ -1328,6 +1329,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 							PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 					bestTreeString = string(iqtree.pllInst->tree_string);
 					iqtree.pllUpdateBestTree();
+					iqtree.readTreeString(bestTreeString);
+					if (params.modOpt) {
+						iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.1);
+						iqtree.inputModelParam2PLL();
+					}
 				}
 			} else {
 				stringstream parsTreeString;
@@ -1503,9 +1509,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			cout << "Probability of deleting sequences: " << iqtree.getProbDelete() << endl;
 			cout << "Number of leaves to be deleted   : " << iqtree.getDelete() << endl;
 		} else if (params.inni) {
-			cout << "Probability of weak perturbation: " << params.prob_weak << endl;
-			cout << "Weak perturbation: " << params.perturb_weak << endl;
-			cout << "Strong perturbation: " << params.perturb_strong << endl;
+			if (params.hybrid) {
+				cout << "Weak perturbation: " << params.perturb_weak << endl;
+				cout << "Strong perturbation: " << params.perturb_strong << endl;
+				cout << "Probability of weak perturbation: " << params.prob_weak << endl;
+			} else {
+				cout << "Perturbation strength: " << params.pertubSize << endl;
+			}
+
 		}
 		cout << "Number of iterations: ";
 		if (params.stop_condition == SC_FIXED_ITERATION)

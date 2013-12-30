@@ -362,7 +362,7 @@ struct Params {
 	bool tabunni;
 
 	/**
-	 *  Default number of NNI used for perturbing the tree
+	 *  portion of NNI used for perturbing the tree
 	 */
 	double pertubSize;
 
@@ -372,8 +372,12 @@ struct Params {
 	double model_eps;
 
 	/**
+	 *  re-optimize model parameters after a better tree is found
+	 */
+	bool modOpt;
+
+	/**
 	 *  Carry out iterated local search using NNI only.
-	 *  From the local maximum, apply some negative NNIs and the continue with the local search
 	 */
 	bool inni;
 
