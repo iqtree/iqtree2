@@ -869,67 +869,13 @@ double IQTree::perturb(int times) {
     return curScore;
 }
 
-double IQTree::pllDoDirectPertubation() {
-	// List of NNI moves that are going to be applied at this pertubation
-	vector<pllNNIMove> candidateNNIs;
-	unordered_set<int> candidateNodes;
-	int numIntBran = aln->getNSeq() - 3;
-	//assert(params->pertubSize == 0.4);
-	int numPerturb = floor(params->pertubSize * numIntBran);
-
-	double min = 0.0;
-	double range = accumLHList.back() - min;
-	int nni_index;
-	for (int i = 0; i < numPerturb; i++) {
-		double num = range * ((double) rand() / (double) RAND_MAX) + min;
-		vector<double>::iterator up;
-		up = upper_bound(accumLHList.begin(), accumLHList.end(), num);
-		nni_index = (up - accumLHList.begin());
-		if (candidateNodes.find(nniListOfBestTree[nni_index].p->number) == candidateNodes.end()
-				&& candidateNodes.find(nniListOfBestTree[nni_index].p->back->number) == candidateNodes.end()) {
-			candidateNNIs.push_back(nniListOfBestTree[nni_index]);
-			candidateNodes.insert(nniListOfBestTree[nni_index].p->number);
-			candidateNodes.insert(nniListOfBestTree[nni_index].p->back->number);
-		} else {
-			bool found = false;
-			// select the next bigger non-conflict NNI
-			for (vector<pllNNIMove>::iterator it = nniListOfBestTree.begin() + nni_index + 1;
-					it != nniListOfBestTree.end(); it++) {
-				if (candidateNodes.find((*it).p->number) == candidateNodes.end()
-						&& candidateNodes.find((*it).p->back->number) == candidateNodes.end()) {
-					found = true;
-					candidateNNIs.push_back((*it));
-					candidateNodes.insert((*it).p->number);
-					candidateNodes.insert((*it).p->back->number);
-					break;
-				}
-			}
-			if (!found) {
-				for (int i = nni_index - 1; i >= 0; i--) {
-					if (candidateNodes.find(nniListOfBestTree[i].p->number) == candidateNodes.end()
-							&& candidateNodes.find(nniListOfBestTree[i].p->back->number) == candidateNodes.end()) {
-						found = true;
-						candidateNNIs.push_back(nniListOfBestTree[i]);
-						candidateNodes.insert(nniListOfBestTree[i].p->number);
-						candidateNodes.insert(nniListOfBestTree[i].p->back->number);
-						break;
-					}
-				}
-			}
-			if (!found) {
-				break;
-			}
-		}
-	}
-
-	curScore = pllPerturbTree(pllInst, pllPartitions, candidateNNIs);
-	return curScore;
-}
-
 
 double IQTree::doIQPNNI() {
 	if (params->inni) {
 		enableHeuris = false;
+	}
+	if (params->speednni) {
+		searchinfo.speednni = true;
 	}
 	//double bestIQPScore = -DBL_MAX + 100;
 	if (testNNI) {
@@ -1117,7 +1063,6 @@ double IQTree::doIQPNNI() {
 		int skipped = 0;
 		int nni_count = 0;
 		int nni_steps;
-		SearchInfo searchinfo;
 		if (enableHeuris) {
 			if (curIteration > params->speedup_iter) {
 				if (!speedupMsg) {
@@ -1282,9 +1227,13 @@ double IQTree::doIQPNNI() {
 					cout << " / "<< perturbType;
 					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
 					if (params->modOpt) {
+						double time_s = getCPUTime();
+						cout << "Re-estimate model parameters ... ";
 						initializeAllPartialLh();
 						getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 0.1);
 						inputModelParam2PLL();
+						double time_e = getCPUTime();
+						cout << time_e - time_s << "s" << endl;
 					}
 				} else {
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
@@ -1516,13 +1465,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
 
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &searchinfo) {
-	if (params->tabunni) {
-		searchinfo.tabunni = true;
-	    searchinfo.tabuNNIs.clear();
-	    searchinfo.numUnevalQuartet = 0;
-	} else {
-		searchinfo.tabunni = false;
-	}
 	searchinfo.numAppliedNNIs = 0;
 	searchinfo.curLogl = pllInst->likelihood;
     const int MAX_NNI_STEPS = 50;

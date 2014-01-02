@@ -1315,8 +1315,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				pllNewickParseDestroy(&newick);
 				iqtree.curScore = iqtree.pllInst->likelihood;
 				cout << "logl of starting tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
-				SearchInfo searchinfo;
-				iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, searchinfo);
+				iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.searchinfo);
 				cout << "logl of fastNNI " << treeNr + 1 << ": "
 						<< iqtree.curScore << " (NNIs: " << nni_count
 						<< " / NNI steps: " << nni_steps << ")" << endl;
@@ -1331,8 +1330,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
 					iqtree.pllUpdateBestTree();
 					iqtree.readTreeString(bestTreeString);
 					if (params.modOpt) {
+						double time_s = getCPUTime();
+						cout << "Re-estimate model parameters ... ";
 						iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.1);
 						iqtree.inputModelParam2PLL();
+						double time_e = getCPUTime();
+						cout << time_e - time_s << "s" << endl;
 					}
 				}
 			} else {
@@ -1376,21 +1379,21 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		if (iqtree.isSuperTree())
 				((PhyloSuperTree*) &iqtree)->mapTrees();
 		// re-estimate model parameters for the best found local optimal tree
-	    iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
-	    if (params.pll) {
-		    initTree.seekp(0, ios::beg);
-		    iqtree.printTree(initTree);
-			newick = pllNewickParseString(initTree.str().c_str());
-			pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-			iqtree.inputModelParam2PLL();
-			pllNewickParseDestroy(&newick);
-			pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-		    cout << "Log-likelihood recomputed by PLL: " << iqtree.pllInst->likelihood << endl;
-		    if (abs(iqtree.pllInst->likelihood - iqtree.curScore) > 0.1) {
-		    	cout << "POSSIBLE ERROR: logl computed by PLL deviates too much from IQTree kernel" << endl;
-		    }
-			iqtree.curScore = iqtree.pllInst->likelihood;
-	    }
+//	    iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
+//	    if (params.pll) {
+//		    initTree.seekp(0, ios::beg);
+//		    iqtree.printTree(initTree);
+//			newick = pllNewickParseString(initTree.str().c_str());
+//			pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+//			iqtree.inputModelParam2PLL();
+//			pllNewickParseDestroy(&newick);
+//			pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
+//		    cout << "Log-likelihood recomputed by PLL: " << iqtree.pllInst->likelihood << endl;
+//		    if (abs(iqtree.pllInst->likelihood - iqtree.curScore) > 0.1) {
+//		    	cout << "POSSIBLE ERROR: logl computed by PLL deviates too much from IQTree kernel" << endl;
+//		    }
+//			iqtree.curScore = iqtree.pllInst->likelihood;
+//	    }
 
 	    iqtree.bestScore = iqtree.curScore;
 

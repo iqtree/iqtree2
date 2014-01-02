@@ -359,7 +359,10 @@ struct Params {
 
 	int numParsimony;
 
-	bool tabunni;
+	/**
+	 *  heuristics for speeding up NNI evaluation
+	 */
+	bool speednni;
 
 	/**
 	 *  portion of NNI used for perturbing the tree

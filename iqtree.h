@@ -226,11 +226,6 @@ public:
      */
     double doIQPNNI();
 
-    /*
-     *  perform a guided pertubation instead of doing IQP
-     */
-    double pllDoDirectPertubation();
-
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
      ****************************************************************************/
@@ -436,10 +431,6 @@ public:
      */
     vector<pllNNIMove> nniListOfBestTree;
 
-    /**
-     *  vector contains accumulated likelihood of all (2n-6) NNIs
-     */
-    vector<double> accumLHList;
 
     /**
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
@@ -460,6 +451,11 @@ public:
      *  PLL partition list
      */
     partitionList * pllPartitions;
+
+    /**
+     *  information and parameters for the tree search procedure
+     */
+    SearchInfo searchinfo;
 
     /**
      *  Vector contains number of NNIs used at each iterations

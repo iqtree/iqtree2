@@ -754,7 +754,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bestStart = true;
     params.inni = false;
     params.hybrid = false;
-    params.tabunni = false;
+    params.speednni = false;
     params.random_restart = false;
     params.numParsimony = 20;
     params.avh_test = 0;
@@ -1684,8 +1684,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.modOpt = true;
             } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
-            } else if (strcmp(argv[cnt], "-tabu") == 0) {
-                params.tabunni = true;
+            } else if (strcmp(argv[cnt], "-speednni") == 0) {
+                params.speednni = true;
             } else if (strcmp(argv[cnt], "-inni") == 0) {
             	params.inni = true;
             	params.pll = true;
