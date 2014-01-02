@@ -194,6 +194,12 @@ public:
      */
     void inputModelParam2PLL();
 
+    /**
+     * input the tree string from IQTree kernel to PLL kernel
+     * @return
+     */
+    double inputTree2PLL(string treestring, bool computeLH = true);
+
     //bool containPosNNI(vector<NNIMove> posNNIs);
 
     /**

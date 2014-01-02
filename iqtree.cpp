@@ -738,11 +738,21 @@ double IQTree::doIQP() {
     return curScore;
 }
 
+double IQTree::inputTree2PLL(string treestring, bool computeLH) {
+	double res = 0.0;
+	// read in the tree string from IQTree kernel
+	pllNewickTree *newick = pllNewickParseString(treestring.c_str());
+	pllTreeInitTopologyNewick(pllInst, newick, PLL_FALSE);
+	pllNewickParseDestroy(&newick);
+	if (computeLH) {
+		pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+		res = pllInst->likelihood;
+	}
+	return res;
+}
+
 void IQTree::inputModelParam2PLL() {
 	if (params->pll && !params->pllModOpt) {
-		// TODO: Here the likelihood is also compute, so check whether it is needed
-		//pllInitModel(pllInst, pllPartitions, pllAlignment);
-		/* Now initialize the model parameters in PLL using the one computed from IQTree kernel */
 		// get the alpha parameter
 		double alpha = getRate()->getGammaShape();
 		if (alpha == 0.0)
@@ -1024,7 +1034,9 @@ double IQTree::doIQPNNI() {
 					} else {
 						int numNNI;
 						if (numNonImpIter >= 20 && params->adaptivePerturbation) {
-							//cout << "Increase perturbation strength!" << endl;
+							if (numNonImpIter == 20) {
+								cout << "Increase perturbation strength!" << endl;
+							}
 							numNNI = params->pertubSize * (aln->getNSeq() - 3) * 2;
 							//searchinfo.evalType = FIVE_BRAN_OPT;
 						} else {
@@ -1220,24 +1232,32 @@ double IQTree::doIQPNNI() {
 					perturbType="strong pertubation";
 				}
 				if (params->inni) {
-					numNonImpIter = 0;
-//					if (params->adaptivePerturbation) {
-//						searchinfo.evalType = ONE_BRAN_OPT;
-//					}
-					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
-					cout << " / "<< perturbType;
-					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
 					if (params->modOpt) {
-						double time_s = getCPUTime();
-						cout << "Re-estimate model parameters ... ";
+						//double time_s = getCPUTime();
+						//cout << "Re-estimate model parameters ... ";
 						initializeAllPartialLh();
+						clearAllPartialLH();
 						getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 0.1);
 						inputModelParam2PLL();
-						double time_e = getCPUTime();
-						cout << time_e - time_s << "s" << endl;
+						stringstream treestream;
+						printTree(treestream);
+						double pllLogl = inputTree2PLL(treestream.str());
+						pllUpdateBestTree();
+						//double time_e = getCPUTime();
+						//cout << time_e - time_s << "s" << endl;
+						//cout << "iqtreeLogl: " << iqtreeLogl << " / pllLogl: " << pllLogl << endl;
+						bestScore = pllLogl;
+						deleteAllPartialLh();
 					}
+					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << bestScore;
+					cout << " / "<< perturbType;
+					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
+					if (params->adaptivePerturbation && numNonImpIter >= 20) {
+						cout << "Set back perturbation strength." << endl;
+					}
+					numNonImpIter = 0;
 				} else {
-					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
+					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << bestScore;
 					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
 				}
 				stop_rule.addImprovedIteration(curIteration);
@@ -1469,6 +1489,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &searchinfo) {
 	searchinfo.numAppliedNNIs = 0;
 	searchinfo.curLogl = pllInst->likelihood;
+	//cout << "curLogl: " << searchinfo.curLogl << endl;
     const int MAX_NNI_STEPS = 50;
     totalNNICount = 0;
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
@@ -1505,18 +1526,6 @@ void IQTree::pllUpdateBestTree() {
 		pllBestTree = setupTopol(pllInst->mxtips);
 	}
 	saveTree(pllInst, pllBestTree, pllPartitions->numberOfPartitions);
-	// read new best tree into IQTree's kernel
-	int printBranchLengths = PLL_TRUE;
-	Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths,
-			PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
-	stringstream mytree;
-	mytree << pllInst->tree_string;
-	mytree.seekg(0, ios::beg);
-	freeNode();
-	readTree(mytree, rooted);
-	setRootNode(params->root);
-	setAlignment(aln);
-
 }
 
 void IQTree::applyNNIs(int nni2apply, bool changeBran) {

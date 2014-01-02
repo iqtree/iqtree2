@@ -200,9 +200,9 @@ void PhyloTree::readTreeString(const string &tree_string) {
 	freeNode();
 	readTree(str, rooted);
 	setAlignment(aln);
-	initializeAllPartialLh();
-	clearAllPartialLH();
-    fixNegativeBranch(false);
+	//initializeAllPartialLh();
+	//clearAllPartialLH();
+    //fixNegativeBranch(false);
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {

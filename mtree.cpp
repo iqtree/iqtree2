@@ -43,7 +43,7 @@ MTree::MTree(const char *userTreeFile, bool &is_rooted)
 }
 
 void MTree::init(const char *userTreeFile, bool &is_rooted) {
-    num_precision = 6;
+    num_precision = 10;
     len_scale = 1.0;
     readTree(userTreeFile, is_rooted);
     //printInfo();
