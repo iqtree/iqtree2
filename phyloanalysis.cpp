@@ -1315,6 +1315,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				pllNewickParseDestroy(&newick);
 				iqtree.curScore = iqtree.pllInst->likelihood;
 				cout << "logl of starting tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
+				if (params.nni5 && !params.adaptivePerturbation) {
+					iqtree.searchinfo.evalType = FIVE_BRAN_OPT;
+				} else {
+					iqtree.searchinfo.evalType = ONE_BRAN_OPT;
+				}
 				iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.searchinfo);
 				cout << "logl of fastNNI " << treeNr + 1 << ": "
 						<< iqtree.curScore << " (NNIs: " << nni_count

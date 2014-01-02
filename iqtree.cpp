@@ -686,11 +686,9 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 
 void IQTree::doParsimonyReinsertion() {
     PhyloNodeVector del_leaves;
-    if (params->tabu) {
-        deleteNonTabuLeaves(del_leaves);
-    } else {
-        deleteLeaves(del_leaves);
-    }
+
+    deleteLeaves(del_leaves);
+
     reinsertLeavesByParsimony(del_leaves);
     fixNegativeBranch(false);
 }
@@ -700,13 +698,7 @@ double IQTree::doIQP() {
         drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
     //double time_begin = getCPUTime();
     PhyloNodeVector del_leaves;
-
-    if (params->tabu) {
-        deleteNonTabuLeaves(del_leaves);
-    }  else {
-        deleteLeaves(del_leaves);
-    }
-
+    deleteLeaves(del_leaves);
     reinsertLeaves(del_leaves);
 
     if (!params->pll) {
@@ -942,11 +934,9 @@ double IQTree::doIQPNNI() {
 
 	bool speedupMsg = false;
 	double prev_time = 0.0;
-	if (params->tabu) {
-		initLeafFrequency();
-	}
 	bool usePerturbWeak = true;
 	//string iqpTree;
+	int numNonImpIter = 0;
 	for (curIteration = 2; !stop_rule.meetStopCondition(curIteration); curIteration++) {
 		//curIQPIter = cur_iteration;
 		double min_elapsed = (getCPUTime() - params->startTime) / 60;
@@ -1032,7 +1022,14 @@ double IQTree::doIQPNNI() {
 						}
 						iqpScore = curScore;
 					} else {
-						int numNNI = params->pertubSize * (aln->getNSeq() - 3);
+						int numNNI;
+						if (numNonImpIter == 20 && params->adaptivePerturbation) {
+							cout << "Increase perturbation strength!" << endl;
+							numNNI = params->pertubSize * (aln->getNSeq() - 3) * 2;
+							searchinfo.evalType = FIVE_BRAN_OPT;
+						} else {
+							numNNI = params->pertubSize * (aln->getNSeq() - 3);
+						}
 						curScore = pllDoRandNNIs(pllInst, pllPartitions, numNNI);
 						iqpScore = curScore;
 					}
@@ -1223,6 +1220,10 @@ double IQTree::doIQPNNI() {
 					perturbType="strong pertubation";
 				}
 				if (params->inni) {
+					numNonImpIter = 0;
+					if (params->adaptivePerturbation) {
+						searchinfo.evalType = ONE_BRAN_OPT;
+					}
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
 					cout << " / "<< perturbType;
 					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
@@ -1245,6 +1246,7 @@ double IQTree::doIQPNNI() {
 				bestScore = curScore;
 				cout << "UPDATE BEST LOG-LIKELIHOOD: " << bestScore << endl;
 				if (params->inni) {
+					numNonImpIter++;
 					if (!restoreTree(pllBestTree, pllInst, pllPartitions)) {
 						outError("Failed to roll back tree best tree");
 					}
@@ -1262,11 +1264,11 @@ double IQTree::doIQPNNI() {
 					clearAllPartialLH();
 				}
 			} else {
+				numNonImpIter++;
 				if (!restoreTree(pllBestTree, pllInst, pllPartitions)) {
 					outError("ERROR: failed to roll back tree \n");
 				}
 			}
-
 		}
 		if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
 			SplitGraph *sg = new SplitGraph;
@@ -1469,31 +1471,12 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
 	searchinfo.curLogl = pllInst->likelihood;
     const int MAX_NNI_STEPS = 50;
     totalNNICount = 0;
-    bool startNNI5 = false;
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
         searchinfo.curNumNNISteps = nniSteps;
         searchinfo.nniList.clear();
         searchinfo.posNNIList.clear();
         searchinfo.updateNNIList = false;
-        double newLH;
-        if (params->nni5) {
-        	searchinfo.evalType = FIVE_BRAN_OPT;
-        	newLH = pllDoNNISearch(pllInst, pllPartitions, searchinfo);
-        } else if (params->nni05) {
-        	if (searchinfo.curNumAppliedNNIs == 1) {
-        		startNNI5 = true;
-        	}
-			if (startNNI5) {
-				searchinfo.evalType = FIVE_BRAN_OPT;
-				newLH = pllDoNNISearch(pllInst, pllPartitions, searchinfo);
-			} else {
-				searchinfo.evalType = NO_BRAN_OPT;
-				newLH = pllDoNNISearch(pllInst, pllPartitions, searchinfo);
-			}
-        } else {
-        	searchinfo.evalType = ONE_BRAN_OPT;
-        	newLH = pllDoNNISearch(pllInst, pllPartitions, searchinfo);
-        }
+        double newLH = pllDoNNISearch(pllInst, pllPartitions, searchinfo);
         if (searchinfo.curNumAppliedNNIs == 0) { // no admissible NNI was found
         	searchinfo.curLogl = newLH;
             break;

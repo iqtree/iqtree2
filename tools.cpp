@@ -645,11 +645,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
     params.nni5 = false;
-    params.nni05 = false;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
     params.nni0 = false;
+    params.adaptivePerturbation = false;
     params.evalType = 2;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -1689,6 +1689,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-inni") == 0) {
             	params.inni = true;
             	params.pll = true;
+            } else if (strcmp(argv[cnt], "-adapt") == 0) {
+            	params.adaptivePerturbation = true;
             } else if (strcmp(argv[cnt], "-hybrid") == 0) {
             	params.hybrid = true;
             	params.pll = true;
@@ -1701,8 +1703,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.leastSquareBranch = true;
             } else if (strcmp(argv[cnt], "-fivebran") == 0 || strcmp(argv[cnt], "-nni5") == 0) {
             	params.nni5 = true;
-            } else if (strcmp(argv[cnt], "-nni05") == 0) {
-            	params.nni05 = true;
             } else if (strcmp(argv[cnt], "-onebran") == 0 || strcmp(argv[cnt], "-nni1") == 0) {
             	params.nni5 = false;
             } else if (strcmp(argv[cnt], "-smooth") == 0) {

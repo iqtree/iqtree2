@@ -422,10 +422,6 @@ struct Params {
 	 */
 	bool nni5;
 
-	/**
-	 *  first use -nni0 and then use -nni5
-	 */
-	bool nni05;
 
     /**
      *  Number of smoothTree iteration carried out in Phylolib for IQP Tree
@@ -468,11 +464,6 @@ struct Params {
     double maxtime;
 
     /**
-     *  Turn on tabu function for IQP (Memory for removed nodes)
-     */
-    bool tabu;
-
-    /**
      *  Turn on parsimony branch length estimation
      */
     bool parbran;
@@ -481,6 +472,8 @@ struct Params {
      *  option to turn on phylogenetic library
      */
     bool pll;
+
+    bool adaptivePerturbation;
 
     /**
      *  Turn on model parameter optimization by PLL
