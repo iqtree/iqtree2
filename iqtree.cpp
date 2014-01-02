@@ -1023,10 +1023,10 @@ double IQTree::doIQPNNI() {
 						iqpScore = curScore;
 					} else {
 						int numNNI;
-						if (numNonImpIter == 20 && params->adaptivePerturbation) {
-							cout << "Increase perturbation strength!" << endl;
+						if (numNonImpIter >= 20 && params->adaptivePerturbation) {
+							//cout << "Increase perturbation strength!" << endl;
 							numNNI = params->pertubSize * (aln->getNSeq() - 3) * 2;
-							searchinfo.evalType = FIVE_BRAN_OPT;
+							//searchinfo.evalType = FIVE_BRAN_OPT;
 						} else {
 							numNNI = params->pertubSize * (aln->getNSeq() - 3);
 						}
@@ -1221,9 +1221,9 @@ double IQTree::doIQPNNI() {
 				}
 				if (params->inni) {
 					numNonImpIter = 0;
-					if (params->adaptivePerturbation) {
-						searchinfo.evalType = ONE_BRAN_OPT;
-					}
+//					if (params->adaptivePerturbation) {
+//						searchinfo.evalType = ONE_BRAN_OPT;
+//					}
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
 					cout << " / "<< perturbType;
 					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
