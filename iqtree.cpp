@@ -1035,10 +1035,11 @@ double IQTree::doIQPNNI() {
 						int numNNI;
 						if (numNonImpIter >= 20 && params->adaptivePerturbation) {
 							if (numNonImpIter == 20) {
-								cout << "Increase perturbation strength!" << endl;
+								cout << "Iteration " << curIteration << ": Increase perturbation strength!" << endl;
 							}
 							numNNI = params->pertubSize * (aln->getNSeq() - 3) * 2;
 							searchinfo.evalType = FIVE_BRAN_OPT;
+							usePerturbWeak = false;
 						} else {
 							numNNI = params->pertubSize * (aln->getNSeq() - 3);
 						}
@@ -1255,6 +1256,7 @@ double IQTree::doIQPNNI() {
 					if (params->adaptivePerturbation && numNonImpIter >= 20) {
 						cout << "Set back perturbation strength." << endl;
 						searchinfo.evalType = ONE_BRAN_OPT;
+						usePerturbWeak = true;
 					}
 					numNonImpIter = 0;
 				} else {
