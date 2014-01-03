@@ -1234,8 +1234,8 @@ double IQTree::doIQPNNI() {
 				}
 				if (params->inni) {
 					if (params->modOpt) {
-						//double time_s = getCPUTime();
-						//cout << "Re-estimate model parameters ... ";
+						double time_s = getCPUTime();
+						cout << "Re-estimate model parameters ... ";
 						initializeAllPartialLh();
 						clearAllPartialLH();
 						getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 0.1);
@@ -1244,8 +1244,8 @@ double IQTree::doIQPNNI() {
 						printTree(treestream);
 						double pllLogl = inputTree2PLL(treestream.str());
 						pllUpdateBestTree();
-						//double time_e = getCPUTime();
-						//cout << time_e - time_s << "s" << endl;
+						double time_e = getCPUTime();
+						cout << time_e - time_s << "s" << endl;
 						//cout << "iqtreeLogl: " << iqtreeLogl << " / pllLogl: " << pllLogl << endl;
 						bestScore = pllLogl;
 						deleteAllPartialLh();

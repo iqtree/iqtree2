@@ -1337,10 +1337,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
 					iqtree.pllUpdateBestTree();
 					iqtree.readTreeString(bestTreeString);
 					if (params.modOpt) {
-						//double time_s = getCPUTime();
+						double time_s = getCPUTime();
 						iqtree.initializeAllPartialLh();
 						iqtree.clearAllPartialLH();
-						//cout << "Re-estimate model parameters ... ";
+						cout << "Re-estimate model parameters ... ";
 						iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.1);
 						iqtree.inputModelParam2PLL();
 						stringstream treestream;
@@ -1348,8 +1348,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 						bestTreeString = treestream.str();
 						double pllLogl = iqtree.inputTree2PLL(bestTreeString);
 						iqtree.bestScore = pllLogl;
-						//double time_e = getCPUTime();
-						//cout << time_e - time_s << "s" << endl;
+						double time_e = getCPUTime();
+						cout << time_e - time_s << "s" << endl;
 						//cout << "logl computed by PLL: " << pllLogl << " / logl computed by IQTree: "
 							//	<< iqtreeLogl << ""<< endl;
 					}

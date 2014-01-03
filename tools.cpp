@@ -744,7 +744,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.speedup_iter = 100;
     params.pll = false;
     params.model_eps = 0.1;
-    params.modOpt = false;
+    params.modOpt = true;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -1691,6 +1691,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.pll = true;
             } else if (strcmp(argv[cnt], "-adapt") == 0) {
             	params.adaptivePerturbation = true;
+            	params.inni = true;
+            	params.pll = true;
             } else if (strcmp(argv[cnt], "-hybrid") == 0) {
             	params.hybrid = true;
             	params.pll = true;
