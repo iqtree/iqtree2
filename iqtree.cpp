@@ -1038,7 +1038,7 @@ double IQTree::doIQPNNI() {
 								cout << "Increase perturbation strength!" << endl;
 							}
 							numNNI = params->pertubSize * (aln->getNSeq() - 3) * 2;
-							//searchinfo.evalType = FIVE_BRAN_OPT;
+							searchinfo.evalType = FIVE_BRAN_OPT;
 						} else {
 							numNNI = params->pertubSize * (aln->getNSeq() - 3);
 						}
@@ -1254,6 +1254,7 @@ double IQTree::doIQPNNI() {
 					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
 					if (params->adaptivePerturbation && numNonImpIter >= 20) {
 						cout << "Set back perturbation strength." << endl;
+						searchinfo.evalType = ONE_BRAN_OPT;
 					}
 					numNonImpIter = 0;
 				} else {
