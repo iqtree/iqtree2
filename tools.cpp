@@ -766,6 +766,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.root_state = NULL;
     params.print_bootaln = false;
 	params.print_subaln = false;
+	params.print_partition_info = false;
 
     struct timeval tv;
     struct timezone tz;
@@ -1501,6 +1502,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_subaln = true;
             } else if (strcmp(argv[cnt], "-wtl") == 0) {
                 params.print_tree_lh = true;
+            } else if (strcmp(argv[cnt], "-wpi") == 0) {
+                params.print_partition_info = true;
             } else if (strcmp(argv[cnt], "-ns") == 0) {
                 cnt++;
                 if (cnt >= argc)

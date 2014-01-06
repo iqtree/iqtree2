@@ -1608,6 +1608,13 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree);
 	}
 
+	if (params.print_partition_info && iqtree.isSuperTree()) {
+		string partition_info = params.out_prefix;
+		partition_info += ".partinfo.nex";
+		((PhyloSuperTree*)(&iqtree))->printPartition(partition_info.c_str());
+
+	}
+
 	if (params.mvh_site_rate) {
 		RateMeyerHaeseler *rate_mvh = new RateMeyerHaeseler(params.rate_file,
 				&iqtree, params.rate_mh_type);

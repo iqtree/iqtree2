@@ -160,6 +160,39 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
     if (input_aln)
     	delete input_aln;
 }
+
+void PhyloSuperTree::printPartition(const char *filename) {
+	   try {
+	        ofstream out;
+	        out.exceptions(ios::failbit | ios::badbit);
+            out.open(filename);
+            out << "#nexus" << endl << "[ partition information for alignment written in .conaln file ]" << endl
+            	<< "begin sets;" << endl;
+            int part; int start_site;
+            for (part = 0, start_site = 1; part < part_info.size(); part++) {
+            	string name = part_info[part].name;
+            	replace(name.begin(), name.end(), '+', '_');
+            	int end_site = start_site + at(part)->getAlnNSite();
+            	out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
+            	start_site = end_site;
+            }
+            out << "  charpartition mymodels = ";
+            for (part = 0; part < part_info.size(); part++) {
+            	string name = part_info[part].name;
+            	replace(name.begin(), name.end(), '+', '_');
+            	if (part > 0) out << ", ";
+            	out << at(part)->getModelName() << ":" << name;
+            }
+        	out << ";" << endl;
+            out << "end;" << endl;
+	        out.close();
+	        cout << "Partition information was printed to " << filename << endl;
+	    } catch (ios::failure) {
+	        outError(ERR_WRITE_OUTPUT, filename);
+	    }
+
+}
+
 PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
 	if (detectInputFile(params.partition_file) == IN_NEXUS)
