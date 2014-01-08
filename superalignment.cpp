@@ -421,7 +421,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     for (i = 0; i < ids.size(); i++) {
     	int id = ids[i];
 		string taxa_set = getPattern(id);
-    	for (Alignment::iterator it = partitions[id]->begin(); it != partitions[id]->end(); it++, site++) {
+    	for (Alignment::iterator it = partitions[id]->begin(); it != partitions[id]->end(); it++) {
     		Pattern pat;
     		int part_seq = 0;
     		for (int seq = 0; seq < union_taxa.size(); seq++)
@@ -434,6 +434,11 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     			}
     		assert(part_seq == partitions[id]->getNSeq());
     		aln->addPattern(pat, site, (*it).frequency);
+    		// IMPORTANT BUG FIX FOLLOW
+    		int ptnindex = aln->pattern_index[pat];
+            for (int j = 0; j < (*it).frequency; j++)
+                aln->site_pattern[site++] = ptnindex;
+
     	}
     }
     aln->countConstSite();

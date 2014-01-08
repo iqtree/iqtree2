@@ -224,6 +224,24 @@ void ModelDNA::readRates(string str) throw(const char*) {
 	}
 }
 
+
+string ModelDNA::getNameParams() {
+	if (num_params == 0) return name;
+	ostringstream retname;
+	retname << name << '{';
+	int nrates = getNumRateEntries();
+	int k = 0;
+	for (int i = 0; i < nrates; i++) {
+		if (param_spec[i] > k) {
+			if (k>0) retname << ',';
+			retname << rates[i];
+			k++;
+		}
+	}
+	retname << '}';
+	return retname.str();
+}
+
 bool ModelDNA::setRateType(const char *rate_str) {
 	//char first_type = 127;
 	//char last_type = 0;

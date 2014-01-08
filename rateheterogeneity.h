@@ -68,6 +68,11 @@ public:
 	PhyloTree *getTree() { return phylo_tree; }
 
 	/**
+	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
+	 */
+	virtual string getNameParams() { return name; }
+
+	/**
 		@return false by default. True if rates are site-specific (Meyer and von Haeseler (2003) model)
 	*/
 	virtual bool isSiteSpecificRate() { return false; }

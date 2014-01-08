@@ -176,12 +176,12 @@ void PhyloSuperTree::printPartition(const char *filename) {
             	out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
             	start_site = end_site;
             }
-            out << "  charpartition mymodels = ";
+            out << "  charpartition mymodels =" << endl;
             for (part = 0; part < part_info.size(); part++) {
             	string name = part_info[part].name;
             	replace(name.begin(), name.end(), '+', '_');
-            	if (part > 0) out << ", ";
-            	out << at(part)->getModelName() << ":" << name;
+            	if (part > 0) out << "," << endl;
+            	out << "    " << at(part)->getModelNameParams() << ":" << name;
             }
         	out << ";" << endl;
             out << "end;" << endl;
