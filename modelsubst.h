@@ -41,6 +41,11 @@ public:
 	virtual int getNDim() { return 0; }
 
 	/**
+	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
+	 */
+	virtual string getNameParams() { return name; }
+
+	/**
 		@return TRUE if model is time-reversible, FALSE otherwise
 	*/
 	virtual bool isReversible() { return true; };

@@ -272,6 +272,13 @@ string PhyloTree::getModelName() {
 		return model->name + site_rate->name;
 }
 
+string PhyloTree::getModelNameParams() {
+	if (model->getFreqType() == FREQ_EMPIRICAL)
+		return model->getNameParams() + site_rate->getNameParams() + "+F";
+	else
+		return model->getNameParams() + site_rate->getNameParams();
+}
+
 /****************************************************************************
  Parsimony function
  ****************************************************************************/

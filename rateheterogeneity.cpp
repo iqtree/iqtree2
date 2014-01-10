@@ -47,10 +47,12 @@ void RateHeterogeneity::writeSiteRates(ostream &out, DoubleVector &pattern_rates
 	out << "Site\tRate";
 	if (!pattern_cat.empty()) out << "\tCategory\tCategorized_rate";
 	out << endl;
+	cout << __func__ << endl;
 	for (i = 0; i < nsite; i++) {
 		int ptn = phylo_tree->aln->getPatternID(i);
 		out << i+1 << "\t";
 		if (pattern_rates[ptn] >= MAX_SITE_RATE) out << "100.0"; else out << pattern_rates[ptn];
+		//cout << i << " "<< ptn << " " << pattern_cat[ptn] << endl;
 		if (!pattern_cat.empty()) out << "\t" << pattern_cat[ptn]+1 << "\t" << getRate(pattern_cat[ptn]);
 		out << endl;
 	}

@@ -24,6 +24,16 @@
 #include <string>
 
 /**
+ * return name and other information of an input model_name
+ * @param model_name DNA model name
+ * @param full_name (OUT) full model name with citation
+ * @param rate_type (OUT) a 6-digit string showing 6 rate constraints
+ * @param def_freq (OUT) base frequency type, either FREQ_UNNOWN, FREQ_EQUAL, or FREQ_ESIMATE
+ * @return unique model name or "" (empty string) if model_name is unrecognized
+ */
+string getDNAModelInfo(string model_name, string &full_name, string &rate_type, StateFreqType &def_freq);
+
+/**
 All DNA models are managed here
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
@@ -51,6 +61,11 @@ public:
 		@param freq state frequency type
 	*/
 	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
+
+	/**
+	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
+	 */
+	virtual string getNameParams();
 
 	/**
 		Read the rate parameters from a comma-separated string

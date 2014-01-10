@@ -51,6 +51,11 @@ public:
 	*/
 	virtual void readRates(istream &in) throw(const char*);
 
+	/**
+	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
+	 */
+	virtual string getNameParams() { return name; }
+
 
 };
 

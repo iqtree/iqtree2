@@ -45,6 +45,12 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 }
 
 
+string RateGamma::getNameParams() {
+	ostringstream str;
+	str << name << '{' << gamma_shape << '}';
+	return str.str();
+}
+
 RateGamma::~RateGamma()
 {
 	if (rates) delete [] rates;

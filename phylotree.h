@@ -245,6 +245,11 @@ public:
      */
     virtual string getModelName();
 
+	/**
+	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}+I{pinvar}+G{alpha}
+	 */
+	virtual string getModelNameParams();
+
     ModelSubst *getModel() {
         return model;
     }

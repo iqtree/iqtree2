@@ -57,6 +57,8 @@ public:
     /** read partition model file in NEXUS format into variable info */
     void readPartitionNexus(Params &params);
 
+    void printPartition(const char *filename);
+
 	/**
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */

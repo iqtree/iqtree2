@@ -1000,17 +1000,19 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	if (iqtree.isSuperTree()) {
 		PhyloSuperTree *siqtree = (PhyloSuperTree*) &iqtree;
 		int i = 0;
-		for (vector<PartitionInfo>::iterator it = siqtree->part_info.begin(); it !=
-				siqtree->part_info.end(); it++) {
+		int startPos=1;
+		for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
 			i++;
-			if ((*it).sequence_type.compare("DNA") != 0) {
+			int curLen = ((*it))->getAlnNSite();
+			if ((*it)->aln->num_states == 4) {
 				//cout << "HELLO DNA" << endl;
-				partFile << "DNA" << ", p" << i << " = "<< (*it).position_spec << endl;
-			} else if ((*it).sequence_type.compare("AA") != 0) {
-				partFile << (*it).model_name << ", p" << i << " = " << (*it).position_spec << endl;
-			} else {
-				partFile << (*it).model_name << ", p" << i << " = " << (*it).position_spec << endl;
-			}
+				partFile << "DNA";
+			} else if ((*it)->getModel()) {
+				partFile << (*it)->getModel()->name;
+			} else
+				partFile << "WAG";
+			partFile << ", p" << i << " = "<< startPos << "-" << startPos + curLen - 1  << endl;
+			startPos = startPos + curLen;
 		}
 
 	} else {
@@ -1018,11 +1020,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		string model;
 		if (alignment->num_states == 4) {
 			model = "DNA";
-		} else if (alignment->num_states == 20) {
-			model = "WAG"; // TODO: Change this hard-coded model
+		} else if (iqtree.getModel()) {
+			model = iqtree.getModel()->name;
+		} else {
+			model = "WAG";
 		}
-
-		//partFile << model << ", p1 = " << "1-" << alignment->getNSite() << endl;
 		partFile << model << ", p1 = " << "1-" << iqtree.getAlnNSite() << endl;
 	}
 	partFile.close();
@@ -1625,6 +1627,13 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
 		else
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree);
+	}
+
+	if (params.print_partition_info && iqtree.isSuperTree()) {
+		string partition_info = params.out_prefix;
+		partition_info += ".partinfo.nex";
+		((PhyloSuperTree*)(&iqtree))->printPartition(partition_info.c_str());
+
 	}
 
 	if (params.mvh_site_rate) {

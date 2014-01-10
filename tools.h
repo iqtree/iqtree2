@@ -1385,6 +1385,9 @@ struct Params {
 
 	/** true to print sub alignments of super alignment, default: false */
 	bool print_subaln;
+
+	/** print partition information */
+	bool print_partition_info;
 };
 
 /**
