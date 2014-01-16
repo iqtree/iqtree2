@@ -183,11 +183,9 @@ public:
     void clearRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec, Node *node, Node *dad);
 
     /**
-            perform one IQPNNI iteration
-            @param paramters given through command line and others
-            @return current likelihood
+            remove a portion of leaves and reinsert them using the IQP algorithm
      */
-    double doIQP();
+    void doIQP();
 
     /**
      * 		Perform a series of random NNI moves

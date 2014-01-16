@@ -714,7 +714,7 @@ double IQTree::doRandomNNIs(int numNNI) {
 	return optimizeAllBranches(1);
 }
 
-double IQTree::doIQP() {
+void IQTree::doIQP() {
     if (verbose_mode >= VB_DEBUG)
         drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
     //double time_begin = getCPUTime();
@@ -722,31 +722,8 @@ double IQTree::doIQP() {
     deleteLeaves(del_leaves);
     reinsertLeaves(del_leaves);
 
-    if (!params->pll) {
-        // just to make sure IQP does it right
-        setAlignment(aln);
-        initializeAllPartialLh();
-        clearAllPartialLH();
-        if (params->gbo_replicates)
-            //curScore = optimizeAllBranches(3, 1.0);
-        	curScore = optimizeAllBranches(params->numSmoothTree);
-        else {
-            // optimize branches at the reinsertion point
-            /*
-            for (PhyloNodeVector::iterator dit = del_leaves.begin(); dit != del_leaves.end(); dit++) {
-                PhyloNode *adj_node = (PhyloNode*) (*dit)->neighbors[0]->node;
-                FOR_NEIGHBOR_IT(adj_node, (*dit), it)
-                	curScore = optimizeOneBranch(adj_node, (PhyloNode*) (*it)->node);
-                curScore = optimizeOneBranch(adj_node, (PhyloNode*)(*dit));
-            }
-             */
-            curScore = optimizeAllBranches(params->numSmoothTree);
-        }
-
-    }
-
-    //cout << "IQP log-likelihood: " << curScore << endl;
-    //cout << "computeLikelihood(): " << computeLikelihood() << endl;
+    // just to make sure IQP does it right
+    setAlignment(aln);
 
     if (enable_parsimony) {
         cur_pars_score = computeParsimony();
@@ -754,9 +731,6 @@ double IQTree::doIQP() {
             cout << "IQP Likelihood = " << curScore << "  Parsimony = " << cur_pars_score << endl;
         }
     }
-    //double time_end = getCPUTime();
-    //cout << "IQP Time: " << (time_end - time_begin) << endl;
-    return curScore;
 }
 
 double IQTree::inputTree2PLL(string treestring, bool computeLH) {
@@ -1031,13 +1005,7 @@ double IQTree::doIQPNNI() {
 				curScore = optimizeAllBranches(1);
 				cout << "LH Pars = " << curScore << endl;
 			} else {
-				if (!params->pll) {
-					curScore = doIQP();
-					iqpScore = curScore;
-					if (verbose_mode >= VB_MAX) {
-						cout << "LH IQP = " << curScore << endl;
-					}
-				} else if (params->inni) {
+				if (params->inni) {
 					int numNNI;
 					if (numNonImpIter >= 20 && params->adaptivePerturbation) {
 						if (numNonImpIter == 20) {
@@ -1052,20 +1020,25 @@ double IQTree::doIQPNNI() {
 					curScore = pllDoRandomNNIs(pllInst, pllPartitions, numNNI);
 					iqpScore = curScore;
 
-				} else { // PLL enabled
+				} else {
 					doIQP();
-					stringstream iqp_tree_string;
-					printTree(iqp_tree_string);
-					pllNewickTree *iqpTree = pllNewickParseString(iqp_tree_string.str().c_str());
-					pllTreeInitTopologyNewick(pllInst, iqpTree, PLL_FALSE);
-					pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-					pllTreeEvaluate(pllInst, pllPartitions, 1);
-					pllNewickParseDestroy(&iqpTree);
-					curScore = pllInst->likelihood;
-					iqpScore = curScore;
+					if (params->pll) {
+						stringstream iqp_tree_string;
+						printTree(iqp_tree_string);
+						pllNewickTree *iqpTree = pllNewickParseString(iqp_tree_string.str().c_str());
+						pllTreeInitTopologyNewick(pllInst, iqpTree, PLL_FALSE);
+						pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+						pllTreeEvaluate(pllInst, pllPartitions, 1);
+						pllNewickParseDestroy(&iqpTree);
+						curScore = pllInst->likelihood;
+						iqpScore = curScore;
+					} else {
+				        curScore = optimizeAllBranches(params->numSmoothTree);
+				        iqpScore = curScore;
+					}
+
 				}
 			}
-
 		}
 
 		setRootNode(params->root);
@@ -1457,9 +1430,11 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
                 break;
             }
 
-            //if (verbose_mode >= VB_MED) {
-            cout << "logl=" << curScore << " after applying " << nni2apply << " NNIs for lambda = " << curLambda << " is worse than logl="
-            		<<  vec_nonconf_nni.at(0).newloglh << " of the best NNI. Roll back tree ..." << endl;
+			if (verbose_mode >= VB_MED) {
+				cout << "logl=" << curScore << " after applying " << nni2apply << " NNIs for lambda = " << curLambda
+						<< " is worse than logl=" << vec_nonconf_nni.at(0).newloglh
+						<< " of the best NNI. Roll back tree ..." << endl;
+			}
             curLambda = curLambda * 0.5;
             // restore the tree by reverting all NNIs
             applyNNIs(nni2apply, false);
