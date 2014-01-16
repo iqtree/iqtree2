@@ -816,11 +816,12 @@ public:
     virtual void doNNI(NNIMove &move, bool clearLH = true);
 
     /**
-     * Randomly choose perform an NNI, out of the two defined by branch node1-node2
+     * Randomly choose perform an NNI, out of the two defined by branch node1-node2.
+     * This function also clear the corresponding partial likelihood vectors
      * @param node1 one node of the branch
      * @param node2 one node of the branch
      */
-    void doRandomNNI(PhyloNode *node1, PhyloNode *node2);
+    void doOneRandomNNI(Node *node1, Node *node2);
 
 
     /**

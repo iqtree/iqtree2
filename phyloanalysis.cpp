@@ -1519,14 +1519,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			cout << "Probability of deleting sequences: " << iqtree.getProbDelete() << endl;
 			cout << "Number of leaves to be deleted   : " << iqtree.getDelete() << endl;
 		} else if (params.inni) {
-			if (params.hybrid) {
-				cout << "Weak perturbation: " << params.perturb_weak << endl;
-				cout << "Strong perturbation: " << params.perturb_strong << endl;
-				cout << "Probability of weak perturbation: " << params.prob_weak << endl;
-			} else {
-				cout << "Perturbation strength: " << params.pertubSize << endl;
-			}
-
+			cout << "Perturbation strength: " << params.pertubSize << endl;
 		}
 		cout << "Number of iterations: ";
 		if (params.stop_condition == SC_FIXED_ITERATION)

@@ -738,9 +738,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_best_trees = false;
     params.iteration_multiple = 1;
     params.pertubSize = 0.5;
-    params.perturb_weak = 0.2;
-    params.perturb_strong = 0.8;
-    params.prob_weak = 0.5;
     params.speedup_iter = 100;
     params.pll = false;
     params.model_eps = 0.1;
@@ -753,7 +750,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.fast_branch_opt = false;
     params.bestStart = true;
     params.inni = false;
-    params.hybrid = false;
     params.speednni = false;
     params.random_restart = false;
     params.numParsimony = 20;
@@ -1258,24 +1254,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             	if (cnt >= argc)
             		throw "Use -psize <probability>";
             	params.pertubSize = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-pw") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            		throw "Use -pw <portion_of_nni>";
-            	params.perturb_weak = convert_double(argv[cnt]);
-            	params.hybrid = true;
-        	} else if (strcmp(argv[cnt], "-ps") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            		throw "Use -ps <portion_of_nni>";
-            	params.perturb_strong = convert_double(argv[cnt]);
-            	params.hybrid = true;
-        	} else if(strcmp(argv[cnt], "-pr_weak") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            		throw "Use -pr_weak <prob_weak_perturb>";
-            	params.prob_weak = convert_double(argv[cnt]);
-            	params.hybrid = true;
         	} else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1691,15 +1669,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.speednni = true;
             } else if (strcmp(argv[cnt], "-inni") == 0) {
             	params.inni = true;
-            	params.pll = true;
             } else if (strcmp(argv[cnt], "-adapt") == 0) {
             	params.adaptivePerturbation = true;
             	params.inni = true;
             	params.pll = true;
-            } else if (strcmp(argv[cnt], "-hybrid") == 0) {
-            	params.hybrid = true;
-            	params.pll = true;
-            	params.inni = true;
             } else if (strcmp(argv[cnt], "-rr") == 0) {
             	params.random_restart = true;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {

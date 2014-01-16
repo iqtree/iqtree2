@@ -700,8 +700,18 @@ double IQTree::doRandomNNIs(int numNNI) {
 	assert(numInBran == getNumTaxa() - 3);
 	getInternalBranches(nodeList1, nodeList2);
 	for (int i = 0; i < numNNI; i++) {
-
+		PhyloNode *node1 = (PhyloNode*) nodeList1[i];
+		PhyloNode *node2 = (PhyloNode*) nodeList2[i];
+		doOneRandomNNI(nodeList1[i], nodeList2[i]);
+		PhyloNeighbor *node12It = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+		PhyloNeighbor *node21It = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
+		// clear partial likelihood vector
+		node12It->clearPartialLh();
+		node21It->clearPartialLh();
+		node2->clearReversePartialLh(node1);
+		node1->clearReversePartialLh(node2);
 	}
+	return optimizeAllBranches(1);
 }
 
 double IQTree::doIQP() {
@@ -1028,35 +1038,20 @@ double IQTree::doIQPNNI() {
 						cout << "LH IQP = " << curScore << endl;
 					}
 				} else if (params->inni) {
-					//curScore = pllDoDirectPertubation();
-					if (params->hybrid) {
-						assert(params->perturb_weak <= params->perturb_strong);
-						int smallPerturb = params->perturb_weak * (aln->getNSeq() - 3);
-						int largePerturb = params->perturb_strong * (aln->getNSeq() - 3);
-						double rand = random_double();
-						if (rand < params->prob_weak) {
-							curScore = pllDoRandomNNIs(pllInst, pllPartitions, smallPerturb);
-							usePerturbWeak = true;
-						} else {
-							curScore = pllDoRandomNNIs(pllInst, pllPartitions, largePerturb);
-							usePerturbWeak = false;
+					int numNNI;
+					if (numNonImpIter >= 20 && params->adaptivePerturbation) {
+						if (numNonImpIter == 20) {
+							cout << "Iteration " << curIteration << ": Increase perturbation strength!" << endl;
 						}
-						iqpScore = curScore;
+						numNNI = params->pertubSize * (aln->getNSeq() - 3) * 2;
+						//searchinfo.evalType = FIVE_BRAN_OPT;
+						usePerturbWeak = false;
 					} else {
-						int numNNI;
-						if (numNonImpIter >= 20 && params->adaptivePerturbation) {
-							if (numNonImpIter == 20) {
-								cout << "Iteration " << curIteration << ": Increase perturbation strength!" << endl;
-							}
-							numNNI = params->pertubSize * (aln->getNSeq() - 3) * 2;
-							//searchinfo.evalType = FIVE_BRAN_OPT;
-							usePerturbWeak = false;
-						} else {
-							numNNI = params->pertubSize * (aln->getNSeq() - 3);
-						}
-						curScore = pllDoRandomNNIs(pllInst, pllPartitions, numNNI);
-						iqpScore = curScore;
+						numNNI = params->pertubSize * (aln->getNSeq() - 3);
 					}
+					curScore = pllDoRandomNNIs(pllInst, pllPartitions, numNNI);
+					iqpScore = curScore;
+
 				} else { // PLL enabled
 					doIQP();
 					stringstream iqp_tree_string;

@@ -351,12 +351,6 @@ struct NNIInfo {
  */
 struct Params {
 
-	double prob_weak;
-
-	double perturb_weak;
-
-	double perturb_strong;
-
 	int numParsimony;
 
 	/**
@@ -383,11 +377,6 @@ struct Params {
 	 *  Carry out iterated local search using NNI only.
 	 */
 	bool inni;
-
-	/**
-	 *  only valid for -inni: combine intensification and diversificaiton in perturbation steps
-	 */
-	bool hybrid;
 
 	/**
 	 *  only evaluate NNIs in affected regions
