@@ -190,6 +190,14 @@ public:
     double doIQP();
 
     /**
+     * 		Perform a series of random NNI moves
+     * 		@param numNNI number of random NNIs
+     * 		@return new logl of the perturbed tree
+     */
+    double doRandomNNIs(int numNNI);
+
+
+    /**
      *   get model parameters from IQTree and input them into PLL
      */
     void inputModelParam2PLL();

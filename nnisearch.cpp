@@ -44,7 +44,7 @@ pllNNIMove *getNonConflictNNIList(pllInstance* tr) {
 	return nonConfNNIList;
 }
 
-double pllDoRandNNIs(pllInstance *tr, partitionList *pr, int numNNI) {
+double pllDoRandomNNIs(pllInstance *tr, partitionList *pr, int numNNI) {
 	int numInBrans = tr->mxtips - 3;
 	int numNNIinStep = (int) numInBrans / 5;
 

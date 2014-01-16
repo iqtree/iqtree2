@@ -2505,7 +2505,7 @@ void PhyloTree::growTreeML(Alignment *alignment) {
         // compute the likelihood
         clearAllPartialLH();
         optimizeAllBranches();
-        optimizeNNI();
+        //optimizeNNI();
     }
 
     nodeNum = 2 * leafNum - 2;
@@ -2782,6 +2782,25 @@ int PhyloTree::fixNegativeBranch2(bool force, Node *node, Node *dad) {
  Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 
+void PhyloTree::doRandomNNI(PhyloNode *node1, PhyloNode *node2) {
+    assert(node1->degree() == 3 && node2->degree() == 3);
+    assert(node1->neighbors.size() == 2 && node1->neighbors.size() == 2);
+    // randomly choose one neighbor from node1 and one neighbor from node2
+    PhyloNeighbor *node1Nei = (PhyloNeighbor*) node1->neighbors[random_int(1)];
+    PhyloNeighbor *node2Nei = (PhyloNeighbor*) node2->neighbors[random_int(1)];
+    NeighborVec::iterator node1NeiIt = node1->findNeighborIt(node1Nei->node);
+    NeighborVec::iterator node2NeiIt = node2->findNeighborIt(node2Nei->node);
+    assert(node1NeiIt != node1->neighbors.end());
+    assert(node1NeiIt != node2->neighbors.end());
+
+    node1->updateNeighbor(node1NeiIt, node2Nei);
+    node2Nei->node->updateNeighbor(node2, node1);
+
+    node2->updateNeighbor(node2NeiIt, node1Nei);
+    node1Nei->node->updateNeighbor(node1, node2);
+
+}
+
 void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
     PhyloNode *node1 = move.node1;
     PhyloNode *node2 = move.node2;
@@ -3030,56 +3049,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	return res;
 }
 
-double PhyloTree::optimizeNNI(double cur_score, PhyloNode *node, PhyloNode *dad/*, ostream *out,
- int brtype, ostream *out_lh, ostream *site_lh, StringIntMap *treels,
- vector<double*> *treels_ptnlh, DoubleVector *treels_logl, int *max_trees, double *logl_cutoff*/) {
-    if (!node)
-        node = (PhyloNode*) root;
-    if (!node->isLeaf() && dad && !dad->isLeaf()) {
-        double score = swapNNIBranch(cur_score, node, dad/*, out, brtype, NULL, out_lh, site_lh,
-         treels, treels_ptnlh, treels_logl, max_trees, logl_cutoff*/);
-        if (score > cur_score)
-
-            return score;
-    }
-
-    FOR_NEIGHBOR_IT(node, dad, it){
-    double score = optimizeNNI(cur_score, (PhyloNode*) (*it)->node, node/*, out, brtype,
-             out_lh, site_lh, treels, treels_ptnlh, treels_logl, max_trees, logl_cutoff*/);
-
-    if (score > cur_score) return score;
-}
-    return cur_score;
-}
-
-double PhyloTree::optimizeNNI() {
-    double cur_score = computeLikelihood();
-    for (int i = 0; i < 100; i++) {
-        double score = optimizeNNI(cur_score);
-        if (score <= cur_score)
-            break;
-
-        if (verbose_mode > VB_MED)
-            cout << "NNI " << i + 1 << " : " << score << endl;
-        //cur_score = score;
-        cur_score = optimizeAllBranches((PhyloNode*) root);
-    }
-    return optimizeAllBranches();
-}
-
-double PhyloTree::optimizeNNIBranches() {
-    if (verbose_mode >= VB_MED)
-        cout << "Search with Nearest Neighbor Interchange (NNI) using ML..." << endl;
-    double cur_score = computeLikelihood();
-    for (int i = 0; i < 100; i++) {
-        double score = optimizeNNI();
-        if (score <= cur_score + TOL_LIKELIHOOD)
-
-            break;
-        cur_score = score;
-    }
-    return cur_score;
-}
 
 /****************************************************************************
  Subtree Pruning and Regrafting by maximum likelihood

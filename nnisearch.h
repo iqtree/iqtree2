@@ -100,7 +100,7 @@ void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nn
 
 void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo);
 
-double pllDoRandNNIs(pllInstance *tr, partitionList *pr, int numNNI);
+double pllDoRandomNNIs(pllInstance *tr, partitionList *pr, int numNNI);
 
 /**
  *  Evaluate NNI moves for the current internal branch

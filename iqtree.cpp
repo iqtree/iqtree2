@@ -693,6 +693,17 @@ void IQTree::doParsimonyReinsertion() {
     fixNegativeBranch(false);
 }
 
+double IQTree::doRandomNNIs(int numNNI) {
+	// generate a list of all internal branches
+	NodeVector nodeList1, nodeList2;
+	int numInBran = nodeList1.size();
+	assert(numInBran == getNumTaxa() - 3);
+	getInternalBranches(nodeList1, nodeList2);
+	for (int i = 0; i < numNNI; i++) {
+
+	}
+}
+
 double IQTree::doIQP() {
     if (verbose_mode >= VB_DEBUG)
         drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
@@ -1024,10 +1035,10 @@ double IQTree::doIQPNNI() {
 						int largePerturb = params->perturb_strong * (aln->getNSeq() - 3);
 						double rand = random_double();
 						if (rand < params->prob_weak) {
-							curScore = pllDoRandNNIs(pllInst, pllPartitions, smallPerturb);
+							curScore = pllDoRandomNNIs(pllInst, pllPartitions, smallPerturb);
 							usePerturbWeak = true;
 						} else {
-							curScore = pllDoRandNNIs(pllInst, pllPartitions, largePerturb);
+							curScore = pllDoRandomNNIs(pllInst, pllPartitions, largePerturb);
 							usePerturbWeak = false;
 						}
 						iqpScore = curScore;
@@ -1043,7 +1054,7 @@ double IQTree::doIQPNNI() {
 						} else {
 							numNNI = params->pertubSize * (aln->getNSeq() - 3);
 						}
-						curScore = pllDoRandNNIs(pllInst, pllPartitions, numNNI);
+						curScore = pllDoRandomNNIs(pllInst, pllPartitions, numNNI);
 						iqpScore = curScore;
 					}
 				} else { // PLL enabled
