@@ -94,7 +94,7 @@ extern "C" {
 
 #define PLL_BADREAR                             -1
 
-#define PLL_NUM_BRANCHES                        2048
+#define PLL_NUM_BRANCHES                        1
 
 #define PLL_TRUE                                1
 #define PLL_FALSE                               0

@@ -522,7 +522,7 @@ public:
      * @param nni NNI move that is carried out
      */
     void updateSubtreeDists(NNIMove &nni);
-    
+
     /**
      * Compute all pairwise distance of subtree rooted at \a source and other subtrees
      */
@@ -683,7 +683,7 @@ public:
             @return the likelihood of the tree
      */
     virtual double optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL);
-    
+
     /**
      * optimize all branch lengths at the subtree rooted at node step-by-step.
      * Using Least Squares instead of Newton Raphson.
@@ -717,16 +717,16 @@ public:
             @return negative of likelihood (for minimization)
      */
     virtual double computeFuncDerv(double value, double &df, double &ddf);
-    
+
      /****************************************************************************
             Branch length optimization by Least Squares
      ****************************************************************************/
-    
+
     /**
      * Estimate the current branch using least squares
      * @param node1 first node of the branch
      * @param node2 second node of the branch
-     * @return 
+     * @return
      */
     double optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2);
 
@@ -809,27 +809,20 @@ public:
     		bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
 
     /**
-            This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
-            If a swap shows better score, return the swapped tree and the score.
-            @param cur_score current likelihood score
-            @param node1 1st end node of the branch
-            @param node2 2nd end node of the branch
-            @param nni_param (OUT) if not NULL: swapping information returned
-            @return the likelihood of the tree
-     */
-    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL
-            /*,	ostream *out = NULL, int brtype = 0,
-                ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL,
-                vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
-                int *max_trees = NULL, double *logl_cutoff = NULL
-             */);
-
-    /**
             Do an NNI
             @param move reference to an NNI move object containing information about the move
             @param clearLH decides whether or not the partial likelihood should be cleared
      */
     virtual void doNNI(NNIMove &move, bool clearLH = true);
+
+    /**
+     * Randomly choose perform an NNI, out of the two defined by branch node1-node2.
+     * This function also clear the corresponding partial likelihood vectors
+     * @param node1 one node of the branch
+     * @param node2 one node of the branch
+     */
+    void doOneRandomNNI(Node *node1, Node *node2);
+
 
     /**
      *   Apply 5 new branch lengths stored in the NNI move
@@ -1126,7 +1119,7 @@ public:
     int save_all_trees;
 
 protected:
-    
+
     /**
      *  is the subtree distance matrix need to be computed or updated
      */

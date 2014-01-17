@@ -1,27 +1,54 @@
-add_library(pll 
-#avxLikelihood.c
-#mem_alloc.c
-alignment.c
-bipartitionList.c
-evaluateGenericSpecial.c
-evaluatePartialGenericSpecial.c
-fastDNAparsimony.c
-hash.c
-lexer.c
-makenewzGenericSpecial.c
-models.c
-newick.c
-newviewGenericSpecial.c
-optimizeModel.c
-parsePartition.c
-queue.c
-randomTree.c
-recom.c
-restartHashTable.c
-searchAlgo.c
-ssort.c
-stack.c
-topologies.c
-trash.c
-treeIO.c
-utils.c)
+if (AVX)
+  add_library(pll 
+  avxLikelihood.c
+  alignment.c
+  bipartitionList.c
+  evaluateGenericSpecial.c
+  evaluatePartialGenericSpecial.c
+  fastDNAparsimony.c
+  hash.c
+  lexer.c
+  makenewzGenericSpecial.c
+  models.c
+  newick.c
+  newviewGenericSpecial.c
+  optimizeModel.c
+  parsePartition.c
+  queue.c
+  randomTree.c
+  recom.c
+  restartHashTable.c
+  searchAlgo.c
+  ssort.c
+  stack.c
+  topologies.c
+  trash.c
+  treeIO.c
+  utils.c)
+else()
+  add_library(pll 
+  alignment.c
+  bipartitionList.c
+  evaluateGenericSpecial.c
+  evaluatePartialGenericSpecial.c
+  fastDNAparsimony.c
+  hash.c
+  lexer.c
+  makenewzGenericSpecial.c
+  models.c
+  newick.c
+  newviewGenericSpecial.c
+  optimizeModel.c
+  parsePartition.c
+  queue.c
+  randomTree.c
+  recom.c
+  restartHashTable.c
+  searchAlgo.c
+  ssort.c
+  stack.c
+  topologies.c
+  trash.c
+  treeIO.c
+  utils.c)
+endif()

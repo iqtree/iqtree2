@@ -183,16 +183,27 @@ public:
     void clearRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec, Node *node, Node *dad);
 
     /**
-            perform one IQPNNI iteration
-            @param paramters given through command line and others
-            @return current likelihood
+            remove a portion of leaves and reinsert them using the IQP algorithm
      */
-    double doIQP();
+    void doIQP();
+
+    /**
+     * 		Perform a series of random NNI moves
+     * 		@param numNNI number of random NNIs
+     */
+    void doRandomNNIs(int numNNI);
+
 
     /**
      *   get model parameters from IQTree and input them into PLL
      */
     void inputModelParam2PLL();
+
+    /**
+     * input the tree string from IQTree kernel to PLL kernel
+     * @return
+     */
+    double inputTree2PLL(string treestring, bool computeLH = true);
 
     //bool containPosNNI(vector<NNIMove> posNNIs);
 
@@ -224,12 +235,7 @@ public:
             perform all IQPNNI iterations
             @return best likelihood found
      */
-    double doIQPNNI();
-
-    /*
-     *  perform a guided pertubation instead of doing IQP
-     */
-    double pllDoDirectPertubation();
+    double doTreeSearch();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
@@ -406,17 +412,6 @@ public:
 
     Linear* linRegModel;
 
-    inline void disableHeuristic() {
-        enableHeuris = false;
-    }
-
-    inline void setSpeed_conf(double speed_conf) {
-        this->speed_conf = speed_conf;
-    }
-
-    inline double getSpeed_conf() const {
-        return speed_conf;
-    }
 
     inline void setStartLambda(double startLambda) {
         this->startLambda = startLambda;
@@ -436,10 +431,6 @@ public:
      */
     vector<pllNNIMove> nniListOfBestTree;
 
-    /**
-     *  vector contains accumulated likelihood of all (2n-6) NNIs
-     */
-    vector<double> accumLHList;
 
     /**
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
@@ -460,6 +451,11 @@ public:
      *  PLL partition list
      */
     partitionList * pllPartitions;
+
+    /**
+     *  information and parameters for the tree search procedure
+     */
+    SearchInfo searchinfo;
 
     /**
      *  Vector contains number of NNIs used at each iterations
@@ -513,16 +509,6 @@ protected:
      * confidence value for likelihood improvement made by one NNI
      */
     double nni_delta_est;
-
-    /**
-     * Enable/Disable speed-up heuristics
-     */
-    bool enableHeuris;
-
-    /**
-     * Confidence level for speed up heuristics
-     */
-    double speed_conf;
 
 
     /**

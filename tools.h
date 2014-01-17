@@ -351,18 +351,15 @@ struct NNIInfo {
  */
 struct Params {
 
-	double prob_weak;
-
-	double perturb_weak;
-
-	double perturb_strong;
-
 	int numParsimony;
 
-	bool tabunni;
+	/**
+	 *  heuristics for speeding up NNI evaluation
+	 */
+	bool speednni;
 
 	/**
-	 *  Default number of NNI used for perturbing the tree
+	 *  portion of NNI used for perturbing the tree
 	 */
 	double pertubSize;
 
@@ -372,15 +369,14 @@ struct Params {
 	double model_eps;
 
 	/**
-	 *  Carry out iterated local search using NNI only.
-	 *  From the local maximum, apply some negative NNIs and the continue with the local search
+	 *  re-optimize model parameters after a better tree is found
 	 */
-	bool inni;
+	bool modOpt;
 
 	/**
-	 *  only valid for -inni: combine intensification and diversificaiton in perturbation steps
+	 *  Carry out iterated local search using NNI only.
 	 */
-	bool hybrid;
+	bool inni;
 
 	/**
 	 *  only evaluate NNIs in affected regions
@@ -415,10 +411,6 @@ struct Params {
 	 */
 	bool nni5;
 
-	/**
-	 *  first use -nni0 and then use -nni5
-	 */
-	bool nni05;
 
     /**
      *  Number of smoothTree iteration carried out in Phylolib for IQP Tree
@@ -461,11 +453,6 @@ struct Params {
     double maxtime;
 
     /**
-     *  Turn on tabu function for IQP (Memory for removed nodes)
-     */
-    bool tabu;
-
-    /**
      *  Turn on parsimony branch length estimation
      */
     bool parbran;
@@ -474,6 +461,8 @@ struct Params {
      *  option to turn on phylogenetic library
      */
     bool pll;
+
+    bool adaptivePerturbation;
 
     /**
      *  Turn on model parameter optimization by PLL
