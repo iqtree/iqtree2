@@ -1082,7 +1082,7 @@ double IQTree::doTreeSearch() {
 			// NNI search was skipped according to the speed up heuristics
 			cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ?
 							"Bootstrap " : "Iteration ") << curIteration
-					<< " interrupted / LogL: " << curScore << " / NNIs: "
+					<< " / LogL: " << curScore << " / NNIs: "
 					<< nni_count << " / CPU time: " << (int) round(cputime_secs)
 					<< "s";
 			if (curIteration > 10 && cputime_secs > 10)
