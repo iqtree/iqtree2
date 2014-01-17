@@ -2783,12 +2783,41 @@ int PhyloTree::fixNegativeBranch2(bool force, Node *node, Node *dad) {
  ****************************************************************************/
 
 void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
+	assert(!node1->isLeaf() && !node2->isLeaf());
     assert(node1->degree() == 3 && node2->degree() == 3);
-    assert(node1->neighbors.size() == 2 && node1->neighbors.size() == 2);
+    assert(node1->neighbors.size() == 3 && node2->neighbors.size() == 3);
 
+    Neighbor *node1Nei = NULL;
+    Neighbor *node2Nei = NULL;
     // randomly choose one neighbor from node1 and one neighbor from node2
-    Neighbor *node1Nei = node1->neighbors[random_int(1)];
-    Neighbor *node2Nei = node2->neighbors[random_int(1)];
+    bool chooseNext = false;
+	FOR_NEIGHBOR_IT(node1, node2, it){
+		if (chooseNext) {
+			node1Nei = (*it);
+			break;
+		}
+		int randNum = random_int(1);
+		if (randNum == 0) {
+			node1Nei = (*it);
+		} else {
+			chooseNext = true;
+		}
+	}
+	chooseNext = false;
+	FOR_NEIGHBOR_IT(node2, node1, it){
+		if (chooseNext) {
+			node2Nei = (*it);
+			break;
+		}
+		int randNum = random_int(1);
+		if (randNum == 0) {
+			node2Nei = (*it);
+		} else {
+			chooseNext = true;
+		}
+	}
+	assert(node1Nei != NULL && node2Nei != NULL);
+
     NeighborVec::iterator node1NeiIt = node1->findNeighborIt(node1Nei->node);
     NeighborVec::iterator node2NeiIt = node2->findNeighborIt(node2Nei->node);
     assert(node1NeiIt != node1->neighbors.end());
@@ -2896,6 +2925,7 @@ void PhyloTree::applyNNIBranches(NNIMove nnimove) {
 
 NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove* nniMoves, bool approx_nni, bool useLS, double lh_contribution) {
 
+	assert(!node1->isLeaf() && !node2->isLeaf());
     assert(node1->degree() == 3 && node2->degree() == 3);
 
 	NeighborVec::iterator it;

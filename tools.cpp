@@ -573,7 +573,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.boundary_modifier = 1.0;
     params.dist_file = NULL;
     params.compute_obs_dist = false;
-    params.compute_jc_dist = false;
+    params.compute_jc_dist = true;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.budget_file = NULL;
@@ -644,7 +644,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5 = false;
+    params.nni5 = true;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;

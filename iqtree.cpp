@@ -691,25 +691,15 @@ void IQTree::doParsimonyReinsertion() {
     fixNegativeBranch(false);
 }
 
-double IQTree::doRandomNNIs(int numNNI) {
-	// generate a list of all internal branches
-	NodeVector nodeList1, nodeList2;
-	int numInBran = nodeList1.size();
-	assert(numInBran == getNumTaxa() - 3);
-	getInternalBranches(nodeList1, nodeList2);
+void IQTree::doRandomNNIs(int numNNI) {
 	for (int i = 0; i < numNNI; i++) {
-		PhyloNode *node1 = (PhyloNode*) nodeList1[i];
-		PhyloNode *node2 = (PhyloNode*) nodeList2[i];
-		doOneRandomNNI(nodeList1[i], nodeList2[i]);
-		PhyloNeighbor *node12It = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
-		PhyloNeighbor *node21It = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
-		// clear partial likelihood vector
-		node12It->clearPartialLh();
-		node21It->clearPartialLh();
-		node2->clearReversePartialLh(node1);
-		node1->clearReversePartialLh(node2);
+		NodeVector nodeList1, nodeList2;
+		getInternalBranches(nodeList1, nodeList2);
+		int numInBran = nodeList1.size();
+		assert(numInBran == aln->getNSeq() - 3);
+		int index = random_int(numInBran);
+		doOneRandomNNI(nodeList1[index], nodeList2[index]);
 	}
-	return optimizeAllBranches(1);
 }
 
 void IQTree::doIQP() {
@@ -745,58 +735,53 @@ double IQTree::inputTree2PLL(string treestring, bool computeLH) {
 }
 
 void IQTree::inputModelParam2PLL() {
-	if (params->pll && !params->pllModOpt) {
-		// get the alpha parameter
-		double alpha = getRate()->getGammaShape();
-		if (alpha == 0.0)
-			alpha = PLL_ALPHA_MAX;
-		if (aln->num_states == 4) {
-			// get the rate parameters
-			// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
-			double *rate_param = new double[6];
-			getModel()->getRateMatrix(rate_param);
-			// get the state frequencies
-			double *state_freqs = new double[aln->num_states];
-			getModel()->getStateFrequency(state_freqs);
+	// get the alpha parameter
+	double alpha = getRate()->getGammaShape();
+	if (alpha == 0.0)
+		alpha = PLL_ALPHA_MAX;
+	if (aln->num_states == 4) {
+		// get the rate parameters
+		// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
+		double *rate_param = new double[6];
+		getModel()->getRateMatrix(rate_param);
+		// get the state frequencies
+		double *state_freqs = new double[aln->num_states];
+		getModel()->getStateFrequency(state_freqs);
 
-			/* put them into PLL */
-			stringstream linkagePattern;
-			int partNr;
-			for (partNr = 0; partNr < pllPartitions->numberOfPartitions - 1; partNr++) {
-				linkagePattern << partNr << ",";
-			}
-			linkagePattern << partNr;
-			char *pattern = new char[linkagePattern.str().length() + 1];
-			strcpy(pattern, linkagePattern.str().c_str());
-			pllLinkAlphaParameters(pattern, pllPartitions);
-			pllLinkFrequencies(pattern, pllPartitions);
-			pllLinkRates(pattern, pllPartitions);
-			delete[] pattern;
-
-			for (partNr = 0; partNr < pllPartitions->numberOfPartitions; partNr++) {
-				pllSetFixedAlpha(alpha, partNr, pllPartitions, pllInst);
-				pllSetFixedBaseFrequencies(state_freqs, 4, partNr, pllPartitions, pllInst);
-				pllSetFixedSubstitutionMatrix(rate_param, 6, partNr, pllPartitions, pllInst);
-			}
-			delete[] rate_param;
-			delete[] state_freqs;
-		} else if (aln->num_states == 20) {
-			double *state_freqs = new double[aln->num_states];
-			getModel()->getStateFrequency(state_freqs);
-			int partNr;
-			for (partNr = 0; partNr < pllPartitions->numberOfPartitions; partNr++) {
-				pllSetFixedAlpha(alpha, partNr, pllPartitions, pllInst);
-				pllSetFixedBaseFrequencies(state_freqs, 20, partNr, pllPartitions, pllInst);
-			}
-			delete[] state_freqs;
-		} else {
-			if (params->pll) {
-				outError("Phylogenetic likelihood library current does not support data type other than DNA or Protein");
-			}
+		/* put them into PLL */
+		stringstream linkagePattern;
+		int partNr;
+		for (partNr = 0; partNr < pllPartitions->numberOfPartitions - 1; partNr++) {
+			linkagePattern << partNr << ",";
 		}
+		linkagePattern << partNr;
+		char *pattern = new char[linkagePattern.str().length() + 1];
+		strcpy(pattern, linkagePattern.str().c_str());
+		pllLinkAlphaParameters(pattern, pllPartitions);
+		pllLinkFrequencies(pattern, pllPartitions);
+		pllLinkRates(pattern, pllPartitions);
+		delete[] pattern;
+
+		for (partNr = 0; partNr < pllPartitions->numberOfPartitions; partNr++) {
+			pllSetFixedAlpha(alpha, partNr, pllPartitions, pllInst);
+			pllSetFixedBaseFrequencies(state_freqs, 4, partNr, pllPartitions, pllInst);
+			pllSetFixedSubstitutionMatrix(rate_param, 6, partNr, pllPartitions, pllInst);
+		}
+		delete[] rate_param;
+		delete[] state_freqs;
+	} else if (aln->num_states == 20) {
+		double *state_freqs = new double[aln->num_states];
+		getModel()->getStateFrequency(state_freqs);
+		int partNr;
+		for (partNr = 0; partNr < pllPartitions->numberOfPartitions; partNr++) {
+			pllSetFixedAlpha(alpha, partNr, pllPartitions, pllInst);
+			pllSetFixedBaseFrequencies(state_freqs, 20, partNr, pllPartitions, pllInst);
+		}
+		delete[] state_freqs;
 	} else {
-		pllInitModel(pllInst, pllPartitions, pllAlignment);
-		modOpt(pllInst, pllPartitions, 0.1);
+		if (params->pll) {
+			outError("Phylogenetic likelihood library current does not support data type other than DNA or Protein");
+		}
 	}
 }
 double IQTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
@@ -865,17 +850,12 @@ double IQTree::perturb(int times) {
 }
 
 
-double IQTree::doIQPNNI() {
+double IQTree::doTreeSearch() {
 	if (params->speednni) {
 		searchinfo.speednni = true;
 	}
 	//double bestIQPScore = -DBL_MAX + 100;
-	if (testNNI) {
-		string str = params->out_prefix;
-		str += ".nni";
-		outNNI.open(str.c_str());
-		outNNI << "cur_lh\tzero_lh\tnni_lh1\tnni_lh2\topt_len\tnnilen1\tnnilen2\tnni_round" << endl;
-	}
+
 	time_t begin_time, cur_time;
 	time(&begin_time);
 	string tree_file_name = params->out_prefix;
@@ -978,7 +958,7 @@ double IQTree::doIQPNNI() {
 			randomizeNeighbors();
 		}
 
-		double iqpScore;
+		double perturbScore;
 		if (iqp_assess_quartet == IQP_BOOTSTRAP) {
 			// create bootstrap sample
 			Alignment* bootstrap_alignment;
@@ -1009,8 +989,19 @@ double IQTree::doIQPNNI() {
 					} else {
 						numNNI = params->pertubSize * (aln->getNSeq() - 3);
 					}
-					curScore = pllDoRandomNNIs(pllInst, pllPartitions, numNNI);
-					iqpScore = curScore;
+					if (params->pll) {
+						curScore = pllDoRandomNNIs(pllInst, pllPartitions, numNNI);
+						perturbScore = curScore;
+					} else {
+						//double initTime = getCPUTime();
+						doRandomNNIs(numNNI);
+						//cout << "Time for perturbation: " << getCPUTime() - initTime << endl;
+						setAlignment(aln);
+						initializeAllPartialLh();
+						clearAllPartialLH();
+						curScore = optimizeAllBranches(1);
+						perturbScore = curScore;
+					}
 				} else {
 					doIQP();
 					if (params->pll) {
@@ -1022,13 +1013,13 @@ double IQTree::doIQPNNI() {
 						pllTreeEvaluate(pllInst, pllPartitions, 1);
 						pllNewickParseDestroy(&iqpTree);
 						curScore = pllInst->likelihood;
-						iqpScore = curScore;
+						perturbScore = curScore;
 					} else {
+						initializeAllPartialLh();
 						clearAllPartialLH();
 				        curScore = optimizeAllBranches(params->numSmoothTree);
-				        iqpScore = curScore;
+				        perturbScore = curScore;
 					}
-
 				}
 			}
 		}
@@ -1083,7 +1074,7 @@ double IQTree::doIQPNNI() {
 			// NNI search was skipped according to the speed up heuristics
 			if (!skipped) {
 				cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIteration
-						<< " / Start logl: " << iqpScore << " - End LogL: " << curScore << " / NNIs: " << nni_count
+						<< " / Start logl: " << perturbScore << " - End LogL: " << curScore << " / NNIs: " << nni_count
 						<< " / NNI steps: " << nni_steps << " / CPU time: " << (int) round(cputime_secs) << "s";
 				if (curIteration > 10 && cputime_secs > 10)
 					cout << " (" << (int) round(cputime_remaining) << "s left)";
@@ -1117,7 +1108,6 @@ double IQTree::doIQPNNI() {
 				setRootNode(params->root);
 				setAlignment(aln);
 			}
-
 			best_tree_string.seekp(0, ios::beg);
 			printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 			if (params->write_best_trees) {
@@ -1130,7 +1120,9 @@ double IQTree::doIQPNNI() {
 			stringstream cur_tree_topo_ss;
 			printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
 			if (cur_tree_topo_ss.str() != best_tree_topo) {
-				pllUpdateBestTree();
+				if (params->pll) {
+					pllUpdateBestTree();
+				}
 				if (!params->pll) {
 					curScore = optimizeAllBranches();
 					//cout << "Saving new better tree ..." << endl;
@@ -1155,19 +1147,25 @@ double IQTree::doIQPNNI() {
 					if (params->modOpt) {
 						double time_s = getCPUTime();
 						cout << "Re-estimate model parameters ... ";
-						initializeAllPartialLh();
-						clearAllPartialLH();
-						getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 0.1);
-						inputModelParam2PLL();
-						stringstream treestream;
-						printTree(treestream);
-						double pllLogl = inputTree2PLL(treestream.str());
-						pllUpdateBestTree();
+						if (params->pll) {
+							initializeAllPartialLh();
+							clearAllPartialLH();
+						}
+						bestScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 0.1);
+						if (params->pll) {
+							inputModelParam2PLL();
+							stringstream treestream;
+							printTree(treestream);
+							double pllLogl = inputTree2PLL(treestream.str());
+							pllUpdateBestTree();
+							bestScore = pllLogl;
+							deleteAllPartialLh();
+						}
 						double time_e = getCPUTime();
+						best_tree_string.seekp(0, ios::beg);
+						printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 						cout << time_e - time_s << "s" << endl;
 						//cout << "iqtreeLogl: " << iqtreeLogl << " / pllLogl: " << pllLogl << endl;
-						bestScore = pllLogl;
-						deleteAllPartialLh();
 					}
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << bestScore;
 					cout << " / "<< perturbType;
@@ -1187,24 +1185,20 @@ double IQTree::doIQPNNI() {
 				// higher likelihood but the same tree topology
 				bestScore = curScore;
 				cout << "UPDATE BEST LOG-LIKELIHOOD: " << bestScore << endl;
-				if (params->inni) {
-					numNonImpIter++;
+				numNonImpIter++;
+				if (params->pll) {
 					if (!restoreTree(pllBestTree, pllInst, pllPartitions)) {
 						outError("Failed to roll back tree best tree");
 					}
 				}
 			}
 		} else {
-			if (!params->inni) {
+			if (!params->pll) {
 				/* take back the current best tree */
 				best_tree_string.seekg(0, ios::beg);
 				freeNode();
 				readTree(best_tree_string, rooted);
 				assignLeafNames();
-				if (!params->pll) {
-					initializeAllPartialLh();
-					clearAllPartialLH();
-				}
 			} else {
 				numNonImpIter++;
 				if (!restoreTree(pllBestTree, pllInst, pllPartitions)) {

@@ -190,9 +190,8 @@ public:
     /**
      * 		Perform a series of random NNI moves
      * 		@param numNNI number of random NNIs
-     * 		@return new logl of the perturbed tree
      */
-    double doRandomNNIs(int numNNI);
+    void doRandomNNIs(int numNNI);
 
 
     /**
@@ -236,7 +235,7 @@ public:
             perform all IQPNNI iterations
             @return best likelihood found
      */
-    double doIQPNNI();
+    double doTreeSearch();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
