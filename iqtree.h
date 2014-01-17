@@ -249,7 +249,7 @@ public:
             @param skipped (OUT) 1 if current iteration is skipped, otherwise 0
             @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    double optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu = false, int *skipped = NULL);
+    double optimizeNNI(int &nni_count, int &nni_steps);
 
     /**
      * 		Do fastNNI using PLL

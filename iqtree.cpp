@@ -886,6 +886,7 @@ double IQTree::doTreeSearch() {
 	setRootNode(params->root);
 	// keep the best tree into a string
 	stringstream best_tree_string;
+	stringstream perturb_tree_string;
 	stringstream best_tree_topo_ss;
 	printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 	printTree(best_tree_topo_ss, WT_TAXON_ID + WT_SORT_TAXA);
@@ -995,11 +996,19 @@ double IQTree::doTreeSearch() {
 					} else {
 						//double initTime = getCPUTime();
 						doRandomNNIs(numNNI);
+						printTree(perturb_tree_string, WT_TAXON_ID + WT_BR_LEN);
+//						perturb_tree_string.seekg(0, ios::beg);
+//						freeNode();
+//						readTree(best_tree_string, rooted);
+//						assignLeafNames();
 						//cout << "Time for perturbation: " << getCPUTime() - initTime << endl;
 						setAlignment(aln);
 						initializeAllPartialLh();
 						clearAllPartialLH();
-						curScore = optimizeAllBranches(1);
+						if (isSuperTree()) {
+								((PhyloSuperTree*) this)->mapTrees();
+						}
+						curScore = optimizeAllBranches(params->numSmoothTree);
 						perturbScore = curScore;
 					}
 				} else {
@@ -1026,13 +1035,12 @@ double IQTree::doTreeSearch() {
 
 		setRootNode(params->root);
 
-		int skipped = 0;
 		int nni_count = 0;
 		int nni_steps;
 		if (params->pll) {
 			curScore = pllOptimizeNNI(nni_count, nni_steps, searchinfo);
 		} else {
-			curScore = optimizeNNI(nni_count, nni_steps, false, &skipped);
+			curScore = optimizeNNI(nni_count, nni_steps);
 		}
 
 		if (iqp_assess_quartet == IQP_BOOTSTRAP) {
@@ -1072,21 +1080,14 @@ double IQTree::doTreeSearch() {
 
 		if (printLog) {
 			// NNI search was skipped according to the speed up heuristics
-			if (!skipped) {
-				cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIteration
-						<< " / Start logl: " << perturbScore << " - End LogL: " << curScore << " / NNIs: " << nni_count
-						<< " / NNI steps: " << nni_steps << " / CPU time: " << (int) round(cputime_secs) << "s";
-				if (curIteration > 10 && cputime_secs > 10)
-					cout << " (" << (int) round(cputime_remaining) << "s left)";
-				cout << endl;
-			} else {
-				cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIteration
-						<< " interrupted / LogL: " << curScore << " / NNIs: " << nni_count << " / CPU time: "
-						<< (int) round(cputime_secs) << "s";
-				if (curIteration > 10 && cputime_secs > 10)
-					cout << " (" << (int) round(cputime_remaining) << "s left)";
-				cout << endl;
-			}
+			cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ?
+							"Bootstrap " : "Iteration ") << curIteration
+					<< " interrupted / LogL: " << curScore << " / NNIs: "
+					<< nni_count << " / CPU time: " << (int) round(cputime_secs)
+					<< "s";
+			if (curIteration > 10 && cputime_secs > 10)
+				cout << " (" << (int) round(cputime_remaining) << "s left)";
+			cout << endl;
 			prev_time = cputime_secs;
 		}
 
@@ -1145,7 +1146,7 @@ double IQTree::doTreeSearch() {
 				}
 				if (params->inni) {
 					if (params->modOpt) {
-						double time_s = getCPUTime();
+						//double time_s = getCPUTime();
 						//cout << "Re-estimate model parameters ... ";
 						if (params->pll) {
 							initializeAllPartialLh();
@@ -1161,7 +1162,7 @@ double IQTree::doTreeSearch() {
 							bestScore = pllLogl;
 							deleteAllPartialLh();
 						}
-						double time_e = getCPUTime();
+						//double time_e = getCPUTime();
 						best_tree_string.seekp(0, ios::beg);
 						printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 						//cout << time_e - time_s << "s" << endl;
@@ -1256,13 +1257,10 @@ double IQTree::doTreeSearch() {
 /****************************************************************************
  Fast Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
-double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *skipped) {
+double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     bool resetLamda = true; // variable indicates whether lambda should be reset
     curLambda = startLambda;
-    if (skipped) // variable indicates whether the NNI search is skipped or not (due to the heuristic)
-        *skipped = 0;
     nni_count = 0;
-
     int nni2apply = 0; // number of nni to be applied in each NNI steps
     int nonconf_nni = 0; // number of non-conflicting NNIs found in this round
     int MAXSTEPS = 50;
@@ -1279,16 +1277,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
                 }
             }
 
-            if (beginHeu) {
-                double maxScore = curScore + nni_delta_est * (nni_count_est - nni_count);
-                if (maxScore < curScore)
-                    maxScore = curScore;
-                if (maxScore <= bestScore) {
-                    if (skipped)
-                        *skipped = 1;
-                    return curScore;
-                }
-            }
             curLambda = startLambda;
             vec_nonconf_nni.clear(); // Vector containing non-conflicting positive NNIs
             mapOptBranLens.clear(); // Vector containing branch length of the positive NNIs
