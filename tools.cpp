@@ -684,7 +684,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_tree_lh = false;
     params.nni_lh = false;
     params.lambda = 1;
-    params.speed_conf = 0.95;
+    params.speed_conf = 1.0;
     params.whtest_simulations = 1000;
     params.mcat_type = MCAT_LOG + MCAT_PATTERN;
     params.rate_file = NULL;
@@ -738,7 +738,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_best_trees = false;
     params.iteration_multiple = 1;
     params.pertubSize = 0.5;
-    params.speedup_iter = 100;
     params.pll = false;
     params.model_eps = 0.1;
     params.modOpt = true;
@@ -1302,13 +1301,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.lambda = convert_double(argv[cnt]);
                 if (params.lambda > 1.0)
                     throw "Lambda must be in (0,1]";
-            } else if (strcmp(argv[cnt], "-spc") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Please specify the confidence level for the adaptive NNI Search";
-                params.speed_conf = convert_double(argv[cnt]);
-                if (params.speed_conf < 0.75 || params.speed_conf > 1)
-                    throw "Confidence level of the adaptive NNI search must be >= 0.75 and <= 1";
             } else if (strcmp(argv[cnt], "-nosse") == 0) {
                 params.SSE = false;
             } else if (strcmp(argv[cnt], "-f") == 0) {

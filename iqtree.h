@@ -413,17 +413,6 @@ public:
 
     Linear* linRegModel;
 
-    inline void disableHeuristic() {
-        enableHeuris = false;
-    }
-
-    inline void setSpeed_conf(double speed_conf) {
-        this->speed_conf = speed_conf;
-    }
-
-    inline double getSpeed_conf() const {
-        return speed_conf;
-    }
 
     inline void setStartLambda(double startLambda) {
         this->startLambda = startLambda;
@@ -521,16 +510,6 @@ protected:
      * confidence value for likelihood improvement made by one NNI
      */
     double nni_delta_est;
-
-    /**
-     * Enable/Disable speed-up heuristics
-     */
-    bool enableHeuris;
-
-    /**
-     * Confidence level for speed up heuristics
-     */
-    double speed_conf;
 
 
     /**

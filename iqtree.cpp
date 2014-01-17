@@ -44,8 +44,6 @@ void IQTree::init() {
     curIteration = 1;
     cur_pars_score = -1;
     enable_parsimony = false;
-    enableHeuris = true; // This is set true when the heuristic started (after N iterations)
-    linRegModel = NULL;
     estimate_nni_cutoff = false;
     nni_cutoff = -1e6;
     nni_sort = false;
@@ -868,9 +866,6 @@ double IQTree::perturb(int times) {
 
 
 double IQTree::doIQPNNI() {
-	if (params->inni) {
-		enableHeuris = false;
-	}
 	if (params->speednni) {
 		searchinfo.speednni = true;
 	}
@@ -937,10 +932,8 @@ double IQTree::doIQPNNI() {
 	}
 	stop_rule.addImprovedIteration(1);
 
-	bool speedupMsg = false;
 	double prev_time = 0.0;
 	bool usePerturbWeak = true;
-	//string iqpTree;
 	int numNonImpIter = 0;
 	for (curIteration = 2; !stop_rule.meetStopCondition(curIteration); curIteration++) {
 		//curIQPIter = cur_iteration;
@@ -988,7 +981,6 @@ double IQTree::doIQPNNI() {
 		double iqpScore;
 		if (iqp_assess_quartet == IQP_BOOTSTRAP) {
 			// create bootstrap sample
-			enableHeuris = false;
 			Alignment* bootstrap_alignment;
 			if (aln->isSuperAlignment())
 				bootstrap_alignment = new SuperAlignment;
@@ -1011,15 +1003,14 @@ double IQTree::doIQPNNI() {
 						if (numNonImpIter == 20) {
 							cout << "Iteration " << curIteration << ": Increase perturbation strength!" << endl;
 						}
+						// increase the perturbation strength
 						numNNI = params->pertubSize * (aln->getNSeq() - 3) * 2;
-						//searchinfo.evalType = FIVE_BRAN_OPT;
 						usePerturbWeak = false;
 					} else {
 						numNNI = params->pertubSize * (aln->getNSeq() - 3);
 					}
 					curScore = pllDoRandomNNIs(pllInst, pllPartitions, numNNI);
 					iqpScore = curScore;
-
 				} else {
 					doIQP();
 					if (params->pll) {
@@ -1033,6 +1024,7 @@ double IQTree::doIQPNNI() {
 						curScore = pllInst->likelihood;
 						iqpScore = curScore;
 					} else {
+						clearAllPartialLH();
 				        curScore = optimizeAllBranches(params->numSmoothTree);
 				        iqpScore = curScore;
 					}
@@ -1043,65 +1035,13 @@ double IQTree::doIQPNNI() {
 
 		setRootNode(params->root);
 
-		//cout.precision(15);
-		if (verbose_mode >= VB_DEBUG) {
-			string iqp_tree = tree_file_name + "IQP" + convertIntToString(curIteration);
-			printTree(iqp_tree.c_str());
-		}
-
 		int skipped = 0;
 		int nni_count = 0;
 		int nni_steps;
-		if (enableHeuris) {
-			if (curIteration > params->speedup_iter) {
-				if (!speedupMsg) {
-					speedupMsg = true;
-					cout << "SPEED UP HEURISTIC ENABLED!" << endl;
-				}
-				if (!params->new_heuristic) {
-					nni_count_est = estN95();
-					nni_delta_est = estDelta95();
-				} else {
-					double nni_count_est95 = estN95();
-					double nni_delta_est95 = estDelta95();
-					double nni_count_estMedian = getAvgNumNNI();
-					double nni_delta_estMedian = estDeltaMedian();
-					double maxScore1 = nni_delta_est95 * nni_count_estMedian;
-					double maxScore2 = nni_delta_estMedian * nni_count_est95;
-					if (maxScore2 > maxScore1) {
-						nni_count_est = nni_count_est95;
-						nni_delta_est = nni_delta_estMedian;
-					} else {
-						nni_count_est = nni_count_estMedian;
-						nni_delta_est = nni_delta_est95;
-					}
-					//nni_count_est = estN95();
-					//nni_delta_est = estDelta95();
-				}
-				if (verbose_mode >= VB_MED) {
-					if (curIteration % 10 == 0)
-						cout << "Estimated number of NNIs: " << nni_count_est << ", delta-logl per NNI: "
-								<< nni_delta_est << endl;
-				}
-
-				if (params->pll) {
-					curScore = pllOptimizeNNI(nni_count, nni_steps, searchinfo);
-				} else {
-					curScore = optimizeNNI(nni_count, nni_steps, true, &skipped);
-				}
-			} else {
-				if (params->pll) {
-					curScore = pllOptimizeNNI(nni_count, nni_steps, searchinfo);
-				} else {
-					curScore = optimizeNNI(nni_count, nni_steps, false, &skipped);
-				}
-			}
+		if (params->pll) {
+			curScore = pllOptimizeNNI(nni_count, nni_steps, searchinfo);
 		} else {
-			if (params->pll) {
-				curScore = pllOptimizeNNI(nni_count, nni_steps, searchinfo);
-			} else {
-				curScore = optimizeNNI(nni_count, nni_steps, false, &skipped);
-			}
+			curScore = optimizeNNI(nni_count, nni_steps, false, &skipped);
 		}
 
 		if (iqp_assess_quartet == IQP_BOOTSTRAP) {
@@ -1405,14 +1345,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
         	if (abs(curScore - oldScore) < 0.001) {
         		break;
         	}
-            if (enableHeuris && curIteration > 1) {
-                if (vecImpProNNI.size() < 1000) {
-                    vecImpProNNI.push_back((curScore - oldScore) / nni2apply);
-                } else {
-                    vecImpProNNI.erase(vecImpProNNI.begin());
-                    vecImpProNNI.push_back((curScore - oldScore) / nni2apply);
-                }
-            }
             nni_count += nni2apply;
             resetLamda = true;
         } else {
@@ -1445,18 +1377,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps, bool beginHeu, int *s
         }
     };
 
-    if (nni_count != 0) {
-        if (enableHeuris && curIteration > 1) {
-            if (vecNumNNI.size() < 10000) {
-                vecNumNNI.push_back(nni_count);
-            } else {
-                vecNumNNI.erase(vecNumNNI.begin());
-                vecNumNNI.push_back(nni_count);
-            }
-        }
-    } else {
-    	if (verbose_mode >= VB_DEBUG)
-    		cout << "NNI search could not find any better tree for this iteration!" << endl;
+    if (nni_count == 0) {
+    	cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
 
     /*
@@ -1540,15 +1462,15 @@ void IQTree::genNonconfNNIs() {
     }
 }
 
-double IQTree::estN95() {
-    if (vecNumNNI.size() == 0) {
-        return 0;
-    } else {
-        sort(vecNumNNI.begin(), vecNumNNI.end());
-        int index = floor(vecNumNNI.size() * speed_conf);
-        return vecNumNNI[index];
-    }
-}
+//double IQTree::estN95() {
+//    if (vecNumNNI.size() == 0) {
+//        return 0;
+//    } else {
+//        sort(vecNumNNI.begin(), vecNumNNI.end());
+//        int index = floor(vecNumNNI.size() * speed_conf);
+//        return vecNumNNI[index];
+//    }
+//}
 
 double IQTree::getAvgNumNNI() {
     if (vecNumNNI.size() == 0) {
@@ -1582,15 +1504,15 @@ double IQTree::estDeltaMedian() {
     }
 }
 
-inline double IQTree::estDelta95() {
-    if (vecImpProNNI.size() == 0) {
-        return 0;
-    } else {
-        sort(vecImpProNNI.begin(), vecImpProNNI.end());
-        int index = floor(vecImpProNNI.size() * speed_conf);
-        return vecImpProNNI[index];
-    }
-}
+//inline double IQTree::estDelta95() {
+//    if (vecImpProNNI.size() == 0) {
+//        return 0;
+//    } else {
+//        sort(vecImpProNNI.begin(), vecImpProNNI.end());
+//        int index = floor(vecImpProNNI.size() * speed_conf);
+//        return vecImpProNNI[index];
+//    }
+//}
 
 int IQTree::getDelete() const {
 	return k_delete;

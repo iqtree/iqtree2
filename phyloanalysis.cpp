@@ -1183,11 +1183,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	iqtree.sse = params.SSE;
 	if (params.gbo_replicates)
 		params.speed_conf = 1.0;
-	if (params.speed_conf == 1.0 || params.pll) {
-		iqtree.disableHeuristic();
-	}
-	else
-		iqtree.setSpeed_conf(params.speed_conf);
 	try {
 		if (!iqtree.getModelFactory()) {
 			if (iqtree.isSuperTree()){
@@ -1373,10 +1368,20 @@ void runPhyloAnalysis(Params &params, string &original_model,
 						<< iqtree.curScore << " (NNIs: " << nni_count
 						<< " / NNI steps: " << nni_steps << ")" << endl;
 				if (iqtree.curScore > iqtree.bestScore) {
+					if (params.modOpt) {
+						double time_s = getCPUTime();
+						iqtree.initializeAllPartialLh();
+						iqtree.clearAllPartialLH();
+						cout << "Re-estimate model parameters ... ";
+						iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.1);
+						double time_e = getCPUTime();
+						cout << time_e - time_s << "s" << endl;
+					}
 					iqtree.bestScore = iqtree.curScore;
 					stringstream tree;
 					iqtree.printTree(tree);
 					bestTreeString = tree.str();
+					cout << "BETTER SCORE FOUND: " << iqtree.bestScore << endl;
 				}
 			}
 			double min_elapsed = (getCPUTime() - begin_time) / 60;
@@ -1562,7 +1567,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	}
 
 	if (!pruned_taxa.empty()) {
-		iqtree.disableHeuristic();
 		cout << "Restoring full tree..." << endl;
 		iqtree.restoreStableClade(alignment, pruned_taxa, linked_name);
 		delete[] iqtree.dist_matrix;
