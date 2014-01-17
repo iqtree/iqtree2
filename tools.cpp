@@ -644,7 +644,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5 = true;
+    params.nni5 = false;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
