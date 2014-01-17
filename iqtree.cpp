@@ -1146,7 +1146,7 @@ double IQTree::doTreeSearch() {
 				if (params->inni) {
 					if (params->modOpt) {
 						double time_s = getCPUTime();
-						cout << "Re-estimate model parameters ... ";
+						//cout << "Re-estimate model parameters ... ";
 						if (params->pll) {
 							initializeAllPartialLh();
 							clearAllPartialLH();
@@ -1164,7 +1164,7 @@ double IQTree::doTreeSearch() {
 						double time_e = getCPUTime();
 						best_tree_string.seekp(0, ios::beg);
 						printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-						cout << time_e - time_s << "s" << endl;
+						//cout << time_e - time_s << "s" << endl;
 						//cout << "iqtreeLogl: " << iqtreeLogl << " / pllLogl: " << pllLogl << endl;
 					}
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << bestScore;

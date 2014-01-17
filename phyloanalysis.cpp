@@ -994,9 +994,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	/* Read in the partition information */
 	pllQueue *partitionInfo;
-	ofstream partFile;
-	string pllPartFile = string(params.out_prefix) + ".pll_partitions";
-	partFile.open(pllPartFile.c_str());
+	ofstream pllPartitionFileHandle;
+	string pllPartitionFileName = string(params.out_prefix) + ".pll_partitions";
+	pllPartitionFileHandle.open(pllPartitionFileName.c_str());
 	if (iqtree.isSuperTree()) {
 		PhyloSuperTree *siqtree = (PhyloSuperTree*) &iqtree;
 		int i = 0;
@@ -1006,12 +1006,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
 			int curLen = ((*it))->getAlnNSite();
 			if ((*it)->aln->num_states == 4) {
 				//cout << "HELLO DNA" << endl;
-				partFile << "DNA";
+				pllPartitionFileHandle << "DNA";
 			} else if ((*it)->getModel()) {
-				partFile << (*it)->getModel()->name;
+				pllPartitionFileHandle << (*it)->getModel()->name;
 			} else
-				partFile << "WAG";
-			partFile << ", p" << i << " = "<< startPos << "-" << startPos + curLen - 1  << endl;
+				pllPartitionFileHandle << "WAG";
+			pllPartitionFileHandle << ", p" << i << " = "<< startPos << "-" << startPos + curLen - 1  << endl;
 			startPos = startPos + curLen;
 		}
 
@@ -1025,10 +1025,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		} else {
 			model = "WAG";
 		}
-		partFile << model << ", p1 = " << "1-" << iqtree.getAlnNSite() << endl;
+		pllPartitionFileHandle << model << ", p1 = " << "1-" << iqtree.getAlnNSite() << endl;
 	}
-	partFile.close();
-	partitionInfo = pllPartitionParse(pllPartFile.c_str());
+	pllPartitionFileHandle.close();
+	partitionInfo = pllPartitionParse(pllPartitionFileName.c_str());
 
 	/* Validate the partitions */
 	if (!pllPartitionsValidate(partitionInfo, iqtree.pllAlignment)) {
@@ -1337,7 +1337,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 							double time_s = getCPUTime();
 							iqtree.initializeAllPartialLh();
 							iqtree.clearAllPartialLH();
-							cout << "Re-estimate model parameters ... ";
+							//cout << "Re-estimate model parameters ... ";
 							iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.1);
 							iqtree.inputModelParam2PLL();
 							stringstream treestream;
@@ -1346,7 +1346,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 							double pllLogl = iqtree.inputTree2PLL(bestTreeString);
 							iqtree.bestScore = pllLogl;
 							double time_e = getCPUTime();
-							cout << time_e - time_s << "s" << endl;
+							//cout << time_e - time_s << "s" << endl;
 							//cout << "logl computed by PLL: " << pllLogl << " / logl computed by IQTree: "
 								//	<< iqtreeLogl << ""<< endl;
 						}
@@ -1372,10 +1372,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
 							double time_s = getCPUTime();
 							iqtree.initializeAllPartialLh();
 							iqtree.clearAllPartialLH();
-							cout << "Re-estimate model parameters ... ";
+							//cout << "Re-estimate model parameters ... ";
 							iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.1);
 							double time_e = getCPUTime();
-							cout << time_e - time_s << "s" << endl;
+							//cout << time_e - time_s << "s" << endl;
 						}
 						iqtree.bestScore = iqtree.curScore;
 						stringstream tree;
