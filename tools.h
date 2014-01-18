@@ -383,11 +383,6 @@ struct Params {
 	 */
 	bool fastnni;
 
-	/**
-	 *  Do random restart search
-	 */
-	bool random_restart;
-
     /**
      *  Evaluating NNI without re-optimizing the central branch
      */

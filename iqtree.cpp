@@ -997,10 +997,6 @@ double IQTree::doTreeSearch() {
 						//double initTime = getCPUTime();
 						doRandomNNIs(numNNI);
 						printTree(perturb_tree_string, WT_TAXON_ID + WT_BR_LEN);
-//						perturb_tree_string.seekg(0, ios::beg);
-//						freeNode();
-//						readTree(best_tree_string, rooted);
-//						assignLeafNames();
 						//cout << "Time for perturbation: " << getCPUTime() - initTime << endl;
 						setAlignment(aln);
 						initializeAllPartialLh();
@@ -1194,14 +1190,12 @@ double IQTree::doTreeSearch() {
 				}
 			}
 		} else {
-			if (!params->pll) {
-				/* take back the current best tree */
-				best_tree_string.seekg(0, ios::beg);
-				freeNode();
-				readTree(best_tree_string, rooted);
-				assignLeafNames();
-			} else {
-				numNonImpIter++;
+			numNonImpIter++;
+			best_tree_string.seekg(0, ios::beg);
+			freeNode();
+			readTree(best_tree_string, rooted);
+			assignLeafNames();
+			if (params->pll) {
 				if (!restoreTree(pllBestTree, pllInst, pllPartitions)) {
 					outError("ERROR: failed to roll back tree \n");
 				}

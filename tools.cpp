@@ -750,7 +750,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bestStart = true;
     params.inni = false;
     params.speednni = false;
-    params.random_restart = false;
     params.numParsimony = 20;
     params.avh_test = 0;
     params.site_freq_file = NULL;
@@ -1665,8 +1664,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.adaptivePerturbation = true;
             	params.inni = true;
             	params.pll = true;
-            } else if (strcmp(argv[cnt], "-rr") == 0) {
-            	params.random_restart = true;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
