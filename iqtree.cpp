@@ -692,13 +692,26 @@ void IQTree::doParsimonyReinsertion() {
 }
 
 void IQTree::doRandomNNIs(int numNNI) {
+	map<int, Node*> usedNodes;
+	NodeVector nodeList1, nodeList2;
+	getInternalBranches(nodeList1, nodeList2);
+	int numInBran = nodeList1.size();
+	assert(numInBran == aln->getNSeq() - 3);
 	for (int i = 0; i < numNNI; i++) {
-		NodeVector nodeList1, nodeList2;
-		getInternalBranches(nodeList1, nodeList2);
-		int numInBran = nodeList1.size();
-		assert(numInBran == aln->getNSeq() - 3);
 		int index = random_int(numInBran);
-		doOneRandomNNI(nodeList1[index], nodeList2[index]);
+		if (usedNodes.find(nodeList1[index]->id) == usedNodes.end() && usedNodes.find(nodeList2[index]->id) == usedNodes.end()) {
+			doOneRandomNNI(nodeList1[index], nodeList2[index]);
+			usedNodes.insert(map<int, Node*>::value_type(nodeList1[index]->id, nodeList1[index]));
+			usedNodes.insert(map<int, Node*>::value_type(nodeList2[index]->id, nodeList2[index]));
+		} else {
+			usedNodes.clear();
+			nodeList1.clear();
+			nodeList2.clear();
+			getInternalBranches(nodeList1, nodeList2);
+			doOneRandomNNI(nodeList1[index], nodeList2[index]);
+			usedNodes.insert(map<int, Node*>::value_type(nodeList1[index]->id, nodeList1[index]));
+			usedNodes.insert(map<int, Node*>::value_type(nodeList2[index]->id, nodeList2[index]));
+		}
 	}
 }
 
