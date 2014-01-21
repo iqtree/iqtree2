@@ -260,10 +260,6 @@ public:
     double pllOptimizeNNI(int &nniCount, int &nniSteps, SearchInfo &searchinfo);
 
     /**
-     *   update best tree topology (for PLL only)
-     */
-    void pllUpdateBestTree();
-    /**
             search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
      */
     void genNNIMoves(bool approx_nni, PhyloNode *node = NULL, PhyloNode *dad = NULL);
