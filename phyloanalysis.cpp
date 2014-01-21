@@ -1679,6 +1679,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	cout << "Total tree length: " << iqtree.treeLength() << endl;
 
+	if (iqtree.isSuperTree()) {
+		PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
+		cout << stree->evalNNIs << " NNIs evaluated from " << stree->totalNNIs << " all possible NNIs ( " <<
+				(int)(((stree->evalNNIs+1.0)/(stree->totalNNIs+1.0))*100.0) << " %)" << endl;
+	}
+
 	t_end = getCPUTime();
 	params.run_time = (t_end - t_begin);
 	cout << endl;

@@ -245,6 +245,8 @@ public:
      */
     int countEmptyBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
+    int totalNNIs, evalNNIs;
+
 };
 
 #endif
