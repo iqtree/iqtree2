@@ -642,12 +642,12 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	int i = 0, id = 0;
 	int part, ntrees = size();
 	double old_brlen = node1->findNeighbor(node2)->length; // length of the branch between node1 and node2 on SuperTree before NNI
-	int IT_NUM = (params->nni5Branches) ? 6 : 2;
+	int IT_NUM = (params->nni5) ? 6 : 2;
 	NeighborVec::iterator it, saved_it[6], node_nei_it[4];
 	saved_it[id++] = node1->findNeighborIt(node2);
 	saved_it[id++] = node2->findNeighborIt(node1);
 
-	if (params->nni5Branches) {
+	if (params->nni5) {
 		FOR_NEIGHBOR(node1, node2, it){
 			saved_it[id++] = (*it)->node->findNeighborIt(node1);
 			node_nei_it[i++] = it;
@@ -782,7 +782,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 			// something should be changed.....
 			// optimization on 5 branches
-			if(params->nni5Branches){
+			if(params->nni5){
 				for(id = 2; id < 6; id ++){
 					/*
 					 * here check if neighbor of node1 or node2 has link_neighbor filled in already by linkCheck
@@ -972,7 +972,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    	}*/
 
 		// %%%%%%%%%%%%%%%%%%%%%%%%  FIVE BRANCH OPTIMIZATION  %%%%%%%%%%%%%%%%%%%%%%%%
-	    if (params->nni5Branches) {
+	    if (params->nni5) {
 	    	if (verbose_mode >= VB_DEBUG)
 	    		cout << "Log-likelihood: " << score << endl;
 	    	FOR_NEIGHBOR(node1, node2, it){

@@ -36,7 +36,7 @@ const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEAS
 const double MAX_BRANCH_LEN = 9.0;
 const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
-const double TOL_LIKELIHOOD_PARAMOPT = 0.01; // BQM: newly introduced for ModelFactory::optimizeParameters
+const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for ModelFactory::optimizeParameters
 //const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
 const static double SCALING_THRESHOLD = 1e-100;
 const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
@@ -143,6 +143,8 @@ struct NNIMove {
     }
 };
 
+
+
 struct LeafFreq {
     int leaf_id;
 
@@ -242,6 +244,11 @@ public:
             get the name of the model
      */
     virtual string getModelName();
+
+	/**
+	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}+I{pinvar}+G{alpha}
+	 */
+	virtual string getModelNameParams();
 
     ModelSubst *getModel() {
         return model;
@@ -371,6 +378,11 @@ public:
     virtual void initializeAllPartialLh();
 
     /**
+            de-allocate central_partial_lh
+     */
+    virtual void deleteAllPartialLh();
+
+    /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
             @param node the current node
             @param dad dad of the node, used to direct the search
@@ -463,8 +475,11 @@ public:
             Otherwise, copy the pattern_lh attribute
             @param pattern_lh (OUT) pattern log-likelihoods,
                             assuming pattern_lh has the size of the number of patterns
+            @param cur_logl current log-likelihood (for sanity check)
+            @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
      */
-    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
+    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
+    		double *pattern_lh_cat = NULL);
 
     /**
             Compute the variance in tree log-likelihood
@@ -507,7 +522,7 @@ public:
      * @param nni NNI move that is carried out
      */
     void updateSubtreeDists(NNIMove &nni);
-    
+
     /**
      * Compute all pairwise distance of subtree rooted at \a source and other subtrees
      */
@@ -536,6 +551,12 @@ public:
             @param best_tree_string input stream to read from
      */
     void rollBack(istream &best_tree_string);
+
+    /**
+            Read the tree saved with Taxon Names and branch lengths.
+            @param tree_string input stream to read from
+     */
+    void readTreeString(const string &tree_string);
 
     bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
@@ -662,7 +683,7 @@ public:
             @return the likelihood of the tree
      */
     virtual double optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL);
-    
+
     /**
      * optimize all branch lengths at the subtree rooted at node step-by-step.
      * Using Least Squares instead of Newton Raphson.
@@ -696,16 +717,16 @@ public:
             @return negative of likelihood (for minimization)
      */
     virtual double computeFuncDerv(double value, double &df, double &ddf);
-    
+
      /****************************************************************************
             Branch length optimization by Least Squares
      ****************************************************************************/
-    
+
     /**
      * Estimate the current branch using least squares
      * @param node1 first node of the branch
      * @param node2 second node of the branch
-     * @return 
+     * @return
      */
     double optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2);
 
@@ -788,27 +809,20 @@ public:
     		bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
 
     /**
-            This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
-            If a swap shows better score, return the swapped tree and the score.
-            @param cur_score current likelihood score
-            @param node1 1st end node of the branch
-            @param node2 2nd end node of the branch
-            @param nni_param (OUT) if not NULL: swapping information returned
-            @return the likelihood of the tree
-     */
-    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL
-            /*,	ostream *out = NULL, int brtype = 0,
-                ostream *out_lh = NULL, ostream *site_lh = NULL, StringIntMap *treels = NULL,
-                vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
-                int *max_trees = NULL, double *logl_cutoff = NULL
-             */);
-
-    /**
             Do an NNI
             @param move reference to an NNI move object containing information about the move
             @param clearLH decides whether or not the partial likelihood should be cleared
      */
     virtual void doNNI(NNIMove &move, bool clearLH = true);
+
+    /**
+     * Randomly choose perform an NNI, out of the two defined by branch node1-node2.
+     * This function also clear the corresponding partial likelihood vectors
+     * @param node1 one node of the branch
+     * @param node2 one node of the branch
+     */
+    void doOneRandomNNI(Node *node1, Node *node2);
+
 
     /**
      *   Apply 5 new branch lengths stored in the NNI move
@@ -1055,16 +1069,6 @@ public:
     double *var_matrix;
 
     /**
-     *      size of the alignment (used to avoid calling aln->size())
-     */
-    //int alnSize;
-
-    /**
-     *      number of states ( used to avoid calling aln->num_states() )
-     */
-    //int numStates;
-
-    /**
             TRUE if you want to optimize branch lengths by Newton-Raphson method
      */
     bool optimize_by_newton;
@@ -1132,7 +1136,7 @@ public:
     int save_all_trees;
 
 protected:
-    
+
     /**
      *  is the subtree distance matrix need to be computed or updated
      */
@@ -1161,6 +1165,12 @@ protected:
      */
     double *_pattern_lh;
 
+    /**
+            internal pattern likelihoods per category, always stored after calling computeLikelihood()
+            or related functions. Note that scaling factors are not incorporated here.
+            If you want to get real pattern likelihoods, please use computePatternLikelihood()
+     */
+    double *_pattern_lh_cat;
 
     /**
             associated substitution model

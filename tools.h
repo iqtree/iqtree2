@@ -55,17 +55,22 @@
 #ifdef USE_HASH_MAP
 #if !defined(__GNUC__)
 #include <hash_map>
+#include <hash_set>
 using namespace stdext;
 #elif GCC_VERSION < 40300
 #include <ext/hash_map>
+#include <ext/hash_set>
 using namespace __gnu_cxx;
 #define unordered_map hash_map
+#define unordered_set hash_set
 #else
 #include <tr1/unordered_map>
+#include <tr1/unordered_set>
 using namespace std::tr1;
 #endif
 #else
 #include <map>
+#include <set>
 #endif
 
 
@@ -234,6 +239,8 @@ const int WT_NEWLINE = 128;
 const int WT_BR_LEN_FIXED_WIDTH = 256;
 const int WT_BR_ID = 512;
 const int WT_BR_LEN_ROUNDING = 1024;
+const int TRUE = 1;
+const int FALSE = 0;
 
 /**
         when computing Robinson-Foulds distances
@@ -344,18 +351,42 @@ struct NNIInfo {
  */
 struct Params {
 
+	int numParsimony;
+
+	/**
+	 *  heuristics for speeding up NNI evaluation
+	 */
+	bool speednni;
+
+	/**
+	 *  portion of NNI used for perturbing the tree
+	 */
+	double pertubSize;
+
+	/**
+	 *  logl epsilon for the initial model parameter optimization
+	 */
+	double model_eps;
+
+	/**
+	 *  re-optimize model parameters after a better tree is found
+	 */
+	bool modOpt;
+
 	/**
 	 *  Carry out iterated local search using NNI only.
-	 *  From the local maximum, apply some negative NNIs and the continue with the local search
 	 */
-	bool ilsnni;
+	bool inni;
 
-	bool cherry;
+	/**
+	 *  only evaluate NNIs in affected regions
+	 */
+	bool fastnni;
 
     /**
      *  Evaluating NNI without re-optimizing the central branch
      */
-    bool fast_eval;
+    bool nni0;
 
     int evalType;
 
@@ -373,8 +404,9 @@ struct Params {
 	/**
 	 *  Optimize 5 branches on NNI tree
 	 */
-	bool nni5Branches;
-    
+	bool nni5;
+
+
     /**
      *  Number of smoothTree iteration carried out in Phylolib for IQP Tree
      */
@@ -384,12 +416,12 @@ struct Params {
      *   compute least square branches for a given tree
      */
     bool leastSquareBranch;
-    
+
     /**
      *  use Least Square to evaluate NNI
      */
     bool leastSquareNNI;
-    
+
     /**
      *  epsilon value used to compare log-likelihood between trees
      */
@@ -406,24 +438,14 @@ struct Params {
     bool reinsert_par;
 
     /*
-     *  Option to compare BIONJ and Parsimony Tree
+     *  Option to evaluate 10 different starting tree and take the best
      */
-    bool par_vs_bionj;
+    bool bestStart;
 
     /**
      *  Maximum running time of the tree search in minutes
      */
     double maxtime;
-
-    /**
-     *  Turn on tabu function for IQP (Memory for removed nodes)
-     */
-    bool tabu;
-
-    /**
-     *   Option for doing random restart
-     */
-    bool random_restart;
 
     /**
      *  Turn on parsimony branch length estimation
@@ -433,7 +455,14 @@ struct Params {
     /**
      *  option to turn on phylogenetic library
      */
-    bool phylolib;
+    bool pll;
+
+    bool adaptivePerturbation;
+
+    /**
+     *  Turn on model parameter optimization by PLL
+     */
+    bool pllModOpt;
 
     char *binary_aln_file;
 
@@ -676,6 +705,11 @@ struct Params {
             TRUE to compute the observed distances instead of Juke-Cantor distances, default: FALSE
      */
     bool compute_obs_dist;
+
+    /**
+            TRUE to compute the Juke-Cantor distances, default: FALSE
+     */
+    bool compute_jc_dist;
 
     /**
             TRUE to compute the maximum-likelihood distances
@@ -1055,9 +1089,11 @@ struct Params {
      */
     bool SSE;
     /**
-            TRUE to print site log-likelihood
+     	 	0: do not print anything
+            1: print site log-likelihood
+            2: print site log-likelihood per Gamma category
      */
-    bool print_site_lh;
+    int print_site_lh;
 
     /**
             TRUE to print tree log-likelihood
@@ -1314,7 +1350,7 @@ struct Params {
 
     /** file containing state-frequencies per site for site-specific state frequency model
      * each line has n+1 entries (n=number of states):
-     * site_ID state1_freq state2_freq ... staten_freq 
+     * site_ID state1_freq state2_freq ... staten_freq
      * where site_ID is from 1 to m (m=number of sites)
      */
     char *site_freq_file;
@@ -1339,6 +1375,9 @@ struct Params {
 
 	/** true to print sub alignments of super alignment, default: false */
 	bool print_subaln;
+
+	/** print partition information */
+	bool print_partition_info;
 };
 
 /**
@@ -1451,6 +1490,16 @@ double randomLen(Params &params);
         @return logarithm of (num! = 1*2*...*num)
  */
 double logFac(const int num);
+
+/**
+ * Function to randomly select an element in a C++ container
+ *
+ * @param begin
+ * @param end
+ * @return
+ */
+template <typename I>
+I random_element(I begin, I end);
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
@@ -1720,19 +1769,19 @@ double computePValueChiSquare(double x, int df);
 int init_random(int seed);
 
 /**
- * returns a random integer in the range [0; n - 1] 
+ * returns a random integer in the range [0; n - 1]
  * @param n upper-bound of random number
  */
 int random_int(int n);
 
 /**
- * returns a random integer in the range [0; RAND_MAX - 1] 
+ * returns a random integer in the range [0; RAND_MAX - 1]
  * = random_int(RAND_MAX)
  */
 int random_int();
 
 /**
- * returns a random floating-point nuber in the range [0; 1) 
+ * returns a random floating-point nuber in the range [0; 1)
  */
 double random_double();
 

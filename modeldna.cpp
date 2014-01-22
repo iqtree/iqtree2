@@ -30,127 +30,139 @@ ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType fr
 	init(model_name, model_params, freq, freq_params);
 }
 
-
-void ModelDNA::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
-{
-	assert(num_states == 4); // make sure that you create model for DNA
-	StateFreqType def_freq = FREQ_UNKNOWN;
-	name = model_name;
-	full_name = model_name;
+string getDNAModelInfo(string model_name, string &full_name, string &rate_type, StateFreqType &def_freq) {
 	string name_upper = model_name;
 	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
 		(*it) = toupper(*it);
+	string name = model_name;
+	full_name = name;
+	rate_type = "";
+	def_freq = FREQ_UNKNOWN;
 	if (name_upper == "JC" || name_upper == "JC69") {
 		name = "JC";
-		setRateType("000000");
+		rate_type = "000000";
 		def_freq = FREQ_EQUAL;
 		full_name = "JC (Juke and Cantor, 1969)";
 	} else if (name_upper == "F81") {
 		name = "F81";
-		setRateType("000000");
+		rate_type = "000000";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "F81 (Felsenstein, 1981)";
 	} else if (name_upper == "K2P" || name_upper == "K80") {
 		name = "K2P";
-		setRateType("010010");
+		rate_type = "010010";
 		def_freq = FREQ_EQUAL;
 		full_name = "K2P (Kimura, 1980)";
 	} else if (name_upper == "HKY" || name_upper == "HKY85") {
 		name = "HKY";
-		setRateType("010010");
+		rate_type = "010010";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "HKY (Hasegawa, Kishino and Yano, 1985)";
 	} else if (name_upper == "K3P" || name_upper == "K81" || name_upper=="TPM1") {
 		name = "K3P";
-		setRateType("012210");
+		rate_type = "012210";
 		def_freq = FREQ_EQUAL;
 		full_name = "K3P (Kimura, 1981)";
 	} else if (name_upper == "K81UF" || name_upper == "K81U" || name_upper == "K3PU" ||
 			name_upper == "K3PUF" || name_upper=="TPM1UF" || name_upper=="TPM1U") {
 		name = "K3Pu";
-		setRateType("012210");
+		rate_type = "012210";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "K3P unequal frequencies (Kimura, 1981)";
 	} else if (name_upper == "TN" || name_upper == "TRN" || name_upper == "TN93") {
 		name = "TN";
-		setRateType("010020");
+		rate_type = "010020";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TN (Tamura and Nei, 1993)";
 	} else if (name_upper == "TNEF" || name_upper == "TRNEF" || name_upper == "TNE" || name_upper == "TRNE") {
 		name = "TNe";
-		setRateType("010020");
+		rate_type = "010020";
 		def_freq = FREQ_EQUAL;
 		full_name = "TN equal frequencies (Tamura and Nei, 1993)";
 	} else if (name_upper == "TPM2") {
 		name = "TPM2";
-		setRateType("121020");
+		rate_type = "121020";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM2 ()";
 	} else if (name_upper == "TPM2U" || name_upper == "TPM2UF") {
 		name = "TPM2u";
-		setRateType("121020");
+		rate_type = "121020";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM2 unequal frequencies ()";
 	} else if (name_upper == "TPM3") {
 		name = "TPM3";
-		setRateType("120120");
+		rate_type = "120120";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM3 ()";
 	} else if (name_upper == "TPM3U" || name_upper == "TPM3UF") {
 		name = "TPM3u";
-		setRateType("120120");
+		rate_type = "120120";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TPM3 unequal frequencies ()";
 	} else if (name_upper == "TIM" || name_upper == "TIM1") {
 		name = "TIM";
-		setRateType("012230");		
+		rate_type = "012230";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TIM ()";
 	} else if (name_upper == "TIMEF" || name_upper == "TIME" || name_upper == "TIM1EF" || name_upper == "TIM1E") {
 		name = "TIMe";
-		setRateType("012230");		
+		rate_type = "012230";
 		def_freq = FREQ_EQUAL;
 		full_name = "TIM equal frequencies";
 	} else if (name_upper == "TIM2") {
 		name = "TIM2";
-		setRateType("121030");
+		rate_type = "121030";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TIM2 ()";
 	} else if (name_upper == "TIM2EF" || name_upper == "TIM2E") {
 		name = "TIM2e";
-		setRateType("121030");
+		rate_type = "121030";
 		def_freq = FREQ_EQUAL;
 		full_name = "TIM2 equal frequencies";
 	} else if (name_upper == "TIM3") {
 		name = "TIM3";
-		setRateType("120130");
+		rate_type = "120130";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TIM3 ()";
 	} else if (name_upper == "TIM3EF" || name_upper == "TIM3E") {
 		name = "TIM3e";
-		setRateType("120130");
+		rate_type = "120130";
 		def_freq = FREQ_EQUAL;
 		full_name = "TIM3 equal frequencies";
 	} else if (name_upper == "TVM") {
 		name = "TVM";
-		setRateType("412310");		
+		rate_type = "412310";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "TVM";
 	} else if (name_upper == "TVMEF" || name_upper == "TVME") {
 		name = "TVMe";
-		setRateType("412310");		
+		rate_type = "412310";
 		def_freq = FREQ_EQUAL;
 		full_name = "TVM equal frequencies";
 	} else if (name_upper == "SYM") {
 		name = "SYM";
-		setRateType("123450");
+		rate_type = "123450";
 		def_freq = FREQ_EQUAL;
 		full_name = "SYM (Zharkihk, 1994)";
 	} else if (name_upper == "GTR" || name_upper == "REV") {
 		name = "GTR";
-		setRateType("123450");
+		rate_type = "123450";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "GTR (Tavare, 1986)";
+	}
+	return name;
+}
+
+
+void ModelDNA::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
+{
+	assert(num_states == 4); // make sure that you create model for DNA
+	StateFreqType def_freq = FREQ_UNKNOWN;
+	string rate_type;
+	name = getDNAModelInfo((string)model_name, full_name, rate_type, def_freq);
+
+	if (name != "") {
+		setRateType(rate_type.c_str());
 	} else {
 		//cout << "User-specified model "<< model_name << endl;
 		if (setRateType(model_name))
@@ -210,6 +222,24 @@ void ModelDNA::readRates(string str) throw(const char*) {
 			if (param_spec[j] == i+1)
 				rates[j] = rate;
 	}
+}
+
+
+string ModelDNA::getNameParams() {
+	if (num_params == 0) return name;
+	ostringstream retname;
+	retname << name << '{';
+	int nrates = getNumRateEntries();
+	int k = 0;
+	for (int i = 0; i < nrates; i++) {
+		if (param_spec[i] > k) {
+			if (k>0) retname << ',';
+			retname << rates[i];
+			k++;
+		}
+	}
+	retname << '}';
+	return retname.str();
 }
 
 bool ModelDNA::setRateType(const char *rate_str) {

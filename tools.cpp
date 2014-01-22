@@ -573,6 +573,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.boundary_modifier = 1.0;
     params.dist_file = NULL;
     params.compute_obs_dist = false;
+    params.compute_jc_dist = true;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.budget_file = NULL;
@@ -643,12 +644,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5Branches = false;
-    params.nniThresHold = 0.1;
+    params.nni5 = false;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.fast_eval = false;
+    params.nni0 = false;
+    params.adaptivePerturbation = false;
     params.evalType = 2;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -679,11 +680,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_replicates = 0;
     params.localbp_replicates = 0;
     params.SSE = true;
-    params.print_site_lh = false;
+    params.print_site_lh = 0;
     params.print_tree_lh = false;
     params.nni_lh = false;
     params.lambda = 1;
-    params.speed_conf = 0.95;
+    params.speed_conf = 1.0;
     params.whtest_simulations = 1000;
     params.mcat_type = MCAT_LOG + MCAT_PATTERN;
     params.rate_file = NULL;
@@ -720,7 +721,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.use_weighted_bootstrap = false;
     params.use_max_tree_per_bootstrap = true;
     params.max_candidate_trees = 0;
-    params.distinct_trees = true;
+    params.distinct_trees = false;
     params.online_bootstrap = true;
     params.min_correlation = 0.99;
     params.step_iterations = 100;
@@ -735,22 +736,23 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.approximate_nni = false;
     params.do_compression = false;
 
-    params.new_heuristic = false;
+    params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.vns_search = false;
-    params.speedup_iter = 100;
-    params.phylolib = false;
+    params.pertubSize = 0.5;
+    params.pll = false;
+    params.model_eps = 0.1;
+    params.modOpt = true;
+    params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
-    params.maxtime = 1000000;
+    params.maxtime = 100000;
     params.reinsert_par = false;
     params.fast_branch_opt = false;
-    params.par_vs_bionj = false;
-    params.tabu = false;
-    params.cherry = false;
-    params.ilsnni = false;
-    params.random_restart = false;
+    params.bestStart = true;
+    params.inni = false;
+    params.speednni = false;
+    params.numParsimony = 20;
     params.avh_test = 0;
     params.site_freq_file = NULL;
 #ifdef _OPENMP
@@ -761,6 +763,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.root_state = NULL;
     params.print_bootaln = false;
 	params.print_subaln = false;
+	params.print_partition_info = false;
 
     struct timeval tv;
     struct timezone tz;
@@ -1246,7 +1249,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.p_delete = convert_double(argv[cnt]);
                 if (params.p_delete < 0.0 || params.p_delete > 1.0)
                     throw "Probability of deleting a leaf must be between 0 and 1";
-            } else if (strcmp(argv[cnt], "-n") == 0) {
+            } else if (strcmp(argv[cnt], "-psize") == 0) {
+            	cnt++;
+            	if (cnt >= argc)
+            		throw "Use -psize <probability>";
+            	params.pertubSize = convert_double(argv[cnt]);
+        	} else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -n <#iterations>";
@@ -1294,13 +1302,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.lambda = convert_double(argv[cnt]);
                 if (params.lambda > 1.0)
                     throw "Lambda must be in (0,1]";
-            } else if (strcmp(argv[cnt], "-spc") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Please specify the confidence level for the adaptive NNI Search";
-                params.speed_conf = convert_double(argv[cnt]);
-                if (params.speed_conf < 0.75 || params.speed_conf > 1)
-                    throw "Confidence level of the adaptive NNI search must be >= 0.75 and <= 1";
             } else if (strcmp(argv[cnt], "-nosse") == 0) {
                 params.SSE = false;
             } else if (strcmp(argv[cnt], "-f") == 0) {
@@ -1464,13 +1465,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (params.localbp_replicates < 1000 && params.localbp_replicates != 0)
                     throw "Local bootstrap (LBP) replicates must be at least 1000";
             } else if (strcmp(argv[cnt], "-wsl") == 0) {
-                params.print_site_lh = true;
+                params.print_site_lh = 1;
+            } else if (strcmp(argv[cnt], "-wslg") == 0) {
+                params.print_site_lh = 2;
             } else if (strcmp(argv[cnt], "-wba") == 0) {
                 params.print_bootaln = true;
 			} else if (strcmp(argv[cnt],"-wsa") == 0) {
 				params.print_subaln = true;
             } else if (strcmp(argv[cnt], "-wtl") == 0) {
                 params.print_tree_lh = true;
+            } else if (strcmp(argv[cnt], "-wpi") == 0) {
+                params.print_partition_info = true;
             } else if (strcmp(argv[cnt], "-ns") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1608,6 +1613,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.store_candidate_trees = true;
             } else if (strcmp(argv[cnt], "-nodiff") == 0) {
                 params.distinct_trees = false;
+            } else if (strcmp(argv[cnt], "-treediff") == 0) {
+                params.distinct_trees = true;
             } else if (strcmp(argv[cnt], "-norell") == 0) {
                 params.use_rell_method = false;
             } else if (strcmp(argv[cnt], "-elw") == 0) {
@@ -1631,39 +1638,44 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -maxtime <time_in_minutes>";
                 params.maxtime = convert_double(argv[cnt]);
                 params.min_iterations = 1000000;
-            } else if (strcmp(argv[cnt], "-best_start") == 0) {
-                params.par_vs_bionj = true;
+            } else if (strcmp(argv[cnt], "-numpars") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -numnni <number_of_parsimony_trees>";
+                params.numParsimony = convert_int(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-beststart") == 0) {
+                params.bestStart = true;
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -best_start <binary_alignment_file>";
                 params.binary_aln_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-ba") == 0) {
+            } else if (strcmp(argv[cnt], "-pll") == 0) {
+                params.pll = true;
+            } else if (strcmp(argv[cnt], "-me") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -ba <binary_alignment_file>";
-                params.binary_aln_file = argv[cnt];
-                params.phylolib = true;
+                    throw "Use -me <model_epsilon>";
+                params.model_eps = convert_double(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-modopt") == 0) {
+            	params.modOpt = true;
             } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
-            } else if (strcmp(argv[cnt], "-tabu") == 0) {
-                params.tabu = true;
-            } else if (strcmp(argv[cnt], "-cherry") == 0) {
-            	params.cherry = true;
-            } else if (strcmp(argv[cnt], "-ilsnni") == 0) {
-            	params.ilsnni = true;
+            } else if (strcmp(argv[cnt], "-speednni") == 0) {
+                params.speednni = true;
+            } else if (strcmp(argv[cnt], "-inni") == 0) {
+            	params.inni = true;
+            } else if (strcmp(argv[cnt], "-adapt") == 0) {
+            	params.adaptivePerturbation = true;
+            	params.inni = true;
+            	params.pll = true;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
             } else if (strcmp(argv[cnt], "-fivebran") == 0 || strcmp(argv[cnt], "-nni5") == 0) {
-            	params.nni5Branches = true;
+            	params.nni5 = true;
             } else if (strcmp(argv[cnt], "-onebran") == 0 || strcmp(argv[cnt], "-nni1") == 0) {
-            	params.nni5Branches = false;
-            } else if (strcmp(argv[cnt], "-nniThreshold") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            		throw "Use -nniThreshold <threshold>";
-            	params.nniThresHold = convert_double(argv[cnt]);
+            	params.nni5 = false;
             } else if (strcmp(argv[cnt], "-smooth") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1671,8 +1683,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.numSmoothTree = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-lsnni") == 0) {
                 params.leastSquareNNI = true;
-            } else if (strcmp(argv[cnt], "-fast_eval") == 0) {
-                params.fast_eval = true;
+            } else if (strcmp(argv[cnt], "-nni0") == 0) {
+                params.nni0 = true;
             } else if(strcmp(argv[cnt], "-ls_var") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1695,8 +1707,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -eps <log-likelihood epsilon>";
                 params.loglh_epsilon = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-random_restart") == 0) {
-                params.random_restart = true;
             } else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
                 params.parbran = true;
             } else if (strcmp(argv[cnt], "-wbt") == 0) {
@@ -1800,8 +1810,8 @@ void usage(char* argv[], bool full_command) {
     printCopyright(cout);
     cout << "Usage: " << argv[0] << " [OPTIONS] <file_name> [<output_file>]" << endl;
     cout << "GENERAL OPTIONS:" << endl;
-    cout << "  -h                Print this help dialog. Use -hh to display all options" << endl;
-    cout << "  -?                Print help options for phylogenetic inference" << endl;
+    cout << "  -hh               Print this help dialog" << endl;
+    cout << "  -h                Print help options for phylogenetic inference" << endl;
     cout << "  <file_name>       User tree in NEWICK format or split network in NEXUS format" << endl;
     cout << "  <output_file>     Output file to store results, default is '<file_name>.pda'" << endl;
     cout << "  -k <num_taxa>     Find optimal set of size <num_taxa>" << endl;
@@ -1969,10 +1979,11 @@ void usage_iqtree(char* argv[], bool full_command) {
 			cout << "                       min, mean, and max branch lengths of random trees." << endl;
 
 			cout << endl << "MISCELLANEOUS:" << endl
-            << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl;
+            << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
+            << "  -wslg                Writing site log-likelihoods per Gamma category" << endl;
 		    cout << "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl;
-		    cout << "  -stats <outfile>     Output some statistics about branch lengths on the tree" << endl;
-		    cout << "  -comp <treefile>     Compare the tree with each in the input trees" << endl;
+		    cout << "  -stats <outfile>     Output some statistics about branch lengths" << endl;
+		    cout << "  -comp <treefile>     Compare tree with each in the input trees" << endl;
 
 
 			cout << endl;
@@ -2048,6 +2059,18 @@ double logFac(const int num) {
     for (int i = 1; i <= num; i++)
         ret += log((double) i);
     return ret;
+}
+
+template <typename I>
+I random_element(I begin, I end)
+{
+    const unsigned long n = std::distance(begin, end);
+    const unsigned long divisor = (RAND_MAX + 1) / n;
+
+    unsigned long k;
+    do { k = std::rand() / divisor; } while (k >= n);
+
+    return std::advance(begin, k);
 }
 
 template <class T>
@@ -2262,8 +2285,8 @@ double random_double() {
 #define	BIGX            20.0                                 /* max value to represent exp (x) */
 #define	LOG_SQRT_PI     0.5723649429247000870717135          /* log (sqrt (pi)) */
 #define	I_SQRT_PI       0.5641895835477562869480795          /* 1 / sqrt (pi) */
-#define	Z_MAX           6.0                                  /* maximum meaningful z value */ 
-#define	ex(x)           (((x) < -BIGX) ? 0.0 : exp (x))   
+#define	Z_MAX           6.0                                  /* maximum meaningful z value */
+#define	ex(x)           (((x) < -BIGX) ? 0.0 : exp (x))
 
 /************** Normalz: probability of normal z value *********************/
 

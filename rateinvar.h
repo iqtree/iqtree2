@@ -43,6 +43,10 @@ public:
 	*/
 	RateInvar(double p_invar_sites, PhyloTree *tree);
 
+	/**
+	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
+	 */
+	virtual string getNameParams();
 
 	/**
 		get the proportion of invariable sites

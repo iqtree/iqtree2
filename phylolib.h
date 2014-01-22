@@ -17,9 +17,6 @@
 extern "C" {
 #endif
 
-#include "phylolib/treeIO.h"
-#include "phylolib/utils.h"
-
 #ifdef __cplusplus
 }
 #endif

@@ -28,6 +28,10 @@ RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median, double p_inv
 }
 
 
+string RateGammaInvar::getNameParams() {
+	return RateInvar::getNameParams() + RateGamma::getNameParams();
+}
+
 double RateGammaInvar::computeFunction(double value) {
 	if (cur_optimize == 0)
 		gamma_shape = value;

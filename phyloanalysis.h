@@ -83,7 +83,8 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count, do
 	@param output_tree (OUT, OVERWRITE IF EXIST) Resulting consensus tree will be written to this file. If NULL,
 		output_tree will be named input_trees appended with ".connetwork"
 */
-void computeConsensusNetwork(const char *input_trees, int burnin, int max_count, double cutoff, double weight_threshold,
+void computeConsensusNetwork(const char *input_trees, int burnin, int max_count, double cutoff,
+		int weight_summary, double weight_threshold,
 	const char *output_tree, const char *out_prefix, const char* tree_weight_file);
 
 #endif
