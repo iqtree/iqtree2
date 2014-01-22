@@ -443,6 +443,13 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	}
 	if (verbose_mode >= VB_MED || write_info) 
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
+
+	// For UpperBounds -----------
+	//cout<<"MLCheck = "<<tree->mlCheck <<endl;
+	if(tree->mlCheck == 0)
+		tree->mlInitial = cur_lh;
+	// ---------------------------
+
 	int i;
 	//bool optimize_rate = true;
 	double param_epsilon = logl_epsilon; // epsilon for parameters starts at epsilon for logl
@@ -485,6 +492,12 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	}
 	if (verbose_mode >= VB_MED || write_info)
 		cout << "Optimal log-likelihood: " << cur_lh << endl;
+
+	// For UpperBounds -----------
+	if(tree->mlCheck == 0)
+		tree->mlFirstOpt = cur_lh;
+	// ---------------------------
+
 	if (verbose_mode <= VB_MIN && write_info) {
 		model->writeInfo(cout);
 		site_rate->writeInfo(cout);
@@ -495,6 +508,9 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	if (write_info)
 		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
 	startStoringTransMatrix();
+	// For UpperBounds -----------
+	tree->mlCheck = 1;
+	// ---------------------------
 	return cur_lh;
 }
 

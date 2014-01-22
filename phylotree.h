@@ -1079,6 +1079,23 @@ public:
      */
     double curScore;
 
+    /**
+     * for UpperBounds: Initial tree log-likelihood
+     */
+    double mlInitial;
+
+    /**
+     * for UpperBounds: Log-likelihood after optimization of model parameters in the beginning of tree search
+     */
+    double mlFirstOpt;
+
+    /*
+     * for UpperBounds: mlCheck = 1, if previous two values were already saved.
+     * Needed, because parameter optimization is done twice before and after tree search
+     */
+
+    int mlCheck;
+
     /*
      * 		Store the all the parameters for the program
      */

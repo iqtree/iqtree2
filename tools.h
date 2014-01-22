@@ -1207,6 +1207,12 @@ struct Params {
 	bool eco_weighted;
 
     /**********************************************/
+    /****** variables for upper bound tests *******/
+	bool upper_bound;
+
+
+
+    /**********************************************/
     /**** variables for ultra-fast bootstrap ******/
 
     /**

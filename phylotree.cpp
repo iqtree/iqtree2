@@ -75,8 +75,9 @@ void PhyloTree::init() {
     theta_all = NULL;
     subTreeDistComputed = false;
     dist_matrix = NULL;
-    sse = true; // FOR TUNG: you forgot to initialize this variable!
+    sse = true;  // FOR TUNG: you forgot to initialize this variable!
     save_all_trees = 0;
+    mlCheck = 0; // FOR: upper bounds
 }
 
 PhyloTree::PhyloTree(Alignment *aln) :

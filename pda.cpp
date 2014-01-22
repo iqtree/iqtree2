@@ -2080,6 +2080,57 @@ void processECOpd(Params &params) {
 		delete[] variables;
 	}
 }
+/*********************************************************************************************************************************
+	Olga: tests on Upper Bounds for ML
+*********************************************************************************************************************************/
+void calculateUpperBound(Params &params, PhyloTree &tree, Alignment &aln){
+	//MTree tree(params.user_file,params.is_rooted);
+	//Alignment aln(params.aln_file, params.sequence_type, params.intype);
+	NodeVector branch1, branch2;
+	tree.getBranches(branch1, branch2);
+	NodeVector::iterator it;
+	int i, j;
+	double U = 0.0;
+	string out_file;
+	out_file = params.out_prefix;
+	out_file += ".upperbounds";
+	ofstream out;
+	out.exceptions(ios::failbit | ios::badbit);
+	out.open((char*)out_file.c_str());
+
+	for(i = 0; i != branch1.size(); i++){
+		vector<int> taxaA, taxaB;
+		tree.getTaxaID(taxaA,branch1[i],branch2[i]);
+		tree.getTaxaID(taxaB,branch2[i],branch1[i]);
+		if(taxaA.size() != 1 && taxaB.size() != 1){
+			Alignment alnA, alnB;
+			alnA.extractSubAlignment(&aln,taxaA,0);
+//			cout<<"Taxa in set A"<<endl;
+//			for(j = 0; j != alnA.size(); j++){
+//				cout<<"pattern "<<j<<".frequency = "<<alnA[j].frequency<<"| LOG = "<<alnA[j].frequency / (double)aln.getNSite() * log(alnA[j].frequency / (double)aln.getNSite())<<endl;
+//				U = U + alnA[j].frequency / (double)aln.getNSite() * log(alnA[j].frequency / (double)aln.getNSite());
+//			}
+
+
+			alnB.extractSubAlignment(&aln,taxaB,0);
+//			cout<<"Taxa in set B"<<endl;
+//			for(j = 0; j != alnB.size(); j++){
+//				cout<<"pattern "<<j<<".frequency = "<<alnB[j].frequency<<"| LOG = "<<alnB[j].frequency/(double)aln.getNSite() * log(alnB[j].frequency / (double)aln.getNSite())<<endl;
+//				U = U + alnB[j].frequency/(double)aln.getNSite() * log(alnB[j].frequency/(double)aln.getNSite());
+//			}
+
+			U = alnA.computeUnconstrainedLogL()+alnB.computeUnconstrainedLogL();
+
+
+			for(j = 0; j < taxaA.size()-1; j++)
+				out<<taxaA[j]<<",";
+			out<<taxaA[taxaA.size()-1]<<"|";
+			for(j = 0; j < taxaB.size()-1; j++)
+				out<<taxaB[j]<<",";
+			out<<taxaB[taxaB.size()-1]<<"|"<<min(taxaA.size(),taxaB.size())/max(taxaA.size(),taxaB.size())<<"|"<<U<<endl;
+		}
+	}
+}
 
 /********************************************************
 	main function
@@ -2212,9 +2263,10 @@ int main(int argc, char *argv[])
 		calcTreeCluster(params);
 	} else if (params.ncbi_taxid) {
 		processNCBITree(params);
-	} else if (params.user_file && params.eco_dag_file) {
-		/**ECOpd analysis*/
+	} else if (params.user_file && params.eco_dag_file) { /**ECOpd analysis*/
 		processECOpd(params);
+//	} else if (params.upper_bound) {
+//		calculateUpperBound(params);
 	} else if (params.aln_file || params.partition_file) {
 		if ((params.siteLL_file || params.second_align) && !params.gbo_replicates)
 		{
