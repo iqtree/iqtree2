@@ -682,7 +682,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.SSE = true;
     params.print_site_lh = 0;
     params.print_tree_lh = false;
-    params.nni_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
     params.whtest_simulations = 1000;
@@ -740,7 +739,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pertubSize = 0.5;
     params.pll = false;
     params.model_eps = 0.1;
-    params.modOpt = true;
+    params.modOpt = false;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -1660,6 +1659,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.speednni = true;
             } else if (strcmp(argv[cnt], "-inni") == 0) {
             	params.inni = true;
+            	params.modOpt = true;
             } else if (strcmp(argv[cnt], "-adapt") == 0) {
             	params.adaptivePerturbation = true;
             	params.inni = true;
