@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <limits>
 #include "timeutil.h"
+#include "nnisearch.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
@@ -3008,7 +3009,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		node21_it->clearPartialLh();
 
 		// compute the score of the swapped topology
-		double score = optimizeOneBranch(node1, node2, false);
+		double score = optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
 		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
 
 		int i=1;
@@ -3016,7 +3017,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			FOR_NEIGHBOR(node1, node2, it)
 			{
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node1))->clearPartialLh();
-				score = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false);
+				score = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
 				nniMoves[cnt].newLen[i] = node1->findNeighbor((*it)->node)->length;
 				i++;
 			}
@@ -3026,7 +3027,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			FOR_NEIGHBOR(node2, node1, it)
 			{
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
-				score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
+				score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
 				//node2_lastnei = (PhyloNeighbor*) (*it);
 				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
 				i++;

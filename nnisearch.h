@@ -23,8 +23,6 @@ const int NO_BRAN_OPT = 1;
 const int ONE_BRAN_OPT = 2;
 const int FIVE_BRAN_OPT = 4;
 
-#define IQTREE_NEWZPERCYCLE 64
-
 /* This is the info you need to copy the vector*/
 typedef struct
 {

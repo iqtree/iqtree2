@@ -1024,7 +1024,7 @@ double IQTree::doTreeSearch() {
 					if (isSuperTree()) {
 						((PhyloSuperTree*) this)->mapTrees();
 					}
-					curScore = optimizeAllBranches(params->numSmoothTree);
+					curScore = optimizeAllBranches(1,TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
 					perturbScore = curScore;
 				}
 			}
@@ -1286,7 +1286,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         	nni2apply = 1;
         applyNNIs(nni2apply);
 
-        curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, 1);
+        curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
 
 		if (verbose_mode >= VB_DEBUG) {
 			cout << "logl: " << curScore << " / NNIs: " << nni2apply << endl;
@@ -1338,7 +1338,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         saveCurrentTree(curScore); // BQM: for new bootstrap
         saveNNITrees(); // optimize 5 branches around NNI, this makes program slower
     }*/
-    curScore = optimizeAllBranches(1);
+    //curScore = optimizeAllBranches(1);
     return curScore;
 }
 

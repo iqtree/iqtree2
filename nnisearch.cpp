@@ -15,6 +15,8 @@
 int nni0;
 int nni5;
 extern Params *globalParam;
+int NNI_MAX_NR_STEP = 1;
+
 /* program options */
 
 int compareDouble(const void * a, const void * b) {
@@ -403,9 +405,9 @@ void _update(pllInstance *tr, partitionList *pr, nodeptr p) {
 		z0[i] = q->z[i];
 
 	if (numBranches > 1)
-		makenewzGeneric(tr, pr, p, q, z0, IQTREE_NEWZPERCYCLE, z, PLL_TRUE);
+		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_TRUE);
 	else
-		makenewzGeneric(tr, pr, p, q, z0, IQTREE_NEWZPERCYCLE, z, PLL_FALSE);
+		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_FALSE);
 
 	for (i = 0; i < numBranches; i++) {
 		if (!tr->partitionConverged[i]) {

@@ -343,6 +343,9 @@ struct NNIInfo {
 };
 
 
+/** maximum number of newton-raphson steps for NNI branch evaluation */
+extern int NNI_MAX_NR_STEP;
+
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 

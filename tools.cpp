@@ -848,6 +848,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -if <file>";
                 params.initial_file = argv[cnt];
+            } else if (strcmp(argv[cnt], "-nni_nr_step") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -nni_nr_step <newton_raphson_steps>";
+                NNI_MAX_NR_STEP = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-ia") == 0) {
                 cnt++;
                 if (cnt >= argc)

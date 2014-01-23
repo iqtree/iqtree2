@@ -930,6 +930,7 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No")
 			<< endl;
 	cout << "Phylogenetic likelihood library: " << (params.pll ? "Yes" : "No") << endl;
+	cout << "Number of Newton-Raphson steps in NNI evaluation: " << NNI_MAX_NR_STEP << " " << PLL_NEWZPERCYCLE << endl;
 	cout << endl;
 }
 
