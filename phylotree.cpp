@@ -2311,7 +2311,7 @@ double PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
     return lh;
 }
 
-double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH) {
+double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
     double negative_lh;
     current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     assert(current_it);
@@ -2321,7 +2321,7 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
     double ferror, optx;
     theta_computed = false;
     if (optimize_by_newton) // Newton-Raphson method
-    	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
+    	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
     else
         // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
@@ -2368,14 +2368,14 @@ void PhyloTree::optimizeAllBranchesLS(PhyloNode *node, PhyloNode *dad) {
         }
 }
 
-double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
+double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRStep) {
     //double tree_lh = optimizeChildBranches(node, dad);
     double tree_lh = -DBL_MAX;
 
     for (NeighborVec::iterator it = (node)->neighbors.begin(); it != (node)->neighbors.end(); it++)
         if ((*it)->node != (dad)) {
             //if (!(*it)->node->isLeaf())
-            double new_tree_lh = optimizeAllBranches((PhyloNode*) (*it)->node, node);
+            double new_tree_lh = optimizeAllBranches((PhyloNode*) (*it)->node, node, maxNRStep);
             /*
              if (new_tree_lh < tree_lh)
              cout << "Wrong " << __func__ << endl;
@@ -2383,12 +2383,12 @@ double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
             tree_lh = new_tree_lh;
         }
     if (dad)
-        tree_lh = optimizeOneBranch(node, dad);
+        tree_lh = optimizeOneBranch(node, dad, maxNRStep);
 
     return tree_lh;
 }
 
-double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance) {
+double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
     if (verbose_mode >= VB_MAX)
         cout << "Optimizing branch lengths (max " << my_iterations << " loops)..." << endl;
     double tree_lh = computeLikelihood();
@@ -2397,7 +2397,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance) {
     }
     //cout << tree_lh << endl;
     for (int i = 0; i < my_iterations; i++) {
-        double new_tree_lh = optimizeAllBranches((PhyloNode*) root);
+        double new_tree_lh = optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
         /*
          clearAllPartialLH();
          double new_tree_lh2 = computeLikelihood();

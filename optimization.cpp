@@ -378,9 +378,8 @@ double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double x
 	return optx;
 }
 
-double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm, double &d2l)
+double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm, double &d2l, int maxNRStep)
 {
-	const int MAXIT = 64;
 	int j;
 	double df,dx,dxold,f;
 	double temp,xh,xl,rts, fold, finit;
@@ -403,7 +402,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 	}
 
 	dx=dxold=fabs(xh-xl);
-	for (j=1;j<=MAXIT;j++) {
+	for (j=1;j<=maxNRStep;j++) {
 		if (
 			(df <= 0.0) // function is concave
 			|| (fm > fold + xacc) // increasing
@@ -423,7 +422,10 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 			d2l = df;
 			if (temp == rts) return rts;
 		}
-		if (fabs(dx) < xacc) { fm = computeFunction(rts); return rts; }
+		if (fabs(dx) < xacc || (j == maxNRStep)) {
+			fm = computeFunction(rts);
+			return rts;
+		}
 		fold = fm;
 		fm = computeFuncDerv(rts,f,df);
 		if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) nrerror("Wrong computeFuncDerv");
@@ -450,10 +452,10 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 	return rts;
 }
 
-double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm)
+double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm, int maxNRStep)
 {
 	double var;
-	double optx = minimizeNewton(x1, xguess, x2, xacc, fm, var);
+	double optx = minimizeNewton(x1, xguess, x2, xacc, fm, var, maxNRStep);
 	return optx;
 }
 

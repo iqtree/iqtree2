@@ -1201,6 +1201,13 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	}
 	iqtree.setModel(iqtree.getModelFactory()->model);
 	iqtree.setRate(iqtree.getModelFactory()->site_rate);
+
+	if (params.pll) {
+		if (iqtree.getRate()->getNDiscreteRate() == 1) {
+			// TODO: change rateHetModel to PLL_CAT in case of non-Gamma model
+		}
+	}
+
 	iqtree.setStartLambda(params.lambda);
 	if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();

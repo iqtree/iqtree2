@@ -1706,6 +1706,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
                 params.parbran = true;
             } else if (strcmp(argv[cnt], "-wbt") == 0) {
+            	// TODO: WTF ?
                 params.write_best_trees = true;
             } else if (strcmp(argv[cnt], "-x") == 0) {
                 cnt++;

@@ -1311,7 +1311,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         	nni2apply = 1;
         applyNNIs(nni2apply);
 
-        curScore = optimizeAllBranches(1);
+        curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, 1);
 
 		if (verbose_mode >= VB_DEBUG) {
 			cout << "logl: " << curScore << " / NNIs: " << nni2apply << endl;

@@ -486,14 +486,14 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 	}
 }
 
-double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance) {
+double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
 	double tree_lh = 0.0;
 	int ntrees = size();
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: tree_lh)
 	#endif
 	for (int i = 0; i < ntrees; i++) {
-		tree_lh += at(i)->optimizeAllBranches(my_iterations, tolerance);
+		tree_lh += at(i)->optimizeAllBranches(my_iterations, tolerance, maxNRStep);
 		if (verbose_mode >= VB_MAX)
 			at(i)->printTree(cout, WT_BR_LEN + WT_NEWLINE);
 	}

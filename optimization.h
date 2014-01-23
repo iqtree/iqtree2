@@ -77,12 +77,11 @@ public:
 		@param tolerance tolerance of x-value to stop the iterations
 		@param fx (OUT) function value at the minimum x found
 		@param var (OUT) variance estimate of x
+		@param maxNRStep max number of NR steps
 	*/
-	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f);
+	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f, int maxNRStep = 100);
 
-	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f, double &d2l);
-
-	double minimizeNewtonTung(double x1, double xguess, double x2, double xacc, double &fm);
+	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f, double &d2l, int maxNRStep);
 
 	double minimizeNewtonSafeMode(double xmin, double xguess, double xmax, double tolerance, double &f);
 
@@ -136,6 +135,7 @@ public:
 	double brent(double ax, double bx, double cx, double tol, double *xmin);
 
 private:
+
 
 	double brent_opt (double ax, double bx, double cx, double tol,
 		double *foptx, double *f2optx, double fax, double fbx, double fcx);
