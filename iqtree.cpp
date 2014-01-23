@@ -1313,11 +1313,11 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
                 break;
             }
 
-			if (verbose_mode >= VB_MED) {
+			//if (verbose_mode >= VB_MED) {
 				cout << "logl=" << curScore << " after applying " << nni2apply << " NNIs for lambda = " << curLambda
 						<< " is worse than logl=" << vec_nonconf_nni.at(0).newloglh
 						<< " of the best NNI. Roll back tree ..." << endl;
-			}
+			//}
             curLambda = curLambda * 0.5;
             // restore the tree by reverting all NNIs
             applyNNIs(nni2apply, false);
