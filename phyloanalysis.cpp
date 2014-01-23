@@ -1367,6 +1367,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		}
 
 		iqtree.readTreeString(bestTreeString);
+		if (iqtree.isSuperTree())
+			((PhyloSuperTree*) &iqtree)->mapTrees();
 		if (params.modOpt) {
 			iqtree.initializeAllPartialLh();
 			iqtree.clearAllPartialLH();
