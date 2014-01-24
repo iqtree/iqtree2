@@ -899,6 +899,7 @@ double IQTree::doTreeSearch() {
 	// keep the best tree into a string
 	stringstream best_tree_string;
 	stringstream best_tree_topo_ss;
+	stringstream perturb_tree_string;
 	printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 	printTree(best_tree_topo_ss, WT_TAXON_ID + WT_SORT_TAXA);
 	string best_tree_topo = best_tree_topo_ss.str();
@@ -1027,6 +1028,9 @@ double IQTree::doTreeSearch() {
 					curScore = optimizeAllBranches(1,TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
 					perturbScore = curScore;
 				}
+
+				perturb_tree_string.seekp(0, ios::beg);
+				printTree(perturb_tree_string);
 			}
 		}
 
@@ -1158,11 +1162,13 @@ double IQTree::doTreeSearch() {
 						usePerturbWeak = true;
 					}
 					numNonImpIter = 0;
+					cout << perturb_tree_string.str() << endl;
 				} else {
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << bestScore;
 					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
 				}
 				stop_rule.addImprovedIteration(curIteration);
+
 			} else {
 				// higher likelihood but the same tree topology
 				bestScore = curScore;
