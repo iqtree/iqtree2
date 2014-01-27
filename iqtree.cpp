@@ -1162,7 +1162,7 @@ double IQTree::doTreeSearch() {
 						usePerturbWeak = true;
 					}
 					numNonImpIter = 0;
-					cout << perturb_tree_string.str() << endl;
+					//cout << perturb_tree_string.str() << endl;
 				} else {
 					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << bestScore;
 					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
