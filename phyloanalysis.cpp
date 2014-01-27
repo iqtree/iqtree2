@@ -976,7 +976,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.pllAttr.saveMemory = PLL_FALSE;
 		iqtree.pllAttr.useRecom = PLL_FALSE;
 		iqtree.pllAttr.randomNumberSeed = params.ran_seed;
-		iqtree.pllAttr.numberOfThreads = 8; /* This only affects the pthreads version */
+		iqtree.pllAttr.numberOfThreads = 2; /* This only affects the pthreads version */
 
 		if (iqtree.pllInst != NULL) {
 			pllDestroyInstance(iqtree.pllInst);

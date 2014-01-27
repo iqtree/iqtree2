@@ -103,7 +103,7 @@ set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -std=c99 -Wno-deprecated ${COMBINED_FLAGS}"
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_C_FLAGS_RELEASE "-O2 -msse3 -fomit-frame-pointer -funroll-loops")
-if (AVX)
+if (CMAKE_BUILD_TYPE MATCHES "avx")
   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -D__SSE3 -D__AVX -mavx")
 else()
   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -D__SSE3")
@@ -118,8 +118,10 @@ set(CMAKE_C_FLAGS_MEM "-g -O1 -D__SSE3 -msse3")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -D__SSE3 -msse3")
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g -D__SSE3 -msse3")
 
-set(CMAKE_C_FLAGS_PARALLEL "${CMAKE_C_FLAGS_RELEASE} -D_USE_PTHREADS -pthread")
-set(CMAKE_CXX_FLAGS_PARALLEL "${CMAKE_C_FLAGS_RELEASE} -pthread")
+if (CMAKE_BUILD_TYPE STREQUAL "parallel_sse3" OR CMAKE_BUILD_TYPE STREQUAL "parallel_avx" )
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_RELEASE} -D_USE_PTHREADS -pthread")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE} -pthread")  
+endif()  
 
 
 
