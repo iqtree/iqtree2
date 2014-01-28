@@ -1257,8 +1257,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
         iqtree.printResultTree("LeastSquareTree");
 	}
 
-	double t_tree_search_start, t_tree_search_end;
-	t_tree_search_start = getCPUTime();
+	double cputime_search_start, cputime_search_end;
+	double clocktime_search_start, clocktime_search_end;
+	cputime_search_start = getCPUTime();
+	clocktime_search_start = getRealTime();
 
 	if (params.parsimony) {
 		iqtree.enable_parsimony = true;
@@ -1559,6 +1561,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	}
 
+	cputime_search_end = getCPUTime();
+	double treeSearchTime = (cputime_search_end - cputime_search_start);
+	clocktime_search_end = getRealTime();
+	double clocktime_search = clocktime_search_end - clocktime_search_start;
+
 	if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();
 
@@ -1568,7 +1575,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.initializeAllPartialLh();
 		iqtree.clearAllPartialLH();
 		cout << "Optimizing model parameters" << endl;
-		iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD_PARAMOPT));
+		iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, 0.1));
 	} else {
 		iqtree.setBestScore(iqtree.curScore);
 	}
@@ -1578,8 +1585,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 	cout << endl;
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
-	t_tree_search_end = getCPUTime();
-	double treeSearchTime = (t_tree_search_end - t_tree_search_start);
 
 	/* root the tree at the first sequence */
 	iqtree.root = iqtree.findLeafName(alignment->getSeqName(0));
@@ -1689,7 +1694,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	t_end = getCPUTime();
 	params.run_time = (t_end - t_begin);
 	cout << endl;
-	cout << "CPU time used for tree reconstruction: " << treeSearchTime
+	cout << "CPU time used for tree search: " << treeSearchTime
+			<< " sec (" << convert_time(treeSearchTime) << ")" << endl;
+	cout << "Wall-clock time used for tree search: " << clocktime_search
 			<< " sec (" << convert_time(treeSearchTime) << ")" << endl;
 	cout << "Total CPU time used: " << (double) params.run_time << " sec ("
 			<< convert_time((double) params.run_time) << ")" << endl;
