@@ -1,4 +1,4 @@
-if (CMAKE_BUILD_TYPE STREQUAL "parallel_avx")
+if (CMAKE_BUILD_TYPE MATCHES "parallel_avx")
   message("Building PARALLEL_AVX version of PLL")
   add_library(pll 
   avxLikelihood.c
@@ -27,7 +27,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "parallel_avx")
   trash.c
   treeIO.c
   utils.c)
-elseif (CMAKE_BUILD_TYPE STREQUAL "parallel_sse3")
+elseif (CMAKE_BUILD_TYPE MATCHES "parallel_sse3")
   message("Building PARALLEL_SSE3 version of PLL")  
   add_library(pll 
   alignment.c
@@ -55,7 +55,7 @@ elseif (CMAKE_BUILD_TYPE STREQUAL "parallel_sse3")
   trash.c
   treeIO.c
   utils.c)
-elseif (CMAKE_BUILD_TYPE STREQUAL "avx")
+elseif (CMAKE_BUILD_TYPE MATCHES "avx")
   message("Building AVX version of PLL")  
   add_library(pll 
     avxLikelihood.c
