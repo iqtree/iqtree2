@@ -1015,7 +1015,7 @@ double IQTree::doTreeSearch() {
 					pllNewickTree *perturbTree = pllNewickParseString(perturbTreeString.str().c_str());
 					pllTreeInitTopologyNewick(pllInst, perturbTree, PLL_FALSE);
 					pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-					pllTreeEvaluate(pllInst, pllPartitions, 2);
+					pllTreeEvaluate(pllInst, pllPartitions, params->numSmoothTree);
 					pllNewickParseDestroy(&perturbTree);
 					curScore = pllInst->likelihood;
 					perturbScore = curScore;
@@ -1050,7 +1050,6 @@ double IQTree::doTreeSearch() {
 			setAlignment(saved_aln);
 			initializeAllPartialLh();
 			clearAllPartialLH();
-			curScore = optimizeAllBranches();
 		}
 		if (isSuperTree())
 			((PhyloSuperTree*) this)->computeBranchLengths();
