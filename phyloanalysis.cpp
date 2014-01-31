@@ -1132,7 +1132,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.setAlignment(alignment);
 		double end = getCPUTime();
 		cout << end - start << " seconds" << endl;
-		numParsTree = params.numParsimony;
+		numParsTree = params.numParsTrees;
 	} else {
 		double start = getCPUTime();
 		// This is the old default option: using BIONJ as starting tree
@@ -1282,8 +1282,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		if (params.pll) {
 			pllNewickTree *newick = pllNewickParseString(parsTree[0].c_str());
 			pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-			pllInitModel(iqtree.pllInst, iqtree.pllPartitions,
-					iqtree.pllAlignment);
+			pllInitModel(iqtree.pllInst, iqtree.pllPartitions,iqtree.pllAlignment);
 			iqtree.inputModelParam2PLL();
 			pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
 			pllNewickParseDestroy(&newick);
@@ -1291,8 +1290,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 		for (int treeNr = 0; treeNr < numParsTree; treeNr++) {
 			if (treeNr >= 1) {
-				iqtree.pllInst->randomNumberSeed = params.ran_seed
-						+ treeNr * 12345;
+				iqtree.pllInst->randomNumberSeed = params.ran_seed + treeNr * 12345;
 				pllComputeRandomizedStepwiseAdditionParsimonyTree(
 						iqtree.pllInst, iqtree.pllPartitions);
 				Tree2String(iqtree.pllInst->tree_string, iqtree.pllInst,
@@ -1309,13 +1307,13 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				stringstream tree;
 				iqtree.printTree(tree);
 				parsTree[treeNr] = tree.str();
+				//cout << tree.str() << endl;
 			}
 			if (params.pll) {
 				pllNewickTree *newick = pllNewickParseString(parsTree[treeNr].c_str());
 				pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions,
-						iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, 8);
+				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
+				//pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, params.numSmoothTree);
 				pllNewickParseDestroy(&newick);
 				iqtree.curScore = iqtree.pllInst->likelihood;
 				cout << "logl of starting tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
@@ -1335,7 +1333,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 							PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
 							PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 					bestTreeString = string(iqtree.pllInst->tree_string);
-					iqtree.readTreeString(bestTreeString);
 					cout << "BETTER SCORE FOUND: " << iqtree.bestScore << endl;
 				}
 			} else {
@@ -1346,9 +1343,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				if (iqtree.isSuperTree())
 					((PhyloSuperTree*) &iqtree)->mapTrees();
 				iqtree.initializeAllPartialLh();
-				iqtree.curScore = iqtree.optimizeAllBranches(8);
-				cout << "logl of starting tree " << treeNr + 1 << ": "
-						<< iqtree.curScore << endl;
+				iqtree.curScore = iqtree.optimizeAllBranches(params.numSmoothTree);
+				cout << "logl of starting tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
 				iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
 				cout << "logl of fastNNI " << treeNr + 1 << ": "
 						<< iqtree.curScore << " (NNIs: " << nni_count

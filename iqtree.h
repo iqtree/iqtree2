@@ -193,6 +193,17 @@ public:
      */
     void doRandomNNIs(int numNNI);
 
+    /**
+     *  If the tree in question has higher logl than the worst tree in the reference set,
+     *  replace the worst tree with that one
+     *
+     *  @param treeString the tree to be considered
+     *  @param treeLolg log-likelihood of the tree
+     *  @return whether or not the reference set was updated
+     */
+    bool updateReferenceTrees(string treeString, double treeLogl);
+
+
 
     /**
      *   get model parameters from IQTree and input them into PLL
@@ -216,14 +227,6 @@ public:
     double perturb(int times);
 
     /**
-     * Carry out Iterated Local Search
-     * @param numIter number of iteration
-     * @param perturbLevel the level of perturbation
-     * @return tree's score
-     */
-    double doILS(Params &params, int perturbLevel);
-
-    /**
      * TODO
      * @param node1
      * @param node2
@@ -232,7 +235,7 @@ public:
     double swapTaxa(PhyloNode *node1, PhyloNode *node2);
 
     /**
-            perform all IQPNNI iterations
+            perform tree search
             @return best likelihood found
      */
     double doTreeSearch();
@@ -517,11 +520,6 @@ protected:
      */
     vector<NNIMove> posNNIs;
 
-    /**
-     *  data structure to store delta LH (in NNICUT heuristic)
-     */
-    NNICUT nnicut;
-
 
     /**
             List contains non-conflicting NNI moves for the current tree;
@@ -573,6 +571,11 @@ public:
      * The current best score found
      */
     double bestScore;
+
+    /**
+     *  A set of reference trees which are for the evolutionary tree search
+     */
+    unordered_map<string, double> referenceTrees;
 
     /****** following variables are for ultra-fast bootstrap *******/
 

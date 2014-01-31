@@ -71,8 +71,6 @@ typedef struct {
 } NNICUT;
 
 typedef struct {
-	vector<pllNNIMove> nniList;
-	bool updateNNIList;
 	bool speednni;
 	vector<pllNNIMove> posNNIList; // positive NNI list
 	unordered_set<string> affectBranches; // Set of branches that are affected by the previous NNIs

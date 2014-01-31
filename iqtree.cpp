@@ -59,8 +59,6 @@ void IQTree::init() {
     pllPartitions = NULL;
     //boot_splits = new SplitGraph;
     //initLeafFrequency();
-    nnicut.num_delta = 0;
-    nnicut.delta_min = DBL_MAX;
     diversification = false;
 }
 
@@ -157,7 +155,6 @@ void IQTree::setParams(Params &params) {
         cout << "Max candidate trees (tau): " << max_candidate_trees << endl;
     }
 
-    nnicut.doNNICut = params.estimate_nni_cutoff;
     if (params.root_state) {
         if (strlen(params.root_state) != 1)
             outError("Root state must have exactly 1 character");
@@ -690,6 +687,26 @@ void IQTree::doParsimonyReinsertion() {
     fixNegativeBranch(false);
 }
 
+bool IQTree::updateReferenceTrees(string treeString, double treeLogl) {
+	bool updated = false;
+	readTreeString(treeString);
+	stringstream treeTopoSS;
+	printTree(treeTopoSS, WT_TAXON_ID + WT_SORT_TAXA);
+	string treeTopo = treeTopoSS.str();
+	// get the worst logl
+	double worstLogl = 0.0;
+	for (unordered_map<string, double>::iterator it = referenceTrees.begin(); it != referenceTrees.end(); it++) {
+		if (it->second < worstLogl) {
+			worstLogl = it->second;
+		}
+	}
+	if (referenceTrees.size() < params->popSize || (treeLogl > worstLogl && referenceTrees.find(treeTopo) == referenceTrees.end())) {
+		referenceTrees.insert(make_pair(treeTopo, treeLogl));
+		updated = true;
+	}
+	return updated;
+}
+
 void IQTree::doRandomNNIs(int numNNI) {
 	map<int, Node*> usedNodes;
 	NodeVector nodeList1, nodeList2;
@@ -753,7 +770,6 @@ void IQTree::inputModelParam2PLL() {
 		alpha = PLL_ALPHA_MAX;
 	if (aln->num_states == 4) {
 		// get the rate parameters
-		// TODO Ask Minh whether getNumRateEntries also return 6 for model like HKY, F81, ...
 		double *rate_param = new double[6];
 		getModel()->getRateMatrix(rate_param);
 		// get the state frequencies
@@ -865,6 +881,8 @@ double IQTree::perturb(int times) {
 double IQTree::doTreeSearch() {
 	if (params->speednni) {
 		searchinfo.speednni = true;
+	} else {
+		searchinfo.speednni = false;
 	}
 	//double bestIQPScore = -DBL_MAX + 100;
 
@@ -1015,7 +1033,7 @@ double IQTree::doTreeSearch() {
 					pllNewickTree *perturbTree = pllNewickParseString(perturbTreeString.str().c_str());
 					pllTreeInitTopologyNewick(pllInst, perturbTree, PLL_FALSE);
 					pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-					pllTreeEvaluate(pllInst, pllPartitions, params->numSmoothTree);
+					//pllTreeEvaluate(pllInst, pllPartitions, params->numSmoothTree);
 					pllNewickParseDestroy(&perturbTree);
 					curScore = pllInst->likelihood;
 					perturbScore = curScore;
@@ -1266,7 +1284,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
             /* sort all positive NNI moves (descending) */
             sort(posNNIs.begin(), posNNIs.end());
-            if (verbose_mode >= VB_MED) {
+            if (verbose_mode >= VB_DEBUG) {
             	cout << "curScore: " << curScore << endl;
                 for (int i = 0; i < posNNIs.size(); i++) {
                     cout << "Log-likelihood of positive NNI " << i << " : " << posNNIs[i].newloglh << endl;
@@ -1356,9 +1374,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
     totalNNICount = 0;
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
         searchinfo.curNumNNISteps = nniSteps;
-        searchinfo.nniList.clear();
         searchinfo.posNNIList.clear();
-        searchinfo.updateNNIList = false;
         double newLH = pllDoNNISearch(pllInst, pllPartitions, searchinfo);
         if (searchinfo.curNumAppliedNNIs == 0) { // no admissible NNI was found
         	searchinfo.curLogl = newLH;
@@ -1373,13 +1389,12 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
     	cout << "WARNING: NNI search seems to run unusually too long and thus it was stopped!" << endl;
     }
 
-//	if (abs(searchinfo.curLogl - bestScore) < 0.1 || searchinfo.curLogl > bestScore) {
-//		pllTreeEvaluate(pllInst, pllPartitions, 2);
-//		searchinfo.curLogl = pllInst->likelihood;
-//	}
+	if (abs(searchinfo.curLogl - bestScore) < 0.1 || searchinfo.curLogl > bestScore) {
+		pllTreeEvaluate(pllInst, pllPartitions, 1);
+		searchinfo.curLogl = pllInst->likelihood;
+	}
 
     totalNNICount = searchinfo.numAppliedNNIs;
-    //cout << "Number of unevaluated quartet: " << searchinfo.numUnevalQuartet << endl;
     return searchinfo.curLogl;
 }
 
@@ -1469,12 +1484,6 @@ int IQTree::getDelete() const {
 
 void IQTree::setDelete(int _delete) {
 	k_delete = _delete;
-}
-
-void IQTree::estDeltaMin() {
-    sort(nnicut.delta, nnicut.delta + MAX_NUM_DELTA);
-    int index = floor(MAX_NUM_DELTA * 0.95);
-    nnicut.delta_min = nnicut.delta[index];
 }
 
 void IQTree::changeBranLen(PhyloNode *node1, PhyloNode *node2, double newlen) {

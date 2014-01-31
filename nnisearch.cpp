@@ -15,6 +15,7 @@
 int nni0;
 int nni5;
 extern Params *globalParam;
+extern VerboseMode verbose_mode;
 int NNI_MAX_NR_STEP = 1;
 
 /* program options */
@@ -269,7 +270,6 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	topol* curTree = _setupTopol(tr);
 	saveTree(tr, curTree, numBranches);
 
-
 	/* evaluate NNIs */
 	pllEvalAllNNIs(tr, pr, searchinfo);
 
@@ -280,10 +280,14 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	/* apply non-confilicting positive NNIs */
 	if (searchinfo.posNNIList.size() != 0) {
 		sort(searchinfo.posNNIList.begin(), searchinfo.posNNIList.end(), comparePLLNNIMove);
-		for (vector<pllNNIMove>::reverse_iterator rit = searchinfo.posNNIList.rbegin();
-				rit != searchinfo.posNNIList.rend(); ++rit) {
-			if (selectedNodes.find((*rit).p->number) == selectedNodes.end()
-					&& selectedNodes.find((*rit).p->back->number) == selectedNodes.end()) {
+        if (verbose_mode >= VB_MED) {
+        	cout << "curScore: "  << searchinfo.curLogl << endl;
+            for (int i = 0; i < searchinfo.posNNIList.size(); i++) {
+                cout << "Log-likelihood of positive NNI " << i << " : " << searchinfo.posNNIList[i].likelihood << endl;
+            }
+        }
+		for (vector<pllNNIMove>::reverse_iterator rit = searchinfo.posNNIList.rbegin(); rit != searchinfo.posNNIList.rend(); ++rit) {
+			if (selectedNodes.find((*rit).p->number) == selectedNodes.end() && selectedNodes.find((*rit).p->back->number) == selectedNodes.end()) {
 				selectedNNIs.push_back((*rit));
 				selectedNodes.insert((*rit).p->number);
 				selectedNodes.insert((*rit).p->back->number);
@@ -301,8 +305,9 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 				vector<string> aBranches = getAffectedBranches(tr, (*it).p);
 				searchinfo.affectBranches.insert(aBranches.begin(), aBranches.end());
 			}
-
-			updateBranchLengthForNNI(tr, pr, (*it));
+			if (selectedNNIs.size() == 1) {
+				updateBranchLengthForNNI(tr, pr, (*it));
+			}
 		}
 		if (selectedNNIs.size() != 0) {
 			pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
@@ -325,7 +330,9 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 					int count = numNNI;
 					for (vector<pllNNIMove>::reverse_iterator rit = selectedNNIs.rbegin(); rit != selectedNNIs.rend(); ++rit) {
 						doOneNNI(tr, pr, (*rit).p, (*rit).nniType, TOPO_ONLY);
-						updateBranchLengthForNNI(tr, pr, (*rit));
+						if (numNNI == 1) {
+							updateBranchLengthForNNI(tr, pr, (*rit));
+						}
 						count--;
 						if (count == 0) {
 							break;
@@ -342,8 +349,6 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 			}
 			if (tr->likelihood - initLH < 0.1) {
 				searchinfo.curNumAppliedNNIs = 0;
-				// Here we need to update searchinfo.nniList;
-				searchinfo.updateNNIList = true;
 			}
 			finalLH = tr->likelihood;
 		}
@@ -451,7 +456,6 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 		if (numBranches > 1 && !tr->useRecom) {
 			pllNewviewGeneric(tr, pr, p, PLL_TRUE);
 			pllNewviewGeneric(tr, pr, q, PLL_TRUE);
-
 		} else {
 			pllNewviewGeneric(tr, pr, p, PLL_FALSE);
 			pllNewviewGeneric(tr, pr, q, PLL_FALSE);
@@ -462,7 +466,6 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 		if (numBranches > 1 && !tr->useRecom) {
 			pllNewviewGeneric(tr, pr, p, PLL_TRUE);
 			pllNewviewGeneric(tr, pr, q, PLL_TRUE);
-
 		} else {
 			pllNewviewGeneric(tr, pr, p, PLL_FALSE);
 			pllNewviewGeneric(tr, pr, q, PLL_FALSE);
@@ -562,6 +565,8 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		nni0.z4[i] = q->next->next->z[i];
 	}
 
+	pllNNIMove bestNNI;
+
 	/* do an NNI move of type 1 */
 	double lh1 = doOneNNI(tr, pr, p, 0, searchinfo.evalType);
 	pllNNIMove nni1;
@@ -578,12 +583,6 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	nni1.likelihood = lh1;
 	nni1.loglDelta = lh1 - nni0.likelihood;
 	nni1.negLoglDelta = -nni1.loglDelta;
-	searchinfo.nniList.push_back(nni1);
-
-	if (nni1.likelihood > searchinfo.curLogl + 1e-6) {
-		numPosNNI++;
-		searchinfo.posNNIList.push_back(nni1);
-	}
 
 	/* Restore previous NNI move */
 	doOneNNI(tr, pr, p, 0, TOPO_ONLY);
@@ -608,7 +607,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	pllNNIMove nni2;
 	nni2.p = p;
 	nni2.nniType = 1;
-	// Store the optimized and unoptimized central branch length
+	// Store the optimized central branch length
 	for (i = 0; i < PLL_NUM_BRANCHES; i++) {
 		nni2.z0[i] = p->z[i];
 		nni2.z1[i] = p->next->z[i];
@@ -619,12 +618,19 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	nni2.likelihood = lh2;
 	nni2.loglDelta = lh2 - nni0.likelihood;
 	nni2.negLoglDelta = -nni2.loglDelta;
-	searchinfo.nniList.push_back(nni2);
 
-	if (nni2.likelihood > searchinfo.curLogl + 1e-6) {
-		numPosNNI++;
-		searchinfo.posNNIList.push_back(nni2);
+	if (nni2.likelihood > nni1.likelihood) {
+		bestNNI = nni2;
+	} else {
+		bestNNI = nni1;
 	}
+
+	if (bestNNI.likelihood > searchinfo.curLogl + 1e-6) {
+		numPosNNI++;
+		searchinfo.posNNIList.push_back(bestNNI);
+	}
+
+
 
 	/* Restore previous NNI move */
 	doOneNNI(tr, pr, p, 1, TOPO_ONLY);

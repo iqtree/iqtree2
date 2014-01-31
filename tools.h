@@ -354,7 +354,15 @@ extern int NNI_MAX_NR_STEP;
  */
 struct Params {
 
-	int numParsimony;
+	/**
+	 *  Number of starting parsimony trees
+	 */
+	int numParsTrees;
+
+	/**
+	 *  Population size
+	 */
+	int popSize;
 
 	/**
 	 *  heuristics for speeding up NNI evaluation
@@ -375,6 +383,7 @@ struct Params {
 	 *  re-optimize model parameters after a better tree is found
 	 */
 	bool modOpt;
+
 
 	/**
 	 *  Carry out iterated local search using NNI only.
