@@ -650,6 +650,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ls_var_type = OLS;
     params.nni0 = false;
     params.adaptivePerturbation = false;
+    params.popSize = 5;
     params.evalType = 2;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -1649,6 +1650,9 @@ void parseArg(int argc, char *argv[], Params &params) {
             		throw "Use -numpars <number_of_parsimony_trees>";
             	params.popSize = convert_int(argv[cnt]);
             	assert(params.popSize < params.numParsTrees);
+            	params.evol = true;
+        	} else if (strcmp(argv[cnt], "-evol") == 0) {
+        		params.evol = true;
         	} else if (strcmp(argv[cnt], "-beststart") == 0) {
                 params.bestStart = true;
                 cnt++;

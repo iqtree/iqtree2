@@ -305,9 +305,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 				vector<string> aBranches = getAffectedBranches(tr, (*it).p);
 				searchinfo.affectBranches.insert(aBranches.begin(), aBranches.end());
 			}
-			if (selectedNNIs.size() == 1) {
-				updateBranchLengthForNNI(tr, pr, (*it));
-			}
+			updateBranchLengthForNNI(tr, pr, (*it));
 		}
 		if (selectedNNIs.size() != 0) {
 			pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
@@ -330,9 +328,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 					int count = numNNI;
 					for (vector<pllNNIMove>::reverse_iterator rit = selectedNNIs.rbegin(); rit != selectedNNIs.rend(); ++rit) {
 						doOneNNI(tr, pr, (*rit).p, (*rit).nniType, TOPO_ONLY);
-						if (numNNI == 1) {
-							updateBranchLengthForNNI(tr, pr, (*rit));
-						}
+						updateBranchLengthForNNI(tr, pr, (*rit));
 						count--;
 						if (count == 0) {
 							break;

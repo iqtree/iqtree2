@@ -365,6 +365,11 @@ struct Params {
 	int popSize;
 
 	/**
+	 *  use population based approached
+	 */
+	bool evol;
+
+	/**
 	 *  heuristics for speeding up NNI evaluation
 	 */
 	bool speednni;

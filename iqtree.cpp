@@ -687,23 +687,43 @@ void IQTree::doParsimonyReinsertion() {
     fixNegativeBranch(false);
 }
 
-bool IQTree::updateReferenceTrees(string treeString, double treeLogl) {
+void IQTree::setBestTree(string treeString, double treeLogl) {
+	bestTreeString = treeString;
+	bestScore = treeLogl;
+}
+
+bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
 	bool updated = false;
-	readTreeString(treeString);
+	setTreeString(treeString);
 	stringstream treeTopoSS;
 	printTree(treeTopoSS, WT_TAXON_ID + WT_SORT_TAXA);
 	string treeTopo = treeTopoSS.str();
+
 	// get the worst logl
-	double worstLogl = 0.0;
-	for (unordered_map<string, double>::iterator it = referenceTrees.begin(); it != referenceTrees.end(); it++) {
+	double worstLogl;
+	if (refTreeSet.empty()) {
+		worstLogl = -DBL_MAX;
+	} else {
+		worstLogl = 0.0;
+	}
+
+	string worstTree;
+	for (unordered_map<string, double>::iterator it = refTreeSet.begin(); it != refTreeSet.end(); it++) {
 		if (it->second < worstLogl) {
 			worstLogl = it->second;
+			worstTree = it->first;
 		}
 	}
-	if (referenceTrees.size() < params->popSize || (treeLogl > worstLogl && referenceTrees.find(treeTopo) == referenceTrees.end())) {
-		referenceTrees.insert(make_pair(treeTopo, treeLogl));
+	if (treeLogl > worstLogl && refTreeSet.find(treeTopo) == refTreeSet.end()) {
+		if (refTreeSet.size() == params->popSize) {
+			refTreeSet.erase(worstTree);
+			refTreeSetSorted.erase(refTreeSetSorted.begin());
+		}
+		refTreeSet.insert(make_pair(treeTopo, treeLogl));
+		refTreeSetSorted.insert(make_pair(treeLogl, treeString));
 		updated = true;
 	}
+
 	return updated;
 }
 
@@ -1020,6 +1040,15 @@ double IQTree::doTreeSearch() {
 					} else {
 						numNNI = params->pertubSize * (aln->getNSeq() - 3);
 					}
+					if (params->evol) {
+						int index = random_int(params->popSize);
+						vector<string> trees;
+						for (map<double, string>::iterator it = refTreeSetSorted.begin(); it != refTreeSetSorted.end(); ++it) {
+							trees.push_back(it->second);
+						}
+						assert(trees.size() == params->popSize);
+						setTreeString(trees[index]);
+					}
 					doRandomNNIs(numNNI);
 				} else {
 					doIQP();
@@ -1058,6 +1087,11 @@ double IQTree::doTreeSearch() {
 		int nni_steps;
 		if (params->pll) {
 			curScore = pllOptimizeNNI(nni_count, nni_steps, searchinfo);
+			int printBranchLengths = PLL_TRUE;
+			Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths,
+					PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
+			string tree = string(pllInst->tree_string);
+			setTreeString(tree);
 		} else {
 			curScore = optimizeNNI(nni_count, nni_steps);
 		}
@@ -1069,8 +1103,9 @@ double IQTree::doTreeSearch() {
 			initializeAllPartialLh();
 			clearAllPartialLH();
 		}
-		if (isSuperTree())
+		if (isSuperTree()) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
+		}
 
 		time(&cur_time);
 		double cputime_secs = getCPUTime() - params->startTime;
@@ -1102,51 +1137,10 @@ double IQTree::doTreeSearch() {
 		}
 
 		if (curScore > bestScore) {
-			if (params->pll) {
-				// read new best tree into IQTree's kernel
-				int printBranchLengths = PLL_TRUE;
-				Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths,
-						PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
-				stringstream mytree;
-				mytree << pllInst->tree_string;
-				mytree.seekg(0, ios::beg);
-				freeNode();
-				readTree(mytree, rooted);
-				//setRootNode(params->root);
-				setAlignment(aln);
-			}
-			best_tree_string.seekp(0, ios::beg);
-			printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-			if (params->write_best_trees) {
-				ostringstream iter_string;
-				iter_string << curIteration;
-				printResultTree(iter_string.str());
-			}
-			printResultTree();
-
 			stringstream cur_tree_topo_ss;
 			printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
 			if (cur_tree_topo_ss.str() != best_tree_topo) {
-				if (!params->pll) {
-					curScore = optimizeAllBranches();
-					//cout << "Saving new better tree ..." << endl;
-					best_tree_string.seekp(0, ios::beg);
-					printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-					if (params->write_best_trees) {
-						ostringstream iter_string;
-						iter_string << curIteration;
-						printResultTree(iter_string.str());
-					}
-					printResultTree();
-				}
-				bestScore = curScore;
-				best_tree_topo = cur_tree_topo_ss.str();
-				string perturbType;
-				if (usePerturbWeak && params->inni) {
-					perturbType="weak pertubation";
-				} else {
-					perturbType="strong pertubation";
-				}
+				//cout << "Saving new better tree ..." << endl;
 				if (params->inni) {
 					if (params->modOpt) {
 						//double time_s = getCPUTime();
@@ -1155,7 +1149,7 @@ double IQTree::doTreeSearch() {
 							initializeAllPartialLh();
 							clearAllPartialLH();
 						}
-						bestScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 0.1);
+						curScore = bestScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 0.1);
 						if (params->pll) {
 							inputModelParam2PLL();
 							stringstream treestream;
@@ -1164,15 +1158,7 @@ double IQTree::doTreeSearch() {
 							bestScore = pllLogl;
 							deleteAllPartialLh();
 						}
-						//double time_e = getCPUTime();
-						best_tree_string.seekp(0, ios::beg);
-						printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-						//cout << time_e - time_s << "s" << endl;
-						//cout << "iqtreeLogl: " << iqtreeLogl << " / pllLogl: " << pllLogl << endl;
 					}
-					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << bestScore;
-					cout << " / "<< perturbType;
-					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
 					if (params->adaptivePerturbation && numNonImpIter >= 20) {
 						cout << "Set back perturbation strength." << endl;
 						//searchinfo.evalType = ONE_BRAN_OPT;
@@ -1180,25 +1166,56 @@ double IQTree::doTreeSearch() {
 					}
 					numNonImpIter = 0;
 					//cout << perturb_tree_string.str() << endl;
-				} else {
-					cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << bestScore;
-					cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
 				}
+
 				stop_rule.addImprovedIteration(curIteration);
 
+				string perturbType;
+				if (usePerturbWeak && params->inni) {
+					perturbType="weak pertubation";
+				} else {
+					perturbType="strong pertubation";
+				}
+
+				cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << bestScore;
+				cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
+
 			} else {
-				// higher likelihood but the same tree topology
-				bestScore = curScore;
-				cout << "UPDATE BEST LOG-LIKELIHOOD: " << bestScore << endl;
 				numNonImpIter++;
 			}
+
+			best_tree_string.seekp(0, ios::beg);
+			stringstream tmpTree;
+			printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
+			printTree(tmpTree);
+			setBestTree(tmpTree.str(), curScore);
+			if (params->write_best_trees) {
+				ostringstream iter_string;
+				iter_string << curIteration;
+				printResultTree(iter_string.str());
+			}
+			printResultTree();
+			best_tree_topo = cur_tree_topo_ss.str();
+
 		} else {
 			numNonImpIter++;
-			best_tree_string.seekg(0, ios::beg);
-			freeNode();
-			readTree(best_tree_string, rooted);
-			assignLeafNames();
+			if (!params->evol) {
+				best_tree_string.seekg(0, ios::beg);
+				freeNode();
+				readTree(best_tree_string, rooted);
+				assignLeafNames();
+			}
 		}
+
+		// check the tree can be put into the reference set
+		if (params->evol) {
+			stringstream treess;
+			printTree(treess);
+			bool updated = updateRefTreeSet(treess.str(), curScore);
+//			if (updated)
+//				cout << "Reference set updated" << endl;
+		}
+
 		if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
 			SplitGraph *sg = new SplitGraph;
 			summarizeBootstrap(*sg);

@@ -201,9 +201,7 @@ public:
      *  @param treeLolg log-likelihood of the tree
      *  @return whether or not the reference set was updated
      */
-    bool updateReferenceTrees(string treeString, double treeLogl);
-
-
+    bool updateRefTreeSet(string treeString, double treeLogl);
 
     /**
      *   get model parameters from IQTree and input them into PLL
@@ -381,6 +379,11 @@ public:
     void setBestScore(double score) {
         bestScore = score;
     }
+
+    /**
+     *  set the current tree as the best tree
+     */
+    void setBestTree(string tree, double logl);
 
     /**
             current parsimony score of the tree
@@ -573,9 +576,22 @@ public:
     double bestScore;
 
     /**
-     *  A set of reference trees which are for the evolutionary tree search
+     *  the current best tree
      */
-    unordered_map<string, double> referenceTrees;
+    string bestTreeString;
+
+    /**
+     *  A set of reference trees which are for the evolutionary tree search
+     *  This set only contains tree topologies (without branch length)
+     */
+    unordered_map<string, double> refTreeSet;
+
+	/**
+	 *  A set of reference trees which are sorted according to their logl
+	 *  This set contains complete tree strings (with branch length)
+	 */
+	map<double, string> refTreeSetSorted;
+
 
     /****** following variables are for ultra-fast bootstrap *******/
 

@@ -196,11 +196,17 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     }
 }
 
-void PhyloTree::readTreeString(const string &tree_string) {
+void PhyloTree::setTreeString(const string &tree_string) {
 	stringstream str(tree_string);
 	freeNode();
 	readTree(str, rooted);
 	setAlignment(aln);
+}
+
+string PhyloTree::getTreeString() {
+	stringstream tree_stream;
+	printTree(tree_stream);
+	return tree_stream.str();
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {
