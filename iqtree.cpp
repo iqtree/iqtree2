@@ -1406,10 +1406,10 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
     	cout << "WARNING: NNI search seems to run unusually too long and thus it was stopped!" << endl;
     }
 
-	if (abs(searchinfo.curLogl - bestScore) < 0.1 || searchinfo.curLogl > bestScore) {
-		pllTreeEvaluate(pllInst, pllPartitions, 1);
-		searchinfo.curLogl = pllInst->likelihood;
-	}
+//	if (abs(searchinfo.curLogl - bestScore) < 0.1 || searchinfo.curLogl > bestScore) {
+//		pllTreeEvaluate(pllInst, pllPartitions, 1);
+//		searchinfo.curLogl = pllInst->likelihood;
+//	}
 
     totalNNICount = searchinfo.numAppliedNNIs;
     return searchinfo.curLogl;
