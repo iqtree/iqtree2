@@ -70,7 +70,7 @@ void IQTree::setParams(Params &params) {
     if (params.min_iterations == -1) {
         if (!params.gbo_replicates) {
         	if (params.autostop) {
-                params.min_iterations = aln->getNSeq() * 10;
+                params.min_iterations = aln->getNSeq() * 100;
         	} else if (aln->getNSeq() < 100) {
                 params.min_iterations = 200;
         	} else {

@@ -1537,7 +1537,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		} else if (params.inni) {
 			cout << "Perturbation strength: " << params.pertubSize << endl;
 		}
-		cout << "Number of iterations: ";
+		if (params.autostop) {
+			cout << "Maximum iterations: ";
+		} else {
+			cout << "Number of iterations: ";
+		}
 		if (params.stop_condition == SC_FIXED_ITERATION)
 			cout << params.min_iterations << endl;
 		else
