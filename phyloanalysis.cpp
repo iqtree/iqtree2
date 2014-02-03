@@ -1156,6 +1156,21 @@ void runPhyloAnalysis(Params &params, string &original_model,
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
     }
 
+
+    if (params.pllModOpt) {
+    	double stime = getCPUTime();
+    	stringstream tree;
+    	iqtree.printTree(tree);
+		pllNewickTree *newick = pllNewickParseString(tree.str().c_str());
+		pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+		pllNewickParseDestroy(&newick);
+		pllInitModel(iqtree.pllInst, iqtree.pllPartitions,iqtree.pllAlignment);
+		modOpt(iqtree.pllInst, iqtree.pllPartitions, 0.1);
+		double etime = getCPUTime();
+		cout << endl;
+		cout << "Model optimization by PLL took " << etime - stime << " sec" << endl;
+    }
+
 	bool test_only = params.model_name.substr(0,8) == "TESTONLY";
 	/* initialize substitution model */
 	if (params.model_name.substr(0,4) == "TEST") {
@@ -1232,6 +1247,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
     cout.precision(6);
 	cout << "Optimize model parameters " << (params.optimize_model_rate_joint ? "jointly":"")
 			<< " (tolerace " << params.model_eps << ")... " << endl;
+
+
 
     // Optimize model parameters and branch lengths using ML for the initial tree
     iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
@@ -1322,7 +1339,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				pllNewickTree *newick = pllNewickParseString(parsTree[treeNr].c_str());
 				pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
 				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, params.numSmoothTree);
+				//pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, params.numSmoothTree);
 				pllNewickParseDestroy(&newick);
 				iqtree.curScore = iqtree.pllInst->likelihood;
 				cout << "logl of starting tree " << treeNr + 1 << ": " << iqtree.curScore << endl;

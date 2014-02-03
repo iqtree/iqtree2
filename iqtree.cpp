@@ -69,10 +69,13 @@ IQTree::IQTree(Alignment *aln) :
 void IQTree::setParams(Params &params) {
     if (params.min_iterations == -1) {
         if (!params.gbo_replicates) {
-            if (aln->getNSeq() < 100)
+        	if (params.autostop) {
+                params.min_iterations = aln->getNSeq() * 10;
+        	} else if (aln->getNSeq() < 100) {
                 params.min_iterations = 200;
-            else
+        	} else {
                 params.min_iterations = aln->getNSeq() * 2;
+        	}
             if (params.iteration_multiple > 1)
                 params.min_iterations = aln->getNSeq() * params.iteration_multiple;
         } else {
@@ -965,8 +968,16 @@ double IQTree::doTreeSearch() {
 
 	double prev_time = 0.0;
 	bool usePerturbWeak = true;
-	int numNonImpIter = 0;
+	int nUnsuccessIteration = 0;
 	for (curIteration = 2; !stop_rule.meetStopCondition(curIteration); curIteration++) {
+		if (params->autostop) {
+			if (nUnsuccessIteration == 200) {
+				cout << endl;
+				cout << "No better tree has been found after 200 iterations. Tree search was stopped after "
+						<< curIteration << " iterations!" <<  endl;
+				break;
+			}
+		}
 		//curIQPIter = cur_iteration;
 		double min_elapsed = (getCPUTime() - params->startTime) / 60;
 		if (min_elapsed > params->maxtime) {
@@ -1030,8 +1041,8 @@ double IQTree::doTreeSearch() {
 			} else {
 				if (params->inni) {
 					int numNNI;
-					if (numNonImpIter >= 20 && params->adaptivePerturbation) {
-						if (numNonImpIter == 20) {
+					if (nUnsuccessIteration >= 20 && params->adaptivePerturbation) {
+						if (nUnsuccessIteration == 20) {
 							cout << "Iteration " << curIteration << ": Increase perturbation strength!" << endl;
 						}
 						// increase the perturbation strength
@@ -1159,12 +1170,12 @@ double IQTree::doTreeSearch() {
 							deleteAllPartialLh();
 						}
 					}
-					if (params->adaptivePerturbation && numNonImpIter >= 20) {
+					if (params->adaptivePerturbation && nUnsuccessIteration >= 20) {
 						cout << "Set back perturbation strength." << endl;
 						//searchinfo.evalType = ONE_BRAN_OPT;
 						usePerturbWeak = true;
 					}
-					numNonImpIter = 0;
+					nUnsuccessIteration = 0;
 					//cout << perturb_tree_string.str() << endl;
 				}
 
@@ -1181,7 +1192,7 @@ double IQTree::doTreeSearch() {
 				cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
 
 			} else {
-				numNonImpIter++;
+				nUnsuccessIteration++;
 			}
 
 			best_tree_string.seekp(0, ios::beg);
@@ -1198,7 +1209,7 @@ double IQTree::doTreeSearch() {
 			best_tree_topo = cur_tree_topo_ss.str();
 
 		} else {
-			numNonImpIter++;
+			nUnsuccessIteration++;
 			if (!params->evol) {
 				best_tree_string.seekg(0, ios::beg);
 				freeNode();

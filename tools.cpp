@@ -1666,7 +1666,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -me <model_epsilon>";
                 params.model_eps = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-modopt") == 0) {
+            } else if (strcmp(argv[cnt], "-pllmod") == 0) {
+            	params.pllModOpt = true;
+        	} else if (strcmp(argv[cnt], "-modopt") == 0) {
             	params.modOpt = true;
             } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
@@ -1675,6 +1677,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-inni") == 0) {
             	params.inni = true;
             	params.modOpt = true;
+            } else if (strcmp(argv[cnt], "-auto") == 0) {
+            	params.autostop = true;
             } else if (strcmp(argv[cnt], "-adapt") == 0) {
             	params.adaptivePerturbation = true;
             	params.inni = true;

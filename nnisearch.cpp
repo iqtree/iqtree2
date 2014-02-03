@@ -337,7 +337,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 
 					pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 					pllTreeEvaluate(tr, pr, 1);
-					cout << "Number of NNIs reduced to " << numNNI << ": " << tr->likelihood << endl;
+					//cout << "Number of NNIs reduced to " << numNNI << ": " << tr->likelihood << endl;
 
 					/* Only apply the best NNI after the tree has been rolled back */
 					searchinfo.curNumAppliedNNIs = numNNI;

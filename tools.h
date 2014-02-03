@@ -481,6 +481,11 @@ struct Params {
      */
     bool pllModOpt;
 
+    /**
+     *  Stopping rule for the tree search
+     */
+    bool autostop;
+
     char *binary_aln_file;
 
     /**
