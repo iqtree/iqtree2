@@ -1382,18 +1382,17 @@ void runPhyloAnalysis(Params &params, string &original_model,
 						iqtree.clearAllPartialLH();
 					}
 					// Now re-estimate the model parameters
-					iqtree.bestScore = iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 1.0);
+					iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 1.0);
 					stringstream tmpTree;
 					iqtree.printTree(tmpTree);
-					iqtree.setBestTree(tmpTree.str(), iqtree.bestScore);
+					intermediate_tree = tmpTree.str();
 					if (params.pll) {
 						iqtree.inputModelParam2PLL();
-						iqtree.bestScore = iqtree.curScore = iqtree.inputTree2PLL(tmpTree.str(), true);
+						iqtree.curScore = iqtree.inputTree2PLL(intermediate_tree, true);
 					}
-				} else {
-					iqtree.setBestTree(intermediate_tree, iqtree.curScore);
 				}
 				iqtree.bestScore = iqtree.curScore;
+				iqtree.setBestTree(intermediate_tree, iqtree.bestScore);
 				cout << "BETTER SCORE FOUND: " << iqtree.bestScore << endl;
 			}
 

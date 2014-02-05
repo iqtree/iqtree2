@@ -913,13 +913,11 @@ double IQTree::doTreeSearch() {
 	} else {
 		searchinfo.speednni = false;
 	}
-	//double bestIQPScore = -DBL_MAX + 100;
 
 	time_t begin_time, cur_time;
 	time(&begin_time);
 	string tree_file_name = params->out_prefix;
 	tree_file_name += ".treefile";
-	bestScore = curScore;
 	//printResultTree(params);
 	string treels_name = params->out_prefix;
 	treels_name += ".treels";
