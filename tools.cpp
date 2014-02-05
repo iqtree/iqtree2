@@ -650,7 +650,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ls_var_type = OLS;
     params.nni0 = false;
     params.adaptivePerturbation = false;
-    params.popSize = 5;
+    params.popSize = 2;
     params.evalType = 2;
     params.p_delete = -1;
     params.min_iterations = -1;

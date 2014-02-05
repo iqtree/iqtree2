@@ -696,8 +696,10 @@ void IQTree::setBestTree(string treeString, double treeLogl) {
 }
 
 bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
+	stringstream backupTree;
+	printTree(backupTree);
 	bool updated = false;
-	setTreeString(treeString);
+	readTreeString(treeString);
 	stringstream treeTopoSS;
 	printTree(treeTopoSS, WT_TAXON_ID + WT_SORT_TAXA);
 	string treeTopo = treeTopoSS.str();
@@ -727,6 +729,10 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
 		updated = true;
 	}
 
+	backupTree.seekg(0, ios::beg);
+	freeNode();
+	readTree(backupTree, rooted);
+	setAlignment(aln);
 	return updated;
 }
 
@@ -1058,7 +1064,7 @@ double IQTree::doTreeSearch() {
 							trees.push_back(it->second);
 						}
 						assert(trees.size() == params->popSize);
-						setTreeString(trees[index]);
+						readTreeString(trees[index]);
 					}
 					doRandomNNIs(numNNI);
 				} else {
@@ -1102,7 +1108,7 @@ double IQTree::doTreeSearch() {
 			Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths,
 					PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
 			string tree = string(pllInst->tree_string);
-			setTreeString(tree);
+			readTreeString(tree);
 		} else {
 			curScore = optimizeNNI(nni_count, nni_steps);
 		}
@@ -1160,13 +1166,13 @@ double IQTree::doTreeSearch() {
 							initializeAllPartialLh();
 							clearAllPartialLH();
 						}
-						curScore = bestScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 0.1);
+						curScore = bestScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 1.0);
 						if (params->pll) {
 							inputModelParam2PLL();
 							stringstream treestream;
 							printTree(treestream);
 							double pllLogl = inputTree2PLL(treestream.str());
-							bestScore = pllLogl;
+							curScore = bestScore = pllLogl;
 							deleteAllPartialLh();
 						}
 					}

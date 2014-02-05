@@ -556,7 +556,7 @@ public:
             Read the tree saved with Taxon Names and branch lengths.
             @param tree_string tree string to read from
      */
-    void setTreeString(const string &tree_string);
+    void readTreeString(const string &tree_string);
 
     /**
      * Return the tree string contining taxon names and branch lengths
