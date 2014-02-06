@@ -1080,7 +1080,7 @@ double IQTree::doTreeSearch() {
 					pllNewickTree *perturbTree = pllNewickParseString(perturbTreeString.str().c_str());
 					pllTreeInitTopologyNewick(pllInst, perturbTree, PLL_FALSE);
 					pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-					//pllTreeEvaluate(pllInst, pllPartitions, params->numSmoothTree);
+					pllTreeEvaluate(pllInst, pllPartitions, params->numSmoothTree);
 					pllNewickParseDestroy(&perturbTree);
 					curScore = pllInst->likelihood;
 					perturbScore = curScore;
@@ -1142,7 +1142,7 @@ double IQTree::doTreeSearch() {
 			cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ?
 							"Bootstrap " : "Iteration ") << curIteration << " / Start LogL: "<< perturbScore
 					<< " / End LogL: " << curScore << " / NNIs: "
-					<< nni_count << " / CPU time: " << (int) round(cputime_secs)
+					<< nni_count << " / NNI steps: " << nni_steps << " / CPU time: " << (int) round(cputime_secs)
 					<< "s";
 			if (curIteration > 10 && cputime_secs > 10)
 				cout << " (" << (int) round(cputime_remaining) << "s left)";

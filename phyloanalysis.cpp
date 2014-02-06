@@ -1340,7 +1340,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				pllNewickTree *newick = pllNewickParseString(parsTree[treeNr].c_str());
 				pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
 				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-				//pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, params.numSmoothTree);
+				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, params.numSmoothTree);
 				pllNewickParseDestroy(&newick);
 				iqtree.curScore = iqtree.pllInst->likelihood;
 				cout << "logl of starting tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
