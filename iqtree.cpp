@@ -1167,7 +1167,7 @@ double IQTree::doTreeSearch() {
 							initializeAllPartialLh();
 							clearAllPartialLH();
 						}
-						curScore = bestScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 1.0);
+						curScore = bestScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, params->model_eps);
 						if (params->pll) {
 							inputModelParam2PLL();
 							stringstream treestream;

@@ -1244,6 +1244,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
     	outError("Memory required exceeds your computer RAM size!");
     }
 
+    if (alignment->num_states == 4) {
+    	params.model_eps = 0.1;
+    } else if (alignment->num_states == 20) {
+    	params.model_eps = 0.01;
+    }
     cout.precision(6);
 	cout << "Optimize model parameters " << (params.optimize_model_rate_joint ? "jointly":"")
 			<< " (tolerace " << params.model_eps << ")... " << endl;
@@ -1251,9 +1256,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
 
     // Optimize model parameters and branch lengths using ML for the initial tree
-    //iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
-	// To avoid over-fitting the model parameters with a not so good tree, we just do the model parameter roughly
-	iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, 1.0);
+    iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
 
 	iqtree.printTree(initTree);
     iqtree.setBestTree(initTree.str(), iqtree.curScore);
@@ -1382,7 +1385,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 						iqtree.clearAllPartialLH();
 					}
 					// Now re-estimate the model parameters
-					iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 1.0);
+					iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.model_eps);
 					stringstream tmpTree;
 					iqtree.printTree(tmpTree);
 					intermediate_tree = tmpTree.str();
