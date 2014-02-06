@@ -968,7 +968,10 @@ double IQTree::doTreeSearch() {
 			cout << "Cannot open file " + lh_file_name;
 		}
 	}
-	stop_rule.addImprovedIteration(1);
+
+	if (!params->autostop) {
+		stop_rule.addImprovedIteration(1);
+	}
 
 	double prev_time = 0.0;
 	bool usePerturbWeak = true;
@@ -977,7 +980,7 @@ double IQTree::doTreeSearch() {
 		if (params->autostop) {
 			if (nUnsuccessIteration == 200) {
 				cout << endl;
-				cout << "No better tree has been found after 200 iterations. Tree search was stopped after "
+				cout << "No better tree was found in the last 200 iterations. Tree search was stopped after "
 						<< curIteration << " iterations!" <<  endl;
 				break;
 			}
@@ -1183,7 +1186,9 @@ double IQTree::doTreeSearch() {
 					//cout << perturb_tree_string.str() << endl;
 				}
 
-				stop_rule.addImprovedIteration(curIteration);
+				if (!params->autostop) {
+					stop_rule.addImprovedIteration(curIteration);
+				}
 
 				string perturbType;
 				if (usePerturbWeak && params->inni) {
@@ -1226,7 +1231,7 @@ double IQTree::doTreeSearch() {
 		if (params->evol) {
 			stringstream treess;
 			printTree(treess);
-			bool updated = updateRefTreeSet(treess.str(), curScore);
+			updateRefTreeSet(treess.str(), curScore);
 //			if (updated)
 //				cout << "Reference set updated" << endl;
 		}
@@ -1257,14 +1262,17 @@ double IQTree::doTreeSearch() {
 		}
 	}
 
-	int predicted_iteration = stop_rule.getPredictedIteration();
+	if (!params->autostop) {
+		int predicted_iteration = stop_rule.getPredictedIteration();
+		if (predicted_iteration > curIteration) {
+			cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure that with a "
+					<< floor(params->stop_confidence * 100) << "% confidence" << endl
+					<< "         the IQPNNI search will not find a better tree" << endl;
+		}
+	}
 	//cout.unsetf(ios::fixed);
 
-	if (predicted_iteration > curIteration) {
-		cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure that with a "
-				<< floor(params->stop_confidence * 100) << "% confidence" << endl
-				<< "         the IQPNNI search will not find a better tree" << endl;
-	}
+
 
 	if (testNNI)
 		outNNI.close();

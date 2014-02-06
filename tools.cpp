@@ -1647,7 +1647,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-popsize") == 0) {
             	cnt++;
             	if (cnt >=argc)
-            		throw "Use -numpars <number_of_parsimony_trees>";
+            		throw "Use -popsize <number_of_candidate_trees>";
             	params.popSize = convert_int(argv[cnt]);
             	assert(params.popSize < params.numParsTrees);
             	params.evol = true;
