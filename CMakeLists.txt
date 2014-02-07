@@ -100,11 +100,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wno-deprecated ${COMBINED_FL
 set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
 
 if (CMAKE_BUILD_TYPE MATCHES "avx")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -fomit-frame-pointer -funroll-loops -D__SSE3 -D__AVX -mavx")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -fomit-frame-pointer -funroll-loops -D__SSE3 -D__AVX -mavx")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -D__SSE3 -D__AVX -mavx")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -D__SSE3 -D__AVX -mavx")
 else()
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -fomit-frame-pointer -funroll-loops -D__SSE3")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -fomit-frame-pointer -funroll-loops -D__SSE3")  
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -D__SSE3")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -D__SSE3")  
 endif()
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -fomit-frame-pointer -funroll-loops")
