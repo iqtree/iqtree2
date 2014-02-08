@@ -714,6 +714,7 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
 
 	string worstTree;
 	for (unordered_map<string, double>::iterator it = refTreeSet.begin(); it != refTreeSet.end(); it++) {
+	    assert(it->second < 0.0);
 		if (it->second < worstLogl) {
 			worstLogl = it->second;
 			worstTree = it->first;
@@ -908,12 +909,6 @@ double IQTree::perturb(int times) {
 
 
 double IQTree::doTreeSearch() {
-	if (params->speednni) {
-		searchinfo.speednni = true;
-	} else {
-		searchinfo.speednni = false;
-	}
-
 	time_t begin_time, cur_time;
 	time(&begin_time);
 	string tree_file_name = params->out_prefix;
@@ -974,7 +969,6 @@ double IQTree::doTreeSearch() {
 	}
 
 	double prev_time = 0.0;
-	bool usePerturbWeak = true;
 	int nUnsuccessIteration = 0;
 	for (curIteration = 2; !stop_rule.meetStopCondition(curIteration); curIteration++) {
 		if (params->autostop) {
@@ -985,10 +979,10 @@ double IQTree::doTreeSearch() {
 				break;
 			}
 		}
-		//curIQPIter = cur_iteration;
 		double min_elapsed = (getCPUTime() - params->startTime) / 60;
 		if (min_elapsed > params->maxtime) {
-			cout << "Maximal running time of " << params->maxtime << " minutes reached" << endl;
+		    cout << endl;
+			cout << "Maximum running time of " << params->maxtime << " minutes reached" << endl;
 			break;
 		}
 		// estimate logl_cutoff
@@ -1019,13 +1013,7 @@ double IQTree::doTreeSearch() {
 			estimateNNICutoff(params);
 		}
 
-		double iqp_score;
 		Alignment *saved_aln = aln;
-
-		if (!params->inni) {
-			// randomize the neighbor orders for all nodes
-			randomizeNeighbors();
-		}
 
 		double perturbScore;
 		if (iqp_assess_quartet == IQP_BOOTSTRAP) {
@@ -1039,77 +1027,58 @@ double IQTree::doTreeSearch() {
 			setAlignment(bootstrap_alignment);
 			initializeAllPartialLh();
 			clearAllPartialLH();
-			curScore = iqp_score = optimizeAllBranches();
+			curScore = optimizeAllBranches();
 		} else {
-			if (params->reinsert_par) {
-				doParsimonyReinsertion();
-				curScore = optimizeAllBranches(1);
-				cout << "LH Pars = " << curScore << endl;
-			} else {
-				if (params->inni) {
-					int numNNI;
-					if (nUnsuccessIteration >= 20 && params->adaptivePerturbation) {
-						if (nUnsuccessIteration == 20) {
-							cout << "Iteration " << curIteration << ": Increase perturbation strength!" << endl;
-						}
-						// increase the perturbation strength
-						numNNI = params->pertubSize * (aln->getNSeq() - 3) * 2;
-						usePerturbWeak = false;
-					} else {
-						numNNI = params->pertubSize * (aln->getNSeq() - 3);
-					}
-					if (params->evol) {
-						int index = random_int(params->popSize);
-						vector<string> trees;
-						for (map<double, string>::iterator it = refTreeSetSorted.begin(); it != refTreeSetSorted.end(); ++it) {
-							trees.push_back(it->second);
-						}
-						assert(trees.size() == params->popSize);
-						readTreeString(trees[index]);
-					}
-					doRandomNNIs(numNNI);
-				} else {
-					doIQP();
-				}
+            if (params->inni) {
+                int numNNI = params->pertubSize * (aln->getNSeq() - 3);
+                if (params->evol) {
+                    int index = random_int(params->popSize);
+                    vector<string> trees;
+                    for (map<double, string>::iterator it = refTreeSetSorted.begin(); it != refTreeSetSorted.end();
+                            ++it) {
+                        trees.push_back(it->second);
+                    }
+                    assert(trees.size() == params->popSize);
+                    readTreeString(trees[index]);
+                }
+                doRandomNNIs(numNNI);
+            } else {
+                doIQP();
+            }
 
-				setAlignment(aln);
+            setAlignment(aln);
+            perturb_tree_string.seekp(0, ios::beg);
+            printTree(perturb_tree_string);
 
-				if (params->pll) {
-					stringstream perturbTreeString;
-					printTree(perturbTreeString);
-					pllNewickTree *perturbTree = pllNewickParseString(perturbTreeString.str().c_str());
-					pllTreeInitTopologyNewick(pllInst, perturbTree, PLL_FALSE);
-					pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-					pllTreeEvaluate(pllInst, pllPartitions, params->numSmoothTree);
-					pllNewickParseDestroy(&perturbTree);
-					curScore = pllInst->likelihood;
-					perturbScore = curScore;
-				} else {
-					initializeAllPartialLh();
-					clearAllPartialLH();
-					if (isSuperTree()) {
-						((PhyloSuperTree*) this)->mapTrees();
-					}
-					curScore = optimizeAllBranches(1,TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
-					perturbScore = curScore;
-				}
-
-				perturb_tree_string.seekp(0, ios::beg);
-				printTree(perturb_tree_string);
-			}
-		}
+            if (params->pll) {
+                pllNewickTree *perturbTree = pllNewickParseString(perturb_tree_string.str().c_str());
+                pllTreeInitTopologyNewick(pllInst, perturbTree, PLL_FALSE);
+                pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+                //pllTreeEvaluate(pllInst, pllPartitions, params->numSmoothTree);
+                pllNewickParseDestroy(&perturbTree);
+                curScore = pllInst->likelihood;
+                perturbScore = curScore;
+            } else {
+                initializeAllPartialLh();
+                clearAllPartialLH();
+                if (isSuperTree()) {
+                    ((PhyloSuperTree*) this)->mapTrees();
+                }
+                curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
+                perturbScore = curScore;
+            }
+        }
 
 		setRootNode(params->root);
 
 		int nni_count = 0;
-		int nni_steps;
+		int nni_steps = 0;
 		if (params->pll) {
 			curScore = pllOptimizeNNI(nni_count, nni_steps, searchinfo);
 			int printBranchLengths = PLL_TRUE;
 			Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths,
 					PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
-			string tree = string(pllInst->tree_string);
-			readTreeString(tree);
+			readTreeString(string(pllInst->tree_string));
 		} else {
 			curScore = optimizeNNI(nni_count, nni_steps);
 		}
@@ -1127,28 +1096,25 @@ double IQTree::doTreeSearch() {
 
 		time(&cur_time);
 		double cputime_secs = getCPUTime() - params->startTime;
-		double cputime_remaining = (stop_rule.getNumIterations() - curIteration) * cputime_secs / (curIteration - 1);
-		/*double remaining_secs = (stop_rule.getNumIterations() - curIQPIter) *
-		 elapsed_secs / (curIQPIter - 1);*/
-		cout.setf(ios::fixed, ios::floatfield);
-		bool printLog = false;
-		if (cputime_secs >= prev_time + 10)
-			printLog = true;
-		if (verbose_mode >= VB_MED)
-			printLog = true;
-
-		if (printLog) {
-			// NNI search was skipped according to the speed up heuristics
-			cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ?
-							"Bootstrap " : "Iteration ") << curIteration << " / Start LogL: "<< perturbScore
-					<< " / End LogL: " << curScore << " / NNIs: "
-					<< nni_count << " / NNI steps: " << nni_steps << " / CPU time: " << (int) round(cputime_secs)
-					<< "s";
-			if (curIteration > 10 && cputime_secs > 10)
-				cout << " (" << (int) round(cputime_remaining) << "s left)";
-			cout << endl;
-			prev_time = cputime_secs;
+		double cputime_remaining;
+		if (params->maxtime < 1000000) {
+		    cputime_remaining = params->maxtime * 60 - cputime_secs;
+		} else {
+	        cputime_remaining = (stop_rule.getNumIterations() - curIteration) * cputime_secs / (curIteration - 1);
 		}
+		cout.setf(ios::fixed, ios::floatfield);
+
+        // NNI search was skipped according to the speed up heuristics
+        cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIteration
+                << " / Start LogL: " << perturbScore << " / End LogL: " << curScore << " / NNIs: " << nni_count
+                << " / NNI steps: " << nni_steps << " / CPU time: " << (int) round(cputime_secs) << "s";
+        if (curIteration > 10 && cputime_secs > 10) {
+            if (!params->autostop) {
+                cout << " (" << (int) round(cputime_remaining) << "s left)";
+            }
+        }
+        cout << endl;
+        prev_time = cputime_secs;
 
 		if (params->write_intermediate_trees && save_all_trees != 2) {
 			printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
@@ -1156,31 +1122,29 @@ double IQTree::doTreeSearch() {
 
 		if (curScore > bestScore) {
 			stringstream cur_tree_topo_ss;
+			cur_tree_topo_ss.seekp(0, ios::beg);
 			printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
 			if (cur_tree_topo_ss.str() != best_tree_topo) {
+	            best_tree_topo = cur_tree_topo_ss.str();
 				//cout << "Saving new better tree ..." << endl;
 				if (params->inni) {
 					if (params->modOpt) {
-						//double time_s = getCPUTime();
-						//cout << "Re-estimate model parameters ... ";
+						double time_s = getCPUTime();
+						cout << "Re-estimate model parameters ... ";
 						if (params->pll) {
 							initializeAllPartialLh();
 							clearAllPartialLH();
 						}
-						curScore = bestScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, params->model_eps);
+						curScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, params->model_eps);
+						//curScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 1.0);
 						if (params->pll) {
 							inputModelParam2PLL();
 							stringstream treestream;
 							printTree(treestream);
-							double pllLogl = inputTree2PLL(treestream.str());
-							curScore = bestScore = pllLogl;
+							curScore = inputTree2PLL(treestream.str());
 							deleteAllPartialLh();
 						}
-					}
-					if (params->adaptivePerturbation && nUnsuccessIteration >= 20) {
-						cout << "Set back perturbation strength." << endl;
-						//searchinfo.evalType = ONE_BRAN_OPT;
-						usePerturbWeak = true;
+						cout << getCPUTime() - time_s << "s " << endl;
 					}
 					nUnsuccessIteration = 0;
 					//cout << perturb_tree_string.str() << endl;
@@ -1189,41 +1153,28 @@ double IQTree::doTreeSearch() {
 				if (!params->autostop) {
 					stop_rule.addImprovedIteration(curIteration);
 				}
-
-				string perturbType;
-				if (usePerturbWeak && params->inni) {
-					perturbType="weak pertubation";
-				} else {
-					perturbType="strong pertubation";
-				}
-
+				bestScore = curScore;
 				cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << bestScore;
 				cout << " / CPU time: " << (int) round (getCPUTime() - params->startTime) << "s" << endl;
-
 			} else {
+				bestScore = curScore;
+				cout << "UPDATE BEST LOG-LIKELIHOOD: " << bestScore << endl;
 				nUnsuccessIteration++;
 			}
 
 			best_tree_string.seekp(0, ios::beg);
-			stringstream tmpTree;
-			printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
-			printTree(tmpTree);
-			setBestTree(tmpTree.str(), curScore);
+			printTree(best_tree_string);
+			setBestTree(best_tree_string.str(), bestScore);
 			if (params->write_best_trees) {
 				ostringstream iter_string;
 				iter_string << curIteration;
 				printResultTree(iter_string.str());
 			}
 			printResultTree();
-			best_tree_topo = cur_tree_topo_ss.str();
-
 		} else {
 			nUnsuccessIteration++;
 			if (!params->evol) {
-				best_tree_string.seekg(0, ios::beg);
-				freeNode();
-				readTree(best_tree_string, rooted);
-				assignLeafNames();
+			    readTreeString(bestTreeString);
 			}
 		}
 
@@ -1285,6 +1236,7 @@ double IQTree::doTreeSearch() {
 
 	return bestScore;
 }
+
 
 /****************************************************************************
  Fast Nearest Neighbor Interchange by maximum likelihood
@@ -1408,7 +1360,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &searchinfo) {
 	searchinfo.numAppliedNNIs = 0;
-	searchinfo.curLogl = pllInst->likelihood;
+	searchinfo.curLogl = curScore;
 	//cout << "curLogl: " << searchinfo.curLogl << endl;
     const int MAX_NNI_STEPS = 50;
     totalNNICount = 0;

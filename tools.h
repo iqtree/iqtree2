@@ -474,8 +474,6 @@ struct Params {
      */
     bool pll;
 
-    bool adaptivePerturbation;
-
     /**
      *  Turn on model parameter optimization by PLL
      */
@@ -485,6 +483,12 @@ struct Params {
      *  Stopping rule for the tree search
      */
     bool autostop;
+
+    /**
+     *  Number of maximum unsuccessful iterations after the search is stopped.
+     *  Used for the automatic stopping rule
+     */
+    int maxUnsuccess;
 
     char *binary_aln_file;
 

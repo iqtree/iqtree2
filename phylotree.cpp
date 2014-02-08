@@ -197,7 +197,9 @@ void PhyloTree::setAlignment(Alignment *alignment) {
 }
 
 void PhyloTree::readTreeString(const string &tree_string) {
-	stringstream str(tree_string);
+	stringstream str;
+	str << tree_string;
+	str.seekg(0, ios::beg);
 	freeNode();
 	readTree(str, rooted);
 	setAlignment(aln);

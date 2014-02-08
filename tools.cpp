@@ -649,8 +649,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
     params.nni0 = false;
-    params.adaptivePerturbation = false;
-    params.popSize = 2;
+    params.evol = false;
+    params.popSize = 5;
     params.evalType = 2;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -744,11 +744,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
-    params.maxtime = 100000;
+    params.maxtime = 1000000;
     params.reinsert_par = false;
     params.fast_branch_opt = false;
     params.bestStart = true;
     params.inni = false;
+    params.autostop = false;
+    params.maxUnsuccess = 200;
     params.speednni = false;
     params.numParsTrees = 20;
     params.avh_test = 0;
@@ -1679,10 +1681,12 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.modOpt = true;
             } else if (strcmp(argv[cnt], "-auto") == 0) {
             	params.autostop = true;
-            } else if (strcmp(argv[cnt], "-adapt") == 0) {
-            	params.adaptivePerturbation = true;
-            	params.inni = true;
-            	params.pll = true;
+            } else if (strcmp(argv[cnt], "-maxiter") == 0) {
+                if (!params.autostop) {
+                    throw "-auto need to be enabled before specifying this option";
+                }
+                cnt++;
+                params.maxUnsuccess = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {

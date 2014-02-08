@@ -915,20 +915,21 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	}
 	cout << "Fixed branch lengths: "
 			<< ((params.fixed_branch_length) ? "Yes" : "No") << endl;
-	cout << "Lambda for local search: " << params.lambda << endl;
-	if (params.speed_conf != 1.0) {
-		cout << "Confidence value for speed up NNI: ";
-		if (params.new_heuristic)
-			cout << "Using 50%*" << params.speed_conf << endl;
-		else
-			cout << "N" << params.speed_conf << " * delta" << params.speed_conf
-					<< endl;
-	} else {
-		cout << "Speed up NNI: disabled " << endl;
-	}
-	cout << "NNI cutoff: " << params.nni_cutoff << endl;
-	cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No")
-			<< endl;
+	//cout << "Lambda for local search: " << params.lambda << endl;
+//	if (params.speed_conf != 1.0) {
+//		cout << "Confidence value for speed up NNI: ";
+//		if (params.new_heuristic)
+//			cout << "Using 50%*" << params.speed_conf << endl;
+//		else
+//			cout << "N" << params.speed_conf << " * delta" << params.speed_conf
+//					<< endl;
+//	} else {
+//		cout << "Speed up NNI: disabled " << endl;
+//	}
+//	cout << "NNI cutoff: " << params.nni_cutoff << endl;
+//	cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No")
+//			<< endl;
+	cout << "Speed NNI: " << (params.speednni ? "Yes" : "No") << endl;
 	cout << "Phylogenetic likelihood library: " << (params.pll ? "Yes" : "No") << endl;
 	cout << "Number of Newton-Raphson steps in NNI evaluation and branch length optimiazaion: " << NNI_MAX_NR_STEP << " / " << PLL_NEWZPERCYCLE << endl;
 	cout << endl;
@@ -1297,6 +1298,12 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		iqtree.cur_pars_score = iqtree.computeParsimony();
 	}
 
+    if (params.speednni) {
+        iqtree.searchinfo.speednni = true;
+    } else {
+        iqtree.searchinfo.speednni = false;
+    }
+
 	if (params.min_iterations > 0) {
 		double initTime = getCPUTime();
 		int nni_count = 0;
@@ -1340,7 +1347,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				pllNewickTree *newick = pllNewickParseString(parsTree[treeNr].c_str());
 				pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
 				pllEvaluateGeneric(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-				pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, params.numSmoothTree);
+				//pllTreeEvaluate(iqtree.pllInst, iqtree.pllPartitions, params.numSmoothTree);
 				pllNewickParseDestroy(&newick);
 				iqtree.curScore = iqtree.pllInst->likelihood;
 				cout << "logl of starting tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
@@ -1384,6 +1391,8 @@ void runPhyloAnalysis(Params &params, string &original_model,
 						iqtree.initializeAllPartialLh();
 						iqtree.clearAllPartialLH();
 					}
+                    double time_s = getCPUTime();
+                    cout << "Re-estimate model parameters ... ";
 					// Now re-estimate the model parameters
 					iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.model_eps);
 					stringstream tmpTree;
@@ -1393,9 +1402,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
 						iqtree.inputModelParam2PLL();
 						iqtree.curScore = iqtree.inputTree2PLL(intermediate_tree, true);
 					}
+                    cout << getCPUTime() - time_s << "s " << endl;
 				}
-				iqtree.bestScore = iqtree.curScore;
-				iqtree.setBestTree(intermediate_tree, iqtree.bestScore);
+				iqtree.setBestTree(intermediate_tree, iqtree.curScore);
 				cout << "BETTER SCORE FOUND: " << iqtree.bestScore << endl;
 			}
 
@@ -1411,6 +1420,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		}
 
 		iqtree.readTreeString(iqtree.bestTreeString);
+		iqtree.curScore = iqtree.bestScore;
 
 		if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();
@@ -1533,7 +1543,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	/* DO IQPNNI */
 	if (params.k_representative > 0 /*&&  params.min_iterations > 1*/) {
 		if (params.inni) {
-			cout << endl << "START ITERATED NNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
+			cout << endl << "START STOCHASTIC NNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
 		} else {
 			cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
 		}
@@ -1544,17 +1554,24 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		} else if (params.inni) {
 			cout << "Perturbation strength: " << params.pertubSize << endl;
 		}
-		if (params.autostop) {
-			cout << "Maximum iterations: ";
-		} else {
-			cout << "Number of iterations: ";
+		cout << "Evolutionary approach: " << (params.evol ? "Yes" : "No") << endl;
+		if (params.evol) {
+		    cout << "Population size: " << params.popSize << endl;
 		}
-		if (params.stop_condition == SC_FIXED_ITERATION)
-			cout << params.min_iterations << endl;
-		else
-			cout << "predicted in [" << params.min_iterations << ","
-					<< params.max_iterations << "] (confidence "
-					<< params.stop_confidence << ")" << endl;
+		cout << "Use automatic stopping rule: " << (params.autostop ? "Yes" : "No") << endl;
+		if (params.autostop) {
+			cout << "Search stops after " << params.maxUnsuccess << " non-improving iterations" << endl;
+		} else if (params.maxtime < 1000000){
+			cout << "Maximum running time: " << params.maxtime << " minutes" << endl;
+		} else {
+		    cout << "Number of iterations: ";
+	        if (params.stop_condition == SC_FIXED_ITERATION)
+	            cout << params.min_iterations << endl;
+	        else
+	            cout << "predicted in [" << params.min_iterations << ","
+	                    << params.max_iterations << "] (confidence "
+	                    << params.stop_confidence << ")" << endl;
+		}
 		if (!params.inni) {
 			cout << "Important quartets assessed on: "
 					<< ((params.iqp_assess_quartet == IQP_DISTANCE) ?
@@ -1571,7 +1588,6 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		cout << endl;
 		iqtree.doTreeSearch();
 		iqtree.readTreeString(iqtree.bestTreeString);
-		iqtree.setAlignment(alignment);
 //		for (map<double, string>::iterator it = iqtree.refTreeSetSorted.begin(); it != iqtree.refTreeSetSorted.end(); it++) {
 //			cout << it->first << endl;
 //		}
