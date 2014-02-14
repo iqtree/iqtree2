@@ -1394,7 +1394,9 @@ void runPhyloAnalysis(Params &params, string &original_model,
                     double time_s = getCPUTime();
                     cout << "Re-estimate model parameters ... ";
 					// Now re-estimate the model parameters
-					iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.model_eps);
+					double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.model_eps);
+					assert(modOptScore >= iqtree.curScore);
+					iqtree.curScore = modOptScore;
 					stringstream tmpTree;
 					iqtree.printTree(tmpTree);
 					intermediate_tree = tmpTree.str();
