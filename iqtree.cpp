@@ -1136,7 +1136,12 @@ double IQTree::doTreeSearch() {
 							clearAllPartialLH();
 						}
 						double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, true, params->model_eps);
-						assert(modOptScore >= curScore);
+						//assert(modOptScore >= curScore);
+						if (modOptScore < curScore) {
+							cout << "BUG: Tree logl get worse after model optimization!" << endl;
+							cout << "Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
+							exit(1);
+						}
 						curScore = modOptScore;
 						//curScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 1.0);
 						if (params->pll) {

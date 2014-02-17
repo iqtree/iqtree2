@@ -1392,10 +1392,14 @@ void runPhyloAnalysis(Params &params, string &original_model,
 						iqtree.clearAllPartialLH();
 					}
                     double time_s = getCPUTime();
-                    cout << "Re-estimate model parameters ... ";
+                    cout << "Re-estimate model parameters using logl epsilon =  " << params.model_eps << "...";
 					// Now re-estimate the model parameters
-					double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.model_eps);
-					assert(modOptScore >= iqtree.curScore);
+					double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
+					if (modOptScore < iqtree.curScore) {
+						cout << "BUG: Tree logl get worse after model optimization!" << endl;
+						cout << "Old logl: " << iqtree.curScore << " / " << "new logl: " << modOptScore << endl;
+						exit(1);
+					}
 					iqtree.curScore = modOptScore;
 					stringstream tmpTree;
 					iqtree.printTree(tmpTree);
