@@ -38,8 +38,8 @@
 const char OPEN_BRACKET = '{';
 const char CLOSE_BRACKET = '}';
 
-ModelFactory::ModelFactory() { 
-	model = NULL; 
+ModelFactory::ModelFactory() {
+	model = NULL;
 	site_rate = NULL;
 	store_trans_matrix = false;
 	is_storing = false;
@@ -60,13 +60,13 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 		model_str = model_str.substr(0, pos);
 	}
 
-	if ((model_str == "JC" && tree->aln->num_states == 4) || 
+	if ((model_str == "JC" && tree->aln->num_states == 4) ||
 		(model_str == "POISSON" && tree->aln->num_states == 20) ||
 		(model_str == "JC2" && tree->aln->num_states == 2) ||
 		(model_str == "JCC" && tree->aln->codon_table))
 	{
 		model = new ModelSubst(tree->aln->num_states);
-	} else 
+	} else
 	if ((model_str == "GTR" && tree->aln->num_states == 4) ||
 		(model_str == "GTR2" && tree->aln->num_states == 2) ||
 		(model_str == "GTR20" && tree->aln->num_states == 20)) {
@@ -100,7 +100,7 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 }
 
 
-ModelFactory::ModelFactory(Params &params, PhyloTree *tree) { 
+ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
@@ -207,7 +207,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				if (num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else num_rate_cats = -1;
 			if (num_rate_cats >= 0)
-				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
+				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type,
 					params.rate_file, tree, params.rate_mh_type);
 			else
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
@@ -220,7 +220,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				if (num_rate_cats < 0) outError("Wrong number of rate categories");
 			} else num_rate_cats = -1;
 			if (num_rate_cats >= 0)
-				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
+				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type,
 					params.rate_file, tree, params.rate_mh_type);
 			else
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
@@ -253,15 +253,15 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	} else {
 		site_rate = new RateHeterogeneity();
 		site_rate->setTree(tree);
-	} 	
+	}
 
 	/* create substitution model */
 
 	if (!params.site_freq_file) {
 		model = createModel(model_str, freq_type, freq_params, tree);
-	} else { 
+	} else {
 		// site-specific model
-		if (model_str == "JC" || model_str == "POSSION") 
+		if (model_str == "JC" || model_str == "POSSION")
 			outError("JC is not suitable for site-specific model");
 		model = new ModelSet(model_str.c_str(), tree);
 		ModelSet *models = (ModelSet*)model; // assign pointer for convenience
@@ -302,7 +302,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		cout << "Alignment is divided into " << models->size() << " partitions with " << tree->aln->getNPattern() << " patterns" << endl;
 		for (vector<double*>::reverse_iterator it = freq_vec.rbegin(); it != freq_vec.rend(); it++)
 			if (*it) delete [] (*it);
-	} 
+	}
 	tree->discardSaturatedSite(params.discard_saturated_site);
 
 }
@@ -352,7 +352,7 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 			// there are some unspecified sites
 			cout << site_model.size() - specified_sites << " unspecified sites will get default frequencies" << endl;
 			for (int i = 0; i < site_model.size(); i++)
-				if (site_model[i] == -1) 
+				if (site_model[i] == -1)
 					site_model[i] = freq_vec.size();
 			freq_vec.push_back(NULL);
 		}
@@ -436,12 +436,13 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	assert(tree);
 
 	stopStoringTransMatrix();
-	if (fixed_len) 
+	if (fixed_len)
 		cur_lh = tree->computeLikelihood();
 	else {
 		cur_lh = tree->optimizeAllBranches(1);
 	}
-	if (verbose_mode >= VB_MED || write_info) 
+	tree->curScore = cur_lh;
+	if (verbose_mode >= VB_MED || write_info)
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
 	int i;
 	//bool optimize_rate = true;
@@ -461,6 +462,8 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
 		*/
 		double new_lh = optimizeParametersOnly(param_epsilon);
+		if (verbose_mode >= VB_MED || write_info)
+			cout << i << ". Model optimization log-likelihood: " << new_lh << endl;
 		if (new_lh == 0.0) {
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
 			break;
@@ -476,10 +479,15 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 				param_epsilon = (new_lh - cur_lh) * logl_epsilon;
 			cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)
-				cout << i << ". Current log-likelihood: " << cur_lh << endl;
+				//cout << i << ". Branch length optimization log-likelihood: " << cur_lh << endl;
+				cout << "   Branch length optimization log-likelihood: " << cur_lh << endl;
 		} else {
 			site_rate->classifyRates(new_lh);
-			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
+			if (!fixed_len) {
+				cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
+			}
+			//cout << i << ". Convergence point log-likelihood: " << cur_lh << endl;
+			//cout << "   Convergence point log-likelihood: " << cur_lh << endl;
 				break;
 		}
 	}
@@ -492,8 +500,9 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	//time(&cur_time);
 	//double elapsed_secs = difftime(cur_time,begin_time);
 	double elapsed_secs = getCPUTime() - begin_time;
-	if (write_info)
-		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
+//	if (write_info)
+//		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
+	cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl;
 	startStoringTransMatrix();
 	return cur_lh;
 }
@@ -536,10 +545,10 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix) {
 		model->computeTransMatrix(time, trans_entry);
 		ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
 	} else {
-		//if (verbose_mode >= VB_MAX) 
+		//if (verbose_mode >= VB_MAX)
 			//cout << "ModelFactory bingo" << endl;
-	} 
-	
+	}
+
 	memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
 }
 
@@ -557,7 +566,7 @@ void ModelFactory::computeTransMatrixFreq(double time, double *state_freq, doubl
 	}
 }
 
-void ModelFactory::computeTransDerv(double time, double *trans_matrix, 
+void ModelFactory::computeTransDerv(double time, double *trans_matrix,
 	double *trans_derv1, double *trans_derv2) {
 	if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
 		model->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
@@ -580,14 +589,14 @@ void ModelFactory::computeTransDerv(double time, double *trans_matrix,
 	memcpy(trans_derv2, ass_it->second + (mat_size*2), mat_size * sizeof(double));
 }
 
-void ModelFactory::computeTransDervFreq(double time, double rate_val, double *state_freq, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2) 
+void ModelFactory::computeTransDervFreq(double time, double rate_val, double *state_freq, double *trans_matrix,
+		double *trans_derv1, double *trans_derv2)
 {
 	if (model->isSiteSpecificModel()) {
 		model->computeTransDervFreq(time, rate_val, trans_matrix, trans_derv1, trans_derv2);
 		return;
 	}
-	int nstates = model->num_states;	
+	int nstates = model->num_states;
 	double rate_sqr = rate_val*rate_val;
 	computeTransDerv(time * rate_val, trans_matrix, trans_derv1, trans_derv2);
 	for (int state1 = 0; state1 < nstates; state1++) {

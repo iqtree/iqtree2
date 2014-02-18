@@ -22,6 +22,8 @@
 #include "phylosupertreeplen.h"
 #include "mexttree.h"
 #include "timeutil.h"
+#include "gtrmodel.h"
+#include "rategamma.h"
 #include <numeric>
 
 Params *globalParam;
@@ -940,6 +942,7 @@ double IQTree::doTreeSearch() {
 	stringstream best_tree_string;
 	stringstream best_tree_topo_ss;
 	stringstream perturb_tree_string;
+	string intermediate_tree;
 	printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 	printTree(best_tree_topo_ss, WT_TAXON_ID + WT_SORT_TAXA);
 	string best_tree_topo = best_tree_topo_ss.str();
@@ -1078,9 +1081,13 @@ double IQTree::doTreeSearch() {
 			int printBranchLengths = PLL_TRUE;
 			Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths,
 					PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
-			readTreeString(string(pllInst->tree_string));
+			intermediate_tree = string(pllInst->tree_string);
+			readTreeString(intermediate_tree);
 		} else {
 			curScore = optimizeNNI(nni_count, nni_steps);
+			stringstream imd_tree;
+			printTree(imd_tree);
+			intermediate_tree = imd_tree.str();
 		}
 
 		if (iqp_assess_quartet == IQP_BOOTSTRAP) {
@@ -1129,29 +1136,47 @@ double IQTree::doTreeSearch() {
 				//cout << "Saving new better tree ..." << endl;
 				if (params->inni) {
 					if (params->modOpt) {
-						double time_s = getCPUTime();
-						cout << "Re-estimate model parameters ... ";
+	                    double *rate_param_bk = NULL;
+	                    if (aln->num_states == 4) {
+	                		rate_param_bk = new double[6];
+	                		getModel()->getRateMatrix(rate_param_bk);
+	                    }
+	            		double alpha_bk = getRate()->getGammaShape();
+						//double time_s = getCPUTime();
+						cout << "Re-estimate model parameters ... " << endl;
 						if (params->pll) {
 							initializeAllPartialLh();
 							clearAllPartialLH();
 						}
-						double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, true, params->model_eps);
+						double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, params->model_eps);
+						//cout << getCPUTime() - time_s << "s " << endl;
 						//assert(modOptScore >= curScore);
 						if (modOptScore < curScore) {
-							cout << "BUG: Tree logl get worse after model optimization!" << endl;
-							cout << "Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
-							exit(1);
+							cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
+							cout << "  Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
+							readTreeString(intermediate_tree);
+							initializeAllPartialLh();
+							clearAllPartialLH();
+							if (aln->num_states == 4) {
+								assert(rate_param_bk != NULL);
+								((GTRModel*) getModel())->setRateMatrix(rate_param_bk);
+							}
+							dynamic_cast<RateGamma*>(getRate())->setGammaShape(alpha_bk);
+							getModel()->decomposeRateMatrix();
+							curScore = computeLikelihood();
+							cout << "Reset rate parameters / logl: " << curScore << endl;
+						} else {
+							curScore = modOptScore;
 						}
-						curScore = modOptScore;
 						//curScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 1.0);
 						if (params->pll) {
 							inputModelParam2PLL();
 							stringstream treestream;
 							printTree(treestream);
+							// recompute the curScore using PLL
 							curScore = inputTree2PLL(treestream.str());
 							deleteAllPartialLh();
 						}
-						cout << getCPUTime() - time_s << "s " << endl;
 					}
 					nUnsuccessIteration = 0;
 					//cout << perturb_tree_string.str() << endl;
@@ -1189,9 +1214,9 @@ double IQTree::doTreeSearch() {
 		if (params->evol) {
 			stringstream treess;
 			printTree(treess);
-			updateRefTreeSet(treess.str(), curScore);
-//			if (updated)
-//				cout << "Reference set updated" << endl;
+			bool updated = updateRefTreeSet(treess.str(), curScore);
+			if (updated)
+				cout << "Reference set updated" << endl;
 		}
 
 		if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {

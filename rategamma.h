@@ -54,6 +54,8 @@ public:
 
 	virtual double getGammaShape() { return gamma_shape; }
 
+	virtual void setGammaShape(double gs);
+
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
@@ -115,8 +117,8 @@ public:
 	virtual double targetFunk(double x[]);
 
 	/**
-		optimize parameters. Default is to optimize gamma shape 
-		@return the best likelihood 
+		optimize parameters. Default is to optimize gamma shape
+		@return the best likelihood
 	*/
 	virtual double optimizeParameters(double epsilon);
 
@@ -191,13 +193,13 @@ protected:
 
 	/***********************************************************
 	NUMERICAL SUBROUTINES
-	THE FOLLOWING CODE COMES FROM tools.c in Yang's PAML package 
+	THE FOLLOWING CODE COMES FROM tools.c in Yang's PAML package
 	***********************************************************/
 	/** returns ln(gamma(alpha)) for alpha>0, accurate to 10 decimal places.
 	   Stirling's formula is used for the central polynomial part of the procedure.
 	   Pike MC & Hill ID (1966) Algorithm 291: Logarithm of the gamma function.
 	   Communications of the Association for Computing Machinery, 9:684
-	 
+
 	*/
 	double cmpLnGamma (double alpha);
 
@@ -218,11 +220,11 @@ protected:
 	   returns (-9999) if in error
 	   Odeh RE & Evans JO (1974) The percentage points of the normal distribution.
 	   Applied Statistics 22: 96-97 (AS70)
-	 
+
 	   Newer methods:
 	     Wichura MJ (1988) Algorithm AS 241: the percentage points of the
 	       normal distribution.  37: 477-484.
-	     Beasley JD & Springer SG  (1977).  Algorithm AS 111: the percentage 
+	     Beasley JD & Springer SG  (1977).  Algorithm AS 111: the percentage
 	       points of the normal distribution.  26: 118-121.
 	*/
 	double cmpPointNormal (double prob);
@@ -231,7 +233,7 @@ protected:
 	/** returns z so that Prob{x<z}=prob where x is Chi2 distributed with df=v
 	   returns -1 if in error.   0.000002<prob<0.999998
 	   RATNEST FORTRAN by
-	       Best DJ & Roberts DE (1975) The percentage points of the 
+	       Best DJ & Roberts DE (1975) The percentage points of the
 	       Chi2 distribution.  Applied Statistics 24: 385-388.  (AS91)
 	   Converted into C by Ziheng Yang, Oct. 1993.
 	*/

@@ -1258,6 +1258,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
     // Optimize model parameters and branch lengths using ML for the initial tree
     iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
+	cout << endl;
 
 	iqtree.printTree(initTree);
     iqtree.setBestTree(initTree.str(), iqtree.curScore);
@@ -1391,24 +1392,43 @@ void runPhyloAnalysis(Params &params, string &original_model,
 						iqtree.initializeAllPartialLh();
 						iqtree.clearAllPartialLH();
 					}
-                    double time_s = getCPUTime();
-                    cout << "Re-estimate model parameters using logl epsilon =  " << params.model_eps << "...";
+                    //double time_s = getCPUTime();
+                    // Back up model parameters
+                    double *rate_param_bk = NULL;
+                    if (iqtree.aln->num_states == 4) {
+                		rate_param_bk = new double[6];
+                		iqtree.getModel()->getRateMatrix(rate_param_bk);
+                    }
+            		double alpha_bk = iqtree.getRate()->getGammaShape();
+            		cout.precision(6);
+                    cout << "Re-estimate model parameters using logl epsilon =  " << params.model_eps << endl;
 					// Now re-estimate the model parameters
-					double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps);
+					double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.model_eps);
+                    //cout << getCPUTime() - time_s << "s " << endl;
 					if (modOptScore < iqtree.curScore) {
-						cout << "BUG: Tree logl get worse after model optimization!" << endl;
-						cout << "Old logl: " << iqtree.curScore << " / " << "new logl: " << modOptScore << endl;
-						exit(1);
+						cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
+						cout << "  Old logl: " << iqtree.curScore << " / " << "new logl: " << modOptScore << endl;
+						iqtree.readTreeString(intermediate_tree);
+						iqtree.initializeAllPartialLh();
+						iqtree.clearAllPartialLH();
+						if (iqtree.aln->num_states == 4) {
+							assert(rate_param_bk != NULL);
+							((GTRModel*)iqtree.getModel())->setRateMatrix(rate_param_bk);
+						}
+						dynamic_cast<RateGamma*>(iqtree.getRate())->setGammaShape(alpha_bk);
+						iqtree.getModel()->decomposeRateMatrix();
+						iqtree.curScore = iqtree.computeLikelihood();
+						cout << "Reset rate parameters / logl: " << iqtree.curScore << endl;
+					} else {
+						iqtree.curScore = modOptScore;
+						stringstream tmpTree;
+						iqtree.printTree(tmpTree);
+						intermediate_tree = tmpTree.str();
+						if (params.pll) {
+							iqtree.inputModelParam2PLL();
+							iqtree.curScore = iqtree.inputTree2PLL(intermediate_tree, true);
+						}
 					}
-					iqtree.curScore = modOptScore;
-					stringstream tmpTree;
-					iqtree.printTree(tmpTree);
-					intermediate_tree = tmpTree.str();
-					if (params.pll) {
-						iqtree.inputModelParam2PLL();
-						iqtree.curScore = iqtree.inputTree2PLL(intermediate_tree, true);
-					}
-                    cout << getCPUTime() - time_s << "s " << endl;
 				}
 				iqtree.setBestTree(intermediate_tree, iqtree.curScore);
 				cout << "BETTER SCORE FOUND: " << iqtree.bestScore << endl;
