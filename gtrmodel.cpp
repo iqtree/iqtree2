@@ -64,6 +64,19 @@ void GTRModel::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
 
+string GTRModel::getNameParams() {
+	ostringstream retname;
+	retname << "GTR";
+	if (num_states != 4) retname << num_states;
+	retname << '{';
+	int nrates = getNumRateEntries();
+	for (int i = 0; i < nrates; i++) {
+		if (i>0) retname << ',';
+		retname << rates[i];
+	}
+	retname << '}';
+	return retname.str();
+}
 
 void GTRModel::init(StateFreqType type) {
 	//if (type == FREQ_UNKNOWN) return;

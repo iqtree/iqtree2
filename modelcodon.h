@@ -51,6 +51,11 @@ public:
 	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
 	/**
+	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
+	 */
+	virtual string getNameParams() { return name; }
+
+	/**
 	 * set rates into groups, rates within a group are equal
 	 * @param group assignment of each rate into group
 	 */

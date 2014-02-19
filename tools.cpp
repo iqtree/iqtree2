@@ -573,7 +573,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.boundary_modifier = 1.0;
     params.dist_file = NULL;
     params.compute_obs_dist = false;
-    params.compute_jc_dist = false;
+    params.compute_jc_dist = true;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.budget_file = NULL;
@@ -645,11 +645,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
     params.nni5 = false;
-    params.nni05 = false;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
     params.nni0 = false;
+    params.adaptivePerturbation = false;
     params.evalType = 2;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -682,9 +682,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.SSE = true;
     params.print_site_lh = 0;
     params.print_tree_lh = false;
-    params.nni_lh = false;
     params.lambda = 1;
-    params.speed_conf = 0.95;
+    params.speed_conf = 1.0;
     params.whtest_simulations = 1000;
     params.mcat_type = MCAT_LOG + MCAT_PATTERN;
     params.rate_file = NULL;
@@ -737,13 +736,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.pertubSize = 1.0;
-    params.perturb_weak = 0.2;
-    params.perturb_strong = 0.8;
-    params.prob_weak = 0.5;
-    params.speedup_iter = 100;
+    params.pertubSize = 0.5;
     params.pll = false;
-    params.model_eps = 0.01;
+    params.model_eps = 0.1;
+    params.modOpt = false;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -752,9 +748,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.fast_branch_opt = false;
     params.bestStart = true;
     params.inni = false;
-    params.hybrid = false;
-    params.tabunni = false;
-    params.random_restart = false;
+    params.speednni = false;
     params.numParsimony = 20;
     params.avh_test = 0;
     params.site_freq_file = NULL;
@@ -766,6 +760,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.root_state = NULL;
     params.print_bootaln = false;
 	params.print_subaln = false;
+	params.print_partition_info = false;
 
     struct timeval tv;
     struct timezone tz;
@@ -853,6 +848,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -if <file>";
                 params.initial_file = argv[cnt];
+            } else if (strcmp(argv[cnt], "-nni_nr_step") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -nni_nr_step <newton_raphson_steps>";
+                NNI_MAX_NR_STEP = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-ia") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1256,24 +1256,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             	if (cnt >= argc)
             		throw "Use -psize <probability>";
             	params.pertubSize = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-pw") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            		throw "Use -pw <portion_of_nni>";
-            	params.perturb_weak = convert_double(argv[cnt]);
-            	params.hybrid = true;
-        	} else if (strcmp(argv[cnt], "-ps") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            		throw "Use -ps <portion_of_nni>";
-            	params.perturb_strong = convert_double(argv[cnt]);
-            	params.hybrid = true;
-        	} else if(strcmp(argv[cnt], "-pr_weak") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            		throw "Use -pr_weak <prob_weak_perturb>";
-            	params.prob_weak = convert_double(argv[cnt]);
-            	params.hybrid = true;
         	} else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1322,13 +1304,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.lambda = convert_double(argv[cnt]);
                 if (params.lambda > 1.0)
                     throw "Lambda must be in (0,1]";
-            } else if (strcmp(argv[cnt], "-spc") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Please specify the confidence level for the adaptive NNI Search";
-                params.speed_conf = convert_double(argv[cnt]);
-                if (params.speed_conf < 0.75 || params.speed_conf > 1)
-                    throw "Confidence level of the adaptive NNI search must be >= 0.75 and <= 1";
             } else if (strcmp(argv[cnt], "-nosse") == 0) {
                 params.SSE = false;
             } else if (strcmp(argv[cnt], "-f") == 0) {
@@ -1501,6 +1476,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_subaln = true;
             } else if (strcmp(argv[cnt], "-wtl") == 0) {
                 params.print_tree_lh = true;
+            } else if (strcmp(argv[cnt], "-wpi") == 0) {
+                params.print_partition_info = true;
             } else if (strcmp(argv[cnt], "-ns") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1679,27 +1656,25 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -me <model_epsilon>";
                 params.model_eps = convert_double(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-modopt") == 0) {
+            	params.modOpt = true;
             } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
-            } else if (strcmp(argv[cnt], "-tabu") == 0) {
-                params.tabunni = true;
+            } else if (strcmp(argv[cnt], "-speednni") == 0) {
+                params.speednni = true;
             } else if (strcmp(argv[cnt], "-inni") == 0) {
             	params.inni = true;
-            	params.pll = true;
-            } else if (strcmp(argv[cnt], "-hybrid") == 0) {
-            	params.hybrid = true;
-            	params.pll = true;
+            	params.modOpt = true;
+            } else if (strcmp(argv[cnt], "-adapt") == 0) {
+            	params.adaptivePerturbation = true;
             	params.inni = true;
-            } else if (strcmp(argv[cnt], "-rr") == 0) {
-            	params.random_restart = true;
+            	params.pll = true;
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
             } else if (strcmp(argv[cnt], "-fivebran") == 0 || strcmp(argv[cnt], "-nni5") == 0) {
             	params.nni5 = true;
-            } else if (strcmp(argv[cnt], "-nni05") == 0) {
-            	params.nni05 = true;
             } else if (strcmp(argv[cnt], "-onebran") == 0 || strcmp(argv[cnt], "-nni1") == 0) {
             	params.nni5 = false;
             } else if (strcmp(argv[cnt], "-smooth") == 0) {
@@ -1736,6 +1711,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
                 params.parbran = true;
             } else if (strcmp(argv[cnt], "-wbt") == 0) {
+            	// TODO: WTF ?
                 params.write_best_trees = true;
             } else if (strcmp(argv[cnt], "-x") == 0) {
                 cnt++;

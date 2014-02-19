@@ -36,6 +36,12 @@ RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
 	}
 }
 
+string RateInvar::getNameParams() {
+	ostringstream str;
+	str << name << '{' << p_invar << '}';
+	return str.str();
+}
+
 double RateInvar::computeFunction(double p_invar_value) {
 	p_invar = p_invar_value;
 	//phylo_tree->clearAllPartialLh();

@@ -55,6 +55,11 @@ public:
 	virtual double getGammaShape() { return gamma_shape; }
 
 	/**
+	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
+	 */
+	virtual string getNameParams();
+
+	/**
 		@return TRUE to use median rate for discrete categories, FALSE to use mean rate instead
 	*/
 	bool isCutMedian() { return cut_median; }

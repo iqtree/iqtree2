@@ -1,27 +1,113 @@
-add_library(pll 
-#avxLikelihood.c
-#mem_alloc.c
-alignment.c
-bipartitionList.c
-evaluateGenericSpecial.c
-evaluatePartialGenericSpecial.c
-fastDNAparsimony.c
-hash.c
-lexer.c
-makenewzGenericSpecial.c
-models.c
-newick.c
-newviewGenericSpecial.c
-optimizeModel.c
-parsePartition.c
-queue.c
-randomTree.c
-recom.c
-restartHashTable.c
-searchAlgo.c
-ssort.c
-stack.c
-topologies.c
-trash.c
-treeIO.c
-utils.c)
+if (CMAKE_BUILD_TYPE MATCHES "parallel_avx")
+  message("Building PARALLEL_AVX version of PLL")
+  add_library(pll 
+  avxLikelihood.c
+  alignment.c
+  bipartitionList.c
+  evaluateGenericSpecial.c
+  evaluatePartialGenericSpecial.c
+  fastDNAparsimony.c
+  hash.c
+  lexer.c
+  makenewzGenericSpecial.c
+  models.c
+  newick.c
+  newviewGenericSpecial.c
+  genericParallelization.c
+  optimizeModel.c
+  parsePartition.c
+  queue.c
+  randomTree.c
+  recom.c
+  restartHashTable.c
+  searchAlgo.c
+  ssort.c
+  stack.c
+  topologies.c
+  trash.c
+  treeIO.c
+  utils.c)
+elseif (CMAKE_BUILD_TYPE MATCHES "parallel_sse3")
+  message("Building PARALLEL_SSE3 version of PLL")  
+  add_library(pll 
+  alignment.c
+  bipartitionList.c
+  evaluateGenericSpecial.c
+  evaluatePartialGenericSpecial.c
+  fastDNAparsimony.c
+  hash.c
+  lexer.c
+  makenewzGenericSpecial.c
+  models.c
+  newick.c
+  genericParallelization.c
+  newviewGenericSpecial.c
+  optimizeModel.c
+  parsePartition.c
+  queue.c
+  randomTree.c
+  recom.c
+  restartHashTable.c
+  searchAlgo.c
+  ssort.c
+  stack.c
+  topologies.c
+  trash.c
+  treeIO.c
+  utils.c)
+elseif (CMAKE_BUILD_TYPE MATCHES "avx")
+  message("Building AVX version of PLL")  
+  add_library(pll 
+    avxLikelihood.c
+    alignment.c
+    bipartitionList.c
+    evaluateGenericSpecial.c
+    evaluatePartialGenericSpecial.c
+    fastDNAparsimony.c
+    hash.c
+    lexer.c
+    makenewzGenericSpecial.c
+    models.c
+    newick.c
+    newviewGenericSpecial.c
+    optimizeModel.c
+    parsePartition.c
+    queue.c
+    randomTree.c
+    recom.c
+    restartHashTable.c
+    searchAlgo.c
+    ssort.c
+    stack.c
+    topologies.c
+    trash.c
+    treeIO.c
+    utils.c)
+else ()
+  message("Building SSE3 version of PLL")  
+  add_library(pll 
+    alignment.c
+    bipartitionList.c
+    evaluateGenericSpecial.c
+    evaluatePartialGenericSpecial.c
+    fastDNAparsimony.c
+    hash.c
+    lexer.c
+    makenewzGenericSpecial.c
+    models.c
+    newick.c
+    newviewGenericSpecial.c
+    optimizeModel.c
+    parsePartition.c
+    queue.c
+    randomTree.c
+    recom.c
+    restartHashTable.c
+    searchAlgo.c
+    ssort.c
+    stack.c
+    topologies.c
+    trash.c
+    treeIO.c
+    utils.c)       
+endif()

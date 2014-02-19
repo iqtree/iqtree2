@@ -57,6 +57,8 @@ public:
     /** read partition model file in NEXUS format into variable info */
     void readPartitionNexus(Params &params);
 
+    void printPartition(const char *filename);
+
 	/**
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */
@@ -152,7 +154,7 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD);
+    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
 
     /**
             optimize one branch length by ML by optimizing all mapped branches of subtrees
@@ -242,6 +244,8 @@ public:
      * count the number of super branches that map to no branches in gene trees
      */
     int countEmptyBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    int totalNNIs, evalNNIs;
 
 };
 

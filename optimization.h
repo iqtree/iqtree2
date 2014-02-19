@@ -1,7 +1,7 @@
 //
 // C++ Interface: optimization
 //
-// Description: 
+// Description:
 //
 //
 // Author: BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>, (C) 2008
@@ -35,7 +35,7 @@ public:
 	virtual double computeFunction(double value) { return value; }
 
 	/**
-		the brent method to find the value that minimizes the computeFunction(). 
+		the brent method to find the value that minimizes the computeFunction().
 		@return the x-value that minimize the function
 		@param xmin lower bound
 		@param xmax upper bound
@@ -49,7 +49,7 @@ public:
 	double minimizeOneDimenSafeMode(double xmin, double xguess, double xmax, double tolerance, double *fx);
 
 	/*****************************************************
-		One dimensional optimization with Newton Raphson 
+		One dimensional optimization with Newton Raphson
 		only applicable if 1st and 2nd derivatives are easy to compute
 	*****************************************************/
 
@@ -77,12 +77,11 @@ public:
 		@param tolerance tolerance of x-value to stop the iterations
 		@param fx (OUT) function value at the minimum x found
 		@param var (OUT) variance estimate of x
+		@param maxNRStep max number of NR steps
 	*/
-	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f);
+	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f, int maxNRStep = 100);
 
-	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f, double &d2l);
-
-	double minimizeNewtonTung(double x1, double xguess, double x2, double xacc, double &fm);
+	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f, double &d2l, int maxNRStep = 100);
 
 	double minimizeNewtonSafeMode(double xmin, double xguess, double xmax, double tolerance, double &f);
 
@@ -97,7 +96,7 @@ public:
 		return the number of dimensions
 	*/
 	virtual int getNDim() { return 0; }
-	
+
 
 	/**
 		the target function which needs to be optimized
@@ -113,7 +112,7 @@ public:
 		@return the function value at x
 	*/
 	virtual double derivativeFunk(double x[], double dfx[]);
-	
+
 	/**
 		multi dimensional optimization by BFGS method
 		@param guess the initial starting point
@@ -124,9 +123,9 @@ public:
 		@param bound_check bound checking vector
 		@return the minimum function value obtained
 	*/
-	double minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[], 
+	double minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[],
 		bool bound_check[], double gtol);
-	
+
 
     ~Optimization();
 
@@ -137,13 +136,14 @@ public:
 
 private:
 
+
 	double brent_opt (double ax, double bx, double cx, double tol,
 		double *foptx, double *f2optx, double fax, double fbx, double fcx);
 
 	double dbrent(double ax, double bx, double cx, double tol, double *xmin);
 
 	void dfpmin(double p[], int n, double lower[], double upper[], double gtol, int *iter, double *fret);
-	
+
 	void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[],
 		double *f, double stpmax, int *check, double lower[], double upper[]);
 

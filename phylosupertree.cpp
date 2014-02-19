@@ -26,10 +26,12 @@
 PhyloSuperTree::PhyloSuperTree()
  : IQTree()
 {
+	totalNNIs = evalNNIs = 0;
 }
 
 
 PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree) :  IQTree(alignment) {
+	totalNNIs = evalNNIs = 0;
 	part_info = super_tree->part_info;
 	for (vector<Alignment*>::iterator it = alignment->partitions.begin(); it != alignment->partitions.end(); it++) {
 		PhyloTree *tree = new PhyloTree((*it));
@@ -160,7 +162,42 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
     if (input_aln)
     	delete input_aln;
 }
+
+void PhyloSuperTree::printPartition(const char *filename) {
+	   try {
+	        ofstream out;
+	        out.exceptions(ios::failbit | ios::badbit);
+            out.open(filename);
+            out << "#nexus" << endl << "[ partition information for alignment written in .conaln file ]" << endl
+            	<< "begin sets;" << endl;
+            int part; int start_site;
+            for (part = 0, start_site = 1; part < part_info.size(); part++) {
+            	string name = part_info[part].name;
+            	replace(name.begin(), name.end(), '+', '_');
+            	int end_site = start_site + at(part)->getAlnNSite();
+            	out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
+            	start_site = end_site;
+            }
+            out << "  charpartition mymodels =" << endl;
+            for (part = 0; part < part_info.size(); part++) {
+            	string name = part_info[part].name;
+            	replace(name.begin(), name.end(), '+', '_');
+            	if (part > 0) out << "," << endl;
+            	out << "    " << at(part)->getModelNameParams() << ":" << name;
+            }
+        	out << ";" << endl;
+            out << "end;" << endl;
+	        out.close();
+	        cout << "Partition information was printed to " << filename << endl;
+	    } catch (ios::failure) {
+	        outError(ERR_WRITE_OUTPUT, filename);
+	    }
+
+}
+
 PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
+	totalNNIs = evalNNIs = 0;
+
 	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
 	if (detectInputFile(params.partition_file) == IN_NEXUS)
 		readPartitionNexus(params);
@@ -449,14 +486,14 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 	}
 }
 
-double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance) {
+double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
 	double tree_lh = 0.0;
 	int ntrees = size();
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: tree_lh)
 	#endif
 	for (int i = 0; i < ntrees; i++) {
-		tree_lh += at(i)->optimizeAllBranches(my_iterations, tolerance);
+		tree_lh += at(i)->optimizeAllBranches(my_iterations, tolerance, maxNRStep);
 		if (verbose_mode >= VB_MAX)
 			at(i)->printTree(cout, WT_BR_LEN + WT_NEWLINE);
 	}
@@ -602,6 +639,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	#endif
 	for (part = 0; part < ntrees; part++) {
 		bool is_nni = true;
+		totalNNIs++;
 		FOR_NEIGHBOR_DECLARE(node1, NULL, nit) {
 			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
@@ -618,6 +656,8 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 			nni2_score += part_info[part].cur_score;
 			continue;
 		}
+
+		evalNNIs++;
 
 		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];

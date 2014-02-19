@@ -24,8 +24,6 @@ const int NO_BRAN_OPT = 1;
 const int ONE_BRAN_OPT = 2;
 const int FIVE_BRAN_OPT = 4;
 
-#define IQTREE_NEWZPERCYCLE 10
-
 /* This is the info you need to copy the vector*/
 typedef struct
 {
@@ -41,7 +39,6 @@ typedef struct {
 	nodeptr p;
 	int nniType;
 	char* idString;
-	string quartetString;
     double z0[PLL_NUM_BRANCHES]; // p
     double z1[PLL_NUM_BRANCHES]; // p->next
     double z2[PLL_NUM_BRANCHES]; // p->next->next
@@ -75,16 +72,12 @@ typedef struct {
 } NNICUT;
 
 typedef struct {
-	//unordered_map<string, pllNNIMove> nniList;
 	vector<pllNNIMove> nniList;
 	bool updateNNIList;
-	unordered_set<string> tabuNNIs;
+	bool speednni;
 	vector<pllNNIMove> posNNIList; // positive NNI list
-	bool tabunni;
-	unordered_set<int> affectNodes; // Set of nodes that are affected by the previous NNIs
-	unordered_set<string> affectBranches;
+	unordered_set<string> affectBranches; // Set of branches that are affected by the previous NNIs
 	double curLogl;
-	int numUnevalQuartet; // number of unevaluated quartet because of tabu constraint
 	int evalType;
 	int numAppliedNNIs; // total number of applied NNIs sofar
 	int curNumAppliedNNIs; // number of applied NNIs at the current step
@@ -102,13 +95,11 @@ string getBranString(nodeptr p);
 
 bool containsAffectedNodes(nodeptr p, SearchInfo &searchinfo);
 
-void pllSaveQuartet(nodeptr p, SearchInfo &searchinfo);
-
 void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nni);
 
 void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo);
 
-double pllDoRandNNIs(pllInstance *tr, partitionList *pr, int numNNI);
+double pllDoRandomNNIs(pllInstance *tr, partitionList *pr, int numNNI);
 
 /**
  *  Evaluate NNI moves for the current internal branch

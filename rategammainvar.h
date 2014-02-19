@@ -39,6 +39,11 @@ public:
     RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, bool simultaneous, PhyloTree *tree);
 
 	/**
+	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
+	 */
+	virtual string getNameParams();
+
+	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize
 		p_invar or gamma shape parameter.
 		@param value value of p_invar (if cur_optimize == 1) or gamma shape (if cur_optimize == 0).

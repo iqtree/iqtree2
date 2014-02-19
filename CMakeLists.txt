@@ -93,25 +93,45 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
-#set(LIBPLL_CFLAGS "-Wall -Wredundant-decls  -Wreturn-type  -Wswitch-default -Wimplicit  -Wimplicit-function-declaration  -Wimplicit-int -Wimport -Wunused-label -Wno-int-to-pointer-cast -Wbad-function-cast  -Wmissing-declarations -Wmissing-prototypes  -Wnested-externs -Wstrict-prototypes -Wpointer-sign -Wextra -Wredundant-decls -Wunused -Wunused-function -Wunused-parameter -Wunused-value  -Wunused-variable -Wformat  -Wformat-nonliteral -Wparentheses -Wsequence-point -Wuninitialized -Wundef") 
-#set(LIBPLL_SSE3_CFLAGS "-fomit-frame-pointer -funroll-loops -D__SSE3 -msse3")
 add_definitions(-DIQ_TREE)
 
-set (COMBINED_FLAGS "-msse3 -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
+set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
-set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -std=c99 -Wno-deprecated ${COMBINED_FLAGS}")
+set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
-set(CMAKE_C_FLAGS_RELEASE "-O2 -g0 -fomit-frame-pointer -funroll-loops -D__SSE3")
+if (CMAKE_BUILD_TYPE MATCHES "avx")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -fomit-frame-pointer -funroll-loops -D__SSE3 -D__AVX -mavx")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -fomit-frame-pointer -funroll-loops -D__SSE3 -D__AVX -mavx")
+else()
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -fomit-frame-pointer -funroll-loops -D__SSE3")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -fomit-frame-pointer -funroll-loops -D__SSE3")  
+endif()
 
-set(CMAKE_CXX_FLAGS_PROFILE "-D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
-set(CMAKE_C_FLAGS_PROFILE "-D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -fomit-frame-pointer -funroll-loops")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -O2 -fomit-frame-pointer -funroll-loops")
+
+set(CMAKE_CXX_FLAGS_PROFILE "${COMBINED_FLAGS} -msse3 -D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
+set(CMAKE_C_FLAGS_PROFILE "${COMBINED_FLAGS} -msse3 -D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
 
 set(CMAKE_CXX_FLAGS_MEM "-g -O1 -D__SSE3 -msse3")
 set(CMAKE_C_FLAGS_MEM "-g -O1 -D__SSE3 -msse3")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -D__SSE3 -msse3")
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g -D__SSE3 -msse3")
+
+if (CMAKE_BUILD_TYPE STREQUAL "parallel_sse3" OR CMAKE_BUILD_TYPE STREQUAL "parallel_avx" )
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_RELEASE} -D_USE_PTHREADS -pthread")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE} -pthread")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+endif()
+
+if (CMAKE_BUILD_TYPE STREQUAL "parallel_sse3_debug" OR CMAKE_BUILD_TYPE STREQUAL "parallel_avx_debug" )
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_DEBUG} -D_USE_PTHREADS -pthread")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG} -D_USE_PTHREADS -pthread")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+endif()    
+
+
 
 # subdirectories containing necessary libraries for the build 
 add_subdirectory(pll)

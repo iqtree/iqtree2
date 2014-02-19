@@ -43,7 +43,7 @@ MTree::MTree(const char *userTreeFile, bool &is_rooted)
 }
 
 void MTree::init(const char *userTreeFile, bool &is_rooted) {
-    num_precision = 6;
+    num_precision = 10;
     len_scale = 1.0;
     readTree(userTreeFile, is_rooted);
     //printInfo();
@@ -749,6 +749,7 @@ void MTree::getAllNodesInSubtree(Node *node, Node *dad, NodeVector &nodeList) {
 }
 
 int MTree::getNumTaxa(Node *node, Node *dad) {
+	// This function is WRONG because it will always return 1 if calling from the ROOT
     if (!node) node = root;
     if (node->isLeaf()) {
         return 1;
