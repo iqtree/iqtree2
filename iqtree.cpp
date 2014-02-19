@@ -722,7 +722,12 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
 			worstTree = it->first;
 		}
 	}
-	if (treeLogl > worstLogl && refTreeSet.find(treeTopo) == refTreeSet.end()) {
+
+	if (refTreeSet.size() < params->popSize && refTreeSet.find(treeTopo) == refTreeSet.end()) {
+		refTreeSet.insert(make_pair(treeTopo, treeLogl));
+		refTreeSetSorted.insert(make_pair(treeLogl, treeString));
+		updated = true;
+	} else if (treeLogl > worstLogl && refTreeSet.find(treeTopo) == refTreeSet.end()) {
 		if (refTreeSet.size() == params->popSize) {
 			refTreeSet.erase(worstTree);
 			refTreeSetSorted.erase(refTreeSetSorted.begin());
@@ -1035,13 +1040,12 @@ double IQTree::doTreeSearch() {
             if (params->inni) {
                 int numNNI = params->pertubSize * (aln->getNSeq() - 3);
                 if (params->evol) {
-                    int index = random_int(params->popSize);
                     vector<string> trees;
                     for (map<double, string>::iterator it = refTreeSetSorted.begin(); it != refTreeSetSorted.end();
                             ++it) {
                         trees.push_back(it->second);
                     }
-                    assert(trees.size() == params->popSize);
+                    int index = random_int(trees.size());
                     readTreeString(trees[index]);
                 }
                 doRandomNNIs(numNNI);
