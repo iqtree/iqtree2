@@ -1492,7 +1492,9 @@ double IQTree::doIQPNNI() {
 			}
 
 		}
-		if(params->pll) pllConvertUFBootData2IQTree(); // DTH: make pllUFBootData usable in summarizeBootstrap
+		// DTH: make pllUFBootData usable in summarizeBootstrap
+		if(params->pll && params->online_bootstrap && (params->gbo_replicates > 0))
+			pllConvertUFBootData2IQTree();
 		// DTH: Carefully watch the -pll case here
 		if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
 			SplitGraph *sg = new SplitGraph;
@@ -1887,10 +1889,6 @@ void IQTree::pllInitUFBootData(){
 				(int *) malloc(params->gbo_replicates * (sizeof(int)));
 			if(!pllUFBootDataPtr->boot_trees) pllAlertMemoryError();
 
-//			pllUFBootDataPtr->random_doubles =
-//				(double *) malloc(params->gbo_replicates * (sizeof(double)));
-//			if(!pllUFBootDataPtr->random_doubles) pllAlertMemoryError();
-
 			pllUFBootDataPtr->duplication_counter = 0;
 		}
 	}
@@ -1904,10 +1902,6 @@ void IQTree::pllInitUFBootData(){
 	pllUFBootDataPtr->save_all_br_lens = save_all_br_lens;
 	pllUFBootDataPtr->logl_cutoff = logl_cutoff;
 	pllUFBootDataPtr->n_patterns = pllAlignment->sequenceLength;
-
-//	if(pllUFBootDataPtr->random_doubles)
-//		for(int i = 0; i < params->gbo_replicates; i++)
-//			pllUFBootDataPtr->random_doubles[i] = random_double();
 }
 
 void IQTree::pllDestroyUFBootData(){
@@ -1948,9 +1942,6 @@ void IQTree::pllDestroyUFBootData(){
 
 		free(pllUFBootDataPtr->boot_trees);
 //		cout << "Done freeing boot_trees" << endl;
-
-//		free(pllUFBootDataPtr->random_doubles);
-//		cout << "Done freeing random_doubles" << endl;
 	}
 	free(pllUFBootDataPtr);
 	pllUFBootDataPtr = NULL;

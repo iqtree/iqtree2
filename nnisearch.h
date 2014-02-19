@@ -218,7 +218,6 @@ typedef struct{
 	double * boot_logl;
 	int * boot_counts;
 	int * boot_trees;
-//	double * random_doubles;
 } pllUFBootData;
 
 /**

@@ -957,8 +957,6 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 			for (int ptn = 0; ptn < nptn; ptn++)
 				rell += pattern_lh[ptn] * pllUFBootDataPtr->boot_samples[sample][ptn];
 
-//			int rand_pos = (sample + rand()) % nsamples;
-
 			if (rell > pllUFBootDataPtr->boot_logl[sample] + globalParam->ufboot_epsilon ||
 				(rell > pllUFBootDataPtr->boot_logl[sample] - globalParam->ufboot_epsilon &&
 					random_double() <= 1.0/(pllUFBootDataPtr->boot_counts[sample]+1))) {
