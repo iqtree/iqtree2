@@ -883,6 +883,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     double t_begin, t_end;
     t_begin = getCPUTime();
 
+    // if PLL is used for likelihood computation, then make sure to deallocate
+    // all other memory used by IQ-TREE
+    if (params.pllModOpt) {
+        iqtree.deleteAllPartialLh();
+    }
+
     if (params.inni || params.pll) {
         /* Initialized all data strucutre for PLL*/
         iqtree.pllAttr.rateHetModel = PLL_GAMMA;

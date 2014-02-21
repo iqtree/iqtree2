@@ -1176,6 +1176,7 @@ double IQTree::doTreeSearch() {
 				if (params->inni) {
 					if (params->modOpt) {
 						if (params->pllModOpt) {
+                            deleteAllPartialLh();
 					    	cout << "Optimizing model parameters by PLL ... ";
 					    	double stime = getCPUTime();
 							modOpt(pllInst, pllPartitions, 1.0);
