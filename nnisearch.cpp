@@ -280,10 +280,10 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	/* apply non-confilicting positive NNIs */
 	if (searchinfo.posNNIList.size() != 0) {
 		sort(searchinfo.posNNIList.begin(), searchinfo.posNNIList.end(), comparePLLNNIMove);
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VB_DEBUG) {
         	cout << "curScore: "  << searchinfo.curLogl << endl;
             for (int i = 0; i < searchinfo.posNNIList.size(); i++) {
-                cout << "Log-likelihood of positive NNI " << i << " : " << searchinfo.posNNIList[i].likelihood << endl;
+                cout << "Logl of positive NNI " << i << " : " << searchinfo.posNNIList[i].likelihood << endl;
             }
         }
 		for (vector<pllNNIMove>::reverse_iterator rit = searchinfo.posNNIList.rbegin(); rit != searchinfo.posNNIList.rend(); ++rit) {
@@ -351,9 +351,6 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	} else {
 		searchinfo.curNumAppliedNNIs = 0;
 	}
-//	if (verbose_mode >= VB_MED) {
-//		cout << "Step: " << searchinfo.curNumNNISteps << " / NumNNI: " << searchinfo.curNumAppliedNNIs << " / logl: " << finalLH << endl;
-//	}
 	return finalLH;
 }
 

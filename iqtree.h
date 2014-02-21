@@ -209,6 +209,28 @@ public:
     void inputModelParam2PLL();
 
     /**
+     *  get the rate parameters from PLL
+     *  @return double array containing the 6 rates
+     */
+    double* getModelRatesFromPLL();
+
+    /**
+     *  get the alpha parameter from PLL for the GAMMA distribution of rate heterogenity
+     *  @return alpha parameter
+     */
+    double getAlphaFromPLL();
+
+    /**
+     *  print model parameters from PLL
+     */
+    void printPLLModParams();
+
+    /**
+     *  print logl of trees in population (for debugging purpose only)
+     */
+    void printLoglInTreePop();
+
+    /**
      * input the tree string from IQTree kernel to PLL kernel
      * @return
      */

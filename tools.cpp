@@ -1655,6 +1655,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.evol = true;
         	} else if (strcmp(argv[cnt], "-evol") == 0) {
         		params.evol = true;
+        		params.inni = true;
+        		params.modOpt = true;
         	} else if (strcmp(argv[cnt], "-beststart") == 0) {
                 params.bestStart = true;
                 cnt++;
