@@ -1392,6 +1392,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         delete[] parsTree;
         cout << endl;
         cout << "Initial phase: tree logl = " << iqtree.bestScore << " / CPU time: " << getCPUTime() - initTime << endl;
+        if (verbose_mode >= VB_MED) {
+            if (params.evol) {
+                iqtree.printLoglInTreePop();
+            }
+        }
 
         if (iqtree.isSuperTree()) {
             ((PhyloSuperTree*) &iqtree)->mapTrees();
