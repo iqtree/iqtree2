@@ -1151,7 +1151,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 
     /* Fix if negative branch lengths detected */
     //double fixed_length = 0.001;
-    int fixed_number = iqtree.fixNegativeBranch(true);
+    int fixed_number = iqtree.fixNegativeBranch(false);
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
     }
@@ -1305,7 +1305,7 @@ void runPhyloAnalysis(Params &params, string &original_model,
 				iqtree.readTreeString(parsTreeString);
 				iqtree.initializeAllPartialLh();
 				iqtree.clearAllPartialLH();
-				iqtree.fixNegativeBranch(true);
+				iqtree.fixNegativeBranch(false);
 				stringstream tree;
 				iqtree.printTree(tree);
 				parsTree[treeNr] = tree.str();
