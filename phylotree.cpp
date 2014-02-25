@@ -2384,7 +2384,7 @@ double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNR
             tree_lh = new_tree_lh;
         }
     if (dad)
-        tree_lh = optimizeOneBranch(node, dad, maxNRStep);
+        tree_lh = optimizeOneBranch(node, dad, true, maxNRStep); // BQM 2014-02-24: true was missing
 
     return tree_lh;
 }
