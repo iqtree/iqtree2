@@ -318,7 +318,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 							tr->likelihood, selectedNNIs[0].likelihood);
 					exit(1);
 				} else {
-					cout << "Best logl: " << selectedNNIs.back().likelihood << " / " << "Applying " << numNNI << " NNIs give logl: " << tr->likelihood << " (worse than best)";
+					cout << "Best logl: " << selectedNNIs.back().likelihood << " / " << "NNI step " << searchinfo.curNumNNISteps<< " / Applying " << numNNI << " NNIs give logl: " << tr->likelihood << " (worse than best)";
 					cout << " / Roll back tree ... " << endl;
 					if (!restoreTree(curTree, tr, pr)) {
 						printf("ERROR: failed to roll back tree \n");

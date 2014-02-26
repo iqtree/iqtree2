@@ -1672,6 +1672,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.model_eps = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-pllmod") == 0) {
             	params.pllModOpt = true;
+            	params.pll = true;
         	} else if (strcmp(argv[cnt], "-modopt") == 0) {
             	params.modOpt = true;
             } else if (strcmp(argv[cnt], "-pars_ins") == 0) {

@@ -1098,7 +1098,7 @@ double IQTree::doTreeSearch() {
                 assert(perturbTree != NULL);
                 pllTreeInitTopologyNewick(pllInst, perturbTree, PLL_FALSE);
                 pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-                //pllTreeEvaluate(pllInst, pllPartitions, params->numSmoothTree);
+                pllTreeEvaluate(pllInst, pllPartitions, params->numSmoothTree);
                 pllNewickParseDestroy(&perturbTree);
                 curScore = pllInst->likelihood;
                 perturbScore = curScore;

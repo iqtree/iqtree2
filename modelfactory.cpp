@@ -462,8 +462,8 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
 		*/
 		double new_lh = optimizeParametersOnly(param_epsilon);
-		if (verbose_mode >= VB_MED || write_info)
-			cout << i << ". Model optimization log-likelihood: " << new_lh << endl;
+//		if (verbose_mode >= VB_MED || write_info)
+//			cout << i << ". Model optimization log-likelihood: " << new_lh << endl;
 		if (new_lh == 0.0) {
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
 			break;
@@ -479,8 +479,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 				param_epsilon = (new_lh - cur_lh) * logl_epsilon;
 			cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)
-				//cout << i << ". Branch length optimization log-likelihood: " << cur_lh << endl;
-				cout << "   Branch length optimization log-likelihood: " << cur_lh << endl;
+				cout << i << ". Current log-likelihood: " << cur_lh << endl;
 		} else {
 			site_rate->classifyRates(new_lh);
 			if (!fixed_len) {
