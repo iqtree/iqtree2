@@ -726,6 +726,9 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
         refTreeSetSorted.insert(make_pair(treeLogl, treeString));
         updated = true;
     }
+    if (updated) {
+        printLoglInTreePop();
+    }
 
     backupTree.seekg(0, ios::beg);
     freeNode();
@@ -1270,7 +1273,7 @@ double IQTree::doTreeSearch() {
         // check whether the tree can be put into the reference set
         if (params->evol) {
             bool updated = updateRefTreeSet(intermediate_tree, curScore);
-            if (updated && verbose_mode >= VB_MED) {
+            if (updated) {
                 printLoglInTreePop();
             }
         }
