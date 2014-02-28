@@ -751,6 +751,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.speednni = false;
     params.numParsimony = 20;
     params.avh_test = 0;
+    params.bootlh_test = 0;
     params.site_freq_file = NULL;
 #ifdef _OPENMP
     params.num_threads = 0;
@@ -1730,6 +1731,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -avh <arndt_#bootstrap>";
                 params.avh_test = convert_int(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-bootlh") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -bootlh <#replicates>";
+                params.bootlh_test = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-AIC") == 0) {
                 params.model_test_criterion = MTC_AIC;
             } else if (strcmp(argv[cnt], "-AICc") == 0) {

@@ -1809,6 +1809,9 @@ void runPhyloAnalysis(Params &params) {
 	} else if (params.avh_test) {
 		// run one of the wondering test for Arndt
 		runAvHTest(params, alignment, *tree);
+	} else if (params.bootlh_test) {
+		// run Arndt's plot of tree likelihoods against bootstrap alignments
+		runBootLhTest(params, alignment, *tree);
 	} else if (params.num_bootstrap_samples == 0) {
 		// the main Maximum likelihood tree reconstruction
 		alignment->checkGappySeq();

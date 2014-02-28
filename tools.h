@@ -1342,6 +1342,11 @@ struct Params {
      */
     int avh_test;
 
+    /**
+            number of bootstrap samples for Arndt's bootstrap plot
+     */
+    int bootlh_test;
+
     /** precision when printing out for floating-point number */
     int numeric_precision;
 
