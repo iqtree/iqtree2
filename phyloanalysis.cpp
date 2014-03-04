@@ -1171,13 +1171,16 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             outError("Memory required exceeds your computer RAM size!");
         }
 
-        if (alignment->num_states == 4) {
-            params.model_eps = 0.1;
-        } else if (alignment->num_states == 20) {
-            params.model_eps = 0.01;
+        if (params.min_iterations > 0) {
+            if (alignment->num_states == 4) {
+                params.model_eps = 0.1;
+            } else if (alignment->num_states == 20) {
+                params.model_eps = 0.01;
+            }
         }
+
         cout.precision(6);
-        cout << "Optimize model parameters " << (params.optimize_model_rate_joint ? "jointly" : "") << " (tolerace "
+        cout << "Optimize model parameters " << (params.optimize_model_rate_joint ? "jointly" : "") << " (log-likelihood tolerance "
                 << params.model_eps << ")... " << endl;
 
         // Optimize model parameters and branch lengths using ML for the initial tree
@@ -1190,6 +1193,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     // Compute maximum likelihood distance
     double bestTreeScore = iqtree.bestScore;
+    // ML distance is only needed for IQP
     if (params.inni || params.min_iterations == 1) {
         params.compute_ml_dist = false;
     }
@@ -1240,7 +1244,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         parsTree[0] = initTree;
 
         // input the tree optimized by IQ-TREE into PLL
-        if (!params.pllModOpt) {
+        if (!params.pllModOpt && params.pll) {
             pllNewickTree *newick = pllNewickParseString(parsTree[0].c_str());
             pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
             pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
