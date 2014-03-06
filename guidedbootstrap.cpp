@@ -1229,13 +1229,18 @@ void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
 
     for (id = 0; id < params.bootlh_test; id++) {
     	Alignment *boot_aln;
-		if (alignment->isSuperAlignment())
-			boot_aln = new SuperAlignment;
-		else
-			boot_aln = new Alignment;
         IntVector boot_freq;
-        boot_aln->createBootstrapAlignment(alignment, &boot_freq, params.bootstrap_spec);
-
+        if (id==0) {
+        	// include original alignment
+        	boot_aln = alignment;
+        	boot_freq = ptnfreq;
+        } else {
+    		if (alignment->isSuperAlignment())
+    			boot_aln = new SuperAlignment;
+    		else
+    			boot_aln = new Alignment;
+        	boot_aln->createBootstrapAlignment(alignment, &boot_freq, params.bootstrap_spec);
+        }
         // computing Kullback-Leibler distance
         double dist = 0.0;
         for (int ptn = 0; ptn < ptnfreq.size(); ptn++)
@@ -1255,7 +1260,8 @@ void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
             	out << " " << info[i].logl;
         }
         out << endl;
-        delete boot_aln;
+        if (id != 0)
+        	delete boot_aln;
     }
     out.close();
 }
