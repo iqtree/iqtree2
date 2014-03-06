@@ -231,6 +231,11 @@ public:
     void printLoglInTreePop();
 
     /**
+     *  print reference tree strings to file
+     */
+    void printRefTrees();
+
+    /**
      * input the tree string from IQTree kernel to PLL kernel
      * @return
      */

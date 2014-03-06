@@ -1237,6 +1237,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     }
 
     if (params.min_iterations > 0) {
+        if (params.evol) {
+            iqtree.refTreeSet.clear();
+            iqtree.refTreeSetSorted.clear();
+        }
         double initTime = getCPUTime();
         int nni_count = 0;
         int nni_steps = 0;
@@ -1292,13 +1296,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                         PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
                 intermediate_tree = string(iqtree.pllInst->tree_string);
             } else {
-                stringstream parsTreeString;
-                parsTreeString << parsTree[treeNr];
-                iqtree.readTree(parsTreeString, iqtree.rooted);
-                iqtree.setAlignment(alignment);
+                iqtree.readTreeString(parsTree[treeNr]);
+                iqtree.initializeAllPartialLh();
+                iqtree.fixNegativeBranch(true);
                 if (iqtree.isSuperTree())
                     ((PhyloSuperTree*) &iqtree)->mapTrees();
-                iqtree.initializeAllPartialLh();
+                iqtree.clearAllPartialLH();
                 iqtree.curScore = iqtree.optimizeAllBranches(params.numSmoothTree);
                 cout << "logl of starting tree " << treeNr + 1 << ": " << iqtree.curScore << endl;
                 iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
@@ -1586,6 +1589,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
         cout << endl;
         cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
+
+        if (params.evol) {
+            iqtree.printLoglInTreePop();
+            iqtree.printRefTrees();
+        }
 
         /* root the tree at the first sequence */
         iqtree.root = iqtree.findLeafName(alignment->getSeqName(0));

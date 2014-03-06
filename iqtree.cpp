@@ -710,20 +710,28 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
         worstLogl = refTreeSetSorted.begin()->first;
     }
     if (refTreeSet.size() < params->popSize) {
-        refTreeSet.insert(make_pair(treeTopo, treeLogl));
-        refTreeSetSorted.insert(make_pair(treeLogl, treeString));
-        updated = true;
+        if (refTreeSet.find(treeTopo) != refTreeSet.end()) {
+            updated = false;
+        } else {
+            refTreeSet.insert(make_pair(treeTopo, treeLogl));
+            refTreeSetSorted.insert(make_pair(treeLogl, treeString));
+            updated = true;
+        }
     } else if (treeLogl > worstLogl && refTreeSet.find(treeTopo) == refTreeSet.end()) {
+        cout << "refTreeSet.size: " << refTreeSet.size() << endl;
+        cout << "refTreeSetSorted.size: " << refTreeSetSorted.size() << endl;
         if (refTreeSet.size() == params->popSize) {
             refTreeSetSorted.erase(refTreeSetSorted.begin());
             for (unordered_map<string, double>::iterator it = refTreeSet.begin(); it != refTreeSet.end(); ++it) {
                 if (it->second == worstLogl) {
                     refTreeSet.erase(it);
+                    break;
                 }
             }
         }
         refTreeSet.insert(make_pair(treeTopo, treeLogl));
         refTreeSetSorted.insert(make_pair(treeLogl, treeString));
+        assert(refTreeSet.size() == refTreeSetSorted.size() && refTreeSetSorted.size() == params->popSize);
         updated = true;
     }
     if (updated) {
@@ -831,6 +839,15 @@ void IQTree::printLoglInTreePop() {
         cout << it->first << " / ";
     }
     cout << endl;
+}
+
+void IQTree::printRefTrees() {
+    string filename = string(params->out_prefix) + ".reftrees";
+    ofstream file;
+    file.open(filename.c_str());
+    for (map<double, string>::iterator it = refTreeSetSorted.begin(); it != refTreeSetSorted.end(); ++it) {
+        file << it->second << endl;
+    }
 }
 
 double IQTree::getAlphaFromPLL() {
@@ -1169,10 +1186,9 @@ double IQTree::doTreeSearch() {
         if (params->write_intermediate_trees && save_all_trees != 2) {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
         }
-
+        bool betterTreeFound = false;
         if (curScore > bestScore) {
             stringstream cur_tree_topo_ss;
-            cur_tree_topo_ss.seekp(0, ios::beg);
             printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
             if (cur_tree_topo_ss.str() != best_tree_topo) {
                 best_tree_topo = cur_tree_topo_ss.str();
@@ -1200,7 +1216,6 @@ double IQTree::doTreeSearch() {
                                 getModel()->getRateMatrix(rate_param_bk);
                             }
                             double alpha_bk = getRate()->getGammaShape();
-                            //double time_s = getCPUTime();
                             cout << "Re-estimate model parameters ... " << endl;
                             if (params->pll) {
                                 initializeAllPartialLh();
@@ -1208,8 +1223,6 @@ double IQTree::doTreeSearch() {
                             }
                             double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length,
                                     false, params->model_eps);
-                            //cout << getCPUTime() - time_s << "s " << endl;
-                            //assert(modOptScore >= curScore);
                             if (modOptScore < curScore) {
                                 cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
                                 cout << "  Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
@@ -1228,9 +1241,7 @@ double IQTree::doTreeSearch() {
                             } else {
                                 curScore = modOptScore;
                             }
-                            stringstream treestream;
-                            printTree(treestream);
-                            intermediate_tree = treestream.str();
+                            intermediate_tree = getTreeString();
                             if (params->pll) {
                                 inputModelParam2PLL();
                                 // recompute the curScore using PLL
@@ -1238,7 +1249,6 @@ double IQTree::doTreeSearch() {
                                 deleteAllPartialLh();
                             }
                         }
-
                     }
                     nUnsuccessIteration = 0;
                     //cout << perturb_tree_string.str() << endl;
