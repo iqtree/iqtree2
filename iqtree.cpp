@@ -718,8 +718,6 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
             updated = true;
         }
     } else if (treeLogl > worstLogl && refTreeSet.find(treeTopo) == refTreeSet.end()) {
-        cout << "refTreeSet.size: " << refTreeSet.size() << endl;
-        cout << "refTreeSetSorted.size: " << refTreeSetSorted.size() << endl;
         if (refTreeSet.size() == params->popSize) {
             refTreeSetSorted.erase(refTreeSetSorted.begin());
             for (unordered_map<string, double>::iterator it = refTreeSet.begin(); it != refTreeSet.end(); ++it) {
@@ -1217,12 +1215,9 @@ double IQTree::doTreeSearch() {
                             }
                             double alpha_bk = getRate()->getGammaShape();
                             cout << "Re-estimate model parameters ... " << endl;
-                            if (params->pll) {
-                                initializeAllPartialLh();
-                                clearAllPartialLH();
-                            }
-                            double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length,
-                                    false, params->model_eps);
+                            initializeAllPartialLh();
+                            clearAllPartialLH();
+                            double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, params->model_eps);
                             if (modOptScore < curScore) {
                                 cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
                                 cout << "  Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
@@ -1235,18 +1230,16 @@ double IQTree::doTreeSearch() {
                                 }
                                 dynamic_cast<RateGamma*>(getRate())->setGammaShape(alpha_bk);
                                 getModel()->decomposeRateMatrix();
-                                curScore = pllInst->likelihood;
-                                params->modOpt = false;
-                                //cout << "Reset rate parameters / logl: " << curScore << endl;
+                                cout << "Reset rate parameters!" << endl;
                             } else {
                                 curScore = modOptScore;
-                            }
-                            intermediate_tree = getTreeString();
-                            if (params->pll) {
-                                inputModelParam2PLL();
-                                // recompute the curScore using PLL
-                                curScore = inputTree2PLL(intermediate_tree);
-                                deleteAllPartialLh();
+                                intermediate_tree = getTreeString();
+                                if (params->pll) {
+                                    inputModelParam2PLL();
+                                    // recompute the curScore using PLL
+                                    //curScore = inputTree2PLL(intermediate_tree);
+                                    deleteAllPartialLh();
+                                }
                             }
                         }
                     }
@@ -1257,16 +1250,14 @@ double IQTree::doTreeSearch() {
                 if (!params->autostop) {
                     stop_rule.addImprovedIteration(curIteration);
                 }
-                bestScore = curScore;
-                cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << bestScore;
+                cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl;
             } else {
-                bestScore = curScore;
-                cout << "UPDATE BEST LOG-LIKELIHOOD: " << bestScore << endl;
+                cout << "UPDATE BEST LOG-LIKELIHOOD: " << curScore << endl;
                 nUnsuccessIteration++;
             }
 
-            setBestTree(intermediate_tree, bestScore);
+            setBestTree(intermediate_tree, curScore);
             if (params->write_best_trees) {
                 ostringstream iter_string;
                 iter_string << curIteration;
@@ -1282,10 +1273,7 @@ double IQTree::doTreeSearch() {
 
         // check whether the tree can be put into the reference set
         if (params->evol) {
-            bool updated = updateRefTreeSet(intermediate_tree, curScore);
-            if (updated) {
-                printLoglInTreePop();
-            }
+            updateRefTreeSet(intermediate_tree, curScore);
         }
 
         if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {

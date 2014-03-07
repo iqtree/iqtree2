@@ -1344,8 +1344,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                         cout.precision(6);
                         cout << "Re-estimate model parameters using logl epsilon =  " << params.model_eps << endl;
                         // Now re-estimate the model parameters
-                        double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length,
-                                false, params.model_eps);
+                        double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.model_eps);
                         //cout << getCPUTime() - time_s << "s " << endl;
                         if (modOptScore < iqtree.curScore) {
                             cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
@@ -1359,18 +1358,15 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                             }
                             dynamic_cast<RateGamma*>(iqtree.getRate())->setGammaShape(alpha_bk);
                             iqtree.getModel()->decomposeRateMatrix();
-                            //iqtree.curScore = iqtree.computeLikelihood();
-                            iqtree.curScore = iqtree.pllInst->likelihood;
-                            params.modOpt = false;
-                            //cout << "Reset rate parameters / logl: " << iqtree.curScore << endl;
+                            cout << "Reset rate parameters!" << endl;
                         } else {
-                            iqtree.curScore = modOptScore;
-                            stringstream tmpTree;
-                            iqtree.printTree(tmpTree);
-                            intermediate_tree = tmpTree.str();
+                            //iqtree.curScore = modOptScore;
+                            intermediate_tree = iqtree.getTreeString();
                             if (params.pll) {
                                 iqtree.inputModelParam2PLL();
-                                iqtree.curScore = iqtree.inputTree2PLL(intermediate_tree, true);
+                                // recompute the curScore using PLL
+                                //curScore = inputTree2PLL(intermediate_tree);
+                                iqtree.deleteAllPartialLh();
                             }
                         }
                     }
