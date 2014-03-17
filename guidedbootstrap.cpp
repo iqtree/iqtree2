@@ -1208,3 +1208,60 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     for (IntVectorCollection::reverse_iterator rit = boot_freqs.rbegin(); rit != boot_freqs.rend(); rit++)
         delete (*rit);
 }
+
+void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
+    // collection of distinct bootstrapped site-pattern frequency vectors
+    cout << "Doing likelihood-bootstrap plot using Kullback-Leibler distance with " << params.bootlh_test << " bootstrap replicates ..." << endl;
+    int id;
+    IntVector ptnfreq;
+    alignment->getPatternFreq(ptnfreq);
+    string orig_model = params.model_name;
+    vector<ModelInfo> model_info;
+
+    string outfile = params.out_prefix;
+    outfile += ".bootlhtest";
+    ofstream out;
+    out.open(outfile.c_str());
+    //out << "ID KLdist" << endl;
+
+    out.precision(8);
+    params.min_iterations = 0; // do not do tree search
+
+    for (id = 0; id < params.bootlh_test; id++) {
+    	Alignment *boot_aln;
+        IntVector boot_freq;
+        if (id==0) {
+        	// include original alignment
+        	boot_aln = alignment;
+        	boot_freq = ptnfreq;
+        } else {
+    		if (alignment->isSuperAlignment())
+    			boot_aln = new SuperAlignment;
+    		else
+    			boot_aln = new Alignment;
+        	boot_aln->createBootstrapAlignment(alignment, &boot_freq, params.bootstrap_spec);
+        }
+        // computing Kullback-Leibler distance
+        double dist = 0.0;
+        for (int ptn = 0; ptn < ptnfreq.size(); ptn++)
+        	if (boot_freq[ptn]) {
+        		dist += log(((double)boot_freq[ptn])/ptnfreq[ptn]) * boot_freq[ptn];
+        	}
+        dist /= tree.getAlnNSite();
+        out << id+1 << " " << dist;
+        // now run analysis and compute tree likelihood for params.treeset_file
+        if (params.treeset_file) {
+			IQTree boot_tree(boot_aln);
+			runPhyloAnalysis(params, orig_model, boot_aln, boot_tree, model_info);
+        	vector<TreeInfo> info;
+        	IntVector distinct_ids;
+        	evaluateTrees(params, &boot_tree, info, distinct_ids);
+            for (int i = 0; i < info.size(); i++)
+            	out << " " << info[i].logl;
+        }
+        out << endl;
+        if (id != 0)
+        	delete boot_aln;
+    }
+    out.close();
+}
