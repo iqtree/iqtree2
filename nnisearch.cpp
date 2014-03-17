@@ -15,6 +15,8 @@
 int nni0;
 int nni5;
 extern Params *globalParam;
+int NNI_MAX_NR_STEP = 1;
+
 /* program options */
 
 int compareDouble(const void * a, const void * b) {
@@ -295,7 +297,6 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 		for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
 			/* do the topological change */
 			doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
-
 			if (searchinfo.speednni) {
 				vector<string> aBranches = getAffectedBranches(tr, (*it).p);
 				searchinfo.affectBranches.insert(aBranches.begin(), aBranches.end());
@@ -306,30 +307,37 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 		if (selectedNNIs.size() != 0) {
 			pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 			pllTreeEvaluate(tr, pr, 1);
+			int numNNI = selectedNNIs.size();
 			/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
-			if (tr->likelihood < selectedNNIs.back().likelihood) {
-				if (selectedNNIs.size() == 1) {
+			while (tr->likelihood < selectedNNIs.back().likelihood) {
+				if (numNNI == 1) {
 					printf("ERROR: new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
 							tr->likelihood, selectedNNIs[0].likelihood);
 					exit(1);
 				} else {
-					//cout << "Roll back tree ... " << endl;
+					cout << "Best logl: " << selectedNNIs.back().likelihood << " / " << "Applying " << numNNI << " NNIs give logl: " << tr->likelihood << " (worse than best)";
+					cout << " / Roll back tree ... " << endl;
 					if (!restoreTree(curTree, tr, pr)) {
 						printf("ERROR: failed to roll back tree \n");
 						exit(1);
 					}
-					doOneNNI(tr, pr, selectedNNIs.back().p, selectedNNIs.back().nniType, TOPO_ONLY);
-					updateBranchLengthForNNI(tr, pr, selectedNNIs.back());
-					pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
-					pllTreeEvaluate(tr, pr, 1);
-					if (tr->likelihood < selectedNNIs.back().likelihood) {
-						printf("ERROR: (After rolling back) new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
-								tr->likelihood, selectedNNIs.front().likelihood);
-						exit(1);
+					numNNI = ceil(0.5 * numNNI);
+					int count = numNNI;
+					for (vector<pllNNIMove>::reverse_iterator rit = selectedNNIs.rbegin(); rit != selectedNNIs.rend(); ++rit) {
+						doOneNNI(tr, pr, (*rit).p, (*rit).nniType, TOPO_ONLY);
+						updateBranchLengthForNNI(tr, pr, (*rit));
+						count--;
+						if (count == 0) {
+							break;
+						}
 					}
 
+					pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+					pllTreeEvaluate(tr, pr, 1);
+					cout << "Number of NNIs reduced to " << numNNI << ": " << tr->likelihood << endl;
+
 					/* Only apply the best NNI after the tree has been rolled back */
-					searchinfo.curNumAppliedNNIs = 1;
+					searchinfo.curNumAppliedNNIs = numNNI;
 				}
 			}
 			if (tr->likelihood - initLH < 0.1) {
@@ -403,9 +411,9 @@ void _update(pllInstance *tr, partitionList *pr, nodeptr p) {
 		z0[i] = q->z[i];
 
 	if (numBranches > 1)
-		makenewzGeneric(tr, pr, p, q, z0, IQTREE_NEWZPERCYCLE, z, PLL_TRUE);
+		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_TRUE);
 	else
-		makenewzGeneric(tr, pr, p, q, z0, IQTREE_NEWZPERCYCLE, z, PLL_FALSE);
+		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_FALSE);
 
 	for (i = 0; i < numBranches; i++) {
 		if (!tr->partitionConverged[i]) {

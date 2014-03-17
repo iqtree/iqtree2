@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <limits>
 #include "timeutil.h"
+#include "nnisearch.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
@@ -2312,7 +2313,7 @@ double PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
     return lh;
 }
 
-double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH) {
+double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
     double negative_lh;
     current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     assert(current_it);
@@ -2322,7 +2323,7 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
     double ferror, optx;
     theta_computed = false;
     if (optimize_by_newton) // Newton-Raphson method
-    	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh);
+    	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
     else
         // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
@@ -2369,14 +2370,14 @@ void PhyloTree::optimizeAllBranchesLS(PhyloNode *node, PhyloNode *dad) {
         }
 }
 
-double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
+double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRStep) {
     //double tree_lh = optimizeChildBranches(node, dad);
     double tree_lh = -DBL_MAX;
 
     for (NeighborVec::iterator it = (node)->neighbors.begin(); it != (node)->neighbors.end(); it++)
         if ((*it)->node != (dad)) {
             //if (!(*it)->node->isLeaf())
-            double new_tree_lh = optimizeAllBranches((PhyloNode*) (*it)->node, node);
+            double new_tree_lh = optimizeAllBranches((PhyloNode*) (*it)->node, node, maxNRStep);
             /*
              if (new_tree_lh < tree_lh)
              cout << "Wrong " << __func__ << endl;
@@ -2384,12 +2385,12 @@ double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad) {
             tree_lh = new_tree_lh;
         }
     if (dad)
-        tree_lh = optimizeOneBranch(node, dad);
+        tree_lh = optimizeOneBranch(node, dad, true, maxNRStep); // BQM 2014-02-24: true was missing
 
     return tree_lh;
 }
 
-double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance) {
+double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
     if (verbose_mode >= VB_MAX)
         cout << "Optimizing branch lengths (max " << my_iterations << " loops)..." << endl;
     double tree_lh = computeLikelihood();
@@ -2398,7 +2399,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance) {
     }
     //cout << tree_lh << endl;
     for (int i = 0; i < my_iterations; i++) {
-        double new_tree_lh = optimizeAllBranches((PhyloNode*) root);
+        double new_tree_lh = optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
         /*
          clearAllPartialLH();
          double new_tree_lh2 = computeLikelihood();
@@ -3009,7 +3010,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		node21_it->clearPartialLh();
 
 		// compute the score of the swapped topology
-		double score = optimizeOneBranch(node1, node2, false);
+		double score = optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
 		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
 
 		int i=1;
@@ -3017,7 +3018,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			FOR_NEIGHBOR(node1, node2, it)
 			{
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node1))->clearPartialLh();
-				score = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false);
+				score = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
 				nniMoves[cnt].newLen[i] = node1->findNeighbor((*it)->node)->length;
 				i++;
 			}
@@ -3027,7 +3028,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			FOR_NEIGHBOR(node2, node1, it)
 			{
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
-				score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
+				score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
 				//node2_lastnei = (PhyloNeighbor*) (*it);
 				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
 				i++;

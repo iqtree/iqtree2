@@ -682,7 +682,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.SSE = true;
     params.print_site_lh = 0;
     params.print_tree_lh = false;
-    params.nni_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
     params.whtest_simulations = 1000;
@@ -742,7 +741,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pertubSize = 0.5;
     params.pll = false;
     params.model_eps = 0.1;
-    params.modOpt = true;
+    params.modOpt = false;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -754,6 +753,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.speednni = false;
     params.numParsimony = 20;
     params.avh_test = 0;
+    params.bootlh_test = 0;
     params.site_freq_file = NULL;
 #ifdef _OPENMP
     params.num_threads = 0;
@@ -851,6 +851,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -if <file>";
                 params.initial_file = argv[cnt];
+            } else if (strcmp(argv[cnt], "-nni_nr_step") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -nni_nr_step <newton_raphson_steps>";
+                NNI_MAX_NR_STEP = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-ia") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1664,6 +1669,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.speednni = true;
             } else if (strcmp(argv[cnt], "-inni") == 0) {
             	params.inni = true;
+            	params.modOpt = true;
             } else if (strcmp(argv[cnt], "-adapt") == 0) {
             	params.adaptivePerturbation = true;
             	params.inni = true;
@@ -1710,6 +1716,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
                 params.parbran = true;
             } else if (strcmp(argv[cnt], "-wbt") == 0) {
+            	// TODO: WTF ?
                 params.write_best_trees = true;
             } else if (strcmp(argv[cnt], "-x") == 0) {
                 cnt++;
@@ -1728,6 +1735,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -avh <arndt_#bootstrap>";
                 params.avh_test = convert_int(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-bootlh") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -bootlh <#replicates>";
+                params.bootlh_test = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-AIC") == 0) {
                 params.model_test_criterion = MTC_AIC;
             } else if (strcmp(argv[cnt], "-AICc") == 0) {

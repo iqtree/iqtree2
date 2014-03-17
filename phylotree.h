@@ -664,9 +664,10 @@ public:
             @param node1 1st end node of the branch
             @param node2 2nd end node of the branch
             @param clearLH true to clear the partial likelihood, otherwise false
+            @param maxNRStep maximum number of Newton-Raphson steps
             @return likelihood score
      */
-    virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
+    virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
 
     /**
             optimize all branch lengths of the children of node
@@ -682,7 +683,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL);
+    virtual double optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL, int maxNRStep = 100);
 
     /**
      * optimize all branch lengths at the subtree rooted at node step-by-step.
@@ -697,7 +698,7 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD);
+    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
 
     /**
             inherited from Optimization class, to return to likelihood of the tree

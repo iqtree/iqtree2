@@ -53,24 +53,24 @@
 #endif
 
 #ifdef USE_HASH_MAP
-#if !defined(__GNUC__)
-#include <hash_map>
-#include <hash_set>
-using namespace stdext;
-#elif GCC_VERSION < 40300
-#include <ext/hash_map>
-#include <ext/hash_set>
-using namespace __gnu_cxx;
-#define unordered_map hash_map
-#define unordered_set hash_set
+	#if !defined(__GNUC__)
+		#include <hash_map>
+		#include <hash_set>
+		using namespace stdext;
+	#elif GCC_VERSION < 40300
+		#include <ext/hash_map>
+		#include <ext/hash_set>
+		using namespace __gnu_cxx;
+		#define unordered_map hash_map
+		#define unordered_set hash_set
+	#else
+		#include <tr1/unordered_map>
+		#include <tr1/unordered_set>
+		using namespace std::tr1;
+	#endif
 #else
-#include <tr1/unordered_map>
-#include <tr1/unordered_set>
-using namespace std::tr1;
-#endif
-#else
-#include <map>
-#include <set>
+	#include <map>
+	#include <set>
 #endif
 
 
@@ -342,6 +342,9 @@ struct NNIInfo {
     int iqpnni_iteration;
 };
 
+
+/** maximum number of newton-raphson steps for NNI branch evaluation */
+extern int NNI_MAX_NR_STEP;
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
@@ -1344,6 +1347,11 @@ struct Params {
             number of bootstrap samples for AvH curiosity
      */
     int avh_test;
+
+    /**
+            number of bootstrap samples for Arndt's bootstrap plot
+     */
+    int bootlh_test;
 
     /** precision when printing out for floating-point number */
     int numeric_precision;

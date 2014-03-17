@@ -326,16 +326,16 @@ void PhyloSuperTreePlen::mapTrees() {
 	if (verbose_mode >= VB_DEBUG) printMapInfo();
 }
 
-double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double tolerance) {
+double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
 	//initPartitionInfo(); // OLGA: not needed here
 	//cout<<"Optimizing all branches"<<endl;
 	for(int part = 0; part < size(); part++){
 		part_info[part].cur_score = 0.0;
 	}
-	return PhyloTree::optimizeAllBranches(my_iterations,tolerance);
+	return PhyloTree::optimizeAllBranches(my_iterations,tolerance, maxNRStep);
 }
 
-double PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH) {
+double PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
 
 	SuperNeighbor *nei1 = (SuperNeighbor*)node1->findNeighbor(node2);
 	SuperNeighbor *nei2 = (SuperNeighbor*)node2->findNeighbor(node1);
@@ -344,7 +344,7 @@ double PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
 		at(part)->theta_computed = false;
 	}
 
-	double tree_lh = PhyloTree::optimizeOneBranch(node1,node2,clearLH);
+	double tree_lh = PhyloTree::optimizeOneBranch(node1,node2,clearLH, maxNRStep);
 
 
 
