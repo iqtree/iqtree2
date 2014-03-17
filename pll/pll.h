@@ -326,7 +326,7 @@ typedef struct
   entry **table;
   hashNumberType entryCount;
 }
-  hashtable;
+  pllHashtable;
 struct stringEnt
 {
   int nodeNumber;
@@ -1222,7 +1222,7 @@ typedef  struct  {
 
   unsigned int vLength;
 
-  hashtable *h;                 /**< hashtable for ML convergence criterion */
+  pllHashtable *h;                 /**< hashtable for ML convergence criterion */
 
   int optimizeRateCategoryInvocations;
 
@@ -1696,18 +1696,18 @@ extern void execCore(pllInstance *, partitionList *pr, volatile double *dlnLdlz,
 extern nodeptr findAnyTip(nodeptr p, int numsp);
 extern void putWAG(double *ext_initialRates);
 extern  unsigned int **initBitVector(int mxtips, unsigned int *vectorLength);
-extern hashtable *initHashTable(unsigned int n);
-extern void cleanupHashTable(hashtable *h, int state);
-extern double convergenceCriterion(hashtable *h, int mxtips);
+extern pllHashtable *initHashTable(unsigned int n);
+extern void cleanupHashTable(pllHashtable *h, int state);
+extern double convergenceCriterion(pllHashtable *h, int mxtips);
 extern void freeBitVectors(unsigned int **v, int n);
-extern void freeHashTable(hashtable *h);
+extern void freeHashTable(pllHashtable *h);
 extern stringHashtable *initStringHashTable(hashNumberType n);
 extern void addword(char *s, stringHashtable *h, int nodeNumber);
 
 extern void printBothOpen(const char* format, ... );
 extern void initRateMatrix(pllInstance *tr, partitionList *pr);
 
-extern void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, hashtable *h, int treeNumber, int function, branchInfo *bInf,
+extern void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, pllHashtable *h, int treeNumber, int function, branchInfo *bInf,
                                     int *countBranches, int treeVectorLength, pll_boolean traverseOnly, pll_boolean computeWRF, int processID);
 
 

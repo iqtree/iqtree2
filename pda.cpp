@@ -2265,8 +2265,8 @@ int main(int argc, char *argv[])
 		processNCBITree(params);
 	} else if (params.user_file && params.eco_dag_file) { /**ECOpd analysis*/
 		processECOpd(params);
-//	} else if (params.upper_bound) {
-//		calculateUpperBound(params);
+	//} else if (params.upper_bound) {
+	//	calculateUpperBound(params);
 	} else if (params.aln_file || params.partition_file) {
 		if ((params.siteLL_file || params.second_align) && !params.gbo_replicates)
 		{

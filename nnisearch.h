@@ -77,7 +77,7 @@ typedef struct {
 	bool updateNNIList;
 	bool speednni;
 	vector<pllNNIMove> posNNIList; // positive NNI list
-	unordered_set<string> affectBranches; // Set of branches that are affected by the previous NNIs
+	set<string> affectBranches; // Set of branches that are affected by the previous NNIs
 	double curLogl;
 	int evalType;
 	int numAppliedNNIs; // total number of applied NNIs sofar

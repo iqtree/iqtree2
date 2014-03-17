@@ -1979,65 +1979,109 @@ void runPhyloAnalysis(Params &params) {
 	//if(params.partition_type)
 	//	((PhyloSuperTreePlen*)tree)->printNNIcasesNUM();
 
+	// ML BOUNDSSSSSS -------------------------------------------------------------
+//	if(params.upper_bound){
+/*		string out_file;
+		out_file = params.out_prefix;
+		out_file += ".up.3taxa";
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open((char*)out_file.c_str());
+
+		ofstream UBresults;
+		UBresults.open("results.file",ios::app);
+
+		string taxa1_name = "110",taxa2_name = "001";
+		PhyloTree tree1, tree2;
+
+		tree1.copyTree(tree,taxa1_name);
+		tree2.copyTree(tree,taxa2_name);
+		//out<<params.aln_file<<"\t"<<tree->leafNum<<"\t"<<alignment->getNSite()<<tree->bestScore<<"\t"<< tree1.computeLikelihood() * tree2.computeLikelihood() <<endl;
+		//out.close();
+
+		UBresults<<params.aln_file<<"\t"<<tree->leafNum<<"\t"<<alignment->getNSite()<<"\t";
+		string name;
+		name="A";
+		UBresults<<tree->findLeafName(name)->neighbors[0]->length<<"\t";
+		name="B";
+		UBresults<<tree->findLeafName(name)->neighbors[0]->length<<"\t";
+		name="C";
+		UBresults<<tree->findLeafName(name)->neighbors[0]->length<<"\t";
+
+		 * check = -1 -> inequality is violated
+		 * check =  1 -> inequality holds
+
+		int check = -1;
+		if(tree->bestScore <= tree1.computeLikelihood() * tree2.computeLikelihood())
+			check = 1;
+		UBresults<<tree->bestScore<<"\t"<< tree1.computeLikelihood() * tree2.computeLikelihood() <<"\t"<<check<<endl;
+		UBresults.close();*/
+
+//	}
+
+	// ------------------------------------------------------------------------------
+
+
 	// Upper Bounds -----------------------------------------------------------------
 	if (params.upper_bound) {
+		cout<<"Upper Bounds analysis..."<<endl;
 		int check = 0;
 		if(check == 1){
-			NodeVector branch1, branch2;
-			tree->getBranches(branch1, branch2);
-			NodeVector::iterator it;
-			int i;
-			double U = 0.0;
-			string out_file;
-			out_file = params.out_prefix;
-			out_file += ".upperbounds0";
-			ofstream out;
-			out.exceptions(ios::failbit | ios::badbit);
-			out.open((char*)out_file.c_str());
-
-			for(i = 0; i != branch1.size(); i++){
-				vector<int> taxaA, taxaB;
-				tree->getTaxaID(taxaA,branch1[i],branch2[i]);
-				tree->getTaxaID(taxaB,branch2[i],branch1[i]);
-				if(taxaA.size() != 1 && taxaB.size() != 1){
-					Alignment alnA, alnB;
-					alnA.extractSubAlignment(alignment,taxaA,0);
-		//			cout<<"Taxa in set A"<<endl;
-		//			for(j = 0; j != alnA.size(); j++){
-		//				cout<<"pattern "<<j<<".frequency = "<<alnA[j].frequency<<"| LOG = "<<alnA[j].frequency / (double)aln.getNSite() * log(alnA[j].frequency / (double)aln.getNSite())<<endl;
-		//				U = U + alnA[j].frequency / (double)aln.getNSite() * log(alnA[j].frequency / (double)aln.getNSite());
-		//			}
-
-					alnB.extractSubAlignment(alignment,taxaB,0);
-		//			cout<<"Taxa in set B"<<endl;
-		//			for(j = 0; j != alnB.size(); j++){
-		//				cout<<"pattern "<<j<<".frequency = "<<alnB[j].frequency<<"| LOG = "<<alnB[j].frequency/(double)aln.getNSite() * log(alnB[j].frequency / (double)aln.getNSite())<<endl;
-		//				U = U + alnB[j].frequency/(double)aln.getNSite() * log(alnB[j].frequency/(double)aln.getNSite());
-		//			}
-
-					U = alnA.computeUnconstrainedLogL()+alnB.computeUnconstrainedLogL();
-
-					if(min(taxaA.size(),taxaB.size()) == taxaA.size()){
-						for(int f = 0; f < taxaA.size()-1; f++)
-							out<<taxaA[f]<<",";
-						out<<taxaA[taxaA.size()-1]<<"|";
-						for(int f = 0; f < taxaB.size()-1; f++)
-							out<<taxaB[f]<<",";
-						out<<taxaB[taxaB.size()-1];
-					} else {
-						for(int f = 0; f < taxaB.size()-1; f++)
-							out<<taxaB[f]<<",";
-						out<<taxaB[taxaB.size()-1]<<"|";
-						for(int f = 0; f < taxaA.size()-1; f++)
-							out<<taxaA[f]<<",";
-						out<<taxaA[taxaA.size()-1];
-					}
-
-					out<<"\t|\t"<<min(taxaA.size(),taxaB.size())<<"|"<<((double) max(taxaA.size(),taxaB.size()))
-							<<"\t|\t"<<tree->curScore<<"\t|\t"<<U<<"\t|\t"<<alignment->computeUnconstrainedLogL()<<endl;
-				}
-			}
-			out.close();
+//			NodeVector branch1, branch2;
+//			tree->getBranches(branch1, branch2);
+//			NodeVector::iterator it;
+//			int i;
+//			double U = 0.0;
+//			string out_file;
+//			out_file = params.out_prefix;
+//			out_file += ".upperbounds0";
+//			ofstream out;
+//			out.exceptions(ios::failbit | ios::badbit);
+//			out.open((char*)out_file.c_str());
+//
+//			for(i = 0; i != branch1.size(); i++){
+//				vector<int> taxaA, taxaB;
+//				tree->getTaxaID(taxaA,branch1[i],branch2[i]);
+//				tree->getTaxaID(taxaB,branch2[i],branch1[i]);
+//				if(taxaA.size() != 1 && taxaB.size() != 1){
+//					Alignment alnA, alnB;
+//					alnA.extractSubAlignment(alignment,taxaA,0);
+//		//			cout<<"Taxa in set A"<<endl;
+//		//			for(j = 0; j != alnA.size(); j++){
+//		//				cout<<"pattern "<<j<<".frequency = "<<alnA[j].frequency<<"| LOG = "<<alnA[j].frequency / (double)aln.getNSite() * log(alnA[j].frequency / (double)aln.getNSite())<<endl;
+//		//				U = U + alnA[j].frequency / (double)aln.getNSite() * log(alnA[j].frequency / (double)aln.getNSite());
+//		//			}
+//
+//					alnB.extractSubAlignment(alignment,taxaB,0);
+//		//			cout<<"Taxa in set B"<<endl;
+//		//			for(j = 0; j != alnB.size(); j++){
+//		//				cout<<"pattern "<<j<<".frequency = "<<alnB[j].frequency<<"| LOG = "<<alnB[j].frequency/(double)aln.getNSite() * log(alnB[j].frequency / (double)aln.getNSite())<<endl;
+//		//				U = U + alnB[j].frequency/(double)aln.getNSite() * log(alnB[j].frequency/(double)aln.getNSite());
+//		//			}
+//
+//					U = alnA.computeUnconstrainedLogL()+alnB.computeUnconstrainedLogL();
+//
+//					if(min(taxaA.size(),taxaB.size()) == taxaA.size()){
+//						for(int f = 0; f < taxaA.size()-1; f++)
+//							out<<taxaA[f]<<",";
+//						out<<taxaA[taxaA.size()-1]<<"|";
+//						for(int f = 0; f < taxaB.size()-1; f++)
+//							out<<taxaB[f]<<",";
+//						out<<taxaB[taxaB.size()-1];
+//					} else {
+//						for(int f = 0; f < taxaB.size()-1; f++)
+//							out<<taxaB[f]<<",";
+//						out<<taxaB[taxaB.size()-1]<<"|";
+//						for(int f = 0; f < taxaA.size()-1; f++)
+//							out<<taxaA[f]<<",";
+//						out<<taxaA[taxaA.size()-1];
+//					}
+//
+//					out<<"\t|\t"<<min(taxaA.size(),taxaB.size())<<"|"<<((double) max(taxaA.size(),taxaB.size()))
+//							<<"\t|\t"<<tree->curScore<<"\t|\t"<<U<<"\t|\t"<<alignment->computeUnconstrainedLogL()<<endl;
+//				}
+//			}
+//			out.close();
 		} else {
 			/*---------------------------------------------------*
 			 * Upper Bounds: together with computing an ML tree  *
@@ -2047,7 +2091,7 @@ void runPhyloAnalysis(Params &params) {
 			IntVector taxaA, taxaB;
 			int TripleUB = 0, DoubleUB = 0;
 			double U;
-			int i, j, k, h;
+			int i, j, k, h, nei;
 			string out_file;
 			out_file = params.out_prefix;
 			out_file += ".upperbounds";
@@ -2058,6 +2102,9 @@ void runPhyloAnalysis(Params &params) {
 			double mlQuestionary = tree->mlInitial; //or tree->mlFirstOpt for example
 
 //			// Double Splits ------------------------------------
+			double t1,t2,t3;
+			double LOGapproxZ,LOGmatch,LOGmismatch,LOGapproxLT2;
+			int matchNUM = 0, mismatchNUM = 0;
 //			tree->getTaxaID(*taxa1);
 //			tree->getTaxaID(*taxa2);
 //			taxa2->erase(taxa2->begin());
@@ -2070,11 +2117,20 @@ void runPhyloAnalysis(Params &params) {
 //			taxa3 = taxa3init;
 //			// --------------------------------------------------
 
-			// DOUBLE splits ------------------------------------
+			/**********************************************
+			 *               DOUBLE splits                *
+			 **********************************************/
 			for(i = 0; i<tree->leafNum-1; i++){
 				taxaA.push_back(i);
+				t1 = tree->findNodeID(i)->neighbors[0]->length;
 				for(j = i+1; j <tree->leafNum; j++){
 					taxaA.push_back(j);
+					t2 = tree->findNodeID(j)->neighbors[0]->length;
+					for(nei = 0; nei < 3; nei++){
+						if(tree->findNodeID(j)->neighbors[0]->node->neighbors[nei]->node->id != i &&
+						   tree->findNodeID(j)->neighbors[0]->node->neighbors[nei]->node->id != j)
+							t3 = tree->findNodeID(j)->neighbors[0]->node->neighbors[nei]->length;
+					}
 					//cout<<i<<","<<j<<"|";
 					for(k = 0; k<tree->leafNum; k++){
 						if(k != i && k != j){
@@ -2090,7 +2146,31 @@ void runPhyloAnalysis(Params &params) {
 					alnA->extractSubAlignment(alignment,taxaA,0);
 					alnB->extractSubAlignment(alignment,taxaB,0);
 
-					U = alnA->computeUnconstrainedLogL()+alnB->computeUnconstrainedLogL();
+					// General bound from Hendy and Holand ----------------------------------
+					// U = alnA->computeUnconstrainedLogL()+alnB->computeUnconstrainedLogL();
+
+					// My crazy bound :) ----------------------------------------------------
+					//cout<<"GOT TO THE POINT OF CRAZY BOUND: "<<i<<","<<j<<endl;
+
+					matchNUM = 0;
+					mismatchNUM = 0;
+					for(Alignment::iterator alnIT = alnA->begin(); alnIT<alnA->end(); alnIT++){
+						if((alnIT)->is_const){
+							matchNUM = matchNUM + (alnIT)->frequency;
+						}else{
+							mismatchNUM = mismatchNUM + (alnIT)->frequency;
+						}
+					}
+
+					cout<<"matchNUM/mismatchNUM:"<<matchNUM<<"/"<<mismatchNUM<<endl;
+
+					//LOGapproxZ   = alignment->getNSite()*(log(1/4.) +log((1+3*exp(-t3))));
+					LOGapproxZ   = alignment->getNSite()*(log(1/4.) + log(1-exp(-t3)));
+					LOGmatch     = 2*log(1/4.) + log((1+3*exp(-t1))*(1+3*exp(-t2)) + 3*(1-exp(-t1))*(1-exp(-t2)));
+					LOGmismatch  = 2*log(1/4.) + log(((1+3*exp(-t1))*(1-exp(-t2)) + (1-exp(-t1))*(1+3*exp(-t2)) + 2*(1-exp(-t1))*(1-exp(-t2))));
+					LOGapproxLT2 = alnB->computeUnconstrainedLogL();
+
+					U = LOGapproxZ + matchNUM * LOGmatch + mismatchNUM * LOGmismatch + LOGapproxLT2;
 
 					// Printing stuff --------------------------------------
 					if(min(taxaA.size(),taxaB.size()) == taxaA.size()){
@@ -2129,31 +2209,169 @@ void runPhyloAnalysis(Params &params) {
 				taxaA.clear();
 			}
 
-			// TRIPLE splits ------------------------------------
-			for(i = 0; i<tree->leafNum-2; i++){
-				taxaA.push_back(i);
-				for(j = i+1; j <tree->leafNum-1; j++){
-					taxaA.push_back(j);
-					for(h = j+1; h<tree->leafNum; h++){
-						taxaA.push_back(h);
-						//cout<<i<<","<<j<<","<<h<<"|";
-						for(k = 0; k<tree->leafNum; k++){
-							if(k != i && k != j && k != h){
-								taxaB.push_back(k);
-								//cout<<k<<",";
+//			// TRIPLE splits ------------------------------------
+//			for(i = 0; i<tree->leafNum-2; i++){
+//				taxaA.push_back(i);
+//				for(j = i+1; j <tree->leafNum-1; j++){
+//					taxaA.push_back(j);
+//					for(h = j+1; h<tree->leafNum; h++){
+//						taxaA.push_back(h);
+//						//cout<<i<<","<<j<<","<<h<<"|";
+//						for(k = 0; k<tree->leafNum; k++){
+//							if(k != i && k != j && k != h){
+//								taxaB.push_back(k);
+//								//cout<<k<<",";
+//							}
+//						}
+//						//cout<<endl;
+//						/*
+//						 * ***********************************************************
+//						 */
+//						Alignment *alnA = new Alignment, *alnB = new Alignment;
+//						alnA->extractSubAlignment(alignment,taxaA,0);
+//						alnB->extractSubAlignment(alignment,taxaB,0);
+//
+//						U = alnA->computeUnconstrainedLogL()+alnB->computeUnconstrainedLogL();
+//
+//						// Printing stuff --------------------------------------
+//						if(min(taxaA.size(),taxaB.size()) == taxaA.size()){
+//							for(int f = 0; f < taxaA.size()-1; f++)
+//								out<<taxaA[f]<<",";
+//							out<<taxaA[taxaA.size()-1]<<"|";
+//							for(int f = 0; f < taxaB.size()-1; f++)
+//								out<<taxaB[f]<<",";
+//							out<<taxaB[taxaB.size()-1];
+//						} else {
+//							for(int f = 0; f < taxaB.size()-1; f++)
+//								out<<taxaB[f]<<",";
+//							out<<taxaB[taxaB.size()-1]<<"|";
+//							for(int f = 0; f < taxaA.size()-1; f++)
+//								out<<taxaA[f]<<",";
+//							out<<taxaA[taxaA.size()-1];
+//						}
+//						//out<<"\t"<<min(taxaA.size(),taxaB.size())<<"|"<<((double) max(taxaA.size(),taxaB.size()))<<"\t"<<tree->curScore<<"\t"<<U<<"\t"<<alignment->computeUnconstrainedLogL()<<endl;
+//						out<<"\t"<<U;
+//						if(U < mlQuestionary){
+//							TripleUB++;
+//							out<<"\t yuhoo!!:) upper bound is less than ml of interest!"<<endl;
+//						} else {
+//							out<<endl;
+//						}
+//						// END of printing stuff --------------------------------------------
+//						delete alnA;
+//						delete alnB;
+//
+//						/*
+//						 * ***********************************************************
+//						 */
+//						taxaB.clear();
+//						taxaA.erase(taxaA.end()-1);
+//					}
+//					taxaA.erase(taxaA.end()-1);
+//				}
+//				taxaA.clear();
+//			}
+			cout<<"mlInitial  = "<<tree->mlInitial<<endl;
+			cout<<"mlFirstOpt = "<<tree->mlFirstOpt<<endl;
+			cout<<"mlBestTree = "<<tree->getBestScore()<<endl;
+			cout<<"mlUnConstr = "<<alignment->computeUnconstrainedLogL()<<endl;
+
+			cout<<"DoubleUB = "<<DoubleUB<<endl;
+			//cout<<"TripleUB = "<<TripleUB<<endl;
+
+
+			//delete taxa1;
+			//delete taxa2;
+			//delete taxa3;
+			out.close();
+
+			/*------------------------------------------
+			 * Analyzing bounds for splits on the tree
+			 *------------------------------------------*/
+
+			if(false){
+
+			out_file = params.out_prefix;
+			out_file += ".upperboundsTree";
+
+			out.open((char*)out_file.c_str());
+
+			NodeVector branch1, branch2;
+			tree->getBranches(branch1, branch2);
+			int BadSplits = 0;
+
+			for(i = 0; i != branch1.size(); i++){
+				vector<int> taxaA, taxaB;
+				vector<string> taxaAname, taxaBname;
+				tree->getTaxaID(taxaA,branch1[i],branch2[i]);
+				tree->getTaxaID(taxaB,branch2[i],branch1[i]);
+
+				if(taxaA.size() == 2 or taxaB.size() == 2){
+					for(h = 0; h < taxaA.size(); h++)
+						taxaAname.push_back(tree->findNodeID(taxaA[i])->name);
+					for(h = 0; h < taxaB.size(); h++)
+						taxaBname.push_back(tree->findNodeID(taxaB[i])->name);
+
+					PhyloTree treeA, treeB;
+
+					if(taxaA.size() != 1 && taxaB.size() != 1){
+						Alignment alnA, alnB;
+						alnA.extractSubAlignment(alignment,taxaA,0);
+						alnB.extractSubAlignment(alignment,taxaB,0);
+
+						//UpperBound: Hendy & Holland
+						//U = alnA.computeUnconstrainedLogL()+alnB.computeUnconstrainedLogL();
+
+						//MyCrazy UpperBound:)---------------------------------------------------
+
+						if(taxaA.size() == 2){
+							t1 = tree->findNodeID(taxaA[0])->neighbors[0]->length;
+							t2 = tree->findNodeID(taxaA[1])->neighbors[0]->length;
+							for(int nei = 0; nei < 3; nei++){
+								if(tree->findNodeID(taxaA[0])->neighbors[0]->node->neighbors[nei]->node->id != taxaA[0] &&
+								   tree->findNodeID(taxaA[0])->neighbors[0]->node->neighbors[nei]->node->id != taxaA[1])
+									t3 = tree->findNodeID(taxaA[0])->neighbors[0]->node->neighbors[nei]->length;
 							}
+
+//							if((alnA.begin())->is_const){
+//								matchNUM = (alnA.begin())->frequency;
+//								mismatchNUM = (alnA.begin()+1)->frequency;
+//							}else{
+//								matchNUM = (alnA.begin()+1)->frequency;
+//								mismatchNUM = (alnA.begin())->frequency;
+//							}
+
+							LOGapproxLT2 = alnB.computeUnconstrainedLogL();
+
+						}else{
+							t1 = tree->findNodeID(taxaB[0])->neighbors[0]->length;
+							t2 = tree->findNodeID(taxaB[1])->neighbors[0]->length;
+							for(int nei = 0; nei < 3; nei++){
+								if(tree->findNodeID(taxaB[0])->neighbors[0]->node->neighbors[nei]->node->id != taxaB[0] &&
+								   tree->findNodeID(taxaB[0])->neighbors[0]->node->neighbors[nei]->node->id != taxaB[1])
+									t3 = tree->findNodeID(taxaB[0])->neighbors[0]->node->neighbors[nei]->length;
+							}
+
+//							if((alnB.begin())->is_const){
+//								matchNUM = (alnB.begin())->frequency;
+//								mismatchNUM = (alnB.begin()+1)->frequency;
+//							}else{
+//								matchNUM = (alnB.begin()+1)->frequency;
+//								mismatchNUM = (alnB.begin())->frequency;
+//							}
+
+							LOGapproxLT2 = alnA.computeUnconstrainedLogL();
 						}
-						//cout<<endl;
-						/*
-						 * ***********************************************************
-						 */
-						Alignment *alnA = new Alignment, *alnB = new Alignment;
-						alnA->extractSubAlignment(alignment,taxaA,0);
-						alnB->extractSubAlignment(alignment,taxaB,0);
 
-						U = alnA->computeUnconstrainedLogL()+alnB->computeUnconstrainedLogL();
+						cout<<"matchNUM/mismatchNUM:"<<matchNUM<<"/"<<mismatchNUM<<endl;
 
-						// Printing stuff --------------------------------------
+						LOGapproxZ   = alignment->getNSite()*(log(1/4.) +log((1+3*exp(-t3))));
+						LOGmatch     = 2*log(1/4.) + log((1+3*exp(-t1))*(1+3*exp(-t2)) + 3*(1-exp(-t1))*(1-exp(-t2)));
+						LOGmismatch  = 2*log(1/4.) + log(((1+3*exp(-t1))*(1-exp(-t2)) + (1-exp(-t1))*(1+3*exp(-t2)) + 2*(1-exp(-t1))*(1-exp(-t2))));
+
+						U = LOGapproxZ + matchNUM * LOGmatch + mismatchNUM * LOGmismatch + LOGapproxLT2;
+						//--------------------------------------------------------------------------------
+
 						if(min(taxaA.size(),taxaB.size()) == taxaA.size()){
 							for(int f = 0; f < taxaA.size()-1; f++)
 								out<<taxaA[f]<<",";
@@ -2169,127 +2387,58 @@ void runPhyloAnalysis(Params &params) {
 								out<<taxaA[f]<<",";
 							out<<taxaA[taxaA.size()-1];
 						}
-						//out<<"\t"<<min(taxaA.size(),taxaB.size())<<"|"<<((double) max(taxaA.size(),taxaB.size()))<<"\t"<<tree->curScore<<"\t"<<U<<"\t"<<alignment->computeUnconstrainedLogL()<<endl;
-						out<<"\t"<<U;
-						if(U < mlQuestionary){
-							TripleUB++;
-							out<<"\t yuhoo!!:) upper bound is less than ml of interest!"<<endl;
-						} else {
-							out<<endl;
-						}
-						// END of printing stuff --------------------------------------------
-						delete alnA;
-						delete alnB;
 
-						/*
-						 * ***********************************************************
-						 */
-						taxaB.clear();
-						taxaA.erase(taxaA.end()-1);
-					}
-					taxaA.erase(taxaA.end()-1);
-				}
-				taxaA.clear();
-			}
-			cout<<"mlInitial  = "<<tree->mlInitial<<endl;
-			cout<<"mlFirstOpt = "<<tree->mlFirstOpt<<endl;
-			cout<<"mlBestTree = "<<tree->getBestScore()<<endl;
-			cout<<"mlUnConstr = "<<alignment->computeUnconstrainedLogL()<<endl;
+						out<<"\t"<<min(taxaA.size(),taxaB.size())<<"|"<<((double) max(taxaA.size(),taxaB.size()))
+								<<"\t"<<U<<"\t"<<mlQuestionary;
+						if(U<mlQuestionary){
 
-			cout<<"DoubleUB = "<<DoubleUB<<endl;
-			cout<<"TripleUB = "<<TripleUB<<endl;
+							out<<"\t fuck... upper bound is less than ml of interest!";
+							out<<" brLEN = "<<branch1[i]->findNeighbor(branch2[i])->length<<endl;
+							BadSplits++;
+							if(min(taxaA.size(),taxaB.size()) == taxaA.size()){
+								for(int f = 0; f < taxaA.size()-1; f++)
+									out<<taxaA[f]<<",";
+								out<<taxaA[taxaA.size()-1]<<":"<<endl;
+								for(int i_aln=0; i_aln<alnA.size(); i_aln++)
+									out<<alnA[i_aln].frequency<<" ";
+								out<<endl;
+
+								for(int f = 0; f < taxaB.size()-1; f++)
+									out<<taxaB[f]<<",";
+								out<<taxaB[taxaB.size()-1]<<":"<<endl;
+								for(int i_aln=0; i_aln<alnB.size(); i_aln++)
+									out<<alnB[i_aln].frequency<<" ";
+								out<<endl;
 
 
-			//delete taxa1;
-			//delete taxa2;
-			//delete taxa3;
-			out.close();
-
-			// ##########################################################
-			out_file = params.out_prefix;
-			out_file += ".upperboundsTree";
-
-			out.open((char*)out_file.c_str());
-
-			NodeVector branch1, branch2;
-			tree->getBranches(branch1, branch2);
-			int BadSplits = 0;
-
-			for(i = 0; i != branch1.size(); i++){
-				vector<int> taxaA, taxaB;
-				tree->getTaxaID(taxaA,branch1[i],branch2[i]);
-				tree->getTaxaID(taxaB,branch2[i],branch1[i]);
-				if(taxaA.size() != 1 && taxaB.size() != 1){
-					Alignment alnA, alnB;
-					alnA.extractSubAlignment(alignment,taxaA,0);
-					alnB.extractSubAlignment(alignment,taxaB,0);
-
-					U = alnA.computeUnconstrainedLogL()+alnB.computeUnconstrainedLogL();
-
-					if(min(taxaA.size(),taxaB.size()) == taxaA.size()){
-						for(int f = 0; f < taxaA.size()-1; f++)
-							out<<taxaA[f]<<",";
-						out<<taxaA[taxaA.size()-1]<<"|";
-						for(int f = 0; f < taxaB.size()-1; f++)
-							out<<taxaB[f]<<",";
-						out<<taxaB[taxaB.size()-1];
-					} else {
-						for(int f = 0; f < taxaB.size()-1; f++)
-							out<<taxaB[f]<<",";
-						out<<taxaB[taxaB.size()-1]<<"|";
-						for(int f = 0; f < taxaA.size()-1; f++)
-							out<<taxaA[f]<<",";
-						out<<taxaA[taxaA.size()-1];
-					}
-
-					out<<"\t"<<min(taxaA.size(),taxaB.size())<<"|"<<((double) max(taxaA.size(),taxaB.size()))
-							<<"\t"<<U<<"\t"<<mlQuestionary;
-					if(U<mlQuestionary){
-						out<<"\t fuck... upper bound is less than ml of interest!"<<endl;
-						BadSplits++;
-						if(min(taxaA.size(),taxaB.size()) == taxaA.size()){
-							for(int f = 0; f < taxaA.size()-1; f++)
-								out<<taxaA[f]<<",";
-							out<<taxaA[taxaA.size()-1]<<":"<<endl;
-							for(int i_aln=0; i_aln<alnA.size(); i_aln++)
-								out<<alnA[i_aln].frequency<<" ";
-							out<<endl;
+							} else {
+								for(int f = 0; f < taxaB.size()-1; f++)
+									out<<taxaB[f]<<",";
+								out<<taxaB[taxaB.size()-1]<<":"<<endl;
+								for(int i_aln=0; i_aln<alnB.size(); i_aln++)
+									out<<alnB[i_aln].frequency<<" ";
+								out<<endl;
 
 
-
-							for(int f = 0; f < taxaB.size()-1; f++)
-								out<<taxaB[f]<<",";
-							out<<taxaB[taxaB.size()-1]<<":"<<endl;
-							for(int i_aln=0; i_aln<alnB.size(); i_aln++)
-								out<<alnB[i_aln].frequency<<" ";
-							out<<endl;
+								for(int f = 0; f < taxaA.size()-1; f++)
+									out<<taxaA[f]<<",";
+								out<<taxaA[taxaA.size()-1]<<":"<<endl;
+								for(int i_aln=0; i_aln<alnA.size(); i_aln++)
+									out<<alnA[i_aln].frequency<<" ";
+								out<<endl;
+							}
 
 
 						} else {
-							for(int f = 0; f < taxaB.size()-1; f++)
-								out<<taxaB[f]<<",";
-							out<<taxaB[taxaB.size()-1]<<":"<<endl;
-							for(int i_aln=0; i_aln<alnB.size(); i_aln++)
-								out<<alnB[i_aln].frequency<<" ";
-							out<<endl;
-
-
-							for(int f = 0; f < taxaA.size()-1; f++)
-								out<<taxaA[f]<<",";
-							out<<taxaA[taxaA.size()-1]<<":"<<endl;
-							for(int i_aln=0; i_aln<alnA.size(); i_aln++)
-								out<<alnA[i_aln].frequency<<" ";
 							out<<endl;
 						}
-
-
-					} else {
-						out<<endl;
 					}
 				}
 			}
 			out.close();
 			cout<<"BadSplits = "<<BadSplits<<endl;
+
+
 			// ##########################################################
 
 			ofstream UBresults;
@@ -2298,15 +2447,11 @@ void runPhyloAnalysis(Params &params) {
 			UBresults<<params.aln_file<<"\t"<<tree->leafNum<<"\t"<<alignment->getNSite()<<"\t"<<tree->mlInitial<<"\t"<<tree->mlFirstOpt<<"\t"<<tree->getBestScore()<<"\t"
 					<<alignment->computeUnconstrainedLogL()<<"\t"<<DoubleUB<<"\t"<<TripleUB<<"\t"<<BadSplits<<endl;
 			UBresults.close();
-
-
+		}
 
 //			exit(0);
-//
-//
-//
+
 //			//************************************************
-//
 //			delete taxa1;
 //			delete taxa2;
 //			delete taxa3;
@@ -2319,9 +2464,8 @@ void runPhyloAnalysis(Params &params) {
 //			}
 //			UBresults<<endl;
 //			UBresults.close();
-
 		}
-	}// end if UpperBound ---------------------------------------------------------------
+		}// end if UpperBound ---------------------------------------------------------------
 
 
 	delete tree;
