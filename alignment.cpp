@@ -1121,7 +1121,8 @@ void Alignment::printPhylip(const char *file_name, bool append, const char *aln_
             out << endl;
         }
         out.close();
-        cout << "Alignment was printed to " << file_name << endl;
+        if (verbose_mode >= VB_MIN)
+        	cout << "Alignment was printed to " << file_name << endl;
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, file_name);
     }
