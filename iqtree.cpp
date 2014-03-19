@@ -145,15 +145,40 @@ void IQTree::setParams(Params &params) {
         max_candidate_trees = aln->getNSeq() * stop_rule.getNumIterations();
     setRootNode(params.root);
 
+    string bootaln_name = params.out_prefix;
+    bootaln_name += ".bootaln";
+    if (params.print_bootaln) {
+        ofstream bootalnout;
+    	bootalnout.open(bootaln_name.c_str());
+    	bootalnout.close();
+    }
+
     if (params.online_bootstrap && params.gbo_replicates > 0) {
         cout << "Generating " << params.gbo_replicates << " samples for ultrafast bootstrap..." << endl;
         boot_samples.resize(params.gbo_replicates);
         boot_logl.resize(params.gbo_replicates, -DBL_MAX);
         boot_trees.resize(params.gbo_replicates, -1);
         boot_counts.resize(params.gbo_replicates, 0);
+        VerboseMode saved_mode = verbose_mode;
+        verbose_mode = VB_QUIET;
         for (int i = 0; i < params.gbo_replicates; i++) {
-            aln->createBootstrapAlignment(boot_samples[i], params.bootstrap_spec);
+        	if (params.print_bootaln) {
+    			Alignment* bootstrap_alignment;
+    			if (aln->isSuperAlignment())
+    				bootstrap_alignment = new SuperAlignment;
+    			else
+    				bootstrap_alignment = new Alignment;
+    			bootstrap_alignment->createBootstrapAlignment(aln, &(boot_samples[i]), params.bootstrap_spec);
+				bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+
+        	} else
+        		aln->createBootstrapAlignment(boot_samples[i], params.bootstrap_spec);
         }
+        verbose_mode = saved_mode;
+        if (params.print_bootaln) {
+        	cout << "Bootstrap alignments printed to " << bootaln_name << endl;
+        }
+
         cout << "Max candidate trees (tau): " << max_candidate_trees << endl;
     }
 

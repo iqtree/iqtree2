@@ -541,6 +541,9 @@ struct Params {
     /** remove all-gap sequences in partition model to account for terrace default: TRUE */
     bool remove_empty_seq;
 
+    /** use terrace aware data structure for partition models, default: TRUE */
+    bool terrace_aware;
+
     /**
             B, D, or P for Binary, DNA, or Protein sequences
      */

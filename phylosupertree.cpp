@@ -649,7 +649,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		FOR_NEIGHBOR(node2, NULL, nit) {
 			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
-		if (!is_nni) {
+		if (!is_nni && params->terrace_aware) {
 			if (part_info[part].cur_score == 0.0)  {
 				part_info[part].cur_score = at(part)->computeLikelihood();
 				if (save_all_trees == 2)

@@ -1212,7 +1212,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
 void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
     // collection of distinct bootstrapped site-pattern frequency vectors
     cout << "Doing likelihood-bootstrap plot using Kullback-Leibler distance with " << params.bootlh_test << " bootstrap replicates ..." << endl;
-    int id;
+    int id, ptn;
     IntVector ptnfreq;
     alignment->getPatternFreq(ptnfreq);
     string orig_model = params.model_name;
@@ -1222,6 +1222,10 @@ void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
     outfile += ".bootlhtest";
     ofstream out;
     out.open(outfile.c_str());
+    string bootfreqfile = params.out_prefix; // bootstrap pattern frequency vector file
+    bootfreqfile += ".bootfreq";
+    ofstream outfreq;
+    outfreq.open(bootfreqfile.c_str());
     //out << "ID KLdist" << endl;
 
     out.precision(8);
@@ -1241,9 +1245,12 @@ void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
     			boot_aln = new Alignment;
         	boot_aln->createBootstrapAlignment(alignment, &boot_freq, params.bootstrap_spec);
         }
+        for ( ptn = 0; ptn < boot_freq.size(); ptn++)
+        	outfreq << "\t" << boot_freq[ptn];
+        outfreq << endl;
         // computing Kullback-Leibler distance
         double dist = 0.0;
-        for (int ptn = 0; ptn < ptnfreq.size(); ptn++)
+        for ( ptn = 0; ptn < ptnfreq.size(); ptn++)
         	if (boot_freq[ptn]) {
         		dist += log(((double)boot_freq[ptn])/ptnfreq[ptn]) * boot_freq[ptn];
         	}
@@ -1264,4 +1271,5 @@ void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
         	delete boot_aln;
     }
     out.close();
+    outfreq.close();
 }
