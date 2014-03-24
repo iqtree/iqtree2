@@ -650,7 +650,7 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		for (i=1;i<=n;i++) dg[i]=g[i];
 		derivativeFunk(p,g);
 		test=0.0;
-		den=FMAX(*fret,1.0);
+		den=FMAX(abs(*fret),1.0); // fix bug found by Tung, as also suggested by NR author
 		for (i=1;i<=n;i++) {
 			temp=fabs(g[i])*FMAX(fabs(p[i]),1.0)/den;
 			if (temp > test) test=temp;
