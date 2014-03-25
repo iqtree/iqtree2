@@ -170,7 +170,7 @@ void IQTree::setParams(Params &params) {
     				bootstrap_alignment = new Alignment;
     			bootstrap_alignment->createBootstrapAlignment(aln, &(boot_samples[i]), params.bootstrap_spec);
 				bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
-
+				delete bootstrap_alignment;
         	} else
         		aln->createBootstrapAlignment(boot_samples[i], params.bootstrap_spec);
         }
@@ -2142,6 +2142,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
         string filename = params.out_prefix;
         filename += ".ufboot";
         ofstream out(filename.c_str());
+        /*
     	for (i = 0; i < trees.size(); i++) {
     		NodeVector taxa;
     		// change the taxa name from ID to real name
@@ -2151,8 +2152,28 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     		// now print to file
     		for (j = 0; j < trees.tree_weights[i]; j++)
     			trees[i]->printTree(out, WT_NEWLINE);
-    	}
-        out.close();
+    	}*/
+        // For Olga: Now we write ufboot trees in the right order
+        for (IntVector::iterator tid = boot_trees.begin(); tid != boot_trees.end(); tid++) {
+        	for (StringIntMap::iterator it = treels.begin(); it != treels.end(); it++)
+        	if (it->second == (*tid)) {
+        		// it->first is a tree string with ID as taxon names, so we have to convert it to original taxon name
+        		MTree tree;
+        		stringstream ss(it->first);
+        		bool myrooted = rooted;
+        		tree.readTree(ss, myrooted);
+        		NodeVector taxa;
+        		tree.getTaxa(taxa);
+        		for (NodeVector::iterator taxit = taxa.begin(); taxit != taxa.end(); taxit++) {
+        			(*taxit)->id = atoi((*taxit)->name.c_str());
+        			(*taxit)->name = aln->getSeqName((*taxit)->id);
+        		}
+        		tree.printTree(out, WT_NEWLINE);
+        		break;
+        	}
+        }
+
+    	out.close();
         cout << "UFBoot trees printed to " << filename << endl;
     }
 
