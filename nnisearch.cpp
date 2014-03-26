@@ -16,7 +16,7 @@ int nni0;
 int nni5;
 extern Params *globalParam;
 extern VerboseMode verbose_mode;
-int NNI_MAX_NR_STEP = 1;
+int NNI_MAX_NR_STEP = 10;
 
 /* program options */
 
