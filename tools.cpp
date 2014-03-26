@@ -750,7 +750,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bestStart = true;
     params.inni = false;
     params.autostop = false;
-    params.maxUnsuccess = 200;
+    params.maxUnsuccess = 100;
     params.speednni = false;
     params.numParsTrees = 20;
     params.avh_test = 0;
