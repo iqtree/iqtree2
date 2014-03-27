@@ -1033,7 +1033,7 @@ double IQTree::doTreeSearch() {
         if (params->autostop) {
             if (nUnsuccessIteration == params->maxUnsuccess) {
                 cout << endl;
-                cout << "No better tree was found in the last" << params->maxUnsuccess << " iterations. Tree search was stopped after "
+                cout << "No better tree was found in the last " << params->maxUnsuccess << " iterations. Tree search was stopped after "
                         << curIteration << " iterations!" << endl;
                 break;
             }
