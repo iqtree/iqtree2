@@ -890,6 +890,29 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.deleteAllPartialLh();
     }
 
+    try {
+        if (!iqtree.getModelFactory()) {
+            if (iqtree.isSuperTree()) {
+                if (params.partition_type) {
+                    iqtree.setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) &iqtree));
+                } else
+                    iqtree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*) &iqtree));
+            } else {
+                iqtree.setModelFactory(new ModelFactory(params, &iqtree));
+            }
+        }
+    } catch (string & str) {
+        outError(str);
+    }
+    iqtree.setModel(iqtree.getModelFactory()->model);
+    iqtree.setRate(iqtree.getModelFactory()->site_rate);
+
+    if (params.pll) {
+        if (iqtree.getRate()->getNDiscreteRate() == 1) {
+            // TODO: change rateHetModel to PLL_CAT in case of non-Gamma model
+        }
+    }
+
     if (params.inni || params.pll) {
         /* Initialized all data structure for PLL*/
         iqtree.pllAttr.rateHetModel = PLL_GAMMA;
@@ -933,7 +956,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                 } else if ((*it)->getModel()) {
                     pllPartitionFileHandle << (*it)->getModel()->name;
                 } else
-                    pllPartitionFileHandle << "WAG";
+                    pllPartitionFileHandle << iqtree.getModelName();
                 pllPartitionFileHandle << ", p" << i << " = " << startPos << "-" << startPos + curLen - 1 << endl;
                 startPos = startPos + curLen;
             }
@@ -946,7 +969,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             } else if (iqtree.getModel()) {
                 model = iqtree.getModel()->name;
             } else {
-                model = "WAG"; // TODO: Change this hard-coded model
+                //model = "WAG"; // TODO: Change this hard-coded model
+                model = iqtree.getModelName();
             }
             pllPartitionFileHandle << model << ", p1 = " << "1-" << iqtree.getAlnNSite() << endl;
         }
@@ -1107,29 +1131,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     assert(iqtree.aln);
     iqtree.optimize_by_newton = params.optimize_by_newton;
     iqtree.sse = params.SSE;
-    if (params.gbo_replicates)
+    if (params.gbo_replicates) {
         params.speed_conf = 1.0;
-    try {
-        if (!iqtree.getModelFactory()) {
-            if (iqtree.isSuperTree()) {
-                if (params.partition_type) {
-                    iqtree.setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) &iqtree));
-                } else
-                    iqtree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*) &iqtree));
-            } else {
-                iqtree.setModelFactory(new ModelFactory(params, &iqtree));
-            }
-        }
-    } catch (string & str) {
-        outError(str);
-    }
-    iqtree.setModel(iqtree.getModelFactory()->model);
-    iqtree.setRate(iqtree.getModelFactory()->site_rate);
-
-    if (params.pll) {
-        if (iqtree.getRate()->getNDiscreteRate() == 1) {
-            // TODO: change rateHetModel to PLL_CAT in case of non-Gamma model
-        }
     }
 
     iqtree.setStartLambda(params.lambda);
