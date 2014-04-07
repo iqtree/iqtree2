@@ -87,7 +87,13 @@ void IQTree::setParams(Params &params) {
     k_represent = params.k_representative;
 
     if (params.p_delete == -1.0) {
-        if (aln->getNSeq() < 51)
+        if (aln->getNSeq() < 4)
+            params.p_delete = 0.0; // delete nothing
+        else if (aln->getNSeq() == 4)
+            params.p_delete = 0.25; // just delete 1 leaf
+        else if (aln->getNSeq() == 5)
+            params.p_delete = 0.4; // just delete 2 leaves
+        else if (aln->getNSeq() < 51)
             params.p_delete = 0.5;
         else if (aln->getNSeq() < 100)
             params.p_delete = 0.3;
