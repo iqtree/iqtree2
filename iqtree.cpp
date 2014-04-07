@@ -711,6 +711,7 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
     }
     if (refTreeSet.size() < params->popSize) {
         if (refTreeSet.find(treeTopo) != refTreeSet.end()) {
+			cout << "Tree topology already exists in the reference set" << endl;
             updated = false;
         } else {
             refTreeSet.insert(make_pair(treeTopo, treeLogl));
