@@ -1364,7 +1364,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         }
     };
 
-    if (nni_count == 0) {
+    if (nni_count == 0 && verbose_mode >= VB_MED) {
     	cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
 
