@@ -1056,7 +1056,8 @@ double IQTree::doTreeSearch() {
 					if (isSuperTree()) {
 						((PhyloSuperTree*) this)->mapTrees();
 					}
-					curScore = optimizeAllBranches(1,TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
+					//curScore = optimizeAllBranches(1,TOL_LIKELIHOOD, PLL_NEWZPERCYCLE); // this is too inaccurate
+					curScore = optimizeAllBranches(1,TOL_LIKELIHOOD);
 					perturbScore = curScore;
 				}
 
@@ -1202,7 +1203,7 @@ double IQTree::doTreeSearch() {
 			} else {
 				// higher likelihood but the same tree topology
 				bestScore = curScore;
-				cout << "UPDATE BEST LOG-LIKELIHOOD: " << bestScore << endl;
+				cout << "Update best log-likelihood: " << bestScore << endl;
 				numNonImpIter++;
 			}
 		} else {
@@ -1322,14 +1323,15 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         	nni2apply = 1;
         applyNNIs(nni2apply);
 
-        curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
+        //curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE); // MINH: 1 is too inaccurate
+        curScore = optimizeAllBranches(1, TOL_LIKELIHOOD);
 
 		if (verbose_mode >= VB_DEBUG) {
 			cout << "logl: " << curScore << " / NNIs: " << nni2apply << endl;
 		}
 
         if (curScore > oldScore && curScore >= vec_nonconf_nni.at(0).newloglh ) {
-        	if (abs(curScore - oldScore) < 0.001) {
+        	if (fabs(curScore - oldScore) < 0.001) {
         		break;
         	}
             nni_count += nni2apply;
@@ -2056,7 +2058,7 @@ void IQTree::saveNNITrees(PhyloNode *node, PhyloNode *dad) {
 
 void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     int sum_weights = trees.sumTreeWeights();
-    int i, j;
+    int i;
     if (verbose_mode >= VB_MAX) {
         for (i = 0; i < trees.size(); i++)
             if (trees.tree_weights[i] > 0)

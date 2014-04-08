@@ -2410,9 +2410,12 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             cout << "Likelihood after iteration " << i + 1 << " : ";
             cout << new_tree_lh << endl;
         }
-        if (new_tree_lh <= tree_lh + tolerance)
 
+        // CRITICAL BUG FIX: THIS GIVES WRONG LIKELIHOOD
+        /*
+        if (new_tree_lh <= tree_lh + tolerance)
             return (new_tree_lh > tree_lh) ? new_tree_lh : tree_lh;
+        */
         tree_lh = new_tree_lh;
     }
     return tree_lh;

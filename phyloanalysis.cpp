@@ -936,7 +936,7 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No")
 			<< endl;
 	cout << "Phylogenetic likelihood library: " << (params.pll ? "Yes" : "No") << endl;
-	cout << "Number of Newton-Raphson steps in NNI evaluation and branch length optimiazaion: " << NNI_MAX_NR_STEP << " / " << PLL_NEWZPERCYCLE << endl;
+	cout << "Number of Newton-Raphson steps in NNI evaluation and branch length optimization: " << NNI_MAX_NR_STEP << " / " << PLL_NEWZPERCYCLE << endl;
 	cout << endl;
 }
 
@@ -1599,7 +1599,10 @@ void runPhyloAnalysis(Params &params, string &original_model,
 	double myscore = 0.0;
 
 	myscore = iqtree.getBestScore();
-	iqtree.computePatternLikelihood(pattern_lh, &myscore);
+	// who changed computeLikelihood to computePatternLikelihood? I now commented out
+	// computePatternLikelihood
+	//iqtree.computePatternLikelihood(pattern_lh, &myscore);
+	iqtree.computeLikelihood(pattern_lh);
 
 	// compute logl variance
 	iqtree.logl_variance = iqtree.computeLogLVariance();
