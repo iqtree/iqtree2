@@ -1350,6 +1350,11 @@ struct Params {
      */
     int bootlh_test;
 
+    /**
+            partition definition for Arndt's bootstrap plot
+     */
+    char* bootlh_partitions;
+
     /** precision when printing out for floating-point number */
     int numeric_precision;
 
