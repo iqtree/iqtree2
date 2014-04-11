@@ -12,6 +12,10 @@ set (iqtree_VERSION_PATCH 7)
 
 set(BUILD_SHARED_LIBS OFF)
 
+if (IQTREE_FLAGS) 
+	message("IQTREE_FLAGS = ${IQTREE_FLAGS}")
+endif()
+
 if (NOT CMAKE_BUILD_TYPE) 
 	set(CMAKE_BUILD_TYPE "Release")
 endif()
@@ -100,7 +104,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wno-deprecated ${COMBINED_FL
 set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
 
 if (CMAKE_BUILD_TYPE MATCHES "avx")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fomit-frame-pointer -funroll-loops -D__AVX -mavx")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__AVX -mavx")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__AVX -mavx")
 else()
   ### TO TUNG: please do not put "-fomit-frame-pointer -funroll-loops" here! It messed up my debugging a lot

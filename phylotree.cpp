@@ -511,7 +511,7 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
             }
     } else {
         // internal node
-        memset(dad_branch->partial_pars, 127, pars_size * sizeof(int));
+        memset(dad_branch->partial_pars, 255, pars_size * sizeof(int));
         UINT *partial_pars_dad = dad_branch->partial_pars;
         int partial_pars = 0;
         //UINT *partial_pars_child1 = NULL, *partial_pars_child2 = NULL;
