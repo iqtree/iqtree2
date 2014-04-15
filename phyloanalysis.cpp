@@ -82,9 +82,11 @@ void reportReferences(ofstream &out, string &original_model) {
 void reportAlignment(ofstream &out, Alignment &alignment) {
 	out << "Input data: " << alignment.getNSeq() << " sequences with "
 			<< alignment.getNSite() << " "
-			<< ((alignment.num_states == 2) ?
+			<< ((alignment.seq_type == SEQ_BINARY) ?
 					"binary" :
-					((alignment.num_states == 4) ? "nucleotide" : (alignment.num_states == 20) ? "amino-acid" : "codon"))
+					((alignment.seq_type == SEQ_DNA) ? "nucleotide" :
+					(alignment.seq_type == SEQ_PROTEIN) ? "amino-acid" :
+					(alignment.seq_type == SEQ_CODON) ? "codon": "morphological"))
 			<< " sites" << endl << "Number of constant sites: "
 			<< round(alignment.frac_const_sites * alignment.getNSite())
 			<< " (= " << alignment.frac_const_sites * 100 << "% of all sites)"

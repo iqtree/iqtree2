@@ -860,7 +860,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             num_states = getMaxObservedStates(sequences);
             if (num_states < 2 || num_states > 32) throw "Invalid number of states";
             user_seq_type = SEQ_MORPH;
-        } else if (strcmp(sequence_type, "MULTI") == 0) {
+        } else if (strcmp(sequence_type, "TINA") == 0) {
             cout << "Multi-state data with " << num_states << " alphabets" << endl;
             user_seq_type = SEQ_MULTISTATE;
         } else if (strncmp(sequence_type, "CODON", 5) == 0) {
@@ -949,7 +949,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
     string line;
     // remove the failbit
     in.exceptions(ios::badbit);
-    bool multi_state = (sequence_type && strcmp(sequence_type,"MULTI") == 0);
+    bool tina_state = (sequence_type && strcmp(sequence_type,"TINA") == 0);
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
@@ -978,7 +978,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
                 line.erase(0, pos);
             }
             int old_len = sequences[seq_id].length();
-            if (multi_state) {
+            if (tina_state) {
                 stringstream linestr(line);
                 int state;
                 while (!linestr.eof() ) {
