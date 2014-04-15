@@ -21,7 +21,7 @@
 #include "gtrmodel.h"
 
 /* BQM: to ignore all-gapp subtree at an alignment site */
-#define IGNORE_GAP_LH
+//#define IGNORE_GAP_LH
 
 template<int NSTATES>
 inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
@@ -145,7 +145,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
             }
 
             if (state == STATE_UNKNOWN) {
-#ifdef IGNORE_GAP_LH
+#ifndef KEEP_GAP_LH
                 dad_branch->scale_num[ptn] = -1;
 #endif
                 for (int state2 = 0; state2 < block; state2++) {
@@ -186,7 +186,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
             trans_mat = trans_mat + 1;
         for (ptn = 0; ptn < lh_size; ++ptn)
             dad_branch->partial_lh[ptn] = 1.0;
-#ifdef IGNORE_GAP_LH
+#ifndef KEEP_GAP_LH
         for (ptn = 0; ptn < alnSize; ptn++)
             dad_branch->scale_num[ptn] = -1;
 #endif
@@ -203,7 +203,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
 #pragma omp parallel for reduction(+: sum_scale) private(ptn, cat, partial_lh_site, partial_lh_child)
 #endif
             for (ptn = 0; ptn < alnSize; ++ptn)
-#ifdef IGNORE_GAP_LH
+#ifndef KEEP_GAP_LH
             if (((PhyloNeighbor*) (*it))->scale_num[ptn] < 0) {
 #ifndef _OPENMP
                 partial_lh_site += NSTATES * numCat;
@@ -212,7 +212,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
             } else
 #endif
             {
-#ifdef IGNORE_GAP_LH
+#ifndef KEEP_GAP_LH
                 if (dad_branch->scale_num[ptn] < 0)
                 dad_branch->scale_num[ptn] = 0;
 #endif

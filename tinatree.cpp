@@ -91,8 +91,16 @@ int TinaTree::computeParsimonyScore() {
     for (int ptn = 0; ptn < aln->size(); ptn++)
         if (!aln->at(ptn).is_const) {
             int states;
-            score += computeParsimonyScore(ptn, states) * (*aln)[ptn].frequency;
+            int ptn_score = computeParsimonyScore(ptn, states);
+            score += ptn_score * (*aln)[ptn].frequency;
+            if (verbose_mode >= VB_MAX) {
+            	for (int seq=0; seq < aln->getNSeq(); seq++)
+            		cout << aln->convertStateBackStr(aln->at(ptn)[seq]);
+            	cout << " " << ptn_score << endl;
+            }
         }
+    if (verbose_mode >= VB_MAX)
+    	cout << endl;
     return score;
 }
 

@@ -630,6 +630,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partition_file = NULL;
     params.partition_type = 0;
     params.remove_empty_seq = true;
+    params.terrace_aware = true;
     params.sequence_type = NULL;
     params.aln_output = NULL;
     params.aln_site_list = NULL;
@@ -748,12 +749,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.reinsert_par = false;
     params.fast_branch_opt = false;
     params.bestStart = true;
-    params.inni = false;
+    params.snni = false;
     params.autostop = false;
     params.maxUnsuccess = 100;
     params.speednni = false;
     params.numParsTrees = 20;
     params.avh_test = 0;
+    params.bootlh_test = 0;
+    params.bootlh_partitions = NULL;
     params.site_freq_file = NULL;
 #ifdef _OPENMP
     params.num_threads = 0;
@@ -1180,6 +1183,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.partition_type = 'j';
             } else if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
             	params.remove_empty_seq = false;
+            } else if (strcmp(argv[cnt], "-no_terrace") == 0) {
+            	params.terrace_aware = false;
             } else if (strcmp(argv[cnt], "-sf") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1655,7 +1660,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.evol = true;
         	} else if (strcmp(argv[cnt], "-evol") == 0) {
         		params.evol = true;
-        		params.inni = true;
+        		params.snni = true;
         		params.modOpt = true;
         	} else if (strcmp(argv[cnt], "-beststart") == 0) {
                 params.bestStart = true;
@@ -1679,8 +1684,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-speednni") == 0) {
                 params.speednni = true;
-            } else if (strcmp(argv[cnt], "-inni") == 0) {
-            	params.inni = true;
+            } else if (strcmp(argv[cnt], "-snni") == 0) {
+            	params.snni = true;
             	params.modOpt = true;
             } else if (strcmp(argv[cnt], "-auto") == 0) {
             	params.autostop = true;
@@ -1751,6 +1756,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -avh <arndt_#bootstrap>";
                 params.avh_test = convert_int(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-bootlh") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -bootlh <#replicates>";
+                params.bootlh_test = convert_int(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-bootpart") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -bootpart <part1_length,part2_length,...>";
+                params.bootlh_partitions = argv[cnt];
             } else if (strcmp(argv[cnt], "-AIC") == 0) {
                 params.model_test_criterion = MTC_AIC;
             } else if (strcmp(argv[cnt], "-AICc") == 0) {

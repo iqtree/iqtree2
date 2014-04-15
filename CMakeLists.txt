@@ -12,6 +12,10 @@ set (iqtree_VERSION_PATCH 7)
 
 set(BUILD_SHARED_LIBS OFF)
 
+if (IQTREE_FLAGS) 
+	message("IQTREE_FLAGS = ${IQTREE_FLAGS}")
+endif()
+
 if (NOT CMAKE_BUILD_TYPE) 
 	set(CMAKE_BUILD_TYPE "Release")
 endif()
@@ -95,29 +99,30 @@ include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
 add_definitions(-DIQ_TREE)
 
-set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
+set(COMBINED_FLAGS "-msse3 -D__SSE3 -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
 set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
 
 if (CMAKE_BUILD_TYPE MATCHES "avx")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -D__SSE3 -D__AVX -mavx")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -D__SSE3 -D__AVX -mavx")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__AVX -mavx")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__AVX -mavx")
 else()
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -D__SSE3")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -D__SSE3")  
+  ### TO TUNG: please do not put "-fomit-frame-pointer -funroll-loops" here! It messed up my debugging a lot
+  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3  -D__SSE3")
+  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -D__SSE3")  
 endif()
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -fomit-frame-pointer -funroll-loops")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -O2 -fomit-frame-pointer -funroll-loops")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
+set(CMAKE_C_FLAGS_RELEASE "-O2 -g0 -fomit-frame-pointer -funroll-loops")
 
-set(CMAKE_CXX_FLAGS_PROFILE "${COMBINED_FLAGS} -msse3 -D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
-set(CMAKE_C_FLAGS_PROFILE "${COMBINED_FLAGS} -msse3 -D__SSE3 -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
+set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
+set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
 
-set(CMAKE_CXX_FLAGS_MEM "-g -O1 -D__SSE3 -msse3")
-set(CMAKE_C_FLAGS_MEM "-g -O1 -D__SSE3 -msse3")
+set(CMAKE_CXX_FLAGS_MEM "-g -O1")
+set(CMAKE_C_FLAGS_MEM "-g -O1")
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -D__SSE3 -msse3")
-set(CMAKE_C_FLAGS_DEBUG "-O0 -g -D__SSE3 -msse3")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 
 if (CMAKE_BUILD_TYPE STREQUAL "parallel_sse3" OR CMAKE_BUILD_TYPE STREQUAL "parallel_avx" )
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_RELEASE} -D_USE_PTHREADS -pthread")
