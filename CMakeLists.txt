@@ -217,6 +217,7 @@ phylotesting.cpp
 ecopd.cpp
 ecopdmtreeset.cpp
 graph.cpp
+modelmorphology.cpp
 )
 
 

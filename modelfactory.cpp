@@ -27,6 +27,7 @@
 #include "modelprotein.h"
 #include "modelbin.h"
 #include "modelcodon.h"
+#include "modelmorphology.h"
 #include "modelset.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
@@ -86,13 +87,13 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 	} else if (tree->aln->seq_type == SEQ_BINARY) {
 		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->seq_type == SEQ_DNA) {
-
 		model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->seq_type == SEQ_PROTEIN) {
-
 		model = new ModelProtein(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->seq_type == SEQ_CODON) {
 		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
+	} else if (tree->aln->seq_type == SEQ_MORPH) {
+		model = new ModelMorphology(model_str.c_str(), model_params, freq_type, freq_params, tree);
 	} else {
 		outError("Unsupported model type");
 	}
