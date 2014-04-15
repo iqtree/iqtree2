@@ -27,10 +27,13 @@
 #include "modelprotein.h"
 #include "modelbin.h"
 #include "modelcodon.h"
+#include "modelmorphology.h"
 #include "timeutil.h"
 
 
 const char* bin_model_names[] = { "JC2", "GTR2" };
+
+const char* morph_model_names[] = {"MK", "ORDERED"};
 
 const char* dna_model_names[] = { "JC", "F81", "K80", "HKY", "TNe",
 		"TN", "K81", "K81u", "TPM2", "TPM2u", "TPM3", "TPM3u", "TIMe", "TIM",
@@ -242,13 +245,16 @@ bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &i
  * @param nmodels (OUT) number of models
  * @return array of model names
  */
-void getModelList(Params &params, int nstates, StrVector &models) {
+void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 	int nmodels;
 	char **model_names;
-	if (nstates == 2) {
+	if (seq_type == SEQ_BINARY) {
 		nmodels = sizeof(bin_model_names) / sizeof(char*);
 		model_names = (char**)bin_model_names;
-	} else if (nstates == 4) {
+	} else if (seq_type == SEQ_MORPH) {
+		nmodels = sizeof(morph_model_names) / sizeof(char*);
+		model_names = (char**)morph_model_names;
+	} else if (seq_type == SEQ_DNA) {
 		if (params.model_set == NULL) {
 			nmodels = sizeof(dna_model_names) / sizeof(char*);
 			model_names = (char**)dna_model_names;
@@ -263,7 +269,7 @@ void getModelList(Params &params, int nstates, StrVector &models) {
 			nmodels = 0;
 			model_names = NULL;
 		}
-	} else if (nstates == 20) {
+	} else if (seq_type == SEQ_PROTEIN) {
 		if (params.model_set == NULL) {
 			nmodels = sizeof(aa_model_names) / sizeof(char*);
 			model_names = (char**)aa_model_names;
@@ -290,10 +296,14 @@ void getModelList(Params &params, int nstates, StrVector &models) {
 	const char *can_options[] = {"+i", "+g", "+f"};
 	const char *not_options[] = {"-I", "-G", "-F"};
 	int i, j;
-	if (nstates == 20) {
+	if (seq_type == SEQ_PROTEIN) {
 		// test all options for protein, incl. +F
 		for (i = 0; i < noptions; i++)
 			test_options[i] = true;
+	} else if (seq_type == SEQ_MORPH) {
+		// test only homogeneity and +G option
+		test_options[1] = false;
+		test_options[5] = false;
 	}
 	// can-have option
 	for (j = 0; j < sizeof(can_options)/sizeof(char*); j++)
@@ -596,11 +606,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 }
 
 string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, string set_name) {
-	int nstates = in_tree->aln->num_states;
+	int seq_type = in_tree->aln->num_states;
 	if (in_tree->isSuperTree())
-		nstates = ((PhyloSuperTree*)in_tree)->front()->aln->num_states;
-	if (nstates != 2 && nstates != 4 && nstates != 20)
-		outError("Test of best-fit models only works for Binary/DNA/Protein");
+		seq_type = ((PhyloSuperTree*)in_tree)->front()->aln->seq_type;
+	if (seq_type != SEQ_BINARY && seq_type != SEQ_DNA && seq_type != SEQ_PROTEIN && seq_type != SEQ_MORPH)
+		outError("Test of best-fit models only works for Binary/DNA/Protein/Morphology");
 	string fmodel_str = params.out_prefix;
 	fmodel_str += ".model";
 	string sitelh_file = params.out_prefix;
@@ -608,7 +618,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	in_tree->params = &params;
 
 	StrVector model_names;
-	getModelList(params, nstates, model_names);
+	getModelList(params, in_tree->aln->seq_type, model_names);
 	int model;
 
 	string best_model;
@@ -642,9 +652,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			if (in_tree->isSuperTree())
 				fmodel << "Charset\t";
 			fmodel << "Model\tdf\tLnL";
-			if (nstates == 2)
+			if (seq_type == SEQ_BINARY)
 				fmodel << "\t0\t1";
-			else if (nstates == 4)
+			else if (seq_type == SEQ_DNA)
 				fmodel << "\tA-C\tA-G\tA-T\tC-G\tC-T\tG-T\tA\tC\tG\tT";
 			fmodel << "\talpha\tpinv" << endl;
 			fmodel.precision(4);
@@ -677,13 +687,15 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	rate_class[2] = new RateGamma(params.num_rate_cats, -1, params.gamma_median, NULL);
 	rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1, params.gamma_median, -1, params.optimize_model_rate_joint, NULL);
 	GTRModel *subst_model = NULL;
-	if (nstates == 2)
+	if (seq_type == SEQ_BINARY)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
-	else if (nstates == 4)
+	else if (seq_type == SEQ_DNA)
 		subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", in_tree);
-	else if (nstates == 20)
+	else if (seq_type == SEQ_PROTEIN)
 		subst_model = new ModelProtein("WAG", "", FREQ_UNKNOWN, "", in_tree);
-	else if (in_tree->aln->codon_table)
+	else if (seq_type == SEQ_MORPH)
+		subst_model = new ModelMorphology("MK", "", FREQ_UNKNOWN, "", in_tree);
+	else if (seq_type == SEQ_CODON)
 		subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", in_tree);
 
 	assert(subst_model);
@@ -695,8 +707,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	if (params.model_test_sample_size)
 		ssize = params.model_test_sample_size;
 	if (set_name == "") {
-		cout << "Testing " << model_names.size()
-			<< ((nstates == 2) ? "binary" : ((nstates == 4) ? " DNA" : " protein"))
+		cout << "Testing " << model_names.size() << " "
+			<< ((seq_type == SEQ_BINARY) ? "binary" : ((seq_type == SEQ_DNA) ? "DNA" : ((seq_type == SEQ_PROTEIN) ? "protein":"morphological")))
 			<< " models (sample size: " << ssize << ") ..." << endl;
 		cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
@@ -779,7 +791,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			if (set_name != "")
 				fmodel << set_name << "\t";
 			fmodel << info.name << "\t" << info.df << "\t" << info.logl;
-			if (nstates == 4) {
+			if (seq_type == SEQ_DNA) {
 				int nrates = tree->getModel()->getNumRateEntries();
 				double *rate_mat = new double[nrates];
 				tree->getModel()->getRateMatrix(rate_mat);
@@ -787,7 +799,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 					fmodel << "\t" << rate_mat[rate];
 				delete [] rate_mat;
 			}
-			if (nstates <= 4) {
+			if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY) {
+				int nstates = (seq_type == SEQ_DNA) ? 4 : 2;
 				double *freqs = new double[nstates];
 				tree->getModel()->getStateFrequency(freqs);
 				for (int freq = 0; freq < nstates; freq++)
