@@ -541,6 +541,9 @@ struct Params {
     /** remove all-gap sequences in partition model to account for terrace default: TRUE */
     bool remove_empty_seq;
 
+    /** use terrace aware data structure for partition models, default: TRUE */
+    bool terrace_aware;
+
     /**
             B, D, or P for Binary, DNA, or Protein sequences
      */
@@ -1341,6 +1344,16 @@ struct Params {
             number of bootstrap samples for AvH curiosity
      */
     int avh_test;
+
+    /**
+            number of bootstrap samples for Arndt's bootstrap plot
+     */
+    int bootlh_test;
+
+    /**
+            partition definition for Arndt's bootstrap plot
+     */
+    char* bootlh_partitions;
 
     /** precision when printing out for floating-point number */
     int numeric_precision;

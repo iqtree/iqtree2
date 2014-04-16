@@ -27,6 +27,7 @@
 #include "modelprotein.h"
 #include "modelbin.h"
 #include "modelcodon.h"
+#include "modelmorphology.h"
 #include "modelset.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
@@ -60,16 +61,17 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 		model_str = model_str.substr(0, pos);
 	}
 
-	if ((model_str == "JC" && tree->aln->num_states == 4) || 
-		(model_str == "POISSON" && tree->aln->num_states == 20) ||
-		(model_str == "JC2" && tree->aln->num_states == 2) ||
-		(model_str == "JCC" && tree->aln->codon_table))
+	if ((model_str == "JC" && tree->aln->seq_type == SEQ_DNA) ||
+		(model_str == "POISSON" && tree->aln->seq_type == SEQ_PROTEIN) ||
+		(model_str == "JC2" && tree->aln->seq_type == SEQ_BINARY) ||
+		(model_str == "JCC" && tree->aln->seq_type == SEQ_CODON) ||
+		(model_str == "MK" && tree->aln->seq_type == SEQ_MORPH))
 	{
 		model = new ModelSubst(tree->aln->num_states);
 	} else 
-	if ((model_str == "GTR" && tree->aln->num_states == 4) ||
-		(model_str == "GTR2" && tree->aln->num_states == 2) ||
-		(model_str == "GTR20" && tree->aln->num_states == 20)) {
+	if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
+		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
+		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
 		model = new GTRModel(tree, count_rates);
 		if (freq_params != "")
 			((GTRModel*)model)->readStateFreq(freq_params);
@@ -82,16 +84,16 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 		tree->optimize_by_newton = false;
 		model = new ModelNonRev(tree, count_rates);
 		((ModelNonRev*)model)->init(freq_type);
-	} else if (tree->aln->num_states == 2) {
+	} else if (tree->aln->seq_type == SEQ_BINARY) {
 		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->num_states == 4) {
-
+	} else if (tree->aln->seq_type == SEQ_DNA) {
 		model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->num_states == 20) {
-
+	} else if (tree->aln->seq_type == SEQ_PROTEIN) {
 		model = new ModelProtein(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->codon_table) {
+	} else if (tree->aln->seq_type == SEQ_CODON) {
 		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
+	} else if (tree->aln->seq_type == SEQ_MORPH) {
+		model = new ModelMorphology(model_str.c_str(), model_params, freq_type, freq_params, tree);
 	} else {
 		outError("Unsupported model type");
 	}
@@ -107,19 +109,21 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 
 	string model_str = params.model_name;
 	if (model_str == "") {
-		if (tree->aln->num_states == 4) model_str = "HKY";
-		else if (tree->aln->num_states == 20) model_str = "WAG";
-		else if (tree->aln->num_states == 2) model_str = "JC2";
-		else if (tree->aln->codon_table) model_str = "JCC";
+		if (tree->aln->seq_type == SEQ_DNA) model_str = "HKY";
+		else if (tree->aln->seq_type == SEQ_PROTEIN) model_str = "WAG";
+		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "JC2";
+		else if (tree->aln->seq_type == SEQ_CODON) model_str = "JCC";
+		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
 		else model_str = "JC";
 	}
 	string::size_type posfreq;
 	StateFreqType freq_type = params.freq_type;
 
 	if (freq_type == FREQ_UNKNOWN) {
-		switch (tree->aln->num_states) {
-		case 2: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
-		case 20: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
+		switch (tree->aln->seq_type) {
+		case SEQ_BINARY: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
+		case SEQ_PROTEIN: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
+		case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
 		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA and others: counted frequencies from alignment
 		}
 	}

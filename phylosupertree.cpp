@@ -444,15 +444,18 @@ void PhyloSuperTree::mapTrees() {
 double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	double tree_lh = 0.0;
 	int ntrees = size();
-	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh)
-	#endif
 	if (pattern_lh) {
+		//#ifdef _OPENMP
+		//#pragma omp parallel for reduction(+: tree_lh)
+		//#endif
 		for (int i = 0; i < ntrees; i++) {
 			tree_lh += at(i)->computeLikelihood(pattern_lh);
 			pattern_lh += at(i)->getAlnNPattern();
 		}
 	} else {
+		#ifdef _OPENMP
+		#pragma omp parallel for reduction(+: tree_lh)
+		#endif
 		for (int i = 0; i < ntrees; i++)
 			tree_lh += at(i)->computeLikelihood();
 	}
@@ -646,7 +649,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		FOR_NEIGHBOR(node2, NULL, nit) {
 			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
-		if (!is_nni) {
+		if (!is_nni && params->terrace_aware) {
 			if (part_info[part].cur_score == 0.0)  {
 				part_info[part].cur_score = at(part)->computeLikelihood();
 				if (save_all_trees == 2)

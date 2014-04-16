@@ -511,7 +511,7 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
             }
     } else {
         // internal node
-        memset(dad_branch->partial_pars, 127, pars_size * sizeof(int));
+        memset(dad_branch->partial_pars, 255, pars_size * sizeof(int));
         UINT *partial_pars_dad = dad_branch->partial_pars;
         int partial_pars = 0;
         //UINT *partial_pars_child1 = NULL, *partial_pars_child2 = NULL;
@@ -2384,7 +2384,7 @@ double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNR
             tree_lh = new_tree_lh;
         }
     if (dad)
-        tree_lh = optimizeOneBranch(node, dad, maxNRStep);
+        tree_lh = optimizeOneBranch(node, dad, true, maxNRStep); // BQM 2014-02-24: true was missing
 
     return tree_lh;
 }
@@ -2410,9 +2410,12 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             cout << "Likelihood after iteration " << i + 1 << " : ";
             cout << new_tree_lh << endl;
         }
-        if (new_tree_lh <= tree_lh + tolerance)
 
+        // CRITICAL BUG FIX: THIS GIVES WRONG LIKELIHOOD
+        /*
+        if (new_tree_lh <= tree_lh + tolerance)
             return (new_tree_lh > tree_lh) ? new_tree_lh : tree_lh;
+        */
         tree_lh = new_tree_lh;
     }
     return tree_lh;

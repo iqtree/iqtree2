@@ -15,7 +15,7 @@
 int nni0;
 int nni5;
 extern Params *globalParam;
-int NNI_MAX_NR_STEP = 1;
+int NNI_MAX_NR_STEP = 3; // MINH: 1 is too inaccurate for bootstrap
 
 /* program options */
 

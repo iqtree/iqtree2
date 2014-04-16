@@ -32,5 +32,5 @@ void doParsMultiState(Params &params) {
 	tree.drawTree(cout);
 	cout << "Parsimony score is: " << tree.computeParsimonyScore() << endl;
 	cout << "Parsimony score ver2 is: " << tree.computeParsimony() << endl;
-	tree.printParsimonyStates();
+	//tree.printParsimonyStates();
 }

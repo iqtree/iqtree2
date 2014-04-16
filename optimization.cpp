@@ -382,11 +382,12 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 {
 	int j;
 	double df,dx,dxold,f;
-	double temp,xh,xl,rts, fold, finit;
+	double temp,xh,xl,rts, fold, finit, xinit;
 
 	rts = xguess;
 	if (rts < x1) rts = x1;
 	if (rts > x2) rts = x2;
+	xinit = xguess;
 	finit = fold = fm = computeFuncDerv(rts,f,df);
 	d2l = df;
 	if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) {
@@ -424,6 +425,10 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 		}
 		if (fabs(dx) < xacc || (j == maxNRStep)) {
 			fm = computeFunction(rts);
+			if (fm > finit) {
+				fm = computeFunction(xinit);
+				return xinit;
+			}
 			return rts;
 		}
 		fold = fm;
@@ -650,7 +655,7 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		for (i=1;i<=n;i++) dg[i]=g[i];
 		derivativeFunk(p,g);
 		test=0.0;
-		den=FMAX(*fret,1.0);
+		den=FMAX(abs(*fret),1.0); // fix bug found by Tung, as also suggested by NR author
 		for (i=1;i<=n;i++) {
 			temp=fabs(g[i])*FMAX(fabs(p[i]),1.0)/den;
 			if (temp > test) test=temp;

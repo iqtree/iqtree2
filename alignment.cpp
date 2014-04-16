@@ -16,7 +16,8 @@
 char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
 char symbols_dna[]     = "ACGT";
 char symbols_rna[]     = "ACGU";
-char symbols_binary[]  = "01";
+//char symbols_binary[]  = "01";
+char symbols_morph[] = "0123456789ABCDEFGHIJKLMNOPQRSTUV";
 // genetic code from tri-nucleotides (AAA, AAC, AAG, AAT, ..., TTT) to amino-acids
 // Source: http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi
 // Base1:                AAAAAAAAAAAAAAAACCCCCCCCCCCCCCCCGGGGGGGGGGGGGGGGTTTTTTTTTTTTTTTT
@@ -55,6 +56,7 @@ Alignment::Alignment()
     codon_table = NULL;
     genetic_code = NULL;
     non_stop_codon = NULL;
+    seq_type = SEQ_UNKNOWN;
 }
 
 string &Alignment::getSeqName(int i) {
@@ -210,6 +212,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     codon_table = NULL;
     genetic_code = NULL;
     non_stop_codon = NULL;
+    seq_type = SEQ_UNKNOWN;
     cout << "Reading alignment file " << filename << " ..." << endl;
     intype = detectInputFile(filename);
 
@@ -312,12 +315,23 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
             symbols = symbols_rna;
         else
             symbols = symbols_dna;
+        seq_type = SEQ_DNA;
     } else if (data_type == NxsCharactersBlock::protein) {
         num_states = 20;
         symbols = symbols_protein;
+        seq_type = SEQ_PROTEIN;
     } else {
-        num_states = 2;
-        symbols = symbols_binary;
+    	// standard morphological character
+        num_states = data_block->GetMaxObsNumStates();
+        if (num_states > 32)
+        	outError("Number of states can not exceed 32");
+        if (num_states < 2)
+        	outError("Number of states can not be below 2");
+        if (num_states == 2)
+        	seq_type = SEQ_BINARY;
+        else
+    		seq_type = SEQ_MORPH;
+        symbols = symbols_morph;
     }
 
     memset(char_to_state, STATE_UNKNOWN, NUM_CHAR);
@@ -446,7 +460,8 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
     int num_nuc = 0;
     int num_ungap = 0;
     int num_bin = 0;
-    int num_alphabet = 0;
+    int num_alpha = 0;
+    int num_digit = 0;
 
     for (StrVector::iterator it = sequences.begin(); it != sequences.end(); it++)
         for (string::iterator i = it->begin(); i != it->end(); i++) {
@@ -455,15 +470,18 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
                 num_nuc++;
             if ((*i) == '0' || (*i) == '1')
                 num_bin++;
-            if (isalnum(*i)) num_alphabet++;
+            if (isalpha(*i)) num_alpha++;
+            if (isdigit(*i)) num_digit++;
         }
     if (((double)num_nuc) / num_ungap > 0.9)
         return SEQ_DNA;
     if (((double)num_bin) / num_ungap > 0.9)
         return SEQ_BINARY;
-    if (((double)num_alphabet) / num_ungap < 0.5)
-        return SEQ_UNKNOWN;
-    return SEQ_PROTEIN;
+    if (((double)num_alpha) / num_ungap > 0.9)
+        return SEQ_PROTEIN;
+    if (((double)(num_alpha+num_digit)) / num_ungap > 0.9)
+        return SEQ_MORPH;
+    return SEQ_UNKNOWN;
 }
 
 void buildStateMap(char *map, SeqType seq_type) {
@@ -471,7 +489,7 @@ void buildStateMap(char *map, SeqType seq_type) {
     map[(unsigned char)'?'] = STATE_UNKNOWN;
     map[(unsigned char)'-'] = STATE_UNKNOWN;
     map[(unsigned char)'.'] = STATE_UNKNOWN;
-
+    int len;
     switch (seq_type) {
     case SEQ_BINARY:
         map[(unsigned char)'0'] = 0;
@@ -507,6 +525,11 @@ void buildStateMap(char *map, SeqType seq_type) {
     case SEQ_MULTISTATE:
         for (int i = 0; i <= STATE_UNKNOWN; i++)
             map[i] = i;
+        return;
+    case SEQ_MORPH: // Protein
+    	len = strlen(symbols_morph);
+        for (int i = 0; i < len; i++)
+            map[(int)symbols_morph[i]] = i;
         return;
     default:
         return;
@@ -586,18 +609,19 @@ char Alignment::convertState(char state, SeqType seq_type) {
             return state;
         else
             return STATE_UNKNOWN;
+    case SEQ_MORPH: // Standard morphological character
+        loc = strchr(symbols_morph, state);
+
+        if (!loc) return STATE_INVALID; // unrecognize character
+        state = loc - symbols_morph;
+	    return state;
     default:
         return STATE_INVALID;
     }
 }
 
 char Alignment::convertState(char state) {
-	switch (num_states) {
-		case 2: return convertState(state, SEQ_BINARY);
-		case 4: return convertState(state, SEQ_DNA);
-		case 20: return convertState(state, SEQ_PROTEIN);
-		default: return STATE_INVALID;
-	}
+	return convertState(state, seq_type);
 }
 
 
@@ -606,8 +630,8 @@ char Alignment::convertStateBack(char state) {
     if (state == STATE_UNKNOWN) return '-';
     if (state == STATE_INVALID) return '?';
 
-    switch (num_states) {
-    case 2:
+    switch (seq_type) {
+    case SEQ_BINARY:
         switch (state) {
         case 0:
             return '0';
@@ -616,7 +640,7 @@ char Alignment::convertStateBack(char state) {
         default:
             return STATE_INVALID;
         }
-    case 4: // DNA
+    case SEQ_DNA: // DNA
         switch (state) {
         case 0:
             return 'A';
@@ -650,22 +674,28 @@ char Alignment::convertStateBack(char state) {
             return '?'; // unrecognize character
         }
         return state;
-    case 20: // Protein
+    case SEQ_PROTEIN: // Protein
         if (state < 20)
             return symbols_protein[(int)state];
 		else if (state == 4+8+19) return 'B';
 		else if (state == 32+64+19) return 'Z';
         else
             return '-';
+    case SEQ_MORPH:
+    	// morphological state
+        if (state < strlen(symbols_morph))
+            return symbols_morph[(int)state];
+        else
+            return '-';
     default:
     	// unknown
-        return '*';
+    	return '*';
     }
-    }
+}
 
 string Alignment::convertStateBackStr(char state) {
 	string str;
-	if (num_states <= 20) {
+	if (seq_type != SEQ_CODON) {
 		str = convertStateBack(state);
 	} else {
 		// codon data
@@ -690,7 +720,7 @@ void Alignment::initCodon(char *sequence_type) {
 	if (strlen(sequence_type) > 5) {
 		try {
 			transl_table = convert_int(sequence_type+5);
-		} catch (string str) {
+		} catch (string &str) {
 			outError("Wrong genetic code ", sequence_type);
 		}
 		switch (transl_table) {
@@ -741,6 +771,16 @@ void Alignment::initCodon(char *sequence_type) {
 	}
 }
 
+int getMaxObservedStates(StrVector &sequences) {
+	char maxstate = 0;
+	for (StrVector::iterator it = sequences.begin(); it != sequences.end(); it++)
+		for (string::iterator pos = it->begin(); pos != it->end(); pos++)
+			if ((*pos) > maxstate) maxstate = *pos;
+	if (maxstate >= '0' && maxstate <= '9') return (maxstate - '0' + 1);
+	if (maxstate >= 'A' && maxstate <= 'V') return (maxstate - 'A' + 11);
+	return 0;
+}
+
 int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
     int seq_id;
     ostringstream err_str;
@@ -782,7 +822,6 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         throw err_str.str();
 
     /* now check data type */
-    SeqType seq_type = SEQ_UNKNOWN;
     seq_type = detectSequenceType(sequences);
     switch (seq_type) {
     case SEQ_BINARY:
@@ -797,6 +836,11 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         num_states = 20;
         cout << "Alignment most likely contains protein sequences" << endl;
         break;
+    case SEQ_MORPH:
+        num_states = getMaxObservedStates(sequences);
+        if (num_states < 2 || num_states > 32) throw "Invalid number of states.";
+        cout << "Alignment most likely contains " << num_states << "-state morphological data" << endl;
+        break;
     default:
         if (!sequence_type)
             throw "Unknown sequence type.";
@@ -809,10 +853,14 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         } else if (strcmp(sequence_type, "DNA") == 0) {
             num_states = 4;
             user_seq_type = SEQ_DNA;
-        } else if (strcmp(sequence_type, "AA") == 0) {
+        } else if (strcmp(sequence_type, "AA") == 0 || strcmp(sequence_type, "PROT") == 0) {
             num_states = 20;
             user_seq_type = SEQ_PROTEIN;
-        } else if (strcmp(sequence_type, "MULTI") == 0) {
+        } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0) {
+            num_states = getMaxObservedStates(sequences);
+            if (num_states < 2 || num_states > 32) throw "Invalid number of states";
+            user_seq_type = SEQ_MORPH;
+        } else if (strcmp(sequence_type, "TINA") == 0) {
             cout << "Multi-state data with " << num_states << " alphabets" << endl;
             user_seq_type = SEQ_MULTISTATE;
         } else if (strncmp(sequence_type, "CODON", 5) == 0) {
@@ -901,7 +949,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
     string line;
     // remove the failbit
     in.exceptions(ios::badbit);
-    bool multi_state = (sequence_type && strcmp(sequence_type,"MULTI") == 0);
+    bool tina_state = (sequence_type && strcmp(sequence_type,"TINA") == 0);
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
@@ -930,7 +978,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
                 line.erase(0, pos);
             }
             int old_len = sequences[seq_id].length();
-            if (multi_state) {
+            if (tina_state) {
                 stringstream linestr(line);
                 int state;
                 while (!linestr.eof() ) {
@@ -1121,7 +1169,8 @@ void Alignment::printPhylip(const char *file_name, bool append, const char *aln_
             out << endl;
         }
         out.close();
-        cout << "Alignment was printed to " << file_name << endl;
+        if (verbose_mode >= VB_MIN)
+        	cout << "Alignment was printed to " << file_name << endl;
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, file_name);
     }
