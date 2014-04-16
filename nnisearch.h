@@ -36,17 +36,17 @@ typedef struct
 
 
 typedef struct {
-	nodeptr p;
-	int nniType;
-	char* idString;
+    nodeptr p;
+    int nniType;
+    char* idString;
     double z0[PLL_NUM_BRANCHES]; // p
     double z1[PLL_NUM_BRANCHES]; // p->next
     double z2[PLL_NUM_BRANCHES]; // p->next->next
     double z3[PLL_NUM_BRANCHES]; // q->next
     double z4[PLL_NUM_BRANCHES]; // q->next->next
-	double likelihood;
-	double loglDelta;
-	double negLoglDelta;
+    double likelihood;
+    double loglDelta;
+    double negLoglDelta;
 } pllNNIMove;
 
 inline bool comparePLLNNIMove(const pllNNIMove &a, const pllNNIMove &b)
@@ -65,23 +65,23 @@ void _update(pllInstance *tr, partitionList *pr, nodeptr p);
 #define MAX_NUM_DELTA 10000
 
 typedef struct {
-	double delta[MAX_NUM_DELTA];
-	int num_delta;
-	double delta_min;
-	int doNNICut;
+    double delta[MAX_NUM_DELTA];
+    int num_delta;
+    double delta_min;
+    int doNNICut;
 } NNICUT;
 
 typedef struct {
-	vector<pllNNIMove> nniList;
-	bool updateNNIList;
-	bool speednni;
-	vector<pllNNIMove> posNNIList; // positive NNI list
-	unordered_set<string> affectBranches; // Set of branches that are affected by the previous NNIs
-	double curLogl;
-	int evalType;
-	int numAppliedNNIs; // total number of applied NNIs sofar
-	int curNumAppliedNNIs; // number of applied NNIs at the current step
-	int curNumNNISteps;
+    vector<pllNNIMove> nniList;
+    bool updateNNIList;
+    bool speednni;
+    vector<pllNNIMove> posNNIList; // positive NNI list
+    unordered_set<string> affectBranches; // Set of branches that are affected by the previous NNIs
+    double curLogl;
+    int evalType;
+    int numAppliedNNIs; // total number of applied NNIs sofar
+    int curNumAppliedNNIs; // number of applied NNIs at the current step
+    int curNumNNISteps;
 } SearchInfo;
 
 /**
@@ -123,7 +123,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 double pllPerturbTree(pllInstance *tr, partitionList *pr, vector<pllNNIMove> &nnis);
 
 /**
- * 	do 1 round of fastNNI
+ *     do 1 round of fastNNI
  *  return new tree log-likelihood if found improving NNI otherwise -1.0
  *
  *  @param[in] tr the tree data structure
@@ -163,12 +163,12 @@ string convertQuartet2String(nodeptr p);
 void evalAllNNI(pllInstance* tr);
 
 /**
- * 	@brief evaluate all NNIs within the subtree specified by node p
- * 	populates the list containing all possible NNI moves
+ *     @brief evaluate all NNIs within the subtree specified by node p
+ *     populates the list containing all possible NNI moves
  *
- * 	@param[in] tr: the tree data structure
- * 	@param[in] pr partition data structure
- * 	@param[in] p node pointer that specify the subtree
+ *     @param[in] tr: the tree data structure
+ *     @param[in] pr partition data structure
+ *     @param[in] p node pointer that specify the subtree
  */
 void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo);
 
@@ -193,22 +193,22 @@ pllNNIMove *getNNIList(pllInstance* tr);
  * This one keeps all info necessary to run UFBoot in PLL mode
  */
 typedef struct{
-	int max_candidate_trees;
-	int treels_size;
-	int save_all_trees;
-	pll_boolean save_all_br_lens;
-	double logl_cutoff;
-	int duplication_counter;
-	int n_patterns;
-	struct pllHashTable * treels;
-	unsigned int candidate_trees_count; /* counter of trees in pllHashTable */
-	double * treels_logl; // maintain size == treels_size
-	char ** treels_newick; // maintain size == treels_size
-	double ** treels_ptnlh; // maintain size == treels_size
-	int ** boot_samples;
-	double * boot_logl;
-	int * boot_counts;
-	int * boot_trees;
+    int max_candidate_trees;
+    int treels_size;
+    int save_all_trees;
+    pll_boolean save_all_br_lens;
+    double logl_cutoff;
+    int duplication_counter;
+    int n_patterns;
+    struct pllHashTable * treels;
+    unsigned int candidate_trees_count; /* counter of trees in pllHashTable */
+    double * treels_logl; // maintain size == treels_size
+    char ** treels_newick; // maintain size == treels_size
+    double ** treels_ptnlh; // maintain size == treels_size
+    int ** boot_samples;
+    double * boot_logl;
+    int * boot_counts;
+    int * boot_trees;
 } pllUFBootData;
 
 /**
@@ -250,7 +250,7 @@ void pllResizeUFBootData();
  * @param All are the same as in PLL's
  */
 static char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pll_boolean printBranchLengths, pll_boolean printNames,
-			    pll_boolean printLikelihood, pll_boolean rellTree, pll_boolean finalPrint, int perGene, pll_boolean branchLabelSupport, pll_boolean printSHSupport);
+                pll_boolean printLikelihood, pll_boolean rellTree, pll_boolean finalPrint, int perGene, pll_boolean branchLabelSupport, pll_boolean printSHSupport);
 
 
 //#ifdef __cplusplus

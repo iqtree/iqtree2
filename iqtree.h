@@ -188,8 +188,8 @@ public:
     void doIQP();
 
     /**
-     * 		Perform a series of random NNI moves
-     * 		@param numNNI number of random NNIs
+     *         Perform a series of random NNI moves
+     *         @param numNNI number of random NNIs
      */
     void doRandomNNIs(int numNNI);
 
@@ -252,10 +252,10 @@ public:
     double optimizeNNI(int &nni_count, int &nni_steps);
 
     /**
-     * 		Do fastNNI using PLL
+     *         Do fastNNI using PLL
      *
      *      @param nniCount (OUT) number of NNIs applied
-     * 		@param nniSteps (OUT) number of NNI steps done
+     *         @param nniSteps (OUT) number of NNI steps done
      */
     double pllOptimizeNNI(int &nniCount, int &nniSteps, SearchInfo &searchinfo);
 
@@ -296,12 +296,12 @@ public:
     void addPositiveNNIMove(NNIMove myMove);
 
     /**
-     * 	Save all the current branch lengths
+     *     Save all the current branch lengths
      */
     void saveBranLens(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
-     * 	 Restore the branch lengths from the saved values
+     *      Restore the branch lengths from the saved values
      */
     virtual void restoreAllBranLen(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
@@ -324,8 +324,8 @@ public:
 
     /**
             Change all branch length according to the computed values during
-     * 		NNI evaluation. There might be branches that are not be affected
-     * 		since tree topology is changed after doing NNI
+     *         NNI evaluation. There might be branches that are not be affected
+     *         since tree topology is changed after doing NNI
      */
     void changeAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
@@ -434,7 +434,7 @@ public:
     pllInstance *pllInst;
 
     /**
-     *	PLL data structure for alignment
+     *    PLL data structure for alignment
      */
     pllAlignmentData *pllAlignment;
 
@@ -589,7 +589,7 @@ protected:
     BranLenMap mapOptBranLens;
 
     /**
-     * 	Data structure (of type Map) used to store the original branch
+     *     Data structure (of type Map) used to store the original branch
         lengths of the tree
      */
     BranLenMap savedBranLens;
@@ -654,8 +654,8 @@ public:
     /** newick string of corresponding bootstrap trees */
     IntVector boot_trees;
 
-	/** number of multiple optimal trees per replicate */
-	IntVector boot_counts;
+    /** number of multiple optimal trees per replicate */
+    IntVector boot_counts;
 
     /** corresponding RELL log-likelihood */
     DoubleVector boot_logl;
@@ -676,8 +676,8 @@ public:
 
     /** @return TRUE if stopping criterion is met */
     bool checkBootstrapStopping();
-	int getDelete() const;
-	void setDelete(int _delete);
+    int getDelete() const;
+    void setDelete(int _delete);
 
 protected:
     /**** NNI cutoff heuristic *****/
@@ -731,9 +731,9 @@ protected:
     void deleteNonTabuLeaves(PhyloNodeVector &del_leaves);
 
     /**
-     * 		delete a set of leaves from tree
-     * 		non-cherry leaves are selected first
-     * 		@param del_leaves (OUT) the list of deleted leaves
+     *         delete a set of leaves from tree
+     *         non-cherry leaves are selected first
+     *         @param del_leaves (OUT) the list of deleted leaves
      */
     void deleteNonCherryLeaves(PhyloNodeVector &del_leaves);
 
