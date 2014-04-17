@@ -315,30 +315,33 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh,
 			<< totalLenInternal / totalLen << endl;
 	out << endl;
 	//out << "ZERO BRANCH EPSILON = " << epsilon << endl;
-	int zero_branches = tree.countZeroBranches(NULL, NULL, epsilon);
-	if (zero_branches > 0) {
-		int zero_internal_branches = tree.countZeroInternalBranches(NULL, NULL,
-				epsilon);
+	int zero_internal_branches = tree.countZeroInternalBranches(NULL, NULL, epsilon);
+	if (zero_internal_branches > 0) {
+		//int zero_internal_branches = tree.countZeroInternalBranches(NULL, NULL, epsilon);
+		/*
 		out << "WARNING: " << zero_branches
 				<< " branches of near-zero lengths (<" << epsilon << ") and should be treated with caution!"
 				<< endl;
+		*/
 		out << "WARNING: " << zero_internal_branches
-				<< " internal branches of near-zero lengths (<" << epsilon << ") and should be treated with caution"
+				<< " near-zero internal branches (<" << epsilon << ") should be treated with caution"
 				<< endl;
+		/*
 		cout << endl << "WARNING: " << zero_branches
 				<< " branches of near-zero lengths (<" << epsilon << ") and should be treated with caution!"
 				<< endl;
+		*/
 		out << "         Such branches are denoted by '**' in the figure"
 				<< endl << endl;
 	}
 	int long_branches = tree.countLongBranches(NULL, NULL, MAX_BRANCH_LEN-0.2);
 	if (long_branches > 0) {
-		stringstream sstr;
-		sstr << "WARNING: " << long_branches
+		//stringstream sstr;
+		out << "WARNING: " << long_branches
 				<< " too long branches (>" << MAX_BRANCH_LEN-0.2 << ") should be treated with caution!"
 				<< endl;
-		out << sstr.str();
-		cout << sstr.str();
+		//out << sstr.str();
+		//cout << sstr.str();
 	}
 	tree.sortTaxa();
 	//tree.setExtendedFigChar();
@@ -553,6 +556,16 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< params.k_representative << endl
 				<< "NNI log-likelihood cutoff: " << tree.getNNICutoff() << endl
 				<< endl;
+
+
+		int predicted_iteration = tree.stop_rule.getPredictedIteration();
+		//cout.unsetf(ios::fixed);
+
+		if (predicted_iteration > tree.getCurIteration()) {
+			out << "WARNING: " << predicted_iteration << " iterations needed to ensure "
+					<< ((int)floor(params.stop_confidence * 100)) << "% confidence for search convergence." << endl << endl;
+		}
+
 
 		if (params.compute_ml_tree) {
 			out << "MAXIMUM LIKELIHOOD TREE" << endl

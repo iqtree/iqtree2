@@ -1239,15 +1239,6 @@ double IQTree::doTreeSearch() {
 		}
 	}
 
-	int predicted_iteration = stop_rule.getPredictedIteration();
-	//cout.unsetf(ios::fixed);
-
-	if (predicted_iteration > curIteration) {
-		cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure that with a "
-				<< floor(params->stop_confidence * 100) << "% confidence" << endl
-				<< "         the IQPNNI search will not find a better tree" << endl;
-	}
-
 	if (testNNI)
 		outNNI.close();
 	if (params->write_intermediate_trees)
