@@ -19,7 +19,7 @@
  ***************************************************************************/
 #ifndef IQPTREE_H
 #define IQPTREE_H
-asdf
+
 #include <set>
 #include <map>
 #include <stack>
