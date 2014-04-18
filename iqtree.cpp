@@ -25,6 +25,8 @@
 #include "gtrmodel.h"
 #include "rategamma.h"
 #include <numeric>
+#include "pll/pllInternal.h"
+#include "nnisearch.h"
 
 Params *globalParam;
 
@@ -69,6 +71,11 @@ IQTree::IQTree(Alignment *aln) :
     init();
 }
 void IQTree::setParams(Params &params) {
+    searchinfo.speednni = params.speednni;
+    searchinfo.nni_type = params.nni_type;
+    optimize_by_newton = params.optimize_by_newton;
+    sse = params.SSE;
+    setStartLambda(params.lambda);
     if (params.min_iterations == -1) {
         if (!params.gbo_replicates) {
             if (params.autostop) {
@@ -796,7 +803,7 @@ double IQTree::inputTree2PLL(string treestring, bool computeLH) {
     pllTreeInitTopologyNewick(pllInst, newick, PLL_FALSE);
     pllNewickParseDestroy(&newick);
     if (computeLH) {
-        pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+        pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
         res = pllInst->likelihood;
     }
     return res;
@@ -1109,8 +1116,8 @@ double IQTree::doTreeSearch() {
                 pllNewickTree *perturbTree = pllNewickParseString(perturb_tree_string.c_str());
                 assert(perturbTree != NULL);
                 pllTreeInitTopologyNewick(pllInst, perturbTree, PLL_FALSE);
-                pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-                pllTreeEvaluate(pllInst, pllPartitions, params->numSmoothTree);
+                pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+                pllOptimizeBranchLengths(pllInst, pllPartitions, params->numSmoothTree);
                 pllNewickParseDestroy(&perturbTree);
                 curScore = pllInst->likelihood;
                 perturbScore = curScore;
@@ -1132,8 +1139,7 @@ double IQTree::doTreeSearch() {
 
         if (params->pll) {
             curScore = pllOptimizeNNI(nni_count, nni_steps, searchinfo);
-            int printBranchLengths = PLL_TRUE;
-            Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths,
+            pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
                     PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
             intermediate_tree = string(pllInst->tree_string);
         } else {
@@ -1191,11 +1197,12 @@ double IQTree::doTreeSearch() {
                             deleteAllPartialLh();
                             cout << "Optimizing model parameters by PLL ... ";
                             double stime = getCPUTime();
-                            modOpt(pllInst, pllPartitions, 1.0);
+                            pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+                            pllOptimizeModelParameters(pllInst, pllPartitions, 1.0);
                             curScore = pllInst->likelihood;
                             double etime = getCPUTime();
                             cout << etime - stime << " seconds" << endl;
-                            Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
+                            pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
                                     PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
                             intermediate_tree = string(pllInst->tree_string);
                             readTreeString(intermediate_tree);
@@ -1211,7 +1218,7 @@ double IQTree::doTreeSearch() {
                             initializeAllPartialLh();
                             clearAllPartialLH();
                             double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length,
-                                    false, params->model_eps);
+                                    true, params->model_eps);
                             if (modOptScore < curScore) {
                                 cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
                                 cout << "  Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
@@ -1319,14 +1326,14 @@ double IQTree::doTreeSearch() {
         pllNewickTree *newick = pllNewickParseString(bestTreeString.c_str());
         pllTreeInitTopologyNewick(pllInst, newick, PLL_FALSE);
         pllNewickParseDestroy(&newick);
-        pllEvaluateGeneric(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+        pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
         cout << endl;
         cout << "Optimizing model parameters on the final tree by PLL ... ";
         double stime = getCPUTime();
-        modOpt(pllInst, pllPartitions, 0.01);
+        pllOptimizeModelParameters(pllInst, pllPartitions, 0.01);
         double etime = getCPUTime();
         cout << etime - stime << " seconds" << endl;
-        Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE, PLL_TRUE,
+        pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE, PLL_TRUE,
                 PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
         setBestTree(string(pllInst->tree_string), pllInst->likelihood);
     }
@@ -1490,7 +1497,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
 void IQTree::applyNNIs(int nni2apply, bool changeBran) {
     for (int i = 0; i < nni2apply; i++) {
         doNNI(vec_nonconf_nni.at(i));
-        if (!params->leastSquareNNI && !params->nni0 && changeBran) {
+        if (!params->leastSquareNNI && changeBran) {
             // apply new branch lengths
             applyNNIBranches(vec_nonconf_nni.at(i));
         }
@@ -2157,8 +2164,7 @@ void IQTree::printResultTree(ostream &out) {
 }
 
 void IQTree::printPhylolibTree(const char* suffix) {
-    pll_boolean printBranchLengths = PLL_TRUE;
-    Tree2String(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, printBranchLengths, 1, 0, 0, 0,
+    pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE, 1, 0, 0, 0,
             PLL_SUMMARIZE_LH, 0, 0);
     char phylolibTree[1024];
     strcpy(phylolibTree, params->out_prefix);

@@ -24,6 +24,7 @@
 #include "tools.h"
 #include "mexttree.h"
 #include "phylotesting.h"
+#include "nnisearch.h"
 
 class PhyloTree;
 class IQTree;

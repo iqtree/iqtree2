@@ -3,18 +3,18 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#include "pll/pll.h"
+
 #define GLOBAL_VARIABLES_DEFINITION
-#include "nnisearch.h"
 
 #if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
 #include <sys/resource.h>
 #endif
 
+#include "nnisearch.h"
+
 /* program options */
 int nni0;
 int nni5;
-extern Params *globalParam;
 extern VerboseMode verbose_mode;
 int NNI_MAX_NR_STEP = 10;
 
@@ -82,8 +82,8 @@ double pllDoRandomNNIs(pllInstance *tr, partitionList *pr, int numNNI) {
 			numNNIinStep = numNNI - cnt1;
 		}
 	} while (cnt1 < numNNI);
-	pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
-	pllTreeEvaluate(tr, pr, 1);
+	pllEvaluateLikelihood(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+	pllOptimizeBranchLengths(tr, pr, 1);
 	return tr->likelihood;
 }
 
@@ -115,8 +115,8 @@ double pllPerturbTree(pllInstance *tr, partitionList *pr, vector<pllNNIMove> &nn
 		updateBranchLengthForNNI(tr, pr, (*it));
 
 	}
-	pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
-	pllTreeEvaluate(tr, pr, 1);
+	pllEvaluateLikelihood(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+	pllOptimizeBranchLengths(tr, pr, 1);
 	return tr->likelihood;
 }
 
@@ -148,12 +148,12 @@ void quicksort_nni(pllNNIMove* arr,int left, int right) {
 }
 
 //TODO: Workaround for memory leak problem when calling setupTopol within doNNISearch
-topol *_setupTopol(pllInstance* tr) {
-	static topol* tree;
-	if (tree == NULL)
-		tree = setupTopol(tr->mxtips);
-	return tree;
-}
+//topol *_setupTopol(pllInstance* tr) {
+//	static topol* tree;
+//	if (tree == NULL)
+//		tree = setupTopol(tr->mxtips);
+//	return tree;
+//}
 
 vector<string> getAffectedBranches(pllInstance* tr, nodeptr p) {
 	vector<string> res;
@@ -264,11 +264,11 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	double finalLH = initLH;
 	vector<pllNNIMove> selectedNNIs;
 	unordered_set<int> selectedNodes;
-	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 
 	/* data structure to store the initial tree topology + branch length */
-	topol* curTree = _setupTopol(tr);
-	saveTree(tr, curTree, numBranches);
+    topolRELL_LIST *rl = (topolRELL_LIST *)rax_malloc(sizeof(topolRELL_LIST));
+    initTL(rl, tr, 1);
+    saveTL(rl, tr, 0);
 
 	/* evaluate NNIs */
 	pllEvalAllNNIs(tr, pr, searchinfo);
@@ -308,8 +308,8 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 			updateBranchLengthForNNI(tr, pr, (*it));
 		}
 		if (selectedNNIs.size() != 0) {
-			pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
-			pllTreeEvaluate(tr, pr, 1);
+			pllEvaluateLikelihood(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+			pllOptimizeBranchLengths(tr, pr, 1);
 			int numNNI = selectedNNIs.size();
 			/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
 			while (tr->likelihood < selectedNNIs.back().likelihood) {
@@ -320,10 +320,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 				} else {
 //					cout << "Best logl: " << selectedNNIs.back().likelihood << " / " << "NNI step " << searchinfo.curNumNNISteps<< " / Applying " << numNNI << " NNIs give logl: " << tr->likelihood << " (worse than best)";
 //					cout << " / Roll back tree ... " << endl;
-					if (!restoreTree(curTree, tr, pr)) {
-						printf("ERROR: failed to roll back tree \n");
-						exit(1);
-					}
+			        restoreTL(rl, tr, 0, pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);
 					numNNI = ceil(0.5 * numNNI);
 					int count = numNNI;
 					for (vector<pllNNIMove>::reverse_iterator rit = selectedNNIs.rbegin(); rit != selectedNNIs.rend(); ++rit) {
@@ -335,8 +332,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 						}
 					}
 
-					pllEvaluateGeneric(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
-					pllTreeEvaluate(tr, pr, 1);
+					pllOptimizeBranchLengths(tr, pr, 1);
 					//cout << "Number of NNIs reduced to " << numNNI << ": " << tr->likelihood << endl;
 
 					/* Only apply the best NNI after the tree has been rolled back */
@@ -351,6 +347,8 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	} else {
 		searchinfo.curNumAppliedNNIs = 0;
 	}
+    freeTL(rl);
+    rax_free(rl);
 	return finalLH;
 }
 
@@ -397,34 +395,34 @@ void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nn
  @param newzpercycle Maximal number of Newton Raphson iterations
 
  */
-void _update(pllInstance *tr, partitionList *pr, nodeptr p) {
-	nodeptr q;
-	int i;
-	double z[PLL_NUM_BRANCHES], z0[PLL_NUM_BRANCHES];
-	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
+//void _update(pllInstance *tr, partitionList *pr, nodeptr p) {
+//	nodeptr q;
+//	int i;
+//	double z[PLL_NUM_BRANCHES], z0[PLL_NUM_BRANCHES];
+//	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
+//
+//	q = p->back;
+//
+//	for (i = 0; i < numBranches; i++)
+//		z0[i] = q->z[i];
+//
+//	if (numBranches > 1)
+//		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_TRUE);
+//	else
+//		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_FALSE);
+//
+//	for (i = 0; i < numBranches; i++) {
+//		if (!tr->partitionConverged[i]) {
+//			if (PLL_ABS(z[i] - z0[i]) > PLL_DELTAZ) {
+//				tr->partitionSmoothed[i] = PLL_FALSE;
+//			}
+//
+//			p->z[i] = q->z[i] = z[i];
+//		}
+//	}
+//}
 
-	q = p->back;
-
-	for (i = 0; i < numBranches; i++)
-		z0[i] = q->z[i];
-
-	if (numBranches > 1)
-		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_TRUE);
-	else
-		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_FALSE);
-
-	for (i = 0; i < numBranches; i++) {
-		if (!tr->partitionConverged[i]) {
-			if (PLL_ABS(z[i] - z0[i]) > PLL_DELTAZ) {
-				tr->partitionSmoothed[i] = PLL_FALSE;
-			}
-
-			p->z[i] = q->z[i] = z[i];
-		}
-	}
-}
-
-double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int evalType) {
+double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, SearchInfo *searchinfo) {
 	assert(swap == 0 || swap == 1);
 	nodeptr q;
 	nodeptr tmp;
@@ -443,68 +441,68 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, int eva
 		hookup(q->next, tmp, tmp->z, numBranches);
 	}
 
-	if (evalType == TOPO_ONLY) {
+	if (nni_type == TOPO_ONLY) {
 		return 0.0;
-	} else if (evalType == ONE_BRAN_OPT) {
-		if (numBranches > 1 && !tr->useRecom) {
-			pllNewviewGeneric(tr, pr, p, PLL_TRUE);
-			pllNewviewGeneric(tr, pr, q, PLL_TRUE);
-		} else {
-			pllNewviewGeneric(tr, pr, p, PLL_FALSE);
-			pllNewviewGeneric(tr, pr, q, PLL_FALSE);
-		}
-		_update(tr, pr, p);
-		pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_FALSE);
-	} else if (evalType == NO_BRAN_OPT) {
-		if (numBranches > 1 && !tr->useRecom) {
-			pllNewviewGeneric(tr, pr, p, PLL_TRUE);
-			pllNewviewGeneric(tr, pr, q, PLL_TRUE);
-		} else {
-			pllNewviewGeneric(tr, pr, p, PLL_FALSE);
-			pllNewviewGeneric(tr, pr, q, PLL_FALSE);
-		}
-		pllEvaluateGeneric(tr, pr, p, PLL_FALSE, PLL_FALSE);
-	} else { // 5 branches optimization
-		if (numBranches > 1 && !tr->useRecom) {
-			pllNewviewGeneric(tr, pr, q, PLL_TRUE);
-		} else {
-			pllNewviewGeneric(tr, pr, q, PLL_FALSE);
-		}
-		nodeptr r; // temporary node poiter
-		r = p->next;
-		if (numBranches > 1 && !tr->useRecom)
-			pllNewviewGeneric(tr, pr, r, PLL_TRUE);
-		else
-			pllNewviewGeneric(tr, pr, r, PLL_FALSE);
-		_update(tr, pr, r);
-		r = p->next->next;
-		if (numBranches > 1 && !tr->useRecom)
-			pllNewviewGeneric(tr, pr, r, PLL_TRUE);
-		else
-			pllNewviewGeneric(tr, pr, r, PLL_FALSE);
-		_update(tr, pr, r);
-		if (numBranches > 1 && !tr->useRecom)
-			pllNewviewGeneric(tr, pr, p, PLL_TRUE);
-		else
-			pllNewviewGeneric(tr, pr, p, PLL_FALSE);
-		_update(tr, pr, p);
-		// optimize 2 branches at node q
-		r = q->next;
-		if (numBranches > 1 && !tr->useRecom)
-			pllNewviewGeneric(tr, pr, r, PLL_TRUE);
-		else
-			pllNewviewGeneric(tr, pr, r, PLL_FALSE);
-		_update(tr, pr, r);
-		r = q->next->next;
-		if (numBranches > 1 && !tr->useRecom)
-			pllNewviewGeneric(tr, pr, r, PLL_TRUE);
-		else
-			pllNewviewGeneric(tr, pr, r, PLL_FALSE);
-		_update(tr, pr, r);
-		pllEvaluateGeneric(tr, pr, r, PLL_FALSE, PLL_FALSE);
 	}
-	return tr->likelihood;
 
+	// Optimize the central branch
+    if (numBranches > 1 && !tr->useRecom) {
+        pllUpdatePartials(tr, pr, p, PLL_TRUE);
+        pllUpdatePartials(tr, pr, q, PLL_TRUE);
+    } else {
+        pllUpdatePartials(tr, pr, p, PLL_FALSE);
+        pllUpdatePartials(tr, pr, q, PLL_FALSE);
+    }
+    update(tr, pr, p);
+    pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+    // if after optimizing the central branch we already obtain better logl
+    // then there is no need for optimizing other branches
+    if (tr->likelihood > searchinfo->curLogl) {
+        return tr->likelihood;
+    }
+
+    // Optimize 4 other branches
+    if (nni_type == NNI5) {
+        if (numBranches > 1 && !tr->useRecom) {
+            pllUpdatePartials(tr, pr, q, PLL_TRUE);
+        } else {
+            pllUpdatePartials(tr, pr, q, PLL_FALSE);
+        }
+        nodeptr r; // temporary node poiter
+        r = p->next;
+        if (numBranches > 1 && !tr->useRecom)
+            pllUpdatePartials(tr, pr, r, PLL_TRUE);
+        else
+            pllUpdatePartials(tr, pr, r, PLL_FALSE);
+        update(tr, pr, r);
+        r = p->next->next;
+        if (numBranches > 1 && !tr->useRecom)
+            pllUpdatePartials(tr, pr, r, PLL_TRUE);
+        else
+            pllUpdatePartials(tr, pr, r, PLL_FALSE);
+        update(tr, pr, r);
+        if (numBranches > 1 && !tr->useRecom)
+            pllUpdatePartials(tr, pr, p, PLL_TRUE);
+        else
+            pllUpdatePartials(tr, pr, p, PLL_FALSE);
+        update(tr, pr, p);
+        // optimize 2 branches at node q
+        r = q->next;
+        if (numBranches > 1 && !tr->useRecom)
+            pllUpdatePartials(tr, pr, r, PLL_TRUE);
+        else
+            pllUpdatePartials(tr, pr, r, PLL_FALSE);
+        update(tr, pr, r);
+        r = q->next->next;
+        if (numBranches > 1 && !tr->useRecom)
+            pllUpdatePartials(tr, pr, r, PLL_TRUE);
+        else
+            pllUpdatePartials(tr, pr, r, PLL_FALSE);
+        update(tr, pr, r);
+        pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_FALSE);
+    }
+
+	return tr->likelihood;
 }
 
 string convertQuartet2String(nodeptr p) {
@@ -542,7 +540,6 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	nodeptr q = p->back;
 	assert(!isTip(p->number, tr->mxtips));
 	assert(!isTip(q->number, tr->mxtips));
-	bool recomputePartialLH = false;
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 	int numPosNNI = 0;
 	int i;
@@ -561,7 +558,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	pllNNIMove bestNNI;
 
 	/* do an NNI move of type 1 */
-	double lh1 = doOneNNI(tr, pr, p, 0, searchinfo.evalType);
+	double lh1 = doOneNNI(tr, pr, p, 0, searchinfo.nni_type, &searchinfo);
 	pllNNIMove nni1;
 	nni1.p = p;
 	nni1.nniType = 0;
@@ -592,10 +589,9 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		q->next->next->z[i] = nni0.z4[i];
 		q->next->next->back->z[i] = nni0.z4[i];
 	}
-	recomputePartialLH = true;
 
 	/* do an NNI move of type 2 */
-	double lh2 = doOneNNI(tr, pr, p, 1, searchinfo.evalType);
+	double lh2 = doOneNNI(tr, pr, p, 1, searchinfo.nni_type, &searchinfo);
 	// Create the nniMove struct to store this move
 	pllNNIMove nni2;
 	nni2.p = p;
@@ -623,8 +619,6 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		searchinfo.posNNIList.push_back(bestNNI);
 	}
 
-
-
 	/* Restore previous NNI move */
 	doOneNNI(tr, pr, p, 1, TOPO_ONLY);
 	/* Restore the old branch length */
@@ -640,17 +634,14 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		q->next->next->z[i] = nni0.z4[i];
 		q->next->next->back->z[i] = nni0.z4[i];
 	}
-	recomputePartialLH = true;
 
-	if (recomputePartialLH) {
-		if (numBranches > 1 && !tr->useRecom) {
-			pllNewviewGeneric(tr, pr, p, PLL_TRUE);
-			pllNewviewGeneric(tr, pr, p->back, PLL_TRUE);
-		} else {
-			pllNewviewGeneric(tr, pr, p, PLL_FALSE);
-			pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
-		}
-	}
+    if (numBranches > 1 && !tr->useRecom) {
+        pllUpdatePartials(tr, pr, p, PLL_TRUE);
+        pllUpdatePartials(tr, pr, p->back, PLL_TRUE);
+    } else {
+        pllUpdatePartials(tr, pr, p, PLL_FALSE);
+        pllUpdatePartials(tr, pr, p->back, PLL_FALSE);
+    }
 
 	return numPosNNI;
 }

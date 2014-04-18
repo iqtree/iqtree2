@@ -28,9 +28,8 @@
 #include "phylonode.h"
 #include "stoprule.h"
 #include "mtreeset.h"
-
-#include "pll/pll.h"
 #include "nnisearch.h"
+
 
 typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;

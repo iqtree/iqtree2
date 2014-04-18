@@ -137,7 +137,6 @@ private:
     double m_a, m_b, m_coeff;
 };
 
-
 /**
         vector of double number
  */
@@ -241,6 +240,20 @@ const int WT_BR_ID = 512;
 const int WT_BR_LEN_ROUNDING = 1024;
 const int TRUE = 1;
 const int FALSE = 0;
+
+/**
+ *  Specify different ways of doing an NNI.
+ *  TOPO_ONLY: only change the tree topology
+ *  TOPO_UPDATE_LV: the same as above but the partial likelihoods are update in addition
+ *  NNI1: optimize the central branch after changing the tree topology
+ *  NNI5: optimized the 5 affected branches after changing the tree topology
+ */
+enum NNI_Type {
+    TOPO_ONLY,
+    TOPO_UPDATE_LV,
+    NNI1,
+    NNI5
+};
 
 /**
         when computing Robinson-Foulds distances
@@ -365,11 +378,6 @@ struct Params {
 	int popSize;
 
 	/**
-	 *  use population based approached
-	 */
-	bool evol;
-
-	/**
 	 *  heuristics for speeding up NNI evaluation
 	 */
 	bool speednni;
@@ -400,12 +408,7 @@ struct Params {
 	 */
 	bool fastnni;
 
-    /**
-     *  Evaluating NNI without re-optimizing the central branch
-     */
-    bool nni0;
-
-    int evalType;
+    NNI_Type nni_type;
 
     /**
      *  Different type of Least Square variances

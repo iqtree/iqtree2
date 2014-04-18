@@ -645,14 +645,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5 = false;
+    params.nni5 = true;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.nni0 = false;
-    params.evol = false;
     params.popSize = 5;
-    params.evalType = 2;
     params.p_delete = -1;
     params.min_iterations = -1;
     params.max_iterations = 1;
@@ -1657,9 +1654,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             		throw "Use -popsize <number_of_candidate_trees>";
             	params.popSize = convert_int(argv[cnt]);
             	assert(params.popSize < params.numParsTrees);
-            	params.evol = true;
         	} else if (strcmp(argv[cnt], "-evol") == 0) {
-        		params.evol = true;
         		params.snni = true;
         		params.modOpt = true;
         	} else if (strcmp(argv[cnt], "-beststart") == 0) {
@@ -1700,8 +1695,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
             } else if (strcmp(argv[cnt], "-fivebran") == 0 || strcmp(argv[cnt], "-nni5") == 0) {
-            	params.nni5 = true;
+                params.nni5 = true;
+            	params.nni_type = NNI5;
             } else if (strcmp(argv[cnt], "-onebran") == 0 || strcmp(argv[cnt], "-nni1") == 0) {
+            	params.nni_type = NNI1;
             	params.nni5 = false;
             } else if (strcmp(argv[cnt], "-smooth") == 0) {
                 cnt++;
@@ -1710,8 +1707,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.numSmoothTree = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-lsnni") == 0) {
                 params.leastSquareNNI = true;
-            } else if (strcmp(argv[cnt], "-nni0") == 0) {
-                params.nni0 = true;
             } else if(strcmp(argv[cnt], "-ls_var") == 0) {
                 cnt++;
                 if (cnt >= argc)
