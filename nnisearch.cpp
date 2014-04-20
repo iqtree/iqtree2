@@ -229,12 +229,6 @@ void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo) 
 	while (q != p) {
 		evalNNIForSubtree(tr, pr, q->back, searchinfo);
 		q = q->next;
-		//		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
-		//		if (numBranches > 1 && !tr->useRecom) {
-		//			pllNewviewGeneric(tr, pr,  q->back, PLL_TRUE);
-		//		} else {
-		//			pllNewviewGeneric(tr, pr,  q->back, PLL_FALSE);
-		//		}
 	}
 }
 
@@ -635,6 +629,8 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 		q->next->next->back->z[i] = nni0.z4[i];
 	}
 
+	// Re-compute the partial likelihood vectors
+	// TODO: One could save these instread of recomputation
     if (numBranches > 1 && !tr->useRecom) {
         pllUpdatePartials(tr, pr, p, PLL_TRUE);
         pllUpdatePartials(tr, pr, p->back, PLL_TRUE);
@@ -664,24 +660,9 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo
 		} else {
 			evalNNIForBran(tr, pr, p, searchinfo);
 		}
-//		int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 		nodeptr q = p->next;
 		while (q != p) {
-
-//			if (numBranches > 1 && !tr->useRecom) {
-//				pllNewviewGeneric(tr, pr, p->back, PLL_TRUE);
-//			} else {
-//				pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
-//			}
-
 			evalNNIForSubtree(tr, pr, q->back, searchinfo);
-
-//			if (numBranches > 1 && !tr->useRecom) {
-//				pllNewviewGeneric(tr, pr, p, PLL_TRUE);
-//			} else {
-//				pllNewviewGeneric(tr, pr, p, PLL_FALSE);
-//			}
-
 			q = q->next;
 		}
 	}

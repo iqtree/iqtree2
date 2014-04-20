@@ -612,6 +612,11 @@ public:
      */
     unordered_map<string, double> refTreeSet;
 
+    /**
+     *  Set of unique initial parsimony trees
+     */
+    set<string> uniqParsTrees;
+
 	/**
 	 *  A set of reference trees which are sorted according to their logl
 	 *  This set contains complete tree strings (with branch length)

@@ -750,7 +750,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.autostop = false;
     params.maxUnsuccess = 100;
     params.speednni = false;
-    params.numParsTrees = 20;
+    params.numParsTrees = 100;
     params.avh_test = 0;
     params.bootlh_test = 0;
     params.bootlh_partitions = NULL;
@@ -1654,9 +1654,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             		throw "Use -popsize <number_of_candidate_trees>";
             	params.popSize = convert_int(argv[cnt]);
             	assert(params.popSize < params.numParsTrees);
-        	} else if (strcmp(argv[cnt], "-evol") == 0) {
-        		params.snni = true;
-        		params.modOpt = true;
         	} else if (strcmp(argv[cnt], "-beststart") == 0) {
                 params.bestStart = true;
                 cnt++;
@@ -1682,6 +1679,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-snni") == 0) {
             	params.snni = true;
             	params.modOpt = true;
+                params.autostop = true;
             } else if (strcmp(argv[cnt], "-auto") == 0) {
             	params.autostop = true;
             } else if (strcmp(argv[cnt], "-maxiter") == 0) {
