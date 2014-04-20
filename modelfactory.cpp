@@ -45,7 +45,6 @@ ModelFactory::ModelFactory() {
 	store_trans_matrix = false;
 	is_storing = false;
 	joint_optimize = false;
-	ascertainment_bias = 0;
 }
 
 ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type, string freq_params,
@@ -106,7 +105,6 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 ModelFactory::ModelFactory(Params &params, PhyloTree *tree) { 
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
-	ascertainment_bias = 0;
 	joint_optimize = params.optimize_model_rate_joint;
 
 	string model_str = params.model_name;
@@ -134,13 +132,17 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 
 	if ((posasc = model_str.find("+ASC")) != string::npos) {
 		// ascertainment bias correction
-		ascertainment_bias = tree->aln->num_states - tree->aln->countConstPatterns();
-		if (ascertainment_bias <= 0)
+		unobserved_ptns = tree->aln->getUnobservedConstPatterns();
+		if (unobserved_ptns.length() <= 0)
 			outError("Invalid +ASC model because all constant patterns are observed in the alignment");
-		if (ascertainment_bias < tree->aln->num_states)
+		if (unobserved_ptns.length() < tree->aln->num_states)
 			outWarning("Some constant patterns are observed in the alignment");
-		cout << "Ascertainment bias correction: " << ascertainment_bias << " unobservable constant patterns"<< endl;
+		cout << "Ascertainment bias correction: " << unobserved_ptns.length() << " unobservable constant patterns"<< endl;
 		model_str = model_str.substr(0, posasc) + model_str.substr(posasc+4);
+		if (tree->sse) {
+			tree->sse = false;
+			cout << "INFO: turn off SSE for +ASC model" << endl;
+		}
 	}
 	size_t close_bracket;
 	string freq_params;

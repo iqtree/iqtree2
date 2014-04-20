@@ -593,6 +593,11 @@ struct Params {
     bool aln_nogaps;
 
     /**
+     * TRUE to discard all constant sites
+     */
+    bool aln_no_const_sites;
+
+    /**
             compute parsimony score on trees
      */
     bool parsimony;

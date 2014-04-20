@@ -638,6 +638,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.gap_masked_aln = NULL;
     params.concatenate_aln = NULL;
     params.aln_nogaps = false;
+    params.aln_no_const_sites = false;
     params.parsimony = false;
     params.parsimony_tree = false;
     params.tree_spr = false;
@@ -1217,7 +1218,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-af") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -af <aln_format>";
+                    throw "Use -af phy|fasta";
                 if (strcmp(argv[cnt], "phy") == 0)
                     params.aln_output_format = ALN_PHYLIP;
                 else if (strcmp(argv[cnt], "fasta") == 0)
@@ -1235,6 +1236,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.concatenate_aln = argv[cnt];
             } else if (strcmp(argv[cnt], "-nogap") == 0) {
                 params.aln_nogaps = true;
+            } else if (strcmp(argv[cnt], "-noconst") == 0) {
+                params.aln_no_const_sites = true;
             } else if (strcmp(argv[cnt], "-parstree") == 0) {
                 // maximum parsimony
                 params.parsimony_tree = true;

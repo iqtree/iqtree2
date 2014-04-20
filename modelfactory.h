@@ -179,10 +179,10 @@ public:
 	bool is_storing;
 
 	/**
-	 * the numer of constant sites that are unobservable and added in the alignment. Default: 0 -> normal behaviour
-	 * this involves likelihood function ascertainment bias correction for morphological data (Lewis 2001)
+	 * encoded constant sites that are unobservable and added in the alignment
+	 * this involves likelihood function for ascertainment bias correction for morphological or SNP data (Lewis 2001)
 	 */
-	int ascertainment_bias;
+	string unobserved_ptns;
 
 	/**
 	 * optimize model and site_rate parameters

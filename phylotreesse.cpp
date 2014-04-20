@@ -469,6 +469,7 @@ void PhyloTree::computeThetaNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     double *partial_lh_child = dad_branch->partial_lh;
     double *theta_ptn = theta_all;
     int alnSize = aln->getNPattern();
+    // BQM's question: why state_freq has size = alnSize?
     double* state_freq = new double[alnSize];
     model->getStateFrequency(state_freq);
     int num_cat = site_rate->getNRate();

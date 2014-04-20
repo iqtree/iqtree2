@@ -1814,17 +1814,17 @@ void runPhyloAnalysis(Params &params) {
 					params.intype);
 			out_aln.createGapMaskedAlignment(&masked_aln, alignment);
 			out_aln.printPhylip(params.aln_output, false, params.aln_site_list,
-					params.aln_nogaps, params.ref_seq_name);
+					params.aln_nogaps, params.aln_no_const_sites, params.ref_seq_name);
 			string str = params.gap_masked_aln;
 			str += ".sitegaps";
 			out_aln.printSiteGaps(str.c_str());
 		} else if (params.aln_output_format == ALN_PHYLIP)
 			alignment->printPhylip(params.aln_output, false,
-					params.aln_site_list, params.aln_nogaps,
+					params.aln_site_list, params.aln_nogaps, params.aln_no_const_sites,
 					params.ref_seq_name);
 		else if (params.aln_output_format == ALN_FASTA)
 			alignment->printFasta(params.aln_output, false,
-					params.aln_site_list, params.aln_nogaps,
+					params.aln_site_list, params.aln_nogaps, params.aln_no_const_sites,
 					params.ref_seq_name);
 	} else if (params.gbo_replicates > 0 && params.user_file
 			&& params.second_tree) {
