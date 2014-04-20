@@ -1664,6 +1664,13 @@ void Alignment::countConstSite() {
     frac_const_sites = ((double)num_const_sites) / getNSite();
 }
 
+int Alignment::countConstPatterns() {
+	int num_const_patterns = 0;
+    for (iterator it = begin(); it != end(); it++)
+        if ((*it).is_const) num_const_patterns++;
+    return num_const_patterns;
+}
+
 int Alignment::countProperChar(int seq_id) {
     int num_proper_chars = 0;
     for (iterator it = begin(); it != end(); it++) {

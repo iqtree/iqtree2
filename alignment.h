@@ -492,6 +492,11 @@ public:
     virtual void countConstSite();
 
     /**
+     * @return number of constant patterns
+     */
+    int countConstPatterns();
+
+    /**
             @return the number of ungappy and unambiguous characters from a sequence
             @param seq_id sequence ID
      */
