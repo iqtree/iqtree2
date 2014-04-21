@@ -289,8 +289,8 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 		model_names = NULL;
 	}
 	if (nmodels == 0) return;
-	const char *rate_options[] = {  "", "+I",  "+F", "+I+F", "+G", "+I+G", "+G+F", "+I+G+F", "+ASC", "+ASC+G"};
-	bool test_options[] =        {true, true, false,  false, true,   true,  false,    false,  false,   false};
+	const char *rate_options[] = {  "", "+I",  "+ASC", "+F", "+I+F", "+G", "+I+G", "+ASC+G", "+G+F", "+I+G+F"};
+	bool test_options[] =        {true, true,   false, false,  false, true,   true,   false,  false,    false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	const char *must_options[] = {"+I", "+G", "+F","+ASC"};
 	const char *can_options[] = {"+i", "+g", "+f","+asc"};
@@ -299,14 +299,17 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 	if (seq_type == SEQ_PROTEIN) {
 		// test all options for protein, incl. +F
 		for (i = 0; i < noptions; i++)
-			test_options[i] = true;
+			if (strstr(rate_options[i],"+ASC") == NULL)
+				test_options[i] = true;
 	} else if (seq_type == SEQ_MORPH) {
-		// test only homogeneity and +G option
-		test_options[1] = false;
-		test_options[5] = false;
+		// turn off +I
+		for (i = 0; i < noptions; i++)
+			if (strstr(rate_options[i],"+I") != NULL)
+				test_options[i] = false;
 		// turn on +ASC
-		test_options[8] = true;
-		test_options[9] = true;
+		for (i = 0; i < noptions; i++)
+			if (strstr(rate_options[i],"+ASC") != NULL)
+				test_options[i] = true;
 	}
 	// can-have option
 	for (j = 0; j < sizeof(can_options)/sizeof(char*); j++)
@@ -730,7 +733,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	}
 
 	for (model = 0; model < model_names.size(); model++) {
-		cout << model_names[model] << endl;
+		//cout << model_names[model] << endl;
 		if (model_names[model].find("+ASC") != string::npos) {
 			model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
 			if (model_fac->unobserved_ptns.size() == 0) continue;

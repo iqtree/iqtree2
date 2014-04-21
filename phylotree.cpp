@@ -267,18 +267,22 @@ void PhyloTree::computeAllPartialLh(PhyloNode *node, PhyloNode *dad) {
 }
 
 string PhyloTree::getModelName() {
+	string name = model->name;
+	if (model_factory->unobserved_ptns.size() > 0)
+		name += "+ASC";
+	name += site_rate->name;
 	if (model->getFreqType() == FREQ_EMPIRICAL)
-		return model->name + site_rate->name + "+F";
-	else
-		return model->name + site_rate->name;
+		name += "+F";
+	return name;
 }
 
 string PhyloTree::getModelNameParams() {
-	string name = model->getNameParams() + site_rate->getNameParams();
-	if (model->getFreqType() == FREQ_EMPIRICAL)
-		name += "+F";
+	string name = model->getNameParams();
 	if (model_factory->unobserved_ptns.size() > 0)
 		name += "+ASC";
+	name += site_rate->getNameParams();
+	if (model->getFreqType() == FREQ_EMPIRICAL)
+		name += "+F";
 	return name;
 }
 
