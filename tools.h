@@ -393,12 +393,6 @@ struct Params {
 	double model_eps;
 
 	/**
-	 *  re-optimize model parameters after a better tree is found
-	 */
-	bool modOpt;
-
-
-	/**
 	 *  Carry out iterated local search using NNI only.
 	 */
 	bool snni;

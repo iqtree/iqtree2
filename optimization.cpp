@@ -600,7 +600,7 @@ double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[]
 }
 
 
-#define ITMAX 500
+#define ITMAX 200
 static double sqrarg;
 #define SQR(a) ((sqrarg=(a)) == 0.0 ? 0.0 : sqrarg*sqrarg)
 #define EPS 3.0e-8
@@ -696,7 +696,8 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		//checkDirection(p, xi);
 		//if (*iter > 200) cout << "iteration=" << *iter << endl;
 	}
-	nrerror("too many iterations in dfpmin");
+	// BQM: TODO disable this message!
+	//nrerror("too many iterations in dfpmin");
 	FREEALL
 }
 #undef ITMAX

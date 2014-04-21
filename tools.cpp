@@ -645,7 +645,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
     params.numSmoothTree = 1;
-    params.nni5 = true;
+    params.nni5 = false;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
@@ -738,7 +738,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pertubSize = 0.5;
     params.pll = false;
     params.model_eps = 0.1;
-    params.modOpt = false;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -1670,15 +1669,12 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-pllmod") == 0) {
             	params.pllModOpt = true;
             	params.pll = true;
-        	} else if (strcmp(argv[cnt], "-modopt") == 0) {
-            	params.modOpt = true;
-            } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
+        	} else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-speednni") == 0) {
                 params.speednni = true;
             } else if (strcmp(argv[cnt], "-snni") == 0) {
             	params.snni = true;
-            	params.modOpt = true;
                 params.autostop = true;
             } else if (strcmp(argv[cnt], "-auto") == 0) {
             	params.autostop = true;

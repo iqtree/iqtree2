@@ -490,6 +490,8 @@ public:
      */
     vector<int> vecNumNNI;
 
+    int getCurIteration() { return curIteration; }
+
 protected:
 
     /**

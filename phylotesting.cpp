@@ -606,7 +606,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 }
 
 string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, string set_name) {
-	int seq_type = in_tree->aln->num_states;
+	SeqType seq_type = in_tree->aln->seq_type;
 	if (in_tree->isSuperTree())
 		seq_type = ((PhyloSuperTree*)in_tree)->front()->aln->seq_type;
 	if (seq_type != SEQ_BINARY && seq_type != SEQ_DNA && seq_type != SEQ_PROTEIN && seq_type != SEQ_MORPH)

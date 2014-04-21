@@ -29,7 +29,7 @@ SuperAlignment::SuperAlignment()
 SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
  : Alignment()
 {
-
+	seq_type = SEQ_BINARY;
 	int site, seq, nsite = super_tree->size();
 	PhyloSuperTree::iterator it;
 	map<string,int> name_map;
@@ -391,13 +391,17 @@ double SuperAlignment::computeMissingData() {
 Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
 	string union_taxa;
 	int nsites = 0, nstates = 0, i;
+	SeqType sub_type = SEQ_UNKNOWN;
 	for (i = 0; i < ids.size(); i++) {
 		int id = ids[i];
 		if (id < 0 || id >= partitions.size())
 			outError("Internal error ", __func__);
 		if (nstates == 0) nstates = partitions[id]->num_states;
-		if (nstates != partitions[id]->num_states)
+		if (sub_type == SEQ_UNKNOWN) sub_type = partitions[id]->seq_type;
+		if (sub_type != partitions[id]->seq_type)
 			outError("Cannot concatenate sub-alignments of different type");
+		if (nstates != partitions[id]->num_states)
+			outError("Cannot concatenate sub-alignments of different #states");
 
 		string taxa_set = getPattern(id);
 		nsites += partitions[id]->getNSite();
@@ -413,6 +417,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
 			aln->seq_names.push_back(getSeqName(i));
 		}
 	aln->num_states = nstates;
+	aln->seq_type = sub_type;
 	aln->site_pattern.resize(nsites, -1);
     aln->clear();
     aln->pattern_index.clear();
