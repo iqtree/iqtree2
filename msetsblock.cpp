@@ -130,6 +130,7 @@ void MSetsBlock::Read(NxsToken &token)
 			myset->model_name = "";
 			myset->position_spec = "";
 			myset->sequence_type = "";
+			myset->char_partition = "";
 
 			myset->name = token.GetToken();
 
@@ -169,7 +170,7 @@ void MSetsBlock::Read(NxsToken &token)
 			//
 			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 			token.GetNextToken();
-			string name = token.GetToken();
+			string partition_name = token.GetToken();
 			token.GetNextToken();
 			if (!token.Equals("="))
 			{
@@ -182,22 +183,23 @@ void MSetsBlock::Read(NxsToken &token)
 			token.GetNextToken();
 			do {
 				string model_name = "";
-				do {
+				while (!token.AtEOF() && !token.Equals(":")) {
 					model_name += token.GetToken();
 					token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 					token.GetNextToken();
-				}  while (!token.AtEOF() && !token.Equals(":"));
+				}
 
 				if (!token.Equals(":"))
 				{
-					errormsg = "Expecting ':', but found ";
+					errormsg = "Expecting ':' or ',' but found ";
 					errormsg += token.GetToken();
 					errormsg += " instead";
 					throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 				}
+				string charset_name;
 				token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 				token.GetNextToken();
-				string charset_name = token.GetToken();
+				charset_name = token.GetToken();
 				CharSet *myset = findCharSet(charset_name);
 				if (!myset)
 				{
@@ -207,6 +209,7 @@ void MSetsBlock::Read(NxsToken &token)
 					throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 				}
 				myset->model_name = model_name;
+				myset->char_partition = partition_name;
 				token.GetNextToken();
 				if (!token.Equals(",") && !token.Equals(";"))
 				{
@@ -222,7 +225,7 @@ void MSetsBlock::Read(NxsToken &token)
 			} while (!token.AtEOF() && !token.Equals(";"));
 			if (!token.Equals(";"))
 			{
-				errormsg = "Expecting ';' to terminate PARAMETERS command, but found ";
+				errormsg = "Expecting ';' to terminate CHARPARTITION command, but found ";
 				errormsg += token.GetToken();
 				errormsg += " instead";
 				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());

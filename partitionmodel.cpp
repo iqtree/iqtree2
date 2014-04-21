@@ -26,14 +26,24 @@ PartitionModel::PartitionModel()
 }
 
 PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree)
-        : ModelFactory(params, tree)
+        : ModelFactory()
 {
+	store_trans_matrix = params.store_trans_matrix;
+	is_storing = false;
+	joint_optimize = params.optimize_model_rate_joint;
+	// create dummy model
+	model = new ModelSubst(tree->aln->num_states);
+	site_rate = new RateHeterogeneity();
+	site_rate->setTree(tree);
+
     string model_name = params.model_name;
     PhyloSuperTree::iterator it;
     int part;
     for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
         assert(!((*it)->getModelFactory()));
         params.model_name = tree->part_info[part].model_name;
+        if (params.model_name == "") // if empty, take model name from command option
+        	params.model_name = model_name;
         (*it)->setModelFactory(new ModelFactory(params, (*it)));
         (*it)->setModel((*it)->getModelFactory()->model);
         (*it)->setRate((*it)->getModelFactory()->site_rate);

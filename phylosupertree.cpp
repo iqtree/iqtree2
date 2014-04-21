@@ -117,10 +117,12 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
     }
 
     for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
-    	if (empty_partition || (*it)->model_name != "") {
+    	if (empty_partition || (*it)->char_partition != "") {
 			PartitionInfo info;
 			info.name = (*it)->name;
 			info.model_name = (*it)->model_name;
+			if (info.model_name == "")
+				info.model_name = params.model_name;
 			info.aln_file = (*it)->aln_file;
 			//if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
 			if (info.aln_file == "" && !params.aln_file)
