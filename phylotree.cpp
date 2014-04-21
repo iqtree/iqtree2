@@ -1868,11 +1868,12 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         		dad_state = model_factory->unobserved_ptns[ptn-orig_nptn];
         }
         int dad_offset = dad_state * nstates;
-        if (site_rate->isSiteSpecificRate())
+        if (site_rate->isSiteSpecificRate()) {
         	if (ptn < orig_nptn)
         		model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getPtnRate(ptn), state_freq, trans_mat);
         	else
         		model_factory->computeTransMatrixFreq(dad_branch->length, state_freq, trans_mat);
+        }
         for (cat = 0; cat < ncat; cat++) {
             double lh_cat = 0.0; // likelihood of the pattern's category
             size_t lh_offset = cat * nstates + ptn * block;
@@ -1919,7 +1920,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
 				continue;
 			tree_lh += lh_ptn * aln->at(ptn).frequency;
         } else {
-        	lh_ptn = lh_ptn*p_var_cat + p_invar*state_freq[model_factory->unobserved_ptns[ptn-orig_nptn]];
+        	lh_ptn = lh_ptn*p_var_cat + p_invar*state_freq[(int)model_factory->unobserved_ptns[ptn-orig_nptn]];
         	prob_const += lh_ptn;
         }
 
@@ -1972,7 +1973,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
     size_t orig_nptn = aln->size();
 
     dad_branch->lh_scale_factor = 0.0;
-    memset(dad_branch->scale_num, 0, aln->size() * sizeof(UBYTE));
+    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 
     assert(dad_branch->partial_lh);
     //if (!dad_branch->partial_lh)
@@ -2045,9 +2046,15 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                 //
                 if (dad_branch->scale_num[ptn] < 0) dad_branch->scale_num[ptn] = 0;
                 dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
-                int ptn_cat = site_rate->getPtnCat(ptn);
-                if (site_rate->isSiteSpecificRate())
-                model_factory->computeTransMatrix((*it)->length * site_rate->getPtnRate(ptn), trans_mat);
+                int ptn_cat = 0;
+                if (ptn < orig_nptn) {
+                	ptn_cat = site_rate->getPtnCat(ptn);
+					if (site_rate->isSiteSpecificRate())
+						model_factory->computeTransMatrix((*it)->length * site_rate->getPtnRate(ptn), trans_mat);
+                } else {
+					if (site_rate->isSiteSpecificRate())
+						model_factory->computeTransMatrix((*it)->length, trans_mat);
+                }
                 for (cat = 0; cat < ncat; cat++) {
                     size_t lh_offset = cat * nstates + ptn*block;
                     partial_lh_site = dad_branch->partial_lh + lh_offset;
@@ -2055,7 +2062,8 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                     for (int state = 0; state < nstates; state++) {
                         double lh_child = 0.0;
                         double *trans_state = trans_mat + ((not_ptn_cat ? cat : ptn_cat) * trans_size + state * nstates);
-                        if (model->isSiteSpecificModel()) trans_state += (nstates * nstates * model->getPtnModelID(ptn));
+                        if (model->isSiteSpecificModel() && ptn < orig_nptn)
+                        	trans_state += (nstates * nstates * model->getPtnModelID(ptn));
                         for (int state2 = 0; state2 < nstates; state2++)
                         lh_child += trans_state[state2] * partial_lh_child[state2];
 
@@ -2083,6 +2091,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                  */
                 for (cat = 0; cat < block; cat++)
                 partial_lh_site[cat] /= SCALING_THRESHOLD;
+                // unobserved const pattern will never have underflow
                 sum_scale += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
                 dad_branch->scale_num[ptn] += 1;
 
@@ -2300,7 +2309,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
 	            abort();
 	        }
         } else {
-        	lh_ptn = lh_ptn*p_var_cat + p_invar*state_freq[model_factory->unobserved_ptns[ptn-orig_nptn]];
+        	lh_ptn = lh_ptn*p_var_cat + p_invar*state_freq[(int)model_factory->unobserved_ptns[ptn-orig_nptn]];
         	prob_const += lh_ptn;
         	prob_const_derv1 += lh_ptn_derv1;
         	prob_const_derv2 += lh_ptn_derv2;

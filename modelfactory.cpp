@@ -139,10 +139,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			outWarning("Some constant patterns are observed in the alignment");
 		cout << "Ascertainment bias correction: " << unobserved_ptns.length() << " unobservable constant patterns"<< endl;
 		model_str = model_str.substr(0, posasc) + model_str.substr(posasc+4);
-		if (tree->sse) {
-			tree->sse = false;
-			cout << "INFO: turn off SSE for +ASC model" << endl;
-		}
 	}
 	size_t close_bracket;
 	string freq_params;
