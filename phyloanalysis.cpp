@@ -955,13 +955,16 @@ void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
 
 void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignment, IQTree &iqtree,
         vector<ModelInfo> &model_info) {
+
     double t_begin, t_end;
     t_begin = getCPUTime();
 
-    /*if PLL is used for likelihood computation, then make sure to deallocate all other memory used by IQ-TREE */
-    if (params.pllModOpt) {
-        iqtree.deleteAllPartialLh();
-    }
+    double longest_dist;
+    string dist_file;
+    params.startTime = t_begin;
+    params.start_real_time = getRealTime();
+    string bionj_file = params.out_prefix;
+    bionj_file += ".bionj";
 
     try {
         if (!iqtree.getModelFactory()) {
@@ -977,7 +980,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     } catch (string & str) {
         outError(str);
     }
-
     iqtree.setModel(iqtree.getModelFactory()->model);
     iqtree.setRate(iqtree.getModelFactory()->site_rate);
 
@@ -987,6 +989,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         }
     }
 
+
+    /************************************ START: Initialization for PLL and sNNI *************************************************/
     if (params.snni || params.pll) {
         /* Initialized all data structure for PLL*/
         iqtree.pllAttr.rateHetModel = PLL_GAMMA;
@@ -1070,16 +1074,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             outError("Incompatible tree/alignment combination");
         }
     }
+    /************************************ END: Initilization for PLL and sNNI *************************************************/
 
-    double longest_dist;
-    string dist_file;
-    double begin_time = getCPUTime();
-    params.startTime = begin_time;
-    params.start_real_time = getRealTime();
-    string bionj_file = params.out_prefix;
-    bionj_file += ".bionj";
 
-    // Compute JC distances or read them from user file
+    /*********************************************** START: Compute pairwise distances ************************************/
     if (params.dist_file) {
         cout << "Reading distance matrix file " << params.dist_file << " ..." << endl;
     } else if (params.compute_jc_dist) {
@@ -1095,8 +1093,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             outWarning("Some pairwise distances are too long (saturated)");
         }
     }
+    /*********************************************** END: Compute pairwise distances ************************************/
 
-    /**************** START: CREATE INITIAL TREE(S) ************************************/
+    /*********************************************** START: CREATE INITIAL TREE(S) ************************************/
     int numInitTrees;
     bool fixbranch = true;
     // start the search with user-defined tree
@@ -1180,28 +1179,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     assert(iqtree.aln);
     if (params.gbo_replicates)
         params.speed_conf = 1.0;
-    try {
-        if (!iqtree.getModelFactory()) {
-            if (iqtree.isSuperTree()) {
-                if (params.partition_type) {
-                    iqtree.setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) &iqtree));
-                } else
-                    iqtree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*) &iqtree));
-            } else {
-                iqtree.setModelFactory(new ModelFactory(params, &iqtree));
-            }
-        }
-    } catch (string & str) {
-        outError(str);
-    }
-    iqtree.setModel(iqtree.getModelFactory()->model);
-    iqtree.setRate(iqtree.getModelFactory()->site_rate);
-
-    if (params.pll) {
-        if (iqtree.getRate()->getNDiscreteRate() == 1) {
-            // TODO: change rateHetModel to PLL_CAT in case of non-Gamma model
-        }
-    }
 
     if (iqtree.isSuperTree())
         ((PhyloSuperTree*) &iqtree)->mapTrees();
@@ -1458,7 +1435,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                 iqtree.updateRefTreeSet(imd_tree, iqtree.curScore);
                 cout << endl;
             }
-            double min_elapsed = (getCPUTime() - begin_time) / 60;
+            double min_elapsed = (getCPUTime() - t_begin) / 60;
             if (min_elapsed > params.maxtime) {
                 cout << "Maximal running time of " << params.maxtime << " minutes reached" << endl;
                 break;
