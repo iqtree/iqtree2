@@ -274,10 +274,12 @@ string PhyloTree::getModelName() {
 }
 
 string PhyloTree::getModelNameParams() {
+	string name = model->getNameParams() + site_rate->getNameParams();
 	if (model->getFreqType() == FREQ_EMPIRICAL)
-		return model->getNameParams() + site_rate->getNameParams() + "+F";
-	else
-		return model->getNameParams() + site_rate->getNameParams();
+		name += "+F";
+	if (model_factory->unobserved_ptns.size() > 0)
+		name += "+ASC";
+	return name;
 }
 
 /****************************************************************************
@@ -1038,7 +1040,7 @@ void PhyloTree::initializeAllPartialLh() {
     int numStates = model->num_states;
 	// Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
-    size_t nptn = getAlnNPattern() + model_factory->unobserved_ptns.length();
+    size_t nptn = getAlnNPattern() + numStates;
     size_t mem_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
     size_t block_size = mem_size * numStates * site_rate->getNRate();
     if (!tmp_partial_lh1) {
@@ -1088,7 +1090,7 @@ void PhyloTree::deleteAllPartialLh() {
 }
 
 uint64_t PhyloTree::getMemoryRequired() {
-	size_t nptn = aln->getNPattern() + model_factory->unobserved_ptns.length();
+	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
 	uint64_t block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
     block_size = block_size * aln->num_states;
     if (site_rate)
@@ -1099,7 +1101,7 @@ uint64_t PhyloTree::getMemoryRequired() {
 
 void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
     size_t pars_block_size = getBitsBlockSize();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.length();
+    size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
     size_t scale_block_size = nptn;
     size_t block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
     block_size = block_size * model->num_states * site_rate->getNRate();
@@ -1155,20 +1157,20 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
 }
 
 double *PhyloTree::newPartialLh() {
-    double *ret = new double[(aln->size()+model_factory->unobserved_ptns.length()) * aln->num_states * site_rate->getNRate() + 2];
+    double *ret = new double[(aln->size()+aln->num_states) * aln->num_states * site_rate->getNRate() + 2];
     return ret;
 }
 
 int PhyloTree::getPartialLhBytes() {
-	return ((aln->size()+model_factory->unobserved_ptns.length()) * aln->num_states * site_rate->getNRate() + 2) * sizeof(double);
+	return ((aln->size()+aln->num_states) * aln->num_states * site_rate->getNRate() + 2) * sizeof(double);
 }
 
 int PhyloTree::getScaleNumBytes() {
-	return (aln->size()+model_factory->unobserved_ptns.length()) * sizeof(UBYTE);
+	return (aln->size()+aln->num_states) * sizeof(UBYTE);
 }
 
 UBYTE *PhyloTree::newScaleNum() {
-    return new UBYTE[aln->size()+model_factory->unobserved_ptns.length()];
+    return new UBYTE[aln->size()+aln->num_states];
 }
 
 double PhyloTree::computeLikelihood(double *pattern_lh) {
@@ -2311,8 +2313,8 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         } else {
         	lh_ptn = lh_ptn*p_var_cat + p_invar*state_freq[(int)model_factory->unobserved_ptns[ptn-orig_nptn]];
         	prob_const += lh_ptn;
-        	prob_const_derv1 += lh_ptn_derv1;
-        	prob_const_derv2 += lh_ptn_derv2;
+        	prob_const_derv1 += lh_ptn_derv1 * p_var_cat;
+        	prob_const_derv2 += lh_ptn_derv2 * p_var_cat;
         }
 
     }

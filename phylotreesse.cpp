@@ -444,8 +444,8 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
         } else {
         	lh_ptn = lh_ptn*p_var_cat + p_invar*state_freq[(int)model_factory->unobserved_ptns[ptn-orig_alnSize]];
         	prob_const += lh_ptn;
-        	prob_const_derv1 += lh_ptn_derv1;
-        	prob_const_derv2 += lh_ptn_derv2;
+        	prob_const_derv1 += lh_ptn_derv1 * p_var_cat;
+        	prob_const_derv2 += lh_ptn_derv2 * p_var_cat;
         }
     }
     if (orig_alnSize < alnSize) {

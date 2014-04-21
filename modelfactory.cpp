@@ -133,11 +133,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	if ((posasc = model_str.find("+ASC")) != string::npos) {
 		// ascertainment bias correction
 		unobserved_ptns = tree->aln->getUnobservedConstPatterns();
-		if (unobserved_ptns.length() <= 0)
+		if (unobserved_ptns.size() <= 0)
 			outError("Invalid +ASC model because all constant patterns are observed in the alignment");
-		if (unobserved_ptns.length() < tree->aln->num_states)
+		if (unobserved_ptns.size() < tree->aln->num_states)
 			outWarning("Some constant patterns are observed in the alignment");
-		cout << "Ascertainment bias correction: " << unobserved_ptns.length() << " unobservable constant patterns"<< endl;
+		cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
 		model_str = model_str.substr(0, posasc) + model_str.substr(posasc+4);
 	}
 	size_t close_bracket;
