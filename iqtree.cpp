@@ -770,6 +770,8 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
         refTreeSetSorted.insert(make_pair(treeLogl, treeString));
         assert(refTreeSet.size() == refTreeSetSorted.size() && refTreeSetSorted.size() == params->popSize);
         updated = true;
+    } else if (refTreeSet.find(treeTopo) != refTreeSet.end()) {
+        cout << "Tree topology is identical with one of the tree in the candidate set" << endl;
     }
     if (updated) {
         printLoglInTreePop();
@@ -1171,12 +1173,11 @@ double IQTree::doTreeSearch() {
             pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
                     PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
             imd_tree = string(pllInst->tree_string);
+            readTreeString(imd_tree);
         } else {
             curScore = optimizeNNI(nni_count, nni_steps);
             imd_tree = getTreeString();
         }
-
-        readTreeString(imd_tree);
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
@@ -1339,6 +1340,7 @@ double IQTree::doTreeSearch() {
                 //boot_splits = sg;
             } //else delete sg;
         }
+        cout << endl;
     }
 
     readTreeString(bestTreeString);
