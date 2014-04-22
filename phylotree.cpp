@@ -3727,7 +3727,7 @@ void PhyloTree::regraftSubtree(PruningInfo &info, PhyloNode *in_node, PhyloNode 
  Approximate Likelihood Ratio Test with SH-like interpretation
  ****************************************************************************/
 
-void PhyloTree::computeNNIPatternLh(double cur_lh, double &lh2, double *pattern_lh2, double &lh3, double *pattern_lh3,
+/*void PhyloTree::computeNNIPatternLh(double cur_lh, double &lh2, double *pattern_lh2, double &lh3, double *pattern_lh3,
         PhyloNode *node1, PhyloNode *node2) {
 
     assert(node1->degree() == 3 && node2->degree() == 3);
@@ -3761,7 +3761,7 @@ void PhyloTree::computeNNIPatternLh(double cur_lh, double &lh2, double *pattern_
     // save Neighbor and allocate new Neighbor pointer
     for (id = 0; id < IT_NUM; id++) {
         saved_nei[id] = (*saved_it[id]);
-        /** NOTE BUG DOWN HERE! */
+        // NOTE BUG DOWN HERE!
         *saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length); // BUG for PhyloSuperTree!
         ((PhyloNeighbor*) (*saved_it[id]))->partial_lh = newPartialLh();
         ((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
@@ -3782,7 +3782,7 @@ void PhyloTree::computeNNIPatternLh(double cur_lh, double &lh2, double *pattern_
     bool first = true;
 
     FOR_NEIGHBOR_IT(node2, node1, node2_it) {
-		/* do the NNI swap */
+		// do the NNI swap
 		Neighbor *node2_nei = *node2_it;
 		node1->updateNeighbor(node1_it, node2_nei);
 		node2_nei->node->updateNeighbor(node2, node1);
@@ -3858,6 +3858,21 @@ void PhyloTree::computeNNIPatternLh(double cur_lh, double &lh2, double *pattern_
         (*it)->length = (*it)->node->findNeighbor(node1)->length;
     FOR_NEIGHBOR(node2, node1, it)
         (*it)->length = (*it)->node->findNeighbor(node2)->length;
+}*/
+
+void PhyloTree::computeNNIPatternLh(double cur_lh, double &lh2, double *pattern_lh2, double &lh3, double *pattern_lh3,
+        PhyloNode *node1, PhyloNode *node2) {
+	NNIMove nniMoves[2];
+	nniMoves[0].ptnlh = pattern_lh2;
+	nniMoves[1].ptnlh = pattern_lh3;
+	bool nni5 = params->nni5;
+	params->nni5 = true; // always optimize 5 branches for accurate SH-aLRT
+	getBestNNIForBran(node1, node2, nniMoves);
+	params->nni5 = nni5;
+	lh2 = nniMoves[0].newloglh;
+	lh3 = nniMoves[1].newloglh;
+	if (max(lh2,lh3) > cur_lh + TOL_LIKELIHOOD)
+		cout << "Alternative NNI shows better log-likelihood " << max(lh2,lh3) << " > " << cur_lh << endl;
 }
 
 void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
@@ -3943,6 +3958,15 @@ int PhyloTree::testAllBranches(int threshold, double best_score, double *pattern
     if (!node) {
         node = (PhyloNode*) root;
         root->neighbors[0]->node->name = "";
+        if (isSuperTree()) {
+			int tmp = save_all_trees;
+			save_all_trees = 2;
+			bool nni5 = params->nni5;
+			params->nni5 = true; // always optimize 5 branches for accurate SH-aLRT
+			initPartitionInfo();
+			params->nni5 = nni5;
+			save_all_trees = tmp;
+        }
     }
     if (dad && !node->isLeaf() && !dad->isLeaf()) {
         double lbp_support;
