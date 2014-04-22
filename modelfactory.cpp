@@ -60,7 +60,6 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 		model_params = model_str.substr(pos+1, model_str.length()-pos-2);
 		model_str = model_str.substr(0, pos);
 	}
-
 	if ((model_str == "JC" && tree->aln->seq_type == SEQ_DNA) ||
 		(model_str == "POISSON" && tree->aln->seq_type == SEQ_PROTEIN) ||
 		(model_str == "JC2" && tree->aln->seq_type == SEQ_BINARY) ||
@@ -68,8 +67,7 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 		(model_str == "MK" && tree->aln->seq_type == SEQ_MORPH))
 	{
 		model = new ModelSubst(tree->aln->num_states);
-	} else 
-	if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
+	} else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
 		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
 		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
 		model = new GTRModel(tree, count_rates);
@@ -108,6 +106,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	joint_optimize = params.optimize_model_rate_joint;
 
 	string model_str = params.model_name;
+
 	if (model_str == "") {
 		if (tree->aln->seq_type == SEQ_DNA) model_str = "HKY";
 		else if (tree->aln->seq_type == SEQ_PROTEIN) model_str = "WAG";

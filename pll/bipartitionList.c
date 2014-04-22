@@ -1,36 +1,30 @@
-/*  RAxML-HPC, a program for sequential and parallel estimation of phylogenetic trees 
- *  Copyright March 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
- *  
- *  and 
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  stamatak@ics.forth.gr
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
- *  
- *  Alexandros Stamatakis: "An Efficient Program for phylogenetic Inference Using Simulated Annealing". 
- *  Proceedings of IPDPS2005,  Denver, Colorado, April 2005.
- *  
- *  AND
- *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands of taxa and mixed models". 
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file bipartitionList.c
  */
 #include "mem_alloc.h"
 
@@ -50,7 +44,9 @@
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
+
 #include "pll.h"
+#include "pllInternal.h"
 
 
 
@@ -383,7 +379,7 @@ static void newviewBipartitions(unsigned int **bitVectors, nodeptr p, int numsp,
 
 
 static void insertHashRF(unsigned int *bitVector, hashtable *h, unsigned int vectorLength, int treeNumber, int treeVectorLength, hashNumberType position, int support, 
-			 pll_boolean computeWRF)
+			 boolean computeWRF)
 {     
   if(h->table[position] != NULL)
     {
@@ -470,7 +466,7 @@ static void insertHashRF(unsigned int *bitVector, hashtable *h, unsigned int vec
 
 
 void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, hashtable *h, int treeNumber, int function, branchInfo *bInf, 
-			     int *countBranches, int treeVectorLength, pll_boolean traverseOnly, pll_boolean computeWRF, int processID)
+			     int *countBranches, int treeVectorLength, boolean traverseOnly, boolean computeWRF, int processID)
 {
   if(isTip(p->number, numsp))
     return;

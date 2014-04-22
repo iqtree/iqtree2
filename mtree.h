@@ -151,6 +151,9 @@ public:
      */
     void printTree(ostream & out, int brtype = WT_BR_LEN);
 
+
+    string getTreeString();
+
     /**
             print the tree to the output file in newick format
             @param out the output file.

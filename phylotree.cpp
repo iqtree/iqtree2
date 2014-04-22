@@ -18,6 +18,7 @@
 #include <limits>
 #include "timeutil.h"
 #include "nnisearch.h"
+#include "phylosupertree.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
@@ -197,13 +198,27 @@ void PhyloTree::setAlignment(Alignment *alignment) {
 }
 
 void PhyloTree::readTreeString(const string &tree_string) {
-	stringstream str(tree_string);
+	stringstream str;
+	str << tree_string;
+	str.seekg(0, ios::beg);
 	freeNode();
 	readTree(str, rooted);
 	setAlignment(aln);
-	//initializeAllPartialLh();
-	//clearAllPartialLH();
-    //fixNegativeBranch(false);
+    if (isSuperTree()) {
+        ((PhyloSuperTree*) this)->mapTrees();
+    }
+}
+
+string PhyloTree::getTreeString() {
+	stringstream tree_stream;
+	printTree(tree_stream);
+	return tree_stream.str();
+}
+
+string PhyloTree::getTopology() {
+    stringstream tree_stream;
+    printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
+    return tree_stream.str();
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {
@@ -2965,7 +2980,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	PhyloNeighbor* node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
 	PhyloNeighbor* node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 
-    // TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
+    // save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
     FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
         break;
 

@@ -1,33 +1,34 @@
-/*  RAxML-VI-HPC (version 2.2) a program for sequential and parallel estimation of phylogenetic trees 
- *  Copyright August 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
- *  
- *  and 
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  Alexandros.Stamatakis@epfl.ch
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file searchAlgo.c
+ * @brief Collection of routines for performing likelihood computation and branch optimization.
  *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands of taxa and mixed models". 
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
+ * Detailed description to appear soon.
  */
-
 #include "mem_alloc.h"
 
 #ifndef WIN32
@@ -46,22 +47,12 @@
 #include <assert.h>
 #include <errno.h>
 
-
-
 #include "pll.h"
-
-
-/** @file searchAlgo.c
-    
-    @brief Collection of routines for performing likelihood computation and branch optimization.
-
-    Detailed description to appear soon.
-*/
-
+#include "pllInternal.h"
 
 double treeOptimizeRapid(pllInstance *tr, partitionList *pr, int mintrav, int maxtrav, bestlist *bt, infoList *iList);
 nniMove getBestNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, double curLH);
-void pllEvalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, nniMove* nniList, int* cnt, int* cnt_nni, double curLH);
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, nniMove* nniList, int* cnt, int* cnt_nni, double curLH);
 
 
 static int cmp_nni(const void* nni1, const void* nni2);
@@ -83,7 +74,7 @@ extern partitionLengths pLengths[PLL_MAX_MODEL];
 extern char binaryCheckpointName[1024];  /**< Binary checkpointing file */
 extern char binaryCheckpointInputName[1024];
 
-pll_boolean initrav (pllInstance *tr, partitionList *pr, nodeptr p)
+boolean initrav (pllInstance *tr, partitionList *pr, nodeptr p)
 { 
   nodeptr  q;
 
@@ -98,7 +89,7 @@ pll_boolean initrav (pllInstance *tr, partitionList *pr, nodeptr p)
     } 
     while (q != p);  
 
-    pllNewviewGeneric(tr, pr, p, PLL_FALSE);
+    pllUpdatePartials(tr, pr, p, PLL_FALSE);
   }
 
   return PLL_TRUE;
@@ -130,7 +121,7 @@ void update(pllInstance *tr, partitionList *pr, nodeptr p)
     double 
       startLH;
   
-    pllEvaluateGeneric (tr, p);
+    pllEvaluateLikelihood (tr, p);
   
     startLH = tr->likelihood;
   #endif
@@ -159,7 +150,7 @@ void update(pllInstance *tr, partitionList *pr, nodeptr p)
   }
  
   #ifdef _DEBUG_UPDATE
-    pllEvaluateGeneric (tr, p);
+    pllEvaluateLikelihood (tr, p);
   
     if(tr->likelihood <= startLH)
       {
@@ -203,9 +194,9 @@ void smooth (pllInstance *tr, partitionList *pr, nodeptr p)
     }	
 
     if(numBranches > 1 && !tr->useRecom)
-      pllNewviewGeneric(tr, pr,p, PLL_TRUE);
+      pllUpdatePartials(tr, pr,p, PLL_TRUE);
     else
-      pllNewviewGeneric(tr, pr,p, PLL_FALSE);
+      pllUpdatePartials(tr, pr,p, PLL_FALSE);
   }
 } 
 
@@ -222,10 +213,10 @@ void smooth (pllInstance *tr, partitionList *pr, nodeptr p)
        otherwise \b PLL_TRUE.
              
 */
-static pll_boolean allSmoothed(pllInstance *tr, int numBranches)
+static boolean allSmoothed(pllInstance *tr, int numBranches)
 {
   int i;
-  pll_boolean result = PLL_TRUE;
+  boolean result = PLL_TRUE;
 
   for(i = 0; i < numBranches; i++)
   {
@@ -480,7 +471,7 @@ void smoothRegion (pllInstance *tr, partitionList *pr, nodeptr p, int region)
         q = q->next;
       }	
 
-      pllNewviewGeneric(tr, pr,p, PLL_FALSE);
+      pllUpdatePartials(tr, pr,p, PLL_FALSE);
     }
   }
 }
@@ -621,8 +612,8 @@ nodeptr  removeNodeRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p)
   q = p->next->back;
   r = p->next->next->back;  
 
-  pllNewviewGeneric(tr, pr,q, PLL_FALSE);
-  pllNewviewGeneric(tr, pr,r, PLL_FALSE);
+  pllUpdatePartials(tr, pr,q, PLL_FALSE);
+  pllUpdatePartials(tr, pr,r, PLL_FALSE);
 
   hookup(q, r, tr->currentZQR, pr->perGeneBranchLengths?pr->numberOfPartitions:1);
 
@@ -648,7 +639,7 @@ nodeptr  removeNodeRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p)
 
    @image html pll.png "The diagram shows in blue colors the new edges that are created and in red the edge that is removed" 
 */
-pll_boolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+boolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {
   nodeptr  r, s;
   int i;
@@ -724,7 +715,7 @@ pll_boolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
     hookup(p->next->next, r, z, numBranches);
   }
 
-  pllNewviewGeneric(tr, pr,p, PLL_FALSE);
+  pllUpdatePartials(tr, pr,p, PLL_FALSE);
 
   if(tr->thoroughInsertion)
   {     
@@ -754,7 +745,7 @@ pll_boolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
    @todo
      What is the difference between this and insertBIG? 
 */
-pll_boolean insertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+boolean insertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {
   nodeptr  r, s;
 
@@ -789,7 +780,7 @@ pll_boolean insertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nod
     hookup(p->next->next, r, z, numBranches);
   }   
 
-  pllNewviewGeneric(tr, pr,p, PLL_FALSE);
+  pllUpdatePartials(tr, pr,p, PLL_FALSE);
 
   return  PLL_TRUE;
 }
@@ -869,7 +860,7 @@ static void restoreTopologyOnly(pllInstance *tr, bestlist *bt, int numBranches)
 
 /** @brief Test the 
 */
-pll_boolean testInsertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+boolean testInsertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {
 
   int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
@@ -888,7 +879,7 @@ pll_boolean testInsertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodept
 
   if (! insertBIG(tr, pr, p, q))       return PLL_FALSE;
 
-  pllEvaluateGeneric (tr, pr, p->next->next, PLL_FALSE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, pr, p->next->next, PLL_FALSE, PLL_FALSE);
 
   if(tr->likelihood > tr->bestOfNode)
   {
@@ -1010,7 +1001,7 @@ int rearrangeBIG(pllInstance *tr, partitionList *pr, nodeptr p, int mintrav, int
   double   p1z[PLL_NUM_BRANCHES], p2z[PLL_NUM_BRANCHES], q1z[PLL_NUM_BRANCHES], q2z[PLL_NUM_BRANCHES];
   nodeptr  p1, p2, q, q1, q2;
   int      mintrav2, i;  
-  pll_boolean doP = PLL_TRUE, doQ = PLL_TRUE;
+  boolean doP = PLL_TRUE, doQ = PLL_TRUE;
   int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 
   if (maxtrav < 1 || mintrav > maxtrav)  return (0);
@@ -1054,7 +1045,7 @@ int rearrangeBIG(pllInstance *tr, partitionList *pr, nodeptr p, int mintrav, int
 
       hookup(p->next,       p1, p1z, numBranches);
       hookup(p->next->next, p2, p2z, numBranches);
-      pllNewviewGeneric(tr, pr,p, PLL_FALSE);
+      pllUpdatePartials(tr, pr,p, PLL_FALSE);
     }
   }  
 
@@ -1107,7 +1098,7 @@ int rearrangeBIG(pllInstance *tr, partitionList *pr, nodeptr p, int mintrav, int
       hookup(q->next,       q1, q1z, numBranches);
       hookup(q->next->next, q2, q2z, numBranches);
 
-      pllNewviewGeneric(tr, pr,q, PLL_FALSE);
+      pllUpdatePartials(tr, pr,q, PLL_FALSE);
     }
   } 
 
@@ -1262,13 +1253,13 @@ double treeOptimizeRapid(pllInstance *tr, partitionList *pr, int mintrav, int ma
 
 
 
-pll_boolean testInsertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+boolean testInsertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {    
   if(tr->thoroughInsertion)
   {
     if (! insertBIG(tr, pr, p, q))       return PLL_FALSE;
 
-    pllEvaluateGeneric (tr, pr, p->next->next, PLL_FALSE, PLL_FALSE);
+    pllEvaluateLikelihood (tr, pr, p->next->next, PLL_FALSE, PLL_FALSE);
   }
   else
   {
@@ -1284,7 +1275,7 @@ pll_boolean testInsertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p,
         while ((! x->x)) 
         {
           if (! (x->x))
-            pllNewviewGeneric(tr, pr,x, PLL_FALSE);
+            pllUpdatePartials(tr, pr,x, PLL_FALSE);
         }
       }
 
@@ -1293,7 +1284,7 @@ pll_boolean testInsertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p,
         while ((! y->x)) 
         {		  
           if (! (y->x))
-            pllNewviewGeneric(tr, pr,y, PLL_FALSE);
+            pllUpdatePartials(tr, pr,y, PLL_FALSE);
         }
       }
 
@@ -1302,9 +1293,9 @@ pll_boolean testInsertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p,
         while ((! x->x) || (! y->x)) 
         {
           if (! (x->x))
-            pllNewviewGeneric(tr, pr,x, PLL_FALSE);
+            pllUpdatePartials(tr, pr,x, PLL_FALSE);
           if (! (y->x))
-            pllNewviewGeneric(tr, pr,y, PLL_FALSE);
+            pllUpdatePartials(tr, pr,y, PLL_FALSE);
         }
       }				      	
 
@@ -1340,164 +1331,11 @@ static void myfread(void *ptr, size_t size, size_t nmemb, FILE *stream)
   assert(bytes_read == nmemb);
 }
 
-
-
-/** @brief Write tree to file
-
-    Serialize tree to a file. 
-
-    @todo Document this
-*/
-static void writeTree(pllInstance *tr, FILE *f)
-{
-  int 
-    x = tr->mxtips + 3 * (tr->mxtips - 1);
-
-  nodeptr
-    base = tr->nodeBaseAddress;
-
-  myfwrite(&(tr->start->number), sizeof(int), 1, f);
-  myfwrite(&base, sizeof(nodeptr), 1, f);
-  myfwrite(tr->nodeBaseAddress, sizeof(node), x, f);
-
-}
-
-int ckpCount = 0;
-
-/** @brief Write a checkpoint
-
-    Is checkpoint enabled?
-
-    @todo fill this up
-*/
-static void writeCheckpoint(pllInstance *tr, partitionList *pr, int state)
-{
-  int   
-    model; 
-
-  char 
-    extendedName[2048],
-    buf[64];
-
-  FILE 
-    *f;
-
-  strcpy(extendedName,  binaryCheckpointName);
-  strcat(extendedName, "_");
-  sprintf(buf, "%d", ckpCount);
-  strcat(extendedName, buf);  
-
-  ckpCount++;
-
-  f = myfopen(extendedName, "w"); 
-
-  /* cdta */   
-
-
-  tr->ckp.accumulatedTime = accumulatedTime + (gettime() - masterTime);
-
-  tr->ckp.state = state;
-
-  tr->ckp.tr_optimizeRateCategoryInvocations = tr->optimizeRateCategoryInvocations;
-  tr->ckp.tr_thoroughInsertion = tr->thoroughInsertion;
-  tr->ckp.tr_startLH  = tr->startLH;
-  tr->ckp.tr_endLH    = tr->endLH;
-  tr->ckp.tr_likelihood = tr->likelihood;
-  tr->ckp.tr_bestOfNode = tr->bestOfNode;
-
-  tr->ckp.tr_lhCutoff = tr->lhCutoff;
-  tr->ckp.tr_lhAVG    = tr->lhAVG;
-  tr->ckp.tr_lhDEC    = tr->lhDEC;     
-  tr->ckp.tr_itCount  = tr->itCount;
-  tr->ckp.tr_doCutoff = tr->doCutoff;
-  /* printf("Acc time: %f\n", tr->ckp.accumulatedTime); */
-
-  /* user stupidity */
-
-
-  tr->ckp.searchConvergenceCriterion = tr->searchConvergenceCriterion;
-  tr->ckp.rateHetModel =  tr->rateHetModel;
-  tr->ckp.maxCategories =  tr->maxCategories;
-  tr->ckp.NumberOfModels = pr->numberOfPartitions;
-  tr->ckp.numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
-  tr->ckp.originalCrunchedLength = tr->originalCrunchedLength;
-  tr->ckp.mxtips = tr->mxtips;
-  strcpy(tr->ckp.seq_file, seq_file);
-
-  /* handle user stupidity */
-
-
-  myfwrite(&(tr->ckp), sizeof(checkPointState), 1, f);
-
-  myfwrite(tr->tree0, sizeof(char), tr->treeStringLength, f);
-  myfwrite(tr->tree1, sizeof(char), tr->treeStringLength, f);
-
-  myfwrite(tr->rateCategory, sizeof(int), tr->originalCrunchedLength, f);
-  myfwrite(tr->patrat, sizeof(double), tr->originalCrunchedLength, f);
-  myfwrite(tr->patratStored, sizeof(double), tr->originalCrunchedLength, f);
-
-  /* need to store this as well in checkpoints, otherwise the branch lengths 
-     in the output tree files will be wrong, not the internal branch lengths though */
-
-  //TODO: We have to change the way to store the fracchanges
-  //myfwrite(tr->fracchanges,  sizeof(double), pr->numberOfPartitions, f);
-  myfwrite(&(tr->fracchange),   sizeof(double), 1, f);
-
-
-  /* pInfo */
-
-  for(model = 0; model < pr->numberOfPartitions; model++)
-  {
-    int 
-      dataType = pr->partitionData[model]->dataType;
-
-    myfwrite(&(pr->partitionData[model]->numberOfCategories), sizeof(int), 1, f);
-    myfwrite(pr->partitionData[model]->perSiteRates, sizeof(double), tr->maxCategories, f);
-    myfwrite(pr->partitionData[model]->EIGN, sizeof(double), pLengths[dataType].eignLength, f);
-    myfwrite(pr->partitionData[model]->EV, sizeof(double),  pLengths[dataType].evLength, f);
-    myfwrite(pr->partitionData[model]->EI, sizeof(double),  pLengths[dataType].eiLength, f);
-
-    myfwrite(pr->partitionData[model]->frequencies, sizeof(double),  pLengths[dataType].frequenciesLength, f);
-    myfwrite(pr->partitionData[model]->tipVector, sizeof(double),  pLengths[dataType].tipVectorLength, f);
-    myfwrite(pr->partitionData[model]->substRates, sizeof(double),  pLengths[dataType].substRatesLength, f);
-    myfwrite(&(pr->partitionData[model]->alpha), sizeof(double), 1, f);
-    
-    if(pr->partitionData[model]->protModels == PLL_LG4)
-	{
-	  int 
-	    k;
-	  
-	  for(k = 0; k < 4; k++)
-	    {
-	      myfwrite(pr->partitionData[model]->EIGN_LG4[k], sizeof(double), pLengths[dataType].eignLength, f);
-	      myfwrite(pr->partitionData[model]->EV_LG4[k], sizeof(double),  pLengths[dataType].evLength, f);
-	      myfwrite(pr->partitionData[model]->EI_LG4[k], sizeof(double),  pLengths[dataType].eiLength, f);    
-	      myfwrite(pr->partitionData[model]->frequencies_LG4[k], sizeof(double),  pLengths[dataType].frequenciesLength, f);
-	      myfwrite(pr->partitionData[model]->tipVector_LG4[k], sizeof(double),  pLengths[dataType].tipVectorLength, f);  
-	      myfwrite(pr->partitionData[model]->substRates_LG4[k], sizeof(double),  pLengths[dataType].substRatesLength, f);    
-	    }
-	}
-	
-  }
-
-
-
-  writeTree(tr, f);
-
-  fclose(f); 
-
-  printBothOpen("\nCheckpoint written to: %s likelihood: %f\n", extendedName, tr->likelihood);
-}
-
 static void readTree(pllInstance *tr, partitionList *pr, FILE *f)
 {
   int 
     nodeNumber,   
     x = tr->mxtips + 3 * (tr->mxtips - 1);
-
-
-
-
 
   nodeptr
     startAddress;
@@ -1522,7 +1360,7 @@ static void readTree(pllInstance *tr, partitionList *pr, FILE *f)
     size_t         
       offset;
 
-    pll_boolean 
+    boolean 
       addIt;
 
     if(startAddress > tr->nodeBaseAddress)
@@ -1553,7 +1391,7 @@ static void readTree(pllInstance *tr, partitionList *pr, FILE *f)
 
   }
 
-  pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 
   printBothOpen("RAxML Restart with likelihood: %1.50f\n", tr->likelihood);
 }
@@ -1746,7 +1584,7 @@ static void readCheckpoint(pllInstance *tr, partitionList *pr)
 	    }
 	}
 
-    makeGammaCats(pr->partitionData[model]->alpha, pr->partitionData[model]->gammaRates, 4, tr->useMedian);
+    pllMakeGammaCats(pr->partitionData[model]->alpha, pr->partitionData[model]->gammaRates, 4, tr->useMedian);
   }
 
 #if (defined(_FINE_GRAIN_MPI) || defined(_USE_PTHREADS))
@@ -1759,18 +1597,6 @@ static void readCheckpoint(pllInstance *tr, partitionList *pr)
 
   fclose(f); 
 
-}
-
-static void restoreTreeDataValuesFromCheckpoint(pllInstance *tr)
-{
-  tr->optimizeRateCategoryInvocations = tr->ckp.tr_optimizeRateCategoryInvocations;  
-  tr->thoroughInsertion = tr->ckp.tr_thoroughInsertion;
-  tr->likelihood = tr->ckp.tr_likelihood;              
-  tr->lhCutoff = tr->ckp.tr_lhCutoff;
-  tr->lhAVG    = tr->ckp.tr_lhAVG;
-  tr->lhDEC    = tr->ckp.tr_lhDEC;   	 
-  tr->itCount = tr->ckp.tr_itCount;
-  tr->doCutoff = tr->ckp.tr_doCutoff;
 }
 
 void restart(pllInstance *tr, partitionList *pr)
@@ -1808,11 +1634,11 @@ void restart(pllInstance *tr, partitionList *pr)
       Number of times to optimize branch lengths
 */
 void
-pllTreeEvaluate (pllInstance *tr, partitionList *pr, int maxSmoothIterations)       /* Evaluate a user tree */
+pllOptimizeBranchLengths (pllInstance *tr, partitionList *pr, int maxSmoothIterations)       /* Evaluate a user tree */
 {
   smoothTree(tr, pr, maxSmoothIterations); /* former (32 * smoothFactor) */
 
-  pllEvaluateGeneric (tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
 }
 
 /** @brief Perform an NNI move
@@ -1908,7 +1734,7 @@ nniMove getBestNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,
 	assert( ! isTip(p->number, tr->mxtips));
 	assert( ! isTip(q->number, tr->mxtips));
 #ifdef _DEBUG_NNI
-	Tree2String(tr->tree_string, tr, tr->start->back, TRUE, FALSE, 0, 0, 0, SUMMARIZE_LH, 0,0);
+	pllTreeToNewick(tr->tree_string, tr, tr->start->back, TRUE, FALSE, 0, 0, 0, SUMMARIZE_LH, 0,0);
 	fprintf(stderr, "%s\n", tr->tree_string);
 #endif
 
@@ -1941,10 +1767,10 @@ nniMove getBestNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,
 	NNI(tr, p, PLL_NNI_P_NEXT);
 	double lh1 = tr->likelihood;
 	/* Update branch lengths */
-	pllNewviewGeneric(tr, pr, p, PLL_FALSE);
-	pllNewviewGeneric(tr, pr, q, PLL_FALSE);
+	pllUpdatePartials(tr, pr, p, PLL_FALSE);
+	pllUpdatePartials(tr, pr, q, PLL_FALSE);
 	update(tr, pr, p);
-	pllEvaluateGeneric (tr, pr, p, PLL_FALSE, PLL_FALSE);
+	pllEvaluateLikelihood (tr, pr, p, PLL_FALSE, PLL_FALSE);
 
 	nniMove nni1;
 	nni1.p = p;
@@ -1970,19 +1796,19 @@ nniMove getBestNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,
 
 #ifdef _DEBUG_NNI
 	printf("Restore topology\n");
-	Tree2String(tr->tree_string, tr, tr->start->back, TRUE, FALSE, 0, 0, 0, SUMMARIZE_LH, 0,0);
+	pllTreeToNewick(tr->tree_string, tr, tr->start->back, TRUE, FALSE, 0, 0, 0, SUMMARIZE_LH, 0,0);
 	fprintf(stderr, "%s\n", tr->tree_string);
-	pllEvaluateGeneric (tr, tr->start, TRUE);
+	pllEvaluateLikelihood (tr, tr->start, TRUE);
 	printf("Likelihood after restoring from NNI 1: %f\n", tr->likelihood);
 #endif
 	/* Try to do an NNI move of type 2 */
 	NNI(tr, p, 2);
 	double lh2 = tr->likelihood;
 	/* Update branch lengths */
-	pllNewviewGeneric(tr, pr, p, PLL_FALSE);
-	pllNewviewGeneric(tr, pr, q, PLL_FALSE);
+	pllUpdatePartials(tr, pr, p, PLL_FALSE);
+	pllUpdatePartials(tr, pr, q, PLL_FALSE);
 	update(tr, pr, p);
-	pllEvaluateGeneric (tr, pr, p, PLL_FALSE, PLL_FALSE);
+	pllEvaluateLikelihood (tr, pr, p, PLL_FALSE, PLL_FALSE);
 
 	// Create the nniMove struct to store this move
 	nniMove nni2;
@@ -2002,8 +1828,8 @@ nniMove getBestNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,
 
 	/* Restore previous NNI move */
 	NNI(tr, p, 2);
-	pllNewviewGeneric(tr, pr, p, PLL_FALSE);
-	pllNewviewGeneric(tr, pr, p->back, PLL_FALSE);
+	pllUpdatePartials(tr, pr, p, PLL_FALSE);
+	pllUpdatePartials(tr, pr, p->back, PLL_FALSE);
 	/* Restore the old branch length */
 	for (i = 0; i < pr->numberOfPartitions; i++) {
 		p->z[i] = z0[i];
@@ -2021,7 +1847,7 @@ nniMove getBestNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p,
 }
 
 /** @brief ??? Not sure */
-void pllEvalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p,
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p,
 		nniMove* nniList, int* cnt, int* cnt_nni, double curLH) {
 	if (!isTip(p->number, tr->mxtips)) {
 		nniList[*cnt] = getBestNNIForBran(tr, pr, p, curLH);
@@ -2031,7 +1857,7 @@ void pllEvalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p,
 		*cnt = *cnt + 1;
 		nodeptr q = p->next;
 		while (q != p) {
-			pllEvalNNIForSubtree(tr, pr, q->back, nniList, cnt, cnt_nni, curLH);
+			evalNNIForSubtree(tr, pr, q->back, nniList, cnt, cnt_nni, curLH);
 			q = q->next;
 		}
 	}
@@ -2068,7 +1894,7 @@ int pllNniSearch(pllInstance * tr, partitionList *pr, int estimateModel) {
 	int cnt = 0; // number of visited internal branches during NNI evaluation
 	int cnt_nni = 0; // number of positive NNI found
 	while (q != p) {
-		pllEvalNNIForSubtree(tr, pr, q->back, nniList, &cnt, &cnt_nni, curScore);
+		evalNNIForSubtree(tr, pr, q->back, nniList, &cnt, &cnt_nni, curScore);
 		q = q->next;
 	}
 	if (cnt_nni == 0)
@@ -2122,8 +1948,8 @@ int pllNniSearch(pllInstance * tr, partitionList *pr, int estimateModel) {
 		for (i = 0; i < numNNI2Apply; i++) {
 			// Just do the topological change
 			NNI(tr, nonConfNNIList[i].p, nonConfNNIList[i].nniType);
-			pllNewviewGeneric(tr, pr, nonConfNNIList[i].p, PLL_FALSE);
-			pllNewviewGeneric(tr, pr, nonConfNNIList[i].p->back, PLL_FALSE);
+			pllUpdatePartials(tr, pr, nonConfNNIList[i].p, PLL_FALSE);
+			pllUpdatePartials(tr, pr, nonConfNNIList[i].p->back, PLL_FALSE);
 			// Apply the store branch length
 			int j;
 			for (j = 0; j < pr->numberOfPartitions; j++) {
@@ -2133,11 +1959,11 @@ int pllNniSearch(pllInstance * tr, partitionList *pr, int estimateModel) {
 		}
 		// Re-optimize all branches
 		smoothTree(tr, pr, 2);
-		pllEvaluateGeneric (tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
+		pllEvaluateLikelihood (tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
 		if (estimateModel) {
 			modOpt(tr, pr, 0.1);
 		}
-		pllEvaluateGeneric (tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
+		pllEvaluateLikelihood (tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
 		if (tr->likelihood < curScore) {
 #ifdef _DEBUG_NNI
 			printf("Tree likelihood gets worse after applying NNI\n");
@@ -2154,7 +1980,7 @@ int pllNniSearch(pllInstance * tr, partitionList *pr, int estimateModel) {
 					nonConfNNIList[i].p->back->z[j] = nonConfNNIList[i].z0[j];
 				}
 			}
-			pllEvaluateGeneric (tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
+			pllEvaluateLikelihood (tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
 #ifdef _DEBUG_NNI
 			printf("Tree likelihood after rolling back = %f \n",
 					tr->likelihood);
@@ -2324,7 +2150,7 @@ pllTestInsertBIG (pllInstance * tr, partitionList * pr, nodeptr p, nodeptr q, pl
 
   if (! insertBIG(tr, pr, p, q))       return PLL_FALSE;
 
-  pllEvaluateGeneric (tr, pr, p->next->next, PLL_FALSE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, pr, p->next->next, PLL_FALSE, PLL_FALSE);
   
   rearr.rearrangeType  = PLL_REARRANGE_SPR;
   rearr.likelihood     = tr->likelihood;
@@ -2495,7 +2321,7 @@ static int pllTestSPR (pllInstance * tr, partitionList * pr, nodeptr p, int mint
         /* restore the topology as it was before the split */
         hookup (p->next,       p1, p1z, numBranches);
         hookup (p->next->next, p2, p2z, numBranches);
-        pllNewviewGeneric (tr, pr, p, PLL_FALSE);
+        pllUpdatePartials (tr, pr, p, PLL_FALSE);
       }
    }
 
@@ -2541,7 +2367,7 @@ static int pllTestSPR (pllInstance * tr, partitionList * pr, nodeptr p, int mint
 
        hookup (q->next,       q1, q1z, numBranches);
        hookup (q->next->next, q2, q2z, numBranches);
-       pllNewviewGeneric (tr, pr, q, PLL_FALSE);
+       pllUpdatePartials (tr, pr, q, PLL_FALSE);
      }
    }
   return (PLL_TRUE);
@@ -2630,18 +2456,18 @@ pllTestNNILikelihood (pllInstance * tr, partitionList * pr, nodeptr p, int swapT
   NNI (tr, p, swapType);
   /* recompute the likelihood vectors of the two subtrees rooted at p and p->back,
      optimize the branch lengths and evaluate the likelihood  */
-  pllNewviewGeneric (tr, pr, p,       PLL_FALSE);
-  pllNewviewGeneric (tr, pr, p->back, PLL_FALSE);
+  pllUpdatePartials (tr, pr, p,       PLL_FALSE);
+  pllUpdatePartials (tr, pr, p->back, PLL_FALSE);
   update (tr, pr, p);
-  pllEvaluateGeneric (tr, pr, p, PLL_FALSE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, pr, p, PLL_FALSE, PLL_FALSE);
   lh = tr->likelihood;
 
   /* restore topology */
   NNI (tr, p, swapType);
-  pllNewviewGeneric (tr, pr, p,       PLL_FALSE);
-  pllNewviewGeneric (tr, pr, p->back, PLL_FALSE);
+  pllUpdatePartials (tr, pr, p,       PLL_FALSE);
+  pllUpdatePartials (tr, pr, p->back, PLL_FALSE);
   //update (tr, pr, p);
-  pllEvaluateGeneric (tr, pr, p, PLL_FALSE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, pr, p, PLL_FALSE, PLL_FALSE);
   for (i = 0; i < pr->numberOfPartitions; ++ i)
    {
      p->z[i] = p->back->z[i] = z0[i];
@@ -2921,16 +2747,13 @@ pllRollbackSPR (pllInstance * tr, partitionList * pr, pllRollbackInfo * ri)
 static void
 pllRollbackNNI (pllInstance * tr, partitionList * pr, pllRollbackInfo * ri)
 {
-  int numBranches;
   nodeptr p = ri->NNI.origin;
 
-  numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
-  
   NNI (tr, p, ri->NNI.swapType);
-  pllNewviewGeneric (tr, pr, p,       PLL_FALSE);
-  pllNewviewGeneric (tr, pr, p->back, PLL_FALSE);
+  pllUpdatePartials (tr, pr, p,       PLL_FALSE);
+  pllUpdatePartials (tr, pr, p->back, PLL_FALSE);
   update (tr, pr, p);
-  pllEvaluateGeneric (tr, pr, p, PLL_FALSE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, pr, p, PLL_FALSE, PLL_FALSE);
   
   rax_free (ri);
 }
@@ -3012,10 +2835,10 @@ pllRearrangeCommit (pllInstance * tr, partitionList * pr, pllRearrangeInfo * rea
    {
      case PLL_REARRANGE_NNI:
        NNI (tr, rearr->NNI.originNode, rearr->NNI.swapType);
-       pllNewviewGeneric (tr, pr, rearr->NNI.originNode, PLL_FALSE);
-       pllNewviewGeneric (tr, pr, rearr->NNI.originNode->back, PLL_FALSE);
+       pllUpdatePartials (tr, pr, rearr->NNI.originNode, PLL_FALSE);
+       pllUpdatePartials (tr, pr, rearr->NNI.originNode->back, PLL_FALSE);
        update (tr, pr, rearr->NNI.originNode);
-       pllEvaluateGeneric (tr, pr, rearr->NNI.originNode, PLL_FALSE, PLL_FALSE);
+       pllEvaluateLikelihood (tr, pr, rearr->NNI.originNode, PLL_FALSE, PLL_FALSE);
        break;
      case PLL_REARRANGE_SPR:
        removeNodeBIG (tr, pr, rearr->SPR.removeNode, numBranches);
@@ -3085,6 +2908,430 @@ pllRearrangeSearch (pllInstance * tr, partitionList * pr, int rearrangeType, nod
      default:
        break;
    }
-
-  //return (NULL);
 }
+
+
+static int
+determineRearrangementSetting(pllInstance *tr, partitionList *pr,
+    bestlist *bestT, bestlist *bt)
+{
+  int i, mintrav, maxtrav, bestTrav, impr, index, MaxFast, *perm = (int*) NULL;
+  double startLH;
+  boolean cutoff;
+
+  MaxFast = 26;
+
+  startLH = tr->likelihood;
+
+  cutoff = tr->doCutoff;
+  tr->doCutoff = PLL_FALSE;
+
+  mintrav = 1;
+  maxtrav = 5;
+
+  bestTrav = maxtrav = 5;
+
+  impr = 1;
+
+  resetBestTree(bt);
+
+  if (tr->permuteTreeoptimize)
+    {
+      int n = tr->mxtips + tr->mxtips - 2;
+      perm = (int *) rax_malloc(sizeof(int) * (n + 1));
+      makePermutation(perm, n, tr);
+    }
+
+  while (impr && maxtrav < MaxFast)
+    {
+      recallBestTree(bestT, 1, tr, pr);
+      nodeRectifier(tr);
+
+      if (maxtrav > tr->ntips - 3)
+        maxtrav = tr->ntips - 3;
+
+      tr->startLH = tr->endLH = tr->likelihood;
+
+      for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++)
+        {
+
+          if (tr->permuteTreeoptimize)
+            index = perm[i];
+          else
+            index = i;
+
+          tr->bestOfNode = PLL_UNLIKELY;
+          if (rearrangeBIG(tr, pr, tr->nodep[index], mintrav, maxtrav))
+            {
+              if (tr->endLH > tr->startLH)
+                {
+                  restoreTreeFast(tr, pr);
+                  tr->startLH = tr->endLH = tr->likelihood;
+                }
+            }
+        }
+
+      pllOptimizeBranchLengths(tr, pr, 8);
+      saveBestTree(bt, tr,
+          pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);
+
+      if (tr->likelihood > startLH)
+        {
+          startLH = tr->likelihood;
+          bestTrav = maxtrav;
+          impr = 1;
+        }
+      else
+        {
+          impr = 0;
+        }
+      maxtrav += 5;
+
+      if (tr->doCutoff)
+        {
+          tr->lhCutoff = (tr->lhAVG) / ((double) (tr->lhDEC));
+
+          tr->itCount = tr->itCount + 1;
+          tr->lhAVG = 0;
+          tr->lhDEC = 0;
+        }
+    }
+
+  recallBestTree(bt, 1, tr, pr);
+  tr->doCutoff = cutoff;
+
+  if (tr->permuteTreeoptimize)
+    rax_free(perm);
+
+  return bestTrav;
+}
+
+/** @ingroup rearrangementGroup
+    @brief RAxML algorithm for ML search
+
+    RAxML algorithm for searching the Maximum Likelihood tree and model.
+
+    @param tr
+      PLL instance
+
+    @param pr
+      List of partitions
+
+    @param estimateModel
+      If true, model parameters are optimized in a ML framework.
+
+    @note
+      For datasets with a large number of taxa, setting tr->searchConvergenceCriterion to
+    PLL_TRUE can improve the execution time in up to 50% looking for topology convergence.
+*/
+int
+pllRaxmlSearchAlgorithm(pllInstance * tr, partitionList * pr,
+    boolean estimateModel)
+{
+  unsigned int vLength = 0;
+  int i, impr, bestTrav, rearrangementsMax = 0, rearrangementsMin = 0,
+      thoroughIterations = 0, fastIterations = 0;
+
+  double lh, previousLh, difference, epsilon;
+  bestlist *bestT, *bt;
+  infoList iList;
+  pllOptimizeBranchLengths(tr, pr, 32);
+#ifdef _TERRACES
+  /* store the 20 best trees found in a dedicated list */
+
+  bestlist
+  *terrace;
+
+  /* output file names */
+
+  char
+  terraceFileName[1024],
+  buf[64];
+#endif
+
+  hashtable *h = (hashtable*) NULL;
+  unsigned int **bitVectors = (unsigned int**) NULL;
+
+  /* Security check... These variables might have not been initialized! */
+  if (tr->stepwidth == 0) tr->stepwidth = 5;
+  if (tr->max_rearrange == 0) tr->max_rearrange = 21;
+
+  if (tr->searchConvergenceCriterion)
+    {
+      bitVectors = initBitVector(tr->mxtips, &vLength);
+      h = initHashTable(tr->mxtips * 4);
+    }
+
+  bestT = (bestlist *) rax_malloc(sizeof(bestlist));
+  bestT->ninit = 0;
+  initBestTree(bestT, 1, tr->mxtips);
+
+  bt = (bestlist *) rax_malloc(sizeof(bestlist));
+  bt->ninit = 0;
+  initBestTree(bt, 20, tr->mxtips);
+
+#ifdef _TERRACES
+  /* initialize the tree list and the output file name for the current tree search/replicate */
+  terrace = (bestlist *) rax_malloc(sizeof(bestlist));
+  terrace->ninit = 0;
+  initBestTree(terrace, 20, tr->mxtips);
+  strcpy(terraceFileName, workdir);
+  strcat(terraceFileName, "RAxML_terrace.");
+  strcat(terraceFileName, run_id);
+  strcat(terraceFileName, ".BS.");
+  strcat(terraceFileName, buf);
+#endif
+
+  initInfoList(&iList, 50);
+
+  difference = 10.0;
+  epsilon = 0.01;
+
+  tr->thoroughInsertion = 0;
+
+  if (estimateModel)
+    {
+      pllEvaluateLikelihood(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+      pllOptimizeModelParameters(tr, pr, 10.0);
+    }
+  else
+    pllOptimizeBranchLengths(tr, pr, 64);
+
+  saveBestTree(bestT, tr,
+      pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);
+
+  if (!tr->initialSet)
+    bestTrav = tr->bestTrav = determineRearrangementSetting(tr, pr, bestT, bt);
+  else
+    bestTrav = tr->bestTrav = tr->initial;
+
+  if (estimateModel)
+    {
+      pllEvaluateLikelihood(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+      pllOptimizeModelParameters(tr, pr, 5.0);
+    }
+  else
+    pllOptimizeBranchLengths(tr, pr, 32);
+
+  saveBestTree(bestT, tr,
+      pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);
+  impr = 1;
+  if (tr->doCutoff)
+    tr->itCount = 0;
+
+  while (impr)
+    {
+      recallBestTree(bestT, 1, tr, pr);
+
+      if (tr->searchConvergenceCriterion)
+        {
+          int bCounter = 0;
+
+          if (fastIterations > 1)
+            cleanupHashTable(h, (fastIterations % 2));
+
+          bitVectorInitravSpecial(bitVectors, tr->nodep[1]->back, tr->mxtips,
+              vLength, h, fastIterations % 2, PLL_BIPARTITIONS_RF,
+              (branchInfo *) NULL, &bCounter, 1, PLL_FALSE, PLL_FALSE, 0);
+
+          assert(bCounter == tr->mxtips - 3);
+
+          if (fastIterations > 0)
+            {
+              double rrf = convergenceCriterion(h, tr->mxtips);
+
+              if (rrf <= 0.01) /* 1% cutoff */
+                {
+                  cleanupHashTable(h, 0);
+                  cleanupHashTable(h, 1);
+                  goto cleanup_fast;
+                }
+            }
+        }
+
+      fastIterations++;
+
+      pllOptimizeBranchLengths(tr, pr, 32);
+
+      saveBestTree(bestT, tr,
+          pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);
+      //printResult(tr, adef, PLL_FALSE);
+      lh = previousLh = tr->likelihood;
+
+      treeOptimizeRapid(tr, pr, 1, bestTrav, bt, &iList);
+
+      impr = 0;
+
+      for (i = 1; i <= bt->nvalid; i++)
+        {
+          recallBestTree(bt, i, tr, pr);
+
+          pllOptimizeBranchLengths(tr, pr, 8);
+
+          /*
+           if(adef->rellBootstrap)
+           updateRellTrees(tr, NUM_RELL_BOOTSTRAPS);
+           */
+
+          difference = (
+              (tr->likelihood > previousLh) ?
+                  tr->likelihood - previousLh : previousLh - tr->likelihood);
+          if (tr->likelihood > lh && difference > epsilon)
+            {
+              impr = 1;
+              lh = tr->likelihood;
+              saveBestTree(bestT, tr,
+                  pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);
+            }
+        }
+    }
+
+  if (tr->searchConvergenceCriterion)
+    {
+      cleanupHashTable(h, 0);
+      cleanupHashTable(h, 1);
+    }
+
+  cleanup_fast:
+
+  tr->thoroughInsertion = 1;
+  impr = 1;
+
+  recallBestTree(bestT, 1, tr, pr);
+  if (estimateModel)
+    {
+      pllEvaluateLikelihood(tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+      pllOptimizeModelParameters(tr, pr, 1.0);
+    }
+  else
+    pllOptimizeBranchLengths(tr, pr, 32);
+
+  while (1)
+    {
+      recallBestTree(bestT, 1, tr, pr);
+      if (impr)
+        {
+          //printResult(tr, adef, PLL_FALSE);
+          rearrangementsMin = 1;
+          rearrangementsMax = tr->stepwidth;
+
+          if (tr->searchConvergenceCriterion)
+            {
+              int bCounter = 0;
+
+              if (thoroughIterations > 1)
+                cleanupHashTable(h, (thoroughIterations % 2));
+
+              bitVectorInitravSpecial(bitVectors, tr->nodep[1]->back,
+                  tr->mxtips, vLength, h, thoroughIterations % 2,
+                  PLL_BIPARTITIONS_RF, (branchInfo *) NULL, &bCounter, 1,
+                  PLL_FALSE, PLL_FALSE, 0);
+
+              assert(bCounter == tr->mxtips - 3);
+
+              if (thoroughIterations > 0)
+                {
+                  double rrf = convergenceCriterion(h, tr->mxtips);
+
+                  if (rrf <= 0.01) /* 1% cutoff */
+                    {
+                      goto cleanup;
+                    }
+                }
+            }
+
+          thoroughIterations++;
+        }
+      else
+        {
+          rearrangementsMax += tr->stepwidth;
+          rearrangementsMin += tr->stepwidth;
+          if (rearrangementsMax > tr->max_rearrange)
+            goto cleanup;
+        }
+      pllOptimizeBranchLengths(tr, pr, 32);
+
+      previousLh = lh = tr->likelihood;
+      saveBestTree(bestT, tr,
+          pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);
+
+      treeOptimizeRapid(tr, pr, rearrangementsMin, rearrangementsMax, bt,
+          &iList);
+
+      impr = 0;
+
+      for (i = 1; i <= bt->nvalid; i++)
+        {
+          recallBestTree(bt, i, tr, pr);
+
+          pllOptimizeBranchLengths(tr, pr, 8);
+
+#ifdef _TERRACES
+          /* save all 20 best trees in the terrace tree list */
+          saveBestTree(terrace, tr, pr->perGeneBranchLengths?pr->numberOfPartitions:1);
+#endif
+
+          difference = (
+              (tr->likelihood > previousLh) ?
+                  tr->likelihood - previousLh : previousLh - tr->likelihood);
+          if (tr->likelihood > lh && difference > epsilon)
+            {
+              impr = 1;
+              lh = tr->likelihood;
+              saveBestTree(bestT, tr,
+                  pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);
+            }
+        }
+
+    }
+
+  cleanup:
+
+#ifdef _TERRACES
+    {
+      double
+      bestLH = tr->likelihood;
+      FILE
+      *f = myfopen(terraceFileName, "w");
+
+      /* print out likelihoods of 20 best trees found during the tree search */
+      for(i = 1; i <= terrace->nvalid; i++)
+        {
+          recallBestTree(terrace, i, tr, pr);
+          /* if the likelihood scores are smaller than some epsilon 0.000001
+           print the tree to file */
+          if(ABS(bestLH - tr->likelihood) < 0.000001)
+            {
+              fprintf(f, "%s\n", tr->tree_string);
+            }
+        }
+      fclose(f);
+      /* increment tree search counter */
+      bCount++;
+    }
+#endif
+
+  if (tr->searchConvergenceCriterion)
+    {
+      freeBitVectors(bitVectors, 2 * tr->mxtips);
+      rax_free(bitVectors);
+      freeHashTable(h);
+      rax_free(h);
+    }
+
+  freeBestTree(bestT);
+  rax_free(bestT);
+  freeBestTree(bt);
+  rax_free(bt);
+
+#ifdef _TERRACES
+  /* free terrace tree list */
+  freeBestTree(terrace);
+  rax_free(terrace);
+#endif
+
+  freeInfoList(&iList);
+  //printResult(tr, adef, PLL_FALSE);
+  return 0;
+}
+

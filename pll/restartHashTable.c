@@ -1,33 +1,31 @@
-/*  RAxML-VI-HPC (version 2.2) a program for sequential and parallel estimation of phylogenetic trees 
- *  Copyright August 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
- *  
- *  and 
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  Alexandros.Stamatakis@epfl.ch
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
- *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands of taxa and mixed models". 
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file bipartitionList.c
  */
-
 #include "mem_alloc.h"
 
 #ifndef WIN32
@@ -46,9 +44,9 @@
 #include <assert.h>
 
 #include "pll.h"
+#include "pllInternal.h"
 
-
-static pll_boolean treeNeedString(const char *fp, char c1, int *position)
+static boolean treeNeedString(const char *fp, char c1, int *position)
 {
   char 
     c2 = fp[(*position)++];
@@ -75,7 +73,7 @@ static pll_boolean treeNeedString(const char *fp, char c1, int *position)
 
 
 
-static pll_boolean treeLabelEndString (char ch)
+static boolean treeLabelEndString (char ch)
 {
   switch(ch) 
     {   
@@ -97,12 +95,12 @@ static pll_boolean treeLabelEndString (char ch)
   return PLL_FALSE;
 } 
 
-static pll_boolean  treeGetLabelString (const char *fp, char *lblPtr, int maxlen, int *position)
+static boolean  treeGetLabelString (const char *fp, char *lblPtr, int maxlen, int *position)
 {
   char 
     ch;
   
-  pll_boolean  
+  boolean  
     done, 
     lblfound;
 
@@ -137,13 +135,13 @@ static pll_boolean  treeGetLabelString (const char *fp, char *lblPtr, int maxlen
   return lblfound;
 }
 
-static pll_boolean  treeFlushLabelString(const char *fp, int *position)
+static boolean  treeFlushLabelString(const char *fp, int *position)
 { 
   return  treeGetLabelString(fp, (char *) NULL, (int) 0, position);
 } 
 
 
-static pll_boolean treeProcessLengthString (const char *fp, double *dptr, int *position)
+static boolean treeProcessLengthString (const char *fp, double *dptr, int *position)
 { 
   (*position)++;
   
@@ -210,7 +208,7 @@ static int treeFindTipNameString (const char *fp, pllInstance *tr, int *position
   return  n;
 } 
 
-static pll_boolean addElementLenString(const char *fp, pllInstance *tr, nodeptr p, int *position)
+static boolean addElementLenString(const char *fp, pllInstance *tr, nodeptr p, int *position)
 {
   nodeptr  
     q;
