@@ -3032,40 +3032,54 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	PhyloNeighbor* node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
 	PhyloNeighbor* node21_it = (PhyloNeighbor*) node2->findNeighbor(node1);
 
-    // TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
-    FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
-        break;
-
-    Neighbor *node1_nei = *node1_it;
-    // Neighbors of node2 which are not node1
-
-    vector<NeighborVec::iterator> node2_its;
-    FOR_NEIGHBOR_DECLARE(node2, node1, node2_it)
-        node2_its.push_back(node2_it);
-    assert(node2_its.size() == 2);
+    int cnt;
 
 	//NNIMove nniMoves[2];
     bool newNNIMoves = false;
     if (!nniMoves) {
+		//   Initialize the 2 NNI moves
     	newNNIMoves = true;
     	nniMoves = new NNIMove[2];
-    	nniMoves[0].ptnlh = NULL;
-    	nniMoves[1].ptnlh = NULL;
+    	nniMoves[0].ptnlh = nniMoves[1].ptnlh = NULL;
+
+    	// TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
+        FOR_NEIGHBOR_IT(node1, node2, node1_it) {
+			cnt = 0;
+			FOR_NEIGHBOR_IT(node2, node1, node2_it) {
+				//   Initialize the 2 NNI moves
+				nniMoves[cnt].node1Nei_it = node1_it;
+				nniMoves[cnt].node2Nei_it = node2_it;
+				cnt++;
+			}
+			break;
+        }
+    } else {
+    	// assuming that node1Nei_it and node2Nei_it is defined in nniMoves structure
+    	for (cnt = 0; cnt < 2; cnt++) {
+    		// sanity check
+    		if (!node1->findNeighbor((*nniMoves[cnt].node1Nei_it)->node)) outError(__func__);
+    		if (!node2->findNeighbor((*nniMoves[cnt].node2Nei_it)->node)) outError(__func__);
+    	}
     }
+    // Initialize node1 and node2 in nniMoves
+	nniMoves[0].node1 = nniMoves[1].node1 = node1;
+	nniMoves[0].node2 = nniMoves[1].node2 = node2;
 
     double backupScore = curScore;
 
-    int cnt;
-    for (cnt = 0; cnt < node2_its.size(); cnt++) {
-		node2_it = node2_its[cnt];
+    for (cnt = 0; cnt < 2; cnt++) {
+		//node2_it = node2_its[cnt];
 
-		//   Initialize the 2 NNI moves
+		/*
 		nniMoves[cnt].node1 = node1;
 		nniMoves[cnt].node2 = node2;
 		nniMoves[cnt].node1Nei_it = node1_it;
-		nniMoves[cnt].node2Nei_it = node2_it;
+		nniMoves[cnt].node2Nei_it = node2_it;*/
 
         // do the NNI swap
+    	NeighborVec::iterator node1_it = nniMoves[cnt].node1Nei_it;
+    	NeighborVec::iterator node2_it = nniMoves[cnt].node2Nei_it;
+        Neighbor *node1_nei = *node1_it;
         Neighbor *node2_nei = *node2_it;
 
         node1->updateNeighbor(node1_it, node2_nei);

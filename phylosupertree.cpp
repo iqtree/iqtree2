@@ -655,11 +655,24 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 
 		//NNIMove part_moves[2];
 		//part_moves[0].node1Nei_it = NULL;
+
+		// setup subtree NNI correspondingly
+		PhyloNode *node1_part = (PhyloNode*)nei2_part->node;
+		PhyloNode *node2_part = (PhyloNode*)nei1_part->node;
+		part_info[part].nniMoves[0].node1Nei_it = node1_part->findNeighborIt(node1_nei->link_neighbors[part]->node);
+		part_info[part].nniMoves[0].node2Nei_it = node2_part->findNeighborIt(node2_nei->link_neighbors[part]->node);
+
+		part_info[part].nniMoves[1].node1Nei_it = node1_part->findNeighborIt(node1_nei->link_neighbors[part]->node);
+		part_info[part].nniMoves[1].node2Nei_it = node2_part->findNeighborIt(node2_nei_other->link_neighbors[part]->node);
+
 		at(part)->getBestNNIForBran((PhyloNode*)nei2_part->node, (PhyloNode*)nei1_part->node, part_info[part].nniMoves);
 		// detect the corresponding NNIs and swap if necessary
-		if (!((*part_info[part].nniMoves[0].node1Nei_it == node1_nei->link_neighbors[part] && *part_info[part].nniMoves[0].node2Nei_it == node2_nei->link_neighbors[part]) ||
-			(*part_info[part].nniMoves[0].node1Nei_it != node1_nei->link_neighbors[part] && *part_info[part].nniMoves[0].node2Nei_it != node2_nei->link_neighbors[part])))
+		if (!((*part_info[part].nniMoves[0].node1Nei_it == node1_nei->link_neighbors[part] &&
+			*part_info[part].nniMoves[0].node2Nei_it == node2_nei->link_neighbors[part]) ||
+			(*part_info[part].nniMoves[0].node1Nei_it != node1_nei->link_neighbors[part] &&
+			*part_info[part].nniMoves[0].node2Nei_it != node2_nei->link_neighbors[part])))
 		{
+			outError("WRONG");
 			NNIMove tmp = part_info[part].nniMoves[0];
 			part_info[part].nniMoves[0] = part_info[part].nniMoves[1];
 			part_info[part].nniMoves[1] = tmp;
