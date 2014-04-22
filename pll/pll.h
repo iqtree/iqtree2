@@ -90,7 +90,7 @@ extern "C" {
 #define PLL_MAX_TIP_EV                          0.999999999 /* max tip vector value, sum of EVs needs to be smaller than 1.0, otherwise the numerics break down */
 #define PLL_MAX_LOCAL_SMOOTHING_ITERATIONS      32          /** @brief maximum iterations of smoothings per insert in the */
 #define PLL_ITERATIONS                          10          /* maximum iterations of iterations per insert */
-#define PLL_NEWZPERCYCLE                        10           /* iterations of makenewz per tree traversal */
+#define PLL_NEWZPERCYCLE                        1           /* iterations of makenewz per tree traversal */
 #define PLL_NMLNGTH                             256         /* number of characters in species name */
 #define PLL_DELTAZ                              0.00001     /* test of net branch length change in update */
 #define PLL_DEFAULTZ                            0.9         /* value of z assigned as starting point */
@@ -1667,7 +1667,8 @@ void pllRearrangeCommit (pllInstance * tr, partitionList * pr, pllRearrangeInfo 
 int pllRearrangeRollback (pllInstance * tr, partitionList * pr);
 void pllClearRearrangeHistory (pllInstance * tr);
 int pllRaxmlSearchAlgorithm (pllInstance * tr, partitionList * pr, boolean estimateModel);
-void pllGetTransitionMatrix (pllInstance * tr, partitionList * pr, int model, nodeptr p, double * outBuffer);
+int pllGetTransitionMatrix (pllInstance * tr, partitionList * pr, nodeptr p, int model, int rate, double * outBuffer);
+void pllGetTransitionMatrix2 (pllInstance * tr, partitionList * pr, int model, nodeptr p, double * outBuffer);
 
 /* other functions */
 extern char * pllReadFile (const char *, long *);

@@ -1223,7 +1223,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         pllNewickTree *newick = pllNewickParseString(curTreeString.c_str());
         pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
         pllNewickParseDestroy(&newick);
-        //pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
+        pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
         pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, 0.1);
         iqtree.curScore = iqtree.pllInst->likelihood;
         double etime = getCPUTime();
@@ -1385,10 +1385,17 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
                 string nniTree;
                 if (params.pll) {
+                    pllNewickTree *newick = pllNewickParseString(rit->second.c_str());
+                    pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+                    pllNewickParseDestroy(&newick);
                     pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
                     pllOptimizeBranchLengths(iqtree.pllInst, iqtree.pllPartitions, 1);
                     initLogl = iqtree.curScore = iqtree.pllInst->likelihood;
-                    iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.searchinfo);
+                    nniLogl = iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.searchinfo);
+                    pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
+                            iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
+                            PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+                    nniTree = string(iqtree.pllInst->tree_string);
                 } else {
                     //cout << rit->second << endl;
                     iqtree.readTreeString(rit->second);

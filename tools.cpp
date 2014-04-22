@@ -1661,6 +1661,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.binary_aln_file = argv[cnt];
             } else if (strcmp(argv[cnt], "-pll") == 0) {
                 params.pll = true;
+                params.pllModOpt = true;
             } else if (strcmp(argv[cnt], "-me") == 0) {
                 cnt++;
                 if (cnt >= argc)
