@@ -38,7 +38,7 @@ RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
 
 string RateInvar::getNameParams() {
 	ostringstream str;
-	str << name << '{' << p_invar << '}';
+	str << "+I{" << p_invar << '}';
 	return str.str();
 }
 

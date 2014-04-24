@@ -124,10 +124,14 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 		out << model_info[0].name;
 	}
 
-	out << endl << endl << "List of models sorted by "
-		<< ((params.model_test_criterion == MTC_BIC) ? "BIC" :
-			((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc"))
-		<< " scores: " << endl << endl;
+	if (is_partitioned) {
+		out << endl << endl << "List of best-fit models per partition:" << endl << endl;
+	} else {
+		out << endl << endl << "List of models sorted by "
+			<< ((params.model_test_criterion == MTC_BIC) ? "BIC" :
+				((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc"))
+			<< " scores: " << endl << endl;
+	}
 	if (is_partitioned)
 		out << "  ID  ";
 	out << "Model             LogL          AIC      w-AIC      AICc     w-AICc       BIC      w-BIC" << endl;
@@ -140,6 +144,8 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 		if (it->AIC_score == DBL_MAX) continue;
 		if (it != model_info.begin() && it->set_name != (it-1)->set_name)
 			setid++;
+		if (is_partitioned && it != model_info.begin() && it->set_name == (it-1)->set_name)
+			continue;
 		if (is_partitioned) {
 			out.width(4);
 			out << right << setid << "  ";
@@ -441,17 +447,27 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
 			int namelen = stree->getMaxPartNameLength();
 			int part;
-			out.width(namelen+7);
-			out << left << "  ID  Name" << " #Seqs  #Sites  #Patterns  #Const_Sites" << endl;
-			out << string(namelen+46, '-') << endl;
+			out.width(max(namelen+6,10));
+			out << left << "  ID  Name" << "  Type  #Seqs  #Sites  #Patterns  #Const_Sites" << endl;
+			//out << string(namelen+54, '-') << endl;
 			part = 0;
 			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
 				//out << "FOR PARTITION " << stree->part_info[part].name << ":" << endl << endl;
 				//reportAlignment(out, *((*it)->aln));
 				out.width(4);
 				out << right << part+1 << "  ";
-				out.width(namelen);
+				out.width(max(namelen,4));
 				out << left << stree->part_info[part].name << "  ";
+				out.width(6);
+				switch ((*it)->aln->seq_type) {
+				case SEQ_BINARY: out << "BIN"; break;
+				case SEQ_CODON: out << "CODON"; break;
+				case SEQ_DNA: out << "DNA"; break;
+				case SEQ_MORPH: out << "MORPH"; break;
+				case SEQ_MULTISTATE: out << "TINA"; break;
+				case SEQ_PROTEIN: out << "AA"; break;
+				case SEQ_UNKNOWN: out << "???"; break;
+				}
 				out.width(5);
 				out << right << (*it)->aln->getNSeq() << "  ";
 				out.width(6);
@@ -482,19 +498,21 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			PhyloSuperTree::iterator it;
 			int part;
 
-			out << "  ID  Model" << endl;
-			out << "-----------------" << endl;
+			out << "  ID  Model          Parameters" << endl;
+			//out << "-------------------------------------" << endl;
 			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
 				out.width(4);
 				out << right << (part+1) << "  ";
-				out << left << (*it)->getModelName() << endl;
+				out.width(14);
+				out << left << (*it)->getModelName() << " " << (*it)->getModelNameParams() << endl;
 			}
 			out << endl;
+			/*
 			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
 				out << "FOR PARTITION " << stree->part_info[part].name << ":" << endl << endl;
 				reportModel(out, *(*it));
 				reportRate(out, *(*it));
-			}
+			}*/
 		} else {
 			reportModel(out, tree);
 			reportRate(out, tree);
@@ -609,6 +627,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					ss << empty_branches << " undefined branch lengths in the overall tree!";
 					outWarning(ss.str());
 				}
+				/*
 				int part = 0;
 				for (PhyloSuperTree::iterator it = stree->begin();
 						it != stree->end(); it++, part++) {
@@ -623,7 +642,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					assert((*it)->root);
 					reportTree(out, params, *(*it), (*it)->computeLikelihood(),
 							(*it)->computeLogLVariance());
-				}
+				}*/
 			}
 
 		}
