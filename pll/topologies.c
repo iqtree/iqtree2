@@ -246,7 +246,7 @@ static int  cmpTipVal (void *v1, void *v2)
     @return
       Pointer to the allocated \a topol structure
 */
-static topol  *setupTopol (int maxtips)
+topol  *setupTopol (int maxtips)
 {
   topol   *tpl;
 
@@ -278,7 +278,7 @@ static topol  *setupTopol (int maxtips)
     @param tpl
       The \a topol structure that is to be deallocated
 */
-static void  freeTopol (topol *tpl)
+void freeTopol (topol *tpl)
 {
   rax_free(tpl->links);
   rax_free(tpl);
@@ -382,7 +382,7 @@ static nodeptr  minTreeTip (nodeptr  p, int numsp)
     Save the current tree topology in \a topol structure \a tpl.
 
 */
-static void saveTree (pllInstance *tr, topol *tpl, int numBranches)
+void saveTree (pllInstance *tr, topol *tpl, int numBranches)
 /*  Save a tree topology in a standard order so that first branches
  *  from a node contain lower value tips than do second branches from
  *  the node.  The root tip should have the lowest value of all.
@@ -420,7 +420,7 @@ static void saveTree (pllInstance *tr, topol *tpl, int numBranches)
      Remove the return value, unnecessary
 
 */
-static boolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr)
+boolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr)
 { 
   connptr  r;
   nodeptr  p, p0;    

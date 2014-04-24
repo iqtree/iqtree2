@@ -764,6 +764,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_subaln = false;
 	params.print_partition_info = false;
 
+	if (params.nni5) {
+	    params.nni_type = NNI5;
+	} else {
+	    params.nni_type = NNI1;
+	}
+
     struct timeval tv;
     struct timezone tz;
     // initialize random seed based on current time
