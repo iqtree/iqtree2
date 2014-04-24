@@ -683,6 +683,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.localbp_replicates = 0;
     params.SSE = true;
     params.print_site_lh = 0;
+    params.print_site_rate = false;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -765,6 +766,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_bootaln = false;
 	params.print_subaln = false;
 	params.print_partition_info = false;
+	params.print_conaln = false;
 
     struct timeval tv;
     struct timezone tz;
@@ -1478,6 +1480,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.print_site_lh = 1;
             } else if (strcmp(argv[cnt], "-wslg") == 0) {
                 params.print_site_lh = 2;
+            } else if (strcmp(argv[cnt], "-wsr") == 0) {
+            	params.print_site_rate = true;
             } else if (strcmp(argv[cnt], "-wba") == 0) {
                 params.print_bootaln = true;
 			} else if (strcmp(argv[cnt],"-wsa") == 0) {
@@ -1486,6 +1490,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.print_tree_lh = true;
             } else if (strcmp(argv[cnt], "-wpi") == 0) {
                 params.print_partition_info = true;
+                params.print_conaln = true;
+            } else if (strcmp(argv[cnt], "-wca") == 0) {
+            	params.print_conaln = true;
             } else if (strcmp(argv[cnt], "-ns") == 0) {
                 cnt++;
                 if (cnt >= argc)

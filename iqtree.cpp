@@ -1219,20 +1219,22 @@ double IQTree::doTreeSearch() {
 			boot_splits.push_back(sg);
 			if (params->max_candidate_trees == 0)
 				max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations()) / curIteration;
-			cout << "Setting tau = " << max_candidate_trees << endl;
+			if (verbose_mode >= VB_MED)
+				cout << "INFO: Increasing number of bootstrap candidate trees to " << max_candidate_trees << endl;
 		}
 		if (curIteration == stop_rule.getNumIterations() && params->gbo_replicates && !boot_splits.empty()
 				&& stop_rule.getNumIterations() + params->step_iterations <= params->max_iterations) {
 			//SplitGraph *sg = new SplitGraph;
 			//summarizeBootstrap(*sg);
+		    cout << "Checking UFBoot stopping rule..." << endl;
+
 			if (!checkBootstrapStopping()) {
 				if (params->max_candidate_trees == 0)
 					max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations() + params->step_iterations)
 							/ stop_rule.getNumIterations();
 				stop_rule.setIterationNum(stop_rule.getNumIterations() + params->step_iterations,
 						params->max_iterations);
-				cout << "INFO: Increase number of iterations to " << stop_rule.getNumIterations() << " tau = "
-						<< max_candidate_trees << endl;
+				cout << "INFO: UFBoot did not converge, increasing #iterations to " << stop_rule.getNumIterations() << endl;
 				//delete boot_splits;
 				//boot_splits = sg;
 			} //else delete sg;
@@ -2056,8 +2058,10 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
                 cout << "Tree " << i + 1 << " weight= " << (double) trees.tree_weights[i] * 100 / sum_weights << endl;
     }
     int max_tree_id = max_element(trees.tree_weights.begin(), trees.tree_weights.end()) - trees.tree_weights.begin();
-    cout << "max_tree_id = " << max_tree_id + 1 << "   max_weight = " << trees.tree_weights[max_tree_id];
-    cout << " (" << (double) trees.tree_weights[max_tree_id] * 100 / sum_weights << "%)" << endl;
+    if (verbose_mode >= VB_MED) {
+		cout << "max_tree_id = " << max_tree_id + 1 << "   max_weight = " << trees.tree_weights[max_tree_id];
+		cout << " (" << (double) trees.tree_weights[max_tree_id] * 100 / sum_weights << "%)" << endl;
+    }
     // assign bootstrap support
     SplitGraph sg;
     SplitIntMap hash_ss;
@@ -2076,7 +2080,8 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
      */
     trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false); // do not sort taxa
 
-    cout << sg.size() << " splits found" << endl;
+    if (verbose_mode >= VB_MED)
+    	cout << sg.size() << " splits found" << endl;
 
     if (!boot_splits.empty()) {
         // check the stopping criterion for ultra-fast bootstrap
@@ -2089,9 +2094,10 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     string out_file;
     out_file = params.out_prefix;
     out_file += ".splits";
-    sg.saveFile(out_file.c_str(), IN_OTHER, true);
-    cout << "Split supports printed to star-dot file " << out_file << endl;
-
+    if (verbose_mode >= VB_MED) {
+		sg.saveFile(out_file.c_str(), IN_OTHER, true);
+		cout << "Split supports printed to star-dot file " << out_file << endl;
+    }
     // compute the percentage of appearance
     sg.scaleWeight(100.0, true);
     //	printSplitSet(sg, hash_ss);
@@ -2179,7 +2185,8 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 }
 
 void IQTree::summarizeBootstrap(Params &params) {
-    cout << "Summarizing from " << treels.size() << " candidate trees..." << endl;
+	if (verbose_mode >= VB_MED)
+		cout << "Summarizing from " << treels.size() << " candidate trees..." << endl;
     MTreeSet trees;
     IntVector tree_weights;
     int sample;
@@ -2276,13 +2283,14 @@ bool IQTree::checkBootstrapStopping() {
                 split_supports_new.push_back((int) ((*sg)[i]->getWeight()));
             }
         }
-    cout << split_supports_new.size() - split_supports.size() << " new splits compared to old boot_splits" << endl;
+    if (verbose_mode >= VB_MED)
+    	cout << split_supports_new.size() - split_supports.size() << " new splits compared to old boot_splits" << endl;
     if (split_supports_new.size() > split_supports.size())
         split_supports.resize(split_supports_new.size(), 0);
 
     // now compute correlation coefficient
     double corr = computeCorrelation(split_supports, split_supports_new);
-    cout << "Correlation coefficient: " << corr << endl;
+    cout << "Bootstrap correlation coefficient of split occurrence frequencies: " << corr << endl;
     // printing supports into file
     /*
      string outfile = params->out_prefix;

@@ -135,10 +135,12 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 	if (is_partitioned)
 		out << "  ID  ";
 	out << "Model             LogL          AIC      w-AIC      AICc     w-AICc       BIC      w-BIC" << endl;
+	/*
 	if (is_partitioned)
 		out << "----------";
 
 	out << "----------------------------------------------------------------------------------------" << endl;
+	*/
 	int setid = 1;
 	for (it = model_info.begin(); it != model_info.end(); it++) {
 		if (it->AIC_score == DBL_MAX) continue;
@@ -351,7 +353,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh,
 	}
 	tree.sortTaxa();
 	//tree.setExtendedFigChar();
-	tree.drawTree(out, WT_BR_SCALE + WT_INT_NODE, epsilon);
+	tree.drawTree(out, WT_BR_SCALE, epsilon);
 	int df = tree.getModelFactory()->getNParameters();
 	int ssize = tree.getAlnNSite();
 	double AIC_score, AICc_score, BIC_score;
@@ -691,7 +693,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			tree.printTree(con_file.c_str(),
 					WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 			tree.sortTaxa();
-			tree.drawTree(out);
+			tree.drawTree(out, WT_BR_SCALE);
 			out << endl << "Consensus tree in newick format: " << endl << endl;
 			tree.printResultTree(out);
 			out << endl << endl;
@@ -839,21 +841,19 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		}
 	}
 	if (!params.dist_file) {
-		cout << "  Juke-Cantor distances:    " << params.out_prefix << ".jcdist"
-				<< endl;
+		//cout << "  Juke-Cantor distances:    " << params.out_prefix << ".jcdist" << endl;
 		if (params.compute_ml_dist)
 			cout << "  Likelihood distances:     " << params.out_prefix
 					<< ".mldist" << endl;
-		if (params.partition_file)
+		if (params.print_conaln)
 			cout << "  Concatenated alignment:   " << params.out_prefix
 					<< ".conaln" << endl;
 	}
-	if (tree.getRate()->getGammaShape() > 0)
+	if (tree.getRate()->getGammaShape() > 0 && params.print_site_rate)
 		cout << "  Gamma-distributed rates:  " << params.out_prefix << ".rate"
 				<< endl;
 
-	if (tree.getRate()->isSiteSpecificRate()
-			|| tree.getRate()->getPtnCat(0) >= 0)
+	if ((tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) && params.print_site_rate)
 		cout << "  Site-rates by MH model:   " << params.out_prefix << ".rate"
 				<< endl;
 
@@ -868,7 +868,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 	if (params.gbo_replicates) {
 		cout << endl << "Ultrafast bootstrap approximation results written to:"
 				<< endl << "  Split support values:     " << params.out_prefix
-				<< ".splits" << endl << "  Consensus tree:           "
+				<< ".splits.nex" << endl << "  Consensus tree:           "
 				<< params.out_prefix << ".contree" << endl;
 		if (params.print_ufboot_trees)
 			cout << "  UFBoot trees:             " << params.out_prefix << ".ufboot" << endl;
@@ -1696,26 +1696,27 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		 cout << "Support values written to " << out_file << endl;*/
 	}
 
-	string rate_file = params.out_prefix;
-	rate_file += ".rate";
-	iqtree.getRate()->writeSiteRates(rate_file.c_str());
-
-	if (iqtree.isSuperTree()) {
-		PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
-		int part = 0;
-		try {
-			ofstream out;
-			out.exceptions(ios::failbit | ios::badbit);
-			out.open(rate_file.c_str());
-			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end();
-					it++, part++) {
-				out << "SITE RATES FOR PARTITION " << stree->part_info[part].name << ":" << endl;
-				(*it)->getRate()->writeSiteRates(out);
+	if (params.print_site_rate) {
+		string rate_file = params.out_prefix;
+		rate_file += ".rate";
+		iqtree.getRate()->writeSiteRates(rate_file.c_str());
+		if (iqtree.isSuperTree()) {
+			PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
+			int part = 0;
+			try {
+				ofstream out;
+				out.exceptions(ios::failbit | ios::badbit);
+				out.open(rate_file.c_str());
+				for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end();
+						it++, part++) {
+					out << "SITE RATES FOR PARTITION " << stree->part_info[part].name << ":" << endl;
+					(*it)->getRate()->writeSiteRates(out);
+				}
+				cout << "Site rates printed to " << rate_file << endl;
+				out.close();
+			} catch (ios::failure) {
+				outError(ERR_WRITE_OUTPUT, rate_file);
 			}
-			cout << "Site rates printed to " << rate_file << endl;
-			out.close();
-		} catch (ios::failure) {
-			outError(ERR_WRITE_OUTPUT, rate_file);
 		}
 	}
 
@@ -1861,7 +1862,7 @@ void runPhyloAnalysis(Params &params) {
 		runPhyloAnalysis(params, original_model, alignment, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
 
-			cout << endl << "Computing consensus tree..." << endl;
+			cout << endl << "Computing bootstrap consensus tree..." << endl;
 			string splitsfile = params.out_prefix;
 			splitsfile += ".splits.nex";
 			//cout << splitsfile << endl;
@@ -2222,7 +2223,8 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 		cout << sg.size() << " splits found" << endl;
 	}
 	//sg.report(cout);
-	cout << "Rescaling split weights by " << scale << endl;
+	if (verbose_mode >= VB_MED)
+		cout << "Rescaling split weights by " << scale << endl;
 	if (params->scaling_factor < 0)
 		sg.scaleWeight(scale, true);
 	else {
@@ -2231,14 +2233,14 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 
 
 
-	cout << "Creating greedy consensus tree..." << endl;
+	//cout << "Creating greedy consensus tree..." << endl;
 	MTree mytree;
 	SplitGraph maxsg;
 	sg.findMaxCompatibleSplits(maxsg);
 
 	if (verbose_mode >= VB_MAX)
 		maxsg.saveFileStarDot(cout);
-	cout << "convert compatible split system into tree..." << endl;
+	//cout << "convert compatible split system into tree..." << endl;
 	mytree.convertToTree(maxsg);
 	//cout << "done" << endl;
 	string taxname = sg.getTaxa()->GetTaxonLabel(0);
@@ -2276,8 +2278,10 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 	}
 
     //sg.scaleWeight(0.01, false, 4);
-    sg.saveFile(out_file.c_str(), IN_OTHER, true);
-    cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
+	if (verbose_mode >= VB_MED) {
+		sg.saveFile(out_file.c_str(), IN_OTHER, true);
+		cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
+	}
 
 }
 
@@ -2319,8 +2323,9 @@ void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
 			out_file = input_trees;
 		out_file += ".splits";
 	}
-
-	sg.saveFile(out_file.c_str(), IN_OTHER, true);
-    cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
+	if (verbose_mode >= VB_MED) {
+		sg.saveFile(out_file.c_str(), IN_OTHER, true);
+		cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
+	}
 
 }

@@ -2703,7 +2703,8 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
         if (params.compute_obs_dist)
         	dist_file += ".obsdist";
         else
-        	dist_file += ".jcdist";
+        	//dist_file += ".jcdist"; // too many files, I decided to discard .jcdist
+        	dist_file += ".mldist";
     } else
         dist_file += ".mldist";
 

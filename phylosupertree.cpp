@@ -208,12 +208,12 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	if (part_info.empty())
 		outError("No partition found");
 	aln = new SuperAlignment(this);
-	string str = params.out_prefix;
-	//str += ".part";
-	//aln->printPhylip(str.c_str());
-	str = params.out_prefix;
-	str += ".conaln";
-	((SuperAlignment*)aln)->printCombinedAlignment(str.c_str());
+	if (params.print_conaln) {
+		string str = params.out_prefix;
+		str = params.out_prefix;
+		str += ".conaln";
+		((SuperAlignment*)aln)->printCombinedAlignment(str.c_str());
+	}
 	cout << "Degree of missing data: " << ((SuperAlignment*)aln)->computeMissingData() << endl;
 	cout << endl;
 

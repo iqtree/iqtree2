@@ -73,10 +73,11 @@ double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, doubl
 	#pragma omp parallel for reduction(+: tree_lh)
 	#endif
     for (int part = 0; part < ntrees; part++) {
-        cout << "Optimizing " << tree->at(part)->getModelName() <<
+    	if (write_info)
+    		cout << "Optimizing " << tree->at(part)->getModelName() <<
         		" parameters for partition " << tree->part_info[part].name <<
         		" (" << tree->at(part)->getModelFactory()->getNParameters() << " free parameters)" << endl;
-        tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info, epsilon);
+        tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED, epsilon);
     }
     //return ModelFactory::optimizeParameters(fixed_len, write_info);
     return tree_lh;

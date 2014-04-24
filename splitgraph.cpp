@@ -146,7 +146,7 @@ void SplitGraph::init(Params &params)
 		//outError(ERR_NO_SPLITS);
 		createStarTree();
 	}
-	cout << endl << "Split network contains " << getNTaxa()-params.is_rooted << 
+	cout << getNTaxa()-params.is_rooted <<
 		" taxa and " << getNSplits()-params.is_rooted << " splits." << endl;
 
 }
