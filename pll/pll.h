@@ -1667,7 +1667,8 @@ void pllRearrangeCommit (pllInstance * tr, partitionList * pr, pllRearrangeInfo 
 int pllRearrangeRollback (pllInstance * tr, partitionList * pr);
 void pllClearRearrangeHistory (pllInstance * tr);
 int pllRaxmlSearchAlgorithm (pllInstance * tr, partitionList * pr, boolean estimateModel);
-void pllGetTransitionMatrix (pllInstance * tr, partitionList * pr, int model, nodeptr p, double * outBuffer);
+int pllGetTransitionMatrix (pllInstance * tr, partitionList * pr, nodeptr p, int model, int rate, double * outBuffer);
+void pllGetTransitionMatrix2 (pllInstance * tr, partitionList * pr, int model, nodeptr p, double * outBuffer);
 
 /* other functions */
 extern char * pllReadFile (const char *, long *);

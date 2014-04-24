@@ -86,6 +86,13 @@ extern void restoreTL ( topolRELL_LIST *rl, pllInstance *tr, int n, int numBranc
 extern void resetTL ( topolRELL_LIST *rl );
 extern void saveTL ( topolRELL_LIST *rl, pllInstance *tr, int index );
 
+extern topol  *setupTopol (int maxtips);
+extern void saveTree (pllInstance *tr, topol *tpl, int numBranches);
+extern boolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr);
+
+
+
+
 extern int  saveBestTree (bestlist *bt, pllInstance *tr, int numBranches);
 extern int  recallBestTree (bestlist *bt, int rank, pllInstance *tr, partitionList *pr);
 extern int initBestTree ( bestlist *bt, int newkeep, int numsp );

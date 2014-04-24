@@ -770,6 +770,8 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
         refTreeSetSorted.insert(make_pair(treeLogl, treeString));
         assert(refTreeSet.size() == refTreeSetSorted.size() && refTreeSetSorted.size() == params->popSize);
         updated = true;
+    } else if (refTreeSet.find(treeTopo) != refTreeSet.end()) {
+        cout << "Tree topology is identical with one of the tree in the candidate set" << endl;
     }
     if (updated) {
         printLoglInTreePop();
@@ -852,20 +854,25 @@ double* IQTree::getModelRatesFromPLL() {
 
 void IQTree::printPLLModParams() {
     for (int part = 0; part < pllPartitions->numberOfPartitions; part++) {
-        printf("alpha[%d]: %f \n", part, pllPartitions->partitionData[part]->alpha);
+        //printf("alpha[%d]: %f \n", part, pllPartitions->partitionData[part]->alpha);
+        cout << "Alpha[" << part << "]" << ": " << pllPartitions->partitionData[part]->alpha << endl;
         if (aln->num_states == 4) {
             int states, rates;
             states = pllPartitions->partitionData[part]->states;
             rates = ((states * states - states) / 2);
-            printf("rates[%d] ac ag at cg ct gt: ", part);
+            //printf(rates, "rates[%d] ac ag at cg ct gt: ", part);
+            cout << "Rates[" << part << "]: " << " ac ag at cg ct gt: ";
             for (int i = 0; i < rates; i++) {
-                printf("%f ", pllPartitions->partitionData[part]->substRates[i]);
+                //printf(rates,"%f ", pllPartitions->partitionData[part]->substRates[i]);
+                cout << pllPartitions->partitionData[part]->substRates[i] << " ";
             }
             cout << endl;
-            cout << "frequencies: ";
+            cout << "Frequencies: ";
             for (int i = 0; i < 4; i++) {
-                printf("%f ", pllPartitions->partitionData[part]->empiricalFrequencies[i]);
+                //printf("%f ", pllPartitions->partitionData[part]->empiricalFrequencies[i]);
+                cout << pllPartitions->partitionData[part]->empiricalFrequencies[i] << " ";
             }
+            cout << endl;
         }
     }
 }
@@ -938,11 +945,6 @@ void IQTree::inputModelParam2PLL() {
         if (params->pll) {
             outError("Phylogenetic likelihood library current does not support data type other than DNA or Protein");
         }
-    }
-
-    if(params->online_bootstrap && params->gbo_replicates > 0){
-        // Build pll2iqtree_pattern_index to map the sites in pllAlignment into pattern in aln
-        pllBuildIQTreePatternIndex();
     }
 }
 
@@ -1244,7 +1246,6 @@ double IQTree::doTreeSearch() {
     for (curIteration = 2; !stop_rule.meetStopCondition(curIteration); curIteration++) {
         if (params->autostop) {
             if (nUnsuccessIteration == params->maxUnsuccess) {
-                cout << endl;
                 cout << "No better tree was found in the last " << params->maxUnsuccess
                         << " iterations. Tree search was stopped after " << curIteration << " iterations!" << endl;
                 break;
@@ -1319,7 +1320,7 @@ double IQTree::doTreeSearch() {
                 assert(perturbTree != NULL);
                 pllTreeInitTopologyNewick(pllInst, perturbTree, PLL_FALSE);
                 pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-                pllOptimizeBranchLengths(pllInst, pllPartitions, params->numSmoothTree);
+                pllOptimizeBranchLengths(pllInst, pllPartitions, 1);
                 pllNewickParseDestroy(&perturbTree);
                 curScore = pllInst->likelihood;
                 perturbScore = curScore;
@@ -1344,6 +1345,7 @@ double IQTree::doTreeSearch() {
             pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
                     PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
             imd_tree = string(pllInst->tree_string);
+            readTreeString(imd_tree);
         } else {
             curScore = optimizeNNI(nni_count, nni_steps);
             imd_tree = getTreeString();
@@ -1518,6 +1520,7 @@ double IQTree::doTreeSearch() {
                 //boot_splits = sg;
             } //else delete sg;
         }
+        cout << endl;
     }
 
     readTreeString(bestTreeString);
@@ -1539,22 +1542,6 @@ double IQTree::doTreeSearch() {
     if (params->print_tree_lh) {
         out_treelh.close();
         out_sitelh.close();
-    }
-
-    if (params->pllModOpt) {
-        pllNewickTree *newick = pllNewickParseString(bestTreeString.c_str());
-        pllTreeInitTopologyNewick(pllInst, newick, PLL_FALSE);
-        pllNewickParseDestroy(&newick);
-        pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-        cout << endl;
-        cout << "Optimizing model parameters on the final tree by PLL ... ";
-        double stime = getCPUTime();
-        pllOptimizeModelParameters(pllInst, pllPartitions, 0.01);
-        double etime = getCPUTime();
-        cout << etime - stime << " seconds" << endl;
-        pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE, PLL_TRUE,
-                PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-        setBestTree(string(pllInst->tree_string), pllInst->likelihood);
     }
 
     // DTH: pllUFBoot deallocation
@@ -1710,7 +1697,6 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
 
     totalNNICount = searchinfo.numAppliedNNIs;
     pllInst->likelihood = searchinfo.curLogl;
-    cout << "End of pllOptimizeNNI" << endl;
     return searchinfo.curLogl;
 }
 
@@ -1745,6 +1731,8 @@ void IQTree::pllInitUFBootData(){
         pllUFBootDataPtr->candidate_trees_count = 0;
 
         if(params->online_bootstrap && params->gbo_replicates > 0){
+        	if(!pll2iqtree_pattern_index) pllBuildIQTreePatternIndex();
+
 //            pllUFBootDataPtr->params_ufboot_epsilon = params->ufboot_epsilon;
 
             pllUFBootDataPtr->treels = pllHashInit(max_candidate_trees);

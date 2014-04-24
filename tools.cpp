@@ -764,6 +764,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_subaln = false;
 	params.print_partition_info = false;
 
+	if (params.nni5) {
+	    params.nni_type = NNI5;
+	} else {
+	    params.nni_type = NNI1;
+	}
+
     struct timeval tv;
     struct timezone tz;
     // initialize random seed based on current time
@@ -1661,6 +1667,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.binary_aln_file = argv[cnt];
             } else if (strcmp(argv[cnt], "-pll") == 0) {
                 params.pll = true;
+                params.pllModOpt = true;
             } else if (strcmp(argv[cnt], "-me") == 0) {
                 cnt++;
                 if (cnt >= argc)

@@ -131,8 +131,8 @@ const union __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)))
 
 #endif
 
-static void pllGetTransitionMatrixNormal (pllInstance * tr, partitionList * pr, int model, nodeptr p, double * outBuffer);
-static void pllGetTransitionMatrixLG4 (partitionList * pr, int model, nodeptr p, double * outBuffer);
+static int pllGetTransitionMatrixNormal (pllInstance * tr, partitionList * pr, nodeptr p, int model, int rate, double * outBuffer);
+static int pllGetTransitionMatrixLG4 (partitionList * pr, nodeptr p, int model, int rate, double * outBuffer);
 
 extern const char dnaStateNames[4];     /**< @brief Array that contains letters for the four DNA base-pairs, i.e. 0 = A, 1 = C, 2 = G, 3 = T */
 extern const char protStateNames[20];   /**< @brief Array that contains letters for the 20 AA base-pairs */
@@ -227,6 +227,7 @@ makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberO
     {
       d1[j] = EXP(rptr[i] * lz1[j]);
       d2[j] = EXP(rptr[i] * lz2[j]);
+
     }
 
     /* now fill the P matrices for the two branch length values */
@@ -296,16 +297,27 @@ makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberO
     @param outBuffer Output buffer where to store the transition probability matrix
 
 */
-void pllGetTransitionMatrix (pllInstance * tr, partitionList * pr, int model, nodeptr p, double * outBuffer)
+int pllGetTransitionMatrix (pllInstance * tr, partitionList * pr, nodeptr p, int model, int rate, double * outBuffer)
 {
-  if (pr->partitionData[model]->dataType == PLL_AA_DATA && pr->partitionData[model]->protModels == PLL_LG4)
-    pllGetTransitionMatrixLG4 (pr, model, p, outBuffer);
+  if (tr->rateHetModel == PLL_CAT)
+   {
+     if (rate >= pr->partitionData[model]->numberOfCategories) return (PLL_FALSE);
+   }
   else
-    pllGetTransitionMatrixNormal (tr, pr, model, p, outBuffer);
+   {
+     if (rate >= 4) return (PLL_FALSE);
+   }
+
+  if (pr->partitionData[model]->dataType == PLL_AA_DATA && pr->partitionData[model]->protModels == PLL_LG4)
+    return (pllGetTransitionMatrixLG4 (pr, p, model, rate, outBuffer));
+    
+    
+  return (pllGetTransitionMatrixNormal (tr, pr, p, model, rate, outBuffer));
 }
 
 
-static void pllGetTransitionMatrixLG4 (partitionList * pr, int model, nodeptr p, double * outBuffer)
+/* TODO: Fix this function according to pllGetTransitionMatrixNormal */
+static int pllGetTransitionMatrixLG4 (partitionList * pr, nodeptr p, int model, int rate, double * outBuffer)
 {
   int
     i, j, k,
@@ -334,21 +346,23 @@ static void pllGetTransitionMatrixLG4 (partitionList * pr, int model, nodeptr p,
          }
       }
    }
+  return (PLL_TRUE);
 }
 
-static void pllGetTransitionMatrixNormal (pllInstance * tr, partitionList * pr, int model, nodeptr p, double * outBuffer)
+static int pllGetTransitionMatrixNormal (pllInstance * tr, partitionList * pr, nodeptr p, int model, int rate, double * outBuffer)
 {
   int 
-    i, j, k,
+    i, j, k, l,
     numberOfCategories,
     states = pr->partitionData[model]->states;
   double
     * d = (double *)rax_malloc(sizeof(double) * states),
     * rptr,
     * EI   = pr->partitionData[model]->EI,
-    * EIGN = pr->partitionData[model]->EIGN;
-
-
+    * EIGN = pr->partitionData[model]->EIGN,
+    * EV = pr->partitionData[model]->EV;
+  
+  double lz = (p->z[model] > PLL_ZMIN) ? log(p->z[model]) : log(PLL_ZMIN);                        
 
   if (tr->rateHetModel == PLL_CAT)
    {
@@ -361,47 +375,50 @@ static void pllGetTransitionMatrixNormal (pllInstance * tr, partitionList * pr, 
      numberOfCategories = 4;
    }
 
-  for (i = 0; i < numberOfCategories; ++ i)
-   {
-     /* exponentiate the rate multiplied by the branch */
-     for (j = 1; j < states; ++ j)
-      {
-        d[j] = EXP(rptr[i] * EIGN[j] * p->z[model]);
-      }
+  for (i = 0; i < states * states; ++ i) outBuffer[i] = 0;
 
-     /* now fill the P matrix for the branch length values */
+  d[0] = 1.0;
+  for (j = 1; j < states; ++ j)
+   {
+     d[j] = EXP(rptr[rate] * EIGN[j] * lz);
+   }
+
+  for (i = 0; i < states; ++ i)
+   {
      for (j = 0; j < states; ++ j)
       {
-        outBuffer[states * states * i + states * j] = 1.0;
-        for (k = 1; k < states; ++k)
+        for (k = 0; k < states; ++ k)
          {
-           outBuffer[states * states * i + states * j + k] = d[k] * EI[states * j + k];
+           outBuffer[states * i + j] += (d[k] * EI[states * i + k] * EV[states * j + k]);
          }
       }
    }
 
-  if (tr->saveMemory)
-   {
-     i = tr->maxCategories;
-     
-     for (j = 1; j < states; ++j)
-      {
-        d[j] = EXP(EIGN[j] * p->z[model]);
-      }
+  assert (!tr->saveMemory);
+  // TODO: Fix the following snippet
+  //if (tr->saveMemory)
+  // {
+  //   i = tr->maxCategories;
+  //   
+  //   for (j = 1; j < states; ++j)
+  //    {
+  //      d[j] = EXP(EIGN[j] * p->z[model]);
+  //    }
 
-     for (j = 0; j < states; ++j)
-      {
-        outBuffer[states * states * i + states * j] = 1.0;
-        for (k = 1; k < states; ++k)
-         {
-           outBuffer[states * states * i + states * j + k] = d[k] * EI[states * j + k];
-         }
-      }
-   }
+  //   for (j = 0; j < states; ++j)
+  //    {
+  //      outBuffer[states * states * i + states * j] = 1.0;
+  //      for (k = 1; k < states; ++k)
+  //       {
+  //         outBuffer[states * states * i + states * j + k] = d[k] * EI[states * j + k];
+  //       }
+  //    }
+  // }
 
   rax_free(d);
-}
 
+  return (PLL_TRUE);
+}
 
 
 /** @brief Compute two P matrices for two edges for the LG4 model

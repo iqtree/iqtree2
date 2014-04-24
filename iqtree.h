@@ -663,15 +663,21 @@ public:
     unordered_map<string, double> refTreeSet;
 
     /**
+     *  A set of reference trees which are sorted according to their logl
+     *  This set contains complete tree strings (with branch length)
+     */
+    map<double, string> refTreeSetSorted;
+
+    /**
      *  Set of unique initial parsimony trees
      */
-    set<string> uniqParsTrees;
+    set<string> uniqParsTopo;
 
-	/**
-	 *  A set of reference trees which are sorted according to their logl
-	 *  This set contains complete tree strings (with branch length)
-	 */
-	map<double, string> refTreeSetSorted;
+    /**
+     *  A set of unique starting parsimony trees (with branch lengths) that a sorted
+     *  according to its likelihood.
+     */
+    map<double, string> uniqParsTree;
 
 
     /****** following variables are for ultra-fast bootstrap *******/
