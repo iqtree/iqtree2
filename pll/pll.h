@@ -356,7 +356,7 @@ typedef struct
   entry **table;
   hashNumberType entryCount;
 }
-  pllHashtable;
+  hashtable;
 struct stringEnt
 {
   int nodeNumber;
@@ -1240,13 +1240,8 @@ typedef  struct  {
 
   unsigned int vLength;
 
-<<<<<<< HEAD
-  pllHashtable *h;                 /**< hashtable for ML convergence criterion */
-
-=======
   hashtable *h;                 /**< hashtable for ML convergence criterion */
  
->>>>>>> master
   int optimizeRateCategoryInvocations;
 
   checkPointState ckp;
@@ -1600,52 +1595,7 @@ extern void pllEvaluateLikelihood (pllInstance *tr, partitionList *pr, nodeptr p
 extern void pllUpdatePartials (pllInstance *tr, partitionList *pr, nodeptr p, boolean masked);
 extern void pllUpdatePartialsAncestral(pllInstance *tr, partitionList *pr, nodeptr p);
 extern void pllNewviewIterative(pllInstance *tr, partitionList *pr, int startIndex);
-<<<<<<< HEAD
-extern void pllEvaluateIterative(pllInstance *tr, partitionList *pr, pll_boolean getPerSiteLikelihoods);
-extern void storeExecuteMaskInTraversalDescriptor(pllInstance *tr, partitionList *pr);
-extern void storeValuesInTraversalDescriptor(pllInstance *tr, partitionList *pr, double *value);
-extern void makenewzIterative(pllInstance *, partitionList *pr);
-extern void execCore(pllInstance *, partitionList *pr, volatile double *dlnLdlz, volatile double *d2lnLdlz2);
-
-
-
-
-
-extern nodeptr findAnyTip(nodeptr p, int numsp);
-extern void putWAG(double *ext_initialRates);
-extern  unsigned int **initBitVector(int mxtips, unsigned int *vectorLength);
-extern pllHashtable *initHashTable(unsigned int n);
-extern void cleanupHashTable(pllHashtable *h, int state);
-extern double convergenceCriterion(pllHashtable *h, int mxtips);
-extern void freeBitVectors(unsigned int **v, int n);
-extern void freeHashTable(pllHashtable *h);
-extern stringHashtable *initStringHashTable(hashNumberType n);
-extern void addword(char *s, stringHashtable *h, int nodeNumber);
-
-extern void printBothOpen(const char* format, ... );
-extern void initRateMatrix(pllInstance *tr, partitionList *pr);
-
-extern void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, pllHashtable *h, int treeNumber, int function, branchInfo *bInf,
-                                    int *countBranches, int treeVectorLength, pll_boolean traverseOnly, pll_boolean computeWRF, int processID);
-
-
-extern unsigned int bitcount_32_bit(unsigned int i);
-extern unsigned int bitcount_64_bit(unsigned long i);
-
-
-extern void perSiteLogLikelihoods(pllInstance *tr, partitionList *pr, double *logLikelihoods);
-
-extern void updatePerSiteRates(pllInstance *tr, partitionList *pr, pll_boolean scaleRates);
-
-extern void restart(pllInstance *tr, partitionList *pr);
-
-extern double getBranchLength(pllInstance *tr, partitionList *pr, int perGene, nodeptr p);
-
-extern pll_boolean isGap(unsigned int *x, int pos);
-extern pll_boolean noGap(unsigned int *x, int pos);
-=======
 extern void pllEvaluateIterative(pllInstance *tr, partitionList *pr, boolean getPerSiteLikelihoods);
->>>>>>> master
 
 /* newick parser declarations */
 extern pllNewickTree * pllNewickParseString (const char * newick);

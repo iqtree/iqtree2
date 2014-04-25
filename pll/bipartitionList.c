@@ -83,7 +83,7 @@ entry *initEntry(void)
   return e;
 } 
 
-pllHashtable *initHashTable(hashNumberType n)
+hashtable *initHashTable(hashNumberType n)
 {
   /* 
      init with primes 
@@ -100,7 +100,7 @@ pllHashtable *initHashTable(hashNumberType n)
 					      4194304, 8388608, 16777216, 33554432, 67108864, 134217728,
 					      268435456, 536870912, 1073741824, 2147483648U};
   
-  pllHashtable *h = (pllHashtable*)rax_malloc(sizeof(pllHashtable));
+  hashtable *h = (hashtable*)rax_malloc(sizeof(hashtable));
   
   hashNumberType
     tableSize,
@@ -131,7 +131,7 @@ pllHashtable *initHashTable(hashNumberType n)
 
 
 
-void freeHashTable(pllHashtable *h)
+void freeHashTable(hashtable *h)
 {
   hashNumberType
     i,
@@ -174,7 +174,7 @@ void freeHashTable(pllHashtable *h)
 
 
 
-void cleanupHashTable(pllHashtable *h, int state)
+void cleanupHashTable(hashtable *h, int state)
 {
   hashNumberType
     k,
@@ -378,13 +378,8 @@ static void newviewBipartitions(unsigned int **bitVectors, nodeptr p, int numsp,
 
 
 
-<<<<<<< HEAD
-static void insertHashRF(unsigned int *bitVector, pllHashtable *h, unsigned int vectorLength, int treeNumber, int treeVectorLength, hashNumberType position, int support, 
-			 pll_boolean computeWRF)
-=======
 static void insertHashRF(unsigned int *bitVector, hashtable *h, unsigned int vectorLength, int treeNumber, int treeVectorLength, hashNumberType position, int support, 
 			 boolean computeWRF)
->>>>>>> master
 {     
   if(h->table[position] != NULL)
     {
@@ -470,13 +465,8 @@ static void insertHashRF(unsigned int *bitVector, hashtable *h, unsigned int vec
 
 
 
-<<<<<<< HEAD
-void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, pllHashtable *h, int treeNumber, int function, branchInfo *bInf, 
-			     int *countBranches, int treeVectorLength, pll_boolean traverseOnly, pll_boolean computeWRF, int processID)
-=======
 void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, hashtable *h, int treeNumber, int function, branchInfo *bInf, 
 			     int *countBranches, int treeVectorLength, boolean traverseOnly, boolean computeWRF, int processID)
->>>>>>> master
 {
   if(isTip(p->number, numsp))
     return;
@@ -544,7 +534,7 @@ void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, un
 
 
 
-double convergenceCriterion(pllHashtable *h, int mxtips)
+double convergenceCriterion(hashtable *h, int mxtips)
 {
   int      
     rf = 0; 
