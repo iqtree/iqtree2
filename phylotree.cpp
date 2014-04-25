@@ -3042,7 +3042,19 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     	newNNIMoves = true;
     	nniMoves = new NNIMove[2];
     	nniMoves[0].ptnlh = nniMoves[1].ptnlh = NULL;
+    	nniMoves[0].node1 = NULL;
 
+    }
+
+    if (nniMoves[0].node1) {
+    	// assuming that node1Nei_it and node2Nei_it is defined in nniMoves structure
+    	for (cnt = 0; cnt < 2; cnt++) {
+    		// sanity check
+    		if (!node1->findNeighbor((*nniMoves[cnt].node1Nei_it)->node)) outError(__func__);
+    		if (!node2->findNeighbor((*nniMoves[cnt].node2Nei_it)->node)) outError(__func__);
+    	}
+    } else {
+    	// Initialize node1Nei_it and node2Nei_it
     	// TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
         FOR_NEIGHBOR_IT(node1, node2, node1_it) {
 			cnt = 0;
@@ -3054,14 +3066,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			}
 			break;
         }
-    } else {
-    	// assuming that node1Nei_it and node2Nei_it is defined in nniMoves structure
-    	for (cnt = 0; cnt < 2; cnt++) {
-    		// sanity check
-    		if (!node1->findNeighbor((*nniMoves[cnt].node1Nei_it)->node)) outError(__func__);
-    		if (!node2->findNeighbor((*nniMoves[cnt].node2Nei_it)->node)) outError(__func__);
-    	}
     }
+
     // Initialize node1 and node2 in nniMoves
 	nniMoves[0].node1 = nniMoves[1].node1 = node1;
 	nniMoves[0].node2 = nniMoves[1].node2 = node2;
@@ -3882,6 +3888,8 @@ void PhyloTree::computeNNIPatternLh(double cur_lh, double &lh2, double *pattern_
 	nniMoves[1].ptnlh = pattern_lh3;
 	bool nni5 = params->nni5;
 	params->nni5 = true; // always optimize 5 branches for accurate SH-aLRT
+	nniMoves[0].node1 = nniMoves[1].node1 = NULL;
+	nniMoves[0].node2 = nniMoves[1].node2 = NULL;
 	getBestNNIForBran(node1, node2, nniMoves);
 	params->nni5 = nni5;
 	lh2 = nniMoves[0].newloglh;
