@@ -94,7 +94,7 @@
 #include "pll.h"
 #include "pllInternal.h"
 
-static boolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping);
+static pllBoolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping);
 
 extern const unsigned int mask32[32]; 
 /* vector-specific stuff */
@@ -170,7 +170,7 @@ static int checkerPars(pllInstance *tr, nodeptr p)
     }
 }
 
-static boolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping)
+static pllBoolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping)
 {
   if(isTip(p->number, tr->mxtips))
     {
@@ -199,7 +199,7 @@ static void getxnodeLocal (nodeptr p)
 
 }
 
-static void computeTraversalInfoParsimony(nodeptr p, int *ti, int *counter, int maxTips, boolean full)
+static void computeTraversalInfoParsimony(nodeptr p, int *ti, int *counter, int maxTips, pllBoolean full)
 {        
   nodeptr 
     q = p->next->back,
@@ -1010,7 +1010,7 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
 
 
 
-static unsigned int evaluateParsimony(pllInstance *tr, partitionList *pr, nodeptr p, boolean full)
+static unsigned int evaluateParsimony(pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean full)
 {
   volatile unsigned int result;
   nodeptr q = p->back;
@@ -1108,7 +1108,7 @@ static void buildSimpleTree (pllInstance *tr, partitionList *pr, int ip, int iq,
 }
 
 
-static void testInsertParsimony (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q, boolean saveBranches)
+static void testInsertParsimony (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q, pllBoolean saveBranches)
 { 
   unsigned int 
     mp;
@@ -1116,7 +1116,7 @@ static void testInsertParsimony (pllInstance *tr, partitionList *pr, nodeptr p, 
   nodeptr  
     r = q->back;   
 
-  boolean 
+  pllBoolean 
     doIt = PLL_TRUE;
 
   int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
@@ -1200,7 +1200,7 @@ static void restoreTreeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, 
 }
 
 
-static void addTraverseParsimony (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q, int mintrav, int maxtrav, boolean doAll, boolean saveBranches)
+static void addTraverseParsimony (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q, int mintrav, int maxtrav, pllBoolean doAll, pllBoolean saveBranches)
 {        
   if (doAll || (--mintrav <= 0))               
     testInsertParsimony(tr, pr, p, q, saveBranches);
@@ -1254,7 +1254,7 @@ static nodeptr  removeNodeParsimony (nodeptr p)
   return  q;
 }
 
-static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, int mintrav, int maxtrav, boolean doAll)
+static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, int mintrav, int maxtrav, pllBoolean doAll)
 {   
   nodeptr  
     p1, 
@@ -1266,7 +1266,7 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, int
   int      
     mintrav2; 
 
-  boolean 
+  pllBoolean 
     doP = PLL_TRUE,
     doQ = PLL_TRUE;
            
@@ -1441,7 +1441,7 @@ static boolean isInformative2(pllInstance *tr, int site)
 }
 */
 
-static boolean isInformative(pllInstance *tr, int dataType, int site)
+static pllBoolean isInformative(pllInstance *tr, int dataType, int site)
 {
   int
     informativeCounter = 0,

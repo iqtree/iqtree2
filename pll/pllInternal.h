@@ -26,7 +26,7 @@ extern unsigned int precomputed16_bitcount(unsigned int n, char *bits_in_16bits)
 extern size_t discreteRateCategories(int rateHetModel);
 
 extern const partitionLengths * getPartitionLengths(pInfo *p);
-extern boolean getSmoothFreqs(int dataType);
+extern pllBoolean getSmoothFreqs(int dataType);
 extern const unsigned int *getBitVector(int dataType);
 extern int getUndetermined(int dataType);
 extern int getStates(int dataType);
@@ -39,7 +39,7 @@ extern void getxnode ( nodeptr p );
 extern void hookup ( nodeptr p, nodeptr q, double *z, int numBranches);
 extern void hookupFull ( nodeptr p, nodeptr q, double *z);
 extern void hookupDefault ( nodeptr p, nodeptr q);
-extern boolean whitechar ( int ch );
+extern pllBoolean whitechar ( int ch );
 extern void printLog ( pllInstance *tr);
 extern double LnGamma ( double alpha );
 extern double IncompleteGamma ( double x, double alpha, double ln_gamma_alpha );
@@ -58,26 +58,26 @@ extern void allocateParsimonyDataStructures(pllInstance *tr, partitionList *pr);
 
 extern FILE *myfopen(const char *path, const char *mode);
 
-extern boolean initrav ( pllInstance *tr, partitionList *pr, nodeptr p );
+extern pllBoolean initrav ( pllInstance *tr, partitionList *pr, nodeptr p );
 extern void initravPartition ( pllInstance *tr, nodeptr p, int model );
 extern void update ( pllInstance *tr, partitionList *pr, nodeptr p );
 extern void smooth ( pllInstance *tr, partitionList *pr, nodeptr p );
 extern void smoothTree ( pllInstance *tr, partitionList *pr, int maxtimes );
 extern void localSmooth ( pllInstance *tr, partitionList *pr, nodeptr p, int maxtimes );
-extern boolean localSmoothMulti(pllInstance *tr, nodeptr p, int maxtimes, int model);
+extern pllBoolean localSmoothMulti(pllInstance *tr, nodeptr p, int maxtimes, int model);
 
 extern void smoothRegion ( pllInstance *tr, partitionList *pr, nodeptr p, int region );
 extern void regionalSmooth ( pllInstance *tr, partitionList *pr, nodeptr p, int maxtimes, int region );
 extern nodeptr removeNodeBIG ( pllInstance *tr, partitionList *pr, nodeptr p, int numBranches);
 extern nodeptr removeNodeRestoreBIG ( pllInstance *tr, partitionList *pr, nodeptr p );
-extern boolean insertBIG ( pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q);
-extern boolean insertRestoreBIG ( pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q );
-extern boolean testInsertBIG ( pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q );
+extern pllBoolean insertBIG ( pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q);
+extern pllBoolean insertRestoreBIG ( pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q );
+extern pllBoolean testInsertBIG ( pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q );
 extern int NNI(pllInstance * tr, nodeptr p, int swap);
 extern void addTraverseBIG ( pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q, int mintrav, int maxtrav );
 extern int rearrangeBIG ( pllInstance *tr, partitionList *pr, nodeptr p, int mintrav, int maxtrav );
 extern void traversalOrder ( nodeptr p, int *count, nodeptr *nodeArray );
-extern boolean testInsertRestoreBIG ( pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q );
+extern pllBoolean testInsertRestoreBIG ( pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q );
 extern void restoreTreeFast ( pllInstance *tr, partitionList *pr );
 
 extern void initTL ( topolRELL_LIST *rl, pllInstance *tr, int n );
@@ -88,7 +88,7 @@ extern void saveTL ( topolRELL_LIST *rl, pllInstance *tr, int index );
 
 extern topol  *setupTopol (int maxtips);
 extern void saveTree (pllInstance *tr, topol *tpl, int numBranches);
-extern boolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr);
+extern pllBoolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr);
 
 
 
@@ -97,30 +97,30 @@ extern int  saveBestTree (bestlist *bt, pllInstance *tr, int numBranches);
 extern int  recallBestTree (bestlist *bt, int rank, pllInstance *tr, partitionList *pr);
 extern int initBestTree ( bestlist *bt, int newkeep, int numsp );
 extern void resetBestTree ( bestlist *bt );
-extern boolean freeBestTree ( bestlist *bt );
+extern pllBoolean freeBestTree ( bestlist *bt );
 
-extern int treeReadLen (FILE *fp, pllInstance *tr, boolean readBranches, boolean readNodeLabels, boolean topologyOnly);
+extern int treeReadLen (FILE *fp, pllInstance *tr, pllBoolean readBranches, pllBoolean readNodeLabels, pllBoolean topologyOnly);
 extern void treeReadTopologyString(char *treeString, pllInstance *tr);
 extern void getStartingTree (pllInstance *tr);
 extern double treeLength (pllInstance *tr, int model);
 extern double evaluatePartialGeneric (pllInstance *, partitionList *pr, int i, double ki, int _model);
 extern void newviewAncestralIterative(pllInstance *tr, partitionList *pr);
-extern void printAncestralState(nodeptr p, boolean printStates, boolean printProbs, pllInstance *tr, partitionList *pr);
-extern void makenewzGeneric(pllInstance *tr, partitionList * pr, nodeptr p, nodeptr q, double *z0, int maxiter, double *result, boolean mask);
+extern void printAncestralState(nodeptr p, pllBoolean printStates, pllBoolean printProbs, pllInstance *tr, partitionList *pr);
+extern void makenewzGeneric(pllInstance *tr, partitionList * pr, nodeptr p, nodeptr q, double *z0, int maxiter, double *result, pllBoolean mask);
 extern void makenewzGenericDistance(pllInstance *tr, int maxiter, double *z0, double *result, int taxon1, int taxon2);
 extern double evaluatePartitionGeneric (pllInstance *tr, nodeptr p, int model);
 extern void newviewPartitionGeneric (pllInstance *tr, nodeptr p, int model);
 extern double evaluateGenericVector (pllInstance *tr, nodeptr p);
 extern void categorizeGeneric (pllInstance *tr, nodeptr p);
 extern double makenewzPartitionGeneric(pllInstance *tr, nodeptr p, nodeptr q, double z0, int maxiter, int model);
-extern boolean isTip(int number, int maxTips);
+extern pllBoolean isTip(int number, int maxTips);
 
 /* recom functions */
-extern void computeTraversal(pllInstance *tr, nodeptr p, boolean partialTraversal, int numBranches);
+extern void computeTraversal(pllInstance *tr, nodeptr p, pllBoolean partialTraversal, int numBranches);
 extern void allocRecompVectorsInfo(pllInstance *tr);
 extern void allocTraversalCounter(pllInstance *tr);
-extern boolean getxVector(recompVectors *rvec, int nodenum, int *slot, int mxtips);
-extern boolean needsRecomp(boolean recompute, recompVectors *rvec, nodeptr p, int mxtips);
+extern pllBoolean getxVector(recompVectors *rvec, int nodenum, int *slot, int mxtips);
+extern pllBoolean needsRecomp(pllBoolean recompute, recompVectors *rvec, nodeptr p, int mxtips);
 extern void unpinNode(recompVectors *v, int nodenum, int mxtips);
 extern void protectNode(recompVectors *rvec, int nodenum, int mxtips);
 
@@ -137,24 +137,24 @@ extern void makePermutation(int *perm, int n, pllInstance *tr);
 extern nodeptr findAnyTip(nodeptr p, int numsp);
 extern void putWAG(double *ext_initialRates);
 extern  unsigned int **initBitVector(int mxtips, unsigned int *vectorLength);
-extern hashtable *initHashTable(unsigned int n);
-extern void cleanupHashTable(hashtable *h, int state);
-extern double convergenceCriterion(hashtable *h, int mxtips);
+extern pllHashtable *initHashTable(unsigned int n);
+extern void cleanupHashTable(pllHashtable *h, int state);
+extern double convergenceCriterion(pllHashtable *h, int mxtips);
 extern void freeBitVectors(unsigned int **v, int n);
-extern void freeHashTable(hashtable *h);
+extern void freeHashTable(pllHashtable *h);
 extern stringHashtable *initStringHashTable(hashNumberType n);
 extern void addword(char *s, stringHashtable *h, int nodeNumber);
 extern void printBothOpen(const char* format, ... );
 extern void initRateMatrix(pllInstance *tr, partitionList *pr);
-extern void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, hashtable *h, int treeNumber, int function, branchInfo *bInf,
-                                    int *countBranches, int treeVectorLength, boolean traverseOnly, boolean computeWRF, int processID);
+extern void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, pllHashtable *h, int treeNumber, int function, branchInfo *bInf,
+                                    int *countBranches, int treeVectorLength, pllBoolean traverseOnly, pllBoolean computeWRF, int processID);
 extern  unsigned int bitcount_32_bit(unsigned int i);
 extern inline unsigned int bitcount_64_bit(unsigned long i);
 extern void perSiteLogLikelihoods(pllInstance *tr, partitionList *pr, double *logLikelihoods);
-extern void updatePerSiteRates(pllInstance *tr, partitionList *pr, boolean scaleRates);
+extern void updatePerSiteRates(pllInstance *tr, partitionList *pr, pllBoolean scaleRates);
 extern void restart(pllInstance *tr, partitionList *pr);
-inline boolean isGap(unsigned int *x, int pos);
-inline boolean noGap(unsigned int *x, int pos);
+inline pllBoolean isGap(unsigned int *x, int pos);
+inline pllBoolean noGap(unsigned int *x, int pos);
 
 /* from utils.h */
 linkageList* initLinkageList(int *linkList, partitionList *pr);
@@ -199,13 +199,13 @@ extern void pllMasterBarrier(pllInstance *, partitionList *, int);
 extern void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
                                         double *x1, double *x2, double *x3, double *extEV[4], double *tipVector[4],
                                         int *ex3, unsigned char *tipX1, unsigned char *tipX2, int n,
-                                        double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling);
+                                        double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling);
 
 
 extern void newviewGTRCAT_AVX_GAPPED_SAVE(int tipCase,  double *EV,  int *cptr,
                                    double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
                                    int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                   int n,  double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling,
+                                   int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
                                    unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                    double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats);
 
@@ -213,7 +213,7 @@ extern void newviewGTRCATPROT_AVX_GAPPED_SAVE(int tipCase, double *extEV,
                                        int *cptr,
                                        double *x1, double *x2, double *x3, double *tipVector,
                                        int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                       int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling,
+                                       int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
                                        unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                        double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats);
 
@@ -221,7 +221,7 @@ extern void  newviewGTRGAMMA_AVX_GAPPED_SAVE(int tipCase,
                                       double *x1_start, double *x2_start, double *x3_start,
                                       double *extEV, double *tipVector,
                                       int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                      const int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling,
+                                      const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
                                       unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                       double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn
                                       );
@@ -229,39 +229,39 @@ extern void  newviewGTRGAMMA_AVX_GAPPED_SAVE(int tipCase,
 extern void newviewGTRGAMMAPROT_AVX_GAPPED_SAVE(int tipCase,
                                          double *x1_start, double *x2_start, double *x3_start, double *extEV, double *tipVector,
                                          int *ex3, unsigned char *tipX1, unsigned char *tipX2, int n,
-                                         double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling,
+                                         double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
                                          unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                          double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn);
 
 extern void newviewGTRCAT_AVX(int tipCase,  double *EV,  int *cptr,
     double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
     int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-    int n,  double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling);
+    int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling);
 
 
 extern void newviewGenericCATPROT_AVX(int tipCase, double *extEV,
     int *cptr,
     double *x1, double *x2, double *x3, double *tipVector,
     int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-    int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling);
+    int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling);
 
 
 extern void newviewGTRGAMMA_AVX(int tipCase,
     double *x1_start, double *x2_start, double *x3_start,
     double *EV, double *tipVector,
     int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-    const int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling);
+    const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling);
 
 extern void newviewGTRGAMMAPROT_AVX(int tipCase,
                              double *x1, double *x2, double *x3, double *extEV, double *tipVector,
                              int *ex3, unsigned char *tipX1, unsigned char *tipX2, int n,
-                             double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling);
+                             double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling);
 
 extern void newviewGTRCATPROT_AVX(int tipCase, double *extEV,
                            int *cptr,
                            double *x1, double *x2, double *x3, double *tipVector,
                            int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                           int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling);
+                           int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling);
 
 #endif
 

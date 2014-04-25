@@ -60,7 +60,7 @@ void branchLength_parallelReduce(pllInstance *tr, double *dlnLdlz,  double *d2ln
 void pllMasterPostBarrier(pllInstance *tr, partitionList *pr, int jobType);
 static void distributeYVectors(pllInstance *localTree, pllInstance *tr, partitionList *localPr);
 static void distributeWeights(pllInstance *localTree, pllInstance *tr, partitionList *localPr);
-static boolean execFunction(pllInstance *tr, pllInstance *localTree, partitionList *pr, partitionList *localPr, int tid, int n);
+static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitionList *pr, partitionList *localPr, int tid, int n);
 
 static void *likelihoodThread(void *tData); 
 
@@ -74,7 +74,7 @@ static void initializePartitionsMaster(pllInstance *tr, pllInstance *localTree, 
 static char* addBytes(char *buf, void *toAdd, size_t numBytes); 
 static char* popBytes(char *buf, void *result, size_t numBytes); 
 static void defineTraversalInfoMPI(void);
-static boolean pllWorkerTrap(pllInstance *tr, partitionList *pr);
+static pllBoolean pllWorkerTrap(pllInstance *tr, partitionList *pr);
 #endif
 
 #ifdef _USE_PTHREADS
@@ -84,7 +84,7 @@ static threadData *tData;
 
 extern volatile int jobCycle; 
 extern volatile int threadJob;          /**< current job to be done by worker threads/processes */
-extern boolean treeIsInitialized; 
+extern pllBoolean treeIsInitialized; 
 
 #ifdef MEASURE_TIME_PARALLEL
 extern double masterTimePerPhase; 
@@ -239,7 +239,7 @@ void pllInitMPI(int * argc, char **argv[])
    @return
      Returns /b PLL_FALSE if the callee was the master thread/process, otherwise /b PLL_TRUE
  */ 
-static boolean pllWorkerTrap(pllInstance *tr, partitionList *pr)
+static pllBoolean pllWorkerTrap(pllInstance *tr, partitionList *pr)
 {
   /// @note for the broadcasting, we need to, if the tree structure has already been initialized 
   treeIsInitialized = PLL_FALSE; 
@@ -454,7 +454,7 @@ void perSiteLogLikelihoodsPthreads(pllInstance *tr, partitionList *pr, double *l
 	 or when -Q is not activated figure out which sites have been assigned to the 
 	 current thread */
 
-      boolean 
+      pllBoolean 
 	execute = ((tr->manyPartitions && isThisMyPartition(pr, tid, model)) || (!tr->manyPartitions));
 
       /* if the entire partition has been assigned to this thread (-Q) or if -Q is not activated 
@@ -512,7 +512,7 @@ void perSiteLogLikelihoodsPthreads(pllInstance *tr, partitionList *pr, double *l
     @param model
       Partition number
  */ 
-boolean isThisMyPartition(partitionList *localPr, int tid, int model)
+pllBoolean isThisMyPartition(partitionList *localPr, int tid, int model)
 { 
   if(localPr->partitionData[model]->partitionAssignment == tid)
     return PLL_TRUE;
@@ -630,7 +630,7 @@ static void multiprocessorScheduling(pllInstance * tr, partitionList *pr, int ti
 
       for(model = 0; model < pr->numberOfPartitions; model++)
 	{        
-	  boolean 
+	  pllBoolean 
 	    exists = PLL_FALSE;
 
 	  for(s = 0; s < arrayLength; s++)
@@ -796,7 +796,7 @@ void branchLength_parallelReduce(pllInstance *tr, double *dlnLdlz,  double *d2ln
    @param countOnly
      if \b PLL_TRUE, simply return the number of elements
 */
-static int doublesToBuffer(double *buf, double *srcTar, pllInstance *tr, partitionList *pr, int n, int tid, boolean read, boolean countOnly)
+static int doublesToBuffer(double *buf, double *srcTar, pllInstance *tr, partitionList *pr, int n, int tid, pllBoolean read, pllBoolean countOnly)
 {
   int 
     model,
@@ -1073,7 +1073,7 @@ static void broadCastRates(partitionList *localPr, partitionList *pr)
     @param getPerSiteLikelihoods 
       If set to \b PLL_TRUE, compute the log likelihood for each site. 
  */ 
-static void reduceEvaluateIterative(pllInstance *tr, pllInstance *localTree, partitionList *localPr, int tid, boolean getPerSiteLikelihoods)
+static void reduceEvaluateIterative(pllInstance *tr, pllInstance *localTree, partitionList *localPr, int tid, pllBoolean getPerSiteLikelihoods)
 {
   int model;
 
@@ -1101,7 +1101,7 @@ static void reduceEvaluateIterative(pllInstance *tr, pllInstance *localTree, par
       for(model = 0; model < localPr->numberOfPartitions; ++model)
 	{
 	  pInfo *partition = localPr->partitionData[model]; 
-	  boolean isMyPartition  = isThisMyPartition(localPr, tid, model);
+	  pllBoolean isMyPartition  = isThisMyPartition(localPr, tid, model);
 
 	  int ctr = 0; 
 	  for(i = partition->lower; i < partition->upper; ++i)
@@ -1183,7 +1183,7 @@ inline static void broadcastTraversalInfo(pllInstance *localTree, pllInstance *t
   localTree->td[0].count =                   tr->td[0].count ;
   localTree->td[0].traversalHasChanged =     tr->td[0].traversalHasChanged;
 
-  memmove(localTree->td[0].executeModel,    tr->td[0].executeModel,    sizeof(boolean) * localPr->numberOfPartitions);
+  memmove(localTree->td[0].executeModel,    tr->td[0].executeModel,    sizeof(pllBoolean) * localPr->numberOfPartitions);
   memmove(localTree->td[0].parameterValues, tr->td[0].parameterValues, sizeof(double) * localPr->numberOfPartitions);
   
   if(localTree->td[0].traversalHasChanged)
@@ -1296,7 +1296,7 @@ char* getJobName(int type)
    @param tid worker id 
    @param n number of workers 
 */
-static boolean execFunction(pllInstance *tr, pllInstance *localTree, partitionList *pr, partitionList *localPr, int tid, int n)
+static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitionList *pr, partitionList *localPr, int tid, int n)
 {
   int
     i,
@@ -1912,7 +1912,7 @@ static void assignAndInitPart1(pllInstance *localTree, pllInstance *tr, partitio
   ASSIGN_BUF( localTree->originalCrunchedLength,    tr->originalCrunchedLength, int);
   ASSIGN_BUF( localTree->mxtips,                    tr->mxtips, int);
   ASSIGN_BUF( localPr->numberOfPartitions,          pr->numberOfPartitions, int);
-  ASSIGN_BUF( localPr->perGeneBranchLengths,        pr->perGeneBranchLengths, boolean);
+  ASSIGN_BUF( localPr->perGeneBranchLengths,        pr->perGeneBranchLengths, pllBoolean);
 
   localTree->td[0].count = 0; 
 
@@ -1924,7 +1924,7 @@ static void assignAndInitPart1(pllInstance *localTree, pllInstance *tr, partitio
     	localPr->partitionData[model] = (pInfo*)rax_calloc(1,sizeof(pInfo));
       }
       localTree->td[0].ti              = (traversalInfo *)rax_malloc(sizeof(traversalInfo) * (size_t)localTree->mxtips);
-      localTree->td[0].executeModel    = (boolean *)rax_malloc(sizeof(boolean) * PLL_NUM_BRANCHES);
+      localTree->td[0].executeModel    = (pllBoolean *)rax_malloc(sizeof(pllBoolean) * PLL_NUM_BRANCHES);
       localTree->td[0].parameterValues = (double *)rax_malloc(sizeof(double) * PLL_NUM_BRANCHES);
       localTree->patrat       = (double*)rax_malloc(sizeof(double) * (size_t)localTree->originalCrunchedLength);
       localTree->patratStored = (double*)rax_malloc(sizeof(double) * (size_t)localTree->originalCrunchedLength);            
