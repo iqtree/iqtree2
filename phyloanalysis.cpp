@@ -1689,6 +1689,11 @@ void runPhyloAnalysis(Params &params, string &original_model,
 		PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
 		cout << stree->evalNNIs << " NNIs evaluated from " << stree->totalNNIs << " all possible NNIs ( " <<
 				(int)(((stree->evalNNIs+1.0)/(stree->totalNNIs+1.0))*100.0) << " %)" << endl;
+		cout<<"Details for subtrees:"<<endl;
+		for(int part = 0; part < stree->size(); part++){
+			cout << part+1 <<". "<<stree->part_info[part].name<<": "<<stree->part_info[part].evalNNIs<<" ( " <<
+					(int)(((stree->part_info[part].evalNNIs+1.0)/((stree->totalNNIs+1.0) / (stree->size()+1.0)))*100.0) << " %)" << endl;
+		}
 	}
 
 	t_end = getCPUTime();
@@ -1990,6 +1995,7 @@ void runPhyloAnalysis(Params &params) {
 	//if(params.partition_type)
 	//	((PhyloSuperTreePlen*)tree)->printNNIcasesNUM();
 
+//$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 	// ML BOUNDSSSSSS -------------------------------------------------------------
 //	if(params.upper_bound){
 /*		string out_file;
@@ -2477,6 +2483,7 @@ void runPhyloAnalysis(Params &params) {
 //			UBresults.close();
 		}
 		}// end if UpperBound ---------------------------------------------------------------
+//$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 
 	delete tree;

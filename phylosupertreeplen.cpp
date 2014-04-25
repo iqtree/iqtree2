@@ -269,6 +269,7 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(Params &params)
 	int part = 0;
 	for (iterator it = begin(); it != end(); it++, part++) {
 		part_info[part].part_rate = 1.0;
+		part_info[part].evalNNIs = 0.0;
 	}
 }
 
