@@ -1,36 +1,32 @@
-/*  RAxML-VI-HPC (version 2.2) a program for sequential and parallel estimation of phylogenetic trees
- *  Copyright August 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  and
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
- *
- *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  Alexandros.Stamatakis@epfl.ch
- *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
- *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands of taxa and mixed models".
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
- */
-
-/** @file utils.c
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file utils.c
  *  
- *  @brief Miscellaneous general utility and helper functions
+ * @brief Miscellaneous general utility and helper functions
  */
 #ifdef WIN32
 #include <direct.h>
@@ -71,6 +67,7 @@
 #endif
 
 #include "pll.h"
+#include "pllInternal.h"
 
 #define GLOBAL_VARIABLES_DEFINITION
 
@@ -367,7 +364,7 @@ FILE *myfopen(const char *path, const char *mode)
     @return
       \b PLL_TRUE if tip, \b PLL_FALSE otherwise
   */
-pll_boolean isTip(int number, int maxTips)
+boolean isTip(int number, int maxTips)
 {
   assert(number > 0);
 
@@ -460,7 +457,7 @@ void hookupDefault (nodeptr p, nodeptr q)
 
 
 
-pll_boolean whitechar (int ch)
+boolean whitechar (int ch)
 {
   return (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r');
 }
@@ -584,7 +581,7 @@ void computeAllAncestralVectors(nodeptr p, pllInstance *tr, partitionList *pr)
       
       /* then compute the ancestral state at node p */
 
-      pllNewviewGenericAncestral(tr, pr, p);
+      pllUpdatePartialsAncestral(tr, pr, p);
 
       /* and print it to terminal, the two booleans that are set to PLL_TRUE here 
 	 tell the function to print the marginal probabilities as well as 
@@ -1450,7 +1447,7 @@ pllAlignmentRemoveDups (pllAlignmentData * alignmentData, partitionList * pl)
       Array of size \a partition->states where the empirical frequencies for this partition are stored
 */
 static void
-genericBaseFrequencies (pInfo * partition, pllAlignmentData * alignmentData, pll_boolean smoothFrequencies, const unsigned int * bitMask, double * pfreqs)
+genericBaseFrequencies (pInfo * partition, pllAlignmentData * alignmentData, boolean smoothFrequencies, const unsigned int * bitMask, double * pfreqs)
 {
   double 
     wj, 
@@ -1564,20 +1561,6 @@ genericBaseFrequencies (pInfo * partition, pllAlignmentData * alignmentData, pll
   
 }
 
-/** @brief Compute the empirical base frequencies for all partitions
-
-    Compute the empirical base frequencies for all partitions in the list \a pl.
-
-    @param pl
-      Partition list
-    
-    @param alignmentData
-      Multiple sequence alignment
-
-    @return
-      A list of \a pl->numberOfPartitions arrays each of size \a pl->partitionData[i]->states,
-      where \a i is the \a i-th partition
-*/
 double **
 pllBaseFrequenciesGTR (partitionList * pl, pllAlignmentData * alignmentData)
 {
@@ -1630,33 +1613,6 @@ pllEmpiricalFrequenciesDestroy (double *** empiricalFrequencies, int models)
   *empiricalFrequencies = NULL;
 }
 
-/** @ingroup instanceLinkingGroup
-    @brief Load alignment to the PLL instance
-    
-    Loads (copies) the parsed alignment to the PLL instance. Depending
-    on how the \a bDeep flag is set, the alignment in the PLL instance
-    is a deep or shallow copy of \a alignmentData
-
-    @param tr
-      The library instance
-
-    @param alignmentData 
-      The multiple sequence alignment
-
-    @param partitions
-      List of partitions
-
-    @param bDeep
-      Controls how the alignment is used within the PLL instance.
-      If it is set to \b PLL_DEEP_COPY, then new memory will be allocated
-      and the alignment will be copied there (deep copy). On the other
-      hand, if \b PLL_SHALLOW_COPY is specified, only the pointers will be
-      copied and therefore, the alignment will be shared between the 
-      alignment structure and the library instance (shallow copy).
-
-    @return
-      Returns 1 in case of success, 0 otherwise.
-*/
 int
 pllLoadAlignment (pllInstance * tr, pllAlignmentData * alignmentData, partitionList * partitions, int bDeep)
 {
@@ -1714,32 +1670,6 @@ pllLoadAlignment (pllInstance * tr, pllAlignmentData * alignmentData, partitionL
   return (1);
 }
 
-/** @brief Create the main instance of PLL
-    
-    Create an instance of the phylogenetic likelihood library
-
-    @param rateHetModel
-      Rate heterogeneity model
-
-    @param fastScaling
-      explain fastScaling here
-
-    @param saveMemory
-      explain saveMemory here
-
-    @param useRecom
-      If set to \b PLL_TRUE, enables ancestral state recomputation
-    
-    @todo
-      Document fastScaling, rate heterogeneity and saveMemory and useRecom
-
-    @note
-      Do not set \a saveMemory to when using \a useRecom as memory saving techniques 
-      are not yet implemented for ancestral state recomputation. 
-
-    @return
-      On success returns an instance to PLL, otherwise \b NULL
-*/
 pllInstance *
 pllCreateInstance (pllInstanceAttr * attr)
 {
@@ -1876,14 +1806,14 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
   tr->td[0].count            = 0;
   tr->td[0].ti               = (traversalInfo *) rax_malloc (sizeof(traversalInfo) * (size_t)tr->mxtips);
   tr->td[0].parameterValues  = (double *) rax_malloc(sizeof(double) * (size_t)PLL_NUM_BRANCHES);
-  tr->td[0].executeModel     = (pll_boolean *) rax_malloc (sizeof(pll_boolean) * (size_t)PLL_NUM_BRANCHES);
+  tr->td[0].executeModel     = (boolean *) rax_malloc (sizeof(boolean) * (size_t)PLL_NUM_BRANCHES);
   tr->td[0].executeModel[0]  = PLL_TRUE;                                                                                                                                                                                                                                    
   for (i = 0; i < PLL_NUM_BRANCHES; ++ i) tr->td[0].executeModel[i] = PLL_TRUE;
 }
 
 
 /* @brief Check a parsed tree for inclusion in the current tree
-
+   
    Check whether the set of leaves (taxa) of the parsed tree \a nTree is a
    subset of the leaves of the currently loaded tree.
 
@@ -1902,7 +1832,7 @@ checkTreeInclusion (pllInstance * pInst, pllNewickTree * nTree)
   pllStack * sList;
   pllNewickNodeInfo * sItem;
   void * dummy;
-  
+
   if (!pInst->nameHash) return (PLL_FALSE);
 
   for (sList = nTree->tree; sList; sList = sList->next)
@@ -1911,7 +1841,7 @@ checkTreeInclusion (pllInstance * pInst, pllNewickTree * nTree)
      if (!sItem->rank)   /* leaf */
       {
         if (!pllHashSearch (pInst->nameHash, sItem->name, &dummy)) return (PLL_FALSE);
-   }
+      }
    }
 
   return (PLL_TRUE);
@@ -1991,7 +1921,7 @@ linkTaxa (pllInstance * pInst, pllNewickTree * nTree, int taxaExist)
     leaf  = 1;
   double z;
   pllNewickNodeInfo * nodeInfo;
-  
+
   if (!taxaExist) pllTreeInitDefaults (pInst, nTree->tips);
 
   /* Place the ternary root node 3 times on the stack such that later on
@@ -2000,28 +1930,28 @@ linkTaxa (pllInstance * pInst, pllNewickTree * nTree, int taxaExist)
   for (parent = pInst->nodep[inner], i  = 0; i < 3; ++ i, parent = parent->next)
     pllStackPush (&nodeStack, parent);
   ++ inner;
-  
-  
+
+  /* now traverse the rest of the nodes */
   for (current = current->next; current; current = current->next)
-  {
+   {
      parent   = (nodeptr) pllStackPop (&nodeStack);
      nodeInfo = (pllNewickNodeInfo *) current->item;
 
      /* if inner node place it twice on the stack (out-degree 2) */
      if (nodeInfo->rank)
-     {
+      {
         child = pInst->nodep[inner ++];
         pllStackPush (&nodeStack, child->next);
         pllStackPush (&nodeStack, child->next->next);
-     }
-    else
-     {
+      }
+     else /* check if taxon already exists, i.e. we loaded another tree topology */
+      {
         if (taxaExist)
-        {
+         {
            assert (pllHashSearch (pInst->nameHash, nodeInfo->name, (void **) &child));
-        }
-       else             /* leaf */
-        {
+         }
+        else
+         {
            child = pInst->nodep[leaf];
            pInst->nameList[leaf] = strdup (nodeInfo->name);
            pllHashAdd (pInst->nameHash, pInst->nameList[leaf], (void *) (pInst->nodep[leaf]));
@@ -2029,21 +1959,24 @@ linkTaxa (pllInstance * pInst, pllNewickTree * nTree, int taxaExist)
          }
       }
      assert (parent);
-
+     /* link parent and child */
      parent->back = child;
      child->back  = parent;
-            
+
      if (!taxaExist) pInst->fracchange = 1;
- 
-          
+
+     /* set the branch length */
      z = exp ((-1 * atof (nodeInfo->branch)) / pInst->fracchange);
      if (z < PLL_ZMIN) z = PLL_ZMIN;
      if (z > PLL_ZMAX) z = PLL_ZMAX;
      for (j = 0; j < PLL_NUM_BRANCHES; ++ j)
        parent->z[j] = child->z[j] = z;
-        }
+   }
   pllStackClear (&nodeStack);
-     }
+
+  return PLL_TRUE;
+}
+
 /** @ingroup instanceLinkingGroup
     @brief Initializes the PLL tree topology according to a parsed newick tree
 
@@ -2063,12 +1996,106 @@ void
 pllTreeInitTopologyNewick (pllInstance * tr, pllNewickTree * newick, int useDefaultz)
 {
   linkTaxa (tr, newick, tr->nameHash && checkTreeInclusion (tr, newick));
-  
+
   tr->start = tr->nodep[1];
-  
-  if (useDefaultz == PLL_TRUE) 
+
+  if (useDefaultz == PLL_TRUE)
     resetBranches (tr);
 }
+
+//void
+//pllTreeInitTopologyNewick (pllInstance * tr, pllNewickTree * nt, int useDefaultz)
+//{
+//  pllStack * nodeStack = NULL;
+//  pllStack * head;
+//  pllNewickNodeInfo * item;
+//  int i, j, k;
+//  
+///*
+//  for (i = 0; i < partitions->numberOfPartitions; ++ i)
+//   {
+//     partitions->partitionData[i] = (pInfo *) rax_malloc (sizeof (pInfo));
+//     partitions->partitionData[i]->partitionContribution = -1.0;
+//     partitions->partitionData[i]->partitionLH           =  0.0;
+//     partitions->partitionData[i]->fracchange            =  1.0;
+//   }
+//*/
+// 
+//
+// if (tr->nameHash)
+//  {
+//    if (checkTreeInclusion (tr, nt))
+//     {
+//       printf ("It is a subset\n");
+//     }
+//    else
+//     {
+//       printf ("It is not a subset\n");
+//     }
+//  }
+//  
+//  pllTreeInitDefaults (tr, nt->tips);
+//
+//  i = nt->tips + 1;
+//  j = 1;
+//  nodeptr v;
+//  
+//  
+//  for (head = nt->tree; head; head = head->next)
+//  {
+//    item = (pllNewickNodeInfo *) head->item;
+//    if (!nodeStack)
+//     {
+//       pllStackPush (&nodeStack, tr->nodep[i]);
+//       pllStackPush (&nodeStack, tr->nodep[i]->next);
+//       pllStackPush (&nodeStack, tr->nodep[i]->next->next);
+//       ++i;
+//     }
+//    else
+//     {
+//       v = (nodeptr) pllStackPop (&nodeStack);
+//       if (item->rank)  /* internal node */
+//        {
+//          v->back           = tr->nodep[i];
+//          tr->nodep[i]->back = v; //t->nodep[v->number]
+//          pllStackPush (&nodeStack, tr->nodep[i]->next);
+//          pllStackPush (&nodeStack, tr->nodep[i]->next->next);
+//          double z = exp((-1 * atof(item->branch))/tr->fracchange);
+//          if(z < PLL_ZMIN) z = PLL_ZMIN;
+//          if(z > PLL_ZMAX) z = PLL_ZMAX;
+//          for (k = 0; k < PLL_NUM_BRANCHES; ++ k)
+//             v->z[k] = tr->nodep[i]->z[k] = z;
+//
+//          ++ i;
+//        }
+//       else             /* leaf */
+//        {
+//          v->back           = tr->nodep[j];
+//          tr->nodep[j]->back = v; //t->nodep[v->number];
+//
+//          double z = exp((-1 * atof(item->branch))/tr->fracchange);
+//          if(z < PLL_ZMIN) z = PLL_ZMIN;
+//          if(z > PLL_ZMAX) z = PLL_ZMAX;
+//          for (k = 0; k < PLL_NUM_BRANCHES; ++ k)
+//            v->z[k] = tr->nodep[j]->z[k] = z;
+//            
+//          //t->nameList[j] = strdup (item->name);
+//          tr->nameList[j] = (char *) rax_malloc ((strlen (item->name) + 1) * sizeof (char));
+//          strcpy (tr->nameList[j], item->name);
+//          
+//          pllHashAdd (tr->nameHash, tr->nameList[j], (void *) (tr->nodep[j]));
+//          ++ j;
+//        }
+//     }
+//  }
+//  
+//  tr->start = tr->nodep[1];
+//  
+//  pllStackClear (&nodeStack);
+//
+//  if (useDefaultz == PLL_TRUE) 
+//    resetBranches (tr);
+//}
 
 /** @brief Initialize PLL tree with a random topology
 
@@ -2100,7 +2127,7 @@ pllTreeInitTopologyRandom (pllInstance * tr, int tips, char ** nameList)
    }
   
 
-  makeRandomTree (tr);
+  pllMakeRandomTree (tr);
 }
 
 
@@ -2154,8 +2181,8 @@ pllTreeInitTopologyForAlignment (pllInstance * tr, pllAlignmentData * alignmentD
 void pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInstance * tr, partitionList * partitions)
 {
   allocateParsimonyDataStructures(tr, partitions);
-  makeParsimonyTreeFast(tr, partitions);
-  freeParsimonyDataStructures(tr, partitions);
+  pllMakeParsimonyTreeFast(tr, partitions);
+  pllFreeParsimonyDataStructures(tr, partitions);
 }
 
 /** @brief Encode the alignment data to the PLL numerical representation
@@ -2177,6 +2204,7 @@ pllBaseSubstitute (pllAlignmentData * alignmentData, partitionList * partitions)
   char * d;
   int i, j, k;
 
+  if (alignmentData->sequenceData[1][1] < 23) return;
   for (i = 0; i < 256; ++ i)
    {
      meaningDNA[i] = -1;
@@ -2692,7 +2720,7 @@ void pllSetFixedAlpha(double alpha, int model, partitionList * pr, pllInstance *
 
   //do the discretization of the gamma curve
 
-  makeGammaCats(pr->partitionData[model]->alpha, pr->partitionData[model]->gammaRates, 4, tr->useMedian);
+  pllMakeGammaCats(pr->partitionData[model]->alpha, pr->partitionData[model]->gammaRates, 4, tr->useMedian);
 
   //broadcast the changed parameters to all threads/MPI processes 
 
@@ -2707,7 +2735,61 @@ void pllSetFixedAlpha(double alpha, int model, partitionList * pr, pllInstance *
 }
 
 /** @ingroup modelParamsGroups
-    @brief Set all base freuqncies to a fixed value for a partition
+    @brief Get the rate categories of the Gamma model of a partition
+
+    Gets the gamma rate categories of the Gamma model of rate heterogeneity
+    of partition \a pid from partition list \a pr.
+
+    @param pr   List of partitions
+    @param pid  Index of partition to use
+    @param outBuffer  Output buffer where to store the rates
+*/
+void pllGetGammaRates (partitionList * pr, int pid, double * outBuffer)
+{
+  /* TODO: Change the hardcoded 4 and also add a check that this partition
+     really uses gamma. Currently, instance is also not required */
+  memcpy (outBuffer, pr->partitionData[pid]->gammaRates, 4 * sizeof (double));
+}
+
+/** @ingroup modelParamsGroups
+    @brief Get the alpha parameter of the Gamma model of a partition
+
+    Returns the alpha parameter of the gamma model of rate heterogeneity
+    of partition \a pid from partition list \a pr.
+
+    @param pr   List of partitions
+    @param pid  Index of partition to use
+
+    @return
+      Alpha parameter
+*/
+double pllGetAlpha (partitionList * pr, int pid)
+{
+  /* TODO: check if the partition uses gamma */
+  return (pr->partitionData[pid]->alpha);
+}
+
+
+/** @ingroup modelParamsGroups
+    @brief Get the base frequencies of a partition
+
+    Gets the base frequencies of partition \a model from partition list
+    \a partitionList and stores them in \a outBuffer. Note that \outBuffer
+    must be of size s, where s is the number of states.
+
+    @param  tr       PLL instance
+    @param pr        List of partitions
+    @param model     Index of the partition for which we want to get the base frequencies
+    @param outBuffer Buffer where to store the base frequencies
+*/
+void pllGetBaseFrequencies(pllInstance * tr, partitionList * pr, int model, double * outBuffer)
+{
+  memcpy (outBuffer, pr->partitionData[model]->frequencies, pr->partitionData[model]->states * sizeof (double));
+}
+
+
+/** @ingroup modelParamsGroups
+    @brief Set all base frequencies to a fixed value for a partition
     
     Sets all base freuqencies of a partition to fixed values and disables 
     ML optimization of these parameters 
@@ -2763,7 +2845,7 @@ void pllSetFixedBaseFrequencies(double *f, int length, int model, partitionList 
   memcpy(pr->partitionData[model]->frequencies, f, sizeof(double) * length);
 
   //re-calculate the Q matrix 
-  initReversibleGTR(tr, pr, model);
+  pllInitReversibleGTR(tr, pr, model);
 
 
   //broadcast the new Q matrix to all threads/processes 
@@ -2834,7 +2916,7 @@ int pllSetOptimizeBaseFrequencies(int model, partitionList * pr, pllInstance *tr
     }
 
   //re-calculate the Q matrix 
-  initReversibleGTR(tr, pr, model);
+  pllInitReversibleGTR(tr, pr, model);
 
   //broadcast the new Q matrix to all threads/processes 
 #if (defined(_FINE_GRAIN_MPI) || defined(_USE_PTHREADS))
@@ -2851,7 +2933,30 @@ int pllSetOptimizeBaseFrequencies(int model, partitionList * pr, pllInstance *tr
 
 
 
+/** @ingroup modelParamsGroups
+    @brief Get the substitution rates for a specific partition
 
+    Gets the substitution rates of partition \a model from partition list
+    \a partitionList and stores them in \a outBuffer. Note that \outBuffer
+    must be of size (2 * s - s) / 2, where s is the number of states, i.e.
+    the number of upper diagonal entries of the Q matrix.
+
+    @param tr        PLL instance
+    @param pr        List of partitions
+    @param model     Index of partition for which we want to get the substitution rates
+    @param outBuffer Buffer where to store the substitution rates.
+*/
+void pllGetSubstitutionMatrix (pllInstance * tr, partitionList * pr, int model, double * outBuffer)
+{
+  int 
+    rates,
+    states;
+  
+  states = pr->partitionData[model]->states;
+  rates = (states * states - states) / 2;
+
+  memcpy (outBuffer, pr->partitionData[model]->substRates, rates * sizeof (double));
+}
 
 /** @ingroup modelParamsGroups
      @brief Set all substitution rates to a fixed value for a specific partition
@@ -2922,7 +3027,7 @@ void pllSetFixedSubstitutionMatrix(double *q, int length, int model, partitionLi
     }
 
   //re-calculate the Q matrix 
-  initReversibleGTR(tr, pr, model);
+  pllInitReversibleGTR(tr, pr, model);
 
   //broadcast the new Q matrix to all threads/processes 
 #if (defined(_FINE_GRAIN_MPI) || defined(_USE_PTHREADS))
@@ -3058,7 +3163,6 @@ static linkageList* initLinkageListString(char *linkageString, partitionList * p
 	break;
       assert(j < pr->numberOfPartitions);
       list[j] = atoi(token);
-      //printf("%d: %s\n", j, token);
     }
   
   rax_free(ch);
@@ -3261,11 +3365,11 @@ int pllInitModel (pllInstance * tr, partitionList * partitions, pllAlignmentData
   rax_free(unlinked);
 
   updateAllBranchLengths (tr, old_fracchange ? old_fracchange : 1,  tr->fracchange);
-  pllEvaluateGeneric (tr, partitions, tr->start, PLL_TRUE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, partitions, tr->start, PLL_TRUE, PLL_FALSE);
 
   return PLL_TRUE;
 }
-
+ 
 /** @ingroup modelParamsGroups
     @brief Optimize all free model parameters of the likelihood model
     

@@ -137,7 +137,6 @@ private:
     double m_a, m_b, m_coeff;
 };
 
-
 /**
         vector of double number
  */
@@ -241,6 +240,20 @@ const int WT_BR_ID = 512;
 const int WT_BR_LEN_ROUNDING = 1024;
 const int TRUE = 1;
 const int FALSE = 0;
+
+/**
+ *  Specify different ways of doing an NNI.
+ *  TOPO_ONLY: only change the tree topology
+ *  TOPO_UPDATE_LV: the same as above but the partial likelihoods are update in addition
+ *  NNI1: optimize the central branch after changing the tree topology
+ *  NNI5: optimized the 5 affected branches after changing the tree topology
+ */
+enum NNI_Type {
+    TOPO_ONLY,
+    TOPO_UPDATE_LV,
+    NNI1,
+    NNI5
+};
 
 /**
         when computing Robinson-Foulds distances
@@ -354,7 +367,15 @@ extern int NNI_MAX_NR_STEP;
  */
 struct Params {
 
-	int numParsimony;
+	/**
+	 *  Number of starting parsimony trees
+	 */
+	int numParsTrees;
+
+	/**
+	 *  Population size
+	 */
+	int popSize;
 
 	/**
 	 *  heuristics for speeding up NNI evaluation
@@ -372,26 +393,16 @@ struct Params {
 	double model_eps;
 
 	/**
-	 *  re-optimize model parameters after a better tree is found
-	 */
-	bool modOpt;
-
-	/**
 	 *  Carry out iterated local search using NNI only.
 	 */
-	bool inni;
+	bool snni;
 
 	/**
 	 *  only evaluate NNIs in affected regions
 	 */
 	bool fastnni;
 
-    /**
-     *  Evaluating NNI without re-optimizing the central branch
-     */
-    bool nni0;
-
-    int evalType;
+    NNI_Type nni_type;
 
     /**
      *  Different type of Least Square variances
@@ -460,12 +471,21 @@ struct Params {
      */
     bool pll;
 
-    bool adaptivePerturbation;
-
     /**
      *  Turn on model parameter optimization by PLL
      */
     bool pllModOpt;
+
+    /**
+     *  Stopping rule for the tree search
+     */
+    bool autostop;
+
+    /**
+     *  Number of maximum unsuccessful iterations after the search is stopped.
+     *  Used for the automatic stopping rule
+     */
+    int maxUnsuccess;
 
     char *binary_aln_file;
 
@@ -1355,6 +1375,11 @@ struct Params {
             number of bootstrap samples for Arndt's bootstrap plot
      */
     int bootlh_test;
+
+    /**
+            partition definition for Arndt's bootstrap plot
+     */
+    char* bootlh_partitions;
 
     /** precision when printing out for floating-point number */
     int numeric_precision;

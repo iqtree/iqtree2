@@ -1217,6 +1217,12 @@ void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
     alignment->getPatternFreq(ptnfreq);
     string orig_model = params.model_name;
     vector<ModelInfo> model_info;
+    IntVector partitions;
+
+    if (params.bootlh_partitions) {
+    	convert_int_vec(params.bootlh_partitions, partitions);
+    	cout << "Using " << partitions.size() << " partitions" << endl;
+    }
 
     string outfile = params.out_prefix;
     outfile += ".bootlhtest";
@@ -1230,7 +1236,7 @@ void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
 
     out.precision(8);
     params.min_iterations = 0; // do not do tree search
-
+    int start_site = 0;
     for (id = 0; id < params.bootlh_test; id++) {
     	Alignment *boot_aln;
         IntVector boot_freq;
@@ -1238,6 +1244,26 @@ void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
         	// include original alignment
         	boot_aln = alignment;
         	boot_freq = ptnfreq;
+        } else if (id <= partitions.size()) {
+        	int end_site = start_site + partitions[id-1];
+        	boot_freq.resize(ptnfreq.size(), 0);
+        	for (int site = start_site; site < end_site; site++)
+        		boot_freq[alignment->getPatternID(site)]++;
+        	// now multiplying the frequencies
+        	for ( ptn = 0; ptn < boot_freq.size(); ptn++)
+        		boot_freq[ptn]*=partitions.size();
+    		if (alignment->isSuperAlignment())
+    			boot_aln = new SuperAlignment;
+    		else
+    			boot_aln = new Alignment;
+    		stringstream sitestr;
+    		sitestr << start_site+1 << "-" << end_site;
+        	cout << "-->Extracting sites " << sitestr.str() << endl;
+    		boot_aln->extractSites(alignment, sitestr.str().c_str());
+        	// now multiplying the frequencies
+    		for (ptn = 0; ptn < boot_aln->size(); ptn++)
+    			boot_aln->at(ptn).frequency *= partitions.size();
+    		start_site = end_site;
         } else {
     		if (alignment->isSuperAlignment())
     			boot_aln = new SuperAlignment;

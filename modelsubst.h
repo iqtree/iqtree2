@@ -138,9 +138,11 @@ public:
 	
 
 	/**
-		Get the rate matrix. One should override this function when defining new model.
+	 * Get the rate parameters like a,b,c,d,e,f for DNA model!!!
+		Get the above-diagonal entries of the rate matrix, assuming that the last element is 1.
+		ONE SHOULD OVERRIDE THIS FUNCTION WHEN DEFINING NEW MODEL!!!
 		The default is equal rate of 1 (JC Model), valid for all kind of data.
-		@param rate_mat (OUT) upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
+		@param rate_mat (OUT) upper-triangle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
 	*/
 	
 	virtual void getRateMatrix(double *rate_mat);

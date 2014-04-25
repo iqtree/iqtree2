@@ -28,9 +28,8 @@
 #include "phylonode.h"
 #include "stoprule.h"
 #include "mtreeset.h"
-
-#include "pll/pll.h"
 #include "nnisearch.h"
+
 
 typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;
@@ -193,11 +192,47 @@ public:
      */
     void doRandomNNIs(int numNNI);
 
+    /**
+     *  If the tree in question has higher logl than the worst tree in the reference set,
+     *  replace the worst tree with that one
+     *
+     *  @param treeString the tree to be considered
+     *  @param treeLolg log-likelihood of the tree
+     *  @return whether or not the reference set was updated
+     */
+    bool updateRefTreeSet(string treeString, double treeLogl);
 
     /**
      *   get model parameters from IQTree and input them into PLL
      */
     void inputModelParam2PLL();
+
+    /**
+     *  get the rate parameters from PLL
+     *  @return double array containing the 6 rates
+     */
+    double* getModelRatesFromPLL();
+
+    /**
+     *  get the alpha parameter from PLL for the GAMMA distribution of rate heterogenity
+     *  @return alpha parameter
+     */
+    double getAlphaFromPLL();
+
+    /**
+     *  print model parameters from PLL
+     */
+    void printPLLModParams();
+
+    /**
+     *  print logl of trees in population (for debugging purpose only)
+     */
+    void printLoglInTreePop();
+
+    /**
+     *  print reference tree strings to file
+     */
+    void printRefTrees();
 
     /**
      * input the tree string from IQTree kernel to PLL kernel
@@ -216,14 +251,6 @@ public:
     double perturb(int times);
 
     /**
-     * Carry out Iterated Local Search
-     * @param numIter number of iteration
-     * @param perturbLevel the level of perturbation
-     * @return tree's score
-     */
-    double doILS(Params &params, int perturbLevel);
-
-    /**
      * TODO
      * @param node1
      * @param node2
@@ -232,7 +259,7 @@ public:
     double swapTaxa(PhyloNode *node1, PhyloNode *node2);
 
     /**
-            perform all IQPNNI iterations
+            perform tree search
             @return best likelihood found
      */
     double doTreeSearch();
@@ -380,6 +407,11 @@ public:
     }
 
     /**
+     *  set the current tree as the best tree
+     */
+    void setBestTree(string tree, double logl);
+
+    /**
             current parsimony score of the tree
      */
     int cur_pars_score;
@@ -458,6 +490,8 @@ public:
      */
     vector<int> vecNumNNI;
 
+    int getCurIteration() { return curIteration; }
+
 protected:
 
     /**
@@ -517,11 +551,6 @@ protected:
      */
     vector<NNIMove> posNNIs;
 
-    /**
-     *  data structure to store delta LH (in NNICUT heuristic)
-     */
-    NNICUT nnicut;
-
 
     /**
             List contains non-conflicting NNI moves for the current tree;
@@ -573,6 +602,35 @@ public:
      * The current best score found
      */
     double bestScore;
+
+    /**
+     *  the current best tree
+     */
+    string bestTreeString;
+
+    /**
+     *  A set of reference trees which are for the evolutionary tree search
+     *  This set only contains tree topologies (without branch length)
+     */
+    unordered_map<string, double> refTreeSet;
+
+    /**
+     *  A set of reference trees which are sorted according to their logl
+     *  This set contains complete tree strings (with branch length)
+     */
+    map<double, string> refTreeSetSorted;
+
+    /**
+     *  Set of unique initial parsimony trees
+     */
+    set<string> uniqParsTopo;
+
+    /**
+     *  A set of unique starting parsimony trees (with branch lengths) that a sorted
+     *  according to its likelihood.
+     */
+    map<double, string> uniqParsTree;
+
 
     /****** following variables are for ultra-fast bootstrap *******/
 

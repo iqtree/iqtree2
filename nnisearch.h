@@ -1,14 +1,9 @@
 #ifndef NNISEARCH_H
 #define NNISEARCH_H
 
-//#ifdef __cplusplus
-//extern "C" {
-//#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "tools.h"
-#include "pll/pll.h"
 #include <string>
 #include <sstream>
 #include <set>
@@ -16,12 +11,9 @@
 #include <map>
 #include <vector>
 //#include <unordered_set>
-using namespace std;
-
-const int TOPO_ONLY = 0;
-const int NO_BRAN_OPT = 1;
-const int ONE_BRAN_OPT = 2;
-const int FIVE_BRAN_OPT = 4;
+extern "C" {
+#include "pll/pllInternal.h"
+}
 
 /* This is the info you need to copy the vector*/
 typedef struct
@@ -48,6 +40,7 @@ typedef struct {
 	double negLoglDelta;
 } pllNNIMove;
 
+
 inline bool comparePLLNNIMove(const pllNNIMove &a, const pllNNIMove &b)
 {
     return a.likelihood < b.likelihood;
@@ -71,13 +64,11 @@ typedef struct {
 } NNICUT;
 
 typedef struct {
-	vector<pllNNIMove> nniList;
-	bool updateNNIList;
 	bool speednni;
 	vector<pllNNIMove> posNNIList; // positive NNI list
-	set<string> affectBranches; // Set of branches that are affected by the previous NNIs
-	double curLogl;
-	int evalType;
+	unordered_set<string> affectBranches; // Set of branches that are affected by the previous NNIs
+	double curLogl; // Current tree log-likelihood
+	NNI_Type nni_type;
 	int numAppliedNNIs; // total number of applied NNIs sofar
 	int curNumAppliedNNIs; // number of applied NNIs at the current step
 	int curNumNNISteps;
@@ -145,9 +136,9 @@ void pllSaveQuartetForSubTree(pllInstance* tr, nodeptr p, SearchInfo &searchinfo
  *  @param[in] tr: the tree data structure
  *  @param[in] pr partition data structure
  *  @param[in] swap: represents one of the 2 NNI moves. Could be either 0 or 1
- *  @param[in] evalType: NO_NR, WITH_ONE_NR, WITH_FIVE_NR
+ *  @param[in] NNI_Type
  */
-double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, int evalType);
+double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, SearchInfo *searchinfo = NULL);
 
 void pllGetAllInBran(pllInstance *tr, vector<nodeptr> &branlist);
 
@@ -177,11 +168,6 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo
  *  @param[in] tr: the tree data structure
  */
 pllNNIMove *getNNIList(pllInstance* tr);
-
-
-//#ifdef __cplusplus
-//}
-//#endif
 
 #endif
 

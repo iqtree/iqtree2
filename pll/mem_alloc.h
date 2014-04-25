@@ -11,11 +11,7 @@
 #define rax_malloc malloc
 #define rax_realloc realloc
 #define rax_free free
-#ifdef WIN32
-	#define rax_posix_memalign _aligned_malloc
-#else
-	#define rax_posix_memalign posix_memalign
-#endif
+#define rax_posix_memalign posix_memalign
 #define rax_calloc calloc
 //#define rax_malloc_aligned(x) memalign(PLL_BYTE_ALIGNMENT,x)
 

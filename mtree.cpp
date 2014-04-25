@@ -206,11 +206,17 @@ void MTree::printTree(const char *ofile, int brtype)
             out.open(ofile);
         printTree(out, brtype);
         out.close();
-        if (verbose_mode >= VB_MED)
+        if (verbose_mode >= VB_DEBUG)
             cout << "Tree was printed to " << ofile << endl;
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, ofile);
     }
+}
+
+string MTree::getTreeString() {
+	stringstream tree_stream;
+	printTree(tree_stream);
+	return tree_stream.str();
 }
 
 void MTree::printTree(ostream &out, int brtype) {

@@ -23,7 +23,7 @@ const char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
 
 enum SeqType {
-    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MULTISTATE, SEQ_CODON, SEQ_UNKNOWN
+    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_UNKNOWN
 };
 
 
@@ -502,6 +502,9 @@ public:
             @return unconstrained log-likelihood (without a tree)
      */
     virtual double computeUnconstrainedLogL();
+
+    /** either SEQ_BINARY, SEQ_DNA, SEQ_PROTEIN, SEQ_MORPH, or SEQ_CODON */
+    SeqType seq_type;
 
     /**
             number of states

@@ -33,7 +33,7 @@
 
 
 const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
-const double MAX_BRANCH_LEN = 9.0;
+const double MAX_BRANCH_LEN = 100.0;
 const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for ModelFactory::optimizeParameters
@@ -554,9 +554,21 @@ public:
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
-            @param tree_string input stream to read from
+            @param tree_string tree string to read from
      */
     void readTreeString(const string &tree_string);
+
+    /**
+     * Return the tree string contining taxon names and branch lengths
+     * @return
+     */
+    string getTreeString();
+
+    /**
+     *  Return the sorted topology without branch length, used to compare tree topology
+     */
+    string getTopology();
+
 
     bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
