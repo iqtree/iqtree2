@@ -356,7 +356,7 @@ typedef struct
   entry **table;
   hashNumberType entryCount;
 }
-  hashtable;
+  pllHashtable;
 struct stringEnt
 {
   int nodeNumber;
@@ -1240,7 +1240,7 @@ typedef  struct  {
 
   unsigned int vLength;
 
-  hashtable *h;                 /**< hashtable for ML convergence criterion */
+  pllHashtable *h;                 /**< hashtable for ML convergence criterion */
  
   int optimizeRateCategoryInvocations;
 

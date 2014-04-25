@@ -3049,7 +3049,7 @@ pllRaxmlSearchAlgorithm(pllInstance * tr, partitionList * pr,
   buf[64];
 #endif
 
-  hashtable *h = (hashtable*) NULL;
+  pllHashtable *h = (pllHashtable*) NULL;
   unsigned int **bitVectors = (unsigned int**) NULL;
 
   /* Security check... These variables might have not been initialized! */

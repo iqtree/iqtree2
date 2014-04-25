@@ -27,28 +27,6 @@ enum SeqType {
 };
 
 
-#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300
-/*
-        Define the hash function of Split
- */
-#if !defined(__GNUC__) 
-namespace stdext {
-#else
-namespace __gnu_cxx {
-#endif
-
-    template<>
-    struct hash<string> {
-
-        size_t operator()(string str) const {
-            hash<const char*> hash_str;
-            return hash_str(str.c_str());
-        }
-    };
-} // namespace
-#endif // USE_HASH_MAP
-
-
 #ifdef USE_HASH_MAP
 typedef unordered_map<string, int> StringIntMap;
 typedef unordered_map<string, int> PatternIntMap;
