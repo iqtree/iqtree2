@@ -74,7 +74,7 @@ extern partitionLengths pLengths[PLL_MAX_MODEL];
 extern char binaryCheckpointName[1024];  /**< Binary checkpointing file */
 extern char binaryCheckpointInputName[1024];
 
-boolean initrav (pllInstance *tr, partitionList *pr, nodeptr p)
+pllBoolean initrav (pllInstance *tr, partitionList *pr, nodeptr p)
 { 
   nodeptr  q;
 
@@ -213,10 +213,10 @@ void smooth (pllInstance *tr, partitionList *pr, nodeptr p)
        otherwise \b PLL_TRUE.
              
 */
-static boolean allSmoothed(pllInstance *tr, int numBranches)
+static pllBoolean allSmoothed(pllInstance *tr, int numBranches)
 {
   int i;
-  boolean result = PLL_TRUE;
+  pllBoolean result = PLL_TRUE;
 
   for(i = 0; i < numBranches; i++)
   {
@@ -639,7 +639,7 @@ nodeptr  removeNodeRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p)
 
    @image html pll.png "The diagram shows in blue colors the new edges that are created and in red the edge that is removed" 
 */
-boolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+pllBoolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {
   nodeptr  r, s;
   int i;
@@ -745,7 +745,7 @@ boolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
    @todo
      What is the difference between this and insertBIG? 
 */
-boolean insertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+pllBoolean insertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {
   nodeptr  r, s;
 
@@ -860,7 +860,7 @@ static void restoreTopologyOnly(pllInstance *tr, bestlist *bt, int numBranches)
 
 /** @brief Test the 
 */
-boolean testInsertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+pllBoolean testInsertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {
 
   int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
@@ -1001,7 +1001,7 @@ int rearrangeBIG(pllInstance *tr, partitionList *pr, nodeptr p, int mintrav, int
   double   p1z[PLL_NUM_BRANCHES], p2z[PLL_NUM_BRANCHES], q1z[PLL_NUM_BRANCHES], q2z[PLL_NUM_BRANCHES];
   nodeptr  p1, p2, q, q1, q2;
   int      mintrav2, i;  
-  boolean doP = PLL_TRUE, doQ = PLL_TRUE;
+  pllBoolean doP = PLL_TRUE, doQ = PLL_TRUE;
   int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 
   if (maxtrav < 1 || mintrav > maxtrav)  return (0);
@@ -1253,7 +1253,7 @@ double treeOptimizeRapid(pllInstance *tr, partitionList *pr, int mintrav, int ma
 
 
 
-boolean testInsertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
+pllBoolean testInsertRestoreBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 {    
   if(tr->thoroughInsertion)
   {
@@ -1360,7 +1360,7 @@ static void readTree(pllInstance *tr, partitionList *pr, FILE *f)
     size_t         
       offset;
 
-    boolean 
+    pllBoolean 
       addIt;
 
     if(startAddress > tr->nodeBaseAddress)
@@ -2917,7 +2917,7 @@ determineRearrangementSetting(pllInstance *tr, partitionList *pr,
 {
   int i, mintrav, maxtrav, bestTrav, impr, index, MaxFast, *perm = (int*) NULL;
   double startLH;
-  boolean cutoff;
+  pllBoolean cutoff;
 
   MaxFast = 26;
 
@@ -3026,7 +3026,7 @@ determineRearrangementSetting(pllInstance *tr, partitionList *pr,
 */
 int
 pllRaxmlSearchAlgorithm(pllInstance * tr, partitionList * pr,
-    boolean estimateModel)
+    pllBoolean estimateModel)
 {
   unsigned int vLength = 0;
   int i, impr, bestTrav, rearrangementsMax = 0, rearrangementsMin = 0,

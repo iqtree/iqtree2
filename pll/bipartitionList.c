@@ -379,7 +379,7 @@ static void newviewBipartitions(unsigned int **bitVectors, nodeptr p, int numsp,
 
 
 static void insertHashRF(unsigned int *bitVector, pllHashtable *h, unsigned int vectorLength, int treeNumber, int treeVectorLength, hashNumberType position, int support, 
-			 boolean computeWRF)
+			 pllBoolean computeWRF)
 {     
   if(h->table[position] != NULL)
     {
@@ -466,7 +466,7 @@ static void insertHashRF(unsigned int *bitVector, pllHashtable *h, unsigned int 
 
 
 void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, pllHashtable *h, int treeNumber, int function, branchInfo *bInf, 
-			     int *countBranches, int treeVectorLength, boolean traverseOnly, boolean computeWRF, int processID)
+			     int *countBranches, int treeVectorLength, pllBoolean traverseOnly, pllBoolean computeWRF, int processID)
 {
   if(isTip(p->number, numsp))
     return;

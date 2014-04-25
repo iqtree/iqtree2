@@ -46,7 +46,7 @@
 #include "pll.h"
 #include "pllInternal.h"
 
-static boolean treeNeedString(const char *fp, char c1, int *position)
+static pllBoolean treeNeedString(const char *fp, char c1, int *position)
 {
   char 
     c2 = fp[(*position)++];
@@ -73,7 +73,7 @@ static boolean treeNeedString(const char *fp, char c1, int *position)
 
 
 
-static boolean treeLabelEndString (char ch)
+static pllBoolean treeLabelEndString (char ch)
 {
   switch(ch) 
     {   
@@ -95,12 +95,12 @@ static boolean treeLabelEndString (char ch)
   return PLL_FALSE;
 } 
 
-static boolean  treeGetLabelString (const char *fp, char *lblPtr, int maxlen, int *position)
+static pllBoolean  treeGetLabelString (const char *fp, char *lblPtr, int maxlen, int *position)
 {
   char 
     ch;
   
-  boolean  
+  pllBoolean  
     done, 
     lblfound;
 
@@ -135,13 +135,13 @@ static boolean  treeGetLabelString (const char *fp, char *lblPtr, int maxlen, in
   return lblfound;
 }
 
-static boolean  treeFlushLabelString(const char *fp, int *position)
+static pllBoolean  treeFlushLabelString(const char *fp, int *position)
 { 
   return  treeGetLabelString(fp, (char *) NULL, (int) 0, position);
 } 
 
 
-static boolean treeProcessLengthString (const char *fp, double *dptr, int *position)
+static pllBoolean treeProcessLengthString (const char *fp, double *dptr, int *position)
 { 
   (*position)++;
   
@@ -208,7 +208,7 @@ static int treeFindTipNameString (const char *fp, pllInstance *tr, int *position
   return  n;
 } 
 
-static boolean addElementLenString(const char *fp, pllInstance *tr, nodeptr p, int *position)
+static pllBoolean addElementLenString(const char *fp, pllInstance *tr, nodeptr p, int *position)
 {
   nodeptr  
     q;

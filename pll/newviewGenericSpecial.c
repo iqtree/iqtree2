@@ -54,19 +54,19 @@
 #include <pmmintrin.h>
 #include "cycle.h"
 
-static void computeTraversalInfo(nodeptr, traversalInfo *, int *, int, int, boolean, recompVectors *, boolean);
-static void makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, boolean saveMem, int maxCat, const int states);
+static void computeTraversalInfo(nodeptr, traversalInfo *, int *, int, int, pllBoolean, recompVectors *, pllBoolean);
+static void makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, pllBoolean saveMem, int maxCat, const int states);
 #if (defined(__SSE3) && !defined(__AVX))
 static void newviewGTRGAMMAPROT_LG4(int tipCase,
                                     double *x1, double *x2, double *x3, double *extEV[4], double *tipVector[4],
                                     int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                    int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling);
+                                    int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling);
 
 static void newviewGTRGAMMA_GAPPED_SAVE(int tipCase,
                                         double *x1_start, double *x2_start, double *x3_start,
                                         double *EV, double *tipVector,
                                         int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                        const int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling,
+                                        const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                         unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap, 
                                         double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn);
 
@@ -74,26 +74,26 @@ static void newviewGTRGAMMA(int tipCase,
                             double *x1_start, double *x2_start, double *x3_start,
                             double *EV, double *tipVector,
                             int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                            const int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling
+                            const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling
                             );
 
 static void newviewGTRCAT( int tipCase,  double *EV,  int *cptr,
                            double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
                            int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                           int n,  double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling);
+                           int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling);
 
 
 static void newviewGTRCAT_SAVE( int tipCase,  double *EV,  int *cptr,
                                 double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
                                 int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                int n,  double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling,
+                                int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                 unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                 double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats);
 
 static void newviewGTRGAMMAPROT_GAPPED_SAVE(int tipCase,
                                             double *x1, double *x2, double *x3, double *extEV, double *tipVector,
                                             int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling,
+                                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                             unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,  
                                             double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn
                                             );
@@ -101,19 +101,19 @@ static void newviewGTRGAMMAPROT_GAPPED_SAVE(int tipCase,
 static void newviewGTRGAMMAPROT(int tipCase,
                                 double *x1, double *x2, double *x3, double *extEV, double *tipVector,
                                 int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling);
+                                int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling);
 
 static void newviewGTRCATPROT(int tipCase, double *extEV,
                               int *cptr,
                               double *x1, double *x2, double *x3, double *tipVector,
                               int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling);
+                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling);
 
 static void newviewGTRCATPROT_SAVE(int tipCase, double *extEV,
                                    int *cptr,
                                    double *x1, double *x2, double *x3, double *tipVector,
                                    int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                   int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling,
+                                   int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                    unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                    double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats);
 #endif
@@ -190,7 +190,7 @@ extern const unsigned int mask32[32];   /**< @brief Array that contains the firs
       Number of states for the particular data (4 for DNA or 20 for AA)
 */
 static void 
-makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, boolean saveMem, int maxCat, const int states)
+makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, pllBoolean saveMem, int maxCat, const int states)
 {
   int 
     i, 
@@ -580,7 +580,7 @@ static void newviewCAT_FLEX(int tipCase, double *extEV,
                             int *cptr,
                             double *x1, double *x2, double *x3, double *tipVector,
                             int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling, const int states)
+                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling, const int states)
 {
   double
     *le, 
@@ -875,7 +875,7 @@ static void newviewCAT_FLEX(int tipCase, double *extEV,
 static void newviewGAMMA_FLEX(int tipCase,
                               double *x1, double *x2, double *x3, double *extEV, double *tipVector,
                               int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling, const int states, const int maxStateValue)
+                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling, const int states, const int maxStateValue)
 {
   double  
     *uX1, 
@@ -1330,7 +1330,7 @@ i    Traversal descriptor element structure
    
    @todo Fill in the ancestral recomputation parameter information 
  */
-static void computeTraversalInfo(nodeptr p, traversalInfo *ti, int *counter, int maxTips, int numBranches, boolean partialTraversal, recompVectors *rvec, boolean useRecom)
+static void computeTraversalInfo(nodeptr p, traversalInfo *ti, int *counter, int maxTips, int numBranches, pllBoolean partialTraversal, recompVectors *rvec, pllBoolean useRecom)
 {
   /* if it's a tip we don't do anything */
 
@@ -1672,7 +1672,7 @@ void pllNewviewIterative (pllInstance *tr, partitionList *pr, int startIndex)
 
         /* select fastScaling or per-site scaling of conidtional likelihood entries */
 
-        boolean
+        pllBoolean
           fastScaling = tr->fastScaling;
 
 #if (defined(__SSE3) || defined(__AVX))
@@ -2174,7 +2174,7 @@ void pllNewviewIterative (pllInstance *tr, partitionList *pr, int startIndex)
     @param numBranches
       Number of branches (either per-partition branch or joint branch estimate)
 */
-void computeTraversal(pllInstance *tr, nodeptr p, boolean partialTraversal, int numBranches)
+void computeTraversal(pllInstance *tr, nodeptr p, pllBoolean partialTraversal, int numBranches)
 {
   /* Only if we apply recomputations we need the additional step of updating the subtree lengths */
   if(tr->useRecom)
@@ -2210,7 +2210,7 @@ void computeTraversal(pllInstance *tr, nodeptr p, boolean partialTraversal, int 
       If set to \b PLL_TRUE, then likelihood vectors of partitions that are converged are
       not recomputed.
  */
-void pllUpdatePartials (pllInstance *tr, partitionList *pr, nodeptr p, boolean masked)
+void pllUpdatePartials (pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean masked)
 {  
   /* if it's a tip there is nothing to do */
 
@@ -2753,7 +2753,7 @@ static char getStateCharacter(int dataType, int state)
  
     @note  Here one can see how to store the ancestral probabilities in a dedicated data structure
  */
-void printAncestralState(nodeptr p, boolean printStates, boolean printProbs, pllInstance *tr, partitionList *pr)
+void printAncestralState(nodeptr p, pllBoolean printStates, pllBoolean printProbs, pllInstance *tr, partitionList *pr)
 {
 #ifdef _USE_PTHREADS
   size_t 
@@ -2798,7 +2798,7 @@ void printAncestralState(nodeptr p, boolean printStates, boolean printProbs, pll
             equal = 1.0 / (double)states,
             max = -1.0;
             
-          boolean
+          pllBoolean
             approximatelyEqual = PLL_TRUE;
 
           int
@@ -2934,7 +2934,7 @@ void pllGetAncestralState(pllInstance *tr, partitionList *pr, nodeptr p, double 
             equal = 1.0 / (double)states,
             max = -1.0;
             
-          boolean
+          pllBoolean
             approximatelyEqual = PLL_TRUE;
 
           int
@@ -3034,7 +3034,7 @@ static void newviewGTRGAMMA_GAPPED_SAVE(int tipCase,
                                         double *x1_start, double *x2_start, double *x3_start,
                                         double *EV, double *tipVector,
                                         int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                        const int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling,
+                                        const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                         unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap, 
                                         double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn)
 {
@@ -3948,7 +3948,7 @@ static void newviewGTRGAMMA(int tipCase,
                             double *x1_start, double *x2_start, double *x3_start,
                             double *EV, double *tipVector,
                             int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                            const int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling
+                            const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling
                             )
 {
   int 
@@ -4471,7 +4471,7 @@ static void newviewGTRGAMMA(int tipCase,
 static void newviewGTRCAT( int tipCase,  double *EV,  int *cptr,
                            double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
                            int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                           int n,  double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling)
+                           int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling)
 {
   double
     *le,
@@ -4914,7 +4914,7 @@ static void newviewGTRCAT( int tipCase,  double *EV,  int *cptr,
 #ifndef __clang__
 inline 
 #endif
-boolean isGap(unsigned int *x, int pos)
+pllBoolean isGap(unsigned int *x, int pos)
 {
   return (x[pos / 32] & mask32[pos % 32]);
 }
@@ -4933,7 +4933,7 @@ boolean isGap(unsigned int *x, int pos)
 #ifndef __clang__
 inline 
 #endif
-boolean noGap(unsigned int *x, int pos)
+pllBoolean noGap(unsigned int *x, int pos)
 {
   return (!(x[pos / 32] & mask32[pos % 32]));
 }
@@ -4952,7 +4952,7 @@ boolean noGap(unsigned int *x, int pos)
 static void newviewGTRCAT_SAVE( int tipCase,  double *EV,  int *cptr,
                                 double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
                                 int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                int n,  double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling,
+                                int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                 unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                 double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats)
 {
@@ -5615,7 +5615,7 @@ static void newviewGTRCAT_SAVE( int tipCase,  double *EV,  int *cptr,
 static void newviewGTRGAMMAPROT_GAPPED_SAVE(int tipCase,
                                             double *x1, double *x2, double *x3, double *extEV, double *tipVector,
                                             int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling,
+                                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                             unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,  
                                             double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn
                                             )
@@ -6170,7 +6170,7 @@ static void newviewGTRGAMMAPROT_GAPPED_SAVE(int tipCase,
 static void newviewGTRGAMMAPROT(int tipCase,
                                 double *x1, double *x2, double *x3, double *extEV, double *tipVector,
                                 int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling)
+                                int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling)
 {
   double  *uX1, *uX2, *v;
   double x1px2;
@@ -6482,7 +6482,7 @@ static void newviewGTRCATPROT(int tipCase, double *extEV,
                               int *cptr,
                               double *x1, double *x2, double *x3, double *tipVector,
                               int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling)
+                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling)
 {
   double
     *le, *ri, *v, *vl, *vr;
@@ -6719,7 +6719,7 @@ static void newviewGTRCATPROT_SAVE(int tipCase, double *extEV,
                                    int *cptr,
                                    double *x1, double *x2, double *x3, double *tipVector,
                                    int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                   int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean fastScaling,
+                                   int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                    unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                    double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats)
 {
@@ -7102,7 +7102,7 @@ static void newviewGTRCATPROT_SAVE(int tipCase, double *extEV,
 static void newviewGTRGAMMAPROT_LG4(int tipCase,
                                     double *x1, double *x2, double *x3, double *extEV[4], double *tipVector[4],
                                     int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                    int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling)
+                                    int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling)
 {
   double  *uX1, *uX2, *v;
   double x1px2;

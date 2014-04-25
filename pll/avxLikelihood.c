@@ -99,7 +99,7 @@ void  newviewGTRGAMMA_AVX(int tipCase,
 			 double *x1, double *x2, double *x3,
 			 double *extEV, double *tipVector,
 			 int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-			 const int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling
+			 const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling
 			 )
 {
  
@@ -366,7 +366,7 @@ void  newviewGTRGAMMA_AVX_GAPPED_SAVE(int tipCase,
 				      double *x1_start, double *x2_start, double *x3_start,
 				      double *extEV, double *tipVector,
 				      int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-				      const int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling,
+				      const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
 				      unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap, 
 				      double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn
 				      )
@@ -867,7 +867,7 @@ void  newviewGTRGAMMA_AVX_GAPPED_SAVE(int tipCase,
 void newviewGTRCAT_AVX(int tipCase,  double *EV,  int *cptr,
 			   double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
 			   int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-			   int n,  double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling)
+			   int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling)
 {
   double
     *le,
@@ -1037,7 +1037,7 @@ void newviewGTRCAT_AVX(int tipCase,  double *EV,  int *cptr,
 void newviewGTRCAT_AVX_GAPPED_SAVE(int tipCase,  double *EV,  int *cptr,
 				   double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
 				   int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-				   int n,  double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling,
+				   int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
 				   unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
 				   double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats)
 {
@@ -1339,7 +1339,7 @@ void newviewGTRCATPROT_AVX(int tipCase, double *extEV,
 			       int *cptr,
 			       double *x1, double *x2, double *x3, double *tipVector,
 			       int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-			       int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling)
+			       int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling)
 {
   double
     *le, *ri, *v, *vl, *vr;
@@ -1667,7 +1667,7 @@ void newviewGTRCATPROT_AVX_GAPPED_SAVE(int tipCase, double *extEV,
 				       int *cptr,
 				       double *x1, double *x2, double *x3, double *tipVector,
 				       int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-				       int n, double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling,
+				       int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
 				       unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
 				       double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats)
 {
@@ -2186,7 +2186,7 @@ void newviewGTRCATPROT_AVX_GAPPED_SAVE(int tipCase, double *extEV,
 void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 				 double *x1, double *x2, double *x3, double *extEV[4], double *tipVector[4],
 				 int *ex3, unsigned char *tipX1, unsigned char *tipX2, int n, 
-				 double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling) 
+				 double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling) 
 {
   double	
     *uX1, 
@@ -2683,7 +2683,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 void newviewGTRGAMMAPROT_AVX(int tipCase,
 			     double *x1, double *x2, double *x3, double *extEV, double *tipVector,
 			     int *ex3, unsigned char *tipX1, unsigned char *tipX2, int n, 
-			     double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling) 
+			     double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling) 
 {
   double	
     *uX1, 
@@ -3179,7 +3179,7 @@ void newviewGTRGAMMAPROT_AVX(int tipCase,
 void newviewGTRGAMMAPROT_AVX_GAPPED_SAVE(int tipCase,
 					 double *x1_start, double *x2_start, double *x3_start, double *extEV, double *tipVector,
 					 int *ex3, unsigned char *tipX1, unsigned char *tipX2, int n, 
-					 double *left, double *right, int *wgt, int *scalerIncrement, const boolean useFastScaling,
+					 double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
 					 unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap, 
 					 double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn) 
 {
