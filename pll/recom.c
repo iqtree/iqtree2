@@ -82,7 +82,7 @@ void protectNode(recompVectors *rvec, int nodenum, int mxtips)
  *    Number of tips in the tree
  *
  */
-static boolean isNodePinned(recompVectors *rvec, int nodenum, int mxtips)
+static pllBoolean isNodePinned(recompVectors *rvec, int nodenum, int mxtips)
 {
   assert(nodenum > mxtips);
 
@@ -108,7 +108,7 @@ static boolean isNodePinned(recompVectors *rvec, int nodenum, int mxtips)
  *    Number of tips in the tree
  *
  */
-boolean needsRecomp(boolean recompute, recompVectors *rvec, nodeptr p, int mxtips)
+pllBoolean needsRecomp(pllBoolean recompute, recompVectors *rvec, nodeptr p, int mxtips)
 { 
   if((!p->x) || (recompute && !isNodePinned(rvec, p->number, mxtips)))
     return PLL_TRUE;
@@ -152,7 +152,7 @@ void allocRecompVectorsInfo(pllInstance *tr)
   /* init vectors tracking */
 
   v->iVector         = (int *) rax_malloc((size_t)num_vectors * sizeof(int));
-  v->unpinnable      = (boolean *) rax_malloc((size_t)num_vectors * sizeof(boolean));
+  v->unpinnable      = (pllBoolean *) rax_malloc((size_t)num_vectors * sizeof(pllBoolean));
 
   for(i = 0; i < num_vectors; i++)
   {
@@ -383,9 +383,9 @@ void unpinNode(recompVectors *v, int nodenum, int mxtips)
  *    Number of tips in the tree
  *
  */
-boolean getxVector(recompVectors *rvec, int nodenum, int *slot, int mxtips)
+pllBoolean getxVector(recompVectors *rvec, int nodenum, int *slot, int mxtips)
 {
-  boolean 
+  pllBoolean 
     slotNeedsRecomp = PLL_FALSE;
 
   *slot = rvec->iNode[nodenum - mxtips - 1];

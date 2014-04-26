@@ -298,7 +298,7 @@ extern double exp_approx (double x);
 #define PLL_MAX_RECOM_FRACTION     1.0 /* always 1, just there for boundary checks */
 
 
-typedef  int boolean;
+typedef  int pllBoolean;
 
 /* @brief PLL instance attribute structure */
 typedef struct
@@ -320,7 +320,7 @@ typedef struct
   int *stlen;          /**< Number of tips behind the current orientation of the indexed inner node (subtree size/cost) */ 
   int *unpinnable;     /**< size:numVectors , TRUE if we dont need the vector */
   int maxVectorsUsed;  
-  boolean allSlotsBusy; /**< on if all slots contain an ancesctral node (the usual case after first full traversal) */ 
+  pllBoolean allSlotsBusy; /**< on if all slots contain an ancesctral node (the usual case after first full traversal) */ 
 } recompVectors;
 /* E recomp */
 
@@ -356,7 +356,7 @@ typedef struct
   entry **table;
   hashNumberType entryCount;
 }
-  hashtable;
+  pllHashtable;
 struct stringEnt
 {
   int nodeNumber;
@@ -422,8 +422,8 @@ typedef struct
   traversalInfo *ti;              /**< list of traversal steps */
   int count;                      /**< number of traversal steps */
   int functionType;
-  boolean traversalHasChanged;   
-  boolean *executeModel;           
+  pllBoolean traversalHasChanged;   
+  pllBoolean *executeModel;           
   double  *parameterValues;
 } traversalData;
 
@@ -460,7 +460,7 @@ typedef struct
   */
 typedef struct
 {
-  boolean valid;
+  pllBoolean valid;
   int partitions;  
   int *partitionList;
 }
@@ -961,10 +961,10 @@ typedef struct {
   int     autoProtModels;
   int     protFreqs;                    /** TODO: Is this the flag for empirical protein frequencies? (0 use default) */ 
   /* specific for secondary structures ?? */
-  boolean nonGTR;
-  boolean optimizeBaseFrequencies;
-  boolean optimizeAlphaParameter;
-  boolean optimizeSubstitutionRates;
+  pllBoolean nonGTR;
+  pllBoolean optimizeBaseFrequencies;
+  pllBoolean optimizeAlphaParameter;
+  pllBoolean optimizeSubstitutionRates;
   int    *symmetryVector;
   int    *frequencyGrouping;
 
@@ -1005,7 +1005,7 @@ typedef struct {
   double *ancestralBuffer;
 
   /* From tree */
-  boolean executeModel;
+  pllBoolean executeModel;
   double fracchange;
   double partitionContribution;
   double partitionLH;
@@ -1020,8 +1020,8 @@ typedef struct
  {
    pInfo **partitionData;
    int numberOfPartitions;
-   boolean perGeneBranchLengths;
-   boolean dirty;
+   pllBoolean perGeneBranchLengths;
+   pllBoolean dirty;
    linkageList *alphaList;
    linkageList *rateList;
    linkageList *freqList;
@@ -1056,8 +1056,8 @@ typedef struct {
   double previousLh;
   double difference;
   double epsilon;  
-  boolean impr;
-  boolean cutoff;  
+  pllBoolean impr;
+  pllBoolean cutoff;  
        
   double tr_startLH;
   double tr_endLH;
@@ -1111,15 +1111,15 @@ typedef  struct  {
   recompVectors *rvec;            /**< this data structure tracks which vectors store which nodes */
   float maxMegabytesMemory;       /**< User says how many MB in main memory should be used */
   float vectorRecomFraction;      /**< vectorRecomFraction ~= 0.8 * maxMegabytesMemory  */
-  boolean useRecom;               /**< ON if we apply recomputation of ancestral vectors*/
+  pllBoolean useRecom;               /**< ON if we apply recomputation of ancestral vectors*/
 #ifdef _DEBUG_RECOMPUTATION 
   traversalCounter *travCounter;
   double stlenTime;
 #endif
   /* E recomp */
   
-  boolean fastScaling;
-  boolean saveMemory;
+  pllBoolean fastScaling;
+  pllBoolean saveMemory;
   int              startingTree;
   long             randomNumberSeed;
 
@@ -1128,10 +1128,10 @@ typedef  struct  {
   double          *patratStored; 
   int             *rateCategory;
   int             *aliaswgt;    /**< weight by pattern */ 
-  boolean    manyPartitions;
+  pllBoolean    manyPartitions;
 
-  boolean grouped;              /**< No idea what this is, but is always set to PLL_FALSE */
-  boolean constrained;          /**< No idea what this is, but is always set to PLL_FALSE */
+  pllBoolean grouped;              /**< No idea what this is, but is always set to PLL_FALSE */
+  pllBoolean constrained;          /**< No idea what this is, but is always set to PLL_FALSE */
   int threadID;
   volatile int numberOfThreads;
 
@@ -1163,7 +1163,7 @@ typedef  struct  {
   int              multiStateModel;
 
 
-  boolean curvatOK[PLL_NUM_BRANCHES];
+  pllBoolean curvatOK[PLL_NUM_BRANCHES];
 
   /* the stuff below is shared among DNA and AA, span does
      not change depending on datatype */
@@ -1198,15 +1198,15 @@ typedef  struct  {
 
   int              *constraintVector;   /**< @todo What is this? */
   int              numberOfSecondaryColumns;
-  boolean          searchConvergenceCriterion;
+  pllBoolean          searchConvergenceCriterion;
   int              ntips;
   int              nextnode;  
 
-  boolean          bigCutoff;
-  boolean          partitionSmoothed[PLL_NUM_BRANCHES];
-  boolean          partitionConverged[PLL_NUM_BRANCHES];
-  boolean          rooted;
-  boolean          doCutoff;
+  pllBoolean          bigCutoff;
+  pllBoolean          partitionSmoothed[PLL_NUM_BRANCHES];
+  pllBoolean          partitionConverged[PLL_NUM_BRANCHES];
+  pllBoolean          rooted;
+  pllBoolean          doCutoff;
  
   double         gapyness;
 
@@ -1240,13 +1240,13 @@ typedef  struct  {
 
   unsigned int vLength;
 
-  hashtable *h;                 /**< hashtable for ML convergence criterion */
+  pllHashtable *h;                 /**< hashtable for ML convergence criterion */
  
   int optimizeRateCategoryInvocations;
 
   checkPointState ckp;
-  boolean thoroughInsertion; /**< true if the neighbor branches should be optimized when a subtree is inserted (slower)*/
-  boolean useMedian;
+  pllBoolean thoroughInsertion; /**< true if the neighbor branches should be optimized when a subtree is inserted (slower)*/
+  pllBoolean useMedian;
 
   pllStack * rearrangeHistory;
 
@@ -1257,13 +1257,13 @@ typedef  struct  {
   int              max_rearrange;       /**< max. rearrangemenent radius */
   int              stepwidth;           /**< step in rearrangement radius */
   int              initial;             /**< user defined rearrangement radius which also sets bestTrav if initialSet is set */
-  boolean          initialSet;          /**< set bestTrav according to initial */
+  pllBoolean          initialSet;          /**< set bestTrav according to initial */
   int              mode;                /**< candidate for removal */
-  boolean        perGeneBranchLengths;
-  boolean        permuteTreeoptimize;   /**< randomly select subtrees for SPR moves */
-  boolean        compressPatterns;
+  pllBoolean        perGeneBranchLengths;
+  pllBoolean        permuteTreeoptimize;   /**< randomly select subtrees for SPR moves */
+  pllBoolean        compressPatterns;
   double         likelihoodEpsilon;
-  boolean        useCheckpoint;
+  pllBoolean        useCheckpoint;
 
 } pllInstance;
 
@@ -1319,14 +1319,14 @@ typedef struct conntyp {
     void            *valptr;      /**< pointer to value of subtree */
     int              descend;     /**< pointer to first connect of child */
     int              sibling;     /**< next connect from same parent */
-    } connect, *connptr;
+    } pllConnect, *connptr;
 
 /** @brief Single Topology
 *   */
 typedef  struct {
     double           likelihood;
     int              initialTreeNumber;
-    connect         *links;       /**< pointer to first connect (start) */
+    pllConnect         *links;       /**< pointer to first connect (start) */
     node            *start;
     int              nextlink;    /**< index of next available connect */
                                   /**< tr->start = tpl->links->p */
@@ -1360,7 +1360,7 @@ typedef struct {
     int              nvalid;      /**< number of topologies saved */
     int              ninit;       /**< number of topologies initialized */
     int              numtrees;    /**< number of alternatives tested */
-    boolean          improved;
+    pllBoolean          improved;
     } bestlist;
 
 /** @brief  This is used to look up some hard-coded data for each data type 
@@ -1378,8 +1378,8 @@ typedef struct
   int symmetryVectorLength;
   int frequencyGroupingLength;
 
-  boolean nonGTR;
-  boolean optimizeBaseFrequencies;
+  pllBoolean nonGTR;
+  pllBoolean optimizeBaseFrequencies;
 
   int undetermined;
 
@@ -1387,7 +1387,7 @@ typedef struct
 
   int states;   /* s */
 
-  boolean smoothFrequencies;
+  pllBoolean smoothFrequencies;
 
   const unsigned  int *bitVector;
 
@@ -1507,7 +1507,7 @@ typedef struct
 /******************** START OF API FUNCTION DESCRIPTIONS ********************/
 
 #if (defined(_USE_PTHREADS) || defined(_FINE_GRAIN_MPI))
-boolean isThisMyPartition(partitionList *pr, int tid, int model);
+pllBoolean isThisMyPartition(partitionList *pr, int tid, int model);
 void printParallelTimePerRegion(void); 
 #endif
 
@@ -1591,11 +1591,11 @@ extern int pllNniSearch(pllInstance * tr, partitionList *pr, int estimateModel);
 extern void pllOptimizeBranchLengths ( pllInstance *tr, partitionList *pr, int maxSmoothIterations );
 
 
-extern void pllEvaluateLikelihood (pllInstance *tr, partitionList *pr, nodeptr p, boolean fullTraversal, boolean getPerSiteLikelihoods);
-extern void pllUpdatePartials (pllInstance *tr, partitionList *pr, nodeptr p, boolean masked);
+extern void pllEvaluateLikelihood (pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean fullTraversal, pllBoolean getPerSiteLikelihoods);
+extern void pllUpdatePartials (pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean masked);
 extern void pllUpdatePartialsAncestral(pllInstance *tr, partitionList *pr, nodeptr p);
 extern void pllNewviewIterative(pllInstance *tr, partitionList *pr, int startIndex);
-extern void pllEvaluateIterative(pllInstance *tr, partitionList *pr, boolean getPerSiteLikelihoods);
+extern void pllEvaluateIterative(pllInstance *tr, partitionList *pr, pllBoolean getPerSiteLikelihoods);
 
 /* newick parser declarations */
 extern pllNewickTree * pllNewickParseString (const char * newick);
@@ -1604,9 +1604,9 @@ extern int pllValidateNewick (pllNewickTree *);
 extern void pllNewickParseDestroy (pllNewickTree **);
 extern int pllNewickUnroot (pllNewickTree * t);
 extern char * pllTreeToNewick ( char *treestr, pllInstance *tr, partitionList *pr, nodeptr p,
-      boolean printBranchLengths, boolean printNames, boolean printLikelihood,
-      boolean rellTree, boolean finalPrint, int perGene,
-      boolean branchLabelSupport, boolean printSHSupport);
+      pllBoolean printBranchLengths, pllBoolean printNames, pllBoolean printLikelihood,
+      pllBoolean rellTree, pllBoolean finalPrint, int perGene,
+      pllBoolean branchLabelSupport, pllBoolean printSHSupport);
 
 /* partition parser declarations */
 extern void  pllQueuePartitionsDestroy (pllQueue ** partitions);
@@ -1630,7 +1630,7 @@ extern pllAlignmentData * pllParseAlignmentFile (int fileType, const char *);
 /* model management */
 int pllInitModel (pllInstance *, partitionList *, pllAlignmentData *);
 void pllInitReversibleGTR(pllInstance * tr, partitionList * pr, int model);
-void pllMakeGammaCats(double alpha, double *gammaRates, int K, boolean useMedian);
+void pllMakeGammaCats(double alpha, double *gammaRates, int K, pllBoolean useMedian);
 int pllLinkAlphaParameters(char *string, partitionList *pr);
 int pllLinkFrequencies(char *string, partitionList *pr);
 int pllLinkRates(char *string, partitionList *pr);
@@ -1666,7 +1666,7 @@ void pllRearrangeSearch (pllInstance * tr, partitionList * pr, int rearrangeType
 void pllRearrangeCommit (pllInstance * tr, partitionList * pr, pllRearrangeInfo * rearr, int saveRollbackInfo);
 int pllRearrangeRollback (pllInstance * tr, partitionList * pr);
 void pllClearRearrangeHistory (pllInstance * tr);
-int pllRaxmlSearchAlgorithm (pllInstance * tr, partitionList * pr, boolean estimateModel);
+int pllRaxmlSearchAlgorithm (pllInstance * tr, partitionList * pr, pllBoolean estimateModel);
 int pllGetTransitionMatrix (pllInstance * tr, partitionList * pr, nodeptr p, int model, int rate, double * outBuffer);
 void pllGetTransitionMatrix2 (pllInstance * tr, partitionList * pr, int model, nodeptr p, double * outBuffer);
 

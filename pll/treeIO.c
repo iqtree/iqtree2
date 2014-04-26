@@ -237,8 +237,8 @@ static double getBranchLength(pllInstance *tr, partitionList *pr, int perGene, n
 
 
   
-static char *TreeInner2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, boolean printBranchLengths, boolean printNames,
-			    boolean printLikelihood, boolean rellTree, boolean finalPrint, int perGene, boolean branchLabelSupport, boolean printSHSupport, boolean printInnerNodes)
+static char *TreeInner2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean printBranchLengths, pllBoolean printNames,
+			    pllBoolean printLikelihood, pllBoolean rellTree, pllBoolean finalPrint, int perGene, pllBoolean branchLabelSupport, pllBoolean printSHSupport, pllBoolean printInnerNodes)
 {
   /* TODOFER simplify this, should be used just to print inner nodes for testing */
   char  *nameptr;            
@@ -320,8 +320,8 @@ static char *TreeInner2StringREC(char *treestr, pllInstance *tr, partitionList *
 }
 
 
-static char *pllTreeToNewickREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, boolean printBranchLengths, boolean printNames,
-			    boolean printLikelihood, boolean rellTree, boolean finalPrint, int perGene, boolean branchLabelSupport, boolean printSHSupport)
+static char *pllTreeToNewickREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean printBranchLengths, pllBoolean printNames,
+			    pllBoolean printLikelihood, pllBoolean rellTree, pllBoolean finalPrint, int perGene, pllBoolean branchLabelSupport, pllBoolean printSHSupport)
 {
   char  *nameptr;            
       
@@ -400,8 +400,8 @@ static char *pllTreeToNewickREC(char *treestr, pllInstance *tr, partitionList *p
 }
 
 
-char *pllTreeToNewick(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, boolean printBranchLengths, boolean printNames, boolean printLikelihood,
-		  boolean rellTree, boolean finalPrint, int perGene, boolean branchLabelSupport, boolean printSHSupport)
+char *pllTreeToNewick(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean printBranchLengths, pllBoolean printNames, pllBoolean printLikelihood,
+		  pllBoolean rellTree, pllBoolean finalPrint, int perGene, pllBoolean branchLabelSupport, pllBoolean printSHSupport)
 { 
 
   if(rellTree)
@@ -465,7 +465,7 @@ static int treeGetCh (FILE *fp)         /* get next nonblank, noncomment charact
 } /* treeGetCh */
 
 
-static boolean treeLabelEnd (int ch)
+static pllBoolean treeLabelEnd (int ch)
 {
   switch (ch) 
     {
@@ -488,10 +488,10 @@ static boolean treeLabelEnd (int ch)
 } 
 
 
-static boolean  treeGetLabel (FILE *fp, char *lblPtr, int maxlen)
+static pllBoolean  treeGetLabel (FILE *fp, char *lblPtr, int maxlen)
 {
   int      ch;
-  boolean  done, quoted, lblfound;
+  pllBoolean  done, quoted, lblfound;
 
   if (--maxlen < 0) 
     lblPtr = (char *) NULL; 
@@ -537,7 +537,7 @@ static boolean  treeGetLabel (FILE *fp, char *lblPtr, int maxlen)
 }
 
 
-static boolean  treeFlushLabel (FILE *fp)
+static pllBoolean  treeFlushLabel (FILE *fp)
 { 
   return  treeGetLabel(fp, (char *) NULL, (int) 0);
 } 
@@ -581,7 +581,7 @@ static int treeFindTipName(FILE *fp, pllInstance *tr)
 static void  treeEchoContext (FILE *fp1, FILE *fp2, int n)
 { /* treeEchoContext */
   int      ch;
-  boolean  waswhite;
+  pllBoolean  waswhite;
   
   waswhite = PLL_TRUE;
   
@@ -599,7 +599,7 @@ static void  treeEchoContext (FILE *fp1, FILE *fp2, int n)
 } /* treeEchoContext */
 
 
-static boolean treeProcessLength (FILE *fp, double *dptr)
+static pllBoolean treeProcessLength (FILE *fp, double *dptr)
 {
   int  ch;
   
@@ -643,7 +643,7 @@ static int treeFlushLen (FILE  *fp)
 
 
 
-static boolean treeNeedCh (FILE *fp, int c1, char *where)
+static pllBoolean treeNeedCh (FILE *fp, int c1, char *where)
 {
   int  c2;
   
@@ -669,7 +669,7 @@ static boolean treeNeedCh (FILE *fp, int c1, char *where)
 
 
 
-static boolean addElementLen (FILE *fp, pllInstance *tr, nodeptr p, boolean readBranchLengths, boolean readNodeLabels, int *lcount)
+static pllBoolean addElementLen (FILE *fp, pllInstance *tr, nodeptr p, pllBoolean readBranchLengths, pllBoolean readNodeLabels, int *lcount)
 {   
   nodeptr  q;
   int      n, ch, fres;
@@ -758,7 +758,7 @@ static boolean addElementLen (FILE *fp, pllInstance *tr, nodeptr p, boolean read
 
 
 
-static nodeptr uprootTree (pllInstance *tr, nodeptr p, boolean readBranchLengths, boolean readConstraint, int numBranches)
+static nodeptr uprootTree (pllInstance *tr, nodeptr p, pllBoolean readBranchLengths, pllBoolean readConstraint, int numBranches)
 {
   nodeptr  q, r, s, start;
   int      n, i;              
@@ -847,7 +847,7 @@ static nodeptr uprootTree (pllInstance *tr, nodeptr p, boolean readBranchLengths
 }
 
 
-int treeReadLen (FILE *fp, pllInstance *tr, boolean readBranches, boolean readNodeLabels, boolean topologyOnly)
+int treeReadLen (FILE *fp, pllInstance *tr, pllBoolean readBranches, pllBoolean readNodeLabels, pllBoolean topologyOnly)
 {
   nodeptr  
     p;

@@ -73,8 +73,30 @@
 	#include <set>
 #endif
 
-
 using namespace std;
+
+
+#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300
+/*
+        Define the hash function of Split
+ */
+#if !defined(__GNUC__)
+namespace stdext {
+#else
+namespace __gnu_cxx {
+#endif
+
+    template<>
+    struct hash<string> {
+
+        size_t operator()(string str) const {
+            hash<const char*> hash_str;
+            return hash_str(str.c_str());
+        }
+    };
+} // namespace
+#endif // USE_HASH_MAP
+
 
 class Linear {
 public:
