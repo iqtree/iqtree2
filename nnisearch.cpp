@@ -741,7 +741,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
     tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
     strcpy(tree_str, tr->tree_string);
 
-    boolean is_stored = PLL_FALSE;
+    pllBoolean is_stored = PLL_FALSE;
 
     if(globalParam->store_candidate_trees){
         is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
@@ -940,8 +940,8 @@ void pllResizeUFBootData(){
 * 2014.4.23: REPLACE getBranchLength(tr, pr, perGene, p) BY pllGetBranchLength(tr, p, pr->numberOfPartitions)
 * BECAUSE OF LIB NEW DECLARATION: pllGetBranchLength (pllInstance *tr, nodeptr p, int partition_id);
 */
-static char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, boolean printBranchLengths, boolean printNames,
-                boolean printLikelihood, boolean rellTree, boolean finalPrint, int perGene, boolean branchLabelSupport, boolean printSHSupport)
+static char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean  printBranchLengths, pllBoolean  printNames,
+		pllBoolean  printLikelihood, pllBoolean  rellTree, pllBoolean  finalPrint, int perGene, pllBoolean  branchLabelSupport, pllBoolean  printSHSupport)
 {
 	char * result = treestr; // DTH: added this var to be able to remove the '\n' at the end
 	char  *nameptr;
