@@ -1,3 +1,32 @@
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
+ *
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
+ *
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file recom.c
+ * @brief Functions used for recomputation of vectors (only a fraction of LH vectors stored in RAM)   
+ */
 #include "mem_alloc.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,11 +39,7 @@
 #include <sys/time.h>
 
 #include "pll.h"
-
-/** @file recom.c
- *  
- *  @brief Functions used for recomputation of vectors (only a fraction of LH vectors stored in RAM)   
- */
+#include "pllInternal.h"
 
 /** @brief Locks node \a nodenum to force it remains availably in memory
  *
@@ -57,7 +82,7 @@ void protectNode(recompVectors *rvec, int nodenum, int mxtips)
  *    Number of tips in the tree
  *
  */
-static pll_boolean isNodePinned(recompVectors *rvec, int nodenum, int mxtips)
+static pllBoolean isNodePinned(recompVectors *rvec, int nodenum, int mxtips)
 {
   assert(nodenum > mxtips);
 
@@ -83,7 +108,7 @@ static pll_boolean isNodePinned(recompVectors *rvec, int nodenum, int mxtips)
  *    Number of tips in the tree
  *
  */
-pll_boolean needsRecomp(pll_boolean recompute, recompVectors *rvec, nodeptr p, int mxtips)
+pllBoolean needsRecomp(pllBoolean recompute, recompVectors *rvec, nodeptr p, int mxtips)
 { 
   if((!p->x) || (recompute && !isNodePinned(rvec, p->number, mxtips)))
     return PLL_TRUE;
@@ -127,7 +152,7 @@ void allocRecompVectorsInfo(pllInstance *tr)
   /* init vectors tracking */
 
   v->iVector         = (int *) rax_malloc((size_t)num_vectors * sizeof(int));
-  v->unpinnable      = (pll_boolean *) rax_malloc((size_t)num_vectors * sizeof(pll_boolean));
+  v->unpinnable      = (pllBoolean *) rax_malloc((size_t)num_vectors * sizeof(pllBoolean));
 
   for(i = 0; i < num_vectors; i++)
   {
@@ -358,9 +383,9 @@ void unpinNode(recompVectors *v, int nodenum, int mxtips)
  *    Number of tips in the tree
  *
  */
-pll_boolean getxVector(recompVectors *rvec, int nodenum, int *slot, int mxtips)
+pllBoolean getxVector(recompVectors *rvec, int nodenum, int *slot, int mxtips)
 {
-  pll_boolean 
+  pllBoolean 
     slotNeedsRecomp = PLL_FALSE;
 
   *slot = rvec->iNode[nodenum - mxtips - 1];

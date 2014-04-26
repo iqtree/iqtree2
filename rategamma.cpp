@@ -74,13 +74,13 @@ void RateGamma::computeRates() {
 			perPoint_ = perPoint_ < 0.0 ? -perPoint_ : perPoint_;
 			rates[ cat ] = perPoint_;
 		}
-	
+
 		//rescale in order to make mean equal to 1.0
-	
-	
+
+
 		for (cat = 0; cat < ncategory; cat ++)
 			sum_rates += rates[ cat];
-	
+
 		for (cat = 0; cat < ncategory; cat ++)
 			rates[ cat ] = rates[ cat ] * ncategory / sum_rates;
 	}
@@ -114,6 +114,10 @@ void RateGamma::computeRatesMean () {
 	delete [] freqK;
 }
 
+void RateGamma::setGammaShape(double gs) {
+	gamma_shape = gs;
+}
+
 double RateGamma::computeFunction(double shape) {
 	gamma_shape = shape;
 	computeRates();
@@ -127,7 +131,6 @@ double RateGamma::targetFunk(double x[]) {
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
 }
-
 
 void RateGamma::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 	if (getNDim() == 0) return;
@@ -147,7 +150,7 @@ void RateGamma::getVariables(double *variables) {
 }
 
 double RateGamma::optimizeParameters(double epsilon) {
-	if (fix_gamma_shape) 
+	if (fix_gamma_shape)
 		return phylo_tree->computeLikelihood();
 	if (verbose_mode >= VB_MAX)
 		cout << "Optimizing gamma shape..." << endl;
@@ -175,7 +178,7 @@ void RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &patt
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 	int npattern = phylo_tree->aln->getNPattern();
 	double *ptn_rates = new double[npattern];
-	phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0], 
+	phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0],
 		(PhyloNode*)phylo_tree->root, NULL, ptn_rates);
 
 	pattern_rates.clear();
@@ -191,7 +194,7 @@ void RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &patt
 
 /*NUMERICAL SUBROUTINES
 **************************************************************************************
- 
+
 **************************************************************************************
 **************************************************************************************
 **************************************************************************************
@@ -226,7 +229,7 @@ double RateGamma::cmpIncompleteGamma (double x, double alpha, double ln_gamma_al
 	   returns (-1) if in error
 	   (1) series expansion     if (alpha>x || x<=1)
 	   (2) continued fraction   otherwise
-	 
+
 	   RATNEST FORTRAN by
 	   Bhattacharjee GP (1970) The incomplete gamma integral.  Applied Statistics,
 	   19: 285-287 (AS32)
@@ -289,13 +292,13 @@ double RateGamma::cmpPointNormal (double prob) {
 	   returns (-9999) if in error
 	   Odeh RE & Evans JO (1974) The percentage points of the normal distribution.
 	   Applied Statistics 22: 96-97 (AS70)
-	 
+
 	   Newer methods:
 	     Wichura MJ (1988) Algorithm AS 241: the percentage points of the
 	       normal distribution.  37: 477-484.
-	     Beasley JD & Springer SG  (1977).  Algorithm AS 111: the percentage 
+	     Beasley JD & Springer SG  (1977).  Algorithm AS 111: the percentage
 	       points of the normal distribution.  26: 118-121.
-	 
+
 	*/
 	double a0=-.322232431088, a1=-1, a2=-.342242088547, a3=-.0204231210245;
 	double a4=-.453642210148e-4, b0=.0993484626060, b1=.588581570495;
@@ -319,7 +322,7 @@ double RateGamma::cmpPointChi2 (double prob, double v) {
 	/* returns z so that Prob{x<z}=prob where x is Chi2 distributed with df=v
 	   returns -1 if in error.   0.000002<prob<0.999998
 	   RATNEST FORTRAN by
-	       Best DJ & Roberts DE (1975) The percentage points of the 
+	       Best DJ & Roberts DE (1975) The percentage points of the
 	       Chi2 distribution.  Applied Statistics 24: 385-388.  (AS91)
 	   Converted into C by Ziheng Yang, Oct. 1993.
 	*/

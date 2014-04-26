@@ -7,6 +7,7 @@ if (CMAKE_BUILD_TYPE MATCHES "parallel_avx")
   evaluateGenericSpecial.c
   evaluatePartialGenericSpecial.c
   fastDNAparsimony.c
+  hardware.c
   hash.c
   lexer.c
   makenewzGenericSpecial.c
@@ -35,6 +36,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES "parallel_sse3")
   evaluateGenericSpecial.c
   evaluatePartialGenericSpecial.c
   fastDNAparsimony.c
+  hardware.c
   hash.c
   lexer.c
   makenewzGenericSpecial.c
@@ -64,6 +66,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES "avx")
     evaluateGenericSpecial.c
     evaluatePartialGenericSpecial.c
     fastDNAparsimony.c
+    hardware.c
     hash.c
     lexer.c
     makenewzGenericSpecial.c
@@ -91,6 +94,7 @@ else ()
     evaluateGenericSpecial.c
     evaluatePartialGenericSpecial.c
     fastDNAparsimony.c
+    hardware.c
     hash.c
     lexer.c
     makenewzGenericSpecial.c

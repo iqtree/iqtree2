@@ -1,5 +1,36 @@
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
+ *
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
+ *
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file avxLikelihood.c
+ *
+ * @brief AVX versions of the likelihood functions
+ *
+ * AVX versions of the likelihood functions
+ */
 #include <unistd.h>
-
 #include <math.h>
 #include <time.h>
 #include <stdlib.h>
@@ -8,7 +39,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <limits.h>
-#include "pll.h"
 #include <stdint.h>
 #include <xmmintrin.h>
 #include <pmmintrin.h>
@@ -17,8 +47,11 @@
 
 #ifdef _FMA
 #include <x86intrin.h>
-#define FMAMACC(a,b,c) _mm256_macc_pd(b,c,a)
+#define FMAMACC(a,b,c) _mm256_fmadd_pd(b,c,a)
 #endif
+
+#include "pll.h"
+#include "pllInternal.h"
 
 extern const unsigned int mask32[32];
 
@@ -66,7 +99,7 @@ void  newviewGTRGAMMA_AVX(int tipCase,
 			 double *x1, double *x2, double *x3,
 			 double *extEV, double *tipVector,
 			 int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-			 const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean useFastScaling
+			 const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling
 			 )
 {
  
@@ -333,7 +366,7 @@ void  newviewGTRGAMMA_AVX_GAPPED_SAVE(int tipCase,
 				      double *x1_start, double *x2_start, double *x3_start,
 				      double *extEV, double *tipVector,
 				      int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-				      const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean useFastScaling,
+				      const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
 				      unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap, 
 				      double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn
 				      )
@@ -834,7 +867,7 @@ void  newviewGTRGAMMA_AVX_GAPPED_SAVE(int tipCase,
 void newviewGTRCAT_AVX(int tipCase,  double *EV,  int *cptr,
 			   double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
 			   int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-			   int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean useFastScaling)
+			   int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling)
 {
   double
     *le,
@@ -1004,7 +1037,7 @@ void newviewGTRCAT_AVX(int tipCase,  double *EV,  int *cptr,
 void newviewGTRCAT_AVX_GAPPED_SAVE(int tipCase,  double *EV,  int *cptr,
 				   double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
 				   int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-				   int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean useFastScaling,
+				   int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
 				   unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
 				   double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats)
 {
@@ -1306,7 +1339,7 @@ void newviewGTRCATPROT_AVX(int tipCase, double *extEV,
 			       int *cptr,
 			       double *x1, double *x2, double *x3, double *tipVector,
 			       int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-			       int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean useFastScaling)
+			       int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling)
 {
   double
     *le, *ri, *v, *vl, *vr;
@@ -1634,7 +1667,7 @@ void newviewGTRCATPROT_AVX_GAPPED_SAVE(int tipCase, double *extEV,
 				       int *cptr,
 				       double *x1, double *x2, double *x3, double *tipVector,
 				       int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-				       int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean useFastScaling,
+				       int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
 				       unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
 				       double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats)
 {
@@ -2153,7 +2186,7 @@ void newviewGTRCATPROT_AVX_GAPPED_SAVE(int tipCase, double *extEV,
 void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 				 double *x1, double *x2, double *x3, double *extEV[4], double *tipVector[4],
 				 int *ex3, unsigned char *tipX1, unsigned char *tipX2, int n, 
-				 double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean useFastScaling) 
+				 double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling) 
 {
   double	
     *uX1, 
@@ -2401,7 +2434,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 		    __m256d x1px2v = _mm256_set1_pd(x1px2);	
 	    		 
 #ifdef _FMA
-		    __m256d ev = _mm256_load_pd(&extEV[l * 20 + 0]);
+		    __m256d ev = _mm256_load_pd(&extEV[k][l * 20 + 0]);
 		    vv[0] = FMAMACC(vv[0],x1px2v, ev);
 #else
 		    vv[0] = _mm256_add_pd(vv[0],_mm256_mul_pd(x1px2v, _mm256_load_pd(&extEV[k][l * 20 + 0])));
@@ -2409,7 +2442,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 		    _mm256_store_pd(&v[0],vv[0]);
 
 #ifdef _FMA
-		    ev = _mm256_load_pd(&extEV[l * 20 + 4]);
+		    ev = _mm256_load_pd(&extEV[k][l * 20 + 4]);
 		    vv[1] = FMAMACC(vv[1],x1px2v, ev);
 #else
 		    vv[1] = _mm256_add_pd(vv[1],_mm256_mul_pd(x1px2v, _mm256_load_pd(&extEV[k][l * 20 + 4])));
@@ -2417,7 +2450,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 		    _mm256_store_pd(&v[4],vv[1]);
 
 #ifdef _FMA
-		    ev = _mm256_load_pd(&extEV[l * 20 + 8]);
+		    ev = _mm256_load_pd(&extEV[k][l * 20 + 8]);
 		    vv[2] = FMAMACC(vv[2],x1px2v, ev);
 #else
 		    vv[2] = _mm256_add_pd(vv[2],_mm256_mul_pd(x1px2v, _mm256_load_pd(&extEV[k][l * 20 + 8])));
@@ -2425,7 +2458,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 		    _mm256_store_pd(&v[8],vv[2]);
 		    
 #ifdef _FMA
-		    ev = _mm256_load_pd(&extEV[l * 20 + 12]);
+		    ev = _mm256_load_pd(&extEV[k][l * 20 + 12]);
 		    vv[3] = FMAMACC(vv[3],x1px2v, ev);
 #else
 		    vv[3] = _mm256_add_pd(vv[3],_mm256_mul_pd(x1px2v, _mm256_load_pd(&extEV[k][l * 20 + 12])));
@@ -2434,7 +2467,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 
 
 #ifdef _FMA
-		    ev = _mm256_load_pd(&extEV[l * 20 + 16]);
+		    ev = _mm256_load_pd(&extEV[k][l * 20 + 16]);
 		    vv[4] = FMAMACC(vv[4],x1px2v, ev);
 #else
 		    vv[4] = _mm256_add_pd(vv[4],_mm256_mul_pd(x1px2v, _mm256_load_pd(&extEV[k][l * 20 + 16])));
@@ -2570,7 +2603,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 		  
 		  /************************************************************************************************************/
 #ifdef _FMA		    
-		  __m256d ev =  _mm256_load_pd(&extEV[20 * l + 0]);
+		  __m256d ev =  _mm256_load_pd(&extEV[k][20 * l + 0]);
 		  vv[0] = FMAMACC(vv[0], al, ev);		 
 #else
 		  vv[0] = _mm256_add_pd(vv[0],_mm256_mul_pd(al, _mm256_load_pd(&extEV[k][20 * l + 0])));			  		 		  
@@ -2578,7 +2611,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 		  _mm256_store_pd(&v[0],vv[0]);
 
 #ifdef _FMA		    
-		  ev =  _mm256_load_pd(&extEV[20 * l + 4]);
+		  ev =  _mm256_load_pd(&extEV[k][20 * l + 4]);
 		  vv[1] = FMAMACC(vv[1], al, ev);		 
 #else
 		  vv[1] = _mm256_add_pd(vv[1],_mm256_mul_pd(al, _mm256_load_pd(&extEV[k][20 * l + 4])));		  		 
@@ -2586,7 +2619,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 		  _mm256_store_pd(&v[4],vv[1]);
 
 #ifdef _FMA		    
-		  ev =  _mm256_load_pd(&extEV[20 * l + 8]);
+		  ev =  _mm256_load_pd(&extEV[k][20 * l + 8]);
 		  vv[2] = FMAMACC(vv[2], al, ev);		 
 #else
 		  vv[2] = _mm256_add_pd(vv[2],_mm256_mul_pd(al, _mm256_load_pd(&extEV[k][20 * l + 8])));		  		 
@@ -2594,7 +2627,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 		  _mm256_store_pd(&v[8],vv[2]);
 
 #ifdef _FMA		    
-		  ev =  _mm256_load_pd(&extEV[20 * l + 12]);
+		  ev =  _mm256_load_pd(&extEV[k][20 * l + 12]);
 		  vv[3] = FMAMACC(vv[3], al, ev);		 
 #else
 		  vv[3] = _mm256_add_pd(vv[3],_mm256_mul_pd(al, _mm256_load_pd(&extEV[k][20 * l + 12])));		  		 
@@ -2602,7 +2635,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 		  _mm256_store_pd(&v[12],vv[3]);
 
 #ifdef _FMA		    
-		  ev =  _mm256_load_pd(&extEV[20 * l + 16]);
+		  ev =  _mm256_load_pd(&extEV[k][20 * l + 16]);
 		  vv[4] = FMAMACC(vv[4], al, ev);		 
 #else
 		  vv[4] = _mm256_add_pd(vv[4],_mm256_mul_pd(al, _mm256_load_pd(&extEV[k][20 * l + 16])));			 	  
@@ -2650,7 +2683,7 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
 void newviewGTRGAMMAPROT_AVX(int tipCase,
 			     double *x1, double *x2, double *x3, double *extEV, double *tipVector,
 			     int *ex3, unsigned char *tipX1, unsigned char *tipX2, int n, 
-			     double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean useFastScaling) 
+			     double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling) 
 {
   double	
     *uX1, 
@@ -3146,7 +3179,7 @@ void newviewGTRGAMMAPROT_AVX(int tipCase,
 void newviewGTRGAMMAPROT_AVX_GAPPED_SAVE(int tipCase,
 					 double *x1_start, double *x2_start, double *x3_start, double *extEV, double *tipVector,
 					 int *ex3, unsigned char *tipX1, unsigned char *tipX2, int n, 
-					 double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean useFastScaling,
+					 double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling,
 					 unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap, 
 					 double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn) 
 {

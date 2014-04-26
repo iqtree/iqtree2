@@ -1,36 +1,30 @@
-/*  RAxML-HPC, a program for sequential and parallel estimation of phylogenetic trees 
- *  Copyright March 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
- *  
- *  and 
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  stamatak@ics.forth.gr
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
- *  
- *  Alexandros Stamatakis: "An Efficient Program for phylogenetic Inference Using Simulated Annealing". 
- *  Proceedings of IPDPS2005,  Denver, Colorado, April 2005.
- *  
- *  AND
- *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands of taxa and mixed models". 
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file bipartitionList.c
  */
 #include "mem_alloc.h"
 
@@ -50,7 +44,9 @@
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
+
 #include "pll.h"
+#include "pllInternal.h"
 
 
 
@@ -87,7 +83,7 @@ entry *initEntry(void)
   return e;
 } 
 
-hashtable *initHashTable(hashNumberType n)
+pllHashtable *initHashTable(hashNumberType n)
 {
   /* 
      init with primes 
@@ -104,7 +100,7 @@ hashtable *initHashTable(hashNumberType n)
 					      4194304, 8388608, 16777216, 33554432, 67108864, 134217728,
 					      268435456, 536870912, 1073741824, 2147483648U};
   
-  hashtable *h = (hashtable*)rax_malloc(sizeof(hashtable));
+  pllHashtable *h = (pllHashtable*)rax_malloc(sizeof(pllHashtable));
   
   hashNumberType
     tableSize,
@@ -135,7 +131,7 @@ hashtable *initHashTable(hashNumberType n)
 
 
 
-void freeHashTable(hashtable *h)
+void freeHashTable(pllHashtable *h)
 {
   hashNumberType
     i,
@@ -178,7 +174,7 @@ void freeHashTable(hashtable *h)
 
 
 
-void cleanupHashTable(hashtable *h, int state)
+void cleanupHashTable(pllHashtable *h, int state)
 {
   hashNumberType
     k,
@@ -382,8 +378,8 @@ static void newviewBipartitions(unsigned int **bitVectors, nodeptr p, int numsp,
 
 
 
-static void insertHashRF(unsigned int *bitVector, hashtable *h, unsigned int vectorLength, int treeNumber, int treeVectorLength, hashNumberType position, int support, 
-			 pll_boolean computeWRF)
+static void insertHashRF(unsigned int *bitVector, pllHashtable *h, unsigned int vectorLength, int treeNumber, int treeVectorLength, hashNumberType position, int support, 
+			 pllBoolean computeWRF)
 {     
   if(h->table[position] != NULL)
     {
@@ -469,8 +465,8 @@ static void insertHashRF(unsigned int *bitVector, hashtable *h, unsigned int vec
 
 
 
-void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, hashtable *h, int treeNumber, int function, branchInfo *bInf, 
-			     int *countBranches, int treeVectorLength, pll_boolean traverseOnly, pll_boolean computeWRF, int processID)
+void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, pllHashtable *h, int treeNumber, int function, branchInfo *bInf, 
+			     int *countBranches, int treeVectorLength, pllBoolean traverseOnly, pllBoolean computeWRF, int processID)
 {
   if(isTip(p->number, numsp))
     return;
@@ -538,7 +534,7 @@ void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, un
 
 
 
-double convergenceCriterion(hashtable *h, int mxtips)
+double convergenceCriterion(pllHashtable *h, int mxtips)
 {
   int      
     rf = 0; 

@@ -1,35 +1,32 @@
-/*  RAxML-VI-HPC (version 2.2) a program for sequential and parallel estimation of phylogenetic trees
- *  Copyright August 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  and
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  Alexandros.Stamatakis@epfl.ch
- *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
- *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands of taxa and mixed models".
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
- */
-
-/** @file newviewGenericSpecial.c
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file newviewGenericSpecial.c
  *  
- *  @brief Functions that deal (mostly) with conditional likelihood (re)computation
+ * @brief Functions that deal (mostly) with conditional likelihood (re)computation
  */
 
 #include "mem_alloc.h"
@@ -47,7 +44,9 @@
 #include <stdint.h>
 #include <limits.h>
 #include <assert.h>
+
 #include "pll.h"
+#include "pllInternal.h"
 
 #ifdef __SSE3
 #include <stdint.h>
@@ -55,20 +54,19 @@
 #include <pmmintrin.h>
 #include "cycle.h"
 
-
-static void computeTraversalInfo(nodeptr, traversalInfo *, int *, int, int, pll_boolean, recompVectors *, pll_boolean);
-static void makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, pll_boolean saveMem, int maxCat, const int states);
+static void computeTraversalInfo(nodeptr, traversalInfo *, int *, int, int, pllBoolean, recompVectors *, pllBoolean);
+static void makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, pllBoolean saveMem, int maxCat, const int states);
 #if (defined(__SSE3) && !defined(__AVX))
 static void newviewGTRGAMMAPROT_LG4(int tipCase,
                                     double *x1, double *x2, double *x3, double *extEV[4], double *tipVector[4],
                                     int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                    int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean useFastScaling);
+                                    int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling);
 
 static void newviewGTRGAMMA_GAPPED_SAVE(int tipCase,
                                         double *x1_start, double *x2_start, double *x3_start,
                                         double *EV, double *tipVector,
                                         int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                        const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling,
+                                        const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                         unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap, 
                                         double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn);
 
@@ -76,26 +74,26 @@ static void newviewGTRGAMMA(int tipCase,
                             double *x1_start, double *x2_start, double *x3_start,
                             double *EV, double *tipVector,
                             int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                            const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling
+                            const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling
                             );
 
 static void newviewGTRCAT( int tipCase,  double *EV,  int *cptr,
                            double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
                            int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                           int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling);
+                           int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling);
 
 
 static void newviewGTRCAT_SAVE( int tipCase,  double *EV,  int *cptr,
                                 double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
                                 int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling,
+                                int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                 unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                 double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats);
 
 static void newviewGTRGAMMAPROT_GAPPED_SAVE(int tipCase,
                                             double *x1, double *x2, double *x3, double *extEV, double *tipVector,
                                             int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling,
+                                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                             unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,  
                                             double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn
                                             );
@@ -103,19 +101,19 @@ static void newviewGTRGAMMAPROT_GAPPED_SAVE(int tipCase,
 static void newviewGTRGAMMAPROT(int tipCase,
                                 double *x1, double *x2, double *x3, double *extEV, double *tipVector,
                                 int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling);
+                                int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling);
 
 static void newviewGTRCATPROT(int tipCase, double *extEV,
                               int *cptr,
                               double *x1, double *x2, double *x3, double *tipVector,
                               int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling);
+                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling);
 
 static void newviewGTRCATPROT_SAVE(int tipCase, double *extEV,
                                    int *cptr,
                                    double *x1, double *x2, double *x3, double *tipVector,
                                    int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                   int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling,
+                                   int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                    unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                    double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats);
 #endif
@@ -132,6 +130,9 @@ const union __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)))
 
 
 #endif
+
+static int pllGetTransitionMatrixNormal (pllInstance * tr, partitionList * pr, nodeptr p, int model, int rate, double * outBuffer);
+static int pllGetTransitionMatrixLG4 (partitionList * pr, nodeptr p, int model, int rate, double * outBuffer);
 
 extern const char dnaStateNames[4];     /**< @brief Array that contains letters for the four DNA base-pairs, i.e. 0 = A, 1 = C, 2 = G, 3 = T */
 extern const char protStateNames[20];   /**< @brief Array that contains letters for the 20 AA base-pairs */
@@ -189,7 +190,7 @@ extern const unsigned int mask32[32];   /**< @brief Array that contains the firs
       Number of states for the particular data (4 for DNA or 20 for AA)
 */
 static void 
-makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, pll_boolean saveMem, int maxCat, const int states)
+makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberOfCategories, double *left, double *right, pllBoolean saveMem, int maxCat, const int states)
 {
   int 
     i, 
@@ -226,6 +227,7 @@ makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberO
     {
       d1[j] = EXP(rptr[i] * lz1[j]);
       d2[j] = EXP(rptr[i] * lz2[j]);
+
     }
 
     /* now fill the P matrices for the two branch length values */
@@ -280,6 +282,144 @@ makeP(double z1, double z2, double *rptr, double *EI,  double *EIGN, int numberO
   rax_free(d1);
   rax_free(d2);
 }
+
+
+/** Compute the transition probability matrix for a given branch
+
+    Computes the transition probability matrix for the branch \a p->z and partition \a model given the
+    PLL instance \a tr and list of partitions \a pr. The result is stored in \a outBuffer which must
+    be of sufficient size, i.e states * states * (numberOfRateCategories + 1) * sizeof(double);
+
+    @param tr  PLL instance
+    @param pr  List of partitions
+    @param model  Partition index for which to take the branch length
+    @param p  Adjacent node to the edge we want to compute the trans. prob. matrix
+    @param outBuffer Output buffer where to store the transition probability matrix
+
+*/
+int pllGetTransitionMatrix (pllInstance * tr, partitionList * pr, nodeptr p, int model, int rate, double * outBuffer)
+{
+  if (tr->rateHetModel == PLL_CAT)
+   {
+     if (rate >= pr->partitionData[model]->numberOfCategories) return (PLL_FALSE);
+   }
+  else
+   {
+     if (rate >= 4) return (PLL_FALSE);
+   }
+
+  if (pr->partitionData[model]->dataType == PLL_AA_DATA && pr->partitionData[model]->protModels == PLL_LG4)
+    return (pllGetTransitionMatrixLG4 (pr, p, model, rate, outBuffer));
+    
+    
+  return (pllGetTransitionMatrixNormal (tr, pr, p, model, rate, outBuffer));
+}
+
+
+/* TODO: Fix this function according to pllGetTransitionMatrixNormal */
+static int pllGetTransitionMatrixLG4 (partitionList * pr, nodeptr p, int model, int rate, double * outBuffer)
+{
+  int
+    i, j, k,
+    states = pr->partitionData[model]->states,
+    numberOfCategories = 4;
+  double
+    d[64],
+    *  rptr = pr->partitionData[model]->gammaRates,
+    ** EI   = pr->partitionData[model]->EI_LG4,
+    ** EIGN = pr->partitionData[model]->EIGN_LG4;
+
+  assert (states == 20);
+
+  for (i = 0; i < numberOfCategories; ++i)
+   {
+     for (j = 1; j < states; ++j)
+      {
+        d[j] = EXP(rptr[i] * EIGN[i][j] * p->z[model]);
+      }
+     for (j = 0; j < states; ++ j)
+      {
+        outBuffer[states * states * i + states * j] = 1.0;
+        for (k = 1; k < states; ++k) 
+         {
+           outBuffer[states * states * i + states * j + k] = d[k] * EI[i][states * j + k];
+         }
+      }
+   }
+  return (PLL_TRUE);
+}
+
+static int pllGetTransitionMatrixNormal (pllInstance * tr, partitionList * pr, nodeptr p, int model, int rate, double * outBuffer)
+{
+  int 
+    i, j, k, l,
+    numberOfCategories,
+    states = pr->partitionData[model]->states;
+  double
+    * d = (double *)rax_malloc(sizeof(double) * states),
+    * rptr,
+    * EI   = pr->partitionData[model]->EI,
+    * EIGN = pr->partitionData[model]->EIGN,
+    * EV = pr->partitionData[model]->EV;
+  
+  double lz = (p->z[model] > PLL_ZMIN) ? log(p->z[model]) : log(PLL_ZMIN);                        
+
+  if (tr->rateHetModel == PLL_CAT)
+   {
+     rptr               = pr->partitionData[model]->perSiteRates;
+     numberOfCategories = pr->partitionData[model]->numberOfCategories;
+   }
+  else
+   {
+     rptr               = pr->partitionData[model]->gammaRates;
+     numberOfCategories = 4;
+   }
+
+  for (i = 0; i < states * states; ++ i) outBuffer[i] = 0;
+
+  d[0] = 1.0;
+  for (j = 1; j < states; ++ j)
+   {
+     d[j] = EXP(rptr[rate] * EIGN[j] * lz);
+   }
+
+  for (i = 0; i < states; ++ i)
+   {
+     for (j = 0; j < states; ++ j)
+      {
+        for (k = 0; k < states; ++ k)
+         {
+           outBuffer[states * i + j] += (d[k] * EI[states * i + k] * EV[states * j + k]);
+         }
+      }
+   }
+
+  assert (!tr->saveMemory);
+  // TODO: Fix the following snippet
+  //if (tr->saveMemory)
+  // {
+  //   i = tr->maxCategories;
+  //   
+  //   for (j = 1; j < states; ++j)
+  //    {
+  //      d[j] = EXP(EIGN[j] * p->z[model]);
+  //    }
+
+  //   for (j = 0; j < states; ++j)
+  //    {
+  //      outBuffer[states * states * i + states * j] = 1.0;
+  //      for (k = 1; k < states; ++k)
+  //       {
+  //         outBuffer[states * states * i + states * j + k] = d[k] * EI[states * j + k];
+  //       }
+  //    }
+  // }
+
+  rax_free(d);
+
+  return (PLL_TRUE);
+}
+
 
 /** @brief Compute two P matrices for two edges for the LG4 model
     
@@ -440,7 +580,7 @@ static void newviewCAT_FLEX(int tipCase, double *extEV,
                             int *cptr,
                             double *x1, double *x2, double *x3, double *tipVector,
                             int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling, const int states)
+                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling, const int states)
 {
   double
     *le, 
@@ -735,7 +875,7 @@ static void newviewCAT_FLEX(int tipCase, double *extEV,
 static void newviewGAMMA_FLEX(int tipCase,
                               double *x1, double *x2, double *x3, double *extEV, double *tipVector,
                               int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling, const int states, const int maxStateValue)
+                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling, const int states, const int maxStateValue)
 {
   double  
     *uX1, 
@@ -1190,7 +1330,7 @@ i    Traversal descriptor element structure
    
    @todo Fill in the ancestral recomputation parameter information 
  */
-static void computeTraversalInfo(nodeptr p, traversalInfo *ti, int *counter, int maxTips, int numBranches, pll_boolean partialTraversal, recompVectors *rvec, pll_boolean useRecom)
+static void computeTraversalInfo(nodeptr p, traversalInfo *ti, int *counter, int maxTips, int numBranches, pllBoolean partialTraversal, recompVectors *rvec, pllBoolean useRecom)
 {
   /* if it's a tip we don't do anything */
 
@@ -1532,7 +1672,7 @@ void pllNewviewIterative (pllInstance *tr, partitionList *pr, int startIndex)
 
         /* select fastScaling or per-site scaling of conidtional likelihood entries */
 
-        pll_boolean
+        pllBoolean
           fastScaling = tr->fastScaling;
 
 #if (defined(__SSE3) || defined(__AVX))
@@ -2034,7 +2174,7 @@ void pllNewviewIterative (pllInstance *tr, partitionList *pr, int startIndex)
     @param numBranches
       Number of branches (either per-partition branch or joint branch estimate)
 */
-void computeTraversal(pllInstance *tr, nodeptr p, pll_boolean partialTraversal, int numBranches)
+void computeTraversal(pllInstance *tr, nodeptr p, pllBoolean partialTraversal, int numBranches)
 {
   /* Only if we apply recomputations we need the additional step of updating the subtree lengths */
   if(tr->useRecom)
@@ -2070,7 +2210,7 @@ void computeTraversal(pllInstance *tr, nodeptr p, pll_boolean partialTraversal, 
       If set to \b PLL_TRUE, then likelihood vectors of partitions that are converged are
       not recomputed.
  */
-void pllNewviewGeneric (pllInstance *tr, partitionList *pr, nodeptr p, pll_boolean masked)
+void pllUpdatePartials (pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean masked)
 {  
   /* if it's a tip there is nothing to do */
 
@@ -2462,7 +2602,7 @@ void newviewAncestralIterative(pllInstance *tr, partitionList *pr)
     }
 }
 
-/* this is very similar to pllNewviewGeneric, except that it also computes the marginal ancestral probabilities 
+/* this is very similar to pllUpdatePartials, except that it also computes the marginal ancestral probabilities 
    at node p. To simplify the code I am re-using newview() here to first get the likelihood vector p->x at p
    and then I deploy newviewAncestralIterative(tr); that should always only have a traversal descriptor of lenth 1,
    to do some mathematical transformations that are required to obtain the marginal ancestral probabilities from 
@@ -2490,7 +2630,7 @@ void newviewAncestralIterative(pllInstance *tr, partitionList *pr)
     @note
       This function is not implemented with the saveMemory technique. 
 */
-void pllNewviewGenericAncestral(pllInstance *tr, partitionList *pr, nodeptr p)
+void pllUpdatePartialsAncestral(pllInstance *tr, partitionList *pr, nodeptr p)
 {
   /* error check, we don't need to compute anything for tips */
   
@@ -2510,9 +2650,9 @@ void pllNewviewGenericAncestral(pllInstance *tr, partitionList *pr, nodeptr p)
       return;
     }
 
-  /* first call pllNewviewGeneric() with mask set to PLL_FALSE such that the likelihood vector is there ! */
+  /* first call pllUpdatePartials() with mask set to PLL_FALSE such that the likelihood vector is there ! */
 
-  pllNewviewGeneric(tr, pr, p, PLL_FALSE);
+  pllUpdatePartials(tr, pr, p, PLL_FALSE);
 
   /* now let's compute the ancestral states using this vector ! */
   
@@ -2526,7 +2666,7 @@ void pllNewviewGenericAncestral(pllInstance *tr, partitionList *pr, nodeptr p)
   tr->td[0].traversalHasChanged = PLL_TRUE;
 
   /* here we actually assert, that the traversal descriptor only contains one node triplet p, p->next->back, p->next->next->back
-     this must be PLL_TRUE because we have alread invoked the standard pllNewviewGeneric() on p.
+     this must be PLL_TRUE because we have alread invoked the standard pllUpdatePartials() on p.
   */ 
 
   assert(tr->td[0].count == 1);  
@@ -2613,7 +2753,7 @@ static char getStateCharacter(int dataType, int state)
  
     @note  Here one can see how to store the ancestral probabilities in a dedicated data structure
  */
-void printAncestralState(nodeptr p, pll_boolean printStates, pll_boolean printProbs, pllInstance *tr, partitionList *pr)
+void printAncestralState(nodeptr p, pllBoolean printStates, pllBoolean printProbs, pllInstance *tr, partitionList *pr)
 {
 #ifdef _USE_PTHREADS
   size_t 
@@ -2658,7 +2798,7 @@ void printAncestralState(nodeptr p, pll_boolean printStates, pll_boolean printPr
             equal = 1.0 / (double)states,
             max = -1.0;
             
-          pll_boolean
+          pllBoolean
             approximatelyEqual = PLL_TRUE;
 
           int
@@ -2749,6 +2889,127 @@ void printAncestralState(nodeptr p, pll_boolean printStates, pll_boolean printPr
   rax_free(a);
 }
 
+void pllGetAncestralState(pllInstance *tr, partitionList *pr, nodeptr p, double * outProbs, char * outSequence)
+{
+#ifdef _USE_PTHREADS
+  size_t 
+    accumulatedOffset = 0;
+#endif
+
+  int
+    j,
+    k,
+    model,
+    globalIndex = 0;
+  
+  /* allocate an array of structs for storing ancestral prob vector info/data */
+
+  ancestralState 
+    *a = (ancestralState *)rax_malloc(sizeof(ancestralState) * tr->originalCrunchedLength);   
+
+  /* loop over partitions */
+
+  for(model = 0; model < pr->numberOfPartitions; model++)
+    {
+      int            
+        i,
+        width = pr->partitionData[model]->upper - pr->partitionData[model]->lower,
+        states = pr->partitionData[model]->states;
+      
+      /* set pointer to ancestral probability vector */
+
+#ifdef _USE_PTHREADS
+      double
+        *ancestral = &tr->ancestralVector[accumulatedOffset];
+#else
+      double 
+        *ancestral = pr->partitionData[model]->ancestralBuffer;
+#endif        
+      
+      /* loop over the sites of the partition */
+
+      for(i = 0; i < width; i++, globalIndex++)
+        {
+          double
+            equal = 1.0 / (double)states,
+            max = -1.0;
+            
+          pllBoolean
+            approximatelyEqual = PLL_TRUE;
+
+          int
+            max_l = -1,
+            l;
+          
+          char 
+            c;
+
+          /* stiore number of states for this site */
+
+          a[globalIndex].states = states;
+
+          /* alloc space for storing marginal ancestral probabilities */
+
+          a[globalIndex].probs = (double *)rax_malloc(sizeof(double) * states);
+          
+          /* loop over states to store probabilities and find the maximum */
+
+          for(l = 0; l < states; l++)
+            {
+              double 
+                value = ancestral[states * i + l];
+
+              if(value > max)
+                {
+                  max = value;
+                  max_l = l;
+                }
+              
+              /* this is used for discretizing the ancestral state sequence, if all marginal ancestral 
+                 probabilities are approximately equal we output a ? */
+
+              approximatelyEqual = approximatelyEqual && (PLL_ABS(equal - value) < 0.000001);
+              
+              a[globalIndex].probs[l] = value;                
+            }
+
+          
+          /* figure out the discrete ancestral nucleotide */
+
+          if(approximatelyEqual)
+            c = '?';      
+          else
+            c = getStateCharacter(pr->partitionData[model]->dataType, max_l);
+          
+          a[globalIndex].c = c;   
+        }
+
+#ifdef _USE_PTHREADS
+      accumulatedOffset += width * states;
+#endif            
+    }
+
+  /* print marginal ancestral probs to terminal */
+
+  for(k = 0; k < tr->originalCrunchedLength; k++)
+    {
+      for(j = 0; j < a[k].states; j++)
+        outProbs[k * a[k].states + j] = a[k].probs[j];
+    }
+ 
+  /* print discrete state ancestrakl sequence to terminal */
+
+  for(k = 0; k < tr->originalCrunchedLength; k++)          
+      outSequence[k] = a[k].c;
+  outSequence[tr->originalCrunchedLength] = 0;
+  
+  /* free the ancestral state data structure */
+          
+  for(j = 0; j < tr->originalCrunchedLength; j++)
+    rax_free(a[j].probs);  
+
+  rax_free(a);
+}
 /* optimized function implementations */
 
 
@@ -2773,7 +3034,7 @@ static void newviewGTRGAMMA_GAPPED_SAVE(int tipCase,
                                         double *x1_start, double *x2_start, double *x3_start,
                                         double *EV, double *tipVector,
                                         int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                        const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling,
+                                        const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                         unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap, 
                                         double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn)
 {
@@ -3687,7 +3948,7 @@ static void newviewGTRGAMMA(int tipCase,
                             double *x1_start, double *x2_start, double *x3_start,
                             double *EV, double *tipVector,
                             int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                            const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling
+                            const int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling
                             )
 {
   int 
@@ -4210,7 +4471,7 @@ static void newviewGTRGAMMA(int tipCase,
 static void newviewGTRCAT( int tipCase,  double *EV,  int *cptr,
                            double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
                            int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                           int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling)
+                           int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling)
 {
   double
     *le,
@@ -4653,7 +4914,7 @@ static void newviewGTRCAT( int tipCase,  double *EV,  int *cptr,
 #ifndef __clang__
 inline 
 #endif
-pll_boolean isGap(unsigned int *x, int pos)
+pllBoolean isGap(unsigned int *x, int pos)
 {
   return (x[pos / 32] & mask32[pos % 32]);
 }
@@ -4672,7 +4933,7 @@ pll_boolean isGap(unsigned int *x, int pos)
 #ifndef __clang__
 inline 
 #endif
-pll_boolean noGap(unsigned int *x, int pos)
+pllBoolean noGap(unsigned int *x, int pos)
 {
   return (!(x[pos / 32] & mask32[pos % 32]));
 }
@@ -4691,7 +4952,7 @@ pll_boolean noGap(unsigned int *x, int pos)
 static void newviewGTRCAT_SAVE( int tipCase,  double *EV,  int *cptr,
                                 double *x1_start, double *x2_start,  double *x3_start, double *tipVector,
                                 int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling,
+                                int n,  double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                 unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                 double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats)
 {
@@ -5354,7 +5615,7 @@ static void newviewGTRCAT_SAVE( int tipCase,  double *EV,  int *cptr,
 static void newviewGTRGAMMAPROT_GAPPED_SAVE(int tipCase,
                                             double *x1, double *x2, double *x3, double *extEV, double *tipVector,
                                             int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling,
+                                            int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                             unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,  
                                             double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn
                                             )
@@ -5909,7 +6170,7 @@ static void newviewGTRGAMMAPROT_GAPPED_SAVE(int tipCase,
 static void newviewGTRGAMMAPROT(int tipCase,
                                 double *x1, double *x2, double *x3, double *extEV, double *tipVector,
                                 int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling)
+                                int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling)
 {
   double  *uX1, *uX2, *v;
   double x1px2;
@@ -6221,7 +6482,7 @@ static void newviewGTRCATPROT(int tipCase, double *extEV,
                               int *cptr,
                               double *x1, double *x2, double *x3, double *tipVector,
                               int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling)
+                              int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling)
 {
   double
     *le, *ri, *v, *vl, *vr;
@@ -6458,7 +6719,7 @@ static void newviewGTRCATPROT_SAVE(int tipCase, double *extEV,
                                    int *cptr,
                                    double *x1, double *x2, double *x3, double *tipVector,
                                    int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                   int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean fastScaling,
+                                   int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean fastScaling,
                                    unsigned int *x1_gap, unsigned int *x2_gap, unsigned int *x3_gap,
                                    double *x1_gapColumn, double *x2_gapColumn, double *x3_gapColumn, const int maxCats)
 {
@@ -6841,7 +7102,7 @@ static void newviewGTRCATPROT_SAVE(int tipCase, double *extEV,
 static void newviewGTRGAMMAPROT_LG4(int tipCase,
                                     double *x1, double *x2, double *x3, double *extEV[4], double *tipVector[4],
                                     int *ex3, unsigned char *tipX1, unsigned char *tipX2,
-                                    int n, double *left, double *right, int *wgt, int *scalerIncrement, const pll_boolean useFastScaling)
+                                    int n, double *left, double *right, int *wgt, int *scalerIncrement, const pllBoolean useFastScaling)
 {
   double  *uX1, *uX2, *v;
   double x1px2;

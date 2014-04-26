@@ -1,21 +1,45 @@
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
+ *
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
+ *
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file part.c
+ * @brief Collection of routines for parsing and processing a partition (model) file
+ *
+ * @defgroup parsePartitionFileGroup Reading and parsing partition (model) files
+ * This set of functions handles the reading and parsing of partition files, i.e.
+ * files that contain alignment partition definitions and corresponding models.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <math.h>
 #include <ctype.h>
+
 #include "pll.h"
-
-/** @file part.c
-
-    @brief Collection of routines for parsing and processing a partition (model) file
-
-    @defgroup parsePartitionFileGroup Reading and parsing partition (model) files
-
-    This set of functions handles the reading and parsing of partition files, i.e.
-    files that contain alignment partition definitions and corresponding models.
-*/
-
+#include "pllInternal.h"
 
 extern const char *protModels[PLL_NUM_PROT_MODELS];
 
@@ -96,7 +120,7 @@ parse_partition (int * inp)
 
 
     /* read partition type */
-    if (token.tokenType != PLL_TOKEN_STRING)
+    if (token.tokenType != PLL_TOKEN_STRING) 
      {
        pllQueuePartitionsDestroy (&partitions);
        return (0);
@@ -114,14 +138,14 @@ parse_partition (int * inp)
        pi->protModels = PLL_FALSE;
        pi->protFreqs  = PLL_FALSE;
        pi->dataType   = PLL_DNA_DATA;
-       pi->optimizeBaseFrequencies = PLL_FALSE;
+       pi->optimizeBaseFrequencies = PLL_FALSE; 
      }
     else if (!strcmp (pi->partitionModel, "DNAX"))
      {
        pi->protModels = PLL_FALSE;
        pi->protFreqs  = PLL_FALSE;
        pi->dataType   = PLL_DNA_DATA;
-       pi->optimizeBaseFrequencies = PLL_TRUE;
+       pi->optimizeBaseFrequencies = PLL_TRUE; 
      }
     else
      {                  /* check for protein data */
@@ -168,7 +192,7 @@ parse_partition (int * inp)
     NEXT_TOKEN
     CONSUME(PLL_TOKEN_WHITESPACE)
 
-    if (token.tokenType != PLL_TOKEN_COMMA)
+    if (token.tokenType != PLL_TOKEN_COMMA) 
      {
        pllQueuePartitionsDestroy (&partitions);
        return (0);
@@ -177,7 +201,7 @@ parse_partition (int * inp)
     CONSUME(PLL_TOKEN_WHITESPACE)
 
     /* read partition name */
-    if (token.tokenType != PLL_TOKEN_STRING)
+    if (token.tokenType != PLL_TOKEN_STRING) 
      {
        pllQueuePartitionsDestroy (&partitions);
        return (0);
@@ -203,21 +227,21 @@ parse_partition (int * inp)
     while (1)
     {
       region = (pllPartitionRegion *) rax_malloc (sizeof (pllPartitionRegion));
-      if (token.tokenType != PLL_TOKEN_NUMBER)
+      if (token.tokenType != PLL_TOKEN_NUMBER) 
        {
          pllQueuePartitionsDestroy (&partitions);
          return (0);
        }
-      region->start  = region->end = atoi (token.lexeme);
+      region->start  = region->end = atoi (token.lexeme);  
       region->stride = 1;
       NEXT_TOKEN
       CONSUME(PLL_TOKEN_WHITESPACE)
-
+      
       if  (token.tokenType == PLL_TOKEN_DASH)
        {
          NEXT_TOKEN
          CONSUME(PLL_TOKEN_WHITESPACE)
-         if (token.tokenType != PLL_TOKEN_NUMBER)
+         if (token.tokenType != PLL_TOKEN_NUMBER) 
           {
             pllQueuePartitionsDestroy (&partitions);
             return (0);
@@ -234,7 +258,7 @@ parse_partition (int * inp)
           {
             NEXT_TOKEN
             CONSUME(PLL_TOKEN_WHITESPACE)
-            if (token.tokenType != PLL_TOKEN_NUMBER)
+            if (token.tokenType != PLL_TOKEN_NUMBER) 
              {
                pllQueuePartitionsDestroy (&partitions);
                return (0);
@@ -245,16 +269,16 @@ parse_partition (int * inp)
          CONSUME(PLL_TOKEN_WHITESPACE)
        }
        pllQueueAppend (pi->regionList, (void *)region);
-
+      
       if (token.tokenType != PLL_TOKEN_COMMA) break;
       NEXT_TOKEN
       CONSUME(PLL_TOKEN_WHITESPACE)
     }
    CONSUME(PLL_TOKEN_WHITESPACE | PLL_TOKEN_NEWLINE)
   }
-
+ 
  return (partitions);
-}
+} 
 
 /** @ingroup parsePartitionFileGroup
     @brief Dump a parsed partition file in the console
@@ -264,7 +288,7 @@ parse_partition (int * inp)
     @param partitions
       A queue structure that contains the parsed information
 */
-void
+void 
 pllPartitionDump (pllQueue * partitions)
 {
    struct pllQueueItem * elm;
@@ -301,11 +325,11 @@ pllPartitionDump (pllQueue * partitions)
     @brief Parse a partition (model) file
 
     Parses the partition file \a filename and stores the information
-    a queue structure ::pllQueue
+    in a queue structure ::pllQueue
 
     @param filename
       Name of the partition file
-
+    
     @return
       Queue structure with parsed information
 */
@@ -324,7 +348,7 @@ pllPartitionParse (const char * filename)
      return (0);
    }
 
-  /* printf ("%s\n\n", rawdata); */
+  printf ("%s\n\n", rawdata);
 
   n = strlen (rawdata);
 
@@ -334,7 +358,37 @@ pllPartitionParse (const char * filename)
   init_model_names();
   partitions = parse_partition (&input);
   destroy_model_names();
-
+  
   rax_free (rawdata);
+  return (partitions);
+}
+
+/** @ingroup parsePartitionFileGroup
+    @brief Parse a partition (model) file
+
+    Parses the partition information stored in string \a p and stores the information
+    in a queue structure ::pllQueue
+
+    @param p
+      Partition information string
+    
+    @return
+      Queue structure with parsed information
+*/
+pllQueue *
+pllPartitionParseString (const char * p)
+{
+  long n;
+  int input;
+  pllQueue * partitions;
+
+  n = strlen(p);
+  init_lexan (p, n);
+  input = get_next_symbol();
+
+  init_model_names();
+  partitions = parse_partition (&input);
+  destroy_model_names();
+  
   return (partitions);
 }
