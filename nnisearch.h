@@ -221,12 +221,6 @@ void pllComputePatternLikelihood(pllInstance* tr, double * ptnlh, double * cur_l
 
 /**
  * DTH:
- * Announce the memory allocation error (for debugging)
- */
-void pllAlertMemoryError();
-
-/**
- * DTH:
  * Resize some of the arrays in UFBootData if they're full
  * Along with update treels_size (to track the size of these arrays)
  */

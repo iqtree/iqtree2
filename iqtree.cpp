@@ -63,6 +63,7 @@ void IQTree::init() {
     pllPartitions = NULL;
     //boot_splits = new SplitGraph;
     diversification = false;
+    pll2iqtree_pattern_index = NULL;
 }
 
 IQTree::IQTree(Alignment *aln) :
@@ -965,8 +966,8 @@ void IQTree::pllBuildIQTreePatternIndex(){
         }
     }
 
-     char * pll_site = new char[pllAlignment->sequenceCount + 1];
-     char * site = new char[pllAlignment->sequenceCount + 1];
+	char * pll_site = new char[pllAlignment->sequenceCount + 1];
+	char * site = new char[pllAlignment->sequenceCount + 1];
     for(int i = 0; i < pllAlignment->sequenceLength; i++){
         for(int j = 0; j < pllAlignment->sequenceCount; j++)
             pll_site[j]= pll_aln[j][i];
@@ -979,7 +980,6 @@ void IQTree::pllBuildIQTreePatternIndex(){
             pllBaseSubstitute(site, pllPartitions->partitionData[0]->dataType);
             if(memcmp(pll_site,site, pllAlignment->sequenceCount) == 0){
                 pll2iqtree_pattern_index[i] = k;
-//                cout << "original_aln_index[" << i << "] = " << k  << endl;
             }
         }
     }
@@ -1733,35 +1733,33 @@ void IQTree::pllInitUFBootData(){
         if(params->online_bootstrap && params->gbo_replicates > 0){
         	if(!pll2iqtree_pattern_index) pllBuildIQTreePatternIndex();
 
-//            pllUFBootDataPtr->params_ufboot_epsilon = params->ufboot_epsilon;
-
             pllUFBootDataPtr->treels = pllHashInit(max_candidate_trees);
-
             pllUFBootDataPtr->treels_size = max_candidate_trees; // track size of treels_logl, treels_newick, treels_ptnlh
 
             pllUFBootDataPtr->treels_logl =
                 (double *) malloc(max_candidate_trees * (sizeof(double)));
-            if(!pllUFBootDataPtr->treels_logl) pllAlertMemoryError();
+            if(!pllUFBootDataPtr->treels_logl) outError("Not enough dynamic memory!");
             //memset(pllUFBootDataPtr->treels_logl, 0, max_candidate_trees * (sizeof(double)));
 
             pllUFBootDataPtr->treels_newick =
                 (char **) malloc(max_candidate_trees * (sizeof(char *)));
-            if(!pllUFBootDataPtr->treels_newick) pllAlertMemoryError();
+            if(!pllUFBootDataPtr->treels_newick) outError("Not enough dynamic memory!");
             memset(pllUFBootDataPtr->treels_newick, 0, max_candidate_trees * (sizeof(char *)));
 
 
             pllUFBootDataPtr->treels_ptnlh =
                 (double **) malloc(max_candidate_trees * (sizeof(double *)));
-            if(!pllUFBootDataPtr->treels_ptnlh) pllAlertMemoryError();
+            if(!pllUFBootDataPtr->treels_ptnlh) outError("Not enough dynamic memory!");
             memset(pllUFBootDataPtr->treels_ptnlh, 0, max_candidate_trees * (sizeof(double *)));
 
             // aln->createBootstrapAlignment() must be called before this fragment
             pllUFBootDataPtr->boot_samples =
                 (int **) malloc(params->gbo_replicates * sizeof(int *));
-            if(!pllUFBootDataPtr->boot_samples) pllAlertMemoryError();
+            if(!pllUFBootDataPtr->boot_samples) outError("Not enough dynamic memory!");
             for(int i = 0; i < params->gbo_replicates; i++){
                 pllUFBootDataPtr->boot_samples[i] =
                     (int *) malloc(pllAlignment->sequenceLength * sizeof(int));
+                if(!pllUFBootDataPtr->boot_samples[i]) outError("Not enough dynamic memory!");
                 for(int j = 0; j < pllAlignment->sequenceLength; j++){
                     pllUFBootDataPtr->boot_samples[i][j] =
                         boot_samples[i][pll2iqtree_pattern_index[j]];
@@ -1773,27 +1771,22 @@ void IQTree::pllInitUFBootData(){
 
             pllUFBootDataPtr->boot_logl =
                 (double *) malloc(params->gbo_replicates * (sizeof(double)));
-            if(!pllUFBootDataPtr->boot_logl) pllAlertMemoryError();
+            if(!pllUFBootDataPtr->boot_logl) outError("Not enough dynamic memory!");
             for(int i = 0; i < params->gbo_replicates; i++)
                 pllUFBootDataPtr->boot_logl[i] = -DBL_MAX;
 
             pllUFBootDataPtr->boot_counts =
                 (int *) malloc(params->gbo_replicates * (sizeof(int)));
-            if(!pllUFBootDataPtr->boot_counts) pllAlertMemoryError();
+            if(!pllUFBootDataPtr->boot_counts) outError("Not enough dynamic memory!");
             memset(pllUFBootDataPtr->boot_counts, 0, params->gbo_replicates * (sizeof(int)));
 
             pllUFBootDataPtr->boot_trees =
                 (int *) malloc(params->gbo_replicates * (sizeof(int)));
-            if(!pllUFBootDataPtr->boot_trees) pllAlertMemoryError();
+            if(!pllUFBootDataPtr->boot_trees) outError("Not enough dynamic memory!");
 
             pllUFBootDataPtr->duplication_counter = 0;
         }
     }
-//    pllUFBootDataPtr->params_store_candidate_trees = params->store_candidate_trees;
-//    params->store_candidate_trees = TRUE; // TEST!!!!
-//    pllUFBootDataPtr->params_store_candidate_trees = PLL_TRUE; // TEST!!!!
-//    globalParam->online_bootstrap = params->online_bootstrap;
-//    pllUFBootDataPtr->params_gbo_replicates = params->gbo_replicates;
     pllUFBootDataPtr->max_candidate_trees = max_candidate_trees;
     pllUFBootDataPtr->save_all_trees = save_all_trees;
     pllUFBootDataPtr->save_all_br_lens = save_all_br_lens;
@@ -1806,39 +1799,31 @@ void IQTree::pllDestroyUFBootData(){
         delete [] pll2iqtree_pattern_index;
         pll2iqtree_pattern_index = NULL;
     }
-//    cout << "Done freeing pll2iqtree_pattern_index" << endl;
+
     if(params->online_bootstrap && params->gbo_replicates > 0){
         pllHashDestroy(&(pllUFBootDataPtr->treels), PLL_TRUE);
-//        cout << "Done pllHashDestroy" << endl;
 
         free(pllUFBootDataPtr->treels_logl);
-//        cout << "Done freeing treels_logl" << endl;
 
         for(int i = 0; i < pllUFBootDataPtr->candidate_trees_count; i++)
             if(pllUFBootDataPtr->treels_newick[i])
                 free(pllUFBootDataPtr->treels_newick[i]);
         free(pllUFBootDataPtr->treels_newick);
-//        cout << "Done freeing treels_newick" << endl;
 
         for(int i = 0; i < pllUFBootDataPtr->treels_size; i++)
             if(pllUFBootDataPtr->treels_ptnlh[i])
                 free(pllUFBootDataPtr->treels_ptnlh[i]);
         free(pllUFBootDataPtr->treels_ptnlh);
-//        cout << "Done freeing treels_ptnlh" << endl;
 
         for(int i = 0; i < params->gbo_replicates; i++)
             free(pllUFBootDataPtr->boot_samples[i]);
         free(pllUFBootDataPtr->boot_samples);
-//        cout << "Done freeing boot_samples" << endl;
 
         free(pllUFBootDataPtr->boot_logl);
-//        cout << "Done freeing boot_logl" << endl;
 
         free(pllUFBootDataPtr->boot_counts);
-//        cout << "Done freeing boot_counts" << endl;
 
         free(pllUFBootDataPtr->boot_trees);
-//        cout << "Done freeing boot_trees" << endl;
     }
     free(pllUFBootDataPtr);
     pllUFBootDataPtr = NULL;

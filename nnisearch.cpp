@@ -240,7 +240,6 @@ void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo) 
             (globalParam->gbo_replicates > 0)){
         tr->fastScaling = PLL_FALSE;
         pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_TRUE);
-//        pllOptimizeBranchLengths(tr, pr, 1);
         pllSaveCurrentTree(tr, pr, tr->start);
     }
 
@@ -490,7 +489,6 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
             (globalParam->gbo_replicates > 0)){
         tr->fastScaling = PLL_FALSE;
         pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
-//        pllOptimizeBranchLengths(tr, pr, 1);
         pllSaveCurrentTree(tr, pr, p);
     }else{
         pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
@@ -543,7 +541,6 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
                         (globalParam->gbo_replicates > 0)){
             tr->fastScaling = PLL_FALSE;
             pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
-//            pllOptimizeBranchLengths(tr, pr, 1);
             pllSaveCurrentTree(tr, pr, r);
         }else{
             pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_FALSE);
@@ -722,17 +719,6 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo
 	}
 }
 
-
-
-/**
- * DTH:
- * Announce the memory allocation error (for debugging)
- */
-void pllAlertMemoryError(){
-    printf("Memory error!!!!!!\n");;
-    exit(1);
-}
-
 /**
 * DTH:
 * The PLL version of saveCurrentTree function
@@ -825,7 +811,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
     //        printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
 
     double *pattern_lh = (double *) malloc(pllUFBootDataPtr->n_patterns * sizeof(double));
-    if(!pattern_lh) pllAlertMemoryError();
+    if(!pattern_lh) outError("Not enough dynamic memory!");
     pllComputePatternLikelihood(tr, pattern_lh, &cur_logl);
 
     if (pllUFBootDataPtr->boot_samples == NULL) {
@@ -922,7 +908,7 @@ void pllResizeUFBootData(){
 
     double * rtreels_logl =
             (double *) malloc(2 * count * (sizeof(double)));
-    if(!rtreels_logl) pllAlertMemoryError();
+    if(!rtreels_logl) outError("Not enough dynamic memory!");
 //    memset(rtreels_logl, 0, 2 * count * sizeof(double));
     memcpy(rtreels_logl, pllUFBootDataPtr->treels_logl, count * sizeof(double));
     free(pllUFBootDataPtr->treels_logl);
@@ -930,7 +916,7 @@ void pllResizeUFBootData(){
 
     char ** rtreels_newick =
             (char **) malloc(2 * count * (sizeof(char *)));
-    if(!rtreels_newick) pllAlertMemoryError();
+    if(!rtreels_newick) outError("Not enough dynamic memory!");
     memset(rtreels_newick, 0, 2 * count * sizeof(char *));
     memcpy(rtreels_newick, pllUFBootDataPtr->treels_newick, count * sizeof(char *));
     free(pllUFBootDataPtr->treels_newick);
@@ -938,7 +924,7 @@ void pllResizeUFBootData(){
 
     double ** rtreels_ptnlh =
         (double **) malloc(2 * count * (sizeof(double *)));
-    if(!rtreels_ptnlh) pllAlertMemoryError();
+    if(!rtreels_ptnlh) outError("Not enough dynamic memory!");
     memset(rtreels_ptnlh, 0, 2 * count * sizeof(double *));
     memcpy(rtreels_ptnlh, pllUFBootDataPtr->treels_ptnlh, count * sizeof(double *));
     free(pllUFBootDataPtr->treels_ptnlh);
