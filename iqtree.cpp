@@ -1351,7 +1351,7 @@ double IQTree::doTreeSearch() {
             imd_tree = getTreeString();
         }
 
-        readTreeString(imd_tree);
+        //readTreeString(imd_tree);
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
