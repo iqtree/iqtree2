@@ -1427,7 +1427,7 @@ double IQTree::doTreeSearch() {
                         double alpha_bk = getRate()->getGammaShape();
                         cout << endl;
                         cout << "Re-estimate model parameters ... " << endl;
-                        double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, true, 0.1);
+                        double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, true, 1.0);
                         if (isSuperTree()) {
                             ((PhyloSuperTree*) this)->computeBranchLengths();
                         }
