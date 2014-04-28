@@ -63,6 +63,7 @@ void IQTree::init() {
     pllPartitions = NULL;
     //boot_splits = new SplitGraph;
     diversification = false;
+    pll2iqtree_pattern_index = NULL;
 }
 
 IQTree::IQTree(Alignment *aln) :
@@ -947,6 +948,172 @@ void IQTree::inputModelParam2PLL() {
         }
     }
 }
+
+void IQTree::pllBuildIQTreePatternIndex(){
+    pll2iqtree_pattern_index = new int[pllAlignment->sequenceLength];
+    char ** pll_aln = new char *[pllAlignment->sequenceCount];
+    for(int i = 0; i < pllAlignment->sequenceCount; i++)
+        pll_aln[i] = new char[pllAlignment->sequenceLength];
+
+    int pos;
+    for(int i = 0; i < pllAlignment->sequenceCount; i++){
+        pos = 0;
+        for(int model = 0; model < pllPartitions->numberOfPartitions; model++){
+            memcpy(&pll_aln[i][pos],
+                    &pllAlignment->sequenceData[i + 1][pllPartitions->partitionData[model]->lower],
+                    pllPartitions->partitionData[model]->width);
+            pos += pllPartitions->partitionData[model]->width;
+        }
+    }
+
+	char * pll_site = new char[pllAlignment->sequenceCount + 1];
+	char * site = new char[pllAlignment->sequenceCount + 1];
+    for(int i = 0; i < pllAlignment->sequenceLength; i++){
+        for(int j = 0; j < pllAlignment->sequenceCount; j++)
+            pll_site[j]= pll_aln[j][i];
+        pll_site[pllAlignment->sequenceCount] = '\0';
+
+        site[pllAlignment->sequenceCount] = '\0';
+        for(int k = 0; k < aln->size(); k++){
+            for(int p = 0; p < pllAlignment->sequenceCount; p++)
+                site[p] = aln->convertStateBack(aln->at(k)[p]);
+            pllBaseSubstitute(site, pllPartitions->partitionData[0]->dataType);
+            if(memcmp(pll_site,site, pllAlignment->sequenceCount) == 0){
+                pll2iqtree_pattern_index[i] = k;
+            }
+        }
+    }
+
+    delete [] pll_site;
+    delete [] site;
+    for(int i = 0; i < pllAlignment->sequenceCount; i++)
+        delete [] pll_aln[i];
+    delete [] pll_aln;
+}
+
+
+/**
+ * DTH:
+ * Substitute bases in seq according to PLL's rules
+ * This function should be updated if PLL's rules change.
+ * @param seq: data of some sequence to be substituted
+ * @param dataType: PLL_DNA_DATA or PLL_AA_DATA
+ */
+void IQTree::pllBaseSubstitute (char *seq, int dataType)
+{
+    char meaningDNA[256];
+    char  meaningAA[256];
+    char * d;
+
+    for (int i = 0; i < 256; ++ i)
+    {
+        meaningDNA[i] = -1;
+        meaningAA[i]  = -1;
+    }
+
+    /* DNA data */
+
+    meaningDNA['A'] =  1;
+    meaningDNA['B'] = 14;
+    meaningDNA['C'] =  2;
+    meaningDNA['D'] = 13;
+    meaningDNA['G'] =  4;
+    meaningDNA['H'] = 11;
+    meaningDNA['K'] = 12;
+    meaningDNA['M'] =  3;
+    meaningDNA['R'] =  5;
+    meaningDNA['S'] =  6;
+    meaningDNA['T'] =  8;
+    meaningDNA['U'] =  8;
+    meaningDNA['V'] =  7;
+    meaningDNA['W'] =  9;
+    meaningDNA['Y'] = 10;
+    meaningDNA['a'] =  1;
+    meaningDNA['b'] = 14;
+    meaningDNA['c'] =  2;
+    meaningDNA['d'] = 13;
+    meaningDNA['g'] =  4;
+    meaningDNA['h'] = 11;
+    meaningDNA['k'] = 12;
+    meaningDNA['m'] =  3;
+    meaningDNA['r'] =  5;
+    meaningDNA['s'] =  6;
+    meaningDNA['t'] =  8;
+    meaningDNA['u'] =  8;
+    meaningDNA['v'] =  7;
+    meaningDNA['w'] =  9;
+    meaningDNA['y'] = 10;
+
+    meaningDNA['N'] =
+    meaningDNA['n'] =
+    meaningDNA['O'] =
+    meaningDNA['o'] =
+    meaningDNA['X'] =
+    meaningDNA['x'] =
+    meaningDNA['-'] =
+    meaningDNA['?'] = 15;
+
+    /* AA data */
+
+    meaningAA['A'] =  0;  /* alanine */
+    meaningAA['R'] =  1;  /* arginine */
+    meaningAA['N'] =  2;  /*  asparagine*/
+    meaningAA['D'] =  3;  /* aspartic */
+    meaningAA['C'] =  4;  /* cysteine */
+    meaningAA['Q'] =  5;  /* glutamine */
+    meaningAA['E'] =  6;  /* glutamic */
+    meaningAA['G'] =  7;  /* glycine */
+    meaningAA['H'] =  8;  /* histidine */
+    meaningAA['I'] =  9;  /* isoleucine */
+    meaningAA['L'] =  10; /* leucine */
+    meaningAA['K'] =  11; /* lysine */
+    meaningAA['M'] =  12; /* methionine */
+    meaningAA['F'] =  13; /* phenylalanine */
+    meaningAA['P'] =  14; /* proline */
+    meaningAA['S'] =  15; /* serine */
+    meaningAA['T'] =  16; /* threonine */
+    meaningAA['W'] =  17; /* tryptophan */
+    meaningAA['Y'] =  18; /* tyrosine */
+    meaningAA['V'] =  19; /* valine */
+    meaningAA['B'] =  20; /* asparagine, aspartic 2 and 3*/
+    meaningAA['Z'] =  21; /*21 glutamine glutamic 5 and 6*/
+    meaningAA['a'] =  0;  /* alanine */
+    meaningAA['r'] =  1;  /* arginine */
+    meaningAA['n'] =  2;  /*  asparagine*/
+    meaningAA['d'] =  3;  /* aspartic */
+    meaningAA['c'] =  4;  /* cysteine */
+    meaningAA['q'] =  5;  /* glutamine */
+    meaningAA['e'] =  6;  /* glutamic */
+    meaningAA['g'] =  7;  /* glycine */
+    meaningAA['h'] =  8;  /* histidine */
+    meaningAA['i'] =  9;  /* isoleucine */
+    meaningAA['l'] =  10; /* leucine */
+    meaningAA['k'] =  11; /* lysine */
+    meaningAA['m'] =  12; /* methionine */
+    meaningAA['f'] =  13; /* phenylalanine */
+    meaningAA['p'] =  14; /* proline */
+    meaningAA['s'] =  15; /* serine */
+    meaningAA['t'] =  16; /* threonine */
+    meaningAA['w'] =  17; /* tryptophan */
+    meaningAA['y'] =  18; /* tyrosine */
+    meaningAA['v'] =  19; /* valine */
+    meaningAA['b'] =  20; /* asparagine, aspartic 2 and 3*/
+    meaningAA['z'] =  21; /*21 glutamine glutamic 5 and 6*/
+
+    meaningAA['X'] =
+    meaningAA['x'] =
+    meaningAA['?'] =
+    meaningAA['*'] =
+    meaningAA['-'] = 22;
+
+    d = (dataType == PLL_DNA_DATA) ? meaningDNA : meaningAA;
+    int seq_len = strlen(seq);
+    for (int i = 0; i < seq_len; ++ i)
+    {
+        seq[i] = d[seq[i]];
+    }
+}
+
 double IQTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
     assert(node1->isLeaf());
     assert(node2->isLeaf());
@@ -1012,6 +1179,7 @@ double IQTree::perturb(int times) {
     return curScore;
 }
 
+extern "C" pllUFBootData * pllUFBootDataPtr;
 
 double IQTree::doTreeSearch() {
     time_t begin_time, cur_time;
@@ -1183,6 +1351,8 @@ double IQTree::doTreeSearch() {
             imd_tree = getTreeString();
         }
 
+        //readTreeString(imd_tree);
+
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
             delete aln;
@@ -1318,6 +1488,12 @@ double IQTree::doTreeSearch() {
             readTreeString(bestTreeString);
         }
 
+        // DTH: make pllUFBootData usable in summarizeBootstrap
+        if(params->pll && params->online_bootstrap && (params->gbo_replicates > 0))
+            pllConvertUFBootData2IQTree();
+        // DTH: Carefully watch the -pll case here
+
+
         if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
             SplitGraph *sg = new SplitGraph;
             summarizeBootstrap(*sg);
@@ -1349,6 +1525,7 @@ double IQTree::doTreeSearch() {
 
     readTreeString(bestTreeString);
 
+    // DTH: Carefully watch the -pll case here
     if (!params->autostop) {
         int predicted_iteration = stop_rule.getPredictedIteration();
         if (predicted_iteration > curIteration) {
@@ -1366,6 +1543,10 @@ double IQTree::doTreeSearch() {
         out_treelh.close();
         out_sitelh.close();
     }
+
+    // DTH: pllUFBoot deallocation
+    if(params->pll) pllDestroyUFBootData();
+
     return bestScore;
 }
 
@@ -1490,6 +1671,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &searchinfo) {
+    pllInitUFBootData();
+
     searchinfo.numAppliedNNIs = 0;
     searchinfo.curLogl = curScore;
     //cout << "curLogl: " << searchinfo.curLogl << endl;
@@ -1516,6 +1699,136 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
     pllInst->likelihood = searchinfo.curLogl;
     return searchinfo.curLogl;
 }
+
+void IQTree::pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns){
+    ofstream bfile("boot_samples.log");
+    bfile << "Original freq:" << endl;
+    int sum = 0;
+    for(int i = 0; i < pllAlignment->sequenceLength; i++){
+        bfile << setw(4) << pllInst->aliaswgt[i];
+        sum += pllInst->aliaswgt[i];
+    }
+    bfile << endl << "sum = " << sum << endl;
+
+    bfile << "Bootstrap freq:" << endl;
+
+    for(int i = 0; i < nsamples; i++){
+        sum = 0;
+        for(int j = 0; j < npatterns; j++){
+            bfile << setw(4) << pll_boot_samples[i][j];
+            sum += pll_boot_samples[i][j];
+        }
+        bfile << endl << "sum = "  << sum << endl;
+    }
+    bfile.close();
+
+}
+
+void IQTree::pllInitUFBootData(){
+    if(pllUFBootDataPtr == NULL){
+        pllUFBootDataPtr = (pllUFBootData *) malloc(sizeof(pllUFBootData));
+        pllUFBootDataPtr->boot_samples = NULL;
+        pllUFBootDataPtr->candidate_trees_count = 0;
+
+        if(params->online_bootstrap && params->gbo_replicates > 0){
+        	if(!pll2iqtree_pattern_index) pllBuildIQTreePatternIndex();
+
+            pllUFBootDataPtr->treels = pllHashInit(max_candidate_trees);
+            pllUFBootDataPtr->treels_size = max_candidate_trees; // track size of treels_logl, treels_newick, treels_ptnlh
+
+            pllUFBootDataPtr->treels_logl =
+                (double *) malloc(max_candidate_trees * (sizeof(double)));
+            if(!pllUFBootDataPtr->treels_logl) outError("Not enough dynamic memory!");
+            //memset(pllUFBootDataPtr->treels_logl, 0, max_candidate_trees * (sizeof(double)));
+
+            pllUFBootDataPtr->treels_newick =
+                (char **) malloc(max_candidate_trees * (sizeof(char *)));
+            if(!pllUFBootDataPtr->treels_newick) outError("Not enough dynamic memory!");
+            memset(pllUFBootDataPtr->treels_newick, 0, max_candidate_trees * (sizeof(char *)));
+
+
+            pllUFBootDataPtr->treels_ptnlh =
+                (double **) malloc(max_candidate_trees * (sizeof(double *)));
+            if(!pllUFBootDataPtr->treels_ptnlh) outError("Not enough dynamic memory!");
+            memset(pllUFBootDataPtr->treels_ptnlh, 0, max_candidate_trees * (sizeof(double *)));
+
+            // aln->createBootstrapAlignment() must be called before this fragment
+            pllUFBootDataPtr->boot_samples =
+                (int **) malloc(params->gbo_replicates * sizeof(int *));
+            if(!pllUFBootDataPtr->boot_samples) outError("Not enough dynamic memory!");
+            for(int i = 0; i < params->gbo_replicates; i++){
+                pllUFBootDataPtr->boot_samples[i] =
+                    (int *) malloc(pllAlignment->sequenceLength * sizeof(int));
+                if(!pllUFBootDataPtr->boot_samples[i]) outError("Not enough dynamic memory!");
+                for(int j = 0; j < pllAlignment->sequenceLength; j++){
+                    pllUFBootDataPtr->boot_samples[i][j] =
+                        boot_samples[i][pll2iqtree_pattern_index[j]];
+                }
+            }
+
+//            pllLogBootSamples(pllUFBootDataPtr->boot_samples,
+//                    params->gbo_replicates, pllAlignment->sequenceLength);
+
+            pllUFBootDataPtr->boot_logl =
+                (double *) malloc(params->gbo_replicates * (sizeof(double)));
+            if(!pllUFBootDataPtr->boot_logl) outError("Not enough dynamic memory!");
+            for(int i = 0; i < params->gbo_replicates; i++)
+                pllUFBootDataPtr->boot_logl[i] = -DBL_MAX;
+
+            pllUFBootDataPtr->boot_counts =
+                (int *) malloc(params->gbo_replicates * (sizeof(int)));
+            if(!pllUFBootDataPtr->boot_counts) outError("Not enough dynamic memory!");
+            memset(pllUFBootDataPtr->boot_counts, 0, params->gbo_replicates * (sizeof(int)));
+
+            pllUFBootDataPtr->boot_trees =
+                (int *) malloc(params->gbo_replicates * (sizeof(int)));
+            if(!pllUFBootDataPtr->boot_trees) outError("Not enough dynamic memory!");
+
+            pllUFBootDataPtr->duplication_counter = 0;
+        }
+    }
+    pllUFBootDataPtr->max_candidate_trees = max_candidate_trees;
+    pllUFBootDataPtr->save_all_trees = save_all_trees;
+    pllUFBootDataPtr->save_all_br_lens = save_all_br_lens;
+    pllUFBootDataPtr->logl_cutoff = logl_cutoff;
+    pllUFBootDataPtr->n_patterns = pllAlignment->sequenceLength;
+}
+
+void IQTree::pllDestroyUFBootData(){
+    if(pll2iqtree_pattern_index){
+        delete [] pll2iqtree_pattern_index;
+        pll2iqtree_pattern_index = NULL;
+    }
+
+    if(params->online_bootstrap && params->gbo_replicates > 0){
+        pllHashDestroy(&(pllUFBootDataPtr->treels), PLL_TRUE);
+
+        free(pllUFBootDataPtr->treels_logl);
+
+        for(int i = 0; i < pllUFBootDataPtr->candidate_trees_count; i++)
+            if(pllUFBootDataPtr->treels_newick[i])
+                free(pllUFBootDataPtr->treels_newick[i]);
+        free(pllUFBootDataPtr->treels_newick);
+
+        for(int i = 0; i < pllUFBootDataPtr->treels_size; i++)
+            if(pllUFBootDataPtr->treels_ptnlh[i])
+                free(pllUFBootDataPtr->treels_ptnlh[i]);
+        free(pllUFBootDataPtr->treels_ptnlh);
+
+        for(int i = 0; i < params->gbo_replicates; i++)
+            free(pllUFBootDataPtr->boot_samples[i]);
+        free(pllUFBootDataPtr->boot_samples);
+
+        free(pllUFBootDataPtr->boot_logl);
+
+        free(pllUFBootDataPtr->boot_counts);
+
+        free(pllUFBootDataPtr->boot_trees);
+    }
+    free(pllUFBootDataPtr);
+    pllUFBootDataPtr = NULL;
+}
+
 
 void IQTree::applyNNIs(int nni2apply, bool changeBran) {
     for (int i = 0; i < nni2apply; i++) {
@@ -2060,6 +2373,35 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
      trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false);
      */
     trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false); // do not sort taxa
+}
+
+void IQTree::pllConvertUFBootData2IQTree(){
+    // duplication_counter
+    duplication_counter = pllUFBootDataPtr->duplication_counter;
+    //treels_logl
+    treels_logl.clear();
+    for(int i = 0; i < pllUFBootDataPtr->candidate_trees_count; i++)
+        treels_logl.push_back(pllUFBootDataPtr->treels_logl[i]);
+
+    //boot_trees
+    boot_trees.clear();
+    for(int i = 0; i < params->gbo_replicates; i++)
+        boot_trees.push_back(pllUFBootDataPtr->boot_trees[i]);
+
+    //treels
+    treels.clear();
+    if(pllUFBootDataPtr->candidate_trees_count > 0){
+        struct pllHashItem * hItem;
+        struct pllHashTable * hTable = pllUFBootDataPtr->treels;
+        for (int i = 0; i < hTable->size; ++ i){
+            hItem = hTable->Items[i];
+            while (hItem){
+                string k(hItem->str);
+                treels[k] = *((int *)hItem->data);
+                hItem = hItem->next;
+            }
+        }
+    }
 }
 
 double computeCorrelation(IntVector &ix, IntVector &iy) {

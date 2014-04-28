@@ -865,6 +865,7 @@ void MTree::getTaxaName(vector<string> &taxname, Node *node, Node *dad) {
     }
 }
 
+
 void MTree::getTaxaID(vector<int> &taxa, Node *node, Node *dad) {
     if (!node) node = root;
     if (node->isLeaf()) {
