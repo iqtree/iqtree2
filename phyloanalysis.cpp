@@ -1351,7 +1351,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                     // Initialize branch lengths for the parsimony tree
                     iqtree.initializeAllPartialPars();
                     iqtree.clearAllPartialLH();
-                    iqtree.fixNegativeBranch(true);
+                    if (iqtree.isSuperTree()) {
+                        iqtree.fixNegativeBranch2(true);
+                        ((PhyloSuperTree*)&iqtree)->mapTrees();
+                    } else
+                    	iqtree.fixNegativeBranch(true);
                     curParsTree = iqtree.getTreeString();
 
                     // Optimize the branch lengths
@@ -1451,7 +1455,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                             cout << "Re-estimate model parameters using logl epsilon =  " << 0.1 << endl;
                             // Now re-estimate the model parameters
                             double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, 0.1);
-                            if (modOptScore < iqtree.curScore) {
+                    		/* FOR PARTITION MODEL */
+                    		if (iqtree.isSuperTree())
+                    			((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+
+                            if (modOptScore < iqtree.curScore - 1e-3) {
                                 cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
                                 cout << "  Old logl: " << iqtree.curScore << " / " << "new logl: " << modOptScore << endl;
                                 iqtree.readTreeString(nniTree);
@@ -1479,6 +1487,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                             }
                         }
                     }
+
                     iqtree.setBestTree(nniTree, iqtree.curScore);
                     cout << "BETTER SCORE FOUND: " << iqtree.bestScore << endl;
                 }
@@ -1491,8 +1500,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                     break;
                 }
             }
+
             /*********** END: Do NNI on the best parsimony trees ************************************/
-        } else {
+        } else { // no -snni
             cout << "Doing NNI on the initial tree ... " << endl;
             if (params.pll) {
                 iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.searchinfo);
@@ -1504,19 +1514,17 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                 iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
                 iqtree.setBestTree(iqtree.getTreeString(), iqtree.curScore);
             }
+
+        	if (iqtree.isSuperTree())
+        		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+
         }
 
         cout << "Finish initial phase. Tree log-likelihood = " << iqtree.bestScore << " / CPU time: "
                 << getCPUTime() - initTime << endl;
 
-		/* FOR PARTITION MODEL */
-		if (iqtree.isSuperTree())
-			((PhyloSuperTree*) &iqtree)->computeBranchLengths();
 	}
 
-
-	if (iqtree.isSuperTree())
-		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
 
 	/*
 	 if ((tree.getModel()->name == "JC") && tree.getRate()->getNDim() == 0)
