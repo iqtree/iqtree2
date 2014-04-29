@@ -229,7 +229,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
             readPhylip(filename, sequence_type);
 	} else if (intype == IN_COUNTS) {
 	  cout << "Counts format (PoMo) detected" << endl;
-	  readCountsFormat(filename, sequence_type);
+	  readCountsFormat(filename);
         } else {
             outError("Unknown sequence format, please use PHYLIP, FASTA, or NEXUS format");
         }
@@ -1067,7 +1067,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
 }
 
-int Alignment::readCountsFormat(char* filename, char *sequence_type) {
+int Alignment::readCountsFormat(char* filename) {
   std::cout << "TODO" << std::endl;
 
   return 0;
