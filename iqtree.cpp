@@ -1212,7 +1212,6 @@ double IQTree::doTreeSearch() {
     // keep the best tree into a string
     stringstream bestTreeStream;
     stringstream bestTopoStream;
-    string perturb_tree_string;
     string imd_tree;
     printTree(bestTreeStream, WT_TAXON_ID + WT_BR_LEN);
     printTree(bestTopoStream, WT_TAXON_ID + WT_SORT_TAXA);
@@ -1313,9 +1312,9 @@ double IQTree::doTreeSearch() {
                 doIQP();
             }
             //setAlignment(aln);
-            perturb_tree_string = getTreeString();
 
             if (params->pll) {
+                string perturb_tree_string = getTreeString();
                 pllNewickTree *perturbTree = pllNewickParseString(perturb_tree_string.c_str());
                 assert(perturbTree != NULL);
                 pllTreeInitTopologyNewick(pllInst, perturbTree, PLL_FALSE);
@@ -1341,13 +1340,20 @@ double IQTree::doTreeSearch() {
         int nni_steps = 0;
 
         if (params->pll) {
+        	if (params->partition_file)
+        		outError("Unsupported -pll -sp combination!");
             curScore = pllOptimizeNNI(nni_count, nni_steps, searchinfo);
             pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
                     PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
-            imd_tree = string(pllInst->tree_string);
-            readTreeString(imd_tree);
+            readTreeString(string(pllInst->tree_string));
+            imd_tree = getTreeString();
+
         } else {
             curScore = optimizeNNI(nni_count, nni_steps);
+            //imd_tree = getTreeString();
+            if (isSuperTree()) {
+                ((PhyloSuperTree*) this)->computeBranchLengths();
+            }
             imd_tree = getTreeString();
         }
 
@@ -1359,10 +1365,6 @@ double IQTree::doTreeSearch() {
             setAlignment(saved_aln);
             initializeAllPartialLh();
             clearAllPartialLH();
-        }
-
-        if (isSuperTree()) {
-            ((PhyloSuperTree*) this)->computeBranchLengths();
         }
 
         time(&cur_time);
@@ -1391,8 +1393,7 @@ double IQTree::doTreeSearch() {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
         }
 
-        double lhDelta = curScore - bestScore;
-        if (lhDelta > 0.0) {
+        if (curScore > bestScore) {
             stringstream cur_tree_topo_ss;
             printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
             if (cur_tree_topo_ss.str() != best_tree_topo) {
@@ -1426,7 +1427,11 @@ double IQTree::doTreeSearch() {
                         double alpha_bk = getRate()->getGammaShape();
                         cout << endl;
                         cout << "Re-estimate model parameters ... " << endl;
-                        double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, true, 0.1);
+                        double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, true, 1.0);
+                        if (isSuperTree()) {
+                            ((PhyloSuperTree*) this)->computeBranchLengths();
+                        }
+
                         if (modOptScore < curScore) {
                             cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
                             cout << "  Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
@@ -1452,9 +1457,9 @@ double IQTree::doTreeSearch() {
                     }
                     /****************************************** END: Optimizing model parameters ***************************************/
 
-                    lhDelta = curScore - bestScore;
+
                     // Only increase the number of remaining iterations if a significant improvement is found
-                    if (lhDelta > 0.1) {
+                    if (curScore - bestScore > 0.1) {
                         nUnsuccessIteration = 0;
                     }
                     //cout << perturb_tree_string.str() << endl;
