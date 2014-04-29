@@ -649,9 +649,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.nni0 = false;
-    params.adaptivePerturbation = false;
-    params.evalType = 2;
+    params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
     params.max_iterations = 1;
@@ -740,17 +738,18 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pertubSize = 0.5;
     params.pll = false;
     params.model_eps = 0.1;
-    params.modOpt = false;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
-    params.maxtime = 100000;
+    params.maxtime = 1000000;
     params.reinsert_par = false;
     params.fast_branch_opt = false;
     params.bestStart = true;
-    params.inni = false;
+    params.snni = false;
+    params.autostop = false;
+    params.maxUnsuccess = 100;
     params.speednni = false;
-    params.numParsimony = 20;
+    params.numParsTrees = 100;
     params.avh_test = 0;
     params.bootlh_test = 0;
     params.bootlh_partitions = NULL;
@@ -764,6 +763,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_bootaln = false;
 	params.print_subaln = false;
 	params.print_partition_info = false;
+
+	if (params.nni5) {
+	    params.nni_type = NNI5;
+	} else {
+	    params.nni_type = NNI1;
+	}
 
     struct timeval tv;
     struct timezone tz;
@@ -1646,9 +1651,15 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-numpars") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -numnni <number_of_parsimony_trees>";
-                params.numParsimony = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-beststart") == 0) {
+                    throw "Use -numpars <number_of_parsimony_trees>";
+                params.numParsTrees = convert_int(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-popsize") == 0) {
+            	cnt++;
+            	if (cnt >=argc)
+            		throw "Use -popsize <number_of_candidate_trees>";
+            	params.popSize = convert_int(argv[cnt]);
+            	assert(params.popSize < params.numParsTrees);
+        	} else if (strcmp(argv[cnt], "-beststart") == 0) {
                 params.bestStart = true;
                 cnt++;
                 if (cnt >= argc)
@@ -1656,31 +1667,39 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.binary_aln_file = argv[cnt];
             } else if (strcmp(argv[cnt], "-pll") == 0) {
                 params.pll = true;
+                params.pllModOpt = true;
             } else if (strcmp(argv[cnt], "-me") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -me <model_epsilon>";
                 params.model_eps = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-modopt") == 0) {
-            	params.modOpt = true;
-            } else if (strcmp(argv[cnt], "-pars_ins") == 0) {
+            } else if (strcmp(argv[cnt], "-pllmod") == 0) {
+            	params.pllModOpt = true;
+            	params.pll = true;
+        	} else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-speednni") == 0) {
                 params.speednni = true;
-            } else if (strcmp(argv[cnt], "-inni") == 0) {
-            	params.inni = true;
-            	params.modOpt = true;
-            } else if (strcmp(argv[cnt], "-adapt") == 0) {
-            	params.adaptivePerturbation = true;
-            	params.inni = true;
-            	params.pll = true;
+            } else if (strcmp(argv[cnt], "-snni") == 0) {
+            	params.snni = true;
+                params.autostop = true;
+            } else if (strcmp(argv[cnt], "-auto") == 0) {
+            	params.autostop = true;
+            } else if (strcmp(argv[cnt], "-maxiter") == 0) {
+                if (!params.autostop) {
+                    throw "-auto need to be enabled before specifying this option";
+                }
+                cnt++;
+                params.maxUnsuccess = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
             } else if (strcmp(argv[cnt], "-fivebran") == 0 || strcmp(argv[cnt], "-nni5") == 0) {
-            	params.nni5 = true;
+                params.nni5 = true;
+            	params.nni_type = NNI5;
             } else if (strcmp(argv[cnt], "-onebran") == 0 || strcmp(argv[cnt], "-nni1") == 0) {
+            	params.nni_type = NNI1;
             	params.nni5 = false;
             } else if (strcmp(argv[cnt], "-smooth") == 0) {
                 cnt++;
@@ -1689,8 +1708,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.numSmoothTree = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-lsnni") == 0) {
                 params.leastSquareNNI = true;
-            } else if (strcmp(argv[cnt], "-nni0") == 0) {
-                params.nni0 = true;
             } else if(strcmp(argv[cnt], "-ls_var") == 0) {
                 cnt++;
                 if (cnt >= argc)

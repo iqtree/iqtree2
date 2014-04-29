@@ -1,5 +1,13 @@
 #ifndef __mem_alloc_h
 #define __mem_alloc_h
+
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+#include <stdlib.h>
+#include <intrin.h>
+#include <malloc.h>
+#include <windows.h>
+#endif
+
 #include <stddef.h>
 #include <stdlib.h>
 #ifdef __linux__
@@ -11,11 +19,13 @@
 #define rax_malloc malloc
 #define rax_realloc realloc
 #define rax_free free
-#ifdef WIN32
-	#define rax_posix_memalign _aligned_malloc
+
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+#define rax_posix_memalign(x,y,z) *(x) = _aligned_malloc((z),(y))
 #else
-	#define rax_posix_memalign posix_memalign
+#define rax_posix_memalign posix_memalign
 #endif
+
 #define rax_calloc calloc
 //#define rax_malloc_aligned(x) memalign(PLL_BYTE_ALIGNMENT,x)
 

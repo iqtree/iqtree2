@@ -1,14 +1,9 @@
 #ifndef NNISEARCH_H
 #define NNISEARCH_H
 
-//#ifdef __cplusplus
-//extern "C" {
-//#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "tools.h"
-#include "pll/pll.h"
 #include <string>
 #include <sstream>
 #include <set>
@@ -16,12 +11,9 @@
 #include <map>
 #include <vector>
 //#include <unordered_set>
-using namespace std;
-
-const int TOPO_ONLY = 0;
-const int NO_BRAN_OPT = 1;
-const int ONE_BRAN_OPT = 2;
-const int FIVE_BRAN_OPT = 4;
+extern "C" {
+#include "pll/pllInternal.h"
+}
 
 /* This is the info you need to copy the vector*/
 typedef struct
@@ -48,6 +40,7 @@ typedef struct {
 	double negLoglDelta;
 } pllNNIMove;
 
+
 inline bool comparePLLNNIMove(const pllNNIMove &a, const pllNNIMove &b)
 {
     return a.likelihood < b.likelihood;
@@ -71,13 +64,11 @@ typedef struct {
 } NNICUT;
 
 typedef struct {
-	vector<pllNNIMove> nniList;
-	bool updateNNIList;
 	bool speednni;
 	vector<pllNNIMove> posNNIList; // positive NNI list
 	unordered_set<string> affectBranches; // Set of branches that are affected by the previous NNIs
-	double curLogl;
-	int evalType;
+	double curLogl; // Current tree log-likelihood
+	NNI_Type nni_type;
 	int numAppliedNNIs; // total number of applied NNIs sofar
 	int curNumAppliedNNIs; // number of applied NNIs at the current step
 	int curNumNNISteps;
@@ -139,15 +130,14 @@ void pllUpdateTabuList(pllInstance *tr, SearchInfo &searchinfo);
 void pllSaveQuartetForSubTree(pllInstance* tr, nodeptr p, SearchInfo &searchinfo);
 
 
-
 /**
  *  @brief Do 1 NNI move.
  *  @param[in] tr: the tree data structure
  *  @param[in] pr partition data structure
  *  @param[in] swap: represents one of the 2 NNI moves. Could be either 0 or 1
- *  @param[in] evalType: NO_NR, WITH_ONE_NR, WITH_FIVE_NR
+ *  @param[in] NNI_Type
  */
-double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, int evalType);
+double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, SearchInfo *searchinfo = NULL);
 
 void pllGetAllInBran(pllInstance *tr, vector<nodeptr> &branlist);
 
@@ -179,9 +169,71 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo
 pllNNIMove *getNNIList(pllInstance* tr);
 
 
-//#ifdef __cplusplus
-//}
-//#endif
+
+/*
+ * ****************************************************************************
+ * pllUFBoot area
+ * ****************************************************************************
+ */
+
+/**
+ * DTH:
+ * pllUFBootData struct
+ * This one keeps all info necessary to run UFBoot in PLL mode
+ */
+typedef struct{
+    int max_candidate_trees;
+    int treels_size;
+    int save_all_trees;
+    pllBoolean save_all_br_lens;
+    double logl_cutoff;
+    int duplication_counter;
+    int n_patterns;
+    struct pllHashTable * treels;
+    unsigned int candidate_trees_count; /* counter of trees in pllHashTable */
+    double * treels_logl; // maintain size == treels_size
+    char ** treels_newick; // maintain size == treels_size
+    double ** treels_ptnlh; // maintain size == treels_size
+    int ** boot_samples;
+    double * boot_logl;
+    int * boot_counts;
+    int * boot_trees;
+} pllUFBootData;
+
+/**
+ * DTH:
+ * The PLL version of saveCurrentTree function
+ * @param tr: the tree (a pointer to a pllInstance)
+ * @param pr: pointer to a partitionList (this one keeps tons of tree info)
+ * @param p: root?
+ */
+void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p);
+
+/**
+ * DTH:
+ * Extract the array of site log likelihood to be kept in ptnlh
+ * And update *cur_log
+ * @param tr: the tree (pointer to an pllInstance)
+ * @param ptnlh: to-be-kept array of site log likelihood
+ * @param cur_logl: pointer to current tree log likelihood
+ */
+void pllComputePatternLikelihood(pllInstance* tr, double * ptnlh, double * cur_logl);
+
+/**
+ * DTH:
+ * Resize some of the arrays in UFBootData if they're full
+ * Along with update treels_size (to track the size of these arrays)
+ */
+void pllResizeUFBootData();
+
+/**
+ * DTH:
+ * (Based on function Tree2StringREC of PLL)
+ * Print out the tree topology with IQTree taxa ID (starts at 0) instead of PLL taxa ID (starts at 1)
+ * @param All are the same as in PLL's
+ */
+static char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean printBranchLengths, pllBoolean printNames,
+		pllBoolean printLikelihood, pllBoolean rellTree, pllBoolean finalPrint, int perGene, pllBoolean branchLabelSupport, pllBoolean printSHSupport);
 
 #endif
 

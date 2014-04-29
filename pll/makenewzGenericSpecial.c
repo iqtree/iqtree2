@@ -1,41 +1,36 @@
-/*  pAxML-VI-HPC (version 2.2) a program for sequential and parallel estimation of phylogenetic trees
- *  Copyright August 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  and
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
- *
- *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  Alexandros.Stamatakis@epfl.ch
- *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
- *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with
- *  thousands of taxa and mixed models".
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file bipartitionList.c
  */
-
 #include "mem_alloc.h"
 
 #ifndef WIN32
 #include <unistd.h>
 #endif
-
-
 
 #include <math.h>
 #include <time.h>
@@ -44,7 +39,9 @@
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
+
 #include "pll.h"
+#include "pllInternal.h"
 
 #ifdef __SSE3
 #include <xmmintrin.h>
@@ -911,9 +908,9 @@ static void topLevelMakenewz(pllInstance *tr, partitionList * pr, double *z0, in
   volatile double  dlnLdlz[PLL_NUM_BRANCHES], d2lnLdlz2[PLL_NUM_BRANCHES];
   int i, maxiter[PLL_NUM_BRANCHES], model;
   int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
-  pll_boolean firstIteration = PLL_TRUE;
-  pll_boolean outerConverged[PLL_NUM_BRANCHES];
-  pll_boolean loopConverged;
+  pllBoolean firstIteration = PLL_TRUE;
+  pllBoolean outerConverged[PLL_NUM_BRANCHES];
+  pllBoolean loopConverged;
 
 
   /* figure out if this is on a per partition basis or jointly across all partitions */
@@ -1148,13 +1145,13 @@ static void topLevelMakenewz(pllInstance *tr, partitionList * pr, double *z0, in
  * @sa typical values for \a maxiter are constants \a iterations and \a PLL_NEWZPERCYCLE
  * @note Requirement: q->z == p->z
  */
-void makenewzGeneric(pllInstance *tr, partitionList * pr, nodeptr p, nodeptr q, double *z0, int maxiter, double *result, pll_boolean mask)
+void makenewzGeneric(pllInstance *tr, partitionList * pr, nodeptr p, nodeptr q, double *z0, int maxiter, double *result, pllBoolean mask)
 {
   int i;
   //boolean originalExecute[PLL_NUM_BRANCHES];
   int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
 
-  pll_boolean 
+  pllBoolean 
     p_recom = PLL_FALSE, /* if one of was missing, we will need to force recomputation */
     q_recom = PLL_FALSE;
 

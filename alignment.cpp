@@ -1222,6 +1222,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
         seq_names.push_back(aln->getSeqName(*it));
     }
     num_states = aln->num_states;
+    seq_type = aln->seq_type;
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -1254,6 +1255,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
         seq_names.push_back(aln->getSeqName(i));
     }
     num_states = aln->num_states;
+    seq_type = aln->seq_type;
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -1280,6 +1282,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
         seq_names.push_back(aln->getSeqName(i));
     }
     num_states = aln->num_states;
+    seq_type = aln->seq_type;
     site_pattern.resize(accumulate(ptn_freq.begin(), ptn_freq.end(), 0), -1);
     clear();
     pattern_index.clear();
@@ -1306,6 +1309,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
         seq_names.push_back(aln->getSeqName(i));
     }
     num_states = aln->num_states;
+    seq_type = aln->seq_type;
     site_pattern.resize(site_id.size(), -1);
     clear();
     pattern_index.clear();
@@ -1406,6 +1410,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     int site, nsite = aln->getNSite();
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
+    seq_type = aln->seq_type;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
@@ -1586,6 +1591,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     int site, nsite = aln->getNSite(), nseq = aln->getNSeq();
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
+    seq_type = aln->seq_type;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
@@ -1618,6 +1624,7 @@ void Alignment::shuffleAlignment() {
 void Alignment::concatenateAlignment(Alignment *aln) {
     if (getNSeq() != aln->getNSeq()) outError("Different number of sequences in two alignments");
     if (num_states != aln->num_states) outError("Different number of states in two alignments");
+    if (seq_type != aln->seq_type) outError("Different data type in two alignments");
     int site, nsite = aln->getNSite();
     int cur_sites = getNSite();
     site_pattern.resize(cur_sites + nsite , -1);
@@ -1643,6 +1650,7 @@ void Alignment::copyAlignment(Alignment *aln) {
     int site, nsite = aln->getNSite();
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
+    seq_type = aln->seq_type;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();

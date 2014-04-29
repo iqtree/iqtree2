@@ -16,7 +16,8 @@ It make things much easier for the integration with other software.
 
 #include "pll.h"
 
-char *Tree2String(char *treestr, tree *tr, nodeptr p, pll_boolean printBranchLengths, pll_boolean printNames, pll_boolean printLikelihood,
-		  pll_boolean rellTree, pll_boolean finalPrint, int perGene, pll_boolean branchLabelSupport, pll_boolean printSHSupport);
+char *pllTreeToNewick(char *treestr, tree *tr, nodeptr p, pllBoolean printBranchLengths, pllBoolean printNames, pllBoolean printLikelihood,
+		  pllBoolean rellTree, pllBoolean finalPrint, int perGene, pllBoolean branchLabelSupport, pllBoolean printSHSupport);
+double getBranchLength(pllInstance *tr, partitionList *pr, int perGene, nodeptr p);
 
 #endif /* TREEIO_H_ */

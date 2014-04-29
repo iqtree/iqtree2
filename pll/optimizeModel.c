@@ -1,37 +1,33 @@
-/*  RAxML-VI-HPC (version 2.2) a program for sequential and parallel estimation of phylogenetic trees 
- *  Copyright August 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
- *  
- *  and 
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  Alexandros.Stamatakis@epfl.ch
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file optimizeModel.c
  *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands 
- *  of taxa and mixed models". 
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
- */
-
-/** @file optimizeModel.c
-  * @brief Model optimization routines
-  */ 
+ * @brief Model optimization routines
+ */ 
 
 #include "mem_alloc.h"
 
@@ -46,7 +42,9 @@
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
+
 #include "pll.h"
+#include "pllInternal.h"
 
 static const double MNBRAK_GOLD =    1.618034;          /**< Golden ratio */
 static const double MNBRAK_TINY =      1.e-20;
@@ -211,11 +209,11 @@ static void changeModelParameters(int index, int rateNumber, double value, int w
     {
     case RATE_F:
       setRateModel(pr, index, value, rateNumber);  
-      initReversibleGTR(tr, pr, index);          
+      pllInitReversibleGTR(tr, pr, index);          
       break;
     case ALPHA_F:
       pr->partitionData[index]->alpha = value;
-      makeGammaCats(pr->partitionData[index]->alpha, pr->partitionData[index]->gammaRates, 4, tr->useMedian);
+      pllMakeGammaCats(pr->partitionData[index]->alpha, pr->partitionData[index]->gammaRates, 4, tr->useMedian);
       break;
     case FREQ_F:
       {
@@ -234,7 +232,7 @@ static void changeModelParameters(int index, int rateNumber, double value, int w
         for(j = 0; j < states; j++)              
           pr->partitionData[index]->frequencies[j] = exp(pr->partitionData[index]->freqExponents[j]) / w;
         
-        initReversibleGTR(tr, pr, index);
+        pllInitReversibleGTR(tr, pr, index);
       }
       break;
     default:
@@ -278,7 +276,7 @@ static void changeModelParameters(int index, int rateNumber, double value, int w
  *  @todo
  *     Removed argument modelEpsilon as it is not used in this function. Maybe more things can be refactored.
  */
-static void evaluateChange(pllInstance *tr, partitionList *pr, int rateNumber, double *value, double *result, pll_boolean* converged, int whichFunction, int numberOfModels, linkageList *ll)
+static void evaluateChange(pllInstance *tr, partitionList *pr, int rateNumber, double *value, double *result, pllBoolean* converged, int whichFunction, int numberOfModels, linkageList *ll)
 //static void evaluateChange(pllInstance *tr, partitionList *pr, int rateNumber, double *value, double *result, boolean* converged, int whichFunction, int numberOfModels, linkageList *ll, double modelEpsilon)
 { 
   int 
@@ -334,7 +332,7 @@ static void evaluateChange(pllInstance *tr, partitionList *pr, int rateNumber, d
     }
 #else
       /* and compute the likelihood by doing a full tree traversal :-) */
-      pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+      pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 #endif     
 
 
@@ -439,8 +437,8 @@ static void brentGeneric(double *ax, double *bx, double *cx, double *fb, double 
     *x     = (double *)rax_malloc(sizeof(double) * numberOfModels),
     *xm    = (double *)rax_malloc(sizeof(double) * numberOfModels),
     *e     = (double *)rax_malloc(sizeof(double) * numberOfModels);
-  pll_boolean *converged = (pll_boolean *)rax_malloc(sizeof(pll_boolean) * numberOfModels);
-  pll_boolean allConverged;
+  pllBoolean *converged = (pllBoolean *)rax_malloc(sizeof(pllBoolean) * numberOfModels);
+  pllBoolean allConverged;
   
   for(i = 0; i < numberOfModels; i++)    
     converged[i] = PLL_FALSE;
@@ -686,7 +684,7 @@ static void brentGeneric(double *ax, double *bx, double *cx, double *fb, double 
  */
 static int brakGeneric(double *param, double *ax, double *bx, double *cx, double *fa, double *fb, 
                        double *fc, double lim_inf, double lim_sup, 
-                       int numberOfModels, int rateNumber, int whichFunction, pllInstance *tr, partitionList *pr, linkageList *ll, double modelEpsilon)
+                       int numberOfModels, int rateNumber, int whichFunction, pllInstance *tr, partitionList *pr, linkageList *ll)
 {
   double 
     *ulim = (double *)rax_malloc(sizeof(double) * numberOfModels),
@@ -702,8 +700,8 @@ static int brakGeneric(double *param, double *ax, double *bx, double *cx, double
     *state    = (int *)rax_malloc(sizeof(int) * numberOfModels),
     *endState = (int *)rax_malloc(sizeof(int) * numberOfModels);
 
-  pll_boolean *converged = (pll_boolean *)rax_malloc(sizeof(pll_boolean) * numberOfModels);
-  pll_boolean allConverged;
+  pllBoolean *converged = (pllBoolean *)rax_malloc(sizeof(pllBoolean) * numberOfModels);
+  pllBoolean allConverged;
 
   for(i = 0; i < numberOfModels; i++)
     converged[i] = PLL_FALSE;
@@ -1178,7 +1176,7 @@ static void optParamGeneric(pllInstance *tr, partitionList * pr, double modelEps
     *_param      = (double *)rax_malloc(sizeof(double) * numberOfModels),
     *_x          = (double *)rax_malloc(sizeof(double) * numberOfModels); 
    
-  pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
   
 #ifdef  _DEBUG_MOD_OPT
   double
@@ -1251,7 +1249,7 @@ static void optParamGeneric(pllInstance *tr, partitionList * pr, double modelEps
 
   assert(pos == numberOfModels);
 
-  brakGeneric(_param, _a, _b, _c, _fa, _fb, _fc, lim_inf, lim_sup, numberOfModels, rateNumber, whichParameterType, tr, pr, ll, modelEpsilon);
+  brakGeneric(_param, _a, _b, _c, _fa, _fb, _fc, lim_inf, lim_sup, numberOfModels, rateNumber, whichParameterType, tr, pr, ll);
       
   for(k = 0; k < numberOfModels; k++)
     {
@@ -1317,7 +1315,7 @@ static void optParamGeneric(pllInstance *tr, partitionList * pr, double modelEps
   rax_free(startValues);
 
 #ifdef _DEBUG_MOD_OPT
-  pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 
   if(tr->likelihood < initialLH)
     printf("%f %f\n", tr->likelihood, initialLH);
@@ -1502,7 +1500,7 @@ static void optRates(pllInstance *tr, partitionList * pr, double modelEpsilon, l
   *   Return \b PLL_TRUE in case there exists at least one protein partition and all of
   *   protein partitions are assigned a joint GTR matrix. Otherwise return \b PLL_FALSE
   */
-static pll_boolean AAisGTR(partitionList *pr)
+static pllBoolean AAisGTR(partitionList *pr)
 {
   int i, count = 0;
 
@@ -1721,7 +1719,7 @@ void optRateCatPthreads(pllInstance *tr, partitionList *pr, double lower_spacing
       int 
         localIndex = 0;
 
-      pll_boolean 
+      pllBoolean 
         execute = ((tr->manyPartitions && isThisMyPartition(pr, tid, model)) || (!tr->manyPartitions));
 
       if(execute)
@@ -1904,7 +1902,7 @@ static void optRateCatModel(pllInstance *tr, partitionList *pr, int model, doubl
    of 1.0
 */
 
-void updatePerSiteRates(pllInstance *tr, partitionList *pr, pll_boolean scaleRates)
+void updatePerSiteRates(pllInstance *tr, partitionList *pr, pllBoolean scaleRates)
 {
   int 
     i,
@@ -2175,7 +2173,7 @@ static void optimizeRateCategories(pllInstance *tr, partitionList *pr, int _maxC
   
       assert(isTip(tr->start->number, tr->mxtips));         
       
-      pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+      pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 
       if(tr->optimizeRateCategoryInvocations == 1)
         {
@@ -2282,7 +2280,7 @@ static void optimizeRateCategories(pllInstance *tr, partitionList *pr, int _maxC
                 
       updatePerSiteRates(tr, pr, PLL_TRUE);
 
-      pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+      pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
       
       if(tr->likelihood < initialLH)
         {                         
@@ -2297,7 +2295,7 @@ static void optimizeRateCategories(pllInstance *tr, partitionList *pr, int _maxC
           
           updatePerSiteRates(tr, pr, PLL_FALSE);
           
-          pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+          pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 
           /* printf("REVERT: %1.40f %1.40f\n", initialLH, tr->likelihood); */
 
@@ -2483,7 +2481,7 @@ static void autoProtein(pllInstance *tr, partitionList *pr)
       initTL(rl, tr, 1);
       saveTL(rl, tr, 0);
 
-      pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE); 
+      pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE); 
 
       /* store the initial likelihood of the tree with the currently assigned protein models */
       startLH = tr->likelihood;
@@ -2504,7 +2502,7 @@ static void autoProtein(pllInstance *tr, partitionList *pr)
              if(pr->partitionData[model]->protModels == PLL_AUTO)
               {
                  pr->partitionData[model]->autoProtModels = i;
-                 initReversibleGTR(tr, pr, model);
+                 pllInitReversibleGTR(tr, pr, model);
               }
            }
           
@@ -2513,8 +2511,8 @@ static void autoProtein(pllInstance *tr, partitionList *pr)
 #endif
           
            resetBranches(tr);
-           pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
-           pllTreeEvaluate(tr, pr, 16);// 0.5 * 32 = 16.0
+           pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+           pllOptimizeBranchLengths(tr, pr, 16);// 0.5 * 32 = 16.0
 
            for(model = 0; model < pr->numberOfPartitions; model++)
             {
@@ -2537,7 +2535,7 @@ static void autoProtein(pllInstance *tr, partitionList *pr)
          if(pr->partitionData[model]->protModels == PLL_AUTO)
            {
              pr->partitionData[model]->autoProtModels = bestIndex[model];
-             initReversibleGTR(tr, pr, model);
+             pllInitReversibleGTR(tr, pr, model);
              printBothOpen("Partition: %d best-scoring AA model: %s likelihood %f\n", model, protModels[pr->partitionData[model]->autoProtModels], bestScores[model]);
            }
        }
@@ -2549,8 +2547,8 @@ static void autoProtein(pllInstance *tr, partitionList *pr)
 
       /* compute again the likelihood of the tree */
       resetBranches(tr);
-      pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
-      pllTreeEvaluate(tr, pr, 64); // 0.5 * 32 = 16
+      pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+      pllOptimizeBranchLengths(tr, pr, 64); // 0.5 * 32 = 16
       
       /* check if the likelihood of the tree with the new protein models assigned to PLL_AUTO partitions is better than the with the old protein models */
       if(tr->likelihood < startLH)
@@ -2560,7 +2558,7 @@ static void autoProtein(pllInstance *tr, partitionList *pr)
               if(pr->partitionData[model]->protModels == PLL_AUTO)
                 {
                   pr->partitionData[model]->autoProtModels = oldIndex[model];
-                  initReversibleGTR(tr, pr, model);
+                  pllInitReversibleGTR(tr, pr, model);
                 }
             }
           
@@ -2573,7 +2571,7 @@ static void autoProtein(pllInstance *tr, partitionList *pr)
              since the topology doesn't change - only the branch lengths do - maybe we
              could write a new routine that will store only the branch lengths and restore them */
           restoreTL(rl, tr, 0, pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);  
-          pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);              
+          pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);              
         }
       
       assert(tr->likelihood >= startLH);
@@ -2674,7 +2672,7 @@ void modOpt(pllInstance *tr, partitionList *pr, double likelihoodEpsilon)
      to entereing this function.
    */
   inputLikelihood = tr->likelihood;
-  pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
   assert (inputLikelihood == tr->likelihood);
 
   do
@@ -2688,7 +2686,7 @@ void modOpt(pllInstance *tr, partitionList *pr, double likelihoodEpsilon)
 
     optRatesGeneric(tr, pr, modelEpsilon, rateList);
 
-    pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+    pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 
 #ifdef _DEBUG_MOD_OPT
     printf ("after rates %f\n", tr->likelihood);
@@ -2696,23 +2694,23 @@ void modOpt(pllInstance *tr, partitionList *pr, double likelihoodEpsilon)
 
     autoProtein(tr, pr);
 
-    pllTreeEvaluate(tr, pr, 2); // 0.0625 * 32 = 2.0
+    pllOptimizeBranchLengths(tr, pr, 2); // 0.0625 * 32 = 2.0
 
 #ifdef _DEBUG_MOD_OPT
-    pllEvaluateGeneric (tr, tr->start, PLL_TRUE);
+    pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
     printf("after br-len 1 %f\n", tr->likelihood); 
 #endif
 
-    pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+    pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 
     optBaseFreqs(tr, pr, modelEpsilon, freqList);
     
-    pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+    pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
     
-    pllTreeEvaluate(tr, pr, 0.0625);
+    pllOptimizeBranchLengths(tr, pr, 2); // 0.0625 * 32 = 2.0
 
 #ifdef _DEBUG_MOD_OPT
-    pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE); 
+    pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE); 
     printf("after optBaseFreqs 1 %f\n", tr->likelihood);
 #endif 
 
@@ -2720,26 +2718,26 @@ void modOpt(pllInstance *tr, partitionList *pr, double likelihoodEpsilon)
     {
       case PLL_GAMMA:      
         optAlphasGeneric (tr, pr, modelEpsilon, alphaList);
-        pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+        pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
 
 #ifdef _DEBUG_MOD_OPT
           printf("after alphas %f\n", tr->likelihood); 
 #endif
 
-        pllTreeEvaluate(tr, pr, 3); // 0.1 * 32 = 3.2
+        pllOptimizeBranchLengths(tr, pr, 3); // 0.1 * 32 = 3.2
 
 #ifdef _DEBUG_MOD_OPT
-          pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);  
+          pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);  
           printf("after br-len 2 %f\n", tr->likelihood); 
 #endif
         break;
       case PLL_CAT:
         if(catOpt < 3)
         {                            
-          pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);  
+          pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);  
           optimizeRateCategories(tr, pr, tr->categories);
 #ifdef _DEBUG_MOD_OPT
-            pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);  
+            pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);  
             printf("after cat-opt %f\n", tr->likelihood); 
 #endif
           catOpt++;

@@ -1,34 +1,31 @@
-/*  RAxML-VI-HPC (version 2.2) a program for sequential and parallel estimation of phylogenetic trees 
- *  Copyright August 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
- *  
- *  and 
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  Alexandros.Stamatakis@epfl.ch
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
- *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with 
- *  thousands of taxa and mixed models". 
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file fastDNAparsimony.c
  */
-
 #include "mem_alloc.h"
 
 #ifndef WIN32
@@ -95,9 +92,9 @@
 
 
 #include "pll.h"
+#include "pllInternal.h"
 
-
-static pll_boolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping);
+static pllBoolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping);
 
 extern const unsigned int mask32[32]; 
 /* vector-specific stuff */
@@ -173,7 +170,7 @@ static int checkerPars(pllInstance *tr, nodeptr p)
     }
 }
 
-static pll_boolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping)
+static pllBoolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping)
 {
   if(isTip(p->number, tr->mxtips))
     {
@@ -202,7 +199,7 @@ static void getxnodeLocal (nodeptr p)
 
 }
 
-static void computeTraversalInfoParsimony(nodeptr p, int *ti, int *counter, int maxTips, pll_boolean full)
+static void computeTraversalInfoParsimony(nodeptr p, int *ti, int *counter, int maxTips, pllBoolean full)
 {        
   nodeptr 
     q = p->next->back,
@@ -1013,7 +1010,7 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
 
 
 
-static unsigned int evaluateParsimony(pllInstance *tr, partitionList *pr, nodeptr p, pll_boolean full)
+static unsigned int evaluateParsimony(pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean full)
 {
   volatile unsigned int result;
   nodeptr q = p->back;
@@ -1111,7 +1108,7 @@ static void buildSimpleTree (pllInstance *tr, partitionList *pr, int ip, int iq,
 }
 
 
-static void testInsertParsimony (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q, pll_boolean saveBranches)
+static void testInsertParsimony (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q, pllBoolean saveBranches)
 { 
   unsigned int 
     mp;
@@ -1119,7 +1116,7 @@ static void testInsertParsimony (pllInstance *tr, partitionList *pr, nodeptr p, 
   nodeptr  
     r = q->back;   
 
-  pll_boolean 
+  pllBoolean 
     doIt = PLL_TRUE;
 
   int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
@@ -1203,7 +1200,7 @@ static void restoreTreeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, 
 }
 
 
-static void addTraverseParsimony (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q, int mintrav, int maxtrav, pll_boolean doAll, pll_boolean saveBranches)
+static void addTraverseParsimony (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q, int mintrav, int maxtrav, pllBoolean doAll, pllBoolean saveBranches)
 {        
   if (doAll || (--mintrav <= 0))               
     testInsertParsimony(tr, pr, p, q, saveBranches);
@@ -1257,7 +1254,7 @@ static nodeptr  removeNodeParsimony (nodeptr p)
   return  q;
 }
 
-static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, int mintrav, int maxtrav, pll_boolean doAll)
+static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, int mintrav, int maxtrav, pllBoolean doAll)
 {   
   nodeptr  
     p1, 
@@ -1269,7 +1266,7 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p, int
   int      
     mintrav2; 
 
-  pll_boolean 
+  pllBoolean 
     doP = PLL_TRUE,
     doQ = PLL_TRUE;
            
@@ -1444,7 +1441,7 @@ static boolean isInformative2(pllInstance *tr, int site)
 }
 */
 
-static pll_boolean isInformative(pllInstance *tr, int dataType, int site)
+static pllBoolean isInformative(pllInstance *tr, int dataType, int site)
 {
   int
     informativeCounter = 0,
@@ -1787,7 +1784,7 @@ void allocateParsimonyDataStructures(pllInstance *tr, partitionList *pr)
   rax_free(informative); 
 }
 
-void freeParsimonyDataStructures(pllInstance *tr, partitionList *pr)
+void pllFreeParsimonyDataStructures(pllInstance *tr, partitionList *pr)
 {
   size_t 
     model;
@@ -1801,7 +1798,7 @@ void freeParsimonyDataStructures(pllInstance *tr, partitionList *pr)
 }
 
 
-void makeParsimonyTreeFast(pllInstance *tr, partitionList *pr)
+void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr)
 {   
   nodeptr  
     p, 
@@ -1887,53 +1884,3 @@ void makeParsimonyTreeFast(pllInstance *tr, partitionList *pr)
   
   rax_free(perm);
 } 
-
-void parsimonySPR(nodeptr p, partitionList *pr, pllInstance *tr)
-{
-  int i;
-  int numBranches = pr->perGeneBranchLengths?pr->numberOfPartitions:1;
-
-  double   
-    p1z[PLL_NUM_BRANCHES], 
-    p2z[PLL_NUM_BRANCHES];
-
-  nodeptr 
-    p1 = p->next->back,
-    p2 = p->next->next->back;
-
-  //unsigned int score = evaluateParsimony(tr, pr, p, PLL_TRUE);
-
-  //printf("parsimonyScore: %u\n", score);
-
-  for(i = 0; i < numBranches; i++)
-    {
-      p1z[i] = p1->z[i];
-      p2z[i] = p2->z[i];                   
-    }
-  
-  tr->bestParsimony = INT_MAX; 
-
-  hookupDefault(p1, p2);
-
-  p->next->next->back = p->next->back = (node *) NULL;
-
-  if (p1->number > tr->mxtips) 
-    {
-      addTraverseParsimony(tr, pr, p, p1->next->back, 0, 0, PLL_TRUE, PLL_TRUE);
-      addTraverseParsimony(tr, pr, p, p1->next->next->back, 0, 0, PLL_TRUE, PLL_TRUE);
-    }
-  
-  if(p2->number > tr->mxtips)
-    {
-      addTraverseParsimony(tr, pr, p, p2->next->back, 0, 0, PLL_TRUE, PLL_TRUE);
-      addTraverseParsimony(tr, pr, p, p2->next->next->back, 0, 0, PLL_TRUE, PLL_TRUE);
-    }
-
-  //printf("best %u nodes %d %d\n",tr->bestParsimony, tr->insertNode->number, tr->insertNode->back->number);
-
-  hookup(p1, p->next, p1z,       numBranches);
-  hookup(p2, p->next->next, p2z, numBranches);
-}
-
-
-

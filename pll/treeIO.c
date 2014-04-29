@@ -1,31 +1,30 @@
-/*  RAxML-VI-HPC (version 2.2) a program for sequential and parallel estimation of phylogenetic trees 
- *  Copyright August 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
- *  
- *  and 
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  Alexandros.Stamatakis@epfl.ch
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
- *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands of taxa and mixed models". 
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file treeIO.c
  */
 #include "mem_alloc.h"
 
@@ -47,7 +46,7 @@
 #include <assert.h>
 
 #include "pll.h"
-
+#include "pllInternal.h"
 
 extern char infoFileName[1024];
 extern char tree_file[1024];
@@ -178,7 +177,7 @@ int countTips(nodeptr p, int numsp)
 }
 
 
-double getBranchLength(pllInstance *tr, partitionList *pr, int perGene, nodeptr p)
+static double getBranchLength(pllInstance *tr, partitionList *pr, int perGene, nodeptr p)
 {
   double 
     z = 0.0,
@@ -238,8 +237,8 @@ double getBranchLength(pllInstance *tr, partitionList *pr, int perGene, nodeptr 
 
 
   
-static char *TreeInner2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pll_boolean printBranchLengths, pll_boolean printNames,
-			    pll_boolean printLikelihood, pll_boolean rellTree, pll_boolean finalPrint, int perGene, pll_boolean branchLabelSupport, pll_boolean printSHSupport, pll_boolean printInnerNodes)
+static char *TreeInner2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean printBranchLengths, pllBoolean printNames,
+			    pllBoolean printLikelihood, pllBoolean rellTree, pllBoolean finalPrint, int perGene, pllBoolean branchLabelSupport, pllBoolean printSHSupport, pllBoolean printInnerNodes)
 {
   /* TODOFER simplify this, should be used just to print inner nodes for testing */
   char  *nameptr;            
@@ -321,8 +320,8 @@ static char *TreeInner2StringREC(char *treestr, pllInstance *tr, partitionList *
 }
 
 
-static char *Tree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pll_boolean printBranchLengths, pll_boolean printNames,
-			    pll_boolean printLikelihood, pll_boolean rellTree, pll_boolean finalPrint, int perGene, pll_boolean branchLabelSupport, pll_boolean printSHSupport)
+static char *pllTreeToNewickREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean printBranchLengths, pllBoolean printNames,
+			    pllBoolean printLikelihood, pllBoolean rellTree, pllBoolean finalPrint, int perGene, pllBoolean branchLabelSupport, pllBoolean printSHSupport)
 {
   char  *nameptr;            
       
@@ -341,15 +340,15 @@ static char *Tree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, n
   else 
     {                 	 
       *treestr++ = '(';
-      treestr = Tree2StringREC(treestr, tr, pr, p->next->back, printBranchLengths, printNames, printLikelihood, rellTree,
+      treestr = pllTreeToNewickREC(treestr, tr, pr, p->next->back, printBranchLengths, printNames, printLikelihood, rellTree,
 			       finalPrint, perGene, branchLabelSupport, printSHSupport);
       *treestr++ = ',';
-      treestr = Tree2StringREC(treestr, tr, pr, p->next->next->back, printBranchLengths, printNames, printLikelihood, rellTree,
+      treestr = pllTreeToNewickREC(treestr, tr, pr, p->next->next->back, printBranchLengths, printNames, printLikelihood, rellTree,
 			       finalPrint, perGene, branchLabelSupport, printSHSupport);
       if(p == tr->start->back) 
 	{
 	  *treestr++ = ',';
-	  treestr = Tree2StringREC(treestr, tr, pr, p->back, printBranchLengths, printNames, printLikelihood, rellTree,
+	  treestr = pllTreeToNewickREC(treestr, tr, pr, p->back, printBranchLengths, printNames, printLikelihood, rellTree,
 				   finalPrint, perGene, branchLabelSupport, printSHSupport);
 	}
       *treestr++ = ')';                    
@@ -401,34 +400,8 @@ static char *Tree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, n
 }
 
 
-
-void printTopology(pllInstance *tr, partitionList *pr, pll_boolean printInner)
-{
-  if(!printInner)
-  {
-    pll_boolean printBranchLengths = PLL_FALSE;
-    Tree2String(tr->tree_string, tr, pr, tr->start->back, printBranchLengths, 0, 0, 0, 0, PLL_SUMMARIZE_LH, 0,0);
-    fprintf(stderr, "%s", tr->tree_string);
-  }
-  else
-  {
-    TreeInner2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE, 0, 0, 0, 0, PLL_SUMMARIZE_LH, 0,0, PLL_TRUE);
-    fprintf(stderr, "%s", tr->tree_string);
-    fprintf(stderr, "Start was %d, pnb %d, pnnb %d, pback %d\n", 
-        tr->start->back->number, 
-        tr->start->back->next->back->number, 
-        tr->start->back->next->next->back->number, 
-        tr->start->number);
-  }
-}
-
-    
-
-
-
-
-char *Tree2String(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pll_boolean printBranchLengths, pll_boolean printNames, pll_boolean printLikelihood,
-		  pll_boolean rellTree, pll_boolean finalPrint, int perGene, pll_boolean branchLabelSupport, pll_boolean printSHSupport)
+char *pllTreeToNewick(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean printBranchLengths, pllBoolean printNames, pllBoolean printLikelihood,
+		  pllBoolean rellTree, pllBoolean finalPrint, int perGene, pllBoolean branchLabelSupport, pllBoolean printSHSupport)
 { 
 
   if(rellTree)
@@ -441,7 +414,7 @@ char *Tree2String(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, 
     assert(!branchLabelSupport && !rellTree);
 
  
-  Tree2StringREC(treestr, tr, pr, p, printBranchLengths, printNames, printLikelihood, rellTree,
+  pllTreeToNewickREC(treestr, tr, pr, p, printBranchLengths, printNames, printLikelihood, rellTree,
 		 finalPrint, perGene, branchLabelSupport, printSHSupport);  
     
   
@@ -492,7 +465,7 @@ static int treeGetCh (FILE *fp)         /* get next nonblank, noncomment charact
 } /* treeGetCh */
 
 
-static pll_boolean treeLabelEnd (int ch)
+static pllBoolean treeLabelEnd (int ch)
 {
   switch (ch) 
     {
@@ -515,10 +488,10 @@ static pll_boolean treeLabelEnd (int ch)
 } 
 
 
-static pll_boolean  treeGetLabel (FILE *fp, char *lblPtr, int maxlen)
+static pllBoolean  treeGetLabel (FILE *fp, char *lblPtr, int maxlen)
 {
   int      ch;
-  pll_boolean  done, quoted, lblfound;
+  pllBoolean  done, quoted, lblfound;
 
   if (--maxlen < 0) 
     lblPtr = (char *) NULL; 
@@ -564,7 +537,7 @@ static pll_boolean  treeGetLabel (FILE *fp, char *lblPtr, int maxlen)
 }
 
 
-static pll_boolean  treeFlushLabel (FILE *fp)
+static pllBoolean  treeFlushLabel (FILE *fp)
 { 
   return  treeGetLabel(fp, (char *) NULL, (int) 0);
 } 
@@ -608,7 +581,7 @@ static int treeFindTipName(FILE *fp, pllInstance *tr)
 static void  treeEchoContext (FILE *fp1, FILE *fp2, int n)
 { /* treeEchoContext */
   int      ch;
-  pll_boolean  waswhite;
+  pllBoolean  waswhite;
   
   waswhite = PLL_TRUE;
   
@@ -626,7 +599,7 @@ static void  treeEchoContext (FILE *fp1, FILE *fp2, int n)
 } /* treeEchoContext */
 
 
-static pll_boolean treeProcessLength (FILE *fp, double *dptr)
+static pllBoolean treeProcessLength (FILE *fp, double *dptr)
 {
   int  ch;
   
@@ -670,7 +643,7 @@ static int treeFlushLen (FILE  *fp)
 
 
 
-static pll_boolean treeNeedCh (FILE *fp, int c1, char *where)
+static pllBoolean treeNeedCh (FILE *fp, int c1, char *where)
 {
   int  c2;
   
@@ -696,7 +669,7 @@ static pll_boolean treeNeedCh (FILE *fp, int c1, char *where)
 
 
 
-static pll_boolean addElementLen (FILE *fp, pllInstance *tr, nodeptr p, pll_boolean readBranchLengths, pll_boolean readNodeLabels, int *lcount)
+static pllBoolean addElementLen (FILE *fp, pllInstance *tr, nodeptr p, pllBoolean readBranchLengths, pllBoolean readNodeLabels, int *lcount)
 {   
   nodeptr  q;
   int      n, ch, fres;
@@ -785,7 +758,7 @@ static pll_boolean addElementLen (FILE *fp, pllInstance *tr, nodeptr p, pll_bool
 
 
 
-static nodeptr uprootTree (pllInstance *tr, nodeptr p, pll_boolean readBranchLengths, pll_boolean readConstraint, int numBranches)
+static nodeptr uprootTree (pllInstance *tr, nodeptr p, pllBoolean readBranchLengths, pllBoolean readConstraint, int numBranches)
 {
   nodeptr  q, r, s, start;
   int      n, i;              
@@ -874,7 +847,7 @@ static nodeptr uprootTree (pllInstance *tr, nodeptr p, pll_boolean readBranchLen
 }
 
 
-int treeReadLen (FILE *fp, pllInstance *tr, pll_boolean readBranches, pll_boolean readNodeLabels, pll_boolean topologyOnly)
+int treeReadLen (FILE *fp, pllInstance *tr, pllBoolean readBranches, pllBoolean readNodeLabels, pllBoolean topologyOnly)
 {
   nodeptr  
     p;

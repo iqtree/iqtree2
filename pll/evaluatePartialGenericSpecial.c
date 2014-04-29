@@ -42,6 +42,7 @@
 #include <string.h>
 #include <assert.h>
 #include "pll.h"
+#include "pllInternal.h"
 
 #ifdef __SSE3
 #include <xmmintrin.h>

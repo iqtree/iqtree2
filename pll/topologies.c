@@ -1,33 +1,32 @@
-/*  RAxML-VI-HPC (version 2.2) a program for sequential and parallel estimation of phylogenetic trees 
- *  Copyright August 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
- *  
- *  and 
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  Alexandros.Stamatakis@epfl.ch
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
- *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands of taxa and mixed models". 
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
- */
-
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file topologies.c
+ * @brief Miscellanous functions working with tree topology
+*/
 #include "mem_alloc.h"
 
 #ifndef WIN32
@@ -46,14 +45,7 @@
 #include <assert.h>
 
 #include "pll.h"
-
-
-/** @file topologies.c
-    @brief Miscellanous functions working with tree topology
-*/
-
-
-
+#include "pllInternal.h"
 
 static void saveTopolRELLRec(pllInstance *tr, nodeptr p, topolRELL *tpl, int *i, int numsp)
 {
@@ -259,7 +251,7 @@ topol  *setupTopol (int maxtips)
   topol   *tpl;
 
   if (! (tpl = (topol *) rax_malloc(sizeof(topol))) || 
-      ! (tpl->links = (connptr) rax_malloc((2*maxtips-3) * sizeof(pllconnect))))
+      ! (tpl->links = (connptr) rax_malloc((2*maxtips-3) * sizeof(pllConnect))))
     {
       printf("ERROR: Unable to get topology memory");
       tpl = (topol *) NULL;
@@ -286,7 +278,7 @@ topol  *setupTopol (int maxtips)
     @param tpl
       The \a topol structure that is to be deallocated
 */
-void  freeTopol (topol *tpl)
+void freeTopol (topol *tpl)
 {
   rax_free(tpl->links);
   rax_free(tpl);
@@ -428,7 +420,7 @@ void saveTree (pllInstance *tr, topol *tpl, int numBranches)
      Remove the return value, unnecessary
 
 */
-pll_boolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr)
+pllBoolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr)
 { 
   connptr  r;
   nodeptr  p, p0;    
@@ -459,7 +451,7 @@ pll_boolean restoreTree (topol *tpl, pllInstance *tr, partitionList *pr)
   
   tr->nextnode   = tpl->nextnode;    
 
-  pllEvaluateGeneric (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
+  pllEvaluateLikelihood (tr, pr, tr->start, PLL_TRUE, PLL_FALSE);
   return PLL_TRUE;
 }
 
@@ -552,7 +544,7 @@ void resetBestTree (bestlist *bt)
 } /* resetBestTree */
 
 
-pll_boolean  freeBestTree(bestlist *bt)
+pllBoolean  freeBestTree(bestlist *bt)
 { /* freeBestTree */
   while (bt->ninit >= 0)  freeTopol(bt->byScore[(bt->ninit)--]);
     

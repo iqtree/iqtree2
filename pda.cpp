@@ -227,9 +227,9 @@ void printCopyright(ostream &out) {
 #endif
 
 #ifdef IQ_TREE
-	out << endl << "Copyright (c) 2011-2013 Nguyen Lam Tung, Olga Chernomor, Bui Quang Minh, and Arndt von Haeseler." << endl << endl;
+	out << endl << "Copyright (c) 2011-2014 Nguyen Lam Tung, Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #else
-	out << endl << "Copyright (c) 2006-2008 Bui Quang Minh, Steffen Klaere and Arndt von Haeseler." << endl << endl;
+	out << endl << "Copyright (c) 2006-2014 Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #endif
 }
 
@@ -2084,6 +2084,19 @@ void processECOpd(Params &params) {
 /********************************************************
 	main function
 ********************************************************/
+/*
+int main(){
+	IQTree tree;
+	char * str = "(1, (2, 345));";
+	string k;
+	tree.pllConvertTaxaID2IQTreeForm(str, k);
+	cout << str << endl;
+	cout << k << endl;
+	cout << "WHAT" << endl;
+	return 0;
+}
+*/
+
 int main(int argc, char *argv[])
 {
 

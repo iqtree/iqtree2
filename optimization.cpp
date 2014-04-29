@@ -600,7 +600,7 @@ double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[]
 }
 
 
-#define ITMAX 500
+#define ITMAX 200
 static double sqrarg;
 #define SQR(a) ((sqrarg=(a)) == 0.0 ? 0.0 : sqrarg*sqrarg)
 #define EPS 3.0e-8
@@ -655,7 +655,7 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		for (i=1;i<=n;i++) dg[i]=g[i];
 		derivativeFunk(p,g);
 		test=0.0;
-		den=FMAX(abs(*fret),1.0); // fix bug found by Tung, as also suggested by NR author
+		den=FMAX(fabs(*fret),1.0); // fix bug found by Tung, as also suggested by NR author
 		for (i=1;i<=n;i++) {
 			temp=fabs(g[i])*FMAX(fabs(p[i]),1.0)/den;
 			if (temp > test) test=temp;
@@ -696,7 +696,8 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		//checkDirection(p, xi);
 		//if (*iter > 200) cout << "iteration=" << *iter << endl;
 	}
-	nrerror("too many iterations in dfpmin");
+	// BQM: TODO disable this message!
+	//nrerror("too many iterations in dfpmin");
 	FREEALL
 }
 #undef ITMAX

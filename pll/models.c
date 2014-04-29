@@ -1,41 +1,35 @@
-/*  RAxML-VI-HPC (version 2.2) a program for sequential and parallel estimation of phylogenetic trees 
- *  Copyright August 2006 by Alexandros Stamatakis
+/** 
+ * PLL (version 1.0.0) a software library for phylogenetic inference
+ * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
  *
- *  Partially derived from
- *  fastDNAml, a program for estimation of phylogenetic trees from sequences by Gary J. Olsen
- *  
- *  and 
+ * Derived from 
+ * RAxML-HPC, a program for sequential and parallel estimation of phylogenetic
+ * trees by Alexandros Stamatakis
  *
- *  Programs of the PHYLIP package by Joe Felsenstein.
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  This program is free software; you may redistribute it and/or modify its
- *  under the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- *  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  For any other enquiries send an Email to Alexandros Stamatakis
- *  Alexandros.Stamatakis@epfl.ch
+ * For any other enquiries send an Email to Tomas Flouri
+ * Tomas.Flouri@h-its.org
  *
- *  When publishing work that is based on the results from RAxML-VI-HPC please cite:
+ * When publishing work that uses PLL please cite PLL
+ * 
+ * @file models.c
+ *  
+ * @brief Model related code
  *
- *  Alexandros Stamatakis:"RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands 
- *  of taxa and mixed models". 
- *  Bioinformatics 2006; doi: 10.1093/bioinformatics/btl446
- */
-
-/** @file models.c
-   
-   @brief Model related code
-
-   Detailed description to appear soon.
-
-*/ 
+ * Detailed description to appear soon.
+ */ 
 
 
 #include "mem_alloc.h"
@@ -56,7 +50,7 @@
 #include <assert.h>
 
 #include "pll.h"
-
+#include "pllInternal.h"
 
 
 extern const unsigned int bitVectorSecondary[256];
@@ -3419,8 +3413,6 @@ static void initGeneric(const int states,
   rax_free(EIGN);
 }
 
-
-
 /** @brief Initialize GTR
   *
   * Wrapper function for the decomposition of the substitution rates matrix
@@ -3435,7 +3427,7 @@ static void initGeneric(const int states,
   * @param model
   *   Partition index
   */
-void initReversibleGTR(pllInstance * tr, partitionList * pr, int model)
+void pllInitReversibleGTR(pllInstance * tr, partitionList * pr, int model)
 { 
  double   
    *ext_EIGN         = pr->partitionData[model]->EIGN,
@@ -3773,10 +3765,6 @@ l4:
    return (ch);
 }
 
-
-
-
-
 /** @brief Compute the gamma rates
     
     Compute the gamma rates
@@ -3796,7 +3784,7 @@ l4:
     @todo
        Document this more.
 */
-void makeGammaCats(double alpha, double *gammaRates, int K, pll_boolean useMedian)
+void pllMakeGammaCats(double alpha, double *gammaRates, int K, pllBoolean useMedian)
 {
   int 
     i;
@@ -4280,9 +4268,9 @@ void initModel(pllInstance *tr, double **empiricalFrequencies, partitionList * p
      if(partitions->partitionData[model]->dataType == PLL_AA_DATA && partitions->partitionData[model]->protModels == PLL_AUTO)
        partitions->partitionData[model]->autoProtModels = PLL_WAG; /* initialize by WAG per default */
       
-     initReversibleGTR(tr, partitions, model); /* Decomposition of Q matrix */
+     pllInitReversibleGTR(tr, partitions, model); /* Decomposition of Q matrix */
       /* GAMMA model init */
-     makeGammaCats(partitions->partitionData[model]->alpha, partitions->partitionData[model]->gammaRates, 4, tr->useMedian);
+     pllMakeGammaCats(partitions->partitionData[model]->alpha, partitions->partitionData[model]->gammaRates, 4, tr->useMedian);
 
      for(k = 0; k < partitions->partitionData[model]->states; k++)
        partitions->partitionData[model]->freqExponents[k] = 0.0;	
