@@ -2026,13 +2026,14 @@ InputType detectInputFile(char *input_file) {
         } while (ch <= 32 && !in.eof() && count++ < 20);
         in.close();
         switch (ch) {
-            case '#': return IN_NEXUS;
-            case '(': return IN_NEWICK;
-            case '[': return IN_NEWICK;
-            case '>': return IN_FASTA;
-            default:
-                if (isdigit(ch)) return IN_PHYLIP;
-                return IN_OTHER;
+	case '#': return IN_NEXUS;
+	case '(': return IN_NEWICK;
+	case '[': return IN_NEWICK;
+	case '>': return IN_FASTA;
+	case 'C': return IN_COUNTS;
+	default:
+	  if (isdigit(ch)) return IN_PHYLIP;
+	  return IN_OTHER;
         }
     } catch (ios::failure) {
         outError("Cannot read file ", input_file);

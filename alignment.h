@@ -127,6 +127,15 @@ public:
      */
     int readFasta(char *filename, char *sequence_type);
 
+    /** 
+     * read the alignment in counts format (PoMo)
+     * 
+     * @param filename file name
+     * 
+     * @return 1 on success, 0 on failure
+     */
+    int readCountsFormat(char *filename);
+
     /**
             extract the alignment from a nexus data block, called by readNexus()
             @param data_block data block of nexus file

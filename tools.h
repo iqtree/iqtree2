@@ -267,7 +267,7 @@ const int SW_AVG_PRESENT = 4; // take the split weight average over all trees th
         input type, tree or splits graph
  */
 enum InputType {
-    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_OTHER
+    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_OTHER
 };
 
 /**
@@ -1701,6 +1701,7 @@ void parseArg(int argc, char *argv[], Params &params);
                 IN_NEXUS if in nexus format,
                 IN_FASTA if in fasta format,
                 IN_PHYLIP if in phylip format,
+		IN_COUNTSFILE if in counts format (PoMo),
                 IN_OTHER if file format unknown.
  */
 InputType detectInputFile(char *input_file);
