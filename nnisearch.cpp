@@ -469,8 +469,18 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
     pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
     // if after optimizing the central branch we already obtain better logl
     // then there is no need for optimizing other branches
-    if (tr->likelihood > searchinfo->curLogl) {
-        return tr->likelihood;
+    double logl_nni1 = tr->likelihood;
+    if (logl_nni1 > searchinfo->curLogl) {
+        return logl_nni1;
+    }
+
+    if (searchinfo->speedeval && searchinfo->intenStage) {
+        //double possImp = estBestLoglImp(searchinfo);
+        //exit(0);
+        if (logl_nni1 + 40 < searchinfo->curLogl) {
+            cout << " / Skipped " << endl;
+            return -DBL_MAX;
+        }
     }
 
     // Optimize 4 other branches
@@ -512,9 +522,28 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
         update(tr, pr, r);
         pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_FALSE);
+        if (searchinfo->speedeval && !searchinfo->intenStage) {
+            searchinfo->deltaLogl.insert(tr->likelihood - logl_nni1);
+        }
     }
-
 	return tr->likelihood;
+}
+
+double estBestLoglImp(SearchInfo* searchinfo) {
+    double res = 0.0;
+    int index = floor(searchinfo->deltaLogl.size() * 5 / 100);
+    set<double>::reverse_iterator ri;
+    for (ri = searchinfo->deltaLogl.rbegin(); ri != searchinfo->deltaLogl.rend(); ++ri) {
+        //cout << (*ri) << " ";
+        --index;
+        if (index == 0) {
+            res = (*ri);
+            break;
+        }
+    }
+    //cout << res << endl;
+    //cout << searchinfo->deltaLogl.size() << endl;
+    return res;
 }
 
 string convertQuartet2String(nodeptr p) {
@@ -648,7 +677,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	}
 
 	// Re-compute the partial likelihood vectors
-	// TODO: One could save these instread of recomputation
+	// TODO: One could save these instead of recomputation
     if (numBranches > 1 && !tr->useRecom) {
         pllUpdatePartials(tr, pr, p, PLL_TRUE);
         pllUpdatePartials(tr, pr, p->back, PLL_TRUE);

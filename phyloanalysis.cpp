@@ -1387,7 +1387,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             for (rit = iqtree.uniqParsTree.rbegin(); rit != iqtree.uniqParsTree.rend(); ++rit) {
                 numParsTrees++;
                 double initLogl, nniLogl;
-
                 string nniTree;
                 if (params.pll) {
                     pllNewickTree *newick = pllNewickParseString(rit->second.c_str());
@@ -1489,6 +1488,13 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                 if (numParsTrees == 20) {
                     iqtree.printLoglInTreePop();
                     break;
+                } else {
+                    double min_elapsed = (getCPUTime() - params.startTime) / 60;
+                    if (min_elapsed > params.maxtime) {
+                        //cout << endl;
+                        //cout << "Maximum running time of " << params.maxtime << " minutes reached" << endl;
+                        break;
+                    }
                 }
             }
             /*********** END: Do NNI on the best parsimony trees ************************************/

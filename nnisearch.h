@@ -65,6 +65,8 @@ typedef struct {
 
 typedef struct {
 	bool speednni;
+	bool speedeval;
+	bool intenStage; // Tell the search whether it is at explorative stage or intensification stage
 	vector<pllNNIMove> posNNIList; // positive NNI list
 	unordered_set<string> affectBranches; // Set of branches that are affected by the previous NNIs
 	double curLogl; // Current tree log-likelihood
@@ -72,6 +74,7 @@ typedef struct {
 	int numAppliedNNIs; // total number of applied NNIs sofar
 	int curNumAppliedNNIs; // number of applied NNIs at the current step
 	int curNumNNISteps;
+	set<double> deltaLogl; // logl differences between nni1 and nni5
 } SearchInfo;
 
 /**
@@ -90,6 +93,13 @@ void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nn
 void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo);
 
 double pllDoRandomNNIs(pllInstance *tr, partitionList *pr, int numNNI);
+
+/**
+ *  Compute the possible best logl improvement of NNI5 over NNI1
+ *  @param serachinfo contains the logl improvement collected in previous iterations
+ *  @return a logl delta that is larger than 95% of the collected values
+ */
+double estBestLoglImp(SearchInfo* searchinfo);
 
 /**
  *  Evaluate NNI moves for the current internal branch

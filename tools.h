@@ -382,6 +382,8 @@ struct Params {
 	 */
 	bool speednni;
 
+	bool speedeval;
+
 	/**
 	 *  portion of NNI used for perturbing the tree
 	 */

@@ -749,6 +749,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.autostop = false;
     params.maxUnsuccess = 100;
     params.speednni = false;
+    params.speedeval = false;
     params.numParsTrees = 100;
     params.avh_test = 0;
     params.bootlh_test = 0;
@@ -1680,6 +1681,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-speednni") == 0) {
                 params.speednni = true;
+            } else if (strcmp(argv[cnt], "-speedeval") == 0) {
+                params.speedeval = true;
             } else if (strcmp(argv[cnt], "-snni") == 0) {
             	params.snni = true;
                 params.autostop = true;

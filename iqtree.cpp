@@ -70,7 +70,9 @@ IQTree::IQTree(Alignment *aln) :
     init();
 }
 void IQTree::setParams(Params &params) {
+    searchinfo.speedeval = params.speedeval;
     searchinfo.speednni = params.speednni;
+    searchinfo.intenStage = false;
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
     sse = params.SSE;
@@ -1075,6 +1077,9 @@ double IQTree::doTreeSearch() {
     }
 
     int nUnsuccessIteration = 0;
+    if (params->snni) {
+        searchinfo.intenStage = true;
+    }
     for (curIteration = 2; !stop_rule.meetStopCondition(curIteration); curIteration++) {
         if (params->autostop) {
             if (nUnsuccessIteration == params->maxUnsuccess) {
