@@ -77,6 +77,9 @@ void IQTree::setParams(Params &params) {
     optimize_by_newton = params.optimize_by_newton;
     sse = params.SSE;
     setStartLambda(params.lambda);
+    if (params.maxtime != 1000000) {
+        params.autostop = false;
+    }
     if (params.min_iterations == -1) {
         if (!params.gbo_replicates) {
             if (params.autostop) {

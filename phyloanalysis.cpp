@@ -919,23 +919,54 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	}
 	cout << "Fixed branch lengths: "
 			<< ((params.fixed_branch_length) ? "Yes" : "No") << endl;
-	cout << "Lambda for local search: " << params.lambda << endl;
-	if (params.speed_conf != 1.0) {
-		cout << "Confidence value for speed up NNI: ";
-		if (params.new_heuristic)
-			cout << "Using 50%*" << params.speed_conf << endl;
-		else
-			cout << "N" << params.speed_conf << " * delta" << params.speed_conf
-					<< endl;
+
+	/* Deprecated tree search options */
+//	cout << "Lambda for local search: " << params.lambda << endl;
+//	if (params.speed_conf != 1.0) {
+//		cout << "Confidence value for speed up NNI: ";
+//		if (params.new_heuristic)
+//			cout << "Using 50%*" << params.speed_conf << endl;
+//		else
+//			cout << "N" << params.speed_conf << " * delta" << params.speed_conf
+//					<< endl;
+//	} else {
+//		cout << "Speed up NNI: disabled " << endl;
+//	}
+//	cout << "NNI cutoff: " << params.nni_cutoff << endl;
+//	cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No")
+//			<< endl;
+
+	cout << "Tree search algorithm: " << (params.snni ? "Stochastic nearest neighbor interchange" : "IQPNNI") << endl;
+	cout << "Termination condition: ";
+	if (params.maxtime != 1000000) {
+	    cout << "after " << params.maxtime << " minutes" << endl;
+	} else if (params.autostop) {
+	    cout << "Automatic" << endl;
 	} else {
-		cout << "Speed up NNI: disabled " << endl;
+	    if (params.stop_condition == SC_FIXED_ITERATION)
+	        cout << params.min_iterations << endl;
+	    else
+	        cout << "predicted in [" << params.min_iterations << ","
+	                << params.max_iterations << "] (confidence "
+	                << params.stop_confidence << ")" << endl;
 	}
-	cout << "NNI cutoff: " << params.nni_cutoff << endl;
-	cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No")
-			<< endl;
 	cout << "Phylogenetic likelihood library: " << (params.pll ? "Yes" : "No") << endl;
-    cout << "Number of Newton-Raphson steps in NNI evaluation and branch length optimiazaion: " << NNI_MAX_NR_STEP
+    cout << "Branch length optimization method: "
+            << ((iqtree.optimize_by_newton) ? "Newton" : "Brent") << endl;
+    cout << "Number of Newton-Raphson steps in NNI evaluation and branch length optimization: " << NNI_MAX_NR_STEP
             << " / " << PLL_NEWZPERCYCLE << endl;
+    if (!params.snni) {
+        cout << "Number of representative leaves  : " << params.k_representative << endl;
+        cout << "Probability of deleting sequences: " << iqtree.getProbDelete() << endl;
+        cout << "Number of leaves to be deleted   : " << iqtree.getDelete() << endl;
+        cout << "Important quartets assessed on: "
+                << ((params.iqp_assess_quartet == IQP_DISTANCE) ?
+                        "Distance" : ((params.iqp_assess_quartet == IQP_PARSIMONY) ? "Parsimony" : "Bootstrap"))
+                << endl;
+    }
+    cout << "NNI assessed on: " << ((params.nni5) ? "5 branches" : "1 branch") << endl;
+    cout << "SSE instructions: "
+            << ((iqtree.sse) ? "Yes" : "No") << endl;
 	cout << endl;
 }
 
@@ -1326,6 +1357,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
         if (params.snni) {
             /************ START: Create a set of up to (numInitTrees - 1) unique parsimony trees **********************/
+            if (params.snni) {
+                cout << "************************************************* START EXPLORATIVE PHASE *************************************************" << endl << endl;
+            }
             cout << "Generating a set of " << numInitTrees << " parsimony trees ...";
             double parsTimeStart = getCPUTime();
             int numDupPars = 0;
@@ -1512,8 +1546,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             }
         }
 
-        cout << "Finish initial phase. Tree log-likelihood = " << iqtree.bestScore << " / CPU time: "
-                << getCPUTime() - initTime << endl;
+        cout << "END EXPLORATIVE PHASE: Tree log-likelihood = " << iqtree.bestScore << " / CPU time: "
+                << getCPUTime() - initTime << endl << endl;
 
 		/* FOR PARTITION MODEL */
 		if (iqtree.isSuperTree())
@@ -1614,39 +1648,40 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
 	/* DO IQPNNI */
 	if (params.k_representative > 0 /*&&  params.min_iterations > 1*/) {
-		if (params.snni) {
-			cout << endl << "START ITERATED NNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
-		} else {
-			cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
-		}
-		if (!params.snni) {
-			cout << "Number of representative leaves  : " << params.k_representative << endl;
-			cout << "Probability of deleting sequences: " << iqtree.getProbDelete() << endl;
-			cout << "Number of leaves to be deleted   : " << iqtree.getDelete() << endl;
-		} else if (params.snni) {
-			cout << "Perturbation strength: " << params.pertubSize << endl;
-		}
-		cout << "Number of iterations: ";
-		if (params.stop_condition == SC_FIXED_ITERATION)
-			cout << params.min_iterations << endl;
-		else
-			cout << "predicted in [" << params.min_iterations << ","
-					<< params.max_iterations << "] (confidence "
-					<< params.stop_confidence << ")" << endl;
-		if (!params.snni) {
-			cout << "Important quartets assessed on: "
-					<< ((params.iqp_assess_quartet == IQP_DISTANCE) ?
-							"Distance" : ((params.iqp_assess_quartet == IQP_PARSIMONY) ? "Parsimony" : "Bootstrap"))
-					<< endl;
-		}
-
-		cout << "NNI assessed on: " << ((params.nni5) ? "5 branches" : "1 branch") << endl;
-		cout << "SSE instructions: "
-				<< ((iqtree.sse) ? "Yes" : "No") << endl;
-		cout << "Branch length optimization method   : "
-				<< ((iqtree.optimize_by_newton) ? "Newton" : "Brent") << endl;
-		cout << "Phylogenetic likelihood library(PLL): " << (params.pll ? "Yes" : "No") << endl;
-		cout << endl;
+//		if (params.snni) {
+//			cout << endl << "START ITERATED NNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
+//		} else {
+//			cout << endl << "START IQPNNI SEARCH WITH THE FOLLOWING PARAMETERS" << endl;
+//		}
+//		if (!params.snni) {
+//			cout << "Number of representative leaves  : " << params.k_representative << endl;
+//			cout << "Probability of deleting sequences: " << iqtree.getProbDelete() << endl;
+//			cout << "Number of leaves to be deleted   : " << iqtree.getDelete() << endl;
+//		} else if (params.snni) {
+//			cout << "Perturbation strength: " << params.pertubSize << endl;
+//		}
+//		cout << "Number of iterations: ";
+//		if (params.stop_condition == SC_FIXED_ITERATION)
+//			cout << params.min_iterations << endl;
+//		else
+//			cout << "predicted in [" << params.min_iterations << ","
+//					<< params.max_iterations << "] (confidence "
+//					<< params.stop_confidence << ")" << endl;
+//		if (!params.snni) {
+//			cout << "Important quartets assessed on: "
+//					<< ((params.iqp_assess_quartet == IQP_DISTANCE) ?
+//							"Distance" : ((params.iqp_assess_quartet == IQP_PARSIMONY) ? "Parsimony" : "Bootstrap"))
+//					<< endl;
+//		}
+//
+//		cout << "NNI assessed on: " << ((params.nni5) ? "5 branches" : "1 branch") << endl;
+//		cout << "SSE instructions: "
+//				<< ((iqtree.sse) ? "Yes" : "No") << endl;
+//		cout << "Branch length optimization method   : "
+//				<< ((iqtree.optimize_by_newton) ? "Newton" : "Brent") << endl;
+//		cout << "Phylogenetic likelihood library(PLL): " << (params.pll ? "Yes" : "No") << endl;
+//		cout << endl;
+	    cout << " ************************************************* OPTIMIZATION PHASE *************************************************" << endl << endl;
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(alignment);
 	} else {
