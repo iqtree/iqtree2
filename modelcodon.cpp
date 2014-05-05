@@ -280,7 +280,7 @@ void ModelCodon::readRates(string str) throw(const char*) {
 		} else {
 			try {
 				rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
-			} catch (string str) {
+			} catch (string &str) {
 				outError(str);
 			}
 			end_pos += new_end_pos;
@@ -364,7 +364,9 @@ void ModelCodon::setRateGroupConstraint(string constraint) {
 				rate_constraints[id].max_value = convert_double(constraint.substr(pos).c_str(), end_pos);
 				pos += end_pos;
 				break;
-			default: outError("Invalid constraint ", constraint);
+			default:
+				outError("Invalid constraint ", constraint);
+				break;
 			}
 			if (pos == constraint.length()) break;
 			assert(constraint[pos] == ',');
@@ -396,7 +398,7 @@ void ModelCodon::setRateGroupConstraint(string constraint) {
 					rate_constraints[pos].param2 = free_param[rate_constraints[pos].param2];
 				}
 			}
-	} catch (string str) {
+	} catch (string &str) {
 		outError(str);
 	} catch (const char* str) {
 		outError(str);
@@ -429,6 +431,7 @@ void ModelCodon::getVariables(double *variables) {
 							break;
 						default:
 							outError("Invalid operator");
+							break;
 						}
 						rates[k] *= extra_rates[k];
 						if (empirical_rates)

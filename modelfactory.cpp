@@ -110,8 +110,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	if (model_str == "") {
 		if (tree->aln->seq_type == SEQ_DNA) model_str = "HKY";
 		else if (tree->aln->seq_type == SEQ_PROTEIN) model_str = "WAG";
-		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "JC2";
-		else if (tree->aln->seq_type == SEQ_CODON) model_str = "JCC";
+		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
+		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
 		else model_str = "JC";
 		outWarning("The default model may be under-fitting. You can use option '-m TEST' to let IQ-TREE select the best-fit model.");

@@ -55,6 +55,8 @@ const char *aa_model_names_old[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "VT", "LG", "DCMut", "Blosum62" };
 
+const char *codon_model_names[] = {"MG","GY"};
+
 const double TOL_LIKELIHOOD_MODELTEST = 0.01;
 
 void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC) {
@@ -284,6 +286,9 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 			nmodels = 0;
 			model_names = NULL;
 		}
+	} else if (seq_type == SEQ_CODON) {
+		nmodels = sizeof(codon_model_names) / sizeof(char*);
+		model_names = (char**) codon_model_names;
 	} else {
 		nmodels = 0;
 		model_names = NULL;
@@ -615,14 +620,13 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	SeqType seq_type = in_tree->aln->seq_type;
 	if (in_tree->isSuperTree())
 		seq_type = ((PhyloSuperTree*)in_tree)->front()->aln->seq_type;
-	if (seq_type != SEQ_BINARY && seq_type != SEQ_DNA && seq_type != SEQ_PROTEIN && seq_type != SEQ_MORPH)
-		outError("Test of best-fit models only works for Binary/DNA/Protein/Morphology");
+	if (seq_type == SEQ_UNKNOWN)
+		outError("Unknown data for model testing.");
 	string fmodel_str = params.out_prefix;
 	fmodel_str += ".model";
 	string sitelh_file = params.out_prefix;
 	sitelh_file += ".sitelh";
 	in_tree->params = &params;
-
 	StrVector model_names;
 	getModelList(params, in_tree->aln->seq_type, model_names);
 	int model;
@@ -714,7 +718,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		ssize = params.model_test_sample_size;
 	if (set_name == "") {
 		cout << "Testing " << model_names.size() << " "
-			<< ((seq_type == SEQ_BINARY) ? "binary" : ((seq_type == SEQ_DNA) ? "DNA" : ((seq_type == SEQ_PROTEIN) ? "protein":"morphological")))
+			<< ((seq_type == SEQ_BINARY) ? "binary" : ((seq_type == SEQ_DNA) ? "DNA" :
+				((seq_type == SEQ_PROTEIN) ? "protein": ((seq_type == SEQ_CODON) ? "codon": "morphological"))))
 			<< " models (sample size: " << ssize << ") ..." << endl;
 		cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
