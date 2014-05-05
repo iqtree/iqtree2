@@ -190,6 +190,7 @@ StateFreqType ModelCodon::initCodon(const char *model_name) {
 		return FREQ_EQUAL;
 	} else if (name_upper == "GY") {
 		initGY94();
+		return FREQ_EMPIRICAL;
 	} else if (name_upper == "ECM") {
 		if (num_states != 61)
 			outError("For ECM a standard genetic code must be used");
