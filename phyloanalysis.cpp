@@ -1048,8 +1048,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                 if ((*it)->aln->seq_type == SEQ_DNA) {
                     pllPartitionFileHandle << "DNA";
                 } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
-                	if (params.model_name.substr(0, 4) == "TEST")
-                		pllPartitionFileHandle << params.model_name;
+                	if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST")
+                		pllPartitionFileHandle << siqtree->part_info[i-1].model_name.substr(0, siqtree->part_info[i-1].model_name.find_first_of("+{"));
                 	else
                 		pllPartitionFileHandle << "WAG";
                 } else
@@ -1063,8 +1063,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             if (alignment->seq_type == SEQ_DNA) {
                 model = "DNA";
             } else if (alignment->seq_type == SEQ_PROTEIN) {
-            	if (params.model_name.substr(0, 4) == "TEST")
-            		model = params.model_name;
+            	if (params.model_name != "" && params.model_name.substr(0, 4) != "TEST")
+            		model = params.model_name.substr(0, params.model_name.find_first_of("+{"));
             	else
             		model = "WAG";
             } else {
@@ -1236,6 +1236,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     if (params.pll) {
         if (iqtree.getRate()->getNDiscreteRate() == 1) {
+        	outError("PLL only works with Gamma model.");
             // TODO: change rateHetModel to PLL_CAT in case of non-Gamma model
         }
     }
