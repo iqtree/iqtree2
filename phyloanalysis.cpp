@@ -1021,6 +1021,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         pllPartitionFileHandle.open(pllPartitionFileName.c_str());
         if (iqtree.isSuperTree()) {
             PhyloSuperTree *siqtree = (PhyloSuperTree*) &iqtree;
+            // additional check for stupid PLL hard limit
+            if (siqtree->size() > PLL_NUM_BRANCHES)
+            	outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
             int i = 0;
             int startPos = 1;
             for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
