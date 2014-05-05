@@ -987,29 +987,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.deleteAllPartialLh();
     }
 
-    try {
-        if (!iqtree.getModelFactory()) {
-            if (iqtree.isSuperTree()) {
-                if (params.partition_type) {
-                    iqtree.setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) &iqtree));
-                } else
-                    iqtree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*) &iqtree));
-            } else {
-                iqtree.setModelFactory(new ModelFactory(params, &iqtree));
-            }
-        }
-    } catch (string & str) {
-        outError(str);
-    }
-    iqtree.setModel(iqtree.getModelFactory()->model);
-    iqtree.setRate(iqtree.getModelFactory()->site_rate);
-
-    if (params.pll) {
-        if (iqtree.getRate()->getNDiscreteRate() == 1) {
-            // TODO: change rateHetModel to PLL_CAT in case of non-Gamma model
-        }
-    }
-
 
     /************************************ START: Initialization for PLL and sNNI *************************************************/
     if (params.snni || params.pll) {
@@ -1044,29 +1021,38 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         pllPartitionFileHandle.open(pllPartitionFileName.c_str());
         if (iqtree.isSuperTree()) {
             PhyloSuperTree *siqtree = (PhyloSuperTree*) &iqtree;
+            // additional check for stupid PLL hard limit
+            if (siqtree->size() > PLL_NUM_BRANCHES)
+            	outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
             int i = 0;
             int startPos = 1;
             for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
                 i++;
                 int curLen = ((*it))->getAlnNSite();
-                if ((*it)->aln->num_states == 4) {
+                if ((*it)->aln->seq_type == SEQ_DNA) {
                     pllPartitionFileHandle << "DNA";
-                } else if ((*it)->getModel()) {
-                    pllPartitionFileHandle << (*it)->getModel()->name;
+                } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
+                	if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST")
+                		pllPartitionFileHandle << siqtree->part_info[i-1].model_name.substr(0, siqtree->part_info[i-1].model_name.find_first_of("+{"));
+                	else
+                		pllPartitionFileHandle << "WAG";
                 } else
-                    pllPartitionFileHandle << iqtree.getModelName();
+                	outError("PLL only works with DNA/protein alignments");
                 pllPartitionFileHandle << ", p" << i << " = " << startPos << "-" << startPos + curLen - 1 << endl;
                 startPos = startPos + curLen;
             }
         } else {
             /* create a partition file */
             string model;
-            if (alignment->num_states == 4) {
+            if (alignment->seq_type == SEQ_DNA) {
                 model = "DNA";
-            } else if (iqtree.getModel()) {
-                model = iqtree.getModel()->name;
+            } else if (alignment->seq_type == SEQ_PROTEIN) {
+            	if (params.model_name != "" && params.model_name.substr(0, 4) != "TEST")
+            		model = params.model_name.substr(0, params.model_name.find_first_of("+{"));
+            	else
+            		model = "WAG";
             } else {
-                model = iqtree.getModelName();
+            	outError("PLL only works with DNA/protein alignments");
             }
             pllPartitionFileHandle << model << ", p1 = " << "1-" << iqtree.getAlnNSite() << endl;
         }
@@ -1214,6 +1200,32 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     iqtree.setParams(params);
 
     /****************** START: INITIAL MODEL OPTIMIZATION *************************************/
+
+    try {
+        if (!iqtree.getModelFactory()) {
+            if (iqtree.isSuperTree()) {
+                if (params.partition_type) {
+                    iqtree.setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) &iqtree));
+                } else
+                    iqtree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*) &iqtree));
+            } else {
+                iqtree.setModelFactory(new ModelFactory(params, &iqtree));
+            }
+        }
+    } catch (string & str) {
+        outError(str);
+    }
+    iqtree.setModel(iqtree.getModelFactory()->model);
+    iqtree.setRate(iqtree.getModelFactory()->site_rate);
+
+    if (params.pll) {
+        if (iqtree.getRate()->getNDiscreteRate() == 1) {
+        	outError("PLL only works with Gamma model.");
+            // TODO: change rateHetModel to PLL_CAT in case of non-Gamma model
+        }
+    }
+
+
     // degree of freedom
     int model_df = iqtree.getModelFactory()->getNParameters();
     cout << endl;
