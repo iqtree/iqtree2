@@ -1747,7 +1747,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	        iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, 0.1));
 	    }
 	} else {
+		// TODO: this is still called with -pll
         iqtree.setBestScore(iqtree.curScore);
+        iqtree.initializeAllPartialLh();
+        iqtree.clearAllPartialLH();
     }
 
 	if (iqtree.isSuperTree())
@@ -1766,9 +1769,13 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	// who changed computeLikelihood to computePatternLikelihood? I now commented out
 	// computePatternLikelihood
 	//iqtree.computePatternLikelihood(pattern_lh, &myscore);
+	//iqtree.initializeAllPartialLh();
+
+	// TODO: in case -pll is specified this code is still called. -> solution: use PLL compute pattern likelihoods
 	iqtree.computeLikelihood(pattern_lh);
 
 	// compute logl variance
+	// TODO: in case -pll is specified this code is still called. -> solution: use PLL compute pattern likelihoods
 	iqtree.logl_variance = iqtree.computeLogLVariance();
 
 
