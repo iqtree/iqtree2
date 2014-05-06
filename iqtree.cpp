@@ -1529,7 +1529,6 @@ double IQTree::doTreeSearch() {
     }
 
     readTreeString(bestTreeString);
-    cout << "This is called" << endl;
 
     // DTH: Carefully watch the -pll case here
     if (!params->autostop) {
