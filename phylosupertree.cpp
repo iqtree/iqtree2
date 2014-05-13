@@ -659,6 +659,8 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		// setup subtree NNI correspondingly
 		PhyloNode *node1_part = (PhyloNode*)nei2_part->node;
 		PhyloNode *node2_part = (PhyloNode*)nei1_part->node;
+		part_info[part].nniMoves[0].node1 = part_info[part].nniMoves[1].node1 = node1;
+		part_info[part].nniMoves[0].node2 = part_info[part].nniMoves[1].node2 = node2;
 		part_info[part].nniMoves[0].node1Nei_it = node1_part->findNeighborIt(node1_nei->link_neighbors[part]->node);
 		part_info[part].nniMoves[0].node2Nei_it = node2_part->findNeighborIt(node2_nei->link_neighbors[part]->node);
 
