@@ -149,6 +149,10 @@ string getDNAModelInfo(string model_name, string &full_name, string &rate_type, 
 		rate_type = "123450";
 		def_freq = FREQ_ESTIMATE;
 		full_name = "GTR (Tavare, 1986)";
+	} else {
+		name = "";
+		rate_type = "";
+		full_name = "";
 	}
 	return name;
 }

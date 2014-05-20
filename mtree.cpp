@@ -1215,13 +1215,17 @@ void MTree::drawTree(ostream &out, int brtype, double zero_epsilon) {
     double scale = 60.0/treeDepth(node);
     //if (verbose_mode >= VB_DEBUG)
     //cout << "Tree depth: " << scale<< endl;
+    drawTree2(out, brtype, scale, sub_tree_br, zero_epsilon);
+    /*
     if (brtype & WT_INT_NODE)
         drawTree2(out, brtype, scale, sub_tree_br, zero_epsilon);
     else
         drawTree(out, brtype, scale, sub_tree_br, zero_epsilon);
+    */
     out << endl;
 }
 
+/*
 void MTree::drawTree(ostream &out, int brtype, double brscale, IntVector &subtree_br, double zero_epsilon, Node *node, Node *dad) {
     int i, br_len = 3;
     if (!node) {
@@ -1269,6 +1273,7 @@ void MTree::drawTree(ostream &out, int brtype, double brscale, IntVector &subtre
     }
     subtree_br.pop_back();
 }
+*/
 
 void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtree_br, double zero_epsilon, Node *node, Node *dad) {
     int i, br_len = 3;
@@ -1340,7 +1345,10 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
                 for (i = 0; i < abs(br_len); i++)
                     out << ((zero_length) ? '*' : fig_char[1]);
             }
-            out << node->id;
+            if (brtype & WT_INT_NODE)
+            	out << node->id;
+            else
+            	out << fig_char[0];
             if (!node->name.empty())
                 out << " (" << node->name << ")";
             if (brtype & WT_BR_LEN && dad)
