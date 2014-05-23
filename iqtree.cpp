@@ -773,7 +773,8 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
         }
         refTreeSet.insert(make_pair(treeTopo, treeLogl));
         refTreeSetSorted.insert(make_pair(treeLogl, treeString));
-        assert(refTreeSet.size() == refTreeSetSorted.size() && refTreeSetSorted.size() == params->popSize);
+        assert(refTreeSet.size() == refTreeSetSorted.size() &&
+                refTreeSetSorted.size() == params->popSize);
         updated = true;
     } else if (refTreeSet.find(treeTopo) != refTreeSet.end()) {
         cout << "Tree topology is identical with one of the tree in the candidate set" << endl;

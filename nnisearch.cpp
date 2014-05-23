@@ -390,50 +390,6 @@ void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nn
 //	}
 }
 
-/** @brief Optimize the length of a specific branch with variable number of Newton Raphson iterations
-
- Optimize the length of the branch connecting \a p and \a p->back
- for each partition (\a tr->numBranches) in library instance \a tr.
-
- @param tr
- The library instance
-
- @param pr
- Partition list
-
- @param p
- Endpoints of branch to be optimized
-
- @param newzpercycle Maximal number of Newton Raphson iterations
-
- */
-//void _update(pllInstance *tr, partitionList *pr, nodeptr p) {
-//	nodeptr q;
-//	int i;
-//	double z[PLL_NUM_BRANCHES], z0[PLL_NUM_BRANCHES];
-//	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
-//
-//	q = p->back;
-//
-//	for (i = 0; i < numBranches; i++)
-//		z0[i] = q->z[i];
-//
-//	if (numBranches > 1)
-//		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_TRUE);
-//	else
-//		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_FALSE);
-//
-//	for (i = 0; i < numBranches; i++) {
-//		if (!tr->partitionConverged[i]) {
-//			if (PLL_ABS(z[i] - z0[i]) > PLL_DELTAZ) {
-//				tr->partitionSmoothed[i] = PLL_FALSE;
-//			}
-//
-//			p->z[i] = q->z[i] = z[i];
-//		}
-//	}
-//}
-
 double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, SearchInfo *searchinfo) {
 	assert(swap == 0 || swap == 1);
 	nodeptr q;
@@ -467,22 +423,9 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
     // Optimize the central branch
     update(tr, pr, p);
     pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
-    // if after optimizing the central branch we already obtain better logl
-    // then there is no need for optimizing other branches
-    double logl_nni1 = tr->likelihood;
-    if (logl_nni1 > searchinfo->curLogl) {
-        return logl_nni1;
+    if (tr->likelihood > searchinfo->curLogl) {
+        return tr->likelihood;
     }
-
-    if (searchinfo->speedeval && searchinfo->intenStage) {
-        //double possImp = estBestLoglImp(searchinfo);
-        //exit(0);
-        if (logl_nni1 + 40 < searchinfo->curLogl) {
-            cout << " / Skipped " << endl;
-            return -DBL_MAX;
-        }
-    }
-
     // Optimize 4 other branches
     if (nni_type == NNI5) {
         if (numBranches > 1 && !tr->useRecom) {
@@ -490,24 +433,37 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
         } else {
             pllUpdatePartials(tr, pr, q, PLL_FALSE);
         }
-        nodeptr r; // temporary node poiter
+        nodeptr r;
         r = p->next;
-        if (numBranches > 1 && !tr->useRecom)
+        if (numBranches > 1 && !tr->useRecom) {
             pllUpdatePartials(tr, pr, r, PLL_TRUE);
-        else
+        } else {
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
+        }
         update(tr, pr, r);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
         r = p->next->next;
         if (numBranches > 1 && !tr->useRecom)
             pllUpdatePartials(tr, pr, r, PLL_TRUE);
         else
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
         update(tr, pr, r);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
         if (numBranches > 1 && !tr->useRecom)
             pllUpdatePartials(tr, pr, p, PLL_TRUE);
         else
             pllUpdatePartials(tr, pr, p, PLL_FALSE);
         update(tr, pr, p);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
         // optimize 2 branches at node q
         r = q->next;
         if (numBranches > 1 && !tr->useRecom)
@@ -515,6 +471,10 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
         else
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
         update(tr, pr, r);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
         r = q->next->next;
         if (numBranches > 1 && !tr->useRecom)
             pllUpdatePartials(tr, pr, r, PLL_TRUE);
@@ -522,9 +482,6 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
         update(tr, pr, r);
         pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_FALSE);
-        if (searchinfo->speedeval && !searchinfo->intenStage) {
-            searchinfo->deltaLogl.insert(tr->likelihood - logl_nni1);
-        }
     }
 	return tr->likelihood;
 }

@@ -1272,6 +1272,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -n <#iterations>";
                 params.min_iterations = convert_int(argv[cnt]);
+                params.autostop = false;
             } else if (strcmp(argv[cnt], "-nb") == 0) {
                 cnt++;
                 if (cnt >= argc)
