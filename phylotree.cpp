@@ -2088,6 +2088,8 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                         for (int state2 = 0; state2 < nstates; state2++)
                         lh_child += trans_state[state2] * partial_lh_child[state2];
 
+                        if (!isfinite(lh_child))
+                        	outError("Numerical error with ", __func__);
                         partial_lh_site[state] *= lh_child;
                     }
                 }

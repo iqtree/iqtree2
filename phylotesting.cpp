@@ -55,7 +55,7 @@ const char *aa_model_names_old[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "VT", "LG", "DCMut", "Blosum62" };
 
-const char *codon_model_names[] = {"MG","GY"};
+const char *codon_model_names[] = {"MG", "GY", "ECM"};
 
 const double TOL_LIKELIHOOD_MODELTEST = 0.01;
 

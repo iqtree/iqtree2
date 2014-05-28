@@ -1300,7 +1300,7 @@ double IQTree::doTreeSearch() {
             curScore = optimizeAllBranches();
         } else {
             if (params->snni) {
-                int numNNI = params->pertubSize * (aln->getNSeq() - 3);
+                int numNNI = floor(params->pertubSize * (aln->getNSeq() - 3));
                 vector<string> trees;
                 for (map<double, string>::iterator it = refTreeSetSorted.begin(); it != refTreeSetSorted.end(); ++it) {
                     trees.push_back(it->second);
