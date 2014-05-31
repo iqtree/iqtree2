@@ -1056,26 +1056,6 @@ double IQTree::doTreeSearch() {
     printTree(bestTopoStream, WT_TAXON_ID + WT_SORT_TAXA);
     string best_tree_topo = bestTopoStream.str();
 
-    // write tree's loglikelihood to a file (if nni_lh option is enabled)
-    ofstream lh_file;
-    if (params->nni_lh) {
-        // Remove the .treefile ending and add iq-tree.lh ending to the file name
-        string aln_file_name;
-        aln_file_name.assign(tree_file_name).erase(tree_file_name.size() - 9);
-        string lh_file_name = aln_file_name + ".iq-tree.lh";
-
-        lh_file.open((lh_file_name).c_str());
-        if (lh_file.is_open()) {
-            lh_file.precision(15);
-            lh_file << 1;
-            lh_file << "\t";
-            lh_file << bestScore;
-            lh_file << endl;
-        } else {
-            cout << "Cannot open file " + lh_file_name;
-        }
-    }
-
     if (!params->autostop) {
         stop_rule.addImprovedIteration(1);
     }
@@ -1183,7 +1163,6 @@ double IQTree::doTreeSearch() {
                 perturbScore = curScore;
             }
         }
-
 
         int nni_count = 0;
         int nni_steps = 0;
@@ -1305,7 +1284,7 @@ double IQTree::doTreeSearch() {
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl << endl;
 
                 // Only increase the number of remaining iterations if a significant improvement is found
-                if (curScore - bestScore > 1.0) {
+                if (curScore - bestScore > 0.1) {
                     searchinfo.curFailedIterNum = 0;
                     searchinfo.curPerStrength = params->initPerStrength;
                 }

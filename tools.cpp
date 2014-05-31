@@ -735,7 +735,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.initPerStrength = 0.25;
+    params.initPerStrength = 0.5;
     params.pll = false;
     params.model_eps = 0.1;
     params.pllModOpt = false;
