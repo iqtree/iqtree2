@@ -1088,10 +1088,10 @@ double IQTree::doTreeSearch() {
                 cout << "No better tree was found in the last " << params->stopCond
                         << " iterations. Tree search was stopped after " << curIteration << " iterations!" << endl;
                 break;
-            } else if (searchinfo.curFailedIterNum > 50) {
-                searchinfo.curPerStrength = searchinfo.curPerStrength * 2;
+            } else if (searchinfo.curFailedIterNum >= 50 && searchinfo.curFailedIterNum < 75) {
+                searchinfo.curPerStrength = params->initPerStrength * 2;
             } else if (searchinfo.curFailedIterNum > 75) {
-                searchinfo.curPerStrength = searchinfo.curPerStrength * 2;
+                searchinfo.curPerStrength = params->initPerStrength * 3;
             }
         }
         double min_elapsed = (getCPUTime() - params->startTime) / 60;
@@ -1291,13 +1291,6 @@ double IQTree::doTreeSearch() {
                         }
                     }
                     /****************************************** END: Optimizing model parameters ***************************************/
-
-                    // Only increase the number of remaining iterations if a significant improvement is found
-                    if (curScore - bestScore > 1.0) {
-                        searchinfo.curFailedIterNum = 0;
-                        searchinfo.curPerStrength = params->initPerStrength;
-                    }
-                    //cout << perturb_tree_string.str() << endl;
                 }
 
                 if (!params->autostop) {
@@ -1305,6 +1298,12 @@ double IQTree::doTreeSearch() {
                 }
                 cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl << endl;
+
+                // Only increase the number of remaining iterations if a significant improvement is found
+                if (curScore - bestScore > 1.0) {
+                    searchinfo.curFailedIterNum = 0;
+                    searchinfo.curPerStrength = params->initPerStrength;
+                }
             } else {
                 cout << "UPDATE BEST LOG-LIKELIHOOD: " << curScore << endl;
                 searchinfo.curFailedIterNum++;

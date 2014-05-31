@@ -1687,6 +1687,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-snni") == 0) {
             	params.snni = true;
                 params.autostop = true;
+                params.speednni = true;
             } else if (strcmp(argv[cnt], "-auto") == 0) {
             	params.autostop = true;
             } else if (strcmp(argv[cnt], "-maxiter") == 0) {

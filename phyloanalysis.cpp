@@ -1042,7 +1042,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     }
 
 
-    /************************************ START: Initialization for PLL and sNNI *************************************************/
+    /***************** START: Initialization for PLL and sNNI *****************/
     if (params.snni || params.pll) {
         /* Initialized all data structure for PLL*/
         iqtree.pllAttr.rateHetModel = PLL_GAMMA;
@@ -1358,7 +1358,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         if (params.snni) {
             /************ START: Create a set of up to (numInitTrees - 1) unique parsimony trees **********************/
             if (params.snni) {
-                cout << "************************************************* START EXPLORATIVE PHASE *************************************************" << endl << endl;
+                cout << "********************* START EXPLORATIVE PHASE ********************* " << endl << endl;
             }
             cout << "Generating a set of " << numInitTrees << " parsimony trees ...";
             double parsTimeStart = getCPUTime();
@@ -1681,7 +1681,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 //				<< ((iqtree.optimize_by_newton) ? "Newton" : "Brent") << endl;
 //		cout << "Phylogenetic likelihood library(PLL): " << (params.pll ? "Yes" : "No") << endl;
 //		cout << endl;
-	    cout << " ************************************************* OPTIMIZATION PHASE *************************************************" << endl << endl;
+	    cout << " *********************  EXPLOITATION PHASE ********************* " << endl << endl;
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(alignment);
 	} else {
