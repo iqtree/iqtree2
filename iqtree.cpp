@@ -744,6 +744,7 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
     printTree(backupTree);
     bool updated = false;
     readTreeString(treeString);
+    setRootNode(params->root);
     stringstream treeTopoSS;
     printTree(treeTopoSS, WT_TAXON_ID + WT_SORT_TAXA);
     string treeTopo = treeTopoSS.str();
