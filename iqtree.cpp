@@ -1088,11 +1088,15 @@ double IQTree::doTreeSearch() {
                 cout << "No better tree was found in the last " << params->stopCond
                         << " iterations. Tree search was stopped after " << curIteration << " iterations!" << endl;
                 break;
-            } else if (searchinfo.curFailedIterNum >= 50 && searchinfo.curFailedIterNum < 75) {
-                searchinfo.curPerStrength = params->initPerStrength * 2;
-            } else if (searchinfo.curFailedIterNum > 75) {
-                searchinfo.curPerStrength = params->initPerStrength * 3;
             }
+            if (params->adaptPert) {
+               if (searchinfo.curFailedIterNum >= 50 && searchinfo.curFailedIterNum < 75) {
+                    searchinfo.curPerStrength = params->initPerStrength * 2;
+               } else if (searchinfo.curFailedIterNum > 75) {
+                    searchinfo.curPerStrength = params->initPerStrength * 3;
+                }
+            }
+
         }
         double min_elapsed = (getCPUTime() - params->startTime) / 60;
         if (min_elapsed > params->maxtime) {
@@ -1145,6 +1149,7 @@ double IQTree::doTreeSearch() {
         } else {
             if (params->snni) {
                 int numNNI = floor(searchinfo.curPerStrength * (aln->getNSeq() - 3));
+                //cout << numNNI << endl;
                 vector<string> trees;
                 for (map<double, string>::iterator it = refTreeSetSorted.begin(); it != refTreeSetSorted.end(); ++it) {
                     trees.push_back(it->second);
@@ -1164,7 +1169,7 @@ double IQTree::doTreeSearch() {
                 assert(perturbTree != NULL);
                 pllTreeInitTopologyNewick(pllInst, perturbTree, PLL_FALSE);
                 pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-                pllOptimizeBranchLengths(pllInst, pllPartitions, 1);
+                pllOptimizeBranchLengths(pllInst, pllPartitions, params->numSmoothTree);
                 pllNewickParseDestroy(&perturbTree);
                 curScore = pllInst->likelihood;
                 perturbScore = curScore;

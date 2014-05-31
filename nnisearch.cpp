@@ -309,7 +309,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
             }
 		}
 		if (selectedNNIs.size() != 0) {
-			pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
+			//pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
 			pllOptimizeBranchLengths(tr, pr, 1);
 			int numNNI = selectedNNIs.size();
 			/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
@@ -344,7 +344,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 							break;
 						}
 					}
-		            pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
+		            //pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
 					pllOptimizeBranchLengths(tr, pr, 1);
 					//cout << "Number of NNIs reduced to " << numNNI << ": " << tr->likelihood << endl;
 
