@@ -1070,11 +1070,9 @@ double IQTree::doTreeSearch() {
                 break;
             }
             if (params->adaptPert) {
-               if (searchinfo.curFailedIterNum >= 50 && searchinfo.curFailedIterNum < 75) {
+               if (searchinfo.curFailedIterNum >= 50) {
                     searchinfo.curPerStrength = params->initPerStrength * 2;
-               } else if (searchinfo.curFailedIterNum > 75) {
-                    searchinfo.curPerStrength = params->initPerStrength * 3;
-                }
+               }
             }
 
         }
