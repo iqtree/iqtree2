@@ -64,12 +64,16 @@ typedef struct {
 } NNICUT;
 
 typedef struct {
+    // FOR GENERAL TRRE SEARCH
 	bool speednni;
-	bool speedeval;
-	bool intenStage; // Tell the search whether it is at explorative stage or intensification stage
-	vector<pllNNIMove> posNNIList; // positive NNI list
-	unordered_set<string> affectBranches; // Set of branches that are affected by the previous NNIs
+	vector<pllNNIMove> posNNIList; // positive NNIs
+	unordered_set<string> aBranches; // Set of branches that are affected by the previous NNIs
 	double curLogl; // Current tree log-likelihood
+	int curIterNum; // Current iteration number
+	int curFailedIterNum; // Current number of failed iterations (no better tree found)
+	double curPerStrength; // Current perturbation strength
+
+	// FOR NNI SEARCH
 	NNI_Type nni_type;
 	int numAppliedNNIs; // total number of applied NNIs sofar
 	int curNumAppliedNNIs; // number of applied NNIs at the current step

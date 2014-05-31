@@ -70,9 +70,7 @@ IQTree::IQTree(Alignment *aln) :
     init();
 }
 void IQTree::setParams(Params &params) {
-    searchinfo.speedeval = params.speedeval;
     searchinfo.speednni = params.speednni;
-    searchinfo.intenStage = false;
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
     sse = params.SSE;
@@ -764,6 +762,7 @@ bool IQTree::updateRefTreeSet(string treeString, double treeLogl) {
         }
     } else if (treeLogl > worstLogl && refTreeSet.find(treeTopo) == refTreeSet.end()) {
         if (refTreeSet.size() == params->popSize) {
+            // remove the worst tree
             refTreeSetSorted.erase(refTreeSetSorted.begin());
             for (unordered_map<string, double>::iterator it = refTreeSet.begin(); it != refTreeSet.end(); ++it) {
                 if (it->second == worstLogl) {
@@ -1080,17 +1079,19 @@ double IQTree::doTreeSearch() {
     if (!params->autostop) {
         stop_rule.addImprovedIteration(1);
     }
-
-    int nUnsuccessIteration = 0;
-    if (params->snni) {
-        searchinfo.intenStage = true;
-    }
+    searchinfo.curFailedIterNum = 0;
+    searchinfo.curPerStrength = params->initPerStrength;
     for (curIteration = 2; !stop_rule.meetStopCondition(curIteration); curIteration++) {
+        searchinfo.curIterNum = curIteration;
         if (params->autostop) {
-            if (nUnsuccessIteration == params->maxUnsuccess) {
-                cout << "No better tree was found in the last " << params->maxUnsuccess
+            if (searchinfo.curFailedIterNum == params->stopCond) {
+                cout << "No better tree was found in the last " << params->stopCond
                         << " iterations. Tree search was stopped after " << curIteration << " iterations!" << endl;
                 break;
+            } else if (searchinfo.curFailedIterNum > 50) {
+                searchinfo.curPerStrength = searchinfo.curPerStrength * 2;
+            } else if (searchinfo.curFailedIterNum > 75) {
+                searchinfo.curPerStrength = searchinfo.curPerStrength * 2;
             }
         }
         double min_elapsed = (getCPUTime() - params->startTime) / 60;
@@ -1143,7 +1144,7 @@ double IQTree::doTreeSearch() {
             curScore = optimizeAllBranches();
         } else {
             if (params->snni) {
-                int numNNI = params->pertubSize * (aln->getNSeq() - 3);
+                int numNNI = floor(searchinfo.curPerStrength * (aln->getNSeq() - 3));
                 vector<string> trees;
                 for (map<double, string>::iterator it = refTreeSetSorted.begin(); it != refTreeSetSorted.end(); ++it) {
                     trees.push_back(it->second);
@@ -1155,6 +1156,7 @@ double IQTree::doTreeSearch() {
                 doIQP();
             }
             //setAlignment(aln);
+            setRootNode(params->root);
             perturb_tree_string = getTreeString();
 
             if (params->pll) {
@@ -1177,7 +1179,6 @@ double IQTree::doTreeSearch() {
             }
         }
 
-        setRootNode(params->root);
 
         int nni_count = 0;
         int nni_steps = 0;
@@ -1231,8 +1232,7 @@ double IQTree::doTreeSearch() {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
         }
 
-        double lhDelta = curScore - bestScore;
-        if (lhDelta > 0.0) {
+        if (curScore > bestScore) {
             stringstream cur_tree_topo_ss;
             printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
             if (cur_tree_topo_ss.str() != best_tree_topo) {
@@ -1292,10 +1292,10 @@ double IQTree::doTreeSearch() {
                     }
                     /****************************************** END: Optimizing model parameters ***************************************/
 
-                    lhDelta = curScore - bestScore;
                     // Only increase the number of remaining iterations if a significant improvement is found
-                    if (lhDelta > 0.1) {
-                        nUnsuccessIteration = 0;
+                    if (curScore - bestScore > 1.0) {
+                        searchinfo.curFailedIterNum = 0;
+                        searchinfo.curPerStrength = params->initPerStrength;
                     }
                     //cout << perturb_tree_string.str() << endl;
                 }
@@ -1307,7 +1307,7 @@ double IQTree::doTreeSearch() {
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl << endl;
             } else {
                 cout << "UPDATE BEST LOG-LIKELIHOOD: " << curScore << endl;
-                nUnsuccessIteration++;
+                searchinfo.curFailedIterNum++;
             }
             setBestTree(imd_tree, curScore);
             if (params->write_best_trees) {
@@ -1317,7 +1317,7 @@ double IQTree::doTreeSearch() {
             }
             printResultTree();
         } else {
-            nUnsuccessIteration++;
+            searchinfo.curFailedIterNum++;
         }
 
         // check whether the tree can be put into the reference set

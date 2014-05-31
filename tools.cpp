@@ -735,7 +735,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.pertubSize = 0.5;
+    params.initPerStrength = 0.25;
     params.pll = false;
     params.model_eps = 0.1;
     params.pllModOpt = false;
@@ -747,7 +747,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bestStart = true;
     params.snni = false;
     params.autostop = false;
-    params.maxUnsuccess = 100;
+    params.stopCond = 100;
     params.speednni = false;
     params.speedeval = false;
     params.numParsTrees = 100;
@@ -1266,7 +1266,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             	cnt++;
             	if (cnt >= argc)
             		throw "Use -psize <probability>";
-            	params.pertubSize = convert_double(argv[cnt]);
+            	params.initPerStrength = convert_double(argv[cnt]);
         	} else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1694,7 +1694,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "-auto need to be enabled before specifying this option";
                 }
                 cnt++;
-                params.maxUnsuccess = convert_int(argv[cnt]);
+                params.stopCond = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {

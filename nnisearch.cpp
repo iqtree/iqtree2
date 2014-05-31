@@ -268,7 +268,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	pllEvalAllNNIs(tr, pr, searchinfo);
 
 	if (searchinfo.speednni) {
-		searchinfo.affectBranches.clear();
+		searchinfo.aBranches.clear();
 	}
 
 	/* apply non-conflicting positive NNIs */
@@ -297,7 +297,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 			doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
 			if (searchinfo.speednni) {
 				vector<string> aBranches = getAffectedBranches(tr, (*it).p);
-				searchinfo.affectBranches.insert(aBranches.begin(), aBranches.end());
+				searchinfo.aBranches.insert(aBranches.begin(), aBranches.end());
 			}
 			updateBranchLengthForNNI(tr, pr, (*it));
             if (numBranches > 1 && !tr->useRecom) {
@@ -648,7 +648,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 
 bool isAffectedBranch(nodeptr p, SearchInfo &searchinfo) {
 	string branString = getBranString(p);
-	if (searchinfo.affectBranches.find(branString) != searchinfo.affectBranches.end()) {
+	if (searchinfo.aBranches.find(branString) != searchinfo.aBranches.end()) {
 		return true;
 	} else {
 		return false;
