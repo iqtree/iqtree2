@@ -1427,7 +1427,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                     pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
                     pllNewickParseDestroy(&newick);
                     pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-                    pllOptimizeBranchLengths(iqtree.pllInst, iqtree.pllPartitions, 1);
+                    pllOptimizeBranchLengths(iqtree.pllInst, iqtree.pllPartitions, params.numSmoothTree);
                     initLogl = iqtree.curScore = iqtree.pllInst->likelihood;
                     nniLogl = iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.searchinfo);
                     pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
