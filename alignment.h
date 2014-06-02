@@ -23,7 +23,7 @@ const char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
 
 enum SeqType {
-    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_UNKNOWN
+    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_COUNTSFORMAT, SEQ_UNKNOWN
 };
 
 
@@ -109,7 +109,7 @@ public:
      * read the alignment in counts format (PoMo)
      * 
      * @param filename file name
-     * 
+     *
      * @return 1 on success, 0 on failure
      */
     int readCountsFormat(char *filename);

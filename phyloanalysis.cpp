@@ -465,6 +465,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				case SEQ_MORPH: out << "MORPH"; break;
 				case SEQ_MULTISTATE: out << "TINA"; break;
 				case SEQ_PROTEIN: out << "AA"; break;
+				case SEQ_COUNTSFORMAT: out << "COUNTSFORMAT"; break;
 				case SEQ_UNKNOWN: out << "???"; break;
 				}
 				out.width(5);

@@ -844,6 +844,8 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         if (num_states < 2 || num_states > 32) throw "Invalid number of states.";
         cout << "Alignment most likely contains " << num_states << "-state morphological data" << endl;
         break;
+    case SEQ_COUNTSFORMAT:
+    	/* TODO */
     default:
         if (!sequence_type)
             throw "Unknown sequence type.";
@@ -1068,9 +1070,103 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 }
 
 int Alignment::readCountsFormat(char* filename) {
-  std::cout << "TODO" << std::endl;
+    typedef vector <vector <vector <int> > > Data;
+    // Data matrix; for data[i][j][k], we have:
+    // i .. nucleotide base index
+    // j .. species / population
+    // k .. nucleotide: 1 - A, 2 - C, 3 - G, 4 - T
+    Data data;
+    // Number of sequences.
+    int nSeqs = 0;
+    ostringstream err_str;
+    ifstream in;
 
-  return 0;
+    // Variables to stream the data.
+    string line;
+    string field;
+    int value;
+    string val_str;
+    int line_num = 1;
+    int field_num;
+    int i;
+    string::size_type pos;
+    char const field_delim = '\t';
+    char const value_delim = ',';
+
+    // set the failbit and badbit
+    in.exceptions(ios::failbit | ios::badbit);
+    in.open(filename);
+    // remove the failbit
+    in.exceptions(ios::badbit);
+
+    // Headerline.
+    getline(in, line);
+    istringstream ss(line);
+    field_num = 0;
+    for ( ; getline(ss, field, field_delim); ) {
+        if (field_num == 0) {
+            if ((field.compare("Chrom") != 0) && (field.compare("CHROM") != 0)) {
+                err_str << "Unrecognized header field " << field << ".";
+                throw err_str.str();
+            }
+        }
+        else if (field_num == 1) {
+            if ((field.compare("Pos") != 0) && (field.compare("POS") != 0)) {
+                err_str << "Unrecognized header field " << field << ".";
+                throw err_str.str();
+            }
+        }
+        else {
+            //Read in sequence names.
+            nSeqs++;
+            seq_names.push_back(field);
+        }
+        field_num++;    
+    }
+    line_num++;
+
+    // Data.
+    for ( ; getline(in, line); ) {
+        field_num = 0;
+        data.push_back(Data::value_type());
+        istringstream fieldstream(line);
+        for ( ; getline(fieldstream, field, field_delim); ) {
+            // Skip Chrom and Pos columns.
+            if ( (field_num == 0) || (field_num == 1)) {
+                field_num++;
+                continue;
+            }
+            data.back().push_back(vector<int>());
+            istringstream valuestream(field);
+            i = 0;
+            for (; getline(valuestream, val_str, value_delim);) {
+                if ( ! (istringstream(val_str) >> value) ) {
+                    err_str << "Could not read value " << val_str << " on line " << line_num << ".";
+                    throw err_str.str();
+                }
+                i++;
+                data.back().back().push_back(value);
+            }
+            if (i != 4) {
+                err_str << "Number of bases does not match on line " << line_num << ".";
+                throw err_str.str();
+            }
+            field_num++;
+        }
+        if (field_num - 2 != nSeqs) {
+            err_str << "Number of species does not match on line " << line_num << ".";
+            throw err_str.str();
+        }
+        line_num++;
+    }
+
+    in.clear();
+    // set the failbit again
+    in.exceptions(ios::failbit | ios::badbit);
+    in.close();
+
+    exit (EXIT_SUCCESS);
+    // return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
 }
 
 bool Alignment::getSiteFromResidue(int seq_id, int &residue_left, int &residue_right) {
