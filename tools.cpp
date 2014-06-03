@@ -644,7 +644,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.nexus_output = false;
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
-    params.numSmoothTree = 1;
+    params.numSmoothTree = 0;
     params.nni5 = false;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
@@ -1688,6 +1688,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.snni = true;
                 params.autostop = true;
                 params.speednni = true;
+                params.adaptPert = true;
             } else if (strcmp(argv[cnt], "-auto") == 0) {
             	params.autostop = true;
             } else if (strcmp(argv[cnt], "-maxiter") == 0) {
