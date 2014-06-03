@@ -49,8 +49,7 @@ void SPRMoves::add(PhyloNode *prune_node, PhyloNode *prune_dad, PhyloNode *regra
  PhyloTree class
  ****************************************************************************/
 
-PhyloTree::PhyloTree() :
-        MTree() {
+PhyloTree::PhyloTree() : MTree() {
     init();
 }
 
@@ -82,8 +81,7 @@ void PhyloTree::init() {
     save_all_trees = 0;
 }
 
-PhyloTree::PhyloTree(Alignment *aln) :
-        MTree() {
+PhyloTree::PhyloTree(Alignment *aln) : MTree() {
     init();
     this->aln = aln;
 }
