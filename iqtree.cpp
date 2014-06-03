@@ -1243,7 +1243,7 @@ double IQTree::doTreeSearch() {
 
     int nUnsuccessIteration = 0;
     for (curIteration = 2; !stop_rule.meetStopCondition(curIteration); curIteration++) {
-        if (params->autostop) {
+        if (params->autostop && !params->gbo_replicates) {
             if (nUnsuccessIteration == params->maxUnsuccess) {
                 cout << "No better tree was found in the last " << params->maxUnsuccess
                         << " iterations. Tree search was stopped after " << curIteration << " iterations!" << endl;
