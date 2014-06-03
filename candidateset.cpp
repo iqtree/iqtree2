@@ -5,6 +5,7 @@
  *      Author: Tung Nguyen
  */
 
+#include "phylotree.h"
 #include "candidateset.h"
 
 candidateset::candidateset(int max_elements, int max_parents) {

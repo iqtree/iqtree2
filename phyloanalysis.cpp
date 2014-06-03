@@ -1397,15 +1397,20 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                         pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE,
                         PLL_FALSE);
                         pllOptimizeBranchLengths(iqtree.pllInst, iqtree.pllPartitions, 1);
+                        iqtree.curScore = iqtree.pllInst->likelihood;
                         pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
                                 iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
                                 PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-                        iqtree.uniqParsTree.insert(
-                                make_pair(iqtree.pllInst->likelihood, string(iqtree.pllInst->tree_string)));
+                        curParsTree = string(iqtree.pllInst->tree_string);
+                        iqtree.uniqParsTree.insert(make_pair(iqtree.pllInst->likelihood, curParsTree));
                     } else {
                         iqtree.initializeAllPartialLh();
                         iqtree.curScore = iqtree.optimizeAllBranches(1);
+                        curParsTree = iqtree.getTreeString();
                         iqtree.uniqParsTree.insert(make_pair(iqtree.curScore, iqtree.getTreeString()));
+                    }
+                    if (iqtree.curScore > iqtree.bestScore) {
+                        iqtree.setBestTree(curParsTree, iqtree.curScore);
                     }
                 }
             }
