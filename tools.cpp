@@ -649,6 +649,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
+    params.limitPopSize = 100;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -1655,7 +1656,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -numpars <number_of_parsimony_trees>";
                 params.numParsTrees = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-popsize") == 0) {
+            } else if (strcmp(argv[cnt], "-poplim") == 0) {
+            	cnt++;
+            	if (cnt >=argc)
+            		throw "Use -poplim <max_pop_size>";
+            	params.limitPopSize = convert_int(argv[cnt]);
+        	} else if (strcmp(argv[cnt], "-popsize") == 0) {
             	cnt++;
             	if (cnt >=argc)
             		throw "Use -popsize <number_of_candidate_trees>";

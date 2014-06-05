@@ -1311,7 +1311,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     iqtree.setBestTree(initTree, iqtree.curScore);
 
     iqtree.uniqParsTopo.insert(iqtree.getTopology());
-    iqtree.uniqParsTree.insert(make_pair(iqtree.curScore, initTree));
 
     // Compute maximum likelihood distance
     double bestTreeScore = iqtree.bestScore;
@@ -1347,10 +1346,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     }
 
     if (params.min_iterations > 0) {
-        if (params.snni) {
-            iqtree.refTreeSet.clear();
-            iqtree.refTreeSetSorted.clear();
-        }
         double initTime = getCPUTime();
         int nni_count = 0;
         int nni_steps = 0;
@@ -1402,12 +1397,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                                 iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
                                 PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
                         curParsTree = string(iqtree.pllInst->tree_string);
-                        iqtree.uniqParsTree.insert(make_pair(iqtree.pllInst->likelihood, curParsTree));
+                        iqtree.candidateTrees.update(curParsTree, iqtree.curScore);
                     } else {
                         iqtree.initializeAllPartialLh();
                         iqtree.curScore = iqtree.optimizeAllBranches(1);
                         curParsTree = iqtree.getTreeString();
-                        iqtree.uniqParsTree.insert(make_pair(iqtree.curScore, iqtree.getTreeString()));
+                        iqtree.candidateTrees.update(curParsTree, iqtree.curScore);
                     }
                     if (iqtree.curScore > iqtree.bestScore) {
                         iqtree.setBestTree(curParsTree, iqtree.curScore);
@@ -1421,14 +1416,14 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             cout << endl;
             cout << "Doing NNIs on the best 20 parsimony trees" << endl << endl;
             /*********** START: Do NNI on the best parsimony trees ************************************/
-            map<double, string>::reverse_iterator rit;
+            CandidateSet::reverse_iterator rit;
             int numParsTrees = 0;
-            for (rit = iqtree.uniqParsTree.rbegin(); rit != iqtree.uniqParsTree.rend(); ++rit) {
+            for (rit = iqtree.candidateTrees.rbegin(); rit != iqtree.candidateTrees.rend(); ++rit) {
                 numParsTrees++;
                 double initLogl, nniLogl;
                 string nniTree;
                 if (params.pll) {
-                    pllNewickTree *newick = pllNewickParseString(rit->second.c_str());
+                    pllNewickTree *newick = pllNewickParseString(rit->second.tree.c_str());
                     pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
                     pllNewickParseDestroy(&newick);
                     pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
@@ -1443,7 +1438,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                     nniTree = string(iqtree.pllInst->tree_string);
                 } else {
                     //cout << rit->second << endl;
-                    iqtree.readTreeString(rit->second);
+                    iqtree.readTreeString(rit->second.tree);
                     iqtree.initializeAllPartialLh();
                     iqtree.clearAllPartialLH();
                     initLogl = iqtree.curScore = iqtree.optimizeAllBranches(1);
@@ -1523,11 +1518,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                     cout << "BETTER SCORE FOUND: " << iqtree.bestScore << endl;
                 }
 
-                iqtree.updateRefTreeSet(nniTree, iqtree.curScore);
+                iqtree.candidateTrees.update(nniTree, iqtree.curScore);
+
                 cout << endl;
 
                 if (numParsTrees == 20) {
-                    iqtree.printLoglInTreePop();
+                    iqtree.candidateTrees.printBestScores();
                     break;
                 } else {
                     double min_elapsed = (getCPUTime() - params.startTime) / 60;

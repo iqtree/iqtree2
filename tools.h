@@ -378,6 +378,11 @@ struct Params {
 	int popSize;
 
 	/**
+	 *  maximum number of trees stored in the candidate set
+	 */
+	int limitPopSize;
+
+	/**
 	 *  heuristics for speeding up NNI evaluation
 	 */
 	bool speednni;
