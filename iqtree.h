@@ -28,6 +28,8 @@
 #include "phylonode.h"
 #include "stoprule.h"
 #include "mtreeset.h"
+
+#include "pll/pll.h"
 #include "nnisearch.h"
 #include "candidateset.h"
 
@@ -472,6 +474,52 @@ public:
     vector<int> vecNumNNI;
 
     int getCurIteration() { return curIteration; }
+
+    /**
+     * Do memory allocation and initialize parameter for UFBoot to run with PLL
+     */
+    void pllInitUFBootData();
+
+    /**
+     * Do memory deallocation for UFBoot data (PLL mode)
+     */
+    void pllDestroyUFBootData();
+
+    /**
+     * DTH:
+     * Substitute bases in seq according to PLL's rules
+     * This function should be updated if PLL's rules change.
+     * @param seq: data of some sequence to be substituted
+     * @param dataType: PLL_DNA_DATA or PLL_AA_DATA
+     */
+   void pllBaseSubstitute (char *str, int dataType);
+
+   /*
+    * An array to map site index in pllAlignment into IQTree pattern index
+    * Born due to the order difference of these two
+    * Will be deallocated in pllDestroyUFBootData()
+    */
+   int * pll2iqtree_pattern_index;
+
+   /*
+    * Build pll2iqtree_pattern_index
+    * Must be called AFTER initializing PLL model
+    */
+   void pllBuildIQTreePatternIndex();
+
+   /**
+    * FOR TESTING:
+    * Write to log file the freq of pllAlignment sites, and
+    * freq of bootstrap site stored in pllUFBootDataPtr->boot_samples
+    */
+   void pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns);
+
+   /**
+    * Convert certain arrays in pllUFBootDataPtr
+    * into IQTree data structures
+    * to be usable in IQTree::summarizeBootstrap()
+    */
+   void pllConvertUFBootData2IQTree();
 
 protected:
 

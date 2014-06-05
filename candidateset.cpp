@@ -43,7 +43,11 @@ bool CandidateSet::update(string tree, double score) {
 	candidate.tree = tree;
 	candidate.score = score;
 	candidate.topology = getTopology(tree);
-	if (treeTopologyExist(candidate.topology)) return false;
+	if (treeTopologyExist(candidate.topology)) {
+		if (verbose_mode >= VB_MED)
+			cout << "Duplicated candidate tree " << score << endl;
+		return false;
+	}
 	if (size() < limit) {
 		// insert tree into candidate set
 		insert(CandidateSet::value_type(score, candidate));

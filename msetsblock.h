@@ -59,6 +59,9 @@ public:
 
 	/** sequence type */
 	string sequence_type;
+
+	/** name of CharPartition where this charset is included*/
+	string char_partition;
 };
 
 

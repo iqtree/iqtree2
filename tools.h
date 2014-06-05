@@ -73,8 +73,30 @@
 	#include <set>
 #endif
 
-
 using namespace std;
+
+
+#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300
+/*
+        Define the hash function of Split
+ */
+#if !defined(__GNUC__)
+namespace stdext {
+#else
+namespace __gnu_cxx {
+#endif
+
+    template<>
+    struct hash<string> {
+
+        size_t operator()(string str) const {
+            hash<const char*> hash_str;
+            return hash_str(str.c_str());
+        }
+    };
+} // namespace
+#endif // USE_HASH_MAP
+
 
 class Linear {
 public:
@@ -220,7 +242,7 @@ enum TreeGenType {
                 WT_BR_LEN - output branch length
                 WT_BR_CLADE - put branch length into internal node name
                 WT_TAXON_ID - output taxon ID
-                WT_INT_NODE - for draw tree, draw the internal node
+                WT_INT_NODE - for draw tree, draw the internal node ID
                 WT_BR_SCALE - for draw tree, draw the branch proportional to its length
                 WT_SORT_TAXA - sort the taxa s.t. subtrees with least taxon ID come first
                 WT_APPEND    - append the output file
@@ -618,6 +640,11 @@ struct Params {
             TRUE to discard all gappy positions
      */
     bool aln_nogaps;
+
+    /**
+     * TRUE to discard all constant sites
+     */
+    bool aln_no_const_sites;
 
     /**
             compute parsimony score on trees
@@ -1128,6 +1155,9 @@ struct Params {
      */
     int print_site_lh;
 
+    /** TRUE to print site-specific rates, default: FALSE */
+    bool print_site_rate;
+
     /**
             TRUE to print tree log-likelihood
      */
@@ -1415,6 +1445,9 @@ struct Params {
 
 	/** print partition information */
 	bool print_partition_info;
+
+	/** TRUE to print concatenated alignment, default: false */
+	bool print_conaln;
 };
 
 /**

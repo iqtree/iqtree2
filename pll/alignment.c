@@ -30,6 +30,7 @@
  *
  * Auxiliary functions for storing alignments read from predefined file formats
  */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,6 +38,15 @@
 
 #include "pll.h"
 #include "pllInternal.h"
+
+// for strndup stuff
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+char *strndup(const char *s, size_t n) {
+	char *ret = malloc(n);
+	strncpy(ret, s, n);
+	return ret;
+}
+#endif
 
 /** @defgroup alignmentGroup Reading and parsing multiple sequence alignments
     

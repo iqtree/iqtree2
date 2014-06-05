@@ -638,6 +638,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.gap_masked_aln = NULL;
     params.concatenate_aln = NULL;
     params.aln_nogaps = false;
+    params.aln_no_const_sites = false;
     params.parsimony = false;
     params.parsimony_tree = false;
     params.tree_spr = false;
@@ -681,6 +682,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.localbp_replicates = 0;
     params.SSE = true;
     params.print_site_lh = 0;
+    params.print_site_rate = false;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -765,6 +767,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_bootaln = false;
 	params.print_subaln = false;
 	params.print_partition_info = false;
+	params.print_conaln = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1224,7 +1227,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-af") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -af <aln_format>";
+                    throw "Use -af phy|fasta";
                 if (strcmp(argv[cnt], "phy") == 0)
                     params.aln_output_format = ALN_PHYLIP;
                 else if (strcmp(argv[cnt], "fasta") == 0)
@@ -1242,6 +1245,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.concatenate_aln = argv[cnt];
             } else if (strcmp(argv[cnt], "-nogap") == 0) {
                 params.aln_nogaps = true;
+            } else if (strcmp(argv[cnt], "-noconst") == 0) {
+                params.aln_no_const_sites = true;
             } else if (strcmp(argv[cnt], "-parstree") == 0) {
                 // maximum parsimony
                 params.parsimony_tree = true;
@@ -1483,6 +1488,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.print_site_lh = 1;
             } else if (strcmp(argv[cnt], "-wslg") == 0) {
                 params.print_site_lh = 2;
+            } else if (strcmp(argv[cnt], "-wsr") == 0) {
+            	params.print_site_rate = true;
             } else if (strcmp(argv[cnt], "-wba") == 0) {
                 params.print_bootaln = true;
 			} else if (strcmp(argv[cnt],"-wsa") == 0) {
@@ -1491,6 +1498,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.print_tree_lh = true;
             } else if (strcmp(argv[cnt], "-wpi") == 0) {
                 params.print_partition_info = true;
+                params.print_conaln = true;
+            } else if (strcmp(argv[cnt], "-wca") == 0) {
+            	params.print_conaln = true;
             } else if (strcmp(argv[cnt], "-ns") == 0) {
                 cnt++;
                 if (cnt >= argc)

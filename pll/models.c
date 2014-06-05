@@ -3784,7 +3784,7 @@ l4:
     @todo
        Document this more.
 */
-void pllMakeGammaCats(double alpha, double *gammaRates, int K, boolean useMedian)
+void pllMakeGammaCats(double alpha, double *gammaRates, int K, pllBoolean useMedian)
 {
   int 
     i;

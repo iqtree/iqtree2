@@ -27,28 +27,6 @@ enum SeqType {
 };
 
 
-#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300
-/*
-        Define the hash function of Split
- */
-#if !defined(__GNUC__) 
-namespace stdext {
-#else
-namespace __gnu_cxx {
-#endif
-
-    template<>
-    struct hash<string> {
-
-        size_t operator()(string str) const {
-            hash<const char*> hash_str;
-            return hash_str(str.c_str());
-        }
-    };
-} // namespace
-#endif // USE_HASH_MAP
-
-
 #ifdef USE_HASH_MAP
 typedef unordered_map<string, int> StringIntMap;
 typedef unordered_map<string, int> PatternIntMap;
@@ -189,13 +167,13 @@ public:
     bool getSiteFromResidue(int seq_id, int &residue_left, int &residue_right);
 
     int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
-            bool exclude_gaps, const char *ref_seq_name);
+            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name);
 
-    void printPhylip(const char *filename, bool append = false,
-            const char *aln_site_list = NULL, bool exclude_gaps = false, const char *ref_seq_name = NULL);
+    void printPhylip(const char *filename, bool append = false, const char *aln_site_list = NULL,
+    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
 
-    void printFasta(const char *filename, bool append = false,
-            const char *aln_site_list = NULL, bool exclude_gaps = false, const char *ref_seq_name = NULL);
+    void printFasta(const char *filename, bool append = false, const char *aln_site_list = NULL,
+    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
 
     /**
             Print the number of gaps per site
@@ -490,6 +468,11 @@ public:
             count the fraction of constant sites in the alignment, update the variable frac_const_sites
      */
     virtual void countConstSite();
+
+    /**
+     * @return unobserved constant patterns, each entry encoding for one constant character
+     */
+    string getUnobservedConstPatterns();
 
     /**
             @return the number of ungappy and unambiguous characters from a sequence

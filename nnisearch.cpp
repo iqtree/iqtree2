@@ -19,6 +19,16 @@ extern VerboseMode verbose_mode;
 int NNI_MAX_NR_STEP = 10;
 
 /* program options */
+extern Params *globalParam;
+
+/*
+ * ****************************************************************************
+ * pllUFBoot area
+ * ****************************************************************************
+ */
+
+pllUFBootData * pllUFBootDataPtr = NULL;
+
 
 int compareDouble(const void * a, const void * b) {
 	if (*(double*) a > *(double*) b)
@@ -224,6 +234,14 @@ set<int> getAffectedNodes(pllInstance* tr, nodeptr p) {
 }
 
 void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo) {
+    /* DTH: mimic IQTREE::optimizeNNI 's first call to IQTREE::saveCurrentTree */
+    if((globalParam->online_bootstrap == PLL_TRUE) &&
+            (globalParam->gbo_replicates > 0)){
+        tr->fastScaling = PLL_FALSE;
+        pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_TRUE);
+        pllSaveCurrentTree(tr, pr, tr->start);
+    }
+
 	nodeptr p = tr->start->back;
 	nodeptr q = p->next;
 	while (q != p) {
@@ -422,7 +440,16 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
     }
     // Optimize the central branch
     update(tr, pr, p);
-    pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+    if((globalParam->online_bootstrap == PLL_TRUE) &&
+            (globalParam->gbo_replicates > 0)){
+        tr->fastScaling = PLL_FALSE;
+        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
+        pllSaveCurrentTree(tr, pr, p);
+    }else{
+        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+    }
+    // if after optimizing the central branch we already obtain better logl
+    // then there is no need for optimizing other branches
     if (tr->likelihood > searchinfo->curLogl) {
         return tr->likelihood;
     }
@@ -481,8 +508,16 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
         else
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
         update(tr, pr, r);
-        pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_FALSE);
+        if((globalParam->online_bootstrap == PLL_TRUE) &&
+                        (globalParam->gbo_replicates > 0)){
+            tr->fastScaling = PLL_FALSE;
+            pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
+            pllSaveCurrentTree(tr, pr, r);
+        }else{
+            pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_FALSE);
+        }
     }
+
 	return tr->likelihood;
 }
 
@@ -671,3 +706,291 @@ void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo
 		}
 	}
 }
+
+/**
+* DTH:
+* The PLL version of saveCurrentTree function
+* @param tr: the tree (a pointer to a pllInstance)
+* @param pr: pointer to a partitionList (this one keeps tons of tree info)
+* @param p: root?
+*/
+void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
+    double cur_logl = tr->likelihood;
+
+    struct pllHashItem * item_ptr = (struct pllHashItem *) malloc(sizeof(struct pllHashItem));
+    item_ptr->data = (int *) malloc(sizeof(int));
+    item_ptr->next = NULL;
+    item_ptr->str = NULL;
+
+    unsigned int tree_index = -1;
+    char * tree_str = NULL;
+    pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
+            PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+    tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
+    strcpy(tree_str, tr->tree_string);
+
+    pllBoolean is_stored = PLL_FALSE;
+
+    if(globalParam->store_candidate_trees){
+        is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
+    }
+
+    if(is_stored){ // if found the tree_str
+        pllUFBootDataPtr->duplication_counter++;
+        tree_index = *((int *)item_ptr->data);
+        if (cur_logl <= pllUFBootDataPtr->treels_logl[tree_index] + 1e-4) {
+            if (cur_logl < pllUFBootDataPtr->treels_logl[tree_index] - 5.0)
+                if (verbose_mode >= VB_MED)
+                    printf("Current lh %f is much worse than expected %f\n",
+                            cur_logl, pllUFBootDataPtr->treels_logl[tree_index]);
+/*            free(tree_str);
+            free(item_ptr->data);
+            free(item_ptr);*/
+            return;
+        }
+        if (verbose_mode >= VB_MAX)
+            printf("Updated logl %f to %f\n", pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
+        pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
+
+        if (pllUFBootDataPtr->save_all_br_lens) {
+            pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
+                    PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LENGTH, PLL_FALSE, PLL_FALSE);
+            char * tree_str_br_lens = (char *) malloc (strlen(tr->tree_string) + 1);
+            strcpy(tree_str_br_lens, tr->tree_string);
+            pllUFBootDataPtr->treels_newick[tree_index] = tree_str_br_lens;
+        }
+        if (pllUFBootDataPtr->boot_samples == NULL) {
+            (pllUFBootDataPtr->treels_ptnlh)[tree_index] =
+                    (double *) malloc(pllUFBootDataPtr->n_patterns * sizeof(double));
+            pllComputePatternLikelihood(tr, (pllUFBootDataPtr->treels_ptnlh)[tree_index], &cur_logl);
+/*            free(tree_str);
+            free(item_ptr->data);
+            free(item_ptr);*/
+            return;
+        }
+        if (verbose_mode >= VB_MAX)
+            printf("Update treels_logl[%d] := %f\n", tree_index, cur_logl);
+
+    } else {
+		if (pllUFBootDataPtr->logl_cutoff != 0.0 && cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4){
+		/*            free(tree_str);
+			free(item_ptr->data);
+			free(item_ptr);*/
+			return;
+		}
+
+		if(pllUFBootDataPtr->treels_size == pllUFBootDataPtr->candidate_trees_count)
+			pllResizeUFBootData();
+
+		tree_index = pllUFBootDataPtr->candidate_trees_count;
+		pllUFBootDataPtr->candidate_trees_count++;
+		if (globalParam->store_candidate_trees){
+			*((int *)item_ptr->data) = tree_index;
+			item_ptr->str = tree_str;
+			pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
+		}
+		pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
+
+		if (verbose_mode >= VB_MAX)
+			printf("Add    treels_logl[%d] := %f\n", tree_index, cur_logl);
+   }
+
+    //if (write_intermediate_trees)
+    //        printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
+
+    double *pattern_lh = (double *) malloc(pllUFBootDataPtr->n_patterns * sizeof(double));
+    if(!pattern_lh) outError("Not enough dynamic memory!");
+    pllComputePatternLikelihood(tr, pattern_lh, &cur_logl);
+
+    if (pllUFBootDataPtr->boot_samples == NULL) {
+        // for runGuidedBootstrap
+        pllUFBootDataPtr->treels_ptnlh[tree_index] = pattern_lh;
+    } else {
+        // online bootstrap
+        int nptn = pllUFBootDataPtr->n_patterns;
+        int updated = 0;
+        int nsamples = globalParam->gbo_replicates;
+        for (int sample = 0; sample < nsamples; sample++) {
+            double rell = 0.0;
+            for (int ptn = 0; ptn < nptn; ptn++)
+                rell += pattern_lh[ptn] * pllUFBootDataPtr->boot_samples[sample][ptn];
+
+            if (rell > pllUFBootDataPtr->boot_logl[sample] + globalParam->ufboot_epsilon ||
+                (rell > pllUFBootDataPtr->boot_logl[sample] - globalParam->ufboot_epsilon &&
+                    random_double() <= 1.0/(pllUFBootDataPtr->boot_counts[sample]+1))) {
+                if (!globalParam->store_candidate_trees){
+                    is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
+                    if(is_stored)
+                        tree_index = *((int *)item_ptr->data);
+                    else{
+                        *((int *)item_ptr->data) = tree_index = pllUFBootDataPtr->candidate_trees_count - 1;
+                        item_ptr->str = tree_str;
+                        pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
+                    }
+                }
+                if (rell <= pllUFBootDataPtr->boot_logl[sample] +
+                        globalParam->ufboot_epsilon) {
+                    pllUFBootDataPtr->boot_counts[sample]++;
+                } else {
+                    pllUFBootDataPtr->boot_counts[sample] = 1;
+                }
+                if(rell > pllUFBootDataPtr->boot_logl[sample])
+                    pllUFBootDataPtr->boot_logl[sample] = rell;
+                pllUFBootDataPtr->boot_trees[sample] = tree_index;
+                updated++;
+            }
+        }
+/*        if (updated && verbose_mode >= VB_MAX)
+         printf("%d boot trees updated\n", updated);*/
+    }
+    if (pllUFBootDataPtr->save_all_br_lens) {
+        pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
+                PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+        char * s = (char *) malloc (strlen(tr->tree_string) + 1);
+        strcpy(s, tr->tree_string);
+        pllUFBootDataPtr->treels_newick[tree_index] = s;
+    }
+
+//    if(!globalParam->store_candidate_trees){
+//        free(tree_str);
+//        free(item_ptr->data);
+//        free(item_ptr);
+//    }
+    if (pllUFBootDataPtr->boot_samples){
+        free(pattern_lh);
+        pllUFBootDataPtr->treels_ptnlh[tree_index] = NULL;
+    }
+
+//    printf("Done freeing: max = %d, count = %d, size = %d\n",
+//            pllUFBootDataPtr->max_candidate_trees,
+//            pllUFBootDataPtr->candidate_trees_count,
+//            pllUFBootDataPtr->treels_size);
+}
+
+/**
+* DTH:
+* Extract the array of site log likelihood to be kept in ptnlh
+* And update *cur_log
+* @param tr: the tree (pointer to an pllInstance)
+* @param ptnlh: to-be-kept array of site log likelihood
+* @param cur_logl: pointer to current tree log likelihood
+*/
+void pllComputePatternLikelihood(pllInstance* tr, double * ptnlh, double * cur_logl){
+    int i;
+    double tree_logl = 0;
+    for(i = 0; i < pllUFBootDataPtr->n_patterns; i++){
+        ptnlh[i] = tr->lhs[i];
+        tree_logl += tr->lhs[i] * tr->aliaswgt[i];
+    }
+    *cur_logl = tree_logl;
+}
+
+/**
+* DTH:
+* Resize some of the arrays in UFBootData if they're full
+* Along with update treels_size (to track the size of these arrays)
+*/
+void pllResizeUFBootData(){
+    int count = pllUFBootDataPtr->candidate_trees_count;
+    pllUFBootDataPtr->treels_size = 2 * count;
+
+    double * rtreels_logl =
+            (double *) malloc(2 * count * (sizeof(double)));
+    if(!rtreels_logl) outError("Not enough dynamic memory!");
+//    memset(rtreels_logl, 0, 2 * count * sizeof(double));
+    memcpy(rtreels_logl, pllUFBootDataPtr->treels_logl, count * sizeof(double));
+    free(pllUFBootDataPtr->treels_logl);
+    pllUFBootDataPtr->treels_logl = rtreels_logl;
+
+    char ** rtreels_newick =
+            (char **) malloc(2 * count * (sizeof(char *)));
+    if(!rtreels_newick) outError("Not enough dynamic memory!");
+    memset(rtreels_newick, 0, 2 * count * sizeof(char *));
+    memcpy(rtreels_newick, pllUFBootDataPtr->treels_newick, count * sizeof(char *));
+    free(pllUFBootDataPtr->treels_newick);
+    pllUFBootDataPtr->treels_newick = rtreels_newick;
+
+    double ** rtreels_ptnlh =
+        (double **) malloc(2 * count * (sizeof(double *)));
+    if(!rtreels_ptnlh) outError("Not enough dynamic memory!");
+    memset(rtreels_ptnlh, 0, 2 * count * sizeof(double *));
+    memcpy(rtreels_ptnlh, pllUFBootDataPtr->treels_ptnlh, count * sizeof(double *));
+    free(pllUFBootDataPtr->treels_ptnlh);
+    pllUFBootDataPtr->treels_ptnlh = rtreels_ptnlh;
+}
+
+
+/**
+* DTH:
+* (Based on function Tree2StringREC of PLL)
+* Print out the tree topology with IQTree taxa ID (starts at 0) instead of PLL taxa ID (starts at 1)
+* @param All are the same as in PLL's
+* 2014.4.23: REPLACE getBranchLength(tr, pr, perGene, p) BY pllGetBranchLength(tr, p, pr->numberOfPartitions)
+* BECAUSE OF LIB NEW DECLARATION: pllGetBranchLength (pllInstance *tr, nodeptr p, int partition_id);
+*/
+static char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean  printBranchLengths, pllBoolean  printNames,
+		pllBoolean  printLikelihood, pllBoolean  rellTree, pllBoolean  finalPrint, int perGene, pllBoolean  branchLabelSupport, pllBoolean  printSHSupport)
+{
+	char * result = treestr; // DTH: added this var to be able to remove the '\n' at the end
+	char  *nameptr;
+
+	if(isTip(p->number, tr->mxtips)){
+		if(printNames){
+			nameptr = tr->nameList[p->number];
+			sprintf(treestr, "%s", nameptr);
+		}else
+			sprintf(treestr, "%d", p->number - 1);
+
+		while (*treestr) treestr++;
+	}else{
+		*treestr++ = '(';
+		treestr = pllTree2StringREC(treestr, tr, pr, p->next->back, printBranchLengths, printNames, printLikelihood, rellTree,
+				finalPrint, perGene, branchLabelSupport, printSHSupport);
+		*treestr++ = ',';
+		treestr = pllTree2StringREC(treestr, tr, pr, p->next->next->back, printBranchLengths, printNames, printLikelihood, rellTree,
+				finalPrint, perGene, branchLabelSupport, printSHSupport);
+		if(p == tr->start->back){
+			*treestr++ = ',';
+			treestr = pllTree2StringREC(treestr, tr, pr, p->back, printBranchLengths, printNames, printLikelihood, rellTree,
+				finalPrint, perGene, branchLabelSupport, printSHSupport);
+		}
+		*treestr++ = ')';
+	}
+
+	if(p == tr->start->back){
+		if(printBranchLengths && !rellTree)
+			sprintf(treestr, ":0.0;\n");
+		else
+			sprintf(treestr, ";\n");
+	}else{
+		if(rellTree || branchLabelSupport || printSHSupport){
+			if(( !isTip(p->number, tr->mxtips)) &&
+					( !isTip(p->back->number, tr->mxtips)))
+			{
+				assert(p->bInf != (branchInfo *)NULL);
+				if(rellTree)
+					sprintf(treestr, "%d:%8.20f", p->bInf->support, p->z[0]);
+				if(branchLabelSupport)
+					sprintf(treestr, ":%8.20f[%d]", p->z[0], p->bInf->support);
+				if(printSHSupport)
+					sprintf(treestr, ":%8.20f[%d]", pllGetBranchLength(tr, p, pr->numberOfPartitions), p->bInf->support);
+			}else{
+				if(rellTree || branchLabelSupport)
+					sprintf(treestr, ":%8.20f", p->z[0]);
+				if(printSHSupport)
+					sprintf(treestr, ":%8.20f", pllGetBranchLength(tr, p, pr->numberOfPartitions));
+			}
+		}else{
+			if(printBranchLengths)
+				sprintf(treestr, ":%8.20f", pllGetBranchLength(tr, p, pr->numberOfPartitions));
+			else
+				sprintf(treestr, "%s", "\0");
+		}
+	}
+
+	if(result[strlen(result) - 1] == '\n') result[strlen(result) - 1] = '\0';
+	while (*treestr) treestr++;
+	return  treestr;
+}
+
+
