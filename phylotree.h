@@ -214,6 +214,10 @@ public:
      */
     void setAlignment(Alignment *alignment);
 
+    /** set the root by name */
+    void setRootNode(char *my_root);
+
+
     /**
             set the substitution model, important to compute the likelihood
             @param amodel associated substitution model

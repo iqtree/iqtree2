@@ -135,8 +135,6 @@ public:
      */
     void printIntermediateTree(int brtype);
 
-    void setRootNode(char *my_root);
-
     /**
             set k-representative parameter
             @param k_rep k-representative

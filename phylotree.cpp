@@ -195,6 +195,16 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     }
 }
 
+void PhyloTree::setRootNode(char *my_root) {
+    string root_name;
+    if (my_root)
+        root_name = my_root;
+    else
+        root_name = aln->getSeqName(0);
+    root = findNodeName(root_name);
+    assert(root);
+}
+
 void PhyloTree::readTreeString(const string &tree_string) {
 	stringstream str;
 	str << tree_string;
@@ -215,6 +225,8 @@ string PhyloTree::getTreeString() {
 
 string PhyloTree::getTopology() {
     stringstream tree_stream;
+    // important: to make topology string unique
+    setRootNode(params->root);
     printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
     return tree_stream.str();
 }

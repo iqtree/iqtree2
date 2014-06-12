@@ -30,7 +30,8 @@ string CandidateSet::getBestTree() {
 string CandidateSet::getCandidateTree() {
 	if (empty())
 		return "";
-	int id = random_int(max(max_candidates, (int)size()) );
+	// BQM: bug fix max -> min
+	int id = random_int(min(max_candidates, (int)size()) );
 	for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
 		if (id == 0)
 			return i->second.tree;

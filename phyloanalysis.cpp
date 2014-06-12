@@ -1343,6 +1343,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     iqtree.uniqParsTopo.insert(iqtree.getTopology());
 
+    // (BQM): Tung, did you forget to put this tree into candidate set?
+    iqtree.candidateTrees.update(initTree, iqtree.curScore);
+
     // Compute maximum likelihood distance
     double bestTreeScore = iqtree.bestScore;
     // ML distance is only needed for IQP
@@ -1449,6 +1452,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             /************ END: Create a set of up to (numInitTrees - 1) unique parsimony trees **********************/
 
             cout << endl;
+
+            // TODO: you should parameterize this 20
             cout << "Doing NNIs on the best 20 parsimony trees" << endl << endl;
             /*********** START: Do NNI on the best parsimony trees ************************************/
             CandidateSet::reverse_iterator rit;

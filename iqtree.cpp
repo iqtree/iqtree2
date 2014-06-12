@@ -2442,16 +2442,6 @@ void IQTree::addPositiveNNIMove(NNIMove myMove) {
     posNNIs.push_back(myMove);
 }
 
-void IQTree::setRootNode(char *my_root) {
-    string root_name;
-    if (my_root)
-        root_name = my_root;
-    else
-        root_name = aln->getSeqName(0);
-    root = findNodeName(root_name);
-    assert(root);
-}
-
 void IQTree::printResultTree(string suffix) {
     setRootNode(params->root);
     string tree_file_name = params->out_prefix;
