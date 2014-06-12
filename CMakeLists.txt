@@ -219,6 +219,7 @@ ecopdmtreeset.cpp
 graph.cpp
 modelmorphology.cpp
 candidateset.cpp
+checkpoint.cpp
 )
 
 
