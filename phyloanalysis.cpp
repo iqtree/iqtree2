@@ -492,18 +492,26 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
 				<< endl;
 		if (tree.isSuperTree()) {
-			out	<< "Full partition model with separate branch lengths and models between partitions" << endl << endl;
+			if(params.partition_type)
+				out	<< "Proportional partition model with joint branch lengths and separate models between partitions" << endl << endl;
+			else
+				out	<< "Full partition model with separate branch lengths and models between partitions" << endl << endl;
 			PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
 			PhyloSuperTree::iterator it;
 			int part;
-
-			out << "  ID  Model          Parameters" << endl;
+			if(params.partition_type)
+				out << "  ID  Model          Rate   Parameters" << endl;
+			else
+				out << "  ID  Model          Parameters" << endl;
 			//out << "-------------------------------------" << endl;
 			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
 				out.width(4);
 				out << right << (part+1) << "  ";
 				out.width(14);
-				out << left << (*it)->getModelName() << " " << (*it)->getModelNameParams() << endl;
+				if(params.partition_type)
+					out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << " " << (*it)->getModelNameParams() << endl;
+				else
+					out << left << (*it)->getModelName() << " " << (*it)->getModelNameParams() << endl;
 			}
 			out << endl;
 			/*
