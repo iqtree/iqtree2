@@ -99,7 +99,8 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 		//cout << "Tree " << it->second << ": ";
 		//tree->printTree(cout, WT_NEWLINE);
 	}
-	cout << count << " tree(s) converted" << endl;
+	if (verbose_mode >= VB_MED)
+		cout << count << " tree(s) converted" << endl;
 	//tree_weights.resize(size(), 1);
 }
 
@@ -324,12 +325,15 @@ void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss,
 void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, 
 	int weighting_type, double weight_threshold, bool sort_taxa) {
 
-#ifdef USE_HASH_MAP
-	cout << "Using hash_map" << endl;
-#else
-	cout << "Using map" << endl;
-#endif
-	cout << "Converting collection of tree(s) into split system..." << endl;
+	if (verbose_mode >= VB_MED) {
+	#ifdef USE_HASH_MAP
+		cout << "Using hash_map" << endl;
+	#else
+		cout << "Using map" << endl;
+	#endif
+
+		cout << "Converting collection of tree(s) into split system..." << endl;
+	}
 	SplitGraph::iterator itg;
 	vector<string>::iterator its;
 /*

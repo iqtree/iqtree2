@@ -1085,7 +1085,7 @@ bool Alignment::getSiteFromResidue(int seq_id, int &residue_left, int &residue_r
 }
 
 int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
-                                   bool exclude_gaps, const char *ref_seq_name)
+		bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name)
 {
     if (aln_site_list) {
         int seq_id = -1;
@@ -1134,6 +1134,12 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
                 kept_sites[j] = 0;
             }
     }
+    if (exclude_const_sites) {
+        for (j = 0; j < kept_sites.size(); j++)
+        	if (at(site_pattern[j]).is_const)
+        		kept_sites[j] = 0;
+
+    }
 
     int final_length = 0;
     for (j = 0; j < kept_sites.size(); j++)
@@ -1142,9 +1148,9 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
 }
 
 void Alignment::printPhylip(const char *file_name, bool append, const char *aln_site_list,
-                            bool exclude_gaps, const char *ref_seq_name) {
+                            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
     IntVector kept_sites;
-    int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, ref_seq_name);
+    int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
 
     try {
         ofstream out;
@@ -1177,10 +1183,10 @@ void Alignment::printPhylip(const char *file_name, bool append, const char *aln_
 }
 
 void Alignment::printFasta(const char *file_name, bool append, const char *aln_site_list
-                           , bool exclude_gaps, const char *ref_seq_name)
+                           , bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name)
 {
     IntVector kept_sites;
-    buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, ref_seq_name);
+    buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -1662,6 +1668,19 @@ void Alignment::countConstSite() {
     for (iterator it = begin(); it != end(); it++)
         if ((*it).is_const) num_const_sites += (*it).frequency;
     frac_const_sites = ((double)num_const_sites) / getNSite();
+}
+
+string Alignment::getUnobservedConstPatterns() {
+	string ret = "";
+	for (char state = 0; state < num_states; state++) {
+		string pat;
+		pat.resize(getNSeq(), state);
+		if (pattern_index.find(pat) == pattern_index.end()) {
+			// constant pattern is unobserved
+			ret.push_back(state);
+		}
+	}
+	return ret;
 }
 
 int Alignment::countProperChar(int seq_id) {
