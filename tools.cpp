@@ -645,11 +645,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.nexus_output = false;
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
-    params.numSmoothTree = 1;
+    params.numSmoothTree = 0;
     params.nni5 = false;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
+    params.limitPopSize = 100;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -739,7 +740,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.pertubSize = 0.5;
+    params.initPerStrength = 0.5;
     params.pll = false;
     params.model_eps = 0.1;
     params.pllModOpt = false;
@@ -751,8 +752,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bestStart = true;
     params.snni = false;
     params.autostop = false;
-    params.maxUnsuccess = 100;
+    params.stopCond = 100;
     params.speednni = false;
+    params.adaptPert = false;
     params.numParsTrees = 100;
     params.avh_test = 0;
     params.bootlh_test = 0;
@@ -1272,12 +1274,13 @@ void parseArg(int argc, char *argv[], Params &params) {
             	cnt++;
             	if (cnt >= argc)
             		throw "Use -psize <probability>";
-            	params.pertubSize = convert_double(argv[cnt]);
+            	params.initPerStrength = convert_double(argv[cnt]);
         	} else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -n <#iterations>";
                 params.min_iterations = convert_int(argv[cnt]);
+                params.autostop = false;
             } else if (strcmp(argv[cnt], "-nb") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1667,7 +1670,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -numpars <number_of_parsimony_trees>";
                 params.numParsTrees = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-popsize") == 0) {
+            } else if (strcmp(argv[cnt], "-poplim") == 0) {
+            	cnt++;
+            	if (cnt >=argc)
+            		throw "Use -poplim <max_pop_size>";
+            	params.limitPopSize = convert_int(argv[cnt]);
+        	} else if (strcmp(argv[cnt], "-popsize") == 0) {
             	cnt++;
             	if (cnt >=argc)
             		throw "Use -popsize <number_of_candidate_trees>";
@@ -1694,9 +1702,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.reinsert_par = true;
             } else if (strcmp(argv[cnt], "-speednni") == 0) {
                 params.speednni = true;
+            } else if (strcmp(argv[cnt], "-adapt") == 0) {
+                params.adaptPert = true;
             } else if (strcmp(argv[cnt], "-snni") == 0) {
             	params.snni = true;
                 params.autostop = true;
+                params.speednni = true;
+                params.adaptPert = true;
             } else if (strcmp(argv[cnt], "-auto") == 0) {
             	params.autostop = true;
             } else if (strcmp(argv[cnt], "-maxiter") == 0) {
@@ -1704,7 +1716,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "-auto need to be enabled before specifying this option";
                 }
                 cnt++;
-                params.maxUnsuccess = convert_int(argv[cnt]);
+                params.stopCond = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {

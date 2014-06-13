@@ -64,14 +64,21 @@ typedef struct {
 } NNICUT;
 
 typedef struct {
+    // FOR GENERAL TRRE SEARCH
 	bool speednni;
-	vector<pllNNIMove> posNNIList; // positive NNI list
-	unordered_set<string> affectBranches; // Set of branches that are affected by the previous NNIs
+	vector<pllNNIMove> posNNIList; // positive NNIs
+	unordered_set<string> aBranches; // Set of branches that are affected by the previous NNIs
 	double curLogl; // Current tree log-likelihood
+	int curIterNum; // Current iteration number
+	int curFailedIterNum; // Current number of failed iterations (no better tree found)
+	double curPerStrength; // Current perturbation strength
+
+	// FOR NNI SEARCH
 	NNI_Type nni_type;
 	int numAppliedNNIs; // total number of applied NNIs sofar
 	int curNumAppliedNNIs; // number of applied NNIs at the current step
 	int curNumNNISteps;
+	set<double> deltaLogl; // logl differences between nni1 and nni5
 } SearchInfo;
 
 /**
@@ -90,6 +97,13 @@ void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nn
 void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo);
 
 double pllDoRandomNNIs(pllInstance *tr, partitionList *pr, int numNNI);
+
+/**
+ *  Compute the possible best logl improvement of NNI5 over NNI1
+ *  @param serachinfo contains the logl improvement collected in previous iterations
+ *  @return a logl delta that is larger than 95% of the collected values
+ */
+double estBestLoglImp(SearchInfo* searchinfo);
 
 /**
  *  Evaluate NNI moves for the current internal branch

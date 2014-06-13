@@ -400,14 +400,21 @@ struct Params {
 	int popSize;
 
 	/**
+	 *  maximum number of trees stored in the candidate set
+	 */
+	int limitPopSize;
+
+	/**
 	 *  heuristics for speeding up NNI evaluation
 	 */
 	bool speednni;
 
+	bool adaptPert;
+
 	/**
 	 *  portion of NNI used for perturbing the tree
 	 */
-	double pertubSize;
+	double initPerStrength;
 
 	/**
 	 *  logl epsilon for the initial model parameter optimization
@@ -507,7 +514,7 @@ struct Params {
      *  Number of maximum unsuccessful iterations after the search is stopped.
      *  Used for the automatic stopping rule
      */
-    int maxUnsuccess;
+    int stopCond;
 
     char *binary_aln_file;
 

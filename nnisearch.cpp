@@ -18,9 +18,8 @@ int nni5;
 extern VerboseMode verbose_mode;
 int NNI_MAX_NR_STEP = 10;
 
-extern Params *globalParam;
-
 /* program options */
+extern Params *globalParam;
 
 /*
  * ****************************************************************************
@@ -287,7 +286,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	pllEvalAllNNIs(tr, pr, searchinfo);
 
 	if (searchinfo.speednni) {
-		searchinfo.affectBranches.clear();
+		searchinfo.aBranches.clear();
 	}
 
 	/* apply non-conflicting positive NNIs */
@@ -316,7 +315,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 			doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
 			if (searchinfo.speednni) {
 				vector<string> aBranches = getAffectedBranches(tr, (*it).p);
-				searchinfo.affectBranches.insert(aBranches.begin(), aBranches.end());
+				searchinfo.aBranches.insert(aBranches.begin(), aBranches.end());
 			}
 			updateBranchLengthForNNI(tr, pr, (*it));
             if (numBranches > 1 && !tr->useRecom) {
@@ -328,7 +327,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
             }
 		}
 		if (selectedNNIs.size() != 0) {
-			pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
+			//pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
 			pllOptimizeBranchLengths(tr, pr, 1);
 			int numNNI = selectedNNIs.size();
 			/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
@@ -363,7 +362,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 							break;
 						}
 					}
-		            pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
+		            //pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
 					pllOptimizeBranchLengths(tr, pr, 1);
 					//cout << "Number of NNIs reduced to " << numNNI << ": " << tr->likelihood << endl;
 
@@ -408,50 +407,6 @@ void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nn
 //		pllNewviewGeneric(tr, pr, nni.p->back, PLL_FALSE);
 //	}
 }
-
-/** @brief Optimize the length of a specific branch with variable number of Newton Raphson iterations
-
- Optimize the length of the branch connecting \a p and \a p->back
- for each partition (\a tr->numBranches) in library instance \a tr.
-
- @param tr
- The library instance
-
- @param pr
- Partition list
-
- @param p
- Endpoints of branch to be optimized
-
- @param newzpercycle Maximal number of Newton Raphson iterations
-
- */
-//void _update(pllInstance *tr, partitionList *pr, nodeptr p) {
-//	nodeptr q;
-//	int i;
-//	double z[PLL_NUM_BRANCHES], z0[PLL_NUM_BRANCHES];
-//	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
-//
-//	q = p->back;
-//
-//	for (i = 0; i < numBranches; i++)
-//		z0[i] = q->z[i];
-//
-//	if (numBranches > 1)
-//		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_TRUE);
-//	else
-//		makenewzGeneric(tr, pr, p, q, z0, NNI_MAX_NR_STEP, z, PLL_FALSE);
-//
-//	for (i = 0; i < numBranches; i++) {
-//		if (!tr->partitionConverged[i]) {
-//			if (PLL_ABS(z[i] - z0[i]) > PLL_DELTAZ) {
-//				tr->partitionSmoothed[i] = PLL_FALSE;
-//			}
-//
-//			p->z[i] = q->z[i] = z[i];
-//		}
-//	}
-//}
 
 double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, SearchInfo *searchinfo) {
 	assert(swap == 0 || swap == 1);
@@ -498,7 +453,6 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
     if (tr->likelihood > searchinfo->curLogl) {
         return tr->likelihood;
     }
-
     // Optimize 4 other branches
     if (nni_type == NNI5) {
         if (numBranches > 1 && !tr->useRecom) {
@@ -506,24 +460,37 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
         } else {
             pllUpdatePartials(tr, pr, q, PLL_FALSE);
         }
-        nodeptr r; // temporary node poiter
+        nodeptr r;
         r = p->next;
-        if (numBranches > 1 && !tr->useRecom)
+        if (numBranches > 1 && !tr->useRecom) {
             pllUpdatePartials(tr, pr, r, PLL_TRUE);
-        else
+        } else {
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
+        }
         update(tr, pr, r);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
         r = p->next->next;
         if (numBranches > 1 && !tr->useRecom)
             pllUpdatePartials(tr, pr, r, PLL_TRUE);
         else
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
         update(tr, pr, r);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
         if (numBranches > 1 && !tr->useRecom)
             pllUpdatePartials(tr, pr, p, PLL_TRUE);
         else
             pllUpdatePartials(tr, pr, p, PLL_FALSE);
         update(tr, pr, p);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
         // optimize 2 branches at node q
         r = q->next;
         if (numBranches > 1 && !tr->useRecom)
@@ -531,6 +498,10 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
         else
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
         update(tr, pr, r);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
         r = q->next->next;
         if (numBranches > 1 && !tr->useRecom)
             pllUpdatePartials(tr, pr, r, PLL_TRUE);
@@ -548,6 +519,23 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
     }
 
 	return tr->likelihood;
+}
+
+double estBestLoglImp(SearchInfo* searchinfo) {
+    double res = 0.0;
+    int index = floor(searchinfo->deltaLogl.size() * 5 / 100);
+    set<double>::reverse_iterator ri;
+    for (ri = searchinfo->deltaLogl.rbegin(); ri != searchinfo->deltaLogl.rend(); ++ri) {
+        //cout << (*ri) << " ";
+        --index;
+        if (index == 0) {
+            res = (*ri);
+            break;
+        }
+    }
+    //cout << res << endl;
+    //cout << searchinfo->deltaLogl.size() << endl;
+    return res;
 }
 
 string convertQuartet2String(nodeptr p) {
@@ -681,7 +669,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 	}
 
 	// Re-compute the partial likelihood vectors
-	// TODO: One could save these instread of recomputation
+	// TODO: One could save these instead of recomputation
     if (numBranches > 1 && !tr->useRecom) {
         pllUpdatePartials(tr, pr, p, PLL_TRUE);
         pllUpdatePartials(tr, pr, p->back, PLL_TRUE);
@@ -695,7 +683,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 
 bool isAffectedBranch(nodeptr p, SearchInfo &searchinfo) {
 	string branString = getBranString(p);
-	if (searchinfo.affectBranches.find(branString) != searchinfo.affectBranches.end()) {
+	if (searchinfo.aBranches.find(branString) != searchinfo.aBranches.end()) {
 		return true;
 	} else {
 		return false;

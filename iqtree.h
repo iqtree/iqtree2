@@ -31,6 +31,7 @@
 
 #include "pll/pll.h"
 #include "nnisearch.h"
+#include "candidateset.h"
 
 
 typedef std::map< string, double > BranLenMap;
@@ -134,8 +135,6 @@ public:
      */
     void printIntermediateTree(int brtype);
 
-    void setRootNode(char *my_root);
-
     /**
             set k-representative parameter
             @param k_rep k-representative
@@ -195,16 +194,6 @@ public:
     void doRandomNNIs(int numNNI);
 
     /**
-     *  If the tree in question has higher logl than the worst tree in the reference set,
-     *  replace the worst tree with that one
-     *
-     *  @param treeString the tree to be considered
-     *  @param treeLolg log-likelihood of the tree
-     *  @return whether or not the reference set was updated
-     */
-    bool updateRefTreeSet(string treeString, double treeLogl);
-
-    /**
      *   get model parameters from IQTree and input them into PLL
      */
     void inputModelParam2PLL();
@@ -225,16 +214,6 @@ public:
      *  print model parameters from PLL
      */
     void printPLLModParams();
-
-    /**
-     *  print logl of trees in population (for debugging purpose only)
-     */
-    void printLoglInTreePop();
-
-    /**
-     *  print reference tree strings to file
-     */
-    void printRefTrees();
 
     /**
      * input the tree string from IQTree kernel to PLL kernel
@@ -660,24 +639,20 @@ public:
      *  A set of reference trees which are for the evolutionary tree search
      *  This set only contains tree topologies (without branch length)
      */
-    unordered_map<string, double> refTreeSet;
+    //unordered_map<string, double> refTreeSet;
 
     /**
      *  A set of reference trees which are sorted according to their logl
      *  This set contains complete tree strings (with branch length)
      */
-    map<double, string> refTreeSetSorted;
+    //map<double, string> refTreeSetSorted;
+
+    CandidateSet candidateTrees;
 
     /**
      *  Set of unique initial parsimony trees
      */
     set<string> uniqParsTopo;
-
-    /**
-     *  A set of unique starting parsimony trees (with branch lengths) that a sorted
-     *  according to its likelihood.
-     */
-    map<double, string> uniqParsTree;
 
 
     /****** following variables are for ultra-fast bootstrap *******/

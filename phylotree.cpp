@@ -49,8 +49,7 @@ void SPRMoves::add(PhyloNode *prune_node, PhyloNode *prune_dad, PhyloNode *regra
  PhyloTree class
  ****************************************************************************/
 
-PhyloTree::PhyloTree() :
-        MTree() {
+PhyloTree::PhyloTree() : MTree() {
     init();
 }
 
@@ -83,8 +82,7 @@ void PhyloTree::init() {
     mlCheck = 0; // FOR: upper bounds
 }
 
-PhyloTree::PhyloTree(Alignment *aln) :
-        MTree() {
+PhyloTree::PhyloTree(Alignment *aln) : MTree() {
     init();
     this->aln = aln;
 }
@@ -198,6 +196,16 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     }
 }
 
+void PhyloTree::setRootNode(char *my_root) {
+    string root_name;
+    if (my_root)
+        root_name = my_root;
+    else
+        root_name = aln->getSeqName(0);
+    root = findNodeName(root_name);
+    assert(root);
+}
+
 void PhyloTree::readTreeString(const string &tree_string) {
 	stringstream str;
 	str << tree_string;
@@ -218,6 +226,8 @@ string PhyloTree::getTreeString() {
 
 string PhyloTree::getTopology() {
     stringstream tree_stream;
+    // important: to make topology string unique
+    setRootNode(params->root);
     printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
     return tree_stream.str();
 }
@@ -2089,6 +2099,8 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                         for (int state2 = 0; state2 < nstates; state2++)
                         lh_child += trans_state[state2] * partial_lh_child[state2];
 
+                        if (!isfinite(lh_child))
+                        	outError("Numerical error with ", __func__);
                         partial_lh_site[state] *= lh_child;
                     }
                 }
