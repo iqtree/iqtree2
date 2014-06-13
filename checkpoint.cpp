@@ -79,7 +79,7 @@ void Checkpoint::get(string key, T& value) {
 
 bool Checkpoint::getBool(string key) {
 	assert(containsKey(key));
-	if ((*this)[key] == "true") return true;
+	if ((*this)[key] == "1") return true;
 	return false;
 }
 
