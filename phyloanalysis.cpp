@@ -516,7 +516,6 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			out << endl;
 			/*
 			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
-				out << "FOR PARTITION " << stree->part_info[part].name << ":" << endl << endl;
 				reportModel(out, *(*it));
 				reportRate(out, *(*it));
 			}*/
@@ -1989,6 +1988,9 @@ void runPhyloAnalysis(Params &params) {
 	// read in alignment
 	if (params.partition_file) {
 		if(params.partition_type){
+			// since nni5 does not work yet, stop the programm
+			if(params.nni5)
+				outError("nni5 option is unsupported yet for proportitional partition model. please use -nni1 option");
 			// initialize supertree - Proportional Edges case, "-spt p" option
 			tree = new PhyloSuperTreePlen(params);
 		} else {
