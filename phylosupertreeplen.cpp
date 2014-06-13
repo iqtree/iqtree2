@@ -702,6 +702,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 *------------------------------------------------------------------------------------*/
 
 	for(part = 0; part < ntrees; part++){
+		totalNNIs++;
 		is_nni[part] = true;
 		if(saved_nei[0]->link_neighbors[part]){
 			FOR_NEIGHBOR_DECLARE(node1,node2,nit){
@@ -714,6 +715,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 
 		if(is_nni[part]){
+			evalNNIs++;
+			part_info[part].evalNNIs++;
 			// one branch optimization
 			for(id = 0; id < 2; id++){
 				nei_link  = saved_nei[id]->link_neighbors[part]->node;

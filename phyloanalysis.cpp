@@ -1922,7 +1922,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 		cout<<"Details for subtrees:"<<endl;
 		for(int part = 0; part < stree->size(); part++){
 			cout << part+1 <<". "<<stree->part_info[part].name<<": "<<stree->part_info[part].evalNNIs<<" ( " <<
-					(int)(((stree->part_info[part].evalNNIs+1.0)/((stree->totalNNIs+1.0) / (stree->size()+1.0)))*100.0) << " %)" << endl;
+					(int)(((stree->part_info[part].evalNNIs+1.0)/((stree->totalNNIs+1.0) / stree->size()))*100.0) << " %)" << endl;
 		}
 	}
 
