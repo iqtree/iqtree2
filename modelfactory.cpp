@@ -92,6 +92,9 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->seq_type == SEQ_MORPH) {
 		model = new ModelMorphology(model_str.c_str(), model_params, freq_type, freq_params, tree);
+	} else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) {
+		// TODO
+		model = new ModelSubst(tree->aln->num_states);
 	} else {
 		outError("Unsupported model type");
 	}

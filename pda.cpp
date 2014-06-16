@@ -2105,7 +2105,7 @@ int main(int argc, char *argv[])
 		int found=FALSE;              /* "click" found in cmd name? */
 		int n, dummyint;
 		char *tmpstr;
-		int     intargc; 
+		int     intargc;
 		char  **intargv; 
 		intargc = 0; 
 		intargv = NULL; 

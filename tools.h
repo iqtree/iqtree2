@@ -1543,11 +1543,6 @@ void outWarning(string warn);
 double randomLen(Params &params);
 
 /**
-        convert string to int, with error checking
-        @param str original string
-        @return the integer
- */
-/**
         Compute the logarithm of the factorial of an integer number
         @param num: the number
         @return logarithm of (num! = 1*2*...*num)

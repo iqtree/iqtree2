@@ -1070,40 +1070,99 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 }
 
 int Alignment::readCountsFormat(char* filename) {
-    typedef vector <vector <vector <int> > > Data;
-    // Data matrix; for data[i][j][k], we have:
-    // i .. nucleotide base index
-    // j .. species / population
-    // k .. nucleotide: 1 - A, 2 - C, 3 - G, 4 - T
-    Data data;
-    // Number of sequences.
-    int nSeqs = 0;
+    int npop = 0;                // Number of populations.
+    int nsites = 0;              // Number of sites.
+    int N = 10;                  // Virtual population size.
+    int nnuc = 4;                // Number of nucleotides (base states).
     ostringstream err_str;
     ifstream in;
 
     // Variables to stream the data.
     string line;
     string field;
-    int value;
-    string val_str;
-    int line_num = 1;
-    int field_num;
-    int i;
-    string::size_type pos;
+    string val_str;             // String of counts value.
+    int value;                  // Actual int value.
+    int line_num = 0;           // Line number counter.
+    int field_num;              // Field number counter.
+    int site_count = 0;         // Site / base counter.
+    // Delimiters
     char const field_delim = '\t';
     char const value_delim = ',';
 
-    // set the failbit and badbit
+    // Vector of nucleotide base counts in order A, C, G, T.
+    IntVector values;
+    // Sampled vector of nucleotide base counts (N individuals are
+    // sampled out of =values=).
+    IntVector sampled_values;
+    // Iterator to loop over bases.
+    IntVector::iterator i;
+
+    // Variables to convert sampled_values to a state in the pattern.
+    int sum;
+    int count;
+    int id1, id2;
+    int r_int;
+    // Index of polymorphism type; ranges from 0 to 5: [AC], [AG],
+    // [AT], [CG], [CT], [GT].
+    int j;
+    // String with states.  Each character represents an integer state
+    // value ranging from 0 to 4+(4 choose 2)*(N-1)-1.  E.g., 0 to 57
+    // if N is 10.
+    Pattern pattern;
+    // The state a population is in at a specific site.
+    // 0 ... 3 = fixed A,C,G,T
+    // 4 + j*(N-2)+j ... 4 + (j+1)*(N-2)+j = polymorphism of type j
+    // E.g., 4 = [1A,9C]; 5 = [2A,8C]; 12 = [9A,1C]; 13 = [1A,9G]
+    int state;
+
+    // Strings to check counts-file identification line.
+    string ftype, npop_str, nsites_str;
+
+    // Set the number of states.  If nnuc=4:
+    // 4 + (4 choose 2)*(N-1) = 58.
+    num_states = nnuc + nnuc*(nnuc-1)/2*(N-1);
+    seq_type = SEQ_COUNTSFORMAT;
+
+    // Open counts file.
+    // Set the failbit and badbit.
     in.exceptions(ios::failbit | ios::badbit);
     in.open(filename);
-    // remove the failbit
+    // Remove the failbit.
     in.exceptions(ios::badbit);
 
+    // Skip comments.
+    do {
+        getline(in, line);
+        line_num++;
+    }
+    while (line[0] == '#');
+
+    // Read in npop and nsites;
+    istringstream ss1(line);
+    // Read and check counts file headerline.
+    if (!(ss1 >> ftype >> npop_str >> npop >> nsites_str >> nsites)) {
+        err_str << "Counts-File identification line could not be read.";
+        throw err_str.str();
+    }
+    if ((ftype.compare("COUNTSFILE") ||
+         npop_str.compare("NPOP") ||
+         nsites_str.compare("NSITES")) != 0) {
+        err_str << "Counts-File identification line could not be read.";
+        throw err_str.str();        
+    }
+    site_pattern.resize(nsites);
+
+    // Skip comments.
+    do {
+        getline(in, line);
+        line_num++;
+    }
+    while (line[0] == '#');
+
     // Headerline.
-    getline(in, line);
-    istringstream ss(line);
+    istringstream ss2(line);
     field_num = 0;
-    for ( ; getline(ss, field, field_delim); ) {
+    for ( ; getline(ss2, field, field_delim); ) {
         if (field_num == 0) {
             if ((field.compare("Chrom") != 0) && (field.compare("CHROM") != 0)) {
                 err_str << "Unrecognized header field " << field << ".";
@@ -1118,46 +1177,107 @@ int Alignment::readCountsFormat(char* filename) {
         }
         else {
             //Read in sequence names.
-            nSeqs++;
             seq_names.push_back(field);
         }
         field_num++;    
     }
-    line_num++;
+    if (seq_names.size() != npop) {
+                err_str << "Number of populations in headerline doesn't match NPOP.";
+                throw err_str.str();
+    }
 
     // Data.
+    // Loop over sites.
     for ( ; getline(in, line); ) {
-        field_num = 0;
-        data.push_back(Data::value_type());
+        line_num++;
+        site_count++;
+    	field_num = 0;
+        pattern.clear();
         istringstream fieldstream(line);
+        // Loop over populations / individuals.
         for ( ; getline(fieldstream, field, field_delim); ) {
             // Skip Chrom and Pos columns.
             if ( (field_num == 0) || (field_num == 1)) {
                 field_num++;
                 continue;
             }
-            data.back().push_back(vector<int>());
+            // Clear value vectors.
+            values.clear();
+            sampled_values.clear();
+            sampled_values.resize(nnuc,0);
             istringstream valuestream(field);
-            i = 0;
+            // Loop over bases within one population.
             for (; getline(valuestream, val_str, value_delim);) {
-                if ( ! (istringstream(val_str) >> value) ) {
-                    err_str << "Could not read value " << val_str << " on line " << line_num << ".";
-                    throw err_str.str();
-                }
-                i++;
-                data.back().back().push_back(value);
+            	try {
+            		value = convert_int(val_str.c_str());
+            	} catch(string &str) {
+            		err_str << "Could not read value " << val_str << " on line " << line_num << ".";
+            		throw err_str.str();
+            	}
+            	values.push_back(value);
             }
-            if (i != 4) {
+            if (values.size() != nnuc) {
                 err_str << "Number of bases does not match on line " << line_num << ".";
                 throw err_str.str();
             }
-            field_num++;
+            // Binomial sampling.
+            sum = 0;
+            count = 0;
+            id1 = -1;
+            // Sum over elements and count non-zero elements.
+            for(i = values.begin(); i != values.end(); ++i) {
+            	if (*i != 0) {
+            		if (id1 == -1) id1 = i - values.begin();
+            		else id2 = i - values.begin();
+            		count++;
+                	sum += *i;
+            	}
+            }
+            // Determine state (cf. above).
+            if (count == 1) {
+            	// State is just id1.
+            	state = id1;
+            }
+            else if (count == 0) {
+            	err_str << "No bases are present on line " << line_num << ".";
+            	throw err_str.str();
+            }
+            else if (count > 2) {
+            	err_str << "More than 2 bases are present on line " << line_num << ".";
+            	throw err_str.str();
+            }
+            // 2 bases are present.
+            else {
+            	for(int k = 0; k < N; k++) {
+            		r_int = random_int(sum);
+            		if (r_int < values[id1]) sampled_values[id1]++;
+            		else sampled_values[id2]++;
+            	}
+            	if (sampled_values[id1] == 0) state = id2;
+            	else if (sampled_values[id2] == 0) state = id1;
+            	else {
+                    // Convert sampled_values to state.
+                    // This could be improved (TODO).
+                    if (id1 == 0) j = id2 - 1;
+                    else j = id1 + id2;
+                    state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
+            	}
+            }
+            // Now we have the state to build a pattern ;-).
+            pattern.push_back(state);
         }
-        if (field_num - 2 != nSeqs) {
+        if (pattern.size() != npop) {
             err_str << "Number of species does not match on line " << line_num << ".";
             throw err_str.str();
         }
-        line_num++;
+        // Pattern has been built and is now added to the vector of
+        // patterns.
+        addPattern(pattern,site_count);
+    }
+
+    if (site_count != nsites) {
+        err_str << "Number of sites does not match NSITES.";
+        throw err_str.str();
     }
 
     in.clear();
@@ -1165,8 +1285,9 @@ int Alignment::readCountsFormat(char* filename) {
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
 
-    exit (EXIT_SUCCESS);
+    // exit (EXIT_SUCCESS);
     // return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+    return 1;
 }
 
 bool Alignment::getSiteFromResidue(int seq_id, int &residue_left, int &residue_right) {
