@@ -1190,7 +1190,6 @@ int Alignment::readCountsFormat(char* filename) {
     // Loop over sites.
     for ( ; getline(in, line); ) {
         line_num++;
-        site_count++;
     	field_num = 0;
         pattern.clear();
         istringstream fieldstream(line);
@@ -1273,6 +1272,7 @@ int Alignment::readCountsFormat(char* filename) {
         // Pattern has been built and is now added to the vector of
         // patterns.
         addPattern(pattern,site_count);
+        site_count++;
     }
 
     if (site_count != nsites) {
