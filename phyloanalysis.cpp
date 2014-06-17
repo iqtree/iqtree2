@@ -1341,7 +1341,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     // Update best tree
     iqtree.setBestTree(initTree, iqtree.curScore);
 
-    iqtree.uniqParsTopo.insert(iqtree.getTopology());
+    //iqtree.uniqParsTopo.insert(iqtree.getTopology());
 
     // (BQM): Tung, did you forget to put this tree into candidate set?
     iqtree.candidateTrees.update(initTree, iqtree.curScore);
@@ -1401,15 +1401,16 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                         PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
                 curParsTree = string(iqtree.pllInst->tree_string);
                 // Initialize branch lengths of the parsimony tree using parsimony method
-                iqtree.readTreeString(curParsTree);
+                //iqtree.readTreeString(curParsTree);
 
                 // Check whether the parsimony have already been created
-                string treeTopo = iqtree.getTopology();
-                if (iqtree.uniqParsTopo.find(treeTopo) != iqtree.uniqParsTopo.end()) {
+                //string treeTopo = iqtree.getTopology();
+                if (iqtree.candidateTrees.treeExist(curParsTree)) {
                     numDupPars++;
                     continue;
                 } else {
-                    iqtree.uniqParsTopo.insert(treeTopo);
+                	iqtree.readTreeString(curParsTree);
+                    //iqtree.uniqParsTopo.insert(treeTopo);
 
                     // Initialize branch lengths for the parsimony tree
                     iqtree.initializeAllPartialPars();
