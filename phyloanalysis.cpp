@@ -1794,13 +1794,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	        iqtree.initializeAllPartialLh();
 	        iqtree.clearAllPartialLH();
 	        cout << "Optimizing model parameters" << endl;
-	        iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, 0.1));
+	        iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, 0.1);
+	        iqtree.setBestTree(iqtree.getTreeString(), iqtree.curScore);
 	    }
 	} else {
-		// TODO: this is still called with -pll
         iqtree.setBestScore(iqtree.curScore);
-        iqtree.initializeAllPartialLh();
-        iqtree.clearAllPartialLH();
     }
 
 	if (iqtree.isSuperTree())
@@ -1937,10 +1935,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 			<< endl;
 	//printf( "Total time used: %8.6f seconds.\n", (double) params.run_time );
 
+	iqtree.readTreeString(iqtree.bestTreeString);
 	iqtree.printResultTree();
-    if (verbose_mode >= VB_MED && params.pll) {
-        iqtree.printPhylolibTree(".phylolibtree_end");
-    }
+
+
 	if (params.out_file)
 		iqtree.printTree(params.out_file);
 	//tree.printTree(params.out_file,WT_BR_LEN_FIXED_WIDTH);
