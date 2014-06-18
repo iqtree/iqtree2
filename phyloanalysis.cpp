@@ -1351,7 +1351,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     // Compute maximum likelihood distance
     double bestTreeScore = iqtree.bestScore;
     // ML distance is only needed for IQP
-    if (params.snni || params.min_iterations == 1) {
+    if (params.snni || params.min_iterations == 0) {
         params.compute_ml_dist = false;
     }
     if (!params.dist_file && params.compute_ml_dist) {
@@ -1773,7 +1773,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	if (iqtree.isSuperTree())
 		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
 
-	cout << endl;
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
 
 	/* root the tree at the first sequence */
