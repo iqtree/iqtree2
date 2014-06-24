@@ -1285,7 +1285,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     printAnalysisInfo(model_df, iqtree, params);
 
     // Optimize model parameters and branch lengths using ML for the initial tree
-    if (params.min_iterations != 0) {
+    if (params.min_iterations != 0 && params.snni) {
         params.init_modeps = 1.0;
     }
 
