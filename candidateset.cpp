@@ -91,3 +91,7 @@ CandidateSet::~CandidateSet() {
 bool CandidateSet::treeTopologyExist(string topo) {
 	return topologies.find(topo) != topologies.end();
 }
+
+bool CandidateSet::treeExist(string tree) {
+	return treeTopologyExist(getTopology(tree));
+}

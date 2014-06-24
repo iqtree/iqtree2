@@ -170,6 +170,8 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 		if (omitted) cout << omitted << " tree(s) omitted" << endl;
 		//in->exceptions(ios::failbit | ios::badbit);
 		if (compressed) ((igzstream*)in)->close(); else ((ifstream*)in)->close();
+		// following line was missing which caused small memory leak
+		delete in;
 	} catch (ios::failure) {
 		outError(ERR_READ_INPUT, infile);		
 	} catch (const char* str) {

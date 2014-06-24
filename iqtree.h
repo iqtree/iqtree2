@@ -650,9 +650,9 @@ public:
     CandidateSet candidateTrees;
 
     /**
-     *  Set of unique initial parsimony trees
+     *  Set of unique initial parsimony trees (OBSOLETE by introducing candidateTrees)
      */
-    set<string> uniqParsTopo;
+    //set<string> uniqParsTopo;
 
 
     /****** following variables are for ultra-fast bootstrap *******/
