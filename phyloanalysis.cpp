@@ -1291,7 +1291,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     if (params.pllModOpt) {
         assert(params.pll);
-        cout << "Optimizing model parameters by PLL ... ";
+        cout << "Optimizing model parameters by PLL (logl epsilon = " << params.init_modeps << ") ...";
         double stime = getCPUTime();
         string curTreeString = iqtree.getTreeString();
         pllNewickTree *newick = pllNewickParseString(curTreeString.c_str());
@@ -1783,14 +1783,14 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	// TODO: in case -pll is specified this code is still called. -> solution: use PLL compute pattern likelihoods
 	// (TUNG): Why do we this function call?
 	// BQM: To printSiteLh and do aLRT test, etc.
-	iqtree.computeLikelihood(pattern_lh);
+	if (!params.pll) {
+	    iqtree.computeLikelihood(pattern_lh);
+	    // compute logl variance
+	    // TODO: in case -pll is specified this code is still called. -> solution: use PLL compute pattern likelihoods
+	    iqtree.logl_variance = iqtree.computeLogLVariance();
+	}
 
-	// compute logl variance
-	// TODO: in case -pll is specified this code is still called. -> solution: use PLL compute pattern likelihoods
-	iqtree.logl_variance = iqtree.computeLogLVariance();
-
-
-	if (params.print_site_lh) {
+	if (params.print_site_lh && !params.pll) {
 		string site_lh_file = params.out_prefix;
 		site_lh_file += ".sitelh";
 		if (params.print_site_lh == 1)
@@ -1824,7 +1824,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 		}
 	}
 
-	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
+	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0) && !params.pll) {
 		mytime = getCPUTime();
 		cout << endl;
 		cout << "Testing tree branches by SH-like aLRT with "
