@@ -419,7 +419,7 @@ struct Params {
 	/**
 	 *  logl epsilon for the initial model parameter optimization
 	 */
-	double model_eps;
+	double init_modeps;
 
 	/**
 	 *  Carry out iterated local search using NNI only.
