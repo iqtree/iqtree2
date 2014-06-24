@@ -1566,8 +1566,10 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         } else {
             /* tree cannot be worse if only 1 NNI is applied */
             if (nni2apply == 1) {
-            	if (curScore < vec_nonconf_nni.at(0).newloglh)
+            	if (curScore < vec_nonconf_nni.at(0).newloglh) {
             		cout << "ERROR / POSSIBLE BUG: logl=" << curScore << " < " << vec_nonconf_nni.at(0).newloglh << endl;
+            		exit(1);
+            	}
                 // restore the tree by reverting all NNIs
                 applyNNIs(nni2apply, false);
                 // restore the branch lengths
