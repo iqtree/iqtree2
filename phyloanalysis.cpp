@@ -1165,12 +1165,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.setAlignment(alignment);
         numInitTrees = 1;
         fixbranch = false;
-        /* Fix if negative branch lengths detected */
-        int fixed_number = iqtree.fixNegativeBranch(fixbranch);
-        if (fixed_number && params.user_file) {
-            cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony"
-                    << endl;
-        }
         // Create parsimony tree using IQ-Tree kernel
     } else if (params.parsimony_tree && !params.pll) {
         cout << endl;
@@ -1201,6 +1195,13 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         cout << getCPUTime() - start << " seconds" << endl;
         numInitTrees = 1;
     }
+
+    /* Fix if negative branch lengths detected */
+    int fixed_number = iqtree.fixNegativeBranch();
+    if (fixed_number) {
+        cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
+    }
+
 
     if (params.root) {
         string str = params.root;
