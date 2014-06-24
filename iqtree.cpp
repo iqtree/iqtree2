@@ -1230,14 +1230,17 @@ double IQTree::doTreeSearch() {
         } else {
             if (params->snni) {
                 int numNNI = floor(searchinfo.curPerStrength * (aln->getNSeq() - 3));
-                //cout << numNNI << endl;
                 string candidateTree = candidateTrees.getCandidateTree();
                 readTreeString(candidateTree);
-                doRandomNNIs(numNNI);
+                if (params->iqp) {
+                    doIQP();
+                } else {
+                    doRandomNNIs(numNNI);
+                }
             } else {
                 doIQP();
             }
-            //setAlignment(aln);
+            setAlignment(aln);
             setRootNode(params->root);
             perturb_tree_string = getTreeString();
 
@@ -1391,8 +1394,7 @@ double IQTree::doTreeSearch() {
                 }
                 cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl << endl;
-                // Only increase the number of remaining iterations if a significant improvement is found
-                if (curScore - bestScore > 0.1) {
+                if (curScore > bestScore) {
                     searchinfo.curFailedIterNum = 0;
                     searchinfo.curPerStrength = params->initPerStrength;
                 }
