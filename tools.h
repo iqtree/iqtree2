@@ -419,7 +419,7 @@ struct Params {
 	/**
 	 *  logl epsilon for the initial model parameter optimization
 	 */
-	double model_eps;
+	double init_modeps;
 
 	/**
 	 *  Carry out iterated local search using NNI only.
@@ -1068,6 +1068,11 @@ struct Params {
             criterion to assess important quartet
      */
     IQP_ASSESS_QUARTET iqp_assess_quartet;
+
+    /**
+     *      Using IQP algorithm to do tree perturbation
+     */
+    bool iqp;
 
     /**
             the LP file is in gurobi format or not

@@ -1173,7 +1173,7 @@ double IQTree::doTreeSearch() {
                 break;
             }
             if (params->adaptPert) {
-               if (searchinfo.curFailedIterNum >= 50) {
+               if (searchinfo.curFailedIterNum >= params->stopCond / 2) {
                     searchinfo.curPerStrength = params->initPerStrength * 2;
         }
             }
@@ -1230,14 +1230,17 @@ double IQTree::doTreeSearch() {
         } else {
             if (params->snni) {
                 int numNNI = floor(searchinfo.curPerStrength * (aln->getNSeq() - 3));
-                //cout << numNNI << endl;
                 string candidateTree = candidateTrees.getCandidateTree();
                 readTreeString(candidateTree);
-                doRandomNNIs(numNNI);
+                if (params->iqp) {
+                    doIQP();
+                } else {
+                    doRandomNNIs(numNNI);
+                }
             } else {
                 doIQP();
             }
-            //setAlignment(aln);
+            setAlignment(aln);
             setRootNode(params->root);
             perturb_tree_string = getTreeString();
 
@@ -1391,8 +1394,7 @@ double IQTree::doTreeSearch() {
                 }
                 cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl << endl;
-                // Only increase the number of remaining iterations if a significant improvement is found
-                if (curScore - bestScore > 0.1) {
+                if (curScore > bestScore) {
                     searchinfo.curFailedIterNum = 0;
                     searchinfo.curPerStrength = params->initPerStrength;
                 }
@@ -1490,15 +1492,14 @@ double IQTree::doTreeSearch() {
  Fast Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
-    bool resetLamda = true; // variable indicates whether lambda should be reset
+    bool rollBack = false;
     curLambda = startLambda;
     nni_count = 0;
-    int nni2apply = 0; // number of nni to be applied in each NNI steps
-    int nonconf_nni = 0; // number of non-conflicting NNIs found in this round
+    int nni2apply = 0; // number of NNI to be applied in each step
     int MAXSTEPS = 50;
     for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
         double oldScore = curScore;
-        if (resetLamda) { // tree get improved, lamda reset
+        if (!rollBack) { // tree get improved and was not rollbacked
             if (save_all_trees == 2) {
                 saveCurrentTree(curScore); // BQM: for new bootstrap
             }
@@ -1537,37 +1538,38 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
             /* remove conflicting NNIs */
             genNonconfNNIs();
-            nonconf_nni = vec_nonconf_nni.size();
+            nni2apply = vec_nonconf_nni.size();
             if (verbose_mode >= VB_DEBUG) {
                 for (int i = 0; i < vec_nonconf_nni.size(); i++) {
                     cout << "Log-likelihood of non-conflicting NNI " << i << " : " << vec_nonconf_nni[i].newloglh << endl;
                 }
             }
         }
-        nni2apply = floor(nonconf_nni * curLambda);
-        if (nni2apply == 0)
-        	nni2apply = 1;
+        // Apply all non-conflicting positive NNIs
         applyNNIs(nni2apply);
 
+        // Re-estimate branch lengths of the new tree
         curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
 
 		if (verbose_mode >= VB_DEBUG) {
 			cout << "logl: " << curScore << " / NNIs: " << nni2apply << endl;
 		}
 
-        if (curScore > oldScore && curScore >= vec_nonconf_nni.at(0).newloglh ) {
+		// curScore should be larger than score of the best NNI
+        if (curScore > vec_nonconf_nni.at(0).newloglh ) {
+            // If the improvement is minimal, stop doing NNI
         	if (fabs(curScore - oldScore) < 0.001) {
         		break;
         	}
             nni_count += nni2apply;
-            resetLamda = true;
+            rollBack = false;
         } else {
-
             /* tree cannot be worse if only 1 NNI is applied */
             if (nni2apply == 1) {
-            	if (curScore < vec_nonconf_nni.at(0).newloglh - 0.001)
-            		cout << "Error: logl=" << curScore << " < " << vec_nonconf_nni.at(0).newloglh << endl;
-
+            	if (curScore < vec_nonconf_nni.at(0).newloglh) {
+            		cout << "ERROR / POSSIBLE BUG: logl=" << curScore << " < " << vec_nonconf_nni.at(0).newloglh << endl;
+            		exit(1);
+            	}
                 // restore the tree by reverting all NNIs
                 applyNNIs(nni2apply, false);
                 // restore the branch lengths
@@ -1575,21 +1577,19 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
                 curScore = oldScore;
                 break;
             }
-
-			//if (verbose_mode >= VB_MED) {
-				cout << "logl=" << curScore << " after applying " << nni2apply << " NNIs for lambda = " << curLambda
-						<< " is worse than logl=" << vec_nonconf_nni.at(0).newloglh
-						<< " of the best NNI. Roll back tree ..." << endl;
-			//}
-            curLambda = curLambda * 0.5;
+            cout << "New score = " << curScore << " after applying " << nni2apply <<
+                    " is worse than score = " << vec_nonconf_nni.at(0).newloglh
+                    << " of the best NNI. Roll back tree ..." << endl;
             // restore the tree by reverting all NNIs
             applyNNIs(nni2apply, false);
             // restore the branch lengths
             restoreAllBranLen();
-            resetLamda = false;
+            rollBack = true;
+            // only apply the best NNI
+            nni2apply = 1;
             curScore = oldScore;
         }
-    };
+    }
 
     if (nni_count == 0) {
         cout << "NNI search could not find any better tree for this iteration!" << endl;
