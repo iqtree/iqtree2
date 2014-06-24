@@ -1782,6 +1782,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
 	// TODO: in case -pll is specified this code is still called. -> solution: use PLL compute pattern likelihoods
 	// (TUNG): Why do we this function call?
+	// BQM: To printSiteLh and do aLRT test, etc.
 	iqtree.computeLikelihood(pattern_lh);
 
 	// compute logl variance
@@ -2121,6 +2122,8 @@ void runPhyloAnalysis(Params &params) {
 			if (params.num_bootstrap_samples == 1)
 				reportPhyloAnalysis(params, original_model,
 						*bootstrap_alignment, *boot_tree, model_info);
+			// WHY was the following line missing, which caused memory leak?
+			delete boot_tree;
 			delete bootstrap_alignment;
 		}
 

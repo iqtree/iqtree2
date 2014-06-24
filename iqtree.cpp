@@ -1128,6 +1128,8 @@ double IQTree::doTreeSearch() {
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
     //printResultTree(params);
+    // PLEASE PRINT TREE HERE!
+    printResultTree();
     string treels_name = params->out_prefix;
     treels_name += ".treels";
     string out_lh_file = params->out_prefix;
