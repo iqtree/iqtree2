@@ -670,6 +670,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_by_newton = true;
     params.fixed_branch_length = false;
     params.iqp_assess_quartet = IQP_DISTANCE;
+    params.iqp = false;
     params.write_intermediate_trees = 0;
     params.avoid_duplicated_trees = false;
     params.rf_dist_mode = 0;
@@ -1268,10 +1269,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.p_delete = convert_double(argv[cnt]);
                 if (params.p_delete < 0.0 || params.p_delete > 1.0)
                     throw "Probability of deleting a leaf must be between 0 and 1";
-            } else if (strcmp(argv[cnt], "-psize") == 0) {
+            } else if (strcmp(argv[cnt], "-pers") == 0) {
             	cnt++;
             	if (cnt >= argc)
-            		throw "Use -psize <probability>";
+            		throw "Use -pers <perturbation_strength>";
             	params.initPerStrength = convert_double(argv[cnt]);
         	} else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
@@ -1435,6 +1436,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (params.num_bootstrap_samples > 1) params.consensus_type = CT_CONSENSUS_TREE;
             } else if (strcmp(argv[cnt], "-iqppars") == 0) {
                 params.iqp_assess_quartet = IQP_PARSIMONY;
+            } else if (strcmp(argv[cnt], "-iqp") == 0) {
+                params.iqp = true;
             } else if (strcmp(argv[cnt], "-wt") == 0) {
                 params.write_intermediate_trees = 1;
             } else if (strcmp(argv[cnt], "-wt2") == 0) {
@@ -1707,10 +1710,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.adaptPert = true;
             } else if (strcmp(argv[cnt], "-auto") == 0) {
             	params.autostop = true;
-            } else if (strcmp(argv[cnt], "-maxiter") == 0) {
-                if (!params.autostop) {
-                    throw "-auto need to be enabled before specifying this option";
-                }
+            } else if (strcmp(argv[cnt], "-stop_cond") == 0) {
+                params.autostop = true;
                 cnt++;
                 params.stopCond = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {

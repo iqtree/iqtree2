@@ -1070,6 +1070,11 @@ struct Params {
     IQP_ASSESS_QUARTET iqp_assess_quartet;
 
     /**
+     *      Using IQP algorithm to do tree perturbation
+     */
+    bool iqp;
+
+    /**
             the LP file is in gurobi format or not
      */
     bool gurobi_format;
