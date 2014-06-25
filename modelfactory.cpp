@@ -28,6 +28,7 @@
 #include "modelbin.h"
 #include "modelcodon.h"
 #include "modelmorphology.h"
+#include "modelpomo.h"
 #include "modelset.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
@@ -94,7 +95,7 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 		model = new ModelMorphology(model_str.c_str(), model_params, freq_type, freq_params, tree);
 	} else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) {
 		// TODO
-		model = new ModelSubst(tree->aln->num_states);
+		model = new ModelPoMo(tree);
 	} else {
 		outError("Unsupported model type");
 	}

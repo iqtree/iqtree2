@@ -15,29 +15,13 @@ public:
    */
   ModelPoMo(PhyloTree *tree, bool count_rate = true);
   
-  /* TODO ModelSubst::Rates */
+  /* TODO ModelSubst::rates */
 
-  /* TODO ModelSubst::State_Frequ */
+  virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
-  /* TODO */
-  virtual void init();
+  void initMoranWithMutation();
 
-  /* TODO */
   virtual int getNDim();
-
-  /* TODO */
-  virtual void setVariables();
-
-  /* TODO */
-  virtual void getVariables();
-
-  /** 
-   * Destructor
-   * 
-   * 
-   * @return 
-   */
-  ~ModelPoMo();
 
 private:
 
