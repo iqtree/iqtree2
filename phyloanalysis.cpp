@@ -1345,7 +1345,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     // Compute maximum likelihood distance
     double bestTreeScore = iqtree.bestScore;
     // ML distance is only needed for IQP
-    if (params.snni || params.min_iterations == 0) {
+    if ( (params.snni && !params.iqp) || params.min_iterations == 0) {
         params.compute_ml_dist = false;
     }
     if (!params.dist_file && params.compute_ml_dist) {
