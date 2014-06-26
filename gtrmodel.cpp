@@ -385,7 +385,7 @@ double GTRModel::optimizeParameters(double epsilon) {
 	bool *bound_check = new bool[ndim+1];
 	int i;
 	double score;
-	
+
 	// by BFGS algorithm
 	setVariables(variables);
 	for (i = 1; i <= ndim; i++) {
