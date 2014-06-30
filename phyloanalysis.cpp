@@ -1750,6 +1750,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	                PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 	        iqtree.setBestTree(string(iqtree.pllInst->tree_string), iqtree.pllInst->likelihood);
 	        iqtree.printPLLModParams();
+	    	iqtree.readTreeString(iqtree.bestTreeString);
 	        cout << endl;
 	    } else {
 	        cout << endl;
@@ -1869,6 +1870,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 		}
 	}
 
+
 	if (params.gbo_replicates > 0) {
 		if (!params.online_bootstrap)
 			runGuidedBootstrap(params, alignment, iqtree);
@@ -1899,9 +1901,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 			<< endl;
 	//printf( "Total time used: %8.6f seconds.\n", (double) params.run_time );
 
-	iqtree.readTreeString(iqtree.bestTreeString);
+	// BUG FIX: readTreeString(bestTreeString) not needed before this line
 	iqtree.printResultTree();
-
 
 	if (params.out_file)
 		iqtree.printTree(params.out_file);
