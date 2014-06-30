@@ -1453,6 +1453,9 @@ struct Params {
 
 	/** TRUE to print concatenated alignment, default: false */
 	bool print_conaln;
+
+	/** true to count all distinct trees visited during tree search */
+	bool count_trees;
 };
 
 /**
