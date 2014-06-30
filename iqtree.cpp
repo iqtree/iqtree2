@@ -80,7 +80,6 @@ void IQTree::setParams(Params &params) {
     candidateTrees.limit = params.limitPopSize;
 
     sse = params.SSE;
-    setStartLambda(params.lambda);
     if (params.maxtime != 1000000) {
         params.autostop = false;
     }
@@ -1496,7 +1495,6 @@ double IQTree::doTreeSearch() {
  ****************************************************************************/
 double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     bool rollBack = false;
-    curLambda = startLambda;
     nni_count = 0;
     int nni2apply = 0; // number of NNI to be applied in each step
     int MAXSTEPS = 50;
@@ -1513,7 +1511,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
                 }
             }
 
-            curLambda = startLambda;
             vec_nonconf_nni.clear(); // Vector containing non-conflicting positive NNIs
             mapOptBranLens.clear(); // Vector containing branch length of the positive NNIs
             savedBranLens.clear(); // Vector containing all current branch of the tree
@@ -1906,23 +1903,6 @@ void IQTree::restoreAllBranLen(PhyloNode *node, PhyloNode *dad) {
 
 inline double IQTree::getCurScore() {
     return curScore;
-}
-
-void IQTree::changeAllBranches(PhyloNode *node, PhyloNode *dad) {
-    if (!node) {
-        node = (PhyloNode*) root;
-    }
-
-    FOR_NEIGHBOR_IT(node, dad, it){
-    string key = nodePair2String((PhyloNode*) (*it)->node, (PhyloNode*) node);
-    BranLenMap::iterator bran_it = mapOptBranLens.find(key);
-    if (bran_it != mapOptBranLens.end()) {
-        double curlen = (*it)->length;
-        changeBranLen((PhyloNode*) (*it)->node, (PhyloNode*) node, curlen + curLambda * (bran_it->second - curlen));
-    }
-    changeAllBranches((PhyloNode*) (*it)->node, (PhyloNode*) node);
-}
-
 }
 
 void IQTree::genNNIMoves(bool approx_nni, PhyloNode *node, PhyloNode *dad) {
