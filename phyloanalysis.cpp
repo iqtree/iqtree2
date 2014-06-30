@@ -1164,6 +1164,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.readTree(params.user_file, myrooted);
         iqtree.setAlignment(alignment);
         numInitTrees = 1;
+        params.numNNITrees = 1;
         fixbranch = false;
         /* Fix if negative branch lengths detected */
         int fixed_number = iqtree.fixNegativeBranch(fixbranch);
@@ -1450,12 +1451,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             cout << endl;
 
             // TODO: you should parameterize this 20
-            cout << "Doing NNIs on the best 20 parsimony trees" << endl << endl;
+            cout << "Doing NNIs on the best "<< params.numNNITrees << " parsimony trees" << endl << endl;
             /*********** START: Do NNI on the best parsimony trees ************************************/
             CandidateSet::reverse_iterator rit;
-            int numParsTrees = 0;
+            int numNNITrees = 0;
             for (rit = iqtree.candidateTrees.rbegin(); rit != iqtree.candidateTrees.rend(); ++rit) {
-                numParsTrees++;
+                numNNITrees++;
                 double initLogl, nniLogl;
                 string nniTree;
                 if (params.pll) {
@@ -1482,7 +1483,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                     nniTree = iqtree.getTreeString();
                 }
 
-                cout << numParsTrees << ". Initial logl " << initLogl << " / ";
+                cout << numNNITrees << ". Initial logl " << initLogl << " / ";
                 cout << "Lolg after NNI: " << nniLogl << endl;
 
                 // Better tree is found
@@ -1561,9 +1562,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
                 iqtree.candidateTrees.update(nniTree, iqtree.curScore);
 
-                cout << endl;
-
-                if (numParsTrees == 20) {
+                if (numNNITrees == params.numNNITrees) {
                     iqtree.candidateTrees.printBestScores();
                     break;
                 } else {
@@ -1733,6 +1732,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();
 
+	cout << "Logl of best " << params.popSize << " trees found: " << endl;
+	iqtree.candidateTrees.printBestScores();
+
 	if (params.min_iterations) {
 	    if (params.pllModOpt) {
 	        pllNewickTree *newick = pllNewickParseString(iqtree.bestTreeString.c_str());
@@ -1740,7 +1742,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	        pllNewickParseDestroy(&newick);
 	        pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
 	        cout << endl;
-	        cout << "Optimizing model parameters on the final tree by PLL ... ";
+	        cout << "Optimizing model parameters on the best tree by PLL ... ";
 	        double stime = getCPUTime();
 	        pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, 0.001);
 	        double etime = getCPUTime();

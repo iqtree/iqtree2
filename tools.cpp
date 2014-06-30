@@ -755,6 +755,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.speednni = false;
     params.adaptPert = false;
     params.numParsTrees = 100;
+    params.numNNITrees = 20;
     params.avh_test = 0;
     params.bootlh_test = 0;
     params.bootlh_partitions = NULL;

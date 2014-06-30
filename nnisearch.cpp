@@ -440,8 +440,7 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
     }
     // Optimize the central branch
     update(tr, pr, p);
-    if((globalParam->online_bootstrap == PLL_TRUE) &&
-            (globalParam->gbo_replicates > 0)){
+    if((globalParam->online_bootstrap == PLL_TRUE) && (globalParam->gbo_replicates > 0)){
         tr->fastScaling = PLL_FALSE;
         pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
         pllSaveCurrentTree(tr, pr, p);

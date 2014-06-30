@@ -1326,6 +1326,7 @@ double IQTree::doTreeSearch() {
 
         if (curScore > bestScore) {
             stringstream cur_tree_topo_ss;
+            setRootNode(params->root);
             printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
             if (cur_tree_topo_ss.str() != best_tree_topo) {
                 best_tree_topo = cur_tree_topo_ss.str();
@@ -1483,7 +1484,9 @@ double IQTree::doTreeSearch() {
     }
 
     // DTH: pllUFBoot deallocation
-    if(params->pll) pllDestroyUFBootData();
+    if(params->pll) {
+        pllDestroyUFBootData();
+    }
 
     return bestScore;
 }
@@ -1607,8 +1610,9 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &searchinfo) {
-    pllInitUFBootData();
-
+    if((globalParam->online_bootstrap == PLL_TRUE) && (globalParam->gbo_replicates > 0)) {
+        pllInitUFBootData();
+    }
     searchinfo.numAppliedNNIs = 0;
     searchinfo.curLogl = curScore;
     //cout << "curLogl: " << searchinfo.curLogl << endl;

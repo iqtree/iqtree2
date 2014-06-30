@@ -395,6 +395,12 @@ struct Params {
 	int numParsTrees;
 
 	/**
+	 *  Number of NNI trees generated from the set of parsimony trees
+	 *  Default = 20 (out of 100 parsimony trees)
+	 */
+	int numNNITrees;
+
+	/**
 	 *  Population size
 	 */
 	int popSize;
