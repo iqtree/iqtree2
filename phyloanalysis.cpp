@@ -402,8 +402,22 @@ void reportCredits(ofstream &out) {
 			*/
 }
 
+extern StringIntMap tree_counter;
 void reportPhyloAnalysis(Params &params, string &original_model,
 		Alignment &alignment, IQTree &tree, vector<ModelInfo> &model_info) {
+	if (params.count_trees) {
+		// addon: print #distinct trees
+		cout << endl << "INFO: " << tree_counter.size() << " distinct trees evaluated during whole tree search" << endl;
+
+		IntVector counts;
+		for (StringIntMap::iterator i = tree_counter.begin(); i != tree_counter.end(); i++) {
+			if (i->second > counts.size())
+				counts.resize(i->second+1, 0);
+			counts[i->second]++;
+		}
+		for (IntVector::iterator i2 = counts.begin(); i2 != counts.end(); i2++)
+			cout << "#Trees occuring " << (i2-counts.begin()) << " times: " << *i2 << endl;
+	}
 	string outfile = params.out_prefix;
 
 	outfile += ".iqtree";
@@ -1156,7 +1170,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     /*********************************************** START: CREATE INITIAL TREE(S) ************************************/
     int numInitTrees;
-    bool fixbranch = true;
+
     // start the search with user-defined tree
     if (params.user_file) {
         cout << "READING INPUT TREE FILE " << params.user_file << " ..." << endl;
@@ -1165,13 +1179,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.setAlignment(alignment);
         numInitTrees = 1;
         params.numNNITrees = 1;
-        fixbranch = false;
-        /* Fix if negative branch lengths detected */
-        int fixed_number = iqtree.fixNegativeBranch(fixbranch);
-        if (fixed_number && params.user_file) {
-            cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony"
-                    << endl;
-        }
+
         // Create parsimony tree using IQ-Tree kernel
     } else if (params.parsimony_tree && !params.pll) {
         cout << endl;
@@ -1203,6 +1211,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         numInitTrees = 1;
     }
 
+    /* Fix if negative branch lengths detected */
+    int fixed_number = iqtree.fixNegativeBranch();
+    if (fixed_number) {
+        cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
+    }
     if (params.root) {
         string str = params.root;
         if (!iqtree.findNodeName(str)) {
@@ -1731,7 +1744,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
 	if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();
-
 	cout << "Logl of best " << params.popSize << " trees found: " << endl;
 	iqtree.candidateTrees.printBestScores();
 
@@ -1751,6 +1763,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	                PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 	        iqtree.setBestTree(string(iqtree.pllInst->tree_string), iqtree.pllInst->likelihood);
 	        iqtree.printPLLModParams();
+	    	iqtree.readTreeString(iqtree.bestTreeString);
 	        cout << endl;
 	    } else {
 	        cout << endl;
@@ -1784,6 +1797,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
 	// TODO: in case -pll is specified this code is still called. -> solution: use PLL compute pattern likelihoods
 	// (TUNG): Why do we this function call?
+	// BQM: To printSiteLh and do aLRT test, etc.
 	if (!params.pll) {
 	    iqtree.computeLikelihood(pattern_lh);
 	    // compute logl variance
@@ -1794,7 +1808,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
 
 
-	if (params.print_site_lh) {
+	if (params.print_site_lh && !params.pll) {
 		string site_lh_file = params.out_prefix;
 		site_lh_file += ".sitelh";
 		if (params.print_site_lh == 1)
@@ -1828,7 +1842,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 		}
 	}
 
-	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
+	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0) && !params.pll) {
 		mytime = getCPUTime();
 		cout << endl;
 		cout << "Testing tree branches by SH-like aLRT with "
@@ -1902,7 +1916,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 			<< endl;
 	//printf( "Total time used: %8.6f seconds.\n", (double) params.run_time );
 
-	iqtree.readTreeString(iqtree.bestTreeString);
+	// BUG FIX: readTreeString(bestTreeString) not needed before this line
 	iqtree.printResultTree();
 
 
@@ -2126,6 +2140,8 @@ void runPhyloAnalysis(Params &params) {
 			if (params.num_bootstrap_samples == 1)
 				reportPhyloAnalysis(params, original_model,
 						*bootstrap_alignment, *boot_tree, model_info);
+			// WHY was the following line missing, which caused memory leak?
+			delete boot_tree;
 			delete bootstrap_alignment;
 		}
 

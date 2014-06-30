@@ -10,7 +10,9 @@
 #include <sys/resource.h>
 #endif
 
+#include "phylotree.h"
 #include "nnisearch.h"
+#include "alignment.h"
 
 /* program options */
 int nni0;
@@ -20,6 +22,14 @@ int NNI_MAX_NR_STEP = 10;
 
 /* program options */
 extern Params *globalParam;
+extern Alignment *globalAlignment;
+
+
+
+/**
+ * map from newick tree string to frequencies that a tree is revisited during tree search
+ */
+StringIntMap tree_counter;
 
 /*
  * ****************************************************************************
@@ -568,6 +578,26 @@ string convertQuartet2String(nodeptr p) {
 	return res.str();
 }
 
+void countDistinctTrees(pllInstance* pllInst, partitionList *pllPartitions) {
+    pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_FALSE,
+            PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+	PhyloTree mtree;
+	mtree.rooted = false;
+	mtree.aln = globalAlignment;
+	mtree.readTreeString(string(pllInst->tree_string));
+    mtree.root = mtree.findNodeName(globalAlignment->getSeqName(0));
+	ostringstream ostr;
+	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+	string tree_str = ostr.str();
+	if (tree_counter.find(tree_str) == tree_counter.end()) {
+		// not found in hash_map
+		tree_counter[tree_str] = 1;
+	} else {
+		// found in hash_map
+		tree_counter[tree_str]++;
+	}
+}
+
 int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
 	nodeptr q = p->back;
 	assert(!isTip(p->number, tr->mxtips));
@@ -591,6 +621,8 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 
 	/* do an NNI move of type 1 */
 	double lh1 = doOneNNI(tr, pr, p, 0, searchinfo.nni_type, &searchinfo);
+	if (globalParam->count_trees)
+		countDistinctTrees(tr, pr);
 	pllNNIMove nni1;
 	nni1.p = p;
 	nni1.nniType = 0;
@@ -624,6 +656,9 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 
 	/* do an NNI move of type 2 */
 	double lh2 = doOneNNI(tr, pr, p, 1, searchinfo.nni_type, &searchinfo);
+	if (globalParam->count_trees)
+		countDistinctTrees(tr, pr);
+
 	// Create the nniMove struct to store this move
 	pllNNIMove nni2;
 	nni2.p = p;

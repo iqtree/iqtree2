@@ -214,6 +214,8 @@ void PhyloTree::readTreeString(const string &tree_string) {
 	setAlignment(aln);
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
+    } else {
+    	clearAllPartialLH();
     }
 }
 
@@ -2825,6 +2827,8 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
         // first compute the observed parsimony distance
         double branch_length = (branch_subst > 0) ? ((double) branch_subst / getAlnNSite()) : (1.0 / getAlnNSite());
+        if (branch_length < MIN_BRANCH_LEN)
+        	branch_length = MIN_BRANCH_LEN;
         // now correct Juke-Cantor formula
         double z = (double) aln->num_states / (aln->num_states - 1);
         double x = 1.0 - (z * branch_length);
@@ -2871,7 +2875,7 @@ int PhyloTree::fixNegativeBranch2(bool force, Node *node, Node *dad) {
                 *it)->length = 1e-6;
         (*it)->node->findNeighbor(node)->length = (*it)->length;
     }
-    fixed += fixNegativeBranch(force, (*it)->node, node);
+    fixed += fixNegativeBranch2(force, (*it)->node, node);
 }
     return fixed;
 }

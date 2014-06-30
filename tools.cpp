@@ -770,6 +770,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_subaln = false;
 	params.print_partition_info = false;
 	params.print_conaln = false;
+	params.count_trees = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1810,6 +1811,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -rootstate <rootstate>";
                 params.root_state = argv[cnt];
                 params.SSE = false;
+            } else if (strcmp(argv[cnt], "-ct") == 0) {
+            	params.count_trees = true;
             } else if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
