@@ -24,12 +24,11 @@ int NNI_MAX_NR_STEP = 10;
 extern Params *globalParam;
 extern Alignment *globalAlignment;
 
-
-
 /**
  * map from newick tree string to frequencies that a tree is revisited during tree search
  */
-StringIntMap tree_counter;
+StringIntMap pllTreeCounter;
+
 
 /*
  * ****************************************************************************
@@ -339,6 +338,9 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 		if (selectedNNIs.size() != 0) {
 			//pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
 			pllOptimizeBranchLengths(tr, pr, 1);
+			if (globalParam->count_trees) {
+	            countDistinctTrees(tr, pr);
+			}
 			int numNNI = selectedNNIs.size();
 			/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
 			while (tr->likelihood < selectedNNIs.back().likelihood) {
@@ -589,12 +591,12 @@ void countDistinctTrees(pllInstance* pllInst, partitionList *pllPartitions) {
 	ostringstream ostr;
 	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	string tree_str = ostr.str();
-	if (tree_counter.find(tree_str) == tree_counter.end()) {
+	if (pllTreeCounter.find(tree_str) == pllTreeCounter.end()) {
 		// not found in hash_map
-		tree_counter[tree_str] = 1;
+	    pllTreeCounter[tree_str] = 1;
 	} else {
 		// found in hash_map
-		tree_counter[tree_str]++;
+	    pllTreeCounter[tree_str]++;
 	}
 }
 

@@ -402,21 +402,24 @@ void reportCredits(ofstream &out) {
 			*/
 }
 
-extern StringIntMap tree_counter;
+extern StringIntMap pllTreeCounter;
 void reportPhyloAnalysis(Params &params, string &original_model,
 		Alignment &alignment, IQTree &tree, vector<ModelInfo> &model_info) {
 	if (params.count_trees) {
 		// addon: print #distinct trees
-		cout << endl << "INFO: " << tree_counter.size() << " distinct trees evaluated during whole tree search" << endl;
+		cout << endl << "INFO: " << pllTreeCounter.size() << " distinct trees evaluated during whole tree search" << endl;
 
 		IntVector counts;
-		for (StringIntMap::iterator i = tree_counter.begin(); i != tree_counter.end(); i++) {
+		for (StringIntMap::iterator i = pllTreeCounter.begin(); i != pllTreeCounter.end(); i++) {
 			if (i->second > counts.size())
 				counts.resize(i->second+1, 0);
 			counts[i->second]++;
 		}
-		for (IntVector::iterator i2 = counts.begin(); i2 != counts.end(); i2++)
-			cout << "#Trees occuring " << (i2-counts.begin()) << " times: " << *i2 << endl;
+		for (IntVector::iterator i2 = counts.begin(); i2 != counts.end(); i2++) {
+		    if (*i2 != 0) {
+	            cout << "#Trees occuring " << (i2-counts.begin()) << " times: " << *i2 << endl;
+		    }
+		}
 	}
 	string outfile = params.out_prefix;
 
@@ -1322,6 +1325,16 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                 PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
         initTree = string(iqtree.pllInst->tree_string);
         iqtree.readTreeString(initTree);
+        if (params.count_trees) {
+            string tree = iqtree.getTopology();
+            if (pllTreeCounter.find(tree) == pllTreeCounter.end()) {
+                // not found in hash_map
+                pllTreeCounter[tree] = 1;
+            } else {
+                // found in hash_map
+                pllTreeCounter[tree]++;
+            }
+        }
     } else {
         uint64_t mem_size = iqtree.getMemoryRequired();
         cout << "NOTE: THE ANALYSIS REQUIRES AT LEAST " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
@@ -1350,9 +1363,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     // Update best tree
     iqtree.setBestTree(initTree, iqtree.curScore);
 
-    //iqtree.uniqParsTopo.insert(iqtree.getTopology());
-
-    // (BQM): Tung, did you forget to put this tree into candidate set?
     iqtree.candidateTrees.update(initTree, iqtree.curScore);
 
     // Compute maximum likelihood distance
@@ -1409,17 +1419,21 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                         iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
                         PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
                 curParsTree = string(iqtree.pllInst->tree_string);
-                // Initialize branch lengths of the parsimony tree using parsimony method
-                //iqtree.readTreeString(curParsTree);
-
-                // Check whether the parsimony have already been created
-                //string treeTopo = iqtree.getTopology();
                 if (iqtree.candidateTrees.treeExist(curParsTree)) {
                     numDupPars++;
                     continue;
                 } else {
                 	iqtree.readTreeString(curParsTree);
-                    //iqtree.uniqParsTopo.insert(treeTopo);
+                    if (params.count_trees) {
+                        string tree = iqtree.getTopology();
+                        if (pllTreeCounter.find(tree) == pllTreeCounter.end()) {
+                            // not found in hash_map
+                            pllTreeCounter[tree] = 1;
+                        } else {
+                            // found in hash_map
+                            pllTreeCounter[tree]++;
+                        }
+                    }
 
                     // Initialize branch lengths for the parsimony tree
                     iqtree.initializeAllPartialPars();
@@ -1486,6 +1500,17 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                             iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
                             PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
                     nniTree = string(iqtree.pllInst->tree_string);
+                    if (params.count_trees) {
+                        iqtree.readTreeString(nniTree);
+                        string topo = iqtree.getTopology();
+                        if (pllTreeCounter.find(topo) == pllTreeCounter.end()) {
+                            // not found in hash_map
+                            pllTreeCounter[topo] = 1;
+                        } else {
+                            // found in hash_map
+                            pllTreeCounter[topo]++;
+                        }
+                    }
                 } else {
                     //cout << rit->second << endl;
                     iqtree.readTreeString(rit->second.tree);

@@ -30,6 +30,8 @@
 
 Params *globalParam;
 Alignment *globalAlignment;
+extern StringIntMap pllTreeCounter;
+
 
 IQTree::IQTree() :
         PhyloTree() {
@@ -1246,6 +1248,16 @@ double IQTree::doTreeSearch() {
             setAlignment(aln);
             setRootNode(params->root);
             perturb_tree_string = getTreeString();
+            if (params->count_trees) {
+                string perturb_tree_topo = getTopology();
+                if (pllTreeCounter.find(perturb_tree_topo) == pllTreeCounter.end()) {
+                    // not found in hash_map
+                    pllTreeCounter[perturb_tree_topo] = 1;
+                } else {
+                    // found in hash_map
+                    pllTreeCounter[perturb_tree_topo]++;
+                }
+            }
 
             if (params->pll) {
                 pllNewickTree *perturbTree = pllNewickParseString(perturb_tree_string.c_str());
