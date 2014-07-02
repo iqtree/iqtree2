@@ -431,8 +431,18 @@ public:
     void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL,
             double *pattern_scale = NULL);
 
+    /**
+     * this implements the SSE version using Eigen library
+     */
     template<int NSTATES>
     inline void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+
+    /**
+     * this implements the fast alternative strategy for reversible model
+     * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
+     */
+    template<int NSTATES>
+    inline void computePartialLikelihoodFast(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
     /**
             compute tree likelihood on a branch. used to optimize branch length
@@ -444,8 +454,18 @@ public:
      */
     virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
+    /**
+     * this implements the SSE version using Eigen library
+     */
     template<int NSTATES>
     inline double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+
+    /**
+     * MINH: this implements the fast alternative strategy for reversible model (March 2013)
+     * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
+     */
+    template<int NSTATES>
+    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad,
             double *pattern_lh = NULL, double *pattern_rate = NULL);
@@ -582,8 +602,18 @@ public:
 
     double computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
+    /**
+     * this implements the SSE version using Eigen library
+     */
     template<int NSTATES>
     inline double computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    /**
+     * MINH: this implements the fast alternative strategy for reversible model (March 2013)
+     * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
+     */
+    template<int NSTATES>
+    inline double computeLikelihoodDervFast(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length

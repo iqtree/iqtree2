@@ -1153,6 +1153,12 @@ struct Params {
             SSE Option
      */
     bool SSE;
+
+    /**
+            Fast SSE Option, implementing likelihood kernel learned from RAxML code
+     */
+    bool fastSSE;
+
     /**
      	 	0: do not print anything
             1: print site log-likelihood

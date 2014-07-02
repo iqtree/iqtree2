@@ -553,20 +553,37 @@ void PhyloTree::computeThetaNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 
 void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
     if (sse) {
-        switch (aln->num_states) {
-        case 2:
-            return computePartialLikelihoodSSE<2>(dad_branch, dad, pattern_scale);
-        case 4:
-            return computePartialLikelihoodSSE<4>(dad_branch, dad, pattern_scale);
-        case 20:
-            return computePartialLikelihoodSSE<20>(dad_branch, dad, pattern_scale);
-        /*
-        case 61:
-            return computePartialLikelihoodSSE<61>(dad_branch, dad, pattern_scale);
-        */
-        default:
-            return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
-        }
+    	if (params->fastSSE && getModel()->isReversible() && getModel()->getEigenvectors()) {
+			switch (aln->num_states) {
+			case 2:
+				return computePartialLikelihoodFast<2>(dad_branch, dad, pattern_scale);
+			case 4:
+				return computePartialLikelihoodFast<4>(dad_branch, dad, pattern_scale);
+			case 20:
+				return computePartialLikelihoodFast<20>(dad_branch, dad, pattern_scale);
+			/*
+			case 61:
+				return computePartialLikelihoodSSE<61>(dad_branch, dad, pattern_scale);
+			*/
+			default:
+				return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
+			}
+    	} else {
+			switch (aln->num_states) {
+			case 2:
+				return computePartialLikelihoodSSE<2>(dad_branch, dad, pattern_scale);
+			case 4:
+				return computePartialLikelihoodSSE<4>(dad_branch, dad, pattern_scale);
+			case 20:
+				return computePartialLikelihoodSSE<20>(dad_branch, dad, pattern_scale);
+			/*
+			case 61:
+				return computePartialLikelihoodSSE<61>(dad_branch, dad, pattern_scale);
+			*/
+			default:
+				return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
+			}
+    	}
     } else {
         return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
     }
@@ -891,4 +908,170 @@ double PhyloTree::computeLikelihoodDervFastSSE(PhyloNeighbor *dad_branch, PhyloN
     }
     return tree_lh;
 
+}
+
+template<int NSTATES>
+void PhyloTree::computePartialLikelihoodFast(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
+    // don't recompute the likelihood
+    if (dad_branch->partial_lh_computed & 1)
+        return;
+    Node *node = dad_branch->node;
+    int ptn, cat;
+    //double *trans_state;
+    double *partial_lh_site;
+    double *partial_lh_child;
+    //double *partial_lh_block;
+    //bool do_scale = true;
+    //double freq;
+    dad_branch->lh_scale_factor = 0.0;
+    double **eigen_vec = model->getEigenvectors();
+    double **inv_eigen_vec = model->getInverseEigenvectors();
+    double *eigen_val = model->getEigenvalues();
+
+    int numCat = site_rate->getNRate();
+    //int numStates = model->num_states;
+    const int tranSize = NSTATES * NSTATES;
+    int alnSize = aln->size() + model_factory->unobserved_ptns.size();
+    int orig_alnSize = aln->size();
+    int block = NSTATES * numCat;
+    size_t lh_size = alnSize * block;
+    memset(dad_branch->scale_num, 0, alnSize * sizeof(UBYTE));
+
+    double *sum_inv_eigen_vec = new double[NSTATES];
+    memset(sum_inv_eigen_vec, 0, NSTATES*sizeof(double));
+    {
+    for (int state2 = 0; state2 < NSTATES; state2++) {
+    	for (int state3 = 0; state3 < NSTATES; state3++) {
+    		sum_inv_eigen_vec[state2] += inv_eigen_vec[state2][state3];
+    	}
+    }
+    }
+
+    if (node->isLeaf() && dad) {
+        // external node
+        memset(dad_branch->partial_lh, 0, lh_size * sizeof(double));
+        //double *partial_lh_site;
+        for (ptn = 0; ptn < alnSize; ++ptn) {
+            char state;
+            partial_lh_site = dad_branch->partial_lh + (ptn * block);
+
+            if (node->name == ROOT_NAME) {
+                state = STATE_UNKNOWN;
+            } else if (ptn < orig_alnSize){
+                state = (aln->at(ptn))[node->id];
+            } else {
+            	state = model_factory->unobserved_ptns[ptn-orig_alnSize];
+            }
+
+            if (state == STATE_UNKNOWN) {
+#ifndef KEEP_GAP_LH
+                dad_branch->scale_num[ptn] = -1;
+#endif
+                for (cat = 0; cat < numCat; cat++) {
+                	memcpy(partial_lh_site + cat*NSTATES, sum_inv_eigen_vec, NSTATES*sizeof(double));
+                }
+            } else if (state < NSTATES) {
+            	for (int state2 = 0; state2 < NSTATES; state2++)
+            		partial_lh_site[state2] = inv_eigen_vec[state2][(int)state];
+                for (cat = 1; cat < numCat; cat++) {
+                	memcpy(partial_lh_site + cat*NSTATES, partial_lh_site, NSTATES*sizeof(double));
+                }
+            } else {
+                // ambiguous character, for DNA, RNA
+                state = state - (NSTATES - 1);
+                for (int state2 = 0; state2 < NSTATES; state2++) {
+                	partial_lh_site[state2] = 0.0;
+					for (int state3 = 0; state3 < NSTATES && state3 <= 6; state3++)
+						if (state & (1 << state3)) {
+							partial_lh_site[state2] += inv_eigen_vec[state2][state3];
+						}
+                }
+                for (cat = 1; cat < numCat; cat++) {
+                	memcpy(partial_lh_site + cat*NSTATES, partial_lh_site, NSTATES*sizeof(double));
+                }
+            }
+        }
+    } else {
+        // internal node
+        EIGEN_ALIGN16 double *trans_mat_orig = new double[numCat * tranSize + 2];
+        double *trans_mat = trans_mat_orig;
+        if (((intptr_t) trans_mat) % 16 != 0)
+            trans_mat = trans_mat + 1;
+        for (ptn = 0; ptn < lh_size; ++ptn)
+            dad_branch->partial_lh[ptn] = 1.0;
+#ifndef KEEP_GAP_LH
+        for (ptn = 0; ptn < alnSize; ptn++)
+            dad_branch->scale_num[ptn] = -1;
+#endif
+        FOR_NEIGHBOR_IT(node, dad, it)if ((*it)->node->name != ROOT_NAME) {
+            computePartialLikelihoodFast<NSTATES > ((PhyloNeighbor*) (*it), (PhyloNode*) node, pattern_scale);
+            dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
+            for (cat = 0; cat < numCat; cat++) {
+                //model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), &trans_mat[cat * tranSize]);
+            	for (int state = 0; state < NSTATES; state++)
+            		for (int state2 = 0; state2 < NSTATES; state2++)
+            			trans_mat[cat*tranSize + state*NSTATES + state2] =
+            				eigen_vec[state][state2] * exp(eigen_val[state2] * site_rate->getRate(cat) * (*it)->length);
+            }
+            partial_lh_site = dad_branch->partial_lh;
+            partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh;
+            double sum_scale = 0.0;
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, cat, partial_lh_site, partial_lh_child)
+#endif
+            for (ptn = 0; ptn < alnSize; ++ptn)
+#ifndef KEEP_GAP_LH
+            if (((PhyloNeighbor*) (*it))->scale_num[ptn] < 0) {
+	#ifndef _OPENMP
+                partial_lh_site += NSTATES * numCat;
+                partial_lh_child += NSTATES * numCat;
+	#endif // _OPENMP
+            } else
+#endif // KEEP_GAP_LH
+            {
+#ifndef KEEP_GAP_LH
+                if (dad_branch->scale_num[ptn] < 0)
+                dad_branch->scale_num[ptn] = 0;
+#endif
+#ifdef _OPENMP
+                int lh_offset = ptn*block;
+                partial_lh_site = dad_branch->partial_lh + lh_offset;
+                partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + lh_offset;
+#endif
+                dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
+                double *partial_lh_block = partial_lh_site;
+                double *trans_state = trans_mat;
+                bool do_scale = true;
+                for (cat=0; cat < numCat; cat++) {
+                    MappedRowVec(NSTATES) ei_partial_lh_child(partial_lh_child);
+                    MappedRowVec(NSTATES) ei_partial_lh_site(partial_lh_site);
+                    MappedMat(NSTATES) ei_trans_state(trans_state);
+                    //ei_partial_lh_site.noalias() = (ei_partial_lh_child * ei_trans_state).cwiseProduct(ei_partial_lh_site);
+                    ei_partial_lh_site.array() *= (ei_partial_lh_child * ei_trans_state).array();
+                    partial_lh_site += NSTATES;
+                    partial_lh_child += NSTATES;
+                    trans_state += tranSize;
+                }
+                for (cat = 0; cat < block; cat++)
+                if (partial_lh_block[cat] > SCALING_THRESHOLD) {
+                    do_scale = false;
+                    break;
+                }
+                if (do_scale) {
+                    // unobserved const pattern will never have underflow
+                    Map<VectorXd, Aligned> ei_lh_block(partial_lh_block, block);
+                    ei_lh_block *= SCALING_THRESHOLD_INVER;
+                    sum_scale += LOG_SCALING_THRESHOLD *  (*aln)[ptn].frequency;
+                    dad_branch->scale_num[ptn] += 1;
+                    if (pattern_scale)
+                    pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
+                }
+            }
+            dad_branch->lh_scale_factor += sum_scale;
+        }
+        delete[] trans_mat_orig;
+    }
+
+    dad_branch->partial_lh_computed |= 1;
+    delete [] sum_inv_eigen_vec;
 }

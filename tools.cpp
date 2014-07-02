@@ -682,6 +682,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_replicates = 0;
     params.localbp_replicates = 0;
     params.SSE = true;
+    params.fastSSE = false;
     params.print_site_lh = 0;
     params.print_site_rate = false;
     params.print_tree_lh = false;
@@ -1325,6 +1326,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Lambda must be in (0,1]";
             } else if (strcmp(argv[cnt], "-nosse") == 0) {
                 params.SSE = false;
+            } else if (strcmp(argv[cnt], "-fastsse") == 0) {
+                params.fastSSE = true;
             } else if (strcmp(argv[cnt], "-f") == 0) {
                 cnt++;
                 if (cnt >= argc)

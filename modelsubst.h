@@ -219,6 +219,12 @@ public:
 	*/
 	virtual void writeInfo(ostream &out) {}
 
+	virtual double *getEigenvalues() const { return NULL;}
+
+	virtual double **getEigenvectors() const { return NULL;}
+
+	virtual double **getInverseEigenvectors() const { return NULL;}
+
 	/**
 		number of states
 	*/
