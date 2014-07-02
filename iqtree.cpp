@@ -29,6 +29,7 @@
 #include "nnisearch.h"
 
 Params *globalParam;
+Alignment *globalAlignment;
 
 IQTree::IQTree() :
         PhyloTree() {
@@ -150,6 +151,7 @@ void IQTree::setParams(Params &params) {
 
     this->params = &params;
     globalParam = &params;
+    globalAlignment = aln;
 
     write_intermediate_trees = params.write_intermediate_trees;
 

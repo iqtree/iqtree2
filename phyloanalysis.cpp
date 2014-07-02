@@ -402,8 +402,25 @@ void reportCredits(ofstream &out) {
 			*/
 }
 
+extern StringIntMap tree_counter;
+
 void reportPhyloAnalysis(Params &params, string &original_model,
 		Alignment &alignment, IQTree &tree, vector<ModelInfo> &model_info) {
+
+	if (params.count_trees) {
+		// addon: print #distinct trees
+		cout << endl << "INFO: " << tree_counter.size() << " distinct trees evaluated during whole tree search" << endl;
+
+		IntVector counts;
+		for (StringIntMap::iterator i = tree_counter.begin(); i != tree_counter.end(); i++) {
+			if (i->second > counts.size())
+				counts.resize(i->second+1, 0);
+			counts[i->second]++;
+		}
+		for (IntVector::iterator i2 = counts.begin(); i2 != counts.end(); i2++)
+			cout << "#Trees occuring " << (i2-counts.begin()) << " times: " << *i2 << endl;
+	}
+
 	string outfile = params.out_prefix;
 
 	outfile += ".iqtree";
@@ -1156,7 +1173,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     /*********************************************** START: CREATE INITIAL TREE(S) ************************************/
     int numInitTrees;
-    bool fixbranch = true;
+    //bool fixbranch = true;
     // start the search with user-defined tree
     if (params.user_file) {
         cout << "READING INPUT TREE FILE " << params.user_file << " ..." << endl;
@@ -1164,7 +1181,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.readTree(params.user_file, myrooted);
         iqtree.setAlignment(alignment);
         numInitTrees = 1;
-        fixbranch = false;
+        //fixbranch = false;
         // Create parsimony tree using IQ-Tree kernel
     } else if (params.parsimony_tree && !params.pll) {
         cout << endl;
@@ -1345,7 +1362,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     // Compute maximum likelihood distance
     double bestTreeScore = iqtree.bestScore;
     // ML distance is only needed for IQP
-    if (params.snni || params.min_iterations == 0) {
+    if ( (params.snni && !params.iqp) || params.min_iterations == 0) {
         params.compute_ml_dist = false;
     }
     if (!params.dist_file && params.compute_ml_dist) {
@@ -1750,6 +1767,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	                PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 	        iqtree.setBestTree(string(iqtree.pllInst->tree_string), iqtree.pllInst->likelihood);
 	        iqtree.printPLLModParams();
+	    	iqtree.readTreeString(iqtree.bestTreeString);
 	        cout << endl;
 	    } else {
 	        cout << endl;
@@ -1869,6 +1887,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 		}
 	}
 
+
 	if (params.gbo_replicates > 0) {
 		if (!params.online_bootstrap)
 			runGuidedBootstrap(params, alignment, iqtree);
@@ -1899,9 +1918,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 			<< endl;
 	//printf( "Total time used: %8.6f seconds.\n", (double) params.run_time );
 
-	iqtree.readTreeString(iqtree.bestTreeString);
+	// BUG FIX: readTreeString(bestTreeString) not needed before this line
 	iqtree.printResultTree();
-
 
 	if (params.out_file)
 		iqtree.printTree(params.out_file);

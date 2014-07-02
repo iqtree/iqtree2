@@ -214,6 +214,8 @@ void PhyloTree::readTreeString(const string &tree_string) {
 	setAlignment(aln);
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
+    } else {
+    	clearAllPartialLH();
     }
 }
 
