@@ -741,7 +741,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.iteration_multiple = 1;
     params.initPerStrength = 0.5;
     params.pll = false;
-    params.init_modeps = 0.001;
+    params.modeps = 0.001;
+    params.imd_modeps = 1.0;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -1695,7 +1696,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -me <model_epsilon>";
-                params.init_modeps = convert_double(argv[cnt]);
+                params.modeps = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-pllmod") == 0) {
             	params.pllModOpt = true;
             	params.pll = true;

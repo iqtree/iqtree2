@@ -423,9 +423,14 @@ struct Params {
 	double initPerStrength;
 
 	/**
-	 *  logl epsilon for the initial model parameter optimization
+	 *  logl epsilon for the final model parameter optimization
 	 */
-	double init_modeps;
+	double modeps;
+
+    /**
+     *  logl epsilon for the intermediate model parameter optimization steps
+     */
+    double imd_modeps;
 
 	/**
 	 *  Carry out iterated local search using NNI only.

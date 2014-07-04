@@ -814,7 +814,7 @@ double* IQTree::getModelRatesFromPLL() {
     return rate_params;
 }
 
-void IQTree::printPLLModParams() {
+void IQTree::pllPrintModelParams() {
     for (int part = 0; part < pllPartitions->numberOfPartitions; part++) {
         //printf("alpha[%d]: %f \n", part, pllPartitions->partitionData[part]->alpha);
         cout << "Alpha[" << part << "]" << ": " << pllPartitions->partitionData[part]->alpha << endl;
@@ -1353,7 +1353,7 @@ double IQTree::doTreeSearch() {
                         cout << "Optimizing model parameters by PLL ... ";
                         double stime = getCPUTime();
                         pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
-                        pllOptimizeModelParameters(pllInst, pllPartitions, 1.0);
+                        pllOptimizeModelParameters(pllInst, pllPartitions, params->modeps);
                         curScore = pllInst->likelihood;
                         double etime = getCPUTime();
                         cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
@@ -1374,7 +1374,7 @@ double IQTree::doTreeSearch() {
                         double alpha_bk = getRate()->getGammaShape();
                         cout << endl;
                         cout << "Re-estimate model parameters ... " << endl;
-                        double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, true, 0.1);
+                        double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, true, params->modeps);
                         if (isSuperTree()) {
                             ((PhyloSuperTree*) this)->computeBranchLengths();
                         }

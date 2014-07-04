@@ -213,7 +213,7 @@ public:
     /**
      *  print model parameters from PLL
      */
-    void printPLLModParams();
+    void pllPrintModelParams();
 
     /**
      * input the tree string from IQTree kernel to PLL kernel
