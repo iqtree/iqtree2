@@ -860,7 +860,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             num_states = getMaxObservedStates(sequences);
             if (num_states < 2 || num_states > 32) throw "Invalid number of states";
             user_seq_type = SEQ_MORPH;
-        } else if (strcmp(sequence_type, "TINA") == 0) {
+        } else if (strcmp(sequence_type, "TINA") == 0 || strcmp(sequence_type, "MULTI") == 0) {
             cout << "Multi-state data with " << num_states << " alphabets" << endl;
             user_seq_type = SEQ_MULTISTATE;
         } else if (strncmp(sequence_type, "CODON", 5) == 0) {
