@@ -447,7 +447,6 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
     }
     tree.setModel(tree.getModelFactory()->model);
     tree.setRate(tree.getModelFactory()->site_rate);
-    tree.setStartLambda(params.lambda);
     if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
 
     int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();

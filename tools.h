@@ -395,6 +395,12 @@ struct Params {
 	int numParsTrees;
 
 	/**
+	 *  Number of NNI trees generated from the set of parsimony trees
+	 *  Default = 20 (out of 100 parsimony trees)
+	 */
+	int numNNITrees;
+
+	/**
 	 *  Population size
 	 */
 	int popSize;
@@ -417,9 +423,14 @@ struct Params {
 	double initPerStrength;
 
 	/**
-	 *  logl epsilon for the initial model parameter optimization
+	 *  logl epsilon for the final model parameter optimization
 	 */
-	double init_modeps;
+	double modeps;
+
+    /**
+     *  logl epsilon for the intermediate model parameter optimization steps
+     */
+    double imd_modeps;
 
 	/**
 	 *  Carry out iterated local search using NNI only.

@@ -38,7 +38,6 @@ string CandidateSet::getCandidateTree() {
 	return "";
 }
 
-
 bool CandidateSet::update(string tree, double score) {
 	CandidateTree candidate;
 	candidate.tree = tree;

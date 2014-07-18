@@ -46,6 +46,8 @@ inline bool comparePLLNNIMove(const pllNNIMove &a, const pllNNIMove &b)
     return a.likelihood < b.likelihood;
 }
 
+void countDistinctTrees(pllInstance* pllInst, partitionList *pllPartitions);
+
 static int cmp_nni(const void* nni1, const void* nni2);
 
 int compareDouble(const void * a, const void * b);
