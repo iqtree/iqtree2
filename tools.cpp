@@ -1708,6 +1708,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.snni = true;
                 params.autostop = true;
                 params.speednni = true;
+                // Minh: why do you turn this on? it doubles curPerStrength at some point
                 params.adaptPert = true;
             } else if (strcmp(argv[cnt], "-auto") == 0) {
             	params.autostop = true;
