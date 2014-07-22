@@ -6,9 +6,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(iqtree)
 # The version number.
-set (iqtree_VERSION_MAJOR 0)
-set (iqtree_VERSION_MINOR 9)
-set (iqtree_VERSION_PATCH 7)
+set (iqtree_VERSION_MAJOR 1)
+set (iqtree_VERSION_MINOR 0)
+set (iqtree_VERSION_PATCH 0)
 
 set(BUILD_SHARED_LIBS OFF)
 

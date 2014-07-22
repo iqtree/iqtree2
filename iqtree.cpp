@@ -1054,7 +1054,7 @@ void IQTree::pllBaseSubstitute (char *seq, int dataType)
     int seq_len = strlen(seq);
     for (int i = 0; i < seq_len; ++ i)
     {
-        seq[i] = d[seq[i]];
+        seq[i] = d[(int)seq[i]];
     }
 }
 
