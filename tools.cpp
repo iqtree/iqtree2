@@ -1957,9 +1957,9 @@ void usage_iqtree(char* argv[], bool full_command) {
     cout << "GENERAL OPTIONS:" << endl
             << "  -?                   Printing this help dialog" << endl
             << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP/FASTA/NEXUS format" << endl
+            << "  -st <data_type>      BIN, DNA, AA, CODON, or MORPH (default: auto-detect)" << endl
             << "  -sp <partition_file> Partition model specification in NEXUS format" << endl
             << "  -z <trees_file>      Compute log-likelihoods for all trees in the given file" << endl
-            << "  -st <BIN|DNA|AA>     Binary, DNA, or Protein sequences (default: auto-detect)" << endl
             << "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
             << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment)" << endl
@@ -2000,12 +2000,17 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       JTT, LG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
             << "                       HIVw, JTTDCMut, FLU, Blosum62" << endl
             << "               Binary: JC2 (default), GTR2" << endl
+            << "                Codon: GY (default), ECM, MG" << endl
+            << "       Morphology/SNP: MK (default), ORDERED" << endl
             << "      Model selection: TEST or TESTONLY to auto-select the best-fit model." << endl
             << "                       TESTONLY will stop the run after model selection" << endl
             << "            Otherwise: Name of file containing user-model parameters" << endl
             << "                       (rate parameters and state frequencies)" << endl
             << "  -m <model_name>+F or +FO or +FU or +FQ (default: auto)" << endl
             << "                       counted, optimized, user-defined, equal state frequency" << endl
+            << "  -m <model_name>+F1x4 or +F3x4 or +F3x4C" << endl
+            << "                       Codon frequencies" << endl
+            << "  -m <model_name>+ASC  Ascertainment bias correction for morphological/SNP data" << endl
             << endl << "RATE HETEROGENEITY:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n]" << endl
             << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl
