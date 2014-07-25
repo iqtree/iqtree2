@@ -2015,7 +2015,9 @@ void runPhyloAnalysis(Params &params) {
 		if(params.partition_type){
 			// since nni5 does not work yet, stop the programm
 			if(params.nni5)
-				outError("nni5 option is unsupported yet for proportitional partition model. please use -nni1 option");
+				outError("-nni5 option is unsupported yet for proportitional partition model. please use -nni1 option");
+			if(params.aLRT_replicates)
+				outError("-alrt option is unsupported yet for proportitional partition model");
 			// initialize supertree - Proportional Edges case, "-spt p" option
 			tree = new PhyloSuperTreePlen(params);
 		} else {
