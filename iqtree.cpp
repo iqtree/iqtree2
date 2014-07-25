@@ -1167,10 +1167,16 @@ double IQTree::doTreeSearch() {
     if (!params->autostop) {
         stop_rule.addImprovedIteration(1);
     }
-    searchinfo.curFailedIterNum = 0;
+    //searchinfo.curFailedIterNum = 0;
     searchinfo.curPerStrength = params->initPerStrength;
+	if (params->autostop && !params->gbo_replicates) {
+		stop_rule.setIterationNum(params->stopCond, params->stopCond);
+		cout << "INFO: #iterations set to " << stop_rule.getNumIterations() << endl;
+	}
+
     for (curIteration = 2; !stop_rule.meetStopCondition(curIteration); curIteration++) {
         searchinfo.curIterNum = curIteration;
+        /*
         if (params->autostop && !params->gbo_replicates) {
             if (searchinfo.curFailedIterNum == params->stopCond) {
                 cout << "No better tree was found in the last " << params->stopCond
@@ -1180,10 +1186,11 @@ double IQTree::doTreeSearch() {
             if (params->adaptPert) {
                if (searchinfo.curFailedIterNum >= params->stopCond / 2) {
                     searchinfo.curPerStrength = params->initPerStrength * 2;
-        }
+               }
             }
 
-        }
+        }*/
+
         double min_elapsed = (getCPUTime() - params->startTime) / 60;
         if (min_elapsed > params->maxtime) {
             cout << endl;
@@ -1236,7 +1243,7 @@ double IQTree::doTreeSearch() {
             if (params->snni) {
                 int numNNI = floor(searchinfo.curPerStrength * (aln->getNSeq() - 3));
                 if (verbose_mode >= VB_MED) {
-                	cout << "numNNI=" << numNNI << ", searchinfo.curPerStrength=" << searchinfo.curPerStrength << endl;
+                	//cout << "numNNI=" << numNNI << ", searchinfo.curPerStrength=" << searchinfo.curPerStrength << endl;
                 }
                 string candidateTree = candidateTrees.getCandidateTree();
                 readTreeString(candidateTree);
@@ -1322,16 +1329,20 @@ double IQTree::doTreeSearch() {
         if (params->maxtime < 1000000) {
             cputime_remaining = params->maxtime * 60 - cputime_secs;
         } else {
-            cputime_remaining = (stop_rule.getNumIterations() - curIteration) * cputime_secs / (curIteration - 1);
+        	//if (params->autostop)
+            //    cputime_remaining = (params->stopCond - searchinfo.curFailedIterNum) * cputime_secs / (curIteration - 1);
+        	//else
+        		cputime_remaining = (stop_rule.getNumIterations() - curIteration) * cputime_secs / (curIteration - 1);
         }
         cout.setf(ios::fixed, ios::floatfield);
 
         cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIteration
-                << " / Start LogL: " << perturbScore << " / End LogL: " << curScore << " / NNIs: " << nni_count
-                << " / NNI steps: " << nni_steps << " / CPU time: " << (int) round(cputime_secs) << "s";
+                << " / LogL: " << perturbScore << " -> " << curScore << " / NNIs: " << nni_count
+                << "," << nni_steps << " / Time: " << (int) round(cputime_secs) << "s";
 
         if (curIteration > 10 && cputime_secs > 10) {
-            if (!params->autostop) {
+            //if (!params->autostop)
+        	{
                 cout << " (" << (int) round(cputime_remaining) << "s left)";
             }
         }
@@ -1376,8 +1387,8 @@ double IQTree::doTreeSearch() {
                         }
                         double alpha_bk = getRate()->getGammaShape();
                         cout << endl;
-                        cout << "Re-estimate model parameters ... " << endl;
-                        double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, true, params->modeps);
+                        cout << "Re-estimate model parameters (epsilon = " << params->modeps << ")" << endl;
+                        double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, params->modeps);
                         if (isSuperTree()) {
                             ((PhyloSuperTree*) this)->computeBranchLengths();
                         }
@@ -1414,12 +1425,16 @@ double IQTree::doTreeSearch() {
                 cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl << endl;
                 if (curScore > bestScore) {
-                    searchinfo.curFailedIterNum = 0;
+                    //searchinfo.curFailedIterNum = 0;
+                	if (params->autostop && !params->gbo_replicates) {
+                		stop_rule.setIterationNum(curIteration + params->stopCond, curIteration + params->stopCond);
+                		cout << "INFO: #iterations increased to " << stop_rule.getNumIterations() << endl;
+                	}
                     searchinfo.curPerStrength = params->initPerStrength;
                 }
             } else {
                 cout << "UPDATE BEST LOG-LIKELIHOOD: " << curScore << endl;
-                searchinfo.curFailedIterNum++;
+                //searchinfo.curFailedIterNum++;
             }
             setBestTree(imd_tree, curScore);
             if (params->write_best_trees) {
@@ -1429,7 +1444,7 @@ double IQTree::doTreeSearch() {
             }
             printResultTree();
         } else {
-            searchinfo.curFailedIterNum++;
+            //searchinfo.curFailedIterNum++;
         }
 
         // check whether the tree can be put into the reference set

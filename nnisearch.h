@@ -72,7 +72,7 @@ typedef struct {
 	unordered_set<string> aBranches; // Set of branches that are affected by the previous NNIs
 	double curLogl; // Current tree log-likelihood
 	int curIterNum; // Current iteration number
-	int curFailedIterNum; // Current number of failed iterations (no better tree found)
+	//int curFailedIterNum; // Current number of failed iterations (no better tree found)
 	double curPerStrength; // Current perturbation strength
 
 	// FOR NNI SEARCH

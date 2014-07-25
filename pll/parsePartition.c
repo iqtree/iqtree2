@@ -348,7 +348,7 @@ pllPartitionParse (const char * filename)
      return (0);
    }
 
-  printf ("%s\n\n", rawdata);
+  /*printf ("%s\n\n", rawdata);*/
 
   n = strlen (rawdata);
 

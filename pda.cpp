@@ -203,7 +203,7 @@ void printCopyright(ostream &out) {
 	#ifdef _OPENMP
 	out << "-OpenMP";
 	#endif
- 	out << " beta version "; 
+ 	out << " version ";
 #else
  	out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif

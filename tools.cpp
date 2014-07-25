@@ -1672,15 +1672,20 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -numpars <number_of_parsimony_trees>";
                 params.numParsTrees = convert_int(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-toppars") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -toppars <number_of_top_parsimony_trees>";
+                params.numNNITrees = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-poplim") == 0) {
             	cnt++;
             	if (cnt >=argc)
             		throw "Use -poplim <max_pop_size>";
             	params.limitPopSize = convert_int(argv[cnt]);
-        	} else if (strcmp(argv[cnt], "-popsize") == 0) {
+        	} else if (strcmp(argv[cnt], "-popsize") == 0 || strcmp(argv[cnt], "-numcand") == 0) {
             	cnt++;
             	if (cnt >=argc)
-            		throw "Use -popsize <number_of_candidate_trees>";
+            		throw "Use -numcand <number_of_candidate_trees>";
             	params.popSize = convert_int(argv[cnt]);
             	assert(params.popSize < params.numParsTrees);
         	} else if (strcmp(argv[cnt], "-beststart") == 0) {
@@ -1708,13 +1713,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.adaptPert = true;
             } else if (strcmp(argv[cnt], "-snni") == 0) {
             	params.snni = true;
-                params.autostop = true;
-                params.speednni = true;
+            	// dont need to turn this on here
+                //params.autostop = true;
+                //params.speednni = true;
                 // Minh: why do you turn this on? it doubles curPerStrength at some point
                 //params.adaptPert = true;
+            } else if (strcmp(argv[cnt], "-iqpnni") == 0) {
+            	params.snni = false;
             } else if (strcmp(argv[cnt], "-auto") == 0) {
             	params.autostop = true;
-            } else if (strcmp(argv[cnt], "-stop_cond") == 0) {
+            } else if (strcmp(argv[cnt], "-stop_cond") == 0 || strcmp(argv[cnt], "-numstop") == 0) {
                 params.autostop = true;
                 cnt++;
                 params.stopCond = convert_int(argv[cnt]);
@@ -1954,11 +1962,15 @@ void usage_iqtree(char* argv[], bool full_command) {
 #ifdef _OPENMP
             << "  -omp <#cpu_cores>    Number of cores/threads to use (default: all cores)" << endl
 #endif
-            << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
-            << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
-            << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
-            << "  -bo <#replicates>    Bootstrap only" << endl
-            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
+            << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
+            << "  -pll                 Turn on phylogenetic likelihood library (default: off)" << endl
+            << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
+            << "  -toppars <number>    Number of top initial parsimony trees (dfault: 20)" << endl
+            << "  -numcand <number>    Number of candidate trees during search (defaut: 5)" << endl
+            << "  -pers <perturbation> Perturbation strength for stochastic NNI (default: 0.5)" << endl
+            << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
+            << "  -iqp                 Use IQP tree perturbation (default: sNNI)" << endl
+            << "  -iqpnni              Switch entirely to old IQPNNI algorithm" << endl
             << endl << "ULTRA-FAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultra-fast bootstrap (>=1000)" << endl
             << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
@@ -1967,6 +1979,11 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
 			<< "  -beps <epsilon>      Bootstrap trees in [maxlh-eps,maxlh+eps] are chosen" << endl
 			<< "                       at random (default: 0.5)" << endl
+            << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
+            << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
+            << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
+            << "  -bo <#replicates>    Bootstrap only" << endl
+            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
             << endl << "SINGLE BRANCH TEST:" << endl
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
             << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl

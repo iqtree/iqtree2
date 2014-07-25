@@ -102,7 +102,7 @@ void GTRModel::init(StateFreqType type) {
 
 void GTRModel::writeInfo(ostream &out) {
 	if (num_states != 4) return;
-	out << "Rate parameters:" << endl;
+	out << "Rate parameters:";
 	//out.precision(3);
 	//out << fixed;
 	out << "  A-C: " << rates[0];
@@ -113,7 +113,7 @@ void GTRModel::writeInfo(ostream &out) {
 	out << "  G-T: " << rates[5];
 	out << endl;
 	//if (freq_type != FREQ_ESTIMATE) return;
-	out << "Base frequencies: " << endl;
+	out << "Base frequencies: ";
 	out << "  A: " << state_freq[0];
 	out << "  C: " << state_freq[1];
 	out << "  G: " << state_freq[2];
