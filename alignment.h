@@ -283,6 +283,7 @@ public:
             extract sub-alignment of a sub-set of sequences
             @param aln original input alignment
             @param seq_id ID of sequences to extract from
+            @param min_true_cher the minimum number of non-gap characters, true_char<min_true_char -> delete the sequence
      */
     void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
 

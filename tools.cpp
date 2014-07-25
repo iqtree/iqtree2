@@ -713,6 +713,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.eco_weighted = false;
 	params.eco_run = 0;
 
+	params.upper_bound = false;
+
     params.gbo_replicates = 0;
 	params.ufboot_epsilon = 0.5;
     params.check_gbo_sample_size = 0;
@@ -1588,6 +1590,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -diet <d in %>";
 				convert_range(argv[cnt], params.diet_min, params.diet_max, params.diet_step);
 				//params.diet = convert_int(argv[cnt]);
+			} else if (strcmp(argv[cnt], "-up") == 0) {
+				params.upper_bound = true;
 			} else if (strcmp(argv[cnt], "-ecoR") == 0) {
 				cnt++;
 				if (cnt >= argc)

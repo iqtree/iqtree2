@@ -2225,8 +2225,7 @@ int main(int argc, char *argv[])
 		calcTreeCluster(params);
 	} else if (params.ncbi_taxid) {
 		processNCBITree(params);
-	} else if (params.user_file && params.eco_dag_file) {
-		/**ECOpd analysis*/
+	} else if (params.user_file && params.eco_dag_file) { /**ECOpd analysis*/
 		processECOpd(params);
 	} else if (params.aln_file || params.partition_file) {
 		if ((params.siteLL_file || params.second_align) && !params.gbo_replicates)
