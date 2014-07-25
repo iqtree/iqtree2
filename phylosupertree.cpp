@@ -27,8 +27,8 @@ PhyloSuperTree::PhyloSuperTree()
  : IQTree()
 {
 	totalNNIs = evalNNIs = 0;
+	// Initialize the counter for evaluated NNIs on subtrees. FOR THIS CASE IT WON'T BE initialized.
 }
-
 
 PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree) :  IQTree(alignment) {
 	totalNNIs = evalNNIs = 0;
@@ -37,6 +37,12 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 		PhyloTree *tree = new PhyloTree((*it));
 		push_back(tree);
 	}
+	// Initialize the counter for evaluated NNIs on subtrees
+	int part = 0;
+	for (iterator it = begin(); it != end(); it++, part++) {
+		part_info[part].evalNNIs = 0.0;
+	}
+
 	aln = alignment;
 }
 
@@ -207,6 +213,13 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 		readPartition(params);
 	if (part_info.empty())
 		outError("No partition found");
+
+	// Initialize the counter for evaluated NNIs on subtrees
+	int part = 0;
+	for (iterator it = begin(); it != end(); it++, part++) {
+		part_info[part].evalNNIs = 0.0;
+	}
+
 	aln = new SuperAlignment(this);
 	if (params.print_conaln) {
 		string str = params.out_prefix;
@@ -440,6 +453,7 @@ void PhyloSuperTree::mapTrees() {
 		}
 		linkTree(part, part_taxa);
 	}
+
 	if (verbose_mode >= VB_DEBUG) printMapInfo();
 }
 
@@ -647,6 +661,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		}
 
 		evalNNIs++;
+		part_info[part].evalNNIs++;
 
 		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
@@ -668,11 +683,11 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		part_info[part].nniMoves[1].node2Nei_it = node2_part->findNeighborIt(node2_nei_other->link_neighbors[part]->node);
 
 		at(part)->getBestNNIForBran((PhyloNode*)nei2_part->node, (PhyloNode*)nei1_part->node, part_info[part].nniMoves);
-		// detect the corresponding NNIs and swap if necessary
+		// detect the corresponding NNIs and swap if necessary (the swapping refers to the swapping of NNI order)
 		if (!((*part_info[part].nniMoves[0].node1Nei_it == node1_nei->link_neighbors[part] &&
-			*part_info[part].nniMoves[0].node2Nei_it == node2_nei->link_neighbors[part]) ||
+				*part_info[part].nniMoves[0].node2Nei_it == node2_nei->link_neighbors[part]) ||
 			(*part_info[part].nniMoves[0].node1Nei_it != node1_nei->link_neighbors[part] &&
-			*part_info[part].nniMoves[0].node2Nei_it != node2_nei->link_neighbors[part])))
+					*part_info[part].nniMoves[0].node2Nei_it != node2_nei->link_neighbors[part])))
 		{
 			outError("WRONG");
 			NNIMove tmp = part_info[part].nniMoves[0];

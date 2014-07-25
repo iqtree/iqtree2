@@ -269,6 +269,7 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(Params &params)
 	int part = 0;
 	for (iterator it = begin(); it != end(); it++, part++) {
 		part_info[part].part_rate = 1.0;
+		part_info[part].evalNNIs = 0.0;
 	}
 }
 
@@ -308,7 +309,8 @@ void PhyloSuperTreePlen::mapTrees() {
 		// the only difference with PhyloSuperTree::mapTrees()
 		(*it)->scaleLength(part_info[part].part_rate);
 
-		(*it)->initializeAllPartialLh();
+		if ((*it)->getModel())
+			(*it)->initializeAllPartialLh();
 		NodeVector my_taxa, part_taxa;
 		(*it)->getOrderedTaxa(my_taxa);
 		part_taxa.resize(leafNum, NULL);
@@ -497,60 +499,6 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 		//myMove.oldLen[0] = oldLEN;
 	}
 	// ========================================================================
-
-	if (save_all_trees != 2) return myMove;
-
-	double *save_lh_factor = new double [ntrees];
-	double *save_lh_factor_back = new double [ntrees];
-	int nnino = 0;
-	FOR_NEIGHBOR(node2, node1, node2_it) {
-
-		// do the NNI
-		node2_nei = (SuperNeighbor*)(*node2_it);
-        node1->updateNeighbor(node1_it, node2_nei);
-        node2_nei->node->updateNeighbor(node2, node1);
-        node2->updateNeighbor(node2_it, node1_nei);
-        node1_nei->node->updateNeighbor(node1, node2);
-
-        for (part = 0; part < ntrees; part++) {
-			bool is_nni = true;
-			FOR_NEIGHBOR_DECLARE(node1, NULL, nit) {
-				if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
-			}
-			FOR_NEIGHBOR(node2, NULL, nit) {
-				if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
-			}
-			if (!is_nni) {
-				memcpy(at(part)->_pattern_lh, part_info[part].cur_ptnlh, at(part)->getAlnNPattern() * sizeof(double));
-			} else
-				memcpy(at(part)->_pattern_lh, part_info[part].nniMoves[nnino].ptnlh, at(part)->getAlnNPattern() * sizeof(double));
-    		save_lh_factor[part] = at(part)->current_it->lh_scale_factor;
-    		save_lh_factor_back[part] = at(part)->current_it_back->lh_scale_factor;
-    		at(part)->current_it->lh_scale_factor = 0.0;
-    		at(part)->current_it_back->lh_scale_factor = 0.0;
-        }
-        if (nnino == 0)
-        	saveCurrentTree(nni_param.nni1_score);
-        else
-        	saveCurrentTree(nni_param.nni2_score);
-
-        // restore information
-        for (part = 0; part < ntrees; part++) {
-    		at(part)->current_it->lh_scale_factor = save_lh_factor[part];
-    		at(part)->current_it_back->lh_scale_factor = save_lh_factor_back[part];
-        }
-
-        // swap back to recover the tree
-        node1->updateNeighbor(node1_it, node1_nei);
-        node1_nei->node->updateNeighbor(node2, node1);
-        node2->updateNeighbor(node2_it, node2_nei);
-        node2_nei->node->updateNeighbor(node1, node2);
-        nnino++;
-
-	}
-
-	delete [] save_lh_factor_back;
-	delete [] save_lh_factor;
 	return myMove;
 }
 
@@ -754,6 +702,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 *------------------------------------------------------------------------------------*/
 
 	for(part = 0; part < ntrees; part++){
+		totalNNIs++;
 		is_nni[part] = true;
 		if(saved_nei[0]->link_neighbors[part]){
 			FOR_NEIGHBOR_DECLARE(node1,node2,nit){
@@ -766,6 +715,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 
 		if(is_nni[part]){
+			evalNNIs++;
+			part_info[part].evalNNIs++;
 			// one branch optimization
 			for(id = 0; id < 2; id++){
 				nei_link  = saved_nei[id]->link_neighbors[part]->node;
@@ -965,12 +916,6 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		}
 		checkBranchLen();
 
-		/*  for(part = 0; part < ntrees; part++)
-	    	if(nei1_new->link_neighbors[part] && !is_nni[part]){
-	    		part_info[part].opt_brlen[brid[part]] = nei1_new_part[part]->length;
-	    		at(part)->computePatternLikelihood(part_info[part].opt_ptnlh[brid[part]], &part_info[part].opt_score[brid[part]]);
-	    	}*/
-
 		// %%%%%%%%%%%%%%%%%%%%%%%%  FIVE BRANCH OPTIMIZATION  %%%%%%%%%%%%%%%%%%%%%%%%
 	    if (params->nni5) {
 	    	if (verbose_mode >= VB_DEBUG)
@@ -1002,6 +947,12 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    	}
 	    }
 		// %%%%%%%%%%%%%%%%%%%%%%%%%%%  END of nni5branch  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	    // Save current tree for ufboot analysis
+	    if (save_all_trees == 2) {
+	    		saveCurrentTree(score);
+	    }
+
 
 		/* Minh bug fix: restore the cur_score */
 		for (i = 0; i < part_info.size(); i++)

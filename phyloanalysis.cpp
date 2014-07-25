@@ -509,23 +509,30 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
 				<< endl;
 		if (tree.isSuperTree()) {
-			out	<< "Full partition model with separate branch lengths and models between partitions" << endl << endl;
+			if(params.partition_type)
+				out	<< "Proportional partition model with joint branch lengths and separate models between partitions" << endl << endl;
+			else
+				out	<< "Full partition model with separate branch lengths and models between partitions" << endl << endl;
 			PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
 			PhyloSuperTree::iterator it;
 			int part;
-
-			out << "  ID  Model          Parameters" << endl;
+			if(params.partition_type)
+				out << "  ID  Model          Rate   Parameters" << endl;
+			else
+				out << "  ID  Model          Parameters" << endl;
 			//out << "-------------------------------------" << endl;
 			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
 				out.width(4);
 				out << right << (part+1) << "  ";
 				out.width(14);
-				out << left << (*it)->getModelName() << " " << (*it)->getModelNameParams() << endl;
+				if(params.partition_type)
+					out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << " " << (*it)->getModelNameParams() << endl;
+				else
+					out << left << (*it)->getModelName() << " " << (*it)->getModelNameParams() << endl;
 			}
 			out << endl;
 			/*
 			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
-				out << "FOR PARTITION " << stree->part_info[part].name << ":" << endl << endl;
 				reportModel(out, *(*it));
 				reportRate(out, *(*it));
 			}*/
@@ -1925,6 +1932,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 		PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
 		cout << stree->evalNNIs << " NNIs evaluated from " << stree->totalNNIs << " all possible NNIs ( " <<
 				(int)(((stree->evalNNIs+1.0)/(stree->totalNNIs+1.0))*100.0) << " %)" << endl;
+		cout<<"Details for subtrees:"<<endl;
+		for(int part = 0; part < stree->size(); part++){
+			cout << part+1 <<". "<<stree->part_info[part].name<<": "<<stree->part_info[part].evalNNIs<<" ( " <<
+					(int)(((stree->part_info[part].evalNNIs+1.0)/((stree->totalNNIs+1.0) / stree->size()))*100.0) << " %)" << endl;
+		}
 	}
 
 	t_end = getCPUTime();
@@ -1982,6 +1994,9 @@ void runPhyloAnalysis(Params &params) {
 	// read in alignment
 	if (params.partition_file) {
 		if(params.partition_type){
+			// since nni5 does not work yet, stop the programm
+			if(params.nni5)
+				outError("nni5 option is unsupported yet for proportitional partition model. please use -nni1 option");
 			// initialize supertree - Proportional Edges case, "-spt p" option
 			tree = new PhyloSuperTreePlen(params);
 		} else {
@@ -2224,9 +2239,6 @@ void runPhyloAnalysis(Params &params) {
 					<< ".contree" << endl;
 		cout << endl;
 	}
-
-	//if(params.partition_type)
-	//	((PhyloSuperTreePlen*)tree)->printNNIcasesNUM();
 
 	delete tree;
 	delete alignment;
@@ -2523,3 +2535,4 @@ void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
 	}
 
 }
+
