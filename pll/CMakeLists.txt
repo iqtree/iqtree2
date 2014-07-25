@@ -1,5 +1,5 @@
-if (CMAKE_BUILD_TYPE MATCHES "parallel_avx")
-  message("Building PARALLEL_AVX version of PLL")
+if (IQTREE_FLAGS MATCHES "avx" AND IQTREE_FLAGS MATCHES "multicore")
+  message("PLL Kernel    : AVX/Pthreads")
   add_library(pll 
   avxLikelihood.c
   alignment.c
@@ -28,8 +28,8 @@ if (CMAKE_BUILD_TYPE MATCHES "parallel_avx")
   trash.c
   treeIO.c
   utils.c)
-elseif (CMAKE_BUILD_TYPE MATCHES "parallel_sse3")
-  message("Building PARALLEL_SSE3 version of PLL")  
+elseif (IQTREE_FLAGS MATCHES "multicore")
+  message("PLL Kernel    : SSE3/Pthreads")  
   add_library(pll 
   alignment.c
   bipartitionList.c
@@ -57,8 +57,8 @@ elseif (CMAKE_BUILD_TYPE MATCHES "parallel_sse3")
   trash.c
   treeIO.c
   utils.c)
-elseif (CMAKE_BUILD_TYPE MATCHES "avx")
-  message("Building AVX version of PLL")  
+elseif (IQTREE_FLAGS MATCHES "avx")
+  message("PLL Kernel    : AVX")  
   add_library(pll 
     avxLikelihood.c
     alignment.c
@@ -87,7 +87,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES "avx")
     treeIO.c
     utils.c)
 else ()
-  message("Building SSE3 version of PLL")  
+  message("PLL Kernel    : SSE3")  
   add_library(pll 
     alignment.c
     bipartitionList.c

@@ -67,9 +67,11 @@ else()
 endif()
 
 # change the executable name if compiled for OpenMP parallel version
-if (CMAKE_CXX_FLAGS MATCHES "openmp")
-	message("Parallel      : OpenMP")
-	SET(EXE_SUFFIX "-omp")
+if (IQTREE_FLAGS MATCHES "multicore")
+	message("Parallel      : OpenMP/PThreads")
+	SET(EXE_SUFFIX "-multicore")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_USE_PTHREADS -pthread")
+  	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 else()
 	message("Parallel      : None")
 	SET(EXE_SUFFIX "")
@@ -99,18 +101,16 @@ include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
 add_definitions(-DIQ_TREE)
 
-set(COMBINED_FLAGS "-msse3 -D__SSE3 -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
+if (IQTREE_FLAGS MATCHES "avx")
+	set(COMBINED_FLAGS "-D__AVX -mavx")
+else()
+	set(COMBINED_FLAGS "-msse3 -D__SSE3")
+endif()
+
+
+set(COMBINED_FLAGS "${COMBINED_FLAGS} -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
 set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
-
-if (CMAKE_BUILD_TYPE MATCHES "avx")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__AVX -mavx")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__AVX -mavx")
-else()
-  ### TO TUNG: please do not put "-fomit-frame-pointer -funroll-loops" here! It messed up my debugging a lot
-  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3  -D__SSE3")
-  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -D__SSE3")  
-endif()
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
@@ -123,20 +123,6 @@ set(CMAKE_C_FLAGS_MEM "-g -O1")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
-
-if (CMAKE_BUILD_TYPE STREQUAL "parallel_sse3" OR CMAKE_BUILD_TYPE STREQUAL "parallel_avx" )
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_RELEASE} -D_USE_PTHREADS -pthread")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE} -pthread")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-endif()
-
-if (CMAKE_BUILD_TYPE STREQUAL "parallel_sse3_debug" OR CMAKE_BUILD_TYPE STREQUAL "parallel_avx_debug" )
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_DEBUG} -D_USE_PTHREADS -pthread")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG} -D_USE_PTHREADS -pthread")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-endif()    
-
-
 
 # subdirectories containing necessary libraries for the build 
 add_subdirectory(pll)
