@@ -1126,8 +1126,8 @@ double IQTree::perturb(int times) {
 extern "C" pllUFBootData * pllUFBootDataPtr;
 
 double IQTree::doTreeSearch() {
-    time_t begin_time, cur_time;
-    time(&begin_time);
+    double begin_real_time, cur_real_time;
+    begin_real_time = getRealTime();
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
     //printResultTree(params);
@@ -1323,28 +1323,22 @@ double IQTree::doTreeSearch() {
             ((PhyloSuperTree*) this)->computeBranchLengths();
         }
 
-        time(&cur_time);
-        double cputime_secs = getCPUTime() - params->startTime;
-        double cputime_remaining;
+        cur_real_time = getRealTime();
+        double realtime_secs = cur_real_time - begin_real_time;
+        double realtime_remaining;
         if (params->maxtime < 1000000) {
-            cputime_remaining = params->maxtime * 60 - cputime_secs;
+            realtime_remaining = params->maxtime * 60 - realtime_secs;
         } else {
-        	//if (params->autostop)
-            //    cputime_remaining = (params->stopCond - searchinfo.curFailedIterNum) * cputime_secs / (curIteration - 1);
-        	//else
-        		cputime_remaining = (stop_rule.getNumIterations() - curIteration) * cputime_secs / (curIteration - 1);
+        	realtime_remaining = (stop_rule.getNumIterations() - curIteration) * realtime_secs / (curIteration - 1);
         }
         cout.setf(ios::fixed, ios::floatfield);
 
         cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIteration
                 << " / LogL: " << perturbScore << " -> " << curScore << " / NNIs: " << nni_count
-                << "," << nni_steps << " / Time: " << (int) round(cputime_secs) << "s";
+                << "," << nni_steps << " / Time: " << convert_time(realtime_secs);
 
-        if (curIteration > 10 && cputime_secs > 10) {
-            //if (!params->autostop)
-        	{
-                cout << " (" << (int) round(cputime_remaining) << "s left)";
-            }
+        if (curIteration > 10 && realtime_secs > 10) {
+			cout << " (" << convert_time(realtime_remaining) << " left)";
         }
 
         cout << endl;
