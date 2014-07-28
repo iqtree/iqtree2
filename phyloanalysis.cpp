@@ -1788,8 +1788,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
 	if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();
-	cout << "Logl of best " << params.popSize << " trees found: " << endl;
-	iqtree.candidateTrees.printBestScores();
+	if (params.snni) {
+		cout << "Logl of best " << params.popSize << " trees found: " << endl;
+		iqtree.candidateTrees.printBestScores();
+	}
 
 	if (params.min_iterations) {
 	    if (params.pllModOpt) {
