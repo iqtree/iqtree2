@@ -1140,8 +1140,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
         /* Validate the partitions */
         if (!pllPartitionsValidate(partitionInfo, iqtree.pllAlignment)) {
-            fprintf(stderr, "Error: Partitions do not cover all sites\n");
-            exit(EXIT_FAILURE);
+            outError("pllPartitionsValidate");
         }
 
         /* Commit the partitions and build a partitions structure */
