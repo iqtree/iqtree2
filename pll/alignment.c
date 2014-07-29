@@ -226,7 +226,7 @@ pllAlignmentDataDumpFile (pllAlignmentData * alignmentData, int fileFormat, cons
 
   outFormat = (fileFormat == PLL_FORMAT_PHYLIP) ? phylip : fasta;
 
-  fp = fopen (filename,"w");
+  fp = fopen (filename,"wb");
   if (!fp) return (PLL_FALSE);
   
   /* if PHYLIP print the stupid header at the beginning */

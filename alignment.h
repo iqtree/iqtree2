@@ -29,10 +29,11 @@ enum SeqType {
 
 #ifdef USE_HASH_MAP
 typedef unordered_map<string, int> StringIntMap;
+typedef unordered_map<string, double> StringDoubleHashMap;
 typedef unordered_map<string, int> PatternIntMap;
 //typedef map<string, int> PatternIntMap;
 #else
-typedef map<string, int> StringIntMap;
+typedef map<string, double> StringDoubleHashMap;
 typedef map<string, int> PatternIntMap;
 #endif
 
@@ -282,6 +283,7 @@ public:
             extract sub-alignment of a sub-set of sequences
             @param aln original input alignment
             @param seq_id ID of sequences to extract from
+            @param min_true_cher the minimum number of non-gap characters, true_char<min_true_char -> delete the sequence
      */
     void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
 

@@ -114,7 +114,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
 		else model_str = "JC";
-		outWarning("The default model may be under-fitting. You can use option '-m TEST' to let IQ-TREE select the best-fit model.");
+		outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
 	string::size_type posfreq;
 	StateFreqType freq_type = params.freq_type;
@@ -459,6 +459,13 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	}
 	if (verbose_mode >= VB_MED || write_info) 
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
+
+	// For UpperBounds -----------
+	//cout<<"MLCheck = "<<tree->mlCheck <<endl;
+	if(tree->mlCheck == 0)
+		tree->mlInitial = cur_lh;
+	// ---------------------------
+
 	int i;
 	//bool optimize_rate = true;
 	double param_epsilon = logl_epsilon; // epsilon for parameters starts at epsilon for logl
@@ -501,6 +508,12 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	}
 	if (verbose_mode >= VB_MED || write_info)
 		cout << "Optimal log-likelihood: " << cur_lh << endl;
+
+	// For UpperBounds -----------
+	if(tree->mlCheck == 0)
+		tree->mlFirstOpt = cur_lh;
+	// ---------------------------
+
 	if (verbose_mode <= VB_MIN && write_info) {
 		model->writeInfo(cout);
 		site_rate->writeInfo(cout);
@@ -511,6 +524,9 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	if (write_info)
 		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
 	startStoringTransMatrix();
+	// For UpperBounds -----------
+	tree->mlCheck = 1;
+	// ---------------------------
 	return cur_lh;
 }
 

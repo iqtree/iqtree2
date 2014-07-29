@@ -30,8 +30,9 @@ struct PartitionInfo {
 	string sequence_type; // sequence type (DNA/AA/BIN)
 	string position_spec; // position specification, e.g., "1-100\1 1-100\2"
 
-	double cur_score; // current log-likelihood
-	double part_rate; // partition heterogeneity rate
+	double cur_score;	// current log-likelihood
+	double part_rate;	// partition heterogeneity rate
+	int    evalNNIs;	// number of evaluated NNIs on subtree
 
 	//DoubleVector null_score; // log-likelihood of each branch collapsed to zero
 	//DoubleVector opt_score;  // optimized log-likelihood for every branch

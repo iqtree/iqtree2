@@ -2749,7 +2749,7 @@ void modOpt(pllInstance *tr, partitionList *pr, double likelihoodEpsilon)
 
     if(tr->likelihood < currentLikelihood)
       printf("%f %f\n", tr->likelihood, currentLikelihood);
-    assert(tr->likelihood >= currentLikelihood);
+    //assert(tr->likelihood >= currentLikelihood);
 
     printAAmatrix(pr, fabs(currentLikelihood - tr->likelihood));
   }

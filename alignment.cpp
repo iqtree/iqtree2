@@ -213,7 +213,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     genetic_code = NULL;
     non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
-    cout << "Reading alignment file " << filename << " ..." << endl;
+    cout << "Reading alignment file " << filename << " ... ";
     intype = detectInputFile(filename);
 
     try {
@@ -241,9 +241,9 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     if (getNSeq() < 3)
         outError("Alignment must have at least 3 sequences");
 
-    checkSeqName();
     cout << "Alignment has " << getNSeq() << " sequences with " << getNSite() <<
          " columns and " << getNPattern() << " patterns"<< endl;
+    checkSeqName();
 	checkIdenticalSeq();
     //cout << "Number of character states is " << num_states << endl;
     //cout << "Number of patterns = " << size() << endl;
@@ -1175,7 +1175,7 @@ void Alignment::printPhylip(const char *file_name, bool append, const char *aln_
             out << endl;
         }
         out.close();
-        if (verbose_mode >= VB_MIN)
+        if (verbose_mode >= VB_MED)
         	cout << "Alignment was printed to " << file_name << endl;
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, file_name);

@@ -68,7 +68,7 @@ public:
     /** index of tree topologies in set
      *
      */
-    StringIntMap topologies;
+    StringDoubleHashMap topologies;
 
     /**
      * pointer to alignment, just to assign correct IDs for taxa
