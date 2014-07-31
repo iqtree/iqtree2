@@ -87,6 +87,11 @@ void StopRule::addImprovedIteration(int iteration) {
 		<< (predicted_iteration - iteration) << " more iterations)" << endl;
 }
 
+int StopRule::getLastImprovedIteration() {
+	if (timeVec_.empty())
+		return 0;
+	return timeVec_[0];
+}
 
 void StopRule::cmpInvMat (DoubleMatrix &oriMat, DoubleMatrix &invMat, int size) {
 	//invMat.setLimit (size, size);

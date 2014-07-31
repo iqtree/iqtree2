@@ -71,6 +71,12 @@ public:
 	void addImprovedIteration(int iteration);
 
 	/**
+		Get the last iteration number that improved trees
+		@return the last iteration number that improved trees
+	*/
+	int getLastImprovedIteration();
+
+	/**
 		main function to check the stop condition
 		@param current_iteration current iteration number
 		@return TRUE if stop condition is met, FALSE otherwise

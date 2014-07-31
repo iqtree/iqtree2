@@ -157,7 +157,7 @@ const partitionLengths pLengths[PLL_MAX_MODEL] = {
 
 #if (defined(_USE_PTHREADS) || defined(_FINE_GRAIN_MPI))
 double *globalResult;
-boolean treeIsInitialized; 
+pllBoolean treeIsInitialized;
 #ifdef MEASURE_TIME_PARALLEL
 double masterTimePerPhase; 
 #endif

@@ -214,6 +214,10 @@ public:
      */
     void setAlignment(Alignment *alignment);
 
+    /** set the root by name */
+    void setRootNode(char *my_root);
+
+
     /**
             set the substitution model, important to compute the likelihood
             @param amodel associated substitution model
@@ -1095,6 +1099,23 @@ public:
      * Current score of the tree;
      */
     double curScore;
+
+    /**
+     * for UpperBounds: Initial tree log-likelihood
+     */
+    double mlInitial;
+
+    /**
+     * for UpperBounds: Log-likelihood after optimization of model parameters in the beginning of tree search
+     */
+    double mlFirstOpt;
+
+    /*
+     * for UpperBounds: mlCheck = 1, if previous two values were already saved.
+     * Needed, because parameter optimization is done twice before and after tree search
+     */
+
+    int mlCheck;
 
     /*
      * 		Store the all the parameters for the program

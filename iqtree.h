@@ -31,6 +31,7 @@
 
 #include "pll/pll.h"
 #include "nnisearch.h"
+#include "candidateset.h"
 
 
 typedef std::map< string, double > BranLenMap;
@@ -134,8 +135,6 @@ public:
      */
     void printIntermediateTree(int brtype);
 
-    void setRootNode(char *my_root);
-
     /**
             set k-representative parameter
             @param k_rep k-representative
@@ -195,16 +194,6 @@ public:
     void doRandomNNIs(int numNNI);
 
     /**
-     *  If the tree in question has higher logl than the worst tree in the reference set,
-     *  replace the worst tree with that one
-     *
-     *  @param treeString the tree to be considered
-     *  @param treeLolg log-likelihood of the tree
-     *  @return whether or not the reference set was updated
-     */
-    bool updateRefTreeSet(string treeString, double treeLogl);
-
-    /**
      *   get model parameters from IQTree and input them into PLL
      */
     void inputModelParam2PLL();
@@ -224,17 +213,7 @@ public:
     /**
      *  print model parameters from PLL
      */
-    void printPLLModParams();
-
-    /**
-     *  print logl of trees in population (for debugging purpose only)
-     */
-    void printLoglInTreePop();
-
-    /**
-     *  print reference tree strings to file
-     */
-    void printRefTrees();
+    void pllPrintModelParams();
 
     /**
      * input the tree string from IQTree kernel to PLL kernel
@@ -352,14 +331,6 @@ public:
     void changeBranLen(PhyloNode *node1, PhyloNode *node2, double branLen);
 
     /**
-            Change all branch length according to the computed values during
-     * 		NNI evaluation. There might be branches that are not be affected
-     * 		since tree topology is changed after doing NNI
-     */
-    void changeAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
-
-
-    /**
      * Estimate the 95% quantile of the distribution of N (see paper for more d
                                                            details)
      * @return the estimated value
@@ -442,14 +413,6 @@ public:
 
     Linear* linRegModel;
 
-
-    inline void setStartLambda(double startLambda) {
-        this->startLambda = startLambda;
-    }
-
-    inline double getStartLambda() const {
-        return startLambda;
-    }
 
     inline double getNNICutoff() {
         return nni_cutoff;
@@ -557,16 +520,6 @@ protected:
     IQP_ASSESS_QUARTET iqp_assess_quartet;
 
     /**
-       The lambda number for NNI search (described in PhyML Paper)
-     */
-    double startLambda;
-
-    /**
-     * current lambda value in use
-     */
-    double curLambda;
-
-    /**
      * Array that stores the frequency that each taxa has been choosen to be swapped
      */
     map<int, int> freqList;
@@ -660,24 +613,20 @@ public:
      *  A set of reference trees which are for the evolutionary tree search
      *  This set only contains tree topologies (without branch length)
      */
-    unordered_map<string, double> refTreeSet;
+    //unordered_map<string, double> refTreeSet;
 
     /**
      *  A set of reference trees which are sorted according to their logl
      *  This set contains complete tree strings (with branch length)
      */
-    map<double, string> refTreeSetSorted;
+    //map<double, string> refTreeSetSorted;
+
+    CandidateSet candidateTrees;
 
     /**
-     *  Set of unique initial parsimony trees
+     *  Set of unique initial parsimony trees (OBSOLETE by introducing candidateTrees)
      */
-    set<string> uniqParsTopo;
-
-    /**
-     *  A set of unique starting parsimony trees (with branch lengths) that a sorted
-     *  according to its likelihood.
-     */
-    map<double, string> uniqParsTree;
+    //set<string> uniqParsTopo;
 
 
     /****** following variables are for ultra-fast bootstrap *******/

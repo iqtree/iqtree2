@@ -395,24 +395,42 @@ struct Params {
 	int numParsTrees;
 
 	/**
+	 *  Number of NNI trees generated from the set of parsimony trees
+	 *  Default = 20 (out of 100 parsimony trees)
+	 */
+	int numNNITrees;
+
+	/**
 	 *  Population size
 	 */
 	int popSize;
+
+	/**
+	 *  maximum number of trees stored in the candidate set
+	 */
+	int limitPopSize;
 
 	/**
 	 *  heuristics for speeding up NNI evaluation
 	 */
 	bool speednni;
 
+	bool adaptPert;
+
 	/**
 	 *  portion of NNI used for perturbing the tree
 	 */
-	double pertubSize;
+	double initPerStrength;
 
 	/**
-	 *  logl epsilon for the initial model parameter optimization
+	 *  logl epsilon for the final model parameter optimization
 	 */
-	double model_eps;
+	double modeps;
+
+    /**
+     *  logl epsilon for the intermediate model parameter optimization steps
+     */
+    double imd_modeps;
 
 	/**
 	 *  Carry out iterated local search using NNI only.
@@ -507,7 +525,7 @@ struct Params {
      *  Number of maximum unsuccessful iterations after the search is stopped.
      *  Used for the automatic stopping rule
      */
-    int maxUnsuccess;
+    int stopCond;
 
     char *binary_aln_file;
 
@@ -1063,6 +1081,11 @@ struct Params {
     IQP_ASSESS_QUARTET iqp_assess_quartet;
 
     /**
+     *      Using IQP algorithm to do tree perturbation
+     */
+    bool iqp;
+
+    /**
             the LP file is in gurobi format or not
      */
     bool gurobi_format;
@@ -1299,6 +1322,12 @@ struct Params {
 	bool eco_weighted;
 
     /**********************************************/
+    /****** variables for upper bound tests *******/
+	bool upper_bound;
+
+
+
+    /**********************************************/
     /**** variables for ultra-fast bootstrap ******/
 
     /**
@@ -1441,6 +1470,9 @@ struct Params {
 
 	/** TRUE to print concatenated alignment, default: false */
 	bool print_conaln;
+
+	/** true to count all distinct trees visited during tree search */
+	bool count_trees;
 };
 
 /**

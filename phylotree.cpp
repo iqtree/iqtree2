@@ -49,8 +49,7 @@ void SPRMoves::add(PhyloNode *prune_node, PhyloNode *prune_dad, PhyloNode *regra
  PhyloTree class
  ****************************************************************************/
 
-PhyloTree::PhyloTree() :
-        MTree() {
+PhyloTree::PhyloTree() : MTree() {
     init();
 }
 
@@ -78,12 +77,12 @@ void PhyloTree::init() {
     theta_all = NULL;
     subTreeDistComputed = false;
     dist_matrix = NULL;
-    sse = true; // FOR TUNG: you forgot to initialize this variable!
+    sse = true;  // FOR TUNG: you forgot to initialize this variable!
     save_all_trees = 0;
+    mlCheck = 0; // FOR: upper bounds
 }
 
-PhyloTree::PhyloTree(Alignment *aln) :
-        MTree() {
+PhyloTree::PhyloTree(Alignment *aln) : MTree() {
     init();
     this->aln = aln;
 }
@@ -197,6 +196,16 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     }
 }
 
+void PhyloTree::setRootNode(char *my_root) {
+    string root_name;
+    if (my_root)
+        root_name = my_root;
+    else
+        root_name = aln->getSeqName(0);
+    root = findNodeName(root_name);
+    assert(root);
+}
+
 void PhyloTree::readTreeString(const string &tree_string) {
 	stringstream str;
 	str << tree_string;
@@ -206,6 +215,8 @@ void PhyloTree::readTreeString(const string &tree_string) {
 	setAlignment(aln);
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
+    } else {
+    	clearAllPartialLH();
     }
 }
 
@@ -217,6 +228,8 @@ string PhyloTree::getTreeString() {
 
 string PhyloTree::getTopology() {
     stringstream tree_stream;
+    // important: to make topology string unique
+    setRootNode(params->root);
     printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
     return tree_stream.str();
 }
@@ -2088,6 +2101,8 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                         for (int state2 = 0; state2 < nstates; state2++)
                         lh_child += trans_state[state2] * partial_lh_child[state2];
 
+                        if (!isfinite(lh_child))
+                        	outError("Numerical error with ", __func__);
                         partial_lh_site[state] *= lh_child;
                     }
                 }
@@ -2813,6 +2828,8 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
         // first compute the observed parsimony distance
         double branch_length = (branch_subst > 0) ? ((double) branch_subst / getAlnNSite()) : (1.0 / getAlnNSite());
+        if (branch_length < MIN_BRANCH_LEN)
+        	branch_length = MIN_BRANCH_LEN;
         // now correct Juke-Cantor formula
         double z = (double) aln->num_states / (aln->num_states - 1);
         double x = 1.0 - (z * branch_length);
@@ -2859,7 +2876,7 @@ int PhyloTree::fixNegativeBranch2(bool force, Node *node, Node *dad) {
                 *it)->length = 1e-6;
         (*it)->node->findNeighbor(node)->length = (*it)->length;
     }
-    fixed += fixNegativeBranch(force, (*it)->node, node);
+    fixed += fixNegativeBranch2(force, (*it)->node, node);
 }
     return fixed;
 }
