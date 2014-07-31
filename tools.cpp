@@ -774,6 +774,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_partition_info = false;
 	params.print_conaln = false;
 	params.count_trees = false;
+	params.pomo_pop_size = 10;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1827,6 +1828,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.SSE = false;
             } else if (strcmp(argv[cnt], "-ct") == 0) {
             	params.count_trees = true;
+            } else if (strcmp(argv[cnt], "-ps") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -ps <PoMo_population_size>";
+                params.pomo_pop_size = convert_int(argv[cnt]);
             } else if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];

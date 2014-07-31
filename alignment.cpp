@@ -229,6 +229,8 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
             readPhylip(filename, sequence_type);
 	} else if (intype == IN_COUNTS) {
 	  cout << "Counts format (PoMo) detected" << endl;
+	  // TODO: set this to Params.pomo_pop_size
+	  virtual_pop_size = 10;
 	  readCountsFormat(filename);
         } else {
             outError("Unknown sequence format, please use PHYLIP, FASTA, or NEXUS format");
@@ -1072,7 +1074,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 int Alignment::readCountsFormat(char* filename) {
     int npop = 0;                // Number of populations.
     int nsites = 0;              // Number of sites.
-    int N = 10;                  // Virtual population size.
+    int N = virtual_pop_size;                  // Virtual population size.
     int nnuc = 4;                // Number of nucleotides (base states).
     ostringstream err_str;
     ifstream in;

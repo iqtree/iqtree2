@@ -1473,6 +1473,11 @@ struct Params {
 
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
+
+	/**
+	 * virtual population size for PoMo model
+	 */
+	int pomo_pop_size;
 };
 
 /**

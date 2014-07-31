@@ -526,7 +526,10 @@ public:
 	 */
 	char *genetic_code;
 
-
+	/**
+	 * virtual population size for PoMo model
+	 */
+	int virtual_pop_size;
 
     /** Added by MA
             Compute the probability of this alignment according to the multinomial distribution with parameters determined by the reference alignment
