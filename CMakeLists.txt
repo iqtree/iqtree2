@@ -67,9 +67,9 @@ else()
 endif()
 
 # change the executable name if compiled for OpenMP parallel version
-if (IQTREE_FLAGS MATCHES "multicore")
+if (IQTREE_FLAGS MATCHES "omp")
 	message("Parallel      : OpenMP/PThreads")
-	SET(EXE_SUFFIX "-multicore")
+	SET(EXE_SUFFIX "-omp")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_USE_PTHREADS -pthread")
   	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 else()
@@ -103,6 +103,8 @@ add_definitions(-DIQ_TREE)
 
 if (IQTREE_FLAGS MATCHES "avx")
 	set(COMBINED_FLAGS "-D__AVX -mavx")
+	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
+	
 else()
 	set(COMBINED_FLAGS "-msse3 -D__SSE3")
 endif()

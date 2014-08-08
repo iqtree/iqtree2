@@ -1,4 +1,4 @@
-if (IQTREE_FLAGS MATCHES "avx" AND IQTREE_FLAGS MATCHES "multicore")
+if (IQTREE_FLAGS MATCHES "avx" AND IQTREE_FLAGS MATCHES "omp")
   message("PLL Kernel    : AVX/Pthreads")
   add_library(pll 
   avxLikelihood.c
@@ -28,7 +28,7 @@ if (IQTREE_FLAGS MATCHES "avx" AND IQTREE_FLAGS MATCHES "multicore")
   trash.c
   treeIO.c
   utils.c)
-elseif (IQTREE_FLAGS MATCHES "multicore")
+elseif (IQTREE_FLAGS MATCHES "omp")
   message("PLL Kernel    : SSE3/Pthreads")  
   add_library(pll 
   alignment.c

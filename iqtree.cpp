@@ -1126,8 +1126,8 @@ double IQTree::perturb(int times) {
 extern "C" pllUFBootData * pllUFBootDataPtr;
 
 double IQTree::doTreeSearch() {
-    time_t begin_time, cur_time;
-    time(&begin_time);
+    double begin_real_time, cur_real_time;
+    begin_real_time = getRealTime();
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
     //printResultTree(params);
@@ -1164,9 +1164,7 @@ double IQTree::doTreeSearch() {
     printTree(bestTopoStream, WT_TAXON_ID + WT_SORT_TAXA);
     string best_tree_topo = bestTopoStream.str();
 
-    if (!params->autostop) {
-        stop_rule.addImprovedIteration(1);
-    }
+    stop_rule.addImprovedIteration(1);
     //searchinfo.curFailedIterNum = 0;
     searchinfo.curPerStrength = params->initPerStrength;
 	if (params->autostop && !params->gbo_replicates) {
@@ -1320,28 +1318,27 @@ double IQTree::doTreeSearch() {
             ((PhyloSuperTree*) this)->computeBranchLengths();
         }
 
-        time(&cur_time);
-        double cputime_secs = getCPUTime() - params->startTime;
-        double cputime_remaining;
+        cur_real_time = getRealTime();
+        double realtime_secs = cur_real_time - begin_real_time;
+        double realtime_remaining;
         if (params->maxtime < 1000000) {
-            cputime_remaining = params->maxtime * 60 - cputime_secs;
+            realtime_remaining = params->maxtime * 60 - realtime_secs;
         } else {
-        	//if (params->autostop)
-            //    cputime_remaining = (params->stopCond - searchinfo.curFailedIterNum) * cputime_secs / (curIteration - 1);
-        	//else
-        		cputime_remaining = (stop_rule.getNumIterations() - curIteration) * cputime_secs / (curIteration - 1);
+        	realtime_remaining = (stop_rule.getNumIterations() - curIteration) * realtime_secs / (curIteration - 1);
         }
         cout.setf(ios::fixed, ios::floatfield);
 
         cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIteration
-                << " / LogL: " << perturbScore << " -> " << curScore << " / NNIs: " << nni_count
-                << "," << nni_steps << " / Time: " << (int) round(cputime_secs) << "s";
+                << " / LogL: ";
+        if (verbose_mode >= VB_MED)
+        	cout << perturbScore << " -> ";
+        cout << curScore;
+        if (verbose_mode >= VB_MED)
+        	cout << " / NNIs: " << nni_count << "," << nni_steps;
+        cout << " / Time: " << convert_time(cur_real_time - params->start_real_time);
 
-        if (curIteration > 10 && cputime_secs > 10) {
-            //if (!params->autostop)
-        	{
-                cout << " (" << (int) round(cputime_remaining) << "s left)";
-            }
+        if (curIteration > 10 && realtime_secs > 10) {
+			cout << " (" << convert_time(realtime_remaining) << " left)";
         }
 
         cout << endl;
@@ -1416,9 +1413,7 @@ double IQTree::doTreeSearch() {
                     /****************************************** END: Optimizing model parameters ***************************************/
                     }
 
-                if (!params->autostop) {
-                    stop_rule.addImprovedIteration(curIteration);
-                }
+                stop_rule.addImprovedIteration(curIteration);
                 cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl << endl;
                 if (curScore > bestScore) {
@@ -1496,12 +1491,20 @@ double IQTree::doTreeSearch() {
 
     // DTH: Carefully watch the -pll case here
     if (!params->autostop) {
-        int predicted_iteration = stop_rule.getPredictedIteration();
-        if (predicted_iteration > curIteration) {
-            cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure that with a "
-                    << floor(params->stop_confidence * 100) << "% confidence" << endl
-                    << "         the IQPNNI search will not find a better tree" << endl;
-        }
+    	if (params->snni) {
+			int predicted_iteration = stop_rule.getLastImprovedIteration() + params->stopCond;
+			if (predicted_iteration > curIteration) {
+				cout << endl << "WARNING: " << predicted_iteration <<
+					" iterations are needed by the default stopping rule" << endl;
+			}
+    	} else {
+			int predicted_iteration = stop_rule.getPredictedIteration();
+			if (predicted_iteration > curIteration) {
+				cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure "
+						<< int(floor(params->stop_confidence * 100)) << "% confidence that "
+						<< "         the IQPNNI search will not find a better tree" << endl;
+			}
+    	}
     }
 
     if (testNNI)

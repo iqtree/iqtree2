@@ -1072,8 +1072,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.pllAttr.saveMemory = PLL_FALSE;
         iqtree.pllAttr.useRecom = PLL_FALSE;
         iqtree.pllAttr.randomNumberSeed = params.ran_seed;
-        iqtree.pllAttr.numberOfThreads = 2; /* This only affects the pthreads version */
-
+#ifdef _OPENMP
+        iqtree.pllAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
+#else
+        iqtree.pllAttr.numberOfThreads = 1;
+#endif
         if (iqtree.pllInst != NULL) {
             pllDestroyInstance(iqtree.pllInst);
         }
@@ -1137,8 +1140,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
         /* Validate the partitions */
         if (!pllPartitionsValidate(partitionInfo, iqtree.pllAlignment)) {
-            fprintf(stderr, "Error: Partitions do not cover all sites\n");
-            exit(EXIT_FAILURE);
+            outError("pllPartitionsValidate");
         }
 
         /* Commit the partitions and build a partitions structure */
@@ -1785,8 +1787,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
 	if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();
-	cout << "Logl of best " << params.popSize << " trees found: " << endl;
-	iqtree.candidateTrees.printBestScores();
+	if (params.snni) {
+		cout << "Logl of best " << params.popSize << " trees found: " << endl;
+		iqtree.candidateTrees.printBestScores();
+	}
 
 	if (params.min_iterations) {
 	    if (params.pllModOpt) {
@@ -1954,7 +1958,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	cout << "CPU time used for tree search: " << treeSearchTime
 			<< " sec (" << convert_time(treeSearchTime) << ")" << endl;
 	cout << "Wall-clock time used for tree search: " << clocktime_search
-			<< " sec (" << convert_time(treeSearchTime) << ")" << endl;
+			<< " sec (" << convert_time(clocktime_search) << ")" << endl;
 	cout << "Total CPU time used: " << (double) params.run_time << " sec ("
 			<< convert_time((double) params.run_time) << ")" << endl;
 	cout << "Total wall-clock time used: "
