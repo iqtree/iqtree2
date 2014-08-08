@@ -27,7 +27,7 @@ string CandidateSet::getBestTree() {
 	return (rbegin())->second.tree;
 }
 
-string CandidateSet::getCandidateTree() {
+string CandidateSet::getRandCandTree() {
 	if (empty())
 		return "";
 	// BQM: bug fix max -> min
@@ -37,6 +37,28 @@ string CandidateSet::getCandidateTree() {
 			return i->second.tree;
 	return "";
 }
+
+string CandidateSet::getNextCandTree() {
+    string tree;
+    assert(!empty());
+    if (parentTrees.empty()) {
+        initParentTrees();
+    }
+    tree = parentTrees.top();
+    parentTrees.pop();
+    return tree;
+}
+
+void CandidateSet::initParentTrees() {
+    if (parentTrees.empty()) {
+        int count = this->max_candidates;
+        for (reverse_iterator i = rbegin(); i != rend() && count >0 ; i++, count--) {
+            parentTrees.push(i->second.tree);
+            //cout << i->first << endl;
+        }
+    }
+}
+
 
 bool CandidateSet::update(string tree, double score) {
 	CandidateTree candidate;

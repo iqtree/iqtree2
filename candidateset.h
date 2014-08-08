@@ -9,6 +9,7 @@
 #define CANDIDATESET_H_
 #include "tools.h"
 #include "alignment.h"
+#include <stack>
 
 struct CandidateTree {
 	string tree; // with branch length
@@ -38,7 +39,20 @@ public:
     /**
      * return randomly one candidate tree from max_candidate
      */
-    string getCandidateTree();
+    string getRandCandTree();
+
+    /**
+     * return the next parent tree for reproduction.
+     * Here we always maintain a list of candidate trees which have not
+     * been used for reproduction. If all candidate trees have been used, we select the
+     * current best trees as the new parent trees
+     */
+    string getNextCandTree();
+
+    /**
+     *  create the parent tree set containing top trees
+     */
+    void initParentTrees();
 
     /**
      * update / insert tree into set of score is higher than lowest-scoring tree
@@ -69,6 +83,11 @@ public:
      *
      */
     StringDoubleHashMap topologies;
+
+    /**
+     *  Trees used for reproduction
+     */
+    stack<string> parentTrees;
 
     /**
      * pointer to alignment, just to assign correct IDs for taxa

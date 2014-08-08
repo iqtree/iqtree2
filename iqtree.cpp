@@ -1242,10 +1242,7 @@ double IQTree::doTreeSearch() {
         } else {
             if (params->snni) {
                 int numNNI = floor(searchinfo.curPerStrength * (aln->getNSeq() - 3));
-                if (verbose_mode >= VB_MED) {
-                	//cout << "numNNI=" << numNNI << ", searchinfo.curPerStrength=" << searchinfo.curPerStrength << endl;
-                }
-                string candidateTree = candidateTrees.getCandidateTree();
+                string candidateTree = candidateTrees.getRandCandTree();
                 readTreeString(candidateTree);
                 if (params->iqp) {
                     doIQP();

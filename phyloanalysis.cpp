@@ -2007,6 +2007,19 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 }
 
 void runPhyloAnalysis(Params &params) {
+//    map<int, int> numCount;
+//    for (int i=0; i < 2000; i++) {
+//        int intNum = random_int(200);
+//        if (numCount.count(intNum) == 0) {
+//            numCount[intNum] = 0;
+//        } else {
+//            numCount[intNum] = numCount[intNum]+1;
+//        }
+//    }
+//    for (map<int, int>::iterator it = numCount.begin(); it != numCount.end(); it++) {
+//        cout << it->first << ": " << it->second << endl;
+//    }
+//    exit(0);
 	Alignment *alignment;
 	IQTree *tree;
 	vector<ModelInfo> model_info;
