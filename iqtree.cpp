@@ -1583,9 +1583,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         applyNNIs(nni2apply);
 
         double _curScore;
-        if (verbose_mode >= VB_DEBUG) {
-            _curScore = computeLikelihood();
-        }
 
         // Re-estimate branch lengths of the new tree
         curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
@@ -1605,27 +1602,21 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         } else {
             /* tree cannot be worse if only 1 NNI is applied */
             if (nni2apply == 1) {
-            	if (curScore < vec_nonconf_nni.at(0).newloglh) {
-            		cout << "ERROR / POSSIBLE BUG: logl=" << curScore << " < " << vec_nonconf_nni.at(0).newloglh
-            		        << "(best NNI)" << endl;
-            		cout << "logl without optimization = " << _curScore << endl;
-            		exit(1);
-            	}
-                // restore the tree by reverting all NNIs
-                applyNNIs(nni2apply, false);
-                // restore the branch lengths
-                restoreAllBranLen();
-                curScore = oldScore;
-                break;
+                cout << "ERROR / POSSIBLE BUG: logl=" << curScore << " < " << vec_nonconf_nni.at(0).newloglh
+                        << "(best NNI)" << endl;
+                cout << "logl without optimization = " << _curScore << endl;
+                exit(1);
             }
-            cout << "New score = " << curScore << " after applying " << nni2apply <<
-                    " is worse than score = " << vec_nonconf_nni.at(0).newloglh
-                    << " of the best NNI. Roll back tree ..." << endl;
+            if (verbose_mode >= VB_MED) {
+                cout << "New score = " << curScore << " after applying " << nni2apply <<
+                        " is worse than score = " << vec_nonconf_nni.at(0).newloglh
+                        << " of the best NNI. Roll back tree ..." << endl;
+            }
+
             // restore the tree by reverting all NNIs
-            applyNNIs(nni2apply, false);
+            applyNNIs(nni2apply, true);
             // restore the branch lengths
             restoreAllBranLen();
-            clearAllPartialLH();
             rollBack = true;
             // only apply the best NNI
             nni2apply = 1;
