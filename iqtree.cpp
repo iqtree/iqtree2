@@ -1582,10 +1582,23 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         // Apply all non-conflicting positive NNIs
         applyNNIs(nni2apply);
 
-        double _curScore;
+//        double _curScore;
+//        if (nni2apply == 1) {
+//            clearAllPartialLH();
+//            if (rollBack) {
+//                cout << "Rollbacked" << endl;
+//            }
+//            _curScore = computeLikelihood();
+//            cout << "_curScore: " << _curScore << endl;
+//            cout << "best NNI score: " << vec_nonconf_nni.at(0).newloglh << endl;
+//        }
 
         // Re-estimate branch lengths of the new tree
         curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
+
+//        if (nni2apply == 1) {
+//            cout << "curScore: " << curScore << endl;
+//        }
 
 		if (verbose_mode >= VB_DEBUG) {
 			cout << "logl: " << curScore << " / NNIs: " << nni2apply << endl;
@@ -1604,7 +1617,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             if (nni2apply == 1) {
                 cout << "ERROR / POSSIBLE BUG: logl=" << curScore << " < " << vec_nonconf_nni.at(0).newloglh
                         << "(best NNI)" << endl;
-                cout << "logl without optimization = " << _curScore << endl;
                 exit(1);
             }
             if (verbose_mode >= VB_MED) {
@@ -1614,9 +1626,12 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             }
 
             // restore the tree by reverting all NNIs
-            applyNNIs(nni2apply, true);
+            applyNNIs(nni2apply, false);
             // restore the branch lengths
             restoreAllBranLen();
+            // This is important because after restoring the branch lengths, all partial
+            // likelihood need to be cleared.
+            clearAllPartialLH();
             rollBack = true;
             // only apply the best NNI
             nni2apply = 1;
