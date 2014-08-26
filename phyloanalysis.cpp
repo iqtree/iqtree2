@@ -1275,6 +1275,14 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     iqtree.setModel(iqtree.getModelFactory()->model);
     iqtree.setRate(iqtree.getModelFactory()->site_rate);
 
+    // UpperBounds analysis. Here, to analyse the initial tree without any tree search or optimization
+	if (params.upper_bound) {
+			iqtree.curScore = iqtree.computeLikelihood();
+			cout<<iqtree.curScore<<endl;
+			UpperBounds(&params, iqtree.aln, &iqtree);
+			exit(0);
+	}
+
     if (params.pll) {
         if (iqtree.getRate()->getNDiscreteRate() == 1) {
         	outError("PLL only works with Gamma model.");
@@ -1329,6 +1337,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         cout << "Optimize model parameters " << (params.optimize_model_rate_joint ? "jointly" : "")
                 << " (log-likelihood tolerance " << params.model_eps << ")... " << endl;
 
+        iqtree.printTree(cout);
         // Optimize model parameters and branch lengths using ML for the initial tree
         iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true,
                 params.model_eps);
@@ -2231,6 +2240,11 @@ void runPhyloAnalysis(Params &params) {
 					<< ".contree" << endl;
 		cout << endl;
 	}
+
+	if (params.upper_bound) {
+			UpperBounds(&params, alignment, tree);
+	}
+
 
 	delete tree;
 	delete alignment;

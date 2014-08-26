@@ -462,8 +462,9 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 
 	// For UpperBounds -----------
 	//cout<<"MLCheck = "<<tree->mlCheck <<endl;
-	if(tree->mlCheck == 0)
+	if(tree->mlCheck == 0){
 		tree->mlInitial = cur_lh;
+	}
 	// ---------------------------
 
 	int i;
@@ -524,9 +525,11 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	if (write_info)
 		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
 	startStoringTransMatrix();
+
 	// For UpperBounds -----------
 	tree->mlCheck = 1;
 	// ---------------------------
+
 	return cur_lh;
 }
 
