@@ -1545,72 +1545,73 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                 // Better tree is found
                 if (iqtree.curScore > iqtree.bestScore) {
                     // Re-optimize model parameters (the sNNI algorithm)
-                    if (params.snni) {
-                        // Optimize model parameters using PLL
-                        if (params.pllModOpt) {
-                            cout << "Optimizing model parameters by PLL ... ";
-                            double stime = getCPUTime();
-                            // Re-calculate all partial likelihood vectors to make sure everything is ok
-                            pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_FALSE, PLL_FALSE);
-                            pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, params.imd_modeps);
-                            iqtree.curScore = iqtree.pllInst->likelihood;
-                            double etime = getCPUTime();
-                            cout << etime - stime << " seconds" << endl;
-                            pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
-                                    iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
-                                    PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-                            nniTree = string(iqtree.pllInst->tree_string);
-                        } else {
-                            // Optimize model parameters using IQ-TREE
-                            if (params.pll) {
-                                iqtree.readTreeString(nniTree);
-                                iqtree.initializeAllPartialLh();
-                                iqtree.clearAllPartialLH();
-                            }
-                            // Back up model parameters in case something goes wrong
-                            double *rate_param_bk = NULL;
-                            if (iqtree.aln->num_states == 4) {
-                                rate_param_bk = new double[6];
-                                iqtree.getModel()->getRateMatrix(rate_param_bk);
-                            }
-                            double alpha_bk = iqtree.getRate()->getGammaShape();
-                            //cout.precision(6);
-                            //cout << endl;
-                            cout << "Optimizing model parameters (epsilon = " << params.imd_modeps << ")" << endl;
-                            // Now re-estimate the model parameters
-                            double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.imd_modeps);
-                    		/* FOR PARTITION MODEL */
-                    		if (iqtree.isSuperTree())
-                    			((PhyloSuperTree*) &iqtree)->computeBranchLengths();
-
-                            if (modOptScore < iqtree.curScore - 1e-3) {
-                                cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
-                                cout << "  Old logl: " << iqtree.curScore << " / " << "new logl: " << modOptScore << endl;
-                                iqtree.readTreeString(nniTree);
-                                iqtree.initializeAllPartialLh();
-                                iqtree.clearAllPartialLH();
-                                if (iqtree.aln->num_states == 4) {
-                                    assert(rate_param_bk != NULL);
-                                    ((GTRModel*) iqtree.getModel())->setRateMatrix(rate_param_bk);
-                                }
-                                dynamic_cast<RateGamma*>(iqtree.getRate())->setGammaShape(alpha_bk);
-                                iqtree.getModel()->decomposeRateMatrix();
-                                cout << "Reset rate parameters!" << endl;
-                                // There is something wrong with this alignment, stop optimizing model parameters
-                            } else {
-                                iqtree.curScore = modOptScore;
-                                // update PLL with the new model parameters and new best tree
-                                nniTree = iqtree.getTreeString();
-                                if (params.pll) {
-                                    // update PLL with the new model parameters
-                                    iqtree.inputModelParam2PLL();
-                                }
-                            }
-                            if (params.pll) {
-                                iqtree.deleteAllPartialLh();
-                            }
-                        }
-                    }
+                    iqtree.optimizeModelParameters(nniTree);
+//                    if (params.snni) {
+//                        // Optimize model parameters using PLL
+//                        if (params.pllModOpt) {
+//                            cout << "Optimizing model parameters by PLL ... ";
+//                            double stime = getCPUTime();
+//                            // Re-calculate all partial likelihood vectors to make sure everything is ok
+//                            pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_FALSE, PLL_FALSE);
+//                            pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, params.imd_modeps);
+//                            iqtree.curScore = iqtree.pllInst->likelihood;
+//                            double etime = getCPUTime();
+//                            cout << etime - stime << " seconds" << endl;
+//                            pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
+//                                    iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
+//                                    PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+//                            nniTree = string(iqtree.pllInst->tree_string);
+//                        } else {
+//                            // Optimize model parameters using IQ-TREE
+//                            if (params.pll) {
+//                                iqtree.readTreeString(nniTree);
+//                                iqtree.initializeAllPartialLh();
+//                                iqtree.clearAllPartialLH();
+//                            }
+//                            // Back up model parameters in case something goes wrong
+//                            double *rate_param_bk = NULL;
+//                            if (iqtree.aln->num_states == 4) {
+//                                rate_param_bk = new double[6];
+//                                iqtree.getModel()->getRateMatrix(rate_param_bk);
+//                            }
+//                            double alpha_bk = iqtree.getRate()->getGammaShape();
+//                            //cout.precision(6);
+//                            //cout << endl;
+//                            cout << "Optimizing model parameters (epsilon = " << params.imd_modeps << ")" << endl;
+//                            // Now re-estimate the model parameters
+//                            double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.imd_modeps);
+//                    		/* FOR PARTITION MODEL */
+//                    		if (iqtree.isSuperTree())
+//                    			((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+//
+//                            if (modOptScore < iqtree.curScore - 1e-3) {
+//                                cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
+//                                cout << "  Old logl: " << iqtree.curScore << " / " << "new logl: " << modOptScore << endl;
+//                                iqtree.readTreeString(nniTree);
+//                                iqtree.initializeAllPartialLh();
+//                                iqtree.clearAllPartialLH();
+//                                if (iqtree.aln->num_states == 4) {
+//                                    assert(rate_param_bk != NULL);
+//                                    ((GTRModel*) iqtree.getModel())->setRateMatrix(rate_param_bk);
+//                                }
+//                                dynamic_cast<RateGamma*>(iqtree.getRate())->setGammaShape(alpha_bk);
+//                                iqtree.getModel()->decomposeRateMatrix();
+//                                cout << "Reset rate parameters!" << endl;
+//                                // There is something wrong with this alignment, stop optimizing model parameters
+//                            } else {
+//                                iqtree.curScore = modOptScore;
+//                                // update PLL with the new model parameters and new best tree
+//                                nniTree = iqtree.getTreeString();
+//                                if (params.pll) {
+//                                    // update PLL with the new model parameters
+//                                    iqtree.inputModelParam2PLL();
+//                                }
+//                            }
+//                            if (params.pll) {
+//                                iqtree.deleteAllPartialLh();
+//                            }
+//                        }
+//                    }
 
                     iqtree.setBestTree(nniTree, iqtree.curScore);
                     cout << "BETTER SCORE FOUND: " << iqtree.bestScore << endl;

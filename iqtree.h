@@ -593,6 +593,8 @@ protected:
 
 public:
 
+    void optimizeModelParameters(string& imd_tree);
+
     /**
      *  variable storing the current best tree topology
      */
@@ -703,7 +705,6 @@ protected:
 
     ofstream outNNI;
 protected:
-
 
     bool print_tree_lh;
 
