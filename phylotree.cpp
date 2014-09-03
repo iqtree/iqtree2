@@ -1382,11 +1382,6 @@ double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern
     delete[] pattern_lh_other;
 }
 
-double PhyloTree::estimateBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    double observedBran = computeObservedBranchLength(dad_branch, dad);
-    return correctBranchLengthF81(observedBran, site_rate->getGammaShape());
-}
-
 void PhyloTree::getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, PhyloNode* node, PhyloNode* dad) {
     if (!node) {
         node = (PhyloNode*) root;
@@ -1745,7 +1740,7 @@ void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* so
  }
  */
 
-double PhyloTree::computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+double PhyloTree::computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     double obsLen = 0.0;
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
@@ -1835,6 +1830,11 @@ double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
     }
 
     return correctedBranLen;
+}
+
+double PhyloTree::computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+    double observedBran = computeBayesianBranchLength(dad_branch, dad);
+    return correctBranchLengthF81(observedBran, site_rate->getGammaShape());
 }
 
 double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh,

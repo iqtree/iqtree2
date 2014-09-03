@@ -510,7 +510,7 @@ public:
      *	@param[in] dad must be an internal node
      *	@return estimated branch length or -1.0 if one of the 2 nodes is leaf
      */
-    double computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
      * \brief Approximate the branch legnth between \a dad_branch and \a dad using Least Square instead
@@ -538,7 +538,7 @@ public:
 
     double correctBranchLengthF81(double observedBran, double alpha = -1.0);
 
-    double estimateBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             Compute the variance in log-likelihood difference
