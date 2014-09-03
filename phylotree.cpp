@@ -1456,11 +1456,14 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
     string keyAB = nodePair2String(nodeA, nodeB);
     assert(subTreeDists.count(keyAB));
     double distAB = subTreeDists[keyAB];
-    if (params->ls_var_type == OLS) {
+    if (params->ls_var_type == OLS/* || params->ls_var_type == FIRST_TAYLOR || params->ls_var_type == FITCH_MARGOLIASH
+    		|| params->ls_var_type == SECOND_TAYLOR*/) {
         lsBranch = 0.5 * (distAC / A + distBC / B - distAB / (A * B));
     } else if (params->ls_var_type == PAUPLIN) {
+    	// Chua test bao gio
     	lsBranch = 0.5 * (distAC + distBC) - 0.5 * distAB;
     } else {
+    	outError("Unsupported LS option");
     	lsBranch = 0;
     }
 } else { // Both node are internal node

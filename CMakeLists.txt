@@ -102,13 +102,15 @@ include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 add_definitions(-DIQ_TREE)
 
 if (IQTREE_FLAGS MATCHES "avx")
-	set(COMBINED_FLAGS "-D__AVX -mavx")
+# moved this flag explicitly to PLL
+#	set(COMBINED_FLAGS "-D__AVX -mavx")
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
-	
 else()
-	set(COMBINED_FLAGS "-msse3 -D__SSE3")
+# moved this flag explicitly to PLL
+#	set(COMBINED_FLAGS "-msse3 -D__SSE3")
 endif()
 
+set(COMBINED_FLAGS "-msse3 -D__SSE3")
 
 set(COMBINED_FLAGS "${COMBINED_FLAGS} -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
@@ -222,7 +224,9 @@ set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
 # strip the release build
 if (CMAKE_BUILD_TYPE STREQUAL "Release") 
-	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
+# ${CMAKE_STRIP} does not work with clang
+#	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
+	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND strip $<TARGET_FILE:iqtree>)
 endif()
 
 ##############################################################
