@@ -1389,7 +1389,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     if ( (params.snni && !params.iqp) || params.min_iterations == 0) {
         params.compute_ml_dist = false;
     }
-    if (!params.dist_file && params.compute_ml_dist) {
+    if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
         computeMLDist(longest_dist, dist_file, getCPUTime(), iqtree, params, alignment, bestTreeScore);
     }
 
@@ -2022,6 +2022,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         	out.close();
         	cout << "LS Branch lengths written to " << filename << endl;
         }
+        cout << "Total LS tree length: " << iqtree.treeLength() << endl;
     }
 
 
