@@ -135,7 +135,7 @@ public:
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
      */
-    void printInfo(Node *node = NULL, Node *dad = NULL);
+    void printBranchLengths(ostream &out, Node *node = NULL, Node *dad = NULL);
 
     /**
             print the tree to the output file in newick format

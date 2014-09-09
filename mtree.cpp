@@ -154,12 +154,18 @@ Node* MTree::newNode(int node_id, int node_name) {
 }
 
 
-void MTree::printInfo(Node *node, Node *dad)
+void MTree::printBranchLengths(ostream &out, Node *node, Node *dad)
 {
-    if (node == NULL) node = root;
+    if (node == NULL) {
+    	node = root;
+    	sortTaxa();
+    }
     FOR_NEIGHBOR_IT(node, dad, it) {
-        cout << node->name << " " << (*it)->node->name << " " << (*it)->length << endl;
-        printInfo((*it)->node, node);
+        if (node->name != "") out << node->name; else out << node->id;
+        out << "\t";
+        if ((*it)->node->name != "") out << (*it)->node->name; else out << (*it)->node->id;
+        out << "\t" << (*it)->length << endl;
+        printBranchLengths(out, (*it)->node, node);
     }
 }
 

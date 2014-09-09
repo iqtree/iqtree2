@@ -1179,6 +1179,8 @@ struct Params {
      */
     bool print_tree_lh;
 
+    bool print_branch_lengths;
+
     /****** adaptive NNI search heuristic ******/
 
     /**

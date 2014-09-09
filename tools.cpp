@@ -774,6 +774,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_partition_info = false;
 	params.print_conaln = false;
 	params.count_trees = false;
+	params.print_branch_lengths = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1453,6 +1454,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.write_intermediate_trees = 3;
                 params.avoid_duplicated_trees = true;
                 params.print_tree_lh = true;
+            } else if (strcmp(argv[cnt], "-wbl") == 0) {
+            	params.print_branch_lengths = true;
             } else if (strcmp(argv[cnt], "-nodup") == 0) {
                 params.avoid_duplicated_trees = true;
             } else if (strcmp(argv[cnt], "-rf_all") == 0) {
