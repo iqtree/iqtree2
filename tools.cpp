@@ -648,6 +648,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.numSmoothTree = 1;
     params.nni5 = true;
     params.leastSquareBranch = false;
+    params.pars_branch_length = false;
+    params.bayes_branch_length = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
     params.limitPopSize = 100;
@@ -1737,6 +1739,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
+            } else if (strcmp(argv[cnt], "-parsbran") == 0) {
+                params.pars_branch_length = true;
+            } else if (strcmp(argv[cnt], "-bayesbran") == 0) {
+                params.bayes_branch_length = true;
             } else if (strcmp(argv[cnt], "-fivebran") == 0 || strcmp(argv[cnt], "-nni5") == 0) {
                 params.nni5 = true;
             	params.nni_type = NNI5;

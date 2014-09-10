@@ -1837,6 +1837,25 @@ double PhyloTree::computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch
     return correctBranchLengthF81(observedBran, site_rate->getGammaShape());
 }
 
+void PhyloTree::computeAllBayesianBranchLengths(Node *node, Node *dad) {
+
+    if (!node)
+        node = root;
+
+    FOR_NEIGHBOR_IT(node, dad, it){
+        double branch_length = computeBayesianBranchLength((PhyloNeighbor*) (*it), (PhyloNode*) node);
+        // first compute the observed parsimony distance
+        if (branch_length < MIN_BRANCH_LEN)
+        	branch_length = MIN_BRANCH_LEN;
+        if (branch_length > MAX_BRANCH_LEN)
+        	branch_length = MAX_BRANCH_LEN;
+        (*it)->length = branch_length;
+        // set the backward branch length
+        (*it)->node->findNeighbor(node)->length = (*it)->length;
+		computeAllBayesianBranchLengths((*it)->node, node);
+    }
+}
+
 double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh,
         double *pattern_rate) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;

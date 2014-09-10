@@ -951,6 +951,9 @@ public:
 
     int fixNegativeBranch2(bool force = false, Node *node = NULL, Node *dad = NULL);
 
+    /* compute Bayesian branch lengths based on ancestral sequence reconstruction */
+    void computeAllBayesianBranchLengths(Node *node = NULL, Node *dad = NULL);
+
     /****************************************************************************
             Subtree Pruning and Regrafting by maximum likelihood
             NOTE: NOT DONE YET

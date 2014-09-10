@@ -2003,6 +2003,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 			outError("Could not delete file ", pllAln);
 	}
 
+
     if (!params.fixed_branch_length && params.leastSquareBranch) {
         cout << endl << "Computing Least Square branch lengths..." << endl;
         iqtree.optimizeAllBranchesLS();
@@ -2010,7 +2011,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.curScore = iqtree.computeLikelihood();
         string filename = params.out_prefix;
         filename += ".lstree";
-        iqtree.printTree(filename.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_NEWLINE);
+        iqtree.printTree(filename.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
         cout << "Logl of tree with LS branch lengths: " << iqtree.curScore << endl;
         cout << "Tree with LS branch lengths written to " << filename << endl;
         if (params.print_branch_lengths) {
@@ -2025,6 +2026,51 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         cout << "Total LS tree length: " << iqtree.treeLength() << endl;
     }
 
+    if (params.pars_branch_length) {
+    	cout << endl << "Computing parsimony branch lengths..." << endl;
+    	iqtree.fixNegativeBranch(true);
+    	iqtree.clearAllPartialLH();
+        iqtree.curScore = iqtree.computeLikelihood();
+        string filename = params.out_prefix;
+        filename += ".mptree";
+        iqtree.printTree(filename.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+        cout << "Logl of tree with MP branch lengths: " << iqtree.curScore << endl;
+        cout << "Tree with MP branch lengths written to " << filename << endl;
+        if (params.print_branch_lengths) {
+        	ofstream out;
+        	filename = params.out_prefix;
+        	filename += ".mpbrlen";
+        	out.open(filename.c_str());
+        	iqtree.printBranchLengths(out);
+        	out.close();
+        	cout << "MP Branch lengths written to " << filename << endl;
+        }
+        cout << "Total MP tree length: " << iqtree.treeLength() << endl;
+
+    }
+
+    if (params.bayes_branch_length) {
+    	cout << endl << "Computing Bayesian branch lengths..." << endl;
+    	iqtree.computeAllBayesianBranchLengths();
+    	iqtree.clearAllPartialLH();
+        iqtree.curScore = iqtree.computeLikelihood();
+        string filename = params.out_prefix;
+        filename += ".batree";
+        iqtree.printTree(filename.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+        cout << "Logl of tree with Bayesian branch lengths: " << iqtree.curScore << endl;
+        cout << "Tree with Bayesian branch lengths written to " << filename << endl;
+        if (params.print_branch_lengths) {
+        	ofstream out;
+        	filename = params.out_prefix;
+        	filename += ".babrlen";
+        	out.open(filename.c_str());
+        	iqtree.printBranchLengths(out);
+        	out.close();
+        	cout << "Bayesian Branch lengths written to " << filename << endl;
+        }
+        cout << "Total Bayesian tree length: " << iqtree.treeLength() << endl;
+
+    }
 
 	/*	if (tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) {
 	 string rate_file = params.out_prefix;

@@ -471,6 +471,12 @@ struct Params {
      */
     bool leastSquareBranch;
 
+    /** TRUE to compute parsimony branch length of final tree */
+    bool pars_branch_length;
+
+    /** TRUE to compute bayesian branch length for the final tree */
+    bool bayes_branch_length;
+
     /**
      *  use Least Square to evaluate NNI
      */
