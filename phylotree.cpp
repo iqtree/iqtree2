@@ -1769,7 +1769,6 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNo
 
     model->getStateFrequency(tmp_state_freq);
 
-    double cutoff = 0.2 / nstates;
     for (ptn = 0; ptn < nptn; ptn++) {
         // Compute the probability of each state for the current site
         double sum_prob1 = 0.0, sum_prob2 = 0.0;
@@ -1789,14 +1788,19 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNo
             sum_prob2 += tmp_anscentral_state_prob2[state];
         }
         bool sameState = false;
+        int state1 = 0, state2 = 0;
+        double cutoff = 1.0/nstates;
         for (state = 0; state < nstates; state++) {
             tmp_anscentral_state_prob1[state] /= sum_prob1;
             tmp_anscentral_state_prob2[state] /= sum_prob2;
-            if (tmp_anscentral_state_prob1[state] > cutoff && tmp_anscentral_state_prob2[state] > cutoff) {
-                sameState = true;
-                break;
-            }
+            if (tmp_anscentral_state_prob1[state] > tmp_anscentral_state_prob1[state1])
+            	state1 = state;
+            if (tmp_anscentral_state_prob2[state] > tmp_anscentral_state_prob2[state2])
+            	state2 = state;
+            if (tmp_anscentral_state_prob1[state] > cutoff && tmp_anscentral_state_prob2[state] > cutoff)
+            	sameState = true;
         }
+        sameState = sameState || (state1 == state2);
         if (!sameState) {
             obsLen += aln->at(ptn).frequency;
         }
@@ -1829,6 +1833,11 @@ double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
         correctedBranLen = H * alpha * (pow(observedBran, -1 / alpha) - 1);
     }
 
+    if (correctedBranLen < MIN_BRANCH_LEN)
+    	correctedBranLen = MIN_BRANCH_LEN;
+    if (correctedBranLen > MAX_BRANCH_LEN)
+    	correctedBranLen = MAX_BRANCH_LEN;
+
     return correctedBranLen;
 }
 
@@ -1844,11 +1853,6 @@ void PhyloTree::computeAllBayesianBranchLengths(Node *node, Node *dad) {
 
     FOR_NEIGHBOR_IT(node, dad, it){
         double branch_length = computeBayesianBranchLength((PhyloNeighbor*) (*it), (PhyloNode*) node);
-        // first compute the observed parsimony distance
-        if (branch_length < MIN_BRANCH_LEN)
-        	branch_length = MIN_BRANCH_LEN;
-        if (branch_length > MAX_BRANCH_LEN)
-        	branch_length = MAX_BRANCH_LEN;
         (*it)->length = branch_length;
         // set the backward branch length
         (*it)->node->findNeighbor(node)->length = (*it)->length;
