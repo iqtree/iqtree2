@@ -8,7 +8,7 @@ project(iqtree)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 0)
-set (iqtree_VERSION_PATCH 1)
+set (iqtree_VERSION_PATCH 2)
 
 set(BUILD_SHARED_LIBS OFF)
 
