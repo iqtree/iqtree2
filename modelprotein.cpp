@@ -2477,8 +2477,8 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
    
   /* SCALING HAS BEEN RE-INTRODUCED TO RESOLVE NUMERICAL  PROBLEMS */   
 
-  for(i = 0; i < 19; i++)
-      for(j = i + 1; j < 20; j++)
+  for(i = 0; i < 20; i++)
+      for(j = 0; j < 20; j++)
 		{  
 		daa[i*20+j] *= scaler;
 		}
