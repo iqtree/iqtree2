@@ -815,28 +815,28 @@ double* IQTree::getModelRatesFromPLL() {
 }
 
 void IQTree::pllPrintModelParams() {
+    cout.precision(6);
+    cout << fixed;
     for (int part = 0; part < pllPartitions->numberOfPartitions; part++) {
-        //printf("alpha[%d]: %f \n", part, pllPartitions->partitionData[part]->alpha);
         cout << "Alpha[" << part << "]" << ": " << pllPartitions->partitionData[part]->alpha << endl;
         if (aln->num_states == 4) {
             int states, rates;
             states = pllPartitions->partitionData[part]->states;
             rates = ((states * states - states) / 2);
-            //printf(rates, "rates[%d] ac ag at cg ct gt: ", part);
             cout << "Rates[" << part << "]: " << " ac ag at cg ct gt: ";
             for (int i = 0; i < rates; i++) {
-                //printf(rates,"%f ", pllPartitions->partitionData[part]->substRates[i]);
                 cout << pllPartitions->partitionData[part]->substRates[i] << " ";
             }
             cout << endl;
-            cout << "Frequencies: ";
+            cout <<  "Frequencies: ";
             for (int i = 0; i < 4; i++) {
-                //printf("%f ", pllPartitions->partitionData[part]->empiricalFrequencies[i]);
                 cout << pllPartitions->partitionData[part]->empiricalFrequencies[i] << " ";
             }
             cout << endl;
         }
     }
+    cout.precision(3);
+    cout << fixed;
 }
 
 double IQTree::getAlphaFromPLL() {
