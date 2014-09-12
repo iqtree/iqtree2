@@ -1793,7 +1793,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	        pllNewickParseDestroy(&newick);
 	        pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
 	        cout << endl;
-	        cout << "Optimizing model parameters on the best tree by PLL ... (logl epsilon = "
+	        cout << "Optimizing model parameters on the best tree (logl epsilon = "
 	                << params.modeps << ")" << endl;
 	        double stime = getCPUTime();
 	        pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, params.modeps);

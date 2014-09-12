@@ -2457,6 +2457,8 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
 	else  return false;
 
   for (i=0; i<20; i++)  
+	daa[i*20+i] = 0.0;
+  for (i=0; i<20; i++)
     for (j=0; j<i; j++)               
       daa[j*20+i] = daa[i*20+j];
 
@@ -2475,8 +2477,8 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
    
   /* SCALING HAS BEEN RE-INTRODUCED TO RESOLVE NUMERICAL  PROBLEMS */   
 
-  for(i = 0; i < 19; i++)
-      for(j = i + 1; j < 20; j++)
+  for(i = 0; i < 20; i++)
+      for(j = 0; j < 20; j++)
 		{  
 		daa[i*20+j] *= scaler;
 		}
@@ -3132,6 +3134,20 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 		if (round(sum*1e8) != 1e8) {
 			cout.precision(7);
 			cout << "WARNING: " <<  name_upper << " state frequencies do not sum up to 1: " << sum << endl;
+		}
+		if (verbose_mode >= VB_DEBUG) {
+			cout.precision(6);
+			cout.unsetf(ios::fixed);
+			cout << name_upper << " rate matrix and state frequencies:" << endl;
+			for (i=0; i < num_states; i++) {
+				for (j=0; j < num_states; j++)
+					cout << ((j>0) ? "\t":"") << daa[i*20+j];
+				cout << endl;
+			}
+			for (i=0; i < num_states; i++)
+				cout << ((i>0)? "\t":"") << state_freq[i];
+			cout << endl;
+
 		}
 		for (i = 0, k = 0; i < num_states-1; i++)
 			for (j = i+1; j < num_states; j++)
