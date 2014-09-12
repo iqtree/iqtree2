@@ -1169,6 +1169,8 @@ protected:
      */
     StringDoubleMap subTreeDists;
 
+    StringDoubleMap subTreeWeights;
+
     /**
      * A list containing all the marked list. This is used in the dynamic programming
      * algorithm for compute inter subtree distances

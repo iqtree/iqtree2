@@ -1416,52 +1416,55 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
         if (node1->isLeaf()) {
             // nodeA and nodeB are children of node2
             FOR_NEIGHBOR_IT(node2, node1, it){
-            if (A == 0) {
-                A = getNumTaxa((*it)->node, node2);
-                nodeA = (PhyloNode*) (*it)->node;
-            } else {
-                B = getNumTaxa((*it)->node, node2);
-                nodeB = (PhyloNode*) (*it)->node;
+				if (A == 0) {
+					A = getNumTaxa((*it)->node, node2);
+					nodeA = (PhyloNode*) (*it)->node;
+				} else {
+					B = getNumTaxa((*it)->node, node2);
+					nodeB = (PhyloNode*) (*it)->node;
+				}
             }
-        }
-        // nodeC is now node1
-        nodeC = node1;
-    } else {
-        // nodeA and nodeB are children of node1
-        FOR_NEIGHBOR_IT(node1, node2, it) {
-            if (A == 0) {
-                A = getNumTaxa((*it)->node, node1);
-                nodeA = (PhyloNode*) (*it)->node;
-            } else {
-                B = getNumTaxa((*it)->node, node1);
-                nodeB = (PhyloNode*) (*it)->node;
-            }
-        }
-        // nodeC is now node1
-        nodeC = node2;
-    }
-    assert(A != 0);
-    assert(B != 0);
-    string keyAC = nodePair2String(nodeA, nodeC);
-    assert(subTreeDists.count(keyAC));
-    double distAC = subTreeDists[keyAC];
-    string keyBC = nodePair2String(nodeB, nodeC);
-    assert(subTreeDists.count(keyBC));
-    double distBC = subTreeDists[keyBC];
-    string keyAB = nodePair2String(nodeA, nodeB);
-    assert(subTreeDists.count(keyAB));
-    double distAB = subTreeDists[keyAB];
-    if (params->ls_var_type == OLS/* || params->ls_var_type == FIRST_TAYLOR || params->ls_var_type == FITCH_MARGOLIASH
-    		|| params->ls_var_type == SECOND_TAYLOR*/) {
-        lsBranch = 0.5 * (distAC / A + distBC / B - distAB / (A * B));
-    } else if (params->ls_var_type == PAUPLIN) {
-    	// Chua test bao gio
-    	lsBranch = 0.5 * (distAC + distBC) - 0.5 * distAB;
-    } else {
-    	outError("Unsupported LS option");
-    	lsBranch = 0;
-    }
-} else { // Both node are internal node
+			// nodeC is now node1
+			nodeC = node1;
+		} else {
+			// nodeA and nodeB are children of node1
+			FOR_NEIGHBOR_IT(node1, node2, it) {
+				if (A == 0) {
+					A = getNumTaxa((*it)->node, node1);
+					nodeA = (PhyloNode*) (*it)->node;
+				} else {
+					B = getNumTaxa((*it)->node, node1);
+					nodeB = (PhyloNode*) (*it)->node;
+				}
+			}
+			// nodeC is now node1
+			nodeC = node2;
+		}
+		assert(A != 0);
+		assert(B != 0);
+		string keyAC = nodePair2String(nodeA, nodeC);
+		assert(subTreeDists.count(keyAC));
+		double distAC = subTreeDists[keyAC];
+		double weightAC = subTreeWeights[keyAC];
+		string keyBC = nodePair2String(nodeB, nodeC);
+		assert(subTreeDists.count(keyBC));
+		double distBC = subTreeDists[keyBC];
+		double weightBC = subTreeWeights[keyBC];
+		string keyAB = nodePair2String(nodeA, nodeB);
+		assert(subTreeDists.count(keyAB));
+		double distAB = subTreeDists[keyAB];
+		double weightAB = subTreeWeights[keyAB];
+		if (params->ls_var_type == OLS/* || params->ls_var_type == FIRST_TAYLOR || params->ls_var_type == FITCH_MARGOLIASH
+				|| params->ls_var_type == SECOND_TAYLOR*/) {
+			lsBranch = 0.5 * (distAC / A + distBC / B - distAB / (A * B));
+		} else if (params->ls_var_type == PAUPLIN) {
+			// Chua test bao gio
+			lsBranch = 0.5 * (distAC + distBC) - 0.5 * distAB;
+		} else {
+			// weighted least square
+			lsBranch = 0.5*(distAC/weightAC + distBC/weightBC - distAB/weightAB);
+		}
+	} else { // Both node are internal node
     FOR_NEIGHBOR_IT(node1, node2, it) {
         if (A == 0) {
             A = getNumTaxa((*it)->node, node1);
@@ -1482,39 +1485,53 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
         }
     }
 
-    double gamma = (B * C + A * D) / ((A + B)*(C + D));
     string keyAC = nodePair2String(nodeA, nodeC);
     assert(subTreeDists.count(keyAC));
     double distAC = subTreeDists[keyAC];
+    double weightAC = subTreeWeights[keyAC];
 
     string keyBD = nodePair2String(nodeB, nodeD);
     assert(subTreeDists.count(keyBD));
     double distBD = subTreeDists[keyBD];
+    double weightBD = subTreeWeights[keyBD];
 
     string keyBC = nodePair2String(nodeB, nodeC);
     assert(subTreeDists.count(keyBC));
     double distBC = subTreeDists[keyBC];
+    double weightBC = subTreeWeights[keyBC];
 
     string keyAD = nodePair2String(nodeA, nodeD);
     assert(subTreeDists.count(keyAD));
     double distAD = subTreeDists[keyAD];
+    double weightAD = subTreeWeights[keyAD];
 
     string keyAB = nodePair2String(nodeA, nodeB);
     assert(subTreeDists.count(keyAB));
     double distAB = subTreeDists[keyAB];
+    double weightAB = subTreeWeights[keyAB];
 
     string keyCD = nodePair2String(nodeC, nodeD);
     assert(subTreeDists.count(keyCD));
     double distCD = subTreeDists[keyCD];
+    double weightCD = subTreeWeights[keyCD];
 
     if (params->ls_var_type == PAUPLIN) {
-    	lsBranch = 0.25 * (distAC + distBD + distAD + distBC) - 0.5 * (distAB - distCD);
+    	// this distance has a typo as also seen in Mihaescu & Pachter 2008
+    	//lsBranch = 0.25 * (distAC + distBD + distAD + distBC) - 0.5 * (distAB - distCD);
+    	lsBranch = 0.25 * (distAC + distBD + distAD + distBC) - 0.5 * (distAB + distCD);
     } else if (params->ls_var_type == OLS) {
+        double gamma = (B * C + A * D) / ((A + B)*(C + D));
         lsBranch = 0.5 * (gamma * (distAC / (A * C) + distBD / (B * D))
                 + (1 - gamma) * (distBC / (B * C) + distAD / (A * D))
                 - distAB / (A * B) - distCD / (C * D));
     } else {
-    	lsBranch = 0;
+    	// weighted least square
+    	double K = 1.0/weightAC + 1.0/weightBD + 1.0/weightAD + 1.0/weightBC;
+    	lsBranch =
+    			((distAC/weightAC+distBD/weightBD)*(weightAD+weightBC)/(weightAD*weightBC)+
+    			(distAD/weightAD+distBC/weightBC)*(weightAC+weightBD)/(weightAC*weightBD))/K
+    			- distAB/weightAB - distCD/weightCD;
+    	lsBranch = 0.5*lsBranch;
     }
 }
     return lsBranch;
@@ -1612,6 +1629,7 @@ void PhyloTree::updateSubtreeDists(NNIMove &nnimove) {
 void PhyloTree::computeSubtreeDists() {
     PhyloNodeVector unmarkedNodes;
     subTreeDists.clear();
+    subTreeWeights.clear();
     do {
         // Generate a list of unmarked node that is adjacent to exactly one unmarked nodes
         // Here we will work up the tree in a bottom up manner
@@ -1657,25 +1675,37 @@ void PhyloTree::computeSubtreeDists() {
 void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* source_nei1, PhyloNode* source_nei2,
         PhyloNode* node, PhyloNode* dad) {
     string key = nodePair2String(source, dad);
-    double dist;
+    double dist, weight;
     if (markedNodeList.find(dad->id) != markedNodeList.end()) {
         return;
     } else if (source->isLeaf() && dad->isLeaf()) {
         assert(dist_matrix);
         int nseq = aln->getNSeq();
-        dist = dist_matrix[dad->id * nseq + source->id];
+        if (params->ls_var_type == OLS || params->ls_var_type == PAUPLIN) {
+        	dist = dist_matrix[dad->id * nseq + source->id];
+        	weight = 1.0;
+        } else {
+        	// this will take into account variances, also work for OLS since var = 1
+        	dist = dist_matrix[dad->id * nseq + source->id] / var_matrix[dad->id * nseq + source->id];
+        	weight = 1.0/var_matrix[dad->id * nseq + source->id];
+        }
         subTreeDists.insert(StringDoubleMap::value_type(key, dist));
+        subTreeWeights.insert(StringDoubleMap::value_type(key, weight));
     } else if (!source->isLeaf() && dad->isLeaf()) {
         assert(source_nei1);
         assert(source_nei2);
         string key1 = nodePair2String(source_nei1, dad);
         assert(subTreeDists.find(key1) == subTreeDists.end());
         double dist1 = subTreeDists.find(key1)->second;
+        double weight1 = subTreeWeights.find(key1)->second;
         string key2 = nodePair2String(source_nei2, dad);
         assert(subTreeDists.find(key2) == subTreeDists.end());
         double dist2 = subTreeDists.find(key2)->second;
+        double weight2 = subTreeWeights.find(key2)->second;
         dist = dist1 + dist2;
+        weight = weight1 + weight2;
         subTreeDists.insert(StringDoubleMap::value_type(key, dist));
+        subTreeWeights.insert(StringDoubleMap::value_type(key, weight));
     } else {
         PhyloNode* dad_nei1 = NULL;
         PhyloNode* dad_nei2 = NULL;
@@ -1697,9 +1727,13 @@ void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* so
         assert(subTreeDists.find(key1) != subTreeDists.end());
         assert(subTreeDists.find(key2) != subTreeDists.end());
         double dist1 = subTreeDists.find(key1)->second;
+        double weight1 = subTreeWeights.find(key1)->second;
         double dist2 = subTreeDists.find(key2)->second;
+        double weight2 = subTreeWeights.find(key2)->second;
         dist = dist1 + dist2;
+        weight = weight1 + weight2;
         subTreeDists.insert(StringDoubleMap::value_type(key, dist));
+        subTreeWeights.insert(StringDoubleMap::value_type(key, weight));
     }
 }
 
