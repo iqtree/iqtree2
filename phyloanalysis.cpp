@@ -185,17 +185,18 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 			((ModelSet*) tree.getModel())->front()->getRateMatrix(rate_mat);
 		if (tree.aln->num_states > 4)
 			out << fixed;
-		if (tree.getModel()->isReversible()) {
-			for (i = 0, k = 0; i < tree.aln->num_states - 1; i++)
-				for (j = i + 1; j < tree.aln->num_states; j++, k++) {
-					out << "  " << tree.aln->convertStateBackStr(i) << "-"
-							<< tree.aln->convertStateBackStr(j) << ": " << rate_mat[k];
-					if (tree.aln->num_states <= 4)
-						out << endl;
-					else if (k % 5 == 4)
-						out << endl;
-				}
-		} else { // non-reversible model
+        if (tree.getModel()->isReversible()) {
+            for (i = 0, k = 0; i < tree.aln->num_states - 1; i++)
+                for (j = i + 1; j < tree.aln->num_states; j++, k++) {
+                    out << "  " << tree.aln->convertStateBackStr(i) << "-" << tree.aln->convertStateBackStr(j) << ": "
+                            << rate_mat[k];
+                    if (tree.aln->num_states <= 4)
+                        out << endl;
+                    else if (k % 5 == 4)
+                        out << endl;
+                }
+
+        } else { // non-reversible model
 			for (i = 0, k = 0; i < tree.aln->num_states; i++)
 				for (j = 0; j < tree.aln->num_states; j++)
 					if (i != j) {
@@ -1371,7 +1372,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             pllNewickTree *newick = pllNewickParseString(initTree.c_str());
             pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
             pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-            iqtree.inputModelParam2PLL();
+            iqtree.inputModelIQTree2PLL();
             pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
             pllNewickParseDestroy(&newick);
         }
@@ -1603,7 +1604,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                                 nniTree = iqtree.getTreeString();
                                 if (params.pll) {
                                     // update PLL with the new model parameters
-                                    iqtree.inputModelParam2PLL();
+                                    iqtree.inputModelIQTree2PLL();
                                 }
                             }
                             if (params.pll) {
@@ -1828,6 +1829,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
 
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
+	iqtree.inputModelPLL2IQTree();
 
 	/* root the tree at the first sequence */
 	iqtree.root = iqtree.findLeafName(alignment->getSeqName(0));

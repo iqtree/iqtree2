@@ -843,7 +843,16 @@ double IQTree::getAlphaFromPLL() {
     return pllPartitions->partitionData[0]->alpha;
 }
 
-void IQTree::inputModelParam2PLL() {
+void IQTree::inputModelPLL2IQTree() {
+    // TODO add support for partitioned model
+    dynamic_cast<RateGamma*>(getRate())->setGammaShape(pllPartitions->partitionData[0]->alpha);
+    if (aln->num_states == 4) {
+        ((GTRModel*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
+        getModel()->decomposeRateMatrix();
+    }
+}
+
+void IQTree::inputModelIQTree2PLL() {
     // get the alpha parameter
     double alpha = getRate()->getGammaShape();
     if (alpha == 0.0)
@@ -1404,7 +1413,7 @@ double IQTree::doTreeSearch() {
                             imd_tree = getTreeString();
                             if (params->pll) {
                                 deleteAllPartialLh();
-                                inputModelParam2PLL();
+                                inputModelIQTree2PLL();
                                 // recompute the curScore using PLL
                                 curScore = inputTree2PLL(imd_tree, true);
                             }
