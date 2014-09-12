@@ -850,6 +850,7 @@ void IQTree::inputModelPLL2IQTree() {
         ((GTRModel*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
         getModel()->decomposeRateMatrix();
     }
+    ((GTRModel*) getModel())->setStateFrequency(pllPartitions->partitionData[0]->empiricalFrequencies);
 }
 
 void IQTree::inputModelIQTree2PLL() {

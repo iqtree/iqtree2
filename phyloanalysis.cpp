@@ -175,16 +175,16 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 	int i, j, k;
 	out << "Model of substitution: " << tree.getModelName() << endl << endl;
 
-	if (tree.aln->num_states <= 4) {
-		out << "Rate parameter R:" << endl << endl;
+    if (tree.aln->num_states <= 4) {
+        out << "Rate parameter R:" << endl << endl;
 
-		double *rate_mat = new double[tree.aln->num_states * tree.aln->num_states];
-		if (!tree.getModel()->isSiteSpecificModel())
-			tree.getModel()->getRateMatrix(rate_mat);
-		else
-			((ModelSet*) tree.getModel())->front()->getRateMatrix(rate_mat);
-		if (tree.aln->num_states > 4)
-			out << fixed;
+        double *rate_mat = new double[tree.aln->num_states * tree.aln->num_states];
+        if (!tree.getModel()->isSiteSpecificModel())
+            tree.getModel()->getRateMatrix(rate_mat);
+        else
+            ((ModelSet*) tree.getModel())->front()->getRateMatrix(rate_mat);
+        if (tree.aln->num_states > 4)
+            out << fixed;
         if (tree.getModel()->isReversible()) {
             for (i = 0, k = 0; i < tree.aln->num_states - 1; i++)
                 for (j = i + 1; j < tree.aln->num_states; j++, k++) {
@@ -197,26 +197,25 @@ void reportModel(ofstream &out, PhyloTree &tree) {
                 }
 
         } else { // non-reversible model
-			for (i = 0, k = 0; i < tree.aln->num_states; i++)
-				for (j = 0; j < tree.aln->num_states; j++)
-					if (i != j) {
-						out << "  " << tree.aln->convertStateBackStr(i) << "-"
-								<< tree.aln->convertStateBackStr(j) << ": "
-								<< rate_mat[k];
-						if (tree.aln->num_states <= 4)
-							out << endl;
-						else if (k % 5 == 4)
-							out << endl;
-						k++;
-					}
+            for (i = 0, k = 0; i < tree.aln->num_states; i++)
+                for (j = 0; j < tree.aln->num_states; j++)
+                    if (i != j) {
+                        out << "  " << tree.aln->convertStateBackStr(i) << "-" << tree.aln->convertStateBackStr(j)
+                                << ": " << rate_mat[k];
+                        if (tree.aln->num_states <= 4)
+                            out << endl;
+                        else if (k % 5 == 4)
+                            out << endl;
+                        k++;
+                    }
 
-		}
+        }
 
-		//if (tree.aln->num_states > 4)
-			out << endl;
-		out.unsetf(ios_base::fixed);
-		delete[] rate_mat;
-	}
+        //if (tree.aln->num_states > 4)
+        out << endl;
+        out.unsetf(ios_base::fixed);
+        delete[] rate_mat;
+    }
 	out << "State frequencies: ";
 	if (tree.getModel()->isSiteSpecificModel())
 		out << "(site specific frequencies)" << endl << endl;
