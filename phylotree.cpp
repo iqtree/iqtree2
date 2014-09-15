@@ -1458,7 +1458,8 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
 				|| params->ls_var_type == SECOND_TAYLOR*/) {
 			lsBranch = 0.5 * (distAC / A + distBC / B - distAB / (A * B));
 		} else if (params->ls_var_type == PAUPLIN) {
-			// Chua test bao gio
+			// TODO: Chua test bao gio
+			outError("Paulin formula not supported yet");
 			lsBranch = 0.5 * (distAC + distBC) - 0.5 * distAB;
 		} else {
 			// weighted least square
@@ -1518,6 +1519,7 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
     if (params->ls_var_type == PAUPLIN) {
     	// this distance has a typo as also seen in Mihaescu & Pachter 2008
     	//lsBranch = 0.25 * (distAC + distBD + distAD + distBC) - 0.5 * (distAB - distCD);
+		outError("Paulin formula not supported yet");
     	lsBranch = 0.25 * (distAC + distBD + distAD + distBC) - 0.5 * (distAB + distCD);
     } else if (params->ls_var_type == OLS) {
         double gamma = (B * C + A * D) / ((A + B)*(C + D));
