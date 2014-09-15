@@ -2747,7 +2747,7 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
         int seq2 = col_id[pos];
         int sym_pos = seq1 * nseqs + seq2;
         dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
-        if (params->ls_var_type == OLS)
+        if (params->ls_var_type == OLS || params->ls_var_type == PAUPLIN)
             var_mat[sym_pos] = 1.0;
         else if (params->ls_var_type == FIRST_TAYLOR)
             var_mat[sym_pos] = dist_mat[sym_pos];
