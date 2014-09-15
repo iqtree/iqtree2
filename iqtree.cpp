@@ -2279,8 +2279,12 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     freeNode();
     readTree(tree_stream, rooted);
     assignLeafNames();
-    initializeAllPartialLh();
-    clearAllPartialLH();
+    if (isSuperTree()) {
+        ((PhyloSuperTree*) this)->mapTrees();
+    } else {
+		initializeAllPartialLh();
+		clearAllPartialLH();
+    }
 
     if (!save_all_trees) {
         out_file = params.out_prefix;

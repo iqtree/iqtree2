@@ -603,16 +603,13 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					<< "-----------------------" << endl << endl;
 
 			tree.setRootNode(params.root);
-			out << "NOTE: Tree is UNROOTED although outgroup taxon '"
-					<< tree.root->name << "' is drawn at root" << endl;
+			out << "NOTE: Tree is UNROOTED although outgroup taxon '" << tree.root->name << "' is drawn at root" << endl;
 			if (params.partition_file)
-				out
-						<< "NOTE: Branch lengths are weighted average over all partitions"
-						<< endl
-						<< "      (weighted by the number of sites in the partitions)"
-						<< endl;
-			if (params.aLRT_replicates > 0 || params.gbo_replicates
-					|| (params.num_bootstrap_samples && params.compute_ml_tree)) {
+				out	<< "NOTE: Branch lengths are weighted average over all partitions"
+					<< endl
+					<< "      (weighted by the number of sites in the partitions)"
+					<< endl;
+			if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
 				out << "Numbers in parentheses are ";
 				if (params.aLRT_replicates > 0)
 					out << "SH-aLRT supports";
@@ -629,15 +626,15 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				out << " (%)" << endl;
 			}
 			out << endl;
-			reportTree(out, params, tree, tree.getBestScore(),
-					tree.logl_variance);
+			reportTree(out, params, tree, tree.getBestScore(), tree.logl_variance);
 
 			if (tree.isSuperTree()) {
 				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+				stree->mapTrees();
 				int empty_branches = stree->countEmptyBranches();
 				if (empty_branches) {
 					stringstream ss;
-					ss << empty_branches << " undefined branch lengths in the overall tree!";
+					ss << empty_branches << " branches in the overall tree with no phylogenetic information due to missing data!";
 					outWarning(ss.str());
 				}
 				/*
@@ -670,12 +667,9 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		if (params.consensus_type == CT_CONSENSUS_TREE) {
 			out << "CONSENSUS TREE" << endl << "--------------" << endl << endl;
 			out << "Consensus tree is constructed from "
-					<< (params.num_bootstrap_samples ?
-							params.num_bootstrap_samples : params.gbo_replicates)
-					<< " bootstrap trees" << endl
-					<< "Branches with bootstrap support >"
-					<< floor(params.split_threshold * 1000) / 10
-					<< "% are kept";
+					<< (params.num_bootstrap_samples ? params.num_bootstrap_samples : params.gbo_replicates)
+					<< " bootstrap trees" << endl << "Branches with bootstrap support >"
+					<< floor(params.split_threshold * 1000) / 10 << "% are kept";
 			if (params.split_threshold == 0.0)
 				out << " (extended consensus)";
 			if (params.split_threshold == 0.5)
@@ -683,11 +677,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			if (params.split_threshold >= 0.99)
 				out << " (strict consensus)";
 
-			out << endl
-					<< "Branch lengths are optimized by maximum likelihood on original alignment"
-					<< endl;
-			out << "Numbers in parentheses are bootstrap supports (%)" << endl
-					<< endl;
+			out << endl << "Branch lengths are optimized by maximum likelihood on original alignment" << endl;
+			out << "Numbers in parentheses are bootstrap supports (%)" << endl << endl;
 
 			string con_file = params.out_prefix;
 			con_file += ".contree";
@@ -1828,7 +1819,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
 
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
-	iqtree.inputModelPLL2IQTree();
+	if (params.pll)
+		iqtree.inputModelPLL2IQTree();
 
 	/* root the tree at the first sequence */
 	iqtree.root = iqtree.findLeafName(alignment->getSeqName(0));
