@@ -1142,7 +1142,11 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         // allocate the big central partial likelihoods memory
         if (!central_partial_lh) {
             uint64_t mem_size = ((uint64_t) leafNum - 1) * 4 * (uint64_t) block_size + 2;
-            central_partial_lh = new double[mem_size];
+            try {
+            	central_partial_lh = new double[mem_size];
+            } catch (std::bad_alloc &ba) {
+            	outError("Not enough memory for partial likelihood vectors (bad_alloc)");
+            }
             //central_partial_lh = (double*) Eigen::internal::conditional_aligned_malloc<true>((leafNum-1)*4*block_size);
             if (!central_partial_lh)
                 outError("Not enough memory for partial likelihood vectors");
@@ -1152,7 +1156,11 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << (leafNum - 1) * 4 * scale_block_size * sizeof(UBYTE)
                         << " bytes for scale num vectors" << endl;
-            central_scale_num = new UBYTE[(leafNum - 1) * 4 * scale_block_size];
+            try {
+            	central_scale_num = new UBYTE[(leafNum - 1) * 4 * scale_block_size];
+            } catch (std::bad_alloc &ba) {
+            	outError("Not enough memory for scale num vectors (bad_alloc)");
+            }
             if (!central_scale_num)
                 outError("Not enough memory for scale num vectors");
         }
@@ -1160,7 +1168,11 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << (leafNum - 1) * 4 * pars_block_size * sizeof(UINT)
                         << " bytes for partial parsimony vectors" << endl;
-            central_partial_pars = new UINT[(leafNum - 1) * 4 * pars_block_size];
+            try {
+            	central_partial_pars = new UINT[(leafNum - 1) * 4 * pars_block_size];
+            } catch (std::bad_alloc &ba) {
+            	outError("Not enough memory for partial parsimony vectors (bad_alloc)");
+            }
             if (!central_partial_pars)
                 outError("Not enough memory for partial parsimony vectors");
         }
