@@ -1039,7 +1039,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 
         //cout << line << endl;
         if (line[0] == '>') { // next sequence
-            string::size_type pos = line.find(' ');
+            string::size_type pos = line.find_first_of(" \n\r\t");
             seq_names.push_back(line.substr(1, pos-1));
             sequences.push_back("");
             continue;
