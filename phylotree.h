@@ -434,6 +434,8 @@ public:
     template<int NSTATES>
     inline void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
+    inline void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+
     /**
             compute tree likelihood on a branch. used to optimize branch length
             @param dad_branch the branch leading to the subtree
