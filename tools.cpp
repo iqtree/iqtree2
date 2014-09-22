@@ -650,6 +650,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.leastSquareBranch = false;
     params.pars_branch_length = false;
     params.bayes_branch_length = false;
+    params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
     params.limitPopSize = 100;
@@ -1739,6 +1740,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
+            } else if (strcmp(argv[cnt], "-manuel") == 0) {
+                params.manuel_analytic_approx = true;
             } else if (strcmp(argv[cnt], "-parsbran") == 0) {
                 params.pars_branch_length = true;
             } else if (strcmp(argv[cnt], "-bayesbran") == 0) {

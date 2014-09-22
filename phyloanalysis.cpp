@@ -1851,6 +1851,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	}
 
 	if (params.print_branch_lengths) {
+    	if (params.manuel_analytic_approx) {
+    		cout << "Applying Manuel's analytic approximation.." << endl;
+    		iqtree.approxAllBranches();
+    	}
 		string brlen_file = params.out_prefix;
 		brlen_file += ".brlen";
 		ofstream out;
@@ -2008,6 +2012,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         cout << "Logl of tree with LS branch lengths: " << iqtree.curScore << endl;
         cout << "Tree with LS branch lengths written to " << filename << endl;
         if (params.print_branch_lengths) {
+        	if (params.manuel_analytic_approx) {
+        		cout << "Applying Manuel's analytic approximation.." << endl;
+        		iqtree.approxAllBranches();
+        	}
         	ofstream out;
         	filename = params.out_prefix;
         	filename += ".lsbrlen";

@@ -1486,76 +1486,76 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
 			lsBranch = 0.5*(distAC/weightAC + distBC/weightBC - distAB/weightAB);
 		}
 	} else { // Both node are internal node
-    FOR_NEIGHBOR_IT(node1, node2, it) {
-        if (A == 0) {
-            A = getNumTaxa((*it)->node, node1);
-            nodeA = (PhyloNode*) (*it)->node;
-        } else {
-            B = getNumTaxa((*it)->node, node1);
-            nodeB = (PhyloNode*) (*it)->node;
-        }
-    }
+		FOR_NEIGHBOR_IT(node1, node2, it) {
+			if (A == 0) {
+				A = getNumTaxa((*it)->node, node1);
+				nodeA = (PhyloNode*) (*it)->node;
+			} else {
+				B = getNumTaxa((*it)->node, node1);
+				nodeB = (PhyloNode*) (*it)->node;
+			}
+		}
 
-    FOR_NEIGHBOR_IT(node2, node1, it) {
-        if (C == 0) {
-            C = getNumTaxa((*it)->node, node2);
-            nodeC = (PhyloNode*) (*it)->node;
-        } else {
-            D = getNumTaxa((*it)->node, node2);
-            nodeD = (PhyloNode*) (*it)->node;
-        }
-    }
+		FOR_NEIGHBOR_IT(node2, node1, it) {
+			if (C == 0) {
+				C = getNumTaxa((*it)->node, node2);
+				nodeC = (PhyloNode*) (*it)->node;
+			} else {
+				D = getNumTaxa((*it)->node, node2);
+				nodeD = (PhyloNode*) (*it)->node;
+			}
+		}
 
-    string keyAC = nodePair2String(nodeA, nodeC);
-    assert(subTreeDists.count(keyAC));
-    double distAC = subTreeDists[keyAC];
-    double weightAC = subTreeWeights[keyAC];
+		string keyAC = nodePair2String(nodeA, nodeC);
+		assert(subTreeDists.count(keyAC));
+		double distAC = subTreeDists[keyAC];
+		double weightAC = subTreeWeights[keyAC];
 
-    string keyBD = nodePair2String(nodeB, nodeD);
-    assert(subTreeDists.count(keyBD));
-    double distBD = subTreeDists[keyBD];
-    double weightBD = subTreeWeights[keyBD];
+		string keyBD = nodePair2String(nodeB, nodeD);
+		assert(subTreeDists.count(keyBD));
+		double distBD = subTreeDists[keyBD];
+		double weightBD = subTreeWeights[keyBD];
 
-    string keyBC = nodePair2String(nodeB, nodeC);
-    assert(subTreeDists.count(keyBC));
-    double distBC = subTreeDists[keyBC];
-    double weightBC = subTreeWeights[keyBC];
+		string keyBC = nodePair2String(nodeB, nodeC);
+		assert(subTreeDists.count(keyBC));
+		double distBC = subTreeDists[keyBC];
+		double weightBC = subTreeWeights[keyBC];
 
-    string keyAD = nodePair2String(nodeA, nodeD);
-    assert(subTreeDists.count(keyAD));
-    double distAD = subTreeDists[keyAD];
-    double weightAD = subTreeWeights[keyAD];
+		string keyAD = nodePair2String(nodeA, nodeD);
+		assert(subTreeDists.count(keyAD));
+		double distAD = subTreeDists[keyAD];
+		double weightAD = subTreeWeights[keyAD];
 
-    string keyAB = nodePair2String(nodeA, nodeB);
-    assert(subTreeDists.count(keyAB));
-    double distAB = subTreeDists[keyAB];
-    double weightAB = subTreeWeights[keyAB];
+		string keyAB = nodePair2String(nodeA, nodeB);
+		assert(subTreeDists.count(keyAB));
+		double distAB = subTreeDists[keyAB];
+		double weightAB = subTreeWeights[keyAB];
 
-    string keyCD = nodePair2String(nodeC, nodeD);
-    assert(subTreeDists.count(keyCD));
-    double distCD = subTreeDists[keyCD];
-    double weightCD = subTreeWeights[keyCD];
+		string keyCD = nodePair2String(nodeC, nodeD);
+		assert(subTreeDists.count(keyCD));
+		double distCD = subTreeDists[keyCD];
+		double weightCD = subTreeWeights[keyCD];
 
-    /*if (params->ls_var_type == PAUPLIN) {
-    	// this distance has a typo as also seen in Mihaescu & Pachter 2008
-    	//lsBranch = 0.25 * (distAC + distBD + distAD + distBC) - 0.5 * (distAB - distCD);
-		outError("Paulin formula not supported yet");
-    	lsBranch = 0.25 * (distAC + distBD + distAD + distBC) - 0.5 * (distAB + distCD);
-    } else*/ if (params->ls_var_type == OLS) {
-        double gamma = (B * C + A * D) / ((A + B)*(C + D));
-        lsBranch = 0.5 * (gamma * (distAC / (A * C) + distBD / (B * D))
-                + (1 - gamma) * (distBC / (B * C) + distAD / (A * D))
-                - distAB / (A * B) - distCD / (C * D));
-    } else {
-    	// weighted least square
-    	double K = 1.0/weightAC + 1.0/weightBD + 1.0/weightAD + 1.0/weightBC;
-    	lsBranch =
-    			((distAC/weightAC+distBD/weightBD)*(weightAD+weightBC)/(weightAD*weightBC)+
-    			(distAD/weightAD+distBC/weightBC)*(weightAC+weightBD)/(weightAC*weightBD))/K
-    			- distAB/weightAB - distCD/weightCD;
-    	lsBranch = 0.5*lsBranch;
-    }
-}
+		/*if (params->ls_var_type == PAUPLIN) {
+			// this distance has a typo as also seen in Mihaescu & Pachter 2008
+			//lsBranch = 0.25 * (distAC + distBD + distAD + distBC) - 0.5 * (distAB - distCD);
+			outError("Paulin formula not supported yet");
+			lsBranch = 0.25 * (distAC + distBD + distAD + distBC) - 0.5 * (distAB + distCD);
+		} else*/ if (params->ls_var_type == OLS) {
+			double gamma = (B * C + A * D) / ((A + B)*(C + D));
+			lsBranch = 0.5 * (gamma * (distAC / (A * C) + distBD / (B * D))
+					+ (1 - gamma) * (distBC / (B * C) + distAD / (A * D))
+					- distAB / (A * B) - distCD / (C * D));
+		} else {
+			// weighted least square
+			double K = 1.0/weightAC + 1.0/weightBD + 1.0/weightAD + 1.0/weightBC;
+			lsBranch =
+					((distAC/weightAC+distBD/weightBD)*(weightAD+weightBC)/(weightAD*weightBC)+
+					(distAD/weightAD+distBC/weightBC)*(weightAC+weightBD)/(weightAC*weightBD))/K
+					- distAB/weightAB - distCD/weightCD;
+			lsBranch = 0.5*lsBranch;
+		}
+	}
     return lsBranch;
 }
 
@@ -1808,6 +1808,83 @@ set<int> PhyloTree::computeNodeBranchDists(Node *node, Node *dad) {
 	resl.insert(resr.begin(), resr.end());
 	resl.insert(node->id);
 	return resl;
+}
+
+
+/*
+    b0: initial guess for the maximum
+*/
+double PhyloTree::approxOneBranch(PhyloNode *node, PhyloNode *dad, double b0) {
+    double b_max, ddl, b1, b2, std, seqlen;
+    double t1, t3, t5, t11, t18, t21, t26, t29, t30, t32, t44, t46, t48;
+    double beps = 1/DBL_MAX;
+
+    /* TODO: insert call to get sequence length */
+    seqlen = getAlnNSite();
+
+    /* use a robust first order approximation to the variance */
+    std = sqrt(b0/seqlen);
+
+    /* determine neighbour points */
+    b1 = b0 - std;
+    if (b1<=0) b1 = beps; /* only happens for b<=1 with small seq. len. */
+    b2 = b0 + std;
+
+    /* TODO: insert calls to log-likelihood function */
+    PhyloNeighbor *dad_nei = (PhyloNeighbor*)(dad->findNeighbor(node));
+    PhyloNeighbor *node_nei = (PhyloNeighbor*)(node->findNeighbor(dad));
+    double old_len = dad_nei->length;
+    dad_nei->length = node_nei->length = b0;
+    double l0 = computeLikelihoodBranch(dad_nei, dad);
+    dad_nei->length = node_nei->length = b1;
+    double l1 = computeLikelihoodBranch(dad_nei, dad);
+    dad_nei->length = node_nei->length = b2;
+    double l2 = computeLikelihoodBranch(dad_nei, dad);
+    dad_nei->length = node_nei->length = old_len;
+
+    t1 = sqrt(b0);
+    t3 = sqrt(b2);
+    t5 = sqrt(b1);
+    t11 = pow(-t1*l2+t3*l0+t5*l2+t1*l1-t5*l0-t3*l1,2.0);
+    t18 = -b0*l2+b2*l0+b1*l2+b0*l1-b1*l0-b2*l1;
+    t21 = t1-t5;
+    t26 = -t1*t3+t1*t5+b2-t5*t3;
+    t29 = t18*t18;
+    t30 = 1/t11;
+    t32 = sqrt(t29*t30);
+    ddl = -2.0*t11/t18/t21/t26/t32;
+
+    if (ddl > 0) {
+        /* the analytic extremum is a minimum,
+           so the maximum is at the lower bound */
+        b_max = 0;
+    } else {
+        t44 = pow(-t1*b2+t5*b2-t5*b0+t3*b0-t3*b1+t1*b1,2.0);
+        t46 = t21*t21;
+        t48 = t26*t26;
+        b_max = t29*t44/t46/t48*t30/4.0;
+    }
+
+    return(b_max);
+}
+
+void PhyloTree::approxAllBranches(PhyloNode *node, PhyloNode *dad) {
+    if (!node) {
+        node = (PhyloNode*) root;
+    }
+
+    if (dad) {
+        PhyloNeighbor *node_dad_nei = (PhyloNeighbor*) node->findNeighbor(dad);
+        PhyloNeighbor *dad_node_nei = (PhyloNeighbor*) dad->findNeighbor(node);
+        double len = approxOneBranch(node, dad, dad_node_nei->length);
+        node_dad_nei->length = len;
+        dad_node_nei->length = len;
+    }
+
+    for (NeighborVec::iterator it = (node)->neighbors.begin(); it != (node)->neighbors.end(); it++)
+        if ((*it)->node != (dad)) {
+        	approxAllBranches((PhyloNode*) (*it)->node, node);
+        }
 }
 
 /*

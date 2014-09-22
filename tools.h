@@ -471,6 +471,9 @@ struct Params {
      */
     bool leastSquareBranch;
 
+    /** TRUE to apply Manuel's analytic approximation formulae for branch length */
+    bool manuel_analytic_approx;
+
     /** TRUE to compute parsimony branch length of final tree */
     bool pars_branch_length;
 

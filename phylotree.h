@@ -1159,6 +1159,15 @@ public:
 
     set<int> computeNodeBranchDists(Node *node = NULL, Node *dad = NULL);
 
+    /*
+     * Manuel's approach for analytic approximation of branch length given initial guess
+        b0: initial guess for the maximum
+        @return approximted branch length
+    */
+    double approxOneBranch(PhyloNode *node, PhyloNode *dad, double b0);
+
+    void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
 protected:
 
     /**
