@@ -1418,7 +1418,7 @@ void PhyloTree::getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, PhyloNode* node
 
 double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
     if (!subTreeDistComputed) {
-    	if (params->ls_var_type == PAUPLIN) {
+    	if (params->ls_var_type == WLS_PAUPLIN) {
     		computeNodeBranchDists();
     		for (int i = 0; i < leafNum; i++)
     			for (int j = 0; j < leafNum; j++)
@@ -2822,13 +2822,13 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
         dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
         if (params->ls_var_type == OLS)
             var_mat[sym_pos] = 1.0;
-        else if (params->ls_var_type == PAUPLIN)
+        else if (params->ls_var_type == WLS_PAUPLIN)
             var_mat[sym_pos] = 0.0;
-        else if (params->ls_var_type == FIRST_TAYLOR)
+        else if (params->ls_var_type == WLS_FIRST_TAYLOR)
             var_mat[sym_pos] = dist_mat[sym_pos];
-        else if (params->ls_var_type == FITCH_MARGOLIASH)
+        else if (params->ls_var_type == WLS_FITCH_MARGOLIASH)
             var_mat[sym_pos] = dist_mat[sym_pos] * dist_mat[sym_pos];
-        else if (params->ls_var_type == SECOND_TAYLOR)
+        else if (params->ls_var_type == WLS_SECOND_TAYLOR)
             var_mat[sym_pos] = -1.0 / d2l;
     }
 

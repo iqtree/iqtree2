@@ -361,7 +361,7 @@ enum IQP_ASSESS_QUARTET {
 };
 
 enum LEAST_SQUARE_VAR {
-    OLS, FIRST_TAYLOR, FITCH_MARGOLIASH, SECOND_TAYLOR, PAUPLIN
+    OLS, WLS_FIRST_TAYLOR, WLS_FITCH_MARGOLIASH, WLS_SECOND_TAYLOR, WLS_PAUPLIN
 };
 
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model

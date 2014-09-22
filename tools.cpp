@@ -1763,13 +1763,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (strcmp(argv[cnt], "o") == 0 || strcmp(argv[cnt], "ols") == 0) {
                     params.ls_var_type = OLS;
                 } else if (strcmp(argv[cnt], "ft") == 0 || strcmp(argv[cnt], "first_taylor") == 0) {
-                    params.ls_var_type = FIRST_TAYLOR;
+                    params.ls_var_type = WLS_FIRST_TAYLOR;
                 } else if (strcmp(argv[cnt], "fm") == 0 || strcmp(argv[cnt], "fitch_margoliash") == 0) {
-                    params.ls_var_type = FITCH_MARGOLIASH;
+                    params.ls_var_type = WLS_FITCH_MARGOLIASH;
                 } else if (strcmp(argv[cnt], "st") == 0 || strcmp(argv[cnt], "second_taylor") == 0) {
-                    params.ls_var_type = SECOND_TAYLOR;
+                    params.ls_var_type = WLS_SECOND_TAYLOR;
                 } else if (strcmp(argv[cnt], "p") == 0 || strcmp(argv[cnt], "pauplin") == 0) {
-                    params.ls_var_type = PAUPLIN;
+                    params.ls_var_type = WLS_PAUPLIN;
                 } else {
                     throw "Use -lsvar <o|ft|fm|st|p>";
                 }
