@@ -434,7 +434,7 @@ public:
     template<int NSTATES>
     inline void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
-    inline void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
     /**
             compute tree likelihood on a branch. used to optimize branch length
@@ -448,6 +448,8 @@ public:
 
     template<int NSTATES>
     inline double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+
 
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad,
             double *pattern_lh = NULL, double *pattern_rate = NULL);
@@ -586,6 +588,8 @@ public:
 
     template<int NSTATES>
     inline double computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    double computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length
@@ -1098,7 +1102,7 @@ public:
     /**
      *      TRUE if the loglikelihood is computed using SSE
      */
-    bool sse;
+    LikelihoodKernel sse;
 
     /**
      * Current score of the tree;

@@ -88,6 +88,16 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 	dad_branch->lh_scale_factor = left->lh_scale_factor + right->lh_scale_factor;
 	double *partial_lh_left = left->partial_lh, *partial_lh_right = right->partial_lh;
 	double *partial_lh_tmp = new double[nstates];
+	double *eleft = new double[block*nstates], *eright = new double[block*nstates];
+	for (c = 0; c < ncat; c++) {
+		double len_left = site_rate->getRate(c) * left->length;
+		double len_right = site_rate->getRate(c) * right->length;
+		for (x = 0; x < nstates; x++)
+			for (i = 0; i < nstates; i++) {
+				eleft[c*block+x*nstates+i] = evec[x][i] * exp(eval[i]*len_left);
+				eright[c*block+x*nstates+i] = evec[x][i] * exp(eval[i]*len_right);
+			}
+	}
 
 	//memset(partial_lh, 0, nptn*block*sizeof(double));
 	if (left->node->isLeaf() && right->node->isLeaf()) {
@@ -99,8 +109,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 				for (x = 0; x < nstates; x++) {
 					double vleft = 0.0, vright = 0.0;
 					for (i = 0; i < nstates; i++) {
-						vleft += evec[x][i] * exp(eval[i]*site_rate->getRate(c)*left->length) * partial_lh_left[i];
-						vright += evec[x][i] * exp(eval[i]*site_rate->getRate(c)*right->length) * partial_lh_right[i];
+						vleft += eleft[c*block+x*nstates+i] * partial_lh_left[i];
+						vright += eright[c*block+x*nstates+i] * partial_lh_right[i];
 					}
 					partial_lh_tmp[x] = vleft * vright;
 				}
@@ -124,8 +134,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 				for (x = 0; x < nstates; x++) {
 					double vleft = 0.0, vright = 0.0;
 					for (i = 0; i < nstates; i++) {
-						vleft += evec[x][i] * exp(eval[i]*site_rate->getRate(c)*left->length) * partial_lh_left[i];
-						vright += evec[x][i] * exp(eval[i]*site_rate->getRate(c)*right->length) * partial_lh_right[c*nstates+i];
+						vleft += eleft[c*block+x*nstates+i] * partial_lh_left[i];
+						vright += eright[c*block+x*nstates+i] * partial_lh_right[c*nstates+i];
 					}
 					partial_lh_tmp[x] = vleft * vright;
 				}
@@ -148,8 +158,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 				for (x = 0; x < nstates; x++) {
 					double vleft = 0.0, vright = 0.0;
 					for (i = 0; i < nstates; i++) {
-						vleft += evec[x][i] * exp(eval[i]*site_rate->getRate(c)*left->length) * partial_lh_left[c*nstates+i];
-						vright += evec[x][i] * exp(eval[i]*site_rate->getRate(c)*right->length) * partial_lh_right[c*nstates+i];
+						vleft += eleft[c*block+x*nstates+i] * partial_lh_left[c*nstates+i];
+						vright += eright[c*block+x*nstates+i] * partial_lh_right[c*nstates+i];
 					}
 					partial_lh_tmp[x] = vleft * vright;
 				}
@@ -167,4 +177,83 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 	}
 
 	delete [] partial_lh_tmp;
+}
+
+
+double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+	outError("Not supported yet");
+	return 0.0;
+}
+
+double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    if (!central_partial_lh)
+        initializeAllPartialLh();
+    if (node->isLeaf()) {
+    	PhyloNode *tmp_node = dad;
+    	dad = node;
+    	node = tmp_node;
+    	PhyloNeighbor *tmp_nei = dad_branch;
+    	dad_branch = node_branch;
+    	node_branch = tmp_nei;
+    }
+    if ((dad_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihoodEigen(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihoodEigen(node_branch, node);
+    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+    size_t ncat = site_rate->getNRate();
+    double p_invar = site_rate->getPInvar();
+    assert(p_invar == 0.0); // +I model not supported yet
+    double p_var_cat = (1.0 - p_invar) / (double) ncat;
+    size_t nstates = aln->num_states;
+    size_t block = ncat * nstates;
+    size_t ptn; // for big data size > 4GB memory required
+    size_t c, i;
+    size_t nptn = aln->size();
+    double *eval = model->getEigenvalues();
+    assert(eval);
+
+    double *partial_lh_dad = dad_branch->partial_lh;
+    double *partial_lh_node = node_branch->partial_lh;
+    double *val = new double[block];
+	for (c = 0; c < ncat; c++) {
+		double len = site_rate->getRate(c)*dad_branch->length;
+		for (i = 0; i < nstates; i++)
+			val[c*nstates+i] = exp(eval[i]*len);
+	}
+    if (dad->isLeaf()) {
+    	// special treatment for TIP-INTERNAL NODE case
+		for (ptn = 0; ptn < nptn; ptn++) {
+			double lh_ptn = 0.0;
+			for (c = 0; c < ncat; c++)
+				for (i = 0; i < nstates; i++)
+					lh_ptn +=  val[c*nstates+i] * partial_lh_node[i] * partial_lh_dad[c*nstates+i];
+			lh_ptn *= p_var_cat;
+			lh_ptn = log(lh_ptn);
+			_pattern_lh[ptn] = lh_ptn;
+			tree_lh += lh_ptn * aln->at(ptn).frequency;
+			partial_lh_node += nstates;
+			partial_lh_dad += block;
+		}
+    } else {
+    	// both dad and node are internal nodes
+		for (ptn = 0; ptn < nptn; ptn++) {
+			double lh_ptn = 0.0;
+			for (c = 0; c < ncat; c++)
+				for (i = 0; i < nstates; i++)
+					lh_ptn +=  val[c*nstates+i] * partial_lh_node[c*nstates+i] * partial_lh_dad[c*nstates+i];
+			lh_ptn *= p_var_cat;
+			lh_ptn = log(lh_ptn);
+			_pattern_lh[ptn] = lh_ptn;
+			tree_lh += lh_ptn * aln->at(ptn).frequency;
+			partial_lh_node += block;
+			partial_lh_dad += block;
+		}
+    }
+    if (pattern_lh)
+        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
+    delete [] val;
+    return tree_lh;
 }

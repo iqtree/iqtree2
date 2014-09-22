@@ -377,6 +377,9 @@ struct NNIInfo {
     int iqpnni_iteration;
 };
 
+enum LikelihoodKernel {
+	LK_NORMAL, LK_SSE, LK_EIGEN
+};
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
@@ -1172,7 +1175,7 @@ struct Params {
     /**
             SSE Option
      */
-    bool SSE;
+    LikelihoodKernel SSE;
     /**
      	 	0: do not print anything
             1: print site log-likelihood

@@ -77,7 +77,7 @@ void PhyloTree::init() {
     theta_all = NULL;
     subTreeDistComputed = false;
     dist_matrix = NULL;
-    sse = true;  // FOR TUNG: you forgot to initialize this variable!
+    sse = LK_SSE;  // FOR TUNG: you forgot to initialize this variable!
     save_all_trees = 0;
     mlCheck = 0; // FOR: upper bounds
     nodeBranchDists = NULL;

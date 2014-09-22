@@ -552,7 +552,8 @@ void PhyloTree::computeThetaNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 }
 
 void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
-    if (sse) {
+    switch (sse) {
+    case LK_SSE:
         switch (aln->num_states) {
         case 2:
             return computePartialLikelihoodSSE<2>(dad_branch, dad, pattern_scale);
@@ -567,8 +568,10 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
         default:
             return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
         }
-    } else {
+        case LK_NORMAL:
         return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
+        case LK_EIGEN:
+        	return computePartialLikelihoodEigen(dad_branch, dad, pattern_scale);
     }
 }
 
@@ -590,7 +593,8 @@ void PhyloTree::initiateMyEigenCoeff() {
 }
 
 double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
-    if (sse) {
+    switch (sse) {
+    case LK_SSE:
         switch (aln->num_states) {
         case 2:
             return computeLikelihoodBranchSSE<2>(dad_branch, dad, pattern_lh);
@@ -605,8 +609,10 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
         default:
             return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
         }
-    } else {
+    case LK_NORMAL:
         return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
+    case LK_EIGEN:
+       	return computeLikelihoodBranchEigen(dad_branch, dad, pattern_lh);
     }
 
 }
@@ -616,7 +622,8 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
  * have a if and switch here.
  */
 double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-    if (sse) {
+    switch (sse) {
+    case LK_SSE:
         switch (aln->num_states) {
         case 2:
             return computeLikelihoodDervSSE<2>(dad_branch, dad, df, ddf);
@@ -633,8 +640,10 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
             //cout << "Wrong number of states: " << aln->num_states << endl;
             //return -1.0;
         }
-    } else {
+    case LK_NORMAL:
         return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
+    case LK_EIGEN:
+    	return computeLikelihoodDervEigen(dad_branch, dad, df, ddf);
     }
 }
 
