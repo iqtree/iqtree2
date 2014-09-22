@@ -1157,6 +1157,8 @@ public:
     /** 2 to save all trees, 1 to save intermediate trees */
     int save_all_trees;
 
+    set<int> computeNodeBranchDists(Node *node = NULL, Node *dad = NULL);
+
 protected:
 
     /**
@@ -1172,6 +1174,9 @@ protected:
     StringDoubleMap subTreeDists;
 
     StringDoubleMap subTreeWeights;
+
+    /** distance (# of branches) between 2 nodes */
+    int *nodeBranchDists;
 
     /**
      * A list containing all the marked list. This is used in the dynamic programming

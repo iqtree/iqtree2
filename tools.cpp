@@ -1780,8 +1780,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.loglh_epsilon = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
                 params.parbran = true;
-            } else if (strcmp(argv[cnt], "-wbt") == 0) {
-            	// TODO: WTF ?
+            } else if (strcmp(argv[cnt], "-write_best_trees") == 0) {
                 params.write_best_trees = true;
             } else if (strcmp(argv[cnt], "-x") == 0) {
                 cnt++;

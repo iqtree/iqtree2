@@ -80,6 +80,7 @@ void PhyloTree::init() {
     sse = true;  // FOR TUNG: you forgot to initialize this variable!
     save_all_trees = 0;
     mlCheck = 0; // FOR: upper bounds
+    nodeBranchDists = NULL;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree() {
@@ -1390,8 +1391,9 @@ double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_
 double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh) {
     double *pattern_lh_other = new double[getAlnNPattern()];
     other_tree->computePatternLikelihood(pattern_lh_other);
-    return computeLogLDiffVariance(pattern_lh_other, pattern_lh);
     delete[] pattern_lh_other;
+    double res = computeLogLDiffVariance(pattern_lh_other, pattern_lh);
+    return res;
 }
 
 void PhyloTree::getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, PhyloNode* node, PhyloNode* dad) {
@@ -1416,6 +1418,12 @@ void PhyloTree::getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, PhyloNode* node
 
 double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
     if (!subTreeDistComputed) {
+    	if (params->ls_var_type == PAUPLIN) {
+    		computeNodeBranchDists();
+    		for (int i = 0; i < leafNum; i++)
+    			for (int j = 0; j < leafNum; j++)
+    				var_matrix[i*leafNum+j] = pow(2.0,nodeBranchDists[i*nodeNum+j]);
+    	}
         computeSubtreeDists();
     }
     double A, B, C, D;
@@ -1469,11 +1477,11 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
 		if (params->ls_var_type == OLS/* || params->ls_var_type == FIRST_TAYLOR || params->ls_var_type == FITCH_MARGOLIASH
 				|| params->ls_var_type == SECOND_TAYLOR*/) {
 			lsBranch = 0.5 * (distAC / A + distBC / B - distAB / (A * B));
-		} else if (params->ls_var_type == PAUPLIN) {
+		} /*else if (params->ls_var_type == PAUPLIN) {
 			// TODO: Chua test bao gio
 			outError("Paulin formula not supported yet");
 			lsBranch = 0.5 * (distAC + distBC) - 0.5 * distAB;
-		} else {
+		}*/ else {
 			// weighted least square
 			lsBranch = 0.5*(distAC/weightAC + distBC/weightBC - distAB/weightAB);
 		}
@@ -1528,12 +1536,12 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
     double distCD = subTreeDists[keyCD];
     double weightCD = subTreeWeights[keyCD];
 
-    if (params->ls_var_type == PAUPLIN) {
+    /*if (params->ls_var_type == PAUPLIN) {
     	// this distance has a typo as also seen in Mihaescu & Pachter 2008
     	//lsBranch = 0.25 * (distAC + distBD + distAD + distBC) - 0.5 * (distAB - distCD);
 		outError("Paulin formula not supported yet");
     	lsBranch = 0.25 * (distAC + distBD + distAD + distBC) - 0.5 * (distAB + distCD);
-    } else if (params->ls_var_type == OLS) {
+    } else*/ if (params->ls_var_type == OLS) {
         double gamma = (B * C + A * D) / ((A + B)*(C + D));
         lsBranch = 0.5 * (gamma * (distAC / (A * C) + distBD / (B * D))
                 + (1 - gamma) * (distBC / (B * C) + distAD / (A * D))
@@ -1695,13 +1703,13 @@ void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* so
     } else if (source->isLeaf() && dad->isLeaf()) {
         assert(dist_matrix);
         int nseq = aln->getNSeq();
-        if (params->ls_var_type == OLS || params->ls_var_type == PAUPLIN) {
+        if (params->ls_var_type == OLS) {
         	dist = dist_matrix[dad->id * nseq + source->id];
         	weight = 1.0;
         } else {
         	// this will take into account variances, also work for OLS since var = 1
-        	dist = dist_matrix[dad->id * nseq + source->id] / var_matrix[dad->id * nseq + source->id];
         	weight = 1.0/var_matrix[dad->id * nseq + source->id];
+        	dist = dist_matrix[dad->id * nseq + source->id] * weight;
         }
         subTreeDists.insert(StringDoubleMap::value_type(key, dist));
         subTreeWeights.insert(StringDoubleMap::value_type(key, weight));
@@ -1749,6 +1757,57 @@ void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* so
         subTreeDists.insert(StringDoubleMap::value_type(key, dist));
         subTreeWeights.insert(StringDoubleMap::value_type(key, weight));
     }
+}
+
+set<int> PhyloTree::computeNodeBranchDists(Node *node, Node *dad) {
+	set<int>::iterator i, j;
+	if (!nodeBranchDists) {
+		cout << "nodeNum = " << nodeNum << endl;
+		nodeBranchDists = new int[nodeNum*nodeNum];
+	}
+	if (!node) {
+		memset(nodeBranchDists, 0, sizeof(int)*nodeNum*nodeNum);
+		assert(root->isLeaf());
+		dad = root;
+		node = dad->neighbors[0]->node;
+		set<int> res = computeNodeBranchDists(node, dad);
+		for (i = res.begin(); i != res.end(); i++)
+			nodeBranchDists[(*i)*nodeNum + dad->id] = nodeBranchDists[(dad->id)*nodeNum + (*i)] =
+				nodeBranchDists[(*i)*nodeNum + node->id] + 1;
+		// sanity check that all distances are filled
+		for (int x = 0; x < nodeNum; x++)
+			for (int y = 0; y < nodeNum; y++)
+				if (x != y)
+					assert(nodeBranchDists[x*nodeNum+y] != 0);
+				else
+					assert(nodeBranchDists[x*nodeNum+y] == 0);
+		return res;
+	}
+	if (node->isLeaf()) {
+		set<int> res;
+		res.insert(node->id);
+		return res;
+	}
+	assert(node->degree() == 3);
+	Node *left = NULL, *right = NULL;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		if (!left) left = (*it)->node; else right = (*it)->node;
+	}
+	set<int> resl = computeNodeBranchDists(left, node);
+	set<int> resr = computeNodeBranchDists(right, node);
+	for (i = resl.begin(); i != resl.end(); i++)
+		nodeBranchDists[(*i)*nodeNum + node->id] = nodeBranchDists[(node->id)*nodeNum + (*i)] =
+			nodeBranchDists[(*i)*nodeNum + left->id] + 1;
+	for (i = resr.begin(); i != resr.end(); i++)
+		nodeBranchDists[(*i)*nodeNum + node->id] = nodeBranchDists[(node->id)*nodeNum + (*i)] =
+			nodeBranchDists[(*i)*nodeNum + right->id] + 1;
+	for (i = resl.begin(); i != resl.end(); i++)
+		for (j = resr.begin(); j != resr.end(); j++)
+			nodeBranchDists[(*i)*nodeNum + (*j)] = nodeBranchDists[(*j)*nodeNum+(*i)] =
+				nodeBranchDists[(*i)*nodeNum+node->id]+nodeBranchDists[(*j)*nodeNum+node->id];
+	resl.insert(resr.begin(), resr.end());
+	resl.insert(node->id);
+	return resl;
 }
 
 /*
@@ -2761,8 +2820,10 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
         int seq2 = col_id[pos];
         int sym_pos = seq1 * nseqs + seq2;
         dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
-        if (params->ls_var_type == OLS || params->ls_var_type == PAUPLIN)
+        if (params->ls_var_type == OLS)
             var_mat[sym_pos] = 1.0;
+        else if (params->ls_var_type == PAUPLIN)
+            var_mat[sym_pos] = 0.0;
         else if (params->ls_var_type == FIRST_TAYLOR)
             var_mat[sym_pos] = dist_mat[sym_pos];
         else if (params->ls_var_type == FITCH_MARGOLIASH)
