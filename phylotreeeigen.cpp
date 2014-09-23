@@ -12,7 +12,7 @@
 #include "gtrmodel.h"
 
 /**
- * this version uses RAxML technique that stores the product of partial likelihoods and eigenvectors at node
+ * this version uses Alexis' technique that stores the dot product of partial likelihoods and eigenvectors at node
  * for faster branch length optimization
  */
 void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
@@ -97,15 +97,23 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 	double *partial_lh_left = left->partial_lh, *partial_lh_right = right->partial_lh;
 	double *partial_lh_tmp = new double[nstates];
 	double *eleft = new double[block*nstates], *eright = new double[block*nstates];
+	double *expleft = new double[nstates];
+	double *expright = new double[nstates];
 	for (c = 0; c < ncat; c++) {
 		double len_left = site_rate->getRate(c) * left->length;
 		double len_right = site_rate->getRate(c) * right->length;
+		for (i = 0; i < nstates; i++) {
+			expleft[i] = exp(eval[i]*len_left);
+			expright[i] = exp(eval[i]*len_right);
+		}
 		for (x = 0; x < nstates; x++)
 			for (i = 0; i < nstates; i++) {
-				eleft[c*nstatesqr+x*nstates+i] = evec[x*nstates+i] * exp(eval[i]*len_left);
-				eright[c*nstatesqr+x*nstates+i] = evec[x*nstates+i] * exp(eval[i]*len_right);
+				eleft[c*nstatesqr+x*nstates+i] = evec[x*nstates+i] * expleft[i];
+				eright[c*nstatesqr+x*nstates+i] = evec[x*nstates+i] * expright[i];
 			}
 	}
+	delete [] expright;
+	delete [] expleft;
 
 	//memset(partial_lh, 0, nptn*block*sizeof(double));
 	if (left->node->isLeaf() && right->node->isLeaf()) {
@@ -137,6 +145,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 		// special treatment to TIP-INTERNAL NODE case
 		// only take scale_num from the right subtree
 		memcpy(dad_branch->scale_num, right->scale_num, nptn * sizeof(UBYTE));
+		double sum_scale = 0.0;
 		for (ptn = 0; ptn < nptn; ptn++) {
 			for (c = 0; c < ncat; c++) {
 				for (x = 0; x < nstates; x++) {
@@ -154,12 +163,35 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 					partial_lh[c*nstates+i] = res;
 				}
 			}
+            // check if one should scale partial likelihoods
+
+			bool do_scale = true;
+            for (i = 0; i < block; i++)
+				if (fabs(partial_lh[i]) > SCALING_THRESHOLD) {
+					do_scale = false;
+					break;
+				}
+            if (do_scale) {
+				// now do the likelihood scaling
+				for (i = 0; i < block; i++) {
+					partial_lh[i] /= SCALING_THRESHOLD;
+				}
+				// unobserved const pattern will never have underflow
+				sum_scale += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
+				dad_branch->scale_num[ptn] += 1;
+				if (pattern_scale)
+					pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
+            }
+
 			partial_lh += block;
 			partial_lh_left += nstates;
 			partial_lh_right += block;
 		}
+		dad_branch->lh_scale_factor += sum_scale;
+
 	} else {
 		// both left and right are internal node
+		double sum_scale = 0.0;
 		for (ptn = 0; ptn < nptn; ptn++) {
 			dad_branch->scale_num[ptn] = left->scale_num[ptn] + right->scale_num[ptn];
 			for (c = 0; c < ncat; c++) {
@@ -178,10 +210,33 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 					partial_lh[c*nstates+i] = res;
 				}
 			}
+
+            // check if one should scale partial likelihoods
+
+			bool do_scale = true;
+            for (i = 0; i < block; i++)
+				if (fabs(partial_lh[i]) > SCALING_THRESHOLD) {
+					do_scale = false;
+					break;
+				}
+            if (do_scale) {
+				// now do the likelihood scaling
+				for (i = 0; i < block; i++) {
+					partial_lh[i] /= SCALING_THRESHOLD;
+				}
+				// unobserved const pattern will never have underflow
+				sum_scale += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
+				dad_branch->scale_num[ptn] += 1;
+				if (pattern_scale)
+					pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
+            }
+
 			partial_lh += block;
 			partial_lh_left += block;
 			partial_lh_right += block;
 		}
+		dad_branch->lh_scale_factor += sum_scale;
+
 	}
 
 	delete [] eright;
@@ -256,6 +311,7 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 	        double tmp2 = ddf_frac * freq;
 	        df += tmp1;
 	        ddf += tmp2 - tmp1 * df_frac;
+			assert(lh_ptn > 0.0);
 	        lh_ptn = log(lh_ptn);
 	        tree_lh += lh_ptn * freq;
 	        _pattern_lh[ptn] = lh_ptn;
@@ -284,6 +340,7 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 	        double tmp2 = ddf_frac * freq;
 	        df += tmp1;
 	        ddf += tmp2 - tmp1 * df_frac;
+			assert(lh_ptn > 0.0);
 	        lh_ptn = log(lh_ptn);
 	        tree_lh += lh_ptn * freq;
 	        _pattern_lh[ptn] = lh_ptn;
@@ -355,6 +412,7 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 			for (i = 0; i < block; i++)
 				lh_ptn +=  val[i] * partial_lh_node[i] * partial_lh_dad[i];
 			lh_ptn *= p_var_cat;
+			assert(lh_ptn > 0.0);
 			lh_ptn = log(lh_ptn);
 			_pattern_lh[ptn] = lh_ptn;
 			tree_lh += lh_ptn * aln->at(ptn).frequency;
