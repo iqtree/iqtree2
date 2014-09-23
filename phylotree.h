@@ -436,6 +436,8 @@ public:
 
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
+    void computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+
     /**
             compute tree likelihood on a branch. used to optimize branch length
             @param dad_branch the branch leading to the subtree
@@ -451,6 +453,7 @@ public:
 
     double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
+    double computeLikelihoodBranchEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad,
             double *pattern_lh = NULL, double *pattern_rate = NULL);
@@ -591,6 +594,7 @@ public:
     inline double computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     double computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    double computeLikelihoodDervEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length

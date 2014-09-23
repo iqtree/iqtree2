@@ -378,7 +378,7 @@ struct NNIInfo {
 };
 
 enum LikelihoodKernel {
-	LK_NORMAL, LK_SSE, LK_EIGEN
+	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_SSE
 };
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */

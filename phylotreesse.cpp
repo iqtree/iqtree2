@@ -573,6 +573,8 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
         return computePartialLikelihoodNaive(dad_branch, dad, pattern_scale);
         case LK_EIGEN:
         	return computePartialLikelihoodEigen(dad_branch, dad, pattern_scale);
+        case LK_EIGEN_SSE:
+        	return computePartialLikelihoodEigenSSE(dad_branch, dad, pattern_scale);
     }
 }
 
@@ -615,6 +617,8 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
         return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
     case LK_EIGEN:
    		return computeLikelihoodBranchEigen(dad_branch, dad, pattern_lh);
+    case LK_EIGEN_SSE:
+   		return computeLikelihoodBranchEigenSSE(dad_branch, dad, pattern_lh);
     }
 
 }
@@ -647,6 +651,8 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
         return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
     case LK_EIGEN:
     	return computeLikelihoodDervEigen(dad_branch, dad, df, ddf);
+    case LK_EIGEN_SSE:
+    	return computeLikelihoodDervEigenSSE(dad_branch, dad, df, ddf);
     }
 }
 
