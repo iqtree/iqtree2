@@ -23,6 +23,7 @@
 /* BQM: to ignore all-gapp subtree at an alignment site */
 //#define IGNORE_GAP_LH
 
+
 template<const int NSTATES>
 inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
     PhyloNode *node = (PhyloNode*) dad_branch->node; // Node A
@@ -609,10 +610,11 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
         default:
             return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
         }
+        return 0.0;
     case LK_NORMAL:
         return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
     case LK_EIGEN:
-       	return computeLikelihoodBranchEigen(dad_branch, dad, pattern_lh);
+   		return computeLikelihoodBranchEigen(dad_branch, dad, pattern_lh);
     }
 
 }
@@ -640,6 +642,7 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
             //cout << "Wrong number of states: " << aln->num_states << endl;
             //return -1.0;
         }
+        break;
     case LK_NORMAL:
         return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
     case LK_EIGEN:
