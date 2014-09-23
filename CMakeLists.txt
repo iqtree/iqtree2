@@ -181,7 +181,7 @@ phylonode.cpp
 phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
-phylotreeeigen.cpp
+#phylotreeeigen.cpp
 pruning.cpp
 rategamma.cpp
 rategammainvar.cpp
