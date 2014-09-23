@@ -1,8 +1,8 @@
 /****************************  vectorf256e.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2013-10-04
-* Version:       1.10
+* Last modified: 2014-07-23
+* Version:       1.14
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit floating point vector classes as interface
@@ -16,7 +16,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2012 - 2013 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2012 - 2014 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -42,6 +42,9 @@
 *****************************************************************************/
 // base class to replace __m256 when AVX is not supported
 class Vec256fe {
+protected:
+    __m128 y0;                         // low half
+    __m128 y1;                         // high half
 public:
     Vec256fe(void) {};                 // default constructor
     Vec256fe(__m128 x0, __m128 x1) {   // constructor to build from two __m128
@@ -53,9 +56,6 @@ public:
     __m128 get_high() const {          // get high half
         return y1;
     }
-protected:
-    __m128 y0;                         // low half
-    __m128 y1;                         // high half
 };
 
 // base class to replace __m256d when AVX is not supported
@@ -176,7 +176,7 @@ public:
     }
     // Member function extract a single element from vector
     // Note: This function is inefficient. Use store function if extracting more than one element
-    int extract(uint32_t index) const {
+    bool extract(uint32_t index) const {
         if (index < 4) {
             return Vec4fb(y0).extract(index);
         }
@@ -185,7 +185,7 @@ public:
         }
     }
     // Extract a single element. Operator [] can only read an element, not write.
-    int operator [] (uint32_t index) const {
+    bool operator [] (uint32_t index) const {
         return extract(index);
     }
     // Member functions to split into two Vec4fb:
@@ -194,6 +194,9 @@ public:
     }
     Vec4fb get_high() const {
         return y1;
+    }
+    static int size () {
+        return 8;
     }
 };
 
@@ -346,7 +349,7 @@ public:
     }
     // Member function extract a single element from vector
     // Note: This function is inefficient. Use store function if extracting more than one element
-    int extract(uint32_t index) const {
+    bool extract(uint32_t index) const {
         if (index < 2) {
             return Vec2db(y0).extract(index);
         }
@@ -355,7 +358,7 @@ public:
         }
     }
     // Extract a single element. Operator [] can only read an element, not write.
-    int operator [] (uint32_t index) const {
+    bool operator [] (uint32_t index) const {
         return extract(index);
     }
     // Member functions to split into two Vec4fb:
@@ -364,6 +367,9 @@ public:
     }
     Vec2db get_high() const {
         return y1;
+    }
+    static int size () {
+        return 4;
     }
 };
 
@@ -579,6 +585,9 @@ public:
     Vec4f get_high() const {
         return y1;
     }
+    static int size () {
+        return 8;
+    }
 };
 
 
@@ -739,6 +748,14 @@ static inline Vec8f & operator &= (Vec8f & a, Vec8f const & b) {
     return a;
 }
 
+// vector operator & : bitwise and of Vec8f and Vec8fb
+static inline Vec8f operator & (Vec8f const & a, Vec8fb const & b) {
+    return Vec8f(a.get_low() & b.get_low(), a.get_high() & b.get_high());
+}
+static inline Vec8f operator & (Vec8fb const & a, Vec8f const & b) {
+    return Vec8f(a.get_low() & b.get_low(), a.get_high() & b.get_high());
+}
+
 // vector operator | : bitwise or
 static inline Vec8f operator | (Vec8f const & a, Vec8f const & b) {
     return Vec8f(a.get_low() | b.get_low(), a.get_high() | b.get_high());
@@ -785,6 +802,12 @@ static inline Vec8f if_add (Vec8fb const & f, Vec8f const & a, Vec8f const & b) 
     return a + (Vec8f(f) & b);
 }
 
+// Conditional multiply: For all vector elements i: result[i] = f[i] ? (a[i] * b[i]) : a[i]
+static inline Vec8f if_mul (Vec8fb const & f, Vec8f const & a, Vec8f const & b) {
+    return a * select(f, b, 1.f);
+}
+
+
 // General arithmetic functions, etc.
 
 // Horizontal add: Calculates the sum of all vector elements.
@@ -823,6 +846,9 @@ static inline Vec8f square(Vec8f const & a) {
 static inline Vec8f pow(Vec8f const & a, int n) {
     return Vec8f(pow(a.get_low(),n), pow(a.get_high(),n));
 }
+// prevent implicit conversion of exponent to int
+static Vec8f pow(Vec8f const & x, float y);
+
 
 // Raise floating point numbers to integer power n, where n is a compile-time constant
 template <int n>
@@ -915,6 +941,7 @@ static inline Vec8f fraction(Vec8f const & a) {
 static inline Vec8f exp2(Vec8i const & a) {
     return Vec8f(exp2(a.get_low()), exp2(a.get_high()));
 }
+static Vec8f exp2(Vec8f const & x); // defined in vectormath_exp.h
 #endif // VECTORI256_H
 
 
@@ -927,6 +954,12 @@ static inline Vec8f exp2(Vec8i const & a) {
 // (the underscore in the name avoids a conflict with a macro in Intel's mathimf.h)
 static inline Vec8fb sign_bit(Vec8f const & a) {
     return Vec8fb(sign_bit(a.get_low()), sign_bit(a.get_high()));
+}
+
+// Function sign_combine: changes the sign of a when b has the sign bit set
+// same as select(sign_bit(b), -a, a)
+static inline Vec8f sign_combine(Vec8f const & a, Vec8f const & b) {
+    return Vec8f(sign_combine(a.get_low(), b.get_low()), sign_combine(a.get_high(), b.get_high()));
 }
 
 // Function is_finite: gives true for elements that are normal, denormal or zero, 
@@ -950,10 +983,16 @@ static inline Vec8fb is_nan(Vec8f const & a) {
     return Vec8fb(is_nan(a.get_low()), is_nan(a.get_high()));
 }
 
-// Function is_denormal: gives true for elements that are denormal (subnormal)
+// Function is_subnormal: gives true for elements that are denormal (subnormal)
 // false for finite numbers, zero, NAN and INF
-static inline Vec8fb is_denormal(Vec8f const & a) {
-    return Vec8fb(is_denormal(a.get_low()), is_denormal(a.get_high()));
+static inline Vec8fb is_subnormal(Vec8f const & a) {
+    return Vec8fb(is_subnormal(a.get_low()), is_subnormal(a.get_high()));
+}
+
+// Function is_zero_or_subnormal: gives true for elements that are zero or subnormal (denormal)
+// false for finite numbers, NAN and INF
+static inline Vec8fb is_zero_or_subnormal(Vec8f const & a) {
+    return Vec8fb(is_zero_or_subnormal(a.get_low()), is_zero_or_subnormal(a.get_high()));
 }
 
 // Function infinite4f: returns a vector where all elements are +INF
@@ -962,14 +1001,8 @@ static inline Vec8f infinite8f() {
 }
 
 // Function nan4f: returns a vector where all elements are +NAN (quiet)
-static inline Vec8f nan8f() {
-    return constant8f<0x7FC00010,0x7FC00011,0x7FC00012,0x7FC00013,0x7FC00014,0x7FC00015,0x7FC00016,0x7FC00017>();
-}
-
-// Function snan4f: returns a vector where all elements are signalling +NAN
-// Note: You can probably not rely on the behavior of signalling NANs
-static inline Vec8f snan8f() {
-    return constant8f<0x7F800020,0x7F800021,0x7F800022,0x7F800023,0x7F800024,0x7F800025,0x7F800026,0x7F800027>();
+static inline Vec8f nan8f(int n = 0x10) {
+    return Vec8f(nan4f(n), nan4f(n));
 }
 
 // change signs on vectors Vec8f
@@ -1110,6 +1143,9 @@ public:
     }
     Vec2d get_high() const {
         return y1;
+    }
+    static int size () {
+        return 2;
     }
 };
 
@@ -1272,6 +1308,14 @@ static inline Vec4d & operator &= (Vec4d & a, Vec4d const & b) {
     return a;
 }
 
+// vector operator & : bitwise and of Vec4d and Vec4db
+static inline Vec4d operator & (Vec4d const & a, Vec4db const & b) {
+    return Vec4d(a.get_low() & b.get_low(), a.get_high() & b.get_high());
+}
+static inline Vec4d operator & (Vec4db const & a, Vec4d const & b) {
+    return Vec4d(a.get_low() & b.get_low(), a.get_high() & b.get_high());
+}
+
 // vector operator | : bitwise or
 static inline Vec4d operator | (Vec4d const & a, Vec4d const & b) {
     return Vec4d(a.get_low() | b.get_low(), a.get_high() | b.get_high());
@@ -1319,6 +1363,11 @@ static inline Vec4d if_add (Vec4db const & f, Vec4d const & a, Vec4d const & b) 
     return a + (Vec4d(f) & b);
 }
 
+// Conditional multiply: For all vector elements i: result[i] = f[i] ? (a[i] * b[i]) : a[i]
+static inline Vec4d if_mul (Vec4db const & f, Vec4d const & a, Vec4d const & b) {
+    return a * select(f, b, 1.f);
+}
+
 // General arithmetic functions, etc.
 
 // Horizontal add: Calculates the sum of all vector elements.
@@ -1357,6 +1406,9 @@ static inline Vec4d square(Vec4d const & a) {
 static inline Vec4d pow(Vec4d const & a, int n) {
     return Vec4d(pow(a.get_low(),n), pow(a.get_high(),n));
 }
+// prevent implicit conversion of exponent to int
+static Vec4d pow(Vec4d const & x, double y);
+
 
 // Raise floating point numbers to integer power n, where n is a compile-time constant
 template <int n>
@@ -1410,9 +1462,21 @@ static inline Vec4q truncate_to_int64(Vec4d const & a) {
     return Vec4q(int64_t(aa[0]), int64_t(aa[1]), int64_t(aa[2]), int64_t(aa[3]));
 }
 
+// function truncate_to_int64_limited: round towards zero.
+// result as 64-bit integer vector, but with limited range
+static inline Vec4q truncate_to_int64_limited(Vec4d const & a) {
+    return Vec4q(truncate_to_int64_limited(a.get_low()), truncate_to_int64_limited(a.get_high()));
+}
+
 // function round_to_int64: round to nearest or even. (inefficient)
 static inline Vec4q round_to_int64(Vec4d const & a) {
     return truncate_to_int64(round(a));
+}
+
+// function round_to_int64_limited: round to nearest integer
+// result as 64-bit integer vector, but with limited range
+static inline Vec4q round_to_int64_limited(Vec4d const & a) {
+    return Vec4q(round_to_int64_limited(a.get_low()), round_to_int64_limited(a.get_high()));
 }
 
 // function to_double: convert integer vector elements to double vector (inefficient)
@@ -1421,6 +1485,13 @@ static inline Vec4d to_double(Vec4q const & a) {
     a.store(aa);
     return Vec4d(double(aa[0]), double(aa[1]), double(aa[2]), double(aa[3]));
 }
+
+// function to_double_limited: convert integer vector elements to double vector
+// limited to abs(x) < 2^31
+static inline Vec4d to_double_limited(Vec4q const & x) {
+    return Vec4d(to_double_limited(x.get_low()),to_double_limited(x.get_high()));
+}
+
 #endif  // VECTORI256_H
 
 // function to_double: convert integer vector to double vector
@@ -1468,6 +1539,7 @@ static inline Vec4d fraction(Vec4d const & a) {
 static inline Vec4d exp2(Vec4q const & a) {
     return Vec4d(exp2(a.get_low()), exp2(a.get_high()));
 }
+static Vec4d exp2(Vec4d const & x); // defined in vectormath_exp.h
 #endif
 
 
@@ -1478,6 +1550,12 @@ static inline Vec4d exp2(Vec4q const & a) {
 // Note that sign_bit(Vec4d(-0.0)) gives true, while Vec4d(-0.0) < Vec4d(0.0) gives false
 static inline Vec4db sign_bit(Vec4d const & a) {
     return Vec4db(sign_bit(a.get_low()), sign_bit(a.get_high()));
+}
+
+// Function sign_combine: changes the sign of a when b has the sign bit set
+// same as select(sign_bit(b), -a, a)
+static inline Vec4d sign_combine(Vec4d const & a, Vec4d const & b) {
+    return Vec4d(sign_combine(a.get_low(), b.get_low()), sign_combine(a.get_high(), b.get_high()));
 }
 
 // Function is_finite: gives true for elements that are normal, denormal or zero, 
@@ -1498,10 +1576,16 @@ static inline Vec4db is_nan(Vec4d const & a) {
     return Vec4db(is_nan(a.get_low()), is_nan(a.get_high()));
 }
 
-// Function is_denormal: gives true for elements that are denormal (subnormal)
+// Function is_subnormal: gives true for elements that are denormal (subnormal)
 // false for finite numbers, zero, NAN and INF
-static inline Vec4db is_denormal(Vec4d const & a) {
-    return Vec4db(is_denormal(a.get_low()), is_denormal(a.get_high()));
+static inline Vec4db is_subnormal(Vec4d const & a) {
+    return Vec4db(is_subnormal(a.get_low()), is_subnormal(a.get_high()));
+}
+
+// Function is_zero_or_subnormal: gives true for elements that are zero or subnormal (denormal)
+// false for finite numbers, NAN and INF
+static inline Vec4db is_zero_or_subnormal(Vec4d const & a) {
+    return Vec4db(is_zero_or_subnormal(a.get_low()),is_zero_or_subnormal(a.get_high()));
 }
 
 // Function infinite2d: returns a vector where all elements are +INF
@@ -1510,14 +1594,8 @@ static inline Vec4d infinite4d() {
 }
 
 // Function nan2d: returns a vector where all elements are +NAN (quiet)
-static inline Vec4d nan4d() {
-    return Vec4d(nan2d(), nan2d());
-}
-
-// Function snan2d: returns a vector where all elements are signalling +NAN
-// Note: You can probably not rely on the behavior of signalling NANs
-static inline Vec4d snan4d() {
-    return Vec4d(snan2d(), snan2d());
+static inline Vec4d nan4d(int n = 0x10) {
+    return Vec4d(nan2d(n), nan2d(n));
 }
 
 // change signs on vectors Vec4d
@@ -1816,12 +1894,8 @@ static inline Vec8f lookup(Vec8i const & index, float const * table) {
         // n is not a power of 2, limit to n-1
         index1 = min(Vec8ui(index), n-1);
     }
-    uint32_t ii[8];  index1.store(ii);
-    float    rr[8];
-    for (int j = 0; j < 8; j++) {
-        rr[j] = table[ii[j]];
-    }
-    return Vec8f().load(rr);
+    return Vec8f(table[index1[0]],table[index1[1]],table[index1[2]],table[index1[3]],
+    table[index1[4]],table[index1[5]],table[index1[6]],table[index1[7]]);
 }
 
 static inline Vec4d lookup4(Vec4q const & index, Vec4d const & table) {
@@ -1849,13 +1923,60 @@ static inline Vec4d lookup(Vec4q const & index, double const * table) {
         // n is not a power of 2, limit to n-1
         index1 = min(Vec8ui(index), constant8i<n-1, 0, n-1, 0, n-1, 0, n-1, 0>() );
     }
-    uint32_t ii[8];  index1.store(ii);
-    double   rr[4];
-    for (int j = 0; j < 4; j++) {
-        rr[j] = table[ii[j<<1]];
-    }
-    return Vec4d().load(rr);
+    Vec4q index2 = Vec4q(index1);
+    return Vec4d(table[index2[0]],table[index2[1]],table[index2[2]],table[index2[3]]);
 }
 #endif  // VECTORI256_H
+
+/*****************************************************************************
+*
+*          Horizontal scan functions
+*
+*****************************************************************************/
+
+// Get index to the first element that is true. Return -1 if all are false
+
+static inline int horizontal_find_first(Vec8fb const & x) {
+    return horizontal_find_first(Vec8ib(x));
+}
+
+static inline int horizontal_find_first(Vec4db const & x) {
+    return horizontal_find_first(Vec4qb(x));
+} 
+
+// Count the number of elements that are true
+static inline uint32_t horizontal_count(Vec8fb const & x) {
+    return horizontal_count(Vec8ib(x));
+}
+
+static inline uint32_t horizontal_count(Vec4db const & x) {
+    return horizontal_count(Vec4qb(x));
+}
+
+/*****************************************************************************
+*
+*          Boolean <-> bitfield conversion functions
+*
+*****************************************************************************/
+
+// to_bits: convert boolean vector to integer bitfield
+static inline uint8_t to_bits(Vec8fb const & x) {
+    return to_bits(Vec8ib(x));
+}
+
+// to_Vec8fb: convert integer bitfield to boolean vector
+static inline Vec8fb to_Vec8fb(uint8_t x) {
+    return Vec8fb(to_Vec8ib(x));
+}
+
+// to_bits: convert boolean vector to integer bitfield
+static inline uint8_t to_bits(Vec4db const & x) {
+    return to_bits(Vec4qb(x));
+}
+
+// to_Vec4db: convert integer bitfield to boolean vector
+static inline Vec4db to_Vec4db(uint8_t x) {
+    return Vec4db(to_Vec4qb(x));
+}
 
 #endif // VECTORF256_H

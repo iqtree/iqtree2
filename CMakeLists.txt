@@ -134,6 +134,7 @@ add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
 add_subdirectory(zlib-1.2.7)
+#add_subdirectory(vectorclass)
 
 # the main executable
 add_executable(iqtree
