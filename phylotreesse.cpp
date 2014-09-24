@@ -571,7 +571,7 @@ void PhyloTree::computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, Phyl
 		}
 		for (x = 0; x < nstates; x++) {
 			size_t addr = c*nstatesqr+x*nstates;
-			for (i = 0; i < nstates; i+=2) {
+			for (i = 0; i < nstates; i+=Vec2d::size()) {
 				vc_a.load_a(evec+x*nstates+i);
 				vc_b.load_a(expleft+i);
 				vc_res = vc_a * vc_b;
@@ -610,7 +610,7 @@ void PhyloTree::computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, Phyl
 					vc_b.load_a(partial_lh_right);
 					vc_right = vc_a * vc_b;
 
-					for (i = 2; i < nstates; i+=2) {
+					for (i = Vec2d::size(); i < nstates; i+=Vec2d::size()) {
 						// left
 						vc_a.load_a(eleft+addr+i);
 						vc_b.load_a(partial_lh_left+i);
@@ -636,7 +636,7 @@ void PhyloTree::computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, Phyl
 						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];
 						*/
 					Vec2d vc_res(0.0);
-					for (x = 0; x < nstates; x+=2) {
+					for (x = Vec2d::size(); x < nstates; x+=Vec2d::size()) {
 						vc_a.load_a(partial_lh_tmp+x);
 						vc_b.load_a(inv_evec+i*nstates+x);
 						vc_res += vc_a*vc_b;
@@ -670,7 +670,7 @@ void PhyloTree::computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, Phyl
 					vc_b.load_a(partial_lh_right+c*nstates);
 					vc_right = vc_a * vc_b;
 
-					for (i = 2; i < nstates; i+=2) {
+					for (i = Vec2d::size(); i < nstates; i+=Vec2d::size()) {
 						// left
 						vc_a.load_a(eleft+addr+i);
 						vc_b.load_a(partial_lh_left+i);
@@ -696,7 +696,7 @@ void PhyloTree::computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, Phyl
 					for (x = 0; x < nstates; x++)
 						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];*/
 					Vec2d vc_res(0.0);
-					for (x = 0; x < nstates; x+=2) {
+					for (x = Vec2d::size(); x < nstates; x+=Vec2d::size()) {
 						vc_a.load_a(partial_lh_tmp+x);
 						vc_b.load_a(inv_evec+i*nstates+x);
 						vc_res += vc_a*vc_b;
@@ -750,7 +750,7 @@ void PhyloTree::computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, Phyl
 					vc_a.load_a(eright+addr);
 					vc_b.load_a(partial_lh_right+c*nstates);
 					vc_right = vc_a * vc_b;
-					for (i = 2; i < nstates; i+=2) {
+					for (i = Vec2d::size(); i < nstates; i+=Vec2d::size()) {
 						// left
 						vc_a.load_a(eleft+addr+i);
 						vc_b.load_a(partial_lh_left+c*nstates+i);
@@ -777,7 +777,7 @@ void PhyloTree::computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, Phyl
 						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];
 						*/
 					Vec2d vc_res(0.0);
-					for (x = 0; x < nstates; x+=2) {
+					for (x = 0; x < nstates; x+=Vec2d::size()) {
 						vc_a.load_a(partial_lh_tmp+x);
 						vc_b.load_a(inv_evec+i*nstates+x);
 						vc_res += vc_a*vc_b;
@@ -887,7 +887,7 @@ double PhyloTree::computeLikelihoodDervEigenSSE(PhyloNeighbor *dad_branch, Phylo
 					res *= cof[c*nstates+i];
 					ddf_ptn += res;
 				}*/
-				for (i = 0; i < nstates; i+=2) {
+				for (i = 0; i < nstates; i+=Vec2d::size()) {
 					vc_a.load_a(partial_lh_node+i);
 					vc_b.load_a(val+c*nstates+i);
 					vc_c.load_a(partial_lh_dad+c*nstates+i);
@@ -937,7 +937,7 @@ double PhyloTree::computeLikelihoodDervEigenSSE(PhyloNeighbor *dad_branch, Phylo
 			Vec2d vc_final(0.0);
 			Vec2d vc_df_final(0.0);
 			Vec2d vc_ddf_final(0.0);
-			for (i = 0; i < block; i+=2) {
+			for (i = 0; i < block; i+=Vec2d::size()) {
 				vc_a.load_a(partial_lh_node+i);
 				vc_b.load_a(val+i);
 				vc_c.load_a(partial_lh_dad+i);
@@ -1026,7 +1026,7 @@ double PhyloTree::computeLikelihoodBranchEigenSSE(PhyloNeighbor *dad_branch, Phy
 			Vec2d vc_final(0.0);
 			for (c = 0; c < ncat; c++) {
 				size_t addr = c*nstates;
-				for (i = 0; i < nstates; i+=2) {
+				for (i = 0; i < nstates; i+=Vec2d::size()) {
 					vc_res.load_a(val+addr+i);
 					vc_a.load_a(partial_lh_node+i);
 					vc_b.load_a(partial_lh_dad+addr+i);
@@ -1053,7 +1053,7 @@ double PhyloTree::computeLikelihoodBranchEigenSSE(PhyloNeighbor *dad_branch, Phy
 			for (i = 0; i < block; i++)
 				lh_ptn +=  val[i] * partial_lh_node[i] * partial_lh_dad[i];*/
 			Vec2d vc_final(0.0);
-			for (i = 0; i < block; i+=2) {
+			for (i = 0; i < block; i+=Vec2d::size()) {
 				vc_res.load_a(val+i);
 				vc_a.load_a(partial_lh_node+i);
 				vc_b.load_a(partial_lh_dad+i);
