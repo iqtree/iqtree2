@@ -815,35 +815,45 @@ double* IQTree::getModelRatesFromPLL() {
 }
 
 void IQTree::pllPrintModelParams() {
+    cout.precision(6);
+    cout << fixed;
     for (int part = 0; part < pllPartitions->numberOfPartitions; part++) {
-        //printf("alpha[%d]: %f \n", part, pllPartitions->partitionData[part]->alpha);
         cout << "Alpha[" << part << "]" << ": " << pllPartitions->partitionData[part]->alpha << endl;
         if (aln->num_states == 4) {
             int states, rates;
             states = pllPartitions->partitionData[part]->states;
             rates = ((states * states - states) / 2);
-            //printf(rates, "rates[%d] ac ag at cg ct gt: ", part);
             cout << "Rates[" << part << "]: " << " ac ag at cg ct gt: ";
             for (int i = 0; i < rates; i++) {
-                //printf(rates,"%f ", pllPartitions->partitionData[part]->substRates[i]);
                 cout << pllPartitions->partitionData[part]->substRates[i] << " ";
             }
             cout << endl;
-            cout << "Frequencies: ";
+            cout <<  "Frequencies: ";
             for (int i = 0; i < 4; i++) {
-                //printf("%f ", pllPartitions->partitionData[part]->empiricalFrequencies[i]);
                 cout << pllPartitions->partitionData[part]->empiricalFrequencies[i] << " ";
             }
             cout << endl;
         }
     }
+    cout.precision(3);
+    cout << fixed;
 }
 
 double IQTree::getAlphaFromPLL() {
     return pllPartitions->partitionData[0]->alpha;
 }
 
-void IQTree::inputModelParam2PLL() {
+void IQTree::inputModelPLL2IQTree() {
+    // TODO add support for partitioned model
+    dynamic_cast<RateGamma*>(getRate())->setGammaShape(pllPartitions->partitionData[0]->alpha);
+    if (aln->num_states == 4) {
+        ((GTRModel*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
+        getModel()->decomposeRateMatrix();
+    }
+    ((GTRModel*) getModel())->setStateFrequency(pllPartitions->partitionData[0]->empiricalFrequencies);
+}
+
+void IQTree::inputModelIQTree2PLL() {
     // get the alpha parameter
     double alpha = getRate()->getGammaShape();
     if (alpha == 0.0)
@@ -1413,9 +1423,7 @@ double IQTree::doTreeSearch() {
             printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
             if (cur_tree_topo_ss.str() != best_tree_topo) {
                 best_tree_topo = cur_tree_topo_ss.str();
-
                 optimizeModelParameters(imd_tree);
-
                 stop_rule.addImprovedIteration(curIteration);
                 cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl << endl;
@@ -2272,8 +2280,12 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     freeNode();
     readTree(tree_stream, rooted);
     assignLeafNames();
-    initializeAllPartialLh();
-    clearAllPartialLH();
+    if (isSuperTree()) {
+        ((PhyloSuperTree*) this)->mapTrees();
+    } else {
+		initializeAllPartialLh();
+		clearAllPartialLH();
+    }
 
     if (!save_all_trees) {
         out_file = params.out_prefix;

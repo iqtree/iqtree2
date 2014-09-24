@@ -194,9 +194,14 @@ public:
     void doRandomNNIs(int numNNI);
 
     /**
-     *   get model parameters from IQTree and input them into PLL
+     *   input model parameters from IQ-TREE to PLL
      */
-    void inputModelParam2PLL();
+    void inputModelIQTree2PLL();
+
+    /**
+     *  input model parameters from PLL to IQ-TREE
+     */
+    void inputModelPLL2IQTree();
 
     /**
      *  get the rate parameters from PLL
