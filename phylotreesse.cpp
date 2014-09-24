@@ -636,7 +636,7 @@ void PhyloTree::computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, Phyl
 						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];
 						*/
 					Vec2d vc_res(0.0);
-					for (x = Vec2d::size(); x < nstates; x+=Vec2d::size()) {
+					for (x = 0; x < nstates; x+=Vec2d::size()) {
 						vc_a.load_a(partial_lh_tmp+x);
 						vc_b.load_a(inv_evec+i*nstates+x);
 						vc_res += vc_a*vc_b;
@@ -696,7 +696,7 @@ void PhyloTree::computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, Phyl
 					for (x = 0; x < nstates; x++)
 						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];*/
 					Vec2d vc_res(0.0);
-					for (x = Vec2d::size(); x < nstates; x+=Vec2d::size()) {
+					for (x = 0; x < nstates; x+=Vec2d::size()) {
 						vc_a.load_a(partial_lh_tmp+x);
 						vc_b.load_a(inv_evec+i*nstates+x);
 						vc_res += vc_a*vc_b;
