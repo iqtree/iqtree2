@@ -45,6 +45,12 @@ const int SPR_DEPTH = 2;
 
 using namespace Eigen;
 
+#ifdef __AVX
+#define MEM_ALIGNMENT 32
+#else
+#define MEM_ALIGNMENT 16
+#endif
+
 /**
  *  Row Major Array For Eigen
  */
