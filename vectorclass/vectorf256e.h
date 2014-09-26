@@ -349,18 +349,18 @@ public:
     }
     // Member function extract a single element from vector
     // Note: This function is inefficient. Use store function if extracting more than one element
-    bool extract(uint32_t index) const {
-        if (index < 2) {
-            return Vec2db(y0).extract(index);
-        }
-        else {
-            return Vec2db(y1).extract(index - 2);
-        }
-    }
-    // Extract a single element. Operator [] can only read an element, not write.
-    bool operator [] (uint32_t index) const {
-        return extract(index);
-    }
+//    bool extract(uint32_t index) const {
+//        if (index < 2) {
+//            return Vec2db(y0).extract(index);
+//        }
+//        else {
+//            return Vec2db(y1).extract(index - 2);
+//        }
+//    }
+//    // Extract a single element. Operator [] can only read an element, not write.
+//    bool operator [] (uint32_t index) const {
+//        return extract(index);
+//    }
     // Member functions to split into two Vec4fb:
     Vec2db get_low() const {
         return y0;

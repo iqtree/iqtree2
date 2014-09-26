@@ -211,9 +211,10 @@ static inline Vec4fb operator ~ (Vec4fb const & a) {
 // vector operator ! : logical not
 // (operator ! is less efficient than operator ~. Use only where not
 // all bits in an element are the same)
-static inline Vec4fb operator ! (Vec4fb const & a) {
-    return Vec4fb( ! Vec4ib(a));
-}
+//BQM: commented out due to clang compiling error
+//static inline Vec4fb operator ! (Vec4fb const & a) {
+//    return Vec4fb( ! Vec4ib(a));
+//}
 
 // Functions for Vec4fb
 
@@ -303,13 +304,14 @@ public:
         return *this;
     };
     // Member function extract a single element from vector
-    bool extract(uint32_t index) const {
-        return Vec2qb(*this).extract(index);
-    }
-    // Extract a single element. Operator [] can only read an element, not write.
-    bool operator [] (uint32_t index) const {
-        return extract(index);
-    }
+    //BQM: commented out due to clang compiling error
+//    bool extract(uint32_t index) const {
+//        return Vec2qb(*this).extract(index);
+//    }
+//    // Extract a single element. Operator [] can only read an element, not write.
+//    bool operator [] (uint32_t index) const {
+//        return extract(index);
+//    }
     static int size() {
         return 2;
     }
@@ -369,9 +371,10 @@ static inline Vec2db operator ~ (Vec2db const & a) {
 // vector operator ! : logical not
 // (operator ! is less efficient than operator ~. Use only where not
 // all bits in an element are the same)
-static inline Vec2db operator ! (Vec2db const & a) {
-    return Vec2db (! Vec2qb(a));
-}
+//BQM: commented out due to clang compiling error
+//static inline Vec2db operator ! (Vec2db const & a) {
+//    return Vec2db (! Vec2qb(a));
+//}
 
 // Functions for Vec2db
 
@@ -2411,22 +2414,23 @@ static inline Vec2d gather2d(void const * a) {
 *****************************************************************************/
 
 // Get index to the first element that is true. Return -1 if all are false
-static inline int horizontal_find_first(Vec4fb const & x) {
-    return horizontal_find_first(Vec4ib(x));
-}
-
-static inline int horizontal_find_first(Vec2db const & x) {
-    return horizontal_find_first(Vec2qb(x));
-}
-
-// Count the number of elements that are true
-static inline uint32_t horizontal_count(Vec4fb const & x) {
-    return horizontal_count(Vec4ib(x));
-}
-
-static inline uint32_t horizontal_count(Vec2db const & x) {
-    return horizontal_count(Vec2qb(x));
-}
+//BQM: commented out due to clang compiling error
+//static inline int horizontal_find_first(Vec4fb const & x) {
+//    return horizontal_find_first(Vec4ib(x));
+//}
+//
+//static inline int horizontal_find_first(Vec2db const & x) {
+//    return horizontal_find_first(Vec2qb(x));
+//}
+//
+//// Count the number of elements that are true
+//static inline uint32_t horizontal_count(Vec4fb const & x) {
+//    return horizontal_count(Vec4ib(x));
+//}
+//
+//static inline uint32_t horizontal_count(Vec2db const & x) {
+//    return horizontal_count(Vec2qb(x));
+//}
 
 /*****************************************************************************
 *
@@ -2435,9 +2439,10 @@ static inline uint32_t horizontal_count(Vec2db const & x) {
 *****************************************************************************/
 
 // to_bits: convert boolean vector to integer bitfield
-static inline uint8_t to_bits(Vec4fb const & x) {
-    return to_bits(Vec4ib(x));
-}
+//BQM: commented out due to clang compiling error
+//static inline uint8_t to_bits(Vec4fb const & x) {
+//    return to_bits(Vec4ib(x));
+//}
 
 // to_Vec4fb: convert integer bitfield to boolean vector
 static inline Vec4fb to_Vec4fb(uint8_t x) {
@@ -2445,9 +2450,10 @@ static inline Vec4fb to_Vec4fb(uint8_t x) {
 }
 
 // to_bits: convert boolean vector to integer bitfield
-static inline uint8_t to_bits(Vec2db const & x) {
-    return to_bits(Vec2qb(x));
-}
+//BQM: commented out due to clang compiling error
+//static inline uint8_t to_bits(Vec2db const & x) {
+//    return to_bits(Vec2qb(x));
+//}
 
 // to_Vec2db: convert integer bitfield to boolean vector
 static inline Vec2db to_Vec2db(uint8_t x) {
