@@ -194,9 +194,14 @@ public:
     void doRandomNNIs(int numNNI);
 
     /**
-     *   get model parameters from IQTree and input them into PLL
+     *   input model parameters from IQ-TREE to PLL
      */
-    void inputModelParam2PLL();
+    void inputModelIQTree2PLL();
+
+    /**
+     *  input model parameters from PLL to IQ-TREE
+     */
+    void inputModelPLL2IQTree();
 
     /**
      *  get the rate parameters from PLL
@@ -213,7 +218,7 @@ public:
     /**
      *  print model parameters from PLL
      */
-    void printPLLModParams();
+    void pllPrintModelParams();
 
     /**
      * input the tree string from IQTree kernel to PLL kernel
@@ -331,14 +336,6 @@ public:
     void changeBranLen(PhyloNode *node1, PhyloNode *node2, double branLen);
 
     /**
-            Change all branch length according to the computed values during
-     * 		NNI evaluation. There might be branches that are not be affected
-     * 		since tree topology is changed after doing NNI
-     */
-    void changeAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
-
-
-    /**
      * Estimate the 95% quantile of the distribution of N (see paper for more d
                                                            details)
      * @return the estimated value
@@ -421,14 +418,6 @@ public:
 
     Linear* linRegModel;
 
-
-    inline void setStartLambda(double startLambda) {
-        this->startLambda = startLambda;
-    }
-
-    inline double getStartLambda() const {
-        return startLambda;
-    }
 
     inline double getNNICutoff() {
         return nni_cutoff;
@@ -536,16 +525,6 @@ protected:
     IQP_ASSESS_QUARTET iqp_assess_quartet;
 
     /**
-       The lambda number for NNI search (described in PhyML Paper)
-     */
-    double startLambda;
-
-    /**
-     * current lambda value in use
-     */
-    double curLambda;
-
-    /**
      * Array that stores the frequency that each taxa has been choosen to be swapped
      */
     map<int, int> freqList;
@@ -650,9 +629,9 @@ public:
     CandidateSet candidateTrees;
 
     /**
-     *  Set of unique initial parsimony trees
+     *  Set of unique initial parsimony trees (OBSOLETE by introducing candidateTrees)
      */
-    set<string> uniqParsTopo;
+    //set<string> uniqParsTopo;
 
 
     /****** following variables are for ultra-fast bootstrap *******/

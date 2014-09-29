@@ -634,15 +634,16 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 
 	//double bestScore = optimizeOneBranch(node1, node2, false);
 
-	double nni_scores[2] = {0.0, 0.0};
 	int ntrees = size(), part;
+	double nni_score1 = 0.0, nni_score2 = 0.0;
+	int local_totalNNIs = 0, local_evalNNIs = 0;
 
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: nni1_score, nni2_score) private(part)
+	#pragma omp parallel for reduction(+: nni_score1, nni_score2, local_totalNNIs, local_evalNNIs) private(part)
 	#endif
 	for (part = 0; part < ntrees; part++) {
 		bool is_nni = true;
-		totalNNIs++;
+		local_totalNNIs++;
 		FOR_NEIGHBOR_DECLARE(node1, NULL, nit) {
 			if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni = false; break; }
 		}
@@ -655,12 +656,12 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 				if (save_all_trees == 2 || nniMoves)
 					at(part)->computePatternLikelihood(part_info[part].cur_ptnlh, &part_info[part].cur_score);
 			}
-			nni_scores[0] += part_info[part].cur_score;
-			nni_scores[1] += part_info[part].cur_score;
+			nni_score1 += part_info[part].cur_score;
+			nni_score2 += part_info[part].cur_score;
 			continue;
 		}
 
-		evalNNIs++;
+		local_evalNNIs++;
 		part_info[part].evalNNIs++;
 
 		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
@@ -694,8 +695,8 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 			part_info[part].nniMoves[0] = part_info[part].nniMoves[1];
 			part_info[part].nniMoves[1] = tmp;
 		}
-		nni_scores[0] += part_info[part].nniMoves[0].newloglh;
-		nni_scores[1] += part_info[part].nniMoves[1].newloglh;
+		nni_score1 += part_info[part].nniMoves[0].newloglh;
+		nni_score2 += part_info[part].nniMoves[1].newloglh;
 		int numlen = 1;
 		if (params->nni5) numlen = 5;
 		for (int i = 0; i < numlen; i++) {
@@ -704,6 +705,10 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		}
 
 	}
+	totalNNIs += local_totalNNIs;
+	evalNNIs += local_evalNNIs;
+	double nni_scores[2] = {nni_score1, nni_score2};
+
 	myMove.node1Nei_it = node1->findNeighborIt(node1_nei->node);
 	myMove.node1 = node1;
 	myMove.node2 = node2;

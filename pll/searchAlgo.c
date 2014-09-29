@@ -1404,7 +1404,7 @@ static void readCheckpoint(pllInstance *tr, partitionList *pr)
                   model; 
 
   FILE 
-    *f = myfopen(binaryCheckpointInputName, "r");
+    *f = myfopen(binaryCheckpointInputName, "rb");
 
   /* cdta */   
 
@@ -3292,7 +3292,7 @@ pllRaxmlSearchAlgorithm(pllInstance * tr, partitionList * pr,
       double
       bestLH = tr->likelihood;
       FILE
-      *f = myfopen(terraceFileName, "w");
+      *f = myfopen(terraceFileName, "wb");
 
       /* print out likelihoods of 20 best trees found during the tree search */
       for(i = 1; i <= terrace->nvalid; i++)

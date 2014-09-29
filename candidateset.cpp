@@ -27,7 +27,7 @@ string CandidateSet::getBestTree() {
 	return (rbegin())->second.tree;
 }
 
-string CandidateSet::getCandidateTree() {
+string CandidateSet::getRandCandTree() {
 	if (empty())
 		return "";
 	// BQM: bug fix max -> min
@@ -38,6 +38,27 @@ string CandidateSet::getCandidateTree() {
 	return "";
 }
 
+string CandidateSet::getNextCandTree() {
+    string tree;
+    assert(!empty());
+    if (parentTrees.empty()) {
+        initParentTrees();
+    }
+    tree = parentTrees.top();
+    parentTrees.pop();
+    return tree;
+}
+
+void CandidateSet::initParentTrees() {
+    if (parentTrees.empty()) {
+        int count = this->max_candidates;
+        for (reverse_iterator i = rbegin(); i != rend() && count >0 ; i++, count--) {
+            parentTrees.push(i->second.tree);
+            //cout << i->first << endl;
+        }
+    }
+}
+
 
 bool CandidateSet::update(string tree, double score) {
 	CandidateTree candidate;
@@ -46,13 +67,23 @@ bool CandidateSet::update(string tree, double score) {
 	candidate.topology = getTopology(tree);
 	if (treeTopologyExist(candidate.topology)) {
 		if (verbose_mode >= VB_MED)
-			cout << "Duplicated candidate tree " << score << endl;
+			cout << "Duplicated candidate tree " << score << " / current score: " << topologies[candidate.topology] << endl;
+		if (topologies[candidate.topology] < score) {
+			topologies[candidate.topology] = score;
+			for (CandidateSet::iterator i = begin(); i != end(); i++)
+				if (i->second.topology == candidate.topology) {
+					erase(i);
+					break;
+				}
+			// insert tree into candidate set
+			insert(CandidateSet::value_type(score, candidate));
+		}
 		return false;
 	}
 	if (size() < limit) {
 		// insert tree into candidate set
 		insert(CandidateSet::value_type(score, candidate));
-		topologies[candidate.topology] = 1;
+		topologies[candidate.topology] = score;
 		return true;
 	} else if (begin()->first < score){
 		// remove the worst-scoring tree
@@ -60,7 +91,7 @@ bool CandidateSet::update(string tree, double score) {
 		erase(begin());
 		// insert tree into candidate set
 		insert(CandidateSet::value_type(score, candidate));
-		topologies[candidate.topology] = 1;
+		topologies[candidate.topology] = score;
 		return true;
 	}
 	return false;
@@ -69,7 +100,8 @@ bool CandidateSet::update(string tree, double score) {
 void CandidateSet::printBestScores() {
 	int cnt = max_candidates;
 	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++, cnt--) {
-		cout << rit->first << " / ";
+		if (cnt < max_candidates) cout << " / ";
+		cout << rit->first;
 	}
 	cout << endl;
 }
@@ -90,4 +122,8 @@ CandidateSet::~CandidateSet() {
 
 bool CandidateSet::treeTopologyExist(string topo) {
 	return topologies.find(topo) != topologies.end();
+}
+
+bool CandidateSet::treeExist(string tree) {
+	return treeTopologyExist(getTopology(tree));
 }

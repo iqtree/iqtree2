@@ -201,9 +201,9 @@ void printCopyright(ostream &out) {
 #ifdef IQ_TREE
  	out << "IQ-TREE";
 	#ifdef _OPENMP
-	out << "-OpenMP";
+	out << " multicore";
 	#endif
- 	out << " beta version "; 
+ 	out << " version ";
 #else
  	out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif

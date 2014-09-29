@@ -395,6 +395,12 @@ struct Params {
 	int numParsTrees;
 
 	/**
+	 *  Number of NNI trees generated from the set of parsimony trees
+	 *  Default = 20 (out of 100 parsimony trees)
+	 */
+	int numNNITrees;
+
+	/**
 	 *  Population size
 	 */
 	int popSize;
@@ -417,9 +423,14 @@ struct Params {
 	double initPerStrength;
 
 	/**
-	 *  logl epsilon for the initial model parameter optimization
+	 *  logl epsilon for the final model parameter optimization
 	 */
-	double model_eps;
+	double modeps;
+
+    /**
+     *  logl epsilon for the intermediate model parameter optimization steps
+     */
+    double imd_modeps;
 
 	/**
 	 *  Carry out iterated local search using NNI only.
@@ -1070,6 +1081,11 @@ struct Params {
     IQP_ASSESS_QUARTET iqp_assess_quartet;
 
     /**
+     *      Using IQP algorithm to do tree perturbation
+     */
+    bool iqp;
+
+    /**
             the LP file is in gurobi format or not
      */
     bool gurobi_format;
@@ -1454,6 +1470,9 @@ struct Params {
 
 	/** TRUE to print concatenated alignment, default: false */
 	bool print_conaln;
+
+	/** true to count all distinct trees visited during tree search */
+	bool count_trees;
 };
 
 /**

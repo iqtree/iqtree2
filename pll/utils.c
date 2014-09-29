@@ -3421,7 +3421,8 @@ pllReadFile (const char * filename, long * filesize)
   FILE * fp;
   char * rawdata;
 
-  fp = fopen (filename, "r");
+  // FIX BUG: opening with "r" does not work on Windows
+  fp = fopen (filename, "rb");
   if (!fp) return (NULL);
 
   /* obtain file size */

@@ -645,8 +645,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.nexus_output = false;
     params.k_representative = 4;
     params.loglh_epsilon = 0.000001;
-    params.numSmoothTree = 0;
-    params.nni5 = false;
+    params.numSmoothTree = 1;
+    params.nni5 = true;
     params.leastSquareBranch = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
@@ -670,6 +670,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_by_newton = true;
     params.fixed_branch_length = false;
     params.iqp_assess_quartet = IQP_DISTANCE;
+    params.iqp = false;
     params.write_intermediate_trees = 0;
     params.avoid_duplicated_trees = false;
     params.rf_dist_mode = 0;
@@ -742,7 +743,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.iteration_multiple = 1;
     params.initPerStrength = 0.5;
     params.pll = false;
-    params.model_eps = 0.1;
+    params.modeps = 0.001;
+    params.imd_modeps = 1.0;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -750,12 +752,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.reinsert_par = false;
     params.fast_branch_opt = false;
     params.bestStart = true;
-    params.snni = false;
-    params.autostop = false;
+    params.snni = true; // turn on sNNI default now
+    params.autostop = true; // turn on auto stopping rule by default now
     params.stopCond = 100;
-    params.speednni = false;
+    params.speednni = true; // turn on reduced hill-climbing NNI by default now
     params.adaptPert = false;
     params.numParsTrees = 100;
+    params.numNNITrees = 20;
     params.avh_test = 0;
     params.bootlh_test = 0;
     params.bootlh_partitions = NULL;
@@ -770,6 +773,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_subaln = false;
 	params.print_partition_info = false;
 	params.print_conaln = false;
+	params.count_trees = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1270,10 +1274,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.p_delete = convert_double(argv[cnt]);
                 if (params.p_delete < 0.0 || params.p_delete > 1.0)
                     throw "Probability of deleting a leaf must be between 0 and 1";
-            } else if (strcmp(argv[cnt], "-psize") == 0) {
+            } else if (strcmp(argv[cnt], "-pers") == 0) {
             	cnt++;
             	if (cnt >= argc)
-            		throw "Use -psize <probability>";
+            		throw "Use -pers <perturbation_strength>";
             	params.initPerStrength = convert_double(argv[cnt]);
         	} else if (strcmp(argv[cnt], "-n") == 0) {
                 cnt++;
@@ -1437,6 +1441,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (params.num_bootstrap_samples > 1) params.consensus_type = CT_CONSENSUS_TREE;
             } else if (strcmp(argv[cnt], "-iqppars") == 0) {
                 params.iqp_assess_quartet = IQP_PARSIMONY;
+            } else if (strcmp(argv[cnt], "-iqp") == 0) {
+                params.iqp = true;
             } else if (strcmp(argv[cnt], "-wt") == 0) {
                 params.write_intermediate_trees = 1;
             } else if (strcmp(argv[cnt], "-wt2") == 0) {
@@ -1670,15 +1676,20 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -numpars <number_of_parsimony_trees>";
                 params.numParsTrees = convert_int(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-toppars") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -toppars <number_of_top_parsimony_trees>";
+                params.numNNITrees = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-poplim") == 0) {
             	cnt++;
             	if (cnt >=argc)
             		throw "Use -poplim <max_pop_size>";
             	params.limitPopSize = convert_int(argv[cnt]);
-        	} else if (strcmp(argv[cnt], "-popsize") == 0) {
+        	} else if (strcmp(argv[cnt], "-popsize") == 0 || strcmp(argv[cnt], "-numcand") == 0) {
             	cnt++;
             	if (cnt >=argc)
-            		throw "Use -popsize <number_of_candidate_trees>";
+            		throw "Use -numcand <number_of_candidate_trees>";
             	params.popSize = convert_int(argv[cnt]);
             	assert(params.popSize < params.numParsTrees);
         	} else if (strcmp(argv[cnt], "-beststart") == 0) {
@@ -1694,7 +1705,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -me <model_epsilon>";
-                params.model_eps = convert_double(argv[cnt]);
+                params.modeps = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-pllmod") == 0) {
             	params.pllModOpt = true;
             	params.pll = true;
@@ -1706,15 +1717,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.adaptPert = true;
             } else if (strcmp(argv[cnt], "-snni") == 0) {
             	params.snni = true;
-                params.autostop = true;
-                params.speednni = true;
-                params.adaptPert = true;
+            	// dont need to turn this on here
+                //params.autostop = true;
+                //params.speednni = true;
+                // Minh: why do you turn this on? it doubles curPerStrength at some point
+                //params.adaptPert = true;
+            } else if (strcmp(argv[cnt], "-iqpnni") == 0) {
+            	params.snni = false;
             } else if (strcmp(argv[cnt], "-auto") == 0) {
             	params.autostop = true;
-            } else if (strcmp(argv[cnt], "-maxiter") == 0) {
-                if (!params.autostop) {
-                    throw "-auto need to be enabled before specifying this option";
-                }
+            } else if (strcmp(argv[cnt], "-stop_cond") == 0 || strcmp(argv[cnt], "-numstop") == 0) {
+                params.autostop = true;
                 cnt++;
                 params.stopCond = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
@@ -1812,6 +1825,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -rootstate <rootstate>";
                 params.root_state = argv[cnt];
                 params.SSE = false;
+            } else if (strcmp(argv[cnt], "-ct") == 0) {
+            	params.count_trees = true;
             } else if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
@@ -1942,20 +1957,24 @@ void usage_iqtree(char* argv[], bool full_command) {
     cout << "GENERAL OPTIONS:" << endl
             << "  -?                   Printing this help dialog" << endl
             << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP/FASTA/NEXUS format" << endl
+            << "  -st <data_type>      BIN, DNA, AA, CODON, or MORPH (default: auto-detect)" << endl
             << "  -sp <partition_file> Partition model specification in NEXUS format" << endl
             << "  -z <trees_file>      Compute log-likelihoods for all trees in the given file" << endl
-            << "  -st <BIN|DNA|AA>     Binary, DNA, or Protein sequences (default: auto-detect)" << endl
             << "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
             << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment)" << endl
 #ifdef _OPENMP
             << "  -omp <#cpu_cores>    Number of cores/threads to use (default: all cores)" << endl
 #endif
-            << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
-            << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
-            << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
-            << "  -bo <#replicates>    Bootstrap only" << endl
-            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
+            << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
+            << "  -pll                 Turn on phylogenetic likelihood library (default: off)" << endl
+            << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
+            << "  -toppars <number>    Number of top initial parsimony trees (dfault: 20)" << endl
+            << "  -numcand <number>    Number of candidate trees during search (defaut: 5)" << endl
+            << "  -pers <perturbation> Perturbation strength for stochastic NNI (default: 0.5)" << endl
+            << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
+            << "  -iqp                 Use IQP tree perturbation (default: sNNI)" << endl
+            << "  -iqpnni              Switch entirely to old IQPNNI algorithm" << endl
             << endl << "ULTRA-FAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultra-fast bootstrap (>=1000)" << endl
             << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
@@ -1964,6 +1983,11 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
 			<< "  -beps <epsilon>      Bootstrap trees in [maxlh-eps,maxlh+eps] are chosen" << endl
 			<< "                       at random (default: 0.5)" << endl
+            << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
+            << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
+            << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
+            << "  -bo <#replicates>    Bootstrap only" << endl
+            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
             << endl << "SINGLE BRANCH TEST:" << endl
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
             << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
@@ -1976,12 +2000,17 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       JTT, LG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
             << "                       HIVw, JTTDCMut, FLU, Blosum62" << endl
             << "               Binary: JC2 (default), GTR2" << endl
+            << "                Codon: GY (default), ECM, MG" << endl
+            << "       Morphology/SNP: MK (default), ORDERED" << endl
             << "      Model selection: TEST or TESTONLY to auto-select the best-fit model." << endl
             << "                       TESTONLY will stop the run after model selection" << endl
             << "            Otherwise: Name of file containing user-model parameters" << endl
             << "                       (rate parameters and state frequencies)" << endl
             << "  -m <model_name>+F or +FO or +FU or +FQ (default: auto)" << endl
             << "                       counted, optimized, user-defined, equal state frequency" << endl
+            << "  -m <model_name>+F1x4 or +F3x4 or +F3x4C" << endl
+            << "                       Codon frequencies" << endl
+            << "  -m <model_name>+ASC  Ascertainment bias correction for morphological/SNP data" << endl
             << endl << "RATE HETEROGENEITY:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n]" << endl
             << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl

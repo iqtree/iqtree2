@@ -46,6 +46,8 @@ inline bool comparePLLNNIMove(const pllNNIMove &a, const pllNNIMove &b)
     return a.likelihood < b.likelihood;
 }
 
+void countDistinctTrees(pllInstance* pllInst, partitionList *pllPartitions);
+
 static int cmp_nni(const void* nni1, const void* nni2);
 
 int compareDouble(const void * a, const void * b);
@@ -70,7 +72,7 @@ typedef struct {
 	unordered_set<string> aBranches; // Set of branches that are affected by the previous NNIs
 	double curLogl; // Current tree log-likelihood
 	int curIterNum; // Current iteration number
-	int curFailedIterNum; // Current number of failed iterations (no better tree found)
+	//int curFailedIterNum; // Current number of failed iterations (no better tree found)
 	double curPerStrength; // Current perturbation strength
 
 	// FOR NNI SEARCH

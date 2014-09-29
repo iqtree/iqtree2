@@ -215,6 +215,8 @@ void PhyloTree::readTreeString(const string &tree_string) {
 	setAlignment(aln);
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
+    } else {
+    	clearAllPartialLH();
     }
 }
 
@@ -1140,7 +1142,11 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         // allocate the big central partial likelihoods memory
         if (!central_partial_lh) {
             uint64_t mem_size = ((uint64_t) leafNum - 1) * 4 * (uint64_t) block_size + 2;
-            central_partial_lh = new double[mem_size];
+            try {
+            	central_partial_lh = new double[mem_size];
+            } catch (std::bad_alloc &ba) {
+            	outError("Not enough memory for partial likelihood vectors (bad_alloc)");
+            }
             //central_partial_lh = (double*) Eigen::internal::conditional_aligned_malloc<true>((leafNum-1)*4*block_size);
             if (!central_partial_lh)
                 outError("Not enough memory for partial likelihood vectors");
@@ -1150,7 +1156,11 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << (leafNum - 1) * 4 * scale_block_size * sizeof(UBYTE)
                         << " bytes for scale num vectors" << endl;
-            central_scale_num = new UBYTE[(leafNum - 1) * 4 * scale_block_size];
+            try {
+            	central_scale_num = new UBYTE[(leafNum - 1) * 4 * scale_block_size];
+            } catch (std::bad_alloc &ba) {
+            	outError("Not enough memory for scale num vectors (bad_alloc)");
+            }
             if (!central_scale_num)
                 outError("Not enough memory for scale num vectors");
         }
@@ -1158,7 +1168,11 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << (leafNum - 1) * 4 * pars_block_size * sizeof(UINT)
                         << " bytes for partial parsimony vectors" << endl;
-            central_partial_pars = new UINT[(leafNum - 1) * 4 * pars_block_size];
+            try {
+            	central_partial_pars = new UINT[(leafNum - 1) * 4 * pars_block_size];
+            } catch (std::bad_alloc &ba) {
+            	outError("Not enough memory for partial parsimony vectors (bad_alloc)");
+            }
             if (!central_partial_pars)
                 outError("Not enough memory for partial parsimony vectors");
         }
@@ -2826,6 +2840,8 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
         // first compute the observed parsimony distance
         double branch_length = (branch_subst > 0) ? ((double) branch_subst / getAlnNSite()) : (1.0 / getAlnNSite());
+        if (branch_length < MIN_BRANCH_LEN)
+        	branch_length = MIN_BRANCH_LEN;
         // now correct Juke-Cantor formula
         double z = (double) aln->num_states / (aln->num_states - 1);
         double x = 1.0 - (z * branch_length);
@@ -2872,7 +2888,7 @@ int PhyloTree::fixNegativeBranch2(bool force, Node *node, Node *dad) {
                 *it)->length = 1e-6;
         (*it)->node->findNeighbor(node)->length = (*it)->length;
     }
-    fixed += fixNegativeBranch(force, (*it)->node, node);
+    fixed += fixNegativeBranch2(force, (*it)->node, node);
 }
     return fixed;
 }

@@ -29,10 +29,11 @@ enum SeqType {
 
 #ifdef USE_HASH_MAP
 typedef unordered_map<string, int> StringIntMap;
+typedef unordered_map<string, double> StringDoubleHashMap;
 typedef unordered_map<string, int> PatternIntMap;
 //typedef map<string, int> PatternIntMap;
 #else
-typedef map<string, int> StringIntMap;
+typedef map<string, double> StringDoubleHashMap;
 typedef map<string, int> PatternIntMap;
 #endif
 
