@@ -428,6 +428,15 @@ public:
     int getScaleNumBytes();
 
     /**
+     * this stores partial_lh for each state at the leaves of the tree because they are the same between leaves
+     * e.g. (1,0,0,0) for A,  (0,0,0,1) for T
+     */
+    double *tip_partial_lh;
+    bool tip_partial_lh_computed;
+
+    void computeTipPartialLikelihood();
+
+    /**
             compute the partial likelihood at a subtree
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal

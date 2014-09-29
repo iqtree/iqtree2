@@ -17,8 +17,8 @@
 #include "ncl/ncl.h"
 #include "tools.h"
 
-
-const char STATE_UNKNOWN = 126;
+// IMPORTANT: refactor STATE_UNKNOWN
+//const char STATE_UNKNOWN = 126;
 const char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
 
@@ -130,6 +130,10 @@ public:
             output alignment 
      ****************************************************************************/
     SeqType detectSequenceType(StrVector &sequences);
+
+    void computeUnknownState();
+
+    void buildStateMap(char *map, SeqType seq_type);
 
     virtual char convertState(char state, SeqType seq_type);
 
@@ -490,6 +494,8 @@ public:
     /** either SEQ_BINARY, SEQ_DNA, SEQ_PROTEIN, SEQ_MORPH, or SEQ_CODON */
     SeqType seq_type;
 
+    char STATE_UNKNOWN;
+
     /**
             number of states
      */
@@ -517,6 +523,9 @@ public:
 	 */
 	char *genetic_code;
 
+    vector<vector<int> > seq_states; // state set for each sequence in the alignment
+
+    void buildSeqStates();
 
 
     /** Added by MA

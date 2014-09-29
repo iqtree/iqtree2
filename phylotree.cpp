@@ -59,6 +59,8 @@ void PhyloTree::init() {
     site_rate = NULL;
     optimize_by_newton = true;
     central_partial_lh = NULL;
+    tip_partial_lh = NULL;
+    tip_partial_lh_computed = false;
     central_scale_num = NULL;
     central_partial_pars = NULL;
     model_factory = NULL;
@@ -73,7 +75,8 @@ void PhyloTree::init() {
     discard_saturated_site = true;
     _pattern_lh = NULL;
     _pattern_lh_cat = NULL;
-    root_state = STATE_UNKNOWN;
+    //root_state = STATE_UNKNOWN;
+    root_state = 126;
     theta_all = NULL;
     subTreeDistComputed = false;
     dist_matrix = NULL;
@@ -281,6 +284,7 @@ void PhyloTree::clearAllPartialLH() {
     if (!root)
         return;
     ((PhyloNode*) root->neighbors[0]->node)->clearAllPartialLh((PhyloNode*) root);
+    tip_partial_lh_computed = false;
 }
 
 void PhyloTree::computeAllPartialLh(PhyloNode *node, PhyloNode *dad) {
@@ -524,12 +528,12 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
             if (!aln->at(ptn).is_const) {
                 char state;
                 if (node->name == ROOT_NAME) {
-                    state = STATE_UNKNOWN;
+                    state = aln->STATE_UNKNOWN;
                 } else {
                     assert(node->id < aln->getNSeq());
                     state = (aln->at(ptn))[node->id];
                 }
-                if (state == STATE_UNKNOWN) {
+                if (state == aln->STATE_UNKNOWN) {
                     // fill all entries with bit 1
                     //setBitsBlock(dad_branch->partial_pars, ptn, (1 << nstates) - 1);
                 } else if (state < nstates) {
@@ -718,12 +722,12 @@ int PhyloTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, Phyl
     if (node->isLeaf()) {
         char state;
         if (node->name == ROOT_NAME) {
-            state = STATE_UNKNOWN;
+            state = aln->STATE_UNKNOWN;
         } else {
             assert(node->id < aln->getNSeq());
             state = (*aln)[ptn][node->id];
         }
-        if (state == STATE_UNKNOWN) {
+        if (state == aln->STATE_UNKNOWN) {
             states = (1 << aln->num_states) - 1;
         } else if (state < aln->num_states)
             states = (1 << state);
@@ -1142,7 +1146,14 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
         if (!central_partial_lh) {
-            uint64_t mem_size = ((uint64_t) leafNum - 1) * 4 * (uint64_t) block_size + 2;
+        	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1);
+        	/*
+        	switch (aln->seq_type) {
+        	case SEQ_DNA: tip_partial_lh_size *=16; break; // including ambiguous nt and gap
+        	case SEQ_PROTEIN: tip_partial_lh_size *=23; break; // including 2 ambiguous aa and gap
+        	default: tip_partial_lh_size *=(aln->num_states+1); break; // including gap
+        	}*/
+            uint64_t mem_size = ((uint64_t) leafNum - 1) * 4 * (uint64_t) block_size + 2 + tip_partial_lh_size;
             try {
             	central_partial_lh = new double[mem_size];
             } catch (std::bad_alloc &ba) {
@@ -1151,7 +1162,10 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
             //central_partial_lh = (double*) Eigen::internal::conditional_aligned_malloc<true>((leafNum-1)*4*block_size);
             if (!central_partial_lh)
                 outError("Not enough memory for partial likelihood vectors");
-
+            size_t mem_shift = 0;
+            if (((intptr_t) central_partial_lh) % MEM_ALIGNMENT != 0)
+            	mem_shift = (MEM_ALIGNMENT - (((intptr_t) central_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
+            tip_partial_lh = central_partial_lh + ((nodeNum - 1)*2*block_size + mem_shift);
         }
         if (!central_scale_num) {
             if (verbose_mode >= VB_MED)
@@ -1187,12 +1201,18 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
         PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
         //assert(!nei->partial_lh);
-        nei->partial_lh = central_partial_lh + (index * block_size + mem_shift);
+        //if (nei->node->isLeaf())
+        //	nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
+        //else
+        	nei->partial_lh = central_partial_lh + (index * block_size + mem_shift);
         nei->scale_num = central_scale_num + (index * scale_block_size);
         nei->partial_pars = central_partial_pars + (index * pars_block_size);
         nei = (PhyloNeighbor*) dad->findNeighbor(node);
         //assert(!nei->partial_lh);
-        nei->partial_lh = central_partial_lh + ((index + 1) * block_size + mem_shift);
+        //if (nei->node->isLeaf())
+        //	nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
+        //else
+        	nei->partial_lh = central_partial_lh + ((index + 1) * block_size + mem_shift);
         nei->scale_num = central_scale_num + ((index + 1) * scale_block_size);
         nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
         index += 2;
@@ -1247,7 +1267,7 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     double score;
     string root_name = ROOT_NAME;
     Node *vroot = findLeafName(root_name);
-    if (root_state != STATE_UNKNOWN && vroot) {
+    if (root_state != aln->STATE_UNKNOWN && vroot) {
         if (verbose_mode >= VB_DEBUG)
             cout << __func__ << " HIT ROOT STATE " << endl;
         score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
@@ -2054,7 +2074,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         initializeAllPartialLh();
     // swap node and dad if dad is a leaf
     // NEW: swap if root_state is given
-    if (node->isLeaf() || (node->name == ROOT_NAME && root_state != STATE_UNKNOWN)) {
+    if (node->isLeaf() || (node->name == ROOT_NAME && root_state != aln->STATE_UNKNOWN)) {
         PhyloNode *tmp_node = dad;
         dad = node;
         node = tmp_node;
@@ -2103,7 +2123,7 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
         double rate_ptn = 0.0;
         int dad_state = 1000; // just something big enough
         int ptn_cat = site_rate->getPtnCat(ptn);
-        if (dad->name == ROOT_NAME && root_state != STATE_UNKNOWN) {
+        if (dad->name == ROOT_NAME && root_state != aln->STATE_UNKNOWN) {
             dad_state = root_state;
         } else if (dad->isLeaf()) {
         	if (ptn < orig_nptn)
@@ -2229,7 +2249,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
             char state;
             partial_lh_site = dad_branch->partial_lh + (ptn * block);
             if (node->name == ROOT_NAME) {
-                state = STATE_UNKNOWN;
+                state = aln->STATE_UNKNOWN;
             } else {
                 assert(node->id < aln->getNSeq());
                 if (ptn < orig_nptn)
@@ -2240,13 +2260,13 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
             if (state < nstates) {
 				for (cat = 0; cat < ncat; cat++)
 					partial_lh_site[cat * nstates + state] = 1.0;
-			} else if (state == STATE_UNKNOWN) {
+			} else if (state == aln->STATE_UNKNOWN) {
                 // fill all entries (also over rate category) with 1.0
                 dad_branch->scale_num[ptn] = -1;
                 for (int state2 = 0; state2 < block; state2++) {
                     partial_lh_site[state2] = 1.0;
                 }
-            } else {
+            } else if (aln->seq_type == SEQ_DNA) {
                 // ambiguous character, for DNA, RNA
                 state = state - (nstates - 1);
                 for (int state2 = 0; state2 < nstates && state2 <= 6; state2++)
@@ -2254,6 +2274,18 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                         for (cat = 0; cat < ncat; cat++)
                             partial_lh_site[cat * nstates + state2] = 1.0;
                     }
+            } else if (aln->seq_type == SEQ_PROTEIN) {
+                // ambiguous character, for DNA, RNA
+                state = state - (nstates);
+                assert(state < 2);
+                int state_map[2] = {4+8,32+64};
+                for (int state2 = 0; state2 <= 6; state2++)
+                    if (state_map[(int)state] & (1 << state2)) {
+                        for (cat = 0; cat < ncat; cat++)
+                            partial_lh_site[cat * nstates + state2] = 1.0;
+                    }
+            } else {
+            	outError("Internal error ", __func__);
             }
         }
     } else {
@@ -2360,7 +2392,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     assert(node_branch);
     // swap node and dad if dad is a leaf
     // NEW: swap if root_state is given
-    if (node->isLeaf() || (node->name == ROOT_NAME && root_state != STATE_UNKNOWN)) {
+    if (node->isLeaf() || (node->name == ROOT_NAME && root_state != aln->STATE_UNKNOWN)) {
         PhyloNode *tmp_node = dad;
         dad = node;
         node = tmp_node;
@@ -2437,9 +2469,9 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         double lh_ptn = 0.0; // likelihood of the pattern
         double lh_ptn_derv1 = 0.0;
         double lh_ptn_derv2 = 0.0;
-        int dad_state = STATE_UNKNOWN;
+        int dad_state = aln->STATE_UNKNOWN;
 
-        if (dad->name == ROOT_NAME && root_state != STATE_UNKNOWN)
+        if (dad->name == ROOT_NAME && root_state != aln->STATE_UNKNOWN)
             dad_state = root_state;
         else if (dad->isLeaf()) {
         	if (ptn < orig_nptn)
