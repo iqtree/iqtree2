@@ -1073,7 +1073,7 @@ void PhyloTree::growTreeMP(Alignment *alignment) {
  ****************************************************************************/
 
 void PhyloTree::initializeAllPartialLh() {
-    int index;
+    int index, indexlh;
     int numStates = model->num_states;
 	// Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
@@ -1108,8 +1108,13 @@ void PhyloTree::initializeAllPartialLh() {
         _pattern_lh_cat = new double[nptn * site_rate->getNDiscreteRate()];
     if (!theta_all)
         theta_all = new double[block_size];
-    initializeAllPartialLh(index);
+    initializeAllPartialLh(index, indexlh);
     assert(index == (nodeNum - 1) * 2);
+    if (sse == LK_EIGEN)
+    	assert(indexlh == (nodeNum-1)*2-leafNum);
+    else
+    	assert(indexlh == (nodeNum-1)*2);
+
 }
 
 void PhyloTree::deleteAllPartialLh() {
@@ -1132,11 +1137,14 @@ uint64_t PhyloTree::getMemoryRequired() {
     block_size = block_size * aln->num_states;
     if (site_rate)
     	block_size *= site_rate->getNRate();
-    uint64_t mem_size = ((uint64_t) leafNum - 1) * 4 * block_size + 2;
+    uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2;
+    if (sse == LK_EIGEN)
+    	mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
+
     return mem_size;
 }
 
-void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
+void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
     size_t pars_block_size = getBitsBlockSize();
     size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
     size_t scale_block_size = nptn;
@@ -1153,7 +1161,9 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         	case SEQ_PROTEIN: tip_partial_lh_size *=23; break; // including 2 ambiguous aa and gap
         	default: tip_partial_lh_size *=(aln->num_states+1); break; // including gap
         	}*/
-            uint64_t mem_size = ((uint64_t) leafNum - 1) * 4 * (uint64_t) block_size + 2 + tip_partial_lh_size;
+            uint64_t mem_size = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
+            if (sse == LK_EIGEN)
+            	mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
             try {
             	central_partial_lh = new double[mem_size];
             } catch (std::bad_alloc &ba) {
@@ -1165,7 +1175,10 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
             size_t mem_shift = 0;
             if (((intptr_t) central_partial_lh) % MEM_ALIGNMENT != 0)
             	mem_shift = (MEM_ALIGNMENT - (((intptr_t) central_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
-            tip_partial_lh = central_partial_lh + ((nodeNum - 1)*2*block_size + mem_shift);
+            if (sse == LK_EIGEN)
+            	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size + mem_shift);
+            else
+            	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size + mem_shift);
         }
         if (!central_scale_num) {
             if (verbose_mode >= VB_MED)
@@ -1192,6 +1205,7 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
                 outError("Not enough memory for partial parsimony vectors");
         }
         index = 0;
+        indexlh = 0;
     }
     if (dad) {
         // make memory alignment
@@ -1201,24 +1215,28 @@ void PhyloTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *d
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
         PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
         //assert(!nei->partial_lh);
-        //if (nei->node->isLeaf())
-        //	nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
-        //else
-        	nei->partial_lh = central_partial_lh + (index * block_size + mem_shift);
+        if (nei->node->isLeaf() && sse == LK_EIGEN)
+        	nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
+        else {
+        	nei->partial_lh = central_partial_lh + (indexlh * block_size + mem_shift);
+        	indexlh++;
+        }
         nei->scale_num = central_scale_num + (index * scale_block_size);
         nei->partial_pars = central_partial_pars + (index * pars_block_size);
         nei = (PhyloNeighbor*) dad->findNeighbor(node);
         //assert(!nei->partial_lh);
-        //if (nei->node->isLeaf())
-        //	nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
-        //else
-        	nei->partial_lh = central_partial_lh + ((index + 1) * block_size + mem_shift);
+        if (nei->node->isLeaf() && sse == LK_EIGEN)
+        	nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
+        else {
+        	nei->partial_lh = central_partial_lh + (indexlh * block_size + mem_shift);
+        	indexlh++;
+        }
         nei->scale_num = central_scale_num + ((index + 1) * scale_block_size);
         nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
         index += 2;
         assert(index < nodeNum * 2 - 1);
     }
-    FOR_NEIGHBOR_IT(node, dad, it)initializeAllPartialLh(index, (PhyloNode*) (*it)->node, node);
+    FOR_NEIGHBOR_IT(node, dad, it) initializeAllPartialLh(index, indexlh, (PhyloNode*) (*it)->node, node);
 }
 
 double *PhyloTree::newPartialLh() {

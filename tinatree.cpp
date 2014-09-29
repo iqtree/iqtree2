@@ -105,12 +105,12 @@ int TinaTree::computeParsimonyScore() {
 }
 
 void TinaTree::initializeAllPartialLh() {
-    int index;
-    initializeAllPartialLh(index);
+    int index, indexlh;
+    initializeAllPartialLh(index, indexlh);
     assert(index == (nodeNum - 1)*2);
 }
 
-void TinaTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *dad) {
+void TinaTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
     int pars_block_size = getBitsBlockSize();
     if (!node) {
         node = (PhyloNode*) root;
@@ -137,5 +137,5 @@ void TinaTree::initializeAllPartialLh(int &index, PhyloNode *node, PhyloNode *da
         assert(index < nodeNum * 2 - 1);
     }
     FOR_NEIGHBOR_IT(node, dad, it)
-    initializeAllPartialLh(index, (PhyloNode*) (*it)->node, node);
+    initializeAllPartialLh(index, indexlh, (PhyloNode*) (*it)->node, node);
 }

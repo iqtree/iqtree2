@@ -127,51 +127,13 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 
     dad_branch->lh_scale_factor = 0.0;
 
-    /*
-	if (node->isLeaf()) {
-		// external node
-		assert(node->id < aln->getNSeq());
-	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
-		for (ptn = 0; ptn < nptn; ptn++) {
-			int state = (aln->at(ptn))[node->id];
-			if (state < nstates) {
-				// simple state
-				for (i = 0; i < nstates; i++)
-					partial_lh[i] = inv_evec[i*nstates+state];
-			} else if (state == aln->STATE_UNKNOWN) {
-				// gap or unknown state
-				//dad_branch->scale_num[ptn] = -1;
-				memset(partial_lh, 0, nstates*sizeof(double));
-				for (i = 0; i < nstates; i++) {
-					for (x = 0; x < nstates; x++) {
-						partial_lh[i] += inv_evec[i*nstates+x];
-					}
-				}
-			} else {
-				// ambiguous state
-				memset(partial_lh, 0, nstates*sizeof(double));
-				state -= (nstates-1);
-				for (i = 0; i < nstates; i++) {
-					for (x = 0; x < nstates; x++)
-						if (state & (1 << x))
-							partial_lh[i] += inv_evec[i*nstates+x];
-				}
-
-			}
-			partial_lh += nstates;
-		} // for loop over ptn
-		delete [] inv_evec;
-		delete [] evec;
-
-		return;
-	}*/
-
 	// internal node
 	assert(node->degree() == 3); // it works only for strictly bifurcating tree
 	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
 	FOR_NEIGHBOR_IT(node, dad, it) {
 		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
 	}
+
 	if (!left->node->isLeaf() && right->node->isLeaf()) {
 		PhyloNeighbor *tmp = left;
 		left = right;
@@ -215,41 +177,26 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
 			int state = (*it);
 			for (x = 0; x < block; x++) {
-				double vleft = 0.0;
-				for (i = 0; i < nstates; i++) {
-					vleft += eleft[x*nstates+i] * tip_partial_lh[state*nstates+i];
+				double vleft1 = 0.0, vleft2 = 0.0;
+				for (i = 0; i < nstates; i+=2) {
+					vleft1 += eleft[x*nstates+i] * tip_partial_lh[state*nstates+i];
+					vleft2 += eleft[x*nstates+i+1] * tip_partial_lh[state*nstates+i+1];
 				}
-				partial_lh_left[state*block+x] = vleft;
+				partial_lh_left[state*block+x] = vleft1+vleft2;
 			}
 		}
 
 		for (it = aln->seq_states[right->node->id].begin(); it != aln->seq_states[right->node->id].end(); it++) {
 			int state = (*it);
 			for (x = 0; x < block; x++) {
-				double vright = 0.0;
-				for (i = 0; i < nstates; i++) {
-					vright += eright[x*nstates+i] * tip_partial_lh[state*nstates+i];
+				double vright1 = 0.0, vright2 = 0.0;
+				for (i = 0; i < nstates; i+=2) {
+					vright1 += eright[x*nstates+i] * tip_partial_lh[state*nstates+i];
+					vright2 += eright[x*nstates+i+1] * tip_partial_lh[state*nstates+i+1];
 				}
-				partial_lh_right[state*block+x] = vright;
+				partial_lh_right[state*block+x] = vright1+vright2;
 			}
 		}
-
-/*
-			for (c = 0; c < ncat; c++) {
-				// compute real partial likelihood vector
-				for (x = 0; x < nstates; x++) {
-					double vleft = 0.0, vright = 0.0;
-					size_t addr = c*nstatesqr+x*nstates;
-					for (i = 0; i < nstates; i++) {
-						vleft += eleft[addr+i] * tip_partial_lh[state*nstates+i];
-						vright += eright[addr+i] * tip_partial_lh[state*nstates+i];
-					}
-					partial_lh_left[state*block+c*nstates+x] = vleft;
-					partial_lh_right[state*block+c*nstates+x] = vright;
-				}
-			}
-			*/
-		//}
 
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
@@ -258,42 +205,22 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 			int state_right = (aln->at(ptn))[right->node->id];
 			for (c = 0; c < ncat; c++) {
 				// compute real partial likelihood vector
+				double *left = partial_lh_left + (state_left*block+c*nstates);
+				double *right = partial_lh_right + (state_right*block+c*nstates);
 				for (x = 0; x < nstates; x++) {
-					partial_lh_tmp[x] = partial_lh_left[state_left*block+c*nstates+x] * partial_lh_right[state_right*block+c*nstates+x];
+					partial_lh_tmp[x] = left[x] * right[x];
 				}
 				// compute dot-product with inv_eigenvector
 				for (i = 0; i < nstates; i++) {
-					double res = 0.0;
-					for (x = 0; x < nstates; x++)
-						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];
-					partial_lh[c*nstates+i] = res;
-//					cout << "partial_lh[" << c*nstates+i << "] " << res << endl;
-				}
-			}
-			/*
-			for (c = 0; c < ncat; c++) {
-				// compute real partial likelihood vector
-				for (x = 0; x < nstates; x++) {
-					double vleft = 0.0, vright = 0.0;
-					size_t addr = c*nstatesqr+x*nstates;
-					for (i = 0; i < nstates; i++) {
-						vleft += eleft[addr+i] * partial_lh_left[i];
-						vright += eright[addr+i] * partial_lh_right[i];
+					double res1 = 0.0, res2=0.0;
+					for (x = 0; x < nstates; x+=2) {
+						res1 += partial_lh_tmp[x]*inv_evec[i*nstates+x];
+						res2 += partial_lh_tmp[x+1]*inv_evec[i*nstates+x+1];
 					}
-					partial_lh_tmp[x] = vleft * vright;
-				}
-				// compute dot-product with inv_eigenvector
-				for (i = 0; i < nstates; i++) {
-					double res = 0.0;
-					for (x = 0; x < nstates; x++)
-						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];
-					partial_lh[c*nstates+i] = res;
+					partial_lh[c*nstates+i] = res1+res2;
 				}
 			}
-			*/
 			partial_lh += block;
-			//partial_lh_left += nstates;
-			//partial_lh_right += nstates;
 		}
 		delete [] partial_lh_right;
 		delete [] partial_lh_left;
@@ -310,14 +237,14 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
 			int state = (*it);
 			for (x = 0; x < block; x++) {
-				double vleft = 0.0;
-				for (i = 0; i < nstates; i++) {
-					vleft += eleft[x*nstates+i] * tip_partial_lh[state*nstates+i];
+				double vleft1 = 0.0, vleft2 = 0.0;
+				for (i = 0; i < nstates; i+=2) {
+					vleft1 += eleft[x*nstates+i] * tip_partial_lh[state*nstates+i];
+					vleft2 += eleft[x*nstates+i+1] * tip_partial_lh[state*nstates+i+1];
 				}
-				partial_lh_left[state*block+x] = vleft;
+				partial_lh_left[state*block+x] = vleft1+vleft2;
 			}
 		}
-
 
 		double sum_scale = 0.0;
 		for (ptn = 0; ptn < nptn; ptn++) {
@@ -326,22 +253,23 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 			for (c = 0; c < ncat; c++) {
 				// compute real partial likelihood vector
 				for (x = 0; x < nstates; x++) {
-					double vleft = 0.0, vright = 0.0;
+					double vleft = 0.0, vright1 = 0.0, vright2 = 0.0;
 					size_t addr = c*nstatesqr+x*nstates;
 					vleft = partial_lh_left[state_left*block+c*nstates+x];
-					for (i = 0; i < nstates; i++) {
-						//vleft += eleft[addr+i] * partial_lh_left[i];
-						vright += eright[addr+i] * partial_lh_right[c*nstates+i];
+					for (i = 0; i < nstates; i+=2) {
+						vright1 += eright[addr+i] * partial_lh_right[c*nstates+i];
+						vright2 += eright[addr+i+1] * partial_lh_right[c*nstates+i+1];
 					}
-					partial_lh_tmp[x] = vleft * vright;
+					partial_lh_tmp[x] = vleft * (vright1+vright2);
 				}
 				// compute dot-product with inv_eigenvector
 				for (i = 0; i < nstates; i++) {
-					double res = 0.0;
-					for (x = 0; x < nstates; x++)
-						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];
-					partial_lh[c*nstates+i] = res;
-
+					double res1 = 0.0, res2=0.0;
+					for (x = 0; x < nstates; x+=2) {
+						res1 += partial_lh_tmp[x]*inv_evec[i*nstates+x];
+						res2 += partial_lh_tmp[x+1]*inv_evec[i*nstates+x+1];
+					}
+					partial_lh[c*nstates+i] = res1+res2;
 				}
 			}
             // check if one should scale partial likelihoods
@@ -396,11 +324,12 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 				}
 				// compute dot-product with inv_eigenvector
 				for (i = 0; i < nstates; i++) {
-					double res = 0.0;
-					for (x = 0; x < nstates; x++)
-						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];
-					partial_lh[c*nstates+i] = res;
-
+					double res1 = 0.0, res2=0.0;
+					for (x = 0; x < nstates; x+=2) {
+						res1 += partial_lh_tmp[x]*inv_evec[i*nstates+x];
+						res2 += partial_lh_tmp[x+1]*inv_evec[i*nstates+x+1];
+					}
+					partial_lh[c*nstates+i] = res1+res2;
 				}
 			}
 
