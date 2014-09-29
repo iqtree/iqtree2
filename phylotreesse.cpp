@@ -23,14 +23,23 @@
 /* BQM: to ignore all-gapp subtree at an alignment site */
 //#define IGNORE_GAP_LH
 
+#include "vectorclass/vectorclass.h"
+#ifdef __AVX
+#define VectorClass Vec4d
+#pragma message "Using AVX instructions"
+#else
+#define VectorClass Vec2d
+//#pragma message "Using SS3 instructions"
+#endif
+
 void PhyloTree::computeTipPartialLikelihood() {
 	if (tip_partial_lh_computed)
 		return;
 	tip_partial_lh_computed = true;
 	int i, x, state, nstates = aln->num_states;
 
-	double *evec = new double[nstates*nstates];
-    double *inv_evec = new double[nstates*nstates];
+	double *evec = aligned_alloc_double(nstates*nstates);
+    double *inv_evec = aligned_alloc_double(nstates*nstates);
 	double **_evec = model->getEigenvectors(), **_inv_evec = model->getInverseEigenvectors();
 	assert(_inv_evec && _evec);
 	for (i = 0; i < nstates; i++) {
@@ -82,8 +91,8 @@ void PhyloTree::computeTipPartialLikelihood() {
 	default:
 		break;
 	}
-	delete [] inv_evec;
-	delete [] evec;
+	aligned_free(inv_evec);
+	aligned_free(evec);
 }
 
 /**
@@ -547,33 +556,11 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     return tree_lh;
 }
 
-#include "vectorclass/vectorclass.h"
-
 /************************************************************************************************
  *
  *   SSE vectorized versions of above functions
  *
  *************************************************************************************************/
-
-#include "pll/mem_alloc.h"
-
-#ifdef __AVX
-#define VectorClass Vec4d
-#pragma message "Using AVX instructions"
-#else
-#define VectorClass Vec2d
-//#pragma message "Using SS3 instructions"
-#endif
-
-double *aligned_alloc_double(size_t size) {
-	void *res;
-	rax_posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
-	return (double*)res;
-}
-
-void aligned_free(void *mem) {
-	free(mem);
-}
 
 template <const int nstates>
 void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {

@@ -133,7 +133,7 @@ PhyloTree::~PhyloTree() {
     //if (state_freqs)
     //	delete [] state_freqs;
     if (theta_all)
-        delete[] theta_all;
+        aligned_free(theta_all);
     if (dist_matrix)
     	delete[] dist_matrix;
 }
@@ -1107,7 +1107,7 @@ void PhyloTree::initializeAllPartialLh() {
     if (!_pattern_lh_cat)
         _pattern_lh_cat = new double[nptn * site_rate->getNDiscreteRate()];
     if (!theta_all)
-        theta_all = new double[block_size];
+        theta_all = aligned_alloc_double(block_size);
     initializeAllPartialLh(index, indexlh);
     assert(index == (nodeNum - 1) * 2);
     if (sse == LK_EIGEN)

@@ -51,6 +51,19 @@ using namespace Eigen;
 #define MEM_ALIGNMENT 16
 #endif
 
+#include "pll/mem_alloc.h"
+
+inline double *aligned_alloc_double(size_t size) {
+	void *res;
+	rax_posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
+	return (double*)res;
+}
+
+inline void aligned_free(void *mem) {
+	free(mem);
+}
+
+
 /**
  *  Row Major Array For Eigen
  */
