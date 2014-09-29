@@ -455,6 +455,9 @@ public:
     template<const int nstates>
     void computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
+    template<const int nstates>
+    void computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+
     /**
             compute tree likelihood on a branch. used to optimize branch length
             @param dad_branch the branch leading to the subtree
@@ -473,6 +476,8 @@ public:
 
     template<const int nstates>
     double computeLikelihoodBranchEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    template<const int nstates>
+    double computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad,
             double *pattern_lh = NULL, double *pattern_rate = NULL);
@@ -617,6 +622,9 @@ public:
 
     template<const int nstates>
     double computeLikelihoodDervEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template<const int nstates>
+    double computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length

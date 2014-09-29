@@ -1338,6 +1338,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.SSE = LK_EIGEN;
             } else if (strcmp(argv[cnt], "-fastsse") == 0) {
                 params.SSE = LK_EIGEN_SSE;
+            } else if (strcmp(argv[cnt], "-fasttipsse") == 0) {
+                params.SSE = LK_EIGEN_TIP_SSE;
             } else if (strcmp(argv[cnt], "-f") == 0) {
                 cnt++;
                 if (cnt >= argc)
