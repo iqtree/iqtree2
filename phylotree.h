@@ -38,9 +38,14 @@ const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEAS
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for ModelFactory::optimizeParameters
 //const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
-const static double SCALING_THRESHOLD = 1e-100;
-const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
-const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
+//const static double SCALING_THRESHOLD = 1e-100;
+//const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
+//const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
+#include "pll/pll.h"
+#define SCALING_THRESHOLD (1.0/PLL_TWOTOTHE256)
+#define SCALING_THRESHOLD_INVER PLL_TWOTOTHE256
+#define LOG_SCALING_THRESHOLD log(SCALING_THRESHOLD)
+
 const int SPR_DEPTH = 2;
 
 using namespace Eigen;
