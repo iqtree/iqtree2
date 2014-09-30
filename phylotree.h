@@ -80,6 +80,8 @@ typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 #define Matrix(NSTATES) Matrix<double, NSTATES, NSTATES>
 #define RowVector(NSTATES) Matrix<double, 1, NSTATES>
 #define MappedRowArr2DDyn Map<Array<double, Dynamic, Dynamic, RowMajor> >
+#define MappedArrDyn Map<Array<double, Dynamic, 1> >
+#define MappedVecDyn(NSTATES) Map<Matrix<double, Dynamic, NSTATES> >
 
 const int MAX_SPR_MOVES = 20;
 

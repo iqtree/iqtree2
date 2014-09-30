@@ -1334,6 +1334,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Lambda must be in (0,1]";
             } else if (strcmp(argv[cnt], "-nosse") == 0) {
                 params.SSE = LK_NORMAL;
+            } else if (strcmp(argv[cnt], "-sse") == 0) {
+                params.SSE = LK_SSE;
             } else if (strcmp(argv[cnt], "-fastlk") == 0) {
                 params.SSE = LK_EIGEN;
             } else if (strcmp(argv[cnt], "-fastsse") == 0) {

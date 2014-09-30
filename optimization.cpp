@@ -433,7 +433,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 			}
 			return rts;*/
 			if (fm > finit) {
-				// happen in rare cases
+				// happen in rare cases that it is worse than starting point: revert init value
 				fm = computeFunction(xinit);
 				return xinit;
 			}
