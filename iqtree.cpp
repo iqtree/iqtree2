@@ -1186,7 +1186,7 @@ void IQTree::optimizeModelParameters(string& imd_tree) {
                 imd_tree = getTreeString();
                 if (params->pll) {
                     deleteAllPartialLh();
-                    inputModelParam2PLL();
+                    inputModelIQTree2PLL();
                     // recompute the curScore using PLL
                     curScore = inputTree2PLL(imd_tree, true);
                 }

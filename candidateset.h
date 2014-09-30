@@ -74,8 +74,10 @@ public:
      */
     void printBestScores();
 
+    void printBestTrees(int numTree);
+
     /**
-     * destroctor
+     * destructor
      */
     virtual ~CandidateSet();
 

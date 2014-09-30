@@ -1414,9 +1414,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
         if (params.snni) {
             /************ START: Create a set of up to (numInitTrees - 1) unique parsimony trees **********************/
-            if (params.snni) {
-                //cout << "********************* START EXPLORATIVE PHASE ********************* " << endl << endl;
-            }
             cout << "Generating " << numInitTrees << " parsimony trees... ";
             cout.flush();
             double parsTimeStart = getCPUTime();
@@ -1556,7 +1553,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                     }
                 }
             }
-
             /*********** END: Do NNI on the best parsimony trees ************************************/
         } else { // no -snni
             cout << "Doing NNI on the initial tree ... " << endl;
