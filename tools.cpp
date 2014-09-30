@@ -1723,8 +1723,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.pll = true;
         	} else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
-            } else if (strcmp(argv[cnt], "-speednni") == 0) {
-                params.speednni = true;
+            } else if (strcmp(argv[cnt], "-nospeednni") == 0) {
+                params.speednni = false;
             } else if (strcmp(argv[cnt], "-adapt") == 0) {
                 params.adaptPert = true;
             } else if (strcmp(argv[cnt], "-snni") == 0) {

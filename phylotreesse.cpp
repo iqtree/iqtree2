@@ -119,7 +119,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
     //size_t nstates = aln->num_states;
     //const size_t ncat = 4;
     //const size_t nstates = 4;
-    size_t nstatesqr=nstates*nstates, i, x;
+    const size_t nstatesqr=nstates*nstates;
+    size_t i, x;
     //const size_t block = nstates * ncat;
     size_t block = nstates * ncat;
 
@@ -582,7 +583,8 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
     //size_t nstates = aln->num_states;
     //const size_t ncat = 4;
     //const size_t nstates = 4;
-    size_t nstatesqr=nstates*nstates, i, x;
+    const size_t nstatesqr=nstates*nstates;
+    size_t i, x;
     //const size_t block = nstates * ncat;
     size_t block = nstates * ncat;
 
@@ -658,6 +660,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 					vleft += VectorClass().load_a(&eleft[x*nstates+i]) * VectorClass().load_a(&tip_partial_lh[state*nstates+i]);
 				}
 				partial_lh_left[state*block+x] = horizontal_add(vleft);
+
 			}
 		}
 
@@ -1049,7 +1052,8 @@ void PhyloTree::computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, Phyl
 
     //size_t nstates = aln->num_states ;
     //const size_t nstates = 4;
-    size_t nstatesqr = nstates*nstates, i, x;
+    const size_t nstatesqr = nstates*nstates;
+    size_t i, x;
     size_t block = nstates * ncat;
 
     PhyloNode *node = (PhyloNode*)(dad_branch->node);
@@ -1318,8 +1322,8 @@ double PhyloTree::computeLikelihoodDervEigenSSE(PhyloNeighbor *dad_branch, Phylo
         computePartialLikelihoodEigenSSE<nstates>(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     df = ddf = 0.0;
-    //size_t ncat = site_rate->getNRate();
-    const size_t ncat = 4;
+    size_t ncat = site_rate->getNRate();
+    //const size_t ncat = 4;
 
     //double p_invar = site_rate->getPInvar();
     //assert(p_invar == 0.0); // +I model not supported yet
@@ -1327,7 +1331,8 @@ double PhyloTree::computeLikelihoodDervEigenSSE(PhyloNeighbor *dad_branch, Phylo
     const double p_var_cat = 0.25;
     //size_t nstates = aln->num_states;
     //const size_t nstates = 4;
-    const size_t block = ncat * nstates;
+//    const size_t block = ncat * nstates;
+    size_t block = ncat * nstates;
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i;
     size_t nptn = aln->size();

@@ -382,7 +382,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 {
 	int j;
 	double df,dx,dxold,f;
-	double temp,xh,xl,rts, fold, finit, xinit;
+	double temp,xh,xl,rts, rts_old, fold, finit, xinit;
 
 	rts = xguess;
 	if (rts < x1) rts = x1;
@@ -404,6 +404,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 
 	dx=dxold=fabs(xh-xl);
 	for (j=1;j<=maxNRStep;j++) {
+		rts_old = rts;
 		if (
 			(df <= 0.0) // function is concave
 			|| (fm > fold + xacc) // increasing
@@ -424,12 +425,19 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 			if (temp == rts) return rts;
 		}
 		if (fabs(dx) < xacc || (j == maxNRStep)) {
+			/*
 			fm = computeFunction(rts);
 			if (fm > finit) {
 				fm = computeFunction(xinit);
 				return xinit;
 			}
-			return rts;
+			return rts;*/
+			if (fm > finit) {
+				// happen in rare cases
+				fm = computeFunction(xinit);
+				return xinit;
+			}
+			return rts_old;
 		}
 		fold = fm;
 		fm = computeFuncDerv(rts,f,df);
