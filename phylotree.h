@@ -45,6 +45,25 @@ const int SPR_DEPTH = 2;
 
 using namespace Eigen;
 
+#ifdef __AVX
+#define MEM_ALIGNMENT 32
+#else
+#define MEM_ALIGNMENT 16
+#endif
+
+#include "pll/mem_alloc.h"
+
+inline double *aligned_alloc_double(size_t size) {
+	void *res;
+	rax_posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
+	return (double*)res;
+}
+
+inline void aligned_free(void *mem) {
+	free(mem);
+}
+
+
 /**
  *  Row Major Array For Eigen
  */
@@ -61,6 +80,8 @@ typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 #define Matrix(NSTATES) Matrix<double, NSTATES, NSTATES>
 #define RowVector(NSTATES) Matrix<double, 1, NSTATES>
 #define MappedRowArr2DDyn Map<Array<double, Dynamic, Dynamic, RowMajor> >
+#define MappedArrDyn Map<Array<double, Dynamic, 1> >
+#define MappedVecDyn(NSTATES) Map<Matrix<double, Dynamic, NSTATES> >
 
 const int MAX_SPR_MOVES = 20;
 
@@ -392,7 +413,7 @@ public:
             @param dad dad of the node, used to direct the search
             @param index the index
      */
-    virtual void initializeAllPartialLh(int &index, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 
     /**
@@ -422,6 +443,15 @@ public:
     int getScaleNumBytes();
 
     /**
+     * this stores partial_lh for each state at the leaves of the tree because they are the same between leaves
+     * e.g. (1,0,0,0) for A,  (0,0,0,1) for T
+     */
+    double *tip_partial_lh;
+    bool tip_partial_lh_computed;
+
+    void computeTipPartialLikelihood();
+
+    /**
             compute the partial likelihood at a subtree
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
@@ -433,6 +463,15 @@ public:
 
     template<int NSTATES>
     inline void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+
+    template <const int nstates>
+    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+
+    template<const int nstates>
+    void computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+
+    template<const int nstates>
+    void computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
     /**
             compute tree likelihood on a branch. used to optimize branch length
@@ -446,6 +485,14 @@ public:
 
     template<int NSTATES>
     inline double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+
+    template <const int nstates>
+    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+
+    template<const int nstates>
+    double computeLikelihoodBranchEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    template<const int nstates>
+    double computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad,
             double *pattern_lh = NULL, double *pattern_rate = NULL);
@@ -510,7 +557,7 @@ public:
      *	@param[in] dad must be an internal node
      *	@return estimated branch length or -1.0 if one of the 2 nodes is leaf
      */
-    double computeObservedBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
      * \brief Approximate the branch legnth between \a dad_branch and \a dad using Least Square instead
@@ -538,7 +585,7 @@ public:
 
     double correctBranchLengthF81(double observedBran, double alpha = -1.0);
 
-    double estimateBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             Compute the variance in log-likelihood difference
@@ -584,6 +631,15 @@ public:
 
     template<int NSTATES>
     inline double computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <const int nstates>
+    double computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template<const int nstates>
+    double computeLikelihoodDervEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template<const int nstates>
+    double computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length
@@ -951,6 +1007,9 @@ public:
 
     int fixNegativeBranch2(bool force = false, Node *node = NULL, Node *dad = NULL);
 
+    /* compute Bayesian branch lengths based on ancestral sequence reconstruction */
+    void computeAllBayesianBranchLengths(Node *node = NULL, Node *dad = NULL);
+
     /****************************************************************************
             Subtree Pruning and Regrafting by maximum likelihood
             NOTE: NOT DONE YET
@@ -1093,7 +1152,7 @@ public:
     /**
      *      TRUE if the loglikelihood is computed using SSE
      */
-    bool sse;
+    LikelihoodKernel sse;
 
     /**
      * Current score of the tree;
@@ -1152,6 +1211,17 @@ public:
     /** 2 to save all trees, 1 to save intermediate trees */
     int save_all_trees;
 
+    set<int> computeNodeBranchDists(Node *node = NULL, Node *dad = NULL);
+
+    /*
+     * Manuel's approach for analytic approximation of branch length given initial guess
+        b0: initial guess for the maximum
+        @return approximted branch length
+    */
+    double approxOneBranch(PhyloNode *node, PhyloNode *dad, double b0);
+
+    void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
 protected:
 
     /**
@@ -1165,6 +1235,11 @@ protected:
      * the 2 nodes, e.g. 15-16
      */
     StringDoubleMap subTreeDists;
+
+    StringDoubleMap subTreeWeights;
+
+    /** distance (# of branches) between 2 nodes */
+    int *nodeBranchDists;
 
     /**
      * A list containing all the marked list. This is used in the dynamic programming

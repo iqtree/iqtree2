@@ -102,16 +102,17 @@ include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 add_definitions(-DIQ_TREE)
 
 if (IQTREE_FLAGS MATCHES "avx")
-	set(COMBINED_FLAGS "-D__AVX -mavx")
+	set(COMBINED_FLAGS "-msse3 -D__SSE3 -D__AVX -mavx")
+	if (CMAKE_COMPILER_IS_GNUCXX) 
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -fabi-version=0")
+	endif()
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
-	
 else()
 	set(COMBINED_FLAGS "-msse3 -D__SSE3")
 endif()
 
-
 set(COMBINED_FLAGS "${COMBINED_FLAGS} -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fms-extensions -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
 set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
@@ -132,6 +133,7 @@ add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
 add_subdirectory(zlib-1.2.7)
+#add_subdirectory(vectorclass)
 
 # the main executable
 add_executable(iqtree
@@ -178,6 +180,7 @@ phylonode.cpp
 phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
+#phylotreeeigen.cpp
 pruning.cpp
 rategamma.cpp
 rategammainvar.cpp
@@ -222,7 +225,12 @@ set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
 # strip the release build
 if (CMAKE_BUILD_TYPE STREQUAL "Release") 
-	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
+	if (CMAKE_COMPILER_IS_GNUCXX) 
+		# ${CMAKE_STRIP} does not work with clang
+		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
+	else()
+		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND strip $<TARGET_FILE:iqtree>)
+	endif()
 endif()
 
 ##############################################################

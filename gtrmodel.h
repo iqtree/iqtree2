@@ -256,11 +256,11 @@ public:
 
 	double *getEigenCoeff() const;
 
-	double *getEigenvalues() const;
+	virtual double *getEigenvalues() const;
 
-	double **getEigenvectors() const;
+	virtual double **getEigenvectors() const;
 
-	double **getInverseEigenvectors() const;
+	virtual double **getInverseEigenvectors() const;
 
 	void setEigenCoeff(double *eigenCoeff);
 

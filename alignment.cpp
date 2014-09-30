@@ -57,6 +57,7 @@ Alignment::Alignment()
     genetic_code = NULL;
     non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
+    STATE_UNKNOWN = 126;
 }
 
 string &Alignment::getSeqName(int i) {
@@ -129,6 +130,7 @@ void Alignment::checkSeqName() {
 				cout << " !!!";
 				num_problem_seq++;
 			}
+            cout << "\t" << seq_states[i].size();
 			cout << endl;
         }
         if (num_problem_seq) cout << "WARNING: " << num_problem_seq << " sequences contain more than 50% gaps/ambiguity" << endl;
@@ -213,6 +215,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     genetic_code = NULL;
     non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
+    STATE_UNKNOWN = 126;
     cout << "Reading alignment file " << filename << " ... ";
     intype = detectInputFile(filename);
 
@@ -243,6 +246,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 
     cout << "Alignment has " << getNSeq() << " sequences with " << getNSite() <<
          " columns and " << getNPattern() << " patterns"<< endl;
+    buildSeqStates();
     checkSeqName();
 	checkIdenticalSeq();
     //cout << "Number of character states is " << num_states << endl;
@@ -250,6 +254,20 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     countConstSite();
     //cout << "Fraction of constant sites: " << frac_const_sites << endl;
 
+}
+
+void Alignment::buildSeqStates() {
+	seq_states.resize(getNSeq());
+	for (int seq = 0; seq < getNSeq(); seq++) {
+		vector<bool> has_state;
+		has_state.resize(STATE_UNKNOWN+1, false);
+
+		for (int site = 0; site < getNPattern(); site++)
+			has_state[at(site)[seq]] = true;
+		for (int state = 0; state <= STATE_UNKNOWN; state++)
+			if (has_state[state])
+				seq_states[seq].push_back(state);
+	}
 }
 
 int Alignment::readNexus(char *filename) {
@@ -296,6 +314,14 @@ int Alignment::readNexus(char *filename) {
     return 1;
 }
 
+void Alignment::computeUnknownState() {
+    switch (seq_type) {
+    case SEQ_DNA: STATE_UNKNOWN = 18; break;
+    case SEQ_PROTEIN: STATE_UNKNOWN = 22; break;
+    default: STATE_UNKNOWN = num_states; break;
+    }
+}
+
 void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
     int nseq = data_block->GetNTax();
     int nsite = data_block->GetNCharTotal();
@@ -334,6 +360,7 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         symbols = symbols_morph;
     }
 
+    computeUnknownState();
     memset(char_to_state, STATE_UNKNOWN, NUM_CHAR);
     memset(state_to_char, '?', NUM_CHAR);
     for (int i = 0; i < strlen(symbols); i++) {
@@ -399,7 +426,7 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
     PatternIntMap::iterator pat_it = pattern_index.find(pat);
     if (pat_it == pattern_index.end()) { // not found
         pat.frequency = freq;
-        pat.computeConst();
+        pat.computeConst(STATE_UNKNOWN);
         push_back(pat);
         pattern_index[pat] = size()-1;
         site_pattern[site] = size()-1;
@@ -484,8 +511,9 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
     return SEQ_UNKNOWN;
 }
 
-void buildStateMap(char *map, SeqType seq_type) {
+void Alignment::buildStateMap(char *map, SeqType seq_type) {
     memset(map, STATE_INVALID, NUM_CHAR);
+    assert(STATE_UNKNOWN < 126);
     map[(unsigned char)'?'] = STATE_UNKNOWN;
     map[(unsigned char)'-'] = STATE_UNKNOWN;
     map[(unsigned char)'.'] = STATE_UNKNOWN;
@@ -519,8 +547,10 @@ void buildStateMap(char *map, SeqType seq_type) {
         for (int i = 0; i < 20; i++)
             map[(int)symbols_protein[i]] = i;
         map[(int)symbols_protein[20]] = STATE_UNKNOWN;
-		map[(unsigned char)'B'] = 4+8+19; // N or D
-		map[(unsigned char)'Z'] = 32+64+19; // Q or E
+//		map[(unsigned char)'B'] = 4+8+19; // N or D
+//		map[(unsigned char)'Z'] = 32+64+19; // Q or E
+        map[(unsigned char)'B'] = 20; // N or D
+        map[(unsigned char)'Z'] = 21; // Q or E
         return;
     case SEQ_MULTISTATE:
         for (int i = 0; i <= STATE_UNKNOWN; i++)
@@ -599,8 +629,10 @@ char Alignment::convertState(char state, SeqType seq_type) {
         }
         return state;
     case SEQ_PROTEIN: // Protein
-		if (state == 'B') return 4+8+19;
-		if (state == 'Z') return 32+64+19;
+//		if (state == 'B') return 4+8+19;
+//		if (state == 'Z') return 32+64+19;
+		if (state == 'B') return 20;
+		if (state == 'Z') return 21;
         loc = strchr(symbols_protein, state);
 
         if (!loc) return STATE_INVALID; // unrecognize character
@@ -677,8 +709,10 @@ char Alignment::convertStateBack(char state) {
     case SEQ_PROTEIN: // Protein
         if (state < 20)
             return symbols_protein[(int)state];
-		else if (state == 4+8+19) return 'B';
-		else if (state == 32+64+19) return 'Z';
+		else if (state == 20) return 'B';
+		else if (state == 21) return 'Z';
+//		else if (state == 4+8+19) return 'B';
+//		else if (state == 32+64+19) return 'Z';
         else
             return '-';
     case SEQ_MORPH:
@@ -879,6 +913,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     int site, seq, num_gaps_only = 0;
 
     char char_to_state[NUM_CHAR];
+    computeUnknownState();
     buildStateMap(char_to_state, seq_type);
 
     Pattern pat;
@@ -2135,7 +2170,7 @@ void Alignment::printSiteGaps(const char *filename) {
         int nsite = getNSite();
         out << nsite << endl << "Site_Gap  ";
         for (int site = 0; site < getNSite(); site++) {
-            out << " " << at(getPatternID(site)).computeGapChar(num_states);
+            out << " " << at(getPatternID(site)).computeGapChar(num_states, STATE_UNKNOWN);
         }
         out << endl << "Site_Ambi ";
         for (int site = 0; site < getNSite(); site++) {

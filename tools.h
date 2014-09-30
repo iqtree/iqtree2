@@ -361,7 +361,7 @@ enum IQP_ASSESS_QUARTET {
 };
 
 enum LEAST_SQUARE_VAR {
-    OLS, FIRST_TAYLOR, FITCH_MARGOLIASH, SECOND_TAYLOR, PAUPLIN
+    OLS, WLS_FIRST_TAYLOR, WLS_FITCH_MARGOLIASH, WLS_SECOND_TAYLOR, WLS_PAUPLIN
 };
 
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model
@@ -377,6 +377,9 @@ struct NNIInfo {
     int iqpnni_iteration;
 };
 
+enum LikelihoodKernel {
+	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_SSE, LK_EIGEN_TIP_SSE
+};
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
@@ -470,6 +473,15 @@ struct Params {
      *   compute least square branches for a given tree
      */
     bool leastSquareBranch;
+
+    /** TRUE to apply Manuel's analytic approximation formulae for branch length */
+    bool manuel_analytic_approx;
+
+    /** TRUE to compute parsimony branch length of final tree */
+    bool pars_branch_length;
+
+    /** TRUE to compute bayesian branch length for the final tree */
+    bool bayes_branch_length;
 
     /**
      *  use Least Square to evaluate NNI
@@ -1163,7 +1175,7 @@ struct Params {
     /**
             SSE Option
      */
-    bool SSE;
+    LikelihoodKernel SSE;
     /**
      	 	0: do not print anything
             1: print site log-likelihood
@@ -1178,6 +1190,8 @@ struct Params {
             TRUE to print tree log-likelihood
      */
     bool print_tree_lh;
+
+    bool print_branch_lengths;
 
     /****** adaptive NNI search heuristic ******/
 

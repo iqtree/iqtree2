@@ -70,6 +70,7 @@
 	#include <omp.h>
 #endif
 
+//#include "vectorclass/vectorclass.h"
 
 using namespace std;
 
@@ -2190,6 +2191,11 @@ int main(int argc, char *argv[])
 	cout << fixed;
 	cout << "Memory:  " << ((getMemorySize()/1024.0)/1024)/1024 << " GB RAM detected" << endl;
 	
+	/*
+	int instrset = instrset_detect();
+	cout << "CPU:     " << instrset << endl;
+	*/
+
 #ifdef _OPENMP
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
 	int max_threads = omp_get_max_threads();
