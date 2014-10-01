@@ -1724,7 +1724,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 
     double *theta = theta_all;
 
-	size_t block_sse = block/2;
+//	size_t block_sse = block/2;
 
 	for (ptn = 0; ptn < nptn; ptn++) {
 		double lh_ptn, df_ptn, ddf_ptn;

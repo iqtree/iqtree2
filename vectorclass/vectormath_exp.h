@@ -1317,7 +1317,7 @@ static inline VTYPE pow_template_d(VTYPE const & x0, VTYPE const & y) {
     z = select(xfinite, z, select(y == 0., VTYPE(1.), select(y < 0., VTYPE(0.), infinite_vec<VTYPE>() | ( VTYPE(reinterpret_d(yodd)) & x0))));
     z = select(is_nan(x0), select(is_nan(y), x0 | y, x0), select(is_nan(y), y, z));
     return z;
-}; 
+}
 
 
 // instantiations of pow_template_d:
@@ -1506,7 +1506,7 @@ static inline VTYPE pow_template_f(VTYPE const & x0, VTYPE const & y) {
     z = select(xfinite, z, select(y == 0.f, VTYPE(1.f), select(y < 0.f, VTYPE(0.f), infinite_vec<VTYPE>() | (VTYPE(reinterpret_f(yodd)) & x0))));
     z = select(is_nan(x0), select(is_nan(y), x0 | y, x0), select(is_nan(y), y, z));
     return z;
-};
+}
 
 static inline Vec4f pow(Vec4f const & x, Vec4f const & y) {
     return pow_template_f<Vec4f, Vec4i, Vec4fb>(x, y);
