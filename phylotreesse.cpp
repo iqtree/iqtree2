@@ -1717,8 +1717,8 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 
 	VectorClass vc_ptn, vc_df, vc_ddf, vc_theta, vc_ptn2, vc_df2, vc_ddf2, vc_theta2;
 	Vec2d v2d_var_cat(p_var_cat, p_var_cat);
-	Vec2d v2d_1(1.0, 1.0);
-	Vec2d lh_final(0.0, 0.0), df_final(0.0, 0.0), ddf_final(0.0, 0.0);
+	Vec2d v2d_1(1.0);
+	Vec2d lh_final(0.0), df_final(0.0), ddf_final(0.0);
 
 	// allocate 1 more element
 	double *ptn_freq = aligned_alloc_double(nptn+1);
