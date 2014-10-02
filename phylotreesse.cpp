@@ -1716,7 +1716,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
     double *theta = theta_all;
 
 	VectorClass vc_ptn, vc_df, vc_ddf, vc_theta, vc_ptn2, vc_df2, vc_ddf2, vc_theta2;
-	Vec2d v2d_var_cat(p_var_cat, p_var_cat);
+	Vec2d v2d_var_cat(p_var_cat);
 	Vec2d v2d_1(1.0);
 	Vec2d lh_final(0.0), df_final(0.0), ddf_final(0.0);
 
@@ -1827,71 +1827,139 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 
     double *partial_lh_dad = dad_branch->partial_lh;
     double *partial_lh_node = node_branch->partial_lh;
-    double *val = aligned_alloc_double(block);
+    VectorClass vc_val[block/VCSIZE];
     double *state_freq = aligned_alloc_double(nstates);
     model->getStateFrequency(state_freq);
 
+	// allocate 1 more element
+	double *ptn_freq = aligned_alloc_double(nptn+1);
+	for (ptn = 0; ptn < nptn; ptn++)
+		ptn_freq[ptn] = (*aln)[ptn].frequency;
+	ptn_freq[nptn] = 0.0;
+
 	for (c = 0; c < ncat; c++) {
 		double len = site_rate->getRate(c)*dad_branch->length;
-		for (i = 0; i < nstates; i++)
-			val[c*nstates+i] = exp(eval[i]*len);
+		VectorClass vc_len(len);
+		for (i = 0; i < nstates/VCSIZE; i++) {
+			vc_val[c*nstates/VCSIZE+i] = exp(VectorClass().load(&eval[i*VCSIZE]) * vc_len);
+		}
 	}
-    if (dad->isLeaf()) {
+
+	assert(p_invar == 0.0);
+	if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
-    	VectorClass vc_val, vc_tip_partial_lh, vc_partial_lh_dad;
-		for (ptn = 0; ptn < nptn; ptn++) {
-			double lh_ptn;
-			VectorClass vc_ptn = 0.0;
-			int state_dad = (aln->at(ptn))[dad->id];
-			for (c = 0; c < ncat; c++)
-				for (i = 0; i < nstates; i+=VCSIZE) {
-					vc_val.load_a(&val[c*nstates+i]);
-					vc_tip_partial_lh.load_a(&tip_partial_lh[state_dad*nstates+i]);
-					vc_partial_lh_dad.load_a(&partial_lh_dad[c*nstates+i]);
-					vc_ptn += vc_val * vc_tip_partial_lh * vc_partial_lh_dad;
-				}
-			lh_ptn = horizontal_add(vc_ptn) * p_var_cat;
-			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+    	VectorClass vc_tip_partial_lh[nstates/VCSIZE], vc_tip_partial_lh2[nstates/VCSIZE];
+    	VectorClass vc_partial_lh_dad, vc_partial_lh_dad2, vc_freq, vc_ptn, vc_ptn2;
+    	VectorClass vc_var_cat(p_var_cat);
+    	Vec2d lh_final(0.0), lh_prev;
+
+    	int *states_dad = new int[nptn+3];
+    	for (ptn = 0; ptn < nptn; ptn++)
+    		states_dad[ptn] = (aln->at(ptn))[dad->id];
+    	states_dad[nptn] = states_dad[nptn+1] = states_dad[nptn+2] = aln->STATE_UNKNOWN;
+
+    	if (nptn%2 != 0) {
+    		double *lh_dad = &partial_lh_dad[nptn*block];
+    		//VectorClass vc1(1.0);
+    		double *lh_tip = &tip_partial_lh[aln->STATE_UNKNOWN*nstates];
+    		for (i = 0; i < block/VCSIZE; i++) {
+    			(vc_var_cat/(vc_val[i] * VectorClass().load_a(&lh_tip[(i*VCSIZE)%nstates])) ).store_a(&lh_dad[i*VCSIZE]);
+    		}
+    	}
+
+		for (ptn = 0; ptn < nptn; ptn+=2) {
+			Vec2d lh_ptn;
+			int state_dad = states_dad[ptn];
+			int state_dad2 = states_dad[ptn+1];
+			for (i = 0; i < nstates/VCSIZE; i++) {
+				vc_tip_partial_lh[i].load_a(&tip_partial_lh[state_dad*nstates+i*VCSIZE]);
+				vc_tip_partial_lh2[i].load_a(&tip_partial_lh[state_dad2*nstates+i*VCSIZE]);
 			}
 
-			assert(lh_ptn > 0.0);
+			vc_partial_lh_dad.load_a(partial_lh_dad);
+			vc_partial_lh_dad2.load_a(&partial_lh_dad[block]);
+			vc_ptn = vc_val[0] * vc_tip_partial_lh[0] * vc_partial_lh_dad;
+			vc_ptn2 = vc_val[0] * vc_tip_partial_lh2[0] * vc_partial_lh_dad2;
+
+			for (i = 1; i < block/VCSIZE; i++) {
+				vc_partial_lh_dad.load_a(&partial_lh_dad[i*VCSIZE]);
+				vc_partial_lh_dad2.load_a(&partial_lh_dad[i*VCSIZE+block]);
+				vc_ptn += vc_val[i] * vc_tip_partial_lh[i%(nstates/VCSIZE)] * vc_partial_lh_dad;
+				vc_ptn2 += vc_val[i] * vc_tip_partial_lh2[i%(nstates/VCSIZE)] * vc_partial_lh_dad2;
+			}
+			lh_ptn = horizontal_add(vc_ptn, vc_ptn2) * vc_var_cat;
+
+
+			// TODO
+//			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
+//				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+//			}
+
+//			assert(lh_ptn > 0.0);
+//			cout << lh_ptn[0] << " " << lh_ptn[1] << endl;
 			lh_ptn = log(lh_ptn);
-			_pattern_lh[ptn] = lh_ptn;
-			tree_lh += lh_ptn * aln->at(ptn).frequency;
-			//partial_lh_node += nstates;
-			partial_lh_dad += block;
+			vc_freq.load(&ptn_freq[ptn]);
+			lh_ptn.store_a(&_pattern_lh[ptn]);
+			lh_prev = lh_final;
+			lh_final += lh_ptn * vc_freq;
+			partial_lh_dad += block*2;
+//			cout << _pattern_lh[ptn] << " " << _pattern_lh[ptn+1] << endl;
 		}
+		if (nptn%2 == 0)
+			tree_lh += horizontal_add(lh_final);
+		else
+			tree_lh += horizontal_add(lh_prev)+_pattern_lh[nptn-1];
+//		cout << tree_lh << endl;
+//		abort();
+		assert(!isnan(tree_lh) && !isinf(tree_lh));
+
+		delete [] states_dad;
     } else {
     	// both dad and node are internal nodes
-    	VectorClass vc_val, vc_partial_lh_node, vc_partial_lh_dad;
+    	VectorClass vc_partial_lh_node, vc_partial_lh_node2;
+    	VectorClass vc_partial_lh_dad, vc_partial_lh_dad2, vc_freq, vc_ptn, vc_ptn2;
+    	VectorClass vc_var_cat(p_var_cat);
+    	Vec2d lh_final(0.0), lh_prev(0.0);
 
-		for (ptn = 0; ptn < nptn; ptn++) {
-			double lh_ptn = 0.0;
-			VectorClass vc_ptn = 0.0;
+		for (ptn = 0; ptn < nptn; ptn+=2) {
+			Vec2d lh_ptn = 0.0;
+			vc_ptn = 0.0, vc_ptn2 = 0.0;
 			for (i = 0; i < block; i+=VCSIZE) {
-				vc_val.load_a(&val[i]);
 				vc_partial_lh_node.load_a(&partial_lh_node[i]);
 				vc_partial_lh_dad.load_a(&partial_lh_dad[i]);
-				vc_ptn += vc_val * vc_partial_lh_node * vc_partial_lh_dad;
-			}
-			lh_ptn = horizontal_add(vc_ptn) * p_var_cat;
-			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
-			}
+				vc_ptn += vc_val[i/VCSIZE] * vc_partial_lh_node * vc_partial_lh_dad;
 
-			assert(lh_ptn > 0.0);
+				vc_partial_lh_node2.load_a(&partial_lh_node[i+block]);
+				vc_partial_lh_dad2.load_a(&partial_lh_dad[i+block]);
+				vc_ptn2 += vc_val[i/VCSIZE] * vc_partial_lh_node2 * vc_partial_lh_dad2;
+			}
+			lh_ptn = horizontal_add(vc_ptn, vc_ptn2) * p_var_cat;
+			// TODO
+//			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
+//				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+//			}
+
+//			assert(lh_ptn > 0.0);
 			lh_ptn = log(lh_ptn);
-			_pattern_lh[ptn] = lh_ptn;
-			tree_lh += lh_ptn * aln->at(ptn).frequency;
-			partial_lh_node += block;
-			partial_lh_dad += block;
+			lh_ptn.store_a(&_pattern_lh[ptn]);
+//			_pattern_lh[ptn] = lh_ptn;
+			vc_freq.load_a(&ptn_freq[ptn]);
+
+			lh_prev = lh_final;
+			lh_final += lh_ptn * vc_freq;
+
+			partial_lh_node += block*2;
+			partial_lh_dad += block*2;
 		}
+		if (nptn%2 == 0)
+			tree_lh += horizontal_add(lh_final);
+		else
+			tree_lh += horizontal_add(lh_prev)+_pattern_lh[nptn-1];
     }
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
+    aligned_free(ptn_freq);
     aligned_free(state_freq);
-    aligned_free(val);
     return tree_lh;
 }
 
