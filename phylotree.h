@@ -52,8 +52,15 @@ using namespace Eigen;
 
 #ifdef __AVX
 #define MEM_ALIGNMENT 32
+inline size_t get_safe_upper_limit(size_t cur_limit) {
+	return ((cur_limit+3)/4)*4;
+}
+
 #else
 #define MEM_ALIGNMENT 16
+inline size_t get_safe_upper_limit(size_t cur_limit) {
+	return (cur_limit%2 == 0) ? cur_limit : cur_limit+1;
+}
 #endif
 
 #include "pll/mem_alloc.h"
