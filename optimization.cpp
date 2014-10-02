@@ -434,6 +434,8 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 			return rts;*/
 			if (fm > finit) {
 				// happen in rare cases that it is worse than starting point: revert init value
+//				if (verbose_mode >= VB_MED)
+//					cout << __func__ << " reverted initial value " << xinit << endl;
 				fm = computeFunction(xinit);
 				return xinit;
 			}
@@ -444,6 +446,13 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 		if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) nrerror("Wrong computeFuncDerv");
 		if (df > 0.0 && fabs(f) < xacc) {
 			d2l = df;
+			if (fm > finit) {
+				// happen in rare cases that it is worse than starting point: revert init value
+//				if (verbose_mode >= VB_MED)
+//					cout << __func__ << " reverted initial value " << xinit << endl;
+				fm = computeFunction(xinit);
+				return xinit;
+			}
 			return rts;
 		}
 		if (f < 0.0)

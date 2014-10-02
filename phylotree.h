@@ -38,9 +38,14 @@ const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEAS
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for ModelFactory::optimizeParameters
 //const static double SCALING_THRESHOLD = sqrt(DBL_MIN);
-const static double SCALING_THRESHOLD = 1e-100;
-const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
-const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
+//const static double SCALING_THRESHOLD = 1e-100;
+//const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
+//const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
+#include "pll/pll.h"
+#define SCALING_THRESHOLD (1.0/PLL_TWOTOTHE256)
+#define SCALING_THRESHOLD_INVER PLL_TWOTOTHE256
+#define LOG_SCALING_THRESHOLD log(SCALING_THRESHOLD)
+
 const int SPR_DEPTH = 2;
 
 using namespace Eigen;
@@ -467,8 +472,6 @@ public:
     template <const int nstates>
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
-    template<const int nstates>
-    void computePartialLikelihoodEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
     template<const int nstates>
     void computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
@@ -489,8 +492,6 @@ public:
     template <const int nstates>
     double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
-    template<const int nstates>
-    double computeLikelihoodBranchEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
     template<const int nstates>
     double computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
@@ -634,9 +635,6 @@ public:
 
     template <const int nstates>
     double computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    template<const int nstates>
-    double computeLikelihoodDervEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template<const int nstates>
     double computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);

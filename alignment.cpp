@@ -257,6 +257,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 }
 
 void Alignment::buildSeqStates() {
+	seq_states.clear();
 	seq_states.resize(getNSeq());
 	for (int seq = 0; seq < getNSeq(); seq++) {
 		vector<bool> has_state;
@@ -264,7 +265,7 @@ void Alignment::buildSeqStates() {
 
 		for (int site = 0; site < getNPattern(); site++)
 			has_state[at(site)[seq]] = true;
-		for (int state = 0; state <= STATE_UNKNOWN; state++)
+		for (int state = 0; state < STATE_UNKNOWN; state++)
 			if (has_state[state])
 				seq_states[seq].push_back(state);
 	}

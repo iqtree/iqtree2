@@ -1450,7 +1450,7 @@ public:
     double operator [] (uint32_t index) const {
         return extract(index);
     }
-    static int size() {
+    inline int size() {
         return 2;
     }
 };
