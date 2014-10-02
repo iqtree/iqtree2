@@ -927,16 +927,6 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 	}
 	double *eval = model->getEigenvalues();
 
-#ifdef __AVX
-	Vec2d v2d_inv_evec[nstates*nstates/2];
-	for (i = 0; i < nstates; i++) {
-		for (x = 0; x < nstates/2; x++)
-			v2d_inv_evec[i*nstates/2+x].load_a(&inv_evec[i*nstates+x*2]);
-	}
-#else
-#define v2d_inv_evec vc_inv_evec
-#endif
-
     dad_branch->lh_scale_factor = 0.0;
 	dad_branch->lh_scale_factor = left->lh_scale_factor + right->lh_scale_factor;
 
@@ -968,7 +958,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 	if (left->node->isLeaf() && right->node->isLeaf()) {
 		// special treatment for TIP-TIP (cherry) case
 		VectorClass res[VCSIZE];
-		VectorClass vleft, vleft2, vright, vright2;
+		VectorClass vleft[VCSIZE], vright[VCSIZE];
 
 		// pre compute information for both tips
 		double *partial_lh_left = aligned_alloc_double((aln->STATE_UNKNOWN+1)*block);
@@ -981,14 +971,18 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 			int state = (*it);
 			for (i = 0; i < nstates/VCSIZE; i++)
 				vc_partial_lh_tmp[i].load_a(&tip_partial_lh[state*nstates+i*VCSIZE]);
-			for (x = 0; x < block; x+=2) {
-				vleft = VectorClass().load_a(&eleft[x*nstates]) * vc_partial_lh_tmp[0];
-				vleft2 = VectorClass().load_a(&eleft[(x+1)*nstates]) * vc_partial_lh_tmp[0];
-				for (i = VCSIZE; i < nstates; i+=VCSIZE) {
-					vleft += VectorClass().load_a(&eleft[x*nstates+i]) * vc_partial_lh_tmp[i/VCSIZE];
-					vleft2 += VectorClass().load_a(&eleft[(x+1)*nstates+i]) * vc_partial_lh_tmp[i/VCSIZE];
+			for (x = 0; x < block; x+=VCSIZE) {
+				for (j = 0; j < VCSIZE; j++) {
+					vleft[j] = VectorClass().load_a(&eleft[(x+j)*nstates]) * vc_partial_lh_tmp[0];
+//					vleft2 = VectorClass().load_a(&eleft[(x+1)*nstates]) * vc_partial_lh_tmp[0];
 				}
-				horizontal_add(vleft, vleft2).store_a(&partial_lh_left[state*block+x]);
+				for (i = VCSIZE; i < nstates; i+=VCSIZE) {
+					for (j = 0; j < VCSIZE; j++) {
+						vleft[j] += VectorClass().load_a(&eleft[(x+j)*nstates+i]) * vc_partial_lh_tmp[i/VCSIZE];
+//						vleft2 += VectorClass().load_a(&eleft[(x+1)*nstates+i]) * vc_partial_lh_tmp[i/VCSIZE];
+					}
+				}
+				horizontal_add(vleft).store_a(&partial_lh_left[state*block+x]);
 			}
 		}
 
@@ -996,14 +990,16 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 			int state = (*it);
 			for (i = 0; i < nstates/VCSIZE; i++)
 				vc_partial_lh_tmp[i].load_a(&tip_partial_lh[state*nstates+i*VCSIZE]);
-			for (x = 0; x < block; x+=2) {
-				vright = VectorClass().load_a(&eright[x*nstates]) * vc_partial_lh_tmp[0];
-				vright2 = VectorClass().load_a(&eright[(x+1)*nstates]) * vc_partial_lh_tmp[0];
+			for (x = 0; x < block; x+=VCSIZE) {
+				for (j = 0; j < VCSIZE; j++)
+					vright[j] = VectorClass().load_a(&eright[(x+j)*nstates]) * vc_partial_lh_tmp[0];
+//				vright2 = VectorClass().load_a(&eright[(x+1)*nstates]) * vc_partial_lh_tmp[0];
 				for (i = VCSIZE; i < nstates; i+=VCSIZE) {
-					vright += VectorClass().load_a(&eright[x*nstates+i]) * vc_partial_lh_tmp[i/VCSIZE];
-					vright2 += VectorClass().load_a(&eright[(x+1)*nstates+i]) * vc_partial_lh_tmp[i/VCSIZE];
+					for (j = 0; j < VCSIZE; j++)
+						vright[j] += VectorClass().load_a(&eright[(x+j)*nstates+i]) * vc_partial_lh_tmp[i/VCSIZE];
+//					vright2 += VectorClass().load_a(&eright[(x+1)*nstates+i]) * vc_partial_lh_tmp[i/VCSIZE];
 				}
-				horizontal_add(vright, vright2).store_a(&partial_lh_right[state*block+x]);
+				horizontal_add(vright).store_a(&partial_lh_right[state*block+x]);
 			}
 		}
 
@@ -1059,21 +1055,23 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 		VectorClass vc_lh_right[nstates/VCSIZE];
 		VectorClass vc_partial_lh_tmp[nstates/VCSIZE];
 		VectorClass res[VCSIZE];
-		VectorClass vleft, vleft2, vright[VCSIZE];
+		VectorClass vleft[VCSIZE], vright[VCSIZE];
 
 		vector<int>::iterator it;
 		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
 			int state = (*it);
 			for (i = 0; i < nstates/VCSIZE; i++)
 				vc_tip_lh[i].load_a(&tip_partial_lh[state*nstates+i*VCSIZE]);
-			for (x = 0; x < block; x+=2) {
-				vleft = VectorClass().load_a(&eleft[x*nstates]) * vc_tip_lh[0];
-				vleft2 = VectorClass().load_a(&eleft[(x+1)*nstates]) * vc_tip_lh[0];
+			for (x = 0; x < block; x+=VCSIZE) {
+				for (j = 0; j < VCSIZE; j++)
+					vleft[j] = VectorClass().load_a(&eleft[(x+j)*nstates]) * vc_tip_lh[0];
+//				vleft2 = VectorClass().load_a(&eleft[(x+1)*nstates]) * vc_tip_lh[0];
 				for (i = VCSIZE; i < nstates; i+=VCSIZE) {
-					vleft += VectorClass().load_a(&eleft[x*nstates+i]) * vc_tip_lh[i/VCSIZE];
-					vleft2 += VectorClass().load_a(&eleft[(x+1)*nstates+i]) * vc_tip_lh[i/VCSIZE];
+					for (j = 0; j < VCSIZE; j++)
+						vleft[j] += VectorClass().load_a(&eleft[(x+j)*nstates+i]) * vc_tip_lh[i/VCSIZE];
+//					vleft2 += VectorClass().load_a(&eleft[(x+1)*nstates+i]) * vc_tip_lh[i/VCSIZE];
 				}
-				horizontal_add(vleft, vleft2).store_a(&partial_lh_left[state*block+x]);
+				horizontal_add(vleft).store_a(&partial_lh_left[state*block+x]);
 			}
 		}
 
