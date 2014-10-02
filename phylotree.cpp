@@ -129,7 +129,7 @@ PhyloTree::~PhyloTree() {
     if (_pattern_lh_cat)
         delete[] _pattern_lh_cat;
     if (_pattern_lh)
-        delete[] _pattern_lh;
+        aligned_free(_pattern_lh);
     //if (state_freqs)
     //	delete [] state_freqs;
     if (theta_all)
@@ -1078,7 +1078,11 @@ void PhyloTree::initializeAllPartialLh() {
 	// Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
     size_t nptn = getAlnNPattern() + numStates;
+#ifdef __AVX
+    size_t mem_size = ((nptn +3)/4)*4;
+#else
     size_t mem_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+#endif
     size_t block_size = mem_size * numStates * site_rate->getNRate();
     if (!tmp_partial_lh1) {
         tmp_partial_lh1 = newPartialLh();
@@ -1102,15 +1106,16 @@ void PhyloTree::initializeAllPartialLh() {
         tmp_scale_num1 = newScaleNum();
     if (!tmp_scale_num2)
         tmp_scale_num2 = newScaleNum();
+    // make sure _pattern_lh size is divisible by 4 (e.g., 9->12, 14->16)
     if (!_pattern_lh)
-        _pattern_lh = new double[nptn];
+        _pattern_lh = aligned_alloc_double(mem_size);
     if (!_pattern_lh_cat)
-        _pattern_lh_cat = new double[nptn * site_rate->getNDiscreteRate()];
+        _pattern_lh_cat = new double[mem_size * site_rate->getNDiscreteRate()];
     if (!theta_all)
         theta_all = aligned_alloc_double(block_size);
     initializeAllPartialLh(index, indexlh);
     assert(index == (nodeNum - 1) * 2);
-    if (sse == LK_EIGEN)
+    if (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE)
     	assert(indexlh == (nodeNum-1)*2-leafNum);
     else
     	assert(indexlh == (nodeNum-1)*2);
@@ -1133,12 +1138,18 @@ void PhyloTree::deleteAllPartialLh() {
 
 uint64_t PhyloTree::getMemoryRequired() {
 	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
+#ifdef __AVX
+    // block size must be divisible by 4
+    uint64_t block_size = ((nptn+3)/4)*4;
+#else
+    // block size must be divisible by 2
 	uint64_t block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+#endif
     block_size = block_size * aln->num_states;
     if (site_rate)
     	block_size *= site_rate->getNRate();
     uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2;
-    if (sse == LK_EIGEN)
+    if (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE)
     	mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
 
     return mem_size;
@@ -1148,7 +1159,14 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
     size_t pars_block_size = getBitsBlockSize();
     size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
     size_t scale_block_size = nptn;
+#ifdef __AVX
+    // block size must be divisible by 4
+    size_t block_size = ((nptn+3)/4)*4;
+#else
+    // block size must be divisible by 2
     size_t block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+#endif
+
     block_size = block_size * model->num_states * site_rate->getNRate();
     if (!node) {
         node = (PhyloNode*) root;
@@ -1162,7 +1180,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         	default: tip_partial_lh_size *=(aln->num_states+1); break; // including gap
         	}*/
             uint64_t mem_size = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
-            if (sse == LK_EIGEN)
+            if (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE)
             	mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
             try {
             	central_partial_lh = new double[mem_size];
@@ -1175,7 +1193,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             size_t mem_shift = 0;
             if (((intptr_t) central_partial_lh) % MEM_ALIGNMENT != 0)
             	mem_shift = (MEM_ALIGNMENT - (((intptr_t) central_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
-            if (sse == LK_EIGEN)
+            if (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE)
             	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size + mem_shift);
             else
             	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size + mem_shift);
@@ -1215,7 +1233,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
         PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
         //assert(!nei->partial_lh);
-        if (nei->node->isLeaf() && sse == LK_EIGEN)
+        if (nei->node->isLeaf() && (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE))
         	nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
         else {
         	nei->partial_lh = central_partial_lh + (indexlh * block_size + mem_shift);
@@ -1225,7 +1243,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         nei->partial_pars = central_partial_pars + (index * pars_block_size);
         nei = (PhyloNeighbor*) dad->findNeighbor(node);
         //assert(!nei->partial_lh);
-        if (nei->node->isLeaf() && sse == LK_EIGEN)
+        if (nei->node->isLeaf() && (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE))
         	nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
         else {
         	nei->partial_lh = central_partial_lh + (indexlh * block_size + mem_shift);
@@ -1240,12 +1258,12 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 }
 
 double *PhyloTree::newPartialLh() {
-    double *ret = new double[(aln->size()+aln->num_states) * aln->num_states * site_rate->getNRate() + 4];
+    double *ret = new double[(aln->size()+aln->num_states+3) * aln->num_states * site_rate->getNRate()];
     return ret;
 }
 
 int PhyloTree::getPartialLhBytes() {
-	return ((aln->size()+aln->num_states) * aln->num_states * site_rate->getNRate() + 4) * sizeof(double);
+	return ((aln->size()+aln->num_states+3) * aln->num_states * site_rate->getNRate()) * sizeof(double);
 }
 
 int PhyloTree::getScaleNumBytes() {

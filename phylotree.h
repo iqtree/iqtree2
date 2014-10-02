@@ -639,9 +639,6 @@ public:
     template<const int nstates>
     double computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    template<const int nstates>
-    void computeThetaTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length
             @param dad_branch the branch leading to the subtree
