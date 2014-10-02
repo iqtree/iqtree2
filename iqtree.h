@@ -465,7 +465,7 @@ public:
      */
     vector<int> vecNumNNI;
 
-    int getCurIteration() { return curIteration; }
+    int getCurIteration() { return curIt; }
 
     /**
      * Do memory allocation and initialize parameter for UFBoot to run with PLL
@@ -518,7 +518,7 @@ protected:
     /**
      *  Current IQPNNI iteration number
      */
-    int curIteration;
+    int curIt;
     /**
             criterion to assess important quartet
      */

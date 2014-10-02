@@ -747,7 +747,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.initPerStrength = 0.5;
     params.pll = false;
     params.modeps = 0.001;
-    params.imd_modeps = 1.0;
     params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;

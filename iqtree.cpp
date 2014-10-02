@@ -47,7 +47,7 @@ void IQTree::init() {
     nni_delta_est = 0;
     curScore = 0.0; // Current score of the tree
     bestScore = -DBL_MAX; // Best score found so far
-    curIteration = 1;
+    curIt = 1;
     cur_pars_score = -1;
     enable_parsimony = false;
     estimate_nni_cutoff = false;
@@ -1138,7 +1138,7 @@ void IQTree::optimizeModelParameters(string& imd_tree) {
     if (params->snni) {
         if (params->pllModOpt) {
             assert(params->pll);
-            cout << "Optimizing model parameters by PLL ... ";
+            cout << "Estimate model parameters by PLL ... ";
             double stime = getCPUTime();
             pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
             pllOptimizeModelParameters(pllInst, pllPartitions, params->modeps);
@@ -1160,8 +1160,7 @@ void IQTree::optimizeModelParameters(string& imd_tree) {
                 getModel()->getRateMatrix(rate_param_bk);
             }
             double alpha_bk = getRate()->getGammaShape();
-            cout << endl;
-            cout << "Re-estimate model parameters (epsilon = " << params->modeps << ")" << endl;
+            cout << "Estimate model parameters (epsilon = " << params->modeps << ")" << endl;
             double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false,
                     params->modeps);
             if (isSuperTree()) {
@@ -1221,8 +1220,6 @@ double IQTree::doTreeSearch() {
         printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
     }
 
-    //printTree(treels_name.c_str(), WT_NEWLINE | WT_BR_LEN);
-
     setRootNode(params->root);
     // keep the best tree into a string
     stringstream bestTreeStream;
@@ -1234,30 +1231,14 @@ double IQTree::doTreeSearch() {
     string best_tree_topo = bestTopoStream.str();
 
     stop_rule.addImprovedIteration(1);
-    //searchinfo.curFailedIterNum = 0;
     searchinfo.curPerStrength = params->initPerStrength;
 	if (params->autostop && !params->gbo_replicates) {
 		stop_rule.setIterationNum(params->stopCond, params->stopCond);
 		cout << "INFO: #iterations set to " << stop_rule.getNumIterations() << endl;
 	}
 
-    for (curIteration = 2; !stop_rule.meetStopCondition(curIteration); curIteration++) {
-        searchinfo.curIterNum = curIteration;
-        /*
-        if (params->autostop && !params->gbo_replicates) {
-            if (searchinfo.curFailedIterNum == params->stopCond) {
-                cout << "No better tree was found in the last " << params->stopCond
-                        << " iterations. Tree search was stopped after " << curIteration << " iterations!" << endl;
-                break;
-            }
-            if (params->adaptPert) {
-               if (searchinfo.curFailedIterNum >= params->stopCond / 2) {
-                    searchinfo.curPerStrength = params->initPerStrength * 2;
-               }
-            }
-
-        }*/
-
+    for (curIt = 2; !stop_rule.meetStopCondition(curIt); curIt++) {
+        searchinfo.curIterNum = curIt;
         double min_elapsed = (getCPUTime() - params->startTime) / 60;
         if (min_elapsed > params->maxtime) {
             cout << endl;
@@ -1266,7 +1247,7 @@ double IQTree::doTreeSearch() {
         }
         // estimate logl_cutoff
         if (params->avoid_duplicated_trees && max_candidate_trees > 0 && treels_logl.size() > 1000) {
-            int num_entries = floor(max_candidate_trees * ((double) curIteration / stop_rule.getNumIterations()));
+            int num_entries = floor(max_candidate_trees * ((double) curIt / stop_rule.getNumIterations()));
             if (num_entries < treels_logl.size() * 0.9) {
                 DoubleVector logl = treels_logl;
                 nth_element(logl.begin(), logl.begin() + (treels_logl.size() - num_entries), logl.end());
@@ -1274,7 +1255,7 @@ double IQTree::doTreeSearch() {
             } else
                 logl_cutoff = 0.0;
             if (verbose_mode >= VB_MED) {
-                if (curIteration % 10 == 0) {
+                if (curIt % 10 == 0) {
                     cout << treels.size() << " trees, " << treels_logl.size() << " logls, logl_cutoff= " << logl_cutoff;
                     if (params->store_candidate_trees)
                         cout << " duplicates= " << duplication_counter << " ("
@@ -1393,11 +1374,11 @@ double IQTree::doTreeSearch() {
         if (params->maxtime < 1000000) {
             realtime_remaining = params->maxtime * 60 - realtime_secs;
         } else {
-        	realtime_remaining = (stop_rule.getNumIterations() - curIteration) * realtime_secs / (curIteration - 1);
+        	realtime_remaining = (stop_rule.getNumIterations() - curIt) * realtime_secs / (curIt - 1);
         }
         cout.setf(ios::fixed, ios::floatfield);
 
-        cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIteration
+        cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIt
                 << " / LogL: ";
         if (verbose_mode >= VB_MED)
         	cout << perturbScore << " -> ";
@@ -1406,7 +1387,7 @@ double IQTree::doTreeSearch() {
         	cout << " / NNIs: " << nni_count << "," << nni_steps;
         cout << " / Time: " << convert_time(cur_real_time - params->start_real_time);
 
-        if (curIteration > 10 && realtime_secs > 10) {
+        if (curIt > 10 && realtime_secs > 10) {
 			cout << " (" << convert_time(realtime_remaining) << " left)";
         }
 
@@ -1423,13 +1404,13 @@ double IQTree::doTreeSearch() {
             if (cur_tree_topo_ss.str() != best_tree_topo) {
                 best_tree_topo = cur_tree_topo_ss.str();
                 optimizeModelParameters(imd_tree);
-                stop_rule.addImprovedIteration(curIteration);
-                cout << "BETTER TREE FOUND at iteration " << curIteration << ": " << curScore;
+                stop_rule.addImprovedIteration(curIt);
+                cout << "BETTER TREE FOUND at iteration " << curIt << ": " << curScore;
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl << endl;
                 if (curScore > bestScore) {
                     //searchinfo.curFailedIterNum = 0;
                 	if (params->autostop && !params->gbo_replicates) {
-                		stop_rule.setIterationNum(curIteration + params->stopCond, curIteration + params->stopCond);
+                		stop_rule.setIterationNum(curIt + params->stopCond, curIt + params->stopCond);
                 		cout << "INFO: #iterations increased to " << stop_rule.getNumIterations() << endl;
                 	}
                     searchinfo.curPerStrength = params->initPerStrength;
@@ -1441,7 +1422,7 @@ double IQTree::doTreeSearch() {
             setBestTree(imd_tree, curScore);
             if (params->write_best_trees) {
                 ostringstream iter_string;
-                iter_string << curIteration;
+                iter_string << curIt;
                 printResultTree(iter_string.str());
             }
             printResultTree();
@@ -1467,17 +1448,17 @@ double IQTree::doTreeSearch() {
         // DTH: Carefully watch the -pll case here
 
 
-        if ((curIteration) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
+        if ((curIt) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
             SplitGraph *sg = new SplitGraph;
             summarizeBootstrap(*sg);
             boot_splits.push_back(sg);
             if (params->max_candidate_trees == 0)
-                max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations()) / curIteration;
+                max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations()) / curIt;
 			if (verbose_mode >= VB_MED)
 				cout << "INFO: Increasing number of bootstrap candidate trees to " << max_candidate_trees << endl;
         }
 
-        if (curIteration == stop_rule.getNumIterations() && params->gbo_replicates && !boot_splits.empty()
+        if (curIt == stop_rule.getNumIterations() && params->gbo_replicates && !boot_splits.empty()
                 && stop_rule.getNumIterations() + params->step_iterations <= params->max_iterations) {
             //SplitGraph *sg = new SplitGraph;
             //summarizeBootstrap(*sg);
@@ -1503,13 +1484,13 @@ double IQTree::doTreeSearch() {
     if (!params->autostop) {
     	if (params->snni) {
 			int predicted_iteration = stop_rule.getLastImprovedIteration() + params->stopCond;
-			if (predicted_iteration > curIteration) {
+			if (predicted_iteration > curIt) {
 				cout << endl << "WARNING: " << predicted_iteration <<
 					" iterations are needed by the default stopping rule" << endl;
 			}
     	} else {
 			int predicted_iteration = stop_rule.getPredictedIteration();
-			if (predicted_iteration > curIteration) {
+			if (predicted_iteration > curIt) {
 				cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure "
 						<< int(floor(params->stop_confidence * 100)) << "% confidence that "
 						<< "         the IQPNNI search will not find a better tree" << endl;
