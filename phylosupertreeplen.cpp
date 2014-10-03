@@ -579,6 +579,23 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 
 }
 
+/**
+ * this is to classify the cases which happen on the subtree
+ *
+ *  NNI_NONE_EPSILON: all 5 branches have images on subtree, this corresponds to change in subtree topology
+ * 					  2 partial_lh vectors for -nni1 or 6 partial_lh vectors for -nni5 options
+ *  NNI_ONE_EPSILON:  only one of the 5 branches has no image on subtree, this does not change subtree topology, but changes branch length of subtrees
+ * 					  we need to allocate partial likelihood memory (2 partial_lh vectors for -nni1 option or 4 partial_lh for -nni5 option)
+ * 	NNI_TWO_EPSILON:  two branches (on different sides of central branch) have no images, here after the NNI swap,
+ * 					  the image of central branch either does not change or is equal to epsilon (then we decrease the branch length)
+ * 					  and no allocation of partial_lh is needed
+ * 	NNI_THREE_EPSILON: central and two adjacent edges have no images: after the NNI swap, central branch will have image and we need to relink it
+ * 					no allocation of partial_lh is needed
+ *  NNI_MANY_EPSILON: more than 3 branches have no images on subtree: nothing changes in subtree and no recomputation of partial likelihood are required
+ */
+enum NNIType {NNI_NO_EPSILON, NNI_ONE_EPSILON, NNI_TWO_EPSILON, NNI_THREE_EPSILON, NNI_MANY_EPSILON};
+
+
 double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param) {
 
 	assert(node1->degree() == 3 && node2->degree() == 3);
@@ -667,8 +684,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 * node2_nei -> node2_link_nei[part] - synchronized later, since differs for nni1 and nni2	*
 	 *------------------------------------------------------------------------------------------*/
 
-	vector<bool> is_nni;
-	is_nni.resize(ntrees);
+	vector<NNIType> is_nni;
+	is_nni.resize(ntrees, NNI_NO_EPSILON);
 
 	Node *node_link, *nei_link;
 	vector<PhyloNode*> node1_link,node2_link;
@@ -720,20 +737,32 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 * 			- synchronize node1_link[part], node2_link[part], node1_link_nei[part]
 	 *------------------------------------------------------------------------------------*/
 
+	int epsilon_cnt;
 	for(part = 0; part < ntrees; part++){
 		totalNNIs++;
-		is_nni[part] = true;
-		if(saved_nei[0]->link_neighbors[part]){
-			FOR_NEIGHBOR_DECLARE(node1,node2,nit){
-				if(!((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni[part] = false; break; }
-			}
-			FOR_NEIGHBOR(node2, node1, nit) {
-				if(!((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni[part] = false; break; }
-			}
-		} else { is_nni[part] = false; }
+		is_nni[part] = NNI_NO_EPSILON;
+		epsilon_cnt = 0;
 
+		FOR_NEIGHBOR_DECLARE(node1,NULL,nit){
+			if(!((SuperNeighbor*)*nit)->link_neighbors[part]) { epsilon_cnt++; }
+		}
+		FOR_NEIGHBOR(node2, node1, nit) {
+			if(!((SuperNeighbor*)*nit)->link_neighbors[part]) { epsilon_cnt++; }
+		}
 
-		if(is_nni[part]){
+		if(epsilon_cnt == 0){
+			is_nni[part]=NNI_NO_EPSILON;
+		}else if(epsilon_cnt == 1){
+			is_nni[part] = NNI_ONE_EPSILON;
+		}else if(epsilon_cnt == 2){
+			is_nni[part]=NNI_TWO_EPSILON;
+		}else if(epsilon_cnt == 3){
+			is_nni[part]=NNI_THREE_EPSILON;
+		}else {
+			is_nni[part] = NNI_MANY_EPSILON;
+		}
+
+		if(is_nni[part]==NNI_NO_EPSILON){
 			evalNNIs++;
 			part_info[part].evalNNIs++;
 
@@ -778,6 +807,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			node1_link_nei[part] = ((SuperNeighbor*)node1_nei)->link_neighbors[part];
 			node1_link_it[part] = node1_link[part]->findNeighborIt(node1_link_nei[part]->node);
 		}
+
 	}
 	//===========================================================================================
 	// Do the NNI swap and compute the likelihood of swapped topology
@@ -789,7 +819,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 		// Synchronize node2_link_nei for NNI on SubTree
 		for(part=0; part<ntrees; part++)
-			if(is_nni[part]){
+			if(is_nni[part]==NNI_NO_EPSILON){
 				node2_link_nei[part] = ((SuperNeighbor*)node2_nei)->link_neighbors[part];
 				node2_link_it[part] = node2_link[part]->findNeighborIt(node2_link_nei[part]->node);
 			}
@@ -799,10 +829,13 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		node2_nei->node->updateNeighbor(node2, node1);
 		node2->updateNeighbor(node2_it, node1_nei);
 		node1_nei->node->updateNeighbor(node1, node2);
+		IntVector restored_id;
+		restored_id.resize(ntrees,-1);
 
 // Do the NNI swap on SubTrees or Proceed with partitions requiring relink of (node1,node2) ------------------------------
 		for(part = 0; part < ntrees; part++){
-			if(is_nni[part]){
+
+			if(is_nni[part]==NNI_NO_EPSILON){
 				//allNNIcases_computed[0] += 1;
 				// Do NNI swap on partition
 				node1_link[part]->updateNeighbor(node1_link_it[part], node2_link_nei[part]);
@@ -812,37 +845,69 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 				nei1_new_part[part] = nei1_new->link_neighbors[part];
 				nei2_new_part[part] = nei2_new->link_neighbors[part];
-				if(nei1_new_part[part]){
-					nei1_new_part[part]->clearPartialLh();
-					nei2_new_part[part]->clearPartialLh();
-				}
-			} else {
-				/*
-				 * If it is not NNI on SubTree, but branch is linked to some branch on SubTree, RELINK
-				 *
-				 * 	- first update the link_neighbor[part] of nei1_new and nei2_new,
-				 * let it points to the same link_neighbor as in saved[0]->link_nei and saved[1]->link_nei.
-				 * 	- then allocate new PhyloNeighbor, change the NEW branch length +=
-				 * 	- check if some other branches from SuperTree link to the same branch on SubTree
-				 * 		YES: update link_neighbors to new PhyloNeighbors
-				 * 	- after optimization: delete new, restore phyloNeighbors and link_neighbors,
-				 * 	relink, increase the old branch length
-				 */
+				assert(nei1_new_part[part]);
 
-				if(saved_nei[0]->link_neighbors[part]){
+				nei1_new_part[part]->clearPartialLh();
+				nei2_new_part[part]->clearPartialLh();
 
-					nei1_new->link_neighbors[part] = saved_nei[0]->link_neighbors[part];
-					nei2_new->link_neighbors[part] = saved_nei[1]->link_neighbors[part];
-
-					// Change the length of branch, (node1,node2) WAS linked to (-=)
-					nei1_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
-					nei2_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
-
-					if(nei1_new->link_neighbors[part]->length == 0.0){
-						nei1_new->link_neighbors[part]->length = MIN_BRANCH_LEN;
-						nei2_new->link_neighbors[part]->length = MIN_BRANCH_LEN;
+				if(params->nni5){
+					for(id=2; id<6; id++){
+						((PhyloNeighbor*)(*sub_saved_it[part*6+id]))->clearPartialLh();
 					}
 				}
+			} else if(is_nni[part]==NNI_MANY_EPSILON){
+				//no need to change or allocate anything
+			} else if(is_nni[part]==NNI_THREE_EPSILON){
+				linkBranch(part, nei1_new, nei2_new);
+				assert(nei1_new->link_neighbors[part]);
+				nei1_new->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
+				nei2_new->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
+				// since the branch length was changed we have to recompute the likelihood of the branch
+				part_info[part].cur_score = at(part)->computeLikelihoodBranch(nei1_new->link_neighbors[part],
+						(PhyloNode*)nei2_new->link_neighbors[part]->node);
+
+			}else if(is_nni[part]==NNI_TWO_EPSILON){
+				// In this case we have to decrease the image by central branch and relink.
+
+				nei1_new->link_neighbors[part] = saved_nei[0]->link_neighbors[part];
+				nei2_new->link_neighbors[part] = saved_nei[1]->link_neighbors[part];
+
+				// Change the length of branch, (node1,node2) WAS linked to (-=)
+				nei1_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
+				nei2_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
+
+//				if(nei1_new->link_neighbors[part]->length == 0.0){
+//					nei1_new->link_neighbors[part]->length = MIN_BRANCH_LEN;
+//					nei2_new->link_neighbors[part]->length = MIN_BRANCH_LEN;
+//				}
+
+				linkBranch(part, nei1_new, nei2_new);
+				//But if the central branch still has an image we have to restore the branch length.
+				if(nei1_new->link_neighbors[part]){
+					//restore the branch and do not recompute the likelihood
+					nei1_new->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
+					nei2_new->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
+				}else{
+					assert(nei1_new->link_neighbors[part]->length >= 0.0);
+					// since the branch length was changed we have to recompute the likelihood of the branch
+					part_info[part].cur_score = at(part)->computeLikelihoodBranch(nei1_new->link_neighbors[part],
+							(PhyloNode*)nei2_new->link_neighbors[part]->node);
+				}
+			}else if(is_nni[part] == NNI_ONE_EPSILON){
+
+				nei1_new->link_neighbors[part] = saved_nei[0]->link_neighbors[part];
+				nei2_new->link_neighbors[part] = saved_nei[1]->link_neighbors[part];
+
+				// Change the length of branch, (node1,node2) WAS linked to (-=)
+				nei1_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
+				nei2_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
+				assert(nei1_new->link_neighbors[part]->length >= 0.0);
+
+//				if(nei1_new->link_neighbors[part]->length == 0.0){
+//					nei1_new->link_neighbors[part]->length = MIN_BRANCH_LEN;
+//					nei2_new->link_neighbors[part]->length = MIN_BRANCH_LEN;
+//				}
+
 				// Relink the branch if it does not correspond to NNI for partition
 				linkBranch(part, nei1_new, nei2_new);
 
@@ -862,74 +927,94 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					}
 				}
 
-				/*
-				 * If the branch linked to some subbranch or if it was linked to nothing and
-				 * after relinking it links to some non empty subbranch
-				 */
-				if(nei1_new->link_neighbors[part]){ // otherwise it's NULL
-					sub_saved_nei1[part] = nei1_new->link_neighbors[part];
-					sub_saved_nei2[part] = nei2_new->link_neighbors[part];
+				assert(nei1_new->link_neighbors[part]);
+				sub_saved_nei1[part] = nei1_new->link_neighbors[part];
+				sub_saved_nei2[part] = nei2_new->link_neighbors[part];
 
-					// Allocate new PhyloNeighbors
-					// one branch optimization
-					for(id = 0; id < 2; id++){
-						nei_link  =  (id == 0) ? sub_saved_nei1[part]->node : sub_saved_nei2[part]->node;
-						node_link =  (id == 1) ? sub_saved_nei1[part]->node : sub_saved_nei2[part]->node;
+				// Allocate new PhyloNeighbors
+
+				// one branch optimization
+				for(id = 0; id < 2; id++){
+					nei_link  =  (id == 0) ? sub_saved_nei1[part]->node : sub_saved_nei2[part]->node;
+					node_link =  (id == 1) ? sub_saved_nei1[part]->node : sub_saved_nei2[part]->node;
+					sub_saved_it[part*6 + id] = node_link->findNeighborIt(nei_link);
+
+					// the central branch length of the subtree is increased!
+					*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, sub_saved_nei1[part]->length + old_brlen * part_info[part].part_rate);
+					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
+					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = at(part)->newScaleNum();
+
+//					PhyloNeighbor *savednei = (id == 0) ? sub_saved_nei1[part] : sub_saved_nei2[part];
+//					if (savednei->partial_lh_computed) {
+//						if (saved_nei[0]->link_neighbors[part] && common_nodes == 1) {
+//							//allNNIcases_computed[3] += 1;
+//							// Minh: for efficiency, if previous branch maps to some new branch, reuse partial_lh if it does not look to old branch
+//							if (nei_link != saved_nei[0]->link_neighbors[part]->node && nei_link != saved_nei[1]->link_neighbors[part]->node) {
+//								PhyloNeighbor *thisnei = ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]));
+//								memcpy(thisnei->partial_lh, savednei->partial_lh, at(part)->getPartialLhBytes());
+//								memcpy(thisnei->scale_num , savednei->scale_num , at(part)->getScaleNumBytes());
+//								thisnei->lh_scale_factor = savednei->lh_scale_factor;
+//								thisnei->partial_lh_computed = savednei->partial_lh_computed;
+//							}
+//						} else {
+//							//allNNIcases_computed[4] += 1;
+//							// Minh: for efficiency, if previous branch maps to NULL or after relinking it maps to the same branch, reuse partial_lh
+//							PhyloNeighbor *thisnei = ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]));
+//							memcpy(thisnei->partial_lh, savednei->partial_lh, at(part)->getPartialLhBytes());
+//							memcpy(thisnei->scale_num , savednei->scale_num , at(part)->getScaleNumBytes());
+//							thisnei->lh_scale_factor = savednei->lh_scale_factor;
+//							thisnei->partial_lh_computed = savednei->partial_lh_computed;
+//							//if (thisnei->partial_lh_computed)
+//								//cout << "yh" << endl;
+//						}
+//					}
+
+					(*sub_saved_it[part*6 + id])->id = sub_saved_nei1[part]->id;
+
+					// update link_neighbor[part]
+					((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
+
+				}
+
+				// optimization on 5 branches!!!!!
+				if(params->nni5){
+					if(((SuperNeighbor*)(*saved_it[2]))->link_neighbors[part] && ((SuperNeighbor*)(*saved_it[3]))->link_neighbors[part]){
+						restored_id[part] = 2;
+					} else restored_id[part] = 4;
+					for (id = restored_id[part]; id < restored_id[part]+2; id++){
+						nei_link = saved_nei[id]->link_neighbors[part]->node;
+						node_link = ((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node;
 						sub_saved_it[part*6 + id] = node_link->findNeighborIt(nei_link);
-						*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, sub_saved_nei1[part]->length + old_brlen * part_info[part].part_rate);
+						*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, ((SuperNeighbor*)(*saved_it[id]))->link_neighbors[part]->length);
 						((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
 						((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = at(part)->newScaleNum();
-
-						PhyloNeighbor *savednei = (id == 0) ? sub_saved_nei1[part] : sub_saved_nei2[part];
-						if (savednei->partial_lh_computed) {
-							if (saved_nei[0]->link_neighbors[part] && common_nodes == 1) {
-								//allNNIcases_computed[3] += 1;
-								// Minh: for efficiency, if previous branch maps to some new branch, reuse partial_lh if it does not look to old branch
-								if (nei_link != saved_nei[0]->link_neighbors[part]->node && nei_link != saved_nei[1]->link_neighbors[part]->node) {
-									PhyloNeighbor *thisnei = ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]));
-									memcpy(thisnei->partial_lh, savednei->partial_lh, at(part)->getPartialLhBytes());
-									memcpy(thisnei->scale_num , savednei->scale_num , at(part)->getScaleNumBytes());
-									thisnei->lh_scale_factor = savednei->lh_scale_factor;
-									thisnei->partial_lh_computed = savednei->partial_lh_computed;
-								}
-							} else {
-								//allNNIcases_computed[4] += 1;
-								// Minh: for efficiency, if previous branch maps to NULL or after relinking it maps to the same branch, reuse partial_lh
-								PhyloNeighbor *thisnei = ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]));
-								memcpy(thisnei->partial_lh, savednei->partial_lh, at(part)->getPartialLhBytes());
-								memcpy(thisnei->scale_num , savednei->scale_num , at(part)->getScaleNumBytes());
-								thisnei->lh_scale_factor = savednei->lh_scale_factor;
-								thisnei->partial_lh_computed = savednei->partial_lh_computed;
-								//if (thisnei->partial_lh_computed)
-									//cout << "yh" << endl;
-							}
-						}
-
-						(*sub_saved_it[part*6 + id])->id = sub_saved_nei1[part]->id;
+						(*sub_saved_it[part*6 + id])->id = saved_nei[id]->link_neighbors[part]->id;
 
 						// update link_neighbor[part]
 						((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
 
 					}
-					linkCheck(part,node1,node2,sub_saved_nei2[part]);
-					linkCheck(part,node2,node1,sub_saved_nei1[part]);
+					(*sub_saved_it[part*6 + id])->id = sub_saved_nei1[part]->id;
 
-					// optimization on 5 branches!!!!!
+					// update link_neighbor[part]
+					((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
+				}
 
+				linkCheck(part,node1,node2,sub_saved_nei2[part]);
+				linkCheck(part,node2,node1,sub_saved_nei1[part]);
 
-
-
-				}else{
-					//allNNIcases_computed[2] += 1;
+//				}
+//			else{
+//					//allNNIcases_computed[2] += 1;
 					/*
 					 * If the branch was linked to some subbranch or if it was linked to empty subbranch
 					 * and after relink it maps to empty subbranch
 					 */
-					if(saved_nei[0]->link_neighbors[part]){
-						//allNNIcases_computed[1] += 1;
-						part_info[part].cur_score = at(part)->computeLikelihoodBranch(saved_nei[0]->link_neighbors[part],(PhyloNode*)saved_nei[1]->link_neighbors[part]->node);
-					}
-				}
+//					if(saved_nei[0]->link_neighbors[part]){
+//						//allNNIcases_computed[1] += 1;
+//						part_info[part].cur_score = at(part)->computeLikelihoodBranch(saved_nei[0]->link_neighbors[part],(PhyloNode*)saved_nei[1]->link_neighbors[part]->node);
+//					}
+//				}
 			} // end RELINK
 		} // end of part loop
 
@@ -937,7 +1022,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
  * 											Compute the score of the swapped topology 				  							 *
  *===============================================================================================================================*/
 		checkBranchLen();
-		double score = optimizeOneBranch(node1, node2, false);
+		double score = optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
 		if (verbose_mode >= VB_MED) {
 			cout << "[" << score << "] ";
 			printTree(cout);
@@ -951,26 +1036,26 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    		cout << "Log-likelihood: " << score << endl;
 	    	FOR_NEIGHBOR(node1, node2, it){
 	    		for(part = 0; part < ntrees; part++)
-	    			if(((SuperNeighbor*)(*it))->link_neighbors[part]){
+	    			if(((SuperNeighbor*)(*it))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON || NNI_ONE_EPSILON)){
 	    				node_link = ((SuperNeighbor*)(*it))->link_neighbors[part]->node;
 	    				nei_link  = nei2_new->link_neighbors[part]->node;
-	    				((PhyloNeighbor*)node_link->findNeighbor(nei_link))->clearPartialLh();
+						((PhyloNeighbor*)node_link->findNeighbor(nei_link))->clearPartialLh();
 	    			}
-	    		score = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false);
+	    		score = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
 	    		if (verbose_mode >= VB_DEBUG)
 	    			cout << "Log-likelihood: " << score << endl;
 	    	}
-	    	for(part = 0; part > ntrees; part++)
-	    		if(nei2_new->link_neighbors[part])
+	    	for(part = 0; part < ntrees; part++)
+	    		if(nei2_new->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON || NNI_ONE_EPSILON))
 	    			nei2_new_part[part]->clearPartialLh();
 	    	FOR_NEIGHBOR(node2, node1, it){
 	    		for(part = 0; part < ntrees; part++)
-	    			if(((SuperNeighbor*)(*it))->link_neighbors[part]){
+	    			if(((SuperNeighbor*)(*it))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON || NNI_ONE_EPSILON)){
 	    				node_link = ((SuperNeighbor*)(*it))->link_neighbors[part]->node;
 	    				nei_link  = nei1_new->link_neighbors[part]->node;
 	    				((PhyloNeighbor*)node_link->findNeighbor(nei_link))->clearPartialLh();
 	    			}
-	    		score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
+	    		score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
 	    		if (verbose_mode >= VB_DEBUG)
 	    			cout << "Log-likelihood: " << score << endl;
 	    	}
@@ -988,19 +1073,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			part_info[i].cur_score = saved_cur_score[i];
 
 	    // *************************** STORE INFO ABOUT NNI ***************************
-	    // Store information about this NNI for partitions, this is used for bootstrap...
-//	    for(part = 0; part < ntrees; part++){
-//	    	if(nei1_new->link_neighbors[part]){
-//	    		int brid = nei1_new->link_neighbors[part]->id;
-//		    	if(cnt == 0){
-//		    		part_info[part].nni1_brlen[brid] = nei1_new->link_neighbors[part]->length;
-//		    		//computePatternLikelihood(part_info[part].nni1_ptnlh[brid[part]], &part_info[part].nni1_score[brid[part]]);
-//		    	}else{
-//		    		part_info[part].nni2_brlen[brid] = nei1_new->link_neighbors[part]->length;
-//		    		//computePatternLikelihood(part_info[part].nni2_ptnlh[brid[part]], &part_info[part].nni2_score[brid[part]]);
-//		    	}
-//	    	}
-//	    }
+
 	    // Store information about this NNI for NNImove for SuperTree
 		if (nni_param) {
 			if (verbose_mode >= VB_MAX)
@@ -1020,8 +1093,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		nei1_new->length = old_brlen;
 		nei2_new->length = old_brlen;
 
-		for(part = 0; part < ntrees; part++)
-			if(!is_nni[part] && nei1_new->link_neighbors[part]){
+		for(part = 0; part < ntrees; part++){
+			if(is_nni[part]==NNI_ONE_EPSILON){
 				linkCheckRe(part,node1,node2,sub_saved_nei2[part],sub_saved_nei1[part]);
 				linkCheckRe(part,node2,node1,sub_saved_nei1[part],sub_saved_nei2[part]);
 				// Restore on SubTree
@@ -1049,7 +1122,14 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 //				FOR_NEIGHBOR(node2_link[part], node1_link[part], it)
 //					(*it)->length = (*it)->node->findNeighbor(node2_link[part])->length;
 //				}*/
+				if(params->nni5){
+
+				}
+
+
+
 			}
+		}
 
 // Swap back on SuperTree --------------------------------------------------------------------------------------------------------------
 		node1->updateNeighbor(node1_it, node1_nei);
