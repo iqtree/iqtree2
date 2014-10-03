@@ -2671,17 +2671,9 @@ double PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
     current_it->length = value;
     current_it_back->length = value;
     double lh;
-    if (params->fast_branch_opt) {
-        // Pre-compute Theta vector
-        if (!theta_computed) {
-            computeTheta(current_it, (PhyloNode*) current_it_back->node);
-            theta_computed = true;
-        }
-        lh = -computeLikelihoodDervFast(current_it, (PhyloNode*) current_it_back->node, df, ddf);
-    } else {
-        lh = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
-    }
-    df = -df;
+	lh = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+
+	df = -df;
     ddf = -ddf;
 
     return lh;

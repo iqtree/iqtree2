@@ -814,33 +814,12 @@ public:
 
     bool theta_computed;
 
-    double computeLikelihoodDervFast(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    double computeLikelihoodDervFastNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    template<int NSTATES>
-    double computeLikelihoodDervFastSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    template<int NSTATES>
-    void computeThetaSSE(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
-    void computeTheta(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
-    void computeThetaNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
     /**
      *	NSTATES x NUMCAT x (number of patterns) array
      *	Used to store precomputed values when optimizing branch length
      *	See Tung's report on 07.05.2012 for more information
      */
     double* theta_all;
-
-    void initiateMyEigenCoeff();
-    /*
-     * 	Array to store the eigen coefficients
-     */
-    double* myEigenCoeff;
-
 
     /****************************************************************************
             Nearest Neighbor Interchange by maximum likelihood
