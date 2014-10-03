@@ -223,11 +223,11 @@ public:
 		return NULL;
 	}
 
-	virtual double **getEigenvectors() const {
+	virtual double *getEigenvectors() const {
 		return NULL;
 	}
 
-	virtual double **getInverseEigenvectors() const {
+	virtual double *getInverseEigenvectors() const {
 		return NULL;
 	}
 

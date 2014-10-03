@@ -43,14 +43,15 @@ void PhyloTree::computeTipPartialLikelihood() {
 	tip_partial_lh_computed = true;
 	int i, x, state, nstates = aln->num_states;
 
-	double *evec = aligned_alloc_double(nstates*nstates);
-    double *inv_evec = aligned_alloc_double(nstates*nstates);
-	double **_evec = model->getEigenvectors(), **_inv_evec = model->getInverseEigenvectors();
-	assert(_inv_evec && _evec);
-	for (i = 0; i < nstates; i++) {
-		memcpy(evec+i*nstates, _evec[i], nstates*sizeof(double));
-		memcpy(inv_evec+i*nstates, _inv_evec[i], nstates*sizeof(double));
-	}
+//	double *evec = aligned_alloc_double(nstates*nstates);
+//    double *inv_evec = aligned_alloc_double(nstates*nstates);
+	double *evec = model->getEigenvectors();
+	double *inv_evec = model->getInverseEigenvectors();
+	assert(inv_evec && evec);
+//	for (i = 0; i < nstates; i++) {
+//		memcpy(evec+i*nstates, _evec[i], nstates*sizeof(double));
+//		memcpy(inv_evec+i*nstates, _inv_evec[i], nstates*sizeof(double));
+//	}
 
 	assert(tip_partial_lh);
 	for (state = 0; state < nstates; state++)
@@ -96,8 +97,8 @@ void PhyloTree::computeTipPartialLikelihood() {
 	default:
 		break;
 	}
-	aligned_free(inv_evec);
-	aligned_free(evec);
+//	aligned_free(inv_evec);
+//	aligned_free(evec);
 }
 
 /**
@@ -131,14 +132,15 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 
     double *partial_lh = dad_branch->partial_lh;
 
-    double *evec = new double[nstates*nstates];
-    double *inv_evec = new double[nstates*nstates];
-	double **_evec = model->getEigenvectors(), **_inv_evec = model->getInverseEigenvectors();
-	assert(_inv_evec && _evec);
-	for (i = 0; i < nstates; i++) {
-		memcpy(evec+i*nstates, _evec[i], nstates*sizeof(double));
-		memcpy(inv_evec+i*nstates, _inv_evec[i], nstates*sizeof(double));
-	}
+//    double *evec = new double[nstates*nstates];
+//    double *inv_evec = new double[nstates*nstates];
+	double *evec = model->getEigenvectors();
+	double *inv_evec = model->getInverseEigenvectors();
+	assert(inv_evec && evec);
+//	for (i = 0; i < nstates; i++) {
+//		memcpy(evec+i*nstates, _evec[i], nstates*sizeof(double));
+//		memcpy(inv_evec+i*nstates, _inv_evec[i], nstates*sizeof(double));
+//	}
 	double *eval = model->getEigenvalues();
 
     dad_branch->lh_scale_factor = 0.0;
@@ -521,8 +523,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 	delete [] eright;
 	delete [] eleft;
 	delete [] partial_lh_tmp;
-	delete [] inv_evec;
-	delete [] evec;
+//	delete [] inv_evec;
+//	delete [] evec;
 }
 
 template <const int nstates>
@@ -872,6 +874,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
     size_t ptn, c;
     size_t nptn = aln->size();
     size_t ncat = site_rate->getNRate();
+    assert(nstates == aln->num_states);
     //size_t nstates = aln->num_states;
     //const size_t ncat = 4;
     //const size_t nstates = 4;
@@ -888,6 +891,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 	}
 
 	if (!left->node->isLeaf() && right->node->isLeaf()) {
+		// swap left and right
 		PhyloNeighbor *tmp = left;
 		left = right;
 		right = tmp;
@@ -899,17 +903,19 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 
     double *partial_lh = dad_branch->partial_lh;
 
-    double *evec = aligned_alloc_double(nstates*nstates);
-    double *inv_evec = aligned_alloc_double(nstates*nstates);
-	double **_evec = model->getEigenvectors(), **_inv_evec = model->getInverseEigenvectors();
+//    double *evec = aligned_alloc_double(nstates*nstates);
+//    double *inv_evec = aligned_alloc_double(nstates*nstates);
+	double *evec = model->getEigenvectors();
+	double *inv_evec = model->getInverseEigenvectors();
 
 	VectorClass vc_inv_evec[nstates*nstates/VCSIZE];
-	assert(_inv_evec && _evec);
+	assert(inv_evec && evec);
 	for (i = 0; i < nstates; i++) {
-		memcpy(evec+i*nstates, _evec[i], nstates*sizeof(double));
-		memcpy(inv_evec+i*nstates, _inv_evec[i], nstates*sizeof(double));
+//		memcpy(evec+i*nstates, _evec[i], nstates*sizeof(double));
+//		memcpy(inv_evec+i*nstates, _inv_evec[i], nstates*sizeof(double));
 		for (x = 0; x < nstates/VCSIZE; x++)
-			vc_inv_evec[i*nstates/VCSIZE+x].load_a(&inv_evec[i*nstates+x*VCSIZE]);
+			// inv_evec is not aligned!
+			vc_inv_evec[i*nstates/VCSIZE+x].load(&inv_evec[i*nstates+x*VCSIZE]);
 	}
 	double *eval = model->getEigenvalues();
 
@@ -932,7 +938,8 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 		}
 		for (x = 0; x < nstates; x++)
 			for (i = 0; i < nstates; i+=VCSIZE) {
-				vc_evec.load_a(&evec[x*nstates+i]);
+				// evec is not be aligned!
+				vc_evec.load(&evec[x*nstates+i]);
 				(vc_evec * VectorClass().load_a(&expleft[i])) . store_a(&eleft[c*nstatesqr+x*nstates+i]);
 				(vc_evec * VectorClass().load_a(&expright[i])) . store_a(&eright[c*nstatesqr+x*nstates+i]);
 			}
@@ -1192,8 +1199,8 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 
 	aligned_free(eright);
 	aligned_free(eleft);
-	aligned_free(inv_evec);
-	aligned_free(evec);
+//	aligned_free(inv_evec);
+//	aligned_free(evec);
 }
 
 template <const int nstates>
@@ -2179,7 +2186,7 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
 		case LK_EIGEN_TIP_SSE:
 #ifdef __AVX
 		// use non-SSE code as current AVX-code does not work with  2-state model
-			return computeLikelihoodDervEigenTipSSE<2>(dad_branch, dad, df, ddf);
+			return computeLikelihoodDervEigen<2>(dad_branch, dad, df, ddf);
 #else
 			return computeLikelihoodDervEigenTipSSE<2>(dad_branch, dad, df, ddf);
 #endif
