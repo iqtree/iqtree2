@@ -1239,6 +1239,10 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
     double *state_freq = aligned_alloc_double(nstates);
     model->getStateFrequency(state_freq);
 
+    VectorClass vc_val0[block/VCSIZE];
+	VectorClass vc_val1[block/VCSIZE];
+	VectorClass vc_val2[block/VCSIZE];
+
 	for (c = 0; c < ncat; c++) {
 		for (i = 0; i < nstates; i++) {
 			double cof = eval[i]*site_rate->getRate(c);
@@ -1249,9 +1253,6 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 			val2[c*nstates+i] = cof*val1_;
 		}
 	}
-	VectorClass vc_val0[block/VCSIZE];
-	VectorClass vc_val1[block/VCSIZE];
-	VectorClass vc_val2[block/VCSIZE];
 	for (i = 0; i < block/VCSIZE; i++) {
 		vc_val0[i].load_a(&val0[i*VCSIZE]);
 		vc_val1[i].load_a(&val1[i*VCSIZE]);
@@ -1287,14 +1288,15 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 			}
 	    }
 		if (nptn < maxptn) {
+/*
 			VectorClass vc1(p_var_cat);
 			for (ptn = nptn; ptn < maxptn; ptn++) {
 				theta = &theta_all[ptn*block];
 				for (i = 0; i < block/VCSIZE; i++) {
 					(vc1 / vc_val0[i]).store_a(&theta[i*VCSIZE]);
 				}
-			}
-	//		memset(&theta[nptn*block], 0, block*sizeof(double));
+			}*/
+			memset(&theta_all[nptn*block], 0, block*(maxptn-nptn)*sizeof(double));
 		}
 	}
 
@@ -2093,7 +2095,13 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 		switch(sse) {
 		case LK_SSE: computePartialLikelihoodSSE<2>(dad_branch, dad, pattern_scale); break;
 		case LK_EIGEN: computePartialLikelihoodEigen<2>(dad_branch, dad, pattern_scale); break;
-		case LK_EIGEN_TIP_SSE: computePartialLikelihoodEigenTipSSE<2>(dad_branch, dad, pattern_scale); break;
+		case LK_EIGEN_TIP_SSE:
+#ifdef __AVX
+		// use non-SSE code as current AVX-code does not work with  2-state model
+			computePartialLikelihoodEigen<2>(dad_branch, dad, pattern_scale); break;
+#else
+			computePartialLikelihoodEigenTipSSE<2>(dad_branch, dad, pattern_scale); break;
+#endif
 		case LK_NORMAL: computePartialLikelihoodNaive(dad_branch, dad, pattern_scale); break;
 		}
 		break;
@@ -2125,7 +2133,13 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 		switch(sse) {
 		case LK_SSE: return computeLikelihoodBranchSSE<2>(dad_branch, dad, pattern_lh);
 		case LK_EIGEN: return computeLikelihoodBranchEigen<2>(dad_branch, dad, pattern_lh);
-		case LK_EIGEN_TIP_SSE: return computeLikelihoodBranchEigenTipSSE<2>(dad_branch, dad, pattern_lh);
+		case LK_EIGEN_TIP_SSE:
+#ifdef __AVX
+		// use non-SSE code as current AVX-code does not work with  2-state model
+			return computeLikelihoodBranchEigen<2>(dad_branch, dad, pattern_lh);
+#else
+			return computeLikelihoodBranchEigenTipSSE<2>(dad_branch, dad, pattern_lh);
+#endif
 		case LK_NORMAL: return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
 		}
 		break;
@@ -2162,7 +2176,13 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
 		switch(sse) {
 		case LK_SSE: return computeLikelihoodDervSSE<2>(dad_branch, dad, df, ddf);
 		case LK_EIGEN: return computeLikelihoodDervEigen<2>(dad_branch, dad, df, ddf);
-		case LK_EIGEN_TIP_SSE: return computeLikelihoodDervEigenTipSSE<2>(dad_branch, dad, df, ddf);
+		case LK_EIGEN_TIP_SSE:
+#ifdef __AVX
+		// use non-SSE code as current AVX-code does not work with  2-state model
+			return computeLikelihoodDervEigenTipSSE<2>(dad_branch, dad, df, ddf);
+#else
+			return computeLikelihoodDervEigenTipSSE<2>(dad_branch, dad, df, ddf);
+#endif
 		case LK_NORMAL: return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
 		}
 		break;
