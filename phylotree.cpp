@@ -1083,7 +1083,7 @@ void PhyloTree::initializeAllPartialLh() {
     int numStates = model->num_states;
 	// Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
-    size_t nptn = getAlnNPattern() + numStates;
+    size_t nptn = getAlnNPattern() + numStates; // extra #numStates for ascertainment bias correction
 #ifdef __AVX
     size_t mem_size = ((nptn +3)/4)*4;
 #else

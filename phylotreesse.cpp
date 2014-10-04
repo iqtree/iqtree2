@@ -99,7 +99,7 @@ void PhyloTree::computeTipPartialLikelihood() {
     model->getStateFrequency(state_freq);
 
 	size_t nptn = aln->getNPattern();
-	size_t maxptn = get_safe_upper_limit(nptn);
+	size_t maxptn = get_safe_upper_limit(nptn+model_factory->unobserved_ptns.size());
 	int ptn;
 	for (ptn = 0; ptn < nptn; ptn++)
 		ptn_freq[ptn] = (*aln)[ptn].frequency;
@@ -114,6 +114,9 @@ void PhyloTree::computeTipPartialLikelihood() {
 			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
 					ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn][0]];
 			}
+		// ascertmain bias correction
+		for (ptn = 0; ptn < model_factory->unobserved_ptns.size(); ptn++)
+			ptn_invar[nptn+ptn] = p_invar * state_freq[(int)model_factory->unobserved_ptns[ptn]];
 	}
 	aligned_free(state_freq);
 }
@@ -137,7 +140,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 	}
 
     size_t ptn, c;
-    size_t nptn = aln->size();
+    size_t orig_ntn = aln->size();
+    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     size_t ncat = site_rate->getNRate();
     //size_t nstates = aln->num_states;
     //const size_t ncat = 4;
@@ -273,8 +277,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 
 		for (ptn = 0; ptn < nptn; ptn++) {
-			int state_left = (aln->at(ptn))[left->node->id];
-			int state_right = (aln->at(ptn))[right->node->id];
+			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
+			int state_right = (ptn < orig_ntn) ? (aln->at(ptn))[right->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
 #ifdef USING_SSE
 
 			for (c = 0; c < ncat; c++) {
@@ -356,7 +360,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 
 		double sum_scale = 0.0;
 		for (ptn = 0; ptn < nptn; ptn++) {
-			int state_left = (aln->at(ptn))[left->node->id];
+			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
 #ifdef USING_SSE
 			double *partial_lh_block = partial_lh;
 			double *eright_tmp = eright;
@@ -570,7 +574,8 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
     size_t block = ncat * nstates;
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i;
-    size_t nptn = aln->size();
+    size_t orig_nptn = aln->size();
+    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     double *eval = model->getEigenvalues();
     assert(eval);
 
@@ -583,7 +588,7 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
 			for (ptn = 0; ptn < nptn; ptn++) {
-				int state_dad = (aln->at(ptn))[dad->id];
+				int state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn];
 #ifdef USING_SSE
 				MappedRowVec(nstates) ei_tip_partial_lh(tip_partial_lh + state_dad*nstates);
 				for (c = 0; c < ncat; c++) {
@@ -604,6 +609,7 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 				theta += block;
 #endif
 			}
+			// ascertainment bias correction
 	    } else {
 	    	// both dad and node are internal nodes
 		    double *partial_lh_node = node_branch->partial_lh;
@@ -638,6 +644,8 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 
 
     double *theta = theta_all;
+    double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
+
 	for (ptn = 0; ptn < nptn; ptn++) {
 		double lh_ptn = 0.0, df_ptn = 0.0, ddf_ptn = 0.0;
 #ifdef USING_SSE
@@ -670,22 +678,44 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 		lh_ptn = lh_ptn * p_var_cat + ptn_invar[ptn];
 		df_ptn *= p_var_cat;
 		ddf_ptn *= p_var_cat;
-		double df_frac = df_ptn / lh_ptn;
-		double ddf_frac = ddf_ptn / lh_ptn;
-		double freq = ptn_freq[ptn];
-		double tmp1 = df_frac * freq;
-		double tmp2 = ddf_frac * freq;
-		df += tmp1;
-		ddf += tmp2 - tmp1 * df_frac;
-		lh_ptn = log(lh_ptn);
-		tree_lh += lh_ptn * freq;
-		_pattern_lh[ptn] = lh_ptn;
+		if (ptn < orig_nptn) {
+			double df_frac = df_ptn / lh_ptn;
+			double ddf_frac = ddf_ptn / lh_ptn;
+			double freq = ptn_freq[ptn];
+			double tmp1 = df_frac * freq;
+			double tmp2 = ddf_frac * freq;
+			df += tmp1;
+			ddf += tmp2 - tmp1 * df_frac;
+			lh_ptn = log(lh_ptn);
+			tree_lh += lh_ptn * freq;
+			_pattern_lh[ptn] = lh_ptn;
+		} else {
+			// ascertainment bias correction
+			prob_const += lh_ptn;
+			df_const += df_ptn;
+			ddf_const += ddf_ptn;
+		}
+    }
+
+	if (orig_nptn < nptn) {
+    	// ascertainment bias correction
+    	prob_const = 1.0 - prob_const;
+    	double df_frac = df_const / prob_const;
+    	double ddf_frac = ddf_const / prob_const;
+    	int nsites = aln->getNSite();
+    	df += nsites * df_frac;
+    	ddf += nsites *(ddf_frac + df_frac*df_frac);
+    	prob_const = log(prob_const);
+    	tree_lh -= nsites * prob_const;
+    	for (ptn = 0; ptn < orig_nptn; ptn++)
+    		_pattern_lh[ptn] -= prob_const;
     }
 
 
     delete [] val2;
     delete [] val1;
     delete [] val0;
+
     return tree_lh;
 }
 
@@ -715,7 +745,8 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     size_t block = ncat * nstates;
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i;
-    size_t nptn = aln->size();
+    size_t orig_nptn = aln->size();
+    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     double *eval = model->getEigenvalues();
     assert(eval);
 
@@ -727,11 +758,14 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 		for (i = 0; i < nstates; i++)
 			val[c*nstates+i] = exp(eval[i]*len);
 	}
+
+	double prob_const = 0.0;
+
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = 0.0;
-			int state_dad = (aln->at(ptn))[dad->id];
+			int state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
 #ifdef USING_SSE
 			double *val_tmp = val;
 			MappedVec(nstates) ei_tip_partial_lh(tip_partial_lh+state_dad*nstates);
@@ -750,9 +784,13 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 			partial_lh_dad += block;
 #endif
 			lh_ptn = lh_ptn*p_var_cat + ptn_invar[ptn];
-			lh_ptn = log(lh_ptn);
-			_pattern_lh[ptn] = lh_ptn;
-			tree_lh += lh_ptn * ptn_freq[ptn];
+			if (ptn < orig_nptn) {
+				lh_ptn = log(lh_ptn);
+				_pattern_lh[ptn] = lh_ptn;
+				tree_lh += lh_ptn * ptn_freq[ptn];
+			} else {
+				prob_const += lh_ptn;
+			}
 		}
     } else {
     	// both dad and node are internal nodes
@@ -778,11 +816,24 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 #endif
 			lh_ptn = lh_ptn*p_var_cat + ptn_invar[ptn];
 			assert(lh_ptn > 0.0);
-			lh_ptn = log(lh_ptn);
-			_pattern_lh[ptn] = lh_ptn;
+			if (ptn < orig_nptn) {
+				lh_ptn = log(lh_ptn);
+				_pattern_lh[ptn] = lh_ptn;
 			tree_lh += lh_ptn * ptn_freq[ptn];
+			} else {
+				prob_const += lh_ptn;
+			}
 		}
     }
+
+    if (orig_nptn < nptn) {
+    	// ascertainment bias correction
+    	prob_const = log(1.0 - prob_const);
+    	for (ptn = 0; ptn < orig_nptn; ptn++)
+    		_pattern_lh[ptn] -= prob_const;
+    	tree_lh -= aln->getNSite()*prob_const;
+    }
+
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
     delete [] val;
