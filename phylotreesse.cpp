@@ -1003,14 +1003,16 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 		vector<int>::iterator it;
 		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
 			int state = (*it);
+			size_t addr = state*nstates;
 			for (i = 0; i < nstates/VCSIZE; i++)
-				vc_partial_lh_tmp[i].load_a(&tip_partial_lh[state*nstates+i*VCSIZE]);
+				vc_partial_lh_tmp[i].load_a(&tip_partial_lh[addr+i*VCSIZE]);
 			for (x = 0; x < block; x+=VCSIZE) {
+				addr = x*nstates/VCSIZE;
 				for (j = 0; j < VCSIZE; j++)
-					vleft[j] = eleft[(x+j)*nstates/VCSIZE] * vc_partial_lh_tmp[0];
+					vleft[j] = eleft[addr+j*nstates/VCSIZE] * vc_partial_lh_tmp[0];
 				for (i = 1; i < nstates/VCSIZE; i++) {
 					for (j = 0; j < VCSIZE; j++)
-						vleft[j] += eleft[(x+j)*nstates/VCSIZE+i] * vc_partial_lh_tmp[i];
+						vleft[j] += eleft[addr+j*nstates/VCSIZE+i] * vc_partial_lh_tmp[i];
 				}
 				horizontal_add(vleft).store_a(&partial_lh_left[state*block+x]);
 			}
@@ -1042,15 +1044,13 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 
 	    for (ptn = 0; ptn < nptn; ptn++) {
-			int state_left = (aln->at(ptn))[left->node->id];
-			int state_right = (aln->at(ptn))[right->node->id];
-
+			double *lh_left  = &partial_lh_left [block * (aln->at(ptn))[left->node->id]];
+			double *lh_right = &partial_lh_right[block * (aln->at(ptn))[right->node->id]];
 			for (c = 0; c < ncat; c++) {
 				// compute real partial likelihood vector
-				double *left = partial_lh_left + (state_left*block+c*nstates);
-				double *right = partial_lh_right + (state_right*block+c*nstates);
+
 				for (x = 0; x < nstates/VCSIZE; x++) {
-					vc_partial_lh_tmp[x] = (VectorClass().load_a(&left[x*VCSIZE]) * VectorClass().load_a(&right[x*VCSIZE]));
+					vc_partial_lh_tmp[x] = (VectorClass().load_a(&lh_left[x*VCSIZE]) * VectorClass().load_a(&lh_right[x*VCSIZE]));
 				}
 				// compute dot-product with inv_eigenvector
 				for (i = 0; i < nstates; i+=VCSIZE) {
@@ -1061,10 +1061,14 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 						for (j = 0; j < VCSIZE; j++) {
 							res[j] += vc_partial_lh_tmp[x] * vc_inv_evec[(i+j)*nstates/VCSIZE+x];
 						}
-					horizontal_add(res).store_a(&partial_lh[c*nstates+i]);
+					horizontal_add(res).store_a(&partial_lh[i]);
 				}
+
+				lh_left += nstates;
+				lh_right += nstates;
+				partial_lh += nstates;
 			}
-			partial_lh += block;
+//			partial_lh += block;
 		}
 		aligned_free(partial_lh_right);
 		aligned_free(partial_lh_left);
@@ -1082,6 +1086,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 		VectorClass vc_partial_lh_tmp[nstates/VCSIZE];
 		VectorClass res[VCSIZE];
 		VectorClass vleft[VCSIZE], vright[VCSIZE];
+		VectorClass vc_max; // maximum of partial likelihood, for scaling check
 
 		vector<int>::iterator it;
 		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
@@ -1108,12 +1113,13 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 		double sum_scale = 0.0;
 
 		for (ptn = 0; ptn < nptn; ptn++) {
-			int state_left = (aln->at(ptn))[left->node->id];
-
+			double *lh_left = &partial_lh_left[block*(aln->at(ptn))[left->node->id]];
+			vc_max = 0.0;
 			for (c = 0; c < ncat; c++) {
 				// compute real partial likelihood vector
 				for (i = 0; i < nstates/VCSIZE; i++)
-					vc_lh_right[i].load_a(&partial_lh_right[c*nstates+i*VCSIZE]);
+					vc_lh_right[i].load_a(&partial_lh_right[i*VCSIZE]);
+
 				for (x = 0; x < nstates/VCSIZE; x++) {
 					size_t addr = c*nstatesqr/VCSIZE+x*nstates;
 					for (j = 0; j < VCSIZE; j++) {
@@ -1123,7 +1129,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 						for (j = 0; j < VCSIZE; j++) {
 							vright[j] += eright[addr+i+nstates*j/VCSIZE] * vc_lh_right[i];
 						}
-					vc_partial_lh_tmp[x] = VectorClass().load_a(&partial_lh_left[state_left*block+c*nstates+x*VCSIZE])
+					vc_partial_lh_tmp[x] = VectorClass().load_a(&lh_left[x*VCSIZE])
 							* horizontal_add(vright);
 				}
 				// compute dot-product with inv_eigenvector
@@ -1136,17 +1142,19 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 							res[j] += vc_partial_lh_tmp[x] * vc_inv_evec[(i+j)*nstates/VCSIZE+x];
 						}
 					}
-					horizontal_add(res).store_a(&partial_lh[c*nstates+i]);
+					VectorClass sum_res = horizontal_add(res);
+					sum_res.store_a(&partial_lh[i]);
+					vc_max = max(vc_max, abs(sum_res)); // take the maximum for scaling check
 				}
+				lh_left += nstates;
+				partial_lh_right += nstates;
+				partial_lh += nstates;
 			}
             // check if one should scale partial likelihoods
-			VectorClass vc_max = abs(VectorClass().load_a(partial_lh));
-			for (i = VCSIZE; i < block; i+=VCSIZE) {
-				vc_max = max(vc_max, abs(VectorClass().load_a(&partial_lh[i])));
-			}
-			double vmax = horizontal_max(vc_max);
-            if (vmax < SCALING_THRESHOLD) {
+			double lh_max = horizontal_max(vc_max);
+            if (lh_max < SCALING_THRESHOLD) {
             	// now do the likelihood scaling
+            	partial_lh -= block; // revert its pointer
             	VectorClass scale_thres(SCALING_THRESHOLD_INVER);
 				for (i = 0; i < block; i+=VCSIZE) {
 					(VectorClass().load_a(&partial_lh[i]) * scale_thres).store_a(&partial_lh[i]);
@@ -1156,10 +1164,9 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 				dad_branch->scale_num[ptn] += 1;
 				if (pattern_scale)
 					pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
+				partial_lh += block; // increase the pointer again
             }
 
-			partial_lh += block;
-			partial_lh_right += block;
 		}
 		dad_branch->lh_scale_factor += sum_scale;
 		aligned_free(partial_lh_left);
@@ -1174,27 +1181,30 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 		VectorClass vc_lh_left[nstates/VCSIZE], vc_lh_right[nstates/VCSIZE];
 		VectorClass res[VCSIZE];
 		VectorClass vleft[VCSIZE], vright[VCSIZE];
-
+		VectorClass vc_max; // maximum of partial likelihood, for scaling check
 
 		for (ptn = 0; ptn < nptn; ptn++) {
 			dad_branch->scale_num[ptn] = left->scale_num[ptn] + right->scale_num[ptn];
-
+			vc_max = 0.0;
 			for (c = 0; c < ncat; c++) {
 				// compute real partial likelihood vector
 				for (i = 0; i < nstates/VCSIZE; i++) {
-					vc_lh_left[i].load_a(&partial_lh_left[c*nstates+i*VCSIZE]);
-					vc_lh_right[i].load_a(&partial_lh_right[c*nstates+i*VCSIZE]);
+					vc_lh_left[i].load_a(&partial_lh_left[i*VCSIZE]);
+					vc_lh_right[i].load_a(&partial_lh_right[i*VCSIZE]);
 				}
+
 				for (x = 0; x < nstates/VCSIZE; x++) {
 					size_t addr = c*nstatesqr/VCSIZE+x*nstates;
 					for (j = 0; j < VCSIZE; j++) {
-						vleft[j] = eleft[addr+nstates*j/VCSIZE] * vc_lh_left[0];
-						vright[j] = eright[addr+nstates*j/VCSIZE] * vc_lh_right[0];
+						size_t addr_com = addr+j*nstates/VCSIZE;
+						vleft[j] = eleft[addr_com] * vc_lh_left[0];
+						vright[j] = eright[addr_com] * vc_lh_right[0];
 					}
 					for (i = 1; i < nstates/VCSIZE; i++) {
 						for (j = 0; j < VCSIZE; j++) {
-							vleft[j] += eleft[addr+i+j*nstates/VCSIZE] * vc_lh_left[i];
-							vright[j] += eright[addr+i+j*nstates/VCSIZE] * vc_lh_right[i];
+							size_t addr_com = addr+i+j*nstates/VCSIZE;
+							vleft[j] += eleft[addr_com] * vc_lh_left[i];
+							vright[j] += eright[addr_com] * vc_lh_right[i];
 						}
 					}
 					vc_partial_lh_tmp[x] = horizontal_add(vleft) * horizontal_add(vright);
@@ -1208,18 +1218,20 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 						for (j = 0; j < VCSIZE; j++)
 							res[j] += vc_partial_lh_tmp[x] * vc_inv_evec[(i+j)*nstates/VCSIZE+x];
 
-					horizontal_add(res).store_a(&partial_lh[c*nstates+i]);
+					VectorClass sum_res = horizontal_add(res);
+					sum_res.store_a(&partial_lh[i]);
+					vc_max = max(vc_max, abs(sum_res)); // take the maximum for scaling check
 				}
+				partial_lh += nstates;
+				partial_lh_left += nstates;
+				partial_lh_right += nstates;
 			}
 
             // check if one should scale partial likelihoods
-			VectorClass vc_max = abs(VectorClass().load_a(partial_lh));
-			for (i = VCSIZE; i < block; i+=VCSIZE) {
-				vc_max = max(vc_max, abs(VectorClass().load_a(&partial_lh[i])));
-			}
-			double vmax = horizontal_max(vc_max);
-            if (vmax < SCALING_THRESHOLD) {
+			double lh_max = horizontal_max(vc_max);
+            if (lh_max < SCALING_THRESHOLD) {
 				// now do the likelihood scaling
+            	partial_lh -= block; // revert its pointer
             	VectorClass scale_thres(SCALING_THRESHOLD_INVER);
 				for (i = 0; i < block; i+=VCSIZE) {
 					(VectorClass().load_a(&partial_lh[i]) * scale_thres).store_a(&partial_lh[i]);
@@ -1229,11 +1241,11 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 				dad_branch->scale_num[ptn] += 1;
 				if (pattern_scale)
 					pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
+				partial_lh += block; // increase the pointer again
             }
 
-			partial_lh += block;
-			partial_lh_left += block;
-			partial_lh_right += block;
+//			partial_lh_left += block;
+//			partial_lh_right += block;
 		}
 		dad_branch->lh_scale_factor += sum_scale;
 
