@@ -43,15 +43,9 @@ void PhyloTree::computeTipPartialLikelihood() {
 	tip_partial_lh_computed = true;
 	int i, x, state, nstates = aln->num_states;
 
-//	double *evec = aligned_alloc_double(nstates*nstates);
-//    double *inv_evec = aligned_alloc_double(nstates*nstates);
 	double *evec = model->getEigenvectors();
 	double *inv_evec = model->getInverseEigenvectors();
 	assert(inv_evec && evec);
-//	for (i = 0; i < nstates; i++) {
-//		memcpy(evec+i*nstates, _evec[i], nstates*sizeof(double));
-//		memcpy(inv_evec+i*nstates, _inv_evec[i], nstates*sizeof(double));
-//	}
 
 	assert(tip_partial_lh);
 	for (state = 0; state < nstates; state++)
@@ -97,8 +91,31 @@ void PhyloTree::computeTipPartialLikelihood() {
 	default:
 		break;
 	}
-//	aligned_free(inv_evec);
-//	aligned_free(evec);
+
+	//-------------------------------------------------------
+	// initialize ptn_freq and ptn_invar
+	//-------------------------------------------------------
+    double *state_freq = aligned_alloc_double(nstates);
+    model->getStateFrequency(state_freq);
+
+	size_t nptn = aln->getNPattern();
+	size_t maxptn = get_safe_upper_limit(nptn);
+	int ptn;
+	for (ptn = 0; ptn < nptn; ptn++)
+		ptn_freq[ptn] = (*aln)[ptn].frequency;
+	for (ptn = nptn; ptn < maxptn; ptn++)
+		ptn_freq[ptn] = 0.0;
+
+	// for +I model
+	memset(ptn_invar, 0, maxptn*sizeof(double));
+	double p_invar = site_rate->getPInvar();
+	if (p_invar != 0.0) {
+		for (ptn = 0; ptn < nptn; ptn++)
+			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
+					ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn][0]];
+			}
+	}
+	aligned_free(state_freq);
 }
 
 /**
@@ -875,6 +892,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
     size_t nptn = aln->size();
     size_t ncat = site_rate->getNRate();
     assert(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
+    assert(model->isReversible()); // only works with reversible model!
     //size_t nstates = aln->num_states;
     //const size_t ncat = 4;
     //const size_t nstates = 4;
@@ -1261,8 +1279,8 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 //    double *val0 = aligned_alloc_double(block);
 //    double *val1 = aligned_alloc_double(block);
 //    double *val2 = aligned_alloc_double(block);
-    double *state_freq = aligned_alloc_double(nstates);
-    model->getStateFrequency(state_freq);
+//    double *state_freq = aligned_alloc_double(nstates);
+//    model->getStateFrequency(state_freq);
 
 //    VectorClass *vc_val0 = new VectorClass[block/VCSIZE];
 //	VectorClass *vc_val1 = new VectorClass[block/VCSIZE];
@@ -1352,21 +1370,23 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 	VectorClass lh_ptn = 0.0, df_ptn = 0.0, ddf_ptn = 0.0, inv_lh_ptn; // these stores values of 2 consecutive patterns
 
 	// allocate some more element for efficiency
-	double *ptn_freq = aligned_alloc_double(maxptn);
-	for (ptn = 0; ptn < nptn; ptn++)
-		ptn_freq[ptn] = (*aln)[ptn].frequency;
-	for (ptn = nptn; ptn < maxptn; ptn++)
-		ptn_freq[ptn] = 0.0;
+//	double *ptn_freq = aligned_alloc_double(maxptn);
+//	for (ptn = 0; ptn < nptn; ptn++)
+//		ptn_freq[ptn] = (*aln)[ptn].frequency;
+//	for (ptn = nptn; ptn < maxptn; ptn++)
+//		ptn_freq[ptn] = 0.0;
 
 	// for +I model
-	double *invar_stuffs = aligned_alloc_double(maxptn);
-	memset(invar_stuffs, 0, maxptn*sizeof(double));
-	for (ptn = 0; ptn < nptn; ptn++)
-		if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-			invar_stuffs[ptn] = p_invar * state_freq[(int) (*aln)[ptn][0]];
-		}
+//	double *invar_stuffs = aligned_alloc_double(maxptn);
+//	memset(invar_stuffs, 0, maxptn*sizeof(double));
+//	if (p_invar != 0.0)
+//		for (ptn = 0; ptn < nptn; ptn++)
+//			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
+//				invar_stuffs[ptn] = p_invar * state_freq[(int) (*aln)[ptn][0]];
+//			}
 
 	// perform 2 sites at the same time for SSE
+
 	for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
 		lh_final += lh_ptn;
 		df_final += df_ptn;
@@ -1390,11 +1410,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 		}
 		theta += block*VCSIZE;
 
-		lh_ptn = horizontal_add(vc_ptn) * vc_var_cat;
-//		if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-//			lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
-//		}
-		lh_ptn += VectorClass().load_a(&invar_stuffs[ptn]);
+		lh_ptn = horizontal_add(vc_ptn) * vc_var_cat + VectorClass().load_a(&ptn_invar[ptn]);
 		inv_lh_ptn = vc_var_cat/lh_ptn;
 
 		lh_ptn = log(lh_ptn);
@@ -1408,8 +1424,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 		lh_ptn *= vc_freq;
 		ddf_ptn = (ddf_ptn - df_ptn * df_ptn) * vc_freq; // this must become before changing df_ptn
 		df_ptn *= vc_freq;
-
-    }
+	}
 	switch (nptn % VCSIZE) {
 	case 0:
 		tree_lh += horizontal_add(lh_final+lh_ptn);
@@ -1436,9 +1451,9 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 		break;
 	}
 
-	aligned_free(invar_stuffs);
-	aligned_free(ptn_freq);
-	aligned_free(state_freq);
+//	aligned_free(invar_stuffs);
+//	aligned_free(ptn_freq);
+//	aligned_free(state_freq);
 //	delete [] vc_val2;
 //	delete [] vc_val1;
 //	delete [] vc_val0;
@@ -1490,15 +1505,15 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 //    VectorClass *vc_val = new VectorClass[block/VCSIZE];
     VectorClass *vc_val = (VectorClass*)aligned_alloc_double(block);
 
-    double *state_freq = aligned_alloc_double(nstates);
-    model->getStateFrequency(state_freq);
-
-	// allocate 1 more element
-	double *ptn_freq = aligned_alloc_double(maxptn);
-	for (ptn = 0; ptn < nptn; ptn++)
-		ptn_freq[ptn] = (*aln)[ptn].frequency;
-	for (ptn = nptn; ptn < maxptn; ptn++)
-		ptn_freq[ptn] = 0.0;
+//    double *state_freq = aligned_alloc_double(nstates);
+//    model->getStateFrequency(state_freq);
+//
+//	// allocate 1 more element
+//	double *ptn_freq = aligned_alloc_double(maxptn);
+//	for (ptn = 0; ptn < nptn; ptn++)
+//		ptn_freq[ptn] = (*aln)[ptn].frequency;
+//	for (ptn = nptn; ptn < maxptn; ptn++)
+//		ptn_freq[ptn] = 0.0;
 
 	for (c = 0; c < ncat; c++) {
 		double len = site_rate->getRate(c)*dad_branch->length;
@@ -1510,13 +1525,14 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 	}
 
 	// for +I model
-	double *invar_stuffs = aligned_alloc_double(maxptn);
-	memset(invar_stuffs, 0, maxptn*sizeof(double));
-	for (ptn = 0; ptn < nptn; ptn++)
-		if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-			invar_stuffs[ptn] = p_invar * state_freq[(int) (*aln)[ptn][0]];
-		}
-
+//	double *invar_stuffs = aligned_alloc_double(maxptn);
+//	memset(invar_stuffs, 0, maxptn*sizeof(double));
+//	if (p_invar != 0.0)
+//	for (ptn = 0; ptn < nptn; ptn++)
+//		if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
+//			invar_stuffs[ptn] = p_invar * state_freq[(int) (*aln)[ptn][0]];
+//		}
+//
 	if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
     	VectorClass vc_tip_partial_lh[nstates];
@@ -1565,9 +1581,8 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 					vc_ptn[j] += vc_val[i] * vc_tip_partial_lh[j*(nstates/VCSIZE)+i%(nstates/VCSIZE)] * vc_partial_lh_dad[j];
 				}
 
-			lh_ptn = horizontal_add(vc_ptn) * vc_var_cat;
+			lh_ptn = horizontal_add(vc_ptn) * vc_var_cat + VectorClass().load_a(&ptn_invar[ptn]);
 
-			lh_ptn += VectorClass().load_a(&invar_stuffs[ptn]);
 //			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
 //				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
 //			}
@@ -1620,9 +1635,8 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 					vc_ptn[j] += vc_val[i/VCSIZE] * vc_partial_lh_node[j] * vc_partial_lh_dad[j];
 				}
 			}
-			lh_ptn = horizontal_add(vc_ptn) * p_var_cat;
+			lh_ptn = horizontal_add(vc_ptn) * p_var_cat + VectorClass().load_a(&ptn_invar[ptn]);
 
-			lh_ptn += VectorClass().load_a(&invar_stuffs[ptn]);
 //			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
 //				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
 //			}
@@ -1659,9 +1673,9 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
-    aligned_free(invar_stuffs);
-    aligned_free(ptn_freq);
-    aligned_free(state_freq);
+//    aligned_free(invar_stuffs);
+//    aligned_free(ptn_freq);
+//    aligned_free(state_freq);
 //    delete [] vc_val;
     aligned_free(vc_val);
     return tree_lh;

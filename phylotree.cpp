@@ -78,6 +78,8 @@ void PhyloTree::init() {
     //root_state = STATE_UNKNOWN;
     root_state = 126;
     theta_all = NULL;
+    ptn_freq = NULL;
+    ptn_invar = NULL;
     subTreeDistComputed = false;
     dist_matrix = NULL;
     sse = LK_SSE;  // FOR TUNG: you forgot to initialize this variable!
@@ -134,6 +136,10 @@ PhyloTree::~PhyloTree() {
     //	delete [] state_freqs;
     if (theta_all)
         aligned_free(theta_all);
+    if (ptn_freq)
+        aligned_free(ptn_freq);
+    if (ptn_invar)
+    	aligned_free(ptn_invar);
     if (dist_matrix)
     	delete[] dist_matrix;
 }
@@ -1113,6 +1119,10 @@ void PhyloTree::initializeAllPartialLh() {
         _pattern_lh_cat = new double[mem_size * site_rate->getNDiscreteRate()];
     if (!theta_all)
         theta_all = aligned_alloc_double(block_size);
+    if (!ptn_freq)
+        ptn_freq = aligned_alloc_double(mem_size);
+    if (!ptn_invar)
+        ptn_invar = aligned_alloc_double(mem_size);
     initializeAllPartialLh(index, indexlh);
     assert(index == (nodeNum - 1) * 2);
     if (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE)

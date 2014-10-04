@@ -821,6 +821,19 @@ public:
      */
     double* theta_all;
 
+
+    /**
+     * frequencies of alignment patterns, used as buffer for likelihood computation
+     */
+    double *ptn_freq;
+
+    /**
+     * used as buffer for faster likelihood computation
+     * for const pattern: it stores product of p_invar and state frequency
+     * for other pattern: zero
+     */
+    double *ptn_invar;
+
     /****************************************************************************
             Nearest Neighbor Interchange by maximum likelihood
      ****************************************************************************/
