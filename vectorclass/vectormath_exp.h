@@ -834,7 +834,9 @@ static inline VTYPE log_f(VTYPE const & initial_x) {
 
     blend = x > float(VM_SQRT2*0.5);
     x  = if_add(!blend, x, x);         // conditional add
-    e  = if_add(BTYPEI(blend),  e, ITYPE(1));  // conditional add
+//    e  = if_add(BTYPEI(blend),  e, ITYPE(1));  // conditional add
+    // BQM bug fix: with clang
+    e  = if_add(blend,  e, 1.);  // conditional add
     fe = to_float(e);
 
     if (M1 == 0) {

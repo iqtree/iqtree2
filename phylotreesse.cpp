@@ -1315,10 +1315,9 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 		if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
 			for (ptn = 0; ptn < nptn; ptn++) {
-				int state_dad = (aln->at(ptn))[dad->id];
+				double *lh_dad = &tip_partial_lh[(aln->at(ptn))[dad->id] * nstates];
 				for (i = 0; i < block; i+=VCSIZE) {
-					(VectorClass().load_a(&tip_partial_lh[state_dad*nstates+i%nstates]) * VectorClass().load_a(&partial_lh_dad[i]))
-							.store_a(&theta[i]);
+					(VectorClass().load_a(&lh_dad[i%nstates]) * VectorClass().load_a(&partial_lh_dad[i])).store_a(&theta[i]);
 				}
 				partial_lh_dad += block;
 				theta += block;
@@ -1349,7 +1348,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 	// these stores values of 2 consecutive patterns
 	VectorClass lh_ptn = 0.0, df_ptn = 0.0, ddf_ptn = 0.0, inv_lh_ptn;
 
-	// perform 2 sites at the same time for SSE
+	// perform 2 sites at the same time for SSE/AVX efficiency
 
 	for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
 		lh_final += lh_ptn;

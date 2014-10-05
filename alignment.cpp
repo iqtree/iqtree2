@@ -1183,6 +1183,27 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
     return final_length;
 }
 
+void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list,
+                            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
+    IntVector kept_sites;
+    int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
+
+	out << getNSeq() << " " << final_length << endl;
+	StrVector::iterator it;
+	int max_len = getMaxSeqNameLength();
+	if (max_len < 10) max_len = 10;
+	int seq_id = 0;
+	for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
+		out.width(max_len);
+		out << left << (*it) << "  ";
+		int j = 0;
+		for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
+			if (kept_sites[j])
+				out << convertStateBackStr(at(*i)[seq_id]);
+		out << endl;
+	}
+}
+
 void Alignment::printPhylip(const char *file_name, bool append, const char *aln_site_list,
                             bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
     IntVector kept_sites;
