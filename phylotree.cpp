@@ -2793,6 +2793,10 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         if (new_tree_lh <= tree_lh + tolerance)
             return (new_tree_lh > tree_lh) ? new_tree_lh : tree_lh;
         */
+        // BQM: WHY DID I DO THIS??? this will make the loop never stop after my_iterations
+        assert(new_tree_lh >= tree_lh); // make sure that the new tree likelihood never decreases
+        if (new_tree_lh <= tree_lh + tolerance)
+        	return new_tree_lh;
         tree_lh = new_tree_lh;
     }
     return tree_lh;
@@ -3116,8 +3120,8 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         double z = (double) aln->num_states / (aln->num_states - 1);
         double x = 1.0 - (z * branch_length);
         if (x > 0) branch_length = -log(x) / z;
-        if (verbose_mode >= VB_DEBUG)
-        cout << "Negative branch length " << (*it)->length << " was set to ";
+//        if (verbose_mode >= VB_DEBUG)
+//        	cout << "Negative branch length " << (*it)->length << " was set to ";
         //(*it)->length = fixed_length;
         //(*it)->length = random_double()+0.1;
         (*it)->length = branch_length;
