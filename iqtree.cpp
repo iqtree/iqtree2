@@ -189,8 +189,8 @@ void IQTree::setParams(Params &params) {
         // allocate memory for boot_samples
         boot_samples.resize(params.gbo_replicates);
         size_t nptn = get_safe_upper_limit(getAlnNPattern());
-        double *mem = aligned_alloc_double(nptn * (size_t)(params.gbo_replicates));
-        memset(mem, 0, nptn * (size_t)(params.gbo_replicates) * sizeof(double));
+        BootValType *mem = aligned_alloc<BootValType>(nptn * (size_t)(params.gbo_replicates));
+        memset(mem, 0, nptn * (size_t)(params.gbo_replicates) * sizeof(BootValType));
         for (i = 0; i < params.gbo_replicates; i++)
         	boot_samples[i] = mem + i*nptn;
 
@@ -2136,12 +2136,26 @@ void IQTree::saveCurrentTree(double cur_logl) {
     if (write_intermediate_trees)
         printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
 
-    double *pattern_lh = new double[getAlnNPattern()];
+    int nptn = getAlnNPattern();
+    BootValType *pattern_lh = aligned_alloc<BootValType>(nptn);
+
+#ifdef BOOT_VAL_FLOAT
+    double *pattern_lh_orig = aligned_alloc_double(nptn);
+    computePatternLikelihood(pattern_lh_orig, &cur_logl);
+    for (int i = 0; i < nptn; i++)
+    	pattern_lh[i] = pattern_lh_orig[i];
+#else
     computePatternLikelihood(pattern_lh, &cur_logl);
+#endif
+
 
     if (boot_samples.empty()) {
         // for runGuidedBootstrap
+#ifdef BOOT_VAL_FLOAT
+        treels_ptnlh.push_back(pattern_lh_orig);
+#else
         treels_ptnlh.push_back(pattern_lh);
+#endif
     } else {
         // online bootstrap
         int ptn, nptn = getAlnNPattern();
@@ -2156,20 +2170,29 @@ void IQTree::saveCurrentTree(double cur_logl) {
 //#pragma omp parallel for reduction(+: rell)
 //#endif
             if (sse == LK_NORMAL || sse == LK_EIGEN) {
-            	double *boot_sample = boot_samples[sample];
+            	BootValType *boot_sample = boot_samples[sample];
 				for (ptn = 0; ptn < nptn; ptn++)
 					rell += pattern_lh[ptn] * boot_sample[ptn];
             } else {
             	// SSE optimized version of the above loop
+				BootValType *boot_sample = boot_samples[sample];
+#ifdef BOOT_VAL_FLOAT
+				VectorClassFloat vc_rell = 0.0;
+				int maxptn = nptn - VCSIZE_FLOAT;
+				for (ptn = 0; ptn < maxptn; ptn+=VCSIZE_FLOAT)
+					vc_rell = mul_add(VectorClassFloat().load_a(&pattern_lh[ptn]), VectorClassFloat().load_a(&boot_sample[ptn]), vc_rell);
+#else
 				VectorClassMaster vc_rell = 0.0;
-				double *boot_sample = boot_samples[sample];
 				int maxptn = nptn - VCSIZE_MASTER;
 				for (ptn = 0; ptn < maxptn; ptn+=VCSIZE_MASTER)
 					vc_rell = mul_add(VectorClassMaster().load_a(&pattern_lh[ptn]), VectorClassMaster().load_a(&boot_sample[ptn]), vc_rell);
-				rell = horizontal_add(vc_rell);
+#endif
+
+				BootValType res = horizontal_add(vc_rell);
 				// add the remaining ptn
 				for (; ptn < nptn; ptn++)
-					rell += pattern_lh[ptn] * boot_sample[ptn];
+					res += pattern_lh[ptn] * boot_sample[ptn];
+				rell = res;
             }
 
             if (rell > boot_logl[sample] + params->ufboot_epsilon
@@ -2215,7 +2238,11 @@ void IQTree::saveCurrentTree(double cur_logl) {
     if (print_tree_lh) {
         out_treelh << cur_logl;
         double prob;
+#ifdef BOOT_VAL_FLOAT
+        aln->multinomialProb(pattern_lh_orig, prob);
+#else
         aln->multinomialProb(pattern_lh, prob);
+#endif
         out_treelh << "\t" << prob << endl;
 
         IntVector pattern_index;
@@ -2225,8 +2252,18 @@ void IQTree::saveCurrentTree(double cur_logl) {
             out_sitelh << " " << pattern_lh[pattern_index[i]];
         out_sitelh << endl;
     }
-    if (!boot_samples.empty())
-        delete[] pattern_lh;
+
+    if (!boot_samples.empty()) {
+#ifdef BOOT_VAL_FLOAT
+    	aligned_free(pattern_lh_orig);
+#endif
+    	aligned_free(pattern_lh);
+    } else {
+#ifdef BOOT_VAL_FLOAT
+    	aligned_free(pattern_lh);
+#endif
+    }
+
 }
 
 void IQTree::saveNNITrees(PhyloNode *node, PhyloNode *dad) {

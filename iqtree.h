@@ -33,6 +33,9 @@
 #include "nnisearch.h"
 #include "candidateset.h"
 
+#define BOOT_VAL_FLOAT
+#define BootValType float
+//#define BootValType double
 
 typedef std::map< string, double > BranLenMap;
 typedef std::multiset< double, std::less< double > > multiSetDB;
@@ -661,7 +664,7 @@ public:
     double logl_cutoff;
 
     /** vector of bootstrap alignments generated */
-    vector<double* > boot_samples;
+    vector<BootValType* > boot_samples;
 
     /** newick string of corresponding bootstrap trees */
     IntVector boot_trees;

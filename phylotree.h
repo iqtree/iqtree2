@@ -75,6 +75,17 @@ inline double *aligned_alloc_double(size_t size) {
 #endif
 }
 
+template< class T>
+inline T *aligned_alloc(size_t size) {
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+	return (T*)_aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+#else
+	void *res;
+	posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(T));
+	return (T*)res;
+#endif
+}
+
 inline void aligned_free(void *mem) {
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
 	_aligned_free(mem);
@@ -86,11 +97,15 @@ inline void aligned_free(void *mem) {
 
 #ifdef __AVX
 #define VectorClassMaster Vec4d
+#define VectorClassFloat Vec8f
 #define VCSIZE_MASTER 4
+#define VCSIZE_FLOAT 8
 #pragma message "Using AVX instructions"
 #else
 #define VectorClassMaster Vec2d
+#define VectorClassFloat Vec4f
 #define VCSIZE_MASTER 2
+#define VCSIZE_FLOAT 4
 //#pragma message "Using SS3 instructions"
 #endif
 
