@@ -782,13 +782,18 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 				val_tmp += nstates;
 			}
 #else
+//			cout.unsetf(ios::fixed);
 			for (c = 0; c < ncat; c++)
 				for (i = 0; i < nstates; i++) {
 					lh_ptn +=  val[c*nstates+i] * tip_partial_lh[state_dad*nstates+i] * partial_lh_dad[c*nstates+i];
+//					cout << val[c*nstates+i] << "\t" << tip_partial_lh[state_dad*nstates+i] <<
+//							"\t" << partial_lh_dad[c*nstates+i] << endl;
 				}
 			partial_lh_dad += block;
 #endif
 			lh_ptn = lh_ptn*p_var_cat + ptn_invar[ptn];
+//			cout << "lh_ptn = " << lh_ptn << endl;
+//			assert(lh_ptn > 0.0);
 			if (ptn < orig_nptn) {
 				lh_ptn = log(lh_ptn);
 				_pattern_lh[ptn] = lh_ptn;
@@ -838,6 +843,8 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     		_pattern_lh[ptn] -= prob_const;
     	tree_lh -= aln->getNSite()*prob_const;
     }
+
+	assert(!isnan(tree_lh) && !isinf(tree_lh));
 
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));

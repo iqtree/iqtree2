@@ -1277,6 +1277,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -1310,6 +1311,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -1337,6 +1339,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(accumulate(ptn_freq.begin(), ptn_freq.end(), 0), -1);
     clear();
     pattern_index.clear();
@@ -1364,6 +1367,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(site_id.size(), -1);
     clear();
     pattern_index.clear();
@@ -1465,6 +1469,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
@@ -1646,6 +1651,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
@@ -1705,6 +1711,7 @@ void Alignment::copyAlignment(Alignment *aln) {
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
