@@ -1363,6 +1363,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     int ncat = site_rate->getNDiscreteRate();
     if (ptn_lh_cat) {
     	// Right now only Naive version store _pattern_lh_cat!
+    	assert(sse == LK_NORMAL || sse == LK_SSE);
     	computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
     }
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
@@ -1384,16 +1385,16 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
         		ptn_lh_cat[offset] = log(_pattern_lh_cat[offset]) + scale;
         }
     }
-    if (cur_logl) {
-        double check_score = 0.0;
-        for (int i = 0; i < nptn; i++) {
-            check_score += (ptn_lh[i] * (aln->at(i).frequency));
-        }
-        if (fabs(check_score - *cur_logl) > 0.01) {
-            cout << *cur_logl << " " << check_score << endl;
-            outError("Wrong PhyloTree::", __func__);
-        }
-    }
+//    if (cur_logl) {
+//        double check_score = 0.0;
+//        for (int i = 0; i < nptn; i++) {
+//            check_score += (ptn_lh[i] * (aln->at(i).frequency));
+//        }
+//        if (fabs(check_score - *cur_logl) > 0.01) {
+//            cout << *cur_logl << " " << check_score << endl;
+//            outError("Wrong PhyloTree::", __func__);
+//        }
+//    }
     //double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
     //return score;
 }

@@ -661,7 +661,7 @@ public:
     double logl_cutoff;
 
     /** vector of bootstrap alignments generated */
-    vector<IntVector> boot_samples;
+    vector<double* > boot_samples;
 
     /** newick string of corresponding bootstrap trees */
     IntVector boot_trees;

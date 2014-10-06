@@ -19,22 +19,73 @@
  ***************************************************************************/
 #include "phylotree.h"
 #include "gtrmodel.h"
+#include "vectorclass/vectorclass.h"
+#include "vectorclass/vectormath_exp.h"
+
 
 /* BQM: to ignore all-gapp subtree at an alignment site */
 //#define IGNORE_GAP_LH
 
-#include "vectorclass/vectorclass.h"
-#include "vectorclass/vectormath_exp.h"
-#ifdef __AVX
-#define VectorClassMaster Vec4d
-#define VCSIZE_MASTER 4
-#pragma message "Using AVX instructions"
-#else
-#define VectorClassMaster Vec2d
-#define VCSIZE_MASTER 2
-//#pragma message "Using SS3 instructions"
-#endif
 
+inline Vec2d horizontal_add(Vec2d x[2]) {
+#if  INSTRSET >= 3  // SSE3
+    return _mm_hadd_pd(x[0],x[1]);
+#else
+#error "SSE3 instructions not supported by current machine."
+#endif
+}
+
+inline double horizontal_max(Vec2d const &a) {
+    double x[2];
+    a.store(x);
+    return max(x[0],x[1]);
+}
+
+/***
+ * AVX support codes
+ */
+#ifdef __AVX
+
+/*
+// lower 64 bits of result contain the sum of a[0], a[1], a[2], a[3]
+// upper 64 bits of result contain the sum of b[0], b[1], b[2], b[3]
+static inline Vec2d horizontal_add(Vec4d const & a, Vec4d const & b) {
+	// calculate 4 two-element horizontal sums:
+	// lower 64 bits contain a[0] + a[1]
+	// next 64 bits contain b[0] + b[1]
+	// next 64 bits contain a[2] + a[3]
+	// next 64 bits contain b[2] + b[3]
+	__m256d sum1 = _mm256_hadd_pd(a, b);
+	// extract upper 128 bits of result
+	__m128d sum_high = _mm256_extractf128_pd(sum1, 1);
+	// add upper 128 bits of sum to its lower 128 bits
+	return _mm_add_pd(sum_high, _mm256_castpd256_pd128(sum1));
+}
+*/
+
+inline Vec4d horizontal_add(Vec4d x[4]) {
+	// {a[0]+a[1], b[0]+b[1], a[2]+a[3], b[2]+b[3]}
+	__m256d sumab = _mm256_hadd_pd(x[0], x[1]);
+	// {c[0]+c[1], d[0]+d[1], c[2]+c[3], d[2]+d[3]}
+	__m256d sumcd = _mm256_hadd_pd(x[2], x[3]);
+
+	// {a[0]+a[1], b[0]+b[1], c[2]+c[3], d[2]+d[3]}
+	__m256d blend = _mm256_blend_pd(sumab, sumcd, 0b1100);
+	// {a[2]+a[3], b[2]+b[3], c[0]+c[1], d[0]+d[1]}
+	__m256d perm = _mm256_permute2f128_pd(sumab, sumcd, 0x21);
+
+	return _mm256_add_pd(perm, blend);
+}
+
+inline double horizontal_max(Vec4d const &a) {
+	__m128d high = _mm256_extractf128_pd(a,1);
+	__m128d m = _mm_max_pd(_mm256_castpd256_pd128(a), high);
+    double x[2];
+    _mm_storeu_pd(x, m);
+    return max(x[0],x[1]);
+}
+
+#endif // __AVX
 //#define USING_SSE
 
 void PhyloTree::computeTipPartialLikelihood() {
@@ -857,66 +908,6 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
  *   SSE vectorized versions of above functions
  *
  *************************************************************************************************/
-
-static inline Vec2d horizontal_add(Vec2d x[2]) {
-#if  INSTRSET >= 3  // SSE3
-    return _mm_hadd_pd(x[0],x[1]);
-#else
-#error "SSE3 instructions not supported by current machine."
-#endif
-}
-
-static inline double horizontal_max(Vec2d const &a) {
-    double x[2];
-    a.store(x);
-    return max(x[0],x[1]);
-}
-
-/***
- * AVX support codes
- */
-#ifdef __AVX
-
-/*
-// lower 64 bits of result contain the sum of a[0], a[1], a[2], a[3]
-// upper 64 bits of result contain the sum of b[0], b[1], b[2], b[3]
-static inline Vec2d horizontal_add(Vec4d const & a, Vec4d const & b) {
-	// calculate 4 two-element horizontal sums:
-	// lower 64 bits contain a[0] + a[1]
-	// next 64 bits contain b[0] + b[1]
-	// next 64 bits contain a[2] + a[3]
-	// next 64 bits contain b[2] + b[3]
-	__m256d sum1 = _mm256_hadd_pd(a, b);
-	// extract upper 128 bits of result
-	__m128d sum_high = _mm256_extractf128_pd(sum1, 1);
-	// add upper 128 bits of sum to its lower 128 bits
-	return _mm_add_pd(sum_high, _mm256_castpd256_pd128(sum1));
-}
-*/
-
-static inline Vec4d horizontal_add(Vec4d x[4]) {
-	// {a[0]+a[1], b[0]+b[1], a[2]+a[3], b[2]+b[3]}
-	__m256d sumab = _mm256_hadd_pd(x[0], x[1]);
-	// {c[0]+c[1], d[0]+d[1], c[2]+c[3], d[2]+d[3]}
-	__m256d sumcd = _mm256_hadd_pd(x[2], x[3]);
-
-	// {a[0]+a[1], b[0]+b[1], c[2]+c[3], d[2]+d[3]}
-	__m256d blend = _mm256_blend_pd(sumab, sumcd, 0b1100);
-	// {a[2]+a[3], b[2]+b[3], c[0]+c[1], d[0]+d[1]}
-	__m256d perm = _mm256_permute2f128_pd(sumab, sumcd, 0x21);
-
-	return _mm256_add_pd(perm, blend);
-}
-
-static inline double horizontal_max(Vec4d const &a) {
-	__m128d high = _mm256_extractf128_pd(a,1);
-	__m128d m = _mm_max_pd(_mm256_castpd256_pd128(a), high);
-    double x[2];
-    _mm_storeu_pd(x, m);
-    return max(x[0],x[1]);
-}
-
-#endif // __AVX
 
 
 template <class VectorClass, const int VCSIZE, const int nstates>
