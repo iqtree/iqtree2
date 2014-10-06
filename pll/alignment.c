@@ -42,8 +42,9 @@
 // for strndup stuff
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
 char *strndup(const char *s, size_t n) {
-	char *ret = malloc(n);
+	char *ret = malloc(n+1);
 	strncpy(ret, s, n);
+	ret[n] = 0;
 	return ret;
 }
 #endif
