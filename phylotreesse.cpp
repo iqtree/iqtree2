@@ -919,15 +919,20 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
     if (dad_branch->partial_lh_computed & 1)
         return;
     dad_branch->partial_lh_computed |= 1;
+
+    size_t nptn = aln->size();
     PhyloNode *node = (PhyloNode*)(dad_branch->node);
+
 	if (node->isLeaf()) {
+	    dad_branch->lh_scale_factor = 0.0;
+	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
+
 		if (!tip_partial_lh_computed)
 			computeTipPartialLikelihood();
 		return;
 	}
 
     size_t ptn, c;
-    size_t nptn = aln->size();
     size_t ncat = site_rate->getNRate();
     assert(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
     assert(model->isReversible()); // only works with reversible model!
