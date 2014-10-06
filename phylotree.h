@@ -150,11 +150,10 @@ struct SwapNNIParam {
 
 
 struct NNIMove {
-    PhyloNode *node1;
-    NeighborVec::iterator node1Nei_it;
-
-    PhyloNode *node2;
-    NeighborVec::iterator node2Nei_it;
+    // Two nodes representing the central branch
+    PhyloNode *node1, *node2;
+    // Roots of the two subtree that are swapped
+    NeighborVec::iterator node1Nei_it, node2Nei_it;
 
     // log-likelihood of the tree after applying the NNI
     double newloglh;
@@ -879,12 +878,9 @@ public:
        according to the evaluation scheme in use
        @param node1 1 of the 2 nodes on the branch
        @param node2 1 of the 2 nodes on the branch
-     * @param approx_nni evaluate NNI based on "Bayes"
-     * @param useLS evaluate NNI based on Least Square
-     * @param nniMoves (IN/OUT) detailed information of the 2 NNIs, set .ptnlh to compute pattern likelihoods
+       @param nniMoves (IN/OUT) detailed information of the 2 NNIs, set .ptnlh to compute pattern likelihoods
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL,
-    		bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL);
 
     /**
             Do an NNI
@@ -906,7 +902,7 @@ public:
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void applyNNIBranches(NNIMove nnimove);
+    virtual void changeNNIBrans(NNIMove nnimove);
 
     /****************************************************************************
             Stepwise addition (greedy) by maximum likelihood

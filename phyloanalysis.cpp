@@ -954,22 +954,6 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	cout << "Fixed branch lengths: "
 			<< ((params.fixed_branch_length) ? "Yes" : "No") << endl;
 
-	/* Deprecated tree search options */
-//	cout << "Lambda for local search: " << params.lambda << endl;
-//	if (params.speed_conf != 1.0) {
-//		cout << "Confidence value for speed up NNI: ";
-//		if (params.new_heuristic)
-//			cout << "Using 50%*" << params.speed_conf << endl;
-//		else
-//			cout << "N" << params.speed_conf << " * delta" << params.speed_conf
-//					<< endl;
-//	} else {
-//		cout << "Speed up NNI: disabled " << endl;
-//	}
-//	cout << "NNI cutoff: " << params.nni_cutoff << endl;
-//	cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No")
-//			<< endl;
-
 	if (params.min_iterations > 0) {
 	    cout << "Tree search algorithm: " << (params.snni ? "Stochastic nearest neighbor interchange" : "IQPNNI") << endl;
 	    cout << "Termination condition: ";
@@ -1265,7 +1249,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     // string to store the current tree with branch length optimized
     string initTree;
-    // initialize all
+
+    // set parameter for the current tree
     iqtree.setParams(params);
 
     /****************** START: INITIAL MODEL OPTIMIZATION *************************************/

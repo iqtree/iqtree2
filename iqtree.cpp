@@ -33,8 +33,7 @@ Alignment *globalAlignment;
 extern StringIntMap pllTreeCounter;
 
 
-IQTree::IQTree() :
-        PhyloTree() {
+IQTree::IQTree() : PhyloTree() {
     init();
 }
 
@@ -66,12 +65,11 @@ void IQTree::init() {
     pllPartitions = NULL;
     //boot_splits = new SplitGraph;
     pll2iqtree_pattern_index = NULL;
+    fastNNI = true;
 }
 
-IQTree::IQTree(Alignment *aln) :
-        PhyloTree(aln) {
+IQTree::IQTree(Alignment *aln) : PhyloTree(aln) {
     init();
-
 }
 void IQTree::setParams(Params &params) {
     searchinfo.speednni = params.speednni;
@@ -344,27 +342,6 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
  }
  }*/
 
-void IQTree::initLeafFrequency(PhyloNode *node, PhyloNode *dad) {
-    if (!node)
-        node = (PhyloNode*) root;
-    if (node->isLeaf()) {
-        LeafFreq leaf_freq;
-        leaf_freq.leaf_id = node->id;
-        leaf_freq.freq = 0;
-        leaf_freqs.push_back(leaf_freq);
-    }
-    for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
-        if ((*it)->node != dad) {
-            initLeafFrequency((PhyloNode*) (*it)->node, node);
-        }
-}
-
-void IQTree::clearLeafFrequency() {
-	for (vector<LeafFreq>::iterator it = leaf_freqs.begin(); it != leaf_freqs.end(); it++) {
-		(*it).freq = 0;
-	}
-}
-
 void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
     NodeVector cherry_taxa;
     NodeVector noncherry_taxa;
@@ -412,55 +389,6 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
         }
     }
     root = cherry_taxa[j];
-}
-
-void IQTree::deleteNonTabuLeaves(PhyloNodeVector &del_leaves) {
-    // sort node frequency
-    sort(leaf_freqs.begin(), leaf_freqs.end());
-    NodeVector taxa;
-    // get the vector of taxa
-    getTaxa(taxa);
-
-    // shuffle the sorted list first so that leaves with the same frequency have the same
-    // chance of being removed
-    int cur_freq = leaf_freqs[0].freq;
-
-    //cout << "size: " << leaf_freqs.size() << endl;
-    //cout << "Before randomize" << endl;
-    /*
-     for (size_t i = 0; i < leaf_freqs.size(); i++) {
-     cout << leaf_freqs[i].leaf_id << ":" << leaf_freqs[i].freq << " ";
-     }
-     cout << endl;
-     */
-    int startIndex = 0;
-    int endIndex = 0;
-    while (true) {
-        while (leaf_freqs[endIndex].freq == cur_freq && endIndex < leaf_freqs.size()) {
-            endIndex++;
-        }
-        random_shuffle(leaf_freqs.begin() + startIndex, leaf_freqs.begin() + endIndex);
-        if (endIndex == leaf_freqs.size())
-            break;
-        startIndex = endIndex;
-        cur_freq = leaf_freqs[endIndex].freq;
-    }
-    /*
-     cout << "After randomize" << endl;
-     for (size_t i = 0; i < leaf_freqs.size(); i++) {
-     cout << leaf_freqs[i].leaf_id << ":" << leaf_freqs[i].freq << " ";
-     }
-     cout << endl;
-     */
-    int leafCnt = 0;
-    while (leafCnt < k_delete) {
-        PhyloNode *taxon = (PhyloNode*) taxa[leaf_freqs[leafCnt].leaf_id];
-        del_leaves.push_back(taxon);
-        leaf_freqs[leafCnt].freq++;
-        leafCnt++;
-        deleteLeaf(taxon);
-    }
-    root = taxa[leaf_freqs[leafCnt].leaf_id];
 }
 
 void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
@@ -1238,7 +1166,7 @@ double IQTree::doTreeSearch() {
 	}
 
     for (curIt = 2; !stop_rule.meetStopCondition(curIt); curIt++) {
-        searchinfo.curIterNum = curIt;
+        searchinfo.curIter = curIt;
         double min_elapsed = (getCPUTime() - params->startTime) / 60;
         if (min_elapsed > params->maxtime) {
             cout << endl;
@@ -1540,13 +1468,15 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             optBrans.clear(); // Vector containing branch length of the positive NNIs
             orgBrans.clear(); // Vector containing all current branch of the tree
             plusNNIs.clear(); // Vector containing all positive NNIs
-            saveBranLens(); // save all current branch lengths
+            saveBranches(); // save all current branch lengths
             initPartitionInfo(); // for super tree
-            if (!nni_sort) {
-                evalNNIs(); // generate all positive NNI moves
-            } else {
-                evalNNIsSort(params->approximate_nni);
-            }
+            evalNNIs();
+
+//            if (!nni_sort) {
+//                evalNNIs(); // generate all positive NNI moves
+//            } else {
+//                evalNNIsSort(params->approximate_nni);
+//            }
 
             /* sort all positive NNI moves (descending) */
             sort(plusNNIs.begin(), plusNNIs.end());
@@ -1571,7 +1501,12 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             }
         }
         // Apply all non-conflicting positive NNIs
-        applyNNIs(numNNIs);
+        doNNIs(numNNIs);
+
+        if (searchinfo.speednni) {
+            brans2Eval.clear();
+            updateBrans2Eval(appliedNNIs);
+        }
 
         // Re-estimate branch lengths of the new tree
         curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
@@ -1598,9 +1533,10 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             }
 
             // restore the tree by reverting all NNIs
-            applyNNIs(numNNIs, false);
+            for (int i = 0; i < numNNIs; i++)
+                doNNI(nonConfNNIs.at(i));
             // restore the branch lengths
-            restoreAllBranLen();
+            restoreAllBrans();
             // This is important because after restoring the branch lengths, all partial
             // likelihood need to be cleared.
             clearAllPartialLH();
@@ -1615,6 +1551,13 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
     return curScore;
+}
+
+void IQTree::updateBrans2Eval(vector<NNIMove> nnis) {
+    for (vector<NNIMove>::iterator it = nnis.begin(); it != nnis.end(); it++) {
+        getInBranches(brans2Eval, 2, (*it).node1, (*it).node2);
+        getInBranches(brans2Eval, 2, (*it).node2, (*it).node1);
+    }
 }
 
 
@@ -1779,12 +1722,13 @@ void IQTree::pllDestroyUFBootData(){
 }
 
 
-void IQTree::applyNNIs(int nni2apply, bool changeBran) {
+void IQTree::doNNIs(int nni2apply, bool changeBran) {
     for (int i = 0; i < nni2apply; i++) {
         doNNI(nonConfNNIs.at(i));
+        appliedNNIs.push_back(nonConfNNIs.at(i));
         if (!params->leastSquareNNI && changeBran) {
             // apply new branch lengths
-            applyNNIBranches(nonConfNNIs.at(i));
+            changeNNIBrans(nonConfNNIs.at(i));
         }
     }
 }
@@ -1878,7 +1822,7 @@ double IQTree::getBranLen(PhyloNode *node1, PhyloNode *node2) {
     return  node1->findNeighbor(node2)->length;
 }
 
-void IQTree::saveBranLens(PhyloNode *node, PhyloNode *dad) {
+void IQTree::saveBranches(PhyloNode *node, PhyloNode *dad) {
     if (!node) {
         node = (PhyloNode*) root;
     }
@@ -1889,11 +1833,11 @@ void IQTree::saveBranLens(PhyloNode *node, PhyloNode *dad) {
     }
 
     FOR_NEIGHBOR_IT(node, dad, it){
-    saveBranLens((PhyloNode*) (*it)->node, node);
+    saveBranches((PhyloNode*) (*it)->node, node);
 }
 }
 
-void IQTree::restoreAllBranLen(PhyloNode *node, PhyloNode *dad) {
+void IQTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
     if (!node) {
         node = (PhyloNode*) root;
     }
@@ -1909,31 +1853,36 @@ void IQTree::restoreAllBranLen(PhyloNode *node, PhyloNode *dad) {
     }
 
     FOR_NEIGHBOR_IT(node, dad, it){
-    restoreAllBranLen((PhyloNode*) (*it)->node, node);
+    restoreAllBrans((PhyloNode*) (*it)->node, node);
 }
 }
 
-inline double IQTree::getCurScore() {
-    return curScore;
-}
 
-void IQTree::evalNNIs(PhyloNode *node, PhyloNode *dad, bool approx_nni) {
+void IQTree::evalNNIs(PhyloNode *node, PhyloNode *dad) {
     if (!node) {
         node = (PhyloNode*) root;
     }
-    // internal Branch
+    // internal branch
     if (!node->isLeaf() && dad && !dad->isLeaf()) {
-        NNIMove myMove = getBestNNIForBran(node, dad, NULL, approx_nni, params->leastSquareNNI);
+        NNIMove myMove = getBestNNIForBran(node, dad, NULL);
         if (myMove.newloglh > curScore + params->loglh_epsilon) {
             addPositiveNNIMove(myMove);
         }
     }
 
     FOR_NEIGHBOR_IT(node, dad, it){
-        evalNNIs((PhyloNode*) (*it)->node, node, approx_nni);
+        evalNNIs((PhyloNode*) (*it)->node, node);
     }
 }
 
+void IQTree::evalNNIs(map<string, Branch> brans) {
+    for (map<string, Branch>::iterator it = brans.begin(); it != brans.end(); it++) {
+        NNIMove myMove = getBestNNIForBran((PhyloNode*)it->second.node1, (PhyloNode*) it->second.node2, NULL);
+    }
+}
+
+/**
+ *  Currently not used, commented out to simplify the interface of getBestNNIForBran
 void IQTree::evalNNIsSort(bool approx_nni) {
     NodeVector nodes1, nodes2;
     int i;
@@ -1989,6 +1938,7 @@ void IQTree::evalNNIsSort(bool approx_nni) {
             node21_it->length = stored_len;
         }
 }
+*/
 
 void IQTree::estimateNNICutoff(Params* params) {
     double *delta = new double[nni_info.size()];

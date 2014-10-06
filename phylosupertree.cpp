@@ -608,7 +608,7 @@ int PhyloSuperTree::getMaxPartNameLength() {
 	return namelen;
 }
 
-NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves, bool approx_nni, bool useLS, double lh_contribution) {
+NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves) {
     NNIMove myMove;
     //myMove.newloglh = 0;
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
@@ -820,7 +820,7 @@ void PhyloSuperTree::doNNI(NNIMove &move, bool clearLH) {
 	//linkTrees();
 }
 
-void PhyloSuperTree::applyNNIBranches(NNIMove move) {
+void PhyloSuperTree::changeNNIBrans(NNIMove move) {
 	SuperNeighbor *nei1 = (SuperNeighbor*)move.node1->findNeighbor(move.node2);
 	SuperNeighbor *nei2 = (SuperNeighbor*)move.node2->findNeighbor(move.node1);
 	iterator it;
@@ -854,7 +854,7 @@ void PhyloSuperTree::applyNNIBranches(NNIMove move) {
 				part_move.newLen[i] = part_info[part].nni2_brlen[brid*numlen + i];
 		}
 
-		(*it)->applyNNIBranches(part_move);
+		(*it)->changeNNIBrans(part_move);
 
 	}
 
@@ -878,7 +878,7 @@ void PhyloSuperTree::linkTrees() {
 	}
 }
 
-void PhyloSuperTree::restoreAllBranLen(PhyloNode *node, PhyloNode *dad) {
+void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
 	int part = 0;
 	for (iterator it = begin(); it != end(); it++, part++) {
 		(*it)->setBranchLengths(part_info[part].cur_brlen);
