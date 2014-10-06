@@ -2793,7 +2793,8 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         if (new_tree_lh <= tree_lh + tolerance)
             return (new_tree_lh > tree_lh) ? new_tree_lh : tree_lh;
         */
-        // BQM: WHY DID I DO THIS??? this will make the loop never stop after my_iterations
+        // BQM comment for above: WHY DID I DO THIS??? this will make the loop never stop after my_iterations
+
         assert(new_tree_lh >= tree_lh); // make sure that the new tree likelihood never decreases
         if (new_tree_lh <= tree_lh + tolerance)
         	return new_tree_lh;

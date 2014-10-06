@@ -132,8 +132,14 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
     if (dad_branch->partial_lh_computed & 1)
         return;
     dad_branch->partial_lh_computed |= 1;
+
+    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     PhyloNode *node = (PhyloNode*)(dad_branch->node);
+
 	if (node->isLeaf()) {
+	    dad_branch->lh_scale_factor = 0.0;
+	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
+
 		if (!tip_partial_lh_computed)
 			computeTipPartialLikelihood();
 		return;
@@ -141,7 +147,6 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 
     size_t ptn, c;
     size_t orig_ntn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     size_t ncat = site_rate->getNRate();
     //size_t nstates = aln->num_states;
     //const size_t ncat = 4;
