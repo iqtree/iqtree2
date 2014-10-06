@@ -63,16 +63,24 @@ inline size_t get_safe_upper_limit(size_t cur_limit) {
 }
 #endif
 
-#include "pll/mem_alloc.h"
+//#include "pll/mem_alloc.h"
 
 inline double *aligned_alloc_double(size_t size) {
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+	return (double*)_aligned_malloc(size*sizeof(double), MEM_ALIGNMENT);
+#else
 	void *res;
-	rax_posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
+	posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
 	return (double*)res;
+#endif
 }
 
 inline void aligned_free(void *mem) {
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+	_aligned_free(mem);
+#else
 	free(mem);
+#endif
 }
 
 

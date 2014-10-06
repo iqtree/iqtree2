@@ -1039,7 +1039,6 @@ void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
 //extern pllAlignmentData *pllParsePHYLIPFromMem (const char *rawdata, long filesize);
 
 void createPLLPartition(Params &params, Alignment *alignment, IQTree &iqtree, ostream &pllPartitionFileHandle) {
-    pllQueue *partitionInfo;
 
 //    ofstream pllPartitionFileHandle;
 //    string pllPartitionFileName = string(params.out_prefix) + ".pll_partitions";
@@ -1133,14 +1132,14 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 //
 //        iqtree.pllAlignment = pllParseAlignmentFile(PLL_FORMAT_PHYLIP, pllAln.c_str());
 
-        stringstream ss;
+        stringstream pllAln;
 		if (alignment->isSuperAlignment()) {
-			((SuperAlignment*) alignment)->printCombinedAlignment(ss);
+			((SuperAlignment*) alignment)->printCombinedAlignment(pllAln);
 		} else {
-			alignment->printPhylip(ss);
+			alignment->printPhylip(pllAln);
 		}
-		string ss_str = ss.str();
-        iqtree.pllAlignment = pllParsePHYLIPString(ss_str.c_str(), ss_str.size());
+		string pllAlnStr = pllAln.str();
+        iqtree.pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), pllAlnStr.length());
 
         /* Read in the partition information */
 //        pllQueue *partitionInfo;
