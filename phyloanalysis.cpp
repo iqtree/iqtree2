@@ -1260,11 +1260,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         // generate a parsimony tree for model optimization
         iqtree.pllInst->randomNumberSeed = params.ran_seed;
         pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions);
-        //resetBranches(iqtree.pllInst);
+        resetBranches(iqtree.pllInst);
         pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back,
                 PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-        if (verbose_mode >= VB_MED)
-        	cout << iqtree.pllInst->tree_string << endl;
         iqtree.readTreeString(string(iqtree.pllInst->tree_string));
         iqtree.initializeAllPartialPars();
         iqtree.clearAllPartialLH();
