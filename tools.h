@@ -427,11 +427,6 @@ struct Params {
 	 */
 	double modeps;
 
-    /**
-     *  logl epsilon for the intermediate model parameter optimization steps
-     */
-    double imd_modeps;
-
 	/**
 	 *  Carry out iterated local search using NNI only.
 	 */
