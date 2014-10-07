@@ -37,7 +37,7 @@
 #define BootValType float
 //#define BootValType double
 
-typedef std::map< string, double > BranLenMap;
+typedef std::map< string, double > mapString2Double;
 typedef std::multiset< double, std::less< double > > multiSetDB;
 typedef std::multiset< int, std::less< int > > MultiSetInt;
 
@@ -276,15 +276,20 @@ public:
     double pllOptimizeNNI(int &nniCount, int &nniSteps, SearchInfo &searchinfo);
 
     /**
-            search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
+            @brief evaluate all NNIs and store them in possilbleNNIMoves list
+            @param  node    evaluate all NNIs of the subtree rooted at node
+            @param  dad     a neighbor of \p node which does not belong to the subtree
+                            being considered (used for traverse direction)
+            @param  approx_nni (TEST_ONLY) enabled approximated NNI
+
      */
-    void genNNIMoves(bool approx_nni, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL, bool approx_nni = false);
 
     /**
             search all positive NNI move on the current tree and save them
             on the possilbleNNIMoves list
      */
-    void genNNIMovesSort(bool approx_nni);
+    void evalNNIsSort(bool approx_nni);
 
     /**
             apply nni2apply NNIs from the non-conflicting NNI list
@@ -514,11 +519,6 @@ public:
 protected:
 
     /**
-     *  Determine whether during tree search whether the diversification process should start
-     */
-    bool diversification;
-
-    /**
      *  Current IQPNNI iteration number
      */
     int curIteration;
@@ -527,17 +527,11 @@ protected:
      */
     IQP_ASSESS_QUARTET iqp_assess_quartet;
 
-    /**
-     * Array that stores the frequency that each taxa has been choosen to be swapped
-     */
-    map<int, int> freqList;
 
     /**
      * Taxa set
      */
     NodeVector taxaSet;
-
-    //int nbNNI;
 
     /**
      * confidence value for number of NNIs found in one iteration
@@ -556,34 +550,30 @@ protected:
     vector<double> vecImpProNNI;
 
     /**
-            The list of positive NNI moves for the current tree;
+        List of positive NNI for the current tree;
      */
-    vector<NNIMove> posNNIs;
-
+    vector<NNIMove> plusNNIs;
 
     /**
-            List contains non-conflicting NNI moves for the current tree;
+        List of non-conflicting NNIs for the current tree;
      */
-    vector<NNIMove> vec_nonconf_nni;
+    vector<NNIMove> nonConfNNIs;
+
+    /**
+            Optimal branch lengths
+     */
+    mapString2Double optBrans;
+
+    /**
+            Original branch lengths
+     */
+    mapString2Double orgBrans;
 
     /**
      *      Data structure to store how many times a leaf has been removed.
      *      LeafFreq is a struct that contains leaf_id and leaf_frequency
      */
     vector<LeafFreq> leaf_freqs;
-
-    /**
-            Data structure (of type Map) which stores all the optimal
-            branch lengths for all branches in the tree
-     */
-    BranLenMap mapOptBranLens;
-
-    /**
-     * 	Data structure (of type Map) used to store the original branch
-        lengths of the tree
-     */
-    BranLenMap savedBranLens;
-
 
     int k_delete, k_delete_min, k_delete_max, k_delete_stay;
 

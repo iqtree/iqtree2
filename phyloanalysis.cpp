@@ -1372,20 +1372,17 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     }
 
     // Optimize model parameters and branch lengths using ML for the initial tree
-    if (params.min_iterations == 0) {
-        params.imd_modeps = params.modeps;
-    }
 
     if (params.pllModOpt) {
         assert(params.pll);
-        cout << "Optimizing model parameters by PLL (logl epsilon = " << params.imd_modeps << ") ...";
+        cout << "Optimizing model parameters by PLL (logl epsilon = " << params.modeps << ") ...";
         double stime = getCPUTime();
         string curTreeString = iqtree.getTreeString();
         pllNewickTree *newick = pllNewickParseString(curTreeString.c_str());
         pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
         pllNewickParseDestroy(&newick);
         pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-        pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, params.imd_modeps);
+        pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, params.modeps);
         iqtree.curScore = iqtree.pllInst->likelihood;
         double etime = getCPUTime();
         cout << etime - stime << " seconds" << endl;
@@ -1415,9 +1412,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         }
 
         cout << "Optimizing model parameters " << (params.optimize_model_rate_joint ? "jointly" : "")
-                << " (log-likelihood tolerance " << params.imd_modeps << ")... " << endl;
+                << " (log-likelihood tolerance " << params.modeps << ")... " << endl;
         iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true,
-                params.imd_modeps);
+                params.modeps);
         initTree = iqtree.getTreeString();
 
         if (params.pll) {
@@ -1599,7 +1596,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                             double stime = getCPUTime();
                             // Re-calculate all partial likelihood vectors to make sure everything is ok
                             pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_FALSE, PLL_FALSE);
-                            pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, params.imd_modeps);
+                            pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, params.modeps);
                             iqtree.curScore = iqtree.pllInst->likelihood;
                             double etime = getCPUTime();
                             cout << etime - stime << " seconds" << endl;
@@ -1623,9 +1620,9 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                             double alpha_bk = iqtree.getRate()->getGammaShape();
                             //cout.precision(6);
                             //cout << endl;
-                            cout << "Optimizing model parameters (epsilon = " << params.imd_modeps << ")" << endl;
+                            cout << "Optimizing model parameters (epsilon = " << params.modeps << ")" << endl;
                             // Now re-estimate the model parameters
-                            double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.imd_modeps);
+                            double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.modeps);
                     		/* FOR PARTITION MODEL */
                     		if (iqtree.isSuperTree())
                     			((PhyloSuperTree*) &iqtree)->computeBranchLengths();
@@ -1791,7 +1788,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	//tree.setParams(params);
 	/* evaluating all trees in user tree file */
 
-	/* DO IQPNNI */
+	/* Do tree search */
 	if (params.min_iterations > 1) {
 	    //cout << " *********************  EXPLOITATION PHASE ********************* " << endl << endl;
 		iqtree.doTreeSearch();
@@ -1810,6 +1807,8 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 			}
 		}
 	}
+
+	iqtree.readTreeString(iqtree.bestTreeString);
 
 	if (!pruned_taxa.empty()) {
 		cout << "Restoring full tree..." << endl;
