@@ -684,7 +684,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_threshold = 101;
     params.aLRT_replicates = 0;
     params.localbp_replicates = 0;
-    params.SSE = LK_SSE;
+    params.SSE = LK_EIGEN_TIP_SSE;
     params.print_site_lh = 0;
     params.print_site_rate = false;
     params.print_tree_lh = false;

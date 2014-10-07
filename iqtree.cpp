@@ -2098,7 +2098,8 @@ void IQTree::saveCurrentTree(double cur_logl) {
 //#ifdef _OPENMP
 //#pragma omp parallel for reduction(+: rell)
 //#endif
-            if (sse == LK_NORMAL || sse == LK_EIGEN) {
+//            if (sse == LK_NORMAL || sse == LK_EIGEN) {
+            if (false) {
             	BootValType *boot_sample = boot_samples[sample];
 				for (ptn = 0; ptn < nptn; ptn++)
 					rell += pattern_lh[ptn] * boot_sample[ptn];
