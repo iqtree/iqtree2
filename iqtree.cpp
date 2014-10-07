@@ -1470,7 +1470,10 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             plusNNIs.clear(); // Vector containing all positive NNIs
             saveBranches(); // save all current branch lengths
             initPartitionInfo(); // for super tree
-            evalNNIs();
+            if (searchinfo.speednni && !brans2Eval.empty())
+              evalNNIs(brans2Eval);
+            else
+              evalNNIs();
 
 //            if (!nni_sort) {
 //                evalNNIs(); // generate all positive NNI moves
@@ -1506,6 +1509,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         if (searchinfo.speednni) {
             brans2Eval.clear();
             updateBrans2Eval(appliedNNIs);
+            appliedNNIs.clear();
         }
 
         // Re-estimate branch lengths of the new tree
@@ -1550,6 +1554,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     if (nni_count == 0) {
         cout << "NNI search could not find any better tree for this iteration!" << endl;
     }
+    brans2Eval.clear();
     return curScore;
 }
 
@@ -1878,12 +1883,21 @@ void IQTree::evalNNIs(PhyloNode *node, PhyloNode *dad) {
 void IQTree::evalNNIs(map<string, Branch> brans) {
     for (map<string, Branch>::iterator it = brans.begin(); it != brans.end(); it++) {
         NNIMove myMove = getBestNNIForBran((PhyloNode*)it->second.node1, (PhyloNode*) it->second.node2, NULL);
+        if (myMove.newloglh > curScore + params->loglh_epsilon) {
+            addPositiveNNIMove(myMove);
+        }
     }
 }
 
 /**
  *  Currently not used, commented out to simplify the interface of getBestNNIForBran
 void IQTree::evalNNIsSort(bool approx_nni) {
+        if (myMove.newloglh > curScore + params->loglh_epsilon) {
+        if (myMove.newloglh > curScore + params->loglh_epsilon) {
+            addPositiveNNIMove(myMove);
+        }
+            addPositiveNNIMove(myMove);
+        }
     NodeVector nodes1, nodes2;
     int i;
     double cur_lh = curScore;

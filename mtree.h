@@ -387,10 +387,10 @@ public:
     void getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL);
 
     /**
-     *      get all descending internal branches below \a node up to depth \a depth
+     *      get all descending internal branches below \a node and \a dad up to depth \a depth
      *      @param[out] brans the branches in question
      */
-    void getInBranches(map<string, Branch> &brans, int depth, Node *node = NULL, Node *dad = NULL);
+    void getInBranches(map<string, Branch> &brans, int depth, Node *node, Node *dad);
 
     /**
      * @brief: check if the branch is internal

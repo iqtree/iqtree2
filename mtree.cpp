@@ -804,16 +804,15 @@ void MTree::getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *nod
 }
 
 void MTree::getInBranches(map<string, Branch> &brans, int depth, Node *node, Node *dad) {
-    if (!node) node = root;
+    if (depth == 0)
+      return;
+    assert(isInBran(node, dad));
     FOR_NEIGHBOR_IT(node, dad, it) {
         if (!(*it)->node->isLeaf()) {
             Branch bran(node, (*it)->node);
             brans.insert(pair<string, Branch>(bran.getKey(), bran));
+            getInBranches(brans, depth-1, (*it)->node, node);
         }
-        depth--;
-        if (depth == 0)
-            return;
-        getInBranches(brans, depth, (*it)->node, node);
     }
 }
 
