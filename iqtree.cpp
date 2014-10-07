@@ -1062,63 +1062,61 @@ double IQTree::perturb(int times) {
 
 extern "C" pllUFBootData * pllUFBootDataPtr;
 
-void IQTree::optimizeModelParameters(string& imd_tree) {
-    if (params->snni) {
-        if (params->pllModOpt) {
-            assert(params->pll);
-            cout << "Estimate model parameters by PLL ... ";
-            double stime = getCPUTime();
-            pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
-            pllOptimizeModelParameters(pllInst, pllPartitions, params->modeps);
-            curScore = pllInst->likelihood;
-            double etime = getCPUTime();
-            cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
-            pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
-            PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-            imd_tree = string(pllInst->tree_string);
-        } else {
-            if (params->pll) {
-                readTreeString(imd_tree);
-                initializeAllPartialLh();
-                clearAllPartialLH();
-            }
-            double *rate_param_bk = NULL;
-            if (aln->num_states == 4) {
-                rate_param_bk = new double[6];
-                getModel()->getRateMatrix(rate_param_bk);
-            }
-            double alpha_bk = getRate()->getGammaShape();
-            cout << "Estimate model parameters (epsilon = " << params->modeps << ")" << endl;
-            double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, false,
-                    params->modeps);
-            if (isSuperTree()) {
-                ((PhyloSuperTree*) this)->computeBranchLengths();
-            }
+string IQTree::optimizeModelParameters(bool printInfo) {
+	string newTree;
+	if (params->pll) {
+		cout << "Estimate model parameters (epsilon = " << params->modeps << ")" << endl;
+		double stime = getCPUTime();
+		pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_FALSE,
+				PLL_FALSE);
+		pllOptimizeModelParameters(pllInst, pllPartitions, params->modeps);
+		curScore = pllInst->likelihood;
+		double etime = getCPUTime();
+		cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
+		pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
+				pllInst->start->back, PLL_TRUE,
+				PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH,
+				PLL_FALSE, PLL_FALSE);
+		if (printInfo) {
+			pllPrintModelParams();
+		}
+		newTree = string(pllInst->tree_string);
+	} else {
+		string curTree = getTreeString();
+		double *rate_param_bk = NULL;
+		if (aln->num_states == 4) {
+			rate_param_bk = new double[6];
+			getModel()->getRateMatrix(rate_param_bk);
+		}
+		double alpha_bk = getRate()->getGammaShape();
+		cout << "Estimate model parameters (epsilon = " << params->modeps << ")"
+				<< endl;
+		double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, params->modeps);
+		if (isSuperTree()) {
+			((PhyloSuperTree*) this)->computeBranchLengths();
+		}
 
-            if (modOptScore < curScore) {
-                cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
-                cout << "  Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
-                readTreeString(imd_tree);
-                clearAllPartialLH();
-                if (aln->num_states == 4) {
-                    assert(rate_param_bk != NULL);
-                    ((GTRModel*) getModel())->setRateMatrix(rate_param_bk);
-                }
-                dynamic_cast<RateGamma*>(getRate())->setGammaShape(alpha_bk);
-                getModel()->decomposeRateMatrix();
-                cout << "Reset rate parameters!" << endl;
-            } else {
-                curScore = modOptScore;
-                imd_tree = getTreeString();
-                if (params->pll) {
-                    deleteAllPartialLh();
-                    inputModelIQTree2PLL();
-                    // recompute the curScore using PLL
-                    curScore = inputTree2PLL(imd_tree, true);
-                }
-            }
-        }
-    }
+		if (modOptScore < curScore) {
+			cout << "  BUG: Tree logl gets worse after model optimization!"
+					<< endl;
+			cout << "  Old logl: " << curScore << " / " << "new logl: "
+					<< modOptScore << endl;
+			readTreeString(curTree);
+			newTree = curTree;
+			clearAllPartialLH();
+			if (aln->num_states == 4) {
+				assert(rate_param_bk != NULL);
+				((GTRModel*) getModel())->setRateMatrix(rate_param_bk);
+			}
+			dynamic_cast<RateGamma*>(getRate())->setGammaShape(alpha_bk);
+			getModel()->decomposeRateMatrix();
+			cout << "Reset rate parameters!" << endl;
+		} else {
+			curScore = modOptScore;
+			newTree = getTreeString();
+		}
+	}
+	return newTree;
 }
 
 double IQTree::doTreeSearch() {
@@ -1218,6 +1216,7 @@ double IQTree::doTreeSearch() {
         } else {
             if (params->snni) {
                 int numNNI = floor(searchinfo.curPerStrength * (aln->getNSeq() - 3));
+                //cout << "candidateTrees.size() = " << candidateTrees.size() << endl;
                 string candidateTree = candidateTrees.getRandCandTree();
                 readTreeString(candidateTree);
                 if (params->iqp) {
@@ -1331,7 +1330,7 @@ double IQTree::doTreeSearch() {
             printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
             if (cur_tree_topo_ss.str() != best_tree_topo) {
                 best_tree_topo = cur_tree_topo_ss.str();
-                optimizeModelParameters(imd_tree);
+                imd_tree = optimizeModelParameters();
                 stop_rule.addImprovedIteration(curIt);
                 cout << "BETTER TREE FOUND at iteration " << curIt << ": " << curScore;
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl << endl;

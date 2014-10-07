@@ -31,8 +31,8 @@ string CandidateSet::getRandCandTree() {
 	if (empty())
 		return "";
 	// BQM: bug fix max -> min
-	//int id = random_int(min(max_candidates, (int)size()) );
-	int id = randint(0, min(max_candidates, (int)size()));
+	int id = random_int(min(max_candidates, (int)size()) );
+	//int id = randint(0, min(max_candidates, (int)size()));
 	//int id = 0 + (rand() % (int)( min(max_candidates, (int)size())) );
 	for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
 		if (id == 0)

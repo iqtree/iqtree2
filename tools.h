@@ -519,11 +519,6 @@ struct Params {
     bool pll;
 
     /**
-     *  Turn on model parameter optimization by PLL
-     */
-    bool pllModOpt;
-
-    /**
      *  Stopping rule for the tree search
      */
     bool autostop;

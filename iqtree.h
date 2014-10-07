@@ -602,7 +602,13 @@ protected:
 
 public:
 
-    void optimizeModelParameters(string& imd_tree);
+    /**
+     *  @brief: optimize model parameters on the current tree
+     *  either IQ-TREE or PLL
+     *  @param imd_tree the input tree or NULL
+     *  @param printInfo to print model parameters to the screen or not
+     */
+    string optimizeModelParameters(bool printInfo=false);
 
     /**
      *  variable storing the current best tree topology
