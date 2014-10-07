@@ -1509,6 +1509,11 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         if (searchinfo.speednni) {
             brans2Eval.clear();
             updateBrans2Eval(appliedNNIs);
+//            for (map<string, Branch>::iterator it = brans2Eval.begin(); it != brans2Eval.end(); it++) {
+//            	cout << it->first << ", ";
+//            }
+//            cout << endl;
+            //cout << "brans2Eval / appliedNNIs " << brans2Eval.size() << " / " << appliedNNIs.size() << endl;
             appliedNNIs.clear();
         }
 
@@ -1560,8 +1565,10 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
 void IQTree::updateBrans2Eval(vector<NNIMove> nnis) {
     for (vector<NNIMove>::iterator it = nnis.begin(); it != nnis.end(); it++) {
-        getInBranches(brans2Eval, 2, (*it).node1, (*it).node2);
-        getInBranches(brans2Eval, 2, (*it).node2, (*it).node1);
+        Branch bran((*it).node1, (*it).node2);
+        brans2Eval.insert(pair<string, Branch>(bran.getKey(), bran));
+        getInBranches(brans2Eval, 1, (*it).node1, (*it).node2);
+        getInBranches(brans2Eval, 1, (*it).node2, (*it).node1);
     }
 }
 

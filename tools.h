@@ -1879,6 +1879,11 @@ int init_random(int seed);
 int random_int(int n);
 
 /**
+ *  return a random integer in the range [a,b]
+ */
+int randint(int a, int b);
+
+/**
  * returns a random integer in the range [0; RAND_MAX - 1]
  * = random_int(RAND_MAX)
  */
