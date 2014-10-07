@@ -1102,6 +1102,7 @@ string IQTree::optimizeModelParameters(bool printInfo) {
 			cout << "  Old logl: " << curScore << " / " << "new logl: "
 					<< modOptScore << endl;
 			readTreeString(curTree);
+			initializeAllPartialLh();
 			newTree = curTree;
 			clearAllPartialLH();
 			if (aln->num_states == 4) {
