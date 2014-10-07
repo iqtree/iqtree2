@@ -56,11 +56,19 @@ inline size_t get_safe_upper_limit(size_t cur_limit) {
 	return ((cur_limit+3)/4)*4;
 }
 
+inline size_t get_safe_upper_limit_float(size_t cur_limit) {
+	return ((cur_limit+7)/8)*8;
+}
+
 #else
 #define MEM_ALIGNMENT 16
 inline size_t get_safe_upper_limit(size_t cur_limit) {
 	return (cur_limit%2 == 0) ? cur_limit : cur_limit+1;
 }
+inline size_t get_safe_upper_limit_float(size_t cur_limit) {
+	return ((cur_limit+3)/4)*4;
+}
+
 #endif
 
 //#include "pll/mem_alloc.h"

@@ -187,7 +187,11 @@ void IQTree::setParams(Params &params) {
         cout << "Generating " << params.gbo_replicates << " samples for ultrafast bootstrap..." << endl;
         // allocate memory for boot_samples
         boot_samples.resize(params.gbo_replicates);
+#ifdef BOOT_VAL_FLOAT
+        size_t nptn = get_safe_upper_limit_float(getAlnNPattern());
+#else
         size_t nptn = get_safe_upper_limit(getAlnNPattern());
+#endif
         BootValType *mem = aligned_alloc<BootValType>(nptn * (size_t)(params.gbo_replicates));
         memset(mem, 0, nptn * (size_t)(params.gbo_replicates) * sizeof(BootValType));
         for (i = 0; i < params.gbo_replicates; i++)
