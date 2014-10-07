@@ -1276,6 +1276,13 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         }
     }
     initTree = iqtree.getTreeString();
+    if (params.pll) {
+        pllNewickTree *newick = pllNewickParseString(initTree.c_str());
+        pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
+        pllNewickParseDestroy(&newick);
+        pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
+    }
+
     /**************** END: CREATE INITIAL TREE **********************************/
 
 
