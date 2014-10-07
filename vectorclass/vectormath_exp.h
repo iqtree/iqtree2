@@ -834,7 +834,9 @@ static inline VTYPE log_f(VTYPE const & initial_x) {
 
     blend = x > float(VM_SQRT2*0.5);
     x  = if_add(!blend, x, x);         // conditional add
-    e  = if_add(BTYPEI(blend),  e, ITYPE(1));  // conditional add
+//    e  = if_add(BTYPEI(blend),  e, ITYPE(1));  // conditional add
+    // BQM bug fix: with clang
+    e  = if_add(blend,  e, 1.);  // conditional add
     fe = to_float(e);
 
     if (M1 == 0) {
@@ -1880,14 +1882,14 @@ public:
 * These functions return the code hidden in a NAN. The sign bit is ignored
 ******************************************************************************/
 
-Vec4i nan_code(Vec4f const & x) {
+inline Vec4i nan_code(Vec4f const & x) {
     Vec4i  a = reinterpret_i(x);
     Vec4ib b = (a & 0x7F800000) == 0x7F800000;   // check if NAN/INF
     return a & 0x007FFFFF & Vec4i(b);            // isolate NAN code bits
 }
 
 // This function returns the code hidden in a NAN. The sign bit is ignored
-Vec2q nan_code(Vec2d const & x) {
+inline Vec2q nan_code(Vec2d const & x) {
     Vec2q  a = reinterpret_i(x);
     Vec2q const m = 0x7FF0000000000000;
     Vec2q const n = 0x000FFFFFFFFFFFFF;
@@ -1898,14 +1900,14 @@ Vec2q nan_code(Vec2d const & x) {
 #if MAX_VECTOR_SIZE >= 256
 
 // This function returns the code hidden in a NAN. The sign bit is ignored
-Vec8i nan_code(Vec8f const & x) {
+inline Vec8i nan_code(Vec8f const & x) {
     Vec8i  a = reinterpret_i(x);
     Vec8ib b = (a & 0x7F800000) == 0x7F800000;   // check if NAN/INF
     return a & 0x007FFFFF & Vec8i(b);            // isolate NAN code bits
 }
 
 // This function returns the code hidden in a NAN. The sign bit is ignored
-Vec4q nan_code(Vec4d const & x) {
+inline Vec4q nan_code(Vec4d const & x) {
     Vec4q  a = reinterpret_i(x);
     Vec4q const m = 0x7FF0000000000000;
     Vec4q const n = 0x000FFFFFFFFFFFFF;
@@ -1917,14 +1919,14 @@ Vec4q nan_code(Vec4d const & x) {
 #if MAX_VECTOR_SIZE >= 512
 
 // This function returns the code hidden in a NAN. The sign bit is ignored
-Vec16i nan_code(Vec16f const & x) {
+inline Vec16i nan_code(Vec16f const & x) {
     Vec16i  a = Vec16i(reinterpret_i(x));
     Vec16ib b = (a & 0x7F800000) == 0x7F800000;   // check if NAN/INF
     return a & 0x007FFFFF & Vec16i(b);            // isolate NAN code bits
 }
 
 // This function returns the code hidden in a NAN. The sign bit is ignored
-Vec8q nan_code(Vec8d const & x) {
+inline Vec8q nan_code(Vec8d const & x) {
     Vec8q  a = Vec8q(reinterpret_i(x));
     Vec8q const m = 0x7FF0000000000000;
     Vec8q const n = 0x000FFFFFFFFFFFFF;

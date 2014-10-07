@@ -78,6 +78,8 @@ void PhyloTree::init() {
     //root_state = STATE_UNKNOWN;
     root_state = 126;
     theta_all = NULL;
+    ptn_freq = NULL;
+    ptn_invar = NULL;
     subTreeDistComputed = false;
     dist_matrix = NULL;
     sse = LK_SSE;  // FOR TUNG: you forgot to initialize this variable!
@@ -134,6 +136,10 @@ PhyloTree::~PhyloTree() {
     //	delete [] state_freqs;
     if (theta_all)
         aligned_free(theta_all);
+    if (ptn_freq)
+        aligned_free(ptn_freq);
+    if (ptn_invar)
+    	aligned_free(ptn_invar);
     if (dist_matrix)
     	delete[] dist_matrix;
 }
@@ -1077,7 +1083,7 @@ void PhyloTree::initializeAllPartialLh() {
     int numStates = model->num_states;
 	// Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
-    size_t nptn = getAlnNPattern() + numStates;
+    size_t nptn = getAlnNPattern() + numStates; // extra #numStates for ascertainment bias correction
 #ifdef __AVX
     size_t mem_size = ((nptn +3)/4)*4;
 #else
@@ -1113,6 +1119,10 @@ void PhyloTree::initializeAllPartialLh() {
         _pattern_lh_cat = new double[mem_size * site_rate->getNDiscreteRate()];
     if (!theta_all)
         theta_all = aligned_alloc_double(block_size);
+    if (!ptn_freq)
+        ptn_freq = aligned_alloc_double(mem_size);
+    if (!ptn_invar)
+        ptn_invar = aligned_alloc_double(mem_size);
     initializeAllPartialLh(index, indexlh);
     assert(index == (nodeNum - 1) * 2);
     if (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE)
@@ -1353,6 +1363,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     int ncat = site_rate->getNDiscreteRate();
     if (ptn_lh_cat) {
     	// Right now only Naive version store _pattern_lh_cat!
+    	assert(sse == LK_NORMAL || sse == LK_SSE);
     	computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
     }
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
@@ -1374,16 +1385,16 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
         		ptn_lh_cat[offset] = log(_pattern_lh_cat[offset]) + scale;
         }
     }
-    if (cur_logl) {
-        double check_score = 0.0;
-        for (int i = 0; i < nptn; i++) {
-            check_score += (ptn_lh[i] * (aln->at(i).frequency));
-        }
-        if (fabs(check_score - *cur_logl) > 0.01) {
-            cout << *cur_logl << " " << check_score << endl;
-            outError("Wrong PhyloTree::", __func__);
-        }
-    }
+//    if (cur_logl) {
+//        double check_score = 0.0;
+//        for (int i = 0; i < nptn; i++) {
+//            check_score += (ptn_lh[i] * (aln->at(i).frequency));
+//        }
+//        if (fabs(check_score - *cur_logl) > 0.01) {
+//            cout << *cur_logl << " " << check_score << endl;
+//            outError("Wrong PhyloTree::", __func__);
+//        }
+//    }
     //double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
     //return score;
 }
@@ -2671,17 +2682,9 @@ double PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
     current_it->length = value;
     current_it_back->length = value;
     double lh;
-    if (params->fast_branch_opt) {
-        // Pre-compute Theta vector
-        if (!theta_computed) {
-            computeTheta(current_it, (PhyloNode*) current_it_back->node);
-            theta_computed = true;
-        }
-        lh = -computeLikelihoodDervFast(current_it, (PhyloNode*) current_it_back->node, df, ddf);
-    } else {
-        lh = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
-    }
-    df = -df;
+	lh = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+
+	df = -df;
     ddf = -ddf;
 
     return lh;
@@ -2791,6 +2794,11 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         if (new_tree_lh <= tree_lh + tolerance)
             return (new_tree_lh > tree_lh) ? new_tree_lh : tree_lh;
         */
+        // BQM comment for above: WHY DID I DO THIS??? this will make the loop never stop after my_iterations
+
+//        assert(new_tree_lh >= tree_lh); // make sure that the new tree likelihood never decreases
+        if (tree_lh <= new_tree_lh && new_tree_lh <= tree_lh + tolerance)
+        	return new_tree_lh;
         tree_lh = new_tree_lh;
     }
     return tree_lh;
@@ -3114,8 +3122,8 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         double z = (double) aln->num_states / (aln->num_states - 1);
         double x = 1.0 - (z * branch_length);
         if (x > 0) branch_length = -log(x) / z;
-        if (verbose_mode >= VB_DEBUG)
-        cout << "Negative branch length " << (*it)->length << " was set to ";
+//        if (verbose_mode >= VB_DEBUG)
+//        	cout << "Negative branch length " << (*it)->length << " was set to ";
         //(*it)->length = fixed_length;
         //(*it)->length = random_double()+0.1;
         (*it)->length = branch_length;

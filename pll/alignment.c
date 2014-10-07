@@ -42,8 +42,9 @@
 // for strndup stuff
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
 char *strndup(const char *s, size_t n) {
-	char *ret = malloc(n);
+	char *ret = malloc(n+1);
 	strncpy(ret, s, n);
+	ret[n] = 0;
 	return ret;
 }
 #endif
@@ -452,6 +453,57 @@ pllParsePHYLIP (const char * filename)
   return (alignmentData);
 }
 
+pllAlignmentData *
+pllParsePHYLIPString (const char *rawdata, long filesize)
+{
+  int
+    i, input, sequenceCount, sequenceLength;
+//  char * rawdata;
+//  long filesize;
+  pllAlignmentData * alignmentData;
+
+//  rawdata = pllReadFile (filename, &filesize);
+//  if (!rawdata)
+//   {
+//     errno = PLL_ERROR_FILE_OPEN;
+//     return (NULL);
+//   }
+
+  init_lexan (rawdata, filesize);
+  input = get_next_symbol();
+
+  /* parse the header to obtain the number of taxa and sequence length */
+  if (!read_phylip_header (&input, &sequenceCount, &sequenceLength))
+   {
+//     rax_free (rawdata);
+     fprintf (stderr, "Error while parsing PHYLIP header (number of taxa and sequence length)\n");
+     errno = PLL_ERROR_PHYLIP_HEADER_SYNTAX;
+     return (NULL);
+   }
+
+  lex_table_amend_phylip();
+
+  /* allocate alignment structure */
+  alignmentData = pllInitAlignmentData (sequenceCount, sequenceLength);
+
+  if (! parse_phylip (alignmentData, input))
+   {
+     errno = PLL_ERROR_PHYLIP_BODY_SYNTAX;
+     pllAlignmentDataDestroy (alignmentData);
+     lex_table_restore();
+//     rax_free (rawdata);
+     return (NULL);
+   }
+
+  lex_table_restore();
+//  rax_free (rawdata);
+
+  alignmentData->siteWeights  = (int *) rax_malloc (alignmentData->sequenceLength * sizeof (int));
+  for (i = 0; i < alignmentData->sequenceLength; ++ i)
+    alignmentData->siteWeights[i] = 1;
+
+  return (alignmentData);
+}
 
 /* FASTA routines */
 /* only check whether it is a valid alignment in fasta format */

@@ -487,11 +487,6 @@ struct Params {
      *  epsilon value used to compare log-likelihood between trees
      */
     double loglh_epsilon;
-    /**
-     *   Option to turn on the fast branch length optimization trick
-     *   from RAxML
-     */
-    bool fast_branch_opt;
 
     /*
      *  reinsert leaves back to tree using parsimony

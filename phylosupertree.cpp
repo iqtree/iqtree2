@@ -160,6 +160,9 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 				new_aln = part_aln->removeGappySeq();
 			else
 				new_aln = part_aln;
+		    // also rebuild states set of each sequence for likelihood computation
+		    new_aln->buildSeqStates();
+
 			if (part_aln != new_aln && part_aln != input_aln) delete part_aln;
 			PhyloTree *tree = new PhyloTree(new_aln);
 			push_back(tree);

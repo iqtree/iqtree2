@@ -35,7 +35,10 @@ static bool initProtMat(double f[20], double daa[400], string prot_model)
   int i, j;
   double scaler;
 
-  if (prot_model == "DAYHOFF")
+  if (prot_model == "POISSON") {
+	  for (i = 0; i < 400; i++) daa[i] = 1.0;
+	  for (i = 0; i < 20; i++) f[i] = 0.05;
+  } else if (prot_model == "DAYHOFF")
 	  {	
 	    daa[ 1*20+ 0] =   27.00; daa[ 2*20+ 0] =   98.00; daa[ 2*20+ 1] =   32.00; daa[ 3*20+ 0] =  120.00;
 	    daa[ 3*20+ 1] =    0.00; daa[ 3*20+ 2] =  905.00; daa[ 4*20+ 0] =   36.00; daa[ 4*20+ 1] =   23.00;

@@ -1183,6 +1183,27 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
     return final_length;
 }
 
+void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list,
+                            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
+    IntVector kept_sites;
+    int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
+
+	out << getNSeq() << " " << final_length << endl;
+	StrVector::iterator it;
+	int max_len = getMaxSeqNameLength();
+	if (max_len < 10) max_len = 10;
+	int seq_id = 0;
+	for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
+		out.width(max_len);
+		out << left << (*it) << "  ";
+		int j = 0;
+		for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
+			if (kept_sites[j])
+				out << convertStateBackStr(at(*i)[seq_id]);
+		out << endl;
+	}
+}
+
 void Alignment::printPhylip(const char *file_name, bool append, const char *aln_site_list,
                             bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
     IntVector kept_sites;
@@ -1256,6 +1277,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -1289,6 +1311,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -1316,6 +1339,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(accumulate(ptn_freq.begin(), ptn_freq.end(), 0), -1);
     clear();
     pattern_index.clear();
@@ -1343,6 +1367,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(site_id.size(), -1);
     clear();
     pattern_index.clear();
@@ -1444,6 +1469,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
@@ -1625,6 +1651,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
@@ -1684,6 +1711,7 @@ void Alignment::copyAlignment(Alignment *aln) {
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();

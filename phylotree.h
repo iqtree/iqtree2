@@ -56,24 +56,66 @@ inline size_t get_safe_upper_limit(size_t cur_limit) {
 	return ((cur_limit+3)/4)*4;
 }
 
+inline size_t get_safe_upper_limit_float(size_t cur_limit) {
+	return ((cur_limit+7)/8)*8;
+}
+
 #else
 #define MEM_ALIGNMENT 16
 inline size_t get_safe_upper_limit(size_t cur_limit) {
 	return (cur_limit%2 == 0) ? cur_limit : cur_limit+1;
 }
+inline size_t get_safe_upper_limit_float(size_t cur_limit) {
+	return ((cur_limit+3)/4)*4;
+}
+
 #endif
 
-#include "pll/mem_alloc.h"
+//#include "pll/mem_alloc.h"
 
 inline double *aligned_alloc_double(size_t size) {
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+	return (double*)_aligned_malloc(size*sizeof(double), MEM_ALIGNMENT);
+#else
 	void *res;
-	rax_posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
+	posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
 	return (double*)res;
+#endif
+}
+
+template< class T>
+inline T *aligned_alloc(size_t size) {
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+	return (T*)_aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+#else
+	void *res;
+	posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(T));
+	return (T*)res;
+#endif
 }
 
 inline void aligned_free(void *mem) {
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+	_aligned_free(mem);
+#else
 	free(mem);
+#endif
 }
+
+
+#ifdef __AVX
+#define VectorClassMaster Vec4d
+#define VectorClassFloat Vec8f
+#define VCSIZE_MASTER 4
+#define VCSIZE_FLOAT 8
+#pragma message "Using AVX instructions"
+#else
+#define VectorClassMaster Vec2d
+#define VectorClassFloat Vec4f
+#define VCSIZE_MASTER 2
+#define VCSIZE_FLOAT 4
+//#pragma message "Using SS3 instructions"
+#endif
 
 
 /**
@@ -479,7 +521,7 @@ public:
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
 
-    template<const int nstates>
+    template <class VectorClass, const int VCSIZE, const int nstates>
     void computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
     /**
@@ -498,7 +540,7 @@ public:
     template <const int nstates>
     double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
-    template<const int nstates>
+    template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad,
@@ -642,7 +684,7 @@ public:
     template <const int nstates>
     double computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    template<const int nstates>
+    template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
@@ -813,20 +855,6 @@ public:
 
     bool theta_computed;
 
-    double computeLikelihoodDervFast(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    double computeLikelihoodDervFastNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    template<int NSTATES>
-    double computeLikelihoodDervFastSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    template<int NSTATES>
-    void computeThetaSSE(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
-    void computeTheta(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
-    void computeThetaNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
     /**
      *	NSTATES x NUMCAT x (number of patterns) array
      *	Used to store precomputed values when optimizing branch length
@@ -834,12 +862,18 @@ public:
      */
     double* theta_all;
 
-    void initiateMyEigenCoeff();
-    /*
-     * 	Array to store the eigen coefficients
-     */
-    double* myEigenCoeff;
 
+    /**
+     * frequencies of alignment patterns, used as buffer for likelihood computation
+     */
+    double *ptn_freq;
+
+    /**
+     * used as buffer for faster likelihood computation
+     * for const pattern: it stores product of p_invar and state frequency
+     * for other pattern: zero
+     */
+    double *ptn_invar;
 
     /****************************************************************************
             Nearest Neighbor Interchange by maximum likelihood

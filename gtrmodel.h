@@ -258,15 +258,15 @@ public:
 
 	virtual double *getEigenvalues() const;
 
-	virtual double **getEigenvectors() const;
+	virtual double *getEigenvectors() const;
 
-	virtual double **getInverseEigenvectors() const;
+	virtual double *getInverseEigenvectors() const;
 
 	void setEigenCoeff(double *eigenCoeff);
 
 	void setEigenvalues(double *eigenvalues);
 
-	void setEigenvectors(double **eigenvectors);
+	void setEigenvectors(double *eigenvectors);
 
 protected:
 
@@ -310,12 +310,12 @@ protected:
 	/**
 		eigenvectors of the rate matrix Q 
 	*/
-	double **eigenvectors;
+	double *eigenvectors;
 
 	/**
 		inverse eigenvectors of the rate matrix Q 
 	*/
-	double **inv_eigenvectors;
+	double *inv_eigenvectors;
 
 	/**
 		coefficient cache, served for fast computation of the P(t) matrix

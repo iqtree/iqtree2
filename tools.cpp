@@ -751,7 +751,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
     params.reinsert_par = false;
-    params.fast_branch_opt = false;
     params.bestStart = true;
     params.snni = true; // turn on sNNI default now
     params.autostop = true; // turn on auto stopping rule by default now
@@ -1738,8 +1737,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.autostop = true;
                 cnt++;
                 params.stopCond = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
-                params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
             } else if (strcmp(argv[cnt], "-manuel") == 0) {

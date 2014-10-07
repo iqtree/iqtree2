@@ -18,12 +18,16 @@
 #define rax_memalign memalign
 #define rax_malloc malloc
 #define rax_realloc realloc
+
 #define rax_free free
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
-#define rax_posix_memalign(x,y,z) *(x) = _aligned_malloc((z),(y))
+//#define rax_posix_memalign(x,y,z) *(x) = _aligned_malloc((z),(y))
+#define rax_posix_memalign(x,y,z) *(x) = malloc((z))
+#define rax_free_align _aligned_free
 #else
 #define rax_posix_memalign posix_memalign
+#define rax_free_align free
 #endif
 
 #define rax_calloc calloc
