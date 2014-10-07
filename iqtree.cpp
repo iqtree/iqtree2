@@ -28,7 +28,7 @@
 #include "pll/pllInternal.h"
 #include "nnisearch.h"
 #include "vectorclass/vectorclass.h"
-#include "vectorclass/vectormath_exp.h"
+#include "vectorclass/vectormath_common.h"
 
 
 Params *globalParam;
