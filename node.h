@@ -242,6 +242,12 @@ public:
     Neighbor *findNeighbor(Node *node);
 
     /**
+     * @brief check whether the two nodes are neighbors
+     * @param[in] node the other node
+     */
+    bool isNeighbor(Node *node);
+
+    /**
         @param node the target node
         @return the iterator to the neighbor that has the node. If not found, return neighbors.end()
      */
@@ -300,6 +306,34 @@ public:
         @param id branch ID
      */
     virtual void addNeighbor(Node *node, double length, int id = -1);
+};
+
+class Branch {
+public:
+    Node* node1;
+
+    Node* node2;
+
+    string key;
+
+    Branch(Node* node1, Node* node2) {
+        assert(node1->isNeighbor(node2));
+        assert(node2->isNeighbor(node1));
+
+        if (node1->id < node2->id) {
+            this->node1 = node1;
+            this->node2 = node2;
+        } else {
+            this->node1 = node2;
+            this->node2 = node1;
+        }
+
+        key = convertIntToString(this->node1->id) + convertIntToString(this->node2->id);
+    }
+
+    inline string getKey() {
+        return key;
+    }
 };
 
 /*

@@ -28,6 +28,7 @@
 #include "phylonode.h"
 #include "stoprule.h"
 #include "mtreeset.h"
+#include "node.h"
 
 #include "pll/pll.h"
 #include "nnisearch.h"
@@ -280,10 +281,15 @@ public:
             @param  node    evaluate all NNIs of the subtree rooted at node
             @param  dad     a neighbor of \p node which does not belong to the subtree
                             being considered (used for traverse direction)
-            @param  approx_nni (TEST_ONLY) enabled approximated NNI
 
      */
-    void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL, bool approx_nni = false);
+    void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
+     * @brief Evaluate all NNIs defined in \a brans
+     * @param[in] brans contains branches whose NNIs need to be evaluated
+     */
+    void evalNNIs(map<string, Branch> brans);
 
     /**
             search all positive NNI move on the current tree and save them
@@ -296,7 +302,7 @@ public:
             @param nni2apply number of NNIs to apply from the list
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void applyNNIs(int nni2apply, bool changeBran = true);
+    virtual void doNNIs(int nni2apply, bool changeBran = true);
 
     /**
      *  Restore the old 5 branch lengths stored in the NNI move.
@@ -319,12 +325,12 @@ public:
     /**
      * 	Save all the current branch lengths
      */
-    void saveBranLens(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void saveBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * 	 Restore the branch lengths from the saved values
      */
-    virtual void restoreAllBranLen(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * Get the branch length of the branch node1-node2
@@ -468,7 +474,7 @@ public:
      */
     vector<int> vecNumNNI;
 
-    int getCurIteration() { return curIteration; }
+    int getCurIteration() { return curIt; }
 
     /**
      * Do memory allocation and initialize parameter for UFBoot to run with PLL
@@ -521,7 +527,7 @@ protected:
     /**
      *  Current IQPNNI iteration number
      */
-    int curIteration;
+    int curIt;
     /**
             criterion to assess important quartet
      */
@@ -560,20 +566,35 @@ protected:
     vector<NNIMove> nonConfNNIs;
 
     /**
-            Optimal branch lengths
+     *  NNIs that have been applied in the previous step
+     */
+    vector<NNIMove> appliedNNIs;
+
+    /**
+        Optimal branch lengths
      */
     mapString2Double optBrans;
+
+    /**
+     *  Set of all internal branches whose induced NNIs need to be evaluate
+     *  in the next NNI step
+     */
+    map<string, Branch> brans2Eval;
+
+    /**
+     *  Update \a brans2Eval after \a all NNIs in nnis have been performed
+     */
+    void updateBrans2Eval(vector<NNIMove> nnis);
+
+    /**
+     *  Use fastNNI heuristic
+     */
+    bool fastNNI;
 
     /**
             Original branch lengths
      */
     mapString2Double orgBrans;
-
-    /**
-     *      Data structure to store how many times a leaf has been removed.
-     *      LeafFreq is a struct that contains leaf_id and leaf_frequency
-     */
-    vector<LeafFreq> leaf_freqs;
 
     int k_delete, k_delete_min, k_delete_max, k_delete_stay;
 
@@ -582,14 +603,15 @@ protected:
      */
     int k_represent;
 
-    /**
-     *  Initialize the node frequency list (node_freqs)
-     */
-    void initLeafFrequency(PhyloNode* node = NULL, PhyloNode* dad = NULL);
-
-    void clearLeafFrequency();
-
 public:
+
+    /**
+     *  @brief: optimize model parameters on the current tree
+     *  either IQ-TREE or PLL
+     *  @param imd_tree the input tree or NULL
+     *  @param printInfo to print model parameters to the screen or not
+     */
+    string optimizeModelParameters(bool printInfo=false);
 
     /**
      *  variable storing the current best tree topology
@@ -607,24 +629,7 @@ public:
      */
     string bestTreeString;
 
-    /**
-     *  A set of reference trees which are for the evolutionary tree search
-     *  This set only contains tree topologies (without branch length)
-     */
-    //unordered_map<string, double> refTreeSet;
-
-    /**
-     *  A set of reference trees which are sorted according to their logl
-     *  This set contains complete tree strings (with branch length)
-     */
-    //map<double, string> refTreeSetSorted;
-
     CandidateSet candidateTrees;
-
-    /**
-     *  Set of unique initial parsimony trees (OBSOLETE by introducing candidateTrees)
-     */
-    //set<string> uniqParsTopo;
 
 
     /****** following variables are for ultra-fast bootstrap *******/
@@ -701,7 +706,6 @@ protected:
 
     ofstream outNNI;
 protected:
-
 
     bool print_tree_lh;
 

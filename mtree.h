@@ -386,6 +386,19 @@ public:
      */
     void getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL);
 
+    /**
+     *      get all descending internal branches below \a node and \a dad up to depth \a depth
+     *      @param[out] brans the branches in question
+     */
+    void getInBranches(map<string, Branch> &brans, int depth, Node *node, Node *dad);
+
+    /**
+     * @brief: check if the branch is internal
+     * @param[in] node1 one end of the branch
+     * @param[in] node2 the other end of the branch
+     */
+    bool isInBran(Node* node1, Node* node2);
+
     void getBranchLengths(DoubleVector &len, Node *node = NULL, Node *dad = NULL);
 
     void setBranchLengths(DoubleVector &len, Node *node = NULL, Node *dad = NULL);
@@ -637,7 +650,7 @@ protected:
      * where id1 is smaller than id2. This is done to create a key for the map data structure
      * @param node1
      * @param node2
-     * @return
+     * @return the string key for the node pair
      */
     inline string nodePair2String(Node* node1, Node* node2) {
         string key("");

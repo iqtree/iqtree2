@@ -490,8 +490,10 @@ void MTree::readTree(istream &in, bool &is_rooted)
     try {
         char ch;
         ch = readNextChar(in);
-        if (ch != '(')
+        if (ch != '(') {
+        	cout << in << endl;
             throw "Tree file not started with an opening-bracket '('";
+        }
 
         leafNum = 0;
 
@@ -802,6 +804,25 @@ void MTree::getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *nod
         }
     }
 }
+
+void MTree::getInBranches(map<string, Branch> &brans, int depth, Node *node, Node *dad) {
+    if (depth == 0)
+      return;
+    assert(isInBran(node, dad));
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if (!(*it)->node->isLeaf()) {
+            Branch bran(node, (*it)->node);
+            brans.insert(pair<string, Branch>(bran.getKey(), bran));
+            getInBranches(brans, depth-1, (*it)->node, node);
+        }
+    }
+}
+
+bool MTree::isInBran(Node* node1, Node* node2) {
+    return (!node1->isLeaf() && !node2->isLeaf());
+}
+
+
 
 void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
     if (!node) node = root;

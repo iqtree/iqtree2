@@ -514,11 +514,6 @@ struct Params {
     bool pll;
 
     /**
-     *  Turn on model parameter optimization by PLL
-     */
-    bool pllModOpt;
-
-    /**
      *  Stopping rule for the tree search
      */
     bool autostop;
@@ -1872,6 +1867,11 @@ int init_random(int seed);
  * @param n upper-bound of random number
  */
 int random_int(int n);
+
+/**
+ *  return a random integer in the range [a,b]
+ */
+int randint(int a, int b);
 
 /**
  * returns a random integer in the range [0; RAND_MAX - 1]

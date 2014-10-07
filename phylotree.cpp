@@ -3284,14 +3284,13 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
     }
 }
 
-void PhyloTree::applyNNIBranches(NNIMove nnimove) {
+void PhyloTree::changeNNIBrans(NNIMove nnimove) {
 	PhyloNode *node1 = nnimove.node1;
 	PhyloNode *node2 = nnimove.node2;
 	PhyloNeighbor *node1_node2_nei = (PhyloNeighbor*) node1->findNeighbor(node2);
 	PhyloNeighbor *node2_node1_nei = (PhyloNeighbor*) node2->findNeighbor(node1);
 	node1_node2_nei->length = nnimove.newLen[0];
 	node2_node1_nei->length = nnimove.newLen[0];
-	//return;
 	if (params->nni5) {
 		int i = 1;
 		Neighbor* nei;
@@ -3316,7 +3315,7 @@ void PhyloTree::applyNNIBranches(NNIMove nnimove) {
 	}
 }
 
-NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove* nniMoves, bool approx_nni, bool useLS, double lh_contribution) {
+NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove* nniMoves) {
 
 	assert(!node1->isLeaf() && !node2->isLeaf());
     assert(node1->degree() == 3 && node2->degree() == 3);
@@ -3379,8 +3378,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     		if (!node2->findNeighbor((*nniMoves[cnt].node2Nei_it)->node)) outError(__func__);
     	}
     } else {
-    	// Initialize node1Nei_it and node2Nei_it
-    	// TUNG save the first found neighbor (2 Neighbor total) of node 1 (excluding node2) in node1_it
         FOR_NEIGHBOR_IT(node1, node2, node1_it) {
 			cnt = 0;
 			FOR_NEIGHBOR_IT(node2, node1, node2_it) {
@@ -3400,14 +3397,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     double backupScore = curScore;
 
     for (cnt = 0; cnt < 2; cnt++) {
-		//node2_it = node2_its[cnt];
-
-		/*
-		nniMoves[cnt].node1 = node1;
-		nniMoves[cnt].node2 = node2;
-		nniMoves[cnt].node1Nei_it = node1_it;
-		nniMoves[cnt].node2Nei_it = node2_it;*/
-
         // do the NNI swap
     	NeighborVec::iterator node1_it = nniMoves[cnt].node1Nei_it;
     	NeighborVec::iterator node2_it = nniMoves[cnt].node2Nei_it;

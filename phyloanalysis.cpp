@@ -954,22 +954,6 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	cout << "Fixed branch lengths: "
 			<< ((params.fixed_branch_length) ? "Yes" : "No") << endl;
 
-	/* Deprecated tree search options */
-//	cout << "Lambda for local search: " << params.lambda << endl;
-//	if (params.speed_conf != 1.0) {
-//		cout << "Confidence value for speed up NNI: ";
-//		if (params.new_heuristic)
-//			cout << "Using 50%*" << params.speed_conf << endl;
-//		else
-//			cout << "N" << params.speed_conf << " * delta" << params.speed_conf
-//					<< endl;
-//	} else {
-//		cout << "Speed up NNI: disabled " << endl;
-//	}
-//	cout << "NNI cutoff: " << params.nni_cutoff << endl;
-//	cout << "Approximate NNI: " << (params.approximate_nni ? "Yes" : "No")
-//			<< endl;
-
 	if (params.min_iterations > 0) {
 	    cout << "Tree search algorithm: " << (params.snni ? "Stochastic nearest neighbor interchange" : "IQPNNI") << endl;
 	    cout << "Termination condition: ";
@@ -1237,6 +1221,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     /*********************************************** START: CREATE INITIAL TREE(S) ************************************/
     int numInitTrees;
+    string initTree;
 
     // start the search with user-defined tree
     if (params.user_file) {
@@ -1255,7 +1240,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         numInitTrees = 1;
     } else if (params.snni) {
         cout << endl;
-        cout << "Creating parsimony tree by PLL... ";
+        cout << "Create initial parsimony tree ... ";
         double start = getCPUTime();
         // generate a parsimony tree for model optimization
         iqtree.pllInst->randomNumberSeed = params.ran_seed;
@@ -1290,10 +1275,13 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             outError(str);
         }
     }
-
+    initTree = iqtree.getTreeString();
     /**************** END: CREATE INITIAL TREE **********************************/
 
 
+    /********************************* START SET UP PARAMETERS ***************************************/
+
+    iqtree.curScore = -DBL_MAX;
     bool test_only = params.model_name.substr(0, 8) == "TESTONLY";
     /* initialize substitution model */
     if (params.model_name.substr(0, 4) == "TEST") {
@@ -1327,13 +1315,22 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     if (iqtree.isSuperTree())
         ((PhyloSuperTree*) &iqtree)->mapTrees();
 
-    // string to store the current tree with branch length optimized
-    string initTree;
-    // initialize all
+    // set parameter for the current tree
     iqtree.setParams(params);
 
-    /****************** START: INITIAL MODEL OPTIMIZATION *************************************/
+    if (!params.pll) {
+        uint64_t mem_size = iqtree.getMemoryRequired();
+        cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
+                << " MB RAM is required!" << endl;
+        if (mem_size >= getMemorySize()) {
+            outError("Memory required exceeds your computer RAM size!");
+        }
+    }
 
+    /********************************* END SET UP PARAMETERS ***************************************/
+
+
+    /****************** START: INITIAL MODEL OPTIMIZATION *************************************/
     try {
         if (!iqtree.getModelFactory()) {
             if (iqtree.isSuperTree()) {
@@ -1372,12 +1369,15 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     }
 
     // Optimize model parameters and branch lengths using ML for the initial tree
+    initTree = iqtree.optimizeModelParameters(true);
+    iqtree.setBestTree(initTree, iqtree.curScore);
 
+/*
     if (params.pllModOpt) {
         assert(params.pll);
         cout << "Optimizing model parameters by PLL (logl epsilon = " << params.modeps << ") ...";
         double stime = getCPUTime();
-        string curTreeString = iqtree.getTreeString();
+        initTree = iqtree.getTreeString();
         pllNewickTree *newick = pllNewickParseString(curTreeString.c_str());
         pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
         pllNewickParseDestroy(&newick);
@@ -1426,6 +1426,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             pllNewickParseDestroy(&newick);
         }
     }
+ */
     /****************** END: INITIAL MODEL OPTIMIZATION *************************************/
 
     // Update best tree
@@ -1467,9 +1468,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
         if (params.snni) {
             /************ START: Create a set of up to (numInitTrees - 1) unique parsimony trees **********************/
-            if (params.snni) {
-                //cout << "********************* START EXPLORATIVE PHASE ********************* " << endl << endl;
-            }
             cout << "Generating " << numInitTrees << " parsimony trees... ";
             cout.flush();
             double parsTimeStart = getCPUTime();
@@ -1584,80 +1582,14 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                 }
 
                 if (verbose_mode >= VB_MED)
-                	cout << numNNITrees << ". Initial logl " << initLogl << " / NNI logl: " << nniLogl << endl;
+                	cout << numNNITrees << ". Parsimony logl " << initLogl << " / NNI logl: " << nniLogl << endl;
 
                 // Better tree is found
                 if (iqtree.curScore > iqtree.bestScore) {
                     // Re-optimize model parameters (the sNNI algorithm)
-                    if (params.snni) {
-                        // Optimize model parameters using PLL
-                        if (params.pllModOpt) {
-                            cout << "Optimizing model parameters by PLL ... ";
-                            double stime = getCPUTime();
-                            // Re-calculate all partial likelihood vectors to make sure everything is ok
-                            pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_FALSE, PLL_FALSE);
-                            pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, params.modeps);
-                            iqtree.curScore = iqtree.pllInst->likelihood;
-                            double etime = getCPUTime();
-                            cout << etime - stime << " seconds" << endl;
-                            pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
-                                    iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
-                                    PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-                            nniTree = string(iqtree.pllInst->tree_string);
-                        } else {
-                            // Optimize model parameters using IQ-TREE
-                            if (params.pll) {
-                                iqtree.readTreeString(nniTree);
-                                iqtree.initializeAllPartialLh();
-                                iqtree.clearAllPartialLH();
-                            }
-                            // Back up model parameters in case something goes wrong
-                            double *rate_param_bk = NULL;
-                            if (iqtree.aln->num_states == 4) {
-                                rate_param_bk = new double[6];
-                                iqtree.getModel()->getRateMatrix(rate_param_bk);
-                            }
-                            double alpha_bk = iqtree.getRate()->getGammaShape();
-                            //cout.precision(6);
-                            //cout << endl;
-                            cout << "Optimizing model parameters (epsilon = " << params.modeps << ")" << endl;
-                            // Now re-estimate the model parameters
-                            double modOptScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.modeps);
-                    		/* FOR PARTITION MODEL */
-                    		if (iqtree.isSuperTree())
-                    			((PhyloSuperTree*) &iqtree)->computeBranchLengths();
-
-                            if (modOptScore < iqtree.curScore - 1e-3) {
-                                cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
-                                cout << "  Old logl: " << iqtree.curScore << " / " << "new logl: " << modOptScore << endl;
-                                iqtree.readTreeString(nniTree);
-                                iqtree.initializeAllPartialLh();
-                                iqtree.clearAllPartialLH();
-                                if (iqtree.aln->num_states == 4) {
-                                    assert(rate_param_bk != NULL);
-                                    ((GTRModel*) iqtree.getModel())->setRateMatrix(rate_param_bk);
-                                }
-                                dynamic_cast<RateGamma*>(iqtree.getRate())->setGammaShape(alpha_bk);
-                                iqtree.getModel()->decomposeRateMatrix();
-                                cout << "Reset rate parameters!" << endl;
-                                // There is something wrong with this alignment, stop optimizing model parameters
-                            } else {
-                                iqtree.curScore = modOptScore;
-                                // update PLL with the new model parameters and new best tree
-                                nniTree = iqtree.getTreeString();
-                                if (params.pll) {
-                                    // update PLL with the new model parameters
-                                    iqtree.inputModelIQTree2PLL();
-                                }
-                            }
-                            if (params.pll) {
-                                iqtree.deleteAllPartialLh();
-                            }
-                        }
-                    }
-
+                	nniTree = iqtree.optimizeModelParameters();
                     iqtree.setBestTree(nniTree, iqtree.curScore);
-                    cout << "BETTER SCORE FOUND: " << iqtree.bestScore << endl;
+                    cout << "BETTER TREE FOUND: " << iqtree.bestScore << endl;
                 }
 
                 iqtree.candidateTrees.update(nniTree, iqtree.curScore);
@@ -1675,7 +1607,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                     }
                 }
             }
-
             /*********** END: Do NNI on the best parsimony trees ************************************/
         } else { // no -snni
             cout << "Doing NNI on the initial tree ... " << endl;
@@ -1790,7 +1721,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
 	/* Do tree search */
 	if (params.min_iterations > 1) {
-	    //cout << " *********************  EXPLOITATION PHASE ********************* " << endl << endl;
+		iqtree.readTreeString(iqtree.bestTreeString);
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(alignment);
 	} else {
@@ -1838,34 +1769,10 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 		iqtree.candidateTrees.printBestScores();
 	}
 
+	/******** Performs final model parameters optimization ******************/
 	if (params.min_iterations) {
-	    if (params.pllModOpt) {
-	        pllNewickTree *newick = pllNewickParseString(iqtree.bestTreeString.c_str());
-	        pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-	        pllNewickParseDestroy(&newick);
-	        pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE, PLL_FALSE);
-	        cout << endl;
-	        cout << "Optimizing model parameters on the best tree (logl epsilon = "
-	                << params.modeps << ")" << endl;
-	        double stime = getCPUTime();
-	        pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, params.modeps);
-	        double etime = getCPUTime();
-	        cout << etime - stime << " seconds" << endl;
-	        pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE,
-	                PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-	        iqtree.setBestTree(string(iqtree.pllInst->tree_string), iqtree.pllInst->likelihood);
-	        iqtree.pllPrintModelParams();
-	    	iqtree.readTreeString(iqtree.bestTreeString);
-	        cout << endl;
-	    } else {
-	        cout << endl;
-	        iqtree.setAlignment(alignment);
-	        iqtree.initializeAllPartialLh();
-	        iqtree.clearAllPartialLH();
-	        cout << "Optimizing model parameters (epsilon = " << params.modeps << ")" << endl;
-	        iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.modeps);
-	        iqtree.setBestTree(iqtree.getTreeString(), iqtree.curScore);
-	    }
+        iqtree.initializeAllPartialLh();
+		iqtree.bestTreeString = iqtree.optimizeModelParameters(true);
 	} else {
         iqtree.setBestScore(iqtree.curScore);
     }

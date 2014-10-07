@@ -83,8 +83,8 @@ void StopRule::addImprovedIteration(int iteration) {
 		predicted_iteration = max_iteration;
 	if (predicted_iteration < min_iteration)
 			predicted_iteration = min_iteration;
-	cout << "Stopping rule suggests " << predicted_iteration << " iterations (" 
-		<< (predicted_iteration - iteration) << " more iterations)" << endl;
+	//cout << "Stopping rule suggests " << predicted_iteration << " iterations ("
+	//	<< (predicted_iteration - iteration) << " more iterations)" << endl;
 }
 
 int StopRule::getLastImprovedIteration() {
