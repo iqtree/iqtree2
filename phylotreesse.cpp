@@ -816,6 +816,8 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 	}
 
 	double prob_const = 0.0;
+	double *lh_cat = _pattern_lh_cat;
+	memset(lh_cat, 0, nptn*ncat*sizeof(double));
 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
@@ -828,23 +830,23 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 			for (c = 0; c < ncat; c++){
 				MappedVec(nstates) ei_val(val_tmp);
 				MappedVec(nstates) ei_partial_lh_dad(partial_lh_dad);
-				lh_ptn += (ei_val.array() * ei_tip_partial_lh.array() * ei_partial_lh_dad.array()).sum();
+				*lh_cat = (ei_val.array() * ei_tip_partial_lh.array() * ei_partial_lh_dad.array()).sum();
+				lh_ptn += *lh_cat;
 				partial_lh_dad += nstates;
 				val_tmp += nstates;
+				lh_cat++;
 			}
 #else
-//			cout.unsetf(ios::fixed);
-			for (c = 0; c < ncat; c++)
+			for (c = 0; c < ncat; c++) {
 				for (i = 0; i < nstates; i++) {
-					lh_ptn +=  val[c*nstates+i] * tip_partial_lh[state_dad*nstates+i] * partial_lh_dad[c*nstates+i];
-//					cout << val[c*nstates+i] << "\t" << tip_partial_lh[state_dad*nstates+i] <<
-//							"\t" << partial_lh_dad[c*nstates+i] << endl;
+					*lh_cat +=  val[c*nstates+i] * tip_partial_lh[state_dad*nstates+i] * partial_lh_dad[c*nstates+i];
 				}
+				lh_ptn += *lh_cat;
+				lh_cat++;
+			}
 			partial_lh_dad += block;
 #endif
 			lh_ptn = lh_ptn*p_var_cat + ptn_invar[ptn];
-//			cout << "lh_ptn = " << lh_ptn << endl;
-//			assert(lh_ptn > 0.0);
 			if (ptn < orig_nptn) {
 				lh_ptn = log(lh_ptn);
 				_pattern_lh[ptn] = lh_ptn;
@@ -863,17 +865,26 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 				MappedVec(nstates) ei_val(val_tmp);
 				MappedVec(nstates) ei_partial_lh_dad(partial_lh_dad);
 				MappedVec(nstates) ei_partial_lh_node(partial_lh_node);
-				lh_ptn += (ei_val.array() * ei_partial_lh_node.array() * ei_partial_lh_dad.array()).sum();
+				*lh_cat = (ei_val.array() * ei_partial_lh_node.array() * ei_partial_lh_dad.array()).sum();
+				lh_ptn += *lh_cat;
 				partial_lh_dad += nstates;
 				partial_lh_node += nstates;
 				val_tmp += nstates;
+				lh_cat++;
 			}
 
 #else
-			for (i = 0; i < block; i++)
-				lh_ptn +=  val[i] * partial_lh_node[i] * partial_lh_dad[i];
-			partial_lh_node += block;
-			partial_lh_dad += block;
+			double *val_tmp = val;
+			for (c = 0; c < ncat; c++) {
+				for (i = 0; i < nstates; i++) {
+					*lh_cat +=  val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
+				}
+				lh_ptn += *lh_cat;
+				partial_lh_node += nstates;
+				partial_lh_dad += nstates;
+				val_tmp += nstates;
+				lh_cat++;
+			}
 #endif
 			lh_ptn = lh_ptn*p_var_cat + ptn_invar[ptn];
 			assert(lh_ptn > 0.0);

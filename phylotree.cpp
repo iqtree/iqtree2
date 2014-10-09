@@ -1363,8 +1363,17 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     int ncat = site_rate->getNDiscreteRate();
     if (ptn_lh_cat) {
     	// Right now only Naive version store _pattern_lh_cat!
-    	assert(sse == LK_NORMAL || sse == LK_SSE);
-    	computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
+    	if (sse == LK_NORMAL || sse == LK_SSE)
+    		computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
+    	else {
+    		switch (aln->num_states) {
+    		case 4: computeLikelihoodBranchEigen<4>(current_it, (PhyloNode*)current_it_back->node); break;
+    		case 20: computeLikelihoodBranchEigen<20>(current_it, (PhyloNode*)current_it_back->node); break;
+    		case 2: computeLikelihoodBranchEigen<2>(current_it, (PhyloNode*)current_it_back->node); break;
+    		default: outError("Option not supported yet"); break;
+    		}
+    	}
+
     }
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
     //double sum_scaling = 0.0;
