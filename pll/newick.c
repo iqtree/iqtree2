@@ -472,9 +472,9 @@ pllNewickUnroot (pllNewickTree * t)
         t->tree->next = t->tree->next->next;
       }
      item = tmp->item;
-     free (item->name);
-     free (tmp->item);
-     free (tmp);
+     rax_free (item->name);
+     rax_free (tmp->item);
+     rax_free (tmp);
    }
 
   return (pllValidateNewick (t));
@@ -503,7 +503,7 @@ pllNewickParseString (const char * newick)
   pllNewickTree * t;
   int nodes, leaves;
   
-  t = (pllNewickTree *) calloc (1, sizeof (pllNewickTree));
+  t = (pllNewickTree *) rax_calloc (1, sizeof (pllNewickTree));
 
   n = strlen (newick);
 

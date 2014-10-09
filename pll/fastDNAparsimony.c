@@ -46,17 +46,18 @@
 #include <assert.h>
 
 
-
-#if (defined(__SSE3) && !defined(__AVX)) 
+#if (defined(__SSE3) && !defined(__AVX))
 
 #include <xmmintrin.h>
 #include <pmmintrin.h>
   
 #define INTS_PER_VECTOR 4
 #ifdef __i386__
-#define LONG_INTS_PER_VECTOR 4
+//#define LONG_INTS_PER_VECTOR 4
+#define LONG_INTS_PER_VECTOR (16/sizeof(long))
 #else
-#define LONG_INTS_PER_VECTOR 2
+//#define LONG_INTS_PER_VECTOR 2
+#define LONG_INTS_PER_VECTOR (16/sizeof(long))
 #endif
 #define INT_TYPE __m128i
 #define CAST __m128i*
@@ -77,7 +78,8 @@
 #include <pmmintrin.h>
 
 #define INTS_PER_VECTOR 8
-#define LONG_INTS_PER_VECTOR 4
+//#define LONG_INTS_PER_VECTOR 4
+#define LONG_INTS_PER_VECTOR (32/sizeof(long))
 #define INT_TYPE __m256d
 #define CAST double*
 #define SET_ALL_BITS_ONE (__m256d)_mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)
@@ -129,7 +131,7 @@ static inline unsigned int vectorPopcount(INT_TYPE v)
   int    
     i,
     sum = 0;
-  
+
   VECTOR_STORE((CAST)counts, v);
 
   for(i = 0; i < LONG_INTS_PER_VECTOR; i++)
@@ -254,7 +256,8 @@ static void newviewParsimonyIterativeFast(pllInstance *tr, partitionList *pr)
   for(index = 4; index < count; index += 4)
     {      
       unsigned int
-        totalScore = 0;
+        totalScore __attribute__((aligned (PLL_BYTE_ALIGNMENT)));
+      totalScore = 0;
 
       size_t
         pNumber = (size_t)ti[index],
@@ -479,7 +482,7 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
 
   unsigned int 
     bestScore = tr->bestParsimony,    
-    sum;
+    sum __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
 
   if(tr->ti[0] > 4)
     newviewParsimonyIterativeFast(tr, pr);
@@ -1789,10 +1792,12 @@ void pllFreeParsimonyDataStructures(pllInstance *tr, partitionList *pr)
   size_t 
     model;
 
+  //rax_free(tr->parsimonyScore);
   rax_free(tr->parsimonyScore);
   
   for(model = 0; model < (size_t) pr->numberOfPartitions; ++model)
-    rax_free(pr->partitionData[model]->parsVect);
+    //rax_free(pr->partitionData[model]->parsVect);
+	  rax_free(pr->partitionData[model]->parsVect);
   
   rax_free(tr->ti);
 }
