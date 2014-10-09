@@ -238,6 +238,8 @@ class PhyloTree : public MTree, public Optimization {
 
 	friend class PhyloSuperTree;
 	friend class PhyloSuperTreePlen;
+	friend class RateGamma;
+	friend class RateKategory;
 
 public:
     /**
@@ -511,8 +513,7 @@ public:
      */
     virtual void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
-    void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL,
-            double *pattern_scale = NULL);
+    void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
 
     template<int NSTATES>
     inline void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
@@ -543,8 +544,8 @@ public:
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
-    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad,
-            double *pattern_lh = NULL, double *pattern_rate = NULL);
+//    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL, double *pattern_rate = NULL);
+    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
     /**
             compute tree likelihood when a branch length collapses to zero

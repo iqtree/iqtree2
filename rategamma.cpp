@@ -176,19 +176,44 @@ void RateGamma::writeParameters(ostream &out) {
 
 void RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
-	int npattern = phylo_tree->aln->getNPattern();
-	double *ptn_rates = new double[npattern];
-	phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0],
-		(PhyloNode*)phylo_tree->root, NULL, ptn_rates);
+//	double *ptn_rates = new double[npattern];
+	if (phylo_tree->sse == LK_NORMAL || phylo_tree->sse == LK_SSE)
+		phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
+	else {
+		switch (phylo_tree->aln->num_states) {
+		case 4: phylo_tree->computeLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+		case 20: phylo_tree->computeLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+		case 2: phylo_tree->computeLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
+		}
+	}
 
-	pattern_rates.clear();
-	pattern_rates.insert(pattern_rates.begin(), ptn_rates, ptn_rates + npattern);
-	pattern_cat.resize(npattern, 0);
-	for (int i = 0; i < npattern; i++)
-		for (int j = 1; j < ncategory; j++)
-			if (fabs(rates[j] - ptn_rates[i]) < fabs(rates[pattern_cat[i]] - ptn_rates[i]))
-				pattern_cat[i] = j;
-	delete [] ptn_rates;
+	int npattern = phylo_tree->aln->getNPattern();
+	pattern_rates.resize(npattern);
+	pattern_cat.resize(npattern);
+
+	double *lh_cat = phylo_tree->_pattern_lh_cat;
+	for (int i = 0; i < npattern; i++) {
+		double sum_rate = 0.0, sum_lh = 0.0;
+		int best = 0;
+		for (int c = 0; c < ncategory; c++) {
+			sum_rate += rates[c] * lh_cat[c];
+			sum_lh += lh_cat[c];
+			if (lh_cat[c] > lh_cat[best]) best = c;
+		}
+		pattern_rates[i] = sum_rate / sum_lh;
+		pattern_cat[i] = best;
+		lh_cat += ncategory;
+	}
+
+//	pattern_rates.clear();
+//	pattern_rates.insert(pattern_rates.begin(), ptn_rates, ptn_rates + npattern);
+//	pattern_cat.resize(npattern, 0);
+//	for (int i = 0; i < npattern; i++)
+//		for (int j = 1; j < ncategory; j++)
+//			if (fabs(rates[j] - ptn_rates[i]) < fabs(rates[pattern_cat[i]] - ptn_rates[i]))
+//				pattern_cat[i] = j;
+//	delete [] ptn_rates;
 }
 
 

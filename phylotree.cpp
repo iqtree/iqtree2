@@ -1370,7 +1370,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     		case 4: computeLikelihoodBranchEigen<4>(current_it, (PhyloNode*)current_it_back->node); break;
     		case 20: computeLikelihoodBranchEigen<20>(current_it, (PhyloNode*)current_it_back->node); break;
     		case 2: computeLikelihoodBranchEigen<2>(current_it, (PhyloNode*)current_it_back->node); break;
-    		default: outError("Option not supported yet"); break;
+    		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
     		}
     	}
 
@@ -2120,8 +2120,8 @@ void PhyloTree::computeAllBayesianBranchLengths(Node *node, Node *dad) {
     }
 }
 
-double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh,
-        double *pattern_rate) {
+//double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh, double *pattern_rate) {
+double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     //assert(node_branch);
@@ -2220,12 +2220,12 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
             }
             lh_ptn += lh_cat;
             _pattern_lh_cat[ptn * ncat + cat] = lh_cat;
-            if (pattern_rate)
-                rate_ptn += lh_cat * site_rate->getRate(cat);
+//            if (pattern_rate)
+//                rate_ptn += lh_cat * site_rate->getRate(cat);
         }
         if (ptn < orig_nptn) {
-			if (pattern_rate)
-				pattern_rate[ptn] = rate_ptn / lh_ptn;
+//			if (pattern_rate)
+//				pattern_rate[ptn] = rate_ptn / lh_ptn;
 			lh_ptn *= p_var_cat;
 			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
 				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
