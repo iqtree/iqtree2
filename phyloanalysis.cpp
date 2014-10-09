@@ -1023,10 +1023,6 @@ void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
 //extern pllAlignmentData *pllParsePHYLIPFromMem (const char *rawdata, long filesize);
 
 void createPLLPartition(Params &params, Alignment *alignment, IQTree &iqtree, ostream &pllPartitionFileHandle) {
-
-//    ofstream pllPartitionFileHandle;
-//    string pllPartitionFileName = string(params.out_prefix) + ".pll_partitions";
-//    pllPartitionFileHandle.open(pllPartitionFileName.c_str());
     if (iqtree.isSuperTree()) {
         PhyloSuperTree *siqtree = (PhyloSuperTree*) &iqtree;
         // additional check for stupid PLL hard limit
@@ -1055,16 +1051,17 @@ void createPLLPartition(Params &params, Alignment *alignment, IQTree &iqtree, os
         if (alignment->seq_type == SEQ_DNA) {
             model = "DNA";
         } else if (alignment->seq_type == SEQ_PROTEIN) {
-        	if (params.model_name != "" && params.model_name.substr(0, 4) != "TEST")
+        	if (params.pll && params.model_name != "" && params.model_name.substr(0, 4) != "TEST") {
         		model = params.model_name.substr(0, params.model_name.find_first_of("+{"));
-        	else
+        	} else {
         		model = "WAG";
+        	}
         } else {
-        	outError("PLL currently only supports DNA/protein alignments");
+        	model = "WAG";
+        	//outError("PLL currently only supports DNA/protein alignments");
         }
         pllPartitionFileHandle << model << ", p1 = " << "1-" << iqtree.getAlnNSite() << endl;
     }
-//    pllPartitionFileHandle.close();
 }
 
 void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignment, IQTree &iqtree,
@@ -1126,49 +1123,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), pllAlnStr.length());
 
         /* Read in the partition information */
-//        pllQueue *partitionInfo;
-//        ofstream pllPartitionFileHandle;
-//        string pllPartitionFileName = string(params.out_prefix) + ".pll_partitions";
-//        pllPartitionFileHandle.open(pllPartitionFileName.c_str());
-//        if (iqtree.isSuperTree()) {
-//            PhyloSuperTree *siqtree = (PhyloSuperTree*) &iqtree;
-//            // additional check for stupid PLL hard limit
-//            if (siqtree->size() > PLL_NUM_BRANCHES)
-//            	outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
-//            int i = 0;
-//            int startPos = 1;
-//            for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
-//                i++;
-//                int curLen = ((*it))->getAlnNSite();
-//                if ((*it)->aln->seq_type == SEQ_DNA) {
-//                    pllPartitionFileHandle << "DNA";
-//                } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
-//                	if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST")
-//                		pllPartitionFileHandle << siqtree->part_info[i-1].model_name.substr(0, siqtree->part_info[i-1].model_name.find_first_of("+{"));
-//                	else
-//                		pllPartitionFileHandle << "WAG";
-//                } else
-//                	outError("PLL only works with DNA/protein alignments");
-//                pllPartitionFileHandle << ", p" << i << " = " << startPos << "-" << startPos + curLen - 1 << endl;
-//                startPos = startPos + curLen;
-//            }
-//        } else {
-//            /* create a partition file */
-//            string model;
-//            if (alignment->seq_type == SEQ_DNA) {
-//                model = "DNA";
-//            } else if (alignment->seq_type == SEQ_PROTEIN) {
-//            	if (params.model_name != "" && params.model_name.substr(0, 4) != "TEST")
-//            		model = params.model_name.substr(0, params.model_name.find_first_of("+{"));
-//            	else
-//            		model = "WAG";
-//            } else {
-//            	outError("PLL currently only supports DNA/protein alignments");
-//            }
-//            pllPartitionFileHandle << model << ", p1 = " << "1-" << iqtree.getAlnNSite() << endl;
-//        }
-//        pllPartitionFileHandle.close();
-//        partitionInfo = pllPartitionParse(pllPartitionFileName.c_str());
+
 
         // BQM: to avoid printing file
         stringstream pllPartitionFileHandle;
