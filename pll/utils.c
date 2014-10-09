@@ -3464,3 +3464,11 @@ pllReadFile (const char * filename, long * filesize)
   return (rawdata);
 }
 
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+void* rax_calloc(size_t count, size_t size) {
+	void* res = rax_malloc(size * count);
+	memset(res,0,size * count);
+	return res;
+}
+#endif
+

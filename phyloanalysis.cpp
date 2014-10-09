@@ -1023,10 +1023,6 @@ void computeMLDist(double &longest_dist, string &dist_file, double begin_time,
 //extern pllAlignmentData *pllParsePHYLIPFromMem (const char *rawdata, long filesize);
 
 void createPLLPartition(Params &params, Alignment *alignment, IQTree &iqtree, ostream &pllPartitionFileHandle) {
-
-//    ofstream pllPartitionFileHandle;
-//    string pllPartitionFileName = string(params.out_prefix) + ".pll_partitions";
-//    pllPartitionFileHandle.open(pllPartitionFileName.c_str());
     if (iqtree.isSuperTree()) {
         PhyloSuperTree *siqtree = (PhyloSuperTree*) &iqtree;
         // additional check for stupid PLL hard limit
@@ -1055,16 +1051,17 @@ void createPLLPartition(Params &params, Alignment *alignment, IQTree &iqtree, os
         if (alignment->seq_type == SEQ_DNA) {
             model = "DNA";
         } else if (alignment->seq_type == SEQ_PROTEIN) {
-        	if (params.model_name != "" && params.model_name.substr(0, 4) != "TEST")
+        	if (params.pll && params.model_name != "" && params.model_name.substr(0, 4) != "TEST") {
         		model = params.model_name.substr(0, params.model_name.find_first_of("+{"));
-        	else
+        	} else {
         		model = "WAG";
+        	}
         } else {
-        	outError("PLL currently only supports DNA/protein alignments");
+        	model = "WAG";
+        	//outError("PLL currently only supports DNA/protein alignments");
         }
         pllPartitionFileHandle << model << ", p1 = " << "1-" << iqtree.getAlnNSite() << endl;
     }
-//    pllPartitionFileHandle.close();
 }
 
 void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignment, IQTree &iqtree,
@@ -1126,49 +1123,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), pllAlnStr.length());
 
         /* Read in the partition information */
-//        pllQueue *partitionInfo;
-//        ofstream pllPartitionFileHandle;
-//        string pllPartitionFileName = string(params.out_prefix) + ".pll_partitions";
-//        pllPartitionFileHandle.open(pllPartitionFileName.c_str());
-//        if (iqtree.isSuperTree()) {
-//            PhyloSuperTree *siqtree = (PhyloSuperTree*) &iqtree;
-//            // additional check for stupid PLL hard limit
-//            if (siqtree->size() > PLL_NUM_BRANCHES)
-//            	outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
-//            int i = 0;
-//            int startPos = 1;
-//            for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
-//                i++;
-//                int curLen = ((*it))->getAlnNSite();
-//                if ((*it)->aln->seq_type == SEQ_DNA) {
-//                    pllPartitionFileHandle << "DNA";
-//                } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
-//                	if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST")
-//                		pllPartitionFileHandle << siqtree->part_info[i-1].model_name.substr(0, siqtree->part_info[i-1].model_name.find_first_of("+{"));
-//                	else
-//                		pllPartitionFileHandle << "WAG";
-//                } else
-//                	outError("PLL only works with DNA/protein alignments");
-//                pllPartitionFileHandle << ", p" << i << " = " << startPos << "-" << startPos + curLen - 1 << endl;
-//                startPos = startPos + curLen;
-//            }
-//        } else {
-//            /* create a partition file */
-//            string model;
-//            if (alignment->seq_type == SEQ_DNA) {
-//                model = "DNA";
-//            } else if (alignment->seq_type == SEQ_PROTEIN) {
-//            	if (params.model_name != "" && params.model_name.substr(0, 4) != "TEST")
-//            		model = params.model_name.substr(0, params.model_name.find_first_of("+{"));
-//            	else
-//            		model = "WAG";
-//            } else {
-//            	outError("PLL currently only supports DNA/protein alignments");
-//            }
-//            pllPartitionFileHandle << model << ", p1 = " << "1-" << iqtree.getAlnNSite() << endl;
-//        }
-//        pllPartitionFileHandle.close();
-//        partitionInfo = pllPartitionParse(pllPartitionFileName.c_str());
+
 
         // BQM: to avoid printing file
         stringstream pllPartitionFileHandle;
@@ -1225,6 +1180,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     // start the search with user-defined tree
     if (params.user_file) {
+    	cout << endl;
         cout << "Reading input tree file " << params.user_file << " ..." << endl;
         bool myrooted = params.is_rooted;
         iqtree.readTree(params.user_file, myrooted);
@@ -1325,15 +1281,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     // set parameter for the current tree
     iqtree.setParams(params);
 
-    if (!params.pll) {
-        uint64_t mem_size = iqtree.getMemoryRequired();
-        cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
-                << " MB RAM is required!" << endl;
-        if (mem_size >= getMemorySize()) {
-            outError("Memory required exceeds your computer RAM size!");
-        }
-    }
-
     /********************************* END SET UP PARAMETERS ***************************************/
 
 
@@ -1375,65 +1322,18 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     	printAnalysisInfo(model_df, iqtree, params);
     }
 
-    // Optimize model parameters and branch lengths using ML for the initial tree
-    initTree = iqtree.optimizeModelParameters(true);
-    iqtree.setBestTree(initTree, iqtree.curScore);
-
-/*
-    if (params.pllModOpt) {
-        assert(params.pll);
-        cout << "Optimizing model parameters by PLL (logl epsilon = " << params.modeps << ") ...";
-        double stime = getCPUTime();
-        initTree = iqtree.getTreeString();
-        pllNewickTree *newick = pllNewickParseString(curTreeString.c_str());
-        pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
-        pllNewickParseDestroy(&newick);
-        pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-        pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, params.modeps);
-        iqtree.curScore = iqtree.pllInst->likelihood;
-        double etime = getCPUTime();
-        cout << etime - stime << " seconds" << endl;
-        iqtree.pllPrintModelParams();
-        cout << "Current tree log-likelihood: " << iqtree.curScore << endl;
-        cout << endl;
-        pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back,
-                PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-        initTree = string(iqtree.pllInst->tree_string);
-        iqtree.readTreeString(initTree);
-        if (params.count_trees) {
-            string tree = iqtree.getTopology();
-            if (pllTreeCounter.find(tree) == pllTreeCounter.end()) {
-                // not found in hash_map
-                pllTreeCounter[tree] = 1;
-            } else {
-                // found in hash_map
-                pllTreeCounter[tree]++;
-            }
-        }
-    } else {
+    if (!params.pll) {
         uint64_t mem_size = iqtree.getMemoryRequired();
         cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
                 << " MB RAM is required!" << endl;
         if (mem_size >= getMemorySize()) {
             outError("Memory required exceeds your computer RAM size!");
         }
-
-        cout << "Optimizing model parameters " << (params.optimize_model_rate_joint ? "jointly" : "")
-                << " (log-likelihood tolerance " << params.modeps << ")... " << endl;
-        iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true,
-                params.modeps);
-        initTree = iqtree.getTreeString();
-
-        if (params.pll) {
-            pllNewickTree *newick = pllNewickParseString(initTree.c_str());
-            pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-            pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-            iqtree.inputModelIQTree2PLL();
-            pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-            pllNewickParseDestroy(&newick);
-        }
     }
- */
+
+    // Optimize model parameters and branch lengths using ML for the initial tree
+    initTree = iqtree.optimizeModelParameters(true);
+
     /****************** END: INITIAL MODEL OPTIMIZATION *************************************/
 
     // Update best tree
@@ -1746,8 +1646,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 		}
 	}
 
-	iqtree.readTreeString(iqtree.bestTreeString);
-
 	if (!pruned_taxa.empty()) {
 		cout << "Restoring full tree..." << endl;
 		iqtree.restoreStableClade(alignment, pruned_taxa, linked_name);
@@ -1771,7 +1669,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
 	if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();
-	if (params.snni) {
+	if (params.snni && params.min_iterations) {
 		cout << "Logl of best " << params.popSize << " trees found: " << endl;
 		iqtree.candidateTrees.printBestScores();
 	}

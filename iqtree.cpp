@@ -1379,8 +1379,6 @@ double IQTree::doTreeSearch() {
                 printResultTree(iter_string.str());
             }
             printResultTree();
-        } else {
-            //searchinfo.curFailedIterNum++;
         }
 
         // check whether the tree can be put into the reference set
@@ -1534,11 +1532,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         if (searchinfo.speednni) {
             brans2Eval.clear();
             updateBrans2Eval(appliedNNIs);
-//            for (map<string, Branch>::iterator it = brans2Eval.begin(); it != brans2Eval.end(); it++) {
-//            	cout << it->first << ", ";
-//            }
-//            cout << endl;
-            //cout << "brans2Eval / appliedNNIs " << brans2Eval.size() << " / " << appliedNNIs.size() << endl;
             appliedNNIs.clear();
         }
 
@@ -1547,10 +1540,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
 		// curScore should be larger than score of the best NNI
         if (curScore > nonConfNNIs.at(0).newloglh ) {
-            // if the improvement is minimal, stop doing NNI
-        	if (fabs(curScore - oldScore) < 0.1) {
-        		break;
-        	}
             nni_count += numNNIs;
             rollBack = false;
         } else {
@@ -1592,8 +1581,8 @@ void IQTree::updateBrans2Eval(vector<NNIMove> nnis) {
     for (vector<NNIMove>::iterator it = nnis.begin(); it != nnis.end(); it++) {
         Branch bran((*it).node1, (*it).node2);
         brans2Eval.insert(pair<string, Branch>(bran.getKey(), bran));
-        getInBranches(brans2Eval, 1, (*it).node1, (*it).node2);
-        getInBranches(brans2Eval, 1, (*it).node2, (*it).node1);
+        getInBranches(brans2Eval, 2, (*it).node1, (*it).node2);
+        getInBranches(brans2Eval, 2, (*it).node2, (*it).node1);
     }
 }
 
