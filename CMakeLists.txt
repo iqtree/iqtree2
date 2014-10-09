@@ -41,7 +41,7 @@ elseif (UNIX)
   endif() 
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
-	message("Target OS     : Unknown")
+	message("Target OS     : Unknown (untested yet)")
 endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX) 
@@ -50,8 +50,10 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	#	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")  ## Strip binary
 	#endif()
 	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	message("Compiler      : Clang")
 else()
-	message("Compiler      : Unknown")
+	message("Compiler      : Unknown (untested yet)")
 endif()
 
 # verbose for 32 or 64 bit platform
@@ -225,12 +227,7 @@ set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
 # strip the release build
 if (CMAKE_BUILD_TYPE STREQUAL "Release") 
-	if (CMAKE_COMPILER_IS_GNUCXX) 
-		# ${CMAKE_STRIP} does not work with clang
-		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
-	else()
-		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND strip $<TARGET_FILE:iqtree>)
-	endif()
+	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
 endif()
 
 ##############################################################

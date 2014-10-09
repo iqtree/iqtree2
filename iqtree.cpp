@@ -1558,7 +1558,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             if (numNNIs == 1) {
                 cout << "ERROR / POSSIBLE BUG: current logl=" << curScore << " < " << nonConfNNIs.at(0).newloglh
                         << "(best NNI)" << endl;
-                exit(1);
+                abort();
             }
             if (verbose_mode >= VB_MED) {
                 cout << "New score = " << curScore << " after applying " << numNNIs <<
