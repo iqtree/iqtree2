@@ -170,7 +170,7 @@ void pllLockMPI (pllInstance * tr)
    {
      //MPI_Bcast (&numberOfPartitions, 1, MPI_INT, MPI_ROOT, MPI_COMM_WORLD);
      MPI_Bcast (&numberOfPartitions, 1, MPI_INT, 0, MPI_COMM_WORLD);
-     pr = (partitionList *) calloc (1, sizeof (partitionList));
+     pr = (partitionList *) rax_calloc (1, sizeof (partitionList));
      pr->numberOfPartitions = numberOfPartitions;
 
      pllWorkerTrap (tr, pr);

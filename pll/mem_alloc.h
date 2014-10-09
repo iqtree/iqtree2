@@ -15,22 +15,24 @@
 #endif
 #include "pll.h"
 
-#define rax_memalign memalign
-#define rax_malloc malloc
-#define rax_realloc realloc
+//#define rax_memalign memalign
+//#define rax_malloc malloc
+//#define rax_calloc calloc
+//#define rax_realloc realloc
 
-#define rax_free free
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
-//#define rax_posix_memalign(x,y,z) *(x) = _aligned_malloc((z),(y))
-#define rax_posix_memalign(x,y,z) *(x) = malloc((z))
-#define rax_free_align _aligned_free
+#define rax_posix_memalign(ptr,alignment,size) *(ptr) = _aligned_malloc((size),(alignment))
+#define rax_malloc(size) _aligned_malloc((size), PLL_BYTE_ALIGNMENT)
+void *rax_calloc(size_t count, size_t size);
+#define rax_free _aligned_free
 #else
 #define rax_posix_memalign posix_memalign
-#define rax_free_align free
+#define rax_malloc malloc
+#define rax_calloc calloc
+#define rax_free free
 #endif
 
-#define rax_calloc calloc
 //#define rax_malloc_aligned(x) memalign(PLL_BYTE_ALIGNMENT,x)
 
 //void *rax_memalign(size_t align, size_t size);
