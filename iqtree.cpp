@@ -1379,8 +1379,6 @@ double IQTree::doTreeSearch() {
                 printResultTree(iter_string.str());
             }
             printResultTree();
-        } else {
-            //searchinfo.curFailedIterNum++;
         }
 
         // check whether the tree can be put into the reference set

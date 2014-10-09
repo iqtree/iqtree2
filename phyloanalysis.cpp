@@ -1180,6 +1180,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     // start the search with user-defined tree
     if (params.user_file) {
+    	cout << endl;
         cout << "Reading input tree file " << params.user_file << " ..." << endl;
         bool myrooted = params.is_rooted;
         iqtree.readTree(params.user_file, myrooted);
@@ -1280,15 +1281,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     // set parameter for the current tree
     iqtree.setParams(params);
 
-    if (!params.pll) {
-        uint64_t mem_size = iqtree.getMemoryRequired();
-        cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
-                << " MB RAM is required!" << endl;
-        if (mem_size >= getMemorySize()) {
-            outError("Memory required exceeds your computer RAM size!");
-        }
-    }
-
     /********************************* END SET UP PARAMETERS ***************************************/
 
 
@@ -1330,65 +1322,18 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
     	printAnalysisInfo(model_df, iqtree, params);
     }
 
-    // Optimize model parameters and branch lengths using ML for the initial tree
-    initTree = iqtree.optimizeModelParameters(true);
-    iqtree.setBestTree(initTree, iqtree.curScore);
-
-/*
-    if (params.pllModOpt) {
-        assert(params.pll);
-        cout << "Optimizing model parameters by PLL (logl epsilon = " << params.modeps << ") ...";
-        double stime = getCPUTime();
-        initTree = iqtree.getTreeString();
-        pllNewickTree *newick = pllNewickParseString(curTreeString.c_str());
-        pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
-        pllNewickParseDestroy(&newick);
-        pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-        pllOptimizeModelParameters(iqtree.pllInst, iqtree.pllPartitions, params.modeps);
-        iqtree.curScore = iqtree.pllInst->likelihood;
-        double etime = getCPUTime();
-        cout << etime - stime << " seconds" << endl;
-        iqtree.pllPrintModelParams();
-        cout << "Current tree log-likelihood: " << iqtree.curScore << endl;
-        cout << endl;
-        pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back,
-                PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-        initTree = string(iqtree.pllInst->tree_string);
-        iqtree.readTreeString(initTree);
-        if (params.count_trees) {
-            string tree = iqtree.getTopology();
-            if (pllTreeCounter.find(tree) == pllTreeCounter.end()) {
-                // not found in hash_map
-                pllTreeCounter[tree] = 1;
-            } else {
-                // found in hash_map
-                pllTreeCounter[tree]++;
-            }
-        }
-    } else {
+    if (!params.pll) {
         uint64_t mem_size = iqtree.getMemoryRequired();
         cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
                 << " MB RAM is required!" << endl;
         if (mem_size >= getMemorySize()) {
             outError("Memory required exceeds your computer RAM size!");
         }
-
-        cout << "Optimizing model parameters " << (params.optimize_model_rate_joint ? "jointly" : "")
-                << " (log-likelihood tolerance " << params.modeps << ")... " << endl;
-        iqtree.curScore = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true,
-                params.modeps);
-        initTree = iqtree.getTreeString();
-
-        if (params.pll) {
-            pllNewickTree *newick = pllNewickParseString(initTree.c_str());
-            pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-            pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
-            iqtree.inputModelIQTree2PLL();
-            pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-            pllNewickParseDestroy(&newick);
-        }
     }
- */
+
+    // Optimize model parameters and branch lengths using ML for the initial tree
+    initTree = iqtree.optimizeModelParameters(true);
+
     /****************** END: INITIAL MODEL OPTIMIZATION *************************************/
 
     // Update best tree
@@ -1701,8 +1646,6 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 		}
 	}
 
-	iqtree.readTreeString(iqtree.bestTreeString);
-
 	if (!pruned_taxa.empty()) {
 		cout << "Restoring full tree..." << endl;
 		iqtree.restoreStableClade(alignment, pruned_taxa, linked_name);
@@ -1726,7 +1669,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
 	if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();
-	if (params.snni) {
+	if (params.snni && params.min_iterations) {
 		cout << "Logl of best " << params.popSize << " trees found: " << endl;
 		iqtree.candidateTrees.printBestScores();
 	}
