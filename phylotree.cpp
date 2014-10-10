@@ -2176,7 +2176,6 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
 #endif
     for (ptn = 0; ptn < nptn; ptn++) {
         double lh_ptn = 0.0; // likelihood of the pattern
-        double rate_ptn = 0.0;
         int dad_state = 1000; // just something big enough
         int ptn_cat = site_rate->getPtnCat(ptn);
         if (dad->name == ROOT_NAME && root_state != aln->STATE_UNKNOWN) {

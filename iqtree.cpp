@@ -1539,16 +1539,16 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
 
 		// curScore should be larger than score of the best NNI
-        if (curScore > nonConfNNIs.at(0).newloglh ) {
+        if (curScore >= nonConfNNIs.at(0).newloglh ) {
             nni_count += numNNIs;
             rollBack = false;
         } else {
             /* tree cannot be worse if only 1 NNI is applied */
-            if (numNNIs == 1) {
-                cout << "ERROR / POSSIBLE BUG: current logl=" << curScore << " < " << nonConfNNIs.at(0).newloglh
-                        << "(best NNI)" << endl;
-                abort();
-            }
+//            if (numNNIs == 1) {
+//                cout << "ERROR / POSSIBLE BUG: current logl=" << curScore << " < " << nonConfNNIs.at(0).newloglh
+//                        << "(best NNI)" << endl;
+//                abort();
+//            }
             if (verbose_mode >= VB_MED) {
                 cout << "New score = " << curScore << " after applying " << numNNIs <<
                         " is worse than score = " << nonConfNNIs.at(0).newloglh
