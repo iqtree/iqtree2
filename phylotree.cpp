@@ -1125,7 +1125,7 @@ void PhyloTree::initializeAllPartialLh() {
         ptn_invar = aligned_alloc_double(mem_size);
     initializeAllPartialLh(index, indexlh);
     assert(index == (nodeNum - 1) * 2);
-    if (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE)
+    if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
     	assert(indexlh == (nodeNum-1)*2-leafNum);
     else
     	assert(indexlh == (nodeNum-1)*2);
@@ -1159,7 +1159,7 @@ uint64_t PhyloTree::getMemoryRequired() {
     if (site_rate)
     	block_size *= site_rate->getNRate();
     uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2;
-    if (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE)
+    if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
     	mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
 
     return mem_size;
@@ -1168,7 +1168,6 @@ uint64_t PhyloTree::getMemoryRequired() {
 void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
     size_t pars_block_size = getBitsBlockSize();
     size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
-    size_t scale_block_size = nptn;
 #ifdef __AVX
     // block size must be divisible by 4
     size_t block_size = ((nptn+3)/4)*4;
@@ -1176,6 +1175,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
     // block size must be divisible by 2
     size_t block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
 #endif
+    size_t scale_block_size = nptn;
 
     block_size = block_size * model->num_states * site_rate->getNRate();
     if (!node) {
@@ -1190,7 +1190,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         	default: tip_partial_lh_size *=(aln->num_states+1); break; // including gap
         	}*/
             uint64_t mem_size = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
-            if (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE)
+            if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
             	mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
             try {
             	central_partial_lh = new double[mem_size];
@@ -1203,23 +1203,27 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             size_t mem_shift = 0;
             if (((intptr_t) central_partial_lh) % MEM_ALIGNMENT != 0)
             	mem_shift = (MEM_ALIGNMENT - (((intptr_t) central_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
-            if (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE)
+            if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
             	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size + mem_shift);
             else
             	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size + mem_shift);
         }
+
         if (!central_scale_num) {
+        	uint64_t mem_size = (leafNum - 1) * 4 * scale_block_size;
+        	if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
+        		mem_size -= (uint64_t)leafNum * (uint64_t) scale_block_size;
             if (verbose_mode >= VB_MED)
-                cout << "Allocating " << (leafNum - 1) * 4 * scale_block_size * sizeof(UBYTE)
-                        << " bytes for scale num vectors" << endl;
+                cout << "Allocating " << mem_size * sizeof(UBYTE) << " bytes for scale num vectors" << endl;
             try {
-            	central_scale_num = new UBYTE[(leafNum - 1) * 4 * scale_block_size];
+            	central_scale_num = new UBYTE[mem_size];
             } catch (std::bad_alloc &ba) {
             	outError("Not enough memory for scale num vectors (bad_alloc)");
             }
             if (!central_scale_num)
                 outError("Not enough memory for scale num vectors");
         }
+
         if (!central_partial_pars) {
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << (leafNum - 1) * 4 * pars_block_size * sizeof(UINT)
@@ -1243,25 +1247,28 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
         PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
         //assert(!nei->partial_lh);
-        if (nei->node->isLeaf() && (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE))
+        if (nei->node->isLeaf() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
         	nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
-        else {
+        	nei->scale_num = NULL;
+        } else {
+            nei->scale_num = central_scale_num + (indexlh * scale_block_size);
         	nei->partial_lh = central_partial_lh + (indexlh * block_size + mem_shift);
         	indexlh++;
         }
-        nei->scale_num = central_scale_num + (index * scale_block_size);
         nei->partial_pars = central_partial_pars + (index * pars_block_size);
+        index++;
         nei = (PhyloNeighbor*) dad->findNeighbor(node);
         //assert(!nei->partial_lh);
-        if (nei->node->isLeaf() && (sse == LK_EIGEN || sse == LK_EIGEN_TIP_SSE))
+        if (nei->node->isLeaf() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
         	nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
-        else {
+        	nei->scale_num = NULL;
+        } else {
+            nei->scale_num = central_scale_num + ((indexlh) * scale_block_size);
         	nei->partial_lh = central_partial_lh + (indexlh * block_size + mem_shift);
         	indexlh++;
         }
-        nei->scale_num = central_scale_num + ((index + 1) * scale_block_size);
-        nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
-        index += 2;
+        nei->partial_pars = central_partial_pars + (index * pars_block_size);
+        index ++;
         assert(index < nodeNum * 2 - 1);
     }
     FOR_NEIGHBOR_IT(node, dad, it) initializeAllPartialLh(index, indexlh, (PhyloNode*) (*it)->node, node);
@@ -1288,28 +1295,12 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     assert(model);
     assert(site_rate);
     assert(root->isLeaf());
-    //double *ptn_scale = NULL;
     PhyloNeighbor *nei = ((PhyloNeighbor*) root->neighbors[0]);
     current_it = nei;
     assert(current_it);
     current_it_back = (PhyloNeighbor*) nei->node->findNeighbor(root);
     assert(current_it_back);
-    //    double sum_scaling = nei->lh_scale_factor;
-    //    double check = 0.0;
-    /*    if (pattern_lh) {
-     if (sum_scaling < 0.0) {
-     ptn_scale   qqqqqq= new double[nptn];
-     memset(ptn_scale, 0, sizeof (double) * nptn);
-     for (int i = 0; i < nptn; i++) {
-     ptn_scale[i] = max(nei->scale_num[i],UBYTE(0)) * LOG_SCALING_THRESHOLD;
-     check += ptn_scale[i] * aln->at(i).frequency;
-     }
-     if (fabs(check-sum_scaling) > 1e-3) {
-     outError("sum_scaling does not match", __func__);
-     }
-     //clearAllPartialLh();
-     }
-     }*/
+
     double score;
     string root_name = ROOT_NAME;
     Node *vroot = findLeafName(root_name);
@@ -1331,7 +1322,6 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
          cout << "score = " << score << " check_score = " << check_score << endl;
          outError("Scaling error ", __func__);
          }*/
-        //delete [] ptn_scale;
     }
     return score;
 }
@@ -1349,8 +1339,9 @@ double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *
     }
     double* state_freq = new double[aln->num_states];
     model->getStateFrequency(state_freq);
-    return score - log(state_freq[(int) root_state]);
+    score -= log(state_freq[(int) root_state]);
     delete[] state_freq;
+    return score;
 }
 
 void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat) {
@@ -1378,21 +1369,50 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
     //double sum_scaling = 0.0;
     if (sum_scaling < 0.0) {
-        for (i = 0; i < nptn; i++) {
-        	ptn_lh[i] = _pattern_lh[i] + (max(UBYTE(0), current_it->scale_num[i]) +
-            	max(UBYTE(0), current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
-        }
+    	if (current_it->lh_scale_factor == 0.0) {
+			for (i = 0; i < nptn; i++) {
+				ptn_lh[i] = _pattern_lh[i] + (max(UBYTE(0), current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
+			}
+    	} else if (current_it_back->lh_scale_factor == 0.0){
+			for (i = 0; i < nptn; i++) {
+				ptn_lh[i] = _pattern_lh[i] + (max(UBYTE(0), current_it->scale_num[i])) * LOG_SCALING_THRESHOLD;
+			}
+    	} else {
+			for (i = 0; i < nptn; i++) {
+				ptn_lh[i] = _pattern_lh[i] + (max(UBYTE(0), current_it->scale_num[i]) +
+					max(UBYTE(0), current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
+			}
+    	}
     } else {
         memmove(ptn_lh, _pattern_lh, nptn * sizeof(double));
     }
     if (ptn_lh_cat) {
     	int offset = 0;
-        for (i = 0; i < nptn; i++) {
-        	double scale = (max(UBYTE(0), current_it->scale_num[i]) +
-	            	max(UBYTE(0), current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
-        	for (int j = 0; j < ncat; j++, offset++)
-        		ptn_lh_cat[offset] = log(_pattern_lh_cat[offset]) + scale;
-        }
+    	if (sum_scaling == 0.0) {
+    		int nptncat = nptn * ncat;
+            for (i = 0; i < nptncat; i++) {
+            	ptn_lh_cat[i] = log(_pattern_lh_cat[i]);
+            }
+    	} else if (current_it->lh_scale_factor == 0.0) {
+			for (i = 0; i < nptn; i++) {
+				double scale = (max(UBYTE(0), current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
+				for (int j = 0; j < ncat; j++, offset++)
+					ptn_lh_cat[offset] = log(_pattern_lh_cat[offset]) + scale;
+			}
+    	} else if (current_it_back->lh_scale_factor == 0.0) {
+			for (i = 0; i < nptn; i++) {
+				double scale = (max(UBYTE(0), current_it->scale_num[i])) * LOG_SCALING_THRESHOLD;
+				for (int j = 0; j < ncat; j++, offset++)
+					ptn_lh_cat[offset] = log(_pattern_lh_cat[offset]) + scale;
+			}
+    	} else {
+			for (i = 0; i < nptn; i++) {
+				double scale = (max(UBYTE(0), current_it->scale_num[i]) +
+						max(UBYTE(0), current_it_back->scale_num[i])) * LOG_SCALING_THRESHOLD;
+				for (int j = 0; j < ncat; j++, offset++)
+					ptn_lh_cat[offset] = log(_pattern_lh_cat[offset]) + scale;
+			}
+    	}
     }
 //    if (cur_logl) {
 //        double check_score = 0.0;

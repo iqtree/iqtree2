@@ -2190,7 +2190,27 @@ int main(int argc, char *argv[])
 	cout.precision(3);
 	cout << fixed;
 	cout << "Memory:  " << ((getMemorySize()/1024.0)/1024)/1024 << " GB RAM detected" << endl;
-	
+
+	cout << "Kernel:  ";
+	if (params.pll) {
+#ifdef __AVX
+		cout << "PLL-AVX";
+#else
+		cout << "PLL-SSE3";
+#endif
+	} else {
+		switch (params.SSE) {
+		case LK_NORMAL: cout << "Slow"; break;
+		case LK_SSE: cout << "Slow SSE3"; break;
+		case LK_EIGEN: cout << "No SSE"; break;
+		case LK_EIGEN_SSE:
+#ifdef __AVX
+			cout << "AVX"; break;
+#else
+			cout << "SSE3"; break;
+#endif
+		}
+	}
 	/*
 	int instrset = instrset_detect();
 	cout << "CPU:     " << instrset << endl;
@@ -2200,12 +2220,15 @@ int main(int argc, char *argv[])
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
 	int max_threads = omp_get_max_threads();
 	int max_procs = omp_get_num_procs();
-	cout << "Threads: " << max_threads << " (" << max_procs << " CPU cores detected)" << endl;
-	if (max_threads > max_procs) outWarning("You have specified more threads than CPU cores available");
+	cout << << max_threads << " threads (" << max_procs << " CPU cores detected)";
+	if (max_threads > max_procs) {
+		cout << endl;
+		outWarning("You have specified more threads than CPU cores available");
+	}
 	omp_set_nested(false); // don't allow nested OpenMP parallelism
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
-	cout << endl;
+	cout << endl << endl;
 	
 	// call the main function
 	if (params.tree_gen != NONE) {

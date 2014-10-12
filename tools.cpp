@@ -684,7 +684,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_threshold = 101;
     params.aLRT_replicates = 0;
     params.localbp_replicates = 0;
-    params.SSE = LK_EIGEN_TIP_SSE;
+    params.SSE = LK_EIGEN_SSE;
     params.print_site_lh = 0;
     params.print_site_rate = false;
     params.print_tree_lh = false;
@@ -775,6 +775,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_conaln = false;
 	params.count_trees = false;
 	params.print_branch_lengths = false;
+	params.lh_mem_save = -1; // auto detect
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1331,12 +1332,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Lambda must be in (0,1]";
             } else if (strcmp(argv[cnt], "-nosse") == 0) {
                 params.SSE = LK_NORMAL;
-            } else if (strcmp(argv[cnt], "-sse") == 0) {
+            } else if (strcmp(argv[cnt], "-slowsse") == 0) {
                 params.SSE = LK_SSE;
             } else if (strcmp(argv[cnt], "-fastlk") == 0) {
                 params.SSE = LK_EIGEN;
             } else if (strcmp(argv[cnt], "-fastsse") == 0 || strcmp(argv[cnt], "-fasttipsse") == 0) {
-                params.SSE = LK_EIGEN_TIP_SSE;
+                params.SSE = LK_EIGEN_SSE;
             } else if (strcmp(argv[cnt], "-f") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1651,6 +1652,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.online_bootstrap = false;
             } else if (strcmp(argv[cnt], "-nostore") == 0 || strcmp(argv[cnt], "-memsave") == 0) {
                 params.store_candidate_trees = false;
+            } else if (strcmp(argv[cnt], "-lhmemsave") == 0) {
+                params.lh_mem_save = 1;
+            } else if (strcmp(argv[cnt], "-nolhmemsave") == 0) {
+                params.lh_mem_save = 0;
             } else if (strcmp(argv[cnt], "-storetrees") == 0) {
                 params.store_candidate_trees = true;
             } else if (strcmp(argv[cnt], "-nodiff") == 0) {

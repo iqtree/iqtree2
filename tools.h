@@ -378,7 +378,7 @@ struct NNIInfo {
 };
 
 enum LikelihoodKernel {
-	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_TIP_SSE
+	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_SSE
 };
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
@@ -1472,6 +1472,11 @@ struct Params {
 
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
+
+	/* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
+	 * 0: store all partial likelihood vectors
+	 * 1: only store 1 partial likelihood vector per node */
+	int lh_mem_save;
 };
 
 /**
