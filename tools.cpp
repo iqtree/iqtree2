@@ -775,7 +775,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_conaln = false;
 	params.count_trees = false;
 	params.print_branch_lengths = false;
-	params.lh_mem_save = -1; // auto detect
+	params.lh_mem_save = LM_DETECT; // auto detect
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1653,9 +1653,9 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-nostore") == 0 || strcmp(argv[cnt], "-memsave") == 0) {
                 params.store_candidate_trees = false;
             } else if (strcmp(argv[cnt], "-lhmemsave") == 0) {
-                params.lh_mem_save = 1;
+                params.lh_mem_save = LM_PER_NODE;
             } else if (strcmp(argv[cnt], "-nolhmemsave") == 0) {
-                params.lh_mem_save = 0;
+                params.lh_mem_save = LM_ALL_BRANCH;
             } else if (strcmp(argv[cnt], "-storetrees") == 0) {
                 params.store_candidate_trees = true;
             } else if (strcmp(argv[cnt], "-nodiff") == 0) {

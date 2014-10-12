@@ -381,6 +381,10 @@ enum LikelihoodKernel {
 	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_SSE
 };
 
+enum LhMemSave {
+	LM_DETECT, LM_ALL_BRANCH, LM_PER_NODE
+};
+
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
 
@@ -1476,7 +1480,7 @@ struct Params {
 	/* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
 	 * 0: store all partial likelihood vectors
 	 * 1: only store 1 partial likelihood vector per node */
-	int lh_mem_save;
+	LhMemSave lh_mem_save;
 };
 
 /**

@@ -108,7 +108,7 @@ inline void aligned_free(void *mem) {
 #define VectorClassFloat Vec8f
 #define VCSIZE_MASTER 4
 #define VCSIZE_FLOAT 8
-#pragma message "Using AVX instructions"
+//#pragma message "Using AVX instructions"
 #else
 #define VectorClassMaster Vec2d
 #define VectorClassFloat Vec4f

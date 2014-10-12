@@ -2174,7 +2174,13 @@ int main(int argc, char *argv[])
 	//fgets(hostname, sizeof(hostname), pfile);
 	//pclose(pfile);
 
-	cout << "Host:    " << hostname << endl;
+	cout << "Host:    " << hostname << " (";
+#if defined __APPLE__ || defined __MACH__
+	cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM detected)" << endl;
+#else
+	cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM detected)" << endl;
+#endif
+
 	cout << "Command:";
 	for (int i = 0; i < argc; i++)
 		cout << " " << argv[i];
@@ -2186,10 +2192,6 @@ int main(int argc, char *argv[])
 	time_t cur_time;
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
-
-	cout.precision(3);
-	cout << fixed;
-	cout << "Memory:  " << ((getMemorySize()/1024.0)/1024)/1024 << " GB RAM detected" << endl;
 
 	cout << "Kernel:  ";
 	if (params.pll) {
@@ -2220,7 +2222,7 @@ int main(int argc, char *argv[])
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
 	int max_threads = omp_get_max_threads();
 	int max_procs = omp_get_num_procs();
-	cout << << max_threads << " threads (" << max_procs << " CPU cores detected)";
+	cout << " - " << max_threads << " threads (" << max_procs << " CPU cores detected)";
 	if (max_threads > max_procs) {
 		cout << endl;
 		outWarning("You have specified more threads than CPU cores available");
@@ -2229,7 +2231,9 @@ int main(int argc, char *argv[])
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl << endl;
-	
+	cout.precision(3);
+	cout.setf(ios::fixed);
+
 	// call the main function
 	if (params.tree_gen != NONE) {
 		generateRandomTree(params);
