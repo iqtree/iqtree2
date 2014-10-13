@@ -217,7 +217,11 @@ candidateset.cpp
 
 # link special lib for WIN32
 if (WIN32)
-	target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32)
+	if (IQTREE_FLAGS MATCHES "omp")
+		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32 pthread)
+	else()
+		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32)	
+	endif()
 else (WIN32)
 	target_link_libraries(iqtree pll ncl whtest zlibstatic sprng m)
 endif (WIN32)
@@ -241,8 +245,8 @@ install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.nex" DESTINATION exampl
 install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.budget" DESTINATION examples)
 if (WIN32)
 	if (EXE_SUFFIX MATCHES "omp")
-		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
-		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
+#		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
+#		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
 	endif()
 endif()
 #install (FILES "${PROJECT_BINARY_DIR}/iqtree_config.h"        
