@@ -1585,16 +1585,17 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                             if (modOptScore < iqtree.curScore - 1e-3) {
                                 cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
                                 cout << "  Old logl: " << iqtree.curScore << " / " << "new logl: " << modOptScore << endl;
-                                iqtree.readTreeString(nniTree);
-                                iqtree.initializeAllPartialLh();
-                                iqtree.clearAllPartialLH();
-                                if (iqtree.aln->num_states == 4) {
-                                    assert(rate_param_bk != NULL);
-                                    ((GTRModel*) iqtree.getModel())->setRateMatrix(rate_param_bk);
-                                }
-                                dynamic_cast<RateGamma*>(iqtree.getRate())->setGammaShape(alpha_bk);
-                                iqtree.getModel()->decomposeRateMatrix();
-                                cout << "Reset rate parameters!" << endl;
+                                abort();
+//                                iqtree.readTreeString(nniTree);
+//                                iqtree.initializeAllPartialLh();
+//                                iqtree.clearAllPartialLH();
+//                                if (iqtree.aln->num_states == 4) {
+//                                    assert(rate_param_bk != NULL);
+//                                    ((GTRModel*) iqtree.getModel())->setRateMatrix(rate_param_bk);
+//                                }
+//                                dynamic_cast<RateGamma*>(iqtree.getRate())->setGammaShape(alpha_bk);
+//                                iqtree.getModel()->decomposeRateMatrix();
+//                                cout << "Reset rate parameters!" << endl;
                                 // There is something wrong with this alignment, stop optimizing model parameters
                             } else {
                                 iqtree.curScore = modOptScore;
@@ -2032,8 +2033,8 @@ void runPhyloAnalysis(Params &params) {
 	if (params.partition_file) {
 		if(params.partition_type){
 			// since nni5 does not work yet, stop the programm
-			if(params.nni5)
-				outError("-nni5 option is unsupported yet for proportitional partition model. please use -nni1 option");
+/*			if(params.nni5)
+				outError("-nni5 option is unsupported yet for proportitional partition model. please use -nni1 option");*/
 			if(params.aLRT_replicates)
 				outError("-alrt option is unsupported yet for proportitional partition model");
 			// initialize supertree - Proportional Edges case, "-spt p" option
