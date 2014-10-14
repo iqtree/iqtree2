@@ -132,8 +132,13 @@ set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-on
 set(CMAKE_CXX_FLAGS_MEM "-g -O1")
 set(CMAKE_C_FLAGS_MEM "-g -O1")
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
-set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
+if (CMAKE_COMPILER_IS_GNUCXX) 
+	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
+	set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
+else ()
+	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline")
+	set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline")
+endif()
 
 # subdirectories containing necessary libraries for the build 
 add_subdirectory(pll)

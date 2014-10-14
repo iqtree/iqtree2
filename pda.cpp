@@ -2220,12 +2220,13 @@ int main(int argc, char *argv[])
 
 #ifdef _OPENMP
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
-	int max_threads = omp_get_max_threads();
+//	int max_threads = omp_get_max_threads();
+	params.num_threads = omp_get_max_threads();
 	int max_procs = omp_get_num_procs();
-	cout << " - " << max_threads << " threads (" << max_procs << " CPU cores detected)";
-	if (max_threads > max_procs) {
+	cout << " - " << params.num_threads  << " threads (" << max_procs << " CPU cores detected)";
+	if (params.num_threads  > max_procs) {
 		cout << endl;
-		outWarning("You have specified more threads than CPU cores available");
+		outError("You have specified more threads than CPU cores available");
 	}
 	omp_set_nested(false); // don't allow nested OpenMP parallelism
 #endif
