@@ -2330,5 +2330,6 @@ int main(int argc, char *argv[])
 	time(&cur_time);
 	cout << "Date and Time: " << ctime(&cur_time);
 
+	finish_random();
 	return EXIT_SUCCESS;
 }

@@ -829,34 +829,64 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
+    	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block];
+    	IntVector states_dad = aln->seq_states[dad->id];
+    	states_dad.push_back(aln->STATE_UNKNOWN);
+//    	cout << "here" << endl;
+    	// precompute information from one tip
+    	for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
+    		double *lh_node = partial_lh_node +(*it)*block;
+    		double *lh_tip = tip_partial_lh + (*it)*nstates;
+    		double *val_tmp = val;
+			for (c = 0; c < ncat; c++) {
+				for (i = 0; i < nstates; i++) {
+					  lh_node[i] = val_tmp[i] * lh_tip[i];
+				}
+				lh_node += nstates;
+				val_tmp += nstates;
+			}
+    	}
+//    	cout.unsetf(ios::fixed);
+//		for (c = 0; c < ncat; c++) {
+//			for (i = 0; i < nstates; i++)
+//				cout << partial_lh_node[aln->STATE_UNKNOWN * block + c*nstates+i] << "\t";
+//			cout << endl;
+//		}
+//		exit(0);
+
+    	// now do the real computation
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = 0.0;
 			double *lh_cat = _pattern_lh_cat + ptn*ncat;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			int state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
-#ifdef USING_SSE
-			double *val_tmp = val;
-			MappedVec(nstates) ei_tip_partial_lh(tip_partial_lh+state_dad*nstates);
-			for (c = 0; c < ncat; c++){
-				MappedVec(nstates) ei_val(val_tmp);
-				MappedVec(nstates) ei_partial_lh_dad(partial_lh_dad);
-				*lh_cat = (ei_val.array() * ei_tip_partial_lh.array() * ei_partial_lh_dad.array()).sum();
-				lh_ptn += *lh_cat;
-				partial_lh_dad += nstates;
-				val_tmp += nstates;
-				lh_cat++;
-			}
-#else
+			double *lh_node = partial_lh_node + state_dad*block;
+//#ifdef USING_SSE
+//			double *val_tmp = val;
+//			MappedVec(nstates) ei_tip_partial_lh(tip_partial_lh+state_dad*nstates);
+//			for (c = 0; c < ncat; c++){
+//				MappedVec(nstates) ei_val(val_tmp);
+//				MappedVec(nstates) ei_partial_lh_dad(partial_lh_dad);
+//				*lh_cat = (ei_val.array() * ei_tip_partial_lh.array() * ei_partial_lh_dad.array()).sum();
+//				lh_ptn += *lh_cat;
+//				partial_lh_dad += nstates;
+//				val_tmp += nstates;
+//				lh_cat++;
+//			}
+//#else
 			for (c = 0; c < ncat; c++) {
 				for (i = 0; i < nstates; i++) {
-					*lh_cat +=  val[c*nstates+i] * tip_partial_lh[state_dad*nstates+i] * partial_lh_dad[c*nstates+i];
+//					*lh_cat +=  val[c*nstates+i] * tip_partial_lh[state_dad*nstates+i] * partial_lh_dad[c*nstates+i];
+					*lh_cat += lh_node[i] * partial_lh_dad[i];
 				}
+				lh_node += nstates;
+				partial_lh_dad += nstates;
 				lh_ptn += *lh_cat;
 				lh_cat++;
 			}
 //			partial_lh_dad += block;
-#endif
+//#endif
 			lh_ptn = lh_ptn*p_var_cat + ptn_invar[ptn];
 			if (ptn < orig_nptn) {
 				lh_ptn = log(lh_ptn);
@@ -866,6 +896,7 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 				prob_const += lh_ptn;
 			}
 		}
+		delete [] partial_lh_node;
     } else {
     	// both dad and node are internal nodes
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)

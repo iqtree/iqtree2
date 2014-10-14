@@ -1872,6 +1872,11 @@ double computePValueChiSquare(double x, int df);
 int init_random(int seed);
 
 /**
+ * finalize random number generator (e.g. free memory
+ */
+int finish_random();
+
+/**
  * returns a random integer in the range [0; n - 1]
  * @param n upper-bound of random number
  */

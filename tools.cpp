@@ -2203,6 +2203,11 @@ int init_random(int seed) {
     return seed;
 }
 
+int finish_random() {
+	return 0;
+}
+
+
 #elif RAN_TYPE == RAN_RAND4
 /******************************************************************************/
 /* random numbers generator  (Numerical recipes)                              */
@@ -2314,6 +2319,9 @@ int init_random(int seed) /* RAND4 */ {
     return (seed);
 } /* initrandom */
 
+int finish_random() {
+	return 0;
+}
 /******************/
 
 #else /* SPRNG */
@@ -2346,6 +2354,9 @@ int init_random(int seed) {
     return (seed);
 } /* initrandom */
 
+int finish_random() {
+	return free_sprng(randstream);
+}
 
 #endif /* USE_SPRNG */
 

@@ -237,6 +237,16 @@ void IQTree::setParams(Params &params) {
     }
 }
 
+void myPartitionsDestroy(partitionList *pl) {
+	int i;
+	for (i = 0; i < pl->numberOfPartitions; i++) {
+		rax_free(pl->partitionData[i]->partitionName);
+		rax_free(pl->partitionData[i]);
+	}
+	rax_free(pl->partitionData);
+	rax_free(pl);
+}
+
 IQTree::~IQTree() {
     //if (bonus_values)
     //delete bonus_values;
@@ -255,6 +265,10 @@ IQTree::~IQTree() {
     for (vector<SplitGraph*>::reverse_iterator it2 = boot_splits.rbegin(); it2 != boot_splits.rend(); it2++)
         delete (*it2);
     //if (boot_splits) delete boot_splits;
+    if (pllPartitions)
+    	myPartitionsDestroy(pllPartitions);
+    if (pllAlignment)
+    	pllAlignmentDataDestroy(pllAlignment);
     if (pllInst)
         pllDestroyInstance(pllInst);
 
@@ -1108,36 +1122,33 @@ string IQTree::optimizeModelParameters(bool printInfo) {
 		newTree = string(pllInst->tree_string);
 	} else {
 		string curTree = getTreeString();
-		double *rate_param_bk = NULL;
-		if (aln->num_states == 4) {
-			rate_param_bk = new double[6];
-			getModel()->getRateMatrix(rate_param_bk);
-		}
-		double alpha_bk = getRate()->getGammaShape();
-		cout << "Estimate model parameters (epsilon = " << params->modeps << ")"
-				<< endl;
+//		double *rate_param_bk = NULL;
+//		if (aln->num_states == 4) {
+//			rate_param_bk = new double[6];
+//			getModel()->getRateMatrix(rate_param_bk);
+//		}
+//		double alpha_bk = getRate()->getGammaShape();
+		cout << "Estimate model parameters (epsilon = " << params->modeps << ")" << endl;
 		double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, params->modeps);
 		if (isSuperTree()) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
 		}
 
 		if (modOptScore < curScore - 1e-3) {
-			cout << "  BUG: Tree logl gets worse after model optimization!"
-					<< endl;
-			cout << "  Old logl: " << curScore << " / " << "new logl: "
-					<< modOptScore << endl;
+			cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
+			cout << "  Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
 			abort();
-			readTreeString(curTree);
-			initializeAllPartialLh();
-			newTree = curTree;
-			clearAllPartialLH();
-			if (aln->num_states == 4) {
-				assert(rate_param_bk != NULL);
-				((GTRModel*) getModel())->setRateMatrix(rate_param_bk);
-			}
-			dynamic_cast<RateGamma*>(getRate())->setGammaShape(alpha_bk);
-			getModel()->decomposeRateMatrix();
-			cout << "Reset rate parameters!" << endl;
+//			readTreeString(curTree);
+//			initializeAllPartialLh();
+//			newTree = curTree;
+//			clearAllPartialLH();
+//			if (aln->num_states == 4) {
+//				assert(rate_param_bk != NULL);
+//				((GTRModel*) getModel())->setRateMatrix(rate_param_bk);
+//			}
+//			dynamic_cast<RateGamma*>(getRate())->setGammaShape(alpha_bk);
+//			getModel()->decomposeRateMatrix();
+//			cout << "Reset rate parameters!" << endl;
 		} else {
 			curScore = modOptScore;
 			newTree = getTreeString();
