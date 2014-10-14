@@ -1121,11 +1121,12 @@ string IQTree::optimizeModelParameters(bool printInfo) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
 		}
 
-		if (modOptScore < curScore) {
+		if (modOptScore < curScore - 1e-3) {
 			cout << "  BUG: Tree logl gets worse after model optimization!"
 					<< endl;
 			cout << "  Old logl: " << curScore << " / " << "new logl: "
 					<< modOptScore << endl;
+			abort();
 			readTreeString(curTree);
 			initializeAllPartialLh();
 			newTree = curTree;
