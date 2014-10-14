@@ -1158,9 +1158,9 @@ uint64_t PhyloTree::getMemoryRequired() {
     block_size = block_size * aln->num_states;
     if (site_rate)
     	block_size *= site_rate->getNRate();
-    uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2;
+    uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2 + (leafNum - 1) * 4 * nptn * sizeof(UBYTE);
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
-    	mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
+    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size -  nptn * sizeof(UBYTE));
 
     return mem_size;
 }
