@@ -255,6 +255,11 @@ if (WIN32)
 #		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
 #	endif()
 endif()
+
+if (APPLE AND IQTREE_FLAGS MATCHES "omp")
+	install (FILES "${PROJECT_SOURCE_DIR}/lib/libiomp5.dylib" DESTINATION bin)
+endif()
+
 #install (FILES "${PROJECT_BINARY_DIR}/iqtree_config.h"        
 #         DESTINATION include)
 

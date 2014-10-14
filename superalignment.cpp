@@ -65,6 +65,7 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 	}
 	verbose_mode = save_mode;
 	countConstSite();
+    buildSeqStates();
 }
 
 void SuperAlignment::linkSubAlignment(int part) {
@@ -476,6 +477,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     	}
     }
     aln->countConstSite();
+    aln->buildSeqStates();
 
 	return aln;
 }
