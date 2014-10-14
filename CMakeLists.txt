@@ -217,11 +217,11 @@ candidateset.cpp
 
 # link special lib for WIN32
 if (WIN32)
-	if (IQTREE_FLAGS MATCHES "omp")
-		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32 pthread)
-	else()
+#	if (IQTREE_FLAGS MATCHES "omp")
+#		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32 pthread)
+#	else()
 		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32)	
-	endif()
+#	endif()
 else (WIN32)
 	target_link_libraries(iqtree pll ncl whtest zlibstatic sprng m)
 endif (WIN32)
@@ -234,20 +234,26 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
 	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
 endif()
 
+if (WIN32)
+	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "iqtree${EXE_SUFFIX}.exe" "iqtree${EXE_SUFFIX}-click.exe")
+endif()
+
 ##############################################################
 # add the install targets
 ##############################################################
 install (TARGETS iqtree DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/examples/example.phy" DESTINATION examples)
-install (FILES "${PROJECT_SOURCE_DIR}/examples/test.nex" DESTINATION examples)
-install (FILES "${PROJECT_SOURCE_DIR}/examples/test.budget" DESTINATION examples)
-install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.nex" DESTINATION examples)
-install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.budget" DESTINATION examples)
+#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.nex" DESTINATION examples)
+#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.budget" DESTINATION examples)
+#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.nex" DESTINATION examples)
+#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.budget" DESTINATION examples)
 if (WIN32)
-	if (EXE_SUFFIX MATCHES "omp")
+	install (FILES "${PROJECT_BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
+# obsolete: pthread is statically linked, so no dll is required anymore
+#	if (EXE_SUFFIX MATCHES "omp")
 #		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
 #		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
-	endif()
+#	endif()
 endif()
 #install (FILES "${PROJECT_BINARY_DIR}/iqtree_config.h"        
 #         DESTINATION include)
