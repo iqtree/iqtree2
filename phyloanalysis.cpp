@@ -1093,7 +1093,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.pllAttr.randomNumberSeed = params.ran_seed;
 #ifdef _OPENMP
         iqtree.pllAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
-        cout << "params.num_threads = " << params.num_threads << endl;
+//        cout << "params.num_threads = " << params.num_threads << endl;
 #else
         iqtree.pllAttr.numberOfThreads = 1;
 #endif
