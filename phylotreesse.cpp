@@ -88,6 +88,21 @@ inline double horizontal_max(Vec4d const &a) {
 #endif // __AVX
 //#define USING_SSE
 
+void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
+	if (sse == lk) return;
+	if ((sse == LK_EIGEN || sse == LK_EIGEN_SSE) && (lk == LK_NORMAL || lk == LK_SSE)) {
+		// need to increase the memory usage when changing from new kernel to old kernel
+		sse = lk;
+		deleteAllPartialLh();
+		initializeAllPartialLh();
+		clearAllPartialLH();
+	} else {
+		// otherwise simply assign variable sse
+		sse = lk;
+	}
+}
+
+
 void PhyloTree::computeTipPartialLikelihood() {
 	if (tip_partial_lh_computed)
 		return;
@@ -1670,12 +1685,9 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
     	for (ptn = nptn; ptn < maxptn; ptn++)
     		lh_states_dad[ptn] = &tip_partial_lh[aln->STATE_UNKNOWN * nstates];
 
-    	// same here
-    	if (nptn < maxptn) {
-    		// copy dummy values
-    		for (ptn = nptn; ptn < maxptn; ptn++)
-    			memcpy(&dad_branch->partial_lh[ptn*block], dad_branch->partial_lh, block*sizeof(double));
-    	}
+		// copy dummy values because VectorClass will access beyond nptn
+		for (ptn = nptn; ptn < maxptn; ptn++)
+			memcpy(&dad_branch->partial_lh[ptn*block], dad_branch->partial_lh, block*sizeof(double));
 
 #ifdef _OPENMP
 #pragma omp parallel private(ptn, i, j, vc_tip_partial_lh, vc_partial_lh_dad, vc_ptn, vc_freq, lh_ptn)

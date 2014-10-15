@@ -687,6 +687,13 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			tree.freeNode();
 			tree.readTree(con_file.c_str(), rooted);
 			tree.setAlignment(tree.aln);
+
+			// bug fix
+			if ((tree.sse == LK_EIGEN || tree.sse == LK_EIGEN_SSE) && !tree.isBifurcating()) {
+				cout << "INFO: Changing to old kernel as consensus tree is multifurcating" << endl;
+				tree.changeLikelihoodKernel(LK_SSE);
+			}
+
 			tree.initializeAllPartialLh();
 			tree.fixNegativeBranch(false);
 			if (tree.isSuperTree())
@@ -1188,6 +1195,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.setAlignment(alignment);
         numInitTrees = 1;
         params.numNNITrees = 1;
+        // change to old kernel if tree is multifurcating
+		if ((params.SSE == LK_EIGEN || params.SSE == LK_EIGEN_SSE) && !iqtree.isBifurcating()) {
+			cout << "INFO: Changing to old kernel as input tree is multifurcating" << endl;
+			params.SSE = LK_SSE;
+		}
 
         // Create parsimony tree using IQ-Tree kernel
     } else if (params.parsimony_tree && !params.pll) {
