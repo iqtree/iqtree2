@@ -408,14 +408,14 @@ NGSTree::NGSTree(Params &params, NGSAlignment *alignment) {
     model_factory = NULL;
     optimize_by_newton = params.optimize_by_newton;
     //tree.sse = params.SSE;
-    sse = false;
+    sse = LK_NORMAL;
 }
 
 double NGSTree::computeLikelihood(double *pattern_lh) {
     return -((NGSAlignment*)aln)->computeFunction(1.0);
 }
 
-double NGSTree::optimizeAllBranches(int my_iterations, double tolerance) {
+double NGSTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
     return computeLikelihood();
 }
 

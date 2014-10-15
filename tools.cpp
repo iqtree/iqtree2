@@ -648,6 +648,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.numSmoothTree = 1;
     params.nni5 = true;
     params.leastSquareBranch = false;
+    params.pars_branch_length = false;
+    params.bayes_branch_length = false;
+    params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
     params.limitPopSize = 100;
@@ -681,7 +684,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_threshold = 101;
     params.aLRT_replicates = 0;
     params.localbp_replicates = 0;
-    params.SSE = true;
+    params.SSE = LK_EIGEN_SSE;
     params.print_site_lh = 0;
     params.print_site_rate = false;
     params.print_tree_lh = false;
@@ -744,13 +747,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.initPerStrength = 0.5;
     params.pll = false;
     params.modeps = 0.001;
-    params.imd_modeps = 1.0;
-    params.pllModOpt = false;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
     params.reinsert_par = false;
-    params.fast_branch_opt = false;
     params.bestStart = true;
     params.snni = true; // turn on sNNI default now
     params.autostop = true; // turn on auto stopping rule by default now
@@ -774,6 +774,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_partition_info = false;
 	params.print_conaln = false;
 	params.count_trees = false;
+	params.print_branch_lengths = false;
+	params.lh_mem_save = LM_DETECT; // auto detect
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1305,11 +1307,11 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-mh") == 0) {
                 params.mvh_site_rate = true;
                 params.discard_saturated_site = false;
-                params.SSE = false;
+                params.SSE = LK_NORMAL;
             } else if (strcmp(argv[cnt], "-mhs") == 0) {
                 params.mvh_site_rate = true;
                 params.discard_saturated_site = true;
-                params.SSE = false;
+                params.SSE = LK_NORMAL;
             } else if (strcmp(argv[cnt], "-rl") == 0) {
                 params.rate_mh_type = false;
             } else if (strcmp(argv[cnt], "-nr") == 0) {
@@ -1329,7 +1331,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (params.lambda > 1.0)
                     throw "Lambda must be in (0,1]";
             } else if (strcmp(argv[cnt], "-nosse") == 0) {
-                params.SSE = false;
+                params.SSE = LK_NORMAL;
+            } else if (strcmp(argv[cnt], "-slowsse") == 0) {
+                params.SSE = LK_SSE;
+            } else if (strcmp(argv[cnt], "-fastlk") == 0) {
+                params.SSE = LK_EIGEN;
+            } else if (strcmp(argv[cnt], "-fastsse") == 0 || strcmp(argv[cnt], "-fasttipsse") == 0) {
+                params.SSE = LK_EIGEN_SSE;
             } else if (strcmp(argv[cnt], "-f") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1349,7 +1357,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -fs <site_freq_file>";
                 params.site_freq_file = argv[cnt];
-                params.SSE = false;
+                params.SSE = LK_NORMAL;
             } else if (strcmp(argv[cnt], "-c") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1453,6 +1461,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.write_intermediate_trees = 3;
                 params.avoid_duplicated_trees = true;
                 params.print_tree_lh = true;
+            } else if (strcmp(argv[cnt], "-wbl") == 0) {
+            	params.print_branch_lengths = true;
             } else if (strcmp(argv[cnt], "-nodup") == 0) {
                 params.avoid_duplicated_trees = true;
             } else if (strcmp(argv[cnt], "-rf_all") == 0) {
@@ -1642,6 +1652,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.online_bootstrap = false;
             } else if (strcmp(argv[cnt], "-nostore") == 0 || strcmp(argv[cnt], "-memsave") == 0) {
                 params.store_candidate_trees = false;
+            } else if (strcmp(argv[cnt], "-lhmemsave") == 0) {
+                params.lh_mem_save = LM_PER_NODE;
+            } else if (strcmp(argv[cnt], "-nolhmemsave") == 0) {
+                params.lh_mem_save = LM_ALL_BRANCH;
             } else if (strcmp(argv[cnt], "-storetrees") == 0) {
                 params.store_candidate_trees = true;
             } else if (strcmp(argv[cnt], "-nodiff") == 0) {
@@ -1700,19 +1714,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.binary_aln_file = argv[cnt];
             } else if (strcmp(argv[cnt], "-pll") == 0) {
                 params.pll = true;
-                params.pllModOpt = true;
             } else if (strcmp(argv[cnt], "-me") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -me <model_epsilon>";
                 params.modeps = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-pllmod") == 0) {
-            	params.pllModOpt = true;
             	params.pll = true;
         	} else if (strcmp(argv[cnt], "-pars_ins") == 0) {
                 params.reinsert_par = true;
-            } else if (strcmp(argv[cnt], "-speednni") == 0) {
-                params.speednni = true;
+            } else if (strcmp(argv[cnt], "-nospeednni") == 0) {
+                params.speednni = false;
             } else if (strcmp(argv[cnt], "-adapt") == 0) {
                 params.adaptPert = true;
             } else if (strcmp(argv[cnt], "-snni") == 0) {
@@ -1730,10 +1742,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.autostop = true;
                 cnt++;
                 params.stopCond = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-fast_bran") == 0) {
-                params.fast_branch_opt = true;
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
+            } else if (strcmp(argv[cnt], "-manuel") == 0) {
+                params.manuel_analytic_approx = true;
+            } else if (strcmp(argv[cnt], "-parsbran") == 0) {
+                params.pars_branch_length = true;
+            } else if (strcmp(argv[cnt], "-bayesbran") == 0) {
+                params.bayes_branch_length = true;
             } else if (strcmp(argv[cnt], "-fivebran") == 0 || strcmp(argv[cnt], "-nni5") == 0) {
                 params.nni5 = true;
             	params.nni_type = NNI5;
@@ -1747,22 +1763,22 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.numSmoothTree = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-lsnni") == 0) {
                 params.leastSquareNNI = true;
-            } else if(strcmp(argv[cnt], "-ls_var") == 0) {
+            } else if(strcmp(argv[cnt], "-lsvar") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -ls_var <ols|first_taylor|fitch_margoliash|second_taylor|pauplin>";
-                if (strcmp(argv[cnt], "ols") == 0) {
+                    throw "Use -lsvar <o|ft|fm|st|p>";
+                if (strcmp(argv[cnt], "o") == 0 || strcmp(argv[cnt], "ols") == 0) {
                     params.ls_var_type = OLS;
-                } else if (strcmp(argv[cnt], "first_taylor") == 0) {
-                    params.ls_var_type = FIRST_TAYLOR;
-                } else if (strcmp(argv[cnt], "fitch_margoliash") == 0) {
-                    params.ls_var_type = FITCH_MARGOLIASH;
-                } else if (strcmp(argv[cnt], "second_taylor") == 0) {
-                    params.ls_var_type = SECOND_TAYLOR;
-                } else if (strcmp(argv[cnt], "pauplin") == 0) {
-                    params.ls_var_type = PAUPLIN;
+                } else if (strcmp(argv[cnt], "ft") == 0 || strcmp(argv[cnt], "first_taylor") == 0) {
+                    params.ls_var_type = WLS_FIRST_TAYLOR;
+                } else if (strcmp(argv[cnt], "fm") == 0 || strcmp(argv[cnt], "fitch_margoliash") == 0) {
+                    params.ls_var_type = WLS_FITCH_MARGOLIASH;
+                } else if (strcmp(argv[cnt], "st") == 0 || strcmp(argv[cnt], "second_taylor") == 0) {
+                    params.ls_var_type = WLS_SECOND_TAYLOR;
+                } else if (strcmp(argv[cnt], "p") == 0 || strcmp(argv[cnt], "pauplin") == 0) {
+                    params.ls_var_type = WLS_PAUPLIN;
                 } else {
-                    throw "Use -ls_var <ols|first_taylor|fitch_margoliash|second_taylor|pauplin>";
+                    throw "Use -lsvar <o|ft|fm|st|p>";
                 }
             } else if (strcmp(argv[cnt], "-eps") == 0) {
                 cnt++;
@@ -1771,8 +1787,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.loglh_epsilon = convert_double(argv[cnt]);
             } else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
                 params.parbran = true;
-            } else if (strcmp(argv[cnt], "-wbt") == 0) {
-            	// TODO: WTF ?
+            } else if (strcmp(argv[cnt], "-write_best_trees") == 0) {
                 params.write_best_trees = true;
             } else if (strcmp(argv[cnt], "-x") == 0) {
                 cnt++;
@@ -1824,7 +1839,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -rootstate <rootstate>";
                 params.root_state = argv[cnt];
-                params.SSE = false;
+                params.SSE = LK_NORMAL;
             } else if (strcmp(argv[cnt], "-ct") == 0) {
             	params.count_trees = true;
             } else if (argv[cnt][0] == '-') {
@@ -2340,6 +2355,11 @@ int init_random(int seed) {
 int random_int(int n) {
     return (int) floor(random_double() * n);
 } /* randominteger */
+
+int randint(int a, int b) {
+	return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
+}
+
 
 double random_double() {
 #ifndef FIXEDINTRAND

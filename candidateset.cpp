@@ -32,10 +32,32 @@ string CandidateSet::getRandCandTree() {
 		return "";
 	// BQM: bug fix max -> min
 	int id = random_int(min(max_candidates, (int)size()) );
+	//int id = randint(0, min(max_candidates, (int)size()));
+	//int id = 0 + (rand() % (int)( min(max_candidates, (int)size())) );
 	for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
 		if (id == 0)
 			return i->second.tree;
 	return "";
+}
+
+bool CandidateSet::replaceTree(string tree, double score) {
+    CandidateTree candidate;
+    candidate.tree = tree;
+    candidate.score = score;
+    candidate.topology = getTopology(tree);
+    if (treeTopologyExist(candidate.topology)) {
+        topologies[candidate.topology] = score;
+        for (reverse_iterator i = rbegin(); i != rend(); i++) {
+            if (i->second.topology == candidate.topology) {
+                erase( --(i.base()) );
+                break;
+            }
+            insert(CandidateSet::value_type(score, candidate));
+        }
+    } else {
+        return false;
+    }
+    return true;
 }
 
 string CandidateSet::getNextCandTree() {
@@ -59,15 +81,14 @@ void CandidateSet::initParentTrees() {
     }
 }
 
-
 bool CandidateSet::update(string tree, double score) {
 	CandidateTree candidate;
 	candidate.tree = tree;
 	candidate.score = score;
 	candidate.topology = getTopology(tree);
 	if (treeTopologyExist(candidate.topology)) {
-		if (verbose_mode >= VB_MED)
-			cout << "Duplicated candidate tree " << score << " / current score: " << topologies[candidate.topology] << endl;
+	    // if tree topology already exist, we replace the old
+	    // by the new one (with new branch lengths)
 		if (topologies[candidate.topology] < score) {
 			topologies[candidate.topology] = score;
 			for (CandidateSet::iterator i = begin(); i != end(); i++)

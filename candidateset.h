@@ -50,12 +50,22 @@ public:
     string getNextCandTree();
 
     /**
+     *  Replace an existing tree in the candidate set
+     *  @param tree the new tree string that will replace the existing tree
+     *  @param score the score of the new tree
+     *  @return true if the topology of \a tree exist in the candidate set
+     */
+    bool replaceTree(string tree, double score);
+
+    /**
      *  create the parent tree set containing top trees
      */
     void initParentTrees();
 
     /**
      * update / insert tree into set of score is higher than lowest-scoring tree
+     * @return true if the candidate set is updated, otherwise false
+     *
      */
     bool update(string tree, double score);
 
@@ -64,8 +74,10 @@ public:
      */
     void printBestScores();
 
+    void printBestTrees(int numTree);
+
     /**
-     * destroctor
+     * destructor
      */
     virtual ~CandidateSet();
 

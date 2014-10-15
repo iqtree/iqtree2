@@ -41,7 +41,7 @@ elseif (UNIX)
   endif() 
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
-	message("Target OS     : Unknown")
+	message("Target OS     : Unknown (untested yet)")
 endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX) 
@@ -50,8 +50,10 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	#	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")  ## Strip binary
 	#endif()
 	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	message("Compiler      : Clang")
 else()
-	message("Compiler      : Unknown")
+	message("Compiler      : Unknown (untested yet)")
 endif()
 
 # verbose for 32 or 64 bit platform
@@ -102,17 +104,24 @@ include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 add_definitions(-DIQ_TREE)
 
 if (IQTREE_FLAGS MATCHES "avx")
-	set(COMBINED_FLAGS "-D__AVX -mavx")
+	set(COMBINED_FLAGS "-msse3 -D__SSE3 -D__AVX -mavx")
+	if (CMAKE_COMPILER_IS_GNUCXX) 
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -fabi-version=0")
+	endif()
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
-	
 else()
 	set(COMBINED_FLAGS "-msse3 -D__SSE3")
 endif()
 
-
-set(COMBINED_FLAGS "${COMBINED_FLAGS} -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
-set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
+if (MSVC) 
+	set(COMBINED_FLAGS "${COMBINED_FLAGS} -Wall -pedantic -D_GNU_SOURCE")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fms-extensions -std=c++98 ${COMBINED_FLAGS}")
+	set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
+else ()
+	set(COMBINED_FLAGS "${COMBINED_FLAGS} -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fms-extensions -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
+	set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
+endif()
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
@@ -123,8 +132,13 @@ set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-on
 set(CMAKE_CXX_FLAGS_MEM "-g -O1")
 set(CMAKE_C_FLAGS_MEM "-g -O1")
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
+if (CMAKE_COMPILER_IS_GNUCXX) 
+	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
+	set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
+else ()
+	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline")
+	set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline")
+endif()
 
 # subdirectories containing necessary libraries for the build 
 add_subdirectory(pll)
@@ -132,6 +146,7 @@ add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
 add_subdirectory(zlib-1.2.7)
+#add_subdirectory(vectorclass)
 
 # the main executable
 add_executable(iqtree
@@ -178,6 +193,7 @@ phylonode.cpp
 phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
+#phylotreeeigen.cpp
 pruning.cpp
 rategamma.cpp
 rategammainvar.cpp
@@ -213,7 +229,11 @@ upperbounds.cpp
 
 # link special lib for WIN32
 if (WIN32)
-	target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32)
+#	if (IQTREE_FLAGS MATCHES "omp")
+#		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32 pthread)
+#	else()
+		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32)	
+#	endif()
 else (WIN32)
 	target_link_libraries(iqtree pll ncl whtest zlibstatic sprng m)
 endif (WIN32)
@@ -226,21 +246,32 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
 	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
 endif()
 
+if (WIN32)
+	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "iqtree${EXE_SUFFIX}.exe" "iqtree${EXE_SUFFIX}-click.exe")
+endif()
+
 ##############################################################
 # add the install targets
 ##############################################################
 install (TARGETS iqtree DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/examples/example.phy" DESTINATION examples)
-install (FILES "${PROJECT_SOURCE_DIR}/examples/test.nex" DESTINATION examples)
-install (FILES "${PROJECT_SOURCE_DIR}/examples/test.budget" DESTINATION examples)
-install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.nex" DESTINATION examples)
-install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.budget" DESTINATION examples)
+#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.nex" DESTINATION examples)
+#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.budget" DESTINATION examples)
+#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.nex" DESTINATION examples)
+#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.budget" DESTINATION examples)
 if (WIN32)
-	if (EXE_SUFFIX MATCHES "omp")
-		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
-		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
-	endif()
+	install (FILES "${PROJECT_BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
+# obsolete: pthread is statically linked, so no dll is required anymore
+#	if (EXE_SUFFIX MATCHES "omp")
+#		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
+#		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
+#	endif()
 endif()
+
+if (APPLE AND IQTREE_FLAGS MATCHES "omp")
+	install (FILES "${PROJECT_SOURCE_DIR}/lib/libiomp5.dylib" DESTINATION bin)
+endif()
+
 #install (FILES "${PROJECT_BINARY_DIR}/iqtree_config.h"        
 #         DESTINATION include)
 

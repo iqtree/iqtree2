@@ -502,8 +502,8 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 	return myMove;
 }
 
-void PhyloSuperTreePlen::applyNNIs(int nni2apply, bool changeBran) {
-	IQTree::applyNNIs(nni2apply, changeBran);
+void PhyloSuperTreePlen::doNNIs(int nni2apply, bool changeBran) {
+	IQTree::doNNIs(nni2apply, changeBran);
 	mapBranchLen();
 }
 
@@ -951,7 +951,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					sub_saved_it[part*6 + id] = node_link->findNeighborIt(nei_link);
 
 					// Saving neighbor for restoring purposes
-					sub_saved_nei[6*part + id] = node_link->findNeighbor(nei_link);
+					sub_saved_nei[6*part + id] = (PhyloNeighbor*) node_link->findNeighbor(nei_link);
 
 					// the central branch length of the subtree is increased!
 					*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, nei1_new->link_neighbors[part]->length + old_brlen * part_info[part].part_rate);
@@ -986,7 +986,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 								sub_saved_it[part*6 + id] = node_link->findNeighborIt(nei_link);
 
 								// Save neighbor for restoring purposes
-								sub_saved_nei[6*part+id] = node_link->findNeighbor(nei_link);
+								sub_saved_nei[6*part+id] = (PhyloNeighbor*) node_link->findNeighbor(nei_link);
 
 								*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, ((SuperNeighbor*)(*saved_it[id]))->link_neighbors[part]->length);
 								((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
@@ -1130,12 +1130,12 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 
 			} else if(is_nni[part]==NNI_THREE_EPSILON){
-				nei1_new->link_neighbors[part]->length = sub_saved_branch[6*part];
-				nei2_new->link_neighbors[part]->length = sub_saved_branch[6*part];
+				nei1_new->link_neighbors[part]->length = *sub_saved_branch[6*part];
+				nei2_new->link_neighbors[part]->length = *sub_saved_branch[6*part];
 				//linkBranch(part, nei1_new, nei2_new);
 			} else if(is_nni[part]==NNI_TWO_EPSILON){
-				saved_nei[0]->link_neighbors[part]->length = sub_saved_branch[6*part];
-				saved_nei[1]->link_neighbors[part]->length = sub_saved_branch[6*part];
+				saved_nei[0]->link_neighbors[part]->length = *sub_saved_branch[6*part];
+				saved_nei[1]->link_neighbors[part]->length = *sub_saved_branch[6*part];
 			} else if(is_nni[part]==NNI_MANY_EPSILON){
 				// There is no need to restore anything
 			}
@@ -1244,8 +1244,8 @@ void PhyloSuperTreePlen::linkCheckRe(int part,Node* node, Node* dad, PhyloNeighb
 		}
 	}
 }
-void PhyloSuperTreePlen::restoreAllBranLen(PhyloNode *node, PhyloNode *dad) {
-	IQTree::restoreAllBranLen(node,dad);
+void PhyloSuperTreePlen::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+	IQTree::restoreAllBrans(node,dad);
 	mapTrees();
 }
 

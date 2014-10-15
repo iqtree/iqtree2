@@ -17,8 +17,8 @@
 #include "ncl/ncl.h"
 #include "tools.h"
 
-
-const char STATE_UNKNOWN = 126;
+// IMPORTANT: refactor STATE_UNKNOWN
+//const char STATE_UNKNOWN = 126;
 const char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
 
@@ -131,6 +131,10 @@ public:
      ****************************************************************************/
     SeqType detectSequenceType(StrVector &sequences);
 
+    void computeUnknownState();
+
+    void buildStateMap(char *map, SeqType seq_type);
+
     virtual char convertState(char state, SeqType seq_type);
 
     /** 
@@ -171,6 +175,9 @@ public:
             bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name);
 
     void printPhylip(const char *filename, bool append = false, const char *aln_site_list = NULL,
+    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
+
+    void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
     		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
 
     void printFasta(const char *filename, bool append = false, const char *aln_site_list = NULL,
@@ -490,6 +497,8 @@ public:
     /** either SEQ_BINARY, SEQ_DNA, SEQ_PROTEIN, SEQ_MORPH, or SEQ_CODON */
     SeqType seq_type;
 
+    char STATE_UNKNOWN;
+
     /**
             number of states
      */
@@ -517,6 +526,9 @@ public:
 	 */
 	char *genetic_code;
 
+    vector<vector<int> > seq_states; // state set for each sequence in the alignment
+
+    void buildSeqStates();
 
 
     /** Added by MA

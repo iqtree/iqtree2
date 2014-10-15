@@ -175,6 +175,13 @@ Neighbor *Node::findNeighbor(Node *node) {
     return NULL;
 }
 
+bool Node::isNeighbor(Node* node) {
+    int size = neighbors.size();
+    for (int i = 0; i < size; i++)
+        if (neighbors[i]->node == node) return true;
+    return false;
+}
+
 NeighborVec::iterator Node::findNeighborIt(Node *node) {
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
         if ((*it)->node == node)

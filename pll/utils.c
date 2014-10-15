@@ -3422,7 +3422,10 @@ pllReadFile (const char * filename, long * filesize)
   char * rawdata;
 
   // FIX BUG: opening with "r" does not work on Windows
+//  fp = fopen (filename, "r");
+  printf("[PLL] Reading file %s...\n", filename);
   fp = fopen (filename, "rb");
+  printf("[PLL] Success!\n");
   if (!fp) return (NULL);
 
   /* obtain file size */
@@ -3460,4 +3463,12 @@ pllReadFile (const char * filename, long * filesize)
 
   return (rawdata);
 }
+
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
+void* rax_calloc(size_t count, size_t size) {
+	void* res = rax_malloc(size * count);
+	memset(res,0,size * count);
+	return res;
+}
+#endif
 

@@ -177,13 +177,13 @@ public:
             @param nni2apply number of NNIs to apply from the list
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void applyNNIs(int nni2apply, bool changeBran = true);
+    virtual void doNNIs(int nni2apply, bool changeBran = true);
 
     /**
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void applyNNIBranches(NNIMove nnimove) {};
+    virtual void changeNNIBrans(NNIMove nnimove) {};
 
 
     /**
@@ -213,7 +213,7 @@ public:
 	void mapBranchLen();
 	virtual void printMapInfo();
 
-	virtual void restoreAllBranLen(PhyloNode *node, PhyloNode *dad);
+	virtual void restoreAllBrans(PhyloNode *node, PhyloNode *dad);
 
 	/**
 	 * initialize partition information for super tree
