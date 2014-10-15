@@ -1583,7 +1583,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     }
 
     if (nni_count == 0) {
-        cout << "NNI search could not find any better tree for this iteration!" << endl;
+        cout << "INFO: Tree is readily NNI-optimized" << endl;
     }
     brans2Eval.clear();
     return curScore;
