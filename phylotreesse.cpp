@@ -1728,6 +1728,7 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
     }
 #endif
 		tree_lh += horizontal_add(lh_final);
+		assert(!isnan(tree_lh) && !isinf(tree_lh));
 
 //		switch (orig_nptn%VCSIZE) {
 //		case 0: tree_lh += horizontal_add(lh_final+lh_ptn); break;
@@ -1785,6 +1786,12 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
     	VectorClass lh_final(0.0), vc_freq;
 		VectorClass lh_ptn;
 
+		// copy dummy values because VectorClass will access beyond nptn
+		for (ptn = nptn; ptn < maxptn; ptn++) {
+			memcpy(&dad_branch->partial_lh[ptn*block], dad_branch->partial_lh, block*sizeof(double));
+			memcpy(&node_branch->partial_lh[ptn*block], node_branch->partial_lh, block*sizeof(double));
+		}
+
 #ifdef _OPENMP
 #pragma omp parallel private(ptn, i, j, vc_partial_lh_node, vc_partial_lh_dad, vc_ptn, vc_freq, lh_ptn)
 		{
@@ -1829,6 +1836,8 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 #endif
 
 		tree_lh += horizontal_add(lh_final);
+		assert(!isnan(tree_lh) && !isinf(tree_lh));
+
 //		switch (orig_nptn%VCSIZE) {
 //		case 0: tree_lh += horizontal_add(lh_final+lh_ptn); break;
 //		case 1: tree_lh += horizontal_add(lh_final)+lh_ptn[0]; break;
@@ -1880,8 +1889,6 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
     		_pattern_lh[ptn] -= prob_const;
     	tree_lh -= aln->getNSite()*prob_const;
     }
-
-	assert(!isnan(tree_lh) && !isinf(tree_lh));
 
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
