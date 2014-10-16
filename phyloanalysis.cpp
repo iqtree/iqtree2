@@ -1688,7 +1688,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();
 	if (params.snni && params.min_iterations) {
-		cout << "Logl of best " << params.popSize << " trees found: " << endl;
+		cout << "Log-likelihoods of best " << params.popSize << " trees: " << endl;
 		iqtree.candidateTrees.printBestScores();
 	}
 
@@ -2077,8 +2077,8 @@ void runPhyloAnalysis(Params &params) {
 			string splitsfile = params.out_prefix;
 			splitsfile += ".splits.nex";
 			//cout << splitsfile << endl;
-			computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
-					params.split_threshold, NULL, params.out_prefix, NULL,
+			computeConsensusTree(splitsfile.c_str(), 0, 1e6, params.split_threshold,
+					params.split_weight_threshold, NULL, params.out_prefix, NULL,
 					&params);
 		}
 		//if (original_model != "TESTONLY")

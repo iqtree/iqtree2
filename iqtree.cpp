@@ -1410,18 +1410,17 @@ double IQTree::doTreeSearch() {
             boot_splits.push_back(sg);
             if (params->max_candidate_trees == 0)
                 max_candidate_trees = treels_logl.size() * (curIt + (params->step_iterations / 2)) / curIt;
-			if (verbose_mode >= VB_MED)
-				cout << "INFO: Increasing number of bootstrap candidate trees to " << max_candidate_trees << endl;
+			cout << "INFO: " << treels_logl.size() << " bootstrap candidate trees evaluated (logl-cutoff: " << logl_cutoff << ")" << endl;
 
 			// check convergence every full step
 			if (curIt % params->step_iterations == 0) {
 	        	cur_correlation = computeBootstrapCorrelation();
-	        	cout << "INFO: UFBoot correlation coefficient: " << cur_correlation << endl;
+	            cout << "INFO: Bootstrap correlation coefficient of split occurrence frequencies: " << cur_correlation << endl;
 	            if (!stop_rule.meetStopCondition(curIt, cur_correlation)) {
 	                if (params->max_candidate_trees == 0) {
 	                    max_candidate_trees = treels_logl.size() * (curIt + params->step_iterations) / curIt;
 	                }
-	                cout << "INFO: UFBoot did not converge, continue collecting more candidate trees" << endl;
+	                cout << "INFO: UFBoot does not converge, continue " << params->step_iterations << " more iterations" << endl;
 	            }
 	        }
         } // end of bootstrap convergence test
@@ -2453,7 +2452,6 @@ double IQTree::computeBootstrapCorrelation() {
 
     // now compute correlation coefficient
     double corr = computeCorrelation(split_supports, split_supports_new);
-    cout << "Bootstrap correlation coefficient of split occurrence frequencies: " << corr << endl;
     // printing supports into file
     /*
      string outfile = params->out_prefix;
