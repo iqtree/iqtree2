@@ -1121,6 +1121,17 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 			partial_lh_right[addr_unknown+x] = 1.0;
 		}
 
+		// assign pointers for left and right partial_lh
+		double **lh_left_ptr = aligned_alloc<double*>(nptn);
+		double **lh_right_ptr = aligned_alloc<double*>(nptn);
+		for (ptn = 0; ptn < orig_ntn; ptn++) {
+			lh_left_ptr[ptn] = &partial_lh_left[block *  (aln->at(ptn))[left->node->id]];
+			lh_right_ptr[ptn] = &partial_lh_right[block * (aln->at(ptn))[right->node->id]];
+		}
+		for (ptn = orig_ntn; ptn < nptn; ptn++) {
+			lh_left_ptr[ptn] = &partial_lh_left[block * model_factory->unobserved_ptns[ptn-orig_ntn]];
+			lh_right_ptr[ptn] = &partial_lh_right[block * model_factory->unobserved_ptns[ptn-orig_ntn]];
+		}
 
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
@@ -1131,10 +1142,12 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 	    for (ptn = 0; ptn < nptn; ptn++) {
 	        double *partial_lh = dad_branch->partial_lh + ptn*block;
 
-	    	int state_left  = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
-	    	int state_right = (ptn < orig_ntn) ? (aln->at(ptn))[right->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
-			double *lh_left  = &partial_lh_left [block * state_left];
-			double *lh_right = &partial_lh_right[block * state_right];
+//	    	int state_left  = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
+//	    	int state_right = (ptn < orig_ntn) ? (aln->at(ptn))[right->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
+//			double *lh_left  = &partial_lh_left [block * state_left];
+//			double *lh_right = &partial_lh_right[block * state_right];
+	        double *lh_left = lh_left_ptr[ptn];
+	        double *lh_right = lh_right_ptr[ptn];
 			for (c = 0; c < ncat; c++) {
 				// compute real partial likelihood vector
 
@@ -1164,6 +1177,8 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 //	    aligned_free(master_partial_lh_tmp);
 //#endif
 
+	    aligned_free(lh_left_ptr);
+	    aligned_free(lh_right_ptr);
 		aligned_free(partial_lh_right);
 		aligned_free(partial_lh_left);
 	} else if (left->node->isLeaf() && !right->node->isLeaf()) {
@@ -1199,6 +1214,14 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 			partial_lh_left[addr_unknown+x] = 1.0;
 		}
 
+		// assign pointers for partial_lh_left
+		double **lh_left_ptr = aligned_alloc<double*>(nptn);
+		for (ptn = 0; ptn < orig_ntn; ptn++) {
+			lh_left_ptr[ptn] = &partial_lh_left[block *  (aln->at(ptn))[left->node->id]];
+		}
+		for (ptn = orig_ntn; ptn < nptn; ptn++) {
+			lh_left_ptr[ptn] = &partial_lh_left[block * model_factory->unobserved_ptns[ptn-orig_ntn]];
+		}
 
 		double sum_scale = 0.0;
 		VectorClass vc_lh_right[nstates/VCSIZE];
@@ -1212,8 +1235,9 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 	        double *partial_lh = dad_branch->partial_lh + ptn*block;
 	        double *partial_lh_right = right->partial_lh + ptn*block;
 
-			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
-			double *lh_left = &partial_lh_left[block * state_left];
+//			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
+//			double *lh_left = &partial_lh_left[block * state_left];
+	        double *lh_left = lh_left_ptr[ptn];
 			vc_max = 0.0;
 			for (c = 0; c < ncat; c++) {
 				// compute real partial likelihood vector
@@ -1269,6 +1293,8 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 
 		}
 		dad_branch->lh_scale_factor += sum_scale;
+
+	    aligned_free(lh_left_ptr);
 		aligned_free(partial_lh_left);
 
 	} else {

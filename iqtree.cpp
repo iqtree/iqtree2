@@ -1134,7 +1134,7 @@ string IQTree::optimizeModelParameters(bool printInfo) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
 		}
 
-		if (modOptScore < curScore - 1e-3) {
+		if (modOptScore < curScore - 1.0) {
 			cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
 			cout << "  Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
 			abort();
