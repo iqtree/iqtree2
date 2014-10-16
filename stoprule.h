@@ -36,33 +36,11 @@ public:
 	*/
     StopRule();
 
+    void initialize(Params &params);
 	/**
 		destructor
 	*/
     ~StopRule();
-
-	/**
-		@param sc stop condition
-	*/
-	void setStopCondition(STOP_CONDITION sc);
-
-	/**
-		@param confidence_val confidence value for the prediction
-	*/
-	void setConfidenceValue(double confidence_val);
-
-	/**
-		set the number of iterations
-		@param min_it minimum iteration
-		@param max_it maximum iteration
-	*/
-	void setIterationNum(int min_it, int max_it);
-
-	void setUnsuccessIteration(int unsuccess_iteration);
-
-	void setMinCorrelation(double min_correlation);
-
-	void setRealTime(double start_real_time, double max_run_time);
 
 	/**
 		read improved iteration number from a file
@@ -90,15 +68,18 @@ public:
 	*/
 	bool meetStopCondition(int cur_iteration, double cur_correlation);
 	
+	/** get the remaining time to converge, in seconds */
+	double getRemainingTime(int cur_iteration);
+
 	/**
 		@return the number of iterations required to stop the search
 	*/
-	int getNumIterations();
+//	int getNumIterations();
 
 	/**
 		@return predicted iteration, 0 if no prediction has been made
 	*/
-	int getPredictedIteration();
+//	int getPredictedIteration(int cur_iteration);
 
 private:
 
@@ -135,6 +116,9 @@ private:
 	/** bootstrap correlation threshold to stop */
 	double min_correlation;
 
+	/** step size for checking bootstrap convergence */
+	int step_iteration;
+
 	/** max wall-clock running time to stop */
 	double max_run_time;
 
@@ -143,8 +127,8 @@ private:
 
 	/* FOLLOWING CODES ARE FROM IQPNNI version 3 */	
 
-	int nTime_;
-	DoubleVector timeVec_;
+//	int nTime_;
+	DoubleVector time_vec;
 
 	void cmpInvMat (DoubleMatrix &oriMat, DoubleMatrix &invMat, int size);
 

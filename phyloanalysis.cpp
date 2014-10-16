@@ -2223,9 +2223,10 @@ void runPhyloAnalysis(Params &params) {
 			runPhyloAnalysis(params, original_model, alignment, *tree, model_info);
 			params.min_iterations = mi;
 			params.stop_condition = sc;
-			tree->setIQPIterations(params.stop_condition,
-					params.stop_confidence, params.min_iterations,
-					params.max_iterations);
+			tree->stop_rule.initialize(params);
+//			tree->setIQPIterations(params.stop_condition,
+//					params.stop_confidence, params.min_iterations,
+//					params.max_iterations);
 			reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
 		} else
 			cout << endl;
