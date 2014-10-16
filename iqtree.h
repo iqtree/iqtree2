@@ -684,8 +684,9 @@ public:
     /** summarize bootstrap trees into split set */
     void summarizeBootstrap(SplitGraph &sg);
 
-    /** @return TRUE if stopping criterion is met */
-    bool checkBootstrapStopping();
+    /** @return bootstrap correlation coefficient for assessing convergence */
+    double computeBootstrapCorrelation();
+
 	int getDelete() const;
 	void setDelete(int _delete);
 

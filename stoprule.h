@@ -58,6 +58,12 @@ public:
 	*/
 	void setIterationNum(int min_it, int max_it);
 
+	void setUnsuccessIteration(int unsuccess_iteration);
+
+	void setMinCorrelation(double min_correlation);
+
+	void setRealTime(double start_real_time, double max_run_time);
+
 	/**
 		read improved iteration number from a file
 		@param fileName file name
@@ -79,9 +85,10 @@ public:
 	/**
 		main function to check the stop condition
 		@param current_iteration current iteration number
+		@param cur_correlation current correlation coefficient for bootstrap convergence
 		@return TRUE if stop condition is met, FALSE otherwise
 	*/
-	bool meetStopCondition(int current_iteration);
+	bool meetStopCondition(int cur_iteration, double cur_correlation);
 	
 	/**
 		@return the number of iterations required to stop the search
@@ -121,6 +128,18 @@ private:
 		predicted number of iterations
 	*/
 	int predicted_iteration;
+
+	/** number of unsuccessful iterations to stop the search */
+	int unsuccess_iteration;
+
+	/** bootstrap correlation threshold to stop */
+	double min_correlation;
+
+	/** max wall-clock running time to stop */
+	double max_run_time;
+
+    /** starting real time of the program */
+    double start_real_time;
 
 	/* FOLLOWING CODES ARE FROM IQPNNI version 3 */	
 

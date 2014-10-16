@@ -658,7 +658,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.p_delete = -1;
     params.min_iterations = -1;
     params.max_iterations = 1;
-    params.stop_condition = SC_FIXED_ITERATION;
+    params.stop_condition = SC_UNSUCCESS_ITERATION;
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
@@ -753,8 +753,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.reinsert_par = false;
     params.bestStart = true;
     params.snni = true; // turn on sNNI default now
-    params.autostop = true; // turn on auto stopping rule by default now
-    params.stopCond = 100;
+//    params.autostop = true; // turn on auto stopping rule by default now
+    params.unsuccess_iteration = 100;
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
     params.adaptPert = false;
     params.numParsTrees = 100;
@@ -1286,7 +1286,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -n <#iterations>";
                 params.min_iterations = convert_int(argv[cnt]);
-                params.autostop = false;
+                params.stop_condition = SC_FIXED_ITERATION;
+//                params.autostop = false;
             } else if (strcmp(argv[cnt], "-nb") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1389,7 +1390,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-fixbr") == 0) {
                 params.fixed_branch_length = true;
             } else if (strcmp(argv[cnt], "-sr") == 0) {
-                params.stop_condition = SC_STOP_PREDICT;
+                params.stop_condition = SC_WEIBULL;
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -sr <#max_iteration>";
@@ -1615,6 +1616,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.avoid_duplicated_trees = true;
                 if (params.gbo_replicates < 1000) throw "#replicates must be >= 1000";
                 params.consensus_type = CT_CONSENSUS_TREE;
+                params.stop_condition = SC_BOOTSTRAP_CORRELATION;
                 //params.nni5Branches = true;
 			} else if (strcmp(argv[cnt], "-beps") == 0) {
 				cnt++;
@@ -1685,6 +1687,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -maxtime <time_in_minutes>";
                 params.maxtime = convert_double(argv[cnt]);
                 params.min_iterations = 1000000;
+                params.stop_condition = SC_REAL_TIME;
             } else if (strcmp(argv[cnt], "-numpars") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1736,12 +1739,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 //params.adaptPert = true;
             } else if (strcmp(argv[cnt], "-iqpnni") == 0) {
             	params.snni = false;
-            } else if (strcmp(argv[cnt], "-auto") == 0) {
-            	params.autostop = true;
+//            } else if (strcmp(argv[cnt], "-auto") == 0) {
+//            	params.autostop = true;
             } else if (strcmp(argv[cnt], "-stop_cond") == 0 || strcmp(argv[cnt], "-numstop") == 0) {
-                params.autostop = true;
+//                params.autostop = true;
+            	params.stop_condition = SC_UNSUCCESS_ITERATION;
                 cnt++;
-                params.stopCond = convert_int(argv[cnt]);
+                params.unsuccess_iteration = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
             } else if (strcmp(argv[cnt], "-manuel") == 0) {

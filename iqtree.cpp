@@ -83,12 +83,12 @@ void IQTree::setParams(Params &params) {
     candidateTrees.limit = params.limitPopSize;
 
     sse = params.SSE;
-    if (params.maxtime != 1000000) {
-        params.autostop = false;
-    }
+//    if (params.maxtime != 1000000) {
+//        params.autostop = false;
+//    }
     if (params.min_iterations == -1) {
         if (!params.gbo_replicates) {
-            if (params.autostop) {
+            if (params.stop_condition == SC_UNSUCCESS_ITERATION) {
                 params.min_iterations = aln->getNSeq() * 100;
             } else if (aln->getNSeq() < 100) {
                 params.min_iterations = 200;
@@ -142,6 +142,9 @@ void IQTree::setParams(Params &params) {
     stop_rule.setStopCondition(params.stop_condition);
     stop_rule.setConfidenceValue(params.stop_confidence);
     stop_rule.setIterationNum(params.min_iterations, params.max_iterations);
+    stop_rule.setUnsuccessIteration(params.unsuccess_iteration);
+    stop_rule.setMinCorrelation(params.min_correlation);
+//    stop_rule.setMaxTime(params.maxtime);
 
     //tree.setIQPAssessQuartet(params.iqp_assess_quartet);
     iqp_assess_quartet = params.iqp_assess_quartet;
@@ -933,98 +936,98 @@ void IQTree::pllBaseSubstitute (char *seq, int dataType)
 
     /* DNA data */
 
-    meaningDNA['A'] =  1;
-    meaningDNA['B'] = 14;
-    meaningDNA['C'] =  2;
-    meaningDNA['D'] = 13;
-    meaningDNA['G'] =  4;
-    meaningDNA['H'] = 11;
-    meaningDNA['K'] = 12;
-    meaningDNA['M'] =  3;
-    meaningDNA['R'] =  5;
-    meaningDNA['S'] =  6;
-    meaningDNA['T'] =  8;
-    meaningDNA['U'] =  8;
-    meaningDNA['V'] =  7;
-    meaningDNA['W'] =  9;
-    meaningDNA['Y'] = 10;
-    meaningDNA['a'] =  1;
-    meaningDNA['b'] = 14;
-    meaningDNA['c'] =  2;
-    meaningDNA['d'] = 13;
-    meaningDNA['g'] =  4;
-    meaningDNA['h'] = 11;
-    meaningDNA['k'] = 12;
-    meaningDNA['m'] =  3;
-    meaningDNA['r'] =  5;
-    meaningDNA['s'] =  6;
-    meaningDNA['t'] =  8;
-    meaningDNA['u'] =  8;
-    meaningDNA['v'] =  7;
-    meaningDNA['w'] =  9;
-    meaningDNA['y'] = 10;
+    meaningDNA[(int)'A'] =  1;
+    meaningDNA[(int)'B'] = 14;
+    meaningDNA[(int)'C'] =  2;
+    meaningDNA[(int)'D'] = 13;
+    meaningDNA[(int)'G'] =  4;
+    meaningDNA[(int)'H'] = 11;
+    meaningDNA[(int)'K'] = 12;
+    meaningDNA[(int)'M'] =  3;
+    meaningDNA[(int)'R'] =  5;
+    meaningDNA[(int)'S'] =  6;
+    meaningDNA[(int)'T'] =  8;
+    meaningDNA[(int)'U'] =  8;
+    meaningDNA[(int)'V'] =  7;
+    meaningDNA[(int)'W'] =  9;
+    meaningDNA[(int)'Y'] = 10;
+    meaningDNA[(int)'a'] =  1;
+    meaningDNA[(int)'b'] = 14;
+    meaningDNA[(int)'c'] =  2;
+    meaningDNA[(int)'d'] = 13;
+    meaningDNA[(int)'g'] =  4;
+    meaningDNA[(int)'h'] = 11;
+    meaningDNA[(int)'k'] = 12;
+    meaningDNA[(int)'m'] =  3;
+    meaningDNA[(int)'r'] =  5;
+    meaningDNA[(int)'s'] =  6;
+    meaningDNA[(int)'t'] =  8;
+    meaningDNA[(int)'u'] =  8;
+    meaningDNA[(int)'v'] =  7;
+    meaningDNA[(int)'w'] =  9;
+    meaningDNA[(int)'y'] = 10;
 
-    meaningDNA['N'] =
-    meaningDNA['n'] =
-    meaningDNA['O'] =
-    meaningDNA['o'] =
-    meaningDNA['X'] =
-    meaningDNA['x'] =
-    meaningDNA['-'] =
+    meaningDNA[(int)'N'] =
+    meaningDNA[(int)'n'] =
+    meaningDNA[(int)'O'] =
+    meaningDNA[(int)'o'] =
+    meaningDNA[(int)'X'] =
+    meaningDNA[(int)'x'] =
+    meaningDNA[(int)'-'] =
     meaningDNA['?'] = 15;
 
     /* AA data */
 
-    meaningAA['A'] =  0;  /* alanine */
-    meaningAA['R'] =  1;  /* arginine */
-    meaningAA['N'] =  2;  /*  asparagine*/
-    meaningAA['D'] =  3;  /* aspartic */
-    meaningAA['C'] =  4;  /* cysteine */
-    meaningAA['Q'] =  5;  /* glutamine */
-    meaningAA['E'] =  6;  /* glutamic */
-    meaningAA['G'] =  7;  /* glycine */
-    meaningAA['H'] =  8;  /* histidine */
-    meaningAA['I'] =  9;  /* isoleucine */
-    meaningAA['L'] =  10; /* leucine */
-    meaningAA['K'] =  11; /* lysine */
-    meaningAA['M'] =  12; /* methionine */
-    meaningAA['F'] =  13; /* phenylalanine */
-    meaningAA['P'] =  14; /* proline */
-    meaningAA['S'] =  15; /* serine */
-    meaningAA['T'] =  16; /* threonine */
-    meaningAA['W'] =  17; /* tryptophan */
-    meaningAA['Y'] =  18; /* tyrosine */
-    meaningAA['V'] =  19; /* valine */
-    meaningAA['B'] =  20; /* asparagine, aspartic 2 and 3*/
-    meaningAA['Z'] =  21; /*21 glutamine glutamic 5 and 6*/
-    meaningAA['a'] =  0;  /* alanine */
-    meaningAA['r'] =  1;  /* arginine */
-    meaningAA['n'] =  2;  /*  asparagine*/
-    meaningAA['d'] =  3;  /* aspartic */
-    meaningAA['c'] =  4;  /* cysteine */
-    meaningAA['q'] =  5;  /* glutamine */
-    meaningAA['e'] =  6;  /* glutamic */
-    meaningAA['g'] =  7;  /* glycine */
-    meaningAA['h'] =  8;  /* histidine */
-    meaningAA['i'] =  9;  /* isoleucine */
-    meaningAA['l'] =  10; /* leucine */
-    meaningAA['k'] =  11; /* lysine */
-    meaningAA['m'] =  12; /* methionine */
-    meaningAA['f'] =  13; /* phenylalanine */
-    meaningAA['p'] =  14; /* proline */
-    meaningAA['s'] =  15; /* serine */
-    meaningAA['t'] =  16; /* threonine */
-    meaningAA['w'] =  17; /* tryptophan */
-    meaningAA['y'] =  18; /* tyrosine */
-    meaningAA['v'] =  19; /* valine */
-    meaningAA['b'] =  20; /* asparagine, aspartic 2 and 3*/
-    meaningAA['z'] =  21; /*21 glutamine glutamic 5 and 6*/
+    meaningAA[(int)'A'] =  0;  /* alanine */
+    meaningAA[(int)'R'] =  1;  /* arginine */
+    meaningAA[(int)'N'] =  2;  /*  asparagine*/
+    meaningAA[(int)'D'] =  3;  /* aspartic */
+    meaningAA[(int)'C'] =  4;  /* cysteine */
+    meaningAA[(int)'Q'] =  5;  /* glutamine */
+    meaningAA[(int)'E'] =  6;  /* glutamic */
+    meaningAA[(int)'G'] =  7;  /* glycine */
+    meaningAA[(int)'H'] =  8;  /* histidine */
+    meaningAA[(int)'I'] =  9;  /* isoleucine */
+    meaningAA[(int)'L'] =  10; /* leucine */
+    meaningAA[(int)'K'] =  11; /* lysine */
+    meaningAA[(int)'M'] =  12; /* methionine */
+    meaningAA[(int)'F'] =  13; /* phenylalanine */
+    meaningAA[(int)'P'] =  14; /* proline */
+    meaningAA[(int)'S'] =  15; /* serine */
+    meaningAA[(int)'T'] =  16; /* threonine */
+    meaningAA[(int)'W'] =  17; /* tryptophan */
+    meaningAA[(int)'Y'] =  18; /* tyrosine */
+    meaningAA[(int)'V'] =  19; /* valine */
+    meaningAA[(int)'B'] =  20; /* asparagine, aspartic 2 and 3*/
+    meaningAA[(int)'Z'] =  21; /*21 glutamine glutamic 5 and 6*/
+    meaningAA[(int)'a'] =  0;  /* alanine */
+    meaningAA[(int)'r'] =  1;  /* arginine */
+    meaningAA[(int)'n'] =  2;  /*  asparagine*/
+    meaningAA[(int)'d'] =  3;  /* aspartic */
+    meaningAA[(int)'c'] =  4;  /* cysteine */
+    meaningAA[(int)'q'] =  5;  /* glutamine */
+    meaningAA[(int)'e'] =  6;  /* glutamic */
+    meaningAA[(int)'g'] =  7;  /* glycine */
+    meaningAA[(int)'h'] =  8;  /* histidine */
+    meaningAA[(int)'i'] =  9;  /* isoleucine */
+    meaningAA[(int)'l'] =  10; /* leucine */
+    meaningAA[(int)'k'] =  11; /* lysine */
+    meaningAA[(int)'m'] =  12; /* methionine */
+    meaningAA[(int)'f'] =  13; /* phenylalanine */
+    meaningAA[(int)'p'] =  14; /* proline */
+    meaningAA[(int)'s'] =  15; /* serine */
+    meaningAA[(int)'t'] =  16; /* threonine */
+    meaningAA[(int)'w'] =  17; /* tryptophan */
+    meaningAA[(int)'y'] =  18; /* tyrosine */
+    meaningAA[(int)'v'] =  19; /* valine */
+    meaningAA[(int)'b'] =  20; /* asparagine, aspartic 2 and 3*/
+    meaningAA[(int)'z'] =  21; /*21 glutamine glutamic 5 and 6*/
 
-    meaningAA['X'] =
-    meaningAA['x'] =
-    meaningAA['?'] =
-    meaningAA['*'] =
-    meaningAA['-'] = 22;
+    meaningAA[(int)'X'] =
+    meaningAA[(int)'x'] =
+    meaningAA[(int)'?'] =
+    meaningAA[(int)'*'] =
+    meaningAA[(int)'-'] = 22;
 
     d = (dataType == PLL_DNA_DATA) ? meaningDNA : meaningAA;
     int seq_len = strlen(seq);
@@ -1196,19 +1199,23 @@ double IQTree::doTreeSearch() {
 
     stop_rule.addImprovedIteration(1);
     searchinfo.curPerStrength = params->initPerStrength;
-	if (params->autostop && !params->gbo_replicates) {
-		stop_rule.setIterationNum(params->stopCond, params->stopCond);
+    stop_rule.setRealTime(params->start_real_time, params->maxtime * 60);
+
+	if (params->stop_condition == SC_UNSUCCESS_ITERATION) {
+		stop_rule.setIterationNum(params->unsuccess_iteration, params->unsuccess_iteration);
 		cout << "INFO: #iterations set to " << stop_rule.getNumIterations() << endl;
 	}
 
-    for (curIt = 2; !stop_rule.meetStopCondition(curIt); curIt++) {
+	double cur_correlation = 0.0;
+
+    for (curIt = 2; !stop_rule.meetStopCondition(curIt, cur_correlation); curIt++) {
         searchinfo.curIter = curIt;
-        double min_elapsed = (getCPUTime() - params->startTime) / 60;
-        if (min_elapsed > params->maxtime) {
-            cout << endl;
-            cout << "Maximum running time of " << params->maxtime << " minutes reached" << endl;
-            break;
-        }
+//        double min_elapsed = (getCPUTime() - params->startTime) / 60;
+//        if (min_elapsed > params->maxtime) {
+//            cout << endl;
+//            cout << "Maximum running time of " << params->maxtime << " minutes reached" << endl;
+//            break;
+//        }
         // estimate logl_cutoff
         if (params->avoid_duplicated_trees && max_candidate_trees > 0 && treels_logl.size() > 1000) {
             int num_entries = floor(max_candidate_trees * ((double) curIt / stop_rule.getNumIterations()));
@@ -1336,7 +1343,7 @@ double IQTree::doTreeSearch() {
         cur_real_time = getRealTime();
         double realtime_secs = cur_real_time - begin_real_time;
         double realtime_remaining;
-        if (params->maxtime < 1000000) {
+        if (params->stop_condition == SC_REAL_TIME) {
             realtime_remaining = params->maxtime * 60 - realtime_secs;
         } else {
         	realtime_remaining = (stop_rule.getNumIterations() - curIt) * realtime_secs / (curIt - 1);
@@ -1371,11 +1378,11 @@ double IQTree::doTreeSearch() {
                 imd_tree = optimizeModelParameters();
                 stop_rule.addImprovedIteration(curIt);
                 cout << "BETTER TREE FOUND at iteration " << curIt << ": " << curScore;
-                cout << " / CPU time: " << (int) round(getCPUTime() - params->startTime) << "s" << endl << endl;
+                cout << " / CPU time: " << (int) round(getCPUTime() - params->startCPUTime) << "s" << endl << endl;
                 if (curScore > bestScore) {
-                    //searchinfo.curFailedIterNum = 0;
-                	if (params->autostop && !params->gbo_replicates) {
-                		stop_rule.setIterationNum(curIt + params->stopCond, curIt + params->stopCond);
+//                    searchinfo.curFailedIterNum = 0;
+                	if (params->stop_condition == SC_UNSUCCESS_ITERATION) {
+                		stop_rule.setIterationNum(curIt + params->unsuccess_iteration, curIt + params->unsuccess_iteration);
                 		cout << "INFO: #iterations increased to " << stop_rule.getNumIterations() << endl;
                 	}
                     searchinfo.curPerStrength = params->initPerStrength;
@@ -1411,7 +1418,7 @@ double IQTree::doTreeSearch() {
         // DTH: Carefully watch the -pll case here
 
 
-        if ((curIt) % (params->step_iterations / 2) == 0 && params->gbo_replicates) {
+        if ((curIt) % (params->step_iterations / 2) == 0 && params->stop_condition == SC_BOOTSTRAP_CORRELATION) {
             SplitGraph *sg = new SplitGraph;
             summarizeBootstrap(*sg);
             boot_splits.push_back(sg);
@@ -1421,45 +1428,41 @@ double IQTree::doTreeSearch() {
 				cout << "INFO: Increasing number of bootstrap candidate trees to " << max_candidate_trees << endl;
         }
 
-        if (curIt == stop_rule.getNumIterations() && params->gbo_replicates && !boot_splits.empty()
-                && stop_rule.getNumIterations() + params->step_iterations <= params->max_iterations) {
-            //SplitGraph *sg = new SplitGraph;
-            //summarizeBootstrap(*sg);
+        if (curIt == stop_rule.getNumIterations() && params->stop_condition == SC_BOOTSTRAP_CORRELATION) {
+//        if (curIt == stop_rule.getNumIterations() && params->gbo_replicates && !boot_splits.empty()
+//                && stop_rule.getNumIterations() + params->step_iterations <= params->max_iterations) {
         	cout << "Checking UFBoot stopping rule..." << endl;
-            if (!checkBootstrapStopping()) {
+        	cur_correlation = computeBootstrapCorrelation();
+            if (!stop_rule.meetStopCondition(curIt, cur_correlation)) {
                 if (params->max_candidate_trees == 0) {
                     max_candidate_trees = treels_logl.size() * (stop_rule.getNumIterations() + params->step_iterations)
                             / stop_rule.getNumIterations();
                 }
-                stop_rule.setIterationNum(stop_rule.getNumIterations() + params->step_iterations,
-                        params->max_iterations);
-                cout << "INFO: UFBoot did not converge, increasing #iterations to " << stop_rule.getNumIterations() << endl;
-                //delete boot_splits;
-                //boot_splits = sg;
-            } //else delete sg;
+                stop_rule.setIterationNum(stop_rule.getNumIterations() + params->step_iterations, params->max_iterations);
+                cout << "INFO: UFBoot did not converge, continue collecting more candidate trees" << endl;
+            }
         }
-        //cout << endl;
     }
 
     readTreeString(bestTreeString);
 
     // DTH: Carefully watch the -pll case here
-    if (!params->autostop) {
-    	if (params->snni) {
-			int predicted_iteration = stop_rule.getLastImprovedIteration() + params->stopCond;
-			if (predicted_iteration > curIt) {
-				cout << endl << "WARNING: " << predicted_iteration <<
-					" iterations are needed by the default stopping rule" << endl;
-			}
-    	} else {
-			int predicted_iteration = stop_rule.getPredictedIteration();
-			if (predicted_iteration > curIt) {
-				cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure "
-						<< int(floor(params->stop_confidence * 100)) << "% confidence that "
-						<< "         the IQPNNI search will not find a better tree" << endl;
-			}
-    	}
-    }
+//    if (params->stop_condition != SC_UNSUCCESS_ITERATION) {
+//    	if (params->snni) {
+//			int predicted_iteration = stop_rule.getLastImprovedIteration() + params->unsuccess_iteration;
+//			if (predicted_iteration > curIt) {
+//				cout << endl << "WARNING: " << predicted_iteration <<
+//					" iterations are needed by the default stopping rule" << endl;
+//			}
+//    	} else {
+//			int predicted_iteration = stop_rule.getPredictedIteration();
+//			if (predicted_iteration > curIt) {
+//				cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure "
+//						<< int(floor(params->stop_confidence * 100)) << "% confidence that "
+//						<< "         the IQPNNI search will not find a better tree" << endl;
+//			}
+//    	}
+//    }
 
     if (testNNI)
         outNNI.close();
@@ -2248,7 +2251,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 
     if (!boot_splits.empty()) {
         // check the stopping criterion for ultra-fast bootstrap
-        if (!checkBootstrapStopping())
+        if (computeBootstrapCorrelation() < params.min_correlation)
             cout << "WARNING: bootstrap analysis did not converge, rerun with higher number of iterations" << endl;
 
     }
@@ -2428,9 +2431,9 @@ double computeCorrelation(IntVector &ix, IntVector &iy) {
     return f1 / (sqrt(f2) * sqrt(f3));
 }
 
-bool IQTree::checkBootstrapStopping() {
+double IQTree::computeBootstrapCorrelation() {
     if (boot_splits.size() < 2)
-        return false;
+        return 0.0;
     IntVector split_supports;
     SplitIntMap split_map;
     int i;
@@ -2484,7 +2487,7 @@ bool IQTree::checkBootstrapStopping() {
      outError(ERR_WRITE_OUTPUT, outfile);
      }
      */
-    return (corr >= params->min_correlation);
+    return corr;
 }
 
 void IQTree::addPositiveNNIMove(NNIMove myMove) {

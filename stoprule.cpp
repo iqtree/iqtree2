@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "stoprule.h"
+#include "timeutil.h"
 
 StopRule::StopRule()
 {
@@ -27,6 +28,10 @@ StopRule::StopRule()
 	min_iteration = 0;
 	max_iteration = 0;
 	predicted_iteration = 0;
+	unsuccess_iteration = 100;
+	min_correlation = 0.99;
+	start_real_time = -1.0;
+	max_run_time = -1.0;
 }
 
 
@@ -44,10 +49,25 @@ int StopRule::getPredictedIteration() {
 	return predicted_iteration;
 }
 
-bool StopRule::meetStopCondition(int current_iteration) {
-	if (stop_condition == SC_FIXED_ITERATION || predicted_iteration == 0)
-		return current_iteration > min_iteration;
-	return current_iteration > predicted_iteration;
+bool StopRule::meetStopCondition(int cur_iteration, double cur_correlation) {
+	switch (stop_condition) {
+	case SC_FIXED_ITERATION:
+		return cur_iteration > min_iteration;
+	case SC_WEIBULL:
+		if (predicted_iteration == 0)
+			return cur_iteration > min_iteration;
+		else
+			return cur_iteration > predicted_iteration;
+	case SC_UNSUCCESS_ITERATION:
+		return cur_iteration > getLastImprovedIteration() + unsuccess_iteration;
+	case SC_BOOTSTRAP_CORRELATION:
+		return cur_correlation >= min_correlation;
+	case SC_REAL_TIME:
+		return (getRealTime() - start_real_time >= max_run_time);
+	}
+//	if (stop_condition == SC_FIXED_ITERATION || predicted_iteration == 0)
+//		return current_iteration > min_iteration;
+//	return current_iteration > predicted_iteration;
 }
 
 void StopRule::setStopCondition(STOP_CONDITION sc) {
@@ -65,6 +85,20 @@ void StopRule::setConfidenceValue(double confidence_val)
 	assert(confidence_value > 0 && confidence_value < 1);
 }
 
+void StopRule::setUnsuccessIteration(int unsuccess_iteration) {
+	this->unsuccess_iteration = unsuccess_iteration;
+}
+
+void StopRule::setMinCorrelation(double min_correlation) {
+	this->min_correlation = min_correlation;
+}
+
+void StopRule::setRealTime(double start_real_time, double max_un_time) {
+	this->start_real_time = start_real_time;
+	this->max_run_time = max_run_time;
+}
+
+
 double StopRule::predict (double &upperTime) {
 	if (nTime_ < 4) return 0;
 	//readVector(time_vec);
@@ -79,7 +113,7 @@ void StopRule::addImprovedIteration(int iteration) {
 	double upperTime;
 	if (predict(upperTime) == 0) return;
 	predicted_iteration = upperTime;
-	if (stop_condition == SC_STOP_PREDICT && predicted_iteration > max_iteration)
+	if (stop_condition == SC_WEIBULL && predicted_iteration > max_iteration)
 		predicted_iteration = max_iteration;
 	if (predicted_iteration < min_iteration)
 			predicted_iteration = min_iteration;

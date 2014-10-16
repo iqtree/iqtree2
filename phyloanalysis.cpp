@@ -964,18 +964,20 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	if (params.min_iterations > 0) {
 	    cout << "Tree search algorithm: " << (params.snni ? "Stochastic nearest neighbor interchange" : "IQPNNI") << endl;
 	    cout << "Termination condition: ";
-	    if (params.maxtime != 1000000) {
+	    if (params.stop_condition == SC_REAL_TIME) {
 	        cout << "after " << params.maxtime << " minutes" << endl;
-	    } else if (params.autostop) {
-	        cout << "Automatic" << endl;
-	    } else {
-	        if (params.stop_condition == SC_FIXED_ITERATION)
-	            cout << params.min_iterations << endl;
-	        else
+	    } else if (params.stop_condition == SC_UNSUCCESS_ITERATION) {
+	        cout << "after " << params.unsuccess_iteration << " unsuccessful iterations" << endl;
+	    } else if (params.stop_condition == SC_FIXED_ITERATION) {
+	            cout << params.min_iterations << " iterations" << endl;
+	    } else if(params.stop_condition == SC_WEIBULL) {
 	            cout << "predicted in [" << params.min_iterations << ","
 	                    << params.max_iterations << "] (confidence "
 	                    << params.stop_confidence << ")" << endl;
+	    } else if (params.stop_condition == SC_BOOTSTRAP_CORRELATION) {
+	    	cout << "min " << params.min_correlation << " correlation coefficient" << endl;
 	    }
+
 	    if (!params.snni) {
 	        cout << "Number of representative leaves  : " << params.k_representative << endl;
 	        cout << "Probability of deleting sequences: " << iqtree.getProbDelete() << endl;
@@ -1079,7 +1081,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     double longest_dist;
     string dist_file;
-    params.startTime = t_begin;
+    params.startCPUTime = t_begin;
     params.start_real_time = getRealTime();
     string bionj_file = params.out_prefix;
     bionj_file += ".bionj";
@@ -1522,12 +1524,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                 		iqtree.candidateTrees.printBestScores();
                     break;
                 } else {
-                    double min_elapsed = (getCPUTime() - params.startTime) / 60;
-                    if (min_elapsed > params.maxtime) {
-                        //cout << endl;
-                        //cout << "Maximum running time of " << params.maxtime << " minutes reached" << endl;
-                        break;
-                    }
+//                    double min_elapsed = (getCPUTime() - params.startTime) / 60;
+//                    if (min_elapsed > params.maxtime) {
+//                        cout << endl;
+//                        cout << "Maximum running time of " << params.maxtime << " minutes reached" << endl;
+//                        break;
+//                    }
                 }
             }
             /*********** END: Do NNI on the best parsimony trees ************************************/
