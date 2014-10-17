@@ -96,6 +96,7 @@ bool StopRule::meetStopCondition(int cur_iteration, double cur_correlation) {
 	case SC_REAL_TIME:
 		return (getRealTime() - start_real_time >= max_run_time);
 	}
+	return false;
 }
 
 double StopRule::getRemainingTime(int cur_iteration) {
@@ -115,6 +116,7 @@ double StopRule::getRemainingTime(int cur_iteration) {
 	case SC_REAL_TIME:
 		return max_run_time - realtime_secs;
 	}
+	return 0.0;
 }
 
 //void StopRule::setStopCondition(STOP_CONDITION sc) {

@@ -337,8 +337,9 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
-
+#ifdef _OPENMP
 #pragma omp parallel for private(ptn, c, x, i, partial_lh_tmp)
+#endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
@@ -423,7 +424,9 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 
 
 		double sum_scale = 0.0;
+#ifdef _OPENMP
 #pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+#endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_right = right->partial_lh + ptn*block;
@@ -518,7 +521,9 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 //		double *partial_lh_right = right->partial_lh;
 
 		double sum_scale = 0.0;
+#ifdef _OPENMP
 #pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+#endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_left = left->partial_lh + ptn*block;
@@ -657,8 +662,10 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
+#ifdef _OPENMP
 #pragma omp parallel for private(ptn, i)
-			for (ptn = 0; ptn < nptn; ptn++) {
+#endif
+	    	for (ptn = 0; ptn < nptn; ptn++) {
 				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 				double *theta = theta_all + ptn*block;
 				double *lh_tip = tip_partial_lh + ((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn]))*nstates;
@@ -694,8 +701,10 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 	    	MappedArrDyn ei_partial_lh_dad(partial_lh_dad, all_entries);
 	    	ei_theta = ei_partial_lh_node * ei_partial_lh_dad;
 #else
+#ifdef _OPENMP
 #pragma omp parallel for
-			for (i = 0; i < all_entries; i++) {
+#endif
+	    	for (i = 0; i < all_entries; i++) {
 				theta_all[i] = partial_lh_node[i] * partial_lh_dad[i];
 			}
 #endif
@@ -721,8 +730,10 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 //    double *theta = theta_all;
     double my_df = 0.0, my_ddf = 0.0, prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
 
+#ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh, my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i)
-	for (ptn = 0; ptn < nptn; ptn++) {
+#endif
+    for (ptn = 0; ptn < nptn; ptn++) {
 		double lh_ptn = 0.0, df_ptn = 0.0, ddf_ptn = 0.0;
 		double *theta = theta_all + ptn*block;
 #ifdef USING_SSE
@@ -870,8 +881,10 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 //		exit(0);
 
     	// now do the real computation
+#ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)
-		for (ptn = 0; ptn < nptn; ptn++) {
+#endif
+    	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = 0.0;
 			double *lh_cat = _pattern_lh_cat + ptn*ncat;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
@@ -914,8 +927,10 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 		delete [] partial_lh_node;
     } else {
     	// both dad and node are internal nodes
+#ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)
-		for (ptn = 0; ptn < nptn; ptn++) {
+#endif
+    	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = 0.0;
 			double *lh_cat = _pattern_lh_cat + ptn*ncat;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
@@ -1138,8 +1153,10 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 		VectorClass vc_partial_lh_tmp[nstates/VCSIZE];
 		VectorClass res[VCSIZE];
 
+#ifdef _OPENMP
 #pragma omp parallel for private(ptn, c, x, i, j, vc_partial_lh_tmp, res)
-	    for (ptn = 0; ptn < nptn; ptn++) {
+#endif
+		for (ptn = 0; ptn < nptn; ptn++) {
 	        double *partial_lh = dad_branch->partial_lh + ptn*block;
 
 //	    	int state_left  = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
@@ -1230,7 +1247,9 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 		VectorClass vc_max; // maximum of partial likelihood, for scaling check
 		VectorClass vright[VCSIZE];
 
+#ifdef _OPENMP
 #pragma omp parallel for reduction(+: sum_scale) private (ptn, c, x, i, j, vc_lh_right, vc_partial_lh_tmp, res, vc_max, vright)
+#endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 	        double *partial_lh = dad_branch->partial_lh + ptn*block;
 	        double *partial_lh_right = right->partial_lh + ptn*block;
@@ -1307,7 +1326,9 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 		VectorClass res[VCSIZE];
 		VectorClass vleft[VCSIZE], vright[VCSIZE];
 
+#ifdef _OPENMP
 #pragma omp parallel for reduction (+: sum_scale) private(ptn, c, x, i, j, vc_max, vc_partial_lh_tmp, vc_lh_left, vc_lh_right, res, vleft, vright)
+#endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 	        double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_left = left->partial_lh + ptn*block;
@@ -1442,7 +1463,9 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 
 		if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
+#ifdef _OPENMP
 #pragma omp parallel for private(ptn, i)
+#endif
 			for (ptn = 0; ptn < orig_nptn; ptn++) {
 			    double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 				double *theta = theta_all + ptn*block;
@@ -1469,8 +1492,10 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 		    double *partial_lh_node = node_branch->partial_lh;
 		    double *partial_lh_dad = dad_branch->partial_lh;
 	    	size_t all_entries = nptn*block;
+#ifdef _OPENMP
 #pragma omp parallel for private(i)
-			for (i = 0; i < all_entries; i+=VCSIZE) {
+#endif
+	    	for (i = 0; i < all_entries; i+=VCSIZE) {
 				(VectorClass().load_a(&partial_lh_node[i]) * VectorClass().load_a(&partial_lh_dad[i]))
 						.store_a(&theta_all[i]);
 			}
