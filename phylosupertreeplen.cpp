@@ -636,9 +636,9 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		}
 	}
 
-	//===========================================================================================
-	// Prepare the details for NNI: SuperTree
-	//===========================================================================================
+	//==================================================================================================
+	// SuperTREE: saving Neighbors and allocating new ones; assign which nodes/neighbors to be swapped.
+	//==================================================================================================
 	double old_brlen = node1->findNeighbor(node2)->length; // length of the branch between node1 and node2 on SuperTree before NNI
 	int IT_NUM = (params->nni5) ? 6 : 2;
 	NeighborVec::iterator it, saved_it[6], node_nei_it[4];
@@ -655,9 +655,16 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			node_nei_it[i++] = it;
 		}
 	//}
-	assert(id == IT_NUM);
 
-	// Save SuperNeighbors
+	/*------------------------------------------------------------------------------------
+	 * Saving original neighbors:
+	 * saved_nei[0] - node2 as a neighbor of node1
+	 * saved_nei[1] - node1 as a neighbor of node2
+	 * IF(nni5Branches)
+	 * 		saved_nei[2(3)] - node1 as a neighbor of its nei1(nei2) different from node2
+	 * 		saved_nei[4(5)] - node2 as a neighbor of its nei1(nei2) different from node1
+	 *------------------------------------------------------------------------------------*/
+
 	SuperNeighbor *saved_nei[6];
 
 	// allocate new Super Neighbor pointers
@@ -668,43 +675,14 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		for(part = 0; part < ntrees; part++)
 			((SuperNeighbor*)*saved_it[id])->link_neighbors.push_back(NULL);
 	}
-	/*---------------------------------------------------------
-	 * Save branch lengths on SubTrees for restoring purposes
-	 *---------------------------------------------------------*/
-	/*
-	 * NO_EPS:  one/five branches need to be restored in nni1/nni5 cases respectively,
-	 * 			but these branches are saved in saved_nei->link_neighbors, we won't store them again
-	 *
-	 * ONE_EPS: three branches need to be restored (stick to ids: 0,...,5)
-	 * 			in nni1 case only the saved_nei for central branch is saved, keep this in mind, when restoring
-	 * TWO_EPS: the image of central branch needs to be restored (the id for restoring [6*part+0])
-	 * THREE_EPS: one branch needs to be restored: which the central is relinked to after NNI (the id for restoring [6*part+0])
-	 *
-	 * MANY_EPS: nothing to be restored
-	 */
-	vector<double*> sub_saved_branch;
-	sub_saved_branch.resize(6*ntrees);
-
-	/* Minh bug fix: save the cur_score */
-	double *saved_cur_score = new double[part_info.size()];
-	for (i = 0; i < part_info.size(); i++)
-		saved_cur_score[i] = part_info[i].cur_score;
-
-	/*------------------------------------------------------------------------------------
-	 * Saved original neighbors:
-	 * saved_nei[0] - node2 as a neighbor of node1
-	 * saved_nei[1] - node1 as a neighbor of node2
-	 * IF(nni5Branches)
-	 * 		saved_nei[2(3)] - node1 as a neighbor of its nei1(nei2) different from node2
-	 * 		saved_nei[4(5)] - node2 as a neighbor of its nei1(nei2) different from node1
-	 *------------------------------------------------------------------------------------*/
 
 	// Getting NEW Neighbors: get the Neighbors again since they were saved for restoring purpose and replaced by new
 	SuperNeighbor *nei1_new = (SuperNeighbor*) node1->findNeighbor(node2);
 	SuperNeighbor *nei2_new = (SuperNeighbor*) node2->findNeighbor(node1);
 
-	//-------------------------------------------------------------------------------------------
-	// NNI details: assigning nodes to be swapped -----------------------------------------------
+	/* -------------------------------------------------------------------------------------------
+	 *  NNI details: assigning nodes to be swapped on SuperTree
+	 * -------------------------------------------------------------------------------------------*/
 
 	// node1_nei - one of the node1 neighbors, which is not node2
 	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
@@ -724,59 +702,55 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		node2_its[0] = node2_its[1];
 		node2_its[1] = node2_it;
 	}
-	//===========================================================================================
-	// Prepare the details for NNI: SubTrees
-	//===========================================================================================
-	/*------------------------------------------------------------------------------------------*
-	 * Synchronization:																			*
-	 * node1 -> node1_link[part]																*
-	 * node2 -> node2_link[part]																*
-	 * node1_nei -> node1_link_nei[part]														*
-	 * node2_nei -> node2_link_nei[part] - synchronized later, since differs for nni1 and nni2	*
-	 *------------------------------------------------------------------------------------------*/
 
-	Node *node_link, *nei_link;
-	vector<PhyloNode*> node1_link,node2_link;
-	vector<PhyloNeighbor*> node1_link_nei,node2_link_nei,sub_saved_nei1,sub_saved_nei2,sub_saved_nei;
-	vector<NeighborVec::iterator> node1_link_it, node2_link_it, sub_saved_it;
-
-	// Nodes which correspond to node1 and node2 on partitions
-	node1_link.resize(ntrees);
-	node2_link.resize(ntrees);
-
-	// Neighbors of node1_link and node2_link to be swapped during NNI
-	node1_link_nei.resize(ntrees);
-	node2_link_nei.resize(ntrees);
-
-	// iterators for the neighbors of node1_link and node2_link to be swapped
-	node1_link_it.resize(ntrees);
-	node2_link_it.resize(ntrees);
-
+	/* =================================================================================================
+	 * SubTREEs: saving Neighbors and allocating new ones.
+	 * =================================================================================================*/
 
 	/*------------------------------------------------------------------------------------
-	 * Saving neighbors and their iterators on partitions
+	 * Variables to be used for saving/restoring purposes on SubTrees
 	 *------------------------------------------------------------------------------------*/
+
+	vector<PhyloNeighbor*> sub_saved_nei1,sub_saved_nei2,sub_saved_nei;
+	vector<NeighborVec::iterator> sub_saved_it;
 
 	// Saving linked neighbor of node1->findNei(node2)
 	sub_saved_nei1.resize(ntrees);
-
 	// Saving linked neighbor of node2->findNei(node1)
 	sub_saved_nei2.resize(ntrees);
 
-	// This vector of Phylo Neighbors will be used only for ONE_EPS case.
-	// Here, we'll have to save and restore 1/3 neis for nni1/nni5. For convenience I'm still gonna use 6*ntrees elements vector.
 	sub_saved_nei.resize(6*ntrees);
 	sub_saved_it.resize(6*ntrees);
 
-	/*------------------------------------------------------------------------------------
-	 * At this point we work only with partitions satisfying is_nni condition:
-	 * 		- check if is_nni[part]
-	 * 			YES:
-	 * 			- allocate new PhyloNeighbor
-	 * 			- check if some other branch links to the same branch on SubTree
-	 * 			- update link_neighbors[part]
-	 * 			- synchronize node1_link[part], node2_link[part], node1_link_nei[part]
-	 *------------------------------------------------------------------------------------*/
+	/*---------------------------------------------------------
+	 * For Restoring: saving branch lengths on SubTrees
+	 *---------------------------------------------------------*/
+	/* NO_EPS:  one/five branches need to be restored in nni1/nni5 cases respectively,
+	 * 			but these branches are saved in saved_nei->link_neighbors, we won't store them again
+	 * ONE_EPS: three branches need to be restored (stick to ids: 0,...,5)
+	 * TWO_EPS: the image of central branch needs to be restored (the id for restoring [6*part+0])
+	 * THREE_EPS: one branch needs to be restored: which the central is relinked to after NNI (the id for restoring [6*part+0])
+	 * MANY_EPS: nothing to be restored
+	 */
+	vector<double*> sub_saved_branch;
+	sub_saved_branch.resize(6*ntrees);
+
+	/* ---------------------------------------------------------
+	 * For Restoring: saving current likelihoods for SubTree
+	 * ---------------------------------------------------------*/
+	double *saved_cur_score = new double[part_info.size()];
+	for (i = 0; i < part_info.size(); i++)
+		saved_cur_score[i] = part_info[i].cur_score;
+
+	/* -------------------------------------------------------------------------------------------------------------------
+	 * Allocate new PhyloNeighbors:
+	 * NO_EPS:  2 or 6 for nni1 and nni5 respectively; update link_neighbors for corresponding SuperNeighbors.
+	 * ONE_EPS: 1 or 3 for nni1 and nni5 respectively; update link_neighbors for corresponding SuperNeighbors LATER
+	 * 			(since it depends on particular NNI).
+	 * -------------------------------------------------------------------------------------------------------------------*/
+
+	// Auxiliary variables: we allocate new PhyloNeighbor for [node_link->findNeighbor(nei_link)]
+	Node *node_link, *nei_link;
 
 	for(part = 0; part < ntrees; part++){
 		if(is_nni[part]==NNI_NO_EPSILON){
@@ -800,7 +774,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, saved_nei[id]->link_neighbors[part]->length);
 				((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
 				((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = at(part)->newScaleNum();
-				(*sub_saved_it[part*6 + id])->id = saved_nei[id]->link_neighbors[part]->id;
+				//(*sub_saved_it[part*6 + id])->id = saved_nei[id]->link_neighbors[part]->id;
 
 				// update link_neighbor[part]: for New SuperNeighbor we set the corresponding new PhyloNeighbor on partition part
 				((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
@@ -821,32 +795,112 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
 				}
 			}
-			// Synchronization: node1, node2, node1_nei; node2_nei varies for two NNIs therefore synchronized later
-			node1_link[part] = (PhyloNode*) nei2_new->link_neighbors[part]->node;
-			node2_link[part] = (PhyloNode*) nei1_new->link_neighbors[part]->node;
-			node1_link_nei[part] = ((SuperNeighbor*)node1_nei)->link_neighbors[part];
-			node1_link_it[part] = node1_link[part]->findNeighborIt(node1_link_nei[part]->node);
 
 		} else if(is_nni[part]==NNI_ONE_EPSILON){
-			// Allocate three new Phylo Neighbors here. For nni1 only one will be used and for nni5 all three.
 			// Make sure to update all the necessary link_neighbors and take care of branch lengths
 			// (increase/decrease by central branch where necessary).
 
+			nei1_new->link_neighbors[part] = saved_nei[0]->link_neighbors[part];
+			nei2_new->link_neighbors[part] = saved_nei[1]->link_neighbors[part];
 
+			// Change the length of branch, (node1,node2) WAS linked to (-=)
+			nei1_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
+			nei2_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
+			assert(nei1_new->link_neighbors[part]->length >= 0.0);
+
+			// Allocate three new PhyloNeighbors. For nni1 only one of it will be actually used and which one depends on the NNI.
+
+			for(id = 2; id < 6; id++){
+				if(((SuperNeighbor*)(*saved_it[id]))->link_neighbors[part]){
+					// nei_link is either node1 or node2 on SubTrees
+					nei_link = ((SuperNeighbor*)(*saved_it[id]))->link_neighbors[part]->node;
+					// node_link are nodes neighbors of node1 and node2 on SubTrees
+					node_link = ((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node;
+					sub_saved_it[part*6 + id] = node_link->findNeighborIt(nei_link);
+
+					*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, ((SuperNeighbor*)(*saved_it[id]))->link_neighbors[part]->length);
+					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
+					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = at(part)->newScaleNum();
+
+				}
+
+/*
+			// update link_neighbor[part]
+				((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
+
+				// For nni5 we need to update also the link_nei for the corresponding nei,
+				// where the central branch was relinked to
+				if(params->nni5){
+					for(int idh = 2; idh < 6; idh++){
+						if(node_link == ((SuperNeighbor*)(*node_nei_it[idh-2]))->link_neighbors[part]->node){
+							((SuperNeighbor*)*saved_it[idh])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
+						}
+					}
+				}
+			}
+
+			// optimization on 5 branches!!!!!
+			if(params->nni5){
+				for(id = 2; id < 6; id++){
+					if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]){
+						if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node
+								!= nei1_new->link_neighbors[part]->node
+							&& ((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node
+							!= nei2_new->link_neighbors[part]->node)
+						{
+							// update link_neighbor[part]
+							((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
+						}
+					}
+				}
+			}// end of nni5
+*/
+			}
 		}
 	}
 
-	//===========================================================================================
-	// Do the NNI swap and compute the likelihood of swapped topology
-	//===========================================================================================
+	/* -------------------------------------------------------------------
+	 * Variables to store the information about which nodes/neighbors
+	 * to be swapped on SubTrees for the corresponding NNI on SuperTree
+	 *
+	 * node1 -> node1_link[part]
+	 * node2 -> node2_link[part]
+	 * node1_nei -> node1_link_nei[part]
+	 * node2_nei -> node2_link_nei[part]
+	 * -------------------------------------------------------------------*/
+	vector<PhyloNode*> node1_link,node2_link;
+	vector<PhyloNeighbor*> node1_link_nei,node2_link_nei;
+	vector<NeighborVec::iterator> node1_link_it, node2_link_it;
+
+	// Nodes which correspond to node1 and node2 on partitions
+	node1_link.resize(ntrees);
+	node2_link.resize(ntrees);
+	// Neighbors of node1_link and node2_link to be swapped during NNI
+	node1_link_nei.resize(ntrees);
+	node2_link_nei.resize(ntrees);
+	// iterators for the neighbors of node1_link and node2_link to be swapped
+	node1_link_it.resize(ntrees);
+	node2_link_it.resize(ntrees);
+
+	/*===========================================================================================
+	 * 	MAIN:
+	 * 	- do the NNI swap on SuperTree and perform the corresponding actions on SubTrees;
+	 *	- compute the likelihood of swapped topology;
+	 *  - swap back;
+	 *	- restore if necessary.
+	 *===========================================================================================*/
 	int cnt;
 	for (cnt = 0; cnt < node2_its.size(); cnt++) {
 		node2_it = node2_its[cnt];
 		Neighbor *node2_nei = *node2_it;
 
-		// Synchronize node2_link_nei for NNI on SubTree
+		// Define which nodes/neighbors to be swapped on SubTree ----------------------------
 		for(part=0; part<ntrees; part++)
 			if(is_nni[part]==NNI_NO_EPSILON){
+				node1_link[part] = (PhyloNode*) nei2_new->link_neighbors[part]->node;
+				node2_link[part] = (PhyloNode*) nei1_new->link_neighbors[part]->node;
+				node1_link_nei[part] = ((SuperNeighbor*)node1_nei)->link_neighbors[part];
+				node1_link_it[part] = node1_link[part]->findNeighborIt(node1_link_nei[part]->node);
 				node2_link_nei[part] = ((SuperNeighbor*)node2_nei)->link_neighbors[part];
 				node2_link_it[part] = node2_link[part]->findNeighborIt(node2_link_nei[part]->node);
 			}
@@ -857,7 +911,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		node2->updateNeighbor(node2_it, node1_nei);
 		node1_nei->node->updateNeighbor(node1, node2);
 
-// Do the NNI swap on SubTrees or Proceed with partitions requiring relink of (node1,node2) ------------------------------
+		// Perform actions in accordance with the type of NNI for a given partition ---------
 		for(part = 0; part < ntrees; part++){
 
 			if(is_nni[part]==NNI_NO_EPSILON){
@@ -871,15 +925,21 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				for(id=0; id<IT_NUM; id++){
 					((PhyloNeighbor*)(*sub_saved_it[part*6+id]))->clearPartialLh();
 				}
+
 			} else if(is_nni[part]==NNI_MANY_EPSILON){
-				//no need to change or allocate anything
+				// the NNI on SuperTree does not change anything on SubTree
+
 			} else if(is_nni[part]==NNI_THREE_EPSILON){
+				// The central branch has no image before the NNI.
+				// Relink the central branch and take care of branch lengths.
+				// In the end restore one branch.
+
 				linkBranch(part, nei1_new, nei2_new);
 				assert(nei1_new->link_neighbors[part]);
 
 				// Save the branch length
 				if(cnt == 0)
-					sub_saved_branch[6*part] = new double(nei1_new->link_neighbors[part]->length);
+					sub_saved_branch[6*part] = nei1_new->link_neighbors[part]->length;
 
 				nei1_new->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
 				nei2_new->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
@@ -889,14 +949,15 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 						(PhyloNode*)nei2_new->link_neighbors[part]->node);
 
 			}else if(is_nni[part]==NNI_TWO_EPSILON){
-				/* Olga: bugfix
-				 	 	 In fact, before relinking the image of central branch is NULL
-				 	 	 after relinking it can be either NULL or it should relink to the same branch as before.
-				*/
+
+				/* In fact, before relinking the image of central branch is NULL (because we allocated
+				 * new SuperNeighbor and filled the link_neighbors with NULL for all partitions).
+				 * After relinking it can be either NULL or it should relink to the same branch as before.
+				 * In the end restore one branch.*/
 
 				// Save the branch length
 				if(cnt == 0)
-					sub_saved_branch[6*part] = new double(nei1_new->link_neighbors[part]->length);
+					sub_saved_branch[6*part] = nei1_new->link_neighbors[part]->length;
 
 				linkBranch(part, nei1_new, nei2_new);
 				if(!nei1_new->link_neighbors[part]){
@@ -905,102 +966,50 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					part_info[part].cur_score = at(part)->computeLikelihoodBranch(saved_nei[0]->link_neighbors[part],
 							(PhyloNode*)saved_nei[1]->link_neighbors[part]->node);
 				}
+
 			}else if(is_nni[part] == NNI_ONE_EPSILON){
 
-				nei1_new->link_neighbors[part] = saved_nei[0]->link_neighbors[part];
-				nei2_new->link_neighbors[part] = saved_nei[1]->link_neighbors[part];
+				/* The crazy case, which absorbs most of the bugs:(
+				 * Lets say on SuperTree there are five branches, a,b,c,d and central e, and d has an empty image.
+				 * The corresponding SubTree has 3 branches, a',b',c'.
+				 * Before NNI central branch, e, has an image. Lets say it maps to a'.
+				 * After NNI it will be remapped either to b' or c', depending on which nodes will be swapped.
+				 * Update the corresponding link_neighbors. Make sure that link_neighbors for central branch e
+				 * and for the one it is now mapped to (b' or c'), are the same.
+				 * Decrease a' (done before). Increase b' or c' depending on the NNI. Restore three branches.*/
 
-				// Change the length of branch, (node1,node2) WAS linked to (-=)
-				nei1_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
-				nei2_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
-				assert(nei1_new->link_neighbors[part]->length >= 0.0);
 
-				// Relink the branch if it does not correspond to NNI for partition
 				linkBranch(part, nei1_new, nei2_new);
+				assert(nei1_new->link_neighbors[part]);
 
 				if(!params->nni5){
-					sub_saved_branch[6*part] = new double (nei1_new->link_neighbors[part]->length);
+					sub_saved_branch[6*part] = nei1_new->link_neighbors[part]->length;
 				}
 
-				// Minh sanity check that old and newly relinked branches MUST be adjacent in subtree!
-				int common_nodes = 0;
-				if (nei1_new->link_neighbors[part] && saved_nei[0]->link_neighbors[part]) {
-					if (nei1_new->link_neighbors[part]->node == saved_nei[0]->link_neighbors[part]->node) common_nodes++;
-					if (nei1_new->link_neighbors[part]->node == saved_nei[1]->link_neighbors[part]->node) common_nodes++;
-					if (nei2_new->link_neighbors[part]->node == saved_nei[0]->link_neighbors[part]->node) common_nodes++;
-					if (nei2_new->link_neighbors[part]->node == saved_nei[1]->link_neighbors[part]->node ) common_nodes++;
-					if (common_nodes == 0) {
-						printMapInfo();
-						cout << "common_nodes = " << common_nodes << endl;
-						cout << nei1_new->link_neighbors[part]->node->id << " " << nei2_new->link_neighbors[part]->node->id << " "
-							 << saved_nei[0]->link_neighbors[part]->node->id << " " << saved_nei[1]->link_neighbors[part]->node->id << endl;
-						outError("linkBranch failed in ", __func__);
+
+				// nni1: you need to update only one link_neighbor either node1->findNeighbor(node2) or node2->findNeighbor(node1)
+				for(id=2; id<6; id++){
+					if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node == nei1_new->link_neighbors[part]->node){
+						((SuperNeighbor*)*saved_it[0])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
+						break;
+					} else if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node == nei2_new->link_neighbors[part]->node){
+						((SuperNeighbor*)*saved_it[1])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
+						break;
 					}
 				}
 
-				assert(nei1_new->link_neighbors[part]);
-				//sub_saved_nei1[part] = nei1_new->link_neighbors[part];
-				//sub_saved_nei2[part] = nei2_new->link_neighbors[part];
+				// Increase the branch to which the central is relinked.
+				nei1_new->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
+				nei2_new->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
 
-				// Allocate new PhyloNeighbors
-
-				// one branch optimization
-				for(id = 0; id < 2; id++){
-					nei_link  =  (id == 0) ? nei1_new->link_neighbors[part]->node : nei2_new->link_neighbors[part]->node;
-					node_link =  (id == 1) ? nei1_new->link_neighbors[part]->node : nei2_new->link_neighbors[part]->node;
-					sub_saved_it[part*6 + id] = node_link->findNeighborIt(nei_link);
-
-					// Saving neighbor for restoring purposes
-					sub_saved_nei[6*part + id] = (PhyloNeighbor*) node_link->findNeighbor(nei_link);
-
-					// the central branch length of the subtree is increased!
-					*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, nei1_new->link_neighbors[part]->length + old_brlen * part_info[part].part_rate);
-					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
-					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = at(part)->newScaleNum();
-					(*sub_saved_it[part*6 + id])->id = nei1_new->link_neighbors[part]->id;
-					// update link_neighbor[part]
-					((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
-
-					// For nni5 we need to update also the link_nei for the corresponding nei,
-					// where the central branch was relinked to
-					if(params->nni5){
-						for(int idh = 2; idh < 6; idh++){
-							if(node_link == ((SuperNeighbor*)(*node_nei_it[idh-2]))->link_neighbors[part]->node){
-								((SuperNeighbor*)*saved_it[idh])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
-							}
-						}
-					}
-				}
-
-				// optimization on 5 branches!!!!!
+				// nni5: you need to update also the link_neighbors for corresponding neighbors of node1 and node2
 				if(params->nni5){
-					for(id = 2; id < 6; id++){
-						if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]){
-							if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node
-									!= nei1_new->link_neighbors[part]->node
-								&& ((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node
-								!= nei2_new->link_neighbors[part]->node)
-							{
-								nei_link = saved_nei[id]->link_neighbors[part]->node;
-								node_link = ((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node;
-								sub_saved_it[part*6 + id] = node_link->findNeighborIt(nei_link);
-
-								// Save neighbor for restoring purposes
-								sub_saved_nei[6*part+id] = (PhyloNeighbor*) node_link->findNeighbor(nei_link);
-
-								*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, ((SuperNeighbor*)(*saved_it[id]))->link_neighbors[part]->length);
-								((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
-								((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = at(part)->newScaleNum();
-								(*sub_saved_it[part*6 + id])->id = saved_nei[id]->link_neighbors[part]->id;
-
-								// update link_neighbor[part]
-								((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
-							}
+					for(id=2; id<6; id++){
+						if(saved_nei[id]->link_neighbors[part]){
+							((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
 						}
 					}
-				}// end of nni5
-
-
+				}
 			} // end of else ONE_EPS case
 		} // end of part loop
 
@@ -1067,7 +1076,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		// ***************************************************************************
 
 		// =============================== RESTORE INFO ==============================
-		/* Minh bug fix: restore the cur_score */
+		/* Restore the cur_score for partitions*/
 		for (i = 0; i < part_info.size(); i++)
 			part_info[i].cur_score = saved_cur_score[i];
 
