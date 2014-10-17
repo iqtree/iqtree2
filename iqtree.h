@@ -162,7 +162,7 @@ public:
             @param min_iterations the min number of iterations
             @param max_iterations the maximum number of iterations
      */
-    void setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, int min_iterations, int max_iterations);
+//    void setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, int min_iterations, int max_iterations);
 
     /**
             @param assess_quartet the quartet assessment, either IQP_DISTANCE or IQP_PARSIMONY
@@ -684,8 +684,9 @@ public:
     /** summarize bootstrap trees into split set */
     void summarizeBootstrap(SplitGraph &sg);
 
-    /** @return TRUE if stopping criterion is met */
-    bool checkBootstrapStopping();
+    /** @return bootstrap correlation coefficient for assessing convergence */
+    double computeBootstrapCorrelation();
+
 	int getDelete() const;
 	void setDelete(int _delete);
 

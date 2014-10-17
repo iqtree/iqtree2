@@ -256,15 +256,18 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 
 }
 
-void Alignment::buildSeqStates() {
+void Alignment::buildSeqStates(bool add_unobs_const) {
+	string unobs_const;
+	if (add_unobs_const) unobs_const = getUnobservedConstPatterns();
 	seq_states.clear();
 	seq_states.resize(getNSeq());
 	for (int seq = 0; seq < getNSeq(); seq++) {
 		vector<bool> has_state;
 		has_state.resize(STATE_UNKNOWN+1, false);
-
 		for (int site = 0; site < getNPattern(); site++)
 			has_state[at(site)[seq]] = true;
+		for (string::iterator it = unobs_const.begin(); it != unobs_const.end(); it++)
+			has_state[*it] = true;
 		for (int state = 0; state < STATE_UNKNOWN; state++)
 			if (has_state[state])
 				seq_states[seq].push_back(state);

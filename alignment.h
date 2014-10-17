@@ -528,7 +528,10 @@ public:
 
     vector<vector<int> > seq_states; // state set for each sequence in the alignment
 
-    void buildSeqStates();
+    /* build seq_states containing set of states per sequence
+     * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
+     */
+    void buildSeqStates(bool add_unobs_const = false);
 
 
     /** Added by MA

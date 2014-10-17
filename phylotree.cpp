@@ -1158,9 +1158,9 @@ uint64_t PhyloTree::getMemoryRequired() {
     block_size = block_size * aln->num_states;
     if (site_rate)
     	block_size *= site_rate->getNRate();
-    uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2;
+    uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2 + (leafNum - 1) * 4 * nptn * sizeof(UBYTE);
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
-    	mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
+    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size -  nptn * sizeof(UBYTE));
 
     return mem_size;
 }
@@ -2296,7 +2296,7 @@ double PhyloTree::computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNo
     return lh_zero_branch;
 }
 
-void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
+void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     // don't recompute the likelihood
     if (dad_branch->partial_lh_computed & 1)
         return;
@@ -2375,7 +2375,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
             dad_branch->scale_num[ptn] = -1;
 
         FOR_NEIGHBOR_IT(node, dad, it)if ((*it)->node->name != ROOT_NAME) {
-            computePartialLikelihoodNaive((PhyloNeighbor*) (*it), (PhyloNode*) node, pattern_scale);
+            computePartialLikelihoodNaive((PhyloNeighbor*) (*it), (PhyloNode*) node);
 
             dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
 
@@ -2448,8 +2448,8 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                 sum_scale += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
                 dad_branch->scale_num[ptn] += 1;
 
-                if (pattern_scale)
-                pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
+//                if (pattern_scale)
+//                pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
             }
             dad_branch->lh_scale_factor += sum_scale;
         }

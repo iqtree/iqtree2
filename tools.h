@@ -353,7 +353,7 @@ enum ModelTestCriterion {
         Stopping condition type
  */
 enum STOP_CONDITION {
-    SC_FIXED_ITERATION, SC_STOP_PREDICT
+    SC_FIXED_ITERATION, SC_WEIBULL, SC_UNSUCCESS_ITERATION, SC_BOOTSTRAP_CORRELATION, SC_REAL_TIME
 };
 
 enum IQP_ASSESS_QUARTET {
@@ -518,15 +518,15 @@ struct Params {
     bool pll;
 
     /**
-     *  Stopping rule for the tree search
+     *  OBSOLETE! Stopping rule for the tree search
      */
-    bool autostop;
+//    bool autostop;
 
     /**
      *  Number of maximum unsuccessful iterations after the search is stopped.
      *  Used for the automatic stopping rule
      */
-    int stopCond;
+    int unsuccess_iteration;
 
     char *binary_aln_file;
 
@@ -544,7 +544,7 @@ struct Params {
     /**
      *  starting CPU time of the program
      */
-    double startTime;
+    double startCPUTime;
 
     /** starting real time of the program */
     double start_real_time;
@@ -1870,6 +1870,11 @@ double computePValueChiSquare(double x, int df);
  * @param seed seed for generator
  */
 int init_random(int seed);
+
+/**
+ * finalize random number generator (e.g. free memory
+ */
+int finish_random();
 
 /**
  * returns a random integer in the range [0; n - 1]

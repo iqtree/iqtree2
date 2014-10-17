@@ -1146,6 +1146,11 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		tree->freeNode();
 		tree->readTree(in, params.is_rooted);
 		tree->setAlignment(tree->aln);
+		if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
+			cout << "INFO: Changing to old kernel as user tree is multifurcating" << endl;
+			tree->changeLikelihoodKernel(LK_SSE);
+		}
+
 		tree->initializeAllPartialLh();
 		tree->fixNegativeBranch(false);
 		if (tree->isSuperTree())

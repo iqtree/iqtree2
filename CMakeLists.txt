@@ -46,10 +46,6 @@ endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX) 
 	message("Compiler      : GNU Compiler (gcc)")
-	#if (CMAKE_BUILD_TYPE STREQUAL "Release") 
-	#	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")  ## Strip binary
-	#endif()
-	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	message("Compiler      : Clang")
 else()
@@ -123,8 +119,8 @@ else ()
 	set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
 endif()
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -g0")
+set(CMAKE_C_FLAGS_RELEASE "-O2 -g0")
 
 set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
 set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
@@ -229,11 +225,7 @@ upperbounds.cpp
 
 # link special lib for WIN32
 if (WIN32)
-#	if (IQTREE_FLAGS MATCHES "omp")
-#		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32 pthread)
-#	else()
 		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32)	
-#	endif()
 else (WIN32)
 	target_link_libraries(iqtree pll ncl whtest zlibstatic sprng m)
 endif (WIN32)
@@ -271,9 +263,6 @@ endif()
 if (APPLE AND IQTREE_FLAGS MATCHES "omp")
 	install (FILES "${PROJECT_SOURCE_DIR}/lib/libiomp5.dylib" DESTINATION bin)
 endif()
-
-#install (FILES "${PROJECT_BINARY_DIR}/iqtree_config.h"        
-#         DESTINATION include)
 
 ##############################################################
 # build a CPack driven installer package

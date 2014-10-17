@@ -687,6 +687,13 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			tree.freeNode();
 			tree.readTree(con_file.c_str(), rooted);
 			tree.setAlignment(tree.aln);
+
+			// bug fix
+			if ((tree.sse == LK_EIGEN || tree.sse == LK_EIGEN_SSE) && !tree.isBifurcating()) {
+				cout << "INFO: Changing to old kernel as consensus tree is multifurcating" << endl;
+				tree.changeLikelihoodKernel(LK_SSE);
+			}
+
 			tree.initializeAllPartialLh();
 			tree.fixNegativeBranch(false);
 			if (tree.isSuperTree())
@@ -957,18 +964,20 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	if (params.min_iterations > 0) {
 	    cout << "Tree search algorithm: " << (params.snni ? "Stochastic nearest neighbor interchange" : "IQPNNI") << endl;
 	    cout << "Termination condition: ";
-	    if (params.maxtime != 1000000) {
+	    if (params.stop_condition == SC_REAL_TIME) {
 	        cout << "after " << params.maxtime << " minutes" << endl;
-	    } else if (params.autostop) {
-	        cout << "Automatic" << endl;
-	    } else {
-	        if (params.stop_condition == SC_FIXED_ITERATION)
-	            cout << params.min_iterations << endl;
-	        else
+	    } else if (params.stop_condition == SC_UNSUCCESS_ITERATION) {
+	        cout << "after " << params.unsuccess_iteration << " unsuccessful iterations" << endl;
+	    } else if (params.stop_condition == SC_FIXED_ITERATION) {
+	            cout << params.min_iterations << " iterations" << endl;
+	    } else if(params.stop_condition == SC_WEIBULL) {
 	            cout << "predicted in [" << params.min_iterations << ","
 	                    << params.max_iterations << "] (confidence "
 	                    << params.stop_confidence << ")" << endl;
+	    } else if (params.stop_condition == SC_BOOTSTRAP_CORRELATION) {
+	    	cout << "min " << params.min_correlation << " correlation coefficient" << endl;
 	    }
+
 	    if (!params.snni) {
 	        cout << "Number of representative leaves  : " << params.k_representative << endl;
 	        cout << "Probability of deleting sequences: " << iqtree.getProbDelete() << endl;
@@ -1072,7 +1081,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     double longest_dist;
     string dist_file;
-    params.startTime = t_begin;
+    params.startCPUTime = t_begin;
     params.start_real_time = getRealTime();
     string bionj_file = params.out_prefix;
     bionj_file += ".bionj";
@@ -1093,7 +1102,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.pllAttr.randomNumberSeed = params.ran_seed;
 #ifdef _OPENMP
         iqtree.pllAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
-        cout << "params.num_threads = " << params.num_threads << endl;
+//        cout << "params.num_threads = " << params.num_threads << endl;
 #else
         iqtree.pllAttr.numberOfThreads = 1;
 #endif
@@ -1188,6 +1197,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         iqtree.setAlignment(alignment);
         numInitTrees = 1;
         params.numNNITrees = 1;
+        // change to old kernel if tree is multifurcating
+		if ((params.SSE == LK_EIGEN || params.SSE == LK_EIGEN_SSE) && !iqtree.isBifurcating()) {
+			cout << "INFO: Changing to old kernel as input tree is multifurcating" << endl;
+			params.SSE = LK_SSE;
+		}
 
         // Create parsimony tree using IQ-Tree kernel
     } else if (params.parsimony_tree && !params.pll) {
@@ -1333,8 +1347,11 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
     if (!params.pll) {
         uint64_t mem_size = iqtree.getMemoryRequired();
-        cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
-                << " MB RAM is required!" << endl;
+#if defined __APPLE__ || defined __MACH__
+        cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1024.0) / 1024 << " MB RAM is required!" << endl;
+#else
+        cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1000.0) / 1000 << " MB RAM is required!" << endl;
+#endif
         if (mem_size >= getMemorySize()) {
             outError("Memory required exceeds your computer RAM size!");
         }
@@ -1515,12 +1532,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                 		iqtree.candidateTrees.printBestScores();
                     break;
                 } else {
-                    double min_elapsed = (getCPUTime() - params.startTime) / 60;
-                    if (min_elapsed > params.maxtime) {
-                        //cout << endl;
-                        //cout << "Maximum running time of " << params.maxtime << " minutes reached" << endl;
-                        break;
-                    }
+//                    double min_elapsed = (getCPUTime() - params.startTime) / 60;
+//                    if (min_elapsed > params.maxtime) {
+//                        cout << endl;
+//                        cout << "Maximum running time of " << params.maxtime << " minutes reached" << endl;
+//                        break;
+//                    }
                 }
             }
             /*********** END: Do NNI on the best parsimony trees ************************************/
@@ -1679,7 +1696,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();
 	if (params.snni && params.min_iterations) {
-		cout << "Logl of best " << params.popSize << " trees found: " << endl;
+		cout << "Log-likelihoods of best " << params.popSize << " trees: " << endl;
 		iqtree.candidateTrees.printBestScores();
 	}
 
@@ -2068,8 +2085,8 @@ void runPhyloAnalysis(Params &params) {
 			string splitsfile = params.out_prefix;
 			splitsfile += ".splits.nex";
 			//cout << splitsfile << endl;
-			computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
-					params.split_threshold, NULL, params.out_prefix, NULL,
+			computeConsensusTree(splitsfile.c_str(), 0, 1e6, params.split_threshold,
+					params.split_weight_threshold, NULL, params.out_prefix, NULL,
 					&params);
 		}
 		//if (original_model != "TESTONLY")
@@ -2214,9 +2231,10 @@ void runPhyloAnalysis(Params &params) {
 			runPhyloAnalysis(params, original_model, alignment, *tree, model_info);
 			params.min_iterations = mi;
 			params.stop_condition = sc;
-			tree->setIQPIterations(params.stop_condition,
-					params.stop_confidence, params.min_iterations,
-					params.max_iterations);
+			tree->stop_rule.initialize(params);
+//			tree->setIQPIterations(params.stop_condition,
+//					params.stop_confidence, params.min_iterations,
+//					params.max_iterations);
 			reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
 		} else
 			cout << endl;
