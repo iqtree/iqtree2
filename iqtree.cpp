@@ -969,7 +969,7 @@ void IQTree::pllBaseSubstitute (char *seq, int dataType)
     meaningDNA[(int)'X'] =
     meaningDNA[(int)'x'] =
     meaningDNA[(int)'-'] =
-    meaningDNA['?'] = 15;
+    meaningDNA[(int)'?'] = 15;
 
     /* AA data */
 
