@@ -758,6 +758,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
     params.adaptPert = false;
     params.numParsTrees = 100;
+    params.sprDist = 20;
     params.numNNITrees = 20;
     params.avh_test = 0;
     params.bootlh_test = 0;
@@ -1685,6 +1686,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -numpars <number_of_parsimony_trees>";
                 params.numParsTrees = convert_int(argv[cnt]);
+            } else if (strcmp(argv[cnt], "-sprpars") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -sprpars <spr radius for parsimony tree>";
+                params.sprDist = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-toppars") == 0) {
                 cnt++;
                 if (cnt >= argc)

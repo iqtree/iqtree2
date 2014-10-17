@@ -1200,7 +1200,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
         double start = getCPUTime();
         // generate a parsimony tree for model optimization
         iqtree.pllInst->randomNumberSeed = params.ran_seed;
-        pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions);
+        pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions, params.sprDist);
         resetBranches(iqtree.pllInst);
         pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start->back,
                 PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
@@ -1382,7 +1382,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
             for (int treeNr = 1; treeNr < numInitTrees; treeNr++) {
                 string curParsTree;
                 iqtree.pllInst->randomNumberSeed = params.ran_seed + treeNr * 12345;
-                pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions);
+                pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions, params.sprDist);
                 pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
                         iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
                         PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
@@ -1502,8 +1502,13 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
                 iqtree.candidateTrees.update(nniTree, iqtree.curScore);
 
                 if (numNNITrees == params.numNNITrees) {
-                	if (verbose_mode >= VB_MED)
-                		iqtree.candidateTrees.printBestScores();
+                	if (verbose_mode >= VB_MED) {
+                		vector<double> bestScores = iqtree.candidateTrees.getBestScores();
+                		for (vector<double>::iterator it = bestScores.begin(); it != bestScores.end(); it++)
+                			cout << (*it) << " ";
+                		cout << endl;
+
+                	}
                     break;
                 } else {
                     double min_elapsed = (getCPUTime() - params.startTime) / 60;
@@ -1670,8 +1675,12 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 	if (iqtree.isSuperTree())
 			((PhyloSuperTree*) &iqtree)->mapTrees();
 	if (params.snni && params.min_iterations) {
+		cout << endl;
 		cout << "Logl of best " << params.popSize << " trees found: " << endl;
-		iqtree.candidateTrees.printBestScores();
+		vector<double> bestScores = iqtree.candidateTrees.getBestScores();
+		for (vector<double>::iterator it = bestScores.begin(); it != bestScores.end(); it++)
+			cout << (*it) << " ";
+		cout << endl;
 	}
 
 	/******** Performs final model parameters optimization ******************/

@@ -14,17 +14,22 @@ CandidateSet::CandidateSet(int limit, int max_candidates, Alignment *aln) {
     this->limit = limit;
     this->max_candidates = max_candidates;
     this->aln = aln;
+    this->bestScore = -DBL_MAX;
 }
 
 CandidateSet::CandidateSet() {
 	aln = NULL;
 	limit = 0;
 	max_candidates = 0;
+	bestScore = -DBL_MAX;
 }
 
-string CandidateSet::getBestTree() {
-	// TODO: What happen if there are multiple optimal trees?
-	return (rbegin())->second.tree;
+vector<string> CandidateSet::getBestTree() {
+	vector<string> res;
+	for (reverse_iterator rit = rbegin(); rit != rend() && rit->second.score == bestScore; rit++) {
+		res.push_back(rit->second.tree);
+	}
+	return res;
 }
 
 string CandidateSet::getRandCandTree() {
@@ -38,6 +43,19 @@ string CandidateSet::getRandCandTree() {
 		if (id == 0)
 			return i->second.tree;
 	return "";
+}
+
+vector<string> CandidateSet::getBestTrees(int numTree) {
+	assert(numTree <= limit);
+	if (numTree == 0) {
+		numTree = max_candidates;
+	}
+	vector<string> res;
+	int cnt = numTree;
+	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++, cnt--) {
+		res.push_back(rit->second.tree);
+	}
+	return res;
 }
 
 bool CandidateSet::replaceTree(string tree, double score) {
@@ -86,6 +104,8 @@ bool CandidateSet::update(string tree, double score) {
 	candidate.tree = tree;
 	candidate.score = score;
 	candidate.topology = getTopology(tree);
+	if (candidate.score > bestScore)
+		bestScore = candidate.score;
 	if (treeTopologyExist(candidate.topology)) {
 	    // if tree topology already exist, we replace the old
 	    // by the new one (with new branch lengths)
@@ -118,13 +138,13 @@ bool CandidateSet::update(string tree, double score) {
 	return false;
 }
 
-void CandidateSet::printBestScores() {
+vector<double> CandidateSet::getBestScores() {
 	int cnt = max_candidates;
+	vector<double> res;
 	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++, cnt--) {
-		if (cnt < max_candidates) cout << " / ";
-		cout << rit->first;
+		res.push_back(rit->first);
 	}
-	cout << endl;
+	return res;
 }
 
 string CandidateSet::getTopology(string tree) {

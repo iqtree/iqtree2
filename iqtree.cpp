@@ -1385,7 +1385,9 @@ double IQTree::doTreeSearch() {
         if (params->snni) {
         	candidateTrees.update(imd_tree, curScore);
         	if (verbose_mode >= VB_MED) {
-        		candidateTrees.printBestScores();
+        		vector<double> bestScores = candidateTrees.getBestScores();
+        		for (vector<double>::iterator it = bestScores.begin(); it != bestScores.end(); it++)
+        			cout << (*it) << " ";
         		cout << endl;
         	}
         } else {

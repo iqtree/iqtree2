@@ -1803,7 +1803,7 @@ void pllFreeParsimonyDataStructures(pllInstance *tr, partitionList *pr)
 }
 
 
-void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr)
+void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist)
 {   
   nodeptr  
     p, 
@@ -1877,7 +1877,7 @@ void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr)
       nodeRectifierPars(tr);
       for(i = 1; i <= tr->mxtips + tr->mxtips - 2; i++)
         {
-          rearrangeParsimony(tr, pr, tr->nodep[i], 1, 20, PLL_FALSE);
+          rearrangeParsimony(tr, pr, tr->nodep[i], 1, sprDist, PLL_FALSE);
           if(tr->bestParsimony < randomMP)
             {           
               restoreTreeRearrangeParsimony(tr, pr);

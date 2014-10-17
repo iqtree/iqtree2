@@ -398,6 +398,11 @@ struct Params {
 	int numParsTrees;
 
 	/**
+	 *  SPR distance (radius) for parsimony tree
+	 */
+	int sprDist;
+
+	/**
 	 *  Number of NNI trees generated from the set of parsimony trees
 	 *  Default = 20 (out of 100 parsimony trees)
 	 */
