@@ -109,6 +109,12 @@ public:
      */
     virtual void setParams(Params& params);
 
+    void createPLLPartition(Params &params, ostream &pllPartitionFileHandle);
+
+    void initializePLL(Params &params);
+
+    void initializeModel(Params &params);
+
     /**
             print tree to .treefile
             @param params program parameters, field root is taken
@@ -408,7 +414,7 @@ public:
      */
     int cur_pars_score;
 
-    bool enable_parsimony;
+//    bool enable_parsimony;
     /**
             stopping rule
      */

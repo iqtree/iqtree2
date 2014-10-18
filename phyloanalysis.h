@@ -35,7 +35,7 @@ class IQTree;
 */
 void runPhyloAnalysis(Params &params);
 
-void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignment,
+void runTreeReconstruction(Params &params, string &original_model, Alignment* &alignment,
 		IQTree &tree, vector<ModelInfo> &model_info);
 
 /**

@@ -659,9 +659,9 @@ struct Params {
     bool aln_no_const_sites;
 
     /**
-            compute parsimony score on trees
+            OBSOLETE compute parsimony score on trees
      */
-    bool parsimony;
+//    bool parsimony;
 
     /**
             compute random step-wise addition parsimony tree instead of BIONJ
