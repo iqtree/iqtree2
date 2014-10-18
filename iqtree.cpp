@@ -2741,6 +2741,7 @@ void IQTree::printIntermediateTree(int brtype) {
 }
 
 void IQTree::removeIdenticalSeqs(StrVector &removed_seqs, StrVector &twin_seqs) {
+	// TODO: do not remove params.root sequence!
 	Alignment *new_aln = aln->removeIdenticalSeq(removed_seqs, twin_seqs);
 	if (removed_seqs.size() > 0)
 		cout << "INFO: " << removed_seqs.size() << " identical sequences are removed for tree reconstruction" << endl;
@@ -2751,12 +2752,21 @@ void IQTree::removeIdenticalSeqs(StrVector &removed_seqs, StrVector &twin_seqs) 
 
 void IQTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs) {
 	if (removed_seqs.empty()) return;
+	IntVector id;
+	int i;
+	id.resize(removed_seqs.size());
+	for (i = 0; i < id.size(); i++)
+		id[i] = i;
+	// randomize order before reinsert back into tree
+//	random_shuffle(id.begin(), id.end(), random_int);
+	random_shuffle(id.begin(), id.end());
+
 	for (int i = 0; i < removed_seqs.size(); i++) {
-		Node *old_taxon = findLeafName(twin_seqs[i]);
+		Node *old_taxon = findLeafName(twin_seqs[id[i]]);
 		assert(old_taxon);
 		double len = old_taxon->neighbors[0]->length;
 		Node *old_node = old_taxon->neighbors[0]->node;
-		Node *new_taxon = newNode(leafNum+i, removed_seqs[i].c_str());
+		Node *new_taxon = newNode(leafNum+i, removed_seqs[id[i]].c_str());
 		Node *new_node = newNode();
 		// link new_taxon - new_node
 		new_taxon->addNeighbor(new_node, 0.0);

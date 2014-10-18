@@ -2371,10 +2371,10 @@ int random_int(int n) {
     return (int) floor(random_double() * n);
 } /* randominteger */
 
-int randint(int a, int b) {
-	return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
-}
-
+//int randint(int a, int b) {
+//	return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
+//}
+//
 
 double random_double() {
 #ifndef FIXEDINTRAND

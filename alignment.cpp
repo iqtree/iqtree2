@@ -182,7 +182,6 @@ Alignment *Alignment::removeIdenticalSeq(StrVector &removed_seqs, StrVector &tar
 
 	for (seq1 = 0; seq1 < getNSeq(); seq1++) {
         if (checked[seq1]) continue;
-		bool first = true;
 		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
 			bool equal_seq = true;
 			for (iterator it = begin(); it != end(); it++)
@@ -195,7 +194,6 @@ Alignment *Alignment::removeIdenticalSeq(StrVector &removed_seqs, StrVector &tar
 				target_seqs.push_back(getSeqName(seq1));
 				removed[seq2] = true;
 				checked[seq2] = 1;
-				first = false;
 			}
 		}
 		checked[seq1] = 1;

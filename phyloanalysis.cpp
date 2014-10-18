@@ -691,8 +691,9 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 
 			tree.freeNode();
 			tree.readTree(con_file.c_str(), rooted);
-			if (removed_seqs.size() > 0)
+			if (removed_seqs.size() > 0) {
 				tree.reinsertIdenticalSeqs(tree.aln, removed_seqs, twin_seqs);
+			}
 			tree.setAlignment(tree.aln);
 
 			// bug fix
@@ -706,8 +707,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			if (tree.isSuperTree())
 				((PhyloSuperTree*) &tree)->mapTrees();
 			tree.optimizeAllBranches();
-			tree.printTree(con_file.c_str(),
-					WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+			tree.printTree(con_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 			tree.sortTaxa();
 			tree.drawTree(out, WT_BR_SCALE);
 			out << endl << "Consensus tree in newick format: " << endl << endl;
@@ -2027,8 +2027,11 @@ void runPhyloAnalysis(Params &params) {
 					params.split_weight_threshold, NULL, params.out_prefix, NULL, &params);
 		}
 		// reinsert identical sequences
-		delete tree->aln;
-		tree->reinsertIdenticalSeqs(alignment, removed_seqs, twin_seqs);
+		if (removed_seqs.size() > 0) {
+			delete tree->aln;
+			tree->reinsertIdenticalSeqs(alignment, removed_seqs, twin_seqs);
+			tree->printResultTree();
+		}
 		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info, removed_seqs, twin_seqs);
 	} else {
 		// the classical non-parameter bootstrap (SBS)
