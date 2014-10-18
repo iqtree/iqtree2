@@ -2740,9 +2740,8 @@ void IQTree::printIntermediateTree(int brtype) {
     save_all_trees = x;
 }
 
-void IQTree::removeIdenticalSeqs(StrVector &removed_seqs, StrVector &twin_seqs) {
-	// TODO: do not remove params.root sequence!
-	Alignment *new_aln = aln->removeIdenticalSeq(removed_seqs, twin_seqs);
+void IQTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs) {
+	Alignment *new_aln = aln->removeIdenticalSeq((string)params.root, removed_seqs, twin_seqs);
 	if (removed_seqs.size() > 0)
 		cout << "INFO: " << removed_seqs.size() << " identical sequences are removed for tree reconstruction" << endl;
 	if (new_aln != aln) {

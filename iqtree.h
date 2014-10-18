@@ -697,7 +697,7 @@ public:
 	void setDelete(int _delete);
 
 	/** remove identical sequences from the tree */
-    void removeIdenticalSeqs(StrVector &removed_seqs, StrVector &twin_seqs);
+    void removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs);
 
     /** reinsert identical sequences into the tree and reset original alignment */
     void reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs);

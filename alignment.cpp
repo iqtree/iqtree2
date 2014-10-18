@@ -172,7 +172,7 @@ int Alignment::checkIdenticalSeq()
 	return num_identical;
 }
 
-Alignment *Alignment::removeIdenticalSeq(StrVector &removed_seqs, StrVector &target_seqs)
+Alignment *Alignment::removeIdenticalSeq(string not_remove, StrVector &removed_seqs, StrVector &target_seqs)
 {
     IntVector checked;
     vector<bool> removed;
@@ -183,6 +183,7 @@ Alignment *Alignment::removeIdenticalSeq(StrVector &removed_seqs, StrVector &tar
 	for (seq1 = 0; seq1 < getNSeq(); seq1++) {
         if (checked[seq1]) continue;
 		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
+			if (getSeqName(seq2) == not_remove) continue;
 			bool equal_seq = true;
 			for (iterator it = begin(); it != end(); it++)
 				if  ((*it)[seq1] != (*it)[seq2]) {
@@ -286,7 +287,8 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
          " columns and " << getNPattern() << " patterns"<< endl;
     buildSeqStates();
     checkSeqName();
-	checkIdenticalSeq();
+    // OBSOLETE: identical sequences are handled later
+//	checkIdenticalSeq();
     //cout << "Number of character states is " << num_states << endl;
     //cout << "Number of patterns = " << size() << endl;
     countConstSite();

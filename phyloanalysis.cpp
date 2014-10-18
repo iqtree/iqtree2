@@ -2015,7 +2015,7 @@ void runPhyloAnalysis(Params &params) {
 		StrVector twin_seqs;
 
 		// remove identical sequences
-		tree->removeIdenticalSeqs(removed_seqs, twin_seqs);
+		tree->removeIdenticalSeqs(params, removed_seqs, twin_seqs);
 
 		// call main tree reconstruction
 		runTreeReconstruction(params, original_model, *tree, model_info);
