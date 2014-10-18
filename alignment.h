@@ -263,6 +263,14 @@ public:
     int checkIdenticalSeq();
 
     /**
+     * remove identical sequences from alignment
+     * @param removed_seqs (OUT) name of removed sequences
+     * @param target_seqs (OUT) corresponding name of kept sequence that is identical to the removed sequences
+     * @return this if no sequences were removed, or new alignment if at least 1 sequence was removed
+     */
+    Alignment *removeIdenticalSeq(StrVector &removed_seqs, StrVector &target_seqs);
+
+    /**
             Quit if some sequences contain only gaps or missing data
      */
 	virtual void checkGappySeq(bool force_error = true);

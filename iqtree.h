@@ -696,6 +696,12 @@ public:
 	int getDelete() const;
 	void setDelete(int _delete);
 
+	/** remove identical sequences from the tree */
+    void removeIdenticalSeqs(StrVector &removed_seqs, StrVector &twin_seqs);
+
+    /** reinsert identical sequences into the tree and reset original alignment */
+    void reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs);
+
 protected:
     /**** NNI cutoff heuristic *****/
     /**
@@ -760,6 +766,7 @@ protected:
     virtual void reinsertLeaves(PhyloNodeVector &del_leaves);
 
     void reinsertLeavesByParsimony(PhyloNodeVector &del_leaves);
+
 
     void doParsimonyReinsertion();
 

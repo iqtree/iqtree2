@@ -2740,3 +2740,39 @@ void IQTree::printIntermediateTree(int brtype) {
     save_all_trees = x;
 }
 
+void IQTree::removeIdenticalSeqs(StrVector &removed_seqs, StrVector &twin_seqs) {
+	Alignment *new_aln = aln->removeIdenticalSeq(removed_seqs, twin_seqs);
+	if (removed_seqs.size() > 0)
+		cout << "INFO: " << removed_seqs.size() << " identical sequences are removed for tree reconstruction" << endl;
+	if (new_aln != aln) {
+		aln = new_aln;
+	}
+}
+
+void IQTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs) {
+	if (removed_seqs.empty()) return;
+	for (int i = 0; i < removed_seqs.size(); i++) {
+		Node *old_taxon = findLeafName(twin_seqs[i]);
+		assert(old_taxon);
+		double len = old_taxon->neighbors[0]->length;
+		Node *old_node = old_taxon->neighbors[0]->node;
+		Node *new_taxon = newNode(leafNum+i, removed_seqs[i].c_str());
+		Node *new_node = newNode();
+		// link new_taxon - new_node
+		new_taxon->addNeighbor(new_node, 0.0);
+		new_node->addNeighbor(new_taxon, 0.0);
+		// link old_taxon - new_node
+		new_node->addNeighbor(old_taxon, 0.0);
+		old_taxon->updateNeighbor(old_node, new_node, 0.0);
+		// link old_node - new_node
+		new_node->addNeighbor(old_node, len);
+		old_node->updateNeighbor(old_taxon, new_node, len);
+	}
+
+    leafNum = leafNum + removed_seqs.size();
+    initializeTree();
+//    delete iqtree.aln;
+    setAlignment(orig_aln);
+    // delete all partial_lh, which will be automatically recreated later
+    deleteAllPartialLh();
+}

@@ -51,6 +51,7 @@
 #include "modelset.h"
 #include "timeutil.h"
 
+
 void reportReferences(ofstream &out, string &original_model) {
 	out
 			<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast"
@@ -407,7 +408,8 @@ void reportCredits(ofstream &out) {
  ***********************************************************/
 extern StringIntMap pllTreeCounter;
 void reportPhyloAnalysis(Params &params, string &original_model,
-		Alignment &alignment, IQTree &tree, vector<ModelInfo> &model_info) {
+		Alignment &alignment, IQTree &tree, vector<ModelInfo> &model_info,
+		StrVector &removed_seqs, StrVector &twin_seqs) {
 	if (params.count_trees) {
 		// addon: print #distinct trees
 		cout << endl << "INFO: " << pllTreeCounter.size() << " distinct trees evaluated during whole tree search" << endl;
@@ -689,6 +691,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 
 			tree.freeNode();
 			tree.readTree(con_file.c_str(), rooted);
+			if (removed_seqs.size() > 0)
+				tree.reinsertIdenticalSeqs(tree.aln, removed_seqs, twin_seqs);
 			tree.setAlignment(tree.aln);
 
 			// bug fix
@@ -1304,6 +1308,63 @@ void createParsimonyTrees(Params &params, IQTree &iqtree, int numInitTrees) {
     }
 }
 
+void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh, NodeVector &pruned_taxa, StrVector &linked_name) {
+	int num_low_support;
+	double mytime;
+
+	if (params.aLRT_threshold <= 100 && (params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
+		mytime = getCPUTime();
+		cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
+		iqtree.setRootNode(params.root);
+		iqtree.computePatternLikelihood(pattern_lh, &iqtree.curScore);
+		num_low_support = iqtree.testAllBranches(params.aLRT_threshold, iqtree.curScore,
+				pattern_lh, params.aLRT_replicates, params.localbp_replicates);
+		iqtree.printResultTree();
+		cout << "  " << getCPUTime() - mytime << " sec." << endl;
+		cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
+
+		//tree.drawTree(cout);
+		cout << "Collapsing stable clades..." << endl;
+		iqtree.collapseStableClade(params.aLRT_threshold, pruned_taxa, linked_name, iqtree.dist_matrix);
+		cout << pruned_taxa.size() << " taxa were pruned from stable clades" << endl;
+	}
+
+	if (!pruned_taxa.empty()) {
+		cout << "Pruned alignment contains " << iqtree.aln->getNSeq()
+				<< " sequences and " << iqtree.aln->getNSite() << " sites and "
+				<< iqtree.aln->getNPattern() << " patterns" << endl;
+		//tree.clearAllPartialLh();
+		iqtree.initializeAllPartialLh();
+		iqtree.clearAllPartialLH();
+		iqtree.curScore = iqtree.optimizeAllBranches();
+		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
+		int nni_count, nni_steps;
+		iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
+		cout << "Log-likelihood after optimizing partial tree: "
+				<< iqtree.curScore << endl;
+	}
+
+}
+
+void restoreTaxa(IQTree &iqtree, double *saved_dist_mat, NodeVector &pruned_taxa, StrVector &linked_name) {
+	if (!pruned_taxa.empty()) {
+		cout << "Restoring full tree..." << endl;
+		iqtree.restoreStableClade(iqtree.aln, pruned_taxa, linked_name);
+		delete[] iqtree.dist_matrix;
+		iqtree.dist_matrix = saved_dist_mat;
+		iqtree.initializeAllPartialLh();
+		iqtree.clearAllPartialLH();
+		iqtree.curScore = iqtree.optimizeAllBranches();
+		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
+		int nni_count, nni_steps;
+		iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
+		cout << "Log-likelihood	after reoptimizing full tree: "
+				<< iqtree.curScore << endl;		//iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps));
+
+	}
+
+
+}
 void runApproximateBranchLengths(Params &params, IQTree &iqtree) {
 
     if (!params.fixed_branch_length && params.leastSquareBranch) {
@@ -1486,8 +1547,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 /************************************************************
  *  MAIN TREE RECONSTRUCTION
  ***********************************************************/
-void runTreeReconstruction(Params &params, string &original_model, Alignment* &alignment,
-		IQTree &iqtree, vector<ModelInfo> &model_info) {
+void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtree, vector<ModelInfo> &model_info) {
 
     string dist_file;
     params.startCPUTime = getCPUTime();
@@ -1611,48 +1671,17 @@ void runTreeReconstruction(Params &params, string &original_model, Alignment* &a
 	StrVector linked_name;
 	double *saved_dist_mat = iqtree.dist_matrix;
 	double *pattern_lh;
-	int num_low_support;
-	double mytime;
 
 	pattern_lh = new double[iqtree.getAlnNPattern()];
 
-	if (params.aLRT_threshold <= 100 && (params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
-		mytime = getCPUTime();
-		cout << "Testing tree branches by SH-like aLRT with " << params.aLRT_replicates << " replicates..." << endl;
-		iqtree.setRootNode(params.root);
-		iqtree.computePatternLikelihood(pattern_lh, &iqtree.curScore);
-		num_low_support = iqtree.testAllBranches(params.aLRT_threshold, iqtree.curScore,
-				pattern_lh, params.aLRT_replicates, params.localbp_replicates);
-		iqtree.printResultTree();
-		cout << "  " << getCPUTime() - mytime << " sec." << endl;
-		cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
-
-		//tree.drawTree(cout);
-		cout << "Collapsing stable clades..." << endl;
-		iqtree.collapseStableClade(params.aLRT_threshold, pruned_taxa, linked_name, iqtree.dist_matrix);
-		cout << pruned_taxa.size() << " taxa were pruned from stable clades" << endl;
-	}
-
-	if (!pruned_taxa.empty()) {
-		cout << "Pruned alignment contains " << iqtree.aln->getNSeq()
-				<< " sequences and " << iqtree.aln->getNSite() << " sites and "
-				<< iqtree.aln->getNPattern() << " patterns" << endl;
-		//tree.clearAllPartialLh();
-		iqtree.initializeAllPartialLh();
-		iqtree.clearAllPartialLH();
-		iqtree.curScore = iqtree.optimizeAllBranches();
-		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
-		int nni_count, nni_steps;
-		iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
-		cout << "Log-likelihood after optimizing partial tree: "
-				<< iqtree.curScore << endl;
-	}
+	// prune stable taxa
+	pruneTaxa(params, iqtree, pattern_lh, pruned_taxa, linked_name);
 
 	/****************** Do tree search ***************************/
 	if (params.min_iterations > 1) {
 		iqtree.readTreeString(iqtree.bestTreeString);
 		iqtree.doTreeSearch();
-		iqtree.setAlignment(alignment);
+		iqtree.setAlignment(iqtree.aln);
 	} else {
 		/* do SPR with likelihood function */
 		if (params.tree_spr) {
@@ -1668,21 +1697,8 @@ void runTreeReconstruction(Params &params, string &original_model, Alignment* &a
 		}
 	}
 
-	if (!pruned_taxa.empty()) {
-		cout << "Restoring full tree..." << endl;
-		iqtree.restoreStableClade(alignment, pruned_taxa, linked_name);
-		delete[] iqtree.dist_matrix;
-		iqtree.dist_matrix = saved_dist_mat;
-		iqtree.initializeAllPartialLh();
-		iqtree.clearAllPartialLH();
-		iqtree.curScore = iqtree.optimizeAllBranches();
-		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
-		int nni_count, nni_steps;
-		iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
-		cout << "Log-likelihood	after reoptimizing full tree: "
-				<< iqtree.curScore << endl;		//iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps));
-
-	}
+	// restore pruned taxa
+	restoreTaxa(iqtree, saved_dist_mat, pruned_taxa, linked_name);
 
 	double search_cpu_time = getCPUTime() - cputime_search_start;
 	double search_real_time = getRealTime() - realtime_search_start;
@@ -1710,7 +1726,7 @@ void runTreeReconstruction(Params &params, string &original_model, Alignment* &a
 		iqtree.inputModelPLL2IQTree();
 
 	/* root the tree at the first sequence */
-	iqtree.root = iqtree.findLeafName(alignment->getSeqName(0));
+	iqtree.root = iqtree.findLeafName(iqtree.aln->getSeqName(0));
 	assert(iqtree.root);
 
 	double myscore = 0.0;
@@ -1727,18 +1743,18 @@ void runTreeReconstruction(Params &params, string &original_model, Alignment* &a
 
 	/****** perform SH-aLRT test ******************/
 	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0) && !params.pll) {
-		mytime = getCPUTime();
+		double mytime = getCPUTime();
 		cout << endl << "Testing tree branches by SH-like aLRT with "
 				<< params.aLRT_replicates << " replicates..." << endl;
 		iqtree.setRootNode(params.root);
-		num_low_support = iqtree.testAllBranches(params.aLRT_threshold, myscore,
+		iqtree.testAllBranches(params.aLRT_threshold, myscore,
 				pattern_lh, params.aLRT_replicates, params.localbp_replicates);
 		cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
 	}
 
 	if (params.gbo_replicates > 0) {
 		if (!params.online_bootstrap)
-			runGuidedBootstrap(params, alignment, iqtree);
+			runGuidedBootstrap(params, iqtree.aln, iqtree);
 		else
 			iqtree.summarizeBootstrap(params);
 	}
@@ -1763,6 +1779,7 @@ void runTreeReconstruction(Params &params, string &original_model, Alignment* &a
  ***********************************************************/
 void runStandardBootstrap(Params &params, string &original_model, Alignment *alignment, IQTree *tree) {
 	vector<ModelInfo> model_info;
+	StrVector removed_seqs, twin_seqs;
 
 	// turn off aLRT test
 	int saved_aLRT_replicates = params.aLRT_replicates;
@@ -1832,7 +1849,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			boot_tree = new IQTree(bootstrap_alignment);
 		if (params.print_bootaln)
 			bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
-		runTreeReconstruction(params, original_model, bootstrap_alignment, *boot_tree, model_info);
+		runTreeReconstruction(params, original_model, *boot_tree, model_info);
 		// read in the output tree file
 		string tree_str;
 		try {
@@ -1855,7 +1872,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			outError(ERR_WRITE_OUTPUT, boottrees_name);
 		}
 		if (params.num_bootstrap_samples == 1)
-			reportPhyloAnalysis(params, original_model, *bootstrap_alignment, *boot_tree, model_info);
+			reportPhyloAnalysis(params, original_model, *bootstrap_alignment, *boot_tree, model_info, removed_seqs, twin_seqs);
 		// WHY was the following line missing, which caused memory leak?
 		delete boot_tree;
 		delete bootstrap_alignment;
@@ -1872,7 +1889,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 	if (params.compute_ml_tree) {
 		cout << endl << "===> START ANALYSIS ON THE ORIGINAL ALIGNMENT" << endl << endl;
 		params.aLRT_replicates = saved_aLRT_replicates;
-		runTreeReconstruction(params, original_model, alignment, *tree, model_info);
+		runTreeReconstruction(params, original_model, *tree, model_info);
 
 		cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
 		MExtTree ext_tree;
@@ -1880,17 +1897,17 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 				treefile_name.c_str(), false, treefile_name.c_str(),
 				params.out_prefix, ext_tree, NULL, &params);
 		tree->copyTree(&ext_tree);
-		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
+		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info, removed_seqs, twin_seqs);
 	} else if (params.consensus_type == CT_CONSENSUS_TREE) {
 		int mi = params.min_iterations;
 		STOP_CONDITION sc = params.stop_condition;
 		params.min_iterations = 0;
 		params.stop_condition = SC_FIXED_ITERATION;
-		runTreeReconstruction(params, original_model, alignment, *tree, model_info);
+		runTreeReconstruction(params, original_model, *tree, model_info);
 		params.min_iterations = mi;
 		params.stop_condition = sc;
 		tree->stop_rule.initialize(params);
-		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
+		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info, removed_seqs, twin_seqs);
 	} else
 		cout << endl;
 
@@ -1939,6 +1956,7 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 		alignment->printFasta(params.aln_output, false, params.aln_site_list,
 				params.aln_nogaps, params.aln_no_const_sites, params.ref_seq_name);
 }
+
 
 /**********************************************************
  * TOP-LEVEL FUNCTION
@@ -1993,7 +2011,14 @@ void runPhyloAnalysis(Params &params) {
 		// the main Maximum likelihood tree reconstruction
 		vector<ModelInfo> model_info;
 		alignment->checkGappySeq();
-		runTreeReconstruction(params, original_model, alignment, *tree, model_info);
+		StrVector removed_seqs;
+		StrVector twin_seqs;
+
+		// remove identical sequences
+		tree->removeIdenticalSeqs(removed_seqs, twin_seqs);
+
+		// call main tree reconstruction
+		runTreeReconstruction(params, original_model, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
 			cout << endl << "Computing bootstrap consensus tree..." << endl;
 			string splitsfile = params.out_prefix;
@@ -2001,7 +2026,10 @@ void runPhyloAnalysis(Params &params) {
 			computeConsensusTree(splitsfile.c_str(), 0, 1e6, params.split_threshold,
 					params.split_weight_threshold, NULL, params.out_prefix, NULL, &params);
 		}
-		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
+		// reinsert identical sequences
+		delete tree->aln;
+		tree->reinsertIdenticalSeqs(alignment, removed_seqs, twin_seqs);
+		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info, removed_seqs, twin_seqs);
 	} else {
 		// the classical non-parameter bootstrap (SBS)
 		runStandardBootstrap(params, original_model, alignment, tree);
