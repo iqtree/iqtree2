@@ -1726,7 +1726,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
 
 void Alignment::shuffleAlignment() {
     if (isSuperAlignment()) outError("Internal error: ", __func__);
-    random_shuffle(site_pattern.begin(), site_pattern.end());
+    my_random_shuffle(site_pattern.begin(), site_pattern.end());
 }
 
 

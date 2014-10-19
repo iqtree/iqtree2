@@ -527,7 +527,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
         (*it) = startValue;
         ++startValue;
     }
-    random_shuffle(indices_noncherry.begin(), indices_noncherry.end());
+    my_random_shuffle(indices_noncherry.begin(), indices_noncherry.end());
     int i;
     for (i = 0; i < num_delete && i < noncherry_taxa.size(); i++) {
         PhyloNode *taxon = (PhyloNode*) noncherry_taxa[indices_noncherry[i]];
@@ -544,7 +544,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
             (*it) = startValue;
             ++startValue;
         }
-        random_shuffle(indices_cherry.begin(), indices_cherry.end());
+        my_random_shuffle(indices_cherry.begin(), indices_cherry.end());
         while (i < num_delete) {
             PhyloNode *taxon = (PhyloNode*) cherry_taxa[indices_cherry[j]];
             del_leaves.push_back(taxon);
@@ -2746,9 +2746,8 @@ void IQTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVec
 		new_aln = aln->removeIdenticalSeq((string)params.root, removed_seqs, twin_seqs);
 	else
 		new_aln = aln->removeIdenticalSeq("", removed_seqs, twin_seqs);
-	if (removed_seqs.size() > 0)
-		cout << "INFO: " << removed_seqs.size() << " identical sequences are removed for tree reconstruction" << endl;
-	if (new_aln != aln) {
+	if (removed_seqs.size() > 0) {
+		cout << "INFO: " << removed_seqs.size() << " identical sequences are ignored." << endl;
 		aln = new_aln;
 	}
 }
@@ -2761,8 +2760,7 @@ void IQTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs,
 	for (i = 0; i < id.size(); i++)
 		id[i] = i;
 	// randomize order before reinsert back into tree
-//	random_shuffle(id.begin(), id.end(), random_int);
-	random_shuffle(id.begin(), id.end());
+	my_random_shuffle(id.begin(), id.end());
 
 	for (int i = 0; i < removed_seqs.size(); i++) {
 		Node *old_taxon = findLeafName(twin_seqs[id[i]]);

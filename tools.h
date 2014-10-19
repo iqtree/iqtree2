@@ -1898,6 +1898,15 @@ int random_int();
  */
 double random_double();
 
+template <class T>
+void my_random_shuffle (T first, T last)
+{
+	int n = last - first;
+	for (int i=n-1; i>0; --i) {
+		swap (first[i],first[random_int(i+1)]);
+	}
+}
+
 /**
  * generic function for sorting by index
  */
