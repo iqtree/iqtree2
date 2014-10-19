@@ -659,9 +659,9 @@ struct Params {
     bool aln_no_const_sites;
 
     /**
-            compute parsimony score on trees
+            OBSOLETE compute parsimony score on trees
      */
-    bool parsimony;
+//    bool parsimony;
 
     /**
             compute random step-wise addition parsimony tree instead of BIONJ
@@ -1885,7 +1885,7 @@ int random_int(int n);
 /**
  *  return a random integer in the range [a,b]
  */
-int randint(int a, int b);
+//int randint(int a, int b);
 
 /**
  * returns a random integer in the range [0; RAND_MAX - 1]
@@ -1897,6 +1897,15 @@ int random_int();
  * returns a random floating-point nuber in the range [0; 1)
  */
 double random_double();
+
+template <class T>
+void my_random_shuffle (T first, T last)
+{
+	int n = last - first;
+	for (int i=n-1; i>0; --i) {
+		swap (first[i],first[random_int(i+1)]);
+	}
+}
 
 /**
  * generic function for sorting by index

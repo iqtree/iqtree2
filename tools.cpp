@@ -639,7 +639,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.concatenate_aln = NULL;
     params.aln_nogaps = false;
     params.aln_no_const_sites = false;
-    params.parsimony = false;
+//    params.parsimony = false;
     params.parsimony_tree = false;
     params.tree_spr = false;
     params.nexus_output = false;
@@ -1258,9 +1258,9 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-parstree") == 0) {
                 // maximum parsimony
                 params.parsimony_tree = true;
-            } else if (strcmp(argv[cnt], "-pars") == 0) {
-                // maximum parsimony
-                params.parsimony = true;
+//            } else if (strcmp(argv[cnt], "-pars") == 0) {
+//                // maximum parsimony
+//                params.parsimony = true;
             } else if (strcmp(argv[cnt], "-spr") == 0) {
                 // subtree pruning and regrafting
                 params.tree_spr = true;
@@ -1986,7 +1986,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -omp <#cpu_cores>    Number of cores/threads to use (default: all cores)" << endl
 #endif
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
-            << "  -pll                 Turn on phylogenetic likelihood library (default: off)" << endl
+            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
             << "  -toppars <number>    Number of top initial parsimony trees (dfault: 20)" << endl
             << "  -numcand <number>    Number of candidate trees during search (defaut: 5)" << endl
@@ -1996,12 +1996,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -iqpnni              Switch entirely to old IQPNNI algorithm" << endl
             << endl << "ULTRA-FAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultra-fast bootstrap (>=1000)" << endl
-            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
+//            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
             << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
             << "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
-			<< "  -beps <epsilon>      Bootstrap trees in [maxlh-eps,maxlh+eps] are chosen" << endl
-			<< "                       at random (default: 0.5)" << endl
+			<< "  -beps <epsilon>      Trees with logl difference smaller than epsilon" << endl
+			<< "                       are chosen at random (default: 0.5)" << endl
             << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
             << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
@@ -2371,10 +2371,10 @@ int random_int(int n) {
     return (int) floor(random_double() * n);
 } /* randominteger */
 
-int randint(int a, int b) {
-	return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
-}
-
+//int randint(int a, int b) {
+//	return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
+//}
+//
 
 double random_double() {
 #ifndef FIXEDINTRAND

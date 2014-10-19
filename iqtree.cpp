@@ -51,7 +51,7 @@ void IQTree::init() {
     bestScore = -DBL_MAX; // Best score found so far
     curIt = 1;
     cur_pars_score = -1;
-    enable_parsimony = false;
+//    enable_parsimony = false;
     estimate_nni_cutoff = false;
     nni_cutoff = -1e6;
     nni_sort = false;
@@ -274,6 +274,134 @@ IQTree::~IQTree() {
     	aligned_free(boot_samples[0]); // free memory
 }
 
+void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle) {
+    if (isSuperTree()) {
+        PhyloSuperTree *siqtree = (PhyloSuperTree*) this;
+        // additional check for stupid PLL hard limit
+        if (siqtree->size() > PLL_NUM_BRANCHES)
+        	outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
+        int i = 0;
+        int startPos = 1;
+        for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
+            i++;
+            int curLen = ((*it))->getAlnNSite();
+            if ((*it)->aln->seq_type == SEQ_DNA) {
+                pllPartitionFileHandle << "DNA";
+            } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
+            	if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST")
+            		pllPartitionFileHandle << siqtree->part_info[i-1].model_name.substr(0, siqtree->part_info[i-1].model_name.find_first_of("+{"));
+            	else
+            		pllPartitionFileHandle << "WAG";
+            } else
+            	outError("PLL only works with DNA/protein alignments");
+            pllPartitionFileHandle << ", p" << i << " = " << startPos << "-" << startPos + curLen - 1 << endl;
+            startPos = startPos + curLen;
+        }
+    } else {
+        /* create a partition file */
+        string model;
+        if (aln->seq_type == SEQ_DNA) {
+            model = "DNA";
+        } else if (aln->seq_type == SEQ_PROTEIN) {
+        	if (params.pll && params.model_name != "" && params.model_name.substr(0, 4) != "TEST") {
+        		model = params.model_name.substr(0, params.model_name.find_first_of("+{"));
+        	} else {
+        		model = "WAG";
+        	}
+        } else {
+        	model = "WAG";
+        	//outError("PLL currently only supports DNA/protein alignments");
+        }
+        pllPartitionFileHandle << model << ", p1 = " << "1-" << getAlnNSite() << endl;
+    }
+}
+
+void IQTree::initializePLL(Params &params) {
+    pllAttr.rateHetModel = PLL_GAMMA;
+    pllAttr.fastScaling = PLL_FALSE;
+    pllAttr.saveMemory = PLL_FALSE;
+    pllAttr.useRecom = PLL_FALSE;
+    pllAttr.randomNumberSeed = params.ran_seed;
+#ifdef _OPENMP
+    pllAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
+#else
+    pllAttr.numberOfThreads = 1;
+#endif
+    if (pllInst != NULL) {
+        pllDestroyInstance(pllInst);
+    }
+    /* Create a PLL instance */
+    pllInst = pllCreateInstance(&pllAttr);
+
+    /* Read in the alignment file */
+    stringstream pllAln;
+	if (aln->isSuperAlignment()) {
+		((SuperAlignment*) aln)->printCombinedAlignment(pllAln);
+	} else {
+		aln->printPhylip(pllAln);
+	}
+	string pllAlnStr = pllAln.str();
+    pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), pllAlnStr.length());
+
+    /* Read in the partition information */
+    // BQM: to avoid printing file
+    stringstream pllPartitionFileHandle;
+    createPLLPartition(params, pllPartitionFileHandle);
+    pllQueue *partitionInfo = pllPartitionParseString(pllPartitionFileHandle.str().c_str());
+
+    /* Validate the partitions */
+    if (!pllPartitionsValidate(partitionInfo, pllAlignment)) {
+        outError("pllPartitionsValidate");
+    }
+
+    /* Commit the partitions and build a partitions structure */
+    pllPartitions = pllPartitionsCommit(partitionInfo, pllAlignment);
+
+    /* We don't need the the intermediate partition queue structure anymore */
+    pllQueuePartitionsDestroy(&partitionInfo);
+
+    /* eliminate duplicate sites from the alignment and update weights vector */
+    pllAlignmentRemoveDups(pllAlignment, pllPartitions);
+
+    pllTreeInitTopologyForAlignment(pllInst, pllAlignment);
+
+    /* Connect the alignment and partition structure with the tree structure */
+    if (!pllLoadAlignment(pllInst, pllAlignment, pllPartitions, PLL_SHALLOW_COPY)) {
+        outError("Incompatible tree/alignment combination");
+    }
+}
+
+
+void IQTree::initializeModel(Params &params) {
+    try {
+        if (!getModelFactory()) {
+            if (isSuperTree()) {
+                if (params.partition_type) {
+                    setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this));
+                } else
+                    setModelFactory(new PartitionModel(params, (PhyloSuperTree*) this));
+            } else {
+                setModelFactory(new ModelFactory(params, this));
+            }
+        }
+    } catch (string & str) {
+        outError(str);
+    }
+    setModel(getModelFactory()->model);
+    setRate(getModelFactory()->site_rate);
+
+    if (params.pll) {
+        if (getRate()->getNDiscreteRate() == 1) {
+        	outError("Non-Gamma model is not yet supported by PLL.");
+            // TODO: change rateHetModel to PLL_CAT in case of non-Gamma model
+        }
+        if (getRate()->name.substr(0,2) == "+I")
+        	outError("+Invar model is not yet supported by PLL.");
+        if (aln->seq_type == SEQ_DNA && getModel()->name != "GTR")
+        	outError("non GTR model for DNA is not yet supported by PLL.");
+    }
+
+}
 double IQTree::getProbDelete() {
     return (double) k_delete / leafNum;
 }
@@ -399,7 +527,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
         (*it) = startValue;
         ++startValue;
     }
-    random_shuffle(indices_noncherry.begin(), indices_noncherry.end());
+    my_random_shuffle(indices_noncherry.begin(), indices_noncherry.end());
     int i;
     for (i = 0; i < num_delete && i < noncherry_taxa.size(); i++) {
         PhyloNode *taxon = (PhyloNode*) noncherry_taxa[indices_noncherry[i]];
@@ -416,7 +544,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
             (*it) = startValue;
             ++startValue;
         }
-        random_shuffle(indices_cherry.begin(), indices_cherry.end());
+        my_random_shuffle(indices_cherry.begin(), indices_cherry.end());
         while (i < num_delete) {
             PhyloNode *taxon = (PhyloNode*) cherry_taxa[indices_cherry[j]];
             del_leaves.push_back(taxon);
@@ -746,12 +874,12 @@ void IQTree::doIQP() {
     // just to make sure IQP does it right
     setAlignment(aln);
 
-    if (enable_parsimony) {
-        cur_pars_score = computeParsimony();
-        if (verbose_mode >= VB_MAX) {
-            cout << "IQP Likelihood = " << curScore << "  Parsimony = " << cur_pars_score << endl;
-        }
-    }
+//    if (enable_parsimony) {
+//        cur_pars_score = computeParsimony();
+//        if (verbose_mode >= VB_MAX) {
+//            cout << "IQP Likelihood = " << curScore << "  Parsimony = " << cur_pars_score << endl;
+//        }
+//    }
 }
 
 double IQTree::inputTree2PLL(string treestring, bool computeLH) {
@@ -969,7 +1097,7 @@ void IQTree::pllBaseSubstitute (char *seq, int dataType)
     meaningDNA[(int)'X'] =
     meaningDNA[(int)'x'] =
     meaningDNA[(int)'-'] =
-    meaningDNA['?'] = 15;
+    meaningDNA[(int)'?'] = 15;
 
     /* AA data */
 
@@ -2236,7 +2364,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     if (!boot_splits.empty()) {
         // check the stopping criterion for ultra-fast bootstrap
         if (computeBootstrapCorrelation() < params.min_correlation)
-            cout << "WARNING: bootstrap analysis did not converge, rerun with higher number of iterations" << endl;
+            cout << "WARNING: bootstrap analysis did not converge. You should rerun with higher number of iterations (-nm option)" << endl;
 
     }
 
@@ -2612,3 +2740,50 @@ void IQTree::printIntermediateTree(int brtype) {
     save_all_trees = x;
 }
 
+void IQTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs) {
+	Alignment *new_aln;
+	if (params.root)
+		new_aln = aln->removeIdenticalSeq((string)params.root, removed_seqs, twin_seqs);
+	else
+		new_aln = aln->removeIdenticalSeq("", removed_seqs, twin_seqs);
+	if (removed_seqs.size() > 0) {
+		cout << "INFO: " << removed_seqs.size() << " identical sequences are ignored." << endl;
+		aln = new_aln;
+	}
+}
+
+void IQTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs) {
+	if (removed_seqs.empty()) return;
+	IntVector id;
+	int i;
+	id.resize(removed_seqs.size());
+	for (i = 0; i < id.size(); i++)
+		id[i] = i;
+	// randomize order before reinsert back into tree
+	my_random_shuffle(id.begin(), id.end());
+
+	for (int i = 0; i < removed_seqs.size(); i++) {
+		Node *old_taxon = findLeafName(twin_seqs[id[i]]);
+		assert(old_taxon);
+		double len = old_taxon->neighbors[0]->length;
+		Node *old_node = old_taxon->neighbors[0]->node;
+		Node *new_taxon = newNode(leafNum+i, removed_seqs[id[i]].c_str());
+		Node *new_node = newNode();
+		// link new_taxon - new_node
+		new_taxon->addNeighbor(new_node, 0.0);
+		new_node->addNeighbor(new_taxon, 0.0);
+		// link old_taxon - new_node
+		new_node->addNeighbor(old_taxon, 0.0);
+		old_taxon->updateNeighbor(old_node, new_node, 0.0);
+		// link old_node - new_node
+		new_node->addNeighbor(old_node, len);
+		old_node->updateNeighbor(old_taxon, new_node, len);
+	}
+
+    leafNum = leafNum + removed_seqs.size();
+    initializeTree();
+//    delete iqtree.aln;
+    setAlignment(orig_aln);
+    // delete all partial_lh, which will be automatically recreated later
+    deleteAllPartialLh();
+}

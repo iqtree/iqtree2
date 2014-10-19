@@ -109,6 +109,12 @@ public:
      */
     virtual void setParams(Params& params);
 
+    void createPLLPartition(Params &params, ostream &pllPartitionFileHandle);
+
+    void initializePLL(Params &params);
+
+    void initializeModel(Params &params);
+
     /**
             print tree to .treefile
             @param params program parameters, field root is taken
@@ -408,7 +414,7 @@ public:
      */
     int cur_pars_score;
 
-    bool enable_parsimony;
+//    bool enable_parsimony;
     /**
             stopping rule
      */
@@ -690,6 +696,12 @@ public:
 	int getDelete() const;
 	void setDelete(int _delete);
 
+	/** remove identical sequences from the tree */
+    void removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs);
+
+    /** reinsert identical sequences into the tree and reset original alignment */
+    void reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs);
+
 protected:
     /**** NNI cutoff heuristic *****/
     /**
@@ -754,6 +766,7 @@ protected:
     virtual void reinsertLeaves(PhyloNodeVector &del_leaves);
 
     void reinsertLeavesByParsimony(PhyloNodeVector &del_leaves);
+
 
     void doParsimonyReinsertion();
 
