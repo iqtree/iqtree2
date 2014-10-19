@@ -65,6 +65,7 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 	}
 	verbose_mode = save_mode;
 	countConstSite();
+    buildSeqStates();
 }
 
 void SuperAlignment::linkSubAlignment(int part) {
@@ -306,6 +307,35 @@ SuperAlignment::~SuperAlignment()
 	partitions.clear();
 }
 
+void SuperAlignment::printCombinedAlignment(ostream &out, bool append) {
+	vector<Alignment*>::iterator pit;
+	int final_length = 0;
+	for (pit = partitions.begin(); pit != partitions.end(); pit++)
+		final_length += (*pit)->getNSite();
+
+	out << getNSeq() << " " << final_length << endl;
+	StrVector::iterator it;
+	int max_len = getMaxSeqNameLength();
+	if (max_len < 10) max_len = 10;
+	int seq_id = 0;
+	for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
+		out.width(max_len);
+		out << left << (*it) << " ";
+		int part = 0;
+		for (pit = partitions.begin(); pit != partitions.end(); pit++, part++) {
+			int part_seq_id = taxa_index[seq_id][part];
+			int nsite = (*pit)->getNSite();
+			if (part_seq_id >= 0) {
+				for (int i = 0; i < nsite; i++)
+					out << (*pit)->convertStateBackStr((*pit)->getPattern(i) [part_seq_id]);
+			} else {
+				string str(nsite, '?');
+				out << str;
+			}
+		}
+		out << endl;
+	}
+}
 
 void SuperAlignment::printCombinedAlignment(const char *file_name, bool append) {
 	vector<Alignment*>::iterator pit;
@@ -361,9 +391,9 @@ void SuperAlignment::printSubAlignments(Params &params, vector<PartitionInfo> &p
 			filename = params.out_prefix;
 		filename += "." + part_info[part].name;
 		 if (params.aln_output_format == ALN_PHYLIP)
-			(*pit)->printPhylip(filename.c_str(), false, NULL, params.aln_nogaps, NULL);
+			(*pit)->printPhylip(filename.c_str(), false, NULL, params.aln_nogaps, false, NULL);
 		else if (params.aln_output_format == ALN_FASTA)
-			(*pit)->printFasta(filename.c_str(), false, NULL, params.aln_nogaps, NULL);
+			(*pit)->printFasta(filename.c_str(), false, NULL, params.aln_nogaps, false, NULL);
 	}
 }
 
@@ -447,6 +477,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     	}
     }
     aln->countConstSite();
+    aln->buildSeqStates();
 
 	return aln;
 }

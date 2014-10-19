@@ -434,7 +434,7 @@ double PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf
     return -tree_lh;
 }
 
-NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves, bool approx_nni, bool useLS, double lh_contribution)
+NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves)
 {
     NNIMove myMove;
     myMove.newloglh = 0;
@@ -502,8 +502,8 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 	return myMove;
 }
 
-void PhyloSuperTreePlen::applyNNIs(int nni2apply, bool changeBran) {
-	IQTree::applyNNIs(nni2apply, changeBran);
+void PhyloSuperTreePlen::doNNIs(int nni2apply, bool changeBran) {
+	IQTree::doNNIs(nni2apply, changeBran);
 	mapBranchLen();
 }
 
@@ -1129,8 +1129,8 @@ void PhyloSuperTreePlen::linkCheckRe(int part,Node* node, Node* dad, PhyloNeighb
 		}
 	}
 }
-void PhyloSuperTreePlen::restoreAllBranLen(PhyloNode *node, PhyloNode *dad) {
-	IQTree::restoreAllBranLen(node,dad);
+void PhyloSuperTreePlen::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+	IQTree::restoreAllBrans(node,dad);
 	mapTrees();
 }
 

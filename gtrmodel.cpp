@@ -41,13 +41,13 @@ GTRModel::GTRModel(PhyloTree *tree, bool count_rates)
 	
 	eigenvalues = new double[num_states];
 
-	eigenvectors = (double**) new double[num_states];
-	for (i = 0; i < num_states; i++)
-		eigenvectors[i] = new double[num_states];
+	eigenvectors = new double[num_states*num_states];
+//	for (i = 0; i < num_states; i++)
+//		eigenvectors[i] = new double[num_states];
 
-	inv_eigenvectors = (double**) new double[num_states];
-	for (i = 0; i < num_states; i++)
-		inv_eigenvectors[i] = new double[num_states];
+	inv_eigenvectors = new double[num_states*num_states];
+//	for (i = 0; i < num_states; i++)
+//		inv_eigenvectors[i] = new double[num_states];
 		
 	eigen_coeff = new double[ncoeff];
 
@@ -440,7 +440,7 @@ void GTRModel::decomposeRateMatrix(){
 			int offset = (i*num_states+j)*num_states;
 			double sum = 0.0;
 			for (k = 0; k < num_states; k++) {
-				eigen_coeff[offset+k] = eigenvectors[i][k] * inv_eigenvectors[k][j];
+				eigen_coeff[offset+k] = eigenvectors[i*num_states+k] * inv_eigenvectors[k*num_states+j];
 				sum += eigen_coeff[offset+k];
 				//eigen_coeff_derv1[offset+k] = eigen_coeff[offset+k] * eigenvalues[k];
 				//eigen_coeff_derv2[offset+k] = eigen_coeff_derv1[offset+k] * eigenvalues[k];
@@ -549,16 +549,16 @@ GTRModel::~GTRModel() {
 
 void GTRModel::freeMem()
 {
-	int i;
+//	int i;
 	//delete eigen_coeff_derv2;
 	//delete eigen_coeff_derv1;
 	delete [] eigen_coeff;
 
-	for (i = num_states-1; i>=0; i--)
-		delete [] inv_eigenvectors[i];
+//	for (i = num_states-1; i>=0; i--)
+//		delete [] inv_eigenvectors[i];
 	delete [] inv_eigenvectors;
-	for (i = num_states-1; i>=0; i--)
-		delete [] eigenvectors[i];
+//	for (i = num_states-1; i>=0; i--)
+//		delete [] eigenvectors[i];
 	delete [] eigenvectors;
 
 	delete [] eigenvalues;
@@ -576,12 +576,12 @@ double *GTRModel::getEigenvalues() const
     return eigenvalues;
 }
 
-double **GTRModel::getEigenvectors() const
+double *GTRModel::getEigenvectors() const
 {
     return eigenvectors;
 }
 
-double** GTRModel::getInverseEigenvectors() const {
+double* GTRModel::getInverseEigenvectors() const {
 	return inv_eigenvectors;
 }
 
@@ -595,7 +595,7 @@ void GTRModel::setEigenvalues(double *eigenvalues)
     this->eigenvalues = eigenvalues;
 }
 
-void GTRModel::setEigenvectors(double **eigenvectors)
+void GTRModel::setEigenvectors(double *eigenvectors)
 {
     this->eigenvectors = eigenvectors;
 }

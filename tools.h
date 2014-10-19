@@ -353,7 +353,7 @@ enum ModelTestCriterion {
         Stopping condition type
  */
 enum STOP_CONDITION {
-    SC_FIXED_ITERATION, SC_STOP_PREDICT
+    SC_FIXED_ITERATION, SC_WEIBULL, SC_UNSUCCESS_ITERATION, SC_BOOTSTRAP_CORRELATION, SC_REAL_TIME
 };
 
 enum IQP_ASSESS_QUARTET {
@@ -361,7 +361,7 @@ enum IQP_ASSESS_QUARTET {
 };
 
 enum LEAST_SQUARE_VAR {
-    OLS, FIRST_TAYLOR, FITCH_MARGOLIASH, SECOND_TAYLOR, PAUPLIN
+    OLS, WLS_FIRST_TAYLOR, WLS_FITCH_MARGOLIASH, WLS_SECOND_TAYLOR, WLS_PAUPLIN
 };
 
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model
@@ -377,6 +377,13 @@ struct NNIInfo {
     int iqpnni_iteration;
 };
 
+enum LikelihoodKernel {
+	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_SSE
+};
+
+enum LhMemSave {
+	LM_DETECT, LM_ALL_BRANCH, LM_PER_NODE
+};
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
@@ -427,11 +434,6 @@ struct Params {
 	 */
 	double modeps;
 
-    /**
-     *  logl epsilon for the intermediate model parameter optimization steps
-     */
-    double imd_modeps;
-
 	/**
 	 *  Carry out iterated local search using NNI only.
 	 */
@@ -471,6 +473,15 @@ struct Params {
      */
     bool leastSquareBranch;
 
+    /** TRUE to apply Manuel's analytic approximation formulae for branch length */
+    bool manuel_analytic_approx;
+
+    /** TRUE to compute parsimony branch length of final tree */
+    bool pars_branch_length;
+
+    /** TRUE to compute bayesian branch length for the final tree */
+    bool bayes_branch_length;
+
     /**
      *  use Least Square to evaluate NNI
      */
@@ -480,11 +491,6 @@ struct Params {
      *  epsilon value used to compare log-likelihood between trees
      */
     double loglh_epsilon;
-    /**
-     *   Option to turn on the fast branch length optimization trick
-     *   from RAxML
-     */
-    bool fast_branch_opt;
 
     /*
      *  reinsert leaves back to tree using parsimony
@@ -512,20 +518,15 @@ struct Params {
     bool pll;
 
     /**
-     *  Turn on model parameter optimization by PLL
+     *  OBSOLETE! Stopping rule for the tree search
      */
-    bool pllModOpt;
-
-    /**
-     *  Stopping rule for the tree search
-     */
-    bool autostop;
+//    bool autostop;
 
     /**
      *  Number of maximum unsuccessful iterations after the search is stopped.
      *  Used for the automatic stopping rule
      */
-    int stopCond;
+    int unsuccess_iteration;
 
     char *binary_aln_file;
 
@@ -543,7 +544,7 @@ struct Params {
     /**
      *  starting CPU time of the program
      */
-    double startTime;
+    double startCPUTime;
 
     /** starting real time of the program */
     double start_real_time;
@@ -1163,13 +1164,7 @@ struct Params {
     /**
             SSE Option
      */
-    bool SSE;
-
-    /**
-            Fast SSE Option, implementing likelihood kernel learned from RAxML code
-     */
-    bool fastSSE;
-
+    LikelihoodKernel SSE;
     /**
      	 	0: do not print anything
             1: print site log-likelihood
@@ -1184,6 +1179,8 @@ struct Params {
             TRUE to print tree log-likelihood
      */
     bool print_tree_lh;
+
+    bool print_branch_lengths;
 
     /****** adaptive NNI search heuristic ******/
 
@@ -1479,6 +1476,11 @@ struct Params {
 
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
+
+	/* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
+	 * 0: store all partial likelihood vectors
+	 * 1: only store 1 partial likelihood vector per node */
+	LhMemSave lh_mem_save;
 };
 
 /**
@@ -1870,10 +1872,20 @@ double computePValueChiSquare(double x, int df);
 int init_random(int seed);
 
 /**
+ * finalize random number generator (e.g. free memory
+ */
+int finish_random();
+
+/**
  * returns a random integer in the range [0; n - 1]
  * @param n upper-bound of random number
  */
 int random_int(int n);
+
+/**
+ *  return a random integer in the range [a,b]
+ */
+int randint(int a, int b);
 
 /**
  * returns a random integer in the range [0; RAND_MAX - 1]

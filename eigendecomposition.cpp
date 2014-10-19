@@ -154,7 +154,7 @@ void EigenDecomposition::eigensystem(
 
 
 void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_freq, 
-	double *eval, double **evec, double **inv_evec, int num_state)
+	double *eval, double *evec, double *inv_evec, int num_state)
 {
 	double *forg = new double[num_state];
 	double *new_forg = new double[num_state];
@@ -208,20 +208,20 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 // 			for (j = 0, jnew = 0; j < num_state; j++) 
 			for (j = num_state-1, jnew = new_num-1; j >= 0; j--) 
 				if (forg[j] > ZERO) {
-					evec[i][j] = a[inew][jnew] / forg_sqrt[inew];
-					inv_evec[i][j] = a[jnew][inew] * forg_sqrt[jnew];
+					evec[i*num_state+j] = a[inew][jnew] / forg_sqrt[inew];
+					inv_evec[i*num_state+j] = a[jnew][inew] * forg_sqrt[jnew];
 					//jnew++;
 					jnew--;
 				} else {
-					evec[i][j] = (i == j);
-					inv_evec[i][j] = (i == j);
+					evec[i*num_state+j] = (i == j);
+					inv_evec[i*num_state+j] = (i == j);
 				}
 // 			inew++;
  			inew--;
 		} else 
 		for (j=0; j < num_state; j++) {
-			evec[i][j] = (i==j);
-			inv_evec[i][j] = (i==j);
+			evec[i*num_state+j] = (i==j);
+			inv_evec[i*num_state+j] = (i==j);
 		}
 
 
@@ -230,8 +230,8 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	error = 0;
 	for (j = 0; j < num_state; j++) {
 		for (i = 0, zero = 0.0; i < num_state; i++) {
-			for (k = 0; k < num_state; k++) zero += b[i][k] * evec[k][j];
-			zero -= eval[j] * evec[i][j];
+			for (k = 0; k < num_state; k++) zero += b[i][k] * evec[k*num_state+j];
+			zero -= eval[j] * evec[i*num_state+j];
 			if (fabs(zero) > 1.0e-5) {
 				error = 1;
 				break;
@@ -1049,7 +1049,7 @@ void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
 	delete [] index;
 } /* luinverse */
 
-void EigenDecomposition::checkevector(double **evec, double **ivec, int nn) {
+void EigenDecomposition::checkevector(double *evec, double *ivec, int nn) {
 	int i, j, ia, ib, ic, error;
 	double **matx = (double**) new double [nn];
 	double sum;
@@ -1061,7 +1061,7 @@ void EigenDecomposition::checkevector(double **evec, double **ivec, int nn) {
 	for (ia = 0; ia < nn; ia++) {
 		for (ic = 0; ic < nn; ic++) {
 			sum = 0.0;
-			for (ib = 0; ib < nn; ib++) sum += evec[ia][ib] * ivec[ib][ic];
+			for (ib = 0; ib < nn; ib++) sum += evec[ia*nn+ib] * ivec[ib*nn+ic];
 			matx[ia][ic] = sum;
 		}
 	}

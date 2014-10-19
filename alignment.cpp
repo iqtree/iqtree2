@@ -57,6 +57,7 @@ Alignment::Alignment()
     genetic_code = NULL;
     non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
+    STATE_UNKNOWN = 126;
 }
 
 string &Alignment::getSeqName(int i) {
@@ -129,6 +130,7 @@ void Alignment::checkSeqName() {
 				cout << " !!!";
 				num_problem_seq++;
 			}
+            cout << "\t" << seq_states[i].size();
 			cout << endl;
         }
         if (num_problem_seq) cout << "WARNING: " << num_problem_seq << " sequences contain more than 50% gaps/ambiguity" << endl;
@@ -213,6 +215,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     genetic_code = NULL;
     non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
+    STATE_UNKNOWN = 126;
     cout << "Reading alignment file " << filename << " ... ";
     intype = detectInputFile(filename);
 
@@ -243,6 +246,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 
     cout << "Alignment has " << getNSeq() << " sequences with " << getNSite() <<
          " columns and " << getNPattern() << " patterns"<< endl;
+    buildSeqStates();
     checkSeqName();
 	checkIdenticalSeq();
     //cout << "Number of character states is " << num_states << endl;
@@ -250,6 +254,24 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     countConstSite();
     //cout << "Fraction of constant sites: " << frac_const_sites << endl;
 
+}
+
+void Alignment::buildSeqStates(bool add_unobs_const) {
+	string unobs_const;
+	if (add_unobs_const) unobs_const = getUnobservedConstPatterns();
+	seq_states.clear();
+	seq_states.resize(getNSeq());
+	for (int seq = 0; seq < getNSeq(); seq++) {
+		vector<bool> has_state;
+		has_state.resize(STATE_UNKNOWN+1, false);
+		for (int site = 0; site < getNPattern(); site++)
+			has_state[at(site)[seq]] = true;
+		for (string::iterator it = unobs_const.begin(); it != unobs_const.end(); it++)
+			has_state[*it] = true;
+		for (int state = 0; state < STATE_UNKNOWN; state++)
+			if (has_state[state])
+				seq_states[seq].push_back(state);
+	}
 }
 
 int Alignment::readNexus(char *filename) {
@@ -296,6 +318,14 @@ int Alignment::readNexus(char *filename) {
     return 1;
 }
 
+void Alignment::computeUnknownState() {
+    switch (seq_type) {
+    case SEQ_DNA: STATE_UNKNOWN = 18; break;
+    case SEQ_PROTEIN: STATE_UNKNOWN = 22; break;
+    default: STATE_UNKNOWN = num_states; break;
+    }
+}
+
 void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
     int nseq = data_block->GetNTax();
     int nsite = data_block->GetNCharTotal();
@@ -334,6 +364,7 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         symbols = symbols_morph;
     }
 
+    computeUnknownState();
     memset(char_to_state, STATE_UNKNOWN, NUM_CHAR);
     memset(state_to_char, '?', NUM_CHAR);
     for (int i = 0; i < strlen(symbols); i++) {
@@ -399,7 +430,7 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
     PatternIntMap::iterator pat_it = pattern_index.find(pat);
     if (pat_it == pattern_index.end()) { // not found
         pat.frequency = freq;
-        pat.computeConst();
+        pat.computeConst(STATE_UNKNOWN);
         push_back(pat);
         pattern_index[pat] = size()-1;
         site_pattern[site] = size()-1;
@@ -484,8 +515,9 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
     return SEQ_UNKNOWN;
 }
 
-void buildStateMap(char *map, SeqType seq_type) {
+void Alignment::buildStateMap(char *map, SeqType seq_type) {
     memset(map, STATE_INVALID, NUM_CHAR);
+    assert(STATE_UNKNOWN < 126);
     map[(unsigned char)'?'] = STATE_UNKNOWN;
     map[(unsigned char)'-'] = STATE_UNKNOWN;
     map[(unsigned char)'.'] = STATE_UNKNOWN;
@@ -519,8 +551,10 @@ void buildStateMap(char *map, SeqType seq_type) {
         for (int i = 0; i < 20; i++)
             map[(int)symbols_protein[i]] = i;
         map[(int)symbols_protein[20]] = STATE_UNKNOWN;
-		map[(unsigned char)'B'] = 4+8+19; // N or D
-		map[(unsigned char)'Z'] = 32+64+19; // Q or E
+//		map[(unsigned char)'B'] = 4+8+19; // N or D
+//		map[(unsigned char)'Z'] = 32+64+19; // Q or E
+        map[(unsigned char)'B'] = 20; // N or D
+        map[(unsigned char)'Z'] = 21; // Q or E
         return;
     case SEQ_MULTISTATE:
         for (int i = 0; i <= STATE_UNKNOWN; i++)
@@ -599,8 +633,10 @@ char Alignment::convertState(char state, SeqType seq_type) {
         }
         return state;
     case SEQ_PROTEIN: // Protein
-		if (state == 'B') return 4+8+19;
-		if (state == 'Z') return 32+64+19;
+//		if (state == 'B') return 4+8+19;
+//		if (state == 'Z') return 32+64+19;
+		if (state == 'B') return 20;
+		if (state == 'Z') return 21;
         loc = strchr(symbols_protein, state);
 
         if (!loc) return STATE_INVALID; // unrecognize character
@@ -677,8 +713,10 @@ char Alignment::convertStateBack(char state) {
     case SEQ_PROTEIN: // Protein
         if (state < 20)
             return symbols_protein[(int)state];
-		else if (state == 4+8+19) return 'B';
-		else if (state == 32+64+19) return 'Z';
+		else if (state == 20) return 'B';
+		else if (state == 21) return 'Z';
+//		else if (state == 4+8+19) return 'B';
+//		else if (state == 32+64+19) return 'Z';
         else
             return '-';
     case SEQ_MORPH:
@@ -879,6 +917,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     int site, seq, num_gaps_only = 0;
 
     char char_to_state[NUM_CHAR];
+    computeUnknownState();
     buildStateMap(char_to_state, seq_type);
 
     Pattern pat;
@@ -1039,7 +1078,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 
         //cout << line << endl;
         if (line[0] == '>') { // next sequence
-            string::size_type pos = line.find(' ');
+            string::size_type pos = line.find_first_of(" \n\r\t");
             seq_names.push_back(line.substr(1, pos-1));
             sequences.push_back("");
             continue;
@@ -1147,6 +1186,27 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
     return final_length;
 }
 
+void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list,
+                            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
+    IntVector kept_sites;
+    int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
+
+	out << getNSeq() << " " << final_length << endl;
+	StrVector::iterator it;
+	int max_len = getMaxSeqNameLength();
+	if (max_len < 10) max_len = 10;
+	int seq_id = 0;
+	for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
+		out.width(max_len);
+		out << left << (*it) << "  ";
+		int j = 0;
+		for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
+			if (kept_sites[j])
+				out << convertStateBackStr(at(*i)[seq_id]);
+		out << endl;
+	}
+}
+
 void Alignment::printPhylip(const char *file_name, bool append, const char *aln_site_list,
                             bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
     IntVector kept_sites;
@@ -1220,6 +1280,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -1242,6 +1303,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     site_pattern.resize(site);
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
     assert(size() <= aln->size());
 }
 
@@ -1253,6 +1315,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -1269,6 +1332,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     site_pattern.resize(site);
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
     assert(size() <= aln->size());
 }
 
@@ -1280,6 +1344,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(accumulate(ptn_freq.begin(), ptn_freq.end(), 0), -1);
     clear();
     pattern_index.clear();
@@ -1297,6 +1362,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     site_pattern.resize(site);
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
     assert(size() <= aln->size());
 }
 
@@ -1307,6 +1373,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(site_id.size(), -1);
     clear();
     pattern_index.clear();
@@ -1320,6 +1387,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     }
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
     //cout << getNSite() << " positions were extracted" << endl;
     //cout << __func__ << " " << num_states << endl;
 }
@@ -1408,6 +1476,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
@@ -1498,6 +1567,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     }
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
 }
 
 void Alignment::createBootstrapAlignment(IntVector &pattern_freq, const char *spec) {
@@ -1589,6 +1659,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
@@ -1610,6 +1681,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     }
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
 }
 
 void Alignment::shuffleAlignment() {
@@ -1641,6 +1713,7 @@ void Alignment::concatenateAlignment(Alignment *aln) {
     }
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
 }
 
 void Alignment::copyAlignment(Alignment *aln) {
@@ -1648,6 +1721,7 @@ void Alignment::copyAlignment(Alignment *aln) {
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
@@ -1661,6 +1735,7 @@ void Alignment::copyAlignment(Alignment *aln) {
     }
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
 }
 
 void Alignment::countConstSite() {
@@ -2135,7 +2210,7 @@ void Alignment::printSiteGaps(const char *filename) {
         int nsite = getNSite();
         out << nsite << endl << "Site_Gap  ";
         for (int site = 0; site < getNSite(); site++) {
-            out << " " << at(getPatternID(site)).computeGapChar(num_states);
+            out << " " << at(getPatternID(site)).computeGapChar(num_states, STATE_UNKNOWN);
         }
         out << endl << "Site_Ambi ";
         for (int site = 0; site < getNSite(); site++) {

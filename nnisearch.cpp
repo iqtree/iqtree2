@@ -420,6 +420,58 @@ void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nn
 //	}
 }
 
+void pllOptimizeOneBranch(pllInstance *tr, partitionList *pr, nodeptr p) {
+    nodeptr  q;
+    int i;
+    double   z[PLL_NUM_BRANCHES], z0[PLL_NUM_BRANCHES];
+    int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
+
+    #ifdef _DEBUG_UPDATE
+      double
+        startLH;
+
+      pllEvaluateLikelihood (tr, p);
+
+      startLH = tr->likelihood;
+    #endif
+
+    q = p->back;
+
+    for(i = 0; i < numBranches; i++)
+      z0[i] = q->z[i];
+
+    if(numBranches > 1)
+      makenewzGeneric(tr, pr, p, q, z0, PLL_ITERATIONS, z, PLL_TRUE);
+    else
+      makenewzGeneric(tr, pr, p, q, z0, PLL_ITERATIONS, z, PLL_FALSE);
+
+    for(i = 0; i < numBranches; i++)
+    {
+      if(!tr->partitionConverged[i])
+      {
+        if(PLL_ABS(z[i] - z0[i]) > PLL_DELTAZ)
+        {
+          tr->partitionSmoothed[i] = PLL_FALSE;
+        }
+
+        p->z[i] = q->z[i] = z[i];
+      }
+    }
+
+    #ifdef _DEBUG_UPDATE
+      pllEvaluateLikelihood (tr, p);
+
+      if(tr->likelihood <= startLH)
+        {
+          if(fabs(tr->likelihood - startLH) > 0.01)
+      {
+        printf("%f %f\n", startLH, tr->likelihood);
+        assert(0);
+      }
+        }
+    #endif
+}
+
 double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, SearchInfo *searchinfo) {
 	assert(swap == 0 || swap == 1);
 	nodeptr q;
@@ -451,7 +503,7 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
         pllUpdatePartials(tr, pr, q, PLL_FALSE);
     }
     // Optimize the central branch
-    update(tr, pr, p);
+    pllOptimizeOneBranch(tr, pr, p);
     if((globalParam->online_bootstrap == PLL_TRUE) && (globalParam->gbo_replicates > 0)){
         tr->fastScaling = PLL_FALSE;
         pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
@@ -478,7 +530,7 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
         } else {
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
         }
-        update(tr, pr, r);
+        pllOptimizeOneBranch(tr, pr, r);
 //        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
 //        if (tr->likelihood > searchinfo->curLogl) {
 //            return tr->likelihood;
@@ -488,7 +540,7 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
             pllUpdatePartials(tr, pr, r, PLL_TRUE);
         else
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
-        update(tr, pr, r);
+        pllOptimizeOneBranch(tr, pr, r);
 //        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
 //        if (tr->likelihood > searchinfo->curLogl) {
 //            return tr->likelihood;
@@ -497,7 +549,7 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
             pllUpdatePartials(tr, pr, p, PLL_TRUE);
         else
             pllUpdatePartials(tr, pr, p, PLL_FALSE);
-        update(tr, pr, p);
+        pllOptimizeOneBranch(tr, pr, p);
 //        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
 //        if (tr->likelihood > searchinfo->curLogl) {
 //            return tr->likelihood;
@@ -508,7 +560,7 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
             pllUpdatePartials(tr, pr, r, PLL_TRUE);
         else
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
-        update(tr, pr, r);
+        pllOptimizeOneBranch(tr, pr, r);
 //        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
 //        if (tr->likelihood > searchinfo->curLogl) {
 //            return tr->likelihood;
@@ -518,7 +570,7 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
             pllUpdatePartials(tr, pr, r, PLL_TRUE);
         else
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
-        update(tr, pr, r);
+        pllOptimizeOneBranch(tr, pr, r);
         if((globalParam->online_bootstrap == PLL_TRUE) &&
                         (globalParam->gbo_replicates > 0)){
             tr->fastScaling = PLL_FALSE;
@@ -528,7 +580,6 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
             pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_FALSE);
         }
     }
-
 	return tr->likelihood;
 }
 
@@ -716,6 +767,16 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 
 	return numPosNNI;
 }
+
+//void recomputePartial(pllInstance tr, partitionList pr, nodeptr p) {
+//    if (numBranches > 1 && !tr->useRecom) {
+//        pllUpdatePartials(tr, pr, p, PLL_TRUE);
+//        pllUpdatePartials(tr, pr, p->back, PLL_TRUE);
+//    } else {
+//        pllUpdatePartials(tr, pr, p, PLL_FALSE);
+//        pllUpdatePartials(tr, pr, p->back, PLL_FALSE);
+//    }
+//}
 
 bool isAffectedBranch(nodeptr p, SearchInfo &searchinfo) {
 	string branString = getBranString(p);

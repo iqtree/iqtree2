@@ -172,9 +172,7 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
-    		NNIMove *nniMoves = NULL, bool approx_nni = false,
-    		bool useLS = false, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL);
 
     /**
             Do an NNI on the supertree and synchronize all subtrees respectively
@@ -186,14 +184,14 @@ public:
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void applyNNIBranches(NNIMove nnimove);
+    virtual void changeNNIBrans(NNIMove nnimove);
 
     /**
      * 	 Restore the branch lengths from the saved values
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
      */
-    virtual void restoreAllBranLen(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
             reinsert the whole list of leaves back into the supertree then call mapTrees

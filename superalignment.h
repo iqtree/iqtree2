@@ -161,6 +161,8 @@ public:
 	 */
 	void printCombinedAlignment(const char *filename, bool append = false);
 
+	void printCombinedAlignment(ostream &out, bool append = false);
+
 	/**
 	 * print all sub alignments into files with prefix, suffix is the charset name
 	 * @param prefix prefix of output files

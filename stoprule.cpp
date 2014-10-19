@@ -18,79 +18,164 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "stoprule.h"
+#include "timeutil.h"
 
 StopRule::StopRule()
 {
-	nTime_ = 0;
-	confidence_value = 0.95;
+//	nTime_ = 0;
+	predicted_iteration = 0;
+
 	stop_condition = SC_FIXED_ITERATION;
+	confidence_value = 0.95;
 	min_iteration = 0;
 	max_iteration = 0;
-	predicted_iteration = 0;
+	unsuccess_iteration = 100;
+	min_correlation = 0.99;
+	step_iteration = 100;
+	start_real_time = -1.0;
+	max_run_time = -1.0;
 }
 
+void StopRule::initialize(Params &params) {
+	stop_condition = params.stop_condition;
+	confidence_value = params.stop_confidence;
+	min_iteration = params.min_iterations;
+	max_iteration = params.max_iterations;
+	unsuccess_iteration = params.unsuccess_iteration;
+	min_correlation = params.min_correlation;
+	step_iteration = params.step_iterations;
+	start_real_time = getRealTime();
+	max_run_time = params.maxtime * 60; // maxtime is in minutes
+}
 
 StopRule::~StopRule()
 {
 }
+//
+//int StopRule::getNumIterations() {
+//	if (stop_condition == SC_FIXED_ITERATION || predicted_iteration == 0)
+//		return min_iteration;
+//	return predicted_iteration;
+//}
 
-int StopRule::getNumIterations() {
-	if (stop_condition == SC_FIXED_ITERATION || predicted_iteration == 0)
-		return min_iteration;
-	return predicted_iteration;
+//int StopRule::getPredictedIteration(int cur_iteration) {
+//	double realtime_secs = getRealTime() - start_real_time;
+//
+//	switch (stop_condition) {
+//	case SC_FIXED_ITERATION:
+//		return min_iteration;
+//	case SC_WEIBULL:
+//		if (predicted_iteration == 0)
+//			return min_iteration;
+//		else
+//			return predicted_iteration;
+//	case SC_UNSUCCESS_ITERATION:
+//		return getLastImprovedIteration() + unsuccess_iteration;
+//	case SC_BOOTSTRAP_CORRELATION:
+//		return ((cur_iteration+step_iteration-1)/step_iteration)*step_iteration;
+//	case SC_REAL_TIME:
+////		return ((max_run_time - realtime_secs)/max_run_time);
+//		assert(0); // TODO
+//		return 0;
+//	}
+//}
+
+bool StopRule::meetStopCondition(int cur_iteration, double cur_correlation) {
+	switch (stop_condition) {
+	case SC_FIXED_ITERATION:
+		return cur_iteration > min_iteration;
+	case SC_WEIBULL:
+		if (predicted_iteration == 0)
+			return cur_iteration > min_iteration;
+		else
+			return cur_iteration > predicted_iteration;
+	case SC_UNSUCCESS_ITERATION:
+		return cur_iteration > getLastImprovedIteration() + unsuccess_iteration;
+	case SC_BOOTSTRAP_CORRELATION:
+		return (cur_correlation >= min_correlation) || cur_iteration >= max_iteration;
+	case SC_REAL_TIME:
+		return (getRealTime() - start_real_time >= max_run_time);
+	}
+	return false;
 }
 
-int StopRule::getPredictedIteration() {
-	return predicted_iteration;
+double StopRule::getRemainingTime(int cur_iteration) {
+	double realtime_secs = getRealTime() - start_real_time;
+	switch (stop_condition) {
+	case SC_FIXED_ITERATION:
+		return (min_iteration - cur_iteration) * realtime_secs / (cur_iteration - 1);
+	case SC_WEIBULL:
+		if (predicted_iteration == 0)
+			return (min_iteration - cur_iteration) * realtime_secs / (cur_iteration - 1);
+		else
+			return (predicted_iteration - cur_iteration) * realtime_secs / (cur_iteration - 1);
+	case SC_UNSUCCESS_ITERATION:
+		return (getLastImprovedIteration() + unsuccess_iteration - cur_iteration) * realtime_secs / (cur_iteration - 1);
+	case SC_BOOTSTRAP_CORRELATION:
+		return (((cur_iteration+step_iteration-1)/step_iteration)*step_iteration - cur_iteration) * realtime_secs / (cur_iteration - 1);
+	case SC_REAL_TIME:
+		return max_run_time - realtime_secs;
+	}
+	return 0.0;
 }
 
-bool StopRule::meetStopCondition(int current_iteration) {
-	if (stop_condition == SC_FIXED_ITERATION || predicted_iteration == 0)
-		return current_iteration > min_iteration;
-	return current_iteration > predicted_iteration;
-}
+//void StopRule::setStopCondition(STOP_CONDITION sc) {
+//	stop_condition = sc;
+//}
+//
+//void StopRule::setIterationNum(int min_it, int max_it) {
+//	min_iteration = min_it;
+//	max_iteration = max_it;
+//}
+//
+//void StopRule::setConfidenceValue(double confidence_val)
+//{
+//	confidence_value = confidence_val;
+//	assert(confidence_value > 0 && confidence_value < 1);
+//}
+//
+//void StopRule::setUnsuccessIteration(int unsuccess_iteration) {
+//	this->unsuccess_iteration = unsuccess_iteration;
+//}
+//
+//void StopRule::setMinCorrelation(double min_correlation, int step_iteration) {
+//	this->min_correlation = min_correlation;
+//	this->step_iteration = step_iteration;
+//}
+//
+//void StopRule::setRealTime(double start_real_time, double max_un_time) {
+//	this->start_real_time = start_real_time;
+//	this->max_run_time = max_run_time;
+//}
 
-void StopRule::setStopCondition(STOP_CONDITION sc) {
-	stop_condition = sc;
-}
-
-void StopRule::setIterationNum(int min_it, int max_it) {
-	min_iteration = min_it;
-	max_iteration = max_it;
-}
-
-void StopRule::setConfidenceValue(double confidence_val)
-{
-	confidence_value = confidence_val;
-	assert(confidence_value > 0 && confidence_value < 1);
-}
 
 double StopRule::predict (double &upperTime) {
-	if (nTime_ < 4) return 0;
+	if (time_vec.size() < 4) return 0;
 	//readVector(time_vec);
-	double predictedTime_ = cmpExtinctTime (nTime_);
-	upperTime = cmpUpperTime (nTime_, 1.0 - confidence_value);
+	double predictedTime_ = cmpExtinctTime (time_vec.size());
+	upperTime = cmpUpperTime (time_vec.size(), 1.0 - confidence_value);
 	return predictedTime_;
 }
 
 void StopRule::addImprovedIteration(int iteration) {
-	timeVec_.insert(timeVec_.begin(), iteration);
-	nTime_++;
+	time_vec.insert(time_vec.begin(), iteration);
+//	nTime_++;
+	if (stop_condition != SC_WEIBULL) return;
 	double upperTime;
 	if (predict(upperTime) == 0) return;
 	predicted_iteration = upperTime;
-	if (stop_condition == SC_STOP_PREDICT && predicted_iteration > max_iteration)
+	if (stop_condition == SC_WEIBULL && predicted_iteration > max_iteration)
 		predicted_iteration = max_iteration;
 	if (predicted_iteration < min_iteration)
 			predicted_iteration = min_iteration;
-	cout << "Stopping rule suggests " << predicted_iteration << " iterations (" 
-		<< (predicted_iteration - iteration) << " more iterations)" << endl;
+	//cout << "Stopping rule suggests " << predicted_iteration << " iterations ("
+	//	<< (predicted_iteration - iteration) << " more iterations)" << endl;
 }
 
 int StopRule::getLastImprovedIteration() {
-	if (timeVec_.empty())
+	if (time_vec.empty())
 		return 0;
-	return timeVec_[0];
+	return time_vec[0];
 }
 
 void StopRule::cmpInvMat (DoubleMatrix &oriMat, DoubleMatrix &invMat, int size) {
@@ -288,17 +373,17 @@ double StopRule::cmpLnGamma (double alpha) {
 
 
 void StopRule::readVector(DoubleVector &tmpTimeVec_) {
-	nTime_ = tmpTimeVec_.size();
-	timeVec_.resize(nTime_);
-	for (int count_ = 0; count_ < nTime_; count_ ++)
-		timeVec_[count_] = tmpTimeVec_[nTime_ - count_ - 1];
+//	nTime_ = tmpTimeVec_.size();
+	time_vec.resize(tmpTimeVec_.size());
+	for (int count_ = 0; count_ < tmpTimeVec_.size(); count_ ++)
+		time_vec[count_] = tmpTimeVec_[tmpTimeVec_.size() - count_ - 1];
 }
 
 void StopRule::readFile (const char *fileName) {
 	std::ifstream inFile_;
 	inFile_.open (fileName);
 
-	nTime_ = 0;
+//	int nTime_ = 0;
 
 
 	DoubleVector tmpTimeVec_;// (MAX_ITERATION, MAX_ITERATION);
@@ -309,22 +394,22 @@ void StopRule::readFile (const char *fileName) {
 		inFile_ >> tmpTime_;
 		if (tmpTime_ > old_time) {
 			tmpTimeVec_.push_back(tmpTime_);
-			nTime_ ++;
+//			nTime_ ++;
 			old_time = tmpTime_;
 		}
 	}
 	inFile_.close ();
 
-	timeVec_.resize(nTime_);
-	for (int count_ = 0; count_ < nTime_; count_ ++)
-		timeVec_[count_] = tmpTimeVec_[nTime_ - count_ - 1];
+	time_vec.resize(tmpTimeVec_.size());
+	for (int count_ = 0; count_ < tmpTimeVec_.size(); count_ ++)
+		time_vec[count_] = tmpTimeVec_[tmpTimeVec_.size() - count_ - 1];
 }
 
 double StopRule::cmpMuy (int k) {
 	double sum_ = 0.0;
 
 	for (int i = 0; i < k - 2; i ++)
-		sum_ += log ( (timeVec_[0] - timeVec_[ k - 1]) / (timeVec_[0] - timeVec_[i + 1]) );
+		sum_ += log ( (time_vec[0] - time_vec[ k - 1]) / (time_vec[0] - time_vec[i + 1]) );
 
 	double lamda_;
 	lamda_ = (1.0 / (k - 1.0) ) * sum_;
@@ -395,7 +480,7 @@ double StopRule::cmpExtinctTime (int k) {
 	cmpVecA (k, a);
 	double extinctTime_ = 0.0;
 	for (int count_ = 0; count_ < k; count_ ++)
-		extinctTime_ += a[count_] * timeVec_[count_];
+		extinctTime_ += a[count_] * time_vec[count_];
 	return extinctTime_;
 }
 
@@ -405,6 +490,6 @@ double StopRule::cmpUpperTime (int k, double alpha) {
 	double muy_ = cmpMuy (k);
 	double priSu_ = -log (alpha) / k ;
 	double su_ = pow (priSu_, -muy_);
-	return timeVec_[0] + (timeVec_[0] - timeVec_[k - 1]) / (su_ - 1.0);
+	return time_vec[0] + (time_vec[0] - time_vec[k - 1]) / (su_ - 1.0);
 }
 

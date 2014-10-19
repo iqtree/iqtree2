@@ -162,9 +162,7 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2,
-    		NNIMove *nniMoves = NULL, bool approx_nni = false,
-    		bool useLS = false, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL);
 
 
     /**
@@ -177,13 +175,13 @@ public:
             @param nni2apply number of NNIs to apply from the list
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void applyNNIs(int nni2apply, bool changeBran = true);
+    virtual void doNNIs(int nni2apply, bool changeBran = true);
 
     /**
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void applyNNIBranches(NNIMove nnimove) {};
+    virtual void changeNNIBrans(NNIMove nnimove) {};
 
 
     /**
@@ -213,7 +211,7 @@ public:
 	void mapBranchLen();
 	virtual void printMapInfo();
 
-	virtual void restoreAllBranLen(PhyloNode *node, PhyloNode *dad);
+	virtual void restoreAllBrans(PhyloNode *node, PhyloNode *dad);
 
 	/**
 	 * initialize partition information for super tree

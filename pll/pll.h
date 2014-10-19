@@ -1625,6 +1625,7 @@ extern int pllAlignmentDataDumpFile (pllAlignmentData *, int, const char *);
 extern void pllAlignmentDataDumpConsole (pllAlignmentData * alignmentData);
 extern pllAlignmentData * pllInitAlignmentData (int, int);
 extern pllAlignmentData * pllParseAlignmentFile (int fileType, const char *);
+extern pllAlignmentData *pllParsePHYLIPString (const char *rawdata, long filesize);
 
 
 /* model management */
