@@ -27,9 +27,13 @@
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
-#include <sys/time.h>
+//#include <sys/time.h>
 #ifdef _OPENMP
 #include <omp.h>
+#endif
+
+#if defined(_MSC_VER)
+#define inline __inline
 #endif
 
 #if (defined _WIN32 || defined __WIN32__ || defined WIN32) 
@@ -57,7 +61,8 @@
 	#include <sys/timeb.h>
 	#include <sys/types.h>
 	#include <winsock.h>
-	void gettimeofday(struct timeval* t, void* timezone)
+
+	inline void gettimeofday(struct timeval* t, void* timezone)
 	{       
 		struct _timeb timebuffer;
 		_ftime( &timebuffer );
@@ -125,7 +130,9 @@ inline double getRealTime() {
 	return omp_get_wtime();
 #else
 	struct timeval tv;
-	if (gettimeofday(&tv, NULL)) return -1.0; /* error */
+	gettimeofday(&tv, NULL);
+	//Tung: the if statement below causes compiling error because gettimeofday() return void not boolean
+	//if (gettimeofday(&tv, NULL)) return -1.0; /* error */
 	return (tv.tv_sec + (double)tv.tv_usec / 1.0e6);
 #endif
 }

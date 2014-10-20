@@ -92,9 +92,14 @@
 
 #endif
 
-
 #include "pll.h"
 #include "pllInternal.h"
+
+#if defined(_MSC_VER)
+#	include <intrin.h>
+#	define __builtin_popcount __popcnt
+#	define __builtin_popcountl __popcnt64
+#endif
 
 static pllBoolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping);
 
@@ -125,8 +130,13 @@ inline unsigned int bitcount_64_bit(unsigned long i)
 #if (defined(__SSE3) || defined(__AVX))
 static inline unsigned int vectorPopcount(INT_TYPE v)
 {
+
+#if defined(_MSC_VER)
+  __declspec(align(PLL_BYTE_ALIGNMENT)) unsigned long counts[LONG_INTS_PER_VECTOR];
+#else
   unsigned long
-    counts[LONG_INTS_PER_VECTOR] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+	  counts[LONG_INTS_PER_VECTOR] __attribute__((aligned(PLL_BYTE_ALIGNMENT)));
+#endif
 
   int    
     i,
@@ -255,8 +265,14 @@ static void newviewParsimonyIterativeFast(pllInstance *tr, partitionList *pr)
 
   for(index = 4; index < count; index += 4)
     {      
-      unsigned int
-        totalScore __attribute__((aligned (PLL_BYTE_ALIGNMENT)));
+
+#if defined(_MSC_VER)
+	  __declspec(align(PLL_BYTE_ALIGNMENT)) unsigned int totalScore;
+#else
+	  unsigned int
+		  totalScore __attribute__((aligned (PLL_BYTE_ALIGNMENT)));
+#endif
+
       totalScore = 0;
 
       size_t

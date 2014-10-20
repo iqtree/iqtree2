@@ -2230,9 +2230,9 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     double p_var_cat = (1.0 - p_invar) / (double) numCat;
     double state_freq[NSTATES];
     model->getStateFrequency(state_freq);
-    double *trans_mat_orig EIGEN_ALIGN16 = new double[numCat * tranSize + 1];
-    double *trans_derv1_orig EIGEN_ALIGN16 = new double[numCat * tranSize + 1];
-    double *trans_derv2_orig EIGEN_ALIGN16 = new double[numCat * tranSize + 1];
+    double *trans_mat_orig  = new double[numCat * tranSize + 1];
+    double *trans_derv1_orig  = new double[numCat * tranSize + 1];
+    double *trans_derv2_orig  = new double[numCat * tranSize + 1];
     // make alignment 16
     double *trans_mat = trans_mat_orig, *trans_derv1 = trans_derv1_orig, *trans_derv2 = trans_derv2_orig;
     if (((intptr_t) trans_mat) % 16 != 0)

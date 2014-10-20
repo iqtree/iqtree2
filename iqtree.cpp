@@ -1099,7 +1099,8 @@ double IQTree::perturb(int times) {
     return curScore;
 }
 
-extern "C" pllUFBootData * pllUFBootDataPtr;
+//extern "C" pllUFBootData * pllUFBootDataPtr;
+extern pllUFBootData * pllUFBootDataPtr;
 
 string IQTree::optimizeModelParameters(bool printInfo) {
 	string newTree;

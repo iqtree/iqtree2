@@ -30,6 +30,7 @@ VerboseMode verbose_mode;
 #include <sys/timeb.h>
 #include <sys/types.h>
 #include <winsock.h>
+#include <sstream>
 
 struct timezone {
 };

@@ -52,7 +52,7 @@
 #define GCC_VERSION 0
 #endif
 
-#ifdef USE_HASH_MAP
+#if defined(USE_HASH_MAP) && !defined(_MSC_VER)
 	#if !defined(__GNUC__)
 		#include <hash_map>
 		#include <hash_set>
@@ -71,12 +71,14 @@
 #else
 	#include <map>
 	#include <set>
+	#include <unordered_map>
+	#include <unordered_set>
 #endif
 
 using namespace std;
 
 
-#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300
+#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300 && !defined(_MSC_VER)
 /*
         Define the hash function of Split
  */

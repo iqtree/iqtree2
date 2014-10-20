@@ -519,13 +519,17 @@ static inline void computeVectorGTRGAMMAPROT(double *lVector, int *eVector, doub
     }
      
   {
-    double  
-      e1[20] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-      e2[20] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-      d1[20] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), 
-      d2[20] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), 
-      lz1, lz2;  
-    
+#if defined(_MSC_VER)
+	  __declspec(align(PLL_BYTE_ALIGNMENT)) double e1[20], e2[20], d1[20], d2[20];
+	  double lz1, lz2;
+#else
+	  double
+		  e1[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
+		  e2[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
+		  d1[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
+		  d2[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
+		  lz1, lz2;
+#endif    
     int 
       l, 
       k, 
@@ -668,13 +672,18 @@ static  void computeVectorGTRGAMMA(double *lVector, int *eVector, double *gammaR
     }
      
   {
-    double  
-      e1[4] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-      e2[4] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-      d1[4] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), 
-      d2[4] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), 
-      lz1, lz2;  
-    
+#if defined(_MSC_VER)
+	  __declspec(align(PLL_BYTE_ALIGNMENT)) double e1[20], e2[20], d1[20], d2[20];
+	  double lz1, lz2;
+#else
+	  double
+		  e1[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
+		  e2[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
+		  d1[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
+		  d2[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
+		  lz1, lz2;
+#endif    
+
     int 
       l, 
       k, 
@@ -774,9 +783,15 @@ static double evaluatePartialGTRGAMMAPROT(int i, int counter,  traversalInfo *ti
   double  d[80];
   double   *x1, *x2; 
   int scale = 0, k, l, j;
-  double 
-    *lVector,
-    myEI[400]  __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+
+#if defined(_MSC_VER)
+  __declspec(align(PLL_BYTE_ALIGNMENT)) double myEI[400];
+  double *lVector;
+#else
+  double
+	  *lVector,
+	  myEI[400]  __attribute__((aligned(PLL_BYTE_ALIGNMENT))); 
+#endif
 
   traversalInfo 
     *trav = &ti[0];
@@ -853,9 +868,15 @@ static double evaluatePartialGTRGAMMA(int i, int counter,  traversalInfo *ti, do
   double  d[16];
   double   *x1, *x2; 
   int scale = 0, k, l, j;
+#if defined(_MSC_VER)
+  __declspec(align(PLL_BYTE_ALIGNMENT)) double myEI[16];
+  double *lVector;
+#else
   double 
-    *lVector,
-    myEI[16]  __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+	  *lVector,
+	  myEI[16]  __attribute__((aligned(PLL_BYTE_ALIGNMENT))); 
+#endif
+
 
   traversalInfo 
     *trav = &ti[0];
@@ -1018,7 +1039,13 @@ static double evaluatePartialGTRCAT(int i, double ki, int counter,  traversalInf
   int scale = 0, k;
   traversalInfo *trav = &ti[0];
  
-  lVector = rax_posix_memalign ((void **) &lVector, PLL_BYTE_ALIGNMENT, sizeof(double) * 4 * mxtips);    
+  //TUNG the following statement causes error in Intel compiler. We also don't need to align memory here
+  // this function does not use SSE
+  //lVector = (double *) rax_posix_memalign ((void **) &lVector, PLL_BYTE_ALIGNMENT, sizeof(double) * 4 * mxtips);
+  
+  // Here I copy the statement used in standard RAxML
+  lVector = (double *)rax_malloc(sizeof(double) * 4 * mxtips);
+
 
   assert(isTip(trav->pNumber, mxtips));
      

@@ -8,6 +8,10 @@
 #ifndef PLLINTERNAL_H_
 #define PLLINTERNAL_H_
 
+#ifdef _MSC_VER
+#define inline __forceinline /* use __forceinline (VC++ specific) */
+#endif
+
 #include "pll.h"
 #include "genericParallelization.h"
 #include "errcodes.h"

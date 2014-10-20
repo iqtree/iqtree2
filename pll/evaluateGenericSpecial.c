@@ -1836,7 +1836,8 @@ static double evaluateGTRGAMMAPROT_GAPPED_SAVE (const pllBoolean fastScaling, in
     *x1_ptr = x1,
     *x2_ptr = x2,
     *x1v,
-    *x2v;              
+    *x2v;       
+  __m128d tv;
 
   if(tipX1)
   {               
@@ -1850,7 +1851,9 @@ static double evaluateGTRGAMMAPROT_GAPPED_SAVE (const pllBoolean fastScaling, in
         x2_ptr += 80;
       }
 
-      __m128d tv = _mm_setzero_pd();
+	  //TUNG: Standard C does not allow declaration after executable statement
+	  tv = _mm_setzero_pd();
+      //__m128d tv = _mm_setzero_pd();
       left = &(tipVector[20 * tipX1[i]]);                 
 
       for(j = 0, term = 0.0; j < 4; j++)
@@ -1896,7 +1899,8 @@ static double evaluateGTRGAMMAPROT_GAPPED_SAVE (const pllBoolean fastScaling, in
         x2_ptr += 80;
       }
 
-      __m128d tv = _mm_setzero_pd();                      
+      //__m128d tv = _mm_setzero_pd(); 
+	  tv = _mm_setzero_pd();
 
       for(j = 0, term = 0.0; j < 4; j++)
       {
@@ -2029,7 +2033,8 @@ static double evaluateGTRCATPROT (const pllBoolean fastScaling, int *ex1, int *e
 {
   double   sum = 0.0, term;
   double  *diagptable,  *left, *right;
-  int     i, l;                           
+  int     i, l;   
+  __m128d tv;
 
   if(tipX1)
   {                 
@@ -2040,7 +2045,9 @@ static double evaluateGTRCATPROT (const pllBoolean fastScaling, int *ex1, int *e
 
       diagptable = &diagptable_start[20 * cptr[i]];                      
 
-      __m128d tv = _mm_setzero_pd();        
+	  //TUNG: Standard C does not allow declaration after executable statement
+	  tv = _mm_setzero_pd();
+      //__m128d tv = _mm_setzero_pd();        
 
       for(l = 0; l < 20; l+=2)
       {
@@ -2244,8 +2251,12 @@ static double evaluateGTRCAT_SAVE (const pllBoolean fastScaling, int *ex1, int *
   if(tipX1)
   {           
     for (i = 0; i < n; i++) 
-    {   
-      double t[2] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+    {  
+#if defined(_MSC_VER)
+		__declspec(align(PLL_BYTE_ALIGNMENT)) double t[2];
+#else
+	   double t[2] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+#endif
       __m128d x1v1, x1v2, x2v1, x2v2, dv1, dv2;
 
       x1 = &(tipVector[4 * tipX1[i]]);
@@ -2291,7 +2302,11 @@ static double evaluateGTRCAT_SAVE (const pllBoolean fastScaling, int *ex1, int *
   {
     for (i = 0; i < n; i++) 
     { 
-      double t[2] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+#if defined(_MSC_VER)
+		__declspec(align(PLL_BYTE_ALIGNMENT)) double t[2];
+#else
+		double t[2] __attribute__((aligned(PLL_BYTE_ALIGNMENT)));
+#endif
       __m128d x1v1, x1v2, x2v1, x2v2, dv1, dv2;
 
       if(isGap(x1_gap, i))
@@ -2374,7 +2389,11 @@ static double evaluateGTRGAMMA_GAPPED_SAVE(const pllBoolean fastScaling, int *ex
 
     for (i = 0; i < n; i++)
     {
-      double t[2] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+#if defined(_MSC_VER)
+		__declspec(align(PLL_BYTE_ALIGNMENT)) double t[2];
+#else
+		double t[2] __attribute__((aligned(PLL_BYTE_ALIGNMENT)));
+#endif
       __m128d termv, x1v, x2v, dv;
 
       x1 = &(tipVector[4 * tipX1[i]]);   
@@ -2426,8 +2445,11 @@ static double evaluateGTRGAMMA_GAPPED_SAVE(const pllBoolean fastScaling, int *ex
 
     for (i = 0; i < n; i++) 
     {
-
-      double t[2] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+#if defined(_MSC_VER)
+		__declspec(align(PLL_BYTE_ALIGNMENT)) double t[2];
+#else
+		double t[2] __attribute__((aligned(PLL_BYTE_ALIGNMENT)));
+#endif
       __m128d termv, x1v, x2v, dv;
 
       if(x1_gap[i / 32] & mask32[i % 32])
@@ -2509,8 +2531,11 @@ static double evaluateGTRGAMMA(const pllBoolean fastScaling, int *ex1, int *ex2,
   {             
     for (i = 0; i < n; i++)
     {
-
-      double t[2] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+#if defined(_MSC_VER)
+		__declspec(align(PLL_BYTE_ALIGNMENT)) double t[2];
+#else
+		double t[2] __attribute__((aligned(PLL_BYTE_ALIGNMENT)));
+#endif
       __m128d termv, x1v, x2v, dv;
 
       x1 = &(tipVector[4 * tipX1[i]]);   
@@ -2557,8 +2582,11 @@ static double evaluateGTRGAMMA(const pllBoolean fastScaling, int *ex1, int *ex2,
   {        
     for (i = 0; i < n; i++) 
     {
-
-      double t[2] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+#if defined(_MSC_VER)
+		__declspec(align(PLL_BYTE_ALIGNMENT)) double t[2];
+#else
+		double t[2] __attribute__((aligned(PLL_BYTE_ALIGNMENT)));
+#endif
       __m128d termv, x1v, x2v, dv;
 
 
@@ -2627,8 +2655,11 @@ static double evaluateGTRCAT (const pllBoolean fastScaling, int *ex1, int *ex2, 
   {           
     for (i = 0; i < n; i++) 
     {   
-
-      double t[2] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+#if defined(_MSC_VER)
+		__declspec(align(PLL_BYTE_ALIGNMENT)) double t[2];
+#else
+		double t[2] __attribute__((aligned(PLL_BYTE_ALIGNMENT)));
+#endif
       __m128d x1v1, x1v2, x2v1, x2v2, dv1, dv2;
 
       x1 = &(tipVector[4 * tipX1[i]]);
@@ -2667,8 +2698,11 @@ static double evaluateGTRCAT (const pllBoolean fastScaling, int *ex1, int *ex2, 
   {
     for (i = 0; i < n; i++) 
     { 
-
-      double t[2] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+#if defined(_MSC_VER)
+		__declspec(align(PLL_BYTE_ALIGNMENT)) double t[2];
+#else
+		double t[2] __attribute__((aligned(PLL_BYTE_ALIGNMENT)));
+#endif
       __m128d x1v1, x1v2, x2v1, x2v2, dv1, dv2;
 
       x1 = &x1_start[4 * i];

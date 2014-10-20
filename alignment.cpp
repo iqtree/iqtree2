@@ -12,6 +12,8 @@
 #include "alignment.h"
 #include "myreader.h"
 #include <numeric>
+#include <sstream>
+using namespace std;
 
 char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
 char symbols_dna[]     = "ACGT";
