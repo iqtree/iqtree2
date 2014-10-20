@@ -42,8 +42,8 @@ vecswap (int i, int j, int n, char ** x, int * oi)
 {
   while (n-- > 0)
    {
-     PLL_SWAP (x[i], x[j]);
-     PLL_SWAP (oi[i], oi[j]);
+     PLL_SWAP_PTR (x[i], x[j]);
+     PLL_SWAP_INT (oi[i], oi[j]);
 
      ++ i; ++ j;
    }
@@ -58,8 +58,8 @@ ssort1 (char ** x, int n, int depth, int * oi)
 
   a = rand() % n;
 
-  PLL_SWAP (x[0], x[a]);
-  PLL_SWAP (oi[0], oi[a]);
+  PLL_SWAP_PTR (x[0], x[a]);
+  PLL_SWAP_INT (oi[0], oi[a]);
 
   v = x[0][depth];
 
@@ -72,8 +72,8 @@ ssort1 (char ** x, int n, int depth, int * oi)
       {
         if (r == 0)
          {
-           PLL_SWAP (x[a], x[b]);
-           PLL_SWAP (oi[a], oi[b]);
+           PLL_SWAP_PTR (x[a], x[b]);
+           PLL_SWAP_INT (oi[a], oi[b]);
            ++ a;
          }
         ++ b;
@@ -82,15 +82,15 @@ ssort1 (char ** x, int n, int depth, int * oi)
       {
         if (r == 0)
          {
-           PLL_SWAP (x[c], x[d]);
-           PLL_SWAP (oi[c], oi[d]);
+           PLL_SWAP_PTR (x[c], x[d]);
+           PLL_SWAP_INT (oi[c], oi[d]);
            -- d;
          }
         -- c;
       }
      if (b > c) break;
-     PLL_SWAP (x[b], x[c]);
-     PLL_SWAP (oi[b], oi[c]);
+     PLL_SWAP_PTR (x[b], x[c]);
+     PLL_SWAP_INT (oi[b], oi[c]);
      ++ b; -- c;
    }
   r = PLL_MIN (a,     b - a);      vecswap (0, b - r, r, x, oi);

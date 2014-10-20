@@ -2629,10 +2629,10 @@ pllCreateSprInfoRollback (pllInstance * tr, pllRearrangeInfo * rearr, int numBra
   q = rearr->SPR.insertNode;
 
   sprRb = (pllRollbackInfo *) rax_malloc (sizeof (pllRollbackInfo) + 4 * numBranches * sizeof (double));
-  sprRb->SPR.zp   = (double *) ((void *)sprRb + sizeof (pllRollbackInfo));
-  sprRb->SPR.zpn  = (double *) ((void *)sprRb + sizeof (pllRollbackInfo) + numBranches * sizeof (double));
-  sprRb->SPR.zpnn = (double *) ((void *)sprRb + sizeof (pllRollbackInfo) + 2 * numBranches * sizeof (double));
-  sprRb->SPR.zqr  = (double *) ((void *)sprRb + sizeof (pllRollbackInfo) + 3 * numBranches * sizeof (double));
+  sprRb->SPR.zp   = (double *) ((char *)sprRb + sizeof (pllRollbackInfo));
+  sprRb->SPR.zpn  = (double *) ((char *)sprRb + sizeof (pllRollbackInfo) + numBranches * sizeof (double));
+  sprRb->SPR.zpnn = (double *) ((char *)sprRb + sizeof (pllRollbackInfo) + 2 * numBranches * sizeof (double));
+  sprRb->SPR.zqr  = (double *) ((char *)sprRb + sizeof (pllRollbackInfo) + 3 * numBranches * sizeof (double));
 
   for (i = 0; i < numBranches; ++ i)
    {
