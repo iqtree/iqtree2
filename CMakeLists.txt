@@ -257,7 +257,7 @@ install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATI
 #install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.nex" DESTINATION examples)
 #install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.budget" DESTINATION examples)
 if (WIN32)
-	install (FILES "${PROJECT_BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
+	install (FILES "${PROJECT_BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION .)
 # obsolete: pthread is statically linked, so no dll is required anymore
 #	if (EXE_SUFFIX MATCHES "omp")
 #		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
