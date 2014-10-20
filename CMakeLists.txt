@@ -69,7 +69,7 @@ if (IQTREE_FLAGS MATCHES "omp")
 	message("Parallel      : OpenMP/PThreads")
 	SET(EXE_SUFFIX "-omp")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_USE_PTHREADS -pthread")
-  	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -pthread")
+  	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 else()
 	message("Parallel      : None")
 	SET(EXE_SUFFIX "")
@@ -115,6 +115,10 @@ if (MSVC)
 	set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
 else ()
 	set(COMBINED_FLAGS "${COMBINED_FLAGS} -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
+	if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -Wno-nested-anon-types")
+	endif()
+	
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fms-extensions -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
 	set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
 endif()
@@ -244,8 +248,10 @@ endif()
 ##############################################################
 # add the install targets
 ##############################################################
-install (TARGETS iqtree DESTINATION bin)
-install (FILES "${PROJECT_SOURCE_DIR}/examples/example.phy" DESTINATION examples)
+install (TARGETS iqtree DESTINATION .)
+install (FILES "${PROJECT_SOURCE_DIR}/examples/example.phy" DESTINATION .)
+install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATION .)
+
 #install (FILES "${PROJECT_SOURCE_DIR}/examples/test.nex" DESTINATION examples)
 #install (FILES "${PROJECT_SOURCE_DIR}/examples/test.budget" DESTINATION examples)
 #install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.nex" DESTINATION examples)
@@ -259,9 +265,10 @@ if (WIN32)
 #	endif()
 endif()
 
-if (APPLE AND IQTREE_FLAGS MATCHES "omp")
-	install (FILES "${PROJECT_SOURCE_DIR}/lib/libiomp5.dylib" DESTINATION bin)
-endif()
+## not needed anymore: IQ-TREE is statically linked with libiomp5.a 
+#if (APPLE AND IQTREE_FLAGS MATCHES "omp")
+#	install (FILES "${PROJECT_SOURCE_DIR}/lib/libiomp5.dylib" DESTINATION bin)
+#endif()
 
 ##############################################################
 # build a CPack driven installer package
@@ -272,20 +279,26 @@ set (CPACK_RESOURCE_FILE_LICENSE
 set (CPACK_PACKAGE_VERSION_MAJOR "${iqtree_VERSION_MAJOR}")
 set (CPACK_PACKAGE_VERSION_MINOR "${iqtree_VERSION_MINOR}")
 set (CPACK_PACKAGE_VERSION_PATCH "${iqtree_VERSION_PATCH}")
-if(WIN32)
+if(WIN32 OR APPLE)
   set(CPACK_GENERATOR "ZIP")
   set(CPACK_SOURCE_GENERATOR "ZIP")
-else(WIN32)
+else()
   set(CPACK_GENERATOR "TGZ")
   set(CPACK_SOURCE_GENERATOR "TGZ")
-endif(WIN32)
+endif()
+
 #set(CPACK_SOURCE_PACKAGE_FILE_NAME
 #  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 set(CPACK_SOURCE_IGNORE_FILES
   "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;${CPACK_SOURCE_IGNORE_FILES}")
 
+set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin") 
+	set (SYSTEM_NAME "MacOSX")
+endif()
+
 set(CPACK_PACKAGE_FILE_NAME 
-	"${CMAKE_PROJECT_NAME}${EXE_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${CMAKE_SYSTEM_NAME}")
+	"${CMAKE_PROJECT_NAME}${EXE_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${SYSTEM_NAME}")
 
 set(CPACK_STRIP_FILES TRUE)
 
