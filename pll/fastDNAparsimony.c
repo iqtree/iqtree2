@@ -131,12 +131,7 @@ inline unsigned int bitcount_64_bit(unsigned long i)
 static inline unsigned int vectorPopcount(INT_TYPE v)
 {
 
-#if defined(_MSC_VER)
-  __declspec(align(PLL_BYTE_ALIGNMENT)) unsigned long counts[LONG_INTS_PER_VECTOR];
-#else
-  unsigned long
-	  counts[LONG_INTS_PER_VECTOR] __attribute__((aligned(PLL_BYTE_ALIGNMENT)));
-#endif
+PLL_ALIGN_BEGIN unsigned long counts[LONG_INTS_PER_VECTOR] PLL_ALIGN_END;
 
   int    
     i,
@@ -266,12 +261,7 @@ static void newviewParsimonyIterativeFast(pllInstance *tr, partitionList *pr)
   for(index = 4; index < count; index += 4)
     {      
 
-#if defined(_MSC_VER)
-	  __declspec(align(PLL_BYTE_ALIGNMENT)) unsigned int totalScore;
-#else
-	  unsigned int
-		  totalScore __attribute__((aligned (PLL_BYTE_ALIGNMENT)));
-#endif
+PLL_ALIGN_BEGIN unsigned int totalScore PLL_ALIGN_END;
 
       totalScore = 0;
 
@@ -496,9 +486,9 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
   int
     model;
 
-  unsigned int 
-    bestScore = tr->bestParsimony,    
-    sum __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+  unsigned int
+	  bestScore = tr->bestParsimony;
+  PLL_ALIGN_BEGIN unsigned int sum PLL_ALIGN_END;
 
   if(tr->ti[0] > 4)
     newviewParsimonyIterativeFast(tr, pr);

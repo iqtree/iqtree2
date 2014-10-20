@@ -121,7 +121,7 @@ static void newviewGTRCATPROT_SAVE(int tipCase, double *extEV,
 
 /* required to compute the absolute values of double precision numbers with SSE3 */
 
-const union __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)))
+PLL_ALIGN_BEGIN const union PLL_ALIGN_END
 {
   uint64_t i[2];
   __m128d m;
@@ -3052,9 +3052,10 @@ static void newviewGTRGAMMA_GAPPED_SAVE(int tipCase,
     *x3,
     *x1_ptr = x1_start,
     *x2_ptr = x2_start,       
-    max,
-    maxima[2] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),        
-    EV_t[16] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));      
+    max;
+  PLL_ALIGN_BEGIN double
+    maxima[2] PLL_ALIGN_END,
+    EV_t[16] PLL_ALIGN_END;
 
   __m128d 
     values[8],
@@ -3073,7 +3074,8 @@ static void newviewGTRGAMMA_GAPPED_SAVE(int tipCase,
   {
     case PLL_TIP_TIP:
       {
-        double *uX1, umpX1[256] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), *uX2, umpX2[256] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+        double *uX1, *uX2;
+        PLL_ALIGN_BEGIN double umpX1[256] PLL_ALIGN_END, umpX2[256] PLL_ALIGN_END;
 
 
         for (i = 1; i < 16; i++)
@@ -3233,8 +3235,9 @@ static void newviewGTRGAMMA_GAPPED_SAVE(int tipCase,
     case PLL_TIP_INNER:
       { 
         double 
-          *uX1, 
-          umpX1[256] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));                 
+          *uX1;
+        PLL_ALIGN_BEGIN double
+          umpX1[256] PLL_ALIGN_END;
 
         for (i = 1; i < 16; i++)
         {
@@ -3964,9 +3967,10 @@ static void newviewGTRGAMMA(int tipCase,
     *x1,
     *x2,
     *x3,
-    max,
-    maxima[2] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),       
-    EV_t[16] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));      
+    max;
+  PLL_ALIGN_BEGIN double
+    maxima[2] PLL_ALIGN_END,
+    EV_t[16] PLL_ALIGN_END;
 
   __m128d 
     values[8],
@@ -3983,7 +3987,8 @@ static void newviewGTRGAMMA(int tipCase,
   {
     case PLL_TIP_TIP:
       {
-        double *uX1, umpX1[256] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), *uX2, umpX2[256] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+        double *uX1, *uX2;
+        PLL_ALIGN_BEGIN double umpX1[256] PLL_ALIGN_END, umpX2[256] PLL_ALIGN_END;
 
 
         for (i = 1; i < 16; i++)
@@ -4090,7 +4095,8 @@ static void newviewGTRGAMMA(int tipCase,
       break;
     case PLL_TIP_INNER:
       { 
-        double *uX1, umpX1[256] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+        double *uX1;
+        PLL_ALIGN_BEGIN double umpX1[256] PLL_ALIGN_END;
 
 
         for (i = 1; i < 16; i++)
@@ -4478,8 +4484,9 @@ static void newviewGTRCAT( int tipCase,  double *EV,  int *cptr,
     *ri,
     *x1,
     *x2, 
-    *x3, 
-    EV_t[16] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+    *x3;
+  PLL_ALIGN_BEGIN double
+    EV_t[16] PLL_ALIGN_END;
 
   int 
     i, 
@@ -4964,8 +4971,9 @@ static void newviewGTRCAT_SAVE( int tipCase,  double *EV,  int *cptr,
     *x3,
     *x1_ptr = x1_start,
     *x2_ptr = x2_start, 
-    *x3_ptr = x3_start, 
-    EV_t[16] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+    *x3_ptr = x3_start;
+  PLL_ALIGN_BEGIN double
+    EV_t[16] PLL_ALIGN_END;
 
   int 
     i, 

@@ -30,7 +30,10 @@
  *
  * AVX versions of the likelihood functions
  */
+#ifndef WIN32
 #include <unistd.h>
+#endif
+
 #include <math.h>
 #include <time.h>
 #include <stdlib.h>
@@ -55,7 +58,7 @@
 
 extern const unsigned int mask32[32];
 
-const union __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)))
+PLL_ALIGN_BEGIN const union PLL_ALIGN_END
 {
   uint64_t i[4];
   __m256d m;
@@ -119,10 +122,10 @@ void  newviewGTRGAMMA_AVX(int tipCase,
     case PLL_TIP_TIP:
       {
 	double 
-	  *uX1, 
-	  umpX1[1024] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), 
-	  *uX2, 
-	  umpX2[1024] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+	  *uX1, *uX2;
+	PLL_ALIGN_BEGIN double
+	  umpX1[1024] PLL_ALIGN_END,
+	  umpX2[1024] PLL_ALIGN_END;
 
 	for (i = 1; i < 16; i++)
 	  {
@@ -193,8 +196,9 @@ void  newviewGTRGAMMA_AVX(int tipCase,
     case PLL_TIP_INNER:
       {
 	double 
-	  *uX1, 
-	  umpX1[1024] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+	  *uX1;
+	PLL_ALIGN_BEGIN double
+	  umpX1[1024] PLL_ALIGN_END;
 
 	for (i = 1; i < 16; i++)
 	  {
@@ -395,10 +399,10 @@ void  newviewGTRGAMMA_AVX_GAPPED_SAVE(int tipCase,
     case PLL_TIP_TIP:
       {
 	double 
-	  *uX1, 
-	  umpX1[1024] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), 
-	  *uX2, 
-	  umpX2[1024] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+	  *uX1, *uX2;
+	PLL_ALIGN_BEGIN double
+	  umpX1[1024] PLL_ALIGN_END,
+	  umpX2[1024] PLL_ALIGN_END;
 
 	for (i = 1; i < 16; i++)
 	  {
@@ -507,8 +511,9 @@ void  newviewGTRGAMMA_AVX_GAPPED_SAVE(int tipCase,
     case PLL_TIP_INNER:
       {
 	double 
-	  *uX1, 
-	  umpX1[1024] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+	  *uX1;
+	PLL_ALIGN_BEGIN double
+	  umpX1[1024] PLL_ALIGN_END;
        
 	for (i = 1; i < 16; i++)
 	  {
@@ -2223,9 +2228,9 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
     case PLL_TIP_TIP: 
       {
        
-	double 
-	  umpX1[1840] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), 
-	  umpX2[1840] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+    PLL_ALIGN_BEGIN double
+	  umpX1[1840] PLL_ALIGN_END,
+	  umpX2[1840] PLL_ALIGN_END;
 
 	
 	for(i = 0; i < 23; i++) 
@@ -2333,9 +2338,9 @@ void newviewGTRGAMMAPROT_AVX_LG4(int tipCase,
     case PLL_TIP_INNER: 
       {
 
-	double 
-	  umpX1[1840] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-	  ump_x2[20] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+    	  PLL_ALIGN_BEGIN double
+	  umpX1[1840] PLL_ALIGN_END,
+	  ump_x2[20] PLL_ALIGN_END;
 
 	for(i = 0; i < 23; i++) 
 	  {	   
@@ -2720,9 +2725,9 @@ void newviewGTRGAMMAPROT_AVX(int tipCase,
     case PLL_TIP_TIP: 
       {
        
-	double 
-	  umpX1[1840] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), 
-	  umpX2[1840] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+    PLL_ALIGN_BEGIN double
+	  umpX1[1840] PLL_ALIGN_END,
+	  umpX2[1840] PLL_ALIGN_END;
 
 	for(i = 0; i < 23; i++) 
 	  {
@@ -2829,9 +2834,9 @@ void newviewGTRGAMMAPROT_AVX(int tipCase,
     case PLL_TIP_INNER: 
       {
 
-	double 
-	  umpX1[1840] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-	  ump_x2[20] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+    	  PLL_ALIGN_BEGIN double
+	  umpX1[1840] PLL_ALIGN_END,
+	  ump_x2[20] PLL_ALIGN_END;
 
 	for(i = 0; i < 23; i++) 
 	  {
@@ -3223,9 +3228,9 @@ void newviewGTRGAMMAPROT_AVX_GAPPED_SAVE(int tipCase,
     {
     case PLL_TIP_TIP: 
       {       
-	double 
-	  umpX1[1840] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), 
-	  umpX2[1840] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+    	  PLL_ALIGN_BEGIN double
+	  umpX1[1840] PLL_ALIGN_END,
+	  umpX2[1840] PLL_ALIGN_END;
 
 
 
@@ -3404,9 +3409,9 @@ void newviewGTRGAMMAPROT_AVX_GAPPED_SAVE(int tipCase,
       break;
     case PLL_TIP_INNER: 
       {
-	double 
-	  umpX1[1840] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-	  ump_x2[20] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+    	  PLL_ALIGN_BEGIN double
+	  umpX1[1840] PLL_ALIGN_END,
+	  ump_x2[20] PLL_ALIGN_END;
 
 
 

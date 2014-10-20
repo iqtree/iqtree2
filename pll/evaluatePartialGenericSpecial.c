@@ -519,17 +519,13 @@ static inline void computeVectorGTRGAMMAPROT(double *lVector, int *eVector, doub
     }
      
   {
-#if defined(_MSC_VER)
-	  __declspec(align(PLL_BYTE_ALIGNMENT)) double e1[20], e2[20], d1[20], d2[20];
-	  double lz1, lz2;
-#else
+	  PLL_ALIGN_BEGIN double
+		  e1[20] PLL_ALIGN_END,
+		  e2[20] PLL_ALIGN_END,
+		  d1[20] PLL_ALIGN_END,
+		  d2[20] PLL_ALIGN_END;
 	  double
-		  e1[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
-		  e2[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
-		  d1[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
-		  d2[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
 		  lz1, lz2;
-#endif    
     int 
       l, 
       k, 
@@ -672,17 +668,13 @@ static  void computeVectorGTRGAMMA(double *lVector, int *eVector, double *gammaR
     }
      
   {
-#if defined(_MSC_VER)
-	  __declspec(align(PLL_BYTE_ALIGNMENT)) double e1[20], e2[20], d1[20], d2[20];
-	  double lz1, lz2;
-#else
+	  PLL_ALIGN_BEGIN double
+		  e1[20] PLL_ALIGN_END,
+		  e2[20] PLL_ALIGN_END,
+		  d1[20] PLL_ALIGN_END,
+		  d2[20] PLL_ALIGN_END;
 	  double
-		  e1[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
-		  e2[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
-		  d1[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
-		  d2[20] __attribute__((aligned(PLL_BYTE_ALIGNMENT))),
 		  lz1, lz2;
-#endif    
 
     int 
       l, 
@@ -784,14 +776,10 @@ static double evaluatePartialGTRGAMMAPROT(int i, int counter,  traversalInfo *ti
   double   *x1, *x2; 
   int scale = 0, k, l, j;
 
-#if defined(_MSC_VER)
-  __declspec(align(PLL_BYTE_ALIGNMENT)) double myEI[400];
-  double *lVector;
-#else
   double
-	  *lVector,
-	  myEI[400]  __attribute__((aligned(PLL_BYTE_ALIGNMENT))); 
-#endif
+	  *lVector;
+  PLL_ALIGN_BEGIN double
+	  myEI[400]  PLL_ALIGN_END;
 
   traversalInfo 
     *trav = &ti[0];
@@ -868,14 +856,10 @@ static double evaluatePartialGTRGAMMA(int i, int counter,  traversalInfo *ti, do
   double  d[16];
   double   *x1, *x2; 
   int scale = 0, k, l, j;
-#if defined(_MSC_VER)
-  __declspec(align(PLL_BYTE_ALIGNMENT)) double myEI[16];
-  double *lVector;
-#else
   double 
-	  *lVector,
-	  myEI[16]  __attribute__((aligned(PLL_BYTE_ALIGNMENT))); 
-#endif
+	  *lVector;
+  PLL_ALIGN_BEGIN double
+	  myEI[16]  PLL_ALIGN_END;
 
 
   traversalInfo 

@@ -1,20 +1,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
+
 #include <string.h>
 #include "hardware.h"
 
 #define PLL_FEAT_AVAIL(x,y) (((x) & (y)) == (y))
 #define PLL_SYS_CPU_DIR_PATH "/sys/devices/system/cpu/"
 
+#ifdef _MSC_VER
+#define inline __inline
+#endif
+
 static inline void cpuid(unsigned int op, int count,
                          unsigned int *eax, unsigned int *ebx,
                          unsigned int *ecx, unsigned int *edx)
 {
-  *eax = op;
+#ifdef WIN32
+	__int32 regs[4];
+	__cpuid((int*)regs, (int)op);
+	*eax = regs[0];
+	*ebx = regs[1];
+	*ecx = regs[2];
+	*edx = regs[3];
+#else
+	*eax = op;
   *ecx = count;
-
   asm volatile("cpuid"
         : "=a" (*eax),
           "=b" (*ebx),
@@ -23,6 +37,7 @@ static inline void cpuid(unsigned int op, int count,
 
         : "0" (*eax), "2" (*ecx)
         : "memory");
+#endif
 }
 
 
