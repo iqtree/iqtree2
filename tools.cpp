@@ -640,7 +640,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.concatenate_aln = NULL;
     params.aln_nogaps = false;
     params.aln_no_const_sites = false;
-    params.parsimony = false;
+//    params.parsimony = false;
     params.parsimony_tree = false;
     params.tree_spr = false;
     params.nexus_output = false;
@@ -659,7 +659,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.p_delete = -1;
     params.min_iterations = -1;
     params.max_iterations = 1;
-    params.stop_condition = SC_FIXED_ITERATION;
+    params.stop_condition = SC_UNSUCCESS_ITERATION;
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
@@ -754,8 +754,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.reinsert_par = false;
     params.bestStart = true;
     params.snni = true; // turn on sNNI default now
-    params.autostop = true; // turn on auto stopping rule by default now
-    params.stopCond = 100;
+//    params.autostop = true; // turn on auto stopping rule by default now
+    params.unsuccess_iteration = 100;
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
     params.adaptPert = false;
     params.numParsTrees = 100;
@@ -1259,9 +1259,9 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-parstree") == 0) {
                 // maximum parsimony
                 params.parsimony_tree = true;
-            } else if (strcmp(argv[cnt], "-pars") == 0) {
-                // maximum parsimony
-                params.parsimony = true;
+//            } else if (strcmp(argv[cnt], "-pars") == 0) {
+//                // maximum parsimony
+//                params.parsimony = true;
             } else if (strcmp(argv[cnt], "-spr") == 0) {
                 // subtree pruning and regrafting
                 params.tree_spr = true;
@@ -1287,7 +1287,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -n <#iterations>";
                 params.min_iterations = convert_int(argv[cnt]);
-                params.autostop = false;
+                params.stop_condition = SC_FIXED_ITERATION;
+//                params.autostop = false;
             } else if (strcmp(argv[cnt], "-nb") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1390,7 +1391,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             } else if (strcmp(argv[cnt], "-fixbr") == 0) {
                 params.fixed_branch_length = true;
             } else if (strcmp(argv[cnt], "-sr") == 0) {
-                params.stop_condition = SC_STOP_PREDICT;
+                params.stop_condition = SC_WEIBULL;
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -sr <#max_iteration>";
@@ -1616,6 +1617,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.avoid_duplicated_trees = true;
                 if (params.gbo_replicates < 1000) throw "#replicates must be >= 1000";
                 params.consensus_type = CT_CONSENSUS_TREE;
+                params.stop_condition = SC_BOOTSTRAP_CORRELATION;
                 //params.nni5Branches = true;
 			} else if (strcmp(argv[cnt], "-beps") == 0) {
 				cnt++;
@@ -1686,6 +1688,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -maxtime <time_in_minutes>";
                 params.maxtime = convert_double(argv[cnt]);
                 params.min_iterations = 1000000;
+                params.stop_condition = SC_REAL_TIME;
             } else if (strcmp(argv[cnt], "-numpars") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1737,12 +1740,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 //params.adaptPert = true;
             } else if (strcmp(argv[cnt], "-iqpnni") == 0) {
             	params.snni = false;
-            } else if (strcmp(argv[cnt], "-auto") == 0) {
-            	params.autostop = true;
+//            } else if (strcmp(argv[cnt], "-auto") == 0) {
+//            	params.autostop = true;
             } else if (strcmp(argv[cnt], "-stop_cond") == 0 || strcmp(argv[cnt], "-numstop") == 0) {
-                params.autostop = true;
+//                params.autostop = true;
+            	params.stop_condition = SC_UNSUCCESS_ITERATION;
                 cnt++;
-                params.stopCond = convert_int(argv[cnt]);
+                params.unsuccess_iteration = convert_int(argv[cnt]);
             } else if (strcmp(argv[cnt], "-lsbran") == 0) {
                 params.leastSquareBranch = true;
             } else if (strcmp(argv[cnt], "-manuel") == 0) {
@@ -1983,7 +1987,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -omp <#cpu_cores>    Number of cores/threads to use (default: all cores)" << endl
 #endif
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
-            << "  -pll                 Turn on phylogenetic likelihood library (default: off)" << endl
+            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
             << "  -toppars <number>    Number of top initial parsimony trees (dfault: 20)" << endl
             << "  -numcand <number>    Number of candidate trees during search (defaut: 5)" << endl
@@ -1993,12 +1997,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -iqpnni              Switch entirely to old IQPNNI algorithm" << endl
             << endl << "ULTRA-FAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultra-fast bootstrap (>=1000)" << endl
-            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
+//            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
             << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
             << "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
-			<< "  -beps <epsilon>      Bootstrap trees in [maxlh-eps,maxlh+eps] are chosen" << endl
-			<< "                       at random (default: 0.5)" << endl
+			<< "  -beps <epsilon>      Trees with logl difference smaller than epsilon" << endl
+			<< "                       are chosen at random (default: 0.5)" << endl
             << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
             << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
@@ -2368,10 +2372,10 @@ int random_int(int n) {
     return (int) floor(random_double() * n);
 } /* randominteger */
 
-int randint(int a, int b) {
-	return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
-}
-
+//int randint(int a, int b) {
+//	return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
+//}
+//
 
 double random_double() {
 #ifndef FIXEDINTRAND

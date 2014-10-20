@@ -434,7 +434,7 @@ double PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf
     return -tree_lh;
 }
 
-NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves, bool approx_nni, bool useLS, double lh_contribution)
+NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves)
 {
     NNIMove myMove;
     myMove.newloglh = 0;

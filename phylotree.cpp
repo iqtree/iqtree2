@@ -843,12 +843,12 @@ void PhyloTree::searchNNI() {
  ****************************************************************************/
 
 // random generator function:
-ptrdiff_t myrandom(ptrdiff_t i) {
-    return random_int(i);
-}
+//ptrdiff_t myrandom(ptrdiff_t i) {
+//    return random_int(i);
+//}
 
 // pointer object to it:
-ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
+//ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
 
 void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
     cout << "Computing parsimony tree by random stepwise addition..." << endl;
@@ -866,7 +866,8 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     for (int i = 0; i < size; i++)
         taxon_order[i] = i;
     // randomize the addition order
-    random_shuffle(taxon_order.begin(), taxon_order.end(), p_myrandom);
+//    random_shuffle(taxon_order.begin(), taxon_order.end(), p_myrandom);
+    my_random_shuffle(taxon_order.begin(), taxon_order.end());
 
     // create initial tree with 3 taxa
     for (leafNum = 0; leafNum < 3; leafNum++) {
@@ -2296,7 +2297,7 @@ double PhyloTree::computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNo
     return lh_zero_branch;
 }
 
-void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_scale) {
+void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     // don't recompute the likelihood
     if (dad_branch->partial_lh_computed & 1)
         return;
@@ -2375,7 +2376,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
             dad_branch->scale_num[ptn] = -1;
 
         FOR_NEIGHBOR_IT(node, dad, it)if ((*it)->node->name != ROOT_NAME) {
-            computePartialLikelihoodNaive((PhyloNeighbor*) (*it), (PhyloNode*) node, pattern_scale);
+            computePartialLikelihoodNaive((PhyloNeighbor*) (*it), (PhyloNode*) node);
 
             dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
 
@@ -2448,8 +2449,8 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
                 sum_scale += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
                 dad_branch->scale_num[ptn] += 1;
 
-                if (pattern_scale)
-                pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
+//                if (pattern_scale)
+//                pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
             }
             dad_branch->lh_scale_factor += sum_scale;
         }
@@ -4548,7 +4549,7 @@ void PhyloTree::randomizeNeighbors(Node *node, Node *dad) {
         node = root;
     FOR_NEIGHBOR_IT(node, dad, it)randomizeNeighbors((*it)->node, node);
 
-    random_shuffle(node->neighbors.begin(), node->neighbors.end());
+    my_random_shuffle(node->neighbors.begin(), node->neighbors.end());
 }
 
 void PhyloTree::printTransMatrices(Node *node, Node *dad) {

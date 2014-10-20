@@ -174,6 +174,45 @@ int Alignment::checkIdenticalSeq()
 	return num_identical;
 }
 
+Alignment *Alignment::removeIdenticalSeq(string not_remove, StrVector &removed_seqs, StrVector &target_seqs)
+{
+    IntVector checked;
+    vector<bool> removed;
+    checked.resize(getNSeq(), 0);
+    removed.resize(getNSeq(), false);
+    int seq1;
+
+	for (seq1 = 0; seq1 < getNSeq(); seq1++) {
+        if (checked[seq1]) continue;
+		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
+			if (getSeqName(seq2) == not_remove) continue;
+			bool equal_seq = true;
+			for (iterator it = begin(); it != end(); it++)
+				if  ((*it)[seq1] != (*it)[seq2]) {
+					equal_seq = false;
+					break;
+				}
+			if (equal_seq) {
+				removed_seqs.push_back(getSeqName(seq2));
+				target_seqs.push_back(getSeqName(seq1));
+				removed[seq2] = true;
+				checked[seq2] = 1;
+			}
+		}
+		checked[seq1] = 1;
+	}
+
+	if (removed_seqs.size() > 0) {
+		IntVector keep_seqs;
+		for (seq1 = 0; seq1 < getNSeq(); seq1++)
+			if (!removed[seq1]) keep_seqs.push_back(seq1);
+		Alignment *aln = new Alignment;
+		aln->extractSubAlignment(this, keep_seqs, 0);
+		return aln;
+	} else return this;
+}
+
+
 bool Alignment::isGapOnlySeq(int seq_id) {
     assert(seq_id < getNSeq());
     for (iterator it = begin(); it != end(); it++)
@@ -250,7 +289,8 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
          " columns and " << getNPattern() << " patterns"<< endl;
     buildSeqStates();
     checkSeqName();
-	checkIdenticalSeq();
+    // OBSOLETE: identical sequences are handled later
+//	checkIdenticalSeq();
     //cout << "Number of character states is " << num_states << endl;
     //cout << "Number of patterns = " << size() << endl;
     countConstSite();
@@ -1688,7 +1728,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
 
 void Alignment::shuffleAlignment() {
     if (isSuperAlignment()) outError("Internal error: ", __func__);
-    random_shuffle(site_pattern.begin(), site_pattern.end());
+    my_random_shuffle(site_pattern.begin(), site_pattern.end());
 }
 
 

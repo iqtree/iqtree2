@@ -355,7 +355,7 @@ enum ModelTestCriterion {
         Stopping condition type
  */
 enum STOP_CONDITION {
-    SC_FIXED_ITERATION, SC_STOP_PREDICT
+    SC_FIXED_ITERATION, SC_WEIBULL, SC_UNSUCCESS_ITERATION, SC_BOOTSTRAP_CORRELATION, SC_REAL_TIME
 };
 
 enum IQP_ASSESS_QUARTET {
@@ -520,15 +520,15 @@ struct Params {
     bool pll;
 
     /**
-     *  Stopping rule for the tree search
+     *  OBSOLETE! Stopping rule for the tree search
      */
-    bool autostop;
+//    bool autostop;
 
     /**
      *  Number of maximum unsuccessful iterations after the search is stopped.
      *  Used for the automatic stopping rule
      */
-    int stopCond;
+    int unsuccess_iteration;
 
     char *binary_aln_file;
 
@@ -546,7 +546,7 @@ struct Params {
     /**
      *  starting CPU time of the program
      */
-    double startTime;
+    double startCPUTime;
 
     /** starting real time of the program */
     double start_real_time;
@@ -661,9 +661,9 @@ struct Params {
     bool aln_no_const_sites;
 
     /**
-            compute parsimony score on trees
+            OBSOLETE compute parsimony score on trees
      */
-    bool parsimony;
+//    bool parsimony;
 
     /**
             compute random step-wise addition parsimony tree instead of BIONJ
@@ -1887,7 +1887,7 @@ int random_int(int n);
 /**
  *  return a random integer in the range [a,b]
  */
-int randint(int a, int b);
+//int randint(int a, int b);
 
 /**
  * returns a random integer in the range [0; RAND_MAX - 1]
@@ -1899,6 +1899,15 @@ int random_int();
  * returns a random floating-point nuber in the range [0; 1)
  */
 double random_double();
+
+template <class T>
+void my_random_shuffle (T first, T last)
+{
+	int n = last - first;
+	for (int i=n-1; i>0; --i) {
+		swap (first[i],first[random_int(i+1)]);
+	}
+}
 
 /**
  * generic function for sorting by index

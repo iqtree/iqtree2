@@ -269,6 +269,7 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 	int nsplits = sg.getNSplits();
 
 	double threshold = split_threshold * size();
+//	cout << "threshold = " << threshold << endl;
 	int count=0;
 	for (SplitGraph::iterator it = sg.begin(); it != sg.end(); ) {
 		count++;

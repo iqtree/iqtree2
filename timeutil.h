@@ -27,7 +27,9 @@
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
-//#include <sys/time.h>
+#if !defined(_MSC_VER)
+#include <sys/time.h>
+#endif
 #ifdef _OPENMP
 #include <omp.h>
 #endif
