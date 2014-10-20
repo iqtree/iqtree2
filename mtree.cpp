@@ -535,8 +535,6 @@ void MTree::readTree(istream &in, bool &is_rooted)
         outError(ERR_NO_MEMORY);
     } catch (const char *str) {
         outError(str, reportInputInfo());
-    } catch (char *str) {
-        outError(str, reportInputInfo());
     } catch (string str) {
         outError(str.c_str(), reportInputInfo());
     } catch (ios::failure) {

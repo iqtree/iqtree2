@@ -64,6 +64,10 @@
 	#include <sys/types.h>
 	#include <winsock.h>
 
+	struct timezone {
+		char dummy;
+	};
+
 	inline void gettimeofday(struct timeval* t, void* timezone)
 	{       
 		struct _timeb timebuffer;
@@ -73,7 +77,7 @@
 	}
 	#else /* UNIX */
 	#include <sys/time.h>
-	void gettimeofday(struct timeval* t, void* timezone) {
+	inline void gettimeofday(struct timeval* t, void* timezone) {
 		time_t cur_time;
 		time(&cur_time);
 		t->tv_sec = cur_time;

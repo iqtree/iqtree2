@@ -52,6 +52,11 @@
 #define GCC_VERSION 0
 #endif
 
+// for MSVC
+#ifndef __func__
+#define __func__ __FUNCTION__
+#endif
+
 #if defined(USE_HASH_MAP) && !defined(_MSC_VER)
 	#if !defined(__GNUC__)
 		#include <hash_map>

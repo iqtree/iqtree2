@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include "tools.h"
+#include "timeutil.h"
 
 VerboseMode verbose_mode;
 
@@ -26,24 +27,23 @@ VerboseMode verbose_mode;
         WIN32 does not define gettimeofday() function.
         Here declare it extra for WIN32 only.
  */
-#if defined(WIN32) && !defined(HAVE_GETTIMEOFDAY)
-#include <sys/timeb.h>
-#include <sys/types.h>
-#include <winsock.h>
+//#if defined(WIN32) && !defined(HAVE_GETTIMEOFDAY)
+#if defined(WIN32)
 #include <sstream>
-
-struct timezone {
-};
-
-void gettimeofday(struct timeval* t, void* timezone) {
-    struct _timeb timebuffer;
-    _ftime(&timebuffer);
-    t->tv_sec = timebuffer.time;
-    t->tv_usec = 1000 * timebuffer.millitm;
-}
-#else
-#include <sys/time.h>
 #endif
+//
+//struct timezone {
+//};
+//
+//void gettimeofday(struct timeval* t, void* timezone) {
+//    struct _timeb timebuffer;
+//    _ftime(&timebuffer);
+//    t->tv_sec = timebuffer.time;
+//    t->tv_usec = 1000 * timebuffer.millitm;
+//}
+//#else
+//#include <sys/time.h>
+//#endif
 
 
 /********************************************************
@@ -800,1054 +800,1601 @@ void parseArg(int argc, char *argv[], Params &params) {
 #else
                 usage(argv, false);
 #endif
-            } else if (strcmp(argv[cnt], "-ho") == 0 || strcmp(argv[cnt], "-?") == 0) {
-                usage_iqtree(argv, false);
-            } else if (strcmp(argv[cnt], "-hh") == 0 || strcmp(argv[cnt], "-hhh") == 0) {
-                usage(argv, true);
-            } else if (strcmp(argv[cnt], "-v0") == 0) {
-                verbose_mode = VB_QUIET;
-            } else if (strcmp(argv[cnt], "-v") == 0 || strcmp(argv[cnt], "-v1") == 0) {
-                verbose_mode = VB_MED;
-            } else if (strcmp(argv[cnt], "-vv") == 0 || strcmp(argv[cnt], "-v2") == 0) {
-                verbose_mode = VB_MAX;
-            } else if (strcmp(argv[cnt], "-vvv") == 0 || strcmp(argv[cnt], "-v3") == 0) {
-                verbose_mode = VB_DEBUG;
-            } else if (strcmp(argv[cnt], "-k") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -k <num_taxa>";
-                convert_range(argv[cnt], params.min_size, params.sub_size, params.step_size);
-                params.k_representative = params.min_size;
-            } else if (strcmp(argv[cnt], "-pre") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -pre <output_prefix>";
-                params.out_prefix = argv[cnt];
-            } else if (strcmp(argv[cnt], "-pp") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -pp <pd_proportion>";
-                convert_range(argv[cnt], params.min_proportion, params.pd_proportion, params.step_proportion);
-                if (params.pd_proportion < 0 || params.pd_proportion > 1)
-                    throw "PD proportion must be between 0 and 1";
-            } else if (strcmp(argv[cnt], "-mk") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -mk <min_taxa>";
-                params.min_size = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-bud") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -bud <budget>";
-                convert_range(argv[cnt], params.min_budget, params.budget, params.step_budget);
-            } else if (strcmp(argv[cnt], "-mb") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -mb <min_budget>";
-                params.min_budget = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-o") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -o <taxon>";
-                params.root = argv[cnt];
-            } else if (strcmp(argv[cnt], "-root") == 0) {
-                params.is_rooted = true;
-            } else if (strcmp(argv[cnt], "-all") == 0) {
-                params.find_all = true;
-            } else if (strcmp(argv[cnt], "-g") == 0 || strcmp(argv[cnt], "--greedy") == 0) {
-                params.run_mode = GREEDY;
-            } else if (strcmp(argv[cnt], "-pr") == 0 || strcmp(argv[cnt], "--pruning") == 0) {
-                params.run_mode = PRUNING;
-                //} else if (strcmp(argv[cnt],"--both") == 0) {
-                //params.run_mode = BOTH_ALG;
-            } else if (strcmp(argv[cnt], "-e") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -e <file>";
-                params.param_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-if") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -if <file>";
-                params.initial_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-nni_nr_step") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -nni_nr_step <newton_raphson_steps>";
-                NNI_MAX_NR_STEP = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-ia") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -ia <file>";
-                params.initial_area_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-u") == 0) {
-                // file containing budget information
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -u <file>";
-                params.budget_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-dd") == 0) {
-                // compute distribution of PD score on random sets
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -dd <sample_size>";
-                params.run_mode = PD_DISTRIBUTION;
-                params.sample_size = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-ts") == 0) {
-                // calculate PD score a taxa set listed in the file
-                cnt++;
-                //params.run_mode = PD_USER_SET;
-                if (cnt >= argc)
-                    throw "Use -ts <taxa_file>";
-                params.pdtaxa_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-bound") == 0) {
-                // boundary length of areas
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -bound <file>";
-                params.areas_boundary_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-blm") == 0) {
-                // boundary length modifier
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -blm <boundary_modifier>";
-                params.boundary_modifier = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-dist") == 0 || strcmp(argv[cnt], "-d") == 0) {
-                // calculate distance matrix from the tree
-                params.run_mode = CALC_DIST;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -dist <distance_file>";
-                params.dist_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-djc") == 0) {
-                params.compute_ml_dist = false;
-            } else if (strcmp(argv[cnt], "-dobs") == 0) {
-                params.compute_obs_dist = true;
-            } else if (strcmp(argv[cnt], "-r") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -r <num_taxa>";
-                params.sub_size = convert_int(argv[cnt]);
-                params.tree_gen = YULE_HARDING;
-			} else if (strcmp(argv[cnt],"-rs") == 0) {
+                continue;
+            }
+			if (strcmp(argv[cnt], "-ho") == 0 || strcmp(argv[cnt], "-?") == 0) {
+				usage_iqtree(argv, false);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-hh") == 0
+					|| strcmp(argv[cnt], "-hhh") == 0) {
+				usage(argv, true);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-v0") == 0) {
+				verbose_mode = VB_QUIET;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-v") == 0 || strcmp(argv[cnt], "-v1") == 0) {
+				verbose_mode = VB_MED;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-vv") == 0
+					|| strcmp(argv[cnt], "-v2") == 0) {
+				verbose_mode = VB_MAX;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-vvv") == 0
+					|| strcmp(argv[cnt], "-v3") == 0) {
+				verbose_mode = VB_DEBUG;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-k") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -k <num_taxa>";
+				convert_range(argv[cnt], params.min_size, params.sub_size,
+						params.step_size);
+				params.k_representative = params.min_size;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-pre") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -pre <output_prefix>";
+				params.out_prefix = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-pp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -pp <pd_proportion>";
+				convert_range(argv[cnt], params.min_proportion,
+						params.pd_proportion, params.step_proportion);
+				if (params.pd_proportion < 0 || params.pd_proportion > 1)
+					throw "PD proportion must be between 0 and 1";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mk") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mk <min_taxa>";
+				params.min_size = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bud") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bud <budget>";
+				convert_range(argv[cnt], params.min_budget, params.budget,
+						params.step_budget);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mb") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mb <min_budget>";
+				params.min_budget = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-o") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -o <taxon>";
+				params.root = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-root") == 0) {
+				params.is_rooted = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-all") == 0) {
+				params.find_all = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-g") == 0
+					|| strcmp(argv[cnt], "--greedy") == 0) {
+				params.run_mode = GREEDY;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-pr") == 0
+					|| strcmp(argv[cnt], "--pruning") == 0) {
+				params.run_mode = PRUNING;
+				//continue; } if (strcmp(argv[cnt],"--both") == 0) {
+				//params.run_mode = BOTH_ALG;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-e") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -e <file>";
+				params.param_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-if") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -if <file>";
+				params.initial_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nni_nr_step") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nni_nr_step <newton_raphson_steps>";
+				NNI_MAX_NR_STEP = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-ia") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ia <file>";
+				params.initial_area_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-u") == 0) {
+				// file containing budget information
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -u <file>";
+				params.budget_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-dd") == 0) {
+				// compute distribution of PD score on random sets
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -dd <sample_size>";
+				params.run_mode = PD_DISTRIBUTION;
+				params.sample_size = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-ts") == 0) {
+				// calculate PD score a taxa set listed in the file
+				cnt++;
+				//params.run_mode = PD_USER_SET;
+				if (cnt >= argc)
+					throw "Use -ts <taxa_file>";
+				params.pdtaxa_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bound") == 0) {
+				// boundary length of areas
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bound <file>";
+				params.areas_boundary_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-blm") == 0) {
+				// boundary length modifier
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -blm <boundary_modifier>";
+				params.boundary_modifier = convert_double(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-dist") == 0
+					|| strcmp(argv[cnt], "-d") == 0) {
+				// calculate distance matrix from the tree
+				params.run_mode = CALC_DIST;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -dist <distance_file>";
+				params.dist_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-djc") == 0) {
+				params.compute_ml_dist = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-dobs") == 0) {
+				params.compute_obs_dist = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-r") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -r <num_taxa>";
+				params.sub_size = convert_int(argv[cnt]);
+				params.tree_gen = YULE_HARDING;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rs") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -rs <alignment_file>";
 				params.tree_gen = YULE_HARDING;
 				params.aln_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-rstar") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rstar <num_taxa>";
-                params.sub_size = convert_int(argv[cnt]);
-                params.tree_gen = STAR_TREE;
-            } else if (strcmp(argv[cnt], "-ru") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -ru <num_taxa>";
-                params.sub_size = convert_int(argv[cnt]);
-                params.tree_gen = UNIFORM;
-            } else if (strcmp(argv[cnt], "-rcat") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rcat <num_taxa>";
-                params.sub_size = convert_int(argv[cnt]);
-                params.tree_gen = CATERPILLAR;
-            } else if (strcmp(argv[cnt], "-rbal") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rbal <num_taxa>";
-                params.sub_size = convert_int(argv[cnt]);
-                params.tree_gen = BALANCED;
-            } else if (strcmp(argv[cnt], "-rcsg") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rcsg <num_taxa>";
-                params.sub_size = convert_int(argv[cnt]);
-                params.tree_gen = CIRCULAR_SPLIT_GRAPH;
-            } else if (strcmp(argv[cnt], "-rpam") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rpam <num_splits>";
-                params.num_splits = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-rlen") == 0) {
-                cnt++;
-                if (cnt >= argc - 2)
-                    throw "Use -rlen <min_len> <mean_len> <max_len>";
-                params.min_len = convert_double(argv[cnt]);
-                params.mean_len = convert_double(argv[cnt + 1]);
-                params.max_len = convert_double(argv[cnt + 2]);
-                cnt += 2;
-            } else if (strcmp(argv[cnt], "-rzero") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rzero <num_zero_branch>";
-                params.num_zero_len = convert_int(argv[cnt]);
-                if (params.num_zero_len < 0) throw "num_zero_len must not be negative";
-            } else if (strcmp(argv[cnt], "-rset") == 0) {
-                cnt++;
-                if (cnt >= argc - 1)
-                    throw "Use -rset <overlap> <outfile>";
-                params.overlap = convert_int(argv[cnt]);
-                cnt++;
-                params.pdtaxa_file = argv[cnt];
-                params.tree_gen = TAXA_SET;
-            } else if (strcmp(argv[cnt], "-rep") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rep <repeated_times>";
-                params.repeated_time = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-lim") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -lim <pd_limit>";
-                params.pd_limit = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-noout") == 0) {
-                params.nr_output = 0;
-            } else if (strcmp(argv[cnt], "-1out") == 0) {
-                params.nr_output = 1;
-            } else if (strcmp(argv[cnt], "-oldout") == 0) {
-                params.nr_output = 100;
-            } else if (strcmp(argv[cnt], "-nexout") == 0) {
-                params.nexus_output = true;
-            } else if (strcmp(argv[cnt], "-exhaust") == 0) {
-                params.run_mode = EXHAUSTIVE;
-            } else if (strcmp(argv[cnt], "-seed") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -seed <random_seed>";
-                params.ran_seed = (unsigned) convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-pdgain") == 0) {
-                params.calc_pdgain = true;
-            } else if (strcmp(argv[cnt], "-sup") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -sup <target_tree_file>";
-                params.second_tree = argv[cnt];
-                params.consensus_type = CT_ASSIGN_SUPPORT;
-			} else if (strcmp(argv[cnt],"-sup2") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rstar") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rstar <num_taxa>";
+				params.sub_size = convert_int(argv[cnt]);
+				params.tree_gen = STAR_TREE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-ru") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ru <num_taxa>";
+				params.sub_size = convert_int(argv[cnt]);
+				params.tree_gen = UNIFORM;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rcat") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rcat <num_taxa>";
+				params.sub_size = convert_int(argv[cnt]);
+				params.tree_gen = CATERPILLAR;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rbal") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rbal <num_taxa>";
+				params.sub_size = convert_int(argv[cnt]);
+				params.tree_gen = BALANCED;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rcsg") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rcsg <num_taxa>";
+				params.sub_size = convert_int(argv[cnt]);
+				params.tree_gen = CIRCULAR_SPLIT_GRAPH;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rpam") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rpam <num_splits>";
+				params.num_splits = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rlen") == 0) {
+				cnt++;
+				if (cnt >= argc - 2)
+					throw "Use -rlen <min_len> <mean_len> <max_len>";
+				params.min_len = convert_double(argv[cnt]);
+				params.mean_len = convert_double(argv[cnt + 1]);
+				params.max_len = convert_double(argv[cnt + 2]);
+				cnt += 2;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rzero") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rzero <num_zero_branch>";
+				params.num_zero_len = convert_int(argv[cnt]);
+				if (params.num_zero_len < 0)
+					throw "num_zero_len must not be negative";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rset") == 0) {
+				cnt++;
+				if (cnt >= argc - 1)
+					throw "Use -rset <overlap> <outfile>";
+				params.overlap = convert_int(argv[cnt]);
+				cnt++;
+				params.pdtaxa_file = argv[cnt];
+				params.tree_gen = TAXA_SET;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rep") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rep <repeated_times>";
+				params.repeated_time = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-lim") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -lim <pd_limit>";
+				params.pd_limit = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-noout") == 0) {
+				params.nr_output = 0;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-1out") == 0) {
+				params.nr_output = 1;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-oldout") == 0) {
+				params.nr_output = 100;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nexout") == 0) {
+				params.nexus_output = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-exhaust") == 0) {
+				params.run_mode = EXHAUSTIVE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-seed") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -seed <random_seed>";
+				params.ran_seed = (unsigned) convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-pdgain") == 0) {
+				params.calc_pdgain = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-sup") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sup <target_tree_file>";
+				params.second_tree = argv[cnt];
+				params.consensus_type = CT_ASSIGN_SUPPORT;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-sup2") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -sup2 <target_tree_file>";
 				params.second_tree = argv[cnt];
 				params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
-            } else if (strcmp(argv[cnt], "-treew") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -treew <tree_weight_file>";
-                params.tree_weight_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-con") == 0) {
-                params.consensus_type = CT_CONSENSUS_TREE;
-            } else if (strcmp(argv[cnt], "-net") == 0) {
-                params.consensus_type = CT_CONSENSUS_NETWORK;
-            }                /**MINH ANH: to serve some statistics on tree*/
-            else if (strcmp(argv[cnt], "-comp") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -comp <treefile>";
-                params.consensus_type = COMPARE;
-                params.second_tree = argv[cnt];
-            } else if (strcmp(argv[cnt], "-stats") == 0) {
-                params.run_mode = STATS;
-            } else if (strcmp(argv[cnt], "-gbo") == 0) { //guided bootstrap
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -gbo <site likelihod file>";
-                params.siteLL_file = argv[cnt];
-                //params.run_mode = GBO;
-            }// MA
-            else if (strcmp(argv[cnt], "-mprob") == 0) { //compute multinomial distribution probability
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -mprob <ref_alignment>";
-                params.second_align = argv[cnt];
-                //params.run_mode = MPRO;
-            }// MA
-            else if (strcmp(argv[cnt], "-min") == 0) {
-                params.find_pd_min = true;
-            } else if (strcmp(argv[cnt], "-excl") == 0) {
-                params.exclusive_pd = true;
-            } else if (strcmp(argv[cnt], "-endem") == 0) {
-                params.endemic_pd = true;
-            } else if (strcmp(argv[cnt], "-compl") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -compl <area_name>";
-                params.complement_area = argv[cnt];
-            } else if (strcmp(argv[cnt], "-cluster") == 0) {
-                params.branch_cluster = 4;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -cluster <taxa_order_file>";
-                params.taxa_order_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-taxa") == 0) {
-                params.run_mode = PRINT_TAXA;
-            } else if (strcmp(argv[cnt], "-area") == 0) {
-                params.run_mode = PRINT_AREA;
-            } else if (strcmp(argv[cnt], "-scale") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -scale <scaling_factor>";
-                params.scaling_factor = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-scaleg") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -scaleg <gene_scale_factor>";
-                params.gene_scale_factor = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-scalebranch") == 0) {
-                params.run_mode = SCALE_BRANCH_LEN;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -scalebranch <scaling_factor>";
-                params.scaling_factor = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-scalenode") == 0) {
-                params.run_mode = SCALE_NODE_NAME;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -scalenode <scaling_factor>";
-                params.scaling_factor = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-prec") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -prec <numeric_precision>";
-                params.numeric_precision = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-lp") == 0) {
-                params.run_mode = LINEAR_PROGRAMMING;
-            } else if (strcmp(argv[cnt], "-lpbin") == 0) {
-                params.run_mode = LINEAR_PROGRAMMING;
-                params.binary_programming = true;
-            } else if (strcmp(argv[cnt], "-qp") == 0) {
-                params.gurobi_format = true;
-                params.quad_programming = true;
-            } else if (strcmp(argv[cnt], "-q") == 0) {
-                verbose_mode = VB_QUIET;
-            } else if (strcmp(argv[cnt], "-mult") == 0) {
-                params.multi_tree = true;
-            } else if (strcmp(argv[cnt], "-bi") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -bi <burnin_value>";
-                params.tree_burnin = convert_int(argv[cnt]);
-                if (params.tree_burnin < 0)
-                    throw "Burnin value must not be negative";
-            } else if (strcmp(argv[cnt], "-tm") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -tm <tree_max_count>";
-                params.tree_max_count = convert_int(argv[cnt]);
-                if (params.tree_max_count < 0)
-                    throw "tree_max_count must not be negative";
-            } else if (strcmp(argv[cnt], "-t") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -t <split_threshold>";
-                params.split_threshold = convert_double(argv[cnt]);
-                if (params.split_threshold < 0 || params.split_threshold > 1)
-                    throw "Split threshold must be between 0 and 1";
-            } else if (strcmp(argv[cnt], "-tw") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -tw <split_weight_threshold>";
-                params.split_weight_threshold = convert_double(argv[cnt]);
-                if (params.split_weight_threshold < 0)
-                    throw "Split weight threshold is negative";
-            } else if (strcmp(argv[cnt], "-swc") == 0) {
-                params.split_weight_summary = SW_COUNT;
-            } else if (strcmp(argv[cnt], "-swa") == 0) {
-                params.split_weight_summary = SW_AVG_ALL;
-            } else if (strcmp(argv[cnt], "-swp") == 0) {
-                params.split_weight_summary = SW_AVG_PRESENT;
-            } else if (strcmp(argv[cnt], "-iwc") == 0) {
-                params.test_input = TEST_WEAKLY_COMPATIBLE;
-            } else if (strcmp(argv[cnt], "-aln") == 0 || strcmp(argv[cnt], "-s") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -aln, -s <alignment_file>";
-                params.aln_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-z") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -aln, -z <user_trees_file>";
-                params.treeset_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-zb") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -zb <#replicates>";
-                params.topotest_replicates = convert_int(argv[cnt]);
-                if (params.topotest_replicates < 1000)
-                    throw "Please specify at least 1000 replicates";
-            } else if (strcmp(argv[cnt], "-zw") == 0) {
-                params.do_weighted_test = true;
-            } else if (strcmp(argv[cnt], "-zau") == 0) {
-                params.do_au_test = true;
-            } else if (strcmp(argv[cnt], "-sp") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -sp <partition_file>";
-                params.partition_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-spp") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            	    throw "Use -spp <type of partition model>";
-                params.partition_file = argv[cnt];
-                params.partition_type = 'p';
-            } else if (strcmp(argv[cnt], "-spj") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            	    throw "Use -spj <type of partition model>";
-                params.partition_file = argv[cnt];
-                params.partition_type = 'j';
-            } else if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
-            	params.remove_empty_seq = false;
-            } else if (strcmp(argv[cnt], "-no_terrace") == 0) {
-            	params.terrace_aware = false;
-            } else if (strcmp(argv[cnt], "-sf") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -sf <ngs_file>";
-                params.ngs_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-sm") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -sm <ngs_mapped_read_file>";
-                params.ngs_mapped_reads = argv[cnt];
-            } else if (strcmp(argv[cnt], "-ngs_gap") == 0) {
-                params.ngs_ignore_gaps = false;
-            } else if (strcmp(argv[cnt], "-st") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -st <BIN|DNA|AA>";
-                params.sequence_type = argv[cnt];
-            } else if (strcmp(argv[cnt], "-ao") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -ao <alignment_file>";
-                params.aln_output = argv[cnt];
-            } else if (strcmp(argv[cnt], "-as") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -as <aln_site_list>";
-                params.aln_site_list = argv[cnt];
-            } else if (strcmp(argv[cnt], "-an") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -an <ref_seq_name>";
-                params.ref_seq_name = argv[cnt];
-            } else if (strcmp(argv[cnt], "-af") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -af phy|fasta";
-                if (strcmp(argv[cnt], "phy") == 0)
-                    params.aln_output_format = ALN_PHYLIP;
-                else if (strcmp(argv[cnt], "fasta") == 0)
-                    params.aln_output_format = ALN_FASTA;
-                else throw "Unknown output format";
-            } else if (strcmp(argv[cnt], "-am") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -am <gap_masked_aln>";
-                params.gap_masked_aln = argv[cnt];
-            } else if (strcmp(argv[cnt], "-ac") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -ac <concatenate_aln>";
-                params.concatenate_aln = argv[cnt];
-            } else if (strcmp(argv[cnt], "-nogap") == 0) {
-                params.aln_nogaps = true;
-            } else if (strcmp(argv[cnt], "-noconst") == 0) {
-                params.aln_no_const_sites = true;
-            } else if (strcmp(argv[cnt], "-parstree") == 0) {
-                // maximum parsimony
-                params.parsimony_tree = true;
-//            } else if (strcmp(argv[cnt], "-pars") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-treew") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -treew <tree_weight_file>";
+				params.tree_weight_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-con") == 0) {
+				params.consensus_type = CT_CONSENSUS_TREE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-net") == 0) {
+				params.consensus_type = CT_CONSENSUS_NETWORK;
+			} /**MINH ANH: to serve some statistics on tree*/
+			else if (strcmp(argv[cnt], "-comp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -comp <treefile>";
+				params.consensus_type = COMPARE;
+				params.second_tree = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-stats") == 0) {
+				params.run_mode = STATS;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-gbo") == 0) { //guided bootstrap
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -gbo <site likelihod file>";
+				params.siteLL_file = argv[cnt];
+				//params.run_mode = GBO;
+			} // MA
+			else if (strcmp(argv[cnt], "-mprob") == 0) { //compute multinomial distribution probability
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mprob <ref_alignment>";
+				params.second_align = argv[cnt];
+				//params.run_mode = MPRO;
+			} // MA
+			else if (strcmp(argv[cnt], "-min") == 0) {
+				params.find_pd_min = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-excl") == 0) {
+				params.exclusive_pd = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-endem") == 0) {
+				params.endemic_pd = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-compl") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -compl <area_name>";
+				params.complement_area = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-cluster") == 0) {
+				params.branch_cluster = 4;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -cluster <taxa_order_file>";
+				params.taxa_order_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-taxa") == 0) {
+				params.run_mode = PRINT_TAXA;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-area") == 0) {
+				params.run_mode = PRINT_AREA;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-scale") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -scale <scaling_factor>";
+				params.scaling_factor = convert_double(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-scaleg") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -scaleg <gene_scale_factor>";
+				params.gene_scale_factor = convert_double(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-scalebranch") == 0) {
+				params.run_mode = SCALE_BRANCH_LEN;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -scalebranch <scaling_factor>";
+				params.scaling_factor = convert_double(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-scalenode") == 0) {
+				params.run_mode = SCALE_NODE_NAME;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -scalenode <scaling_factor>";
+				params.scaling_factor = convert_double(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-prec") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -prec <numeric_precision>";
+				params.numeric_precision = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-lp") == 0) {
+				params.run_mode = LINEAR_PROGRAMMING;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-lpbin") == 0) {
+				params.run_mode = LINEAR_PROGRAMMING;
+				params.binary_programming = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-qp") == 0) {
+				params.gurobi_format = true;
+				params.quad_programming = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-q") == 0) {
+				verbose_mode = VB_QUIET;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mult") == 0) {
+				params.multi_tree = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bi") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bi <burnin_value>";
+				params.tree_burnin = convert_int(argv[cnt]);
+				if (params.tree_burnin < 0)
+					throw "Burnin value must not be negative";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-tm") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -tm <tree_max_count>";
+				params.tree_max_count = convert_int(argv[cnt]);
+				if (params.tree_max_count < 0)
+					throw "tree_max_count must not be negative";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-t") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -t <split_threshold>";
+				params.split_threshold = convert_double(argv[cnt]);
+				if (params.split_threshold < 0 || params.split_threshold > 1)
+					throw "Split threshold must be between 0 and 1";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-tw") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -tw <split_weight_threshold>";
+				params.split_weight_threshold = convert_double(argv[cnt]);
+				if (params.split_weight_threshold < 0)
+					throw "Split weight threshold is negative";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-swc") == 0) {
+				params.split_weight_summary = SW_COUNT;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-swa") == 0) {
+				params.split_weight_summary = SW_AVG_ALL;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-swp") == 0) {
+				params.split_weight_summary = SW_AVG_PRESENT;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-iwc") == 0) {
+				params.test_input = TEST_WEAKLY_COMPATIBLE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-aln") == 0
+					|| strcmp(argv[cnt], "-s") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -aln, -s <alignment_file>";
+				params.aln_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-z") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -aln, -z <user_trees_file>";
+				params.treeset_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-zb") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -zb <#replicates>";
+				params.topotest_replicates = convert_int(argv[cnt]);
+				if (params.topotest_replicates < 1000)
+					throw "Please specify at least 1000 replicates";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-zw") == 0) {
+				params.do_weighted_test = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-zau") == 0) {
+				params.do_au_test = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-sp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sp <partition_file>";
+				params.partition_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-spp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -spp <type of partition model>";
+				params.partition_file = argv[cnt];
+				params.partition_type = 'p';
+				continue;
+			}
+			if (strcmp(argv[cnt], "-spj") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -spj <type of partition model>";
+				params.partition_file = argv[cnt];
+				params.partition_type = 'j';
+				continue;
+			}
+			if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
+				params.remove_empty_seq = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-no_terrace") == 0) {
+				params.terrace_aware = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-sf") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sf <ngs_file>";
+				params.ngs_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-sm") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sm <ngs_mapped_read_file>";
+				params.ngs_mapped_reads = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-ngs_gap") == 0) {
+				params.ngs_ignore_gaps = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-st") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -st <BIN|DNA|AA>";
+				params.sequence_type = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-ao") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ao <alignment_file>";
+				params.aln_output = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-as") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -as <aln_site_list>";
+				params.aln_site_list = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-an") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -an <ref_seq_name>";
+				params.ref_seq_name = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-af") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -af phy|fasta";
+				if (strcmp(argv[cnt], "phy") == 0)
+					params.aln_output_format = ALN_PHYLIP;
+				else if (strcmp(argv[cnt], "fasta") == 0)
+					params.aln_output_format = ALN_FASTA;
+				else
+					throw "Unknown output format";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-am") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -am <gap_masked_aln>";
+				params.gap_masked_aln = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-ac") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ac <concatenate_aln>";
+				params.concatenate_aln = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nogap") == 0) {
+				params.aln_nogaps = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-noconst") == 0) {
+				params.aln_no_const_sites = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-parstree") == 0) {
+				// maximum parsimony
+				params.parsimony_tree = true;
+//            continue; } if (strcmp(argv[cnt], "-pars") == 0) {
 //                // maximum parsimony
 //                params.parsimony = true;
-            } else if (strcmp(argv[cnt], "-spr") == 0) {
-                // subtree pruning and regrafting
-                params.tree_spr = true;
-            } else if (strcmp(argv[cnt], "-krep") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -krep <num_k>";
-                params.k_representative = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-pdel") == 0 || strcmp(argv[cnt], "-p") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -pdel <probability>";
-                params.p_delete = convert_double(argv[cnt]);
-                if (params.p_delete < 0.0 || params.p_delete > 1.0)
-                    throw "Probability of deleting a leaf must be between 0 and 1";
-            } else if (strcmp(argv[cnt], "-pers") == 0) {
-            	cnt++;
-            	if (cnt >= argc)
-            		throw "Use -pers <perturbation_strength>";
-            	params.initPerStrength = convert_double(argv[cnt]);
-        	} else if (strcmp(argv[cnt], "-n") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -n <#iterations>";
-                params.min_iterations = convert_int(argv[cnt]);
-                params.stop_condition = SC_FIXED_ITERATION;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-spr") == 0) {
+				// subtree pruning and regrafting
+				params.tree_spr = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-krep") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -krep <num_k>";
+				params.k_representative = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-pdel") == 0
+					|| strcmp(argv[cnt], "-p") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -pdel <probability>";
+				params.p_delete = convert_double(argv[cnt]);
+				if (params.p_delete < 0.0 || params.p_delete > 1.0)
+					throw "Probability of deleting a leaf must be between 0 and 1";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-pers") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -pers <perturbation_strength>";
+				params.initPerStrength = convert_double(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-n") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -n <#iterations>";
+				params.min_iterations = convert_int(argv[cnt]);
+				params.stop_condition = SC_FIXED_ITERATION;
 //                params.autostop = false;
-            } else if (strcmp(argv[cnt], "-nb") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -nb <#bootstrap_replicates>";
-                params.min_iterations = convert_int(argv[cnt]);
-                params.iqp_assess_quartet = IQP_BOOTSTRAP;
-                params.avoid_duplicated_trees = true;
-            } else if (strcmp(argv[cnt], "-mod") == 0 || strcmp(argv[cnt], "-m") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -mod <model_name>";
-                params.model_name = argv[cnt];
-            } else if (strcmp(argv[cnt], "-mset") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -mset <model_set>";
-                params.model_set = argv[cnt];
-            } else if (strcmp(argv[cnt], "-mh") == 0) {
-                params.mvh_site_rate = true;
-                params.discard_saturated_site = false;
-                params.SSE = LK_NORMAL;
-            } else if (strcmp(argv[cnt], "-mhs") == 0) {
-                params.mvh_site_rate = true;
-                params.discard_saturated_site = true;
-                params.SSE = LK_NORMAL;
-            } else if (strcmp(argv[cnt], "-rl") == 0) {
-                params.rate_mh_type = false;
-            } else if (strcmp(argv[cnt], "-nr") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -nr <mean_rate>";
-                params.mean_rate = convert_double(argv[cnt]);
-                if (params.mean_rate < 0)
-                    throw "Wrong mean rate for MH model";
-            } else if (strcmp(argv[cnt], "-mstore") == 0) {
-                params.store_trans_matrix = true;
-            } else if (strcmp(argv[cnt], "-nni_lh") == 0) {
-                params.nni_lh = true;
-            } else if (strcmp(argv[cnt], "-lmd") == 0) {
-                cnt++;
-                params.lambda = convert_double(argv[cnt]);
-                if (params.lambda > 1.0)
-                    throw "Lambda must be in (0,1]";
-            } else if (strcmp(argv[cnt], "-nosse") == 0) {
-                params.SSE = LK_NORMAL;
-            } else if (strcmp(argv[cnt], "-slowsse") == 0) {
-                params.SSE = LK_SSE;
-            } else if (strcmp(argv[cnt], "-fastlk") == 0) {
-                params.SSE = LK_EIGEN;
-            } else if (strcmp(argv[cnt], "-fastsse") == 0 || strcmp(argv[cnt], "-fasttipsse") == 0) {
-                params.SSE = LK_EIGEN_SSE;
-            } else if (strcmp(argv[cnt], "-f") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -f <c | o | u | q>";
-                if (strcmp(argv[cnt], "q") == 0 || strcmp(argv[cnt], "EQ") == 0)
-                    params.freq_type = FREQ_EQUAL;
-                else if (strcmp(argv[cnt], "c") == 0 || strcmp(argv[cnt], "EM") == 0)
-                    params.freq_type = FREQ_EMPIRICAL;
-                else if (strcmp(argv[cnt], "o") == 0 || strcmp(argv[cnt], "ES") == 0)
-                    params.freq_type = FREQ_ESTIMATE;
-                else if (strcmp(argv[cnt], "u") == 0 || strcmp(argv[cnt], "UD") == 0)
-                    params.freq_type = FREQ_USER_DEFINED;
-                else
-                    throw "Use -f <c | o | u | q>";
-            } else if (strcmp(argv[cnt], "-fs") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -fs <site_freq_file>";
-                params.site_freq_file = argv[cnt];
-                params.SSE = LK_NORMAL;
-            } else if (strcmp(argv[cnt], "-c") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -c <#rate_category>";
-                params.num_rate_cats = convert_int(argv[cnt]);
-                if (params.num_rate_cats < 1) throw "Wrong number of rate categories";
-            } else if (strcmp(argv[cnt], "-a") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -a <gamma_shape>";
-                params.gamma_shape = convert_double(argv[cnt]);
-                if (params.gamma_shape < 0) throw "Wrong number of gamma shape parameter (alpha)";
-            } else if (strcmp(argv[cnt], "-gmean") == 0) {
-                params.gamma_median = false;
-            } else if (strcmp(argv[cnt], "-gmedian") == 0) {
-                params.gamma_median = true;
-            } else if (strcmp(argv[cnt], "-i") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -i <p_invar_sites>";
-                params.p_invar_sites = convert_double(argv[cnt]);
-                if (params.p_invar_sites < 0) throw "Wrong number of proportion of invariable sites";
-            } else if (strcmp(argv[cnt], "-brent") == 0) {
-                params.optimize_by_newton = false;
-            } else if (strcmp(argv[cnt], "-jointopt") == 0) {
-                params.optimize_model_rate_joint = true;
-            } else if (strcmp(argv[cnt], "-brent_ginvar") == 0) {
-                params.optimize_model_rate_joint = false;
-            } else if (strcmp(argv[cnt], "-fixbr") == 0) {
-                params.fixed_branch_length = true;
-            } else if (strcmp(argv[cnt], "-sr") == 0) {
-                params.stop_condition = SC_WEIBULL;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -sr <#max_iteration>";
-                params.max_iterations = convert_int(argv[cnt]);
-                if (params.max_iterations <= params.min_iterations)
-                    throw "Specified max iteration must be greater than min iteration";
-            } else if (strcmp(argv[cnt], "-nm") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -nm <#max_iteration>";
-                params.max_iterations = convert_int(argv[cnt]);
-                if (params.max_iterations <= params.min_iterations)
-                    throw "Specified max iteration must be greater than min iteration";
-            } else if (strcmp(argv[cnt], "-sc") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -sc <stop_confidence_value>";
-                params.stop_confidence = convert_double(argv[cnt]);
-                if (params.stop_confidence <= 0.5 || params.stop_confidence >= 1)
-                    throw "Stop confidence value must be in range (0.5,1)";
-            } else if (strcmp(argv[cnt], "-gurobi") == 0) {
-                params.gurobi_format = true;
-            } else if (strcmp(argv[cnt], "-gthreads") == 0) {
-                params.gurobi_format = true;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -gthreads <gurobi_threads>";
-                params.gurobi_threads = convert_int(argv[cnt]);
-                if (params.gurobi_threads < 1)
-                    throw "Wrong number of threads";
-            } else if (strcmp(argv[cnt], "-b") == 0 || strcmp(argv[cnt], "-bo") == 0) {
-                params.multi_tree = true;
-                if (strcmp(argv[cnt], "-bo") == 0) params.compute_ml_tree = false;
-                if (strcmp(argv[cnt], "-b") == 0) params.consensus_type = CT_CONSENSUS_TREE;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -b <num_bootstrap_samples>";
-                params.num_bootstrap_samples = convert_int(argv[cnt]);
-                if (params.num_bootstrap_samples < 1)
-                    throw "Wrong number of bootstrap samples";
-                if (params.num_bootstrap_samples == 1) params.compute_ml_tree = false;
-                if (params.num_bootstrap_samples == 1) params.consensus_type = CT_NONE;
-            } else if (strcmp(argv[cnt], "-bspec") == 0) {
-            	cnt++;
-                if (cnt >= argc)
-                    throw "Use -bspec <bootstrap_specification>";
-            	params.bootstrap_spec = argv[cnt];
-            } else if (strcmp(argv[cnt], "-bc") == 0) {
-                params.multi_tree = true;
-                params.compute_ml_tree = false;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -bc <num_bootstrap_samples>";
-                params.num_bootstrap_samples = convert_int(argv[cnt]);
-                if (params.num_bootstrap_samples < 1)
-                    throw "Wrong number of bootstrap samples";
-                if (params.num_bootstrap_samples > 1) params.consensus_type = CT_CONSENSUS_TREE;
-            } else if (strcmp(argv[cnt], "-iqppars") == 0) {
-                params.iqp_assess_quartet = IQP_PARSIMONY;
-            } else if (strcmp(argv[cnt], "-iqp") == 0) {
-                params.iqp = true;
-            } else if (strcmp(argv[cnt], "-wt") == 0) {
-                params.write_intermediate_trees = 1;
-            } else if (strcmp(argv[cnt], "-wt2") == 0) {
-                params.write_intermediate_trees = 2;
-                params.avoid_duplicated_trees = true;
-                params.print_tree_lh = true;
-            } else if (strcmp(argv[cnt], "-wt3") == 0) {
-                params.write_intermediate_trees = 3;
-                params.avoid_duplicated_trees = true;
-                params.print_tree_lh = true;
-            } else if (strcmp(argv[cnt], "-wbl") == 0) {
-            	params.print_branch_lengths = true;
-            } else if (strcmp(argv[cnt], "-nodup") == 0) {
-                params.avoid_duplicated_trees = true;
-            } else if (strcmp(argv[cnt], "-rf_all") == 0) {
-                params.rf_dist_mode = RF_ALL_PAIR;
-            } else if (strcmp(argv[cnt], "-rf_adj") == 0) {
-                params.rf_dist_mode = RF_ADJACENT_PAIR;
-            } else if (strcmp(argv[cnt], "-rf") == 0) {
-                params.rf_dist_mode = RF_TWO_TREE_SETS;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rf <second_tree>";
-                params.second_tree = argv[cnt];
-            } else if (strcmp(argv[cnt], "-rf2") == 0) {
-                params.rf_dist_mode = RF_TWO_TREE_SETS_EXTENDED;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rf2 <second_tree>";
-                params.second_tree = argv[cnt];
-            } else if (strcmp(argv[cnt], "-aLRT") == 0) {
-                cnt++;
-                if (cnt + 1 >= argc)
-                    throw "Use -aLRT <threshold%> <#replicates>";
-                params.aLRT_threshold = convert_int(argv[cnt]);
-                if (params.aLRT_threshold < 85 || params.aLRT_threshold > 101)
-                    throw "aLRT threshold must be between 85 and 100";
-                cnt++;
-                params.aLRT_replicates = convert_int(argv[cnt]);
-                if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0)
-                    throw "aLRT replicates must be at least 1000";
-            } else if (strcmp(argv[cnt], "-alrt") == 0) {
-                cnt++;
-                params.aLRT_replicates = convert_int(argv[cnt]);
-                if (params.aLRT_replicates < 1000 && params.aLRT_replicates != 0)
-                    throw "aLRT replicates must be at least 1000";
-            } else if (strcmp(argv[cnt], "-lbp") == 0) {
-                cnt++;
-                params.localbp_replicates = convert_int(argv[cnt]);
-                if (params.localbp_replicates < 1000 && params.localbp_replicates != 0)
-                    throw "Local bootstrap (LBP) replicates must be at least 1000";
-            } else if (strcmp(argv[cnt], "-wsl") == 0) {
-                params.print_site_lh = 1;
-            } else if (strcmp(argv[cnt], "-wslg") == 0) {
-                params.print_site_lh = 2;
-            } else if (strcmp(argv[cnt], "-wsr") == 0) {
-            	params.print_site_rate = true;
-            } else if (strcmp(argv[cnt], "-wba") == 0) {
-                params.print_bootaln = true;
-			} else if (strcmp(argv[cnt],"-wsa") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nb") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nb <#bootstrap_replicates>";
+				params.min_iterations = convert_int(argv[cnt]);
+				params.iqp_assess_quartet = IQP_BOOTSTRAP;
+				params.avoid_duplicated_trees = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mod") == 0
+					|| strcmp(argv[cnt], "-m") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mod <model_name>";
+				params.model_name = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mset") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mset <model_set>";
+				params.model_set = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mh") == 0) {
+				params.mvh_site_rate = true;
+				params.discard_saturated_site = false;
+				params.SSE = LK_NORMAL;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mhs") == 0) {
+				params.mvh_site_rate = true;
+				params.discard_saturated_site = true;
+				params.SSE = LK_NORMAL;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rl") == 0) {
+				params.rate_mh_type = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nr") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nr <mean_rate>";
+				params.mean_rate = convert_double(argv[cnt]);
+				if (params.mean_rate < 0)
+					throw "Wrong mean rate for MH model";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mstore") == 0) {
+				params.store_trans_matrix = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nni_lh") == 0) {
+				params.nni_lh = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-lmd") == 0) {
+				cnt++;
+				params.lambda = convert_double(argv[cnt]);
+				if (params.lambda > 1.0)
+					throw "Lambda must be in (0,1]";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nosse") == 0) {
+				params.SSE = LK_NORMAL;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-slowsse") == 0) {
+				params.SSE = LK_SSE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-fastlk") == 0) {
+				params.SSE = LK_EIGEN;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-fastsse") == 0
+					|| strcmp(argv[cnt], "-fasttipsse") == 0) {
+				params.SSE = LK_EIGEN_SSE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-f") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -f <c | o | u | q>";
+				if (strcmp(argv[cnt], "q") == 0 || strcmp(argv[cnt], "EQ") == 0)
+					params.freq_type = FREQ_EQUAL;
+				else if (strcmp(argv[cnt], "c") == 0
+						|| strcmp(argv[cnt], "EM") == 0)
+					params.freq_type = FREQ_EMPIRICAL;
+				else if (strcmp(argv[cnt], "o") == 0
+						|| strcmp(argv[cnt], "ES") == 0)
+					params.freq_type = FREQ_ESTIMATE;
+				else if (strcmp(argv[cnt], "u") == 0
+						|| strcmp(argv[cnt], "UD") == 0)
+					params.freq_type = FREQ_USER_DEFINED;
+				else
+					throw "Use -f <c | o | u | q>";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-fs") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -fs <site_freq_file>";
+				params.site_freq_file = argv[cnt];
+				params.SSE = LK_NORMAL;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-c") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -c <#rate_category>";
+				params.num_rate_cats = convert_int(argv[cnt]);
+				if (params.num_rate_cats < 1)
+					throw "Wrong number of rate categories";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-a") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -a <gamma_shape>";
+				params.gamma_shape = convert_double(argv[cnt]);
+				if (params.gamma_shape < 0)
+					throw "Wrong number of gamma shape parameter (alpha)";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-gmean") == 0) {
+				params.gamma_median = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-gmedian") == 0) {
+				params.gamma_median = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-i") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -i <p_invar_sites>";
+				params.p_invar_sites = convert_double(argv[cnt]);
+				if (params.p_invar_sites < 0)
+					throw "Wrong number of proportion of invariable sites";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-brent") == 0) {
+				params.optimize_by_newton = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-jointopt") == 0) {
+				params.optimize_model_rate_joint = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-brent_ginvar") == 0) {
+				params.optimize_model_rate_joint = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-fixbr") == 0) {
+				params.fixed_branch_length = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-sr") == 0) {
+				params.stop_condition = SC_WEIBULL;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sr <#max_iteration>";
+				params.max_iterations = convert_int(argv[cnt]);
+				if (params.max_iterations <= params.min_iterations)
+					throw "Specified max iteration must be greater than min iteration";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nm") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nm <#max_iteration>";
+				params.max_iterations = convert_int(argv[cnt]);
+				if (params.max_iterations <= params.min_iterations)
+					throw "Specified max iteration must be greater than min iteration";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-sc") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sc <stop_confidence_value>";
+				params.stop_confidence = convert_double(argv[cnt]);
+				if (params.stop_confidence <= 0.5
+						|| params.stop_confidence >= 1)
+					throw "Stop confidence value must be in range (0.5,1)";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-gurobi") == 0) {
+				params.gurobi_format = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-gthreads") == 0) {
+				params.gurobi_format = true;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -gthreads <gurobi_threads>";
+				params.gurobi_threads = convert_int(argv[cnt]);
+				if (params.gurobi_threads < 1)
+					throw "Wrong number of threads";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-b") == 0 || strcmp(argv[cnt], "-bo") == 0) {
+				params.multi_tree = true;
+				if (strcmp(argv[cnt], "-bo") == 0)
+					params.compute_ml_tree = false;
+				if (strcmp(argv[cnt], "-b") == 0)
+					params.consensus_type = CT_CONSENSUS_TREE;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -b <num_bootstrap_samples>";
+				params.num_bootstrap_samples = convert_int(argv[cnt]);
+				if (params.num_bootstrap_samples < 1)
+					throw "Wrong number of bootstrap samples";
+				if (params.num_bootstrap_samples == 1)
+					params.compute_ml_tree = false;
+				if (params.num_bootstrap_samples == 1)
+					params.consensus_type = CT_NONE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bspec") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bspec <bootstrap_specification>";
+				params.bootstrap_spec = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bc") == 0) {
+				params.multi_tree = true;
+				params.compute_ml_tree = false;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bc <num_bootstrap_samples>";
+				params.num_bootstrap_samples = convert_int(argv[cnt]);
+				if (params.num_bootstrap_samples < 1)
+					throw "Wrong number of bootstrap samples";
+				if (params.num_bootstrap_samples > 1)
+					params.consensus_type = CT_CONSENSUS_TREE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-iqppars") == 0) {
+				params.iqp_assess_quartet = IQP_PARSIMONY;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-iqp") == 0) {
+				params.iqp = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wt") == 0) {
+				params.write_intermediate_trees = 1;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wt2") == 0) {
+				params.write_intermediate_trees = 2;
+				params.avoid_duplicated_trees = true;
+				params.print_tree_lh = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wt3") == 0) {
+				params.write_intermediate_trees = 3;
+				params.avoid_duplicated_trees = true;
+				params.print_tree_lh = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wbl") == 0) {
+				params.print_branch_lengths = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nodup") == 0) {
+				params.avoid_duplicated_trees = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rf_all") == 0) {
+				params.rf_dist_mode = RF_ALL_PAIR;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rf_adj") == 0) {
+				params.rf_dist_mode = RF_ADJACENT_PAIR;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rf") == 0) {
+				params.rf_dist_mode = RF_TWO_TREE_SETS;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rf <second_tree>";
+				params.second_tree = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rf2") == 0) {
+				params.rf_dist_mode = RF_TWO_TREE_SETS_EXTENDED;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rf2 <second_tree>";
+				params.second_tree = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-aLRT") == 0) {
+				cnt++;
+				if (cnt + 1 >= argc)
+					throw "Use -aLRT <threshold%> <#replicates>";
+				params.aLRT_threshold = convert_int(argv[cnt]);
+				if (params.aLRT_threshold < 85 || params.aLRT_threshold > 101)
+					throw "aLRT threshold must be between 85 and 100";
+				cnt++;
+				params.aLRT_replicates = convert_int(argv[cnt]);
+				if (params.aLRT_replicates < 1000
+						&& params.aLRT_replicates != 0)
+					throw "aLRT replicates must be at least 1000";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-alrt") == 0) {
+				cnt++;
+				params.aLRT_replicates = convert_int(argv[cnt]);
+				if (params.aLRT_replicates < 1000
+						&& params.aLRT_replicates != 0)
+					throw "aLRT replicates must be at least 1000";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-lbp") == 0) {
+				cnt++;
+				params.localbp_replicates = convert_int(argv[cnt]);
+				if (params.localbp_replicates < 1000
+						&& params.localbp_replicates != 0)
+					throw "Local bootstrap (LBP) replicates must be at least 1000";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wsl") == 0) {
+				params.print_site_lh = 1;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wslg") == 0) {
+				params.print_site_lh = 2;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wsr") == 0) {
+				params.print_site_rate = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wba") == 0) {
+				params.print_bootaln = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wsa") == 0) {
 				params.print_subaln = true;
-            } else if (strcmp(argv[cnt], "-wtl") == 0) {
-                params.print_tree_lh = true;
-            } else if (strcmp(argv[cnt], "-wpi") == 0) {
-                params.print_partition_info = true;
-                params.print_conaln = true;
-            } else if (strcmp(argv[cnt], "-wca") == 0) {
-            	params.print_conaln = true;
-            } else if (strcmp(argv[cnt], "-ns") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -ns <num_simulations>";
-                params.whtest_simulations = convert_int(argv[cnt]);
-                if (params.whtest_simulations < 1)
-                    throw "Wrong number of simulations for WH-test";
-            } else if (strcmp(argv[cnt], "-mr") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -mr <rate_file>";
-                params.rate_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-cat_mean") == 0) {
-                params.mcat_type |= MCAT_MEAN;
-            } else if (strcmp(argv[cnt], "-cat_nolog") == 0) {
-                params.mcat_type &= (127 - MCAT_LOG);
-            } else if (strcmp(argv[cnt], "-cat_site") == 0) {
-                params.mcat_type &= (127 - MCAT_PATTERN);
-            } else if (strcmp(argv[cnt], "-tina") == 0) {
-                params.do_pars_multistate = true;
-            } else if (strcmp(argv[cnt], "-pval") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -pval <gene_pvalue_file>";
-                params.gene_pvalue_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-nnitest") == 0) {
-                params.testNNI = true;
-            } else if (strcmp(argv[cnt], "-anni") == 0) {
-                params.approximate_nni = true;
-            } else if (strcmp(argv[cnt], "-nnicut") == 0) {
-                params.estimate_nni_cutoff = true;
-                //nni_cutoff = -5.41/2;
-            } else if (strcmp(argv[cnt], "-nnichi2") == 0) {
-                params.nni_cutoff = -5.41 / 2;
-            } else if (strcmp(argv[cnt], "-nnicutval") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -nnicutval <log_diff_value>";
-                params.nni_cutoff = convert_double(argv[cnt]);
-                if (params.nni_cutoff >= 0) throw "cutoff value for -nnicutval must be negative";
-            } else if (strcmp(argv[cnt], "-nnisort") == 0) {
-                params.nni_sort = true;
-            } else if (strcmp(argv[cnt], "-plog") == 0) {
-                params.gene_pvalue_loga = true;
-            } else if (strcmp(argv[cnt], "-dmp") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -dmp <ncbi_taxid>";
-                params.ncbi_taxid = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-dmplevel") == 0 || strcmp(argv[cnt], "-dmprank") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -dmprank <ncbi_taxon_rank>";
-                params.ncbi_taxon_level = argv[cnt];
-            } else if (strcmp(argv[cnt], "-dmpignore") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -dmpignore <ncbi_ignore_level>";
-                params.ncbi_ignore_level = argv[cnt];
-            } else if (strcmp(argv[cnt], "-dmpname") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -dmpname <ncbi_names_file>";
-                params.ncbi_names_file = argv[cnt];
-			} else if (strcmp(argv[cnt], "-eco") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wtl") == 0) {
+				params.print_tree_lh = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wpi") == 0) {
+				params.print_partition_info = true;
+				params.print_conaln = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wca") == 0) {
+				params.print_conaln = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-ns") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ns <num_simulations>";
+				params.whtest_simulations = convert_int(argv[cnt]);
+				if (params.whtest_simulations < 1)
+					throw "Wrong number of simulations for WH-test";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mr") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mr <rate_file>";
+				params.rate_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-cat_mean") == 0) {
+				params.mcat_type |= MCAT_MEAN;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-cat_nolog") == 0) {
+				params.mcat_type &= (127 - MCAT_LOG);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-cat_site") == 0) {
+				params.mcat_type &= (127 - MCAT_PATTERN);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-tina") == 0) {
+				params.do_pars_multistate = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-pval") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -pval <gene_pvalue_file>";
+				params.gene_pvalue_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nnitest") == 0) {
+				params.testNNI = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-anni") == 0) {
+				params.approximate_nni = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nnicut") == 0) {
+				params.estimate_nni_cutoff = true;
+				//nni_cutoff = -5.41/2;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nnichi2") == 0) {
+				params.nni_cutoff = -5.41 / 2;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nnicutval") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nnicutval <log_diff_value>";
+				params.nni_cutoff = convert_double(argv[cnt]);
+				if (params.nni_cutoff >= 0)
+					throw "cutoff value for -nnicutval must be negative";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nnisort") == 0) {
+				params.nni_sort = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-plog") == 0) {
+				params.gene_pvalue_loga = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-dmp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -dmp <ncbi_taxid>";
+				params.ncbi_taxid = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-dmplevel") == 0
+					|| strcmp(argv[cnt], "-dmprank") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -dmprank <ncbi_taxon_rank>";
+				params.ncbi_taxon_level = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-dmpignore") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -dmpignore <ncbi_ignore_level>";
+				params.ncbi_ignore_level = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-dmpname") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -dmpname <ncbi_names_file>";
+				params.ncbi_names_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-eco") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -eco <eco_dag_file>";
 				params.eco_dag_file = argv[cnt];
-			} else if (strcmp(argv[cnt], "-k%") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-k%") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -k% <k in %>";
 				//convert_range(argv[cnt], params.k_percent, params.sub_size, params.step_size);
 				params.k_percent = convert_int(argv[cnt]);
-			} else if (strcmp(argv[cnt], "-diet") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-diet") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -diet <d in %>";
-				convert_range(argv[cnt], params.diet_min, params.diet_max, params.diet_step);
+				convert_range(argv[cnt], params.diet_min, params.diet_max,
+						params.diet_step);
 				//params.diet = convert_int(argv[cnt]);
-			} else if (strcmp(argv[cnt], "-up") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-up") == 0) {
 				params.upper_bound = true;
-			} else if (strcmp(argv[cnt], "-ecoR") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-ecoR") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -ecoR <run number>";
 				params.eco_run = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-bb") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -bb <#replicates>";
-                params.gbo_replicates = convert_int(argv[cnt]);
-                params.avoid_duplicated_trees = true;
-                if (params.gbo_replicates < 1000) throw "#replicates must be >= 1000";
-                params.consensus_type = CT_CONSENSUS_TREE;
-                params.stop_condition = SC_BOOTSTRAP_CORRELATION;
-                //params.nni5Branches = true;
-			} else if (strcmp(argv[cnt], "-beps") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bb") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bb <#replicates>";
+				params.gbo_replicates = convert_int(argv[cnt]);
+				params.avoid_duplicated_trees = true;
+				if (params.gbo_replicates < 1000)
+					throw "#replicates must be >= 1000";
+				params.consensus_type = CT_CONSENSUS_TREE;
+				params.stop_condition = SC_BOOTSTRAP_CORRELATION;
+				//params.nni5Branches = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-beps") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -beps <epsilon>";
 				params.ufboot_epsilon = convert_double(argv[cnt]);
 				if (params.ufboot_epsilon <= 0.0)
 					throw "Epsilon must be positive";
-			} else if (strcmp(argv[cnt], "-wbt") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wbt") == 0) {
 				params.print_ufboot_trees = true;
-            } else if (strcmp(argv[cnt], "-bs") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -bs <begin_sampling_size>";
-                params.check_gbo_sample_size = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-bmax") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -bmax <max_candidate_trees>";
-                params.max_candidate_trees = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-bcor") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -bcor <min_correlation>";
-                params.min_correlation = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-nstep") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -nstep <step_iterations>";
-                params.step_iterations = convert_int(argv[cnt]);
-                if (params.step_iterations < 10 || params.step_iterations % 2 == 1)
-                    throw "At least step size of 10 and even number please";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bs") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bs <begin_sampling_size>";
+				params.check_gbo_sample_size = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bmax") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bmax <max_candidate_trees>";
+				params.max_candidate_trees = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bcor") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bcor <min_correlation>";
+				params.min_correlation = convert_double(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nstep") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nstep <step_iterations>";
+				params.step_iterations = convert_int(argv[cnt]);
+				if (params.step_iterations < 10
+						|| params.step_iterations % 2 == 1)
+					throw "At least step size of 10 and even number please";
 				params.min_iterations = params.step_iterations;
-            } else if (strcmp(argv[cnt], "-boff") == 0) {
-                params.online_bootstrap = false;
-            } else if (strcmp(argv[cnt], "-nostore") == 0 || strcmp(argv[cnt], "-memsave") == 0) {
-                params.store_candidate_trees = false;
-            } else if (strcmp(argv[cnt], "-lhmemsave") == 0) {
-                params.lh_mem_save = LM_PER_NODE;
-            } else if (strcmp(argv[cnt], "-nolhmemsave") == 0) {
-                params.lh_mem_save = LM_ALL_BRANCH;
-            } else if (strcmp(argv[cnt], "-storetrees") == 0) {
-                params.store_candidate_trees = true;
-            } else if (strcmp(argv[cnt], "-nodiff") == 0) {
-                params.distinct_trees = false;
-            } else if (strcmp(argv[cnt], "-treediff") == 0) {
-                params.distinct_trees = true;
-            } else if (strcmp(argv[cnt], "-norell") == 0) {
-                params.use_rell_method = false;
-            } else if (strcmp(argv[cnt], "-elw") == 0) {
-                params.use_elw_method = true;
-            } else if (strcmp(argv[cnt], "-noweight") == 0) {
-                params.use_weighted_bootstrap = false;
-            } else if (strcmp(argv[cnt], "-nomore") == 0) {
-                params.use_max_tree_per_bootstrap = true;
-            } else if (strcmp(argv[cnt], "-bweight") == 0) {
-                params.use_weighted_bootstrap = true;
-            } else if (strcmp(argv[cnt], "-bmore") == 0) {
-                params.use_max_tree_per_bootstrap = false;
-            } else if (strcmp(argv[cnt], "-gz") == 0) {
-                params.do_compression = true;
-            } else if (strcmp(argv[cnt], "-newheu") == 0) {
-                params.new_heuristic = true;
-                // Enable RAxML kernel
-            } else if (strcmp(argv[cnt], "-maxtime") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -maxtime <time_in_minutes>";
-                params.maxtime = convert_double(argv[cnt]);
-                params.min_iterations = 1000000;
-                params.stop_condition = SC_REAL_TIME;
-            } else if (strcmp(argv[cnt], "-numpars") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -numpars <number_of_parsimony_trees>";
-                params.numParsTrees = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-toppars") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -toppars <number_of_top_parsimony_trees>";
-                params.numNNITrees = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-poplim") == 0) {
-            	cnt++;
-            	if (cnt >=argc)
-            		throw "Use -poplim <max_pop_size>";
-            	params.limitPopSize = convert_int(argv[cnt]);
-        	} else if (strcmp(argv[cnt], "-popsize") == 0 || strcmp(argv[cnt], "-numcand") == 0) {
-            	cnt++;
-            	if (cnt >=argc)
-            		throw "Use -numcand <number_of_candidate_trees>";
-            	params.popSize = convert_int(argv[cnt]);
-            	assert(params.popSize < params.numParsTrees);
-        	} else if (strcmp(argv[cnt], "-beststart") == 0) {
-                params.bestStart = true;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -best_start <binary_alignment_file>";
-                params.binary_aln_file = argv[cnt];
-            } else if (strcmp(argv[cnt], "-pll") == 0) {
-                params.pll = true;
-            } else if (strcmp(argv[cnt], "-me") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -me <model_epsilon>";
-                params.modeps = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-pllmod") == 0) {
-            	params.pll = true;
-        	} else if (strcmp(argv[cnt], "-pars_ins") == 0) {
-                params.reinsert_par = true;
-            } else if (strcmp(argv[cnt], "-nospeednni") == 0) {
-                params.speednni = false;
-            } else if (strcmp(argv[cnt], "-adapt") == 0) {
-                params.adaptPert = true;
-            } else if (strcmp(argv[cnt], "-snni") == 0) {
-            	params.snni = true;
-            	// dont need to turn this on here
-                //params.autostop = true;
-                //params.speednni = true;
-                // Minh: why do you turn this on? it doubles curPerStrength at some point
-                //params.adaptPert = true;
-            } else if (strcmp(argv[cnt], "-iqpnni") == 0) {
-            	params.snni = false;
-//            } else if (strcmp(argv[cnt], "-auto") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-boff") == 0) {
+				params.online_bootstrap = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nostore") == 0
+					|| strcmp(argv[cnt], "-memsave") == 0) {
+				params.store_candidate_trees = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-lhmemsave") == 0) {
+				params.lh_mem_save = LM_PER_NODE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nolhmemsave") == 0) {
+				params.lh_mem_save = LM_ALL_BRANCH;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-storetrees") == 0) {
+				params.store_candidate_trees = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nodiff") == 0) {
+				params.distinct_trees = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-treediff") == 0) {
+				params.distinct_trees = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-norell") == 0) {
+				params.use_rell_method = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-elw") == 0) {
+				params.use_elw_method = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-noweight") == 0) {
+				params.use_weighted_bootstrap = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nomore") == 0) {
+				params.use_max_tree_per_bootstrap = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bweight") == 0) {
+				params.use_weighted_bootstrap = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bmore") == 0) {
+				params.use_max_tree_per_bootstrap = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-gz") == 0) {
+				params.do_compression = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-newheu") == 0) {
+				params.new_heuristic = true;
+				// Enable RAxML kernel
+				continue;
+			}
+			if (strcmp(argv[cnt], "-maxtime") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -maxtime <time_in_minutes>";
+				params.maxtime = convert_double(argv[cnt]);
+				params.min_iterations = 1000000;
+				params.stop_condition = SC_REAL_TIME;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-numpars") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -numpars <number_of_parsimony_trees>";
+				params.numParsTrees = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-toppars") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -toppars <number_of_top_parsimony_trees>";
+				params.numNNITrees = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-poplim") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -poplim <max_pop_size>";
+				params.limitPopSize = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-popsize") == 0
+					|| strcmp(argv[cnt], "-numcand") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -numcand <number_of_candidate_trees>";
+				params.popSize = convert_int(argv[cnt]);
+				assert(params.popSize < params.numParsTrees);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-beststart") == 0) {
+				params.bestStart = true;
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -best_start <binary_alignment_file>";
+				params.binary_aln_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-pll") == 0) {
+				params.pll = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-me") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -me <model_epsilon>";
+				params.modeps = convert_double(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-pllmod") == 0) {
+				params.pll = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-pars_ins") == 0) {
+				params.reinsert_par = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nospeednni") == 0) {
+				params.speednni = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-adapt") == 0) {
+				params.adaptPert = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-snni") == 0) {
+				params.snni = true;
+				// dont need to turn this on here
+				//params.autostop = true;
+				//params.speednni = true;
+				// Minh: why do you turn this on? it doubles curPerStrength at some point
+				//params.adaptPert = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-iqpnni") == 0) {
+				params.snni = false;
+//            continue; } if (strcmp(argv[cnt], "-auto") == 0) {
 //            	params.autostop = true;
-            } else if (strcmp(argv[cnt], "-stop_cond") == 0 || strcmp(argv[cnt], "-numstop") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-stop_cond") == 0
+					|| strcmp(argv[cnt], "-numstop") == 0) {
 //                params.autostop = true;
-            	params.stop_condition = SC_UNSUCCESS_ITERATION;
-                cnt++;
-                params.unsuccess_iteration = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-lsbran") == 0) {
-                params.leastSquareBranch = true;
-            } else if (strcmp(argv[cnt], "-manuel") == 0) {
-                params.manuel_analytic_approx = true;
-            } else if (strcmp(argv[cnt], "-parsbran") == 0) {
-                params.pars_branch_length = true;
-            } else if (strcmp(argv[cnt], "-bayesbran") == 0) {
-                params.bayes_branch_length = true;
-            } else if (strcmp(argv[cnt], "-fivebran") == 0 || strcmp(argv[cnt], "-nni5") == 0) {
-                params.nni5 = true;
-            	params.nni_type = NNI5;
-            } else if (strcmp(argv[cnt], "-onebran") == 0 || strcmp(argv[cnt], "-nni1") == 0) {
-            	params.nni_type = NNI1;
-            	params.nni5 = false;
-            } else if (strcmp(argv[cnt], "-smooth") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -smooth <num_iterations>";
-                params.numSmoothTree = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-lsnni") == 0) {
-                params.leastSquareNNI = true;
-            } else if(strcmp(argv[cnt], "-lsvar") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -lsvar <o|ft|fm|st|p>";
-                if (strcmp(argv[cnt], "o") == 0 || strcmp(argv[cnt], "ols") == 0) {
-                    params.ls_var_type = OLS;
-                } else if (strcmp(argv[cnt], "ft") == 0 || strcmp(argv[cnt], "first_taylor") == 0) {
-                    params.ls_var_type = WLS_FIRST_TAYLOR;
-                } else if (strcmp(argv[cnt], "fm") == 0 || strcmp(argv[cnt], "fitch_margoliash") == 0) {
-                    params.ls_var_type = WLS_FITCH_MARGOLIASH;
-                } else if (strcmp(argv[cnt], "st") == 0 || strcmp(argv[cnt], "second_taylor") == 0) {
-                    params.ls_var_type = WLS_SECOND_TAYLOR;
-                } else if (strcmp(argv[cnt], "p") == 0 || strcmp(argv[cnt], "pauplin") == 0) {
-                    params.ls_var_type = WLS_PAUPLIN;
-                } else {
-                    throw "Use -lsvar <o|ft|fm|st|p>";
-                }
-            } else if (strcmp(argv[cnt], "-eps") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -eps <log-likelihood epsilon>";
-                params.loglh_epsilon = convert_double(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
-                params.parbran = true;
-            } else if (strcmp(argv[cnt], "-write_best_trees") == 0) {
-                params.write_best_trees = true;
-            } else if (strcmp(argv[cnt], "-x") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -x <iteration_multiple>";
-                params.iteration_multiple = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-vns") == 0) {
-                params.vns_search = true;
-            } else if (strcmp(argv[cnt], "-sp_iter") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -sp_iter <number_iteration>";
-                params.speedup_iter = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-avh") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -avh <arndt_#bootstrap>";
-                params.avh_test = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-bootlh") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -bootlh <#replicates>";
-                params.bootlh_test = convert_int(argv[cnt]);
-            } else if (strcmp(argv[cnt], "-bootpart") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -bootpart <part1_length,part2_length,...>";
-                params.bootlh_partitions = argv[cnt];
-            } else if (strcmp(argv[cnt], "-AIC") == 0) {
-                params.model_test_criterion = MTC_AIC;
-            } else if (strcmp(argv[cnt], "-AICc") == 0) {
-                params.model_test_criterion = MTC_AICC;
-            } else if (strcmp(argv[cnt], "-ms") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -ms <model_test_sample_size>";
-                params.model_test_sample_size = convert_int(argv[cnt]);
+				params.stop_condition = SC_UNSUCCESS_ITERATION;
+				cnt++;
+				params.unsuccess_iteration = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-lsbran") == 0) {
+				params.leastSquareBranch = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-manuel") == 0) {
+				params.manuel_analytic_approx = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-parsbran") == 0) {
+				params.pars_branch_length = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bayesbran") == 0) {
+				params.bayes_branch_length = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-fivebran") == 0
+					|| strcmp(argv[cnt], "-nni5") == 0) {
+				params.nni5 = true;
+				params.nni_type = NNI5;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-onebran") == 0
+					|| strcmp(argv[cnt], "-nni1") == 0) {
+				params.nni_type = NNI1;
+				params.nni5 = false;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-smooth") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -smooth <num_iterations>";
+				params.numSmoothTree = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-lsnni") == 0) {
+				params.leastSquareNNI = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-lsvar") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -lsvar <o|ft|fm|st|p>";
+				if (strcmp(argv[cnt], "o") == 0
+						|| strcmp(argv[cnt], "ols") == 0) {
+					params.ls_var_type = OLS;
+					continue;
+				}
+				if (strcmp(argv[cnt], "ft") == 0
+						|| strcmp(argv[cnt], "first_taylor") == 0) {
+					params.ls_var_type = WLS_FIRST_TAYLOR;
+					continue;
+				}
+				if (strcmp(argv[cnt], "fm") == 0
+						|| strcmp(argv[cnt], "fitch_margoliash") == 0) {
+					params.ls_var_type = WLS_FITCH_MARGOLIASH;
+					continue;
+				}
+				if (strcmp(argv[cnt], "st") == 0
+						|| strcmp(argv[cnt], "second_taylor") == 0) {
+					params.ls_var_type = WLS_SECOND_TAYLOR;
+					continue;
+				}
+				if (strcmp(argv[cnt], "p") == 0
+						|| strcmp(argv[cnt], "pauplin") == 0) {
+					params.ls_var_type = WLS_PAUPLIN;
+				} else {
+					throw "Use -lsvar <o|ft|fm|st|p>";
+				}
+				continue;
+			}
+			if (strcmp(argv[cnt], "-eps") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -eps <log-likelihood epsilon>";
+				params.loglh_epsilon = convert_double(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
+				params.parbran = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-write_best_trees") == 0) {
+				params.write_best_trees = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-x") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -x <iteration_multiple>";
+				params.iteration_multiple = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-vns") == 0) {
+				params.vns_search = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-sp_iter") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sp_iter <number_iteration>";
+				params.speedup_iter = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-avh") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -avh <arndt_#bootstrap>";
+				params.avh_test = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bootlh") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bootlh <#replicates>";
+				params.bootlh_test = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-bootpart") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -bootpart <part1_length,part2_length,...>";
+				params.bootlh_partitions = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-AIC") == 0) {
+				params.model_test_criterion = MTC_AIC;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-AICc") == 0) {
+				params.model_test_criterion = MTC_AICC;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-ms") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ms <model_test_sample_size>";
+				params.model_test_sample_size = convert_int(argv[cnt]);
 #ifdef _OPENMP
-            } else if (strcmp(argv[cnt], "-omp") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -omp <num_threads>";
-                params.num_threads = convert_int(argv[cnt]);
-                if (params.num_threads < 1)
-                    throw "At least 1 thread please";
+				continue;}if (strcmp(argv[cnt], "-omp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+				throw "Use -omp <num_threads>";
+				params.num_threads = convert_int(argv[cnt]);
+				if (params.num_threads < 1)
+				throw "At least 1 thread please";
 #endif
-            } else if (strcmp(argv[cnt], "-rootstate") == 0) {
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rootstate") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -rootstate <rootstate>";
                 params.root_state = argv[cnt];
                 params.SSE = LK_NORMAL;
-            } else if (strcmp(argv[cnt], "-ct") == 0) {
+                continue;
+			}
+			if (strcmp(argv[cnt], "-ct") == 0) {
             	params.count_trees = true;
-            } else if (argv[cnt][0] == '-') {
+            	continue;
+			}
+			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
                 err += "\" option.";
