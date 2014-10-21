@@ -101,7 +101,7 @@
 //#	define __builtin_popcount __popcnt
 //#	define __builtin_popcountl __popcnt64
 #	define __builtin_popcount _mm_popcnt_u32
-#	define __builtin_popcount _mm_popcnt_u64
+#	define __builtin_popcountl _mm_popcnt_u64
 #endif
 
 static pllBoolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping);
@@ -122,7 +122,8 @@ extern double masterTime;
 }
 
 /* bit count for 64 bit integers */
-#if (!defined(_WIN64) && defined(_MSC_VER)) || defined(__MINGW32__)
+//#if (defined(_MSC_VER)) || defined(__MINGW32__)
+#ifdef _WIN32
  inline unsigned int bitcount_64_bit(uint64_t i)
  {
 	 unsigned int *counts = &i;
@@ -139,7 +140,8 @@ inline unsigned int bitcount_64_bit(uint64_t i)
 
 #if (defined(__SSE3) || defined(__AVX))
 
-#if (!defined(_WIN64) && defined(_MSC_VER)) || defined(__MINGW32__)
+//#if (!defined(_WIN64) && defined(_MSC_VER)) || defined(__MINGW32__)
+#ifdef _WIN32
  /* emulate with 32-bit version */
 static inline unsigned int vectorPopcount(INT_TYPE v)
 {
