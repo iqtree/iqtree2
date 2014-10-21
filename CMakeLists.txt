@@ -48,8 +48,10 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	message("Compiler      : GNU Compiler (gcc)")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	message("Compiler      : Clang")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+	message("Compiler      : MS Visual Studio (MSVC)")
 else()
-	message("Compiler      : Unknown (untested yet)")
+	message("Compiler      : Unknown and untested yet")
 endif()
 
 # verbose for 32 or 64 bit platform
@@ -247,20 +249,32 @@ modelmorphology.cpp
 candidateset.cpp
 )
 
-if (IQTREE_FLAGS MATCHES "omp" AND (MSVC OR APPLE))
-		LINK_DIRECTORIES(${CMAKE_SOURCE_DIR}/lib)
+# link special lib for WIN32
+if (WIN32) 
+	set(PLATFORM_LIB "ws2_32")
+else()
+	set(PLATFORM_LIB "m")
 endif()
 
-# link special lib for WIN32
-if (WIN32)
-if (IQTREE_FLAGS MATCHES "omp" AND MSVC)
-		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32 pthreadVC2)	
-else()
-		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32)	
+set(THREAD_LIB "")
+if (IQTREE_FLAGS MATCHES "omp") 
+	link_directories(${PROJECT_SOURCE_DIR}/lib)
+	if (MSVC)
+		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${PROJECT_SOURCE_DIR}/lib")
+		set(THREAD_LIB pthreadVC2)
+	elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
+		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib")
+	endif()
 endif()
-else (WIN32)
-	target_link_libraries(iqtree pll ncl whtest zlibstatic sprng m)
-endif (WIN32)
+
+
+
+target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ${PLATFORM_LIB} ${THREAD_LIB})	
+#elseif (WIN32)
+#		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32)
+#else ()
+#		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng m)
+#endif ()
 
 # setup the executable name properly
 set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")

@@ -71,7 +71,7 @@ elseif (IQTREE_FLAGS MATCHES "omp" AND (MSVC))
   makenewzGenericSpecial.c
   models.c
   newick.c
-  #genericParallelization.c
+  genericParallelization.c
   newviewGenericSpecial.c
   optimizeModel.c
   parsePartition.c
