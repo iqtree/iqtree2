@@ -119,19 +119,45 @@ extern double masterTime;
 }
 
 /* bit count for 64 bit integers */
-
-inline unsigned int bitcount_64_bit(unsigned long i)
+#if defined(_WIN32) && !defined(_WIN64)
+ inline unsigned int bitcount_64_bit(uint64_t i)
+ {
+	 unsigned int *counts = &i;
+   return ((unsigned int) __builtin_popcount(counts[0]) + __builtin_popcount(counts[1]));
+ }
+#else
+inline unsigned int bitcount_64_bit(uint64_t i)
 {
   return ((unsigned int) __builtin_popcountl(i));
 }
+#endif
 
 /* bit count for 128 bit SSE3 and 256 bit AVX registers */
 
 #if (defined(__SSE3) || defined(__AVX))
+
+#if defined(_WIN32) && !defined(_WIN64)
+ /* emulate with 32-bit version */
+static inline unsigned int vectorPopcount(INT_TYPE v)
+{
+PLL_ALIGN_BEGIN unsigned int counts[INTS_PER_VECTOR] PLL_ALIGN_END;
+
+  int
+    i,
+    sum = 0;
+
+  VECTOR_STORE((CAST)counts, v);
+
+  for(i = 0; i < INTS_PER_VECTOR; i++)
+    sum += __builtin_popcount(counts[i]);
+
+  return ((unsigned int)sum);
+}
+#else
 static inline unsigned int vectorPopcount(INT_TYPE v)
 {
 
-PLL_ALIGN_BEGIN unsigned long counts[LONG_INTS_PER_VECTOR] PLL_ALIGN_END;
+PLL_ALIGN_BEGIN uint64_t counts[LONG_INTS_PER_VECTOR] PLL_ALIGN_END;
 
   int    
     i,
@@ -144,6 +170,7 @@ PLL_ALIGN_BEGIN unsigned long counts[LONG_INTS_PER_VECTOR] PLL_ALIGN_END;
              
   return ((unsigned int)sum);
 }
+#endif
 #endif
 
 
