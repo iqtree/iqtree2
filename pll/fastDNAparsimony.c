@@ -122,24 +122,24 @@ extern double masterTime;
 }
 
 /* bit count for 64 bit integers */
-//#if defined(_WIN32) && !defined(_WIN64) && defined(_MSC_VER)
-// inline unsigned int bitcount_64_bit(uint64_t i)
-// {
-//	 unsigned int *counts = &i;
-//   return ((unsigned int) __builtin_popcount(counts[0]) + __builtin_popcount(counts[1]));
-// }
-//#else
+#if (!defined(_WIN64) && defined(_MSC_VER)) || defined(__MINGW32__)
+ inline unsigned int bitcount_64_bit(uint64_t i)
+ {
+	 unsigned int *counts = &i;
+   return ((unsigned int) __builtin_popcount(counts[0]) + __builtin_popcount(counts[1]));
+ }
+#else
 inline unsigned int bitcount_64_bit(uint64_t i)
 {
   return ((unsigned int) __builtin_popcountl(i));
 }
-//#endif
+#endif
 
 /* bit count for 128 bit SSE3 and 256 bit AVX registers */
 
 #if (defined(__SSE3) || defined(__AVX))
 
-#if defined(_WIN32) && !defined(_WIN64)
+#if (!defined(_WIN64) && defined(_MSC_VER)) || defined(__MINGW32__)
  /* emulate with 32-bit version */
 static inline unsigned int vectorPopcount(INT_TYPE v)
 {
