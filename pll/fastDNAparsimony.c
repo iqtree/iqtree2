@@ -96,9 +96,12 @@
 #include "pllInternal.h"
 
 #if defined(_MSC_VER)
-#	include <intrin.h>
-#	define __builtin_popcount __popcnt
-#	define __builtin_popcountl __popcnt64
+//#	include <intrin.h>
+#include <nmmintrin.h>
+//#	define __builtin_popcount __popcnt
+//#	define __builtin_popcountl __popcnt64
+#	define __builtin_popcount _mm_popcnt_u32
+#	define __builtin_popcount _mm_popcnt_u64
 #endif
 
 static pllBoolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping);
@@ -119,18 +122,18 @@ extern double masterTime;
 }
 
 /* bit count for 64 bit integers */
-#if defined(_WIN32) && !defined(_WIN64)
- inline unsigned int bitcount_64_bit(uint64_t i)
- {
-	 unsigned int *counts = &i;
-   return ((unsigned int) __builtin_popcount(counts[0]) + __builtin_popcount(counts[1]));
- }
-#else
+//#if defined(_WIN32) && !defined(_WIN64) && defined(_MSC_VER)
+// inline unsigned int bitcount_64_bit(uint64_t i)
+// {
+//	 unsigned int *counts = &i;
+//   return ((unsigned int) __builtin_popcount(counts[0]) + __builtin_popcount(counts[1]));
+// }
+//#else
 inline unsigned int bitcount_64_bit(uint64_t i)
 {
   return ((unsigned int) __builtin_popcountl(i));
 }
-#endif
+//#endif
 
 /* bit count for 128 bit SSE3 and 256 bit AVX registers */
 

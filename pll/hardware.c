@@ -11,9 +11,9 @@
 #define PLL_FEAT_AVAIL(x,y) (((x) & (y)) == (y))
 #define PLL_SYS_CPU_DIR_PATH "/sys/devices/system/cpu/"
 
-#ifdef _MSC_VER
-#define inline __inline
-#endif
+//#ifdef _MSC_VER
+//#define inline __inline
+//#endif
 
 static inline void cpuid(unsigned int op, int count,
                          unsigned int *eax, unsigned int *ebx,

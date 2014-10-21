@@ -56,7 +56,7 @@
 #include "pll.h"
 #include "pllInternal.h"
 
-extern const unsigned int mask32[32];
+//extern const unsigned int mask32[32];
 
 PLL_ALIGN_BEGIN const union PLL_ALIGN_END
 {

@@ -34,9 +34,9 @@
 #include <omp.h>
 #endif
 
-#if defined(_MSC_VER)
-#define inline __inline
-#endif
+//#if defined(_MSC_VER)
+//#define inline __inline
+//#endif
 
 #if (defined _WIN32 || defined __WIN32__ || defined WIN32) 
 #ifndef _WIN32_WINNT
@@ -68,7 +68,7 @@
 		char dummy;
 	};
 
-	inline void gettimeofday(struct timeval* t, void* timezone)
+	__inline void gettimeofday(struct timeval* t, void* timezone)
 	{       
 		struct _timeb timebuffer;
 		_ftime( &timebuffer );
@@ -77,7 +77,7 @@
 	}
 	#else /* UNIX */
 	#include <sys/time.h>
-	inline void gettimeofday(struct timeval* t, void* timezone) {
+	__inline void gettimeofday(struct timeval* t, void* timezone) {
 		time_t cur_time;
 		time(&cur_time);
 		t->tv_sec = cur_time;
@@ -92,7 +92,7 @@
  * @return CPU time in seconds since program was started (corrrect up to micro-seconds)
  * with correction for OpenMP
  */
-inline double getCPUTime() {
+__inline double getCPUTime() {
 #ifdef HAVE_GETRUSAGE
 	struct rusage usage;
 	getrusage(RUSAGE_SELF, &usage);
@@ -131,7 +131,7 @@ inline double getCPUTime() {
 /**
  * @return real wall-clock time in seconds since Epoch (correct up to micro-seconds)
  */
-inline double getRealTime() {
+__inline double getRealTime() {
 #ifdef _OPENMP
 	return omp_get_wtime();
 #else
@@ -212,7 +212,7 @@ inline uint64_t getTotalSystemMemory()
 /**
  * Returns the size of physical memory (RAM) in bytes.
  */
-inline uint64_t getMemorySize( )
+__inline uint64_t getMemorySize( )
 {
 #if defined(_WIN32) && (defined(__CYGWIN__) || defined(__CYGWIN32__))
 	/* Cygwin under Windows. ------------------------------------ */

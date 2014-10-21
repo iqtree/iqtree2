@@ -4908,38 +4908,38 @@ static void newviewGTRCAT( int tipCase,  double *EV,  int *cptr,
 #endif
 
 /** @brief Check whether the position \a pos in bitvector \a x is a gap
-    
+
     @param x
       A bitvector represented by unsigned integers
 
     @param pos
-      Position to check in \a x if it is set (i.e. it is a gap) 
+      Position to check in \a x if it is set (i.e. it is a gap)
 
     @return
       Returns the value of the bit vector (\b 1 if set, \b 0 if not)
 */
-#ifndef __clang__
-inline 
-#endif
+//#ifndef __clang__
+//__inline
+//#endif
 pllBoolean isGap(unsigned int *x, int pos)
 {
   return (x[pos / 32] & mask32[pos % 32]);
 }
 
 /** @brief Check whether the position \a pos in bitvector \a x is \b NOT a gap
-    
+
     @param x
       A bitvector represented by unsigned integers
 
     @param pos
-      Position to check in \a x if it is \b NOT set (i.e. it is \b NOT a gap) 
+      Position to check in \a x if it is \b NOT set (i.e. it is \b NOT a gap)
 
     @return
       Returns the value of the bit vector (\b 1 if set, \b 0 if not)
 */
-#ifndef __clang__
-inline 
-#endif
+//#ifndef __clang__
+//__inline
+//#endif
 pllBoolean noGap(unsigned int *x, int pos)
 {
   return (!(x[pos / 32] & mask32[pos % 32]));
