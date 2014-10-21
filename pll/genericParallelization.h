@@ -101,7 +101,11 @@ extern int processID;
 /* PTHREAD SPECIFIC  */
 /*********************/
 #ifdef _USE_PTHREADS
+#if defined (_MSC_VER)
+#include "pthread.h"
+#else
 #include <pthread.h>
+#endif
 #define _REPRODUCIBLE_MPI_OR_PTHREADS
 #define VOLATILE_PAR volatile 
 #define MASTER_P (tid == 0)
