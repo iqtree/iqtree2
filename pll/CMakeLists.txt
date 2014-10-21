@@ -28,37 +28,8 @@ if (IQTREE_FLAGS MATCHES "avx" AND IQTREE_FLAGS MATCHES "omp")
   trash.c
   treeIO.c
   utils.c)
-elseif (IQTREE_FLAGS MATCHES "omp" AND (NOT MSVC))
+elseif (IQTREE_FLAGS MATCHES "omp")
   message("PLL Kernel    : SSE3/Pthreads")
-  add_library(pll 
-  alignment.c
-  bipartitionList.c
-  evaluateGenericSpecial.c
-  evaluatePartialGenericSpecial.c
-  fastDNAparsimony.c
-  hardware.c
-  hash.c
-  lexer.c
-  makenewzGenericSpecial.c
-  models.c
-  newick.c
-  genericParallelization.c
-  newviewGenericSpecial.c
-  optimizeModel.c
-  parsePartition.c
-  queue.c
-  randomTree.c
-  recom.c
-  restartHashTable.c
-  searchAlgo.c
-  ssort.c
-  stack.c
-  topologies.c
-  trash.c
-  treeIO.c
-  utils.c)
-elseif (IQTREE_FLAGS MATCHES "omp" AND (MSVC))
-  message("PLL Kernel    : SSE3")
   add_library(pll 
   alignment.c
   bipartitionList.c
