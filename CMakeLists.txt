@@ -53,26 +53,24 @@ else()
 endif()
 
 # verbose for 32 or 64 bit platform
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-	message("Target binary : possibly 32-bit")
-	#SET(EXE_SUFFIX "-32bit")
-elseif(CMAKE_CXX_FLAGS MATCHES "m32")
+if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
 	message("Target binary : 32-bit")
-	#SET(EXE_SUFFIX "-32bit")
+	SET(EXE_SUFFIX "-m32")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+  	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
 else()
 	message("Target binary : 64-bit")
-	#SET(EXE_SUFFIX "")
+	SET(EXE_SUFFIX "")
 endif()
 
 # change the executable name if compiled for OpenMP parallel version
 if (IQTREE_FLAGS MATCHES "omp")
 	message("Parallel      : OpenMP/PThreads")
-	SET(EXE_SUFFIX "-omp")
+	SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_USE_PTHREADS -pthread")
   	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 else()
 	message("Parallel      : None")
-	SET(EXE_SUFFIX "")
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release") 
@@ -310,8 +308,13 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 	set (SYSTEM_NAME "MacOSX")
 endif()
 
+set (PROJECT_NAME_SUFFIX "")
+if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx")  
+	set (PROJECT_NAME_SUFFIX "-sse") 
+endif()
+
 set(CPACK_PACKAGE_FILE_NAME 
-	"${CMAKE_PROJECT_NAME}${EXE_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${SYSTEM_NAME}")
+	"${CMAKE_PROJECT_NAME}${PROJECT_NAME_SUFFIX}${EXE_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${SYSTEM_NAME}")
 
 set(CPACK_STRIP_FILES TRUE)
 
