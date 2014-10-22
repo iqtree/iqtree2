@@ -1,5 +1,4 @@
 if (IQTREE_FLAGS MATCHES "avx" AND IQTREE_FLAGS MATCHES "omp")
-  message("PLL Kernel    : AVX/Pthreads")
   add_library(pll 
   avxLikelihood.c
   alignment.c
@@ -29,7 +28,6 @@ if (IQTREE_FLAGS MATCHES "avx" AND IQTREE_FLAGS MATCHES "omp")
   treeIO.c
   utils.c)
 elseif (IQTREE_FLAGS MATCHES "omp")
-  message("PLL Kernel    : SSE3/Pthreads")
   add_library(pll 
   alignment.c
   bipartitionList.c
@@ -58,7 +56,6 @@ elseif (IQTREE_FLAGS MATCHES "omp")
   treeIO.c
   utils.c)
 elseif (IQTREE_FLAGS MATCHES "avx")
-  message("PLL Kernel    : AVX")  
   add_library(pll 
     avxLikelihood.c
     alignment.c
@@ -87,7 +84,6 @@ elseif (IQTREE_FLAGS MATCHES "avx")
     treeIO.c
     utils.c)
 else ()
-  message("PLL Kernel    : SSE3")
   add_library(pll 
     alignment.c
     bipartitionList.c

@@ -213,7 +213,7 @@ extern double exp_approx (double x);
 
 
 /*#define PLL_SWAP(x,y) do{ __typeof__ (x) _t = x; x = y; y = _t; } while(0)*/
-#define PLL_SWAP_PTR(x,y) do{ int* _t = x; x = y; y = _t; } while(0)
+#define PLL_SWAP_PTR(x,y) do{ char* _t = x; x = y; y = _t; } while(0)
 #define PLL_SWAP_INT(x,y) do{ int _t = x; x = y; y = _t; } while(0)
 
 #define PointGamma(prob,alpha,beta)  PointChi2(prob,2.0*(alpha))/(2.0*(beta))

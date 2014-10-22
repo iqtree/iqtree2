@@ -1,10 +1,13 @@
-#########################################################
+##################################################################
 # IQ-TREE cmake build definition
-#########################################################
+# Copyright (c) 2012-2014 Bui Quang Minh, Lam Tung Nguyen
+##################################################################
 
 cmake_minimum_required(VERSION 2.8)
 
 project(iqtree)
+add_definitions(-DIQ_TREE)
+
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 0)
@@ -12,15 +15,19 @@ set (iqtree_VERSION_PATCH 2)
 
 set(BUILD_SHARED_LIBS OFF)
 
-if (IQTREE_FLAGS) 
-	message("IQTREE_FLAGS = ${IQTREE_FLAGS}")
-endif()
+message("IQ-TREE flags : ${IQTREE_FLAGS}")
 
 if (NOT CMAKE_BUILD_TYPE) 
 	set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-# Detect platforms, tested for Windows, Mac OS X, and Unix-like
+if (CMAKE_BUILD_TYPE STREQUAL "Release") 
+	message("Builde mode   : Release")
+endif()
+
+##################################################################
+# Detect target platforms
+##################################################################
 if (WIN32)
 	message("Target OS     : Windows")
 	# build as static binary to run on most machines
@@ -41,59 +48,152 @@ elseif (UNIX)
   endif() 
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
-	message("Target OS     : Unknown (untested yet)")
+	message("Target OS     : Unknown and untested yet")
 endif()
 
-if (CMAKE_COMPILER_IS_GNUCXX) 
+##################################################################
+# Setup compiler, currently supported GCC, CLANG, MSVC, and ICC
+##################################################################
+set(GCC "FALSE")
+set(CLANG "FALSE")
+set(ICC "FALSE")
+set(MSVC "FALSE") #reset MSVC variable because one can compile with ICC under Visual Studio! 
+
+if (CMAKE_COMPILER_IS_GNUCXX) 	
 	message("Compiler      : GNU Compiler (gcc)")
+	set(GCC "TRUE")
+#	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -fms-extensions -Wno-deprecated")
+#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
+	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
+	set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	message("Compiler      : Clang")
+	set(CLANG "TRUE")
+#	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -Wno-nested-anon-types")
+	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
+	set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")	
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-	if (IQTREE_FLAGS MATCHES "icc")
-		message("Compiler      : Intel Compiler (ICC) in MS Visual Studio")
-	else()
-		message("Compiler      : MS Visual Studio (MSVC)")
-	endif()
+	set(MSVC "TRUE")
+	message("Compiler      : MS Visual Studio (MSVC)")
+	set(COMBINED_FLAGS "/MP") # enable multi-processor compilation
+	set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ot")
+	set(CMAKE_C_FLAGS_RELEASE "/O2 /Ot")	
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+	message("Compiler      : Intel C++ Compiler (icc)")
+	set(ICC "TRUE")
+	set(COMBINED_FLAGS "/MP") # enable multi-processor compilation
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Qstd=c99")
+	set(CMAKE_CXX_FLAGS_RELEASE "/O3 /Ot")
+	set(CMAKE_C_FLAGS_RELEASE "/O3 /Ot")
 else()
 	message("Compiler      : Unknown and untested yet")
 endif()
 
-# verbose for 32 or 64 bit platform
+##################################################################
+# detect 32 or 64 bit binary
+##################################################################
+set (BINARY32 "FALSE")
 if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
+	set(BINARY32 "TRUE")
 	message("Target binary : 32-bit")
+	if (CMAKE_GENERATOR MATCHES "Win64")
+		error("Both 32-bit and 64-bit mode cannot be specified")
+	endif()
 	SET(EXE_SUFFIX "-m32")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-  	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
+	if (GCC OR CLANG) 
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -m32")
+  	endif()
 else()
 	message("Target binary : 64-bit")
 	SET(EXE_SUFFIX "")
 endif()
 
+##################################################################
+# configure OpenMP/PThreads compilation
 # change the executable name if compiled for OpenMP parallel version
+##################################################################
 if (IQTREE_FLAGS MATCHES "omp")
 	message("Parallel      : OpenMP/PThreads")
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")	
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_USE_PTHREADS")
-	set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_PTHREADS")
-if (MSVC) 
-	if (IQTREE_FLAGS MATCHES "icc")
-  		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Qopenmp")
-  	else()
+	add_definitions(-D_USE_PTHREADS)
+	if (MSVC) 
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
+  		include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers 
+  		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+		set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")  		
+	elseif (ICC)
+  		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qopenmp")
+  		if (WIN32)
+  			include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
+  		endif() 
+  		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+		set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
+  	elseif (GCC)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+  		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+  	elseif (CLANG) 
+  		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
   	endif()
-else()
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-  	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-endif()
 else()
 	message("Parallel      : None")
 endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Release") 
-	message("Builde mode   : Release + Strip")
+##################################################################
+# configure SSE/AVX instructions
+##################################################################
+if (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
+ 	message("Vectorization : AVX")
+	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
+	if (MSVC OR ICC) 
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX /Oi")
+	elseif (CLANG)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3 -mavx")
+	elseif (GCC)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3 -mavx -fabi-version=0")
+	endif()
+	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
+else() #SSE intruction set
+	message("Vectorization : SSE3")
+
+	add_definitions(-D__SSE3)
+	if (MSVC)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE /Oi")
+	elseif (ICC)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE3 /Oi")
+	elseif (GCC OR CLANG)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3")
+	endif()
 endif()
 
+##################################################################
+# Setup compiler flags
+##################################################################
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMBINED_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMBINED_FLAGS}")
+
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+	message("C flags    : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}") 
+	message("CXX flags  : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}") 
+endif()
+
+set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
+set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
+
+if (GCC) 
+	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
+	set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
+	set(CMAKE_CXX_FLAGS_MEM "-g -O1")
+	set(CMAKE_C_FLAGS_MEM "-g -O1")
+elseif (CLANG)
+	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline")
+	set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline")
+	set(CMAKE_CXX_FLAGS_MEM "-g -O1")
+	set(CMAKE_C_FLAGS_MEM "-g -O1")
+endif()
+
+##################################################################
 # check existence of a few basic functions
+##################################################################
 include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
 check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
 check_function_exists (getrusage HAVE_GETRUSAGE)
@@ -112,83 +212,9 @@ include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
 
-add_definitions(-DIQ_TREE)
-
-if (MSVC)
-	set(COMBINED_FLAGS "/MP") # enable multi-processor compilation
-	if (IQTREE_FLAGS MATCHES "omp")
-		include_directories("${PROJECT_SOURCE_DIR}/pll")
-	endif()
-	if (IQTREE_FLAGS MATCHES "avx")
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -D__SSE3 -D__AVX /arch:AVX /Oi")
-		SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
-	elseif(IQTREE_FLAGS MATCHES "icc")
-		set(COMBINED_FLAGS "-D__SSE3 /arch:SSE3 /Oi")
-	else()
-		set(COMBINED_FLAGS "-D__SSE3 /arch:SSE /Oi")
-	endif()
-else()
-	if (IQTREE_FLAGS MATCHES "avx")
-		set(COMBINED_FLAGS "-msse3 -D__SSE3 -D__AVX -mavx")
-		if (CMAKE_COMPILER_IS_GNUCXX) 
-			set(COMBINED_FLAGS "${COMBINED_FLAGS} -fabi-version=0")
-		endif()
-		SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
-	else()
-		set(COMBINED_FLAGS "-msse3 -D__SSE3")
-	endif()
-endif()
-
-if (MSVC) 
-	set(COMBINED_FLAGS "${COMBINED_FLAGS} -Wall -D_GNU_SOURCE")
-	if (IQTREE_FLAGS MATCHES "icc")
-		set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} /Qstd=c99 ${COMBINED_FLAGS}")
-	else()
-		set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} ${COMBINED_FLAGS}")
-	endif()
-	set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} ${COMBINED_FLAGS}")
-else ()
-	set(COMBINED_FLAGS "${COMBINED_FLAGS} -Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE")
-	if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -Wno-nested-anon-types")
-	endif()
-	
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fms-extensions -std=c++98 -Wno-deprecated ${COMBINED_FLAGS}")
-	set(CMAKE_C_FLAGS " ${CMAKE_C_FLAGS} -fms-extensions ${COMBINED_FLAGS}")
-endif()
-
-if (MSVC) 
-	if (IQTREE_FLAGS MATCHES "icc")
-		set(CMAKE_CXX_FLAGS_RELEASE "/O3 /Ot")
-		set(CMAKE_C_FLAGS_RELEASE "/O3 /Ot")
-	else()
-		set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ot")
-		set(CMAKE_C_FLAGS_RELEASE "/O2 /Ot")
-	endif()
-	if (IQTREE_FLAGS MATCHES "omp") 
-		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-		set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
-	endif()
-else()
-	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
-	set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
-endif()
-
-set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
-set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
-
-set(CMAKE_CXX_FLAGS_MEM "-g -O1")
-set(CMAKE_C_FLAGS_MEM "-g -O1")
-
-if (CMAKE_COMPILER_IS_GNUCXX) 
-	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
-	set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
-else ()
-	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline")
-	set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline")
-endif()
-
+##################################################################
 # subdirectories containing necessary libraries for the build 
+##################################################################
 add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(whtest)
@@ -196,7 +222,9 @@ add_subdirectory(sprng)
 add_subdirectory(zlib-1.2.7)
 #add_subdirectory(vectorclass)
 
+##################################################################
 # the main executable
+##################################################################
 add_executable(iqtree
 alignment.cpp
 alignmentpairwise.cpp
@@ -273,6 +301,10 @@ modelmorphology.cpp
 candidateset.cpp
 )
 
+##################################################################
+# setup linking flags
+##################################################################
+
 # link special lib for WIN32
 if (WIN32) 
 	set(PLATFORM_LIB "ws2_32")
@@ -283,47 +315,42 @@ endif()
 set(THREAD_LIB "")
 if (IQTREE_FLAGS MATCHES "omp") 
 	link_directories(${PROJECT_SOURCE_DIR}/lib)
-	if (MSVC)
+	if (MSVC OR ICC)
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${PROJECT_SOURCE_DIR}/lib")
 		set(THREAD_LIB pthreadVC2)
-	elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
+	elseif(CLANG AND APPLE)
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib")
 	endif()
 endif()
 
-
-
 target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ${PLATFORM_LIB} ${THREAD_LIB})	
-#elseif (WIN32)
-#		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ws2_32)
-#else ()
-#		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng m)
-#endif ()
 
-# setup the executable name properly
+##################################################################
+# setup the executable name 
+##################################################################
 set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
 # strip the release build
-if (CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT MSVC) # strip is not necessary for MSVC
-if (WIN32)
-	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND strip $<TARGET_FILE:iqtree>)
-else()
-	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
-endif()
+if (CMAKE_BUILD_TYPE STREQUAL "Release" AND (GCC OR CLANG)) # strip is not necessary for MSVC
+	if (WIN32)
+		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND strip $<TARGET_FILE:iqtree>)
+	else()
+		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
+	endif()
 endif()
 
-if (MSVC)
+if (MSVC OR ICC)
 	set (BINARY_DIR "${PROJECT_BINARY_DIR}/Release")
 else()
 	set (BINARY_DIR "${PROJECT_BINARY_DIR}")
 endif()
 
 if (WIN32)
-if (MSVC) 
-	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "Release\\iqtree${EXE_SUFFIX}.exe" "Release\\iqtree${EXE_SUFFIX}-click.exe")
-else()
-	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "iqtree${EXE_SUFFIX}.exe" "iqtree${EXE_SUFFIX}-click.exe")
-endif()	
+	if (MSVC OR ICC) 
+		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "Release\\iqtree${EXE_SUFFIX}.exe" "Release\\iqtree${EXE_SUFFIX}-click.exe")
+	else()
+		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "iqtree${EXE_SUFFIX}.exe" "iqtree${EXE_SUFFIX}-click.exe")
+	endif()	
 endif()
 
 ##############################################################
@@ -333,10 +360,6 @@ install (TARGETS iqtree DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/examples/example.phy" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATION .)
 
-#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.nex" DESTINATION examples)
-#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.budget" DESTINATION examples)
-#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.nex" DESTINATION examples)
-#install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.budget" DESTINATION examples)
 if (WIN32)
 	install (FILES "${BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
 	if (EXE_SUFFIX MATCHES "omp" AND MSVC)
@@ -345,11 +368,6 @@ if (WIN32)
 #		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
 	endif()
 endif()
-
-## not needed anymore: IQ-TREE is statically linked with libiomp5.a 
-#if (APPLE AND IQTREE_FLAGS MATCHES "omp")
-#	install (FILES "${PROJECT_SOURCE_DIR}/lib/libiomp5.dylib" DESTINATION bin)
-#endif()
 
 ##############################################################
 # build a CPack driven installer package
@@ -378,13 +396,13 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 	set (SYSTEM_NAME "MacOSX")
 endif()
 
-set (PROJECT_NAME_SUFFIX "")
+set (PROJECT_NAME_SUFFIX "${EXE_SUFFIX}")
 if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx")  
-	set (PROJECT_NAME_SUFFIX "-sse") 
+	set (PROJECT_NAME_SUFFIX "${PROJECT_NAME_SUFFIX}-sse") 
 endif()
 
 set(CPACK_PACKAGE_FILE_NAME 
-	"${CMAKE_PROJECT_NAME}${PROJECT_NAME_SUFFIX}${EXE_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${SYSTEM_NAME}")
+	"${CMAKE_PROJECT_NAME}${PROJECT_NAME_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${SYSTEM_NAME}")
 
 set(CPACK_STRIP_FILES TRUE)
 
