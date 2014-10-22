@@ -300,12 +300,26 @@ target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ${PLATFORM_LIB} ${T
 set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
 # strip the release build
-if (CMAKE_BUILD_TYPE STREQUAL "Release") 
+if (CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT MSVC) # strip is not necessary for MSVC
+if (WIN32)
+	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND strip $<TARGET_FILE:iqtree>)
+else()
 	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
+endif()
+endif()
+
+if (MSVC)
+	set (BINARY_DIR "${PROJECT_BINARY_DIR}/Release")
+else()
+	set (BINARY_DIR "${PROJECT_BINARY_DIR}")
 endif()
 
 if (WIN32)
+if (MSVC) 
+	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "Release\\iqtree${EXE_SUFFIX}.exe" "Release\\iqtree${EXE_SUFFIX}-click.exe")
+else()
 	ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "iqtree${EXE_SUFFIX}.exe" "iqtree${EXE_SUFFIX}-click.exe")
+endif()	
 endif()
 
 ##############################################################
@@ -320,12 +334,12 @@ install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATI
 #install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.nex" DESTINATION examples)
 #install (FILES "${PROJECT_SOURCE_DIR}/examples/test.area.budget" DESTINATION examples)
 if (WIN32)
-	install (FILES "${PROJECT_BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION .)
-# obsolete: pthread is statically linked, so no dll is required anymore
-#	if (EXE_SUFFIX MATCHES "omp")
-#		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
-#		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
-#	endif()
+	install (FILES "${BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION .)
+	if (EXE_SUFFIX MATCHES "omp" AND MSVC)
+		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadVC2.dll" DESTINATION .)
+#		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION .)
+#		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION .)
+	endif()
 endif()
 
 ## not needed anymore: IQ-TREE is statically linked with libiomp5.a 
