@@ -1841,7 +1841,7 @@ void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignm
 
 	cout << "Total tree length: " << iqtree.treeLength() << endl;
 
-	if (iqtree.isSuperTree()) {
+	if (iqtree.isSuperTree() && verbose_mode >= VB_MAX) {
 		PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
 		cout << stree->evalNNIs << " NNIs evaluated from " << stree->totalNNIs << " all possible NNIs ( " <<
 				(int)(((stree->evalNNIs+1.0)/(stree->totalNNIs+1.0))*100.0) << " %)" << endl;
