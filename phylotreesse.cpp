@@ -46,6 +46,10 @@ inline double horizontal_max(Vec2d const &a) {
  */
 #ifdef __AVX
 
+#ifndef __AVX__
+#error "__AVX is defined but source codes are not compiled with AVX enabled"
+#endif
+
 /*
 // lower 64 bits of result contain the sum of a[0], a[1], a[2], a[3]
 // upper 64 bits of result contain the sum of b[0], b[1], b[2], b[3]
@@ -70,7 +74,7 @@ inline Vec4d horizontal_add(Vec4d x[4]) {
 	__m256d sumcd = _mm256_hadd_pd(x[2], x[3]);
 
 	// {a[0]+a[1], b[0]+b[1], c[2]+c[3], d[2]+d[3]}
-	__m256d blend = _mm256_blend_pd(sumab, sumcd, 0b1100);
+	__m256d blend = _mm256_blend_pd(sumab, sumcd, 12/* 0b1100*/);
 	// {a[2]+a[3], b[2]+b[3], c[0]+c[1], d[0]+d[1]}
 	__m256d perm = _mm256_permute2f128_pd(sumab, sumcd, 0x21);
 
