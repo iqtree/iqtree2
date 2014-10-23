@@ -80,10 +80,20 @@ endif()
 ##################################################################
 # Setup compiler, currently supported GCC, CLANG, MSVC, and ICC
 ##################################################################
-set(GCC "FALSE")
-set(CLANG "FALSE")
-set(ICC "FALSE")
-set(MSVC "FALSE") #reset MSVC variable because one can compile with ICC under Visual Studio! 
+
+if (MSVC) 
+	# MS Visual Studio environment
+	message("Exporting MS Visual Studio projects...")
+	add_definitions(/MP) # enable multi-processor compilation
+	if (CMAKE_BUILD_TYPE STREQUAL "Release")
+		add_definitions(/O2 /Ot /Oi)
+	endif()
+endif()
+
+set(GCC "FALSE")   #  GNU compiler
+set(CLANG "FALSE") # Clang compiler
+set(ICC "FALSE")   # Intel compiler
+set(VCC "FALSE")   # MS Visual C Compiler, note that it is different from MSVC variable
 
 if (CMAKE_COMPILER_IS_GNUCXX) 	
 	message("Compiler      : GNU Compiler (gcc)")
@@ -96,21 +106,15 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	message("Compiler      : Clang")
 	set(CLANG "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -Wno-nested-anon-types")
-	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
-	set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")	
+	set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+	set(CMAKE_C_FLAGS_RELEASE "-O3")	
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-	set(MSVC "TRUE")
-	message("Compiler      : MS Visual Studio (MSVC)")
-	set(COMBINED_FLAGS "/MP") # enable multi-processor compilation
-	set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ot")
-	set(CMAKE_C_FLAGS_RELEASE "/O2 /Ot")	
+	set(VCC "TRUE")
+	message("Compiler      : MS Visual C++ Compiler")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
 	message("Compiler      : Intel C++ Compiler (icc)")
 	set(ICC "TRUE")
-	set(COMBINED_FLAGS "/MP") # enable multi-processor compilation
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Qstd=c99")
-	set(CMAKE_CXX_FLAGS_RELEASE "/O3 /Ot")
-	set(CMAKE_C_FLAGS_RELEASE "/O3 /Ot")
 else()
 	message("Compiler      : Unknown and untested yet")
 endif()
@@ -143,17 +147,17 @@ if (IQTREE_FLAGS MATCHES "omp")
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")	
 	add_definitions(-D_USE_PTHREADS)
 	if (MSVC) 
+		add_definitions(/MT)
+	endif()
+	
+	if (VCC) 
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
   		include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers 
-  		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-		set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")  		
 	elseif (ICC)
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qopenmp")
   		if (WIN32)
   			include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
   		endif() 
-  		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-		set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
   	elseif (GCC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
@@ -170,8 +174,8 @@ endif()
 if (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
  	message("Vectorization : AVX")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
-	if (MSVC OR ICC) 
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX /Oi")
+	if (VCC OR ICC) 
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX")
 	elseif (CLANG)
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3 -mavx")
 	elseif (GCC)
@@ -182,10 +186,10 @@ else() #SSE intruction set
 	message("Vectorization : SSE3")
 
 	add_definitions(-D__SSE3)
-	if (MSVC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE /Oi")
+	if (VCC)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE")
 	elseif (ICC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE3 /Oi")
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE3")
 	elseif (GCC OR CLANG)
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3")
 	endif()
@@ -341,7 +345,7 @@ endif()
 set(THREAD_LIB "")
 if (IQTREE_FLAGS MATCHES "omp") 
 	link_directories(${PROJECT_SOURCE_DIR}/lib)
-	if (MSVC OR ICC)
+	if (MSVC)
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${PROJECT_SOURCE_DIR}/lib")
 		if (BINARY32) 
 			set(THREAD_LIB pthreadVC2_x86)
@@ -369,14 +373,14 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release" AND (GCC OR CLANG)) # strip is not neces
 	endif()
 endif()
 
-if (MSVC OR ICC)
+if (MSVC)
 	set (BINARY_DIR "${PROJECT_BINARY_DIR}/Release")
 else()
 	set (BINARY_DIR "${PROJECT_BINARY_DIR}")
 endif()
 
 if (WIN32)
-	if (MSVC OR ICC) 
+	if (MSVC) 
 		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "Release\\iqtree${EXE_SUFFIX}.exe" "Release\\iqtree${EXE_SUFFIX}-click.exe")
 	else()
 		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "iqtree${EXE_SUFFIX}.exe" "iqtree${EXE_SUFFIX}-click.exe")
@@ -392,7 +396,7 @@ install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATI
 
 if (WIN32)
 	install (FILES "${BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
-	if (EXE_SUFFIX MATCHES "omp" AND MSVC)
+	if (EXE_SUFFIX MATCHES "omp" AND VCC)
 		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadVC2.dll" DESTINATION bin)
 		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadVC2_x86.dll" DESTINATION bin)
 #		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
