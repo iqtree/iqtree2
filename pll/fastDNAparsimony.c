@@ -102,15 +102,15 @@
 #include "pllInternal.h"
 
 #if defined(_MSC_VER)
-#	if defined ( __SSE4_2__ )
+//#	if defined ( __SSE4_2__ )
 #		include <nmmintrin.h>
 #		define __builtin_popcount _mm_popcnt_u32
 #		define __builtin_popcountl _mm_popcnt_u64
-#	else
-#		include <intrin.h>
-#		define __builtin_popcount __popcnt
-#		define __builtin_popcountl __popcnt64
-#	endif
+//#	else
+//#		include <intrin.h>
+//#		define __builtin_popcount __popcnt
+//#		define __builtin_popcountl __popcnt64
+//#	endif
 #endif
 
 static pllBoolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping);
