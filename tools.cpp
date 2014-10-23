@@ -2225,10 +2225,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 //            	params.autostop = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-stop_cond") == 0
-					|| strcmp(argv[cnt], "-numstop") == 0) {
-//                params.autostop = true;
-				params.stop_condition = SC_UNSUCCESS_ITERATION;
+			if (strcmp(argv[cnt], "-stop_cond") == 0 || strcmp(argv[cnt], "-numstop") == 0) {
+				if (params.stop_condition != SC_BOOTSTRAP_CORRELATION)
+					params.stop_condition = SC_UNSUCCESS_ITERATION;
 				cnt++;
 				params.unsuccess_iteration = convert_int(argv[cnt]);
 				continue;
