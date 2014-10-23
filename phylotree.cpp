@@ -843,12 +843,12 @@ void PhyloTree::searchNNI() {
  ****************************************************************************/
 
 // random generator function:
-ptrdiff_t myrandom(ptrdiff_t i) {
-    return random_int(i);
-}
+//ptrdiff_t myrandom(ptrdiff_t i) {
+//    return random_int(i);
+//}
 
 // pointer object to it:
-ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
+//ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
 
 void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
     cout << "Computing parsimony tree by random stepwise addition..." << endl;
@@ -866,7 +866,8 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     for (int i = 0; i < size; i++)
         taxon_order[i] = i;
     // randomize the addition order
-    random_shuffle(taxon_order.begin(), taxon_order.end(), p_myrandom);
+//    random_shuffle(taxon_order.begin(), taxon_order.end(), p_myrandom);
+    my_random_shuffle(taxon_order.begin(), taxon_order.end());
 
     // create initial tree with 3 taxa
     for (leafNum = 0; leafNum < 3; leafNum++) {
@@ -4548,7 +4549,7 @@ void PhyloTree::randomizeNeighbors(Node *node, Node *dad) {
         node = root;
     FOR_NEIGHBOR_IT(node, dad, it)randomizeNeighbors((*it)->node, node);
 
-    random_shuffle(node->neighbors.begin(), node->neighbors.end());
+    my_random_shuffle(node->neighbors.begin(), node->neighbors.end());
 }
 
 void PhyloTree::printTransMatrices(Node *node, Node *dad) {
