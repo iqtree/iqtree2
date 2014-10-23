@@ -396,7 +396,7 @@ install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATI
 
 if (WIN32)
 	install (FILES "${BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
-	if (EXE_SUFFIX MATCHES "omp" AND VCC)
+	if (EXE_SUFFIX MATCHES "omp" AND MSVC)
 		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadVC2.dll" DESTINATION bin)
 		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadVC2_x86.dll" DESTINATION bin)
 #		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
