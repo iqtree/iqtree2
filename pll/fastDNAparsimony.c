@@ -101,16 +101,51 @@
 #include "pll.h"
 #include "pllInternal.h"
 
-#if defined(_MSC_VER)
-//#	if defined ( __SSE4_2__ )
+// Define popcount function. Gives sum of bits
+//#if defined ( __SSE4_2__ )
+//    // popcnt instruction is not officially part of the SSE4.2 instruction set,
+//    // but available in all known processors with SSE4.2
+//#	if defined (__GNUC__) || defined(__clang__)
+//	static inline uint32_t vml_popcnt (uint32_t a) __attribute__ ((pure));
+//	static inline uint32_t vml_popcnt (uint32_t a) {
+//		uint32_t r;
+//		__asm("popcnt %1, %0" : "=r"(r) : "r"(a) : );
+//		return r;
+//	}
+//#	else
+//	static inline uint32_t vml_popcnt (uint32_t a) {
+//		return _mm_popcnt_u32(a);  // MS intrinsic
+//	}
+//#	endif // platform
+//#else  // no SSE4.2
+//	static inline uint32_t vml_popcnt (uint32_t a) {
+//		// popcnt instruction not available
+//		uint32_t b = a - ((a >> 1) & 0x55555555);
+//		uint32_t c = (b & 0x33333333) + ((b >> 2) & 0x33333333);
+//		uint32_t d = (c + (c >> 4)) & 0x0F0F0F0F;
+//		uint32_t e = d * 0x01010101;
+//		return   e >> 24;
+//	}
+//#endif
+
+#if defined (_MSC_VER)
+#	if defined ( __SSE4_2__ ) || defined (__AVX__)
 #		include <nmmintrin.h>
 #		define __builtin_popcount _mm_popcnt_u32
 #		define __builtin_popcountl _mm_popcnt_u64
-//#	else
-//#		include <intrin.h>
+#	else
+#		include <intrin.h>
+	static inline uint32_t __builtin_popcount (uint32_t a) {
+		// popcnt instruction not available
+		uint32_t b = a - ((a >> 1) & 0x55555555);
+		uint32_t c = (b & 0x33333333) + ((b >> 2) & 0x33333333);
+		uint32_t d = (c + (c >> 4)) & 0x0F0F0F0F;
+		uint32_t e = d * 0x01010101;
+		return   e >> 24;
+	}
 //#		define __builtin_popcount __popcnt
-//#		define __builtin_popcountl __popcnt64
-//#	endif
+#		define __builtin_popcountl __popcnt64
+#	endif
 #endif
 
 static pllBoolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping);
@@ -132,18 +167,18 @@ extern double masterTime;
 
 /* bit count for 64 bit integers */
 //#if (defined(_MSC_VER)) || defined(__MINGW32__)
-#ifdef _WIN32
- inline unsigned int bitcount_64_bit(uint64_t i)
- {
-	 unsigned int *counts = &i;
-   return ((unsigned int) __builtin_popcount(counts[0]) + __builtin_popcount(counts[1]));
- }
-#else
-inline unsigned int bitcount_64_bit(uint64_t i)
-{
-  return ((unsigned int) __builtin_popcountl(i));
-}
-#endif
+//#ifdef _WIN32
+// inline unsigned int bitcount_64_bit(uint64_t i)
+// {
+//	 unsigned int *counts = &i;
+//  return ((unsigned int) __builtin_popcount(counts[0]) + __builtin_popcount(counts[1]));
+// }
+//#else
+//inline unsigned int bitcount_64_bit(uint64_t i)
+//{
+//  return ((unsigned int) __builtin_popcountl(i));
+//}
+//#endif
 
 /* bit count for 128 bit SSE3 and 256 bit AVX registers */
 
