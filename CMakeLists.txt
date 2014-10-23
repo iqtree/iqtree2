@@ -3,6 +3,32 @@
 # Copyright (c) 2012-2014 Bui Quang Minh, Lam Tung Nguyen
 ##################################################################
 
+# Windows example usages:
+# cmake -G "Visual Studio 12" <source_dir>			(32-bit SSE3 version, compiled with MSVC)
+# cmake -G "Visual Studio 12 Win64" <source_dir>	(64-bit SSE3 version, compiled with MSVC)
+# cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" <source_dir>		(64-bit SSE3 version, compiled with ICC)
+# cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" -DIQTREE_FLAGS="avx" <source_dir>		(64-bit AVX version, compiled with ICC)
+# cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" -DIQTREE_FLAGS="omp" <source_dir>		(64-bit SSE3+OpenMP version, compiled with ICC)
+# cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" -DIQTREE_FLAGS="avx omp" <source_dir>	(64-bit AVX+OpenMP version, compiled with ICC)
+#
+# Linux example usages:
+# cmake <source_dir>						   (SSE3 version)
+# cmake -DIQTREE_FLAGS="avx" <source_dir>      (AVX version)
+# cmake -DIQTREE_FLAGS="omp" <source_dir>      (OpenMP version)
+# cmake -DIQTREE_FLAGS="omp avx" <source_dir>  (AVX+OpenMP version)
+# cmake -DIQTREE_FLAGS="m32" <source_dir>      (32-bit SSE3 version)
+# cmake -DIQTREE_FLAGS="m32 omp" <source_dir>  (32-bit SSE3+OpenMP version)
+#
+# Mac OSX example usages:
+# cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir>							(SSE3 version)
+# cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DIQTREE_FLAGS="avx" <source_dir>		(AVX version)
+# To build OpenMP version one needs to download and compile Clang-OpenMP. 
+# Then assuming clang2 and clang2++ are the newly built compilers, then:
+# cmake -DCMAKE_C_COMPILER=clang2 -DCMAKE_CXX_COMPILER=clang2++ -DIQTREE_FLAGS="omp" <source_dir>		(SSE3+OpenMP version)
+# cmake -DCMAKE_C_COMPILER=clang2 -DCMAKE_CXX_COMPILER=clang2++ -DIQTREE_FLAGS="omp avx" <source_dir>	(AVX+OpenMP version)
+#
+
+
 cmake_minimum_required(VERSION 2.8)
 
 project(iqtree)
