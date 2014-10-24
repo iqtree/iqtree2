@@ -28,11 +28,11 @@
 
 
 inline Vec2d horizontal_add(Vec2d x[2]) {
-#if  INSTRSET >= 3  // SSE3
+//#if  INSTRSET >= 3  // SSE3
     return _mm_hadd_pd(x[0],x[1]);
-#else
-#error "SSE3 instructions not supported by current machine."
-#endif
+//#else
+//#error "SSE3 instructions not supported by current machine."
+//#endif
 }
 
 inline double horizontal_max(Vec2d const &a) {
@@ -45,6 +45,10 @@ inline double horizontal_max(Vec2d const &a) {
  * AVX support codes
  */
 #ifdef __AVX
+
+#ifndef __AVX__
+#error "__AVX is defined but source codes are not compiled with AVX enabled"
+#endif
 
 /*
 // lower 64 bits of result contain the sum of a[0], a[1], a[2], a[3]
@@ -70,7 +74,7 @@ inline Vec4d horizontal_add(Vec4d x[4]) {
 	__m256d sumcd = _mm256_hadd_pd(x[2], x[3]);
 
 	// {a[0]+a[1], b[0]+b[1], c[2]+c[3], d[2]+d[3]}
-	__m256d blend = _mm256_blend_pd(sumab, sumcd, 0b1100);
+	__m256d blend = _mm256_blend_pd(sumab, sumcd, 12/* 0b1100*/);
 	// {a[2]+a[3], b[2]+b[3], c[0]+c[1], d[0]+d[1]}
 	__m256d perm = _mm256_permute2f128_pd(sumab, sumcd, 0x21);
 
@@ -2281,9 +2285,9 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     double p_var_cat = (1.0 - p_invar) / (double) numCat;
     double state_freq[NSTATES];
     model->getStateFrequency(state_freq);
-    double *trans_mat_orig EIGEN_ALIGN16 = new double[numCat * tranSize + 1];
-    double *trans_derv1_orig EIGEN_ALIGN16 = new double[numCat * tranSize + 1];
-    double *trans_derv2_orig EIGEN_ALIGN16 = new double[numCat * tranSize + 1];
+    double *trans_mat_orig  = new double[numCat * tranSize + 1];
+    double *trans_derv1_orig  = new double[numCat * tranSize + 1];
+    double *trans_derv2_orig  = new double[numCat * tranSize + 1];
     // make alignment 16
     double *trans_mat = trans_mat_orig, *trans_derv1 = trans_derv1_orig, *trans_derv2 = trans_derv2_orig;
     if (((intptr_t) trans_mat) % 16 != 0)

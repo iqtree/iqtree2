@@ -1225,7 +1225,8 @@ double IQTree::perturb(int times) {
     return curScore;
 }
 
-extern "C" pllUFBootData * pllUFBootDataPtr;
+//extern "C" pllUFBootData * pllUFBootDataPtr;
+extern pllUFBootData * pllUFBootDataPtr;
 
 string IQTree::optimizeModelParameters(bool printInfo) {
 	string newTree;
@@ -1538,17 +1539,17 @@ double IQTree::doTreeSearch() {
             boot_splits.push_back(sg);
             if (params->max_candidate_trees == 0)
                 max_candidate_trees = treels_logl.size() * (curIt + (params->step_iterations / 2)) / curIt;
-			cout << "INFO: " << treels_logl.size() << " bootstrap candidate trees evaluated (logl-cutoff: " << logl_cutoff << ")" << endl;
+			cout << "NOTE: " << treels_logl.size() << " bootstrap candidate trees evaluated (logl-cutoff: " << logl_cutoff << ")" << endl;
 
 			// check convergence every full step
 			if (curIt % params->step_iterations == 0) {
 	        	cur_correlation = computeBootstrapCorrelation();
-	            cout << "INFO: Bootstrap correlation coefficient of split occurrence frequencies: " << cur_correlation << endl;
+	            cout << "NOTE: Bootstrap correlation coefficient of split occurrence frequencies: " << cur_correlation << endl;
 	            if (!stop_rule.meetStopCondition(curIt, cur_correlation)) {
 	                if (params->max_candidate_trees == 0) {
 	                    max_candidate_trees = treels_logl.size() * (curIt + params->step_iterations) / curIt;
 	                }
-	                cout << "INFO: UFBoot does not converge, continue " << params->step_iterations << " more iterations" << endl;
+//	                cout << "INFO: UFBoot does not converge, continue " << params->step_iterations << " more iterations" << endl;
 	            }
 	        }
         } // end of bootstrap convergence test
@@ -1698,7 +1699,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     }
 
     if (nni_count == 0) {
-        cout << "INFO: Tree is readily NNI-optimized" << endl;
+        cout << "NOTE: Tree is readily NNI-optimized" << endl;
     }
     brans2Eval.clear();
     return curScore;
@@ -2743,11 +2744,11 @@ void IQTree::printIntermediateTree(int brtype) {
 void IQTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs) {
 	Alignment *new_aln;
 	if (params.root)
-		new_aln = aln->removeIdenticalSeq((string)params.root, removed_seqs, twin_seqs);
+		new_aln = aln->removeIdenticalSeq((string)params.root, params.gbo_replicates > 0, removed_seqs, twin_seqs);
 	else
-		new_aln = aln->removeIdenticalSeq("", removed_seqs, twin_seqs);
+		new_aln = aln->removeIdenticalSeq("", params.gbo_replicates > 0, removed_seqs, twin_seqs);
 	if (removed_seqs.size() > 0) {
-		cout << "INFO: " << removed_seqs.size() << " identical sequences are ignored." << endl;
+		cout << "NOTE: " << removed_seqs.size() << " identical sequences are ignored." << endl;
 		aln = new_aln;
 	}
 }

@@ -83,6 +83,15 @@ extern "C" {
 #endif
 #endif
 
+#ifdef _MSC_VER
+	#define PLL_ALIGN_BEGIN __declspec(align(PLL_BYTE_ALIGNMENT))
+	#define PLL_ALIGN_END
+#else
+	#define PLL_ALIGN_BEGIN
+	#define PLL_ALIGN_END __attribute__((aligned(PLL_BYTE_ALIGNMENT)))
+#endif
+
+
 #include "stack.h"
 #include "newick.h"
 #include "queue.h"
@@ -203,9 +212,9 @@ extern double exp_approx (double x);
 #endif
 
 
-
-#define PLL_SWAP(x,y) do{ __typeof__ (x) _t = x; x = y; y = _t; } while(0)
-
+/*#define PLL_SWAP(x,y) do{ __typeof__ (x) _t = x; x = y; y = _t; } while(0)*/
+#define PLL_SWAP_PTR(x,y) do{ char* _t = x; x = y; y = _t; } while(0)
+#define PLL_SWAP_INT(x,y) do{ int _t = x; x = y; y = _t; } while(0)
 
 #define PointGamma(prob,alpha,beta)  PointChi2(prob,2.0*(alpha))/(2.0*(beta))
 

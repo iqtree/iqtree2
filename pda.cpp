@@ -62,7 +62,7 @@
 #include "ecopdmtreeset.h"
 #include "gurobiwrapper.h"
 #include "timeutil.h"
-#include <unistd.h>
+//#include <unistd.h>
 #include <stdlib.h>
 
 
@@ -1244,7 +1244,7 @@ void calcTreeCluster(Params &params) {
 		out << "y" << endl;
 		out.close();
 		out2.close();
-		cout << "Cluster " << cnt << " printed to " << filename << " and " << filename2 << endl;
+		cout << "Cluster " << cnt << " printed to " << filename.rdbuf() << " and " << filename2.rdbuf() << endl;
 	}
 }
 
@@ -1957,7 +1957,7 @@ void processECOpd(Params &params) {
 	// Checking whether to treat the food web as weighted or non weighted
 	if(params.diet_max == 0){
 		params.eco_weighted = false;
-	}else if(params.diet_max > 100 or params.diet_max < 0){
+	}else if(params.diet_max > 100 || params.diet_max < 0){
 		cout<<"The minimum percentage of the diet to be conserved for each predator"<<endl;
 		cout<<"d = "<<params.diet_max<<endl;
 		cout<<"ERROR: Wrong value of parameter d. It must be within the range 0 <= d <= 100"<<endl;
