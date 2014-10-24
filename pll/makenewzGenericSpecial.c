@@ -1893,18 +1893,19 @@ static void sumGTRCATPROT_SAVE(int tipCase, double *sumtable, double *x1, double
 static void coreGTRGAMMA(const int upper, double *sumtable,
     volatile double *ext_dlnLdlz,  volatile double *ext_d2lnLdlz2, double *EIGN, double *gammaRates, double lz, int *wrptr)
 {
-  double 
-    dlnLdlz = 0.0,
-            d2lnLdlz2 = 0.0,
-            ki, 
-            kisqr,  
-            inv_Li, 
-            dlnLidlz, 
-            d2lnLidlz2,  
-            *sum, 
-            diagptable0[16] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-            diagptable1[16] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-            diagptable2[16] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));    
+	double
+		dlnLdlz = 0.0,
+		d2lnLdlz2 = 0.0,
+		ki,
+		kisqr,
+		inv_Li,
+		dlnLidlz,
+		d2lnLidlz2,
+		*sum;
+	PLL_ALIGN_BEGIN double
+            diagptable0[16] PLL_ALIGN_END,
+            diagptable1[16] PLL_ALIGN_END,
+            diagptable2[16] PLL_ALIGN_END;
 
   int     
     i, 
@@ -1986,8 +1987,9 @@ static void coreGTRCAT(int upper, int numberOfCategories, double *sum,
     inv_Li, dlnLidlz, d2lnLidlz2,
     dlnLdlz = 0.0,
     d2lnLdlz2 = 0.0;
-  double e1[4] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
-  double e2[4] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+
+  PLL_ALIGN_BEGIN double e1[4] PLL_ALIGN_END;
+  PLL_ALIGN_BEGIN double e2[4] PLL_ALIGN_END;
   double dd1, dd2, dd3;
 
   __m128d
@@ -2065,10 +2067,11 @@ static void coreGTRCAT(int upper, int numberOfCategories, double *sum,
 static void coreGTRGAMMAPROT_LG4(double *gammaRates, double *EIGN[4], double *sumtable, int upper, int *wrptr,
 				 volatile double *ext_dlnLdlz,  volatile double *ext_d2lnLdlz2, double lz)
 {
-  double  *sum, 
-    diagptable0[80] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-    diagptable1[80] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-    diagptable2[80] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));    
+	double  *sum;
+	PLL_ALIGN_BEGIN double
+    diagptable0[80] PLL_ALIGN_END,
+    diagptable1[80] PLL_ALIGN_END,
+    diagptable2[80] PLL_ALIGN_END;    
   int     i, j, l;
   double  dlnLdlz = 0;
   double d2lnLdlz2 = 0;
@@ -2142,10 +2145,12 @@ static void coreGTRGAMMAPROT_LG4(double *gammaRates, double *EIGN[4], double *su
 static void coreGTRGAMMAPROT(double *gammaRates, double *EIGN, double *sumtable, int upper, int *wrptr,
     volatile double *ext_dlnLdlz,  volatile double *ext_d2lnLdlz2, double lz)
 {
-  double  *sum, 
-          diagptable0[80] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-          diagptable1[80] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))),
-          diagptable2[80] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));    
+	double  *sum;
+	PLL_ALIGN_BEGIN double
+		diagptable0[80] PLL_ALIGN_END,
+		diagptable1[80] PLL_ALIGN_END,
+		diagptable2[80] PLL_ALIGN_END;
+
   int     i, j, l;
   double  dlnLdlz = 0;
   double d2lnLdlz2 = 0;
@@ -2221,10 +2226,10 @@ static void coreGTRCATPROT(double *EIGN, double lz, int numberOfCategories, doub
 {
   int i, l;
   double *d1, *d_start, *sum;
-  double 
-    e[20] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), 
-    s[20] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT))), 
-    dd[20] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+  PLL_ALIGN_BEGIN double 
+    e[20] PLL_ALIGN_END, 
+    s[20] PLL_ALIGN_END, 
+    dd[20] PLL_ALIGN_END;
   double inv_Li, dlnLidlz, d2lnLidlz2;
   double  dlnLdlz = 0.0;
   double  d2lnLdlz2 = 0.0;

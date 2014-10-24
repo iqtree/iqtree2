@@ -52,7 +52,12 @@
 #define GCC_VERSION 0
 #endif
 
-#ifdef USE_HASH_MAP
+// for MSVC
+#ifndef __func__
+#define __func__ __FUNCTION__
+#endif
+
+#if defined(USE_HASH_MAP) && !defined(_MSC_VER)
 	#if !defined(__GNUC__)
 		#include <hash_map>
 		#include <hash_set>
@@ -71,12 +76,14 @@
 #else
 	#include <map>
 	#include <set>
+	#include <unordered_map>
+	#include <unordered_set>
 #endif
 
 using namespace std;
 
 
-#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300
+#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300 && !defined(_MSC_VER)
 /*
         Define the hash function of Split
  */
@@ -353,7 +360,7 @@ enum ModelTestCriterion {
         Stopping condition type
  */
 enum STOP_CONDITION {
-    SC_FIXED_ITERATION, SC_STOP_PREDICT
+    SC_FIXED_ITERATION, SC_WEIBULL, SC_UNSUCCESS_ITERATION, SC_BOOTSTRAP_CORRELATION, SC_REAL_TIME
 };
 
 enum IQP_ASSESS_QUARTET {
@@ -378,7 +385,11 @@ struct NNIInfo {
 };
 
 enum LikelihoodKernel {
-	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_TIP_SSE
+	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_SSE
+};
+
+enum LhMemSave {
+	LM_DETECT, LM_ALL_BRANCH, LM_PER_NODE
 };
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
@@ -519,15 +530,15 @@ struct Params {
     bool pll;
 
     /**
-     *  Stopping rule for the tree search
+     *  OBSOLETE! Stopping rule for the tree search
      */
-    bool autostop;
+//    bool autostop;
 
     /**
      *  Number of maximum unsuccessful iterations after the search is stopped.
      *  Used for the automatic stopping rule
      */
-    int stopCond;
+    int unsuccess_iteration;
 
     char *binary_aln_file;
 
@@ -538,14 +549,9 @@ struct Params {
     int speedup_iter;
 
     /**
-     *   option for doing a VNS search
-     */
-    bool vns_search;
-
-    /**
      *  starting CPU time of the program
      */
-    double startTime;
+    double startCPUTime;
 
     /** starting real time of the program */
     double start_real_time;
@@ -660,9 +666,9 @@ struct Params {
     bool aln_no_const_sites;
 
     /**
-            compute parsimony score on trees
+            OBSOLETE compute parsimony score on trees
      */
-    bool parsimony;
+//    bool parsimony;
 
     /**
             compute random step-wise addition parsimony tree instead of BIONJ
@@ -1477,6 +1483,11 @@ struct Params {
 
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
+
+	/* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
+	 * 0: store all partial likelihood vectors
+	 * 1: only store 1 partial likelihood vector per node */
+	LhMemSave lh_mem_save;
 };
 
 /**
@@ -1868,6 +1879,11 @@ double computePValueChiSquare(double x, int df);
 int init_random(int seed);
 
 /**
+ * finalize random number generator (e.g. free memory
+ */
+int finish_random();
+
+/**
  * returns a random integer in the range [0; n - 1]
  * @param n upper-bound of random number
  */
@@ -1876,7 +1892,7 @@ int random_int(int n);
 /**
  *  return a random integer in the range [a,b]
  */
-int randint(int a, int b);
+//int randint(int a, int b);
 
 /**
  * returns a random integer in the range [0; RAND_MAX - 1]
@@ -1888,6 +1904,15 @@ int random_int();
  * returns a random floating-point nuber in the range [0; 1)
  */
 double random_double();
+
+template <class T>
+void my_random_shuffle (T first, T last)
+{
+	int n = last - first;
+	for (int i=n-1; i>0; --i) {
+		swap (first[i],first[random_int(i+1)]);
+	}
+}
 
 /**
  * generic function for sorting by index

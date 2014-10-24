@@ -138,10 +138,9 @@ bool CandidateSet::update(string tree, double score) {
 	return false;
 }
 
-vector<double> CandidateSet::getBestScores() {
-	int cnt = max_candidates;
+vector<double> CandidateSet::getBestScores(int numBestsore) {
 	vector<double> res;
-	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++, cnt--) {
+	for (reverse_iterator rit = rbegin(); rit != rend() && numBestsore > 0; rit++, numBestsore--) {
 		res.push_back(rit->first);
 	}
 	return res;

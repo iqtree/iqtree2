@@ -65,6 +65,7 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 	}
 	verbose_mode = save_mode;
 	countConstSite();
+    buildSeqStates();
 }
 
 void SuperAlignment::linkSubAlignment(int part) {
@@ -390,9 +391,9 @@ void SuperAlignment::printSubAlignments(Params &params, vector<PartitionInfo> &p
 			filename = params.out_prefix;
 		filename += "." + part_info[part].name;
 		 if (params.aln_output_format == ALN_PHYLIP)
-			(*pit)->printPhylip(filename.c_str(), false, NULL, params.aln_nogaps, NULL);
+			(*pit)->printPhylip(filename.c_str(), false, NULL, params.aln_nogaps, false, NULL);
 		else if (params.aln_output_format == ALN_FASTA)
-			(*pit)->printFasta(filename.c_str(), false, NULL, params.aln_nogaps, NULL);
+			(*pit)->printFasta(filename.c_str(), false, NULL, params.aln_nogaps, false, NULL);
 	}
 }
 
@@ -476,6 +477,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     	}
     }
     aln->countConstSite();
+    aln->buildSeqStates();
 
 	return aln;
 }

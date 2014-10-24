@@ -109,6 +109,12 @@ public:
      */
     virtual void setParams(Params& params);
 
+    void createPLLPartition(Params &params, ostream &pllPartitionFileHandle);
+
+    void initializePLL(Params &params);
+
+    void initializeModel(Params &params);
+
     /**
             print tree to .treefile
             @param params program parameters, field root is taken
@@ -162,7 +168,7 @@ public:
             @param min_iterations the min number of iterations
             @param max_iterations the maximum number of iterations
      */
-    void setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, int min_iterations, int max_iterations);
+//    void setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, int min_iterations, int max_iterations);
 
     /**
             @param assess_quartet the quartet assessment, either IQP_DISTANCE or IQP_PARSIMONY
@@ -253,6 +259,11 @@ public:
             @return best likelihood found
      */
     double doTreeSearch();
+
+    /**
+     *	Print numBestScore found so far, starting from the highest
+     */
+    void printBestScores(int numBestScore);
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
@@ -408,7 +419,7 @@ public:
      */
     int cur_pars_score;
 
-    bool enable_parsimony;
+//    bool enable_parsimony;
     /**
             stopping rule
      */
@@ -684,10 +695,17 @@ public:
     /** summarize bootstrap trees into split set */
     void summarizeBootstrap(SplitGraph &sg);
 
-    /** @return TRUE if stopping criterion is met */
-    bool checkBootstrapStopping();
+    /** @return bootstrap correlation coefficient for assessing convergence */
+    double computeBootstrapCorrelation();
+
 	int getDelete() const;
 	void setDelete(int _delete);
+
+	/** remove identical sequences from the tree */
+    void removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs);
+
+    /** reinsert identical sequences into the tree and reset original alignment */
+    void reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs);
 
 protected:
     /**** NNI cutoff heuristic *****/
@@ -753,6 +771,7 @@ protected:
     virtual void reinsertLeaves(PhyloNodeVector &del_leaves);
 
     void reinsertLeavesByParsimony(PhyloNodeVector &del_leaves);
+
 
     void doParsimonyReinsertion();
 

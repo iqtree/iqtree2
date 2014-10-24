@@ -42,7 +42,7 @@
 // for strndup stuff
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
 char *strndup(const char *s, size_t n) {
-	char *ret = rax_malloc(n+1);
+	char *ret = (char *) rax_malloc(n+1);
 	strncpy(ret, s, n);
 	ret[n] = 0;
 	return ret;
@@ -129,12 +129,17 @@ pllInitAlignmentData (int sequenceCount, int sequenceLength)
  {
    int i;
    pllAlignmentData * alignmentData;
-   void * mem;
+   //void * mem;
+   //TUNG
+   unsigned char *mem;
+
    
    /** TODO */
    alignmentData               =  (pllAlignmentData *) rax_malloc (sizeof (pllAlignmentData));
    alignmentData->sequenceData = (unsigned char **) rax_malloc ((sequenceCount + 1) * sizeof (unsigned char *));
-   mem = (void *) rax_malloc (sizeof (unsigned char) * (sequenceLength + 1) * sequenceCount);
+   //mem = (void *) rax_malloc (sizeof (unsigned char) * (sequenceLength + 1) * sequenceCount);
+   //TUNG
+   mem = (unsigned char *)rax_malloc(sizeof(unsigned char) * (sequenceLength + 1) * sequenceCount);
    for (i = 1; i <= sequenceCount; ++i)
     {
       alignmentData->sequenceData[i]                 = (unsigned char *) (&mem[(i - 1) * (sequenceLength + 1) * sizeof (unsigned char)]);

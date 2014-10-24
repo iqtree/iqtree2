@@ -12,6 +12,8 @@
 #include "alignment.h"
 #include "myreader.h"
 #include <numeric>
+#include <sstream>
+using namespace std;
 
 char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
 char symbols_dna[]     = "ACGT";
@@ -172,6 +174,49 @@ int Alignment::checkIdenticalSeq()
 	return num_identical;
 }
 
+Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs)
+{
+    IntVector checked;
+    vector<bool> removed;
+    checked.resize(getNSeq(), 0);
+    removed.resize(getNSeq(), false);
+    int seq1;
+
+	for (seq1 = 0; seq1 < getNSeq(); seq1++) {
+        if (checked[seq1]) continue;
+        bool first_ident_seq = true;
+		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
+			if (getSeqName(seq2) == not_remove) continue;
+			bool equal_seq = true;
+			for (iterator it = begin(); it != end(); it++)
+				if  ((*it)[seq1] != (*it)[seq2]) {
+					equal_seq = false;
+					break;
+				}
+			if (equal_seq) {
+				if (!keep_two || !first_ident_seq) {
+					removed_seqs.push_back(getSeqName(seq2));
+					target_seqs.push_back(getSeqName(seq1));
+					removed[seq2] = true;
+				}
+				checked[seq2] = 1;
+				first_ident_seq = false;
+			}
+		}
+		checked[seq1] = 1;
+	}
+
+	if (removed_seqs.size() > 0) {
+		IntVector keep_seqs;
+		for (seq1 = 0; seq1 < getNSeq(); seq1++)
+			if (!removed[seq1]) keep_seqs.push_back(seq1);
+		Alignment *aln = new Alignment;
+		aln->extractSubAlignment(this, keep_seqs, 0);
+		return aln;
+	} else return this;
+}
+
+
 bool Alignment::isGapOnlySeq(int seq_id) {
     assert(seq_id < getNSeq());
     for (iterator it = begin(); it != end(); it++)
@@ -248,7 +293,8 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
          " columns and " << getNPattern() << " patterns"<< endl;
     buildSeqStates();
     checkSeqName();
-	checkIdenticalSeq();
+    // OBSOLETE: identical sequences are handled later
+//	checkIdenticalSeq();
     //cout << "Number of character states is " << num_states << endl;
     //cout << "Number of patterns = " << size() << endl;
     countConstSite();
@@ -256,15 +302,18 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 
 }
 
-void Alignment::buildSeqStates() {
+void Alignment::buildSeqStates(bool add_unobs_const) {
+	string unobs_const;
+	if (add_unobs_const) unobs_const = getUnobservedConstPatterns();
 	seq_states.clear();
 	seq_states.resize(getNSeq());
 	for (int seq = 0; seq < getNSeq(); seq++) {
 		vector<bool> has_state;
 		has_state.resize(STATE_UNKNOWN+1, false);
-
 		for (int site = 0; site < getNPattern(); site++)
 			has_state[at(site)[seq]] = true;
+		for (string::iterator it = unobs_const.begin(); it != unobs_const.end(); it++)
+			has_state[*it] = true;
 		for (int state = 0; state < STATE_UNKNOWN; state++)
 			if (has_state[state])
 				seq_states[seq].push_back(state);
@@ -1300,6 +1349,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     site_pattern.resize(site);
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
     assert(size() <= aln->size());
 }
 
@@ -1328,6 +1378,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     site_pattern.resize(site);
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
     assert(size() <= aln->size());
 }
 
@@ -1357,6 +1408,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     site_pattern.resize(site);
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
     assert(size() <= aln->size());
 }
 
@@ -1381,6 +1433,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     }
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
     //cout << getNSite() << " positions were extracted" << endl;
     //cout << __func__ << " " << num_states << endl;
 }
@@ -1560,6 +1613,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     }
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
 }
 
 void Alignment::createBootstrapAlignment(IntVector &pattern_freq, const char *spec) {
@@ -1673,11 +1727,12 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     }
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
 }
 
 void Alignment::shuffleAlignment() {
     if (isSuperAlignment()) outError("Internal error: ", __func__);
-    random_shuffle(site_pattern.begin(), site_pattern.end());
+    my_random_shuffle(site_pattern.begin(), site_pattern.end());
 }
 
 
@@ -1704,6 +1759,7 @@ void Alignment::concatenateAlignment(Alignment *aln) {
     }
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
 }
 
 void Alignment::copyAlignment(Alignment *aln) {
@@ -1725,6 +1781,7 @@ void Alignment::copyAlignment(Alignment *aln) {
     }
     verbose_mode = save_mode;
     countConstSite();
+    buildSeqStates();
 }
 
 void Alignment::countConstSite() {

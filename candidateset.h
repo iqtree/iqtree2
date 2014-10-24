@@ -66,8 +66,11 @@ public:
 
     /**
      *  print score of max_candidates best trees
+     *
+     *  @param numScore
+     *  	Number of best scores to print out starting from the highest
      */
-    vector<double> getBestScores();
+    vector<double> getBestScores(int numScore);
 
     /**
      *  Return \a numTree best tree strings

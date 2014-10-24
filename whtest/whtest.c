@@ -448,7 +448,7 @@ int WHTest_run ( int argc,char **argv ) {
 	delta_sim = ( double* ) calloc ( simulation, sizeof ( double) );
 	valid_pairs = ( int* ) calloc ( simulation, sizeof ( int) );
 	if (check_times > 0)
-		check_point = malloc(check_times * sizeof(int));
+		check_point = (int *) malloc(check_times * sizeof(int));
 	/*global_sim = ( double* ) calloc ( simulation, sizeof ( double) );
 	global_pairs = ( int* ) calloc ( simulation, sizeof ( int) );*/
 #ifdef PARALLEL

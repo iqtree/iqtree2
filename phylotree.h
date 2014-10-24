@@ -41,9 +41,10 @@ const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for Model
 //const static double SCALING_THRESHOLD = 1e-100;
 //const static double SCALING_THRESHOLD_INVER = 1 / SCALING_THRESHOLD;
 //const static double LOG_SCALING_THRESHOLD = log(SCALING_THRESHOLD);
-#include "pll/pll.h"
-#define SCALING_THRESHOLD (1.0/PLL_TWOTOTHE256)
-#define SCALING_THRESHOLD_INVER PLL_TWOTOTHE256
+//#include "pll/pll.h"
+// 2^256
+#define SCALING_THRESHOLD_INVER 115792089237316195423570985008687907853269984665640564039457584007913129639936.0
+#define SCALING_THRESHOLD (1.0/SCALING_THRESHOLD_INVER)
 #define LOG_SCALING_THRESHOLD log(SCALING_THRESHOLD)
 
 const int SPR_DEPTH = 2;
@@ -108,7 +109,7 @@ inline void aligned_free(void *mem) {
 #define VectorClassFloat Vec8f
 #define VCSIZE_MASTER 4
 #define VCSIZE_FLOAT 8
-#pragma message "Using AVX instructions"
+//#pragma message "Using AVX instructions"
 #else
 #define VectorClassMaster Vec2d
 #define VectorClassFloat Vec4f
@@ -238,6 +239,8 @@ class PhyloTree : public MTree, public Optimization {
 
 	friend class PhyloSuperTree;
 	friend class PhyloSuperTreePlen;
+	friend class RateGamma;
+	friend class RateKategory;
 
 public:
     /**
@@ -509,20 +512,19 @@ public:
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
      */
-    virtual void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+    virtual void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL,
-            double *pattern_scale = NULL);
+    void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template<int NSTATES>
-    inline void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+    inline void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <const int nstates>
-    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL, double *pattern_scale = NULL);
+    void computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     /**
             compute tree likelihood on a branch. used to optimize branch length
@@ -543,8 +545,8 @@ public:
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
-    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad,
-            double *pattern_lh = NULL, double *pattern_rate = NULL);
+//    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL, double *pattern_rate = NULL);
+    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
     /**
             compute tree likelihood when a branch length collapses to zero
@@ -1159,6 +1161,8 @@ public:
             randomize the neighbor orders of all nodes
      */
     void randomizeNeighbors(Node *node = NULL, Node *dad = NULL);
+
+    virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
     /****************************************************************************
             Public variables

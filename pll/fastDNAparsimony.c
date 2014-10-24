@@ -82,8 +82,14 @@
 #define LONG_INTS_PER_VECTOR (32/sizeof(long))
 #define INT_TYPE __m256d
 #define CAST double*
-#define SET_ALL_BITS_ONE (__m256d)_mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)
-#define SET_ALL_BITS_ZERO (__m256d)_mm256_set_epi32(0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000)
+
+//#ifdef _MSC_VER
+#define SET_ALL_BITS_ONE _mm256_castsi256_pd(_mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF))
+#define SET_ALL_BITS_ZERO _mm256_castsi256_pd(_mm256_set_epi32(0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000))
+//#else
+//#define SET_ALL_BITS_ONE (__m256d)_mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF)
+//#define SET_ALL_BITS_ZERO (__m256d)_mm256_set_epi32(0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000)
+//#endif
 #define VECTOR_LOAD _mm256_load_pd
 #define VECTOR_BIT_AND _mm256_and_pd
 #define VECTOR_BIT_OR  _mm256_or_pd
@@ -92,9 +98,55 @@
 
 #endif
 
-
 #include "pll.h"
 #include "pllInternal.h"
+
+// Define popcount function. Gives sum of bits
+//#if defined ( __SSE4_2__ )
+//    // popcnt instruction is not officially part of the SSE4.2 instruction set,
+//    // but available in all known processors with SSE4.2
+//#	if defined (__GNUC__) || defined(__clang__)
+//	static inline uint32_t vml_popcnt (uint32_t a) __attribute__ ((pure));
+//	static inline uint32_t vml_popcnt (uint32_t a) {
+//		uint32_t r;
+//		__asm("popcnt %1, %0" : "=r"(r) : "r"(a) : );
+//		return r;
+//	}
+//#	else
+//	static inline uint32_t vml_popcnt (uint32_t a) {
+//		return _mm_popcnt_u32(a);  // MS intrinsic
+//	}
+//#	endif // platform
+//#else  // no SSE4.2
+//	static inline uint32_t vml_popcnt (uint32_t a) {
+//		// popcnt instruction not available
+//		uint32_t b = a - ((a >> 1) & 0x55555555);
+//		uint32_t c = (b & 0x33333333) + ((b >> 2) & 0x33333333);
+//		uint32_t d = (c + (c >> 4)) & 0x0F0F0F0F;
+//		uint32_t e = d * 0x01010101;
+//		return   e >> 24;
+//	}
+//#endif
+
+#if defined (_MSC_VER)
+#	if defined ( __SSE4_2__ ) || defined (__AVX__)
+#		include <nmmintrin.h>
+#		define __builtin_popcount _mm_popcnt_u32
+#		define __builtin_popcountl _mm_popcnt_u64
+#	else
+#		include <intrin.h>
+	static inline uint32_t __builtin_popcount (uint32_t a) {
+		// popcnt instruction not available
+		uint32_t b = a - ((a >> 1) & 0x55555555);
+		uint32_t c = (b & 0x33333333) + ((b >> 2) & 0x33333333);
+		uint32_t d = (c + (c >> 4)) & 0x0F0F0F0F;
+		uint32_t e = d * 0x01010101;
+		return   e >> 24;
+	}
+//#		define __builtin_popcount __popcnt
+#		define __builtin_popcountl __popcnt64
+#	endif
+#endif
 
 static pllBoolean tipHomogeneityCheckerPars(pllInstance *tr, nodeptr p, int grouping);
 
@@ -114,19 +166,47 @@ extern double masterTime;
 }
 
 /* bit count for 64 bit integers */
-
-inline unsigned int bitcount_64_bit(unsigned long i)
-{
-  return ((unsigned int) __builtin_popcountl(i));
-}
+//#if (defined(_MSC_VER)) || defined(__MINGW32__)
+//#ifdef _WIN32
+// inline unsigned int bitcount_64_bit(uint64_t i)
+// {
+//	 unsigned int *counts = &i;
+//  return ((unsigned int) __builtin_popcount(counts[0]) + __builtin_popcount(counts[1]));
+// }
+//#else
+//inline unsigned int bitcount_64_bit(uint64_t i)
+//{
+//  return ((unsigned int) __builtin_popcountl(i));
+//}
+//#endif
 
 /* bit count for 128 bit SSE3 and 256 bit AVX registers */
 
 #if (defined(__SSE3) || defined(__AVX))
+
+//#if (!defined(_WIN64) && defined(_MSC_VER)) || defined(__MINGW32__)
+#ifdef _WIN32
+ /* emulate with 32-bit version */
 static inline unsigned int vectorPopcount(INT_TYPE v)
 {
-  unsigned long
-    counts[LONG_INTS_PER_VECTOR] __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+PLL_ALIGN_BEGIN unsigned int counts[INTS_PER_VECTOR] PLL_ALIGN_END;
+
+  int
+    i,
+    sum = 0;
+
+  VECTOR_STORE((CAST)counts, v);
+
+  for(i = 0; i < INTS_PER_VECTOR; i++)
+    sum += __builtin_popcount(counts[i]);
+
+  return ((unsigned int)sum);
+}
+#else
+static inline unsigned int vectorPopcount(INT_TYPE v)
+{
+
+PLL_ALIGN_BEGIN uint64_t counts[LONG_INTS_PER_VECTOR] PLL_ALIGN_END;
 
   int    
     i,
@@ -139,6 +219,7 @@ static inline unsigned int vectorPopcount(INT_TYPE v)
              
   return ((unsigned int)sum);
 }
+#endif
 #endif
 
 
@@ -255,8 +336,9 @@ static void newviewParsimonyIterativeFast(pllInstance *tr, partitionList *pr)
 
   for(index = 4; index < count; index += 4)
     {      
-      unsigned int
-        totalScore __attribute__((aligned (PLL_BYTE_ALIGNMENT)));
+
+PLL_ALIGN_BEGIN unsigned int totalScore PLL_ALIGN_END;
+
       totalScore = 0;
 
       size_t
@@ -480,9 +562,9 @@ static unsigned int evaluateParsimonyIterativeFast(pllInstance *tr, partitionLis
   int
     model;
 
-  unsigned int 
-    bestScore = tr->bestParsimony,    
-    sum __attribute__ ((aligned (PLL_BYTE_ALIGNMENT)));
+  unsigned int
+	  bestScore = tr->bestParsimony;
+  PLL_ALIGN_BEGIN unsigned int sum PLL_ALIGN_END;
 
   if(tr->ti[0] > 4)
     newviewParsimonyIterativeFast(tr, pr);

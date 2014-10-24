@@ -22,6 +22,7 @@
 //#include <fstream>
 #include <iterator>
 #include "splitgraph.h"
+using namespace std;
 
 /*********************************************
 	class MTree
@@ -153,6 +154,15 @@ Node* MTree::newNode(int node_id, int node_name) {
     return new Node(node_id, node_name);
 }
 
+bool MTree::isBifurcating(Node *node, Node *dad) {
+	if (!node) node = root;
+	if (!node->isLeaf() && node->degree() != 3) return false;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		if (!(*it)->node->isLeaf() && (*it)->node->degree() != 3) return false;
+		if (!isBifurcating((*it)->node, node)) return false;
+	}
+	return true;
+}
 
 void MTree::printBranchLengths(ostream &out, Node *node, Node *dad)
 {
@@ -491,7 +501,7 @@ void MTree::readTree(istream &in, bool &is_rooted)
         char ch;
         ch = readNextChar(in);
         if (ch != '(') {
-        	cout << in << endl;
+        	cout << in.rdbuf() << endl;
             throw "Tree file not started with an opening-bracket '('";
         }
 
@@ -524,8 +534,6 @@ void MTree::readTree(istream &in, bool &is_rooted)
     } catch (bad_alloc) {
         outError(ERR_NO_MEMORY);
     } catch (const char *str) {
-        outError(str, reportInputInfo());
-    } catch (char *str) {
         outError(str, reportInputInfo());
     } catch (string str) {
         outError(str.c_str(), reportInputInfo());

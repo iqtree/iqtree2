@@ -1347,7 +1347,7 @@ pllAlignmentRemoveDups (pllAlignmentData * alignmentData, partitionList * pl)
 
      for (i = 0; i < pl->partitionData[p]->width; ++ i)
       {
-        sites[p][i] = (char *) (memptr[p] + i * (alignmentData->sequenceCount + 1) * sizeof (char));
+        sites[p][i] = (char *) ((char*)memptr[p] + i * (alignmentData->sequenceCount + 1) * sizeof (char));
       }
 
      for (i = 0; i < pl->partitionData[p]->width; ++ i)
@@ -2177,6 +2177,9 @@ pllTreeInitTopologyForAlignment (pllInstance * tr, pllAlignmentData * alignmentD
 
     @param partitions
       The partitions
+
+    @param sprDist
+      SPR distance for the SPR search in parsimony
 */
 void pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInstance * tr, partitionList * partitions, int sprDist)
 {

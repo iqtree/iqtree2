@@ -36,8 +36,9 @@
 #include <errno.h>
 #include <time.h>
 #include <math.h>
+#ifndef WIN32
 #include <sys/time.h>
-
+#endif
 #include "pll.h"
 #include "pllInternal.h"
 

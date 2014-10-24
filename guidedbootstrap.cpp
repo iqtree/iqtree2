@@ -102,8 +102,6 @@ void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs, D
         outError(ERR_NO_MEMORY);
     } catch (const char *str) {
         outError(str);
-    } catch (char *str) {
-        outError(str);
     } catch (string str) {
         outError(str);
     } catch (ios::failure) {
@@ -1090,7 +1088,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
         boot_aln->extractPatternFreqs(alignment, *boot_freqs[id]);
 
         IQTree boot_tree(boot_aln);
-        runPhyloAnalysis(params, orig_model, boot_aln, boot_tree, model_info);
+        runTreeReconstruction(params, orig_model, boot_tree, model_info);
         boot_tree.setRootNode(params.root);
         stringstream ss;
         boot_tree.printTree(ss, WT_SORT_TAXA);
@@ -1122,7 +1120,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     out_file += ".trees";
     boot_trees.printTrees(out_file.c_str(),WT_SORT_TAXA);
     params.min_iterations = 0;
-    runPhyloAnalysis(params, orig_model, alignment, tree, model_info);
+    runTreeReconstruction(params, orig_model, tree, model_info);
     params.treeset_file = (char*)out_file.c_str();
     evaluateTrees(params, &tree);
 
@@ -1284,7 +1282,7 @@ void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
         // now run analysis and compute tree likelihood for params.treeset_file
         if (params.treeset_file) {
 			IQTree boot_tree(boot_aln);
-			runPhyloAnalysis(params, orig_model, boot_aln, boot_tree, model_info);
+			runTreeReconstruction(params, orig_model, boot_tree, model_info);
         	vector<TreeInfo> info;
         	IntVector distinct_ids;
         	evaluateTrees(params, &boot_tree, info, distinct_ids);

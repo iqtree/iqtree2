@@ -130,6 +130,8 @@ public:
             PRINT INFORMATION
      ********************************************************/
 
+	/** @return true if tree is bifurcating, false otherwise */
+	bool isBifurcating(Node *node = NULL, Node *dad = NULL);
     /**
             print information
             @param node the starting node, NULL to start from the root
