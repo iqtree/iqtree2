@@ -174,7 +174,7 @@ int Alignment::checkIdenticalSeq()
 	return num_identical;
 }
 
-Alignment *Alignment::removeIdenticalSeq(string not_remove, StrVector &removed_seqs, StrVector &target_seqs)
+Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs)
 {
     IntVector checked;
     vector<bool> removed;
@@ -184,6 +184,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, StrVector &removed_s
 
 	for (seq1 = 0; seq1 < getNSeq(); seq1++) {
         if (checked[seq1]) continue;
+        bool first_ident_seq = true;
 		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
 			if (getSeqName(seq2) == not_remove) continue;
 			bool equal_seq = true;
@@ -193,10 +194,13 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, StrVector &removed_s
 					break;
 				}
 			if (equal_seq) {
-				removed_seqs.push_back(getSeqName(seq2));
-				target_seqs.push_back(getSeqName(seq1));
-				removed[seq2] = true;
+				if (!keep_two || !first_ident_seq) {
+					removed_seqs.push_back(getSeqName(seq2));
+					target_seqs.push_back(getSeqName(seq1));
+					removed[seq2] = true;
+				}
 				checked[seq2] = 1;
+				first_ident_seq = false;
 			}
 		}
 		checked[seq1] = 1;
