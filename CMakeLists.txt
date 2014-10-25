@@ -174,24 +174,34 @@ endif()
 if (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
  	message("Vectorization : AVX")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
-	if (VCC OR ICC) 
+	if (VCC) 
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX")
-	elseif (CLANG)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3 -mavx")
-	elseif (GCC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3 -mavx -fabi-version=0")
+#	elseif (CLANG)
+#		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx")
+	elseif (GCC OR CLANG)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -fabi-version=0")
+	elseif (ICC) 
+		if (WIN32)
+			 set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX")
+		else()
+			 set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx")
+		endif()
 	endif()
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
 else() #SSE intruction set
 	message("Vectorization : SSE3")
-
 	add_definitions(-D__SSE3)
+	
 	if (VCC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE")
-	elseif (ICC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE3")
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE2 -D__SSE3__")
 	elseif (GCC OR CLANG)
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3")
+	elseif (ICC)
+		if (WIN32)
+			set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE3")
+		else()
+			set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3")
+		endif()
 	endif()
 endif()
 
@@ -250,7 +260,7 @@ add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
 add_subdirectory(zlib-1.2.7)
-#add_subdirectory(vectorclass)
+add_subdirectory(vectorclass)
 
 ##################################################################
 # the main executable
@@ -358,7 +368,7 @@ if (IQTREE_FLAGS MATCHES "omp")
 	endif()
 endif()
 
-target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ${PLATFORM_LIB} ${THREAD_LIB})	
+target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass ${PLATFORM_LIB} ${THREAD_LIB})	
 
 ##################################################################
 # setup the executable name 

@@ -64,7 +64,7 @@
 #include "timeutil.h"
 //#include <unistd.h>
 #include <stdlib.h>
-
+#include "vectorclass/vectorclass.h"
 
 #ifdef _OPENMP
 	#include <omp.h>
@@ -2174,11 +2174,23 @@ int main(int argc, char *argv[])
 	//fgets(hostname, sizeof(hostname), pfile);
 	//pclose(pfile);
 
+	int instrset = instrset_detect();
+	if (instrset < 3) outError("Your computer does not support SSE3!");
+
 	cout << "Host:    " << hostname << " (";
+	switch (instrset) {
+	case 3: cout << "SSE3 supported, "; break;
+	case 4: cout << "SSSE3 supported, "; break;
+	case 5: cout << "SSE4.1 supported, "; break;
+	case 6: cout << "SSE4.2 supported, "; break;
+	case 7: cout << "AVX supported, "; break;
+	case 8: cout << "AVX2 supported, "; break;
+	default: cout << "AVX512F supported, "; break;
+	}
 #if defined __APPLE__ || defined __MACH__
-	cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM detected)" << endl;
+	cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM)" << endl;
 #else
-	cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM detected)" << endl;
+	cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM)" << endl;
 #endif
 
 	cout << "Command:";
@@ -2213,10 +2225,8 @@ int main(int argc, char *argv[])
 #endif
 		}
 	}
-	/*
-	int instrset = instrset_detect();
-	cout << "CPU:     " << instrset << endl;
-	*/
+
+
 
 #ifdef _OPENMP
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
@@ -2232,6 +2242,18 @@ int main(int argc, char *argv[])
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl << endl;
+
+#ifdef __AVX
+	if (instrset < 7) {
+		outError("Your computer does not support AVX, please use the SSE3 version of IQ-TREE.");
+	}
+#else
+	if (instrset >= 7) {
+		outWarning("Your computer supports AVX but you are using SSE3 version of IQ-TREE.");
+		outWarning("Please consider using AVX version of IQ-TREE which is 40% faster");
+		cout << endl;
+	}
+#endif
 	cout.precision(3);
 	cout.setf(ios::fixed);
 
