@@ -206,6 +206,26 @@ else() #SSE intruction set
 endif()
 
 ##################################################################
+# configure FMA instructions
+##################################################################
+if (IQTREE_FLAGS MATCHES "fma") # AVX instruction set
+	message("Fused multiply add (FMA): enabled")
+	if (GCC OR CLANG)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mfma")
+	elseif (ICC) 
+		if (WIN32) 
+			set(COMBINED_FLAGS "${COMBINED_FLAGS} /Qfma")
+		else()
+			set(COMBINED_FLAGS "${COMBINED_FLAGS} -mfma")
+		endif()
+	elseif (VCC)
+		error("MS Visual C++ does not support FMA")
+	endif()
+else()
+	message("Fused multiply add (FMA): off")
+endif()
+
+##################################################################
 # Setup compiler flags
 ##################################################################
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMBINED_FLAGS}")

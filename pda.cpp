@@ -2175,30 +2175,41 @@ int main(int argc, char *argv[])
 	//pclose(pfile);
 
 	int instrset = instrset_detect();
-	if (instrset < 3) outError("Your computer does not support SSE3!");
+	if (instrset < 3) outError("Your CPU does not support SSE3!");
+	bool has_fma3 = hasFMA3();
+	bool has_fma4 = hasFMA4();
 
 #ifdef __AVX
 	if (instrset < 7) {
-		outError("Your computer does not support AVX, please use the SSE3 version of IQ-TREE.");
+		outError("Your CPU does not support AVX, please use the SSE3 version of IQ-TREE.");
 	}
 #else
 	if (instrset >= 7) {
-		outWarning("Your computer supports AVX but you are using SSE3 version of IQ-TREE!");
+		outWarning("Your CPU supports AVX but you are using SSE3 version of IQ-TREE!");
 		outWarning("Please switch to AVX version that is 40% faster than SSE3.");
+		cout << endl;
+	}
+#endif
+
+#ifndef __FMA__
+	if (has_fma3 || has_fma4) {
+		outWarning("Your CPU supports FMA but you did not enable FMA during compilation");
 		cout << endl;
 	}
 #endif
 
 	cout << "Host:    " << hostname << " (";
 	switch (instrset) {
-	case 3: cout << "SSE3 supported, "; break;
-	case 4: cout << "SSSE3 supported, "; break;
-	case 5: cout << "SSE4.1 supported, "; break;
-	case 6: cout << "SSE4.2 supported, "; break;
-	case 7: cout << "AVX supported, "; break;
-	case 8: cout << "AVX2 supported, "; break;
-	default: cout << "AVX512F supported, "; break;
+	case 3: cout << "SSE3, "; break;
+	case 4: cout << "SSSE3, "; break;
+	case 5: cout << "SSE4.1, "; break;
+	case 6: cout << "SSE4.2, "; break;
+	case 7: cout << "AVX, "; break;
+	case 8: cout << "AVX2, "; break;
+	default: cout << "AVX512F, "; break;
 	}
+	if (has_fma3) cout << "FMA3, ";
+	if (has_fma4) cout << "FMA4, ";
 #if defined __APPLE__ || defined __MACH__
 	cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM)" << endl;
 #else
@@ -2231,10 +2242,14 @@ int main(int argc, char *argv[])
 		case LK_EIGEN: cout << "No SSE"; break;
 		case LK_EIGEN_SSE:
 #ifdef __AVX
-			cout << "AVX"; break;
+			cout << "AVX";
 #else
-			cout << "SSE3"; break;
+			cout << "SSE3";
 #endif
+#ifdef __FMA__
+			cout << "+FMA";
+#endif
+			break;
 		}
 	}
 
