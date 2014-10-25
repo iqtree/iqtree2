@@ -176,9 +176,9 @@ if (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
 	if (VCC) 
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX")
-#	elseif (CLANG)
-#		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx")
-	elseif (GCC OR CLANG)
+	elseif (CLANG)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx")
+	elseif (GCC)
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -fabi-version=0")
 	elseif (ICC) 
 		if (WIN32)

@@ -2177,6 +2177,18 @@ int main(int argc, char *argv[])
 	int instrset = instrset_detect();
 	if (instrset < 3) outError("Your computer does not support SSE3!");
 
+#ifdef __AVX
+	if (instrset < 7) {
+		outError("Your computer does not support AVX, please use the SSE3 version of IQ-TREE.");
+	}
+#else
+	if (instrset >= 7) {
+		outWarning("Your computer supports AVX but you are using SSE3 version of IQ-TREE!");
+		outWarning("Please switch to AVX version that is 40% faster than SSE3.");
+		cout << endl;
+	}
+#endif
+
 	cout << "Host:    " << hostname << " (";
 	switch (instrset) {
 	case 3: cout << "SSE3 supported, "; break;
@@ -2243,17 +2255,6 @@ int main(int argc, char *argv[])
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl << endl;
 
-#ifdef __AVX
-	if (instrset < 7) {
-		outError("Your computer does not support AVX, please use the SSE3 version of IQ-TREE.");
-	}
-#else
-	if (instrset >= 7) {
-		outWarning("Your computer supports AVX but you are using SSE3 version of IQ-TREE.");
-		outWarning("Please consider using AVX version of IQ-TREE which is 40% faster");
-		cout << endl;
-	}
-#endif
 	cout.precision(3);
 	cout.setf(ios::fixed);
 
