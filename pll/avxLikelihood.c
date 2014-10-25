@@ -67,7 +67,7 @@ PLL_ALIGN_BEGIN const union PLL_ALIGN_END
 
 
 
-static inline __m256d hadd4(__m256d v, __m256d u)
+static __inline __m256d hadd4(__m256d v, __m256d u)
 { 
   __m256d
     a, b;
@@ -85,7 +85,7 @@ static inline __m256d hadd4(__m256d v, __m256d u)
   return v;
 }
 
-static inline __m256d hadd3(__m256d v)
+static __inline __m256d hadd3(__m256d v)
 { 
   __m256d
     a;

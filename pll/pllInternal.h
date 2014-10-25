@@ -153,7 +153,7 @@ extern void initRateMatrix(pllInstance *tr, partitionList *pr);
 extern void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, pllHashtable *h, int treeNumber, int function, branchInfo *bInf,
                                     int *countBranches, int treeVectorLength, pllBoolean traverseOnly, pllBoolean computeWRF, int processID);
 extern  unsigned int bitcount_32_bit(unsigned int i);
-extern inline unsigned int bitcount_64_bit(uint64_t i);
+extern __inline unsigned int bitcount_64_bit(uint64_t i);
 extern void perSiteLogLikelihoods(pllInstance *tr, partitionList *pr, double *logLikelihoods);
 extern void updatePerSiteRates(pllInstance *tr, partitionList *pr, pllBoolean scaleRates);
 extern void restart(pllInstance *tr, partitionList *pr);
