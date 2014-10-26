@@ -2178,10 +2178,11 @@ int main(int argc, char *argv[])
 	if (instrset < 3) outError("Your CPU does not support SSE3!");
 	bool has_fma3 = hasFMA3();
 	bool has_fma4 = hasFMA4();
+	bool has_fma =  has_fma3 || has_fma4;
 
 #ifdef __AVX
 	if (instrset < 7) {
-		outError("Your CPU does not support AVX, please use the SSE3 version of IQ-TREE.");
+		outError("Your CPU does not support AVX, please use SSE3 version of IQ-TREE.");
 	}
 #else
 	if (instrset >= 7) {
@@ -2191,9 +2192,14 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-#ifndef __FMA__
-	if (has_fma3 || has_fma4) {
-		outWarning("Your CPU supports FMA but you did not enable FMA during compilation");
+#ifdef __FMA__
+	if (!has_fma) {
+		outError("Your CPU does not support FMA instruction, quiting now...");
+	}
+#else
+	if (has_fma) {
+		outWarning("Your CPU supports AVX+FMA but you are using non-FMA version of IQ-TREE!");
+		outWarning("Please consider trying AVX+FMA version.");
 		cout << endl;
 	}
 #endif

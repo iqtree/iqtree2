@@ -1566,7 +1566,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 //		lh_ptn *= vc_freq;
 //		ddf_ptn = (ddf_ptn - df_ptn * df_ptn); // this must become before changing df_ptn
 //		df_ptn *= vc_freq;
-		ddf_ptn = -mul_sub(df_ptn, df_ptn, ddf_ptn);
+		ddf_ptn = nmul_add(df_ptn, df_ptn, ddf_ptn);
 
 #ifdef _OPENMP
 		lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);
