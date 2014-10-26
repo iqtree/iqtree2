@@ -169,9 +169,28 @@ else()
 endif()
 
 ##################################################################
-# configure SSE/AVX instructions
+# configure SSE/AVX/FMA instructions
 ##################################################################
-if (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
+if (IQTREE_FLAGS MATCHES "fma") # AVX+FMA instruction set
+ 	message("Vectorization : AVX+FMA")
+	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
+	if (VCC)
+		# Visual C++ has no /mfma flag!, FMA is only included in AVX2 
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX2")
+	elseif (CLANG)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
+	elseif (GCC)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -fabi-version=0 -mfma")
+	elseif (ICC) 
+		if (WIN32)
+			 set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX /Qfma")
+		else()
+			 set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
+		endif()
+	endif()
+	SET(EXE_SUFFIX "${EXE_SUFFIX}-fma")
+
+elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
  	message("Vectorization : AVX")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
 	if (VCC) 
@@ -203,26 +222,6 @@ else() #SSE intruction set
 			set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3")
 		endif()
 	endif()
-endif()
-
-##################################################################
-# configure FMA instructions
-##################################################################
-if (IQTREE_FLAGS MATCHES "fma") # AVX instruction set
-	message("Fused multiply add (FMA): enabled")
-	if (GCC OR CLANG)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mfma")
-	elseif (ICC) 
-		if (WIN32) 
-			set(COMBINED_FLAGS "${COMBINED_FLAGS} /Qfma")
-		else()
-			set(COMBINED_FLAGS "${COMBINED_FLAGS} -mfma")
-		endif()
-	elseif (VCC)
-		error("MS Visual C++ does not support FMA")
-	endif()
-else()
-	message("Fused multiply add (FMA): off")
 endif()
 
 ##################################################################
@@ -464,7 +463,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 endif()
 
 set (PROJECT_NAME_SUFFIX "${EXE_SUFFIX}")
-if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx")  
+if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")  
 	set (PROJECT_NAME_SUFFIX "${PROJECT_NAME_SUFFIX}-sse") 
 endif()
 
