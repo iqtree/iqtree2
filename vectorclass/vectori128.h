@@ -1,8 +1,8 @@
 /****************************  vectori128.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2014-07-23
-* Version:       1.14
+* Last modified: 2014-10-24
+* Version:       1.16
 * Project:       vector classes
 * Description:
 * Header file defining integer vector classes as interface to intrinsic 
@@ -63,7 +63,7 @@ protected:
 public:
     // Default constructor:
     Vec128b() {
-    };
+    }
     // Constructor to broadcast the same value into all elements
     // Removed because of undesired implicit conversions
     // Vec128b(int i) {
@@ -72,12 +72,12 @@ public:
     // Constructor to convert from type __m128i used in intrinsics:
     Vec128b(__m128i const & x) {
         xmm = x;
-    };
+    }
     // Assignment operator to convert from type __m128i used in intrinsics:
     Vec128b & operator = (__m128i const & x) {
         xmm = x;
         return *this;
-    };
+    }
     // Type cast operator to convert to __m128i used in intrinsics
     operator __m128i() const {
         return xmm;
@@ -424,6 +424,14 @@ public:
 
 class Vec16cb : public Vec16c {
 public:
+    // Default constructor
+    Vec16cb() {}
+    // Constructor to build from all elements:
+    Vec16cb(bool x0, bool x1, bool x2, bool x3, bool x4, bool x5, bool x6, bool x7,
+        bool x8, bool x9, bool x10, bool x11, bool x12, bool x13, bool x14, bool x15) {
+        xmm = Vec16c(-int8_t(x0), -int8_t(x1), -int8_t(x2), -int8_t(x3), -int8_t(x4), -int8_t(x5), -int8_t(x6), -int8_t(x7), 
+            -int8_t(x8), -int8_t(x9), -int8_t(x10), -int8_t(x11), -int8_t(x12), -int8_t(x13), -int8_t(x14), -int8_t(x15));
+    }
     // Constructor to convert from type __m128i used in intrinsics:
     Vec16cb(__m128i const & x) {
         xmm = x;
@@ -433,6 +441,18 @@ public:
         xmm = x;
         return *this;
     }
+    // Constructor to broadcast scalar value:
+    Vec16cb(bool b) : Vec16c(-int8_t(b)) {
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec16cb & operator = (bool b) {
+        *this = Vec16cb(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec16cb(int b);
+    Vec16cb & operator = (int x);
+public:
     Vec16cb & insert (int index, bool a) {
         Vec16c::insert(index, -(int)a);
         return *this;
@@ -447,6 +467,64 @@ public:
         return extract(index);
     }
 };
+
+
+/*****************************************************************************
+*
+*          Define operators for Vec16cb
+*
+*****************************************************************************/
+
+// vector operator & : bitwise and
+static inline Vec16cb operator & (Vec16cb const & a, Vec16cb const & b) {
+    return Vec16cb(Vec128b(a) & Vec128b(b));
+}
+static inline Vec16cb operator && (Vec16cb const & a, Vec16cb const & b) {
+    return a & b;
+}
+// vector operator &= : bitwise and
+static inline Vec16cb & operator &= (Vec16cb & a, Vec16cb const & b) {
+    a = a & b;
+    return a;
+}
+
+// vector operator | : bitwise or
+static inline Vec16cb operator | (Vec16cb const & a, Vec16cb const & b) {
+    return Vec16cb(Vec128b(a) | Vec128b(b));
+}
+static inline Vec16cb operator || (Vec16cb const & a, Vec16cb const & b) {
+    return a | b;
+}
+// vector operator |= : bitwise or
+static inline Vec16cb & operator |= (Vec16cb & a, Vec16cb const & b) {
+    a = a | b;
+    return a;
+}
+
+// vector operator ^ : bitwise xor
+static inline Vec16cb operator ^ (Vec16cb const & a, Vec16cb const & b) {
+    return Vec16cb(Vec128b(a) ^ Vec128b(b));
+}
+// vector operator ^= : bitwise xor
+static inline Vec16cb & operator ^= (Vec16cb & a, Vec16cb const & b) {
+    a = a ^ b;
+    return a;
+}
+
+// vector operator ~ : bitwise not
+static inline Vec16cb operator ~ (Vec16cb const & a) {
+    return Vec16cb( ~ Vec128b(a));
+}
+
+// vector operator ! : element not
+static inline Vec16cb operator ! (Vec16cb const & a) {
+    return ~ a;
+}
+
+// vector function andnot
+static inline Vec16cb andnot (Vec16cb const & a, Vec16cb const & b) {
+    return Vec16cb(andnot(Vec128b(a), Vec128b(b)));
+}
 
 
 /*****************************************************************************
@@ -1148,6 +1226,10 @@ public:
 
 class Vec8sb : public Vec8s {
 public:
+    // Constructor to build from all elements:
+    Vec8sb(bool x0, bool x1, bool x2, bool x3, bool x4, bool x5, bool x6, bool x7) {
+        xmm = Vec8s(-int16_t(x0), -int16_t(x1), -int16_t(x2), -int16_t(x3), -int16_t(x4), -int16_t(x5), -int16_t(x6), -int16_t(x7));
+    }
     // Default constructor:
     Vec8sb() {
     }
@@ -1160,6 +1242,18 @@ public:
         xmm = x;
         return *this;
     }
+    // Constructor to broadcast scalar value:
+    Vec8sb(bool b) : Vec8s(-int16_t(b)) {
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec8sb & operator = (bool b) {
+        *this = Vec8sb(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec8sb(int b);
+    Vec8sb & operator = (int x);
+public:
     Vec8sb & insert (int index, bool a) {
         Vec8s::insert(index, -(int)a);
         return *this;
@@ -1175,6 +1269,64 @@ public:
         return extract(index);
     }
 };
+
+
+/*****************************************************************************
+*
+*          Define operators for Vec8sb
+*
+*****************************************************************************/
+
+// vector operator & : bitwise and
+static inline Vec8sb operator & (Vec8sb const & a, Vec8sb const & b) {
+    return Vec8sb(Vec128b(a) & Vec128b(b));
+}
+static inline Vec8sb operator && (Vec8sb const & a, Vec8sb const & b) {
+    return a & b;
+}
+// vector operator &= : bitwise and
+static inline Vec8sb & operator &= (Vec8sb & a, Vec8sb const & b) {
+    a = a & b;
+    return a;
+}
+
+// vector operator | : bitwise or
+static inline Vec8sb operator | (Vec8sb const & a, Vec8sb const & b) {
+    return Vec8sb(Vec128b(a) | Vec128b(b));
+}
+static inline Vec8sb operator || (Vec8sb const & a, Vec8sb const & b) {
+    return a | b;
+}
+// vector operator |= : bitwise or
+static inline Vec8sb & operator |= (Vec8sb & a, Vec8sb const & b) {
+    a = a | b;
+    return a;
+}
+
+// vector operator ^ : bitwise xor
+static inline Vec8sb operator ^ (Vec8sb const & a, Vec8sb const & b) {
+    return Vec8sb(Vec128b(a) ^ Vec128b(b));
+}
+// vector operator ^= : bitwise xor
+static inline Vec8sb & operator ^= (Vec8sb & a, Vec8sb const & b) {
+    a = a ^ b;
+    return a;
+}
+
+// vector operator ~ : bitwise not
+static inline Vec8sb operator ~ (Vec8sb const & a) {
+    return Vec8sb( ~ Vec128b(a));
+}
+
+// vector operator ! : element not
+static inline Vec8sb operator ! (Vec8sb const & a) {
+    return ~ a;
+}
+
+// vector function andnot
+static inline Vec8sb andnot (Vec8sb const & a, Vec8sb const & b) {
+    return Vec8sb(andnot(Vec128b(a), Vec128b(b)));
+}
 
 
 /*****************************************************************************
@@ -1758,28 +1910,28 @@ class Vec4i : public Vec128b {
 public:
     // Default constructor:
     Vec4i() {
-    };
+    }
     // Constructor to broadcast the same value into all elements:
     Vec4i(int i) {
         xmm = _mm_set1_epi32(i);
-    };
+    }
     // Constructor to build from all elements:
     Vec4i(int32_t i0, int32_t i1, int32_t i2, int32_t i3) {
         xmm = _mm_setr_epi32(i0, i1, i2, i3);
-    };
+    }
     // Constructor to convert from type __m128i used in intrinsics:
     Vec4i(__m128i const & x) {
         xmm = x;
-    };
+    }
     // Assignment operator to convert from type __m128i used in intrinsics:
     Vec4i & operator = (__m128i const & x) {
         xmm = x;
         return *this;
-    };
+    }
     // Type cast operator to convert to __m128i used in intrinsics
     operator __m128i() const {
         return xmm;
-    };
+    }
     // Member function to load from array (unaligned)
     Vec4i & load(void const * p) {
         xmm = _mm_loadu_si128((__m128i const*)p);
@@ -1845,7 +1997,7 @@ public:
         __m128i mask  = _mm_loadu_si128((__m128i const*)(maskl+4-(index & 3))); // mask with FFFFFFFF at index position
         xmm = selectb(mask,broad,xmm);
         return *this;
-    };
+    }
     // Member function extract a single element from vector
     int32_t extract(uint32_t index) const {
         int32_t x[4];
@@ -1873,6 +2025,10 @@ public:
     // Default constructor:
     Vec4ib() {
     }
+    // Constructor to build from all elements:
+    Vec4ib(bool x0, bool x1, bool x2, bool x3) {
+        xmm = Vec4i(-int32_t(x0), -int32_t(x1), -int32_t(x2), -int32_t(x3));
+    }
     // Constructor to convert from type __m128i used in intrinsics:
     Vec4ib(__m128i const & x) {
         xmm = x;
@@ -1882,6 +2038,18 @@ public:
         xmm = x;
         return *this;
     }
+    // Constructor to broadcast scalar value:
+    Vec4ib(bool b) : Vec4i(-int32_t(b)) {
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec4ib & operator = (bool b) {
+        *this = Vec4ib(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec4ib(int b);
+    Vec4ib & operator = (int x);
+public:
     Vec4ib & insert (int index, bool a) {
         Vec4i::insert(index, -(int)a);
         return *this;
@@ -1896,6 +2064,64 @@ public:
         return extract(index);
     }
 };
+
+
+/*****************************************************************************
+*
+*          Define operators for Vec4ib
+*
+*****************************************************************************/
+
+// vector operator & : bitwise and
+static inline Vec4ib operator & (Vec4ib const & a, Vec4ib const & b) {
+    return Vec4ib(Vec128b(a) & Vec128b(b));
+}
+static inline Vec4ib operator && (Vec4ib const & a, Vec4ib const & b) {
+    return a & b;
+}
+// vector operator &= : bitwise and
+static inline Vec4ib & operator &= (Vec4ib & a, Vec4ib const & b) {
+    a = a & b;
+    return a;
+}
+
+// vector operator | : bitwise or
+static inline Vec4ib operator | (Vec4ib const & a, Vec4ib const & b) {
+    return Vec4ib(Vec128b(a) | Vec128b(b));
+}
+static inline Vec4ib operator || (Vec4ib const & a, Vec4ib const & b) {
+    return a | b;
+}
+// vector operator |= : bitwise or
+static inline Vec4ib & operator |= (Vec4ib & a, Vec4ib const & b) {
+    a = a | b;
+    return a;
+}
+
+// vector operator ^ : bitwise xor
+static inline Vec4ib operator ^ (Vec4ib const & a, Vec4ib const & b) {
+    return Vec4ib(Vec128b(a) ^ Vec128b(b));
+}
+// vector operator ^= : bitwise xor
+static inline Vec4ib & operator ^= (Vec4ib & a, Vec4ib const & b) {
+    a = a ^ b;
+    return a;
+}
+
+// vector operator ~ : bitwise not
+static inline Vec4ib operator ~ (Vec4ib const & a) {
+    return Vec4ib( ~ Vec128b(a));
+}
+
+// vector operator ! : element not
+static inline Vec4ib operator ! (Vec4ib const & a) {
+    return ~ a;
+}
+
+// vector function andnot
+static inline Vec4ib andnot (Vec4ib const & a, Vec4ib const & b) {
+    return Vec4ib(andnot(Vec128b(a), Vec128b(b)));
+}
 
 
 /*****************************************************************************
@@ -2478,7 +2704,7 @@ class Vec2q : public Vec128b {
 public:
     // Default constructor:
     Vec2q() {
-    };
+    }
     // Constructor to broadcast the same value into all elements:
     Vec2q(int64_t i) {
 #if defined (_MSC_VER) && ! defined(__INTEL_COMPILER)
@@ -2510,8 +2736,7 @@ public:
 #else   // Other compilers
         xmm = _mm_set1_epi64x(i);   // emmintrin.h
 #endif
-    };
-
+    }
     // Constructor to build from all elements:
     Vec2q(int64_t i0, int64_t i1) {
 #if defined (_MSC_VER) && ! defined(__INTEL_COMPILER)
@@ -2536,16 +2761,16 @@ public:
 #else   // Other compilers
         xmm = _mm_set_epi64x(i1, i0);
 #endif
-    };
+    }
     // Constructor to convert from type __m128i used in intrinsics:
     Vec2q(__m128i const & x) {
         xmm = x;
-    };
+    }
     // Assignment operator to convert from type __m128i used in intrinsics:
     Vec2q & operator = (__m128i const & x) {
         xmm = x;
         return *this;
-    };
+    }
     // Type cast operator to convert to __m128i used in intrinsics
     operator __m128i() const {
         return xmm;
@@ -2637,7 +2862,7 @@ public:
         return extract(index);
     }
     static int size() {
-        return 8;
+        return 2;
     }
 };
 
@@ -2651,16 +2876,32 @@ class Vec2qb : public Vec2q {
 public:
     // Default constructor:
     Vec2qb() {
-    };
+    }
+    // Constructor to build from all elements:
+    Vec2qb(bool x0, bool x1) {
+        xmm = Vec2q(-int64_t(x0), -int64_t(x1));
+    }
     // Constructor to convert from type __m128i used in intrinsics:
     Vec2qb(__m128i const & x) {
         xmm = x;
-    };
+    }
     // Assignment operator to convert from type __m128i used in intrinsics:
     Vec2qb & operator = (__m128i const & x) {
         xmm = x;
         return *this;
-    };
+    }
+    // Constructor to broadcast scalar value:
+    Vec2qb(bool b) : Vec2q(-int64_t(b)) {
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec2qb & operator = (bool b) {
+        *this = Vec2qb(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec2qb(int b);
+    Vec2qb & operator = (int x);
+public:
     Vec2qb & insert (int index, bool a) {
         Vec2q::insert(index, -(int64_t)a);
         return *this;
@@ -2675,6 +2916,64 @@ public:
         return extract(index);
     }
 };
+
+
+/*****************************************************************************
+*
+*          Define operators for Vec2qb
+*
+*****************************************************************************/
+
+// vector operator & : bitwise and
+static inline Vec2qb operator & (Vec2qb const & a, Vec2qb const & b) {
+    return Vec2qb(Vec128b(a) & Vec128b(b));
+}
+static inline Vec2qb operator && (Vec2qb const & a, Vec2qb const & b) {
+    return a & b;
+}
+// vector operator &= : bitwise and
+static inline Vec2qb & operator &= (Vec2qb & a, Vec2qb const & b) {
+    a = a & b;
+    return a;
+}
+
+// vector operator | : bitwise or
+static inline Vec2qb operator | (Vec2qb const & a, Vec2qb const & b) {
+    return Vec2qb(Vec128b(a) | Vec128b(b));
+}
+static inline Vec2qb operator || (Vec2qb const & a, Vec2qb const & b) {
+    return a | b;
+}
+// vector operator |= : bitwise or
+static inline Vec2qb & operator |= (Vec2qb & a, Vec2qb const & b) {
+    a = a | b;
+    return a;
+}
+
+// vector operator ^ : bitwise xor
+static inline Vec2qb operator ^ (Vec2qb const & a, Vec2qb const & b) {
+    return Vec2qb(Vec128b(a) ^ Vec128b(b));
+}
+// vector operator ^= : bitwise xor
+static inline Vec2qb & operator ^= (Vec2qb & a, Vec2qb const & b) {
+    a = a ^ b;
+    return a;
+}
+
+// vector operator ~ : bitwise not
+static inline Vec2qb operator ~ (Vec2qb const & a) {
+    return Vec2qb( ~ Vec128b(a));
+}
+
+// vector operator ! : element not
+static inline Vec2qb operator ! (Vec2qb const & a) {
+    return ~ a;
+}
+
+// vector function andnot
+static inline Vec2qb andnot (Vec2qb const & a, Vec2qb const & b) {
+    return Vec2qb(andnot(Vec128b(a), Vec128b(b)));
+}
 
 
 /*****************************************************************************
@@ -4112,7 +4411,7 @@ static inline Vec4i blend4i(Vec4i const & a, Vec4i const & b) {
 
     // partially finished result
     __m128i temp;
-#ifdef _MSC_VER
+#if defined (_MSC_VER) || defined (__clang__)
     temp = a;  // avoid spurious warning message for temp unused
 #endif
 
@@ -4942,7 +5241,9 @@ static inline uint32_t bit_scan_reverse (uint32_t a) {
 #endif
 
 // Same function, for compile-time constants.
-// We need template metaprogramming for calculating this function at compile time
+// We need template metaprogramming for calculating this function at compile time.
+// This may take a long time to compile because of the template recursion.
+// Todo: replace this with a constexpr function when C++14 becomes available
 template <uint32_t n> 
 struct BitScanR {
     enum {val = (
@@ -5408,7 +5709,7 @@ static inline Vec4i divide_by_i(Vec4i const & x) {
     Static_error_check<(d!=0)> Dividing_by_zero;                     // Error message if dividing by zero
     if (d ==  1) return  x;
     if (d == -1) return -x;
-    if (uint32_t(d) == 0x80000000u) return (x == Vec4i(0x80000000)) & 1; // prevent overflow when changing sign
+    if (uint32_t(d) == 0x80000000u) return Vec4i(x == Vec4i(0x80000000)) & 1; // prevent overflow when changing sign
     const uint32_t d1 = d > 0 ? uint32_t(d) : uint32_t(-d);          // compile-time abs(d). (force GCC compiler to treat d as 32 bits, not 64 bits)
     if ((d1 & (d1-1)) == 0) {
         // d1 is a power of 2. use shift

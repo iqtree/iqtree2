@@ -1,12 +1,12 @@
 /****************************  vectorclass.h   ********************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2014-07-23
-* Version:       1.14
+* Last modified: 2014-10-24
+* Version:       1.16
 * Project:       vector classes
 * Description:
 * Header file defining vector classes as interface to intrinsic functions 
-* in x86 microprocessors with SSE2 and later instruction sets up to AVX2.
+* in x86 microprocessors with SSE2 and later instruction sets up to AVX512.
 *
 * Instructions:
 * Use Gnu, Clang, Intel or Microsoft C++ compiler. Compile for the desired 
@@ -14,8 +14,8 @@
 * instruction set by a command line define, e.g. __SSE4_1__ if the 
 * compiler does not automatically do so.
 *
-* Each vector object is represented internally in the CPU as a 128-bit or
-* 256 bit register.
+* Each vector object is represented internally in the CPU as a vector
+* register with 128, 256 or 512 bits.
 *
 * This header file includes the appropriate header files depending on the
 * supported instruction set
@@ -25,7 +25,7 @@
 * (c) Copyright 2012 - 2014 GNU General Public License www.gnu.org/licenses
 ******************************************************************************/
 #ifndef VECTORCLASS_H
-#define VECTORCLASS_H  114
+#define VECTORCLASS_H  116
 
 // Maximum vector size, bits. Allowed values are 128, 256, 512
 #ifndef MAX_VECTOR_SIZE
