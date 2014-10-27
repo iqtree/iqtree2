@@ -85,7 +85,7 @@ extern double masterTimePerPhase;
 #define ASSIGN_BUF_DBL(x,y) (POP_OR_PUT_BYTES(bufPtrDbl,y, double))
 #define ASSIGN_DBL(x,y) (MPI_Bcast(&y,1,MPI_DOUBLE, 0, MPI_COMM_WORLD), DEBUG_PRINT("\tSEND/RECV %f\n", y)) 
 #define ASSIGN_DBLS(tar,src,length) MPI_Bcast(tar, length, MPI_DOUBLE, 0, MPI_COMM_WORLD)
-#define DOUBLE MPI_DOUBLE
+#define PLL_DOUBLE MPI_DOUBLE
 #define ASSIGN_GATHER(tar,src,length,type,tid) MPI_Gather(src,length,type,tar,length,type,0, MPI_COMM_WORLD)
 #define SEND_BUF(buf, bufSize,type) if(MASTER_P) MPI_Bcast(buf, bufSize, type, 0, MPI_COMM_WORLD) 
 #define RECV_BUF(buf, bufSize,type) if(NOT MASTER_P) MPI_Bcast(buf, bufSize, type, 0, MPI_COMM_WORLD) 
@@ -101,7 +101,11 @@ extern int processID;
 /* PTHREAD SPECIFIC  */
 /*********************/
 #ifdef _USE_PTHREADS
+#if defined (_MSC_VER)
+#include "pthread.h"
+#else
 #include <pthread.h>
+#endif
 #define _REPRODUCIBLE_MPI_OR_PTHREADS
 #define VOLATILE_PAR volatile 
 #define MASTER_P (tid == 0)
@@ -110,7 +114,7 @@ extern int processID;
 #define ASSIGN_BUF_DBL(x,y) (x = y)
 #define ASSIGN_DBL(x,y) (x = y)
 #define ASSIGN_DBLS(tar,src,length) memmove(tar, src, length * sizeof(double))
-#define DOUBLE double 	/* just rededining that to make the source code less confusing */
+#define PLL_DOUBLE double 	/* just rededining that to make the source code less confusing */
 #define ASSIGN_GATHER(tar,src,length,type,tid) (memmove((tar) + (tid) * (length) ,src, length * sizeof(type)))
 #define SEND_BUF(buf, bufSize, type) 
 #define RECV_BUF(buf, bufSize, type) 

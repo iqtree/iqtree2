@@ -102,8 +102,6 @@ void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs, D
         outError(ERR_NO_MEMORY);
     } catch (const char *str) {
         outError(str);
-    } catch (char *str) {
-        outError(str);
     } catch (string str) {
         outError(str);
     } catch (ios::failure) {

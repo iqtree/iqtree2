@@ -18,6 +18,7 @@
 //
 
 #include "ncl.h"
+#include <functional>
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	Initializes `id' to "CHARACTERS", `taxa' to `tb', `assumptionsBlock' to `ab', `ntax', `ntaxTotal', `nchar' and 

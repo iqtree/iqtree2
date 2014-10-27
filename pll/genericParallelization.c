@@ -1132,7 +1132,7 @@ static void reduceEvaluateIterative(pllInstance *tr, pllInstance *localTree, par
     buf[model] = localPr->partitionData[model]->partitionLH;
 
   /* either make reproducible or efficient */
-  ASSIGN_GATHER(globalResult, buf, localPr->numberOfPartitions, DOUBLE, tid);
+  ASSIGN_GATHER(globalResult, buf, localPr->numberOfPartitions, PLL_DOUBLE, tid);
 
   /* printf("gather worked\n"); */
 #else 
@@ -1367,7 +1367,7 @@ static pllBoolean execFunction(pllInstance *tr, pllInstance *localTree, partitio
 	memcpy( buf, dlnLdlz, numBranches * sizeof(double) );
 	memcpy(buf + numBranches, d2lnLdlz2, numBranches * sizeof(double));
 
-	ASSIGN_GATHER(globalResult, buf,  2 * numBranches, DOUBLE, tid);
+	ASSIGN_GATHER(globalResult, buf,  2 * numBranches, PLL_DOUBLE, tid);
 #else 	
 	double result[numBranches];
 	memset(result,0, numBranches * sizeof(double));

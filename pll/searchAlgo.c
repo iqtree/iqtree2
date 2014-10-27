@@ -562,7 +562,8 @@ void regionalSmooth (pllInstance *tr, partitionList *pr, nodeptr p, int maxtimes
 */
 nodeptr  removeNodeBIG (pllInstance *tr, partitionList *pr, nodeptr p, int numBranches)
 {  
-  double   zqr[numBranches], result[numBranches];
+//  double   zqr[numBranches], result[numBranches];
+  double*   zqr = rax_malloc(numBranches*sizeof(double)), *result = rax_malloc(numBranches*sizeof(double));
   nodeptr  q, r;
   int i;
 
@@ -581,6 +582,8 @@ nodeptr  removeNodeBIG (pllInstance *tr, partitionList *pr, nodeptr p, int numBr
 
   p->next->next->back = p->next->back = (node *) NULL;
 
+  rax_free(result);
+  rax_free(zqr);
   return  q; 
 }
 
@@ -653,9 +656,14 @@ pllBoolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 
   if(tr->thoroughInsertion)
   { 
-    double  zqr[numBranches], zqs[numBranches], zrs[numBranches], lzqr, lzqs, lzrs, lzsum, lzq, lzr, lzs, lzmax;
-    double defaultArray[numBranches];
-    double e1[numBranches], e2[numBranches], e3[numBranches];
+	  double * zqr = rax_malloc(numBranches*sizeof(double)), 
+		  *zqs = rax_malloc(numBranches*sizeof(double)), 
+		  *zrs = rax_malloc(numBranches*sizeof(double));
+	  double lzqr, lzqs, lzrs, lzsum, lzq, lzr, lzs, lzmax;
+    double *defaultArray=rax_malloc(numBranches*sizeof(double));
+	double *e1 = rax_malloc(numBranches*sizeof(double)),
+		*e2 = rax_malloc(numBranches*sizeof(double)),
+		*e3 = rax_malloc(numBranches*sizeof(double));
     double *qz;
 
     qz = q->z;
@@ -695,11 +703,19 @@ pllBoolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
     }
     hookup(p->next,       q, e1, numBranches);
     hookup(p->next->next, r, e2, numBranches);
-    hookup(p,             s, e3, numBranches);      		  
+    hookup(p,             s, e3, numBranches);    
+	rax_free(e3);
+	rax_free(e2);
+	rax_free(e1);
+	rax_free(defaultArray);
+	rax_free(zrs);
+	rax_free(zqs);
+	rax_free(zqr);
+
   }
   else
   {       
-    double  z[numBranches];
+	  double  *z = rax_malloc(numBranches*sizeof(double));
 
     for(i = 0; i < numBranches; i++)
     {
@@ -713,6 +729,7 @@ pllBoolean insertBIG (pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
 
     hookup(p->next,       q, z, numBranches);
     hookup(p->next->next, r, z, numBranches);
+	rax_free(z);
   }
 
   pllUpdatePartials(tr, pr,p, PLL_FALSE);
@@ -2612,10 +2629,10 @@ pllCreateSprInfoRollback (pllInstance * tr, pllRearrangeInfo * rearr, int numBra
   q = rearr->SPR.insertNode;
 
   sprRb = (pllRollbackInfo *) rax_malloc (sizeof (pllRollbackInfo) + 4 * numBranches * sizeof (double));
-  sprRb->SPR.zp   = (double *) ((void *)sprRb + sizeof (pllRollbackInfo));
-  sprRb->SPR.zpn  = (double *) ((void *)sprRb + sizeof (pllRollbackInfo) + numBranches * sizeof (double));
-  sprRb->SPR.zpnn = (double *) ((void *)sprRb + sizeof (pllRollbackInfo) + 2 * numBranches * sizeof (double));
-  sprRb->SPR.zqr  = (double *) ((void *)sprRb + sizeof (pllRollbackInfo) + 3 * numBranches * sizeof (double));
+  sprRb->SPR.zp   = (double *) ((char *)sprRb + sizeof (pllRollbackInfo));
+  sprRb->SPR.zpn  = (double *) ((char *)sprRb + sizeof (pllRollbackInfo) + numBranches * sizeof (double));
+  sprRb->SPR.zpnn = (double *) ((char *)sprRb + sizeof (pllRollbackInfo) + 2 * numBranches * sizeof (double));
+  sprRb->SPR.zqr  = (double *) ((char *)sprRb + sizeof (pllRollbackInfo) + 3 * numBranches * sizeof (double));
 
   for (i = 0; i < numBranches; ++ i)
    {

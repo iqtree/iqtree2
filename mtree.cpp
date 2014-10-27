@@ -22,6 +22,7 @@
 //#include <fstream>
 #include <iterator>
 #include "splitgraph.h"
+using namespace std;
 
 /*********************************************
 	class MTree
@@ -500,7 +501,7 @@ void MTree::readTree(istream &in, bool &is_rooted)
         char ch;
         ch = readNextChar(in);
         if (ch != '(') {
-        	cout << in << endl;
+        	cout << in.rdbuf() << endl;
             throw "Tree file not started with an opening-bracket '('";
         }
 
@@ -533,8 +534,6 @@ void MTree::readTree(istream &in, bool &is_rooted)
     } catch (bad_alloc) {
         outError(ERR_NO_MEMORY);
     } catch (const char *str) {
-        outError(str, reportInputInfo());
-    } catch (char *str) {
         outError(str, reportInputInfo());
     } catch (string str) {
         outError(str.c_str(), reportInputInfo());

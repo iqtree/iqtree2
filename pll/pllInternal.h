@@ -8,6 +8,10 @@
 #ifndef PLLINTERNAL_H_
 #define PLLINTERNAL_H_
 
+//#ifdef _MSC_VER
+//#define inline __inline /* use __forceinline (VC++ specific) */
+//#endif
+
 #include "pll.h"
 #include "genericParallelization.h"
 #include "errcodes.h"
@@ -149,12 +153,54 @@ extern void initRateMatrix(pllInstance *tr, partitionList *pr);
 extern void bitVectorInitravSpecial(unsigned int **bitVectors, nodeptr p, int numsp, unsigned int vectorLength, pllHashtable *h, int treeNumber, int function, branchInfo *bInf,
                                     int *countBranches, int treeVectorLength, pllBoolean traverseOnly, pllBoolean computeWRF, int processID);
 extern  unsigned int bitcount_32_bit(unsigned int i);
-extern inline unsigned int bitcount_64_bit(unsigned long i);
+extern inline unsigned int bitcount_64_bit(uint64_t i);
 extern void perSiteLogLikelihoods(pllInstance *tr, partitionList *pr, double *logLikelihoods);
 extern void updatePerSiteRates(pllInstance *tr, partitionList *pr, pllBoolean scaleRates);
 extern void restart(pllInstance *tr, partitionList *pr);
-inline pllBoolean isGap(unsigned int *x, int pos);
-inline pllBoolean noGap(unsigned int *x, int pos);
+
+extern const unsigned int mask32[32];
+
+/** @brief Check whether the position \a pos in bitvector \a x is a gap
+
+    @param x
+      A bitvector represented by unsigned integers
+
+    @param pos
+      Position to check in \a x if it is set (i.e. it is a gap)
+
+    @return
+      Returns the value of the bit vector (\b 1 if set, \b 0 if not)
+*/
+//#ifndef __clang__
+//inline
+//#endif
+pllBoolean isGap(unsigned int *x, int pos);
+
+/** @brief Check whether the position \a pos in bitvector \a x is \b NOT a gap
+
+    @param x
+      A bitvector represented by unsigned integers
+
+    @param pos
+      Position to check in \a x if it is \b NOT set (i.e. it is \b NOT a gap)
+
+    @return
+      Returns the value of the bit vector (\b 1 if set, \b 0 if not)
+*/
+//#ifndef __clang__
+//inline
+//#endif
+pllBoolean noGap(unsigned int *x, int pos);
+
+//#ifndef __clang__
+//__inline
+//#endif
+//pllBoolean isGap(unsigned int *x, int pos);
+
+//#ifndef __clang__
+//__inline
+//#endif
+//pllBoolean noGap(unsigned int *x, int pos);
 
 /* from utils.h */
 linkageList* initLinkageList(int *linkList, partitionList *pr);

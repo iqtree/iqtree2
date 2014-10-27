@@ -412,7 +412,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		StrVector &removed_seqs, StrVector &twin_seqs) {
 	if (params.count_trees) {
 		// addon: print #distinct trees
-		cout << endl << "INFO: " << pllTreeCounter.size() << " distinct trees evaluated during whole tree search" << endl;
+		cout << endl << "NOTE: " << pllTreeCounter.size() << " distinct trees evaluated during whole tree search" << endl;
 
 		IntVector counts;
 		for (StringIntMap::iterator i = pllTreeCounter.begin(); i != pllTreeCounter.end(); i++) {
@@ -698,7 +698,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 
 			// bug fix
 			if ((tree.sse == LK_EIGEN || tree.sse == LK_EIGEN_SSE) && !tree.isBifurcating()) {
-				cout << "INFO: Changing to old kernel as consensus tree is multifurcating" << endl;
+				cout << "NOTE: Changing to old kernel as consensus tree is multifurcating" << endl;
 				tree.changeLikelihoodKernel(LK_SSE);
 			}
 
@@ -1068,7 +1068,7 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         params.numNNITrees = 1;
         // change to old kernel if tree is multifurcating
 		if ((params.SSE == LK_EIGEN || params.SSE == LK_EIGEN_SSE) && !iqtree.isBifurcating()) {
-			cout << "INFO: Changing to old kernel as input tree is multifurcating" << endl;
+			cout << "NOTE: Changing to old kernel as input tree is multifurcating" << endl;
 			params.SSE = LK_SSE;
 		}
     } else if (params.parsimony_tree && !params.pll) {
