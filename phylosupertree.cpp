@@ -980,3 +980,22 @@ int PhyloSuperTree::countEmptyBranches(PhyloNode *node, PhyloNode *dad) {
     return count;
 }
 
+/** remove identical sequences from the tree */
+void PhyloSuperTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs) {
+	IQTree::removeIdenticalSeqs(params, removed_seqs, twin_seqs);
+	if (removed_seqs.empty()) return;
+	// now synchronize aln
+	int part = 0;
+	for (iterator it = begin(); it != end(); it++, part++)
+		(*it)->aln = ((SuperAlignment*)aln)->partitions[part];
+}
+
+/** reinsert identical sequences into the tree and reset original alignment */
+void PhyloSuperTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs) {
+	if (removed_seqs.empty()) return;
+	IQTree::reinsertIdenticalSeqs(orig_aln, removed_seqs, twin_seqs);
+	// now synchronize aln
+	int part = 0;
+	for (iterator it = begin(); it != end(); it++, part++)
+		(*it)->aln = ((SuperAlignment*)aln)->partitions[part];
+}

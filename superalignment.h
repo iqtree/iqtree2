@@ -102,6 +102,26 @@ public:
 	*/
 	virtual void getPatternFreq(IntVector &pattern_freq);
 
+
+    /**
+            extract sub-alignment of a sub-set of sequences
+            @param aln original input alignment
+            @param seq_id ID of sequences to extract from
+            @param min_true_cher the minimum number of non-gap characters, true_char<min_true_char -> delete the sequence
+     */
+    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
+
+    /**
+     * remove identical sequences from alignment
+     * @param not_remove name of sequence where removal is avoided
+     * @param keep_two TRUE to keep 2 out of k identical sequences, false to keep only 1
+     * @param removed_seqs (OUT) name of removed sequences
+     * @param target_seqs (OUT) corresponding name of kept sequence that is identical to the removed sequences
+     * @return this if no sequences were removed, or new alignment if at least 1 sequence was removed
+     */
+    virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
+
+
 	/**
 		Quit if some sequences contain only gaps or missing data
 	*/
