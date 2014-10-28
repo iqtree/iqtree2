@@ -460,6 +460,12 @@ void PhyloSuperTree::mapTrees() {
 	if (verbose_mode >= VB_DEBUG) printMapInfo();
 }
 
+void PhyloSuperTree::deleteAllPartialLh() {
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->deleteAllPartialLh();
+}
+
+
 double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	double tree_lh = 0.0;
 	int ntrees = size();

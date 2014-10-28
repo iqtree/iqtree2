@@ -136,6 +136,11 @@ public:
 	void linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei);
 
     /**
+            de-allocate central_partial_lh
+     */
+    virtual void deleteAllPartialLh();
+
+    /**
             compute the tree likelihood
             @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
                             assuming pattern_lh has the size of the number of patterns
