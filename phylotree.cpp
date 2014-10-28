@@ -921,9 +921,11 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     clearAllPartialLH();
     fixNegativeBranch(true);
     cout << "Time taken: " << getCPUTime() - start_time << " sec" << endl;
-    string file_name = out_prefix;
-    file_name += ".parstree";
-    printTree(file_name.c_str(), WT_BR_LEN | WT_NEWLINE);
+    if (out_prefix) {
+		string file_name = out_prefix;
+		file_name += ".parstree";
+		printTree(file_name.c_str(), WT_BR_LEN | WT_NEWLINE);
+    }
 }
 
 int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& target_dad, Node* node, Node* dad) {
