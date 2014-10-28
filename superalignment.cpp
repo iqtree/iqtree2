@@ -71,13 +71,22 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 void SuperAlignment::linkSubAlignment(int part) {
 	assert(taxa_index.size() == getNSeq());
 	int nseq = getNSeq(), seq;
+	vector<bool> checked;
+	checked.resize(partitions[part]->getNSeq(), false);
 	for (seq = 0; seq < nseq; seq++) {
 		int id = partitions[part]->getSeqID(getSeqName(seq));
 		if (id < 0)
 			taxa_index[seq][part] = -1;
-		else
+		else {
 			taxa_index[seq][part] = id;
+			checked[id] = true;
+		}
 	}
+	// sanity check that all seqnames in partition must be present in superalignment
+	for (seq = 0; seq < checked.size(); seq++)
+		if (!checked[seq]) {
+			assert(0);
+		}
 }
 
 void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char) {
@@ -88,7 +97,7 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int 
 
 	taxa_index.resize(getNSeq());
 	for (int i = 0; i < getNSeq(); i++)
-		taxa_index.resize(saln->partitions.size());
+		taxa_index[i].resize(saln->partitions.size());
 
 	int part = 0;
 	partitions.resize(saln->partitions.size());
@@ -98,8 +107,10 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int 
 			sub_seq_id.push_back(saln->taxa_index[*it][part]);
 		Alignment *subaln = new Alignment;
 		subaln->extractSubAlignment(*ait, sub_seq_id, 0);
-		partitions.push_back(subaln);
+		partitions[part] = subaln;
 		linkSubAlignment(part);
+//		cout << subaln->getNSeq() << endl;
+//		subaln->printPhylip(cout);
 	}
 }
 
@@ -159,7 +170,7 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 	IntVector keep_seqs;
 	for (seq1 = 0; seq1 < getNSeq(); seq1++)
 		if (!removed[seq1]) keep_seqs.push_back(seq1);
-	Alignment *aln;
+	SuperAlignment *aln;
 	aln = new SuperAlignment;
 	aln->extractSubAlignment(this, keep_seqs, 0);
 	return aln;
