@@ -1698,8 +1698,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         }
     }
 
-    if (nni_count == 0) {
-        cout << "NOTE: Tree is readily NNI-optimized" << endl;
+    if (nni_count == 0 && verbose_mode >= VB_MED) {
+        cout << "NOTE: Tree is already NNI-optimized" << endl;
     }
     brans2Eval.clear();
     return curScore;
