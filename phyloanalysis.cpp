@@ -2016,7 +2016,6 @@ void runPhyloAnalysis(Params &params) {
 
 		// remove identical sequences
 		tree->removeIdenticalSeqs(params, removed_seqs, twin_seqs);
-
 		// call main tree reconstruction
 		runTreeReconstruction(params, original_model, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {

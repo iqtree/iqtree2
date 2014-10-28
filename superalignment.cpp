@@ -71,13 +71,109 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 void SuperAlignment::linkSubAlignment(int part) {
 	assert(taxa_index.size() == getNSeq());
 	int nseq = getNSeq(), seq;
+	vector<bool> checked;
+	checked.resize(partitions[part]->getNSeq(), false);
 	for (seq = 0; seq < nseq; seq++) {
 		int id = partitions[part]->getSeqID(getSeqName(seq));
 		if (id < 0)
 			taxa_index[seq][part] = -1;
-		else
+		else {
 			taxa_index[seq][part] = id;
+			checked[id] = true;
+		}
 	}
+	// sanity check that all seqnames in partition must be present in superalignment
+	for (seq = 0; seq < checked.size(); seq++)
+		if (!checked[seq]) {
+			assert(0);
+		}
+}
+
+void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char) {
+	assert(aln->isSuperAlignment());
+	SuperAlignment *saln = (SuperAlignment*)aln;
+
+	Alignment::extractSubAlignment(aln, seq_id, 0);
+
+	taxa_index.resize(getNSeq());
+	for (int i = 0; i < getNSeq(); i++)
+		taxa_index[i].resize(saln->partitions.size());
+
+	int part = 0;
+	partitions.resize(saln->partitions.size());
+	for (vector<Alignment*>::iterator ait = saln->partitions.begin(); ait != saln->partitions.end(); ait++, part++) {
+		IntVector sub_seq_id;
+		for (IntVector::iterator it = seq_id.begin(); it != seq_id.end(); it++)
+			sub_seq_id.push_back(saln->taxa_index[*it][part]);
+		Alignment *subaln = new Alignment;
+		subaln->extractSubAlignment(*ait, sub_seq_id, 0);
+		partitions[part] = subaln;
+		linkSubAlignment(part);
+//		cout << subaln->getNSeq() << endl;
+//		subaln->printPhylip(cout);
+	}
+}
+
+Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs) {
+    IntVector checked;
+    vector<bool> removed;
+    checked.resize(getNSeq(), 0);
+    removed.resize(getNSeq(), false);
+    int seq1;
+
+	for (seq1 = 0; seq1 < getNSeq(); seq1++) {
+        if (checked[seq1]) continue;
+        bool first_ident_seq = true;
+		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
+			if (getSeqName(seq2) == not_remove) continue;
+			bool equal_seq = true;
+			int part = 0;
+			// check if seq1 and seq2 are identical over all partitions
+			for (vector<Alignment*>::iterator ait = partitions.begin(); ait != partitions.end(); ait++, part++) {
+				int subseq1 = taxa_index[seq1][part];
+				int subseq2 = taxa_index[seq2][part];
+				if (subseq1 < 0 && subseq2 < 0) // continue if both seqs are absent in this partition
+					continue;
+				if (subseq1 < 0 && subseq2 > 0) {
+					// if one sequence is present and the other is absent for a gene, we conclude that they are not identical
+					equal_seq = false;
+					break;
+				}
+				if (subseq1 > 0 && subseq2 < 0) {
+					// if one sequence is present and the other is absent for a gene, we conclude that they are not identical
+					equal_seq = false;
+					break;
+				}
+				// now if both seqs are present, check sequence content
+				for (iterator it = (*ait)->begin(); it != (*ait)->end(); it++)
+					if  ((*it)[subseq1] != (*it)[subseq2]) {
+						equal_seq = false;
+						break;
+					}
+			}
+			if (equal_seq) {
+				if (!keep_two || !first_ident_seq) {
+					removed_seqs.push_back(getSeqName(seq2));
+					target_seqs.push_back(getSeqName(seq1));
+					removed[seq2] = true;
+				}
+				checked[seq2] = 1;
+				first_ident_seq = false;
+			}
+		}
+		checked[seq1] = 1;
+	}
+
+	if (removed_seqs.empty()) return this; // do nothing if the list is empty
+
+	// now remove identical sequences
+	IntVector keep_seqs;
+	for (seq1 = 0; seq1 < getNSeq(); seq1++)
+		if (!removed[seq1]) keep_seqs.push_back(seq1);
+	SuperAlignment *aln;
+	aln = new SuperAlignment;
+	aln->extractSubAlignment(this, keep_seqs, 0);
+	return aln;
 }
 
 /*

@@ -2742,15 +2742,14 @@ void IQTree::printIntermediateTree(int brtype) {
 }
 
 void IQTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs) {
-	if (aln->isSuperAlignment())
-		return;
+	// commented out because it also works for SuperAlignment now!
 	Alignment *new_aln;
 	if (params.root)
 		new_aln = aln->removeIdenticalSeq((string)params.root, params.gbo_replicates > 0, removed_seqs, twin_seqs);
 	else
 		new_aln = aln->removeIdenticalSeq("", params.gbo_replicates > 0, removed_seqs, twin_seqs);
 	if (removed_seqs.size() > 0) {
-		cout << "NOTE: " << removed_seqs.size() << " identical sequences are ignored." << endl;
+		cout << "NOTE: " << removed_seqs.size() << " identical sequences will be ignored during tree search" << endl;
 		aln = new_aln;
 	}
 }
