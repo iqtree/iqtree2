@@ -22,7 +22,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "tools.h"
+#include "whtools.h"
 
 void eliminateZero(DMat20 mat, DVec20 forg, int num, 
 	double **new_mat, DVec20 new_forg, int *new_num) {
