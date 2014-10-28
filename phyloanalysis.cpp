@@ -52,22 +52,17 @@
 #include "timeutil.h"
 
 
-void reportReferences(ofstream &out, string &original_model) {
-	out
-			<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast"
-			<< endl << "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195."
-			<< endl
-			/*
-			<< endl << "Lam-Tung Nguyen, Heiko A. Schmidt, Bui Quang Minh, and Arndt von Haeseler (2012)"
-			<< endl
-			<< "IQ-TREE: Efficient algorithm for phylogenetic inference by maximum likelihood"
-			<< endl << "and important quartet puzzling. In prep." << endl*/
-			<< endl << "For the original IQPNNI algorithm please cite: " << endl
-			<< endl
-			<< "Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space"
-			<< endl
-			<< "and stopping in time. Mol. Biol. Evol., 21:1565-1571."
-			<< endl << endl;
+void reportReferences(Params &params, ofstream &out, string &original_model) {
+	out << "To cite IQ-TREE please use:" << endl << endl
+		<< "Lam-Tung Nguyen, Heiko A. Schmidt, Arndt von Haeseler, and Bui Quang Minh (2014)" << endl
+		<< "IQ-TREE: : A fast and effective stochastic algorithm for estimating" << endl
+		<< "maximum likelihood phylogenies. Mol. Biol. Evol., in press." << endl << endl;
+
+	if (params.gbo_replicates)
+	out << "Since you also used ultrafast bootstrap (UFBoot) please cite: " << endl << endl
+		<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast" << endl
+		<< "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195." << endl << endl;
+
 	/*		"*** If you use the parallel version, please cite: " << endl << endl <<
 	 "Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)" << endl <<
 	 "pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies." << endl <<
@@ -455,7 +450,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		out << endl;
 		out << "Random seed number: " << params.ran_seed << endl << endl;
 		out << "REFERENCES" << endl << "----------" << endl << endl;
-		reportReferences(out, original_model);
+		reportReferences(params, out, original_model);
 
 		out << "SEQUENCE ALIGNMENT" << endl << "------------------" << endl
 				<< endl;
