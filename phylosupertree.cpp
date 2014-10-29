@@ -438,7 +438,7 @@ void PhyloSuperTree::mapTrees() {
 	if (verbose_mode >= VB_DEBUG)
 		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 	for (iterator it = begin(); it != end(); it++, part++) {
-		string taxa_set = ((SuperAlignment*)aln)->getPattern(part);
+		string taxa_set = aln->getPattern(part);
 		(*it)->copyTree(this, taxa_set);
 		if ((*it)->getModel())
 			(*it)->initializeAllPartialLh();
