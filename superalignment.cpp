@@ -104,7 +104,8 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int 
 	for (vector<Alignment*>::iterator ait = saln->partitions.begin(); ait != saln->partitions.end(); ait++, part++) {
 		IntVector sub_seq_id;
 		for (IntVector::iterator it = seq_id.begin(); it != seq_id.end(); it++)
-			sub_seq_id.push_back(saln->taxa_index[*it][part]);
+			if (saln->taxa_index[*it][part] >= 0)
+				sub_seq_id.push_back(saln->taxa_index[*it][part]);
 		Alignment *subaln = new Alignment;
 		subaln->extractSubAlignment(*ait, sub_seq_id, 0);
 		partitions[part] = subaln;
