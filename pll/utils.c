@@ -1095,7 +1095,7 @@ pllPartitionsValidate (pllQueue * parts, pllAlignmentData * alignmentData)
     @param nTaxa
       Number of taxa, i.e. size of site
 */
-static inline void
+static __inline void
 swapSite (unsigned char ** buf, int s1, int s2, int nTaxa)
 {
   int i;
@@ -1300,7 +1300,7 @@ partitionList * pllPartitionsCommit (pllQueue * parts, pllAlignmentData * alignm
     @param nTaxa
       Number of taxa, i.e. size of site
 */
-static inline void
+static __inline void
 copySite (unsigned char ** dst, unsigned char ** src, int to, int from, int nTaxa)
 {
   int i;

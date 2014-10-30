@@ -641,7 +641,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aln_nogaps = false;
     params.aln_no_const_sites = false;
 //    params.parsimony = false;
-    params.parsimony_tree = false;
+//    params.parsimony_tree = false;
     params.tree_spr = false;
     params.nexus_output = false;
     params.k_representative = 4;
@@ -777,6 +777,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.count_trees = false;
 	params.print_branch_lengths = false;
 	params.lh_mem_save = LM_DETECT; // auto detect
+	params.start_tree = STT_PLL_PARSIMONY;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1415,10 +1416,25 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-st") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -st <BIN|DNA|AA>";
+					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH";
 				params.sequence_type = argv[cnt];
 				continue;
 			}
+			if (strcmp(argv[cnt], "-starttree") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -starttree BIONJ|PARS|PLLPARS";
+				if (strcmp(argv[cnt], "BIONJ") == 0)
+					params.start_tree = STT_BIONJ;
+				else if (strcmp(argv[cnt], "PARS") == 0)
+					params.start_tree = STT_PARSIMONY;
+				else if (strcmp(argv[cnt], "PLLPARS") == 0)
+					params.start_tree = STT_PLL_PARSIMONY;
+				else
+					throw "Invalid option, please use -starttree with BIONJ or PARS or PLLPARS";
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-ao") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1474,14 +1490,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.aln_no_const_sites = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-parstree") == 0) {
+//			if (strcmp(argv[cnt], "-parstree") == 0) {
 				// maximum parsimony
-				params.parsimony_tree = true;
+//				params.parsimony_tree = true;
 //            continue; } if (strcmp(argv[cnt], "-pars") == 0) {
 //                // maximum parsimony
 //                params.parsimony = true;
-				continue;
-			}
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-spr") == 0) {
 				// subtree pruning and regrafting
 				params.tree_spr = true;
@@ -2221,6 +2237,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-iqpnni") == 0) {
 				params.snni = false;
+				params.start_tree = STT_BIONJ;
 //            continue; } if (strcmp(argv[cnt], "-auto") == 0) {
 //            	params.autostop = true;
 				continue;
@@ -2539,16 +2556,15 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -numcand <number>    Number of candidate trees during search (defaut: 5)" << endl
             << "  -pers <perturbation> Perturbation strength for stochastic NNI (default: 0.5)" << endl
             << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
-            << "  -iqp                 Use IQP tree perturbation (default: sNNI)" << endl
+            << "  -iqp                 Use IQP tree perturbation (default: stochastic NNI)" << endl
             << "  -iqpnni              Switch entirely to old IQPNNI algorithm" << endl
-            << endl << "ULTRA-FAST BOOTSTRAP:" << endl
-            << "  -bb <#replicates>    Ultra-fast bootstrap (>=1000)" << endl
+            << endl << "ULTRAFAST BOOTSTRAP:" << endl
+            << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
             << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
             << "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
-			<< "  -beps <epsilon>      Trees with logl difference smaller than epsilon" << endl
-			<< "                       are chosen at random (default: 0.5)" << endl
+			<< "  -beps <epsilon>      RELL epsilon to break tie (default: 0.5)" << endl
             << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
             << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl

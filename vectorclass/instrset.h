@@ -1,8 +1,8 @@
 /****************************  instrset.h   **********************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2014-05-11
-* Version:       1.14
+* Last modified: 2014-10-22
+* Version:       1.16
 * Project:       vector classes
 * Description:
 * Header file for various compiler-specific tasks and other common tasks to 
@@ -18,7 +18,7 @@
 ******************************************************************************/
 
 #ifndef INSTRSET_H
-#define INSTRSET_H 114
+#define INSTRSET_H 116
 
 // Detect 64 bit mode
 #if (defined(_M_AMD64) || defined(_M_X64) || defined(__amd64) ) && ! defined(__x86_64__)
@@ -79,8 +79,13 @@
 #endif // INSTRSET
 
 #if INSTRSET >= 8 && !defined(__FMA__)
-// assume that all processors that have AVX2 also have FMA3
+// Assume that all processors that have AVX2 also have FMA3
+#if defined (__GNUC__) && ! defined (__INTEL_COMPILER) && ! defined (__clang__)
+// Prevent error message in g++ when using FMA intrinsics with avx2:
+#pragma message "It is recommended to specify also option -mfma when using -mavx2 or higher"
+#else
 #define __FMA__  1
+#endif
 #endif
 
 // AMD  instruction sets
@@ -164,6 +169,9 @@ bool hasXOP (void);                              // true if XOP  instructions su
 // Clang version
 #if defined (__clang__)
 #define CLANG_VERSION  ((__clang_major__) * 10000 + (__clang_minor__) * 100 + (__clang_patchlevel__))
+// Problem: The version number is not consistent across platforms
+// http://llvm.org/bugs/show_bug.cgi?id=12643
+// Apple bug 18746972
 #endif
 
 // Fix problem with macros named min and max in WinDef.h

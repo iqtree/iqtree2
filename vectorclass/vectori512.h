@@ -1,8 +1,8 @@
 /****************************  vectori512.h   *******************************
 * Author:        Agner Fog
 * Date created:  2014-07-23
-* Last modified: 2014-07-23
-* Version:       1.14
+* Last modified: 2014-10-16
+* Version:       1.16
 * Project:       vector classes
 * Description:
 * Header file defining integer vector classes as interface to intrinsic 
@@ -48,17 +48,16 @@
 #include "vectori256.h"
 
 
-//!! bug fixes
-
-// missing intrinsics:
+// Bug fix for missing intrinsics:
 // _mm512_cmpgt_epu32_mask, _mm512_cmpgt_epu64_mask
 // all typecast intrinsics
+// Fix expected in GCC version 4.9.2 but not seen yet https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61878
 
 // questionable
 // _mm512_mask_mov_epi32 check select(). Doc at https://software.intel.com/en-us/node/513888 is wrong. Bug report filed
 
 
-#if defined (GCC_VERSION) && GCC_VERSION < 41100 && !defined(__INTEL_COMPILER) && !defined(__clang__)
+#if defined (GCC_VERSION) && GCC_VERSION < 41102 && !defined(__INTEL_COMPILER) && !defined(__clang__)
 
 static inline  __m512i _mm512_castsi256_si512(__m256i x) {
     union {
@@ -140,6 +139,13 @@ public:
         m16 = uint16_t(b0 | b1<<1 | b2<<2 | b3<<3 | b4<<4 | b5<<5 | b6<<6 | b7<<7 |
               b8<<8 | b9<<9 | b10<<10 | b11<<11 | b12<<12 | b13<<13 | b14<<14 | b15<<15);
     }
+    // Constructor to broadcast single value:
+    Vec16b(bool b) {
+        m16 = __mmask16(-int16_t(b));
+    }
+private: // Prevent constructing from int, etc.
+    Vec16b(int b);
+public:
     // Constructor to make from two halves
     Vec16b (Vec8ib const & x0, Vec8ib const & x1) {
         // = Vec16i(x0,x1) != 0;  (not defined yet)
@@ -151,9 +157,24 @@ public:
         m16 = x;
         return *this;
     }
+    // Assignment operator to broadcast scalar value:
+    Vec16b & operator = (bool b) {
+        m16 = Vec16b(b);
+        return *this;
+    }
+private: // Prevent assigning int because of ambiguity
+    Vec16b & operator = (int x);
+public:
     // Type cast operator to convert to __mmask16 used in intrinsics
     operator __mmask16() const {
         return m16;
+    }
+    // split into two halves
+    Vec8ib get_low() const {
+        return to_Vec8ib((uint8_t)m16);
+    }
+    Vec8ib get_high() const {
+        return to_Vec8ib((uint16_t)m16 >> 8);
     }
     // Member function to change a single element in vector
     // Note: This function is inefficient. Use load function if changing more than one element
@@ -225,6 +246,7 @@ static inline Vec16b & operator ^= (Vec16b & a, Vec16b b) {
     return a;
 }
 
+
 /*****************************************************************************
 *
 *          Functions for boolean vectors
@@ -261,10 +283,20 @@ public:
     Vec16ib (Vec16b x) {
         m16 = x;
     }
+    // Constructor to build from all elements:
+    Vec16ib(bool x0, bool x1, bool x2, bool x3, bool x4, bool x5, bool x6, bool x7,
+        bool x8, bool x9, bool x10, bool x11, bool x12, bool x13, bool x14, bool x15) :
+        Vec16b(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15) {
+    }
     // Constructor to convert from type __mmask16 used in intrinsics:
     Vec16ib (__mmask16 x) {
         m16 = x;
     }
+    // Constructor to broadcast single value:
+    Vec16ib(bool b) : Vec16b(b) {}
+private: // Prevent constructing from int, etc.
+    Vec16ib(int b);
+public:
     // Constructor to make from two halves
     Vec16ib (Vec8ib const & x0, Vec8ib const & x1) {
         m16 = Vec16b(x0, x1);
@@ -274,6 +306,14 @@ public:
         m16 = x;
         return *this;
     }
+    // Assignment operator to broadcast scalar value:
+    Vec16ib & operator = (bool b) {
+        m16 = Vec16b(b);
+        return *this;
+    }
+private: // Prevent assigning int because of ambiguity
+    Vec16ib & operator = (int x);
+public:
 };
 
 // Define operators for Vec16ib
@@ -327,13 +367,67 @@ static inline Vec16ib & operator ^= (Vec16ib & a, Vec16ib b) {
     return a;
 }
 
+// vector function andnot
+static inline Vec16ib andnot (Vec16ib a, Vec16ib b) {
+    return Vec16ib(andnot(Vec16b(a), Vec16b(b)));
+}
+
+
+/*****************************************************************************
+*
+*          Vec8b: Base class vector of 8 Booleans
+*
+*****************************************************************************/
+
+class Vec8b : public Vec16b {
+public:
+    // Default constructor:
+    Vec8b () {
+    }
+    // Constructor to convert from type __mmask8 used in intrinsics:
+    Vec8b (__mmask8 x) {
+        m16 = x;
+    }
+    // Constructor to build from all elements:
+    Vec8b(bool b0, bool b1, bool b2, bool b3, bool b4, bool b5, bool b6, bool b7) {
+        m16 = uint16_t(b0 | b1<<1 | b2<<2 | b3<<3 | b4<<4 | b5<<5 | b6<<6 | b7<<7);
+    }
+    Vec8b (Vec16b const & x) {
+        m16 = __mmask8(x);
+    }
+    // Constructor to broadcast single value:
+    Vec8b(bool b) {
+        m16 = __mmask8(-int8_t(b));
+    }
+    // Assignment operator to convert from type __mmask8 used in intrinsics:
+    Vec8b & operator = (__mmask8 x) {
+        m16 = x;
+        return *this;
+    }
+private: // Prevent constructing from int etc. because of ambiguity
+    Vec8b(int b);
+    Vec8b & operator = (int x);
+public:
+    // split into two halves
+    Vec4qb get_low() const {
+        return Vec4qb(Vec4q(_mm512_castsi512_si256(_mm512_maskz_set1_epi64(__mmask16(m16), -1LL))));
+    }
+    Vec4qb get_high() const {
+        return Vec8b(__mmask8(m16 >> 4)).get_low();
+    }
+    static int size () {
+        return 8;
+    }
+};
+
+
 /*****************************************************************************
 *
 *          Vec8qb: Vector of 8 Booleans for use with Vec8q and Vec8qu
 *
 *****************************************************************************/
 
-class Vec8qb : public Vec16b {
+class Vec8qb : public Vec8b {
 public:
     // Default constructor:
     Vec8qb () {
@@ -341,24 +435,36 @@ public:
     Vec8qb (Vec16b x) {
         m16 = x;
     }
+    // Constructor to build from all elements:
+    Vec8qb(bool x0, bool x1, bool x2, bool x3, bool x4, bool x5, bool x6, bool x7) :
+        Vec8b(x0, x1, x2, x3, x4, x5, x6, x7) {
+    }
     // Constructor to convert from type __mmask8 used in intrinsics:
     Vec8qb (__mmask8 x) {
         m16 = x;
     }
+    // Assignment operator to convert from type __mmask8 used in intrinsics:
+    Vec8qb & operator = (__mmask8 x) {
+        m16 = x;
+        return *this;
+    }
+    // Constructor to broadcast single value:
+    Vec8qb(bool b) : Vec8b(b) {}
+    // Assignment operator to broadcast scalar:
+    Vec8qb & operator = (bool b) {
+        m16 = Vec8b(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec8qb(int b);
+    Vec8qb & operator = (int x);
+public:
     // Constructor to make from two halves
     Vec8qb (Vec4qb const & x0, Vec4qb const & x1) {
         // = Vec8q(x0,x1) != 0;  (not defined yet)
         __m512i z = _mm512_inserti64x4(_mm512_castsi256_si512(x0), x1, 1);
         m16 = _mm512_cmpneq_epi64_mask(z, _mm512_setzero_si512());
     }        
-    // Assignment operator to convert from type __mmask8 used in intrinsics:
-    Vec8qb & operator = (__mmask8 x) {
-        m16 = x;
-        return *this;
-    }
-    static int size () {
-        return 8;
-    }
 };
 
 // Define operators for Vec8qb
@@ -417,6 +523,11 @@ static inline uint32_t to_bits(Vec8qb a) {
     return (uint8_t)(__mmask16)a;
 }
 
+// vector function andnot
+static inline Vec8qb andnot (Vec8qb a, Vec8qb b) {
+    return Vec8qb(andnot(Vec16b(a), Vec16b(b)));
+}
+
 
 /*****************************************************************************
 *
@@ -429,8 +540,7 @@ protected:
 public:
     // Default constructor:
     Vec512b() {
-    };
-
+    }
     // Constructor to build from two Vec256b:
     Vec512b(Vec256b const & a0, Vec256b const & a1) {
         zmm = _mm512_inserti64x4(_mm512_castsi256_si512(a0), a1, 1);
@@ -438,12 +548,12 @@ public:
     // Constructor to convert from type __m512i used in intrinsics:
     Vec512b(__m512i const & x) {
         zmm = x;
-    };
+    }
     // Assignment operator to convert from type __m512i used in intrinsics:
     Vec512b & operator = (__m512i const & x) {
         zmm = x;
         return *this;
-    };
+    }
     // Type cast operator to convert to __m512i used in intrinsics
     operator __m512i() const {
         return zmm;
@@ -469,6 +579,35 @@ public:
     // divisible by 64, but there is hardly any speed advantage of store_a on modern processors
     void store_a(void * p) const {
         _mm512_store_si512(p, zmm);
+    }
+    // Member function to change a single bit, mainly for test purposes
+    // Note: This function is inefficient. Use load function if changing more than one bit
+    Vec512b const & set_bit(uint32_t index, int value) {
+        static uint64_t m[16] = {0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0};
+        int wi = (index >> 6) & 7;               // qword index
+        int bi = index & 0x3F;                   // bit index within qword w
+
+        __m512i mask = Vec512b().load(m+8-wi);   // 1 in qword number wi
+        mask = _mm512_sll_epi64(mask,_mm_cvtsi32_si128(bi)); // mask with bit number b set
+        if (value & 1) {
+            zmm = _mm512_or_si512(mask,zmm);
+        }
+        else {
+            zmm = _mm512_andnot_si512(mask,zmm);
+        }
+        return *this;
+    }
+    // Member function to get a single bit, mainly for test purposes
+    // Note: This function is inefficient. Use store function if reading more than one bit
+    int get_bit(uint32_t index) const {
+        union {
+            __m512i z;
+            uint8_t i[64];
+        } u;
+        u.z = zmm; 
+        int wi = (index >> 3) & 0x3F;            // byte index
+        int bi = index & 7;                      // bit index within byte w
+        return (u.i[wi] >> bi) & 1;
     }
     // Member functions to split into two Vec256b:
     Vec256b get_low() const {
@@ -970,6 +1109,12 @@ static inline Vec16ui & operator >>= (Vec16ui & a, uint32_t b) {
     a = a >> b;
     return a;
 } 
+
+// vector operator >>= : shift right logical
+static inline Vec16ui & operator >>= (Vec16ui & a, int32_t b) {
+    a = a >> uint32_t(b);
+    return a;
+}
 
 // vector operator << : shift left all elements
 static inline Vec16ui operator << (Vec16ui const & a, uint32_t b) {
@@ -1490,7 +1635,13 @@ static inline Vec8uq operator >> (Vec8uq const & a, int32_t b) {
 static inline Vec8uq & operator >>= (Vec8uq & a, uint32_t b) {
     a = a >> b;
     return a;
-} 
+}
+
+// vector operator >>= : shift right logical
+static inline Vec8uq & operator >>= (Vec8uq & a, int32_t b) {
+    a = a >> uint32_t(b);
+    return a;
+}
 
 // vector operator << : shift left all elements
 static inline Vec8uq operator << (Vec8uq const & a, uint32_t b) {

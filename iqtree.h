@@ -690,6 +690,8 @@ public:
     /** summarize bootstrap trees into split set */
     void summarizeBootstrap(SplitGraph &sg);
 
+    void writeUFBootTrees(Params &params, StrVector &removed_seqs, StrVector &twin_seqs);
+
     /** @return bootstrap correlation coefficient for assessing convergence */
     double computeBootstrapCorrelation();
 

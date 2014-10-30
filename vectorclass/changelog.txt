@@ -1,6 +1,29 @@
 change log for vectorclass.zip
 ------------------------------
 
+2015-10-24 version 1.16
+  * workaround for problem in Clang compiler extended to version 3.09 because not fixed yet by Clang
+    (vectorf128.h line 134)
+  * recognize problem with Apple version of Clang reporting wrong version number
+  * remove various minor problems with Clang
+  * function pow(vector, int) modified to strengthen type checking and avoid compiler warnings
+  * manual discusses dynamic allocation of arrays of vectors
+  * various minor changes
+
+
+2015-10-17 version 1.15
+  * added files ranvec1.h and ranvec1.cpp for random number generator
+  * constructors to make boolean vectors from their elements
+  * constructors and = operators to broadcast boolean scalar into boolean vectors
+  * various lookup functions improved
+  * operators &, |, ^, ~, etc. defined for various boolean vectors to avoid converson
+    to integer vectors
+  * nmul_add functions
+  * mul_add etc. moved to main header files
+  * explicit fused multiply-and-add used in math functions to improve performance 
+    on compilers that don't automatically insert FMA
+
+
 2014-07-24 version 1.14
   * support for AVX-512f instruction set and 512-bit vectors:
     Vec16i, Vec16ui, Vec8q, Vec8uq, Vec16f, Vec8d, and corresponding boolean vectors
@@ -17,7 +40,7 @@ change log for vectorclass.zip
   * pow function improved
   * mul_add, mul_sub, mul_sub_x functions
   * propagation of error codes through nan_code function
-  * "denormal" renamed to "subnormal" everywhere, in accordance with IEEE 754-2008
+  * "denormal" renamed to "subnormal" everywhere, in accordance with IEEE 754-2008 standard
 
 
 2014-04-20 version 1.12

@@ -31,30 +31,45 @@
 #include "timeutil.h"
 
 
+/* Binary model set */
 const char* bin_model_names[] = { "JC2", "GTR2" };
 
+/* Morphological model set */
 const char* morph_model_names[] = {"MK", "ORDERED"};
 
+/* DNA model set */
 const char* dna_model_names[] = { "JC", "F81", "K80", "HKY", "TNe",
 		"TN", "K81", "K81u", "TPM2", "TPM2u", "TPM3", "TPM3u", "TIMe", "TIM",
 		"TIM2e", "TIM2", "TIM3e", "TIM3", "TVMe", "TVM", "SYM", "GTR" };
 
+/* DNA models supported by PhyML/PartitionFinder */
 const char* dna_model_names_old[] ={"JC", "F81", "K80", "HKY", "TNe",
  	 	 "TN", "K81", "K81u", "TIMe", "TIM", "TVMe", "TVM", "SYM", "GTR"};
 
+/* DNA model supported by RAxML */
 const char* dna_model_names_rax[] ={"GTR"};
 
+/* DNA model supported by MrBayes */
+const char *dna_model_names_mrbayes[] = {"JC", "F81", "K80", "HKY", "SYM", "GTR"};
+
+/* Protein model set */
 const char* aa_model_names[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "mtART", "mtZOA", "VT", "LG", "DCMut", "PMB",
 		"HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62" };
 
+/* Protein models supported by PhyML/PartitionFinder */
 const char *aa_model_names_old[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "mtART", "VT", "LG", "DCMut",
 		"HIVb", "HIVw", "Blosum62" };
 
+/* Protein models supported by RAxML */
 const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "VT", "LG", "DCMut", "Blosum62" };
 
+const char* aa_model_names_mrbayes[] = {"Poisson", "Dayhoff", "mtMAM", "JTT", "WAG",
+		"cpREV", "mtREV", "rtREV", "VT", "Blosum62" };
+
+/* Codon models */
 const char *codon_model_names[] = {"MG", "GY", "ECM"};
 
 const double TOL_LIKELIHOOD_MODELTEST = 0.01;
@@ -266,6 +281,9 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 		} else if (strcmp(params.model_set, "raxml") == 0) {
 			nmodels = sizeof(dna_model_names_rax) / sizeof(char*);
 			model_names = (char**)dna_model_names_rax;
+		} else if (strcmp(params.model_set, "mrbayes") == 0) {
+			nmodels = sizeof(dna_model_names_mrbayes) / sizeof(char*);
+			model_names = (char**)dna_model_names_mrbayes;
 		} else {
 			outError("Wrong -mset option");
 			nmodels = 0;
@@ -281,6 +299,9 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 		} else if (strcmp(params.model_set, "raxml") == 0) {
 			nmodels = sizeof(aa_model_names_rax) / sizeof(char*);
 			model_names = (char**)aa_model_names_rax;
+		} else if (strcmp(params.model_set, "mrbayes") == 0) {
+			nmodels = sizeof(aa_model_names_mrbayes) / sizeof(char*);
+			model_names = (char**)aa_model_names_mrbayes;
 		} else {
 			outError("Wrong -mset option");
 			nmodels = 0;

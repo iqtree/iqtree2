@@ -359,7 +359,7 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 	dad_nei->link_neighbors[part] = (PhyloNeighbor*)dad_part->findNeighbor(node_part);
 }
 
-void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, SuperNode *dad) {
+void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *nofde, SuperNode *dad) {
 	if (!node) {
 		if (!root->isLeaf())
 			node = (SuperNode*) root;
@@ -458,6 +458,12 @@ void PhyloSuperTree::mapTrees() {
 	}
 
 	if (verbose_mode >= VB_DEBUG) printMapInfo();
+}
+
+void PhyloSuperTree::deleteAllPartialLh() {
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->deleteAllPartialLh();
+	}
 }
 
 double PhyloSuperTree::computeLikelihood(double *pattern_lh) {

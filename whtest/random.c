@@ -24,7 +24,7 @@
 #include <string.h>
 #include <time.h>
 #include "random.h"
-#include "tools.h"
+#include "whtools.h"
 
 unsigned int kiss(void);
 

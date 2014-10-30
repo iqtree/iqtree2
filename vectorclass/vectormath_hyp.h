@@ -1,8 +1,8 @@
 /****************************  vectormath_hyp.h   ******************************
 * Author:        Agner Fog
 * Date created:  2014-07-09
-* Last modified: 2014-07-23
-* Version:       1.14
+* Last modified: 2014-10-16
+* Version:       1.16
 * Project:       vector classes
 * Description:
 * Header file containing inline vector functions of hyperbolic and inverse 
@@ -68,7 +68,7 @@ static inline VTYPE sinh_d(VTYPE const & x0) {
         // At least one element needs small method
         x2 = x*x;
         y1 = polynomial_3(x2, p0, p1, p2, p3) / polynomial_3(x2, q0, q1, q2, q3);
-        y1 = x + x2*(x*y1);
+        y1 = mul_add(y1, x*x2, x);               // y1 = x + x2*(x*y1);
     }
     if (!horizontal_and(x_small)) {
         // At least one element needs big method
@@ -124,7 +124,7 @@ static inline VTYPE sinh_f(VTYPE const & x0) {
         // At least one element needs small method
         x2 = x*x;
         y1 = polynomial_2(x2, r0, r1, r2);
-        y1 = x + x2*(x*y1);
+        y1 = mul_add(y1, x2*x, x);               // y1 = x + x2*(x*y1);
     }
     if (!horizontal_and(x_small)) {
         // At least one element needs big method
@@ -167,8 +167,8 @@ static inline VTYPE cosh_d(VTYPE const & x0) {
     // data vectors
     VTYPE x, y;
 
-    x =  abs(x0);
-    y =  exp_d<VTYPE, BTYPE, 0, 1>(x);           //   0.5 * exp(x)
+    x  = abs(x0);
+    y  = exp_d<VTYPE, BTYPE, 0, 1>(x);           //   0.5 * exp(x)
     y += 0.25 / y;                               // + 0.5 * exp(-x)
     return y;
 }
@@ -203,8 +203,8 @@ static inline VTYPE cosh_f(VTYPE const & x0) {
     // data vectors
     VTYPE x, y;
 
-    x =  abs(x0);
-    y =  exp_f<VTYPE, BTYPE, 0, 1>(x);           //   0.5 * exp(x)
+    x  = abs(x0);
+    y  = exp_f<VTYPE, BTYPE, 0, 1>(x);           //   0.5 * exp(x)
     y += 0.25f / y;                              // + 0.5 * exp(-x)
     return y;
 }
@@ -256,7 +256,7 @@ static inline VTYPE tanh_d(VTYPE const & x0) {
         // At least one element needs small method
         x2 = x*x;
         y1 = polynomial_2(x2, p0, p1, p2) / polynomial_3(x2, q0, q1, q2, q3);
-        y1 = x + x2*(x*y1);
+        y1 = mul_add(y1, x2*x, x);               // y1 = x + x2*(x*y1);
     }
     if (!horizontal_and(x_small)) {
         // At least one element needs big method
@@ -316,7 +316,7 @@ static inline VTYPE tanh_f(VTYPE const & x0) {
         // At least one element needs small method
         x2 = x*x;
         y1 = polynomial_4(x2, r0, r1, r2, r3, r4);
-        y1 = x + (x2*x)*y1;
+        y1 = mul_add(y1, x2*x, x);               // y1 = x + (x2*x)*y1;
     }
     if (!horizontal_and(x_small)) {
         // At least one element needs big method
@@ -388,7 +388,7 @@ static inline VTYPE asinh_d(VTYPE const & x0) {
     if (horizontal_or(x_small)) {
         // At least one element needs small method
         y1 = polynomial_4(x2, p0, p1, p2, p3, p4) / polynomial_4(x2, q0, q1, q2, q3, q4);
-        y1 = x + (x2*x)*y1;
+        y1 = mul_add(y1, x2*x, x);               // y1 = x + (x2*x)*y1;
     }
     if (!horizontal_and(x_small)) {
         // At least one element needs big method
@@ -448,7 +448,7 @@ static inline VTYPE asinh_f(VTYPE const & x0) {
     if (horizontal_or(x_small)) {
         // At least one element needs small method
         y1 = polynomial_3(x2, r0, r1, r2, r3);
-        y1 = x + (x2*x)*y1;
+        y1 = mul_add(y1, x2*x, x);               // y1 = x + (x2*x)*y1;
     }
     if (!horizontal_and(x_small)) {
         // At least one element needs big method
@@ -521,7 +521,7 @@ static inline VTYPE acosh_d(VTYPE const & x0) {
     }
     if (!horizontal_and(x_small)) {
         // At least one element needs big method
-        y2 = log(x0 + sqrt(x0*x0 - 1.0));
+        y2 = log(x0 + sqrt(mul_sub(x0,x0,1.0)));
         if (horizontal_or(x_huge)) {
             // At least one element needs huge method to avoid overflow
             y2 = select(x_huge, log(x0) + VM_LN2, y2);
@@ -581,7 +581,7 @@ static inline VTYPE acosh_f(VTYPE const & x0) {
     }
     if (!horizontal_and(x_small)) {
         // At least one element needs big method
-        y2 = log(x0 + sqrt(x0*x0 - 1.0));
+        y2 = log(x0 + sqrt(mul_sub(x0,x0,1.0)));
         if (horizontal_or(x_huge)) {
             // At least one element needs huge method to avoid overflow
             y2 = select(x_huge, log(x0) + (float)VM_LN2, y2);
@@ -642,7 +642,7 @@ static inline VTYPE atanh_d(VTYPE const & x0) {
         // At least one element needs small method
         x2 = x * x;
         y1 = polynomial_4(x2, p0, p1, p2, p3, p4) / polynomial_5(x2, q0, q1, q2, q3, q4, q5);
-        y1 = x + (x2*x)*y1;
+        y1 = mul_add(y1, x2*x, x);
     }
     if (!horizontal_and(x_small)) {
         // At least one element needs big method
@@ -701,7 +701,7 @@ static inline VTYPE atanh_f(VTYPE const & x0) {
         // At least one element needs small method
         x2 = x * x;
         y1 = polynomial_4(x2, r0, r1, r2, r3, r4);
-        y1 = x + (x2*x)*y1;
+        y1 = mul_add(y1, x2*x, x);
     }
     if (!horizontal_and(x_small)) {
         // At least one element needs big method

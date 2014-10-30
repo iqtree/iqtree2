@@ -1463,7 +1463,7 @@ double IQTree::doTreeSearch() {
     	/*----------------------------------------
     	 * Print information
     	 *---------------------------------------*/
-        double realtime_remaining = stop_rule.getRemainingTime(curIt);
+        double realtime_remaining = stop_rule.getRemainingTime(curIt, cur_correlation);
         cout.setf(ios::fixed, ios::floatfield);
 
         cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIt << " / LogL: ";
@@ -1698,8 +1698,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         }
     }
 
-    if (nni_count == 0) {
-        cout << "NOTE: Tree is readily NNI-optimized" << endl;
+    if (nni_count == 0 && verbose_mode >= VB_MED) {
+        cout << "NOTE: Tree is already NNI-optimized" << endl;
     }
     brans2Eval.clear();
     return curScore;
@@ -2426,24 +2426,53 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
      cout << "Support values written to " << out_file << endl;
      */
 
-    if (params.print_ufboot_trees) {
-        string filename = params.out_prefix;
-        filename += ".ufboot";
-        ofstream out(filename.c_str());
-        for (i = 0; i < trees.size(); i++) {
-            NodeVector taxa;
-            // change the taxa name from ID to real name
-            trees[i]->getOrderedTaxa(taxa);
-            for (j = 0; j < taxa.size(); j++)
-                taxa[j]->name = aln->getSeqName(taxa[j]->id);
-            // now print to file
-            for (j = 0; j < trees.tree_weights[i]; j++)
-                trees[i]->printTree(out, WT_NEWLINE);
-        }
-        out.close();
-        cout << "UFBoot trees printed to " << filename << endl;
-    }
+//    if (params.print_ufboot_trees) {
+//        string filename = params.out_prefix;
+//        filename += ".ufboot";
+//        ofstream out(filename.c_str());
+//        for (i = 0; i < trees.size(); i++) {
+//            NodeVector taxa;
+//            // change the taxa name from ID to real name
+//            trees[i]->getOrderedTaxa(taxa);
+//            for (j = 0; j < taxa.size(); j++)
+//                taxa[j]->name = aln->getSeqName(taxa[j]->id);
+//            // now print to file
+//            for (j = 0; j < trees.tree_weights[i]; j++)
+//                trees[i]->printTree(out, WT_NEWLINE);
+//        }
+//        out.close();
+//        cout << "UFBoot trees printed to " << filename << endl;
+//    }
+//
+}
 
+void IQTree::writeUFBootTrees(Params &params, StrVector &removed_seqs, StrVector &twin_seqs) {
+    MTreeSet trees;
+    IntVector tree_weights;
+    int sample, i, j;
+    tree_weights.resize(treels_logl.size(), 0);
+    for (sample = 0; sample < boot_trees.size(); sample++)
+        tree_weights[boot_trees[sample]]++;
+    trees.init(treels, rooted, tree_weights);
+	string filename = params.out_prefix;
+	filename += ".ufboot";
+	ofstream out(filename.c_str());
+	for (i = 0; i < trees.size(); i++) {
+		NodeVector taxa;
+		// change the taxa name from ID to real name
+		trees[i]->getOrderedTaxa(taxa);
+		for (j = 0; j < taxa.size(); j++)
+			taxa[j]->name = aln->getSeqName(taxa[j]->id);
+		if (removed_seqs.size() > 0) {
+			// reinsert removed seqs into each tree
+			trees[i]->insertTaxa(removed_seqs, twin_seqs);
+		}
+		// now print to file
+		for (j = 0; j < trees.tree_weights[i]; j++)
+			trees[i]->printTree(out, WT_NEWLINE);
+	}
+	out.close();
+	cout << "UFBoot trees printed to " << filename << endl;
 }
 
 void IQTree::summarizeBootstrap(Params &params) {
@@ -2750,42 +2779,21 @@ void IQTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVec
 		new_aln = aln->removeIdenticalSeq("", params.gbo_replicates > 0, removed_seqs, twin_seqs);
 	if (removed_seqs.size() > 0) {
 		cout << "NOTE: " << removed_seqs.size() << " identical sequences will be ignored during tree search" << endl;
+		if (verbose_mode >= VB_MED) {
+			for (int i = 0; i < removed_seqs.size(); i++) {
+				cout << removed_seqs[i] << " is identical to " << twin_seqs[i] << endl;
+			}
+		}
 		aln = new_aln;
 	}
 }
 
 void IQTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs) {
 	if (removed_seqs.empty()) return;
-	IntVector id;
-	int i;
-	id.resize(removed_seqs.size());
-	for (i = 0; i < id.size(); i++)
-		id[i] = i;
-	// randomize order before reinsert back into tree
-	my_random_shuffle(id.begin(), id.end());
 
-	for (int i = 0; i < removed_seqs.size(); i++) {
-		Node *old_taxon = findLeafName(twin_seqs[id[i]]);
-		assert(old_taxon);
-		double len = old_taxon->neighbors[0]->length;
-		Node *old_node = old_taxon->neighbors[0]->node;
-		Node *new_taxon = newNode(leafNum+i, removed_seqs[id[i]].c_str());
-		Node *new_node = newNode();
-		// link new_taxon - new_node
-		new_taxon->addNeighbor(new_node, 0.0);
-		new_node->addNeighbor(new_taxon, 0.0);
-		// link old_taxon - new_node
-		new_node->addNeighbor(old_taxon, 0.0);
-		old_taxon->updateNeighbor(old_node, new_node, 0.0);
-		// link old_node - new_node
-		new_node->addNeighbor(old_node, len);
-		old_node->updateNeighbor(old_taxon, new_node, len);
-	}
-
-    leafNum = leafNum + removed_seqs.size();
-    initializeTree();
-//    delete iqtree.aln;
+	insertTaxa(removed_seqs, twin_seqs);
     setAlignment(orig_aln);
     // delete all partial_lh, which will be automatically recreated later
     deleteAllPartialLh();
+    clearAllPartialLH();
 }

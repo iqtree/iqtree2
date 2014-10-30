@@ -1,8 +1,8 @@
 /****************************  vectorf256e.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2014-07-23
-* Version:       1.14
+* Last modified: 2014-10-22
+* Version:       1.16
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit floating point vector classes as interface
@@ -129,9 +129,10 @@ public:
     // Default constructor:
     Vec8fb() {
     }
-    // Constructor to broadcast the same value into all elements:
-    Vec8fb(bool b) {
-        y1 = y0 = Vec4fb(b);
+    // Constructor to build from all elements:
+    Vec8fb(bool b0, bool b1, bool b2, bool b3, bool b4, bool b5, bool b6, bool b7) {
+        y0 = Vec4fb(b0, b1, b2, b3);
+        y1 = Vec4fb(b4, b5, b6, b7);
     }
     // Constructor to build from two Vec4fb:
     Vec8fb(Vec4fb const & a0, Vec4fb const & a1) {
@@ -158,6 +159,19 @@ public:
         y1 = _mm_castsi128_ps(Vec8i(x).get_high());
         return *this;
     }
+    // Constructor to broadcast the same value into all elements:
+    Vec8fb(bool b) {
+        y1 = y0 = Vec4fb(b);
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec8fb & operator = (bool b) {
+        y0 = y1 = Vec4fb(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec8fb(int b);
+    Vec8fb & operator = (int x);
+public:
     // Type cast operator to convert to type Vec8ib used as Boolean for integer vectors
     operator Vec8ib() const {
         return Vec8i(_mm_castps_si128(y0), _mm_castps_si128(y1));
@@ -297,10 +311,6 @@ public:
     // Default constructor:
     Vec4db() {
     }
-    // Constructor to broadcast the same value into all elements:
-    Vec4db(bool b) {
-        y1 = y0 = Vec2db(b);
-    }
     // Constructor to build from all elements:
     Vec4db(bool b0, bool b1, bool b2, bool b3) {
         y0 = Vec2db(b0, b1);
@@ -331,6 +341,19 @@ public:
         y1 = _mm_castsi128_pd(Vec4q(x).get_high());
         return *this;
     }
+    // Constructor to broadcast the same value into all elements:
+    Vec4db(bool b) {
+        y1 = y0 = Vec2db(b);
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec4db & operator = (bool b) {
+        y0 = y1 = Vec2db(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec4db(int b);
+    Vec4db & operator = (int x);
+public:
     // Type cast operator to convert to type Vec4qb used as Boolean for integer vectors
     operator Vec4qb() const {
         return Vec4q(_mm_castpd_si128(y0), _mm_castpd_si128(y1));
@@ -349,18 +372,18 @@ public:
     }
     // Member function extract a single element from vector
     // Note: This function is inefficient. Use store function if extracting more than one element
-//    bool extract(uint32_t index) const {
-//        if (index < 2) {
-//            return Vec2db(y0).extract(index);
-//        }
-//        else {
-//            return Vec2db(y1).extract(index - 2);
-//        }
-//    }
-//    // Extract a single element. Operator [] can only read an element, not write.
-//    bool operator [] (uint32_t index) const {
-//        return extract(index);
-//    }
+    bool extract(uint32_t index) const {
+        if (index < 2) {
+            return Vec2db(y0).extract(index);
+        }
+        else {
+            return Vec2db(y1).extract(index - 2);
+        }
+    }
+    // Extract a single element. Operator [] can only read an element, not write.
+    bool operator [] (uint32_t index) const {
+        return extract(index);
+    }
     // Member functions to split into two Vec4fb:
     Vec2db get_low() const {
         return y0;
@@ -842,12 +865,19 @@ static inline Vec8f square(Vec8f const & a) {
 }
 
 // pow(Vec8f, int):
+template <typename TT> static Vec8f pow(Vec8f const & a, TT n);
+
 // Raise floating point numbers to integer power n
-static inline Vec8f pow(Vec8f const & a, int n) {
-    return Vec8f(pow(a.get_low(),n), pow(a.get_high(),n));
+template <>
+inline Vec8f pow<int>(Vec8f const & x0, int n) {
+    return pow_template_i<Vec8f>(x0, n);
 }
-// prevent implicit conversion of exponent to int
-static Vec8f pow(Vec8f const & x, float y);
+
+// allow conversion from unsigned int
+template <>
+inline Vec8f pow<uint32_t>(Vec8f const & x0, uint32_t n) {
+    return pow_template_i<Vec8f>(x0, (int)n);
+}
 
 
 // Raise floating point numbers to integer power n, where n is a compile-time constant
@@ -913,6 +943,30 @@ static inline Vec8f approx_rsqrt(Vec8f const & a) {
     return Vec8f(approx_rsqrt(a.get_low()), approx_rsqrt(a.get_high()));
 }
 
+// Fused multiply and add functions
+
+// Multiply and add
+static inline Vec8f mul_add(Vec8f const & a, Vec8f const & b, Vec8f const & c) {
+    return Vec8f(mul_add(a.get_low(),b.get_low(),c.get_low()), mul_add(a.get_high(),b.get_high(),c.get_high()));
+}
+
+// Multiply and subtract
+static inline Vec8f mul_sub(Vec8f const & a, Vec8f const & b, Vec8f const & c) {
+    return Vec8f(mul_sub(a.get_low(),b.get_low(),c.get_low()), mul_sub(a.get_high(),b.get_high(),c.get_high()));
+}
+
+// Multiply and inverse subtract
+static inline Vec8f nmul_add(Vec8f const & a, Vec8f const & b, Vec8f const & c) {
+    return Vec8f(nmul_add(a.get_low(),b.get_low(),c.get_low()), nmul_add(a.get_high(),b.get_high(),c.get_high()));
+}
+
+
+// Multiply and subtract with extra precision on the intermediate calculations, 
+// even if FMA instructions not supported, using Veltkamp-Dekker split
+static inline Vec8f mul_sub_x(Vec8f const & a, Vec8f const & b, Vec8f const & c) {
+    return Vec8f(mul_sub_x(a.get_low(),b.get_low(),c.get_low()), mul_sub_x(a.get_high(),b.get_high(),c.get_high()));
+}
+
 
 // Math functions using fast bit manipulation
 
@@ -941,7 +995,7 @@ static inline Vec8f fraction(Vec8f const & a) {
 static inline Vec8f exp2(Vec8i const & a) {
     return Vec8f(exp2(a.get_low()), exp2(a.get_high()));
 }
-static Vec8f exp2(Vec8f const & x); // defined in vectormath_exp.h
+//static Vec8f exp2(Vec8f const & x); // defined in vectormath_exp.h
 #endif // VECTORI256_H
 
 
@@ -1403,11 +1457,19 @@ static inline Vec4d square(Vec4d const & a) {
 
 // pow(Vec4d, int):
 // Raise floating point numbers to integer power n
-static inline Vec4d pow(Vec4d const & a, int n) {
-    return Vec4d(pow(a.get_low(),n), pow(a.get_high(),n));
+template <typename TT> static Vec4d pow(Vec4d const & a, TT n);
+
+// Raise floating point numbers to integer power n
+template <>
+inline Vec4d pow<int>(Vec4d const & x0, int n) {
+    return pow_template_i<Vec4d>(x0, n);
 }
-// prevent implicit conversion of exponent to int
-static Vec4d pow(Vec4d const & x, double y);
+
+// allow conversion from unsigned int
+template <>
+inline Vec4d pow<uint32_t>(Vec4d const & x0, uint32_t n) {
+    return pow_template_i<Vec4d>(x0, (int)n);
+}
 
 
 // Raise floating point numbers to integer power n, where n is a compile-time constant
@@ -1514,6 +1576,31 @@ static inline Vec4d extend_high (Vec8f const & a) {
     return Vec4d(extend_low(a.get_high()), extend_high(a.get_high()));
 }
 
+
+// Fused multiply and add functions
+
+// Multiply and add
+static inline Vec4d mul_add(Vec4d const & a, Vec4d const & b, Vec4d const & c) {
+    return Vec4d(mul_add(a.get_low(),b.get_low(),c.get_low()), mul_add(a.get_high(),b.get_high(),c.get_high()));
+}
+
+// Multiply and subtract
+static inline Vec4d mul_sub(Vec4d const & a, Vec4d const & b, Vec4d const & c) {
+    return Vec4d(mul_sub(a.get_low(),b.get_low(),c.get_low()), mul_sub(a.get_high(),b.get_high(),c.get_high()));
+}
+
+// Multiply and inverse subtract
+static inline Vec4d nmul_add(Vec4d const & a, Vec4d const & b, Vec4d const & c) {
+    return Vec4d(nmul_add(a.get_low(),b.get_low(),c.get_low()), nmul_add(a.get_high(),b.get_high(),c.get_high()));
+}
+
+// Multiply and subtract with extra precision on the intermediate calculations, 
+// even if FMA instructions not supported, using Veltkamp-Dekker split
+static inline Vec4d mul_sub_x(Vec4d const & a, Vec4d const & b, Vec4d const & c) {
+    return Vec4d(mul_sub_x(a.get_low(),b.get_low(),c.get_low()), mul_sub_x(a.get_high(),b.get_high(),c.get_high()));
+}
+
+
 // Math functions using fast bit manipulation
 
 #ifdef VECTORI256_H  // 256 bit integer vectors are available, AVX2
@@ -1539,7 +1626,7 @@ static inline Vec4d fraction(Vec4d const & a) {
 static inline Vec4d exp2(Vec4q const & a) {
     return Vec4d(exp2(a.get_low()), exp2(a.get_high()));
 }
-static Vec4d exp2(Vec4d const & x); // defined in vectormath_exp.h
+//static Vec4d exp2(Vec4d const & x); // defined in vectormath_exp.h
 #endif
 
 

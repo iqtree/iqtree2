@@ -56,7 +56,7 @@ char *strndup(const char *s, size_t n) {
 static pllAlignmentData * pllParsePHYLIP (const char * filename);
 static pllAlignmentData * pllParseFASTA (const char * filename);
 static int read_phylip_header (int * inp, int * sequenceCount, int * sequenceLength);
-static inline int parsedOk (int * actLen, int sequenceCount, int sequenceLength);
+static __inline int parsedOk (int * actLen, int sequenceCount, int sequenceLength);
 static int parse_phylip (pllAlignmentData * alignmentData, int input);
 static int getFastaAlignmentInfo (int * inp, int * seqCount, int * seqLen);
 static int parseFastaAlignment (pllAlignmentData * alignmentData, int input);
@@ -283,7 +283,7 @@ read_phylip_header (int * inp, int * sequenceCount, int * sequenceLength)
   return (*sequenceCount && *sequenceLength);
 }
 
-static inline int
+static __inline int
 parsedOk (int * actLen, int sequenceCount, int sequenceLength)
 {
   int i;

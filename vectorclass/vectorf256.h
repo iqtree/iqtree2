@@ -1,8 +1,8 @@
 /****************************  vectorf256.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2014-07-23
-* Version:       1.14
+* Last modified: 2014-10-22
+* Version:       1.16
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit floating point vector classes as interface
@@ -109,16 +109,6 @@ public:
     // Default constructor:
     Vec8fb() {
     }
-    // Constructor to broadcast the same value into all elements:
-    Vec8fb(bool b) {
-#if INSTRSET >= 8  // AVX2
-        ymm = _mm256_castsi256_ps(_mm256_set1_epi32(-(int)b));
-#else
-        __m128 b1 = _mm_castsi128_ps(_mm_set1_epi32(-(int)b));
-        //ymm = _mm256_set_m128(b1,b1);
-        ymm = set_m128r(b1,b1);
-#endif
-    }
     // Constructor to build from all elements:
     Vec8fb(bool b0, bool b1, bool b2, bool b3, bool b4, bool b5, bool b6, bool b7) {
 #if INSTRSET >= 8  // AVX2
@@ -142,6 +132,25 @@ public:
         ymm = x;
         return *this;
     }
+    // Constructor to broadcast the same value into all elements:
+    Vec8fb(bool b) {
+#if INSTRSET >= 8  // AVX2
+        ymm = _mm256_castsi256_ps(_mm256_set1_epi32(-(int)b));
+#else
+        __m128 b1 = _mm_castsi128_ps(_mm_set1_epi32(-(int)b));
+        //ymm = _mm256_set_m128(b1,b1);
+        ymm = set_m128r(b1,b1);
+#endif
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec8fb & operator = (bool b) {
+        *this = Vec8fb(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec8fb(int b);
+    Vec8fb & operator = (int x);
+public:
     // Type cast operator to convert to __m256 used in intrinsics
     operator __m256() const {
         return ymm;
@@ -313,15 +322,6 @@ protected:
 public:
     // Default constructor:
     Vec4db() {
-    };
-    // Constructor to broadcast the same value into all elements:
-    Vec4db(bool b) {
-#if INSTRSET >= 8  // AVX2
-        ymm = _mm256_castsi256_pd(_mm256_set1_epi64x(-(int64_t)b));
-#else
-        __m128 b1 = _mm_castsi128_ps(_mm_set1_epi32(-(int)b));
-        ymm = _mm256_castps_pd(set_m128r(b1,b1));
-#endif
     }
     // Constructor to build from all elements:
     Vec4db(bool b0, bool b1, bool b2, bool b3) {
@@ -347,6 +347,24 @@ public:
         ymm = x;
         return *this;
     }
+    // Constructor to broadcast the same value into all elements:
+    Vec4db(bool b) {
+#if INSTRSET >= 8  // AVX2
+        ymm = _mm256_castsi256_pd(_mm256_set1_epi64x(-(int64_t)b));
+#else
+        __m128 b1 = _mm_castsi128_ps(_mm_set1_epi32(-(int)b));
+        ymm = _mm256_castps_pd(set_m128r(b1,b1));
+#endif
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec4db & operator = (bool b) {
+        ymm = _mm256_castsi256_pd(_mm256_set1_epi32(-int32_t(b)));
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec4db(int b);
+    Vec4db & operator = (int x);
+public:
     // Type cast operator to convert to __m256d used in intrinsics
     operator __m256d() const {
         return ymm;
@@ -912,24 +930,19 @@ static inline Vec8f square(Vec8f const & a) {
 }
 
 // pow(Vec8f, int):
+template <typename TT> static Vec8f pow(Vec8f const & a, TT n);
+
 // Raise floating point numbers to integer power n
-static inline Vec8f pow(Vec8f const & a, int n) {
-    Vec8f x = a;                       // a^(2^i)
-    Vec8f y(1.0f);                     // accumulator
-    if (n >= 0) {                      // make sure n is not negative
-        while (true) {                 // loop for each bit in n
-            if (n & 1) y *= x;         // multiply if bit = 1
-            n >>= 1;                   // get next bit of n
-            if (n == 0) return y;      // finished
-            x *= x;                    // x = a^2, a^4, a^8, etc.
-        }
-    }
-    else {                             // n < 0
-        return Vec8f(1.0f)/pow(x,-n);  // reciprocal
-    }
+template <>
+inline Vec8f pow<int>(Vec8f const & x0, int n) {
+    return pow_template_i<Vec8f>(x0, n);
 }
-// prevent implicit conversion of exponent to int
-static inline Vec8f pow(Vec8f const & x, float y);
+
+// allow conversion from unsigned int
+template <>
+inline Vec8f pow<uint32_t>(Vec8f const & x0, uint32_t n) {
+    return pow_template_i<Vec8f>(x0, (int)n);
+}
 
 
 // Raise floating point numbers to integer power n, where n is a compile-time constant
@@ -1044,6 +1057,66 @@ static inline Vec8f to_float(Vec8i const & a) {
 #endif // VECTORI256_H
 
 
+// Fused multiply and add functions
+
+// Multiply and add
+static inline Vec8f mul_add(Vec8f const & a, Vec8f const & b, Vec8f const & c) {
+#ifdef __FMA__
+    return _mm256_fmadd_ps(a, b, c);
+#elif defined (__FMA4__)
+    return _mm256_macc_ps(a, b, c);
+#else
+    return a * b + c;
+#endif
+    
+}
+
+// Multiply and subtract
+static inline Vec8f mul_sub(Vec8f const & a, Vec8f const & b, Vec8f const & c) {
+#ifdef __FMA__
+    return _mm256_fmsub_ps(a, b, c);
+#elif defined (__FMA4__)
+    return _mm256_msub_ps(a, b, c);
+#else
+    return a * b - c;
+#endif    
+}
+
+// Multiply and inverse subtract
+static inline Vec8f nmul_add(Vec8f const & a, Vec8f const & b, Vec8f const & c) {
+#ifdef __FMA__
+    return _mm256_fnmadd_ps(a, b, c);
+#elif defined (__FMA4__)
+    return _mm256_nmacc_ps(a, b, c);
+#else
+    return c - a * b;
+#endif
+}
+
+
+// Multiply and subtract with extra precision on the intermediate calculations, 
+// even if FMA instructions not supported, using Veltkamp-Dekker split
+static inline Vec8f mul_sub_x(Vec8f const & a, Vec8f const & b, Vec8f const & c) {
+#ifdef __FMA__
+    return _mm256_fmsub_ps(a, b, c);
+#elif defined (__FMA4__)
+    return _mm256_msub_ps(a, b, c);
+#else
+    // calculate a * b - c with extra precision
+    const int b12 = -(1 << 12);                  // mask to remove lower 12 bits
+    Vec8f upper_mask = constant8f<b12,b12,b12,b12,b12,b12,b12,b12>();
+    Vec8f a_high = a & upper_mask;               // split into high and low parts
+    Vec8f b_high = b & upper_mask;
+    Vec8f a_low  = a - a_high;
+    Vec8f b_low  = b - b_high;
+    Vec8f r1 = a_high * b_high;                  // this product is exact
+    Vec8f r2 = r1 - c;                           // subtract c from high product
+    Vec8f r3 = r2 + (a_high * b_low + b_high * a_low) + a_low * b_low; // add rest of product
+    return r3; // + ((r2 - r1) + c);
+#endif
+}
+
+
 // Approximate math functions
 
 // approximate reciprocal (Faster than 1.f / a. relative accuracy better than 2^-11)
@@ -1106,7 +1179,7 @@ static inline Vec8f exp2(Vec8i const & n) {
     return Vec8f(exp2(n.get_low()), exp2(n.get_high()));
 #endif
 }
-static inline Vec8f exp2(Vec8f const & x); // defined in vectormath_exp.h
+//static inline Vec8f exp2(Vec8f const & x); // defined in vectormath_exp.h
 
 #endif // VECTORI256_H
 
@@ -1611,24 +1684,19 @@ static inline Vec4d square(Vec4d const & a) {
 }
 
 // pow(Vec4d, int):
+template <typename TT> static Vec4d pow(Vec4d const & a, TT n);
+
 // Raise floating point numbers to integer power n
-static inline Vec4d pow(Vec4d const & a, int n) {
-    Vec4d x = a;                       // a^(2^i)
-    Vec4d y(1.0);                      // accumulator
-    if (n >= 0) {                      // make sure n is not negative
-        while (true) {                 // loop for each bit in n
-            if (n & 1) y *= x;         // multiply if bit = 1
-            n >>= 1;                   // get next bit of n
-            if (n == 0) return y;      // finished
-            x *= x;                    // x = a^2, a^4, a^8, etc.
-        }
-    }
-    else {                             // n < 0
-        return Vec4d(1.0)/pow(x,-n);   // reciprocal
-    }
+template <>
+inline Vec4d pow<int>(Vec4d const & x0, int n) {
+    return pow_template_i<Vec4d>(x0, n);
 }
-// prevent implicit conversion of exponent to int
-static inline Vec4d pow(Vec4d const & x, double y);
+
+// allow conversion from unsigned int
+template <>
+inline Vec4d pow<uint32_t>(Vec4d const & x0, uint32_t n) {
+    return pow_template_i<Vec4d>(x0, (int)n);
+}
 
 
 // Raise floating point numbers to integer power n, where n is a compile-time constant
@@ -1796,6 +1864,67 @@ static inline Vec4d extend_high (Vec8f const & a) {
     return _mm256_cvtps_pd(_mm256_extractf128_ps(a,1));
 }
 
+// Fused multiply and add functions
+
+// Multiply and add
+static inline Vec4d mul_add(Vec4d const & a, Vec4d const & b, Vec4d const & c) {
+#ifdef __FMA__
+    return _mm256_fmadd_pd(a, b, c);
+#elif defined (__FMA4__)
+    return _mm256_macc_pd(a, b, c);
+#else
+    return a * b + c;
+#endif
+    
+}
+
+
+// Multiply and subtract
+static inline Vec4d mul_sub(Vec4d const & a, Vec4d const & b, Vec4d const & c) {
+#ifdef __FMA__
+    return _mm256_fmsub_pd(a, b, c);
+#elif defined (__FMA4__)
+    return _mm256_msub_pd(a, b, c);
+#else
+    return a * b - c;
+#endif
+   
+}
+
+// Multiply and inverse subtract
+static inline Vec4d nmul_add(Vec4d const & a, Vec4d const & b, Vec4d const & c) {
+#ifdef __FMA__
+    return _mm256_fnmadd_pd(a, b, c);
+#elif defined (__FMA4__)
+    return _mm256_nmacc_pd(a, b, c);
+#else
+    return c - a * b;
+#endif
+}
+
+// Multiply and subtract with extra precision on the intermediate calculations, 
+// even if FMA instructions not supported, using Veltkamp-Dekker split
+static inline Vec4d mul_sub_x(Vec4d const & a, Vec4d const & b, Vec4d const & c) {
+#ifdef __FMA__
+    return _mm256_fmsub_pd(a, b, c);
+#elif defined (__FMA4__)
+    return _mm256_msub_pd(a, b, c);
+#else
+    // calculate a * b - c with extra precision
+    // mask to remove lower 27 bits
+    Vec4d upper_mask = _mm256_castps_pd(constant8f<(int)0xF8000000,-1,(int)0xF8000000,-1,(int)0xF8000000,-1,(int)0xF8000000,-1>());
+    Vec4d a_high = a & upper_mask;               // split into high and low parts
+    Vec4d b_high = b & upper_mask;
+    Vec4d a_low  = a - a_high;
+    Vec4d b_low  = b - b_high;
+    Vec4d r1 = a_high * b_high;                  // this product is exact
+    Vec4d r2 = r1 - c;                           // subtract c from high product
+    Vec4d r3 = r2 + (a_high * b_low + b_high * a_low) + a_low * b_low; // add rest of product
+    return r3; // + ((r2 - r1) + c);
+#endif
+}
+
+
 // Math functions using fast bit manipulation
 
 #ifdef VECTORI256_H  // 256 bit integer vectors are available
@@ -1843,7 +1972,7 @@ static inline Vec4d exp2(Vec4q const & n) {
     return Vec4d(exp2(n.get_low()), exp2(n.get_high()));
 #endif
 }
-static inline Vec4d exp2(Vec4d const & x); // defined in vectormath_exp.h
+//static inline Vec4d exp2(Vec4d const & x); // defined in vectormath_exp.h
 #endif
 
 

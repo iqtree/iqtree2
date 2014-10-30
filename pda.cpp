@@ -64,7 +64,7 @@
 #include "timeutil.h"
 //#include <unistd.h>
 #include <stdlib.h>
-
+#include "vectorclass/vectorclass.h"
 
 #ifdef _OPENMP
 	#include <omp.h>
@@ -2174,11 +2174,52 @@ int main(int argc, char *argv[])
 	//fgets(hostname, sizeof(hostname), pfile);
 	//pclose(pfile);
 
-	cout << "Host:    " << hostname << " (";
-#if defined __APPLE__ || defined __MACH__
-	cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM detected)" << endl;
+	int instrset = instrset_detect();
+	if (instrset < 3) outError("Your CPU does not support SSE3!");
+	bool has_fma3 = hasFMA3();
+	bool has_fma4 = hasFMA4();
+	bool has_fma =  has_fma3 || has_fma4;
+
+#ifdef __AVX
+	if (instrset < 7) {
+		outError("Your CPU does not support AVX, please use SSE3 version of IQ-TREE.");
+	}
 #else
-	cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM detected)" << endl;
+	if (instrset >= 7) {
+		outWarning("Your CPU supports AVX but you are using SSE3 version of IQ-TREE!");
+		outWarning("Please switch to AVX version that is 40% faster than SSE3.");
+		cout << endl;
+	}
+#endif
+
+#ifdef __FMA__
+	if (!has_fma) {
+		outError("Your CPU does not support FMA instruction, quiting now...");
+	}
+#else
+	if (has_fma) {
+		outWarning("Your CPU supports AVX+FMA but you are using non-FMA version of IQ-TREE!");
+		outWarning("Please consider trying AVX+FMA version.");
+		cout << endl;
+	}
+#endif
+
+	cout << "Host:    " << hostname << " (";
+	switch (instrset) {
+	case 3: cout << "SSE3, "; break;
+	case 4: cout << "SSSE3, "; break;
+	case 5: cout << "SSE4.1, "; break;
+	case 6: cout << "SSE4.2, "; break;
+	case 7: cout << "AVX, "; break;
+	case 8: cout << "AVX2, "; break;
+	default: cout << "AVX512F, "; break;
+	}
+	if (has_fma3) cout << "FMA3, ";
+	if (has_fma4) cout << "FMA4, ";
+#if defined __APPLE__ || defined __MACH__
+	cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM)" << endl;
+#else
+	cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM)" << endl;
 #endif
 
 	cout << "Command:";
@@ -2207,16 +2248,18 @@ int main(int argc, char *argv[])
 		case LK_EIGEN: cout << "No SSE"; break;
 		case LK_EIGEN_SSE:
 #ifdef __AVX
-			cout << "AVX"; break;
+			cout << "AVX";
 #else
-			cout << "SSE3"; break;
+			cout << "SSE3";
 #endif
+#ifdef __FMA__
+			cout << "+FMA";
+#endif
+			break;
 		}
 	}
-	/*
-	int instrset = instrset_detect();
-	cout << "CPU:     " << instrset << endl;
-	*/
+
+
 
 #ifdef _OPENMP
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
@@ -2232,6 +2275,7 @@ int main(int argc, char *argv[])
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl << endl;
+
 	cout.precision(3);
 	cout.setf(ios::fixed);
 
