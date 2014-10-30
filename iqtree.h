@@ -288,6 +288,16 @@ public:
     double pllOptimizeNNI(int &nniCount, int &nniSteps, SearchInfo &searchinfo);
 
     /**
+     * 		@brief Perform NNI search on the current tree topology
+     * 		This function will automatically use the selected kernel (either PLL or IQ-TREE)
+     *
+     * 		@param nniCount (OUT) number of NNIs applied
+     * 		@param nniSteps (OUT) number of NNI steps done
+     * 		@return the new NEWICK string
+     */
+    string doNNISearch(int &nniCount, int &nniSteps);
+
+    /**
             @brief evaluate all NNIs and store them in possilbleNNIMoves list
             @param  node    evaluate all NNIs of the subtree rooted at node
             @param  dad     a neighbor of \p node which does not belong to the subtree

@@ -1428,21 +1428,8 @@ double IQTree::doTreeSearch() {
     	 *---------------------------------------*/
         int nni_count = 0;
         int nni_steps = 0;
-        if (params->pll) {
-        	if (params->partition_file)
-        		outError("Unsupported -pll -sp combination!");
-            curScore = pllOptimizeNNI(nni_count, nni_steps, searchinfo);
-            pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
-                    PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
-            imd_tree = string(pllInst->tree_string);
-            readTreeString(imd_tree);
-        } else {
-            curScore = optimizeNNI(nni_count, nni_steps);
-            if (isSuperTree()) {
-                ((PhyloSuperTree*) this)->computeBranchLengths();
-            }
-            imd_tree = getTreeString();
-        }
+
+        imd_tree = doNNISearch(nni_count, nni_steps);
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
@@ -1552,26 +1539,6 @@ double IQTree::doTreeSearch() {
 
     readTreeString(bestTreeString);
 
-    // DTH: Carefully watch the -pll case here
-
-    // OBSOLETE, consider to remove
-//    if (params->stop_condition != SC_UNSUCCESS_ITERATION) {
-//    	if (params->snni) {
-//			int predicted_iteration = stop_rule.getLastImprovedIteration() + params->unsuccess_iteration;
-//			if (predicted_iteration > curIt) {
-//				cout << endl << "WARNING: " << predicted_iteration <<
-//					" iterations are needed by the default stopping rule" << endl;
-//			}
-//    	} else {
-//			int predicted_iteration = stop_rule.getPredictedIteration();
-//			if (predicted_iteration > curIt) {
-//				cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure "
-//						<< int(floor(params->stop_confidence * 100)) << "% confidence that "
-//						<< "         the IQPNNI search will not find a better tree" << endl;
-//			}
-//    	}
-//    }
-
     if (testNNI)
         outNNI.close();
     if (params->write_intermediate_trees)
@@ -1592,6 +1559,26 @@ double IQTree::doTreeSearch() {
 /****************************************************************************
  Fast Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
+string IQTree::doNNISearch(int& nniCount, int& nniSteps) {
+	string treeString;
+    if (params->pll) {
+    	if (params->partition_file)
+    		outError("Unsupported -pll -sp combination!");
+        curScore = pllOptimizeNNI(nniCount, nniSteps, searchinfo);
+        pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
+                PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
+        treeString = string(pllInst->tree_string);
+        readTreeString(treeString);
+    } else {
+        curScore = optimizeNNI(nniCount, nniSteps);
+        if (isSuperTree()) {
+            ((PhyloSuperTree*) this)->computeBranchLengths();
+        }
+        treeString = getTreeString();
+    }
+    return treeString;
+}
+
 double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     bool rollBack = false;
     nni_count = 0;
