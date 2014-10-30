@@ -986,8 +986,13 @@ void PhyloSuperTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs
 	if (removed_seqs.empty()) return;
 	// now synchronize aln
 	int part = 0;
-	for (iterator it = begin(); it != end(); it++, part++)
+	for (iterator it = begin(); it != end(); it++, part++) {
+		if (verbose_mode >= VB_MED) {
+			cout << "Partition " << part_info[part].name << " " << ((SuperAlignment*)aln)->partitions[part]->getNSeq() <<
+					" sequences from " << (*it)->aln->getNSeq() << " extracted" << endl;
+		}
 		(*it)->aln = ((SuperAlignment*)aln)->partitions[part];
+	}
 }
 
 /** reinsert identical sequences into the tree and reset original alignment */

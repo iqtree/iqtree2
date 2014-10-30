@@ -82,11 +82,13 @@ void SuperAlignment::linkSubAlignment(int part) {
 			checked[id] = true;
 		}
 	}
+	if (verbose_mode >= VB_MED) {
+
+	}
 	// sanity check that all seqnames in partition must be present in superalignment
-	for (seq = 0; seq < checked.size(); seq++)
-		if (!checked[seq]) {
-			assert(0);
-		}
+	for (seq = 0; seq < checked.size(); seq++) {
+		assert(checked[seq]);
+	}
 }
 
 void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char) {
@@ -97,7 +99,7 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int 
 
 	taxa_index.resize(getNSeq());
 	for (int i = 0; i < getNSeq(); i++)
-		taxa_index[i].resize(saln->partitions.size());
+		taxa_index[i].resize(saln->partitions.size(), -1);
 
 	int part = 0;
 	partitions.resize(saln->partitions.size());
