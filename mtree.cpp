@@ -1847,3 +1847,35 @@ void MTree::computeRFDist(istream &in, IntVector &dist) {
 
 
 }
+
+void MTree::insertTaxa(StrVector &new_taxa, StrVector &existing_taxa) {
+	if (new_taxa.empty()) return;
+	IntVector id;
+	int i;
+	id.resize(new_taxa.size());
+	for (i = 0; i < id.size(); i++)
+		id[i] = i;
+	// randomize order before reinsert back into tree
+	my_random_shuffle(id.begin(), id.end());
+
+	for (int i = 0; i < new_taxa.size(); i++) {
+		Node *old_taxon = findLeafName(existing_taxa[id[i]]);
+		assert(old_taxon);
+		double len = old_taxon->neighbors[0]->length;
+		Node *old_node = old_taxon->neighbors[0]->node;
+		Node *new_taxon = newNode(leafNum+i, new_taxa[id[i]].c_str());
+		Node *new_node = newNode();
+		// link new_taxon - new_node
+		new_taxon->addNeighbor(new_node, 0.0);
+		new_node->addNeighbor(new_taxon, 0.0);
+		// link old_taxon - new_node
+		new_node->addNeighbor(old_taxon, 0.0);
+		old_taxon->updateNeighbor(old_node, new_node, 0.0);
+		// link old_node - new_node
+		new_node->addNeighbor(old_node, len);
+		old_node->updateNeighbor(old_taxon, new_node, len);
+	}
+
+    leafNum = leafNum + new_taxa.size();
+    initializeTree();
+}

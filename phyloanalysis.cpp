@@ -2026,6 +2026,9 @@ void runPhyloAnalysis(Params &params) {
 		// call main tree reconstruction
 		runTreeReconstruction(params, original_model, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
+			if (params.print_ufboot_trees)
+				tree->writeUFBootTrees(params, removed_seqs, twin_seqs);
+
 			cout << endl << "Computing bootstrap consensus tree..." << endl;
 			string splitsfile = params.out_prefix;
 			splitsfile += ".splits.nex";
