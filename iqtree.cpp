@@ -1438,7 +1438,6 @@ double IQTree::doTreeSearch() {
             readTreeString(imd_tree);
         } else {
             curScore = optimizeNNI(nni_count, nni_steps);
-            //imd_tree = getTreeString();
             if (isSuperTree()) {
                 ((PhyloSuperTree*) this)->computeBranchLengths();
             }
@@ -1668,11 +1667,11 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             rollBack = false;
         } else {
             /* tree cannot be worse if only 1 NNI is applied */
-//            if (numNNIs == 1) {
-//                cout << "ERROR / POSSIBLE BUG: current logl=" << curScore << " < " << nonConfNNIs.at(0).newloglh
-//                        << "(best NNI)" << endl;
-//                abort();
-//            }
+            if (numNNIs == 1) {
+                cout << "ERROR / POSSIBLE BUG: current logl=" << curScore << " < " << nonConfNNIs.at(0).newloglh
+                        << "(best NNI)" << endl;
+                abort();
+            }
             if (verbose_mode >= VB_MED) {
                 cout << "New score = " << curScore << " after applying " << numNNIs <<
                         " is worse than score = " << nonConfNNIs.at(0).newloglh
