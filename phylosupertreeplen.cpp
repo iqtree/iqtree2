@@ -634,14 +634,19 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		//cout<<"Partition "<<part<<" : Epsilon = "<<epsilon_cnt<<endl;
 		if(epsilon_cnt == 0){
 			is_nni[part]=NNI_NO_EPSILON;
+			allNNIcases_computed[0]++;
 		}else if(epsilon_cnt == 1){
 			is_nni[part] = NNI_ONE_EPSILON;
+			allNNIcases_computed[1]++;
 		}else if(epsilon_cnt == 2){
 			is_nni[part]=NNI_TWO_EPSILON;
+			allNNIcases_computed[2]++;
 		}else if(epsilon_cnt == 3){
 			is_nni[part]=NNI_THREE_EPSILON;
+			allNNIcases_computed[3]++;
 		}else {
 			is_nni[part] = NNI_MANY_EPSILON;
+			allNNIcases_computed[4]++;
 		}
 	}
 
@@ -894,7 +899,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 *===========================================================================================*/
 	int cnt;
 	for (cnt = 0; cnt < node2_its.size(); cnt++) {
-		cout<<"NNI Loop-----------------------------NNI."<<cnt<<endl;
+		//cout<<"NNI Loop-----------------------------NNI."<<cnt<<endl;
 
 		node2_it = node2_its[cnt];
 		Neighbor *node2_nei = *node2_it;
@@ -921,7 +926,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			//cout<<"Partition: "<<part<<endl;
 
 			if(is_nni[part]==NNI_NO_EPSILON){
-				cout<<"NO_EPS: do NNI swap"<<endl;
+				//cout<<"NO_EPS: do NNI swap"<<endl;
 				//allNNIcases_computed[0] += 1;
 
 				// Do NNI swap on partition
@@ -935,11 +940,11 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				}
 				//checkBranchLen();
 			} else if(is_nni[part]==NNI_MANY_EPSILON){
-				cout<<"MANY_EPS: do nothing"<<endl;
+				//cout<<"MANY_EPS: do nothing"<<endl;
 				// the NNI on SuperTree does not change anything on SubTree
 
 			} else if(is_nni[part]==NNI_THREE_EPSILON){
-				cout<<"THREE_EPS: relink"<<endl;
+				//cout<<"THREE_EPS: relink"<<endl;
 
 				// The central branch had no image before the NNI.
 				// Relink the central branch and take care of branch lengths.
@@ -960,7 +965,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 						(PhyloNode*)nei2_new->link_neighbors[part]->node);
 
 			}else if(is_nni[part]==NNI_TWO_EPSILON){
-				cout<<"TWO_EPS: relink"<<endl;
+				//cout<<"TWO_EPS: relink"<<endl;
 
 				/* In fact, before relinking the image of central branch is NULL (because we allocated
 				 * new SuperNeighbor and filled the link_neighbors with NULL for all partitions).
@@ -980,7 +985,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				}
 
 			}else if(is_nni[part] == NNI_ONE_EPSILON){
-				cout<<"ONE_EPS: relink, update the link_neighbors"<<endl;
+				//cout<<"ONE_EPS: relink, update the link_neighbors"<<endl;
 
 				/* The crazy case, which absorbs most of the bugs:(
 				 * Lets say on SuperTree there are five branches, a,b,c,d and central e, and d has an empty image.
@@ -1416,12 +1421,11 @@ void PhyloSuperTreePlen::initPartitionInfo() {
 
 void PhyloSuperTreePlen::printNNIcasesNUM(){
 	cout<<"For each \"NNI case\" on subtree the number of times it appeared during NNI evaluation:"<<endl;
-	cout<<"Case 1: NNI on SuperTree => NNI on SubTree: "<<allNNIcases_computed[0]<<endl;
-	cout<<"Relinking..."<<endl;
-	cout<<"Case 2: branch -> empty: "<<allNNIcases_computed[1]<<endl;
-	cout<<"Case 3: empty  -> empty: "<<allNNIcases_computed[2]<<endl;
-	cout<<"Case 4: branch -> new  : "<<allNNIcases_computed[3]<<endl;
-	cout<<"Case 5: branch -> old || empty -> branch: "<<allNNIcases_computed[4]<<endl;
+	cout<<"Case 1: NO_EPS    = "<<allNNIcases_computed[0]<<endl;
+	cout<<"Case 2: ONE_EPS   = "<<allNNIcases_computed[1]<<endl;
+	cout<<"Case 3: TWO_EPS   = "<<allNNIcases_computed[2]<<endl;
+	cout<<"Case 4: THREE_EPS = "<<allNNIcases_computed[3]<<endl;
+	cout<<"Case 5: MANY_EPS  = "<<allNNIcases_computed[4]<<endl;
 }
 
 void PhyloSuperTreePlen::computeBranchLengths()
