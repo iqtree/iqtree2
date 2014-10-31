@@ -29,10 +29,9 @@ SuperAlignment::SuperAlignment()
 SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
  : Alignment()
 {
-	seq_type = SEQ_BINARY;
+	// first build taxa_index and partitions
 	int site, seq, nsite = super_tree->size();
 	PhyloSuperTree::iterator it;
-	map<string,int> name_map;
 	for (site = 0, it = super_tree->begin(); it != super_tree->end(); it++, site++) {
 		partitions.push_back((*it)->aln);
 		int nseq = (*it)->aln->getNSeq();
@@ -49,7 +48,16 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 				taxa_index[id][site] = seq;
 		}
 	}
+	// now the patterns of sequence-genes presence/absence
+	buildPattern();
+}
+
+void SuperAlignment::buildPattern() {
+	int site, seq, nsite = partitions.size();
+
+	seq_type = SEQ_BINARY;
 	num_states = 2; // binary type because the super alignment presents the presence/absence of taxa in the partitions
+	STATE_UNKNOWN = 2;
 	site_pattern.resize(nsite, -1);
 	clear();
 	pattern_index.clear();
@@ -67,6 +75,8 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 	countConstSite();
     buildSeqStates();
 }
+
+
 
 void SuperAlignment::linkSubAlignment(int part) {
 	assert(taxa_index.size() == getNSeq());
@@ -95,7 +105,14 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int 
 	assert(aln->isSuperAlignment());
 	SuperAlignment *saln = (SuperAlignment*)aln;
 
-	Alignment::extractSubAlignment(aln, seq_id, 0);
+    IntVector::iterator it;
+    for (it = seq_id.begin(); it != seq_id.end(); it++) {
+        assert(*it >= 0 && *it < aln->getNSeq());
+        seq_names.push_back(aln->getSeqName(*it));
+    }
+
+	// BUG HERE!
+	//Alignment::extractSubAlignment(aln, seq_id, 0);
 
 	taxa_index.resize(getNSeq());
 	for (int i = 0; i < getNSeq(); i++)
@@ -115,6 +132,9 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int 
 //		cout << subaln->getNSeq() << endl;
 //		subaln->printPhylip(cout);
 	}
+
+	// now build the patterns based on taxa_index
+	buildPattern();
 }
 
 Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs) {

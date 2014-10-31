@@ -200,6 +200,13 @@ public:
 	double computeMissingData();
 
 	/**
+	 * build all patterns of super alignent from partitions and taxa_index
+	 * it is in form of a binary alignment, where 0 means absence and 1 means presence
+	 * of a gene in a sequence
+	 */
+	void buildPattern();
+
+	/**
 		actual partition alignments
 	*/
 	vector<Alignment*> partitions;
