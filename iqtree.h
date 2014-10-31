@@ -261,6 +261,20 @@ public:
     double doTreeSearch();
 
     /**
+     *  Wrapper function that uses either PLL or IQ-TREE to optimize the branch length
+     *  @param maxTraversal
+     *  	maximum number of tree traversal for branch length optimization
+     *  @return NEWICK tree string
+     */
+    string optimizeBranches(int maxTraversal);
+
+    /**
+     *  Wrapper function to compute tree log-likelihood.
+     *  This function with call either PLL or IQ-TREE to compute tree log-likelihood
+     */
+    void computeLogL();
+
+    /**
      *	Print numBestScore found so far, starting from the highest
      */
     void printBestScores(int numBestScore);

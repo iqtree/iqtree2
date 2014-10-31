@@ -1280,6 +1280,36 @@ void IQTree::printBestScores(int numBestScore) {
 	cout << endl;
 }
 
+void IQTree::computeLogL() {
+	if (params->pll) {
+        pllNewickTree *newick = pllNewickParseString(getTreeString().c_str());
+        pllTreeInitTopologyNewick(pllInst, newick, PLL_FALSE);
+        pllNewickParseDestroy(&newick);
+        pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+        curScore = pllInst->likelihood;
+	} else {
+		curScore = computeLikelihood();
+	}
+}
+
+string IQTree::optimizeBranches(int maxTraversal) {
+	string tree;
+    if (params->pll) {
+        pllNewickTree *newick = pllNewickParseString(getTreeString().c_str());
+        pllTreeInitTopologyNewick(pllInst, newick, PLL_FALSE);
+        pllNewickParseDestroy(&newick);
+        pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+        pllOptimizeBranchLengths(pllInst, pllPartitions, maxTraversal);
+        curScore = pllInst->likelihood;
+        pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
+                PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+        tree = string(pllInst->tree_string);
+    } else {
+    	curScore = optimizeAllBranches(maxTraversal);
+        tree = getTreeString();
+    }
+    return tree;
+}
 
 double IQTree::doTreeSearch() {
 //    double begin_real_time, cur_real_time;
@@ -1326,7 +1356,7 @@ double IQTree::doTreeSearch() {
 	/*====================================================
 	 * MAIN LOOP OF THE IQ-TREE ALGORITHM
 	 *====================================================*/
-    for (curIt = 2; !stop_rule.meetStopCondition(curIt, cur_correlation); curIt++) {
+    for (curIt = params->numNNITrees + 1; !stop_rule.meetStopCondition(curIt, cur_correlation); curIt++) {
         searchinfo.curIter = curIt;
         // estimate logl_cutoff for bootstrap
         if (params->avoid_duplicated_trees && max_candidate_trees > 0 && treels_logl.size() > 1000) {
@@ -1449,7 +1479,7 @@ double IQTree::doTreeSearch() {
         double realtime_remaining = stop_rule.getRemainingTime(curIt);
         cout.setf(ios::fixed, ios::floatfield);
 
-        cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIt << " / LogL: ";
+        cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Suboptimal tree ") << curIt << " / LogL: ";
         if (verbose_mode >= VB_MED)
         	cout << perturbScore << " -> ";
         cout << curScore;
