@@ -1162,14 +1162,15 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
     // set parameter for the current tree
     iqtree.setParams(params);
 }
-
-void createParsimonyTrees(Params &params, IQTree &iqtree, int numInitTrees) {
+/*
+ *  Generate the initial candidate tree set
+ */
+void initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     int nni_count = 0;
     int nni_steps = 0;
-
-    cout << "Generating " << numInitTrees << " parsimony trees... ";
+    cout << "Generating " << numInitTrees - 1 << " parsimony trees... ";
     cout.flush();
-    double parsTimeStart = getCPUTime();
+    double startTime = getCPUTime();
     int numDupPars = 0;
     for (int treeNr = 1; treeNr < numInitTrees; treeNr++) {
         string curParsTree;
@@ -1183,66 +1184,70 @@ void createParsimonyTrees(Params &params, IQTree &iqtree, int numInitTrees) {
             numDupPars++;
             continue;
         } else {
-        	iqtree.readTreeString(curParsTree);
-            if (params.count_trees) {
-                string tree = iqtree.getTopology();
-                if (pllTreeCounter.find(tree) == pllTreeCounter.end()) {
+        	if (params.count_trees) {
+                if (pllTreeCounter.find(curParsTree) == pllTreeCounter.end()) {
                     // not found in hash_map
-                    pllTreeCounter[tree] = 1;
+                    pllTreeCounter[curParsTree] = 1;
                 } else {
                     // found in hash_map
-                    pllTreeCounter[tree]++;
+                    pllTreeCounter[curParsTree]++;
                 }
-            }
-
-            // Initialize branch lengths for the parsimony tree
-            iqtree.initializeAllPartialPars();
-            iqtree.clearAllPartialLH();
-            if (iqtree.isSuperTree()) {
-                iqtree.fixNegativeBranch2(true);
-                ((PhyloSuperTree*)&iqtree)->mapTrees();
-            } else
-            	iqtree.fixNegativeBranch(true);
-            curParsTree = iqtree.getTreeString();
-
-            // Optimize the branch lengths
-            if (params.pll) {
-                // Input the new parsimony tree with branch lengths into PLL
-                pllNewickTree *newick = pllNewickParseString(curParsTree.c_str());
-                pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
-                pllNewickParseDestroy(&newick);
-                pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE,
-                PLL_FALSE);
-                pllOptimizeBranchLengths(iqtree.pllInst, iqtree.pllPartitions, 1);
-                iqtree.curScore = iqtree.pllInst->likelihood;
-                pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
-                        iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
-                        PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-                curParsTree = string(iqtree.pllInst->tree_string);
-                iqtree.candidateTrees.update(curParsTree, iqtree.curScore);
-            } else {
-                iqtree.initializeAllPartialLh();
-                iqtree.curScore = iqtree.optimizeAllBranches(1);
-                curParsTree = iqtree.getTreeString();
-                iqtree.candidateTrees.update(curParsTree, iqtree.curScore);
-            }
-            if (iqtree.curScore > iqtree.bestScore) {
-                iqtree.setBestTree(curParsTree, iqtree.curScore);
-            }
+        	}
+        	iqtree.candidateTrees.update(curParsTree, -DBL_MAX);
         }
     }
-    cout << getCPUTime() - parsTimeStart << " seconds (" << numDupPars <<
-    		" duplicated parsimony trees)" << endl;
+    cout << getCPUTime() - startTime << " seconds (" << numDupPars << " duplicated parsimony trees)" << endl;
+    cout << "Computing log-likelihood of the parsimony trees ... ";
+    startTime = getCPUTime();
+    vector<string> unOptParTrees = iqtree.candidateTrees.getBestTrees(numInitTrees);
+    for (vector<string>::iterator it = unOptParTrees.begin()+1; it != unOptParTrees.end(); it++) {
+    	string curParTree = (*it);
+    	iqtree.readTreeString(curParTree);
+        // Initialize branch lengths for the parsimony tree
+        iqtree.initializeAllPartialPars();
+        iqtree.clearAllPartialLH();
+        if (iqtree.isSuperTree()) {
+            iqtree.assignRandomBranchLengths(true);
+            ((PhyloSuperTree*)&iqtree)->mapTrees();
+        } else {
+        	iqtree.fixNegativeBranch(true);
+    	}
+        curParTree = iqtree.getTreeString();
+        // Optimize the branch lengths
+        if (params.pll) {
+            // Input the new parsimony tree with branch lengths into PLL
+            pllNewickTree *newick = pllNewickParseString(curParTree.c_str());
+            pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_FALSE);
+            pllNewickParseDestroy(&newick);
+            pllEvaluateLikelihood(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllInst->start, PLL_TRUE,
+            PLL_FALSE);
+            pllOptimizeBranchLengths(iqtree.pllInst, iqtree.pllPartitions, 1);
+            iqtree.curScore = iqtree.pllInst->likelihood;
+            pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
+                    iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
+                    PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+            curParTree = string(iqtree.pllInst->tree_string);
+            iqtree.candidateTrees.update(curParTree, iqtree.curScore);
+        } else {
+            iqtree.initializeAllPartialLh();
+            iqtree.curScore = iqtree.optimizeAllBranches(1);
+            curParTree = iqtree.getTreeString();
+            //cout << curParTree << endl;
+            iqtree.candidateTrees.update(curParTree, iqtree.curScore);
+        }
+
+        if (iqtree.curScore > iqtree.bestScore) {
+            iqtree.setBestTree(curParTree, iqtree.curScore);
+        }
+    }
+    cout << getCPUTime() - startTime << " seconds" << endl;
     /************ END: Create a set of up to (numInitTrees - 1) unique parsimony trees **********************/
 
-    cout << endl;
-
-    cout << "Optimizing top "<< params.numNNITrees << " parsimony trees with NNI..." << endl << endl;
+    cout << "Optimizing top "<< params.numNNITrees << " parsimony trees with NNI..." << endl;
     /*********** START: Do NNI on the best parsimony trees ************************************/
     CandidateSet::reverse_iterator rit;
-    int numNNITrees = 0;
-    for (rit = iqtree.candidateTrees.rbegin(); rit != iqtree.candidateTrees.rend(); ++rit) {
-        numNNITrees++;
+    int numNNITrees = params.numNNITrees;
+    for (rit = iqtree.candidateTrees.rbegin(); rit != iqtree.candidateTrees.rend() && numNNITrees > 0; ++rit, numNNITrees--) {
         double initLogl, nniLogl;
         string nniTree;
         if (params.pll) {
@@ -1292,20 +1297,6 @@ void createParsimonyTrees(Params &params, IQTree &iqtree, int numInitTrees) {
         }
 
         iqtree.candidateTrees.update(nniTree, iqtree.curScore);
-
-        if (numNNITrees == params.numNNITrees) {
-        	if (verbose_mode >= VB_MED) {
-        		iqtree.printBestScores(iqtree.candidateTrees.max_candidates);
-        	}
-            break;
-        } else {
-//                    double min_elapsed = (getCPUTime() - params.startTime) / 60;
-//                    if (min_elapsed > params.maxtime) {
-//                        cout << endl;
-//                        cout << "Maximum running time of " << params.maxtime << " minutes reached" << endl;
-//                        break;
-//                    }
-        }
     }
 }
 
@@ -1628,8 +1619,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         double initTime = getCPUTime();
 
         if (params.snni) {
-            /******** Create a set of up to (numInitTrees - 1) unique parsimony trees ***********/
-        	createParsimonyTrees(params, iqtree, numInitTrees);
+        	initCandidateTreeSet(params, iqtree, numInitTrees);
         } else { // no -snni
             int nni_count = 0;
             int nni_steps = 0;

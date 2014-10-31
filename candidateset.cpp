@@ -109,7 +109,7 @@ bool CandidateSet::update(string tree, double score) {
 	if (treeTopologyExist(candidate.topology)) {
 	    // if tree topology already exist, we replace the old
 	    // by the new one (with new branch lengths)
-		if (topologies[candidate.topology] < score) {
+		if (topologies[candidate.topology] <= score) {
 			topologies[candidate.topology] = score;
 			for (CandidateSet::iterator i = begin(); i != end(); i++)
 				if (i->second.topology == candidate.topology) {
