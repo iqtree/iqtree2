@@ -32,6 +32,7 @@
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
 #include "ratekategory.h"
+#include "ratefree.h"
 #include "ngs.h"
 #include <string>
 #include "timeutil.h"
@@ -174,12 +175,16 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	}
 	string::size_type posI = model_str.find("+I");
 	string::size_type posG = model_str.find("+G");
+	string::size_type posR = model_str.find("+R"); // FreeRate model
+	if (posG != string::npos && posR != string::npos)
+		outError("Gamma and FreeRate models cannot be both specified!");
 	string::size_type posX;
 	/* create site-rate heterogeneity */
 	int num_rate_cats = params.num_rate_cats;
 	double gamma_shape = params.gamma_shape;
 	double p_invar_sites = params.p_invar_sites;
 	if (posI != string::npos) {
+		// invariable site model
 		if (model_str.length() > posI+2 && model_str[posI+2] == OPEN_BRACKET) {
 			close_bracket = model_str.find(CLOSE_BRACKET, posI);
 			if (close_bracket == string::npos)
@@ -191,6 +196,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			outError("Wrong model name ", model_str);
 	}
 	if (posG != string::npos) {
+		// Gamma rate model
 		int end_pos = 0;
 		if (model_str.length() > posG+2 && isdigit(model_str[posG+2])) {
 			num_rate_cats = convert_int(model_str.substr(posG+2).c_str(), end_pos);
@@ -210,6 +216,14 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		} else if (model_str.length() > posG+2+end_pos && model_str[posG+2+end_pos] != '+')
 			outError("Wrong model name ", model_str);
 	}
+	if (posR != string::npos) {
+		// FreeRate model
+		int end_pos = 0;
+		if (model_str.length() > posR+2 && isdigit(model_str[posR+2])) {
+			num_rate_cats = convert_int(model_str.substr(posR+2).c_str(), end_pos);
+				if (num_rate_cats < 1) outError("Wrong number of rate categories");
+			}
+	}
 	if (model_str.find('+') != string::npos) {
 		//string rate_str = model_str.substr(pos);
 		if (posI != string::npos && posG != string::npos) {
@@ -219,6 +233,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			site_rate = new RateInvar(p_invar_sites, tree);
 		} else if (posG != string::npos) {
 			site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
+		} else if (posR != string::npos) {
+			site_rate = new RateFree(num_rate_cats, tree);
 		} else if ((posX = model_str.find("+M")) != string::npos) {
 			tree->sse = LK_NORMAL;
 			params.rate_mh_type = true;
