@@ -843,12 +843,12 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 	}
 
 	cout << endl << "Analysis results written to: " << endl
-			<< "  IQ-TREE report:           " << params.out_prefix << ".iqtree"
+			<< "  IQ-TREE report:                " << params.out_prefix << ".iqtree"
 			<< endl;
 	if (params.compute_ml_tree)
-		cout << "  Maximum-likelihood tree:  " << params.out_prefix
+		cout << "  Maximum-likelihood tree:       " << params.out_prefix
 				<< ".treefile" << endl;
-		cout << "  Locally optimal trees:    " << params.out_prefix << ".trees" << endl;
+		cout << "  Locally optimal trees (" << tree.candidateTrees.size() << "):    " << params.out_prefix << ".trees" << endl;
 	if (!params.user_file && !params.snni) {
 		cout << "  BIONJ tree:               " << params.out_prefix << ".bionj"
 				<< endl;
@@ -898,7 +898,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			cout << "  Site log-likelihoods:     " << params.out_prefix << ".sitelh" << endl;
 		}
 	}
-	cout << "  Screen log file:          " << params.out_prefix << ".log"
+	cout << "  Screen log file:               " << params.out_prefix << ".log"
 			<< endl;
 	/*	if (original_model == "WHTEST")
 	 cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
