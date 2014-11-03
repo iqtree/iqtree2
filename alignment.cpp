@@ -207,6 +207,8 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
 	}
 
 	if (removed_seqs.size() > 0) {
+		if (removed_seqs.size() > getNSeq()-3)
+			outError("Your alignment contains too many identical sequences, quiting now...");
 		IntVector keep_seqs;
 		for (seq1 = 0; seq1 < getNSeq(); seq1++)
 			if (!removed[seq1]) keep_seqs.push_back(seq1);
