@@ -1164,10 +1164,13 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
 }
 /*
  *  Generate the initial candidate tree set
+ *  @param numInitTrees number of parsimony trees to use
+ *  @return number of duplicated trees
  */
-void initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
+int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     int nni_count = 0;
     int nni_steps = 0;
+    int numDup = 0;
     cout << "Generating " << numInitTrees - 1 << " parsimony trees... ";
     cout.flush();
     double startTime = getCPUTime();
@@ -1229,6 +1232,7 @@ void initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     /*********** START: Do NNI on the best parsimony trees ************************************/
     CandidateSet::reverse_iterator rit;
     int numNNITrees = 1;
+    double worstNNIScore = 0.0;
     for (rit = iqtree.candidateTrees.rbegin(); rit != iqtree.candidateTrees.rend() && numNNITrees <= params.numNNITrees; ++rit, numNNITrees++) {
     	int nniCount, nniStep;
         double initLogl, nniLogl;
@@ -1247,6 +1251,8 @@ void initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         if (verbose_mode >= VB_MED)
         	cout << numNNITrees << ". Parsimony logl " << initLogl << " / NNI logl: " << nniLogl << endl;
 
+        if (iqtree.curScore < worstNNIScore)
+        	worstNNIScore = iqtree.curScore;
         // Better tree is found
         if (iqtree.curScore > iqtree.bestScore) {
             // Re-optimize model parameters (the sNNI algorithm)
@@ -1255,8 +1261,14 @@ void initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
             cout << "BETTER TREE FOUND: " << iqtree.bestScore << endl;
         }
 
-        iqtree.candidateTrees.update(tree, iqtree.curScore);
+        bool newTree = iqtree.candidateTrees.update(tree, iqtree.curScore);
+        if (!newTree)
+        	numDup++;
     }
+
+    // Remove unused parsimony trees from the candidate tree set
+    iqtree.candidateTrees.erase(iqtree.candidateTrees.begin(), iqtree.candidateTrees.lower_bound(worstNNIScore));
+    return numDup;
 }
 
 void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh, NodeVector &pruned_taxa, StrVector &linked_name) {
@@ -1578,7 +1590,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         double initTime = getCPUTime();
 
         if (params.snni) {
-        	initCandidateTreeSet(params, iqtree, numInitTrees);
+        	int numDup = initCandidateTreeSet(params, iqtree, numInitTrees);
+        	cout << "Finish initializing candidate tree set. " << numDup << " / " << numInitTrees << " are duplicated." << endl;
         } else { // no -snni
             int nni_count = 0;
             int nni_steps = 0;
@@ -1599,7 +1612,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
         }
 
-        cout << "Finish initializing candidate tree set. Best score: " << iqtree.bestScore << " / CPU time: "
+        cout << "Current best score: " << iqtree.bestScore << " / CPU time: "
                 << getCPUTime() - initTime << endl << endl;
 	}
 

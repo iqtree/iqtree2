@@ -59,7 +59,7 @@ public:
 
     /**
      * update / insert tree into set of score is higher than lowest-scoring tree
-     * @return true if the candidate set is updated, otherwise false
+     * @return false if the tree topology already exists
      *
      */
     bool update(string tree, double score);
