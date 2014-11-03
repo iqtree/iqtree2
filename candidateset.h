@@ -70,7 +70,13 @@ public:
      *  @param numScore
      *  	Number of best scores to print out starting from the highest
      */
-    vector<double> getBestScores(int numScore);
+    vector<double> getBestScores(int numBestScores = 0);
+
+    /**
+     * Return the worst score in the candidate tree set
+     * @return
+     */
+    double getWorstScore();
 
     /**
      *  Return \a numTree best tree strings
@@ -94,7 +100,7 @@ public:
     /**
      * hard limit for number of trees (typically superset of candidate set)
      */
-    int limit;
+    int maxCandidates;
 
     /**
      *  best score in the set
@@ -104,7 +110,7 @@ public:
     /**
      *  maximum number of candidate trees
      */
-    int max_candidates;
+    int popSize;
 
     /** index of tree topologies in set
      *

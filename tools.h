@@ -427,7 +427,7 @@ struct Params {
 	/**
 	 *  maximum number of trees stored in the candidate set
 	 */
-	int limitPopSize;
+	int maxCandidates;
 
 	/**
 	 *  heuristics for speeding up NNI evaluation
@@ -1120,6 +1120,11 @@ struct Params {
             2 if output all intermediate trees + 1-NNI-away trees
      */
     int write_intermediate_trees;
+
+    /**
+     *  Write out all candidate trees (the locally optimal trees)
+     */
+    int write_candidate_trees;
 
     /**
         TRUE to avoid duplicated trees while writing intermediate trees

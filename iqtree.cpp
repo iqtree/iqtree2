@@ -79,8 +79,8 @@ void IQTree::setParams(Params &params) {
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
     candidateTrees.aln = aln;
-    candidateTrees.max_candidates = params.popSize;
-    candidateTrees.limit = params.limitPopSize;
+    candidateTrees.popSize = params.popSize;
+    candidateTrees.maxCandidates = params.maxCandidates;
 
     sse = params.SSE;
 //    if (params.maxtime != 1000000) {
@@ -1274,7 +1274,7 @@ string IQTree::optimizeModelParameters(bool printInfo) {
 }
 
 void IQTree::printBestScores(int numBestScore) {
-	vector<double> bestScores = candidateTrees.getBestScores(candidateTrees.max_candidates);
+	vector<double> bestScores = candidateTrees.getBestScores(candidateTrees.popSize);
 	for (vector<double>::iterator it = bestScores.begin(); it != bestScores.end(); it++)
 		cout << (*it) << " ";
 	cout << endl;
@@ -1528,7 +1528,7 @@ double IQTree::doTreeSearch() {
         if (params->snni) {
         	candidateTrees.update(imd_tree, curScore);
         	if (verbose_mode >= VB_MED) {
-            	printBestScores(candidateTrees.max_candidates);
+            	printBestScores(candidateTrees.popSize);
         	}
         } else {
             // The IQPNNI algorithm

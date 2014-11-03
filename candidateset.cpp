@@ -11,16 +11,16 @@
 CandidateSet::CandidateSet(int limit, int max_candidates, Alignment *aln) {
     assert(max_candidates <= limit);
     assert(aln);
-    this->limit = limit;
-    this->max_candidates = max_candidates;
+    this->maxCandidates = limit;
+    this->popSize = max_candidates;
     this->aln = aln;
     this->bestScore = -DBL_MAX;
 }
 
 CandidateSet::CandidateSet() {
 	aln = NULL;
-	limit = 0;
-	max_candidates = 0;
+	maxCandidates = 0;
+	popSize = 0;
 	bestScore = -DBL_MAX;
 }
 
@@ -36,7 +36,7 @@ string CandidateSet::getRandCandTree() {
 	if (empty())
 		return "";
 	// BQM: bug fix max -> min
-	int id = random_int(min(max_candidates, (int)size()) );
+	int id = random_int(min(popSize, (int)size()) );
 	//int id = randint(0, min(max_candidates, (int)size()));
 	//int id = 0 + (rand() % (int)( min(max_candidates, (int)size())) );
 	for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
@@ -46,9 +46,9 @@ string CandidateSet::getRandCandTree() {
 }
 
 vector<string> CandidateSet::getBestTrees(int numTree) {
-	assert(numTree <= limit);
+	assert(numTree <= maxCandidates);
 	if (numTree == 0) {
-		numTree = max_candidates;
+		numTree = maxCandidates;
 	}
 	vector<string> res;
 	int cnt = numTree;
@@ -91,7 +91,7 @@ string CandidateSet::getNextCandTree() {
 
 void CandidateSet::initParentTrees() {
     if (parentTrees.empty()) {
-        int count = this->max_candidates;
+        int count = this->popSize;
         for (reverse_iterator i = rbegin(); i != rend() && count >0 ; i++, count--) {
             parentTrees.push(i->second.tree);
             //cout << i->first << endl;
@@ -100,6 +100,7 @@ void CandidateSet::initParentTrees() {
 }
 
 bool CandidateSet::update(string tree, double score) {
+	bool newTree;
 	CandidateTree candidate;
 	candidate.tree = tree;
 	candidate.score = score;
@@ -119,31 +120,37 @@ bool CandidateSet::update(string tree, double score) {
 			// insert tree into candidate set
 			insert(CandidateSet::value_type(score, candidate));
 		}
-		return false;
+		newTree = false;
+	} else {
+		newTree = true;
+		if (size() < maxCandidates) {
+			// insert tree into candidate set
+			insert(CandidateSet::value_type(score, candidate));
+			topologies[candidate.topology] = score;
+		} else if (begin()->first < score){
+			// remove the worst-scoring tree
+			topologies.erase(begin()->second.topology);
+			erase(begin());
+			// insert tree into candidate set
+			insert(CandidateSet::value_type(score, candidate));
+			topologies[candidate.topology] = score;
+		}
 	}
-	if (size() < limit) {
-		// insert tree into candidate set
-		insert(CandidateSet::value_type(score, candidate));
-		topologies[candidate.topology] = score;
-		return true;
-	} else if (begin()->first < score){
-		// remove the worst-scoring tree
-		topologies.erase(begin()->second.topology);
-		erase(begin());
-		// insert tree into candidate set
-		insert(CandidateSet::value_type(score, candidate));
-		topologies[candidate.topology] = score;
-		return true;
-	}
-	return false;
+	return newTree;
 }
 
-vector<double> CandidateSet::getBestScores(int numBestsore) {
+vector<double> CandidateSet::getBestScores(int numBestScore) {
+	if (numBestScore == 0)
+		numBestScore = size();
 	vector<double> res;
-	for (reverse_iterator rit = rbegin(); rit != rend() && numBestsore > 0; rit++, numBestsore--) {
+	for (reverse_iterator rit = rbegin(); rit != rend() && numBestScore > 0; rit++, numBestScore--) {
 		res.push_back(rit->first);
 	}
 	return res;
+}
+
+double CandidateSet::getWorstScore() {
+	return begin()->first;
 }
 
 string CandidateSet::getTopology(string tree) {

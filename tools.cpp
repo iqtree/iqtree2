@@ -654,7 +654,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.limitPopSize = 100;
+    params.maxCandidates = 1000;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -1769,6 +1769,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.iqp = true;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-wct") == 0) {
+				// write all candidate trees
+				params.write_candidate_trees = true;
+				continue;
+			}
 			if (strcmp(argv[cnt], "-wt") == 0) {
 				params.write_intermediate_trees = 1;
 				continue;
@@ -2164,7 +2169,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -poplim <max_pop_size>";
-				params.limitPopSize = convert_int(argv[cnt]);
+				params.maxCandidates = convert_int(argv[cnt]);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-popsize") == 0
