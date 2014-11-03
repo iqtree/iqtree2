@@ -291,7 +291,6 @@ circularnetwork.cpp
 eigendecomposition.cpp
 greedy.cpp
 gss.cpp
-gtrmodel.cpp
 guidedbootstrap.cpp
 gurobiwrapper.cpp
 gzstream.cpp
@@ -300,6 +299,7 @@ iqtree.cpp
 maalignment.cpp
 matree.cpp
 mexttree.cpp
+modelgtr.cpp
 modelbin.cpp
 modeldna.cpp
 modelfactory.cpp

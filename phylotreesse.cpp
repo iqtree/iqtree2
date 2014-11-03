@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "phylotree.h"
-#include "gtrmodel.h"
+#include "modelgtr.h"
 #include "vectorclass/vectorclass.h"
 #include "vectorclass/vectormath_exp.h"
 

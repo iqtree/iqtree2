@@ -8,7 +8,7 @@
 #ifndef MODELMORPHOLOGY_H_
 #define MODELMORPHOLOGY_H_
 
-#include "gtrmodel.h"
+#include "modelgtr.h"
 
 /**
  * This class implement ML model for morphological data. Such models are:

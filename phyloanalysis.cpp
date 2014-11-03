@@ -29,7 +29,7 @@
 #include "alignment.h"
 #include "superalignment.h"
 #include "iqtree.h"
-#include "gtrmodel.h"
+#include "modelgtr.h"
 #include "modeldna.h"
 #include "myreader.h"
 #include "rateheterogeneity.h"

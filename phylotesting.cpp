@@ -16,7 +16,7 @@
 #include "phylosupertree.h"
 #include "phylotesting.h"
 
-#include "gtrmodel.h"
+#include "modelgtr.h"
 #include "modeldna.h"
 #include "myreader.h"
 #include "rateheterogeneity.h"

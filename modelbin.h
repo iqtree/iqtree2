@@ -20,7 +20,7 @@
 #ifndef MODELBIN_H
 #define MODELBIN_H
 
-#include "gtrmodel.h"
+#include "modelgtr.h"
 
 /**
 Model for Binary data

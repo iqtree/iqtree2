@@ -20,7 +20,7 @@
 #ifndef MODELDNA_H
 #define MODELDNA_H
 
-#include "gtrmodel.h"
+#include "modelgtr.h"
 #include <string>
 
 /**

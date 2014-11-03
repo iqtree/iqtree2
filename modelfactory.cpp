@@ -21,7 +21,7 @@
 #include "modelfactory.h"
 #include "rategamma.h"
 #include "rategammainvar.h"
-#include "gtrmodel.h"
+#include "modelgtr.h"
 #include "modelnonrev.h"
 #include "modeldna.h"
 #include "modelprotein.h"

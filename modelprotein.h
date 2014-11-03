@@ -20,7 +20,7 @@
 #ifndef MODELPROTEIN_H
 #define MODELPROTEIN_H
 
-#include "gtrmodel.h"
+#include "modelgtr.h"
 
 /**
 Substitution models for protein sequences

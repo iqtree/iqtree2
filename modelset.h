@@ -20,7 +20,7 @@
 #ifndef MODELSET_H
 #define MODELSET_H
 
-#include "gtrmodel.h"
+#include "modelgtr.h"
 
 /**
  * a set of substitution models, used eg for site-specific state frequency model or 

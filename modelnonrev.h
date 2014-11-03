@@ -21,7 +21,7 @@
 #define MODELNONREV_H
 
 #include "phylotree.h"
-#include "gtrmodel.h"
+#include "modelgtr.h"
 
 /**
 The general non-reversible model

@@ -8,7 +8,7 @@
 #ifndef MODELCODON_H_
 #define MODELCODON_H_
 
-#include "gtrmodel.h"
+#include "modelgtr.h"
 
 /**
  * parameter constraint

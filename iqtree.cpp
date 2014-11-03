@@ -22,7 +22,7 @@
 #include "phylosupertreeplen.h"
 #include "mexttree.h"
 #include "timeutil.h"
-#include "gtrmodel.h"
+#include "modelgtr.h"
 #include "rategamma.h"
 #include <numeric>
 #include "pll/pllInternal.h"

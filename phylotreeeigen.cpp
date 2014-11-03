@@ -8,4 +8,4 @@
 
 
 #include "phylotree.h"
-#include "gtrmodel.h"
+#include "modelgtr.h"
