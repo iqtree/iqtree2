@@ -38,7 +38,7 @@ This works for all kind of data, not only DNA
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class GTRModel : public ModelSubst, public EigenDecomposition
+class ModelGTR : public ModelSubst, public EigenDecomposition
 {
 	
 	friend class ModelSet;
@@ -48,7 +48,7 @@ public:
 		constructor
 		@param tree associated tree for the model
 	*/
-    GTRModel(PhyloTree *tree, bool count_rates = true);
+    ModelGTR(PhyloTree *tree, bool count_rates = true);
 	
 	/**
 		init the model and decompose the rate matrix. This function should always be called
@@ -67,7 +67,7 @@ public:
 	/**
 		destructor
 	*/
-    virtual ~GTRModel();
+    virtual ~ModelGTR();
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}

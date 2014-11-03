@@ -26,7 +26,7 @@
  * a set of substitution models, used eg for site-specific state frequency model or 
  * partition model with joint branch lengths
  */
-class ModelSet : public GTRModel, public vector<GTRModel*>
+class ModelSet : public ModelGTR, public vector<ModelGTR*>
 {
 
 public:

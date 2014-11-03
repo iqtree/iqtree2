@@ -27,7 +27,7 @@ Model for Binary data
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelBIN : public GTRModel
+class ModelBIN : public ModelGTR
 {
 public:
 	/**

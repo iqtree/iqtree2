@@ -38,7 +38,7 @@ All DNA models are managed here
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelDNA : public GTRModel
+class ModelDNA : public ModelGTR
 {
 public:
 	/**

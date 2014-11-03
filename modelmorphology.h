@@ -16,7 +16,7 @@
  * - ORDERED: allowing only transition from state i to i-1 and i+1
  * TODO: Mkv to account for absence of constant sites
  */
-class ModelMorphology: public GTRModel {
+class ModelMorphology: public ModelGTR {
 public:
 	/**
 		constructor

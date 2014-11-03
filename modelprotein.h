@@ -27,7 +27,7 @@ Substitution models for protein sequences
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelProtein : public GTRModel
+class ModelProtein : public ModelGTR
 {
 public:
 	/**

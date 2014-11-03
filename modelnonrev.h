@@ -28,7 +28,7 @@ The general non-reversible model
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelNonRev : public GTRModel
+class ModelNonRev : public ModelGTR
 {
 public:
     ModelNonRev(PhyloTree *tree, bool count_rates = true);

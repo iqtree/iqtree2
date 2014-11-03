@@ -10,7 +10,7 @@
 
 #include "gtrmodel.h"
 
-class ModelPoMo: public GTRModel {
+class ModelPoMo: public ModelGTR {
 public:
 	ModelPoMo();
 	virtual ~ModelPoMo();

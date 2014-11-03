@@ -72,12 +72,12 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 	if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
 		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
 		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
-		model = new GTRModel(tree, count_rates);
+		model = new ModelGTR(tree, count_rates);
 		if (freq_params != "")
-			((GTRModel*)model)->readStateFreq(freq_params);
+			((ModelGTR*)model)->readStateFreq(freq_params);
 		if (model_params != "")
-			((GTRModel*)model)->readRates(model_params);
-		((GTRModel*)model)->init(freq_type);
+			((ModelGTR*)model)->readRates(model_params);
+		((ModelGTR*)model)->init(freq_type);
 	} else if (model_str == "UNREST") {
 		freq_type = FREQ_EQUAL;
 		//params.optimize_by_newton = false;
@@ -301,13 +301,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		double *state_freq = new double[model->num_states];
 		double *rates = new double[model->getNumRateEntries()];
 		for (i = 0; i < freq_vec.size(); i++) {
-			GTRModel *modeli;
+			ModelGTR *modeli;
 			if (i == 0) {
-				modeli = (GTRModel*)createModel(model_str, params.freq_type, "", tree, true);
+				modeli = (ModelGTR*)createModel(model_str, params.freq_type, "", tree, true);
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {
-				modeli = (GTRModel*)createModel(model_str, FREQ_EQUAL, "", tree, false);
+				modeli = (ModelGTR*)createModel(model_str, FREQ_EQUAL, "", tree, false);
 				modeli->setStateFrequency(state_freq);
 				modeli->setRateMatrix(rates);
 			}

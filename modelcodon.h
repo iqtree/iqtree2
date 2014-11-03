@@ -25,7 +25,7 @@ struct ParamConstraint {
 /**
  * Codon substitution models
  */
-class ModelCodon: public GTRModel {
+class ModelCodon: public ModelGTR {
 public:
 	/**
 		constructor
