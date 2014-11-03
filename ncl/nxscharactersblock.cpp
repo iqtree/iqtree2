@@ -954,11 +954,12 @@ void NxsCharactersBlock::HandleFormat(
 				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 				}
 
-			if (standardDataTypeAssumed && datatype != standard)
-				{
-				errormsg = "DATATYPE must be specified first in FORMAT command";
-				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
-				}
+			// BQM commented out
+//			if (standardDataTypeAssumed && datatype != standard)
+//				{
+//				errormsg = "DATATYPE must be specified first in FORMAT command";
+//				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
+//				}
 
 			ResetSymbols();
 
