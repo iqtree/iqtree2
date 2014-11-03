@@ -1200,7 +1200,9 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         	iqtree.candidateTrees.update(curParsTree, -DBL_MAX);
         }
     }
-    cout << getCPUTime() - startTime << " seconds (" << numDupPars << " duplicated parsimony trees)" << endl;
+    double parsTime = getCPUTime() - startTime;
+    cout << parsTime << " seconds (" << numDupPars << " duplicated parsimony trees)" << endl;
+    cout << "Average time for generating 1 parsimony tree: " << parsTime / (numInitTrees - 1) << endl;
     cout << "Computing log-likelihood of the parsimony trees ... ";
     startTime = getCPUTime();
     vector<string> unOptParTrees = iqtree.candidateTrees.getBestTrees(numInitTrees);
@@ -1225,7 +1227,10 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
             iqtree.setBestTree(tree, iqtree.curScore);
         }
     }
-    cout << getCPUTime() - startTime << " seconds" << endl;
+    double loglTime = getCPUTime() - startTime;
+    cout << loglTime << " seconds" << endl;
+    cout << "Average time for computing log-likelihood of 1 tree: " << loglTime / (numInitTrees - 1) << endl;
+
     vector<string> bestTrees = iqtree.candidateTrees.getBestTrees(params.numNNITrees);
     iqtree.candidateTrees.clear();
 
@@ -1233,6 +1238,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
 
     cout << endl;
     cout << "Optimizing top "<< bestTrees.size() << " parsimony trees with NNI..." << endl;
+    startTime = getCPUTime();
     /*********** START: Do NNI on the best parsimony trees ************************************/
     vector<string>::iterator it;
     int numNNITrees = 1;
@@ -1267,6 +1273,8 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         	numDup++;
         }
     }
+    double nniTime = getCPUTime() - startTime;
+    cout << "Average time for 1 NNI search: " << nniTime / bestTrees.size() << endl;
     return numDup;
 }
 
