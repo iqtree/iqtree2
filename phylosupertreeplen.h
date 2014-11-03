@@ -9,7 +9,7 @@
 #define PHYLOSUPERTREEPLEN_H_
 
 #include "phylosupertree.h"
-#include "partitionmodel.h"
+#include "model/partitionmodel.h"
 #include "superalignmentpairwise.h"
 
 /**

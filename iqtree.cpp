@@ -22,8 +22,8 @@
 #include "phylosupertreeplen.h"
 #include "mexttree.h"
 #include "timeutil.h"
-#include "modelgtr.h"
-#include "rategamma.h"
+#include "model/modelgtr.h"
+#include "model/rategamma.h"
 #include <numeric>
 #include "pll/pllInternal.h"
 #include "nnisearch.h"

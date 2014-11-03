@@ -25,11 +25,11 @@
 #include "Eigen/Core"
 #include "mtree.h"
 #include "alignment.h"
-#include "modelsubst.h"
-#include "modelfactory.h"
+#include "model/modelsubst.h"
+#include "model/modelfactory.h"
 #include "phylonode.h"
 #include "optimization.h"
-#include "rateheterogeneity.h"
+#include "model/rateheterogeneity.h"
 
 
 const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
