@@ -337,6 +337,7 @@ rateinvar.cpp
 ratemeyerdiscrete.cpp
 ratemeyerhaeseler.cpp
 ratekategory.cpp
+ratefree.cpp
 split.cpp
 splitgraph.cpp
 splitset.cpp
