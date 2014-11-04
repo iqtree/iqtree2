@@ -85,6 +85,13 @@ public:
 	virtual double getRate(int category) { return rates[category]; }
 
 	/**
+		get the proportion of sites under a specified category.
+		@param category category ID from 0 to #category-1
+		@return the proportion of the specified category
+	*/
+	virtual double getProp(int category) { return 1.0/ncategory; }
+
+	/**
 	 * 	return pointer to the rate array
 	 */
 	virtual double* getRates() { return rates; }

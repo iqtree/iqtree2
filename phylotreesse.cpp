@@ -647,8 +647,8 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t ncat = site_rate->getNRate();
 
-    double p_invar = site_rate->getPInvar();
-    double p_var_cat = (1.0 - p_invar) / (double) ncat;
+//    double p_invar = site_rate->getPInvar();
+    //double p_var_cat = (1.0 - p_invar) / (double) ncat;
     //size_t nstates = aln->num_states;
     size_t block = ncat * nstates;
     size_t ptn; // for big data size > 4GB memory required
@@ -720,9 +720,12 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
     double *val1 = new double[block];
     double *val2 = new double[block];
 	for (c = 0; c < ncat; c++) {
+		double prop = site_rate->getProp(c);
+//		double cof = site_rate->getRate(c) * dad_branch->length;
 		for (i = 0; i < nstates; i++) {
 			double cof = eval[i]*site_rate->getRate(c);
-			double val = exp(cof*dad_branch->length);
+//			double val = exp(cof*dad_branch->length);
+			double val = exp(cof*dad_branch->length) * prop;
 			double val1_ = cof*val;
 			val0[c*nstates+i] = val;
 			val1[c*nstates+i] = val1_;
@@ -738,7 +741,7 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 #pragma omp parallel for reduction(+: tree_lh, my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i)
 #endif
     for (ptn = 0; ptn < nptn; ptn++) {
-		double lh_ptn = 0.0, df_ptn = 0.0, ddf_ptn = 0.0;
+		double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
 		double *theta = theta_all + ptn*block;
 #ifdef USING_SSE
 		double *val0_tmp = val0;
@@ -767,9 +770,10 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 //		theta += block;
 
 #endif
-		lh_ptn = lh_ptn * p_var_cat + ptn_invar[ptn];
-		df_ptn *= p_var_cat;
-		ddf_ptn *= p_var_cat;
+//		lh_ptn = lh_ptn * p_var_cat + ptn_invar[ptn];
+//		df_ptn *= p_var_cat;
+//		ddf_ptn *= p_var_cat;
+//		lh_ptn += ptn_invar[ptn];
 		if (ptn < orig_nptn) {
 			double df_frac = df_ptn / lh_ptn;
 			double ddf_frac = ddf_ptn / lh_ptn;
@@ -834,8 +838,8 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t ncat = site_rate->getNRate();
 
-    double p_invar = site_rate->getPInvar();
-    double p_var_cat = (1.0 - p_invar) / (double) ncat;
+//    double p_invar = site_rate->getPInvar();
+//    double p_var_cat = (1.0 - p_invar) / (double) ncat;
     size_t block = ncat * nstates;
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i;
@@ -849,8 +853,9 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     double *val = new double[block];
 	for (c = 0; c < ncat; c++) {
 		double len = site_rate->getRate(c)*dad_branch->length;
+		double prop = site_rate->getProp(c);
 		for (i = 0; i < nstates; i++)
-			val[c*nstates+i] = exp(eval[i]*len);
+			val[c*nstates+i] = exp(eval[i]*len) * prop;
 	}
 
 	double prob_const = 0.0;
@@ -889,7 +894,7 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
-			double lh_ptn = 0.0;
+			double lh_ptn = ptn_invar[ptn];
 			double *lh_cat = _pattern_lh_cat + ptn*ncat;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			int state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
@@ -919,7 +924,8 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 			}
 //			partial_lh_dad += block;
 //#endif
-			lh_ptn = lh_ptn*p_var_cat + ptn_invar[ptn];
+//			lh_ptn = lh_ptn*p_var_cat + ptn_invar[ptn];
+//			lh_ptn += ptn_invar[ptn];
 			if (ptn < orig_nptn) {
 				lh_ptn = log(lh_ptn);
 				_pattern_lh[ptn] = lh_ptn;
@@ -935,7 +941,7 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
-			double lh_ptn = 0.0;
+			double lh_ptn = ptn_invar[ptn];
 			double *lh_cat = _pattern_lh_cat + ptn*ncat;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_node = node_branch->partial_lh + ptn*block;
@@ -966,7 +972,9 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 				lh_cat++;
 			}
 #endif
-			lh_ptn = lh_ptn*p_var_cat + ptn_invar[ptn];
+//			lh_ptn = lh_ptn*p_var_cat + ptn_invar[ptn];
+//			lh_ptn += ptn_invar[ptn];
+
 			assert(lh_ptn > 0.0);
 			if (ptn < orig_nptn) {
 				lh_ptn = log(lh_ptn);
