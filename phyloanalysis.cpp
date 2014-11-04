@@ -52,22 +52,17 @@
 #include "timeutil.h"
 
 
-void reportReferences(ofstream &out, string &original_model) {
-	out
-			<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast"
-			<< endl << "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195."
-			<< endl
-			/*
-			<< endl << "Lam-Tung Nguyen, Heiko A. Schmidt, Bui Quang Minh, and Arndt von Haeseler (2012)"
-			<< endl
-			<< "IQ-TREE: Efficient algorithm for phylogenetic inference by maximum likelihood"
-			<< endl << "and important quartet puzzling. In prep." << endl*/
-			<< endl << "For the original IQPNNI algorithm please cite: " << endl
-			<< endl
-			<< "Le Sy Vinh and Arndt von Haeseler (2004) IQPNNI: moving fast through tree space"
-			<< endl
-			<< "and stopping in time. Mol. Biol. Evol., 21:1565-1571."
-			<< endl << endl;
+void reportReferences(Params &params, ofstream &out, string &original_model) {
+	out << "To cite IQ-TREE please use:" << endl << endl
+		<< "Lam-Tung Nguyen, Heiko A. Schmidt, Arndt von Haeseler, and Bui Quang Minh (2014)" << endl
+		<< "IQ-TREE: : A fast and effective stochastic algorithm for estimating" << endl
+		<< "maximum likelihood phylogenies. Mol. Biol. Evol., in press." << endl << endl;
+
+	if (params.gbo_replicates)
+	out << "Since you also used ultrafast bootstrap (UFBoot) please cite: " << endl << endl
+		<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast" << endl
+		<< "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195." << endl << endl;
+
 	/*		"*** If you use the parallel version, please cite: " << endl << endl <<
 	 "Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)" << endl <<
 	 "pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies." << endl <<
@@ -455,7 +450,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		out << endl;
 		out << "Random seed number: " << params.ran_seed << endl << endl;
 		out << "REFERENCES" << endl << "----------" << endl << endl;
-		reportReferences(out, original_model);
+		reportReferences(params, out, original_model);
 
 		out << "SEQUENCE ALIGNMENT" << endl << "------------------" << endl
 				<< endl;
@@ -845,11 +840,12 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 	cout << endl << "Analysis results written to: " << endl
 			<< "  IQ-TREE report:                " << params.out_prefix << ".iqtree"
 			<< endl;
-	if (params.compute_ml_tree)
+	if (params.compute_ml_tree) {
 		cout << "  Maximum-likelihood tree:       " << params.out_prefix
 				<< ".treefile" << endl;
 		cout << "  Locally optimal trees (" << tree.candidateTrees.size() << "):    " << params.out_prefix << ".trees" << endl;
-	if (!params.user_file && !params.snni) {
+	}
+	if (!params.user_file && params.start_tree == STT_BIONJ) {
 		cout << "  BIONJ tree:               " << params.out_prefix << ".bionj"
 				<< endl;
 	}
@@ -1058,6 +1054,8 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 }
 
 void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &numInitTrees, string &initTree) {
+    double start = getCPUTime();
+
     if (params.user_file) {
         // start the search with user-defined tree
     	cout << endl;
@@ -1072,16 +1070,20 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
 			cout << "NOTE: Changing to old kernel as input tree is multifurcating" << endl;
 			params.SSE = LK_SSE;
 		}
-    } else if (params.parsimony_tree && !params.pll) {
+    } else switch (params.start_tree) {
+    case STT_PARSIMONY:
         // Create parsimony tree using IQ-Tree kernel
         cout << endl;
-        cout << "Creating parsimony tree by IQ-TREE ..." << endl;
+        cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
         iqtree.computeParsimonyTree(params.out_prefix, iqtree.aln);
-        numInitTrees = 1;
-    } else if (params.snni) {
+        iqtree.initializeAllPartialPars();
+        iqtree.clearAllPartialLH();
+        iqtree.fixNegativeBranch(true);
+        numInitTrees = params.numParsTrees;
+        break;
+    case STT_PLL_PARSIMONY:
         cout << endl;
-        cout << "Create initial parsimony tree ... ";
-        double start = getCPUTime();
+        cout << "Create initial parsimony tree by phylogenetic likelihood library (PLL)... ";
         // generate a parsimony tree for model optimization
         iqtree.pllInst->randomNumberSeed = params.ran_seed;
         pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions, params.sprDist);
@@ -1092,15 +1094,15 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         iqtree.initializeAllPartialPars();
         iqtree.clearAllPartialLH();
         iqtree.fixNegativeBranch(true);
-        double end = getCPUTime();
-        cout << end - start << " seconds" << endl;
+        cout << getCPUTime() - start << " seconds" << endl;
         numInitTrees = params.numParsTrees;
-    } else {
-        double start = getCPUTime();
+        break;
+    case STT_BIONJ:
         // This is the old default option: using BIONJ as starting tree
         iqtree.computeBioNJ(params, iqtree.aln, dist_file);
         cout << getCPUTime() - start << " seconds" << endl;
         numInitTrees = 1;
+        break;
     }
 
     /* Fix if negative branch lengths detected */
@@ -1178,18 +1180,26 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     int numDupPars = 0;
     for (int treeNr = 1; treeNr < numInitTrees; treeNr++) {
         string curParsTree;
-        iqtree.pllInst->randomNumberSeed = params.ran_seed + treeNr * 12345;
-        pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions, params.sprDist);
-        pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
-                iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
-                PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-        curParsTree = string(iqtree.pllInst->tree_string);
+        if (params.start_tree == STT_PLL_PARSIMONY) {
+			iqtree.pllInst->randomNumberSeed = params.ran_seed + treeNr * 12345;
+	        pllComputeRandomizedStepwiseAdditionParsimonyTree(iqtree.pllInst, iqtree.pllPartitions, params.sprDist);
+			pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
+					iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
+					PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+			curParsTree = string(iqtree.pllInst->tree_string);
+        } else {
+            iqtree.computeParsimonyTree(NULL, iqtree.aln);
+            curParsTree = iqtree.getTreeString();
+        }
         if (iqtree.candidateTrees.treeExist(curParsTree)) {
             numDupPars++;
             continue;
         } else {
-        	if (params.count_trees) {
-                if (pllTreeCounter.find(curParsTree) == pllTreeCounter.end()) {
+        	if (params.start_tree == STT_PLL_PARSIMONY)
+        		iqtree.readTreeString(curParsTree);
+            if (params.count_trees) {
+                string tree = iqtree.getTopology();
+                if (pllTreeCounter.find(tree) == pllTreeCounter.end()) {
                     // not found in hash_map
                     pllTreeCounter[curParsTree] = 1;
                 } else {
@@ -1252,7 +1262,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         iqtree.clearAllPartialLH();
         iqtree.computeLogL();
         tree = iqtree.doNNISearch(nniCount, nniStep);
-        cout << "Suboptimal tree " << numNNITrees << " / LogL: " << iqtree.curScore;
+        cout << "Iteration " << numNNITrees << " / LogL: " << iqtree.curScore;
         if (verbose_mode >= VB_MED)
         	cout << " / NNIs: " << nniCount << "," << nniStep;
         cout << " / Time: " << convert_time(getRealTime() - params.start_real_time) << endl;
@@ -1526,14 +1536,14 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     /***************** Initialization for PLL and sNNI ******************/
-    if (params.snni || params.pll) {
+    if (params.start_tree == STT_PLL_PARSIMONY || params.pll) {
         /* Initialized all data structure for PLL*/
     	iqtree.initializePLL(params);
     }
 
 
     /********************* Compute pairwise distances *******************/
-    if (!params.snni || params.iqp || params.leastSquareBranch) {
+    if (params.start_tree == STT_BIONJ || params.iqp || params.leastSquareBranch) {
     	computeInitialDist(params, iqtree, dist_file);
     }
 
@@ -1596,10 +1606,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (params.min_iterations > 0) {
         double initTime = getCPUTime();
 
-        if (params.snni) {
+        if (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY) {
         	int numDup = initCandidateTreeSet(params, iqtree, numInitTrees);
-        	cout << "Finish initializing candidate tree set. " << numDup << " / " << params.numNNITrees << " are duplicated." << endl;
-        	cout << "Number of locally optimal trees: " << iqtree.candidateTrees.size() << endl;
+        	cout << "Finish initializing candidate tree set. ";
+        	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
         } else { // no -snni
             int nni_count = 0;
             int nni_steps = 0;
@@ -1992,10 +2002,12 @@ void runPhyloAnalysis(Params &params) {
 
 		// remove identical sequences
 		tree->removeIdenticalSeqs(params, removed_seqs, twin_seqs);
-
 		// call main tree reconstruction
 		runTreeReconstruction(params, original_model, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
+			if (params.print_ufboot_trees)
+				tree->writeUFBootTrees(params, removed_seqs, twin_seqs);
+
 			cout << endl << "Computing bootstrap consensus tree..." << endl;
 			string splitsfile = params.out_prefix;
 			splitsfile += ".splits.nex";

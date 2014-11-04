@@ -1,8 +1,8 @@
 /****************************  vectori512e.h   *******************************
 * Author:        Agner Fog
 * Date created:  2014-07-23
-* Last modified: 2014-07-23
-* Version:       1.14
+* Last modified: 2014-10-16
+* Version:       1.16
 * Project:       vector classes
 * Description:
 * Header file defining integer vector classes as interface to intrinsic 
@@ -227,6 +227,11 @@ public:
     // Default constructor:
     Vec16b () {
     }
+    // Constructor to build from all elements:
+    Vec16b(bool b0, bool b1, bool b2, bool b3, bool b4, bool b5, bool b6, bool b7, 
+    bool b8, bool b9, bool b10, bool b11, bool b12, bool b13, bool b14, bool b15) {
+        *this = Vec512b(Vec8i(-(int)b0, -(int)b1, -(int)b2, -(int)b3, -(int)b4, -(int)b5, -(int)b6, -(int)b7), Vec8i(-(int)b8, -(int)b9, -(int)b10, -(int)b11, -(int)b12, -(int)b13, -(int)b14, -(int)b15));
+    }
     // Constructor to convert from type Vec512b
     Vec16b (Vec512b const & x) {
         z0 = x.get_low();
@@ -242,11 +247,21 @@ public:
         z0 = x0;
         z1 = x1;
     }        
-    // Constructor to build from all elements:
-    Vec16b(bool b0, bool b1, bool b2, bool b3, bool b4, bool b5, bool b6, bool b7, 
-    bool b8, bool b9, bool b10, bool b11, bool b12, bool b13, bool b14, bool b15) {
-        *this = Vec512b(Vec8i(-(int)b0, -(int)b1, -(int)b2, -(int)b3, -(int)b4, -(int)b5, -(int)b6, -(int)b7), Vec8i(-(int)b8, -(int)b9, -(int)b10, -(int)b11, -(int)b12, -(int)b13, -(int)b14, -(int)b15));
+    // Constructor to broadcast single value:
+    Vec16b(bool b) {
+        z0 = z1 = Vec8i(-int32_t(b));
     }
+    // Assignment operator to broadcast scalar value:
+    Vec16b & operator = (bool b) {
+        z0 = z1 = Vec8i(-int32_t(b));
+        return *this;
+    }
+private: 
+    // Prevent constructing from int, etc. because of ambiguity
+    Vec16b(int b);
+    // Prevent assigning int because of ambiguity
+    Vec16b & operator = (int x);
+public:
     // split into two halves
     Vec8ib get_low() const {
         return Vec8ib(z0);
@@ -377,6 +392,12 @@ public:
         z0 = x.get_low();
         z1 = x.get_high();
     }
+    // Constructor to build from all elements:
+    Vec16ib(bool x0, bool x1, bool x2, bool x3, bool x4, bool x5, bool x6, bool x7,
+        bool x8, bool x9, bool x10, bool x11, bool x12, bool x13, bool x14, bool x15) {
+        z0 = Vec8ib(x0, x1, x2, x3, x4, x5, x6, x7);
+        z1 = Vec8ib(x8, x9, x10, x11, x12, x13, x14, x15);
+    }
     // Constructor to convert from type Vec512b
     Vec16ib (Vec512b const & x) {
         z0 = x.get_low();
@@ -393,6 +414,18 @@ public:
         z1 = x.get_high();
         return *this;
     }
+    // Constructor to broadcast scalar value:
+    Vec16ib(bool b) : Vec16b(b) {
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec16ib & operator = (bool b) {
+        *this = Vec16b(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec16ib(int b);
+    Vec16ib & operator = (int x);
+public:
 };
 
 // Define operators for Vec16ib
@@ -446,31 +479,52 @@ static inline Vec16ib & operator ^= (Vec16ib & a, Vec16ib const & b) {
     return a;
 }
 
+// vector function andnot
+static inline Vec16ib andnot (Vec16ib const & a, Vec16ib const & b) {
+    return Vec16ib(andnot(Vec16b(a), Vec16b(b)));
+}
+
+
 /*****************************************************************************
 *
-*          Vec8qb: Vector of 8 Booleans for use with Vec8q and Vec8qu
+*          Vec8b: Base class vector of 8 Booleans
 *
 *****************************************************************************/
 
-class Vec8qb : public Vec16b {
+class Vec8b : public Vec16b {
 public:
     // Default constructor:
-    Vec8qb () {
+    Vec8b () {
     }
-    Vec8qb (Vec16b const & x) {
+    Vec8b (Vec16b const & x) {
         z0 = x.get_low();
         z1 = x.get_high();
     }
     // Constructor to convert from type Vec512b
-    Vec8qb (Vec512b const & x) {
+    Vec8b (Vec512b const & x) {
         z0 = x.get_low();
         z1 = x.get_high();
     }
     // construct from two halves
-    Vec8qb (Vec4qb const & x0, Vec4qb const & x1) {
+    Vec8b (Vec4qb const & x0, Vec4qb const & x1) {
         z0 = x0;
         z1 = x1;
     }
+    // Constructor to broadcast single value:
+    Vec8b(bool b) {
+        z0 = z1 = Vec8i(-int32_t(b));
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec8b & operator = (bool b) {
+        z0 = z1 = Vec8i(-int32_t(b));
+        return *this;
+    }
+private: 
+    // Prevent constructing from int, etc. because of ambiguity
+    Vec8b(int b);
+    // Prevent assigning int because of ambiguity
+    Vec8b & operator = (int x);
+public:
     // split into two halves
     Vec4qb get_low() const {
         return Vec4qb(z0);
@@ -479,9 +533,20 @@ public:
         return Vec4qb(z1);
     }
     // Assignment operator to convert from type Vec512b
-    Vec8qb & operator = (Vec512b const & x) {
+    Vec8b & operator = (Vec512b const & x) {
         z0 = x.get_low();
         z1 = x.get_high();
+        return *this;
+    }
+    // Member function to change a single element in vector
+    // Note: This function is inefficient. Use load function if changing more than one element
+    Vec8b const & insert(uint32_t index, bool value) {
+        if (index < 4) {
+            z0 = Vec4qb(z0).insert(index, value);
+        }
+        else {
+            z1 = Vec4qb(z1).insert(index-4, value);
+        }
         return *this;
     }
     bool extract(uint32_t index) const {
@@ -498,6 +563,59 @@ public:
     static int size () {
         return 8;
     }
+};
+
+
+/*****************************************************************************
+*
+*          Vec8qb: Vector of 8 Booleans for use with Vec8q and Vec8qu
+*
+*****************************************************************************/
+
+class Vec8qb : public Vec8b {
+public:
+    // Default constructor:
+    Vec8qb () {
+    }
+    Vec8qb (Vec16b const & x) {
+        z0 = x.get_low();
+        z1 = x.get_high();
+    }
+    // Constructor to build from all elements:
+    Vec8qb(bool x0, bool x1, bool x2, bool x3, bool x4, bool x5, bool x6, bool x7) {
+        z0 = Vec4qb(x0, x1, x2, x3);
+        z1 = Vec4qb(x4, x5, x6, x7);
+    }
+    // Constructor to convert from type Vec512b
+    Vec8qb (Vec512b const & x) {
+        z0 = x.get_low();
+        z1 = x.get_high();
+    }
+    // construct from two halves
+    Vec8qb (Vec4qb const & x0, Vec4qb const & x1) {
+        z0 = x0;
+        z1 = x1;
+    }
+    // Assignment operator to convert from type Vec512b
+    Vec8qb & operator = (Vec512b const & x) {
+        z0 = x.get_low();
+        z1 = x.get_high();
+        return *this;
+    }
+    // Constructor to broadcast single value:
+    Vec8qb(bool b) : Vec8b(b) {
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec8qb & operator = (bool b) {
+        *this = Vec8b(b);
+        return *this;
+    }
+private: 
+    // Prevent constructing from int, etc. because of ambiguity
+    Vec8qb(int b);
+    // Prevent assigning int because of ambiguity
+    Vec8qb & operator = (int x);
+public:
 };
 
 // Define operators for Vec8qb
@@ -549,6 +667,11 @@ static inline Vec8qb & operator |= (Vec8qb & a, Vec8qb const & b) {
 static inline Vec8qb & operator ^= (Vec8qb & a, Vec8qb const & b) {
     a = a ^ b;
     return a;
+}
+
+// vector function andnot
+static inline Vec8qb andnot (Vec8qb const & a, Vec8qb const & b) {
+    return Vec8qb(andnot(Vec16b(a), Vec16b(b)));
 }
 
 
@@ -987,6 +1110,12 @@ static inline Vec16ui operator >> (Vec16ui const & a, int32_t b) {
 // vector operator >>= : shift right logical
 static inline Vec16ui & operator >>= (Vec16ui & a, uint32_t b) {
     a = a >> b;
+    return a;
+}
+
+// vector operator >>= : shift right logical
+static inline Vec16ui & operator >>= (Vec16ui & a, int32_t b) {
+    a = a >> uint32_t(b);
     return a;
 } 
 
@@ -1525,6 +1654,12 @@ static inline Vec8uq operator >> (Vec8uq const & a, int32_t b) {
 // vector operator >>= : shift right artihmetic
 static inline Vec8uq & operator >>= (Vec8uq & a, uint32_t b) {
     a = a >> b;
+    return a;
+}
+
+// vector operator >>= : shift right logical
+static inline Vec8uq & operator >>= (Vec8uq & a, int32_t b) {
+    a = a >> uint32_t(b);
     return a;
 } 
 
@@ -2383,6 +2518,11 @@ static inline uint32_t horizontal_count(Vec8qb const & x) {
 *****************************************************************************/
 
 // to_bits: convert to integer bitfield
+static inline uint16_t to_bits(Vec16b const & a) {
+    return to_bits(a.get_low()) | ((uint16_t)to_bits(a.get_high()) << 8);
+}
+
+// to_bits: convert to integer bitfield
 static inline uint16_t to_bits(Vec16ib const & a) {
     return to_bits(a.get_low()) | ((uint16_t)to_bits(a.get_high()) << 8);
 }
@@ -2393,7 +2533,7 @@ static inline Vec16ib to_Vec16ib(uint16_t const & x) {
 }
 
 // to_bits: convert to integer bitfield
-static inline uint8_t to_bits(Vec8qb const & a) {
+static inline uint8_t to_bits(Vec8b const & a) {
     return to_bits(a.get_low()) | (to_bits(a.get_high()) << 4);
 }
 

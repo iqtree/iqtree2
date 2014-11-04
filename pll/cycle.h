@@ -302,7 +302,7 @@ INLINE_ELAPSED(__inline__)
 #include <machine/sys/inline.h>
 typedef unsigned long ticks;
 
-static inline ticks getticks(void)
+static __inline ticks getticks(void)
 {
      ticks ret;
 
@@ -355,7 +355,7 @@ static __inline__ ticks getticks(void)
 }
 #  else
 #  include <machine/inline.h>
-static inline unsigned long getticks(void)
+static __inline unsigned long getticks(void)
 {
      register ticks ret;
      _MFCTL(16, ret);
@@ -441,14 +441,14 @@ INLINE_ELAPSED(__inline)
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_SGI_CYCLE) && !defined(HAVE_TICK_COUNTER)
 typedef struct timespec ticks;
 
-static inline ticks getticks(void)
+static __inline ticks getticks(void)
 {
      struct timespec t;
      clock_gettime(CLOCK_SGI_CYCLE, &t);
      return t;
 }
 
-static inline double elapsed(ticks t1, ticks t0)
+static __inline double elapsed(ticks t1, ticks t0)
 {
      return ((double)t1.tv_sec - (double)t0.tv_sec) * 1.0E9 +
 	  ((double)t1.tv_nsec - (double)t0.tv_nsec);
@@ -482,7 +482,7 @@ INLINE_ELAPSED(inline)
 
 typedef uint64_t ticks;
 
-static inline ticks getticks(void)
+static __inline ticks getticks(void)
 {
   static uint64_t* addr = 0;
 

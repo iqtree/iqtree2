@@ -516,6 +516,9 @@ public:
 
     void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
+    /**
+     * this implements the SSE version using Eigen library
+     */
     template<int NSTATES>
     inline void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
@@ -536,8 +539,18 @@ public:
      */
     virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
+    /**
+     * this implements the SSE version using Eigen library
+     */
     template<int NSTATES>
     inline double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+
+    /**
+     * MINH: this implements the fast alternative strategy for reversible model (March 2013)
+     * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
+     */
+    template<int NSTATES>
+    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
     template <const int nstates>
     double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
@@ -680,6 +693,9 @@ public:
 
     double computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
+    /**
+     * this implements the SSE version using Eigen library
+     */
     template<int NSTATES>
     inline double computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
@@ -688,6 +704,13 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    /**
+     * MINH: this implements the fast alternative strategy for reversible model (March 2013)
+     * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
+     */
+    template<int NSTATES>
+    inline double computeLikelihoodDervFast(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length

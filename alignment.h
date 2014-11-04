@@ -270,7 +270,7 @@ public:
      * @param target_seqs (OUT) corresponding name of kept sequence that is identical to the removed sequences
      * @return this if no sequences were removed, or new alignment if at least 1 sequence was removed
      */
-    Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
+    virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
 
     /**
             Quit if some sequences contain only gaps or missing data
@@ -302,7 +302,7 @@ public:
             @param seq_id ID of sequences to extract from
             @param min_true_cher the minimum number of non-gap characters, true_char<min_true_char -> delete the sequence
      */
-    void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
+    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
 
     /**
             extract a sub-set of patterns

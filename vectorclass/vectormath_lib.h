@@ -2,7 +2,7 @@
 | Author:        Agner Fog
 | Date created:  2012-05-30
 * Last modified: 2014-04-23
-| Version:       1.14
+| Version:       1.16
 | Project:       vector classes
 | Description:
 | Header file defining mathematical functions on floating point vectors

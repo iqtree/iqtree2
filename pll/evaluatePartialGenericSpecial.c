@@ -53,7 +53,7 @@
 /* optimized implementation for computing per-site log likelihoods under CAT and GAMMA for DNA and protein data */
 
 #if (defined(__SSE3) || defined(__AVX))
-static inline void computeVectorGTRCATPROT(double *lVector, int *eVector, double ki, int i, double qz, double rz,
+static __inline void computeVectorGTRCATPROT(double *lVector, int *eVector, double ki, int i, double qz, double rz,
 					   traversalInfo *ti, double *EIGN, double *EI, double *EV, double *tipVector, 
 					   unsigned  char **yVector, int mxtips);
 
@@ -62,7 +62,7 @@ static double evaluatePartialGTRCATPROT(int i, double ki, int counter,  traversa
 					double *tipVector, unsigned char **yVector, 
 					int branchReference, int mxtips);
 
-static inline void computeVectorGTRGAMMAPROT(double *lVector, int *eVector, double *gammaRates, int i, double qz, double rz,
+static __inline void computeVectorGTRGAMMAPROT(double *lVector, int *eVector, double *gammaRates, int i, double qz, double rz,
 					     traversalInfo *ti, double *EIGN, double *EI, double *EV, double *tipVector, 
 					     unsigned  char **yVector, int mxtips);
 
@@ -72,7 +72,7 @@ static double evaluatePartialGTRGAMMAPROT(int i, int counter,  traversalInfo *ti
 					  double *gammaRates,
 					  int branchReference, int mxtips);
 
-static inline void computeVectorGTRCAT(double *lVector, int *eVector, double ki, int i, double qz, double rz,
+static __inline void computeVectorGTRCAT(double *lVector, int *eVector, double ki, int i, double qz, double rz,
 				       traversalInfo *ti, double *EIGN, double *EI, double *EV, double *tipVector, 
 				       unsigned char **yVector, int mxtips);
 
@@ -95,7 +95,7 @@ static double evaluatePartialGTRGAMMA(int i, int counter,  traversalInfo *ti, do
    model of rate heterogeneity. */
 
 
-static inline void computeVectorCAT_FLEX(double *lVector, int *eVector, double ki, int i, double qz, double rz,
+static __inline void computeVectorCAT_FLEX(double *lVector, int *eVector, double ki, int i, double qz, double rz,
 					 traversalInfo *ti, double *EIGN, double *EI, double *EV, double *tipVector, 
 					 unsigned char **yVector, int mxtips, const int states)
 {      
@@ -466,7 +466,7 @@ double evaluatePartialGeneric (pllInstance *tr, partitionList *pr, int i, double
    The structure is analoguous as above with some data- and model-specific optimizations and vectorizations.
 */
 
-static inline void computeVectorGTRGAMMAPROT(double *lVector, int *eVector, double *gammaRates, int i, double qz, double rz,
+static __inline void computeVectorGTRGAMMAPROT(double *lVector, int *eVector, double *gammaRates, int i, double qz, double rz,
 					     traversalInfo *ti, double *EIGN, double *EI, double *EV, double *tipVector, 
 					     unsigned  char **yVector, int mxtips)
 {       
@@ -926,7 +926,7 @@ static double evaluatePartialGTRGAMMA(int i, int counter,  traversalInfo *ti, do
 
 
 
-static inline void computeVectorGTRCAT(double *lVector, int *eVector, double ki, int i, double qz, double rz,
+static __inline void computeVectorGTRCAT(double *lVector, int *eVector, double ki, int i, double qz, double rz,
 				       traversalInfo *ti, double *EIGN, double *EI, double *EV, double *tipVector, 
 				       unsigned char **yVector, int mxtips)
 {       
@@ -1078,7 +1078,7 @@ static double evaluatePartialGTRCAT(int i, double ki, int counter,  traversalInf
 
 /**********************************************************************************/
 
-static inline void computeVectorGTRCATPROT(double *lVector, int *eVector, double ki, int i, double qz, double rz,
+static __inline void computeVectorGTRCATPROT(double *lVector, int *eVector, double ki, int i, double qz, double rz,
 				       traversalInfo *ti, double *EIGN, double *EI, double *EV, double *tipVector, 
 				       unsigned char **yVector, int mxtips)
 {       

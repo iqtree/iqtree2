@@ -1,8 +1,8 @@
 /****************************  vectori256e.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2014-07-23
-* Version:       1.14
+* Last modified: 2014-10-16
+* Version:       1.16
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit integer point vector classes as interface
@@ -405,8 +405,17 @@ public:
 class Vec32cb : public Vec32c {
 public:
     // Default constructor:
-    Vec32cb(){
-    }
+    Vec32cb(){}
+    // Constructor to build from all elements:
+    Vec32cb(bool x0, bool x1, bool x2, bool x3, bool x4, bool x5, bool x6, bool x7,
+        bool x8, bool x9, bool x10, bool x11, bool x12, bool x13, bool x14, bool x15,
+        bool x16, bool x17, bool x18, bool x19, bool x20, bool x21, bool x22, bool x23,
+        bool x24, bool x25, bool x26, bool x27, bool x28, bool x29, bool x30, bool x31) :
+        Vec32c(-int8_t(x0), -int8_t(x1), -int8_t(x2), -int8_t(x3), -int8_t(x4), -int8_t(x5), -int8_t(x6), -int8_t(x7), 
+            -int8_t(x8), -int8_t(x9), -int8_t(x10), -int8_t(x11), -int8_t(x12), -int8_t(x13), -int8_t(x14), -int8_t(x15),
+            -int8_t(x16), -int8_t(x17), -int8_t(x18), -int8_t(x19), -int8_t(x20), -int8_t(x21), -int8_t(x22), -int8_t(x23),
+            -int8_t(x24), -int8_t(x25), -int8_t(x26), -int8_t(x27), -int8_t(x28), -int8_t(x29), -int8_t(x30), -int8_t(x31))
+        {}
     // Constructor to convert from type Vec256ie
     Vec32cb(Vec256ie const & x) {
         y0 = x.get_low();
@@ -418,6 +427,18 @@ public:
         y1 = x.get_high();
         return *this;
     }
+    // Constructor to broadcast scalar value:
+    Vec32cb(bool b) : Vec32c(-int8_t(b)) {
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec32cb & operator = (bool b) {
+        *this = Vec32cb(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec32cb(int b);
+    Vec32cb & operator = (int x);
+public:
     // Member functions to split into two Vec16c:
     Vec16cb get_low() const {
         return y0;
@@ -439,6 +460,65 @@ public:
         return extract(index);
     }
 };
+
+
+/*****************************************************************************
+*
+*          Define operators for Vec32cb
+*
+*****************************************************************************/
+
+// vector operator & : bitwise and
+static inline Vec32cb operator & (Vec32cb const & a, Vec32cb const & b) {
+    return Vec32cb(Vec256b(a) & Vec256b(b));
+}
+static inline Vec32cb operator && (Vec32cb const & a, Vec32cb const & b) {
+    return a & b;
+}
+// vector operator &= : bitwise and
+static inline Vec32cb & operator &= (Vec32cb & a, Vec32cb const & b) {
+    a = a & b;
+    return a;
+}
+
+// vector operator | : bitwise or
+static inline Vec32cb operator | (Vec32cb const & a, Vec32cb const & b) {
+    return Vec32cb(Vec256b(a) | Vec256b(b));
+}
+static inline Vec32cb operator || (Vec32cb const & a, Vec32cb const & b) {
+    return a | b;
+}
+// vector operator |= : bitwise or
+static inline Vec32cb & operator |= (Vec32cb & a, Vec32cb const & b) {
+    a = a | b;
+    return a;
+}
+
+// vector operator ^ : bitwise xor
+static inline Vec32cb operator ^ (Vec32cb const & a, Vec32cb const & b) {
+    return Vec32cb(Vec256b(a) ^ Vec256b(b));
+}
+// vector operator ^= : bitwise xor
+static inline Vec32cb & operator ^= (Vec32cb & a, Vec32cb const & b) {
+    a = a ^ b;
+    return a;
+}
+
+// vector operator ~ : bitwise not
+static inline Vec32cb operator ~ (Vec32cb const & a) {
+    return Vec32cb( ~ Vec256b(a));
+}
+
+// vector operator ! : element not
+static inline Vec32cb operator ! (Vec32cb const & a) {
+    return ~ a;
+}
+
+// vector function andnot
+static inline Vec32cb andnot (Vec32cb const & a, Vec32cb const & b) {
+    return Vec32cb(andnot(Vec256b(a), Vec256b(b)));
+}
+
 
 /*****************************************************************************
 *
@@ -1025,6 +1105,7 @@ public:
     }
 };
 
+
 /*****************************************************************************
 *
 *          Vec16sb: Vector of 16 Booleans for use with Vec16s and Vec16us
@@ -1035,16 +1116,34 @@ class Vec16sb : public Vec16s {
 public:
     // Default constructor:
     Vec16sb() {
-    };
+    }
+    // Constructor to build from all elements:
+    Vec16sb(bool x0, bool x1, bool x2, bool x3, bool x4, bool x5, bool x6, bool x7,
+        bool x8, bool x9, bool x10, bool x11, bool x12, bool x13, bool x14, bool x15) :
+        Vec16s(-int16_t(x0), -int16_t(x1), -int16_t(x2), -int16_t(x3), -int16_t(x4), -int16_t(x5), -int16_t(x6), -int16_t(x7), 
+            -int16_t(x8), -int16_t(x9), -int16_t(x10), -int16_t(x11), -int16_t(x12), -int16_t(x13), -int16_t(x14), -int16_t(x15))
+        {}
     // Constructor to convert from type Vec256ie
     Vec16sb(Vec256ie const & x) {
         y0 = x.get_low();  y1 = x.get_high();
-    };
+    }
     // Assignment operator to convert from type Vec256ie
     Vec16sb & operator = (Vec256ie const & x) {
         y0 = x.get_low();  y1 = x.get_high();
         return *this;
-    };
+    }
+    // Constructor to broadcast scalar value:
+    Vec16sb(bool b) : Vec16s(-int16_t(b)) {
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec16sb & operator = (bool b) {
+        *this = Vec16sb(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec16sb(int b);
+    Vec16sb & operator = (int x);
+public:
     // Member functions to split into two Vec8s:
     Vec8sb get_low() const {
         return y0;
@@ -1055,7 +1154,7 @@ public:
     Vec16sb & insert (int index, bool a) {
         Vec16s::insert(index, -(int)a);
         return *this;
-    };    
+    }    
     // Member function extract a single element from vector
     bool extract(uint32_t index) const {
         return Vec16s::extract(index) != 0;
@@ -1066,6 +1165,64 @@ public:
         return extract(index);
     }
 };
+
+
+/*****************************************************************************
+*
+*          Define operators for Vec16sb
+*
+*****************************************************************************/
+
+// vector operator & : bitwise and
+static inline Vec16sb operator & (Vec16sb const & a, Vec16sb const & b) {
+    return Vec16sb(Vec256b(a) & Vec256b(b));
+}
+static inline Vec16sb operator && (Vec16sb const & a, Vec16sb const & b) {
+    return a & b;
+}
+// vector operator &= : bitwise and
+static inline Vec16sb & operator &= (Vec16sb & a, Vec16sb const & b) {
+    a = a & b;
+    return a;
+}
+
+// vector operator | : bitwise or
+static inline Vec16sb operator | (Vec16sb const & a, Vec16sb const & b) {
+    return Vec16sb(Vec256b(a) | Vec256b(b));
+}
+static inline Vec16sb operator || (Vec16sb const & a, Vec16sb const & b) {
+    return a | b;
+}
+// vector operator |= : bitwise or
+static inline Vec16sb & operator |= (Vec16sb & a, Vec16sb const & b) {
+    a = a | b;
+    return a;
+}
+
+// vector operator ^ : bitwise xor
+static inline Vec16sb operator ^ (Vec16sb const & a, Vec16sb const & b) {
+    return Vec16sb(Vec256b(a) ^ Vec256b(b));
+}
+// vector operator ^= : bitwise xor
+static inline Vec16sb & operator ^= (Vec16sb & a, Vec16sb const & b) {
+    a = a ^ b;
+    return a;
+}
+
+// vector operator ~ : bitwise not
+static inline Vec16sb operator ~ (Vec16sb const & a) {
+    return Vec16sb( ~ Vec256b(a));
+}
+
+// vector operator ! : element not
+static inline Vec16sb operator ! (Vec16sb const & a) {
+    return ~ a;
+}
+
+// vector function andnot
+static inline Vec16sb andnot (Vec16sb const & a, Vec16sb const & b) {
+    return Vec16sb(andnot(Vec256b(a), Vec256b(b)));
+}
 
 
 /*****************************************************************************
@@ -1651,6 +1808,7 @@ public:
     }
 };
 
+
 /*****************************************************************************
 *
 *          Vec8ib: Vector of 8 Booleans for use with Vec8i and Vec8ui
@@ -1662,6 +1820,10 @@ public:
     // Default constructor:
     Vec8ib() {
     }
+    // Constructor to build from all elements:
+    Vec8ib(bool x0, bool x1, bool x2, bool x3, bool x4, bool x5, bool x6, bool x7) :
+        Vec8i(-int32_t(x0), -int32_t(x1), -int32_t(x2), -int32_t(x3), -int32_t(x4), -int32_t(x5), -int32_t(x6), -int32_t(x7))
+        {}
     // Constructor to convert from type Vec256ie
     Vec8ib(Vec256ie const & x) {
         y0 = x.get_low();  y1 = x.get_high();
@@ -1671,6 +1833,18 @@ public:
         y0 = x.get_low();  y1 = x.get_high();
         return *this;
     }
+    // Constructor to broadcast scalar value:
+    Vec8ib(bool b) : Vec8i(-int32_t(b)) {
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec8ib & operator = (bool b) {
+        *this = Vec8ib(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec8ib(int b);
+    Vec8ib & operator = (int x);
+public:
     // Member functions to split into two Vec4i:
     Vec4ib get_low() const {
         return y0;
@@ -1693,6 +1867,63 @@ public:
         return extract(index);
     }
 };
+
+/*****************************************************************************
+*
+*          Define operators for Vec8ib
+*
+*****************************************************************************/
+
+// vector operator & : bitwise and
+static inline Vec8ib operator & (Vec8ib const & a, Vec8ib const & b) {
+    return Vec8ib(Vec256b(a) & Vec256b(b));
+}
+static inline Vec8ib operator && (Vec8ib const & a, Vec8ib const & b) {
+    return a & b;
+}
+// vector operator &= : bitwise and
+static inline Vec8ib & operator &= (Vec8ib & a, Vec8ib const & b) {
+    a = a & b;
+    return a;
+}
+
+// vector operator | : bitwise or
+static inline Vec8ib operator | (Vec8ib const & a, Vec8ib const & b) {
+    return Vec8ib(Vec256b(a) | Vec256b(b));
+}
+static inline Vec8ib operator || (Vec8ib const & a, Vec8ib const & b) {
+    return a | b;
+}
+// vector operator |= : bitwise or
+static inline Vec8ib & operator |= (Vec8ib & a, Vec8ib const & b) {
+    a = a | b;
+    return a;
+}
+
+// vector operator ^ : bitwise xor
+static inline Vec8ib operator ^ (Vec8ib const & a, Vec8ib const & b) {
+    return Vec8ib(Vec256b(a) ^ Vec256b(b));
+}
+// vector operator ^= : bitwise xor
+static inline Vec8ib & operator ^= (Vec8ib & a, Vec8ib const & b) {
+    a = a ^ b;
+    return a;
+}
+
+// vector operator ~ : bitwise not
+static inline Vec8ib operator ~ (Vec8ib const & a) {
+    return Vec8ib( ~ Vec256b(a));
+}
+
+// vector operator ! : element not
+static inline Vec8ib operator ! (Vec8ib const & a) {
+    return ~ a;
+}
+
+// vector function andnot
+static inline Vec8ib andnot (Vec8ib const & a, Vec8ib const & b) {
+    return Vec8ib(andnot(Vec256b(a), Vec256b(b)));
+}
 
 
 /*****************************************************************************
@@ -2282,6 +2513,7 @@ public:
     }
 };
 
+
 /*****************************************************************************
 *
 *          Vec4qb: Vector of 4 Booleans for use with Vec4q and Vec4uq
@@ -2293,6 +2525,10 @@ public:
     // Default constructor:
     Vec4qb() {
     }
+    // Constructor to build from all elements:
+    Vec4qb(bool x0, bool x1, bool x2, bool x3) :
+        Vec4q(-int64_t(x0), -int64_t(x1), -int64_t(x2), -int64_t(x3)) {
+    }
     // Constructor to convert from type Vec256ie
     Vec4qb(Vec256ie const & x) {
         y0 = x.get_low();  y1 = x.get_high();
@@ -2302,6 +2538,18 @@ public:
         y0 = x.get_low();  y1 = x.get_high();
         return *this;
     }
+    // Constructor to broadcast scalar value:
+    Vec4qb(bool b) : Vec4q(-int64_t(b)) {
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec4qb & operator = (bool b) {
+        *this = Vec4qb(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec4qb(int b);
+    Vec4qb & operator = (int x);
+public:
     // Member functions to split into two Vec2qb:
     Vec2qb get_low() const {
         return y0;
@@ -2324,6 +2572,64 @@ public:
         return extract(index);
     }
 };
+
+
+/*****************************************************************************
+*
+*          Define operators for Vec4qb
+*
+*****************************************************************************/
+
+// vector operator & : bitwise and
+static inline Vec4qb operator & (Vec4qb const & a, Vec4qb const & b) {
+    return Vec4qb(Vec256b(a) & Vec256b(b));
+}
+static inline Vec4qb operator && (Vec4qb const & a, Vec4qb const & b) {
+    return a & b;
+}
+// vector operator &= : bitwise and
+static inline Vec4qb & operator &= (Vec4qb & a, Vec4qb const & b) {
+    a = a & b;
+    return a;
+}
+
+// vector operator | : bitwise or
+static inline Vec4qb operator | (Vec4qb const & a, Vec4qb const & b) {
+    return Vec4qb(Vec256b(a) | Vec256b(b));
+}
+static inline Vec4qb operator || (Vec4qb const & a, Vec4qb const & b) {
+    return a | b;
+}
+// vector operator |= : bitwise or
+static inline Vec4qb & operator |= (Vec4qb & a, Vec4qb const & b) {
+    a = a | b;
+    return a;
+}
+
+// vector operator ^ : bitwise xor
+static inline Vec4qb operator ^ (Vec4qb const & a, Vec4qb const & b) {
+    return Vec4qb(Vec256b(a) ^ Vec256b(b));
+}
+// vector operator ^= : bitwise xor
+static inline Vec4qb & operator ^= (Vec4qb & a, Vec4qb const & b) {
+    a = a ^ b;
+    return a;
+}
+
+// vector operator ~ : bitwise not
+static inline Vec4qb operator ~ (Vec4qb const & a) {
+    return Vec4qb( ~ Vec256b(a));
+}
+
+// vector operator ! : element not
+static inline Vec4qb operator ! (Vec4qb const & a) {
+    return ~ a;
+}
+
+// vector function andnot
+static inline Vec4qb andnot (Vec4qb const & a, Vec4qb const & b) {
+    return Vec4qb(andnot(Vec256b(a), Vec256b(b)));
+}
 
 
 /*****************************************************************************

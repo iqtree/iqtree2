@@ -557,6 +557,14 @@ public:
 
 	void computeRFDist(istream &in, IntVector &dist);
 
+	/**
+	 * insert new taxa next to the existing taxa in the tree
+	 * @param new_taxa name of new taxa to be inserted
+	 * @param existing_taxa names of existing taxa in the tree
+	 */
+	void insertTaxa(StrVector &new_taxa, StrVector &existing_taxa);
+
+
     /********************************************************
             PROPERTIES OF TREE
      ********************************************************/

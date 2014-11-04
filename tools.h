@@ -371,6 +371,10 @@ enum LEAST_SQUARE_VAR {
     OLS, WLS_FIRST_TAYLOR, WLS_FITCH_MARGOLIASH, WLS_SECOND_TAYLOR, WLS_PAUPLIN
 };
 
+enum START_TREE_TYPE {
+	STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY
+};
+
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model
 const int MCAT_MEAN = 2; // take the mean of rates for each category for Meyer & von Haeseler model
 const int MCAT_PATTERN = 4; // categorize site-patterns instead of sites for Meyer & von Haeseler model
@@ -569,6 +573,9 @@ struct Params {
      */
     char *user_file;
 
+    /* type of starting tree */
+    START_TREE_TYPE start_tree;
+
     /**
             prefix of the output file, default is the same as input file
      */
@@ -673,7 +680,7 @@ struct Params {
     /**
             compute random step-wise addition parsimony tree instead of BIONJ
      */
-    bool parsimony_tree;
+//    bool parsimony_tree;
 
     /**
              output file name

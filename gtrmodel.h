@@ -259,7 +259,6 @@ public:
 	virtual double *getEigenvalues() const;
 
 	virtual double *getEigenvectors() const;
-
 	virtual double *getInverseEigenvectors() const;
 
 	void setEigenCoeff(double *eigenCoeff);
