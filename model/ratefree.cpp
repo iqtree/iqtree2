@@ -18,10 +18,18 @@ RateFree::RateFree(int ncat, PhyloTree *tree) : RateHeterogeneity() {
 
 	rates = new double[ncategory];
 	prop  = new double[ncategory];
-	for (int i = 0; i < ncategory; i++) {
-		prop[i] = 1.0 / ncategory;
-		rates[i] = 1.0;
+	double sum_prop = (ncategory)*(ncategory+1)/2.0;
+	double sum = 0.0;
+	int i;
+	// initialize rates as increasing
+	for (i = 0; i < ncategory; i++) {
+		prop[i] = (double)(ncategory-i) / sum_prop;
+		rates[i] = (double)(i+1);
+		sum += prop[i]*rates[i];
 	}
+	for (i = 0; i < ncategory; i++)
+		rates[i] = rates[i]/sum;
+
 	name = "+R";
 	name += convertIntToString(ncategory);
 	full_name = "FreeRate";
@@ -130,7 +138,7 @@ void RateFree::getVariables(double *variables) {
 	double sum = 0.0;
 	for (i = 0; i < ncategory; i++) {
 		prop[i] = (y[i+1]-y[i]);
-		sum = prop[i] * z[i];
+		sum += prop[i] * z[i];
 	}
 	for (i = 0; i < ncategory; i++) {
 		rates[i] = z[i] / sum;
