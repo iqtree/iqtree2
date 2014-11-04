@@ -278,10 +278,12 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 					<< endl;
 		int cats = rate_model->getNDiscreteRate();
 		DoubleVector prop;
-		if (rate_model->getGammaShape() > 0 || rate_model->getPtnCat(0) < 0)
-			prop.resize(cats,
-					(1.0 - rate_model->getPInvar()) / rate_model->getNRate());
-		else {
+		if (rate_model->getGammaShape() > 0 || rate_model->getPtnCat(0) < 0) {
+//			prop.resize(cats, (1.0 - rate_model->getPInvar()) / rate_model->getNRate());
+			prop.resize(cats);
+		for (i = 0; i < cats; i++)
+			prop[i] = rate_model->getProp(i);
+		} else {
 			prop.resize(cats, 0.0);
 			for (i = 0; i < tree.aln->getNPattern(); i++)
 				prop[rate_model->getPtnCat(i)] += tree.aln->at(i).frequency;

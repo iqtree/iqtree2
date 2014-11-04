@@ -178,6 +178,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	string::size_type posR = model_str.find("+R"); // FreeRate model
 	if (posG != string::npos && posR != string::npos)
 		outError("Gamma and FreeRate models cannot be both specified!");
+	if (posI != string::npos && posR != string::npos)
+		outError("Invariant site and FreeRate models cannot be both specified yet!");
 	string::size_type posX;
 	/* create site-rate heterogeneity */
 	int num_rate_cats = params.num_rate_cats;

@@ -22,7 +22,7 @@ RateFree::RateFree(int ncat, PhyloTree *tree) : RateHeterogeneity() {
 		prop[i] = 1.0 / ncategory;
 		rates[i] = 1.0;
 	}
-	name = "+FR";
+	name = "+R";
 	name += convertIntToString(ncategory);
 	full_name = "FreeRate";
 	full_name += " with " + convertIntToString(ncategory) + " categories";
@@ -35,7 +35,7 @@ RateFree::~RateFree() {
 
 string RateFree::getNameParams() {
 	stringstream str;
-	str << "FR" << ncategory << "{";
+	str << "R" << ncategory << "{";
 	for (int i = 0; i < ncategory; i++) {
 		if (i > 0) str << ",";
 		str << prop[i]<< "," << rates[i];
@@ -144,7 +144,7 @@ void RateFree::getVariables(double *variables) {
 	@param out output stream
 */
 void RateFree::writeInfo(ostream &out) {
-	out << "Proportion and rates: ";
+	out << "Site proportion and rates: ";
 	for (int i = 0; i < ncategory; i++)
 		out << " (" << prop[i] << "," << rates[i] << ")";
 	out << endl;
