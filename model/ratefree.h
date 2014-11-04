@@ -66,6 +66,11 @@ public:
 	virtual double targetFunk(double x[]);
 
 	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+
+	/**
 		optimize parameters. Default is to optimize gamma shape
 		@return the best likelihood
 	*/
@@ -76,6 +81,19 @@ public:
 		return the number of dimensions
 	*/
 	virtual int getNDim() { return 2*ncategory-2; }
+
+	/**
+		write information
+		@param out output stream
+	*/
+	virtual void writeInfo(ostream &out);
+
+	/**
+		write parameters, used with modeltest
+		@param out output stream
+	*/
+	virtual void writeParameters(ostream &out);
+
 
 protected:
 
