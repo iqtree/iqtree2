@@ -889,8 +889,6 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 //		}
 //		exit(0);
 
-    	cout << "Gamma shape: " << site_rate->getGammaShape() << endl;
-
     	// now do the real computation
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)
