@@ -889,6 +889,8 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 //		}
 //		exit(0);
 
+    	cout << "Gamma shape: " << site_rate->getGammaShape() << endl;
+
     	// now do the real computation
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)
@@ -926,6 +928,7 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 //#endif
 //			lh_ptn = lh_ptn*p_var_cat + ptn_invar[ptn];
 //			lh_ptn += ptn_invar[ptn];
+			assert(lh_ptn > 0.0);
 			if (ptn < orig_nptn) {
 				lh_ptn = log(lh_ptn);
 				_pattern_lh[ptn] = lh_ptn;
@@ -979,12 +982,13 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 			if (ptn < orig_nptn) {
 				lh_ptn = log(lh_ptn);
 				_pattern_lh[ptn] = lh_ptn;
-			tree_lh += lh_ptn * ptn_freq[ptn];
+				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {
 				prob_const += lh_ptn;
 			}
 		}
     }
+
 
     if (orig_nptn < nptn) {
     	// ascertainment bias correction
@@ -992,6 +996,7 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     	for (ptn = 0; ptn < orig_nptn; ptn++)
     		_pattern_lh[ptn] -= prob_const;
     	tree_lh -= aln->getNSite()*prob_const;
+		assert(!isnan(tree_lh) && !isinf(tree_lh));
     }
 
 	assert(!isnan(tree_lh) && !isinf(tree_lh));
