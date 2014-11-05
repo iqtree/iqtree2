@@ -44,12 +44,18 @@ string RateInvar::getNameParams() {
 
 double RateInvar::computeFunction(double p_invar_value) {
 	p_invar = p_invar_value;
+	// fix bug: computeTip... will update ptn_invar vector
+	phylo_tree->tip_partial_lh_computed = false;
+	phylo_tree->computeTipPartialLikelihood();
 	//phylo_tree->clearAllPartialLh();
 	return -phylo_tree->computeLikelihood();
 }
 
 double RateInvar::targetFunk(double x[]) {
 	getVariables(x);
+	// fix bug: computeTip... will update ptn_invar vector
+	phylo_tree->tip_partial_lh_computed = false;
+	phylo_tree->computeTipPartialLikelihood();
 	return -phylo_tree->computeLikelihood();
 }
 
