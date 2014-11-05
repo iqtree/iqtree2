@@ -645,7 +645,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_spr = false;
     params.nexus_output = false;
     params.k_representative = 4;
-    params.loglh_epsilon = 0.000001;
+    params.loglh_epsilon = 0.001;
     params.numSmoothTree = 1;
     params.nni5 = true;
     params.leastSquareBranch = false;
