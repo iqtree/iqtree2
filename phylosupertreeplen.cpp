@@ -651,6 +651,25 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 *===========================================================================================*/
 	vector<NNIType> is_nni;
 	getNNIType(node1, node2, is_nni);
+	for (part = 0; part < ntrees; part++)
+		switch (is_nni[part]) {
+		case NNI_NO_EPSILON:
+			allNNIcases_computed[0]++;
+			break;
+		case NNI_ONE_EPSILON:
+			allNNIcases_computed[1]++;
+			break;
+		case NNI_TWO_EPSILON:
+			allNNIcases_computed[2]++;
+			break;
+		case NNI_THREE_EPSILON:
+			allNNIcases_computed[3]++;
+			break;
+		case NNI_MANY_EPSILON:
+			allNNIcases_computed[4]++;
+			break;
+		}
+
 	//==================================================================================================
 	// SuperTREE: saving Neighbors and allocating new ones; assign which nodes/neighbors to be swapped.
 	//==================================================================================================
