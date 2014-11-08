@@ -33,6 +33,7 @@
 #include "ratemeyerdiscrete.h"
 #include "ratekategory.h"
 #include "ratefree.h"
+#include "ratefreeinvar.h"
 #include "ngs.h"
 #include <string>
 #include "timeutil.h"
@@ -178,8 +179,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	string::size_type posR = model_str.find("+R"); // FreeRate model
 	if (posG != string::npos && posR != string::npos)
 		outError("Gamma and FreeRate models cannot be both specified!");
-	if (posI != string::npos && posR != string::npos)
-		outError("Invariant site and FreeRate models cannot be both specified yet!");
 	string::size_type posX;
 	/* create site-rate heterogeneity */
 	int num_rate_cats = params.num_rate_cats;
@@ -231,6 +230,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
 					p_invar_sites, params.optimize_model_rate_joint, tree);
+		} else if (posI != string::npos && posR != string::npos) {
+			site_rate = new RateFreeInvar(num_rate_cats, p_invar_sites, tree);
 		} else if (posI != string::npos) {
 			site_rate = new RateInvar(p_invar_sites, tree);
 		} else if (posG != string::npos) {

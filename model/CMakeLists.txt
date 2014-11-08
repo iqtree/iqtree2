@@ -16,6 +16,7 @@ ratemeyerdiscrete.cpp
 ratemeyerhaeseler.cpp
 ratekategory.cpp
 ratefree.cpp
+ratefreeinvar.cpp
 modelcodon.cpp
 modelmorphology.cpp
 )

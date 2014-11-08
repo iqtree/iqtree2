@@ -10,7 +10,7 @@
 
 #include "rateheterogeneity.h"
 
-class RateFree: public RateHeterogeneity {
+class RateFree: virtual public RateHeterogeneity {
 public:
 public:
 	/**
