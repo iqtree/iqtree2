@@ -559,14 +559,21 @@ public:
 
 protected:
 
-    /**
-     *  Current IQPNNI iteration number
-     */
-    int curIt;
-    /**
-            criterion to assess important quartet
-     */
-    IQP_ASSESS_QUARTET iqp_assess_quartet;
+   	/**
+   	 * Maximum number of NNI steps performed in optimizeNNI
+   	 * Default value = (numTaxa - 3)
+   	 */
+	int maxNNISteps;
+
+	/**
+	 *  Current IQPNNI iteration number
+	 */
+	int curIt;
+
+	/**
+	 criterion to assess important quartet
+	 */
+	IQP_ASSESS_QUARTET iqp_assess_quartet;
 
 
     /**

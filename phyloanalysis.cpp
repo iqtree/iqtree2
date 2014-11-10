@@ -2131,7 +2131,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
 	cout << sg.size() << " splits found" << endl;
 	// compute the percentage of appearance
 	//	printSplitSet(sg, hash_ss);
-	//sg.report(cout);
+	sg.report(cout);
 	cout << "Creating bootstrap support values..." << endl;
 	mytree.createBootstrapSupport(taxname, boot_trees, sg, hash_ss);
 	//mytree.scaleLength(100.0/boot_trees.size(), true);

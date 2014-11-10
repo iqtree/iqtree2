@@ -142,6 +142,12 @@ public:
      */
     string getTopology(string tree);
 
+    /**
+     * Compute the split support from the \a numTree best trees
+     * @param numTree the number of best trees used to calculate support values
+     */
+    void computeSplitSupport(int numTree);
+
 };
 
 #endif /* CANDIDATESET_H_ */

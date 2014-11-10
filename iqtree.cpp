@@ -81,6 +81,7 @@ void IQTree::setParams(Params &params) {
     candidateTrees.aln = aln;
     candidateTrees.popSize = params.popSize;
     candidateTrees.maxCandidates = params.maxCandidates;
+    maxNNISteps = aln->getNSeq() - 3;
 
     sse = params.SSE;
 //    if (params.maxtime != 1000000) {
@@ -1613,8 +1614,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     bool rollBack = false;
     nni_count = 0;
     int numNNIs = 0; // number of NNI to be applied in each step
-    int MAXSTEPS = 50; // maximum number of NNI steps
-    for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
+    for (nni_steps = 1; nni_steps <= maxNNISteps; nni_steps++) {
         double oldScore = curScore;
         if (!rollBack) { // tree get improved and was not rollbacked
             if (save_all_trees == 2) {

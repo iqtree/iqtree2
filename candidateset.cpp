@@ -174,3 +174,8 @@ bool CandidateSet::treeTopologyExist(string topo) {
 bool CandidateSet::treeExist(string tree) {
 	return treeTopologyExist(getTopology(tree));
 }
+
+void CandidateSet::computeSplitSupport(int numTree) {
+
+
+}
