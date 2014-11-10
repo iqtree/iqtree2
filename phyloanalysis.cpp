@@ -1212,7 +1212,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     }
     double parsTime = getCPUTime() - startTime;
     cout << parsTime << " seconds (" << numDupPars << " duplicated parsimony trees)" << endl;
-    cout << "Average time for generating 1 parsimony tree: " << parsTime / (numInitTrees - 1) << endl;
+    cout << "Average CPU time for generating 1 parsimony tree: " << parsTime / (numInitTrees - 1) << endl;
     cout << "Computing log-likelihood of the parsimony trees ... ";
     startTime = getCPUTime();
     vector<string> unOptParTrees = iqtree.candidateTrees.getBestTrees(numInitTrees);
@@ -1239,7 +1239,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     }
     double loglTime = getCPUTime() - startTime;
     cout << loglTime << " seconds" << endl;
-    cout << "Average time for computing log-likelihood of 1 tree: " << loglTime / (numInitTrees - 1) << endl;
+    cout << "Average CPU time for computing log-likelihood of 1 tree: " << loglTime / (numInitTrees - 1) << endl;
 
     vector<string> bestTrees = iqtree.candidateTrees.getBestTrees(params.numNNITrees);
     iqtree.candidateTrees.clear();
@@ -1261,7 +1261,9 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         iqtree.computeLogL();
+        initLogl = iqtree.curScore;
         tree = iqtree.doNNISearch(nniCount, nniStep);
+        nniLogl = iqtree.curScore;
         cout << "Iteration " << numNNITrees << " / LogL: " << iqtree.curScore;
         if (verbose_mode >= VB_MED)
         	cout << " / NNIs: " << nniCount << "," << nniStep;

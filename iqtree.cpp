@@ -1669,23 +1669,34 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         // Apply all non-conflicting positive NNIs
         doNNIs(numNNIs);
 
+        if (verbose_mode >= VB_MED) {
+        	cout << "NNI step: " << nni_steps << " / Number of NNIs applied: " << numNNIs << endl;
+        }
+
         if (searchinfo.speednni) {
             brans2Eval.clear();
             updateBrans2Eval(appliedNNIs);
             appliedNNIs.clear();
         }
 
-        // Re-estimate branch lengths of the new tree
-        curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
+        // FOR TUNG: If you want to introduce this heuristic, please confirm with reevaluation again.
+//        if (numNNIs > 1) {
+            // Re-estimate branch lengths of the new tree
+            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+//        } else {
+//        	curScore = computeLikelihood();
+//        }
+
 
 		// curScore should be larger than score of the best NNI
-        if (curScore >= nonConfNNIs.at(0).newloglh ) {
+        if (curScore >= nonConfNNIs.at(0).newloglh - params->loglh_epsilon) {
             nni_count += numNNIs;
             rollBack = false;
         } else {
             /* tree cannot be worse if only 1 NNI is applied */
-            if (numNNIs == 1) {
-                cout << "ERROR / POSSIBLE BUG: current logl=" << curScore << " < " << nonConfNNIs.at(0).newloglh
+            if (numNNIs == 1 && curScore < nonConfNNIs.at(0).newloglh - 1.0) {
+            	cout.precision(15);
+                cout << "BUG: current logl=" << curScore << " < " << nonConfNNIs.at(0).newloglh
                         << "(best NNI)" << endl;
                 abort();
             }
