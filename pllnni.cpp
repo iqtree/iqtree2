@@ -11,7 +11,7 @@
 #endif
 
 #include "phylotree.h"
-#include "nnisearch.h"
+#include "pllnni.h"
 #include "alignment.h"
 
 /* program options */
@@ -242,7 +242,7 @@ set<int> getAffectedNodes(pllInstance* tr, nodeptr p) {
 	return nodeSet;
 }
 
-void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo) {
+void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, searchInfo &searchinfo) {
     /* DTH: mimic IQTREE::optimizeNNI 's first call to IQTREE::saveCurrentTree */
     if((globalParam->online_bootstrap == PLL_TRUE) &&
             (globalParam->gbo_replicates > 0)){
@@ -280,7 +280,7 @@ void pllSaveAllQuartet(pllInstance *tr, SearchInfo &searchinfo) {
 }
 */
 
-double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo) {
+double pllDoNNISearch(pllInstance* tr, partitionList *pr, searchInfo &searchinfo) {
 	double initLH = tr->likelihood;
 	double finalLH = initLH;
 	vector<pllNNIMove> selectedNNIs;
@@ -472,7 +472,7 @@ void pllOptimizeOneBranch(pllInstance *tr, partitionList *pr, nodeptr p) {
     #endif
 }
 
-double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, SearchInfo *searchinfo) {
+double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, searchInfo *searchinfo) {
 	assert(swap == 0 || swap == 1);
 	nodeptr q;
 	nodeptr tmp;
@@ -583,7 +583,7 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
 	return tr->likelihood;
 }
 
-double estBestLoglImp(SearchInfo* searchinfo) {
+double estBestLoglImp(searchInfo* searchinfo) {
     double res = 0.0;
     int index = floor(searchinfo->deltaLogl.size() * 5 / 100);
     set<double>::reverse_iterator ri;
@@ -651,7 +651,7 @@ void countDistinctTrees(pllInstance* pllInst, partitionList *pllPartitions) {
 	}
 }
 
-int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
+int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, searchInfo &searchinfo) {
 	nodeptr q = p->back;
 	assert(!isTip(p->number, tr->mxtips));
 	assert(!isTip(q->number, tr->mxtips));
@@ -778,7 +778,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 //    }
 //}
 
-bool isAffectedBranch(nodeptr p, SearchInfo &searchinfo) {
+bool isAffectedBranch(nodeptr p, searchInfo &searchinfo) {
 	string branString = getBranString(p);
 	if (searchinfo.aBranches.find(branString) != searchinfo.aBranches.end()) {
 		return true;
@@ -787,7 +787,7 @@ bool isAffectedBranch(nodeptr p, SearchInfo &searchinfo) {
 	}
 }
 
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, searchInfo &searchinfo) {
 	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
 		if (searchinfo.speednni && searchinfo.curNumNNISteps != 1) {
 			if (isAffectedBranch(p, searchinfo)) {

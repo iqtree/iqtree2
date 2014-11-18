@@ -17,7 +17,7 @@
 #include <algorithm>
 #include <limits>
 #include "timeutil.h"
-#include "nnisearch.h"
+#include "pllnni.h"
 #include "phylosupertree.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
@@ -228,20 +228,23 @@ void PhyloTree::readTreeString(const string &tree_string) {
     } else {
     	clearAllPartialLH();
     }
+    generateNewick();
 }
 
-string PhyloTree::getTreeString() {
+string PhyloTree::generateNewick() {
 	stringstream tree_stream;
 	printTree(tree_stream);
-	return tree_stream.str();
+	newickTree = tree_stream.str();
+	return newickTree;
 }
 
-string PhyloTree::getTopology() {
+string PhyloTree::generateNewickTopology() {
     stringstream tree_stream;
     // important: to make topology string unique
     setRootNode(params->root);
     printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
-    return tree_stream.str();
+    newickTopo = tree_stream.str();
+    return newickTopo;
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {

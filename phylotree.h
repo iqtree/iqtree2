@@ -677,12 +677,12 @@ public:
      * Return the tree string contining taxon names and branch lengths
      * @return
      */
-    string getTreeString();
+    string generateNewick();
 
     /**
      *  Return the sorted topology without branch length, used to compare tree topology
      */
-    string getTopology();
+    string generateNewickTopology();
 
 
     bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);
@@ -1285,6 +1285,18 @@ public:
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 protected:
+
+    /**
+     *  NEWICK representation of the tree with branch lengths
+     *  Taxa names are sorted
+     */
+    string newickTree;
+
+    /**
+     *  NEWICK representation of the tree without branch lenghts
+     *  Taxa names are sorted
+     */
+    string newickTopo;
 
     /**
      *  is the subtree distance matrix need to be computed or updated

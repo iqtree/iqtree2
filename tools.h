@@ -438,6 +438,11 @@ struct Params {
 	 */
 	bool speednni;
 
+	/**
+	 *  use reduction technique to constraint tree space
+	 */
+	bool reduction;
+
 	bool adaptPert;
 
 	/**

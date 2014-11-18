@@ -31,7 +31,7 @@
 #include "node.h"
 
 #include "pll/pll.h"
-#include "nnisearch.h"
+#include "pllnni.h"
 #include "candidateset.h"
 
 #define BOOT_VAL_FLOAT
@@ -70,6 +70,11 @@ struct IntBranchInfo {
     PhyloNode *node2;
     double lh_contribution; // log-likelihood contribution of this branch: L(T)-L(T|e=0)
 };
+
+typedef struct  {
+	bool speedNNI;
+	bool reduction;
+} iqtreeSearchInfo;
 
 inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
     return (a.lh_contribution < b.lh_contribution);
@@ -299,7 +304,7 @@ public:
      *      @param nniCount (OUT) number of NNIs applied
      * 		@param nniSteps (OUT) number of NNI steps done
      */
-    double pllOptimizeNNI(int &nniCount, int &nniSteps, SearchInfo &searchinfo);
+    double pllOptimizeNNI(int &nniCount, int &nniSteps, searchInfo &searchinfo);
 
     /**
      * 		@brief Perform NNI search on the current tree topology
@@ -500,16 +505,14 @@ public:
     partitionList * pllPartitions;
 
     /**
-     *  information and parameters for the tree search procedure
+     *  information and parameters for the tree search using PLL
      */
-    SearchInfo searchinfo;
+    searchInfo pllSearchInfo;
 
     /**
      *  Vector contains number of NNIs used at each iterations
      */
     vector<int> vecNumNNI;
-
-    int getCurIteration() { return curIt; }
 
     /**
      * Do memory allocation and initialize parameter for UFBoot to run with PLL
@@ -558,6 +561,7 @@ public:
    void pllConvertUFBootData2IQTree();
 
 protected:
+   	iqtreeSearchInfo iqtreeSearchinfo;
 
    	/**
    	 * Maximum number of NNI steps performed in optimizeNNI

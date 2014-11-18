@@ -12,9 +12,31 @@
 #include <stack>
 
 struct CandidateTree {
-	string tree; // with branch length
-	string topology; // tree topology WITHOUT branch lengths and WITH TAXON ID (instead of taxon names) for sorting purpose
-	double score; // log-likelihood under ML or parsimony score
+
+	/**
+	 * with branch lengths.
+	 * empty for intermediate NNI tree
+	 */
+	string tree;
+
+
+	/**
+	 * tree topology WITHOUT branch lengths
+	 * and WITH TAXON ID (instead of taxon names)
+	 * for sorting purpose
+	 */
+	string topology;
+
+	/**
+	 * log-likelihood or parsimony score
+	 */
+	double score;
+
+	/**
+	 *  Indicate whether the tree is NNI locally optimal
+	 */
+	bool localOpt;
+
 };
 
 
@@ -59,10 +81,16 @@ public:
 
     /**
      * update / insert tree into set of score is higher than lowest-scoring tree
+     * @param tree
+     * 	The new tree string (with branch lengths)
+     * @param score
+     * 	The score (ML or parsimony) of the new tree
+     * @param localOpt
+     * 	Whether the tree is a locally optimal tree
      * @return false if the tree topology already exists
      *
      */
-    bool update(string tree, double score);
+    bool update(string tree, double score, bool localOpt = true);
 
     /**
      *  print score of max_candidates best trees
@@ -86,6 +114,13 @@ public:
     vector<string> getBestTrees(int numTree = 0);
 
     /**
+     * Return \a numTree best local optimal trees
+     * @param numTree
+     * @return a vector of tree string
+     */
+    vector<string> getBestLocalOptimalTrees(int numTree = 0);
+
+    /**
      * get tree(s) with highest score. More than one tree is
      * returned if there are multiple optima.
      * @return a vector containing optimal trees
@@ -96,36 +131,6 @@ public:
      * destructor
      */
     virtual ~CandidateSet();
-
-    /**
-     * hard limit for number of trees (typically superset of candidate set)
-     */
-    int maxCandidates;
-
-    /**
-     *  best score in the set
-     */
-    double bestScore;
-
-    /**
-     *  maximum number of candidate trees
-     */
-    int popSize;
-
-    /** index of tree topologies in set
-     *
-     */
-    StringDoubleHashMap topologies;
-
-    /**
-     *  Trees used for reproduction
-     */
-    stack<string> parentTrees;
-
-    /**
-     * pointer to alignment, just to assign correct IDs for taxa
-     */
-    Alignment *aln;
 
     /**
      * check if tree topology WITHOUT branch length exist in the candidate set?
@@ -143,10 +148,69 @@ public:
     string getTopology(string tree);
 
     /**
-     * Compute the split support from the \a numTree best trees
-     * @param numTree the number of best trees used to calculate support values
+     *  Empty the candidate set
      */
-    void computeSplitSupport(int numTree);
+    void clear();
+
+    /**
+     * Compute the split support from the \a numTree best local optimal trees in the candidate sets
+     * @param numTree the number of best trees used to calculate support values
+     * @return number of splits with 100% support value
+     */
+    int computeSplitSupport(int numTree = 0);
+
+	void setAln(Alignment* aln);
+	int getMaxCandidates() const;
+	void setMaxCandidates(int maxCandidates);
+	int getPopSize() const;
+	void setPopSize(int popSize);
+	void setIsRooted(bool isRooted);
+	int getNumLocalOptTrees() const;
+
+	const StringDoubleHashMap& getTopologies() const {
+		return topologies;
+	}
+
+private:
+    /**
+     * limit for number of trees (typically superset of candidate set)
+     */
+    int maxCandidates;
+
+    /**
+     *  best score in the set
+     */
+    double bestScore;
+
+    /**
+     *  maximum number of trees used for the evolving population
+     */
+    int popSize;
+
+    /**
+     *  Map data structure storing <topology_string, score>
+     */
+    StringDoubleHashMap topologies;
+
+    /**
+     *  Trees used for reproduction
+     */
+    stack<string> parentTrees;
+
+    /**
+     * pointer to alignment, just to assign correct IDs for taxa
+     */
+    Alignment *aln;
+
+	/**
+	 *  Inherit the rootness of tree from the IQ-TREE class
+	 */
+	bool isRooted;
+
+	/**
+	 *  Number of local optimal trees in the set
+	 */
+	int numLocalOptTrees;
 
 };
 

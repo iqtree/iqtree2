@@ -7,14 +7,18 @@
 
 #include "phylotree.h"
 #include "candidateset.h"
+#include "mtreeset.h"
 
-CandidateSet::CandidateSet(int limit, int max_candidates, Alignment *aln) {
-    assert(max_candidates <= limit);
+
+CandidateSet::CandidateSet(int maxCandidates, int maxPop, Alignment *aln) {
+    assert(maxPop <= maxCandidates);
     assert(aln);
-    this->maxCandidates = limit;
-    this->popSize = max_candidates;
+    this->maxCandidates = maxCandidates;
+    this->popSize = maxPop;
     this->aln = aln;
     this->bestScore = -DBL_MAX;
+    this->numLocalOptTrees = 0;
+    this->isRooted = false;
 }
 
 CandidateSet::CandidateSet() {
@@ -22,6 +26,8 @@ CandidateSet::CandidateSet() {
 	maxCandidates = 0;
 	popSize = 0;
 	bestScore = -DBL_MAX;
+	numLocalOptTrees = 0;
+	isRooted = false;
 }
 
 vector<string> CandidateSet::getBestTree() {
@@ -46,14 +52,29 @@ string CandidateSet::getRandCandTree() {
 }
 
 vector<string> CandidateSet::getBestTrees(int numTree) {
+	if (numTree == 0 || numTree > numLocalOptTrees) {
+		numTree = numLocalOptTrees;
+	}
+	vector<string> res;
+	int cnt = numTree;
+	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++, cnt--) {
+		res.push_back(rit->second.tree);
+	}
+	return res;
+}
+
+vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
 	assert(numTree <= maxCandidates);
 	if (numTree == 0) {
 		numTree = maxCandidates;
 	}
 	vector<string> res;
 	int cnt = numTree;
-	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++, cnt--) {
-		res.push_back(rit->second.tree);
+	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++) {
+		if (rit->second.localOpt) {
+			res.push_back(rit->second.tree);
+			cnt--;
+		}
 	}
 	return res;
 }
@@ -99,18 +120,19 @@ void CandidateSet::initParentTrees() {
     }
 }
 
-bool CandidateSet::update(string tree, double score) {
-	bool newTree;
+bool CandidateSet::update(string tree, double score, bool localOpt) {
+	bool newTree = true;
 	CandidateTree candidate;
-	candidate.tree = tree;
 	candidate.score = score;
 	candidate.topology = getTopology(tree);
+	candidate.localOpt = localOpt;
+	candidate.tree = tree;
 	if (candidate.score > bestScore)
 		bestScore = candidate.score;
 	if (treeTopologyExist(candidate.topology)) {
-	    // if tree topology already exist, we replace the old
+	    // if tree topology already exist, we replace the old one
 	    // by the new one (with new branch lengths) and update the score
-		if (topologies[candidate.topology] <= score) {
+		if (topologies[candidate.topology] < score) {
 			topologies[candidate.topology] = score;
 			for (CandidateSet::iterator i = begin(); i != end(); i++)
 				if (i->second.topology == candidate.topology) {
@@ -122,7 +144,6 @@ bool CandidateSet::update(string tree, double score) {
 		}
 		newTree = false;
 	} else {
-		newTree = true;
 		if (size() < maxCandidates) {
 			// insert tree into candidate set
 			insert(CandidateSet::value_type(score, candidate));
@@ -135,6 +156,8 @@ bool CandidateSet::update(string tree, double score) {
 			insert(CandidateSet::value_type(score, candidate));
 			topologies[candidate.topology] = score;
 		}
+		if (localOpt && numLocalOptTrees < maxCandidates)
+			numLocalOptTrees++;
 	}
 	return newTree;
 }
@@ -164,6 +187,11 @@ string CandidateSet::getTopology(string tree) {
 	return ostr.str();
 }
 
+void CandidateSet::clear() {
+	multimap<double, CandidateTree>::clear();
+	topologies.clear();
+}
+
 CandidateSet::~CandidateSet() {
 }
 
@@ -175,7 +203,48 @@ bool CandidateSet::treeExist(string tree) {
 	return treeTopologyExist(getTopology(tree));
 }
 
-void CandidateSet::computeSplitSupport(int numTree) {
+int CandidateSet::computeSplitSupport(int numTree) {
+	MTreeSet boot_trees;
+	int numMaxSupport = 0;
+	vector<string> trees = getBestLocalOptimalTrees(numTree);
+	int maxSupport = trees.size();
+	boot_trees.init(trees, isRooted);
+	SplitGraph sg;
+	SplitIntMap hash_ss;
+	boot_trees.convertSplits(sg, hash_ss, SW_COUNT, -1);
+	cout << sg.size() << " splits found" << endl;
+	for (unordered_map<Split*,int>::iterator it = hash_ss.begin(); it != hash_ss.end(); it++) {
+		if (it->second == maxSupport)
+			numMaxSupport++;
+	}
+	cout << "Number of supported splits = " << numMaxSupport << endl;
+	return numMaxSupport;
+}
 
+void CandidateSet::setAln(Alignment* aln) {
+	this->aln = aln;
+}
 
+int CandidateSet::getMaxCandidates() const {
+	return maxCandidates;
+}
+
+void CandidateSet::setMaxCandidates(int maxCandidates) {
+	this->maxCandidates = maxCandidates;
+}
+
+int CandidateSet::getPopSize() const {
+	return popSize;
+}
+
+void CandidateSet::setPopSize(int popSize) {
+	this->popSize = popSize;
+}
+
+void CandidateSet::setIsRooted(bool isRooted) {
+	this->isRooted = isRooted;
+}
+
+int CandidateSet::getNumLocalOptTrees() const {
+	return numLocalOptTrees;
 }

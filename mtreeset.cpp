@@ -104,6 +104,20 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 	//tree_weights.resize(size(), 1);
 }
 
+void MTreeSet::init(vector<string> &trees, bool &is_rooted) {
+	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
+		MTree *tree = newTree();
+		stringstream ss(*it);
+		bool myrooted = is_rooted;
+		tree->readTree(ss, myrooted);
+		NodeVector taxa;
+		tree->getTaxa(taxa);
+		for (NodeVector::iterator taxit = taxa.begin(); taxit != taxa.end(); taxit++)
+			(*taxit)->id = atoi((*taxit)->name.c_str());
+		push_back(tree);
+	}
+}
+
 void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int max_count,
 	IntVector *weights, bool compressed) 
 {

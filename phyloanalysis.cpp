@@ -1117,7 +1117,7 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
             outError(str);
         }
     }
-    initTree = iqtree.getTreeString();
+    initTree = iqtree.generateNewick();
     if (params.pll) {
         pllNewickTree *newick = pllNewickParseString(initTree.c_str());
         pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
@@ -1189,7 +1189,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
 			curParsTree = string(iqtree.pllInst->tree_string);
         } else {
             iqtree.computeParsimonyTree(NULL, iqtree.aln);
-            curParsTree = iqtree.getTreeString();
+            curParsTree = iqtree.generateNewick();
         }
         if (iqtree.candidateTrees.treeExist(curParsTree)) {
             numDupPars++;
@@ -1198,7 +1198,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         	if (params.start_tree == STT_PLL_PARSIMONY)
         		iqtree.readTreeString(curParsTree);
             if (params.count_trees) {
-                string tree = iqtree.getTopology();
+                string tree = iqtree.generateNewickTopology();
                 if (pllTreeCounter.find(tree) == pllTreeCounter.end()) {
                     // not found in hash_map
                     pllTreeCounter[curParsTree] = 1;
@@ -1240,9 +1240,16 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     double loglTime = getCPUTime() - startTime;
     cout << loglTime << " seconds" << endl;
     cout << "Average CPU time for computing log-likelihood of 1 tree: " << loglTime / (numInitTrees - 1) << endl;
-
     vector<string> bestTrees = iqtree.candidateTrees.getBestTrees(params.numNNITrees);
+    if (verbose_mode >= VB_MED) {
+    	cout << "Logl of parsimony trees: " << endl;
+    	for (multimap<double, CandidateTree>::reverse_iterator rit =  iqtree.candidateTrees.rbegin(); rit != iqtree.candidateTrees.rend(); rit++) {
+    		cout << rit->first << " ";
+    	}
+    	cout << endl;
+    }
     iqtree.candidateTrees.clear();
+    cout << "Topologies size: " << iqtree.candidateTrees.getTopologies().size() << endl;
 
     /************ END: Create a set of up to (numInitTrees - 1) unique parsimony trees **********************/
 
@@ -1257,7 +1264,6 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         double initLogl, nniLogl;
         string tree;
         iqtree.readTreeString(*it);
-        //cout << rit->second.tree << endl;
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         iqtree.computeLogL();
@@ -1611,20 +1617,20 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         if (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY) {
         	int numDup = initCandidateTreeSet(params, iqtree, numInitTrees);
         	cout << "Finish initializing candidate tree set. ";
-        	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
+        	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.getNumLocalOptTrees() << endl;
         } else { // no -snni
             int nni_count = 0;
             int nni_steps = 0;
             cout << "Doing NNI on the initial tree ... " << endl;
             if (params.pll) {
-                iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.searchinfo);
+                iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.pllSearchInfo);
                 pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
                         iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
                         PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
                 iqtree.setBestTree(string(iqtree.pllInst->tree_string), iqtree.curScore);
             } else {
                 iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
-                iqtree.setBestTree(iqtree.getTreeString(), iqtree.curScore);
+                iqtree.setBestTree(iqtree.generateNewick(), iqtree.curScore);
             }
 
         	if (iqtree.isSuperTree())
@@ -1687,7 +1693,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 			((PhyloSuperTree*) &iqtree)->mapTrees();
 	if (params.snni && params.min_iterations) {
 		cout << "Log-likelihoods of best " << params.popSize << " trees: " << endl;
-		iqtree.printBestScores(iqtree.candidateTrees.popSize);
+		iqtree.printBestScores(iqtree.candidateTrees.getPopSize());
 	}
 
 	/******** Performs final model parameters optimization ******************/
@@ -2132,7 +2138,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
 
 	cout << sg.size() << " splits found" << endl;
 	// compute the percentage of appearance
-	//	printSplitSet(sg, hash_ss);
+	// printSplitSet(sg, hash_ss);
 	sg.report(cout);
 	cout << "Creating bootstrap support values..." << endl;
 	mytree.createBootstrapSupport(taxname, boot_trees, sg, hash_ss);

@@ -58,6 +58,8 @@ public:
 
 	void init(StringIntMap &treels, bool &is_rooted, IntVector &weights);
 
+	void init(vector<string> &trees, bool &is_rooted);
+
 
 	/**
 		read the tree from the input file in newick format
