@@ -371,6 +371,10 @@ enum LEAST_SQUARE_VAR {
     OLS, WLS_FIRST_TAYLOR, WLS_FITCH_MARGOLIASH, WLS_SECOND_TAYLOR, WLS_PAUPLIN
 };
 
+enum START_TREE_TYPE {
+	STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY
+};
+
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model
 const int MCAT_MEAN = 2; // take the mean of rates for each category for Meyer & von Haeseler model
 const int MCAT_PATTERN = 4; // categorize site-patterns instead of sites for Meyer & von Haeseler model
@@ -409,6 +413,11 @@ struct Params {
 	int numParsTrees;
 
 	/**
+	 *  SPR distance (radius) for parsimony tree
+	 */
+	int sprDist;
+
+	/**
 	 *  Number of NNI trees generated from the set of parsimony trees
 	 *  Default = 20 (out of 100 parsimony trees)
 	 */
@@ -422,7 +431,7 @@ struct Params {
 	/**
 	 *  maximum number of trees stored in the candidate set
 	 */
-	int limitPopSize;
+	int maxCandidates;
 
 	/**
 	 *  heuristics for speeding up NNI evaluation
@@ -544,11 +553,6 @@ struct Params {
     int speedup_iter;
 
     /**
-     *   option for doing a VNS search
-     */
-    bool vns_search;
-
-    /**
      *  starting CPU time of the program
      */
     double startCPUTime;
@@ -568,6 +572,9 @@ struct Params {
              input file name
      */
     char *user_file;
+
+    /* type of starting tree */
+    START_TREE_TYPE start_tree;
 
     /**
             prefix of the output file, default is the same as input file
@@ -673,7 +680,7 @@ struct Params {
     /**
             compute random step-wise addition parsimony tree instead of BIONJ
      */
-    bool parsimony_tree;
+//    bool parsimony_tree;
 
     /**
              output file name
@@ -1120,6 +1127,11 @@ struct Params {
             2 if output all intermediate trees + 1-NNI-away trees
      */
     int write_intermediate_trees;
+
+    /**
+     *  Write out all candidate trees (the locally optimal trees)
+     */
+    int write_candidate_trees;
 
     /**
         TRUE to avoid duplicated trees while writing intermediate trees

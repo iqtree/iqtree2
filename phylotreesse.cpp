@@ -1110,7 +1110,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 					vleft[j] = eleft[addr+j*nstates/VCSIZE] * vc_partial_lh_tmp[0];
 				for (i = 1; i < nstates/VCSIZE; i++) {
 					for (j = 0; j < VCSIZE; j++)
-						vleft[j] += eleft[addr+j*nstates/VCSIZE+i] * vc_partial_lh_tmp[i];
+						vleft[j] = mul_add(eleft[addr+j*nstates/VCSIZE+i], vc_partial_lh_tmp[i], vleft[j]);
 				}
 				horizontal_add(vleft).store_a(&partial_lh_left[state*block+x]);
 			}
@@ -1128,7 +1128,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 					vright[j] = eright[(x+j)*nstates/VCSIZE] * vc_partial_lh_tmp[0];
 				for (i = 1; i < nstates/VCSIZE; i++) {
 					for (j = 0; j < VCSIZE; j++)
-						vright[j] += eright[(x+j)*nstates/VCSIZE+i] * vc_partial_lh_tmp[i];
+						vright[j] = mul_add(eright[(x+j)*nstates/VCSIZE+i], vc_partial_lh_tmp[i], vright[j]);
 				}
 				horizontal_add(vright).store_a(&partial_lh_right[state*block+x]);
 			}
@@ -1182,7 +1182,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 					}
 					for (x = 1; x < nstates/VCSIZE; x++)
 						for (j = 0; j < VCSIZE; j++) {
-							res[j] += vc_partial_lh_tmp[x] * vc_inv_evec[(i+j)*nstates/VCSIZE+x];
+							res[j] = mul_add(vc_partial_lh_tmp[x], vc_inv_evec[(i+j)*nstates/VCSIZE+x], res[j]);
 						}
 					horizontal_add(res).store_a(&partial_lh[i]);
 				}
@@ -1224,7 +1224,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 					vleft[j] = eleft[(x+j)*nstates/VCSIZE] * vc_tip_lh[0];
 				for (i = 1; i < nstates/VCSIZE; i++) {
 					for (j = 0; j < VCSIZE; j++)
-						vleft[j] += eleft[(x+j)*nstates/VCSIZE+i] * vc_tip_lh[i];
+						vleft[j] = mul_add(eleft[(x+j)*nstates/VCSIZE+i], vc_tip_lh[i], vleft[j]);
 				}
 				horizontal_add(vleft).store_a(&partial_lh_left[state*block+x]);
 			}
@@ -1274,7 +1274,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 					}
 					for (i = 1; i < nstates/VCSIZE; i++)
 						for (j = 0; j < VCSIZE; j++) {
-							vright[j] += eright[addr+i+nstates*j/VCSIZE] * vc_lh_right[i];
+							vright[j] = mul_add(eright[addr+i+nstates*j/VCSIZE], vc_lh_right[i], vright[j]);
 						}
 					vc_partial_lh_tmp[x] = VectorClass().load_a(&lh_left[x*VCSIZE])
 							* horizontal_add(vright);
@@ -1286,7 +1286,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 					}
 					for (x = 1; x < nstates/VCSIZE; x++) {
 						for (j = 0; j < VCSIZE; j++) {
-							res[j] += vc_partial_lh_tmp[x] * vc_inv_evec[(i+j)*nstates/VCSIZE+x];
+							res[j] = mul_add(vc_partial_lh_tmp[x], vc_inv_evec[(i+j)*nstates/VCSIZE+x], res[j]);
 						}
 					}
 					VectorClass sum_res = horizontal_add(res);
@@ -1357,8 +1357,8 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 					for (i = 1; i < nstates/VCSIZE; i++) {
 						for (j = 0; j < VCSIZE; j++) {
 							size_t addr_com = addr+i+j*nstates/VCSIZE;
-							vleft[j] += eleft[addr_com] * vc_lh_left[i];
-							vright[j] += eright[addr_com] * vc_lh_right[i];
+							vleft[j] = mul_add(eleft[addr_com], vc_lh_left[i], vleft[j]);
+							vright[j] = mul_add(eright[addr_com], vc_lh_right[i], vright[j]);
 						}
 					}
 					vc_partial_lh_tmp[x] = horizontal_add(vleft) * horizontal_add(vright);
@@ -1370,7 +1370,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 					}
 					for (x = 1; x < nstates/VCSIZE; x++)
 						for (j = 0; j < VCSIZE; j++)
-							res[j] += vc_partial_lh_tmp[x] * vc_inv_evec[(i+j)*nstates/VCSIZE+x];
+							res[j] = mul_add(vc_partial_lh_tmp[x], vc_inv_evec[(i+j)*nstates/VCSIZE+x], res[j]);
 
 					VectorClass sum_res = horizontal_add(res);
 					sum_res.store_a(&partial_lh[i]);
@@ -1552,7 +1552,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 		}
 //		theta += block*VCSIZE;
 
-		lh_ptn = horizontal_add(vc_ptn) * vc_var_cat + VectorClass().load_a(&ptn_invar[ptn]);
+		lh_ptn = mul_add(horizontal_add(vc_ptn), vc_var_cat, VectorClass().load_a(&ptn_invar[ptn]));
 		inv_lh_ptn = vc_var_cat/lh_ptn;
 
 		lh_ptn = log(lh_ptn);
@@ -1563,18 +1563,19 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 		ddf_ptn = horizontal_add(vc_ddf) * inv_lh_ptn;
 
 		// multiply with pattern frequency
-		lh_ptn *= vc_freq;
-		ddf_ptn = (ddf_ptn - df_ptn * df_ptn) * vc_freq; // this must become before changing df_ptn
-		df_ptn *= vc_freq;
+//		lh_ptn *= vc_freq;
+//		ddf_ptn = (ddf_ptn - df_ptn * df_ptn); // this must become before changing df_ptn
+//		df_ptn *= vc_freq;
+		ddf_ptn = nmul_add(df_ptn, df_ptn, ddf_ptn);
 
 #ifdef _OPENMP
-		lh_final_th += lh_ptn;
-		df_final_th += df_ptn;
-		ddf_final_th += ddf_ptn;
+		lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);
+		df_final_th = mul_add(df_ptn, vc_freq, df_final_th);
+		ddf_final_th = mul_add(ddf_ptn, vc_freq, ddf_final_th);
 #else
-		lh_final += lh_ptn;
-		df_final += df_ptn;
-		ddf_final += ddf_ptn;
+		lh_final = mul_add(lh_ptn, vc_freq, lh_final);
+		df_final = mul_add(df_ptn, vc_freq, df_final);
+		ddf_final = mul_add(ddf_ptn, vc_freq, ddf_final);
 #endif
 
 	}
@@ -1627,7 +1628,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 			theta += block*VCSIZE;
 
 			// ptn_invar[ptn] is not aligned
-			lh_ptn = horizontal_add(vc_ptn) * vc_var_cat + VectorClass().load(&ptn_invar[ptn]);
+			lh_ptn = mul_add(horizontal_add(vc_ptn), vc_var_cat, VectorClass().load(&ptn_invar[ptn]));
 			df_ptn = horizontal_add(vc_df) * vc_var_cat;
 			ddf_ptn = horizontal_add(vc_ddf) * vc_var_cat;
 		}
@@ -1769,20 +1770,21 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 			for (i = 1; i < block/VCSIZE; i++)
 				for (j = 0; j < VCSIZE; j++) {
 					vc_partial_lh_dad[j].load_a(&partial_lh_dad[j*block+i*VCSIZE]);
-					vc_ptn[j] += vc_val[i] * vc_tip_partial_lh[j*(nstates/VCSIZE)+i%(nstates/VCSIZE)] * vc_partial_lh_dad[j];
+					vc_ptn[j] = mul_add(vc_val[i] * vc_tip_partial_lh[j*(nstates/VCSIZE)+i%(nstates/VCSIZE)],
+							vc_partial_lh_dad[j], vc_ptn[j]);
 				}
 
 			vc_freq.load_a(&ptn_freq[ptn]);
-			lh_ptn = horizontal_add(vc_ptn) * vc_var_cat + VectorClass().load_a(&ptn_invar[ptn]);
+			lh_ptn = mul_add(horizontal_add(vc_ptn), vc_var_cat, VectorClass().load_a(&ptn_invar[ptn]));
 			lh_ptn = log(lh_ptn);
 			lh_ptn.store_a(&_pattern_lh[ptn]);
 
 			// multiply with pattern frequency
-			lh_ptn *= vc_freq;
+//			lh_ptn *= vc_freq;
 #ifdef _OPENMP
-			lh_final_th += lh_ptn;
+			lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);
 #else
-			lh_final += lh_ptn;
+			lh_final = mul_add(lh_ptn, vc_freq, lh_final);
 #endif
 //			partial_lh_dad += block*VCSIZE;
 		}
@@ -1829,10 +1831,11 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 				for (i = 1; i < block/VCSIZE; i++)
 					for (j = 0; j < VCSIZE; j++) {
 						vc_partial_lh_dad[j].load_a(&partial_lh_dad[j*block+i*VCSIZE]);
-						vc_ptn[j] += vc_val[i] * vc_tip_partial_lh[j*(nstates/VCSIZE)+i%(nstates/VCSIZE)] * vc_partial_lh_dad[j];
+						vc_ptn[j] = mul_add(vc_val[i] * vc_tip_partial_lh[j*(nstates/VCSIZE)+i%(nstates/VCSIZE)],
+								vc_partial_lh_dad[j], vc_ptn[j]);
 					}
 				// ptn_invar[ptn] is not aligned
-				lh_ptn = horizontal_add(vc_ptn) * vc_var_cat + VectorClass().load(&ptn_invar[ptn]);
+				lh_ptn = mul_add(horizontal_add(vc_ptn), vc_var_cat, VectorClass().load(&ptn_invar[ptn]));
 
 //				partial_lh_dad += block*VCSIZE;
 			}
@@ -1876,20 +1879,20 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 				for (j = 0; j < VCSIZE; j++) {
 					vc_partial_lh_node[j].load_a(&partial_lh_node[i+j*block]);
 					vc_partial_lh_dad[j].load_a(&partial_lh_dad[i+j*block]);
-					vc_ptn[j] += vc_val[i/VCSIZE] * vc_partial_lh_node[j] * vc_partial_lh_dad[j];
+					vc_ptn[j] = mul_add(vc_val[i/VCSIZE] * vc_partial_lh_node[j], vc_partial_lh_dad[j], vc_ptn[j]);
 				}
 			}
 
 			vc_freq.load_a(&ptn_freq[ptn]);
 
-			lh_ptn = horizontal_add(vc_ptn) * p_var_cat + VectorClass().load_a(&ptn_invar[ptn]);
+			lh_ptn = mul_add(horizontal_add(vc_ptn), p_var_cat, VectorClass().load_a(&ptn_invar[ptn]));
 			lh_ptn = log(lh_ptn);
 			lh_ptn.store_a(&_pattern_lh[ptn]);
-			lh_ptn *= vc_freq;
+//			lh_ptn *= vc_freq;
 #ifdef _OPENMP
-			lh_final_th += lh_ptn;
+			lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);
 #else
-			lh_final += lh_ptn;
+			lh_final = mul_add(lh_ptn, vc_freq, lh_final);
 #endif
 //			partial_lh_node += block*VCSIZE;
 //			partial_lh_dad += block*VCSIZE;
@@ -1930,12 +1933,12 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 					for (j = 0; j < VCSIZE; j++) {
 						vc_partial_lh_node[j].load_a(&partial_lh_node[i+j*block]);
 						vc_partial_lh_dad[j].load_a(&partial_lh_dad[i+j*block]);
-						vc_ptn[j] += vc_val[i/VCSIZE] * vc_partial_lh_node[j] * vc_partial_lh_dad[j];
+						vc_ptn[j] = mul_add(vc_val[i/VCSIZE] * vc_partial_lh_node[j], vc_partial_lh_dad[j], vc_ptn[j]);
 					}
 				}
 
 				// ptn_invar[ptn] is not aligned
-				lh_ptn = horizontal_add(vc_ptn) * p_var_cat + VectorClass().load(&ptn_invar[ptn]);
+				lh_ptn = mul_add(horizontal_add(vc_ptn), p_var_cat, VectorClass().load(&ptn_invar[ptn]));
 				partial_lh_node += block*VCSIZE;
 				partial_lh_dad += block*VCSIZE;
 			}
@@ -2540,3 +2543,4 @@ double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *da
     }
     return 0.0;
 }
+

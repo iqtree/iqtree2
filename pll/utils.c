@@ -1095,7 +1095,7 @@ pllPartitionsValidate (pllQueue * parts, pllAlignmentData * alignmentData)
     @param nTaxa
       Number of taxa, i.e. size of site
 */
-static inline void
+static __inline void
 swapSite (unsigned char ** buf, int s1, int s2, int nTaxa)
 {
   int i;
@@ -1300,7 +1300,7 @@ partitionList * pllPartitionsCommit (pllQueue * parts, pllAlignmentData * alignm
     @param nTaxa
       Number of taxa, i.e. size of site
 */
-static inline void
+static __inline void
 copySite (unsigned char ** dst, unsigned char ** src, int to, int from, int nTaxa)
 {
   int i;
@@ -2177,11 +2177,14 @@ pllTreeInitTopologyForAlignment (pllInstance * tr, pllAlignmentData * alignmentD
 
     @param partitions
       The partitions
+
+    @param sprDist
+      SPR distance for the SPR search in parsimony
 */
-void pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInstance * tr, partitionList * partitions)
+void pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInstance * tr, partitionList * partitions, int sprDist)
 {
   allocateParsimonyDataStructures(tr, partitions);
-  pllMakeParsimonyTreeFast(tr, partitions);
+  pllMakeParsimonyTreeFast(tr, partitions, sprDist);
   pllFreeParsimonyDataStructures(tr, partitions);
 }
 

@@ -32,11 +32,6 @@ public:
 	CandidateSet();
 
     /**
-     * return tree with highest score
-     */
-    string getBestTree();
-
-    /**
      * return randomly one candidate tree from max_candidate
      */
     string getRandCandTree();
@@ -64,17 +59,38 @@ public:
 
     /**
      * update / insert tree into set of score is higher than lowest-scoring tree
-     * @return true if the candidate set is updated, otherwise false
+     * @return false if the tree topology already exists
      *
      */
     bool update(string tree, double score);
 
     /**
      *  print score of max_candidates best trees
+     *
+     *  @param numScore
+     *  	Number of best scores to print out starting from the highest
      */
-    void printBestScores();
+    vector<double> getBestScores(int numBestScores = 0);
 
-    void printBestTrees(int numTree);
+    /**
+     * Return the worst score in the candidate tree set
+     * @return
+     */
+    double getWorstScore();
+
+    /**
+     *  Return \a numTree best tree strings
+     *  @param numTree number of best trees
+     *  @return a list of tree
+     */
+    vector<string> getBestTrees(int numTree = 0);
+
+    /**
+     * get tree(s) with highest score. More than one tree is
+     * returned if there are multiple optima.
+     * @return a vector containing optimal trees
+     */
+    vector<string> getBestTree();
 
     /**
      * destructor
@@ -84,12 +100,17 @@ public:
     /**
      * hard limit for number of trees (typically superset of candidate set)
      */
-    int limit;
+    int maxCandidates;
+
+    /**
+     *  best score in the set
+     */
+    double bestScore;
 
     /**
      *  maximum number of candidate trees
      */
-    int max_candidates;
+    int popSize;
 
     /** index of tree topologies in set
      *

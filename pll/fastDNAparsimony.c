@@ -135,7 +135,7 @@
 #		define __builtin_popcountl _mm_popcnt_u64
 #	else
 #		include <intrin.h>
-	static inline uint32_t __builtin_popcount (uint32_t a) {
+	static __inline uint32_t __builtin_popcount (uint32_t a) {
 		// popcnt instruction not available
 		uint32_t b = a - ((a >> 1) & 0x55555555);
 		uint32_t c = (b & 0x33333333) + ((b >> 2) & 0x33333333);
@@ -187,7 +187,7 @@ extern double masterTime;
 //#if (!defined(_WIN64) && defined(_MSC_VER)) || defined(__MINGW32__)
 #ifdef _WIN32
  /* emulate with 32-bit version */
-static inline unsigned int vectorPopcount(INT_TYPE v)
+static __inline unsigned int vectorPopcount(INT_TYPE v)
 {
 PLL_ALIGN_BEGIN unsigned int counts[INTS_PER_VECTOR] PLL_ALIGN_END;
 
@@ -203,7 +203,7 @@ PLL_ALIGN_BEGIN unsigned int counts[INTS_PER_VECTOR] PLL_ALIGN_END;
   return ((unsigned int)sum);
 }
 #else
-static inline unsigned int vectorPopcount(INT_TYPE v)
+static __inline unsigned int vectorPopcount(INT_TYPE v)
 {
 
 PLL_ALIGN_BEGIN uint64_t counts[LONG_INTS_PER_VECTOR] PLL_ALIGN_END;
@@ -1885,7 +1885,7 @@ void pllFreeParsimonyDataStructures(pllInstance *tr, partitionList *pr)
 }
 
 
-void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr)
+void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sprDist)
 {   
   nodeptr  
     p, 
@@ -1959,7 +1959,7 @@ void pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr)
       nodeRectifierPars(tr);
       for(i = 1; i <= tr->mxtips + tr->mxtips - 2; i++)
         {
-          rearrangeParsimony(tr, pr, tr->nodep[i], 1, 20, PLL_FALSE);
+          rearrangeParsimony(tr, pr, tr->nodep[i], 1, sprDist, PLL_FALSE);
           if(tr->bestParsimony < randomMP)
             {           
               restoreTreeRearrangeParsimony(tr, pr);

@@ -15,7 +15,7 @@
 //#define inline __inline
 //#endif
 
-static inline void cpuid(unsigned int op, int count,
+static __inline void cpuid(unsigned int op, int count,
                          unsigned int *eax, unsigned int *ebx,
                          unsigned int *ecx, unsigned int *edx)
 {

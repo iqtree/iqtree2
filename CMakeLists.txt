@@ -37,7 +37,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 1)
-set (iqtree_VERSION_PATCH 0)
+set (iqtree_VERSION_PATCH 1)
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -169,29 +169,58 @@ else()
 endif()
 
 ##################################################################
-# configure SSE/AVX instructions
+# configure SSE/AVX/FMA instructions
 ##################################################################
-if (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
+if (IQTREE_FLAGS MATCHES "fma") # AVX+FMA instruction set
+ 	message("Vectorization : AVX+FMA")
+	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
+	if (VCC)
+		# Visual C++ has no /mfma flag!, FMA is only included in AVX2 
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX2")
+	elseif (CLANG)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
+	elseif (GCC)
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -fabi-version=0 -mfma")
+	elseif (ICC) 
+		if (WIN32)
+			 set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX /Qfma")
+		else()
+			 set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
+		endif()
+	endif()
+	SET(EXE_SUFFIX "${EXE_SUFFIX}-fma")
+
+elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
  	message("Vectorization : AVX")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
-	if (VCC OR ICC) 
+	if (VCC) 
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX")
 	elseif (CLANG)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3 -mavx")
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx")
 	elseif (GCC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3 -mavx -fabi-version=0")
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -fabi-version=0")
+	elseif (ICC) 
+		if (WIN32)
+			 set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX")
+		else()
+			 set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx")
+		endif()
 	endif()
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
 else() #SSE intruction set
 	message("Vectorization : SSE3")
-
 	add_definitions(-D__SSE3)
+	
 	if (VCC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE")
-	elseif (ICC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE3")
+		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE2 -D__SSE3__")
 	elseif (GCC OR CLANG)
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3")
+	elseif (ICC)
+		if (WIN32)
+			set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE3")
+		else()
+			set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3")
+		endif()
 	endif()
 endif()
 
@@ -250,7 +279,7 @@ add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
 add_subdirectory(zlib-1.2.7)
-#add_subdirectory(vectorclass)
+add_subdirectory(vectorclass)
 
 ##################################################################
 # the main executable
@@ -329,7 +358,7 @@ ecopdmtreeset.cpp
 graph.cpp
 modelmorphology.cpp
 candidateset.cpp
-upperbounds.cpp
+checkpoint.cpp
 )
 
 ##################################################################
@@ -358,7 +387,7 @@ if (IQTREE_FLAGS MATCHES "omp")
 	endif()
 endif()
 
-target_link_libraries(iqtree pll ncl whtest zlibstatic sprng ${PLATFORM_LIB} ${THREAD_LIB})	
+target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass ${PLATFORM_LIB} ${THREAD_LIB})	
 
 ##################################################################
 # setup the executable name 
@@ -434,7 +463,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 endif()
 
 set (PROJECT_NAME_SUFFIX "${EXE_SUFFIX}")
-if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx")  
+if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")  
 	set (PROJECT_NAME_SUFFIX "${PROJECT_NAME_SUFFIX}-sse") 
 endif()
 

@@ -35,7 +35,7 @@
 
 #include "whtest_sub.h"
 #include "random.h"
-#include "tools.h"
+#include "whtools.h"
 /*
 #ifdef WIN32
 #include <sys/timeb.h>

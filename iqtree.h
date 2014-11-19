@@ -260,6 +260,25 @@ public:
      */
     double doTreeSearch();
 
+    /**
+     *  Wrapper function that uses either PLL or IQ-TREE to optimize the branch length
+     *  @param maxTraversal
+     *  	maximum number of tree traversal for branch length optimization
+     *  @return NEWICK tree string
+     */
+    string optimizeBranches(int maxTraversal);
+
+    /**
+     *  Wrapper function to compute tree log-likelihood.
+     *  This function with call either PLL or IQ-TREE to compute tree log-likelihood
+     */
+    void computeLogL();
+
+    /**
+     *	Print numBestScore found so far, starting from the highest
+     */
+    void printBestScores(int numBestScore);
+
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
      ****************************************************************************/
@@ -281,6 +300,16 @@ public:
      * 		@param nniSteps (OUT) number of NNI steps done
      */
     double pllOptimizeNNI(int &nniCount, int &nniSteps, SearchInfo &searchinfo);
+
+    /**
+     * 		@brief Perform NNI search on the current tree topology
+     * 		This function will automatically use the selected kernel (either PLL or IQ-TREE)
+     *
+     * 		@param nniCount (OUT) number of NNIs applied
+     * 		@param nniSteps (OUT) number of NNI steps done
+     * 		@return the new NEWICK string
+     */
+    string doNNISearch(int &nniCount, int &nniSteps);
 
     /**
             @brief evaluate all NNIs and store them in possilbleNNIMoves list
@@ -689,6 +718,8 @@ public:
 
     /** summarize bootstrap trees into split set */
     void summarizeBootstrap(SplitGraph &sg);
+
+    void writeUFBootTrees(Params &params, StrVector &removed_seqs, StrVector &twin_seqs);
 
     /** @return bootstrap correlation coefficient for assessing convergence */
     double computeBootstrapCorrelation();
