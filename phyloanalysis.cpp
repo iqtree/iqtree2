@@ -2028,9 +2028,9 @@ void runPhyloAnalysis(Params &params) {
 		runStandardBootstrap(params, original_model, alignment, tree);
 	}
 
-	if (params.upper_bound) {
-			UpperBounds(&params, alignment, tree);
-	}
+//	if (params.upper_bound) {
+//			UpperBounds(&params, alignment, tree);
+//	}
 
 	if(tree->isSuperTree() && params.partition_type){
 		((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
