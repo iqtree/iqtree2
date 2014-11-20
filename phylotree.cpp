@@ -3445,6 +3445,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		node21_it->clearPartialLh();
 
 		// compute the score of the swapped topology
+		double saved_len = node1_nei->length;
+
 		double score = optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
 		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
 
@@ -3484,6 +3486,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		node1_nei->node->updateNeighbor(node2, node1);
 		node2->updateNeighbor(node2_it, node2_nei);
 		node2_nei->node->updateNeighbor(node1, node2);
+		// ONLY FOR CHECKING WITH OLGA's PLEN MODEL
+//		node1_nei->length = node2_nei->length = saved_len;
     }
 
 	 // restore the Neighbor*

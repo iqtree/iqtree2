@@ -509,6 +509,43 @@ void PhyloSuperTreePlen::doNNIs(int nni2apply, bool changeBran) {
 }
 
 
+void PhyloSuperTreePlen::getNNIType(PhyloNode *node1, PhyloNode *node2, vector<NNIType> &nni_type) {
+	int epsilon_cnt, part, ntrees=size();
+	nni_type.resize(ntrees, NNI_NO_EPSILON);
+	for(part=0; part<ntrees;part++){
+		totalNNIs++;
+		nni_type[part] = NNI_NO_EPSILON;
+		epsilon_cnt = 0;
+
+		FOR_NEIGHBOR_DECLARE(node1,NULL,nit){
+			if(!((SuperNeighbor*)*nit)->link_neighbors[part]) { epsilon_cnt++; }
+		}
+		FOR_NEIGHBOR(node2, node1, nit) {
+			if(!((SuperNeighbor*)*nit)->link_neighbors[part]) { epsilon_cnt++; }
+		}
+
+		//cout<<"Partition "<<part<<" : Epsilon = "<<epsilon_cnt<<endl;
+		if(epsilon_cnt == 0){
+			nni_type[part]=NNI_NO_EPSILON;
+//			allNNIcases_computed[0]++;
+		}else if(epsilon_cnt == 1){
+			nni_type[part] = NNI_ONE_EPSILON;
+//			allNNIcases_computed[1]++;
+		}else if(epsilon_cnt == 2){
+			nni_type[part]=NNI_TWO_EPSILON;
+//			allNNIcases_computed[2]++;
+		}else if(epsilon_cnt == 3){
+			nni_type[part]=NNI_THREE_EPSILON;
+//			allNNIcases_computed[3]++;
+		}else {
+			nni_type[part] = NNI_MANY_EPSILON;
+//			allNNIcases_computed[4]++;
+		}
+	}
+
+
+}
+
 void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 {
 	checkBranchLen();
@@ -521,62 +558,68 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 	iterator it;
 	//double old_brlen = nei1->length;
 	vector<NNIMove> part_move;
-	vector<bool> is_nni;
-	is_nni.resize(ntrees);
+	vector<NNIType> is_nni;
 	part_move.resize(ntrees);
+	getNNIType(move.node1, move.node2, is_nni);
+
 
 	for (it = begin(), part = 0; it != end(); it++, part++) {
-		PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
-		PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
-		is_nni[part] = true;
-		if(nei1_part){
-			FOR_NEIGHBOR_DECLARE(move.node1, NULL, nit) {
-				if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni[part] = false; break; }
-			}
-			FOR_NEIGHBOR(move.node2, NULL, nit) {
-				if (! ((SuperNeighbor*)*nit)->link_neighbors[part]) { is_nni[part] = false; break; }
-			}
-		} else { is_nni[part] = false;}
 
-		if(is_nni[part]){
+		if(is_nni[part] == NNI_NO_EPSILON){
+			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
+			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 			part_move[part].node1 = (PhyloNode*)nei2_part->node;
 			part_move[part].node2 = (PhyloNode*)nei1_part->node;
-
 			part_move[part].node1Nei_it = part_move[part].node1->findNeighborIt(node1_nei->link_neighbors[part]->node);
 			part_move[part].node2Nei_it = part_move[part].node2->findNeighborIt(node2_nei->link_neighbors[part]->node);
-		}else{
-			// !!!! We anyway map all branches from SuperTree to SubTrees (in func doNNIs).
-			// !!!! There is no need to change the branch length here.
-//			// In the subtree change the length of branch, (node1,node2) WAS linked to
-//			if(nei1_part){
-//				nei1_part->length -= old_brlen * part_info[part].part_rate;
-//				nei2_part->length -= old_brlen * part_info[part].part_rate;
-//			}
 		}
 	}
-	PhyloTree::doNNI(move,clearLH);
+//	PhyloTree::doNNI(move,clearLH);
+	PhyloTree::doNNI(move,false);
 	nei1->length = move.newLen[0];
 	nei2->length = move.newLen[0];
+	PhyloNode *node1, *node2;
 
 	for (it = begin(), part = 0; it != end(); it++, part++) {
-		if (!is_nni[part]) {
-			// Relink the branch if it does not correspond to NNI for partition
+		switch (is_nni[part]) {
+		case NNI_NO_EPSILON:
+			(*it)->doNNI(part_move[part],clearLH);
+			break;
+		case NNI_ONE_EPSILON:
 			linkBranch(part, nei1, nei2);
-//			if(nei1->link_neighbors[part]){
-//				nei1->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
-//				nei2->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
-//			}
-		} else { (*it)->doNNI(part_move[part],clearLH); }
+			if (clearLH) {
+				// clear partial likelihood vector
+				node1 = (PhyloNode*)nei2->link_neighbors[part]->node;
+				node2 = (PhyloNode*)nei1->link_neighbors[part]->node;
+				nei1->link_neighbors[part]->clearPartialLh();
+				nei2->link_neighbors[part]->clearPartialLh();
+				node2->clearReversePartialLh(node1);
+				node1->clearReversePartialLh(node2);
+			}
+			break;
+		case NNI_TWO_EPSILON:
+			node1 = (PhyloNode*)nei2->link_neighbors[part]->node;
+			node2 = (PhyloNode*)nei1->link_neighbors[part]->node;
+			linkBranch(part, nei1, nei2);
+			if(clearLH && !(PhyloNode*)nei2->link_neighbors[part]){
+				node2->clearReversePartialLh(node1);
+				node1->clearReversePartialLh(node2);
+			}
+			break;
+		case NNI_THREE_EPSILON:
+			linkBranch(part, nei1, nei2);
+			if (clearLH) {
+				// clear partial likelihood vector
+				node1 = (PhyloNode*)nei2->link_neighbors[part]->node;
+				node2 = (PhyloNode*)nei1->link_neighbors[part]->node;
+				node2->clearReversePartialLh(node1);
+				node1->clearReversePartialLh(node2);
+			}
+			break;
+		case NNI_MANY_EPSILON:
+			break;
+		}
 
-//		PhyloNeighbor* nei1_part_new = nei1->link_neighbors[part];
-//		PhyloNeighbor* nei2_part_new = nei2->link_neighbors[part];
-//		if(nei1_part_new){
-//			int brid = nei1_part_new->id;
-//			if (move.swap_id == 1)
-//				nei1_part_new->length = nei2_part_new->length = part_info[part].nni1_brlen[brid];
-//			else
-//				nei1_part_new->length = nei2_part_new->length = part_info[part].nni2_brlen[brid];
-//		}
 	}
 	//mapBranchLen();
 
@@ -587,24 +630,14 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 
 }
 
-/**
- * this is to classify the cases which happen on the subtree
- *
- *  NNI_NONE_EPSILON: all 5 branches have images on subtree, this corresponds to change in subtree topology
- * 					  2 partial_lh vectors for -nni1 or 6 partial_lh vectors for -nni5 options
- *  NNI_ONE_EPSILON:  only one of the 5 branches has no image on subtree, this does not change subtree topology, but changes branch length of subtrees
- * 					  we need to allocate partial likelihood memory (1 partial_lh vectors for -nni1 option or 3 partial_lh for -nni5 option)
- * 	NNI_TWO_EPSILON:  two branches (on different sides of central branch) have no images, here after the NNI swap,
- * 					  the image of central branch either does not change or is equal to epsilon (then we decrease the branch length)
- * 					  and no allocation of partial_lh is needed
- * 	NNI_THREE_EPSILON: central and two adjacent edges have no images: after the NNI swap, central branch will have image and we need to relink it
- * 					no allocation of partial_lh is needed
- *  NNI_MANY_EPSILON: more than 3 branches have no images on subtree: nothing changes in subtree and no recomputation of partial likelihood are required
- */
-enum NNIType {NNI_NO_EPSILON, NNI_ONE_EPSILON, NNI_TWO_EPSILON, NNI_THREE_EPSILON, NNI_MANY_EPSILON};
+
 
 
 double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param) {
+
+//	for (iterator it = begin(); it != end(); it++)
+//		if ((*it)->sse != LK_EIGEN_SSE)
+//			outError("hey!");
 
 	assert(node1->degree() == 3 && node2->degree() == 3);
 	//cout<<"starting NNI evaluation"<<endl;
@@ -616,39 +649,26 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	/*===========================================================================================
 	 * Identify NNIType for partitions
 	 *===========================================================================================*/
-	int epsilon_cnt;
 	vector<NNIType> is_nni;
-	is_nni.resize(ntrees, NNI_NO_EPSILON);
-	for(part=0; part<ntrees;part++){
-		totalNNIs++;
-		is_nni[part] = NNI_NO_EPSILON;
-		epsilon_cnt = 0;
-
-		FOR_NEIGHBOR_DECLARE(node1,NULL,nit){
-			if(!((SuperNeighbor*)*nit)->link_neighbors[part]) { epsilon_cnt++; }
-		}
-		FOR_NEIGHBOR(node2, node1, nit) {
-			if(!((SuperNeighbor*)*nit)->link_neighbors[part]) { epsilon_cnt++; }
-		}
-
-		//cout<<"Partition "<<part<<" : Epsilon = "<<epsilon_cnt<<endl;
-		if(epsilon_cnt == 0){
-			is_nni[part]=NNI_NO_EPSILON;
+	getNNIType(node1, node2, is_nni);
+	for (part = 0; part < ntrees; part++)
+		switch (is_nni[part]) {
+		case NNI_NO_EPSILON:
 			allNNIcases_computed[0]++;
-		}else if(epsilon_cnt == 1){
-			is_nni[part] = NNI_ONE_EPSILON;
+			break;
+		case NNI_ONE_EPSILON:
 			allNNIcases_computed[1]++;
-		}else if(epsilon_cnt == 2){
-			is_nni[part]=NNI_TWO_EPSILON;
+			break;
+		case NNI_TWO_EPSILON:
 			allNNIcases_computed[2]++;
-		}else if(epsilon_cnt == 3){
-			is_nni[part]=NNI_THREE_EPSILON;
+			break;
+		case NNI_THREE_EPSILON:
 			allNNIcases_computed[3]++;
-		}else {
-			is_nni[part] = NNI_MANY_EPSILON;
+			break;
+		case NNI_MANY_EPSILON:
 			allNNIcases_computed[4]++;
+			break;
 		}
-	}
 
 	//==================================================================================================
 	// SuperTREE: saving Neighbors and allocating new ones; assign which nodes/neighbors to be swapped.

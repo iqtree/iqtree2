@@ -12,6 +12,24 @@
 #include "partitionmodel.h"
 #include "superalignmentpairwise.h"
 
+
+/**
+ * this is to classify the cases which happen on the subtree
+ *
+ *  NNI_NONE_EPSILON: all 5 branches have images on subtree, this corresponds to change in subtree topology
+ * 					  2 partial_lh vectors for -nni1 or 6 partial_lh vectors for -nni5 options
+ *  NNI_ONE_EPSILON:  only one of the 5 branches has no image on subtree, this does not change subtree topology, but changes branch length of subtrees
+ * 					  we need to allocate partial likelihood memory (1 partial_lh vectors for -nni1 option or 3 partial_lh for -nni5 option)
+ * 	NNI_TWO_EPSILON:  two branches (on different sides of central branch) have no images, here after the NNI swap,
+ * 					  the image of central branch either does not change or is equal to epsilon (then we decrease the branch length)
+ * 					  and no allocation of partial_lh is needed
+ * 	NNI_THREE_EPSILON: central and two adjacent edges have no images: after the NNI swap, central branch will have image and we need to relink it
+ * 					no allocation of partial_lh is needed
+ *  NNI_MANY_EPSILON: more than 3 branches have no images on subtree: nothing changes in subtree and no recomputation of partial likelihood are required
+ */
+enum NNIType {NNI_NO_EPSILON, NNI_ONE_EPSILON, NNI_TWO_EPSILON, NNI_THREE_EPSILON, NNI_MANY_EPSILON};
+
+
 /**
 Edge lengths in subtrees are proportional to edge lengths in a supertree.
 
@@ -134,6 +152,10 @@ public:
 	*/
 	virtual void mapTrees();
 
+	/**
+	 * @return the type of NNI around node1-node2 for partition part
+	 */
+	void getNNIType(PhyloNode *node1, PhyloNode *node2, vector<NNIType> &nni_type);
 
 	virtual double computeFuncDerv(double value, double &df, double &ddf);
 	virtual double computeFunction(double value);
