@@ -639,6 +639,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 //		if ((*it)->sse != LK_EIGEN_SSE)
 //			outError("hey!");
 
+
 	assert(node1->degree() == 3 && node2->degree() == 3);
 	//cout<<"starting NNI evaluation"<<endl;
 	checkBranchLen();
