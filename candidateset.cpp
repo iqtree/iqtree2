@@ -33,6 +33,7 @@ vector<string> CandidateSet::getBestTree() {
 }
 
 string CandidateSet::getRandCandTree() {
+	assert(!empty());
 	if (empty())
 		return "";
 	// BQM: bug fix max -> min
@@ -42,6 +43,7 @@ string CandidateSet::getRandCandTree() {
 	for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
 		if (id == 0)
 			return i->second.tree;
+	assert(0);
 	return "";
 }
 
