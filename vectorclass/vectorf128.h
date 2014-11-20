@@ -1,8 +1,8 @@
 /****************************  vectorf128.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2014-07-23
-* Version:       1.14
+* Last modified: 2014-10-24
+* Version:       1.16
 * Project:       vector classes
 * Description:
 * Header file defining floating point vector classes as interface to 
@@ -92,10 +92,6 @@ public:
     // Default constructor:
     Vec4fb() {
     }
-    // Constructor to broadcast the same value into all elements:
-    Vec4fb(bool b) {
-        xmm = _mm_castsi128_ps(_mm_set1_epi32(-(int)b));
-    }
     // Constructor to build from all elements:
     Vec4fb(bool b0, bool b1, bool b2, bool b3) {
         xmm = _mm_castsi128_ps(_mm_setr_epi32(-(int)b0, -(int)b1, -(int)b2, -(int)b3)); 
@@ -109,10 +105,19 @@ public:
         xmm = x;
         return *this;
     }
-    // Type cast operator to convert to __m128 used in intrinsics
-    operator __m128() const {
-        return xmm;
+    // Constructor to broadcast scalar value:
+    Vec4fb(bool b) {
+        xmm = _mm_castsi128_ps(_mm_set1_epi32(-int32_t(b)));
     }
+    // Assignment operator to broadcast scalar value:
+    Vec4fb & operator = (bool b) {
+        *this = Vec4fb(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec4fb(int b);
+    Vec4fb & operator = (int x);
+public:
     // Constructor to convert from type Vec4ib used as Boolean for integer vectors
     Vec4fb(Vec4ib const & x) {
         xmm = _mm_castsi128_ps(x);
@@ -122,8 +127,18 @@ public:
         xmm = _mm_castsi128_ps(x);
         return *this;
     }
-#if defined (__clang__) && CLANG_VERSION < 30500
-#define FIX_CLANG_VECTOR_ALIAS_AMBIGUITY  // clang 3.3 and 3.4 has silent conversion between intrinsic vector types. Will probably be fixed in v. 3.4
+    // Type cast operator to convert to __m128 used in intrinsics
+    operator __m128() const {
+        return xmm;
+    }
+#if defined (__clang__) && CLANG_VERSION < 30900 || defined(__apple_build_version__)
+#define FIX_CLANG_VECTOR_ALIAS_AMBIGUITY  // clang 3.3 - 3.5 has silent conversion between intrinsic vector types. 
+                                          // I expected this to be fixed in version 3.4 but it still exists!
+                                          // http://llvm.org/bugs/show_bug.cgi?id=17164
+                                          // Problem: The version number is not consistent across platforms
+                                          // The Apple build has different version numbers. Too bad!
+                                          // http://llvm.org/bugs/show_bug.cgi?id=12643
+
 #else
     // Type cast operator to convert to type Vec4ib used as Boolean for integer vectors
     operator Vec4ib() const {
@@ -211,10 +226,9 @@ static inline Vec4fb operator ~ (Vec4fb const & a) {
 // vector operator ! : logical not
 // (operator ! is less efficient than operator ~. Use only where not
 // all bits in an element are the same)
-//BQM: commented out due to clang compiling error
-//static inline Vec4fb operator ! (Vec4fb const & a) {
-//    return Vec4fb( ! Vec4ib(a));
-//}
+static inline Vec4fb operator ! (Vec4fb const & a) {
+    return Vec4fb( ! Vec4ib(a));
+}
 
 // Functions for Vec4fb
 
@@ -253,37 +267,47 @@ protected:
 public:
     // Default constructor:
     Vec2db() {
-    };
+    }
     // Constructor to broadcast the same value into all elements:
-    Vec2db(bool b) {
-        xmm = _mm_castsi128_pd(_mm_set1_epi32(-(int)b));
-    };
     // Constructor to build from all elements:
     Vec2db(bool b0, bool b1) {
         xmm = _mm_castsi128_pd(_mm_setr_epi32(-(int)b0, -(int)b0, -(int)b1, -(int)b1)); 
-    };
+    }
     // Constructor to convert from type __m128d used in intrinsics:
     Vec2db(__m128d const & x) {
         xmm = x;
-    };
+    }
     // Assignment operator to convert from type __m128d used in intrinsics:
     Vec2db & operator = (__m128d const & x) {
         xmm = x;
         return *this;
-    };
-    // Type cast operator to convert to __m128d used in intrinsics
-    operator __m128d() const {
-        return xmm;
     }
+    // Constructor to broadcast scalar value:
+    Vec2db(bool b) {
+        xmm = _mm_castsi128_pd(_mm_set1_epi32(-int32_t(b)));
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec2db & operator = (bool b) {
+        *this = Vec2db(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec2db(int b);
+    Vec2db & operator = (int x);
+public:
     // Constructor to convert from type Vec2qb used as Boolean for integer vectors
     Vec2db(Vec2qb const & x) {
         xmm = _mm_castsi128_pd(x);
-    };
+    }
     // Assignment operator to convert from type Vec2qb used as Boolean for integer vectors
     Vec2db & operator = (Vec2qb const & x) {
         xmm = _mm_castsi128_pd(x);
         return *this;
-    };
+    }
+    // Type cast operator to convert to __m128d used in intrinsics
+    operator __m128d() const {
+        return xmm;
+    }
 #ifndef FIX_CLANG_VECTOR_ALIAS_AMBIGUITY
     // Type cast operator to convert to type Vec2qb used as Boolean for integer vectors
     operator Vec2qb() const {
@@ -302,16 +326,15 @@ public:
             xmm = _mm_andnot_pd(_mm_castps_pd(mask),xmm);
         }
         return *this;
-    };
+    }
     // Member function extract a single element from vector
-    //BQM: commented out due to clang compiling error
-//    bool extract(uint32_t index) const {
-//        return Vec2qb(*this).extract(index);
-//    }
-//    // Extract a single element. Operator [] can only read an element, not write.
-//    bool operator [] (uint32_t index) const {
-//        return extract(index);
-//    }
+    bool extract(uint32_t index) const {
+        return Vec2qb(*this).extract(index);
+    }
+    // Extract a single element. Operator [] can only read an element, not write.
+    bool operator [] (uint32_t index) const {
+        return extract(index);
+    }
     static int size() {
         return 2;
     }
@@ -371,10 +394,9 @@ static inline Vec2db operator ~ (Vec2db const & a) {
 // vector operator ! : logical not
 // (operator ! is less efficient than operator ~. Use only where not
 // all bits in an element are the same)
-//BQM: commented out due to clang compiling error
-//static inline Vec2db operator ! (Vec2db const & a) {
-//    return Vec2db (! Vec2qb(a));
-//}
+static inline Vec2db operator ! (Vec2db const & a) {
+    return Vec2db (! Vec2qb(a));
+}
 
 // Functions for Vec2db
 
@@ -808,11 +830,11 @@ static inline Vec4f square(Vec4f const & a) {
     return a * a;
 }
 
-// pow(Vec4f, int):
-// Raise floating point numbers to integer power n
-static inline Vec4f pow(Vec4f const & a, int n) {
-    Vec4f x = a;                       // a^(2^i)
-    Vec4f y(1.0f);                     // accumulator
+// pow(vector,int) function template
+template <typename VTYPE>
+static inline VTYPE pow_template_i(VTYPE const & x0, int n) {
+    VTYPE x = x0;                      // a^(2^i)
+    VTYPE y(1.0f);                     // accumulator
     if (n >= 0) {                      // make sure n is not negative
         while (true) {                 // loop for each bit in n
             if (n & 1) y *= x;         // multiply if bit = 1
@@ -822,11 +844,28 @@ static inline Vec4f pow(Vec4f const & a, int n) {
         }
     }
     else {                             // n < 0
-        return Vec4f(1.0f)/pow(x,-n);  // reciprocal
+        return VTYPE(1.0f)/pow_template_i<VTYPE>(x0,-n);  // reciprocal
     }
 }
-// prevent implicit conversion of float exponent to int
-static Vec4f pow(Vec4f const & x, float y);
+
+// pow(Vec4f, int):
+// The purpose of this template is to prevent implicit conversion of a float
+// exponent to int when calling pow(vector, float) and vectormath_exp.h is
+// not included
+
+template <typename TT> static Vec4f pow(Vec4f const & a, TT n);
+
+// Raise floating point numbers to integer power n
+template <>
+inline Vec4f pow<int>(Vec4f const & x0, int n) {
+    return pow_template_i<Vec4f>(x0, n);
+}
+
+// allow conversion from unsigned int
+template <>
+inline Vec4f pow<uint32_t>(Vec4f const & x0, uint32_t n) {
+    return pow_template_i<Vec4f>(x0, (int)n);
+}
 
 // Raise floating point numbers to integer power n, where n is a compile-time constant
 template <int n>
@@ -889,7 +928,11 @@ static inline Vec4f pow(Vec4f const & a, Const_int_t<n>) {
 // avoid unsafe optimization in function round
 #if defined(__GNUC__) && !defined(__INTEL_COMPILER) && !defined(__clang__) && INSTRSET < 5
 static inline Vec4f round(Vec4f const & a) __attribute__ ((optimize("-fno-unsafe-math-optimizations")));
-#elif (defined (_MSC_VER) || defined(__INTEL_COMPILER) || defined(__clang__)) && INSTRSET < 5
+#elif defined(__clang__) && INSTRSET < 5
+// static inline Vec4f round(Vec4f const & a) __attribute__ ((optnone));
+// This doesn't work, but current versions of Clang (3.5) don't optimize away signedmagic, even with -funsafe-math-optimizations
+// Add volatile to b if future versions fail
+#elif defined (_MSC_VER) || defined(__INTEL_COMPILER) && INSTRSET < 5
 #pragma float_control(push) 
 #pragma float_control(precise,on)
 #define FLOAT_CONTROL_PRECISE_FOR_ROUND
@@ -905,7 +948,9 @@ static inline Vec4f round(Vec4f const & a) {
     Vec4f magic       = _mm_castsi128_ps(constant4i<0x4B000000,0x4B000000,0x4B000000,0x4B000000>());  // magic number = 2^23
     Vec4f sign        = _mm_and_ps(a, signmask);                                    // signbit of a
     Vec4f signedmagic = _mm_or_ps(magic, sign);                                     // magic number with sign of a
-    return a + signedmagic - signedmagic;                                           // round by adding magic number
+    // volatile
+    Vec4f b = a + signedmagic;                                                      // round by adding magic number
+    return b - signedmagic;                                                         // .. and subtracting it again
 #endif
 }
 #ifdef FLOAT_CONTROL_PRECISE_FOR_ROUND
@@ -982,6 +1027,62 @@ static inline Vec4f approx_rsqrt(Vec4f const & a) {
     return _mm_rsqrt_ps(a);
 }
 
+// Fused multiply and add functions
+
+// Multiply and add
+static inline Vec4f mul_add(Vec4f const & a, Vec4f const & b, Vec4f const & c) {
+#ifdef __FMA__
+    return _mm_fmadd_ps(a, b, c);
+#elif defined (__FMA4__)
+    return _mm_macc_ps(a, b, c);
+#else
+    return a * b + c;
+#endif
+}
+
+// Multiply and subtract
+static inline Vec4f mul_sub(Vec4f const & a, Vec4f const & b, Vec4f const & c) {
+#ifdef __FMA__
+    return _mm_fmsub_ps(a, b, c);
+#elif defined (__FMA4__)
+    return _mm_msub_ps(a, b, c);
+#else
+    return a * b - c;
+#endif
+}
+
+// Multiply and inverse subtract
+static inline Vec4f nmul_add(Vec4f const & a, Vec4f const & b, Vec4f const & c) {
+#ifdef __FMA__
+    return _mm_fnmadd_ps(a, b, c);
+#elif defined (__FMA4__)
+    return _mm_nmacc_ps(a, b, c);
+#else
+    return c - a * b;
+#endif
+}
+
+
+// Multiply and subtract with extra precision on the intermediate calculations, 
+// even if FMA instructions not supported, using Veltkamp-Dekker split
+static inline Vec4f mul_sub_x(Vec4f const & a, Vec4f const & b, Vec4f const & c) {
+#ifdef __FMA__
+    return _mm_fmsub_ps(a, b, c);
+#elif defined (__FMA4__)
+    return _mm_msub_ps(a, b, c);
+#else
+    // calculate a * b - c with extra precision
+    Vec4i upper_mask = -(1 << 12);                         // mask to remove lower 12 bits
+    Vec4f a_high = a & Vec4f(_mm_castsi128_ps(upper_mask));// split into high and low parts
+    Vec4f b_high = b & Vec4f(_mm_castsi128_ps(upper_mask));
+    Vec4f a_low  = a - a_high;
+    Vec4f b_low  = b - b_high;
+    Vec4f r1 = a_high * b_high;                            // this product is exact
+    Vec4f r2 = r1 - c;                                     // subtract c from high product
+    Vec4f r3 = r2 + (a_high * b_low + b_high * a_low) + a_low * b_low; // add rest of product
+    return r3; // + ((r2 - r1) + c);
+#endif
+}
 
 // Math functions using fast bit manipulation
 
@@ -1017,7 +1118,7 @@ static inline Vec4f exp2(Vec4i const & n) {
     Vec4i t4 = t3 << 23;               // put exponent into position 23
     return _mm_castsi128_ps(t4);       // reinterpret as float
 }
-static Vec4f exp2(Vec4f const & x); // defined in vectormath_exp.h
+//static Vec4f exp2(Vec4f const & x); // defined in vectormath_exp.h
 
 
 // Control word manipulaton
@@ -1450,7 +1551,7 @@ public:
     double operator [] (uint32_t index) const {
         return extract(index);
     }
-    inline int size() {
+    static int size() {
         return 2;
     }
 };
@@ -1717,24 +1818,23 @@ static inline Vec2d square(Vec2d const & a) {
 }
 
 // pow(Vec2d, int):
+// The purpose of this template is to prevent implicit conversion of a float
+// exponent to int when calling pow(vector, float) and vectormath_exp.h is
+// not included
+
+template <typename TT> static Vec2d pow(Vec2d const & a, TT n);
+
 // Raise floating point numbers to integer power n
-static inline Vec2d pow(Vec2d const & a, int n) {
-    Vec2d x = a;                       // a^(2^i)
-    Vec2d y(1.0);                      // accumulator
-    if (n >= 0) {                      // make sure n is not negative
-        while (true) {                 // loop for each bit in n
-            if (n & 1) y *= x;         // multiply if bit = 1
-            n >>= 1;                   // get next bit of n
-            if (n == 0) return y;      // finished
-            x *= x;                    // x = a^2, a^4, a^8, etc.
-        }
-    }
-    else {                             // n < 0
-        return Vec2d(1.0)/pow(x,-n);   // reciprocal
-    }
+template <>
+inline Vec2d pow<int>(Vec2d const & x0, int n) {
+    return pow_template_i<Vec2d>(x0, n);
 }
-// prevent implicit conversion of exponent to int
-static Vec2d pow(Vec2d const & x, double y);
+
+// allow conversion from unsigned int
+template <>
+inline Vec2d pow<uint32_t>(Vec2d const & x0, uint32_t n) {
+    return pow_template_i<Vec2d>(x0, (int)n);
+}
 
 
 // Raise floating point numbers to integer power n, where n is a compile-time constant
@@ -1951,6 +2051,65 @@ static inline Vec2d extend_high (Vec4f const & a) {
     return _mm_cvtps_pd(_mm_movehl_ps(a,a));
 }
 
+
+// Fused multiply and add functions
+
+// Multiply and add
+static inline Vec2d mul_add(Vec2d const & a, Vec2d const & b, Vec2d const & c) {
+#ifdef __FMA__
+    return _mm_fmadd_pd(a, b, c);
+#elif defined (__FMA4__)
+    return _mm_macc_pd(a, b, c);
+#else
+    return a * b + c;
+#endif
+}
+
+// Multiply and subtract
+static inline Vec2d mul_sub(Vec2d const & a, Vec2d const & b, Vec2d const & c) {
+#ifdef __FMA__
+    return _mm_fmsub_pd(a, b, c);
+#elif defined (__FMA4__)
+    return _mm_msub_pd(a, b, c);
+#else
+    return a * b - c;
+#endif
+}
+
+// Multiply and inverse subtract
+static inline Vec2d nmul_add(Vec2d const & a, Vec2d const & b, Vec2d const & c) {
+#ifdef __FMA__
+    return _mm_fnmadd_pd(a, b, c);
+#elif defined (__FMA4__)
+    return _mm_nmacc_pd(a, b, c);
+#else
+    return c - a * b;
+#endif
+}
+
+
+// Multiply and subtract with extra precision on the intermediate calculations, 
+// even if FMA instructions not supported, using Veltkamp-Dekker split
+static inline Vec2d mul_sub_x(Vec2d const & a, Vec2d const & b, Vec2d const & c) {
+#ifdef __FMA__
+    return _mm_fmsub_pd(a, b, c);
+#elif defined (__FMA4__)
+    return _mm_msub_pd(a, b, c);
+#else
+    // calculate a * b - c with extra precision
+    Vec2q upper_mask = -(1LL << 27);                       // mask to remove lower 27 bits
+    Vec2d a_high = a & Vec2d(_mm_castsi128_pd(upper_mask));// split into high and low parts
+    Vec2d b_high = b & Vec2d(_mm_castsi128_pd(upper_mask));
+    Vec2d a_low  = a - a_high;
+    Vec2d b_low  = b - b_high;
+    Vec2d r1 = a_high * b_high;                            // this product is exact
+    Vec2d r2 = r1 - c;                                     // subtract c from high product
+    Vec2d r3 = r2 + (a_high * b_low + b_high * a_low) + a_low * b_low; // add rest of product
+    return r3; // + ((r2 - r1) + c);
+#endif
+}
+
+
 // Math functions using fast bit manipulation
 
 // Extract the exponent as an integer
@@ -1985,7 +2144,7 @@ static inline Vec2d exp2(Vec2q const & n) {
     Vec2q t4 = t3 << 52;               // put exponent into position 52
     return _mm_castsi128_pd(t4);       // reinterpret as double
 }
-static Vec2d exp2(Vec2d const & x); // defined in vectormath_exp.h
+//static Vec2d exp2(Vec2d const & x); // defined in vectormath_exp.h
 
 
 // Categorization functions
@@ -2414,23 +2573,22 @@ static inline Vec2d gather2d(void const * a) {
 *****************************************************************************/
 
 // Get index to the first element that is true. Return -1 if all are false
-//BQM: commented out due to clang compiling error
-//static inline int horizontal_find_first(Vec4fb const & x) {
-//    return horizontal_find_first(Vec4ib(x));
-//}
-//
-//static inline int horizontal_find_first(Vec2db const & x) {
-//    return horizontal_find_first(Vec2qb(x));
-//}
-//
-//// Count the number of elements that are true
-//static inline uint32_t horizontal_count(Vec4fb const & x) {
-//    return horizontal_count(Vec4ib(x));
-//}
-//
-//static inline uint32_t horizontal_count(Vec2db const & x) {
-//    return horizontal_count(Vec2qb(x));
-//}
+static inline int horizontal_find_first(Vec4fb const & x) {
+    return horizontal_find_first(Vec4ib(x));
+}
+
+static inline int horizontal_find_first(Vec2db const & x) {
+    return horizontal_find_first(Vec2qb(x));
+}
+
+// Count the number of elements that are true
+static inline uint32_t horizontal_count(Vec4fb const & x) {
+    return horizontal_count(Vec4ib(x));
+}
+
+static inline uint32_t horizontal_count(Vec2db const & x) {
+    return horizontal_count(Vec2qb(x));
+}
 
 /*****************************************************************************
 *
@@ -2439,10 +2597,9 @@ static inline Vec2d gather2d(void const * a) {
 *****************************************************************************/
 
 // to_bits: convert boolean vector to integer bitfield
-//BQM: commented out due to clang compiling error
-//static inline uint8_t to_bits(Vec4fb const & x) {
-//    return to_bits(Vec4ib(x));
-//}
+static inline uint8_t to_bits(Vec4fb const & x) {
+    return to_bits(Vec4ib(x));
+}
 
 // to_Vec4fb: convert integer bitfield to boolean vector
 static inline Vec4fb to_Vec4fb(uint8_t x) {
@@ -2450,10 +2607,9 @@ static inline Vec4fb to_Vec4fb(uint8_t x) {
 }
 
 // to_bits: convert boolean vector to integer bitfield
-//BQM: commented out due to clang compiling error
-//static inline uint8_t to_bits(Vec2db const & x) {
-//    return to_bits(Vec2qb(x));
-//}
+static inline uint8_t to_bits(Vec2db const & x) {
+    return to_bits(Vec2qb(x));
+}
 
 // to_Vec2db: convert integer bitfield to boolean vector
 static inline Vec2db to_Vec2db(uint8_t x) {

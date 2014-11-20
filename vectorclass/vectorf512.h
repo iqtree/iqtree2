@@ -1,8 +1,8 @@
 /****************************  vectorf512.h   *******************************
 * Author:        Agner Fog
 * Date created:  2014-07-23
-* Last modified: 2014-07-23
-* Version:       1.14
+* Last modified: 2014-10-22
+* Version:       1.16
 * Project:       vector classes
 * Description:
 * Header file defining floating point vector classes as interface to intrinsic 
@@ -37,7 +37,7 @@
 #include "vectori512.h"
 
 // Define missing intrinsic functions
-#if defined (GCC_VERSION) && GCC_VERSION < 41100 && !defined(__INTEL_COMPILER) && !defined(__clang__)
+#if defined (GCC_VERSION) && GCC_VERSION < 41102 && !defined(__INTEL_COMPILER) && !defined(__clang__)
 
 static inline __m512 _mm512_castpd_ps(__m512d x) {
     union {
@@ -146,10 +146,21 @@ public:
     Vec16fb (Vec16b x) {
         m16 = x;
     }
+    // Constructor to build from all elements:
+    Vec16fb(bool x0, bool x1, bool x2, bool x3, bool x4, bool x5, bool x6, bool x7,
+        bool x8, bool x9, bool x10, bool x11, bool x12, bool x13, bool x14, bool x15) :
+        Vec16b(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15) {
+    }
     // Constructor to convert from type __mmask16 used in intrinsics:
     Vec16fb (__mmask16 x) {
         m16 = x;
     }
+    // Constructor to broadcast single value:
+    Vec16fb(bool b) : Vec16b(b) {}
+private: // Prevent constructing from int, etc.
+    Vec16fb(int b);
+public:
+    // Constructor to make from two halves
     Vec16fb (Vec8fb const & x0, Vec8fb const & x1) {
         m16 = Vec16b(Vec8ib(x0), Vec8ib(x1));
     }
@@ -158,6 +169,14 @@ public:
         m16 = x;
         return *this;
     }
+    // Assignment operator to broadcast scalar value:
+    Vec16fb & operator = (bool b) {
+        m16 = Vec16b(b);
+        return *this;
+    }
+private: // Prevent assigning int because of ambiguity
+    Vec16fb & operator = (int x);
+public:
 };
 
 // Define operators for Vec16fb
@@ -218,13 +237,17 @@ static inline Vec16fb & operator ^= (Vec16fb & a, Vec16fb b) {
 *
 *****************************************************************************/
 
-class Vec8db : public Vec16b {
+class Vec8db : public Vec8b {
 public:
     // Default constructor:
     Vec8db () {
     }
     Vec8db (Vec16b x) {
         m16 = x;
+    }
+    // Constructor to build from all elements:
+    Vec8db(bool x0, bool x1, bool x2, bool x3, bool x4, bool x5, bool x6, bool x7) :
+        Vec8b(x0, x1, x2, x3, x4, x5, x6, x7) {
     }
     // Constructor to convert from type __mmask8 used in intrinsics:
     Vec8db (__mmask8 x) {
@@ -239,6 +262,17 @@ public:
         m16 = x;
         return *this;
     }
+    // Constructor to broadcast single value:
+    Vec8db(bool b) : Vec8b(b) {}
+    // Assignment operator to broadcast scalar:
+    Vec8db & operator = (bool b) {
+        m16 = Vec8b(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec8db(int b);
+    Vec8db & operator = (int x);
+public:
     static int size () {
         return 8;
     }
@@ -662,24 +696,19 @@ static inline Vec16f square(Vec16f const & a) {
 }
 
 // pow(Vec16f, int):
+template <typename TT> static Vec16f pow(Vec16f const & a, TT n);
+
 // Raise floating point numbers to integer power n
-static inline Vec16f pow(Vec16f const & a, int n) {
-    Vec16f x = a;                      // a^(2^i)
-    Vec16f y(1.0f);                    // accumulator
-    if (n >= 0) {                      // make sure n is not negative
-        while (true) {                 // loop for each bit in n
-            if (n & 1) y *= x;         // multiply if bit = 1
-            n >>= 1;                   // get next bit of n
-            if (n == 0) return y;      // finished
-            x *= x;                    // x = a^2, a^4, a^8, etc.
-        }
-    }
-    else {                             // n < 0
-        return Vec16f(1.0f)/pow(x,-n); // reciprocal
-    }
+template <>
+inline Vec16f pow<int>(Vec16f const & x0, int n) {
+    return pow_template_i<Vec16f>(x0, n);
 }
-// prevent implicit conversion of exponent to int
-static Vec16f pow(Vec16f const & x, float y);
+
+// allow conversion from unsigned int
+template <>
+inline Vec16f pow<uint32_t>(Vec16f const & x0, uint32_t n) {
+    return pow_template_i<Vec16f>(x0, (int)n);
+}
 
 
 // Raise floating point numbers to integer power n, where n is a compile-time constant
@@ -788,6 +817,29 @@ static inline Vec16f approx_rsqrt(Vec16f const & a) {
 }
 
 
+// Fused multiply and add functions
+
+// Multiply and add
+static inline Vec16f mul_add(Vec16f const & a, Vec16f const & b, Vec16f const & c) {
+    return _mm512_fmadd_ps(a, b, c);
+}
+
+// Multiply and subtract
+static inline Vec16f mul_sub(Vec16f const & a, Vec16f const & b, Vec16f const & c) {
+    return _mm512_fmsub_ps(a, b, c);
+}
+
+// Multiply and inverse subtract
+static inline Vec16f nmul_add(Vec16f const & a, Vec16f const & b, Vec16f const & c) {
+    return _mm512_fnmadd_ps(a, b, c);
+}
+
+// Multiply and subtract with extra precision on the intermediate calculations, 
+static inline Vec16f mul_sub_x(Vec16f const & a, Vec16f const & b, Vec16f const & c) {
+    return _mm512_fmsub_ps(a, b, c);
+}
+
+
 // Math functions using fast bit manipulation
 
 // Extract the exponent as an integer
@@ -827,8 +879,7 @@ static inline Vec16f exp2(Vec16i const & n) {
     Vec16i t4 = t3 << 23;               // put exponent into position 23
     return _mm512_castsi512_ps(t4);     // reinterpret as float
 }
-
-static Vec16f exp2(Vec16f const & x); // defined in vectormath_exp.h
+//static Vec16f exp2(Vec16f const & x); // defined in vectormath_exp.h
 
 
 
@@ -1296,24 +1347,19 @@ static inline Vec8d square(Vec8d const & a) {
 }
 
 // pow(Vec8d, int):
+template <typename TT> static Vec8d pow(Vec8d const & a, TT n);
+
 // Raise floating point numbers to integer power n
-static inline Vec8d pow(Vec8d const & a, int n) {
-    Vec8d x = a;                       // a^(2^i)
-    Vec8d y(1.0);                      // accumulator
-    if (n >= 0) {                      // make sure n is not negative
-        while (true) {                 // loop for each bit in n
-            if (n & 1) y *= x;         // multiply if bit = 1
-            n >>= 1;                   // get next bit of n
-            if (n == 0) return y;      // finished
-            x *= x;                    // x = a^2, a^4, a^8, etc.
-        }
-    }
-    else {                             // n < 0
-        return Vec8d(1.0)/pow(x,-n);   // reciprocal
-    }
+template <>
+inline Vec8d pow<int>(Vec8d const & x0, int n) {
+    return pow_template_i<Vec8d>(x0, n);
 }
-// prevent implicit conversion of exponent to int
-static Vec8d pow(Vec8d const & x, double y);
+
+// allow conversion from unsigned int
+template <>
+inline Vec8d pow<uint32_t>(Vec8d const & x0, uint32_t n) {
+    return pow_template_i<Vec8d>(x0, (int)n);
+}
 
 
 // Raise floating point numbers to integer power n, where n is a compile-time constant
@@ -1470,6 +1516,30 @@ static inline Vec8d extend_high (Vec16f const & a) {
     return _mm512_cvtps_pd(a.get_high());
 }
 
+
+// Fused multiply and add functions
+
+// Multiply and add
+static inline Vec8d mul_add(Vec8d const & a, Vec8d const & b, Vec8d const & c) {
+    return _mm512_fmadd_pd(a, b, c);
+}
+
+// Multiply and subtract
+static inline Vec8d mul_sub(Vec8d const & a, Vec8d const & b, Vec8d const & c) {
+    return _mm512_fmsub_pd(a, b, c);
+}
+
+// Multiply and inverse subtract
+static inline Vec8d nmul_add(Vec8d const & a, Vec8d const & b, Vec8d const & c) {
+    return _mm512_fnmadd_pd(a, b, c);
+}
+
+// Multiply and subtract with extra precision on the intermediate calculations, 
+static inline Vec8d mul_sub_x(Vec8d const & a, Vec8d const & b, Vec8d const & c) {
+    return _mm512_fmsub_pd(a, b, c);
+}
+
+
 // Math functions using fast bit manipulation
 
 // Extract the exponent as an integer
@@ -1502,7 +1572,7 @@ static inline Vec8d exp2(Vec8q const & n) {
     Vec8q t4 = t3 << 52;               // put exponent into position 52
     return _mm512_castsi512_pd(t4);    // reinterpret as double
 }
-static Vec8d exp2(Vec8d const & x); // defined in vectormath_exp.h
+//static Vec8d exp2(Vec8d const & x); // defined in vectormath_exp.h
 
 
 // Categorization functions
