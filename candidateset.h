@@ -83,14 +83,14 @@ public:
      *  @param numTree number of best trees
      *  @return a list of tree
      */
-    vector<string> getBestTrees(int numTree = 0);
+    vector<string> getBestTreeStrings(int numTree = 0);
 
     /**
      * get tree(s) with highest score. More than one tree is
      * returned if there are multiple optima.
      * @return a vector containing optimal trees
      */
-    vector<string> getBestTree();
+    vector<string> getBestTreeString();
 
     /**
      * destructor
@@ -148,11 +148,11 @@ public:
     void clear();
 
     /**
-     * Only keep up to \a numTress best trees in the set
+     * Return a CandidateSet containing \a numTrees of current best candidate trees
      * @param numTrees
-     * @return number of trees actually removed
+     * @return
      */
-    int retainBestTrees(int numTrees);
+    CandidateSet getBestCandidateTrees(int numTrees);
 
 };
 

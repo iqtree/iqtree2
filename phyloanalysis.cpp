@@ -1215,7 +1215,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     cout << "CPU time: " << parsTime << endl;
     cout << "Computing log-likelihood of the parsimony trees ... " << endl;
     startTime = getCPUTime();
-    vector<string> unOptParTrees = iqtree.candidateTrees.getBestTrees(numInitTrees);
+    vector<string> unOptParTrees = iqtree.candidateTrees.getBestTreeStrings(numInitTrees);
     for (vector<string>::iterator it = unOptParTrees.begin()+1; it != unOptParTrees.end(); it++) {
     	iqtree.readTreeString(*it);
         // Initialize branch lengths for the parsimony tree
@@ -1240,7 +1240,8 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     double loglTime = getCPUTime() - startTime;
     cout << "CPU time: " << loglTime << endl;
 
-    int numNNITrees = iqtree.candidateTrees.retainBestTrees(params.numNNITrees);
+    CandidateSet initParsimonyTrees = iqtree.candidateTrees.getBestCandidateTrees(params.numNNITrees);
+    iqtree.candidateTrees.clear();
     if (verbose_mode >= VB_MED) {
         for (multimap<double, CandidateTree>::iterator it = iqtree.candidateTrees.begin(); it != iqtree.candidateTrees.end(); it++) {
         	cout << it->first << " / " << it->second.topology << endl;
@@ -1252,12 +1253,12 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     /************ END: Create a set of up to (numInitTrees - 1) unique parsimony trees **********************/
 
     cout << endl;
-    cout << "Optimizing top "<< numNNITrees << " parsimony trees with NNI..." << endl;
+    cout << "Optimizing top "<< initParsimonyTrees.size() << " parsimony trees with NNI..." << endl;
     startTime = getCPUTime();
     /*********** START: Do NNI on the best parsimony trees ************************************/
     CandidateSet::reverse_iterator rit;
     iqtree.setCurIt(1);
-    for (rit = iqtree.candidateTrees.rbegin(); rit != iqtree.candidateTrees.rend(); ++rit, iqtree.setCurIt(iqtree.getCurIt() + 1)) {
+    for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); ++rit, iqtree.setCurIt(iqtree.getCurIt() + 1)) {
     	int nniCount, nniStep;
         double initLogl, nniLogl;
         string tree;
@@ -1298,7 +1299,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         }
     }
     double nniTime = getCPUTime() - startTime;
-    cout << "Average time for 1 NNI search: " << nniTime / numNNITrees << endl;
+    cout << "Average time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
     return numDup;
 }
 
@@ -1717,7 +1718,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
 
-	vector<string> trees = iqtree.candidateTrees.getBestTrees();
+	vector<string> trees = iqtree.candidateTrees.getBestTreeStrings();
 	ofstream treesOut((string(params.out_prefix) + ".trees").c_str(), ofstream::out);
 	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++)
 		treesOut << (*it) << endl;
