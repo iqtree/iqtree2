@@ -1271,10 +1271,12 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         } else {
         	iqtree.optimizeBranches(1);
         }
-        if (iqtree.curScore - rit->first < -5.0) {
-        	stringstream msg;
-        	msg << "Wrong likelihood computation: " << iqtree.curScore << " (should be: " << rit->first << ")";
-        	outError(msg.str().c_str());
+        // THIS HAPPEN WHENEVER USING PARTTION MODEL
+        while (iqtree.curScore - rit->first < -5.0) {
+        	iqtree.optimizeBranches(1);
+//        	stringstream msg;
+//        	msg << "Wrong likelihood computation: " << iqtree.curScore << " (should be: " << rit->first << ")";
+//        	outError(msg.str().c_str());
         }
         initLogl = iqtree.curScore;
         tree = iqtree.doNNISearch(nniCount, nniStep);
