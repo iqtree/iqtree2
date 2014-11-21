@@ -33,6 +33,7 @@
 #include "pll/pll.h"
 #include "pllnni.h"
 #include "candidateset.h"
+#include "searchinfo.h"
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -70,11 +71,6 @@ struct IntBranchInfo {
     PhyloNode *node2;
     double lh_contribution; // log-likelihood contribution of this branch: L(T)-L(T|e=0)
 };
-
-typedef struct  {
-	bool speedNNI;
-	bool reduction;
-} iqtreeSearchInfo;
 
 inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
     return (a.lh_contribution < b.lh_contribution);
@@ -304,7 +300,7 @@ public:
      *      @param nniCount (OUT) number of NNIs applied
      * 		@param nniSteps (OUT) number of NNI steps done
      */
-    double pllOptimizeNNI(int &nniCount, int &nniSteps, searchInfo &searchinfo);
+    double pllOptimizeNNI(int &nniCount, int &nniSteps, pllNNIInfo &searchinfo);
 
     /**
      * 		@brief Perform NNI search on the current tree topology
@@ -505,9 +501,14 @@ public:
     partitionList * pllPartitions;
 
     /**
-     *  information and parameters for the tree search using PLL
+     *  information and parameters for the tree search using PLL kernel
      */
-    searchInfo pllSearchInfo;
+    pllNNIInfo pllInfo;
+
+    /**
+     *  information and parameters for the tree search using IQ-TREE kernel
+     */
+    SearchInfo searchInfo;
 
     /**
      *  Vector contains number of NNIs used at each iterations
@@ -561,13 +562,14 @@ public:
    void pllConvertUFBootData2IQTree();
 
 protected:
-   	iqtreeSearchInfo iqtreeSearchinfo;
+
+
 
    	/**
    	 * Maximum number of NNI steps performed in optimizeNNI
    	 * Default value = (numTaxa - 3)
    	 */
-	int maxNNISteps;
+	//int maxNNISteps;
 
 	/**
 	 *  Current IQPNNI iteration number

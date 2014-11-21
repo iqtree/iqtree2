@@ -654,7 +654,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.maxCandidates = 100;
+    params.maxCandidates = 1000;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -745,7 +745,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.new_heuristic = true;
     params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.initPerStrength = 0.5;
+    params.initPS = 0.5;
     params.pll = false;
     params.modeps = 0.001;
     params.parbran = false;
@@ -1526,7 +1526,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -pers <perturbation_strength>";
-				params.initPerStrength = convert_double(argv[cnt]);
+				params.initPS = convert_double(argv[cnt]);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-n") == 0) {
@@ -2250,6 +2250,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.snni = false;
 				params.start_tree = STT_BIONJ;
 				params.reduction = false;
+				params.numNNITrees = 1;
 //            continue; } if (strcmp(argv[cnt], "-auto") == 0) {
 //            	params.autostop = true;
 				continue;

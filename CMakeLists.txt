@@ -359,6 +359,7 @@ graph.cpp
 modelmorphology.cpp
 candidateset.cpp
 checkpoint.cpp
+searchinfo.cpp
 )
 
 ##################################################################

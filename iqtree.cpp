@@ -74,14 +74,20 @@ IQTree::IQTree(Alignment *aln) : PhyloTree(aln) {
     init();
 }
 void IQTree::setParams(Params &params) {
-    pllSearchInfo.speednni = params.speednni;
-    pllSearchInfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
     candidateTrees.setAln(aln);
     candidateTrees.setPopSize(params.popSize);
     candidateTrees.setMaxCandidates(params.maxCandidates);
     candidateTrees.setIsRooted(rooted);
-    maxNNISteps = aln->getNSeq() - 3;
+    int maxNNISteps = aln->getNSeq() - 3;
+
+	if (params.pll) {
+	    pllInfo.speednni = params.speednni;
+	    pllInfo.nni_type = params.nni_type;
+	    pllInfo.maxNNISteps = maxNNISteps;
+	}
+
+	searchInfo.init(params.nni5, params.initPS, maxNNISteps, params.reduction, params.speednni);
 
     sse = params.SSE;
 //    if (params.maxtime != 1000000) {
@@ -1350,7 +1356,7 @@ double IQTree::doTreeSearch() {
     string best_tree_topo = bestTopoStream.str();
 
     stop_rule.addImprovedIteration(1);
-    pllSearchInfo.curPerStrength = params->initPerStrength;
+    pllInfo.curPerStrength = params->initPS;
 
 	double cur_correlation = 0.0;
 
@@ -1358,7 +1364,7 @@ double IQTree::doTreeSearch() {
 	 * MAIN LOOP OF THE IQ-TREE ALGORITHM
 	 *====================================================*/
     for (curIt = params->numNNITrees + 1; !stop_rule.meetStopCondition(curIt, cur_correlation); curIt++) {
-        pllSearchInfo.curIter = curIt;
+        pllInfo.curIter = curIt;
         // estimate logl_cutoff for bootstrap
         if (params->avoid_duplicated_trees && max_candidate_trees > 0 && treels_logl.size() > 1000) {
         	int predicted_iteration = ((curIt+params->step_iterations-1)/params->step_iterations)*params->step_iterations;
@@ -1406,7 +1412,7 @@ double IQTree::doTreeSearch() {
             curScore = optimizeAllBranches();
         } else {
             if (params->snni) {
-                int numNNI = floor(pllSearchInfo.curPerStrength * (aln->getNSeq() - 3));
+                int numNNI = floor(pllInfo.curPerStrength * (aln->getNSeq() - 3));
                 //cout << "candidateTrees.size() = " << candidateTrees.size() << endl;
                 string candidateTree = candidateTrees.getRandCandTree();
                 readTreeString(candidateTree);
@@ -1511,7 +1517,7 @@ double IQTree::doTreeSearch() {
                 cout << "BETTER TREE FOUND at iteration " << curIt << ": " << curScore;
                 cout << " / CPU time: " << (int) round(getCPUTime() - params->startCPUTime) << "s" << endl << endl;
                 if (curScore > bestScore) {
-                    pllSearchInfo.curPerStrength = params->initPerStrength;
+                    pllInfo.curPerStrength = params->initPS;
                 }
             } else {
                 cout << "UPDATE BEST LOG-LIKELIHOOD: " << curScore << endl;
@@ -1592,14 +1598,16 @@ double IQTree::doTreeSearch() {
  ****************************************************************************/
 string IQTree::doNNISearch(int& nniCount, int& nniSteps) {
 	string treeString;
+	searchInfo.setNniOptimal(false);
     if (params->pll) {
     	if (params->partition_file)
     		outError("Unsupported -pll -sp combination!");
-        curScore = pllOptimizeNNI(nniCount, nniSteps, pllSearchInfo);
+        curScore = pllOptimizeNNI(nniCount, nniSteps, pllInfo);
         pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
                 PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
         treeString = string(pllInst->tree_string);
         readTreeString(treeString);
+        searchInfo.setNniOptimal(true);
     } else {
         curScore = optimizeNNI(nniCount, nniSteps);
         if (isSuperTree()) {
@@ -1607,6 +1615,7 @@ string IQTree::doNNISearch(int& nniCount, int& nniSteps) {
         }
         treeString = generateNewick();
     }
+    candidateTrees.update(treeString, curScore, searchInfo.isNniOptimal());
     return treeString;
 }
 
@@ -1614,13 +1623,13 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     bool rollBack = false;
     nni_count = 0;
     int numNNIs = 0; // number of NNI to be applied in each step
-    for (nni_steps = 1; nni_steps <= maxNNISteps; nni_steps++) {
+    for (nni_steps = 1; nni_steps <= searchInfo.getMaxNniSteps(); nni_steps++) {
     	if (params->reduction) {
         	if (candidateTrees.treeTopologyExist(generateNewickTopology())) {
-        		//cout << "Tree existed, stop NNI search." << endl;
+        		searchInfo.setNumDup(searchInfo.getNumDup() + 1);
         		break;
         	} else {
-        		candidateTrees.update(generateNewick(), curScore, false);
+        		candidateTrees.update(generateNewick(), curScore, searchInfo.isNniOptimal());
         	}
     	}
         double oldScore = curScore;
@@ -1641,10 +1650,12 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             plusNNIs.clear(); // Vector containing all positive NNIs
             saveBranches(); // save all current branch lengths
             initPartitionInfo(); // for super tree
-            if (pllSearchInfo.speednni && !brans2Eval.empty())
+            if (searchInfo.isSpeedNni() && !brans2Eval.empty()) {
               evalNNIs(brans2Eval);
-            else
+              //cout << "Speed NNI enabled" << endl;
+            } else {
               evalNNIs();
+            }
 
             /* sort all positive NNI moves (descending) */
             sort(plusNNIs.begin(), plusNNIs.end());
@@ -1656,6 +1667,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             }
 
             if (plusNNIs.size() == 0) {
+            	searchInfo.setNniOptimal(true);
                 break;
             }
 
@@ -1671,11 +1683,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         // Apply all non-conflicting positive NNIs
         doNNIs(numNNIs);
 
-//        if (verbose_mode >= VB_MED) {
-//        	cout << "NNI step: " << nni_steps << " / Number of NNIs applied: " << numNNIs << endl;
-//        }
-
-        if (pllSearchInfo.speednni) {
+        if (searchInfo.isSpeedNni()) {
             brans2Eval.clear();
             updateBrans2Eval(appliedNNIs);
             appliedNNIs.clear();
@@ -1740,16 +1748,15 @@ void IQTree::updateBrans2Eval(vector<NNIMove> nnis) {
 }
 
 
-double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, searchInfo &searchinfo) {
+double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, pllNNIInfo &searchinfo) {
     if((globalParam->online_bootstrap == PLL_TRUE) && (globalParam->gbo_replicates > 0)) {
         pllInitUFBootData();
     }
     searchinfo.numAppliedNNIs = 0;
     searchinfo.curLogl = curScore;
     //cout << "curLogl: " << searchinfo.curLogl << endl;
-    const int MAX_NNI_STEPS = 50;
     totalNNICount = 0;
-    for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
+    for (nniSteps = 1; nniSteps <= pllInfo.maxNNISteps; nniSteps++) {
         searchinfo.curNumNNISteps = nniSteps;
         searchinfo.posNNIList.clear();
         double newLH = pllDoNNISearch(pllInst, pllPartitions, searchinfo);
@@ -1762,8 +1769,8 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, searchInfo &sea
         }
     }
 
-    if (nniSteps == (MAX_NNI_STEPS + 1)) {
-        cout << "WARNING: NNI search seems to run unusually too long and thus it was stopped!" << endl;
+    if (nniSteps == pllInfo.maxNNISteps) {
+        cout << "WARNING: NNI search seems to run unusually long and thus it was stopped!" << endl;
     }
 
     totalNNICount = searchinfo.numAppliedNNIs;

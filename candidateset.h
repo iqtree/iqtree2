@@ -159,17 +159,24 @@ public:
      */
     int computeSplitSupport(int numTree = 0);
 
+    /* Getter and Setter function */
 	void setAln(Alignment* aln);
 	int getMaxCandidates() const;
 	void setMaxCandidates(int maxCandidates);
 	int getPopSize() const;
 	void setPopSize(int popSize);
 	void setIsRooted(bool isRooted);
-	int getNumLocalOptTrees() const;
-
 	const StringDoubleHashMap& getTopologies() const {
 		return topologies;
 	}
+	/* Getter and Setter function */
+
+	/**
+	 * get number of locally optimal trees in the set
+	 * @return
+	 */
+	int getNumLocalOptTrees();
+
 
 private:
     /**
@@ -206,11 +213,6 @@ private:
 	 *  Inherit the rootness of tree from the IQ-TREE class
 	 */
 	bool isRooted;
-
-	/**
-	 *  Number of local optimal trees in the set
-	 */
-	int numLocalOptTrees;
 
 };
 

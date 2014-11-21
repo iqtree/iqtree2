@@ -17,7 +17,6 @@ CandidateSet::CandidateSet(int maxCandidates, int maxPop, Alignment *aln) {
     this->popSize = maxPop;
     this->aln = aln;
     this->bestScore = -DBL_MAX;
-    this->numLocalOptTrees = 0;
     this->isRooted = false;
 }
 
@@ -26,7 +25,6 @@ CandidateSet::CandidateSet() {
 	maxCandidates = 0;
 	popSize = 0;
 	bestScore = -DBL_MAX;
-	numLocalOptTrees = 0;
 	isRooted = false;
 }
 
@@ -52,8 +50,8 @@ string CandidateSet::getRandCandTree() {
 }
 
 vector<string> CandidateSet::getBestTrees(int numTree) {
-	if (numTree == 0 || numTree > numLocalOptTrees) {
-		numTree = numLocalOptTrees;
+	if (numTree == 0 || numTree > maxCandidates) {
+		numTree = maxCandidates;
 	}
 	vector<string> res;
 	int cnt = numTree;
@@ -130,12 +128,15 @@ bool CandidateSet::update(string tree, double score, bool localOpt) {
 	if (candidate.score > bestScore)
 		bestScore = candidate.score;
 	if (treeTopologyExist(candidate.topology)) {
-	    // if tree topology already exist, we replace the old one
-	    // by the new one (with new branch lengths) and update the score
-		if (topologies[candidate.topology] < score) {
+	    /* If tree topology already exist but the score is better, we replace the old one
+	    by the new one (with new branch lengths) and update the score */
+		if (topologies[candidate.topology] <= score) {
 			topologies[candidate.topology] = score;
 			for (CandidateSet::iterator i = begin(); i != end(); i++)
 				if (i->second.topology == candidate.topology) {
+					if (i->second.localOpt) {
+						candidate.localOpt = i->second.localOpt;
+					}
 					erase(i);
 					break;
 				}
@@ -156,8 +157,6 @@ bool CandidateSet::update(string tree, double score, bool localOpt) {
 			insert(CandidateSet::value_type(score, candidate));
 			topologies[candidate.topology] = score;
 		}
-		if (localOpt && numLocalOptTrees < maxCandidates)
-			numLocalOptTrees++;
 	}
 	return newTree;
 }
@@ -245,6 +244,12 @@ void CandidateSet::setIsRooted(bool isRooted) {
 	this->isRooted = isRooted;
 }
 
-int CandidateSet::getNumLocalOptTrees() const {
-	return numLocalOptTrees;
+int CandidateSet::getNumLocalOptTrees() {
+	int numLocalOptima = 0;
+	for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+		if (rit->second.localOpt) {
+			numLocalOptima++;
+		}
+	}
+	return numLocalOptima;
 }

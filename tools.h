@@ -448,7 +448,7 @@ struct Params {
 	/**
 	 *  portion of NNI used for perturbing the tree
 	 */
-	double initPerStrength;
+	double initPS;
 
 	/**
 	 *  logl epsilon for the final model parameter optimization
