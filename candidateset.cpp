@@ -20,6 +20,9 @@ CandidateSet::CandidateSet(int maxCandidates, int maxPop, Alignment *aln) {
     this->isRooted = false;
 }
 
+CandidateSet::~CandidateSet() {
+}
+
 CandidateSet::CandidateSet() {
 	aln = NULL;
 	maxCandidates = 0;
@@ -188,10 +191,26 @@ string CandidateSet::getTopology(string tree) {
 
 void CandidateSet::clear() {
 	multimap<double, CandidateTree>::clear();
+	clearTopologies();
+}
+
+void CandidateSet::clearTopologies() {
 	topologies.clear();
 }
 
-CandidateSet::~CandidateSet() {
+
+int CandidateSet::retainBestTrees(int numTrees) {
+	assert(numTrees <= maxCandidates);
+	int cnt = 0;
+	int numDel;
+	if (numTrees >= size())
+		numDel = 0;
+	else
+		numDel = size() - numTrees;
+	for (CandidateSet::iterator i = begin(); i != end() && numDel > 0; i++, numDel--) {
+		erase(i);
+	}
+	return size();
 }
 
 bool CandidateSet::treeTopologyExist(string topo) {

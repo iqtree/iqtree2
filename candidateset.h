@@ -153,6 +153,11 @@ public:
     void clear();
 
     /**
+     *  Empty the \a topologies data structure;
+     */
+    void clearTopologies();
+
+    /**
      * Compute the split support from the \a numTree best local optimal trees in the candidate sets
      * @param numTree the number of best trees used to calculate support values
      * @return number of splits with 100% support value
@@ -176,6 +181,13 @@ public:
 	 * @return
 	 */
 	int getNumLocalOptTrees();
+
+    /**
+     * Only keep up to \a numTress best trees in the set
+     * @param numTrees
+     * @return number of trees actually removed
+     */
+    int retainBestTrees(int numTrees);
 
 
 private:
@@ -213,7 +225,6 @@ private:
 	 *  Inherit the rootness of tree from the IQ-TREE class
 	 */
 	bool isRooted;
-
 };
 
 #endif /* CANDIDATESET_H_ */
