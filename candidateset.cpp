@@ -31,7 +31,7 @@ CandidateSet::CandidateSet() {
 	isRooted = false;
 }
 
-vector<string> CandidateSet::getBestTree() {
+vector<string> CandidateSet::getBestTreeString() {
 	vector<string> res;
 	for (reverse_iterator rit = rbegin(); rit != rend() && rit->second.score == bestScore; rit++) {
 		res.push_back(rit->second.tree);
@@ -42,18 +42,17 @@ vector<string> CandidateSet::getBestTree() {
 string CandidateSet::getRandCandTree() {
 	if (empty())
 		return "";
-	// BQM: bug fix max -> min
 	int id = random_int(min(popSize, (int)size()) );
-	//int id = randint(0, min(max_candidates, (int)size()));
-	//int id = 0 + (rand() % (int)( min(max_candidates, (int)size())) );
 	for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
 		if (id == 0)
 			return i->second.tree;
 	return "";
 }
 
-vector<string> CandidateSet::getBestTrees(int numTree) {
-	if (numTree == 0 || numTree > maxCandidates) {
+
+vector<string> CandidateSet::getBestTreeStrings(int numTree) {
+	assert(numTree <= maxCandidates);
+	if (numTree == 0) {
 		numTree = maxCandidates;
 	}
 	vector<string> res;
@@ -152,7 +151,7 @@ bool CandidateSet::update(string tree, double score, bool localOpt) {
 			// insert tree into candidate set
 			insert(CandidateSet::value_type(score, candidate));
 			topologies[candidate.topology] = score;
-		} else if (begin()->first < score){
+		} else if (getWorstScore() < score){
 			// remove the worst-scoring tree
 			topologies.erase(begin()->second.topology);
 			erase(begin());
@@ -199,18 +198,14 @@ void CandidateSet::clearTopologies() {
 }
 
 
-int CandidateSet::retainBestTrees(int numTrees) {
-	assert(numTrees <= maxCandidates);
-	int cnt = 0;
-	int numDel;
+CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
+	CandidateSet res;
 	if (numTrees >= size())
-		numDel = 0;
-	else
-		numDel = size() - numTrees;
-	for (CandidateSet::iterator i = begin(); i != end() && numDel > 0; i++, numDel--) {
-		erase(i);
+		numTrees = size();
+	for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; rit++, numTrees--) {
+		res.insert(*rit);
 	}
-	return size();
+	return res;
 }
 
 bool CandidateSet::treeTopologyExist(string topo) {
