@@ -1270,7 +1270,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         } else {
         	iqtree.optimizeBranches(1);
         }
-        if (abs(iqtree.curScore - rit->first) > 1.0) {
+        if (iqtree.curScore - rit->first < -5.0) {
         	stringstream msg;
         	msg << "Wrong likelihood computation: " << iqtree.curScore << " (should be: " << rit->first << ")";
         	outError(msg.str().c_str());
