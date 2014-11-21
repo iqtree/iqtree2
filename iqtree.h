@@ -733,6 +733,14 @@ public:
     /** reinsert identical sequences into the tree and reset original alignment */
     virtual void reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs);
 
+	int getCurIt() const {
+		return curIt;
+	}
+
+	void setCurIt(int curIt) {
+		this->curIt = curIt;
+	}
+
 protected:
     /**** NNI cutoff heuristic *****/
     /**

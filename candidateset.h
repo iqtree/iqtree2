@@ -142,6 +142,18 @@ public:
      */
     string getTopology(string tree);
 
+    /**
+     *  Empty the candidate set
+     */
+    void clear();
+
+    /**
+     * Only keep up to \a numTress best trees in the set
+     * @param numTrees
+     * @return number of trees actually removed
+     */
+    int retainBestTrees(int numTrees);
+
 };
 
 #endif /* CANDIDATESET_H_ */
