@@ -607,9 +607,9 @@ struct Params {
 
     /**
      * 		defines the relation between edge lengths in supertree and subtrees
-     * 		0 for separate edge length (default)
-     * 		p for proportional edge length
-     * 		j for joint edge length
+     * 		0 (NULL) for separate edge length (default)
+     * 		'p' for proportional edge length
+     * 		'j' for joint edge length
      */
     char partition_type;
 

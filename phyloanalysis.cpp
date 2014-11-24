@@ -1266,12 +1266,13 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         //cout << rit->second.tree << endl;
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
-        if (!iqtree.isSuperTree()) {
-            iqtree.computeLogL();
-        } else {
-        	iqtree.optimizeBranches(1);
-        }
-        // THIS HAPPEN WHENEVER USING PARTTION MODEL
+        iqtree.computeLogL();
+//        if (iqtree.isSuperTree() && params.partition_type == 0) {
+//        	iqtree.optimizeBranches(1);
+//        } else {
+//            iqtree.computeLogL();
+//        }
+        // THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
         while (iqtree.curScore - rit->first < -5.0) {
         	iqtree.optimizeBranches(1);
 //        	stringstream msg;
