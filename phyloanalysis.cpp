@@ -843,7 +843,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 	if (params.compute_ml_tree) {
 		cout << "  Maximum-likelihood tree:       " << params.out_prefix
 				<< ".treefile" << endl;
-		cout << "  Locally optimal trees (" << tree.candidateTrees.size() << "):    " << params.out_prefix << ".trees" << endl;
+		if (params.write_local_optimal_trees)
+		cout << "  Local optimal trees (" << tree.candidateTrees.size() << "):      " << params.out_prefix << ".localtrees" << endl;
 	}
 	if (!params.user_file && params.start_tree == STT_BIONJ) {
 		cout << "  BIONJ tree:               " << params.out_prefix << ".bionj"
@@ -1721,10 +1722,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
 
-	vector<string> trees = iqtree.candidateTrees.getBestTreeStrings();
-	ofstream treesOut((string(params.out_prefix) + ".trees").c_str(), ofstream::out);
-	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++)
-		treesOut << (*it) << endl;
+	if (params.write_local_optimal_trees) {
+		vector<string> trees = iqtree.candidateTrees.getBestTreeStrings();
+		ofstream treesOut((string(params.out_prefix) + ".localtrees").c_str(), ofstream::out);
+		for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++)
+			treesOut << (*it) << endl;
+	}
 
 	if (params.pll)
 		iqtree.inputModelPLL2IQTree();

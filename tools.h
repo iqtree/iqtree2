@@ -1131,7 +1131,7 @@ struct Params {
     /**
      *  Write out all candidate trees (the locally optimal trees)
      */
-    int write_candidate_trees;
+    int write_local_optimal_trees;
 
     /**
         TRUE to avoid duplicated trees while writing intermediate trees
