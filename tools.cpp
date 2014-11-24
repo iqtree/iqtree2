@@ -746,7 +746,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_best_trees = false;
     params.iteration_multiple = 1;
     params.initPerStrength = 0.5;
+#ifdef USING_PLL
+    params.pll = true;
+#else
     params.pll = false;
+#endif
     params.modeps = 0.001;
     params.parbran = false;
     params.binary_aln_file = NULL;

@@ -121,6 +121,16 @@ else()
 	message("Compiler      : Unknown and untested yet")
 endif()
 
+set(EXE_SUFFIX "")
+
+##################################################################
+# Configure PLL build
+##################################################################
+if (IQTREE_FLAGS MATCHES "pll")
+	add_definitions(-DUSING_PLL)
+	set(EXE_SUFFIX "${EXE_SUFFIX}-pll")
+endif()
+
 ##################################################################
 # detect 32 or 64 bit binary
 ##################################################################
@@ -131,13 +141,12 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
 	if (CMAKE_GENERATOR MATCHES "Win64")
 		error("Both 32-bit and 64-bit mode cannot be specified")
 	endif()
-	SET(EXE_SUFFIX "-m32")
+	SET(EXE_SUFFIX "${EXE_SUFFIX}-m32")
 	if (GCC OR CLANG) 
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} -m32")
   	endif()
 else()
 	message("Target binary : 64-bit")
-	SET(EXE_SUFFIX "")
 endif()
 
 ##################################################################
