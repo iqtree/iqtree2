@@ -1785,9 +1785,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.iqp = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wct") == 0) {
+			if (strcmp(argv[cnt], "-wlt") == 0) {
 				// write all candidate trees
-				params.write_candidate_trees = true;
+				params.write_local_optimal_trees = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wt") == 0) {

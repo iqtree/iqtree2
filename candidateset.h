@@ -83,14 +83,14 @@ public:
      *  @param numTree number of best trees
      *  @return a list of tree
      */
-    vector<string> getBestTrees(int numTree = 0);
+    vector<string> getBestTreeStrings(int numTree = 0);
 
     /**
      * get tree(s) with highest score. More than one tree is
      * returned if there are multiple optima.
      * @return a vector containing optimal trees
      */
-    vector<string> getBestTree();
+    vector<string> getBestTreeString();
 
     /**
      * destructor
@@ -141,6 +141,18 @@ public:
      * return a unique topology (sorted by taxon names, rooted at taxon with alphabetically smallest name) without branch lengths
      */
     string getTopology(string tree);
+
+    /**
+     *  Empty the candidate set
+     */
+    void clear();
+
+    /**
+     * Return a CandidateSet containing \a numTrees of current best candidate trees
+     * @param numTrees
+     * @return
+     */
+    CandidateSet getBestCandidateTrees(int numTrees);
 
 };
 
