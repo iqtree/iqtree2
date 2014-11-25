@@ -2212,7 +2212,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
     double *pattern_lh_orig = aligned_alloc_double(nptn);
     computePatternLikelihood(pattern_lh_orig, &cur_logl);
     for (int i = 0; i < nptn; i++)
-    	pattern_lh[i] = pattern_lh_orig[i];
+    	pattern_lh[i] = (float)pattern_lh_orig[i];
 #else
     computePatternLikelihood(pattern_lh, &cur_logl);
 #endif
@@ -2241,8 +2241,10 @@ void IQTree::saveCurrentTree(double cur_logl) {
 //            if (sse == LK_NORMAL || sse == LK_EIGEN) {
             if (false) {
             	BootValType *boot_sample = boot_samples[sample];
+            	BootValType rellll = 0.0;
 				for (ptn = 0; ptn < nptn; ptn++)
-					rell += pattern_lh[ptn] * boot_sample[ptn];
+					rellll += pattern_lh[ptn] * boot_sample[ptn];
+				rell = (double)rellll;
             } else {
             	// SSE optimized version of the above loop
 				BootValType *boot_sample = boot_samples[sample];
