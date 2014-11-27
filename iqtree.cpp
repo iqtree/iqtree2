@@ -1448,7 +1448,7 @@ double IQTree::doTreeSearch() {
                 if (isSuperTree()) {
                     ((PhyloSuperTree*) this)->mapTrees();
                 }
-                curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
+                curScore = optimizeAllBranches(params->numSmoothTree, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
                 perturbScore = curScore;
             }
         }

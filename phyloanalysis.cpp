@@ -1268,17 +1268,9 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         iqtree.computeLogL();
-//        if (iqtree.isSuperTree() && params.partition_type == 0) {
-//        	iqtree.optimizeBranches(1);
-//        } else {
-//            iqtree.computeLogL();
-//        }
         // THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
-        while (iqtree.curScore - rit->first < -5.0) {
+        while (iqtree.curScore - rit->first < -1.0) {
         	iqtree.optimizeBranches(1);
-//        	stringstream msg;
-//        	msg << "Wrong likelihood computation: " << iqtree.curScore << " (should be: " << rit->first << ")";
-//        	outError(msg.str().c_str());
         }
         initLogl = iqtree.curScore;
         tree = iqtree.doNNISearch(nniCount, nniStep);

@@ -19,7 +19,7 @@ struct CandidateTree {
 
 
 /**
- * Candidate tree set
+ * Candidate tree set, sorted in ascending order of scores, i.e. the last element is the highest scoring tree
  */
 class CandidateSet : public multimap<double, CandidateTree> {
 
