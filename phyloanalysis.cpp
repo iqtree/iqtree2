@@ -1624,28 +1624,31 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (params.min_iterations > 0) {
         double initTime = getCPUTime();
 
-        if (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY) {
+        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
         	int numDup = initCandidateTreeSet(params, iqtree, numInitTrees);
         	assert(iqtree.candidateTrees.size() != 0);
         	cout << "Finish initializing candidate tree set. ";
         	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
-        } else { // no -snni
+        } else {
             int nni_count = 0;
             int nni_steps = 0;
             cout << "Doing NNI on the initial tree ... " << endl;
-            if (params.pll) {
-                iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.searchinfo);
-                pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
-                        iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
-                        PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-                iqtree.setBestTree(string(iqtree.pllInst->tree_string), iqtree.curScore);
-            } else {
-                iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
-                iqtree.setBestTree(iqtree.getTreeString(), iqtree.curScore);
-            }
-
-        	if (iqtree.isSuperTree())
-        		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+            string tree = iqtree.doNNISearch(nni_count, nni_steps);
+//            if (params.pll) {
+//                iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.searchinfo);
+//                pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
+//                        iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
+//                        PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+//                iqtree.setBestTree(string(iqtree.pllInst->tree_string), iqtree.curScore);
+//            } else {
+//                iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
+//                iqtree.setBestTree(iqtree.getTreeString(), iqtree.curScore);
+//            }
+//
+//        	if (iqtree.isSuperTree())
+//        		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+            iqtree.setBestTree(tree, iqtree.curScore);
+        	iqtree.candidateTrees.update(tree, iqtree.curScore);
 
         }
 
