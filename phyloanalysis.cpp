@@ -844,7 +844,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Maximum-likelihood tree:       " << params.out_prefix
 				<< ".treefile" << endl;
 		if (params.write_local_optimal_trees)
-		cout << "  Local optimal trees (" << tree.candidateTrees.size() << "):      " << params.out_prefix << ".localtrees" << endl;
+		cout << "  Candidate trees (" << tree.candidateTrees.size() << "):      " << params.out_prefix << ".localtrees" << endl;
 	}
 	if (!params.user_file && params.start_tree == STT_BIONJ) {
 		cout << "  BIONJ tree:               " << params.out_prefix << ".bionj"
@@ -1216,7 +1216,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     cout << "CPU time: " << parsTime << endl;
     cout << "Computing log-likelihood of the parsimony trees ... " << endl;
     startTime = getCPUTime();
-    vector<string> unOptParTrees = iqtree.candidateTrees.getBestTreeStrings(numInitTrees);
+    vector<string> unOptParTrees = iqtree.candidateTrees.getHighestScoringTrees(numInitTrees);
     for (vector<string>::iterator it = unOptParTrees.begin()+1; it != unOptParTrees.end(); it++) {
     	iqtree.readTreeString(*it);
         // Initialize branch lengths for the parsimony tree
@@ -1726,7 +1726,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
 
 	if (params.write_local_optimal_trees) {
-		vector<string> trees = iqtree.candidateTrees.getBestTreeStrings();
+		vector<string> trees = iqtree.candidateTrees.getHighestScoringTrees();
 		ofstream treesOut((string(params.out_prefix) + ".localtrees").c_str(), ofstream::out);
 		for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++)
 			treesOut << (*it) << endl;

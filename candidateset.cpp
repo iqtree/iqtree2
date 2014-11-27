@@ -24,7 +24,7 @@ CandidateSet::CandidateSet() {
 	bestScore = -DBL_MAX;
 }
 
-vector<string> CandidateSet::getBestTreeString() {
+vector<string> CandidateSet::getEquallyOptimalTrees() {
 	vector<string> res;
 	for (reverse_iterator rit = rbegin(); rit != rend() && rit->second.score == bestScore; rit++) {
 		res.push_back(rit->second.tree);
@@ -44,7 +44,7 @@ string CandidateSet::getRandCandTree() {
 	return "";
 }
 
-vector<string> CandidateSet::getBestTreeStrings(int numTree) {
+vector<string> CandidateSet::getHighestScoringTrees(int numTree) {
 	assert(numTree <= maxCandidates);
 	if (numTree == 0) {
 		numTree = maxCandidates;
@@ -166,6 +166,7 @@ string CandidateSet::getTopology(string tree) {
 void CandidateSet::clear() {
 	multimap<double, CandidateTree>::clear();
 	topologies.clear();
+	bestScore = -DBL_MAX;
 }
 
 CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {

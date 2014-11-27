@@ -83,14 +83,14 @@ public:
      *  @param numTree number of best trees
      *  @return a list of tree
      */
-    vector<string> getBestTreeStrings(int numTree = 0);
+    vector<string> getHighestScoringTrees(int numTree = 0);
 
     /**
      * get tree(s) with highest score. More than one tree is
      * returned if there are multiple optima.
      * @return a vector containing optimal trees
      */
-    vector<string> getBestTreeString();
+    vector<string> getEquallyOptimalTrees();
 
     /**
      * destructor
