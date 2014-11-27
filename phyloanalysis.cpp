@@ -843,7 +843,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 	if (params.compute_ml_tree) {
 		cout << "  Maximum-likelihood tree:       " << params.out_prefix
 				<< ".treefile" << endl;
-		cout << "  Locally optimal trees (" << tree.candidateTrees.size() << "):    " << params.out_prefix << ".trees" << endl;
+		if (params.write_local_optimal_trees)
+		cout << "  Candidate trees (" << tree.candidateTrees.size() << "):      " << params.out_prefix << ".localtrees" << endl;
 	}
 	if (!params.user_file && params.start_tree == STT_BIONJ) {
 		cout << "  BIONJ tree:               " << params.out_prefix << ".bionj"
@@ -1211,11 +1212,11 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         }
     }
     double parsTime = getCPUTime() - startTime;
-    cout << parsTime << " seconds (" << numDupPars << " duplicated parsimony trees)" << endl;
-    cout << "Average CPU time for generating 1 parsimony tree: " << parsTime / (numInitTrees - 1) << endl;
-    cout << "Computing log-likelihood of the parsimony trees ... ";
+    cout << "(" << numDupPars << " duplicated parsimony trees)" << endl;
+    cout << "CPU time: " << parsTime << endl;
+    cout << "Computing log-likelihood of the parsimony trees ... " << endl;
     startTime = getCPUTime();
-    vector<string> unOptParTrees = iqtree.candidateTrees.getBestTrees(numInitTrees);
+    vector<string> unOptParTrees = iqtree.candidateTrees.getHighestScoringTrees(numInitTrees);
     for (vector<string>::iterator it = unOptParTrees.begin()+1; it != unOptParTrees.end(); it++) {
     	iqtree.readTreeString(*it);
         // Initialize branch lengths for the parsimony tree
@@ -1238,55 +1239,63 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         }
     }
     double loglTime = getCPUTime() - startTime;
-    cout << loglTime << " seconds" << endl;
-    cout << "Average CPU time for computing log-likelihood of 1 tree: " << loglTime / (numInitTrees - 1) << endl;
+    cout << "CPU time: " << loglTime << endl;
 
-    vector<string> bestTrees = iqtree.candidateTrees.getBestTrees(params.numNNITrees);
+    CandidateSet initParsimonyTrees = iqtree.candidateTrees.getBestCandidateTrees(params.numNNITrees);
     iqtree.candidateTrees.clear();
+    if (verbose_mode >= VB_MED) {
+        for (multimap<double, CandidateTree>::iterator it = iqtree.candidateTrees.begin(); it != iqtree.candidateTrees.end(); it++) {
+        	cout << it->first << " / " << it->second.topology << endl;
+        }
+    }
+
+    //iqtree.candidateTrees.clear();
 
     /************ END: Create a set of up to (numInitTrees - 1) unique parsimony trees **********************/
 
     cout << endl;
-    cout << "Optimizing top "<< bestTrees.size() << " parsimony trees with NNI..." << endl;
+    cout << "Optimizing top "<< initParsimonyTrees.size() << " parsimony trees with NNI..." << endl;
     startTime = getCPUTime();
     /*********** START: Do NNI on the best parsimony trees ************************************/
-    vector<string>::iterator it;
-    int numNNITrees = 1;
-    for (it = bestTrees.begin(); it != bestTrees.end(); ++it, numNNITrees++) {
+    CandidateSet::reverse_iterator rit;
+    iqtree.setCurIt(1);
+    for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); ++rit, iqtree.setCurIt(iqtree.getCurIt() + 1)) {
     	int nniCount, nniStep;
         double initLogl, nniLogl;
         string tree;
-        iqtree.readTreeString(*it);
+        iqtree.readTreeString(rit->second.tree);
         //cout << rit->second.tree << endl;
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         iqtree.computeLogL();
+        // THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
+        while (iqtree.curScore - rit->first < -1.0) {
+        	iqtree.optimizeBranches(1);
+        }
         initLogl = iqtree.curScore;
         tree = iqtree.doNNISearch(nniCount, nniStep);
         nniLogl = iqtree.curScore;
-        cout << "Iteration " << numNNITrees << " / LogL: " << iqtree.curScore;
-        if (verbose_mode >= VB_MED)
-        	cout << " / NNIs: " << nniCount << "," << nniStep;
-        cout << " / Time: " << convert_time(getRealTime() - params.start_real_time) << endl;
-
-        if (verbose_mode >= VB_MED)
-        	cout << numNNITrees << ". Parsimony logl " << initLogl << " / NNI logl: " << nniLogl << endl;
-
-        // Better tree is found
-        if (iqtree.curScore > iqtree.bestScore) {
-            // Re-optimize model parameters (the sNNI algorithm)
-        	tree = iqtree.optimizeModelParameters();
-            iqtree.setBestTree(tree, iqtree.curScore);
-            cout << "BETTER TREE FOUND: " << iqtree.bestScore << endl;
+        cout << "Iteration " << iqtree.getCurIt() << " / LogL: " << iqtree.curScore;
+        if (verbose_mode >= VB_MED) {
+        	cout << " / NNI count, steps: " << nniCount << "," << nniStep;
+        	cout << " / Parsimony logl " << initLogl << " / NNI logl: " << nniLogl;
         }
+        cout << " / Time: " << convert_time(getRealTime() - params.start_real_time) << endl;
 
         bool newTree = iqtree.candidateTrees.update(tree, iqtree.curScore);
         if (!newTree) {
         	numDup++;
         }
+        // Better tree is found
+        if (iqtree.curScore > iqtree.bestScore && newTree) {
+            // Re-optimize model parameters (the sNNI algorithm)
+        	tree = iqtree.optimizeModelParameters();
+            iqtree.setBestTree(tree, iqtree.curScore);
+            cout << "BETTER TREE FOUND: " << iqtree.bestScore << endl;
+        }
     }
     double nniTime = getCPUTime() - startTime;
-    cout << "Average time for 1 NNI search: " << nniTime / bestTrees.size() << endl;
+    cout << "Average time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
     return numDup;
 }
 
@@ -1589,17 +1598,16 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Update best tree
     iqtree.setBestTree(initTree, iqtree.curScore);
-
+    cout << "Current best tree score: " << iqtree.bestScore << endl << endl;
     iqtree.candidateTrees.update(initTree, iqtree.curScore);
 
     // Compute maximum likelihood distance
-    double bestTreeScore = iqtree.bestScore;
     // ML distance is only needed for IQP
     if ( (params.snni && !params.iqp) || params.min_iterations == 0) {
         params.compute_ml_dist = false;
     }
     if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
-        computeMLDist(params, iqtree, dist_file, getCPUTime(), bestTreeScore);
+        computeMLDist(params, iqtree, dist_file, getCPUTime(), iqtree.bestScore);
     }
 
     double cputime_search_start = getCPUTime();
@@ -1608,27 +1616,31 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (params.min_iterations > 0) {
         double initTime = getCPUTime();
 
-        if (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY) {
+        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
         	int numDup = initCandidateTreeSet(params, iqtree, numInitTrees);
+        	assert(iqtree.candidateTrees.size() != 0);
         	cout << "Finish initializing candidate tree set. ";
         	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
-        } else { // no -snni
+        } else {
             int nni_count = 0;
             int nni_steps = 0;
             cout << "Doing NNI on the initial tree ... " << endl;
-            if (params.pll) {
-                iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.searchinfo);
-                pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
-                        iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
-                        PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-                iqtree.setBestTree(string(iqtree.pllInst->tree_string), iqtree.curScore);
-            } else {
-                iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
-                iqtree.setBestTree(iqtree.getTreeString(), iqtree.curScore);
-            }
-
-        	if (iqtree.isSuperTree())
-        		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+            string tree = iqtree.doNNISearch(nni_count, nni_steps);
+//            if (params.pll) {
+//                iqtree.curScore = iqtree.pllOptimizeNNI(nni_count, nni_steps, iqtree.searchinfo);
+//                pllTreeToNewick(iqtree.pllInst->tree_string, iqtree.pllInst, iqtree.pllPartitions,
+//                        iqtree.pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
+//                        PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+//                iqtree.setBestTree(string(iqtree.pllInst->tree_string), iqtree.curScore);
+//            } else {
+//                iqtree.curScore = iqtree.optimizeNNI(nni_count, nni_steps);
+//                iqtree.setBestTree(iqtree.getTreeString(), iqtree.curScore);
+//            }
+//
+//        	if (iqtree.isSuperTree())
+//        		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+            iqtree.setBestTree(tree, iqtree.curScore);
+        	iqtree.candidateTrees.update(tree, iqtree.curScore);
 
         }
 
@@ -1705,10 +1717,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
 
-	vector<string> trees = iqtree.candidateTrees.getBestTrees();
-	ofstream treesOut((string(params.out_prefix) + ".trees").c_str(), ofstream::out);
-	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++)
-		treesOut << (*it) << endl;
+	if (params.write_local_optimal_trees) {
+		vector<string> trees = iqtree.candidateTrees.getHighestScoringTrees();
+		ofstream treesOut((string(params.out_prefix) + ".localtrees").c_str(), ofstream::out);
+		for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++)
+			treesOut << (*it) << endl;
+	}
 
 	if (params.pll)
 		iqtree.inputModelPLL2IQTree();

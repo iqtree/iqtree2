@@ -24,7 +24,7 @@ CandidateSet::CandidateSet() {
 	bestScore = -DBL_MAX;
 }
 
-vector<string> CandidateSet::getBestTree() {
+vector<string> CandidateSet::getEquallyOptimalTrees() {
 	vector<string> res;
 	for (reverse_iterator rit = rbegin(); rit != rend() && rit->second.score == bestScore; rit++) {
 		res.push_back(rit->second.tree);
@@ -33,19 +33,18 @@ vector<string> CandidateSet::getBestTree() {
 }
 
 string CandidateSet::getRandCandTree() {
+	assert(!empty());
 	if (empty())
 		return "";
-	// BQM: bug fix max -> min
 	int id = random_int(min(popSize, (int)size()) );
-	//int id = randint(0, min(max_candidates, (int)size()));
-	//int id = 0 + (rand() % (int)( min(max_candidates, (int)size())) );
 	for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
 		if (id == 0)
 			return i->second.tree;
+	assert(0);
 	return "";
 }
 
-vector<string> CandidateSet::getBestTrees(int numTree) {
+vector<string> CandidateSet::getHighestScoringTrees(int numTree) {
 	assert(numTree <= maxCandidates);
 	if (numTree == 0) {
 		numTree = maxCandidates;
@@ -110,7 +109,7 @@ bool CandidateSet::update(string tree, double score) {
 	if (treeTopologyExist(candidate.topology)) {
 	    // if tree topology already exist, we replace the old
 	    // by the new one (with new branch lengths) and update the score
-		if (topologies[candidate.topology] <= score) {
+		if (topologies[candidate.topology] < score) {
 			topologies[candidate.topology] = score;
 			for (CandidateSet::iterator i = begin(); i != end(); i++)
 				if (i->second.topology == candidate.topology) {
@@ -127,7 +126,7 @@ bool CandidateSet::update(string tree, double score) {
 			// insert tree into candidate set
 			insert(CandidateSet::value_type(score, candidate));
 			topologies[candidate.topology] = score;
-		} else if (begin()->first < score){
+		} else if (getWorstScore() < score){
 			// remove the worst-scoring tree
 			topologies.erase(begin()->second.topology);
 			erase(begin());
@@ -162,6 +161,22 @@ string CandidateSet::getTopology(string tree) {
 	ostringstream ostr;
 	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	return ostr.str();
+}
+
+void CandidateSet::clear() {
+	multimap<double, CandidateTree>::clear();
+	topologies.clear();
+	bestScore = -DBL_MAX;
+}
+
+CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
+	CandidateSet res;
+	if (numTrees >= size())
+		numTrees = size();
+	for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; rit++, numTrees--) {
+		res.insert(*rit);
+	}
+	return res;
 }
 
 CandidateSet::~CandidateSet() {
