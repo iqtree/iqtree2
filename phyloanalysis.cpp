@@ -1293,6 +1293,9 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
             iqtree.setBestTree(tree, iqtree.curScore);
             cout << "BETTER TREE FOUND: " << iqtree.bestScore << endl;
         }
+//        if (params.partition_type)
+//        	((PhyloSuperTreePlen*)&iqtree)->printNNIcasesNUM();
+
     }
     double nniTime = getCPUTime() - startTime;
     cout << "Average time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
