@@ -3173,7 +3173,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     return fixed;
 }
 
-int PhyloTree::fixNegativeBranch2(bool force, Node *node, Node *dad) {
+int PhyloTree::assignRandomBranchLengths(bool force, Node *node, Node *dad) {
 
     if (!node)
         node = root;
@@ -3195,7 +3195,7 @@ int PhyloTree::fixNegativeBranch2(bool force, Node *node, Node *dad) {
                 *it)->length = 1e-6;
         (*it)->node->findNeighbor(node)->length = (*it)->length;
     }
-    fixed += fixNegativeBranch2(force, (*it)->node, node);
+    fixed += assignRandomBranchLengths(force, (*it)->node, node);
 }
     return fixed;
 }

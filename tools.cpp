@@ -645,7 +645,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_spr = false;
     params.nexus_output = false;
     params.k_representative = 4;
-    params.loglh_epsilon = 0.000001;
+    params.loglh_epsilon = 0.001;
     params.numSmoothTree = 1;
     params.nni5 = true;
     params.leastSquareBranch = false;
@@ -654,7 +654,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.limitPopSize = 100;
+    params.maxCandidates = 100;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -763,6 +763,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
     params.adaptPert = false;
     params.numParsTrees = 100;
+    params.sprDist = 20;
     params.numNNITrees = 20;
     params.avh_test = 0;
     params.bootlh_test = 0;
@@ -1788,6 +1789,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.iqp = true;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-wlt") == 0) {
+				// write all candidate trees
+				params.write_local_optimal_trees = true;
+				continue;
+			}
 			if (strcmp(argv[cnt], "-wt") == 0) {
 				params.write_intermediate_trees = 1;
 				continue;
@@ -2183,7 +2189,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -poplim <max_pop_size>";
-				params.limitPopSize = convert_int(argv[cnt]);
+				params.maxCandidates = convert_int(argv[cnt]);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-popsize") == 0
@@ -2346,10 +2352,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.iteration_multiple = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-vns") == 0) {
-				params.vns_search = true;
-				continue;
-			}
 			if (strcmp(argv[cnt], "-sp_iter") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2413,6 +2415,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-ct") == 0) {
             	params.count_trees = true;
             	continue;
+			}
+			if (strcmp(argv[cnt], "-sprdist") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -sprdist <SPR distance used in parsimony search>";
+				params.sprDist = convert_int(argv[cnt]);
+				continue;
 			}
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
@@ -2545,23 +2554,27 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -?                   Printing this help dialog" << endl
             << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP/FASTA/NEXUS format" << endl
             << "  -st <data_type>      BIN, DNA, AA, CODON, or MORPH (default: auto-detect)" << endl
-            << "  -sp <partition_file> Partition model specification in NEXUS format" << endl
+            << "  -sp <partition_file> Partition model specification in NEXUS format." << endl
+            << "                       For single model use the -m option (see below)" << endl
             << "  -z <trees_file>      Compute log-likelihoods for all trees in the given file" << endl
-            << "  <treefile>           Initial tree for tree reconstruction (default: BIONJ)" << endl
+            << "  <treefile>           Initial tree for tree reconstruction (default: MP)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
-            << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment)" << endl
+            << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment name)" << endl
 #ifdef _OPENMP
             << "  -omp <#cpu_cores>    Number of cores/threads to use (default: all cores)" << endl
 #endif
+            << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
+            << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
             << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
-            << "  -toppars <number>    Number of top initial parsimony trees (dfault: 20)" << endl
-            << "  -numcand <number>    Number of candidate trees during search (defaut: 5)" << endl
-            << "  -pers <perturbation> Perturbation strength for stochastic NNI (default: 0.5)" << endl
+            << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
+            << "  -numcand <number>    Size of the candidate tree set (defaut: 5)" << endl
+            << "  -pers <perturbation> Perturbation strength for randomized NNI (default: 0.5)" << endl
             << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
-            << "  -iqp                 Use IQP tree perturbation (default: stochastic NNI)" << endl
-            << "  -iqpnni              Switch entirely to old IQPNNI algorithm" << endl
+            << "  -n <#iterations>     Fix number of iterations to <#iterations> (default: auto)" << endl
+            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
+            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
@@ -2611,21 +2624,21 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
             << "                       Weiss & von Haeseler (2003) method" << endl
             << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
-            << endl << "TREE INFERENCE:" << endl
-            << "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
-            << "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl
-            << "  -n <#iterations>     Number of iterations  (default: auto)" << endl
-            << "  -sr <#iterations>    Stopping rule with max. #iterations (default: off)" << endl
-            << "  -sc <confidence>     Confidence value for stopping rule (default: 0.95)" << endl
-            << "  -spc <level>         Confidence level for NNI adaptive search (default 0.95)" << endl
-            << "  -sp_iter <number>    #iterations before NNI adaptive heuristic is started" << endl
-            << "  -lmd <lambda>        lambda parameter for the PhyML search (default 0.75)" << endl
-            << "  -nosse               Disable SSE instructions" << endl
-            << "  -wt                  Writing all intermediate trees into .treels file" << endl
-            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
-            << "  -fixbr               Fix branch lengths of <treefile>" << endl
-            << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
-            << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
+//            << endl << "TREE INFERENCE:" << endl
+//            << "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
+//            << "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl
+//            << "  -n <#iterations>     Number of iterations  (default: auto)" << endl
+//            << "  -sr <#iterations>    Stopping rule with max. #iterations (default: off)" << endl
+//            << "  -sc <confidence>     Confidence value for stopping rule (default: 0.95)" << endl
+//            << "  -spc <level>         Confidence level for NNI adaptive search (default 0.95)" << endl
+//            << "  -sp_iter <number>    #iterations before NNI adaptive heuristic is started" << endl
+//            << "  -lmd <lambda>        lambda parameter for the PhyML search (default 0.75)" << endl
+//            << "  -nosse               Disable SSE instructions" << endl
+//            << "  -wt                  Writing all intermediate trees into .treels file" << endl
+//            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
+//            << "  -fixbr               Fix branch lengths of <treefile>" << endl
+//            << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
+//            << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
             << endl << "CONSENSUS RECONSTRUCTION:" << endl
             << "  <tree_file>          Set of input trees for consensus reconstruction" << endl
             << "  -t <threshold>       Min split support in range [0,1]. 0.5 for majority-rule" << endl
@@ -2654,11 +2667,15 @@ void usage_iqtree(char* argv[], bool full_command) {
 			cout << "                       min, mean, and max branch lengths of random trees." << endl;
 
 			cout << endl << "MISCELLANEOUS:" << endl
-            << "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
+		    << "  -wt                  Write locally optimal trees into .treels file" << endl
+			<< "  -fixbr               Fix branch lengths of <treefile>." << endl
+            << "                       Used with -n 0 to compute log-likelihood of <treefile>" << endl
+			<< "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
             << "  -wslg                Writing site log-likelihoods per Gamma category" << endl;
-		    cout << "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl;
-		    cout << "  -stats <outfile>     Output some statistics about branch lengths" << endl;
-		    cout << "  -comp <treefile>     Compare tree with each in the input trees" << endl;
+//            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
+//			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
+//			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
+//			<< "  -comp <treefile>     Compare tree with each in the input trees" << endl;
 
 
 			cout << endl;

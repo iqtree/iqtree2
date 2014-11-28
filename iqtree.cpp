@@ -79,8 +79,8 @@ void IQTree::setParams(Params &params) {
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
     candidateTrees.aln = aln;
-    candidateTrees.max_candidates = params.popSize;
-    candidateTrees.limit = params.limitPopSize;
+    candidateTrees.popSize = params.popSize;
+    candidateTrees.maxCandidates = params.maxCandidates;
 
     sse = params.SSE;
 //    if (params.maxtime != 1000000) {
@@ -667,17 +667,6 @@ double IQTree::computePartialBonus(Node *node, Node* dad) {
     node_nei->partial_lh_computed = 1;
     return node_nei->lh_scale_factor;
 }
-
-
-/*
- bool IQTree::containPosNNI(vector<NNIMove> posNNIs) {
- for (vector<NNIMove>::iterator iter = posNNIs.begin(); iter != posNNIs.end(); iter++) {
- if (iter->newloglh > iter->oldloglh)
- return true;
- }
- return false;
- }
- */
 
 void IQTree::findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, Node *node, Node *dad) {
     double score;
@@ -1284,6 +1273,44 @@ string IQTree::optimizeModelParameters(bool printInfo) {
 	return newTree;
 }
 
+void IQTree::printBestScores(int numBestScore) {
+	vector<double> bestScores = candidateTrees.getBestScores(candidateTrees.popSize);
+	for (vector<double>::iterator it = bestScores.begin(); it != bestScores.end(); it++)
+		cout << (*it) << " ";
+	cout << endl;
+}
+
+void IQTree::computeLogL() {
+	if (params->pll) {
+        pllNewickTree *newick = pllNewickParseString(getTreeString().c_str());
+        pllTreeInitTopologyNewick(pllInst, newick, PLL_FALSE);
+        pllNewickParseDestroy(&newick);
+        pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+        curScore = pllInst->likelihood;
+	} else {
+		curScore = computeLikelihood();
+	}
+}
+
+string IQTree::optimizeBranches(int maxTraversal) {
+	string tree;
+    if (params->pll) {
+        pllNewickTree *newick = pllNewickParseString(getTreeString().c_str());
+        pllTreeInitTopologyNewick(pllInst, newick, PLL_FALSE);
+        pllNewickParseDestroy(&newick);
+        pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+        pllOptimizeBranchLengths(pllInst, pllPartitions, maxTraversal);
+        curScore = pllInst->likelihood;
+        pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
+                PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+        tree = string(pllInst->tree_string);
+    } else {
+    	curScore = optimizeAllBranches(maxTraversal);
+        tree = getTreeString();
+    }
+    return tree;
+}
+
 double IQTree::doTreeSearch() {
 //    double begin_real_time, cur_real_time;
 //    begin_real_time = getRealTime();
@@ -1329,7 +1356,7 @@ double IQTree::doTreeSearch() {
 	/*====================================================
 	 * MAIN LOOP OF THE IQ-TREE ALGORITHM
 	 *====================================================*/
-    for (curIt = 2; !stop_rule.meetStopCondition(curIt, cur_correlation); curIt++) {
+    for ( ; !stop_rule.meetStopCondition(curIt, cur_correlation); curIt++) {
         searchinfo.curIter = curIt;
         // estimate logl_cutoff for bootstrap
         if (params->avoid_duplicated_trees && max_candidate_trees > 0 && treels_logl.size() > 1000) {
@@ -1421,7 +1448,7 @@ double IQTree::doTreeSearch() {
                 if (isSuperTree()) {
                     ((PhyloSuperTree*) this)->mapTrees();
                 }
-                curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
+                curScore = optimizeAllBranches(params->numSmoothTree, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
                 perturbScore = curScore;
             }
         }
@@ -1431,22 +1458,8 @@ double IQTree::doTreeSearch() {
     	 *---------------------------------------*/
         int nni_count = 0;
         int nni_steps = 0;
-        if (params->pll) {
-        	if (params->partition_file)
-        		outError("Unsupported -pll -sp combination!");
-            curScore = pllOptimizeNNI(nni_count, nni_steps, searchinfo);
-            pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
-                    PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
-            imd_tree = string(pllInst->tree_string);
-            readTreeString(imd_tree);
-        } else {
-            curScore = optimizeNNI(nni_count, nni_steps);
-            //imd_tree = getTreeString();
-            if (isSuperTree()) {
-                ((PhyloSuperTree*) this)->computeBranchLengths();
-            }
-            imd_tree = getTreeString();
-        }
+
+        imd_tree = doNNISearch(nni_count, nni_steps);
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
@@ -1515,8 +1528,7 @@ double IQTree::doTreeSearch() {
         if (params->snni) {
         	candidateTrees.update(imd_tree, curScore);
         	if (verbose_mode >= VB_MED) {
-        		candidateTrees.printBestScores();
-        		cout << endl;
+            	printBestScores(candidateTrees.popSize);
         	}
         } else {
             // The IQPNNI algorithm
@@ -1557,26 +1569,6 @@ double IQTree::doTreeSearch() {
 
     readTreeString(bestTreeString);
 
-    // DTH: Carefully watch the -pll case here
-
-    // OBSOLETE, consider to remove
-//    if (params->stop_condition != SC_UNSUCCESS_ITERATION) {
-//    	if (params->snni) {
-//			int predicted_iteration = stop_rule.getLastImprovedIteration() + params->unsuccess_iteration;
-//			if (predicted_iteration > curIt) {
-//				cout << endl << "WARNING: " << predicted_iteration <<
-//					" iterations are needed by the default stopping rule" << endl;
-//			}
-//    	} else {
-//			int predicted_iteration = stop_rule.getPredictedIteration();
-//			if (predicted_iteration > curIt) {
-//				cout << endl << "WARNING: " << predicted_iteration << " iterations are needed to ensure "
-//						<< int(floor(params->stop_confidence * 100)) << "% confidence that "
-//						<< "         the IQPNNI search will not find a better tree" << endl;
-//			}
-//    	}
-//    }
-
     if (testNNI)
         outNNI.close();
     if (params->write_intermediate_trees)
@@ -1597,6 +1589,26 @@ double IQTree::doTreeSearch() {
 /****************************************************************************
  Fast Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
+string IQTree::doNNISearch(int& nniCount, int& nniSteps) {
+	string treeString;
+    if (params->pll) {
+    	if (params->partition_file)
+    		outError("Unsupported -pll -sp combination!");
+        curScore = pllOptimizeNNI(nniCount, nniSteps, searchinfo);
+        pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
+                PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
+        treeString = string(pllInst->tree_string);
+        readTreeString(treeString);
+    } else {
+        curScore = optimizeNNI(nniCount, nniSteps);
+        if (isSuperTree()) {
+            ((PhyloSuperTree*) this)->computeBranchLengths();
+        }
+        treeString = getTreeString();
+    }
+    return treeString;
+}
+
 double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     bool rollBack = false;
     nni_count = 0;
@@ -1657,26 +1669,37 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         // Apply all non-conflicting positive NNIs
         doNNIs(numNNIs);
 
+        if (verbose_mode >= VB_MED) {
+        	cout << "NNI step: " << nni_steps << " / Number of NNIs applied: " << numNNIs << endl;
+        }
+
         if (searchinfo.speednni) {
             brans2Eval.clear();
             updateBrans2Eval(appliedNNIs);
             appliedNNIs.clear();
         }
 
-        // Re-estimate branch lengths of the new tree
-        curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
+        // FOR TUNG: If you want to introduce this heuristic, please confirm with reevaluation again.
+//        if (numNNIs > 1) {
+            // Re-estimate branch lengths of the new tree
+            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+//        } else {
+//        	curScore = computeLikelihood();
+//        }
+
 
 		// curScore should be larger than score of the best NNI
-        if (curScore >= nonConfNNIs.at(0).newloglh ) {
+        if (curScore >= nonConfNNIs.at(0).newloglh - params->loglh_epsilon) {
             nni_count += numNNIs;
             rollBack = false;
         } else {
             /* tree cannot be worse if only 1 NNI is applied */
-//            if (numNNIs == 1) {
-//                cout << "ERROR / POSSIBLE BUG: current logl=" << curScore << " < " << nonConfNNIs.at(0).newloglh
-//                        << "(best NNI)" << endl;
-//                abort();
-//            }
+            if (numNNIs == 1 && curScore < nonConfNNIs.at(0).newloglh - 1.0) {
+            	cout.precision(15);
+                cout << "BUG: current logl=" << curScore << " < " << nonConfNNIs.at(0).newloglh
+                        << "(best NNI)" << endl;
+                abort();
+            }
             if (verbose_mode >= VB_MED) {
                 cout << "New score = " << curScore << " after applying " << numNNIs <<
                         " is worse than score = " << nonConfNNIs.at(0).newloglh
@@ -2189,7 +2212,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
     double *pattern_lh_orig = aligned_alloc_double(nptn);
     computePatternLikelihood(pattern_lh_orig, &cur_logl);
     for (int i = 0; i < nptn; i++)
-    	pattern_lh[i] = pattern_lh_orig[i];
+    	pattern_lh[i] = (float)pattern_lh_orig[i];
 #else
     computePatternLikelihood(pattern_lh, &cur_logl);
 #endif
@@ -2218,8 +2241,10 @@ void IQTree::saveCurrentTree(double cur_logl) {
 //            if (sse == LK_NORMAL || sse == LK_EIGEN) {
             if (false) {
             	BootValType *boot_sample = boot_samples[sample];
+            	BootValType rellll = 0.0;
 				for (ptn = 0; ptn < nptn; ptn++)
-					rell += pattern_lh[ptn] * boot_sample[ptn];
+					rellll += pattern_lh[ptn] * boot_sample[ptn];
+				rell = (double)rellll;
             } else {
             	// SSE optimized version of the above loop
 				BootValType *boot_sample = boot_samples[sample];

@@ -413,6 +413,11 @@ struct Params {
 	int numParsTrees;
 
 	/**
+	 *  SPR distance (radius) for parsimony tree
+	 */
+	int sprDist;
+
+	/**
 	 *  Number of NNI trees generated from the set of parsimony trees
 	 *  Default = 20 (out of 100 parsimony trees)
 	 */
@@ -426,7 +431,7 @@ struct Params {
 	/**
 	 *  maximum number of trees stored in the candidate set
 	 */
-	int limitPopSize;
+	int maxCandidates;
 
 	/**
 	 *  heuristics for speeding up NNI evaluation
@@ -548,11 +553,6 @@ struct Params {
     int speedup_iter;
 
     /**
-     *   option for doing a VNS search
-     */
-    bool vns_search;
-
-    /**
      *  starting CPU time of the program
      */
     double startCPUTime;
@@ -607,9 +607,9 @@ struct Params {
 
     /**
      * 		defines the relation between edge lengths in supertree and subtrees
-     * 		0 for separate edge length (default)
-     * 		p for proportional edge length
-     * 		j for joint edge length
+     * 		0 (NULL) for separate edge length (default)
+     * 		'p' for proportional edge length
+     * 		'j' for joint edge length
      */
     char partition_type;
 
@@ -1127,6 +1127,11 @@ struct Params {
             2 if output all intermediate trees + 1-NNI-away trees
      */
     int write_intermediate_trees;
+
+    /**
+     *  Write out all candidate trees (the locally optimal trees)
+     */
+    int write_local_optimal_trees;
 
     /**
         TRUE to avoid duplicated trees while writing intermediate trees

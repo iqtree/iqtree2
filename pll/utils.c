@@ -2177,11 +2177,14 @@ pllTreeInitTopologyForAlignment (pllInstance * tr, pllAlignmentData * alignmentD
 
     @param partitions
       The partitions
+
+    @param sprDist
+      SPR distance for the SPR search in parsimony
 */
-void pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInstance * tr, partitionList * partitions)
+void pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInstance * tr, partitionList * partitions, int sprDist)
 {
   allocateParsimonyDataStructures(tr, partitions);
-  pllMakeParsimonyTreeFast(tr, partitions);
+  pllMakeParsimonyTreeFast(tr, partitions, sprDist);
   pllFreeParsimonyDataStructures(tr, partitions);
 }
 

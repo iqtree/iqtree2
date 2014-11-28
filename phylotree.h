@@ -1065,7 +1065,7 @@ public:
      */
     int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
-    int fixNegativeBranch2(bool force = false, Node *node = NULL, Node *dad = NULL);
+    int assignRandomBranchLengths(bool force = false, Node *node = NULL, Node *dad = NULL);
 
     /* compute Bayesian branch lengths based on ancestral sequence reconstruction */
     void computeAllBayesianBranchLengths(Node *node = NULL, Node *dad = NULL);

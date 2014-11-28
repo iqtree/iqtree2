@@ -19,7 +19,7 @@ struct CandidateTree {
 
 
 /**
- * Candidate tree set
+ * Candidate tree set, sorted in ascending order of scores, i.e. the last element is the highest scoring tree
  */
 class CandidateSet : public multimap<double, CandidateTree> {
 
@@ -30,11 +30,6 @@ public:
 	CandidateSet(int limit, int max_candidates, Alignment *aln);
 
 	CandidateSet();
-
-    /**
-     * return tree with highest score
-     */
-    string getBestTree();
 
     /**
      * return randomly one candidate tree from max_candidate
@@ -64,17 +59,38 @@ public:
 
     /**
      * update / insert tree into set of score is higher than lowest-scoring tree
-     * @return true if the candidate set is updated, otherwise false
+     * @return false if the tree topology already exists
      *
      */
     bool update(string tree, double score);
 
     /**
      *  print score of max_candidates best trees
+     *
+     *  @param numScore
+     *  	Number of best scores to print out starting from the highest
      */
-    void printBestScores();
+    vector<double> getBestScores(int numBestScores = 0);
 
-    void printBestTrees(int numTree);
+    /**
+     * Return the worst score in the candidate tree set
+     * @return
+     */
+    double getWorstScore();
+
+    /**
+     *  Return \a numTree best tree strings
+     *  @param numTree number of best trees
+     *  @return a list of tree
+     */
+    vector<string> getHighestScoringTrees(int numTree = 0);
+
+    /**
+     * get tree(s) with highest score. More than one tree is
+     * returned if there are multiple optima.
+     * @return a vector containing optimal trees
+     */
+    vector<string> getEquallyOptimalTrees();
 
     /**
      * destructor
@@ -84,12 +100,17 @@ public:
     /**
      * hard limit for number of trees (typically superset of candidate set)
      */
-    int limit;
+    int maxCandidates;
+
+    /**
+     *  best score in the set
+     */
+    double bestScore;
 
     /**
      *  maximum number of candidate trees
      */
-    int max_candidates;
+    int popSize;
 
     /** index of tree topologies in set
      *
@@ -120,6 +141,18 @@ public:
      * return a unique topology (sorted by taxon names, rooted at taxon with alphabetically smallest name) without branch lengths
      */
     string getTopology(string tree);
+
+    /**
+     *  Empty the candidate set
+     */
+    void clear();
+
+    /**
+     * Return a CandidateSet containing \a numTrees of current best candidate trees
+     * @param numTrees
+     * @return
+     */
+    CandidateSet getBestCandidateTrees(int numTrees);
 
 };
 
