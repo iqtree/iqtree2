@@ -506,6 +506,7 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 void PhyloSuperTreePlen::doNNIs(int nni2apply, bool changeBran) {
 	IQTree::doNNIs(nni2apply, changeBran);
 	mapBranchLen();
+	clearAllPartialLH();
 }
 
 
@@ -1096,6 +1097,9 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			cout << "[" << score << "] ";
 			printTree(cout);
 			cout << endl;
+    		for(part = 0; part < ntrees; part++)
+    			cout << is_nni[part] << " ";
+    		cout << endl;
 		}
 
 		//cout<<"After optimization"<<endl;

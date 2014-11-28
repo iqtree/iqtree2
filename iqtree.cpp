@@ -1566,6 +1566,8 @@ double IQTree::doTreeSearch() {
 	        }
         } // end of bootstrap convergence test
 
+        if (params->partition_type)
+        	((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
     }
 
     readTreeString(bestTreeString);
@@ -1671,7 +1673,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         doNNIs(numNNIs);
 
         if (verbose_mode >= VB_MED) {
-        	cout << "NNI step: " << nni_steps << " / Number of NNIs applied: " << numNNIs << endl;
+        	cout << "NNI step: " << nni_steps << " / Number of NNIs applied: " << numNNIs << " / curScore: " << curScore << endl;
         }
 
         if (searchinfo.speednni) {
