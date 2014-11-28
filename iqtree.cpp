@@ -1565,6 +1565,7 @@ double IQTree::doTreeSearch() {
 	            }
 	        }
         } // end of bootstrap convergence test
+
     }
 
     readTreeString(bestTreeString);

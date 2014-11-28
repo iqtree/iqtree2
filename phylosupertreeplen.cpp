@@ -1097,6 +1097,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			printTree(cout);
 			cout << endl;
 		}
+
 		//cout<<"After optimization"<<endl;
 		//checkBranchLen();
 
