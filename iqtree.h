@@ -419,25 +419,6 @@ public:
      */
     double getCurScore(void);
 
-    /**
-     *
-     * @return
-     */
-    double getBestScore(void) {
-        return bestScore;
-    }
-
-    /**
-     *
-     */
-    void setBestScore(double score) {
-        bestScore = score;
-    }
-
-    /**
-     *  set the current tree as the best tree
-     */
-    void setBestTree(string tree, double logl);
 
     /**
             current parsimony score of the tree
@@ -665,17 +646,6 @@ public:
      *  variable storing the current best tree topology
      */
     topol* pllBestTree;
-
-
-    /**
-     * The current best score found
-     */
-    double bestScore;
-
-    /**
-     *  the current best tree
-     */
-    string bestTreeString;
 
     CandidateSet candidateTrees;
 

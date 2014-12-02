@@ -47,9 +47,9 @@ class CandidateSet : public multimap<double, CandidateTree> {
 
 public:
     /**
-     * constructor
+     * Initialization
      */
-	CandidateSet(int limit, int max_candidates, Alignment *aln);
+	void init(int maxCandidates, int maxPop, char* root, bool rooted, Alignment* aln);
 
 	CandidateSet();
 
@@ -105,6 +105,12 @@ public:
      * @return
      */
     double getWorstScore();
+
+    /**
+     * Return the best score in the candidate tree set
+     * @return
+     */
+    double getBestScore();
 
     /**
      *  Return \a numTree best tree strings
@@ -164,6 +170,19 @@ public:
      */
     int computeSplitSupport(int numTree = 0);
 
+    /**
+     * Return a pointer to the \a CandidateTree that has topology equal to \a topology
+     * @param topology
+     * @return
+     */
+    CandidateSet::iterator getCandidateTree(string topology);
+
+    /**
+     * Remove the \a CandidateTree with topology equal to \a topology
+     * @param topology
+     */
+    void removeCandidateTree(string topology);
+
     /* Getter and Setter function */
 	void setAln(Alignment* aln);
 	int getMaxCandidates() const;
@@ -195,11 +214,6 @@ private:
     int maxCandidates;
 
     /**
-     *  best score in the set
-     */
-    double bestScore;
-
-    /**
      *  maximum number of trees used for the evolving population
      */
     int popSize;
@@ -219,8 +233,14 @@ private:
      */
     Alignment *aln;
 
+
+    /**
+     *  Sequence name of the root
+     */
+    char* root;
+
 	/**
-	 *  Inherit the rootness of tree from the IQ-TREE class
+	 *  Specify whether the tree is rooted or not
 	 */
 	bool isRooted;
 };

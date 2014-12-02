@@ -47,7 +47,6 @@ void IQTree::init() {
     nni_count_est = 0.0;
     nni_delta_est = 0;
     curScore = 0.0; // Current score of the tree
-    bestScore = -DBL_MAX; // Best score found so far
     curIt = 1;
     cur_pars_score = -1;
 //    enable_parsimony = false;
@@ -75,10 +74,8 @@ IQTree::IQTree(Alignment *aln) : PhyloTree(aln) {
 }
 void IQTree::setParams(Params &params) {
     optimize_by_newton = params.optimize_by_newton;
-    candidateTrees.setAln(aln);
-    candidateTrees.setPopSize(params.popSize);
-    candidateTrees.setMaxCandidates(params.maxCandidates);
-    candidateTrees.setIsRooted(rooted);
+    candidateTrees.init(params.maxCandidates, params.popSize, params.root, rooted, aln);
+
     int maxNNISteps = aln->getNSeq() - 3;
 
 	if (params.pll) {
@@ -829,10 +826,6 @@ void IQTree::doParsimonyReinsertion() {
     fixNegativeBranch(false);
 }
 
-void IQTree::setBestTree(string treeString, double treeLogl) {
-    bestTreeString = treeString;
-    bestScore = treeLogl;
-}
 
 void IQTree::doRandomNNIs(int numNNI) {
     map<int, Node*> usedNodes;
@@ -1423,6 +1416,7 @@ double IQTree::doTreeSearch() {
                     doRandomNNIs(numNNI);
                 }
             } else {
+            	readTreeString(candidateTrees.getBestTreeString()[0]);
                 doIQP();
             }
             setAlignment(aln);
@@ -1504,44 +1498,14 @@ double IQTree::doTreeSearch() {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
         }
 
-    	/*----------------------------------------
-    	 * Update if better tree is found
-    	 *---------------------------------------*/
-        if (curScore > bestScore) {
-            stringstream cur_tree_topo_ss;
-            setRootNode(params->root);
-            printTree(cur_tree_topo_ss, WT_TAXON_ID | WT_SORT_TAXA);
-            if (cur_tree_topo_ss.str() != best_tree_topo) {
-                best_tree_topo = cur_tree_topo_ss.str();
-                imd_tree = optimizeModelParameters();
-                stop_rule.addImprovedIteration(curIt);
-                cout << "BETTER TREE FOUND at iteration " << curIt << ": " << curScore;
-                cout << " / CPU time: " << (int) round(getCPUTime() - params->startCPUTime) << "s" << endl << endl;
-                if (curScore > bestScore) {
-                    pllInfo.curPerStrength = params->initPS;
-                }
-            } else {
-                cout << "UPDATE BEST LOG-LIKELIHOOD: " << curScore << endl;
-            }
-            setBestTree(imd_tree, curScore);
-            if (params->write_best_trees) {
-                ostringstream iter_string;
-                iter_string << curIt;
-                printResultTree(iter_string.str());
-            }
-            printResultTree();
-        }
-
-        // check whether the tree can be put into the reference set
-        if (params->snni) {
-        	candidateTrees.update(imd_tree, curScore);
-        	if (verbose_mode >= VB_MED) {
-            	printBestScores(candidateTrees.getPopSize());
-        	}
-        } else {
-            // The IQPNNI algorithm
-            readTreeString(bestTreeString);
-        }
+        if (curScore > candidateTrees.getBestScore()) {
+			if (params->write_best_trees) {
+				ostringstream iter_string;
+				iter_string << curIt;
+				printResultTree(iter_string.str());
+			}
+			printResultTree();
+		}
 
         // DTH: make pllUFBootData usable in summarizeBootstrap
         if(params->pll && params->online_bootstrap && (params->gbo_replicates > 0))
@@ -1575,7 +1539,7 @@ double IQTree::doTreeSearch() {
         } // end of bootstrap convergence test
     }
 
-    readTreeString(bestTreeString);
+    readTreeString(candidateTrees.getBestTreeString()[0]);
 
     if (testNNI)
         outNNI.close();
@@ -1591,7 +1555,7 @@ double IQTree::doTreeSearch() {
         pllDestroyUFBootData();
     }
 
-    return bestScore;
+    return candidateTrees.getBestScore();
 }
 
 /****************************************************************************
@@ -1599,7 +1563,6 @@ double IQTree::doTreeSearch() {
  ****************************************************************************/
 string IQTree::doNNISearch(int& nniCount, int& nniSteps) {
 	string treeString;
-	searchInfo.setNniOptimal(false);
     if (params->pll) {
     	if (params->partition_file)
     		outError("Unsupported -pll -sp combination!");
@@ -1608,33 +1571,28 @@ string IQTree::doNNISearch(int& nniCount, int& nniSteps) {
                 PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
         treeString = string(pllInst->tree_string);
         readTreeString(treeString);
-        searchInfo.setNniOptimal(true);
     } else {
         curScore = optimizeNNI(nniCount, nniSteps);
         if (isSuperTree()) {
             ((PhyloSuperTree*) this)->computeBranchLengths();
         }
+
         treeString = generateNewick();
     }
-    candidateTrees.update(treeString, curScore, searchInfo.isNniOptimal());
+
     return treeString;
 }
 
 double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
+	double bestScore = candidateTrees.getBestScore();
     bool rollBack = false;
     nni_count = 0;
     int numNNIs = 0; // number of NNI to be applied in each step
     for (nni_steps = 1; nni_steps <= searchInfo.getMaxNniSteps(); nni_steps++) {
-    	if (params->reduction) {
-        	if (candidateTrees.treeTopologyExist(generateNewickTopology())) {
-        		searchInfo.setNumDup(searchInfo.getNumDup() + 1);
-        		break;
-        	} else {
-        		candidateTrees.update(generateNewick(), curScore, searchInfo.isNniOptimal());
-        	}
-    	}
+
         double oldScore = curScore;
         if (!rollBack) { // tree get improved and was not rollbacked
+
             if (save_all_trees == 2) {
                 saveCurrentTree(curScore); // BQM: for new bootstrap
             }
@@ -1658,6 +1616,27 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
               evalNNIs();
             }
 
+            // No more positive NNI
+            if (plusNNIs.size() == 0) {
+            	string tree = generateNewick();
+            	string topology = generateNewickTopology();
+            	if (curScore > bestScore) {
+            		if (params->reduction) {
+            			candidateTrees.removeCandidateTree(topology);
+            		}
+            		if (!candidateTrees.treeExist(tree)) {
+            			tree = optimizeModelParameters();
+            			stop_rule.addImprovedIteration(curIt);
+            			cout << "BETTER TREE FOUND at iteration " << curIt << ": " << curScore;
+            			cout << " / CPU time: " << (int) round(getCPUTime() - params->startCPUTime) << "s" << endl;
+            		} else {
+            			cout << "UPDATE BEST LOG-LIKELIHOOD: " << curScore << endl;
+            		}
+            	}
+            	candidateTrees.update(tree, curScore, true);
+                break;
+			}
+
             /* sort all positive NNI moves (descending) */
             sort(plusNNIs.begin(), plusNNIs.end());
             if (verbose_mode >= VB_DEBUG) {
@@ -1665,11 +1644,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
                 for (int i = 0; i < plusNNIs.size(); i++) {
                     cout << "Logl of positive NNI " << i << " : " << plusNNIs[i].newloglh << endl;
                 }
-            }
-
-            if (plusNNIs.size() == 0) {
-            	searchInfo.setNniOptimal(true);
-                break;
             }
 
             /* remove conflicting NNIs */
@@ -1689,18 +1663,18 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             updateBrans2Eval(appliedNNIs);
             appliedNNIs.clear();
         }
-
-        // FOR TUNG: If you want to introduce this heuristic, please confirm with reevaluation again.
-//        if (numNNIs > 1) {
-            // Re-estimate branch lengths of the new tree
-            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
-//        } else {
-//        	curScore = computeLikelihood();
-//        }
-
+		// Re-estimate branch lengths of the new tree
+		curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
 
 		// curScore should be larger than score of the best NNI
         if (curScore >= nonConfNNIs.at(0).newloglh - params->loglh_epsilon) {
+        	if (params->reduction) {
+            	if (candidateTrees.treeTopologyExist(generateNewickTopology())) {
+            		break;
+            	} else {
+					candidateTrees.update(generateNewick(), curScore, false);
+            	}
+        	}
             nni_count += numNNIs;
             rollBack = false;
         } else {

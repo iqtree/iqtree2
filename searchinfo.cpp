@@ -23,8 +23,7 @@ SearchInfo::SearchInfo() {
 	this->reduction = false;
 	this->speedNNI = false;
 	this->curPS = this->initPS;
-	this->nniOptimal = false;
-	this->numDup = 0;
+	this->nniSkipped = false;
 }
 
 SearchInfo::~SearchInfo() {

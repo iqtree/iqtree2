@@ -28,34 +28,15 @@ public:
 	bool isSpeedNni() const;
 	void setSpeedNni(bool speedNni);
 
-	bool isNniOptimal() const {
-		return nniOptimal;
-	}
-
-	void setNniOptimal(bool nniOptimal) {
-		this->nniOptimal = nniOptimal;
-	}
-
-	int getNumDup() const {
-		return numDup;
-	}
-
-	void setNumDup(int numDup) {
-		this->numDup = numDup;
-	}
-	/* Getters and Setters function */
-
+	bool nniSkipped;
 private:
 	bool speedNNI;
 	bool reduction;
 	bool nni5;
-	bool nniOptimal;
 	int maxNNISteps;
 	double initPS; // initial perturbation strength
 	double curPS; // current perturbation strength
-	/* Number of duplicated trees: how many time the search revisit old trees.
-	 * This give us an idea of the search landscape */
-	int numDup;
+
 };
 
 #endif /* SEARCHINFO_H_ */

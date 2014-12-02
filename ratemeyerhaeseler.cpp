@@ -470,7 +470,7 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 	//setRates(prev_rates);
 	//string rate_file = params.out_prefix;
 	//rate_file += ".mhrate";
-	double prev_lh = tree.getBestScore();
+	double prev_lh = tree.curScore;
 	string dist_file = params.out_prefix;
 	dist_file += ".tdist";
 	tree.getModelFactory()->stopStoringTransMatrix();
@@ -484,11 +484,9 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 		tree.curScore = tree.optimizeAllBranches(i);
 		cout << "Current Log-likelihood: " << tree.curScore << endl;
 		if (tree.curScore <= prev_lh + 1e-4) {
-			tree.setBestScore(tree.curScore);
 			break;
 		}
 		prev_lh = tree.curScore;
-		tree.setBestScore(tree.curScore);
 	}
 	cout << "Optimization took " << i-1 << " rounds to finish" << endl;
 	tree.getModelFactory()->startStoringTransMatrix();

@@ -10,14 +10,13 @@
 #include "mtreeset.h"
 
 
-CandidateSet::CandidateSet(int maxCandidates, int maxPop, Alignment *aln) {
+void CandidateSet::init(int maxCandidates, int maxPop, char* root, bool rooted, Alignment* aln) {
     assert(maxPop <= maxCandidates);
-    assert(aln);
     this->maxCandidates = maxCandidates;
     this->popSize = maxPop;
+    this->root = root;
+    this->isRooted = rooted;
     this->aln = aln;
-    this->bestScore = -DBL_MAX;
-    this->isRooted = false;
 }
 
 CandidateSet::~CandidateSet() {
@@ -25,14 +24,15 @@ CandidateSet::~CandidateSet() {
 
 CandidateSet::CandidateSet() {
 	aln = NULL;
+	root = NULL;
 	maxCandidates = 0;
 	popSize = 0;
-	bestScore = -DBL_MAX;
 	isRooted = false;
 }
 
 vector<string> CandidateSet::getBestTreeString() {
 	vector<string> res;
+	double bestScore = rbegin()->first;
 	for (reverse_iterator rit = rbegin(); rit != rend() && rit->second.score == bestScore; rit++) {
 		res.push_back(rit->second.tree);
 	}
@@ -127,25 +127,20 @@ bool CandidateSet::update(string tree, double score, bool localOpt) {
 	candidate.topology = getTopology(tree);
 	candidate.localOpt = localOpt;
 	candidate.tree = tree;
-	if (candidate.score > bestScore)
-		bestScore = candidate.score;
+
 	if (treeTopologyExist(candidate.topology)) {
+		newTree = false;
 	    /* If tree topology already exist but the score is better, we replace the old one
 	    by the new one (with new branch lengths) and update the score */
-		if (topologies[candidate.topology] <= score) {
+		if (topologies[candidate.topology] < score) {
+			removeCandidateTree(candidate.topology);
 			topologies[candidate.topology] = score;
-			for (CandidateSet::iterator i = begin(); i != end(); i++)
-				if (i->second.topology == candidate.topology) {
-					if (i->second.localOpt) {
-						candidate.localOpt = i->second.localOpt;
-					}
-					erase(i);
-					break;
-				}
 			// insert tree into candidate set
 			insert(CandidateSet::value_type(score, candidate));
+		} else if (candidate.localOpt) {
+			CandidateSet::iterator treePtr = getCandidateTree(candidate.topology);
+			treePtr->second.localOpt = candidate.localOpt;
 		}
-		newTree = false;
 	} else {
 		if (size() < maxCandidates) {
 			// insert tree into candidate set
@@ -171,6 +166,13 @@ vector<double> CandidateSet::getBestScores(int numBestScore) {
 		res.push_back(rit->first);
 	}
 	return res;
+}
+
+double CandidateSet::getBestScore() {
+	if (size() == 0)
+		return -DBL_MAX;
+	else
+		return rbegin()->first;
 }
 
 double CandidateSet::getWorstScore() {
@@ -209,11 +211,32 @@ CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
 }
 
 bool CandidateSet::treeTopologyExist(string topo) {
-	return topologies.find(topo) != topologies.end();
+	return (topologies.find(topo) != topologies.end());
 }
 
 bool CandidateSet::treeExist(string tree) {
 	return treeTopologyExist(getTopology(tree));
+}
+
+CandidateSet::iterator CandidateSet::getCandidateTree(string topology) {
+	for (CandidateSet::reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+		if (rit->second.topology == topology)
+			return --(rit.base());
+	}
+	return end();
+}
+
+void CandidateSet::removeCandidateTree(string topology) {
+	bool removed = false;
+	for (CandidateSet::reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+			if (rit->second.topology == topology) {
+				erase( --(rit.base()) );
+				topologies.erase(topology);
+				removed = true;
+				break;
+			}
+	}
+	assert(removed);
 }
 
 int CandidateSet::computeSplitSupport(int numTree) {
