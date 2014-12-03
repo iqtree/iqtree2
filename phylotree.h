@@ -506,6 +506,7 @@ public:
     bool tip_partial_lh_computed;
 
     void computeTipPartialLikelihood();
+    void computePtnInvar();
 
     /**
             compute the partial likelihood at a subtree

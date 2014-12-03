@@ -165,8 +165,6 @@ void PhyloTree::computeTipPartialLikelihood() {
 	//-------------------------------------------------------
 	// initialize ptn_freq and ptn_invar
 	//-------------------------------------------------------
-    double *state_freq = aligned_alloc_double(nstates);
-    model->getStateFrequency(state_freq);
 
 	size_t nptn = aln->getNPattern();
 	size_t maxptn = get_safe_upper_limit(nptn+model_factory->unobserved_ptns.size());
@@ -177,6 +175,16 @@ void PhyloTree::computeTipPartialLikelihood() {
 		ptn_freq[ptn] = 0.0;
 
 	// for +I model
+	computePtnInvar();
+}
+
+void PhyloTree::computePtnInvar() {
+	size_t nptn = aln->getNPattern(), ptn;
+	size_t maxptn = get_safe_upper_limit(nptn+model_factory->unobserved_ptns.size());
+	int nstates = aln->num_states;
+
+    double *state_freq = aligned_alloc_double(nstates);
+    model->getStateFrequency(state_freq);
 	memset(ptn_invar, 0, maxptn*sizeof(double));
 	double p_invar = site_rate->getPInvar();
 	if (p_invar != 0.0) {
