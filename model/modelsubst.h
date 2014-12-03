@@ -56,6 +56,11 @@ public:
 	virtual bool isSiteSpecificModel() { return false; }
 	
 	/**
+	 * @return the number of mixture model components
+	 */
+	virtual int getMixtureComponents() { return 1; }
+
+	/**
 		@return the number of rate entries, equal to the number of elements
 			in the upper-diagonal of the rate matrix (since model is reversible)
 	*/

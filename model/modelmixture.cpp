@@ -7,7 +7,7 @@
 
 #include "modelmixture.h"
 
-ModelMixture::ModelMixture(PhyloTree *tree) : ModelSubst(tree->aln->num_states) {
+ModelMixture::ModelMixture(PhyloTree *tree) : ModelGTR(tree) {
 	// TODO Auto-generated constructor stub
 
 }
