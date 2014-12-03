@@ -1500,6 +1500,9 @@ struct Params {
 	 * 0: store all partial likelihood vectors
 	 * 1: only store 1 partial likelihood vector per node */
 	LhMemSave lh_mem_save;
+
+	/* TRUE to print .splits file in star-dot format */
+	bool print_splits_file;
 };
 
 /**

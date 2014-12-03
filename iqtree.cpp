@@ -2398,7 +2398,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     string out_file;
     out_file = params.out_prefix;
     out_file += ".splits";
-    if (verbose_mode >= VB_MED) {
+    if (params.print_splits_file) {
 		sg.saveFile(out_file.c_str(), IN_OTHER, true);
 		cout << "Split supports printed to star-dot file " << out_file << endl;
     }

@@ -783,6 +783,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_branch_lengths = false;
 	params.lh_mem_save = LM_DETECT; // auto detect
 	params.start_tree = STT_PLL_PARSIMONY;
+	params.print_splits_file = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1903,6 +1904,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-wca") == 0) {
 				params.print_conaln = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-wsplits") == 0) {
+				params.print_splits_file = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-ns") == 0) {

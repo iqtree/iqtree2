@@ -2288,7 +2288,7 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 	}
 
     //sg.scaleWeight(0.01, false, 4);
-	if (verbose_mode >= VB_MED) {
+	if (params->print_splits_file) {
 		sg.saveFile(out_file.c_str(), IN_OTHER, true);
 		cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
 	}
