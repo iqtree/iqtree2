@@ -1148,6 +1148,7 @@ void PhyloTree::deleteAllPartialLh() {
 	central_partial_lh = NULL;
 	central_scale_num = NULL;
 	central_partial_pars = NULL;
+    clearAllPartialLH();
 }
 
 uint64_t PhyloTree::getMemoryRequired() {

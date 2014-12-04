@@ -475,7 +475,7 @@ public:
     /**
             clear all partial likelihood for a clean computation again
      */
-    void clearAllPartialLH();
+    virtual void clearAllPartialLH();
 
     /**
      * compute all partial likelihoods if not computed before

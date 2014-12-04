@@ -436,6 +436,12 @@ void PhyloSuperTree::deleteAllPartialLh() {
 	}
 }
 
+void PhyloSuperTree::clearAllPartialLH() {
+    for (iterator it = begin(); it != end(); it++) {
+        (*it)->clearAllPartialLH();
+    }
+}
+
 double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	double tree_lh = 0.0;
 	int ntrees = size();
