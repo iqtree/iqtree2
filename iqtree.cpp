@@ -1668,6 +1668,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
 		// curScore should be larger than score of the best NNI
         if (curScore >= nonConfNNIs.at(0).newloglh - params->loglh_epsilon) {
+            nni_count += numNNIs;
+            rollBack = false;
         	if (params->reduction) {
             	if (candidateTrees.treeTopologyExist(generateNewickTopology())) {
             		break;
@@ -1675,8 +1677,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 					candidateTrees.update(generateNewick(), curScore, false);
             	}
         	}
-            nni_count += numNNIs;
-            rollBack = false;
         } else {
             /* tree cannot be worse if only 1 NNI is applied */
             if (numNNIs == 1 && curScore < nonConfNNIs.at(0).newloglh - 1.0) {

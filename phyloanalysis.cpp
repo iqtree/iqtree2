@@ -844,7 +844,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Maximum-likelihood tree:       " << params.out_prefix
 				<< ".treefile" << endl;
 		if (params.snni) {
-			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".trees" << endl;
+			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
 		}
 	}
 	if (!params.user_file && params.start_tree == STT_BIONJ) {
@@ -1303,6 +1303,8 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     double nniTime = getCPUTime() - startTime;
     cout << "Average time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
 
+    iqtree.candidateTrees.computeSplitSupport();
+
     return numDup;
 }
 
@@ -1711,8 +1713,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	cout << "BEST SCORE FOUND : " << iqtree.curScore << endl;
 
-	vector<string> trees = iqtree.candidateTrees.getBestTreeStrings();
-	ofstream treesOut((string(params.out_prefix) + ".trees").c_str(), ofstream::out);
+	vector<string> trees = iqtree.candidateTrees.getBestLocalOptimalTrees();
+	ofstream treesOut((string(params.out_prefix) + ".suboptimal_trees").c_str(), ofstream::out);
 	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++)
 		treesOut << (*it) << endl;
 

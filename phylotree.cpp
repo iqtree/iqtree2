@@ -233,7 +233,8 @@ void PhyloTree::readTreeString(const string &tree_string) {
 
 string PhyloTree::generateNewick() {
 	stringstream tree_stream;
-	printTree(tree_stream);
+	printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
+	//printTree(tree_stream);
 	newickTree = tree_stream.str();
 	return newickTree;
 }
@@ -242,7 +243,7 @@ string PhyloTree::generateNewickTopology() {
     stringstream tree_stream;
     // important: to make topology string unique
     setRootNode(params->root);
-    printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
+    printTree(tree_stream, WT_TAXON_ID | WT_SORT_TAXA);
     newickTopo = tree_stream.str();
     return newickTopo;
 }
