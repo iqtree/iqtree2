@@ -924,7 +924,7 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     if (out_prefix) {
 		string file_name = out_prefix;
 		file_name += ".parstree";
-		printTree(file_name.c_str(), WT_BR_LEN | WT_NEWLINE);
+		printTree(file_name.c_str(), WT_NEWLINE);
     }
 }
 
