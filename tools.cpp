@@ -785,6 +785,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.lh_mem_save = LM_DETECT; // auto detect
 	params.start_tree = STT_PLL_PARSIMONY;
 	params.print_splits_file = false;
+    params.ignore_identical_seqs = true;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1048,6 +1049,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_gen = BALANCED;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-keep_ident") == 0) {
+                params.ignore_identical_seqs = false;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-rcsg") == 0) {
 				cnt++;
 				if (cnt >= argc)

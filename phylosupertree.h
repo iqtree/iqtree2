@@ -141,6 +141,12 @@ public:
     virtual void deleteAllPartialLh();
 
     /**
+     NEWLY ADDED (2014-12-04): clear all partial likelihood for a clean computation again
+     */
+    virtual void clearAllPartialLH();
+    
+
+    /**
             compute the tree likelihood
             @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
                             assuming pattern_lh has the size of the number of patterns

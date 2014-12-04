@@ -1702,6 +1702,13 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             // This is important because after restoring the branch lengths, all partial
             // likelihood need to be cleared.
             clearAllPartialLH();
+            // BQM: This was missing: one should also clear all subtrees of a supertree
+            if (isSuperTree()) {
+            	PhyloSuperTree *stree = (PhyloSuperTree*)this;
+            	for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++) {
+            		(*it)->clearAllPartialLH();
+            	}
+            }
             rollBack = true;
             // only apply the best NNI
             numNNIs = 1;
