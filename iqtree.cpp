@@ -22,8 +22,8 @@
 #include "phylosupertreeplen.h"
 #include "mexttree.h"
 #include "timeutil.h"
-#include "gtrmodel.h"
-#include "rategamma.h"
+#include "model/modelgtr.h"
+#include "model/rategamma.h"
 #include <numeric>
 #include "pll/pllInternal.h"
 #include "vectorclass/vectorclass.h"
@@ -928,10 +928,10 @@ void IQTree::inputModelPLL2IQTree() {
     // TODO add support for partitioned model
     dynamic_cast<RateGamma*>(getRate())->setGammaShape(pllPartitions->partitionData[0]->alpha);
     if (aln->num_states == 4) {
-        ((GTRModel*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
+        ((ModelGTR*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
         getModel()->decomposeRateMatrix();
     }
-    ((GTRModel*) getModel())->setStateFrequency(pllPartitions->partitionData[0]->empiricalFrequencies);
+    ((ModelGTR*) getModel())->setStateFrequency(pllPartitions->partitionData[0]->empiricalFrequencies);
 }
 
 void IQTree::inputModelIQTree2PLL() {
@@ -1416,7 +1416,7 @@ double IQTree::doTreeSearch() {
                     doRandomNNIs(numNNI);
                 }
             } else {
-            	readTreeString(candidateTrees.getBestTreeString()[0]);
+            	readTreeString(candidateTrees.getHighestScoringTrees()[0]);
                 doIQP();
             }
             setAlignment(aln);
@@ -1450,7 +1450,7 @@ double IQTree::doTreeSearch() {
                 if (isSuperTree()) {
                     ((PhyloSuperTree*) this)->mapTrees();
                 }
-                curScore = optimizeAllBranches(1, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
+                curScore = optimizeAllBranches(params->numSmoothTree, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
                 perturbScore = curScore;
             }
         }
@@ -1539,7 +1539,7 @@ double IQTree::doTreeSearch() {
         } // end of bootstrap convergence test
     }
 
-    readTreeString(candidateTrees.getBestTreeString()[0]);
+    readTreeString(candidateTrees.getHighestScoringTrees()[0]);
 
     if (testNNI)
         outNNI.close();
@@ -1672,6 +1672,9 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             rollBack = false;
         	if (params->reduction) {
             	if (candidateTrees.treeTopologyExist(generateNewickTopology())) {
+            		double oldScore = candidateTrees.getTopologyScore(newickTopology);
+            		if (curScore > oldScore)
+    					candidateTrees.update(generateNewick(), curScore, false);
             		break;
             	} else {
 					candidateTrees.update(generateNewick(), curScore, false);
@@ -2196,7 +2199,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
     double *pattern_lh_orig = aligned_alloc_double(nptn);
     computePatternLikelihood(pattern_lh_orig, &cur_logl);
     for (int i = 0; i < nptn; i++)
-    	pattern_lh[i] = pattern_lh_orig[i];
+    	pattern_lh[i] = (float)pattern_lh_orig[i];
 #else
     computePatternLikelihood(pattern_lh, &cur_logl);
 #endif
@@ -2225,8 +2228,10 @@ void IQTree::saveCurrentTree(double cur_logl) {
 //            if (sse == LK_NORMAL || sse == LK_EIGEN) {
             if (false) {
             	BootValType *boot_sample = boot_samples[sample];
+            	BootValType rellll = 0.0;
 				for (ptn = 0; ptn < nptn; ptn++)
-					rell += pattern_lh[ptn] * boot_sample[ptn];
+					rellll += pattern_lh[ptn] * boot_sample[ptn];
+				rell = (double)rellll;
             } else {
             	// SSE optimized version of the above loop
 				BootValType *boot_sample = boot_samples[sample];
@@ -2380,7 +2385,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     string out_file;
     out_file = params.out_prefix;
     out_file += ".splits";
-    if (verbose_mode >= VB_MED) {
+    if (params.print_splits_file) {
 		sg.saveFile(out_file.c_str(), IN_OTHER, true);
 		cout << "Split supports printed to star-dot file " << out_file << endl;
     }

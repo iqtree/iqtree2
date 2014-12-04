@@ -29,26 +29,26 @@
 #include "alignment.h"
 #include "superalignment.h"
 #include "iqtree.h"
-#include "gtrmodel.h"
-#include "modeldna.h"
+#include "model/modelgtr.h"
+#include "model/modeldna.h"
 #include "myreader.h"
-#include "rateheterogeneity.h"
-#include "rategamma.h"
-#include "rateinvar.h"
-#include "rategammainvar.h"
+#include "model/rateheterogeneity.h"
+#include "model/rategamma.h"
+#include "model/rateinvar.h"
+#include "model/rategammainvar.h"
 //#include "modeltest_wrapper.h"
-#include "modelprotein.h"
-#include "modelbin.h"
-#include "modelcodon.h"
+#include "model/modelprotein.h"
+#include "model/modelbin.h"
+#include "model/modelcodon.h"
 #include "stoprule.h"
 
 #include "mtreeset.h"
 #include "mexttree.h"
-#include "ratemeyerhaeseler.h"
+#include "model/ratemeyerhaeseler.h"
 #include "whtest_wrapper.h"
-#include "partitionmodel.h"
+#include "model/partitionmodel.h"
 #include "guidedbootstrap.h"
-#include "modelset.h"
+#include "model/modelset.h"
 #include "timeutil.h"
 
 
@@ -278,10 +278,12 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 					<< endl;
 		int cats = rate_model->getNDiscreteRate();
 		DoubleVector prop;
-		if (rate_model->getGammaShape() > 0 || rate_model->getPtnCat(0) < 0)
-			prop.resize(cats,
-					(1.0 - rate_model->getPInvar()) / rate_model->getNRate());
-		else {
+		if (rate_model->getGammaShape() > 0 || rate_model->getPtnCat(0) < 0) {
+//			prop.resize(cats, (1.0 - rate_model->getPInvar()) / rate_model->getNRate());
+			prop.resize(cats);
+		for (i = 0; i < cats; i++)
+			prop[i] = rate_model->getProp(i);
+		} else {
 			prop.resize(cats, 0.0);
 			for (i = 0; i < tree.aln->getNPattern(); i++)
 				prop[rate_model->getPtnCat(i)] += tree.aln->at(i).frequency;
@@ -1237,7 +1239,6 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     		continue;
     	}
     	iqtree.readTreeString(it->second.tree);
-
         // Initialize branch lengths for the parsimony tree
         iqtree.initializeAllPartialPars();
         iqtree.clearAllPartialLH();
@@ -1279,15 +1280,10 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         iqtree.readTreeString(rit->second.tree);
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
-        if (!iqtree.isSuperTree()) {
-            iqtree.computeLogL();
-        } else {
+        iqtree.computeLogL();
+        // THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
+        while (iqtree.curScore - rit->first < -1.0) {
         	iqtree.optimizeBranches(1);
-        }
-        if (iqtree.curScore - rit->first < -5.0) {
-        	stringstream msg;
-        	msg << "Wrong likelihood computation: " << iqtree.curScore << " (should be: " << rit->first << ")";
-        	outError(msg.str().c_str());
         }
         initLogl = iqtree.curScore;
         iqtree.doNNISearch(nniCount, nniStep);
@@ -1303,7 +1299,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
     double nniTime = getCPUTime() - startTime;
     cout << "Average time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
 
-    iqtree.candidateTrees.computeSplitSupport();
+    //iqtree.candidateTrees.computeSplitSupport();
 
     return numDup;
 }
@@ -1623,19 +1619,19 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (params.min_iterations > 0) {
         double initTime = getCPUTime();
 
-        if (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY) {
+        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
         	int numDup = initCandidateTreeSet(params, iqtree, numInitTrees);
         	assert(iqtree.candidateTrees.size() != 0);
         	cout << "Finish initializing candidate tree set. ";
         	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.getNumLocalOptTrees() << endl;
         	cout << "Candidate tree size: " << iqtree.candidateTrees.size() << endl;
         } else { // no -snni
+
             int nni_count = 0;
             int nni_steps = 0;
             cout << "Doing NNI on the initial tree ... " << endl;
             string tree = iqtree.doNNISearch(nni_count, nni_steps);
         	iqtree.candidateTrees.update(tree, iqtree.curScore, true);
-
         }
 
         cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: "
@@ -1665,7 +1661,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	/****************** Do tree search ***************************/
 	if (params.min_iterations > 1) {
-		iqtree.readTreeString(iqtree.candidateTrees.getBestTreeString()[0]);
+		iqtree.readTreeString(iqtree.candidateTrees.getHighestScoringTrees()[0]);
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(iqtree.aln);
 	} else {
@@ -1700,7 +1696,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	/******** Performs final model parameters optimization ******************/
 	if (params.min_iterations) {
-		iqtree.readTreeString(iqtree.candidateTrees.getBestTreeString()[0]);
+		iqtree.readTreeString(iqtree.candidateTrees.getHighestScoringTrees()[0]);
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         cout << "Performs final model parameters optimization" << endl;
@@ -1717,7 +1713,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	ofstream treesOut((string(params.out_prefix) + ".suboptimal_trees").c_str(), ofstream::out);
 	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++)
 		treesOut << (*it) << endl;
-
 	if (params.pll)
 		iqtree.inputModelPLL2IQTree();
 
@@ -2276,7 +2271,7 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 	}
 
     //sg.scaleWeight(0.01, false, 4);
-	if (verbose_mode >= VB_MED) {
+	if (params->print_splits_file) {
 		sg.saveFile(out_file.c_str(), IN_OTHER, true);
 		cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
 	}

@@ -39,6 +39,13 @@ public:
     RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, bool simultaneous, PhyloTree *tree);
 
 	/**
+		get the proportion of sites under a specified category.
+		@param category category ID from 0 to #category-1
+		@return the proportion of the specified category
+	*/
+	virtual double getProp(int category) { return (1.0-p_invar)/ncategory; }
+
+	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
 	virtual string getNameParams();

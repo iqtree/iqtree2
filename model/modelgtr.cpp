@@ -17,13 +17,13 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "gtrmodel.h"
+#include "modelgtr.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 
 
-GTRModel::GTRModel(PhyloTree *tree, bool count_rates)
+ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
  : ModelSubst(tree->aln->num_states), EigenDecomposition()
 {
 	int i;
@@ -60,11 +60,11 @@ GTRModel::GTRModel(PhyloTree *tree, bool count_rates)
 	num_params = getNumRateEntries() - 1;
 }
 
-void GTRModel::setTree(PhyloTree *tree) {
+void ModelGTR::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
 
-string GTRModel::getNameParams() {
+string ModelGTR::getNameParams() {
 	ostringstream retname;
 	retname << "GTR";
 	if (num_states != 4) retname << num_states;
@@ -78,7 +78,7 @@ string GTRModel::getNameParams() {
 	return retname.str();
 }
 
-void GTRModel::init(StateFreqType type) {
+void ModelGTR::init(StateFreqType type) {
 	//if (type == FREQ_UNKNOWN) return;
 	int i;
 	freq_type = type;
@@ -100,7 +100,7 @@ void GTRModel::init(StateFreqType type) {
 	decomposeRateMatrix();
 }
 
-void GTRModel::writeInfo(ostream &out) {
+void ModelGTR::writeInfo(ostream &out) {
 	if (num_states != 4) return;
 	out << "Rate parameters:";
 	//out.precision(3);
@@ -122,7 +122,7 @@ void GTRModel::writeInfo(ostream &out) {
 	//out.unsetf(ios::fixed);
 }
 
-void GTRModel::computeTransMatrix(double time, double *trans_matrix) {
+void ModelGTR::computeTransMatrix(double time, double *trans_matrix) {
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
 	double *exptime = new double[num_states];
@@ -158,7 +158,7 @@ void GTRModel::computeTransMatrix(double time, double *trans_matrix) {
 	delete [] exptime;
 }
 
-void GTRModel::computeTransMatrixFreq(double time, double* trans_matrix)
+void ModelGTR::computeTransMatrixFreq(double time, double* trans_matrix)
 {
 	computeTransMatrix(time, trans_matrix);
 	for (int state1 = 0; state1 < num_states; state1++) {
@@ -168,7 +168,7 @@ void GTRModel::computeTransMatrixFreq(double time, double* trans_matrix)
 	}
 }
 
-double GTRModel::computeTrans(double time, int state1, int state2) {
+double ModelGTR::computeTrans(double time, int state1, int state2) {
 	double evol_time = time / total_num_subst;
 	int i;
 
@@ -180,7 +180,7 @@ double GTRModel::computeTrans(double time, int state1, int state2) {
 	return trans_prob;
 }
 
-double GTRModel::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
+double ModelGTR::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
 	double evol_time = time / total_num_subst;
 	int i;
 
@@ -198,7 +198,7 @@ double GTRModel::computeTrans(double time, int state1, int state2, double &derv1
 }
 
 
-void GTRModel::computeTransDerv(double time, double *trans_matrix, 
+void ModelGTR::computeTransDerv(double time, double *trans_matrix, 
 	double *trans_derv1, double *trans_derv2) 
 {
 	/* compute P(t) */
@@ -237,7 +237,7 @@ void GTRModel::computeTransDerv(double time, double *trans_matrix,
 	delete [] exptime;
 }
 
-void GTRModel::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
+void ModelGTR::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
 {
 	int nstates = num_states;
 	double rate_sqr = rate_val*rate_val;
@@ -255,30 +255,30 @@ void GTRModel::computeTransDervFreq(double time, double rate_val, double* trans_
 }
 
 
-void GTRModel::getRateMatrix(double *rate_mat) {
+void ModelGTR::getRateMatrix(double *rate_mat) {
 	int nrate = getNumRateEntries();
 	memcpy(rate_mat, rates, nrate * sizeof(double));
 }
 
-void GTRModel::setRateMatrix(double* rate_mat)
+void ModelGTR::setRateMatrix(double* rate_mat)
 {
 	int nrate = getNumRateEntries();
 	memcpy(rates, rate_mat, nrate * sizeof(double));
 }
 
-void GTRModel::getStateFrequency(double *freq) {
+void ModelGTR::getStateFrequency(double *freq) {
 	assert(state_freq);
 	assert(freq_type != FREQ_UNKNOWN);
 	memcpy(freq, state_freq, sizeof(double) * num_states);
 }
 
-void GTRModel::setStateFrequency(double* freq)
+void ModelGTR::setStateFrequency(double* freq)
 {
 	assert(state_freq);
 	memcpy(state_freq, freq, sizeof(double) * num_states);
 }
 
-void GTRModel::getQMatrix(double *q_mat) {
+void ModelGTR::getQMatrix(double *q_mat) {
 	double **rate_matrix = (double**) new double[num_states];
 	int i, j, k = 0;
 
@@ -303,7 +303,7 @@ void GTRModel::getQMatrix(double *q_mat) {
 
 }
 
-int GTRModel::getNDim() { 
+int ModelGTR::getNDim() { 
 	assert(freq_type != FREQ_UNKNOWN);
 	int ndim = num_params;
 	if (freq_type == FREQ_ESTIMATE) 
@@ -312,7 +312,7 @@ int GTRModel::getNDim() {
 }
 
 
-void GTRModel::scaleStateFreq(bool sum_one) {
+void ModelGTR::scaleStateFreq(bool sum_one) {
 	int i;
 	if (sum_one) {
 		// make the frequencies sum to 1
@@ -328,7 +328,7 @@ void GTRModel::scaleStateFreq(bool sum_one) {
 	}
 }
 
-void GTRModel::setVariables(double *variables) {
+void ModelGTR::setVariables(double *variables) {
 	int nrate = getNDim();
 	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
 	if (nrate > 0)
@@ -340,7 +340,7 @@ void GTRModel::setVariables(double *variables) {
 	}
 }
 
-void GTRModel::getVariables(double *variables) {
+void ModelGTR::getVariables(double *variables) {
 	int nrate = getNDim();
 	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
 	if (nrate > 0)
@@ -358,7 +358,7 @@ void GTRModel::getVariables(double *variables) {
 	}
 }
 
-double GTRModel::targetFunk(double x[]) {
+double ModelGTR::targetFunk(double x[]) {
 	getVariables(x);
 	if (state_freq[num_states-1] < 1e-4) return 1.0e+12;
 	decomposeRateMatrix();
@@ -368,7 +368,7 @@ double GTRModel::targetFunk(double x[]) {
 }
 
 
-double GTRModel::optimizeParameters(double epsilon) {
+double ModelGTR::optimizeParameters(double epsilon) {
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
@@ -417,7 +417,7 @@ double GTRModel::optimizeParameters(double epsilon) {
 
 
 
-void GTRModel::decomposeRateMatrix(){
+void ModelGTR::decomposeRateMatrix(){
 	double **rate_matrix = (double**) new double[num_states];
 	int i, j, k = 0;
 
@@ -456,7 +456,7 @@ void GTRModel::decomposeRateMatrix(){
 	delete [] rate_matrix;
 } 
 
-void GTRModel::readRates(istream &in) throw(const char*) {
+void ModelGTR::readRates(istream &in) throw(const char*) {
 	int nrates = getNumRateEntries();
 	for (int i = 0; i < nrates; i++) {
 		if (!(in >> rates[i]))
@@ -466,7 +466,7 @@ void GTRModel::readRates(istream &in) throw(const char*) {
 	}
 }
 
-void GTRModel::readRates(string str) throw(const char*) {
+void ModelGTR::readRates(string str) throw(const char*) {
 	int nrates = getNumRateEntries();
 	int end_pos = 0;
 	cout << __func__ << " " << str << endl;
@@ -492,7 +492,7 @@ void GTRModel::readRates(string str) throw(const char*) {
 
 }
 
-void GTRModel::readStateFreq(istream &in) throw(const char*) {
+void ModelGTR::readStateFreq(istream &in) throw(const char*) {
 	int i;
 	for (i = 0; i < num_states; i++) {
 		if (!(in >> state_freq[i])) 
@@ -506,7 +506,7 @@ void GTRModel::readStateFreq(istream &in) throw(const char*) {
 		throw "State frequencies do not sum up to 1.0";
 }
 
-void GTRModel::readStateFreq(string str) throw(const char*) {
+void ModelGTR::readStateFreq(string str) throw(const char*) {
 	int i;
 	int end_pos = 0;
 	for (i = 0; i < num_states; i++) {
@@ -528,7 +528,7 @@ void GTRModel::readStateFreq(string str) throw(const char*) {
 		outError("State frequencies do not sum up to 1.0 in ", str);
 }
 
-void GTRModel::readParameters(const char *file_name) { 
+void ModelGTR::readParameters(const char *file_name) { 
 	try {
 		cout << "Reading model parameters from file " << file_name << endl;
 		ifstream in(file_name);
@@ -543,11 +543,11 @@ void GTRModel::readParameters(const char *file_name) {
 }
 
 
-GTRModel::~GTRModel() {
+ModelGTR::~ModelGTR() {
 	freeMem();
 }
 
-void GTRModel::freeMem()
+void ModelGTR::freeMem()
 {
 //	int i;
 	//delete eigen_coeff_derv2;
@@ -566,36 +566,36 @@ void GTRModel::freeMem()
 	if (rates) delete [] rates;
 }
 
-double *GTRModel::getEigenCoeff() const
+double *ModelGTR::getEigenCoeff() const
 {
     return eigen_coeff;
 }
 
-double *GTRModel::getEigenvalues() const
+double *ModelGTR::getEigenvalues() const
 {
     return eigenvalues;
 }
 
-double *GTRModel::getEigenvectors() const
+double *ModelGTR::getEigenvectors() const
 {
     return eigenvectors;
 }
 
-double* GTRModel::getInverseEigenvectors() const {
+double* ModelGTR::getInverseEigenvectors() const {
 	return inv_eigenvectors;
 }
 
-void GTRModel::setEigenCoeff(double *eigenCoeff)
+void ModelGTR::setEigenCoeff(double *eigenCoeff)
 {
     eigen_coeff = eigenCoeff;
 }
 
-void GTRModel::setEigenvalues(double *eigenvalues)
+void ModelGTR::setEigenvalues(double *eigenvalues)
 {
     this->eigenvalues = eigenvalues;
 }
 
-void GTRModel::setEigenvectors(double *eigenvectors)
+void ModelGTR::setEigenvectors(double *eigenvectors)
 {
     this->eigenvectors = eigenvectors;
 }

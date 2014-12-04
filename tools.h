@@ -612,9 +612,9 @@ struct Params {
 
     /**
      * 		defines the relation between edge lengths in supertree and subtrees
-     * 		0 for separate edge length (default)
-     * 		p for proportional edge length
-     * 		j for joint edge length
+     * 		0 (NULL) for separate edge length (default)
+     * 		'p' for proportional edge length
+     * 		'j' for joint edge length
      */
     char partition_type;
 
@@ -1136,7 +1136,7 @@ struct Params {
     /**
      *  Write out all candidate trees (the locally optimal trees)
      */
-    int write_candidate_trees;
+    int write_local_optimal_trees;
 
     /**
         TRUE to avoid duplicated trees while writing intermediate trees
@@ -1505,6 +1505,9 @@ struct Params {
 	 * 0: store all partial likelihood vectors
 	 * 1: only store 1 partial likelihood vector per node */
 	LhMemSave lh_mem_save;
+
+	/* TRUE to print .splits file in star-dot format */
+	bool print_splits_file;
 };
 
 /**

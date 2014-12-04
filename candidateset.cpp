@@ -30,7 +30,7 @@ CandidateSet::CandidateSet() {
 	isRooted = false;
 }
 
-vector<string> CandidateSet::getBestTreeString() {
+vector<string> CandidateSet::getEquallyOptimalTrees() {
 	vector<string> res;
 	double bestScore = rbegin()->first;
 	for (reverse_iterator rit = rbegin(); rit != rend() && rit->second.score == bestScore; rit++) {
@@ -40,17 +40,18 @@ vector<string> CandidateSet::getBestTreeString() {
 }
 
 string CandidateSet::getRandCandTree() {
+	assert(!empty());
 	if (empty())
 		return "";
 	int id = random_int(min(popSize, (int)size()) );
 	for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
 		if (id == 0)
 			return i->second.tree;
+	assert(0);
 	return "";
 }
 
-
-vector<string> CandidateSet::getBestTreeStrings(int numTree) {
+vector<string> CandidateSet::getHighestScoringTrees(int numTree) {
 	assert(numTree <= maxCandidates);
 	if (numTree == 0) {
 		numTree = maxCandidates;
@@ -188,6 +189,11 @@ string CandidateSet::getTopology(string tree) {
 	ostringstream ostr;
 	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	return ostr.str();
+}
+
+double CandidateSet::getTopologyScore(string topology) {
+	assert(topologies.find(topology) != topologies.end());
+	return topologies[topology];
 }
 
 void CandidateSet::clear() {

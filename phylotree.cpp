@@ -244,8 +244,8 @@ string PhyloTree::generateNewickTopology() {
     // important: to make topology string unique
     setRootNode(params->root);
     printTree(tree_stream, WT_TAXON_ID | WT_SORT_TAXA);
-    newickTopo = tree_stream.str();
-    return newickTopo;
+    newickTopology = tree_stream.str();
+    return newickTopology;
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {

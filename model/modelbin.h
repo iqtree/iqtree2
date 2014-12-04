@@ -17,45 +17,38 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef MODELPROTEIN_H
-#define MODELPROTEIN_H
+#ifndef MODELBIN_H
+#define MODELBIN_H
 
-#include "gtrmodel.h"
+#include "modelgtr.h"
 
 /**
-Substitution models for protein sequences
+Model for Binary data
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelProtein : public GTRModel
+class ModelBIN : public ModelGTR
 {
 public:
 	/**
 		constructor
-		@param model_name model name, e.g., JTT, WAG.
+		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelProtein(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates = true);
+    ModelBIN(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates = true);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it
-		@param model_name model name, e.g., JTT, WAG.
+		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 	*/
 	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
 	/**
-		read the rates from an input stream. it will throw error messages if failed
-		@param in input stream
-	*/
-	virtual void readRates(istream &in) throw(const char*);
-
-	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
 	virtual string getNameParams() { return name; }
-
 
 };
 

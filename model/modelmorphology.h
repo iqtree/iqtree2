@@ -8,7 +8,7 @@
 #ifndef MODELMORPHOLOGY_H_
 #define MODELMORPHOLOGY_H_
 
-#include "gtrmodel.h"
+#include "modelgtr.h"
 
 /**
  * This class implement ML model for morphological data. Such models are:
@@ -16,7 +16,7 @@
  * - ORDERED: allowing only transition from state i to i-1 and i+1
  * TODO: Mkv to account for absence of constant sites
  */
-class ModelMorphology: public GTRModel {
+class ModelMorphology: public ModelGTR {
 public:
 	/**
 		constructor

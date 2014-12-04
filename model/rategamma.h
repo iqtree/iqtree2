@@ -24,7 +24,7 @@
 
 const double MIN_GAMMA_RATE = 1e-6;
 // change from 0.01 to 0.02 as 0.01 causes numerical problems
-const double MIN_GAMMA_SHAPE = 0.02;
+const double MIN_GAMMA_SHAPE = 0.03;
 const double MAX_GAMMA_SHAPE = 10000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
 
@@ -83,6 +83,13 @@ public:
 		@return the rate of the specified category
 	*/
 	virtual double getRate(int category) { return rates[category]; }
+
+	/**
+		get the proportion of sites under a specified category.
+		@param category category ID from 0 to #category-1
+		@return the proportion of the specified category
+	*/
+	virtual double getProp(int category) { return 1.0/ncategory; }
 
 	/**
 	 * 	return pointer to the rate array

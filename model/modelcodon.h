@@ -8,7 +8,7 @@
 #ifndef MODELCODON_H_
 #define MODELCODON_H_
 
-#include "gtrmodel.h"
+#include "modelgtr.h"
 
 /**
  * parameter constraint
@@ -25,7 +25,7 @@ struct ParamConstraint {
 /**
  * Codon substitution models
  */
-class ModelCodon: public GTRModel {
+class ModelCodon: public ModelGTR {
 public:
 	/**
 		constructor

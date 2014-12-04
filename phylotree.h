@@ -25,11 +25,11 @@
 #include "Eigen/Core"
 #include "mtree.h"
 #include "alignment.h"
-#include "modelsubst.h"
-#include "modelfactory.h"
+#include "model/modelsubst.h"
+#include "model/modelfactory.h"
 #include "phylonode.h"
 #include "optimization.h"
-#include "rateheterogeneity.h"
+#include "model/rateheterogeneity.h"
 
 
 const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
@@ -506,6 +506,7 @@ public:
     bool tip_partial_lh_computed;
 
     void computeTipPartialLikelihood();
+    void computePtnInvar();
 
     /**
             compute the partial likelihood at a subtree
@@ -1296,7 +1297,7 @@ protected:
      *  NEWICK representation of the tree without branch lenghts
      *  Taxa names are sorted
      */
-    string newickTopo;
+    string newickTopology;
 
     /**
      *  is the subtree distance matrix need to be computed or updated
