@@ -1132,6 +1132,7 @@ void PhyloTree::initializeAllPartialLh() {
     	assert(indexlh == (nodeNum-1)*2-leafNum);
     else
     	assert(indexlh == (nodeNum-1)*2);
+    clearAllPartialLH();
 
 }
 

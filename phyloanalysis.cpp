@@ -1083,6 +1083,8 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         iqtree.clearAllPartialLH();
         iqtree.fixNegativeBranch(true);
         numInitTrees = params.numParsTrees;
+        if (numInitTrees > params.min_iterations && params.stop_condition == SC_FIXED_ITERATION)
+            numInitTrees = params.min_iterations;
         break;
     case STT_PLL_PARSIMONY:
         cout << endl;
@@ -1099,6 +1101,8 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         iqtree.fixNegativeBranch(true);
         cout << getCPUTime() - start << " seconds" << endl;
         numInitTrees = params.numParsTrees;
+            if (numInitTrees > params.min_iterations && params.stop_condition == SC_FIXED_ITERATION)
+                numInitTrees = params.min_iterations;
         break;
     case STT_BIONJ:
         // This is the old default option: using BIONJ as starting tree
@@ -2019,7 +2023,8 @@ void runPhyloAnalysis(Params &params) {
 		StrVector twin_seqs;
 
 		// remove identical sequences
-		tree->removeIdenticalSeqs(params, removed_seqs, twin_seqs);
+        if (params.ignore_identical_seqs)
+            tree->removeIdenticalSeqs(params, removed_seqs, twin_seqs);
 		// call main tree reconstruction
 		runTreeReconstruction(params, original_model, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {

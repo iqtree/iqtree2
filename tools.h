@@ -1503,6 +1503,9 @@ struct Params {
 
 	/* TRUE to print .splits file in star-dot format */
 	bool print_splits_file;
+    
+    /** TRUE (default) to ignore identical sequences and add them back at the end */
+    bool ignore_identical_seqs;
 };
 
 /**
