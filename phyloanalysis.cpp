@@ -1059,6 +1059,7 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &numInitTrees, string &initTree) {
     double start = getCPUTime();
 
+    string out_file = params.out_prefix;
     if (params.user_file) {
         // start the search with user-defined tree
     	cout << endl;
@@ -1098,6 +1099,10 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         iqtree.readTreeString(string(iqtree.pllInst->tree_string));
         iqtree.initializeAllPartialPars();
         iqtree.clearAllPartialLH();
+        if (params.write_init_tree) {
+            out_file += ".parstree";
+            iqtree.printTree(out_file.c_str(), WT_NEWLINE);
+        }
         iqtree.fixNegativeBranch(true);
         cout << getCPUTime() - start << " seconds" << endl;
         numInitTrees = params.numParsTrees;

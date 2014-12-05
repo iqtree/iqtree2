@@ -785,6 +785,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.start_tree = STT_PLL_PARSIMONY;
 	params.print_splits_file = false;
     params.ignore_identical_seqs = true;
+    params.write_init_tree = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1820,6 +1821,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_branch_lengths = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-wit") == 0) {
+                params.write_init_tree = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-nodup") == 0) {
 				params.avoid_duplicated_trees = true;
 				continue;

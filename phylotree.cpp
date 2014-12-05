@@ -924,7 +924,7 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     if (out_prefix) {
 		string file_name = out_prefix;
 		file_name += ".parstree";
-		printTree(file_name.c_str(), WT_BR_LEN | WT_NEWLINE);
+		printTree(file_name.c_str(), WT_NEWLINE);
     }
 }
 
@@ -3149,12 +3149,12 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
         // first compute the observed parsimony distance
         double branch_length = (branch_subst > 0) ? ((double) branch_subst / getAlnNSite()) : (1.0 / getAlnNSite());
-        if (branch_length < MIN_BRANCH_LEN)
-        	branch_length = MIN_BRANCH_LEN;
         // now correct Juke-Cantor formula
         double z = (double) aln->num_states / (aln->num_states - 1);
         double x = 1.0 - (z * branch_length);
         if (x > 0) branch_length = -log(x) / z;
+        if (branch_length < MIN_BRANCH_LEN)
+            branch_length = MIN_BRANCH_LEN;
 //        if (verbose_mode >= VB_DEBUG)
 //        	cout << "Negative branch length " << (*it)->length << " was set to ";
         //(*it)->length = fixed_length;
@@ -3167,7 +3167,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         fixed++;
     }
     if ((*it)->length <= 0.0) {
-        (*it)->length = 1e-6;
+        (*it)->length = MIN_BRANCH_LEN;
         (*it)->node->findNeighbor(node)->length = (*it)->length;
     }
     fixed += fixNegativeBranch(force, (*it)->node, node);
