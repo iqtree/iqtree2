@@ -26,7 +26,7 @@
 /* BQM: to ignore all-gapp subtree at an alignment site */
 //#define IGNORE_GAP_LH
 
-#define TINY_POSITIVE DBL_MIN
+//#define TINY_POSITIVE 1e-290
 
 inline Vec2d horizontal_add(Vec2d x[2]) {
 //#if  INSTRSET >= 3  // SSE3
@@ -603,8 +603,8 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 			ddf_ptn += val2[i] * theta[i];
 		}
 
-        assert(lh_ptn >= 0.0);
-        if (lh_ptn <= 0) lh_ptn = TINY_POSITIVE;
+        assert(lh_ptn > 0.0);
+//        if (lh_ptn <= 0) lh_ptn = TINY_POSITIVE;
         
         if (ptn < orig_nptn) {
 			double df_frac = df_ptn / lh_ptn;
@@ -741,8 +741,8 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 				lh_ptn += *lh_cat;
 				lh_cat++;
 			}
-			assert(lh_ptn >= 0.0);
-            if (lh_ptn <= 0) lh_ptn = TINY_POSITIVE;
+			assert(lh_ptn > 0.0);
+//            if (lh_ptn <= 0) lh_ptn = TINY_POSITIVE;
 			if (ptn < orig_nptn) {
 				lh_ptn = log(lh_ptn);
 				_pattern_lh[ptn] = lh_ptn;
@@ -774,8 +774,8 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 				lh_cat++;
 			}
 
-			assert(lh_ptn >= 0.0);
-            if (lh_ptn <= 0) lh_ptn = TINY_POSITIVE;
+			assert(lh_ptn > 0.0);
+//            if (lh_ptn <= 0) lh_ptn = TINY_POSITIVE;
             if (ptn < orig_nptn) {
 				lh_ptn = log(lh_ptn);
 				_pattern_lh[ptn] = lh_ptn;
@@ -1333,7 +1333,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 	VectorClass lh_final = 0.0, df_final = 0.0, ddf_final = 0.0;
 	// these stores values of 2 consecutive patterns
 	VectorClass lh_ptn, df_ptn, ddf_ptn, inv_lh_ptn;
-    VectorClass tiny_num(TINY_POSITIVE);
+//    VectorClass tiny_num(TINY_POSITIVE);
 
 	// perform 2 sites at the same time for SSE/AVX efficiency
 
@@ -1369,7 +1369,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 //		inv_lh_ptn = vc_var_cat/lh_ptn;
 		lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
         // BQM: to avoid rare case that lh_ptn == 0
-        lh_ptn = max(lh_ptn, tiny_num);
+//        lh_ptn = max(lh_ptn, tiny_num);
 
 		inv_lh_ptn = vc_unit / lh_ptn;
 
@@ -1552,7 +1552,7 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 //    	VectorClass vc_var_cat(p_var_cat);
     	VectorClass lh_final(0.0), vc_freq;
 		VectorClass lh_ptn; // store likelihoods of VCSIZE consecutive patterns
-        VectorClass tiny_num(TINY_POSITIVE);
+//        VectorClass tiny_num(TINY_POSITIVE);
 
     	double **lh_states_dad = aligned_alloc<double*>(maxptn);
     	for (ptn = 0; ptn < orig_nptn; ptn++)
@@ -1600,7 +1600,7 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 //			lh_ptn = mul_add(horizontal_add(vc_ptn), vc_var_cat, VectorClass().load_a(&ptn_invar[ptn]));
 			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
             // BQM: to avoid rare case that lh_ptn == 0
-            lh_ptn = max(lh_ptn, tiny_num);
+//            lh_ptn = max(lh_ptn, tiny_num);
 			lh_ptn = log(lh_ptn);
 			lh_ptn.store_a(&_pattern_lh[ptn]);
 
@@ -1680,7 +1680,7 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 //    	VectorClass vc_var_cat(p_var_cat);
     	VectorClass lh_final(0.0), vc_freq;
 		VectorClass lh_ptn;
-        VectorClass tiny_num(TINY_POSITIVE);
+//        VectorClass tiny_num(TINY_POSITIVE);
 
 		// copy dummy values because VectorClass will access beyond nptn
 		for (ptn = nptn; ptn < maxptn; ptn++) {
@@ -1714,7 +1714,7 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 //			lh_ptn = mul_add(horizontal_add(vc_ptn), p_var_cat, VectorClass().load_a(&ptn_invar[ptn]));
 			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
             // BQM: to avoid rare case that lh_ptn == 0
-            lh_ptn = max(lh_ptn, tiny_num);
+//            lh_ptn = max(lh_ptn, tiny_num);
 
 			lh_ptn = log(lh_ptn);
 			lh_ptn.store_a(&_pattern_lh[ptn]);
