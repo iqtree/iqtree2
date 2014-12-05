@@ -45,17 +45,14 @@ string RateInvar::getNameParams() {
 double RateInvar::computeFunction(double p_invar_value) {
 	p_invar = p_invar_value;
 	// fix bug: computeTip... will update ptn_invar vector
-	phylo_tree->tip_partial_lh_computed = false;
-	phylo_tree->computeTipPartialLikelihood();
-	//phylo_tree->clearAllPartialLh();
+	phylo_tree->computePtnInvar();
 	return -phylo_tree->computeLikelihood();
 }
 
 double RateInvar::targetFunk(double x[]) {
 	getVariables(x);
 	// fix bug: computeTip... will update ptn_invar vector
-	phylo_tree->tip_partial_lh_computed = false;
-	phylo_tree->computeTipPartialLikelihood();
+	phylo_tree->computePtnInvar();
 	return -phylo_tree->computeLikelihood();
 }
 
@@ -75,7 +72,7 @@ double RateInvar::optimizeParameters(double epsilon) {
 	double ferror;
 	p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, phylo_tree->aln->frac_const_sites, max(epsilon, TOL_PINVAR), &negative_lh, &ferror);
 	//p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, 1.0 - MIN_PINVAR, TOL_PINVAR, &negative_lh, &ferror);
-	//phylo_tree->clearAllPartialLh();
+	phylo_tree->computePtnInvar();
 	return -negative_lh;
 }
 

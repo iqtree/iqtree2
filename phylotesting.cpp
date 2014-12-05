@@ -528,7 +528,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 		string opt_model_name = "";
 		for (part1 = 0; part1 < gene_sets.size()-1; part1++)
 			for (part2 = part1+1; part2 < gene_sets.size(); part2++)
-			if (super_aln->partitions[gene_sets[part1][0]]->num_states == super_aln->partitions[gene_sets[part2][0]]->num_states) {
+			if (super_aln->partitions[gene_sets[part1][0]]->num_states == super_aln->partitions[gene_sets[part2][0]]->num_states &&
+				super_aln->partitions[gene_sets[part1][0]]->seq_type == super_aln->partitions[gene_sets[part2][0]]->seq_type) {
 				// only merge partitions of the same data type
 				IntVector merged_set;
 				merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());

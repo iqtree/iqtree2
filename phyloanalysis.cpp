@@ -1059,6 +1059,7 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &numInitTrees, string &initTree) {
     double start = getCPUTime();
 
+    string out_file = params.out_prefix;
     if (params.user_file) {
         // start the search with user-defined tree
     	cout << endl;
@@ -1083,6 +1084,8 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         iqtree.clearAllPartialLH();
         iqtree.fixNegativeBranch(true);
         numInitTrees = params.numParsTrees;
+        if (numInitTrees > params.min_iterations && params.stop_condition == SC_FIXED_ITERATION)
+            numInitTrees = params.min_iterations;
         break;
     case STT_PLL_PARSIMONY:
         cout << endl;
@@ -1096,9 +1099,15 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         iqtree.readTreeString(string(iqtree.pllInst->tree_string));
         iqtree.initializeAllPartialPars();
         iqtree.clearAllPartialLH();
+        if (params.write_init_tree) {
+            out_file += ".parstree";
+            iqtree.printTree(out_file.c_str(), WT_NEWLINE);
+        }
         iqtree.fixNegativeBranch(true);
         cout << getCPUTime() - start << " seconds" << endl;
         numInitTrees = params.numParsTrees;
+            if (numInitTrees > params.min_iterations && params.stop_condition == SC_FIXED_ITERATION)
+                numInitTrees = params.min_iterations;
         break;
     case STT_BIONJ:
         // This is the old default option: using BIONJ as starting tree
@@ -2019,7 +2028,8 @@ void runPhyloAnalysis(Params &params) {
 		StrVector twin_seqs;
 
 		// remove identical sequences
-		tree->removeIdenticalSeqs(params, removed_seqs, twin_seqs);
+        if (params.ignore_identical_seqs)
+            tree->removeIdenticalSeqs(params, removed_seqs, twin_seqs);
 		// call main tree reconstruction
 		runTreeReconstruction(params, original_model, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
@@ -2288,7 +2298,7 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 	}
 
     //sg.scaleWeight(0.01, false, 4);
-	if (verbose_mode >= VB_MED) {
+	if (params->print_splits_file) {
 		sg.saveFile(out_file.c_str(), IN_OTHER, true);
 		cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
 	}
