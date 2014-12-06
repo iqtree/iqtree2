@@ -692,26 +692,19 @@ public:
             computing derivatives of likelihood function
      ****************************************************************************/
 
-    double computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
      * this implements the SSE version using Eigen library
      */
     template<int NSTATES>
-    inline double computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    inline void computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <const int nstates>
-    double computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    /**
-     * MINH: this implements the fast alternative strategy for reversible model (March 2013)
-     * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
-     */
-    template<int NSTATES>
-    inline double computeLikelihoodDervFast(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length
@@ -721,16 +714,8 @@ public:
             @param ddf (OUT) second derivative
             @return tree likelihood
      */
-    double computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    template<int NSTATES>
-    double computeLikelihoodDervSSE_Test(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    template<int NSTATES>
-    double computeLikelihoodDervSSE_Test2(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    template<int NSTATES>
-    inline void computeLikelihoodDervSSE_PTN(int ptn, double *partial_lh_site, double *partial_lh_child, double *trans_state, double *derv1_state, double *derv2_state);
     /****************************************************************************
             Stepwise addition (greedy) by maximum parsimony
      ****************************************************************************/
@@ -804,6 +789,7 @@ public:
      ****************************************************************************/
 
     /**
+     * IMPORTANT: semantic change: this function does not return score anymore, for efficiency purpose
             optimize one branch length by ML
             @param node1 1st end node of the branch
             @param node2 2nd end node of the branch
@@ -811,7 +797,7 @@ public:
             @param maxNRStep maximum number of Newton-Raphson steps
             @return likelihood score
      */
-    virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
+    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
 
     /**
             optimize all branch lengths of the children of node
@@ -827,7 +813,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL, int maxNRStep = 100);
+    virtual void optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL, int maxNRStep = 100);
 
     /**
      * optimize all branch lengths at the subtree rooted at node step-by-step.
@@ -861,7 +847,7 @@ public:
             @param ddf (OUT) second derivative
             @return negative of likelihood (for minimization)
      */
-    virtual double computeFuncDerv(double value, double &df, double &ddf);
+    virtual void computeFuncDerv(double value, double &df, double &ddf);
 
      /****************************************************************************
             Branch length optimization by Least Squares

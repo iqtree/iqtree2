@@ -2466,7 +2466,7 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
 
 }
 
-double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     assert(node_branch);
@@ -2487,7 +2487,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
         computePartialLikelihoodNaive(node_branch, node);
 
     // now combine likelihood at the branch
-    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+//    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     df = ddf = 0.0;
     int ncat = site_rate->getNRate();
     double p_invar = site_rate->getPInvar();
@@ -2537,7 +2537,8 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
 
     double my_df = 0.0;
     double my_ddf = 0.0;
-    double prob_const = 0.0, prob_const_derv1 = 0.0, prob_const_derv2 = 0.0;
+    double prob_const = 0.0;
+    double prob_const_derv1 = 0.0, prob_const_derv2 = 0.0;
 
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh, my_df, my_ddf, prob_const, prob_const_derv1, prob_const_derv2) private(ptn, cat, state1, state2, derv1_frac, derv2_frac)
@@ -2658,10 +2659,9 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
 	        double tmp2 = derv2_frac * freq;
 	        my_df += tmp1;
 	        my_ddf += tmp2 - tmp1 * derv1_frac;
-	        lh_ptn = log(lh_ptn);
-	        //cout << "lh_ptn = " << lh_ptn << endl;
-	        tree_lh += lh_ptn * freq;
-	        _pattern_lh[ptn] = lh_ptn;
+//	        lh_ptn = log(lh_ptn);
+//	        tree_lh += lh_ptn * freq;
+//	        _pattern_lh[ptn] = lh_ptn;
 	        if (!isfinite(lh_ptn) || !isfinite(my_df) || !isfinite(my_ddf)) {
 	            cout << "Abnormal " << __func__;
 	            abort();
@@ -2682,10 +2682,10 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     	int nsites = aln->getNSite();
     	my_df += nsites * derv1_frac;
     	my_ddf += nsites *(derv2_frac + derv1_frac*derv1_frac);
-    	prob_const = log(prob_const);
-    	tree_lh -= nsites * prob_const;
-    	for (ptn = 0; ptn < orig_nptn; ptn++)
-    		_pattern_lh[ptn] -= prob_const;
+//    	prob_const = log(prob_const);
+//    	tree_lh -= nsites * prob_const;
+//    	for (ptn = 0; ptn < orig_nptn; ptn++)
+//    		_pattern_lh[ptn] -= prob_const;
     }
     delete[] state_freq;
     delete[] trans_derv2;
@@ -2697,7 +2697,7 @@ double PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNod
     df = my_df;
     ddf = my_ddf;
 
-    return tree_lh;
+//    return tree_lh;
 }
 
 /****************************************************************************
@@ -2711,19 +2711,20 @@ double PhyloTree::computeFunction(double value) {
     return -computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
 }
 
-double PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
+void PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
     current_it->length = value;
     current_it_back->length = value;
-    double lh;
-	lh = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+//    double lh;
+//	lh = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+    computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
 
 	df = -df;
     ddf = -ddf;
 
-    return lh;
+//    return lh;
 }
 
-double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
+void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
     double negative_lh;
     current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     assert(current_it);
@@ -2747,18 +2748,20 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
         node2->clearReversePartialLh(node1);
     }
 
-    return -negative_lh;
+//    return -negative_lh;
 }
 
 double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
 
     double tree_lh = 0.0;
 
-    FOR_NEIGHBOR_IT(node, dad, it){
+    FOR_NEIGHBOR_DECLARE(node, dad, it){
 
-    tree_lh = optimizeOneBranch((PhyloNode*) node, (PhyloNode*) (*it)->node);
-}
-    return tree_lh;
+//    tree_lh = optimizeOneBranch((PhyloNode*) node, (PhyloNode*) (*it)->node);
+    	optimizeOneBranch((PhyloNode*) node, (PhyloNode*) (*it)->node);
+    }
+    return computeLikelihoodBranch((PhyloNeighbor*)(*it), node);
+//    return tree_lh;
 }
 
 void PhyloTree::optimizeAllBranchesLS(PhyloNode *node, PhyloNode *dad) {
@@ -2780,24 +2783,24 @@ void PhyloTree::optimizeAllBranchesLS(PhyloNode *node, PhyloNode *dad) {
         }
 }
 
-double PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRStep) {
+void PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRStep) {
     //double tree_lh = optimizeChildBranches(node, dad);
-    double tree_lh = -DBL_MAX;
+//    double tree_lh = -DBL_MAX;
 
     for (NeighborVec::iterator it = (node)->neighbors.begin(); it != (node)->neighbors.end(); it++)
         if ((*it)->node != (dad)) {
             //if (!(*it)->node->isLeaf())
-            double new_tree_lh = optimizeAllBranches((PhyloNode*) (*it)->node, node, maxNRStep);
+            optimizeAllBranches((PhyloNode*) (*it)->node, node, maxNRStep);
             /*
              if (new_tree_lh < tree_lh)
              cout << "Wrong " << __func__ << endl;
              */
-            tree_lh = new_tree_lh;
+//            tree_lh = new_tree_lh;
         }
     if (dad)
-        tree_lh = optimizeOneBranch(node, dad, true, maxNRStep); // BQM 2014-02-24: true was missing
+        optimizeOneBranch(node, dad, true, maxNRStep); // BQM 2014-02-24: true was missing
 
-    return tree_lh;
+//    return tree_lh;
 }
 
 double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
@@ -2809,7 +2812,9 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     }
     //cout << tree_lh << endl;
     for (int i = 0; i < my_iterations; i++) {
-        double new_tree_lh = optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
+        optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
+        double new_tree_lh = computeLikelihood();
+
         /*
          clearAllPartialLH();
          double new_tree_lh2 = computeLikelihood();
@@ -2829,7 +2834,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         */
         // BQM comment for above: WHY DID I DO THIS??? this will make the loop never stop after my_iterations
 
-//        assert(new_tree_lh >= tree_lh); // make sure that the new tree likelihood never decreases
+        assert(new_tree_lh >= tree_lh - 1.0); // make sure that the new tree likelihood never decreases too much
         if (tree_lh <= new_tree_lh && new_tree_lh <= tree_lh + tolerance)
         	return new_tree_lh;
         tree_lh = new_tree_lh;
@@ -3447,7 +3452,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		node21_it->clearPartialLh();
 
 		// compute the score of the swapped topology
-		double score = optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
+		double score;
+		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
 		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
 
 		int i=1;
@@ -3455,7 +3461,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			FOR_NEIGHBOR(node1, node2, it)
 			{
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node1))->clearPartialLh();
-				score = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
+				optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
 				nniMoves[cnt].newLen[i] = node1->findNeighbor((*it)->node)->length;
 				i++;
 			}
@@ -3465,10 +3471,12 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			FOR_NEIGHBOR(node2, node1, it)
 			{
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
-				score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
+				optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
 				//node2_lastnei = (PhyloNeighbor*) (*it);
 				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
 				i++;
+				if (i == 5)
+					score = computeLikelihoodBranch((PhyloNeighbor*)node2->findNeighbor((*it)->node), node2);
 			}
 			 node12_it->clearPartialLh();
 		}
@@ -3647,7 +3655,8 @@ double PhyloTree::swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1,
         double score;
 
         /* testing different branch optimization */
-        score = optimizeOneBranch(node1, dad1);
+        optimizeOneBranch(node1, dad1);
+        score = computeLikelihoodBranch((PhyloNeighbor*)node1->findNeighbor(dad1), node1);
         //score = optimizeOneBranch(dad2, dad1);
         //score = optimizeOneBranch(node2, dad1);
         /*
@@ -3857,10 +3866,11 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         double score;
 
         /* testing different branch optimization */
-        score = optimizeOneBranch(node1, dad1);
-        score = optimizeOneBranch(dad2, dad1);
-        score = optimizeOneBranch(node2, dad1);
-        score = optimizeOneBranch(orig_node1, orig_node2);
+        optimizeOneBranch(node1, dad1);
+        optimizeOneBranch(dad2, dad1);
+        optimizeOneBranch(node2, dad1);
+        optimizeOneBranch(orig_node1, orig_node2);
+        score = computeLikelihoodBranch((PhyloNeighbor*)orig_node1->findNeighbor(orig_node2), orig_node1);
 
         /*
          PhyloNode *cur_node = dad2;
@@ -3976,7 +3986,8 @@ double PhyloTree::assessSPRMove(double cur_score, const SPRMove &spr) {
     clearAllPartialLH();
     // optimize branches
     double score;
-    score = optimizeAllBranches(dad);
+    optimizeAllBranches(dad);
+    score = computeLikelihoodBranch((PhyloNeighbor*)dad->neighbors.back(), dad);
 
     // if score improves, return
     if (score > cur_score)

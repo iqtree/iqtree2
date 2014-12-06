@@ -502,7 +502,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 }
 
 template <const int nstates>
-double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -519,7 +519,7 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
         computePartialLikelihoodEigen<nstates>(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihoodEigen<nstates>(node_branch, node);
-    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+//    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t ncat = site_rate->getNRate();
 
 //    double p_invar = site_rate->getPInvar();
@@ -592,7 +592,7 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
     double my_df = 0.0, my_ddf = 0.0, prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i)
+#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i)
 #endif
     for (ptn = 0; ptn < nptn; ptn++) {
 		double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
@@ -614,9 +614,9 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
 			double tmp2 = ddf_frac * freq;
 			my_df += tmp1;
 			my_ddf += tmp2 - tmp1 * df_frac;
-			lh_ptn = log(lh_ptn);
-			tree_lh += lh_ptn * freq;
-			_pattern_lh[ptn] = lh_ptn;
+//			lh_ptn = log(lh_ptn);
+//			tree_lh += lh_ptn * freq;
+//			_pattern_lh[ptn] = lh_ptn;
 		} else {
 			// ascertainment bias correction
 			prob_const += lh_ptn;
@@ -635,10 +635,10 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
     	int nsites = aln->getNSite();
     	df += nsites * df_frac;
     	ddf += nsites *(ddf_frac + df_frac*df_frac);
-    	prob_const = log(prob_const);
-    	tree_lh -= nsites * prob_const;
-    	for (ptn = 0; ptn < orig_nptn; ptn++)
-    		_pattern_lh[ptn] -= prob_const;
+//    	prob_const = log(prob_const);
+//    	tree_lh -= nsites * prob_const;
+//    	for (ptn = 0; ptn < orig_nptn; ptn++)
+//    		_pattern_lh[ptn] -= prob_const;
     }
 
 
@@ -646,7 +646,7 @@ double PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNod
     delete [] val1;
     delete [] val0;
 
-    return tree_lh;
+//    return tree_lh;
 }
 
 template <const int nstates>
@@ -1220,7 +1220,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -1237,7 +1237,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
         computePartialLikelihoodEigenTipSSE<VectorClass, VCSIZE, nstates>(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihoodEigenTipSSE<VectorClass, VCSIZE, nstates>(node_branch, node);
-    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+//    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     df = ddf = 0.0;
     size_t ncat = site_rate->getNRate();
 
@@ -1330,7 +1330,8 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 //	VectorClass vc_var_cat = p_var_cat;
 	VectorClass vc_unit = 1.0;
 	VectorClass vc_freq;
-	VectorClass lh_final = 0.0, df_final = 0.0, ddf_final = 0.0;
+//	VectorClass lh_final = 0.0;
+	VectorClass df_final = 0.0, ddf_final = 0.0;
 	// these stores values of 2 consecutive patterns
 	VectorClass lh_ptn, df_ptn, ddf_ptn, inv_lh_ptn;
 //    VectorClass tiny_num(TINY_POSITIVE);
@@ -1340,7 +1341,7 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 #ifdef _OPENMP
 #pragma omp parallel private (ptn, i, j, vc_freq, vc_ptn, vc_df, vc_ddf, vc_theta, inv_lh_ptn, lh_ptn, df_ptn, ddf_ptn)
 	{
-	VectorClass lh_final_th = 0.0;
+//	VectorClass lh_final_th = 0.0;
 	VectorClass df_final_th = 0.0;
 	VectorClass ddf_final_th = 0.0;
 #pragma omp for nowait
@@ -1373,8 +1374,8 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 
 		inv_lh_ptn = vc_unit / lh_ptn;
 
-		lh_ptn = log(lh_ptn);
-		lh_ptn.store_a(&_pattern_lh[ptn]);
+//		lh_ptn = log(lh_ptn);
+//		lh_ptn.store_a(&_pattern_lh[ptn]);
 		vc_freq.load_a(&ptn_freq[ptn]);
 
 		df_ptn = horizontal_add(vc_df) * inv_lh_ptn;
@@ -1387,11 +1388,11 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 		ddf_ptn = nmul_add(df_ptn, df_ptn, ddf_ptn);
 
 #ifdef _OPENMP
-		lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);
+//		lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);
 		df_final_th = mul_add(df_ptn, vc_freq, df_final_th);
 		ddf_final_th = mul_add(ddf_ptn, vc_freq, ddf_final_th);
 #else
-		lh_final = mul_add(lh_ptn, vc_freq, lh_final);
+//		lh_final = mul_add(lh_ptn, vc_freq, lh_final);
 		df_final = mul_add(df_ptn, vc_freq, df_final);
 		ddf_final = mul_add(ddf_ptn, vc_freq, ddf_final);
 #endif
@@ -1401,20 +1402,20 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
 #ifdef _OPENMP
 #pragma omp critical
 	{
-		lh_final += lh_final_th;
+//		lh_final += lh_final_th;
 		df_final += df_final_th;
 		ddf_final += ddf_final_th;
 	}
 }
 #endif
-	tree_lh += horizontal_add(lh_final);
+//	tree_lh += horizontal_add(lh_final);
 	df = horizontal_add(df_final);
 	ddf = horizontal_add(ddf_final);
 
-	assert(isnormal(tree_lh));
+//	assert(isnormal(tree_lh));
 	if (orig_nptn < nptn) {
 		// ascertaiment bias correction
-		lh_final = 0.0;
+		VectorClass lh_final = 0.0;
 		df_final = 0.0;
 		ddf_final = 0.0;
 		lh_ptn = 0.0;
@@ -1483,16 +1484,16 @@ double PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Ph
     	int nsites = aln->getNSite();
     	df += nsites * df_frac;
     	ddf += nsites *(ddf_frac + df_frac*df_frac);
-    	prob_const = log(prob_const);
-    	tree_lh -= nsites * prob_const;
-    	for (ptn = 0; ptn < orig_nptn; ptn++)
-    		_pattern_lh[ptn] -= prob_const;
+//    	prob_const = log(prob_const);
+//    	tree_lh -= nsites * prob_const;
+//    	for (ptn = 0; ptn < orig_nptn; ptn++)
+//    		_pattern_lh[ptn] -= prob_const;
 	}
 
     aligned_free(vc_val2);
     aligned_free(vc_val1);
     aligned_free(vc_val0);
-    return tree_lh;
+//    return tree_lh;
 }
 
 
@@ -2077,7 +2078,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
  computing derivatives of likelihood function
  ****************************************************************************/
 template<int NSTATES>
-inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+inline void PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     //assert(node_branch);
@@ -2095,7 +2096,7 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     if ((node_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihoodSSE<NSTATES>(node_branch, node);
     // now combine likelihood at the branch
-    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+//    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     df = ddf = 0.0;
     int cat = 0;
     double *partial_lh_site = node_branch->partial_lh;
@@ -2229,9 +2230,9 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
 			double tmp2 = derv2_frac * freq;
 			my_df += tmp1;
 			my_ddf += tmp2 - tmp1 * derv1_frac;
-			lh_ptn = log(lh_ptn);
-			tree_lh += lh_ptn * freq;
-			_pattern_lh[ptn] = lh_ptn;
+//			lh_ptn = log(lh_ptn);
+//			tree_lh += lh_ptn * freq;
+//			_pattern_lh[ptn] = lh_ptn;
         } else {
         	lh_ptn = lh_ptn*p_var_cat + p_invar*state_freq[(int)model_factory->unobserved_ptns[ptn-orig_alnSize]];
         	prob_const += lh_ptn;
@@ -2247,10 +2248,10 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     	int nsites = aln->getNSite();
     	my_df += nsites * derv1_frac;
     	my_ddf += nsites *(derv2_frac + derv1_frac*derv1_frac);
-    	prob_const = log(prob_const);
-    	tree_lh -= nsites * prob_const;
-    	for (int ptn = 0; ptn < orig_alnSize; ptn++)
-    		_pattern_lh[ptn] -= prob_const;
+//    	prob_const = log(prob_const);
+//    	tree_lh -= nsites * prob_const;
+//    	for (int ptn = 0; ptn < orig_alnSize; ptn++)
+//    		_pattern_lh[ptn] -= prob_const;
     }
 
     delete[] trans_derv2_orig;
@@ -2258,7 +2259,7 @@ inline double PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phy
     delete[] trans_mat_orig;
     df = my_df;
     ddf = my_ddf;
-    return tree_lh;
+//    return tree_lh;
 }
 
 /*******************************************************
@@ -2340,38 +2341,38 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
  * This function is called millions times. So it is not a good idea to
  * have a if and switch here.
  */
-double PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
     switch (aln->num_states) {
     case 4:
     	switch(sse) {
-    	case LK_SSE: return computeLikelihoodDervSSE<4>(dad_branch, dad, df, ddf);
-    	case LK_EIGEN: return computeLikelihoodDervEigen<4>(dad_branch, dad, df, ddf);
-    	case LK_EIGEN_SSE: return computeLikelihoodDervEigenTipSSE<VectorClassMaster, VCSIZE_MASTER, 4>(dad_branch, dad, df, ddf);
-    	case LK_NORMAL: return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
+    	case LK_SSE: computeLikelihoodDervSSE<4>(dad_branch, dad, df, ddf); break;
+    	case LK_EIGEN: computeLikelihoodDervEigen<4>(dad_branch, dad, df, ddf); break;
+    	case LK_EIGEN_SSE: computeLikelihoodDervEigenTipSSE<VectorClassMaster, VCSIZE_MASTER, 4>(dad_branch, dad, df, ddf); break;
+    	case LK_NORMAL: computeLikelihoodDervNaive(dad_branch, dad, df, ddf); break;
     	}
     	break;
 	case 20:
 		switch(sse) {
-		case LK_SSE: return computeLikelihoodDervSSE<20>(dad_branch, dad, df, ddf);
-		case LK_EIGEN: return computeLikelihoodDervEigen<20>(dad_branch, dad, df, ddf);
-		case LK_EIGEN_SSE: return computeLikelihoodDervEigenTipSSE<VectorClassMaster, VCSIZE_MASTER, 20>(dad_branch, dad, df, ddf);
-		case LK_NORMAL: return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
+		case LK_SSE: computeLikelihoodDervSSE<20>(dad_branch, dad, df, ddf); break;
+		case LK_EIGEN: computeLikelihoodDervEigen<20>(dad_branch, dad, df, ddf); break;
+		case LK_EIGEN_SSE: computeLikelihoodDervEigenTipSSE<VectorClassMaster, VCSIZE_MASTER, 20>(dad_branch, dad, df, ddf); break;
+		case LK_NORMAL: computeLikelihoodDervNaive(dad_branch, dad, df, ddf); break;
 		}
 		break;
 	case 2:
 		switch(sse) {
-		case LK_SSE: return computeLikelihoodDervSSE<2>(dad_branch, dad, df, ddf);
-		case LK_EIGEN: return computeLikelihoodDervEigen<2>(dad_branch, dad, df, ddf);
+		case LK_SSE: computeLikelihoodDervSSE<2>(dad_branch, dad, df, ddf); break;
+		case LK_EIGEN: computeLikelihoodDervEigen<2>(dad_branch, dad, df, ddf); break;
 		case LK_EIGEN_SSE:
 		// use SSE code as current AVX-code does not work with  2-state model
-			return computeLikelihoodDervEigenTipSSE<Vec2d, 2, 2>(dad_branch, dad, df, ddf);
-		case LK_NORMAL: return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
+			computeLikelihoodDervEigenTipSSE<Vec2d, 2, 2>(dad_branch, dad, df, ddf); break;
+		case LK_NORMAL: computeLikelihoodDervNaive(dad_branch, dad, df, ddf); break;
 		}
 		break;
 	default:
-		return computeLikelihoodDervNaive(dad_branch, dad, df, ddf);
+		computeLikelihoodDervNaive(dad_branch, dad, df, ddf); break;
 
     }
-    return 0.0;
+//    return 0.0;
 }
 

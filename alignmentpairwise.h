@@ -57,7 +57,7 @@ public:
 		@param ddf (OUT) second derivative
 		@return f(value) of function f you want to minimize
 	*/
-	virtual double computeFuncDerv(double value, double &df, double &ddf);
+	virtual void computeFuncDerv(double value, double &df, double &ddf);
 
 	/**
 		compute the ML distance and variance between two sequences

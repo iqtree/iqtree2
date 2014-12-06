@@ -106,7 +106,7 @@ public:
 		@param ddf (OUT) 2nd derivative
 		@return negative log-likelihood (for minimization purpose)
 	*/
-	double computeFuncDervCat(int cat, double value, double &df, double &ddf);
+	void computeFuncDervCat(int cat, double value, double &df, double &ddf);
 
 	/**
 		number of category
@@ -182,7 +182,7 @@ public:
 		@param ddf (OUT) second derivative
 		@return f(value) of function f you want to minimize
 	*/
-	virtual double computeFuncDerv(double value, double &df, double &ddf);
+	virtual void computeFuncDerv(double value, double &df, double &ddf);
 
 	/**
 		classify rates into categories.
@@ -370,7 +370,7 @@ public:
 		@param ddf (OUT) second derivative
 		@return f(value) of function f you want to minimize
 	*/
-	virtual double computeFuncDerv(double value, double &df, double &ddf);
+	virtual void computeFuncDerv(double value, double &df, double &ddf);
 	
 };
 

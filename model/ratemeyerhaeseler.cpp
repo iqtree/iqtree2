@@ -416,11 +416,11 @@ double RateMeyerHaeseler::computeFunction(double value) {
 	return lh;
 }
 
-double RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf) {
+void RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf) {
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
 	int i, j, state1, state2;
-	double lh = 0.0;
+//	double lh = 0.0;
 	double trans, derv1, derv2;
 	ModelSubst *model = phylo_tree->getModel();
 	Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
@@ -429,13 +429,13 @@ double RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf)
 		for (j = i+1; j < nseq; j++) if ((state2 = pat->at(j)) < nstate) {
 			double dist = dist_mat[i*nseq + j];
 			trans = model->computeTrans(value * dist, state1, state2, derv1, derv2);
-			lh -= log(trans);
+//			lh -= log(trans);
 			double t1 = derv1 / trans;
 			double t2 = derv2 / trans;
 			df -= t1 * dist;
 			ddf -= dist * dist * (t2 - t1*t1);
 		}
-	return lh;
+//	return lh;
 }
 
 

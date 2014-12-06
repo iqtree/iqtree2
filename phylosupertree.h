@@ -174,15 +174,6 @@ public:
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
 
     /**
-            optimize one branch length by ML by optimizing all mapped branches of subtrees
-            @param node1 1st end node of the branch
-            @param node2 2nd end node of the branch
-            @param clearLH true to clear the partial likelihood, otherwise false
-            @return likelihood score
-     */
-    //virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
-
-    /**
             search the best swap for a branch
             @return NNIMove The best Move/Swap
             @param cur_score the current score of the tree before the swaps
