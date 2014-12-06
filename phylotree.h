@@ -505,6 +505,11 @@ public:
     double *tip_partial_lh;
     bool tip_partial_lh_computed;
 
+
+    /****************************************************************************
+            computing partial (conditional) likelihood of subtrees
+     ****************************************************************************/
+
     void computeTipPartialLikelihood();
     void computePtnInvar();
 
@@ -529,6 +534,11 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
+
+    /****************************************************************************
+            computing likelihood on a branch
+     ****************************************************************************/
 
     /**
             compute tree likelihood on a branch. used to optimize branch length
@@ -561,6 +571,24 @@ public:
 
 //    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL, double *pattern_rate = NULL);
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+
+    /****************************************************************************
+            computing likelihood on a branch using buffer
+     ****************************************************************************/
+
+    /**
+            compute tree likelihood on a branch given buffer (theta_all), used after optimizing branch length
+            @param dad_branch the branch leading to the subtree
+            @param dad its dad, used to direct the tranversal
+            @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
+                            assuming pattern_lh has the size of the number of patterns
+            @return tree likelihood
+     */
+
+    virtual double computeLikelihoodWithBuffer(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeLikelihoodWithBufferEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
 
     /**
             compute tree likelihood when a branch length collapses to zero

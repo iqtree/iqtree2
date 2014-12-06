@@ -394,6 +394,11 @@ double PhyloSuperTreePlen::computeFunction(double value) {
     return -tree_lh;
 }
 
+double PhyloSuperTreePlen::computeLikelihoodWithBuffer(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+	// TODO
+	return 0.0;
+}
+
 void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) {
 //	double tree_lh = 0.0;
 	double df_aux, ddf_aux;
@@ -950,7 +955,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    		optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
 	    		count++;
 	    		if (count == 2) {
-	    			score = computeLikelihoodBranch((PhyloNeighbor*)node2->findNeighbor((*it)->node), node2);
+	    			score = computeLikelihoodWithBuffer((PhyloNeighbor*)node2->findNeighbor((*it)->node), node2);
 		    		if (verbose_mode >= VB_DEBUG)
 		    			cout << "Log-likelihood: " << score << endl;
 	    		}
