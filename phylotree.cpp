@@ -851,7 +851,7 @@ void PhyloTree::searchNNI() {
 //ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
 
 void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
-    cout << "Computing parsimony tree by random stepwise addition..." << endl;
+//    cout << "Computing parsimony tree by random stepwise addition..." << endl;
     double start_time = getCPUTime();
     aln = alignment;
     int size = aln->getNSeq();
@@ -920,7 +920,7 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     initializeAllPartialPars();
     clearAllPartialLH();
     fixNegativeBranch(true);
-    cout << "Time taken: " << getCPUTime() - start_time << " sec" << endl;
+//    cout << "Time taken: " << getCPUTime() - start_time << " sec" << endl;
     if (out_prefix) {
 		string file_name = out_prefix;
 		file_name += ".parstree";
