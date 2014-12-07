@@ -394,7 +394,7 @@ double PhyloSuperTreePlen::computeFunction(double value) {
     return -tree_lh;
 }
 
-double PhyloSuperTreePlen::computeLikelihoodFromBuffer(double *pattern_lh) {
+double PhyloSuperTreePlen::computeLikelihoodFromBuffer() {
 	// TODO
 	assert(0);
 	return 0.0;

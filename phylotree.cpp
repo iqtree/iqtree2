@@ -1314,9 +1314,12 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
             cout << __func__ << " HIT ROOT STATE " << endl;
         score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
     } else {
-        score = computeLikelihoodBranch(nei, (PhyloNode*) root, pattern_lh);
+        score = computeLikelihoodBranch(nei, (PhyloNode*) root);
     }
-    if (pattern_lh && nei->lh_scale_factor < 0.0) {
+    if (pattern_lh)
+        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
+
+    else if (pattern_lh && nei->lh_scale_factor < 0.0) {
         int nptn = aln->getNPattern();
         //double check_score = 0.0;
         for (int i = 0; i < nptn; i++) {
@@ -2146,7 +2149,7 @@ void PhyloTree::computeAllBayesianBranchLengths(Node *node, Node *dad) {
 }
 
 //double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh, double *pattern_rate) {
-double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     //assert(node_branch);
@@ -2276,8 +2279,8 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
     		_pattern_lh[ptn] -= prob_const;
     	tree_lh -= aln->getNSite()*prob_const;
     }
-    if (pattern_lh)
-        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
+//    if (pattern_lh)
+//        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
     delete[] state_freq;
     delete[] trans_mat;
     //for (cat = ncat-1; cat >= 0; cat--)

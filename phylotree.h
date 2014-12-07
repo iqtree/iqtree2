@@ -544,33 +544,30 @@ public:
             compute tree likelihood on a branch. used to optimize branch length
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
-            @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
-                            assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
-    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
      * this implements the SSE version using Eigen library
      */
     template<int NSTATES>
-    inline double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    inline double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
      * MINH: this implements the fast alternative strategy for reversible model (March 2013)
      * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
      */
     template<int NSTATES>
-    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <const int nstates>
-    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    double computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-//    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL, double *pattern_rate = NULL);
-    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /****************************************************************************
             computing likelihood on a branch using buffer
@@ -583,10 +580,10 @@ public:
                             assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
-    virtual double computeLikelihoodFromBuffer(double *pattern_lh = NULL);
+    virtual double computeLikelihoodFromBuffer();
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodFromBufferEigenSSE(double *pattern_lh = NULL);
+    double computeLikelihoodFromBufferEigenSSE();
 
     /**
             compute tree likelihood when a branch length collapses to zero

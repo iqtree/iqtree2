@@ -140,14 +140,10 @@ public:
 
     /**
             compute tree likelihood on a branch given buffer (theta_all), used after optimizing branch length
-            @param dad_branch the branch leading to the subtree
-            @param dad its dad, used to direct the tranversal
-            @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
-                            assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
 
-    virtual double computeLikelihoodFromBuffer(double *pattern_lh = NULL);
+    virtual double computeLikelihoodFromBuffer();
 
     /**
             optimize all branch lengths of all subtrees, then compute branch lengths

@@ -650,7 +650,7 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 }
 
 template <const int nstates>
-double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -798,8 +798,8 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 
 	assert(!isnan(tree_lh) && !isinf(tree_lh));
 
-    if (pattern_lh)
-        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
+//    if (pattern_lh)
+//        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
     delete [] val;
     return tree_lh;
 }
@@ -1498,7 +1498,7 @@ void PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Phyl
 
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -1792,14 +1792,14 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
     	tree_lh -= aln->getNSite()*prob_const;
     }
 
-    if (pattern_lh)
-        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
+//    if (pattern_lh)
+//        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
     aligned_free(vc_val);
     return tree_lh;
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeLikelihoodFromBufferEigenSSE(double *pattern_lh) {
+double PhyloTree::computeLikelihoodFromBufferEigenSSE() {
 
 
 	assert(theta_all && theta_computed);
@@ -1927,8 +1927,8 @@ double PhyloTree::computeLikelihoodFromBufferEigenSSE(double *pattern_lh) {
 	}
 
     aligned_free(vc_val0);
-    if (pattern_lh)
-        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
+//    if (pattern_lh)
+//        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
 
     return tree_lh;
 }
@@ -1941,7 +1941,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSSE(double *pattern_lh) {
  *************************************************************************************************/
 
 template<const int NSTATES>
-inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     PhyloNode *node = (PhyloNode*) dad_branch->node; // Node A
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad); // Node B
     assert(node_branch);
@@ -2033,9 +2033,9 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
     	tree_lh -= aln->getNSite()*prob_const;
     }
 
-    if (pattern_lh) {
-        memmove(pattern_lh, _pattern_lh, orig_alnSize * sizeof(double));
-    }
+//    if (pattern_lh) {
+//        memmove(pattern_lh, _pattern_lh, orig_alnSize * sizeof(double));
+//    }
     delete[] trans_mat_orig;
     return tree_lh;
 }
@@ -2437,37 +2437,37 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 	}
 }
 
-double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 	switch(aln->num_states) {
 	case 4:
 		switch(sse) {
-		case LK_SSE: return computeLikelihoodBranchSSE<4>(dad_branch, dad, pattern_lh);
-		case LK_EIGEN: return computeLikelihoodBranchEigen<4>(dad_branch, dad, pattern_lh);
-		case LK_EIGEN_SSE: return computeLikelihoodBranchEigenTipSSE<VectorClassMaster, VCSIZE_MASTER, 4>(dad_branch, dad, pattern_lh);
-		case LK_NORMAL: return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
+		case LK_SSE: return computeLikelihoodBranchSSE<4>(dad_branch, dad);
+		case LK_EIGEN: return computeLikelihoodBranchEigen<4>(dad_branch, dad);
+		case LK_EIGEN_SSE: return computeLikelihoodBranchEigenTipSSE<VectorClassMaster, VCSIZE_MASTER, 4>(dad_branch, dad);
+		case LK_NORMAL: return computeLikelihoodBranchNaive(dad_branch, dad);
 		}
 		break;
 	case 20:
 		switch(sse) {
-		case LK_SSE: return computeLikelihoodBranchSSE<20>(dad_branch, dad, pattern_lh);
-		case LK_EIGEN: return computeLikelihoodBranchEigen<20>(dad_branch, dad, pattern_lh);
-		case LK_EIGEN_SSE: return computeLikelihoodBranchEigenTipSSE<VectorClassMaster, VCSIZE_MASTER, 20>(dad_branch, dad, pattern_lh);
-		case LK_NORMAL: return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
+		case LK_SSE: return computeLikelihoodBranchSSE<20>(dad_branch, dad);
+		case LK_EIGEN: return computeLikelihoodBranchEigen<20>(dad_branch, dad);
+		case LK_EIGEN_SSE: return computeLikelihoodBranchEigenTipSSE<VectorClassMaster, VCSIZE_MASTER, 20>(dad_branch, dad);
+		case LK_NORMAL: return computeLikelihoodBranchNaive(dad_branch, dad);
 		}
 		break;
 	case 2:
 		switch(sse) {
-		case LK_SSE: return computeLikelihoodBranchSSE<2>(dad_branch, dad, pattern_lh);
-		case LK_EIGEN: return computeLikelihoodBranchEigen<2>(dad_branch, dad, pattern_lh);
+		case LK_SSE: return computeLikelihoodBranchSSE<2>(dad_branch, dad);
+		case LK_EIGEN: return computeLikelihoodBranchEigen<2>(dad_branch, dad);
 		case LK_EIGEN_SSE:
 		// use SSE code as current AVX-code does not work with  2-state model
-			return computeLikelihoodBranchEigenTipSSE<Vec2d, 2, 2>(dad_branch, dad, pattern_lh);
-		case LK_NORMAL: return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
+			return computeLikelihoodBranchEigenTipSSE<Vec2d, 2, 2>(dad_branch, dad);
+		case LK_NORMAL: return computeLikelihoodBranchNaive(dad_branch, dad);
 		}
 		break;
 
 	default:
-		return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
+		return computeLikelihoodBranchNaive(dad_branch, dad);
 	}
 	return 0.0;
 }
@@ -2512,38 +2512,38 @@ void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad,
 }
 
 
-double PhyloTree::computeLikelihoodFromBuffer(double *pattern_lh) {
+double PhyloTree::computeLikelihoodFromBuffer() {
 	assert(current_it && current_it_back);
 	switch(aln->num_states) {
 	case 4:
 		switch(sse) {
-		case LK_SSE: return computeLikelihoodBranchSSE<4>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
-		case LK_EIGEN: return computeLikelihoodBranchEigen<4>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
-		case LK_EIGEN_SSE: return computeLikelihoodFromBufferEigenSSE<VectorClassMaster, VCSIZE_MASTER, 4>(pattern_lh);
-		case LK_NORMAL: return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
+		case LK_SSE: return computeLikelihoodBranchSSE<4>(current_it, (PhyloNode*)current_it_back->node);
+		case LK_EIGEN: return computeLikelihoodBranchEigen<4>(current_it, (PhyloNode*)current_it_back->node);
+		case LK_EIGEN_SSE: return computeLikelihoodFromBufferEigenSSE<VectorClassMaster, VCSIZE_MASTER, 4>();
+		case LK_NORMAL: return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
 		}
 		break;
 	case 20:
 		switch(sse) {
-		case LK_SSE: return computeLikelihoodBranchSSE<20>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
-		case LK_EIGEN: return computeLikelihoodBranchEigen<20>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
-		case LK_EIGEN_SSE: return computeLikelihoodFromBufferEigenSSE<VectorClassMaster, VCSIZE_MASTER, 20>(pattern_lh);
-		case LK_NORMAL: return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
+		case LK_SSE: return computeLikelihoodBranchSSE<20>(current_it, (PhyloNode*)current_it_back->node);
+		case LK_EIGEN: return computeLikelihoodBranchEigen<20>(current_it, (PhyloNode*)current_it_back->node);
+		case LK_EIGEN_SSE: return computeLikelihoodFromBufferEigenSSE<VectorClassMaster, VCSIZE_MASTER, 20>();
+		case LK_NORMAL: return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
 		}
 		break;
 	case 2:
 		switch(sse) {
-		case LK_SSE: return computeLikelihoodBranchSSE<2>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
-		case LK_EIGEN: return computeLikelihoodBranchEigen<2>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
+		case LK_SSE: return computeLikelihoodBranchSSE<2>(current_it, (PhyloNode*)current_it_back->node);
+		case LK_EIGEN: return computeLikelihoodBranchEigen<2>(current_it, (PhyloNode*)current_it_back->node);
 		case LK_EIGEN_SSE:
 		// use SSE code as current AVX-code does not work with  2-state model
-			return computeLikelihoodFromBufferEigenSSE<Vec2d, 2, 2>(pattern_lh);
-		case LK_NORMAL: return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
+			return computeLikelihoodFromBufferEigenSSE<Vec2d, 2, 2>();
+		case LK_NORMAL: return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
 		}
 		break;
 
 	default:
-		return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
+		return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
 	}
 	return 0.0;
 }
