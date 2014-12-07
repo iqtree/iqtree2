@@ -2784,18 +2784,11 @@ void PhyloTree::optimizeAllBranchesLS(PhyloNode *node, PhyloNode *dad) {
 }
 
 void PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRStep) {
-    //double tree_lh = optimizeChildBranches(node, dad);
 //    double tree_lh = -DBL_MAX;
 
     for (NeighborVec::iterator it = (node)->neighbors.begin(); it != (node)->neighbors.end(); it++)
         if ((*it)->node != (dad)) {
-            //if (!(*it)->node->isLeaf())
             optimizeAllBranches((PhyloNode*) (*it)->node, node, maxNRStep);
-            /*
-             if (new_tree_lh < tree_lh)
-             cout << "Wrong " << __func__ << endl;
-             */
-//            tree_lh = new_tree_lh;
         }
     if (dad)
         optimizeOneBranch(node, dad, true, maxNRStep); // BQM 2014-02-24: true was missing
@@ -2813,28 +2806,16 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     //cout << tree_lh << endl;
     for (int i = 0; i < my_iterations; i++) {
         optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
-        double new_tree_lh = computeLikelihood();
+        double new_tree_lh = computeLikelihoodFromBuffer();
 
-        /*
-         clearAllPartialLH();
-         double new_tree_lh2 = computeLikelihood();
-         if (fabs(new_tree_lh - new_tree_lh2) > TOL_LIKELIHOOD) {
-         cout << "Wrong " << new_tree_lh <<" "<< new_tree_lh2 << endl;
-         exit(1);
-         }*/
         if (verbose_mode >= VB_MAX) {
             cout << "Likelihood after iteration " << i + 1 << " : ";
             cout << new_tree_lh << endl;
         }
 
-        // CRITICAL BUG FIX: THIS GIVES WRONG LIKELIHOOD
-        /*
-        if (new_tree_lh <= tree_lh + tolerance)
-            return (new_tree_lh > tree_lh) ? new_tree_lh : tree_lh;
-        */
-        // BQM comment for above: WHY DID I DO THIS??? this will make the loop never stop after my_iterations
-
         assert(new_tree_lh >= tree_lh - 1.0); // make sure that the new tree likelihood never decreases too much
+
+        // only return if the new_tree_lh >= tree_lh! (in rare case that likelihood decreases, continue the loop)
         if (tree_lh <= new_tree_lh && new_tree_lh <= tree_lh + tolerance)
         	return new_tree_lh;
         tree_lh = new_tree_lh;
@@ -3452,7 +3433,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		node21_it->clearPartialLh();
 
 		// compute the score of the swapped topology
-		double score;
 		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
 		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
 
@@ -3475,11 +3455,10 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 				//node2_lastnei = (PhyloNeighbor*) (*it);
 				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
 				i++;
-				if (i == 5)
-					score = computeLikelihoodFromBuffer();
 			}
 			 node12_it->clearPartialLh();
 		}
+		double score = computeLikelihoodFromBuffer();
 		nniMoves[cnt].newloglh = score;
 		// compute the pattern likelihoods if wanted
 		if (nniMoves[cnt].ptnlh)

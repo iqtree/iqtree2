@@ -394,8 +394,9 @@ double PhyloSuperTreePlen::computeFunction(double value) {
     return -tree_lh;
 }
 
-double PhyloSuperTreePlen::computeLikelihoodWithBuffer(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+double PhyloSuperTreePlen::computeLikelihoodFromBuffer(double *pattern_lh) {
 	// TODO
+	assert(0);
 	return 0.0;
 }
 
@@ -915,10 +916,9 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
  *===============================================================================================================================*/
 		checkBranchLen();
 //		double score = optimizeOneBranch(node1, node2, false);
-		double score;
 		optimizeOneBranch(node1, node2, false);
 		if (verbose_mode >= VB_MED) {
-			cout << "[" << score << "] ";
+			cout << "[" << computeLikelihoodFromBuffer() << "] ";
 			printTree(cout);
 			cout << endl;
 		}
@@ -943,7 +943,6 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    	for(part = 0; part > ntrees; part++)
 	    		if(nei2_new->link_neighbors[part])
 	    			nei2_new_part[part]->clearPartialLh();
-	    	int count = 0;
 	    	FOR_NEIGHBOR(node2, node1, it){
 	    		for(part = 0; part < ntrees; part++)
 	    			if(((SuperNeighbor*)(*it))->link_neighbors[part]){
@@ -953,14 +952,13 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    			}
 //	    		score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
 	    		optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false);
-	    		count++;
-	    		if (count == 2) {
-	    			score = computeLikelihoodWithBuffer((PhyloNeighbor*)node2->findNeighbor((*it)->node), node2);
-		    		if (verbose_mode >= VB_DEBUG)
-		    			cout << "Log-likelihood: " << score << endl;
-	    		}
 	    	}
 	    }
+
+		double score = computeLikelihoodFromBuffer();
+		if (verbose_mode >= VB_DEBUG)
+			cout << "Log-likelihood: " << score << endl;
+
 		// %%%%%%%%%%%%%%%%%%%%%%%%%%%  END of nni5branch  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	    // Save current tree for ufboot analysis

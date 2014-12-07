@@ -147,7 +147,7 @@ public:
             @return tree likelihood
      */
 
-    virtual double computeLikelihoodWithBuffer(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    virtual double computeLikelihoodFromBuffer(double *pattern_lh = NULL);
 
     /**
             optimize all branch lengths of all subtrees, then compute branch lengths
