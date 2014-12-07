@@ -27,7 +27,7 @@ extern Alignment *globalAlignment;
 /**
  * map from newick tree string to frequencies that a tree is revisited during tree search
  */
-StringIntMap pllTreeCounter;
+StringIntMap *pllTreeCounter = NULL;
 
 
 /*
@@ -642,12 +642,12 @@ void countDistinctTrees(pllInstance* pllInst, partitionList *pllPartitions) {
 	ostringstream ostr;
 	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	string tree_str = ostr.str();
-	if (pllTreeCounter.find(tree_str) == pllTreeCounter.end()) {
+	if (pllTreeCounter->find(tree_str) == pllTreeCounter->end()) {
 		// not found in hash_map
-	    pllTreeCounter[tree_str] = 1;
+	    (*pllTreeCounter)[tree_str] = 1;
 	} else {
 		// found in hash_map
-	    pllTreeCounter[tree_str]++;
+	    (*pllTreeCounter)[tree_str]++;
 	}
 }
 

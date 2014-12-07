@@ -403,16 +403,16 @@ void reportCredits(ofstream &out) {
 /***********************************************************
  * CREATE REPORT FILE
  ***********************************************************/
-extern StringIntMap pllTreeCounter;
+extern StringIntMap *pllTreeCounter;
 void reportPhyloAnalysis(Params &params, string &original_model,
 		Alignment &alignment, IQTree &tree, vector<ModelInfo> &model_info,
 		StrVector &removed_seqs, StrVector &twin_seqs) {
 	if (params.count_trees) {
 		// addon: print #distinct trees
-		cout << endl << "NOTE: " << pllTreeCounter.size() << " distinct trees evaluated during whole tree search" << endl;
+		cout << endl << "NOTE: " << pllTreeCounter->size() << " distinct trees evaluated during whole tree search" << endl;
 
 		IntVector counts;
-		for (StringIntMap::iterator i = pllTreeCounter.begin(); i != pllTreeCounter.end(); i++) {
+		for (StringIntMap::iterator i = pllTreeCounter->begin(); i != pllTreeCounter->end(); i++) {
 			if (i->second > counts.size())
 				counts.resize(i->second+1, 0);
 			counts[i->second]++;
@@ -1209,12 +1209,12 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         		iqtree.readTreeString(curParsTree);
             if (params.count_trees) {
                 string tree = iqtree.getTopology();
-                if (pllTreeCounter.find(tree) == pllTreeCounter.end()) {
+                if (pllTreeCounter->find(tree) == pllTreeCounter->end()) {
                     // not found in hash_map
-                    pllTreeCounter[curParsTree] = 1;
+                    (*pllTreeCounter)[curParsTree] = 1;
                 } else {
                     // found in hash_map
-                    pllTreeCounter[curParsTree]++;
+                    (*pllTreeCounter)[curParsTree]++;
                 }
         	}
         	iqtree.candidateTrees.update(curParsTree, -DBL_MAX);
@@ -1554,6 +1554,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (params.pll) {
         iqtree.deleteAllPartialLh();
     }
+
+    if (params.count_trees && pllTreeCounter == NULL)
+    	pllTreeCounter = new StringIntMap;
 
     // Temporary fix since PLL only supports DNA/Protein: switch to IQ-TREE parsimony kernel
     if (params.start_tree == STT_PLL_PARSIMONY) {
