@@ -2760,7 +2760,7 @@ double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
 //    tree_lh = optimizeOneBranch((PhyloNode*) node, (PhyloNode*) (*it)->node);
     	optimizeOneBranch((PhyloNode*) node, (PhyloNode*) (*it)->node);
     }
-    return computeLikelihoodWithBuffer((PhyloNeighbor*)(*it), node);
+    return computeLikelihoodFromBuffer();
 //    return tree_lh;
 }
 
@@ -3476,7 +3476,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
 				i++;
 				if (i == 5)
-					score = computeLikelihoodWithBuffer((PhyloNeighbor*)node2->findNeighbor((*it)->node), node2);
+					score = computeLikelihoodFromBuffer();
 			}
 			 node12_it->clearPartialLh();
 		}
@@ -3656,7 +3656,7 @@ double PhyloTree::swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1,
 
         /* testing different branch optimization */
         optimizeOneBranch(node1, dad1);
-        score = computeLikelihoodWithBuffer((PhyloNeighbor*)node1->findNeighbor(dad1), node1);
+        score = computeLikelihoodFromBuffer();
         //score = optimizeOneBranch(dad2, dad1);
         //score = optimizeOneBranch(node2, dad1);
         /*
@@ -3870,7 +3870,7 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth, PhyloNode *node1, Phy
         optimizeOneBranch(dad2, dad1);
         optimizeOneBranch(node2, dad1);
         optimizeOneBranch(orig_node1, orig_node2);
-        score = computeLikelihoodWithBuffer((PhyloNeighbor*)orig_node1->findNeighbor(orig_node2), orig_node1);
+        score = computeLikelihoodFromBuffer();
 
         /*
          PhyloNode *cur_node = dad2;

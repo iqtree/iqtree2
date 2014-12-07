@@ -1799,27 +1799,14 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeLikelihoodWithBufferEigenSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    if (!central_partial_lh)
-        initializeAllPartialLh();
-    if (node->isLeaf()) {
-    	PhyloNode *tmp_node = dad;
-    	dad = node;
-    	node = tmp_node;
-    	PhyloNeighbor *tmp_nei = dad_branch;
-    	dad_branch = node_branch;
-    	node_branch = tmp_nei;
-    }
-    if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigenTipSSE<VectorClass, VCSIZE, nstates>(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigenTipSSE<VectorClass, VCSIZE, nstates>(node_branch, node);
-    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-//    df = ddf = 0.0;
-    size_t ncat = site_rate->getNRate();
+double PhyloTree::computeLikelihoodFromBufferEigenSSE(double *pattern_lh) {
 
+
+	assert(theta_all && theta_computed);
+
+	double tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
+
+    size_t ncat = site_rate->getNRate();
     size_t block = ncat * nstates;
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
@@ -1830,34 +1817,23 @@ double PhyloTree::computeLikelihoodWithBufferEigenSSE(PhyloNeighbor *dad_branch,
     assert(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc_double(block);
-	VectorClass *vc_val1 = (VectorClass*)aligned_alloc_double(block);
-	VectorClass *vc_val2 = (VectorClass*)aligned_alloc_double(block);
 
-	VectorClass vc_len = dad_branch->length;
+	VectorClass vc_len = current_it->length;
 	for (c = 0; c < ncat; c++) {
 		VectorClass vc_rate = site_rate->getRate(c);
 		VectorClass vc_prop = site_rate->getProp(c);
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			VectorClass cof = VectorClass().load(&eval[i*VCSIZE]) * vc_rate;
 			VectorClass val = exp(cof*vc_len) * vc_prop;
-			VectorClass val1_ = cof*val;
 			vc_val0[c*nstates/VCSIZE+i] = val;
-			vc_val1[c*nstates/VCSIZE+i] = val1_;
-			vc_val2[c*nstates/VCSIZE+i] = cof*val1_;
 		}
 	}
 
-	assert(theta_all && theta_computed);
-
 	VectorClass vc_ptn[VCSIZE];
-//	VectorClass vc_df[VCSIZE], vc_ddf[VCSIZE], vc_theta[VCSIZE];
-	VectorClass vc_unit = 1.0;
 	VectorClass vc_freq;
 	VectorClass lh_final = 0.0;
-//	VectorClass df_final = 0.0, ddf_final = 0.0;
 	// these stores values of 2 consecutive patterns
-	VectorClass lh_ptn;// df_ptn, ddf_ptn, inv_lh_ptn;
-//    VectorClass tiny_num(TINY_POSITIVE);
+	VectorClass lh_ptn;
 
 	// perform 2 sites at the same time for SSE/AVX efficiency
 
@@ -1865,58 +1841,29 @@ double PhyloTree::computeLikelihoodWithBufferEigenSSE(PhyloNeighbor *dad_branch,
 #pragma omp parallel private (ptn, i, j, vc_freq, vc_ptn, lh_ptn)
 	{
 	VectorClass lh_final_th = 0.0;
-//	VectorClass df_final_th = 0.0;
-//	VectorClass ddf_final_th = 0.0;
 #pragma omp for nowait
 #endif
 	for (ptn = 0; ptn < orig_nptn; ptn+=VCSIZE) {
 		double *theta = theta_all + ptn*block;
 		// initialization
 		for (i = 0; i < VCSIZE; i++) {
-//			vc_theta[i].load_a(theta+i*block);
-//			vc_ptn[i] = vc_val0[0] * vc_theta[i];
 			vc_ptn[i] = vc_val0[0] * VectorClass().load_a(theta+i*block);
-//			vc_df[i] = vc_val1[0] * vc_theta[i];
-//			vc_ddf[i] = vc_val2[0] * vc_theta[i];
 		}
 
 		for (i = 1; i < block/VCSIZE; i++) {
 			for (j = 0; j < VCSIZE; j++) {
-//				vc_theta[j].load_a(&theta[i*VCSIZE+j*block]);
 				vc_ptn[j] = mul_add(VectorClass().load_a(&theta[i*VCSIZE+j*block]), vc_val0[i], vc_ptn[j]);
-//				vc_ptn[j] = mul_add(vc_theta[j], vc_val0[i], vc_ptn[j]);
-//				vc_df[j] = mul_add(vc_theta[j], vc_val1[i], vc_df[j]);
-//				vc_ddf[j] = mul_add(vc_theta[j], vc_val2[i], vc_ddf[j]);
 			}
 		}
-//		theta += block*VCSIZE;
-
-//		lh_ptn = mul_add(horizontal_add(vc_ptn), vc_var_cat, VectorClass().load_a(&ptn_invar[ptn]));
-//		inv_lh_ptn = vc_var_cat/lh_ptn;
 		lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
-        // BQM: to avoid rare case that lh_ptn == 0
-//        lh_ptn = max(lh_ptn, tiny_num);
-
-//		inv_lh_ptn = vc_unit / lh_ptn;
-
 		lh_ptn = log(lh_ptn);
 		lh_ptn.store_a(&_pattern_lh[ptn]);
 		vc_freq.load_a(&ptn_freq[ptn]);
 
-//		df_ptn = horizontal_add(vc_df) * inv_lh_ptn;
-//		ddf_ptn = horizontal_add(vc_ddf) * inv_lh_ptn;
-
-		// multiply with pattern frequency
-//		ddf_ptn = nmul_add(df_ptn, df_ptn, ddf_ptn);
-
 #ifdef _OPENMP
 		lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);
-//		df_final_th = mul_add(df_ptn, vc_freq, df_final_th);
-//		ddf_final_th = mul_add(ddf_ptn, vc_freq, ddf_final_th);
 #else
 		lh_final = mul_add(lh_ptn, vc_freq, lh_final);
-//		df_final = mul_add(df_ptn, vc_freq, df_final);
-//		ddf_final = mul_add(ddf_ptn, vc_freq, ddf_final);
 #endif
 
 	}
@@ -1925,97 +1872,60 @@ double PhyloTree::computeLikelihoodWithBufferEigenSSE(PhyloNeighbor *dad_branch,
 #pragma omp critical
 	{
 		lh_final += lh_final_th;
-//		df_final += df_final_th;
-//		ddf_final += ddf_final_th;
 	}
 }
 #endif
 	tree_lh += horizontal_add(lh_final);
-//	df = horizontal_add(df_final);
-//	ddf = horizontal_add(ddf_final);
 
 	assert(isnormal(tree_lh));
 	if (orig_nptn < nptn) {
 		// ascertaiment bias correction
 		lh_final = 0.0;
-//		df_final = 0.0;
-//		ddf_final = 0.0;
 		lh_ptn = 0.0;
-//		df_ptn = 0.0;
-//		ddf_ptn = 0.0;
 		double prob_const;// df_const, ddf_const;
 		double *theta = &theta_all[orig_nptn*block];
 		for (ptn = orig_nptn; ptn < nptn; ptn+=VCSIZE) {
 			lh_final += lh_ptn;
-//			df_final += df_ptn;
-//			ddf_final += ddf_ptn;
 
 			// initialization
 			for (i = 0; i < VCSIZE; i++) {
-//				vc_theta[i].load_a(theta+i*block);
 				vc_ptn[i] = vc_val0[0] * VectorClass().load_a(theta+i*block);
-//				vc_ptn[i] = vc_val0[0] * vc_theta[i];
-//				vc_df[i] = vc_val1[0] * vc_theta[i];
-//				vc_ddf[i] = vc_val2[0] * vc_theta[i];
 			}
 
 			for (i = 1; i < block/VCSIZE; i++) {
 				for (j = 0; j < VCSIZE; j++) {
-//					vc_theta[j].load_a(&theta[i*VCSIZE+j*block]);
 					vc_ptn[j] = mul_add(VectorClass().load_a(&theta[i*VCSIZE+j*block]), vc_val0[i], vc_ptn[j]);
-//					vc_ptn[j] = mul_add(vc_theta[j], vc_val0[i], vc_ptn[j]);
-//					vc_df[j] = mul_add(vc_theta[j], vc_val1[i], vc_df[j]);
-//					vc_ddf[j] = mul_add(vc_theta[j], vc_val2[i], vc_ddf[j]);
 				}
 			}
 			theta += block*VCSIZE;
 
 			// ptn_invar[ptn] is not aligned
-//			lh_ptn = mul_add(horizontal_add(vc_ptn), vc_var_cat, VectorClass().load(&ptn_invar[ptn]));
-//			df_ptn = horizontal_add(vc_df) * vc_var_cat;
-//			ddf_ptn = horizontal_add(vc_ddf) * vc_var_cat;
 			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
 
 		}
 		switch ((nptn-orig_nptn) % VCSIZE) {
 		case 0:
 			prob_const = horizontal_add(lh_final+lh_ptn);
-//			df_const = horizontal_add(df_final+df_ptn);
-//			ddf_const = horizontal_add(ddf_final+ddf_ptn);
 			break;
 		case 1:
 			prob_const = horizontal_add(lh_final)+lh_ptn[0];
-//			df_const = horizontal_add(df_final)+df_ptn[0];
-//			ddf_const = horizontal_add(ddf_final)+ddf_ptn[0];
 			break;
 		case 2:
 			prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1];
-//			df_const = horizontal_add(df_final)+df_ptn[0]+df_ptn[1];
-//			ddf_const = horizontal_add(ddf_final)+ddf_ptn[0]+ddf_ptn[1];
 			break;
 		case 3:
 			prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1]+lh_ptn[2];
-//			df_const = horizontal_add(df_final)+df_ptn[0]+df_ptn[1]+df_ptn[2];
-//			ddf_const = horizontal_add(ddf_final)+ddf_ptn[0]+ddf_ptn[1]+ddf_ptn[2];
 			break;
 		default:
 			assert(0);
 			break;
 		}
-    	prob_const = 1.0 - prob_const;
-//    	double df_frac = df_const / prob_const;
-//    	double ddf_frac = ddf_const / prob_const;
-    	int nsites = aln->getNSite();
-//    	df += nsites * df_frac;
-//    	ddf += nsites *(ddf_frac + df_frac*df_frac);
-    	prob_const = log(prob_const);
-    	tree_lh -= nsites * prob_const;
+    	prob_const = log(1.0 - prob_const);
+    	tree_lh -= aln->getNSite() * prob_const;
     	for (ptn = 0; ptn < orig_nptn; ptn++)
     		_pattern_lh[ptn] -= prob_const;
 	}
 
-    aligned_free(vc_val2);
-    aligned_free(vc_val1);
     aligned_free(vc_val0);
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
@@ -2602,37 +2512,38 @@ void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad,
 }
 
 
-double PhyloTree::computeLikelihoodWithBuffer(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh) {
+double PhyloTree::computeLikelihoodFromBuffer(double *pattern_lh) {
+	assert(current_it && current_it_back);
 	switch(aln->num_states) {
 	case 4:
 		switch(sse) {
-		case LK_SSE: return computeLikelihoodBranchSSE<4>(dad_branch, dad, pattern_lh);
-		case LK_EIGEN: return computeLikelihoodBranchEigen<4>(dad_branch, dad, pattern_lh);
-		case LK_EIGEN_SSE: return computeLikelihoodWithBufferEigenSSE<VectorClassMaster, VCSIZE_MASTER, 4>(dad_branch, dad, pattern_lh);
-		case LK_NORMAL: return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
+		case LK_SSE: return computeLikelihoodBranchSSE<4>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
+		case LK_EIGEN: return computeLikelihoodBranchEigen<4>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
+		case LK_EIGEN_SSE: return computeLikelihoodFromBufferEigenSSE<VectorClassMaster, VCSIZE_MASTER, 4>(pattern_lh);
+		case LK_NORMAL: return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
 		}
 		break;
 	case 20:
 		switch(sse) {
-		case LK_SSE: return computeLikelihoodBranchSSE<20>(dad_branch, dad, pattern_lh);
-		case LK_EIGEN: return computeLikelihoodBranchEigen<20>(dad_branch, dad, pattern_lh);
-		case LK_EIGEN_SSE: return computeLikelihoodWithBufferEigenSSE<VectorClassMaster, VCSIZE_MASTER, 20>(dad_branch, dad, pattern_lh);
-		case LK_NORMAL: return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
+		case LK_SSE: return computeLikelihoodBranchSSE<20>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
+		case LK_EIGEN: return computeLikelihoodBranchEigen<20>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
+		case LK_EIGEN_SSE: return computeLikelihoodFromBufferEigenSSE<VectorClassMaster, VCSIZE_MASTER, 20>(pattern_lh);
+		case LK_NORMAL: return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
 		}
 		break;
 	case 2:
 		switch(sse) {
-		case LK_SSE: return computeLikelihoodBranchSSE<2>(dad_branch, dad, pattern_lh);
-		case LK_EIGEN: return computeLikelihoodBranchEigen<2>(dad_branch, dad, pattern_lh);
+		case LK_SSE: return computeLikelihoodBranchSSE<2>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
+		case LK_EIGEN: return computeLikelihoodBranchEigen<2>(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
 		case LK_EIGEN_SSE:
 		// use SSE code as current AVX-code does not work with  2-state model
-			return computeLikelihoodWithBufferEigenSSE<Vec2d, 2, 2>(dad_branch, dad, pattern_lh);
-		case LK_NORMAL: return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
+			return computeLikelihoodFromBufferEigenSSE<Vec2d, 2, 2>(pattern_lh);
+		case LK_NORMAL: return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
 		}
 		break;
 
 	default:
-		return computeLikelihoodBranchNaive(dad_branch, dad, pattern_lh);
+		return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node, pattern_lh);
 	}
 	return 0.0;
 }

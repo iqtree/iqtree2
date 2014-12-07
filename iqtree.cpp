@@ -1171,7 +1171,7 @@ double IQTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
 //    this->curScore = optimizeOneBranch(node2, (PhyloNode*) node2NewNei->node);
     optimizeOneBranch(node2, (PhyloNode*) node2NewNei->node);
     //drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
-    this->curScore = computeLikelihoodWithBuffer((PhyloNeighbor*)node2->findNeighbor(node2NewNei->node), node2);
+    this->curScore = computeLikelihoodFromBuffer();
     return this->curScore;
 }
 
