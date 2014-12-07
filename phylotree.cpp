@@ -2544,7 +2544,7 @@ void PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode 
     double prob_const_derv1 = 0.0, prob_const_derv2 = 0.0;
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, my_df, my_ddf, prob_const, prob_const_derv1, prob_const_derv2) private(ptn, cat, state1, state2, derv1_frac, derv2_frac)
+#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, prob_const_derv1, prob_const_derv2) private(ptn, cat, state1, state2, derv1_frac, derv2_frac)
 #endif
     for (ptn = 0; ptn < nptn; ptn++) {
         int ptn_cat = site_rate->getPtnCat(ptn);

@@ -2283,7 +2283,7 @@ inline void PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phylo
     double prob_const = 0.0, prob_const_derv1 = 0.0, prob_const_derv2 = 0.0;
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, my_df, my_ddf,prob_const, prob_const_derv1, prob_const_derv2) \
+#pragma omp parallel for reduction(+: my_df, my_ddf,prob_const, prob_const_derv1, prob_const_derv2) \
 	private(cat, partial_lh_child, partial_lh_site,\
 	lh_ptn, lh_ptn_derv1, lh_ptn_derv2, derv1_frac, derv2_frac, dad_state, trans_state, derv1_state, derv2_state)
 #endif
