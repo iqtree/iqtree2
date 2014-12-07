@@ -849,56 +849,54 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Candidate trees (" << tree.candidateTrees.size() << "):      " << params.out_prefix << ".localtrees" << endl;
 	}
 	if (!params.user_file && params.start_tree == STT_BIONJ) {
-		cout << "  BIONJ tree:               " << params.out_prefix << ".bionj"
+		cout << "  BIONJ tree:                    " << params.out_prefix << ".bionj"
 				<< endl;
 	}
 	if (!params.dist_file) {
 		//cout << "  Juke-Cantor distances:    " << params.out_prefix << ".jcdist" << endl;
 		if (params.compute_ml_dist)
-			cout << "  Likelihood distances:     " << params.out_prefix
+		cout << "  Likelihood distances:          " << params.out_prefix
 					<< ".mldist" << endl;
 		if (params.print_conaln)
-			cout << "  Concatenated alignment:   " << params.out_prefix
+		cout << "  Concatenated alignment:        " << params.out_prefix
 					<< ".conaln" << endl;
 	}
 	if (tree.getRate()->getGammaShape() > 0 && params.print_site_rate)
-		cout << "  Gamma-distributed rates:  " << params.out_prefix << ".rate"
+		cout << "  Gamma-distributed rates:       " << params.out_prefix << ".rate"
 				<< endl;
 
 	if ((tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) && params.print_site_rate)
-		cout << "  Site-rates by MH model:   " << params.out_prefix << ".rate"
+		cout << "  Site-rates by MH model:        " << params.out_prefix << ".rate"
 				<< endl;
 
 	if (params.print_site_lh)
-		cout << "  Site log-likelihoods:     " << params.out_prefix << ".sitelh"
+		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh"
 				<< endl;
 
 	if (params.write_intermediate_trees)
-		cout << "  All intermediate trees:   " << params.out_prefix << ".treels"
+		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
 				<< endl;
 
 	if (params.gbo_replicates) {
-		cout << endl << "Ultrafast bootstrap approximation results written to:"
-				<< endl << "  Split support values:     " << params.out_prefix
-				<< ".splits.nex" << endl << "  Consensus tree:           "
-				<< params.out_prefix << ".contree" << endl;
+		cout << endl << "Ultrafast bootstrap approximation results written to:" << endl
+			 << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
+			 << "  Consensus tree:                " << params.out_prefix << ".contree" << endl;
 		if (params.print_ufboot_trees)
-			cout << "  UFBoot trees:             " << params.out_prefix << ".ufboot" << endl;
+		cout << "  UFBoot trees:                  " << params.out_prefix << ".ufboot" << endl;
 
 	}
 
 	if (params.treeset_file) {
-		cout << "  Evaluated user trees:     " << params.out_prefix << ".trees" << endl;
+		cout << "  Evaluated user trees:          " << params.out_prefix << ".trees" << endl;
 
 		if (params.print_tree_lh) {
-			cout << "  Tree log-likelihoods:   " << params.out_prefix << ".treelh" << endl;
+		cout << "  Tree log-likelihoods:          " << params.out_prefix << ".treelh" << endl;
 		}
 		if (params.print_site_lh) {
-			cout << "  Site log-likelihoods:     " << params.out_prefix << ".sitelh" << endl;
+		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
 		}
 	}
-	cout << "  Screen log file:               " << params.out_prefix << ".log"
-			<< endl;
+	cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
 	/*	if (original_model == "WHTEST")
 	 cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
 	cout << endl;
