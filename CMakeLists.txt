@@ -71,9 +71,9 @@ elseif (APPLE)
 elseif (UNIX) 
 	message("Target OS     : Unix")
 	# build as static binary to run on most machines
-  if (CMAKE_BUILD_TYPE STREQUAL "Release") 	
+#  if (CMAKE_BUILD_TYPE STREQUAL "Release") 	
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-  endif() 
+#  endif() 
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
 	message("Target OS     : Unknown and untested yet")

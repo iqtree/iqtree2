@@ -22,6 +22,8 @@
 #include "vectorclass/vectorclass.h"
 #include "vectorclass/vectormath_exp.h"
 
+extern int instruction_set;
+
 
 /* BQM: to ignore all-gapp subtree at an alignment site */
 //#define IGNORE_GAP_LH
@@ -119,6 +121,28 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 	        computeLikelihoodFromBufferPointer = NULL;
 			break;
 		case LK_EIGEN_SSE:
+//#if INSTRSET >= 7
+//// compiled with AVX enable
+//			if (instruction_set >= 7) {
+//				// CPU supports AVX
+//				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenTipSSE<Vec4d, 4, 4>;
+//				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenTipSSE<Vec4d, 4, 4>;
+//				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenTipSSE<Vec4d, 4, 4>;
+//		        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSSE<Vec4d, 4, 4>;
+//			} else {
+//				// CPU does not support AVX
+//				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenTipSSE<Vec2d, 2, 4>;
+//				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenTipSSE<Vec2d, 2, 4>;
+//				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenTipSSE<Vec2d, 2, 4>;
+//				computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSSE<Vec2d, 2, 4>;
+//			}
+//#else
+//// compiled with AVX disable
+//			computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenTipSSE<Vec2d, 2, 4>;
+//			computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenTipSSE<Vec2d, 2, 4>;
+//			computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenTipSSE<Vec2d, 2, 4>;
+//			computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSSE<Vec2d, 2, 4>;
+//#endif
 			computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenTipSSE<VectorClassMaster, VCSIZE_MASTER, 4>;
 			computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenTipSSE<VectorClassMaster, VCSIZE_MASTER, 4>;
 			computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenTipSSE<VectorClassMaster, VCSIZE_MASTER, 4>;

@@ -2098,6 +2098,21 @@ int main(){
 }
 */
 
+/*
+Instruction set ID reported by vectorclass::instrset_detect
+0           = 80386 instruction set
+1  or above = SSE (XMM) supported by CPU (not testing for O.S. support)
+2  or above = SSE2
+3  or above = SSE3
+4  or above = Supplementary SSE3 (SSSE3)
+5  or above = SSE4.1
+6  or above = SSE4.2
+7  or above = AVX supported by CPU and operating system
+8  or above = AVX2
+9  or above = AVX512F
+*/
+int instruction_set;
+
 int main(int argc, char *argv[])
 {
 
@@ -2174,18 +2189,18 @@ int main(int argc, char *argv[])
 	//fgets(hostname, sizeof(hostname), pfile);
 	//pclose(pfile);
 
-	int instrset = instrset_detect();
-	if (instrset < 3) outError("Your CPU does not support SSE3!");
-	bool has_fma3 = hasFMA3();
-	bool has_fma4 = hasFMA4();
+	instruction_set = instrset_detect();
+	if (instruction_set < 3) outError("Your CPU does not support SSE3!");
+	bool has_fma3 = (instruction_set >= 7) && hasFMA3();
+	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
 	bool has_fma =  has_fma3 || has_fma4;
 
 #ifdef __AVX
-	if (instrset < 7) {
+	if (instruction_set < 7) {
 		outError("Your CPU does not support AVX, please use SSE3 version of IQ-TREE.");
 	}
 #else
-	if (instrset >= 7) {
+	if (instruction_set >= 7) {
 		outWarning("Your CPU supports AVX but you are using SSE3 version of IQ-TREE!");
 		outWarning("Please switch to AVX version that is 40% faster than SSE3.");
 		cout << endl;
@@ -2196,16 +2211,10 @@ int main(int argc, char *argv[])
 	if (!has_fma) {
 		outError("Your CPU does not support FMA instruction, quiting now...");
 	}
-//#else
-//	if (has_fma) {
-//		outWarning("Your CPU supports AVX+FMA but you are using non-FMA version of IQ-TREE!");
-//		outWarning("Please consider trying AVX+FMA version.");
-//		cout << endl;
-//	}
 #endif
 
 	cout << "Host:    " << hostname << " (";
-	switch (instrset) {
+	switch (instruction_set) {
 	case 3: cout << "SSE3, "; break;
 	case 4: cout << "SSSE3, "; break;
 	case 5: cout << "SSE4.1, "; break;
