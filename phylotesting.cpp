@@ -705,12 +705,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	PhyloTree *tree_homo = new PhyloTree();
 	tree_homo->optimize_by_newton = params.optimize_by_newton;
-	tree_homo->sse = params.SSE;
+	tree_homo->setLikelihoodKernel(params.SSE);
 	tree_homo->copyPhyloTree(in_tree);
 
 	PhyloTree *tree_hetero = new PhyloTree();
 	tree_hetero->optimize_by_newton = params.optimize_by_newton;
-	tree_hetero->sse = params.SSE;
+	tree_hetero->setLikelihoodKernel(params.SSE);
 	tree_hetero->copyPhyloTree(in_tree);
 
 	RateHeterogeneity * rate_class[4];

@@ -519,14 +519,19 @@ public:
             @param dad its dad, used to direct the tranversal
      */
     virtual void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    typedef void (PhyloTree::*ComputePartialLikelihoodType)(PhyloNeighbor *, PhyloNode *);
+    ComputePartialLikelihoodType computePartialLikelihoodPointer;
 
+    /**
+     * original naive version in IQ-TREE
+     */
     void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     /**
      * this implements the SSE version using Eigen library
      */
     template<int NSTATES>
-    inline void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <const int nstates>
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
@@ -548,18 +553,21 @@ public:
      */
     virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
+    typedef double (PhyloTree::*ComputeLikelihoodBranchType)(PhyloNeighbor*, PhyloNode*);
+    ComputeLikelihoodBranchType computeLikelihoodBranchPointer;
+
     /**
      * this implements the SSE version using Eigen library
      */
     template<int NSTATES>
-    inline double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
      * MINH: this implements the fast alternative strategy for reversible model (March 2013)
      * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
      */
-    template<int NSTATES>
-    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    template<int NSTATES>
+//    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <const int nstates>
     double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
@@ -581,6 +589,8 @@ public:
             @return tree likelihood
      */
     virtual double computeLikelihoodFromBuffer();
+    typedef double (PhyloTree::*ComputeLikelihoodFromBufferType)();
+    ComputeLikelihoodFromBufferType computeLikelihoodFromBufferPointer;
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodFromBufferEigenSSE();
@@ -721,7 +731,7 @@ public:
      * this implements the SSE version using Eigen library
      */
     template<int NSTATES>
-    inline void computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <const int nstates>
     void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
@@ -738,6 +748,9 @@ public:
             @return tree likelihood
      */
     void computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    typedef void (PhyloTree::*ComputeLikelihoodDervType)(PhyloNeighbor *, PhyloNode *, double &, double &);
+    ComputeLikelihoodDervType computeLikelihoodDervPointer;
 
     /****************************************************************************
             Stepwise addition (greedy) by maximum parsimony
@@ -1196,6 +1209,8 @@ public:
     void randomizeNeighbors(Node *node = NULL, Node *dad = NULL);
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
+
+    virtual void setLikelihoodKernel(LikelihoodKernel lk);
 
     /****************************************************************************
             Public variables
