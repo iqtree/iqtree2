@@ -410,7 +410,7 @@ struct Params {
 	/**
 	 *  Number of starting parsimony trees
 	 */
-	int numParsTrees;
+	int numInitTrees;
 
 	/**
 	 *  SPR distance (radius) for parsimony tree
