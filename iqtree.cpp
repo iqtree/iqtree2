@@ -90,7 +90,7 @@ void IQTree::setParams(Params &params) {
 //    if (params.maxtime != 1000000) {
 //        params.autostop = false;
 //    }
-    if (params.min_iterations == -1) {
+    if (params.min_iterations == -1 && !params.snni) {
         if (!params.gbo_replicates) {
             if (params.stop_condition == SC_UNSUCCESS_ITERATION) {
                 params.min_iterations = aln->getNSeq() * 100;
@@ -105,6 +105,13 @@ void IQTree::setParams(Params &params) {
             params.min_iterations = 100;
         }
     }
+
+    if (params.treeset_file && params.min_iterations == -1) {
+        params.min_iterations = 1;
+		params.stop_condition = SC_FIXED_ITERATION;
+		params.numInitTrees = 1;
+    }
+
     if (params.gbo_replicates)
         params.max_iterations = max(params.max_iterations, max(params.min_iterations, 1000));
 
@@ -237,6 +244,7 @@ void IQTree::setParams(Params &params) {
         if (root_state < 0 || root_state >= aln->num_states)
             outError("Invalid root state");
     }
+
 }
 
 void myPartitionsDestroy(partitionList *pl) {

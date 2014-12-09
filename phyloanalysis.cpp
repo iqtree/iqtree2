@@ -1055,7 +1055,7 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 
 }
 
-void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &numInitTrees, string &initTree) {
+void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, string &initTree) {
     double start = getCPUTime();
 
     string out_file = params.out_prefix;
@@ -1066,7 +1066,7 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         bool myrooted = params.is_rooted;
         iqtree.readTree(params.user_file, myrooted);
         iqtree.setAlignment(iqtree.aln);
-        numInitTrees = 1;
+        params.numInitTrees = 1;
         params.numNNITrees = 1;
         // change to old kernel if tree is multifurcating
 		if ((params.SSE == LK_EIGEN || params.SSE == LK_EIGEN_SSE) && !iqtree.isBifurcating()) {
@@ -1082,9 +1082,8 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         iqtree.initializeAllPartialPars();
         iqtree.clearAllPartialLH();
         iqtree.fixNegativeBranch(true);
-        numInitTrees = params.numParsTrees;
-        if (numInitTrees > params.min_iterations && params.stop_condition == SC_FIXED_ITERATION)
-            numInitTrees = params.min_iterations;
+        if (params.numInitTrees > params.min_iterations && params.stop_condition == SC_FIXED_ITERATION)
+        	params.numInitTrees = params.min_iterations;
         break;
     case STT_PLL_PARSIMONY:
         cout << endl;
@@ -1104,15 +1103,15 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         }
         iqtree.fixNegativeBranch(true);
         cout << getCPUTime() - start << " seconds" << endl;
-        numInitTrees = params.numParsTrees;
-            if (numInitTrees > params.min_iterations && params.stop_condition == SC_FIXED_ITERATION)
-                numInitTrees = params.min_iterations;
+			if (params.numInitTrees > params.min_iterations
+					&& params.stop_condition == SC_FIXED_ITERATION)
+				params.numInitTrees = params.min_iterations;
         break;
     case STT_BIONJ:
         // This is the old default option: using BIONJ as starting tree
         iqtree.computeBioNJ(params, iqtree.aln, dist_file);
         cout << getCPUTime() - start << " seconds" << endl;
-        numInitTrees = 1;
+        params.numInitTrees = 1;
         break;
     }
 
@@ -1181,7 +1180,7 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
  *  @param numInitTrees number of parsimony trees to use
  *  @return number of duplicated trees
  */
-int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
+int initCandidateTreeSet(Params &params, IQTree &iqtree) {
     int nni_count = 0;
     int nni_steps = 0;
     int numDup = 0;
@@ -1189,15 +1188,14 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
 	/*====================================================
 	 * CREATE A SET OF PARSIMONY TREES
 	 *====================================================*/
-
-    cout << "Generating " << numInitTrees - 1 << " parsimony trees... ";
+    cout << "Generating " << params.numInitTrees - 1 << " parsimony trees... ";
     cout.flush();
     CandidateSet parsimonyTrees = iqtree.candidateTrees;
     // Add the current tree
     //parsimonyTrees.update(iqtree.getTreeString(), iqtree.curScore, false);
     double startTime = getCPUTime();
     int numDupPars = 0;
-    for (int treeNr = 1; treeNr < numInitTrees; treeNr++) {
+    for (int treeNr = 1; treeNr < params.numInitTrees; treeNr++) {
         string curParsTree;
         if (params.start_tree == STT_PLL_PARSIMONY) {
 			iqtree.pllInst->randomNumberSeed = params.ran_seed + treeNr * 12345;
@@ -1582,9 +1580,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     /********************** CREATE INITIAL TREE(S) **********************/
-    int numInitTrees;
     string initTree;
-    computeInitialTree(params, iqtree, dist_file, numInitTrees, initTree);
+    computeInitialTree(params, iqtree, dist_file, initTree);
 
     /*************** SET UP PARAMETERS and model testing ****************/
 
@@ -1638,7 +1635,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         double initTime = getCPUTime();
 
         if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
-        	int numDup = initCandidateTreeSet(params, iqtree, numInitTrees);
+        	int numDup = initCandidateTreeSet(params, iqtree);
         	assert(iqtree.candidateTrees.size() != 0);
         	cout << "Finish initializing candidate tree set. ";
         	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.getNumLocalOptTrees() << endl;
