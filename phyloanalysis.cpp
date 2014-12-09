@@ -850,56 +850,54 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		}
 	}
 	if (!params.user_file && params.start_tree == STT_BIONJ) {
-		cout << "  BIONJ tree:               " << params.out_prefix << ".bionj"
+		cout << "  BIONJ tree:                    " << params.out_prefix << ".bionj"
 				<< endl;
 	}
 	if (!params.dist_file) {
 		//cout << "  Juke-Cantor distances:    " << params.out_prefix << ".jcdist" << endl;
 		if (params.compute_ml_dist)
-			cout << "  Likelihood distances:     " << params.out_prefix
+		cout << "  Likelihood distances:          " << params.out_prefix
 					<< ".mldist" << endl;
 		if (params.print_conaln)
-			cout << "  Concatenated alignment:   " << params.out_prefix
+		cout << "  Concatenated alignment:        " << params.out_prefix
 					<< ".conaln" << endl;
 	}
 	if (tree.getRate()->getGammaShape() > 0 && params.print_site_rate)
-		cout << "  Gamma-distributed rates:  " << params.out_prefix << ".rate"
+		cout << "  Gamma-distributed rates:       " << params.out_prefix << ".rate"
 				<< endl;
 
 	if ((tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) && params.print_site_rate)
-		cout << "  Site-rates by MH model:   " << params.out_prefix << ".rate"
+		cout << "  Site-rates by MH model:        " << params.out_prefix << ".rate"
 				<< endl;
 
 	if (params.print_site_lh)
-		cout << "  Site log-likelihoods:     " << params.out_prefix << ".sitelh"
+		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh"
 				<< endl;
 
 	if (params.write_intermediate_trees)
-		cout << "  All intermediate trees:   " << params.out_prefix << ".treels"
+		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
 				<< endl;
 
 	if (params.gbo_replicates) {
-		cout << endl << "Ultrafast bootstrap approximation results written to:"
-				<< endl << "  Split support values:     " << params.out_prefix
-				<< ".splits.nex" << endl << "  Consensus tree:           "
-				<< params.out_prefix << ".contree" << endl;
+		cout << endl << "Ultrafast bootstrap approximation results written to:" << endl
+			 << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
+			 << "  Consensus tree:                " << params.out_prefix << ".contree" << endl;
 		if (params.print_ufboot_trees)
-			cout << "  UFBoot trees:             " << params.out_prefix << ".ufboot" << endl;
+		cout << "  UFBoot trees:                  " << params.out_prefix << ".ufboot" << endl;
 
 	}
 
 	if (params.treeset_file) {
-		cout << "  Evaluated user trees:     " << params.out_prefix << ".trees" << endl;
+		cout << "  Evaluated user trees:          " << params.out_prefix << ".trees" << endl;
 
 		if (params.print_tree_lh) {
-			cout << "  Tree log-likelihoods:   " << params.out_prefix << ".treelh" << endl;
+		cout << "  Tree log-likelihoods:          " << params.out_prefix << ".treelh" << endl;
 		}
 		if (params.print_site_lh) {
-			cout << "  Site log-likelihoods:     " << params.out_prefix << ".sitelh" << endl;
+		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
 		}
 	}
-	cout << "  Screen log file:               " << params.out_prefix << ".log"
-			<< endl;
+	cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
 	/*	if (original_model == "WHTEST")
 	 cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
 	cout << endl;
@@ -1060,6 +1058,7 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &numInitTrees, string &initTree) {
     double start = getCPUTime();
 
+    string out_file = params.out_prefix;
     if (params.user_file) {
         // start the search with user-defined tree
     	cout << endl;
@@ -1099,6 +1098,10 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         iqtree.readTreeString(string(iqtree.pllInst->tree_string));
         iqtree.initializeAllPartialPars();
         iqtree.clearAllPartialLH();
+        if (params.write_init_tree) {
+            out_file += ".parstree";
+            iqtree.printTree(out_file.c_str(), WT_NEWLINE);
+        }
         iqtree.fixNegativeBranch(true);
         cout << getCPUTime() - start << " seconds" << endl;
         numInitTrees = params.numParsTrees;
@@ -1553,6 +1556,17 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Make sure that no partial likelihood of IQ-TREE is initialized when PLL is used to save memory
     if (params.pll) {
         iqtree.deleteAllPartialLh();
+    }
+
+    // Temporary fix since PLL only supports DNA/Protein: switch to IQ-TREE parsimony kernel
+    if (params.start_tree == STT_PLL_PARSIMONY) {
+		if (iqtree.isSuperTree()) {
+			PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++)
+				if ((*it)->aln->seq_type != SEQ_DNA && (*it)->aln->seq_type != SEQ_PROTEIN)
+					params.start_tree = STT_PARSIMONY;
+		} else if (iqtree.aln->seq_type != SEQ_DNA && iqtree.aln->seq_type != SEQ_PROTEIN)
+			params.start_tree = STT_PARSIMONY;
     }
 
     /***************** Initialization for PLL and sNNI ******************/

@@ -1511,6 +1511,9 @@ struct Params {
     
     /** TRUE (default) to ignore identical sequences and add them back at the end */
     bool ignore_identical_seqs;
+
+    /** TRUE to write initial tree to a file (default: false) */
+    bool write_init_tree;
 };
 
 /**
