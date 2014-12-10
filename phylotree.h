@@ -51,7 +51,7 @@ const int SPR_DEPTH = 2;
 
 using namespace Eigen;
 
-#ifdef __AVX
+#ifdef __AVX__
 #define MEM_ALIGNMENT 32
 inline size_t get_safe_upper_limit(size_t cur_limit) {
 	return ((cur_limit+3)/4)*4;
@@ -104,7 +104,7 @@ inline void aligned_free(void *mem) {
 }
 
 
-#ifdef __AVX
+#ifdef __AVX__
 #define VectorClassMaster Vec4d
 #define VectorClassFloat Vec8f
 #define VCSIZE_MASTER 4

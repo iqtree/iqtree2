@@ -2195,7 +2195,7 @@ int main(int argc, char *argv[])
 	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
 	bool has_fma =  has_fma3 || has_fma4;
 
-#ifdef __AVX
+#ifdef __AVX__
 	if (instruction_set < 7) {
 		outError("Your CPU does not support AVX, please use SSE3 version of IQ-TREE.");
 	}
@@ -2245,7 +2245,7 @@ int main(int argc, char *argv[])
 
 	cout << "Kernel:  ";
 	if (params.pll) {
-#ifdef __AVX
+#ifdef __AVX__
 		cout << "PLL-AVX";
 #else
 		cout << "PLL-SSE3";
@@ -2256,7 +2256,7 @@ int main(int argc, char *argv[])
 		case LK_SSE: cout << "Slow SSE3"; break;
 		case LK_EIGEN: cout << "No SSE"; break;
 		case LK_EIGEN_SSE:
-#ifdef __AVX
+#ifdef __AVX__
 			cout << "AVX";
 #else
 			cout << "SSE3";

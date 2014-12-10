@@ -47,11 +47,7 @@ inline double horizontal_max(Vec2d const &a) {
 /***
  * AVX support codes
  */
-#ifdef __AVX
-
-#ifndef __AVX__
-#error "__AVX is defined but source codes are not compiled with AVX enabled"
-#endif
+#ifdef __AVX__
 
 /*
 // lower 64 bits of result contain the sum of a[0], a[1], a[2], a[3]
@@ -92,7 +88,7 @@ inline double horizontal_max(Vec4d const &a) {
     return max(x[0],x[1]);
 }
 
-#endif // __AVX
+#endif // __AVX__
 //#define USING_SSE
 
 void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {

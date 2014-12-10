@@ -1103,7 +1103,7 @@ void PhyloTree::initializeAllPartialLh() {
 	// Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
     size_t nptn = getAlnNPattern() + numStates; // extra #numStates for ascertainment bias correction
-#ifdef __AVX
+#ifdef __AVX__
     size_t mem_size = ((nptn +3)/4)*4;
 #else
     size_t mem_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
@@ -1169,7 +1169,7 @@ void PhyloTree::deleteAllPartialLh() {
 
 uint64_t PhyloTree::getMemoryRequired() {
 	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
-#ifdef __AVX
+#ifdef __AVX__
     // block size must be divisible by 4
     uint64_t block_size = ((nptn+3)/4)*4;
 #else
@@ -1189,7 +1189,7 @@ uint64_t PhyloTree::getMemoryRequired() {
 void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
     size_t pars_block_size = getBitsBlockSize();
     size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
-#ifdef __AVX
+#ifdef __AVX__
     // block size must be divisible by 4
     size_t block_size = ((nptn+3)/4)*4;
 #else
