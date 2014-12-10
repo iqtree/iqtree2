@@ -955,10 +955,14 @@ void PhyloSuperTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs
 void PhyloSuperTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs) {
 	if (removed_seqs.empty()) return;
 	IQTree::reinsertIdenticalSeqs(orig_aln, removed_seqs, twin_seqs);
+
 	// now synchronize aln
 	int part = 0;
     for (iterator it = begin(); it != end(); it++, part++) {
 //        (*it)->setAlignment(((SuperAlignment*)aln)->partitions[part]);
 		(*it)->aln = ((SuperAlignment*)aln)->partitions[part];
     }
+	mapTrees();
+
+
 }

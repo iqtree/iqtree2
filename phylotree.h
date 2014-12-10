@@ -675,6 +675,12 @@ public:
     void readTreeString(const string &tree_string);
 
     /**
+            Read the tree saved with Taxon Names and branch lengths.
+            @param tree_string tree string to read from
+     */
+    void readTreeFile(const string &file_name);
+
+    /**
      * Return the tree string contining taxon names and branch lengths
      * @return
      */

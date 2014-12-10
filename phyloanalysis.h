@@ -71,7 +71,9 @@ void assignBranchSupportNew(Params &params);
 		output_tree will be named input_trees appended with ".contree"
 */
 void computeConsensusTree(const char *input_trees, int burnin, int max_count, double cutoff, double weight_threshold,
-	const char *output_tree, const char *out_prefix, const char* tree_weight_file, Params *params);
+	const char *output_tree, const char *out_prefix, const char* tree_weight_file, Params *params
+	//, StrVector &removed_seqs, StrVector &twin_seqs
+	);
 
 /**
 	Compute the consensus network from the collection of trees in input_trees.

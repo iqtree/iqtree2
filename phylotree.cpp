@@ -230,6 +230,22 @@ void PhyloTree::readTreeString(const string &tree_string) {
     }
 }
 
+void PhyloTree::readTreeFile(const string &file_name) {
+	ifstream str;
+	str.open(file_name.c_str());
+//	str << tree_string;
+//	str.seekg(0, ios::beg);
+	freeNode();
+	readTree(str, rooted);
+	setAlignment(aln);
+    if (isSuperTree()) {
+        ((PhyloSuperTree*) this)->mapTrees();
+    } else {
+    	clearAllPartialLH();
+    }
+    str.close();
+}
+
 string PhyloTree::getTreeString() {
 	stringstream tree_stream;
 	printTree(tree_stream);
@@ -2731,6 +2747,7 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
     assert(current_it_back);
     double current_len = current_it->length;
     double ferror, optx;
+    assert(current_len >= 0.0);
     theta_computed = false;
     if (optimize_by_newton) // Newton-Raphson method
     	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
