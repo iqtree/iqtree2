@@ -685,32 +685,39 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			string con_file = params.out_prefix;
 			con_file += ".contree";
 			bool rooted = false;
-
-			tree.freeNode();
-			tree.readTree(con_file.c_str(), rooted);
-			if (removed_seqs.size() > 0) {
-				tree.reinsertIdenticalSeqs(tree.aln, removed_seqs, twin_seqs);
-			}
-			tree.setAlignment(tree.aln);
+			MTree contree;
+			contree.readTree(con_file.c_str(), rooted);
+			contree.drawTree(out, WT_BR_SCALE);
+			out << endl << "Consensus tree in newick format: " << endl << endl;
+			contree.printTree(out);
+			out << endl << endl;
+//			tree.freeNode();
+//			tree.root = NULL;
+//			tree.readTree(con_file.c_str(), rooted);
+//			if (removed_seqs.size() > 0) {
+//				tree.reinsertIdenticalSeqs(tree.aln, removed_seqs, twin_seqs);
+//			}
+//			tree.setAlignment(tree.aln);
 
 			// bug fix
-			if ((tree.sse == LK_EIGEN || tree.sse == LK_EIGEN_SSE) && !tree.isBifurcating()) {
-				cout << "NOTE: Changing to old kernel as consensus tree is multifurcating" << endl;
-				tree.changeLikelihoodKernel(LK_SSE);
-			}
+//			if ((tree.sse == LK_EIGEN || tree.sse == LK_EIGEN_SSE) && !tree.isBifurcating()) {
+//				cout << "NOTE: Changing to old kernel as consensus tree is multifurcating" << endl;
+//				tree.changeLikelihoodKernel(LK_SSE);
+//			}
 
-			tree.initializeAllPartialLh();
-			tree.fixNegativeBranch(false);
-			if (tree.isSuperTree())
-				((PhyloSuperTree*) &tree)->mapTrees();
-			tree.optimizeAllBranches();
-			tree.printTree(con_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
-			tree.sortTaxa();
-			tree.drawTree(out, WT_BR_SCALE);
-			out << endl << "Consensus tree in newick format: " << endl << endl;
-			tree.printResultTree(out);
-			out << endl << endl;
+//			tree.initializeAllPartialLh();
+//			tree.fixNegativeBranch(false);
+//			if (tree.isSuperTree())
+//				((PhyloSuperTree*) &tree)->mapTrees();
+//			tree.optimizeAllBranches();
+//			tree.printTree(con_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+//			tree.sortTaxa();
+//			tree.drawTree(out, WT_BR_SCALE);
+//			out << endl << "Consensus tree in newick format: " << endl << endl;
+//			tree.printResultTree(out);
+//			out << endl << endl;
 		}
+
 
 		/* evaluate user trees */
 		vector<TreeInfo> info;
@@ -2053,6 +2060,35 @@ void runPhyloAnalysis(Params &params) {
 			splitsfile += ".splits.nex";
 			computeConsensusTree(splitsfile.c_str(), 0, 1e6, params.split_threshold,
 					params.split_weight_threshold, NULL, params.out_prefix, NULL, &params);
+			// now optimize branch lengths of the consensus tree
+			string current_tree = tree->getTreeString();
+			splitsfile = params.out_prefix;
+			splitsfile += ".contree";
+			tree->readTreeFile(splitsfile);
+			// bug fix
+			if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
+				cout << "NOTE: Changing to old kernel as consensus tree is multifurcating" << endl;
+				tree->changeLikelihoodKernel(LK_SSE);
+			}
+
+			tree->initializeAllPartialLh();
+	        if (tree->isSuperTree()) {
+	        	tree->assignRandomBranchLengths(true);
+	            ((PhyloSuperTree*)tree)->mapTrees();
+	        } else {
+	        	tree->fixNegativeBranch(true);
+	    	}
+
+			tree->optimizeAllBranches();
+		    tree->setRootNode(params.root);
+		    tree->insertTaxa(removed_seqs, twin_seqs);
+			tree->printTree(splitsfile.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+			// revert the best tree
+			tree->readTreeString(current_tree);
+//			if (tree->isSuperTree()) {
+//				tree->optimizeAllBranches();
+//				((PhyloSuperTree*)tree)->computeBranchLengths();
+//			}
 		}
 		// reinsert identical sequences
 		if (removed_seqs.size() > 0) {
@@ -2275,7 +2311,11 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 	//cout << "convert compatible split system into tree..." << endl;
 	mytree.convertToTree(maxsg);
 	//cout << "done" << endl;
-	string taxname = sg.getTaxa()->GetTaxonLabel(0);
+	string taxname;
+	if (params->root)
+		taxname = params->root;
+	else
+		taxname = sg.getTaxa()->GetTaxonLabel(0);
 	Node *node = mytree.findLeafName(taxname);
 	if (node)
 		mytree.root = node;
@@ -2295,6 +2335,9 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 			out_file = input_trees;
 		out_file += ".contree";
 	}
+
+//	if (removed_seqs.size() > 0)
+//		mytree.insertTaxa(removed_seqs, twin_seqs);
 
 	mytree.printTree(out_file.c_str(), WT_BR_CLADE);
 	cout << "Consensus tree written to " << out_file << endl;

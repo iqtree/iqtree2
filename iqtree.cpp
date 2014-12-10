@@ -2512,6 +2512,7 @@ void IQTree::writeUFBootTrees(Params &params, StrVector &removed_seqs, StrVector
 }
 
 void IQTree::summarizeBootstrap(Params &params) {
+	setRootNode(params.root);
 	if (verbose_mode >= VB_MED)
 		cout << "Summarizing from " << treels.size() << " candidate trees..." << endl;
     MTreeSet trees;
