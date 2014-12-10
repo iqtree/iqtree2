@@ -2055,7 +2055,6 @@ void runPhyloAnalysis(Params &params) {
 			cout << endl << "Computing bootstrap consensus tree..." << endl;
 			string splitsfile = params.out_prefix;
 			splitsfile += ".splits.nex";
-//			StrVector removed_seqs2, twin_seqs2;
 			computeConsensusTree(splitsfile.c_str(), 0, 1e6, params.split_threshold,
 					params.split_weight_threshold, NULL, params.out_prefix, NULL, &params);
 			// now optimize branch lengths of the consensus tree
@@ -2070,12 +2069,12 @@ void runPhyloAnalysis(Params &params) {
 			}
 
 			tree->initializeAllPartialLh();
-			tree->fixNegativeBranch(false);
-			if (tree->isSuperTree()) {
-				PhyloSuperTree* stree = (PhyloSuperTree*)tree;
-				for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++)
-					(*it)->fixNegativeBranch(false);
-			}
+	        if (tree->isSuperTree()) {
+	        	tree->assignRandomBranchLengths(true);
+	            ((PhyloSuperTree*)tree)->mapTrees();
+	        } else {
+	        	tree->fixNegativeBranch(true);
+	    	}
 
 			tree->optimizeAllBranches();
 		    tree->setRootNode(params.root);
@@ -2237,9 +2236,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
 
 void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 		double cutoff, double weight_threshold, const char *output_tree,
-		const char *out_prefix, const char *tree_weight_file, Params *params
-		//, StrVector &removed_seqs, StrVector &twin_seqs
-		) {
+		const char *out_prefix, const char *tree_weight_file, Params *params) {
 	bool rooted = false;
 
 	// read the bootstrap tree file

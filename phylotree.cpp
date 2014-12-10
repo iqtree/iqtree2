@@ -3210,8 +3210,7 @@ int PhyloTree::assignRandomBranchLengths(bool force, Node *node, Node *dad) {
         fixed++;
     }
     if ((*it)->length <= 0.0) {
-        (
-                *it)->length = 1e-6;
+        (*it)->length = 1e-6;
         (*it)->node->findNeighbor(node)->length = (*it)->length;
     }
     fixed += assignRandomBranchLengths(force, (*it)->node, node);
