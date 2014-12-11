@@ -1566,8 +1566,8 @@ double IQTree::doTreeSearch() {
 	        }
         } // end of bootstrap convergence test
 
-        if (params->partition_type)
-        	((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
+       //if (params->partition_type)
+       // 	((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
     }
 
     readTreeString(bestTreeString);

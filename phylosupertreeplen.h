@@ -205,7 +205,6 @@ public:
      */
     virtual void changeNNIBrans(NNIMove nnimove) {};
 
-
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
             If a swap shows better score, return the swapped tree and the score.
@@ -216,6 +215,12 @@ public:
             @return the likelihood of the tree
      */
     virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL);
+
+    /*
+     * this function is used for debugging reasons.
+     * It will be slow, but should tell you if there are any problems in swapNNIBranch, due to different cases
+     */
+    virtual double NAIVEswapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL);
 
     /**
      *	used in swapNNIBranch to update link_neighbors of other SuperNeighbors that point to the same branch on SubTree as (node,dad)
