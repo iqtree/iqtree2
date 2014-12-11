@@ -23,7 +23,7 @@
 
 #include "phylotree.h"
 #include "alignmentpairwise.h"
-#include "ratemeyerdiscrete.h"
+#include "model/ratemeyerdiscrete.h"
 
 /*
 	collection of classes for Next-generation sequencing 

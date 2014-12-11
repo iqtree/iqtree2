@@ -153,7 +153,7 @@ GGG";
 
 
 ModelCodon::ModelCodon(const char *model_name, string model_params, StateFreqType freq, string freq_params,
-		PhyloTree *tree, bool count_rates) : GTRModel(tree, count_rates)
+		PhyloTree *tree, bool count_rates) : ModelGTR(tree, count_rates)
 {
 	int i;
 	ntfreq = new double[12];
@@ -250,7 +250,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 		//ntfreq = new double[12];
 		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
 	}
-	GTRModel::init(freq);
+	ModelGTR::init(freq);
 }
 
 void ModelCodon::setRateGroup(IntVector group) {

@@ -21,7 +21,7 @@
 //#include "whtest/eigen.h"
 
 ModelNonRev::ModelNonRev(PhyloTree *tree, bool count_rates)
-        : GTRModel(tree, false)
+        : ModelGTR(tree, false)
 {
     num_params = getNumRateEntries() - 1;
     delete [] rates;
@@ -39,7 +39,7 @@ ModelNonRev::ModelNonRev(PhyloTree *tree, bool count_rates)
 }
 
 void ModelNonRev::freeMem() {
-    GTRModel::freeMem();
+    ModelGTR::freeMem();
     delete [] temp_space;
     delete [] rate_matrix;
 }

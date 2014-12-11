@@ -746,7 +746,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_best_trees = false;
     params.iteration_multiple = 1;
     params.initPerStrength = 0.5;
+#ifdef USING_PLL
+    params.pll = true;
+#else
     params.pll = false;
+#endif
     params.modeps = 0.001;
     params.parbran = false;
     params.binary_aln_file = NULL;
@@ -779,6 +783,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_branch_lengths = false;
 	params.lh_mem_save = LM_DETECT; // auto detect
 	params.start_tree = STT_PLL_PARSIMONY;
+	params.print_splits_file = false;
+    params.ignore_identical_seqs = true;
+    params.write_init_tree = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1042,6 +1049,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_gen = BALANCED;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-keep_ident") == 0) {
+                params.ignore_identical_seqs = false;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-rcsg") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1810,6 +1821,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_branch_lengths = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-wit") == 0) {
+                params.write_init_tree = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-nodup") == 0) {
 				params.avoid_duplicated_trees = true;
 				continue;
@@ -1899,6 +1914,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-wca") == 0) {
 				params.print_conaln = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-wsplits") == 0) {
+				params.print_splits_file = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-ns") == 0) {

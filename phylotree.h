@@ -25,11 +25,11 @@
 #include "Eigen/Core"
 #include "mtree.h"
 #include "alignment.h"
-#include "modelsubst.h"
-#include "modelfactory.h"
+#include "model/modelsubst.h"
+#include "model/modelfactory.h"
 #include "phylonode.h"
 #include "optimization.h"
-#include "rateheterogeneity.h"
+#include "model/rateheterogeneity.h"
 
 
 const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
@@ -475,7 +475,7 @@ public:
     /**
             clear all partial likelihood for a clean computation again
      */
-    void clearAllPartialLH();
+    virtual void clearAllPartialLH();
 
     /**
      * compute all partial likelihoods if not computed before
@@ -506,6 +506,7 @@ public:
     bool tip_partial_lh_computed;
 
     void computeTipPartialLikelihood();
+    void computePtnInvar();
 
     /**
             compute the partial likelihood at a subtree
@@ -672,6 +673,12 @@ public:
             @param tree_string tree string to read from
      */
     void readTreeString(const string &tree_string);
+
+    /**
+            Read the tree saved with Taxon Names and branch lengths.
+            @param tree_string tree string to read from
+     */
+    void readTreeFile(const string &file_name);
 
     /**
      * Return the tree string contining taxon names and branch lengths

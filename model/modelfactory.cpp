@@ -21,7 +21,7 @@
 #include "modelfactory.h"
 #include "rategamma.h"
 #include "rategammainvar.h"
-#include "gtrmodel.h"
+#include "modelgtr.h"
 #include "modelnonrev.h"
 #include "modeldna.h"
 #include "modelprotein.h"
@@ -32,6 +32,8 @@
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
 #include "ratekategory.h"
+#include "ratefree.h"
+#include "ratefreeinvar.h"
 #include "ngs.h"
 #include <string>
 #include "timeutil.h"
@@ -72,12 +74,12 @@ ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type,
 	if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
 		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
 		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
-		model = new GTRModel(tree, count_rates);
+		model = new ModelGTR(tree, count_rates);
 		if (freq_params != "")
-			((GTRModel*)model)->readStateFreq(freq_params);
+			((ModelGTR*)model)->readStateFreq(freq_params);
 		if (model_params != "")
-			((GTRModel*)model)->readRates(model_params);
-		((GTRModel*)model)->init(freq_type);
+			((ModelGTR*)model)->readRates(model_params);
+		((ModelGTR*)model)->init(freq_type);
 	} else if (model_str == "UNREST") {
 		freq_type = FREQ_EQUAL;
 		//params.optimize_by_newton = false;
@@ -174,12 +176,16 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	}
 	string::size_type posI = model_str.find("+I");
 	string::size_type posG = model_str.find("+G");
+	string::size_type posR = model_str.find("+R"); // FreeRate model
+	if (posG != string::npos && posR != string::npos)
+		outError("Gamma and FreeRate models cannot be both specified!");
 	string::size_type posX;
 	/* create site-rate heterogeneity */
 	int num_rate_cats = params.num_rate_cats;
 	double gamma_shape = params.gamma_shape;
 	double p_invar_sites = params.p_invar_sites;
 	if (posI != string::npos) {
+		// invariable site model
 		if (model_str.length() > posI+2 && model_str[posI+2] == OPEN_BRACKET) {
 			close_bracket = model_str.find(CLOSE_BRACKET, posI);
 			if (close_bracket == string::npos)
@@ -191,6 +197,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			outError("Wrong model name ", model_str);
 	}
 	if (posG != string::npos) {
+		// Gamma rate model
 		int end_pos = 0;
 		if (model_str.length() > posG+2 && isdigit(model_str[posG+2])) {
 			num_rate_cats = convert_int(model_str.substr(posG+2).c_str(), end_pos);
@@ -210,15 +217,27 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		} else if (model_str.length() > posG+2+end_pos && model_str[posG+2+end_pos] != '+')
 			outError("Wrong model name ", model_str);
 	}
+	if (posR != string::npos) {
+		// FreeRate model
+		int end_pos = 0;
+		if (model_str.length() > posR+2 && isdigit(model_str[posR+2])) {
+			num_rate_cats = convert_int(model_str.substr(posR+2).c_str(), end_pos);
+				if (num_rate_cats < 1) outError("Wrong number of rate categories");
+			}
+	}
 	if (model_str.find('+') != string::npos) {
 		//string rate_str = model_str.substr(pos);
 		if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
 					p_invar_sites, params.optimize_model_rate_joint, tree);
+		} else if (posI != string::npos && posR != string::npos) {
+			site_rate = new RateFreeInvar(num_rate_cats, p_invar_sites, tree);
 		} else if (posI != string::npos) {
 			site_rate = new RateInvar(p_invar_sites, tree);
 		} else if (posG != string::npos) {
 			site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
+		} else if (posR != string::npos) {
+			site_rate = new RateFree(num_rate_cats, tree);
 		} else if ((posX = model_str.find("+M")) != string::npos) {
 			tree->sse = LK_NORMAL;
 			params.rate_mh_type = true;
@@ -301,13 +320,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		double *state_freq = new double[model->num_states];
 		double *rates = new double[model->getNumRateEntries()];
 		for (i = 0; i < freq_vec.size(); i++) {
-			GTRModel *modeli;
+			ModelGTR *modeli;
 			if (i == 0) {
-				modeli = (GTRModel*)createModel(model_str, params.freq_type, "", tree, true);
+				modeli = (ModelGTR*)createModel(model_str, params.freq_type, "", tree, true);
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {
-				modeli = (GTRModel*)createModel(model_str, FREQ_EQUAL, "", tree, false);
+				modeli = (ModelGTR*)createModel(model_str, FREQ_EQUAL, "", tree, false);
 				modeli->setStateFrequency(state_freq);
 				modeli->setRateMatrix(rates);
 			}

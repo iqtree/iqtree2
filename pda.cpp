@@ -2196,12 +2196,12 @@ int main(int argc, char *argv[])
 	if (!has_fma) {
 		outError("Your CPU does not support FMA instruction, quiting now...");
 	}
-#else
-	if (has_fma) {
-		outWarning("Your CPU supports AVX+FMA but you are using non-FMA version of IQ-TREE!");
-		outWarning("Please consider trying AVX+FMA version.");
-		cout << endl;
-	}
+//#else
+//	if (has_fma) {
+//		outWarning("Your CPU supports AVX+FMA but you are using non-FMA version of IQ-TREE!");
+//		outWarning("Please consider trying AVX+FMA version.");
+//		cout << endl;
+//	}
 #endif
 
 	cout << "Host:    " << hostname << " (";

@@ -33,11 +33,10 @@ cmake_minimum_required(VERSION 2.8)
 
 project(iqtree)
 add_definitions(-DIQ_TREE)
-
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 1)
-set (iqtree_VERSION_PATCH 1)
+set (iqtree_VERSION_PATCH 5)
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -50,6 +49,9 @@ endif()
 if (CMAKE_BUILD_TYPE STREQUAL "Release") 
 	message("Builde mode   : Release")
 endif()
+
+include_directories("${PROJECT_SOURCE_DIR}")
+
 
 ##################################################################
 # Detect target platforms
@@ -119,6 +121,16 @@ else()
 	message("Compiler      : Unknown and untested yet")
 endif()
 
+set(EXE_SUFFIX "")
+
+##################################################################
+# Configure PLL build
+##################################################################
+if (IQTREE_FLAGS MATCHES "pll")
+	add_definitions(-DUSING_PLL)
+	set(EXE_SUFFIX "${EXE_SUFFIX}-pll")
+endif()
+
 ##################################################################
 # detect 32 or 64 bit binary
 ##################################################################
@@ -129,13 +141,12 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
 	if (CMAKE_GENERATOR MATCHES "Win64")
 		error("Both 32-bit and 64-bit mode cannot be specified")
 	endif()
-	SET(EXE_SUFFIX "-m32")
+	SET(EXE_SUFFIX "${EXE_SUFFIX}-m32")
 	if (GCC OR CLANG) 
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} -m32")
   	endif()
 else()
 	message("Target binary : 64-bit")
-	SET(EXE_SUFFIX "")
 endif()
 
 ##################################################################
@@ -280,6 +291,7 @@ add_subdirectory(whtest)
 add_subdirectory(sprng)
 add_subdirectory(zlib-1.2.7)
 add_subdirectory(vectorclass)
+add_subdirectory(model)
 
 ##################################################################
 # the main executable
@@ -291,7 +303,6 @@ circularnetwork.cpp
 eigendecomposition.cpp
 greedy.cpp
 gss.cpp
-gtrmodel.cpp
 guidedbootstrap.cpp
 gurobiwrapper.cpp
 gzstream.cpp
@@ -300,13 +311,6 @@ iqtree.cpp
 maalignment.cpp
 matree.cpp
 mexttree.cpp
-modelbin.cpp
-modeldna.cpp
-modelfactory.cpp
-modelnonrev.cpp
-modelprotein.cpp
-modelset.cpp
-modelsubst.cpp
 mpdablock.cpp
 msetsblock.cpp
 msplitsblock.cpp
@@ -317,7 +321,6 @@ ngs.cpp
 node.cpp
 optimization.cpp
 parsmultistate.cpp
-partitionmodel.cpp
 pattern.cpp
 pda.cpp
 pdnetwork.cpp
@@ -330,13 +333,6 @@ phylotree.cpp
 phylotreesse.cpp
 #phylotreeeigen.cpp
 pruning.cpp
-rategamma.cpp
-rategammainvar.cpp
-rateheterogeneity.cpp
-rateinvar.cpp
-ratemeyerdiscrete.cpp
-ratemeyerhaeseler.cpp
-ratekategory.cpp
 split.cpp
 splitgraph.cpp
 splitset.cpp
@@ -348,15 +344,12 @@ tinatree.cpp
 tools.cpp
 whtest_wrapper.cpp
 lpwrapper.c
-#modeltest_wrapper.c
 nnisearch.cpp
-modelcodon.cpp
 phylosupertreeplen.cpp
 phylotesting.cpp
 ecopd.cpp
 ecopdmtreeset.cpp
 graph.cpp
-modelmorphology.cpp
 candidateset.cpp
 checkpoint.cpp
 )
@@ -387,7 +380,7 @@ if (IQTREE_FLAGS MATCHES "omp")
 	endif()
 endif()
 
-target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass ${PLATFORM_LIB} ${THREAD_LIB})	
+target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
 
 ##################################################################
 # setup the executable name 

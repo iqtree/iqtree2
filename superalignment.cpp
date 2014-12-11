@@ -189,6 +189,9 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 
 	if (removed_seqs.empty()) return this; // do nothing if the list is empty
 
+	if (removed_seqs.size() > getNSeq()-3)
+		outError("Your alignment contains too many identical sequences, quiting now...");
+
 	// now remove identical sequences
 	IntVector keep_seqs;
 	for (seq1 = 0; seq1 < getNSeq(); seq1++)
@@ -570,6 +573,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
 	aln->site_pattern.resize(nsites, -1);
     aln->clear();
     aln->pattern_index.clear();
+    aln->STATE_UNKNOWN = partitions[ids[0]]->STATE_UNKNOWN;
 
     int site = 0;
     for (i = 0; i < ids.size(); i++) {
@@ -580,7 +584,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     		int part_seq = 0;
     		for (int seq = 0; seq < union_taxa.size(); seq++)
     			if (union_taxa[seq] == 1) {
-    				char ch = STATE_UNKNOWN;
+    				char ch = aln->STATE_UNKNOWN;
     				if (taxa_set[seq] == 1) {
     					ch = (*it)[part_seq++];
     				}

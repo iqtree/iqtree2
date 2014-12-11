@@ -19,7 +19,7 @@
 
 #include "modelset.h"
 
-ModelSet::ModelSet(const char *model_name, PhyloTree *tree) : GTRModel(tree)
+ModelSet::ModelSet(const char *model_name, PhyloTree *tree) : ModelGTR(tree)
 {
 	name = full_name = model_name;
 	name += "+SSF";

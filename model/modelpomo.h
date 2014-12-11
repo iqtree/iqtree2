@@ -8,9 +8,9 @@
 #ifndef MODELPOMO_H_
 #define MODELPOMO_H_
 
-#include "gtrmodel.h"
+#include "modelgtr.h"
 
-class ModelPoMo: public GTRModel {
+class ModelPoMo: public ModelGTR {
 public:
 	ModelPoMo();
 	virtual ~ModelPoMo();
