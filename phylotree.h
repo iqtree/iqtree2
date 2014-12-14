@@ -30,6 +30,7 @@
 #include "phylonode.h"
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
+#include "pll/pll.h"
 
 
 const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
@@ -1287,6 +1288,25 @@ public:
 
 protected:
 
+    /**
+     *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
+     */
+    pllInstance *pllInst;
+
+    /**
+     *	PLL data structure for alignment
+     */
+    pllAlignmentData *pllAlignment;
+
+    /**
+     *  PLL data structure for storing phylognetic analysis options
+     */
+    pllInstanceAttr pllAttr;
+
+    /**
+     *  PLL partition list
+     */
+    partitionList * pllPartitions;
     /**
      *  is the subtree distance matrix need to be computed or updated
      */

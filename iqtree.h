@@ -480,26 +480,6 @@ public:
 
 
     /**
-     *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
-     */
-    pllInstance *pllInst;
-
-    /**
-     *	PLL data structure for alignment
-     */
-    pllAlignmentData *pllAlignment;
-
-    /**
-     *  PLL data structure for storing phylognetic analysis options
-     */
-    pllInstanceAttr pllAttr;
-
-    /**
-     *  PLL partition list
-     */
-    partitionList * pllPartitions;
-
-    /**
      *  information and parameters for the tree search procedure
      */
     SearchInfo searchinfo;
@@ -639,6 +619,22 @@ protected:
     int k_represent;
 
 public:
+
+    /**
+     *  Generate the initial candidate tree set
+     *  @param nParTrees number of parsimony trees to generate
+     *  @param nNNITrees number of NNI locally optimal trees to generate
+     *  @return number of duplicated trees
+     */
+    int initCandidateTreeSet(int nParTrees, int nNNITrees);
+
+
+    /**
+     * Generate the initial tree (usually used for model parameter estimation)
+     * @param dist_file
+     * @param initTree
+     */
+    void computeInitialTree(Params& params, string &dist_file, string &initTree);
 
     /**
      *  @brief: optimize model parameters on the current tree

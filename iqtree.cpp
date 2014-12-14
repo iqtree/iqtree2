@@ -324,6 +324,213 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     }
 }
 
+void IQTree::computeInitialTree(Params& params, string &dist_file, string &initTree) {
+    double start = getCPUTime();
+
+    string out_file = params.out_prefix;
+    if (params.user_file) {
+        // start the search with user-defined tree
+    	cout << endl;
+        cout << "Reading input tree file " << params.user_file << " ..." << endl;
+        bool myrooted = params.is_rooted;
+        readTree(params.user_file, myrooted);
+        setAlignment(aln);
+        params.numInitTrees = 1;
+        params.numNNITrees = 1;
+        // change to old kernel if tree is multifurcating
+		if ((params.SSE == LK_EIGEN || params.SSE == LK_EIGEN_SSE) && !isBifurcating()) {
+			cout << "NOTE: Changing to old kernel as input tree is multifurcating" << endl;
+			params.SSE = LK_SSE;
+		}
+    } else switch (params.start_tree) {
+    case STT_PARSIMONY:
+        // Create parsimony tree using IQ-Tree kernel
+        cout << endl;
+        cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
+        computeParsimonyTree(params.out_prefix, aln);
+        initializeAllPartialPars();
+        clearAllPartialLH();
+        fixNegativeBranch(true);
+        if (params.numInitTrees > params.min_iterations && params.stop_condition == SC_FIXED_ITERATION)
+        	params.numInitTrees = params.min_iterations;
+        break;
+    case STT_PLL_PARSIMONY:
+        cout << endl;
+        cout << "Create initial parsimony tree by phylogenetic likelihood library (PLL)... ";
+        // generate a parsimony tree for model optimization
+        pllInst->randomNumberSeed = params.ran_seed;
+        pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params.sprDist);
+        resetBranches(pllInst);
+        pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back,
+                PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+        readTreeString(string(pllInst->tree_string));
+        initializeAllPartialPars();
+        clearAllPartialLH();
+        if (params.write_init_tree) {
+            out_file += ".parstree";
+            printTree(out_file.c_str(), WT_NEWLINE);
+        }
+        fixNegativeBranch(true);
+        cout << getCPUTime() - start << " seconds" << endl;
+			if (params.numInitTrees > params.min_iterations
+					&& params.stop_condition == SC_FIXED_ITERATION)
+				params.numInitTrees = params.min_iterations;
+        break;
+    case STT_BIONJ:
+        // This is the old default option: using BIONJ as starting tree
+        computeBioNJ(params, aln, dist_file);
+        cout << getCPUTime() - start << " seconds" << endl;
+        params.numInitTrees = 1;
+        break;
+    }
+
+    /* Fix if negative branch lengths detected */
+    int fixed_number = fixNegativeBranch();
+    if (fixed_number) {
+        cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
+    }
+    if (params.root) {
+        string str = params.root;
+        if (!findNodeName(str)) {
+            str = "Specified root name " + str + "not found";
+            outError(str);
+        }
+    }
+    initTree = getTreeString();
+    if (params.pll) {
+        pllNewickTree *newick = pllNewickParseString(initTree.c_str());
+        pllTreeInitTopologyNewick(pllInst, newick, PLL_TRUE);
+        pllNewickParseDestroy(&newick);
+        pllInitModel(pllInst, pllPartitions, pllAlignment);
+    }
+
+}
+
+int IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
+    int nni_count = 0;
+    int nni_steps = 0;
+    int numDup = 0;
+    cout << "Generating " << nParTrees - 1 << " parsimony trees... ";
+    cout.flush();
+    double startTime = getCPUTime();
+    int numDupPars = 0;
+    for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
+        string curParsTree;
+        if (params->start_tree == STT_PLL_PARSIMONY) {
+			pllInst->randomNumberSeed = params->ran_seed + treeNr * 12345;
+	        pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
+			pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
+					pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE,
+					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+			curParsTree = string(pllInst->tree_string);
+        } else {
+            computeParsimonyTree(NULL, aln);
+            curParsTree = getTreeString();
+        }
+        if (candidateTrees.treeExist(curParsTree)) {
+            numDupPars++;
+            continue;
+        } else {
+        	if (params->start_tree == STT_PLL_PARSIMONY)
+        		readTreeString(curParsTree);
+            if (params->count_trees) {
+                string tree = getTopology();
+                if (pllTreeCounter.find(tree) == pllTreeCounter.end()) {
+                    // not found in hash_map
+                    pllTreeCounter[curParsTree] = 1;
+                } else {
+                    // found in hash_map
+                    pllTreeCounter[curParsTree]++;
+                }
+        	}
+        	candidateTrees.update(curParsTree, -DBL_MAX);
+        }
+    }
+    double parsTime = getCPUTime() - startTime;
+    cout << "(" << numDupPars << " duplicated parsimony trees)" << endl;
+    cout << "CPU time: " << parsTime << endl;
+    cout << "Computing log-likelihood of the parsimony trees ... " << endl;
+    startTime = getCPUTime();
+    vector<string> unOptParTrees = candidateTrees.getHighestScoringTrees(nParTrees);
+    for (vector<string>::iterator it = unOptParTrees.begin()+1; it != unOptParTrees.end(); it++) {
+    	readTreeString(*it);
+        // Initialize branch lengths for the parsimony tree
+        initializeAllPartialPars();
+        clearAllPartialLH();
+        if (isSuperTree()) {
+            assignRandomBranchLengths(true);
+            ((PhyloSuperTree*) this)->mapTrees();
+        } else {
+        	fixNegativeBranch(true);
+    	}
+        initializeAllPartialLh();
+        clearAllPartialLH();
+        // Optimize the branch lengths
+        string tree = optimizeBranches(2);
+        // Add tree to the candidate set
+		candidateTrees.update(tree, curScore);
+        if (curScore > bestScore) {
+            setBestTree(tree, curScore);
+        }
+    }
+    double loglTime = getCPUTime() - startTime;
+    cout << "CPU time: " << loglTime << endl;
+
+    // Only select the best nNNITrees for doing NNI search
+    CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);
+    candidateTrees.clear();
+
+    /************ END: Create a set of up to (numInitTrees - 1) unique parsimony trees **********************/
+
+    cout << endl;
+    cout << "Optimizing top "<< initParsimonyTrees.size() << " parsimony trees with NNI..." << endl;
+    startTime = getCPUTime();
+    /*********** START: Do NNI on the best parsimony trees ************************************/
+    CandidateSet::reverse_iterator rit;
+    setCurIt(1);
+    for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); ++rit, setCurIt(getCurIt() + 1)) {
+    	int nniCount, nniStep;
+        double initLogl, nniLogl;
+        string tree;
+        readTreeString(rit->second.tree);
+        //cout << rit->second.tree << endl;
+        initializeAllPartialLh();
+        clearAllPartialLH();
+        ofstream treefile;
+        treefile.open("cur_parsimonytree.txt");
+        treefile << rit->second.tree;
+        treefile.close();
+        computeLogL();
+        // THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
+        while (curScore - rit->first < -1.0) {
+        	optimizeBranches(1);
+        }
+        initLogl = curScore;
+        tree = doNNISearch(nniCount, nniStep);
+        nniLogl = curScore;
+        cout << "Iteration " << getCurIt() << " / LogL: " << curScore;
+        if (verbose_mode >= VB_MED) {
+        	cout << " / NNI count, steps: " << nniCount << "," << nniStep;
+        	cout << " / Parsimony logl " << initLogl << " / NNI logl: " << nniLogl;
+        }
+        cout << " / Time: " << convert_time(getRealTime() - params->start_real_time) << endl;
+
+        bool newTree = candidateTrees.update(tree, curScore);
+        if (!newTree) {
+        	numDup++;
+        }
+        // Better tree is found
+        if (curScore > bestScore && newTree) {
+            // Re-optimize model parameters (the sNNI algorithm)
+        	tree = optimizeModelParameters();
+            setBestTree(tree, curScore);
+            cout << "BETTER TREE FOUND: " << bestScore << endl;
+        }
+    }
+    double nniTime = getCPUTime() - startTime;
+    cout << "Average time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
+    return numDup;
+}
 void IQTree::initializePLL(Params &params) {
     pllAttr.rateHetModel = PLL_GAMMA;
     pllAttr.fastScaling = PLL_FALSE;
@@ -1312,6 +1519,7 @@ string IQTree::optimizeBranches(int maxTraversal) {
         pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE,
                 PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
         tree = string(pllInst->tree_string);
+        readTreeString(tree);
     } else {
     	curScore = optimizeAllBranches(maxTraversal);
         tree = getTreeString();
