@@ -2259,8 +2259,13 @@ int main(int argc, char *argv[])
 #ifdef __AVX__
 			cout << "AVX";
 #else
-			cout << "SSE3";
+			if (instruction_set >= 7 && !params.lk_no_avx) {
+				cout << "AVX";
+			} else {
+				cout << "SSE3";
+			}
 #endif
+
 #ifdef __FMA__
 			cout << "+FMA";
 #endif
