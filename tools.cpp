@@ -686,6 +686,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_replicates = 0;
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
+    params.lk_no_avx = false;
     params.print_site_lh = 0;
     params.print_site_rate = false;
     params.print_tree_lh = false;
@@ -1627,6 +1628,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-fastsse") == 0
 					|| strcmp(argv[cnt], "-fasttipsse") == 0) {
 				params.SSE = LK_EIGEN_SSE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-noavx") == 0) {
+				params.lk_no_avx = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-f") == 0) {

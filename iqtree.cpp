@@ -82,7 +82,7 @@ void IQTree::setParams(Params &params) {
     candidateTrees.popSize = params.popSize;
     candidateTrees.maxCandidates = params.maxCandidates;
 
-    setLikelihoodKernel(params.SSE);
+    setLikelihoodKernel(params.SSE, params.lk_no_avx);
 //    if (params.maxtime != 1000000) {
 //        params.autostop = false;
 //    }

@@ -239,7 +239,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		} else if (posR != string::npos) {
 			site_rate = new RateFree(num_rate_cats, tree);
 		} else if ((posX = model_str.find("+M")) != string::npos) {
-			tree->setLikelihoodKernel(LK_NORMAL);
+			tree->setLikelihoodKernel(LK_NORMAL, false);
 			params.rate_mh_type = true;
 			if (model_str.length() > posX+2 && isdigit(model_str[posX+2])) {
 				num_rate_cats = convert_int(model_str.substr(posX+2).c_str());
@@ -252,7 +252,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
 			site_rate->setTree(tree);
 		} else if ((posX = model_str.find("+D")) != string::npos) {
-			tree->setLikelihoodKernel(LK_NORMAL);
+			tree->setLikelihoodKernel(LK_NORMAL, false);
 			params.rate_mh_type = false;
 			if (model_str.length() > posX+2 && isdigit(model_str[posX+2])) {
 				num_rate_cats = convert_int(model_str.substr(posX+2).c_str());
@@ -265,7 +265,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
 			site_rate->setTree(tree);
 		} else if ((posX = model_str.find("+NGS")) != string::npos) {
-			tree->setLikelihoodKernel(LK_NORMAL);
+			tree->setLikelihoodKernel(LK_NORMAL, false);
 			if (model_str.length() > posX+4 && isdigit(model_str[posX+4])) {
 				num_rate_cats = convert_int(model_str.substr(posX+4).c_str());
 				if (num_rate_cats < 0) outError("Wrong number of rate categories");
@@ -273,7 +273,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			site_rate = new NGSRateCat(tree, num_rate_cats);
 			site_rate->setTree(tree);
 		} else if ((posX = model_str.find("+NGS")) != string::npos) {
-			tree->setLikelihoodKernel(LK_NORMAL);
+			tree->setLikelihoodKernel(LK_NORMAL, false);
 			if (model_str.length() > posX+4 && isdigit(model_str[posX+4])) {
 				num_rate_cats = convert_int(model_str.substr(posX+4).c_str());
 				if (num_rate_cats < 0) outError("Wrong number of rate categories");

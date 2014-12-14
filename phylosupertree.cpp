@@ -239,7 +239,7 @@ void PhyloSuperTree::setParams(Params &params) {
 	IQTree::setParams(params);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->params = &params;
-		(*it)->setLikelihoodKernel(params.SSE);
+		(*it)->setLikelihoodKernel(params.SSE, params.lk_no_avx);
 		(*it)->optimize_by_newton = params.optimize_by_newton;
 	}
 

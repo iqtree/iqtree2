@@ -46,7 +46,7 @@ inline double horizontal_max(Vec2d const &a) {
 
 //#define USING_SSE
 
-void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
+void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, bool no_avx) {
 	sse = lk;
     if (!aln || lk == LK_NORMAL) {
         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchNaive;
@@ -74,7 +74,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 		case LK_EIGEN_SSE:
 //#if INSTRSET >= 7
 // compiled with AVX enable
-			if (instruction_set >= 7) {
+			if (instruction_set >= 7 && !no_avx) {
 				// CPU supports AVX
 				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenTipAVX_DNA;
 				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenTipAVX_DNA;
@@ -118,7 +118,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 	        computeLikelihoodFromBufferPointer = NULL;
 			break;
 		case LK_EIGEN_SSE:
-			if (instruction_set >= 7) {
+			if (instruction_set >= 7 && !no_avx) {
 				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenTipAVX_PROT;
 				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenTipAVX_PROT;
 				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenTipAVX_PROT;
@@ -173,17 +173,17 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 	}
 }
 
-void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
+void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk, bool no_avx) {
 	if (sse == lk) return;
 	if ((sse == LK_EIGEN || sse == LK_EIGEN_SSE) && (lk == LK_NORMAL || lk == LK_SSE)) {
 		// need to increase the memory usage when changing from new kernel to old kernel
-		setLikelihoodKernel(lk);
+		setLikelihoodKernel(lk, no_avx);
 		deleteAllPartialLh();
 		initializeAllPartialLh();
 		clearAllPartialLH();
 	} else {
 		// otherwise simply assign variable sse
-		setLikelihoodKernel(lk);
+		setLikelihoodKernel(lk, no_avx);
 	}
 }
 

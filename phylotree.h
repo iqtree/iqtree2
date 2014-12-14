@@ -1226,9 +1226,9 @@ public:
      */
     void randomizeNeighbors(Node *node = NULL, Node *dad = NULL);
 
-    virtual void changeLikelihoodKernel(LikelihoodKernel lk);
+    virtual void changeLikelihoodKernel(LikelihoodKernel lk, bool no_avx);
 
-    virtual void setLikelihoodKernel(LikelihoodKernel lk);
+    virtual void setLikelihoodKernel(LikelihoodKernel lk, bool no_avx);
 
     /****************************************************************************
             Public variables

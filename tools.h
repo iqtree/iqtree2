@@ -1184,6 +1184,10 @@ struct Params {
             SSE Option
      */
     LikelihoodKernel SSE;
+
+    /** TRUE to not use AVX even available in CPU, default: FALSE */
+    bool lk_no_avx;
+
     /**
      	 	0: do not print anything
             1: print site log-likelihood

@@ -705,12 +705,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	PhyloTree *tree_homo = new PhyloTree();
 	tree_homo->optimize_by_newton = params.optimize_by_newton;
-	tree_homo->setLikelihoodKernel(params.SSE);
+	tree_homo->setLikelihoodKernel(params.SSE, params.lk_no_avx);
 	tree_homo->copyPhyloTree(in_tree);
 
 	PhyloTree *tree_hetero = new PhyloTree();
 	tree_hetero->optimize_by_newton = params.optimize_by_newton;
-	tree_hetero->setLikelihoodKernel(params.SSE);
+	tree_hetero->setLikelihoodKernel(params.SSE, params.lk_no_avx);
 	tree_hetero->copyPhyloTree(in_tree);
 
 	RateHeterogeneity * rate_class[4];
@@ -1170,7 +1170,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		tree->setAlignment(tree->aln);
 		if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
 			cout << "NOTE: Changing to old kernel as user tree is multifurcating" << endl;
-			tree->changeLikelihoodKernel(LK_SSE);
+			tree->changeLikelihoodKernel(LK_SSE, params.lk_no_avx);
 		}
 
 		tree->initializeAllPartialLh();

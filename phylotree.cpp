@@ -82,7 +82,7 @@ void PhyloTree::init() {
     ptn_invar = NULL;
     subTreeDistComputed = false;
     dist_matrix = NULL;
-    setLikelihoodKernel(LK_SSE);  // FOR TUNG: you forgot to initialize this variable!
+    setLikelihoodKernel(LK_SSE, false);  // FOR TUNG: you forgot to initialize this variable!
     save_all_trees = 0;
     mlCheck = 0; // FOR: upper bounds
     nodeBranchDists = NULL;

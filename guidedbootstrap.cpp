@@ -432,7 +432,7 @@ void readPatternLh(const char *infile, IQTree *tree, bool compression) {
 void computeAllPatternLh(Params &params, IQTree &tree) {
     /* this part copied from phyloanalysis.cpp */
     tree.optimize_by_newton = params.optimize_by_newton;
-    tree.setLikelihoodKernel(params.SSE);
+    tree.setLikelihoodKernel(params.SSE, params.lk_no_avx);
     try {
         if (!tree.getModelFactory()) {
             if (tree.isSuperTree())
