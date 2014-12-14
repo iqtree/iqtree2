@@ -51,7 +51,7 @@ const int SPR_DEPTH = 2;
 
 using namespace Eigen;
 
-#ifdef __AVX__
+//#ifdef __AVX__
 #define MEM_ALIGNMENT 32
 inline size_t get_safe_upper_limit(size_t cur_limit) {
 	return ((cur_limit+3)/4)*4;
@@ -61,16 +61,16 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 	return ((cur_limit+7)/8)*8;
 }
 
-#else
-#define MEM_ALIGNMENT 16
-inline size_t get_safe_upper_limit(size_t cur_limit) {
-	return (cur_limit%2 == 0) ? cur_limit : cur_limit+1;
-}
-inline size_t get_safe_upper_limit_float(size_t cur_limit) {
-	return ((cur_limit+3)/4)*4;
-}
-
-#endif
+//#else
+//#define MEM_ALIGNMENT 16
+//inline size_t get_safe_upper_limit(size_t cur_limit) {
+//	return (cur_limit%2 == 0) ? cur_limit : cur_limit+1;
+//}
+//inline size_t get_safe_upper_limit_float(size_t cur_limit) {
+//	return ((cur_limit+3)/4)*4;
+//}
+//
+//#endif
 
 //#include "pll/mem_alloc.h"
 
@@ -105,13 +105,13 @@ inline void aligned_free(void *mem) {
 
 
 #ifdef __AVX__
-#define VectorClassMaster Vec4d
+//#define VectorClassMaster Vec4d
 #define VectorClassFloat Vec8f
 #define VCSIZE_MASTER 4
 #define VCSIZE_FLOAT 8
 //#pragma message "Using AVX instructions"
 #else
-#define VectorClassMaster Vec2d
+//#define VectorClassMaster Vec2d
 #define VectorClassFloat Vec4f
 #define VCSIZE_MASTER 2
 #define VCSIZE_FLOAT 4
@@ -540,6 +540,9 @@ public:
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
+    void computePartialLikelihoodEigenTipAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    void computePartialLikelihoodEigenTipAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
 
     /****************************************************************************
             computing likelihood on a branch
@@ -575,6 +578,9 @@ public:
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
+    double computeLikelihoodBranchEigenTipAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeLikelihoodBranchEigenTipAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /****************************************************************************
@@ -594,6 +600,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodFromBufferEigenSSE();
+
+    double computeLikelihoodFromBufferEigenAVX_DNA();
+    double computeLikelihoodFromBufferEigenAVX_PROT();
 
     /**
             compute tree likelihood when a branch length collapses to zero
@@ -744,6 +753,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    void computeLikelihoodDervEigenTipAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervEigenTipAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length

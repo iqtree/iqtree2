@@ -235,6 +235,22 @@ else() #SSE intruction set
 	endif()
 endif()
 
+SET(AVX_FLAGS "")
+
+if (VCC) 
+	set(AVX_FLAGS "/arch:AVX")
+elseif (CLANG)
+	set(AVX_FLAGS "-mavx")
+elseif (GCC)
+	set(AVX_FLAGS "-mavx -fabi-version=0")
+elseif (ICC) 
+	if (WIN32)
+		 set(AVX_FLAGS "/arch:AVX")
+	else()
+		 set(AVX_FLAGS "-mavx")
+	endif()
+endif()
+
 ##################################################################
 # Setup compiler flags
 ##################################################################
@@ -296,6 +312,9 @@ add_subdirectory(model)
 ##################################################################
 # the main executable
 ##################################################################
+
+set_source_files_properties(phylotreeavx.cpp PROPERTIES COMPILE_FLAGS ${AVX_FLAGS})
+
 add_executable(iqtree
 alignment.cpp
 alignmentpairwise.cpp
@@ -331,6 +350,7 @@ phylonode.cpp
 phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
+phylotreeavx.cpp
 #phylotreeeigen.cpp
 pruning.cpp
 split.cpp

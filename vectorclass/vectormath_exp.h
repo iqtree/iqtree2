@@ -1938,6 +1938,8 @@ public:
 * These functions return the code hidden in a NAN. The sign bit is ignored
 ******************************************************************************/
 
+#ifdef __UNUSED
+
 Vec4i nan_code(Vec4f const & x) {
     Vec4i  a = reinterpret_i(x);
     Vec4ib b = (a & 0x7F800000) == 0x7F800000;   // check if NAN/INF
@@ -1991,5 +1993,7 @@ Vec8q nan_code(Vec8d const & x) {
 }
 
 #endif // MAX_VECTOR_SIZE >= 512
+
+#endif // __UNUSED
 
 #endif  // VECTORMATH_EXP_H
