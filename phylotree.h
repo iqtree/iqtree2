@@ -107,13 +107,13 @@ inline void aligned_free(void *mem) {
 #ifdef __AVX__
 //#define VectorClassMaster Vec4d
 #define VectorClassFloat Vec8f
-#define VCSIZE_MASTER 4
+//#define VCSIZE_MASTER 4
 #define VCSIZE_FLOAT 8
 //#pragma message "Using AVX instructions"
 #else
 //#define VectorClassMaster Vec2d
 #define VectorClassFloat Vec4f
-#define VCSIZE_MASTER 2
+//#define VCSIZE_MASTER 2
 #define VCSIZE_FLOAT 4
 //#pragma message "Using SS3 instructions"
 #endif

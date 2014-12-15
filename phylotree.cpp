@@ -20,6 +20,8 @@
 #include "nnisearch.h"
 #include "phylosupertree.h"
 
+extern int instruction_set;
+
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
 
@@ -1103,11 +1105,13 @@ void PhyloTree::initializeAllPartialLh() {
 	// Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
     size_t nptn = getAlnNPattern() + numStates; // extra #numStates for ascertainment bias correction
-#ifdef __AVX__
-    size_t mem_size = ((nptn +3)/4)*4;
-#else
-    size_t mem_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
-#endif
+
+    size_t mem_size;
+    if (instruction_set >= 7)
+    	mem_size = ((nptn +3)/4)*4;
+    else
+    	mem_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+
     size_t block_size = mem_size * numStates * site_rate->getNRate();
     if (!tmp_partial_lh1) {
         tmp_partial_lh1 = newPartialLh();
@@ -1169,13 +1173,13 @@ void PhyloTree::deleteAllPartialLh() {
 
 uint64_t PhyloTree::getMemoryRequired() {
 	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
-#ifdef __AVX__
-    // block size must be divisible by 4
-    uint64_t block_size = ((nptn+3)/4)*4;
-#else
-    // block size must be divisible by 2
-	uint64_t block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
-#endif
+	uint64_t block_size;
+	if (instruction_set >= 7)
+		// block size must be divisible by 4
+		block_size = ((nptn+3)/4)*4;
+	else
+		// block size must be divisible by 2
+		block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
     block_size = block_size * aln->num_states;
     if (site_rate)
     	block_size *= site_rate->getNRate();
@@ -1189,13 +1193,14 @@ uint64_t PhyloTree::getMemoryRequired() {
 void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
     size_t pars_block_size = getBitsBlockSize();
     size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
-#ifdef __AVX__
-    // block size must be divisible by 4
-    size_t block_size = ((nptn+3)/4)*4;
-#else
-    // block size must be divisible by 2
-    size_t block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
-#endif
+    size_t block_size;
+    if (instruction_set >= 7)
+    	// block size must be divisible by 4
+    	block_size = ((nptn+3)/4)*4;
+	else
+		// block size must be divisible by 2
+		size_t block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+
     size_t scale_block_size = nptn;
 
     block_size = block_size * model->num_states * site_rate->getNRate();

@@ -2195,18 +2195,6 @@ int main(int argc, char *argv[])
 	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
 	bool has_fma =  has_fma3 || has_fma4;
 
-//#ifdef __AVX__
-//	if (instruction_set < 7) {
-//		outError("Your CPU does not support AVX, please use SSE3 version of IQ-TREE.");
-//	}
-//#else
-//	if (instruction_set >= 7) {
-//		outWarning("Your CPU supports AVX but you are using SSE3 version of IQ-TREE!");
-//		outWarning("Please switch to AVX version that is 40% faster than SSE3.");
-//		cout << endl;
-//	}
-//#endif
-
 #ifdef __FMA__
 	if (!has_fma) {
 		outError("Your CPU does not support FMA instruction, quiting now...");
@@ -2256,15 +2244,11 @@ int main(int argc, char *argv[])
 		case LK_SSE: cout << "Slow SSE3"; break;
 		case LK_EIGEN: cout << "No SSE"; break;
 		case LK_EIGEN_SSE:
-#ifdef __AVX__
-			cout << "AVX";
-#else
 			if (instruction_set >= 7 && !params.lk_no_avx) {
 				cout << "AVX";
 			} else {
 				cout << "SSE3";
 			}
-#endif
 
 #ifdef __FMA__
 			cout << "+FMA";
