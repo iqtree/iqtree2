@@ -1238,12 +1238,13 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         // Initialize branch lengths for the parsimony tree
         iqtree.initializeAllPartialPars();
         iqtree.clearAllPartialLH();
-        if (iqtree.isSuperTree()) {
-            iqtree.assignRandomBranchLengths(true);
-            ((PhyloSuperTree*)&iqtree)->mapTrees();
-        } else {
-        	iqtree.fixNegativeBranch(true);
-    	}
+        iqtree.fixNegativeBranch(true);
+//        if (iqtree.isSuperTree()) {
+//            iqtree.assignRandomBranchLengths(true);
+//            ((PhyloSuperTree*)&iqtree)->mapTrees();
+//        } else {
+//        	iqtree.fixNegativeBranch(true);
+//    	}
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         // Optimize the branch lengths
@@ -2072,14 +2073,27 @@ void runPhyloAnalysis(Params &params) {
 			}
 
 			tree->initializeAllPartialLh();
-	        if (tree->isSuperTree()) {
-	        	tree->assignRandomBranchLengths(true);
-	            ((PhyloSuperTree*)tree)->mapTrees();
-	        } else {
-	        	tree->fixNegativeBranch(true);
-	    	}
+			tree->fixNegativeBranch(true);
+//	        if (tree->isSuperTree()) {
+//	        	if (params.partition_type == 0) {
+//	        		PhyloSuperTree *stree = (PhyloSuperTree*) tree;
+//	        		tree->clearAllPartialLH();
+//	        		// full partition model
+//	        		for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++) {
+//	        			(*it)->fixNegativeBranch(true);
+//	        		}
+//	        		tree->clearAllPartialLH();
+//	        	} else {
+//	        		// joint/prop. partition model
+//					tree->assignRandomBranchLengths(true);
+//					((PhyloSuperTree*)tree)->mapTrees();
+//	        	}
+//	        } else {
+//	        	tree->fixNegativeBranch(true);
+//	    	}
 
-			tree->optimizeAllBranches();
+			double conScore = tree->optimizeAllBranches();
+			cout << "Log-likelihood of consensus tree: " << conScore << endl;
 		    tree->setRootNode(params.root);
 		    tree->insertTaxa(removed_seqs, twin_seqs);
 			tree->printTree(splitsfile.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);

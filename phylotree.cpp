@@ -3192,31 +3192,31 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     return fixed;
 }
 
-int PhyloTree::assignRandomBranchLengths(bool force, Node *node, Node *dad) {
-
-    if (!node)
-        node = root;
-    int fixed = 0;
-
-    FOR_NEIGHBOR_IT(node, dad, it){
-    if ((*it)->length < 0.0 || force) { // negative branch length detected
-        if (verbose_mode >= VB_DEBUG)
-        cout << "Negative branch length " << (*it)->length << " was set to ";
-        (*it)->length = random_double() + 0.1;
-        if (verbose_mode >= VB_DEBUG)
-        cout << (*it)->length << endl;
-        // set the backward branch length
-        (*it)->node->findNeighbor(node)->length = (*it)->length;
-        fixed++;
-    }
-    if ((*it)->length <= 0.0) {
-        (*it)->length = 1e-6;
-        (*it)->node->findNeighbor(node)->length = (*it)->length;
-    }
-    fixed += assignRandomBranchLengths(force, (*it)->node, node);
-}
-    return fixed;
-}
+//int PhyloTree::assignRandomBranchLengths(bool force, Node *node, Node *dad) {
+//
+//    if (!node)
+//        node = root;
+//    int fixed = 0;
+//
+//    FOR_NEIGHBOR_IT(node, dad, it){
+//		if ((*it)->length < 0.0 || force) { // negative branch length detected
+//			if (verbose_mode >= VB_DEBUG)
+//			cout << "Negative branch length " << (*it)->length << " was set to ";
+//			(*it)->length = random_double() + 0.1;
+//			if (verbose_mode >= VB_DEBUG)
+//			cout << (*it)->length << endl;
+//			// set the backward branch length
+//			(*it)->node->findNeighbor(node)->length = (*it)->length;
+//			fixed++;
+//		}
+//		if ((*it)->length <= 0.0) {
+//			(*it)->length = 1e-6;
+//			(*it)->node->findNeighbor(node)->length = (*it)->length;
+//		}
+//		fixed += assignRandomBranchLengths(force, (*it)->node, node);
+//    }
+//    return fixed;
+//}
 
 /****************************************************************************
  Nearest Neighbor Interchange by maximum likelihood
