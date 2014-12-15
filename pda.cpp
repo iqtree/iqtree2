@@ -2278,7 +2278,7 @@ int main(int argc, char *argv[])
 #ifdef _OPENMP
 	if (params.num_threads == 0) {
 		cout << endl << endl;
-		outError("Please specify the number of cores to use (-omp option)!");
+		outError("Please specify the number of cores to use (-nt option)!");
 	}
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
 //	int max_threads = omp_get_max_threads();

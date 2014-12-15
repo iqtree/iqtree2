@@ -2414,17 +2414,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -ms <model_test_sample_size>";
 				params.model_test_sample_size = convert_int(argv[cnt]);
-#ifdef _OPENMP
-				continue;}if (strcmp(argv[cnt], "-omp") == 0) {
-				cnt++;
-				if (cnt >= argc)
-				throw "Use -omp <num_threads>";
-				params.num_threads = convert_int(argv[cnt]);
-				if (params.num_threads < 1)
-				throw "At least 1 thread please";
-#endif
 				continue;
 			}
+#ifdef _OPENMP
+			if (strcmp(argv[cnt], "-omp") == 0 || strcmp(argv[cnt], "-nt") == 0) {
+				cnt++;
+				if (cnt >= argc)
+				throw "Use -nt <num_threads>";
+				params.num_threads = convert_int(argv[cnt]);
+				if (params.num_threads < 1)
+					throw "At least 1 thread please";
+				continue;
+			}
+#endif
 			if (strcmp(argv[cnt], "-rootstate") == 0) {
                 cnt++;
                 if (cnt >= argc)
