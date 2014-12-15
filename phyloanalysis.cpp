@@ -1285,8 +1285,11 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
         iqtree.clearAllPartialLH();
         iqtree.computeLogL();
         // THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
-        while (iqtree.curScore - rit->first < -1.0) {
-        	iqtree.optimizeBranches(1);
+//        while (iqtree.curScore - rit->first < -1.0) {
+        if (iqtree.isSuperTree() && params.partition_type == 0) {
+        	if (verbose_mode >= VB_MED)
+        		cout << "curScore: " << iqtree.curScore << " expected score: " << rit->first << endl;
+        	iqtree.optimizeBranches(2);
         }
         initLogl = iqtree.curScore;
         tree = iqtree.doNNISearch(nniCount, nniStep);
