@@ -2584,7 +2584,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
             << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment name)" << endl
 #ifdef _OPENMP
-            << "  -omp <#cpu_cores>    Number of cores/threads to use (default: all cores)" << endl
+            << "  -nt <#cpu_cores>     Number of cores/threads to use (default: all cores)" << endl
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
@@ -2600,6 +2600,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
+            << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
             << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl

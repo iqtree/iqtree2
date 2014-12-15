@@ -14,33 +14,33 @@
 #endif
 
 double PhyloTree::computeLikelihoodFromBufferEigenAVX_DNA() {
-	return computeLikelihoodFromBufferEigenSSE<Vec4d, 4, 4>();
+	return computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 4>();
 }
 
-void PhyloTree::computePartialLikelihoodEigenTipAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	computePartialLikelihoodEigenTipSSE<Vec4d, 4, 4>(dad_branch, dad);
+void PhyloTree::computePartialLikelihoodEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	computePartialLikelihoodEigenSIMD<Vec4d, 4, 4>(dad_branch, dad);
 }
 
-double PhyloTree::computeLikelihoodBranchEigenTipAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	return computeLikelihoodBranchEigenTipSSE<Vec4d, 4, 4>(dad_branch, dad);
+double PhyloTree::computeLikelihoodBranchEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	return computeLikelihoodBranchEigenSIMD<Vec4d, 4, 4>(dad_branch, dad);
 }
 
-void PhyloTree::computeLikelihoodDervEigenTipAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-	computeLikelihoodDervEigenTipSSE<Vec4d, 4, 4>(dad_branch, dad, df, ddf);
+void PhyloTree::computeLikelihoodDervEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+	computeLikelihoodDervEigenSIMD<Vec4d, 4, 4>(dad_branch, dad, df, ddf);
 }
 
 double PhyloTree::computeLikelihoodFromBufferEigenAVX_PROT() {
-	return computeLikelihoodFromBufferEigenSSE<Vec4d, 4, 20>();
+	return computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 20>();
 }
 
-void PhyloTree::computePartialLikelihoodEigenTipAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	computePartialLikelihoodEigenTipSSE<Vec4d, 4, 20>(dad_branch, dad);
+void PhyloTree::computePartialLikelihoodEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	computePartialLikelihoodEigenSIMD<Vec4d, 4, 20>(dad_branch, dad);
 }
 
-double PhyloTree::computeLikelihoodBranchEigenTipAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	return computeLikelihoodBranchEigenTipSSE<Vec4d, 4, 20>(dad_branch, dad);
+double PhyloTree::computeLikelihoodBranchEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	return computeLikelihoodBranchEigenSIMD<Vec4d, 4, 20>(dad_branch, dad);
 }
 
-void PhyloTree::computeLikelihoodDervEigenTipAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-	computeLikelihoodDervEigenTipSSE<Vec4d, 4, 20>(dad_branch, dad, df, ddf);
+void PhyloTree::computeLikelihoodDervEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+	computeLikelihoodDervEigenSIMD<Vec4d, 4, 20>(dad_branch, dad, df, ddf);
 }

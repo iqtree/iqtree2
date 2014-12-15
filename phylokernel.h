@@ -46,7 +46,7 @@ inline double horizontal_max(Vec4d const &a) {
 
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     // don't recompute the likelihood
 	assert(dad);
     if (dad_branch->partial_lh_computed & 1)
@@ -89,9 +89,9 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 		right = tmp;
 	}
 	if ((left->partial_lh_computed & 1) == 0)
-		computePartialLikelihoodEigenTipSSE<VectorClass, VCSIZE, nstates>(left, node);
+		computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(left, node);
 	if ((right->partial_lh_computed & 1) == 0)
-		computePartialLikelihoodEigenTipSSE<VectorClass, VCSIZE, nstates>(right, node);
+		computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(right, node);
 
 //    double *partial_lh = dad_branch->partial_lh;
 
@@ -454,7 +454,7 @@ void PhyloTree::computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, P
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-void PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -468,9 +468,9 @@ void PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Phyl
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigenTipSSE<VectorClass, VCSIZE, nstates>(dad_branch, dad);
+        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigenTipSSE<VectorClass, VCSIZE, nstates>(node_branch, node);
+        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
 //    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     df = ddf = 0.0;
     size_t ncat = site_rate->getNRate();
@@ -732,7 +732,7 @@ void PhyloTree::computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, Phyl
 
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -746,9 +746,9 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigenTipSSE<VectorClass, VCSIZE, nstates>(dad_branch, dad);
+        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigenTipSSE<VectorClass, VCSIZE, nstates>(node_branch, node);
+        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t ncat = site_rate->getNRate();
 
@@ -1033,7 +1033,7 @@ double PhyloTree::computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, 
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeLikelihoodFromBufferEigenSSE() {
+double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 
 
 	assert(theta_all && theta_computed);

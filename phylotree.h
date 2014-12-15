@@ -538,10 +538,10 @@ public:
 
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    void computePartialLikelihoodEigenTipAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-    void computePartialLikelihoodEigenTipAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    void computePartialLikelihoodEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    void computePartialLikelihoodEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
 
     /****************************************************************************
@@ -576,10 +576,10 @@ public:
     double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    double computeLikelihoodBranchEigenTipAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad);
-    double computeLikelihoodBranchEigenTipAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeLikelihoodBranchEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeLikelihoodBranchEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
@@ -599,7 +599,7 @@ public:
     ComputeLikelihoodFromBufferType computeLikelihoodFromBufferPointer;
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodFromBufferEigenSSE();
+    double computeLikelihoodFromBufferEigenSIMD();
 
     double computeLikelihoodFromBufferEigenAVX_DNA();
     double computeLikelihoodFromBufferEigenAVX_PROT();
@@ -752,10 +752,10 @@ public:
     void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    void computeLikelihoodDervEigenTipAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-    void computeLikelihoodDervEigenTipAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length
