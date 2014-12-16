@@ -787,6 +787,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_splits_file = false;
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
+    params.write_local_optimal_trees = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;

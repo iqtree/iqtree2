@@ -251,6 +251,16 @@ public:
      */
     int countEmptyBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
+    /**
+            Neighbor-joining/parsimony tree might contain negative branch length. This
+            function will fix this.
+            @param fixed_length fixed branch length to set to negative branch lengths
+            @param node the current node
+            @param dad dad of the node, used to direct the search
+            @return The number of branches that have no/negative length
+     */
+    virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+
     int totalNNIs, evalNNIs;
 
 };

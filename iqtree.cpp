@@ -25,7 +25,7 @@
 #include "model/modelgtr.h"
 #include "model/rategamma.h"
 #include <numeric>
-#include "pll/pllInternal.h"
+#include "pllrepo/src/pllInternal.h"
 #include "nnisearch.h"
 
 
@@ -365,7 +365,7 @@ void IQTree::initializePLL(Params &params) {
     pllTreeInitTopologyForAlignment(pllInst, pllAlignment);
 
     /* Connect the alignment and partition structure with the tree structure */
-    if (!pllLoadAlignment(pllInst, pllAlignment, pllPartitions, PLL_SHALLOW_COPY)) {
+    if (!pllLoadAlignment(pllInst, pllAlignment, pllPartitions)) {
         outError("Incompatible tree/alignment combination");
     }
 }
@@ -1880,7 +1880,7 @@ void IQTree::pllDestroyUFBootData(){
     }
 
     if(params->online_bootstrap && params->gbo_replicates > 0){
-        pllHashDestroy(&(pllUFBootDataPtr->treels), PLL_TRUE);
+        pllHashDestroy(&(pllUFBootDataPtr->treels), rax_free);
 
         free(pllUFBootDataPtr->treels_logl);
 

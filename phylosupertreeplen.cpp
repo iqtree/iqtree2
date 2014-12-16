@@ -1257,3 +1257,12 @@ void PhyloSuperTreePlen::printNNIcasesNUM(){
 void PhyloSuperTreePlen::computeBranchLengths()
 {
 	}
+
+int PhyloSuperTreePlen::fixNegativeBranch(bool force, Node *node, Node *dad) {
+	int fixed =  PhyloSuperTree::fixNegativeBranch(force, node, dad);
+
+	// it is neccesary to map the branch lengths from supertree into gene trees!
+	mapTrees();
+
+	return fixed;
+}

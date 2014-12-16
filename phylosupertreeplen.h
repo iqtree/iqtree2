@@ -241,6 +241,18 @@ public:
      * 5 - # of relink branch to an old one + relink empty to some branch (100% saving on these cases)
      */
     int allNNIcases_computed[5];
+
+    /**
+     	 	OLGA: PLEASE CHECK IF THIS FUNCTION IS CORRECTLY IMPLEMENTED!
+            Neighbor-joining/parsimony tree might contain negative branch length. This
+            function will fix this.
+            @param fixed_length fixed branch length to set to negative branch lengths
+            @param node the current node
+            @param dad dad of the node, used to direct the search
+            @return The number of branches that have no/negative length
+     */
+    virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+
 };
 
 
