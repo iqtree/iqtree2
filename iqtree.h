@@ -34,10 +34,6 @@
 #include "nnisearch.h"
 #include "candidateset.h"
 
-#define BOOT_VAL_FLOAT
-#define BootValType float
-//#define BootValType double
-
 typedef std::map< string, double > mapString2Double;
 typedef std::multiset< double, std::less< double > > multiSetDB;
 typedef std::multiset< int, std::less< int > > MultiSetInt;

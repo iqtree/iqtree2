@@ -38,6 +38,7 @@ inline double horizontal_max(Vec4d const &a) {
 
 #endif // __AVX__
 
+
 /************************************************************************************************
  *
  *   SSE vectorized versions of likelihood functions
@@ -482,7 +483,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     size_t c, i, j;
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t maxptn = get_safe_upper_limit(nptn);
+    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     double *eval = model->getEigenvalues();
     assert(eval);
 
@@ -759,7 +760,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     size_t c, i, j;
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t maxptn = get_safe_upper_limit(nptn);
+    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     double *eval = model->getEigenvalues();
     assert(eval);
 
@@ -1046,7 +1047,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
     size_t c, i, j;
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t maxptn = get_safe_upper_limit(nptn);
+    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     double *eval = model->getEigenvalues();
     assert(eval);
 

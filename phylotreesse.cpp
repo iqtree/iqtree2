@@ -22,7 +22,19 @@
 #include "model/modelgtr.h"
 
 
-extern int instruction_set;
+float PhyloTree::dotProductFloatSSE(float *x, float *y, int size) {
+	Vec4f res = 0.0f;
+	for (int i = 0; i < size; i += 4)
+		res = mul_add(Vec4f().load_a(&x[i]), Vec4f().load_a(&y[i]), res);
+	return horizontal_add(res);
+}
+
+double PhyloTree::dotProductDoubleSSE(double *x, double *y, int size) {
+	Vec2d res = 0.0;
+	for (int i = 0; i < size; i += 2)
+		res = mul_add(Vec2d().load_a(&x[i]), Vec2d().load_a(&y[i]), res);
+	return horizontal_add(res);
+}
 
 
 /* BQM: to ignore all-gapp subtree at an alignment site */
@@ -47,6 +59,20 @@ inline double horizontal_max(Vec2d const &a) {
 //#define USING_SSE
 
 void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, bool no_avx) {
+#ifdef BOOT_VAL_FLOAT
+	if (instruction_set >= 7 && !no_avx) {
+		dotProduct = &PhyloTree::dotProductFloatAVX;
+	} else {
+		dotProduct = &PhyloTree::dotProductFloatSSE;
+	}
+#else
+	if (instruction_set >= 7 && !no_avx) {
+		dotProduct = &PhyloTree::dotProductDoubleAVX;
+	} else {
+		dotProduct = &PhyloTree::dotProductDoubleSSE;
+	}
+#endif
+
 	sse = lk;
     if (!aln || lk == LK_NORMAL) {
         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchNaive;

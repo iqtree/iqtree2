@@ -20,8 +20,6 @@
 #include "nnisearch.h"
 #include "phylosupertree.h"
 
-extern int instruction_set;
-
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
 
@@ -1191,6 +1189,7 @@ uint64_t PhyloTree::getMemoryRequired() {
 }
 
 void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
+	intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
     size_t pars_block_size = getBitsBlockSize();
     size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
     size_t block_size;
@@ -3384,6 +3383,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	Neighbor *saved_nei[6];
 	// save Neighbor and allocate new Neighbor pointer
 	size_t partial_lh_size = getPartialLhBytes()/sizeof(double);
+	intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+
 	double *new_partial_lh = new double[IT_NUM*partial_lh_size+MEM_ALIGNMENT/sizeof(double)];
 	size_t mem_shift = 0;
 	if (((intptr_t) new_partial_lh) % MEM_ALIGNMENT != 0)

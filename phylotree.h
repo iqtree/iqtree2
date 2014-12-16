@@ -31,6 +31,12 @@
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
 
+#define BOOT_VAL_FLOAT
+#define BootValType float
+//#define BootValType double
+
+extern int instruction_set;
+
 
 const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double MAX_BRANCH_LEN = 100.0;
@@ -52,13 +58,23 @@ const int SPR_DEPTH = 2;
 using namespace Eigen;
 
 //#ifdef __AVX__
-#define MEM_ALIGNMENT 32
+//#define MEM_ALIGNMENT 32
 inline size_t get_safe_upper_limit(size_t cur_limit) {
-	return ((cur_limit+3)/4)*4;
+	if (instruction_set >= 7)
+		// AVX
+		return ((cur_limit+3)/4)*4;
+	else
+		// SSE
+		return ((cur_limit+1)/2)*2;
 }
 
 inline size_t get_safe_upper_limit_float(size_t cur_limit) {
-	return ((cur_limit+7)/8)*8;
+	if (instruction_set >= 7)
+		// AVX
+		return ((cur_limit+7)/8)*8;
+	else
+		// SSE
+		return ((cur_limit+3)/4)*4;
 }
 
 //#else
@@ -75,6 +91,8 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 //#include "pll/mem_alloc.h"
 
 inline double *aligned_alloc_double(size_t size) {
+	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
 	return (double*)_aligned_malloc(size*sizeof(double), MEM_ALIGNMENT);
 #else
@@ -86,6 +104,8 @@ inline double *aligned_alloc_double(size_t size) {
 
 template< class T>
 inline T *aligned_alloc(size_t size) {
+	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
 	return (T*)_aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
 #else
@@ -372,6 +392,18 @@ public:
     virtual int getAlnNSite() {
         return aln->getNSite();
     }
+
+    /****************************************************************************
+            Dot product
+     ****************************************************************************/
+    typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
+    DotProductType dotProduct;
+
+    float dotProductFloatSSE(float *x, float *y, int size);
+    double dotProductDoubleSSE(double *x, double *y, int size);
+    float dotProductFloatAVX(float *x, float *y, int size);
+    double dotProductDoubleAVX(double *x, double *y, int size);
+
 
     /**
             this function return the parsimony or likelihood score of the tree. Default is

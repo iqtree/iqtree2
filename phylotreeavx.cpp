@@ -13,6 +13,20 @@
 #error "You must compile this file with AVX enabled!"
 #endif
 
+float PhyloTree::dotProductFloatAVX(float *x, float *y, int size) {
+	Vec8f res = 0.0f;
+	for (int i = 0; i < size; i += 8)
+		res = mul_add(Vec8f().load_a(&x[i]), Vec8f().load_a(&y[i]), res);
+	return horizontal_add(res);
+}
+
+double PhyloTree::dotProductDoubleAVX(double *x, double *y, int size) {
+	Vec4d res = 0.0;
+	for (int i = 0; i < size; i += 4)
+		res = mul_add(Vec4d().load_a(&x[i]), Vec4d().load_a(&y[i]), res);
+	return horizontal_add(res);
+}
+
 double PhyloTree::computeLikelihoodFromBufferEigenAVX_DNA() {
 	return computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 4>();
 }

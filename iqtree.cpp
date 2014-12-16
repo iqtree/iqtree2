@@ -183,10 +183,11 @@ void IQTree::setParams(Params &params) {
         cout << "Generating " << params.gbo_replicates << " samples for ultrafast bootstrap..." << endl;
         // allocate memory for boot_samples
         boot_samples.resize(params.gbo_replicates);
+        size_t orig_nptn = getAlnNPattern();
 #ifdef BOOT_VAL_FLOAT
-        size_t nptn = get_safe_upper_limit_float(getAlnNPattern());
+        size_t nptn = get_safe_upper_limit_float(orig_nptn);
 #else
-        size_t nptn = get_safe_upper_limit(getAlnNPattern());
+        size_t nptn = get_safe_upper_limit(orig_nptn);
 #endif
         BootValType *mem = aligned_alloc<BootValType>(nptn * (size_t)(params.gbo_replicates));
         memset(mem, 0, nptn * (size_t)(params.gbo_replicates) * sizeof(BootValType));
@@ -207,14 +208,14 @@ void IQTree::setParams(Params &params) {
     				bootstrap_alignment = new Alignment;
     			IntVector this_sample;
     			bootstrap_alignment->createBootstrapAlignment(aln, &this_sample, params.bootstrap_spec);
-    			for (size_t j = 0; j < nptn; j++)
+    			for (size_t j = 0; j < orig_nptn; j++)
     				boot_samples[i][j] = this_sample[j];
 				bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
 				delete bootstrap_alignment;
         	} else {
     			IntVector this_sample;
         		aln->createBootstrapAlignment(this_sample, params.bootstrap_spec);
-    			for (size_t j = 0; j < nptn; j++)
+    			for (size_t j = 0; j < orig_nptn; j++)
     				boot_samples[i][j] = this_sample[j];
         	}
         }
@@ -2217,14 +2218,19 @@ void IQTree::saveCurrentTree(double cur_logl) {
         printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
 
     int nptn = getAlnNPattern();
-    BootValType *pattern_lh = aligned_alloc<BootValType>(nptn);
 
 #ifdef BOOT_VAL_FLOAT
+    int maxnptn = get_safe_upper_limit_float(nptn);
+    BootValType *pattern_lh = aligned_alloc<BootValType>(maxnptn);
+    memset(pattern_lh, 0, maxnptn*sizeof(BootValType));
     double *pattern_lh_orig = aligned_alloc_double(nptn);
     computePatternLikelihood(pattern_lh_orig, &cur_logl);
     for (int i = 0; i < nptn; i++)
     	pattern_lh[i] = (float)pattern_lh_orig[i];
 #else
+    int maxnptn = get_safe_upper_limit(nptn);
+    BootValType *pattern_lh = aligned_alloc<BootValType>(maxnptn);
+    memset(pattern_lh, 0, maxnptn*sizeof(BootValType));
     computePatternLikelihood(pattern_lh, &cur_logl);
 #endif
 
@@ -2238,7 +2244,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
 #endif
     } else {
         // online bootstrap
-        int ptn, nptn = getAlnNPattern();
+        int ptn;
         int updated = 0;
         int nsamples = boot_samples.size();
 
@@ -2259,22 +2265,26 @@ void IQTree::saveCurrentTree(double cur_logl) {
             } else {
             	// SSE optimized version of the above loop
 				BootValType *boot_sample = boot_samples[sample];
-#ifdef BOOT_VAL_FLOAT
-				VectorClassFloat vc_rell = 0.0;
-				int maxptn = nptn - VCSIZE_FLOAT;
-				for (ptn = 0; ptn < maxptn; ptn+=VCSIZE_FLOAT)
-					vc_rell = mul_add(VectorClassFloat().load_a(&pattern_lh[ptn]), VectorClassFloat().load_a(&boot_sample[ptn]), vc_rell);
-#else
-				VectorClassMaster vc_rell = 0.0;
-				int maxptn = nptn - VCSIZE_MASTER;
-				for (ptn = 0; ptn < maxptn; ptn+=VCSIZE_MASTER)
-					vc_rell = mul_add(VectorClassMaster().load_a(&pattern_lh[ptn]), VectorClassMaster().load_a(&boot_sample[ptn]), vc_rell);
-#endif
 
-				BootValType res = horizontal_add(vc_rell);
-				// add the remaining ptn
-				for (; ptn < nptn; ptn++)
-					res += pattern_lh[ptn] * boot_sample[ptn];
+//#ifdef BOOT_VAL_FLOAT
+//				VectorClassFloat vc_rell = 0.0;
+//				int maxptn = nptn - VCSIZE_FLOAT;
+//				for (ptn = 0; ptn < maxptn; ptn+=VCSIZE_FLOAT)
+//					vc_rell = mul_add(VectorClassFloat().load_a(&pattern_lh[ptn]), VectorClassFloat().load_a(&boot_sample[ptn]), vc_rell);
+//#else
+//				VectorClassMaster vc_rell = 0.0;
+//				int maxptn = nptn - VCSIZE_MASTER;
+//				for (ptn = 0; ptn < maxptn; ptn+=VCSIZE_MASTER)
+//					vc_rell = mul_add(VectorClassMaster().load_a(&pattern_lh[ptn]), VectorClassMaster().load_a(&boot_sample[ptn]), vc_rell);
+//#endif
+//
+//				BootValType res = horizontal_add(vc_rell);
+//				 add the remaining ptn
+//				for (; ptn < nptn; ptn++)
+//					res += pattern_lh[ptn] * boot_sample[ptn];
+
+				BootValType res = (this->*dotProduct)(pattern_lh, boot_sample, nptn);
+
 				rell = res;
             }
 
