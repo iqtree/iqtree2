@@ -1,0 +1,3 @@
+[submodule "pllrepo"]
+	path = pllrepo
+	url = git@git.assembla.com:phylogenetic-likelihood-library.git
