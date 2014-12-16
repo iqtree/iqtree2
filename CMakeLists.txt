@@ -163,11 +163,11 @@ if (IQTREE_FLAGS MATCHES "omp")
 	
 	if (VCC) 
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
-  		include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers 
+  		include_directories("${PROJECT_SOURCE_DIR}/pllrepo/src") # for PThreads headers 
 	elseif (ICC)
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qopenmp")
   		if (WIN32)
-  			include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
+  			include_directories("${PROJECT_SOURCE_DIR}/pllrepo/src") # for PThreads headers
   		endif() 
   	elseif (GCC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
@@ -468,7 +468,7 @@ endif()
 #set(CPACK_SOURCE_PACKAGE_FILE_NAME
 #  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 set(CPACK_SOURCE_IGNORE_FILES
-  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;${CPACK_SOURCE_IGNORE_FILES}")
+  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;/pll/;/pllrepo.dox/;/pllrepo.figures/;/pllrepo.legacy/;/pllrepo.m4/;/pllrepo.man/;/pllrepo.MPI/;/pllrepo.sMSA/;/pllrepo.testdata/;${CPACK_SOURCE_IGNORE_FILES}")
 
 set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin") 
@@ -476,9 +476,9 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 endif()
 
 set (PROJECT_NAME_SUFFIX "${EXE_SUFFIX}")
-if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")  
-	set (PROJECT_NAME_SUFFIX "${PROJECT_NAME_SUFFIX}-sse") 
-endif()
+#if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")  
+#	set (PROJECT_NAME_SUFFIX "${PROJECT_NAME_SUFFIX}-sse") 
+#endif()
 
 set(CPACK_PACKAGE_FILE_NAME 
 	"${CMAKE_PROJECT_NAME}${PROJECT_NAME_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${SYSTEM_NAME}")
@@ -487,4 +487,4 @@ set(CPACK_STRIP_FILES TRUE)
 
 include (CPack)
 
-add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)
+#add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)
