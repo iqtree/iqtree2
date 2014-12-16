@@ -1139,7 +1139,8 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         pllNewickTree *newick = pllNewickParseString(initTree.c_str());
         pllTreeInitTopologyNewick(iqtree.pllInst, newick, PLL_TRUE);
         pllNewickParseDestroy(&newick);
-        pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
+//        pllInitModel(iqtree.pllInst, iqtree.pllPartitions, iqtree.pllAlignment);
+        pllInitModel(iqtree.pllInst, iqtree.pllPartitions);
     }
 
 }
