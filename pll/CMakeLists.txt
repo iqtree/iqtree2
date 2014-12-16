@@ -1,5 +1,9 @@
-if ((IQTREE_FLAGS MATCHES "avx" OR IQTREE_FLAGS MATCHES "fma") AND IQTREE_FLAGS MATCHES "omp")
-  add_library(pll 
+
+set_source_files_properties(avxLikelihood.c PROPERTIES COMPILE_FLAGS ${AVX_FLAGS})
+
+if (IQTREE_FLAGS MATCHES "omp")
+  # PThreads version needs to include genericParallelization.c
+  add_library(pll
   avxLikelihood.c
   alignment.c
   bipartitionList.c
@@ -12,34 +16,6 @@ if ((IQTREE_FLAGS MATCHES "avx" OR IQTREE_FLAGS MATCHES "fma") AND IQTREE_FLAGS 
   makenewzGenericSpecial.c
   models.c
   newick.c
-  newviewGenericSpecial.c
-  genericParallelization.c
-  optimizeModel.c
-  parsePartition.c
-  queue.c
-  randomTree.c
-  recom.c
-  restartHashTable.c
-  searchAlgo.c
-  ssort.c
-  stack.c
-  topologies.c
-  trash.c
-  treeIO.c
-  utils.c)
-elseif (IQTREE_FLAGS MATCHES "omp")
-  add_library(pll 
-  alignment.c
-  bipartitionList.c
-  evaluateGenericSpecial.c
-  evaluatePartialGenericSpecial.c
-  fastDNAparsimony.c
-  hardware.c
-  hash.c
-  lexer.c
-  makenewzGenericSpecial.c
-  models.c
-  newick.c
   genericParallelization.c
   newviewGenericSpecial.c
   optimizeModel.c
@@ -55,36 +31,9 @@ elseif (IQTREE_FLAGS MATCHES "omp")
   trash.c
   treeIO.c
   utils.c)
-elseif (IQTREE_FLAGS MATCHES "avx" OR IQTREE_FLAGS MATCHES "fma")
-  add_library(pll 
-    avxLikelihood.c
-    alignment.c
-    bipartitionList.c
-    evaluateGenericSpecial.c
-    evaluatePartialGenericSpecial.c
-    fastDNAparsimony.c
-    hardware.c
-    hash.c
-    lexer.c
-    makenewzGenericSpecial.c
-    models.c
-    newick.c
-    newviewGenericSpecial.c
-    optimizeModel.c
-    parsePartition.c
-    queue.c
-    randomTree.c
-    recom.c
-    restartHashTable.c
-    searchAlgo.c
-    ssort.c
-    stack.c
-    topologies.c
-    trash.c
-    treeIO.c
-    utils.c)
 else ()
   add_library(pll 
+    avxLikelihood.c
     alignment.c
     bipartitionList.c
     evaluateGenericSpecial.c

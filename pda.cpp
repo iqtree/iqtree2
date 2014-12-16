@@ -70,8 +70,6 @@
 	#include <omp.h>
 #endif
 
-//#include "vectorclass/vectorclass.h"
-
 using namespace std;
 
 
