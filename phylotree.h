@@ -672,14 +672,30 @@ public:
     /**
             Read the tree saved with Taxon Names and branch lengths.
             @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
      */
-    void readTreeString(const string &tree_string);
+    void readTreeString(const string &tree_string, bool updatePLL = false);
 
     /**
      * Return the tree string contining taxon names and branch lengths
      * @return
      */
     string getTreeString();
+
+    /**
+     * Assign branch lengths for branch that has no or negative length
+     * With single model branch lengths are assigned using parsimony. With partition model
+     * branch lengths are assigned randomly
+     * @param updatePLL if true read the new tree into PLL
+     * @return number of branches fixed
+     */
+    int fixAllBranches(bool updatePLL = false);
+
+    /**
+     * Read the newick string into PLL kernel
+     * @param newickTree
+     */
+    void pllReadNewick(string newickTree);
 
     /**
      *  Return the sorted topology without branch length, used to compare tree topology
@@ -1286,12 +1302,19 @@ public:
 
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
+	void setParams(Params& params);
+
 protected:
 
     /**
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
      */
     pllInstance *pllInst;
+
+    /**
+     *  Whether the partial likelihood vectors have been computed for PLL
+     */
+    bool lhComputed;
 
     /**
      *	PLL data structure for alignment

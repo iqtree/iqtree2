@@ -86,6 +86,10 @@ void PhyloTree::init() {
     save_all_trees = 0;
     mlCheck = 0; // FOR: upper bounds
     nodeBranchDists = NULL;
+    pllInst = NULL;
+    pllAlignment = NULL;
+    pllPartitions = NULL;
+    lhComputed = false;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree() {
@@ -180,17 +184,6 @@ void PhyloTree::copyPhyloTree(PhyloTree *tree) {
 
 void PhyloTree::setAlignment(Alignment *alignment) {
     aln = alignment;
-    //alnSize = aln->size();
-    //ptn_freqs.resize(alnSize);
-    //numStates = aln->num_states;
-    //tranSize = numStates * numStates;
-    //ptn_freqs.resize(alnSize);
-    //for (int ptn = 0; ptn < alnSize; ++ptn) {
-    //    ptn_freqs[ptn] = (*aln)[ptn].frequency;
-    //}
-    //block = aln->num_states * numCat;
-    //lh_size = aln->size() * block;
-
     int nseq = aln->getNSeq();
     for (int seq = 0; seq < nseq; seq++) {
         string seq_name = aln->getSeqName(seq);
@@ -216,7 +209,11 @@ void PhyloTree::setRootNode(char *my_root) {
     assert(root);
 }
 
-void PhyloTree::readTreeString(const string &tree_string) {
+void PhyloTree::setParams(Params& params) {
+	this->params = &params;
+}
+
+void PhyloTree::readTreeString(const string &tree_string, bool updatePLL) {
 	stringstream str;
 	str << tree_string;
 	str.seekg(0, ios::beg);
@@ -225,9 +222,35 @@ void PhyloTree::readTreeString(const string &tree_string) {
 	setAlignment(aln);
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
-    } else {
-    	clearAllPartialLH();
     }
+    if (updatePLL) {
+    	pllReadNewick(getTreeString());
+    }
+    lhComputed = false;
+}
+
+int PhyloTree::fixAllBranches(bool updatePLL) {
+    // Initialize branch lengths for the parsimony tree
+    initializeAllPartialPars();
+    clearAllPartialLH();
+    int numFixed;
+    if (isSuperTree()) {
+    	numFixed = assignRandomBranchLengths(true);
+        ((PhyloSuperTree*) this)->mapTrees();
+    } else {
+    	numFixed = fixNegativeBranch(true);
+	}
+    if (updatePLL) {
+    	pllReadNewick(getTreeString());
+    }
+    lhComputed = false;
+    return numFixed;
+}
+
+void PhyloTree::pllReadNewick(string newickTree) {
+    pllNewickTree *newick = pllNewickParseString(newickTree.c_str());
+    pllTreeInitTopologyNewick(pllInst, newick, PLL_FALSE);
+    pllNewickParseDestroy(&newick);
 }
 
 string PhyloTree::getTreeString() {

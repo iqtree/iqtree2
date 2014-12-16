@@ -1088,9 +1088,6 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
 
     if (iqtree.isSuperTree())
         ((PhyloSuperTree*) &iqtree)->mapTrees();
-
-    // set parameter for the current tree
-    iqtree.setParams(params);
 }
 
 void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh, NodeVector &pruned_taxa, StrVector &linked_name) {
@@ -1363,12 +1360,14 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     	computeInitialDist(params, iqtree, dist_file);
     }
 
+    iqtree.setParams(params);
+
     /********************** CREATE INITIAL TREE(S) **********************/
-    string initTree;
-    iqtree.computeInitialTree(params, dist_file, initTree);
+    iqtree.computeInitialTree(dist_file);
 
     /*************** SET UP PARAMETERS and model testing ****************/
 
+    iqtree.initSettings(params);
     initializeParams(params, iqtree, model_info);
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
@@ -1396,13 +1395,14 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     // Optimize model parameters and branch lengths using ML for the initial tree
-    initTree = iqtree.optimizeModelParameters(true);
+    string initTree = iqtree.optimizeModelParameters(true);
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
     // Update best tree
     iqtree.setBestTree(initTree, iqtree.curScore);
     cout << "Current best tree score: " << iqtree.bestScore << endl << endl;
+
     iqtree.candidateTrees.update(initTree, iqtree.curScore);
 
     // Compute maximum likelihood distance

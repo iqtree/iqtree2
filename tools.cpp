@@ -2236,10 +2236,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.modeps = convert_double(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-pllmod") == 0) {
-				params.pll = true;
-				continue;
-			}
 			if (strcmp(argv[cnt], "-pars_ins") == 0) {
 				params.reinsert_par = true;
 				continue;

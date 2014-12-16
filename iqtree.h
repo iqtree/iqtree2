@@ -107,7 +107,7 @@ public:
     /**
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)
      */
-    virtual void setParams(Params& params);
+    virtual void initSettings(Params& params);
 
     void createPLLPartition(Params &params, ostream &pllPartitionFileHandle);
 
@@ -632,9 +632,9 @@ public:
     /**
      * Generate the initial tree (usually used for model parameter estimation)
      * @param dist_file
-     * @param initTree
+     * @return NEWICK string of the initial tree
      */
-    void computeInitialTree(Params& params, string &dist_file, string &initTree);
+    string computeInitialTree(string &dist_file);
 
     /**
      *  @brief: optimize model parameters on the current tree
