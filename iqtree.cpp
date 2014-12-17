@@ -1807,7 +1807,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     bool rollBack = false;
     nni_count = 0;
     int numNNIs = 0; // number of NNI to be applied in each step
-    int MAXSTEPS = 50; // maximum number of NNI steps
+    const int MAXSTEPS = aln->getNSeq(); // maximum number of NNI steps
     for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
         double oldScore = curScore;
         if (!rollBack) { // tree get improved and was not rollbacked
@@ -1927,6 +1927,11 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     if (nni_count == 0 && verbose_mode >= VB_MED) {
         cout << "NOTE: Tree is already NNI-optimized" << endl;
     }
+
+    if (nni_steps == MAXSTEPS) {
+    	cout << "WARNING: NNI search needs unusual large number of steps (" << MAXSTEPS << ") to converge!" << endl;
+    }
+
     brans2Eval.clear();
     return curScore;
 }
@@ -1948,7 +1953,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
     searchinfo.numAppliedNNIs = 0;
     searchinfo.curLogl = curScore;
     //cout << "curLogl: " << searchinfo.curLogl << endl;
-    const int MAX_NNI_STEPS = 50;
+    const int MAX_NNI_STEPS = aln->getNSeq();
     totalNNICount = 0;
     for (nniSteps = 1; nniSteps <= MAX_NNI_STEPS; nniSteps++) {
         searchinfo.curNumNNISteps = nniSteps;
@@ -1963,8 +1968,12 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
         }
     }
 
-    if (nniSteps == (MAX_NNI_STEPS + 1)) {
-        cout << "WARNING: NNI search seems to run unusually too long and thus it was stopped!" << endl;
+    if (nniSteps == (MAX_NNI_STEPS)) {
+    	cout << "WARNING: NNI search needs unusual large number of steps (" << MAX_NNI_STEPS << ") to converge!" << endl;
+    }
+
+    if (searchinfo.numAppliedNNIs == 0) {
+        cout << "NOTE: Tree is already NNI-optimized" << endl;
     }
 
     totalNNICount = searchinfo.numAppliedNNIs;

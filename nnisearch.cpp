@@ -347,7 +347,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 				if (numNNI == 1) {
 					printf("ERROR: new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
 							tr->likelihood, selectedNNIs[0].likelihood);
-					exit(1);
+					abort();
 				} else {
 					cout << "Best logl: " << selectedNNIs.back().likelihood << " / " << "NNI step " << searchinfo.curNumNNISteps<< " / Applying " << numNNI << " NNIs give logl: " << tr->likelihood << " (worse than best)";
 					cout << " / Roll back tree ... " << endl;
@@ -382,9 +382,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 					searchinfo.curNumAppliedNNIs = numNNI;
 				}
 			}
-			if (tr->likelihood - initLH < 0.1) {
-				searchinfo.curNumAppliedNNIs = 0;
-			}
+
 			finalLH = tr->likelihood;
 		}
 	} else {
