@@ -677,6 +677,12 @@ public:
     void readTreeString(const string &tree_string, bool updatePLL = false);
 
     /**
+            Read the tree saved with Taxon Names and branch lengths.
+            @param tree_string tree string to read from
+     */
+    void readTreeFile(const string &file_name);
+
+    /**
      * Return the tree string contining taxon names and branch lengths
      * @return
      */
@@ -1073,17 +1079,19 @@ public:
             @param dist_file distance matrix file
      */
     void computeBioNJ(Params &params, Alignment *alignment, string &dist_file);
+
     /**
-            Neighbor-joining tree might contain negative branch length. This
+            Neighbor-joining/parsimony tree might contain negative branch length. This
             function will fix this.
             @param fixed_length fixed branch length to set to negative branch lengths
             @param node the current node
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+    virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
-    int assignRandomBranchLengths(bool force = false, Node *node = NULL, Node *dad = NULL);
+    // OBSOLETE: assignRandomBranchLengths no longer needed, use fixNegativeBranch instead!
+//    int assignRandomBranchLengths(bool force = false, Node *node = NULL, Node *dad = NULL);
 
     /* compute Bayesian branch lengths based on ancestral sequence reconstruction */
     void computeAllBayesianBranchLengths(Node *node = NULL, Node *dad = NULL);

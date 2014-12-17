@@ -631,10 +631,9 @@ public:
 
     /**
      * Generate the initial tree (usually used for model parameter estimation)
-     * @param dist_file
-     * @return NEWICK string of the initial tree
+     * @param dist_file only needed for BIONJ tree
      */
-    string computeInitialTree(string &dist_file);
+    void computeInitialTree(string &dist_file);
 
     /**
      *  @brief: optimize model parameters on the current tree

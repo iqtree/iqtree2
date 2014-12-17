@@ -321,7 +321,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     }
 }
 
-string IQTree::computeInitialTree(string &dist_file) {
+void IQTree::computeInitialTree(string &dist_file) {
     double start = getCPUTime();
     string initTree;
     string out_file = params->out_prefix;
@@ -339,19 +339,21 @@ string IQTree::computeInitialTree(string &dist_file) {
 			cout << "NOTE: Changing to old kernel as input tree is multifurcating" << endl;
 			params->SSE = LK_SSE;
 		}
-		initTree = getTreeString();
+		if (params->pll)
+			pllReadNewick(getTreeString());
     } else switch (params->start_tree) {
     case STT_PARSIMONY:
         // Create parsimony tree using IQ-Tree kernel
         cout << endl;
         cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
         computeParsimonyTree(params->out_prefix, aln);
-        initializeAllPartialPars();
-        clearAllPartialLH();
-        fixNegativeBranch(true);
+//        initializeAllPartialPars();
+//        clearAllPartialLH();
+//        fixNegativeBranch(true);
         if (params->numInitTrees > params->min_iterations && params->stop_condition == SC_FIXED_ITERATION)
         	params->numInitTrees = params->min_iterations;
-        initTree = getTreeString();
+		if (params->pll)
+			pllReadNewick(getTreeString());
         break;
     case STT_PLL_PARSIMONY:
         cout << endl;
@@ -362,7 +364,7 @@ string IQTree::computeInitialTree(string &dist_file) {
         resetBranches(pllInst);
         pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back,
                 PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-        initTree = string(pllInst->tree_string);
+        readTreeString(string(pllInst->tree_string));
         cout << getCPUTime() - start << " seconds" << endl;
 			if (params->numInitTrees > params->min_iterations
 					&& params->stop_condition == SC_FIXED_ITERATION)
@@ -373,12 +375,11 @@ string IQTree::computeInitialTree(string &dist_file) {
         computeBioNJ(*params, aln, dist_file);
         cout << getCPUTime() - start << " seconds" << endl;
         params->numInitTrees = 1;
-        initTree = getTreeString();
-        break;
+		if (params->pll)
+			pllReadNewick(getTreeString());
+		break;
     }
 
-    if (params->start_tree == STT_PLL_PARSIMONY)
-    	readTreeString(initTree);
     int fixed_number = fixAllBranches(params->pll);
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
@@ -391,16 +392,10 @@ string IQTree::computeInitialTree(string &dist_file) {
             outError(str);
         }
     }
-    initTree = getTreeString();
     if (params->write_init_tree) {
         out_file += ".init_tree";
-        printTree(initTree.c_str(), WT_NEWLINE);
+        printTree(getTreeString().c_str(), WT_NEWLINE);
     }
-    if (params->pll) {
-    	pllReadNewick(initTree);
-    }
-    lhComputed = false;
-    return initTree;
 }
 
 int IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
@@ -2709,6 +2704,7 @@ void IQTree::writeUFBootTrees(Params &params, StrVector &removed_seqs, StrVector
 }
 
 void IQTree::summarizeBootstrap(Params &params) {
+	setRootNode(params.root);
 	if (verbose_mode >= VB_MED)
 		cout << "Summarizing from " << treels.size() << " candidate trees..." << endl;
     MTreeSet trees;
