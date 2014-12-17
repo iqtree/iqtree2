@@ -443,9 +443,8 @@ int IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     double parsTime = getCPUTime() - startTime;
     cout << "(" << numDupPars << " duplicated parsimony trees)" << endl;
     cout << "CPU time: " << parsTime << endl;
-    cout << "Computing log-likelihood of the parsimony trees ... " << endl;
+    cout << "Computing logl of parsimony trees ... " << endl;
     startTime = getCPUTime();
-
     /************ Compute logl of all parsimony trees ********************/
     vector<string> unOptParTrees = candidateTrees.getHighestScoringTrees(nParTrees);
     // logl of the first tree has already been computed during model parameter estimation
@@ -460,7 +459,7 @@ int IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
     }
     double loglTime = getCPUTime() - startTime;
-    cout << "CPU time: " << loglTime << endl;
+    cout << "Average CPU time for computing logl of 1 parsimony tree: " << loglTime / (unOptParTrees.size()-1)<< endl;
 
     // Only select the best nNNITrees for doing NNI search
     CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);
@@ -502,11 +501,11 @@ int IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             // Re-optimize model parameters (the sNNI algorithm)
         	tree = optimizeModelParameters();
             setBestTree(tree, curScore);
-            cout << "BETTER TREE FOUND: " << bestScore << endl;
+            cout << "BETTER TREE FOUND at iteration " << getCurIt() << ": " << bestScore << endl << endl;
         }
     }
     double nniTime = getCPUTime() - startTime;
-    cout << "Average time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
+    cout << "Average CPU time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
     return numDup;
 }
 void IQTree::initializePLL(Params &params) {
@@ -1412,18 +1411,17 @@ double IQTree::perturb(int times) {
 extern pllUFBootData * pllUFBootDataPtr;
 
 string IQTree::optimizeModelParameters(bool printInfo) {
+	cout << endl;
+	cout << "Estimate model parameters (epsilon = " << params->modeps << ")" << endl;
+	double stime = getCPUTime();
 	string newTree;
 	if (params->pll) {
-		cout << "Estimate model parameters (epsilon = " << params->modeps << ")" << endl;
-		double stime = getCPUTime();
 		if (!lhComputed) {
 			pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
 			lhComputed = true;
 		}
 		pllOptimizeModelParameters(pllInst, pllPartitions, params->modeps);
 		curScore = pllInst->likelihood;
-		double etime = getCPUTime();
-		cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
 		pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
 				pllInst->start->back, PLL_TRUE,
 				PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH,
@@ -1434,7 +1432,6 @@ string IQTree::optimizeModelParameters(bool printInfo) {
 		newTree = string(pllInst->tree_string);
 	} else {
 		string curTree = getTreeString();
-		cout << "Estimate model parameters (epsilon = " << params->modeps << ")" << endl;
 		if (!lhComputed) {
 			initializeAllPartialLh();
 			clearAllPartialLH();
@@ -1454,6 +1451,8 @@ string IQTree::optimizeModelParameters(bool printInfo) {
 			newTree = getTreeString();
 		}
 	}
+	double etime = getCPUTime();
+	cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
 	return newTree;
 }
 
@@ -1721,7 +1720,7 @@ double IQTree::doTreeSearch() {
         // check whether the tree can be put into the reference set
         if (params->snni) {
         	candidateTrees.update(imd_tree, curScore);
-        	if (verbose_mode >= VB_MED) {
+        	if (verbose_mode >= VB_DEBUG) {
             	printBestScores(candidateTrees.popSize);
         	}
         } else {
@@ -1863,7 +1862,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         // Apply all non-conflicting positive NNIs
         doNNIs(numNNIs);
 
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VB_DEBUG) {
         	cout << "NNI step: " << nni_steps << " / Number of NNIs applied: " << numNNIs << endl;
         }
 
