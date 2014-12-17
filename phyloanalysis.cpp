@@ -1366,7 +1366,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (params.start_tree == STT_BIONJ || params.iqp || params.leastSquareBranch) {
     	computeInitialDist(params, iqtree, dist_file);
     }
-
     iqtree.setParams(params);
 
     /********************** CREATE INITIAL TREE(S) **********************/
@@ -1409,7 +1408,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Update best tree
     iqtree.setBestTree(initTree, iqtree.curScore);
     cout << "Current best tree score: " << iqtree.bestScore << endl << endl;
-
     iqtree.candidateTrees.update(initTree, iqtree.curScore);
 
     // Compute maximum likelihood distance
@@ -1439,6 +1437,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             string tree = iqtree.doNNISearch(nni_count, nni_steps);
             iqtree.setBestTree(tree, iqtree.curScore);
         	iqtree.candidateTrees.update(tree, iqtree.curScore);
+
         }
 
         cout << "Current best score: " << iqtree.bestScore << " / CPU time: "

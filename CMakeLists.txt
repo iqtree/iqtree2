@@ -285,7 +285,7 @@ include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 ##################################################################
 # subdirectories containing necessary libraries for the build 
 ##################################################################
-add_subdirectory(pll)
+add_subdirectory(pllrepo/src)
 add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)

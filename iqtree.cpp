@@ -25,7 +25,7 @@
 #include "model/modelgtr.h"
 #include "model/rategamma.h"
 #include <numeric>
-#include "pll/pllInternal.h"
+#include "pllrepo/src/pllInternal.h"
 #include "nnisearch.h"
 #include "vectorclass/vectorclass.h"
 #include "vectorclass/vectormath_common.h"
@@ -558,7 +558,7 @@ void IQTree::initializePLL(Params &params) {
     pllTreeInitTopologyForAlignment(pllInst, pllAlignment);
 
     /* Connect the alignment and partition structure with the tree structure */
-    if (!pllLoadAlignment(pllInst, pllAlignment, pllPartitions, PLL_SHALLOW_COPY)) {
+    if (!pllLoadAlignment(pllInst, pllAlignment, pllPartitions)) {
         outError("Incompatible tree/alignment combination");
     }
 }
@@ -591,7 +591,7 @@ void IQTree::initializeModel(Params &params) {
         	outError("+Invar model is not yet supported by PLL.");
         if (aln->seq_type == SEQ_DNA && getModel()->name != "GTR")
         	outError("non GTR model for DNA is not yet supported by PLL.");
-        pllInitModel(pllInst, pllPartitions, pllAlignment);
+        pllInitModel(pllInst, pllPartitions);
     }
 
 }
@@ -2081,7 +2081,7 @@ void IQTree::pllDestroyUFBootData(){
     }
 
     if(params->online_bootstrap && params->gbo_replicates > 0){
-        pllHashDestroy(&(pllUFBootDataPtr->treels), PLL_TRUE);
+        pllHashDestroy(&(pllUFBootDataPtr->treels), rax_free);
 
         free(pllUFBootDataPtr->treels_logl);
 

@@ -882,7 +882,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 		if (globalParam->store_candidate_trees){
 			*((int *)item_ptr->data) = tree_index;
 			item_ptr->str = tree_str;
-			pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
+			pllHashAdd(pllUFBootDataPtr->treels, pllHashString(tree_str, pllUFBootDataPtr->treels->size), tree_str, item_ptr->data);
 		}
 		pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
 
@@ -920,7 +920,8 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
                     else{
                         *((int *)item_ptr->data) = tree_index = pllUFBootDataPtr->candidate_trees_count - 1;
                         item_ptr->str = tree_str;
-                        pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
+                        pllHashAdd(pllUFBootDataPtr->treels, pllHashString(tree_str, pllUFBootDataPtr->treels->size), tree_str, item_ptr->data);
+//                        pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
                     }
                 }
                 if (rell <= pllUFBootDataPtr->boot_logl[sample] +

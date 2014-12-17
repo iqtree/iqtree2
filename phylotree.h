@@ -30,7 +30,7 @@
 #include "phylonode.h"
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
-#include "pll/pll.h"
+#include "pllrepo/src/pll.h"
 
 
 const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
