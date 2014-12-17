@@ -2229,6 +2229,9 @@ int main(int argc, char *argv[])
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
 
+	if (params.lk_no_avx)
+		instruction_set = min(instruction_set, 6);
+
 	cout << "Kernel:  ";
 	if (params.pll) {
 #ifdef __AVX__
@@ -2242,7 +2245,7 @@ int main(int argc, char *argv[])
 		case LK_SSE: cout << "Slow SSE3"; break;
 		case LK_EIGEN: cout << "No SSE"; break;
 		case LK_EIGEN_SSE:
-			if (instruction_set >= 7 && !params.lk_no_avx) {
+			if (instruction_set >= 7) {
 				cout << "AVX";
 			} else {
 				cout << "SSE3";

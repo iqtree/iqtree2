@@ -58,15 +58,15 @@ inline double horizontal_max(Vec2d const &a) {
 
 //#define USING_SSE
 
-void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, bool no_avx) {
+void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 #ifdef BOOT_VAL_FLOAT
-	if (instruction_set >= 7 && !no_avx) {
+	if (instruction_set >= 7) {
 		dotProduct = &PhyloTree::dotProductFloatAVX;
 	} else {
 		dotProduct = &PhyloTree::dotProductFloatSSE;
 	}
 #else
-	if (instruction_set >= 7 && !no_avx) {
+	if (instruction_set >= 7) {
 		dotProduct = &PhyloTree::dotProductDoubleAVX;
 	} else {
 		dotProduct = &PhyloTree::dotProductDoubleSSE;
@@ -100,7 +100,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, bool no_avx) {
 		case LK_EIGEN_SSE:
 //#if INSTRSET >= 7
 // compiled with AVX enable
-			if (instruction_set >= 7 && !no_avx) {
+			if (instruction_set >= 7) {
 				// CPU supports AVX
 				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenAVX_DNA;
 				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenAVX_DNA;
@@ -144,7 +144,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, bool no_avx) {
 	        computeLikelihoodFromBufferPointer = NULL;
 			break;
 		case LK_EIGEN_SSE:
-			if (instruction_set >= 7 && !no_avx) {
+			if (instruction_set >= 7) {
 				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenAVX_PROT;
 				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenAVX_PROT;
 				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenAVX_PROT;
@@ -199,17 +199,17 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, bool no_avx) {
 	}
 }
 
-void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk, bool no_avx) {
+void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	if (sse == lk) return;
 	if ((sse == LK_EIGEN || sse == LK_EIGEN_SSE) && (lk == LK_NORMAL || lk == LK_SSE)) {
 		// need to increase the memory usage when changing from new kernel to old kernel
-		setLikelihoodKernel(lk, no_avx);
+		setLikelihoodKernel(lk);
 		deleteAllPartialLh();
 		initializeAllPartialLh();
 		clearAllPartialLH();
 	} else {
 		// otherwise simply assign variable sse
-		setLikelihoodKernel(lk, no_avx);
+		setLikelihoodKernel(lk);
 	}
 }
 
