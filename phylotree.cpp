@@ -1198,7 +1198,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
     	block_size = ((nptn+3)/4)*4;
 	else
 		// block size must be divisible by 2
-		size_t block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+		block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
 
     size_t scale_block_size = nptn;
 
