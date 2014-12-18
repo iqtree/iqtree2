@@ -104,6 +104,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 }
 
 ModelMixture::~ModelMixture() {
-	// TODO Auto-generated destructor stub
+	for (reverse_iterator rit = rbegin(); rit != rend(); rit++)
+		delete (*rit);
 }
 

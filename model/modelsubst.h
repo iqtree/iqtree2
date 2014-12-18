@@ -58,7 +58,7 @@ public:
 	/**
 	 * @return the number of mixture model components
 	 */
-	virtual int getMixtureComponents() { return 1; }
+	virtual int getNMixtures() { return 1; }
 
 	/**
 		@return the number of rate entries, equal to the number of elements
