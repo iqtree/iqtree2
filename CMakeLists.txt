@@ -83,15 +83,6 @@ endif()
 # Setup compiler, currently supported GCC, CLANG, MSVC, and ICC
 ##################################################################
 
-if (MSVC) 
-	# MS Visual Studio environment
-	message("Exporting MS Visual Studio projects...")
-	add_definitions(/MP) # enable multi-processor compilation
-	if (CMAKE_BUILD_TYPE STREQUAL "Release")
-		add_definitions(/O2 /Ot /Oi)
-	endif()
-endif()
-
 set(GCC "FALSE")   #  GNU compiler
 set(CLANG "FALSE") # Clang compiler
 set(ICC "FALSE")   # Intel compiler
@@ -122,6 +113,22 @@ else()
 endif()
 
 set(EXE_SUFFIX "")
+
+if (MSVC) 
+	# MS Visual Studio environment
+	message("Exporting MS Visual Studio projects...")
+	add_definitions(/MP) # enable multi-processor compilation
+	if (CMAKE_BUILD_TYPE STREQUAL "Release")
+		add_definitions(/Ot /Oi)
+		if (VCC)
+			add_definitions(/O2)
+		elseif (ICC)
+			add_definitions(/O3)
+		endif()
+	endif()
+endif()
+
+
 
 ##################################################################
 # Configure PLL build
@@ -182,6 +189,35 @@ endif()
 ##################################################################
 # configure SSE/AVX/FMA instructions
 ##################################################################
+
+SET(AVX_FLAGS "-D__AVX")
+if (VCC) 
+	set(AVX_FLAGS "${AVX_FLAGS} /arch:AVX")
+elseif (CLANG)
+	set(AVX_FLAGS "${AVX_FLAGS} -mavx")
+elseif (GCC)
+	set(AVX_FLAGS "${AVX_FLAGS} -mavx -fabi-version=0")
+elseif (ICC) 
+	if (WIN32)
+		 set(AVX_FLAGS "${AVX_FLAGS} /arch:AVX")
+	else()
+		 set(AVX_FLAGS "${AVX_FLAGS} -mavx")
+	endif()
+endif()
+
+SET(SSE_FLAGS "")
+if (VCC)
+	set(SSE_FLAGS "/arch:SSE2 -D__SSE3__")
+elseif (GCC OR CLANG)
+	set(SSE_FLAGS "-msse3")
+elseif (ICC)
+	if (WIN32)
+		set(SSE_FLAGS "/arch:SSE3")
+	else()
+		set(SSE_FLAGS "-msse3")
+	endif()
+endif()
+
 if (IQTREE_FLAGS MATCHES "fma") # AVX+FMA instruction set
  	message("Vectorization : AVX+FMA")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
@@ -199,67 +235,37 @@ if (IQTREE_FLAGS MATCHES "fma") # AVX+FMA instruction set
 			 set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
 		endif()
 	endif()
+
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-fma")
 
 elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
  	message("Vectorization : AVX")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
-	if (VCC) 
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX")
-	elseif (CLANG)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx")
-	elseif (GCC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -fabi-version=0")
-	elseif (ICC) 
-		if (WIN32)
-			 set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX")
-		else()
-			 set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx")
-		endif()
-	endif()
+	set(COMBINED_FLAGS "${COMBINED_FLAGS} ${AVX_FLAGS}")
+
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
 else() #SSE intruction set
 	message("Vectorization : SSE3")
 	add_definitions(-D__SSE3)
-	
-	if (VCC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE2 -D__SSE3__")
-	elseif (GCC OR CLANG)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3")
-	elseif (ICC)
-		if (WIN32)
-			set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE3")
-		else()
-			set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3")
-		endif()
-	endif()
+
 endif()
 
-SET(AVX_FLAGS "")
-
-if (VCC) 
-	set(AVX_FLAGS "/arch:AVX")
-elseif (CLANG)
-	set(AVX_FLAGS "-mavx")
-elseif (GCC)
-	set(AVX_FLAGS "-mavx -fabi-version=0")
-elseif (ICC) 
-	if (WIN32)
-		 set(AVX_FLAGS "/arch:AVX")
-	else()
-		 set(AVX_FLAGS "-mavx")
-	endif()
-endif()
 
 ##################################################################
 # Setup compiler flags
 ##################################################################
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMBINED_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMBINED_FLAGS}")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
 	message("C flags    : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}") 
 	message("CXX flags  : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}") 
+endif()
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	message("C flags    : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG}") 
+	message("CXX flags  : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}") 
 endif()
 
 set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
@@ -313,7 +319,7 @@ add_subdirectory(model)
 # the main executable
 ##################################################################
 
-set_source_files_properties(phylotreeavx.cpp PROPERTIES COMPILE_FLAGS ${AVX_FLAGS})
+add_library(avxkernel phylotreeavx.cpp)
 
 add_executable(iqtree
 alignment.cpp
@@ -350,8 +356,7 @@ phylonode.cpp
 phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
-phylotreeavx.cpp
-#phylotreeeigen.cpp
+#phylotreeavx.cpp
 pruning.cpp
 split.cpp
 splitgraph.cpp
@@ -373,6 +378,11 @@ graph.cpp
 candidateset.cpp
 checkpoint.cpp
 )
+
+if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
+	set_target_properties(iqtree pll ncl whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+	set_target_properties(avxkernel PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
+endif()  
 
 ##################################################################
 # setup linking flags
@@ -400,7 +410,8 @@ if (IQTREE_FLAGS MATCHES "omp")
 	endif()
 endif()
 
-target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
+
+target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
 
 ##################################################################
 # setup the executable name 

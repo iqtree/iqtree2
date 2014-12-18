@@ -43,11 +43,11 @@ double PhyloTree::dotProductDoubleSSE(double *x, double *y, int size) {
 //#define TINY_POSITIVE 1e-290
 
 inline Vec2d horizontal_add(Vec2d x[2]) {
-//#if  INSTRSET >= 3  // SSE3
+#if  INSTRSET >= 3  // SSE3
     return _mm_hadd_pd(x[0],x[1]);
-//#else
-//#error "SSE3 instructions not supported by current machine."
-//#endif
+#else
+#error "You must compile with SSE3 enabled!"
+#endif
 }
 
 inline double horizontal_max(Vec2d const &a) {
