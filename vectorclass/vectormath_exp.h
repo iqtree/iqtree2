@@ -1,7 +1,7 @@
 /****************************  vectormath_exp.h   ******************************
 * Author:        Agner Fog
 * Date created:  2014-04-18
-* Last modified: 2014-10-22
+* Last modified: 2014-12-18
 * Version:       1.16
 * Project:       vector classes
 * Description:
@@ -1938,16 +1938,14 @@ public:
 * These functions return the code hidden in a NAN. The sign bit is ignored
 ******************************************************************************/
 
-#ifdef __UNUSED
-
-Vec4i nan_code(Vec4f const & x) {
+static inline Vec4i nan_code(Vec4f const & x) {
     Vec4i  a = reinterpret_i(x);
     Vec4ib b = (a & 0x7F800000) == 0x7F800000;   // check if NAN/INF
     return a & 0x007FFFFF & Vec4i(b);            // isolate NAN code bits
 }
 
 // This function returns the code hidden in a NAN. The sign bit is ignored
-Vec2q nan_code(Vec2d const & x) {
+static inline Vec2q nan_code(Vec2d const & x) {
     Vec2q  a = reinterpret_i(x);
     Vec2q const m = 0x7FF0000000000000;
     Vec2q const n = 0x000FFFFFFFFFFFFF;
@@ -1958,14 +1956,14 @@ Vec2q nan_code(Vec2d const & x) {
 #if MAX_VECTOR_SIZE >= 256
 
 // This function returns the code hidden in a NAN. The sign bit is ignored
-Vec8i nan_code(Vec8f const & x) {
+static inline Vec8i nan_code(Vec8f const & x) {
     Vec8i  a = reinterpret_i(x);
     Vec8ib b = (a & 0x7F800000) == 0x7F800000;   // check if NAN/INF
     return a & 0x007FFFFF & Vec8i(b);            // isolate NAN code bits
 }
 
 // This function returns the code hidden in a NAN. The sign bit is ignored
-Vec4q nan_code(Vec4d const & x) {
+static inline Vec4q nan_code(Vec4d const & x) {
     Vec4q  a = reinterpret_i(x);
     Vec4q const m = 0x7FF0000000000000;
     Vec4q const n = 0x000FFFFFFFFFFFFF;
@@ -1977,14 +1975,14 @@ Vec4q nan_code(Vec4d const & x) {
 #if MAX_VECTOR_SIZE >= 512
 
 // This function returns the code hidden in a NAN. The sign bit is ignored
-Vec16i nan_code(Vec16f const & x) {
+static inline Vec16i nan_code(Vec16f const & x) {
     Vec16i  a = Vec16i(reinterpret_i(x));
     Vec16ib b = (a & 0x7F800000) == 0x7F800000;  // check if NAN/INF
     return a & 0x007FFFFF & Vec16i(b);           // isolate NAN code bits
 }
 
 // This function returns the code hidden in a NAN. The sign bit is ignored
-Vec8q nan_code(Vec8d const & x) {
+static inline Vec8q nan_code(Vec8d const & x) {
     Vec8q  a = Vec8q(reinterpret_i(x));
     Vec8q const m = 0x7FF0000000000000;
     Vec8q const n = 0x000FFFFFFFFFFFFF;
@@ -1993,7 +1991,5 @@ Vec8q nan_code(Vec8d const & x) {
 }
 
 #endif // MAX_VECTOR_SIZE >= 512
-
-#endif // __UNUSED
 
 #endif  // VECTORMATH_EXP_H
