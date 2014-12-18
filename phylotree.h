@@ -109,21 +109,6 @@ inline void aligned_free(void *mem) {
 }
 
 
-#ifdef __AVX__
-//#define VectorClassMaster Vec4d
-#define VectorClassFloat Vec8f
-//#define VCSIZE_MASTER 4
-#define VCSIZE_FLOAT 8
-//#pragma message "Using AVX instructions"
-#else
-//#define VectorClassMaster Vec2d
-#define VectorClassFloat Vec4f
-//#define VCSIZE_MASTER 2
-#define VCSIZE_FLOAT 4
-//#pragma message "Using SS3 instructions"
-#endif
-
-
 /**
  *  Row Major Array For Eigen
  */
@@ -381,14 +366,13 @@ public:
     /****************************************************************************
             Dot product
      ****************************************************************************/
+    template <class Numeric, class VectorClass, const int VCSIZE>
+    Numeric dotProductSIMD(Numeric *x, Numeric *y, int size);
+
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
     DotProductType dotProduct;
 
-    float dotProductFloatSSE(float *x, float *y, int size);
-    double dotProductDoubleSSE(double *x, double *y, int size);
-    float dotProductFloatAVX(float *x, float *y, int size);
-    double dotProductDoubleAVX(double *x, double *y, int size);
-
+    void setDotProductAVX();
 
     /**
             this function return the parsimony or likelihood score of the tree. Default is
@@ -557,9 +541,6 @@ public:
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    void computePartialLikelihoodEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-    void computePartialLikelihoodEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-
 
     /****************************************************************************
             computing likelihood on a branch
@@ -595,9 +576,6 @@ public:
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    double computeLikelihoodBranchEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad);
-    double computeLikelihoodBranchEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /****************************************************************************
@@ -617,9 +595,6 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodFromBufferEigenSIMD();
-
-    double computeLikelihoodFromBufferEigenAVX_DNA();
-    double computeLikelihoodFromBufferEigenAVX_PROT();
 
     /**
             compute tree likelihood when a branch length collapses to zero
@@ -770,9 +745,6 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    void computeLikelihoodDervEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-    void computeLikelihoodDervEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length
@@ -1248,6 +1220,8 @@ public:
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
     virtual void setLikelihoodKernel(LikelihoodKernel lk);
+
+    virtual void setLikelihoodKernelAVX();
 
     /****************************************************************************
             Public variables

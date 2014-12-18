@@ -38,6 +38,13 @@ inline double horizontal_max(Vec4d const &a) {
 
 #endif // __AVX__
 
+template <class Numeric, class VectorClass, const int VCSIZE>
+Numeric PhyloTree::dotProductSIMD(Numeric *x, Numeric *y, int size) {
+	VectorClass res = VectorClass().load_a(x) * VectorClass().load_a(y);
+	for (int i = VCSIZE; i < size; i += VCSIZE)
+		res = mul_add(VectorClass().load_a(&x[i]), VectorClass().load_a(&y[i]), res);
+	return horizontal_add(res);
+}
 
 /************************************************************************************************
  *

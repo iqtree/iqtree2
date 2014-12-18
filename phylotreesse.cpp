@@ -22,21 +22,6 @@
 #include "model/modelgtr.h"
 
 
-float PhyloTree::dotProductFloatSSE(float *x, float *y, int size) {
-	Vec4f res = 0.0f;
-	for (int i = 0; i < size; i += 4)
-		res = mul_add(Vec4f().load_a(&x[i]), Vec4f().load_a(&y[i]), res);
-	return horizontal_add(res);
-}
-
-double PhyloTree::dotProductDoubleSSE(double *x, double *y, int size) {
-	Vec2d res = 0.0;
-	for (int i = 0; i < size; i += 2)
-		res = mul_add(Vec2d().load_a(&x[i]), Vec2d().load_a(&y[i]), res);
-	return horizontal_add(res);
-}
-
-
 /* BQM: to ignore all-gapp subtree at an alignment site */
 //#define IGNORE_GAP_LH
 
@@ -57,19 +42,15 @@ inline double horizontal_max(Vec2d const &a) {
 //#define USING_SSE
 
 void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
+	if (instruction_set >= 7) {
+		setDotProductAVX();
+	} else {
 #ifdef BOOT_VAL_FLOAT
-	if (instruction_set >= 7) {
-		dotProduct = &PhyloTree::dotProductFloatAVX;
-	} else {
-		dotProduct = &PhyloTree::dotProductFloatSSE;
-	}
+		dotProduct = &PhyloTree::dotProductSIMD<float, Vec4f, 4>;
 #else
-	if (instruction_set >= 7) {
-		dotProduct = &PhyloTree::dotProductDoubleAVX;
-	} else {
-		dotProduct = &PhyloTree::dotProductDoubleSSE;
-	}
+		dotProduct = &PhyloTree::dotProductSIMD<double, Vec2d, 2>;
 #endif
+	}
 
 	sse = lk;
     if (!aln || lk == LK_NORMAL) {
@@ -98,10 +79,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 		case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				// CPU supports AVX
-				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenAVX_DNA;
-				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenAVX_DNA;
-				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenAVX_DNA;
-		        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenAVX_DNA;
+				setLikelihoodKernelAVX();
 			} else {
 				// CPU does not support AVX
 				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 4>;
@@ -130,10 +108,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 			break;
 		case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
-				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenAVX_PROT;
-				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenAVX_PROT;
-				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenAVX_PROT;
-				computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenAVX_PROT;
+				setLikelihoodKernelAVX();
 			} else {
 				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 20>;
 				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 20>;

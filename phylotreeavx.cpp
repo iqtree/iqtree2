@@ -13,48 +13,32 @@
 #error "You must compile this file with AVX enabled!"
 #endif
 
-float PhyloTree::dotProductFloatAVX(float *x, float *y, int size) {
-	Vec8f res = 0.0f;
-	for (int i = 0; i < size; i += 8)
-		res = mul_add(Vec8f().load_a(&x[i]), Vec8f().load_a(&y[i]), res);
-	return horizontal_add(res);
+void PhyloTree::setDotProductAVX() {
+#ifdef BOOT_VAL_FLOAT
+		dotProduct = &PhyloTree::dotProductSIMD<float, Vec8f, 8>;
+#else
+		dotProduct = &PhyloTree::dotProductSIMD<double, Vec4d, 4>;
+#endif
+
 }
 
-double PhyloTree::dotProductDoubleAVX(double *x, double *y, int size) {
-	Vec4d res = 0.0;
-	for (int i = 0; i < size; i += 4)
-		res = mul_add(Vec4d().load_a(&x[i]), Vec4d().load_a(&y[i]), res);
-	return horizontal_add(res);
+void PhyloTree::setLikelihoodKernelAVX() {
+	switch(aln->num_states) {
+	case 4:
+		computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec4d, 4, 4>;
+		computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec4d, 4, 4>;
+		computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec4d, 4, 4>;
+		computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 4>;
+		break;
+	case 20:
+		computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec4d, 4, 20>;
+		computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec4d, 4, 20>;
+		computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec4d, 4, 20>;
+		computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 20>;
+		break;
+	default:
+		assert(0);
+		break;
+	}
 }
 
-double PhyloTree::computeLikelihoodFromBufferEigenAVX_DNA() {
-	return computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 4>();
-}
-
-void PhyloTree::computePartialLikelihoodEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	computePartialLikelihoodEigenSIMD<Vec4d, 4, 4>(dad_branch, dad);
-}
-
-double PhyloTree::computeLikelihoodBranchEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	return computeLikelihoodBranchEigenSIMD<Vec4d, 4, 4>(dad_branch, dad);
-}
-
-void PhyloTree::computeLikelihoodDervEigenAVX_DNA(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-	computeLikelihoodDervEigenSIMD<Vec4d, 4, 4>(dad_branch, dad, df, ddf);
-}
-
-double PhyloTree::computeLikelihoodFromBufferEigenAVX_PROT() {
-	return computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 20>();
-}
-
-void PhyloTree::computePartialLikelihoodEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	computePartialLikelihoodEigenSIMD<Vec4d, 4, 20>(dad_branch, dad);
-}
-
-double PhyloTree::computeLikelihoodBranchEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	return computeLikelihoodBranchEigenSIMD<Vec4d, 4, 20>(dad_branch, dad);
-}
-
-void PhyloTree::computeLikelihoodDervEigenAVX_PROT(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-	computeLikelihoodDervEigenSIMD<Vec4d, 4, 20>(dad_branch, dad, df, ddf);
-}

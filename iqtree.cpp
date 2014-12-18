@@ -2253,7 +2253,6 @@ void IQTree::saveCurrentTree(double cur_logl) {
 //#ifdef _OPENMP
 //#pragma omp parallel for reduction(+: rell)
 //#endif
-//            if (sse == LK_NORMAL || sse == LK_EIGEN) {
             if (false) {
             	BootValType *boot_sample = boot_samples[sample];
             	BootValType rellll = 0.0;
@@ -2263,23 +2262,6 @@ void IQTree::saveCurrentTree(double cur_logl) {
             } else {
             	// SSE optimized version of the above loop
 				BootValType *boot_sample = boot_samples[sample];
-
-//#ifdef BOOT_VAL_FLOAT
-//				VectorClassFloat vc_rell = 0.0;
-//				int maxptn = nptn - VCSIZE_FLOAT;
-//				for (ptn = 0; ptn < maxptn; ptn+=VCSIZE_FLOAT)
-//					vc_rell = mul_add(VectorClassFloat().load_a(&pattern_lh[ptn]), VectorClassFloat().load_a(&boot_sample[ptn]), vc_rell);
-//#else
-//				VectorClassMaster vc_rell = 0.0;
-//				int maxptn = nptn - VCSIZE_MASTER;
-//				for (ptn = 0; ptn < maxptn; ptn+=VCSIZE_MASTER)
-//					vc_rell = mul_add(VectorClassMaster().load_a(&pattern_lh[ptn]), VectorClassMaster().load_a(&boot_sample[ptn]), vc_rell);
-//#endif
-//
-//				BootValType res = horizontal_add(vc_rell);
-//				 add the remaining ptn
-//				for (; ptn < nptn; ptn++)
-//					res += pattern_lh[ptn] * boot_sample[ptn];
 
 				BootValType res = (this->*dotProduct)(pattern_lh, boot_sample, nptn);
 
