@@ -2636,9 +2636,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       Codon frequencies" << endl
             << "  -m <model_name>+ASC  Ascertainment bias correction for morphological/SNP data" << endl
             << endl << "RATE HETEROGENEITY:" << endl
-            << "  -m <model_name>+I or +G[n] or +I+G[n]" << endl
-            << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl
-            << "                       categories for Gamma rates (default: n=4)" << endl
+            << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
+            << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
+            << "                       number of categories (default: n=4)" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
             << "  -gmedian             Computing mean for Gamma rate category (default: mean)" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
