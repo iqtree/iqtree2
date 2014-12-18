@@ -381,7 +381,7 @@ checkpoint.cpp
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
 	set_target_properties(iqtree pll ncl whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
-	set_target_properties(avxkernel PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
+	set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
 endif()  
 
 ##################################################################
@@ -401,17 +401,16 @@ if (IQTREE_FLAGS MATCHES "omp")
 	if (MSVC)
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${PROJECT_SOURCE_DIR}/lib")
 		if (BINARY32) 
-			set(THREAD_LIB pthreadVC2_x86)
+			set(THREAD_LIB "${THREAD_LIB} pthreadVC2_x86")
 		else()
-			set(THREAD_LIB pthreadVC2)
+			set(THREAD_LIB "${THREAD_LIB} pthreadVC2")
 		endif()
 	elseif(CLANG AND APPLE)
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib")
 	endif()
 endif()
 
-
-target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
+target_link_libraries(iqtree pll pllavx ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
 
 ##################################################################
 # setup the executable name 
