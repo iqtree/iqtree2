@@ -1135,15 +1135,15 @@ void PhyloTree::initializeAllPartialLh() {
         tmp_scale_num2 = newScaleNum();
     // make sure _pattern_lh size is divisible by 4 (e.g., 9->12, 14->16)
     if (!_pattern_lh)
-        _pattern_lh = aligned_alloc_double(mem_size);
+        _pattern_lh = aligned_alloc<double>(mem_size);
     if (!_pattern_lh_cat)
         _pattern_lh_cat = new double[mem_size * site_rate->getNDiscreteRate()];
     if (!theta_all)
-        theta_all = aligned_alloc_double(block_size);
+        theta_all = aligned_alloc<double>(block_size);
     if (!ptn_freq)
-        ptn_freq = aligned_alloc_double(mem_size);
+        ptn_freq = aligned_alloc<double>(mem_size);
     if (!ptn_invar)
-        ptn_invar = aligned_alloc_double(mem_size);
+        ptn_invar = aligned_alloc<double>(mem_size);
     initializeAllPartialLh(index, indexlh);
     assert(index == (nodeNum - 1) * 2);
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)

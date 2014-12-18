@@ -2221,7 +2221,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
     int maxnptn = get_safe_upper_limit_float(nptn);
     BootValType *pattern_lh = aligned_alloc<BootValType>(maxnptn);
     memset(pattern_lh, 0, maxnptn*sizeof(BootValType));
-    double *pattern_lh_orig = aligned_alloc_double(nptn);
+    double *pattern_lh_orig = aligned_alloc<double>(nptn);
     computePatternLikelihood(pattern_lh_orig, &cur_logl);
     for (int i = 0; i < nptn; i++)
     	pattern_lh[i] = (float)pattern_lh_orig[i];

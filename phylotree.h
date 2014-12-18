@@ -57,8 +57,6 @@ const int SPR_DEPTH = 2;
 
 using namespace Eigen;
 
-//#ifdef __AVX__
-//#define MEM_ALIGNMENT 32
 inline size_t get_safe_upper_limit(size_t cur_limit) {
 	if (instruction_set >= 7)
 		// AVX
@@ -77,30 +75,17 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 		return ((cur_limit+3)/4)*4;
 }
 
-//#else
-//#define MEM_ALIGNMENT 16
-//inline size_t get_safe_upper_limit(size_t cur_limit) {
-//	return (cur_limit%2 == 0) ? cur_limit : cur_limit+1;
-//}
-//inline size_t get_safe_upper_limit_float(size_t cur_limit) {
-//	return ((cur_limit+3)/4)*4;
-//}
+//inline double *aligned_alloc_double(size_t size) {
+//	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
 //
+//#if defined WIN32 || defined _WIN32 || defined __WIN32__
+//	return (double*)_aligned_malloc(size*sizeof(double), MEM_ALIGNMENT);
+//#else
+//	void *res;
+//	posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
+//	return (double*)res;
 //#endif
-
-//#include "pll/mem_alloc.h"
-
-inline double *aligned_alloc_double(size_t size) {
-	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
-
-#if defined WIN32 || defined _WIN32 || defined __WIN32__
-	return (double*)_aligned_malloc(size*sizeof(double), MEM_ALIGNMENT);
-#else
-	void *res;
-	posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
-	return (double*)res;
-#endif
-}
+//}
 
 template< class T>
 inline T *aligned_alloc(size_t size) {

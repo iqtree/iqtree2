@@ -271,7 +271,7 @@ void PhyloTree::computePtnInvar() {
 	size_t maxptn = get_safe_upper_limit(nptn+model_factory->unobserved_ptns.size());
 	int nstates = aln->num_states;
 
-    double *state_freq = aligned_alloc_double(nstates);
+    double *state_freq = aligned_alloc<double>(nstates);
     model->getStateFrequency(state_freq);
 	memset(ptn_invar, 0, maxptn*sizeof(double));
 	double p_invar = site_rate->getPInvar();

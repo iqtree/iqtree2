@@ -108,8 +108,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 
 	dad_branch->lh_scale_factor = left->lh_scale_factor + right->lh_scale_factor;
 
-	VectorClass *eleft = (VectorClass*)aligned_alloc_double(block*nstates);
-	VectorClass *eright = (VectorClass*)aligned_alloc_double(block*nstates);
+	VectorClass *eleft = (VectorClass*)aligned_alloc<double>(block*nstates);
+	VectorClass *eright = (VectorClass*)aligned_alloc<double>(block*nstates);
 
 	// precompute information buffer
 	for (c = 0; c < ncat; c++) {
@@ -136,8 +136,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 		// special treatment for TIP-TIP (cherry) case
 
 		// pre compute information for both tips
-		double *partial_lh_left = aligned_alloc_double((aln->STATE_UNKNOWN+1)*block);
-		double *partial_lh_right = aligned_alloc_double((aln->STATE_UNKNOWN+1)*block);
+		double *partial_lh_left = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
+		double *partial_lh_right = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
 
 		vector<int>::iterator it;
 		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
@@ -242,7 +242,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 		memcpy(dad_branch->scale_num, right->scale_num, nptn * sizeof(UBYTE));
 
 		// pre compute information for left tip
-		double *partial_lh_left = aligned_alloc_double((aln->STATE_UNKNOWN+1)*block);
+		double *partial_lh_left = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
 
 
 		vector<int>::iterator it;
@@ -464,9 +464,9 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     double *eval = model->getEigenvalues();
     assert(eval);
 
-	VectorClass *vc_val0 = (VectorClass*)aligned_alloc_double(block);
-	VectorClass *vc_val1 = (VectorClass*)aligned_alloc_double(block);
-	VectorClass *vc_val2 = (VectorClass*)aligned_alloc_double(block);
+	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
+	VectorClass *vc_val1 = (VectorClass*)aligned_alloc<double>(block);
+	VectorClass *vc_val2 = (VectorClass*)aligned_alloc<double>(block);
 
 	VectorClass vc_len = dad_branch->length;
 	for (c = 0; c < ncat; c++) {
@@ -703,7 +703,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     double *eval = model->getEigenvalues();
     assert(eval);
 
-    VectorClass *vc_val = (VectorClass*)aligned_alloc_double(block);
+    VectorClass *vc_val = (VectorClass*)aligned_alloc<double>(block);
 
 
 	for (c = 0; c < ncat; c++) {
@@ -949,7 +949,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
     double *eval = model->getEigenvalues();
     assert(eval);
 
-	VectorClass *vc_val0 = (VectorClass*)aligned_alloc_double(block);
+	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
 
 	VectorClass vc_len = current_it->length;
 	for (c = 0; c < ncat; c++) {
