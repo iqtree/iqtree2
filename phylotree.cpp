@@ -3505,7 +3505,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		node2->updateNeighbor(node2_it, node2_nei);
 		node2_nei->node->updateNeighbor(node1, node2);
 		// ONLY FOR CHECKING WITH OLGA's PLEN MODEL
-//		node1_nei->length = node2_nei->length = saved_len;
+		//node1_nei->length = node2_nei->length = saved_len;
     }
 
 	 // restore the Neighbor*

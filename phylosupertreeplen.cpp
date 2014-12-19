@@ -350,7 +350,7 @@ double PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
 	double current_len = current_it->length;
 
 
-	this->clearAllPartialLH();
+	//this->clearAllPartialLH();
 	double tree_lh = PhyloTree::optimizeOneBranch(node1,node2,false, maxNRStep);
 
 	if(clearLH && current_len != current_it->length){
