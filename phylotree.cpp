@@ -220,13 +220,14 @@ void PhyloTree::readTreeString(const string &tree_string, bool updatePLL) {
 	freeNode();
 	readTree(str, rooted);
 	setAlignment(aln);
-    if (isSuperTree()) {
-        ((PhyloSuperTree*) this)->mapTrees();
-    }
-    if (updatePLL) {
-    	pllReadNewick(getTreeString());
-    }
-    lhComputed = false;
+
+	if (isSuperTree()) {
+		((PhyloSuperTree*) this)->mapTrees();
+	}
+	if (updatePLL) {
+		pllReadNewick(getTreeString());
+	}
+	lhComputed = false;
 }
 
 int PhyloTree::fixAllBranches(bool updatePLL) {

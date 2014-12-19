@@ -478,9 +478,10 @@ int IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         readTreeString(rit->second.tree, params->pll);
         computeLogL();
         // THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
-        while (curScore - rit->first < -1.0) {
-        	cout << "curScore = " << curScore << " / should = " << rit->first << endl;
-        	optimizeBranches(1);
+        if (isSuperTree() && params->partition_type == 0) {
+        	if (verbose_mode >= VB_MED)
+        		cout << "curScore: " << curScore << " expected score: " << rit->first << endl;
+        	optimizeBranches(2);
         }
         initLogl = curScore;
         tree = doNNISearch(nniCount, nniStep);
@@ -1043,6 +1044,19 @@ void IQTree::doRandomNNIs(int numNNI) {
             usedNodes.insert(map<int, Node*>::value_type(nodeList2[index]->id, nodeList2[index]));
         }
     }
+
+    setAlignment(aln);
+    setRootNode(params->root);
+
+    if (isSuperTree()) {
+        ((PhyloSuperTree*) this)->mapTrees();
+    }
+
+    if (params->pll) {
+    	pllReadNewick(getTreeString());
+    }
+
+    lhComputed = false;
 }
 
 void IQTree::doIQP() {
@@ -1055,6 +1069,16 @@ void IQTree::doIQP() {
 
     // just to make sure IQP does it right
     setAlignment(aln);
+
+    if (params->pll) {
+    	pllReadNewick(getTreeString());
+    }
+
+    lhComputed = false;
+
+    if (isSuperTree()) {
+        ((PhyloSuperTree*) this)->mapTrees();
+    }
 
 //    if (enable_parsimony) {
 //        cur_pars_score = computeParsimony();
@@ -1478,6 +1502,8 @@ void IQTree::computeLogL() {
 		}
 		curScore = computeLikelihood();
 	}
+
+	lhComputed = true;
 }
 
 string IQTree::optimizeBranches(int maxTraversal) {
@@ -1610,9 +1636,7 @@ double IQTree::doTreeSearch() {
             } else {
                 doIQP();
             }
-            setAlignment(aln);
-            setRootNode(params->root);
-            perturb_tree_string = getTreeString();
+
             if (params->count_trees) {
                 string perturb_tree_topo = getTopology();
                 if (pllTreeCounter.find(perturb_tree_topo) == pllTreeCounter.end()) {
@@ -1624,26 +1648,8 @@ double IQTree::doTreeSearch() {
                 }
             }
 
-            if (params->pll) {
-                pllNewickTree *perturbTree = pllNewickParseString(perturb_tree_string.c_str());
-                assert(perturbTree != NULL);
-                pllTreeInitTopologyNewick(pllInst, perturbTree, PLL_FALSE);
-                pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-                if (params->numSmoothTree >= 1) {
-                    pllOptimizeBranchLengths(pllInst, pllPartitions, params->numSmoothTree);
-                }
-                pllNewickParseDestroy(&perturbTree);
-                curScore = pllInst->likelihood;
-                perturbScore = curScore;
-            } else {
-                initializeAllPartialLh();
-                clearAllPartialLH();
-                if (isSuperTree()) {
-                    ((PhyloSuperTree*) this)->mapTrees();
-                }
-                curScore = optimizeAllBranches(params->numSmoothTree, TOL_LIKELIHOOD, PLL_NEWZPERCYCLE);
-                perturbScore = curScore;
-            }
+            computeLogL();
+
         }
 
     	/*----------------------------------------
