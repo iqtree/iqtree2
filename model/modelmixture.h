@@ -44,10 +44,23 @@ public:
 
     virtual ~ModelMixture();
 
+
+	/**
+	 * @return TRUE if this is a mixture model, FALSE otherwise
+	 */
+	virtual bool isMixture() { return true; }
+
+
 	/**
 	 * @return the number of mixture model components
 	 */
 	virtual int getNMixtures() {return size(); }
+
+	/**
+	 * proportion of sites for each sub-models
+	 */
+	double *prop;
+
 };
 
 #endif /* MODELMIXTURE_H_ */

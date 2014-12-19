@@ -19,25 +19,12 @@
  ***************************************************************************/
 #include "phylotree.h"
 #include "phylokernel.h"
+#include "phylokernelmixture.h"
 #include "model/modelgtr.h"
 
 
 /* BQM: to ignore all-gapp subtree at an alignment site */
 //#define IGNORE_GAP_LH
-
-inline Vec2d horizontal_add(Vec2d x[2]) {
-#if  INSTRSET >= 3  // SSE3
-    return _mm_hadd_pd(x[0],x[1]);
-#else
-#error "You must compile with SSE3 enabled!"
-#endif
-}
-
-inline double horizontal_max(Vec2d const &a) {
-    double x[2];
-    a.store(x);
-    return max(x[0],x[1]);
-}
 
 //#define USING_SSE
 
@@ -82,10 +69,17 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 				setLikelihoodKernelAVX();
 			} else {
 				// CPU does not support AVX
-				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 4>;
-				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 4>;
-				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 4>;
-				computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 4>;
+				if (!model_factory || model_factory->model->isMixture()) {
+					computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 4>;
+					computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 4>;
+					computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 4>;
+					computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 4>;
+				} else {
+					computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 4>;
+					computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 4>;
+					computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 4>;
+					computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 4>;
+				}
 			}
 			break;
 		case LK_NORMAL:
@@ -169,6 +163,35 @@ void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	}
 }
 
+/*******************************************************
+ *
+ * master function: wrapper for other optimized functions
+ *
+ ******************************************************/
+
+void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	(this->*computePartialLikelihoodPointer)(dad_branch, dad);
+}
+
+double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+	return (*this.*computeLikelihoodBranchPointer)(dad_branch, dad);
+
+}
+
+void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+	(this->*computeLikelihoodDervPointer)(dad_branch, dad, df, ddf);
+}
+
+
+double PhyloTree::computeLikelihoodFromBuffer() {
+	assert(current_it && current_it_back);
+
+	if (computeLikelihoodFromBufferPointer)
+		return (this->*computeLikelihoodFromBufferPointer)();
+	else
+		return (this->*computeLikelihoodBranchPointer)(current_it, (PhyloNode*)current_it_back->node);
+
+}
 
 void PhyloTree::computeTipPartialLikelihood() {
 	if (tip_partial_lh_computed)
@@ -262,10 +285,15 @@ void PhyloTree::computePtnInvar() {
 	aligned_free(state_freq);
 }
 
-/**
- * this version uses Alexis' technique that stores the dot product of partial likelihoods and eigenvectors at node
+/*******************************************************
+ *
+ * non-vectorized likelihood functions.
+ * this version uses Alexis' technique that stores the
+ * dot product of partial likelihoods and eigenvectors at node
  * for faster branch length optimization
- */
+ *
+ ******************************************************/
+
 template <const int nstates>
 void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     // don't recompute the likelihood
@@ -337,9 +365,6 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 		delete [] expright;
 		delete [] expleft;
 	}
-
-	MappedMat(nstates) ei_inv_evec(inv_evec);
-	MappedRowVec(nstates) ei_partial_lh_tmp(partial_lh_tmp);
 
 	if (left->node->isLeaf() && right->node->isLeaf()) {
 		// special treatment for TIP-TIP (cherry) case
@@ -1228,32 +1253,3 @@ inline void PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phylo
     ddf = my_ddf;
 }
 
-/*******************************************************
- *
- * master function: wrapper for other optimized functions
- *
- ******************************************************/
-
-void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	(this->*computePartialLikelihoodPointer)(dad_branch, dad);
-}
-
-double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	return (*this.*computeLikelihoodBranchPointer)(dad_branch, dad);
-
-}
-
-void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-	(this->*computeLikelihoodDervPointer)(dad_branch, dad, df, ddf);
-}
-
-
-double PhyloTree::computeLikelihoodFromBuffer() {
-	assert(current_it && current_it_back);
-
-	if (computeLikelihoodFromBufferPointer)
-		return (this->*computeLikelihoodFromBufferPointer)();
-	else
-		return (this->*computeLikelihoodBranchPointer)(current_it, (PhyloNode*)current_it_back->node);
-
-}

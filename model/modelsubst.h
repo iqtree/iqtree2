@@ -54,7 +54,12 @@ public:
 	 * @return TRUE if this is a site-specific model, FALSE otherwise
 	 */
 	virtual bool isSiteSpecificModel() { return false; }
-	
+
+	/**
+	 * @return TRUE if this is a mixture model, FALSE otherwise
+	 */
+	virtual bool isMixture() { return false; }
+
 	/**
 	 * @return the number of mixture model components
 	 */

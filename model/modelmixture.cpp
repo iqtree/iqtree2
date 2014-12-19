@@ -81,8 +81,9 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 
 	const int MAX_MODELS = 64;
 	size_t cur_pos = 0;
+	int m;
 	name = full_name = (string)"MIXTURE" + OPEN_BRACKET;
-	for (int m = 0; m < MAX_MODELS && cur_pos < model_list.length(); m++) {
+	for (m = 0; m < MAX_MODELS && cur_pos < model_list.length(); m++) {
 		size_t pos = model_list.find(',', cur_pos);
 		if (pos == string::npos)
 			pos = model_list.length();
@@ -101,9 +102,14 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 	name += CLOSE_BRACKET;
 	full_name += CLOSE_BRACKET;
 	cout << "mixture model: " << name << endl;
+	prop = aligned_alloc<double>(size());
+	for (m = 0; m < size(); m++)
+		prop[m] = 1.0;
 }
 
 ModelMixture::~ModelMixture() {
+	if (prop)
+		aligned_free(prop);
 	for (reverse_iterator rit = rbegin(); rit != rend(); rit++)
 		delete (*rit);
 }

@@ -542,6 +542,9 @@ public:
     void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
 
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
     /****************************************************************************
             computing likelihood on a branch
      ****************************************************************************/
@@ -576,6 +579,9 @@ public:
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /****************************************************************************
@@ -595,6 +601,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodFromBufferEigenSIMD();
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeMixtureLikelihoodFromBufferEigenSIMD();
 
     /**
             compute tree likelihood when a branch length collapses to zero
@@ -745,6 +754,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length

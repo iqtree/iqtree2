@@ -1,64 +1,13 @@
 /*
- * phylokernel.h
+ * phylokernelmixture.h
  *
- *  Created on: Dec 14, 2014
+ *  Created on: Dec 19, 2014
  *      Author: minh
  */
 
-#ifndef PHYLOKERNEL_H_
-#define PHYLOKERNEL_H_
+#ifndef PHYLOKERNELMIXTURE_H_
+#define PHYLOKERNELMIXTURE_H_
 
-#include "phylotree.h"
-#include "vectorclass/vectorclass.h"
-#include "vectorclass/vectormath_exp.h"
-
-inline Vec2d horizontal_add(Vec2d x[2]) {
-#if  INSTRSET >= 3  // SSE3
-    return _mm_hadd_pd(x[0],x[1]);
-#else
-#error "You must compile with SSE3 enabled!"
-#endif
-}
-
-inline double horizontal_max(Vec2d const &a) {
-    double x[2];
-    a.store(x);
-    return max(x[0],x[1]);
-}
-
-#ifdef __AVX__
-
-inline Vec4d horizontal_add(Vec4d x[4]) {
-	// {a[0]+a[1], b[0]+b[1], a[2]+a[3], b[2]+b[3]}
-	__m256d sumab = _mm256_hadd_pd(x[0], x[1]);
-	// {c[0]+c[1], d[0]+d[1], c[2]+c[3], d[2]+d[3]}
-	__m256d sumcd = _mm256_hadd_pd(x[2], x[3]);
-
-	// {a[0]+a[1], b[0]+b[1], c[2]+c[3], d[2]+d[3]}
-	__m256d blend = _mm256_blend_pd(sumab, sumcd, 12/* 0b1100*/);
-	// {a[2]+a[3], b[2]+b[3], c[0]+c[1], d[0]+d[1]}
-	__m256d perm = _mm256_permute2f128_pd(sumab, sumcd, 0x21);
-
-	return _mm256_add_pd(perm, blend);
-}
-
-inline double horizontal_max(Vec4d const &a) {
-	__m128d high = _mm256_extractf128_pd(a,1);
-	__m128d m = _mm_max_pd(_mm256_castpd256_pd128(a), high);
-    double x[2];
-    _mm_storeu_pd(x, m);
-    return max(x[0],x[1]);
-}
-
-#endif // __AVX__
-
-template <class Numeric, class VectorClass, const int VCSIZE>
-Numeric PhyloTree::dotProductSIMD(Numeric *x, Numeric *y, int size) {
-	VectorClass res = VectorClass().load_a(x) * VectorClass().load_a(y);
-	for (int i = VCSIZE; i < size; i += VCSIZE)
-		res = mul_add(VectorClass().load_a(&x[i]), VectorClass().load_a(&y[i]), res);
-	return horizontal_add(res);
-}
 
 /************************************************************************************************
  *
@@ -68,7 +17,7 @@ Numeric PhyloTree::dotProductSIMD(Numeric *x, Numeric *y, int size) {
 
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     // don't recompute the likelihood
 	assert(dad);
     if (dad_branch->partial_lh_computed & 1)
@@ -111,9 +60,9 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 		right = tmp;
 	}
 	if ((left->partial_lh_computed & 1) == 0)
-		computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(left, node);
+		computeMixturePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(left, node);
 	if ((right->partial_lh_computed & 1) == 0)
-		computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(right, node);
+		computeMixturePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(right, node);
 
 	double *evec = model->getEigenvectors();
 	double *inv_evec = model->getInverseEigenvectors();
@@ -456,7 +405,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -470,9 +419,9 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
+        computeMixturePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
+        computeMixturePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
     df = ddf = 0.0;
     size_t ncat = site_rate->getNRate();
 
@@ -695,7 +644,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
 
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -709,9 +658,9 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
+        computeMixturePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
+        computeMixturePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t ncat = site_rate->getNRate();
 
@@ -953,7 +902,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
+double PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD() {
 
 
 	assert(theta_all && theta_computed);
@@ -1086,4 +1035,6 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 }
 
 
-#endif /* PHYLOKERNEL_H_ */
+
+
+#endif /* PHYLOKERNELMIXTURE_H_ */
