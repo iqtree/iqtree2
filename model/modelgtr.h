@@ -42,6 +42,7 @@ class ModelGTR : public ModelSubst, public EigenDecomposition
 {
 	
 	friend class ModelSet;
+	friend class ModelMixture;
 	
 public:
 	/**

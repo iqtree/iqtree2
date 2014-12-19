@@ -32,7 +32,7 @@ ModelSubst *createModel(string model_str, StateFreqType freq_type, string freq_p
 /**
  * mixture model
  */
-class ModelMixture: public ModelGTR, vector<ModelSubst*> {
+class ModelMixture: public ModelGTR, vector<ModelGTR*> {
 public:
 	/**
 		constructor
@@ -57,9 +57,43 @@ public:
 	virtual int getNMixtures() {return size(); }
 
 	/**
+		@return the number of dimensions
+	*/
+	virtual int getNDim();
+
+	/**
+		the target function which needs to be optimized
+		@param x the input vector x
+		@return the function value at x
+	*/
+	virtual double targetFunk(double x[]);
+
+
+	/**
+		decompose the rate matrix into eigenvalues and eigenvectors
+	*/
+	virtual void decomposeRateMatrix();
+
+	/**
 	 * proportion of sites for each sub-models
 	 */
 	double *prop;
+
+protected:
+
+	/**
+		this function is served for the multi-dimension optimization. It should pack the model parameters
+		into a vector that is index from 1 (NOTE: not from 0)
+		@param variables (OUT) vector of variables, indexed from 1
+	*/
+	virtual void setVariables(double *variables);
+
+	/**
+		this function is served for the multi-dimension optimization. It should assign the model parameters
+		from a vector of variables that is index from 1 (NOTE: not from 0)
+		@param variables vector of variables, indexed from 1
+	*/
+	virtual void getVariables(double *variables);
 
 };
 

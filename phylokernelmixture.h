@@ -40,6 +40,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
     size_t orig_ntn = aln->size();
 
     size_t ncat = site_rate->getNRate();
+    size_t nmixture = model->getNMixtures();
     assert(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
     assert(model->isReversible()); // only works with reversible model!
     const size_t nstatesqr=nstates*nstates;

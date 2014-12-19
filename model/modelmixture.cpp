@@ -91,7 +91,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 			outError("One model name in the mixture is empty.");
 		string this_name = model_list.substr(cur_pos, pos-cur_pos);
 		cur_pos = pos+1;
-		push_back(createModel(this_name, freq, freq_params, tree, count_rates));
+		push_back((ModelGTR*)createModel(this_name, freq, freq_params, tree, count_rates));
 		if (m > 0) {
 			name += ',';
 			full_name += ',';
@@ -101,16 +101,50 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 	}
 	name += CLOSE_BRACKET;
 	full_name += CLOSE_BRACKET;
-	cout << "mixture model: " << name << endl;
+//	cout << "mixture model: " << name << endl;
+
+	int nmixtures = size();
 	prop = aligned_alloc<double>(size());
-	for (m = 0; m < size(); m++)
+	for (m = 0; m < nmixtures; m++)
 		prop[m] = 1.0;
+
+	// use central eigen etc. stufffs
+
+	if (eigenvalues) delete [] eigenvalues;
+	if (eigenvectors) delete [] eigenvectors;
+	if (inv_eigenvectors) delete [] inv_eigenvectors;
+	if (eigen_coeff) delete [] eigen_coeff;
+
+	eigenvalues = new double[num_states*nmixtures];
+	eigenvectors = new double[num_states*num_states*nmixtures];
+	inv_eigenvectors = new double[num_states*num_states*nmixtures];
+	int ncoeff = num_states*num_states*num_states;
+	eigen_coeff = new double[ncoeff*nmixtures];
+
+	// assigning memory for individual models
+	m = 0;
+	for (iterator it = begin(); it != end(); it++, m++) {
+		if ((*it)->eigenvalues) delete [] (*it)->eigenvalues;
+		if ((*it)->eigenvectors) delete [] (*it)->eigenvectors;
+		if ((*it)->inv_eigenvectors) delete [] (*it)->inv_eigenvectors;
+		if ((*it)->eigen_coeff) delete [] (*it)->eigen_coeff;
+
+		(*it)->eigenvalues = &eigenvalues[m*num_states];
+		(*it)->eigenvectors = &eigenvectors[m*num_states*num_states];
+		(*it)->inv_eigenvectors = &inv_eigenvectors[m*num_states*num_states];
+		(*it)->eigen_coeff = &eigen_coeff[m*ncoeff];
+	}
 }
 
 ModelMixture::~ModelMixture() {
 	if (prop)
 		aligned_free(prop);
-	for (reverse_iterator rit = rbegin(); rit != rend(); rit++)
+	for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+		(*rit)->eigen_coeff = NULL;
+		(*rit)->eigenvalues = NULL;
+		(*rit)->eigenvectors = NULL;
+		(*rit)->inv_eigenvectors = NULL;
 		delete (*rit);
+	}
 }
 

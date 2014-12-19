@@ -197,22 +197,29 @@ void PhyloTree::computeTipPartialLikelihood() {
 	if (tip_partial_lh_computed)
 		return;
 	tip_partial_lh_computed = true;
-	int i, x, state, nstates = aln->num_states;
-
-	double *evec = model->getEigenvectors();
-	double *inv_evec = model->getInverseEigenvectors();
-	assert(inv_evec && evec);
-
+	int m, i, x, state, nstates = aln->num_states, nmixtures = model->getNMixtures();
+	double *all_inv_evec = model->getInverseEigenvectors();
+	assert(all_inv_evec);
 	assert(tip_partial_lh);
-	for (state = 0; state < nstates; state++)
-		for (i = 0; i < nstates; i++)
-			tip_partial_lh[state*nstates + i] = inv_evec[i*nstates+state];
+
+	for (state = 0; state < nstates; state++) {
+		double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
+		for (m = 0; m < nmixtures; m++) {
+			double *inv_evec = &all_inv_evec[m*nstates*nstates];
+			for (i = 0; i < nstates; i++)
+				this_tip_partial_lh[m*nstates + i] = inv_evec[i*nstates+state];
+		}
+	}
 	// special treatment for unknown char
 	for (i = 0; i < nstates; i++) {
-		double lh_unknown = 0.0;
-		for (x = 0; x < nstates; x++)
-			lh_unknown += inv_evec[i*nstates+x];
-		tip_partial_lh[aln->STATE_UNKNOWN * nstates + i] = lh_unknown;
+		double *this_tip_partial_lh = &tip_partial_lh[aln->STATE_UNKNOWN*nstates*nmixtures];
+		for (m = 0; m < nmixtures; m++) {
+			double *inv_evec = &all_inv_evec[m*nstates*nstates];
+			double lh_unknown = 0.0;
+			for (x = 0; x < nstates; x++)
+				lh_unknown += inv_evec[i*nstates+x];
+			this_tip_partial_lh[m*nstates + i] = lh_unknown;
+		}
 	}
 
 	double lh_ambiguous;
@@ -222,12 +229,16 @@ void PhyloTree::computeTipPartialLikelihood() {
 	case SEQ_DNA:
 		for (state = 4; state < 18; state++) {
 			int cstate = state-nstates+1;
-			for (i = 0; i < nstates; i++) {
-				lh_ambiguous = 0.0;
-				for (x = 0; x < nstates; x++)
-					if ((cstate) & (1 << x))
-						lh_ambiguous += inv_evec[i*nstates+x];
-				tip_partial_lh[state*nstates+i] = lh_ambiguous;
+			double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
+			for (m = 0; m < nmixtures; m++) {
+				double *inv_evec = &all_inv_evec[m*nstates*nstates];
+				for (i = 0; i < nstates; i++) {
+					lh_ambiguous = 0.0;
+					for (x = 0; x < nstates; x++)
+						if ((cstate) & (1 << x))
+							lh_ambiguous += inv_evec[i*nstates+x];
+					this_tip_partial_lh[m*nstates+i] = lh_ambiguous;
+				}
 			}
 		}
 		break;
@@ -235,18 +246,23 @@ void PhyloTree::computeTipPartialLikelihood() {
 		//map[(unsigned char)'B'] = 4+8+19; // N or D
 		//map[(unsigned char)'Z'] = 32+64+19; // Q or E
 		for (state = 0; state < 2; state++) {
-			for (i = 0; i < nstates; i++) {
-				lh_ambiguous = 0.0;
-				for (x = 0; x < 7; x++)
-					if (ambi_aa[state] & (1 << x))
-						lh_ambiguous += inv_evec[i*nstates+x];
-				tip_partial_lh[(state+20)*nstates+i] = lh_ambiguous;
+			double *this_tip_partial_lh = &tip_partial_lh[(state+20)*nstates*nmixtures];
+			for (m = 0; m < nmixtures; m++) {
+				double *inv_evec = &all_inv_evec[m*nstates*nstates];
+				for (i = 0; i < nstates; i++) {
+					lh_ambiguous = 0.0;
+					for (x = 0; x < 7; x++)
+						if (ambi_aa[state] & (1 << x))
+							lh_ambiguous += inv_evec[i*nstates+x];
+					this_tip_partial_lh[m*nstates+i] = lh_ambiguous;
+				}
 			}
 		}
 		break;
 	default:
 		break;
 	}
+
 
 	//-------------------------------------------------------
 	// initialize ptn_freq and ptn_invar

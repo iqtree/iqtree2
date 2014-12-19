@@ -1440,8 +1440,8 @@ protected:
      * Temporary partial likelihood array: used when swapping branch and recalculate the
      * likelihood --> avoid calling malloc everytime
      */
-    double *tmp_partial_lh1;
-    double *tmp_partial_lh2;
+//    double *tmp_partial_lh1;
+//    double *tmp_partial_lh2;
 
     /**
      *  Temporary array containing anscentral states.
@@ -1457,8 +1457,8 @@ protected:
      * Temporary scale num array: used when swapping branch and recalculate the
      * likelihood --> avoid calling malloc
      */
-    UBYTE *tmp_scale_num1;
-    UBYTE *tmp_scale_num2;
+//    UBYTE *tmp_scale_num1;
+//    UBYTE *tmp_scale_num2;
 
     /****************************************************************************
             Vector of bit blocks, used for parsimony function
