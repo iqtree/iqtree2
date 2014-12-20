@@ -347,9 +347,6 @@ void IQTree::computeInitialTree(string &dist_file) {
         cout << endl;
         cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
         computeParsimonyTree(params->out_prefix, aln);
-//        initializeAllPartialPars();
-//        clearAllPartialLH();
-//        fixNegativeBranch(true);
         if (params->numInitTrees > params->min_iterations && params->stop_condition == SC_FIXED_ITERATION)
         	params->numInitTrees = params->min_iterations;
 		if (params->pll)
@@ -358,7 +355,6 @@ void IQTree::computeInitialTree(string &dist_file) {
     case STT_PLL_PARSIMONY:
         cout << endl;
         cout << "Create initial parsimony tree by phylogenetic likelihood library (PLL)... ";
-        // generate a parsimony tree for model optimization
         pllInst->randomNumberSeed = params->ran_seed;
         pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
         resetBranches(pllInst);
@@ -413,6 +409,7 @@ int IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         if (params->start_tree == STT_PLL_PARSIMONY) {
 			pllInst->randomNumberSeed = params->ran_seed + treeNr * 12345;
 	        pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
+	        resetBranches(pllInst);
 			pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
 					pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE,
 					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);

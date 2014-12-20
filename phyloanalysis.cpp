@@ -1366,6 +1366,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (params.start_tree == STT_BIONJ || params.iqp || params.leastSquareBranch) {
     	computeInitialDist(params, iqtree, dist_file);
     }
+
     iqtree.setParams(params);
 
     /********************** CREATE INITIAL TREE(S) **********************/
