@@ -148,3 +148,38 @@ ModelMixture::~ModelMixture() {
 	}
 }
 
+int ModelMixture::getNDim() {
+	int dim = 0;
+	for (iterator it = begin(); it != end(); it++)
+		dim += (*it)->getNDim();
+	return dim;
+}
+
+double ModelMixture::targetFunk(double x[]) {
+	getVariables(x);
+	decomposeRateMatrix();
+	assert(phylo_tree);
+	phylo_tree->clearAllPartialLH();
+	return -phylo_tree->computeLikelihood();
+}
+
+void ModelMixture::decomposeRateMatrix() {
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->decomposeRateMatrix();
+}
+
+void ModelMixture::setVariables(double *variables) {
+	int dim = 0;
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->setVariables(&variables[dim]);
+		dim += (*it)->getNDim();
+	}
+}
+
+void ModelMixture::getVariables(double *variables) {
+	int dim = 0;
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->getVariables(&variables[dim]);
+		dim += (*it)->getNDim();
+	}
+}

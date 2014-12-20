@@ -26,7 +26,7 @@ void PhyloTree::setDotProductAVX() {
 void PhyloTree::setLikelihoodKernelAVX() {
 	switch(aln->num_states) {
 	case 4:
-		if (!model_factory || model_factory->model->isMixture()) {
+		if (!model_factory || !model_factory->model->isMixture()) {
 			computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec4d, 4, 4>;
 			computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec4d, 4, 4>;
 			computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec4d, 4, 4>;
