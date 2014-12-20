@@ -853,7 +853,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Maximum-likelihood tree:       " << params.out_prefix
 				<< ".treefile" << endl;
 		if (params.write_local_optimal_trees)
-		cout << "  Candidate trees (" << tree.candidateTrees.size() << "):      " << params.out_prefix << ".localtrees" << endl;
+		cout << "  Candidate trees (" << tree.candidateTrees.size() << "):      " << params.out_prefix << ".suboptimal_trees" << endl;
 	}
 	if (!params.user_file && params.start_tree == STT_BIONJ) {
 		cout << "  BIONJ tree:                    " << params.out_prefix << ".bionj"
@@ -1330,6 +1330,15 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 
 }
 
+void printSuboptimalTrees(IQTree& iqtree, Params& params, string suffix) {
+	vector<string> trees = iqtree.candidateTrees.getHighestScoringTrees();
+	ofstream treesOut((string(params.out_prefix) + suffix).c_str(),
+			ofstream::out);
+	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++)
+		treesOut << (*it);
+	treesOut.close();
+}
+
 /************************************************************
  *  MAIN TREE RECONSTRUCTION
  ***********************************************************/
@@ -1431,6 +1440,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         	assert(iqtree.candidateTrees.size() != 0);
         	cout << "Finish initializing candidate tree set. ";
         	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
+        	if (params.write_local_optimal_trees) {
+        		printSuboptimalTrees(iqtree, params, ".init_suboptimal_trees");
+        	}
         } else {
             int nni_count = 0;
             int nni_steps = 0;
@@ -1515,10 +1527,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	cout << "BEST SCORE FOUND : " << iqtree.getBestScore() << endl;
 
 	if (params.write_local_optimal_trees) {
-		vector<string> trees = iqtree.candidateTrees.getHighestScoringTrees();
-		ofstream treesOut((string(params.out_prefix) + ".localtrees").c_str(), ofstream::out);
-		for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++)
-			treesOut << (*it) << endl;
+		printSuboptimalTrees(iqtree, params, ".suboptimal_trees");
 	}
 
 	if (params.pll)
