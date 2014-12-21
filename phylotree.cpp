@@ -220,6 +220,7 @@ void PhyloTree::readTreeString(const string &tree_string, bool updatePLL) {
 	freeNode();
 	readTree(str, rooted);
 	setAlignment(aln);
+	root = findNodeName(aln->getSeqName(0));
 
 	if (isSuperTree()) {
 		((PhyloSuperTree*) this)->mapTrees();

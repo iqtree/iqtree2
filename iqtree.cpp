@@ -447,6 +447,7 @@ int IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     // logl of the first tree has already been computed during model parameter estimation
     for (vector<string>::iterator it = unOptParTrees.begin()+1; it != unOptParTrees.end(); it++) {
     	readTreeString(*it);
+    	//cout << "Root: " << root->name << endl;
     	fixAllBranches(params->pll);
         string tree = optimizeBranches(2);
         // Add tree to the candidate set
@@ -455,6 +456,7 @@ int IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             setBestTree(tree, curScore);
         }
     }
+    //exit(0);
     double loglTime = getCPUTime() - startTime;
     cout << "Average CPU time for computing logl of 1 parsimony tree: " << loglTime / (unOptParTrees.size()-1)<< endl;
 
