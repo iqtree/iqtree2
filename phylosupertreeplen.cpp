@@ -300,8 +300,8 @@ double PhyloSuperTreePlen::computeDist(int seq1, int seq2, double initial_dist, 
 void PhyloSuperTreePlen::mapTrees() {
 	assert(root);
 	int part = 0;
-	if (verbose_mode >= VB_DEBUG)
-		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
+//	if (verbose_mode >= VB_DEBUG)
+//		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 	for (iterator it = begin(); it != end(); it++, part++) {
 		string taxa_set = ((SuperAlignment*)aln)->getPattern(part);
 		(*it)->copyTree(this, taxa_set);
@@ -319,13 +319,13 @@ void PhyloSuperTreePlen::mapTrees() {
 			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
 			if (id >=0) part_taxa[i] = my_taxa[id];
 		}
-		if (verbose_mode >= VB_DEBUG) {
-			cout << "Subtree for partition " << part << endl;
-			(*it)->drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
-		}
+//		if (verbose_mode >= VB_DEBUG) {
+//			cout << "Subtree for partition " << part << endl;
+//			(*it)->drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
+//		}
 		linkTree(part, part_taxa);
 	}
-	if (verbose_mode >= VB_DEBUG) printMapInfo();
+	//if (verbose_mode >= VB_DEBUG) printMapInfo();
 }
 
 double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
@@ -1008,6 +1008,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 				for(id=0; id<IT_NUM; id++){
 					((PhyloNeighbor*)(*sub_saved_it[part*6+id]))->clearPartialLh();
+					//total_clearPatialLh++;
 				}
 				//checkBranchLen();
 			} else if(is_nni[part]==NNI_MANY_EPSILON){
@@ -1209,15 +1210,15 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		//checkBranchLen();
 
 		double score = optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
-		if (verbose_mode >= VB_MED) {
-			cout << "[" << score << "] ";
-			printTree(cout);
-			cout << endl;
-    		//for(part = 0; part < ntrees; part++)
-    		//	cout << is_nni[part] << " ";
-    		//cout << endl;
-    		//cout<<"NNI count = "<<cnt<<endl;
-		}
+//		if (verbose_mode >= VB_MED) {
+//			cout << "[" << score << "] ";
+//			printTree(cout);
+//			cout << endl;
+//    		//for(part = 0; part < ntrees; part++)
+//    		//	cout << is_nni[part] << " ";
+//    		//cout << endl;
+//    		//cout<<"NNI count = "<<cnt<<endl;
+//		}
 
 		//cout<<"After optimization"<<endl;
 		//checkBranchLen();
@@ -1285,8 +1286,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 	    // Store information about this NNI for NNImove for SuperTree
 		if (nni_param) {
-			if (verbose_mode >= VB_MAX)
-				printTree(cout, WT_BR_LEN + WT_NEWLINE);
+//			if (verbose_mode >= VB_MAX)
+//				printTree(cout, WT_BR_LEN + WT_NEWLINE);
 			if (cnt == 0) {
 				nni_param->nni1_score = score;
 				nni_param->nni1_brlen = nei1_new->length;
