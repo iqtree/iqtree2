@@ -966,3 +966,16 @@ void PhyloSuperTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &remov
 
 
 }
+
+int PhyloSuperTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
+	mapTrees();
+	int fixed = 0;
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->initializeAllPartialPars();
+		(*it)->clearAllPartialLH();
+		fixed += (*it)->fixNegativeBranch(force);
+		(*it)->clearAllPartialLH();
+	}
+	computeBranchLengths();
+	return fixed;
+}

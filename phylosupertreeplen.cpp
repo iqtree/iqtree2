@@ -1606,5 +1606,13 @@ void PhyloSuperTreePlen::computeBranchLengths()
 	}
 
 double PhyloSuperTreePlen::NAIVEswapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param) {
+}
 
+int PhyloSuperTreePlen::fixNegativeBranch(bool force, Node *node, Node *dad) {
+	int fixed =  PhyloSuperTree::fixNegativeBranch(force, node, dad);
+
+	// it is neccesary to map the branch lengths from supertree into gene trees!
+	mapTrees();
+
+	return fixed;
 }

@@ -285,7 +285,7 @@ include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 ##################################################################
 # subdirectories containing necessary libraries for the build 
 ##################################################################
-add_subdirectory(pll)
+add_subdirectory(pllrepo/src)
 add_subdirectory(ncl)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
@@ -448,7 +448,7 @@ endif()
 #set(CPACK_SOURCE_PACKAGE_FILE_NAME
 #  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 set(CPACK_SOURCE_IGNORE_FILES
-  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;${CPACK_SOURCE_IGNORE_FILES}")
+  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;/pll/;/pllrepo.dox/;/pllrepo.examples/;/pllrepo.figures/;/pllrepo.legacy/;/pllrepo.m4/;/pllrepo.man/;/pllrepo.MPI/;/pllrepo.sMSA/;/pllrepo.testdata/;${CPACK_SOURCE_IGNORE_FILES}")
 
 set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin") 
