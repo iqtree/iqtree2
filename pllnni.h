@@ -12,19 +12,8 @@
 #include <vector>
 //#include <unordered_set>
 extern "C" {
-#include "pll/pllInternal.h"
+#include "pllrepo/src/pllInternal.h"
 }
-
-/* This is the info you need to copy the vector*/
-typedef struct
-{
-  int node_number;
-  int num_partitions;
-  size_t *partition_sizes;
-  double **lh_values;
-  int **expVector;
-} LH_VECTOR;
-
 
 typedef struct {
 	nodeptr p;
@@ -40,6 +29,34 @@ typedef struct {
 	double negLoglDelta;
 } pllNNIMove;
 
+typedef struct {
+    // FOR GENERAL TREE SEARCH
+	bool speednni;
+	vector<pllNNIMove> posNNIList; // positive NNIs
+	unordered_set<string> aBranches; // Set of branches that are affected by the previous NNIs
+	double curLogl; // Current tree log-likelihood
+	int curIter; // Current iteration number
+	double curPerStrength; // Current perturbation strength
+
+	// FOR NNI SEARCH
+	NNI_Type nni_type;
+	int numAppliedNNIs; // total number of applied NNIs sofar
+	int curNumAppliedNNIs; // number of applied NNIs at the current step
+	int curNumNNISteps;
+	int maxNNISteps;
+	set<double> deltaLogl; // logl differences between nni1 and nni5
+} SearchInfo;
+
+
+/* This is the info you need to copy the vector*/
+typedef struct
+{
+  int node_number;
+  int num_partitions;
+  size_t *partition_sizes;
+  double **lh_values;
+  int **expVector;
+} LH_VECTOR;
 
 inline bool comparePLLNNIMove(const pllNNIMove &a, const pllNNIMove &b)
 {
@@ -65,24 +82,6 @@ typedef struct {
 	int doNNICut;
 } NNICUT;
 
-typedef struct {
-    // FOR GENERAL TREE SEARCH
-	bool speednni;
-	vector<pllNNIMove> posNNIList; // positive NNIs
-	unordered_set<string> aBranches; // Set of branches that are affected by the previous NNIs
-	double curLogl; // Current tree log-likelihood
-	int curIter; // Current iteration number
-	double curPerStrength; // Current perturbation strength
-
-	// FOR NNI SEARCH
-	NNI_Type nni_type;
-	int numAppliedNNIs; // total number of applied NNIs sofar
-	int curNumAppliedNNIs; // number of applied NNIs at the current step
-	int curNumNNISteps;
-	int maxNNISteps;
-	set<double> deltaLogl; // logl differences between nni1 and nni5
-} pllNNIInfo;
-
 /**
  * get all the nodes affected by the NNI
  * @param p
@@ -92,11 +91,11 @@ set<int> getAffectedNodes(pllInstance* tr, nodeptr p);
 
 string getBranString(nodeptr p);
 
-bool containsAffectedNodes(nodeptr p, pllNNIInfo &searchinfo);
+bool containsAffectedNodes(nodeptr p, SearchInfo &searchinfo);
 
 void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nni);
 
-void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, pllNNIInfo &searchinfo);
+void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo);
 
 double pllDoRandomNNIs(pllInstance *tr, partitionList *pr, int numNNI);
 
@@ -105,7 +104,7 @@ double pllDoRandomNNIs(pllInstance *tr, partitionList *pr, int numNNI);
  *  @param serachinfo contains the logl improvement collected in previous iterations
  *  @return a logl delta that is larger than 95% of the collected values
  */
-double estBestLoglImp(pllNNIInfo* searchinfo);
+double estBestLoglImp(SearchInfo* searchinfo);
 
 /**
  *  Evaluate NNI moves for the current internal branch
@@ -114,7 +113,7 @@ double estBestLoglImp(pllNNIInfo* searchinfo);
  *  @param p the node representing the current branch
  *  @return number of positive NNIs found
  */
-int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIInfo &searchinfo);
+int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo);
 
 /**
  * Perturb the best tree
@@ -139,11 +138,11 @@ double pllPerturbTree(pllInstance *tr, partitionList *pr, vector<pllNNIMove> &nn
  *  @param[out] nni_count number of NNI that have been applied
  *  @param[out] deltaNNI average improvement made by one NNI
  */
-double pllDoNNISearch(pllInstance* tr, partitionList *pr, pllNNIInfo &searchinfo);
+double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo);
 
-void pllUpdateTabuList(pllInstance *tr, pllNNIInfo &searchinfo);
+void pllUpdateTabuList(pllInstance *tr, SearchInfo &searchinfo);
 
-void pllSaveQuartetForSubTree(pllInstance* tr, nodeptr p, pllNNIInfo &searchinfo);
+void pllSaveQuartetForSubTree(pllInstance* tr, nodeptr p, SearchInfo &searchinfo);
 
 
 /**
@@ -153,7 +152,7 @@ void pllSaveQuartetForSubTree(pllInstance* tr, nodeptr p, pllNNIInfo &searchinfo
  *  @param[in] swap: represents one of the 2 NNI moves. Could be either 0 or 1
  *  @param[in] NNI_Type
  */
-double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, pllNNIInfo *searchinfo = NULL);
+double doOneNNI(pllInstance * tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, SearchInfo *searchinfo = NULL);
 
 void pllGetAllInBran(pllInstance *tr, vector<nodeptr> &branlist);
 
@@ -175,7 +174,7 @@ void evalAllNNI(pllInstance* tr);
  * 	@param[in] pr partition data structure
  * 	@param[in] p node pointer that specify the subtree
  */
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIInfo &searchinfo);
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo);
 
 /*
  *  @brief return the array which can be used to store evaluated NNI moves

@@ -86,6 +86,10 @@ void PhyloTree::init() {
     save_all_trees = 0;
     mlCheck = 0; // FOR: upper bounds
     nodeBranchDists = NULL;
+    pllInst = NULL;
+    pllAlignment = NULL;
+    pllPartitions = NULL;
+    lhComputed = false;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree() {
@@ -180,17 +184,6 @@ void PhyloTree::copyPhyloTree(PhyloTree *tree) {
 
 void PhyloTree::setAlignment(Alignment *alignment) {
     aln = alignment;
-    //alnSize = aln->size();
-    //ptn_freqs.resize(alnSize);
-    //numStates = aln->num_states;
-    //tranSize = numStates * numStates;
-    //ptn_freqs.resize(alnSize);
-    //for (int ptn = 0; ptn < alnSize; ++ptn) {
-    //    ptn_freqs[ptn] = (*aln)[ptn].frequency;
-    //}
-    //block = aln->num_states * numCat;
-    //lh_size = aln->size() * block;
-
     int nseq = aln->getNSeq();
     for (int seq = 0; seq < nseq; seq++) {
         string seq_name = aln->getSeqName(seq);
@@ -216,10 +209,51 @@ void PhyloTree::setRootNode(char *my_root) {
     assert(root);
 }
 
-void PhyloTree::readTreeString(const string &tree_string) {
+void PhyloTree::setParams(Params& params) {
+	this->params = &params;
+}
+
+void PhyloTree::readTreeString(const string &tree_string, bool updatePLL) {
 	stringstream str;
 	str << tree_string;
 	str.seekg(0, ios::beg);
+	freeNode();
+	readTree(str, rooted);
+	setAlignment(aln);
+	root = findNodeName(aln->getSeqName(0));
+
+	if (isSuperTree()) {
+		((PhyloSuperTree*) this)->mapTrees();
+	}
+	if (updatePLL) {
+		pllReadNewick(getTreeString());
+	}
+	lhComputed = false;
+}
+
+int PhyloTree::fixAllBranches(bool updatePLL) {
+    // Initialize branch lengths for the parsimony tree
+    initializeAllPartialPars();
+    clearAllPartialLH();
+    int numFixed = fixNegativeBranch(true);
+    if (updatePLL) {
+    	pllReadNewick(getTreeString());
+    }
+    lhComputed = false;
+    return numFixed;
+}
+
+void PhyloTree::pllReadNewick(string newickTree) {
+    pllNewickTree *newick = pllNewickParseString(newickTree.c_str());
+    pllTreeInitTopologyNewick(pllInst, newick, PLL_FALSE);
+    pllNewickParseDestroy(&newick);
+}
+
+void PhyloTree::readTreeFile(const string &file_name) {
+	ifstream str;
+	str.open(file_name.c_str());
+//	str << tree_string;
+//	str.seekg(0, ios::beg);
 	freeNode();
 	readTree(str, rooted);
 	setAlignment(aln);
@@ -228,24 +262,21 @@ void PhyloTree::readTreeString(const string &tree_string) {
     } else {
     	clearAllPartialLH();
     }
-    generateNewick();
+    str.close();
 }
 
-string PhyloTree::generateNewick() {
+string PhyloTree::getTreeString() {
 	stringstream tree_stream;
-	printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
-	//printTree(tree_stream);
-	newickTree = tree_stream.str();
-	return newickTree;
+	printTree(tree_stream);
+	return tree_stream.str();
 }
 
-string PhyloTree::generateNewickTopology() {
+string PhyloTree::getTopology() {
     stringstream tree_stream;
     // important: to make topology string unique
     setRootNode(params->root);
-    printTree(tree_stream, WT_TAXON_ID | WT_SORT_TAXA);
-    newickTopology = tree_stream.str();
-    return newickTopology;
+    printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
+    return tree_stream.str();
 }
 
 void PhyloTree::rollBack(istream &best_tree_string) {
@@ -2735,6 +2766,7 @@ double PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool cle
     assert(current_it_back);
     double current_len = current_it->length;
     double ferror, optx;
+    assert(current_len >= 0.0);
     theta_computed = false;
     if (optimize_by_newton) // Newton-Raphson method
     	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
@@ -3179,32 +3211,31 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     return fixed;
 }
 
-int PhyloTree::assignRandomBranchLengths(bool force, Node *node, Node *dad) {
-
-    if (!node)
-        node = root;
-    int fixed = 0;
-
-    FOR_NEIGHBOR_IT(node, dad, it){
-    if ((*it)->length < 0.0 || force) { // negative branch length detected
-        if (verbose_mode >= VB_DEBUG)
-        cout << "Negative branch length " << (*it)->length << " was set to ";
-        (*it)->length = random_double() + 0.1;
-        if (verbose_mode >= VB_DEBUG)
-        cout << (*it)->length << endl;
-        // set the backward branch length
-        (*it)->node->findNeighbor(node)->length = (*it)->length;
-        fixed++;
-    }
-    if ((*it)->length <= 0.0) {
-        (
-                *it)->length = 1e-6;
-        (*it)->node->findNeighbor(node)->length = (*it)->length;
-    }
-    fixed += assignRandomBranchLengths(force, (*it)->node, node);
-}
-    return fixed;
-}
+//int PhyloTree::assignRandomBranchLengths(bool force, Node *node, Node *dad) {
+//
+//    if (!node)
+//        node = root;
+//    int fixed = 0;
+//
+//    FOR_NEIGHBOR_IT(node, dad, it){
+//		if ((*it)->length < 0.0 || force) { // negative branch length detected
+//			if (verbose_mode >= VB_DEBUG)
+//			cout << "Negative branch length " << (*it)->length << " was set to ";
+//			(*it)->length = random_double() + 0.1;
+//			if (verbose_mode >= VB_DEBUG)
+//			cout << (*it)->length << endl;
+//			// set the backward branch length
+//			(*it)->node->findNeighbor(node)->length = (*it)->length;
+//			fixed++;
+//		}
+//		if ((*it)->length <= 0.0) {
+//			(*it)->length = 1e-6;
+//			(*it)->node->findNeighbor(node)->length = (*it)->length;
+//		}
+//		fixed += assignRandomBranchLengths(force, (*it)->node, node);
+//    }
+//    return fixed;
+//}
 
 /****************************************************************************
  Nearest Neighbor Interchange by maximum likelihood

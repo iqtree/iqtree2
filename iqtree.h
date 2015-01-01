@@ -29,11 +29,8 @@
 #include "stoprule.h"
 #include "mtreeset.h"
 #include "node.h"
-
-#include "pll/pll.h"
-#include "pllnni.h"
 #include "candidateset.h"
-#include "searchinfo.h"
+#include "pllnni.h"
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -42,11 +39,6 @@
 typedef std::map< string, double > mapString2Double;
 typedef std::multiset< double, std::less< double > > multiSetDB;
 typedef std::multiset< int, std::less< int > > MultiSetInt;
-
-/**
-        nodeheightcmp, for building k-representative leaf set
- */
-
 
 class RepLeaf {
 public:
@@ -59,6 +51,9 @@ public:
     }
 };
 
+/**
+        nodeheightcmp, for building k-representative leaf set
+ */
 struct nodeheightcmp {
 
     bool operator()(const RepLeaf* s1, const RepLeaf * s2) const {
@@ -108,7 +103,7 @@ public:
     /**
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)
      */
-    virtual void setParams(Params& params);
+    virtual void initSettings(Params& params);
 
     void createPLLPartition(Params &params, ostream &pllPartitionFileHandle);
 
@@ -300,7 +295,7 @@ public:
      *      @param nniCount (OUT) number of NNIs applied
      * 		@param nniSteps (OUT) number of NNI steps done
      */
-    double pllOptimizeNNI(int &nniCount, int &nniSteps, pllNNIInfo &searchinfo);
+    double pllOptimizeNNI(int &nniCount, int &nniSteps, SearchInfo &searchinfo);
 
     /**
      * 		@brief Perform NNI search on the current tree topology
@@ -462,39 +457,16 @@ public:
 
 
     /**
-     *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
+     *  information and parameters for the tree search procedure
      */
-    pllInstance *pllInst;
-
-    /**
-     *	PLL data structure for alignment
-     */
-    pllAlignmentData *pllAlignment;
-
-    /**
-     *  PLL data structure for storing phylognetic analysis options
-     */
-    pllInstanceAttr pllAttr;
-
-    /**
-     *  PLL partition list
-     */
-    partitionList * pllPartitions;
-
-    /**
-     *  information and parameters for the tree search using PLL kernel
-     */
-    pllNNIInfo pllInfo;
-
-    /**
-     *  information and parameters for the tree search using IQ-TREE kernel
-     */
-    SearchInfo searchInfo;
+    SearchInfo searchinfo;
 
     /**
      *  Vector contains number of NNIs used at each iterations
      */
     vector<int> vecNumNNI;
+
+    int getCurIteration() { return curIt; }
 
     /**
      * Do memory allocation and initialize parameter for UFBoot to run with PLL
@@ -544,23 +516,14 @@ public:
 
 protected:
 
-
-
-   	/**
-   	 * Maximum number of NNI steps performed in optimizeNNI
-   	 * Default value = (numTaxa - 3)
-   	 */
-	//int maxNNISteps;
-
-	/**
-	 *  Current IQPNNI iteration number
-	 */
-	int curIt;
-
-	/**
-	 criterion to assess important quartet
-	 */
-	IQP_ASSESS_QUARTET iqp_assess_quartet;
+    /**
+     *  Current IQPNNI iteration number
+     */
+    int curIt;
+    /**
+            criterion to assess important quartet
+     */
+    IQP_ASSESS_QUARTET iqp_assess_quartet;
 
 
     /**
@@ -633,6 +596,21 @@ protected:
     int k_represent;
 
 public:
+
+    /**
+     *  Generate the initial candidate tree set
+     *  @param nParTrees number of parsimony trees to generate
+     *  @param nNNITrees number of NNI locally optimal trees to generate
+     *  @return number of duplicated trees
+     */
+    int initCandidateTreeSet(int nParTrees, int nNNITrees);
+
+
+    /**
+     * Generate the initial tree (usually used for model parameter estimation)
+     * @param dist_file only needed for BIONJ tree
+     */
+    void computeInitialTree(string &dist_file);
 
     /**
      *  @brief: optimize model parameters on the current tree

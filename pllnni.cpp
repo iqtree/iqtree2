@@ -242,7 +242,7 @@ set<int> getAffectedNodes(pllInstance* tr, nodeptr p) {
 	return nodeSet;
 }
 
-void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, pllNNIInfo &pllInfo) {
+void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo) {
     /* DTH: mimic IQTREE::optimizeNNI 's first call to IQTREE::saveCurrentTree */
     if((globalParam->online_bootstrap == PLL_TRUE) &&
             (globalParam->gbo_replicates > 0)){
@@ -254,7 +254,7 @@ void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, pllNNIInfo &pllInfo) {
 	nodeptr p = tr->start->back;
 	nodeptr q = p->next;
 	while (q != p) {
-		evalNNIForSubtree(tr, pr, q->back, pllInfo);
+		evalNNIForSubtree(tr, pr, q->back, searchinfo);
 		q = q->next;
 	}
 }
@@ -280,7 +280,7 @@ void pllSaveAllQuartet(pllInstance *tr, SearchInfo &searchinfo) {
 }
 */
 
-double pllDoNNISearch(pllInstance* tr, partitionList *pr, pllNNIInfo &searchinfo) {
+double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo) {
 	double initLH = tr->likelihood;
 	double finalLH = initLH;
 	vector<pllNNIMove> selectedNNIs;
@@ -472,7 +472,7 @@ void pllOptimizeOneBranch(pllInstance *tr, partitionList *pr, nodeptr p) {
     #endif
 }
 
-double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, pllNNIInfo *searchinfo) {
+double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, SearchInfo *searchinfo) {
 	assert(swap == 0 || swap == 1);
 	nodeptr q;
 	nodeptr tmp;
@@ -583,7 +583,7 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
 	return tr->likelihood;
 }
 
-double estBestLoglImp(pllNNIInfo* searchinfo) {
+double estBestLoglImp(SearchInfo* searchinfo) {
     double res = 0.0;
     int index = floor(searchinfo->deltaLogl.size() * 5 / 100);
     set<double>::reverse_iterator ri;
@@ -651,7 +651,7 @@ void countDistinctTrees(pllInstance* pllInst, partitionList *pllPartitions) {
 	}
 }
 
-int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIInfo &searchinfo) {
+int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
 	nodeptr q = p->back;
 	assert(!isTip(p->number, tr->mxtips));
 	assert(!isTip(q->number, tr->mxtips));
@@ -778,7 +778,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIInfo &se
 //    }
 //}
 
-bool isAffectedBranch(nodeptr p, pllNNIInfo &searchinfo) {
+bool isAffectedBranch(nodeptr p, SearchInfo &searchinfo) {
 	string branString = getBranString(p);
 	if (searchinfo.aBranches.find(branString) != searchinfo.aBranches.end()) {
 		return true;
@@ -787,18 +787,18 @@ bool isAffectedBranch(nodeptr p, pllNNIInfo &searchinfo) {
 	}
 }
 
-void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, pllNNIInfo &pllInfo) {
+void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
 	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
-		if (pllInfo.speednni && pllInfo.curNumNNISteps != 1) {
-			if (isAffectedBranch(p, pllInfo)) {
-				evalNNIForBran(tr, pr, p, pllInfo);
+		if (searchinfo.speednni && searchinfo.curNumNNISteps != 1) {
+			if (isAffectedBranch(p, searchinfo)) {
+				evalNNIForBran(tr, pr, p, searchinfo);
 			}
 		} else {
-			evalNNIForBran(tr, pr, p, pllInfo);
+			evalNNIForBran(tr, pr, p, searchinfo);
 		}
 		nodeptr q = p->next;
 		while (q != p) {
-			evalNNIForSubtree(tr, pr, q->back, pllInfo);
+			evalNNIForSubtree(tr, pr, q->back, searchinfo);
 			q = q->next;
 		}
 	}
@@ -884,7 +884,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 		if (globalParam->store_candidate_trees){
 			*((int *)item_ptr->data) = tree_index;
 			item_ptr->str = tree_str;
-			pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
+			pllHashAdd(pllUFBootDataPtr->treels, pllHashString(tree_str, pllUFBootDataPtr->treels->size), tree_str, item_ptr->data);
 		}
 		pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
 
@@ -922,7 +922,8 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
                     else{
                         *((int *)item_ptr->data) = tree_index = pllUFBootDataPtr->candidate_trees_count - 1;
                         item_ptr->str = tree_str;
-                        pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
+                        pllHashAdd(pllUFBootDataPtr->treels, pllHashString(tree_str, pllUFBootDataPtr->treels->size), tree_str, item_ptr->data);
+//                        pllHashAdd(pllUFBootDataPtr->treels, tree_str, item_ptr->data);
                     }
                 }
                 if (rell <= pllUFBootDataPtr->boot_logl[sample] +

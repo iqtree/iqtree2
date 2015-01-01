@@ -235,8 +235,8 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 
 }
 
-void PhyloSuperTree::setParams(Params &params) {
-	IQTree::setParams(params);
+void PhyloSuperTree::initSettings(Params &params) {
+	IQTree::initSettings(params);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->params = &params;
 		(*it)->sse = params.SSE;
@@ -955,10 +955,27 @@ void PhyloSuperTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs
 void PhyloSuperTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs) {
 	if (removed_seqs.empty()) return;
 	IQTree::reinsertIdenticalSeqs(orig_aln, removed_seqs, twin_seqs);
+
 	// now synchronize aln
 	int part = 0;
     for (iterator it = begin(); it != end(); it++, part++) {
 //        (*it)->setAlignment(((SuperAlignment*)aln)->partitions[part]);
 		(*it)->aln = ((SuperAlignment*)aln)->partitions[part];
     }
+	mapTrees();
+
+
+}
+
+int PhyloSuperTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
+	mapTrees();
+	int fixed = 0;
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->initializeAllPartialPars();
+		(*it)->clearAllPartialLH();
+		fixed += (*it)->fixNegativeBranch(force);
+		(*it)->clearAllPartialLH();
+	}
+	computeBranchLengths();
+	return fixed;
 }

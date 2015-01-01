@@ -30,6 +30,7 @@
 #include "phylonode.h"
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
+#include "pllrepo/src/pll.h"
 
 
 const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
@@ -671,19 +672,41 @@ public:
     /**
             Read the tree saved with Taxon Names and branch lengths.
             @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
      */
-    void readTreeString(const string &tree_string);
+    void readTreeString(const string &tree_string, bool updatePLL = false);
+
+    /**
+            Read the tree saved with Taxon Names and branch lengths.
+            @param tree_string tree string to read from
+     */
+    void readTreeFile(const string &file_name);
 
     /**
      * Return the tree string contining taxon names and branch lengths
      * @return
      */
-    string generateNewick();
+    string getTreeString();
+
+    /**
+     * Assign branch lengths for branch that has no or negative length
+     * With single model branch lengths are assigned using parsimony. With partition model
+     * branch lengths are assigned randomly
+     * @param updatePLL if true read the new tree into PLL
+     * @return number of branches fixed
+     */
+    int fixAllBranches(bool updatePLL = false);
+
+    /**
+     * Read the newick string into PLL kernel
+     * @param newickTree
+     */
+    void pllReadNewick(string newickTree);
 
     /**
      *  Return the sorted topology without branch length, used to compare tree topology
      */
-    string generateNewickTopology();
+    string getTopology();
 
 
     bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);
@@ -1057,16 +1080,17 @@ public:
      */
     void computeBioNJ(Params &params, Alignment *alignment, string &dist_file);
     /**
-            Neighbor-joining tree might contain negative branch length. This
+            Neighbor-joining/parsimony tree might contain negative branch length. This
             function will fix this.
             @param fixed_length fixed branch length to set to negative branch lengths
             @param node the current node
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+    virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
-    int assignRandomBranchLengths(bool force = false, Node *node = NULL, Node *dad = NULL);
+    // OBSOLETE: assignRandomBranchLengths no longer needed, use fixNegativeBranch instead!
+//    int assignRandomBranchLengths(bool force = false, Node *node = NULL, Node *dad = NULL);
 
     /* compute Bayesian branch lengths based on ancestral sequence reconstruction */
     void computeAllBayesianBranchLengths(Node *node = NULL, Node *dad = NULL);
@@ -1284,21 +1308,34 @@ public:
     double approxOneBranch(PhyloNode *node, PhyloNode *dad, double b0);
 
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+	void setParams(Params& params);
 
 protected:
 
     /**
-     *  NEWICK representation of the tree with branch lengths
-     *  Taxa names are sorted
+     *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
      */
-    string newickTree;
+    pllInstance *pllInst;
 
     /**
-     *  NEWICK representation of the tree without branch lenghts
-     *  Taxa names are sorted
+     *  Whether the partial likelihood vectors have been computed for PLL
      */
-    string newickTopology;
+    bool lhComputed;
 
+    /**
+     *	PLL data structure for alignment
+     */
+    pllAlignmentData *pllAlignment;
+
+    /**
+     *  PLL data structure for storing phylognetic analysis options
+     */
+    pllInstanceAttr pllAttr;
+
+    /**
+     *  PLL partition list
+     */
+    partitionList * pllPartitions;
     /**
      *  is the subtree distance matrix need to be computed or updated
      */
