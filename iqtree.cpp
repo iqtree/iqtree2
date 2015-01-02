@@ -1926,7 +1926,11 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             numNNIs = 1;
             curScore = oldScore;
         }
+
+        if (curScore - oldScore < 0.1)
+        	break;
     }
+
 
     if (nni_count == 0 && verbose_mode >= VB_MED) {
         cout << "NOTE: Tree is already NNI-optimized" << endl;
