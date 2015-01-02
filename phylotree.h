@@ -293,7 +293,7 @@ public:
     void setAlignment(Alignment *alignment);
 
     /** set the root by name */
-    void setRootNode(char *my_root);
+    void setRootNode(const char *my_root);
 
 
     /**

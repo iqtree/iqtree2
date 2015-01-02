@@ -856,7 +856,7 @@ struct Params {
     /**
             name of the root taxon
      */
-    char *root;
+    const char *root;
 
     /**
             true if tree is forced to be rooted

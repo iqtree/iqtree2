@@ -851,7 +851,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 	if (params.compute_ml_tree) {
 		cout << "  Maximum-likelihood tree:       " << params.out_prefix
 				<< ".treefile" << endl;
-		if (params.snni) {
+		if (params.snni && params.write_local_optimal_trees) {
 			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
 		}
 	}
@@ -1378,8 +1378,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     iqtree.setParams(params);
+
     /********************** CREATE INITIAL TREE(S) **********************/
     iqtree.computeInitialTree(dist_file);
+    if (params.root == NULL) {
+    	params.root = iqtree.aln->getSeqName(0).c_str();
+    	iqtree.setRootNode(params.root);
+    }
 
     /*************** SET UP PARAMETERS and model testing ****************/
 
@@ -1450,14 +1455,18 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         }
 
         cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: "
-                << getCPUTime() - initTime << endl << endl;
+                << getCPUTime() - initTime << endl;
 	}
 
 
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();
     }
-    iqtree.setRootNode(params.root); // Important for NNI below
+
+    /* TUNG: what happens if params.root is not set? This is usually the case.
+     * I added code to ininialize the root above.
+     */
+    //iqtree.setRootNode(params.root); // Important for NNI below
 
 	if (original_model == "WHTEST") {
 		cout << endl << "Testing model homogeneity by Weiss & von Haeseler (2003)..." << endl;

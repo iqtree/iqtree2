@@ -90,6 +90,8 @@ void PhyloTree::init() {
     pllAlignment = NULL;
     pllPartitions = NULL;
     lhComputed = false;
+    root = NULL;
+    params = NULL;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree() {
@@ -199,7 +201,7 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     }
 }
 
-void PhyloTree::setRootNode(char *my_root) {
+void PhyloTree::setRootNode(const char *my_root) {
     string root_name;
     if (my_root)
         root_name = my_root;
@@ -220,7 +222,11 @@ void PhyloTree::readTreeString(const string &tree_string, bool updatePLL) {
 	freeNode();
 	readTree(str, rooted);
 	setAlignment(aln);
-	root = findNodeName(aln->getSeqName(0));
+	if (params != NULL && params->root != NULL) {
+		setRootNode(params->root);
+	} else {
+    	setRootNode(aln->getSeqName(0).c_str());
+	}
 
 	if (isSuperTree()) {
 		((PhyloSuperTree*) this)->mapTrees();
