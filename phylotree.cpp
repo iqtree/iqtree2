@@ -1139,7 +1139,7 @@ void PhyloTree::initializeAllPartialLh() {
     if (!_pattern_lh)
         _pattern_lh = aligned_alloc<double>(mem_size);
     if (!_pattern_lh_cat)
-        _pattern_lh_cat = new double[mem_size * site_rate->getNDiscreteRate()];
+        _pattern_lh_cat = new double[mem_size * site_rate->getNDiscreteRate() * model->getNMixtures()];
     if (!theta_all)
         theta_all = aligned_alloc<double>(block_size);
     if (!ptn_freq)
