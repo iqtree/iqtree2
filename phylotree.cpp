@@ -1211,7 +1211,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
         if (!central_partial_lh) {
-        	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1);
+        	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures();
         	/*
         	switch (aln->seq_type) {
         	case SEQ_DNA: tip_partial_lh_size *=16; break; // including ambiguous nt and gap

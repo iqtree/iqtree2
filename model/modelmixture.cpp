@@ -85,7 +85,9 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 	const int MAX_MODELS = 64;
 	size_t cur_pos = 0;
 	int m;
+	DoubleVector model_weights;
 	name = full_name = (string)"MIXTURE" + OPEN_BRACKET;
+	int has_weight = 0;
 	for (m = 0; m < MAX_MODELS && cur_pos < model_list.length(); m++) {
 		size_t pos = model_list.find(',', cur_pos);
 		if (pos == string::npos)
@@ -93,6 +95,14 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 		if (pos <= cur_pos)
 			outError("One model name in the mixture is empty.");
 		string this_name = model_list.substr(cur_pos, pos-cur_pos);
+		if (this_name.find(':') != string::npos) {
+			double weight = convert_double(this_name.substr(this_name.find(':')+1).c_str());
+			if (weight < 0 || weight > 1) outError("Mixture component weight must be between 0 and 1");
+			model_weights.push_back(weight);
+			this_name = this_name.substr(0, this_name.find(':'));
+			has_weight++;
+		} else
+			model_weights.push_back(-1.0);
 		cur_pos = pos+1;
 		push_back((ModelGTR*)createModel(this_name, freq, freq_params, tree, count_rates));
 		if (m > 0) {
@@ -102,6 +112,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 		name += back()->name;
 		full_name += back()->full_name;
 	}
+	assert(model_weights.size() == size());
 	name += CLOSE_BRACKET;
 	full_name += CLOSE_BRACKET;
 //	cout << "mixture model: " << name << endl;
@@ -111,6 +122,26 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 	for (m = 0; m < nmixtures; m++)
 		prop[m] = 1.0 / nmixtures;
 	fix_prop = (nmixtures == 1);
+	if (nmixtures >= 2 && has_weight > 0) {
+		if (has_weight < nmixtures-1)
+			outError("Mixture component weights are too few");
+		if (has_weight == nmixtures-1 && model_weights[nmixtures-1] != -1.0)
+			outError("Only the last mixture component weight can be empty");
+		fix_prop = true;
+		double sum = 0.0;
+		for (m = 0; m < nmixtures; m++) {
+			prop[m] = model_weights[m];
+			if (prop[m] >= 0)
+				sum += prop[m];
+		}
+		if (has_weight < nmixtures) {
+			prop[nmixtures-1] = 1.0 - sum;
+			if (prop[nmixtures-1] < 0 || prop[nmixtures-1] > 1)
+				outError("Sum of mixture component weights exceeds 1.0");
+		} else if (sum != 1.0) {
+			outError("Sum of mixture component weights is not equal to 1");
+		}
+	}
 
 	// use central eigen etc. stufffs
 
