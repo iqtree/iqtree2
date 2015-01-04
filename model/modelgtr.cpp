@@ -368,6 +368,22 @@ double ModelGTR::targetFunk(double x[]) {
 }
 
 
+void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+	int i, ndim = getNDim();
+
+	for (i = 1; i <= ndim; i++) {
+		//cout << variables[i] << endl;
+		lower_bound[i] = MIN_RATE;
+		upper_bound[i] = MAX_RATE;
+		bound_check[i] = false;
+	}
+
+	if (freq_type == FREQ_ESTIMATE) {
+		for (i = ndim-num_states+2; i <= ndim; i++)
+			upper_bound[i] = 1.0;
+	}
+}
+
 double ModelGTR::optimizeParameters(double epsilon) {
 	int ndim = getNDim();
 	
@@ -383,22 +399,11 @@ double ModelGTR::optimizeParameters(double epsilon) {
 	double *upper_bound = new double[ndim+1];
 	double *lower_bound = new double[ndim+1];
 	bool *bound_check = new bool[ndim+1];
-	int i;
 	double score;
 
 	// by BFGS algorithm
 	setVariables(variables);
-	for (i = 1; i <= ndim; i++) {
-		//cout << variables[i] << endl;
-		lower_bound[i] = MIN_RATE;
-		upper_bound[i] = MAX_RATE;
-		bound_check[i] = false;
-	}
-
-	if (freq_type == FREQ_ESTIMATE) {
-		for (i = ndim-num_states+2; i <= ndim; i++) 
-			upper_bound[i] = 1.0;
-	}
+	setBounds(lower_bound, upper_bound, bound_check);
 	//packData(variables, lower_bound, upper_bound, bound_check);
 	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_RATE));
 

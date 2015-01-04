@@ -8,6 +8,8 @@
 #ifndef PHYLOKERNELMIXTURE_H_
 #define PHYLOKERNELMIXTURE_H_
 
+#include "model/modelmixture.h"
+
 /*******************************************************
  *
  * non-vectorized likelihood functions for mixture models
@@ -378,7 +380,7 @@ void PhyloTree::computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, Phy
 		for (m = 0; m < nmixture; m++) {
 			for (i = 0; i < nstates; i++) {
 				double cof = eval[m*nstates+i]*site_rate->getRate(c);
-				double val = exp(cof*dad_branch->length) * prop;
+				double val = exp(cof*dad_branch->length) * prop * ((ModelMixture*)model)->prop[m];
 				double val1_ = cof*val;
 				val0[(m*ncat+c)*nstates+i] = val;
 				val1[(m*ncat+c)*nstates+i] = val1_;
@@ -475,7 +477,7 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 		double prop = site_rate->getProp(c);
 		for (m = 0; m < nmixture; m++)
 			for (i = 0; i < nstates; i++)
-				val[(m*ncat+c)*nstates+i] = exp(eval[m*nstates+i]*len) * prop;
+				val[(m*ncat+c)*nstates+i] = exp(eval[m*nstates+i]*len) * prop * ((ModelMixture*)model)->prop[m];
 	}
 
 	double prob_const = 0.0;

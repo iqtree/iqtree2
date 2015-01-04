@@ -74,6 +74,10 @@ public:
 	*/
 	virtual void decomposeRateMatrix();
 
+	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
 
 	/**
 		write information
@@ -89,9 +93,14 @@ public:
 
 
 	/**
-	 * proportion of sites for each sub-models
+	 * weight of each sub-model (must sum to 1)
 	 */
 	double *prop;
+
+	/**
+	 * TRUE to fix model weights
+	 */
+	bool fix_prop;
 
 protected:
 

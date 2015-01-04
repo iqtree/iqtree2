@@ -229,6 +229,10 @@ public:
 	*/
 	virtual double targetFunk(double x[]);
 
+	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
 
 	/**
 		optimize model parameters

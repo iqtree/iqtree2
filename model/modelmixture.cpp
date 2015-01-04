@@ -15,6 +15,9 @@
 #include "modelset.h"
 #include "modelmixture.h"
 
+const double MIN_MIXTURE_PROP = 0.0;
+const double MAX_MIXTURE_PROP = 1.0;
+
 ModelSubst* createModel(string model_str, StateFreqType freq_type, string freq_params,
 		PhyloTree* tree, bool count_rates)
 {
@@ -106,7 +109,8 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 	int nmixtures = size();
 	prop = aligned_alloc<double>(size());
 	for (m = 0; m < nmixtures; m++)
-		prop[m] = 1.0;
+		prop[m] = 1.0 / nmixtures;
+	fix_prop = (nmixtures == 1);
 
 	// use central eigen etc. stufffs
 
@@ -156,7 +160,7 @@ ModelMixture::~ModelMixture() {
 }
 
 int ModelMixture::getNDim() {
-	int dim = 0;
+	int dim = (fix_prop) ? 0 : size()-1;
 	for (iterator it = begin(); it != end(); it++)
 		dim += (*it)->getNDim();
 	return dim;
@@ -181,6 +185,11 @@ void ModelMixture::setVariables(double *variables) {
 		(*it)->setVariables(&variables[dim]);
 		dim += (*it)->getNDim();
 	}
+	if (fix_prop) return;
+	int i, ncategory = size();
+	variables[dim+1] = prop[0];
+	for (i = 2; i < ncategory; i++)
+		variables[dim+i] = variables[dim+i-1] + prop[i-1];
 }
 
 void ModelMixture::getVariables(double *variables) {
@@ -189,11 +198,39 @@ void ModelMixture::getVariables(double *variables) {
 		(*it)->getVariables(&variables[dim]);
 		dim += (*it)->getNDim();
 	}
+	if (fix_prop) return;
+	int i, ncategory = size();
+	double *y = new double[ncategory+1];
+	y[0] = 0; y[ncategory] = 1.0;
+	memcpy(y+1, variables+dim+1, (ncategory-1) * sizeof(double));
+	std::sort(y+1, y+ncategory);
+	for (i = 0; i < ncategory; i++) {
+		prop[i] = (y[i+1]-y[i]);
+		assert(prop[i] >= MIN_MIXTURE_PROP && prop[i] <= MAX_MIXTURE_PROP);
+	}
+	delete [] y;
+
+}
+
+void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+	int dim = 0;
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
+		dim += (*it)->getNDim();
+	}
+	if (fix_prop) return;
+	int i, ncategory = size();
+	for (i = 1; i < ncategory; i++) {
+		lower_bound[dim+i] = MIN_MIXTURE_PROP;
+		upper_bound[dim+i] = MAX_MIXTURE_PROP;
+		bound_check[dim+i] = false;
+	}
+
 }
 
 void ModelMixture::writeInfo(ostream &out) {
 	for (iterator it = begin(); it != end(); it++) {
-		out << "For mixture component " << it-begin() << " (" << (*it)->name << "):" << endl;
+		out << "Weight of mixture component " << it-begin() << " (" << (*it)->name << "): " << prop[it-begin()] << endl;
 		(*it)->writeInfo(out);
 	}
 }
