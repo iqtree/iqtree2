@@ -74,6 +74,20 @@ public:
 	*/
 	virtual void decomposeRateMatrix();
 
+
+	/**
+		write information
+		@param out output stream
+	*/
+	virtual void writeInfo(ostream &out);
+
+	/**
+		write parameters, used with modeltest
+		@param out output stream
+	*/
+	virtual void writeParameters(ostream &out);
+
+
 	/**
 	 * proportion of sites for each sub-models
 	 */

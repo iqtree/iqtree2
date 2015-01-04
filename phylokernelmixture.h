@@ -192,8 +192,8 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 				}
 			}
 		}
+		size_t addr = aln->STATE_UNKNOWN * block;
 		for (x = 0; x < block; x++) {
-			size_t addr = aln->STATE_UNKNOWN * block;
 			partial_lh_left[addr+x] = 1.0;
 		}
 
@@ -324,6 +324,7 @@ void PhyloTree::computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, Phy
 
     size_t block = ncat * nstates * nmixture;
     size_t statemix = nstates * nmixture;
+    size_t statecat = nstates * ncat;
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i, m;
     size_t orig_nptn = aln->size();
@@ -343,9 +344,12 @@ void PhyloTree::computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, Phy
 	    	for (ptn = 0; ptn < nptn; ptn++) {
 				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 				double *theta = theta_all + ptn*block;
-				double *lh_tip = tip_partial_lh + ((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn]))*statemix;
-				for (i = 0; i < block; i++) {
-					theta[i] = lh_tip[i%statemix] * partial_lh_dad[i];
+				double *lh_tip = tip_partial_lh +
+						((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn]))*statemix;
+				for (m = 0; m < nmixture; m++) {
+					for (i = 0; i < statecat; i++) {
+						theta[m*statecat+i] = lh_tip[m*nstates + i%nstates] * partial_lh_dad[m*statecat+i];
+					}
 				}
 
 			}

@@ -124,11 +124,18 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 	// assigning memory for individual models
 	m = 0;
 	for (iterator it = begin(); it != end(); it++, m++) {
+        // first copy memory for eigen stuffs
+        memcpy(&eigenvalues[m*num_states], (*it)->eigenvalues, num_states*sizeof(double));
+        memcpy(&eigenvectors[m*num_states*num_states], (*it)->eigenvectors, num_states*num_states*sizeof(double));
+        memcpy(&inv_eigenvectors[m*num_states*num_states], (*it)->inv_eigenvectors, num_states*num_states*sizeof(double));
+        memcpy(&eigen_coeff[m*ncoeff], (*it)->eigen_coeff, ncoeff*sizeof(double));
+        // then delete
 		if ((*it)->eigenvalues) delete [] (*it)->eigenvalues;
 		if ((*it)->eigenvectors) delete [] (*it)->eigenvectors;
 		if ((*it)->inv_eigenvectors) delete [] (*it)->inv_eigenvectors;
 		if ((*it)->eigen_coeff) delete [] (*it)->eigen_coeff;
 
+        // and assign new memory
 		(*it)->eigenvalues = &eigenvalues[m*num_states];
 		(*it)->eigenvectors = &eigenvectors[m*num_states*num_states];
 		(*it)->inv_eigenvectors = &inv_eigenvectors[m*num_states*num_states];
@@ -181,5 +188,18 @@ void ModelMixture::getVariables(double *variables) {
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->getVariables(&variables[dim]);
 		dim += (*it)->getNDim();
+	}
+}
+
+void ModelMixture::writeInfo(ostream &out) {
+	for (iterator it = begin(); it != end(); it++) {
+		out << "For mixture component " << it-begin() << " (" << (*it)->name << "):" << endl;
+		(*it)->writeInfo(out);
+	}
+}
+
+void ModelMixture::writeParameters(ostream &out) {
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->writeParameters(out);
 	}
 }
