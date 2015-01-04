@@ -55,8 +55,8 @@
 void reportReferences(Params &params, ofstream &out, string &original_model) {
 	out << "To cite IQ-TREE please use:" << endl << endl
 		<< "Lam-Tung Nguyen, Heiko A. Schmidt, Arndt von Haeseler, and Bui Quang Minh (2014)" << endl
-		<< "IQ-TREE: : A fast and effective stochastic algorithm for estimating" << endl
-		<< "maximum likelihood phylogenies. Mol. Biol. Evol., in press." << endl << endl;
+		<< "IQ-TREE: A fast and effective stochastic algorithm for estimating" << endl
+		<< "maximum likelihood phylogenies. Mol. Biol. Evol., 32:268-274." << endl << endl;
 
 	if (params.gbo_replicates)
 	out << "Since you also used ultrafast bootstrap (UFBoot) please cite: " << endl << endl
