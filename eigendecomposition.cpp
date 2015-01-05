@@ -30,6 +30,7 @@ using namespace std;
 EigenDecomposition::EigenDecomposition()
 {
 	total_num_subst = 1.0;
+	normalize_matrix = true;
 }
 
 void EigenDecomposition::eigensystem(
@@ -295,15 +296,20 @@ void EigenDecomposition::computeRateMatrix(double **a, double *stateFrqArr_, int
 		sum += temp*stateFrqArr_[i]; /* exp. rate */
 	}
 
-	delta = total_num_subst / sum; /* 0.01 subst. per unit time */
+	if (normalize_matrix) {
+		delta = total_num_subst / sum; /* 0.01 subst. per unit time */
 
-	for (i = 0; i < num_state; i++) {
-		for (j = 0; j < num_state; j++) {
-			if (i != j)
-				a[i][j] = delta * a[i][j];
-			else
-				a[i][j] = delta * (-m[i]);
+		for (i = 0; i < num_state; i++) {
+			for (j = 0; j < num_state; j++) {
+				if (i != j)
+					a[i][j] = delta * a[i][j];
+				else
+					a[i][j] = delta * (-m[i]);
+			}
 		}
+	} else {
+		for (i = 0; i < num_state; i++)
+			a[i][i] = -m[i];
 	}
 	delete [] m;
 } /* onepamratematrix */

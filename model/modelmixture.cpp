@@ -119,8 +119,14 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 
 	int nmixtures = size();
 	prop = aligned_alloc<double>(size());
-	for (m = 0; m < nmixtures; m++)
-		prop[m] = 1.0 / nmixtures;
+//	for (m = 0; m < nmixtures; m++)
+//		prop[m] = 1.0 / nmixtures;
+	double sum_prop = (nmixtures)*(nmixtures+1)/2.0;
+	double sum = 0.0;
+	// initialize rates as increasing
+	for (int i = 0; i < nmixtures; i++) {
+		prop[i] = (double)(nmixtures-i) / sum_prop;
+	}
 	fix_prop = (nmixtures == 1);
 	if (nmixtures >= 2 && has_weight > 0) {
 		if (has_weight < nmixtures-1)
@@ -159,6 +165,8 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 	// assigning memory for individual models
 	m = 0;
 	for (iterator it = begin(); it != end(); it++, m++) {
+		// do not normalize individual rate matrices
+		(*it)->normalize_matrix = false;
         // first copy memory for eigen stuffs
         memcpy(&eigenvalues[m*num_states], (*it)->eigenvalues, num_states*sizeof(double));
         memcpy(&eigenvectors[m*num_states*num_states], (*it)->eigenvectors, num_states*num_states*sizeof(double));
@@ -176,6 +184,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 		(*it)->inv_eigenvectors = &inv_eigenvectors[m*num_states*num_states];
 		(*it)->eigen_coeff = &eigen_coeff[m*ncoeff];
 	}
+	decomposeRateMatrix();
 }
 
 ModelMixture::~ModelMixture() {
