@@ -264,7 +264,8 @@ int CandidateSet::computeSplitSupport(int numTree) {
 	for (unordered_map<Split*,int>::iterator it = hash_ss.begin(); it != hash_ss.end(); it++) {
 		if (it->second == maxSupport && it->first->countTaxa() > 1) {
 			numMaxSupport++;
-			supportedSplits.push_back(it->first);
+			Split* supportedSplit = new Split(*(it->first));
+			supportedSplits.push_back(supportedSplit);
 		}
 		//it->first->report(cout);
 	}

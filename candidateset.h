@@ -228,16 +228,6 @@ private:
     SplitGraph supportedSplits;
 
     /**
-     *  Contains support values for all splits found in the best trees
-     */
-    //SplitIntMap hash_ss;
-
-    /**
-     *  Split graph of the best trees;
-     */
-    //SplitGraph sg;
-
-    /**
      * limit for number of trees (typically superset of candidate set)
      */
     int maxCandidates;
