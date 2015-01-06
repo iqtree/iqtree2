@@ -325,9 +325,10 @@ void IQTree::computeInitialTree(string &dist_file) {
     double start = getCPUTime();
     string initTree;
     string out_file = params->out_prefix;
+    if (params->stop_condition == SC_FIXED_ITERATION)
+    	params->numNNITrees = params->min_iterations;
     if (params->user_file) {
         // start the search with user-defined tree
-    	cout << endl;
         cout << "Reading input tree file " << params->user_file << " ..." << endl;
         bool myrooted = params->is_rooted;
         readTree(params->user_file, myrooted);
@@ -344,11 +345,8 @@ void IQTree::computeInitialTree(string &dist_file) {
     } else switch (params->start_tree) {
     case STT_PARSIMONY:
         // Create parsimony tree using IQ-Tree kernel
-        cout << endl;
         cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
         computeParsimonyTree(params->out_prefix, aln);
-        if (params->numInitTrees > params->min_iterations && params->stop_condition == SC_FIXED_ITERATION)
-        	params->numInitTrees = params->min_iterations;
 		if (params->pll)
 			pllReadNewick(getTreeString());
         break;
@@ -362,9 +360,6 @@ void IQTree::computeInitialTree(string &dist_file) {
                 PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
         readTreeString(string(pllInst->tree_string));
         cout << getCPUTime() - start << " seconds" << endl;
-			if (params->numInitTrees > params->min_iterations
-					&& params->stop_condition == SC_FIXED_ITERATION)
-				params->numInitTrees = params->min_iterations;
         break;
     case STT_BIONJ:
         // This is the old default option: using BIONJ as starting tree
@@ -1014,6 +1009,41 @@ void IQTree::doParsimonyReinsertion() {
 }
 
 void IQTree::doRandomNNIs(int numNNI) {
+	NodeVector nodes1, nodes2;
+	unordered_set<string> usedBranches;
+    getInternalBranches(nodes1, nodes2);
+    int numInBran = nodes1.size();
+    assert(numInBran == aln->getNSeq() - 3);
+    int cntNNI = 0;
+    while (cntNNI < numNNI) {
+        int index = random_int(numInBran);
+        string branchID = nodePair2String(nodes1[index], nodes2[index]);
+        if (usedBranches.find(branchID) == usedBranches.end()) {
+        	doOneRandomNNI(nodes1[index], nodes2[index]);
+        	cntNNI++;
+        	usedBranches.insert(branchID);
+        	nodes1.clear();
+        	nodes2.clear();
+            getInternalBranches(nodes1, nodes2);
+        }
+    }
+
+    setAlignment(aln);
+    setRootNode(params->root);
+
+    if (isSuperTree()) {
+        ((PhyloSuperTree*) this)->mapTrees();
+    }
+
+    if (params->pll) {
+    	pllReadNewick(getTreeString());
+    }
+
+    lhComputed = false;
+}
+
+/*
+void IQTree::doRandomNNIs(int numNNI) {
     map<int, Node*> usedNodes;
     NodeVector nodeList1, nodeList2;
     getInternalBranches(nodeList1, nodeList2);
@@ -1050,6 +1080,7 @@ void IQTree::doRandomNNIs(int numNNI) {
 
     lhComputed = false;
 }
+*/
 
 void IQTree::doIQP() {
     if (verbose_mode >= VB_DEBUG)
@@ -1930,7 +1961,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         if (curScore - oldScore < 0.1)
         	break;
     }
-
 
     if (nni_count == 0 && verbose_mode >= VB_MED) {
         cout << "NOTE: Tree is already NNI-optimized" << endl;

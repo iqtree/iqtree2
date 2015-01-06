@@ -7,8 +7,6 @@
 
 #include "phylotree.h"
 #include "candidateset.h"
-#include "mtreeset.h"
-
 
 void CandidateSet::init(int maxCandidates, int maxPop, char* root, bool rooted, Alignment* aln) {
     assert(maxPop <= maxCandidates);
@@ -64,7 +62,7 @@ vector<string> CandidateSet::getHighestScoringTrees(int numTree) {
 	return res;
 }
 
-vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
+vector<string> CandidateSet::getBestLOTrees(int numTree, bool topoOnly) {
 	assert(numTree <= maxCandidates);
 	if (numTree == 0) {
 		numTree = maxCandidates;
@@ -73,7 +71,11 @@ vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
 	int cnt = numTree;
 	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++) {
 		if (rit->second.localOpt) {
-			res.push_back(rit->second.tree);
+			if (topoOnly) {
+				res.push_back(rit->second.topology);
+			} else {
+				res.push_back(rit->second.tree);
+			}
 			cnt--;
 		}
 	}
@@ -246,18 +248,25 @@ void CandidateSet::removeCandidateTree(string topology) {
 }
 
 int CandidateSet::computeSplitSupport(int numTree) {
+	supportedSplits.clear();
+	SplitIntMap hash_ss;
+	//hash_ss.clear();
+	SplitGraph sg;
+	//sg.clear();
 	MTreeSet boot_trees;
 	int numMaxSupport = 0;
-	vector<string> trees = getBestLocalOptimalTrees(numTree);
+	vector<string> trees = getBestLOTrees(numTree, true);
 	int maxSupport = trees.size();
 	boot_trees.init(trees, isRooted);
-	SplitGraph sg;
-	SplitIntMap hash_ss;
 	boot_trees.convertSplits(sg, hash_ss, SW_COUNT, -1);
 	cout << sg.size() << " splits found" << endl;
+	cout << "hash_ss.size(): " << hash_ss.size() << endl;
 	for (unordered_map<Split*,int>::iterator it = hash_ss.begin(); it != hash_ss.end(); it++) {
-		if (it->second == maxSupport)
+		if (it->second == maxSupport && it->first->countTaxa() > 1) {
 			numMaxSupport++;
+			supportedSplits.push_back(it->first);
+		}
+		//it->first->report(cout);
 	}
 	cout << "Number of supported splits = " << numMaxSupport << endl;
 	return numMaxSupport;

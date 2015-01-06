@@ -182,12 +182,12 @@ void SplitGraph::AddTaxaFromSets() {
 			}	
 }
 
-void SplitGraph::freeMem()
-{
-	
+void SplitGraph::freeMem() {
 	for (reverse_iterator it = rbegin(); it != rend(); it++) {
 		//(*it)->report(cout);
-		delete *it;
+		if (*it != NULL) {
+			delete *it;
+		}
 	}
 	clear();
 	if (areas_boundary) delete areas_boundary;

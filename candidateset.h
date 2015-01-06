@@ -9,6 +9,7 @@
 #define CANDIDATESET_H_
 #include "tools.h"
 #include "alignment.h"
+#include "mtreeset.h"
 #include <stack>
 
 struct CandidateTree {
@@ -122,9 +123,10 @@ public:
     /**
      * Return \a numTree best local optimal trees
      * @param numTree
-     * @return a vector of tree string
+     * @param topoOnly don't write out branch lengths
+     * @return vector containing newick tree strings
      */
-    vector<string> getBestLocalOptimalTrees(int numTree = 0);
+    vector<string> getBestLOTrees(int numTree = 0, bool topoOnly = false);
 
     /**
      * get tree(s) with highest score. More than one tree is
@@ -200,7 +202,6 @@ public:
 	const StringDoubleHashMap& getTopologies() const {
 		return topologies;
 	}
-	/* Getter and Setter function */
 
 	/**
 	 * get number of locally optimal trees in the set
@@ -208,13 +209,34 @@ public:
 	 */
 	int getNumLocalOptTrees();
 
-    /** Return a CandidateSet containing \a numTrees of current best candidate trees
+    /**
+     * Return a CandidateSet containing \a numTrees of current best candidate trees
      * @param numTrees
      * @return
      */
     CandidateSet getBestCandidateTrees(int numTrees);
 
+	SplitGraph& getSupportedSplits() {
+		return supportedSplits;
+	}
+
 private:
+
+    /**
+     *  Set of supported splits by the best trees
+     */
+    SplitGraph supportedSplits;
+
+    /**
+     *  Contains support values for all splits found in the best trees
+     */
+    //SplitIntMap hash_ss;
+
+    /**
+     *  Split graph of the best trees;
+     */
+    //SplitGraph sg;
+
     /**
      * limit for number of trees (typically superset of candidate set)
      */

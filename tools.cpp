@@ -764,6 +764,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.reduction = false;
     params.adaptPert = false;
     params.numInitTrees = 100;
+    params.fix_stable_splits = false;
     params.sprDist = 20;
     params.numNNITrees = 20;
     params.avh_test = 0;
@@ -2194,6 +2195,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -numpars <number_of_parsimony_trees>";
 				params.numInitTrees = convert_int(argv[cnt]);
+				if (params.numInitTrees < params.numNNITrees)
+					params.numNNITrees = params.numInitTrees;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-fss") == 0) {
+				params.fix_stable_splits = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-toppars") == 0) {

@@ -408,6 +408,11 @@ extern int NNI_MAX_NR_STEP;
 struct Params {
 
 	/**
+	 * Turn on feature to identify stable splits and fix them during tree search
+	 */
+	bool fix_stable_splits;
+
+	/**
 	 *  Number of starting parsimony trees
 	 */
 	int numInitTrees;

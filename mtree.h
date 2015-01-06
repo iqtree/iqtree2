@@ -363,7 +363,7 @@ public:
     void getTaxaName(vector<string> &taxname, Node *node = NULL, Node *dad = NULL);
 
     /**
-            get the descending internal nodes below the node
+            get the descending internal nodes below \a node
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
             @param nodes (OUT) vector of internal nodes
@@ -371,7 +371,7 @@ public:
     void getInternalNodes(NodeVector &nodes, Node *node = NULL, Node *dad = NULL);
 
     /**
-            get the descending internal branches below the node
+            get the descending internal branches below \a node
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
             @param nodes (OUT) vector of one end node of branch
@@ -493,6 +493,14 @@ public:
             @param dad dad of the node, used to direct the search
      */
     void convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes = NULL, Node *node = NULL, Node *dad = NULL);
+
+    /**
+     * 		Generate a split defined by branch node1-node2
+     * 		@param node1 one end of the branch
+     * 		@param node2 one end of the branch
+     * 		@return the split
+     */
+    Split* getSplit(Node* node1, Node* node2);
 
     /********************************************************
             CONVERT SPLIT SYSTEM INTO TREE

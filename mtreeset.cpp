@@ -328,8 +328,7 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 }
 
 
-void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, 
-	int weighting_type, double weight_threshold) {
+void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type, double weight_threshold) {
 	vector<string> taxname(front()->leafNum);
 	// make sure that the split system contains at least 1 split
 	if (size() == 0)

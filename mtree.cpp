@@ -772,10 +772,15 @@ void MTree::getAllNodesInSubtree(Node *node, Node *dad, NodeVector &nodeList) {
 
 int MTree::getNumTaxa(Node *node, Node *dad) {
 	// This function is WRONG because it will always return 1 if calling from the ROOT
-    if (!node) node = root;
-    if (node->isLeaf()) {
-        return 1;
+	// FIXED
+    if (!node) {
+    	node = root;
+    } else {
+        if (node->isLeaf()) {
+            return 1;
+        }
     }
+
     int numLeaf = 0;
     FOR_NEIGHBOR_IT(node, dad, it) {
         numLeaf += getNumTaxa((*it)->node, node);
@@ -913,6 +918,13 @@ void MTree::getTaxaID(vector<int> &taxa, Node *node, Node *dad) {
     }
 }
 
+Split* MTree::getSplit(Node* node1, Node* node2) {
+	Split *sp = new Split(leafNum);
+	getTaxa(*sp, node1, node2);
+	if (sp->shouldInvert())
+		sp->invert();
+	return sp;
+}
 
 void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *node, Node *dad) {
     if (!node) node = root;
