@@ -46,6 +46,7 @@ ModelFactory::ModelFactory() {
 	store_trans_matrix = false;
 	is_storing = false;
 	joint_optimize = false;
+	fused_mix_rate = false;
 }
 
 
@@ -53,6 +54,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
+	fused_mix_rate = false;
 
 	string model_str = params.model_name;
 
@@ -121,7 +123,17 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	}
 	string::size_type posI = model_str.find("+I");
 	string::size_type posG = model_str.find("+G");
+	if (posG == string::npos) {
+		posG = model_str.find("*G");
+		if (posG != string::npos)
+			fused_mix_rate = true;
+	}
 	string::size_type posR = model_str.find("+R"); // FreeRate model
+	if (posR == string::npos) {
+		posR = model_str.find("*R");
+		if (posR != string::npos)
+			fused_mix_rate = true;
+	}
 	if (posG != string::npos && posR != string::npos)
 		outError("Gamma and FreeRate models cannot be both specified!");
 	string::size_type posX;
@@ -170,7 +182,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 				if (num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
 	}
-	if (model_str.find('+') != string::npos) {
+	if (model_str.find('+') != string::npos || model_str.find('*') != string::npos) {
 		//string rate_str = model_str.substr(pos);
 		if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
@@ -233,7 +245,10 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			site_rate = new RateKategory(num_rate_cats, tree);
 		} else
 			outError("Invalid rate heterogeneity type");
-		model_str = model_str.substr(0, model_str.find('+'));
+		if (model_str.find('+') != string::npos)
+			model_str = model_str.substr(0, model_str.find('+'));
+		else
+			model_str = model_str.substr(0, model_str.find('*'));
 	} else {
 		site_rate = new RateHeterogeneity();
 		site_rate->setTree(tree);

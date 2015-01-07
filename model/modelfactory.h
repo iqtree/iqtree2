@@ -156,6 +156,9 @@ public:
 	*/
 	RateHeterogeneity *site_rate;
 
+	/* TRUE if a fused mixture and rate model, e.g. LG4M and LG4X */
+	bool fused_mix_rate;
+
 	/**
 		TRUE to store transition matrix into this hash table for computation efficiency
 	*/
