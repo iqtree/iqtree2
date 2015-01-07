@@ -38,6 +38,7 @@ RateFree::RateFree(int ncat, PhyloTree *tree) : RateHeterogeneity() {
 }
 
 RateFree::~RateFree() {
+	delete [] prop;
 	delete [] rates;
 }
 

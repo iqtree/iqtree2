@@ -41,7 +41,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
     const size_t nstatesqr=nstates*nstates;
     size_t i, x, m;
     size_t statecat = nstates * ncat;
-    size_t statemix = nstates * nmixture;
+//    size_t statemix = nstates * nmixture;
     size_t block = nstates * ncat * nmixture;
 
 	double *evec = model->getEigenvectors();
@@ -104,8 +104,18 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 			int state = (*it);
 			for (m = 0; m < nmixture; m++) {
 				double *this_eleft = &eleft[m*nstatesqr*ncat];
-				double *this_tip_partial_lh = &tip_partial_lh[state*statemix+m*nstates];
+				double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixture + m*nstates];
 				double *this_partial_lh_left = &partial_lh_left[state*block+m*statecat];
+
+//				for (c = 0; c < ncat; c++)
+//					for (x = 0; x < nstates; x++) {
+//						double vleft = 0.0;
+//						for (i = 0; i < nstates; i++) {
+//							vleft += this_eleft[(c*nstates+x)*nstates+i] * this_tip_partial_lh[i];
+//						}
+//						this_partial_lh_left[c*nstates+x] = vleft;
+//					}
+
 				for (x = 0; x < statecat; x++) {
 					double vleft = 0.0;
 					for (i = 0; i < nstates; i++) {
@@ -120,7 +130,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 			int state = (*it);
 			for (m = 0; m < nmixture; m++) {
 				double *this_eright = &eright[m*nstatesqr*ncat];
-				double *this_tip_partial_lh = &tip_partial_lh[state*statemix+m*nstates];
+				double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixture + m*nstates];
 				double *this_partial_lh_right = &partial_lh_right[state*block+m*statecat];
 				for (x = 0; x < statecat; x++) {
 					double vright = 0.0;
@@ -183,7 +193,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 			int state = (*it);
 			for (m = 0; m < nmixture; m++) {
 				double *this_eleft = &eleft[m*nstatesqr*ncat];
-				double *this_tip_partial_lh = &tip_partial_lh[state*statemix+m*nstates];
+				double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixture + m*nstates];
 				double *this_partial_lh_left = &partial_lh_left[state*block+m*statecat];
 				for (x = 0; x < statecat; x++) {
 					double vleft = 0.0;

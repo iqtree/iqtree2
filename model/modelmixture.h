@@ -91,6 +91,10 @@ public:
 	*/
 	virtual void writeParameters(ostream &out);
 
+	/**
+		rates of mixture components
+	*/
+	double *mix_rates;
 
 	/**
 	 * weight of each sub-model (must sum to 1)
