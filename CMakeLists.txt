@@ -478,7 +478,7 @@ endif()
 #set(CPACK_SOURCE_PACKAGE_FILE_NAME
 #  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 set(CPACK_SOURCE_IGNORE_FILES
-  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;/pll/;/pllrepo.dox/;/pllrepo.figures/;/pllrepo.legacy/;/pllrepo.m4/;/pllrepo.man/;/pllrepo.MPI/;/pllrepo.sMSA/;/pllrepo.testdata/;${CPACK_SOURCE_IGNORE_FILES}")
+  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;/pll/;/pllrepo.dox/;/pllrepo.examples/;/pllrepo.figures/;/pllrepo.legacy/;/pllrepo.m4/;/pllrepo.man/;/pllrepo.MPI/;/pllrepo.sMSA/;/pllrepo.testdata/;${CPACK_SOURCE_IGNORE_FILES}")
 
 set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin") 
