@@ -152,7 +152,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, c, x, i, partial_lh_tmp)
+#pragma omp parallel for private(ptn, c, x, i, m, partial_lh_tmp)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
@@ -211,7 +211,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 
 		double sum_scale = 0.0;
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, m, partial_lh_tmp)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
@@ -262,7 +262,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 
 		double sum_scale = 0.0;
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, m, partial_lh_tmp)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
@@ -351,7 +351,7 @@ void PhyloTree::computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, Phy
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i)
+#pragma omp parallel for private(ptn, i, m)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
 				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
@@ -516,7 +516,7 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 
     	// now do the real computation
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)
+#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c, m)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
@@ -548,7 +548,7 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
     } else {
     	// both dad and node are internal nodes
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)
+#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c, m)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
