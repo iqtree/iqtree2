@@ -771,17 +771,16 @@ void MTree::getAllNodesInSubtree(Node *node, Node *dad, NodeVector &nodeList) {
 }
 
 int MTree::getNumTaxa(Node *node, Node *dad) {
-	// This function is WRONG because it will always return 1 if calling from the ROOT
-	// FIXED
+    int numLeaf = 0;
     if (!node) {
     	node = root;
+    	numLeaf = 1;
     } else {
         if (node->isLeaf()) {
             return 1;
         }
     }
 
-    int numLeaf = 0;
     FOR_NEIGHBOR_IT(node, dad, it) {
         numLeaf += getNumTaxa((*it)->node, node);
     }
@@ -918,11 +917,24 @@ void MTree::getTaxaID(vector<int> &taxa, Node *node, Node *dad) {
     }
 }
 
-Split* MTree::getSplit(Node* node1, Node* node2) {
-	Split *sp = new Split(leafNum);
-	getTaxa(*sp, node1, node2);
-	if (sp->shouldInvert())
-		sp->invert();
+bool MTree::containsSplits(SplitGraph& splits) {
+	SplitGraph treeSplits;
+	convertSplits(treeSplits);
+	//check if treeSplits contains all splits in splits
+	for (SplitGraph::iterator it = splits.begin(); it != splits.end(); it++) {
+		if (!treeSplits.containSplit(**it))
+			return false;
+	}
+	//treeSplits.report(cout);
+	//splits.report(cout);
+	return true;
+}
+
+Split MTree::getSplit(Node* node1, Node* node2) {
+	Split sp(leafNum);
+	getTaxa(sp, node1, node2);
+	if (sp.shouldInvert())
+		sp.invert();
 	return sp;
 }
 

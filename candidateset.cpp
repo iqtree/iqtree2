@@ -62,7 +62,7 @@ vector<string> CandidateSet::getHighestScoringTrees(int numTree) {
 	return res;
 }
 
-vector<string> CandidateSet::getBestLOTrees(int numTree, bool topoOnly) {
+vector<string> CandidateSet::getBestLOTrees(int numTree) {
 	assert(numTree <= maxCandidates);
 	if (numTree == 0) {
 		numTree = maxCandidates;
@@ -71,11 +71,7 @@ vector<string> CandidateSet::getBestLOTrees(int numTree, bool topoOnly) {
 	int cnt = numTree;
 	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++) {
 		if (rit->second.localOpt) {
-			if (topoOnly) {
-				res.push_back(rit->second.topology);
-			} else {
-				res.push_back(rit->second.tree);
-			}
+			res.push_back(rit->second.tree);
 			cnt--;
 		}
 	}
@@ -247,27 +243,28 @@ void CandidateSet::removeCandidateTree(string topology) {
 	assert(removed);
 }
 
+bool CandidateSet::isStableSplit(Split& sp) {
+	return supportedSplits.containSplit(sp);
+}
+
 int CandidateSet::computeSplitSupport(int numTree) {
 	supportedSplits.clear();
 	SplitIntMap hash_ss;
-	//hash_ss.clear();
 	SplitGraph sg;
-	//sg.clear();
 	MTreeSet boot_trees;
 	int numMaxSupport = 0;
-	vector<string> trees = getBestLOTrees(numTree, true);
+	vector<string> trees = getBestLOTrees(numTree);
+	assert(trees.size() > 1);
 	int maxSupport = trees.size();
-	boot_trees.init(trees, isRooted);
-	boot_trees.convertSplits(sg, hash_ss, SW_COUNT, -1);
-	cout << sg.size() << " splits found" << endl;
-	cout << "hash_ss.size(): " << hash_ss.size() << endl;
+	boot_trees.init(trees, aln->getSeqNames(), isRooted);
+	boot_trees.convertSplits(aln->getSeqNames(), sg, hash_ss, SW_COUNT, -1, false);
+
 	for (unordered_map<Split*,int>::iterator it = hash_ss.begin(); it != hash_ss.end(); it++) {
 		if (it->second == maxSupport && it->first->countTaxa() > 1) {
 			numMaxSupport++;
 			Split* supportedSplit = new Split(*(it->first));
 			supportedSplits.push_back(supportedSplit);
 		}
-		//it->first->report(cout);
 	}
 	cout << "Number of supported splits = " << numMaxSupport << endl;
 	return numMaxSupport;

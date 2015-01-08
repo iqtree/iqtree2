@@ -287,7 +287,8 @@ public:
 
 
     /**
-            set the alignment, important to compute parsimony or likelihood score
+            Set the alignment, important to compute parsimony or likelihood score
+            Assing taxa ids according to their position in the alignment
             @param alignment associated alignment
      */
     void setAlignment(Alignment *alignment);

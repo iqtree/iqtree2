@@ -58,7 +58,14 @@ public:
 
 	void init(StringIntMap &treels, bool &is_rooted, IntVector &weights);
 
-	void init(vector<string> &trees, bool &is_rooted);
+	/**
+	 *  Add trees from \a trees to the tree set
+	 *
+	 *  @param trees reference to a vector of NEWICK tree string
+	 *  @param taxonNames vector containing taxon names. The order of each taxon is used to assign its ID
+	 *  @param is_rooted specify whether the tree is rooted or not
+	 */
+	void init(vector<string> &trees, vector<string> &taxonNames, bool &is_rooted);
 
 
 	/**

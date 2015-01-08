@@ -498,6 +498,13 @@ int IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
     double nniTime = getCPUTime() - startTime;
     cout << "Average CPU time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
+
+	if (params->fix_stable_splits) {
+		int nSupportedSplits = candidateTrees.computeSplitSupport();
+		cout << ((double) nSupportedSplits / (aln->getNSeq() - 3)) * 100 << " % of the splits have 100% support and can be fixed." << endl;
+		//candidateTrees.getSupportedSplits().report(cout);
+	}
+
     return numDup;
 }
 
@@ -1015,10 +1022,20 @@ void IQTree::doRandomNNIs(int numNNI) {
     int numInBran = nodes1.size();
     assert(numInBran == aln->getNSeq() - 3);
     int cntNNI = 0;
-    while (cntNNI < numNNI) {
+    while (cntNNI < numInBran) {
         int index = random_int(numInBran);
         string branchID = nodePair2String(nodes1[index], nodes2[index]);
         if (usedBranches.find(branchID) == usedBranches.end()) {
+        	// NOT FINISH YET!
+        	if (params->fix_stable_splits) {
+        		Split my_split = getSplit(nodes1[index], nodes2[index]);
+        		if (candidateTrees.isStableSplit(my_split)) {
+        			cout << "This is a stable split" << endl;
+        		} else {
+        			//cout << "No stable split: " << endl;
+        			//my_split.report(cout);
+        		}
+        	}
         	doOneRandomNNI(nodes1[index], nodes2[index]);
         	cntNNI++;
         	usedBranches.insert(branchID);
@@ -1650,6 +1667,8 @@ double IQTree::doTreeSearch() {
                 //cout << "candidateTrees.size() = " << candidateTrees.size() << endl;
                 string candidateTree = candidateTrees.getRandCandTree();
                 readTreeString(candidateTree);
+                if (params->fix_stable_splits)
+                	assert(containsSplits(candidateTrees.getSupportedSplits()));
                 if (params->iqp) {
                     doIQP();
                 } else {

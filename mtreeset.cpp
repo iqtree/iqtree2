@@ -104,13 +104,21 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 	//tree_weights.resize(size(), 1);
 }
 
-void MTreeSet::init(vector<string> &trees, bool &is_rooted) {
+void MTreeSet::init(vector<string> &trees, vector<string> &taxonNames, bool &is_rooted) {
 	int count = 0;
 	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
 		MTree *tree = newTree();
 		stringstream ss(*it);
-		bool myrooted = is_rooted;
-		tree->readTree(ss, myrooted);
+		tree->readTree(ss, is_rooted);
+	    int nseq = taxonNames.size();
+	    assert(tree->getNumTaxa() == nseq);
+	    for (int seq = 0; seq < nseq; seq++) {
+	        string seq_name = taxonNames[seq];
+	        Node *node = tree->findLeafName(seq_name);
+	        assert(node);
+	        assert(node->isLeaf());
+	        node->id = seq;
+	    }
 		push_back(tree);
 		tree_weights.push_back(1);
 		count++;

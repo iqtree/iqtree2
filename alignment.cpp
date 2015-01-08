@@ -67,6 +67,10 @@ string &Alignment::getSeqName(int i) {
     return seq_names[i];
 }
 
+vector<string>& Alignment::getSeqNames() {
+	return seq_names;
+}
+
 int Alignment::getSeqID(string &seq_name) {
     for (int i = 0; i < getNSeq(); i++)
         if (seq_name == getSeqName(i)) return i;

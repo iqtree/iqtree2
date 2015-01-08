@@ -123,10 +123,9 @@ public:
     /**
      * Return \a numTree best local optimal trees
      * @param numTree
-     * @param topoOnly don't write out branch lengths
      * @return vector containing newick tree strings
      */
-    vector<string> getBestLOTrees(int numTree = 0, bool topoOnly = false);
+    vector<string> getBestLOTrees(int numTree = 0);
 
     /**
      * get tree(s) with highest score. More than one tree is
@@ -178,6 +177,13 @@ public:
      * @return number of splits with 100% support value
      */
     int computeSplitSupport(int numTree = 0);
+
+    /**
+     * Check whether the
+     * @param sp the split to check, must have the same taxon set as the trees in CandidateSet.
+     * @return true if the \a supportedSplits contain \a sp, false otherwise.
+     */
+    bool isStableSplit(Split& sp);
 
     /**
      * Return a pointer to the \a CandidateTree that has topology equal to \a topology

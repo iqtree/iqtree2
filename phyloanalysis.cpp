@@ -1448,12 +1448,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         	if (params.write_local_optimal_trees) {
         		printSuboptimalTrees(iqtree, params, ".init_suboptimal_trees");
         	}
-
-        	if (params.fix_stable_splits) {
-        		int nSupportedSplits = iqtree.candidateTrees.computeSplitSupport();
-        		cout << ((double) nSupportedSplits / (iqtree.aln->getNSeq() - 3)) * 100 << " % of the splits have 100% support and can be fixed." << endl;
-        		//iqtree.candidateTrees.getSupportedSplits().report(cout);
-        	}
         } else {
             int nni_count = 0;
             int nni_steps = 0;
