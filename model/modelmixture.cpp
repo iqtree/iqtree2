@@ -303,7 +303,8 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
 
 void ModelMixture::writeInfo(ostream &out) {
 	for (int i = 0; i < size(); i++) {
-		out << "Weight and rate of mixture component " << i << " (" << at(i)->name << "): "
+		if (!fix_prop)
+			out << "Weight and rate of mixture component " << i << " (" << at(i)->name << "): "
 			<< prop[i] << ", " << mix_rates[i] << endl;
 		at(i)->writeInfo(out);
 	}

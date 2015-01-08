@@ -258,6 +258,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 
 	if (!params.site_freq_file) {
 		model = createModel(model_str, freq_type, freq_params, tree);
+		if (fused_mix_rate) {
+			if (!model->isMixture()) outError("Model specified is not a mixture model");
+			if (model->getNMixtures() != site_rate->getNRate())
+				outError("Mixture model and site rate model do not have the same number of categories");
+			((ModelMixture*)model)->fix_prop = true;
+		}
 	} else { 
 		// site-specific model
 		if (model_str == "JC" || model_str == "POSSION") 

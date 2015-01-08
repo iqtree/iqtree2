@@ -1112,7 +1112,7 @@ void PhyloTree::initializeAllPartialLh() {
     else
     	mem_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
 
-    size_t block_size = mem_size * numStates * site_rate->getNRate() * model->getNMixtures();
+    size_t block_size = mem_size * numStates * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
 //    if (!tmp_partial_lh1) {
 //        tmp_partial_lh1 = newPartialLh();
 //        // FOR TUNG: below is wrong because you lost the actual pointer to be deleted afterwards
@@ -1139,7 +1139,7 @@ void PhyloTree::initializeAllPartialLh() {
     if (!_pattern_lh)
         _pattern_lh = aligned_alloc<double>(mem_size);
     if (!_pattern_lh_cat)
-        _pattern_lh_cat = new double[mem_size * site_rate->getNDiscreteRate() * model->getNMixtures()];
+        _pattern_lh_cat = new double[mem_size * site_rate->getNDiscreteRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures())];
     if (!theta_all)
         theta_all = aligned_alloc<double>(block_size);
     if (!ptn_freq)
@@ -1183,7 +1183,7 @@ uint64_t PhyloTree::getMemoryRequired() {
     block_size = block_size * aln->num_states;
     if (site_rate)
     	block_size *= site_rate->getNRate();
-    if (model)
+    if (model && !model_factory->fused_mix_rate)
     	block_size *= model->getNMixtures();
     uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2 + (leafNum - 1) * 4 * nptn * sizeof(UBYTE);
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
@@ -1206,7 +1206,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 
     size_t scale_block_size = nptn;
 
-    block_size = block_size * model->num_states * site_rate->getNRate() * model->getNMixtures();
+    block_size = block_size * model->num_states * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
@@ -1304,12 +1304,14 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 }
 
 double *PhyloTree::newPartialLh() {
-    double *ret = new double[(aln->size()+aln->num_states+3) * aln->num_states * site_rate->getNRate() * model->getNMixtures()];
+    double *ret = new double[(aln->size()+aln->num_states+3) * aln->num_states * site_rate->getNRate() *
+                             ((model_factory->fused_mix_rate)? 1 : model->getNMixtures())];
     return ret;
 }
 
 int PhyloTree::getPartialLhBytes() {
-	return ((aln->size()+aln->num_states+3) * aln->num_states * site_rate->getNRate() * model->getNMixtures()) * sizeof(double);
+	return ((aln->size()+aln->num_states+3) * aln->num_states * site_rate->getNRate() *
+			((model_factory->fused_mix_rate)? 1 : model->getNMixtures())) * sizeof(double);
 }
 
 int PhyloTree::getScaleNumBytes() {
