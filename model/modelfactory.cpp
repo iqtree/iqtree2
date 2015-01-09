@@ -79,6 +79,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
 
+	NxsModel *nxsmodel = models_block->findModel(model_str);
+	if (nxsmodel) {
+		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+		model_str = nxsmodel->description;
+	}
+
+
 	string::size_type posfreq;
 	StateFreqType freq_type = params.freq_type;
 
@@ -267,7 +274,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	} 	
 
 	/* create substitution model */
-	NxsModel *nxsmodel = models_block->findModel(model_str);
+	nxsmodel = models_block->findModel(model_str);
 	if (nxsmodel) {
 		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
 		model_str = nxsmodel->description;
@@ -292,7 +299,14 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			if (!model->isMixture()) outError("Model specified is not a mixture model");
 			if (model->getNMixtures() != site_rate->getNRate())
 				outError("Mixture model and site rate model do not have the same number of categories");
-			((ModelMixture*)model)->fix_prop = true;
+			ModelMixture *mmodel = (ModelMixture*)model;
+			// reset mixture model
+			mmodel->fix_prop = true;
+			for (ModelMixture::iterator it = mmodel->begin(); it != mmodel->end(); it++) {
+				(*it)->total_num_subst = 1.0;
+				mmodel->prop[it-mmodel->begin()] = 1.0;
+			}
+			mmodel->decomposeRateMatrix();
 		}
 	} else { 
 		// site-specific model

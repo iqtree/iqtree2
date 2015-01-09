@@ -31,6 +31,12 @@ void ModelsBlock::Read(NxsToken &token)
 
 			model.name = token.GetToken();
 
+			if (findModel(model.name)) {
+				errormsg = "Duplicated model name ";
+				errormsg += model.name.c_str();
+				throw NxsException(errormsg, token);
+			}
+
 			token.GetNextToken();
 			if (!token.Equals("="))
 				throw NxsException("Expecting '=' after model name", token);

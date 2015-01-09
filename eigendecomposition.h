@@ -58,8 +58,6 @@ public:
 	/** TRUE to normalize rate matrix to 1.0 subst per unit time */
 	bool normalize_matrix;
 
-protected:
-
 	/**
 		the total number of substitutions per unit time
 	*/

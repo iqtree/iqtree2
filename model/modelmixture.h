@@ -33,7 +33,7 @@ ModelSubst *createModel(string model_str, string model_desc, StateFreqType freq_
 /**
  * mixture model
  */
-class ModelMixture: public ModelGTR, vector<ModelGTR*> {
+class ModelMixture: public ModelGTR, public vector<ModelGTR*> {
 public:
 	/**
 		constructor
