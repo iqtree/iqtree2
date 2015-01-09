@@ -1733,6 +1733,13 @@ double convert_double(const char *str) throw (string);
 double convert_double(const char *str, int &end_pos) throw (string);
 
 /**
+        convert comma-separated string to integer vector, with error checking
+        @param str original string with integers separated by comma
+        @param vec (OUT) integer vector
+ */
+void convert_double_vec(const char *str, DoubleVector &vec) throw (string);
+
+/**
  * Convert seconds to hour, minute, second
  * @param sec
  * @return string represent hour, minute, second

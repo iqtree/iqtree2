@@ -160,6 +160,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	int num_rate_cats = params.num_rate_cats;
 	double gamma_shape = params.gamma_shape;
 	double p_invar_sites = params.p_invar_sites;
+	string freerate_params = "";
 	if (posI != string::npos) {
 		// invariable site model
 		if (model_str.length() > posI+2 && model_str[posI+2] == OPEN_BRACKET) {
@@ -200,6 +201,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			num_rate_cats = convert_int(model_str.substr(posR+2).c_str(), end_pos);
 				if (num_rate_cats < 1) outError("Wrong number of rate categories");
 			}
+		if (model_str.length() > posR+2+end_pos && model_str[posR+2+end_pos] == OPEN_BRACKET) {
+			close_bracket = model_str.find(CLOSE_BRACKET, posR);
+			if (close_bracket == string::npos)
+				outError("Close bracket not found in ", model_str);
+			freerate_params = model_str.substr(posR+3+end_pos, close_bracket-posR-3-end_pos).c_str();
+		} else if (model_str.length() > posR+2+end_pos && model_str[posR+2+end_pos] != '+')
+			outError("Wrong model name ", model_str);
 	}
 	if (model_str.find('+') != string::npos || model_str.find('*') != string::npos) {
 		//string rate_str = model_str.substr(pos);
@@ -207,13 +215,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
 					p_invar_sites, params.optimize_model_rate_joint, tree);
 		} else if (posI != string::npos && posR != string::npos) {
-			site_rate = new RateFreeInvar(num_rate_cats, p_invar_sites, tree);
+			site_rate = new RateFreeInvar(num_rate_cats, freerate_params, p_invar_sites, tree);
 		} else if (posI != string::npos) {
 			site_rate = new RateInvar(p_invar_sites, tree);
 		} else if (posG != string::npos) {
 			site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
 		} else if (posR != string::npos) {
-			site_rate = new RateFree(num_rate_cats, tree);
+			site_rate = new RateFree(num_rate_cats, freerate_params, tree);
 		} else if ((posX = model_str.find("+M")) != string::npos) {
 			tree->setLikelihoodKernel(LK_NORMAL);
 			params.rate_mh_type = true;

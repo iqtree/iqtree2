@@ -12,9 +12,10 @@ const double MIN_FREE_RATE = 0.0001;
 const double MAX_FREE_RATE = 0.9999;
 const double TOL_FREE_RATE = 0.0001;
 
-RateFree::RateFree(int ncat, PhyloTree *tree) : RateHeterogeneity() {
+RateFree::RateFree(int ncat, string params, PhyloTree *tree) : RateHeterogeneity() {
 	ncategory = ncat;
 	phylo_tree = tree;
+	fix_params = false;
 
 	rates = new double[ncategory];
 	prop  = new double[ncategory];
@@ -28,13 +29,34 @@ RateFree::RateFree(int ncat, PhyloTree *tree) : RateHeterogeneity() {
 		sum += prop[i]*rates[i];
 	}
 	for (i = 0; i < ncategory; i++)
-		rates[i] = rates[i]/sum;
+		rates[i] /= sum;
 
 	name = "+R";
 	name += convertIntToString(ncategory);
 	full_name = "FreeRate";
 	full_name += " with " + convertIntToString(ncategory) + " categories";
 
+	if (params.empty()) return;
+	DoubleVector params_vec;
+	try {
+		convert_double_vec(params.c_str(), params_vec);
+		if (params_vec.size() != ncategory*2)
+			outError("Number of parameters for FreeRate model must be twice number of categories");
+		double sum_prop;
+		for (i = 0, sum = 0.0, sum_prop = 0.0; i < ncategory; i++) {
+			prop[i] = params_vec[i*2];
+			rates[i] = params_vec[i*2+1];
+			sum += prop[i]*rates[i];
+			sum_prop += prop[i];
+		}
+		if (fabs(sum_prop-1.0) > 1e-5)
+			outError("Sum of category proportions not equal to 1");
+		for (i = 0; i < ncategory; i++)
+			rates[i] /= sum;
+		fix_params = true;
+	} catch (string &str) {
+		outError(str);
+	}
 }
 
 RateFree::~RateFree() {

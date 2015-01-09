@@ -18,7 +18,7 @@ public:
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
 	*/
-    RateFree(int ncat, PhyloTree *tree);
+    RateFree(int ncat, string params, PhyloTree *tree);
 
 	virtual ~RateFree();
 
@@ -80,7 +80,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return 2*ncategory-2; }
+	virtual int getNDim() { return (fix_params) ? 0 : (2*ncategory-2); }
 
 	/**
 		write information
@@ -125,6 +125,9 @@ protected:
 	 * proportion of sites for each rate categories
 	 */
 	double *prop;
+
+	/** TRUE to fix parameters */
+	bool fix_params;
 
 };
 

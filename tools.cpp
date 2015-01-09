@@ -270,6 +270,24 @@ double convert_double(const char *str, int &end_pos) throw (string) {
 	return d;
 }
 
+void convert_double_vec(const char *str, DoubleVector &vec) throw (string) {
+    char *beginptr = (char*)str, *endptr;
+    vec.clear();
+    do {
+		double d = strtod(beginptr, &endptr);
+
+		if ((d == 0.0 && endptr == beginptr) || fabs(d) == HUGE_VALF) {
+			string err = "Expecting floating-point number, but found \"";
+			err += beginptr;
+			err += "\" instead";
+			throw err;
+		}
+		vec.push_back(d);
+		if (*endptr == ',') endptr++;
+		beginptr = endptr;
+    } while (*endptr != 0);
+}
+
 string convert_time(const double sec) {
     int sec_int = (int) floor(sec);
     int secs = sec_int % 60;
