@@ -38,7 +38,8 @@
 #include "ngs.h"
 #include <string>
 #include "timeutil.h"
-
+#include "myreader.h"
+#include "modelsblock.h"
 
 ModelFactory::ModelFactory() { 
 	model = NULL; 
@@ -57,6 +58,16 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	fused_mix_rate = false;
 
 	string model_str = params.model_name;
+	ModelsBlock *models_block = new ModelsBlock;
+	if (params.model_def_file) {
+		cout << "Reading model defition file " << params.model_def_file << " ... ";
+		MyReader nexus(params.model_def_file);
+		nexus.Add(models_block);
+	    MyToken token(nexus.inf);
+	    nexus.Execute(token);
+	    cout << models_block->size() << " models specified" << endl;
+	}
+
 
 	if (model_str == "") {
 		if (tree->aln->seq_type == SEQ_DNA) model_str = "HKY";
@@ -67,6 +78,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		else model_str = "JC";
 		outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
+
 	string::size_type posfreq;
 	StateFreqType freq_type = params.freq_type;
 
@@ -255,9 +267,27 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	} 	
 
 	/* create substitution model */
+	NxsModel *nxsmodel = models_block->findModel(model_str);
+	if (nxsmodel) {
+		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+		model_str = nxsmodel->description;
+	}
 
 	if (!params.site_freq_file) {
-		model = createModel(model_str, freq_type, freq_params, tree);
+		if (model_str.substr(0, 4) == "MIX{") {
+			string model_list;
+			if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
+				outError("Close bracket not found at the end of ", model_str);
+			model_list = model_str.substr(4, model_str.length()-5);
+			model_str = model_str.substr(0, 3);
+			model = new ModelMixture(model_str, model_list, models_block, freq_type, freq_params, tree);
+		} else {
+			string model_desc;
+			NxsModel *nxsmodel = models_block->findModel(model_str);
+			if (nxsmodel) model_desc = nxsmodel->description;
+			model = createModel(model_str, model_desc, freq_type, freq_params, tree);
+		}
+
 		if (fused_mix_rate) {
 			if (!model->isMixture()) outError("Model specified is not a mixture model");
 			if (model->getNMixtures() != site_rate->getNRate())
@@ -288,11 +318,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		for (i = 0; i < freq_vec.size(); i++) {
 			ModelGTR *modeli;
 			if (i == 0) {
-				modeli = (ModelGTR*)createModel(model_str, params.freq_type, "", tree, true);
+				modeli = (ModelGTR*)createModel(model_str, "", params.freq_type, "", tree, true);
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {
-				modeli = (ModelGTR*)createModel(model_str, FREQ_EQUAL, "", tree, false);
+				modeli = (ModelGTR*)createModel(model_str, "", FREQ_EQUAL, "", tree, false);
 				modeli->setStateFrequency(state_freq);
 				modeli->setRateMatrix(rates);
 			}

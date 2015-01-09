@@ -339,6 +339,7 @@ mexttree.cpp
 mpdablock.cpp
 msetsblock.cpp
 msplitsblock.cpp
+modelsblock.cpp
 mtree.cpp
 mtreeset.cpp
 ncbitree.cpp

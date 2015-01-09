@@ -663,6 +663,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
+    params.model_def_file = NULL;
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
@@ -1572,6 +1573,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mset <model_set>";
 				params.model_set = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mdef") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mdef <model_definition_file>";
+				params.model_def_file = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-mh") == 0) {

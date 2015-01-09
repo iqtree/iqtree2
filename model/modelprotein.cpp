@@ -3155,7 +3155,10 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 		for (i = 0, k = 0; i < num_states-1; i++)
 			for (j = i+1; j < num_states; j++)
 				rates[k++] = daa[i*20+j];
-
+	} else if (!model_params.empty()) {
+		stringstream ss(model_params);
+		readRates(ss);
+		readStateFreq(ss);
 	} else {
 		// if name does not match, read the user-defined model
 		readParameters(model_name);

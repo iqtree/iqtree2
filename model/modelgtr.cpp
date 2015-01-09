@@ -463,11 +463,25 @@ void ModelGTR::decomposeRateMatrix(){
 
 void ModelGTR::readRates(istream &in) throw(const char*) {
 	int nrates = getNumRateEntries();
-	for (int i = 0; i < nrates; i++) {
-		if (!(in >> rates[i]))
-			throw "Rate entries could not be read";
-		if (rates[i] < 0.0)
-			throw "Negative rates found";
+	string str;
+	in >> str;
+	if (str == "equalrate") {
+		for (int i = 0; i < nrates; i++)
+			rates[i] = 1.0;
+	} else {
+		try {
+			rates[0] = convert_double(str.c_str());
+		} catch (string &str) {
+			outError(str);
+		}
+		if (rates[0] < 0.0)
+			throw "Negative rates not allowed";
+		for (int i = 1; i < nrates; i++) {
+			if (!(in >> rates[i]))
+				throw "Rate entries could not be read";
+			if (rates[i] < 0.0)
+				throw "Negative rates not allowed";
+		}
 	}
 }
 
@@ -475,11 +489,14 @@ void ModelGTR::readRates(string str) throw(const char*) {
 	int nrates = getNumRateEntries();
 	int end_pos = 0;
 	cout << __func__ << " " << str << endl;
-	for (int i = 0; i < nrates; i++) {
+	if (str.find("equalrate") != string::npos) {
+		for (int i = 0; i < nrates; i++)
+			rates[i] = 1.0;
+	} else for (int i = 0; i < nrates; i++) {
 		int new_end_pos;
 		try {
 			rates[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
-		} catch (string str) {
+		} catch (string &str) {
 			outError(str);
 		}
 		end_pos += new_end_pos;

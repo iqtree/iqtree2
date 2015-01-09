@@ -20,12 +20,12 @@ const double MAX_MIXTURE_PROP = 1.0;
 //const double MIN_MIXTURE_RATE = 0.01;
 //const double MAX_MIXTURE_RATE = 100.0;
 
-ModelSubst* createModel(string model_str, StateFreqType freq_type, string freq_params,
+ModelSubst* createModel(string model_str, string model_desc, StateFreqType freq_type, string freq_params,
 		PhyloTree* tree, bool count_rates)
 {
 	ModelSubst *model = NULL;
 	//cout << "Numstates: " << tree->aln->num_states << endl;
-	string model_params;
+	string model_params = model_desc;
 	size_t pos = model_str.find(OPEN_BRACKET);
 	if (pos != string::npos) {
 		if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
@@ -57,8 +57,6 @@ ModelSubst* createModel(string model_str, StateFreqType freq_type, string freq_p
 		tree->optimize_by_newton = false;
 		model = new ModelNonRev(tree, count_rates);
 		((ModelNonRev*)model)->init(freq_type);
-	} else if (model_str == "MIX" || model_str == "MIXG" || model_str == "MIXRATE") {
-		model = new ModelMixture(model_str, model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->seq_type == SEQ_BINARY) {
 		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->seq_type == SEQ_DNA) {
@@ -76,7 +74,7 @@ ModelSubst* createModel(string model_str, StateFreqType freq_type, string freq_p
 	return model;
 }
 
-ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
+ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *models_block, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
 	: ModelGTR(tree, count_rates)
 {
 	if (freq_params != "")
@@ -100,7 +98,10 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 			this_name = this_name.substr(0, this_name.find(':'));
 		}
 		cur_pos = pos+1;
-		push_back((ModelGTR*)createModel(this_name, freq, freq_params, tree, count_rates));
+		string model_desc;
+		NxsModel *nxsmodel = models_block->findModel(this_name);
+		if (nxsmodel) model_desc = nxsmodel->description;
+		push_back((ModelGTR*)createModel(this_name, model_desc, freq, freq_params, tree, count_rates));
 		back()->total_num_subst = rate;
 		if (m > 0) {
 			name += ',';

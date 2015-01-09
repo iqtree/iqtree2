@@ -11,6 +11,7 @@
 #include "phylotree.h"
 #include "modelsubst.h"
 #include "modelgtr.h"
+#include "modelsblock.h"
 
 
 const char OPEN_BRACKET = '{';
@@ -25,7 +26,7 @@ const char CLOSE_BRACKET = '}';
  * @param count_rates TRUE to assign rates counted from alignment, FALSE to not initialize rates
  * @return substitution model created
  */
-ModelSubst *createModel(string model_str, StateFreqType freq_type, string freq_params,
+ModelSubst *createModel(string model_str, string model_desc, StateFreqType freq_type, string freq_params,
 		PhyloTree *tree, bool count_rates = true);
 
 
@@ -40,7 +41,7 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelMixture(string model_name, string model_list, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates = true);
+    ModelMixture(string model_name, string model_list, ModelsBlock *models_block, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates = true);
 
     virtual ~ModelMixture();
 

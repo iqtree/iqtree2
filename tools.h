@@ -1046,6 +1046,9 @@ struct Params {
     /** set of models for testing */
     char *model_set;
 
+    /** model defition file */
+    char *model_def_file;
+
     /**
             TRUE to store transition matrix into a hash table for computation efficiency
      */
