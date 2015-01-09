@@ -94,7 +94,7 @@ public:
 	/**
 		rates of mixture components
 	*/
-	double *mix_rates;
+//	double *mix_rates;
 
 	/**
 	 * weight of each sub-model (must sum to 1)

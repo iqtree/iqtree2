@@ -15,10 +15,10 @@
 #include "modelset.h"
 #include "modelmixture.h"
 
-const double MIN_MIXTURE_PROP = 0.001;
-const double MAX_MIXTURE_PROP = 0.999;
-const double MIN_MIXTURE_RATE = 0.01;
-const double MAX_MIXTURE_RATE = 100.0;
+const double MIN_MIXTURE_PROP = 0.0;
+const double MAX_MIXTURE_PROP = 1.0;
+//const double MIN_MIXTURE_RATE = 0.01;
+//const double MAX_MIXTURE_RATE = 100.0;
 
 ModelSubst* createModel(string model_str, StateFreqType freq_type, string freq_params,
 		PhyloTree* tree, bool count_rates)
@@ -79,7 +79,6 @@ ModelSubst* createModel(string model_str, StateFreqType freq_type, string freq_p
 ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
 	: ModelGTR(tree, count_rates)
 {
-//	cout << model_name << " " << model_list << endl;
 	if (freq_params != "")
 		readStateFreq(freq_params);
 	init(freq);
@@ -87,9 +86,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 	const int MAX_MODELS = 64;
 	size_t cur_pos = 0;
 	int m;
-	DoubleVector model_weights;
 	name = full_name = (string)"MIX" + OPEN_BRACKET;
-	int has_weight = 0;
 	for (m = 0; m < MAX_MODELS && cur_pos < model_list.length(); m++) {
 		size_t pos = model_list.find(',', cur_pos);
 		if (pos == string::npos)
@@ -97,16 +94,14 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 		if (pos <= cur_pos)
 			outError("One model name in the mixture is empty.");
 		string this_name = model_list.substr(cur_pos, pos-cur_pos);
+		double rate = 1.0;
 		if (this_name.find(':') != string::npos) {
-			double weight = convert_double(this_name.substr(this_name.find(':')+1).c_str());
-			if (weight < 0 || weight > 1) outError("Mixture component weight must be between 0 and 1");
-			model_weights.push_back(weight);
+			rate = convert_double(this_name.substr(this_name.find(':')+1).c_str());
 			this_name = this_name.substr(0, this_name.find(':'));
-			has_weight++;
-		} else
-			model_weights.push_back(-1.0);
+		}
 		cur_pos = pos+1;
 		push_back((ModelGTR*)createModel(this_name, freq, freq_params, tree, count_rates));
+		back()->total_num_subst = rate;
 		if (m > 0) {
 			name += ',';
 			full_name += ',';
@@ -114,50 +109,30 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 		name += back()->name;
 		full_name += back()->full_name;
 	}
-	assert(model_weights.size() == size());
 	name += CLOSE_BRACKET;
 	full_name += CLOSE_BRACKET;
-//	cout << "mixture model: " << name << endl;
 
 	int nmixtures = size();
 	prop = aligned_alloc<double>(nmixtures);
-	mix_rates = aligned_alloc<double>(nmixtures);
 
-	double sum_prop = (nmixtures)*(nmixtures+1)/2.0;
 	double sum = 0.0;
 	int i;
 	// initialize rates as increasing
 	for (i = 0; i < nmixtures; i++) {
-		prop[i] = (double)(nmixtures-i) / sum_prop;
-		mix_rates[i] = (double)(i+1);
-//		at(i)->total_num_subst = (double)(i+1);
+		prop[i] = (double)(nmixtures-i);
 //		sum += prop[i]*at(i)->total_num_subst;
+		sum += prop[i];
 	}
-//	for (i = 0; i < nmixtures; i++)
-//		at(i)->total_num_subst /= sum;
+	for (i = 0; i < nmixtures; i++) {
+		 prop[i] /= sum;
+	}
+
+	// sanity check that total rate is 1.0
+//	for (i = 0, sum = 0.0; i < nmixtures; i++)
+//		sum += prop[i]*at(i)->total_num_subst;
+//	assert(fabs(sum-1.0) < 1e-5);
 
 	fix_prop = (nmixtures == 1);
-	if (nmixtures >= 2 && has_weight > 0) {
-		if (has_weight < nmixtures-1)
-			outError("Mixture component weights are too few");
-		if (has_weight == nmixtures-1 && model_weights[nmixtures-1] != -1.0)
-			outError("Only the last mixture component weight can be empty");
-		fix_prop = true;
-		double sum = 0.0;
-		for (m = 0; m < nmixtures; m++) {
-			prop[m] = model_weights[m];
-			if (prop[m] >= 0)
-				sum += prop[m];
-		}
-		if (has_weight < nmixtures) {
-			prop[nmixtures-1] = 1.0 - sum;
-			if (prop[nmixtures-1] < 0 || prop[nmixtures-1] > 1)
-				outError("Sum of mixture component weights exceeds 1.0");
-		} else if (sum != 1.0) {
-			outError("Sum of mixture component weights is not equal to 1");
-		}
-	}
-
 	// use central eigen etc. stufffs
 
 	if (eigenvalues) delete [] eigenvalues;
@@ -174,8 +149,6 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 	// assigning memory for individual models
 	m = 0;
 	for (iterator it = begin(); it != end(); it++, m++) {
-		// do not normalize individual rate matrices
-//		(*it)->normalize_matrix = false;
         // first copy memory for eigen stuffs
         memcpy(&eigenvalues[m*num_states], (*it)->eigenvalues, num_states*sizeof(double));
         memcpy(&eigenvectors[m*num_states*num_states], (*it)->eigenvectors, num_states*num_states*sizeof(double));
@@ -199,8 +172,6 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 ModelMixture::~ModelMixture() {
 	if (prop)
 		aligned_free(prop);
-	if (mix_rates)
-		aligned_free(mix_rates);
 	for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
 		(*rit)->eigen_coeff = NULL;
 		(*rit)->eigenvalues = NULL;
@@ -211,7 +182,6 @@ ModelMixture::~ModelMixture() {
 }
 
 int ModelMixture::getNDim() {
-//	int dim = (fix_prop) ? (size()-1) : (2*size()-2);
 	int dim = (fix_prop) ? 0: (size()-1);
 	for (iterator it = begin(); it != end(); it++)
 		dim += (*it)->getNDim();
@@ -220,7 +190,10 @@ int ModelMixture::getNDim() {
 
 double ModelMixture::targetFunk(double x[]) {
 	getVariables(x);
-	decomposeRateMatrix();
+//	decomposeRateMatrix();
+	for (iterator it = begin(); it != end(); it++)
+		if ((*it)->getNDim() > 0)
+			(*it)->decomposeRateMatrix();
 	assert(phylo_tree);
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
@@ -239,13 +212,12 @@ void ModelMixture::setVariables(double *variables) {
 	}
 	if (fix_prop) return;
 	int i, ncategory = size();
+//	variables[dim+1] = prop[0]*at(0)->total_num_subst;
+//	for (i = 2; i < ncategory; i++)
+//		variables[dim+i] = variables[dim+i-1] + prop[i-1]*at(i-1)->total_num_subst;
 	variables[dim+1] = prop[0];
 	for (i = 2; i < ncategory; i++)
 		variables[dim+i] = variables[dim+i-1] + prop[i-1];
-//	for (i = 0; i < ncategory-1; i++)
-//		variables[dim+i+ncategory] = at(i)->total_num_subst / at(ncategory-1)->total_num_subst;
-//	for (i = 0; i < ncategory-1; i++)
-//		variables[dim+i+ncategory] = mix_rates[i]/mix_rates[ncategory-1];
 }
 
 void ModelMixture::getVariables(double *variables) {
@@ -256,26 +228,23 @@ void ModelMixture::getVariables(double *variables) {
 	}
 	if (fix_prop) return;
 	int i, ncategory = size();
-	double *y = new double[2*ncategory+1];
-//	double *z = y+ncategory+1;
+	double *y = new double[ncategory+1];
 	y[0] = 0; y[ncategory] = 1.0;
 	memcpy(y+1, variables+dim+1, (ncategory-1) * sizeof(double));
 	std::sort(y+1, y+ncategory);
-//	memcpy(z, variables+ncategory+dim, (ncategory-1) * sizeof(double));
-//	z[ncategory-1] = 1.0;
 	double sum = 0.0;
 	for (i = 0; i < ncategory; i++) {
+//		prop[i] = (y[i+1]-y[i])/at(i)->total_num_subst;
 		prop[i] = (y[i+1]-y[i]);
-//		sum += prop[i] * z[i];
-		assert(prop[i] >= MIN_MIXTURE_PROP && prop[i] <= MAX_MIXTURE_PROP);
 	}
-	for (i = 0; i < ncategory; i++) {
-//		at(i)->total_num_subst = z[i] / sum;
-//		mix_rates[i] = z[i] / sum;
-	}
+	// sanity check that total rate is 1.0
+//	for (i = 0, sum = 0.0; i < ncategory; i++)
+//		sum += prop[i]*at(i)->total_num_subst;
+//	assert(fabs(sum-1.0) < 1e-5);
+
 	if (verbose_mode >= VB_MAX) {
 		for (i = 0; i < ncategory; i++)
-			cout << "Component " << i << " prop=" << prop[i] << " rate=" << mix_rates[i] << endl;
+			cout << "Component " << i << " prop=" << prop[i] << endl;
 	}
 	delete [] y;
 
@@ -294,18 +263,13 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
 		upper_bound[dim+i] = MAX_MIXTURE_PROP;
 		bound_check[dim+i] = false;
 	}
-//	for (i = ncategory; i <= 2*ncategory-2; i++) {
-//		lower_bound[dim+i] = MIN_MIXTURE_RATE;
-//		lower_bound[dim+i] = MAX_MIXTURE_RATE;
-//		bound_check[dim+i] = false;
-//	}
 }
 
 void ModelMixture::writeInfo(ostream &out) {
 	for (int i = 0; i < size(); i++) {
 		if (!fix_prop)
-			out << "Weight and rate of mixture component " << i << " (" << at(i)->name << "): "
-			<< prop[i] << ", " << mix_rates[i] << endl;
+			out << "Weight of mixture component " << i << " (" << at(i)->name << "): "
+			<< prop[i] << endl;
 		at(i)->writeInfo(out);
 	}
 }
