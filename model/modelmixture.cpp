@@ -127,10 +127,11 @@ ModelMixture::ModelMixture(string model_name, string model_list, StateFreqType f
 		 prop[i] /= sum;
 	}
 
-	// sanity check that total rate is 1.0
-//	for (i = 0, sum = 0.0; i < nmixtures; i++)
-//		sum += prop[i]*at(i)->total_num_subst;
-//	assert(fabs(sum-1.0) < 1e-5);
+	// rescale total_num_subst such that the global rate is 1
+	for (i = 0, sum = 0.0; i < nmixtures; i++)
+		sum += prop[i]*at(i)->total_num_subst;
+	for (i = 0; i < nmixtures; i++)
+		at(i)->total_num_subst /= sum;
 
 	fix_prop = (nmixtures == 1);
 	// use central eigen etc. stufffs
@@ -190,10 +191,11 @@ int ModelMixture::getNDim() {
 
 double ModelMixture::targetFunk(double x[]) {
 	getVariables(x);
-//	decomposeRateMatrix();
-	for (iterator it = begin(); it != end(); it++)
-		if ((*it)->getNDim() > 0)
-			(*it)->decomposeRateMatrix();
+	// always decompose rate matrix since total_num_subst might change
+	decomposeRateMatrix();
+//	for (iterator it = begin(); it != end(); it++)
+//		if ((*it)->getNDim() > 0)
+//			(*it)->decomposeRateMatrix();
 	assert(phylo_tree);
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
@@ -234,13 +236,12 @@ void ModelMixture::getVariables(double *variables) {
 	std::sort(y+1, y+ncategory);
 	double sum = 0.0;
 	for (i = 0; i < ncategory; i++) {
-//		prop[i] = (y[i+1]-y[i])/at(i)->total_num_subst;
 		prop[i] = (y[i+1]-y[i]);
 	}
-	// sanity check that total rate is 1.0
-//	for (i = 0, sum = 0.0; i < ncategory; i++)
-//		sum += prop[i]*at(i)->total_num_subst;
-//	assert(fabs(sum-1.0) < 1e-5);
+	for (i = 0, sum = 0.0; i < ncategory; i++)
+		sum += prop[i]*at(i)->total_num_subst;
+	for (i = 0; i < ncategory; i++)
+		at(i)->total_num_subst /= sum;
 
 	if (verbose_mode >= VB_MAX) {
 		for (i = 0; i < ncategory; i++)
