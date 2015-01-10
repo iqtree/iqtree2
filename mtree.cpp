@@ -825,7 +825,7 @@ void MTree::getAllInnerBranches(NodeVector &nodes1, NodeVector &nodes2, SplitGra
     }
 }
 
-void MTree::getInBranches(map<string, Branch> &brans, int depth, Node *node, Node *dad) {
+void MTree::getInnerBranches(map<string, Branch> &brans, int depth, Node *node, Node *dad) {
     if (depth == 0)
       return;
     assert(isInnerBranch(node, dad));
@@ -833,7 +833,7 @@ void MTree::getInBranches(map<string, Branch> &brans, int depth, Node *node, Nod
         if (!(*it)->node->isLeaf()) {
             Branch bran(node, (*it)->node);
             brans.insert(pair<string, Branch>(bran.getKey(), bran));
-            getInBranches(brans, depth-1, (*it)->node, node);
+            getInnerBranches(brans, depth-1, (*it)->node, node);
         }
     }
 }

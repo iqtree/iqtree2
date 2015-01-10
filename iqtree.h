@@ -194,6 +194,14 @@ public:
     void doIQP();
 
     /**
+     *  @brief remove all branches mapped to splits in \a split
+     *  @param nodes1 node vector containing one end of the branches
+     *  @param nodes2 node vector containing the other end of the branches
+     *  @return number of branches removed
+     */
+    int removeSplits(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits);
+
+    /**
      * 		Perform a series of random NNI moves
      * 		@param numNNI number of random NNIs
      */

@@ -391,9 +391,12 @@ public:
 
     /**
      *      get all descending internal branches below \a node and \a dad up to depth \a depth
-     *      @param[out] brans the branches in question
+     *      @param[in] depth collect all internal branches up to distance \a depth from the current branch
+     *      @param[in] node one of the 2 nodes of the current branches
+     *      @param[in] dad one of the 2 nodes of the current branches
+     *      @param[out] brans the collected branches
      */
-    void getInBranches(map<string, Branch> &brans, int depth, Node *node, Node *dad);
+    void getInnerBranches(map<string, Branch> &brans, int depth, Node *node, Node *dad);
 
     /**
      * @brief: check if the branch is internal
