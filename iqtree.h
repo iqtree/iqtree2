@@ -325,10 +325,12 @@ public:
     void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
-     * @brief Evaluate all NNIs defined in \a brans
-     * @param[in] brans contains branches whose NNIs need to be evaluated
+     * @brief Evaluate all NNIs on branch defined by \a nodes1 and \a nodes2
+     *
+     * @param[in] nodes1 contains one ends of the branches for NNI evaluation
+     * @param[in] nodes2 contains the other ends of the branches for NNI evaluation
      */
-    void evalNNIs(map<string, Branch> brans);
+    void evalNNIs(NodeVector &nodes1, NodeVector &nodes2);
 
     /**
             search all positive NNI move on the current tree and save them
@@ -576,15 +578,12 @@ protected:
     mapString2Double optBrans;
 
     /**
-     *  Set of all internal branches whose induced NNIs need to be evaluate
-     *  in the next NNI step
+     *  @brief get branches, on which NNIs are evaluated for the next NNI step.
+     *  @param[out] nodes1 one ends of the branches
+     *  @param[out] nodes2 the other ends of the branches
+     *  @param[in] nnis NNIs that have been previously applied
      */
-    map<string, Branch> brans2Eval;
-
-    /**
-     *  Update \a brans2Eval after \a all NNIs in nnis have been performed
-     */
-    void updateBrans2Eval(vector<NNIMove> nnis);
+    void getBranchesForNNI(NodeVector& nodes1, NodeVector& nodes2, vector<NNIMove>& nnis);
 
     /**
      *  Use fastNNI heuristic

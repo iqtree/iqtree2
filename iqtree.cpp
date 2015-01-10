@@ -1872,7 +1872,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     nni_count = 0;
     int numNNIs = 0; // number of NNI to be applied in each step
     const int MAXSTEPS = aln->getNSeq(); // maximum number of NNI steps
-    assert(brans2Eval.empty());
+    NodeVector nodes1, nodes2;
     for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
         double oldScore = curScore;
         if (!rollBack) { // tree get improved and was not rollbacked
@@ -1892,11 +1892,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             plusNNIs.clear(); // Vector containing all positive NNIs
             saveBranches(); // save all current branch lengths
             initPartitionInfo(); // for super tree
-            evalNNIs(brans2Eval);
-//            if (searchinfo.speednni && !brans2Eval.empty())
-//              evalNNIs(brans2Eval);
-//            else
-//              evalNNIs();
+            evalNNIs(nodes1, nodes2);
 
 //            if (!nni_sort) {
 //                evalNNIs(); // generate all positive NNI moves
@@ -1926,6 +1922,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
                 }
             }
         }
+
         // Apply all non-conflicting positive NNIs
         doNNIs(numNNIs);
 
@@ -1934,8 +1931,9 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         }
 
         if (searchinfo.speednni) {
-            brans2Eval.clear();
-            updateBrans2Eval(appliedNNIs);
+        	nodes1.clear();
+        	nodes2.clear();
+        	getBranchesForNNI(nodes1, nodes2, appliedNNIs);
             appliedNNIs.clear();
         }
 
@@ -2012,17 +2010,15 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     if (nni_steps == MAXSTEPS) {
     	cout << "WARNING: NNI search needs unusual large number of steps (" << MAXSTEPS << ") to converge!" << endl;
     }
-
-    brans2Eval.clear();
     return curScore;
 }
 
-void IQTree::updateBrans2Eval(vector<NNIMove> nnis) {
+void IQTree::getBranchesForNNI(NodeVector& nodes1, NodeVector& nodes2, vector<NNIMove>& nnis) {
     for (vector<NNIMove>::iterator it = nnis.begin(); it != nnis.end(); it++) {
-        Branch bran((*it).node1, (*it).node2);
-        brans2Eval.insert(pair<string, Branch>(bran.getKey(), bran));
-        getInnerBranches(brans2Eval, 2, (*it).node1, (*it).node2);
-        getInnerBranches(brans2Eval, 2, (*it).node2, (*it).node1);
+    	nodes1.push_back((*it).node1);
+    	nodes2.push_back((*it).node2);
+    	getInnerBranches(nodes1, nodes2, 2, (*it).node1, (*it).node2);
+    	getInnerBranches(nodes1, nodes2, 2, (*it).node2, (*it).node1);
     }
 }
 
@@ -2345,12 +2341,15 @@ void IQTree::evalNNIs(PhyloNode *node, PhyloNode *dad) {
     }
 }
 
-void IQTree::evalNNIs(map<string, Branch> brans) {
-	if (!brans.empty()) {
-		for (map<string, Branch>::iterator it = brans.begin();
-				it != brans.end(); it++) {
-			NNIMove myMove = getBestNNIForBran((PhyloNode*) it->second.node1,
-					(PhyloNode*) it->second.node2, NULL);
+void IQTree::evalNNIs(NodeVector& nodes1, NodeVector& nodes2) {
+	if (!nodes1.empty()) {
+		assert(!nodes2.empty());
+		assert(nodes1.size() == nodes2.size());
+		NodeVector::iterator it1;
+		NodeVector::iterator it2;
+		for (it1 = nodes1.begin(), it2 = nodes2.begin(); it1 != nodes1.end(), it2 != nodes2.end(); it1++, it2++) {
+			assert(isInnerBranch(*it1, *it2));
+			NNIMove myMove = getBestNNIForBran((PhyloNode*) *it1, (PhyloNode*) *it2, NULL);
 			if (myMove.newloglh > curScore + params->loglh_epsilon) {
 				addPositiveNNIMove(myMove);
 			}

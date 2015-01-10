@@ -825,15 +825,15 @@ void MTree::getAllInnerBranches(NodeVector &nodes1, NodeVector &nodes2, SplitGra
     }
 }
 
-void MTree::getInnerBranches(map<string, Branch> &brans, int depth, Node *node, Node *dad) {
+void MTree::getInnerBranches(NodeVector &nodes1, NodeVector &nodes2, int depth, Node *node, Node *dad) {
     if (depth == 0)
       return;
     assert(isInnerBranch(node, dad));
     FOR_NEIGHBOR_IT(node, dad, it) {
         if (!(*it)->node->isLeaf()) {
-            Branch bran(node, (*it)->node);
-            brans.insert(pair<string, Branch>(bran.getKey(), bran));
-            getInnerBranches(brans, depth-1, (*it)->node, node);
+        	nodes1.push_back(node);
+        	nodes2.push_back((*it)->node);
+            getInnerBranches(nodes1, nodes2, depth-1, (*it)->node, node);
         }
     }
 }
