@@ -546,6 +546,8 @@ public:
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
@@ -591,6 +593,9 @@ public:
     double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
@@ -612,6 +617,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodFromBufferEigenSIMD();
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeMixrateLikelihoodFromBufferEigenSIMD();
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixtureLikelihoodFromBufferEigenSIMD();
@@ -771,6 +779,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
