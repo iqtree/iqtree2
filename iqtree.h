@@ -199,7 +199,7 @@ public:
      *  @param nodes2 node vector containing the other end of the branches
      *  @return number of branches removed
      */
-    int removeSplits(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits);
+    int removeBranches(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits);
 
     /**
      * 		Perform a series of random NNI moves

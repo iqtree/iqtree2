@@ -1022,7 +1022,7 @@ bool isNodeNULL(Node* node) {
 		return false;
 }
 
-int IQTree::removeSplits(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits) {
+int IQTree::removeBranches(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits) {
 	if (splits.size() == 0)
 		return 0;
 	NodeVector _nodes1, _nodes2;
@@ -1052,7 +1052,7 @@ void IQTree::doRandomNNIs(int numNNI) {
     	nodes2.clear();
 		getAllInnerBranches(nodes1, nodes2, &candidateTrees.getStableSplits());
     	// remove all used splits
-		removeSplits(nodes1, nodes2, usedSplits);
+		removeBranches(nodes1, nodes2, usedSplits);
 		if (nodes1.size() == 0) {
 			assert(nodes2.size() == 0);
 			break;
@@ -2014,14 +2014,16 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 }
 
 void IQTree::getBranchesForNNI(NodeVector& nodes1, NodeVector& nodes2, vector<NNIMove>& nnis) {
+	assert(nodes1.size() == nodes2.size());
     for (vector<NNIMove>::iterator it = nnis.begin(); it != nnis.end(); it++) {
-    	nodes1.push_back((*it).node1);
-    	nodes2.push_back((*it).node2);
+    	if (!branchExist((*it).node1, (*it).node2, nodes1, nodes2)) {
+        	nodes1.push_back((*it).node1);
+        	nodes2.push_back((*it).node2);
+    	}
     	getInnerBranches(nodes1, nodes2, 2, (*it).node1, (*it).node2);
     	getInnerBranches(nodes1, nodes2, 2, (*it).node2, (*it).node1);
     }
 }
-
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &searchinfo) {
     if((globalParam->online_bootstrap == PLL_TRUE) && (globalParam->gbo_replicates > 0)) {

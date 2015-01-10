@@ -400,6 +400,11 @@ public:
     void getInnerBranches(NodeVector& nodes1, NodeVector& nodes2, int depth, Node *node, Node *dad);
 
     /**
+     *  @brief check whether branch (node1, node2) exist in the branch vector (nodes1, node2)
+     */
+    bool branchExist(Node* node1, Node* node2, NodeVector& nodes1, NodeVector& nodes2);
+
+    /**
      * @brief: check if the branch is internal
      * @param[in] node1 one end of the branch
      * @param[in] node2 the other end of the branch

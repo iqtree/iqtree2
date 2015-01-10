@@ -825,12 +825,31 @@ void MTree::getAllInnerBranches(NodeVector &nodes1, NodeVector &nodes2, SplitGra
     }
 }
 
+bool MTree::branchExist(Node* node1, Node* node2, NodeVector& nodes1, NodeVector& nodes2) {
+	assert(nodes1.size() == nodes2.size());
+	bool existed = false;
+	for (int i = 0; i < nodes1.size(); i++) {
+		if (nodes1[i] == node1) {
+			if (nodes2[i] == node2) {
+				existed = true;
+				break;
+			}
+		}
+		if (nodes1[i] == node2) {
+			if (nodes2[i] == node1) {
+				existed = true;
+				break;
+			}
+		}
+	}
+	return existed;
+}
+
 void MTree::getInnerBranches(NodeVector &nodes1, NodeVector &nodes2, int depth, Node *node, Node *dad) {
     if (depth == 0)
       return;
-    assert(isInnerBranch(node, dad));
     FOR_NEIGHBOR_IT(node, dad, it) {
-        if (!(*it)->node->isLeaf()) {
+        if (!(*it)->node->isLeaf() && !branchExist(node, (*it)->node, nodes1, nodes2)) {
         	nodes1.push_back(node);
         	nodes2.push_back((*it)->node);
             getInnerBranches(nodes1, nodes2, depth-1, (*it)->node, node);
