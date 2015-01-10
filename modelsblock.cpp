@@ -49,6 +49,8 @@ void ModelsBlock::Read(NxsToken &token)
 			if (!token.Equals(";"))
 				throw NxsException("Expecting ';' to terminate MODEL command", token);
 
+			model.is_atomic = (model.description.find_first_of("+*") == string::npos && model.description.find("MIX") == string::npos);
+
 			push_back(model);
 
 		} else if (token.Equals("END") || token.Equals("ENDBLOCK")) {

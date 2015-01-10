@@ -12,8 +12,14 @@
 
 class NxsModel {
 public:
+	/* model name */
 	string name;
+
+	/* model description */
 	string description;
+
+	/* true if model the basic model (no mixture etc.) */
+	bool is_atomic;
 };
 
 /**

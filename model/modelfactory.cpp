@@ -55,7 +55,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
-	fused_mix_rate = false;
+	fused_mix_rate = true;
 
 	string model_str = params.model_name;
 	ModelsBlock *models_block = new ModelsBlock;
@@ -79,8 +79,10 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
 
-	NxsModel *nxsmodel = models_block->findModel(model_str);
-	if (nxsmodel) {
+	NxsModel *nxsmodel  = NULL;
+
+	nxsmodel = models_block->findModel(model_str);
+	if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
 		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
 		model_str = nxsmodel->description;
 	}
@@ -145,13 +147,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	if (posG == string::npos) {
 		posG = model_str.find("*G");
 		if (posG != string::npos)
-			fused_mix_rate = true;
+			fused_mix_rate = false;
 	}
 	string::size_type posR = model_str.find("+R"); // FreeRate model
 	if (posR == string::npos) {
 		posR = model_str.find("*R");
 		if (posR != string::npos)
-			fused_mix_rate = true;
+			fused_mix_rate = false;
 	}
 	if (posG != string::npos && posR != string::npos)
 		outError("Gamma and FreeRate models cannot be both specified!");
@@ -283,7 +285,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 
 	/* create substitution model */
 	nxsmodel = models_block->findModel(model_str);
-	if (nxsmodel) {
+	if (nxsmodel && nxsmodel->description.substr(0,4) == "MIX{") {
 		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
 		model_str = nxsmodel->description;
 	}
@@ -303,8 +305,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			model = createModel(model_str, model_desc, freq_type, freq_params, tree);
 		}
 
+		fused_mix_rate &= model->isMixture();
+
 		if (fused_mix_rate) {
-			if (!model->isMixture()) outError("Model specified is not a mixture model");
 			if (model->getNMixtures() != site_rate->getNRate())
 				outError("Mixture model and site rate model do not have the same number of categories");
 			ModelMixture *mmodel = (ModelMixture*)model;
@@ -361,6 +364,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			if (*it) delete [] (*it);
 	} 
 	tree->discardSaturatedSite(params.discard_saturated_site);
+
+	delete models_block;
 
 }
 

@@ -227,7 +227,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 				out << "(estimated with maximum likelihood)" << endl;
 				break;
 			case FREQ_USER_DEFINED:
-				out << "(user-defined)" << endl;
+				out << ((tree.aln->seq_type == SEQ_PROTEIN) ? "(model)" : "(user-defined)") << endl;
 				break;
 			case FREQ_EQUAL:
 				out << "(equal frequencies)" << endl;
@@ -237,13 +237,15 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 			}
 		out << endl;
 
-		double *state_freqs = new double[tree.aln->num_states];
-		tree.getModel()->getStateFrequency(state_freqs);
-		for (i = 0; i < tree.aln->num_states; i++)
-			out << "  pi(" << tree.aln->convertStateBackStr(i) << ") = "
-					<< state_freqs[i] << endl;
-		delete[] state_freqs;
-		out << endl;
+		if (tree.getModel()->getFreqType() != FREQ_USER_DEFINED && tree.getModel()->getFreqType() != FREQ_EQUAL) {
+			double *state_freqs = new double[tree.aln->num_states];
+			tree.getModel()->getStateFrequency(state_freqs);
+			for (i = 0; i < tree.aln->num_states; i++)
+				out << "  pi(" << tree.aln->convertStateBackStr(i) << ") = "
+						<< state_freqs[i] << endl;
+			delete[] state_freqs;
+			out << endl;
+		}
 		if (tree.aln->num_states <= 4) {
 			// report Q matrix
 			double *q_mat = new double[tree.aln->num_states * tree.aln->num_states];
