@@ -325,7 +325,7 @@ void IQTree::computeInitialTree(string &dist_file) {
     double start = getCPUTime();
     string initTree;
     string out_file = params->out_prefix;
-    if (params->stop_condition == SC_FIXED_ITERATION)
+    if (params->stop_condition == SC_FIXED_ITERATION && params->numNNITrees > params->min_iterations)
     	params->numNNITrees = params->min_iterations;
     if (params->user_file) {
         // start the search with user-defined tree
@@ -1892,7 +1892,13 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             plusNNIs.clear(); // Vector containing all positive NNIs
             saveBranches(); // save all current branch lengths
             initPartitionInfo(); // for super tree
+            if (params->fix_stable_splits) { // exclude stable splits from NNI evaluation
+            	int numRemoved = removeBranches(nodes1, nodes2, candidateTrees.getStableSplits());
+            	cout << "Number of splits removed: " << numRemoved << endl;
+            }
+            assert(nodes1.size() == nodes2.size());
             evalNNIs(nodes1, nodes2);
+
 
 //            if (!nni_sort) {
 //                evalNNIs(); // generate all positive NNI moves
