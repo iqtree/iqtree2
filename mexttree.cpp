@@ -59,7 +59,7 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 
 void MExtTree::setZeroInternalBranches(int num_zero_len) {
 	NodeVector nodes, nodes2;
-	getInternalBranches(nodes, nodes2);
+	getAllInnerBranches(nodes, nodes2);
 	if (num_zero_len > nodes.size()) outError("The specified number of zero branches is too much");
 	for (int i = 0; i < num_zero_len;) {
 		int id = random_int(nodes.size());
@@ -370,7 +370,7 @@ void MExtTree::generateYuleHarding(Params &params, bool binary) {
 void MExtTree::generateStarTree(Params &params) {
 	generateYuleHarding(params);
 	NodeVector nodes, nodes2;
-	getInternalBranches(nodes, nodes2);
+	getAllInnerBranches(nodes, nodes2);
 	for (int i = 0; i < nodes.size(); i++) {
 		nodes[i]->findNeighbor(nodes2[i])->length = 0.0;
 		nodes2[i]->findNeighbor(nodes[i])->length = 0.0;

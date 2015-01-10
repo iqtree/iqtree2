@@ -798,21 +798,29 @@ void MTree::getInternalNodes(NodeVector &nodes, Node *node, Node *dad) {
     }
 }
 
-void MTree::getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
+void MTree::getAllInnerBranches(NodeVector &nodes1, NodeVector &nodes2, SplitGraph* excludeSplits, Node *node, Node *dad) {
     if (!node) node = root;
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
     //if ((*it)->node != dad)	{
     FOR_NEIGHBOR_IT(node, dad, it)
     if (!(*it)->node->isLeaf()) {
-        getInternalBranches(nodes, nodes2, (*it)->node, node);
+        getAllInnerBranches(nodes1, nodes2, excludeSplits, (*it)->node, node);
         if (!node->isLeaf()) {
-            if (node->id < (*it)->node->id) {
-                nodes.push_back(node);
-                nodes2.push_back((*it)->node);
-            } else {
-                nodes.push_back((*it)->node);
-                nodes2.push_back(node);
-            }
+        	if (excludeSplits != NULL) {
+        		Split* sp = getSplit(node, (*it)->node);
+        		if (excludeSplits->containSplit(*sp)) {
+        			delete sp;
+        			continue;
+        		}
+        		delete sp;
+        	}
+			if (node->id < (*it)->node->id) {
+				nodes1.push_back(node);
+				nodes2.push_back((*it)->node);
+			} else {
+				nodes1.push_back((*it)->node);
+				nodes2.push_back(node);
+			}
         }
     }
 }
@@ -820,7 +828,7 @@ void MTree::getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *nod
 void MTree::getInBranches(map<string, Branch> &brans, int depth, Node *node, Node *dad) {
     if (depth == 0)
       return;
-    assert(isInBran(node, dad));
+    assert(isInnerBranch(node, dad));
     FOR_NEIGHBOR_IT(node, dad, it) {
         if (!(*it)->node->isLeaf()) {
             Branch bran(node, (*it)->node);
@@ -830,11 +838,36 @@ void MTree::getInBranches(map<string, Branch> &brans, int depth, Node *node, Nod
     }
 }
 
-bool MTree::isInBran(Node* node1, Node* node2) {
-    return (!node1->isLeaf() && !node2->isLeaf());
+bool MTree::isInnerBranch(Node* node1, Node* node2) {
+    assert(node1->degree() == 3 && node2->degree() == 3);
+    return (isABranch(node1, node2) && !node1->isLeaf() && !node2->isLeaf());
 }
 
-
+bool MTree::isABranch(Node* node1, Node* node2) {
+	bool isBranch1 = false;
+	for (NeighborVec::iterator it = node1->neighbors.begin(); it != node1->neighbors.end(); it++) {
+		if ((*it)->node == node2) {
+			isBranch1 = true;
+			break;
+		}
+	}
+	// Sanity check: both nodes must have each other as neighbors or not at all
+	bool isBranch2 = false;
+	for (NeighborVec::iterator it = node2->neighbors.begin(); it != node2->neighbors.end(); it++) {
+		if ((*it)->node == node1) {
+			isBranch2 = true;
+			break;
+		}
+	}
+	if (isBranch2 != isBranch1) {
+		int node1ID = node1->id;
+		int node2ID = node2->id;
+		stringstream msg;
+		msg << "Tree data structure corrupted! Node " << node1ID << " and node " << node2ID << " are not constructed properly";
+		outError(msg.str());
+	}
+	return isBranch1;
+}
 
 void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
     if (!node) node = root;
@@ -930,11 +963,11 @@ bool MTree::containsSplits(SplitGraph& splits) {
 	return true;
 }
 
-Split MTree::getSplit(Node* node1, Node* node2) {
-	Split sp(leafNum);
-	getTaxa(sp, node1, node2);
-	if (sp.shouldInvert())
-		sp.invert();
+Split* MTree::getSplit(Node* node1, Node* node2) {
+	Split* sp = new Split(leafNum);
+	getTaxa(*sp, node1, node2);
+	if (sp->shouldInvert())
+		sp->invert();
 	return sp;
 }
 

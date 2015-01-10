@@ -376,8 +376,9 @@ public:
             @param dad dad of the node, used to direct the search
             @param nodes (OUT) vector of one end node of branch
             @param nodes2 (OUT) vector of the other end node of branch
+            @param excludeSplits do not collect branches in here
      */
-    void getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL);
+    void getAllInnerBranches(vector<Node*> &nodes, vector<Node*> &nodes2, SplitGraph* excludeSplits = NULL, Node *node = NULL, Node *dad = NULL);
 
     /**
             get all descending branches below the node
@@ -399,7 +400,15 @@ public:
      * @param[in] node1 one end of the branch
      * @param[in] node2 the other end of the branch
      */
-    bool isInBran(Node* node1, Node* node2);
+    bool isInnerBranch(Node* node1, Node* node2);
+
+    /**
+     *  Check if the 2 nodes from a branch in the tree
+     *  @param node1 one of the 2 nodes
+     *  @param node2 one of the 2 nodes
+     *  return true if they are adjacent to each other
+     */
+    bool isABranch(Node* node1, Node* node2);
 
     void getBranchLengths(DoubleVector &len, Node *node = NULL, Node *dad = NULL);
 
@@ -498,9 +507,9 @@ public:
      * 		Generate a split defined by branch node1-node2
      * 		@param node1 one end of the branch
      * 		@param node2 one end of the branch
-     * 		@return the split
+     * 		@return a pointer to the split (the new split is allocated dynamically)
      */
-    Split getSplit(Node* node1, Node* node2);
+    Split* getSplit(Node* node1, Node* node2);
 
     /**
      *  Check whehter the tree contains all splits in \a splits
@@ -677,7 +686,7 @@ protected:
      * @param node2
      * @return the string key for the node pair
      */
-    inline string nodePair2String(Node* node1, Node* node2) {
+    inline string getBranchID(Node* node1, Node* node2) {
         string key("");
         if (node1->id < node2->id) {
             key += convertIntToString(node1->id) + "-"

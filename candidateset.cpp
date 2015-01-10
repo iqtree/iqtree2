@@ -244,11 +244,11 @@ void CandidateSet::removeCandidateTree(string topology) {
 }
 
 bool CandidateSet::isStableSplit(Split& sp) {
-	return supportedSplits.containSplit(sp);
+	return stableSplit.containSplit(sp);
 }
 
 int CandidateSet::computeSplitSupport(int numTree) {
-	supportedSplits.clear();
+	stableSplit.clear();
 	SplitIntMap hash_ss;
 	SplitGraph sg;
 	MTreeSet boot_trees;
@@ -263,7 +263,7 @@ int CandidateSet::computeSplitSupport(int numTree) {
 		if (it->second == maxSupport && it->first->countTaxa() > 1) {
 			numMaxSupport++;
 			Split* supportedSplit = new Split(*(it->first));
-			supportedSplits.push_back(supportedSplit);
+			stableSplit.push_back(supportedSplit);
 		}
 	}
 	cout << "Number of supported splits = " << numMaxSupport << endl;

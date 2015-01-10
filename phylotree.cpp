@@ -1604,15 +1604,15 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
 		}
 		assert(A != 0);
 		assert(B != 0);
-		string keyAC = nodePair2String(nodeA, nodeC);
+		string keyAC = getBranchID(nodeA, nodeC);
 		assert(subTreeDists.count(keyAC));
 		double distAC = subTreeDists[keyAC];
 		double weightAC = subTreeWeights[keyAC];
-		string keyBC = nodePair2String(nodeB, nodeC);
+		string keyBC = getBranchID(nodeB, nodeC);
 		assert(subTreeDists.count(keyBC));
 		double distBC = subTreeDists[keyBC];
 		double weightBC = subTreeWeights[keyBC];
-		string keyAB = nodePair2String(nodeA, nodeB);
+		string keyAB = getBranchID(nodeA, nodeB);
 		assert(subTreeDists.count(keyAB));
 		double distAB = subTreeDists[keyAB];
 		double weightAB = subTreeWeights[keyAB];
@@ -1648,32 +1648,32 @@ double PhyloTree::optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2) {
 			}
 		}
 
-		string keyAC = nodePair2String(nodeA, nodeC);
+		string keyAC = getBranchID(nodeA, nodeC);
 		assert(subTreeDists.count(keyAC));
 		double distAC = subTreeDists[keyAC];
 		double weightAC = subTreeWeights[keyAC];
 
-		string keyBD = nodePair2String(nodeB, nodeD);
+		string keyBD = getBranchID(nodeB, nodeD);
 		assert(subTreeDists.count(keyBD));
 		double distBD = subTreeDists[keyBD];
 		double weightBD = subTreeWeights[keyBD];
 
-		string keyBC = nodePair2String(nodeB, nodeC);
+		string keyBC = getBranchID(nodeB, nodeC);
 		assert(subTreeDists.count(keyBC));
 		double distBC = subTreeDists[keyBC];
 		double weightBC = subTreeWeights[keyBC];
 
-		string keyAD = nodePair2String(nodeA, nodeD);
+		string keyAD = getBranchID(nodeA, nodeD);
 		assert(subTreeDists.count(keyAD));
 		double distAD = subTreeDists[keyAD];
 		double weightAD = subTreeWeights[keyAD];
 
-		string keyAB = nodePair2String(nodeA, nodeB);
+		string keyAB = getBranchID(nodeA, nodeB);
 		assert(subTreeDists.count(keyAB));
 		double distAB = subTreeDists[keyAB];
 		double weightAB = subTreeWeights[keyAB];
 
-		string keyCD = nodePair2String(nodeC, nodeD);
+		string keyCD = getBranchID(nodeC, nodeD);
 		assert(subTreeDists.count(keyCD));
 		double distCD = subTreeDists[keyCD];
 		double weightCD = subTreeWeights[keyCD];
@@ -1742,9 +1742,9 @@ void PhyloTree::updateSubtreeDists(NNIMove &nnimove) {
     getAllNodesInSubtree(nodeD, node2, nodeListD);
 
     for (NodeVector::iterator it = nodeListA.begin(); it != nodeListA.end(); ++it) {
-        string key = nodePair2String((*it), node2);
-        double distB = subTreeDists.find(nodePair2String((*it), nodeB))->second;
-        double distD = subTreeDists.find(nodePair2String((*it), nodeD))->second;
+        string key = getBranchID((*it), node2);
+        double distB = subTreeDists.find(getBranchID((*it), nodeB))->second;
+        double distD = subTreeDists.find(getBranchID((*it), nodeD))->second;
         double newDist = distB + distD;
         StringDoubleMap::iterator dist_it = subTreeDists.find(key);
         assert(dist_it != subTreeDists.end());
@@ -1752,9 +1752,9 @@ void PhyloTree::updateSubtreeDists(NNIMove &nnimove) {
     }
 
     for (NodeVector::iterator it = nodeListB.begin(); it != nodeListB.end(); ++it) {
-        string key = nodePair2String((*it), node1);
-        double distC = subTreeDists.find(nodePair2String((*it), nodeC))->second;
-        double distA = subTreeDists.find(nodePair2String((*it), nodeA))->second;
+        string key = getBranchID((*it), node1);
+        double distC = subTreeDists.find(getBranchID((*it), nodeC))->second;
+        double distA = subTreeDists.find(getBranchID((*it), nodeA))->second;
         double newDist = distC + distA;
         StringDoubleMap::iterator dist_it = subTreeDists.find(key);
         assert(dist_it != subTreeDists.end());
@@ -1762,9 +1762,9 @@ void PhyloTree::updateSubtreeDists(NNIMove &nnimove) {
     }
 
     for (NodeVector::iterator it = nodeListC.begin(); it != nodeListC.end(); ++it) {
-        string key = nodePair2String((*it), node2);
-        double distD = subTreeDists.find(nodePair2String((*it), nodeD))->second;
-        double distB = subTreeDists.find(nodePair2String((*it), nodeB))->second;
+        string key = getBranchID((*it), node2);
+        double distD = subTreeDists.find(getBranchID((*it), nodeD))->second;
+        double distB = subTreeDists.find(getBranchID((*it), nodeB))->second;
         double newDist = distD + distB;
         StringDoubleMap::iterator dist_it = subTreeDists.find(key);
         assert(dist_it != subTreeDists.end());
@@ -1772,21 +1772,21 @@ void PhyloTree::updateSubtreeDists(NNIMove &nnimove) {
     }
 
     for (NodeVector::iterator it = nodeListD.begin(); it != nodeListD.end(); ++it) {
-        string key = nodePair2String((*it), node1);
-        double distA = subTreeDists.find(nodePair2String((*it), nodeA))->second;
-        double distC = subTreeDists.find(nodePair2String((*it), nodeC))->second;
+        string key = getBranchID((*it), node1);
+        double distA = subTreeDists.find(getBranchID((*it), nodeA))->second;
+        double distC = subTreeDists.find(getBranchID((*it), nodeC))->second;
         double newDist = distA + distC;
         StringDoubleMap::iterator dist_it = subTreeDists.find(key);
         assert(dist_it != subTreeDists.end());
         dist_it->second = newDist;
     }
 
-    double distAB = subTreeDists.find(nodePair2String(nodeA, nodeB))->second;
-    double distAD = subTreeDists.find(nodePair2String(nodeA, nodeD))->second;
-    double distCB = subTreeDists.find(nodePair2String(nodeC, nodeB))->second;
-    double distCD = subTreeDists.find(nodePair2String(nodeC, nodeD))->second;
+    double distAB = subTreeDists.find(getBranchID(nodeA, nodeB))->second;
+    double distAD = subTreeDists.find(getBranchID(nodeA, nodeD))->second;
+    double distCB = subTreeDists.find(getBranchID(nodeC, nodeB))->second;
+    double distCD = subTreeDists.find(getBranchID(nodeC, nodeD))->second;
 
-    subTreeDists.find(nodePair2String(node1, node2))->second = distAB + distAD + distCB + distCD;
+    subTreeDists.find(getBranchID(node1, node2))->second = distAB + distAD + distCB + distCD;
 
 }
 
@@ -1838,7 +1838,7 @@ void PhyloTree::computeSubtreeDists() {
 
 void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* source_nei1, PhyloNode* source_nei2,
         PhyloNode* node, PhyloNode* dad) {
-    string key = nodePair2String(source, dad);
+    string key = getBranchID(source, dad);
     double dist, weight;
     if (markedNodeList.find(dad->id) != markedNodeList.end()) {
         return;
@@ -1858,11 +1858,11 @@ void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* so
     } else if (!source->isLeaf() && dad->isLeaf()) {
         assert(source_nei1);
         assert(source_nei2);
-        string key1 = nodePair2String(source_nei1, dad);
+        string key1 = getBranchID(source_nei1, dad);
         assert(subTreeDists.find(key1) == subTreeDists.end());
         double dist1 = subTreeDists.find(key1)->second;
         double weight1 = subTreeWeights.find(key1)->second;
-        string key2 = nodePair2String(source_nei2, dad);
+        string key2 = getBranchID(source_nei2, dad);
         assert(subTreeDists.find(key2) == subTreeDists.end());
         double dist2 = subTreeDists.find(key2)->second;
         double weight2 = subTreeWeights.find(key2)->second;
@@ -1886,8 +1886,8 @@ void PhyloTree::computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* so
         assert(dad_nei2);
         computeAllSubtreeDistForOneNode(source, source_nei1, source_nei2, dad, dad_nei1);
         computeAllSubtreeDistForOneNode(source, source_nei1, source_nei2, dad, dad_nei2);
-        string key1 = nodePair2String(source, dad_nei1);
-        string key2 = nodePair2String(source, dad_nei2);
+        string key1 = getBranchID(source, dad_nei1);
+        string key2 = getBranchID(source, dad_nei2);
         assert(subTreeDists.find(key1) != subTreeDists.end());
         assert(subTreeDists.find(key2) != subTreeDists.end());
         double dist1 = subTreeDists.find(key1)->second;
@@ -3248,10 +3248,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
  ****************************************************************************/
 
 void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
-	assert(!node1->isLeaf() && !node2->isLeaf());
-    assert(node1->degree() == 3 && node2->degree() == 3);
-    assert(node1->neighbors.size() == 3 && node2->neighbors.size() == 3);
-
+	assert(isInnerBranch(node1, node2));
     Neighbor *node1Nei = NULL;
     Neighbor *node2Nei = NULL;
     // randomly choose one neighbor from node1 and one neighbor from node2

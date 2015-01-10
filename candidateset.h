@@ -222,8 +222,8 @@ public:
      */
     CandidateSet getBestCandidateTrees(int numTrees);
 
-	SplitGraph& getSupportedSplits() {
-		return supportedSplits;
+	SplitGraph& getStableSplits() {
+		return stableSplit;
 	}
 
 private:
@@ -231,7 +231,7 @@ private:
     /**
      *  Set of supported splits by the best trees
      */
-    SplitGraph supportedSplits;
+    SplitGraph stableSplit;
 
     /**
      * limit for number of trees (typically superset of candidate set)

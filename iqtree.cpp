@@ -1015,35 +1015,58 @@ void IQTree::doParsimonyReinsertion() {
     fixNegativeBranch(false);
 }
 
+bool isNodeNULL(Node* node) {
+	if (node == NULL)
+		return true;
+	else
+		return false;
+}
+
 void IQTree::doRandomNNIs(int numNNI) {
 	NodeVector nodes1, nodes2;
-	unordered_set<string> usedBranches;
-    getInternalBranches(nodes1, nodes2);
-    int numInBran = nodes1.size();
-    assert(numInBran == aln->getNSeq() - 3);
+	SplitGraph usedSplits;
+	NodeVector::iterator it1, it2;
     int cntNNI = 0;
-    while (cntNNI < numInBran) {
-        int index = random_int(numInBran);
-        string branchID = nodePair2String(nodes1[index], nodes2[index]);
-        if (usedBranches.find(branchID) == usedBranches.end()) {
-        	// NOT FINISH YET!
-        	if (params->fix_stable_splits) {
-        		Split my_split = getSplit(nodes1[index], nodes2[index]);
-        		if (candidateTrees.isStableSplit(my_split)) {
-        			cout << "This is a stable split" << endl;
-        		} else {
-        			//cout << "No stable split: " << endl;
-        			//my_split.report(cout);
-        		}
-        	}
-        	doOneRandomNNI(nodes1[index], nodes2[index]);
-        	cntNNI++;
-        	usedBranches.insert(branchID);
-        	nodes1.clear();
-        	nodes2.clear();
-            getInternalBranches(nodes1, nodes2);
-        }
+    while (cntNNI < numNNI) {
+    	nodes1.clear();
+    	nodes2.clear();
+    	if (params->fix_stable_splits) {
+    		getAllInnerBranches(nodes1, nodes2, &candidateTrees.getStableSplits());
+        	// remove all used splits
+    		int oldSize = nodes1.size();
+    		NodeVector _nodes1, _nodes2;
+    		_nodes1 = nodes1;
+    		_nodes2 = nodes2;
+    		nodes1.clear();
+    		nodes2.clear();
+    		for (it1 = _nodes1.begin(), it2 = _nodes2.begin(); it1 != _nodes1.end(), it2 != _nodes2.end(); it1++, it2++) {
+    			Split* sp = getSplit(*it1, *it2);
+    			if (!usedSplits.containSplit(*sp)) {
+    				nodes1.push_back(*it1);
+    				nodes2.push_back(*it2);
+    			}
+    			delete sp;
+    		}
+
+    		if (nodes1.size() == 0) {
+    			assert(nodes2.size() == 0);
+    			break;
+    		}
+        	//cout << "oldSize: " << oldSize << " newSize = " << nodes1.size() << endl;
+
+        	// randomly take an inner branch and do a random NNI
+            int index = random_int(nodes1.size());
+            doOneRandomNNI(nodes1[index], nodes2[index]);
+            Split* newSp = getSplit(nodes1[index], nodes2[index]);
+            usedSplits.push_back(newSp);
+    	} else {
+    		getAllInnerBranches(nodes1, nodes2);
+            int index = random_int(nodes1.size());
+            doOneRandomNNI(nodes1[index], nodes2[index]);
+    	}
+    	cntNNI++;
     }
+	//cout << "Number of random NNI performed: " << cntNNI -1 << endl;
 
     setAlignment(aln);
     setRootNode(params->root);
@@ -1667,8 +1690,8 @@ double IQTree::doTreeSearch() {
                 //cout << "candidateTrees.size() = " << candidateTrees.size() << endl;
                 string candidateTree = candidateTrees.getRandCandTree();
                 readTreeString(candidateTree);
-                if (params->fix_stable_splits)
-                	assert(containsSplits(candidateTrees.getSupportedSplits()));
+//                if (params->fix_stable_splits)
+//                	assert(containsSplits(candidateTrees.getStableSplits()));
                 if (params->iqp) {
                     doIQP();
                 } else {
@@ -2274,7 +2297,7 @@ void IQTree::saveBranches(PhyloNode *node, PhyloNode *dad) {
     }
     if (dad) {
         double len = getBranLen(node, dad);
-        string key = nodePair2String(node, dad);
+        string key = getBranchID(node, dad);
         orgBrans.insert(mapString2Double::value_type(key, len));
     }
 
@@ -2288,7 +2311,7 @@ void IQTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
         node = (PhyloNode*) root;
     }
     if (dad) {
-        string key = nodePair2String(node, dad);
+        string key = getBranchID(node, dad);
         Neighbor* bran_it = node->findNeighbor(dad);
         assert(bran_it);
         Neighbor* bran_it_back = dad->findNeighbor(node);

@@ -1537,7 +1537,7 @@ void branchStats(Params &params){
 	
 	/***** Following added by BQM to print internal branch lengths */
 	NodeVector nodes1, nodes2;
-	mytree.getInternalBranches(nodes1, nodes2);
+	mytree.getAllInnerBranches(nodes1, nodes2);
 	output = params.out_prefix;
 	output += ".inlen";
 	try {
