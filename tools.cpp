@@ -2200,6 +2200,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-fss") == 0) {
+				params.sprDist = 0; // to avoid bias
 				params.fix_stable_splits = true;
 				continue;
 			}

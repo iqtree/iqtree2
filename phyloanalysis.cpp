@@ -1418,7 +1418,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     // Optimize model parameters and branch lengths using ML for the initial tree
-    string initTree = iqtree.optimizeModelParameters(false);
+    string initTree = iqtree.optimizeModelParameters(false, 0.1);
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 

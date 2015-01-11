@@ -806,7 +806,7 @@ void MTree::getAllInnerBranches(NodeVector &nodes1, NodeVector &nodes2, SplitGra
     if (!(*it)->node->isLeaf()) {
         getAllInnerBranches(nodes1, nodes2, excludeSplits, (*it)->node, node);
         if (!node->isLeaf()) {
-        	if (excludeSplits != NULL) {
+        	if (excludeSplits != NULL && excludeSplits->size() != 0) {
         		Split* sp = getSplit(node, (*it)->node);
         		if (excludeSplits->containSplit(*sp)) {
         			delete sp;

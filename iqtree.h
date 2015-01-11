@@ -622,10 +622,11 @@ public:
     /**
      *  @brief: optimize model parameters on the current tree
      *  either IQ-TREE or PLL
-     *  @param imd_tree the input tree or NULL
      *  @param printInfo to print model parameters to the screen or not
+     *  @param epsilon likelihood epsilon for optimization
+     *
      */
-    string optimizeModelParameters(bool printInfo=false);
+    string optimizeModelParameters(bool printInfo = false, double epsilon = -1);
 
     /**
      *  variable storing the current best tree topology

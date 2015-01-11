@@ -206,7 +206,7 @@ void CandidateSet::clearTopologies() {
 
 CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
 	CandidateSet res;
-	if (numTrees >= size())
+	if (numTrees >= size() || numTrees == 0)
 		numTrees = size();
 	for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; rit++, numTrees--) {
 		res.insert(*rit);
@@ -249,6 +249,8 @@ bool CandidateSet::isStableSplit(Split& sp) {
 
 int CandidateSet::computeSplitSupport(int numTree) {
 	stableSplit.clear();
+	if (numTree == 0)
+		numTree = getNumLocalOptTrees();
 	SplitIntMap hash_ss;
 	SplitGraph sg;
 	MTreeSet boot_trees;
