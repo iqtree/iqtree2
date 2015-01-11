@@ -65,7 +65,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		nexus.Add(models_block);
 	    MyToken token(nexus.inf);
 	    nexus.Execute(token);
-	    cout << models_block->size() << " models specified" << endl;
+	    cout << models_block->size() << " models loaded" << endl;
 	}
 
 
@@ -305,7 +305,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			model = createModel(model_str, model_desc, freq_type, freq_params, tree);
 		}
 
-		fused_mix_rate &= model->isMixture();
+		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
 
 		if (fused_mix_rate) {
 			if (model->getNMixtures() != site_rate->getNRate())
