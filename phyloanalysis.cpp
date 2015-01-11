@@ -603,7 +603,6 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		if (params.compute_ml_tree) {
 			out << "MAXIMUM LIKELIHOOD TREE" << endl
 					<< "-----------------------" << endl << endl;
-
 			tree.setRootNode(params.root);
 			out << "NOTE: Tree is UNROOTED although outgroup taxon '" << tree.root->name << "' is drawn at root" << endl;
 			if (params.partition_file)
