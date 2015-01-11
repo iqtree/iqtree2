@@ -1288,7 +1288,7 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 			memcpy(&dad_branch->partial_lh[ptn*block], dad_branch->partial_lh, block*sizeof(double));
 
 #ifdef _OPENMP
-#pragma omp parallel private(ptn, i, j, vc_tip_partial_lh, vc_partial_lh_dad, vc_ptn, vc_freq, lh_ptn)
+#pragma omp parallel private(ptn, i, j, vc_ptn, vc_freq, lh_ptn)
     {
     	VectorClass lh_final_th = 0.0;
 #pragma omp for nowait
