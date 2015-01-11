@@ -606,7 +606,7 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 	double *evec = model->getEigenvectors();
 	double *inv_evec = model->getInverseEigenvectors();
 
-	VectorClass *vc_inv_evec = new VectorClass[ncat*nstates*nstates/VCSIZE];
+	VectorClass *vc_inv_evec = aligned_alloc<VectorClass>(ncat*nstates*nstates/VCSIZE);
 	assert(inv_evec && evec);
 	for (c = 0; c < ncat; c++)
 	for (i = 0; i < nstates; i++) {
@@ -956,7 +956,7 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 
 	aligned_free(eright);
 	aligned_free(eleft);
-	delete [] vc_inv_evec;
+	aligned_free(vc_inv_evec);
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
