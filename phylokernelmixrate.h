@@ -1228,7 +1228,7 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
     double *eval = model->getEigenvalues();
     assert(eval);
 
-    VectorClass *vc_val = (VectorClass*)aligned_alloc<double>(block);
+    VectorClass *vc_val = aligned_alloc<VectorClass>(block/VCSIZE);
 
 
 	for (c = 0; c < ncat; c++) {
@@ -1251,14 +1251,37 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
     	VectorClass lh_final(0.0), vc_freq;
 		VectorClass lh_ptn; // store likelihoods of VCSIZE consecutive patterns
 
-    	double **lh_states_dad = aligned_alloc<double*>(maxptn);
-    	for (ptn = 0; ptn < orig_nptn; ptn++)
-    		lh_states_dad[ptn] = &tip_partial_lh[(aln->at(ptn))[dad->id] * nstates * ncat];
-    	for (ptn = orig_nptn; ptn < nptn; ptn++)
-    		lh_states_dad[ptn] = &tip_partial_lh[model_factory->unobserved_ptns[ptn-orig_nptn] * nstates * ncat];
-    	// initialize beyond #patterns for efficiency
-    	for (ptn = nptn; ptn < maxptn; ptn++)
-    		lh_states_dad[ptn] = &tip_partial_lh[aln->STATE_UNKNOWN * nstates * ncat];
+    	// precompute information from one tip
+    	double *partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
+    	IntVector states_dad = aln->seq_states[dad->id];
+    	states_dad.push_back(aln->STATE_UNKNOWN);
+    	for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
+    		double *lh_node = partial_lh_node + (*it)*block;
+    		double *lh_tip = tip_partial_lh + (*it)*block;
+    		for (i = 0; i < block; i+=VCSIZE)
+    			(vc_val[i/VCSIZE]*VectorClass().load_a(&lh_tip[i])).store_a(&lh_node[i]);
+    	}
+
+    	// now do the real computation
+
+
+//    	double **lh_states_dad = aligned_alloc<double*>(maxptn);
+//    	for (ptn = 0; ptn < orig_nptn; ptn++)
+//    		lh_states_dad[ptn] = &tip_partial_lh[(aln->at(ptn))[dad->id] * nstates * ncat];
+//    	for (ptn = orig_nptn; ptn < nptn; ptn++)
+//    		lh_states_dad[ptn] = &tip_partial_lh[model_factory->unobserved_ptns[ptn-orig_nptn] * nstates * ncat];
+//    	// initialize beyond #patterns for efficiency
+//    	for (ptn = nptn; ptn < maxptn; ptn++)
+//    		lh_states_dad[ptn] = &tip_partial_lh[aln->STATE_UNKNOWN * nstates * ncat];
+
+		int *ptn_states_dad = aligned_alloc<int>(maxptn);
+		for (ptn = 0; ptn < orig_nptn; ptn++)
+			ptn_states_dad[ptn] = (aln->at(ptn))[dad->id];
+		for (ptn = orig_nptn; ptn < nptn; ptn++)
+			ptn_states_dad[ptn] = model_factory->unobserved_ptns[ptn-orig_nptn];
+		// initialize beyond #patterns for efficiency
+		for (ptn = nptn; ptn < maxptn; ptn++)
+			ptn_states_dad[ptn] = aln->STATE_UNKNOWN;
 
 		// copy dummy values because VectorClass will access beyond nptn
 		for (ptn = nptn; ptn < maxptn; ptn++)
@@ -1272,33 +1295,16 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 #endif
    		// main loop over all patterns with a step size of VCSIZE
 		for (ptn = 0; ptn < orig_nptn; ptn+=VCSIZE) {
-			for (j = 0; j < VCSIZE; j++)
+			for (j = 0; j < VCSIZE; j++) {
 				vc_ptn[j] = 0.0;
-//			for (c = 0; c < ncat; c++) {
-				// initialize vc_tip_partial_lh
-//				for (j = 0; j < VCSIZE; j++) {
-//					double *lh_dad = lh_states_dad[ptn+j];
-//					for (i = 0; i < nstates/VCSIZE; i++) {
-//						vc_tip_partial_lh[j*(nstates/VCSIZE)+i].load_a(&lh_dad[c*nstates+i*VCSIZE]);
-//					}
-//					vc_partial_lh_dad[j].load_a(&partial_lh_dad[j*block+c*nstates]);
-//					vc_ptn[j] = vc_val[0] * vc_tip_partial_lh[j*(nstates/VCSIZE)] * vc_partial_lh_dad[j];
-//				}
-
-				// compute vc_ptn
-
-				for (j = 0; j < VCSIZE; j++) {
-					double *lh_dad = lh_states_dad[ptn+j];
-					double *partial_lh_dad = dad_branch->partial_lh + (ptn+j)*block;
-					for (i = 0; i < block/VCSIZE; i++) {
-//						vc_partial_lh_dad[j].load_a(&partial_lh_dad[j*block+i*VCSIZE]);
-//						vc_tip.load_a(&lh_dad[i*VCSIZE]);
-//						vc_ptn[j] = mul_add(vc_val[i] * vc_tip, vc_partial_lh_dad[j], vc_ptn[j]);
-						vc_ptn[j] = mul_add(vc_val[i] * VectorClass().load_a(&lh_dad[i*VCSIZE]),
-								VectorClass().load_a(&partial_lh_dad[i*VCSIZE]), vc_ptn[j]);
-					}
+				double *partial_lh_dad = dad_branch->partial_lh + (ptn+j)*block;
+				int state_dad = ptn_states_dad[ptn+j];
+				double *lh_node = &partial_lh_node[state_dad*block];
+				for (i = 0; i < block; i+=VCSIZE) {
+					vc_ptn[j] = mul_add(VectorClass().load_a(&lh_node[i]),
+							VectorClass().load_a(&partial_lh_dad[i]), vc_ptn[j]);
 				}
-//			}
+			}
 			vc_freq.load_a(&ptn_freq[ptn]);
 			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 			lh_ptn = log(lh_ptn);
@@ -1328,30 +1334,15 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 			lh_ptn = 0.0;
 			for (ptn = orig_nptn; ptn < nptn; ptn+=VCSIZE) {
 				lh_final += lh_ptn;
-
-				// initialize vc_tip_partial_lh
-//				for (j = 0; j < VCSIZE; j++) {
-//					double *lh_dad = lh_states_dad[ptn+j];
-//					for (i = 0; i < nstates/VCSIZE; i++) {
-//						vc_tip_partial_lh[j*(nstates/VCSIZE)+i].load_a(&lh_dad[i*VCSIZE]);
-//					}
-//					vc_partial_lh_dad[j].load_a(&partial_lh_dad[j*block]);
-//					vc_ptn[j] = vc_val[0] * vc_tip_partial_lh[j*(nstates/VCSIZE)] * vc_partial_lh_dad[j];
-//				}
-				for (j = 0; j < VCSIZE; j++)
-					vc_ptn[j] = 0.0;
-
-				// compute vc_ptn
 				for (j = 0; j < VCSIZE; j++) {
+					vc_ptn[j] = 0.0;
 					double *partial_lh_dad = &dad_branch->partial_lh[(ptn+j)*block];
-					double *lh_dad = lh_states_dad[ptn+j];
-					for (i = 0; i < block/VCSIZE; i++) {
+					int state_dad = ptn_states_dad[ptn+j];
+					double *lh_node = &partial_lh_node[state_dad*block];
 
-//						vc_partial_lh_dad[j].load_a(&partial_lh_dad[j*block+i*VCSIZE]);
-//						vc_tip.load_a(&lh_dad[i*VCSIZE]);
-						vc_ptn[j] = mul_add(vc_val[i] * VectorClass().load_a(&lh_dad[i*VCSIZE]),
-								VectorClass().load_a(&partial_lh_dad[i*VCSIZE]), vc_ptn[j]);
-//						vc_ptn[j] = mul_add(vc_val[i] * vc_tip, vc_partial_lh_dad[j], vc_ptn[j]);
+					for (i = 0; i < block; i+=VCSIZE) {
+						vc_ptn[j] = mul_add(VectorClass().load_a(&lh_node[i]),
+								VectorClass().load_a(&partial_lh_dad[i]), vc_ptn[j]);
 					}
 				}
 				// ptn_invar[ptn] is not aligned
@@ -1365,7 +1356,9 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 			default: assert(0); break;
 			}
 		}
-		aligned_free(lh_states_dad);
+//		aligned_free(lh_states_dad);
+		aligned_free(ptn_states_dad);
+		aligned_free(partial_lh_node);
     } else {
     	// both dad and node are internal nodes
     	VectorClass vc_partial_lh_node[VCSIZE];
