@@ -84,6 +84,9 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 	int m;
 
 	vector<NxsModel*> freq_vec;
+	DoubleVector freq_rates;
+	DoubleVector freq_weights;
+	fix_prop = false;
 
 	if (freq == FREQ_MIXTURE) {
 		for (m = 0, cur_pos = 0; m < MAX_MODELS && cur_pos < freq_params.length(); m++) {
@@ -93,6 +96,23 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 			if (pos <= cur_pos)
 				outError("One frequency name in the mixture is empty.");
 			string this_name = freq_params.substr(cur_pos, pos-cur_pos);
+			double rate = 1.0, weight = 1.0;
+			size_t pos_rate = this_name.find(':');
+			if (pos_rate != string::npos) {
+				size_t pos_weight = this_name.find(':', pos_rate+1);
+				if (pos_weight == string::npos) {
+					rate = convert_double(this_name.substr(pos_rate+1).c_str());
+				} else {
+					rate = convert_double(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
+					weight = convert_double(this_name.substr(pos_weight+1).c_str());
+					fix_prop = true;
+					if (weight <= 0.0)
+						outError("Mixture component weight is negative!");
+				}
+				this_name = this_name.substr(0, pos_rate);
+			}
+			freq_rates.push_back(rate);
+			freq_weights.push_back(weight);
 			cur_pos = pos+1;
 			if (this_name == "empirical") {
 				freq_vec.push_back(NULL);
@@ -114,6 +134,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 		init(freq);
 	}
 
+	DoubleVector weights;
 	name = full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
 	for (m = 0, cur_pos = 0; m < MAX_MODELS && cur_pos < model_list.length(); m++) {
@@ -123,10 +144,20 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 		if (pos <= cur_pos)
 			outError("One model name in the mixture is empty.");
 		string this_name = model_list.substr(cur_pos, pos-cur_pos);
-		double rate = 1.0;
-		if (this_name.find(':') != string::npos) {
-			rate = convert_double(this_name.substr(this_name.find(':')+1).c_str());
-			this_name = this_name.substr(0, this_name.find(':'));
+		double rate = 1.0, weight = 1.0;
+		size_t pos_rate = this_name.find(':');
+		if (pos_rate != string::npos) {
+			size_t pos_weight = this_name.find(':', pos_rate+1);
+			if (pos_weight == string::npos) {
+				rate = convert_double(this_name.substr(pos_rate+1).c_str());
+			} else {
+				rate = convert_double(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
+				weight = convert_double(this_name.substr(pos_weight+1).c_str());
+				fix_prop = true;
+				if (weight <= 0.0)
+					outError("Mixture component weight is negative!");
+			}
+			this_name = this_name.substr(0, pos_rate);
 		}
 		cur_pos = pos+1;
 		ModelGTR* model;
@@ -136,8 +167,9 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 					model = (ModelGTR*)createModel(this_name, models_block, FREQ_USER_DEFINED, freq_vec[f]->description, tree, count_rates);
 				else
 					model = (ModelGTR*)createModel(this_name, models_block, FREQ_EMPIRICAL, "", tree, count_rates);
-				model->total_num_subst = rate;
+				model->total_num_subst = rate * freq_rates[f];
 				push_back(model);
+				weights.push_back(weight * freq_weights[f]);
 				if (m+f > 0) {
 					name += ',';
 					full_name += ',';
@@ -154,6 +186,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 			model = (ModelGTR*)createModel(this_name, models_block, freq, freq_params, tree, count_rates);
 			model->total_num_subst = rate;
 			push_back(model);
+			weights.push_back(weight);
 			if (m > 0) {
 				name += ',';
 				full_name += ',';
@@ -170,15 +203,21 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 
 	double sum = 0.0;
 	int i;
-	// initialize rates as increasing
-	for (i = 0; i < nmixtures; i++) {
-		prop[i] = (double)(nmixtures-i);
-//		sum += prop[i]*at(i)->total_num_subst;
-		sum += prop[i];
+	if (fix_prop) {
+		for (i = 0, sum = 0.0; i < nmixtures; i++) {
+			prop[i] = weights[i];
+			sum += prop[i];
+		}
+	} else {
+		// initialize rates as increasing
+		for (i = 0, sum = 0.0; i < nmixtures; i++) {
+			prop[i] = (double)(nmixtures-i);
+			sum += prop[i];
+		}
 	}
-	for (i = 0; i < nmixtures; i++) {
+	// normalize weights to 1.0
+	for (i = 0; i < nmixtures; i++)
 		 prop[i] /= sum;
-	}
 
 	// rescale total_num_subst such that the global rate is 1
 	for (i = 0, sum = 0.0; i < nmixtures; i++)
@@ -186,7 +225,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 	for (i = 0; i < nmixtures; i++)
 		at(i)->total_num_subst /= sum;
 
-	fix_prop = (nmixtures == 1);
+	fix_prop |= (nmixtures == 1);
 	// use central eigen etc. stufffs
 
 	if (eigenvalues) delete [] eigenvalues;
