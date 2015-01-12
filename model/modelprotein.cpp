@@ -3163,6 +3163,10 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 		// if name does not match, read the user-defined model
 		readParameters(model_name);
 	}
+	if (freq_params != "") {
+		stringstream ss(freq_params);
+		readStateFreq(ss);
+	}
 /*	if (name == "WAG") { model_str = model_WAG;}
 	else if (name == "cpREV") model_str = model_cpREV;
 	else if (name == "mtREV") model_str = model_mtREV;

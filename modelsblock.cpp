@@ -25,10 +25,10 @@ void ModelsBlock::Read(NxsToken &token)
 	for (;;) {
 		token.GetNextToken();
 		if (token.Equals("MODEL") || token.Equals("FREQUENCY")) {
+			NxsModel model;
+			model.flag = (NM_FREQ * (int)token.Equals("FREQUENCY"));
 			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 			token.GetNextToken();
-			NxsModel model;
-			model.flag = (NM_FREQ * token.Equals("FREQUENCY"));
 			model.name = token.GetToken();
 
 			if (findModel(model.name)) {

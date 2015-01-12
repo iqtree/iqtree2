@@ -20,12 +20,14 @@ const double MAX_MIXTURE_PROP = 1.0;
 //const double MIN_MIXTURE_RATE = 0.01;
 //const double MAX_MIXTURE_RATE = 100.0;
 
-ModelSubst* createModel(string model_str, string model_desc, StateFreqType freq_type, string freq_params,
+ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqType freq_type, string freq_params,
 		PhyloTree* tree, bool count_rates)
 {
 	ModelSubst *model = NULL;
 	//cout << "Numstates: " << tree->aln->num_states << endl;
-	string model_params = model_desc;
+	string model_params;
+	NxsModel *nxsmodel = models_block->findModel(model_str);
+	if (nxsmodel) model_params = nxsmodel->description;
 	size_t pos = model_str.find(OPEN_BRACKET);
 	if (pos != string::npos) {
 		if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
@@ -77,15 +79,44 @@ ModelSubst* createModel(string model_str, string model_desc, StateFreqType freq_
 ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *models_block, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
 	: ModelGTR(tree, count_rates)
 {
-	if (freq_params != "")
-		readStateFreq(freq_params);
-	init(freq);
-
 	const int MAX_MODELS = 64;
-	size_t cur_pos = 0;
+	size_t cur_pos;
 	int m;
+
+	vector<NxsModel*> freq_vec;
+
+	if (freq == FREQ_MIXTURE) {
+		for (m = 0, cur_pos = 0; m < MAX_MODELS && cur_pos < freq_params.length(); m++) {
+			size_t pos = freq_params.find(',', cur_pos);
+			if (pos == string::npos)
+				pos = freq_params.length();
+			if (pos <= cur_pos)
+				outError("One frequency name in the mixture is empty.");
+			string this_name = freq_params.substr(cur_pos, pos-cur_pos);
+			cur_pos = pos+1;
+			if (this_name == "empirical") {
+				freq_vec.push_back(NULL);
+			} else {
+				NxsModel *freq_mod = models_block->findModel(this_name);
+				if (!freq_mod)
+					outError("Frequency mixture name not found ", this_name);
+				if (!(freq_mod->flag & NM_FREQ)) {
+					cout << freq_mod->flag << endl;
+					outError("Frequency mixture name does not corresponding to frequency model ", this_name);
+				}
+				freq_vec.push_back(freq_mod);
+			}
+		}
+		init(FREQ_USER_DEFINED);
+	} else {
+		if (freq_params != "")
+			readStateFreq(freq_params);
+		init(freq);
+	}
+
 	name = full_name = (string)"MIX" + OPEN_BRACKET;
-	for (m = 0; m < MAX_MODELS && cur_pos < model_list.length(); m++) {
+	if (model_list == "") model_list = model_name;
+	for (m = 0, cur_pos = 0; m < MAX_MODELS && cur_pos < model_list.length(); m++) {
 		size_t pos = model_list.find(',', cur_pos);
 		if (pos == string::npos)
 			pos = model_list.length();
@@ -98,17 +129,38 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 			this_name = this_name.substr(0, this_name.find(':'));
 		}
 		cur_pos = pos+1;
-		string model_desc;
-		NxsModel *nxsmodel = models_block->findModel(this_name);
-		if (nxsmodel) model_desc = nxsmodel->description;
-		push_back((ModelGTR*)createModel(this_name, model_desc, freq, freq_params, tree, count_rates));
-		back()->total_num_subst = rate;
-		if (m > 0) {
-			name += ',';
-			full_name += ',';
+		ModelGTR* model;
+		if (freq == FREQ_MIXTURE) {
+			for(int f = 0; f != freq_vec.size(); f++) {
+				if (freq_vec[f])
+					model = (ModelGTR*)createModel(this_name, models_block, FREQ_USER_DEFINED, freq_vec[f]->description, tree, count_rates);
+				else
+					model = (ModelGTR*)createModel(this_name, models_block, FREQ_EMPIRICAL, "", tree, count_rates);
+				model->total_num_subst = rate;
+				push_back(model);
+				if (m+f > 0) {
+					name += ',';
+					full_name += ',';
+				}
+				if (freq_vec[f]) {
+					name += model->name + "+F{" +freq_vec[f]->name + "}";
+					full_name += model->full_name + "+F{" +freq_vec[f]->name + "}";
+				} else {
+					name += model->name + "+F";
+					full_name += model->full_name + "+F";
+				}
+			}
+		} else {
+			model = (ModelGTR*)createModel(this_name, models_block, freq, freq_params, tree, count_rates);
+			model->total_num_subst = rate;
+			push_back(model);
+			if (m > 0) {
+				name += ',';
+				full_name += ',';
+			}
+			name += model->name;
+			full_name += model->full_name;
 		}
-		name += back()->name;
-		full_name += back()->full_name;
 	}
 	name += CLOSE_BRACKET;
 	full_name += CLOSE_BRACKET;
