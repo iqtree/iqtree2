@@ -10,6 +10,9 @@
 
 #include "ncl/ncl.h"
 
+const int NM_ATOMIC = 1; // NxsModel is not mixture or +G etc. model
+const int NM_FREQ = 2;   // NxsModel contains state frequency
+
 class NxsModel {
 public:
 	/* model name */
@@ -19,7 +22,7 @@ public:
 	string description;
 
 	/* true if model the basic model (no mixture etc.) */
-	bool is_atomic;
+	int flag;
 };
 
 /**

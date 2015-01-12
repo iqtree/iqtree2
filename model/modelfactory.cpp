@@ -55,7 +55,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
-	fused_mix_rate = true;
+	fused_mix_rate = false;
 
 	string model_str = params.model_name;
 	ModelsBlock *models_block = new ModelsBlock;
@@ -147,13 +147,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	if (posG == string::npos) {
 		posG = model_str.find("*G");
 		if (posG != string::npos)
-			fused_mix_rate = false;
+			fused_mix_rate = true;
 	}
 	string::size_type posR = model_str.find("+R"); // FreeRate model
 	if (posR == string::npos) {
 		posR = model_str.find("*R");
 		if (posR != string::npos)
-			fused_mix_rate = false;
+			fused_mix_rate = true;
 	}
 	if (posG != string::npos && posR != string::npos)
 		outError("Gamma and FreeRate models cannot be both specified!");
@@ -305,9 +305,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			model = createModel(model_str, model_desc, freq_type, freq_params, tree);
 		}
 
-		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
+//		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
 
 		if (fused_mix_rate) {
+			if (!model->isMixture())
+				outError("Model is a mixture model");
 			if (model->getNMixtures() != site_rate->getNRate())
 				outError("Mixture model and site rate model do not have the same number of categories");
 			ModelMixture *mmodel = (ModelMixture*)model;
@@ -321,7 +323,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		}
 	} else { 
 		// site-specific model
-		if (model_str == "JC" || model_str == "POSSION") 
+		if (model_str == "JC" || model_str == "POISSON")
 			outError("JC is not suitable for site-specific model");
 		model = new ModelSet(model_str.c_str(), tree);
 		ModelSet *models = (ModelSet*)model; // assign pointer for convenience

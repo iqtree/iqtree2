@@ -24,11 +24,11 @@ void ModelsBlock::Read(NxsToken &token)
 		throw NxsException("Expecting ';' after MODELS block name", token);
 	for (;;) {
 		token.GetNextToken();
-		if (token.Equals("MODEL")) {
+		if (token.Equals("MODEL") || token.Equals("FREQUENCY")) {
 			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 			token.GetNextToken();
 			NxsModel model;
-
+			model.flag = (NM_FREQ * token.Equals("FREQUENCY"));
 			model.name = token.GetToken();
 
 			if (findModel(model.name)) {
@@ -49,7 +49,7 @@ void ModelsBlock::Read(NxsToken &token)
 			if (!token.Equals(";"))
 				throw NxsException("Expecting ';' to terminate MODEL command", token);
 
-			model.is_atomic = (model.description.find_first_of("+*") == string::npos && model.description.find("MIX") == string::npos);
+			model.flag |= (NM_ATOMIC*(model.description.find_first_of("+*") == string::npos && model.description.find("MIX") == string::npos));
 
 			push_back(model);
 
