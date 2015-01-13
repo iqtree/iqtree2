@@ -786,7 +786,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.lh_mem_save = LM_DETECT; // auto detect
 	params.start_tree = STT_PLL_PARSIMONY;
 	params.print_splits_file = false;
-    params.ignore_identical_seqs = false; // There might be still a bug with this feature, thus temporarily disabled
+    params.ignore_identical_seqs = true;
     params.write_init_tree = false;
     params.write_local_optimal_trees = false;
 
