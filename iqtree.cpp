@@ -1054,7 +1054,7 @@ int IQTree::removeBranches(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& s
 
 void IQTree::doRandomNNIs(int numNNI) {
 	NodeVector nodes1, nodes2;
-	SplitGraph usedSplits;
+	//SplitGraph usedSplits;
 	NodeVector::iterator it1, it2;
     int cntNNI = 0;
     while (cntNNI < numNNI) {
@@ -1062,18 +1062,18 @@ void IQTree::doRandomNNIs(int numNNI) {
     	nodes2.clear();
 		getAllInnerBranches(nodes1, nodes2, &candidateTrees.getStableSplits());
     	// remove all used splits
-		removeBranches(nodes1, nodes2, usedSplits);
-		if (nodes1.size() == 0) {
-			assert(nodes2.size() == 0);
-			break;
-		}
+//		removeBranches(nodes1, nodes2, usedSplits);
+//		if (nodes1.size() == 0) {
+//			assert(nodes2.size() == 0);
+//			break;
+//		}
     	// randomly take an inner branch and do a random NNI
         int index = random_int(nodes1.size());
         doOneRandomNNI(nodes1[index], nodes2[index]);
-        if (params->fix_stable_splits) {
-            Split* newSp = getSplit(nodes1[index], nodes2[index]);
-            usedSplits.push_back(newSp);
-        }
+//        if (params->fix_stable_splits) {
+//            Split* newSp = getSplit(nodes1[index], nodes2[index]);
+//            usedSplits.push_back(newSp);
+//        }
     	cntNNI++;
     }
 	//cout << "Number of random NNI performed: " << cntNNI << endl;
@@ -1697,7 +1697,8 @@ double IQTree::doTreeSearch() {
             curScore = optimizeAllBranches();
         } else {
             if (params->snni) {
-                int numNNI = floor(searchinfo.curPerStrength * (aln->getNSeq() - 3));
+            	int numStableBranches = aln->getNSeq() - 3 - candidateTrees.getStableSplits().size();
+                int numNNI = floor(searchinfo.curPerStrength * numStableBranches);
                 //cout << "candidateTrees.size() = " << candidateTrees.size() << endl;
                 string candidateTree = candidateTrees.getRandCandTree();
                 readTreeString(candidateTree);
