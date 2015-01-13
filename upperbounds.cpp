@@ -5,39 +5,71 @@
  *      Author: olga
  */
 #include "upperbounds.h"
+#include <string.h>
+#include "timeutil.h"
 
 void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 
-	// Output details --------------------------------------------------
-	// UpperBounds File
+// Output details --------------------------------------------------
+// UpperBounds File
 	string out_file = params->out_prefix;
-	out_file += ".ub";
+	//out_file += ".ub";
 	out_file = "results.trueSplits.ub";
 	ofstream out;
 	out.exceptions(ios::failbit | ios::badbit);
 	out.open((char*)out_file.c_str(),std::ofstream::out | std::ofstream::app);
-	// Details on Split: A|B
+
+// Details on Split: A|B
 	string out_file_split = params->out_prefix;
-	out_file_split += ".ub_split";
+	//out_file_split += ".split.ub";
 	out_file_split = "results.trueSplits.ub.splits";
 	ofstream out_split;
 	out_split.exceptions(ios::failbit | ios::badbit);
 	out_split.open((char*)out_file_split.c_str(),std::ofstream::out | std::ofstream::app);
 
-	// Within Family Info: A|B
-		string out_file_within = params->out_prefix;
-		out_file_within += ".ub_split";
-		out_file_within = "results.within.ub";
-		ofstream out_within;
-		out_within.exceptions(ios::failbit | ios::badbit);
-		out_within.open((char*)out_file_within.c_str(),std::ofstream::out | std::ofstream::app);
+// Within Family Info: A|B
+	string out_file_within = params->out_prefix;
+	//out_file_within += ".within.ub";
+	out_file_within = "results.within.ub";
+	ofstream out_within;
+	out_within.exceptions(ios::failbit | ios::badbit);
+	out_within.open((char*)out_file_within.c_str(),std::ofstream::out | std::ofstream::app);
 
-	// Auxiliary variables ---------------------------------------------
+// Between Families Info: A|B
+	string out_file_between = params->out_prefix;
+	//out_file_between += ".between.ub";
+	out_file_between = "results.between.ub";
+	ofstream out_between;
+	out_between.exceptions(ios::failbit | ios::badbit);
+	out_between.open((char*)out_file_between.c_str(),std::ofstream::out | std::ofstream::app);
+
+	/* ------------------------------------------------------------------------------------------------------
+	 * All output files:
+	 * 	out 		-> "results.trueSplits.ub"			-> upper bounds for all splits from an input tree
+	 * 	out_split   -> "results.trueSplits.ub.splits"	-> list of 			all splits from an input tree
+	 * 	out_within	-> "results.within.ub"				-> comparison of upper bounds within  Split Families
+	 * 	out_between	-> "results.between.ub"				-> comparison of upper bounds between Split Families
+	 * ------------------------------------------------------------------------------------------------------
+	 * FORMAT:
+	 * general info (first columns of every file)...........................................................................
+	 * 		leafNum		getNSite()	min(taxaA,taxaB)	brLen
+	 *
+	 * out .................................................................................................................
+	 * 		L(A|B)		L(A)L(B)	cN*L(A)L(B)		L(A|B)/L(A)L(B)		L(A|B)/cN*L(A)L(B)	coef
+	 *
+	 *[4],[5] - the difference between likelihood and UB normalized by likelihood value
+	 * if >1, the inequality is true.
+	 * if <1, false.
+	 *
+	 * out_within ..........................................................................................................
+	 * 		UB_true		[1..N] UB_random_AB/UB_true (how smaller is the bound for random tree)
+	 *
+	 * out_between..........................................................................................................
+	 * 		UB_true		[1..N] UB_random_CD/UB_true (how smaller is the bound for random tree)
+	 *
+	 * ------------------------------------------------------------------------------------------------------ */
+
 	int i=0, j=0, h=0;
-
-	// STARTing the Analysis -------------------------------------------
-
-	cout<<"Starting Upper Bounds analysis.."<<endl;
 
 	// Printing info about the TreeLogL changes during the tree search
 /*	cout<<"mlInitial  = "<<tree->mlInitial<<endl;
@@ -47,122 +79,114 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 
 	//double mlQuestionary = tree->mlInitial; //or tree->mlFirstOpt for example
 
+	/* ------------------------------------------------------------------------------------------------------
+	 * Main PART
+	 * ------------------------------------------------------------------------------------------------------ */
+	cout<<"Starting Upper Bounds analysis.."<<endl;
+
 	NodeVector branch1, branch2;
 	tree->getBranches(branch1, branch2);
-	int BadSplits1 = 0, BadSplits2 = 0, allSplits = 0;
+	int allSplits = 0;
+	int R=10; // R is the number of random trees we will generate
 
-// HERE must be a loop over all A|B present on tree T
+// A loop over all A|B present on tree T
 	for(i = 0; i != branch1.size(); i++){
 		vector<int> taxaA, taxaB;
 		vector<string> taxaAname, taxaBname;
 		tree->getTaxaID(taxaA,branch1[i],branch2[i]);
 		tree->getTaxaID(taxaB,branch2[i],branch1[i]);
 
+		/* ------------------------------------------------------------------------------------------------------------
+		 * TEST 1: This is the part for tests on LBA effect
+		 */
+
+		/* ------------------------------------------------------------------------------------------------------------
+		 * TEST 2: This is the part for tests on random trees and evaluation of Upper Bounds for each split on the input tree
+		 */
+		int test2 = 1;
+		if(test2 == 1){
 		if(taxaA.size() > 3 and taxaB.size() > 3){ // IQTree does not compute lh of tree with less than 4 taxa.
 			allSplits++;
 
-	// Getting taxa_names for taxon subsets A and B
-			for(h = 0; h < taxaA.size(); h++)
-				taxaAname.push_back(tree->findNodeID(taxaA[h])->name);
-			for(h = 0; h < taxaB.size(); h++)
-				taxaBname.push_back(tree->findNodeID(taxaB[h])->name);
-
-			/* ---------------------------------------------------------------------------------------
-			 * Collective Stuff for artificial Root. Possibly not needed anymore
-			 * --------------------------------------------------------------------------------------- */
-	/*
-			PhyloTree *treeR; // tree with artificial root
-			string ch;
-			ch = "ATGC"; // If one is interested in adding different nucleotides in sequence for artificial root
-			string art_root_name = "art_root";
-			int treeW = 0; // specifies the subtree with artificial root; 0 for treeA, 1 for treeB.
-			if(treeW == 0){
-				treeR= extractSubtreeUB(taxaA,tree,params,1,ch[1]);
-			} else {
-				treeR= extractSubtreeUB(taxaB,tree,params,1,ch[1]);
-			}
-			Node *art_root_node = treeR->findNodeName(art_root_name);
-			art_root_node->neighbors[0]->length = tree->findNodeID(branch1[i]->id,branch1[i],branch2[i])->findNeighbor(branch2[i])->length;
-			treeR->findNodeID(art_root_node->neighbors[0]->node->id)->findNeighbor(art_root_node)->length = art_root_node->neighbors[0]->length;
-	*/
-			/* ---------------------------------------------------------------------------------------
-			 * END of artificial root.
-			 * --------------------------------------------------------------------------------------- */
-
-	// Dealing with subtrees T_A and T_B
+			// Dealing with subtrees T_A and T_B
 			PhyloTree *treeA, *treeB;
-			treeA = extractSubtreeUB(taxaA,tree,params);
-			treeB = extractSubtreeUB(taxaB,tree,params);
+			treeA = extractSubtreeUB(taxaA,tree,params,1);
+			treeB = extractSubtreeUB(taxaB,tree,params,1);
 
+			// Upper Bound for a given split from the input tree
+			double brLen = branch1[i]->findNeighbor(branch2[i])->length;
+			double coef  = tree->aln->getNSite()*(log(1+3*exp(-brLen)) - log(1-exp(-brLen)));
+			double coef2  = tree->aln->getNSite()*log(1+3*exp(-brLen));
+			double UB_true  = coef + treeA->curScore + treeB->curScore;
+			double UB_true2 = coef2 + treeA->curScore + treeB->curScore;
 
-			//Random trees
-			out_within<<min(taxaA.size(),taxaB.size())<<"\t"<<treeA->curScore+treeB->curScore<<"\t";
-			for(j=0; j<50; j++){
-				cout<<"generating "<<j<<" random tree..."<<endl;
-				double llh_randomA = 0.0, llh_randomB = 0.0;
-				llh_randomA = generateRandomYH_UB(*params, treeA);
-				llh_randomB = generateRandomYH_UB(*params, treeB);
-				out_within<<llh_randomA+llh_randomB<<"\t";
-				//cout<<"TreeA_true  : llh = "<<treeA->curScore<<endl;
-				//cout<<"TreeA_random: llh = "<<llh_randomA<<endl;
+			//cout<<"UB_true = "<<UB_true<<endl;
+			out<<tree->leafNum<<"\t"<<tree->aln->getNSite()<<"\t"<<min(taxaA.size(),taxaB.size())<<"\t"<<brLen<<"\t"
+					<<tree->curScore<<"\t"<<treeA->curScore + treeB->curScore<<"\t"<<UB_true<<"\t"<<UB_true2<<"\t"
+					<<tree->curScore/(treeA->curScore + treeB->curScore)<<"\t"
+					<<tree->curScore/UB_true<<"\t"<<tree->curScore/UB_true2<<"\t"<<coef<<"\t"<<coef2<<endl;
+
+/*
+			// Comparison of Upper Bounds within Split Family ----------------------------------------
+			out_within<<tree->leafNum<<"\t"<<tree->aln->getNSite()<<"\t"<<min(taxaA.size(),taxaB.size())<<"\t"<<brLen<<"\t"<<UB_true<<"\t";
+
+			cout<<"comparison within family...."<<endl;
+			double UB_random_AB;
+			for(j=0; j<30; j++){
+				//cout<<"generating "<<j<<" random_AB tree..."<<endl;
+				UB_random_AB = RandomTreeAB(tree, treeA, treeB, taxaA, taxaB, params,brLen);
+				//cout<<"The upper bound for random tree: "<<UB_random_AB<<endl;
+				out_within<<UB_random_AB/UB_true<<"\t";
 			}
 			out_within<<endl;
 
-	/*		//Between Families comparison: true split vs contradicting splits
+
+			// --------------------------------------------------------------------------------------
+
+			// Comparison of Upper Bounds between Split Families ------------------------------------
+			out_between<<tree->leafNum<<"\t"<<tree->aln->getNSite()<<"\t"<<min(taxaA.size(),taxaB.size())<<"\t"<<brLen<<"\t"<<UB_true<<"\t";
+
+			cout<<"comparison between families...."<<endl;
+			// creating split C|D which conflicts with A|B
 			int n=0;
 			n=int(min(taxaA.size(),taxaB.size())/2.);
-			cout<<"taxaA.size() = "<<taxaA.size()<<", taxaB.size() = "<<taxaB.size()<<", n = "<<n<<endl;
+			//cout<<"taxaA.size() = "<<taxaA.size()<<", taxaB.size() = "<<taxaB.size()<<", n = "<<n<<endl;
 
-			vector<int> taxaAnew, taxaBnew;
-			PhyloTree *treeAnew, *treeBnew;
+			vector<int> taxaC, taxaD;
+			PhyloTree *treeC, *treeD;
 
 			// ContraSplit1: changing 1/2 of taxa
-			taxaAnew = taxaA;
-			taxaBnew = taxaB;
-
+			taxaC = taxaA;
+			taxaD = taxaB;
 			for(h=0; h<n; h++){
-				taxaAnew[h]=taxaB[h];
-				taxaBnew[h]=taxaA[h];
+				taxaC[h]=taxaB[h];
+				taxaD[h]=taxaA[h];
 			}
-
-			treeAnew = extractSubtreeUB(taxaAnew,tree,params);
-			treeBnew = extractSubtreeUB(taxaBnew,tree,params);
-			out_within<<min(taxaA.size(),taxaB.size())<<"\t"<<treeA->curScore+treeB->curScore<<"\t";
-
-			for(j=0; j<10; j++){
-				double randomA = 0.0, randomB = 0.0;
-				randomA = generateRandomYH_UB(*params, treeAnew);
-				randomB = generateRandomYH_UB(*params, treeBnew);
-
-				out_within<<randomA+randomB<<"\t";
-
-				cout<<"trueSplit="<<treeA->curScore+treeB->curScore<<", contraSplit="<<randomA+randomB<<endl;
+			treeC = extractSubtreeUB(taxaC,tree,params);
+			treeD = extractSubtreeUB(taxaD,tree,params);
+			double UB_random_CD;
+			for(j=0; j<R; j++){
+				//cout<<"generating "<<j<<" random_CD1 tree..."<<endl;
+				UB_random_CD = RandomTreeAB(tree, treeC, treeD, taxaC, taxaD, params);
+				out_between<<UB_random_CD/UB_true<<"\t";
 			}
 
 			// ContraSplit 2: changing 1/4 of taxa
-			taxaAnew = taxaA;
-			taxaBnew = taxaB;
-
+			taxaC = taxaA;
+			taxaD = taxaB;
 			for(h=0; h<int(n/2.); h++){
-				taxaAnew[h]=taxaB[h];
-				taxaBnew[h]=taxaA[h];
+				taxaC[h]=taxaB[h];
+				taxaD[h]=taxaA[h];
 			}
-
-			treeAnew = extractSubtreeUB(taxaAnew,tree,params);
-			treeBnew = extractSubtreeUB(taxaBnew,tree,params);
-
-			for(j=0; j<10; j++){
-				double randomA = 0.0, randomB = 0.0;
-				randomA = generateRandomYH_UB(*params, treeAnew);
-				randomB = generateRandomYH_UB(*params, treeBnew);
-
-				out_within<<randomA+randomB<<"\t";
-
-				cout<<"trueSplit="<<treeA->curScore+treeB->curScore<<", contraSplit="<<randomA+randomB<<endl;
+			treeC = extractSubtreeUB(taxaC,tree,params);
+			treeD = extractSubtreeUB(taxaD,tree,params);
+			for(j=0; j<R; j++){
+				//cout<<"generating "<<j<<" random_CD2 tree..."<<endl;
+				UB_random_CD = RandomTreeAB(tree, treeC, treeD, taxaC, taxaD, params);
+				out_between<<UB_random_CD/UB_true<<"\t";
 			}
-
-			// end of contra split for one split*/
-			out_within<<endl;
+			out_between<<endl;
+*/
 
 /*
 
@@ -181,26 +205,6 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 			printTreeUB(treeA);
 			cout<<endl<<"Tree T(B)"<<endl;
 			printTreeUB(treeB);
-
-	// Getting all interesting info:)
-
-
-			 *  LogL T_A|B - does not change for A|B
-			 *  double llhT = tree->curScore;
-			 *   Interesting quantities:
-			 *  	diff_1 = LogL(T_A|B) - LogL(T_A) - LogL(T_B)
-			 *  	diff_2 = LogL(T_A|B) - LogL(T_A) - LogL(T_B) - N*log(c(A|B))
-			 *  	if diff_# < 0 everything is ok, if > 0, the corresponding inequality is violated
-			 *
-			 *  LogL(T_B'_fixed_root_nucleotide) < LogL(T_B) < LogL(T_B'_not_fixed_root_nucleotide)
-			 *
-
-
-			double diff_1, diff_2;
-			double br_len;
-			br_len = branch1[i]->findNeighbor(tree->findNodeID(branch2[i]->id))->length;
-			diff_2 = tree->curScore - treeA->curScore - treeB->curScore - tree->aln->size()*(log(1+3*exp(-br_len)) - log(1-exp(-br_len)));
-			diff_1 = tree->curScore - treeA->curScore - treeB->curScore;
 
 	// Printing out the results ----------------------------------------------------------
 			// Split A|B ------------------------------------------
@@ -258,27 +262,18 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 
 	// END: Printing out the results -----------------------------------------------------
 */
-
-		} // END: if taxaA.size() and taxaB.size() >3.
+		}} // END: if taxaA.size() and taxaB.size() >3
 
 	}
 	// END: the loop over all A|B present on tree T
 
+	out_within.close();
+	out_between.close();
 	out.close();
 	out_split.close();
-	out_within.close();
-/*	cout<<"BadSplits1 = "<<BadSplits1<<endl;
-	cout<<"BadSplits2 = "<<BadSplits2<<endl;
-	cout<<"All tested = "<<allSplits<<endl;*/
-
-	// Some more questions:
-	//		- is the UB too far from the TreeLogL?
-	//		- dependency on the length of t(A|B)
-	//		- evaluate these quantities also for the splits on the initial tree
-	//		- can we exclude some splits based on their UB?
 }
 
-PhyloTree* extractSubtreeUB(IntVector &ids, MTree* tree, Params *params,int type, char ch) {
+PhyloTree* extractSubtreeUB(IntVector &ids, MTree* tree, Params *params, int sw) {
 	string taxa_set;
 	int i;
 	for(i = 0; i < tree->leafNum; i++)
@@ -290,159 +285,17 @@ PhyloTree* extractSubtreeUB(IntVector &ids, MTree* tree, Params *params,int type
 	Alignment *alignment = new Alignment();
 	alignment->extractSubAlignment(((PhyloTree*)tree)->aln,ids,0);
 
-	if(type == 0){
-		//cout<<"Copying tree. Normal procedure."<<endl;
-		treeCopy->copyTree(tree, taxa_set);
-		treeCopy->setAlignment(alignment);
-	} else {
-		/*
-		 * This part was written for an artificial root. There are might be some problems with it.
-		 * In fact we do not need it anymore. Delete.
-		 */
-		copyTreeUB(tree, treeCopy, taxa_set);
-		reindexTaxonIDs(treeCopy);
-		string outfile;
-		outfile = "aux.alignment";
-		alignment->printFasta(outfile.c_str(), false,
-				params->aln_site_list, params->aln_nogaps, params->aln_no_const_sites,
-				params->ref_seq_name);
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		out.open(outfile.c_str(),std::ofstream::out | std::ofstream::app);
-		out<<">art_root"<<endl;
-		for(i=0; i<alignment->getNSite(); i++)
-			out<<"?";
-			//out<<ch;
-		out<<endl;
-		out.close();
-		delete(alignment);
-		char *cstr = new char[outfile.length() + 1];
-		strcpy(cstr, outfile.c_str());
-		alignment = new Alignment(cstr, params->sequence_type, params->intype);
-		treeCopy->setAlignment(alignment);
-		treeCopy->aln->printFasta(outfile.c_str(), false,
-						params->aln_site_list, params->aln_nogaps, params->aln_no_const_sites,
-						params->ref_seq_name);
-		remove (outfile.c_str());
-		delete [] cstr;
+	treeCopy->copyTree(tree, taxa_set);
+	treeCopy->setAlignment(alignment);
+	if(sw == 1){
+		treeCopy->setModel(((PhyloTree*)tree)->getModel());
+		treeCopy->setRate(((PhyloTree*)tree)->getRate());
+		treeCopy->setModelFactory(((PhyloTree*)tree)->getModelFactory());
+		treeCopy->initializeAllPartialLh();
+		treeCopy->curScore = treeCopy->computeLikelihood();
 	}
 
-	treeCopy->setModel(((PhyloTree*)tree)->getModel());
-	treeCopy->setRate(((PhyloTree*)tree)->getRate());
-	treeCopy->setModelFactory(((PhyloTree*)tree)->getModelFactory());
-	treeCopy->initializeAllPartialLh();
-
-	treeCopy->curScore = treeCopy->computeLikelihood();
-	//cout<<"SubtreeLikelihood : lh = "<<treeCopy->computeLikelihood()<<endl;
-	//printTreeUB(treeCopy);
-
 	return treeCopy;
-}
-
-void copyTreeUB(MTree *tree, MTree *treeCopy, string &taxa_set) {
-    if (tree->leafNum != taxa_set.length()) outError("#leaves and taxa_set do not match!");
-    treeCopy->leafNum = treeCopy->nodeNum = treeCopy->branchNum = 0;
-    for (string::iterator it = taxa_set.begin(); it != taxa_set.end(); it++)
-    	treeCopy->nodeNum += (*it);
-    double new_len;
-    if (treeCopy->root) treeCopy->freeNode();
-    treeCopy->root = NULL;
-    treeCopy->root = copyTreeUBnode(tree,treeCopy,taxa_set, new_len, NULL, NULL);
-}
-
-Node* copyTreeUBnode(MTree *tree, MTree *treeCopy, string &taxa_set, double &len, Node *node, Node *dad) {
-    if (!node) {
-        if (taxa_set[tree->root->id]) {
-            node = tree->root;
-            //cout<<"The tree root is in subtree."<<endl;
-        } else {
-            for (int i = 0; i < tree->leafNum; i++)
-                if (taxa_set[i]) {
-                    node = tree->findNodeID(i);
-                    break;
-                }
-        }
-        //cout<<"First node name:id "<<node->name<<":"<<node->id<<endl;
-    }
-    Node *new_node = NULL;
-    NodeVector new_nodes;
-    DoubleVector new_lens;
-    if (node->isLeaf()) {
-        len = 0.0;
-        if (taxa_set[node->id]) {
-            new_node = treeCopy->newNode(treeCopy->leafNum++, node->name.c_str());
-            //nodesB_OLD.push_back(node);
-            //nodesB_NEW.push_back(new_node);
-        }
-        if (dad) return new_node;
-    }
-    if (new_node) {
-        new_nodes.push_back(new_node);
-        new_lens.push_back(len);
-    }
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        double new_len;
-        new_node = copyTreeUBnode(tree, treeCopy, taxa_set, new_len, (*it)->node, node);
-        if (new_node) {
-            new_nodes.push_back(new_node);
-            //new_lens.push_back((*it)->length + new_len); //change here!!!
-            new_lens.push_back((*it)->length);
-        }
-    }
-    if (new_nodes.empty()) return NULL;
-
-    // This was changed to add an artificial root to a subtree
-
-    /*
-     * !"%$&$%ZFVFGRT Tut kakoe-to portachivo vishlo:(((( ili s reindexing. Koroche gde-to zdes ein Feller!!!:(
-     */
-
-    if (new_nodes.size() == 1) {
-    	new_node = treeCopy->newNode(treeCopy->leafNum++, dad->name.c_str());
-
-        new_node->addNeighbor(new_nodes[0], new_lens[0], treeCopy->branchNum);
-        new_nodes[0]->addNeighbor(new_node, new_lens[0], treeCopy->branchNum);
-        treeCopy->branchNum++;
-
-        // Artificial Root
-        string root_name = "art_root";
-        Node *art_root = new Node(treeCopy->leafNum++, root_name.c_str());
-        new_node->addNeighbor(art_root,0.0,treeCopy->branchNum);
-        art_root->addNeighbor(new_node,0.0,treeCopy->branchNum);
-        treeCopy->branchNum++;
-
-        //len = new_lens[0];
-        return new_node;
-    }
-
-    // Here change (for cherry case): add an artificial ROOT
-    if (!dad && new_nodes.size() == 2) {
-        double sum_len = new_lens[0] + new_lens[1]; //change here!!!
-        new_nodes[0]->addNeighbor(new_nodes[1], sum_len, treeCopy->branchNum);
-        new_nodes[1]->addNeighbor(new_nodes[0], sum_len, treeCopy->branchNum);
-        treeCopy->branchNum++;
-        return new_nodes[0];
-    }
-
-    Node* int_node = treeCopy->newNode(treeCopy->nodeNum++, node->name.c_str());
-    len = 0.0;
-    for (int i = 0; i < new_nodes.size(); i++) {
-        int_node->addNeighbor(new_nodes[i], new_lens[i], treeCopy->branchNum);
-        new_nodes[i]->addNeighbor(int_node, new_lens[i], treeCopy->branchNum);
-        treeCopy->branchNum++;
-    }
-    return int_node;
-}
-
-void reindexTaxonIDs(MTree *tree){
-	int i=0, j=0;
-	NodeVector nodesTaxa, nodesInternal;
-	tree->getTaxa(nodesTaxa);
-	for(i=0; i<nodesTaxa.size(); i++)
-		nodesTaxa[i]->id = i;
-	tree->getInternalNodes(nodesInternal);
-	for(j=0; j<nodesInternal.size(); j++)
-		nodesInternal[j]->id = i++;
 }
 
 void printTreeUB(MTree *tree){
@@ -473,9 +326,9 @@ void printTreeUB(MTree *tree){
 	}
 }
 
-double generateRandomYH_UB(Params &params, PhyloTree *tree){
+MTree* generateRandomYH_UB(Params &params, PhyloTree *tree){
 	MExtTree* treeR = new MExtTree();
-	bool binary = FALSE;
+	bool binary = TRUE;
 
 	int size = tree->leafNum;
 	if (size < 3)
@@ -532,10 +385,9 @@ double generateRandomYH_UB(Params &params, PhyloTree *tree){
 			node->addNeighbor(newleaf, len);
 			newleaf->addNeighbor(node, len);
 			myleaves.push_back(newleaf);
-
 		}
-
 	}
+
 	treeR->root = myleaves[0];
 	// indexing the leaves
 	treeR->setLeavesName(myleaves);
@@ -549,24 +401,426 @@ double generateRandomYH_UB(Params &params, PhyloTree *tree){
 	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
 		(*it)->name = tree->aln->getSeqName((*it)->id);
 
-	PhyloTree* treeRphylo = new PhyloTree();
-	treeRphylo->copyTree((MTree*)treeR);
-	treeRphylo->setAlignment(tree->aln);
-	treeRphylo->setModel(((PhyloTree*)tree)->getModel());
-	treeRphylo->setRate(((PhyloTree*)tree)->getRate());
-	treeRphylo->setModelFactory(((PhyloTree*)tree)->getModelFactory());
-	treeRphylo->initializeAllPartialLh();
+	return (MTree*)treeR;
+}
 
-	treeRphylo->curScore = treeRphylo->computeLikelihood();
+double RandomTreeAB(PhyloTree* treeORGN, PhyloTree* treeAorgn, PhyloTree* treeBorgn, IntVector &taxaA, IntVector &taxaB, Params* params, double brLen){
+	PhyloTree *tree  = new PhyloTree();
+	MTree *treeA = new MTree();
+	MTree *treeB = new MTree();
 
-/*	cout<<endl;
-	tree->printTree(cout);
+	treeA = generateRandomYH_UB(*params,treeAorgn);
+	treeB = generateRandomYH_UB(*params,treeBorgn);
+
+/*
+	// PrintTree ---------------
+	cout<<"TreeA.root:"<<treeA->root->name<<treeA->root->id<<endl;
+	cout<<"TreeB.root:"<<treeB->root->name<<treeB->root->id<<endl;
+	cout<<"TreeA:"<<endl;
+	treeA->printTree(cout);
+	cout<<endl<<"TreeB:"<<endl;
+	treeB->printTree(cout);
 	cout<<endl;
-	treeRphylo->printTree(cout);
-	cout<<endl;*/
+	// -------------------------
+*/
 
-	double score = treeRphylo->curScore;
-	//delete treeRphylo;
-	delete treeR;
-	return score;
+	extendingTree(treeA,params);
+	extendingTree(treeB,params);
+
+/*
+	// PrintTree ---------------
+	cout<<"TreeA.root:"<<treeA->root->name<<treeA->root->id<<endl;
+	cout<<"TreeB.root:"<<treeB->root->name<<treeB->root->id<<endl;
+
+	cout<<"extended TreeA:"<<endl;
+	treeA->printTree(cout);
+	cout<<endl<<"extended TreeB:"<<endl;
+	treeB->printTree(cout);
+	cout<<endl;
+	// -------------------------
+*/
+
+	treeA->root->name = "NewNodeA";
+	treeB->root->name = "NewNodeB";
+	treeA->root->addNeighbor(treeB->root,0.0,tree->branchNum);
+	treeB->root->addNeighbor(treeA->root,0.0,tree->branchNum);
+
+	tree->copyTree(treeA);
+/*	cout<<"Leaves number = "<<tree->leafNum<<endl;
+	cout<<"Nodes  number = "<<tree->nodeNum<<endl;
+	cout<<"Branch number:"<<tree->branchNum<<endl;
+	*/
+	//tree->printTree(cout);
+	//cout<<endl;
+
+	NodeVector brID;
+	//brID= getBranchABid(brLen, tree);
+	brID.push_back(tree->findNodeName(treeA->root->name));
+	brID.push_back(tree->findNodeName(treeB->root->name));
+
+	if(brLen == 0){
+		brLen = randomLen(*params);
+	}
+	//tree->findNodeName(treeA->root->name)->findNeighbor(treeB->root)->length = brLen;
+	//tree->findNodeName(treeB->root->name)->findNeighbor(treeA->root)->length = brLen;
+
+
+	tree->findNodeID(brID[0]->id)->findNeighbor(brID[1])->length = brLen;
+	tree->findNodeID(brID[1]->id)->findNeighbor(brID[0])->length = brLen;
+
+
+	tree->setAlignment(treeORGN->aln);
+	tree->setModel(((PhyloTree*)treeORGN)->getModel());
+	tree->setRate(((PhyloTree*)treeORGN)->getRate());
+	tree->setModelFactory(((PhyloTree*)treeORGN)->getModelFactory());
+	tree->initializeAllPartialLh();
+
+	tree->curScore = tree->computeLikelihood();
+	//cout<<"LogLh score before optimization: "<<tree->curScore<<endl;
+	tree->params = params;
+	//tree->curScore = tree->optimizeAllBranches(50);
+	//cout<<"LogLh score after  optimization: "<<tree->curScore<<endl;
+
+	//double len = tree->findNodeName(treeA->root->name)->findNeighbor(treeB->root)->length;
+	double len = tree->findNodeID(brID[0]->id)->findNeighbor(brID[1])->length;
+	//cout<<"The length of corresponding branch after optimization: "<<len<<endl;
+	//cout<<"before it was equal to "<<brLen<<endl;
+
+	string out_file = "results.branches.ub";
+	ofstream out;
+	out.exceptions(ios::failbit | ios::badbit);
+	out.open((char*)out_file.c_str(),std::ofstream::out | std::ofstream::app);
+
+	//len = 1;
+
+	double coef = tree->aln->getNSite()*(log(1+3*exp(-len)) - log(1-exp(-len)));
+	double U = coef + UpperBoundAB(taxaA, taxaB, tree, params);
+
+	// leafNum		alnLen		brLen (before opt)		brLen (after opt)		coef 		UB
+	//out<<treeORGN->leafNum<<"\t"<<treeORGN->aln->getNSite()<<"\t"<<brLen<<"\t"<<len<<"\t"<<coef<<"\t"<<U<<endl;
+
+	out.close();
+	return U;
+}
+
+double UpperBoundAB(IntVector &taxaA, IntVector &taxaB, PhyloTree* tree, Params *params){
+	double U = 0.0;
+
+	PhyloTree *treeA, *treeB;
+	treeA = extractSubtreeUB(taxaA,tree,params,1);
+	treeB = extractSubtreeUB(taxaB,tree,params,1);
+
+	U = treeA->curScore + treeB->curScore;
+
+	return U;
+}
+
+NodeVector getBranchABid(double brLen, PhyloTree* tree){
+	NodeVector branch1, branch2;
+	NodeVector branch;
+	tree->getBranches(branch1, branch2);
+	for(int i = 0; i != branch1.size(); i++){
+		if(branch1[i]->findNeighbor(branch2[i])->length == 0.0){
+			branch.push_back(branch1[i]);
+			branch.push_back(branch2[i]);
+			return branch;
+		}
+	}
+	outError("UpperBounds: did not find matching branch:(");
+	return branch;
+}
+
+void extendingTree(MTree *tree, Params* params){
+
+	// Choose random internal node
+	int maxR = tree->nodeNum-1;
+	int randomNodeID = rand() % maxR;
+	//cout<<"randomNodeID = "<<randomNodeID<<endl;
+	if(randomNodeID<tree->leafNum){
+		if(randomNodeID+tree->leafNum > tree->nodeNum-1){
+			randomNodeID += tree->nodeNum - tree->leafNum;
+			//cout<<"adding nodeNum-leafNum"<<endl;
+		}
+		else{
+			randomNodeID+=tree->leafNum;
+			//cout<<"adding leafNum"<<endl;
+		}
+	}
+
+	//cout<<"leafNum = "<<tree->leafNum-1<<" < random = "<<randomNodeID<<" < nodeNum = "<<tree->nodeNum-1<<endl;
+
+	assert(randomNodeID < tree->nodeNum and randomNodeID > tree->leafNum-1);
+
+	// Choose random neighbor
+	int randomNeiID = rand() % 2;
+	//cout<<"randomNeiID = "<<randomNeiID<<endl;
+
+
+	Node *randomNode;
+	randomNode = tree->findNodeID(randomNodeID);
+	Node *randomNeiNode = tree->findNodeID(randomNodeID)->neighbors[randomNeiID]->node;
+
+	// Create new node ----------------------------
+	string str;
+	str = "NewNode";
+	const char *ch = str.c_str();
+	Node* newNode1 = tree->newNode(tree->nodeNum,ch);
+	tree->nodeNum++;
+
+	// Add new node as a neighbor to randomNei->node
+	double len = tree->findNodeID(randomNodeID)->neighbors[randomNeiID]->length;
+	int    id  = tree->findNodeID(randomNodeID)->neighbors[randomNeiID]->id;
+
+	randomNeiNode->findNeighbor(randomNode)->node = newNode1;
+	newNode1->addNeighbor(randomNeiNode,len,id);
+
+
+	//Change randomNei with this new node for randomNode. Create new branch.
+	randomNode->neighbors[randomNeiID]->node = newNode1;
+	randomNode->neighbors[randomNeiID]->id = tree->branchNum;
+	tree->branchNum++;
+	randomNode->neighbors[randomNeiID]->length = randomLen(*params);
+
+	newNode1->addNeighbor(randomNode,randomNode->neighbors[randomNeiID]->length,randomNode->neighbors[randomNeiID]->id);
+
+	tree->root = newNode1;
+
+}
+
+NNIMove getBestNNIForBranUB(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree){
+
+	NNIMove nniMoves[2];
+
+    // Initialize node1 and node2 in nniMoves
+	nniMoves[0].node1 = nniMoves[1].node1 = node1;
+	nniMoves[0].node2 = nniMoves[1].node2 = node2;
+
+	// Initialize two NNIs
+	int cnt;
+	double t[4];
+    FOR_NEIGHBOR_IT(node1, node2, node1_it) {
+			cnt = 0;
+			t[cnt]=(*node1_it)->length;
+			FOR_NEIGHBOR_IT(node2, node1, node2_it) {
+				//   Initialize the 2 NNI moves
+				nniMoves[cnt].node1Nei_it = node1_it; // for both cnt = 0,1 this is the same neighbor of node1,
+													  // which will be swapped with nei1 and nei2 of node2
+				nniMoves[cnt].node2Nei_it = node2_it;
+				t[cnt+2] = (*node2_it)->length;
+				cnt++;
+			}
+			break;
+    }
+
+    NeighborVec::iterator node1Nei2_it;
+
+    FOR_NEIGHBOR_IT(node1, node2, node1_it){
+    	if ((*node1_it)->node != (*nniMoves[0].node1Nei_it)->node){
+    		t[cnt]=(*node1_it)->length;
+    		node1Nei2_it = node1_it;
+    		break;
+    	}
+    }
+
+    /*
+     * Correspondence:
+     *
+     * Nodes, incident to node1 with corresponding branches:
+     * nniMoves[0].node1Nei_it	| t[0]
+     * node1Nei2_it				| t[1]
+     *
+     * Nodes, incident to node2 with corresponding branches:
+     * nniMoves[0].node2Nei_it	| t[2]
+     * nniMoves[1].node2Nei_it	| t[3]
+     *
+     * NNIs:
+     * nniMoves[0] -> swapping (nniMoves[0].node1Nei_it	| t[0]) with (nniMoves[0].node2Nei_it	| t[2])
+     * corresponding coef: q1
+     *
+     * nniMoves[1] -> swapping (nniMoves[1].node1Nei_it	| t[0]) with (nniMoves[1].node2Nei_it	| t[3])
+     * corresponding coef: q2
+     */
+
+    double L[4]; // likelihoods of 4 subtrees
+    double score[4];
+    L[0] = L[1] = L[2] = L[3] = 0.0;
+    score[0] = score[1] = score[2] = score[3] = 0.0;
+
+    double UB = 0.0; // in log terms
+    int nsite = tree->aln->getNSite();
+    UB = nsite*logC(node1->findNeighbor(node2)->length,tree); // coefficient c
+
+    //int ncat = tree->site_rate->getNDiscreteRate();
+    int nptn = tree->aln->getNPattern();
+    int nstates = tree->aln->num_states;
+    int i,x;
+    //int cat;
+    IntVector ptnFreq;
+    tree->aln->getPatternFreq(ptnFreq);
+
+    int clear_pl_lh[4]; // if equals to 1, partial likelihoods were computed, don't clear.
+    clear_pl_lh[0] = clear_pl_lh[1] = clear_pl_lh[2] = clear_pl_lh[3] = 1;
+
+    double* T1_partial_lh;
+    if(((PhyloNeighbor*) (*nniMoves[0].node1Nei_it))->get_partial_lh_computed() == 0){
+    	tree->computePartialLikelihood((PhyloNeighbor*) (*nniMoves[0].node1Nei_it), node1);
+    	clear_pl_lh[0] = 0;
+    }
+    T1_partial_lh = ((PhyloNeighbor*) (*nniMoves[0].node1Nei_it))->get_partial_lh();
+
+    double* T2_partial_lh;
+    if(((PhyloNeighbor*) (*node1Nei2_it))->get_partial_lh_computed() == 0){
+    	tree->computePartialLikelihood(((PhyloNeighbor*) (*node1Nei2_it)), node1);
+    	clear_pl_lh[1] = 0;
+    }
+    T2_partial_lh = ((PhyloNeighbor*) (*node1Nei2_it))->get_partial_lh();
+
+    double* T3_partial_lh;
+    if(((PhyloNeighbor*) (*nniMoves[0].node2Nei_it))->get_partial_lh_computed() == 0){
+    	tree->computePartialLikelihood(((PhyloNeighbor*) (*nniMoves[0].node2Nei_it)), node1);
+    	clear_pl_lh[2] = 0;
+    }
+    T3_partial_lh = ((PhyloNeighbor*) (*nniMoves[0].node2Nei_it))->get_partial_lh();
+
+    double* T4_partial_lh;
+    if(((PhyloNeighbor*) (*nniMoves[1].node2Nei_it))->get_partial_lh_computed() == 0){
+    	tree->computePartialLikelihood(((PhyloNeighbor*) (*nniMoves[1].node2Nei_it)), node1);
+    	clear_pl_lh[3] = 0;
+    }
+    T4_partial_lh = ((PhyloNeighbor*) (*nniMoves[1].node2Nei_it))->get_partial_lh();
+
+    for(i = 0; i<nptn; i++){
+    	score[0] = score[1] = score[2] = score[3] = 0.0;
+    	// Sum over Gamma categories and over states
+    	//for(cat = 0; cat < ncat; cat++){
+    		for(x = 0; x < nstates; x++){
+    		// First  subtree --------------------------
+    			score[0] += tree->getModel()->state_freq[x]*T1_partial_lh[i*nstates+x];
+    		// Second subtree --------------------------
+    			score[1] += tree->getModel()->state_freq[x]*T2_partial_lh[i*nstates+x];
+    	   	// Third  subtree --------------------------
+    			score[2] += tree->getModel()->state_freq[x]*T3_partial_lh[i*nstates+x];
+    	   	// Fourth subtree --------------------------
+    			score[3] += tree->getModel()->state_freq[x]*T4_partial_lh[i*nstates+x];
+    		}
+   	//}
+    	L[0] += log(score[0])*ptnFreq[i];
+    	L[1] += log(score[1])*ptnFreq[i];
+    	L[2] += log(score[2])*ptnFreq[i];
+    	L[3] += log(score[3])*ptnFreq[i];
+
+        assert(isnormal(L[0] + L[1] + L[2] + L[3]));
+
+    }
+
+/*
+    if(clear_pl_lh[0] == 0){
+    	((PhyloNeighbor*) (*nniMoves[0].node1Nei_it))->clearPartialLh();
+    }
+    if(clear_pl_lh[1] == 0){
+    	((PhyloNeighbor*) (*node1Nei2_it))->clearPartialLh();
+    }
+    if(clear_pl_lh[2] == 0){
+    	((PhyloNeighbor*) (*nniMoves[0].node2Nei_it))->clearPartialLh();
+    }
+    if(clear_pl_lh[3] == 0){
+    	((PhyloNeighbor*) (*nniMoves[1].node2Nei_it))->clearPartialLh();
+    }*/
+    //cout<<"Clear_pl_lh:"<<clear_pl_lh[0]<<" "<<clear_pl_lh[1]<<" "<<clear_pl_lh[2]<<" "<<clear_pl_lh[3]<<endl;
+
+    //double logNcat = log(((double)ncat));
+    L[0] = L[0] + ((PhyloNeighbor*) (*nniMoves[0].node1Nei_it))->get_lh_scale_factor();
+    L[1] = L[1] + ((PhyloNeighbor*) (*node1Nei2_it))->get_lh_scale_factor();
+    L[2] = L[2] + ((PhyloNeighbor*) (*nniMoves[0].node2Nei_it))->get_lh_scale_factor();
+    L[3] = L[3] + ((PhyloNeighbor*) (*nniMoves[1].node2Nei_it))->get_lh_scale_factor();
+
+/*   // Print some info:
+    cout<<"The log likelihood  of the parent tree T:"<<tree->computeLikelihood()<<endl;
+    cout<<"The log likelihoods of the four subtrees:"<<endl;
+    cout<<"Node"<<(*nniMoves[0].node1Nei_it)->node->id<<": L[0] = "<<L[0]<<endl;
+    cout<<"Node"<<(*node1Nei2_it)->node->id<<": L[1] = "<<L[1]<<endl;
+    cout<<"Node"<<(*nniMoves[0].node2Nei_it)->node->id<<": L[2] = "<<L[2]<<endl;
+    cout<<"Node"<<(*nniMoves[1].node2Nei_it)->node->id<<": L[3] = "<<L[3]<<endl;*/
+
+    UB += L[0] + L[1] + L[2] + L[3];
+
+    double q1 = logC(t[0]+t[3],tree) + logC(t[1]+t[2],tree);
+    double q2 = logC(t[0]+t[2],tree) + logC(t[1]+t[3],tree);
+    //cout<<"Coefficients q1 and q2:"<<endl<<q1<<endl<<q2<<endl;
+
+    double UBq1 = UB + nsite*q1;
+    double UBq2 = UB + nsite*q2;
+
+	string out_file_UB = tree->params->out_prefix;
+	out_file_UB += ".UB.NNI.upperBounds";
+	ofstream out_UB;
+	out_UB.exceptions(ios::failbit | ios::badbit);
+	out_UB.open((char*)out_file_UB.c_str(),std::ofstream::out | std::ofstream::app);
+
+	out_UB << tree->curScore << "\t" << UBq1 << "\t" << UBq2 << "\t" << tree->curScore - UBq1 << "\t" << tree->curScore - UBq2 << endl;
+
+	out_UB.close();
+
+    if(UBq1 < tree->curScore){
+    	tree->skippedNNIub += 1;
+  /*  	tree->meanUB += UBq1;
+    	if(UBq1 < tree->minUB){
+    		tree->minUB = UBq1;
+    	} else if(UBq1 > tree->maxUB){
+    		tree->maxUB = UBq1;
+    	}*/
+    	//cout<<"----------------- UBq1 < L !!!"<<endl;
+    }
+    if(UBq2 < tree->curScore){
+    	tree->skippedNNIub += 1;
+    	/*tree->meanUB += UBq2;
+    	if(UBq2 < tree->minUB){
+    		tree->minUB = UBq2;
+    	} else if(UBq2 > tree->maxUB){
+    		tree->maxUB = UBq2;
+    	}*/
+    	//cout<<"----------------- UBq2 < L !!!"<<endl;
+    }
+
+	// Decide which NNI has a larger UB (we base our decision on q coefficients)
+	if(q1 > q2){
+		// NNI 1:
+		//nniMoves[0].newLen[0] = NULL;
+		nniMoves[0].newloglh = UBq1;
+		//cout<<"q1 and NNI1 is chosen with UB "<<UBq1<<endl;
+		return nniMoves[0];
+	} else {
+		// NNI 2:
+		//nniMoves[1].newLen[0] = NULL;
+		nniMoves[1].newloglh = UBq2;
+		//cout<<"q2 and NNI2 is chosen with UB "<<UBq2<<endl;
+		return nniMoves[1];
+	}
+}
+
+double logC(double t, PhyloTree* tree){
+	//double c = log((1+3*exp(-t)))-log(1-exp(-t));
+
+	int i, m = tree->aln->num_states*tree->aln->num_states, n = tree->aln->num_states;
+	//double* TransMatrix = new double[m];
+	//tree->getModelFactory()->computeTransMatrix(t,TransMatrix);
+	double maxTransProb = 0.0;
+/*	for(i = 0; i < m; i++)
+		if(TransMatrix[i]>maxTransProb)
+			maxTransProb = TransMatrix[i];*/
+	//maxTransProb = 0.25*(1+3*exp(-t));
+	maxTransProb = 1;
+
+	if(tree->minStateFreq == 0.0){
+		tree->minStateFreq = tree->getModel()->state_freq[0];
+		for(i = 1; i < n; i++){
+			if(tree->minStateFreq > tree->getModel()->state_freq[i])
+				tree->minStateFreq = tree->getModel()->state_freq[i];
+		}
+
+	}
+	//cout<<tree->minStateFreq<<endl;
+	//tree->minStateFreq = 0.25;
+	//assert(isnormal(log(maxTransProb/tree->minStateFreq)));
+	return log(maxTransProb/tree->minStateFreq);
 }

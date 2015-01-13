@@ -1242,12 +1242,34 @@ public:
      */
     double mlFirstOpt;
 
+    /**
+    * for Upper Bounds: how many NNIs have UB < L curScore, that is NNIs for which we don't need to compute likelihood
+    */
+	int skippedNNIub;
+
+	/**
+	* for Upper Bounds: how many NNIs were considered in total
+	*/
+	int totalNNIub;
+
+    /**
+     * for Upper Bounds: min, mean and max UB encountered during the tree search, such that UB < L curScore
+     */
+
+    //double minUB, meanUB, maxUB;
+
     /*
      * for UpperBounds: mlCheck = 1, if previous two values were already saved.
      * Needed, because parameter optimization is done twice before and after tree search
      */
 
     int mlCheck;
+
+    /*
+     * for Upper Bounds: min base frequency
+     */
+
+	double minStateFreq;
 
     /*
      * 		Store the all the parameters for the program

@@ -352,6 +352,7 @@ ecopdmtreeset.cpp
 graph.cpp
 candidateset.cpp
 checkpoint.cpp
+upperbounds.cpp
 )
 
 ##################################################################

@@ -50,6 +50,7 @@
 #include "guidedbootstrap.h"
 #include "model/modelset.h"
 #include "timeutil.h"
+#include "upperbounds.h"
 
 
 void reportReferences(Params &params, ofstream &out, string &original_model) {
@@ -1606,6 +1607,14 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     iqtree.initializeModel(params);
 
+    // UpperBounds analysis. Here, to analyse the initial tree without any tree search or optimization
+    if (params.upper_bound) {
+    	iqtree.curScore = iqtree.computeLikelihood();
+    	cout<<iqtree.curScore<<endl;
+    	UpperBounds(&params, iqtree.aln, &iqtree);
+    	exit(0);
+	}
+
     // degree of freedom
     cout << endl;
     if (verbose_mode >= VB_MED) {
@@ -1800,6 +1809,18 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	// BUG FIX: readTreeString(bestTreeString) not needed before this line
 	iqtree.printResultTree();
+
+	if(params.upper_bound_NNI){
+		string out_file_UB = params.out_prefix;
+		out_file_UB += ".UB.NNI.main";
+		ofstream out_UB;
+		out_UB.exceptions(ios::failbit | ios::badbit);
+		out_UB.open((char*)out_file_UB.c_str(),std::ofstream::out | std::ofstream::app);
+		out_UB<<iqtree.leafNum<<"\t"<<iqtree.aln->getNSite()<<"\t"<<iqtree.params->upper_bound_frac<<"\t"
+				  <<iqtree.skippedNNIub<<"\t"<< iqtree.totalNNIub<<"\t"<<iqtree.bestScore<<endl;
+					//iqtree.minUB << "\t" << iqtree.meanUB/iqtree.skippedNNIub << "\t" << iqtree.maxUB << endl;
+		out_UB.close();
+		}
 
 	if (params.out_file)
 		iqtree.printTree(params.out_file);

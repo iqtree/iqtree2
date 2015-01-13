@@ -19,6 +19,7 @@
 #include "timeutil.h"
 #include "nnisearch.h"
 #include "phylosupertree.h"
+#include "upperbounds.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
@@ -84,8 +85,16 @@ void PhyloTree::init() {
     dist_matrix = NULL;
     sse = LK_SSE;  // FOR TUNG: you forgot to initialize this variable!
     save_all_trees = 0;
-    mlCheck = 0; // FOR: upper bounds
     nodeBranchDists = NULL;
+
+    // FOR: upper bounds
+    mlCheck = 0;
+    skippedNNIub = 0;
+    totalNNIub = 0;
+    minStateFreq = 0.0;
+    //minUB = 0.0;
+    //meanUB = 0.0;
+    //maxUB = 0.0;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree() {
@@ -3368,6 +3377,23 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
 	assert(!node1->isLeaf() && !node2->isLeaf());
     assert(node1->degree() == 3 && node2->degree() == 3);
+
+    // Upper Bounds ---------------
+    totalNNIub += 2;
+    if(params->upper_bound_NNI){
+    	NNIMove resMove;
+    	resMove = getBestNNIForBranUB(node1,node2,this);
+    	/* if UB is smaller than the current likelihood, then we don't recompute the likelihood of the swapped topology.
+    	 * Otherwise, follow the normal procedure: evaluate NNIs and compute the likelihood.*/
+
+    	// here, we skip NNI is its UB n times worse than the curLikelihood
+    	if( resMove.newloglh < (1+params->upper_bound_frac)*this->curScore){
+    		//cout << "Skipping Likelihood evaluation of NNIs for this branch :) ........................"<<endl;
+    		return resMove;
+    	}
+    }
+
+    //-----------------------------
 
 	NeighborVec::iterator it;
 	int IT_NUM = (params->nni5) ? 6 : 2;

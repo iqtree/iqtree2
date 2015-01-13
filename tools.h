@@ -1346,7 +1346,12 @@ struct Params {
     /**********************************************/
     /****** variables for upper bound tests *******/
 	bool upper_bound;
-
+	bool upper_bound_NNI;
+	/*
+	 * fraction of current likelihood by which UB will be increased.
+	 * if UBincreased < L, ignore corresponding NNI Add a comment to this line
+	 */
+	double upper_bound_frac;
 
 
     /**********************************************/

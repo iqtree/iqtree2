@@ -76,6 +76,21 @@ public:
      */
     void clearForwardPartialLh(Node *dad);
 
+	/**
+	* For Upper Bounds analysis: get partial likelihood and lh scale factor
+	*/
+	double* get_partial_lh(){
+	return partial_lh;
+	}
+
+	double get_lh_scale_factor(){
+	return lh_scale_factor;
+	}
+
+	int get_partial_lh_computed(){
+	return partial_lh_computed;
+	}
+
 private:
 
     /**
