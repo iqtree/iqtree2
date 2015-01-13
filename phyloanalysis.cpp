@@ -2124,8 +2124,10 @@ void runPhyloAnalysis(Params &params) {
 //			UpperBounds(&params, alignment, tree);
 //	}
 
-	if(tree->isSuperTree() && params.partition_type){
-		((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
+	if(verbose_mode >= VB_MED){
+		if(tree->isSuperTree() && params.partition_type){
+			((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
+		}
 	}
 
 	delete tree;

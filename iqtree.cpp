@@ -1636,10 +1636,17 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             plusNNIs.clear(); // Vector containing all positive NNIs
             saveBranches(); // save all current branch lengths
             initPartitionInfo(); // for super tree
-            if (searchinfo.speednni && !brans2Eval.empty())
+            if (searchinfo.speednni && !brans2Eval.empty()){
               evalNNIs(brans2Eval);
-            else
+              if(verbose_mode >= VB_MED){
+            	  cout<<"NNI step: "<<nni_steps<<" / evalNNI: "<<brans2Eval.size()<<endl;
+              }
+            } else {
               evalNNIs();
+              if(verbose_mode >= VB_MED){
+            	  cout<<"NNI step: "<<nni_steps<<" / evalNNIall: "<<this->branchNum - this->leafNum<<endl;
+              }
+            }
 
 //            if (!nni_sort) {
 //                evalNNIs(); // generate all positive NNI moves
@@ -1672,6 +1679,10 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         // Apply all non-conflicting positive NNIs
         doNNIs(numNNIs);
 
+        if(verbose_mode >= VB_MED){
+        	cout<<"NNI step: "<<nni_steps<<" / positivNNIs: "<<plusNNIs.size()<<endl;
+        }
+
         if (verbose_mode >= VB_MED) {
         	cout << "NNI step: " << nni_steps << " / Number of NNIs applied: " << numNNIs << " / curScore: " << curScore << endl;
         }
@@ -1701,6 +1712,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             	cout.precision(15);
                 cout << "BUG: current logl=" << curScore << " < " << nonConfNNIs.at(0).newloglh
                         << "(best NNI)" << endl;
+                printTree(cout);
                 abort();
             }
             if (verbose_mode >= VB_MED) {

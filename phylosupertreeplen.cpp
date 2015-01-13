@@ -70,7 +70,7 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     double tree_lh = 0.0, cur_lh = 0.0;
     int ntrees = tree->size();
-    double tol = 0.2;
+    double tol = 0.02;
 
 	/*#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: tree_lh)
@@ -440,36 +440,32 @@ double PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf
 
 NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves)
 {
-    NNIMove myMove;
-    myMove.newloglh = 0;
+	assert(node1->degree() == 3 && node2->degree() == 3);
 
-	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
-	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
-	assert(nei1 && nei2);
+	double backupScore = curScore;
 
-	SuperNeighbor *node1_nei = NULL;
-	SuperNeighbor *node2_nei = NULL;
-	SuperNeighbor *node2_nei_other = NULL;
-
-	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it) {
-		node1_nei = (SuperNeighbor*)(*node1_it);
-		break;
-	}
-	FOR_NEIGHBOR_DECLARE(node2, node1, node2_it) {
-		node2_nei = (SuperNeighbor*)(*node2_it);
-		break;
-	}
-
-	FOR_NEIGHBOR_IT(node2, node1, node2_it_other)
-	if ((*node2_it_other) != node2_nei) {
-		node2_nei_other = (SuperNeighbor*)(*node2_it_other);
-		break;
-	}
-
-	//double bestScore = optimizeOneBranch(node1, node2, false);
-	//double oldLEN = node1->findNeighbor(node2)->length;
-
-	int ntrees = size(), part;
+//	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
+//	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
+//	assert(nei1 && nei2);
+//
+//	SuperNeighbor *node1_nei = NULL;
+//	SuperNeighbor *node2_nei = NULL;
+//	SuperNeighbor *node2_nei_other = NULL;
+//
+//	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it) {
+//		node1_nei = (SuperNeighbor*)(*node1_it);
+//		break;
+//	}
+//	FOR_NEIGHBOR_DECLARE(node2, node1, node2_it) {
+//		node2_nei = (SuperNeighbor*)(*node2_it);
+//		break;
+//	}
+//
+//	FOR_NEIGHBOR_IT(node2, node1, node2_it_other)
+//	if ((*node2_it_other) != node2_nei) {
+//		node2_nei_other = (SuperNeighbor*)(*node2_it_other);
+//		break;
+//	}
 
 /*	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: nni1_score, nni2_score) private(part)
@@ -477,10 +473,53 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 */
 	SwapNNIParam nni_param;
 	// nni_param.node1/2_nei tell swapNNIBranch what to swap first
-	nni_param.node1_nei = node1_nei;
-	nni_param.node2_nei = node2_nei;
+//	nni_param.node1_nei = node1_nei;
+//	nni_param.node2_nei = node2_nei;
 
-	this->swapNNIBranch(0.0, (PhyloNode*)nei2->node, (PhyloNode*)nei1->node, &nni_param);
+	// ------------------------------------------------------------------
+    int cnt;
+
+	//NNIMove nniMoves[2];
+    bool newNNIMoves = false;
+    if (!nniMoves) {
+		//   Initialize the 2 NNI moves
+    	newNNIMoves = true;
+    	nniMoves = new NNIMove[2];
+    	nniMoves[0].ptnlh = nniMoves[1].ptnlh = NULL;
+    	nniMoves[0].node1 = NULL;
+    }
+
+    if (nniMoves[0].node1) {
+    	// assuming that node1Nei_it and node2Nei_it are defined in nniMoves structure
+    	for (cnt = 0; cnt < 2; cnt++) {
+    		// sanity check
+    		if (!node1->findNeighbor((*nniMoves[cnt].node1Nei_it)->node)) outError(__func__);
+    		if (!node2->findNeighbor((*nniMoves[cnt].node2Nei_it)->node)) outError(__func__);
+    	}
+    } else {
+        FOR_NEIGHBOR_IT(node1, node2, node1_it) {
+			cnt = 0;
+			FOR_NEIGHBOR_IT(node2, node1, node2_it) {
+				//   Initialize the 2 NNI moves
+				nniMoves[cnt].node1Nei_it = node1_it; // the same neighbor of node1 for cnt = 0 and cnt = 1
+				nniMoves[cnt].node2Nei_it = node2_it;
+				cnt++;
+			}
+			break;
+        }
+    }
+
+    // Initialize node1 and node2 in nniMoves
+	nniMoves[0].node1 = nniMoves[1].node1 = node1;
+	nniMoves[0].node2 = nniMoves[1].node2 = node2;
+
+	//--------------------------------------------------------------------------
+
+	this->swapNNIBranch(0.0, node1, node2, &nni_param, nniMoves);
+
+/*
+    NNIMove myMove;
+    myMove.newloglh = 0;
 
 	// Choose NNI move for SuperTree===========================================
 	if (nni_param.nni1_score > nni_param.nni2_score) {
@@ -503,13 +542,29 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 		//myMove.oldLen[0] = oldLEN;
 	}
 	// ========================================================================
+*/
+
+	 // restore curScore
+	 curScore = backupScore;
+
+	 NNIMove myMove;
+	 if (nniMoves[0].newloglh > nniMoves[1].newloglh) {
+		 myMove = nniMoves[0];
+		 myMove.swap_id = 1;
+	 } else {
+		 myMove = nniMoves[1];
+		 myMove.swap_id = 2;
+	 }
+	if (newNNIMoves) {
+		delete [] nniMoves;
+	}
 	return myMove;
 }
 
 void PhyloSuperTreePlen::doNNIs(int nni2apply, bool changeBran) {
 	IQTree::doNNIs(nni2apply, changeBran);
 	mapBranchLen();
-	clearAllPartialLH();
+	//clearAllPartialLH();
 }
 
 
@@ -527,27 +582,18 @@ void PhyloSuperTreePlen::getNNIType(PhyloNode *node1, PhyloNode *node2, vector<N
 		FOR_NEIGHBOR(node2, node1, nit) {
 			if(!((SuperNeighbor*)*nit)->link_neighbors[part]) { epsilon_cnt++; }
 		}
-
-		//cout<<"Partition "<<part<<" : Epsilon = "<<epsilon_cnt<<endl;
 		if(epsilon_cnt == 0){
 			nni_type[part]=NNI_NO_EPSILON;
-//			allNNIcases_computed[0]++;
 		}else if(epsilon_cnt == 1){
 			nni_type[part] = NNI_ONE_EPSILON;
-//			allNNIcases_computed[1]++;
 		}else if(epsilon_cnt == 2){
 			nni_type[part]=NNI_TWO_EPSILON;
-//			allNNIcases_computed[2]++;
 		}else if(epsilon_cnt == 3){
 			nni_type[part]=NNI_THREE_EPSILON;
-//			allNNIcases_computed[3]++;
 		}else {
 			nni_type[part] = NNI_MANY_EPSILON;
-//			allNNIcases_computed[4]++;
 		}
 	}
-
-
 }
 
 void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
@@ -560,7 +606,6 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 
 	int part = 0, ntrees = size();
 	iterator it;
-	//double old_brlen = nei1->length;
 	vector<NNIMove> part_move;
 	vector<NNIType> is_nni;
 	part_move.resize(ntrees);
@@ -580,8 +625,8 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 	}
 //	PhyloTree::doNNI(move,clearLH);
 	PhyloTree::doNNI(move,false);
-	nei1->length = move.newLen[0];
-	nei2->length = move.newLen[0];
+	//nei1->length = move.newLen[0];
+	//nei2->length = move.newLen[0];
 	PhyloNode *node1, *node2;
 
 	for (it = begin(), part = 0; it != end(); it++, part++) {
@@ -623,26 +668,17 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 		case NNI_MANY_EPSILON:
 			break;
 		}
-
 	}
-	//mapBranchLen();
-
-//	printTree(cout);
-//	cout<<endl;
-//	cout<<"NNI was applied"<<endl;
-//	checkBranchLen();
-
 }
 
-double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param) {
+double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param, NNIMove *nniMoves) {
 
 //	for (iterator it = begin(); it != end(); it++)
 //		if ((*it)->sse != LK_EIGEN_SSE)
 //			outError("hey!");
 
-	//double score_mine = this->computeLikelihood();
+	double score_mine = this->computeLikelihood();
 
-	assert(node1->degree() == 3 && node2->degree() == 3);
 	//cout<<"starting NNI evaluation"<<endl;
 	//checkBranchLen();
 
@@ -654,25 +690,26 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 *===========================================================================================*/
 	vector<NNIType> is_nni;
 	getNNIType(node1, node2, is_nni);
-	for (part = 0; part < ntrees; part++)
-		switch (is_nni[part]) {
-		case NNI_NO_EPSILON:
-			allNNIcases_computed[0]++;
-			break;
-		case NNI_ONE_EPSILON:
-			allNNIcases_computed[1]++;
-			break;
-		case NNI_TWO_EPSILON:
-			allNNIcases_computed[2]++;
-			break;
-		case NNI_THREE_EPSILON:
-			allNNIcases_computed[3]++;
-			break;
-		case NNI_MANY_EPSILON:
-			allNNIcases_computed[4]++;
-			break;
-		}
-
+	if(verbose_mode >= VB_MED){
+		for (part = 0; part < ntrees; part++)
+			switch (is_nni[part]) {
+			case NNI_NO_EPSILON:
+				allNNIcases_computed[0]++;
+				break;
+			case NNI_ONE_EPSILON:
+				allNNIcases_computed[1]++;
+				break;
+			case NNI_TWO_EPSILON:
+				allNNIcases_computed[2]++;
+				break;
+			case NNI_THREE_EPSILON:
+				allNNIcases_computed[3]++;
+				break;
+			case NNI_MANY_EPSILON:
+				allNNIcases_computed[4]++;
+				break;
+			}
+	}
 	//==================================================================================================
 	// SuperTREE: saving Neighbors and allocating new ones; assign which nodes/neighbors to be swapped.
 	//==================================================================================================
@@ -752,28 +789,24 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	SuperNeighbor *nei1_new = (SuperNeighbor*) node1->findNeighbor(node2);
 	SuperNeighbor *nei2_new = (SuperNeighbor*) node2->findNeighbor(node1);
 
-	/* -------------------------------------------------------------------------------------------
-	 *  NNI details: assigning nodes to be swapped on SuperTree
-	 * -------------------------------------------------------------------------------------------*/
-
-	// node1_nei - one of the node1 neighbors, which is not node2
-	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
-       break;
-	if (nni_param)
-		node1_it = node1->findNeighborIt(nni_param->node1_nei->node);
-	Neighbor *node1_nei = *node1_it;
-
-	// *node2_its[0] - one of the node2 neighbors, which is not node1
-	// *node2_its[1] - second neighbor of node2,   which is not node1
-	vector<NeighborVec::iterator> node2_its;
-	FOR_NEIGHBOR_DECLARE(node2, node1, node2_it)
-		node2_its.push_back(node2_it);
-	assert(node2_its.size() == 2);
-	if (nni_param && nni_param->node2_nei != (*node2_its[0])) {
-		node2_it = node2_its[0];
-		node2_its[0] = node2_its[1];
-		node2_its[1] = node2_it;
-	}
+//	/* -------------------------------------------------------------------------------------------
+//	 *  NNI details: assigning nodes to be swapped on SuperTree
+//	 * -------------------------------------------------------------------------------------------*/
+//
+//	// node1_nei - one of the node1 neighbors, which is not node2
+//	NeighborVec::iterator node1_it = node1->findNeighborIt(nni_param->node1_nei->node);
+//	Neighbor *node1_nei = *node1_it;
+//
+//	// *node2_its[0] - one of the node2 neighbors, which is not node1
+//	// *node2_its[1] - second neighbor of node2,   which is not node1
+//	vector<NeighborVec::iterator> node2_its;
+//	node2_its.push_back(node2->findNeighborIt(nni_param->node2_nei->node));
+//
+//	FOR_NEIGHBOR_DECLARE(node2, node1, node2_it){
+//		FOR_NEIGHBOR_DECLARE(node2,(*node2_it)->node,node2_it2)
+//			node2_its.push_back(node2_it2);
+//	}
+//	assert(node2_its.size() == 2);
 
 	/* =================================================================================================
 	 * SubTREEs: saving Neighbors and allocating new ones.
@@ -969,11 +1002,16 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 *	- restore if necessary.
 	 *===========================================================================================*/
 	int cnt;
-	for (cnt = 0; cnt < node2_its.size(); cnt++) {
+	for (cnt = 0; cnt < 2; cnt++) {
 		//cout<<"NNI Loop-----------------------------NNI."<<cnt<<endl;
 
-		node2_it = node2_its[cnt];
-		Neighbor *node2_nei = *node2_it;
+    	NeighborVec::iterator node1_it = nniMoves[cnt].node1Nei_it;
+    	NeighborVec::iterator node2_it = nniMoves[cnt].node2Nei_it;
+        Neighbor *node1_nei = *node1_it;
+        Neighbor *node2_nei = *node2_it;
+
+		//node2_it = node2_its[cnt];
+		//Neighbor *node2_nei = *node2_it;
 
 		// Define which nodes/neighbors to be swapped on SubTree ----------------------------
 		for(part=0; part<ntrees; part++)
@@ -1008,7 +1046,6 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 				for(id=0; id<IT_NUM; id++){
 					((PhyloNeighbor*)(*sub_saved_it[part*6+id]))->clearPartialLh();
-					//total_clearPatialLh++;
 				}
 				//checkBranchLen();
 			} else if(is_nni[part]==NNI_MANY_EPSILON){
@@ -1068,50 +1105,6 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				 * and for the one it is now mapped to (b' or c'), are the same.
 				 * Decrease a' (done before). Increase b' or c' depending on the NNI. Restore three branches.*/
 
-//				cout<<"CNT------NODE_id check-----------------------------------"<<cnt<<endl;
-//					cout<<"PART = "<<part<<endl;
-//					for(id=2; id<6; id++){
-//						if(node1->isNeighbor(neighbor_nodes[id-2])){
-//							if(((SuperNeighbor*)(node1->findNeighbor(neighbor_nodes[id-2])))->link_neighbors[part]){
-//								cout<<"node1: "<<"id = "<<id<<"; node_id = "<<
-//										((SuperNeighbor*)(node1->findNeighbor(neighbor_nodes[id-2])))->link_neighbors[part]->node->id<<";"<<endl;
-//							} else {
-//								cout<<"node1: "<<"id = "<<id<<"; no neighbor;"<<endl;
-//							}
-//						} else if(node2->isNeighbor(neighbor_nodes[id-2])){
-//							if(((SuperNeighbor*)(node2->findNeighbor(neighbor_nodes[id-2])))->link_neighbors[part]){
-//								cout<<"node2: "<<"id = "<<id<<"; node_id = "<<
-//										((SuperNeighbor*)(node2->findNeighbor(neighbor_nodes[id-2])))->link_neighbors[part]->node->id<<";"<<endl;
-//							} else {
-//								cout<<"node2: "<<"id = "<<id<<"; no neighbor;"<<endl;
-//							}
-//						}
-//					}
-//					cout<<"------"<<endl;
-//					for(id=2; id<6; id++){
-//						if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]){
-//							cout<<"id = "<<id<<"; node_id = "<<((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node->id<<";"<<endl;
-//						}
-//					}
-//
-//				cout<<"------------------------------------------------------"<<endl;
-
-//				// CHECK THIS again!
-//				// For the second NNI we need to clear partial likelihoods
-//				if(cnt == 1){
-//					for(id=2; id<6; id++){
-//						if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]){
-//							if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node == nei1_new->link_neighbors[part]->node){
-//								nei2_new->link_neighbors[part]->clearPartialLh();
-//								break;
-//							} else if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node == nei2_new->link_neighbors[part]->node){
-//								nei1_new->link_neighbors[part]->clearPartialLh();
-//								break;
-//							}
-//						}
-//					}
-//				}
-
 				linkBranch(part, nei1_new, nei2_new);
 				assert(nei1_new->link_neighbors[part]);
 
@@ -1125,28 +1118,6 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				// - you need to update only one link_neighbor with new PhyloNeighbor
 				//	 (either node1->findNeighbor(node2) or node2->findNeighbor(node1))
 				// - the second is already linked to some existing PhyloNeighbor after linkBranch().
-//				for(id=2; id<6; id++){
-//					if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]){
-//						if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node == nei1_new->link_neighbors[part]->node){
-//							nei2_new->link_neighbors[part] = (PhyloNeighbor*)(*sub_saved_it[part*6 + id]);
-////							if(cnt == 1 && params->nni5)
-////								nei2_new->link_neighbors[part]->clearPartialLh();
-//							//cout<<"nei2_new->link_neighbors[part] is newed"<<endl;
-//							break;
-//						} else if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node == nei2_new->link_neighbors[part]->node){
-//							nei1_new->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
-////							if(cnt == 1 && params->nni5)
-////								nei1_new->link_neighbors[part]->clearPartialLh();
-//							//cout<<"nei1_new->link_neighbors[part] is newed"<<endl;
-//							break;
-//						}
-////						// Clear partial likelihoods for all three neighbors nei1/2->find(node1/2)
-////						if(cnt == 1 && params->nni5)
-////							((PhyloNeighbor*)(*sub_saved_it[part*6 + id]))->clearPartialLh();
-//					}
-//				}
-
-				// NEW code
 				for(id=2; id<6; id++){
 					if(node2->isNeighbor(neighbor_nodes[id-2])){
 						// nei2_new should be updated
@@ -1188,7 +1159,6 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 						}
 					}
 				}
-
 				//cout<<"nei1_new->link_nei["<<part<<"]->node->id"<<nei1_new->link_neighbors[part]->node->id<<endl;
 				//cout<<"nei2_new->link_nei["<<part<<"]->node->id"<<nei2_new->link_neighbors[part]->node->id<<endl;
 
@@ -1210,8 +1180,10 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		//checkBranchLen();
 
 		double score = optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
+		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
+
 //		if (verbose_mode >= VB_MED) {
-//			cout << "[" << score << "] ";
+//			cout << "After_nni1 [" << score << "] ";
 //			printTree(cout);
 //			cout << endl;
 //    		//for(part = 0; part < ntrees; part++)
@@ -1219,13 +1191,16 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 //    		//cout << endl;
 //    		//cout<<"NNI count = "<<cnt<<endl;
 //		}
-
 		//cout<<"After optimization"<<endl;
 		//checkBranchLen();
 
 		// %%%%%%%%%%%%%%%%%%%%%%%%  FIVE BRANCH OPTIMIZATION  %%%%%%%%%%%%%%%%%%%%%%%%
+		i=1;
 	    if (params->nni5) {
+
+	    	// ------ Optimization of branches incident to node1 ---------------
 	    	FOR_NEIGHBOR(node1, node2, it){
+	    		// Clear the partial likelihood of node1 neighbor: only for NO or ONE epsilon cases
 	    		for(part = 0; part < ntrees; part++)
 	    			if(((SuperNeighbor*)(*it))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON or is_nni[part]==NNI_ONE_EPSILON)){
 	    				node_link = ((SuperNeighbor*)(*it))->link_neighbors[part]->node;
@@ -1238,18 +1213,30 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    				//cout<<"HERE it is: "<<((SuperNeighbor*)(*it))->link_neighbors[part]->node->id<<endl;
 	    				//cout<<nei2_new->link_neighbors[part]->node->id<<endl;
 						((PhyloNeighbor*)node_link->findNeighbor(nei_link))->clearPartialLh();
+						//cout<<"CASE:"<<is_nni[part]<<"Cleared partial likelihood"<<endl;
 	    			}
+	    		// Optimize the branch incident to node1
 	    		//cout<<"NNI5 : node1 : Before optimization"<<endl;
 	    		//checkBranchLen();
 	    		score = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
+				nniMoves[cnt].newLen[i] = node1->findNeighbor((*it)->node)->length;
+				i++;
+
+
 	    		//cout<<"NNI5 : node1 : After optimization"<<endl;
 	    		//checkBranchLen();
 	    	}
+
+	    	// ------ Clear the partial likelihood on the central branch -------
 	    	for(part = 0; part < ntrees; part++)
-	    		if(((SuperNeighbor*)node2->findNeighbor(node1))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON or is_nni[part]==NNI_ONE_EPSILON))
+	    		if(((SuperNeighbor*)node2->findNeighbor(node1))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON or is_nni[part]==NNI_ONE_EPSILON)){
 	    			((SuperNeighbor*)node2->findNeighbor(node1))->link_neighbors[part]->clearPartialLh();
+	    		}
+
+	    	// ------ Optimization of branches incident to node2 ---------------
 	    	FOR_NEIGHBOR(node2, node1, it){
-	    		for(part = 0; part < ntrees; part++)
+	    		// Clear the partial likelihood of node2 neighbor: only for NO or ONE epsilon cases
+	    		for(part = 0; part < ntrees; part++){
 	    			if(((SuperNeighbor*)(*it))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON or is_nni[part]==NNI_ONE_EPSILON)){
 	    				node_link = ((SuperNeighbor*)(*it))->link_neighbors[part]->node;
 	    				nei_link  = nei1_new->link_neighbors[part]->node;
@@ -1257,11 +1244,18 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    					nei_link = nei2_new->link_neighbors[part]->node;
 	    				}
 	    				((PhyloNeighbor*)node_link->findNeighbor(nei_link))->clearPartialLh();
+	    				//cout<<"CASE:"<<is_nni[part]<<"Cleared partial likelihood"<<endl;
 	    			}
+	    		}
+	    		// Optimize the branch incident to node2
 	    		score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
+				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
+				i++;
 	    	}
 	    }
 		// %%%%%%%%%%%%%%%%%%%%%%%%%%%  END of nni5branch  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+		nniMoves[cnt].newloglh = score;
 
 //	    if (verbose_mode >= VB_MED) {
 //			//this->clearAllPartialLH();
@@ -1269,7 +1263,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 //			//	at(part)->clearAllPartialLH();
 //			//}
 //			//cout << "[" << this->computeLikelihood() << "] ";
-//			cout << "After_nni5 [" << score << "] ";
+//			cout << "After_nni5 " << score << " ";
 //			printTree(cout);
 //			cout << endl;
 //			for(part = 0; part < ntrees; part++)
@@ -1282,21 +1276,21 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    		saveCurrentTree(score);
 	    }
 
-	    // *************************** STORE INFO ABOUT NNI ***************************
-
-	    // Store information about this NNI for NNImove for SuperTree
-		if (nni_param) {
-//			if (verbose_mode >= VB_MAX)
-//				printTree(cout, WT_BR_LEN + WT_NEWLINE);
-			if (cnt == 0) {
-				nni_param->nni1_score = score;
-				nni_param->nni1_brlen = nei1_new->length;
-			} else {
-				nni_param->nni2_score = score;
-				nni_param->nni2_brlen = nei1_new->length;
-			}
-		}
-		// ***************************************************************************
+//	    // *************************** STORE INFO ABOUT NNI ***************************
+//
+//	    // Store information about this NNI for NNImove for SuperTree
+//		if (nni_param) {
+////			if (verbose_mode >= VB_MAX)
+////				printTree(cout, WT_BR_LEN + WT_NEWLINE);
+//			if (cnt == 0) {
+//				nni_param->nni1_score = score;
+//				nni_param->nni1_brlen = nei1_new->length;
+//			} else {
+//				nni_param->nni2_score = score;
+//				nni_param->nni2_brlen = nei1_new->length;
+//			}
+//		}
+//		// ***************************************************************************
 
 		// =============================== RESTORE INFO ==============================
 		// Restore the cur_score for partitions
@@ -1330,7 +1324,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				node2_link[part]->updateNeighbor(node2_link_it[part], node2_link_nei[part]);
 				node2_link_nei[part]->node->updateNeighbor(node1_link[part], node2_link[part]);
 
-				//Restoring the branch length on the Sub Tree
+				//Restoring the branch length on the SubTree
 				node1_link[part]->findNeighbor(node2_link[part])->length = saved_nei[0]->link_neighbors[part]->length;
 				node2_link[part]->findNeighbor(node1_link[part])->length = saved_nei[0]->link_neighbors[part]->length;
 
@@ -1373,11 +1367,12 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			} else if(is_nni[part]==NNI_MANY_EPSILON){
 				// There is no need to restore anything
 			}
-			//mapBranchLen();
 		}
 
 		//cout<<"in NNI1end ---- logL = "<<this->computeLikelihood()<<endl;
 	} // end of for(cnt)
+
+
 //=============================================================================================================================================================
 // 							Restoring after 2 NNIs
 //=============================================================================================================================================================
@@ -1411,8 +1406,6 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 						delete (*sub_saved_it[part*6+i]);
 						(*sub_saved_it[part*6+i]) = saved_nei[i]->link_neighbors[part];
-//						cout<<"Restored....."<<endl;
-//						cout<<"(*sub_saved_it)->node->id"<<(*sub_saved_it[part*6+i])->node->id<<endl;
 					}
 				}
 				// restore the length of 4 branches around node1_link[part], node2_link[part]
@@ -1431,16 +1424,18 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]){
 						delete[] ((PhyloNeighbor*) *sub_saved_it[part*6+id])->scale_num;
 						delete[] ((PhyloNeighbor*) *sub_saved_it[part*6+id])->partial_lh;
-						//if (*sub_saved_it[part*6+id] == at(part)->current_it)
-						//	at(part)->current_it = saved_nei[id]->link_neighbors[part];
-						//if (*sub_saved_it[part*6+id] == at(part)->current_it_back)
-							//at(part)->current_it_back = saved_nei[id]->link_neighbors[part];
+
+						// It was commented, not sure why.. Just keep in mind------------------
+						if (*sub_saved_it[part*6+id] == at(part)->current_it)
+							at(part)->current_it = saved_nei[id]->link_neighbors[part];
+						if (*sub_saved_it[part*6+id] == at(part)->current_it_back)
+							at(part)->current_it_back = saved_nei[id]->link_neighbors[part];
+						//---------------------------------------------------------------------
 
 						delete (*sub_saved_it[part*6+id]);
 						(*sub_saved_it[part*6+id]) = ((SuperNeighbor*)(*saved_it[id]))->link_neighbors[part];
 					}
 				}
-
 				// Increase the central branch, since the length that was saved, was decreased
 				saved_nei[0]->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
 				saved_nei[1]->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
@@ -1450,17 +1445,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		//cout<<"In the end of swap NNI"<<endl;
 		//checkBranchLen();
 //------------------------------------------------------------------------------------------------------------------------------------------------
-	//if(score_mine != this->computeLikelihood())
-	//	cout<<"Something weird happens during NNI evaluation..."<<endl;
-
-		//cout<<"in the end ---- logL = "<<this->computeLikelihood()<<endl;
-		//for(part = 0; part < ntrees; part++)
-		//	cout << is_nni[part] << " ";
-		//cout<<endl<<endl;
-
-		//for(part = 0; part<ntrees; part++){
-		//	at(part)->clearAllPartialLH();
-		//}
+	if(score_mine != this->computeLikelihood())
+		cout<<"Something weird happens during NNI evaluation..."<<endl;
 
 	delete [] saved_cur_score;
 	delete [] sub_saved_branch;
@@ -1584,7 +1570,6 @@ void PhyloSuperTreePlen::printMapInfo() {
 }
 
 void PhyloSuperTreePlen::initPartitionInfo() {
-
 	//PhyloSuperTree::initPartitionInfo();
 	for (int part = 0; part < size(); part++){
 		if(part_info[part].part_rate == 0.0) { part_info[part].part_rate = 1.0; }
@@ -1605,14 +1590,27 @@ void PhyloSuperTreePlen::computeBranchLengths()
 {
 	}
 
-double PhyloSuperTreePlen::NAIVEswapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param) {
-}
-
 int PhyloSuperTreePlen::fixNegativeBranch(bool force, Node *node, Node *dad) {
-	int fixed =  PhyloSuperTree::fixNegativeBranch(force, node, dad);
 
-	// it is neccesary to map the branch lengths from supertree into gene trees!
+	mapTrees();
+	int fixed = 0;
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->initializeAllPartialPars();
+		(*it)->clearAllPartialLH();
+		fixed += (*it)->fixNegativeBranch(force);
+		(*it)->clearAllPartialLH();
+	}
+	PhyloSuperTree::computeBranchLengths();
+
+	// it is necessary to map the branch lengths from supertree into gene trees!
 	mapTrees();
 
 	return fixed;
+}
+
+void PhyloSuperTreePlen::changeNNIBrans(NNIMove nnimove) {
+
+	PhyloTree::changeNNIBrans(nnimove);
+	//mapBranchLen();
+
 }

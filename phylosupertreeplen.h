@@ -203,7 +203,7 @@ public:
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void changeNNIBrans(NNIMove nnimove) {};
+    virtual void changeNNIBrans(NNIMove nnimove);
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
@@ -214,13 +214,7 @@ public:
             @param nni_param (OUT) if not NULL: swapping information returned
             @return the likelihood of the tree
      */
-    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL);
-
-    /*
-     * this function is used for debugging reasons.
-     * It will be slow, but should tell you if there are any problems in swapNNIBranch, due to different cases
-     */
-    virtual double NAIVEswapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL);
+    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL, NNIMove *nniMoves = NULL);
 
     /**
      *	used in swapNNIBranch to update link_neighbors of other SuperNeighbors that point to the same branch on SubTree as (node,dad)
@@ -263,7 +257,6 @@ public:
     int allNNIcases_computed[5];
 
     /**
-     	 	OLGA: PLEASE CHECK IF THIS FUNCTION IS CORRECTLY IMPLEMENTED!
             Neighbor-joining/parsimony tree might contain negative branch length. This
             function will fix this.
             @param fixed_length fixed branch length to set to negative branch lengths
@@ -274,6 +267,7 @@ public:
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
 };
+
 
 
 #endif /* PHYLOSUPERTREEPLEN_H_ */

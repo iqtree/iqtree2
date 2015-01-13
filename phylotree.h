@@ -180,6 +180,9 @@ struct PruningInfo {
 
 };
 
+/**
+ * This Structure is used in PhyloSuperTreePlen.
+ */
 struct SwapNNIParam {
     double nni1_score;
     double nni1_brlen;
@@ -190,7 +193,6 @@ struct SwapNNIParam {
     double *nni1_ptnlh;
     double *nni2_ptnlh;
 };
-
 
 struct NNIMove {
     // Two nodes representing the central branch
