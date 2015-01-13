@@ -86,7 +86,7 @@ public:
 		It will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readRates(istream &in) throw(const char*);
+	virtual void readRates(istream &in) throw(const char*, string);
 
 	/**
 		Read the rate parameters from a comma-separated string

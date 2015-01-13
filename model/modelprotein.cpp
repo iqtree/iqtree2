@@ -3218,7 +3218,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 	ModelGTR::init(freq);
 }
 
-void ModelProtein::readRates(istream &in) throw(const char*) {
+void ModelProtein::readRates(istream &in) throw(const char*, string) {
 	int nrates = getNumRateEntries();
 	int row = 1, col = 0;
 	// since states for protein is stored in lower-triangle, special treatment is needed
@@ -3233,7 +3233,7 @@ void ModelProtein::readRates(istream &in) throw(const char*) {
 		}
 		assert(id < nrates && id >= 0); // make sure that the conversion is correct
 		if (!(in >> rates[id]))
-			throw "Rate entries could not be read";
+			throw name+string(": Rate entries could not be read");
 		if (rates[id] < 0.0)
 			throw "Negative rates found";
 	}

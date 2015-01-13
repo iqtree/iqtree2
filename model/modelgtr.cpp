@@ -461,7 +461,7 @@ void ModelGTR::decomposeRateMatrix(){
 	delete [] rate_matrix;
 } 
 
-void ModelGTR::readRates(istream &in) throw(const char*) {
+void ModelGTR::readRates(istream &in) throw(const char*, string) {
 	int nrates = getNumRateEntries();
 	string str;
 	in >> str;
@@ -552,10 +552,13 @@ void ModelGTR::readStateFreq(string str) throw(const char*) {
 
 void ModelGTR::readParameters(const char *file_name) { 
 	try {
-		cout << "Reading model parameters from file " << file_name << endl;
 		ifstream in(file_name);
+		if (in.fail())
+			outError("Unknown model ", file_name);
+		cout << "Reading model parameters from file " << file_name << endl;
 		readRates(in);
 		readStateFreq(in);
+		in.close();
 	}
 	catch (const char *str) {
 		outError(str);

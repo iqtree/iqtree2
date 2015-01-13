@@ -70,6 +70,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	string model_str = params.model_name;
 	string rate_str;
 
+	try {
 	ModelsBlock *models_block = new ModelsBlock;
 	if (params.model_def_file) {
 		cout << "Reading model definition file " << params.model_def_file << " ... ";
@@ -77,7 +78,10 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		nexus.Add(models_block);
 	    MyToken token(nexus.inf);
 	    nexus.Execute(token);
-	    cout << models_block->size() << " models loaded" << endl;
+	    int num_model = 0, num_freq = 0;
+	    for (ModelsBlock::iterator it = models_block->begin(); it != models_block->end(); it++)
+	    	if ((*it).flag & NM_FREQ) num_freq++; else num_model++;
+	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
 	}
 
 
@@ -91,17 +95,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
 
+	/********* preprocessing model string ****************/
 	NxsModel *nxsmodel  = NULL;
 
 	nxsmodel = models_block->findModel(model_str);
 	if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
-		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-		model_str = nxsmodel->description;
-	}
-
-	/* create substitution model */
-	nxsmodel = models_block->findModel(model_str);
-	if (nxsmodel && nxsmodel->description.substr(0,4) == "MIX{") {
 		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
 		model_str = nxsmodel->description;
 	}
@@ -120,6 +118,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			rate_str = model_str.substr(spec_pos);
 			model_str = model_str.substr(0, spec_pos);
 		}
+	}
+
+	nxsmodel = models_block->findModel(model_str);
+	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
+		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+		model_str = nxsmodel->description;
 	}
 
 	/******************** initialize state frequency ****************************/
@@ -433,6 +437,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	tree->discardSaturatedSite(params.discard_saturated_site);
 
 	delete models_block;
+	} catch (const char* str) {
+		outError(str);
+	}
 
 }
 

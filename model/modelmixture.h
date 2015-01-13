@@ -69,6 +69,11 @@ public:
 	*/
 	virtual double targetFunk(double x[]);
 
+	/**
+		optimize model parameters
+		@return the best likelihood
+	*/
+	virtual double optimizeParameters(double epsilon);
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors

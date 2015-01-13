@@ -283,14 +283,27 @@ int ModelMixture::getNDim() {
 
 double ModelMixture::targetFunk(double x[]) {
 	getVariables(x);
-	// always decompose rate matrix since total_num_subst might change
-	decomposeRateMatrix();
-//	for (iterator it = begin(); it != end(); it++)
-//		if ((*it)->getNDim() > 0)
-//			(*it)->decomposeRateMatrix();
+//	decomposeRateMatrix();
+	for (iterator it = begin(); it != end(); it++)
+		if ((*it)->getNDim() > 0)
+			(*it)->decomposeRateMatrix();
 	assert(phylo_tree);
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
+}
+
+double ModelMixture::optimizeParameters(double epsilon) {
+	double score = ModelGTR::optimizeParameters(epsilon);
+	if (getNDim() == 0) return score;
+	// now rescale Q matrices to have proper interpretation of branch lengths
+	double sum;
+	int i, ncategory = size();
+	for (i = 0, sum = 0.0; i < ncategory; i++)
+		sum += prop[i]*at(i)->total_num_subst;
+	for (i = 0; i < ncategory; i++)
+		at(i)->total_num_subst /= sum;
+	decomposeRateMatrix();
+	return score;
 }
 
 void ModelMixture::decomposeRateMatrix() {
@@ -326,14 +339,14 @@ void ModelMixture::getVariables(double *variables) {
 	y[0] = 0; y[ncategory] = 1.0;
 	memcpy(y+1, variables+dim+1, (ncategory-1) * sizeof(double));
 	std::sort(y+1, y+ncategory);
-	double sum = 0.0;
+//	double sum = 0.0;
 	for (i = 0; i < ncategory; i++) {
 		prop[i] = (y[i+1]-y[i]);
 	}
-	for (i = 0, sum = 0.0; i < ncategory; i++)
-		sum += prop[i]*at(i)->total_num_subst;
-	for (i = 0; i < ncategory; i++)
-		at(i)->total_num_subst /= sum;
+//	for (i = 0, sum = 0.0; i < ncategory; i++)
+//		sum += prop[i]*at(i)->total_num_subst;
+//	for (i = 0; i < ncategory; i++)
+//		at(i)->total_num_subst /= sum;
 
 	if (verbose_mode >= VB_MAX) {
 		for (i = 0; i < ncategory; i++)
