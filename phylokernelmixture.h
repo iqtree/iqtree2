@@ -776,7 +776,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 		VectorClass res[VCSIZE];
 
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, c, x, i, j, vc_partial_lh_tmp, res)
+#pragma omp parallel for private(ptn, c, x, i, j, m, vc_partial_lh_tmp, res)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 	        double *partial_lh = dad_branch->partial_lh + ptn*block;
@@ -868,7 +868,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 		VectorClass vright[VCSIZE];
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private (ptn, c, x, i, j, vc_lh_right, vc_partial_lh_tmp, res, vc_max, vright)
+#pragma omp parallel for reduction(+: sum_scale) private (ptn, c, x, i, j, m, vc_lh_right, vc_partial_lh_tmp, res, vc_max, vright)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 	        double *partial_lh = dad_branch->partial_lh + ptn*block;
@@ -944,7 +944,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 		VectorClass vleft[VCSIZE], vright[VCSIZE];
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction (+: sum_scale) private(ptn, c, x, i, j, vc_max, vc_partial_lh_tmp, vc_lh_left, vc_lh_right, res, vleft, vright)
+#pragma omp parallel for reduction (+: sum_scale) private(ptn, c, x, i, j, m, vc_max, vc_partial_lh_tmp, vc_lh_left, vc_lh_right, res, vleft, vright)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 	        double *partial_lh = dad_branch->partial_lh + ptn*block;
@@ -1082,7 +1082,7 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 		if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i)
+#pragma omp parallel for private(ptn, i, m)
 #endif
 			for (ptn = 0; ptn < orig_nptn; ptn++) {
 			    double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
@@ -1374,7 +1374,7 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 			memcpy(&dad_branch->partial_lh[ptn*block], dad_branch->partial_lh, block*sizeof(double));
 
 #ifdef _OPENMP
-#pragma omp parallel private(ptn, i, j, vc_tip_partial_lh, vc_partial_lh_dad, vc_ptn, vc_freq, lh_ptn)
+#pragma omp parallel private(ptn, i, j, vc_ptn, vc_freq, lh_ptn)
     {
     	VectorClass lh_final_th = 0.0;
 #pragma omp for nowait
