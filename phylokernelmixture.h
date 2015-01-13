@@ -1090,15 +1090,13 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 				double *lh_dad = &tip_partial_lh[(aln->at(ptn))[dad->id] * statemix];
                 for (m = 0; m < nmixture; m++) {
                     for (i = 0; i < statecat; i+=VCSIZE) {
-                        (VectorClass().load_a(&lh_dad[m*nstates + i%nstates]) * VectorClass().load_a(&partial_lh_dad[m*statecat+i])).
-                        		store_a(&theta[m*statecat+i]);
+                        (VectorClass().load_a(&lh_dad[i%nstates]) * VectorClass().load_a(&partial_lh_dad[i])).
+                        		store_a(&theta[i]);
                     }
+                    partial_lh_dad += statecat;
+                    theta += statecat;
+                    lh_dad += nstates;
                 }
-//                
-//				for (i = 0; i < block; i+=VCSIZE) {
-//					m = (i/ncat)+(i%nstates);
-//					(VectorClass().load_a(&lh_dad[m]) * VectorClass().load_a(&partial_lh_dad[i])).store_a(&theta[i]);
-//				}
 			}
 			// ascertainment bias correction
 			for (ptn = orig_nptn; ptn < nptn; ptn++) {
@@ -1107,15 +1105,13 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 				double *lh_dad = &tip_partial_lh[model_factory->unobserved_ptns[ptn-orig_nptn] * statemix];
                 for (m = 0; m < nmixture; m++) {
                     for (i = 0; i < statecat; i+=VCSIZE) {
-                        (VectorClass().load_a(&lh_dad[m*nstates + i%nstates]) * VectorClass().load_a(&partial_lh_dad[m*statecat+i])).
-                        		store_a(&theta[m*statecat+i]);
+                        (VectorClass().load_a(&lh_dad[i%nstates]) * VectorClass().load_a(&partial_lh_dad[i])).
+                        		store_a(&theta[i]);
                     }
+                    partial_lh_dad += statecat;
+                    theta += statecat;
+                    lh_dad += nstates;
                 }
-
-//				for (i = 0; i < block; i+=VCSIZE) {
-//					m = (i/ncat)+(i%nstates);
-//					(VectorClass().load_a(&lh_dad[m]) * VectorClass().load_a(&partial_lh_dad[i])).store_a(&theta[i]);
-//				}
 			}
 	    } else {
 	    	// both dad and node are internal nodes
@@ -1133,7 +1129,7 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 		if (nptn < maxptn) {
 			// copy dummy values
 			for (ptn = nptn; ptn < maxptn; ptn++)
-				memcpy(&theta_all[ptn*block], theta_all, block*sizeof(double));
+				memcpy(&theta_all[ptn*block], &theta_all[(ptn-1)*block], block*sizeof(double));
 		}
 	}
 
