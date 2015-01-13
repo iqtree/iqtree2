@@ -1432,7 +1432,13 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
     }
 #endif
 		tree_lh += horizontal_add(lh_final);
-		assert(!isnan(tree_lh) && !isinf(tree_lh));
+		if (isnan(tree_lh) || isinf(tree_lh)) {
+			cout.setf(ios::scientific);
+			cout.precision(10);
+			model->writeInfo(cout);
+			site_rate->writeInfo(cout);
+			assert(0);
+		}
 
 		// ascertainment bias correction
 		if (orig_nptn < nptn) {

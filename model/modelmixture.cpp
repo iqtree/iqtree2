@@ -76,7 +76,8 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	return model;
 }
 
-ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *models_block, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
+ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *models_block,
+		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool count_rates)
 	: ModelGTR(tree, count_rates)
 {
 	const int MAX_MODELS = 64;
@@ -195,6 +196,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 			full_name += model->full_name;
 		}
 	}
+
 	name += CLOSE_BRACKET;
 	full_name += CLOSE_BRACKET;
 
@@ -211,7 +213,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 	} else {
 		// initialize rates as increasing
 		for (i = 0, sum = 0.0; i < nmixtures; i++) {
-			prop[i] = (double)(nmixtures-i);
+			prop[i] = random_double();
 			sum += prop[i];
 		}
 	}
@@ -225,6 +227,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 	for (i = 0; i < nmixtures; i++)
 		at(i)->total_num_subst /= sum;
 
+	if (optimize_weights) fix_prop = false;
 	fix_prop |= (nmixtures == 1);
 	// use central eigen etc. stufffs
 
@@ -289,6 +292,7 @@ double ModelMixture::targetFunk(double x[]) {
 			(*it)->decomposeRateMatrix();
 	assert(phylo_tree);
 	phylo_tree->clearAllPartialLH();
+	if (prop[size()-1] < 0.0) return 1.0e+12;
 	return -phylo_tree->computeLikelihood();
 }
 
@@ -372,12 +376,15 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
 }
 
 void ModelMixture::writeInfo(ostream &out) {
-	for (int i = 0; i < size(); i++) {
-		if (!fix_prop)
-			out << "Weight of mixture component " << i << " (" << at(i)->name << "): "
-			<< prop[i] << endl;
+	int i;
+	for (i = 0; i < size(); i++) {
 		at(i)->writeInfo(out);
 	}
+//	if (fix_prop) return;
+	cout << "Mixture weights:";
+	for (i = 0; i < size(); i++)
+		cout << " " << prop[i];
+	cout << endl;
 }
 
 void ModelMixture::writeParameters(ostream &out) {

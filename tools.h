@@ -1050,6 +1050,9 @@ struct Params {
     /** model defition file */
     char *model_def_file;
 
+    /** TRUE to optimize mixture model weights */
+    bool optimize_mixmodel_weight;
+
     /**
             TRUE to store transition matrix into a hash table for computation efficiency
      */

@@ -682,6 +682,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_name = "";
     params.model_set = NULL;
     params.model_def_file = NULL;
+    params.optimize_mixmodel_weight = false;
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
@@ -1600,6 +1601,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_def_file = argv[cnt];
 				continue;
 			}
+			if (strcmp(argv[cnt], "-mwopt") == 0) {
+				params.optimize_mixmodel_weight = true;
+				continue;
+			}
 			if (strcmp(argv[cnt], "-mh") == 0) {
 				params.mvh_site_rate = true;
 				params.discard_saturated_site = false;
@@ -2266,6 +2271,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -me <model_epsilon>";
 				params.modeps = convert_double(argv[cnt]);
+				if (params.modeps <= 0.0)
+					throw "Model epsilon must be positive";
+				if (params.modeps > 0.1)
+					throw "Model epsilon must not be larger than 0.1";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pllmod") == 0) {

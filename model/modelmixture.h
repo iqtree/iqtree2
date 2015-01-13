@@ -41,7 +41,8 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelMixture(string model_name, string model_list, ModelsBlock *models_block, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates = true);
+    ModelMixture(string model_name, string model_list, ModelsBlock *models_block,
+    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool count_rates = true);
 
     virtual ~ModelMixture();
 
