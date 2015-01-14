@@ -79,5 +79,11 @@ NodeVector getBranchABid(double brLen, PhyloTree* tree);
 NNIMove getBestNNIForBranUB(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree);
 double logC(double t, PhyloTree* tree);
 
+/**
+ * Tests on fractions ai/(ai+bi) and bi/(ai+bi)
+ * (fractions of sums for matching and non-matching pairs of nucleotides on the ends of branch)
+ */
+
+void sumFraction(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree);
 
 #endif /* UPPERBOUNDS_H_ */

@@ -5,6 +5,7 @@
  *      Author: olga
  */
 #include "upperbounds.h"
+#include "phylonode.h"
 #include <string.h>
 #include "timeutil.h"
 
@@ -97,13 +98,20 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 		tree->getTaxaID(taxaB,branch2[i],branch1[i]);
 
 		/* ------------------------------------------------------------------------------------------------------------
-		 * TEST 1: This is the part for tests on LBA effect
+		 * TEST 1: This is the part for tests on [ai/(ai+bi)] and [bi/(ai+bi)] fractions
 		 */
+		int test1 = 1;
+		if(test1 == 1){
+			if(taxaA.size() > 3 and taxaB.size() > 3){ // IQTree does not compute lh of tree with less than 4 taxa.
+				allSplits++;
+				sumFraction(((PhyloNode*) branch1[i]), ((PhyloNode*) branch2[i]), tree);
+		}
+		}
 
 		/* ------------------------------------------------------------------------------------------------------------
 		 * TEST 2: This is the part for tests on random trees and evaluation of Upper Bounds for each split on the input tree
 		 */
-		int test2 = 1;
+		int test2 = 0;
 		if(test2 == 1){
 		if(taxaA.size() > 3 and taxaB.size() > 3){ // IQTree does not compute lh of tree with less than 4 taxa.
 			allSplits++;
@@ -802,14 +810,14 @@ double logC(double t, PhyloTree* tree){
 	//double c = log((1+3*exp(-t)))-log(1-exp(-t));
 
 	int i, m = tree->aln->num_states*tree->aln->num_states, n = tree->aln->num_states;
-	//double* TransMatrix = new double[m];
-	//tree->getModelFactory()->computeTransMatrix(t,TransMatrix);
+	double* TransMatrix = new double[m];
+	tree->getModelFactory()->computeTransMatrix(t,TransMatrix);
 	double maxTransProb = 0.0;
-/*	for(i = 0; i < m; i++)
+	for(i = 0; i < m; i++)
 		if(TransMatrix[i]>maxTransProb)
-			maxTransProb = TransMatrix[i];*/
-	//maxTransProb = 0.25*(1+3*exp(-t));
-	maxTransProb = 1;
+			maxTransProb = TransMatrix[i];
+	//maxTransProb = 0.25*(1+3*exp(-3*t/4));
+	//maxTransProb = 1;
 
 	if(tree->minStateFreq == 0.0){
 		tree->minStateFreq = tree->getModel()->state_freq[0];
@@ -823,4 +831,77 @@ double logC(double t, PhyloTree* tree){
 	//tree->minStateFreq = 0.25;
 	//assert(isnormal(log(maxTransProb/tree->minStateFreq)));
 	return log(maxTransProb/tree->minStateFreq);
+}
+
+void sumFraction(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree){
+	PhyloNeighbor* nei1 = (PhyloNeighbor*) node1->findNeighbor(node2);
+	PhyloNeighbor* nei2 = (PhyloNeighbor*) node2->findNeighbor(node1);
+
+	int loglh = tree->computeLikelihood();
+
+    double* T1_partial_lh;
+    if(nei1->get_partial_lh_computed() == 0){
+    	tree->computePartialLikelihood(nei1, node1);
+    }
+    T1_partial_lh = nei1->get_partial_lh();
+
+    double* T2_partial_lh;
+    if(nei2->get_partial_lh_computed() == 0){
+    	tree->computePartialLikelihood(nei2, node2);
+    }
+    T2_partial_lh = nei2->get_partial_lh();
+
+    double score[3];
+    score[0] = score[1] = score[2] = 0.0;
+
+    double plh[3];
+    plh[0]=plh[1]=plh[2]=0.0;
+
+    int nptn = tree->aln->getNPattern();
+    int nstates = tree->aln->num_states;
+    int j,i,x,y;
+
+    double plhx[nstates];
+    double plhy[nstates];
+
+    double *eigen = tree->getModel()->getEigenvectors();
+
+    for(i = 0; i<nptn; i++){
+    	score[0] = score[1] = score[2] = 0.0;
+
+    	// computing partial likelihoods
+		for(x = 0; x < nstates; x++){
+			plhx[x] = 0.0;
+			plhy[x] = 0.0;
+			for(j = 0; j<nstates; j++){
+				plhx[x]+= T1_partial_lh[i*nstates+j]*eigen[x*nstates+j];
+				plhy[x]+= T2_partial_lh[i*nstates+j]*eigen[x*nstates+j];
+			}
+		}
+
+		for(x = 0; x < nstates; x++){
+			for(y = 0; y < nstates; y++){
+				if(x == y){
+				// Term for a pair of matching nucleotides --------------------------
+					score[0] += plhx[x]*plhy[y];
+				} else {
+				// Term for a pair of non-matching nucleotides ----------------------
+					score[1] += plhx[x]*plhy[y];
+				}
+			// Full sum ---------------------------------------------------------
+			score[2] += plhx[x]*plhy[y];
+			}
+		}
+
+        assert(isnormal(score[0] + score[1] + score[2]));
+
+		cout<<"BranchLEN |"<< nei1->length
+			<<"| FRACTION of ai (sum over matching pairs) |"<<score[0]/score[2]
+		    <<"| FRACTION of bi (sum over non-matching pairs) |"<<score[1]/score[2]
+		    <<"| likelihood |"<<score[2]
+		    <<endl;
+
+    }
+
+
 }
