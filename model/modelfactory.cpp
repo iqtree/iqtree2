@@ -257,6 +257,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			if (*it) delete [] (*it);
 	}
 
+	if (model->isMixture())
+		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
+
 	/******************** initialize ascertainment bias correction model ****************************/
 
 	string::size_type posasc;
