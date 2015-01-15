@@ -287,11 +287,15 @@ int ModelMixture::getNDim() {
 double ModelMixture::targetFunk(double x[]) {
 	getVariables(x);
 //	decomposeRateMatrix();
-	for (iterator it = begin(); it != end(); it++)
+	int dim = 0;
+	for (iterator it = begin(); it != end(); it++) {
 		if ((*it)->getNDim() > 0)
 			(*it)->decomposeRateMatrix();
+		dim += ((*it)->getNDim());
+	}
 	assert(phylo_tree);
-	phylo_tree->clearAllPartialLH();
+	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
+		phylo_tree->clearAllPartialLH();
 	if (prop[size()-1] < 0.0) return 1.0e+12;
 	return -phylo_tree->computeLikelihood();
 }
