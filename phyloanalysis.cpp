@@ -1312,6 +1312,7 @@ int initCandidateTreeSet(Params &params, IQTree &iqtree, int numInitTrees) {
             // Re-optimize model parameters (the sNNI algorithm)
         	tree = iqtree.optimizeModelParameters();
             iqtree.setBestTree(tree, iqtree.curScore);
+            iqtree.candidateTrees.update(tree, iqtree.curScore);
             cout << "BETTER TREE FOUND: " << iqtree.bestScore << endl;
         }
     }
@@ -1704,6 +1705,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	/****************** Do tree search ***************************/
 	if (params.min_iterations > 1) {
 		iqtree.readTreeString(iqtree.bestTreeString);
+		iqtree.curScore = iqtree.bestScore;
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(iqtree.aln);
 	} else {
@@ -1739,6 +1741,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		iqtree.readTreeString(iqtree.bestTreeString);
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
+        iqtree.curScore = iqtree.bestScore;
 		iqtree.bestTreeString = iqtree.optimizeModelParameters(true);
 	} else {
         iqtree.setBestScore(iqtree.curScore);

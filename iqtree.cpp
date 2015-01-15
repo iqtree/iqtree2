@@ -1533,6 +1533,7 @@ double IQTree::doTreeSearch() {
         } else {
             // The IQPNNI algorithm
             readTreeString(bestTreeString);
+            curScore = bestScore;
         }
 
         // DTH: make pllUFBootData usable in summarizeBootstrap
