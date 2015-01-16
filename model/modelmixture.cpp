@@ -231,16 +231,16 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 	fix_prop |= (nmixtures == 1);
 	// use central eigen etc. stufffs
 
-	if (eigenvalues) delete [] eigenvalues;
-	if (eigenvectors) delete [] eigenvectors;
-	if (inv_eigenvectors) delete [] inv_eigenvectors;
-	if (eigen_coeff) delete [] eigen_coeff;
+	if (eigenvalues) aligned_free(eigenvalues);
+	if (eigenvectors) aligned_free(eigenvectors);
+	if (inv_eigenvectors) aligned_free(inv_eigenvectors);
+	if (eigen_coeff) aligned_free(eigen_coeff);
 
-	eigenvalues = new double[num_states*nmixtures];
-	eigenvectors = new double[num_states*num_states*nmixtures];
-	inv_eigenvectors = new double[num_states*num_states*nmixtures];
+	eigenvalues = aligned_alloc<double>(num_states*nmixtures);
+	eigenvectors = aligned_alloc<double>(num_states*num_states*nmixtures);
+	inv_eigenvectors = aligned_alloc<double>(num_states*num_states*nmixtures);
 	int ncoeff = num_states*num_states*num_states;
-	eigen_coeff = new double[ncoeff*nmixtures];
+	eigen_coeff = aligned_alloc<double>(ncoeff*nmixtures);
 
 	// assigning memory for individual models
 	m = 0;
@@ -251,10 +251,10 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
         memcpy(&inv_eigenvectors[m*num_states*num_states], (*it)->inv_eigenvectors, num_states*num_states*sizeof(double));
         memcpy(&eigen_coeff[m*ncoeff], (*it)->eigen_coeff, ncoeff*sizeof(double));
         // then delete
-		if ((*it)->eigenvalues) delete [] (*it)->eigenvalues;
-		if ((*it)->eigenvectors) delete [] (*it)->eigenvectors;
-		if ((*it)->inv_eigenvectors) delete [] (*it)->inv_eigenvectors;
-		if ((*it)->eigen_coeff) delete [] (*it)->eigen_coeff;
+		if ((*it)->eigenvalues) aligned_free((*it)->eigenvalues);
+		if ((*it)->eigenvectors) aligned_free((*it)->eigenvectors);
+		if ((*it)->inv_eigenvectors) aligned_free((*it)->inv_eigenvectors);
+		if ((*it)->eigen_coeff) aligned_free((*it)->eigen_coeff);
 
         // and assign new memory
 		(*it)->eigenvalues = &eigenvalues[m*num_states];

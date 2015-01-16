@@ -39,17 +39,17 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
 
 	freq_type = FREQ_UNKNOWN;
 	
-	eigenvalues = new double[num_states];
+	eigenvalues = aligned_alloc<double>(num_states);
 
-	eigenvectors = new double[num_states*num_states];
+	eigenvectors = aligned_alloc<double>(num_states*num_states);
 //	for (i = 0; i < num_states; i++)
 //		eigenvectors[i] = new double[num_states];
 
-	inv_eigenvectors = new double[num_states*num_states];
+	inv_eigenvectors = aligned_alloc<double>(num_states*num_states);
 //	for (i = 0; i < num_states; i++)
 //		inv_eigenvectors[i] = new double[num_states];
 		
-	eigen_coeff = new double[ncoeff];
+	eigen_coeff = aligned_alloc<double>(ncoeff);
 
 	if (count_rates) 
 		phylo_tree->aln->computeEmpiricalRate(rates);
@@ -445,23 +445,57 @@ double ModelGTR::optimizeParameters(double epsilon) {
 
 
 void ModelGTR::decomposeRateMatrix(){
-	double **rate_matrix = (double**) new double[num_states];
 	int i, j, k = 0;
 
-	for (i = 0; i < num_states; i++)
-		rate_matrix[i] = new double[num_states];
+	if (num_params == -1) {
+		// manual compute eigenvalues/vectors for F81-style model
+		eigenvalues[num_states-1] = 0.0;
+		double mu = 0.0;
+		for (i = 0; i < num_states; i++)
+			mu += state_freq[i]*state_freq[i];
+		mu = total_num_subst/(1.0 - mu);
 
-	for (i = 0, k = 0; i < num_states; i++) {
-		rate_matrix[i][i] = 0.0;
-		for (j = i+1; j < num_states; j++, k++) {
-			rate_matrix[i][j] = rates[k];
-			rate_matrix[j][i] = rates[k];
+		// compute eigenvalues
+		for (i = 0; i < num_states-1; i++)
+			eigenvalues[i] = -mu;
+
+
+		// compute eigenvectors
+		memset(eigenvectors, 0, num_states*num_states*sizeof(double));
+		memset(inv_eigenvectors, 0, num_states*num_states*sizeof(double));
+		eigenvectors[0] = 1.0;
+		for (i = 1; i < num_states; i++)
+			eigenvectors[i*num_states] = -state_freq[i]/state_freq[0];
+		for (i = 1; i < num_states; i++) {
+			eigenvectors[i] = 1.0;
+			eigenvectors[i*num_states+i] = 1.0;
 		}
-	}
-	/* eigensystem of 1 PAM rate matrix */
-	eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
-	//eigensystem(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);  
 
+		for (i = 0; i < num_states; i++)
+			for (j = 0; j < num_states; j++)
+				inv_eigenvectors[i*num_states+j] = state_freq[j]*eigenvectors[j*num_states+i];
+
+		writeInfo(cout);
+	} else {
+		double **rate_matrix = (double**) new double[num_states];
+
+		for (i = 0; i < num_states; i++)
+			rate_matrix[i] = new double[num_states];
+
+		for (i = 0, k = 0; i < num_states; i++) {
+			rate_matrix[i][i] = 0.0;
+			for (j = i+1; j < num_states; j++, k++) {
+				rate_matrix[i][j] = rates[k];
+				rate_matrix[j][i] = rates[k];
+			}
+		}
+		/* eigensystem of 1 PAM rate matrix */
+		eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
+		//eigensystem(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
+		for (i = num_states-1; i >= 0; i--)
+			delete [] rate_matrix[i];
+		delete [] rate_matrix;
+	}
 	for (i = 0; i < num_states; i++)
 		for (j = 0; j < num_states; j++) {
 			int offset = (i*num_states+j)*num_states;
@@ -478,9 +512,6 @@ void ModelGTR::decomposeRateMatrix(){
 		}
 
 
-	for (i = num_states-1; i >= 0; i--)
-		delete [] rate_matrix[i];
-	delete [] rate_matrix;
 } 
 
 void ModelGTR::readRates(istream &in) throw(const char*, string) {
@@ -599,16 +630,16 @@ void ModelGTR::freeMem()
 //	int i;
 	//delete eigen_coeff_derv2;
 	//delete eigen_coeff_derv1;
-	delete [] eigen_coeff;
+	aligned_free(eigen_coeff);
 
 //	for (i = num_states-1; i>=0; i--)
 //		delete [] inv_eigenvectors[i];
-	delete [] inv_eigenvectors;
+	aligned_free(inv_eigenvectors);
 //	for (i = num_states-1; i>=0; i--)
 //		delete [] eigenvectors[i];
-	delete [] eigenvectors;
+	aligned_free(eigenvectors);
 
-	delete [] eigenvalues;
+	aligned_free(eigenvalues);
 
 	if (rates) delete [] rates;
 }

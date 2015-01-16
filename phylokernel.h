@@ -123,7 +123,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 	for (i = 0; i < nstates; i++) {
 		for (x = 0; x < nstates/VCSIZE; x++)
 			// inv_evec is not aligned!
-			vc_inv_evec[i*nstates/VCSIZE+x].load(&inv_evec[i*nstates+x*VCSIZE]);
+			vc_inv_evec[i*nstates/VCSIZE+x].load_a(&inv_evec[i*nstates+x*VCSIZE]);
 	}
 	double *eval = model->getEigenvalues();
 
@@ -141,13 +141,13 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 		double len_right = site_rate->getRate(c) * right->length;
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			// eval is not aligned!
-			expleft[i] = exp(VectorClass().load(&eval[i*VCSIZE]) * VectorClass(len_left));
-			expright[i] = exp(VectorClass().load(&eval[i*VCSIZE]) * VectorClass(len_right));
+			expleft[i] = exp(VectorClass().load_a(&eval[i*VCSIZE]) * VectorClass(len_left));
+			expright[i] = exp(VectorClass().load_a(&eval[i*VCSIZE]) * VectorClass(len_right));
 		}
 		for (x = 0; x < nstates; x++)
 			for (i = 0; i < nstates/VCSIZE; i++) {
 				// evec is not be aligned!
-				vc_evec.load(&evec[x*nstates+i*VCSIZE]);
+				vc_evec.load_a(&evec[x*nstates+i*VCSIZE]);
 				eleft[c*nstatesqr/VCSIZE+x*nstates/VCSIZE+i] = (vc_evec * expleft[i]);
 				eright[c*nstatesqr/VCSIZE+x*nstates/VCSIZE+i] = (vc_evec * expright[i]);
 			}
@@ -494,7 +494,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
 		VectorClass vc_rate = site_rate->getRate(c);
 		VectorClass vc_prop = site_rate->getProp(c);
 		for (i = 0; i < nstates/VCSIZE; i++) {
-			VectorClass cof = VectorClass().load(&eval[i*VCSIZE]) * vc_rate;
+			VectorClass cof = VectorClass().load_a(&eval[i*VCSIZE]) * vc_rate;
 			VectorClass val = exp(cof*vc_len) * vc_prop;
 			VectorClass val1_ = cof*val;
 			vc_val0[c*nstates/VCSIZE+i] = val;
@@ -652,7 +652,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
 			theta += block*VCSIZE;
 
 			// ptn_invar[ptn] is not aligned
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
 		}
 		switch ((nptn-orig_nptn) % VCSIZE) {
@@ -733,7 +733,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 		VectorClass vc_prop(site_rate->getProp(c));
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			// eval is not aligned!
-			vc_val[c*nstates/VCSIZE+i] = exp(VectorClass().load(&eval[i*VCSIZE]) * vc_len) * vc_prop;
+			vc_val[c*nstates/VCSIZE+i] = exp(VectorClass().load_a(&eval[i*VCSIZE]) * vc_len) * vc_prop;
 		}
 	}
 
@@ -836,7 +836,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 								vc_partial_lh_dad[j], vc_ptn[j]);
 					}
 				// ptn_invar[ptn] is not aligned
-				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 			}
 			switch ((nptn-orig_nptn)%VCSIZE) {
 			case 0: prob_const = horizontal_add(lh_final+lh_ptn); break;
@@ -926,7 +926,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 				}
 
 				// ptn_invar[ptn] is not aligned
-				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 				partial_lh_node += block*VCSIZE;
 				partial_lh_dad += block*VCSIZE;
 			}
@@ -977,7 +977,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 		VectorClass vc_rate = site_rate->getRate(c);
 		VectorClass vc_prop = site_rate->getProp(c);
 		for (i = 0; i < nstates/VCSIZE; i++) {
-			VectorClass cof = VectorClass().load(&eval[i*VCSIZE]) * vc_rate;
+			VectorClass cof = VectorClass().load_a(&eval[i*VCSIZE]) * vc_rate;
 			VectorClass val = exp(cof*vc_len) * vc_prop;
 			vc_val0[c*nstates/VCSIZE+i] = val;
 		}
@@ -1054,7 +1054,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 			theta += block*VCSIZE;
 
 			// ptn_invar[ptn] is not aligned
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
 		}
 		switch ((nptn-orig_nptn) % VCSIZE) {
