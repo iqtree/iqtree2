@@ -98,27 +98,49 @@ void ModelGTR::init(StateFreqType type) {
 	default: break;
 	}
 	decomposeRateMatrix();
+	if (verbose_mode >= VB_MAX)
+		writeInfo(cout);
+
 }
 
 void ModelGTR::writeInfo(ostream &out) {
-	if (num_states != 4) return;
-	out << "Rate parameters:";
-	//out.precision(3);
-	//out << fixed;
-	out << "  A-C: " << rates[0];
-	out << "  A-G: " << rates[1];
-	out << "  A-T: " << rates[2];
-	out << "  C-G: " << rates[3];
-	out << "  C-T: " << rates[4];
-	out << "  G-T: " << rates[5];
-	out << endl;
-	//if (freq_type != FREQ_ESTIMATE) return;
-	out << "Base frequencies: ";
-	out << "  A: " << state_freq[0];
-	out << "  C: " << state_freq[1];
-	out << "  G: " << state_freq[2];
-	out << "  T: " << state_freq[3];
-	out << endl;
+	if (num_states == 4) {
+		out << "Rate parameters:";
+		//out.precision(3);
+		//out << fixed;
+		out << "  A-C: " << rates[0];
+		out << "  A-G: " << rates[1];
+		out << "  A-T: " << rates[2];
+		out << "  C-G: " << rates[3];
+		out << "  C-T: " << rates[4];
+		out << "  G-T: " << rates[5];
+		out << endl;
+		//if (freq_type != FREQ_ESTIMATE) return;
+		out << "Base frequencies: ";
+		out << "  A: " << state_freq[0];
+		out << "  C: " << state_freq[1];
+		out << "  G: " << state_freq[2];
+		out << "  T: " << state_freq[3];
+		out << endl;
+	}
+	if (verbose_mode >= VB_MAX) {
+		int i, j;
+		out.precision(6);
+		out << "eigenvalues: " << endl;
+		for (i = 0; i < num_states; i++) out << " " << eigenvalues[i];
+		out << endl << "eigenvectors: " << endl;
+		for (i = 0; i < num_states; i++)  {
+			for (j = 0; j < num_states; j++)
+				out << " " << eigenvectors[i*num_states+j];
+			out << endl;
+		}
+		out << endl << "inv_eigenvectors: " << endl;
+		for (i = 0; i < num_states; i++)  {
+			for (j = 0; j < num_states; j++)
+				out << " " << inv_eigenvectors[i*num_states+j];
+			out << endl;
+		}
+	}
 	//out.unsetf(ios::fixed);
 }
 
