@@ -39,7 +39,6 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 		dotProduct = &PhyloTree::dotProductSIMD<double, Vec2d, 2>;
 #endif
 	}
-
 	sse = lk;
     if (!aln || lk == LK_NORMAL) {
         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchNaive;
@@ -49,6 +48,19 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         return;
     }
 
+        
+        cout << "Setting likelihood kernel: ";
+        switch (lk) {
+                case LK_NORMAL:
+                        cout << "NAIVE" << endl; break;
+                case LK_SSE:
+                        cout << "NAIVE-SSE" << endl; break;
+                case LK_EIGEN:
+                        cout << "EIGEN" << endl; break;
+                case LK_EIGEN_SSE:
+                        cout << "EIGEN-SIMD" << endl; break;
+        }
+        
 	switch(aln->num_states) {
 	case 4:
 		switch(sse) {

@@ -704,14 +704,14 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	}
 
 	PhyloTree *tree_homo = new PhyloTree();
+        tree_homo->copyPhyloTree(in_tree);
 	tree_homo->optimize_by_newton = params.optimize_by_newton;
 	tree_homo->setLikelihoodKernel(params.SSE);
-	tree_homo->copyPhyloTree(in_tree);
 
 	PhyloTree *tree_hetero = new PhyloTree();
+        tree_hetero->copyPhyloTree(in_tree);
 	tree_hetero->optimize_by_newton = params.optimize_by_newton;
 	tree_hetero->setLikelihoodKernel(params.SSE);
-	tree_hetero->copyPhyloTree(in_tree);
 
 	RateHeterogeneity * rate_class[4];
 	rate_class[0] = new RateHeterogeneity();
@@ -796,9 +796,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		tree->getRate()->setTree(tree);
 
 		// initialize model factory
-		tree->setModelFactory(model_fac);
 		model_fac->model = subst_model;
 		model_fac->site_rate = tree->getRate();
+                tree->setModelFactory(model_fac);
 
 		tree->clearAllPartialLH();
 

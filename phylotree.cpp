@@ -277,7 +277,7 @@ void PhyloTree::setModel(ModelSubst *amodel) {
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
-    if (model_factory->model->isMixture())
+    if (model_factory && model_factory->model->isMixture())
     	setLikelihoodKernel(sse);
 }
 
