@@ -466,10 +466,11 @@ void ModelGTR::decomposeRateMatrix(){
 		memset(inv_eigenvectors, 0, num_states*num_states*sizeof(double));
 		eigenvectors[0] = 1.0;
 		for (i = 1; i < num_states; i++)
-			eigenvectors[i] = f[i]/f[num_states-1];
+			eigenvectors[i] = -1.0;
+//			eigenvectors[i] = f[i]/f[num_states-1];
 		for (i = 1; i < num_states; i++) {
 			eigenvectors[i*num_states] = 1.0;
-			eigenvectors[i*num_states+i] = 1.0;
+			eigenvectors[i*num_states+i] = state_freq[0]/state_freq[i];
 		}
 
 		for (i = 0; i < num_states; i++)
@@ -479,23 +480,18 @@ void ModelGTR::decomposeRateMatrix(){
 		// sanity check
 		double *q = new double[num_states*num_states];
 		getQMatrix(q);
-		int error = 0;
 		double zero;
 		for (j = 0; j < num_states; j++) {
 			for (i = 0, zero = 0.0; i < num_states; i++) {
 				for (k = 0; k < num_states; k++) zero += q[i*num_states+k] * eigenvectors[k*num_states+j];
 				zero -= eigenvalues[j] * eigenvectors[i*num_states+j];
 				if (fabs(zero) > 1.0e-5) {
-					error = 1;
-					break;
+					cout << "\nERROR: Eigenvector doesn't satisfy eigenvalue equation! (gap=" << fabs(zero) << ")" << endl;
+					abort();
 				}
 			}
 		}
 		delete [] q;
-		if (error) {
-			cout << "\nERROR: Eigensystem doesn't satisfy eigenvalue equation! (gap=" << fabs(zero) << ")" << endl;
-			abort();
-		}
 	} else {
 		double **rate_matrix = (double**) new double[num_states];
 
@@ -526,8 +522,12 @@ void ModelGTR::decomposeRateMatrix(){
 				//eigen_coeff_derv1[offset+k] = eigen_coeff[offset+k] * eigenvalues[k];
 				//eigen_coeff_derv2[offset+k] = eigen_coeff_derv1[offset+k] * eigenvalues[k];
 			}
-			if (i == j)
-				assert(fabs(sum-1.0) < 1e-6);
+			if (i == j) {
+				if (fabs(sum-1.0) > 1e-6) {
+					cout << "sum = " << sum << endl;
+					assert(0);
+				}
+			}
 			else assert(fabs(sum) < 1e-6);
 		}
 

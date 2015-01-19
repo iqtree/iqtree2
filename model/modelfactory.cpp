@@ -196,7 +196,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		if (model_str.substr(0, 3) == "MIX" || freq_type == FREQ_MIXTURE) {
 			string model_list;
 			if (model_str.substr(0, 3) == "MIX") {
-				if (model_str[4] != OPEN_BRACKET)
+				if (model_str[3] != OPEN_BRACKET)
 					outError("Mixture model name must start with 'MIX{'");
 				if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
 					outError("Close bracket not found at the end of ", model_str);
