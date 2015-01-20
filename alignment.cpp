@@ -1329,6 +1329,14 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
+    if (seq_type == SEQ_CODON) {
+    	genetic_code = aln->genetic_code;
+    	codon_table = new char[num_states];
+    	memcpy(codon_table, aln->codon_table, num_states);
+    	non_stop_codon = new char[strlen(genetic_code)];
+    	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
+
+    }
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();

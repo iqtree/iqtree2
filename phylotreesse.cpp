@@ -45,6 +45,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervNaive;
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodNaive;
         computeLikelihoodFromBufferPointer = NULL;
+        sse = LK_NORMAL;
         return;
     }
 
@@ -215,6 +216,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervNaive;
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodNaive;
         computeLikelihoodFromBufferPointer = NULL;
+        sse = LK_NORMAL;
 		break;
 	}
 }
