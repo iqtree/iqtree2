@@ -70,6 +70,8 @@ public:
 	 */
 	virtual void setParams(Params& params);
 
+    virtual void changeLikelihoodKernel(LikelihoodKernel lk);
+
 	virtual bool isSuperTree() { return true; }
 
     /**
