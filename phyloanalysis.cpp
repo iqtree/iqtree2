@@ -1417,7 +1417,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     // Optimize model parameters and branch lengths using ML for the initial tree
-    string initTree = iqtree.optimizeModelParameters(false, 0.1);
+    double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
+    string initTree = iqtree.optimizeModelParameters(false, initEpsilon);
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
@@ -1440,7 +1441,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         double initTime = getCPUTime();
 
         if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
-        	int numDup = iqtree.initCandidateTreeSet(params.numInitTrees, params.numNNITrees);
+        	iqtree.initCandidateTreeSet(params.numInitTrees, params.numNNITrees);
         	assert(iqtree.candidateTrees.size() != 0);
         	cout << "Finish initializing candidate tree set. ";
         	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;

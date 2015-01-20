@@ -608,9 +608,8 @@ public:
      *  Generate the initial candidate tree set
      *  @param nParTrees number of parsimony trees to generate
      *  @param nNNITrees number of NNI locally optimal trees to generate
-     *  @return number of duplicated trees
      */
-    int initCandidateTreeSet(int nParTrees, int nNNITrees);
+    void initCandidateTreeSet(int nParTrees, int nNNITrees);
 
 
     /**
