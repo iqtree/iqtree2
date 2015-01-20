@@ -840,6 +840,7 @@ void Alignment::initCodon(char *sequence_type) {
 	cout << "Converting to codon sequences with genetic code " << transl_table << " ..." << endl;
 
 	int codon;
+	/*
 	num_states = 0;
 	for (codon = 0; codon < strlen(genetic_code); codon++)
 		if (genetic_code[codon] != '*')
@@ -855,6 +856,16 @@ void Alignment::initCodon(char *sequence_type) {
 			non_stop_codon[codon] = STATE_INVALID;
 		}
 	}
+	*/
+	num_states = strlen(genetic_code);
+	codon_table = new char[num_states];
+	non_stop_codon = new char[strlen(genetic_code)];
+	int state = 0;
+	for (int codon = 0; codon < strlen(genetic_code); codon++) {
+		non_stop_codon[codon] = state++;
+		codon_table[(int)non_stop_codon[codon]] = codon;
+	}
+	cout << "num_states = " << num_states << endl;
 }
 
 int getMaxObservedStates(StrVector &sequences) {
