@@ -1072,6 +1072,8 @@ void computeInitialTree(Params &params, IQTree &iqtree, string &dist_file, int &
         bool myrooted = params.is_rooted;
         iqtree.readTree(params.user_file, myrooted);
         iqtree.setAlignment(iqtree.aln);
+        if (iqtree.isSuperTree())
+        	iqtree.fixNegativeBranch(true);
         numInitTrees = 1;
         params.numNNITrees = 1;
         // change to old kernel if tree is multifurcating
@@ -1739,6 +1741,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	/******** Performs final model parameters optimization ******************/
 	if (params.min_iterations) {
 		iqtree.readTreeString(iqtree.bestTreeString);
+        if (iqtree.isSuperTree())
+            iqtree.fixNegativeBranch(true);
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         iqtree.curScore = iqtree.bestScore;

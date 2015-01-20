@@ -367,6 +367,17 @@ double ModelGTR::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
+bool ModelGTR::isUnstableParameters() {
+	int nrates = getNumRateEntries();
+	int i;
+	for (i = 0; i < nrates; i++)
+		if (rates[i] < MIN_RATE+TOL_RATE || rates[i] > MAX_RATE-TOL_RATE)
+			return true;
+	for (i = 0; i < num_states; i++)
+		if (state_freq[i] < MIN_RATE+TOL_RATE)
+			return true;
+	return false;
+}
 
 double ModelGTR::optimizeParameters(double epsilon) {
 	int ndim = getNDim();
