@@ -2172,7 +2172,8 @@ void Alignment::computeEmpiricalRate (double *rates) {
         for (j = i+1; j < num_states; j++) {
             rates[k++] = (pair_rates[i][j] + pair_rates[j][i]) / last_rate;
             // BIG WARNING: zero rates might cause numerical instability!
-            if (rates[k-1] == 0) rates[k-1] = 1e-2;
+            if (rates[k-1] <= 0.0001) rates[k-1] = 0.01;
+            if (rates[k-1] > 100.0) rates[k-1] = 50.0;
         }
     rates[k-1] = 1;
     if (verbose_mode >= VB_MED) {
