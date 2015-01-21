@@ -34,7 +34,10 @@ struct CandidateTree {
 	double score;
 
 	/**
-	 *  Indicate whether the tree is NNI locally optimal
+	 *  Indicate whether the tree is NNI locally optimal.
+	 *  The reason to have this variable is that if the -reduction is
+	 *  enabled, we will also store non-locally optimal trees in the set.
+	 *  This is done to identify trees that belong to the same basin of attraction
 	 */
 	bool localOpt;
 
@@ -50,7 +53,7 @@ public:
     /**
      * Initialization
      */
-	void init(int maxCandidates, int maxPop, char* root, bool rooted, Alignment* aln);
+	void init(Alignment* aln, Params& params);
 
 	CandidateSet();
 
@@ -81,58 +84,69 @@ public:
     void initParentTrees();
 
     /**
-     * update / insert tree into set of score is higher than lowest-scoring tree
+     * update/insert \a tree into the candidate set if its score is higher than the worst tree
+     *
      * @param tree
      * 	The new tree string (with branch lengths)
      * @param score
-     * 	The score (ML or parsimony) of the new tree
+     * 	The score (ML or parsimony) of \a tree
      * @param localOpt
-     * 	Whether the tree is a locally optimal tree
-     * @return false if the tree topology already exists
+     * 	Tells whether \a tree is a locally optimal (DEFAULT: true)
+     * @return false if tree topology already exists
      *
      */
     bool update(string tree, double score, bool localOpt = true);
 
     /**
-     *  print score of max_candidates best trees
+     *  Get the \a numBestScores best scores in the candidate set
      *
-     *  @param numScore
-     *  	Number of best scores to print out starting from the highest
+     *  @param numBestScores
+     *  	Number of best scores
+     *  @return
+     *  	Vector containing \a numBestScore best scores
      */
     vector<double> getBestScores(int numBestScores = 0);
 
     /**
-     * Return the worst score in the candidate tree set
-     * @return
+     * Get the worst score
+     *
+     * @return the worst score
      */
     double getWorstScore();
 
     /**
-     * Return the best score in the candidate tree set
-     * @return
+     * Get best score
+     *
+     * @return the best score
      */
     double getBestScore();
 
     /**
-     *  Return \a numTree best tree strings
-     *  @param numTree number of best trees
-     *  @return a list of tree
+     *  Get \a numTree top scoring trees
+     *
+     *  @param numTree
+     *  	Number of top scoring trees
+     *  @return
+     *  	Vector of current best trees
      */
-    vector<string> getHighestScoringTrees(int numTree = 0);
+    vector<string> getTopTrees(int numTree = 0);
 
     /**
-     * Return \a numTree best local optimal trees
-     * @param numTree
-     * @return vector containing newick tree strings
+     * 	Get \a numTree best locally optimal trees
+     * 	@param numTree
+     * 		Number of locally optimal trees
+     * 	@return
+     * 		Vector of current best locally optimal trees
      */
-    vector<string> getBestLOTrees(int numTree = 0);
+    vector<string> getBestLocalOptimalTrees(int numTree = 0);
 
     /**
-     * get tree(s) with highest score. More than one tree is
-     * returned if there are multiple optima.
-     * @return a vector containing optimal trees
+     * 	Get tree(s) with the best score. There could be more than one
+     * 	tree that share the best score (this happens frequently with parsimony)
+     * 	@return
+     * 		A vector containing trees with the best score
      */
-    vector<string> getEquallyOptimalTrees();
+    vector<string> getBestTrees();
 
     /**
      * destructor
@@ -140,24 +154,39 @@ public:
     virtual ~CandidateSet();
 
     /**
-     * check if tree topology WITHOUT branch length exist in the candidate set?
+     * 	Check if tree topology \a topo already exists
+     *
+     * 	@param topo
+     * 		Newick string of the tree topology
      */
     bool treeTopologyExist(string topo);
 
     /**
-     * check if tree topology WITH branch length exist in the candidate set?
+     * 	Check if tree \a tree already exists
+     *
+     * 	@param tree
+     * 		Newick string of the tree topology
      */
     bool treeExist(string tree);
 
     /**
-     * return a unique topology (sorted by taxon names, rooted at taxon with alphabetically smallest name) without branch lengths
+     * 	Return a unique topology (sorted by taxon names, rooted at taxon with alphabetically smallest name)
+     * 	without branch lengths
+     *
+     * 	@param tree
+     * 		The newick tree string, from which the topology string will be generated
+     * 	@return
+     * 		Newick string of the tree topology
      */
     string getTopology(string tree);
 
     /**
      * return the score of \a topology
+     *
      * @param topology
+     * 		Newick topology
      * @return
+     * 		Score of the topology
      */
     double getTopologyScore(string topology);
 
@@ -234,14 +263,9 @@ private:
     SplitGraph stableSplit;
 
     /**
-     * limit for number of trees (typically superset of candidate set)
+     *  Shared params pointing to the global params
      */
-    int maxCandidates;
-
-    /**
-     *  maximum number of trees used for the evolving population
-     */
-    int popSize;
+    Params* params;
 
     /**
      *  Map data structure storing <topology_string, score>
@@ -258,16 +282,6 @@ private:
      */
     Alignment *aln;
 
-
-    /**
-     *  Sequence name of the root
-     */
-    char* root;
-
-	/**
-	 *  Specify whether the tree is rooted or not
-	 */
-	bool isRooted;
 };
 
 #endif /* CANDIDATESET_H_ */

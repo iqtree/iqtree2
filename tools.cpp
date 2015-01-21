@@ -743,7 +743,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.do_compression = false;
 
     params.new_heuristic = true;
-    params.write_best_trees = false;
     params.iteration_multiple = 1;
     params.initPS = 0.5;
 #ifdef USING_PLL
@@ -762,9 +761,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.unsuccess_iteration = 100;
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
     params.reduction = false;
-    params.adaptPert = false;
     params.numInitTrees = 100;
     params.fix_stable_splits = false;
+    params.numSupportTrees = 20;
     params.sprDist = 20;
     params.numNNITrees = 20;
     params.avh_test = 0;
@@ -2210,6 +2209,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.numNNITrees = convert_int(argv[cnt]);
 				continue;
 			}
+			if (strcmp(argv[cnt], "-nsp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nsp <number_of_support_trees>";
+				params.numSupportTrees = convert_int(argv[cnt]);
+				continue;
+			}
 			if (strcmp(argv[cnt], "-poplim") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2255,10 +2261,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-reduction") == 0) {
 				params.reduction = true;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-adapt") == 0) {
-				params.adaptPert = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-snni") == 0) {
@@ -2366,10 +2368,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
 				params.parbran = true;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-write_best_trees") == 0) {
-				params.write_best_trees = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-x") == 0) {

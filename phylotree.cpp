@@ -211,8 +211,8 @@ void PhyloTree::setRootNode(const char *my_root) {
     assert(root);
 }
 
-void PhyloTree::setParams(Params& params) {
-	this->params = &params;
+void PhyloTree::setParams(Params* params) {
+	this->params = params;
 }
 
 void PhyloTree::readTreeString(const string &tree_string, bool updatePLL) {
@@ -222,11 +222,7 @@ void PhyloTree::readTreeString(const string &tree_string, bool updatePLL) {
 	freeNode();
 	readTree(str, rooted);
 	setAlignment(aln);
-	if (params != NULL && params->root != NULL) {
-		setRootNode(params->root);
-	} else {
-    	setRootNode(aln->getSeqName(0).c_str());
-	}
+	setRootNode(params->root);
 
 	if (isSuperTree()) {
 		((PhyloSuperTree*) this)->mapTrees();

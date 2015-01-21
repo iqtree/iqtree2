@@ -1309,7 +1309,7 @@ public:
     double approxOneBranch(PhyloNode *node, PhyloNode *dad, double b0);
 
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
-	void setParams(Params& params);
+	void setParams(Params* params);
 
 protected:
 
@@ -1337,6 +1337,7 @@ protected:
      *  PLL partition list
      */
     partitionList * pllPartitions;
+
     /**
      *  is the subtree distance matrix need to be computed or updated
      */

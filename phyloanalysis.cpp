@@ -603,6 +603,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		if (params.compute_ml_tree) {
 			out << "MAXIMUM LIKELIHOOD TREE" << endl
 					<< "-----------------------" << endl << endl;
+
 			tree.setRootNode(params.root);
 			out << "NOTE: Tree is UNROOTED although outgroup taxon '" << tree.root->name << "' is drawn at root" << endl;
 			if (params.partition_file)
@@ -716,6 +717,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 //			tree.printResultTree(out);
 //			out << endl << endl;
 		}
+
 
 		/* evaluate user trees */
 		vector<TreeInfo> info;
@@ -1331,7 +1333,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 }
 
 void printSuboptimalTrees(IQTree& iqtree, Params& params, string suffix) {
-	vector<string> trees = iqtree.candidateTrees.getHighestScoringTrees();
+	vector<string> trees = iqtree.candidateTrees.getTopTrees();
 	ofstream treesOut((string(params.out_prefix) + suffix).c_str(),
 			ofstream::out);
 	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
@@ -1378,9 +1380,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     	computeInitialDist(params, iqtree, dist_file);
     }
 
-    iqtree.setParams(params);
+    /******************** Pass the parameter object params to IQTree *******************/
+    iqtree.setParams(&params);
 
-    /********************** CREATE INITIAL TREE(S) **********************/
+    /********************** Create an initial tree **********************/
     iqtree.computeInitialTree(dist_file);
     if (params.root == NULL) {
     	params.root = iqtree.aln->getSeqName(0).c_str();
@@ -1454,6 +1457,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             cout << "Doing NNI on the initial tree ... " << endl;
             string tree = iqtree.doNNISearch(nni_count, nni_steps);
         	iqtree.candidateTrees.update(tree, iqtree.curScore, true);
+
         }
 
         cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: "
@@ -1464,7 +1468,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();
     }
-
     /* TUNG: what happens if params.root is not set? This is usually the case.
      * I added code to ininialize the root above.
      */
@@ -1487,7 +1490,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	/****************** Do tree search ***************************/
 	if (params.min_iterations > 1) {
-		iqtree.readTreeString(iqtree.candidateTrees.getHighestScoringTrees()[0], params.pll);
+		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0], params.pll);
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(iqtree.aln);
 	} else {
@@ -1515,13 +1518,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 			((PhyloSuperTree*) &iqtree)->mapTrees();
 	if (params.snni && params.min_iterations && verbose_mode >= VB_MED) {
 		cout << "Log-likelihoods of best " << params.popSize << " trees: " << endl;
-		iqtree.printBestScores(iqtree.candidateTrees.getPopSize());
+		iqtree.printBestScores(params.popSize);
 		cout << endl;
 	}
 
 	/******** Performs final model parameters optimization ******************/
 	if (params.min_iterations) {
-		iqtree.readTreeString(iqtree.candidateTrees.getHighestScoringTrees()[0]);
+		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0]);
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         cout << "Performs final model parameters optimization" << endl;
@@ -2129,6 +2132,7 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 			out_file = input_trees;
 		out_file += ".contree";
 	}
+
 //	if (removed_seqs.size() > 0)
 //		mytree.insertTaxa(removed_seqs, twin_seqs);
 

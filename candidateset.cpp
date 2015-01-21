@@ -8,13 +8,9 @@
 #include "phylotree.h"
 #include "candidateset.h"
 
-void CandidateSet::init(int maxCandidates, int maxPop, char* root, bool rooted, Alignment* aln) {
-    assert(maxPop <= maxCandidates);
-    this->maxCandidates = maxCandidates;
-    this->popSize = maxPop;
-    this->root = root;
-    this->isRooted = rooted;
+void CandidateSet::init(Alignment* aln, Params& params) {
     this->aln = aln;
+    this->params = &params;
 }
 
 CandidateSet::~CandidateSet() {
@@ -22,13 +18,10 @@ CandidateSet::~CandidateSet() {
 
 CandidateSet::CandidateSet() {
 	aln = NULL;
-	root = NULL;
-	maxCandidates = 0;
-	popSize = 0;
-	isRooted = false;
+	params = NULL;
 }
 
-vector<string> CandidateSet::getEquallyOptimalTrees() {
+vector<string> CandidateSet::getBestTrees() {
 	vector<string> res;
 	double bestScore = rbegin()->first;
 	for (reverse_iterator rit = rbegin(); rit != rend() && rit->second.score == bestScore; rit++) {
@@ -41,7 +34,7 @@ string CandidateSet::getRandCandTree() {
 	assert(!empty());
 	if (empty())
 		return "";
-	int id = random_int(min(popSize, (int)size()) );
+	int id = random_int(min(params->popSize, (int)size()) );
 	for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
 		if (id == 0)
 			return i->second.tree;
@@ -49,10 +42,10 @@ string CandidateSet::getRandCandTree() {
 	return "";
 }
 
-vector<string> CandidateSet::getHighestScoringTrees(int numTree) {
-	assert(numTree <= maxCandidates);
+vector<string> CandidateSet::getTopTrees(int numTree) {
+	assert(numTree <= params->maxCandidates);
 	if (numTree == 0) {
-		numTree = maxCandidates;
+		numTree = params->maxCandidates;
 	}
 	vector<string> res;
 	int cnt = numTree;
@@ -62,10 +55,10 @@ vector<string> CandidateSet::getHighestScoringTrees(int numTree) {
 	return res;
 }
 
-vector<string> CandidateSet::getBestLOTrees(int numTree) {
-	assert(numTree <= maxCandidates);
+vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
+	assert(numTree <= params->maxCandidates);
 	if (numTree == 0) {
-		numTree = maxCandidates;
+		numTree = params->maxCandidates;
 	}
 	vector<string> res;
 	int cnt = numTree;
@@ -111,7 +104,7 @@ string CandidateSet::getNextCandTree() {
 
 void CandidateSet::initParentTrees() {
     if (parentTrees.empty()) {
-        int count = this->popSize;
+        int count = params->popSize;
         for (reverse_iterator i = rbegin(); i != rend() && count >0 ; i++, count--) {
             parentTrees.push(i->second.tree);
             //cout << i->first << endl;
@@ -141,19 +134,25 @@ bool CandidateSet::update(string tree, double score, bool localOpt) {
 			treePtr->second.localOpt = candidate.localOpt;
 		}
 	} else {
-		if (size() < maxCandidates) {
-			// insert tree into candidate set
-			insert(CandidateSet::value_type(score, candidate));
-			topologies[candidate.topology] = score;
-		} else if (getWorstScore() < score){
+		if (getWorstScore() < score && size() >= params->maxCandidates) {
 			// remove the worst-scoring tree
 			topologies.erase(begin()->second.topology);
 			erase(begin());
-			// insert tree into candidate set
-			insert(CandidateSet::value_type(score, candidate));
-			topologies[candidate.topology] = score;
+		}
+		CandidateSet::iterator it = insert(CandidateSet::value_type(score, candidate));
+		topologies[candidate.topology] = score;
+		if (params->fix_stable_splits && getNumLocalOptTrees() >= params->numSupportTrees) {
+			int it_pos = distance(it, end());
+			// The new tree is one of the numSupportTrees best trees.
+			// Thus recompute supported splits
+			if (it_pos <= params->numSupportTrees) {
+				int nSupportedSplits = computeSplitSupport(params->numSupportTrees);
+				cout << ((double) nSupportedSplits / (aln->getNSeq() - 3)) * 100
+						<< " % of the splits have 100% support and can be fixed." << endl;
+			}
 		}
 	}
+	assert(topologies.size() == size());
 	return newTree;
 }
 
@@ -180,10 +179,11 @@ double CandidateSet::getWorstScore() {
 
 string CandidateSet::getTopology(string tree) {
 	PhyloTree mtree;
-	mtree.rooted = false;
-	mtree.aln = aln;
+	mtree.rooted = params->is_rooted;
+	mtree.aln = this->aln;
+	mtree.setParams(params);
 	mtree.readTreeString(tree);
-    mtree.root = mtree.findNodeName(aln->getSeqName(0));
+	mtree.setRootNode(params->root);
 	ostringstream ostr;
 	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	return ostr.str();
@@ -255,10 +255,10 @@ int CandidateSet::computeSplitSupport(int numTree) {
 	SplitGraph sg;
 	MTreeSet boot_trees;
 	int numMaxSupport = 0;
-	vector<string> trees = getBestLOTrees(numTree);
+	vector<string> trees = getBestLocalOptimalTrees(numTree);
 	assert(trees.size() > 1);
 	int maxSupport = trees.size();
-	boot_trees.init(trees, aln->getSeqNames(), isRooted);
+	boot_trees.init(trees, aln->getSeqNames(), params->is_rooted);
 	boot_trees.convertSplits(aln->getSeqNames(), sg, hash_ss, SW_COUNT, -1, false);
 
 	for (unordered_map<Split*,int>::iterator it = hash_ss.begin(); it != hash_ss.end(); it++) {
@@ -268,32 +268,12 @@ int CandidateSet::computeSplitSupport(int numTree) {
 			stableSplit.push_back(supportedSplit);
 		}
 	}
-	cout << "Number of supported splits = " << numMaxSupport << endl;
+	//cout << "Number of supported splits = " << numMaxSupport << endl;
 	return numMaxSupport;
 }
 
 void CandidateSet::setAln(Alignment* aln) {
 	this->aln = aln;
-}
-
-int CandidateSet::getMaxCandidates() const {
-	return maxCandidates;
-}
-
-void CandidateSet::setMaxCandidates(int maxCandidates) {
-	this->maxCandidates = maxCandidates;
-}
-
-int CandidateSet::getPopSize() const {
-	return popSize;
-}
-
-void CandidateSet::setPopSize(int popSize) {
-	this->popSize = popSize;
-}
-
-void CandidateSet::setIsRooted(bool isRooted) {
-	this->isRooted = isRooted;
 }
 
 int CandidateSet::getNumLocalOptTrees() {

@@ -245,6 +245,14 @@ void PhyloSuperTree::initSettings(Params &params) {
 
 }
 
+void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
+//	PhyloTree::changeLikelihoodKernel(lk);
+	sse = lk;
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->changeLikelihoodKernel(lk);
+}
+
+
 Node* PhyloSuperTree::newNode(int node_id, const char* node_name) {
     return (Node*) (new SuperNode(node_id, node_name));
 }
