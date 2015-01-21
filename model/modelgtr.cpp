@@ -85,12 +85,26 @@ void ModelGTR::init(StateFreqType type) {
 	assert(freq_type != FREQ_UNKNOWN);
 	switch (freq_type) {
 	case FREQ_EQUAL:
-		for (i = 0; i < num_states; i++)
-			state_freq[i] = 1.0/num_states;
+		if (phylo_tree->aln->seq_type == SEQ_CODON) {
+			int nscodon = phylo_tree->aln->getNumNonstopCodons();
+			for (i = 0; i < num_states; i++)
+				if (phylo_tree->aln->isStopCodon(i))
+					state_freq[i] = 0.0;
+				else
+					state_freq[i] = 1.0/nscodon;
+		} else {
+			for (i = 0; i < num_states; i++)
+				state_freq[i] = 1.0/num_states;
+		}
 		break;	
 	case FREQ_ESTIMATE:
 	case FREQ_EMPIRICAL:
-		phylo_tree->aln->computeStateFreq(state_freq);
+		if (phylo_tree->aln->seq_type == SEQ_CODON) {
+			double ntfreq[12];
+			phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
+//			phylo_tree->aln->computeCodonFreq(state_freq);
+		} else
+			phylo_tree->aln->computeStateFreq(state_freq);
 		break;
 	case FREQ_USER_DEFINED:
 		if (state_freq[0] == 0.0) outError("State frequencies not specified");

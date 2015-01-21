@@ -522,13 +522,13 @@ public:
 	/**
 	 *  map from 64 codon to non-stop codon index
 	 */
-    char *non_stop_codon;
+//    char *non_stop_codon;
 
 	/**
 	 * For codon sequences: index of 61 non-stop codons to 64 codons
 	 * For other sequences: NULL
 	 */
-	char *codon_table;
+//	char *codon_table;
 
 	/**
 	 * For codon_sequences: 64 amino-acid letters for genetic code of AAA,AAC,AAG,AAT,...,TTT
@@ -537,6 +537,16 @@ public:
 	char *genetic_code;
 
     vector<vector<int> > seq_states; // state set for each sequence in the alignment
+
+    /**
+     * @return true if data type is SEQ_CODON and state is a stop codon
+     */
+    bool isStopCodon(int state);
+
+	/**
+	 * @return number of non-stop codons in the genetic code
+	 */
+	int getNumNonstopCodons();
 
     /* build seq_states containing set of states per sequence
      * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)

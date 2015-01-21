@@ -55,9 +55,9 @@ Alignment::Alignment()
 {
     num_states = 0;
     frac_const_sites = 0.0;
-    codon_table = NULL;
+//    codon_table = NULL;
     genetic_code = NULL;
-    non_stop_codon = NULL;
+//    non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
 }
@@ -258,9 +258,9 @@ void Alignment::checkGappySeq(bool force_error) {
 Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : vector<Pattern>() {
     num_states = 0;
     frac_const_sites = 0.0;
-    codon_table = NULL;
+//    codon_table = NULL;
     genetic_code = NULL;
-    non_stop_codon = NULL;
+//    non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
     cout << "Reading alignment file " << filename << " ... ";
@@ -303,6 +303,21 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     //cout << "Fraction of constant sites: " << frac_const_sites << endl;
 
 }
+
+bool Alignment::isStopCodon(int state) {
+	if (seq_type != SEQ_CODON || state >= num_states) return false;
+	assert(genetic_code);
+	return (genetic_code[state] == '*');
+}
+
+int Alignment::getNumNonstopCodons() {
+	assert(genetic_code);
+	int c = 0;
+	for (char *ch = genetic_code; *ch != 0; ch++)
+		if (*ch == '*') c++;
+	return c;
+}
+
 
 void Alignment::buildSeqStates(bool add_unobs_const) {
 	string unobs_const;
@@ -786,11 +801,11 @@ string Alignment::convertStateBackStr(char state) {
 	} else {
 		// codon data
 		if (state >= num_states) return "???";
-		assert(codon_table);
-		int state_back = codon_table[(int)state];
-		str = symbols_dna[state_back/16];
-		str += symbols_dna[(state_back%16)/4];
-		str += symbols_dna[state_back%4];
+//		assert(codon_table);
+//		int state_back = codon_table[(int)state];
+		str = symbols_dna[state/16];
+		str += symbols_dna[(state%16)/4];
+		str += symbols_dna[state%4];
 	}
 	return str;
 }
@@ -858,14 +873,14 @@ void Alignment::initCodon(char *sequence_type) {
 	}
 	*/
 	num_states = strlen(genetic_code);
-	codon_table = new char[num_states];
-	non_stop_codon = new char[strlen(genetic_code)];
-	int state = 0;
-	for (int codon = 0; codon < strlen(genetic_code); codon++) {
-		non_stop_codon[codon] = state++;
-		codon_table[(int)non_stop_codon[codon]] = codon;
-	}
-	cout << "num_states = " << num_states << endl;
+//	codon_table = new char[num_states];
+//	non_stop_codon = new char[strlen(genetic_code)];
+//	int state = 0;
+//	for (int codon = 0; codon < strlen(genetic_code); codon++) {
+//		non_stop_codon[codon] = state++;
+//		codon_table[(int)non_stop_codon[codon]] = codon;
+//	}
+//	cout << "num_states = " << num_states << endl;
 }
 
 int getMaxObservedStates(StrVector &sequences) {
@@ -881,9 +896,9 @@ int getMaxObservedStates(StrVector &sequences) {
 int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
     int seq_id;
     ostringstream err_str;
-    codon_table = NULL;
+//    codon_table = NULL;
     genetic_code = NULL;
-    non_stop_codon = NULL;
+//    non_stop_codon = NULL;
 
 
     if (nseq != seq_names.size()) throw "Different number of sequences than specified";
@@ -997,8 +1012,9 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             	char state2 = char_to_state[(int)(sequences[seq][site+1])];
             	char state3 = char_to_state[(int)(sequences[seq][site+2])];
             	if (state < 4 && state2 < 4 && state3 < 4) {
-            		state = non_stop_codon[state*16 + state2*4 + state3];
-            		if (state == STATE_INVALID) {
+//            		state = non_stop_codon[state*16 + state2*4 + state3];
+            		state = state*16 + state2*4 + state3;
+            		if (isStopCodon(state)) {
                         err_str << "Sequence " << seq_names[seq] << " has stop codon " <<
                         		sequences[seq][site] << sequences[seq][site+1] << sequences[seq][site+2] <<
                         		" at site " << site+1 << endl;
@@ -1340,14 +1356,14 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
-    if (seq_type == SEQ_CODON) {
-    	genetic_code = aln->genetic_code;
-    	codon_table = new char[num_states];
-    	memcpy(codon_table, aln->codon_table, num_states);
-    	non_stop_codon = new char[strlen(genetic_code)];
-    	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
-
-    }
+	genetic_code = aln->genetic_code;
+//    if (seq_type == SEQ_CODON) {
+//    	codon_table = new char[num_states];
+//    	memcpy(codon_table, aln->codon_table, num_states);
+//    	non_stop_codon = new char[strlen(genetic_code)];
+//    	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
+//
+//    }
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -1835,14 +1851,14 @@ int Alignment::countProperChar(int seq_id) {
 
 Alignment::~Alignment()
 {
-	if (codon_table) {
-		delete [] codon_table;
-		codon_table = NULL;
-	}
-	if (non_stop_codon) {
-		delete [] non_stop_codon;
-		non_stop_codon = NULL;
-	}
+//	if (codon_table) {
+//		delete [] codon_table;
+//		codon_table = NULL;
+//	}
+//	if (non_stop_codon) {
+//		delete [] non_stop_codon;
+//		non_stop_codon = NULL;
+//	}
 }
 
 double Alignment::computeObsDist(int seq1, int seq2) {
@@ -2096,7 +2112,8 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 		memset(ntfreq, 0, sizeof(double)*4);
 		for (iterator it = begin(); it != end(); it++) {
 			for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
-				int codon = codon_table[(int)(*it)[seq]];
+//				int codon = codon_table[(int)(*it)[seq]];
+				int codon = (int)(*it)[seq];
 				int nt1 = codon / 16;
 				int nt2 = (codon % 16) / 4;
 				int nt3 = codon % 4;
@@ -2118,11 +2135,15 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 		memcpy(ntfreq+4, ntfreq, sizeof(double)*4);
 		memcpy(ntfreq+8, ntfreq, sizeof(double)*4);
 		sum = 0;
-		for (i = 0; i < num_states; i++) {
-			int codon = codon_table[i];
-			state_freq[i] = ntfreq[codon/16] * ntfreq[(codon%16)/4] * ntfreq[codon%4];
-			sum += state_freq[i];
-		}
+		for (i = 0; i < num_states; i++)
+			if (isStopCodon(i)) {
+				state_freq[i] = 0.0;
+			} else {
+				//int codon = codon_table[i];
+				int codon = i;
+				state_freq[i] = ntfreq[codon/16] * ntfreq[(codon%16)/4] * ntfreq[codon%4];
+				sum += state_freq[i];
+			}
 		for (i = 0; i < num_states; i++)
 			state_freq[i] /= sum;
 	} else if (freq == FREQ_CODON_3x4) {
@@ -2130,7 +2151,8 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 		memset(ntfreq, 0, sizeof(double)*12);
 		for (iterator it = begin(); it != end(); it++) {
 			for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
-				int codon = codon_table[(int)(*it)[seq]];
+//				int codon = codon_table[(int)(*it)[seq]];
+				int codon = (int)(*it)[seq];
 				int nt1 = codon / 16;
 				int nt2 = (codon % 16) / 4;
 				int nt3 = codon % 4;
@@ -2152,13 +2174,30 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 			}
 		}
 		double sum = 0;
-		for (i = 0; i < num_states; i++) {
-			int codon = codon_table[i];
-			state_freq[i] = ntfreq[codon/16] * ntfreq[4+(codon%16)/4] * ntfreq[8+codon%4];
-			sum += state_freq[i];
-		}
+		for (i = 0; i < num_states; i++)
+			if (isStopCodon(i)) {
+				state_freq[i] = 0.0;
+			} else {
+				//int codon = codon_table[i];
+				int codon = i;
+				state_freq[i] = ntfreq[codon/16] * ntfreq[4+(codon%16)/4] * ntfreq[8+codon%4];
+				sum += state_freq[i];
+			}
 		for (i = 0; i < num_states; i++)
 			state_freq[i] /= sum;
+	} else if (freq == FREQ_EMPIRICAL || freq == FREQ_ESTIMATE) {
+		memset(state_freq, 0, num_states*sizeof(double));
+        for (iterator it = begin(); it != end(); it++)
+			for (int seq = 0; seq < nseqs; seq++) {
+				int state = (*it)[seq];
+				if (state >= num_states) continue;
+				state_freq[state] += (*it).frequency;
+			}
+        double sum = 0.0;
+        for (i = 0; i < num_states; i++)
+        	sum += state_freq[i];
+        for (i = 0; i < num_states; i++)
+        	state_freq[i] /= sum;
 	}
 	convfreq(state_freq);
 }
@@ -2230,7 +2269,9 @@ void Alignment::convfreq(double *stateFrqArr) {
 
 	sum = 0.0;
 	maxfreq = 0.0;
-	for (i = 0; i < num_states; i++) {
+	for (i = 0; i < num_states; i++)
+//	if (!isStopCodon(i))
+	{
 		freq = stateFrqArr[i];
 		if (freq < MIN_FREQUENCY) { 
 			stateFrqArr[i] = MIN_FREQUENCY; 
@@ -2245,8 +2286,8 @@ void Alignment::convfreq(double *stateFrqArr) {
 	}
 	stateFrqArr[maxi] += 1.0 - sum;
 
-	for (i = 0; i < num_states - 1; i++) {
-		for (j = i + 1; j < num_states; j++) {
+	for (i = 0; i < num_states - 1; i++) if (!isStopCodon(i)) {
+		for (j = i + 1; j < num_states; j++) if (!isStopCodon(j)) {
 			if (stateFrqArr[i] == stateFrqArr[j]) {
 				stateFrqArr[i] += MIN_FREQUENCY_DIFF;
 				stateFrqArr[j] -= MIN_FREQUENCY_DIFF;
