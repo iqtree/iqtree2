@@ -1170,7 +1170,10 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		tree->setAlignment(tree->aln);
 		if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
 			cout << "NOTE: Changing to old kernel as user tree is multifurcating" << endl;
-			tree->changeLikelihoodKernel(LK_SSE);
+			if (tree->sse == LK_EIGEN)
+				tree->changeLikelihoodKernel(LK_NORMAL);
+			else
+				tree->changeLikelihoodKernel(LK_SSE);
 		}
 
 		tree->initializeAllPartialLh();

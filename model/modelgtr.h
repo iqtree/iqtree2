@@ -240,6 +240,10 @@ public:
 	*/
 	virtual double optimizeParameters(double epsilon);
 
+	/**
+	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
+	 */
+	virtual bool isUnstableParameters();
 
 	/**
 		write information

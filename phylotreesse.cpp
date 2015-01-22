@@ -641,14 +641,32 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
                     lh_max = max(fabs(res), lh_max);
 				}
 			}
+            // check if one should scale partial likelihoods
             if (lh_max < SCALING_THRESHOLD) {
-				// now do the likelihood scaling
-				for (i = 0; i < block; i++) {
-					partial_lh[i] *= SCALING_THRESHOLD_INVER;
-				}
-				// unobserved const pattern will never have underflow
-				sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn];
-				dad_branch->scale_num[ptn] += 1;
+            	if (lh_max == 0.0) {
+            		// for very shitty data
+            		for (c = 0; c < ncat; c++)
+            			memcpy(&partial_lh[c*nstates], &tip_partial_lh[aln->STATE_UNKNOWN*nstates], nstates*sizeof(double));
+					sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
+					//sum_scale += log(lh_max) * ptn_freq[ptn];
+					dad_branch->scale_num[ptn] += 4;
+					int nsite = aln->getNSite();
+					for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
+						if (aln->getPatternID(i) == ptn) {
+							outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
+							x++;
+						}
+            	} else {
+					// now do the likelihood scaling
+					for (i = 0; i < block; i++) {
+						partial_lh[i] *= SCALING_THRESHOLD_INVER;
+	                    //partial_lh[i] /= lh_max;
+					}
+					// unobserved const pattern will never have underflow
+					sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn];
+					//sum_scale += log(lh_max) * ptn_freq[ptn];
+					dad_branch->scale_num[ptn] += 1;
+            	}
             }
 
 
@@ -680,6 +698,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 						vright += eright[addr+i] * partial_lh_right[c*nstates+i];
 					}
 					partial_lh_tmp[x] = vleft*vright;
+//                    assert(partial_lh_tmp[x] != 0.0);
 				}
 				// compute dot-product with inv_eigenvector
 				for (i = 0; i < nstates; i++) {
@@ -691,14 +710,33 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
                     lh_max = max(lh_max, fabs(res));
 				}
 			}
+
+            // check if one should scale partial likelihoods
             if (lh_max < SCALING_THRESHOLD) {
-				// now do the likelihood scaling
-				for (i = 0; i < block; i++) {
-                    partial_lh[i] *= SCALING_THRESHOLD_INVER;
-				}
-				// unobserved const pattern will never have underflow
-                sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn];
-				dad_branch->scale_num[ptn] += 1;
+            	if (lh_max == 0.0) {
+            		// for very shitty data
+            		for (c = 0; c < ncat; c++)
+            			memcpy(&partial_lh[c*nstates], &tip_partial_lh[aln->STATE_UNKNOWN*nstates], nstates*sizeof(double));
+					sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
+					//sum_scale += log(lh_max) * ptn_freq[ptn];
+					dad_branch->scale_num[ptn] += 4;
+					int nsite = aln->getNSite();
+					for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
+						if (aln->getPatternID(i) == ptn) {
+							outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
+							x++;
+						}
+            	} else {
+					// now do the likelihood scaling
+					for (i = 0; i < block; i++) {
+						partial_lh[i] *= SCALING_THRESHOLD_INVER;
+	                    //partial_lh[i] /= lh_max;
+					}
+					// unobserved const pattern will never have underflow
+					sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn];
+					//sum_scale += log(lh_max) * ptn_freq[ptn];
+					dad_branch->scale_num[ptn] += 1;
+            	}
             }
 
 		}
@@ -759,15 +797,29 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 			// ascertainment bias correction
 	    } else {
 	    	// both dad and node are internal nodes
-		    double *partial_lh_node = node_branch->partial_lh;
-		    double *partial_lh_dad = dad_branch->partial_lh;
 
-	    	size_t all_entries = nptn*block;
+//	    	size_t all_entries = nptn*block;
 #ifdef _OPENMP
-#pragma omp parallel for
+#pragma omp parallel for private(ptn, i)
 #endif
-	    	for (i = 0; i < all_entries; i++) {
-				theta_all[i] = partial_lh_node[i] * partial_lh_dad[i];
+	    	for (ptn = 0; ptn < nptn; ptn++) {
+				double *theta = theta_all + ptn*block;
+			    double *partial_lh_node = node_branch->partial_lh + ptn*block;
+			    double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+			    double theta_max = 0.0;
+	    		for (i = 0; i < block; i++) {
+	    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
+	    			theta_max = max(theta_max, fabs(theta[i]));
+	    		}
+	    		if (theta_max <= 0) {
+	    			// numerical underflow, recompute theta
+	    			for (i = 0; i < block; i++) {
+	    				partial_lh_node[i] *= SCALING_THRESHOLD_INVER;
+		    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
+	    			}
+	    			node_branch->lh_scale_factor += LOG_SCALING_THRESHOLD*ptn_freq[ptn];
+	    			node_branch->scale_num[ptn] += 1;
+	    		}
 			}
 	    }
 		theta_computed = true;
@@ -790,6 +842,7 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 
 
     double my_df = 0.0, my_ddf = 0.0, prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
+    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i)

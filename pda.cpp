@@ -2211,11 +2211,11 @@ int main(int argc, char *argv[])
 	}
 	if (has_fma3) cout << "FMA3, ";
 	if (has_fma4) cout << "FMA4, ";
-#if defined __APPLE__ || defined __MACH__
+//#if defined __APPLE__ || defined __MACH__
 	cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM)" << endl;
-#else
-	cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM)" << endl;
-#endif
+//#else
+//	cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM)" << endl;
+//#endif
 
 	cout << "Command:";
 	for (int i = 0; i < argc; i++)

@@ -254,6 +254,20 @@ public:
     virtual ~PhyloTree();
 
     /**
+            read the tree from the input file in newick format
+            @param infile the input file file.
+            @param is_rooted (IN/OUT) true if tree is rooted
+     */
+    virtual void readTree(const char *infile, bool &is_rooted);
+
+    /**
+            read the tree from the ifstream in newick format
+            @param in the input stream.
+            @param is_rooted (IN/OUT) true if tree is rooted
+     */
+    virtual void readTree(istream &in, bool &is_rooted);
+
+    /**
             copy the phylogenetic tree structure into this tree, override to take sequence names
             in the alignment into account
             @param tree the tree to copy

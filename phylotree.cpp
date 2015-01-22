@@ -144,6 +144,32 @@ PhyloTree::~PhyloTree() {
     	delete[] dist_matrix;
 }
 
+void PhyloTree::readTree(const char *infile, bool &is_rooted) {
+	MTree::readTree(infile, is_rooted);
+}
+
+void PhyloTree::readTree(istream &in, bool &is_rooted) {
+	MTree::readTree(in, rooted);
+	// collapse any internal node of degree 2
+	NodeVector nodes;
+	getInternalNodes(nodes);
+	int num_collapsed = 0;
+	for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++)
+		if ((*it)->degree() == 2) {
+			Node *left = (*it)->neighbors[0]->node;
+			Node *right = (*it)->neighbors[1]->node;
+			double len = (*it)->neighbors[0]->length+(*it)->neighbors[1]->length;
+			left->updateNeighbor((*it), right, len);
+			right->updateNeighbor((*it), left, len);
+			delete (*it);
+			num_collapsed++;
+			if (verbose_mode >= VB_MED)
+				cout << "Node of degree 2 collapsed" << endl;
+		}
+	if (num_collapsed)
+		initializeTree();
+}
+
 void PhyloTree::assignLeafNames(Node *node, Node *dad) {
     if (!node)
         node = root;
