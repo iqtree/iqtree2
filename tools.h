@@ -1580,12 +1580,12 @@ inline bool is_newick_token(char ch) {
 /**
         print error message then exit program
  */
-void outError(const char *error);
+void outError(const char *error, bool quit = true);
 
 /**
         print error message then exit program
  */
-void outError(string error);
+void outError(string error, bool quit = true);
 
 
 /*--------------------------------------------------------------*/
@@ -1594,12 +1594,12 @@ void outError(string error);
 /**
         print double error messages then exit program
  */
-void outError(const char *error, const char *msg);
+void outError(const char *error, const char *msg, bool quit = true);
 
 /**
         print double error messages then exit program
  */
-void outError(const char *error, string msg);
+void outError(const char *error, string msg, bool quit = true);
 
 /**
         Output a warning message to screen

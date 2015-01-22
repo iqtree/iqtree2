@@ -150,6 +150,10 @@ void PhyloTree::readTree(const char *infile, bool &is_rooted) {
 
 void PhyloTree::readTree(istream &in, bool &is_rooted) {
 	MTree::readTree(in, rooted);
+	// remove taxa if necessary
+	if (removed_seqs.size() > 0)
+		removeTaxa(removed_seqs);
+
 	// collapse any internal node of degree 2
 	NodeVector nodes;
 	getInternalNodes(nodes);
@@ -217,19 +221,29 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     //block = aln->num_states * numCat;
     //lh_size = aln->size() * block;
 
+    bool err = false;
     int nseq = aln->getNSeq();
     for (int seq = 0; seq < nseq; seq++) {
         string seq_name = aln->getSeqName(seq);
         Node *node = findLeafName(seq_name);
         if (!node) {
-            string str = "Alignment has a sequence name ";
+            string str = "Alignment sequence ";
             str += seq_name;
-            str += " which is not in the tree";
-            outError(str);
+            str += " does not appear in the tree";
+            err = true;
+            outError(str, false);
         }
         assert(node->isLeaf());
         node->id = seq;
     }
+    StrVector taxname;
+    getTaxaName(taxname);
+    for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++)
+    	if (alignment->getSeqID(*it) < 0) {
+    		outError((string)"Tree taxon " + (*it) + " does not appear in the alignment", false);
+    		err = true;
+    	}
+    if (err) outError("Tree taxa and alignment sequence do not match (see above)");
 }
 
 void PhyloTree::setRootNode(char *my_root) {
@@ -4621,4 +4635,32 @@ void PhyloTree::printTransMatrices(Node *node, Node *dad) {
         delete[] trans_cat;
     }
     FOR_NEIGHBOR_IT(node, dad, it)printTransMatrices((*it)->node, node);
+}
+
+void PhyloTree::removeIdenticalSeqs(Params &params) {
+	// commented out because it also works for SuperAlignment now!
+	Alignment *new_aln;
+	if (params.root)
+		new_aln = aln->removeIdenticalSeq((string)params.root, params.gbo_replicates > 0, removed_seqs, twin_seqs);
+	else
+		new_aln = aln->removeIdenticalSeq("", params.gbo_replicates > 0, removed_seqs, twin_seqs);
+	if (removed_seqs.size() > 0) {
+		cout << "NOTE: " << removed_seqs.size() << " identical sequences will be ignored during tree search" << endl;
+		if (verbose_mode >= VB_MED) {
+			for (int i = 0; i < removed_seqs.size(); i++) {
+				cout << removed_seqs[i] << " is identical to " << twin_seqs[i] << endl;
+			}
+		}
+		aln = new_aln;
+	}
+}
+
+void PhyloTree::reinsertIdenticalSeqs(Alignment *orig_aln) {
+	if (removed_seqs.empty()) return;
+
+	insertTaxa(removed_seqs, twin_seqs);
+    setAlignment(orig_aln);
+    // delete all partial_lh, which will be automatically recreated later
+    deleteAllPartialLh();
+    clearAllPartialLH();
 }

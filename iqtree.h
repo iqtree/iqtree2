@@ -715,19 +715,13 @@ public:
     /** summarize bootstrap trees into split set */
     void summarizeBootstrap(SplitGraph &sg);
 
-    void writeUFBootTrees(Params &params, StrVector &removed_seqs, StrVector &twin_seqs);
+    void writeUFBootTrees(Params &params);
 
     /** @return bootstrap correlation coefficient for assessing convergence */
     double computeBootstrapCorrelation();
 
 	int getDelete() const;
 	void setDelete(int _delete);
-
-	/** remove identical sequences from the tree */
-    virtual void removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs);
-
-    /** reinsert identical sequences into the tree and reset original alignment */
-    virtual void reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs);
 
 	int getCurIt() const {
 		return curIt;

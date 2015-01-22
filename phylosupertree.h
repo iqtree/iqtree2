@@ -60,10 +60,10 @@ public:
     void printPartition(const char *filename);
 
 	/** remove identical sequences from the tree */
-    virtual void removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs);
+    virtual void removeIdenticalSeqs(Params &params);
 
     /** reinsert identical sequences into the tree and reset original alignment */
-    virtual void reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs);
+    virtual void reinsertIdenticalSeqs(Alignment *orig_aln);
 
 	/**
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)

@@ -88,29 +88,30 @@ void outError(char *error)
         Output an error to screen, then exit program
         @param error error message
  */
-void outError(const char *error) {
+void outError(const char *error, bool quit) {
     cerr << "ERROR: " << error << endl;
-    exit(2);
+    if (quit)
+    	exit(2);
 }
 
 /**
         Output an error to screen, then exit program
         @param error error message
  */
-void outError(string error) {
-    outError(error.c_str());
+void outError(string error, bool quit) {
+    outError(error.c_str(), quit);
 }
 
-void outError(const char *error, const char *msg) {
+void outError(const char *error, const char *msg, bool quit) {
     string str = error;
     str += msg;
-    outError(str);
+    outError(str, quit);
 }
 
-void outError(const char *error, string msg) {
+void outError(const char *error, string msg, bool quit) {
     string str = error;
     str += msg;
-    outError(str);
+    outError(str, quit);
 }
 
 /**

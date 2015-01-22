@@ -564,8 +564,15 @@ public:
 	 */
 	void insertTaxa(StrVector &new_taxa, StrVector &existing_taxa);
 
+	/** remove some taxa from the tree
+	 * @param taxa_names names of taxa that will be removed
+	 */
+	void removeTaxa(StrVector &taxa_names);
 
-    /********************************************************
+	/** find a first taxon below a subtree */
+	Node *findFirstTaxon(Node *node = NULL, Node *dad = NULL);
+
+	/********************************************************
             PROPERTIES OF TREE
      ********************************************************/
     /**

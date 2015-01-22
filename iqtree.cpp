@@ -2479,7 +2479,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 //
 }
 
-void IQTree::writeUFBootTrees(Params &params, StrVector &removed_seqs, StrVector &twin_seqs) {
+void IQTree::writeUFBootTrees(Params &params) {
     MTreeSet trees;
     IntVector tree_weights;
     int sample, i, j;
@@ -2804,30 +2804,3 @@ void IQTree::printIntermediateTree(int brtype) {
     save_all_trees = x;
 }
 
-void IQTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs) {
-	// commented out because it also works for SuperAlignment now!
-	Alignment *new_aln;
-	if (params.root)
-		new_aln = aln->removeIdenticalSeq((string)params.root, params.gbo_replicates > 0, removed_seqs, twin_seqs);
-	else
-		new_aln = aln->removeIdenticalSeq("", params.gbo_replicates > 0, removed_seqs, twin_seqs);
-	if (removed_seqs.size() > 0) {
-		cout << "NOTE: " << removed_seqs.size() << " identical sequences will be ignored during tree search" << endl;
-		if (verbose_mode >= VB_MED) {
-			for (int i = 0; i < removed_seqs.size(); i++) {
-				cout << removed_seqs[i] << " is identical to " << twin_seqs[i] << endl;
-			}
-		}
-		aln = new_aln;
-	}
-}
-
-void IQTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs) {
-	if (removed_seqs.empty()) return;
-
-	insertTaxa(removed_seqs, twin_seqs);
-    setAlignment(orig_aln);
-    // delete all partial_lh, which will be automatically recreated later
-    deleteAllPartialLh();
-    clearAllPartialLH();
-}

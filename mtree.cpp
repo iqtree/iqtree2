@@ -1879,3 +1879,80 @@ void MTree::insertTaxa(StrVector &new_taxa, StrVector &existing_taxa) {
     leafNum = leafNum + new_taxa.size();
     initializeTree();
 }
+
+Node *MTree::findFirstTaxon(Node *node, Node *dad) {
+	if (!node) node = root;
+	Node *next;
+	for (int i = 0; i < nodeNum; i++)
+		FOR_NEIGHBOR_IT(node, dad, it) {
+			if ((*it)->node->isLeaf()) return (*it)->node;
+			dad = node;
+			node = (*it)->node;
+		}
+	return NULL;
+}
+
+void MTree::removeTaxa(StrVector &taxa_names) {
+	if (taxa_names.empty()) return;
+	int count = 0;
+	for (StrVector::iterator sit = taxa_names.begin(); sit != taxa_names.end(); sit++) {
+		Node *node = findLeafName(*sit);
+		if (!node) continue;
+		count++;
+//		if (!node)
+//			outError((string)"Taxon " + (*sit) + " does not appear in the tree");
+		if (node == root)
+		{	// find another root
+			root = findFirstTaxon(root);
+		}
+
+		Node *innode = node->neighbors[0]->node;
+		Node *othernodes[2] = { NULL, NULL };
+		int i;
+		double length = 0;
+
+		bool should_merge = true;
+
+		FOR_NEIGHBOR_DECLARE(innode, node, it)	{
+			length += (*it)->length;
+			if (othernodes[0] == NULL)
+				othernodes[0] = (*it)->node;
+			else if (othernodes[1] == NULL)
+				othernodes[1] = (*it)->node;
+			else
+				should_merge = false;
+		}
+
+		if (should_merge)
+		{
+			// merge two branches
+			for (i = 0; i < 2; i++)
+				for (it = othernodes[i]->neighbors.begin(); it != othernodes[i]->neighbors.end(); it++)
+					if ((*it)->node == innode)
+					{
+						(*it)->node = othernodes[1-i];
+						(*it)->length = length;
+					}
+		} else {
+			// simple delete the neighbor of innode
+			for (it = innode->neighbors.begin(); it != innode->neighbors.end(); it++)
+				if ((*it)->node == node) {
+					innode->neighbors.erase(it);
+					break;
+				}
+		}
+		delete node;
+	}
+
+	if (!count) return;
+
+	NodeVector taxa;
+	getTaxa(taxa);
+	assert(taxa.size() > 0);
+	// reassign taxon IDs
+	int id = 0;
+	for (NodeVector::iterator nit = taxa.begin(); nit != taxa.end(); nit++, id++)
+		(*nit)->id = id;
+	leafNum = taxa.size();
+	initializeTree();
+}

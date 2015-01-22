@@ -1333,6 +1333,18 @@ public:
      */
     Params* params;
 
+    /** sequence names that were removed */
+	StrVector removed_seqs;
+
+	/** sequence that are identical to one of the removed sequences */
+	StrVector twin_seqs;
+
+	/** remove identical sequences from the tree */
+    virtual void removeIdenticalSeqs(Params &params);
+
+    /** reinsert identical sequences into the tree and reset original alignment */
+    virtual void reinsertIdenticalSeqs(Alignment *orig_aln);
+
 
     /**
             assign the leaf names with the alignment sequence names, using the leaf ID for assignment.

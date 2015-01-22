@@ -940,8 +940,8 @@ int PhyloSuperTree::countEmptyBranches(PhyloNode *node, PhyloNode *dad) {
 }
 
 /** remove identical sequences from the tree */
-void PhyloSuperTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs) {
-	IQTree::removeIdenticalSeqs(params, removed_seqs, twin_seqs);
+void PhyloSuperTree::removeIdenticalSeqs(Params &params) {
+	IQTree::removeIdenticalSeqs(params);
 	if (removed_seqs.empty()) return;
 	// now synchronize aln
 	int part = 0;
@@ -960,9 +960,9 @@ void PhyloSuperTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs
 }
 
 /** reinsert identical sequences into the tree and reset original alignment */
-void PhyloSuperTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs) {
+void PhyloSuperTree::reinsertIdenticalSeqs(Alignment *orig_aln) {
 	if (removed_seqs.empty()) return;
-	IQTree::reinsertIdenticalSeqs(orig_aln, removed_seqs, twin_seqs);
+	IQTree::reinsertIdenticalSeqs(orig_aln);
 
 	// now synchronize aln
 	int part = 0;

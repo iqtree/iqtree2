@@ -407,8 +407,7 @@ void reportCredits(ofstream &out) {
  ***********************************************************/
 extern StringIntMap *pllTreeCounter;
 void reportPhyloAnalysis(Params &params, string &original_model,
-		Alignment &alignment, IQTree &tree, vector<ModelInfo> &model_info,
-		StrVector &removed_seqs, StrVector &twin_seqs) {
+		Alignment &alignment, IQTree &tree, vector<ModelInfo> &model_info) {
 	if (params.count_trees) {
 		// addon: print #distinct trees
 		cout << endl << "NOTE: " << pllTreeCounter->size() << " distinct trees evaluated during whole tree search" << endl;
@@ -1920,7 +1919,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			outError(ERR_WRITE_OUTPUT, boottrees_name);
 		}
 		if (params.num_bootstrap_samples == 1)
-			reportPhyloAnalysis(params, original_model, *bootstrap_alignment, *boot_tree, model_info, removed_seqs, twin_seqs);
+			reportPhyloAnalysis(params, original_model, *bootstrap_alignment, *boot_tree, model_info);
 		// WHY was the following line missing, which caused memory leak?
 		delete boot_tree;
 		delete bootstrap_alignment;
@@ -1945,7 +1944,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 				treefile_name.c_str(), false, treefile_name.c_str(),
 				params.out_prefix, ext_tree, NULL, &params);
 		tree->copyTree(&ext_tree);
-		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info, removed_seqs, twin_seqs);
+		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
 	} else if (params.consensus_type == CT_CONSENSUS_TREE) {
 		int mi = params.min_iterations;
 		STOP_CONDITION sc = params.stop_condition;
@@ -1955,7 +1954,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		params.min_iterations = mi;
 		params.stop_condition = sc;
 		tree->stop_rule.initialize(params);
-		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info, removed_seqs, twin_seqs);
+		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
 	} else
 		cout << endl;
 
@@ -2059,17 +2058,15 @@ void runPhyloAnalysis(Params &params) {
 		// the main Maximum likelihood tree reconstruction
 		vector<ModelInfo> model_info;
 		alignment->checkGappySeq();
-		StrVector removed_seqs;
-		StrVector twin_seqs;
 
 		// remove identical sequences
         if (params.ignore_identical_seqs)
-            tree->removeIdenticalSeqs(params, removed_seqs, twin_seqs);
+            tree->removeIdenticalSeqs(params);
 		// call main tree reconstruction
 		runTreeReconstruction(params, original_model, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
 			if (params.print_ufboot_trees)
-				tree->writeUFBootTrees(params, removed_seqs, twin_seqs);
+				tree->writeUFBootTrees(params);
 
 			cout << endl << "Computing bootstrap consensus tree..." << endl;
 			string splitsfile = params.out_prefix;
@@ -2110,7 +2107,7 @@ void runPhyloAnalysis(Params &params) {
 			double conScore = tree->optimizeAllBranches();
 			cout << "Log-likelihood of consensus tree: " << conScore << endl;
 		    tree->setRootNode(params.root);
-		    tree->insertTaxa(removed_seqs, twin_seqs);
+		    tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
 			tree->printTree(splitsfile.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
 			// revert the best tree
 			tree->readTreeString(current_tree);
@@ -2120,12 +2117,12 @@ void runPhyloAnalysis(Params &params) {
 //			}
 		}
 		// reinsert identical sequences
-		if (removed_seqs.size() > 0) {
+		if (tree->removed_seqs.size() > 0) {
 			delete tree->aln;
-			tree->reinsertIdenticalSeqs(alignment, removed_seqs, twin_seqs);
+			tree->reinsertIdenticalSeqs(alignment);
 			tree->printResultTree();
 		}
-		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info, removed_seqs, twin_seqs);
+		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
 	} else {
 		// the classical non-parameter bootstrap (SBS)
 		runStandardBootstrap(params, original_model, alignment, tree);
