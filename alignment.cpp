@@ -2275,7 +2275,8 @@ void Alignment::convfreq(double *stateFrqArr) {
 		freq = stateFrqArr[i];
 		if (freq < MIN_FREQUENCY) { 
 			stateFrqArr[i] = MIN_FREQUENCY; 
-			cout << "WARNING: " << convertStateBackStr(i) << " is not present in alignment that may cause numerical problems" << endl;
+			if (!isStopCodon(i))
+				cout << "WARNING: " << convertStateBackStr(i) << " is not present in alignment that may cause numerical problems" << endl;
 		}
 		if (freq > maxfreq) {
 			maxfreq = freq;
@@ -2286,8 +2287,12 @@ void Alignment::convfreq(double *stateFrqArr) {
 	}
 	stateFrqArr[maxi] += 1.0 - sum;
 
-	for (i = 0; i < num_states - 1; i++) if (!isStopCodon(i)) {
-		for (j = i + 1; j < num_states; j++) if (!isStopCodon(j)) {
+	for (i = 0; i < num_states - 1; i++)
+//		if (!isStopCodon(i))
+		{
+		for (j = i + 1; j < num_states; j++)
+//			if (!isStopCodon(j))
+			{
 			if (stateFrqArr[i] == stateFrqArr[j]) {
 				stateFrqArr[i] += MIN_FREQUENCY_DIFF;
 				stateFrqArr[j] -= MIN_FREQUENCY_DIFF;

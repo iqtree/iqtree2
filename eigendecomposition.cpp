@@ -218,6 +218,8 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 				} else {
 					evec[i*num_state+j] = (i == j);
 					inv_evec[i*num_state+j] = (i == j);
+//					evec[i*num_state+j] = 0.0;
+//					inv_evec[i*num_state+j] = 0.0;
 				}
 // 			inew++;
  			inew--;
@@ -225,6 +227,8 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		for (j=0; j < num_state; j++) {
 			evec[i*num_state+j] = (i==j);
 			inv_evec[i*num_state+j] = (i==j);
+//			evec[i*num_state+j] = 0.0;
+//			inv_evec[i*num_state+j] = 0.0;
 		}
 
 

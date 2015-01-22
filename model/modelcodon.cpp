@@ -379,6 +379,13 @@ void ModelCodon::setRateGroupConstraint(string constraint) {
 		for (pos = 0; pos < rate_group.size(); pos++)
 			if (rate_constraints[rate_group[pos]].init_value != -1)
 				rates[pos] = rate_constraints[rate_group[pos]].init_value * extra_rates[pos];
+		pos = 0;
+		// NEW: set ZERO rate going in/out stop-codon
+		for (int i = 0; i < num_states; i++)
+			for (int j = 0; j < num_states; j++, pos++)
+			if (phylo_tree->aln->isStopCodon(i) || phylo_tree->aln->isStopCodon(j))
+				rates[pos] = 0.0;
+
 		IntVector free_param; // index of param to free param
 		free_param.resize(rate_constraints.size(), -1);
 		for (pos = 0; pos < rate_constraints.size(); pos++) {
