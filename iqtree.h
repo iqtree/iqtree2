@@ -419,13 +419,6 @@ public:
     inline double estDelta95(void);
 
     /**
-     *
-     * @return
-     */
-    double getCurScore(void);
-
-
-    /**
             current parsimony score of the tree
      */
     int cur_pars_score;

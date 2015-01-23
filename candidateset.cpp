@@ -261,7 +261,7 @@ int CandidateSet::computeSplitSupport(int numTree) {
 	boot_trees.init(trees, aln->getSeqNames(), params->is_rooted);
 	boot_trees.convertSplits(aln->getSeqNames(), sg, hash_ss, SW_COUNT, -1, false);
 
-	for (unordered_map<Split*,int>::iterator it = hash_ss.begin(); it != hash_ss.end(); it++) {
+	for (SplitIntMap::iterator it = hash_ss.begin(); it != hash_ss.end(); it++) {
 		if (it->second == maxSupport && it->first->countTaxa() > 1) {
 			numMaxSupport++;
 			Split* supportedSplit = new Split(*(it->first));

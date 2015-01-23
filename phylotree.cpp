@@ -90,6 +90,7 @@ void PhyloTree::init() {
     pllAlignment = NULL;
     pllPartitions = NULL;
     lhComputed = false;
+    curScore = -DBL_MAX;
     root = NULL;
     params = NULL;
 }

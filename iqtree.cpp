@@ -38,17 +38,18 @@ extern StringIntMap pllTreeCounter;
 
 
 IQTree::IQTree() : PhyloTree() {
-    init();
+    IQTree::init();
 }
 
 void IQTree::init() {
+//	PhyloTree::init();
     k_represent = 0;
     k_delete = k_delete_min = k_delete_max = k_delete_stay = 0;
     dist_matrix = NULL;
     var_matrix = NULL;
     nni_count_est = 0.0;
     nni_delta_est = 0;
-    curScore = 0.0; // Current score of the tree
+//    curScore = 0.0; // Current score of the tree
     curIt = 1;
     cur_pars_score = -1;
 //    enable_parsimony = false;
@@ -69,8 +70,9 @@ void IQTree::init() {
 }
 
 IQTree::IQTree(Alignment *aln) : PhyloTree(aln) {
-    init();
+    IQTree::init();
 }
+
 void IQTree::initSettings(Params &params) {
     searchinfo.speednni = params.speednni;
     searchinfo.nni_type = params.nni_type;
@@ -440,7 +442,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     	fixAllBranches(params->pll);
         string tree = optimizeBranches(2);
         // Add tree to the candidate set
-		candidateTrees.update(tree, curScore, false);
+		candidateTrees.update(tree, getCurScore(), false);
     }
     //exit(0);
     double loglTime = getCPUTime() - startTime;
@@ -465,13 +467,13 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         // THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
         if (isSuperTree() && params->partition_type == 0) {
         	if (verbose_mode >= VB_MED)
-        		cout << "curScore: " << curScore << " expected score: " << rit->first << endl;
+        		cout << "curScore: " << getCurScore() << " expected score: " << rit->first << endl;
         	optimizeBranches(2);
         }
-        initLogl = curScore;
+        initLogl = getCurScore();
         tree = doNNISearch(nniCount, nniStep);
-        nniLogl = curScore;
-        cout << "Iteration " << getCurIt() << " / LogL: " << curScore;
+        nniLogl = getCurScore();
+        cout << "Iteration " << getCurIt() << " / LogL: " << getCurScore();
         if (verbose_mode >= VB_MED) {
         	cout << " / NNI count, steps: " << nniCount << "," << nniStep;
         	cout << " / Parsimony logl " << initLogl << " / NNI logl: " << nniLogl;
@@ -480,19 +482,19 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
         bool betterScore = false;
         // Better tree or score is found
-        if (curScore > candidateTrees.getBestScore()) {
+        if (getCurScore() > candidateTrees.getBestScore()) {
             // Re-optimize model parameters (the sNNI algorithm)
         	tree = optimizeModelParameters(false, 0.1);
         	betterScore = true;
         }
-        bool newTree = candidateTrees.update(tree, curScore);
+        bool newTree = candidateTrees.update(tree, getCurScore());
 		if (betterScore) {
 			if (newTree)
 				cout << "BETTER TREE FOUND at iteration " << getCurIt() << ": "
-						<< curScore << endl;
+						<< getCurScore() << endl;
 			else
 				cout << "BETTER SCORE FOUND at iteration " << getCurIt() << ": "
-						<< curScore << endl;
+						<< getCurScore() << endl;
 		}
     }
     double nniTime = getCPUTime() - startTime;

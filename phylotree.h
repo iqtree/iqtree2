@@ -1257,11 +1257,6 @@ public:
     LikelihoodKernel sse;
 
     /**
-     * Current score of the tree;
-     */
-    double curScore;
-
-    /**
      * for UpperBounds: Initial tree log-likelihood
      */
     double mlInitial;
@@ -1324,6 +1319,14 @@ public:
 
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 	void setParams(Params* params);
+
+	double getCurScore() {
+		return curScore;
+	}
+
+	void setCurScore(double curScore) {
+		this->curScore = curScore;
+	}
 
 protected:
 
@@ -1545,6 +1548,11 @@ protected:
     virtual void saveCurrentTree(double logl) {
     } // save current tree
 
+
+    /**
+     * Current score of the tree;
+     */
+    double curScore;
 
 };
 
