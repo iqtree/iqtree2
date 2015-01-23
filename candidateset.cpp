@@ -179,11 +179,21 @@ double CandidateSet::getWorstScore() {
 
 string CandidateSet::getTopology(string tree) {
 	PhyloTree mtree;
-	mtree.rooted = params->is_rooted;
+//	mtree.rooted = params->is_rooted;
 	mtree.aln = this->aln;
 	mtree.setParams(params);
-	mtree.readTreeString(tree);
+
+	stringstream str;
+	str << tree;
+	str.seekg(0, ios::beg);
+//	freeNode();
+	mtree.readTree(str, params->is_rooted);
+	mtree.setAlignment(aln);
 	mtree.setRootNode(params->root);
+
+//	mtree.readTreeString(tree);
+//	mtree.setRootNode(params->root);
+
 	ostringstream ostr;
 	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	return ostr.str();
@@ -206,7 +216,7 @@ void CandidateSet::clearTopologies() {
 
 CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
 	CandidateSet res;
-	if (numTrees >= size() || numTrees == 0)
+	if (numTrees >= size())
 		numTrees = size();
 	for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; rit++, numTrees--) {
 		res.insert(*rit);

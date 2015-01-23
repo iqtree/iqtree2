@@ -322,12 +322,17 @@ void IQTree::computeInitialTree(string &dist_file) {
     string out_file = params->out_prefix;
     if (params->stop_condition == SC_FIXED_ITERATION && params->numNNITrees > params->min_iterations)
     	params->numNNITrees = params->min_iterations;
+    int fixed_number = 0;
     if (params->user_file) {
         // start the search with user-defined tree
         cout << "Reading input tree file " << params->user_file << " ..." << endl;
         bool myrooted = params->is_rooted;
         readTree(params->user_file, myrooted);
         setAlignment(aln);
+        if (isSuperTree())
+        	fixAllBranches(true);
+        else
+        	fixed_number = fixAllBranches(false);
         params->numInitTrees = 1;
         params->numNNITrees = 1;
         // change to old kernel if tree is multifurcating
@@ -342,8 +347,10 @@ void IQTree::computeInitialTree(string &dist_file) {
         // Create parsimony tree using IQ-Tree kernel
         cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
         computeParsimonyTree(params->out_prefix, aln);
-		if (params->pll)
-			pllReadNewick(getTreeString());
+//		if (params->pll)
+//			pllReadNewick(getTreeString());
+	    fixAllBranches(true);
+
         break;
     case STT_PLL_PARSIMONY:
         cout << endl;
@@ -355,18 +362,22 @@ void IQTree::computeInitialTree(string &dist_file) {
                 PLL_TRUE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
         readTreeString(string(pllInst->tree_string));
         cout << getCPUTime() - start << " seconds" << endl;
+	    fixAllBranches(true);
         break;
     case STT_BIONJ:
         // This is the old default option: using BIONJ as starting tree
         computeBioNJ(*params, aln, dist_file);
         cout << getCPUTime() - start << " seconds" << endl;
         params->numInitTrees = 1;
-		if (params->pll)
-			pllReadNewick(getTreeString());
+//		if (params->pll)
+//			pllReadNewick(getTreeString());
+        if (isSuperTree())
+        	fixAllBranches(true);
+        else
+        	fixed_number = fixAllBranches(false);
 		break;
     }
 
-    int fixed_number = fixAllBranches(params->pll);
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
     }
@@ -439,7 +450,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     for (vector<string>::iterator it = unOptParTrees.begin()+1; it != unOptParTrees.end(); it++) {
     	readTreeString(*it);
     	//cout << "Root: " << root->name << endl;
-    	fixAllBranches(params->pll);
+    	fixAllBranches(true);
         string tree = optimizeBranches(2);
         // Add tree to the candidate set
 		candidateTrees.update(tree, getCurScore(), false);
@@ -462,7 +473,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     	int nniCount, nniStep;
         double initLogl, nniLogl;
         string tree;
-        readTreeString(rit->second.tree, params->pll);
+        readTreeString(rit->second.tree);
         computeLogL();
         // THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
         if (isSuperTree() && params->partition_type == 0) {
@@ -1070,7 +1081,7 @@ void IQTree::doRandomNNIs(int numNNI) {
     	pllReadNewick(getTreeString());
     }
 
-    lhComputed = false;
+    resetCurScore();
 }
 
 /*
@@ -1125,7 +1136,8 @@ void IQTree::doIQP() {
     	pllReadNewick(getTreeString());
     }
 
-    lhComputed = false;
+    resetCurScore();
+//    lhComputed = false;
 
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
@@ -1492,9 +1504,11 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 	double stime = getCPUTime();
 	string newTree;
 	if (params->pll) {
-		if (!lhComputed) {
+		if (curScore == -DBL_MAX) {
 			pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-			lhComputed = true;
+//			lhComputed = true;
+		} else {
+			pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
 		}
 		pllOptimizeModelParameters(pllInst, pllPartitions, epsilon);
 		curScore = pllInst->likelihood;
@@ -1508,11 +1522,11 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 		newTree = string(pllInst->tree_string);
 	} else {
 		string curTree = getTreeString();
-		if (!lhComputed) {
-			initializeAllPartialLh();
-			clearAllPartialLH();
-			lhComputed = true;
-		}
+//		if (!lhComputed) {
+//			initializeAllPartialLh();
+//			clearAllPartialLH();
+//			lhComputed = true;
+//		}
 		double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, epsilon);
 		if (isSuperTree()) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
@@ -1547,28 +1561,28 @@ void IQTree::printBestScores(int numBestScore) {
 
 void IQTree::computeLogL() {
 	if (params->pll) {
-		if (!lhComputed) {
-        pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+		if (curScore == -DBL_MAX) {
+			pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
 		} else {
 			pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
 		}
         curScore = pllInst->likelihood;
 	} else {
-		if (!lhComputed) {
-	        initializeAllPartialLh();
-	        clearAllPartialLH();
-		}
+//		if (!lhComputed) {
+//	        initializeAllPartialLh();
+//	        clearAllPartialLH();
+//		}
 		curScore = computeLikelihood();
 	}
-	lhComputed = true;
+//	lhComputed = true;
 }
 
 string IQTree::optimizeBranches(int maxTraversal) {
 	string tree;
     if (params->pll) {
-    	if (!lhComputed) {
-        pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-            lhComputed = true;
+    	if (curScore == -DBL_MAX) {
+    		pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
+//            lhComputed = true;
     	}
         pllOptimizeBranchLengths(pllInst, pllPartitions, maxTraversal);
         curScore = pllInst->likelihood;
@@ -1576,11 +1590,11 @@ string IQTree::optimizeBranches(int maxTraversal) {
                 PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
         tree = string(pllInst->tree_string);
     } else {
-    	if (!lhComputed) {
-            initializeAllPartialLh();
-            clearAllPartialLH();
-            lhComputed = true;
-    	}
+//    	if (!lhComputed) {
+//            initializeAllPartialLh();
+//            clearAllPartialLH();
+//            lhComputed = true;
+//    	}
     	curScore = optimizeAllBranches(maxTraversal);
         tree = getTreeString();
     }
@@ -1836,7 +1850,7 @@ string IQTree::doNNISearch(int& nniCount, int& nniSteps) {
         pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE,
                 PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
         treeString = string(pllInst->tree_string);
-        readTreeString(treeString);
+//        readTreeString(treeString);
     } else {
         curScore = optimizeNNI(nniCount, nniSteps);
         if (isSuperTree()) {

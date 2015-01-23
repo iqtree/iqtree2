@@ -89,7 +89,7 @@ void PhyloTree::init() {
     pllInst = NULL;
     pllAlignment = NULL;
     pllPartitions = NULL;
-    lhComputed = false;
+//    lhComputed = false;
     curScore = -DBL_MAX;
     root = NULL;
     params = NULL;
@@ -242,7 +242,7 @@ void PhyloTree::setParams(Params* params) {
 	this->params = params;
 }
 
-void PhyloTree::readTreeString(const string &tree_string, bool updatePLL) {
+void PhyloTree::readTreeString(const string &tree_string) {
 	stringstream str;
 	str << tree_string;
 	str.seekg(0, ios::beg);
@@ -254,21 +254,23 @@ void PhyloTree::readTreeString(const string &tree_string, bool updatePLL) {
 	if (isSuperTree()) {
 		((PhyloSuperTree*) this)->mapTrees();
 	}
-	if (updatePLL) {
+	if (params->pll) {
 		pllReadNewick(getTreeString());
 	}
-	lhComputed = false;
+	resetCurScore();
+//	lhComputed = false;
 }
 
-int PhyloTree::fixAllBranches(bool updatePLL) {
+int PhyloTree::fixAllBranches(bool force_change) {
     // Initialize branch lengths for the parsimony tree
     initializeAllPartialPars();
     clearAllPartialLH();
-    int numFixed = fixNegativeBranch(true);
-    if (updatePLL) {
+    int numFixed = fixNegativeBranch(force_change);
+    if (params->pll) {
     	pllReadNewick(getTreeString());
     }
-    lhComputed = false;
+    resetCurScore();
+//    lhComputed = false;
     return numFixed;
 }
 
@@ -413,6 +415,7 @@ string PhyloTree::getModelNameParams() {
 void PhyloTree::initializeAllPartialPars() {
     int index = 0;
     initializeAllPartialPars(index);
+    clearAllPartialLH();
     //assert(index == (nodeNum - 1)*2);
 }
 

@@ -1491,7 +1491,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	/****************** Do tree search ***************************/
 	if (params.min_iterations > 1) {
-		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0], params.pll);
+		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0]);
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(iqtree.aln);
 	} else {
@@ -1525,7 +1525,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	/******** Performs final model parameters optimization ******************/
 	if (params.min_iterations) {
-		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0]);
+		iqtree.readTreeString(iqtree.candidateTrees.getBestTrees()[0]);
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         cout << "Performs final model parameters optimization" << endl;

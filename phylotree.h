@@ -689,7 +689,7 @@ public:
             @param tree_string tree string to read from
             @param updatePLL if true, tree is read into PLL
      */
-    void readTreeString(const string &tree_string, bool updatePLL = false);
+    void readTreeString(const string &tree_string);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
@@ -710,7 +710,7 @@ public:
      * @param updatePLL if true read the new tree into PLL
      * @return number of branches fixed
      */
-    int fixAllBranches(bool updatePLL = false);
+    int fixAllBranches(bool force_change);
 
     /**
      * Read the newick string into PLL kernel
@@ -1328,6 +1328,16 @@ public:
 		this->curScore = curScore;
 	}
 
+	/**
+	 * This will invalidate curScore variable, used whenever reading a tree!
+	 */
+	void resetCurScore() {
+		curScore = -DBL_MAX;
+        if (model)
+            initializeAllPartialLh();
+//		clearAllPartialLH();
+	}
+
 protected:
 
     /**
@@ -1338,7 +1348,7 @@ protected:
     /**
      *  Whether the partial likelihood vectors have been computed for PLL
      */
-    bool lhComputed;
+//    bool lhComputed;
 
     /**
      *	PLL data structure for alignment
