@@ -214,6 +214,11 @@ public:
 	virtual double optimizeParameters(double epsilon) { return 0.0; }
 
 	/**
+	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
+	 */
+	virtual bool isUnstableParameters() { return false; }
+
+	/**
 		write information
 		@param out output stream
 	*/

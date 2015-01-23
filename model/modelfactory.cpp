@@ -553,6 +553,14 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	return cur_lh;
 }
 
+/**
+ * @return TRUE if parameters are at the boundary that may cause numerical unstability
+ */
+bool ModelFactory::isUnstableParameters() {
+	if (model->isUnstableParameters()) return true;
+	return false;
+}
+
 void ModelFactory::startStoringTransMatrix() {
 	if (!store_trans_matrix) return;
 	is_storing = true;

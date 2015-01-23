@@ -1515,10 +1515,16 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 		if (isSuperTree()) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
 		}
+		if (getModelFactory()->isUnstableParameters()) {
+			cout << endl;
+			outWarning("Estimated model parameters are at boundary that can cause numerical instability!");
+			cout << endl;
+		}
 
 		if (modOptScore < curScore - 1.0) {
 			cout << "  BUG: Tree logl gets worse after model optimization!" << endl;
 			cout << "  Old logl: " << curScore << " / " << "new logl: " << modOptScore << endl;
+			printTree("debug.tree");
 			abort();
 		} else {
 			curScore = modOptScore;
