@@ -2056,7 +2056,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
         }
     }
 
-    if (nniSteps == (MAX_NNI_STEPS)) {
+    if (nniSteps == (MAX_NNI_STEPS + 1)) {
     	cout << "WARNING: NNI search needs unusual large number of steps (" << MAX_NNI_STEPS << ") to converge!" << endl;
     }
 
