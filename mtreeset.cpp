@@ -379,8 +379,8 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 
 	SplitGraph *isg;
 	int tree_id = 0;
-	cout << "Number of trees: " << size() << endl;
-	cout << "Number of weight: " << tree_weights.size() << endl;
+//	cout << "Number of trees: " << size() << endl;
+//	cout << "Number of weight: " << tree_weights.size() << endl;
 	for (iterator it = begin(); it != end(); it++, tree_id++) {
 		if (tree_weights[tree_id] == 0) continue;
 		MTree *tree = *it;
