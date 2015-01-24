@@ -50,7 +50,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     }
 
         
-    cout << "Likelihood kernel: ";
+//    cout << "Likelihood kernel: ";
         
 	switch(aln->num_states) {
 	case 4:
@@ -60,7 +60,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 			computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<4>;
 			computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<4>;
 	        computeLikelihoodFromBufferPointer = NULL;
-	        cout << "Naive-SSE" << endl;
+//	        cout << "Naive-SSE" << endl;
 			break;
 		case LK_EIGEN:
 			if (model_factory && model_factory->model->isMixture()) {
@@ -69,20 +69,20 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 					computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigen<4>;
 					computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigen<4>;
 					computeLikelihoodFromBufferPointer = NULL;
-			        cout << "Fast-semi-mixture" << endl;
+//			        cout << "Fast-semi-mixture" << endl;
 				} else {
 					computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigen<4>;
 					computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigen<4>;
 					computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigen<4>;
 					computeLikelihoodFromBufferPointer = NULL;
-			        cout << "Fast-mixture" << endl;
+//			        cout << "Fast-mixture" << endl;
 				}
 			} else {
 				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<4>;
 				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<4>;
 				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<4>;
 				computeLikelihoodFromBufferPointer = NULL;
-		        cout << "Fast" << endl;
+//		        cout << "Fast" << endl;
 			}
 			break;
 		case LK_EIGEN_SSE:
@@ -97,20 +97,20 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 						computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 4>;
 						computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 4>;
 						computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 4>;
-				        cout << "Fast-SSE-semi-mixture" << endl;
+//				        cout << "Fast-SSE-semi-mixture" << endl;
 					} else {
 						computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 4>;
 						computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 4>;
 						computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 4>;
 						computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 4>;
-				        cout << "Fast-SSE-mixture" << endl;
+//				        cout << "Fast-SSE-mixture" << endl;
 					}
 				} else {
 					computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 4>;
 					computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 4>;
 					computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 4>;
 					computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 4>;
-			        cout << "Fast-SSE" << endl;
+//			        cout << "Fast-SSE" << endl;
 				}
 			}
 			break;
@@ -125,7 +125,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 			computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<20>;
 			computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<20>;
 	        computeLikelihoodFromBufferPointer = NULL;
-	        cout << "Naive-SSE" << endl;
+//	        cout << "Naive-SSE" << endl;
 			break;
 		case LK_EIGEN:
 			if (model_factory && model_factory->model->isMixture()) {
@@ -134,20 +134,20 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 					computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigen<20>;
 					computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigen<20>;
 					computeLikelihoodFromBufferPointer = NULL;
-			        cout << "Fast-semi-mixture" << endl;
+//			        cout << "Fast-semi-mixture" << endl;
 				} else {
 					computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigen<20>;
 					computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigen<20>;
 					computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigen<20>;
 					computeLikelihoodFromBufferPointer = NULL;
-			        cout << "Fast-mixture" << endl;
+//			        cout << "Fast-mixture" << endl;
 				}
 			} else {
 				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<20>;
 				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<20>;
 				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<20>;
 				computeLikelihoodFromBufferPointer = NULL;
-		        cout << "Fast" << endl;
+//		        cout << "Fast" << endl;
 			}
 			break;
 		case LK_EIGEN_SSE:
@@ -160,20 +160,20 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 						computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 20>;
 						computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 20>;
 						computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 20>;
-				        cout << "Fast-SSE-semi-mixture" << endl;
+//				        cout << "Fast-SSE-semi-mixture" << endl;
 					} else {
 						computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 20>;
 						computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 20>;
 						computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 20>;
 						computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 20>;
-				        cout << "Fast-SSE-mixture" << endl;
+//				        cout << "Fast-SSE-mixture" << endl;
 					}
 				} else {
 					computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 20>;
 					computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 20>;
 					computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 20>;
 					computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 20>;
-			        cout << "Fast-SSE" << endl;
+//			        cout << "Fast-SSE" << endl;
 				}
 			}
 			break;
@@ -189,7 +189,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 			computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<64>;
 			computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<64>;
 			computeLikelihoodFromBufferPointer = NULL;
-			cout << "Naive-SSE" << endl;
+//			cout << "Naive-SSE" << endl;
 			break;
 		case LK_EIGEN:
 			if (model_factory && model_factory->model->isMixture()) {
@@ -198,20 +198,20 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 					computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigen<64>;
 					computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigen<64>;
 					computeLikelihoodFromBufferPointer = NULL;
-					cout << "Fast-semi-mixture" << endl;
+//					cout << "Fast-semi-mixture" << endl;
 				} else {
 					computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigen<64>;
 					computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigen<64>;
 					computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigen<64>;
 					computeLikelihoodFromBufferPointer = NULL;
-					cout << "Fast-mixture" << endl;
+//					cout << "Fast-mixture" << endl;
 				}
 			} else {
 				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<64>;
 				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<64>;
 				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<64>;
 				computeLikelihoodFromBufferPointer = NULL;
-				cout << "Fast" << endl;
+//				cout << "Fast" << endl;
 			}
 			break;
 		case LK_EIGEN_SSE:
@@ -224,20 +224,20 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 						computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 64>;
 						computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 64>;
 						computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 64>;
-						cout << "Fast-SSE-semi-mixture" << endl;
+//						cout << "Fast-SSE-semi-mixture" << endl;
 					} else {
 						computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 64>;
 						computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 64>;
 						computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 64>;
 						computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 64>;
-						cout << "Fast-SSE-mixture" << endl;
+//						cout << "Fast-SSE-mixture" << endl;
 					}
 				} else {
 					computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 64>;
 					computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 64>;
 					computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 64>;
 					computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 64>;
-					cout << "Fast-SSE" << endl;
+//					cout << "Fast-SSE" << endl;
 				}
 			}
 			break;
@@ -254,21 +254,21 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 			computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<2>;
 			computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<2>;
 	        computeLikelihoodFromBufferPointer = NULL;
-	        cout << "Naive-SSE" << endl;
+//	        cout << "Naive-SSE" << endl;
 			break;
 		case LK_EIGEN:
 			computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<2>;
 			computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<2>;
 			computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<2>;
 	        computeLikelihoodFromBufferPointer = NULL;
-	        cout << "Fast" << endl;
+//	        cout << "Fast" << endl;
 			break;
 		case LK_EIGEN_SSE:
 			computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 2>;
 			computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 2>;
 			computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 2>;
 	        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 2>;
-	        cout << "Fast-SSE" << endl;
+//	        cout << "Fast-SSE" << endl;
 			break;
 		case LK_NORMAL:
 			break;
@@ -276,7 +276,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 		break;
 
 	default:
-        cout << "Naive" << endl;
+//        cout << "Naive" << endl;
 		computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchNaive;
         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervNaive;
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodNaive;

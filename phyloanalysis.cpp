@@ -1403,8 +1403,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     /*************** SET UP PARAMETERS and model testing ****************/
 
-    iqtree.initSettings(params);
+   	// FOR TUNG: swapping the order cause bug for -m TESTLINK
+//    iqtree.initSettings(params);
     initializeParams(params, iqtree, model_info);
+    iqtree.initSettings(params);
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
 
@@ -1702,6 +1704,8 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			reportPhyloAnalysis(params, original_model, *bootstrap_alignment, *boot_tree, model_info);
 		// WHY was the following line missing, which caused memory leak?
 		delete boot_tree;
+		// fix bug: bootstrap_alignment might be changed
+		bootstrap_alignment = boot_tree->aln;
 		delete bootstrap_alignment;
 	}
 
@@ -1909,6 +1913,8 @@ void runPhyloAnalysis(Params &params) {
 	}
 
 	delete tree;
+	// BUG: alignment can be changed, should delete tree->aln instead
+	alignment = tree->aln;
 	delete alignment;
 }
 
