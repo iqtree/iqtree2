@@ -274,7 +274,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		if (unobserved_ptns.size() < tree->aln->num_states)
 			outWarning("Some constant patterns are observed in the alignment");
 		cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
-//		model_str = model_str.substr(0, posasc) + model_str.substr(posasc+4);
+		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
 	}
 
 

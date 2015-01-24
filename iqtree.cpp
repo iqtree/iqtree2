@@ -1534,7 +1534,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 		if (isSuperTree()) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
 		}
-		if (getModelFactory()->isUnstableParameters()) {
+		if (getModelFactory()->isUnstableParameters() && aln->seq_type != SEQ_CODON) {
 			cout << endl;
 			outWarning("Estimated model parameters are at boundary that can cause numerical instability!");
 			cout << endl;
