@@ -307,7 +307,7 @@ public:
      */
     virtual void addNeighbor(Node *node, double length, int id = -1);
 };
-
+/*
 class Branch {
 public:
     Node* node1;
@@ -335,6 +335,7 @@ public:
         return key;
     }
 };
+*/
 
 /*
     some macros to transverse neighbors of a node

@@ -104,6 +104,28 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 	//tree_weights.resize(size(), 1);
 }
 
+void MTreeSet::init(vector<string> &trees, vector<string> &taxonNames, bool &is_rooted) {
+	int count = 0;
+	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
+		MTree *tree = newTree();
+		stringstream ss(*it);
+		tree->readTree(ss, is_rooted);
+	    int nseq = taxonNames.size();
+	    assert(tree->getNumTaxa() == nseq);
+	    for (int seq = 0; seq < nseq; seq++) {
+	        string seq_name = taxonNames[seq];
+	        Node *node = tree->findLeafName(seq_name);
+	        assert(node);
+	        assert(node->isLeaf());
+	        node->id = seq;
+	    }
+		push_back(tree);
+		tree_weights.push_back(1);
+		count++;
+	}
+	cout << count << " tree(s) converted" << endl;
+}
+
 void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int max_count,
 	IntVector *weights, bool compressed) 
 {
@@ -314,8 +336,7 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 }
 
 
-void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, 
-	int weighting_type, double weight_threshold) {
+void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type, double weight_threshold) {
 	vector<string> taxname(front()->leafNum);
 	// make sure that the split system contains at least 1 split
 	if (size() == 0)
@@ -358,6 +379,8 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 
 	SplitGraph *isg;
 	int tree_id = 0;
+	cout << "Number of trees: " << size() << endl;
+	cout << "Number of weight: " << tree_weights.size() << endl;
 	for (iterator it = begin(); it != end(); it++, tree_id++) {
 		if (tree_weights[tree_id] == 0) continue;
 		MTree *tree = *it;
@@ -370,8 +393,11 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 			sort(taxa.begin(), taxa.end(), nodenamecmp);
 			int i = 0;
 			for (NodeVector::iterator it2 = taxa.begin(); it2 != taxa.end(); it2++) {
-				if ((*it2)->name != taxname[i]) 
+				if ((*it2)->name != taxname[i]) {
+					cout << "Name 1: " <<  (*it2)->name << endl;
+					cout << "Name 2: " <<  taxname[i] << endl;
 					outError("Tree has different taxa names!");
+				}
 				(*it2)->id = i++;
 			}
 		}

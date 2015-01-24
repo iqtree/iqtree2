@@ -1971,23 +1971,21 @@ void pllNewviewIterative (pllInstance *tr, partitionList *pr, int startIndex)
           if(tr->rateHetModel == PLL_CAT)
             {                                
               
-              if(tr->saveMemory) {
-//#ifdef __AVX
-            	  if (instruction_set == 7)
+              if(tr->saveMemory)
+#ifdef __AVX
                 newviewGTRCAT_AVX_GAPPED_SAVE(tInfo->tipCase,  pr->partitionData[model]->EV, pr->partitionData[model]->rateCategory,
                                               x1_start, x2_start, x3_start, pr->partitionData[model]->tipVector,
                                               ex3, tipX1, tipX2,
                                               width, left, right, wgt, &scalerIncrement, fastScaling, x1_gap, x2_gap, x3_gap,
                                               x1_gapColumn, x2_gapColumn, x3_gapColumn, tr->maxCategories);
-//#else
-            	  else
+#else
                 newviewGTRCAT_SAVE(tInfo->tipCase,  pr->partitionData[model]->EV, pr->partitionData[model]->rateCategory,
                                    x1_start, x2_start, x3_start, pr->partitionData[model]->tipVector,
                                    ex3, tipX1, tipX2,
                                    width, left, right, wgt, &scalerIncrement, fastScaling, x1_gap, x2_gap, x3_gap,
                                    x1_gapColumn, x2_gapColumn, x3_gapColumn, tr->maxCategories);
-//#endif
-              } else
+#endif
+              else
 #ifdef __AVX
                 newviewGTRCAT_AVX(tInfo->tipCase,  pr->partitionData[model]->EV, pr->partitionData[model]->rateCategory,
                                   x1_start, x2_start, x3_start, pr->partitionData[model]->tipVector,

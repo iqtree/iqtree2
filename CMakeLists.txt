@@ -370,7 +370,7 @@ tinatree.cpp
 tools.cpp
 whtest_wrapper.cpp
 lpwrapper.c
-nnisearch.cpp
+pllnni.cpp
 phylosupertreeplen.cpp
 phylotesting.cpp
 ecopd.cpp

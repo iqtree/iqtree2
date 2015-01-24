@@ -1181,20 +1181,21 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		if (tree->isSuperTree())
 			((PhyloSuperTree*) tree)->mapTrees();
 		if (!params.fixed_branch_length) {
-			tree->curScore = tree->optimizeAllBranches(100, 0.001);
+			tree->setCurScore(tree->optimizeAllBranches(100, 0.001));
 		} else {
-			tree->curScore = tree->computeLikelihood();
+			tree->setCurScore(tree->computeLikelihood());
 		}
-		treeout << "[ tree " << tree_index+1 << " lh=" << tree->curScore << " ]";
+		treeout << "[ tree " << tree_index+1 << " lh=" << tree->getCurScore() << " ]";
 		tree->printTree(treeout);
 		treeout << endl;
 		if (params.print_tree_lh)
-			scoreout << tree->curScore << endl;
+			scoreout << tree->getCurScore() << endl;
 
-		cout << " / LogL: " << tree->curScore << endl;
+		cout << " / LogL: " << tree->getCurScore() << endl;
 
 		if (pattern_lh) {
-			tree->computePatternLikelihood(pattern_lh, &(tree->curScore));
+			double curScore = tree->getCurScore();
+			tree->computePatternLikelihood(pattern_lh, &curScore);
 			if (params.do_weighted_test)
 				memcpy(pattern_lhs + tid*nptn, pattern_lh, nptn*sizeof(double));
 		}
@@ -1202,14 +1203,14 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 			string tree_name = "Tree" + convertIntToString(tree_index+1);
 			printSiteLh(site_lh_file.c_str(), tree, pattern_lh, true, tree_name.c_str());
 		}
-		info[tid].logl = tree->curScore;
+		info[tid].logl = tree->getCurScore();
 
 		if (!params.topotest_replicates || ntrees <= 1) {
 			tid++;
 			continue;
 		}
 		// now compute RELL scores
-		orig_tree_lh[tid] = tree->curScore;
+		orig_tree_lh[tid] = tree->getCurScore();
 		double *tree_lhs_offset = tree_lhs + (tid*params.topotest_replicates);
 		for (boot = 0; boot < params.topotest_replicates; boot++) {
 			double lh = 0.0;

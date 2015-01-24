@@ -45,8 +45,4 @@ typedef struct
 
 } pllHardwareInfo;
 
-int pllGetHardwareInfo (pllHardwareInfo * hw);
-
-extern pllHardwareInfo hardwareInfo;
-
 #endif

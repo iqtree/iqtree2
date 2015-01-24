@@ -30,6 +30,7 @@
 #include "phylonode.h"
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
+#include "pllrepo/src/pll.h"
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -290,13 +291,14 @@ public:
 
 
     /**
-            set the alignment, important to compute parsimony or likelihood score
+            Set the alignment, important to compute parsimony or likelihood score
+            Assing taxa ids according to their position in the alignment
             @param alignment associated alignment
      */
     void setAlignment(Alignment *alignment);
 
     /** set the root by name */
-    void setRootNode(char *my_root);
+    void setRootNode(const char *my_root);
 
 
     /**
@@ -747,6 +749,7 @@ public:
     /**
             Read the tree saved with Taxon Names and branch lengths.
             @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
      */
     void readTreeString(const string &tree_string);
 
@@ -761,6 +764,21 @@ public:
      * @return
      */
     string getTreeString();
+
+    /**
+     * Assign branch lengths for branch that has no or negative length
+     * With single model branch lengths are assigned using parsimony. With partition model
+     * branch lengths are assigned randomly
+     * @param updatePLL if true read the new tree into PLL
+     * @return number of branches fixed
+     */
+    int fixAllBranches(bool force_change);
+
+    /**
+     * Read the newick string into PLL kernel
+     * @param newickTree
+     */
+    void pllReadNewick(string newickTree);
 
     /**
      *  Return the sorted topology without branch length, used to compare tree topology
@@ -1139,7 +1157,6 @@ public:
             @param dist_file distance matrix file
      */
     void computeBioNJ(Params &params, Alignment *alignment, string &dist_file);
-
     /**
             Neighbor-joining/parsimony tree might contain negative branch length. This
             function will fix this.
@@ -1307,11 +1324,6 @@ public:
     LikelihoodKernel sse;
 
     /**
-     * Current score of the tree;
-     */
-    double curScore;
-
-    /**
      * for UpperBounds: Initial tree log-likelihood
      */
     double mlInitial;
@@ -1385,8 +1397,52 @@ public:
     double approxOneBranch(PhyloNode *node, PhyloNode *dad, double b0);
 
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+	void setParams(Params* params);
+
+	double getCurScore() {
+		return curScore;
+	}
+
+	void setCurScore(double curScore) {
+		this->curScore = curScore;
+	}
+
+	/**
+	 * This will invalidate curScore variable, used whenever reading a tree!
+	 */
+	void resetCurScore() {
+		curScore = -DBL_MAX;
+        if (model)
+            initializeAllPartialLh();
+//		clearAllPartialLH();
+	}
 
 protected:
+
+    /**
+     *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
+     */
+    pllInstance *pllInst;
+
+    /**
+     *  Whether the partial likelihood vectors have been computed for PLL
+     */
+//    bool lhComputed;
+
+    /**
+     *	PLL data structure for alignment
+     */
+    pllAlignmentData *pllAlignment;
+
+    /**
+     *  PLL data structure for storing phylognetic analysis options
+     */
+    pllInstanceAttr pllAttr;
+
+    /**
+     *  PLL partition list
+     */
+    partitionList * pllPartitions;
 
     /**
      *  is the subtree distance matrix need to be computed or updated
@@ -1581,6 +1637,11 @@ protected:
     virtual void saveCurrentTree(double logl) {
     } // save current tree
 
+
+    /**
+     * Current score of the tree;
+     */
+    double curScore;
 
 };
 

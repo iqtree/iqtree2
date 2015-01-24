@@ -11,8 +11,6 @@
 #define PLL_FEAT_AVAIL(x,y) (((x) & (y)) == (y))
 #define PLL_SYS_CPU_DIR_PATH "/sys/devices/system/cpu/"
 
-pllHardwareInfo hardwareInfo;
-
 //#ifdef _MSC_VER
 //#define inline __inline
 //#endif

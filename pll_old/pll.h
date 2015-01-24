@@ -76,9 +76,7 @@ extern "C" {
 #include <xmmintrin.h>
 #include <pmmintrin.h>
 
-/*#define PLL_BYTE_ALIGNMENT 16*/
-/*BQM: set to 32 to allow switching between SSE/AVX kernels */
-#define PLL_BYTE_ALIGNMENT 32
+#define PLL_BYTE_ALIGNMENT 16
 
 #else
 #define PLL_BYTE_ALIGNMENT 1

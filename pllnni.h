@@ -15,17 +15,6 @@ extern "C" {
 #include "pllrepo/src/pllInternal.h"
 }
 
-/* This is the info you need to copy the vector*/
-typedef struct
-{
-  int node_number;
-  int num_partitions;
-  size_t *partition_sizes;
-  double **lh_values;
-  int **expVector;
-} LH_VECTOR;
-
-
 typedef struct {
 	nodeptr p;
 	int nniType;
@@ -40,6 +29,34 @@ typedef struct {
 	double negLoglDelta;
 } pllNNIMove;
 
+typedef struct {
+    // FOR GENERAL TREE SEARCH
+	bool speednni;
+	vector<pllNNIMove> posNNIList; // positive NNIs
+	unordered_set<string> aBranches; // Set of branches that are affected by the previous NNIs
+	double curLogl; // Current tree log-likelihood
+	int curIter; // Current iteration number
+	double curPerStrength; // Current perturbation strength
+
+	// FOR NNI SEARCH
+	NNI_Type nni_type;
+	int numAppliedNNIs; // total number of applied NNIs sofar
+	int curNumAppliedNNIs; // number of applied NNIs at the current step
+	int curNumNNISteps;
+	int maxNNISteps;
+	set<double> deltaLogl; // logl differences between nni1 and nni5
+} SearchInfo;
+
+
+/* This is the info you need to copy the vector*/
+typedef struct
+{
+  int node_number;
+  int num_partitions;
+  size_t *partition_sizes;
+  double **lh_values;
+  int **expVector;
+} LH_VECTOR;
 
 inline bool comparePLLNNIMove(const pllNNIMove &a, const pllNNIMove &b)
 {
@@ -64,23 +81,6 @@ typedef struct {
 	double delta_min;
 	int doNNICut;
 } NNICUT;
-
-typedef struct {
-    // FOR GENERAL TREE SEARCH
-	bool speednni;
-	vector<pllNNIMove> posNNIList; // positive NNIs
-	unordered_set<string> aBranches; // Set of branches that are affected by the previous NNIs
-	double curLogl; // Current tree log-likelihood
-	int curIter; // Current iteration number
-	double curPerStrength; // Current perturbation strength
-
-	// FOR NNI SEARCH
-	NNI_Type nni_type;
-	int numAppliedNNIs; // total number of applied NNIs sofar
-	int curNumAppliedNNIs; // number of applied NNIs at the current step
-	int curNumNNISteps;
-	set<double> deltaLogl; // logl differences between nni1 and nni5
-} SearchInfo;
 
 /**
  * get all the nodes affected by the NNI

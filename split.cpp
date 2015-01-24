@@ -336,6 +336,10 @@ void Split::getTaxaList(vector<int> &invec, vector<int> &outvec) {
 	}
 }
 
+bool Split::operator<(const Split &sp) const {
+	return countTaxa() < sp.countTaxa();
+}
+
 Split &Split::operator+=(Split &sp) {
 	assert(sp.ntaxa == ntaxa);
 	iterator it1, it2;

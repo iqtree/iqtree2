@@ -11,7 +11,7 @@
 #endif
 
 #include "phylotree.h"
-#include "nnisearch.h"
+#include "pllnni.h"
 #include "alignment.h"
 
 /* program options */
@@ -27,7 +27,7 @@ extern Alignment *globalAlignment;
 /**
  * map from newick tree string to frequencies that a tree is revisited during tree search
  */
-StringIntMap *pllTreeCounter = NULL;
+StringIntMap pllTreeCounter;
 
 
 /*
@@ -347,14 +347,14 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 				if (numNNI == 1) {
 					printf("ERROR: new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
 							tr->likelihood, selectedNNIs[0].likelihood);
-					exit(1);
+					assert(0);
 				} else {
 					cout << "Best logl: " << selectedNNIs.back().likelihood << " / " << "NNI step " << searchinfo.curNumNNISteps<< " / Applying " << numNNI << " NNIs give logl: " << tr->likelihood << " (worse than best)";
 					cout << " / Roll back tree ... " << endl;
 			        //restoreTL(rl, tr, 0, pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);
 				    if (!restoreTree(curTree, tr, pr)) {
 				        printf("ERROR: failed to roll back tree \n");
-				        exit(1);
+				        assert(0);
 				    }
 				    // If tree log-likelihood decreases only apply the best NNI
 					numNNI = 1;
@@ -642,12 +642,12 @@ void countDistinctTrees(pllInstance* pllInst, partitionList *pllPartitions) {
 	ostringstream ostr;
 	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	string tree_str = ostr.str();
-	if (pllTreeCounter->find(tree_str) == pllTreeCounter->end()) {
+	if (pllTreeCounter.find(tree_str) == pllTreeCounter.end()) {
 		// not found in hash_map
-	    (*pllTreeCounter)[tree_str] = 1;
+	    pllTreeCounter[tree_str] = 1;
 	} else {
 		// found in hash_map
-	    (*pllTreeCounter)[tree_str]++;
+	    pllTreeCounter[tree_str]++;
 	}
 }
 

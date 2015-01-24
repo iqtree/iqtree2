@@ -113,7 +113,7 @@ Node *PDTree::findNode(char *name, Node *node, Node *dad) {
 }
 */
 
-void PDTree::readRootNode(char *root_name) {
+void PDTree::readRootNode(const char *root_name) {
 	string name = root_name;
 	Node *node = findNodeName(name);
 	if (node == NULL)

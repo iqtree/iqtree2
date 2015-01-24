@@ -673,7 +673,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.maxCandidates = 100;
+    params.maxCandidates = 1000;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -765,9 +765,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.do_compression = false;
 
     params.new_heuristic = true;
-    params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.initPerStrength = 0.5;
+    params.initPS = 0.5;
 #ifdef USING_PLL
     params.pll = true;
 #else
@@ -783,8 +782,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    params.autostop = true; // turn on auto stopping rule by default now
     params.unsuccess_iteration = 100;
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
-    params.adaptPert = false;
-    params.numParsTrees = 100;
+    params.reduction = false;
+    params.numInitTrees = 100;
+    params.fix_stable_splits = false;
+    params.numSupportTrees = 20;
     params.sprDist = 20;
     params.numNNITrees = 20;
     params.avh_test = 0;
@@ -1559,7 +1560,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -pers <perturbation_strength>";
-				params.initPerStrength = convert_double(argv[cnt]);
+				params.initPS = convert_double(argv[cnt]);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-n") == 0) {
@@ -2229,7 +2230,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -numpars <number_of_parsimony_trees>";
-				params.numParsTrees = convert_int(argv[cnt]);
+				params.numInitTrees = convert_int(argv[cnt]);
+				if (params.numInitTrees < params.numNNITrees)
+					params.numNNITrees = params.numInitTrees;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-fss") == 0) {
+				params.fix_stable_splits = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-toppars") == 0) {
@@ -2237,6 +2244,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -toppars <number_of_top_parsimony_trees>";
 				params.numNNITrees = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nsp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nsp <number_of_support_trees>";
+				params.numSupportTrees = convert_int(argv[cnt]);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-poplim") == 0) {
@@ -2252,7 +2266,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -numcand <number_of_candidate_trees>";
 				params.popSize = convert_int(argv[cnt]);
-				assert(params.popSize < params.numParsTrees);
+				assert(params.popSize < params.numInitTrees);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-beststart") == 0) {
@@ -2278,10 +2292,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Model epsilon must not be larger than 0.1";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-pllmod") == 0) {
-				params.pll = true;
-				continue;
-			}
 			if (strcmp(argv[cnt], "-pars_ins") == 0) {
 				params.reinsert_par = true;
 				continue;
@@ -2290,8 +2300,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.speednni = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-adapt") == 0) {
-				params.adaptPert = true;
+			if (strcmp(argv[cnt], "-reduction") == 0) {
+				params.reduction = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-snni") == 0) {
@@ -2306,6 +2316,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-iqpnni") == 0) {
 				params.snni = false;
 				params.start_tree = STT_BIONJ;
+				params.reduction = false;
+				params.numNNITrees = 1;
 //            continue; } if (strcmp(argv[cnt], "-auto") == 0) {
 //            	params.autostop = true;
 				continue;
@@ -2397,10 +2409,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-pb") == 0) { // Enable parsimony branch length estimation
 				params.parbran = true;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-write_best_trees") == 0) {
-				params.write_best_trees = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-x") == 0) {

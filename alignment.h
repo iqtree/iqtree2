@@ -241,6 +241,12 @@ public:
     string &getSeqName(int i);
 
     /**
+     *  Get a list of all sequence names
+     *  @return vector containing the sequence names
+     */
+    vector<string>& getSeqNames();
+
+    /**
             @param seq_name sequence name
             @return corresponding ID, -1 if not found
      */

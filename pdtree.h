@@ -73,7 +73,7 @@ public:
 		Identify the root node if specified, include it into the initial set
 		@param root_name name of the root node
 	*/
-	void readRootNode(char *root_name);
+	void readRootNode(const char *root_name);
 
 	/**
 		read the initial set of taxa to be included into PD-tree

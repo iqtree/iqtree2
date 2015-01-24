@@ -68,7 +68,7 @@ public:
 	/**
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */
-	virtual void setParams(Params& params);
+	virtual void initSettings(Params& params);
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 

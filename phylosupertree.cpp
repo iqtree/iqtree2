@@ -235,8 +235,8 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 
 }
 
-void PhyloSuperTree::setParams(Params &params) {
-	IQTree::setParams(params);
+void PhyloSuperTree::initSettings(Params &params) {
+	IQTree::initSettings(params);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->params = &params;
 		(*it)->setLikelihoodKernel(params.SSE);
