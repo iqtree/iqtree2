@@ -53,7 +53,7 @@ public:
     /**
      * Initialization
      */
-	void init(Alignment* aln, Params& params);
+	void init(Alignment* aln, Params *params);
 
 	CandidateSet();
 

@@ -78,7 +78,7 @@ void IQTree::initSettings(Params &params) {
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
     setLikelihoodKernel(params.SSE);
-    candidateTrees.init(this->aln, params);
+    candidateTrees.init(this->aln, &params);
 //    if (params.maxtime != 1000000) {
 //        params.autostop = false;
 //    }

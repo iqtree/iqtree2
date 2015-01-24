@@ -8,9 +8,9 @@
 #include "phylotree.h"
 #include "candidateset.h"
 
-void CandidateSet::init(Alignment* aln, Params& params) {
+void CandidateSet::init(Alignment* aln, Params *params) {
     this->aln = aln;
-    this->params = &params;
+    this->params = params;
 }
 
 CandidateSet::~CandidateSet() {
