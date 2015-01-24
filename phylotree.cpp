@@ -4673,6 +4673,7 @@ void PhyloTree::removeIdenticalSeqs(Params &params) {
 				cout << removed_seqs[i] << " is identical to " << twin_seqs[i] << endl;
 			}
 		}
+		delete aln;
 		aln = new_aln;
 	}
 }

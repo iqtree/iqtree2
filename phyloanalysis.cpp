@@ -72,8 +72,8 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
 // 		out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl << endl;
 }
 
-void reportAlignment(ofstream &out, Alignment &alignment) {
-	out << "Input data: " << alignment.getNSeq() << " sequences with "
+void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
+	out << "Input data: " << alignment.getNSeq()+nremoved_seqs << " sequences with "
 			<< alignment.getNSite() << " "
 			<< ((alignment.seq_type == SEQ_BINARY) ?
 					"binary" :
@@ -407,7 +407,7 @@ void reportCredits(ofstream &out) {
  ***********************************************************/
 extern StringIntMap pllTreeCounter;
 void reportPhyloAnalysis(Params &params, string &original_model,
-		Alignment &alignment, IQTree &tree, vector<ModelInfo> &model_info) {
+		IQTree &tree, vector<ModelInfo> &model_info) {
 	if (params.count_trees) {
 		// addon: print #distinct trees
 		cout << endl << "NOTE: " << pllTreeCounter.size() << " distinct trees evaluated during whole tree search" << endl;
@@ -458,8 +458,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		out << "SEQUENCE ALIGNMENT" << endl << "------------------" << endl
 				<< endl;
 		if (tree.isSuperTree()) {
-			out << "Input data: " << alignment.getNSeq() << " taxa with "
-					<< alignment.getNSite() << " partitions and "
+			out << "Input data: " << tree.aln->getNSeq()+tree.removed_seqs.size() << " taxa with "
+					<< tree.aln->getNSite() << " partitions and "
 					<< tree.getAlnNSite() << " total sites ("
 					<< ((SuperAlignment*)tree.aln)->computeMissingData()*100 << "% missing data)" << endl << endl;
 
@@ -497,7 +497,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			}
 			out << endl;
 		} else
-			reportAlignment(out, alignment);
+			reportAlignment(out, *(tree.aln), tree.removed_seqs.size());
 
 		out.precision(4);
 		out << fixed;
@@ -632,14 +632,14 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			reportTree(out, params, tree, tree.candidateTrees.getBestScore(), tree.logl_variance);
 
 			if (tree.isSuperTree()) {
-				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
-				stree->mapTrees();
-				int empty_branches = stree->countEmptyBranches();
-				if (empty_branches) {
-					stringstream ss;
-					ss << empty_branches << " branches in the overall tree with no phylogenetic information due to missing data!";
-					outWarning(ss.str());
-				}
+//				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+//				stree->mapTrees();
+//				int empty_branches = stree->countEmptyBranches();
+//				if (empty_branches) {
+//					stringstream ss;
+//					ss << empty_branches << " branches in the overall tree with no phylogenetic information due to missing data!";
+//					outWarning(ss.str());
+//				}
 				/*
 				int part = 0;
 				for (PhyloSuperTree::iterator it = stree->begin();
@@ -1701,7 +1701,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			outError(ERR_WRITE_OUTPUT, boottrees_name);
 		}
 		if (params.num_bootstrap_samples == 1)
-			reportPhyloAnalysis(params, original_model, *bootstrap_alignment, *boot_tree, model_info);
+			reportPhyloAnalysis(params, original_model, *boot_tree, model_info);
 		// WHY was the following line missing, which caused memory leak?
 		delete boot_tree;
 		// fix bug: bootstrap_alignment might be changed
@@ -1728,7 +1728,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 				treefile_name.c_str(), false, treefile_name.c_str(),
 				params.out_prefix, ext_tree, NULL, &params);
 		tree->copyTree(&ext_tree);
-		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
+		reportPhyloAnalysis(params, original_model, *tree, model_info);
 	} else if (params.consensus_type == CT_CONSENSUS_TREE) {
 		int mi = params.min_iterations;
 		STOP_CONDITION sc = params.stop_condition;
@@ -1738,7 +1738,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		params.min_iterations = mi;
 		params.stop_condition = sc;
 		tree->stop_rule.initialize(params);
-		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
+		reportPhyloAnalysis(params, original_model, *tree, model_info);
 	} else
 		cout << endl;
 
@@ -1844,8 +1844,10 @@ void runPhyloAnalysis(Params &params) {
 		alignment->checkGappySeq();
 
 		// remove identical sequences
-        if (params.ignore_identical_seqs)
+        if (params.ignore_identical_seqs) {
             tree->removeIdenticalSeqs(params);
+        }
+        alignment = NULL; // from now on use tree->aln instead
 		// call main tree reconstruction
 		runTreeReconstruction(params, original_model, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
@@ -1902,18 +1904,21 @@ void runPhyloAnalysis(Params &params) {
 		}
 		// reinsert identical sequences
 		if (tree->removed_seqs.size() > 0) {
-			delete tree->aln;
-			tree->reinsertIdenticalSeqs(alignment);
+			// BUG HERE!
+//			delete tree->aln;
+//			tree->reinsertIdenticalSeqs(alignment);
+			// BUG FIX: dont use reinsertIdenticalSeqs anymore
+			tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
 			tree->printResultTree();
 		}
-		reportPhyloAnalysis(params, original_model, *alignment, *tree, model_info);
+		reportPhyloAnalysis(params, original_model, *tree, model_info);
 	} else {
 		// the classical non-parameter bootstrap (SBS)
 		runStandardBootstrap(params, original_model, alignment, tree);
 	}
 
 	delete tree;
-	// BUG: alignment can be changed, should delete tree->aln instead
+	// BUG FIX: alignment can be changed, should delete tree->aln instead
 	alignment = tree->aln;
 	delete alignment;
 }

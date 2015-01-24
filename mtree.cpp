@@ -80,7 +80,8 @@ void MTree::copyTree(MTree *tree) {
 }
 
 void MTree::copyTree(MTree *tree, string &taxa_set) {
-    if (tree->leafNum != taxa_set.length()) outError("#leaves and taxa_set do not match!");
+    if (tree->leafNum != taxa_set.length())
+    	outError("#leaves and taxa_set do not match!");
     leafNum = nodeNum = branchNum = 0;
     for (string::iterator it = taxa_set.begin(); it != taxa_set.end(); it++)
         nodeNum += (*it);
