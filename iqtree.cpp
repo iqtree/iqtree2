@@ -361,7 +361,7 @@ void IQTree::computeInitialTree(string &dist_file) {
         resetBranches(pllInst);
         pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back,
                 PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-        readTreeString(string(pllInst->tree_string));
+        PhyloTree::readTreeString(string(pllInst->tree_string));
         cout << getCPUTime() - start << " seconds" << endl;
 	    fixAllBranches(true);
         break;
@@ -392,7 +392,8 @@ void IQTree::computeInitialTree(string &dist_file) {
     }
     if (params->write_init_tree) {
         out_file += ".init_tree";
-        printTree(getTreeString().c_str(), WT_NEWLINE);
+        printTree(out_file.c_str(), WT_NEWLINE);
+//        printTree(getTreeString().c_str(), WT_NEWLINE);
     }
 }
 
@@ -416,6 +417,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 					pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
 					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 			curParsTree = string(pllInst->tree_string);
+			PhyloTree::readTreeString(curParsTree);
+			fixAllBranches(true);
+			curParsTree = getTreeString();
         } else {
             /********* Create parsimony tree using IQ-TREE *********/
             computeParsimonyTree(NULL, aln);
@@ -1524,7 +1528,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 		}
 		newTree = string(pllInst->tree_string);
 	} else {
-		string curTree = getTreeString();
+//		string curTree = getTreeString();
 //		if (!lhComputed) {
 //			initializeAllPartialLh();
 //			clearAllPartialLH();

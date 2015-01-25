@@ -75,6 +75,19 @@ public:
 	virtual bool isSuperTree() { return true; }
 
     /**
+     * Return the tree string contining taxon names and branch lengths
+     * @return
+     */
+    virtual string getTreeString();
+
+    /**
+            Read the tree saved with Taxon Names and branch lengths.
+            @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
+     */
+    virtual void readTreeString(const string &tree_string);
+
+    /**
             allocate a new node. Override this if you have an inherited Node class.
             @param node_id node ID
             @param node_name node name

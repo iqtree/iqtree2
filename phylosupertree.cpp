@@ -252,6 +252,38 @@ void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 		(*it)->changeLikelihoodKernel(lk);
 }
 
+string PhyloSuperTree::getTreeString() {
+	stringstream tree_stream;
+	printTree(tree_stream);
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->printTree(tree_stream);
+	return tree_stream.str();
+}
+
+void PhyloSuperTree::readTreeString(const string &tree_string) {
+	stringstream str;
+	str << tree_string;
+	str.seekg(0, ios::beg);
+	freeNode();
+	readTree(str, rooted);
+	setAlignment(aln);
+	setRootNode(params->root);
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->freeNode();
+		(*it)->readTree(str, rooted);
+//		(*it)->setAlignment((*it)->aln);
+	}
+	linkTrees();
+//	if (isSuperTree()) {
+//		((PhyloSuperTree*) this)->mapTrees();
+//	}
+	if (params->pll) {
+		assert(0);
+		pllReadNewick(getTreeString());
+	}
+	resetCurScore();
+
+}
 
 Node* PhyloSuperTree::newNode(int node_id, const char* node_name) {
     return (Node*) (new SuperNode(node_id, node_name));
@@ -421,6 +453,7 @@ void PhyloSuperTree::mapTrees() {
         if ((*it)->getModel()) {
 			(*it)->initializeAllPartialLh();
         }
+        (*it)->resetCurScore();
 		NodeVector my_taxa, part_taxa;
 		(*it)->getOrderedTaxa(my_taxa);
 		part_taxa.resize(leafNum, NULL);
@@ -436,6 +469,28 @@ void PhyloSuperTree::mapTrees() {
 	}
 
 	if (verbose_mode >= VB_DEBUG) printMapInfo();
+}
+
+void PhyloSuperTree::linkTrees() {
+	int part = 0;
+	iterator it;
+	for (it = begin(), part = 0; it != end(); it++, part++) {
+		(*it)->initializeTree();
+		(*it)->setAlignment((*it)->aln);
+        if ((*it)->getModel()) {
+			(*it)->initializeAllPartialLh();
+        }
+        (*it)->resetCurScore();
+		NodeVector my_taxa, part_taxa;
+		(*it)->getOrderedTaxa(my_taxa);
+		part_taxa.resize(leafNum, NULL);
+		int i;
+		for (i = 0; i < leafNum; i++) {
+			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
+			if (id >=0) part_taxa[i] = my_taxa[id];
+		}
+		linkTree(part, part_taxa);
+	}
 }
 
 void PhyloSuperTree::deleteAllPartialLh() {
@@ -820,24 +875,6 @@ void PhyloSuperTree::changeNNIBrans(NNIMove move) {
 
 	}
 
-}
-
-void PhyloSuperTree::linkTrees() {
-	int part = 0;
-	iterator it;
-	for (it = begin(), part = 0; it != end(); it++, part++) {
-
-		(*it)->initializeTree();
-		NodeVector my_taxa, part_taxa;
-		(*it)->getOrderedTaxa(my_taxa);
-		part_taxa.resize(leafNum, NULL);
-		int i;
-		for (i = 0; i < leafNum; i++) {
-			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
-			if (id >=0) part_taxa[i] = my_taxa[id];
-		}
-		linkTree(part, part_taxa);
-	}
 }
 
 void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {

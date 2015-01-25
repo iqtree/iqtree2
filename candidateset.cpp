@@ -70,7 +70,7 @@ vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
 	}
 	return res;
 }
-
+/*
 bool CandidateSet::replaceTree(string tree, double score) {
     CandidateTree candidate;
     candidate.tree = tree;
@@ -111,13 +111,14 @@ void CandidateSet::initParentTrees() {
         }
     }
 }
-
+*/
 bool CandidateSet::update(string tree, double score, bool localOpt) {
 	bool newTree = true;
 	CandidateTree candidate;
 	candidate.score = score;
 	candidate.topology = getTopology(tree);
 	candidate.localOpt = localOpt;
+//	cout << "Updating candidate tree " << tree << endl;
 	candidate.tree = tree;
 
 	if (treeTopologyExist(candidate.topology)) {

@@ -68,7 +68,7 @@ public:
      * been used for reproduction. If all candidate trees have been used, we select the
      * current best trees as the new parent trees
      */
-    string getNextCandTree();
+//    string getNextCandTree();
 
     /**
      *  Replace an existing tree in the candidate set
@@ -76,12 +76,12 @@ public:
      *  @param score the score of the new tree
      *  @return true if the topology of \a tree exist in the candidate set
      */
-    bool replaceTree(string tree, double score);
+//    bool replaceTree(string tree, double score);
 
     /**
      *  create the parent tree set containing top trees
      */
-    void initParentTrees();
+//    void initParentTrees();
 
     /**
      * update/insert \a tree into the candidate set if its score is higher than the worst tree
@@ -219,7 +219,7 @@ public:
      * @param topology
      * @return
      */
-    CandidateSet::iterator getCandidateTree(string topology);
+    iterator getCandidateTree(string topology);
 
     /**
      * Remove the \a CandidateTree with topology equal to \a topology
