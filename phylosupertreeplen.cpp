@@ -397,9 +397,23 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 }
 
 double PhyloSuperTreePlen::computeLikelihoodFromBuffer() {
-	// TODO
-	assert(0);
-	return 0.0;
+	double score = 0.0;
+	int part = 0;
+	for (iterator it = begin(); it != end(); it++, part++) {
+		PhyloNeighbor *nei1_part = ((SuperNeighbor*)current_it)->link_neighbors[part];
+		PhyloNeighbor *nei2_part = ((SuperNeighbor*)current_it_back)->link_neighbors[part];
+		if (nei1_part && nei2_part) {
+			(*it)->current_it = nei1_part;
+			(*it)->current_it_back = nei2_part;
+			score += (*it)->computeLikelihoodFromBuffer();
+		} else {
+			assert(part_info[part].cur_score != 0.0);
+			score += part_info[part].cur_score;
+		}
+	}
+	return score;
+
+
 }
 
 void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) {
