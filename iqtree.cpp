@@ -398,8 +398,8 @@ void IQTree::computeInitialTree(string &dist_file) {
 }
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
-    int nni_count = 0;
-    int nni_steps = 0;
+//    int nni_count = 0;
+//    int nni_steps = 0;
     //int numDup = 0;
     cout << "Generating " << nParTrees - 1 << " parsimony trees... ";
     cout.flush();
@@ -1039,7 +1039,7 @@ int IQTree::removeBranches(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& s
 	_nodes2 = nodes2;
 	nodes1.clear();
 	nodes2.clear();
-	for (it1 = _nodes1.begin(), it2 = _nodes2.begin(); it1 != _nodes1.end(), it2 != _nodes2.end(); it1++, it2++) {
+	for (it1 = _nodes1.begin(), it2 = _nodes2.begin(); it1 != _nodes1.end() && it2 != _nodes2.end(); it1++, it2++) {
 		Split* sp = getSplit(*it1, *it2);
 		if (!splits.containSplit(*sp)) {
 			nodes1.push_back(*it1);
@@ -1684,7 +1684,7 @@ double IQTree::doTreeSearch() {
     	/*----------------------------------------
     	 * Perturb the tree
     	 *---------------------------------------*/
-        double perturbScore;
+        double perturbScore = 0.0;
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // create bootstrap sample
             Alignment* bootstrap_alignment;
@@ -2365,7 +2365,7 @@ void IQTree::evalNNIs(NodeVector& nodes1, NodeVector& nodes2) {
 		assert(nodes1.size() == nodes2.size());
 		NodeVector::iterator it1;
 		NodeVector::iterator it2;
-		for (it1 = nodes1.begin(), it2 = nodes2.begin(); it1 != nodes1.end(), it2 != nodes2.end(); it1++, it2++) {
+		for (it1 = nodes1.begin(), it2 = nodes2.begin(); it1 != nodes1.end() && it2 != nodes2.end(); it1++, it2++) {
 			assert(isInnerBranch(*it1, *it2));
 			NNIMove myMove = getBestNNIForBran((PhyloNode*) *it1, (PhyloNode*) *it2, NULL);
         if (myMove.newloglh > curScore + params->loglh_epsilon) {
@@ -2662,7 +2662,7 @@ void IQTree::saveNNITrees(PhyloNode *node, PhyloNode *dad) {
 
 void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     int sum_weights = trees.sumTreeWeights();
-    int i, j;
+    int i;
     if (verbose_mode >= VB_MAX) {
         for (i = 0; i < trees.size(); i++)
             if (trees.tree_weights[i] > 0)

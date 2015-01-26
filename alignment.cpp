@@ -858,7 +858,7 @@ void Alignment::initCodon(char *sequence_type) {
 	assert(strlen(genetic_code) == 64);
 	cout << "Converting to codon sequences with genetic code " << transl_table << " ..." << endl;
 
-	int codon;
+//	int codon;
 	/*
 	num_states = 0;
 	for (codon = 0; codon < strlen(genetic_code); codon++)

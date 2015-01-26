@@ -842,7 +842,7 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 
 
     double my_df = 0.0, my_ddf = 0.0, prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
-    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+//    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i)

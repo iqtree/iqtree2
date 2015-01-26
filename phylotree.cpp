@@ -935,7 +935,7 @@ void PhyloTree::searchNNI() {
 
 void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
 //    cout << "Computing parsimony tree by random stepwise addition..." << endl;
-    double start_time = getCPUTime();
+//    double start_time = getCPUTime();
     aln = alignment;
     int size = aln->getNSeq();
     if (size < 3)
@@ -2848,7 +2848,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
 
 double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
 
-    double tree_lh = 0.0;
+//    double tree_lh = 0.0;
 
     FOR_NEIGHBOR_DECLARE(node, dad, it){
 
