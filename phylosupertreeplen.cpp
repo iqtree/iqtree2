@@ -309,8 +309,8 @@ void PhyloSuperTreePlen::mapTrees() {
 		// the only difference with PhyloSuperTree::mapTrees()
 		(*it)->scaleLength(part_info[part].part_rate);
 
-		if ((*it)->getModel())
-			(*it)->initializeAllPartialLh();
+//		if ((*it)->getModel())
+//			(*it)->initializeAllPartialLh();
 		NodeVector my_taxa, part_taxa;
 		(*it)->getOrderedTaxa(my_taxa);
 		part_taxa.resize(leafNum, NULL);
@@ -326,6 +326,8 @@ void PhyloSuperTreePlen::mapTrees() {
 		linkTree(part, part_taxa);
 	}
 	//if (verbose_mode >= VB_DEBUG) printMapInfo();
+	if (getModel())
+		initializeAllPartialLh();
 }
 
 double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
@@ -1637,5 +1639,25 @@ void PhyloSuperTreePlen::changeNNIBrans(NNIMove nnimove) {
 
 	PhyloTree::changeNNIBrans(nnimove);
 	//mapBranchLen();
+
+}
+
+
+/**
+        initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
+ */
+void PhyloSuperTreePlen::initializeAllPartialLh() {
+	if (!central_partial_lh) {
+
+	}
+}
+
+/**
+        initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
+        @param node the current node
+        @param dad dad of the node, used to direct the search
+        @param index the index
+ */
+void PhyloSuperTreePlen::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
 
 }

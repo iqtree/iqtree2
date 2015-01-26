@@ -152,6 +152,19 @@ public:
 	*/
 	virtual void mapTrees();
 
+    /**
+            initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
+     */
+    virtual void initializeAllPartialLh();
+
+    /**
+            initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
+            @param node the current node
+            @param dad dad of the node, used to direct the search
+            @param index the index
+     */
+    virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
 	/**
 	 * @return the type of NNI around node1-node2 for partition part
 	 */
