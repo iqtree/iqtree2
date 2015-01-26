@@ -56,6 +56,11 @@ public:
 	*/
 	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double epsilon = 0.001);
 
+	/**
+	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
+	 */
+	virtual bool isUnstableParameters();
+
 };
 
 #endif

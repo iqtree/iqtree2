@@ -61,11 +61,10 @@ public:
 		@param value x-value of the function
 		@param df (OUT) first derivative
 		@param ddf (OUT) second derivative
-		@return f(value) of function f you want to minimize
 	*/
-	virtual double computeFuncDerv(double value, double &df, double &ddf) {
+	virtual void computeFuncDerv(double value, double &df, double &ddf) {
 		df = 2.0*value; ddf = 2.0;
-		return value*value+1.0;
+//		return value*value+1.0;
 	}
 
 	/**
@@ -79,14 +78,14 @@ public:
 		@param var (OUT) variance estimate of x
 		@param maxNRStep max number of NR steps
 	*/
-	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f, int maxNRStep = 100);
+	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, int maxNRStep = 100);
 
-	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &f, double &d2l, int maxNRStep = 100);
+	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &d2l, int maxNRStep = 100);
 
 	double minimizeNewtonSafeMode(double xmin, double xguess, double xmax, double tolerance, double &f);
 
 
-	double rtsafe(double x1, double xguess, double x2, double xacc, double &f);
+//	double rtsafe(double x1, double xguess, double x2, double xacc, double &f);
 
 	/*****************************************************
 		Multi dimensional optimization with BFGS method

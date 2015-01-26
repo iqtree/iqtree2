@@ -211,6 +211,13 @@ public:
 	void getTaxaList(vector<int> &invec, vector<int> &outvec);
 
 	/**
+	 *  Test whether the current split is smaller than \a sp
+	 *  @param sp the other split to compare
+	 *  @return true if the current split contains less taxa than \a sp
+	 */
+    bool operator<(const Split &sp) const;
+
+	/**
 		compare two split, do not compare the weight
 		@param sp the target split
 		@return TRUE if equal, FALSE otherwise

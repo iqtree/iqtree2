@@ -302,10 +302,13 @@ double RateMeyerDiscrete::computeFunction(double value) {
 	return lh;
 }
 
-double RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
-	if (!is_categorized) return RateMeyerHaeseler::computeFuncDerv(value, df, ddf);
+void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
+	if (!is_categorized) {
+		RateMeyerHaeseler::computeFuncDerv(value, df, ddf);
+		return;
+	}
 
-	double lh = 0.0;
+//	double lh = 0.0;
 	int nseq = phylo_tree->leafNum;
 	int nstate = phylo_tree->getModel()->num_states;
 	int i, j, k, state1, state2;
@@ -335,7 +338,7 @@ double RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf)
 				double t2 = trans_derv2[k] / trans_mat[k];
 				trans_derv1[k] = t1;
 				trans_derv2[k] = (t2 - t1*t1);
-				lh -= log(trans_mat[k]) * pair_freq[k];
+//				lh -= log(trans_mat[k]) * pair_freq[k];
 				derv1 += trans_derv1[k] * pair_freq[k];
 				derv2 += trans_derv2[k] * pair_freq[k];
 			}
@@ -346,7 +349,7 @@ double RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf)
 	delete [] trans_derv2;
 	delete [] trans_derv1;
 	delete [] trans_mat;
-	return lh;
+//	return lh;
 
 /*	double lh = 0.0, derv1, derv2;
 	df = 0.0; ddf = 0.0;	

@@ -35,8 +35,8 @@ project(iqtree)
 add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
-set (iqtree_VERSION_MINOR 1)
-set (iqtree_VERSION_PATCH 5)
+set (iqtree_VERSION_MINOR 2)
+set (iqtree_VERSION_PATCH 0)
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -71,9 +71,9 @@ elseif (APPLE)
 elseif (UNIX) 
 	message("Target OS     : Unix")
 	# build as static binary to run on most machines
-  if (CMAKE_BUILD_TYPE STREQUAL "Release") 	
+#  if (CMAKE_BUILD_TYPE STREQUAL "Release") 	
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-  endif() 
+#  endif() 
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
 	message("Target OS     : Unknown and untested yet")
@@ -82,15 +82,6 @@ endif()
 ##################################################################
 # Setup compiler, currently supported GCC, CLANG, MSVC, and ICC
 ##################################################################
-
-if (MSVC) 
-	# MS Visual Studio environment
-	message("Exporting MS Visual Studio projects...")
-	add_definitions(/MP) # enable multi-processor compilation
-	if (CMAKE_BUILD_TYPE STREQUAL "Release")
-		add_definitions(/O2 /Ot /Oi)
-	endif()
-endif()
 
 set(GCC "FALSE")   #  GNU compiler
 set(CLANG "FALSE") # Clang compiler
@@ -122,6 +113,22 @@ else()
 endif()
 
 set(EXE_SUFFIX "")
+
+if (MSVC) 
+	# MS Visual Studio environment
+	message("Exporting MS Visual Studio projects...")
+	add_definitions(/MP) # enable multi-processor compilation
+	if (CMAKE_BUILD_TYPE STREQUAL "Release")
+		add_definitions(/Ot /Oi)
+		if (VCC)
+			add_definitions(/O2)
+		elseif (ICC)
+			add_definitions(/O3)
+		endif()
+	endif()
+endif()
+
+
 
 ##################################################################
 # Configure PLL build
@@ -163,11 +170,11 @@ if (IQTREE_FLAGS MATCHES "omp")
 	
 	if (VCC) 
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
-  		include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers 
+  		include_directories("${PROJECT_SOURCE_DIR}/pllrepo/src") # for PThreads headers 
 	elseif (ICC)
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qopenmp")
   		if (WIN32)
-  			include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
+  			include_directories("${PROJECT_SOURCE_DIR}/pllrepo/src") # for PThreads headers
   		endif() 
   	elseif (GCC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
@@ -182,6 +189,35 @@ endif()
 ##################################################################
 # configure SSE/AVX/FMA instructions
 ##################################################################
+
+SET(AVX_FLAGS "-D__AVX")
+if (VCC) 
+	set(AVX_FLAGS "${AVX_FLAGS} /arch:AVX")
+elseif (CLANG)
+	set(AVX_FLAGS "${AVX_FLAGS} -mavx")
+elseif (GCC)
+	set(AVX_FLAGS "${AVX_FLAGS} -mavx -fabi-version=0")
+elseif (ICC) 
+	if (WIN32)
+		 set(AVX_FLAGS "${AVX_FLAGS} /arch:AVX")
+	else()
+		 set(AVX_FLAGS "${AVX_FLAGS} -mavx")
+	endif()
+endif()
+
+SET(SSE_FLAGS "")
+if (VCC)
+	set(SSE_FLAGS "/arch:SSE2 -D__SSE3__")
+elseif (GCC OR CLANG)
+	set(SSE_FLAGS "-msse3")
+elseif (ICC)
+	if (WIN32)
+		set(SSE_FLAGS "/arch:SSE3")
+	else()
+		set(SSE_FLAGS "-msse3")
+	endif()
+endif()
+
 if (IQTREE_FLAGS MATCHES "fma") # AVX+FMA instruction set
  	message("Vectorization : AVX+FMA")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
@@ -199,45 +235,26 @@ if (IQTREE_FLAGS MATCHES "fma") # AVX+FMA instruction set
 			 set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
 		endif()
 	endif()
+
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-fma")
 
 elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
  	message("Vectorization : AVX")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
-	if (VCC) 
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX")
-	elseif (CLANG)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx")
-	elseif (GCC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -fabi-version=0")
-	elseif (ICC) 
-		if (WIN32)
-			 set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX")
-		else()
-			 set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx")
-		endif()
-	endif()
+	set(COMBINED_FLAGS "${COMBINED_FLAGS} ${AVX_FLAGS}")
+
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
 else() #SSE intruction set
 	message("Vectorization : SSE3")
 	add_definitions(-D__SSE3)
-	
-	if (VCC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE2 -D__SSE3__")
-	elseif (GCC OR CLANG)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3")
-	elseif (ICC)
-		if (WIN32)
-			set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:SSE3")
-		else()
-			set(COMBINED_FLAGS "${COMBINED_FLAGS} -msse3")
-		endif()
-	endif()
+
 endif()
+
 
 ##################################################################
 # Setup compiler flags
 ##################################################################
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMBINED_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMBINED_FLAGS}")
 
@@ -246,8 +263,13 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
 	message("CXX flags  : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}") 
 endif()
 
-set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg -g")
-set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg -g")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	message("C flags    : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG}") 
+	message("CXX flags  : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}") 
+endif()
+
+set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
+set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
 
 if (GCC) 
 	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
@@ -296,6 +318,9 @@ add_subdirectory(model)
 ##################################################################
 # the main executable
 ##################################################################
+
+add_library(avxkernel phylotreeavx.cpp)
+
 add_executable(iqtree
 alignment.cpp
 alignmentpairwise.cpp
@@ -314,6 +339,7 @@ mexttree.cpp
 mpdablock.cpp
 msetsblock.cpp
 msplitsblock.cpp
+modelsblock.cpp
 mtree.cpp
 mtreeset.cpp
 ncbitree.cpp
@@ -331,7 +357,7 @@ phylonode.cpp
 phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
-#phylotreeeigen.cpp
+#phylotreeavx.cpp
 pruning.cpp
 split.cpp
 splitgraph.cpp
@@ -344,7 +370,7 @@ tinatree.cpp
 tools.cpp
 whtest_wrapper.cpp
 lpwrapper.c
-nnisearch.cpp
+pllnni.cpp
 phylosupertreeplen.cpp
 phylotesting.cpp
 ecopd.cpp
@@ -354,6 +380,11 @@ candidateset.cpp
 checkpoint.cpp
 upperbounds.cpp
 )
+
+if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
+	set_target_properties(iqtree pll ncl whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+	set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
+endif()  
 
 ##################################################################
 # setup linking flags
@@ -372,16 +403,16 @@ if (IQTREE_FLAGS MATCHES "omp")
 	if (MSVC)
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${PROJECT_SOURCE_DIR}/lib")
 		if (BINARY32) 
-			set(THREAD_LIB pthreadVC2_x86)
+			set(THREAD_LIB "${THREAD_LIB} pthreadVC2_x86")
 		else()
-			set(THREAD_LIB pthreadVC2)
+			set(THREAD_LIB "${THREAD_LIB} pthreadVC2")
 		endif()
 	elseif(CLANG AND APPLE)
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib")
 	endif()
 endif()
 
-target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
+target_link_libraries(iqtree pll pllavx ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
 
 ##################################################################
 # setup the executable name 
@@ -457,9 +488,9 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 endif()
 
 set (PROJECT_NAME_SUFFIX "${EXE_SUFFIX}")
-if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")  
-	set (PROJECT_NAME_SUFFIX "${PROJECT_NAME_SUFFIX}-sse") 
-endif()
+#if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")  
+#	set (PROJECT_NAME_SUFFIX "${PROJECT_NAME_SUFFIX}-sse") 
+#endif()
 
 set(CPACK_PACKAGE_FILE_NAME 
 	"${CMAKE_PROJECT_NAME}${PROJECT_NAME_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${SYSTEM_NAME}")
@@ -468,4 +499,4 @@ set(CPACK_STRIP_FILES TRUE)
 
 include (CPack)
 
-add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)
+#add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)

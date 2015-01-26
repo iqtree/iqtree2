@@ -19,4 +19,5 @@ ratefree.cpp
 ratefreeinvar.cpp
 modelcodon.cpp
 modelmorphology.cpp
+modelmixture.cpp
 )

@@ -54,7 +54,17 @@ public:
 	 * @return TRUE if this is a site-specific model, FALSE otherwise
 	 */
 	virtual bool isSiteSpecificModel() { return false; }
-	
+
+	/**
+	 * @return TRUE if this is a mixture model, FALSE otherwise
+	 */
+	virtual bool isMixture() { return false; }
+
+	/**
+	 * @return the number of mixture model components
+	 */
+	virtual int getNMixtures() { return 1; }
+
 	/**
 		@return the number of rate entries, equal to the number of elements
 			in the upper-diagonal of the rate matrix (since model is reversible)
@@ -212,6 +222,11 @@ public:
 		@return the best likelihood 
 	*/
 	virtual double optimizeParameters(double epsilon) { return 0.0; }
+
+	/**
+	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
+	 */
+	virtual bool isUnstableParameters() { return false; }
 
 	/**
 		write information

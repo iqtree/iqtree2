@@ -23,6 +23,7 @@
 #include <string.h>
 #include <iostream>
 #include <stdlib.h>
+#include "tools.h"
 
 const double ZERO = 0.000001;
 using namespace std;
@@ -30,6 +31,7 @@ using namespace std;
 EigenDecomposition::EigenDecomposition()
 {
 	total_num_subst = 1.0;
+	normalize_matrix = true;
 }
 
 void EigenDecomposition::eigensystem(
@@ -201,6 +203,7 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		eval[i] = (forg[i] > ZERO) ? eval_new[inew--] : 0;
 		//eval[i] = (forg[i] > ZERO) ? eval_new[inew++] : 0;
 
+	assert(inew == -1);
 	// calculate the actual eigenvectors of Q and its inverse matrix
 	//for (i = 0, inew = 0; i < num_state; i++)
 	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
@@ -215,6 +218,8 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 				} else {
 					evec[i*num_state+j] = (i == j);
 					inv_evec[i*num_state+j] = (i == j);
+//					evec[i*num_state+j] = 0.0;
+//					inv_evec[i*num_state+j] = 0.0;
 				}
 // 			inew++;
  			inew--;
@@ -222,6 +227,8 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		for (j=0; j < num_state; j++) {
 			evec[i*num_state+j] = (i==j);
 			inv_evec[i*num_state+j] = (i==j);
+//			evec[i*num_state+j] = 0.0;
+//			inv_evec[i*num_state+j] = 0.0;
 		}
 
 
@@ -239,12 +246,13 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		}
 	}
 	if (error) {
+		cout.precision(5);
 		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation! (gap=" << fabs(zero) << ")" << endl;
-		cout << "Rate matrix R: " << endl;
-		for (i = 0; i < num_state; i++) {
-			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
-			cout << endl;
-		}
+//		cout << "Rate matrix R: " << endl;
+//		for (i = 0; i < num_state; i++) {
+//			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
+//			cout << endl;
+//		}
 		cout << "State frequencies: " << endl;
 		for (i = 0; i < num_state; i++) cout << state_freq[i] << " ";
 		cout << endl;
@@ -295,15 +303,20 @@ void EigenDecomposition::computeRateMatrix(double **a, double *stateFrqArr_, int
 		sum += temp*stateFrqArr_[i]; /* exp. rate */
 	}
 
-	delta = total_num_subst / sum; /* 0.01 subst. per unit time */
+	if (normalize_matrix) {
+		delta = total_num_subst / sum; /* 0.01 subst. per unit time */
 
-	for (i = 0; i < num_state; i++) {
-		for (j = 0; j < num_state; j++) {
-			if (i != j)
-				a[i][j] = delta * a[i][j];
-			else
-				a[i][j] = delta * (-m[i]);
+		for (i = 0; i < num_state; i++) {
+			for (j = 0; j < num_state; j++) {
+				if (i != j)
+					a[i][j] = delta * a[i][j];
+				else
+					a[i][j] = delta * (-m[i]);
+			}
 		}
+	} else {
+		for (i = 0; i < num_state; i++)
+			a[i][i] = -m[i];
 	}
 	delete [] m;
 } /* onepamratematrix */
@@ -327,6 +340,8 @@ void EigenDecomposition::eliminateZero(double **mat, double *forg, int num,
 				}
 			inew++;
 		}
+	if (verbose_mode >= VB_MED)
+		cout << "new_num_states = " << new_num << endl;
 	//writeMat(new_mat, new_num);
 	//writeDouble(new_forg, new_num);
 }

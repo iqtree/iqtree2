@@ -235,13 +235,53 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 
 }
 
-void PhyloSuperTree::setParams(Params &params) {
-	IQTree::setParams(params);
+void PhyloSuperTree::initSettings(Params &params) {
+	IQTree::initSettings(params);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->params = &params;
-		(*it)->sse = params.SSE;
+		(*it)->setLikelihoodKernel(params.SSE);
 		(*it)->optimize_by_newton = params.optimize_by_newton;
 	}
+
+}
+
+void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
+//	PhyloTree::changeLikelihoodKernel(lk);
+	sse = lk;
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->changeLikelihoodKernel(lk);
+}
+
+string PhyloSuperTree::getTreeString() {
+	stringstream tree_stream;
+	printTree(tree_stream);
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->printTree(tree_stream);
+	return tree_stream.str();
+}
+
+void PhyloSuperTree::readTreeString(const string &tree_string) {
+	stringstream str;
+	str << tree_string;
+	str.seekg(0, ios::beg);
+	freeNode();
+	readTree(str, rooted);
+	setAlignment(aln);
+	setRootNode(params->root);
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->freeNode();
+		(*it)->readTree(str, rooted);
+//		(*it)->setAlignment((*it)->aln);
+	}
+	linkTrees();
+//	if (isSuperTree()) {
+//		((PhyloSuperTree*) this)->mapTrees();
+//	}
+	if (params->pll) {
+		assert(0);
+		pllReadNewick(getTreeString());
+	}
+	resetCurScore();
 
 }
 
@@ -413,6 +453,7 @@ void PhyloSuperTree::mapTrees() {
         if ((*it)->getModel()) {
 			(*it)->initializeAllPartialLh();
         }
+        (*it)->resetCurScore();
 		NodeVector my_taxa, part_taxa;
 		(*it)->getOrderedTaxa(my_taxa);
 		part_taxa.resize(leafNum, NULL);
@@ -428,6 +469,28 @@ void PhyloSuperTree::mapTrees() {
 	}
 
 	if (verbose_mode >= VB_DEBUG) printMapInfo();
+}
+
+void PhyloSuperTree::linkTrees() {
+	int part = 0;
+	iterator it;
+	for (it = begin(), part = 0; it != end(); it++, part++) {
+		(*it)->initializeTree();
+		(*it)->setAlignment((*it)->aln);
+        if ((*it)->getModel()) {
+			(*it)->initializeAllPartialLh();
+        }
+        (*it)->resetCurScore();
+		NodeVector my_taxa, part_taxa;
+		(*it)->getOrderedTaxa(my_taxa);
+		part_taxa.resize(leafNum, NULL);
+		int i;
+		for (i = 0; i < leafNum; i++) {
+			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
+			if (id >=0) part_taxa[i] = my_taxa[id];
+		}
+		linkTree(part, part_taxa);
+	}
 }
 
 void PhyloSuperTree::deleteAllPartialLh() {
@@ -814,24 +877,6 @@ void PhyloSuperTree::changeNNIBrans(NNIMove move) {
 
 }
 
-void PhyloSuperTree::linkTrees() {
-	int part = 0;
-	iterator it;
-	for (it = begin(), part = 0; it != end(); it++, part++) {
-
-		(*it)->initializeTree();
-		NodeVector my_taxa, part_taxa;
-		(*it)->getOrderedTaxa(my_taxa);
-		part_taxa.resize(leafNum, NULL);
-		int i;
-		for (i = 0; i < leafNum; i++) {
-			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
-			if (id >=0) part_taxa[i] = my_taxa[id];
-		}
-		linkTree(part, part_taxa);
-	}
-}
-
 void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
 	int part = 0;
 	for (iterator it = begin(); it != end(); it++, part++) {
@@ -932,8 +977,8 @@ int PhyloSuperTree::countEmptyBranches(PhyloNode *node, PhyloNode *dad) {
 }
 
 /** remove identical sequences from the tree */
-void PhyloSuperTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs) {
-	IQTree::removeIdenticalSeqs(params, removed_seqs, twin_seqs);
+void PhyloSuperTree::removeIdenticalSeqs(Params &params) {
+	IQTree::removeIdenticalSeqs(params);
 	if (removed_seqs.empty()) return;
 	// now synchronize aln
 	int part = 0;
@@ -952,9 +997,9 @@ void PhyloSuperTree::removeIdenticalSeqs(Params &params, StrVector &removed_seqs
 }
 
 /** reinsert identical sequences into the tree and reset original alignment */
-void PhyloSuperTree::reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs) {
+void PhyloSuperTree::reinsertIdenticalSeqs(Alignment *orig_aln) {
 	if (removed_seqs.empty()) return;
-	IQTree::reinsertIdenticalSeqs(orig_aln, removed_seqs, twin_seqs);
+	IQTree::reinsertIdenticalSeqs(orig_aln);
 
 	// now synchronize aln
 	int part = 0;

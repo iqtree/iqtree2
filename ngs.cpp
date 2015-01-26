@@ -208,9 +208,9 @@ double NGSAlignment::computeFunctionCat(int cat, double value) {
 }
 
 
-double NGSAlignment::computeFuncDervCat(int cat, double value, double &df, double &ddf) {
+void NGSAlignment::computeFuncDervCat(int cat, double value, double &df, double &ddf) {
     int trans_size = num_states*num_states;
-    double lh = 0.0;
+//    double lh = 0.0;
     df = 0.0;
     ddf = 0.0;
     int i;
@@ -227,7 +227,7 @@ double NGSAlignment::computeFuncDervCat(int cat, double value, double &df, doubl
             double d1 = trans_derv1[i] / trans_mat[i];
             derv1 += pair_pos[i] * d1;
             derv2 += pair_pos[i] * (trans_derv2[i]/trans_mat[i] - d1 * d1);
-            lh -= pair_pos[i] * log(trans_mat[i]);
+//            lh -= pair_pos[i] * log(trans_mat[i]);
         }
     //df -= derv1 * rate_val;
     //ddf -= derv2 * rate_val * rate_val;
@@ -236,7 +236,8 @@ double NGSAlignment::computeFuncDervCat(int cat, double value, double &df, doubl
 	delete [] trans_derv2;
 	delete [] trans_derv1;
 	delete [] trans_mat;
-    return lh;
+//    return lh;
+    return;
 }
 
 /****************************************************************************
@@ -276,8 +277,8 @@ double NGSRate::optimizeParameters(double epsilon) {
 double NGSRate::computeFunction(double value) {
     return ((NGSAlignment*)phylo_tree->aln)->computeFunctionCat(optimizing_cat, value);
 }
-double NGSRate::computeFuncDerv(double value, double &df, double &ddf) {
-    return ((NGSAlignment*)phylo_tree->aln)->computeFuncDervCat(optimizing_cat, value, df, ddf);
+void NGSRate::computeFuncDerv(double value, double &df, double &ddf) {
+    ((NGSAlignment*)phylo_tree->aln)->computeFuncDervCat(optimizing_cat, value, df, ddf);
 }
 
 void NGSRate::writeInfo(ostream &out) {
@@ -408,7 +409,7 @@ NGSTree::NGSTree(Params &params, NGSAlignment *alignment) {
     model_factory = NULL;
     optimize_by_newton = params.optimize_by_newton;
     //tree.sse = params.SSE;
-    sse = LK_NORMAL;
+    setLikelihoodKernel(LK_NORMAL);
 }
 
 double NGSTree::computeLikelihood(double *pattern_lh) {
@@ -513,11 +514,11 @@ double NGSRead::computeFunction(double value) {
     return lh;
 }
 
-double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
+void NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
     RateHeterogeneity *site_rate = tree->getRate();
     int i, rate_id;
     int nptn = scaff.length();
-    double lh = 0.0;
+//    double lh = 0.0;
     df = 0.0;
     ddf = 0.0;
 
@@ -528,7 +529,7 @@ double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
         double *trans_derv2 = new double[trans_size];
         tree->getModelFactory()->computeTransDerv(value * homo_rate, trans_mat, trans_derv1, trans_derv2);
         for (i = 0; i < trans_size; i++) if (pair_freq[i] > 1e-6) {
-                lh -= pair_freq[i] * log(trans_mat[i]);
+//                lh -= pair_freq[i] * log(trans_mat[i]);
                 double d1 = trans_derv1[i] / trans_mat[i];
                 df -=  pair_freq[i] * d1;
                 ddf -= pair_freq[i] * (trans_derv2[i]/trans_mat[i] - d1*d1);
@@ -538,7 +539,8 @@ double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
         delete [] trans_derv2;
         delete [] trans_derv1;
         delete [] trans_mat;
-        return lh;
+//        return lh;
+        return;
     }
 
     for (i = 0, rate_id = 0; i < nptn; i++) {
@@ -549,14 +551,14 @@ double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
         double rate_val = site_rate->getRate(rate_id);
         double rate_sqr = rate_val * rate_val;
         trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
-        lh -= log(trans);
+//        lh -= log(trans);
         double d1 = derv1 / trans;
         df -= rate_val * d1;
         ddf -= rate_sqr * (derv2/trans - d1*d1);
         rate_id++;
     }
 
-    return lh;
+//    return lh;
 }
 
 /****************************************************************************

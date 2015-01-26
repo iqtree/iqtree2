@@ -75,7 +75,7 @@ int PDTreeSet::getNTaxa() {
 	return front()->leafNum;
 }
 
-void PDTreeSet::readRootNode(char *root_name) {
+void PDTreeSet::readRootNode(const char *root_name) {
 	string name = root_name;
 	init_taxa.push_back(name);
 	for (iterator it = begin(); it != end(); it++)

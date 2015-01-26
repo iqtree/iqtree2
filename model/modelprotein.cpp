@@ -3155,10 +3155,17 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 		for (i = 0, k = 0; i < num_states-1; i++)
 			for (j = i+1; j < num_states; j++)
 				rates[k++] = daa[i*20+j];
-
+	} else if (!model_params.empty()) {
+		stringstream ss(model_params);
+		readRates(ss);
+		readStateFreq(ss);
 	} else {
 		// if name does not match, read the user-defined model
 		readParameters(model_name);
+	}
+	if (freq_params != "") {
+		stringstream ss(freq_params);
+		readStateFreq(ss);
 	}
 /*	if (name == "WAG") { model_str = model_WAG;}
 	else if (name == "cpREV") model_str = model_cpREV;
@@ -3211,7 +3218,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 	ModelGTR::init(freq);
 }
 
-void ModelProtein::readRates(istream &in) throw(const char*) {
+void ModelProtein::readRates(istream &in) throw(const char*, string) {
 	int nrates = getNumRateEntries();
 	int row = 1, col = 0;
 	// since states for protein is stored in lower-triangle, special treatment is needed
@@ -3226,7 +3233,7 @@ void ModelProtein::readRates(istream &in) throw(const char*) {
 		}
 		assert(id < nrates && id >= 0); // make sure that the conversion is correct
 		if (!(in >> rates[id]))
-			throw "Rate entries could not be read";
+			throw name+string(": Rate entries could not be read");
 		if (rates[id] < 0.0)
 			throw "Negative rates found";
 	}

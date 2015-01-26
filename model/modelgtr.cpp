@@ -39,17 +39,17 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
 
 	freq_type = FREQ_UNKNOWN;
 	
-	eigenvalues = new double[num_states];
+	eigenvalues = aligned_alloc<double>(num_states);
 
-	eigenvectors = new double[num_states*num_states];
+	eigenvectors = aligned_alloc<double>(num_states*num_states);
 //	for (i = 0; i < num_states; i++)
 //		eigenvectors[i] = new double[num_states];
 
-	inv_eigenvectors = new double[num_states*num_states];
+	inv_eigenvectors = aligned_alloc<double>(num_states*num_states);
 //	for (i = 0; i < num_states; i++)
 //		inv_eigenvectors[i] = new double[num_states];
 		
-	eigen_coeff = new double[ncoeff];
+	eigen_coeff = aligned_alloc<double>(ncoeff);
 
 	if (count_rates) 
 		phylo_tree->aln->computeEmpiricalRate(rates);
@@ -85,12 +85,26 @@ void ModelGTR::init(StateFreqType type) {
 	assert(freq_type != FREQ_UNKNOWN);
 	switch (freq_type) {
 	case FREQ_EQUAL:
-		for (i = 0; i < num_states; i++)
-			state_freq[i] = 1.0/num_states;
+		if (phylo_tree->aln->seq_type == SEQ_CODON) {
+			int nscodon = phylo_tree->aln->getNumNonstopCodons();
+			for (i = 0; i < num_states; i++)
+				if (phylo_tree->aln->isStopCodon(i))
+					state_freq[i] = 0.0;
+				else
+					state_freq[i] = 1.0/nscodon;
+		} else {
+			for (i = 0; i < num_states; i++)
+				state_freq[i] = 1.0/num_states;
+		}
 		break;	
 	case FREQ_ESTIMATE:
 	case FREQ_EMPIRICAL:
-		phylo_tree->aln->computeStateFreq(state_freq);
+		if (phylo_tree->aln->seq_type == SEQ_CODON) {
+			double ntfreq[12];
+			phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
+//			phylo_tree->aln->computeCodonFreq(state_freq);
+		} else
+			phylo_tree->aln->computeStateFreq(state_freq);
 		break;
 	case FREQ_USER_DEFINED:
 		if (state_freq[0] == 0.0) outError("State frequencies not specified");
@@ -98,27 +112,49 @@ void ModelGTR::init(StateFreqType type) {
 	default: break;
 	}
 	decomposeRateMatrix();
+	if (verbose_mode >= VB_MAX)
+		writeInfo(cout);
+
 }
 
 void ModelGTR::writeInfo(ostream &out) {
-	if (num_states != 4) return;
-	out << "Rate parameters:";
-	//out.precision(3);
-	//out << fixed;
-	out << "  A-C: " << rates[0];
-	out << "  A-G: " << rates[1];
-	out << "  A-T: " << rates[2];
-	out << "  C-G: " << rates[3];
-	out << "  C-T: " << rates[4];
-	out << "  G-T: " << rates[5];
-	out << endl;
-	//if (freq_type != FREQ_ESTIMATE) return;
-	out << "Base frequencies: ";
-	out << "  A: " << state_freq[0];
-	out << "  C: " << state_freq[1];
-	out << "  G: " << state_freq[2];
-	out << "  T: " << state_freq[3];
-	out << endl;
+	if (num_states == 4) {
+		out << "Rate parameters:";
+		//out.precision(3);
+		//out << fixed;
+		out << "  A-C: " << rates[0];
+		out << "  A-G: " << rates[1];
+		out << "  A-T: " << rates[2];
+		out << "  C-G: " << rates[3];
+		out << "  C-T: " << rates[4];
+		out << "  G-T: " << rates[5];
+		out << endl;
+		//if (freq_type != FREQ_ESTIMATE) return;
+		out << "Base frequencies: ";
+		out << "  A: " << state_freq[0];
+		out << "  C: " << state_freq[1];
+		out << "  G: " << state_freq[2];
+		out << "  T: " << state_freq[3];
+		out << endl;
+	}
+	if (verbose_mode >= VB_MAX) {
+		int i, j;
+		out.precision(6);
+		out << "eigenvalues: " << endl;
+		for (i = 0; i < num_states; i++) out << " " << eigenvalues[i];
+		out << endl << "eigenvectors: " << endl;
+		for (i = 0; i < num_states; i++)  {
+			for (j = 0; j < num_states; j++)
+				out << " " << eigenvectors[i*num_states+j];
+			out << endl;
+		}
+		out << endl << "inv_eigenvectors: " << endl;
+		for (i = 0; i < num_states; i++)  {
+			for (j = 0; j < num_states; j++)
+				out << " " << inv_eigenvectors[i*num_states+j];
+			out << endl;
+		}
+	}
 	//out.unsetf(ios::fixed);
 }
 
@@ -367,6 +403,33 @@ double ModelGTR::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
+bool ModelGTR::isUnstableParameters() {
+	int nrates = getNumRateEntries();
+	int i;
+	for (i = 0; i < nrates; i++)
+		if (rates[i] < MIN_RATE+TOL_RATE || rates[i] > MAX_RATE-TOL_RATE)
+			return true;
+	for (i = 0; i < num_states; i++)
+		if (state_freq[i] < MIN_RATE+TOL_RATE)
+			return true;
+	return false;
+}
+
+void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+	int i, ndim = getNDim();
+
+	for (i = 1; i <= ndim; i++) {
+		//cout << variables[i] << endl;
+		lower_bound[i] = MIN_RATE;
+		upper_bound[i] = MAX_RATE;
+		bound_check[i] = false;
+	}
+
+	if (freq_type == FREQ_ESTIMATE) {
+		for (i = ndim-num_states+2; i <= ndim; i++)
+			upper_bound[i] = 1.0;
+	}
+}
 
 double ModelGTR::optimizeParameters(double epsilon) {
 	int ndim = getNDim();
@@ -383,22 +446,11 @@ double ModelGTR::optimizeParameters(double epsilon) {
 	double *upper_bound = new double[ndim+1];
 	double *lower_bound = new double[ndim+1];
 	bool *bound_check = new bool[ndim+1];
-	int i;
 	double score;
 
 	// by BFGS algorithm
 	setVariables(variables);
-	for (i = 1; i <= ndim; i++) {
-		//cout << variables[i] << endl;
-		lower_bound[i] = MIN_RATE;
-		upper_bound[i] = MAX_RATE;
-		bound_check[i] = false;
-	}
-
-	if (freq_type == FREQ_ESTIMATE) {
-		for (i = ndim-num_states+2; i <= ndim; i++) 
-			upper_bound[i] = 1.0;
-	}
+	setBounds(lower_bound, upper_bound, bound_check);
 	//packData(variables, lower_bound, upper_bound, bound_check);
 	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_RATE));
 
@@ -418,23 +470,73 @@ double ModelGTR::optimizeParameters(double epsilon) {
 
 
 void ModelGTR::decomposeRateMatrix(){
-	double **rate_matrix = (double**) new double[num_states];
 	int i, j, k = 0;
 
-	for (i = 0; i < num_states; i++)
-		rate_matrix[i] = new double[num_states];
+	if (num_params == -1) {
+		// manual compute eigenvalues/vectors for F81-style model
+		eigenvalues[0] = 0.0;
+		double mu = 0.0;
+		for (i = 0; i < num_states; i++)
+			mu += state_freq[i]*state_freq[i];
+		mu = total_num_subst/(1.0 - mu);
 
-	for (i = 0, k = 0; i < num_states; i++) {
-		rate_matrix[i][i] = 0.0;
-		for (j = i+1; j < num_states; j++, k++) {
-			rate_matrix[i][j] = rates[k];
-			rate_matrix[j][i] = rates[k];
+		// compute eigenvalues
+		for (i = 1; i < num_states; i++)
+			eigenvalues[i] = -mu;
+
+		double *f = new double[num_states];
+		for (i = 0; i < num_states; i++) f[i] = sqrt(state_freq[i]);
+		// compute eigenvectors
+		memset(eigenvectors, 0, num_states*num_states*sizeof(double));
+		memset(inv_eigenvectors, 0, num_states*num_states*sizeof(double));
+		eigenvectors[0] = 1.0;
+		for (i = 1; i < num_states; i++)
+			eigenvectors[i] = -1.0;
+//			eigenvectors[i] = f[i]/f[num_states-1];
+		for (i = 1; i < num_states; i++) {
+			eigenvectors[i*num_states] = 1.0;
+			eigenvectors[i*num_states+i] = state_freq[0]/state_freq[i];
 		}
-	}
-	/* eigensystem of 1 PAM rate matrix */
-	eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
-	//eigensystem(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);  
 
+		for (i = 0; i < num_states; i++)
+			for (j = 0; j < num_states; j++)
+				inv_eigenvectors[i*num_states+j] = state_freq[j]*eigenvectors[j*num_states+i];
+		writeInfo(cout);
+		// sanity check
+		double *q = new double[num_states*num_states];
+		getQMatrix(q);
+		double zero;
+		for (j = 0; j < num_states; j++) {
+			for (i = 0, zero = 0.0; i < num_states; i++) {
+				for (k = 0; k < num_states; k++) zero += q[i*num_states+k] * eigenvectors[k*num_states+j];
+				zero -= eigenvalues[j] * eigenvectors[i*num_states+j];
+				if (fabs(zero) > 1.0e-5) {
+					cout << "\nERROR: Eigenvector doesn't satisfy eigenvalue equation! (gap=" << fabs(zero) << ")" << endl;
+					abort();
+				}
+			}
+		}
+		delete [] q;
+	} else {
+		double **rate_matrix = (double**) new double[num_states];
+
+		for (i = 0; i < num_states; i++)
+			rate_matrix[i] = new double[num_states];
+
+		for (i = 0, k = 0; i < num_states; i++) {
+			rate_matrix[i][i] = 0.0;
+			for (j = i+1; j < num_states; j++, k++) {
+				rate_matrix[i][j] = rates[k];
+				rate_matrix[j][i] = rates[k];
+			}
+		}
+		/* eigensystem of 1 PAM rate matrix */
+		eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
+		//eigensystem(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
+		for (i = num_states-1; i >= 0; i--)
+			delete [] rate_matrix[i];
+		delete [] rate_matrix;
+	}
 	for (i = 0; i < num_states; i++)
 		for (j = 0; j < num_states; j++) {
 			int offset = (i*num_states+j)*num_states;
@@ -445,24 +547,39 @@ void ModelGTR::decomposeRateMatrix(){
 				//eigen_coeff_derv1[offset+k] = eigen_coeff[offset+k] * eigenvalues[k];
 				//eigen_coeff_derv2[offset+k] = eigen_coeff_derv1[offset+k] * eigenvalues[k];
 			}
-			if (i == j)
-				assert(fabs(sum-1.0) < 1e-6);
+			if (i == j) {
+				if (fabs(sum-1.0) > 1e-6) {
+					cout << "sum = " << sum << endl;
+					assert(0);
+				}
+			}
 			else assert(fabs(sum) < 1e-6);
 		}
 
 
-	for (i = num_states-1; i >= 0; i--)
-		delete [] rate_matrix[i];
-	delete [] rate_matrix;
 } 
 
-void ModelGTR::readRates(istream &in) throw(const char*) {
+void ModelGTR::readRates(istream &in) throw(const char*, string) {
 	int nrates = getNumRateEntries();
-	for (int i = 0; i < nrates; i++) {
-		if (!(in >> rates[i]))
-			throw "Rate entries could not be read";
-		if (rates[i] < 0.0)
-			throw "Negative rates found";
+	string str;
+	in >> str;
+	if (str == "equalrate") {
+		for (int i = 0; i < nrates; i++)
+			rates[i] = 1.0;
+	} else {
+		try {
+			rates[0] = convert_double(str.c_str());
+		} catch (string &str) {
+			outError(str);
+		}
+		if (rates[0] < 0.0)
+			throw "Negative rates not allowed";
+		for (int i = 1; i < nrates; i++) {
+			if (!(in >> rates[i]))
+				throw "Rate entries could not be read";
+			if (rates[i] < 0.0)
+				throw "Negative rates not allowed";
+		}
 	}
 }
 
@@ -470,11 +587,14 @@ void ModelGTR::readRates(string str) throw(const char*) {
 	int nrates = getNumRateEntries();
 	int end_pos = 0;
 	cout << __func__ << " " << str << endl;
-	for (int i = 0; i < nrates; i++) {
+	if (str.find("equalrate") != string::npos) {
+		for (int i = 0; i < nrates; i++)
+			rates[i] = 1.0;
+	} else for (int i = 0; i < nrates; i++) {
 		int new_end_pos;
 		try {
 			rates[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
-		} catch (string str) {
+		} catch (string &str) {
 			outError(str);
 		}
 		end_pos += new_end_pos;
@@ -530,10 +650,13 @@ void ModelGTR::readStateFreq(string str) throw(const char*) {
 
 void ModelGTR::readParameters(const char *file_name) { 
 	try {
-		cout << "Reading model parameters from file " << file_name << endl;
 		ifstream in(file_name);
+		if (in.fail())
+			outError("Unknown model ", file_name);
+		cout << "Reading model parameters from file " << file_name << endl;
 		readRates(in);
 		readStateFreq(in);
+		in.close();
 	}
 	catch (const char *str) {
 		outError(str);
@@ -552,16 +675,16 @@ void ModelGTR::freeMem()
 //	int i;
 	//delete eigen_coeff_derv2;
 	//delete eigen_coeff_derv1;
-	delete [] eigen_coeff;
+	aligned_free(eigen_coeff);
 
 //	for (i = num_states-1; i>=0; i--)
 //		delete [] inv_eigenvectors[i];
-	delete [] inv_eigenvectors;
+	aligned_free(inv_eigenvectors);
 //	for (i = num_states-1; i>=0; i--)
 //		delete [] eigenvectors[i];
-	delete [] eigenvectors;
+	aligned_free(eigenvectors);
 
-	delete [] eigenvalues;
+	aligned_free(eigenvalues);
 
 	if (rates) delete [] rates;
 }

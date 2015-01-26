@@ -60,17 +60,32 @@ public:
     void printPartition(const char *filename);
 
 	/** remove identical sequences from the tree */
-    virtual void removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs);
+    virtual void removeIdenticalSeqs(Params &params);
 
     /** reinsert identical sequences into the tree and reset original alignment */
-    virtual void reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs);
+    virtual void reinsertIdenticalSeqs(Alignment *orig_aln);
 
 	/**
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */
-	virtual void setParams(Params& params);
+	virtual void initSettings(Params& params);
+
+    virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
 	virtual bool isSuperTree() { return true; }
+
+    /**
+     * Return the tree string contining taxon names and branch lengths
+     * @return
+     */
+    virtual string getTreeString();
+
+    /**
+            Read the tree saved with Taxon Names and branch lengths.
+            @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
+     */
+    virtual void readTreeString(const string &tree_string);
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -172,15 +187,6 @@ public:
             @return the likelihood of the tree
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
-
-    /**
-            optimize one branch length by ML by optimizing all mapped branches of subtrees
-            @param node1 1st end node of the branch
-            @param node2 2nd end node of the branch
-            @param clearLH true to clear the partial likelihood, otherwise false
-            @return likelihood score
-     */
-    //virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
 
     /**
             search the best swap for a branch

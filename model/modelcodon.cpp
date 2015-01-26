@@ -379,6 +379,13 @@ void ModelCodon::setRateGroupConstraint(string constraint) {
 		for (pos = 0; pos < rate_group.size(); pos++)
 			if (rate_constraints[rate_group[pos]].init_value != -1)
 				rates[pos] = rate_constraints[rate_group[pos]].init_value * extra_rates[pos];
+		pos = 0;
+		// NEW: set ZERO rate going in/out stop-codon
+		for (int i = 0; i < num_states; i++)
+			for (int j = 0; j < num_states; j++, pos++)
+			if (phylo_tree->aln->isStopCodon(i) || phylo_tree->aln->isStopCodon(j))
+				rates[pos] = 0.0;
+
 		IntVector free_param; // index of param to free param
 		free_param.resize(rate_constraints.size(), -1);
 		for (pos = 0; pos < rate_constraints.size(); pos++) {
@@ -477,46 +484,53 @@ void ModelCodon::setVariables(double *variables) {
 }
 
 bool ModelCodon::isMultipleSubst(int state1, int state2) {
-	char *codon_table = phylo_tree->aln->codon_table;
-	int codon1 = codon_table[state1];
-	int codon2 = codon_table[state2];
-	int num_subst = (codon1/16 != codon2/16) + ((codon1%16)/4 != (codon2%16)/4) + (codon1%4 != codon2 % 4);
+//	char *codon_table = phylo_tree->aln->codon_table;
+//	int codon1 = codon_table[state1];
+//	int codon2 = codon_table[state2];
+//	int num_subst = (codon1/16 != codon2/16) + ((codon1%16)/4 != (codon2%16)/4) + (codon1%4 != codon2 % 4);
+	int num_subst = (state1/16 != state2/16) + ((state1%16)/4 != (state2%16)/4) + (state1%4 != state2 % 4);
 	return (num_subst != 1);
 }
 
 int ModelCodon::targetNucleotide(int state1, int state2) {
-	char *codon_table = phylo_tree->aln->codon_table;
-	int codon1 = codon_table[state1];
-	int codon2 = codon_table[state2];
-	int num_subst = (codon1/16 != codon2/16) + ((codon1%16)/4 != (codon2%16)/4) + (codon1%4 != codon2 % 4);
+//	char *codon_table = phylo_tree->aln->codon_table;
+//	int codon1 = codon_table[state1];
+//	int codon2 = codon_table[state2];
+//	int num_subst = (codon1/16 != codon2/16) + ((codon1%16)/4 != (codon2%16)/4) + (codon1%4 != codon2 % 4);
+	int num_subst = (state1/16 != state2/16) + ((state1%16)/4 != (state2%16)/4) + (state1%4 != state2 % 4);
 	if (num_subst != 1) return -1;
-	if (codon1/16 != codon2/16) return codon2/16;
-	if (codon1%4 != codon2 % 4) return codon2%4 + 8;
-	return (codon2%16)/4 + 4;
+//	if (codon1/16 != codon2/16) return codon2/16;
+//	if (codon1%4 != codon2 % 4) return codon2%4 + 8;
+//	return (codon2%16)/4 + 4;
+	if (state1/16 != state2/16) return state2/16;
+	if (state1%4 != state2 % 4) return state2%4 + 8;
+	return (state2%16)/4 + 4;
 }
 
 bool ModelCodon::isSynonymous(int state1, int state2) {
-	char *codon_table = phylo_tree->aln->codon_table;
+//	char *codon_table = phylo_tree->aln->codon_table;
 	char *genetic_code = phylo_tree->aln->genetic_code;
-	return (genetic_code[(int)codon_table[state1]] == genetic_code[(int)codon_table[state2]]);
+//	return (genetic_code[(int)codon_table[state1]] == genetic_code[(int)codon_table[state2]]);
+	return (genetic_code[state1] == genetic_code[state2]);
 }
 
 bool ModelCodon::isTransversion(int state1, int state2) {
-	char *codon_table = phylo_tree->aln->codon_table;
-	int codon1 = codon_table[state1];
-	int codon2 = codon_table[state2];
-	int num_subst = (codon1/16 != codon2/16) + ((codon1%16)/4 != (codon2%16)/4) + (codon1%4 != codon2 % 4);
+//	char *codon_table = phylo_tree->aln->codon_table;
+//	int codon1 = codon_table[state1];
+//	int codon2 = codon_table[state2];
+//	int num_subst = (codon1/16 != codon2/16) + ((codon1%16)/4 != (codon2%16)/4) + (codon1%4 != codon2 % 4);
+	int num_subst = (state1/16 != state2/16) + ((state1%16)/4 != (state2%16)/4) + (state1%4 != state2 % 4);
 	if (num_subst != 1) return false;
 	int nuc1, nuc2;
-	if (codon1/16 != codon2/16) {
-		nuc1 = codon1/16;
-		nuc2 = codon2/16;
-	} else if (codon1%4 != codon2 % 4) {
-		nuc1 = codon1%4;
-		nuc2 = codon2%4;
+	if (state1/16 != state2/16) {
+		nuc1 = state1/16;
+		nuc2 = state2/16;
+	} else if (state1%4 != state2 % 4) {
+		nuc1 = state1%4;
+		nuc2 = state2%4;
 	} else {
-		nuc1 = (codon1%16)/4;
-		nuc2 = (codon2%16)/4;
+		nuc1 = (state1%16)/4;
+		nuc2 = (state2%16)/4;
 	}
 	if (nuc1 > nuc2) {
 		int tmp = nuc1;
@@ -606,28 +620,29 @@ void ModelCodon::writeInfo(ostream &out) {
 	delete [] variables;
 }
 
-
 void ModelCodon::readCodonModel(istream &in) {
 	empirical_rates = new double [getNumRateEntries()];
 
 	int i, j;
-	double * q = new double[num_states*num_states];
-	double *f = new double[num_states];
-	for (i = 1; i < num_states; i++) {
+	int nscodons = phylo_tree->aln->getNumNonstopCodons();
+
+	double * q = new double[nscodons*nscodons];
+	double *f = new double[nscodons];
+	for (i = 1; i < nscodons; i++) {
 		for (j = 0; j < i; j++) {
-			in >> q[i*num_states+j];
+			in >> q[i*nscodons+j];
 			//q[j*num_states+i] = q[i*num_states+j];
-			if (verbose_mode >= VB_MAX) cout << " " << q[i*num_states+j];
+			if (verbose_mode >= VB_MAX) cout << " " << q[i*nscodons+j];
 		}
 		if (verbose_mode >= VB_MAX) cout << endl;
 	}
-	for (i = 0; i < num_states; i++)
+	for (i = 0; i < nscodons; i++)
 		in >> f[i];
 	StrVector codons;
-	codons.resize(num_states);
+	codons.resize(nscodons);
 	IntVector state_map;
-	state_map.resize(num_states);
-	for (i = 0; i < num_states; i++) {
+	state_map.resize(nscodons);
+	for (i = 0; i < nscodons; i++) {
 		in >> codons[i];
 		if (codons[i].length() != 3)
 			outError("Input model has wrong codon format ", codons[i]);
@@ -636,7 +651,10 @@ void ModelCodon::readCodonModel(istream &in) {
 		int nt3 = phylo_tree->aln->convertState(codons[i][2], SEQ_DNA);
 		if (nt1 > 3 || nt2 > 3 || nt3 > 3)
 			outError("Wrong codon triplet ", codons[i]);
-		state_map[i] = phylo_tree->aln->non_stop_codon[nt1*16+nt2*4+nt3];
+//		state_map[i] = phylo_tree->aln->non_stop_codon[nt1*16+nt2*4+nt3];
+		state_map[i] = nt1*16+nt2*4+nt3;
+		if (phylo_tree->aln->isStopCodon(state_map[i]))
+			outError("Stop codon encountered");
 		if (verbose_mode >= VB_MAX)
 			cout << " " << codons[i] << " " << state_map[i];
 	}
@@ -645,7 +663,7 @@ void ModelCodon::readCodonModel(istream &in) {
 	//int nrates = getNumRateEntries();
 	//int row = 0, col = 1;
 	// since rates for codons is stored in lower-triangle, special treatment is needed
-	for (i = 1; i < num_states; i++) {
+	for (i = 1; i < nscodons; i++) {
 		for (j = 0; j < i; j++) {
 			int row = state_map[i], col = state_map[j];
 			if (row < col) {
@@ -655,10 +673,11 @@ void ModelCodon::readCodonModel(istream &in) {
 			}
 			int id = col*(2*num_states-col-1)/2 + (row-col-1);
 			assert(id < getNumRateEntries() && id >= 0);
-			empirical_rates[id] = rates[id] = q[i*num_states+j];
+			empirical_rates[id] = rates[id] = q[i*nscodons+j];
 		}
 	}
-	for (i = 0; i < num_states; i++)
+	memset(state_freq, 0, num_states*sizeof(double));
+	for (i = 0; i < nscodons; i++)
 		state_freq[state_map[i]] = f[i];
 
 	num_params = 0;

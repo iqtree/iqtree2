@@ -432,7 +432,6 @@ void readPatternLh(const char *infile, IQTree *tree, bool compression) {
 void computeAllPatternLh(Params &params, IQTree &tree) {
     /* this part copied from phyloanalysis.cpp */
     tree.optimize_by_newton = params.optimize_by_newton;
-    tree.sse = params.SSE;
     try {
         if (!tree.getModelFactory()) {
             if (tree.isSuperTree())
@@ -440,12 +439,13 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
             else
                 tree.setModelFactory(new ModelFactory(params, &tree));
         }
-    } catch (string str) {
+    } catch (string &str) {
         outError(str);
     }
     tree.setModel(tree.getModelFactory()->model);
     tree.setRate(tree.getModelFactory()->site_rate);
     if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
+    tree.setLikelihoodKernel(params.SSE);
 
     int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
     cout << endl;
@@ -458,7 +458,7 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
     cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 
     //Update tree score
-    tree.curScore = bestTreeScore;
+    tree.setCurScore(bestTreeScore);
     if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->computeBranchLengths();
     stringstream best_tree_string;
     tree.printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
@@ -515,16 +515,16 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
             if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
             double *pattern_lh = new double [tree.aln->getNPattern()];
             if (!params.fixed_branch_length) {
-                tree.curScore = tree.optimizeAllBranches();
+                tree.setCurScore(tree.optimizeAllBranches());
                 tree.computePatternLikelihood(pattern_lh);
             } else {
-                tree.curScore = tree.computeLikelihood(pattern_lh);
+                tree.setCurScore(tree.computeLikelihood(pattern_lh));
             }
             if (expected_lh != 0.0)
-                max_logl_diff = max(max_logl_diff, fabs(tree.curScore-expected_lh));
+                max_logl_diff = max(max_logl_diff, fabs(tree.getCurScore()-expected_lh));
             tree.treels_ptnlh.push_back(pattern_lh);
-            tree.treels_logl.push_back(tree.curScore);
-			cout << "Tree " << tree.treels_logl.size() << ": " << tree.curScore << endl;
+            tree.treels_logl.push_back(tree.getCurScore());
+			cout << "Tree " << tree.treels_logl.size() << ": " << tree.getCurScore() << endl;
             if (tree.treels_ptnlh.size() % 500 == 0)
                 cout << tree.treels_ptnlh.size() << " trees evaluated" << endl;
         }
@@ -535,7 +535,7 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
         if (params.do_compression) ((igzstream*)in)->close();
         else ((ifstream*)in)->close();
         delete in;
-    } catch (ios::failure) {
+    } catch (ios::failure&) {
         outError(ERR_READ_INPUT, params.user_file);
     }
 

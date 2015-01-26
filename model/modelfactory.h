@@ -52,18 +52,6 @@ public:
 	ModelFactory();
 
 	/**
-	 * create a substitution model
-	 * @param model_str model nme
-	 * @param freq_type state frequency type
-	 * @param freq_params frequency parameters
-	 * @param tree associated phylo tree
-	 * @param count_rates TRUE to assign rates counted from alignment, FALSE to not initialize rates
-	 * @return substitution model created
-	 */
-	ModelSubst *createModel(string model_str, StateFreqType freq_type, string freq_params,
-			PhyloTree *tree, bool count_rates = true);
-
-	/**
 	 * read site specific state frequency vectors from a file to create corresponding model (Ingo's idea)
 	 * @param aln input alignment
 	 * @param site_freq_file file name
@@ -158,6 +146,11 @@ public:
 	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double epsilon = 0.001);
 
 	/**
+	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
+	 */
+	virtual bool isUnstableParameters();
+
+	/**
 		pointer to the model, will not be deleted when deleting ModelFactory object
 	*/
 	ModelSubst *model;
@@ -167,6 +160,9 @@ public:
 		pointer to the site-rate heterogeneity, will not be deleted when deleting ModelFactory object
 	*/
 	RateHeterogeneity *site_rate;
+
+	/* TRUE if a fused mixture and rate model, e.g. LG4M and LG4X */
+	bool fused_mix_rate;
 
 	/**
 		TRUE to store transition matrix into this hash table for computation efficiency

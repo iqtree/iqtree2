@@ -75,7 +75,7 @@ class SuperAlignmentPairwisePlen : public SuperAlignmentPairwise {
 			@param ddf (OUT) second derivative
 			@return f(value) of function f you want to minimize
 		*/
-		virtual double computeFuncDerv(double value, double &df, double &ddf);
+		virtual void computeFuncDerv(double value, double &df, double &ddf);
 
 		/**
 			partition information
@@ -157,8 +157,15 @@ public:
 	 */
 	void getNNIType(PhyloNode *node1, PhyloNode *node2, vector<NNIType> &nni_type);
 
-	virtual double computeFuncDerv(double value, double &df, double &ddf);
+	virtual void computeFuncDerv(double value, double &df, double &ddf);
 	virtual double computeFunction(double value);
+
+    /**
+            compute tree likelihood on a branch given buffer (theta_all), used after optimizing branch length
+            @return tree likelihood
+     */
+
+    virtual double computeLikelihoodFromBuffer();
 
     /**
             optimize all branch lengths of all subtrees, then compute branch lengths
@@ -175,7 +182,7 @@ public:
             @param clearLH true to clear the partial likelihood, otherwise false
             @return likelihood score
      */
-    virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
+    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
 
     /**
             search the best swap for a branch

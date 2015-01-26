@@ -42,6 +42,7 @@ class ModelGTR : public ModelSubst, public EigenDecomposition
 {
 	
 	friend class ModelSet;
+	friend class ModelMixture;
 	
 public:
 	/**
@@ -85,7 +86,7 @@ public:
 		It will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readRates(istream &in) throw(const char*);
+	virtual void readRates(istream &in) throw(const char*, string);
 
 	/**
 		Read the rate parameters from a comma-separated string
@@ -228,6 +229,10 @@ public:
 	*/
 	virtual double targetFunk(double x[]);
 
+	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
 
 	/**
 		optimize model parameters
@@ -235,6 +240,10 @@ public:
 	*/
 	virtual double optimizeParameters(double epsilon);
 
+	/**
+	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
+	 */
+	virtual bool isUnstableParameters();
 
 	/**
 		write information

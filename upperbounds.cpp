@@ -125,14 +125,14 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 			double brLen = branch1[i]->findNeighbor(branch2[i])->length;
 			double coef  = tree->aln->getNSite()*(log(1+3*exp(-brLen)) - log(1-exp(-brLen)));
 			double coef2  = tree->aln->getNSite()*log(1+3*exp(-brLen));
-			double UB_true  = coef + treeA->curScore + treeB->curScore;
-			double UB_true2 = coef2 + treeA->curScore + treeB->curScore;
+			double UB_true  = coef + treeA->getCurScore() + treeB->getCurScore();
+			double UB_true2 = coef2 + treeA->getCurScore() + treeB->getCurScore();
 
 			//cout<<"UB_true = "<<UB_true<<endl;
 			out<<tree->leafNum<<"\t"<<tree->aln->getNSite()<<"\t"<<min(taxaA.size(),taxaB.size())<<"\t"<<brLen<<"\t"
-					<<tree->curScore<<"\t"<<treeA->curScore + treeB->curScore<<"\t"<<UB_true<<"\t"<<UB_true2<<"\t"
-					<<tree->curScore/(treeA->curScore + treeB->curScore)<<"\t"
-					<<tree->curScore/UB_true<<"\t"<<tree->curScore/UB_true2<<"\t"<<coef<<"\t"<<coef2<<endl;
+					<<tree->getCurScore()<<"\t"<<treeA->getCurScore() + treeB->getCurScore()<<"\t"<<UB_true<<"\t"<<UB_true2<<"\t"
+					<<tree->getCurScore()/(treeA->getCurScore() + treeB->getCurScore())<<"\t"
+					<<tree->getCurScore()/UB_true<<"\t"<<tree->getCurScore()/UB_true2<<"\t"<<coef<<"\t"<<coef2<<endl;
 
 /*
 			// Comparison of Upper Bounds within Split Family ----------------------------------------
@@ -300,7 +300,7 @@ PhyloTree* extractSubtreeUB(IntVector &ids, MTree* tree, Params *params, int sw)
 		treeCopy->setRate(((PhyloTree*)tree)->getRate());
 		treeCopy->setModelFactory(((PhyloTree*)tree)->getModelFactory());
 		treeCopy->initializeAllPartialLh();
-		treeCopy->curScore = treeCopy->computeLikelihood();
+		treeCopy->setCurScore(treeCopy->computeLikelihood());
 	}
 
 	return treeCopy;
@@ -483,7 +483,7 @@ double RandomTreeAB(PhyloTree* treeORGN, PhyloTree* treeAorgn, PhyloTree* treeBo
 	tree->setModelFactory(((PhyloTree*)treeORGN)->getModelFactory());
 	tree->initializeAllPartialLh();
 
-	tree->curScore = tree->computeLikelihood();
+	tree->setCurScore(tree->computeLikelihood());
 	//cout<<"LogLh score before optimization: "<<tree->curScore<<endl;
 	tree->params = params;
 	//tree->curScore = tree->optimizeAllBranches(50);
@@ -518,7 +518,7 @@ double UpperBoundAB(IntVector &taxaA, IntVector &taxaB, PhyloTree* tree, Params 
 	treeA = extractSubtreeUB(taxaA,tree,params,1);
 	treeB = extractSubtreeUB(taxaB,tree,params,1);
 
-	U = treeA->curScore + treeB->curScore;
+	U = treeA->getCurScore() + treeB->getCurScore();
 
 	return U;
 }
@@ -765,11 +765,11 @@ NNIMove getBestNNIForBranUB(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree)
 	out_UB.exceptions(ios::failbit | ios::badbit);
 	out_UB.open((char*)out_file_UB.c_str(),std::ofstream::out | std::ofstream::app);
 
-	out_UB << tree->curScore << "\t" << UBq1 << "\t" << UBq2 << "\t" << tree->curScore - UBq1 << "\t" << tree->curScore - UBq2 << endl;
+	out_UB << tree->getCurScore() << "\t" << UBq1 << "\t" << UBq2 << "\t" << tree->getCurScore() - UBq1 << "\t" << tree->getCurScore() - UBq2 << endl;
 
 	out_UB.close();
 
-    if(UBq1 < tree->curScore){
+    if(UBq1 < tree->getCurScore()){
     	tree->skippedNNIub += 1;
   /*  	tree->meanUB += UBq1;
     	if(UBq1 < tree->minUB){
@@ -779,7 +779,7 @@ NNIMove getBestNNIForBranUB(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree)
     	}*/
     	//cout<<"----------------- UBq1 < L !!!"<<endl;
     }
-    if(UBq2 < tree->curScore){
+    if(UBq2 < tree->getCurScore()){
     	tree->skippedNNIub += 1;
     	/*tree->meanUB += UBq2;
     	if(UBq2 < tree->minUB){

@@ -49,17 +49,18 @@ double SuperAlignmentPairwise::computeFunction(double value) {
 }
 
 
-double SuperAlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
-	double lh = 0.0;
+void SuperAlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
+//	double lh = 0.0;
 	df = 0.0;
 	ddf = 0.0;
 	for (vector<AlignmentPairwise*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
 		double d1, d2;
-		lh += (*it)->computeFuncDerv(value, d1, d2);
+//		lh += (*it)->computeFuncDerv(value, d1, d2);
+		(*it)->computeFuncDerv(value, d1, d2);
 		df += d1;
 		ddf += d2;
 	}
-	return lh;
+//	return lh;
 }
 
 

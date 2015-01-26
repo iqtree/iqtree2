@@ -30,18 +30,18 @@ double SuperAlignmentPairwisePlen::computeFunction(double value) {
 	return lh;
 }
 
-double SuperAlignmentPairwisePlen::computeFuncDerv(double value, double &df, double &ddf) {
+void SuperAlignmentPairwisePlen::computeFuncDerv(double value, double &df, double &ddf) {
 	int part = 0;
-	double lh = 0.0;
+//	double lh = 0.0;
 	df = 0.0;
 	ddf = 0.0;
 	for (vector<AlignmentPairwise*>::iterator it = partitions.begin(); it != partitions.end(); it++, part++) {
 		double d1, d2;
-		lh += (*it)->computeFuncDerv(part_info->at(part).part_rate*value, d1, d2);
+		(*it)->computeFuncDerv(part_info->at(part).part_rate*value, d1, d2);
 		df += part_info->at(part).part_rate*d1;
 		ddf += part_info->at(part).part_rate*part_info->at(part).part_rate*d2;
 	}
-	return lh;
+//	return lh;
 }
 
 SuperAlignmentPairwisePlen::~SuperAlignmentPairwisePlen()
@@ -337,7 +337,7 @@ double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double toleran
 	return PhyloTree::optimizeAllBranches(my_iterations,tolerance, maxNRStep);
 }
 
-double PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
+void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
 
 	SuperNeighbor *nei1 = (SuperNeighbor*)node1->findNeighbor(node2);
 	SuperNeighbor *nei2 = (SuperNeighbor*)node2->findNeighbor(node1);
@@ -349,9 +349,8 @@ double PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
 	current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
 	double current_len = current_it->length;
 
-
 	//this->clearAllPartialLH();
-	double tree_lh = PhyloTree::optimizeOneBranch(node1,node2,false, maxNRStep);
+	PhyloTree::optimizeOneBranch(node1,node2,false, maxNRStep);
 
 	if(clearLH && current_len != current_it->length){
 		for (int part = 0; part < size(); part++) {
@@ -364,7 +363,7 @@ double PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
 		}
 	}
 
-	return tree_lh;
+//	return tree_lh;
 }
 
 double PhyloSuperTreePlen::computeFunction(double value) {
@@ -397,9 +396,14 @@ double PhyloSuperTreePlen::computeFunction(double value) {
     return -tree_lh;
 }
 
-double PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) {
+double PhyloSuperTreePlen::computeLikelihoodFromBuffer() {
+	// TODO
+	assert(0);
+	return 0.0;
+}
 
-	double tree_lh = 0.0;
+void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) {
+//	double tree_lh = 0.0;
 	double df_aux, ddf_aux;
 	df = 0.0;
 	ddf = 0.0;
@@ -425,17 +429,18 @@ double PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf
 					cout<<"NEGATIVE BRANCH len = "<<nei1_part->length<<endl<<" rate = "<<part_info[part].part_rate<<endl;
 					outError("shit!!   ",__func__);
 				}
-				part_info[part].cur_score = at(part)->computeLikelihoodDerv(nei2_part,(PhyloNode*)nei1_part->node, df_aux, ddf_aux);
-				tree_lh += part_info[part].cur_score;
+//				part_info[part].cur_score = at(part)->computeLikelihoodDerv(nei2_part,(PhyloNode*)nei1_part->node, df_aux, ddf_aux);
+				at(part)->computeLikelihoodDerv(nei2_part,(PhyloNode*)nei1_part->node, df_aux, ddf_aux);
+//				tree_lh += part_info[part].cur_score;
 				df -= part_info[part].part_rate*df_aux;
 				ddf -= part_info[part].part_rate*part_info[part].part_rate*ddf_aux;
 			} else {
 				if (part_info[part].cur_score == 0.0)
 					part_info[part].cur_score = at(part)->computeLikelihood();
-				tree_lh += part_info[part].cur_score;
+//				tree_lh += part_info[part].cur_score;
 			}
 		}
-    return -tree_lh;
+//    return -tree_lh;
 }
 
 NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves)
@@ -1179,7 +1184,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		//mapBranchLen();
 		//checkBranchLen();
 
-		double score = optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
+		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
+//		double score = computeLikelihoodFromBuffer();
 		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
 
 //		if (verbose_mode >= VB_MED) {
@@ -1218,7 +1224,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    		// Optimize the branch incident to node1
 	    		//cout<<"NNI5 : node1 : Before optimization"<<endl;
 	    		//checkBranchLen();
-	    		score = optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
+	    		optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
 				nniMoves[cnt].newLen[i] = node1->findNeighbor((*it)->node)->length;
 				i++;
 
@@ -1248,11 +1254,16 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    			}
 	    		}
 	    		// Optimize the branch incident to node2
-	    		score = optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
+	    		optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
 				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
 				i++;
 	    	}
 	    }
+
+		double score = computeLikelihoodFromBuffer();
+		if (verbose_mode >= VB_DEBUG)
+			cout << "Log-likelihood: " << score << endl;
+
 		// %%%%%%%%%%%%%%%%%%%%%%%%%%%  END of nni5branch  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 		nniMoves[cnt].newloglh = score;

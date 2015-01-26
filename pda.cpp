@@ -71,8 +71,6 @@
 	#include <omp.h>
 #endif
 
-//#include "vectorclass/vectorclass.h"
-
 using namespace std;
 
 
@@ -1538,7 +1536,7 @@ void branchStats(Params &params){
 	
 	/***** Following added by BQM to print internal branch lengths */
 	NodeVector nodes1, nodes2;
-	mytree.getInternalBranches(nodes1, nodes2);
+	mytree.getAllInnerBranches(nodes1, nodes2);
 	output = params.out_prefix;
 	output += ".inlen";
 	try {
@@ -2099,6 +2097,21 @@ int main(){
 }
 */
 
+/*
+Instruction set ID reported by vectorclass::instrset_detect
+0           = 80386 instruction set
+1  or above = SSE (XMM) supported by CPU (not testing for O.S. support)
+2  or above = SSE2
+3  or above = SSE3
+4  or above = Supplementary SSE3 (SSSE3)
+5  or above = SSE4.1
+6  or above = SSE4.2
+7  or above = AVX supported by CPU and operating system
+8  or above = AVX2
+9  or above = AVX512F
+*/
+int instruction_set;
+
 int main(int argc, char *argv[])
 {
 
@@ -2175,38 +2188,20 @@ int main(int argc, char *argv[])
 	//fgets(hostname, sizeof(hostname), pfile);
 	//pclose(pfile);
 
-	int instrset = instrset_detect();
-	if (instrset < 3) outError("Your CPU does not support SSE3!");
-	bool has_fma3 = hasFMA3();
-	bool has_fma4 = hasFMA4();
+	instruction_set = instrset_detect();
+	if (instruction_set < 3) outError("Your CPU does not support SSE3!");
+	bool has_fma3 = (instruction_set >= 7) && hasFMA3();
+	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
 	bool has_fma =  has_fma3 || has_fma4;
-
-#ifdef __AVX
-	if (instrset < 7) {
-		outError("Your CPU does not support AVX, please use SSE3 version of IQ-TREE.");
-	}
-#else
-	if (instrset >= 7) {
-		outWarning("Your CPU supports AVX but you are using SSE3 version of IQ-TREE!");
-		outWarning("Please switch to AVX version that is 40% faster than SSE3.");
-		cout << endl;
-	}
-#endif
 
 #ifdef __FMA__
 	if (!has_fma) {
 		outError("Your CPU does not support FMA instruction, quiting now...");
 	}
-//#else
-//	if (has_fma) {
-//		outWarning("Your CPU supports AVX+FMA but you are using non-FMA version of IQ-TREE!");
-//		outWarning("Please consider trying AVX+FMA version.");
-//		cout << endl;
-//	}
 #endif
 
 	cout << "Host:    " << hostname << " (";
-	switch (instrset) {
+	switch (instruction_set) {
 	case 3: cout << "SSE3, "; break;
 	case 4: cout << "SSSE3, "; break;
 	case 5: cout << "SSE4.1, "; break;
@@ -2217,11 +2212,11 @@ int main(int argc, char *argv[])
 	}
 	if (has_fma3) cout << "FMA3, ";
 	if (has_fma4) cout << "FMA4, ";
-#if defined __APPLE__ || defined __MACH__
+//#if defined __APPLE__ || defined __MACH__
 	cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM)" << endl;
-#else
-	cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM)" << endl;
-#endif
+//#else
+//	cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM)" << endl;
+//#endif
 
 	cout << "Command:";
 	for (int i = 0; i < argc; i++)
@@ -2235,9 +2230,12 @@ int main(int argc, char *argv[])
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
 
+	if (params.lk_no_avx)
+		instruction_set = min(instruction_set, 6);
+
 	cout << "Kernel:  ";
 	if (params.pll) {
-#ifdef __AVX
+#ifdef __AVX__
 		cout << "PLL-AVX";
 #else
 		cout << "PLL-SSE3";
@@ -2248,11 +2246,12 @@ int main(int argc, char *argv[])
 		case LK_SSE: cout << "Slow SSE3"; break;
 		case LK_EIGEN: cout << "No SSE"; break;
 		case LK_EIGEN_SSE:
-#ifdef __AVX
-			cout << "AVX";
-#else
-			cout << "SSE3";
-#endif
+			if (instruction_set >= 7) {
+				cout << "AVX";
+			} else {
+				cout << "SSE3";
+			}
+
 #ifdef __FMA__
 			cout << "+FMA";
 #endif
@@ -2263,6 +2262,10 @@ int main(int argc, char *argv[])
 
 
 #ifdef _OPENMP
+	if (params.num_threads == 0) {
+		cout << endl << endl;
+		outError("Please specify the number of cores to use (-nt option)!");
+	}
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
 //	int max_threads = omp_get_max_threads();
 	params.num_threads = omp_get_max_threads();

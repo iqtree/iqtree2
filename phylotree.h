@@ -30,6 +30,13 @@
 #include "phylonode.h"
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
+#include "pllrepo/src/pll.h"
+
+#define BOOT_VAL_FLOAT
+#define BootValType float
+//#define BootValType double
+
+extern int instruction_set;
 
 
 const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
@@ -51,41 +58,40 @@ const int SPR_DEPTH = 2;
 
 using namespace Eigen;
 
-#ifdef __AVX
-#define MEM_ALIGNMENT 32
 inline size_t get_safe_upper_limit(size_t cur_limit) {
-	return ((cur_limit+3)/4)*4;
+	if (instruction_set >= 7)
+		// AVX
+		return ((cur_limit+3)/4)*4;
+	else
+		// SSE
+		return ((cur_limit+1)/2)*2;
 }
 
 inline size_t get_safe_upper_limit_float(size_t cur_limit) {
-	return ((cur_limit+7)/8)*8;
+	if (instruction_set >= 7)
+		// AVX
+		return ((cur_limit+7)/8)*8;
+	else
+		// SSE
+		return ((cur_limit+3)/4)*4;
 }
 
-#else
-#define MEM_ALIGNMENT 16
-inline size_t get_safe_upper_limit(size_t cur_limit) {
-	return (cur_limit%2 == 0) ? cur_limit : cur_limit+1;
-}
-inline size_t get_safe_upper_limit_float(size_t cur_limit) {
-	return ((cur_limit+3)/4)*4;
-}
-
-#endif
-
-//#include "pll/mem_alloc.h"
-
-inline double *aligned_alloc_double(size_t size) {
-#if defined WIN32 || defined _WIN32 || defined __WIN32__
-	return (double*)_aligned_malloc(size*sizeof(double), MEM_ALIGNMENT);
-#else
-	void *res;
-	posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
-	return (double*)res;
-#endif
-}
+//inline double *aligned_alloc_double(size_t size) {
+//	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+//
+//#if defined WIN32 || defined _WIN32 || defined __WIN32__
+//	return (double*)_aligned_malloc(size*sizeof(double), MEM_ALIGNMENT);
+//#else
+//	void *res;
+//	posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
+//	return (double*)res;
+//#endif
+//}
 
 template< class T>
 inline T *aligned_alloc(size_t size) {
+	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
 	return (T*)_aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
 #else
@@ -102,21 +108,6 @@ inline void aligned_free(void *mem) {
 	free(mem);
 #endif
 }
-
-
-#ifdef __AVX
-#define VectorClassMaster Vec4d
-#define VectorClassFloat Vec8f
-#define VCSIZE_MASTER 4
-#define VCSIZE_FLOAT 8
-//#pragma message "Using AVX instructions"
-#else
-#define VectorClassMaster Vec2d
-#define VectorClassFloat Vec4f
-#define VCSIZE_MASTER 2
-#define VCSIZE_FLOAT 4
-//#pragma message "Using SS3 instructions"
-#endif
 
 
 /**
@@ -266,6 +257,20 @@ public:
     virtual ~PhyloTree();
 
     /**
+            read the tree from the input file in newick format
+            @param infile the input file file.
+            @param is_rooted (IN/OUT) true if tree is rooted
+     */
+    virtual void readTree(const char *infile, bool &is_rooted);
+
+    /**
+            read the tree from the ifstream in newick format
+            @param in the input stream.
+            @param is_rooted (IN/OUT) true if tree is rooted
+     */
+    virtual void readTree(istream &in, bool &is_rooted);
+
+    /**
             copy the phylogenetic tree structure into this tree, override to take sequence names
             in the alignment into account
             @param tree the tree to copy
@@ -288,13 +293,14 @@ public:
 
 
     /**
-            set the alignment, important to compute parsimony or likelihood score
+            Set the alignment, important to compute parsimony or likelihood score
+            Assing taxa ids according to their position in the alignment
             @param alignment associated alignment
      */
     void setAlignment(Alignment *alignment);
 
     /** set the root by name */
-    void setRootNode(char *my_root);
+    void setRootNode(const char *my_root);
 
 
     /**
@@ -374,6 +380,17 @@ public:
     virtual int getAlnNSite() {
         return aln->getNSite();
     }
+
+    /****************************************************************************
+            Dot product
+     ****************************************************************************/
+    template <class Numeric, class VectorClass, const int VCSIZE>
+    Numeric dotProductSIMD(Numeric *x, Numeric *y, int size);
+
+    typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
+    DotProductType dotProduct;
+
+    void setDotProductAVX();
 
     /**
             this function return the parsimony or likelihood score of the tree. Default is
@@ -507,6 +524,11 @@ public:
     double *tip_partial_lh;
     bool tip_partial_lh_computed;
 
+
+    /****************************************************************************
+            computing partial (conditional) likelihood of subtrees
+     ****************************************************************************/
+
     void computeTipPartialLikelihood();
     void computePtnInvar();
 
@@ -516,53 +538,109 @@ public:
             @param dad its dad, used to direct the tranversal
      */
     virtual void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    typedef void (PhyloTree::*ComputePartialLikelihoodType)(PhyloNeighbor *, PhyloNode *);
+    ComputePartialLikelihoodType computePartialLikelihoodPointer;
 
+    /**
+     * original naive version in IQ-TREE
+     */
     void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     /**
      * this implements the SSE version using Eigen library
      */
     template<int NSTATES>
-    inline void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <const int nstates>
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
+    template <const int nstates>
+    void computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
+    template <const int nstates>
+    void computeMixratePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computePartialLikelihoodEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
+    /****************************************************************************
+            computing likelihood on a branch
+     ****************************************************************************/
 
     /**
             compute tree likelihood on a branch. used to optimize branch length
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
-            @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
-                            assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
-    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    typedef double (PhyloTree::*ComputeLikelihoodBranchType)(PhyloNeighbor*, PhyloNode*);
+    ComputeLikelihoodBranchType computeLikelihoodBranchPointer;
 
     /**
      * this implements the SSE version using Eigen library
      */
     template<int NSTATES>
-    inline double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
      * MINH: this implements the fast alternative strategy for reversible model (March 2013)
      * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
      */
-    template<int NSTATES>
-    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+//    template<int NSTATES>
+//    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <const int nstates>
-    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    template <const int nstates>
+    double computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    template <const int nstates>
+    double computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodBranchEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-//    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL, double *pattern_rate = NULL);
-    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh = NULL);
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    /****************************************************************************
+            computing likelihood on a branch using buffer
+     ****************************************************************************/
+
+    /**
+            quickly compute tree likelihood on branch current_it <-> current_it_back given buffer (theta_all).
+           	Used after optimizing branch length
+            @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
+                            assuming pattern_lh has the size of the number of patterns
+            @return tree likelihood
+     */
+    virtual double computeLikelihoodFromBuffer();
+    typedef double (PhyloTree::*ComputeLikelihoodFromBufferType)();
+    ComputeLikelihoodFromBufferType computeLikelihoodFromBufferPointer;
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeLikelihoodFromBufferEigenSIMD();
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeMixrateLikelihoodFromBufferEigenSIMD();
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeMixtureLikelihoodFromBufferEigenSIMD();
 
     /**
             compute tree likelihood when a branch length collapses to zero
@@ -673,8 +751,9 @@ public:
     /**
             Read the tree saved with Taxon Names and branch lengths.
             @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
      */
-    void readTreeString(const string &tree_string);
+    virtual void readTreeString(const string &tree_string);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
@@ -686,7 +765,22 @@ public:
      * Return the tree string contining taxon names and branch lengths
      * @return
      */
-    string getTreeString();
+    virtual string getTreeString();
+
+    /**
+     * Assign branch lengths for branch that has no or negative length
+     * With single model branch lengths are assigned using parsimony. With partition model
+     * branch lengths are assigned randomly
+     * @param updatePLL if true read the new tree into PLL
+     * @return number of branches fixed
+     */
+    int fixAllBranches(bool force_change);
+
+    /**
+     * Read the newick string into PLL kernel
+     * @param newickTree
+     */
+    void pllReadNewick(string newickTree);
 
     /**
      *  Return the sorted topology without branch length, used to compare tree topology
@@ -700,26 +794,31 @@ public:
             computing derivatives of likelihood function
      ****************************************************************************/
 
-    double computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
      * this implements the SSE version using Eigen library
      */
     template<int NSTATES>
-    inline double computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <const int nstates>
-    double computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <const int nstates>
+    void computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <const int nstates>
+    void computeMixrateLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodDervEigenTipSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    /**
-     * MINH: this implements the fast alternative strategy for reversible model (March 2013)
-     * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
-     */
-    template<int NSTATES>
-    inline double computeLikelihoodDervFast(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length
@@ -729,16 +828,11 @@ public:
             @param ddf (OUT) second derivative
             @return tree likelihood
      */
-    double computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    template<int NSTATES>
-    double computeLikelihoodDervSSE_Test(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    typedef void (PhyloTree::*ComputeLikelihoodDervType)(PhyloNeighbor *, PhyloNode *, double &, double &);
+    ComputeLikelihoodDervType computeLikelihoodDervPointer;
 
-    template<int NSTATES>
-    double computeLikelihoodDervSSE_Test2(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    template<int NSTATES>
-    inline void computeLikelihoodDervSSE_PTN(int ptn, double *partial_lh_site, double *partial_lh_child, double *trans_state, double *derv1_state, double *derv2_state);
     /****************************************************************************
             Stepwise addition (greedy) by maximum parsimony
      ****************************************************************************/
@@ -812,6 +906,7 @@ public:
      ****************************************************************************/
 
     /**
+     * IMPORTANT: semantic change: this function does not return score anymore, for efficiency purpose
             optimize one branch length by ML
             @param node1 1st end node of the branch
             @param node2 2nd end node of the branch
@@ -819,7 +914,7 @@ public:
             @param maxNRStep maximum number of Newton-Raphson steps
             @return likelihood score
      */
-    virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
+    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
 
     /**
             optimize all branch lengths of the children of node
@@ -835,7 +930,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL, int maxNRStep = 100);
+    virtual void optimizeAllBranches(PhyloNode *node, PhyloNode *dad = NULL, int maxNRStep = 100);
 
     /**
      * optimize all branch lengths at the subtree rooted at node step-by-step.
@@ -869,7 +964,7 @@ public:
             @param ddf (OUT) second derivative
             @return negative of likelihood (for minimization)
      */
-    virtual double computeFuncDerv(double value, double &df, double &ddf);
+    virtual void computeFuncDerv(double value, double &df, double &ddf);
 
      /****************************************************************************
             Branch length optimization by Least Squares
@@ -1064,7 +1159,6 @@ public:
             @param dist_file distance matrix file
      */
     void computeBioNJ(Params &params, Alignment *alignment, string &dist_file);
-
     /**
             Neighbor-joining/parsimony tree might contain negative branch length. This
             function will fix this.
@@ -1198,6 +1292,10 @@ public:
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
+    virtual void setLikelihoodKernel(LikelihoodKernel lk);
+
+    virtual void setLikelihoodKernelAVX();
+
     /****************************************************************************
             Public variables
      ****************************************************************************/
@@ -1226,11 +1324,6 @@ public:
      *      TRUE if the loglikelihood is computed using SSE
      */
     LikelihoodKernel sse;
-
-    /**
-     * Current score of the tree;
-     */
-    double curScore;
 
     /**
      * for UpperBounds: Initial tree log-likelihood
@@ -1276,6 +1369,18 @@ public:
      */
     Params* params;
 
+    /** sequence names that were removed */
+	StrVector removed_seqs;
+
+	/** sequence that are identical to one of the removed sequences */
+	StrVector twin_seqs;
+
+	/** remove identical sequences from the tree */
+    virtual void removeIdenticalSeqs(Params &params);
+
+    /** reinsert identical sequences into the tree and reset original alignment */
+    virtual void reinsertIdenticalSeqs(Alignment *orig_aln);
+
 
     /**
             assign the leaf names with the alignment sequence names, using the leaf ID for assignment.
@@ -1316,8 +1421,52 @@ public:
     double approxOneBranch(PhyloNode *node, PhyloNode *dad, double b0);
 
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+	void setParams(Params* params);
+
+	double getCurScore() {
+		return curScore;
+	}
+
+	void setCurScore(double curScore) {
+		this->curScore = curScore;
+	}
+
+	/**
+	 * This will invalidate curScore variable, used whenever reading a tree!
+	 */
+	void resetCurScore() {
+		curScore = -DBL_MAX;
+        if (model)
+            initializeAllPartialLh();
+//		clearAllPartialLH();
+	}
 
 protected:
+
+    /**
+     *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
+     */
+    pllInstance *pllInst;
+
+    /**
+     *  Whether the partial likelihood vectors have been computed for PLL
+     */
+//    bool lhComputed;
+
+    /**
+     *	PLL data structure for alignment
+     */
+    pllAlignmentData *pllAlignment;
+
+    /**
+     *  PLL data structure for storing phylognetic analysis options
+     */
+    pllInstanceAttr pllAttr;
+
+    /**
+     *  PLL partition list
+     */
+    partitionList * pllPartitions;
 
     /**
      *  is the subtree distance matrix need to be computed or updated
@@ -1425,8 +1574,8 @@ protected:
      * Temporary partial likelihood array: used when swapping branch and recalculate the
      * likelihood --> avoid calling malloc everytime
      */
-    double *tmp_partial_lh1;
-    double *tmp_partial_lh2;
+//    double *tmp_partial_lh1;
+//    double *tmp_partial_lh2;
 
     /**
      *  Temporary array containing anscentral states.
@@ -1442,8 +1591,8 @@ protected:
      * Temporary scale num array: used when swapping branch and recalculate the
      * likelihood --> avoid calling malloc
      */
-    UBYTE *tmp_scale_num1;
-    UBYTE *tmp_scale_num2;
+//    UBYTE *tmp_scale_num1;
+//    UBYTE *tmp_scale_num2;
 
     /****************************************************************************
             Vector of bit blocks, used for parsimony function
@@ -1512,6 +1661,11 @@ protected:
     virtual void saveCurrentTree(double logl) {
     } // save current tree
 
+
+    /**
+     * Current score of the tree;
+     */
+    double curScore;
 
 };
 

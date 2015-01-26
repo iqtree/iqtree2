@@ -88,29 +88,30 @@ void outError(char *error)
         Output an error to screen, then exit program
         @param error error message
  */
-void outError(const char *error) {
+void outError(const char *error, bool quit) {
     cerr << "ERROR: " << error << endl;
-    exit(2);
+    if (quit)
+    	exit(2);
 }
 
 /**
         Output an error to screen, then exit program
         @param error error message
  */
-void outError(string error) {
-    outError(error.c_str());
+void outError(string error, bool quit) {
+    outError(error.c_str(), quit);
 }
 
-void outError(const char *error, const char *msg) {
+void outError(const char *error, const char *msg, bool quit) {
     string str = error;
     str += msg;
-    outError(str);
+    outError(str, quit);
 }
 
-void outError(const char *error, string msg) {
+void outError(const char *error, string msg, bool quit) {
     string str = error;
     str += msg;
-    outError(str);
+    outError(str, quit);
 }
 
 /**
@@ -268,6 +269,24 @@ double convert_double(const char *str, int &end_pos) throw (string) {
 	}
 	end_pos = endptr - str;
 	return d;
+}
+
+void convert_double_vec(const char *str, DoubleVector &vec) throw (string) {
+    char *beginptr = (char*)str, *endptr;
+    vec.clear();
+    do {
+		double d = strtod(beginptr, &endptr);
+
+		if ((d == 0.0 && endptr == beginptr) || fabs(d) == HUGE_VALF) {
+			string err = "Expecting floating-point number, but found \"";
+			err += beginptr;
+			err += "\" instead";
+			throw err;
+		}
+		vec.push_back(d);
+		if (*endptr == ',') endptr++;
+		beginptr = endptr;
+    } while (*endptr != 0);
 }
 
 string convert_time(const double sec) {
@@ -654,7 +673,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.maxCandidates = 100;
+    params.maxCandidates = 1000;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -663,6 +682,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
+    params.model_def_file = NULL;
+    params.optimize_mixmodel_weight = false;
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
@@ -686,6 +707,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_replicates = 0;
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
+    params.lk_no_avx = false;
     params.print_site_lh = 0;
     params.print_site_rate = false;
     params.print_tree_lh = false;
@@ -745,9 +767,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.do_compression = false;
 
     params.new_heuristic = true;
-    params.write_best_trees = false;
     params.iteration_multiple = 1;
-    params.initPerStrength = 0.5;
+    params.initPS = 0.5;
 #ifdef USING_PLL
     params.pll = true;
 #else
@@ -763,8 +784,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    params.autostop = true; // turn on auto stopping rule by default now
     params.unsuccess_iteration = 100;
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
-    params.adaptPert = false;
-    params.numParsTrees = 100;
+    params.reduction = false;
+    params.numInitTrees = 100;
+    params.fix_stable_splits = false;
+    params.numSupportTrees = 20;
     params.sprDist = 20;
     params.numNNITrees = 20;
     params.avh_test = 0;
@@ -1539,7 +1562,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -pers <perturbation_strength>";
-				params.initPerStrength = convert_double(argv[cnt]);
+				params.initPS = convert_double(argv[cnt]);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-n") == 0) {
@@ -1573,6 +1596,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mset <model_set>";
 				params.model_set = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mdef") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mdef <model_definition_file>";
+				params.model_def_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mwopt") == 0) {
+				params.optimize_mixmodel_weight = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-mh") == 0) {
@@ -1630,6 +1664,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-fastsse") == 0
 					|| strcmp(argv[cnt], "-fasttipsse") == 0) {
 				params.SSE = LK_EIGEN_SSE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-noavx") == 0) {
+				params.lk_no_avx = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-f") == 0) {
@@ -2203,7 +2241,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -numpars <number_of_parsimony_trees>";
-				params.numParsTrees = convert_int(argv[cnt]);
+				params.numInitTrees = convert_int(argv[cnt]);
+				if (params.numInitTrees < params.numNNITrees)
+					params.numNNITrees = params.numInitTrees;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-fss") == 0) {
+				params.fix_stable_splits = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-toppars") == 0) {
@@ -2211,6 +2255,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -toppars <number_of_top_parsimony_trees>";
 				params.numNNITrees = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-nsp") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nsp <number_of_support_trees>";
+				params.numSupportTrees = convert_int(argv[cnt]);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-poplim") == 0) {
@@ -2226,7 +2277,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -numcand <number_of_candidate_trees>";
 				params.popSize = convert_int(argv[cnt]);
-				assert(params.popSize < params.numParsTrees);
+				assert(params.popSize < params.numInitTrees);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-beststart") == 0) {
@@ -2246,10 +2297,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -me <model_epsilon>";
 				params.modeps = convert_double(argv[cnt]);
-				continue;
-			}
-			if (strcmp(argv[cnt], "-pllmod") == 0) {
-				params.pll = true;
+				if (params.modeps <= 0.0)
+					throw "Model epsilon must be positive";
+				if (params.modeps > 0.1)
+					throw "Model epsilon must not be larger than 0.1";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pars_ins") == 0) {
@@ -2260,8 +2311,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.speednni = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-adapt") == 0) {
-				params.adaptPert = true;
+			if (strcmp(argv[cnt], "-reduction") == 0) {
+				params.reduction = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-snni") == 0) {
@@ -2276,6 +2327,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-iqpnni") == 0) {
 				params.snni = false;
 				params.start_tree = STT_BIONJ;
+				params.reduction = false;
+				params.numNNITrees = 1;
 //            continue; } if (strcmp(argv[cnt], "-auto") == 0) {
 //            	params.autostop = true;
 				continue;
@@ -2369,10 +2422,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.parbran = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-write_best_trees") == 0) {
-				params.write_best_trees = true;
-				continue;
-			}
 			if (strcmp(argv[cnt], "-x") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2421,17 +2470,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -ms <model_test_sample_size>";
 				params.model_test_sample_size = convert_int(argv[cnt]);
-#ifdef _OPENMP
-				continue;}if (strcmp(argv[cnt], "-omp") == 0) {
-				cnt++;
-				if (cnt >= argc)
-				throw "Use -omp <num_threads>";
-				params.num_threads = convert_int(argv[cnt]);
-				if (params.num_threads < 1)
-				throw "At least 1 thread please";
-#endif
 				continue;
 			}
+#ifdef _OPENMP
+			if (strcmp(argv[cnt], "-omp") == 0 || strcmp(argv[cnt], "-nt") == 0) {
+				cnt++;
+				if (cnt >= argc)
+				throw "Use -nt <num_threads>";
+				params.num_threads = convert_int(argv[cnt]);
+				if (params.num_threads < 1)
+					throw "At least 1 thread please";
+				continue;
+			}
+#endif
 			if (strcmp(argv[cnt], "-rootstate") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2589,7 +2640,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
             << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment name)" << endl
 #ifdef _OPENMP
-            << "  -omp <#cpu_cores>    Number of cores/threads to use (default: all cores)" << endl
+            << "  -nt <#cpu_cores>     Number of cores/threads to use (default: all cores)" << endl
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
@@ -2605,6 +2656,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
+            << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
             << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
@@ -2639,9 +2691,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       Codon frequencies" << endl
             << "  -m <model_name>+ASC  Ascertainment bias correction for morphological/SNP data" << endl
             << endl << "RATE HETEROGENEITY:" << endl
-            << "  -m <model_name>+I or +G[n] or +I+G[n]" << endl
-            << "                       Invar, Gamma, or Invar+Gamma rates. 'n' is number of" << endl
-            << "                       categories for Gamma rates (default: n=4)" << endl
+            << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
+            << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
+            << "                       number of categories (default: n=4)" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
             << "  -gmedian             Computing mean for Gamma rate category (default: mean)" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl

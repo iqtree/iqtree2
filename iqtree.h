@@ -29,23 +29,12 @@
 #include "stoprule.h"
 #include "mtreeset.h"
 #include "node.h"
-
-#include "pllrepo/src/pll.h"
-#include "nnisearch.h"
 #include "candidateset.h"
-
-#define BOOT_VAL_FLOAT
-#define BootValType float
-//#define BootValType double
+#include "pllnni.h"
 
 typedef std::map< string, double > mapString2Double;
 typedef std::multiset< double, std::less< double > > multiSetDB;
 typedef std::multiset< int, std::less< int > > MultiSetInt;
-
-/**
-        nodeheightcmp, for building k-representative leaf set
- */
-
 
 class RepLeaf {
 public:
@@ -58,6 +47,9 @@ public:
     }
 };
 
+/**
+        nodeheightcmp, for building k-representative leaf set
+ */
 struct nodeheightcmp {
 
     bool operator()(const RepLeaf* s1, const RepLeaf * s2) const {
@@ -107,7 +99,7 @@ public:
     /**
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)
      */
-    virtual void setParams(Params& params);
+    virtual void initSettings(Params& params);
 
     void createPLLPartition(Params &params, ostream &pllPartitionFileHandle);
 
@@ -196,6 +188,14 @@ public:
             remove a portion of leaves and reinsert them using the IQP algorithm
      */
     void doIQP();
+
+    /**
+     *  @brief remove all branches mapped to splits in \a split
+     *  @param nodes1 node vector containing one end of the branches
+     *  @param nodes2 node vector containing the other end of the branches
+     *  @return number of branches removed
+     */
+    int removeBranches(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits);
 
     /**
      * 		Perform a series of random NNI moves
@@ -321,10 +321,12 @@ public:
     void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
-     * @brief Evaluate all NNIs defined in \a brans
-     * @param[in] brans contains branches whose NNIs need to be evaluated
+     * @brief Evaluate all NNIs on branch defined by \a nodes1 and \a nodes2
+     *
+     * @param[in] nodes1 contains one ends of the branches for NNI evaluation
+     * @param[in] nodes2 contains the other ends of the branches for NNI evaluation
      */
-    void evalNNIs(map<string, Branch> brans);
+    void evalNNIs(NodeVector &nodes1, NodeVector &nodes2);
 
     /**
             search all positive NNI move on the current tree and save them
@@ -413,32 +415,6 @@ public:
     inline double estDelta95(void);
 
     /**
-     *
-     * @return
-     */
-    double getCurScore(void);
-
-    /**
-     *
-     * @return
-     */
-    double getBestScore(void) {
-        return bestScore;
-    }
-
-    /**
-     *
-     */
-    void setBestScore(double score) {
-        bestScore = score;
-    }
-
-    /**
-     *  set the current tree as the best tree
-     */
-    void setBestTree(string tree, double logl);
-
-    /**
             current parsimony score of the tree
      */
     int cur_pars_score;
@@ -478,26 +454,6 @@ public:
      */
     vector<pllNNIMove> nniListOfBestTree;
 
-
-    /**
-     *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
-     */
-    pllInstance *pllInst;
-
-    /**
-     *	PLL data structure for alignment
-     */
-    pllAlignmentData *pllAlignment;
-
-    /**
-     *  PLL data structure for storing phylognetic analysis options
-     */
-    pllInstanceAttr pllAttr;
-
-    /**
-     *  PLL partition list
-     */
-    partitionList * pllPartitions;
 
     /**
      *  information and parameters for the tree search procedure
@@ -611,15 +567,12 @@ protected:
     mapString2Double optBrans;
 
     /**
-     *  Set of all internal branches whose induced NNIs need to be evaluate
-     *  in the next NNI step
+     *  @brief get branches, on which NNIs are evaluated for the next NNI step.
+     *  @param[out] nodes1 one ends of the branches
+     *  @param[out] nodes2 the other ends of the branches
+     *  @param[in] nnis NNIs that have been previously applied
      */
-    map<string, Branch> brans2Eval;
-
-    /**
-     *  Update \a brans2Eval after \a all NNIs in nnis have been performed
-     */
-    void updateBrans2Eval(vector<NNIMove> nnis);
+    void getBranchesForNNI(NodeVector& nodes1, NodeVector& nodes2, vector<NNIMove>& nnis);
 
     /**
      *  Use fastNNI heuristic
@@ -641,28 +594,32 @@ protected:
 public:
 
     /**
+     *  Generate the initial candidate tree set
+     *  @param nParTrees number of parsimony trees to generate
+     *  @param nNNITrees number of NNI locally optimal trees to generate
+     */
+    void initCandidateTreeSet(int nParTrees, int nNNITrees);
+
+
+    /**
+     * Generate the initial tree (usually used for model parameter estimation)
+     * @param dist_file only needed for BIONJ tree
+     */
+    void computeInitialTree(string &dist_file);
+
+    /**
      *  @brief: optimize model parameters on the current tree
      *  either IQ-TREE or PLL
-     *  @param imd_tree the input tree or NULL
      *  @param printInfo to print model parameters to the screen or not
+     *  @param epsilon likelihood epsilon for optimization
+     *
      */
-    string optimizeModelParameters(bool printInfo=false);
+    string optimizeModelParameters(bool printInfo = false, double epsilon = -1);
 
     /**
      *  variable storing the current best tree topology
      */
     topol* pllBestTree;
-
-
-    /**
-     * The current best score found
-     */
-    double bestScore;
-
-    /**
-     *  the current best tree
-     */
-    string bestTreeString;
 
     CandidateSet candidateTrees;
 
@@ -719,19 +676,13 @@ public:
     /** summarize bootstrap trees into split set */
     void summarizeBootstrap(SplitGraph &sg);
 
-    void writeUFBootTrees(Params &params, StrVector &removed_seqs, StrVector &twin_seqs);
+    void writeUFBootTrees(Params &params);
 
     /** @return bootstrap correlation coefficient for assessing convergence */
     double computeBootstrapCorrelation();
 
 	int getDelete() const;
 	void setDelete(int _delete);
-
-	/** remove identical sequences from the tree */
-    virtual void removeIdenticalSeqs(Params &params, StrVector &removed_seqs, StrVector &twin_seqs);
-
-    /** reinsert identical sequences into the tree and reset original alignment */
-    virtual void reinsertIdenticalSeqs(Alignment *orig_aln, StrVector &removed_seqs, StrVector &twin_seqs);
 
 	int getCurIt() const {
 		return curIt;

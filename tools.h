@@ -341,7 +341,8 @@ enum TestType {
  */
 enum StateFreqType {
     FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, FREQ_ESTIMATE,
-    FREQ_CODON_1x4, FREQ_CODON_3x4, FREQ_CODON_3x4C // special frequency for codon model
+    FREQ_CODON_1x4, FREQ_CODON_3x4, FREQ_CODON_3x4C, // special frequency for codon model
+    FREQ_MIXTURE // mixture-frequency model
 };
 
 /**
@@ -408,9 +409,19 @@ extern int NNI_MAX_NR_STEP;
 struct Params {
 
 	/**
+	 * Turn on feature to identify stable splits and fix them during tree search
+	 */
+	bool fix_stable_splits;
+
+	/**
+	 *  Number of distinct locally optimal trees
+	 */
+	int numSupportTrees;
+
+	/**
 	 *  Number of starting parsimony trees
 	 */
-	int numParsTrees;
+	int numInitTrees;
 
 	/**
 	 *  SPR distance (radius) for parsimony tree
@@ -418,18 +429,18 @@ struct Params {
 	int sprDist;
 
 	/**
-	 *  Number of NNI trees generated from the set of parsimony trees
+	 *  Number of NNI locally optimal trees generated from the set of parsimony trees
 	 *  Default = 20 (out of 100 parsimony trees)
 	 */
 	int numNNITrees;
 
 	/**
-	 *  Population size
+	 *  Number of best trees in the candidate set used to generate perturbed trees
 	 */
 	int popSize;
 
 	/**
-	 *  maximum number of trees stored in the candidate set
+	 *  Maximum number of trees stored in the candidate tree set
 	 */
 	int maxCandidates;
 
@@ -438,28 +449,30 @@ struct Params {
 	 */
 	bool speednni;
 
-	bool adaptPert;
+	/**
+	 *  use reduction technique to constraint tree space
+	 */
+	bool reduction;
 
 	/**
 	 *  portion of NNI used for perturbing the tree
 	 */
-	double initPerStrength;
+	double initPS;
 
 	/**
-	 *  logl epsilon for the final model parameter optimization
+	 *  logl epsilon for model parameter optimization
 	 */
 	double modeps;
 
 	/**
-	 *  Carry out iterated local search using NNI only.
+	 *  New search heuristics (DEFAULT: ON)
 	 */
 	bool snni;
 
 	/**
-	 *  only evaluate NNIs in affected regions
+	 *  Specify how the branch lengths are optimzed after each NNI operation
+	 *  (No optimization, 1 branch optimization, 5 branch optimization)
 	 */
-	bool fastnni;
-
     NNI_Type nni_type;
 
     /**
@@ -478,9 +491,9 @@ struct Params {
 	 */
 	bool nni5;
 
-
     /**
-     *  Number of smoothTree iteration carried out in Phylolib for IQP Tree
+     *  Number of branch length optimization rounds performed after
+     *  each NNI step (DEFAULT: 1)
      */
     int numSmoothTree;
 
@@ -560,10 +573,6 @@ struct Params {
     /** starting real time of the program */
     double start_real_time;
 
-    /**
-     *		write all current best trees to file
-     */
-    bool write_best_trees;
     /**
      *  Number iteration = num_taxa * iteration_multiple
      */
@@ -851,7 +860,7 @@ struct Params {
     /**
             name of the root taxon
      */
-    char *root;
+    const char *root;
 
     /**
             true if tree is forced to be rooted
@@ -1046,6 +1055,12 @@ struct Params {
     /** set of models for testing */
     char *model_set;
 
+    /** model defition file */
+    char *model_def_file;
+
+    /** TRUE to optimize mixture model weights */
+    bool optimize_mixmodel_weight;
+
     /**
             TRUE to store transition matrix into a hash table for computation efficiency
      */
@@ -1184,6 +1199,10 @@ struct Params {
             SSE Option
      */
     LikelihoodKernel SSE;
+
+    /** TRUE to not use AVX even available in CPU, default: FALSE */
+    bool lk_no_avx;
+
     /**
      	 	0: do not print anything
             1: print site log-likelihood
@@ -1574,12 +1593,12 @@ inline bool is_newick_token(char ch) {
 /**
         print error message then exit program
  */
-void outError(const char *error);
+void outError(const char *error, bool quit = true);
 
 /**
         print error message then exit program
  */
-void outError(string error);
+void outError(string error, bool quit = true);
 
 
 /*--------------------------------------------------------------*/
@@ -1588,12 +1607,12 @@ void outError(string error);
 /**
         print double error messages then exit program
  */
-void outError(const char *error, const char *msg);
+void outError(const char *error, const char *msg, bool quit = true);
 
 /**
         print double error messages then exit program
  */
-void outError(const char *error, string msg);
+void outError(const char *error, string msg, bool quit = true);
 
 /**
         Output a warning message to screen
@@ -1729,6 +1748,13 @@ double convert_double(const char *str) throw (string);
         @return the double
  */
 double convert_double(const char *str, int &end_pos) throw (string);
+
+/**
+        convert comma-separated string to integer vector, with error checking
+        @param str original string with integers separated by comma
+        @param vec (OUT) integer vector
+ */
+void convert_double_vec(const char *str, DoubleVector &vec) throw (string);
 
 /**
  * Convert seconds to hour, minute, second

@@ -29,6 +29,7 @@
 #include "modelcodon.h"
 #include "modelmorphology.h"
 #include "modelset.h"
+#include "modelmixture.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
 #include "ratekategory.h"
@@ -37,9 +38,8 @@
 #include "ngs.h"
 #include <string>
 #include "timeutil.h"
-
-const char OPEN_BRACKET = '{';
-const char CLOSE_BRACKET = '}';
+#include "myreader.h"
+#include "modelsblock.h"
 
 ModelFactory::ModelFactory() { 
 	model = NULL; 
@@ -47,69 +47,43 @@ ModelFactory::ModelFactory() {
 	store_trans_matrix = false;
 	is_storing = false;
 	joint_optimize = false;
+	fused_mix_rate = false;
 }
 
-ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type, string freq_params,
-		PhyloTree* tree, bool count_rates)
-{
-	ModelSubst *model = NULL;
-	//cout << "Numstates: " << tree->aln->num_states << endl;
-	string model_params;
-	size_t pos = model_str.find(OPEN_BRACKET);
-	if (pos != string::npos) {
-		if (model_str.find(CLOSE_BRACKET) != model_str.length()-1)
-			outError("Close bracket not found at the end of ", model_str);
-		model_params = model_str.substr(pos+1, model_str.length()-pos-2);
-		model_str = model_str.substr(0, pos);
+size_t findCloseBracket(string &str, size_t start_pos) {
+	int counter = 0;
+	for (size_t pos = start_pos+1; pos < str.length(); pos++) {
+		if (str[pos] == '{') counter++;
+		if (str[pos] == '}') {
+			if (counter == 0) return pos; else counter--;
+		}
 	}
-	/*
-	if ((model_str == "JC" && tree->aln->seq_type == SEQ_DNA) ||
-		(model_str == "POISSON" && tree->aln->seq_type == SEQ_PROTEIN) ||
-		(model_str == "JC2" && tree->aln->seq_type == SEQ_BINARY) ||
-		(model_str == "JCC" && tree->aln->seq_type == SEQ_CODON) ||
-		(model_str == "MK" && tree->aln->seq_type == SEQ_MORPH))
-	{
-		model = new ModelSubst(tree->aln->num_states);
-	} else */
-	if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
-		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
-		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
-		model = new ModelGTR(tree, count_rates);
-		if (freq_params != "")
-			((ModelGTR*)model)->readStateFreq(freq_params);
-		if (model_params != "")
-			((ModelGTR*)model)->readRates(model_params);
-		((ModelGTR*)model)->init(freq_type);
-	} else if (model_str == "UNREST") {
-		freq_type = FREQ_EQUAL;
-		//params.optimize_by_newton = false;
-		tree->optimize_by_newton = false;
-		model = new ModelNonRev(tree, count_rates);
-		((ModelNonRev*)model)->init(freq_type);
-	} else if (tree->aln->seq_type == SEQ_BINARY) {
-		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->seq_type == SEQ_DNA) {
-		model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->seq_type == SEQ_PROTEIN) {
-		model = new ModelProtein(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->seq_type == SEQ_CODON) {
-		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->seq_type == SEQ_MORPH) {
-		model = new ModelMorphology(model_str.c_str(), model_params, freq_type, freq_params, tree);
-	} else {
-		outError("Unsupported model type");
-	}
-
-	return model;
+	return string::npos;
 }
-
 
 ModelFactory::ModelFactory(Params &params, PhyloTree *tree) { 
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
+	fused_mix_rate = false;
 
 	string model_str = params.model_name;
+	string rate_str;
+
+	try {
+	ModelsBlock *models_block = new ModelsBlock;
+	if (params.model_def_file) {
+		cout << "Reading model definition file " << params.model_def_file << " ... ";
+		MyReader nexus(params.model_def_file);
+		nexus.Add(models_block);
+	    MyToken token(nexus.inf);
+	    nexus.Execute(token);
+	    int num_model = 0, num_freq = 0;
+	    for (ModelsBlock::iterator it = models_block->begin(); it != models_block->end(); it++)
+	    	if ((*it).flag & NM_FREQ) num_freq++; else num_model++;
+	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
+	}
+
 
 	if (model_str == "") {
 		if (tree->aln->seq_type == SEQ_DNA) model_str = "HKY";
@@ -120,7 +94,40 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		else model_str = "JC";
 		outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
-	string::size_type posfreq;
+
+	/********* preprocessing model string ****************/
+	NxsModel *nxsmodel  = NULL;
+
+	nxsmodel = models_block->findModel(model_str);
+	if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
+		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+		model_str = nxsmodel->description;
+	}
+
+	// decompose model string into model_str and rate_str string
+	size_t spec_pos = model_str.find_first_of("{+*");
+	if (spec_pos != string::npos) {
+		if (model_str[spec_pos] == '{') {
+			// scan for the corresponding '}'
+			size_t pos = findCloseBracket(model_str, spec_pos);
+			if (pos == string::npos)
+				outError("Model name has wrong bracket notation '{...}'");
+			rate_str = model_str.substr(pos+1);
+			model_str = model_str.substr(0, pos+1);
+		} else {
+			rate_str = model_str.substr(spec_pos);
+			model_str = model_str.substr(0, spec_pos);
+		}
+	}
+
+	nxsmodel = models_block->findModel(model_str);
+	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
+		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+		model_str = nxsmodel->description;
+	}
+
+	/******************** initialize state frequency ****************************/
+
 	StateFreqType freq_type = params.freq_type;
 
 	if (freq_type == FREQ_UNKNOWN) {
@@ -132,175 +139,82 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		}
 	}
 
-	string::size_type posasc;
-
-	if ((posasc = model_str.find("+ASC")) != string::npos) {
-		// ascertainment bias correction
-		unobserved_ptns = tree->aln->getUnobservedConstPatterns();
-		// rebuild the seq_states to contain states of unobserved constant patterns
-		tree->aln->buildSeqStates(true);
-		if (unobserved_ptns.size() <= 0)
-			outError("Invalid +ASC model because all constant patterns are observed in the alignment");
-		if (unobserved_ptns.size() < tree->aln->num_states)
-			outWarning("Some constant patterns are observed in the alignment");
-		cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
-		model_str = model_str.substr(0, posasc) + model_str.substr(posasc+4);
-	}
-	size_t close_bracket;
+	string::size_type posfreq = rate_str.find("+F");
 	string freq_params;
-	if ((posfreq = model_str.find("+F")) != string::npos) {
-		if (model_str.length() > posfreq+2 && model_str[posfreq+2] == OPEN_BRACKET) {
-			close_bracket = model_str.find(CLOSE_BRACKET, posfreq);
-			if (close_bracket == string::npos)
-				outError("Close bracket not found in ", model_str);
-			if (close_bracket != model_str.length()-1)
-				outError("Wrong close bracket position ", model_str);
-			freq_type = FREQ_USER_DEFINED;
-			freq_params = model_str.substr(posfreq+3, close_bracket-posfreq-3);
-		} else if (model_str.substr(posfreq) == "+FC" || model_str.substr(posfreq) == "+Fc" || model_str.substr(posfreq) == "+F")
-			freq_type = FREQ_EMPIRICAL;
-		else if (model_str.substr(posfreq) == "+FU" || model_str.substr(posfreq) == "+Fu")
-			freq_type = FREQ_USER_DEFINED;
-		else if (model_str.substr(posfreq) == "+FQ" || model_str.substr(posfreq) == "+Fq")
-			freq_type = FREQ_EQUAL;
-		else if (model_str.substr(posfreq) == "+FO" || model_str.substr(posfreq) == "+Fo")
-			freq_type = FREQ_ESTIMATE;
-		else if (model_str.substr(posfreq) == "+F1x4")
-			freq_type = FREQ_CODON_1x4;
-		else if (model_str.substr(posfreq) == "+F3x4")
-			freq_type = FREQ_CODON_3x4;
-		else if (model_str.substr(posfreq) == "+F3x4C" || model_str.substr(posfreq) == "+F3x4c")
-			freq_type = FREQ_CODON_3x4C;
-		else outError("Unknown state frequency type ",model_str.substr(posfreq));
-		model_str = model_str.substr(0, posfreq);
-	}
-	string::size_type posI = model_str.find("+I");
-	string::size_type posG = model_str.find("+G");
-	string::size_type posR = model_str.find("+R"); // FreeRate model
-	if (posG != string::npos && posR != string::npos)
-		outError("Gamma and FreeRate models cannot be both specified!");
-	string::size_type posX;
-	/* create site-rate heterogeneity */
-	int num_rate_cats = params.num_rate_cats;
-	double gamma_shape = params.gamma_shape;
-	double p_invar_sites = params.p_invar_sites;
-	if (posI != string::npos) {
-		// invariable site model
-		if (model_str.length() > posI+2 && model_str[posI+2] == OPEN_BRACKET) {
-			close_bracket = model_str.find(CLOSE_BRACKET, posI);
-			if (close_bracket == string::npos)
-				outError("Close bracket not found in ", model_str);
-			p_invar_sites = convert_double(model_str.substr(posI+3, close_bracket-posI-3).c_str());
-			if (p_invar_sites <= 0 || p_invar_sites >= 1)
-				outError("p_invar must be in (0,1)");
-		} else if (model_str.length() > posI+2 && model_str[posI+2] != '+')
-			outError("Wrong model name ", model_str);
-	}
-	if (posG != string::npos) {
-		// Gamma rate model
-		int end_pos = 0;
-		if (model_str.length() > posG+2 && isdigit(model_str[posG+2])) {
-			num_rate_cats = convert_int(model_str.substr(posG+2).c_str(), end_pos);
-				if (num_rate_cats < 1) outError("Wrong number of rate categories");
-			}
-		if (model_str.length() > posG+2+end_pos && model_str[posG+2+end_pos] == OPEN_BRACKET) {
-			close_bracket = model_str.find(CLOSE_BRACKET, posG);
-			if (close_bracket == string::npos)
-				outError("Close bracket not found in ", model_str);
-			gamma_shape = convert_double(model_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
-			if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
-				stringstream str;
-				str << "Gamma shape parameter " << gamma_shape << "out of range ["
-						<< MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]" << endl;
-				outError(str.str());
-			}
-		} else if (model_str.length() > posG+2+end_pos && model_str[posG+2+end_pos] != '+')
-			outError("Wrong model name ", model_str);
-	}
-	if (posR != string::npos) {
-		// FreeRate model
-		int end_pos = 0;
-		if (model_str.length() > posR+2 && isdigit(model_str[posR+2])) {
-			num_rate_cats = convert_int(model_str.substr(posR+2).c_str(), end_pos);
-				if (num_rate_cats < 1) outError("Wrong number of rate categories");
-			}
-	}
-	if (model_str.find('+') != string::npos) {
-		//string rate_str = model_str.substr(pos);
-		if (posI != string::npos && posG != string::npos) {
-			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
-					p_invar_sites, params.optimize_model_rate_joint, tree);
-		} else if (posI != string::npos && posR != string::npos) {
-			site_rate = new RateFreeInvar(num_rate_cats, p_invar_sites, tree);
-		} else if (posI != string::npos) {
-			site_rate = new RateInvar(p_invar_sites, tree);
-		} else if (posG != string::npos) {
-			site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
-		} else if (posR != string::npos) {
-			site_rate = new RateFree(num_rate_cats, tree);
-		} else if ((posX = model_str.find("+M")) != string::npos) {
-			tree->sse = LK_NORMAL;
-			params.rate_mh_type = true;
-			if (model_str.length() > posX+2 && isdigit(model_str[posX+2])) {
-				num_rate_cats = convert_int(model_str.substr(posX+2).c_str());
-				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else num_rate_cats = -1;
-			if (num_rate_cats >= 0)
-				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
-					params.rate_file, tree, params.rate_mh_type);
-			else
-				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
-			site_rate->setTree(tree);
-		} else if ((posX = model_str.find("+D")) != string::npos) {
-			tree->sse = LK_NORMAL;
-			params.rate_mh_type = false;
-			if (model_str.length() > posX+2 && isdigit(model_str[posX+2])) {
-				num_rate_cats = convert_int(model_str.substr(posX+2).c_str());
-				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else num_rate_cats = -1;
-			if (num_rate_cats >= 0)
-				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
-					params.rate_file, tree, params.rate_mh_type);
-			else
-				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
-			site_rate->setTree(tree);
-		} else if ((posX = model_str.find("+NGS")) != string::npos) {
-			tree->sse = LK_NORMAL;
-			if (model_str.length() > posX+4 && isdigit(model_str[posX+4])) {
-				num_rate_cats = convert_int(model_str.substr(posX+4).c_str());
-				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else num_rate_cats = -1;
-			site_rate = new NGSRateCat(tree, num_rate_cats);
-			site_rate->setTree(tree);
-		} else if ((posX = model_str.find("+NGS")) != string::npos) {
-			tree->sse = LK_NORMAL;
-			if (model_str.length() > posX+4 && isdigit(model_str[posX+4])) {
-				num_rate_cats = convert_int(model_str.substr(posX+4).c_str());
-				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else num_rate_cats = -1;
-			site_rate = new NGSRate(tree);
-			site_rate->setTree(tree);
-		} else if ((posX = model_str.find("+K")) != string::npos) {
-			if (model_str.length() > posX+2 && isdigit(model_str[posX+2])) {
-				num_rate_cats = convert_int(model_str.substr(posX+2).c_str());
-				if (num_rate_cats < 1) outError("Wrong number of rate categories");
-			}
-			site_rate = new RateKategory(num_rate_cats, tree);
-		} else
-			outError("Invalid rate heterogeneity type");
-		model_str = model_str.substr(0, model_str.find('+'));
-	} else {
-		site_rate = new RateHeterogeneity();
-		site_rate->setTree(tree);
-	} 	
+	size_t close_bracket;
 
-	/* create substitution model */
+	if (posfreq != string::npos) {
+		string freq_str;
+		size_t last_pos = rate_str.find_first_of("+*", posfreq+1);
+		if (last_pos == string::npos) {
+			freq_str = rate_str.substr(posfreq);
+			rate_str = rate_str.substr(0, posfreq);
+		} else {
+			freq_str = rate_str.substr(posfreq, last_pos-posfreq);
+			rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
+		}
+
+		if (freq_str.substr(0,5) == "+FMIX") {
+			if (freq_str[5] != OPEN_BRACKET)
+				outError("Mixture-frequency must start with +FMIX{");
+			close_bracket = freq_str.find(CLOSE_BRACKET);
+			if (close_bracket == string::npos)
+				outError("Close bracket not found in ", freq_str);
+			if (close_bracket != freq_str.length()-1)
+				outError("Wrong close bracket position ", freq_str);
+			freq_type = FREQ_MIXTURE;
+			freq_params = freq_str.substr(6, close_bracket-6);
+		} else if (freq_str.length() > 2 && freq_str[2] == OPEN_BRACKET) {
+			close_bracket = freq_str.find(CLOSE_BRACKET);
+			if (close_bracket == string::npos)
+				outError("Close bracket not found in ", freq_str);
+			if (close_bracket != freq_str.length()-1)
+				outError("Wrong close bracket position ", freq_str);
+			freq_type = FREQ_USER_DEFINED;
+			freq_params = freq_str.substr(3, close_bracket-3);
+		} else if (freq_str == "+FC" || freq_str == "+Fc" || freq_str == "+F")
+			freq_type = FREQ_EMPIRICAL;
+		else if (freq_str == "+FU" || freq_str == "+Fu")
+			freq_type = FREQ_USER_DEFINED;
+		else if (freq_str == "+FQ" || freq_str == "+Fq")
+			freq_type = FREQ_EQUAL;
+		else if (freq_str == "+FO" || freq_str == "+Fo")
+			freq_type = FREQ_ESTIMATE;
+		else if (freq_str == "+F1x4")
+			freq_type = FREQ_CODON_1x4;
+		else if (freq_str == "+F3x4")
+			freq_type = FREQ_CODON_3x4;
+		else if (freq_str == "+F3x4C" || freq_str == "+F3x4c")
+			freq_type = FREQ_CODON_3x4C;
+		else outError("Unknown state frequency type ",freq_str);
+//		model_str = model_str.substr(0, posfreq);
+	}
+
+	/******************** initialize model ****************************/
 
 	if (!params.site_freq_file) {
-		model = createModel(model_str, freq_type, freq_params, tree);
-	} else { 
+		if (model_str.substr(0, 3) == "MIX" || freq_type == FREQ_MIXTURE) {
+			string model_list;
+			if (model_str.substr(0, 3) == "MIX") {
+				if (model_str[3] != OPEN_BRACKET)
+					outError("Mixture model name must start with 'MIX{'");
+				if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
+					outError("Close bracket not found at the end of ", model_str);
+				model_list = model_str.substr(4, model_str.length()-5);
+				model_str = model_str.substr(0, 3);
+			}
+			model = new ModelMixture(model_str, model_list, models_block, freq_type, freq_params, tree, params.optimize_mixmodel_weight);
+		} else {
+//			string model_desc;
+//			NxsModel *nxsmodel = models_block->findModel(model_str);
+//			if (nxsmodel) model_desc = nxsmodel->description;
+			model = createModel(model_str, models_block, freq_type, freq_params, tree);
+		}
+
+//		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
+	} else {
 		// site-specific model
-		if (model_str == "JC" || model_str == "POSSION") 
+		if (model_str == "JC" || model_str == "POISSON")
 			outError("JC is not suitable for site-specific model");
 		model = new ModelSet(model_str.c_str(), tree);
 		ModelSet *models = (ModelSet*)model; // assign pointer for convenience
@@ -322,11 +236,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		for (i = 0; i < freq_vec.size(); i++) {
 			ModelGTR *modeli;
 			if (i == 0) {
-				modeli = (ModelGTR*)createModel(model_str, params.freq_type, "", tree, true);
+				modeli = (ModelGTR*)createModel(model_str, models_block, params.freq_type, "", tree, true);
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {
-				modeli = (ModelGTR*)createModel(model_str, FREQ_EQUAL, "", tree, false);
+				modeli = (ModelGTR*)createModel(model_str, models_block, FREQ_EQUAL, "", tree, false);
 				modeli->setStateFrequency(state_freq);
 				modeli->setRateMatrix(rates);
 			}
@@ -341,8 +255,194 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		cout << "Alignment is divided into " << models->size() << " partitions with " << tree->aln->getNPattern() << " patterns" << endl;
 		for (vector<double*>::reverse_iterator it = freq_vec.rbegin(); it != freq_vec.rend(); it++)
 			if (*it) delete [] (*it);
-	} 
+	}
+
+	if (model->isMixture())
+		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
+
+	/******************** initialize ascertainment bias correction model ****************************/
+
+	string::size_type posasc;
+
+	if ((posasc = rate_str.find("+ASC")) != string::npos) {
+		// ascertainment bias correction
+		unobserved_ptns = tree->aln->getUnobservedConstPatterns();
+		// rebuild the seq_states to contain states of unobserved constant patterns
+		tree->aln->buildSeqStates(true);
+//		if (unobserved_ptns.size() <= 0)
+//			outError("Invalid use of +ASC because all constant patterns are observed in the alignment");
+		if (unobserved_ptns.size() < tree->aln->num_states)
+			outError("Invalid use of +ASC because constant patterns are observed in the alignment");
+		cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
+		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
+	}
+
+
+	/******************** initialize site rate heterogeneity ****************************/
+
+	string::size_type posI = rate_str.find("+I");
+	string::size_type posG = rate_str.find("+G");
+	if (posG == string::npos) {
+		posG = rate_str.find("*G");
+		if (posG != string::npos)
+			fused_mix_rate = true;
+	}
+	string::size_type posR = rate_str.find("+R"); // FreeRate model
+	if (posR == string::npos) {
+		posR = rate_str.find("*R");
+		if (posR != string::npos)
+			fused_mix_rate = true;
+	}
+	if (posG != string::npos && posR != string::npos)
+		outError("Gamma and FreeRate models cannot be both specified!");
+	string::size_type posX;
+	/* create site-rate heterogeneity */
+	int num_rate_cats = params.num_rate_cats;
+	if (fused_mix_rate) num_rate_cats = model->getNMixtures();
+	double gamma_shape = params.gamma_shape;
+	double p_invar_sites = params.p_invar_sites;
+	string freerate_params = "";
+	if (posI != string::npos) {
+		// invariable site model
+		if (rate_str.length() > posI+2 && rate_str[posI+2] == OPEN_BRACKET) {
+			close_bracket = rate_str.find(CLOSE_BRACKET, posI);
+			if (close_bracket == string::npos)
+				outError("Close bracket not found in ", rate_str);
+			p_invar_sites = convert_double(rate_str.substr(posI+3, close_bracket-posI-3).c_str());
+			if (p_invar_sites <= 0 || p_invar_sites >= 1)
+				outError("p_invar must be in (0,1)");
+		} else if (rate_str.length() > posI+2 && rate_str[posI+2] != '+')
+			outError("Wrong model name ", rate_str);
+	}
+	if (posG != string::npos) {
+		// Gamma rate model
+		int end_pos = 0;
+		if (rate_str.length() > posG+2 && isdigit(rate_str[posG+2])) {
+			num_rate_cats = convert_int(rate_str.substr(posG+2).c_str(), end_pos);
+			if (num_rate_cats < 1) outError("Wrong number of rate categories");
+		}
+		if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] == OPEN_BRACKET) {
+			close_bracket = rate_str.find(CLOSE_BRACKET, posG);
+			if (close_bracket == string::npos)
+				outError("Close bracket not found in ", rate_str);
+			gamma_shape = convert_double(rate_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
+			if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
+				stringstream str;
+				str << "Gamma shape parameter " << gamma_shape << "out of range ["
+						<< MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]" << endl;
+				outError(str.str());
+			}
+		} else if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] != '+')
+			outError("Wrong model name ", rate_str);
+	}
+	if (posR != string::npos) {
+		// FreeRate model
+		int end_pos = 0;
+		if (rate_str.length() > posR+2 && isdigit(rate_str[posR+2])) {
+			num_rate_cats = convert_int(rate_str.substr(posR+2).c_str(), end_pos);
+				if (num_rate_cats < 1) outError("Wrong number of rate categories");
+			}
+		if (rate_str.length() > posR+2+end_pos && rate_str[posR+2+end_pos] == OPEN_BRACKET) {
+			close_bracket = rate_str.find(CLOSE_BRACKET, posR);
+			if (close_bracket == string::npos)
+				outError("Close bracket not found in ", rate_str);
+			freerate_params = rate_str.substr(posR+3+end_pos, close_bracket-posR-3-end_pos).c_str();
+		} else if (rate_str.length() > posR+2+end_pos && rate_str[posR+2+end_pos] != '+')
+			outError("Wrong model name ", rate_str);
+	}
+	if (rate_str.find('+') != string::npos || rate_str.find('*') != string::npos) {
+		//string rate_str = model_str.substr(pos);
+		if (posI != string::npos && posG != string::npos) {
+			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
+					p_invar_sites, params.optimize_model_rate_joint, tree);
+		} else if (posI != string::npos && posR != string::npos) {
+			site_rate = new RateFreeInvar(num_rate_cats, freerate_params, p_invar_sites, tree);
+		} else if (posI != string::npos) {
+			site_rate = new RateInvar(p_invar_sites, tree);
+		} else if (posG != string::npos) {
+			site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
+		} else if (posR != string::npos) {
+			site_rate = new RateFree(num_rate_cats, freerate_params, tree);
+		} else if ((posX = rate_str.find("+M")) != string::npos) {
+			tree->setLikelihoodKernel(LK_NORMAL);
+			params.rate_mh_type = true;
+			if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
+				num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
+				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else num_rate_cats = -1;
+			if (num_rate_cats >= 0)
+				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
+					params.rate_file, tree, params.rate_mh_type);
+			else
+				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
+			site_rate->setTree(tree);
+		} else if ((posX = rate_str.find("+D")) != string::npos) {
+			tree->setLikelihoodKernel(LK_NORMAL);
+			params.rate_mh_type = false;
+			if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
+				num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
+				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else num_rate_cats = -1;
+			if (num_rate_cats >= 0)
+				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
+					params.rate_file, tree, params.rate_mh_type);
+			else
+				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
+			site_rate->setTree(tree);
+		} else if ((posX = rate_str.find("+NGS")) != string::npos) {
+			tree->setLikelihoodKernel(LK_NORMAL);
+			if (rate_str.length() > posX+4 && isdigit(rate_str[posX+4])) {
+				num_rate_cats = convert_int(rate_str.substr(posX+4).c_str());
+				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else num_rate_cats = -1;
+			site_rate = new NGSRateCat(tree, num_rate_cats);
+			site_rate->setTree(tree);
+		} else if ((posX = rate_str.find("+NGS")) != string::npos) {
+			tree->setLikelihoodKernel(LK_NORMAL);
+			if (rate_str.length() > posX+4 && isdigit(rate_str[posX+4])) {
+				num_rate_cats = convert_int(rate_str.substr(posX+4).c_str());
+				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+			} else num_rate_cats = -1;
+			site_rate = new NGSRate(tree);
+			site_rate->setTree(tree);
+		} else if ((posX = rate_str.find("+K")) != string::npos) {
+			if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
+				num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
+				if (num_rate_cats < 1) outError("Wrong number of rate categories");
+			}
+			site_rate = new RateKategory(num_rate_cats, tree);
+		} else
+			outError("Invalid rate heterogeneity type");
+//		if (model_str.find('+') != string::npos)
+//			model_str = model_str.substr(0, model_str.find('+'));
+//		else
+//			model_str = model_str.substr(0, model_str.find('*'));
+	} else {
+		site_rate = new RateHeterogeneity();
+		site_rate->setTree(tree);
+	} 	
+
+	if (fused_mix_rate) {
+		if (!model->isMixture())
+			outError("Model is not a mixture model");
+		if (model->getNMixtures() != site_rate->getNRate())
+			outError("Mixture model and site rate model do not have the same number of categories");
+		ModelMixture *mmodel = (ModelMixture*)model;
+		// reset mixture model
+		mmodel->fix_prop = true;
+		for (ModelMixture::iterator it = mmodel->begin(); it != mmodel->end(); it++) {
+			(*it)->total_num_subst = 1.0;
+			mmodel->prop[it-mmodel->begin()] = 1.0;
+		}
+		mmodel->decomposeRateMatrix();
+	}
+
 	tree->discardSaturatedSite(params.discard_saturated_site);
+
+	delete models_block;
+	} catch (const char* str) {
+		outError(str);
+	}
 
 }
 
@@ -554,6 +654,14 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	// ---------------------------
 
 	return cur_lh;
+}
+
+/**
+ * @return TRUE if parameters are at the boundary that may cause numerical unstability
+ */
+bool ModelFactory::isUnstableParameters() {
+	if (model->isUnstableParameters()) return true;
+	return false;
 }
 
 void ModelFactory::startStoringTransMatrix() {
