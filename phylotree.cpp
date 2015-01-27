@@ -1411,8 +1411,8 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 }
 
 double *PhyloTree::newPartialLh() {
-    double *ret = new double[(aln->size()+aln->num_states+3) * aln->num_states * site_rate->getNRate() *
-                             ((model_factory->fused_mix_rate)? 1 : model->getNMixtures())];
+    double *ret = aligned_alloc<double>((aln->size()+aln->num_states+3) * aln->num_states * site_rate->getNRate() *
+                             ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
     return ret;
 }
 
@@ -1426,7 +1426,7 @@ int PhyloTree::getScaleNumBytes() {
 }
 
 UBYTE *PhyloTree::newScaleNum() {
-    return new UBYTE[aln->size()+aln->num_states];
+    return aligned_alloc<UBYTE>(aln->size()+aln->num_states);
 }
 
 double PhyloTree::computeLikelihood(double *pattern_lh) {

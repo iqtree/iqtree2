@@ -1466,8 +1466,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				// restore the Neighbors*
 				for (i = IT_NUM-1; i >= 0; i--) {
 					if((*sub_saved_it[part*6+i])){
-						delete[] ((PhyloNeighbor*) *sub_saved_it[part*6+i])->scale_num;
-						delete[] ((PhyloNeighbor*) *sub_saved_it[part*6+i])->partial_lh;
+						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+i])->scale_num);
+						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+i])->partial_lh);
 						if (*sub_saved_it[part*6+i] == at(part)->current_it) at(part)->current_it = saved_nei[i]->link_neighbors[part];
 						if (*sub_saved_it[part*6+i] == at(part)->current_it_back) at(part)->current_it_back = saved_nei[i]->link_neighbors[part];
 
@@ -1489,8 +1489,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				for (id = 5; id >= 2; id--) {
 					//if((*sub_saved_it[part*6+id])){
 					if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]){
-						delete[] ((PhyloNeighbor*) *sub_saved_it[part*6+id])->scale_num;
-						delete[] ((PhyloNeighbor*) *sub_saved_it[part*6+id])->partial_lh;
+						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+id])->scale_num);
+						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+id])->partial_lh);
 
 						// It was commented, not sure why.. Just keep in mind------------------
 						if (*sub_saved_it[part*6+id] == at(part)->current_it)
