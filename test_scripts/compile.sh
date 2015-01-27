@@ -99,3 +99,13 @@ make -C ${release_build} -j4
 cp ${release_build}/iqtree ${release_binary}
 git checkout ${curBranch}
 git submodule update
+
+#Clean up
+if [ -e $head_build ]
+then
+  rm -rf $head_build
+fi
+if [ -e $release_build]
+then
+  rm -rf $release_build 
+fi
