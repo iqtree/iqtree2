@@ -140,7 +140,7 @@ public:
 	/**
 	 * Given current supertree T and subtrees T|Y_1,...,T|Y_k, build all maps f_1,...,f_k
 	 */
-	void linkTrees();
+	virtual void linkTrees();
 
 	/**
 	 * link a branch from supertree to subtree (called by linkTree)

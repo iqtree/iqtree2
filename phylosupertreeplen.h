@@ -152,6 +152,11 @@ public:
 	*/
 	virtual void mapTrees();
 
+	/**
+	 * Given current supertree T and subtrees T|Y_1,...,T|Y_k, build all maps f_1,...,f_k
+	 */
+	virtual void linkTrees();
+
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
      */
@@ -164,6 +169,8 @@ public:
             @param index the index
      */
     virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    void initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 	/**
 	 * @return the type of NNI around node1-node2 for partition part
@@ -285,6 +292,9 @@ public:
             @return The number of branches that have no/negative length
      */
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+
+protected:
+	vector<uint64_t> partial_lh_entries, scale_num_entries, partial_pars_entries, block_size, scale_block_size;
 
 };
 

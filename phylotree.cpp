@@ -67,8 +67,8 @@ void PhyloTree::init() {
     model_factory = NULL;
 //    tmp_partial_lh1 = NULL;
 //    tmp_partial_lh2 = NULL;
-    tmp_anscentral_state_prob1 = NULL;
-    tmp_anscentral_state_prob2 = NULL;
+//    tmp_anscentral_state_prob1 = NULL;
+//    tmp_anscentral_state_prob2 = NULL;
     //tmp_ptn_rates = NULL;
     //state_freqs = NULL;
 //    tmp_scale_num1 = NULL;
@@ -114,14 +114,14 @@ void PhyloTree::discardSaturatedSite(bool val) {
 
 PhyloTree::~PhyloTree() {
     if (central_partial_lh)
-        delete[] central_partial_lh;
+        aligned_free(central_partial_lh);
     central_partial_lh = NULL;
     if (central_scale_num)
-        delete[] central_scale_num;
+        aligned_free(central_scale_num);
     central_scale_num = NULL;
 
     if (central_partial_pars)
-        delete[] central_partial_pars;
+        aligned_free(central_partial_pars);
     central_partial_pars = NULL;
     if (model_factory)
         delete model_factory;
@@ -137,10 +137,10 @@ PhyloTree::~PhyloTree() {
 //        delete[] tmp_partial_lh1;
 //    if (tmp_partial_lh2)
 //        delete[] tmp_partial_lh2;
-    if (tmp_anscentral_state_prob1)
-        delete[] tmp_anscentral_state_prob1;
-    if (tmp_anscentral_state_prob2)
-        delete[] tmp_anscentral_state_prob2;
+//    if (tmp_anscentral_state_prob1)
+//        delete[] tmp_anscentral_state_prob1;
+//    if (tmp_anscentral_state_prob2)
+//        delete[] tmp_anscentral_state_prob2;
     //if (tmp_ptn_rates)
     //	delete [] tmp_ptn_rates;
     if (_pattern_lh_cat)
@@ -1198,10 +1198,10 @@ void PhyloTree::initializeAllPartialLh() {
 //        //    tmp_partial_lh2 = tmp_partial_lh2 + 1;
 //    }
 
-    if (!tmp_anscentral_state_prob1)
-        tmp_anscentral_state_prob1 = new double[numStates];
-    if (!tmp_anscentral_state_prob2)
-        tmp_anscentral_state_prob2 = new double[numStates];
+//    if (!tmp_anscentral_state_prob1)
+//        tmp_anscentral_state_prob1 = new double[numStates];
+//    if (!tmp_anscentral_state_prob2)
+//        tmp_anscentral_state_prob2 = new double[numStates];
     //if (!tmp_ptn_rates)
     //	tmp_ptn_rates = new double[alnSize]
 //    if (!tmp_scale_num1)
@@ -1231,13 +1231,13 @@ void PhyloTree::initializeAllPartialLh() {
 
 void PhyloTree::deleteAllPartialLh() {
 	if (central_partial_lh) {
-		delete [] central_partial_lh;
+		aligned_free(central_partial_lh);
 	}
 	if (central_scale_num) {
-		delete [] central_scale_num;
+		aligned_free(central_scale_num);
 	}
 	if (central_partial_pars)
-		delete [] central_partial_pars;
+		aligned_free(central_partial_pars);
 	central_partial_lh = NULL;
 	central_scale_num = NULL;
 	central_partial_pars = NULL;
@@ -1260,9 +1260,43 @@ uint64_t PhyloTree::getMemoryRequired() {
     	block_size *= model->getNMixtures();
     uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2 + (leafNum - 1) * 4 * nptn * sizeof(UBYTE);
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
-    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size -  nptn * sizeof(UBYTE));
+    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size + nptn * sizeof(UBYTE));
 
     return mem_size;
+}
+
+void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries) {
+	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
+	uint64_t block_size;
+	if (instruction_set >= 7)
+		// block size must be divisible by 4
+		block_size = ((nptn+3)/4)*4;
+	else
+		// block size must be divisible by 2
+		block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+    block_size = block_size * aln->num_states;
+    if (site_rate)
+    	block_size *= site_rate->getNRate();
+    if (model && !model_factory->fused_mix_rate)
+    	block_size *= model->getNMixtures();
+//    uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2 + (leafNum - 1) * 4 * nptn * sizeof(UBYTE);
+    //    if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
+    //    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size -  nptn * sizeof(UBYTE));
+
+	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures();
+    if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
+        partial_lh_entries = ((uint64_t)leafNum * 3 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
+    else
+    	partial_lh_entries = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
+
+
+	if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
+		scale_num_entries = (leafNum*4 - 4) * nptn;
+	else
+		scale_num_entries = (leafNum*3 - 4) * nptn;
+
+    size_t pars_block_size = getBitsBlockSize();
+    partial_pars_entries = (leafNum - 1) * 4 * pars_block_size;
 }
 
 void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
@@ -1295,20 +1329,20 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
             	mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
             try {
-            	central_partial_lh = new double[mem_size];
+            	central_partial_lh = aligned_alloc<double>(mem_size);
             } catch (std::bad_alloc &ba) {
             	outError("Not enough memory for partial likelihood vectors (bad_alloc)");
             }
             //central_partial_lh = (double*) Eigen::internal::conditional_aligned_malloc<true>((leafNum-1)*4*block_size);
             if (!central_partial_lh)
                 outError("Not enough memory for partial likelihood vectors");
-            size_t mem_shift = 0;
-            if (((intptr_t) central_partial_lh) % MEM_ALIGNMENT != 0)
-            	mem_shift = (MEM_ALIGNMENT - (((intptr_t) central_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
+//            size_t mem_shift = 0;
+//            if (((intptr_t) central_partial_lh) % MEM_ALIGNMENT != 0)
+//            	mem_shift = (MEM_ALIGNMENT - (((intptr_t) central_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
             if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
-            	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size + mem_shift);
+            	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size);
             else
-            	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size + mem_shift);
+            	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size);
         }
 
         if (!central_scale_num) {
@@ -1318,7 +1352,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << mem_size * sizeof(UBYTE) << " bytes for scale num vectors" << endl;
             try {
-            	central_scale_num = new UBYTE[mem_size];
+            	central_scale_num = aligned_alloc<UBYTE>(mem_size);
             } catch (std::bad_alloc &ba) {
             	outError("Not enough memory for scale num vectors (bad_alloc)");
             }
@@ -1331,7 +1365,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
                 cout << "Allocating " << (leafNum - 1) * 4 * pars_block_size * sizeof(UINT)
                         << " bytes for partial parsimony vectors" << endl;
             try {
-            	central_partial_pars = new UINT[(leafNum - 1) * 4 * pars_block_size];
+            	central_partial_pars = aligned_alloc<UINT>((leafNum - 1) * 4 * pars_block_size);
             } catch (std::bad_alloc &ba) {
             	outError("Not enough memory for partial parsimony vectors (bad_alloc)");
             }
@@ -1343,9 +1377,9 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
     }
     if (dad) {
         // make memory alignment
-        size_t mem_shift = 0;
-        if (((intptr_t) central_partial_lh) % MEM_ALIGNMENT != 0)
-        	mem_shift = (MEM_ALIGNMENT - (((intptr_t) central_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
+//        size_t mem_shift = 0;
+//        if (((intptr_t) central_partial_lh) % MEM_ALIGNMENT != 0)
+//        	mem_shift = (MEM_ALIGNMENT - (((intptr_t) central_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
         PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
         //assert(!nei->partial_lh);
@@ -1354,7 +1388,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         	nei->scale_num = NULL;
         } else {
             nei->scale_num = central_scale_num + (indexlh * scale_block_size);
-        	nei->partial_lh = central_partial_lh + (indexlh * block_size + mem_shift);
+        	nei->partial_lh = central_partial_lh + (indexlh * block_size);
         	indexlh++;
         }
         nei->partial_pars = central_partial_pars + (index * pars_block_size);
@@ -1366,7 +1400,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         	nei->scale_num = NULL;
         } else {
             nei->scale_num = central_scale_num + ((indexlh) * scale_block_size);
-        	nei->partial_lh = central_partial_lh + (indexlh * block_size + mem_shift);
+        	nei->partial_lh = central_partial_lh + (indexlh * block_size);
         	indexlh++;
         }
         nei->partial_pars = central_partial_pars + (index * pars_block_size);
@@ -2148,6 +2182,9 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNo
     size_t ptn;
     int cat, state;
     double *tmp_state_freq = new double[nstates];
+    double *tmp_anscentral_state_prob1 = new double[nstates];
+    double *tmp_anscentral_state_prob2 = new double[nstates];
+
     //computeLikelihoodBranchNaive(dad_branch, dad, NULL, tmp_ptn_rates);
     //double sum_rates = 0.0;
     //for (ptn = 0; ptn < nptn; ptn++)
@@ -2196,6 +2233,8 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNo
     obsLen /= getAlnNSite();
     if (obsLen < MIN_BRANCH_LEN)
         obsLen = MIN_BRANCH_LEN;
+    delete[] tmp_anscentral_state_prob2;
+    delete[] tmp_anscentral_state_prob1;
     delete[] tmp_state_freq;
 
     return obsLen;

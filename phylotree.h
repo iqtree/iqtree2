@@ -1407,6 +1407,8 @@ public:
      */
     virtual uint64_t getMemoryRequired();
 
+    void getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries);
+
     /****** following variables are for ultra-fast bootstrap *******/
     /** 2 to save all trees, 1 to save intermediate trees */
     int save_all_trees;
@@ -1582,8 +1584,8 @@ protected:
      *  Used to avoid calling malloc
      */
 
-    double *tmp_anscentral_state_prob1;
-    double *tmp_anscentral_state_prob2;
+//    double *tmp_anscentral_state_prob1;
+//    double *tmp_anscentral_state_prob2;
     /** pattern-specific rates */
     //double *tmp_ptn_rates;
 

@@ -281,7 +281,19 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree
 }
 
 PhyloSuperTreePlen::~PhyloSuperTreePlen()
-{}
+{
+	for (iterator it = begin(); it != end(); it++) {
+		// reset these pointers so that they are not deleted
+		(*it)->central_partial_lh = NULL;
+		(*it)->central_scale_num = NULL;
+		(*it)->central_partial_pars = NULL;
+		(*it)->_pattern_lh = NULL;
+		(*it)->_pattern_lh_cat = NULL;
+		(*it)->theta_all = NULL;
+		(*it)->ptn_freq = NULL;
+		(*it)->ptn_invar = NULL;
+	}
+}
 
 
 // -------------------------------------------------------------------------------------------------------------
@@ -330,6 +342,11 @@ void PhyloSuperTreePlen::mapTrees() {
 		initializeAllPartialLh();
 }
 
+void PhyloSuperTreePlen::linkTrees() {
+	mapTrees();
+}
+
+
 double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
 	//initPartitionInfo(); // OLGA: not needed here
 	//cout<<"Optimizing all branches"<<endl;
@@ -373,6 +390,8 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 	double tree_lh = 0.0;
 	int ntrees = size();
 
+	if (!central_partial_lh) initializeAllPartialLh();
+
 	double lambda = value-current_it->length;
 	current_it->length = value;
     current_it_back->length = value;
@@ -409,7 +428,8 @@ double PhyloSuperTreePlen::computeLikelihoodFromBuffer() {
 			(*it)->current_it_back = nei2_part;
 			score += (*it)->computeLikelihoodFromBuffer();
 		} else {
-			assert(part_info[part].cur_score != 0.0);
+			if (part_info[part].cur_score == 0.0)
+				part_info[part].cur_score = at(part)->computeLikelihood();
 			score += part_info[part].cur_score;
 		}
 	}
@@ -425,6 +445,8 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) 
 	ddf = 0.0;
 
 	int ntrees = size();
+
+	if (!central_partial_lh) initializeAllPartialLh();
 
 	double lambda = value-current_it->length;
 	current_it->length = value;
@@ -450,11 +472,12 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) 
 //				tree_lh += part_info[part].cur_score;
 				df -= part_info[part].part_rate*df_aux;
 				ddf -= part_info[part].part_rate*part_info[part].part_rate*ddf_aux;
-			} else {
-				if (part_info[part].cur_score == 0.0)
-					part_info[part].cur_score = at(part)->computeLikelihood();
-//				tree_lh += part_info[part].cur_score;
 			}
+//			else {
+//				if (part_info[part].cur_score == 0.0)
+//					part_info[part].cur_score = at(part)->computeLikelihood();
+//				tree_lh += part_info[part].cur_score;
+//			}
 		}
 //    return -tree_lh;
 }
@@ -1647,17 +1670,149 @@ void PhyloSuperTreePlen::changeNNIBrans(NNIMove nnimove) {
         initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
  */
 void PhyloSuperTreePlen::initializeAllPartialLh() {
-	if (!central_partial_lh) {
+	iterator it;
+	int part;
+	int ntrees = size();
 
+	block_size.resize(ntrees);
+	scale_block_size.resize(ntrees);
+
+	vector<uint64_t> mem_size, lh_cat_size;
+	mem_size.resize(ntrees);
+	lh_cat_size.resize(ntrees);
+	uint64_t total_mem_size = 0, total_block_size = 0, total_lh_cat_size = 0;
+
+	for (it = begin(), part = 0; it != end(); it++, part++) {
+		size_t nptn = (*it)->getAlnNPattern() + (*it)->aln->num_states; // extra #numStates for ascertainment bias correction
+		if (instruction_set >= 7)
+			mem_size[part] = ((nptn +3)/4)*4;
+		else
+			mem_size[part] = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+		scale_block_size[part] = nptn;
+		block_size[part] = mem_size[part] * (*it)->aln->num_states * (*it)->getRate()->getNRate() *
+				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
+
+		lh_cat_size[part] = mem_size[part] * (*it)->getRate()->getNDiscreteRate() *
+				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
+		total_mem_size += mem_size[part];
+		total_block_size += block_size[part];
+		total_lh_cat_size += lh_cat_size[part];
 	}
+
+    if (!_pattern_lh)
+        _pattern_lh = aligned_alloc<double>(total_mem_size);
+    front()->_pattern_lh = _pattern_lh;
+    if (!_pattern_lh_cat)
+        _pattern_lh_cat = new double[total_lh_cat_size];
+    front()->_pattern_lh_cat = _pattern_lh_cat;
+    if (!theta_all)
+        theta_all = aligned_alloc<double>(total_block_size);
+    front()->theta_all = theta_all;
+    if (!ptn_freq)
+        ptn_freq = aligned_alloc<double>(total_mem_size);
+    front()->ptn_freq = ptn_freq;
+    if (!ptn_invar)
+        ptn_invar = aligned_alloc<double>(total_mem_size);
+    front()->ptn_invar = ptn_invar;
+
+	for (it = begin()+1, part = 0; it != end(); it++, part++) {
+		(*it)->_pattern_lh = (*(it-1))->_pattern_lh + mem_size[part];
+		(*it)->_pattern_lh_cat = (*(it-1))->_pattern_lh_cat + lh_cat_size[part];
+		(*it)->theta_all = (*(it-1))->theta_all + block_size[part];
+		(*it)->ptn_freq = (*(it-1))->ptn_freq + mem_size[part];
+		(*it)->ptn_invar = (*(it-1))->ptn_invar + mem_size[part];
+	}
+
+	// compute total memory for all partitions
+	uint64_t total_partial_lh_entries = 0, total_scale_num_entries = 0, total_partial_pars_entries = 0;
+	partial_lh_entries.resize(ntrees);
+	scale_num_entries.resize(ntrees);
+	partial_pars_entries.resize(ntrees);
+	for (it = begin(), part = 0; it != end(); it++, part++) {
+		(*it)->getMemoryRequired(partial_lh_entries[part], scale_num_entries[part], partial_pars_entries[part]);
+		total_partial_lh_entries += partial_lh_entries[part];
+		total_scale_num_entries += scale_num_entries[part];
+		total_partial_pars_entries += partial_pars_entries[part];
+	}
+
+	// allocate central memory for all partitions
+	if (!central_partial_lh) {
+        try {
+        	central_partial_lh = aligned_alloc<double>(total_partial_lh_entries);
+        	central_scale_num = aligned_alloc<UBYTE>(total_scale_num_entries);
+        } catch (std::bad_alloc &ba) {
+        	outError("Not enough memory for partial likelihood vectors (bad_alloc)");
+        }
+	}
+//    if (!central_partial_pars) {
+//        try {
+//        	central_partial_pars = aligned_alloc<UINT>(total_partial_pars_entries);
+//        } catch (std::bad_alloc &ba) {
+//        	outError("Not enough memory for partial parsimony vectors (bad_alloc)");
+//        }
+//    }
+
+    // assign individual chunk just to prevent reallocation of memory, they will not be used
+	for (it = begin(); it != end(); it++) {
+		(*it)->central_partial_lh = central_partial_lh;
+		(*it)->central_scale_num = central_scale_num;
+//		(*it)->central_partial_pars = central_partial_pars;
+	}
+
+	double *lh_addr = central_partial_lh;
+	UBYTE *scale_addr = central_scale_num;
+	UINT *pars_addr = central_partial_pars;
+	initializeAllPartialLh(lh_addr, scale_addr, pars_addr);
+	clearAllPartialLH();
+    tip_partial_lh = NULL;
+    for (it = begin(), part = 0; it != end(); it++, part++) {
+        (*it)->tip_partial_lh = lh_addr;
+        uint64_t tip_partial_lh_size = (*it)->aln->num_states * ((*it)->aln->STATE_UNKNOWN+1) * (*it)->model->getNMixtures();
+        lh_addr += tip_partial_lh_size;
+    }
 }
 
-/**
-        initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
-        @param node the current node
-        @param dad dad of the node, used to direct the search
-        @param index the index
- */
-void PhyloSuperTreePlen::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
+void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node, PhyloNode *dad) {
+    if (!node)
+        node = (PhyloNode*) root;
+    if (dad) {
+        // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
+        SuperNeighbor *nei = (SuperNeighbor*) node->findNeighbor(dad);
+		SuperNeighbor *nei_back = (SuperNeighbor*) dad->findNeighbor(node);
+        for (int part = 0; part < size(); part++) {
+        	PhyloNeighbor *nei_part = nei->link_neighbors[part];
+        	if (!nei_part) continue;
 
+			if (nei_part->node->isLeaf() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
+				nei_part->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
+				nei_part->scale_num = NULL;
+			} else {
+				nei_part->partial_lh = lh_addr;
+				nei_part->scale_num = scale_addr;
+				lh_addr = lh_addr + block_size[part];
+				scale_addr = scale_addr + scale_block_size[part];
+			}
+//			nei_part->partial_pars = pars_addr;
+//			pars_addr += partial_pars_entries[part];
+
+			nei_part = nei_back->link_neighbors[part];
+			if (nei_part->node->isLeaf() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
+				nei_part->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
+				nei_part->scale_num = NULL;
+			} else {
+				nei_part->partial_lh = lh_addr;
+				nei_part->scale_num = scale_addr;
+				lh_addr = lh_addr + block_size[part];
+				scale_addr = scale_addr + scale_block_size[part];
+			}
+//			nei_part->partial_pars = pars_addr;
+//			pars_addr += partial_pars_entries[part];
+        }
+    }
+    FOR_NEIGHBOR_IT(node, dad, it) initializeAllPartialLh(lh_addr, scale_addr, pars_addr, (PhyloNode*) (*it)->node, node);
+}
+
+void PhyloSuperTreePlen::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
+	// this function should not be used, assertion raised if accidentally called
+	assert(0);
 }
