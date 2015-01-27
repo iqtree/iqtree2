@@ -71,7 +71,7 @@ if [ -e $head_build ]
 then
   rm -rf $head_build
 fi
-if [ -e $release_build]
+if [ -e $release_build ]
 then
   rm -rf $release_build 
 fi
@@ -101,11 +101,5 @@ git checkout ${curBranch}
 git submodule update
 
 #Clean up
-if [ -e $head_build ]
-then
-  rm -rf $head_build
-fi
-if [ -e $release_build ]
-then
-  rm -rf $release_build 
-fi
+rm -rf $head_build
+rm -rf $release_build 
