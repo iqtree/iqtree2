@@ -1291,9 +1291,9 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
 
 
 	if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
-		scale_num_entries = (leafNum*4 - 4) * nptn;
-	else
 		scale_num_entries = (leafNum*3 - 4) * nptn;
+	else
+		scale_num_entries = (leafNum*4 - 4) * nptn;
 
     size_t pars_block_size = getBitsBlockSize();
     partial_pars_entries = (leafNum - 1) * 4 * pars_block_size;

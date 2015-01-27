@@ -38,6 +38,7 @@ public:
      */
     PhyloNeighbor(Node *anode, double alength) : Neighbor(anode, alength) {
         partial_lh = NULL;
+        scale_num = NULL;
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
@@ -51,6 +52,7 @@ public:
      */
     PhyloNeighbor(Node *anode, double alength, int aid) : Neighbor(anode, alength, aid) {
         partial_lh = NULL;
+        scale_num = NULL;
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
