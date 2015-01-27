@@ -454,6 +454,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     // logl of the first tree has already been computed during model parameter estimation
     for (vector<string>::iterator it = unOptParTrees.begin()+1; it != unOptParTrees.end(); it++) {
     	readTreeString(*it);
+//    	cout << getTreeString() << endl << "-----" << endl;
     	//cout << "Root: " << root->name << endl;
 //    	fixAllBranches(true);
         string tree = optimizeBranches(2);

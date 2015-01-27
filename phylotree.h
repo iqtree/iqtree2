@@ -493,8 +493,9 @@ public:
 
     /**
             clear all partial likelihood for a clean computation again
+            @param make_null true to make all partial_lh become NULL
      */
-    virtual void clearAllPartialLH();
+    virtual void clearAllPartialLH(bool make_null = false);
 
     /**
      * compute all partial likelihoods if not computed before

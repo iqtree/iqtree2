@@ -254,9 +254,9 @@ void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 
 string PhyloSuperTree::getTreeString() {
 	stringstream tree_stream;
-	printTree(tree_stream);
+	printTree(tree_stream, WT_BR_LEN+WT_NEWLINE);
 	for (iterator it = begin(); it != end(); it++)
-		(*it)->printTree(tree_stream);
+		(*it)->printTree(tree_stream, WT_BR_LEN+WT_NEWLINE);
 	return tree_stream.str();
 }
 
@@ -499,9 +499,9 @@ void PhyloSuperTree::deleteAllPartialLh() {
 	}
 }
 
-void PhyloSuperTree::clearAllPartialLH() {
+void PhyloSuperTree::clearAllPartialLH(bool make_null) {
     for (iterator it = begin(); it != end(); it++) {
-        (*it)->clearAllPartialLH();
+        (*it)->clearAllPartialLH(make_null);
     }
 }
 

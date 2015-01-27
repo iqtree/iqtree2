@@ -29,14 +29,18 @@ void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
 			((PhyloNode*)(*it)->node)->clearReversePartialLh(this);
 }
 
-void PhyloNode::clearAllPartialLh(PhyloNode *dad) {
+void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode *dad) {
 	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
 	node_nei->partial_lh_computed = 0;
+	if (make_null) node_nei->partial_lh = NULL;
+
 	node_nei = (PhyloNeighbor*)dad->findNeighbor(this);
 	node_nei->partial_lh_computed = 0;
+	if (make_null) node_nei->partial_lh = NULL;
+
 	for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++)
 		if ((*it)->node != dad)
-			((PhyloNode*)(*it)->node)->clearAllPartialLh(this);
+			((PhyloNode*)(*it)->node)->clearAllPartialLh(make_null, this);
 }
 
 

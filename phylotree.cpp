@@ -376,10 +376,10 @@ Node* PhyloTree::newNode(int node_id, int node_name) {
     return (Node*) (new PhyloNode(node_id, node_name));
 }
 
-void PhyloTree::clearAllPartialLH() {
+void PhyloTree::clearAllPartialLH(bool make_null) {
     if (!root)
         return;
-    ((PhyloNode*) root->neighbors[0]->node)->clearAllPartialLh((PhyloNode*) root);
+    ((PhyloNode*) root->neighbors[0]->node)->clearAllPartialLh(make_null, (PhyloNode*) root);
     tip_partial_lh_computed = false;
 }
 

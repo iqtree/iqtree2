@@ -174,7 +174,7 @@ public:
     /**
         tell that all partial likelihood vectors below this node are not computed
      */
-    void clearAllPartialLh(PhyloNode *dad);
+    void clearAllPartialLh(bool make_null, PhyloNode *dad);
 
     /**
         tell that all partial likelihood vectors (in reverse direction) below this node are not computed

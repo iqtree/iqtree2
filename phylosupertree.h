@@ -158,7 +158,7 @@ public:
     /**
      NEWLY ADDED (2014-12-04): clear all partial likelihood for a clean computation again
      */
-    virtual void clearAllPartialLH();
+    virtual void clearAllPartialLH(bool make_null = false);
     
 
     /**

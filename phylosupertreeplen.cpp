@@ -380,16 +380,23 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
 	SuperNeighbor *nei2 = (SuperNeighbor*)node2->findNeighbor(node1);
 
 	current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
-	current_it_back = (PhyloNeighbor*) node2->findNeighbor(node1);
 	double current_len = current_it->length;
-
-	for (int part = 0; part < size(); part++)
-		if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
-			at(part)->theta_computed = false;
-		}
+	int part;
+	for (part = 0; part < size(); part++) {
+		at(part)->theta_computed = false;
+	}
 
 	//this->clearAllPartialLH();
 	PhyloTree::optimizeOneBranch(node1, node2, false, maxNRStep);
+
+	// bug fix: assign cur_score into part_info
+	for (part = 0; part < size(); part++) {
+		at(part)->current_it = (((SuperNeighbor*)current_it)->link_neighbors[part]);
+		at(part)->current_it_back = (((SuperNeighbor*)current_it_back)->link_neighbors[part]);
+		if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
+			part_info[part].cur_score = at(part)->computeLikelihoodFromBuffer();
+		}
+	}
 
 	if(clearLH && current_len != current_it->length){
 		for (int part = 0; part < size(); part++) {
@@ -439,23 +446,12 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 
 double PhyloSuperTreePlen::computeLikelihoodFromBuffer() {
 	double score = 0.0;
-	int part = 0;
-	for (iterator it = begin(); it != end(); it++, part++) {
-//		PhyloNeighbor *nei1_part = ((SuperNeighbor*)current_it)->link_neighbors[part];
-//		PhyloNeighbor *nei2_part = ((SuperNeighbor*)current_it_back)->link_neighbors[part];
-//		if (nei1_part && nei2_part) {
-//			(*it)->current_it = nei1_part;
-//			(*it)->current_it_back = nei2_part;
-			score += (*it)->computeLikelihoodFromBuffer();
-//		} else {
-//			if (part_info[part].cur_score == 0.0)
-//				part_info[part].cur_score = at(part)->computeLikelihood();
-//			score += part_info[part].cur_score;
-//		}
+	int part, ntrees = size();
+	for (part = 0; part < ntrees; part++) {
+		assert(part_info[part].cur_score != 0.0);
+		score += part_info[part].cur_score;
 	}
 	return score;
-
-
 }
 
 void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) {
@@ -494,8 +490,9 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) 
 				ddf -= part_info[part].part_rate*part_info[part].part_rate*ddf_aux;
 			}
 			else {
-//				if (part_info[part].cur_score == 0.0)
-//					part_info[part].cur_score = at(part)->computeLikelihood();
+//				part_info[part].cur_score = 0.0;
+				if (part_info[part].cur_score == 0.0)
+					part_info[part].cur_score = at(part)->computeLikelihood();
 //				tree_lh += part_info[part].cur_score;
 			}
 		}
@@ -1782,9 +1779,10 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 	double *lh_addr = central_partial_lh;
 	UBYTE *scale_addr = central_scale_num;
 	UINT *pars_addr = central_partial_pars;
+	clearAllPartialLH(true);
+
 	initializeAllPartialLh(lh_addr, scale_addr, pars_addr);
     assert((lh_addr - central_partial_lh) < total_partial_lh_entries*sizeof(double));
-	clearAllPartialLH();
     tip_partial_lh = NULL;
     for (it = begin(), part = 0; it != end(); it++, part++) {
         (*it)->tip_partial_lh = lh_addr;
