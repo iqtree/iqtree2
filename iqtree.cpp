@@ -455,7 +455,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     for (vector<string>::iterator it = unOptParTrees.begin()+1; it != unOptParTrees.end(); it++) {
     	readTreeString(*it);
     	//cout << "Root: " << root->name << endl;
-    	fixAllBranches(true);
+//    	fixAllBranches(true);
         string tree = optimizeBranches(2);
         // Add tree to the candidate set
 		candidateTrees.update(tree, getCurScore(), false);
@@ -480,12 +480,12 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         string tree;
         readTreeString(rit->second.tree);
         computeLogL();
-        // THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
-        if (isSuperTree() && params->partition_type == 0) {
-        	if (verbose_mode >= VB_MED)
-        		cout << "curScore: " << getCurScore() << " expected score: " << rit->first << endl;
-        	optimizeBranches(2);
-        }
+//         THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
+//        if (isSuperTree() && params->partition_type == 0) {
+//        	if (verbose_mode >= VB_MED)
+//        		cout << "curScore: " << getCurScore() << " expected score: " << rit->first << endl;
+//        	optimizeBranches(2);
+//        }
         initLogl = getCurScore();
         tree = doNNISearch(nniCount, nniStep);
         nniLogl = getCurScore();
@@ -1638,7 +1638,7 @@ double IQTree::doTreeSearch() {
     // keep the best tree into a string
     //stringstream bestTreeStream;
     //stringstream bestTopoStream;
-    string perturb_tree_string;
+//    string perturb_tree_string;
     string imd_tree;
     //printTree(bestTreeStream, WT_TAXON_ID + WT_BR_LEN);
     //printTree(bestTopoStream, WT_TAXON_ID + WT_SORT_TAXA);
@@ -1703,8 +1703,9 @@ double IQTree::doTreeSearch() {
             if (params->snni) {
             	int numStableBranches = aln->getNSeq() - 3 - candidateTrees.getStableSplits().size();
                 int numNNI = floor(searchinfo.curPerStrength * numStableBranches);
-                string candidateTree = candidateTrees.getRandCandTree();
-                readTreeString(candidateTree);
+//                string candidateTree = candidateTrees.getRandCandTree();
+//                readTreeString(candidateTree);
+                readTreeString(candidateTrees.getRandCandTree());
 //                if (params->fix_stable_splits)
 //                	assert(containsSplits(candidateTrees.getStableSplits()));
                 if (params->iqp) {
@@ -1716,7 +1717,7 @@ double IQTree::doTreeSearch() {
             	readTreeString(candidateTrees.getBestTrees()[0]);
                 doIQP();
             }
-            perturb_tree_string = getTreeString();
+//            perturb_tree_string = getTreeString();
             if (params->count_trees) {
                 string perturb_tree_topo = getTopology();
                 if (pllTreeCounter.find(perturb_tree_topo) == pllTreeCounter.end()) {
