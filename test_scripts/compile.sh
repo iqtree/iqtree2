@@ -29,7 +29,8 @@ commit_cur=`git log | head -n1 | awk '{print $2}' | cut -c 1-6`
 head_build="build_${commit_cur}"
 release_build="build_release"
 release_binary="iqtree_release"
-cur_binary="iqtree_${commit_cur}"
+#cur_binary="iqtree_${commit_cur}"
+cur_binary="iqtree_test"
 
 #Clean up 
 if [ -e $head_build ]
