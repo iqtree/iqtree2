@@ -91,7 +91,7 @@ cp ${head_build}/iqtree ${cur_binary}
 #rm -rf ${head_build}
 mkdir $release_build
 #Find the hash code of the most recent release in master
-commit=`git log origin/master | grep -m 1 -B 4 "release" | grep "commit" | awk '{print $2}'`
+commit=`git log origin/master | grep -m 1 -B 4 "release version" | grep "commit" | awk '{print $2}'`
 git checkout ${commit}
 git submodule update
 cmake -B${release_build} -H..
