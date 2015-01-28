@@ -1583,6 +1583,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	/****** perform SH-aLRT test ******************/
 	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0) && !params.pll) {
 		double mytime = getCPUTime();
+		params.aLRT_replicates = max(params.aLRT_replicates, params.localbp_replicates);
 		cout << endl << "Testing tree branches by SH-like aLRT with "
 				<< params.aLRT_replicates << " replicates..." << endl;
 		iqtree.setRootNode(params.root);
@@ -1825,8 +1826,8 @@ void runPhyloAnalysis(Params &params) {
 			// since nni5 does not work yet, stop the programm
 /*			if(params.nni5)
 				outError("-nni5 option is unsupported yet for proportitional partition model. please use -nni1 option");*/
-			if(params.aLRT_replicates)
-				outError("-alrt option is unsupported yet for proportitional partition model");
+//			if(params.aLRT_replicates || params.localbp_replicates)
+//				outError("-alrt or -lbp option is unsupported yet for joint/proportional partition model");
 			// initialize supertree - Proportional Edges case, "-spt p" option
 			tree = new PhyloSuperTreePlen(params);
 		} else {

@@ -1502,6 +1502,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     		case 4: computeLikelihoodBranchEigen<4>(current_it, (PhyloNode*)current_it_back->node); break;
     		case 20: computeLikelihoodBranchEigen<20>(current_it, (PhyloNode*)current_it_back->node); break;
     		case 2: computeLikelihoodBranchEigen<2>(current_it, (PhyloNode*)current_it_back->node); break;
+    		case 64: computeLikelihoodBranchEigen<64>(current_it, (PhyloNode*)current_it_back->node); break;
     		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
     		}
     	}
@@ -4498,8 +4499,10 @@ int PhyloTree::testAllBranches(int threshold, double best_score, double *pattern
             node->name += "/" + convertIntToString(round(lbp_support * 100));
         if (support < threshold)
             num_low_support = 1;
-        ((PhyloNeighbor*) node->findNeighbor(dad))->partial_pars[0] = support;
-        ((PhyloNeighbor*) dad->findNeighbor(node))->partial_pars[0] = support;
+        if (((PhyloNeighbor*) node->findNeighbor(dad))->partial_pars) {
+			((PhyloNeighbor*) node->findNeighbor(dad))->partial_pars[0] = support;
+			((PhyloNeighbor*) dad->findNeighbor(node))->partial_pars[0] = support;
+        }
     }
     FOR_NEIGHBOR_IT(node, dad, it)num_low_support += testAllBranches(threshold, best_score, pattern_lh, reps, lbp_reps, (PhyloNode*) (*it)->node, node);
 

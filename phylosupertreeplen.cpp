@@ -1346,6 +1346,10 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 //			cout << endl;
 //		}
 
+		// FOR SH-aLRT test
+		if (nniMoves[cnt].ptnlh)
+			computePatternLikelihood(nniMoves[cnt].ptnlh, &score);
+
 	    // Save current tree for ufboot analysis
 	    if (save_all_trees == 2) {
 	    		saveCurrentTree(score);
