@@ -91,9 +91,9 @@ void RateGamma::computeRates() {
 		rates[cat] = rates[cat]/(1.0 - p_inv);
 
 	/* check for very small rates */
-	for (cat = 0; cat < ncategory; cat ++)
-		if (rates[cat] < MIN_GAMMA_RATE)
-			rates[cat] = MIN_GAMMA_RATE;
+//	for (cat = 0; cat < ncategory; cat ++)
+//		if (rates[cat] < MIN_GAMMA_RATE)
+//			rates[cat] = MIN_GAMMA_RATE;
 }
 
 /*double RateGamma::cmpPerPointGamma (const double prob, const double shape) {

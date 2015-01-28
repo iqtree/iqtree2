@@ -83,10 +83,10 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     //tree->initPartitionInfo(); // FOR OLGA: needed here
 
     //tree_lh = tree->computeLikelihood();
+	for(int part = 0; part < ntrees; part++){
+		tree->part_info[part].cur_score = 0.0;
+	}
 	if (fixed_len) {
-    	for(int part = 0; part < ntrees; part++){
-    		tree->part_info[part].cur_score = 0.0;
-    	}
 		tree_lh = tree->computeLikelihood();
 	} else {
 		tree_lh = tree->optimizeAllBranches(1);
@@ -99,14 +99,13 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	tol = max(tol/2, epsilon);
     	cur_lh = 0.0;
     	for (int part = 0; part < ntrees; part++) {
-
     		// Subtree model parameters optimization
-        	double model_lh = tree->at(part)->getModelFactory()->optimizeParameters(true,false,tol);
-        	cur_lh += model_lh;
+        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParameters(true,false,tol);
+        	cur_lh += tree->part_info[part].cur_score ;
         	//cout <<"Partition "<<part<<" MODEL:"<<tree->at(part)->getModelName() <<endl;
 
     	}
-
+    	tree->clearAllPartialLH();
     	// Optimizing gene rate
     	//tree->fixed_rates = true;
     	if(!tree->fixed_rates){
@@ -124,12 +123,15 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	//cout<<"BEFORE BRANCH OPTIMIZATION"<<endl;
         //tree->printTree(cout);
     	if(!fixed_len){
-    		cur_lh = tree->optimizeAllBranches(my_iter,tol);
+            double new_lh = tree->optimizeAllBranches(my_iter,tol);
+            assert(new_lh > cur_lh - 1.0);
+            cur_lh = new_lh;
     	}
     	cout<<"Current log-likelihood at step "<<i<<": "<<cur_lh<<endl;
     	if(fabs(cur_lh-tree_lh) < epsilon)
     		break;
-
+    	// make sure that the new logl is not so bad compared with previous logl
+    	assert(cur_lh > tree_lh - 1.0);
     	tree_lh = cur_lh;
     }
     //tree->printTree(cout);
@@ -172,6 +174,7 @@ double PartitionModelPlen::optimizeGeneRate(double tol)
 	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, tol);
 
 	getVariables(variables);
+	tree->clearAllPartialLH();
 
 	delete [] bound_check;
 	delete [] lower_bound;
@@ -202,6 +205,7 @@ double PartitionModelPlen::targetFunk(double x[]) {
 			tree->at(part)->clearAllPartialLH();
 			//tree->at(part)->scaleLength(rate/tree->part_info[part].part_rate);
 			tree->part_info[part].part_rate = rate;
+			tree->part_info[part].cur_score = 0.0;
 		}
 	}
 	tree->mapBranchLen();
@@ -445,6 +449,7 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 }
 
 double PhyloSuperTreePlen::computeLikelihoodFromBuffer() {
+    //return -computeFunction(current_it->length);
 	double score = 0.0;
 	int part, ntrees = size();
 	for (part = 0; part < ntrees; part++) {

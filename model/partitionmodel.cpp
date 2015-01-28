@@ -31,6 +31,8 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree)
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
+	fused_mix_rate = false;
+
 	// create dummy model
 	model = new ModelSubst(tree->aln->num_states);
 	site_rate = new RateHeterogeneity();
