@@ -395,8 +395,6 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
 
 	// bug fix: assign cur_score into part_info
 	for (part = 0; part < size(); part++) {
-		at(part)->current_it = (((SuperNeighbor*)current_it)->link_neighbors[part]);
-		at(part)->current_it_back = (((SuperNeighbor*)current_it_back)->link_neighbors[part]);
 		if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
 			part_info[part].cur_score = at(part)->computeLikelihoodFromBuffer();
 		}
@@ -435,6 +433,8 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 			if (nei1_part && nei2_part) {
+				at(part)->current_it = nei1_part;
+				at(part)->current_it_back = nei2_part;
 				nei1_part->length += lambda*part_info[part].part_rate;
 				nei2_part->length += lambda*part_info[part].part_rate;
 				part_info[part].cur_score = at(part)->computeLikelihoodBranch(nei2_part,(PhyloNode*)nei1_part->node);
@@ -481,6 +481,9 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) 
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 			if (nei1_part && nei2_part) {
+				at(part)->current_it = nei1_part;
+				at(part)->current_it_back = nei2_part;
+
 				nei1_part->length += lambda*part_info[part].part_rate;
 				nei2_part->length += lambda*part_info[part].part_rate;
 				if(nei1_part->length<-1e-4){
