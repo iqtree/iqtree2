@@ -615,8 +615,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					<< endl;
 			if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
 				out << "Numbers in parentheses are ";
-				if (params.aLRT_replicates > 0)
+				if (params.aLRT_replicates > 0) {
 					out << "SH-aLRT supports";
+					if (params.localbp_replicates)
+						out << " / local bootstrap (LBP)";
+				}
 				if (params.num_bootstrap_samples && params.compute_ml_tree) {
 					if (params.aLRT_replicates > 0)
 						out << " /";
