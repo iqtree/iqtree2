@@ -236,9 +236,10 @@ void PhyloTree::setAlignment(Alignment *alignment) {
             str += " does not appear in the tree";
             err = true;
             outError(str, false);
+        } else {
+            assert(node->isLeaf());
+            node->id = seq;
         }
-        assert(node->isLeaf());
-        node->id = seq;
     }
     StrVector taxname;
     getTaxaName(taxname);
