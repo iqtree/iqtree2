@@ -1952,7 +1952,6 @@ void runPhyloAnalysis(Params &params) {
 			((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
 		}
 	}
-
 	delete tree;
 	// BUG FIX: alignment can be changed, should delete tree->aln instead
 	alignment = tree->aln;
