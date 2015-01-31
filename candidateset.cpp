@@ -70,6 +70,7 @@ vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
 	}
 	return res;
 }
+
 /*
 bool CandidateSet::replaceTree(string tree, double score) {
     CandidateTree candidate;
@@ -90,6 +91,7 @@ bool CandidateSet::replaceTree(string tree, double score) {
     }
     return true;
 }
+*/
 
 string CandidateSet::getNextCandTree() {
     string tree;
@@ -111,7 +113,8 @@ void CandidateSet::initParentTrees() {
         }
     }
 }
-*/
+
+
 bool CandidateSet::update(string tree, double score, bool localOpt) {
 	bool newTree = true;
 	CandidateTree candidate;

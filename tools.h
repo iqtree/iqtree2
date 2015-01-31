@@ -409,6 +409,11 @@ extern int NNI_MAX_NR_STEP;
 struct Params {
 
 	/**
+	 *  Use (5+5)-ES strategy
+	 */
+	bool five_plus_five;
+
+	/**
 	 * Turn on feature to identify stable splits and fix them during tree search
 	 */
 	bool fix_stable_splits;

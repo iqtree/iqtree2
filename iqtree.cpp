@@ -1605,7 +1605,7 @@ string IQTree::optimizeBranches(int maxTraversal) {
 //            clearAllPartialLH();
 //            lhComputed = true;
 //    	}
-    	curScore = optimizeAllBranches(maxTraversal);
+    	curScore = optimizeAllBranches(maxTraversal, params->loglh_epsilon, PLL_NEWZPERCYCLE);
         tree = getTreeString();
     }
     return tree;
@@ -1704,11 +1704,11 @@ double IQTree::doTreeSearch() {
             if (params->snni) {
             	int numStableBranches = aln->getNSeq() - 3 - candidateTrees.getStableSplits().size();
                 int numNNI = floor(searchinfo.curPerStrength * numStableBranches);
-//                string candidateTree = candidateTrees.getRandCandTree();
-//                readTreeString(candidateTree);
-                readTreeString(candidateTrees.getRandCandTree());
-//                if (params->fix_stable_splits)
-//                	assert(containsSplits(candidateTrees.getStableSplits()));
+                if (params->five_plus_five) {
+                	readTreeString(candidateTrees.getNextCandTree());
+                } else {
+                	readTreeString(candidateTrees.getRandCandTree());
+                }
                 if (params->iqp) {
                     doIQP();
                 } else {

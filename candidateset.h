@@ -68,7 +68,7 @@ public:
      * been used for reproduction. If all candidate trees have been used, we select the
      * current best trees as the new parent trees
      */
-//    string getNextCandTree();
+    string getNextCandTree();
 
     /**
      *  Replace an existing tree in the candidate set
@@ -81,7 +81,7 @@ public:
     /**
      *  create the parent tree set containing top trees
      */
-//    void initParentTrees();
+    void initParentTrees();
 
     /**
      * update/insert \a tree into the candidate set if its score is higher than the worst tree

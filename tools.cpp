@@ -787,6 +787,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.reduction = false;
     params.numInitTrees = 100;
     params.fix_stable_splits = false;
+    params.five_plus_five = false;
     params.numSupportTrees = 20;
     params.sprDist = 20;
     params.numNNITrees = 20;
@@ -2248,6 +2249,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-fss") == 0) {
 				params.fix_stable_splits = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-ff") == 0) {
+				params.five_plus_five = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-toppars") == 0) {
