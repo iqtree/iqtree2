@@ -32,7 +32,7 @@
 #include "vectorclass/vectormath_common.h"
 
 
-Params *globalParam;
+Params *globalParams;
 Alignment *globalAlignment;
 extern StringIntMap pllTreeCounter;
 
@@ -74,7 +74,6 @@ IQTree::IQTree(Alignment *aln) : PhyloTree(aln) {
 }
 
 void IQTree::initSettings(Params &params) {
-    searchinfo.speednni = params.speednni;
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
     setLikelihoodKernel(params.SSE);
@@ -149,7 +148,7 @@ void IQTree::initSettings(Params &params) {
     nni_sort = params.nni_sort;
     testNNI = params.testNNI;
 
-    globalParam = &params;
+    globalParams = &params;
     globalAlignment = aln;
 
     write_intermediate_trees = params.write_intermediate_trees;
@@ -1032,8 +1031,27 @@ void IQTree::doParsimonyReinsertion() {
     fixNegativeBranch(false);
 }
 
+int IQTree::removeNNIBranches(NodeVector& nodes1, NodeVector& nodes2, unordered_map<string, NNIMove> nnis) {
+	if (nnis.size() == 0)
+		return 0;
+	NodeVector _nodes1, _nodes2;
+	NodeVector::iterator it1, it2;
+	_nodes1 = nodes1;
+	_nodes2 = nodes2;
+	nodes1.clear();
+	nodes2.clear();
+	for (it1 = _nodes1.begin(), it2 = _nodes2.begin(); it1 != _nodes1.end(), it2 != _nodes2.end(); it1++, it2++) {
+		assert(isInnerBranch(*it1, *it2));
+		string branchID = getBranchID(*it1, *it2);
+		if (nnis.find(branchID) == nnis.end()) {
+			nodes1.push_back(*it1);
+			nodes2.push_back(*it2);
+		}
+	}
+	return (_nodes1.size() - nodes1.size());
+}
 
-int IQTree::removeBranches(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits) {
+int IQTree::removeSplits(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits) {
 	if (splits.size() == 0)
 		return 0;
 	NodeVector _nodes1, _nodes2;
@@ -1043,6 +1061,7 @@ int IQTree::removeBranches(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& s
 	nodes1.clear();
 	nodes2.clear();
 	for (it1 = _nodes1.begin(), it2 = _nodes2.begin(); it1 != _nodes1.end(), it2 != _nodes2.end(); it1++, it2++) {
+		assert(isInnerBranch(*it1, *it2));
 		Split* sp = getSplit(*it1, *it2);
 		if (!splits.containSplit(*sp)) {
 			nodes1.push_back(*it1);
@@ -1061,7 +1080,7 @@ void IQTree::doRandomNNIs(int numNNI) {
     while (cntNNI < numNNI) {
     	nodes1.clear();
     	nodes2.clear();
-		getAllInnerBranches(nodes1, nodes2, &candidateTrees.getStableSplits());
+		generateNNIBraches(nodes1, nodes2, &candidateTrees.getStableSplits());
     	// remove all used splits
 		//removeBranches(nodes1, nodes2, usedSplits);
 		if (nodes1.size() == 0) {
@@ -1879,7 +1898,9 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     bool rollBack = false;
     nni_count = 0;
     int numNNIs = 0; // number of NNI to be applied in each step
-    const int MAXSTEPS = aln->getNSeq(); // maximum number of NNI steps
+    // maximum number of NNI steps
+    const int MAXSTEPS = aln->getNSeq();
+    // 2 end points of inner branches, on which NNIs are evaluated
     NodeVector nodes1, nodes2;
     for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
         double oldScore = curScore;
@@ -1893,36 +1914,37 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
                     ((PhyloSuperTree*) this)->printMapInfo();
                 }
             }
-
             nonConfNNIs.clear(); // Vector containing non-conflicting positive NNIs
             optBrans.clear(); // Vector containing branch length of the positive NNIs
             orgBrans.clear(); // Vector containing all current branch of the tree
             plusNNIs.clear(); // Vector containing all positive NNIs
             saveBranches(); // save all current branch lengths
             initPartitionInfo(); // for super tree
-            int numRemoved;
+
+            /**
+             *  Generate a list of inner branches for NNI evaluation
+             */
             if (nodes1.size() == 0) {
             	assert (nodes2.size() == 0);
-            	getAllInnerBranches(nodes1, nodes2, &candidateTrees.getStableSplits());
+            	generateNNIBraches(nodes1, nodes2, &candidateTrees.getStableSplits());
             	assert(nodes1.size() == (aln->getNSeq() - 3 - candidateTrees.getStableSplits().size()));
             } else {
-            	// exclude stable splits from NNI evaluation
-                numRemoved = removeBranches(nodes1, nodes2, candidateTrees.getStableSplits());
+            	// nodes1 and nodes2 are generated based on the speednni option
+                int numRemoved = removeSplits(nodes1, nodes2, candidateTrees.getStableSplits());
             }
-//            cout << "Number of splits removed: " << numRemoved << endl;
+
+            if (params->tabu) {
+            	removeNNIBranches(nodes1, nodes2, appliedNNIs);
+            }
+
             assert(nodes1.size() == nodes2.size());
-//            for (int i = 0; i < nodes1.size(); i++) {
-//            	cout << "(" << nodes1[i]->id << "," << nodes2[i]->id << ") ; ";
-//            }
-//            cout << endl;
-//            printTree(cout, WT_TAXON_ID + WT_INT_NODE + WT_NEWLINE);
+
+            // Evaluate NNIs on branches defined by nodes1 and nodes2
             evalNNIs(nodes1, nodes2);
 
-//            if (!nni_sort) {
-//                evalNNIs(); // generate all positive NNI moves
-//            } else {
-//                evalNNIsSort(params->approximate_nni);
-//            }
+            if (plusNNIs.size() == 0) {
+                break;
+            }
 
             /* sort all positive NNI moves (descending) */
             sort(plusNNIs.begin(), plusNNIs.end());
@@ -1931,10 +1953,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
                 for (int i = 0; i < plusNNIs.size(); i++) {
                     cout << "Logl of positive NNI " << i << " : " << plusNNIs[i].newloglh << endl;
                 }
-            }
-
-            if (plusNNIs.size() == 0) {
-                break;
             }
 
             /* remove conflicting NNIs */
@@ -1955,19 +1973,12 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     	nodes1.clear();
     	nodes2.clear();
 
-        if (searchinfo.speednni) {
-        	getBranchesForNNI(nodes1, nodes2, appliedNNIs);
-            appliedNNIs.clear();
+        if (params->speednni) {
+        	generateNNIBranches(nodes1, nodes2, appliedNNIs);
         }
 
-        // FOR TUNG: If you want to introduce this heuristic, please confirm with reevaluation again.
-//        if (numNNIs > 1) {
-            // Re-estimate branch lengths of the new tree
-            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
-//        } else {
-//        	curScore = computeLikelihood();
-//        }
-
+        // Re-estimate branch lengths of the new tree
+        curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
 
 		// curScore should be larger than score of the best NNI
         if (curScore >= nonConfNNIs.at(0).newloglh - params->loglh_epsilon) {
@@ -2019,6 +2030,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             rollBack = true;
             // only apply the best NNI
             numNNIs = 1;
+            // reset curScore
             curScore = oldScore;
         }
         if (curScore - oldScore < 0.1)
@@ -2034,22 +2046,22 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     return curScore;
 }
 
-void IQTree::getBranchesForNNI(NodeVector& nodes1, NodeVector& nodes2, vector<NNIMove>& nnis) {
+void IQTree::generateNNIBranches(NodeVector& nodes1, NodeVector& nodes2,unordered_map<string, NNIMove>& nnis) {
 	assert(nodes1.size() == nodes2.size());
-    for (vector<NNIMove>::iterator it = nnis.begin(); it != nnis.end(); it++) {
-    	if (!branchExist((*it).node1, (*it).node2, nodes1, nodes2)) {
-    		assert(isInnerBranch((*it).node1, (*it).node2));
-        	nodes1.push_back((*it).node1);
-        	nodes2.push_back((*it).node2);
-    }
-    	getInnerBranches(nodes1, nodes2, 2, (*it).node1, (*it).node2);
-    	getInnerBranches(nodes1, nodes2, 2, (*it).node2, (*it).node1);
-}
+	for (unordered_map<string, NNIMove>::iterator it = nnis.begin(); it != nnis.end(); it++) {
+		if (!branchExist(it->second.node1, it->second.node1, nodes1, nodes2)) {
+			assert(isInnerBranch(it->second.node1, it->second.node2));
+			nodes1.push_back(it->second.node1);
+			nodes2.push_back(it->second.node2);
+		}
+		getInnerBranches(nodes1, nodes2, 2, it->second.node1, it->second.node2);
+		getInnerBranches(nodes1, nodes2, 2, it->second.node2, it->second.node1);
+	}
 
 }
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &searchinfo) {
-    if((globalParam->online_bootstrap == PLL_TRUE) && (globalParam->gbo_replicates > 0)) {
+    if((globalParams->online_bootstrap == PLL_TRUE) && (globalParams->gbo_replicates > 0)) {
         pllInitUFBootData();
     }
     searchinfo.numAppliedNNIs = 0;
@@ -2214,9 +2226,11 @@ void IQTree::pllDestroyUFBootData(){
 
 
 void IQTree::doNNIs(int nni2apply, bool changeBran) {
+	appliedNNIs.clear();
     for (int i = 0; i < nni2apply; i++) {
         doNNI(nonConfNNIs.at(i));
-        appliedNNIs.push_back(nonConfNNIs.at(i));
+        string branchID = getBranchID(nonConfNNIs.at(i).node1, nonConfNNIs.at(i).node2);
+        appliedNNIs.insert(make_pair<string, NNIMove>(branchID,nonConfNNIs.at(i)));
         if (!params->leastSquareNNI && changeBran) {
             // apply new branch lengths
             changeNNIBrans(nonConfNNIs.at(i));

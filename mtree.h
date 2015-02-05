@@ -378,7 +378,7 @@ public:
             @param nodes2 (OUT) vector of the other end node of branch
             @param excludeSplits do not collect branches in here
      */
-    void getAllInnerBranches(vector<Node*> &nodes, vector<Node*> &nodes2, SplitGraph* excludeSplits = NULL, Node *node = NULL, Node *dad = NULL);
+    void generateNNIBraches(vector<Node*> &nodes, vector<Node*> &nodes2, SplitGraph* excludeSplits = NULL, Node *node = NULL, Node *dad = NULL);
 
     /**
             get all descending branches below the node

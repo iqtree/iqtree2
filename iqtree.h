@@ -190,12 +190,22 @@ public:
     void doIQP();
 
     /**
-     *  @brief remove all branches mapped to splits in \a split
+     *  @brief remove all branches mapped to splits in \a splits
      *  @param nodes1 node vector containing one end of the branches
      *  @param nodes2 node vector containing the other end of the branches
+     *  @param splits the splits to check
      *  @return number of branches removed
      */
-    int removeBranches(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits);
+    int removeSplits(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits);
+
+    /**
+     * @brief remove all branches corresponding to nnis
+     * @param nodes1 node vector containing one end of the branches
+     * @param nodes2 node vector containing the other end of the branches
+     * @param nnis
+     * @return
+     */
+    int removeNNIBranches(NodeVector& nodes1, NodeVector& nodes2, unordered_map<string, NNIMove> nnis);
 
     /**
      * 		Perform a series of random NNI moves
@@ -559,7 +569,7 @@ protected:
     /**
      *  NNIs that have been applied in the previous step
      */
-    vector<NNIMove> appliedNNIs;
+    unordered_map<string, NNIMove> appliedNNIs;
 
     /**
         Optimal branch lengths
@@ -572,7 +582,7 @@ protected:
      *  @param[out] nodes2 the other ends of the branches
      *  @param[in] nnis NNIs that have been previously applied
      */
-    void getBranchesForNNI(NodeVector& nodes1, NodeVector& nodes2, vector<NNIMove>& nnis);
+    void generateNNIBranches(NodeVector& nodes1, NodeVector& nodes2, unordered_map<string, NNIMove>& nnis);
 
     /**
      *  Use fastNNI heuristic

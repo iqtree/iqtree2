@@ -409,6 +409,11 @@ extern int NNI_MAX_NR_STEP;
 struct Params {
 
 	/**
+	 *  Enable tabu search for NNI
+	 */
+	bool tabu;
+
+	/**
 	 *  Use (5+5)-ES strategy
 	 */
 	bool five_plus_five;

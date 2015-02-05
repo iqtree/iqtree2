@@ -799,13 +799,13 @@ void MTree::getInternalNodes(NodeVector &nodes, Node *node, Node *dad) {
     }
 }
 
-void MTree::getAllInnerBranches(NodeVector &nodes1, NodeVector &nodes2, SplitGraph* excludeSplits, Node *node, Node *dad) {
+void MTree::generateNNIBraches(NodeVector &nodes1, NodeVector &nodes2, SplitGraph* excludeSplits, Node *node, Node *dad) {
     if (!node) node = root;
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
     //if ((*it)->node != dad)	{
     FOR_NEIGHBOR_IT(node, dad, it)
     if (!(*it)->node->isLeaf()) {
-        getAllInnerBranches(nodes1, nodes2, excludeSplits, (*it)->node, node);
+        generateNNIBraches(nodes1, nodes2, excludeSplits, (*it)->node, node);
         if (!node->isLeaf()) {
         	if (excludeSplits != NULL && excludeSplits->size() != 0) {
         		Split* sp = getSplit(node, (*it)->node);
