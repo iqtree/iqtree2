@@ -48,6 +48,13 @@ require_clean_work_tree () {
     fi
 }
 
+if [ "$#" != 1 ]
+then
+  echo "Please enter the name of the local branch you want to compile"
+  echo "USAGE: $0 <branch_name>" >&2
+  exit 1
+fi
+
 #Check whether the git work tree is clean
 require_clean_work_tree
 
@@ -55,18 +62,22 @@ require_clean_work_tree
 git fetch
 
 #Determine hash code of current branch
-curBranch=`git status | grep "On branch" | awk '{print $3}'`
+#curBranch=`git status | grep "On branch" | awk '{print $3}'`
+curBranch=$1
+git checkout $curBranch
+git submodule update
 #Take the first 6 characters of the current head commit
 commit_cur=`git log | head -n1 | awk '{print $2}' | cut -c 1-6`
 
 #Dictionary and binary names
-head_build="build_${commit_cur}"
+head_build="build_${curBranch}"
 release_build="build_release"
 release_binary="iqtree_release"
 #cur_binary="iqtree_${commit_cur}"
-cur_binary="iqtree_test"
+cur_binary="iqtree_${curBranch}"
+bin_dir="iqtree_binaries"
 
-#Clean up 
+#Clean up
 if [ -e $head_build ]
 then
   rm -rf $head_build
@@ -82,6 +93,11 @@ fi
 if [ -e $cur_binary ]
 then
   rm -rf $cur_binary
+fi
+if [ -e $bin_dir ]
+then
+  rm -rf $bin_dir
+  mkdir $bin_dir
 fi
 
 mkdir $head_build 
