@@ -95,6 +95,7 @@ if [ ${curBranch} != ${branch} ]
 then
   git stash
   git checkout $branch
+  git pull
   git submodule update
 fi
 cmake -B${cur_build} -H..
