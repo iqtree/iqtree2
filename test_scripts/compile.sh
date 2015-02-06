@@ -71,7 +71,7 @@ commit_cur=`git log | head -n1 | awk '{print $2}' | cut -c 1-6`
 
 #Dictionary and binary names
 cur_build="build_${curBranch}"
-release_prefix="build_release"
+release_build="build_release"
 release_binary_prefix="iqtree_release"
 #cur_binary="iqtree_${commit_cur}"
 cur_binary="iqtree_${curBranch}"
