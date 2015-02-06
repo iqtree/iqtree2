@@ -39,11 +39,14 @@ def collect_cmds(logFiles, out_dir):
                 if line.startswith('Command:'):
                     cmd = " ".join(line.split()[2:])
                     aln = line.split()[3]
+                    run_dir = os.path.abspath(os.path.join(log, os.pardir))
+                    shutil.copy2(os.path.join(run_dir, aln), out_dir)
+                    if line.find('-sp') != -1:
+                        partitionFile = line.split()[5]
+                        shutil.copy2(os.path.join(run_dir, partitionFile), out_dir)
                 if line.startswith('Seed:'):
                     seed = line.split()[1]
                     runs.append((int(id), email,seed, aln, cmd))
-                    run_dir = os.path.abspath(os.path.join(log, os.pardir))
-                    shutil.copy2(os.path.join(run_dir, aln), out_dir)
                     #print run_dir
                     break
     return runs
@@ -54,7 +57,7 @@ def create_test_cmds(runs, iqtree_binary, filename):
         run_id = run[1] + "_" + str((run[0]))
         seed = run[2]
         args = run[4]
-        cmd = run_id + ' ' + os.path.realpath(iqtree_binary) + ' ' + args + ' -seed ' + seed + ' -pre ' + run_id
+        cmd = run_id + ' ' + iqtree_binary + ' ' + args + ' -seed ' + seed + ' -pre ' + run_id
         print >> outfile, cmd
     outfile.close()
                                         
@@ -76,6 +79,6 @@ if __name__ == '__main__':
     print ("Found %d job submissions, %d of them caused bugs" % (numLog, len(bugLogs)))
     runs = collect_cmds(bugLogs, options.out_dir)
     runs.sort(key=lambda tup: tup[0])
-    create_test_cmds(runs, options.iqtree_bin, 'webserver_' + os.path.basename(options.iqtree_bin) + '_cmds.txt')
+    create_test_cmds(runs, options.iqtree_bin, os.path.basename(options.iqtree_bin) + '_test_webserver_cmds.txt')
 
     

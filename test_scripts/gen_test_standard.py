@@ -56,12 +56,10 @@ def parse_config(config_file):
 if __name__ == '__main__':
   usage = "USAGE: %prog [options]"
   parser = optparse.OptionParser(usage=usage)
-  parser.add_option('-r','--release', dest="release_bin", help='Path to release binary', default="iqtree_release")
-  parser.add_option('-t','--test', dest="test_bin", help='Path to test binary', default="iqtree_test")
+  parser.add_option('-b','--binary', dest="iqtree_bin", help='Path to your IQ-TREE binary')
   parser.add_option('-c','--config', dest="config_file", help='Path to test configuration file')
-  parser.add_option('-o','--out_file', dest="out_file", help='Name of the output file', default="iqtree_test_cmds.txt")
   (options, args) = parser.parse_args()
-  if len(sys.argv) == 1:
+  if not options.iqtree_bin or not options.config_file:
     parser.print_help()
     exit(0)
   (singleAln, partitionAln, genericOpts, partOpts) = parse_config(options.config_file)
@@ -80,15 +78,12 @@ if __name__ == '__main__':
   testNr = 1
   jobs = []
   for cmd in testCmds:
-    testIDRel = options.release_bin + "_TEST_" + str(testNr)
-    release = testIDRel + " " + options.release_bin + " -pre " + testIDRel + " " + cmd
-    testIDTest = options.test_bin + "_TEST_" + str(testNr)
-    test = testIDTest + " " + options.test_bin + " -pre " + testIDTest + " " + cmd
+    testIDRel = os.path.basename(options.iqtree_bin) + "_TEST_" + str(testNr)
+    testCMD = testIDRel + " " + options.iqtree_bin + " -pre " + testIDRel + " " + cmd
     testNr = testNr + 1 
-    jobs.append(release)
-    jobs.append(test)
+    jobs.append(testCMD)
 #  print "\n".join(jobs)
-  outfile = open(options.out_file, "wb")
+  outfile = open(os.path.basename(options.iqtree_bin) + '_test_standard_cmds.txt', "wb")
   for job in jobs:
     print >> outfile, job
   outfile.close()
