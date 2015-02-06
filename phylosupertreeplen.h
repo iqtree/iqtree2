@@ -12,6 +12,24 @@
 #include "model/partitionmodel.h"
 #include "superalignmentpairwise.h"
 
+
+/**
+ * this is to classify the cases which happen on the subtree
+ *
+ *  NNI_NONE_EPSILON: all 5 branches have images on subtree, this corresponds to change in subtree topology
+ * 					  2 partial_lh vectors for -nni1 or 6 partial_lh vectors for -nni5 options
+ *  NNI_ONE_EPSILON:  only one of the 5 branches has no image on subtree, this does not change subtree topology, but changes branch length of subtrees
+ * 					  we need to allocate partial likelihood memory (1 partial_lh vectors for -nni1 option or 3 partial_lh for -nni5 option)
+ * 	NNI_TWO_EPSILON:  two branches (on different sides of central branch) have no images, here after the NNI swap,
+ * 					  the image of central branch either does not change or is equal to epsilon (then we decrease the branch length)
+ * 					  and no allocation of partial_lh is needed
+ * 	NNI_THREE_EPSILON: central and two adjacent edges have no images: after the NNI swap, central branch will have image and we need to relink it
+ * 					no allocation of partial_lh is needed
+ *  NNI_MANY_EPSILON: more than 3 branches have no images on subtree: nothing changes in subtree and no recomputation of partial likelihood are required
+ */
+enum NNIType {NNI_NO_EPSILON, NNI_ONE_EPSILON, NNI_TWO_EPSILON, NNI_THREE_EPSILON, NNI_MANY_EPSILON};
+
+
 /**
 Edge lengths in subtrees are proportional to edge lengths in a supertree.
 
@@ -134,6 +152,30 @@ public:
 	*/
 	virtual void mapTrees();
 
+	/**
+	 * Given current supertree T and subtrees T|Y_1,...,T|Y_k, build all maps f_1,...,f_k
+	 */
+	virtual void linkTrees();
+
+    /**
+            initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
+     */
+    virtual void initializeAllPartialLh();
+
+    /**
+            initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
+            @param node the current node
+            @param dad dad of the node, used to direct the search
+            @param index the index
+     */
+    virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    void initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+	/**
+	 * @return the type of NNI around node1-node2 for partition part
+	 */
+	void getNNIType(PhyloNode *node1, PhyloNode *node2, vector<NNIType> &nni_type);
 
 	virtual void computeFuncDerv(double value, double &df, double &ddf);
 	virtual double computeFunction(double value);
@@ -188,8 +230,7 @@ public:
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void changeNNIBrans(NNIMove nnimove) {};
-
+    virtual void changeNNIBrans(NNIMove nnimove);
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
@@ -200,7 +241,7 @@ public:
             @param nni_param (OUT) if not NULL: swapping information returned
             @return the likelihood of the tree
      */
-    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL);
+    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL, NNIMove *nniMoves = NULL);
 
     /**
      *	used in swapNNIBranch to update link_neighbors of other SuperNeighbors that point to the same branch on SubTree as (node,dad)
@@ -243,7 +284,6 @@ public:
     int allNNIcases_computed[5];
 
     /**
-     	 	OLGA: PLEASE CHECK IF THIS FUNCTION IS CORRECTLY IMPLEMENTED!
             Neighbor-joining/parsimony tree might contain negative branch length. This
             function will fix this.
             @param fixed_length fixed branch length to set to negative branch lengths
@@ -253,7 +293,11 @@ public:
      */
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
+protected:
+	vector<uint64_t> partial_lh_entries, scale_num_entries, partial_pars_entries, block_size, scale_block_size;
+
 };
+
 
 
 #endif /* PHYLOSUPERTREEPLEN_H_ */

@@ -91,9 +91,9 @@ void RateGamma::computeRates() {
 		rates[cat] = rates[cat]/(1.0 - p_inv);
 
 	/* check for very small rates */
-	for (cat = 0; cat < ncategory; cat ++)
-		if (rates[cat] < MIN_GAMMA_RATE)
-			rates[cat] = MIN_GAMMA_RATE;
+//	for (cat = 0; cat < ncategory; cat ++)
+//		if (rates[cat] < MIN_GAMMA_RATE)
+//			rates[cat] = MIN_GAMMA_RATE;
 }
 
 /*double RateGamma::cmpPerPointGamma (const double prob, const double shape) {
@@ -184,6 +184,7 @@ void RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &patt
 		case 4: phylo_tree->computeLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
 		case 20: phylo_tree->computeLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
 		case 2: phylo_tree->computeLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+		case 64: phylo_tree->computeLikelihoodBranchEigen<64>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
 		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
 		}
 	}

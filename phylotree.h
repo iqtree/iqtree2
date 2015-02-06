@@ -171,6 +171,9 @@ struct PruningInfo {
 
 };
 
+/**
+ * This Structure is used in PhyloSuperTreePlen.
+ */
 struct SwapNNIParam {
     double nni1_score;
     double nni1_brlen;
@@ -181,7 +184,6 @@ struct SwapNNIParam {
     double *nni1_ptnlh;
     double *nni2_ptnlh;
 };
-
 
 struct NNIMove {
     // Two nodes representing the central branch
@@ -491,8 +493,9 @@ public:
 
     /**
             clear all partial likelihood for a clean computation again
+            @param make_null true to make all partial_lh become NULL
      */
-    virtual void clearAllPartialLH();
+    virtual void clearAllPartialLH(bool make_null = false);
 
     /**
      * compute all partial likelihoods if not computed before
@@ -1333,12 +1336,34 @@ public:
      */
     double mlFirstOpt;
 
+    /**
+    * for Upper Bounds: how many NNIs have UB < L curScore, that is NNIs for which we don't need to compute likelihood
+    */
+	int skippedNNIub;
+
+	/**
+	* for Upper Bounds: how many NNIs were considered in total
+	*/
+	int totalNNIub;
+
+    /**
+     * for Upper Bounds: min, mean and max UB encountered during the tree search, such that UB < L curScore
+     */
+
+    //double minUB, meanUB, maxUB;
+
     /*
      * for UpperBounds: mlCheck = 1, if previous two values were already saved.
      * Needed, because parameter optimization is done twice before and after tree search
      */
 
     int mlCheck;
+
+    /*
+     * for Upper Bounds: min base frequency
+     */
+
+	double minStateFreq;
 
     /*
      * 		Store the all the parameters for the program
@@ -1382,6 +1407,8 @@ public:
      * @return memory size required in bytes
      */
     virtual uint64_t getMemoryRequired();
+
+    void getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries);
 
     /****** following variables are for ultra-fast bootstrap *******/
     /** 2 to save all trees, 1 to save intermediate trees */
@@ -1558,8 +1585,8 @@ protected:
      *  Used to avoid calling malloc
      */
 
-    double *tmp_anscentral_state_prob1;
-    double *tmp_anscentral_state_prob2;
+//    double *tmp_anscentral_state_prob1;
+//    double *tmp_anscentral_state_prob2;
     /** pattern-specific rates */
     //double *tmp_ptn_rates;
 

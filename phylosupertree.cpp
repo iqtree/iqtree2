@@ -254,9 +254,9 @@ void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 
 string PhyloSuperTree::getTreeString() {
 	stringstream tree_stream;
-	printTree(tree_stream);
+	printTree(tree_stream, WT_BR_LEN+WT_NEWLINE);
 	for (iterator it = begin(); it != end(); it++)
-		(*it)->printTree(tree_stream);
+		(*it)->printTree(tree_stream, WT_BR_LEN+WT_NEWLINE);
 	return tree_stream.str();
 }
 
@@ -499,9 +499,9 @@ void PhyloSuperTree::deleteAllPartialLh() {
 	}
 }
 
-void PhyloSuperTree::clearAllPartialLH() {
+void PhyloSuperTree::clearAllPartialLH(bool make_null) {
     for (iterator it = begin(); it != end(); it++) {
-        (*it)->clearAllPartialLH();
+        (*it)->clearAllPartialLH(make_null);
     }
 }
 
@@ -513,15 +513,18 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 		//#pragma omp parallel for reduction(+: tree_lh)
 		//#endif
 		for (int i = 0; i < ntrees; i++) {
-			tree_lh += at(i)->computeLikelihood(pattern_lh);
+			part_info[i].cur_score = at(i)->computeLikelihood(pattern_lh);
+			tree_lh += part_info[i].cur_score;
 			pattern_lh += at(i)->getAlnNPattern();
 		}
 	} else {
 		#ifdef _OPENMP
 		#pragma omp parallel for reduction(+: tree_lh)
 		#endif
-		for (int i = 0; i < ntrees; i++)
-			tree_lh += at(i)->computeLikelihood();
+		for (int i = 0; i < ntrees; i++) {
+			part_info[i].cur_score = at(i)->computeLikelihood();
+			tree_lh += part_info[i].cur_score;
+		}
 	}
 	return tree_lh;
 }
@@ -560,7 +563,8 @@ double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, 
 	#pragma omp parallel for reduction(+: tree_lh)
 	#endif
 	for (int i = 0; i < ntrees; i++) {
-		tree_lh += at(i)->optimizeAllBranches(my_iterations, tolerance, maxNRStep);
+		part_info[i].cur_score = at(i)->optimizeAllBranches(my_iterations, tolerance, maxNRStep);
+		tree_lh += part_info[i].cur_score;
 		if (verbose_mode >= VB_MAX)
 			at(i)->printTree(cout, WT_BR_LEN + WT_NEWLINE);
 	}

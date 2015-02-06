@@ -38,6 +38,7 @@ public:
      */
     PhyloNeighbor(Node *anode, double alength) : Neighbor(anode, alength) {
         partial_lh = NULL;
+        scale_num = NULL;
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
@@ -51,6 +52,7 @@ public:
      */
     PhyloNeighbor(Node *anode, double alength, int aid) : Neighbor(anode, alength, aid) {
         partial_lh = NULL;
+        scale_num = NULL;
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
@@ -75,6 +77,21 @@ public:
         @param dad dad of this neighbor
      */
     void clearForwardPartialLh(Node *dad);
+
+	/**
+	* For Upper Bounds analysis: get partial likelihood and lh scale factor
+	*/
+	double* get_partial_lh(){
+	return partial_lh;
+	}
+
+	double get_lh_scale_factor(){
+	return lh_scale_factor;
+	}
+
+	int get_partial_lh_computed(){
+	return partial_lh_computed;
+	}
 
 private:
 
@@ -157,7 +174,7 @@ public:
     /**
         tell that all partial likelihood vectors below this node are not computed
      */
-    void clearAllPartialLh(PhyloNode *dad);
+    void clearAllPartialLh(bool make_null, PhyloNode *dad);
 
     /**
         tell that all partial likelihood vectors (in reverse direction) below this node are not computed

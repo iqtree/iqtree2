@@ -50,6 +50,7 @@
 #include "guidedbootstrap.h"
 #include "model/modelset.h"
 #include "timeutil.h"
+#include "upperbounds.h"
 
 
 void reportReferences(Params &params, ofstream &out, string &original_model) {
@@ -614,8 +615,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					<< endl;
 			if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
 				out << "Numbers in parentheses are ";
-				if (params.aLRT_replicates > 0)
+				if (params.aLRT_replicates > 0) {
 					out << "SH-aLRT supports";
+					if (params.localbp_replicates)
+						out << " / local bootstrap (LBP)";
+				}
 				if (params.num_bootstrap_samples && params.compute_ml_tree) {
 					if (params.aLRT_replicates > 0)
 						out << " /";
@@ -1311,7 +1315,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time, double search_real_time) {
 	cout << "Total tree length: " << iqtree.treeLength() << endl;
 
-	if (iqtree.isSuperTree()) {
+	if (iqtree.isSuperTree() && verbose_mode >= VB_MAX) {
 		PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
 		cout << stree->evalNNIs << " NNIs evaluated from " << stree->totalNNIs << " all possible NNIs ( " <<
 				(int)(((stree->evalNNIs+1.0)/(stree->totalNNIs+1.0))*100.0) << " %)" << endl;
@@ -1412,6 +1416,14 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     iqtree.initializeModel(params);
 
+    // UpperBounds analysis. Here, to analyse the initial tree without any tree search or optimization
+    if (params.upper_bound) {
+    	iqtree.setCurScore(iqtree.computeLikelihood());
+    	cout<<iqtree.getCurScore()<<endl;
+    	UpperBounds(&params, iqtree.aln, &iqtree);
+    	exit(0);
+	}
+
     // degree of freedom
     cout << endl;
     if (verbose_mode >= VB_MED) {
@@ -1434,6 +1446,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Optimize model parameters and branch lengths using ML for the initial tree
     double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
+    iqtree.initializeAllPartialLh();
     string initTree = iqtree.optimizeModelParameters(false, initEpsilon);
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
@@ -1573,6 +1586,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	/****** perform SH-aLRT test ******************/
 	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0) && !params.pll) {
 		double mytime = getCPUTime();
+		params.aLRT_replicates = max(params.aLRT_replicates, params.localbp_replicates);
 		cout << endl << "Testing tree branches by SH-like aLRT with "
 				<< params.aLRT_replicates << " replicates..." << endl;
 		iqtree.setRootNode(params.root);
@@ -1592,6 +1606,18 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	// BUG FIX: readTreeString(bestTreeString) not needed before this line
 	iqtree.printResultTree();
+
+	if(params.upper_bound_NNI){
+		string out_file_UB = params.out_prefix;
+		out_file_UB += ".UB.NNI.main";
+		ofstream out_UB;
+		out_UB.exceptions(ios::failbit | ios::badbit);
+		out_UB.open((char*)out_file_UB.c_str(),std::ofstream::out | std::ofstream::app);
+		out_UB<<iqtree.leafNum<<"\t"<<iqtree.aln->getNSite()<<"\t"<<iqtree.params->upper_bound_frac<<"\t"
+				  <<iqtree.skippedNNIub<<"\t"<< iqtree.totalNNIub<<"\t"<<iqtree.candidateTrees.getBestScore() <<endl;
+					//iqtree.minUB << "\t" << iqtree.meanUB/iqtree.skippedNNIub << "\t" << iqtree.maxUB << endl;
+		out_UB.close();
+		}
 
 	if (params.out_file)
 		iqtree.printTree(params.out_file);
@@ -1801,10 +1827,10 @@ void runPhyloAnalysis(Params &params) {
 		// Partition model analysis
 		if(params.partition_type){
 			// since nni5 does not work yet, stop the programm
-			if(params.nni5)
-				outError("-nni5 option is unsupported yet for proportitional partition model. please use -nni1 option");
-			if(params.aLRT_replicates)
-				outError("-alrt option is unsupported yet for proportitional partition model");
+/*			if(params.nni5)
+				outError("-nni5 option is unsupported yet for proportitional partition model. please use -nni1 option");*/
+//			if(params.aLRT_replicates || params.localbp_replicates)
+//				outError("-alrt or -lbp option is unsupported yet for joint/proportional partition model");
 			// initialize supertree - Proportional Edges case, "-spt p" option
 			tree = new PhyloSuperTreePlen(params);
 		} else {
@@ -1917,6 +1943,15 @@ void runPhyloAnalysis(Params &params) {
 		runStandardBootstrap(params, original_model, alignment, tree);
 	}
 
+//	if (params.upper_bound) {
+//			UpperBounds(&params, alignment, tree);
+//	}
+
+	if(verbose_mode >= VB_MED){
+		if(tree->isSuperTree() && params.partition_type){
+			((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
+		}
+	}
 	delete tree;
 	// BUG FIX: alignment can be changed, should delete tree->aln instead
 	alignment = tree->aln;

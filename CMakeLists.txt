@@ -378,6 +378,7 @@ ecopdmtreeset.cpp
 graph.cpp
 candidateset.cpp
 checkpoint.cpp
+upperbounds.cpp
 )
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")

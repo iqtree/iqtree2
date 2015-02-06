@@ -25,6 +25,7 @@ RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median, double p_inv
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
 	joint_optimize = simultaneous;
+    computeRates();
 }
 
 
@@ -82,22 +83,25 @@ void RateGammaInvar::setBounds(double *lower_bound, double *upper_bound, bool *b
 
 double RateGammaInvar::optimizeParameters(double epsilon) {
 
-
-	if (!joint_optimize) {
-		double tree_lh;
-		cur_optimize = 0;
-		tree_lh = RateGamma::optimizeParameters(epsilon);
-		cur_optimize = 1;
-		tree_lh = RateInvar::optimizeParameters(epsilon);
-		phylo_tree->clearAllPartialLH();
-		return tree_lh;
-	}
-
 	int ndim = getNDim();
 
 	// return if nothing to be optimized
 	if (ndim == 0)
 		return phylo_tree->computeLikelihood();
+
+	if (!joint_optimize) {
+//		double lh = phylo_tree->computeLikelihood();
+		cur_optimize = 1;
+		double invar_lh;
+		invar_lh = RateInvar::optimizeParameters(epsilon);
+//		assert(tree_lh >= lh-0.1);
+//		lh = tree_lh;
+		cur_optimize = 0;
+		double gamma_lh = RateGamma::optimizeParameters(epsilon);
+		assert(gamma_lh >= invar_lh - 0.1);
+		phylo_tree->clearAllPartialLH();
+		return gamma_lh;
+	}
 
 	if (verbose_mode >= VB_MAX)
 		cout << "Optimizing " << name << " model parameters by BFGS..." << endl;

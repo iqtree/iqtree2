@@ -856,6 +856,9 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 			ddf_ptn += val2[i] * theta[i];
 		}
 
+        if (lh_ptn <= 0) {
+            printTree(cout);
+        }
         assert(lh_ptn > 0.0);
         
         if (ptn < orig_nptn) {

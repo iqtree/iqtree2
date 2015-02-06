@@ -31,6 +31,7 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2) : Ali
     seq_id1 = seq1;
     seq_id2 = seq2;
     num_states = tree->aln->num_states;
+    STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     pair_freq = NULL;
 
     if (tree->getRate()->isSiteSpecificRate() || tree->getModel()->isSiteSpecificModel()) return;
@@ -297,7 +298,7 @@ double AlignmentPairwise::optimizeDist(double initial_dist, double &d2l) {
 
     double negative_lh, ferror;
     if (tree->optimize_by_newton) // Newton-Raphson method
-        dist = minimizeNewton(1e-6, dist, MAX_GENETIC_DIST, 1e-6, negative_lh, d2l);
+        dist = minimizeNewton(1e-6, dist, MAX_GENETIC_DIST, 1e-6, d2l);
     else // Brent method
         dist = minimizeOneDimen(1e-6, dist, MAX_GENETIC_DIST, 1e-6, &negative_lh, &ferror);
 
