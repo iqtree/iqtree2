@@ -400,7 +400,11 @@ string PhyloTree::getModelName() {
 	string name = model->name;
 	if (model_factory->unobserved_ptns.size() > 0)
 		name += "+ASC";
-	name += site_rate->name;
+	if (model_factory->fused_mix_rate) {
+		name += "*" + site_rate->name.substr(1);
+	} else {
+		name += site_rate->name;
+	}
 	if (model->getFreqType() == FREQ_EMPIRICAL)
 		name += "+F";
 	return name;
