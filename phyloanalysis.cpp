@@ -269,16 +269,30 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 }
 
 void reportModel(ofstream &out, PhyloTree &tree) {
-	int i, j, k;
-	out << "Model of substitution: " << tree.getModelName() << endl << endl;
+//	int i, j, k;
+	int i;
 
 	if (tree.getModel()->isMixture()) {
+		out << "Mixture model of substitution: " << tree.params->model_name << endl;
+		out << "Full name: " << tree.getModelName() << endl;
 		ModelMixture *mmodel = (ModelMixture*) tree.getModel();
-		for (ModelMixture::iterator m = mmodel->begin(); m != mmodel->end(); m++) {
-			out << "Model for mixture component "  << (m-mmodel->begin())+1 << ": " << (*m)->name << endl;
-			reportModel(out, tree.aln, *m);
+		out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
+		i = 0;
+		for (ModelMixture::iterator m = mmodel->begin(); m != mmodel->end(); m++, i++) {
+			out.width(4);
+			out << right << i+1 << "  ";
+			out.width(12);
+			out << left << (*m)->name << "  ";
+			out.width(7);
+			out << (*m)->total_num_subst << "  ";
+			out.width(7);
+			out << mmodel->prop[i] << "  " << (*m)->getNameParams() << endl;
+//			out << "Model for mixture component "  << (m-mmodel->begin())+1 << ": " << (*m)->name << endl;
+//			reportModel(out, tree.aln, *m);
 		}
+		out << endl;
 	} else {
+		out << "Model of substitution: " << tree.getModelName() << endl << endl;
 		reportModel(out, tree.aln, tree.getModel());
 	}
 }
