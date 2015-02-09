@@ -71,7 +71,7 @@ double RateInvar::optimizeParameters(double epsilon) {
 		cout << "Optimizing proportion of invariable sites..." << endl;
 	double negative_lh;
 	double ferror;
-	p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, phylo_tree->aln->frac_const_sites, max(epsilon, TOL_PINVAR), &negative_lh, &ferror);
+	p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, min(phylo_tree->aln->frac_const_sites, 1.0-MIN_PINVAR), max(epsilon, TOL_PINVAR), &negative_lh, &ferror);
 	//p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, 1.0 - MIN_PINVAR, TOL_PINVAR, &negative_lh, &ferror);
 	phylo_tree->computePtnInvar();
 	return -negative_lh;
