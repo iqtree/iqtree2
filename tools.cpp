@@ -2687,6 +2687,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "              Protein: WAG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
             << "                       JTT, LG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
             << "                       HIVw, JTTDCMut, FLU, Blosum62" << endl
+            << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X," << endl
+            << "                       JTTCF4G" << endl
             << "               Binary: JC2 (default), GTR2" << endl
             << "                Codon: GY (default), ECM, MG" << endl
             << "       Morphology/SNP: MK (default), ORDERED" << endl
@@ -2699,6 +2701,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m <model_name>+F1x4 or +F3x4 or +F3x4C" << endl
             << "                       Codon frequencies" << endl
             << "  -m <model_name>+ASC  Ascertainment bias correction for morphological/SNP data" << endl
+            << "  -m \"MIX{m1,...mK}\"   Mixture model with K components" << endl
+            << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
             << endl << "RATE HETEROGENEITY:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
@@ -2760,7 +2764,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -fixbr               Fix branch lengths of <treefile>." << endl
             << "                       Used with -n 0 to compute log-likelihood of <treefile>" << endl
 			<< "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
-            << "  -wslg                Writing site log-likelihoods per Gamma category" << endl;
+            << "  -wslg                Writing site log-likelihoods per Gamma category" << endl
+            << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
