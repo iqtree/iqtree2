@@ -509,6 +509,35 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
     return gaps_only;
 }
 
+void Alignment::addConstPatterns(char *freq_const_patterns) {
+	IntVector vec;
+	convert_int_vec(freq_const_patterns, vec);
+	if (vec.size() != num_states)
+		outError("Const pattern frequency vector has different number of states: ", freq_const_patterns);
+
+	int nsite = getNSite(), orig_nsite = getNSite();
+	int i;
+	for (i = 0; i < vec.size(); i++) {
+		nsite += vec[i];
+		if (vec[i] < 0)
+			outError("Const pattern frequency must be non-negative");
+	}
+    site_pattern.resize(nsite, -1);
+	int nseq = getNSeq();
+	nsite = orig_nsite;
+	for (i = 0; i < vec.size(); i++) if (vec[i] > 0) {
+		Pattern pat;
+		pat.resize(nseq, i);
+//		if (pattern_index.find(pat) != pattern_index.end()) {
+//			outWarning("Constant pattern of all " + convertStateBackStr(i) + " already exists");
+//		}
+		for (int j = 0; j < vec[i]; j++)
+			addPattern(pat, nsite++, 1);
+	}
+    countConstSite();
+    buildSeqStates();
+}
+
 void Alignment::ungroupSitePattern()
 {
 	vector<Pattern> stored_pat = (*this);

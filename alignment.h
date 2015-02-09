@@ -80,6 +80,11 @@ public:
      */
     bool addPattern(Pattern &pat, int site, int freq = 1);
 
+    /**
+     * add const patterns into the alignment
+     * @param freq_const_pattern comma-separated list of const pattern frequencies
+     */
+    void addConstPatterns(char *freq_const_patterns);
 
     /**
             read the alignment in NEXUS format

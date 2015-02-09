@@ -1870,6 +1870,11 @@ void runPhyloAnalysis(Params &params) {
 		alignment = tree->aln;
 	} else {
 		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
+		if (params.freq_const_patterns) {
+			int orig_nsite = alignment->getNSite();
+			alignment->addConstPatterns(params.freq_const_patterns);
+			cout << "INFO: " << alignment->getNSite() - orig_nsite << " const sites added into alignment" << endl;
+		}
 		tree = new IQTree(alignment);
 	}
 

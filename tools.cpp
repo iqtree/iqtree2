@@ -812,6 +812,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
     params.write_local_optimal_trees = false;
+    params.freq_const_patterns = NULL;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1695,6 +1696,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -fs <site_freq_file>";
 				params.site_freq_file = argv[cnt];
 				params.SSE = LK_NORMAL;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-fconst") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -fconst <const_pattern_frequencies>";
+				params.freq_const_patterns = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-c") == 0) {

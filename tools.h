@@ -1533,6 +1533,9 @@ struct Params {
 
     /** TRUE to write initial tree to a file (default: false) */
     bool write_init_tree;
+
+    /** frequencies of const patterns to be inserted into alignment */
+    char *freq_const_patterns;
 };
 
 /**
