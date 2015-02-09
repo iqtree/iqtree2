@@ -434,6 +434,10 @@ void PhyloTree::computePtnInvar() {
 		// ascertmain bias correction
 		for (ptn = 0; ptn < model_factory->unobserved_ptns.size(); ptn++)
 			ptn_invar[nptn+ptn] = p_invar * state_freq[(int)model_factory->unobserved_ptns[ptn]];
+
+		// dummy values
+		for (ptn = nptn+model_factory->unobserved_ptns.size(); ptn < maxptn; ptn++)
+			ptn_invar[ptn] = ptn_invar[ptn-1];
 	}
 	aligned_free(state_freq);
 }
