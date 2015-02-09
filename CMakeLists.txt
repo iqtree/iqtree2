@@ -446,6 +446,7 @@ endif()
 # add the install targets
 ##############################################################
 install (TARGETS iqtree DESTINATION bin)
+install (FILES "${PROJECT_SOURCE_DIR}/model/models.nex" DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/examples/example.phy" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATION .)
 
