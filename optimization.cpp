@@ -431,7 +431,9 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 //				fm = computeFunction(xinit);
 //				return xinit;
 //			}
-			return rts_old;
+			// OBSOLETE: should return rts instead of rts_old
+//			return rts_old;
+			return rts;
 		}
 //		fold = fm;
 //		fm = computeFuncDerv(rts,f,df);

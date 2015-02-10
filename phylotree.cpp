@@ -2953,6 +2953,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     }
     //cout << tree_lh << endl;
     for (int i = 0; i < my_iterations; i++) {
+    	string string_brlen = getTreeString();
         optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
         double new_tree_lh = computeLikelihoodFromBuffer();
 
@@ -2961,7 +2962,15 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             cout << new_tree_lh << endl;
         }
 
-        assert(new_tree_lh >= tree_lh - 5.0); // make sure that the new tree likelihood never decreases too much
+        assert(new_tree_lh >= tree_lh - 10.0); // make sure that the new tree likelihood never decreases too much
+
+        if (new_tree_lh < tree_lh) {
+        	// IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
+        	readTreeString(string_brlen);
+        	new_tree_lh = computeLikelihood();
+        	assert(fabs(new_tree_lh-tree_lh) < 0.1);
+        	return new_tree_lh;
+        }
 
         // only return if the new_tree_lh >= tree_lh! (in rare case that likelihood decreases, continue the loop)
         if (tree_lh <= new_tree_lh && new_tree_lh <= tree_lh + tolerance)
