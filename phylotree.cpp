@@ -1457,7 +1457,7 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
 
-    else if (pattern_lh && nei->lh_scale_factor < 0.0) {
+    if (pattern_lh && nei->lh_scale_factor < 0.0) {
         int nptn = aln->getNPattern();
         //double check_score = 0.0;
         for (int i = 0; i < nptn; i++) {
@@ -1568,7 +1568,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
 //        }
 //        if (fabs(check_score - *cur_logl) > 0.01) {
 //            cout << *cur_logl << " " << check_score << endl;
-//            outError("Wrong PhyloTree::", __func__);
+//            assert(0);
 //        }
 //    }
     //double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
