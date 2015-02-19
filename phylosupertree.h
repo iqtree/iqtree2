@@ -88,6 +88,15 @@ public:
     virtual void readTreeString(const string &tree_string);
 
     /**
+     * save branch lengths into a vector
+     */
+    virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    /**
+     * restore branch lengths from a vector previously called with saveBranchLengths
+     */
+    virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
             allocate a new node. Override this if you have an inherited Node class.
             @param node_id node ID
             @param node_name node name

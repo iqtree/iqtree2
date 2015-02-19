@@ -2348,7 +2348,6 @@ void IQTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
 }
 }
 
-
 void IQTree::evalNNIs(PhyloNode *node, PhyloNode *dad) {
     if (!node) {
         node = (PhyloNode*) root;

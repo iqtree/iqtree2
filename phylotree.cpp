@@ -420,6 +420,29 @@ string PhyloTree::getModelNameParams() {
 	return name;
 }
 
+void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
+    if (!node) {
+        node = (PhyloNode*) root;
+        if (lenvec.empty()) lenvec.resize(branchNum+startid);
+    }
+    FOR_NEIGHBOR_IT(node, dad, it){
+    	lenvec[(*it)->id + startid] = (*it)->length;
+    	saveBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
+    }
+}
+
+void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
+    if (!node) {
+        node = (PhyloNode*) root;
+        assert(!lenvec.empty());
+    }
+    FOR_NEIGHBOR_IT(node, dad, it){
+    	(*it)->length = (*it)->node->findNeighbor(node)->length = lenvec[(*it)->id + startid];
+    	restoreBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
+    }
+}
+
+
 /****************************************************************************
  Parsimony function
  ****************************************************************************/
@@ -2953,7 +2976,9 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     }
     //cout << tree_lh << endl;
     for (int i = 0; i < my_iterations; i++) {
-    	string string_brlen = getTreeString();
+//    	string string_brlen = getTreeString();
+    	DoubleVector lenvec;
+    	saveBranchLengths(lenvec);
         optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
         double new_tree_lh = computeLikelihoodFromBuffer();
 
@@ -2966,9 +2991,13 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 
         if (new_tree_lh < tree_lh) {
         	// IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
-        	readTreeString(string_brlen);
+        	if (verbose_mode >= VB_MED)
+        		cout << "NOTE: Restoring branch lengths as tree log-likelihood decreases after branch length optimization: "
+        			<< tree_lh << " -> " << new_tree_lh << endl;
+        	restoreBranchLengths(lenvec);
+//        	readTreeString(string_brlen);
         	new_tree_lh = computeLikelihood();
-        	assert(fabs(new_tree_lh-tree_lh) < 0.1);
+        	assert(fabs(new_tree_lh-tree_lh) < 1.0);
         	return new_tree_lh;
         }
 

@@ -381,6 +381,15 @@ public:
         return aln->getNSite();
     }
 
+    /**
+     * save branch lengths into a vector
+     */
+    virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    /**
+     * restore branch lengths from a vector previously called with saveBranchLengths
+     */
+    virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
     /****************************************************************************
             Dot product
      ****************************************************************************/

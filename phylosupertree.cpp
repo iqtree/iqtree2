@@ -285,6 +285,37 @@ void PhyloSuperTree::readTreeString(const string &tree_string) {
 
 }
 
+
+/**
+ * save branch lengths into a vector
+ */
+void PhyloSuperTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
+	int totalBranchNum = branchNum;
+	iterator it;
+	for (it = begin(); it != end(); it++) {
+		totalBranchNum += (*it)->branchNum;
+	}
+	lenvec.resize(startid + totalBranchNum);
+
+	PhyloTree::saveBranchLengths(lenvec, startid);
+	startid += branchNum;
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->saveBranchLengths(lenvec, startid);
+		startid += (*it)->branchNum;
+	}
+}
+/**
+ * restore branch lengths from a vector previously called with saveBranchLengths
+ */
+void PhyloSuperTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
+	PhyloTree::restoreBranchLengths(lenvec, startid);
+	startid += branchNum;
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->restoreBranchLengths(lenvec, startid);
+		startid += (*it)->branchNum;
+	}
+}
+
 Node* PhyloSuperTree::newNode(int node_id, const char* node_name) {
     return (Node*) (new SuperNode(node_id, node_name));
 }
