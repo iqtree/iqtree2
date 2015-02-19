@@ -2995,6 +2995,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         		cout << "NOTE: Restoring branch lengths as tree log-likelihood decreases after branch length optimization: "
         			<< tree_lh << " -> " << new_tree_lh << endl;
         	restoreBranchLengths(lenvec);
+        	clearAllPartialLH();
 //        	readTreeString(string_brlen);
         	new_tree_lh = computeLikelihood();
         	assert(fabs(new_tree_lh-tree_lh) < 1.0);
