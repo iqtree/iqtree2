@@ -290,6 +290,7 @@ include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
 check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
 check_function_exists (getrusage HAVE_GETRUSAGE)
 check_function_exists (GlobalMemoryStatusEx HAVE_GLOBALMEMORYSTATUSEX)
+check_function_exists (strndup HAVE_STRNDUP)
 
 # configure a header file to pass some of the CMake settings
 # to the source code
