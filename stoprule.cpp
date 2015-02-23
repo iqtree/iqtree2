@@ -75,7 +75,7 @@ StopRule::~StopRule()
 //		return ((cur_iteration+step_iteration-1)/step_iteration)*step_iteration;
 //	case SC_REAL_TIME:
 ////		return ((max_run_time - realtime_secs)/max_run_time);
-//		assert(0); // TODO
+//		assert(0);
 //		return 0;
 //	}
 //}

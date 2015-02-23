@@ -252,15 +252,26 @@ public:
     CandidateSet getBestCandidateTrees(int numTrees);
 
 	SplitGraph& getStableSplits() {
-		return stableSplit;
+		return stableSplits;
 	}
+
+	/**
+	 * @brief Get a random subset containing \a numSplit from the
+	 * set of stable splits.
+	 * @param
+	 * 		numSplit size of the subset
+	 * @return
+	 * 		A SplitGraph containing the random splits
+	 *
+	 */
+	SplitGraph getRandStableSplits(int numSplit);
 
 private:
 
     /**
      *  Set of supported splits by the best trees
      */
-    SplitGraph stableSplit;
+    SplitGraph stableSplits;
 
     /**
      *  Shared params pointing to the global params

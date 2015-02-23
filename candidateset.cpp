@@ -21,6 +21,14 @@ CandidateSet::CandidateSet() {
 	params = NULL;
 }
 
+SplitGraph CandidateSet::getRandStableSplits(int numSplit) {
+	assert(numSplit < stableSplits.size());
+	SplitGraph tmpSplits = stableSplits;
+	random_shuffle(tmpSplits.begin(), tmpSplits.end());
+	tmpSplits.resize(numSplit);
+	return tmpSplits;
+}
+
 vector<string> CandidateSet::getBestTrees() {
 	vector<string> res;
 	double bestScore = rbegin()->first;
@@ -145,7 +153,7 @@ bool CandidateSet::update(string tree, double score, bool localOpt) {
 		}
 		CandidateSet::iterator it = insert(CandidateSet::value_type(score, candidate));
 		topologies[candidate.topology] = score;
-		if (params->fix_stable_splits && getNumLocalOptTrees() >= params->numSupportTrees) {
+		if (params->fixStableSplits && getNumLocalOptTrees() >= params->numSupportTrees) {
 			int it_pos = distance(it, end());
 			// The new tree is one of the numSupportTrees best trees.
 			// Thus recompute supported splits
@@ -258,11 +266,11 @@ void CandidateSet::removeCandidateTree(string topology) {
 }
 
 bool CandidateSet::isStableSplit(Split& sp) {
-	return stableSplit.containSplit(sp);
+	return stableSplits.containSplit(sp);
 }
 
 int CandidateSet::computeSplitSupport(int numTree) {
-	stableSplit.clear();
+	stableSplits.clear();
 	if (numTree == 0)
 		numTree = getNumLocalOptTrees();
 	SplitIntMap hash_ss;
@@ -279,7 +287,7 @@ int CandidateSet::computeSplitSupport(int numTree) {
 		if (it->second == maxSupport && it->first->countTaxa() > 1) {
 			numMaxSupport++;
 			Split* supportedSplit = new Split(*(it->first));
-			stableSplit.push_back(supportedSplit);
+			stableSplits.push_back(supportedSplit);
 		}
 	}
 	//cout << "Number of supported splits = " << numMaxSupport << endl;

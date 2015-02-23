@@ -421,7 +421,12 @@ struct Params {
 	/**
 	 * Turn on feature to identify stable splits and fix them during tree search
 	 */
-	bool fix_stable_splits;
+	bool fixStableSplits;
+
+	/**
+	 *  Percentage of splits to be relaxed in each iterations
+	 */
+	double relaxStableSplits;
 
 	/**
 	 *  Number of distinct locally optimal trees

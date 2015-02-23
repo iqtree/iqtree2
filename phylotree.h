@@ -431,7 +431,7 @@ public:
     int computeParsimony();
 
     /**
-            TODO: Compute partial parsimony score of the subtree rooted at dad
+            @brief Compute partial parsimony score of the subtree rooted at dad
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
      */
@@ -1056,10 +1056,9 @@ public:
     /**
      * Randomly choose perform an NNI, out of the two defined by branch node1-node2.
      * This function also clear the corresponding partial likelihood vectors
-     * @param node1 one node of the branch
-     * @param node2 one node of the branch
+     * @param branch on which a random NNI is done
      */
-    void doOneRandomNNI(Node *node1, Node *node2);
+    void doOneRandomNNI(Branch branch);
 
 
     /**

@@ -630,8 +630,8 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 	return myMove;
 }
 
-void PhyloSuperTreePlen::doNNIs(int nni2apply, bool changeBran) {
-	IQTree::doNNIs(nni2apply, changeBran);
+void PhyloSuperTreePlen::doNNIs(int nni2apply, vector<NNIMove> compatibleNNIs, bool changeBran) {
+	IQTree::doNNIs(nni2apply, compatibleNNIs, changeBran);
 	mapBranchLen();
 	//clearAllPartialLH();
 }

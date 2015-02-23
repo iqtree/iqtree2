@@ -846,53 +846,30 @@ bool MTree::branchExist(Node* node1, Node* node2, NodeVector& nodes1, NodeVector
 	return existed;
 }
 
-void MTree::getInnerBranches(NodeVector &nodes1, NodeVector &nodes2, int depth, Node *node, Node *dad) {
+void MTree::getSurroundingInnerBranches(NodeVector &nodes1, NodeVector &nodes2, int depth, Node *node, Node *dad) {
     if (depth == 0)
       return;
     FOR_NEIGHBOR_IT(node, dad, it) {
         if (!(*it)->node->isLeaf() && !branchExist(node, (*it)->node, nodes1, nodes2)) {
         	nodes1.push_back(node);
         	nodes2.push_back((*it)->node);
-            getInnerBranches(nodes1, nodes2, depth-1, (*it)->node, node);
+            getSurroundingInnerBranches(nodes1, nodes2, depth-1, (*it)->node, node);
         }
     }
 }
 
 bool MTree::isInnerBranch(Node* node1, Node* node2) {
-    assert(node1->degree() == 3 && node2->degree() == 3);
-    return (isABranch(node1, node2) && !node1->isLeaf() && !node2->isLeaf());
+    return(node1->degree() >= 3 && node2->degree() >= 3 && isABranch(node1, node2));
 }
 
 bool MTree::isABranch(Node* node1, Node* node2) {
-	bool isBranch1 = false;
-	for (NeighborVec::iterator it = node1->neighbors.begin(); it != node1->neighbors.end(); it++) {
-		if ((*it)->node == node2) {
-			isBranch1 = true;
-			break;
-		}
-	}
-	// Sanity check: both nodes must have each other as neighbors or not at all
-	bool isBranch2 = false;
-	for (NeighborVec::iterator it = node2->neighbors.begin(); it != node2->neighbors.end(); it++) {
-		if ((*it)->node == node1) {
-			isBranch2 = true;
-			break;
-		}
-	}
-	if (isBranch2 != isBranch1) {
-		int node1ID = node1->id;
-		int node2ID = node2->id;
-		stringstream msg;
-		msg << "Tree data structure corrupted! Node " << node1ID << " and node " << node2ID << " are not constructed properly";
-		outError(msg.str());
-	}
-	return isBranch1;
+    return (node1->findNeighbor(node2) != NULL && node2->findNeighbor(node1) != NULL);
 }
 
 void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
     if (!node) node = root;
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
-    //if ((*it)->node != dad)	{
+    //if ((*it)->node != dad)   {
     FOR_NEIGHBOR_IT(node, dad, it) {
         if (node->id < (*it)->node->id) {
             nodes.push_back(node);
@@ -902,6 +879,23 @@ void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node 
             nodes2.push_back(node);
         }
         getBranches(nodes, nodes2, (*it)->node, node);
+    }
+}
+
+void MTree::getInnerBranches(Branches& branches, Node *node, Node *dad) {
+    if (!node) node = root;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+    	if (isInnerBranch((*it)->node, node)) {
+            Branch branch;
+            if (node->id < (*it)->node->id) {
+                branch.first = node;
+                branch.second = (*it)->node;
+            } else {
+                branch.first = (*it)->node;
+                branch.second = node;
+            }
+    	}
+    	getInnerBranches(branches, (*it)->node, node);
     }
 }
 

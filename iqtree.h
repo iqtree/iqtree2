@@ -32,7 +32,6 @@
 #include "candidateset.h"
 #include "pllnni.h"
 
-typedef std::map< string, double > mapString2Double;
 typedef std::multiset< double, std::less< double > > multiSetDB;
 typedef std::multiset< int, std::less< int > > MultiSetInt;
 
@@ -190,13 +189,11 @@ public:
     void doIQP();
 
     /**
-     *  @brief remove all branches mapped to splits in \a splits
-     *  @param nodes1 node vector containing one end of the branches
-     *  @param nodes2 node vector containing the other end of the branches
-     *  @param splits the splits to check
-     *  @return number of branches removed
+     *  @brief return branches that do not form splits contained in \a splits
+     *  @param splits the tabu splits
+     *  @return all non-tabu branches
      */
-    int removeSplits(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits);
+    Branches getNonTabuBranches(Branches& branches, SplitGraph& splits);
 
     /**
      * @brief remove all branches corresponding to nnis
@@ -322,21 +319,33 @@ public:
     string doNNISearch(int &nniCount, int &nniSteps);
 
     /**
-            @brief evaluate all NNIs and store them in possilbleNNIMoves list
+            @brief evaluate all NNIs
             @param  node    evaluate all NNIs of the subtree rooted at node
             @param  dad     a neighbor of \p node which does not belong to the subtree
                             being considered (used for traverse direction)
 
      */
-    void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    //void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
-     * @brief Evaluate all NNIs on branch defined by \a nodes1 and \a nodes2
+     * @brief Evaluate all NNIs on branch defined by \a branches
      *
-     * @param[in] nodes1 contains one ends of the branches for NNI evaluation
-     * @param[in] nodes2 contains the other ends of the branches for NNI evaluation
+     * @param[in] branches the branches on which NNIs will be evaluated
+     * @return all positive NNIs found
      */
-    void evalNNIs(NodeVector &nodes1, NodeVector &nodes2);
+    vector<NNIMove> evaluateNNIs(Branches branches);
+
+    /**
+     * @brief Convert a vector of NNIMove to SplitGraph
+     *
+     * @param[in]
+     * 		nnis a vector of NNIMove
+     * @param[in]
+     * 		numNNI number of NNIs to convert. The function will convert NNIs from position
+     * 		0 to (numNNI-1)
+     * @return the resulting split graph from \a nnis
+     */
+    SplitGraph convertNNI2Splits(vector<NNIMove> nnis, int numNNI);
 
     /**
             search all positive NNI move on the current tree and save them
@@ -347,9 +356,10 @@ public:
     /**
             apply nni2apply NNIs from the non-conflicting NNI list
             @param nni2apply number of NNIs to apply from the list
+            @param compatibleNNIs vector of all compatible NNIs
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void doNNIs(int nni2apply, bool changeBran = true);
+    virtual void doNNIs(int nni2apply, vector<NNIMove> compatibleNNIs, bool changeBran = true);
 
     /**
      *  Restore the old 5 branch lengths stored in the NNI move.
@@ -358,11 +368,14 @@ public:
      */
     //void restoreNNIBranches(NNIMove nnimove);
 
+
     /**
-            generate non conflicting NNI moves.
-            moves are saved in vec_nonconf_nni
+     * @brief get a list of compatible NNIs from a list of positive NNIs
+     * @param positiveNNIs
+     * 		List of positive NNIs
+     * 	@return a list of compatible positive NNIs
      */
-    void genNonconfNNIs();
+    vector<NNIMove> getCompatibleNNIs(vector<NNIMove> positiveNNIs);
 
     /**
             add a NNI move to the list of possible NNI moves;
@@ -372,12 +385,12 @@ public:
     /**
      * 	Save all the current branch lengths
      */
-    void saveBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void saveBranches(map<string, double> &branchLengths, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * 	 Restore the branch lengths from the saved values
      */
-    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void restoreAllBrans(map<string, double>& branchLengths, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * Get the branch length of the branch node1-node2
@@ -525,6 +538,11 @@ public:
 
 protected:
 
+   	/**
+   	 *  Splits that are in the tabu list
+   	 */
+   	SplitGraph tabuSplits;
+
     /**
      *  Current IQPNNI iteration number
      */
@@ -557,42 +575,12 @@ protected:
     vector<double> vecImpProNNI;
 
     /**
-        List of positive NNI for the current tree;
-     */
-    vector<NNIMove> plusNNIs;
-
-    /**
-        List of non-conflicting NNIs for the current tree;
-     */
-    vector<NNIMove> nonConfNNIs;
-
-    /**
-     *  NNIs that have been applied in the previous step
-     */
-    unordered_map<string, NNIMove> appliedNNIs;
-
-    /**
-        Optimal branch lengths
-     */
-    mapString2Double optBrans;
-
-    /**
      *  @brief get branches, on which NNIs are evaluated for the next NNI step.
      *  @param[out] nodes1 one ends of the branches
      *  @param[out] nodes2 the other ends of the branches
      *  @param[in] nnis NNIs that have been previously applied
      */
     void generateNNIBranches(NodeVector& nodes1, NodeVector& nodes2, unordered_map<string, NNIMove>& nnis);
-
-    /**
-     *  Use fastNNI heuristic
-     */
-    bool fastNNI;
-
-    /**
-            Original branch lengths
-     */
-    mapString2Double orgBrans;
 
     int k_delete, k_delete_min, k_delete_max, k_delete_stay;
 

@@ -3335,51 +3335,16 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
  Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 
-void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
-	assert(isInnerBranch(node1, node2));
-    Neighbor *node1Nei = NULL;
-    Neighbor *node2Nei = NULL;
-    // randomly choose one neighbor from node1 and one neighbor from node2
-    bool chooseNext = false;
-	FOR_NEIGHBOR_IT(node1, node2, it){
-		if (chooseNext) {
-			node1Nei = (*it);
-			break;
-		}
-		int randNum = random_int(1);
-		if (randNum == 0) {
-			node1Nei = (*it);
-			break;
-		} else {
-			chooseNext = true;
-		}
-	}
-	chooseNext = false;
-	FOR_NEIGHBOR_IT(node2, node1, it){
-		if (chooseNext) {
-			node2Nei = (*it);
-			break;
-		}
-		int randNum = random_int(1);
-		if (randNum == 0) {
-			node2Nei = (*it);
-			break;
-		} else {
-			chooseNext = true;
-		}
-	}
-	assert(node1Nei != NULL && node2Nei != NULL);
-
-    NeighborVec::iterator node1NeiIt = node1->findNeighborIt(node1Nei->node);
-    NeighborVec::iterator node2NeiIt = node2->findNeighborIt(node2Nei->node);
-    assert(node1NeiIt != node1->neighbors.end());
-    assert(node1NeiIt != node2->neighbors.end());
-
-    node1->updateNeighbor(node1NeiIt, node2Nei);
-    node2Nei->node->updateNeighbor(node2, node1);
-
-    node2->updateNeighbor(node2NeiIt, node1Nei);
-    node1Nei->node->updateNeighbor(node1, node2);
+void PhyloTree::doOneRandomNNI(Branch branch) {
+    NeighborVec::iterator node1NeiIt = branch.first->neighbors.begin();
+    int randInt = random_int(branch.second->neighbors.size());
+    NeighborVec::iterator node2NeiIt = branch.second->neighbors.begin() + randInt;
+    NNIMove nni;
+    nni.node1 = (PhyloNode*) branch.first;
+    nni.node2 = (PhyloNode*) branch.second;
+    nni.node1Nei_it = node1NeiIt;
+    nni.node2Nei_it = node2NeiIt;
+    doNNI(nni, true);
 }
 
 void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
