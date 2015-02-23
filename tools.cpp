@@ -794,9 +794,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bootlh_test = 0;
     params.bootlh_partitions = NULL;
     params.site_freq_file = NULL;
-#ifdef _OPENMP
     params.num_threads = 0;
-#endif
     params.model_test_criterion = MTC_BIC;
     params.model_test_sample_size = 0;
     params.root_state = NULL;
@@ -2481,7 +2479,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_test_sample_size = convert_int(argv[cnt]);
 				continue;
 			}
-#ifdef _OPENMP
 			if (strcmp(argv[cnt], "-omp") == 0 || strcmp(argv[cnt], "-nt") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2491,7 +2488,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "At least 1 thread please";
 				continue;
 			}
-#endif
 			if (strcmp(argv[cnt], "-rootstate") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2649,7 +2645,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
             << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment name)" << endl
 #ifdef _OPENMP
-            << "  -nt <#cpu_cores>     Number of cores/threads to use (default: all cores)" << endl
+            << "  -nt <#cpu_cores>     Number of cores/threads to use (REQUIRED)" << endl
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
