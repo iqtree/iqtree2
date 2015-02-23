@@ -532,7 +532,6 @@ void IQTree::initializePLL(Params &params) {
     pllAttr.useRecom = PLL_FALSE;
     pllAttr.randomNumberSeed = params.ran_seed;
     pllAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
-    pllAttr.numberOfThreads = 1;
     if (pllInst != NULL) {
         pllDestroyInstance(pllInst);
     }

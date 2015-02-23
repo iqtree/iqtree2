@@ -2276,6 +2276,11 @@ int main(int argc, char *argv[])
 		outError("You have specified more threads than CPU cores available");
 	}
 	omp_set_nested(false); // don't allow nested OpenMP parallelism
+#else
+	if (params.num_threads != 1) {
+		cout << endl << endl;
+		outError("Number of threads must be 1 for sequential version.");
+	}
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl << endl;

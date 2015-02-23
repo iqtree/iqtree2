@@ -794,7 +794,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bootlh_test = 0;
     params.bootlh_partitions = NULL;
     params.site_freq_file = NULL;
+#ifdef _OPENMP
     params.num_threads = 0;
+#else
+    params.num_threads = 1;
+#endif
     params.model_test_criterion = MTC_BIC;
     params.model_test_sample_size = 0;
     params.root_state = NULL;
