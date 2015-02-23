@@ -102,7 +102,7 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 		 */
 		int test1 = 1;
 		if(test1 == 1){
-			if(taxaA.size() > 3 and taxaB.size() > 3){ // IQTree does not compute lh of tree with less than 4 taxa.
+			if(taxaA.size() > 3 && taxaB.size() > 3){ // IQTree does not compute lh of tree with less than 4 taxa.
 				allSplits++;
 				sumFraction(((PhyloNode*) branch1[i]), ((PhyloNode*) branch2[i]), tree);
 		}
@@ -113,7 +113,7 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 		 */
 		int test2 = 0;
 		if(test2 == 1){
-		if(taxaA.size() > 3 and taxaB.size() > 3){ // IQTree does not compute lh of tree with less than 4 taxa.
+		if(taxaA.size() > 3 && taxaB.size() > 3){ // IQTree does not compute lh of tree with less than 4 taxa.
 			allSplits++;
 
 			// Dealing with subtrees T_A and T_B
@@ -557,7 +557,7 @@ void extendingTree(MTree *tree, Params* params){
 
 	//cout<<"leafNum = "<<tree->leafNum-1<<" < random = "<<randomNodeID<<" < nodeNum = "<<tree->nodeNum-1<<endl;
 
-	assert(randomNodeID < tree->nodeNum and randomNodeID > tree->leafNum-1);
+	assert(randomNodeID < tree->nodeNum && randomNodeID > tree->leafNum-1);
 
 	// Choose random neighbor
 	int randomNeiID = rand() % 2;

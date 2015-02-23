@@ -432,6 +432,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 //				return xinit;
 //			}
 			return rts_old;
+//			return rts;
 		}
 //		fold = fm;
 //		fm = computeFuncDerv(rts,f,df);

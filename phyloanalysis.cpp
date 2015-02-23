@@ -47,6 +47,7 @@
 #include "model/ratemeyerhaeseler.h"
 #include "whtest_wrapper.h"
 #include "model/partitionmodel.h"
+#include "model/modelmixture.h"
 #include "guidedbootstrap.h"
 #include "model/modelset.h"
 #include "timeutil.h"
@@ -168,59 +169,58 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 	out << endl;
 }
 
-void reportModel(ofstream &out, PhyloTree &tree) {
+void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 	int i, j, k;
-	out << "Model of substitution: " << tree.getModelName() << endl << endl;
+	assert(aln->num_states == m->num_states);
+	if (m->num_states <= 4) {
+		out << "Rate parameter R:" << endl << endl;
 
-    if (tree.aln->num_states <= 4) {
-        out << "Rate parameter R:" << endl << endl;
+		double *rate_mat = new double[m->num_states * m->num_states];
+		if (!m->isSiteSpecificModel())
+			m->getRateMatrix(rate_mat);
+		else
+			((ModelSet*)m)->front()->getRateMatrix(rate_mat);
+		if (m->num_states > 4)
+			out << fixed;
+		if (m->isReversible()) {
+			for (i = 0, k = 0; i < m->num_states - 1; i++)
+				for (j = i + 1; j < m->num_states; j++, k++) {
+					out << "  " << aln->convertStateBackStr(i) << "-" << aln->convertStateBackStr(j) << ": "
+							<< rate_mat[k];
+					if (m->num_states <= 4)
+						out << endl;
+					else if (k % 5 == 4)
+						out << endl;
+				}
 
-        double *rate_mat = new double[tree.aln->num_states * tree.aln->num_states];
-        if (!tree.getModel()->isSiteSpecificModel())
-            tree.getModel()->getRateMatrix(rate_mat);
-        else
-            ((ModelSet*) tree.getModel())->front()->getRateMatrix(rate_mat);
-        if (tree.aln->num_states > 4)
-            out << fixed;
-        if (tree.getModel()->isReversible()) {
-            for (i = 0, k = 0; i < tree.aln->num_states - 1; i++)
-                for (j = i + 1; j < tree.aln->num_states; j++, k++) {
-                    out << "  " << tree.aln->convertStateBackStr(i) << "-" << tree.aln->convertStateBackStr(j) << ": "
-                            << rate_mat[k];
-                    if (tree.aln->num_states <= 4)
-                        out << endl;
-                    else if (k % 5 == 4)
-                        out << endl;
-                }
+		} else { // non-reversible model
+			for (i = 0, k = 0; i < m->num_states; i++)
+				for (j = 0; j < m->num_states; j++)
+					if (i != j) {
+						out << "  " << aln->convertStateBackStr(i) << "-" << aln->convertStateBackStr(j)
+								<< ": " << rate_mat[k];
+						if (m->num_states <= 4)
+							out << endl;
+						else if (k % 5 == 4)
+							out << endl;
+						k++;
+					}
 
-        } else { // non-reversible model
-            for (i = 0, k = 0; i < tree.aln->num_states; i++)
-                for (j = 0; j < tree.aln->num_states; j++)
-                    if (i != j) {
-                        out << "  " << tree.aln->convertStateBackStr(i) << "-" << tree.aln->convertStateBackStr(j)
-                                << ": " << rate_mat[k];
-                        if (tree.aln->num_states <= 4)
-                            out << endl;
-                        else if (k % 5 == 4)
-                            out << endl;
-                        k++;
-                    }
+		}
 
-        }
-
-        //if (tree.aln->num_states > 4)
-        out << endl;
-        out.unsetf(ios_base::fixed);
-        delete[] rate_mat;
-    }
+		//if (tree.aln->num_states > 4)
+		out << endl;
+		out.unsetf(ios_base::fixed);
+		delete[] rate_mat;
+	}
 	out << "State frequencies: ";
-	if (tree.getModel()->isSiteSpecificModel())
+	if (m->isSiteSpecificModel())
 		out << "(site specific frequencies)" << endl << endl;
 	else {
-		if (!tree.getModel()->isReversible())
+		if (!m->isReversible())
 			out << "(inferred from Q matrix)" << endl;
 		else
-			switch (tree.getModel()->getFreqType()) {
+			switch (m->getFreqType()) {
 			case FREQ_EMPIRICAL:
 				out << "(empirical counts from alignment)" << endl;
 				break;
@@ -228,7 +228,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 				out << "(estimated with maximum likelihood)" << endl;
 				break;
 			case FREQ_USER_DEFINED:
-				out << ((tree.aln->seq_type == SEQ_PROTEIN) ? "(model)" : "(user-defined)") << endl;
+				out << ((aln->seq_type == SEQ_PROTEIN) ? "(model)" : "(user-defined)") << endl;
 				break;
 			case FREQ_EQUAL:
 				out << "(equal frequencies)" << endl;
@@ -238,24 +238,24 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 			}
 		out << endl;
 
-		if (tree.getModel()->getFreqType() != FREQ_USER_DEFINED && tree.getModel()->getFreqType() != FREQ_EQUAL) {
-			double *state_freqs = new double[tree.aln->num_states];
-			tree.getModel()->getStateFrequency(state_freqs);
-			for (i = 0; i < tree.aln->num_states; i++)
-				out << "  pi(" << tree.aln->convertStateBackStr(i) << ") = "
+		if (m->getFreqType() != FREQ_USER_DEFINED && m->getFreqType() != FREQ_EQUAL) {
+			double *state_freqs = new double[m->num_states];
+			m->getStateFrequency(state_freqs);
+			for (i = 0; i < m->num_states; i++)
+				out << "  pi(" << aln->convertStateBackStr(i) << ") = "
 						<< state_freqs[i] << endl;
 			delete[] state_freqs;
 			out << endl;
 		}
-		if (tree.aln->num_states <= 4) {
+		if (m->num_states <= 4) {
 			// report Q matrix
-			double *q_mat = new double[tree.aln->num_states * tree.aln->num_states];
-			tree.getModel()->getQMatrix(q_mat);
+			double *q_mat = new double[m->num_states * m->num_states];
+			m->getQMatrix(q_mat);
 
 			out << "Rate matrix Q:" << endl << endl;
-			for (i = 0, k = 0; i < tree.aln->num_states; i++) {
-				out << "  " << tree.aln->convertStateBackStr(i);
-				for (j = 0; j < tree.aln->num_states; j++, k++) {
+			for (i = 0, k = 0; i < m->num_states; i++) {
+				out << "  " << aln->convertStateBackStr(i);
+				for (j = 0; j < m->num_states; j++, k++) {
 					out << "  ";
 					out.width(8);
 					out << q_mat[k];
@@ -265,6 +265,35 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 			out << endl;
 			delete[] q_mat;
 		}
+	}
+}
+
+void reportModel(ofstream &out, PhyloTree &tree) {
+//	int i, j, k;
+	int i;
+
+	if (tree.getModel()->isMixture()) {
+		out << "Mixture model of substitution: " << tree.params->model_name << endl;
+		out << "Full name: " << tree.getModelName() << endl;
+		ModelMixture *mmodel = (ModelMixture*) tree.getModel();
+		out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
+		i = 0;
+		for (ModelMixture::iterator m = mmodel->begin(); m != mmodel->end(); m++, i++) {
+			out.width(4);
+			out << right << i+1 << "  ";
+			out.width(12);
+			out << left << (*m)->name << "  ";
+			out.width(7);
+			out << (*m)->total_num_subst << "  ";
+			out.width(7);
+			out << mmodel->prop[i] << "  " << (*m)->getNameParams() << endl;
+//			out << "Model for mixture component "  << (m-mmodel->begin())+1 << ": " << (*m)->name << endl;
+//			reportModel(out, tree.aln, *m);
+		}
+		out << endl;
+	} else {
+		out << "Model of substitution: " << tree.getModelName() << endl << endl;
+		reportModel(out, tree.aln, tree.getModel());
 	}
 }
 
@@ -1841,6 +1870,11 @@ void runPhyloAnalysis(Params &params) {
 		alignment = tree->aln;
 	} else {
 		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
+		if (params.freq_const_patterns) {
+			int orig_nsite = alignment->getNSite();
+			alignment->addConstPatterns(params.freq_const_patterns);
+			cout << "INFO: " << alignment->getNSite() - orig_nsite << " const sites added into alignment" << endl;
+		}
 		tree = new IQTree(alignment);
 	}
 
@@ -1952,7 +1986,6 @@ void runPhyloAnalysis(Params &params) {
 			((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
 		}
 	}
-
 	delete tree;
 	// BUG FIX: alignment can be changed, should delete tree->aln instead
 	alignment = tree->aln;

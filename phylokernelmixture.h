@@ -1608,7 +1608,7 @@ double PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD() {
     size_t c, i, j, m;
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+//    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     double *eval = model->getEigenvalues();
     assert(eval);
 

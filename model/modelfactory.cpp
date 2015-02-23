@@ -72,6 +72,20 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 
 	try {
 	ModelsBlock *models_block = new ModelsBlock;
+
+	{
+		// loading internal model definitions
+		istringstream in(builtin_mixmodels_definition);
+		NxsReader nexus;
+		nexus.Add(models_block);
+	    MyToken token(in);
+	    nexus.Execute(token);
+//	    int num_model = 0, num_freq = 0;
+//	    for (ModelsBlock::iterator it = models_block->begin(); it != models_block->end(); it++)
+//	    	if ((*it).flag & NM_FREQ) num_freq++; else num_model++;
+//	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
+	}
+
 	if (params.model_def_file) {
 		cout << "Reading model definition file " << params.model_def_file << " ... ";
 		MyReader nexus(params.model_def_file);

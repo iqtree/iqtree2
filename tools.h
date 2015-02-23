@@ -1505,9 +1505,8 @@ struct Params {
      */
     char *site_freq_file;
 
-#ifdef _OPENMP
+    /** number of threads for OpenMP version     */
     int num_threads;
-#endif
 
     /** either MTC_AIC, MTC_AICc, MTC_BIC */
     ModelTestCriterion model_test_criterion;
@@ -1548,6 +1547,9 @@ struct Params {
 
     /** TRUE to write initial tree to a file (default: false) */
     bool write_init_tree;
+
+    /** frequencies of const patterns to be inserted into alignment */
+    char *freq_const_patterns;
 };
 
 /**

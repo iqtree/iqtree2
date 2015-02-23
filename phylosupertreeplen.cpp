@@ -1272,7 +1272,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    	FOR_NEIGHBOR(node1, node2, it){
 	    		// Clear the partial likelihood of node1 neighbor: only for NO or ONE epsilon cases
 	    		for(part = 0; part < ntrees; part++)
-	    			if(((SuperNeighbor*)(*it))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON or is_nni[part]==NNI_ONE_EPSILON)){
+	    			if(((SuperNeighbor*)(*it))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON || is_nni[part]==NNI_ONE_EPSILON)){
 	    				node_link = ((SuperNeighbor*)(*it))->link_neighbors[part]->node;
 	    				nei_link  = nei2_new->link_neighbors[part]->node; // this should be node 1 on subtree
 	    				// the problem is that for ONE_epsilon case node1 on subtree is equal to its neighbor node on subtree
@@ -1299,7 +1299,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 	    	// ------ Clear the partial likelihood on the central branch -------
 	    	for(part = 0; part < ntrees; part++)
-	    		if(((SuperNeighbor*)node2->findNeighbor(node1))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON or is_nni[part]==NNI_ONE_EPSILON)){
+	    		if(((SuperNeighbor*)node2->findNeighbor(node1))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON || is_nni[part]==NNI_ONE_EPSILON)){
 	    			((SuperNeighbor*)node2->findNeighbor(node1))->link_neighbors[part]->clearPartialLh();
 	    		}
 
@@ -1307,7 +1307,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    	FOR_NEIGHBOR(node2, node1, it){
 	    		// Clear the partial likelihood of node2 neighbor: only for NO or ONE epsilon cases
 	    		for(part = 0; part < ntrees; part++){
-	    			if(((SuperNeighbor*)(*it))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON or is_nni[part]==NNI_ONE_EPSILON)){
+	    			if(((SuperNeighbor*)(*it))->link_neighbors[part] && (is_nni[part]==NNI_NO_EPSILON || is_nni[part]==NNI_ONE_EPSILON)){
 	    				node_link = ((SuperNeighbor*)(*it))->link_neighbors[part]->node;
 	    				nei_link  = nei1_new->link_neighbors[part]->node;
 	    				if(node_link->id == nei_link->id){

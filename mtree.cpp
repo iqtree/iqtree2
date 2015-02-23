@@ -1953,7 +1953,7 @@ void MTree::insertTaxa(StrVector &new_taxa, StrVector &existing_taxa) {
 
 Node *MTree::findFirstTaxon(Node *node, Node *dad) {
 	if (!node) node = root;
-	Node *next;
+//	Node *next;
 	for (int i = 0; i < nodeNum; i++)
 		FOR_NEIGHBOR_IT(node, dad, it) {
 			if ((*it)->node->isLeaf()) return (*it)->node;

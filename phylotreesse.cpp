@@ -434,6 +434,10 @@ void PhyloTree::computePtnInvar() {
 		// ascertmain bias correction
 		for (ptn = 0; ptn < model_factory->unobserved_ptns.size(); ptn++)
 			ptn_invar[nptn+ptn] = p_invar * state_freq[(int)model_factory->unobserved_ptns[ptn]];
+
+		// dummy values
+		for (ptn = nptn+model_factory->unobserved_ptns.size(); ptn < maxptn; ptn++)
+			ptn_invar[ptn] = ptn_invar[ptn-1];
 	}
 	aligned_free(state_freq);
 }
@@ -842,7 +846,7 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 
 
     double my_df = 0.0, my_ddf = 0.0, prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
-    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+//    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i)

@@ -400,7 +400,11 @@ string PhyloTree::getModelName() {
 	string name = model->name;
 	if (model_factory->unobserved_ptns.size() > 0)
 		name += "+ASC";
-	name += site_rate->name;
+	if (model_factory->fused_mix_rate) {
+		name += "*" + site_rate->name.substr(1);
+	} else {
+		name += site_rate->name;
+	}
 	if (model->getFreqType() == FREQ_EMPIRICAL)
 		name += "+F";
 	return name;
@@ -415,6 +419,29 @@ string PhyloTree::getModelNameParams() {
 		name += "+F";
 	return name;
 }
+
+void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
+    if (!node) {
+        node = (PhyloNode*) root;
+        if (lenvec.empty()) lenvec.resize(branchNum+startid);
+    }
+    FOR_NEIGHBOR_IT(node, dad, it){
+    	lenvec[(*it)->id + startid] = (*it)->length;
+    	saveBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
+    }
+}
+
+void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
+    if (!node) {
+        node = (PhyloNode*) root;
+        assert(!lenvec.empty());
+    }
+    FOR_NEIGHBOR_IT(node, dad, it){
+    	(*it)->length = (*it)->node->findNeighbor(node)->length = lenvec[(*it)->id + startid];
+    	restoreBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
+    }
+}
+
 
 /****************************************************************************
  Parsimony function
@@ -453,7 +480,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
             int memsize = (aln->getNSeq() - 1) * 4 * pars_block_size;
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << memsize * sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
-            central_partial_pars = new UINT[memsize];
+            central_partial_pars = aligned_alloc<UINT>(memsize);
             if (!central_partial_pars)
                 outError("Not enough memory for partial parsimony vectors");
         }
@@ -944,7 +971,7 @@ void PhyloTree::searchNNI() {
 
 void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
 //    cout << "Computing parsimony tree by random stepwise addition..." << endl;
-    double start_time = getCPUTime();
+//    double start_time = getCPUTime();
     aln = alignment;
     int size = aln->getNSeq();
     if (size < 3)
@@ -1453,7 +1480,7 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
 
-    else if (pattern_lh && nei->lh_scale_factor < 0.0) {
+    if (pattern_lh && nei->lh_scale_factor < 0.0) {
         int nptn = aln->getNPattern();
         //double check_score = 0.0;
         for (int i = 0; i < nptn; i++) {
@@ -1564,7 +1591,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
 //        }
 //        if (fabs(check_score - *cur_logl) > 0.01) {
 //            cout << *cur_logl << " " << check_score << endl;
-//            outError("Wrong PhyloTree::", __func__);
+//            assert(0);
 //        }
 //    }
     //double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
@@ -2897,7 +2924,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
 
 double PhyloTree::optimizeChildBranches(PhyloNode *node, PhyloNode *dad) {
 
-    double tree_lh = 0.0;
+//    double tree_lh = 0.0;
 
     FOR_NEIGHBOR_DECLARE(node, dad, it){
 
@@ -2949,6 +2976,9 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     }
     //cout << tree_lh << endl;
     for (int i = 0; i < my_iterations; i++) {
+//    	string string_brlen = getTreeString();
+    	DoubleVector lenvec;
+    	saveBranchLengths(lenvec);
         optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
         double new_tree_lh = computeLikelihoodFromBuffer();
 
@@ -2957,7 +2987,20 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             cout << new_tree_lh << endl;
         }
 
-        assert(new_tree_lh >= tree_lh - 1.0); // make sure that the new tree likelihood never decreases too much
+        assert(new_tree_lh >= tree_lh - 10.0); // make sure that the new tree likelihood never decreases too much
+
+        if (new_tree_lh < tree_lh) {
+        	// IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
+        	if (verbose_mode >= VB_MED)
+        		cout << "NOTE: Restoring branch lengths as tree log-likelihood decreases after branch length optimization: "
+        			<< tree_lh << " -> " << new_tree_lh << endl;
+        	restoreBranchLengths(lenvec);
+        	clearAllPartialLH();
+//        	readTreeString(string_brlen);
+        	new_tree_lh = computeLikelihood();
+        	assert(fabs(new_tree_lh-tree_lh) < 1.0);
+        	return new_tree_lh;
+        }
 
         // only return if the new_tree_lh >= tree_lh! (in rare case that likelihood decreases, continue the loop)
         if (tree_lh <= new_tree_lh && new_tree_lh <= tree_lh + tolerance)
@@ -3484,15 +3527,15 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	size_t partial_lh_size = getPartialLhBytes()/sizeof(double);
 	intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
 
-	double *new_partial_lh = new double[IT_NUM*partial_lh_size+MEM_ALIGNMENT/sizeof(double)];
-	size_t mem_shift = 0;
-	if (((intptr_t) new_partial_lh) % MEM_ALIGNMENT != 0)
-		mem_shift = (MEM_ALIGNMENT - (((intptr_t) new_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
+	double *new_partial_lh = aligned_alloc<double>(IT_NUM*partial_lh_size+MEM_ALIGNMENT/sizeof(double));
+//	size_t mem_shift = 0;
+//	if (((intptr_t) new_partial_lh) % MEM_ALIGNMENT != 0)
+//		mem_shift = (MEM_ALIGNMENT - (((intptr_t) new_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
 
 	for (id = 0; id < IT_NUM; id++) {
 		saved_nei[id] = (*saved_it[id]);
 		*saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
-		((PhyloNeighbor*) (*saved_it[id]))->partial_lh = new_partial_lh + id*partial_lh_size + mem_shift;
+		((PhyloNeighbor*) (*saved_it[id]))->partial_lh = new_partial_lh + id*partial_lh_size;
 		((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
 	}
 
@@ -3605,7 +3648,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
 	 // restore the Neighbor*
 	 for (id = IT_NUM-1; id >= 0; id--) {
-		 delete[] ((PhyloNeighbor*) *saved_it[id])->scale_num;
+		 aligned_free(((PhyloNeighbor*) *saved_it[id])->scale_num);
 		 //delete[] ((PhyloNeighbor*) *saved_it[id])->partial_lh;
 		 if (*saved_it[id] == current_it) current_it = (PhyloNeighbor*) saved_nei[id];
 		 if (*saved_it[id] == current_it_back) current_it_back = (PhyloNeighbor*) saved_nei[id];
@@ -3613,7 +3656,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		 delete (*saved_it[id]);
 		 (*saved_it[id]) = saved_nei[id];
 	 }
-	 delete [] new_partial_lh;
+	 aligned_free(new_partial_lh);
 
 	 // restore the length of 4 branches around node1, node2
 	 FOR_NEIGHBOR(node1, node2, it)

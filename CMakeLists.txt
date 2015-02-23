@@ -36,7 +36,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 2)
-set (iqtree_VERSION_PATCH 0)
+set (iqtree_VERSION_PATCH 2)
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -290,6 +290,7 @@ include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
 check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
 check_function_exists (getrusage HAVE_GETRUSAGE)
 check_function_exists (GlobalMemoryStatusEx HAVE_GLOBALMEMORYSTATUSEX)
+check_function_exists (strndup HAVE_STRNDUP)
 
 # configure a header file to pass some of the CMake settings
 # to the source code
@@ -446,6 +447,7 @@ endif()
 # add the install targets
 ##############################################################
 install (TARGETS iqtree DESTINATION bin)
+install (FILES "${PROJECT_SOURCE_DIR}/model/models.nex" DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/examples/example.phy" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATION .)
 

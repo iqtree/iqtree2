@@ -509,6 +509,35 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
     return gaps_only;
 }
 
+void Alignment::addConstPatterns(char *freq_const_patterns) {
+	IntVector vec;
+	convert_int_vec(freq_const_patterns, vec);
+	if (vec.size() != num_states)
+		outError("Const pattern frequency vector has different number of states: ", freq_const_patterns);
+
+	int nsite = getNSite(), orig_nsite = getNSite();
+	int i;
+	for (i = 0; i < vec.size(); i++) {
+		nsite += vec[i];
+		if (vec[i] < 0)
+			outError("Const pattern frequency must be non-negative");
+	}
+    site_pattern.resize(nsite, -1);
+	int nseq = getNSeq();
+	nsite = orig_nsite;
+	for (i = 0; i < vec.size(); i++) if (vec[i] > 0) {
+		Pattern pat;
+		pat.resize(nseq, i);
+//		if (pattern_index.find(pat) != pattern_index.end()) {
+//			outWarning("Constant pattern of all " + convertStateBackStr(i) + " already exists");
+//		}
+		for (int j = 0; j < vec[i]; j++)
+			addPattern(pat, nsite++, 1);
+	}
+    countConstSite();
+    buildSeqStates();
+}
+
 void Alignment::ungroupSitePattern()
 {
 	vector<Pattern> stored_pat = (*this);
@@ -858,7 +887,7 @@ void Alignment::initCodon(char *sequence_type) {
 	assert(strlen(genetic_code) == 64);
 	cout << "Converting to codon sequences with genetic code " << transl_table << " ..." << endl;
 
-	int codon;
+//	int codon;
 	/*
 	num_states = 0;
 	for (codon = 0; codon < strlen(genetic_code); codon++)

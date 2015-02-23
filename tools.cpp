@@ -799,6 +799,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.site_freq_file = NULL;
 #ifdef _OPENMP
     params.num_threads = 0;
+#else
+    params.num_threads = 1;
 #endif
     params.model_test_criterion = MTC_BIC;
     params.model_test_sample_size = 0;
@@ -815,6 +817,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
     params.write_local_optimal_trees = false;
+    params.freq_const_patterns = NULL;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1700,6 +1703,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.SSE = LK_NORMAL;
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "-fconst") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -fconst <const_pattern_frequencies>";
+				params.freq_const_patterns = argv[cnt];
+				continue;
+			}
 			if (strcmp(argv[cnt], "-c") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2484,7 +2495,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_test_sample_size = convert_int(argv[cnt]);
 				continue;
 			}
-#ifdef _OPENMP
 			if (strcmp(argv[cnt], "-omp") == 0 || strcmp(argv[cnt], "-nt") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2494,7 +2504,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "At least 1 thread please";
 				continue;
 			}
-#endif
 			if (strcmp(argv[cnt], "-rootstate") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2652,7 +2661,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
             << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment name)" << endl
 #ifdef _OPENMP
-            << "  -nt <#cpu_cores>     Number of cores/threads to use (default: all cores)" << endl
+            << "  -nt <#cpu_cores>     Number of cores/threads to use (REQUIRED)" << endl
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
@@ -2690,6 +2699,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "              Protein: WAG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
             << "                       JTT, LG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
             << "                       HIVw, JTTDCMut, FLU, Blosum62" << endl
+            << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X," << endl
+            << "                       JTTCF4G" << endl
             << "               Binary: JC2 (default), GTR2" << endl
             << "                Codon: GY (default), ECM, MG" << endl
             << "       Morphology/SNP: MK (default), ORDERED" << endl
@@ -2702,6 +2713,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m <model_name>+F1x4 or +F3x4 or +F3x4C" << endl
             << "                       Codon frequencies" << endl
             << "  -m <model_name>+ASC  Ascertainment bias correction for morphological/SNP data" << endl
+            << "  -m \"MIX{m1,...mK}\"   Mixture model with K components" << endl
+            << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
             << endl << "RATE HETEROGENEITY:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
@@ -2763,7 +2776,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -fixbr               Fix branch lengths of <treefile>." << endl
             << "                       Used with -n 0 to compute log-likelihood of <treefile>" << endl
 			<< "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
-            << "  -wslg                Writing site log-likelihoods per Gamma category" << endl;
+            << "  -wslg                Writing site log-likelihoods per Gamma category" << endl
+            << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
