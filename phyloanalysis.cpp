@@ -1103,8 +1103,8 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
     if (params.model_name.substr(0, 4) == "TEST") {
         if (iqtree.isSuperTree())
             ((PhyloSuperTree*) &iqtree)->mapTrees();
-        uint64_t mem_size = iqtree.getMemoryRequired();
-        mem_size *= (params.num_rate_cats + 1);
+        uint64_t mem_size = iqtree.getMemoryRequired(params.num_rate_cats);
+//        mem_size *= (params.num_rate_cats);
         cout << "NOTE: MODEL SELECTION REQUIRES AT LEAST " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
                 << " MB MEMORY!" << endl;
         if (mem_size >= getMemorySize()) {
@@ -1476,7 +1476,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Optimize model parameters and branch lengths using ML for the initial tree
     double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
     iqtree.initializeAllPartialLh();
-    string initTree = iqtree.optimizeModelParameters(false, initEpsilon);
+    string initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
@@ -1485,11 +1485,20 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Compute maximum likelihood distance
     // ML distance is only needed for IQP
-    if ( (params.snni && !params.iqp) || params.min_iterations == 0) {
+    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
         params.compute_ml_dist = false;
     }
     if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
         computeMLDist(params, iqtree, dist_file, getCPUTime());
+        if (params.start_tree == STT_BIONJ) {
+        	iqtree.resetCurScore();
+        	iqtree.computeBioNJ(params, iqtree.aln, dist_file);
+            if (iqtree.isSuperTree())
+            	iqtree.fixAllBranches(true);
+            else
+            	iqtree.fixAllBranches(false);
+        	initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
+        }
     }
 
     double cputime_search_start = getCPUTime();

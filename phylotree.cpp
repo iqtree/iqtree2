@@ -1272,7 +1272,7 @@ void PhyloTree::deleteAllPartialLh() {
     clearAllPartialLH();
 }
 
-uint64_t PhyloTree::getMemoryRequired() {
+uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
 	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
 	uint64_t block_size;
 	if (instruction_set >= 7)
@@ -1284,10 +1284,12 @@ uint64_t PhyloTree::getMemoryRequired() {
     block_size = block_size * aln->num_states;
     if (site_rate)
     	block_size *= site_rate->getNRate();
+    else
+    	block_size *= ncategory;
     if (model && !model_factory->fused_mix_rate)
     	block_size *= model->getNMixtures();
     uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2 + (leafNum - 1) * 4 * nptn * sizeof(UBYTE);
-    if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
+    if (params->SSE == LK_EIGEN || params->SSE == LK_EIGEN_SSE)
     	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size + nptn * sizeof(UBYTE));
 
     return mem_size;

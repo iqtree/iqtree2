@@ -1415,7 +1415,7 @@ public:
      * compute the memory size required for storing partial likelihood vectors
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired();
+    virtual uint64_t getMemoryRequired(size_t ncategory = 1);
 
     void getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries);
 
@@ -1433,7 +1433,9 @@ public:
     double approxOneBranch(PhyloNode *node, PhyloNode *dad, double b0);
 
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
-	void setParams(Params* params);
+
+    /** set pointer of params variable */
+	virtual void setParams(Params* params);
 
 	double getCurScore() {
 		return curScore;
