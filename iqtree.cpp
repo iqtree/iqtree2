@@ -1919,6 +1919,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
         // get a list of all inner branches
         getInnerBranches(innerBranches);
+        //cout << "innerBranches.size() = " << innerBranches.size() << endl;
         assert(innerBranches.size() == (aln->getNSeq() - 3));
         // remove tabu branches (if any)
 		if (tabuSplits.size() > 0) {

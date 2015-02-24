@@ -3379,14 +3379,24 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
  ****************************************************************************/
 
 void PhyloTree::doOneRandomNNI(Branch branch) {
-    NeighborVec::iterator node1NeiIt = branch.first->neighbors.begin();
-    int randInt = random_int(branch.second->neighbors.size());
-    NeighborVec::iterator node2NeiIt = branch.second->neighbors.begin() + randInt;
+	assert(isInnerBranch(branch.first, branch.second));
     NNIMove nni;
     nni.node1 = (PhyloNode*) branch.first;
     nni.node2 = (PhyloNode*) branch.second;
-    nni.node1Nei_it = node1NeiIt;
-    nni.node2Nei_it = node2NeiIt;
+	FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt) {
+		nni.node1Nei_it = node1NeiIt;
+		break;
+	}
+    int randInt = random_int(branch.second->neighbors.size()-1);
+    int cnt = 0;
+	FOR_NEIGHBOR_IT(branch.second, branch.first, node2NeiIt) {
+		if (cnt == randInt) {
+			nni.node2Nei_it = node2NeiIt;
+			break;
+		} else {
+			cnt++;
+		}
+	}
     doNNI(nni, true);
 }
 
@@ -3488,8 +3498,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     assert(node1->degree() == 3 && node2->degree() == 3);
 
     // Upper Bounds ---------------
-    totalNNIub += 2;
     if(params->upper_bound_NNI){
+    	totalNNIub += 2;
     	NNIMove resMove;
     	resMove = getBestNNIForBranUB(node1,node2,this);
     	/* if UB is smaller than the current likelihood, then we don't recompute the likelihood of the swapped topology.

@@ -894,6 +894,7 @@ void MTree::getInnerBranches(Branches& branches, Node *node, Node *dad) {
                 branch.first = (*it)->node;
                 branch.second = node;
             }
+            branches.push_back(branch);
     	}
     	getInnerBranches(branches, (*it)->node, node);
     }
