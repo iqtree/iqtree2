@@ -1555,8 +1555,13 @@ void PhyloSuperTreePlen::linkCheckRe(int part,Node* node, Node* dad, PhyloNeighb
 		}
 	}
 }
-void PhyloSuperTreePlen::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
-	IQTree::restoreAllBrans(node,dad);
+//void PhyloSuperTreePlen::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+//	IQTree::restoreAllBrans(node,dad);
+//	mapTrees();
+//}
+
+void PhyloSuperTreePlen::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
+	PhyloTree::restoreBranchLengths(lenvec, startid);
 	mapTrees();
 }
 

@@ -1913,32 +1913,32 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             }
         Branches innerBranches;
         Branches nniBranches;
-        map<string, double> branchLengths;
-        saveBranches(branchLengths); // save all current branch lengths
+    	DoubleVector lenvec;
+    	saveBranchLengths(lenvec); // save all current branch lengths
         initPartitionInfo(); // for super tree
 
         // get a list of all inner branches
         getInnerBranches(innerBranches);
         assert(innerBranches.size() == (aln->getNSeq() - 3));
         // remove tabu branches (if any)
-        if (tabuSplits.size() > 0) {
-            nniBranches = getNonTabuBranches(innerBranches, tabuSplits);
-            } else {
-            nniBranches = innerBranches;
-            }
+		if (tabuSplits.size() > 0) {
+			nniBranches = getNonTabuBranches(innerBranches, tabuSplits);
+		} else {
+			nniBranches = innerBranches;
+		}
 
         // evaluate NNIs on branches defined by nonTabuBranches
         vector<NNIMove> positiveNNIs = evaluateNNIs(nniBranches);
 
-        if (positiveNNIs.size() == 0) {
-            if (params->fixStableSplits && !stopTabu) {
-                // reset the tabu list
-                tabuSplits.resize(initTabuSize);
-                stopTabu = true;
-            } else {
-                break;
-                }
-            }
+		if (positiveNNIs.size() == 0) {
+			if (params->fixStableSplits && !stopTabu) {
+				// reset the tabu list
+				tabuSplits.resize(initTabuSize);
+				stopTabu = true;
+			} else {
+				break;
+			}
+		}
 
         /* sort all positive NNI moves (descending) */
         sort(positiveNNIs.begin(), positiveNNIs.end());
@@ -1959,9 +1959,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             // restore the tree by reverting all NNIs
             for (int i = 0; i < numNNIs; i++)
                 doNNI(compatibleNNIs.at(i));
-            // restore the branch lengths
-            restoreAllBrans(branchLengths);
-            // clear all partial likelihood because branch length changed
+            //restoreAllBrans(branchLengths);
+            restoreBranchLengths(lenvec);
             clearAllPartialLH();
             // only do the best NNI
             numNNIs = 1;
@@ -1972,26 +1971,27 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
         nni_count += numNNIs;
 
-        if (curScore - oldScore < 0.1)
-            break;
+		if (curScore - oldScore < 0.1)
+			break;
 
-        	if (params->reduction) {
-        		string newickToplogy = getTopology();
-        		string newickString = getTreeString();
-            	if (candidateTrees.treeTopologyExist(newickToplogy)) {
-            		double oldScore = candidateTrees.getTopologyScore(newickToplogy);
-            		if (curScore > oldScore)
-    					candidateTrees.update(newickString, curScore, false);
-            		break;
-            	} else {
+		if (params->reduction) {
+			string newickToplogy = getTopology();
+			string newickString = getTreeString();
+			if (candidateTrees.treeTopologyExist(newickToplogy)) {
+				double oldScore = candidateTrees.getTopologyScore(
+						newickToplogy);
+				if (curScore > oldScore)
 					candidateTrees.update(newickString, curScore, false);
-            	}
-        	}
-        if (params->fixStableSplits && !stopTabu) {
-            SplitGraph nniSplits = convertNNI2Splits(compatibleNNIs, numNNIs);
-            tabuSplits.insert(tabuSplits.end(), nniSplits.begin(), nniSplits.end());
-            }
-            }
+				break;
+			} else {
+				candidateTrees.update(newickString, curScore, false);
+			}
+		}
+		if (params->fixStableSplits && !stopTabu) {
+			SplitGraph nniSplits = convertNNI2Splits(compatibleNNIs, numNNIs);
+			tabuSplits.insert(tabuSplits.end(), nniSplits.begin(), nniSplits.end());
+		}
+	}
 
     tabuSplits.clear();
 
@@ -2025,7 +2025,7 @@ void IQTree::generateNNIBranches(NodeVector& nodes1, NodeVector& nodes2,
 }
 
 double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &searchinfo) {
-    if((globalParam->online_bootstrap == PLL_TRUE) && (globalParam->gbo_replicates > 0)) {
+    if((globalParams->online_bootstrap == PLL_TRUE) && (globalParams->gbo_replicates > 0)) {
         pllInitUFBootData();
     }
     searchinfo.numAppliedNNIs = 0;
@@ -2944,9 +2944,9 @@ double IQTree::computeBootstrapCorrelation() {
     return corr;
 }
 
-void IQTree::addPositiveNNIMove(NNIMove myMove) {
-    plusNNIs.push_back(myMove);
-}
+//void IQTree::addPositiveNNIMove(NNIMove myMove) {
+//    plusNNIs.push_back(myMove);
+//}
 
 void IQTree::printResultTree(string suffix) {
     setRootNode(params->root);
