@@ -1535,6 +1535,9 @@ struct Params {
 
     /** frequencies of const patterns to be inserted into alignment */
     char *freq_const_patterns;
+
+    /** BQM 2015-02-25: true to NOT rescale Gamma+Invar rates by (1-p_invar) */
+    bool no_rescale_gamma_invar;
 };
 
 /**

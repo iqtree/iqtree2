@@ -815,6 +815,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_init_tree = false;
     params.write_local_optimal_trees = false;
     params.freq_const_patterns = NULL;
+    params.no_rescale_gamma_invar = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -2509,6 +2510,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -sprdist <SPR distance used in parsimony search>";
 				params.sprDist = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "-no_rescale_gamma_invar") == 0) {
+				params.no_rescale_gamma_invar = true;
 				continue;
 			}
 			if (argv[cnt][0] == '-') {
