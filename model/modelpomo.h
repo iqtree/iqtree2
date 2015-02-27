@@ -20,21 +20,50 @@ public:
 
   virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
+  /**
+   * initialize rate_matrix and state_freq
+   */
   void initMoranWithMutation();
 
-  virtual int getNDim();
+  /**
+   * initialize rate_matrix and state_freq for boundary mutation model
+   */
+  void initMoranWithBoundaryMutation();
 
 	/**
-		optimize model parameters
-		@return the best likelihood
+		@return the number of dimensions
 	*/
-	virtual double optimizeParameters(double epsilon);
+	virtual int getNDim();
+
+	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+
+protected:
+
+	/**
+		this function is served for the multi-dimension optimization. It should pack the model parameters
+		into a vector that is index from 1 (NOTE: not from 0)
+		@param variables (OUT) vector of variables, indexed from 1
+	*/
+	virtual void setVariables(double *variables);
+
+	/**
+		this function is served for the multi-dimension optimization. It should assign the model parameters
+		from a vector of variables that is index from 1 (NOTE: not from 0)
+		@param variables vector of variables, indexed from 1
+	*/
+	virtual void getVariables(double *variables);
 
 
 private:
 
-  /** 4*4 mutation probabilities */
+  /** mutation probabilities, either 4x4 or 6 entries for non-reversible or reversible model, respectively */
   double *mutation_prob;
+
+  /** 4 unnormalized stationary frequencies of fixed states (reversible model only) */
+  double *freq_fixed_states;
 
   /**
    * P(i,major,minor) is the probability to increase the number of
@@ -70,6 +99,22 @@ private:
    * model generation.
    */
   double computeProb(int state1, int state2);
+
+  void computeStateFreq();
+
+  /**
+   * Compute probability of change from state1 to state2 in one Moran with boundary mutation
+   * model generation.
+   */
+  double computeProbBoundaryMutation(int state1, int state2);
+
+  bool isFixed(int state);
+
+  bool isPolymorphic(int state);
+
+  double mutCoeff(int nt1, int nt2);
+
+  double computeNormConst();
 
 };
 
