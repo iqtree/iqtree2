@@ -12,7 +12,7 @@ void ModelPoMo::init(const char *model_name, string model_params, StateFreqType 
 	// TODO: need to reoptimize later
 	for (int i = 0; i < 16; i++) mutation_prob[i] = 0.2;
 	initMoranWithMutation();
-	GTRModel::init(freq);
+	ModelGTR::init(freq);
 }
 
 ModelPoMo::~ModelPoMo() {

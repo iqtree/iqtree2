@@ -14,6 +14,7 @@
 #include "modelmorphology.h"
 #include "modelset.h"
 #include "modelmixture.h"
+#include "modelpomo.h"
 
 const string builtin_mixmodels_definition =
 "#nexus\n\
@@ -1026,6 +1027,9 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->seq_type == SEQ_MORPH) {
 		model = new ModelMorphology(model_str.c_str(), model_params, freq_type, freq_params, tree);
+	} else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) {
+		// TODO
+		model = new ModelPoMo(tree);
 	} else {
 		outError("Unsupported model type");
 	}

@@ -51,59 +51,6 @@ ModelFactory::ModelFactory() {
 	fused_mix_rate = false;
 }
 
-ModelSubst* ModelFactory::createModel(string model_str, StateFreqType freq_type, string freq_params,
-		PhyloTree* tree, bool count_rates)
-{
-	ModelSubst *model = NULL;
-	//cout << "Numstates: " << tree->aln->num_states << endl;
-	string model_params;
-	size_t pos = model_str.find(OPEN_BRACKET);
-	if (pos != string::npos) {
-		if (model_str.find(CLOSE_BRACKET) != model_str.length()-1)
-			outError("Close bracket not found at the end of ", model_str);
-		model_params = model_str.substr(pos+1, model_str.length()-pos-2);
-		model_str = model_str.substr(0, pos);
-	}
-	if ((model_str == "JC" && tree->aln->seq_type == SEQ_DNA) ||
-		(model_str == "POISSON" && tree->aln->seq_type == SEQ_PROTEIN) ||
-		(model_str == "JC2" && tree->aln->seq_type == SEQ_BINARY) ||
-		(model_str == "JCC" && tree->aln->seq_type == SEQ_CODON) ||
-		(model_str == "MK" && tree->aln->seq_type == SEQ_MORPH))
-	{
-		model = new ModelSubst(tree->aln->num_states);
-	} else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
-		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
-		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
-		model = new GTRModel(tree, count_rates);
-		if (freq_params != "")
-			((GTRModel*)model)->readStateFreq(freq_params);
-		if (model_params != "")
-			((GTRModel*)model)->readRates(model_params);
-		((GTRModel*)model)->init(freq_type);
-	} else if (model_str == "UNREST") {
-		freq_type = FREQ_EQUAL;
-		//params.optimize_by_newton = false;
-		tree->optimize_by_newton = false;
-		model = new ModelNonRev(tree, count_rates);
-		((ModelNonRev*)model)->init(freq_type);
-	} else if (tree->aln->seq_type == SEQ_BINARY) {
-		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->seq_type == SEQ_DNA) {
-		model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->seq_type == SEQ_PROTEIN) {
-		model = new ModelProtein(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->seq_type == SEQ_CODON) {
-		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
-	} else if (tree->aln->seq_type == SEQ_MORPH) {
-		model = new ModelMorphology(model_str.c_str(), model_params, freq_type, freq_params, tree);
-	} else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) {
-		// TODO
-		model = new ModelPoMo(tree);
-	} else {
-		outError("Unsupported model type");
-    }
-}
-
 size_t findCloseBracket(string &str, size_t start_pos) {
 	int counter = 0;
 	for (size_t pos = start_pos+1; pos < str.length(); pos++) {
