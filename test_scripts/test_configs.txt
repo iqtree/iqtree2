@@ -1,0 +1,27 @@
+START_PARTITION_ALN
+example.phy example.nex
+d59_8.phy d59_8.nex
+END_PARTITION_ALN
+
+START_SINGLE_ALN
+example.phy
+prot_M126_27_269.phy
+END_SINGLE_ALN
+
+START_PARTITION_OPTIONS
+-sp
+-spp
+-spj
+END_PARTITION_OPTIONS
+
+START_GENERIC_OPTIONS
+-m TEST -n 1000 
+-m TEST -bb 1000 -n 1000
+-m TEST -alrt 1000 -n 1000
+-m TEST -lbp 1000 -n 1000
+-m TEST -bb 1000 -alrt 1000 -lbp 1000 -n 1000
+-m TEST -b 10 -n 1000
+END_GENERIC_OPTIONS
+
+
+

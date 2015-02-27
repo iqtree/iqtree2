@@ -17,8 +17,8 @@
 #include "ncl/ncl.h"
 #include "tools.h"
 
-
-const char STATE_UNKNOWN = 126;
+// IMPORTANT: refactor STATE_UNKNOWN
+//const char STATE_UNKNOWN = 126;
 const char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
 
@@ -80,6 +80,11 @@ public:
      */
     bool addPattern(Pattern &pat, int site, int freq = 1);
 
+    /**
+     * add const patterns into the alignment
+     * @param freq_const_pattern comma-separated list of const pattern frequencies
+     */
+    void addConstPatterns(char *freq_const_patterns);
 
     /**
             read the alignment in NEXUS format
@@ -140,6 +145,10 @@ public:
      ****************************************************************************/
     SeqType detectSequenceType(StrVector &sequences);
 
+    void computeUnknownState();
+
+    void buildStateMap(char *map, SeqType seq_type);
+
     virtual char convertState(char state, SeqType seq_type);
 
     /** 
@@ -180,6 +189,9 @@ public:
             bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name);
 
     void printPhylip(const char *filename, bool append = false, const char *aln_site_list = NULL,
+    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
+
+    void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
     		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
 
     void printFasta(const char *filename, bool append = false, const char *aln_site_list = NULL,
@@ -243,6 +255,12 @@ public:
     string &getSeqName(int i);
 
     /**
+     *  Get a list of all sequence names
+     *  @return vector containing the sequence names
+     */
+    vector<string>& getSeqNames();
+
+    /**
             @param seq_name sequence name
             @return corresponding ID, -1 if not found
      */
@@ -263,6 +281,16 @@ public:
      * @return the number of sequences that are identical to one of the sequences
      */
     int checkIdenticalSeq();
+
+    /**
+     * remove identical sequences from alignment
+     * @param not_remove name of sequence where removal is avoided
+     * @param keep_two TRUE to keep 2 out of k identical sequences, false to keep only 1
+     * @param removed_seqs (OUT) name of removed sequences
+     * @param target_seqs (OUT) corresponding name of kept sequence that is identical to the removed sequences
+     * @return this if no sequences were removed, or new alignment if at least 1 sequence was removed
+     */
+    virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
 
     /**
             Quit if some sequences contain only gaps or missing data
@@ -294,7 +322,7 @@ public:
             @param seq_id ID of sequences to extract from
             @param min_true_cher the minimum number of non-gap characters, true_char<min_true_char -> delete the sequence
      */
-    void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
+    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
 
     /**
             extract a sub-set of patterns
@@ -499,6 +527,8 @@ public:
     /** either SEQ_BINARY, SEQ_DNA, SEQ_PROTEIN, SEQ_MORPH, or SEQ_CODON */
     SeqType seq_type;
 
+    char STATE_UNKNOWN;
+
     /**
             number of states
      */
@@ -512,13 +542,13 @@ public:
 	/**
 	 *  map from 64 codon to non-stop codon index
 	 */
-    char *non_stop_codon;
+//    char *non_stop_codon;
 
 	/**
 	 * For codon sequences: index of 61 non-stop codons to 64 codons
 	 * For other sequences: NULL
 	 */
-	char *codon_table;
+//	char *codon_table;
 
 	/**
 	 * For codon_sequences: 64 amino-acid letters for genetic code of AAA,AAC,AAG,AAT,...,TTT
@@ -530,6 +560,23 @@ public:
 	 * virtual population size for PoMo model
 	 */
 	int virtual_pop_size;
+
+    vector<vector<int> > seq_states; // state set for each sequence in the alignment
+
+    /**
+     * @return true if data type is SEQ_CODON and state is a stop codon
+     */
+    bool isStopCodon(int state);
+
+	/**
+	 * @return number of non-stop codons in the genetic code
+	 */
+	int getNumNonstopCodons();
+
+    /* build seq_states containing set of states per sequence
+     * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
+     */
+    void buildSeqStates(bool add_unobs_const = false);
 
     /** Added by MA
             Compute the probability of this alignment according to the multinomial distribution with parameters determined by the reference alignment

@@ -41,7 +41,7 @@ public:
 		@param num_state (IN) number of states
 	*/
 	void eigensystem_sym(double **rate_params, double *state_freq, 
-	double *eval, double **evec, double **inv_evec, int num_state);
+	double *eval, double *evec, double *inv_evec, int num_state);
 
 	/**
 		EigenSystem for general non-symmetric matrix
@@ -55,7 +55,8 @@ public:
 	void eigensystem(double **rate_params, double *state_freq, 
 	double *eval, double **evec, double **inv_evec, int num_state);
 
-protected:
+	/** TRUE to normalize rate matrix to 1.0 subst per unit time */
+	bool normalize_matrix;
 
 	/**
 		the total number of substitutions per unit time
@@ -163,7 +164,7 @@ protected:
 	*/
 	void luinverse(double **inmat, double **imtrx, int size);
 
-	void checkevector(double **evec, double **ivec, int nn);
+	void checkevector(double *evec, double *ivec, int nn);
 
 };
 

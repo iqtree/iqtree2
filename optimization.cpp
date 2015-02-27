@@ -378,19 +378,20 @@ double Optimization::minimizeNewtonSafeMode(double xmin, double xguess, double x
 	return optx;
 }
 
-double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm, double &d2l, int maxNRStep)
+double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &d2l, int maxNRStep)
 {
 	int j;
 	double df,dx,dxold,f;
-	double temp,xh,xl,rts, fold, finit, xinit;
+	double temp,xh,xl,rts, rts_old, xinit;
 
 	rts = xguess;
 	if (rts < x1) rts = x1;
 	if (rts > x2) rts = x2;
 	xinit = xguess;
-	finit = fold = fm = computeFuncDerv(rts,f,df);
+//	finit = fold = fm = computeFuncDerv(rts,f,df);
+    computeFuncDerv(rts,f,df);
 	d2l = df;
-	if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) {
+	if (!isfinite(f) || !isfinite(df)) {
 		nrerror("Wrong computeFuncDerv");
 	}
 	if (df >= 0.0 && fabs(f) < xacc) return rts;
@@ -404,9 +405,10 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 
 	dx=dxold=fabs(xh-xl);
 	for (j=1;j<=maxNRStep;j++) {
+		rts_old = rts;
 		if (
 			(df <= 0.0) // function is concave
-			|| (fm > fold + xacc) // increasing
+//			|| (fm > fold + xacc) // increasing
 			|| (((rts-xh)*df-f)*((rts-xl)*df-f) >= 0.0) // out of bound
 			//|| (fabs(2.0*f) > fabs(dxold*df))  // converge too slow
 			) {
@@ -424,18 +426,25 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 			if (temp == rts) return rts;
 		}
 		if (fabs(dx) < xacc || (j == maxNRStep)) {
-			fm = computeFunction(rts);
-			if (fm > finit) {
-				fm = computeFunction(xinit);
-				return xinit;
-			}
-			return rts;
+//			if (fm > finit) {
+//				// happen in rare cases that it is worse than starting point: revert init value
+//				fm = computeFunction(xinit);
+//				return xinit;
+//			}
+			return rts_old;
+//			return rts;
 		}
-		fold = fm;
-		fm = computeFuncDerv(rts,f,df);
-		if (!isfinite(fm) || !isfinite(f) || !isfinite(df)) nrerror("Wrong computeFuncDerv");
+//		fold = fm;
+//		fm = computeFuncDerv(rts,f,df);
+        computeFuncDerv(rts,f,df);
+		if (!isfinite(f) || !isfinite(df)) nrerror("Wrong computeFuncDerv");
 		if (df > 0.0 && fabs(f) < xacc) {
 			d2l = df;
+//			if (fm > finit) {
+//				// happen in rare cases that it is worse than starting point: revert init value
+//				fm = computeFunction(xinit);
+//				return xinit;
+//			}
 			return rts;
 		}
 		if (f < 0.0)
@@ -443,24 +452,15 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 		else
 			xh=rts;
 	}
-	//return rts;
 	nrerror("Maximum number of iterations exceeded in minimizeNewton");
 	d2l = 0.0;
 	return 0.0;
-//return_ok:
-	if (fm > finit) {
-		//cout.precision(10);
-		//cout << "revert xguess, fm=" << fm << " finit=" << finit << endl;
-		fm = finit;
-		return xguess;
-	}
-	return rts;
 }
 
-double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, double &fm, int maxNRStep)
+double Optimization::minimizeNewton(double x1, double xguess, double x2, double xacc, int maxNRStep)
 {
 	double var;
-	double optx = minimizeNewton(x1, xguess, x2, xacc, fm, var, maxNRStep);
+	double optx = minimizeNewton(x1, xguess, x2, xacc, var, maxNRStep);
 	return optx;
 }
 

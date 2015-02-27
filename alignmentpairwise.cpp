@@ -31,6 +31,7 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2) : Ali
     seq_id1 = seq1;
     seq_id2 = seq2;
     num_states = tree->aln->num_states;
+    STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     pair_freq = NULL;
 
     if (tree->getRate()->isSiteSpecificRate() || tree->getModel()->isSiteSpecificModel()) return;
@@ -170,14 +171,14 @@ double AlignmentPairwise::computeFunction(double value) {
     return lh;
 }
 
-double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
+void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
     RateHeterogeneity *site_rate = tree->getRate();
     int ncat = site_rate->getNDiscreteRate();
     ModelSubst *model = tree->getModel();
     int trans_size = tree->getModel()->getTransMatrixSize();
     int cat, i;
     int nptn = tree->aln->getNPattern();
-    double lh = 0.0;
+//    double lh = 0.0;
     df = 0.0;
     ddf = 0.0;
 
@@ -190,13 +191,14 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
             double rate_sqr = rate_val * rate_val;
             double derv1, derv2;
             double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
-            lh -= log(trans) * tree->aln->at(i).frequency;
+//            lh -= log(trans) * tree->aln->at(i).frequency;
             double d1 = derv1 / trans;
             df -= rate_val * d1 * tree->aln->at(i).frequency;
             ddf -= rate_sqr * (derv2/trans - d1*d1) * tree->aln->at(i).frequency;
 
         }
-        return lh;
+//        return lh;
+        return;
     }
 
     
@@ -209,13 +211,14 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
             double rate_sqr = rate_val * rate_val;
             double derv1, derv2;
             double trans = tree->getModel()->computeTrans(value * rate_val,model->getPtnModelID(i), state1, state2, derv1, derv2);
-            lh -= log(trans) * tree->aln->at(i).frequency;
+//            lh -= log(trans) * tree->aln->at(i).frequency;
             double d1 = derv1 / trans;
             df -= rate_val * d1 * tree->aln->at(i).frequency;
             ddf -= rate_sqr * (derv2/trans - d1*d1) * tree->aln->at(i).frequency;
 
         }
-        return lh;
+//        return lh;
+        return;
     }
 
     double *trans_mat = new double[trans_size];
@@ -234,7 +237,7 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
                     double d1 = trans_derv1[i] / trans_mat[i];
                     derv1 += pair_pos[i] * d1;
                     derv2 += pair_pos[i] * (trans_derv2[i]/trans_mat[i] - d1 * d1);
-                    lh -= pair_pos[i] * log(trans_mat[i]);
+//                    lh -= pair_pos[i] * log(trans_mat[i]);
                 }
             df -= derv1 * rate_val;
             ddf -= derv2 * rate_val * rate_val;
@@ -242,7 +245,8 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
         delete [] trans_derv2;
 		delete [] trans_derv1;
 		delete [] trans_mat;
-        return lh;
+//        return lh;
+        return;
     }
 
 
@@ -267,7 +271,7 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
         }
     }
     for (i = 0; i < trans_size; i++) if (pair_freq[i] > 1e-6) {
-            lh -= pair_freq[i] * log(sum_trans[i]);
+//            lh -= pair_freq[i] * log(sum_trans[i]);
             double d1 = sum_derv1[i] / sum_trans[i];
             df -= pair_freq[i] * d1;
             ddf -= pair_freq[i] * (sum_derv2[i]/sum_trans[i] - d1 * d1);
@@ -279,7 +283,8 @@ double AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf)
 	delete [] trans_derv1;
 	delete [] trans_mat;
     // negative log-likelihood (for minimization)
-    return lh;
+//    return lh;
+    return;
 }
 
 double AlignmentPairwise::optimizeDist(double initial_dist, double &d2l) {
@@ -293,7 +298,7 @@ double AlignmentPairwise::optimizeDist(double initial_dist, double &d2l) {
 
     double negative_lh, ferror;
     if (tree->optimize_by_newton) // Newton-Raphson method
-        dist = minimizeNewton(1e-6, dist, MAX_GENETIC_DIST, 1e-6, negative_lh, d2l);
+        dist = minimizeNewton(1e-6, dist, MAX_GENETIC_DIST, 1e-6, d2l);
     else // Brent method
         dist = minimizeOneDimen(1e-6, dist, MAX_GENETIC_DIST, 1e-6, &negative_lh, &ferror);
 

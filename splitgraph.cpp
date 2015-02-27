@@ -29,6 +29,13 @@
 #include "mtreeset.h"
 
 
+bool compareSplit(Split* sp1, Split* sp2) {
+	if (sp1->countTaxa() != sp2->countTaxa())
+		return sp1->countTaxa() < sp2->countTaxa();
+	else
+		return sp1->firstTaxon() < sp2->firstTaxon();
+}
+
 //#define MY_DEBUG
 /********************************************************
 	Defining SplitGraph methods
@@ -182,9 +189,7 @@ void SplitGraph::AddTaxaFromSets() {
 			}	
 }
 
-void SplitGraph::freeMem()
-{
-	
+void SplitGraph::freeMem() {
 	for (reverse_iterator it = rbegin(); it != rend(); it++) {
 		//(*it)->report(cout);
 		delete *it;
@@ -256,6 +261,7 @@ void SplitGraph::report(ostream &out)
 	if (size() == 0)
 		return;
 
+	sort(begin(), end(), compareSplit);
 	int k = 0;
 	for (iterator it = begin(); it != end(); it++,k++)
 	{

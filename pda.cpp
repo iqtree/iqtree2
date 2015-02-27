@@ -59,17 +59,17 @@
 #include "maalignment.h" //added by MA
 #include "ncbitree.h"
 #include "ecopd.h"
+#include "upperbounds.h"
 #include "ecopdmtreeset.h"
 #include "gurobiwrapper.h"
 #include "timeutil.h"
-#include <unistd.h>
+//#include <unistd.h>
 #include <stdlib.h>
-
+#include "vectorclass/vectorclass.h"
 
 #ifdef _OPENMP
 	#include <omp.h>
 #endif
-
 
 using namespace std;
 
@@ -1243,7 +1243,7 @@ void calcTreeCluster(Params &params) {
 		out << "y" << endl;
 		out.close();
 		out2.close();
-		cout << "Cluster " << cnt << " printed to " << filename << " and " << filename2 << endl;
+		cout << "Cluster " << cnt << " printed to " << filename.rdbuf() << " and " << filename2.rdbuf() << endl;
 	}
 }
 
@@ -1536,7 +1536,7 @@ void branchStats(Params &params){
 	
 	/***** Following added by BQM to print internal branch lengths */
 	NodeVector nodes1, nodes2;
-	mytree.getInternalBranches(nodes1, nodes2);
+	mytree.getAllInnerBranches(nodes1, nodes2);
 	output = params.out_prefix;
 	output += ".inlen";
 	try {
@@ -1801,7 +1801,7 @@ extern "C" void funcAbort(int signal_number)
 		case SIGILL:  cout << "ILLEGAL INSTRUCTION"; break;
 		case SIGSEGV: cout << "SEGMENTATION FAULT"; break;
 	}
-	cout << endl << "*** For bug report please send developers:" << endl << "***    Log file: " << _log_file;
+	cout << endl << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
 	cout << endl << "***    Alignment files (if possible)" << endl;
 	funcExit();
 	signal(signal_number, SIG_DFL);
@@ -1956,7 +1956,7 @@ void processECOpd(Params &params) {
 	// Checking whether to treat the food web as weighted or non weighted
 	if(params.diet_max == 0){
 		params.eco_weighted = false;
-	}else if(params.diet_max > 100 or params.diet_max < 0){
+	}else if(params.diet_max > 100 || params.diet_max < 0){
 		cout<<"The minimum percentage of the diet to be conserved for each predator"<<endl;
 		cout<<"d = "<<params.diet_max<<endl;
 		cout<<"ERROR: Wrong value of parameter d. It must be within the range 0 <= d <= 100"<<endl;
@@ -2097,6 +2097,21 @@ int main(){
 }
 */
 
+/*
+Instruction set ID reported by vectorclass::instrset_detect
+0           = 80386 instruction set
+1  or above = SSE (XMM) supported by CPU (not testing for O.S. support)
+2  or above = SSE2
+3  or above = SSE3
+4  or above = Supplementary SSE3 (SSSE3)
+5  or above = SSE4.1
+6  or above = SSE4.2
+7  or above = AVX supported by CPU and operating system
+8  or above = AVX2
+9  or above = AVX512F
+*/
+int instruction_set;
+
 int main(int argc, char *argv[])
 {
 
@@ -2173,7 +2188,36 @@ int main(int argc, char *argv[])
 	//fgets(hostname, sizeof(hostname), pfile);
 	//pclose(pfile);
 
-	cout << "Host:    " << hostname << endl;
+	instruction_set = instrset_detect();
+	if (instruction_set < 3) outError("Your CPU does not support SSE3!");
+	bool has_fma3 = (instruction_set >= 7) && hasFMA3();
+	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
+	bool has_fma =  has_fma3 || has_fma4;
+
+#ifdef __FMA__
+	if (!has_fma) {
+		outError("Your CPU does not support FMA instruction, quiting now...");
+	}
+#endif
+
+	cout << "Host:    " << hostname << " (";
+	switch (instruction_set) {
+	case 3: cout << "SSE3, "; break;
+	case 4: cout << "SSSE3, "; break;
+	case 5: cout << "SSE4.1, "; break;
+	case 6: cout << "SSE4.2, "; break;
+	case 7: cout << "AVX, "; break;
+	case 8: cout << "AVX2, "; break;
+	default: cout << "AVX512F, "; break;
+	}
+	if (has_fma3) cout << "FMA3, ";
+	if (has_fma4) cout << "FMA4, ";
+//#if defined __APPLE__ || defined __MACH__
+	cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM)" << endl;
+//#else
+//	cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM)" << endl;
+//#endif
+
 	cout << "Command:";
 	for (int i = 0; i < argc; i++)
 		cout << " " << argv[i];
@@ -2186,21 +2230,64 @@ int main(int argc, char *argv[])
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
 
-	cout.precision(3);
-	cout << fixed;
-	cout << "Memory:  " << ((getMemorySize()/1024.0)/1024)/1024 << " GB RAM detected" << endl;
-	
+	if (params.lk_no_avx)
+		instruction_set = min(instruction_set, 6);
+
+	cout << "Kernel:  ";
+	if (params.pll) {
+#ifdef __AVX__
+		cout << "PLL-AVX";
+#else
+		cout << "PLL-SSE3";
+#endif
+	} else {
+		switch (params.SSE) {
+		case LK_NORMAL: cout << "Slow"; break;
+		case LK_SSE: cout << "Slow SSE3"; break;
+		case LK_EIGEN: cout << "No SSE"; break;
+		case LK_EIGEN_SSE:
+			if (instruction_set >= 7) {
+				cout << "AVX";
+			} else {
+				cout << "SSE3";
+			}
+
+#ifdef __FMA__
+			cout << "+FMA";
+#endif
+			break;
+		}
+	}
+
+
+
 #ifdef _OPENMP
+	if (params.num_threads == 0) {
+		cout << endl << endl;
+		outError("Please specify the number of cores to use (-nt option)!");
+	}
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
-	int max_threads = omp_get_max_threads();
+//	int max_threads = omp_get_max_threads();
+	params.num_threads = omp_get_max_threads();
 	int max_procs = omp_get_num_procs();
-	cout << "Threads: " << max_threads << " (" << max_procs << " CPU cores detected)" << endl;
-	if (max_threads > max_procs) outWarning("You have specified more threads than CPU cores available");
+	cout << " - " << params.num_threads  << " threads (" << max_procs << " CPU cores detected)";
+	if (params.num_threads  > max_procs) {
+		cout << endl;
+		outError("You have specified more threads than CPU cores available");
+	}
 	omp_set_nested(false); // don't allow nested OpenMP parallelism
+#else
+	if (params.num_threads != 1) {
+		cout << endl << endl;
+		outError("Number of threads must be 1 for sequential version.");
+	}
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
-	cout << endl;
-	
+	cout << endl << endl;
+
+	cout.precision(3);
+	cout.setf(ios::fixed);
+
 	// call the main function
 	if (params.tree_gen != NONE) {
 		generateRandomTree(params);
@@ -2296,5 +2383,6 @@ int main(int argc, char *argv[])
 	time(&cur_time);
 	cout << "Date and Time: " << ctime(&cur_time);
 
+	finish_random();
 	return EXIT_SUCCESS;
 }

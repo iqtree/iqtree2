@@ -30,7 +30,7 @@
 #include "eigen.h"
 #include "eigen_sym.h"
 #include "random.h"
-#include "tools.h"
+#include "whtools.h"
 
 
 knoten *baum;

@@ -28,20 +28,13 @@
 #include "phylonode.h"
 #include "stoprule.h"
 #include "mtreeset.h"
-
-#include "pll/pll.h"
-#include "nnisearch.h"
+#include "node.h"
 #include "candidateset.h"
+#include "pllnni.h"
 
-
-typedef std::map< string, double > BranLenMap;
+typedef std::map< string, double > mapString2Double;
 typedef std::multiset< double, std::less< double > > multiSetDB;
 typedef std::multiset< int, std::less< int > > MultiSetInt;
-
-/**
-        nodeheightcmp, for building k-representative leaf set
- */
-
 
 class RepLeaf {
 public:
@@ -54,6 +47,9 @@ public:
     }
 };
 
+/**
+        nodeheightcmp, for building k-representative leaf set
+ */
 struct nodeheightcmp {
 
     bool operator()(const RepLeaf* s1, const RepLeaf * s2) const {
@@ -103,7 +99,13 @@ public:
     /**
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)
      */
-    virtual void setParams(Params& params);
+    virtual void initSettings(Params& params);
+
+    void createPLLPartition(Params &params, ostream &pllPartitionFileHandle);
+
+    void initializePLL(Params &params);
+
+    void initializeModel(Params &params);
 
     /**
             print tree to .treefile
@@ -158,7 +160,7 @@ public:
             @param min_iterations the min number of iterations
             @param max_iterations the maximum number of iterations
      */
-    void setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, int min_iterations, int max_iterations);
+//    void setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, int min_iterations, int max_iterations);
 
     /**
             @param assess_quartet the quartet assessment, either IQP_DISTANCE or IQP_PARSIMONY
@@ -188,15 +190,28 @@ public:
     void doIQP();
 
     /**
+     *  @brief remove all branches mapped to splits in \a split
+     *  @param nodes1 node vector containing one end of the branches
+     *  @param nodes2 node vector containing the other end of the branches
+     *  @return number of branches removed
+     */
+    int removeBranches(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits);
+
+    /**
      * 		Perform a series of random NNI moves
      * 		@param numNNI number of random NNIs
      */
     void doRandomNNIs(int numNNI);
 
     /**
-     *   get model parameters from IQTree and input them into PLL
+     *   input model parameters from IQ-TREE to PLL
      */
-    void inputModelParam2PLL();
+    void inputModelIQTree2PLL();
+
+    /**
+     *  input model parameters from PLL to IQ-TREE
+     */
+    void inputModelPLL2IQTree();
 
     /**
      *  get the rate parameters from PLL
@@ -245,6 +260,25 @@ public:
      */
     double doTreeSearch();
 
+    /**
+     *  Wrapper function that uses either PLL or IQ-TREE to optimize the branch length
+     *  @param maxTraversal
+     *  	maximum number of tree traversal for branch length optimization
+     *  @return NEWICK tree string
+     */
+    string optimizeBranches(int maxTraversal);
+
+    /**
+     *  Wrapper function to compute tree log-likelihood.
+     *  This function with call either PLL or IQ-TREE to compute tree log-likelihood
+     */
+    void computeLogL();
+
+    /**
+     *	Print numBestScore found so far, starting from the highest
+     */
+    void printBestScores(int numBestScore);
+
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
      ****************************************************************************/
@@ -268,22 +302,44 @@ public:
     double pllOptimizeNNI(int &nniCount, int &nniSteps, SearchInfo &searchinfo);
 
     /**
-            search all positive NNI move on the current tree and save them on the possilbleNNIMoves list
+     * 		@brief Perform NNI search on the current tree topology
+     * 		This function will automatically use the selected kernel (either PLL or IQ-TREE)
+     *
+     * 		@param nniCount (OUT) number of NNIs applied
+     * 		@param nniSteps (OUT) number of NNI steps done
+     * 		@return the new NEWICK string
      */
-    void genNNIMoves(bool approx_nni, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    string doNNISearch(int &nniCount, int &nniSteps);
+
+    /**
+            @brief evaluate all NNIs and store them in possilbleNNIMoves list
+            @param  node    evaluate all NNIs of the subtree rooted at node
+            @param  dad     a neighbor of \p node which does not belong to the subtree
+                            being considered (used for traverse direction)
+
+     */
+    void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
+     * @brief Evaluate all NNIs on branch defined by \a nodes1 and \a nodes2
+     *
+     * @param[in] nodes1 contains one ends of the branches for NNI evaluation
+     * @param[in] nodes2 contains the other ends of the branches for NNI evaluation
+     */
+    void evalNNIs(NodeVector &nodes1, NodeVector &nodes2);
 
     /**
             search all positive NNI move on the current tree and save them
             on the possilbleNNIMoves list
      */
-    void genNNIMovesSort(bool approx_nni);
+    void evalNNIsSort(bool approx_nni);
 
     /**
             apply nni2apply NNIs from the non-conflicting NNI list
             @param nni2apply number of NNIs to apply from the list
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void applyNNIs(int nni2apply, bool changeBran = true);
+    virtual void doNNIs(int nni2apply, bool changeBran = true);
 
     /**
      *  Restore the old 5 branch lengths stored in the NNI move.
@@ -306,12 +362,12 @@ public:
     /**
      * 	Save all the current branch lengths
      */
-    void saveBranLens(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void saveBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * 	 Restore the branch lengths from the saved values
      */
-    virtual void restoreAllBranLen(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * Get the branch length of the branch node1-node2
@@ -359,37 +415,11 @@ public:
     inline double estDelta95(void);
 
     /**
-     *
-     * @return
-     */
-    double getCurScore(void);
-
-    /**
-     *
-     * @return
-     */
-    double getBestScore(void) {
-        return bestScore;
-    }
-
-    /**
-     *
-     */
-    void setBestScore(double score) {
-        bestScore = score;
-    }
-
-    /**
-     *  set the current tree as the best tree
-     */
-    void setBestTree(string tree, double logl);
-
-    /**
             current parsimony score of the tree
      */
     int cur_pars_score;
 
-    bool enable_parsimony;
+//    bool enable_parsimony;
     /**
             stopping rule
      */
@@ -426,26 +456,6 @@ public:
 
 
     /**
-     *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
-     */
-    pllInstance *pllInst;
-
-    /**
-     *	PLL data structure for alignment
-     */
-    pllAlignmentData *pllAlignment;
-
-    /**
-     *  PLL data structure for storing phylognetic analysis options
-     */
-    pllInstanceAttr pllAttr;
-
-    /**
-     *  PLL partition list
-     */
-    partitionList * pllPartitions;
-
-    /**
      *  information and parameters for the tree search procedure
      */
     SearchInfo searchinfo;
@@ -455,7 +465,7 @@ public:
      */
     vector<int> vecNumNNI;
 
-    int getCurIteration() { return curIteration; }
+    int getCurIteration() { return curIt; }
 
     /**
      * Do memory allocation and initialize parameter for UFBoot to run with PLL
@@ -506,30 +516,19 @@ public:
 protected:
 
     /**
-     *  Determine whether during tree search whether the diversification process should start
-     */
-    bool diversification;
-
-    /**
      *  Current IQPNNI iteration number
      */
-    int curIteration;
+    int curIt;
     /**
             criterion to assess important quartet
      */
     IQP_ASSESS_QUARTET iqp_assess_quartet;
 
-    /**
-     * Array that stores the frequency that each taxa has been choosen to be swapped
-     */
-    map<int, int> freqList;
 
     /**
      * Taxa set
      */
     NodeVector taxaSet;
-
-    //int nbNNI;
 
     /**
      * confidence value for number of NNIs found in one iteration
@@ -548,34 +547,42 @@ protected:
     vector<double> vecImpProNNI;
 
     /**
-            The list of positive NNI moves for the current tree;
+        List of positive NNI for the current tree;
      */
-    vector<NNIMove> posNNIs;
-
+    vector<NNIMove> plusNNIs;
 
     /**
-            List contains non-conflicting NNI moves for the current tree;
+        List of non-conflicting NNIs for the current tree;
      */
-    vector<NNIMove> vec_nonconf_nni;
+    vector<NNIMove> nonConfNNIs;
 
     /**
-     *      Data structure to store how many times a leaf has been removed.
-     *      LeafFreq is a struct that contains leaf_id and leaf_frequency
+     *  NNIs that have been applied in the previous step
      */
-    vector<LeafFreq> leaf_freqs;
+    vector<NNIMove> appliedNNIs;
 
     /**
-            Data structure (of type Map) which stores all the optimal
-            branch lengths for all branches in the tree
+        Optimal branch lengths
      */
-    BranLenMap mapOptBranLens;
+    mapString2Double optBrans;
 
     /**
-     * 	Data structure (of type Map) used to store the original branch
-        lengths of the tree
+     *  @brief get branches, on which NNIs are evaluated for the next NNI step.
+     *  @param[out] nodes1 one ends of the branches
+     *  @param[out] nodes2 the other ends of the branches
+     *  @param[in] nnis NNIs that have been previously applied
      */
-    BranLenMap savedBranLens;
+    void getBranchesForNNI(NodeVector& nodes1, NodeVector& nodes2, vector<NNIMove>& nnis);
 
+    /**
+     *  Use fastNNI heuristic
+     */
+    bool fastNNI;
+
+    /**
+            Original branch lengths
+     */
+    mapString2Double orgBrans;
 
     int k_delete, k_delete_min, k_delete_max, k_delete_stay;
 
@@ -584,49 +591,37 @@ protected:
      */
     int k_represent;
 
-    /**
-     *  Initialize the node frequency list (node_freqs)
-     */
-    void initLeafFrequency(PhyloNode* node = NULL, PhyloNode* dad = NULL);
-
-    void clearLeafFrequency();
-
 public:
+
+    /**
+     *  Generate the initial candidate tree set
+     *  @param nParTrees number of parsimony trees to generate
+     *  @param nNNITrees number of NNI locally optimal trees to generate
+     */
+    void initCandidateTreeSet(int nParTrees, int nNNITrees);
+
+
+    /**
+     * Generate the initial tree (usually used for model parameter estimation)
+     * @param dist_file only needed for BIONJ tree
+     */
+    void computeInitialTree(string &dist_file);
+
+    /**
+     *  @brief: optimize model parameters on the current tree
+     *  either IQ-TREE or PLL
+     *  @param printInfo to print model parameters to the screen or not
+     *  @param epsilon likelihood epsilon for optimization
+     *
+     */
+    string optimizeModelParameters(bool printInfo = false, double epsilon = -1);
 
     /**
      *  variable storing the current best tree topology
      */
     topol* pllBestTree;
 
-
-    /**
-     * The current best score found
-     */
-    double bestScore;
-
-    /**
-     *  the current best tree
-     */
-    string bestTreeString;
-
-    /**
-     *  A set of reference trees which are for the evolutionary tree search
-     *  This set only contains tree topologies (without branch length)
-     */
-    //unordered_map<string, double> refTreeSet;
-
-    /**
-     *  A set of reference trees which are sorted according to their logl
-     *  This set contains complete tree strings (with branch length)
-     */
-    //map<double, string> refTreeSetSorted;
-
     CandidateSet candidateTrees;
-
-    /**
-     *  Set of unique initial parsimony trees (OBSOLETE by introducing candidateTrees)
-     */
-    //set<string> uniqParsTopo;
 
 
     /****** following variables are for ultra-fast bootstrap *******/
@@ -656,7 +651,7 @@ public:
     double logl_cutoff;
 
     /** vector of bootstrap alignments generated */
-    vector<IntVector> boot_samples;
+    vector<BootValType* > boot_samples;
 
     /** newick string of corresponding bootstrap trees */
     IntVector boot_trees;
@@ -681,10 +676,21 @@ public:
     /** summarize bootstrap trees into split set */
     void summarizeBootstrap(SplitGraph &sg);
 
-    /** @return TRUE if stopping criterion is met */
-    bool checkBootstrapStopping();
+    void writeUFBootTrees(Params &params);
+
+    /** @return bootstrap correlation coefficient for assessing convergence */
+    double computeBootstrapCorrelation();
+
 	int getDelete() const;
 	void setDelete(int _delete);
+
+	int getCurIt() const {
+		return curIt;
+	}
+
+	void setCurIt(int curIt) {
+		this->curIt = curIt;
+	}
 
 protected:
     /**** NNI cutoff heuristic *****/
@@ -703,7 +709,6 @@ protected:
 
     ofstream outNNI;
 protected:
-
 
     bool print_tree_lh;
 
@@ -751,6 +756,7 @@ protected:
     virtual void reinsertLeaves(PhyloNodeVector &del_leaves);
 
     void reinsertLeavesByParsimony(PhyloNodeVector &del_leaves);
+
 
     void doParsimonyReinsertion();
 

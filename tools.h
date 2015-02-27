@@ -52,7 +52,12 @@
 #define GCC_VERSION 0
 #endif
 
-#ifdef USE_HASH_MAP
+// for MSVC
+#ifndef __func__
+#define __func__ __FUNCTION__
+#endif
+
+#if defined(USE_HASH_MAP) && !defined(_MSC_VER)
 	#if !defined(__GNUC__)
 		#include <hash_map>
 		#include <hash_set>
@@ -71,12 +76,14 @@
 #else
 	#include <map>
 	#include <set>
+	#include <unordered_map>
+	#include <unordered_set>
 #endif
 
 using namespace std;
 
 
-#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300
+#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300 && !defined(_MSC_VER)
 /*
         Define the hash function of Split
  */
@@ -334,7 +341,8 @@ enum TestType {
  */
 enum StateFreqType {
     FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, FREQ_ESTIMATE,
-    FREQ_CODON_1x4, FREQ_CODON_3x4, FREQ_CODON_3x4C // special frequency for codon model
+    FREQ_CODON_1x4, FREQ_CODON_3x4, FREQ_CODON_3x4C, // special frequency for codon model
+    FREQ_MIXTURE // mixture-frequency model
 };
 
 /**
@@ -353,7 +361,7 @@ enum ModelTestCriterion {
         Stopping condition type
  */
 enum STOP_CONDITION {
-    SC_FIXED_ITERATION, SC_STOP_PREDICT
+    SC_FIXED_ITERATION, SC_WEIBULL, SC_UNSUCCESS_ITERATION, SC_BOOTSTRAP_CORRELATION, SC_REAL_TIME
 };
 
 enum IQP_ASSESS_QUARTET {
@@ -361,7 +369,11 @@ enum IQP_ASSESS_QUARTET {
 };
 
 enum LEAST_SQUARE_VAR {
-    OLS, FIRST_TAYLOR, FITCH_MARGOLIASH, SECOND_TAYLOR, PAUPLIN
+    OLS, WLS_FIRST_TAYLOR, WLS_FITCH_MARGOLIASH, WLS_SECOND_TAYLOR, WLS_PAUPLIN
+};
+
+enum START_TREE_TYPE {
+	STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY
 };
 
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model
@@ -377,6 +389,13 @@ struct NNIInfo {
     int iqpnni_iteration;
 };
 
+enum LikelihoodKernel {
+	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_SSE
+};
+
+enum LhMemSave {
+	LM_DETECT, LM_ALL_BRANCH, LM_PER_NODE
+};
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
@@ -390,58 +409,70 @@ extern int NNI_MAX_NR_STEP;
 struct Params {
 
 	/**
-	 *  Number of starting parsimony trees
+	 * Turn on feature to identify stable splits and fix them during tree search
 	 */
-	int numParsTrees;
+	bool fix_stable_splits;
 
 	/**
-	 *  Number of NNI trees generated from the set of parsimony trees
+	 *  Number of distinct locally optimal trees
+	 */
+	int numSupportTrees;
+
+	/**
+	 *  Number of starting parsimony trees
+	 */
+	int numInitTrees;
+
+	/**
+	 *  SPR distance (radius) for parsimony tree
+	 */
+	int sprDist;
+
+	/**
+	 *  Number of NNI locally optimal trees generated from the set of parsimony trees
 	 *  Default = 20 (out of 100 parsimony trees)
 	 */
 	int numNNITrees;
 
 	/**
-	 *  Population size
+	 *  Number of best trees in the candidate set used to generate perturbed trees
 	 */
 	int popSize;
 
 	/**
-	 *  maximum number of trees stored in the candidate set
+	 *  Maximum number of trees stored in the candidate tree set
 	 */
-	int limitPopSize;
+	int maxCandidates;
 
 	/**
 	 *  heuristics for speeding up NNI evaluation
 	 */
 	bool speednni;
 
-	bool adaptPert;
+	/**
+	 *  use reduction technique to constraint tree space
+	 */
+	bool reduction;
 
 	/**
 	 *  portion of NNI used for perturbing the tree
 	 */
-	double initPerStrength;
+	double initPS;
 
 	/**
-	 *  logl epsilon for the final model parameter optimization
+	 *  logl epsilon for model parameter optimization
 	 */
 	double modeps;
 
-    /**
-     *  logl epsilon for the intermediate model parameter optimization steps
-     */
-    double imd_modeps;
-
 	/**
-	 *  Carry out iterated local search using NNI only.
+	 *  New search heuristics (DEFAULT: ON)
 	 */
 	bool snni;
 
 	/**
-	 *  only evaluate NNIs in affected regions
+	 *  Specify how the branch lengths are optimzed after each NNI operation
+	 *  (No optimization, 1 branch optimization, 5 branch optimization)
 	 */
-	bool fastnni;
-
     NNI_Type nni_type;
 
     /**
@@ -460,9 +491,9 @@ struct Params {
 	 */
 	bool nni5;
 
-
     /**
-     *  Number of smoothTree iteration carried out in Phylolib for IQP Tree
+     *  Number of branch length optimization rounds performed after
+     *  each NNI step (DEFAULT: 1)
      */
     int numSmoothTree;
 
@@ -470,6 +501,15 @@ struct Params {
      *   compute least square branches for a given tree
      */
     bool leastSquareBranch;
+
+    /** TRUE to apply Manuel's analytic approximation formulae for branch length */
+    bool manuel_analytic_approx;
+
+    /** TRUE to compute parsimony branch length of final tree */
+    bool pars_branch_length;
+
+    /** TRUE to compute bayesian branch length for the final tree */
+    bool bayes_branch_length;
 
     /**
      *  use Least Square to evaluate NNI
@@ -480,11 +520,6 @@ struct Params {
      *  epsilon value used to compare log-likelihood between trees
      */
     double loglh_epsilon;
-    /**
-     *   Option to turn on the fast branch length optimization trick
-     *   from RAxML
-     */
-    bool fast_branch_opt;
 
     /*
      *  reinsert leaves back to tree using parsimony
@@ -512,20 +547,15 @@ struct Params {
     bool pll;
 
     /**
-     *  Turn on model parameter optimization by PLL
+     *  OBSOLETE! Stopping rule for the tree search
      */
-    bool pllModOpt;
-
-    /**
-     *  Stopping rule for the tree search
-     */
-    bool autostop;
+//    bool autostop;
 
     /**
      *  Number of maximum unsuccessful iterations after the search is stopped.
      *  Used for the automatic stopping rule
      */
-    int stopCond;
+    int unsuccess_iteration;
 
     char *binary_aln_file;
 
@@ -536,22 +566,13 @@ struct Params {
     int speedup_iter;
 
     /**
-     *   option for doing a VNS search
-     */
-    bool vns_search;
-
-    /**
      *  starting CPU time of the program
      */
-    double startTime;
+    double startCPUTime;
 
     /** starting real time of the program */
     double start_real_time;
 
-    /**
-     *		write all current best trees to file
-     */
-    bool write_best_trees;
     /**
      *  Number iteration = num_taxa * iteration_multiple
      */
@@ -560,6 +581,9 @@ struct Params {
              input file name
      */
     char *user_file;
+
+    /* type of starting tree */
+    START_TREE_TYPE start_tree;
 
     /**
             prefix of the output file, default is the same as input file
@@ -592,9 +616,9 @@ struct Params {
 
     /**
      * 		defines the relation between edge lengths in supertree and subtrees
-     * 		0 for separate edge length (default)
-     * 		p for proportional edge length
-     * 		j for joint edge length
+     * 		0 (NULL) for separate edge length (default)
+     * 		'p' for proportional edge length
+     * 		'j' for joint edge length
      */
     char partition_type;
 
@@ -658,14 +682,14 @@ struct Params {
     bool aln_no_const_sites;
 
     /**
-            compute parsimony score on trees
+            OBSOLETE compute parsimony score on trees
      */
-    bool parsimony;
+//    bool parsimony;
 
     /**
             compute random step-wise addition parsimony tree instead of BIONJ
      */
-    bool parsimony_tree;
+//    bool parsimony_tree;
 
     /**
              output file name
@@ -836,7 +860,7 @@ struct Params {
     /**
             name of the root taxon
      */
-    char *root;
+    const char *root;
 
     /**
             true if tree is forced to be rooted
@@ -1031,6 +1055,12 @@ struct Params {
     /** set of models for testing */
     char *model_set;
 
+    /** model defition file */
+    char *model_def_file;
+
+    /** TRUE to optimize mixture model weights */
+    bool optimize_mixmodel_weight;
+
     /**
             TRUE to store transition matrix into a hash table for computation efficiency
      */
@@ -1114,6 +1144,11 @@ struct Params {
     int write_intermediate_trees;
 
     /**
+     *  Write out all candidate trees (the locally optimal trees)
+     */
+    int write_local_optimal_trees;
+
+    /**
         TRUE to avoid duplicated trees while writing intermediate trees
      */
     bool avoid_duplicated_trees;
@@ -1163,7 +1198,11 @@ struct Params {
     /**
             SSE Option
      */
-    bool SSE;
+    LikelihoodKernel SSE;
+
+    /** TRUE to not use AVX even available in CPU, default: FALSE */
+    bool lk_no_avx;
+
     /**
      	 	0: do not print anything
             1: print site log-likelihood
@@ -1178,6 +1217,8 @@ struct Params {
             TRUE to print tree log-likelihood
      */
     bool print_tree_lh;
+
+    bool print_branch_lengths;
 
     /****** adaptive NNI search heuristic ******/
 
@@ -1324,7 +1365,12 @@ struct Params {
     /**********************************************/
     /****** variables for upper bound tests *******/
 	bool upper_bound;
-
+	bool upper_bound_NNI;
+	/*
+	 * fraction of current likelihood by which UB will be increased.
+	 * if UBincreased < L, ignore corresponding NNI Add a comment to this line
+	 */
+	double upper_bound_frac;
 
 
     /**********************************************/
@@ -1444,9 +1490,8 @@ struct Params {
      */
     char *site_freq_file;
 
-#ifdef _OPENMP
+    /** number of threads for OpenMP version     */
     int num_threads;
-#endif
 
     /** either MTC_AIC, MTC_AICc, MTC_BIC */
     ModelTestCriterion model_test_criterion;
@@ -1478,6 +1523,26 @@ struct Params {
 	 * virtual population size for PoMo model
 	 */
 	int pomo_pop_size;
+
+	/* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
+	 * 0: store all partial likelihood vectors
+	 * 1: only store 1 partial likelihood vector per node */
+	LhMemSave lh_mem_save;
+
+	/* TRUE to print .splits file in star-dot format */
+	bool print_splits_file;
+    
+    /** TRUE (default) to ignore identical sequences and add them back at the end */
+    bool ignore_identical_seqs;
+
+    /** TRUE to write initial tree to a file (default: false) */
+    bool write_init_tree;
+
+    /** frequencies of const patterns to be inserted into alignment */
+    char *freq_const_patterns;
+
+    /** BQM 2015-02-25: true to NOT rescale Gamma+Invar rates by (1-p_invar) */
+    bool no_rescale_gamma_invar;
 };
 
 /**
@@ -1538,12 +1603,12 @@ inline bool is_newick_token(char ch) {
 /**
         print error message then exit program
  */
-void outError(const char *error);
+void outError(const char *error, bool quit = true);
 
 /**
         print error message then exit program
  */
-void outError(string error);
+void outError(string error, bool quit = true);
 
 
 /*--------------------------------------------------------------*/
@@ -1552,12 +1617,12 @@ void outError(string error);
 /**
         print double error messages then exit program
  */
-void outError(const char *error, const char *msg);
+void outError(const char *error, const char *msg, bool quit = true);
 
 /**
         print double error messages then exit program
  */
-void outError(const char *error, string msg);
+void outError(const char *error, string msg, bool quit = true);
 
 /**
         Output a warning message to screen
@@ -1688,6 +1753,13 @@ double convert_double(const char *str) throw (string);
         @return the double
  */
 double convert_double(const char *str, int &end_pos) throw (string);
+
+/**
+        convert comma-separated string to integer vector, with error checking
+        @param str original string with integers separated by comma
+        @param vec (OUT) integer vector
+ */
+void convert_double_vec(const char *str, DoubleVector &vec) throw (string);
 
 /**
  * Convert seconds to hour, minute, second
@@ -1865,10 +1937,20 @@ double computePValueChiSquare(double x, int df);
 int init_random(int seed);
 
 /**
+ * finalize random number generator (e.g. free memory
+ */
+int finish_random();
+
+/**
  * returns a random integer in the range [0; n - 1]
  * @param n upper-bound of random number
  */
 int random_int(int n);
+
+/**
+ *  return a random integer in the range [a,b]
+ */
+//int randint(int a, int b);
 
 /**
  * returns a random integer in the range [0; RAND_MAX - 1]
@@ -1880,6 +1962,15 @@ int random_int();
  * returns a random floating-point nuber in the range [0; 1)
  */
 double random_double();
+
+template <class T>
+void my_random_shuffle (T first, T last)
+{
+	int n = last - first;
+	for (int i=n-1; i>0; --i) {
+		swap (first[i],first[random_int(i+1)]);
+	}
+}
 
 /**
  * generic function for sorting by index

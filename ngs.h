@@ -23,7 +23,7 @@
 
 #include "phylotree.h"
 #include "alignmentpairwise.h"
-#include "ratemeyerdiscrete.h"
+#include "model/ratemeyerdiscrete.h"
 
 /*
 	collection of classes for Next-generation sequencing 
@@ -106,7 +106,7 @@ public:
 		@param ddf (OUT) 2nd derivative
 		@return negative log-likelihood (for minimization purpose)
 	*/
-	double computeFuncDervCat(int cat, double value, double &df, double &ddf);
+	void computeFuncDervCat(int cat, double value, double &df, double &ddf);
 
 	/**
 		number of category
@@ -141,7 +141,7 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD);
+    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
 
 };
 
@@ -182,7 +182,7 @@ public:
 		@param ddf (OUT) second derivative
 		@return f(value) of function f you want to minimize
 	*/
-	virtual double computeFuncDerv(double value, double &df, double &ddf);
+	virtual void computeFuncDerv(double value, double &df, double &ddf);
 
 	/**
 		classify rates into categories.
@@ -370,7 +370,7 @@ public:
 		@param ddf (OUT) second derivative
 		@return f(value) of function f you want to minimize
 	*/
-	virtual double computeFuncDerv(double value, double &df, double &ddf);
+	virtual void computeFuncDerv(double value, double &df, double &ddf);
 	
 };
 

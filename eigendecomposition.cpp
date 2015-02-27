@@ -23,6 +23,7 @@
 #include <string.h>
 #include <iostream>
 #include <stdlib.h>
+#include "tools.h"
 
 const double ZERO = 0.000001;
 using namespace std;
@@ -30,6 +31,7 @@ using namespace std;
 EigenDecomposition::EigenDecomposition()
 {
 	total_num_subst = 1.0;
+	normalize_matrix = true;
 }
 
 void EigenDecomposition::eigensystem(
@@ -154,7 +156,7 @@ void EigenDecomposition::eigensystem(
 
 
 void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_freq, 
-	double *eval, double **evec, double **inv_evec, int num_state)
+	double *eval, double *evec, double *inv_evec, int num_state)
 {
 	double *forg = new double[num_state];
 	double *new_forg = new double[num_state];
@@ -201,6 +203,7 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		eval[i] = (forg[i] > ZERO) ? eval_new[inew--] : 0;
 		//eval[i] = (forg[i] > ZERO) ? eval_new[inew++] : 0;
 
+	assert(inew == -1);
 	// calculate the actual eigenvectors of Q and its inverse matrix
 	//for (i = 0, inew = 0; i < num_state; i++)
 	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
@@ -208,20 +211,24 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 // 			for (j = 0, jnew = 0; j < num_state; j++) 
 			for (j = num_state-1, jnew = new_num-1; j >= 0; j--) 
 				if (forg[j] > ZERO) {
-					evec[i][j] = a[inew][jnew] / forg_sqrt[inew];
-					inv_evec[i][j] = a[jnew][inew] * forg_sqrt[jnew];
+					evec[i*num_state+j] = a[inew][jnew] / forg_sqrt[inew];
+					inv_evec[i*num_state+j] = a[jnew][inew] * forg_sqrt[jnew];
 					//jnew++;
 					jnew--;
 				} else {
-					evec[i][j] = (i == j);
-					inv_evec[i][j] = (i == j);
+					evec[i*num_state+j] = (i == j);
+					inv_evec[i*num_state+j] = (i == j);
+//					evec[i*num_state+j] = 0.0;
+//					inv_evec[i*num_state+j] = 0.0;
 				}
 // 			inew++;
  			inew--;
 		} else 
 		for (j=0; j < num_state; j++) {
-			evec[i][j] = (i==j);
-			inv_evec[i][j] = (i==j);
+			evec[i*num_state+j] = (i==j);
+			inv_evec[i*num_state+j] = (i==j);
+//			evec[i*num_state+j] = 0.0;
+//			inv_evec[i*num_state+j] = 0.0;
 		}
 
 
@@ -230,8 +237,8 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	error = 0;
 	for (j = 0; j < num_state; j++) {
 		for (i = 0, zero = 0.0; i < num_state; i++) {
-			for (k = 0; k < num_state; k++) zero += b[i][k] * evec[k][j];
-			zero -= eval[j] * evec[i][j];
+			for (k = 0; k < num_state; k++) zero += b[i][k] * evec[k*num_state+j];
+			zero -= eval[j] * evec[i*num_state+j];
 			if (fabs(zero) > 1.0e-5) {
 				error = 1;
 				break;
@@ -239,12 +246,13 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		}
 	}
 	if (error) {
+		cout.precision(5);
 		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation! (gap=" << fabs(zero) << ")" << endl;
-		cout << "Rate matrix R: " << endl;
-		for (i = 0; i < num_state; i++) {
-			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
-			cout << endl;
-		}
+//		cout << "Rate matrix R: " << endl;
+//		for (i = 0; i < num_state; i++) {
+//			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
+//			cout << endl;
+//		}
 		cout << "State frequencies: " << endl;
 		for (i = 0; i < num_state; i++) cout << state_freq[i] << " ";
 		cout << endl;
@@ -295,15 +303,20 @@ void EigenDecomposition::computeRateMatrix(double **a, double *stateFrqArr_, int
 		sum += temp*stateFrqArr_[i]; /* exp. rate */
 	}
 
-	delta = total_num_subst / sum; /* 0.01 subst. per unit time */
+	if (normalize_matrix) {
+		delta = total_num_subst / sum; /* 0.01 subst. per unit time */
 
-	for (i = 0; i < num_state; i++) {
-		for (j = 0; j < num_state; j++) {
-			if (i != j)
-				a[i][j] = delta * a[i][j];
-			else
-				a[i][j] = delta * (-m[i]);
+		for (i = 0; i < num_state; i++) {
+			for (j = 0; j < num_state; j++) {
+				if (i != j)
+					a[i][j] = delta * a[i][j];
+				else
+					a[i][j] = delta * (-m[i]);
+			}
 		}
+	} else {
+		for (i = 0; i < num_state; i++)
+			a[i][i] = -m[i];
 	}
 	delete [] m;
 } /* onepamratematrix */
@@ -327,6 +340,8 @@ void EigenDecomposition::eliminateZero(double **mat, double *forg, int num,
 				}
 			inew++;
 		}
+	if (verbose_mode >= VB_MED)
+		cout << "new_num_states = " << new_num << endl;
 	//writeMat(new_mat, new_num);
 	//writeDouble(new_forg, new_num);
 }
@@ -1049,7 +1064,7 @@ void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
 	delete [] index;
 } /* luinverse */
 
-void EigenDecomposition::checkevector(double **evec, double **ivec, int nn) {
+void EigenDecomposition::checkevector(double *evec, double *ivec, int nn) {
 	int i, j, ia, ib, ic, error;
 	double **matx = (double**) new double [nn];
 	double sum;
@@ -1061,7 +1076,7 @@ void EigenDecomposition::checkevector(double **evec, double **ivec, int nn) {
 	for (ia = 0; ia < nn; ia++) {
 		for (ic = 0; ic < nn; ic++) {
 			sum = 0.0;
-			for (ib = 0; ib < nn; ib++) sum += evec[ia][ib] * ivec[ib][ic];
+			for (ib = 0; ib < nn; ib++) sum += evec[ia*nn+ib] * ivec[ib*nn+ic];
 			matx[ia][ic] = sum;
 		}
 	}

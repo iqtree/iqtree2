@@ -29,10 +29,9 @@ SuperAlignment::SuperAlignment()
 SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
  : Alignment()
 {
-	seq_type = SEQ_BINARY;
+	// first build taxa_index and partitions
 	int site, seq, nsite = super_tree->size();
 	PhyloSuperTree::iterator it;
-	map<string,int> name_map;
 	for (site = 0, it = super_tree->begin(); it != super_tree->end(); it++, site++) {
 		partitions.push_back((*it)->aln);
 		int nseq = (*it)->aln->getNSeq();
@@ -49,7 +48,16 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 				taxa_index[id][site] = seq;
 		}
 	}
+	// now the patterns of sequence-genes presence/absence
+	buildPattern();
+}
+
+void SuperAlignment::buildPattern() {
+	int site, seq, nsite = partitions.size();
+
+	seq_type = SEQ_BINARY;
 	num_states = 2; // binary type because the super alignment presents the presence/absence of taxa in the partitions
+	STATE_UNKNOWN = 2;
 	site_pattern.resize(nsite, -1);
 	clear();
 	pattern_index.clear();
@@ -65,18 +73,133 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
 	}
 	verbose_mode = save_mode;
 	countConstSite();
+    buildSeqStates();
 }
+
+
 
 void SuperAlignment::linkSubAlignment(int part) {
 	assert(taxa_index.size() == getNSeq());
 	int nseq = getNSeq(), seq;
+	vector<bool> checked;
+	checked.resize(partitions[part]->getNSeq(), false);
 	for (seq = 0; seq < nseq; seq++) {
 		int id = partitions[part]->getSeqID(getSeqName(seq));
 		if (id < 0)
 			taxa_index[seq][part] = -1;
-		else
+		else {
 			taxa_index[seq][part] = id;
+			checked[id] = true;
+		}
 	}
+	if (verbose_mode >= VB_MED) {
+
+	}
+	// sanity check that all seqnames in partition must be present in superalignment
+	for (seq = 0; seq < checked.size(); seq++) {
+		assert(checked[seq]);
+	}
+}
+
+void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char) {
+	assert(aln->isSuperAlignment());
+	SuperAlignment *saln = (SuperAlignment*)aln;
+
+    IntVector::iterator it;
+    for (it = seq_id.begin(); it != seq_id.end(); it++) {
+        assert(*it >= 0 && *it < aln->getNSeq());
+        seq_names.push_back(aln->getSeqName(*it));
+    }
+
+	// BUG HERE!
+	//Alignment::extractSubAlignment(aln, seq_id, 0);
+
+	taxa_index.resize(getNSeq());
+	for (int i = 0; i < getNSeq(); i++)
+		taxa_index[i].resize(saln->partitions.size(), -1);
+
+	int part = 0;
+	partitions.resize(saln->partitions.size());
+	for (vector<Alignment*>::iterator ait = saln->partitions.begin(); ait != saln->partitions.end(); ait++, part++) {
+		IntVector sub_seq_id;
+		for (IntVector::iterator it = seq_id.begin(); it != seq_id.end(); it++)
+			if (saln->taxa_index[*it][part] >= 0)
+				sub_seq_id.push_back(saln->taxa_index[*it][part]);
+		Alignment *subaln = new Alignment;
+		subaln->extractSubAlignment(*ait, sub_seq_id, 0);
+		partitions[part] = subaln;
+		linkSubAlignment(part);
+//		cout << subaln->getNSeq() << endl;
+//		subaln->printPhylip(cout);
+	}
+
+	// now build the patterns based on taxa_index
+	buildPattern();
+}
+
+Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs) {
+    IntVector checked;
+    vector<bool> removed;
+    checked.resize(getNSeq(), 0);
+    removed.resize(getNSeq(), false);
+    int seq1;
+
+	for (seq1 = 0; seq1 < getNSeq(); seq1++) {
+        if (checked[seq1]) continue;
+        bool first_ident_seq = true;
+		for (int seq2 = seq1+1; seq2 < getNSeq(); seq2++) {
+			if (getSeqName(seq2) == not_remove) continue;
+			bool equal_seq = true;
+			int part = 0;
+			// check if seq1 and seq2 are identical over all partitions
+			for (vector<Alignment*>::iterator ait = partitions.begin(); ait != partitions.end(); ait++, part++) {
+				int subseq1 = taxa_index[seq1][part];
+				int subseq2 = taxa_index[seq2][part];
+				if (subseq1 < 0 && subseq2 < 0) // continue if both seqs are absent in this partition
+					continue;
+				if (subseq1 < 0 && subseq2 > 0) {
+					// if one sequence is present and the other is absent for a gene, we conclude that they are not identical
+					equal_seq = false;
+					break;
+				}
+				if (subseq1 > 0 && subseq2 < 0) {
+					// if one sequence is present and the other is absent for a gene, we conclude that they are not identical
+					equal_seq = false;
+					break;
+				}
+				// now if both seqs are present, check sequence content
+				for (iterator it = (*ait)->begin(); it != (*ait)->end(); it++)
+					if  ((*it)[subseq1] != (*it)[subseq2]) {
+						equal_seq = false;
+						break;
+					}
+			}
+			if (equal_seq) {
+				if (!keep_two || !first_ident_seq) {
+					removed_seqs.push_back(getSeqName(seq2));
+					target_seqs.push_back(getSeqName(seq1));
+					removed[seq2] = true;
+				}
+				checked[seq2] = 1;
+				first_ident_seq = false;
+			}
+		}
+		checked[seq1] = 1;
+	}
+
+	if (removed_seqs.empty()) return this; // do nothing if the list is empty
+
+	if (removed_seqs.size() > getNSeq()-3)
+		outError("Your alignment contains too many identical sequences, quiting now...");
+
+	// now remove identical sequences
+	IntVector keep_seqs;
+	for (seq1 = 0; seq1 < getNSeq(); seq1++)
+		if (!removed[seq1]) keep_seqs.push_back(seq1);
+	SuperAlignment *aln;
+	aln = new SuperAlignment;
+	aln->extractSubAlignment(this, keep_seqs, 0);
+	return aln;
 }
 
 /*
@@ -306,6 +429,35 @@ SuperAlignment::~SuperAlignment()
 	partitions.clear();
 }
 
+void SuperAlignment::printCombinedAlignment(ostream &out, bool append) {
+	vector<Alignment*>::iterator pit;
+	int final_length = 0;
+	for (pit = partitions.begin(); pit != partitions.end(); pit++)
+		final_length += (*pit)->getNSite();
+
+	out << getNSeq() << " " << final_length << endl;
+	StrVector::iterator it;
+	int max_len = getMaxSeqNameLength();
+	if (max_len < 10) max_len = 10;
+	int seq_id = 0;
+	for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
+		out.width(max_len);
+		out << left << (*it) << " ";
+		int part = 0;
+		for (pit = partitions.begin(); pit != partitions.end(); pit++, part++) {
+			int part_seq_id = taxa_index[seq_id][part];
+			int nsite = (*pit)->getNSite();
+			if (part_seq_id >= 0) {
+				for (int i = 0; i < nsite; i++)
+					out << (*pit)->convertStateBackStr((*pit)->getPattern(i) [part_seq_id]);
+			} else {
+				string str(nsite, '?');
+				out << str;
+			}
+		}
+		out << endl;
+	}
+}
 
 void SuperAlignment::printCombinedAlignment(const char *file_name, bool append) {
 	vector<Alignment*>::iterator pit;
@@ -361,9 +513,9 @@ void SuperAlignment::printSubAlignments(Params &params, vector<PartitionInfo> &p
 			filename = params.out_prefix;
 		filename += "." + part_info[part].name;
 		 if (params.aln_output_format == ALN_PHYLIP)
-			(*pit)->printPhylip(filename.c_str(), false, NULL, params.aln_nogaps, NULL);
+			(*pit)->printPhylip(filename.c_str(), false, NULL, params.aln_nogaps, false, NULL);
 		else if (params.aln_output_format == ALN_FASTA)
-			(*pit)->printFasta(filename.c_str(), false, NULL, params.aln_nogaps, NULL);
+			(*pit)->printFasta(filename.c_str(), false, NULL, params.aln_nogaps, false, NULL);
 	}
 }
 
@@ -421,6 +573,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
 	aln->site_pattern.resize(nsites, -1);
     aln->clear();
     aln->pattern_index.clear();
+    aln->STATE_UNKNOWN = partitions[ids[0]]->STATE_UNKNOWN;
 
     int site = 0;
     for (i = 0; i < ids.size(); i++) {
@@ -431,7 +584,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     		int part_seq = 0;
     		for (int seq = 0; seq < union_taxa.size(); seq++)
     			if (union_taxa[seq] == 1) {
-    				char ch = STATE_UNKNOWN;
+    				char ch = aln->STATE_UNKNOWN;
     				if (taxa_set[seq] == 1) {
     					ch = (*it)[part_seq++];
     				}
@@ -447,6 +600,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     	}
     }
     aln->countConstSite();
+    aln->buildSeqStates();
 
 	return aln;
 }

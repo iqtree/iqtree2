@@ -130,12 +130,14 @@ public:
             PRINT INFORMATION
      ********************************************************/
 
+	/** @return true if tree is bifurcating, false otherwise */
+	bool isBifurcating(Node *node = NULL, Node *dad = NULL);
     /**
             print information
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
      */
-    void printInfo(Node *node = NULL, Node *dad = NULL);
+    void printBranchLengths(ostream &out, Node *node = NULL, Node *dad = NULL);
 
     /**
             print the tree to the output file in newick format
@@ -242,14 +244,14 @@ public:
             @param infile the input file file.
             @param is_rooted (IN/OUT) true if tree is rooted
      */
-    void readTree(const char *infile, bool &is_rooted);
+    virtual void readTree(const char *infile, bool &is_rooted);
 
     /**
             read the tree from the ifstream in newick format
             @param in the input stream.
             @param is_rooted (IN/OUT) true if tree is rooted
      */
-    void readTree(istream &in, bool &is_rooted);
+    virtual void readTree(istream &in, bool &is_rooted);
 
     /**
             parse the tree from the input file in newick format
@@ -361,7 +363,7 @@ public:
     void getTaxaName(vector<string> &taxname, Node *node = NULL, Node *dad = NULL);
 
     /**
-            get the descending internal nodes below the node
+            get the descending internal nodes below \a node
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
             @param nodes (OUT) vector of internal nodes
@@ -369,13 +371,14 @@ public:
     void getInternalNodes(NodeVector &nodes, Node *node = NULL, Node *dad = NULL);
 
     /**
-            get the descending internal branches below the node
+            get the descending internal branches below \a node
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
             @param nodes (OUT) vector of one end node of branch
             @param nodes2 (OUT) vector of the other end node of branch
+            @param excludeSplits do not collect branches in here
      */
-    void getInternalBranches(NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL);
+    void getAllInnerBranches(vector<Node*> &nodes, vector<Node*> &nodes2, SplitGraph* excludeSplits = NULL, Node *node = NULL, Node *dad = NULL);
 
     /**
             get all descending branches below the node
@@ -385,6 +388,36 @@ public:
             @param nodes2 (OUT) vector of the other end node of branch
      */
     void getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node = NULL, Node *dad = NULL);
+
+    /**
+     *      get all descending internal branches below \a node and \a dad up to depth \a depth
+     *      @param[in] depth collect all internal branches up to distance \a depth from the current branch
+     *      @param[in] node one of the 2 nodes of the current branches
+     *      @param[in] dad one of the 2 nodes of the current branches
+     *      @param[out] nodes1 contains one ends of the collected branches
+     *      @param[out] nodes2 contains the other ends of the collected branches
+     */
+    void getInnerBranches(NodeVector& nodes1, NodeVector& nodes2, int depth, Node *node, Node *dad);
+
+    /**
+     *  @brief check whether branch (node1, node2) exist in the branch vector (nodes1, node2)
+     */
+    bool branchExist(Node* node1, Node* node2, NodeVector& nodes1, NodeVector& nodes2);
+
+    /**
+     * @brief: check if the branch is internal
+     * @param[in] node1 one end of the branch
+     * @param[in] node2 the other end of the branch
+     */
+    bool isInnerBranch(Node* node1, Node* node2);
+
+    /**
+     *  Check if the 2 nodes from a branch in the tree
+     *  @param node1 one of the 2 nodes
+     *  @param node2 one of the 2 nodes
+     *  return true if they are adjacent to each other
+     */
+    bool isABranch(Node* node1, Node* node2);
 
     void getBranchLengths(DoubleVector &len, Node *node = NULL, Node *dad = NULL);
 
@@ -479,6 +512,21 @@ public:
      */
     void convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes = NULL, Node *node = NULL, Node *dad = NULL);
 
+    /**
+     * 		Generate a split defined by branch node1-node2
+     * 		@param node1 one end of the branch
+     * 		@param node2 one end of the branch
+     * 		@return a pointer to the split (the new split is allocated dynamically)
+     */
+    Split* getSplit(Node* node1, Node* node2);
+
+    /**
+     *  Check whehter the tree contains all splits in \a splits
+     *  @param splits list of splits to check
+     *  @return true or false
+     */
+    bool containsSplits(SplitGraph& splits);
+
     /********************************************************
             CONVERT SPLIT SYSTEM INTO TREE
      ********************************************************/
@@ -542,7 +590,22 @@ public:
 
 	void computeRFDist(istream &in, IntVector &dist);
 
-    /********************************************************
+	/**
+	 * insert new taxa next to the existing taxa in the tree
+	 * @param new_taxa name of new taxa to be inserted
+	 * @param existing_taxa names of existing taxa in the tree
+	 */
+	void insertTaxa(StrVector &new_taxa, StrVector &existing_taxa);
+
+	/** remove some taxa from the tree
+	 * @param taxa_names names of taxa that will be removed
+	 */
+	void removeTaxa(StrVector &taxa_names);
+
+	/** find a first taxon below a subtree */
+	Node *findFirstTaxon(Node *node = NULL, Node *dad = NULL);
+
+	/********************************************************
             PROPERTIES OF TREE
      ********************************************************/
     /**
@@ -637,9 +700,9 @@ protected:
      * where id1 is smaller than id2. This is done to create a key for the map data structure
      * @param node1
      * @param node2
-     * @return
+     * @return the string key for the node pair
      */
-    inline string nodePair2String(Node* node1, Node* node2) {
+    inline string getBranchID(Node* node1, Node* node2) {
         string key("");
         if (node1->id < node2->id) {
             key += convertIntToString(node1->id) + "-"

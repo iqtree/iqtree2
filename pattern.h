@@ -32,7 +32,7 @@ public:
 	/** 
 		determine if the pattern is constant. update the is_const variable.
 	*/
-	void computeConst();
+	void computeConst(int STATE_UNKNOWN);
 
 	/**
 		@param num_states number of states of the model
@@ -44,7 +44,7 @@ public:
 		@param num_states number of states of the model
 		@return the number of gaps 
 	*/
-	int computeGapChar(int num_states);
+	int computeGapChar(int num_states, int STATE_UNKNOWN);
 
 	/** 
 		destructor

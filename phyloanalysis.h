@@ -24,7 +24,8 @@
 #include "tools.h"
 #include "mexttree.h"
 #include "phylotesting.h"
-#include "nnisearch.h"
+#include "upperbounds.h" // Olga: functions for Upper Bounds analysis
+#include "pllnni.h"
 
 class PhyloTree;
 class IQTree;
@@ -35,7 +36,7 @@ class IQTree;
 */
 void runPhyloAnalysis(Params &params);
 
-void runPhyloAnalysis(Params &params, string &original_model, Alignment* &alignment,
+void runTreeReconstruction(Params &params, string &original_model,
 		IQTree &tree, vector<ModelInfo> &model_info);
 
 /**

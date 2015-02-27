@@ -16,45 +16,60 @@
 #include "phylosupertree.h"
 #include "phylotesting.h"
 
-#include "gtrmodel.h"
-#include "modeldna.h"
+#include "model/modelgtr.h"
+#include "model/modeldna.h"
 #include "myreader.h"
-#include "rateheterogeneity.h"
-#include "rategamma.h"
-#include "rateinvar.h"
-#include "rategammainvar.h"
+#include "model/rateheterogeneity.h"
+#include "model/rategamma.h"
+#include "model/rateinvar.h"
+#include "model/rategammainvar.h"
 //#include "modeltest_wrapper.h"
-#include "modelprotein.h"
-#include "modelbin.h"
-#include "modelcodon.h"
-#include "modelmorphology.h"
+#include "model/modelprotein.h"
+#include "model/modelbin.h"
+#include "model/modelcodon.h"
+#include "model/modelmorphology.h"
 #include "timeutil.h"
 
 
+/* Binary model set */
 const char* bin_model_names[] = { "JC2", "GTR2" };
 
+/* Morphological model set */
 const char* morph_model_names[] = {"MK", "ORDERED"};
 
+/* DNA model set */
 const char* dna_model_names[] = { "JC", "F81", "K80", "HKY", "TNe",
 		"TN", "K81", "K81u", "TPM2", "TPM2u", "TPM3", "TPM3u", "TIMe", "TIM",
 		"TIM2e", "TIM2", "TIM3e", "TIM3", "TVMe", "TVM", "SYM", "GTR" };
 
+/* DNA models supported by PhyML/PartitionFinder */
 const char* dna_model_names_old[] ={"JC", "F81", "K80", "HKY", "TNe",
  	 	 "TN", "K81", "K81u", "TIMe", "TIM", "TVMe", "TVM", "SYM", "GTR"};
 
+/* DNA model supported by RAxML */
 const char* dna_model_names_rax[] ={"GTR"};
 
+/* DNA model supported by MrBayes */
+const char *dna_model_names_mrbayes[] = {"JC", "F81", "K80", "HKY", "SYM", "GTR"};
+
+/* Protein model set */
 const char* aa_model_names[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "mtART", "mtZOA", "VT", "LG", "DCMut", "PMB",
 		"HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62" };
 
+/* Protein models supported by PhyML/PartitionFinder */
 const char *aa_model_names_old[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "mtART", "VT", "LG", "DCMut",
 		"HIVb", "HIVw", "Blosum62" };
 
+/* Protein models supported by RAxML */
 const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "VT", "LG", "DCMut", "Blosum62" };
 
+const char* aa_model_names_mrbayes[] = {"Poisson", "Dayhoff", "mtMAM", "JTT", "WAG",
+		"cpREV", "mtREV", "rtREV", "VT", "Blosum62" };
+
+/* Codon models */
 const char *codon_model_names[] = {"MG", "GY", "ECM"};
 
 const double TOL_LIKELIHOOD_MODELTEST = 0.01;
@@ -266,6 +281,9 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 		} else if (strcmp(params.model_set, "raxml") == 0) {
 			nmodels = sizeof(dna_model_names_rax) / sizeof(char*);
 			model_names = (char**)dna_model_names_rax;
+		} else if (strcmp(params.model_set, "mrbayes") == 0) {
+			nmodels = sizeof(dna_model_names_mrbayes) / sizeof(char*);
+			model_names = (char**)dna_model_names_mrbayes;
 		} else {
 			outError("Wrong -mset option");
 			nmodels = 0;
@@ -281,6 +299,9 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 		} else if (strcmp(params.model_set, "raxml") == 0) {
 			nmodels = sizeof(aa_model_names_rax) / sizeof(char*);
 			model_names = (char**)aa_model_names_rax;
+		} else if (strcmp(params.model_set, "mrbayes") == 0) {
+			nmodels = sizeof(aa_model_names_mrbayes) / sizeof(char*);
+			model_names = (char**)aa_model_names_mrbayes;
 		} else {
 			outError("Wrong -mset option");
 			nmodels = 0;
@@ -507,7 +528,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 		string opt_model_name = "";
 		for (part1 = 0; part1 < gene_sets.size()-1; part1++)
 			for (part2 = part1+1; part2 < gene_sets.size(); part2++)
-			if (super_aln->partitions[gene_sets[part1][0]]->num_states == super_aln->partitions[gene_sets[part2][0]]->num_states) {
+			if (super_aln->partitions[gene_sets[part1][0]]->num_states == super_aln->partitions[gene_sets[part2][0]]->num_states &&
+				super_aln->partitions[gene_sets[part1][0]]->seq_type == super_aln->partitions[gene_sets[part2][0]]->seq_type) {
 				// only merge partitions of the same data type
 				IntVector merged_set;
 				merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());
@@ -682,21 +704,21 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	}
 
 	PhyloTree *tree_homo = new PhyloTree();
+        tree_homo->copyPhyloTree(in_tree);
 	tree_homo->optimize_by_newton = params.optimize_by_newton;
-	tree_homo->sse = params.SSE;
-	tree_homo->copyPhyloTree(in_tree);
+	tree_homo->setLikelihoodKernel(params.SSE);
 
 	PhyloTree *tree_hetero = new PhyloTree();
+        tree_hetero->copyPhyloTree(in_tree);
 	tree_hetero->optimize_by_newton = params.optimize_by_newton;
-	tree_hetero->sse = params.SSE;
-	tree_hetero->copyPhyloTree(in_tree);
+	tree_hetero->setLikelihoodKernel(params.SSE);
 
 	RateHeterogeneity * rate_class[4];
 	rate_class[0] = new RateHeterogeneity();
 	rate_class[1] = new RateInvar(-1, NULL);
 	rate_class[2] = new RateGamma(params.num_rate_cats, -1, params.gamma_median, NULL);
 	rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1, params.gamma_median, -1, params.optimize_model_rate_joint, NULL);
-	GTRModel *subst_model = NULL;
+	ModelGTR *subst_model = NULL;
 	if (seq_type == SEQ_BINARY)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_DNA)
@@ -774,9 +796,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		tree->getRate()->setTree(tree);
 
 		// initialize model factory
-		tree->setModelFactory(model_fac);
 		model_fac->model = subst_model;
 		model_fac->site_rate = tree->getRate();
+                tree->setModelFactory(model_fac);
 
 		tree->clearAllPartialLH();
 
@@ -1146,25 +1168,34 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		tree->freeNode();
 		tree->readTree(in, params.is_rooted);
 		tree->setAlignment(tree->aln);
+		if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
+			cout << "NOTE: Changing to old kernel as user tree is multifurcating" << endl;
+			if (tree->sse == LK_EIGEN)
+				tree->changeLikelihoodKernel(LK_NORMAL);
+			else
+				tree->changeLikelihoodKernel(LK_SSE);
+		}
+
 		tree->initializeAllPartialLh();
 		tree->fixNegativeBranch(false);
 		if (tree->isSuperTree())
 			((PhyloSuperTree*) tree)->mapTrees();
 		if (!params.fixed_branch_length) {
-			tree->curScore = tree->optimizeAllBranches(100, 0.001);
+			tree->setCurScore(tree->optimizeAllBranches(100, 0.001));
 		} else {
-			tree->curScore = tree->computeLikelihood();
+			tree->setCurScore(tree->computeLikelihood());
 		}
-		treeout << "[ tree " << tree_index+1 << " lh=" << tree->curScore << " ]";
+		treeout << "[ tree " << tree_index+1 << " lh=" << tree->getCurScore() << " ]";
 		tree->printTree(treeout);
 		treeout << endl;
 		if (params.print_tree_lh)
-			scoreout << tree->curScore << endl;
+			scoreout << tree->getCurScore() << endl;
 
-		cout << " / LogL: " << tree->curScore << endl;
+		cout << " / LogL: " << tree->getCurScore() << endl;
 
 		if (pattern_lh) {
-			tree->computePatternLikelihood(pattern_lh, &(tree->curScore));
+			double curScore = tree->getCurScore();
+			tree->computePatternLikelihood(pattern_lh, &curScore);
 			if (params.do_weighted_test)
 				memcpy(pattern_lhs + tid*nptn, pattern_lh, nptn*sizeof(double));
 		}
@@ -1172,14 +1203,14 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 			string tree_name = "Tree" + convertIntToString(tree_index+1);
 			printSiteLh(site_lh_file.c_str(), tree, pattern_lh, true, tree_name.c_str());
 		}
-		info[tid].logl = tree->curScore;
+		info[tid].logl = tree->getCurScore();
 
 		if (!params.topotest_replicates || ntrees <= 1) {
 			tid++;
 			continue;
 		}
 		// now compute RELL scores
-		orig_tree_lh[tid] = tree->curScore;
+		orig_tree_lh[tid] = tree->getCurScore();
 		double *tree_lhs_offset = tree_lhs + (tid*params.topotest_replicates);
 		for (boot = 0; boot < params.topotest_replicates; boot++) {
 			double lh = 0.0;
