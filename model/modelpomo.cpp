@@ -3,13 +3,14 @@
 #include <assert.h>
 #include <string.h>
 
-ModelPoMo::ModelPoMo(PhyloTree *tree, bool count_rate) : ModelNonRev(tree, count_rate) {
+ModelPoMo::ModelPoMo(PhyloTree *tree, bool count_rate) : ModelGTR(tree, count_rate) {
 	init("PoMo", "", FREQ_EQUAL, "");
 }
 
 void ModelPoMo::init(const char *model_name, string model_params, StateFreqType freq, string freq_params) {
 	mutation_prob = new double[16];
 	freq_fixed_states = new double[4];
+	rate_matrix = new double[num_states*num_states];
 	// TODO: need to reoptimize later
 	int i;
 	for (i = 0; i < 16; i++) mutation_prob[i] = 1.0;
@@ -21,6 +22,7 @@ void ModelPoMo::init(const char *model_name, string model_params, StateFreqType 
 
 ModelPoMo::~ModelPoMo() {
 	// TODO: Check with ModelPoMo::init!
+	delete [] rate_matrix;
 	delete [] freq_fixed_states;
 	delete [] mutation_prob;
 }
@@ -58,15 +60,25 @@ void ModelPoMo::computeStateFreq() {
 			decomposeState(state, k, X, Y);
 			state_freq[state] = norm*freq_fixed_states[X]*freq_fixed_states[Y]*mutCoeff(X, Y)*N*N / (k*(N-k));
 		}
+	double sum = 0.0;
+	for (state = 0; state < num_states; state++)
+		sum += state_freq[state];
+	assert(fabs(sum-1.0) < 0.000001);
 }
 
 void ModelPoMo::initMoranWithBoundaryMutation() {
 	int state1, state2;
 	int N = phylo_tree->aln->virtual_pop_size;
 
-	if (verbose_mode >= VB_MED) cout << "PoMo rate matrix:" << endl;
-
 	computeStateFreq();
+	if (verbose_mode >= VB_MED) {
+		cout << "state_freq: ";
+		for (state1 = 0; state1 < num_states; state1++)
+			cout << state_freq[state1] << " ";
+		cout << endl;
+	}
+
+	if (verbose_mode >= VB_MAX) cout << "PoMo rate matrix:" << endl;
 
 	// Loop over rows (transition starting from state1)
 	for (state1 = 0; state1 < num_states; state1++) {
@@ -78,9 +90,23 @@ void ModelPoMo::initMoranWithBoundaryMutation() {
 			}
 		rate_matrix[state1*num_states+state1] = -(row_sum);
 	}
+
+	int count = 0;
+	for (state1 = 0; state1 < num_states; state1++) {
+		// Loop over columns (transition to state2)
+		for (state2 = state1+1; state2 < num_states; state2++)
+			rates[count++] = rate_matrix[state1*num_states+state2] / state_freq[state2];
+	}
+	if (verbose_mode >= VB_MAX) {
+		for (state1 = 0; state1 < num_states; state1++) {
+			for (state2 = 0; state2 < num_states; state2++)
+				cout << rate_matrix[state1*num_states+state2] << "\t";
+			cout << endl;
+		}
+	}
 }
 
-void ModelPoMo::initMoranWithMutation() {
+/*void ModelPoMo::initMoranWithMutation() {
 
 	// // This code was used to run a dummy JC69 model with 58 states.
 	// int i=0;
@@ -118,8 +144,7 @@ void ModelPoMo::initMoranWithMutation() {
 		if (fabs(row_sum) > 0.000001) outError("Row sum not equal 0");
 	}
 
-	/* TODO: Initialize state freqs here. */
-}
+}*/
 
 double ModelPoMo::computeP(int i, int major, int minor) {
 	// Cf. Moran model with mutation.
@@ -300,6 +325,7 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 
 int ModelPoMo::getNDim() {
 	return 9;
+//	return 0;
 }
 
 void ModelPoMo::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
@@ -338,5 +364,18 @@ void ModelPoMo::getVariables(double *variables) {
 		mutation_prob[i-4] = variables[i];
 	}
 	initMoranWithBoundaryMutation();
+}
+
+void ModelPoMo::writeInfo(ostream &out) {
+
+	int i;
+	out << "frequency of fixed states: ";
+	for (i = 0; i < 4; i++)
+		out << freq_fixed_states[i] << " ";
+	out << endl;
+	out << "mutation: ";
+	for (i = 0; i < 6; i++)
+		out << mutation_prob[i] << " ";
+	out << endl;
 }
 

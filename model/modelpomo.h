@@ -1,9 +1,9 @@
 #ifndef _MODELPOMO_H_
 #define _MODELPOMO_H_
 
-#include "modelnonrev.h"
+#include "modelgtr.h"
 
-class ModelPoMo : public ModelNonRev
+class ModelPoMo : public ModelGTR
 {     
   
 public:  
@@ -40,6 +40,12 @@ public:
 	 */
 	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
 
+	/**
+		write information
+		@param out output stream
+	*/
+	virtual void writeInfo(ostream &out);
+
 protected:
 
 	/**
@@ -64,6 +70,8 @@ private:
 
   /** 4 unnormalized stationary frequencies of fixed states (reversible model only) */
   double *freq_fixed_states;
+
+  double *rate_matrix;
 
   /**
    * P(i,major,minor) is the probability to increase the number of
