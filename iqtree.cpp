@@ -449,6 +449,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     /************ Compute logl of all parsimony trees ********************/
     vector<string> unOptParTrees = candidateTrees.getTopTrees(nParTrees);
+    candidateTrees.clear();
     // logl of the first tree has already been computed during model parameter estimation
     for (vector<string>::iterator it = unOptParTrees.begin()+1; it != unOptParTrees.end(); it++) {
     	readTreeString(*it);
@@ -456,25 +457,21 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         // Add tree to the candidate set
 		candidateTrees.update(tree, getCurScore(), false);
     }
-    //exit(0);
     double loglTime = getCPUTime() - startTime;
 	cout << "CPU time: " << loglTime << endl;
 
     // Only select the best nNNITrees for doing NNI search
-    CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);
-    candidateTrees.clear();
-
+    vector<string> initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);
     cout << endl;
     cout << "Optimizing top parsimony trees with NNI..." << endl;
     startTime = getCPUTime();
     /*********** START: Do NNI on the best parsimony trees ************************************/
-    CandidateSet::reverse_iterator rit;
     setCurIt(1);
-    for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); ++rit, setCurIt(getCurIt() + 1)) {
+    for (vector<string>::iterator it = initParsimonyTrees.begin(); it != initParsimonyTrees.end(); ++it, setCurIt(getCurIt() + 1)) {
     	int nniCount, nniStep;
         double initLogl, nniLogl;
         string tree;
-        readTreeString(rit->second.tree);
+        readTreeString(*it);
         computeLogL();
         initLogl = getCurScore();
         tree = doNNISearch(nniCount, nniStep);
@@ -1976,25 +1973,17 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 			break;
 
 		if (params->reduction) {
-			string newickToplogy = getTopology();
-			string newickString = getTreeString();
-			if (candidateTrees.treeTopologyExist(newickToplogy)) {
-				double oldScore = candidateTrees.getTopologyScore(
-						newickToplogy);
-				if (curScore > oldScore)
-					candidateTrees.update(newickString, curScore, false);
+			bool isNewTree = candidateTrees.update(getTreeString(), curScore, false);
+			if (!isNewTree)
 				break;
-			} else {
-				candidateTrees.update(newickString, curScore, false);
-			}
 		}
+
 		if (params->fixStableSplits && !stopTabu) {
 			SplitGraph nniSplits = convertNNI2Splits(compatibleNNIs, numNNIs);
 			tabuSplits.insert(tabuSplits.end(), nniSplits.begin(), nniSplits.end());
 		}
-	}
 
-    tabuSplits.clear();
+	}
 
     if (nni_count == 0 && verbose_mode >= VB_MED) {
         cout << "NOTE: Tree is already NNI-optimized" << endl;

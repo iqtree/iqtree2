@@ -249,7 +249,7 @@ public:
      * @param numTrees
      * @return
      */
-    CandidateSet getBestCandidateTrees(int numTrees);
+    vector<string> getBestCandidateTrees(int numTrees);
 
 	SplitGraph& getStableSplits() {
 		return stableSplits;

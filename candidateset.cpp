@@ -226,12 +226,12 @@ void CandidateSet::clearTopologies() {
 }
 
 
-CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
-	CandidateSet res;
+vector<string> CandidateSet::getBestCandidateTrees(int numTrees) {
+	vector<string> res;
 	if (numTrees >= size())
 		numTrees = size();
 	for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; rit++, numTrees--) {
-		res.insert(*rit);
+		res.push_back(rit->second.tree);
 	}
 	return res;
 }
@@ -277,7 +277,8 @@ int CandidateSet::computeSplitSupport(int numTree) {
 	SplitGraph sg;
 	MTreeSet boot_trees;
 	int numMaxSupport = 0;
-	vector<string> trees = getBestLocalOptimalTrees(numTree);
+	//vector<string> trees = getBestLocalOptimalTrees(numTree);
+	vector<string> trees = getBestCandidateTrees(numTree);
 	assert(trees.size() > 1);
 	int maxSupport = trees.size();
 	boot_trees.init(trees, aln->getSeqNames(), params->is_rooted);
