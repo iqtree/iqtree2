@@ -524,7 +524,7 @@ public:
      * 		Generate a split defined by branch node1-node2
      * 		@param node1 one end of the branch
      * 		@param node2 one end of the branch
-     * 		@return a pointer to the split (the new split is allocated dynamically)
+     * 		@return the split
      */
     Split* getSplit(Node* node1, Node* node2);
 

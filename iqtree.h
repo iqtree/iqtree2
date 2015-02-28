@@ -193,7 +193,7 @@ public:
      *  @param splits the tabu splits
      *  @return all non-tabu branches
      */
-    Branches getNonTabuBranches(Branches& branches, SplitGraph& splits);
+    Branches getNonTabuBranches(Branches& branches, SplitGraph& splits, Branches* tabuBranches = NULL);
 
     /**
      * @brief remove all branches corresponding to nnis
@@ -334,18 +334,6 @@ public:
      * @return all positive NNIs found
      */
     vector<NNIMove> evaluateNNIs(Branches branches);
-
-    /**
-     * @brief Convert a vector of NNIMove to SplitGraph
-     *
-     * @param[in]
-     * 		nnis a vector of NNIMove
-     * @param[in]
-     * 		numNNI number of NNIs to convert. The function will convert NNIs from position
-     * 		0 to (numNNI-1)
-     * @return the resulting split graph from \a nnis
-     */
-    SplitGraph convertNNI2Splits(vector<NNIMove> nnis, int numNNI);
 
     /**
             search all positive NNI move on the current tree and save them
