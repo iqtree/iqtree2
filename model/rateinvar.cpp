@@ -31,7 +31,7 @@ RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
 	phylo_tree = tree;
 	name = "+I";
 	full_name = "Invar";
-	if (p_invar_sites > 0) {
+	if (p_invar_sites >= 0) {
 		p_invar = p_invar_sites;
 		fix_p_invar = true;
 	}

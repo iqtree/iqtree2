@@ -323,8 +323,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			if (close_bracket == string::npos)
 				outError("Close bracket not found in ", rate_str);
 			p_invar_sites = convert_double(rate_str.substr(posI+3, close_bracket-posI-3).c_str());
-			if (p_invar_sites <= 0 || p_invar_sites >= 1)
-				outError("p_invar must be in (0,1)");
+			if (p_invar_sites < 0 || p_invar_sites >= 1)
+				outError("p_invar must be in [0,1)");
 		} else if (rate_str.length() > posI+2 && rate_str[posI+2] != '+')
 			outError("Wrong model name ", rate_str);
 	}

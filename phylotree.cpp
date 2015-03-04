@@ -2981,6 +2981,9 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //    	string string_brlen = getTreeString();
     	DoubleVector lenvec;
     	saveBranchLengths(lenvec);
+        if (verbose_mode >= VB_DEBUG) {
+            printTree(cout, WT_BR_LEN+WT_NEWLINE);
+        }
         optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
         double new_tree_lh = computeLikelihoodFromBuffer();
 
@@ -2989,6 +2992,9 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             cout << new_tree_lh << endl;
         }
 
+        if (verbose_mode >= VB_DEBUG) {
+            printTree(cout, WT_BR_LEN+WT_NEWLINE);
+        }
         assert(new_tree_lh >= tree_lh - 10.0); // make sure that the new tree likelihood never decreases too much
 
         if (new_tree_lh < tree_lh) {
