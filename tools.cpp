@@ -2702,6 +2702,14 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "SINGLE BRANCH TEST:" << endl
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
             << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
+            << endl << "AUTOMATIC MODEL SELECTION:" << endl
+            << "  -m TEST              Select best-fit model for tree reconstruction" << endl
+            << "  -m TESTONLY          Only do model selection, then stop" << endl
+            << "  -mset raxml          Restrict to only models supported by RAxML" << endl
+            << "  -mset phyml          Restrict to only models supported by PhyML" << endl
+            << "  -mset mrbayes        Restrict to only models supported by MrBayes" << endl
+            << "  -mset m1,...,mk      Restrict to a comma-separated list of models" << endl
+
             << endl << "SUBSTITUTION MODEL:" << endl
             << "  -m <model_name>" << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
@@ -2715,8 +2723,6 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "               Binary: JC2 (default), GTR2" << endl
             << "                Codon: GY (default), ECM, MG" << endl
             << "       Morphology/SNP: MK (default), ORDERED" << endl
-            << "      Model selection: TEST or TESTONLY to auto-select the best-fit model." << endl
-            << "                       TESTONLY will stop the run after model selection" << endl
             << "            Otherwise: Name of file containing user-model parameters" << endl
             << "                       (rate parameters and state frequencies)" << endl
             << "  -m <model_name>+F or +FO or +FU or +FQ (default: auto)" << endl
