@@ -393,6 +393,24 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
 
 }
 
+void convert_string_vec(const char *str, StrVector &vec) throw (string) {
+    char *beginptr = (char*)str, *endptr;
+    vec.clear();
+    string elem;
+    do {
+    	endptr = strchr(beginptr, ',');
+    	if (!endptr) {
+    		elem.assign(beginptr);
+    		vec.push_back(elem);
+    		return;
+    	}
+    	elem.assign(beginptr, endptr-beginptr);
+    	vec.push_back(elem);
+		beginptr = endptr+1;
+    } while (*endptr != 0);
+
+}
+
 void readWeightFile(Params &params, int ntaxa, double &scale, StrVector &tax_name, DoubleVector &tax_weight) {
     cout << "Reading scale factor and taxa weights file " << params.param_file << " ..." << endl;
     try {

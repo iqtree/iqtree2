@@ -1787,6 +1787,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size) thro
  */
 void convert_range(const char *str, double &lower, double &upper, double &step_size) throw (string);
 
+void convert_string_vec(const char *str, StrVector &str_vec) throw (string);
 
 /**
         read the file containing branch/split scaling factor and taxa weights

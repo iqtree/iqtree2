@@ -258,63 +258,55 @@ bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &i
 }
 
 /**
+ * copy from cvec to strvec
+ */
+void copyCString(const char **cvec, int n, StrVector &strvec) {
+	strvec.resize(n);
+	for (int i = 0; i < n; i++)
+		strvec[i] = cvec[i];
+}
+
+/**
  * get the list of model
  * @param nmodels (OUT) number of models
  * @return array of model names
  */
 void getModelList(Params &params, SeqType seq_type, StrVector &models) {
-	int nmodels;
-	char **model_names;
+	StrVector model_names;
 	if (seq_type == SEQ_BINARY) {
-		nmodels = sizeof(bin_model_names) / sizeof(char*);
-		model_names = (char**)bin_model_names;
+		copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
 	} else if (seq_type == SEQ_MORPH) {
-		nmodels = sizeof(morph_model_names) / sizeof(char*);
-		model_names = (char**)morph_model_names;
+		copyCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
 	} else if (seq_type == SEQ_DNA) {
 		if (params.model_set == NULL) {
-			nmodels = sizeof(dna_model_names) / sizeof(char*);
-			model_names = (char**)dna_model_names;
-		} else if (strcmp(params.model_set, "partitionfinder") == 0) {
-			nmodels = sizeof(dna_model_names_old) / sizeof(char*);
-			model_names = (char**)dna_model_names_old;
+			copyCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
+		} else if (strcmp(params.model_set, "partitionfinder") == 0 || strcmp(params.model_set, "phyml") == 0) {
+			copyCString(dna_model_names_old, sizeof(dna_model_names_old) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "raxml") == 0) {
-			nmodels = sizeof(dna_model_names_rax) / sizeof(char*);
-			model_names = (char**)dna_model_names_rax;
+			copyCString(dna_model_names_rax, sizeof(dna_model_names_rax) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "mrbayes") == 0) {
-			nmodels = sizeof(dna_model_names_mrbayes) / sizeof(char*);
-			model_names = (char**)dna_model_names_mrbayes;
+			copyCString(dna_model_names_mrbayes, sizeof(dna_model_names_mrbayes) / sizeof(char*), model_names);
 		} else {
-			outError("Wrong -mset option");
-			nmodels = 0;
-			model_names = NULL;
+			convert_string_vec(params.model_set, model_names);
 		}
 	} else if (seq_type == SEQ_PROTEIN) {
 		if (params.model_set == NULL) {
-			nmodels = sizeof(aa_model_names) / sizeof(char*);
-			model_names = (char**)aa_model_names;
-		} else if (strcmp(params.model_set, "partitionfinder") == 0) {
-			nmodels = sizeof(aa_model_names_old) / sizeof(char*);
-			model_names = (char**)aa_model_names_old;
+			copyCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
+		} else if (strcmp(params.model_set, "partitionfinder") == 0 || strcmp(params.model_set, "phyml") == 0) {
+			copyCString(aa_model_names_old, sizeof(aa_model_names_old) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "raxml") == 0) {
-			nmodels = sizeof(aa_model_names_rax) / sizeof(char*);
-			model_names = (char**)aa_model_names_rax;
+			copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "mrbayes") == 0) {
-			nmodels = sizeof(aa_model_names_mrbayes) / sizeof(char*);
-			model_names = (char**)aa_model_names_mrbayes;
+			copyCString(aa_model_names_mrbayes, sizeof(aa_model_names_mrbayes) / sizeof(char*), model_names);
 		} else {
-			outError("Wrong -mset option");
-			nmodels = 0;
-			model_names = NULL;
+			convert_string_vec(params.model_set, model_names);
 		}
 	} else if (seq_type == SEQ_CODON) {
-		nmodels = sizeof(codon_model_names) / sizeof(char*);
-		model_names = (char**) codon_model_names;
-	} else {
-		nmodels = 0;
-		model_names = NULL;
+		copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
 	}
-	if (nmodels == 0) return;
+
+	if (model_names.empty()) return;
+
 	const char *rate_options[] = {  "", "+I",  "+ASC", "+F", "+I+F", "+G", "+I+G", "+ASC+G", "+G+F", "+I+G+F"};
 	bool test_options[] =        {true, true,   false, false,  false, true,   true,   false,  false,    false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
@@ -358,10 +350,10 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 			if (strstr(rate_options[i], must_options[j]))
 				test_options[i] = false;
 	}
-	for (i = 0; i < nmodels; i++)
+	for (i = 0; i < model_names.size(); i++)
 		for (j = 0; j < noptions; j++)
 			if (test_options[j])
-				models.push_back(string(model_names[i])+rate_options[j]);
+				models.push_back(model_names[i]+rate_options[j]);
 }
 
 /*
