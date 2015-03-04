@@ -481,6 +481,44 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         }
 }
 
+/**
+	determine if the pattern is constant. update the is_const variable.
+*/
+void Alignment::computeConst(Pattern &pat) {
+    pat.is_const = false;
+    pat.const_char = STATE_UNKNOWN;
+    StateBitset state_app;
+    state_app.reset();
+    int j;
+    for (j = 0; j < num_states; j++)
+    	state_app[j] = 1;
+
+    for (Pattern::iterator i = pat.begin(); i != pat.end(); i++) {
+    	StateBitset this_app;
+    	getAppearance(*i, this_app);
+    	state_app &= this_app;
+    }
+    int count = state_app.count();
+    if (count == 0) {
+    	return;
+    }
+    if (count == num_states) {
+    	// all-gap pattern
+    	pat.is_const = true;
+    	pat.const_char = num_states;
+    	return;
+    }
+    if (count == 1) {
+    	for (j = 0; j < num_states; j++)
+    		if (state_app.test(j)) {
+    			pat.is_const = true;
+    			pat.const_char = j;
+    			return;
+    		}
+    }
+}
+
+
 bool Alignment::addPattern(Pattern &pat, int site, int freq) {
     // check if pattern contains only gaps
     bool gaps_only = true;
@@ -497,7 +535,7 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
     PatternIntMap::iterator pat_it = pattern_index.find(pat);
     if (pat_it == pattern_index.end()) { // not found
         pat.frequency = freq;
-        pat.computeConst(STATE_UNKNOWN);
+        computeConst(pat);
         push_back(pat);
         pattern_index[pat] = size()-1;
         site_pattern[site] = size()-1;
@@ -2130,11 +2168,61 @@ void Alignment::getAppearance(char state, double *state_app) {
         state_app[(int)state] = 1.0;
         return;
     }
-    state -= (num_states-1);
-    for (i = 0; i < num_states; i++)
-        if (state & (1 << i)) {
-            state_app[i] = 1.0;
-        }
+	// ambiguous characters
+	int ambi_aa[2] = {4+8, 32+64};
+	switch (seq_type) {
+	case SEQ_DNA:
+	    state -= (num_states-1);
+		for (i = 0; i < num_states; i++)
+			if (state & (1 << i)) {
+				state_app[i] = 1.0;
+			}
+		break;
+	case SEQ_PROTEIN:
+		assert(state<22);
+		state -= 20;
+		for (i = 0; i < 7; i++)
+			if (ambi_aa[state] & (1<<i)) {
+				state_app[i] = 1.0;
+			}
+		break;
+	default: assert(0); break;
+	}
+}
+
+void Alignment::getAppearance(char state, StateBitset &state_app) {
+
+	int i;
+    if (state == STATE_UNKNOWN) {
+    	state_app.set();
+        return;
+    }
+
+    state_app.reset();
+    if (state < num_states) {
+        state_app[(int)state] = 1;
+        return;
+    }
+	// ambiguous characters
+	int ambi_aa[2] = {4+8, 32+64};
+	switch (seq_type) {
+	case SEQ_DNA:
+	    state -= (num_states-1);
+		for (i = 0; i < num_states; i++)
+			if (state & (1 << i)) {
+				state_app[i] = 1;
+			}
+		break;
+	case SEQ_PROTEIN:
+		assert(state<22);
+		state -= 20;
+		for (i = 0; i < 7; i++)
+			if (ambi_aa[state] & (1<<i)) {
+				state_app[i] = 1;
+			}
+		break;
+	default: assert(0); break;
+	}
 }
 
 void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq) {

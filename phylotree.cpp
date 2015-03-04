@@ -2423,8 +2423,10 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
 //			if (pattern_rate)
 //				pattern_rate[ptn] = rate_ptn / lh_ptn;
 			lh_ptn *= p_var_cat;
-			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+			if ((*aln)[ptn].const_char == nstates)
+				lh_ptn += p_invar;
+			else if ((*aln)[ptn].const_char < nstates) {
+				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn].const_char];
 			}
 			//#ifdef DEBUG
 			if (lh_ptn <= 0.0)
@@ -2785,8 +2787,8 @@ void PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode 
          lh_ptn *= p_var_cat;
          lh_ptn_derv1 *= p_var_cat;
          lh_ptn_derv2 *= p_var_cat;
-         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-         lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+         if ((*aln)[ptn].is_const && (*aln)[ptn].const_char < nstates) {
+         lh_ptn += p_invar * state_freq[(int) (*aln)[ptn].const_char];
          }
          assert(lh_ptn > 0);
          double derv1_frac = lh_ptn_derv1 / lh_ptn;
@@ -2813,8 +2815,10 @@ void PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode 
 
         if (ptn < orig_nptn) {
             lh_ptn = lh_ptn * p_var_cat;
-			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+			if ((*aln)[ptn].const_char == nstates)
+				lh_ptn += p_invar;
+			else if ((*aln)[ptn].const_char < nstates) {
+				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn].const_char];
 			}
 	        double pad = p_var_cat / lh_ptn;
 	        if (std::isinf(pad)) {
