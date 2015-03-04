@@ -2906,11 +2906,23 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     double ferror, optx;
     assert(current_len >= 0.0);
     theta_computed = false;
-    if (optimize_by_newton) // Newton-Raphson method
+    if (optimize_by_newton) {
+    	// Newton-Raphson method
     	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
-    else
+    	if (optx > MAX_BRANCH_LEN*0.95) {
+    		// newton raphson diverged, reset
+    	    double opt_lh = computeLikelihoodFromBuffer();
+    	    current_it->length = current_len;
+    	    current_it_back->length = current_len;
+    	    double orig_lh = computeLikelihoodFromBuffer();
+    	    if (orig_lh > opt_lh) {
+    	    	optx = current_len;
+    	    }
+    	}
+	}	else {
         // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
+	}
 
     current_it->length = optx;
     current_it_back->length = optx;
