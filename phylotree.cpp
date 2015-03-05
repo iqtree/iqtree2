@@ -427,7 +427,7 @@ void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *
     }
     FOR_NEIGHBOR_IT(node, dad, it){
     	lenvec[(*it)->id + startid] = (*it)->length;
-    	saveBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
+    	PhyloTree::saveBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
     }
 }
 
@@ -438,7 +438,7 @@ void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNod
     }
     FOR_NEIGHBOR_IT(node, dad, it){
     	(*it)->length = (*it)->node->findNeighbor(node)->length = lenvec[(*it)->id + startid];
-    	restoreBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
+    	PhyloTree::restoreBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
     }
 }
 
