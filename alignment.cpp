@@ -163,7 +163,7 @@ int Alignment::checkIdenticalSeq()
 				}
 			if (equal_seq) {
 				if (first)
-					cerr << "WARNING: Identical sequences " << getSeqName(seq1); 
+					cerr << "WARNING: Identical sequences " << getSeqName(seq1);
 				cerr << ", " << getSeqName(seq2);
 				num_identical++;
 				checked[seq2] = 1;
@@ -283,7 +283,8 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
             readPhylip(filename, sequence_type);
 	} else if (intype == IN_COUNTS) {
 	  cout << "Counts format (PoMo) detected" << endl;
-	  // TODO: set this to Params.pomo_pop_size
+	  // TODO: set this to Params.pomo_pop_size.  How can I access
+	  // this value?
 	  virtual_pop_size = 10;
 	  readCountsFormat(filename);
         } else {
@@ -370,7 +371,7 @@ int Alignment::readNexus(char *filename) {
     MyToken token(nexus.inf);
     nexus.Execute(token);
 
-	if (data_block->GetNTax() && char_block->GetNTax()) { 
+	if (data_block->GetNTax() && char_block->GetNTax()) {
 		outError("I am confused since both DATA and CHARACTERS blocks were specified");
 		return 0;
 	}
@@ -566,7 +567,7 @@ void Alignment::regroupSitePattern(int groups, IntVector& site_group)
 	int count = 0;
 	for (int g = 0; g < groups; g++) {
 		pattern_index.clear();
-		for (int i = 0; i < site_group.size(); i++) 
+		for (int i = 0; i < site_group.size(); i++)
 		if (site_group[i] == g) {
 			count++;
 			Pattern pat = stored_pat[stored_site_pattern[i]];
@@ -1016,7 +1017,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             cout << "Multi-state data with " << num_states << " alphabets" << endl;
             user_seq_type = SEQ_MULTISTATE;
         } else if (strncmp(sequence_type, "CODON", 5) == 0) {
-            if (seq_type != SEQ_DNA) 
+            if (seq_type != SEQ_DNA)
 				outWarning("You want to use codon models but the sequences were not detected as DNA");
             seq_type = user_seq_type = SEQ_CODON;
         	initCodon(sequence_type);
@@ -1267,6 +1268,8 @@ int Alignment::readCountsFormat(char* filename) {
     // Strings to check counts-file identification line.
     string ftype, npop_str, nsites_str;
 
+    bool everything_ok = true;
+    int fails = 0;
     // Set the number of states.  If nnuc=4:
     // 4 + (4 choose 2)*(N-1) = 58.
     num_states = nnuc + nnuc*(nnuc-1)/2*(N-1);
@@ -1297,7 +1300,7 @@ int Alignment::readCountsFormat(char* filename) {
          npop_str.compare("NPOP") ||
          nsites_str.compare("NSITES")) != 0) {
         err_str << "Counts-File identification line could not be read.";
-        throw err_str.str();        
+        throw err_str.str();
     }
     site_pattern.resize(nsites);
 
@@ -1328,7 +1331,7 @@ int Alignment::readCountsFormat(char* filename) {
             //Read in sequence names.
             seq_names.push_back(field);
         }
-        field_num++;    
+        field_num++;
     }
     if (seq_names.size() != npop) {
                 err_str << "Number of populations in headerline doesn't match NPOP.";
@@ -1368,6 +1371,7 @@ int Alignment::readCountsFormat(char* filename) {
                 err_str << "Number of bases does not match on line " << line_num << ".";
                 throw err_str.str();
             }
+
             // Binomial sampling.
             sum = 0;
             count = 0;
@@ -1387,8 +1391,14 @@ int Alignment::readCountsFormat(char* filename) {
             	state = id1;
             }
             else if (count == 0) {
-            	err_str << "No bases are present on line " << line_num << ".";
-            	throw err_str.str();
+                // TODO: Can we still use this site (i.e., set the
+                // value to 'N') and sum over the likelihoods of all
+                // states in the Felsenstein algorithm?
+                // TODO: Log this correctly.
+            	cout << "WARNING: Population without bases on line " << line_num << "." << endl;
+                everything_ok = false;
+            	// err_str << "No bases are present on line " << line_num << ".";
+            	//throw err_str.str();
             }
             else if (count > 2) {
             	err_str << "More than 2 bases are present on line " << line_num << ".";
@@ -1405,7 +1415,7 @@ int Alignment::readCountsFormat(char* filename) {
             	else if (sampled_values[id2] == 0) state = id1;
             	else {
                     // Convert sampled_values to state.
-                    // This could be improved (TODO).
+                    // FIXME: This could be improved.
                     if (id1 == 0) j = id2 - 1;
                     else j = id1 + id2;
                     state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
@@ -1420,14 +1430,28 @@ int Alignment::readCountsFormat(char* filename) {
         }
         // Pattern has been built and is now added to the vector of
         // patterns.
-        addPattern(pattern,site_count);
-        site_count++;
+        if (everything_ok == true) {
+            addPattern(pattern,site_count);
+            site_count++;
+        }
+        else {
+            // TODO: Log this correctly.
+            fails++;
+            cout << "WARNING: Pattern on line " <<
+                line_num << " was not added." << endl;
+            everything_ok = true;
+        }
     }
 
-    if (site_count != nsites) {
+    if (site_count + fails != nsites) {
         err_str << "Number of sites does not match NSITES.";
         throw err_str.str();
     }
+
+    // TODO: Log this correctly.
+    cout << "Added " << site_count << " out of " << nsites << " sites." << endl;
+
+    site_pattern.resize(site_count);
 
     in.clear();
     // set the failbit again
@@ -2190,7 +2214,7 @@ void Alignment::printDist(const char *file_name, double *dist_mat) {
 }
 
 double Alignment::readDist(istream &in, double *dist_mat) {
-    double longest_dist = 0.0;    
+    double longest_dist = 0.0;
     int nseqs;
     in >> nseqs;
     if (nseqs != getNSeq())
@@ -2219,7 +2243,7 @@ double Alignment::readDist(istream &in, double *dist_mat) {
             if (tmp_dist_mat[pos - 1] > longest_dist)
                 longest_dist = tmp_dist_mat[pos - 1];
         }
-        //cout << endl;        
+        //cout << endl;
     }
     //cout << "Internal distance matrix: " << endl;
     // Now initialize the internal distance matrix, in which the sequence order is the same
@@ -2241,7 +2265,7 @@ double Alignment::readDist(istream &in, double *dist_mat) {
         }
         //cout << endl;
     }
-            
+
     // check for symmetric matrix
     for (seq1 = 0; seq1 < nseqs-1; seq1++) {
         if (dist_mat[seq1*nseqs+seq1] != 0.0)
@@ -2250,7 +2274,7 @@ double Alignment::readDist(istream &in, double *dist_mat) {
             if (dist_mat[seq1*nseqs+seq2] != dist_mat[seq2*nseqs+seq1])
                 throw "Distance between " + getSeqName(seq1) + " and " + getSeqName(seq2) + " is not symmetric";
     }
-    
+
     /*
     string dist_file = params.out_prefix;
     dist_file += ".userdist";
@@ -2342,7 +2366,7 @@ void Alignment::computeStateFreq (double *stateFrqArr) {
 	delete [] newSiteAppArr_;
 	delete [] siteAppArr_;
 	delete [] timeAppArr_;
-	
+
 }
 
 void Alignment::getAppearance(char state, double *state_app) {
@@ -2536,8 +2560,8 @@ void Alignment::convfreq(double *stateFrqArr) {
 //	if (!isStopCodon(i))
 	{
 		freq = stateFrqArr[i];
-		if (freq < MIN_FREQUENCY) { 
-			stateFrqArr[i] = MIN_FREQUENCY; 
+		if (freq < MIN_FREQUENCY) {
+			stateFrqArr[i] = MIN_FREQUENCY;
 			if (!isStopCodon(i))
 				cout << "WARNING: " << convertStateBackStr(i) << " is not present in alignment that may cause numerical problems" << endl;
 		}

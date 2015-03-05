@@ -112,7 +112,9 @@ public:
     int readFasta(char *filename, char *sequence_type);
 
     /** 
-     * read the alignment in counts format (PoMo)
+     * Read the alignment in counts format (PoMo).
+     *
+     * TODO: Allow noninformative sites (where no base is present).
      * 
      * @param filename file name
      *

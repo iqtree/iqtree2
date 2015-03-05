@@ -69,7 +69,7 @@ void ModelPoMo::computeStateFreq() {
 	double sum = 0.0;
 	for (state = 0; state < num_states; state++)
 		sum += state_freq[state];
-    // TODO: Use predefined epsilon?
+    // FIXME: Use predefined epsilon?
 	assert(fabs(sum-1.0) < 0.000001);
 }
 
@@ -291,6 +291,8 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
     // TODO: Check function.
 	int N = phylo_tree->aln->virtual_pop_size;
 
+    // The transition rate to the same state will be calculated by
+    // (row_sum = 0).
 	assert(state1 != state2);
 
 	// Both states are decomposed into the abundance of the first
@@ -299,6 +301,7 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 	int i1=0, i2=0, nt1=-1, nt2=-1, nt3=-1, nt4=-1;
 	decomposeState(state1, i1, nt1, nt2);
 	decomposeState(state2, i2, nt3, nt4);
+
 	// Either the first nucleotides match or the first of state 1 with
 	// the second of state 2 or the first of state 2 with the second
 	// of state 1.  Additionally, we have to consider fixed states as
@@ -307,11 +310,7 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 		assert(i1 != i2); // because state1 != state2
 		if (i1+1==i2)
 			// e.g.: 2A8C -> 3A7C or 9A1C -> 10A
-			if (nt2 == -1)
-				// e.g. 10A ->
-				assert(0);
-			else
-				return double(i1*(N-i1)) / double(N*N);
+            return double(i1*(N-i1)) / double(N*N);
 		else if (i1-1 == i2)
 			// e.g.: 3A7C -> 2A8C or 10A -> 9A1C
 			if (nt2 == -1)
@@ -321,7 +320,6 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 				// e.g. 9A1C -> 8A2C
 				return double(i1*(N-i1)) / double(N*N);
 		else
-			// 0 for all others
 			return 0.0;
 	} else if (nt1 == nt4 && nt2 == -1 && i2 == 1)  {
 		// e.g.: 10G -> 1A9G
