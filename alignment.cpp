@@ -1302,7 +1302,15 @@ int Alignment::readCountsFormat(char* filename) {
         err_str << "Counts-File identification line could not be read.";
         throw err_str.str();
     }
-    site_pattern.resize(nsites);
+    cout << "Number of populations: " << npop << "." << endl;
+    cout << "Number of sites:       " << nsites << "." << endl;
+
+    if (nsites > 0)
+        site_pattern.resize(nsites);
+    else {
+        err_str << "Number of sites is 0.";
+        throw err_str.str()
+    }
 
     // Skip comments.
     do {
@@ -1394,8 +1402,9 @@ int Alignment::readCountsFormat(char* filename) {
                 // TODO: Can we still use this site (i.e., set the
                 // value to 'N') and sum over the likelihoods of all
                 // states in the Felsenstein algorithm?
-                // TODO: Log this correctly.
-            	cout << "WARNING: Population without bases on line " << line_num << "." << endl;
+                if (verbose_mode >= VB_MAX) {
+                    cout << "WARNING: Population without bases on line " << line_num << "." << endl;
+                }
                 everything_ok = false;
             	// err_str << "No bases are present on line " << line_num << ".";
             	//throw err_str.str();
@@ -1435,10 +1444,11 @@ int Alignment::readCountsFormat(char* filename) {
             site_count++;
         }
         else {
-            // TODO: Log this correctly.
             fails++;
-            cout << "WARNING: Pattern on line " <<
-                line_num << " was not added." << endl;
+            if (verbose_mode >= VB_MAX) {
+                cout << "WARNING: Pattern on line " <<
+                    line_num << " was not added." << endl;
+            }
             everything_ok = true;
         }
     }
@@ -1448,8 +1458,7 @@ int Alignment::readCountsFormat(char* filename) {
         throw err_str.str();
     }
 
-    // TODO: Log this correctly.
-    cout << "Added " << site_count << " out of " << nsites << " sites." << endl;
+    cout << "Number of sites read:  " << site_count << "." << endl;
 
     site_pattern.resize(site_count);
 

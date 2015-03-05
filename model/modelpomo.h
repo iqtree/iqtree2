@@ -16,6 +16,14 @@ class ModelPoMo : public ModelGTR
 
     ~ModelPoMo();
 
+    /**
+     * Initialize the PoMo model. Run by constructor.
+     *
+     * @param model_name
+     * @param model_params
+     * @param freq
+     * @param freq_params
+     */
     virtual void init(const char *model_name,
                       string model_params,
                       StateFreqType freq,
@@ -45,7 +53,7 @@ class ModelPoMo : public ModelGTR
                            bool *bound_check);
 
 	/**
-     * Write information.
+     * Write information to output stream (only with -vv).
      * @param out Output stream.
      */
 	virtual void writeInfo(ostream &out);
@@ -71,14 +79,19 @@ class ModelPoMo : public ModelGTR
 
 
  private:
-    /** Mutation probabilities, either 4x4 or 6 entries for
-        non-reversible or reversible model, respectively */
+    /**
+     * Mutation probabilities, 6 entries for reversible model.
+     */
     double *mutation_prob;
 
-    /** 4 unnormalized stationary frequencies of fixed states
-        (reversible model only). */
+    /**
+     * 4 unnormalized stationary frequencies of fixed states.
+     */
     double *freq_fixed_states;
 
+    /**
+     * The rate matrix of the PoMo model.
+     */
     double *rate_matrix;
 
     /* /\** */
@@ -122,6 +135,10 @@ class ModelPoMo : public ModelGTR
     /*  *\/ */
     /* double computeProb(int state1, int state2); */
 
+    /**
+     * Compute the normalized stationary frequencies that fulfill the
+     * detailed balance condition.
+     */
     void computeStateFreq();
 
     /**
@@ -135,7 +152,7 @@ class ModelPoMo : public ModelGTR
     bool isPolymorphic(int state);
 
     /**
-     * Get mutation coefficient from nt1 to nt2.
+     * Get symmetric mutation coefficient from nt1 to nt2 (mij = mji).
      *
      * @param nt1
      * @param nt2
@@ -144,12 +161,12 @@ class ModelPoMo : public ModelGTR
      */
     double mutCoeff(int nt1, int nt2);
 
-    /** 
+    /**
      * Compute the normalization constant.  This constant ensures that
      * the stationary frequencies (invariant measure) sum up to 1
      * (invariant distribution).
-     * 
-     * @return 
+     *
+     * @return
      */
     double computeNormConst();
 
