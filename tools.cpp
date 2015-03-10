@@ -592,6 +592,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
+    params.rr_ai = false;
     params.alpha_invar_file = NULL;
     params.out_prefix = NULL;
     params.out_file = NULL;
@@ -2300,6 +2301,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -fixai <alpha_invar_file>";
 				params.alpha_invar_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rr_ai") == 0) {
+				params.rr_ai = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-poplim") == 0) {

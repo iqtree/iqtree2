@@ -407,6 +407,12 @@ extern int NNI_MAX_NR_STEP;
         program parameters, everything is specified here
  */
 struct Params {
+
+	/**
+	 *  Use random restart strategy for estimating alpha and p_invar
+	 */
+	bool rr_ai;
+
 	/**
 	 *  User file contains the alpha and invar parameters
 	 */
