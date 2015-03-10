@@ -113,7 +113,7 @@ protected:
 	virtual void getVariables(double *variables);
 
 private:
-	
+
 	/**
 		current parameter to optimize. 0 if gamma shape or 1 if p_invar.
 	*/

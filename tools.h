@@ -407,6 +407,10 @@ extern int NNI_MAX_NR_STEP;
         program parameters, everything is specified here
  */
 struct Params {
+	/**
+	 *  User file contains the alpha and invar parameters
+	 */
+	char* alpha_invar_file;
 
 	/**
 	 * Turn on feature to identify stable splits and fix them during tree search

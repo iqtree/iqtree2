@@ -1476,6 +1476,50 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Optimize model parameters and branch lengths using ML for the initial tree
     double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
     iqtree.initializeAllPartialLh();
+    // FOR INTERNAL USE ONLY
+	if (params.alpha_invar_file != NULL) {
+		RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
+		site_rates->setFixPInvar(true);
+		site_rates->setFixGammaShape(true);
+		vector<double> alphas, p_invars, logl;
+		ifstream aiFile;
+		aiFile.open(params.alpha_invar_file, ifstream::in);
+		if (aiFile.good()) {
+			double alpha, p_invar;
+			while (aiFile >> alpha >> p_invar) {
+				alphas.push_back(alpha);
+				p_invars.push_back(p_invar);
+			}
+			aiFile.close();
+			cout << "Computing tree logl based on the alpha and p_invar values in " << params.alpha_invar_file << " ..." << endl;
+		} else {
+			stringstream errMsg;
+			errMsg << "Could not find file: " << params.alpha_invar_file;
+			outError(errMsg.str().c_str());
+		}
+		string aiResultsFileName = string(params.out_prefix) + "_" + string(params.alpha_invar_file) + ".results";
+		ofstream aiFileResults;
+		aiFileResults.open(aiResultsFileName.c_str());
+		aiFileResults << std::fixed;
+		aiFileResults.precision(4);
+    	DoubleVector lenvec;
+    	aiFileResults << "Alpha P_Invar Logl TreeLength\n";
+		for (int i = 0; i < alphas.size(); i++) {
+			iqtree.saveBranchLengths(lenvec);
+    		aiFileResults << alphas.at(i) << " " << p_invars.at(i) << " ";
+			site_rates->setGammaShape(alphas.at(i));
+			site_rates->setPInvar(p_invars.at(i));
+			site_rates->computeRates();
+			iqtree.clearAllPartialLH();
+			double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
+			aiFileResults << lh << " " << iqtree.treeLength() << "\n";
+        	iqtree.restoreBranchLengths(lenvec);
+		}
+		aiFileResults.close();
+		cout << "Results were written to: " << aiResultsFileName << endl;
+		cout << "Wall clock time used: " << getRealTime() - params.start_real_time << endl;
+		exit(0);
+	}
     string initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
@@ -1917,8 +1961,9 @@ void runPhyloAnalysis(Params &params) {
             tree->removeIdenticalSeqs(params);
         }
         alignment = NULL; // from now on use tree->aln instead
+
 		// call main tree reconstruction
-		runTreeReconstruction(params, original_model, *tree, model_info);
+        runTreeReconstruction(params, original_model, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
 			if (params.print_ufboot_trees)
 				tree->writeUFBootTrees(params);
