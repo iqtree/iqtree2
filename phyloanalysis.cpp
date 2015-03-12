@@ -1520,7 +1520,48 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		cout << "Wall clock time used: " << getRealTime() - params.start_real_time << endl;
 		exit(0);
 	}
-    string initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
+
+	if (params.rr_ai) {
+		RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
+		double initAlphas[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
+		double bestLogl = -DBL_MAX;
+		double bestAlpha = 0.0;
+		double bestPInvar = 0.0;
+		double initPInvar = iqtree.getRate()->getPInvar();
+		DoubleVector lenvec;
+		DoubleVector bestLens;
+		iqtree.saveBranchLengths(lenvec);
+		//site_rates->setFixGammaShape(true);
+		for (int i = 0; i < 10; i++) {
+			cout << "Alpha: " << initAlphas[i] << " / Logl: ";
+			site_rates->setGammaShape(initAlphas[i]);
+			site_rates->setPInvar(initPInvar);
+			site_rates->computeRates();
+			iqtree.clearAllPartialLH();
+			iqtree.resetCurScore();
+			iqtree.optimizeModelParameters(false, 0.001);
+			//iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
+			cout << iqtree.getCurScore() << endl;
+			if (iqtree.getCurScore() > bestLogl) {
+				bestLogl = iqtree.getCurScore();
+				bestAlpha = iqtree.getRate()->getGammaShape();
+				bestPInvar = iqtree.getRate()->getPInvar();
+				bestLens.clear();
+				iqtree.saveBranchLengths(bestLens);
+			}
+			iqtree.restoreBranchLengths(lenvec);
+		}
+		cout << "best alpha: " << bestAlpha << " / best p_invar: " << bestPInvar << " / logl:  " << bestLogl << endl;
+		site_rates->setGammaShape(bestAlpha);
+		site_rates->setFixGammaShape(false);
+		site_rates->setPInvar(bestPInvar);
+		site_rates->setFixPInvar(false);
+		iqtree.restoreBranchLengths(bestLens);
+		site_rates->computeRates();
+		iqtree.resetCurScore();
+		iqtree.clearAllPartialLH();
+	}
+    string initTree = iqtree.optimizeModelParameters(params.min_iterations==0, 0.001);
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 

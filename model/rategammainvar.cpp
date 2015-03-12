@@ -19,13 +19,14 @@
  ***************************************************************************/
 #include "rategammainvar.h"
 
-RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, bool simultaneous, PhyloTree *tree)
-: RateInvar(p_invar_sites, tree), RateGamma(ncat, shape, median, tree)
-{
+RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
+		double p_invar_sites, bool simultaneous, bool rr_ai, PhyloTree *tree) :
+		RateInvar(p_invar_sites, tree), RateGamma(ncat, shape, median, tree) {
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
 	joint_optimize = simultaneous;
-    computeRates();
+	this->rr_ai = rr_ai;
+	computeRates();
 }
 
 
@@ -88,6 +89,42 @@ double RateGammaInvar::optimizeParameters(double epsilon) {
 	// return if nothing to be optimized
 	if (ndim == 0)
 		return phylo_tree->computeLikelihood();
+
+/*
+	if (rr_ai) {
+		double initAlphas[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
+		double bestRateLH = -DBL_MAX;
+		double bestAlpha = 0.0;
+		double bestPInvar = 0.0;
+		double initP_Invar = RateInvar::getPInvar();
+		cout << "initP_Invar: " << initP_Invar << endl;
+		for (int i = 0; i < 10; i++) {
+			RateGamma::setGammaShape(initAlphas[i]);
+			computeRates();
+//			cur_optimize = 1;
+//			double invar_lh = RateInvar::optimizeParameters(epsilon);
+			cur_optimize = 0;
+			double gamma_lh = RateGamma::optimizeParameters(epsilon);
+			cout << initAlphas[i] << ": " << gamma_lh << endl;
+			RateInvar::setPInvar(initP_Invar);
+			phylo_tree->clearAllPartialLH();
+			if (gamma_lh > bestRateLH) {
+				bestRateLH = gamma_lh;
+				bestAlpha = RateGamma::getGammaShape();
+				bestPInvar = RateGamma::getPInvar();
+			}
+		}
+		cout << "bestAlpha: " << bestAlpha << endl;
+		//cout << "bestPInvar: " << bestPInvar << endl;
+		RateGamma::setGammaShape(bestAlpha);
+		RateInvar::setPInvar(initP_Invar);
+		//RateInvar::setPInvar(bestPInvar);
+		computeRates();
+		phylo_tree->clearAllPartialLH();
+		rr_ai = false;
+		//return phylo_tree->computeLikelihood();
+	}
+	*/
 
 	if (!joint_optimize) {
 //		double lh = phylo_tree->computeLikelihood();

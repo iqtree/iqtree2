@@ -368,7 +368,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		//string rate_str = model_str.substr(pos);
 		if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
-					p_invar_sites, params.optimize_model_rate_joint, tree);
+					p_invar_sites, params.optimize_model_rate_joint, params.rr_ai, tree);
 		} else if (posI != string::npos && posR != string::npos) {
 			site_rate = new RateFreeInvar(num_rate_cats, freerate_params, p_invar_sites, tree);
 		} else if (posI != string::npos) {
@@ -526,7 +526,8 @@ double ModelFactory::optimizeParametersOnly(double epsilon) {
 	if (!joint_optimize) {
 		double model_lh = model->optimizeParameters(epsilon);
 		double rate_lh = site_rate->optimizeParameters(epsilon);
-		if (rate_lh == 0.0) return model_lh;
+		if (rate_lh == 0.0)
+			return model_lh;
 		return rate_lh;
 	}
 
