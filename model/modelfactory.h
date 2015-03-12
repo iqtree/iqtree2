@@ -191,6 +191,7 @@ public:
 	 * TRUE to optimize all parameters simultaneously, default: FALSE
 	 */
 	bool joint_optimize;
+
 	/**
 		return the number of dimensions
 	*/

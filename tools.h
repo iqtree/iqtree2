@@ -409,6 +409,16 @@ extern int NNI_MAX_NR_STEP;
 struct Params {
 
 	/**
+	 *  Use random restart strategy for estimating alpha and p_invar
+	 */
+	bool rr_ai;
+
+	/**
+	 *  User file contains the alpha and invar parameters
+	 */
+	char* alpha_invar_file;
+
+	/**
 	 * Turn on feature to identify stable splits and fix them during tree search
 	 */
 	bool fix_stable_splits;
