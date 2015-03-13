@@ -19,14 +19,22 @@ CandidateSet::~CandidateSet() {
 CandidateSet::CandidateSet() {
 	aln = NULL;
 	params = NULL;
+	computeStableSplit = false;
 }
 
-SplitGraph CandidateSet::getRandStableSplits(int numSplit) {
+void CandidateSet::getRandomStableSplits(int numSplit, SplitGraph& randomStableSplits) {
+	/*
+	 *  Use reservoir sampling technique
+	 */
+	randomStableSplits.clear();
 	assert(numSplit < stableSplits.size());
-	SplitGraph tmpSplits = stableSplits;
-	random_shuffle(tmpSplits.begin(), tmpSplits.end());
-	tmpSplits.resize(numSplit);
-	return tmpSplits;
+	randomStableSplits.insert(randomStableSplits.begin(), stableSplits.begin(), stableSplits.begin() + numSplit);
+	for (int i = numSplit; i < stableSplits.size(); i++) {
+		int j = random_int(1, i);
+		if (j <= numSplit) {
+			randomStableSplits[j] = stableSplits[i];
+		}
+	}
 }
 
 vector<string> CandidateSet::getBestTrees() {
@@ -63,21 +71,21 @@ vector<string> CandidateSet::getTopTrees(int numTree) {
 	return res;
 }
 
-vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
-	assert(numTree <= params->maxCandidates);
-	if (numTree == 0) {
-		numTree = params->maxCandidates;
-	}
-	vector<string> res;
-	int cnt = numTree;
-	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++) {
-		if (rit->second.localOpt) {
-			res.push_back(rit->second.tree);
-			cnt--;
-		}
-	}
-	return res;
-}
+//vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
+//	assert(numTree <= params->maxCandidates);
+//	if (numTree == 0) {
+//		numTree = params->maxCandidates;
+//	}
+//	vector<string> res;
+//	int cnt = numTree;
+//	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++) {
+//		if (rit->second.localOpt) {
+//			res.push_back(rit->second.tree);
+//			cnt--;
+//		}
+//	}
+//	return res;
+//}
 
 /*
 bool CandidateSet::replaceTree(string tree, double score) {
@@ -123,13 +131,11 @@ void CandidateSet::initParentTrees() {
 }
 
 
-bool CandidateSet::update(string tree, double score, bool localOpt) {
+bool CandidateSet::update(string tree, double score) {
 	bool newTree = true;
 	CandidateTree candidate;
 	candidate.score = score;
 	candidate.topology = getTopology(tree);
-	candidate.localOpt = localOpt;
-//	cout << "Updating candidate tree " << tree << endl;
 	candidate.tree = tree;
 
 	if (treeTopologyExist(candidate.topology)) {
@@ -141,9 +147,6 @@ bool CandidateSet::update(string tree, double score, bool localOpt) {
 			topologies[candidate.topology] = score;
 			// insert tree into candidate set
 			insert(CandidateSet::value_type(score, candidate));
-		} else if (candidate.localOpt) {
-			CandidateSet::iterator treePtr = getCandidateTree(candidate.topology);
-			treePtr->second.localOpt = candidate.localOpt;
 		}
 	} else {
 		if (getWorstScore() < score && size() >= params->maxCandidates) {
@@ -153,7 +156,7 @@ bool CandidateSet::update(string tree, double score, bool localOpt) {
 		}
 		CandidateSet::iterator it = insert(CandidateSet::value_type(score, candidate));
 		topologies[candidate.topology] = score;
-		if (params->fixStableSplits && getNumLocalOptTrees() >= params->numSupportTrees) {
+		if (params->fixStableSplits && size() >= params->numSupportTrees && computeStableSplit) {
 			int it_pos = distance(it, end());
 			// The new tree is one of the numSupportTrees best trees.
 			// Thus recompute supported splits
@@ -252,6 +255,7 @@ CandidateSet::iterator CandidateSet::getCandidateTree(string topology) {
 	return end();
 }
 
+// TODO This function is not efficient for large number of tree
 void CandidateSet::removeCandidateTree(string topology) {
 	bool removed = false;
 	for (CandidateSet::reverse_iterator rit = rbegin(); rit != rend(); rit++) {
@@ -270,21 +274,19 @@ bool CandidateSet::isStableSplit(Split& sp) {
 }
 
 int CandidateSet::computeSplitSupport(int numTree) {
+	assert(numTree != 0);
 	stableSplits.clear();
-	if (numTree == 0)
-		numTree = getNumLocalOptTrees();
-	SplitIntMap hash_ss;
+	allSplits.clear();
 	SplitGraph sg;
 	MTreeSet boot_trees;
 	int numMaxSupport = 0;
-	//vector<string> trees = getBestLocalOptimalTrees(numTree);
 	vector<string> trees = getBestCandidateTrees(numTree);
 	assert(trees.size() > 1);
 	int maxSupport = trees.size();
 	boot_trees.init(trees, aln->getSeqNames(), params->is_rooted);
-	boot_trees.convertSplits(aln->getSeqNames(), sg, hash_ss, SW_COUNT, -1, false);
+	boot_trees.convertSplits(aln->getSeqNames(), sg, allSplits, SW_COUNT, -1, false);
 
-	for (SplitIntMap::iterator it = hash_ss.begin(); it != hash_ss.end(); it++) {
+	for (SplitIntMap::iterator it = allSplits.begin(); it != allSplits.end(); it++) {
 		if (it->second == maxSupport && it->first->countTaxa() > 1) {
 			numMaxSupport++;
 			Split* supportedSplit = new Split(*(it->first));
@@ -299,12 +301,12 @@ void CandidateSet::setAln(Alignment* aln) {
 	this->aln = aln;
 }
 
-int CandidateSet::getNumLocalOptTrees() {
-	int numLocalOptima = 0;
-	for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-		if (rit->second.localOpt) {
-			numLocalOptima++;
-		}
-	}
-	return numLocalOptima;
-}
+//int CandidateSet::getNumLocalOptTrees() {
+//	int numLocalOptima = 0;
+//	for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+//		if (rit->second.localOpt) {
+//			numLocalOptima++;
+//		}
+//	}
+//	return numLocalOptima;
+//}

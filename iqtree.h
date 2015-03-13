@@ -189,11 +189,18 @@ public:
     void doIQP();
 
     /**
-     *  @brief return branches that do not form splits contained in \a splits
-     *  @param splits the tabu splits
-     *  @return all non-tabu branches
+     *  @brief get non-tabu branches from a set of branches
+     *
+     *  @param
+     *  	allBranches[IN] the inital branches
+     *  @param
+     *  	tabuSplits[IN] the tabu splits
+     *  @param
+     *		nonTabuBranches[OUT] non-tabu branches from \a allBranches
+     *	@param[OUT]
+     *		tabuBranches branches that are tabu
      */
-    Branches getNonTabuBranches(Branches& branches, SplitGraph& splits, Branches* tabuBranches = NULL);
+    void getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, Branches& nonTabuBranches, Branches* tabuBranches = NULL);
 
     /**
      * @brief remove all branches corresponding to nnis
@@ -278,8 +285,9 @@ public:
     /**
      *  Wrapper function to compute tree log-likelihood.
      *  This function with call either PLL or IQ-TREE to compute tree log-likelihood
+     *  @return current score of tree
      */
-    void computeLogL();
+    double computeLogL();
 
     /**
      *	Print numBestScore found so far, starting from the highest

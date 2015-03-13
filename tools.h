@@ -429,7 +429,7 @@ struct Params {
 	double relaxStableSplits;
 
 	/**
-	 *  Number of distinct locally optimal trees
+	 *  Number of best trees used to compute stable splits
 	 */
 	int numSupportTrees;
 
@@ -463,11 +463,6 @@ struct Params {
 	 *  heuristics for speeding up NNI evaluation
 	 */
 	bool speednni;
-
-	/**
-	 *  use reduction technique to constraint tree space
-	 */
-	bool reduction;
 
 	/**
 	 *  portion of NNI used for perturbing the tree
@@ -1957,6 +1952,11 @@ int finish_random();
  * @param n upper-bound of random number
  */
 int random_int(int n);
+
+/**
+ * returns a random integer in the range [a; b]
+ */
+int random_int(int a, int b);
 
 /**
  *  return a random integer in the range [a,b]

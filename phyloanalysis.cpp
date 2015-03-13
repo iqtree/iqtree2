@@ -887,7 +887,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Maximum-likelihood tree:       " << params.out_prefix
 				<< ".treefile" << endl;
 		if (params.snni && params.write_local_optimal_trees) {
-			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
+			cout << "  Candidate trees (" << tree.candidateTrees.size() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
 		}
 	}
 	if (!params.user_file && params.start_tree == STT_BIONJ) {
@@ -1501,8 +1501,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
         	iqtree.initCandidateTreeSet(params.numInitTrees, params.numNNITrees);
         	assert(iqtree.candidateTrees.size() != 0);
-        	cout << "Finish initializing candidate tree set. ";
-        	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
+        	cout << "Finish initializing candidate tree set (" << iqtree.candidateTrees.size() << ")" << endl;
         	if (params.write_local_optimal_trees) {
         		printSuboptimalTrees(iqtree, params, ".init_suboptimal_trees");
         	}
@@ -1511,7 +1510,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             int nni_steps = 0;
             cout << "Doing NNI on the initial tree ... " << endl;
             string tree = iqtree.doNNISearch(nni_count, nni_steps);
-        	iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
+        	iqtree.candidateTrees.update(tree, iqtree.getCurScore());
 
         }
 
@@ -1584,7 +1583,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.clearAllPartialLH();
         cout << "Performs final model parameters optimization" << endl;
 		string tree = iqtree.optimizeModelParameters(true);
-		iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
+		iqtree.candidateTrees.update(tree, iqtree.getCurScore());
     }
 
 	if (iqtree.isSuperTree())

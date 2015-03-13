@@ -1453,7 +1453,6 @@ public:
 	}
 
 protected:
-
     /**
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
      */

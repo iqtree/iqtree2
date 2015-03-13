@@ -784,7 +784,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    params.autostop = true; // turn on auto stopping rule by default now
     params.unsuccess_iteration = 100;
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
-    params.reduction = false;
     params.numInitTrees = 100;
     params.fixStableSplits = false;
     params.relaxStableSplits = 0.1;
@@ -2336,10 +2335,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.speednni = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-reduction") == 0) {
-				params.reduction = true;
-				continue;
-			}
 			if (strcmp(argv[cnt], "-snni") == 0) {
 				params.snni = true;
 				// dont need to turn this on here
@@ -2352,7 +2347,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-iqpnni") == 0) {
 				params.snni = false;
 				params.start_tree = STT_BIONJ;
-				params.reduction = false;
 				params.numNNITrees = 1;
 //            continue; } if (strcmp(argv[cnt], "-auto") == 0) {
 //            	params.autostop = true;
@@ -3063,10 +3057,13 @@ int random_int(int n) {
     return (int) floor(random_double() * n);
 } /* randominteger */
 
-//int randint(int a, int b) {
-//	return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
-//}
-//
+/* returns a random integer in the range [a; b] */
+int random_int(int a, int b) {
+	assert(b > a);
+	//return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
+	return a + random_int(b - a);
+}
+
 
 double random_double() {
 #ifndef FIXEDINTRAND

@@ -32,15 +32,6 @@ struct CandidateTree {
 	 * log-likelihood or parsimony score
 	 */
 	double score;
-
-	/**
-	 *  Indicate whether the tree is NNI locally optimal.
-	 *  The reason to have this variable is that if the -reduction is
-	 *  enabled, we will also store non-locally optimal trees in the set.
-	 *  This is done to identify trees that belong to the same basin of attraction
-	 */
-	bool localOpt;
-
 };
 
 
@@ -90,12 +81,10 @@ public:
      * 	The new tree string (with branch lengths)
      * @param score
      * 	The score (ML or parsimony) of \a tree
-     * @param localOpt
-     * 	Tells whether \a tree is a locally optimal (DEFAULT: true)
      * @return false if tree topology already exists
      *
      */
-    bool update(string tree, double score, bool localOpt = true);
+    bool update(string tree, double score);
 
     /**
      *  Get the \a numBestScores best scores in the candidate set
@@ -205,7 +194,21 @@ public:
      * @param numTree the number of best trees used to calculate support values
      * @return number of splits with 100% support value
      */
-    int computeSplitSupport(int numTree = 0);
+    int computeSplitSupport(int numTree);
+
+    /**
+     *  Update the set of stable split when a new tree is inserted
+     *  to the set of best trees used for computing stable splits.
+     *
+     *  This function will remove all splits that belong to oldTree and add all
+     *  splits of newTree
+     *
+     *  @param
+     *  	oldTree tree that will be replace by \a newTree
+     *  @param
+     *  	newTree the new tree
+     */
+    void updateStableSplit(string oldTree, string newTree);
 
     /**
      * Check whether the
@@ -229,20 +232,24 @@ public:
 
     /* Getter and Setter function */
 	void setAln(Alignment* aln);
-	int getMaxCandidates() const;
-	void setMaxCandidates(int maxCandidates);
-	int getPopSize() const;
-	void setPopSize(int popSize);
-	void setIsRooted(bool isRooted);
+
 	const StringDoubleHashMap& getTopologies() const {
 		return topologies;
+	}
+
+	void enableFSS() {
+		computeStableSplit = true;
+	}
+
+	void disableFSS() {
+		computeStableSplit = false;
 	}
 
 	/**
 	 * get number of locally optimal trees in the set
 	 * @return
 	 */
-	int getNumLocalOptTrees();
+//	int getNumLocalOptTrees();
 
     /**
      * Return a CandidateSet containing \a numTrees of current best candidate trees
@@ -260,18 +267,28 @@ public:
 	 * set of stable splits.
 	 * @param
 	 * 		numSplit size of the subset
-	 * @return
-	 * 		A SplitGraph containing the random splits
-	 *
+	 * @param
+	 * 		splits (OUT) a random subset of the stable splits
 	 */
-	SplitGraph getRandStableSplits(int numSplit);
+	void getRandomStableSplits(int numSplit, SplitGraph& splits);
 
 private:
+
+	/**
+	 *  If true, the stable splits set will be computed every time update() is called
+	 */
+	bool computeStableSplit;
 
     /**
      *  Set of supported splits by the best trees
      */
     SplitGraph stableSplits;
+
+    /**
+     *  All splits collected for deriving the stable splits
+     */
+    SplitIntMap allSplits;
+
 
     /**
      *  Shared params pointing to the global params

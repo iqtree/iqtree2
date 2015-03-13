@@ -368,8 +368,22 @@ public:
 	*/
 	void calcDistance(matrix(double) &dist, vector<int> &taxa_order);
 
+const SplitIntMap& getHashSplits() const
+{
+    return hashSplits;
+}
+
+void setHashSplits(const SplitIntMap& hashSplits)
+{
+    this->hashSplits = hashSplits;
+}
 
 protected:
+
+	/**
+	 *  Hash table for fast split retrieval
+	 */
+	SplitIntMap hashSplits;
 
 	/**
 		taxa block
