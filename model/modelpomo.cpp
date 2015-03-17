@@ -7,6 +7,7 @@ ModelPoMo::ModelPoMo(PhyloTree *tree,
                      bool count_rate)
     : ModelGTR(tree, count_rate) {
 	init("PoMo", "", FREQ_USER_DEFINED, "");
+    // TODO: Implement different DNA subsitution models.
 }
 
 void ModelPoMo::init(const char *model_name,
@@ -16,10 +17,10 @@ void ModelPoMo::init(const char *model_name,
 	mutation_prob = new double[16];
 	freq_fixed_states = new double[4];
 	rate_matrix = new double[num_states*num_states];
-	// TODO: Reoptimize.
+	// TODO:  Reoptimize.
 	int i;
 	for (i = 0; i < 6; i++) mutation_prob[i] = 1e-4;
-	for (i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
+	for (i = 0; i < 4; i++) freq_fixed_states[i] = 0.25; /**< Should sum up to 1.0 */
 	initMoranWithBoundaryMutation();
 	ModelGTR::init(freq);
 }
@@ -38,8 +39,12 @@ double ModelPoMo::computeNormConst() {
 		harmonic += 1.0/(double)i;
 
 	double norm_fixed = 0.0, norm_polymorphic = 0.0;
-	for (i = 0; i < 4; i++)
-		norm_fixed += freq_fixed_states[i];
+    // Tue Mar 17 14:29:37 CET 2015; Set the sum over the fixed
+    // frequencies to 1.0 so that they can be compared with the
+    // frequencies from the GTR model.
+	// for (i = 0; i < 4; i++)
+	// 	norm_fixed += freq_fixed_states[i];
+    norm_fixed = 1.0;
 	for (i = 0; i < 4; i++) {
 		for (j = 0; j < 4; j++)
 			if (i != j)
@@ -48,6 +53,13 @@ double ModelPoMo::computeNormConst() {
 	}
 	norm_polymorphic *= N * harmonic;
 	return 1.0/(norm_fixed + norm_polymorphic);
+}
+
+void ModelPoMo::setFreqFixedStates () {
+    double f_sum = freq_fixed_states[0] +
+        freq_fixed_states[1] + freq_fixed_states[0];
+    assert(f_sum <= 1.0);
+    freq_fixed_states[3] = 1.0 - f_sum;
 }
 
 void ModelPoMo::computeStateFreq() {
@@ -69,10 +81,11 @@ void ModelPoMo::computeStateFreq() {
                 norm * freq_fixed_states[X] * freq_fixed_states[Y] *
                 mutCoeff(X, Y)*N*N / (k*(N-k));
 		}
+    // // Debug; should work anyway.
 	// double sum = 0.0;
 	// for (state = 0; state < num_states; state++)
 	// 	sum += state_freq[state];
-    // // FIXME: Use predefined epsilon?
+    // XXX: Use predefined epsilon?
 	// assert(fabs(sum-1.0) < 0.000001);
 }
 
@@ -80,6 +93,7 @@ void ModelPoMo::initMoranWithBoundaryMutation() {
 	int state1, state2;
 	int N = phylo_tree->aln->virtual_pop_size;
 
+    setFreqFixedStates();
 	computeStateFreq();
 
 	// Loop over rows (transition starting from state1).
@@ -97,7 +111,7 @@ void ModelPoMo::initMoranWithBoundaryMutation() {
 
 	int count = 0;
 
-    // XXX: This will not work.  The class ModelGTR expects rate G-T
+    // FIXME: This will not work.  The class ModelGTR expects rate G-T
     // to be one (from docstring in modelgtr.h).  I suppose that this
     // is simply the last element of rates in the usual case.  Here,
     // the last element does not correspond to G-T.  However, we fix
@@ -343,19 +357,22 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 }
 
 int ModelPoMo::getNDim() {
+    // FIXME: Maybe change this to 8, if we fix the mutation rates
+    // such that mu_GT = 1.0.
 	return 9;
-//	return 0;
 }
 
 void ModelPoMo::setBounds(double *lower_bound,
                           double *upper_bound,
                           bool *bound_check) {
 	int i;
+    // Frequencies of fixed states.
 	for (i = 1; i <= 3; i++) {
-		lower_bound[i] = 0.1;
-		upper_bound[i] = 10;
+		lower_bound[i] = 0.01;
+		upper_bound[i] = 1.0;
 		bound_check[i] = false;
 	}
+    // Mutation rates.
 	for (i = 4; i <= 9; i++) {
 		// lower_bound[i] = MIN_RATE / 100.0;
 		// lower_bound[i] = MAX_RATE / 100.0;

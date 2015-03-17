@@ -170,6 +170,13 @@ class ModelPoMo : public ModelGTR
      */
     double computeNormConst();
 
+    /**
+     * Set the fixed frequency of T such that all fixed frequencies
+     * sum up to one.  This is done, so that they can be compared to
+     * the frequencies of the GTR model.
+     */
+    void setFreqFixedStates ();
+
 };
 
 #endif /* _MODELPOMO_H_ */

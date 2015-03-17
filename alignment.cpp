@@ -1309,7 +1309,7 @@ int Alignment::readCountsFormat(char* filename) {
         site_pattern.resize(nsites);
     else {
         err_str << "Number of sites is 0.";
-        throw err_str.str()
+        throw err_str.str();
     }
 
     // Skip comments.
