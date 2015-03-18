@@ -324,8 +324,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 			if (close_bracket == string::npos)
 				outError("Close bracket not found in ", rate_str);
 			p_invar_sites = convert_double(rate_str.substr(posI+3, close_bracket-posI-3).c_str());
-			if (p_invar_sites <= 0 || p_invar_sites >= 1)
-				outError("p_invar must be in (0,1)");
+			if (p_invar_sites < 0 || p_invar_sites >= 1)
+				outError("p_invar must be in [0,1)");
 		} else if (rate_str.length() > posI+2 && rate_str[posI+2] != '+')
 			outError("Wrong model name ", rate_str);
 	}
@@ -369,7 +369,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 		//string rate_str = model_str.substr(pos);
 		if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
-					p_invar_sites, params.optimize_model_rate_joint, tree);
+					p_invar_sites, params.optimize_model_rate_joint, params.rr_ai, tree);
 		} else if (posI != string::npos && posR != string::npos) {
 			site_rate = new RateFreeInvar(num_rate_cats, freerate_params, p_invar_sites, tree);
 		} else if (posI != string::npos) {
@@ -527,7 +527,8 @@ double ModelFactory::optimizeParametersOnly(double epsilon) {
 	if (!joint_optimize) {
 		double model_lh = model->optimizeParameters(epsilon);
 		double rate_lh = site_rate->optimizeParameters(epsilon);
-		if (rate_lh == 0.0) return model_lh;
+		if (rate_lh == 0.0)
+			return model_lh;
 		return rate_lh;
 	}
 

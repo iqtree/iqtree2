@@ -29,11 +29,6 @@ public:
 	*/
     Pattern();
 
-	/** 
-		determine if the pattern is constant. update the is_const variable.
-	*/
-	void computeConst(int STATE_UNKNOWN);
-
 	/**
 		@param num_states number of states of the model
 		@return the number of ambiguous character incl. gaps 
@@ -58,9 +53,12 @@ public:
 
 	/**
 		true if this is a constant pattern
+		2015-03-04: is_const will also be true for pattern like "AA-A--AAA"
 	*/
 	bool is_const;
 
+	/** 2015-03-04: if is_const is true, this will store the const character for the pattern */
+	char const_char;
 
 };
 

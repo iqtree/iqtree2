@@ -154,6 +154,14 @@ public:
 	*/
 	virtual void writeParameters(ostream &out);
 
+	bool isFixGammaShape() const {
+		return fix_gamma_shape;
+	}
+
+	void setFixGammaShape(bool fixGammaShape) {
+		fix_gamma_shape = fixGammaShape;
+	}
+
 protected:
 
 	/**

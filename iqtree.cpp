@@ -463,7 +463,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
     //exit(0);
     double loglTime = getCPUTime() - startTime;
-    cout << "Average CPU time for computing logl of 1 parsimony tree: " << loglTime / (unOptParTrees.size()-1)<< endl;
+    if (unOptParTrees.size() > 1) {
+    	cout << "Average CPU time for computing logl of 1 parsimony tree: " << loglTime / (unOptParTrees.size()-1)<< endl;
+    }
 
     // Only select the best nNNITrees for doing NNI search
     CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);

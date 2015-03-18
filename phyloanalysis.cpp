@@ -1477,7 +1477,92 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Optimize model parameters and branch lengths using ML for the initial tree
     double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
     iqtree.initializeAllPartialLh();
-    string initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
+    // FOR INTERNAL USE ONLY
+	if (params.alpha_invar_file != NULL) {
+		RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
+		site_rates->setFixPInvar(true);
+		site_rates->setFixGammaShape(true);
+		vector<double> alphas, p_invars, logl;
+		ifstream aiFile;
+		aiFile.open(params.alpha_invar_file, ifstream::in);
+		if (aiFile.good()) {
+			double alpha, p_invar;
+			while (aiFile >> alpha >> p_invar) {
+				alphas.push_back(alpha);
+				p_invars.push_back(p_invar);
+			}
+			aiFile.close();
+			cout << "Computing tree logl based on the alpha and p_invar values in " << params.alpha_invar_file << " ..." << endl;
+		} else {
+			stringstream errMsg;
+			errMsg << "Could not find file: " << params.alpha_invar_file;
+			outError(errMsg.str().c_str());
+		}
+		string aiResultsFileName = string(params.out_prefix) + "_" + string(params.alpha_invar_file) + ".results";
+		ofstream aiFileResults;
+		aiFileResults.open(aiResultsFileName.c_str());
+		aiFileResults << std::fixed;
+		aiFileResults.precision(4);
+    	DoubleVector lenvec;
+    	aiFileResults << "Alpha P_Invar Logl TreeLength\n";
+		for (int i = 0; i < alphas.size(); i++) {
+			iqtree.saveBranchLengths(lenvec);
+    		aiFileResults << alphas.at(i) << " " << p_invars.at(i) << " ";
+			site_rates->setGammaShape(alphas.at(i));
+			site_rates->setPInvar(p_invars.at(i));
+			site_rates->computeRates();
+			iqtree.clearAllPartialLH();
+			double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
+			aiFileResults << lh << " " << iqtree.treeLength() << "\n";
+        	iqtree.restoreBranchLengths(lenvec);
+		}
+		aiFileResults.close();
+		cout << "Results were written to: " << aiResultsFileName << endl;
+		cout << "Wall clock time used: " << getRealTime() - params.start_real_time << endl;
+		exit(0);
+	}
+
+	if (params.rr_ai) {
+		RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
+		double initAlphas[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
+		double bestLogl = -DBL_MAX;
+		double bestAlpha = 0.0;
+		double bestPInvar = 0.0;
+		double initPInvar = iqtree.getRate()->getPInvar();
+		DoubleVector lenvec;
+		DoubleVector bestLens;
+		iqtree.saveBranchLengths(lenvec);
+		//site_rates->setFixGammaShape(true);
+		for (int i = 0; i < 10; i++) {
+			cout << "Alpha: " << initAlphas[i] << " / Logl: ";
+			site_rates->setGammaShape(initAlphas[i]);
+			site_rates->setPInvar(initPInvar);
+			site_rates->computeRates();
+			iqtree.clearAllPartialLH();
+			iqtree.resetCurScore();
+			iqtree.optimizeModelParameters(false, 0.001);
+			//iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
+			cout << iqtree.getCurScore() << endl;
+			if (iqtree.getCurScore() > bestLogl) {
+				bestLogl = iqtree.getCurScore();
+				bestAlpha = iqtree.getRate()->getGammaShape();
+				bestPInvar = iqtree.getRate()->getPInvar();
+				bestLens.clear();
+				iqtree.saveBranchLengths(bestLens);
+			}
+			iqtree.restoreBranchLengths(lenvec);
+		}
+		cout << "best alpha: " << bestAlpha << " / best p_invar: " << bestPInvar << " / logl:  " << bestLogl << endl;
+		site_rates->setGammaShape(bestAlpha);
+		site_rates->setFixGammaShape(false);
+		site_rates->setPInvar(bestPInvar);
+		site_rates->setFixPInvar(false);
+		iqtree.restoreBranchLengths(bestLens);
+		site_rates->computeRates();
+		iqtree.resetCurScore();
+		iqtree.clearAllPartialLH();
+	}
+    string initTree = iqtree.optimizeModelParameters(params.min_iterations==0, 0.001);
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
@@ -1765,6 +1850,13 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		} catch (ios::failure) {
 			outError(ERR_WRITE_OUTPUT, boottrees_name);
 		}
+		// fix bug: set the model for original tree after testing
+		if (original_model.substr(0,4) == "TEST" && tree->isSuperTree()) {
+			PhyloSuperTree *stree = ((PhyloSuperTree*)tree);
+			stree->part_info =  ((PhyloSuperTree*)boot_tree)->part_info;
+//			for (int i = 0; i < ((PhyloSuperTree*)tree)->part_info.size(); i++)
+//				((PhyloSuperTree*)tree)->part_info[i].model_name = ((PhyloSuperTree*)boot_tree)->part_info[i].model_name;
+		}
 		if (params.num_bootstrap_samples == 1)
 			reportPhyloAnalysis(params, original_model, *boot_tree, model_info);
 		// WHY was the following line missing, which caused memory leak?
@@ -1918,8 +2010,9 @@ void runPhyloAnalysis(Params &params) {
             tree->removeIdenticalSeqs(params);
         }
         alignment = NULL; // from now on use tree->aln instead
+
 		// call main tree reconstruction
-		runTreeReconstruction(params, original_model, *tree, model_info);
+        runTreeReconstruction(params, original_model, *tree, model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
 			if (params.print_ufboot_trees)
 				tree->writeUFBootTrees(params);
@@ -1984,6 +2077,8 @@ void runPhyloAnalysis(Params &params) {
 		reportPhyloAnalysis(params, original_model, *tree, model_info);
 	} else {
 		// the classical non-parameter bootstrap (SBS)
+		if (params.model_name == "TESTLINK" || params.model_name == "TESTONLYLINK")
+			outError("-m TESTLINK is not allowed when doing standard bootstrap. Please first\nfind partition scheme on the original alignment and use it for bootstrap analysis");
 		runStandardBootstrap(params, original_model, alignment, tree);
 	}
 

@@ -393,6 +393,24 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
 
 }
 
+void convert_string_vec(const char *str, StrVector &vec) throw (string) {
+    char *beginptr = (char*)str, *endptr;
+    vec.clear();
+    string elem;
+    do {
+    	endptr = strchr(beginptr, ',');
+    	if (!endptr) {
+    		elem.assign(beginptr);
+    		vec.push_back(elem);
+    		return;
+    	}
+    	elem.assign(beginptr, endptr-beginptr);
+    	vec.push_back(elem);
+		beginptr = endptr+1;
+    } while (*endptr != 0);
+
+}
+
 void readWeightFile(Params &params, int ntaxa, double &scale, StrVector &tax_name, DoubleVector &tax_weight) {
     cout << "Reading scale factor and taxa weights file " << params.param_file << " ..." << endl;
     try {
@@ -574,6 +592,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
+    params.rr_ai = false;
+    params.alpha_invar_file = NULL;
     params.out_prefix = NULL;
     params.out_file = NULL;
     params.sub_size = 0;
@@ -2277,6 +2297,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.numSupportTrees = convert_int(argv[cnt]);
 				continue;
 			}
+			if (strcmp(argv[cnt], "-fixai") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -fixai <alpha_invar_file>";
+				params.alpha_invar_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rr_ai") == 0) {
+				params.rr_ai = true;
+				continue;
+			}
 			if (strcmp(argv[cnt], "-poplim") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2692,6 +2723,14 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "SINGLE BRANCH TEST:" << endl
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
             << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
+            << endl << "AUTOMATIC MODEL SELECTION:" << endl
+            << "  -m TEST              Select best-fit model for tree reconstruction" << endl
+            << "  -m TESTONLY          Only do model selection, then stop" << endl
+            << "  -mset raxml          Restrict to only models supported by RAxML" << endl
+            << "  -mset phyml          Restrict to only models supported by PhyML" << endl
+            << "  -mset mrbayes        Restrict to only models supported by MrBayes" << endl
+            << "  -mset m1,...,mk      Restrict to a comma-separated list of models" << endl
+
             << endl << "SUBSTITUTION MODEL:" << endl
             << "  -m <model_name>" << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
@@ -2705,8 +2744,6 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "               Binary: JC2 (default), GTR2" << endl
             << "                Codon: GY (default), ECM, MG" << endl
             << "       Morphology/SNP: MK (default), ORDERED" << endl
-            << "      Model selection: TEST or TESTONLY to auto-select the best-fit model." << endl
-            << "                       TESTONLY will stop the run after model selection" << endl
             << "            Otherwise: Name of file containing user-model parameters" << endl
             << "                       (rate parameters and state frequencies)" << endl
             << "  -m <model_name>+F or +FO or +FU or +FQ (default: auto)" << endl
