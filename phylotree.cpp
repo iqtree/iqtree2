@@ -423,6 +423,7 @@ string PhyloTree::getModelNameParams() {
 void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
     if (!node) {
         node = (PhyloNode*) root;
+        assert(branchNum == nodeNum-1);
         if (lenvec.empty()) lenvec.resize(branchNum+startid);
     }
     FOR_NEIGHBOR_IT(node, dad, it){
@@ -1035,6 +1036,8 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     }
 
     nodeNum = 2 * leafNum - 2;
+    initializeTree();
+
     setAlignment(alignment);
     initializeAllPartialPars();
     clearAllPartialLH();
