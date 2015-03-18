@@ -1849,6 +1849,13 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		} catch (ios::failure) {
 			outError(ERR_WRITE_OUTPUT, boottrees_name);
 		}
+		// fix bug: set the model for original tree after testing
+		if (original_model.substr(0,4) == "TEST" && tree->isSuperTree()) {
+			PhyloSuperTree *stree = ((PhyloSuperTree*)tree);
+			stree->part_info =  ((PhyloSuperTree*)boot_tree)->part_info;
+//			for (int i = 0; i < ((PhyloSuperTree*)tree)->part_info.size(); i++)
+//				((PhyloSuperTree*)tree)->part_info[i].model_name = ((PhyloSuperTree*)boot_tree)->part_info[i].model_name;
+		}
 		if (params.num_bootstrap_samples == 1)
 			reportPhyloAnalysis(params, original_model, *boot_tree, model_info);
 		// WHY was the following line missing, which caused memory leak?
@@ -2069,6 +2076,8 @@ void runPhyloAnalysis(Params &params) {
 		reportPhyloAnalysis(params, original_model, *tree, model_info);
 	} else {
 		// the classical non-parameter bootstrap (SBS)
+		if (params.model_name == "TESTLINK" || params.model_name == "TESTONLYLINK")
+			outError("-m TESTLINK is not allowed when doing standard bootstrap. Please first\nfind partition scheme on the original alignment and use it for bootstrap analysis");
 		runStandardBootstrap(params, original_model, alignment, tree);
 	}
 

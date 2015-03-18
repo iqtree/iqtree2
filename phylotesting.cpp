@@ -691,8 +691,14 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		// select model for each partition
 		if (fmodel.is_open())
 			fmodel.close();
-		testPartitionModel(params, (PhyloSuperTree*)in_tree, model_info);
-		return "";
+		PhyloSuperTree *stree = (PhyloSuperTree*)in_tree;
+		testPartitionModel(params, stree, model_info);
+		string res_models = "";
+		for (vector<PartitionInfo>::iterator it = stree->part_info.begin(); it != stree->part_info.end(); it++) {
+			if (it != stree->part_info.begin()) res_models += ",";
+			res_models += (*it).model_name;
+		}
+		return res_models;
 	}
 
 	PhyloTree *tree_homo = new PhyloTree();
