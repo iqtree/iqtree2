@@ -1010,7 +1010,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 			}
 		}
 		lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
-		lh_ptn = log(lh_ptn);
+		lh_ptn = log(abs(lh_ptn));
 		lh_ptn.store_a(&_pattern_lh[ptn]);
 		vc_freq.load_a(&ptn_freq[ptn]);
 
