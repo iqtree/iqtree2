@@ -725,15 +725,15 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		return res_models;
 	}
 
-	PhyloTree *tree_homo = new PhyloTree();
-        tree_homo->copyPhyloTree(in_tree);
-	tree_homo->optimize_by_newton = params.optimize_by_newton;
-	tree_homo->setLikelihoodKernel(params.SSE);
-
-	PhyloTree *tree_hetero = new PhyloTree();
-        tree_hetero->copyPhyloTree(in_tree);
-	tree_hetero->optimize_by_newton = params.optimize_by_newton;
-	tree_hetero->setLikelihoodKernel(params.SSE);
+//	PhyloTree *tree_homo = new PhyloTree();
+//    tree_homo->copyPhyloTree(in_tree);
+//	tree_homo->optimize_by_newton = params.optimize_by_newton;
+//	tree_homo->setLikelihoodKernel(params.SSE);
+//
+//	PhyloTree *tree_hetero = new PhyloTree();
+//    tree_hetero->copyPhyloTree(in_tree);
+//	tree_hetero->optimize_by_newton = params.optimize_by_newton;
+//	tree_hetero->setLikelihoodKernel(params.SSE);
 
 	RateHeterogeneity * rate_class[5];
 	rate_class[0] = new RateHeterogeneity();
@@ -782,6 +782,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		it->BIC_score = DBL_MAX;
 	}
 
+	int num_cat = 0;
+
 	for (model = 0; model < model_names.size(); model++) {
 		//cout << model_names[model] << endl;
 		if (model_names[model].find("+ASC") != string::npos) {
@@ -791,12 +793,14 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			model_fac->unobserved_ptns = "";
 		}
 		// initialize tree
-		PhyloTree *tree;
+		PhyloTree *tree = in_tree;
+/*
 		if (model_names[model].find("+G") == string::npos) {
 			tree = tree_homo;
 		} else {
 			tree = tree_hetero;
 		}
+*/
 		// initialize model
 		if (model_names[model].find("+F") != string::npos)
 			subst_model->init(model_names[model].substr(0, model_names[model].find('+')).c_str(), "", FREQ_EMPIRICAL, "");
@@ -823,7 +827,16 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		// initialize model factory
 		model_fac->model = subst_model;
 		model_fac->site_rate = tree->getRate();
-                tree->setModelFactory(model_fac);
+        tree->setModelFactory(model_fac);
+
+        if (tree->getRate()->getNRate() > num_cat) {
+    		if (verbose_mode >= VB_MED) {
+    			cout << "Increasing memory for " << num_cat << " rate categories" << endl;
+    		}
+        	tree->deleteAllPartialLh();
+    		tree->initializeAllPartialLh();
+    		num_cat = tree->getRate()->getNRate();
+    	}
 
 		tree->clearAllPartialLH();
 
@@ -1030,8 +1043,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	for (int rate_type = sizeof(rate_class)/sizeof(void*)-1; rate_type >= 0; rate_type--) {
 		delete rate_class[rate_type];
 	}
-	delete tree_hetero;
-	delete tree_homo;
+//	delete tree_hetero;
+//	delete tree_homo;
 
 	if (fmodel.is_open())
 		fmodel.close();

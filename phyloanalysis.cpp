@@ -632,7 +632,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< endl;
 */
 		if (params.compute_ml_tree) {
-			out << "MAXIMUM LIKELIHOOD TREE" << endl
+			if (original_model.substr(0, 8) == "TESTONLY")
+				out << "TREE USED FOR MODEL SELECTION" << endl
+					<< "-----------------------------" << endl << endl;
+			else
+				out << "MAXIMUM LIKELIHOOD TREE" << endl
 					<< "-----------------------" << endl << endl;
 
 			tree.setRootNode(params.root);

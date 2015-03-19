@@ -1757,18 +1757,21 @@ double IQTree::doTreeSearch() {
         double realtime_remaining = stop_rule.getRemainingTime(curIt, cur_correlation);
         cout.setf(ios::fixed, ios::floatfield);
 
-        cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIt << " / LogL: ";
-        if (verbose_mode >= VB_MED)
-        	cout << perturbScore << " -> ";
-        cout << curScore;
-        if (verbose_mode >= VB_MED)
-        	cout << " / (NNIs, Steps): (" << nni_count << "," << nni_steps << ")";
-        cout << " / Time: " << convert_time(getRealTime() - params->start_real_time);
+        // only print every 10th iteration or high verbose mode
+        if (curIt % 10 == 0 || verbose_mode >= VB_MED) {
+			cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIt << " / LogL: ";
+			if (verbose_mode >= VB_MED)
+				cout << perturbScore << " -> ";
+			cout << curScore;
+			if (verbose_mode >= VB_MED)
+				cout << " / (NNIs, Steps): (" << nni_count << "," << nni_steps << ")";
+			cout << " / Time: " << convert_time(getRealTime() - params->start_real_time);
 
-        if (curIt > 10) {
-			cout << " (" << convert_time(realtime_remaining) << " left)";
+			if (curIt > 10) {
+				cout << " (" << convert_time(realtime_remaining) << " left)";
+			}
+			cout << endl;
         }
-        cout << endl;
 
         if (params->write_intermediate_trees && save_all_trees != 2) {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);

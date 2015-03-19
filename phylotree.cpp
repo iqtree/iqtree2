@@ -1361,6 +1361,8 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             uint64_t mem_size = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
             if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
             	mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
+            if (verbose_mode >= VB_MED)
+                cout << "Allocating " << mem_size * sizeof(double) << " bytes for partial likelihood vectors" << endl;
             try {
             	central_partial_lh = aligned_alloc<double>(mem_size);
             } catch (std::bad_alloc &ba) {
