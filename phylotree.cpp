@@ -1269,9 +1269,26 @@ void PhyloTree::deleteAllPartialLh() {
 	}
 	if (central_partial_pars)
 		aligned_free(central_partial_pars);
+	if (ptn_invar)
+		aligned_free(ptn_invar);
+	if (ptn_freq)
+		aligned_free(ptn_freq);
+	if (theta_all)
+		aligned_free(theta_all);
+	if (_pattern_lh_cat)
+		aligned_free(_pattern_lh_cat);
+	if (_pattern_lh)
+		aligned_free(_pattern_lh);
 	central_partial_lh = NULL;
 	central_scale_num = NULL;
 	central_partial_pars = NULL;
+
+	ptn_invar = NULL;
+	ptn_freq = NULL;
+	theta_all = NULL;
+	_pattern_lh_cat = NULL;
+	_pattern_lh = NULL;
+
     clearAllPartialLH();
 }
 

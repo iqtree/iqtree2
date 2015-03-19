@@ -725,6 +725,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		return res_models;
 	}
 
+	in_tree->optimize_by_newton = params.optimize_by_newton;
+	in_tree->setLikelihoodKernel(params.SSE);
+
 //	PhyloTree *tree_homo = new PhyloTree();
 //    tree_homo->copyPhyloTree(in_tree);
 //	tree_homo->optimize_by_newton = params.optimize_by_newton;
@@ -829,15 +832,6 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		model_fac->site_rate = tree->getRate();
         tree->setModelFactory(model_fac);
 
-        if (tree->getRate()->getNRate() > num_cat) {
-    		if (verbose_mode >= VB_MED) {
-    			cout << "Increasing memory for " << num_cat << " rate categories" << endl;
-    		}
-        	tree->deleteAllPartialLh();
-    		tree->initializeAllPartialLh();
-    		num_cat = tree->getRate()->getNRate();
-    	}
-
 		tree->clearAllPartialLH();
 
 		ModelInfo info;
@@ -857,6 +851,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		if (model_id >= 0) {
 			info.logl = model_info[model_id].logl;
 		} else {
+	        if (tree->getRate()->getNRate() > num_cat) {
+	        	tree->deleteAllPartialLh();
+	    		tree->initializeAllPartialLh();
+	    		num_cat = tree->getRate()->getNRate();
+	    	}
+
 			info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST);
 			// print information to .model file
 			if (!fmodel.is_open()) {
@@ -1045,6 +1045,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	}
 //	delete tree_hetero;
 //	delete tree_homo;
+	in_tree->deleteAllPartialLh();
 
 	if (fmodel.is_open())
 		fmodel.close();
