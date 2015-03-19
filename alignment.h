@@ -13,6 +13,7 @@
 #define ALIGNMENT_H
 
 #include <vector>
+#include <bitset>
 #include "pattern.h"
 #include "ncl/ncl.h"
 #include "tools.h"
@@ -21,6 +22,8 @@
 //const char STATE_UNKNOWN = 126;
 const char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
+
+typedef bitset<NUM_CHAR> StateBitset;
 
 enum SeqType {
     SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_UNKNOWN
@@ -79,6 +82,12 @@ public:
                             In that case, the pattern won't be added.
      */
     bool addPattern(Pattern &pat, int site, int freq = 1);
+
+	/**
+		determine if the pattern is constant. update the is_const variable.
+	*/
+	void computeConst(Pattern &pat);
+
 
     /**
      * add const patterns into the alignment
@@ -620,7 +629,9 @@ protected:
      */
     void getAppearance(char state, double *state_app);
 
-	/**
+    void getAppearance(char state, StateBitset &state_app);
+
+    /**
 	 * special initialization for codon sequences, e.g., setting #states, genetic_code
 	 * @param sequence_type user-defined sequence type
 	 */

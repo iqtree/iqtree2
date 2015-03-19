@@ -33,12 +33,11 @@ binary_dir=$5
 if [ -d $out_dir ]
 then
   rm -rf $out_dir
-else
-  mkdir $out_dir
 fi
+mkdir $out_dir
 cp ${aln_dir}/* $out_dir
 cp $cmd_file $out_dir
-cp -r ${binary_dir} ${out_dir}/
+cp ${binary_dir}/* ${out_dir}/
 cd $out_dir
 submitCMD="submit2sge -N iqtree_system_test -q cluster -r zuseX -s $numThreads \"../jobmanager.py -f $cmd_file -c $numThreads\""
 #echo "../jobmanager.py -f $cmd_file -c $numThreads" | qsub -V -S /bin/bash -cwd -j y -r y -N iqtree_system_test -l zuseX -l cluster -pe threads 16 -q q.norm@zuse02  

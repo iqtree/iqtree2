@@ -235,6 +235,13 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 
 }
 
+void PhyloSuperTree::setParams(Params* params) {
+	IQTree::setParams(params);
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->setParams(params);
+	}
+}
+
 void PhyloSuperTree::initSettings(Params &params) {
 	IQTree::initSettings(params);
 	for (iterator it = begin(); it != end(); it++) {
@@ -985,10 +992,12 @@ PhyloTree *PhyloSuperTree::extractSubtree(IntVector &ids) {
 	return tree;
 }
 
-uint64_t PhyloSuperTree::getMemoryRequired() {
-	uint64_t mem_size = PhyloTree::getMemoryRequired();
+uint64_t PhyloSuperTree::getMemoryRequired(size_t ncategory) {
+//	uint64_t mem_size = PhyloTree::getMemoryRequired(ncategory);
+	// supertree does not need any memory for likelihood vectors!
+	uint64_t mem_size = 0;
 	for (iterator it = begin(); it != end(); it++)
-		mem_size += (*it)->getMemoryRequired();
+		mem_size += (*it)->getMemoryRequired(ncategory);
 	return mem_size;
 }
 

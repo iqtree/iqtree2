@@ -12,3 +12,4 @@ test_scripts/iqtree_test
 tags
 test_scripts/iqtree_test_cmds.txt
 
+/Default-clang

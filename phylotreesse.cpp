@@ -427,10 +427,13 @@ void PhyloTree::computePtnInvar() {
 	memset(ptn_invar, 0, maxptn*sizeof(double));
 	double p_invar = site_rate->getPInvar();
 	if (p_invar != 0.0) {
-		for (ptn = 0; ptn < nptn; ptn++)
-			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-					ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn][0]];
+		for (ptn = 0; ptn < nptn; ptn++) {
+			if ((*aln)[ptn].const_char == nstates)
+				ptn_invar[ptn] = p_invar;
+			else if ((*aln)[ptn].const_char < nstates) {
+				ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn].const_char];
 			}
+		}
 		// ascertmain bias correction
 		for (ptn = 0; ptn < model_factory->unobserved_ptns.size(); ptn++)
 			ptn_invar[nptn+ptn] = p_invar * state_freq[(int)model_factory->unobserved_ptns[ptn]];
@@ -977,9 +980,9 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 				lh_ptn += *lh_cat;
 				lh_cat++;
 			}
-			assert(lh_ptn > 0.0);
+//			assert(lh_ptn > -1e-10);
 			if (ptn < orig_nptn) {
-				lh_ptn = log(lh_ptn);
+				lh_ptn = log(fabs(lh_ptn));
 				_pattern_lh[ptn] = lh_ptn;
 				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {
@@ -1114,8 +1117,10 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
         }
         if (ptn < orig_alnSize) {
 			lh_ptn *= p_var_cat;
-			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < NSTATES) {
-				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+			if ((*aln)[ptn].const_char == NSTATES)
+				lh_ptn += p_invar;
+			else if ((*aln)[ptn].const_char < NSTATES) {
+				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn].const_char];
 			}
 			lh_ptn = log(lh_ptn);
 			tree_lh += lh_ptn * (aln->at(ptn).frequency);
@@ -1424,8 +1429,10 @@ inline void PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phylo
         }
         if (ptn < orig_alnSize) {
 			lh_ptn = lh_ptn * p_var_cat;
-			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < NSTATES) {
-				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+			if ((*aln)[ptn].const_char == NSTATES)
+				lh_ptn += p_invar;
+			else if ((*aln)[ptn].const_char < NSTATES) {
+				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn].const_char];
 			}
 			double pad = p_var_cat / lh_ptn;
 			if (std::isinf(pad)) {

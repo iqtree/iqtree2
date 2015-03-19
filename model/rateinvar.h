@@ -104,6 +104,18 @@ public:
 	*/
 	virtual void writeParameters(ostream &out);
 
+	bool isFixPInvar() const {
+		return fix_p_invar;
+	}
+
+	void setFixPInvar(bool fixPInvar) {
+		fix_p_invar = fixPInvar;
+	}
+
+	void setPInvar(double pInvar) {
+		p_invar = pInvar;
+	}
+
 	/**
 		proportion of invariable sites
 	*/

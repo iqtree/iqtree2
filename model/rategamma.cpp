@@ -85,6 +85,10 @@ void RateGamma::computeRates() {
 			rates[ cat ] = rates[ cat ] * ncategory / sum_rates;
 	}
 
+	/* BQM 2015-02-25: Testing if RAxML forgot this rate rescaling step */
+	if (phylo_tree && phylo_tree->params && phylo_tree->params->no_rescale_gamma_invar)
+		return;
+
 	/* if invariable sites are present */
 	double p_inv = getPInvar();
 	for (cat = 0; cat < ncategory; cat++)

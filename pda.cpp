@@ -1801,7 +1801,7 @@ extern "C" void funcAbort(int signal_number)
 		case SIGILL:  cout << "ILLEGAL INSTRUCTION"; break;
 		case SIGSEGV: cout << "SEGMENTATION FAULT"; break;
 	}
-	cout << endl << "*** For bug report please send developers:" << endl << "***    Log file: " << _log_file;
+	cout << endl << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
 	cout << endl << "***    Alignment files (if possible)" << endl;
 	funcExit();
 	signal(signal_number, SIG_DFL);

@@ -535,9 +535,9 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 					lh_cat++;
 				}
 			}
-			assert(lh_ptn > 0.0);
+//			assert(lh_ptn > 0.0);
 			if (ptn < orig_nptn) {
-				lh_ptn = log(lh_ptn);
+				lh_ptn = log(fabs(lh_ptn));
 				_pattern_lh[ptn] = lh_ptn;
 				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {
@@ -1413,7 +1413,7 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 
 			vc_freq.load_a(&ptn_freq[ptn]);
 			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
-			lh_ptn = log(lh_ptn);
+			lh_ptn = log(abs(lh_ptn));
 			lh_ptn.store_a(&_pattern_lh[ptn]);
 
 			// multiply with pattern frequency

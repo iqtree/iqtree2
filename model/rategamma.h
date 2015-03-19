@@ -25,7 +25,7 @@
 const double MIN_GAMMA_RATE = 1e-6;
 // change from 0.01 to 0.02 as 0.01 causes numerical problems
 const double MIN_GAMMA_SHAPE = 0.03;
-const double MAX_GAMMA_SHAPE = 10000.0;
+const double MAX_GAMMA_SHAPE = 1000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
 
 class PhyloTree;
@@ -153,6 +153,14 @@ public:
 		@param out output stream
 	*/
 	virtual void writeParameters(ostream &out);
+
+	bool isFixGammaShape() const {
+		return fix_gamma_shape;
+	}
+
+	void setFixGammaShape(bool fixGammaShape) {
+		fix_gamma_shape = fixGammaShape;
+	}
 
 protected:
 

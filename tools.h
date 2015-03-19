@@ -464,6 +464,7 @@ struct Params {
 	 */
 	bool speednni;
 
+
 	/**
 	 *  portion of NNI used for perturbing the tree
 	 */
@@ -1545,6 +1546,8 @@ struct Params {
 
     /** frequencies of const patterns to be inserted into alignment */
     char *freq_const_patterns;
+    /** BQM 2015-02-25: true to NOT rescale Gamma+Invar rates by (1-p_invar) */
+    bool no_rescale_gamma_invar;
 };
 
 /**
@@ -1794,6 +1797,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size) thro
  */
 void convert_range(const char *str, double &lower, double &upper, double &step_size) throw (string);
 
+void convert_string_vec(const char *str, StrVector &str_vec) throw (string);
 
 /**
         read the file containing branch/split scaling factor and taxa weights
@@ -1952,7 +1956,6 @@ int finish_random();
  * @param n upper-bound of random number
  */
 int random_int(int n);
-
 /**
  * returns a random integer in the range [a; b]
  */

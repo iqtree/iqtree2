@@ -481,6 +481,44 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         }
 }
 
+/**
+	determine if the pattern is constant. update the is_const variable.
+*/
+void Alignment::computeConst(Pattern &pat) {
+    pat.is_const = false;
+    pat.const_char = STATE_UNKNOWN;
+    StateBitset state_app;
+    state_app.reset();
+    int j;
+    for (j = 0; j < num_states; j++)
+    	state_app[j] = 1;
+
+    for (Pattern::iterator i = pat.begin(); i != pat.end(); i++) {
+    	StateBitset this_app;
+    	getAppearance(*i, this_app);
+    	state_app &= this_app;
+    }
+    int count = state_app.count();
+    if (count == 0) {
+    	return;
+    }
+    if (count == num_states) {
+    	// all-gap pattern
+    	pat.is_const = true;
+    	pat.const_char = num_states;
+    	return;
+    }
+    if (count == 1) {
+    	for (j = 0; j < num_states; j++)
+    		if (state_app.test(j)) {
+    			pat.is_const = true;
+    			pat.const_char = j;
+    			return;
+    		}
+    }
+}
+
+
 bool Alignment::addPattern(Pattern &pat, int site, int freq) {
     // check if pattern contains only gaps
     bool gaps_only = true;
@@ -497,7 +535,7 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
     PatternIntMap::iterator pat_it = pattern_index.find(pat);
     if (pat_it == pattern_index.end()) { // not found
         pat.frequency = freq;
-        pat.computeConst(STATE_UNKNOWN);
+        computeConst(pat);
         push_back(pat);
         pattern_index[pat] = size()-1;
         site_pattern[site] = size()-1;
@@ -1432,6 +1470,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
+    genetic_code = aln->genetic_code;
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -1460,6 +1499,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    genetic_code = aln->genetic_code;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(accumulate(ptn_freq.begin(), ptn_freq.end(), 0), -1);
     clear();
@@ -1490,6 +1530,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
+    genetic_code = aln->genetic_code;
     site_pattern.resize(site_id.size(), -1);
     clear();
     pattern_index.clear();
@@ -1592,6 +1633,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    genetic_code = aln->genetic_code;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
@@ -1775,6 +1817,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    genetic_code = aln->genetic_code;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
@@ -1837,6 +1880,7 @@ void Alignment::copyAlignment(Alignment *aln) {
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    genetic_code = aln->genetic_code;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
@@ -2130,11 +2174,61 @@ void Alignment::getAppearance(char state, double *state_app) {
         state_app[(int)state] = 1.0;
         return;
     }
-    state -= (num_states-1);
-    for (i = 0; i < num_states; i++)
-        if (state & (1 << i)) {
-            state_app[i] = 1.0;
-        }
+	// ambiguous characters
+	int ambi_aa[2] = {4+8, 32+64};
+	switch (seq_type) {
+	case SEQ_DNA:
+	    state -= (num_states-1);
+		for (i = 0; i < num_states; i++)
+			if (state & (1 << i)) {
+				state_app[i] = 1.0;
+			}
+		break;
+	case SEQ_PROTEIN:
+		assert(state<22);
+		state -= 20;
+		for (i = 0; i < 7; i++)
+			if (ambi_aa[state] & (1<<i)) {
+				state_app[i] = 1.0;
+			}
+		break;
+	default: assert(0); break;
+	}
+}
+
+void Alignment::getAppearance(char state, StateBitset &state_app) {
+
+	int i;
+    if (state == STATE_UNKNOWN) {
+    	state_app.set();
+        return;
+    }
+
+    state_app.reset();
+    if (state < num_states) {
+        state_app[(int)state] = 1;
+        return;
+    }
+	// ambiguous characters
+	int ambi_aa[2] = {4+8, 32+64};
+	switch (seq_type) {
+	case SEQ_DNA:
+	    state -= (num_states-1);
+		for (i = 0; i < num_states; i++)
+			if (state & (1 << i)) {
+				state_app[i] = 1;
+			}
+		break;
+	case SEQ_PROTEIN:
+		assert(state<22);
+		state -= 20;
+		for (i = 0; i < 7; i++)
+			if (ambi_aa[state] & (1<<i)) {
+				state_app[i] = 1;
+			}
+		break;
+	default: assert(0); break;
+	}
 }
 
 void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq) {
@@ -2267,7 +2361,7 @@ void Alignment::computeEmpiricalRate (double *rates) {
             if (rates[k-1] > 100.0) rates[k-1] = 50.0;
         }
     rates[k-1] = 1;
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VB_MAX) {
         cout << "Empirical rates: ";
         for (k = 0; k < num_states*(num_states-1)/2; k++)
             cout << rates[k] << " ";

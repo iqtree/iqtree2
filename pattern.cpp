@@ -17,6 +17,7 @@ Pattern::Pattern()
 {
     frequency = 0;
     is_const = false;
+    const_char = 255;
 }
 
 
@@ -39,14 +40,3 @@ int Pattern::computeGapChar(int num_states, int STATE_UNKNOWN) {
 }
 
 
-void Pattern::computeConst(int STATE_UNKNOWN) {
-    char ch = STATE_UNKNOWN;
-    is_const = true;
-    for (iterator i = begin(); i != end(); i++) {
-        if (ch != STATE_UNKNOWN && *i != STATE_UNKNOWN && *i != ch) {
-            is_const = false;
-            return;
-        }
-        if (*i != STATE_UNKNOWN) ch = *i;
-    }
-}

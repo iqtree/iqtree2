@@ -65,6 +65,8 @@ public:
     /** reinsert identical sequences into the tree and reset original alignment */
     virtual void reinsertIdenticalSeqs(Alignment *orig_aln);
 
+	virtual void setParams(Params* params);
+
 	/**
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */
@@ -268,7 +270,7 @@ public:
      * compute the memory size required for storing partial likelihood vectors
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired();
+    virtual uint64_t getMemoryRequired(size_t ncategory = 1);
 
     /**
      * count the number of super branches that map to no branches in gene trees

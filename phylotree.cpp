@@ -423,11 +423,12 @@ string PhyloTree::getModelNameParams() {
 void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
     if (!node) {
         node = (PhyloNode*) root;
+        assert(branchNum == nodeNum-1);
         if (lenvec.empty()) lenvec.resize(branchNum+startid);
     }
     FOR_NEIGHBOR_IT(node, dad, it){
     	lenvec[(*it)->id + startid] = (*it)->length;
-    	saveBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
+    	PhyloTree::saveBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
     }
 }
 
@@ -438,7 +439,7 @@ void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNod
     }
     FOR_NEIGHBOR_IT(node, dad, it){
     	(*it)->length = (*it)->node->findNeighbor(node)->length = lenvec[(*it)->id + startid];
-    	restoreBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
+    	PhyloTree::restoreBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
     }
 }
 
@@ -1035,6 +1036,8 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
     }
 
     nodeNum = 2 * leafNum - 2;
+    initializeTree();
+
     setAlignment(alignment);
     initializeAllPartialPars();
     clearAllPartialLH();
@@ -1272,7 +1275,7 @@ void PhyloTree::deleteAllPartialLh() {
     clearAllPartialLH();
 }
 
-uint64_t PhyloTree::getMemoryRequired() {
+uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
 	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
 	uint64_t block_size;
 	if (instruction_set >= 7)
@@ -1284,10 +1287,12 @@ uint64_t PhyloTree::getMemoryRequired() {
     block_size = block_size * aln->num_states;
     if (site_rate)
     	block_size *= site_rate->getNRate();
+    else
+    	block_size *= ncategory;
     if (model && !model_factory->fused_mix_rate)
     	block_size *= model->getNMixtures();
     uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2 + (leafNum - 1) * 4 * nptn * sizeof(UBYTE);
-    if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
+    if (params->SSE == LK_EIGEN || params->SSE == LK_EIGEN_SSE)
     	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size + nptn * sizeof(UBYTE));
 
     return mem_size;
@@ -2421,8 +2426,10 @@ double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloN
 //			if (pattern_rate)
 //				pattern_rate[ptn] = rate_ptn / lh_ptn;
 			lh_ptn *= p_var_cat;
-			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+			if ((*aln)[ptn].const_char == nstates)
+				lh_ptn += p_invar;
+			else if ((*aln)[ptn].const_char < nstates) {
+				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn].const_char];
 			}
 			//#ifdef DEBUG
 			if (lh_ptn <= 0.0)
@@ -2783,8 +2790,8 @@ void PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode 
          lh_ptn *= p_var_cat;
          lh_ptn_derv1 *= p_var_cat;
          lh_ptn_derv2 *= p_var_cat;
-         if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-         lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+         if ((*aln)[ptn].is_const && (*aln)[ptn].const_char < nstates) {
+         lh_ptn += p_invar * state_freq[(int) (*aln)[ptn].const_char];
          }
          assert(lh_ptn > 0);
          double derv1_frac = lh_ptn_derv1 / lh_ptn;
@@ -2811,8 +2818,10 @@ void PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode 
 
         if (ptn < orig_nptn) {
             lh_ptn = lh_ptn * p_var_cat;
-			if ((*aln)[ptn].is_const && (*aln)[ptn][0] < nstates) {
-				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn][0]];
+			if ((*aln)[ptn].const_char == nstates)
+				lh_ptn += p_invar;
+			else if ((*aln)[ptn].const_char < nstates) {
+				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn].const_char];
 			}
 	        double pad = p_var_cat / lh_ptn;
 	        if (std::isinf(pad)) {
@@ -2904,11 +2913,23 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     double ferror, optx;
     assert(current_len >= 0.0);
     theta_computed = false;
-    if (optimize_by_newton) // Newton-Raphson method
+    if (optimize_by_newton) {
+    	// Newton-Raphson method
     	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
-    else
+    	if (optx > MAX_BRANCH_LEN*0.95) {
+    		// newton raphson diverged, reset
+    	    double opt_lh = computeLikelihoodFromBuffer();
+    	    current_it->length = current_len;
+    	    current_it_back->length = current_len;
+    	    double orig_lh = computeLikelihoodFromBuffer();
+    	    if (orig_lh > opt_lh) {
+    	    	optx = current_len;
+    	    }
+    	}
+	}	else {
         // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
+	}
 
     current_it->length = optx;
     current_it_back->length = optx;
@@ -2979,6 +3000,9 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //    	string string_brlen = getTreeString();
     	DoubleVector lenvec;
     	saveBranchLengths(lenvec);
+        if (verbose_mode >= VB_DEBUG) {
+            printTree(cout, WT_BR_LEN+WT_NEWLINE);
+        }
         optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
         double new_tree_lh = computeLikelihoodFromBuffer();
 
@@ -2987,6 +3011,9 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             cout << new_tree_lh << endl;
         }
 
+        if (verbose_mode >= VB_DEBUG) {
+            printTree(cout, WT_BR_LEN+WT_NEWLINE);
+        }
         assert(new_tree_lh >= tree_lh - 10.0); // make sure that the new tree likelihood never decreases too much
 
         if (new_tree_lh < tree_lh) {
