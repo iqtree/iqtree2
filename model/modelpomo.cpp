@@ -14,6 +14,7 @@ void ModelPoMo::init(const char *model_name,
                      string model_params,
                      StateFreqType freq,
                      string freq_params) {
+	this->name = string(model_name) + " " + convertIntToString(num_states) + " states";
 	mutation_prob = new double[16];
 	freq_fixed_states = new double[4];
 	rate_matrix = new double[num_states*num_states];

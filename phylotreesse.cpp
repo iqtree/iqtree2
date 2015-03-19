@@ -275,6 +275,34 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 		}
 		break;
 
+		case 58: // PoMo model
+			switch(sse) {
+			case LK_SSE:
+				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<58>;
+				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<58>;
+				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<58>;
+		        computeLikelihoodFromBufferPointer = NULL;
+	//	        cout << "Naive-SSE" << endl;
+				break;
+			case LK_EIGEN:
+				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<58>;
+				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<58>;
+				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<58>;
+		        computeLikelihoodFromBufferPointer = NULL;
+	//	        cout << "Fast" << endl;
+				break;
+			case LK_EIGEN_SSE:
+				computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 58>;
+				computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 58>;
+				computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 58>;
+		        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 58>;
+	//	        cout << "Fast-SSE" << endl;
+				break;
+			case LK_NORMAL:
+				break;
+			}
+			break;
+
 	default:
 //        cout << "Naive" << endl;
 		computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchNaive;

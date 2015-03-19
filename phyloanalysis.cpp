@@ -76,17 +76,21 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
 
 void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
 	out << "Input data: " << alignment.getNSeq()+nremoved_seqs << " sequences with "
-			<< alignment.getNSite() << " "
-			<< ((alignment.seq_type == SEQ_BINARY) ?
-					"binary" :
-					((alignment.seq_type == SEQ_DNA) ? "nucleotide" :
-					(alignment.seq_type == SEQ_PROTEIN) ? "amino-acid" :
-					(alignment.seq_type == SEQ_CODON) ? "codon": "morphological"))
-			<< " sites" << endl << "Number of constant sites: "
-			<< round(alignment.frac_const_sites * alignment.getNSite())
-			<< " (= " << alignment.frac_const_sites * 100 << "% of all sites)"
-			<< endl << "Number of site patterns: " << alignment.size() << endl
-			<< endl;
+			<< alignment.getNSite() << " ";
+	switch (alignment.seq_type) {
+	case SEQ_BINARY: out << "binary"; break;
+	case SEQ_DNA: out << "nucleotide"; break;
+	case SEQ_PROTEIN: out << "amino-acid"; break;
+	case SEQ_CODON: out << "codon"; break;
+	case SEQ_MORPH: out << "morphological"; break;
+	case SEQ_COUNTSFORMAT: out << "PoMo"; break;
+	default: out << "unknown"; break;
+	}
+	out << " sites" << endl << "Number of constant sites: "
+		<< round(alignment.frac_const_sites * alignment.getNSite())
+		<< " (= " << alignment.frac_const_sites * 100 << "% of all sites)"
+		<< endl << "Number of site patterns: " << alignment.size() << endl
+		<< endl;
 }
 
 void pruneModelInfo(vector<ModelInfo> &model_info, PhyloSuperTree *tree) {
