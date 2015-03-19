@@ -814,13 +814,29 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 		tree->setModel(subst_model);
 		// initialize rate
-		if (model_names[model].find("+R") != string::npos)
+		size_t pos;
+		if ((pos = model_names[model].find("+R")) != string::npos) {
 			tree->setRate(rate_class[4]);
-		else if (model_names[model].find("+I+G") != string::npos || model_names[model].find("+G+I") != string::npos)
+			if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
+				int ncat = convert_int(model_names[model].c_str() + pos+2);
+				if (ncat < 1) outError("Wrong number of category for +R in " + model_names[model]);
+				tree->getRate()->setNCategory(ncat);
+			}
+		} else if (model_names[model].find("+I") != string::npos && (pos = model_names[model].find("+G")) != string::npos) {
 			tree->setRate(rate_class[3]);
-		else if (model_names[model].find("+G") != string::npos)
+			if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
+				int ncat = convert_int(model_names[model].c_str() + pos+2);
+				if (ncat < 1) outError("Wrong number of category for +G in " + model_names[model]);
+				tree->getRate()->setNCategory(ncat);
+			}
+		} else if ((pos = model_names[model].find("+G")) != string::npos) {
 			tree->setRate(rate_class[2]);
-		else if (model_names[model].find("+I") != string::npos)
+			if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
+				int ncat = convert_int(model_names[model].c_str() + pos+2);
+				if (ncat < 1) outError("Wrong number of category for +G in " + model_names[model]);
+				tree->getRate()->setNCategory(ncat);
+			}
+		} else if (model_names[model].find("+I") != string::npos)
 			tree->setRate(rate_class[1]);
 		else
 			tree->setRate(rate_class[0]);

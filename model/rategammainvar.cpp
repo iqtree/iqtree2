@@ -29,6 +29,12 @@ RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
 	computeRates();
 }
 
+void RateGammaInvar::setNCategory(int ncat) {
+	RateGamma::setNCategory(ncat);
+	name = "+I" + name;
+	full_name = "Invar+" + full_name;
+	computeRates();
+}
 
 string RateGammaInvar::getNameParams() {
 	return RateInvar::getNameParams() + RateGamma::getNameParams();

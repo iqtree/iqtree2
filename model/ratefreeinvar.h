@@ -79,6 +79,8 @@ public:
 	*/
 	virtual void writeParameters(ostream &out);
 
+	virtual void setNCategory(int ncat);
+
 protected:
 
 	/**

@@ -16,7 +16,38 @@ RateFree::RateFree(int ncat, string params, PhyloTree *tree) : RateHeterogeneity
 	ncategory = ncat;
 	phylo_tree = tree;
 	fix_params = false;
+	rates = NULL;
+	prop = NULL;
+	setNCategory(ncat);
 
+	if (params.empty()) return;
+	DoubleVector params_vec;
+	try {
+		convert_double_vec(params.c_str(), params_vec);
+		if (params_vec.size() != ncategory*2)
+			outError("Number of parameters for FreeRate model must be twice number of categories");
+		int i;
+		double sum, sum_prop;
+		for (i = 0, sum = 0.0, sum_prop = 0.0; i < ncategory; i++) {
+			prop[i] = params_vec[i*2];
+			rates[i] = params_vec[i*2+1];
+			sum += prop[i]*rates[i];
+			sum_prop += prop[i];
+		}
+		if (fabs(sum_prop-1.0) > 1e-5)
+			outError("Sum of category proportions not equal to 1");
+		for (i = 0; i < ncategory; i++)
+			rates[i] /= sum;
+		fix_params = true;
+	} catch (string &str) {
+		outError(str);
+	}
+}
+
+void RateFree::setNCategory(int ncat) {
+	ncategory = ncat;
+	if (rates) delete [] rates;
+	if (prop) delete [] prop;
 	rates = new double[ncategory];
 	prop  = new double[ncategory];
 	double sum_prop = (ncategory)*(ncategory+1)/2.0;
@@ -35,29 +66,8 @@ RateFree::RateFree(int ncat, string params, PhyloTree *tree) : RateHeterogeneity
 	name += convertIntToString(ncategory);
 	full_name = "FreeRate";
 	full_name += " with " + convertIntToString(ncategory) + " categories";
-
-	if (params.empty()) return;
-	DoubleVector params_vec;
-	try {
-		convert_double_vec(params.c_str(), params_vec);
-		if (params_vec.size() != ncategory*2)
-			outError("Number of parameters for FreeRate model must be twice number of categories");
-		double sum_prop;
-		for (i = 0, sum = 0.0, sum_prop = 0.0; i < ncategory; i++) {
-			prop[i] = params_vec[i*2];
-			rates[i] = params_vec[i*2+1];
-			sum += prop[i]*rates[i];
-			sum_prop += prop[i];
-		}
-		if (fabs(sum_prop-1.0) > 1e-5)
-			outError("Sum of category proportions not equal to 1");
-		for (i = 0; i < ncategory; i++)
-			rates[i] /= sum;
-		fix_params = true;
-	} catch (string &str) {
-		outError(str);
-	}
 }
+
 
 RateFree::~RateFree() {
 	delete [] prop;
