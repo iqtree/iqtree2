@@ -1731,6 +1731,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
+    genetic_code = aln->genetic_code;
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -1759,6 +1760,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     }
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    genetic_code = aln->genetic_code;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(accumulate(ptn_freq.begin(), ptn_freq.end(), 0), -1);
     clear();
@@ -1789,6 +1791,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
+    genetic_code = aln->genetic_code;
     site_pattern.resize(site_id.size(), -1);
     clear();
     pattern_index.clear();
@@ -1891,6 +1894,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    genetic_code = aln->genetic_code;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
@@ -2074,6 +2078,7 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    genetic_code = aln->genetic_code;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
@@ -2136,6 +2141,7 @@ void Alignment::copyAlignment(Alignment *aln) {
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
     seq_type = aln->seq_type;
+    genetic_code = aln->genetic_code;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
@@ -2616,7 +2622,7 @@ void Alignment::computeEmpiricalRate (double *rates) {
             if (rates[k-1] > 100.0) rates[k-1] = 50.0;
         }
     rates[k-1] = 1;
-    if (verbose_mode >= VB_MED) {
+    if (verbose_mode >= VB_MAX) {
         cout << "Empirical rates: ";
         for (k = 0; k < num_states*(num_states-1)/2; k++)
             cout << rates[k] << " ";

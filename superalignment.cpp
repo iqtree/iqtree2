@@ -574,6 +574,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     aln->clear();
     aln->pattern_index.clear();
     aln->STATE_UNKNOWN = partitions[ids[0]]->STATE_UNKNOWN;
+    aln->genetic_code = partitions[ids[0]]->genetic_code;
 
     int site = 0;
     for (i = 0; i < ids.size(); i++) {
