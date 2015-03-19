@@ -23,6 +23,7 @@
 #include "model/rategamma.h"
 #include "model/rateinvar.h"
 #include "model/rategammainvar.h"
+#include "model/ratefree.h"
 //#include "modeltest_wrapper.h"
 #include "model/modelprotein.h"
 #include "model/modelbin.h"
@@ -307,8 +308,9 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 
 	if (model_names.empty()) return;
 
-	const char *rate_options[] = {  "", "+I",  "+ASC", "+F", "+I+F", "+G", "+I+G", "+ASC+G", "+G+F", "+I+G+F"};
-	bool test_options[] =        {true, true,   false, false,  false, true,   true,   false,  false,    false};
+	const char *rate_options[] = {  "", "+I",  "+ASC", "+F", "+I+F", "+G", "+I+G", "+ASC+G", "+G+F", "+I+G+F", "+R", "+R+F"};
+	bool test_options[] =        {true, true,   false, false, false, true,   true,    false,  false,    false,false, false};
+	bool test_options_aa[] =     {true, true,   false, true,   true, true,   true,    false,   true,     true,false, false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	const char *must_options[] = {"+I", "+G", "+F","+ASC"};
 	const char *can_options[] = {"+i", "+g", "+f","+asc"};
@@ -317,8 +319,7 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 	if (seq_type == SEQ_PROTEIN) {
 		// test all options for protein, incl. +F
 		for (i = 0; i < noptions; i++)
-			if (strstr(rate_options[i],"+ASC") == NULL)
-				test_options[i] = true;
+				test_options[i] = test_options_aa[i];
 	} else if (seq_type == SEQ_MORPH) {
 		// turn off +I
 		for (i = 0; i < noptions; i++)
@@ -354,9 +355,23 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 		// take the rate_options from user-specified models
 		StrVector ratehet;
 		convert_string_vec(params.ratehet_set, ratehet);
+		if (!ratehet.empty() && ratehet[0] == "default") {
+			ratehet.erase(ratehet.begin());
+			StrVector ratedef;
+			for (j = 0; j < noptions; j++)
+				if (test_options[j])
+					ratedef.push_back(rate_options[j]);
+			ratehet.insert(ratehet.begin(), ratedef.begin(), ratedef.end());
+		}
+		cout << "Rate heterogeneity under selection: ";
+		for (j = 0; j < ratehet.size(); j++) {
+			cout << ratehet[j] << " ";
+		}
+		cout << endl;
 		for (i = 0; i < model_names.size(); i++)
-			for (j = 0; j < ratehet.size(); j++)
+			for (j = 0; j < ratehet.size(); j++) {
 				models.push_back(model_names[i] + ratehet[j]);
+			}
 	} else {
 		for (i = 0; i < model_names.size(); i++)
 			for (j = 0; j < noptions; j++)
@@ -720,11 +735,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	tree_hetero->optimize_by_newton = params.optimize_by_newton;
 	tree_hetero->setLikelihoodKernel(params.SSE);
 
-	RateHeterogeneity * rate_class[4];
+	RateHeterogeneity * rate_class[5];
 	rate_class[0] = new RateHeterogeneity();
 	rate_class[1] = new RateInvar(-1, NULL);
 	rate_class[2] = new RateGamma(params.num_rate_cats, -1, params.gamma_median, NULL);
 	rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1, params.gamma_median, -1, params.optimize_model_rate_joint, params.rr_ai, NULL);
+	rate_class[4] = new RateFree(params.num_rate_cats, "", NULL);
 	ModelGTR *subst_model = NULL;
 	if (seq_type == SEQ_BINARY)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
@@ -791,7 +807,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 		tree->setModel(subst_model);
 		// initialize rate
-		if (model_names[model].find("+I+G") != string::npos)
+		if (model_names[model].find("+R") != string::npos)
+			tree->setRate(rate_class[4]);
+		else if (model_names[model].find("+I+G") != string::npos || model_names[model].find("+G+I") != string::npos)
 			tree->setRate(rate_class[3]);
 		else if (model_names[model].find("+G") != string::npos)
 			tree->setRate(rate_class[2]);
@@ -1009,8 +1027,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	delete model_fac;
 	delete subst_model;
-	for (int rate_type = 3; rate_type >= 0; rate_type--)
+	for (int rate_type = sizeof(rate_class)/sizeof(void*)-1; rate_type >= 0; rate_type--) {
 		delete rate_class[rate_type];
+	}
 	delete tree_hetero;
 	delete tree_homo;
 
