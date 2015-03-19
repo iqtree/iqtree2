@@ -350,10 +350,19 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 			if (strstr(rate_options[i], must_options[j]))
 				test_options[i] = false;
 	}
-	for (i = 0; i < model_names.size(); i++)
-		for (j = 0; j < noptions; j++)
-			if (test_options[j])
-				models.push_back(model_names[i]+rate_options[j]);
+	if (params.ratehet_set) {
+		// take the rate_options from user-specified models
+		StrVector ratehet;
+		convert_string_vec(params.ratehet_set, ratehet);
+		for (i = 0; i < model_names.size(); i++)
+			for (j = 0; j < ratehet.size(); j++)
+				models.push_back(model_names[i] + ratehet[j]);
+	} else {
+		for (i = 0; i < model_names.size(); i++)
+			for (j = 0; j < noptions; j++)
+				if (test_options[j])
+					models.push_back(model_names[i]+rate_options[j]);
+	}
 }
 
 /*

@@ -1065,6 +1065,9 @@ struct Params {
     /** set of models for testing */
     char *model_set;
 
+    /** set of rate heterogeneity model for testing */
+    char *ratehet_set;
+
     /** model defition file */
     char *model_def_file;
 

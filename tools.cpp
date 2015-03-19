@@ -702,6 +702,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
+    params.ratehet_set = NULL;
     params.model_def_file = NULL;
     params.optimize_mixmodel_weight = false;
     params.store_trans_matrix = false;
@@ -1620,6 +1621,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mset <model_set>";
 				params.model_set = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mrate") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mset <model_set>";
+				params.ratehet_set = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-mdef") == 0) {
@@ -2722,6 +2730,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -mset phyml          Restrict to only models supported by PhyML" << endl
             << "  -mset mrbayes        Restrict to only models supported by MrBayes" << endl
             << "  -mset m1,...,mk      Restrict to a comma-separated list of models" << endl
+            << "  -mrate rm1,...,rmk   Restrict to a comma-separated list of rate heterogeneity" << endl
+            << "                       (e.g. -mrate +G,+I)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
             << "  -m <model_name>" << endl
