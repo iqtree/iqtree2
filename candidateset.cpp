@@ -22,20 +22,20 @@ CandidateSet::CandidateSet() {
 	computeStableSplit = false;
 }
 
-void CandidateSet::getRandomStableSplits(int numSplit, SplitGraph& randomStableSplits) {
-	/*
-	 *  Use reservoir sampling technique
-	 */
-	randomStableSplits.clear();
-	assert(numSplit < stableSplits.size());
-	randomStableSplits.insert(randomStableSplits.begin(), stableSplits.begin(), stableSplits.begin() + numSplit);
-	for (int i = numSplit; i < stableSplits.size(); i++) {
-		int j = random_int(1, i);
-		if (j <= numSplit) {
-			randomStableSplits[j] = stableSplits[i];
-		}
-	}
-}
+//void CandidateSet::getRandomStableSplits(int numSplit, SplitGraph& randomStableSplits) {
+//	/*
+//	 *  Use reservoir sampling technique
+//	 */
+//	randomStableSplits.clear();
+//	assert(numSplit < candidateSplits.size());
+//	randomStableSplits.insert(randomStableSplits.begin(), candidateSplits.begin(), candidateSplits.begin() + numSplit);
+//	for (int i = numSplit; i < candidateSplits.size(); i++) {
+//		int j = random_int(1, i);
+//		if (j <= numSplit) {
+//			randomStableSplits[j] = candidateSplits[i];
+//		}
+//	}
+//}
 
 vector<string> CandidateSet::getBestTrees() {
 	vector<string> res;
@@ -109,6 +109,43 @@ bool CandidateSet::replaceTree(string tree, double score) {
 }
 */
 
+
+void CandidateSet::addCandidateSplits(string treeString) {
+	MTree tree;
+	tree.readTreeString(treeString, params->is_rooted);
+	SplitGraph allSplits;
+	tree.convertSplits(allSplits);
+	for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
+		int value;
+		Split *sp = candidateSplits.findSplit(*splitIt, value);
+		if (sp != NULL) {
+			sp->setWeight(sp->getWeight() + 1);
+			candidateSplits.setValue(sp, value + 1);
+		} else {
+			sp = new Split(*(*splitIt));
+			sp->setWeight(1);
+			candidateSplits.insertSplit(sp, 1);
+		}
+	}
+}
+
+void CandidateSet::removeCandidateSplits(string treeString) {
+	MTree tree;
+	tree.readTreeString(treeString, params->is_rooted);
+	SplitGraph allSplits;
+	tree.convertSplits(allSplits);
+	for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
+		int value;
+		Split *sp = candidateSplits.findSplit(*splitIt, value);
+		assert( sp != NULL);
+		if (sp->getWeight() > 1) {
+			sp->setWeight(sp->getWeight() - 1);
+		} else {
+			candidateSplits.eraseSplit(*splitIt);
+		}
+	}
+}
+
 string CandidateSet::getNextCandTree() {
     string tree;
     assert(!empty());
@@ -161,7 +198,7 @@ bool CandidateSet::update(string tree, double score) {
 			// The new tree is one of the numSupportTrees best trees.
 			// Thus recompute supported splits
 			if (it_pos <= params->numSupportTrees) {
-				int nSupportedSplits = computeSplitSupport(params->numSupportTrees);
+				int nSupportedSplits = computeSplitSupport();
 				cout << ((double) nSupportedSplits / (aln->getNSeq() - 3)) * 100
 						<< " % of the splits have 100% support and can be fixed." << endl;
 			}
@@ -270,27 +307,28 @@ void CandidateSet::removeCandidateTree(string topology) {
 }
 
 bool CandidateSet::isStableSplit(Split& sp) {
-	return stableSplits.containSplit(sp);
+	SplitIntMap::const_iterator it = candidateSplits.find(&sp);
+	if (it != candidateSplits.end() ) {
+		return (it->second == candidateSplits.getMaxValue());
+	}
+	return false;
 }
 
-int CandidateSet::computeSplitSupport(int numTree) {
-	assert(numTree != 0);
-	stableSplits.clear();
-	allSplits.clear();
-	SplitGraph sg;
+int CandidateSet::computeSplitSupport() {
+	candidateSplits.clear();
+	SplitGraph tmpSplits; // just created because convertSplits require it
 	MTreeSet boot_trees;
 	int numMaxSupport = 0;
-	vector<string> trees = getBestCandidateTrees(numTree);
+	vector<string> trees = getBestCandidateTrees(params->numSupportTrees);
 	assert(trees.size() > 1);
-	int maxSupport = trees.size();
+	candidateSplits.setMaxValue(trees.size());
 	boot_trees.init(trees, aln->getSeqNames(), params->is_rooted);
-	boot_trees.convertSplits(aln->getSeqNames(), sg, allSplits, SW_COUNT, -1, false);
+	boot_trees.convertSplits(aln->getSeqNames(), tmpSplits, candidateSplits, SW_COUNT, -1, false);
 
+	// count how many splits have 100% support
 	for (SplitIntMap::iterator it = allSplits.begin(); it != allSplits.end(); it++) {
-		if (it->second == maxSupport && it->first->countTaxa() > 1) {
+		if (it->second == candidateSplits.getMaxValue() && it->first->countTaxa() > 1) {
 			numMaxSupport++;
-			Split* supportedSplit = new Split(*(it->first));
-			stableSplits.push_back(supportedSplit);
 		}
 	}
 	//cout << "Number of supported splits = " << numMaxSupport << endl;

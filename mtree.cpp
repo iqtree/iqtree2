@@ -493,6 +493,14 @@ void MTree::readTree(const char *infile, bool &is_rooted) {
              " taxa and " << nodeNum-1-is_rooted << " branches" << endl;
 }
 
+void MTree::readTreeString(string tree_string, bool is_rooted) {
+	stringstream str;
+	str << tree_string;
+	str.seekg(0, ios::beg);
+	freeNode();
+	readTree(str, is_rooted);
+}
+
 
 void MTree::readTree(istream &in, bool &is_rooted)
 {
@@ -986,6 +994,30 @@ Split* MTree::getSplit(Node* node1, Node* node2) {
 	return sp;
 }
 
+void MTree::initializeSplitMap(Split *resp, Node *node, Node *dad) {
+	if (!node) node = root;
+	if (!resp) {
+		resp = new Split(leafNum);
+	}
+	bool has_child = false;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		Split *sp = new Split(leafNum);
+		initializeSplitMap(sp, (*it)->node, node);
+		*resp += *sp;
+        if (sp->shouldInvert())
+            sp->invert();
+		 /* ignore nodes with degree of 2 because such split will be added before */
+		if (node->degree() != 2) {
+			Branch curBranch((*it)->node, node);
+			SplitBranchMap.insert(make_pair(sp, curBranch));
+		}
+		has_child = true;
+	}
+	if (!has_child) {
+		resp->addTaxon(node->id);
+	}
+}
+
 void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *node, Node *dad) {
     if (!node) node = root;
     assert(resp->getNTaxa() == leafNum);
@@ -1001,8 +1033,8 @@ void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *
             sp->invert();
 		 /* ignore nodes with degree of 2 because such split will be added before */
         if (node->degree() != 2) {
-		  sg.push_back(sp);
-          if (nodes) nodes->push_back((*it)->node);
+        	sg.push_back(sp);
+        	if (nodes) nodes->push_back((*it)->node);
         }
         has_child = true;
     }

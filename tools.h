@@ -424,9 +424,9 @@ struct Params {
 	bool fixStableSplits;
 
 	/**
-	 *  Percentage of splits to be relaxed in each iterations
+	 *  The probability for a stable split to be perturbed
 	 */
-	double relaxStableSplits;
+	double probPerturbSS;
 
 	/**
 	 *  Number of best trees used to compute stable splits

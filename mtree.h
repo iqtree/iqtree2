@@ -254,6 +254,13 @@ public:
     virtual void readTree(istream &in, bool &is_rooted);
 
     /**
+            read the tree from a newick string
+            @param tree_string the tree string.
+            @param is_rooted (IN/OUT) true if tree is rooted
+     */
+    virtual void readTreeString(string tree_string, bool is_rooted);
+
+    /**
             parse the tree from the input file in newick format
             @param infile the input file
             @param ch (IN/OUT) current char
@@ -521,6 +528,14 @@ public:
     void convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes = NULL, Node *node = NULL, Node *dad = NULL);
 
     /**
+     * Initialize the hash stable SplitBranchMap which contain mapping from split to branch
+     * @param resp (internal) set of taxa below node
+     * @param node the starting node, NULL to start from the root
+     * @param dad dad of the node, used to direct the search
+     */
+    void initializeSplitMap(Split *resp = NULL, Node *node = NULL, Node *dad = NULL);
+
+    /**
      * 		Generate a split defined by branch node1-node2
      * 		@param node1 one end of the branch
      * 		@param node2 one end of the branch
@@ -664,6 +679,12 @@ public:
     void setExtendedFigChar();
 
 protected:
+
+    /**
+     * 		Hash stable mapping a split into branch.
+     * 		This data structure is generated when genSplitMap() is called.
+     */
+    unordered_map<Split*, Branch> SplitBranchMap;
 
     /**
             line number of the input file, used to output errors in input file

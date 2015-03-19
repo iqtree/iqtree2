@@ -488,7 +488,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
 	if (params->fixStableSplits) {
 		candidateTrees.enableFSS();
-		int nSupportedSplits = candidateTrees.computeSplitSupport(nNNITrees);
+		int nSupportedSplits = candidateTrees.computeSplitSupport();
 		cout << ((double) nSupportedSplits / (aln->getNSeq() - 3)) * 100 ;
 		cout << " % of the splits have 100% support and can be fixed." << endl;
 	}
@@ -1045,12 +1045,12 @@ void IQTree::doRandomNNIs(int numNNI) {
 	NodeVector::iterator it1, it2;
 	if (params->fixStableSplits) {
 		tabuSplits.clear();
-		int numFixedSplits = floor(candidateTrees.getStableSplits().size() * (1.0 - params->relaxStableSplits));
-		// Populate tabuSplits with randomly chosen numFixedSplits
-		candidateTrees.getRandomStableSplits(numFixedSplits, tabuSplits);
+		initializeSplitMap();
 	}
     int cntNNI = 0;
     while (cntNNI < numNNI) {
+    	// Get all internal branch
+
 	    Branches allInnerBranches;
 	    Branches nonTabuBranches;
 	    // TODO update allInnerBranches dynamically after each random NNI
@@ -1691,7 +1691,7 @@ double IQTree::doTreeSearch() {
             curScore = optimizeAllBranches();
         } else {
             if (params->snni) {
-            	int numStableBranches = aln->getNSeq() - 3 - candidateTrees.getStableSplits().size();
+            	int numStableBranches = aln->getNSeq() - 3 - candidateTrees.getCandidateSplits().size();
                 int numNNI = floor(searchinfo.curPerStrength * numStableBranches);
                 if (params->five_plus_five) {
                     readTreeString(candidateTrees.getNextCandTree());
@@ -1865,7 +1865,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     // maximum number of NNI steps
     const int MAXSTEPS = aln->getNSeq();
     // Compatible positive NNIs
-    int initTabuSize = floor(candidateTrees.getStableSplits().size() * (1.0 - params->relaxStableSplits));
     // data structure to store intermediate trees generated in NNI steps
     unordered_map<string, pair<string, double> > intermediateTrees;
     for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
@@ -1901,16 +1900,16 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         vector<NNIMove> positiveNNIs = evaluateNNIs(nniBranches);
 
 		if (positiveNNIs.size() == 0) {
-			if (tabuSplits.size() > 0) {
-				tabuSplits.resize(initTabuSize);
-				// now evaluate the tabu branches
-				positiveNNIs = evaluateNNIs(*tabuBranches);
-				delete tabuBranches;
-				if (positiveNNIs.size() == 0)
-					break;
-			} else {
-				break;
-			}
+//			if (tabuSplits.size() > 0) {
+//				tabuSplits.resize(initTabuSize);
+//				// now evaluate the tabu branches
+//				positiveNNIs = evaluateNNIs(*tabuBranches);
+//				delete tabuBranches;
+//				if (positiveNNIs.size() == 0)
+//					break;
+//			} else {
+//				break;
+//			}
 		}
 
         /* sort all positive NNI moves (descending) */

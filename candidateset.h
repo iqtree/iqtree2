@@ -190,11 +190,10 @@ public:
     void clearTopologies();
 
     /**
-     * Compute the split support from the \a numTree best local optimal trees in the candidate sets
-     * @param numTree the number of best trees used to calculate support values
+     * Compute the split support from the current best trees
      * @return number of splits with 100% support value
      */
-    int computeSplitSupport(int numTree);
+    int computeSplitSupport();
 
     /**
      *  Update the set of stable split when a new tree is inserted
@@ -258,8 +257,8 @@ public:
      */
     vector<string> getBestCandidateTrees(int numTrees);
 
-	SplitGraph& getStableSplits() {
-		return stableSplits;
+	SplitIntMap& getCandidateSplits() {
+		return candidateSplits;
 	}
 
 	/**
@@ -270,7 +269,21 @@ public:
 	 * @param
 	 * 		splits (OUT) a random subset of the stable splits
 	 */
-	void getRandomStableSplits(int numSplit, SplitGraph& splits);
+	//void getRandomStableSplits(int numSplit, SplitGraph& splits);
+
+	/**
+	 *  Add splits from \a treeString to the current candidate splits
+	 *
+	 *  @param tree collect splits from this tree
+	 */
+	void addCandidateSplits(string treeString);
+
+	/**
+	 *  Remove splits that appear from \a treeString.
+	 *  If an existing split has weight > 1, their weight will be
+	 *  reduced by 1.
+	 */
+	void removeCandidateSplits(string treeString);
 
 private:
 
@@ -280,9 +293,10 @@ private:
 	bool computeStableSplit;
 
     /**
-     *  Set of supported splits by the best trees
+     *  Set of splits from the current best trees.
+     *  The number of current best trees is specified in params->numSupportTrees
      */
-    SplitGraph stableSplits;
+	SplitIntMap candidateSplits;
 
     /**
      *  All splits collected for deriving the stable splits

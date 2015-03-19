@@ -33,7 +33,7 @@
 //#include <time.h>
 #include <math.h>
 #include "ncl/ncl.h"
-
+#include "split.h"
 #include "tools.h"
 
 using namespace std;
@@ -46,6 +46,7 @@ class Node;
     Neighbor list of a node in the tree
  */
 class Neighbor {
+
 public:
 
     /**
