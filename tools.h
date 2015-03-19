@@ -409,6 +409,19 @@ extern int NNI_MAX_NR_STEP;
 struct Params {
 
 	/**
+	 *  Option to do mutlipe start for estimating alpha and p_invar
+	 */
+	bool rr_ai;
+
+	/**
+	 *  Text file contain all pairs of alpha and p_invar to
+	 *  evaluate.
+	 *  TODO Remove this option and implement the exhaustive search
+	 *  directly into IQ-TREE
+	 */
+	char* alpha_invar_file;
+
+	/**
 	 *  Enable tabu search for NNI
 	 */
 	bool tabu;
