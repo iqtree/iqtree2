@@ -2916,6 +2916,9 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     if (optimize_by_newton) {
     	// Newton-Raphson method
     	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
+        if (verbose_mode >= VB_DEBUG) {
+            cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
+        }
     	if (optx > MAX_BRANCH_LEN*0.95) {
     		// newton raphson diverged, reset
     	    double opt_lh = computeLikelihoodFromBuffer();
@@ -2929,6 +2932,9 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
 	}	else {
         // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
+        if (verbose_mode >= VB_DEBUG) {
+            cout << "minimizeBrent logl: " << -negative_lh << endl;
+        }
 	}
 
     current_it->length = optx;
@@ -3014,8 +3020,11 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         if (verbose_mode >= VB_DEBUG) {
             printTree(cout, WT_BR_LEN+WT_NEWLINE);
         }
-        assert(new_tree_lh >= tree_lh - 10.0); // make sure that the new tree likelihood never decreases too much
-
+        if (new_tree_lh < tree_lh - 10.0) { // make sure that the new tree likelihood never decreases too much
+            cout << "ERROR: Branch length optimization failed as log-likelihood decreases too much: " << tree_lh << "  --> " << new_tree_lh << endl;
+            assert(new_tree_lh >= tree_lh - 10.0);
+        }
+        
         if (new_tree_lh < tree_lh) {
         	// IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
         	if (verbose_mode >= VB_MED)
