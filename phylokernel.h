@@ -808,7 +808,16 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     }
 #endif
 		tree_lh += horizontal_add(lh_final);
-		assert(!isnan(tree_lh) && !isinf(tree_lh));
+        if (isnan(tree_lh) || isinf(tree_lh)) {
+            cout << "ERROR: Numerical instability caused by alignment sites";
+            i = aln->getNSite();
+            for (j = 0; j < i; j++) {
+                ptn = aln->getPatternID(j);
+                if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) cout << " " << j+1;
+            }
+            cout << endl << "       Please check your alignment again and consider removing these sites from analysis" << endl << endl;
+            exit(1);
+        }
 
 		// ascertainment bias correction
 		if (orig_nptn < nptn) {

@@ -648,7 +648,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	string best_model;
 	/* first check the model file */
 	bool ok_model_file = false;
-	if (!params.print_site_lh) {
+	if (!params.print_site_lh && !params.model_test_again) {
 		if (set_name == "")
 			ok_model_file = checkModelFile(fmodel_str, in_tree->isSuperTree(), model_info);
 		else
