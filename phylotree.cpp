@@ -3006,9 +3006,9 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //    	string string_brlen = getTreeString();
     	DoubleVector lenvec;
     	saveBranchLengths(lenvec);
-        if (verbose_mode >= VB_DEBUG) {
-            printTree(cout, WT_BR_LEN+WT_NEWLINE);
-        }
+//        if (verbose_mode >= VB_DEBUG) {
+//            printTree(cout, WT_BR_LEN+WT_NEWLINE);
+//        }
         optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
         double new_tree_lh = computeLikelihoodFromBuffer();
 
@@ -3017,13 +3017,16 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             cout << new_tree_lh << endl;
         }
 
-        if (verbose_mode >= VB_DEBUG) {
-            printTree(cout, WT_BR_LEN+WT_NEWLINE);
-        }
-        if (new_tree_lh < tree_lh - 10.0) { // make sure that the new tree likelihood never decreases too much
-            cout << "ERROR: Branch length optimization failed as log-likelihood decreases too much: " << tree_lh << "  --> " << new_tree_lh << endl;
-            assert(new_tree_lh >= tree_lh - 10.0);
-        }
+//        if (verbose_mode >= VB_DEBUG) {
+//            printTree(cout, WT_BR_LEN+WT_NEWLINE);
+//        }
+
+//        if (new_tree_lh < tree_lh - 10.0) { // make sure that the new tree likelihood never decreases too much
+//            cout << "ERROR: Branch length optimization failed as log-likelihood decreases too much: " << tree_lh << "  --> " << new_tree_lh << endl;
+//            getModel()->writeInfo(cout);
+//            getRate()->writeInfo(cout);
+//            assert(new_tree_lh >= tree_lh - 10.0);
+//        }
         
         if (new_tree_lh < tree_lh) {
         	// IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
