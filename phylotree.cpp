@@ -20,7 +20,6 @@
 #include "pllnni.h"
 #include "phylosupertree.h"
 #include "upperbounds.h"
-
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
 
@@ -261,10 +260,6 @@ void PhyloTree::setRootNode(const char *my_root) {
     assert(root);
 }
 
-void PhyloTree::setParams(Params* params) {
-	this->params = params;
-}
-
 void PhyloTree::readTreeString(const string &tree_string) {
 	stringstream str;
 	str << tree_string;
@@ -282,6 +277,9 @@ void PhyloTree::readTreeString(const string &tree_string) {
 	}
 	resetCurScore();
 //	lhComputed = false;
+    if (params->fixStableSplits) {
+        buildNodeSplit();
+    }
 }
 
 int PhyloTree::fixAllBranches(bool force_change) {
@@ -3427,6 +3425,29 @@ void PhyloTree::doOneRandomNNI(Branch branch) {
     doNNI(nni, true);
 }
 
+NNIMove PhyloTree::getRandomNNI(Branch &branch) {
+    assert(isInnerBranch(branch.first, branch.second));
+    NNIMove nni;
+    nni.node1 = (PhyloNode*) branch.first;
+    nni.node2 = (PhyloNode*) branch.second;
+
+    FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt) {
+            nni.node1Nei_it = node1NeiIt;
+            break;
+        }
+    int randInt = random_int(branch.second->neighbors.size()-1);
+    int cnt = 0;
+    FOR_NEIGHBOR_IT(branch.second, branch.first, node2NeiIt) {
+            if (cnt == randInt) {
+                nni.node2Nei_it = node2NeiIt;
+                break;
+            } else {
+                cnt++;
+            }
+        }
+    return nni;
+}
+
 void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
     PhyloNode *node1 = move.node1;
     PhyloNode *node2 = move.node2;
@@ -3469,13 +3490,13 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
      outError("Wrong ID");
      }*/
 
-    PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
-    PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
+    PhyloNeighbor *nei12 = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+    PhyloNeighbor *nei21 = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
     if (clearLH) {
         // clear partial likelihood vector
-        node12_it->clearPartialLh();
-        node21_it->clearPartialLh();
+        nei12->clearPartialLh();
+        nei21->clearPartialLh();
 
         node2->clearReversePartialLh(node1);
         node1->clearReversePartialLh(node2);
@@ -3486,6 +3507,19 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
     if (params->leastSquareNNI) {
     	updateSubtreeDists(move);
     }
+
+    // update splits
+    delete nei12->split;
+    delete nei21->split;
+    nei12->split = new Split(leafNum);
+    nei21->split = new Split(leafNum);
+    FOR_NEIGHBOR_IT(node1, node2, it) {
+            *(nei12->split) += *((*it)->split);
+        }
+    FOR_NEIGHBOR_IT(node2, node1, it) {
+            *(nei21->split) += *((*it)->split);
+        }
+
 }
 
 void PhyloTree::changeNNIBrans(NNIMove nnimove) {
@@ -4804,3 +4838,4 @@ void PhyloTree::reinsertIdenticalSeqs(Alignment *orig_aln) {
     deleteAllPartialLh();
     clearAllPartialLH();
 }
+

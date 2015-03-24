@@ -25,6 +25,7 @@
 #include "model/modelgtr.h"
 #include "model/rategamma.h"
 #include <numeric>
+#include <iqtree.h>
 #include "pllrepo/src/pllInternal.h"
 #include "pllrepo/src/pll.h"
 #include "pllnni.h"
@@ -490,7 +491,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
 	if (params->fixStableSplits) {
 		candidateTrees.enableFSS();
-		int nSupportedSplits = candidateTrees.computeSplitSupport();
+		int nSupportedSplits = candidateTrees.buildTopSplits();
 		cout << ((double) nSupportedSplits / (aln->getNSeq() - 3)) * 100 ;
 		cout << " % of the splits have 100% support and can be fixed." << endl;
 	}
@@ -1042,39 +1043,75 @@ void IQTree::getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, B
 	}
 }
 
+
+void IQTree::getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, Node *node, Node *dad) {
+    if (!node) {
+        node = root;
+    }
+    FOR_NEIGHBOR_IT(node, dad, it) {
+            if (isInnerBranch((*it)->node, node)) {
+                Branch curBranch;
+                curBranch.first = (*it)->node;
+                curBranch.second = node;
+                if (!candidateTrees.getCandidateSplits().empty()) {
+                    Split* sp = (*it)->split;
+                    assert(sp != NULL);
+                    Split curSplit(*sp);
+                    if (curSplit.shouldInvert())
+                        curSplit.invert();
+                    if (tabuSplits.findSplit(&curSplit) != NULL) {
+                        continue;
+                    }
+                    // add unstable branch
+                    int value;
+                    candidateTrees.getCandidateSplits().findSplit(&curSplit, value);
+                    int maxSupport = candidateTrees.getCandidateSplits().getMaxValue();
+                    if (value == 0) {
+                        nniBranches.push_back(curBranch);
+                    } else if (value == maxSupport) { // add a stable branch with a certain probability
+                        double rndDbl = random_double();
+                        if (rndDbl < params->probPerturbSS) {
+                            nniBranches.push_back(curBranch);
+                        }
+                    } else {
+                        nonNNIBranches.push_back(curBranch);
+                    }
+                } else {
+                    nniBranches.push_back(curBranch);
+                }
+            }
+            getNNIBranches(nniBranches, nonNNIBranches, (*it)->node, node);
+        }
+}
+
+
+
 void IQTree::doRandomNNIs(int numNNI) {
 	NodeVector nodes1, nodes2;
-	NodeVector::iterator it1, it2;
-	if (params->fixStableSplits) {
+	NodeVector::iterator it1;
+    NodeVector::iterator it2;
+    if (params->fixStableSplits) {
 		tabuSplits.clear();
-		initializeSplitMap();
 	}
     int cntNNI = 0;
     while (cntNNI < numNNI) {
-    	// Get all internal branch
-
-	    Branches allInnerBranches;
-	    Branches nonTabuBranches;
-	    // TODO update allInnerBranches dynamically after each random NNI
-	    // instead of having to traverse the tree again
-	    getInnerBranches(allInnerBranches);
-	    assert(allInnerBranches.size() == aln->getNSeq() - 3);
-		if (params->fixStableSplits) {
-			// remove the tabu splits from innerBranches
-			getNonTabuBranches(allInnerBranches, tabuSplits, nonTabuBranches);
-			assert(nonTabuBranches.size() == allInnerBranches.size() - tabuSplits.size());
-		} else {
-			nonTabuBranches = allInnerBranches;
-		}
-    	// randomly take an inner branch and do a random NNI
-		int index = random_int(nonTabuBranches.size());
-		doOneRandomNNI(nonTabuBranches[index]);
-		if (params->fixStableSplits) {
-			// Add the new split to the tabu list
-			Split* newSp = getSplit(nonTabuBranches[index].first, nonTabuBranches[index].second);
-			tabuSplits.push_back(newSp);
-		}
-    	cntNNI++;
+        Branches nniBranches;
+        Branches nonNNIBranches;
+        nniBranches.reserve(aln->getNSeq()-3);
+        nonNNIBranches.reserve(aln->getNSeq()-3);
+        getNNIBranches(nniBranches, nonNNIBranches);
+        int randInt = random_int(nniBranches.size());
+        NNIMove randNNI = getRandomNNI(nniBranches[randInt]);
+        doNNI(randNNI, true);
+        if (params->fixStableSplits) {
+            Split* sp = getSplit(nniBranches[randInt].first, nniBranches[randInt].second);
+            Split* tabuSplit = new Split(*sp);
+            if (tabuSplit->shouldInvert()) {
+                tabuSplit->invert();
+            }
+            tabuSplits.insertSplit(tabuSplit, 1);
+        }
+        cntNNI++;
     }
 	//cout << "Number of random NNI performed: " << cntNNI << endl;
     setAlignment(aln);
@@ -1863,13 +1900,21 @@ string IQTree::doNNISearch(int& nniCount, int& nniSteps) {
 }
 
 double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
+
+    // Total number of NNIs applied
     nni_count = 0;
-    int numNNIs = 0; // number of NNI to be applied in each step
-    // maximum number of NNI steps
+
+    // Number of NNI applied in the current step
+    int numNNIs = 0;
+
+    // Maximum number of NNI steps
     const int MAXSTEPS = aln->getNSeq();
-    // Compatible positive NNIs
+
+    int numInnerBranches = leafNum - 3;
+
     // data structure to store intermediate trees generated in NNI steps
     unordered_map<string, pair<string, double> > intermediateTrees;
+
     for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
         double oldScore = curScore;
             if (save_all_trees == 2) {
@@ -1882,51 +1927,50 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
                 }
             }
         Branches allInnerBranches;
-        Branches nniBranches;
-    	DoubleVector lenvec;
-    	saveBranchLengths(lenvec); // save all current branch lengths
-        initPartitionInfo(); // for super tree
 
-        // get a list of all inner branches
-        getInnerBranches(allInnerBranches);
-        //cout << "innerBranches.size() = " << innerBranches.size() << endl;
-        assert(allInnerBranches.size() == (aln->getNSeq() - 3));
-        // remove tabu branches (if any)
-        Branches* tabuBranches = new Branches;
-		if (tabuSplits.size() > 0) {
-			getNonTabuBranches(allInnerBranches, tabuSplits, nniBranches, tabuBranches);
-            } else {
-			nniBranches = allInnerBranches;
-            }
+
+
+        // save all current branch lengths
+        DoubleVector lenvec;
+    	saveBranchLengths(lenvec);
+
+        // for super tree
+        initPartitionInfo();
+
+        Branches nniBranches;
+        Branches nonNNIBranches;
+        vector<NNIMove> positiveNNIs;
+        nniBranches.reserve(numInnerBranches);
+        nonNNIBranches.reserve(numInnerBranches);
+        getNNIBranches(nniBranches, nonNNIBranches);
+        positiveNNIs.reserve(numInnerBranches);
 
         // evaluate NNIs
-        vector<NNIMove> positiveNNIs = evaluateNNIs(nniBranches);
+        evaluateNNIs(nniBranches, positiveNNIs);
 
-		if (positiveNNIs.size() == 0) {
-//			if (tabuSplits.size() > 0) {
-//				tabuSplits.resize(initTabuSize);
-//				// now evaluate the tabu branches
-//				positiveNNIs = evaluateNNIs(*tabuBranches);
-//				delete tabuBranches;
-//				if (positiveNNIs.size() == 0)
-//					break;
-//			} else {
-//				break;
-//			}
+        if (positiveNNIs.size() == 0) {
+            if (!nonNNIBranches.empty()) {
+                evaluateNNIs(nonNNIBranches, positiveNNIs);
+                tabuSplits.clear();
+                if (positiveNNIs.size() == 0)
+                    break;
             }
+        }
 
         /* sort all positive NNI moves (descending) */
         sort(positiveNNIs.begin(), positiveNNIs.end());
 
-            /* remove conflicting NNIs */
-        vector<NNIMove> compatibleNNIs = getCompatibleNNIs(positiveNNIs);
+        /* remove conflicting NNIs */
+        vector<NNIMove> compatibleNNIs;
+        compatibleNNIs.reserve(numInnerBranches);
+        getCompatibleNNIs(positiveNNIs, compatibleNNIs);
         numNNIs = compatibleNNIs.size();
 
         // do non-conflicting positive NNIs
         doNNIs(numNNIs, compatibleNNIs);
 
-            // Re-estimate branch lengths of the new tree
-            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+        // Re-estimate branch lengths of the new tree
+        curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
 
         // curScore should be larger than score of the best NNI
         if (curScore < compatibleNNIs.at(0).newloglh - params->loglh_epsilon) {
@@ -1935,7 +1979,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             // restore the tree by reverting all NNIs
             for (int i = 0; i < numNNIs; i++)
                 doNNI(compatibleNNIs.at(i));
-            //restoreAllBrans(branchLengths);
             restoreBranchLengths(lenvec);
             clearAllPartialLH();
             // only do the best NNI
@@ -1945,62 +1988,39 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             assert(curScore > compatibleNNIs.at(0).newloglh - params->loglh_epsilon);
         }
 
-            nni_count += numNNIs;
-		if (params->fixStableSplits) {
-			// add NNI splits to the tabu list
-			for (int i = 0; i < numNNIs; i++) {
-				Split* sp = getSplit(compatibleNNIs[i].node1, compatibleNNIs[i].node2);
-				tabuSplits.push_back(sp);
-			}
+        nni_count += numNNIs;
 
-			// update the list of intermediate trees
-			string topology = getTopology();
-			if (candidateTrees.treeTopologyExist(topology))
-            		break;
-			if (intermediateTrees.find(topology) == intermediateTrees.end()) {
-				string treeString = getTreeString();
-				intermediateTrees.insert(make_pair(topology, make_pair(treeString, curScore)));
-            	} else {
-				break;
-            	}
-        	}
-		if (curScore - oldScore <  params->loglh_epsilon)
-			break;
-	}
-    string candidateTree = getTreeString();
-    bool betterScore = false;
-    if (curScore > candidateTrees.getBestScore()) {
-    	if (params->snni) {
-    		candidateTree = optimizeModelParameters(false, params->loglh_epsilon);
-    	}
-    	printResultTree();
-    	betterScore = true;
-    }
-    bool newTree = candidateTrees.update(candidateTree, curScore);
-
-    if (betterScore) {
-    	if (newTree) {
-			cout << "BETTER TREE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
-			stop_rule.addImprovedIteration(curIt);
-        } else {
-    		cout << "BETTER SCORE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
+        string candidateTree = getTreeString();
+        bool betterScore = false;
+        if (curScore > candidateTrees.getBestScore()) {
+            if (params->snni) {
+                candidateTree = optimizeModelParameters(false, params->loglh_epsilon);
             }
-            }
-
-    if (params->fixStableSplits) {
-    	unordered_map<string, pair<string, double> >::iterator it;
-    	for (it = intermediateTrees.begin(); it != intermediateTrees.end(); it++) {
-    		candidateTrees.update((it->second).first, (it->second).second);
+            printResultTree();
+            betterScore = true;
         }
-    	tabuSplits.clear();
+        bool newTree = candidateTrees.update(candidateTree, curScore);
+
+        if (betterScore) {
+            if (newTree) {
+                cout << "BETTER TREE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
+                stop_rule.addImprovedIteration(curIt);
+            } else {
+                cout << "BETTER SCORE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
+            }
+        }
+
+        if (curScore - oldScore <  params->loglh_epsilon)
+            break;
     }
 
-    if (nni_count == 0 && verbose_mode >= VB_MED) {
+    if (nni_count == 0) {
         cout << "NOTE: Tree is already NNI-optimized" << endl;
     }
     if (nni_steps == MAXSTEPS) {
-    	cout << "WARNING: NNI search needs unusual large number of steps (" << MAXSTEPS << ") to converge!" << endl;
+        cout << "WARNING: NNI search needs unusual large number of steps (" << MAXSTEPS << ") to converge!" << endl;
     }
+
     return curScore;
 }
 
@@ -2200,8 +2220,7 @@ void IQTree::doNNIs(int nni2apply, vector<NNIMove> compatibleNNIs, bool changeBr
 }
 
 
-vector<NNIMove> IQTree::getCompatibleNNIs(vector<NNIMove> positiveNNIs) {
-	vector<NNIMove> compatibleNNIs;
+void IQTree::getCompatibleNNIs(vector<NNIMove> &positiveNNIs, vector<NNIMove> &compatibleNNIs) {
 	for (vector<NNIMove>::iterator iterMove = positiveNNIs.begin();
 			iterMove != positiveNNIs.end(); iterMove++) {
 		bool select = true;
@@ -2219,7 +2238,6 @@ vector<NNIMove> IQTree::getCompatibleNNIs(vector<NNIMove> positiveNNIs) {
 			compatibleNNIs.push_back(*iterMove);
         }
     }
-	return compatibleNNIs;
 }
 
 //double IQTree::estN95() {
@@ -2345,16 +2363,13 @@ void IQTree::restoreAllBrans(map<string, double>& branchLengths, PhyloNode *node
 //}
 //}
 
-vector<NNIMove> IQTree::evaluateNNIs(Branches branches) {
-    vector<NNIMove> positiveNNIs;
-    for (Branches::iterator it = branches.begin(); it != branches.end(); it++) {
+void IQTree::evaluateNNIs(Branches &nniBranches, vector<NNIMove> &positiveNNIs) {
+    for (Branches::iterator it = nniBranches.begin(); it != nniBranches.end(); it++) {
         NNIMove nni = getBestNNIForBran((PhyloNode*) it->first, (PhyloNode*) it->second, NULL);
         if (nni.newloglh > curScore) {
             positiveNNIs.push_back(nni);
+        }
     }
-}
-
-    return positiveNNIs;
 }
 
 /**
@@ -3082,8 +3097,9 @@ void IQTree::printIntermediateTree(int brtype) {
 	// TODO Why is evalNNI() is called in this function?
 	//evalNNIs();
 	Branches innerBranches;
+    vector<NNIMove> positiveNNIs;
 	getInnerBranches(innerBranches);
-	vector<NNIMove> positiveNNIs = evaluateNNIs(innerBranches);
+    evaluateNNIs(innerBranches, positiveNNIs);
     save_all_trees = x;
 }
 

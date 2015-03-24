@@ -2282,10 +2282,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-fss") == 0) {
 				params.fixStableSplits = true;
-//				params.sprDist = 3;
+				params.sprDist = 3;
 //				params.five_plus_five = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-ppt") == 0) {
+                params.probPerturbSS = convert_double(argv[cnt]);
+            }
 			if (strcmp(argv[cnt], "-ff") == 0) {
 				params.five_plus_five = true;
 				continue;

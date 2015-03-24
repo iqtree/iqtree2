@@ -123,7 +123,7 @@ public:
 	*/
 	void buildMap(SplitGraph &sg, bool use_index = true);
 
-	int getMaxValue() const {
+	int getMaxValue() {
 		return maxValue;
 	}
 

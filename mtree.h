@@ -27,6 +27,7 @@
 #include <sstream>
 #include "hashsplitset.h"
 #include "splitset.h"
+//#include "candidateset.h"
 
 const char ROOT_NAME[] = "_root";
 
@@ -528,12 +529,24 @@ public:
     void convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes = NULL, Node *node = NULL, Node *dad = NULL);
 
     /**
-     * Initialize the hash stable SplitBranchMap which contain mapping from split to branch
+     * Initialize the hash stable splitBranchMap which contain mapping from split to branch
      * @param resp (internal) set of taxa below node
      * @param node the starting node, NULL to start from the root
      * @param dad dad of the node, used to direct the search
      */
     void initializeSplitMap(Split *resp = NULL, Node *node = NULL, Node *dad = NULL);
+
+    /**
+    *   Generate a split for each neighbor node
+    */
+    void buildNodeSplit(Split *resp = NULL, Node *node = NULL, Node *dad = NULL);
+
+    /**
+    *   Update the Split-Branch map with the new split defined by a branch
+    *   @param node1 one end of the branch
+    *   @param node2 the other end
+    */
+    //void updateSplitMap(Node* node1, Node* node2);
 
     /**
      * 		Generate a split defined by branch node1-node2
@@ -670,6 +683,11 @@ public:
     double len_scale;
 
     /**
+    *   Pointer to the global params
+    */
+    Params* params;
+
+    /**
             release the nemory.
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
@@ -678,13 +696,17 @@ public:
 
     void setExtendedFigChar();
 
-protected:
+    /** set pointer of params variable */
+    virtual void setParams(Params* params) {
+        this->params = params;
+    };
 
+protected:
     /**
      * 		Hash stable mapping a split into branch.
      * 		This data structure is generated when genSplitMap() is called.
      */
-    unordered_map<Split*, Branch> SplitBranchMap;
+    unordered_map<Split*, Branch> splitBranchMap;
 
     /**
             line number of the input file, used to output errors in input file

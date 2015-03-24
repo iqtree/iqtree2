@@ -202,7 +202,7 @@ typedef vector<string> StrVector;
 /**
         matrix of double number
  */
-#define matrix(T) vector<vector<T> >
+#define matrix(T) vector< vector<T> >
 
 /**
         matrix of double

@@ -131,6 +131,30 @@ typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 
 const int MAX_SPR_MOVES = 20;
 
+struct NNIMove {
+
+    // Two nodes representing the central branch
+    PhyloNode *node1, *node2;
+
+    // Roots of the two subtree that are swapped
+    NeighborVec::iterator node1Nei_it, node2Nei_it;
+
+    // log-likelihood of the tree after applying the NNI
+    double newloglh;
+
+    int swap_id;
+
+    // new branch lengths of 5 branches corresponding to the NNI
+    double newLen[5];
+
+    // pattern likelihoods
+    double *ptnlh;
+
+    bool operator<(const NNIMove & rhs) const {
+        return newloglh > rhs.newloglh;
+    }
+};
+
 /**
         an SPR move.
  */
@@ -184,34 +208,6 @@ struct SwapNNIParam {
     double *nni1_ptnlh;
     double *nni2_ptnlh;
 };
-
-struct NNIMove {
-    // Two nodes representing the central branch
-    PhyloNode *node1, *node2;
-    // Roots of the two subtree that are swapped
-    NeighborVec::iterator node1Nei_it, node2Nei_it;
-
-    // log-likelihood of the tree after applying the NNI
-    double newloglh;
-
-    int swap_id;
-
-    // old branch lengths of 5 branches before doing NNI
-    //double oldLen[5];
-
-    // new branch lengths of 5 branches corresponding to the NNI
-    double newLen[5];
-
-    // pattern likelihoods
-    double *ptnlh;
-
-    bool operator<(const NNIMove & rhs) const {
-        return newloglh > rhs.newloglh;
-        //return delta > rhs.delta;
-    }
-};
-
-
 
 struct LeafFreq {
     int leaf_id;
@@ -1063,11 +1059,20 @@ public:
     virtual void doNNI(NNIMove &move, bool clearLH = true);
 
     /**
+     * [DEPRECATED]
      * Randomly choose perform an NNI, out of the two defined by branch node1-node2.
      * This function also clear the corresponding partial likelihood vectors
+     *
      * @param branch on which a random NNI is done
      */
     void doOneRandomNNI(Branch branch);
+
+    /**
+    *   Get a random NNI from an internal branch
+    *   @param branch the internal branch
+    *   @return an NNIMove
+    */
+    NNIMove getRandomNNI(Branch& branch);
 
 
     /**
@@ -1373,11 +1378,6 @@ public:
 
 	double minStateFreq;
 
-    /*
-     * 		Store the all the parameters for the program
-     */
-    Params* params;
-
     /** sequence names that were removed */
 	StrVector removed_seqs;
 
@@ -1433,10 +1433,7 @@ public:
 
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
-    /** set pointer of params variable */
-	virtual void setParams(Params* params);
-
-	double getCurScore() {
+    double getCurScore() {
 		return curScore;
 	}
 

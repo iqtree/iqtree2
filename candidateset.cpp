@@ -191,17 +191,18 @@ bool CandidateSet::update(string tree, double score) {
 			topologies.erase(begin()->second.topology);
 			erase(begin());
 		}
-		CandidateSet::iterator it = insert(CandidateSet::value_type(score, candidate));
+		CandidateSet::iterator candidateTreeIT = insert(CandidateSet::value_type(score, candidate));
 		topologies[candidate.topology] = score;
-		if (params->fixStableSplits && size() >= params->numSupportTrees && computeStableSplit) {
-			int it_pos = distance(it, end());
-			// The new tree is one of the numSupportTrees best trees.
-			// Thus recompute supported splits
-			if (it_pos <= params->numSupportTrees) {
-				int nSupportedSplits = computeSplitSupport();
-				cout << ((double) nSupportedSplits / (aln->getNSeq() - 3)) * 100
-						<< " % of the splits have 100% support and can be fixed." << endl;
-			}
+
+		if (!candidateSplits.empty()) {
+			int it_pos = distance(candidateTreeIT, end());
+			CandidateSet::iterator oldCandidateTreeIT = candidateTreeIT--;
+			removeCandidateSplits(oldCandidateTreeIT->second.topology);
+			addCandidateSplits(candidateTreeIT->second.topology);
+
+			double percentSS = (double) getNumStableSplits() / (aln->getNSeq() - 3) * 100;
+
+			cout << percentSS << " % of the splits have 100% support and can be fixed." << endl;
 		}
 	}
 	assert(topologies.size() == size());
@@ -306,32 +307,31 @@ void CandidateSet::removeCandidateTree(string topology) {
 	assert(removed);
 }
 
-bool CandidateSet::isStableSplit(Split& sp) {
-	SplitIntMap::const_iterator it = candidateSplits.find(&sp);
-	if (it != candidateSplits.end() ) {
-		return (it->second == candidateSplits.getMaxValue());
-	}
-	return false;
-}
-
-int CandidateSet::computeSplitSupport() {
+int CandidateSet::buildTopSplits() {
 	candidateSplits.clear();
-	SplitGraph tmpSplits; // just created because convertSplits require it
+	// just created because convertSplits require it
+	SplitGraph tmpSplits;
 	MTreeSet boot_trees;
-	int numMaxSupport = 0;
 	vector<string> trees = getBestCandidateTrees(params->numSupportTrees);
 	assert(trees.size() > 1);
 	candidateSplits.setMaxValue(trees.size());
+
 	boot_trees.init(trees, aln->getSeqNames(), params->is_rooted);
 	boot_trees.convertSplits(aln->getSeqNames(), tmpSplits, candidateSplits, SW_COUNT, -1, false);
 
-	// count how many splits have 100% support
-	for (SplitIntMap::iterator it = allSplits.begin(); it != allSplits.end(); it++) {
+	int numStableSplit = getNumStableSplits();
+	return numStableSplit;
+}
+
+int CandidateSet::getNumStableSplits() {
+	if (candidateSplits.empty())
+		return 0;
+	int numMaxSupport = 0;
+	for (SplitIntMap::iterator it = candidateSplits.begin(); it != candidateSplits.end(); it++) {
 		if (it->second == candidateSplits.getMaxValue() && it->first->countTaxa() > 1) {
 			numMaxSupport++;
 		}
 	}
-	//cout << "Number of supported splits = " << numMaxSupport << endl;
 	return numMaxSupport;
 }
 

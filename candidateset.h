@@ -1,7 +1,7 @@
 /*
  * candidateset.h
  *
- *  Created on: Jun 1, 2014
+ *      Created on: Jun 1, 2014
  *      Author: Tung Nguyen
  */
 
@@ -190,10 +190,16 @@ public:
     void clearTopologies();
 
     /**
-     * Compute the split support from the current best trees
-     * @return number of splits with 100% support value
+     *  Create a SplitInMap of splits from the current best trees
+     *
+     *  @return number of splits with 100% support value
      */
-    int computeSplitSupport();
+    int buildTopSplits();
+
+    /**
+    *   Get number of stable splits
+    */
+    int getNumStableSplits();
 
     /**
      *  Update the set of stable split when a new tree is inserted
@@ -208,13 +214,6 @@ public:
      *  	newTree the new tree
      */
     void updateStableSplit(string oldTree, string newTree);
-
-    /**
-     * Check whether the
-     * @param sp the split to check, must have the same taxon set as the trees in CandidateSet.
-     * @return true if the \a supportedSplits contain \a sp, false otherwise.
-     */
-    bool isStableSplit(Split& sp);
 
     /**
      * Return a pointer to the \a CandidateTree that has topology equal to \a topology
@@ -285,7 +284,21 @@ public:
 	 */
 	void removeCandidateSplits(string treeString);
 
+public:
+    int getMaxSplitSupport() const {
+        return maxSplitSupport;
+    }
+
+    void setMaxSplitSupport(int maxSplitSupport) {
+        CandidateSet::maxSplitSupport = maxSplitSupport;
+    }
+
 private:
+/**
+    *  A split is considered stable if it is supported by
+    *  this number of best trees
+    */
+    int maxSplitSupport;
 
 	/**
 	 *  If true, the stable splits set will be computed every time update() is called
@@ -297,12 +310,6 @@ private:
      *  The number of current best trees is specified in params->numSupportTrees
      */
 	SplitIntMap candidateSplits;
-
-    /**
-     *  All splits collected for deriving the stable splits
-     */
-    SplitIntMap allSplits;
-
 
     /**
      *  Shared params pointing to the global params

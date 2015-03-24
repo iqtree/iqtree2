@@ -21,6 +21,7 @@
 #include <iostream>
 //#include <fstream>
 #include <iterator>
+#include <mtree.h>
 #include "splitgraph.h"
 using namespace std;
 
@@ -987,36 +988,10 @@ bool MTree::containsSplits(SplitGraph& splits) {
 }
 
 Split* MTree::getSplit(Node* node1, Node* node2) {
-	Split* sp = new Split(leafNum);
-	getTaxa(*sp, node1, node2);
-	if (sp->shouldInvert())
-		sp->invert();
-	return sp;
+    Neighbor* node12 = node1->findNeighbor(node2);
+    return node12->split;
 }
 
-void MTree::initializeSplitMap(Split *resp, Node *node, Node *dad) {
-	if (!node) node = root;
-	if (!resp) {
-		resp = new Split(leafNum);
-	}
-	bool has_child = false;
-	FOR_NEIGHBOR_IT(node, dad, it) {
-		Split *sp = new Split(leafNum);
-		initializeSplitMap(sp, (*it)->node, node);
-		*resp += *sp;
-        if (sp->shouldInvert())
-            sp->invert();
-		 /* ignore nodes with degree of 2 because such split will be added before */
-		if (node->degree() != 2) {
-			Branch curBranch((*it)->node, node);
-			SplitBranchMap.insert(make_pair(sp, curBranch));
-		}
-		has_child = true;
-	}
-	if (!has_child) {
-		resp->addTaxon(node->id);
-	}
-}
 
 void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *node, Node *dad) {
     if (!node) node = root;
@@ -2059,4 +2034,58 @@ void MTree::removeTaxa(StrVector &taxa_names) {
 		(*nit)->id = id;
 	leafNum = taxa.size();
 	initializeTree();
+}
+
+void MTree::buildNodeSplit(Split *resp, Node *node, Node *dad) {
+    if (!node) {
+        node = root;
+        // The neighbor that represents root
+        Neighbor* rootNei = root->neighbors[0]->node->findNeighbor(root);
+        if (rootNei->split == NULL) {
+            rootNei->split = new Split(leafNum);
+        } else {
+            delete rootNei->split;
+            rootNei->split = new Split(leafNum);
+        }
+        rootNei->split->addTaxon(root->id);
+    }
+    bool has_child = false;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+            if ((*it)->split == NULL) {
+                (*it)->split = new Split(leafNum);
+            } else {
+                delete (*it)->split;
+                (*it)->split = new Split(leafNum);
+            }
+            buildNodeSplit((*it)->split, (*it)->node, node);
+            *resp += *((*it)->split);
+            has_child = true;
+        }
+    if (!has_child) {
+        resp->addTaxon(node->id);
+    }
+}
+
+void MTree::initializeSplitMap(Split *resp, Node *node, Node *dad) {
+    if (!node) node = root;
+    if (!resp) {
+        resp = new Split(leafNum);
+    }
+    bool has_child = false;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+            Split *sp = new Split(leafNum);
+            initializeSplitMap(sp, (*it)->node, node);
+            *resp += *sp;
+            if (sp->shouldInvert())
+                sp->invert();
+            /* ignore nodes with degree of 2 because such split will be added before */
+            if (node->degree() != 2) {
+                Branch curBranch((*it)->node, node);
+                splitBranchMap.insert(make_pair(sp, curBranch));
+            }
+            has_child = true;
+        }
+    if (!has_child) {
+        resp->addTaxon(node->id);
+    }
 }

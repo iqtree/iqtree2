@@ -309,6 +309,16 @@ public:
     double optimizeNNI(int &nni_count, int &nni_steps);
 
     /**
+     * Get branches for doing NNI.
+     * @param nniBranches [OUT]
+     * @param nonNNIBranches [OUT]
+     * @param dad for navigation
+     * @param node for navigation
+     */
+    void getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, Node *dad = NULL, Node *node = NULL);
+
+
+    /**
      * 		Do fastNNI using PLL
      *
      *      @param nniCount (OUT) number of NNIs applied
@@ -338,10 +348,10 @@ public:
     /**
      * @brief Evaluate all NNIs on branch defined by \a branches
      *
-     * @param[in] branches the branches on which NNIs will be evaluated
-     * @return all positive NNIs found
+     * @param nniBranches [IN] branches the branches on which NNIs will be evaluated
+     * @param positiveNNI [OUT]
      */
-    vector<NNIMove> evaluateNNIs(Branches branches);
+    void evaluateNNIs(Branches &nniBranches, vector<NNIMove> &positiveNNIs);
 
     /**
             search all positive NNI move on the current tree and save them
@@ -366,12 +376,11 @@ public:
 
 
     /**
-     * @brief get a list of compatible NNIs from a list of positive NNIs
-     * @param positiveNNIs
-     * 		List of positive NNIs
-     * 	@return a list of compatible positive NNIs
+     *  @brief get a list of compatible NNIs from a list of positive NNIs
+     *  @param [IN] positiveNNIs list of positive NNIs
+     *  @param [OUT] compatibleNNIs list of compatible positive NNIs
      */
-    vector<NNIMove> getCompatibleNNIs(vector<NNIMove> positiveNNIs);
+    void getCompatibleNNIs(vector<NNIMove> &positiveNNIs, vector<NNIMove> &compatibleNNIs);
 
     /**
             add a NNI move to the list of possible NNI moves;
@@ -537,7 +546,7 @@ protected:
    	/**
    	 *  Splits that are in the tabu list
    	 */
-   	SplitGraph tabuSplits;
+   	SplitIntMap tabuSplits;
 
     /**
      *  Current IQPNNI iteration number
