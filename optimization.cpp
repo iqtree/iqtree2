@@ -327,6 +327,11 @@ double Optimization::minimizeOneDimen(double xmin, double xguess, double xmax, d
 	//	optx = brent_opt(xmin, xguess, xmax, tolerance, fx, f2x, fa, fb, fc);
 	//} else
 	optx = brent_opt(ax, bx, cx, tolerance, fx, f2x, fa, fb, fc);
+    if (*fx > fb) // if worse, return initial value 
+    {
+        *fx = computeFunction(bx);
+        return bx;
+    }
 
 	return optx; /* return optimal x */
 }

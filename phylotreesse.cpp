@@ -816,17 +816,17 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 			    double theta_max = 0.0;
 	    		for (i = 0; i < block; i++) {
 	    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
-	    			theta_max = max(theta_max, fabs(theta[i]));
+//	    			theta_max = max(theta_max, fabs(theta[i]));
 	    		}
-	    		if (theta_max <= 0) {
-	    			// numerical underflow, recompute theta
-	    			for (i = 0; i < block; i++) {
-	    				partial_lh_node[i] *= SCALING_THRESHOLD_INVER;
-		    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
-	    			}
-	    			node_branch->lh_scale_factor += LOG_SCALING_THRESHOLD*ptn_freq[ptn];
-	    			node_branch->scale_num[ptn] += 1;
-	    		}
+//	    		if (theta_max <= 0) {
+//	    			// numerical underflow, recompute theta
+//	    			for (i = 0; i < block; i++) {
+//	    				partial_lh_node[i] *= SCALING_THRESHOLD_INVER;
+//		    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
+//	    			}
+//	    			node_branch->lh_scale_factor += LOG_SCALING_THRESHOLD*ptn_freq[ptn];
+//	    			node_branch->scale_num[ptn] += 1;
+//	    		}
 			}
 	    }
 		theta_computed = true;

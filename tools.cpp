@@ -704,6 +704,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_set = NULL;
     params.ratehet_set = NULL;
     params.model_def_file = NULL;
+    params.model_test_again = false;
     params.optimize_mixmodel_weight = false;
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
@@ -1635,6 +1636,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mdef <model_definition_file>";
 				params.model_def_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mredo") == 0) {
+				params.model_test_again = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-mwopt") == 0) {
