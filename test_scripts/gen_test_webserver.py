@@ -57,8 +57,9 @@ def create_test_cmds(runs, iqtree_binary, filename):
         run_id = run[1] + "_" + str((run[0]))
         seed = run[2]
         args = run[4]
-        cmd = run_id + ' ' + iqtree_binary + ' ' + args + ' -seed ' + seed + ' -pre ' + run_id
-        print >> outfile, cmd
+        if not " -b " in args:
+            cmd = run_id + ' ' + iqtree_binary + ' ' + args + ' -seed ' + seed + ' -pre ' + run_id
+            print >> outfile, cmd
     outfile.close()
                                         
 if __name__ == '__main__':

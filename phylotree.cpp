@@ -1250,7 +1250,17 @@ void PhyloTree::initializeAllPartialLh() {
         ptn_freq = aligned_alloc<double>(mem_size);
     if (!ptn_invar)
         ptn_invar = aligned_alloc<double>(mem_size);
+    bool benchmark_mem = (!central_partial_lh && verbose_mode >= VB_MED);
+    if (benchmark_mem) {
+    	cout << "Measuring run time for allocating " << getMemoryRequired()*sizeof(double) << " bytes RAM" << endl;
+    }
+    double cpu_start_time = getCPUTime();
+    double wall_start_time = getRealTime();
     initializeAllPartialLh(index, indexlh);
+    if (benchmark_mem) {
+    	cout << "CPU time for initializeAllPartialLh: " << getCPUTime() - cpu_start_time << " sec" << endl;
+    	cout << "Wall-clock time for initializeAllPartialLh: " << getRealTime() - wall_start_time << " sec" << endl;
+    }
     assert(index == (nodeNum - 1) * 2);
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
     	assert(indexlh == (nodeNum-1)*2-leafNum);
