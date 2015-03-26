@@ -3,6 +3,11 @@
 
 #include "modelgtr.h"
 
+/* TODO: Make it work with N arbitrary, this should not be too hard */
+/*       (phylotreesse.cpp has to be changed to). */
+/* TODO: Implement different DNA subsitution models. */
+
+
 class ModelPoMo : public ModelGTR
 {
  public:
@@ -38,7 +43,7 @@ class ModelPoMo : public ModelGTR
     /**
      * Initialize rate_matrix and state_freq for boundary mutation model.
      */
-    void initMoranWithBoundaryMutation();
+    void updatePoMoStatesAndRates();
 
 	/**
      *  @return Number of free parameters.
@@ -175,7 +180,7 @@ class ModelPoMo : public ModelGTR
      * sum up to one.  This is done, so that they can be compared to
      * the frequencies of the GTR model.
      */
-    void setFreqFixedStates ();
+    void updateFreqFixedState ();
 
 };
 

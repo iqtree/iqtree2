@@ -283,8 +283,8 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
             readPhylip(filename, sequence_type);
 	} else if (intype == IN_COUNTS) {
 	  cout << "Counts format (PoMo) detected" << endl;
-	  // TODO: set this to Params.pomo_pop_size.  How can I access
-	  // this value?
+	  // TODO: PoMo; set this to Params.pomo_pop_size.  How can I
+	  // access this value?
 	  virtual_pop_size = 10;
 	  readCountsFormat(filename);
         } else {

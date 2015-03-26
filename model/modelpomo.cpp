@@ -7,7 +7,6 @@ ModelPoMo::ModelPoMo(PhyloTree *tree,
                      bool count_rate)
     : ModelGTR(tree, count_rate) {
 	init("PoMo", "", FREQ_USER_DEFINED, "");
-    // TODO: Implement different DNA subsitution models.
 }
 
 void ModelPoMo::init(const char *model_name,
@@ -22,7 +21,7 @@ void ModelPoMo::init(const char *model_name,
 	int i;
 	for (i = 0; i < 6; i++) mutation_prob[i] = 1e-4;
 	for (i = 0; i < 4; i++) freq_fixed_states[i] = 0.25; /**< Should sum up to 1.0 */
-	initMoranWithBoundaryMutation();
+	updatePoMoStatesAndRates();
 	ModelGTR::init(freq);
 }
 
@@ -56,14 +55,14 @@ double ModelPoMo::computeNormConst() {
 	return 1.0/(norm_fixed + norm_polymorphic);
 }
 
-void ModelPoMo::setFreqFixedStates () {
+void ModelPoMo::updateFreqFixedState () {
     double f_sum = freq_fixed_states[0] +
         freq_fixed_states[1] + freq_fixed_states[0];
     assert(f_sum <= 1.0);
     freq_fixed_states[3] = 1.0 - f_sum;
 }
 
-void ModelPoMo::computeStateFreq() {
+void ModelPoMo::computeStateFreq () {
 	double norm = computeNormConst();
 	int state;
 	int N = phylo_tree->aln->virtual_pop_size;
@@ -71,7 +70,7 @@ void ModelPoMo::computeStateFreq() {
     // if (verbose_mode >= VB_MAX) {
     //     cout << "Normalization constant: " << norm << endl;
     // }
-    
+
 	for (state = 0; state < num_states; state++)
 		if (isFixed(state))
 			state_freq[state] = freq_fixed_states[state]*norm;
@@ -90,11 +89,11 @@ void ModelPoMo::computeStateFreq() {
 	// assert(fabs(sum-1.0) < 0.000001);
 }
 
-void ModelPoMo::initMoranWithBoundaryMutation() {
+void ModelPoMo::updatePoMoStatesAndRates () {
 	int state1, state2;
 	int N = phylo_tree->aln->virtual_pop_size;
 
-    setFreqFixedStates();
+    updateFreqFixedState();
 	computeStateFreq();
 
 	// Loop over rows (transition starting from state1).
@@ -115,8 +114,7 @@ void ModelPoMo::initMoranWithBoundaryMutation() {
     // FIXME: This will not work.  The class ModelGTR expects rate G-T
     // to be one (from docstring in modelgtr.h).  I suppose that this
     // is simply the last element of rates in the usual case.  Here,
-    // the last element does not correspond to G-T.  However, we fix
-    // the stationary state pi^T to be 1.0.
+    // the last element does not correspond to G-T.
 	for (state1 = 0; state1 < num_states; state1++) {
 		for (state2 = state1+1; state2 < num_states; state2++) {
 			rates[count++] =
@@ -124,8 +122,8 @@ void ModelPoMo::initMoranWithBoundaryMutation() {
         }
 	}
 
-    // Try to fix it: Normalize rates.
-    // double rate_norm = rates[count-1];
+    // // Try to fix it: Normalize rates.
+    // double rate_norm = rates[4];
     // count = 0;
 	// for (state1 = 0; state1 < num_states; state1++) {
 	// 	for (state2 = state1+1; state2 < num_states; state2++) {
@@ -340,7 +338,8 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 			// e.g.: 3A7C -> 2A8C or 10A -> 9A1C
 			if (nt2 == -1)
 				// e.g. 10A -> 9A1C
-				return mutCoeff(nt1,nt4) * state_freq[nt4];
+				// return mutCoeff(nt1,nt4) * state_freq[nt4];
+				return mutCoeff(nt1,nt4) * freq_fixed_states[nt4];
 			else
 				// e.g. 9A1C -> 8A2C
 				return double(i1*(N-i1)) / double(N*N);
@@ -348,7 +347,8 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 			return 0.0;
 	} else if (nt1 == nt4 && nt2 == -1 && i2 == 1)  {
 		// e.g.: 10G -> 1A9G
-		return mutCoeff(nt1,nt3) * state_freq[nt3];
+		//return mutCoeff(nt1,nt3) * state_freq[nt3];
+		return mutCoeff(nt1,nt3) * freq_fixed_states[nt3];
 	} else if (nt2 == nt3  && i1 == 1 && nt4 == -1) {
 		// E.g.: 1A9G -> 10G
 		return double(i1*(N-i1)) / double(N*N);
@@ -359,7 +359,10 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 
 int ModelPoMo::getNDim() {
     // FIXME: Maybe change this to 8, if we fix the mutation rates
-    // such that mu_GT = 1.0.
+    // such that mu_GT = 1.0.  However, this might not be allowed
+    // here, because the mu in the GTR model are subsitution rates and
+    // confounded with N.  Here however, the mu are mutation
+    // probabilities (??).
 	return 9;
 }
 
@@ -377,8 +380,8 @@ void ModelPoMo::setBounds(double *lower_bound,
 	for (i = 4; i <= 9; i++) {
 		// lower_bound[i] = MIN_RATE / 100.0;
 		// lower_bound[i] = MAX_RATE / 100.0;
-		lower_bound[i] = 1e-6;
-		lower_bound[i] = 1e-3;
+		lower_bound[i] = 1e-8;
+		upper_bound[i] = 10.0;
 		bound_check[i] = false;
 	}
 }
@@ -401,7 +404,7 @@ void ModelPoMo::getVariables(double *variables) {
 	for (i = 4; i <= 9; i++) {
 		mutation_prob[i-4] = variables[i];
 	}
-	initMoranWithBoundaryMutation();
+	updatePoMoStatesAndRates();
 }
 
 void ModelPoMo::writeInfo(ostream &out) {
@@ -411,21 +414,27 @@ void ModelPoMo::writeInfo(ostream &out) {
     state.copyfmt(out);
 
     out << setprecision(5);
-    
-	out << "Frequency of fixed states: ";
+    out << endl;
+
+    out << "==========================" << endl;
+    out << "Frequency of fixed states: " << endl;;
 	for (i = 0; i < 4; i++)
 		out << freq_fixed_states[i] << " ";
-	out << endl;
+	out << endl << endl;
 
-	out << "Mutation rates: ";
+    out << "===============" << endl;
+    out << "Mutation rates: " << endl;
 	for (i = 0; i < 6; i++)
 		out << mutation_prob[i] << " ";
-	out << endl;
+	out << endl << endl;;
 
-    out << "State frequency vector state_freq: ";
-    for (state1 = 0; state1 < num_states; state1++)
+    out << "==================================" << endl;
+    out << "State frequency vector state_freq: " << endl;
+    for (state1 = 0; state1 < num_states; state1++) {
+        if (state1 == 4 || (state1-4)%9 == 0) out << endl;
         out << state_freq[state1] << " ";
-    out << endl;
+    }
+    out << endl << endl;
 
     // out << "Rates (upper triangular) without diagonal: ";
     // i = 0;
