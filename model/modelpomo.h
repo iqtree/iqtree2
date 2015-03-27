@@ -64,6 +64,15 @@ class ModelPoMo : public ModelGTR
 	virtual void writeInfo(ostream &out);
 
  protected:
+
+ 	/**
+ 		compute the rate matrix and then normalize it such that the total number of substitutions is 1.
+ 		@param rate_matrix (IN/OUT) As input, it contains rate parameters. On output it is filled with rate matrix entries
+ 		@param state_freq state frequencies
+ 		@param num_state number of states
+ 	*/
+ 	virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
+
 	/**
      * This function is served for the multi-dimension
      * optimization. It should pack the model parameters into a vector

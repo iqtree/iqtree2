@@ -17,12 +17,14 @@ void ModelPoMo::init(const char *model_name,
 	mutation_prob = new double[16];
 	freq_fixed_states = new double[4];
 	rate_matrix = new double[num_states*num_states];
+	normalize_matrix = false;
 	// TODO:  Reoptimize.
 	int i;
-	for (i = 0; i < 6; i++) mutation_prob[i] = 1e-4;
+	for (i = 0; i < 6; i++) mutation_prob[i] = 1e-2;
 	for (i = 0; i < 4; i++) freq_fixed_states[i] = 0.25; /**< Should sum up to 1.0 */
 	updatePoMoStatesAndRates();
-	ModelGTR::init(freq);
+//	ModelGTR::init(freq);
+	ModelGTR::init(FREQ_USER_DEFINED);
 }
 
 ModelPoMo::~ModelPoMo() {
@@ -363,7 +365,7 @@ int ModelPoMo::getNDim() {
     // here, because the mu in the GTR model are subsitution rates and
     // confounded with N.  Here however, the mu are mutation
     // probabilities (??).
-	return 9;
+	return 1;
 }
 
 void ModelPoMo::setBounds(double *lower_bound,
@@ -371,38 +373,46 @@ void ModelPoMo::setBounds(double *lower_bound,
                           bool *bound_check) {
 	int i;
     // Frequencies of fixed states.
-	for (i = 1; i <= 3; i++) {
-		lower_bound[i] = 0.01;
-		upper_bound[i] = 1.0;
-		bound_check[i] = false;
-	}
+//	for (i = 1; i <= 3; i++) {
+//		lower_bound[i] = 0.01;
+//		upper_bound[i] = 1.0;
+//		bound_check[i] = false;
+//	}
     // Mutation rates.
-	for (i = 4; i <= 9; i++) {
-		// lower_bound[i] = MIN_RATE / 100.0;
-		// lower_bound[i] = MAX_RATE / 100.0;
-		lower_bound[i] = 1e-8;
-		upper_bound[i] = 10.0;
-		bound_check[i] = false;
-	}
+//	for (i = 4; i <= 9; i++) {
+//		lower_bound[i] = 1e-8;
+//		upper_bound[i] = 10.0;
+//		bound_check[i] = false;
+//	}
+	// For JC model
+	lower_bound[1] = 1e-5;
+	upper_bound[1] = 1.0;
+	bound_check[1] = false;
 }
 
 void ModelPoMo::setVariables(double *variables) {
 	int i;
-	for (i = 1; i <= 3; i++) {
-		variables[i] = freq_fixed_states[i-1];
-	}
-	for (i = 4; i <= 9; i++) {
-		variables[i] = mutation_prob[i-4];
-	}
+//	for (i = 1; i <= 3; i++) {
+//		variables[i] = freq_fixed_states[i-1];
+//	}
+//	for (i = 4; i <= 9; i++) {
+//		variables[i] = mutation_prob[i-4];
+//	}
+	// For JC model
+	variables[1] = mutation_prob[0];
 }
 
 void ModelPoMo::getVariables(double *variables) {
 	int i;
-	for (i = 1; i <= 3; i++) {
-		freq_fixed_states[i-1] = variables[i];
-	}
-	for (i = 4; i <= 9; i++) {
-		mutation_prob[i-4] = variables[i];
+//	for (i = 1; i <= 3; i++) {
+//		freq_fixed_states[i-1] = variables[i];
+//	}
+//	for (i = 4; i <= 9; i++) {
+//		mutation_prob[i-4] = variables[i];
+//	}
+	// For JC model
+	for (i = 0; i <= 5; i++) {
+		mutation_prob[i] = variables[1];
 	}
 	updatePoMoStatesAndRates();
 }
@@ -445,12 +455,16 @@ void ModelPoMo::writeInfo(ostream &out) {
     //     out << endl;
     // }
 
-    // out << "PoMo rate matrix:" << endl;
-    // for (state1 = 0; state1 < num_states; state1++) {
-    //     for (state2 = 0; state2 < num_states; state2++)
-    //         out << rate_matrix[state1*num_states+state2] << "\t";
-    //     out << endl;
-    // }
+     out << "PoMo rate matrix:" << endl;
+     for (state1 = 0; state1 < num_states; state1++) {
+         for (state2 = 0; state2 < num_states; state2++)
+             out << rate_matrix[state1*num_states+state2] << "\t";
+         out << endl;
+     }
 
     out.copyfmt(state);
+}
+
+void ModelPoMo::computeRateMatrix(double **rate_matrix, double *state_freq, int num_state) {
+	// TODO
 }
