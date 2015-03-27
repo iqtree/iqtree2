@@ -137,24 +137,24 @@ void ModelGTR::writeInfo(ostream &out) {
 		out << "  T: " << state_freq[3];
 		out << endl;
 	}
-	if (verbose_mode >= VB_MAX) {
-		int i, j;
-		out.precision(6);
-		out << "eigenvalues: " << endl;
-		for (i = 0; i < num_states; i++) out << " " << eigenvalues[i];
-		out << endl << "eigenvectors: " << endl;
-		for (i = 0; i < num_states; i++)  {
-			for (j = 0; j < num_states; j++)
-				out << " " << eigenvectors[i*num_states+j];
-			out << endl;
-		}
-		out << endl << "inv_eigenvectors: " << endl;
-		for (i = 0; i < num_states; i++)  {
-			for (j = 0; j < num_states; j++)
-				out << " " << inv_eigenvectors[i*num_states+j];
-			out << endl;
-		}
-	}
+//	if (verbose_mode >= VB_DEBUG) {
+//		int i, j;
+//		out.precision(6);
+//		out << "eigenvalues: " << endl;
+//		for (i = 0; i < num_states; i++) out << " " << eigenvalues[i];
+//		out << endl << "eigenvectors: " << endl;
+//		for (i = 0; i < num_states; i++)  {
+//			for (j = 0; j < num_states; j++)
+//				out << " " << eigenvectors[i*num_states+j];
+//			out << endl;
+//		}
+//		out << endl << "inv_eigenvectors: " << endl;
+//		for (i = 0; i < num_states; i++)  {
+//			for (j = 0; j < num_states; j++)
+//				out << " " << inv_eigenvectors[i*num_states+j];
+//			out << endl;
+//		}
+//	}
 	//out.unsetf(ios::fixed);
 }
 

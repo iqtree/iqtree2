@@ -1068,6 +1068,9 @@ struct Params {
     /** model defition file */
     char *model_def_file;
 
+    /** true to redo model testing even if .model file exists */
+    bool model_test_again;
+
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
 

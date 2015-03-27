@@ -1250,7 +1250,17 @@ void PhyloTree::initializeAllPartialLh() {
         ptn_freq = aligned_alloc<double>(mem_size);
     if (!ptn_invar)
         ptn_invar = aligned_alloc<double>(mem_size);
+    bool benchmark_mem = (!central_partial_lh && verbose_mode >= VB_MED);
+    if (benchmark_mem) {
+    	cout << "Measuring run time for allocating " << getMemoryRequired()*sizeof(double) << " bytes RAM" << endl;
+    }
+    double cpu_start_time = getCPUTime();
+    double wall_start_time = getRealTime();
     initializeAllPartialLh(index, indexlh);
+    if (benchmark_mem) {
+    	cout << "CPU time for initializeAllPartialLh: " << getCPUTime() - cpu_start_time << " sec" << endl;
+    	cout << "Wall-clock time for initializeAllPartialLh: " << getRealTime() - wall_start_time << " sec" << endl;
+    }
     assert(index == (nodeNum - 1) * 2);
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
     	assert(indexlh == (nodeNum-1)*2-leafNum);
@@ -2916,6 +2926,9 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     if (optimize_by_newton) {
     	// Newton-Raphson method
     	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
+        if (verbose_mode >= VB_DEBUG) {
+            cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
+        }
     	if (optx > MAX_BRANCH_LEN*0.95) {
     		// newton raphson diverged, reset
     	    double opt_lh = computeLikelihoodFromBuffer();
@@ -2929,6 +2942,9 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
 	}	else {
         // Brent method
         optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
+        if (verbose_mode >= VB_DEBUG) {
+            cout << "minimizeBrent logl: " << -negative_lh << endl;
+        }
 	}
 
     current_it->length = optx;
@@ -3000,9 +3016,9 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //    	string string_brlen = getTreeString();
     	DoubleVector lenvec;
     	saveBranchLengths(lenvec);
-        if (verbose_mode >= VB_DEBUG) {
-            printTree(cout, WT_BR_LEN+WT_NEWLINE);
-        }
+//        if (verbose_mode >= VB_DEBUG) {
+//            printTree(cout, WT_BR_LEN+WT_NEWLINE);
+//        }
         optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
         double new_tree_lh = computeLikelihoodFromBuffer();
 
@@ -3011,11 +3027,17 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             cout << new_tree_lh << endl;
         }
 
-        if (verbose_mode >= VB_DEBUG) {
-            printTree(cout, WT_BR_LEN+WT_NEWLINE);
-        }
-        assert(new_tree_lh >= tree_lh - 10.0); // make sure that the new tree likelihood never decreases too much
+//        if (verbose_mode >= VB_DEBUG) {
+//            printTree(cout, WT_BR_LEN+WT_NEWLINE);
+//        }
 
+//        if (new_tree_lh < tree_lh - 10.0) { // make sure that the new tree likelihood never decreases too much
+//            cout << "ERROR: Branch length optimization failed as log-likelihood decreases too much: " << tree_lh << "  --> " << new_tree_lh << endl;
+//            getModel()->writeInfo(cout);
+//            getRate()->writeInfo(cout);
+//            assert(new_tree_lh >= tree_lh - 10.0);
+//        }
+        
         if (new_tree_lh < tree_lh) {
         	// IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
         	if (verbose_mode >= VB_MED)
