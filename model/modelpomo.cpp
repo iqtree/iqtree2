@@ -14,16 +14,14 @@ void ModelPoMo::init(const char *model_name,
                      StateFreqType freq,
                      string freq_params) {
 	this->name = string(model_name) + " " + convertIntToString(num_states) + " states";
-	mutation_prob = new double[16];
+	mutation_prob = new double[6];
 	freq_fixed_states = new double[4];
 	rate_matrix = new double[num_states*num_states];
-	normalize_matrix = false;
 	// TODO:  Reoptimize.
 	int i;
-	for (i = 0; i < 6; i++) mutation_prob[i] = 1e-2;
+	for (i = 0; i < 6; i++) mutation_prob[i] = 1e-4;
 	for (i = 0; i < 4; i++) freq_fixed_states[i] = 0.25; /**< Should sum up to 1.0 */
 	updatePoMoStatesAndRates();
-//	ModelGTR::init(freq);
 	ModelGTR::init(FREQ_USER_DEFINED);
 }
 
@@ -59,7 +57,10 @@ double ModelPoMo::computeNormConst() {
 
 void ModelPoMo::updateFreqFixedState () {
     double f_sum = freq_fixed_states[0] +
-        freq_fixed_states[1] + freq_fixed_states[0];
+        freq_fixed_states[1] + freq_fixed_states[2];
+    // TODO: Make sure that this assertion is met and that IQ-Tree is
+    // not unstable.  Probably the lh diverges and this assertion is
+    // not met sometimes?
     assert(f_sum <= 1.0);
     freq_fixed_states[3] = 1.0 - f_sum;
 }
@@ -110,19 +111,26 @@ void ModelPoMo::updatePoMoStatesAndRates () {
 			}
 		rate_matrix[state1*num_states+state1] = -(row_sum);
 	}
-
+    std::cout << std::setprecision(7)
+              << "DEBUG: Rate Matrix calculated; mu=" << mutation_prob[0] << std::endl
+              << "PIs:" << freq_fixed_states[0] << "\t"
+              << freq_fixed_states[1] << "\t"
+              << freq_fixed_states[2] << "\t"
+              << freq_fixed_states[3] << std::endl;
 	int count = 0;
 
-    // FIXME: This will not work.  The class ModelGTR expects rate G-T
-    // to be one (from docstring in modelgtr.h).  I suppose that this
-    // is simply the last element of rates in the usual case.  Here,
-    // the last element does not correspond to G-T.
-	for (state1 = 0; state1 < num_states; state1++) {
-		for (state2 = state1+1; state2 < num_states; state2++) {
-			rates[count++] =
-                rate_matrix[state1*num_states+state2] / state_freq[state2];
-        }
-	}
+    // Commented out for now, because PoMo has its own function to
+    // compute the rate matrix.
+    // // FIXME: This will not work.  The class ModelGTR expects rate G-T
+    // // to be one (from docstring in modelgtr.h).  I suppose that this
+    // // is simply the last element of rates in the usual case.  Here,
+    // // the last element does not correspond to G-T.
+	// for (state1 = 0; state1 < num_states; state1++) {
+	// 	for (state2 = state1+1; state2 < num_states; state2++) {
+	// 		rates[count++] =
+    //             rate_matrix[state1*num_states+state2] / state_freq[state2];
+    //     }
+	// }
 
     // // Try to fix it: Normalize rates.
     // double rate_norm = rates[4];
@@ -365,7 +373,7 @@ int ModelPoMo::getNDim() {
     // here, because the mu in the GTR model are subsitution rates and
     // confounded with N.  Here however, the mu are mutation
     // probabilities (??).
-	return 1;
+	return 4;
 }
 
 void ModelPoMo::setBounds(double *lower_bound,
@@ -373,11 +381,11 @@ void ModelPoMo::setBounds(double *lower_bound,
                           bool *bound_check) {
 	int i;
     // Frequencies of fixed states.
-//	for (i = 1; i <= 3; i++) {
-//		lower_bound[i] = 0.01;
-//		upper_bound[i] = 1.0;
-//		bound_check[i] = false;
-//	}
+	for (i = 1; i <= 3; i++) {
+		lower_bound[i] = 0.2;
+		upper_bound[i] = 0.33;
+		bound_check[i] = false;
+	}
     // Mutation rates.
 //	for (i = 4; i <= 9; i++) {
 //		lower_bound[i] = 1e-8;
@@ -385,34 +393,34 @@ void ModelPoMo::setBounds(double *lower_bound,
 //		bound_check[i] = false;
 //	}
 	// For JC model
-	lower_bound[1] = 1e-5;
-	upper_bound[1] = 1.0;
-	bound_check[1] = false;
+	lower_bound[4] = 1e-5;
+	upper_bound[4] = 1e-3;
+	bound_check[4] = false;
 }
 
 void ModelPoMo::setVariables(double *variables) {
 	int i;
-//	for (i = 1; i <= 3; i++) {
-//		variables[i] = freq_fixed_states[i-1];
-//	}
+	for (i = 1; i <= 3; i++) {
+		variables[i] = freq_fixed_states[i-1];
+	}
 //	for (i = 4; i <= 9; i++) {
 //		variables[i] = mutation_prob[i-4];
 //	}
 	// For JC model
-	variables[1] = mutation_prob[0];
+	variables[4] = mutation_prob[0];
 }
 
 void ModelPoMo::getVariables(double *variables) {
 	int i;
-//	for (i = 1; i <= 3; i++) {
-//		freq_fixed_states[i-1] = variables[i];
-//	}
+	for (i = 1; i <= 3; i++) {
+		freq_fixed_states[i-1] = variables[i];
+	}
 //	for (i = 4; i <= 9; i++) {
 //		mutation_prob[i-4] = variables[i];
 //	}
 	// For JC model
-	for (i = 0; i <= 5; i++) {
-		mutation_prob[i] = variables[1];
+	for (i = 4; i <= 9; i++) {
+		mutation_prob[i-4] = variables[4];
 	}
 	updatePoMoStatesAndRates();
 }
@@ -423,7 +431,7 @@ void ModelPoMo::writeInfo(ostream &out) {
     ios  state(NULL);
     state.copyfmt(out);
 
-    out << setprecision(5);
+    out << setprecision(6);
     out << endl;
 
     out << "==========================" << endl;
@@ -455,16 +463,37 @@ void ModelPoMo::writeInfo(ostream &out) {
     //     out << endl;
     // }
 
-     out << "PoMo rate matrix:" << endl;
-     for (state1 = 0; state1 < num_states; state1++) {
-         for (state2 = 0; state2 < num_states; state2++)
-             out << rate_matrix[state1*num_states+state2] << "\t";
-         out << endl;
-     }
+     // out << "PoMo rate matrix:" << endl;
+     // for (state1 = 0; state1 < num_states; state1++) {
+     //     for (state2 = 0; state2 < num_states; state2++)
+     //         out << rate_matrix[state1*num_states+state2] << "\t";
+     //     out << endl;
+     // }
 
     out.copyfmt(state);
 }
 
-void ModelPoMo::computeRateMatrix(double **rate_matrix, double *state_freq, int num_state) {
-	// TODO
+void ModelPoMo::computeRateMatrix(double **r_matrix, double *s_freqs, int n_states) {
+    double sum = 0.0;
+    // Normalize the rate matrix such that on average one mutation
+    // event happens per delta_t = 1.0.
+    for (int i = 0; i < 4; i++) {
+        sum -= s_freqs[i]*rate_matrix[i*n_states + i];
+    }
+
+    for (int i = 0; i < n_states; i++) {
+        for (int j = 0; j < n_states; j++) {
+            r_matrix[i][j] = rate_matrix[i*n_states+j] / sum;
+        }
+    }
+}
+
+double ModelPoMo::targetFunk(double x[]) {
+    // Define PoMo targetFunkt because state_freq might be very low.
+	getVariables(x);
+	// if (state_freq[num_states-1] < 1e-4) return 1.0e+12;
+	decomposeRateMatrix();
+	assert(phylo_tree);
+	phylo_tree->clearAllPartialLH();
+	return -phylo_tree->computeLikelihood();
 }

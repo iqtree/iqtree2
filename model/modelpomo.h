@@ -63,6 +63,13 @@ class ModelPoMo : public ModelGTR
      */
 	virtual void writeInfo(ostream &out);
 
+    /**
+     *  the target function which needs to be optimized
+     *  @param x the input vector x
+     *	@return the function value at x
+	*/
+	virtual double targetFunk(double x[]);
+
  protected:
 
  	/**
