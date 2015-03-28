@@ -20,7 +20,8 @@ void ModelPoMo::init(const char *model_name,
 	// TODO:  Reoptimize.
 	int i;
 	for (i = 0; i < 6; i++) mutation_prob[i] = 1e-4;
-	for (i = 0; i < 4; i++) freq_fixed_states[i] = 0.25; /**< Should sum up to 1.0 */
+	for (i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
+	// for (i = 0; i < 4; i++) freq_fixed_states[i] = 0.25; /**< Should sum up to 1.0 */
 	updatePoMoStatesAndRates();
 	ModelGTR::init(FREQ_USER_DEFINED);
 }
@@ -39,12 +40,12 @@ double ModelPoMo::computeNormConst() {
 		harmonic += 1.0/(double)i;
 
 	double norm_fixed = 0.0, norm_polymorphic = 0.0;
-    // Tue Mar 17 14:29:37 CET 2015; Set the sum over the fixed
-    // frequencies to 1.0 so that they can be compared with the
-    // frequencies from the GTR model.
-	// for (i = 0; i < 4; i++)
-	// 	norm_fixed += freq_fixed_states[i];
-    norm_fixed = 1.0;
+    // // Tue Mar 17 14:29:37 CET 2015; Set the sum over the fixed
+    // // frequencies to 1.0 so that they can be compared with the
+    // // frequencies from the GTR model.
+    // norm_fixed = 1.0;
+	for (i = 0; i < 4; i++)
+		norm_fixed += freq_fixed_states[i];
 	for (i = 0; i < 4; i++) {
 		for (j = 0; j < 4; j++)
 			if (i != j)
@@ -56,6 +57,9 @@ double ModelPoMo::computeNormConst() {
 }
 
 void ModelPoMo::updateFreqFixedState () {
+    // Sat Mar 28 22:10:49 CET 2015: This function is not needed, when
+    // the frequencies of the fixed states do not sum up to 1.0.  This
+    // might be better, because of numerical instabilities.
     double f_sum = freq_fixed_states[0] +
         freq_fixed_states[1] + freq_fixed_states[2];
     // TODO: Make sure that this assertion is met and that IQ-Tree is
@@ -88,7 +92,7 @@ void ModelPoMo::computeStateFreq () {
 	// double sum = 0.0;
 	// for (state = 0; state < num_states; state++)
 	// 	sum += state_freq[state];
-    // XXX: Use predefined epsilon?
+    // // XXX: Use predefined epsilon?
 	// assert(fabs(sum-1.0) < 0.000001);
 }
 
@@ -96,7 +100,8 @@ void ModelPoMo::updatePoMoStatesAndRates () {
 	int state1, state2;
 	int N = phylo_tree->aln->virtual_pop_size;
 
-    updateFreqFixedState();
+    // Activate this if frequencies of fixed states sum up to 1.0.
+    // updateFreqFixedState();
 	computeStateFreq();
 
 	// Loop over rows (transition starting from state1).
@@ -111,13 +116,24 @@ void ModelPoMo::updatePoMoStatesAndRates () {
 			}
 		rate_matrix[state1*num_states+state1] = -(row_sum);
 	}
-    std::cout << std::setprecision(7)
-              << "DEBUG: Rate Matrix calculated; mu=" << mutation_prob[0] << std::endl
-              << "PIs:" << freq_fixed_states[0] << "\t"
-              << freq_fixed_states[1] << "\t"
-              << freq_fixed_states[2] << "\t"
-              << freq_fixed_states[3] << std::endl;
-	int count = 0;
+    if (verbose_mode >= VB_MAX) {
+        std::cout << std::setprecision(7)
+                  << "DEBUG: Rate Matrix calculated." << std::endl
+                  << "mu=" << std::endl
+                  << mutation_prob[0] << "\t"
+                  << mutation_prob[1] << "\t"
+                  << mutation_prob[2] << "\t"
+                  << mutation_prob[3] << "\t"
+                  << mutation_prob[4] << "\t"
+                  << mutation_prob[5] << std::endl;
+        std::cout << std::setprecision(3) << "PIs:\t"
+                  << freq_fixed_states[0] << "\t"
+                  << freq_fixed_states[1] << "\t"
+                  << freq_fixed_states[2] << "\t"
+                  << freq_fixed_states[3] << std::endl;
+    }
+
+    int count = 0;
 
     // Commented out for now, because PoMo has its own function to
     // compute the rate matrix.
@@ -373,7 +389,7 @@ int ModelPoMo::getNDim() {
     // here, because the mu in the GTR model are subsitution rates and
     // confounded with N.  Here however, the mu are mutation
     // probabilities (??).
-	return 4;
+	return 9;
 }
 
 void ModelPoMo::setBounds(double *lower_bound,
@@ -382,20 +398,22 @@ void ModelPoMo::setBounds(double *lower_bound,
 	int i;
     // Frequencies of fixed states.
 	for (i = 1; i <= 3; i++) {
-		lower_bound[i] = 0.2;
-		upper_bound[i] = 0.33;
+		// lower_bound[i] = 0.2;
+		// upper_bound[i] = 0.33;
+		lower_bound[i] = 0.5;
+		upper_bound[i] = 2.0;
 		bound_check[i] = false;
 	}
     // Mutation rates.
-//	for (i = 4; i <= 9; i++) {
-//		lower_bound[i] = 1e-8;
-//		upper_bound[i] = 10.0;
-//		bound_check[i] = false;
-//	}
-	// For JC model
-	lower_bound[4] = 1e-5;
-	upper_bound[4] = 1e-3;
-	bound_check[4] = false;
+	for (i = 4; i <= 9; i++) {
+		lower_bound[i] = 5e-6;
+		upper_bound[i] = 5e-4;
+		bound_check[i] = false;
+	}
+	// // For JC model
+	// lower_bound[4] = 1e-5;
+	// upper_bound[4] = 1e-3;
+	// bound_check[4] = false;
 }
 
 void ModelPoMo::setVariables(double *variables) {
@@ -403,11 +421,11 @@ void ModelPoMo::setVariables(double *variables) {
 	for (i = 1; i <= 3; i++) {
 		variables[i] = freq_fixed_states[i-1];
 	}
-//	for (i = 4; i <= 9; i++) {
-//		variables[i] = mutation_prob[i-4];
-//	}
-	// For JC model
-	variables[4] = mutation_prob[0];
+	for (i = 4; i <= 9; i++) {
+		variables[i] = mutation_prob[i-4];
+	}
+	// // For JC model
+	// variables[4] = mutation_prob[0];
 }
 
 void ModelPoMo::getVariables(double *variables) {
@@ -415,13 +433,13 @@ void ModelPoMo::getVariables(double *variables) {
 	for (i = 1; i <= 3; i++) {
 		freq_fixed_states[i-1] = variables[i];
 	}
-//	for (i = 4; i <= 9; i++) {
-//		mutation_prob[i-4] = variables[i];
-//	}
-	// For JC model
 	for (i = 4; i <= 9; i++) {
-		mutation_prob[i-4] = variables[4];
+		mutation_prob[i-4] = variables[i];
 	}
+	// // For JC model
+	// for (i = 4; i <= 9; i++) {
+	// 	mutation_prob[i-4] = variables[4];
+	// }
 	updatePoMoStatesAndRates();
 }
 
