@@ -315,7 +315,8 @@ public:
      * @param dad for navigation
      * @param node for navigation
      */
-    void getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, Node *dad = NULL, Node *node = NULL);
+    void getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, SplitIntMap* tabuSplits = NULL
+            , SplitIntMap*candidateSplitHash = NULL, Node *dad = NULL, Node *node = NULL);
 
 
     /**

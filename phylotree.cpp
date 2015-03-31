@@ -260,7 +260,7 @@ void PhyloTree::setRootNode(const char *my_root) {
     assert(root);
 }
 
-void PhyloTree::readTreeString(const string &tree_string) {
+void PhyloTree::readTreeString(const string &tree_string, bool buildSplits) {
 	stringstream str;
 	str << tree_string;
 	str.seekg(0, ios::beg);
@@ -277,7 +277,7 @@ void PhyloTree::readTreeString(const string &tree_string) {
 	}
 	resetCurScore();
 //	lhComputed = false;
-    if (params->fixStableSplits) {
+    if (params->fixStableSplits && buildSplits) {
         buildNodeSplit();
     }
 }
@@ -3508,18 +3508,19 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
     	updateSubtreeDists(move);
     }
 
-    // update splits
-    delete nei12->split;
-    delete nei21->split;
-    nei12->split = new Split(leafNum);
-    nei21->split = new Split(leafNum);
-    FOR_NEIGHBOR_IT(node1, node2, it) {
-            *(nei12->split) += *((*it)->split);
-        }
-    FOR_NEIGHBOR_IT(node2, node1, it) {
-            *(nei21->split) += *((*it)->split);
-        }
+    // update split store in node
+    if (nei12->split != NULL || nei21->split != NULL) {
+        delete nei12->split;
+        nei12->split = new Split(leafNum);
+        delete nei21->split;
+        nei21->split = new Split(leafNum);
 
+        FOR_NEIGHBOR_IT(nei12->node, node1, it)
+                *(nei12->split) += *((*it)->split);
+
+        FOR_NEIGHBOR_IT(nei21->node, node2, it)
+                *(nei21->split) += *((*it)->split);
+    }
 }
 
 void PhyloTree::changeNNIBrans(NNIMove nnimove) {

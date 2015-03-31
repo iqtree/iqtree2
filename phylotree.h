@@ -759,7 +759,7 @@ public:
             @param tree_string tree string to read from
             @param updatePLL if true, tree is read into PLL
      */
-    virtual void readTreeString(const string &tree_string);
+    virtual void readTreeString(const string &tree_string, bool buildSplits = false);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.

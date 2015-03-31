@@ -259,7 +259,7 @@ public:
             @param tree_string the tree string.
             @param is_rooted (IN/OUT) true if tree is rooted
      */
-    virtual void readTreeString(string tree_string, bool is_rooted);
+    //virtual void readTreeString(string tree_string, bool is_rooted);
 
     /**
             parse the tree from the input file in newick format
@@ -540,6 +540,11 @@ public:
     *   Generate a split for each neighbor node
     */
     void buildNodeSplit(Split *resp = NULL, Node *node = NULL, Node *dad = NULL);
+
+    /**
+     *  Get split graph based on split stored in nodes
+     */
+    void getSplits(SplitGraph &splits, Node* node = NULL, Node* dad = NULL);
 
     /**
     *   Update the Split-Branch map with the new split defined by a branch

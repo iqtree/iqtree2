@@ -27,12 +27,12 @@ CandidateSet::CandidateSet() {
 //	 *  Use reservoir sampling technique
 //	 */
 //	randomStableSplits.clear();
-//	assert(numSplit < candidateSplits.size());
-//	randomStableSplits.insert(randomStableSplits.begin(), candidateSplits.begin(), candidateSplits.begin() + numSplit);
-//	for (int i = numSplit; i < candidateSplits.size(); i++) {
+//	assert(numSplit < candidateSplitsHash.size());
+//	randomStableSplits.insert(randomStableSplits.begin(), candidateSplitsHash.begin(), candidateSplitsHash.begin() + numSplit);
+//	for (int i = numSplit; i < candidateSplitsHash.size(); i++) {
 //		int j = random_int(1, i);
 //		if (j <= numSplit) {
-//			randomStableSplits[j] = candidateSplits[i];
+//			randomStableSplits[j] = candidateSplitsHash[i];
 //		}
 //	}
 //}
@@ -112,36 +112,38 @@ bool CandidateSet::replaceTree(string tree, double score) {
 
 void CandidateSet::addCandidateSplits(string treeString) {
 	MTree tree;
-	tree.readTreeString(treeString, params->is_rooted);
+	stringstream ss(treeString);
+	tree.readTree(ss, params->is_rooted);
 	SplitGraph allSplits;
 	tree.convertSplits(allSplits);
 	for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
 		int value;
-		Split *sp = candidateSplits.findSplit(*splitIt, value);
+		Split *sp = candidateSplitsHash.findSplit(*splitIt, value);
 		if (sp != NULL) {
 			sp->setWeight(sp->getWeight() + 1);
-			candidateSplits.setValue(sp, value + 1);
+			candidateSplitsHash.setValue(sp, value + 1);
 		} else {
 			sp = new Split(*(*splitIt));
 			sp->setWeight(1);
-			candidateSplits.insertSplit(sp, 1);
+			candidateSplitsHash.insertSplit(sp, 1);
 		}
 	}
 }
 
 void CandidateSet::removeCandidateSplits(string treeString) {
 	MTree tree;
-	tree.readTreeString(treeString, params->is_rooted);
+	stringstream ss(treeString);
+	tree.readTree(ss, params->is_rooted);
 	SplitGraph allSplits;
 	tree.convertSplits(allSplits);
 	for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
 		int value;
-		Split *sp = candidateSplits.findSplit(*splitIt, value);
+		Split *sp = candidateSplitsHash.findSplit(*splitIt, value);
 		assert( sp != NULL);
 		if (sp->getWeight() > 1) {
 			sp->setWeight(sp->getWeight() - 1);
 		} else {
-			candidateSplits.eraseSplit(*splitIt);
+			candidateSplitsHash.eraseSplit(*splitIt);
 		}
 	}
 }
@@ -194,15 +196,17 @@ bool CandidateSet::update(string tree, double score) {
 		CandidateSet::iterator candidateTreeIT = insert(CandidateSet::value_type(score, candidate));
 		topologies[candidate.topology] = score;
 
-		if (!candidateSplits.empty()) {
+		if (!candidateSplitsHash.empty()) {
 			int it_pos = distance(candidateTreeIT, end());
-			CandidateSet::iterator oldCandidateTreeIT = candidateTreeIT--;
-			removeCandidateSplits(oldCandidateTreeIT->second.topology);
-			addCandidateSplits(candidateTreeIT->second.topology);
+			if (it_pos <= params->numSupportTrees) {
+				CandidateSet::iterator oldCandidateTreeIT = candidateTreeIT--;
+				removeCandidateSplits(oldCandidateTreeIT->second.topology);
+				addCandidateSplits(candidateTreeIT->second.topology);
 
-			double percentSS = (double) getNumStableSplits() / (aln->getNSeq() - 3) * 100;
+				double percentSS = (double) getNumStableSplits() / (aln->getNSeq() - 3) * 100;
+				cout << percentSS << " % of the splits have 100% support and can be fixed." << endl;
+			}
 
-			cout << percentSS << " % of the splits have 100% support and can be fixed." << endl;
 		}
 	}
 	assert(topologies.size() == size());
@@ -308,27 +312,27 @@ void CandidateSet::removeCandidateTree(string topology) {
 }
 
 int CandidateSet::buildTopSplits() {
+	candidateSplitsHash.clear();
 	candidateSplits.clear();
-	// just created because convertSplits require it
-	SplitGraph tmpSplits;
-	MTreeSet boot_trees;
-	vector<string> trees = getBestCandidateTrees(params->numSupportTrees);
-	assert(trees.size() > 1);
-	candidateSplits.setMaxValue(trees.size());
+	MTreeSet bestTrees;
+	vector<string> bestTreeStrings;
+	bestTreeStrings = getBestCandidateTrees(params->numSupportTrees);
+	assert(bestTreeStrings.size() > 1);
 
-	boot_trees.init(trees, aln->getSeqNames(), params->is_rooted);
-	boot_trees.convertSplits(aln->getSeqNames(), tmpSplits, candidateSplits, SW_COUNT, -1, false);
+	candidateSplitsHash.setMaxValue(bestTreeStrings.size());
+	bestTrees.init(bestTreeStrings, aln->getSeqNames(), params->is_rooted);
+	bestTrees.convertSplits(aln->getSeqNames(), candidateSplits, candidateSplitsHash, SW_COUNT, -1, false);
 
 	int numStableSplit = getNumStableSplits();
 	return numStableSplit;
 }
 
 int CandidateSet::getNumStableSplits() {
-	if (candidateSplits.empty())
+	if (candidateSplitsHash.empty())
 		return 0;
 	int numMaxSupport = 0;
-	for (SplitIntMap::iterator it = candidateSplits.begin(); it != candidateSplits.end(); it++) {
-		if (it->second == candidateSplits.getMaxValue() && it->first->countTaxa() > 1) {
+	for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); it++) {
+		if (it->second == candidateSplitsHash.getMaxValue() && it->first->countTaxa() > 1) {
 			numMaxSupport++;
 		}
 	}

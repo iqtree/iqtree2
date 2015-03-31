@@ -486,7 +486,7 @@ struct Params {
 	/**
 	 *  logl epsilon for model parameter optimization
 	 */
-	double modeps;
+	double modelEps;
 
 	/**
 	 *  New search heuristics (DEFAULT: ON)

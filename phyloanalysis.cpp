@@ -1563,7 +1563,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Optimize model parameters and branch lengths using ML for the initial tree
     double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
 	iqtree.clearAllPartialLH();
-    string initTree = iqtree.optimizeModelParameters(params.min_iterations==0, 0.001);
+    string initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
@@ -1594,7 +1594,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (params.min_iterations > 0) {
         double initTime = getCPUTime();
 
-        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
+		/********************************** INITIALIZE THE CANDIDATE TREE SET ***************************************/
+		params.modelEps = initEpsilon;
+		if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
         	iqtree.initCandidateTreeSet(params.numInitTrees, params.numNNITrees);
         	assert(iqtree.candidateTrees.size() != 0);
         	cout << "Finish initializing candidate tree set (" << iqtree.candidateTrees.size() << ")" << endl;
@@ -1609,9 +1611,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         	iqtree.candidateTrees.update(tree, iqtree.getCurScore());
 
         }
+		params.modelEps = 0.001;
 
-        cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: "
-                << getCPUTime() - initTime << endl;
+        cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: " << getCPUTime() - initTime << endl;
 	}
 
 
@@ -1638,7 +1640,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	// prune stable taxa
 	pruneTaxa(params, iqtree, pattern_lh, pruned_taxa, linked_name);
 
-	/****************** Do tree search ***************************/
+	/***************************************** DO STOCHASTIC TREE SEARCH *******************************************/
 	if (params.min_iterations > 1) {
 		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0]);
 		iqtree.doTreeSearch();

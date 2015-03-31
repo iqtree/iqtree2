@@ -494,6 +494,7 @@ void MTree::readTree(const char *infile, bool &is_rooted) {
              " taxa and " << nodeNum-1-is_rooted << " branches" << endl;
 }
 
+/*
 void MTree::readTreeString(string tree_string, bool is_rooted) {
 	stringstream str;
 	str << tree_string;
@@ -501,6 +502,7 @@ void MTree::readTreeString(string tree_string, bool is_rooted) {
 	freeNode();
 	readTree(str, is_rooted);
 }
+*/
 
 
 void MTree::readTree(istream &in, bool &is_rooted)
@@ -2036,6 +2038,19 @@ void MTree::removeTaxa(StrVector &taxa_names) {
 	initializeTree();
 }
 
+void MTree::getSplits(SplitGraph &splits, Node* node, Node* dad) {
+   if (!node) {
+       node = root;
+   }
+   FOR_NEIGHBOR_IT(node, dad, it) {
+           getSplits(splits, (*it)->node, node);
+           Split* mySplit = new Split(*((*it)->split));
+           if (mySplit->shouldInvert())
+               mySplit->invert();
+           splits.push_back(mySplit);
+       }
+}
+
 void MTree::buildNodeSplit(Split *resp, Node *node, Node *dad) {
     if (!node) {
         node = root;
@@ -2047,7 +2062,7 @@ void MTree::buildNodeSplit(Split *resp, Node *node, Node *dad) {
             delete rootNei->split;
             rootNei->split = new Split(leafNum);
         }
-        rootNei->split->addTaxon(root->id);
+        resp = rootNei->split;
     }
     bool has_child = false;
     FOR_NEIGHBOR_IT(node, dad, it) {
@@ -2058,9 +2073,17 @@ void MTree::buildNodeSplit(Split *resp, Node *node, Node *dad) {
                 (*it)->split = new Split(leafNum);
             }
             buildNodeSplit((*it)->split, (*it)->node, node);
+            //(*it)->split->report(cout);
             *resp += *((*it)->split);
             has_child = true;
         }
+
+    if (dad != NULL) {
+        Neighbor* dadNei = node->findNeighbor(dad);
+        dadNei->split = new Split(*resp);
+        dadNei->split->invert();
+    }
+
     if (!has_child) {
         resp->addTaxon(node->id);
     }

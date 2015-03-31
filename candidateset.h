@@ -256,8 +256,8 @@ public:
      */
     vector<string> getBestCandidateTrees(int numTrees);
 
-	SplitIntMap& getCandidateSplits() {
-		return candidateSplits;
+	SplitIntMap& getCandidateSplitHash() {
+		return candidateSplitsHash;
 	}
 
 	/**
@@ -309,7 +309,12 @@ private:
      *  Set of splits from the current best trees.
      *  The number of current best trees is specified in params->numSupportTrees
      */
-	SplitIntMap candidateSplits;
+	SplitIntMap candidateSplitsHash;
+
+    /**
+    *   Set of splits from the current best trees.
+    */
+    SplitGraph candidateSplits;
 
     /**
      *  Shared params pointing to the global params

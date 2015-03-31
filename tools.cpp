@@ -794,7 +794,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 #else
     params.pll = false;
 #endif
-    params.modeps = 0.001;
+    params.modelEps = 0.001;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
@@ -2355,10 +2355,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -me <model_epsilon>";
-				params.modeps = convert_double(argv[cnt]);
-				if (params.modeps <= 0.0)
+				params.modelEps = convert_double(argv[cnt]);
+				if (params.modelEps <= 0.0)
 					throw "Model epsilon must be positive";
-				if (params.modeps > 0.1)
+				if (params.modelEps > 0.1)
 					throw "Model epsilon must not be larger than 0.1";
 				continue;
 			}
