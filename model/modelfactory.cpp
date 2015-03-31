@@ -39,40 +39,12 @@
 #include <string>
 #include "timeutil.h"
 #include "myreader.h"
-#include "modelsblock.h"
 
-ModelFactory::ModelFactory() { 
-	model = NULL; 
-	site_rate = NULL;
-	store_trans_matrix = false;
-	is_storing = false;
-	joint_optimize = false;
-	fused_mix_rate = false;
-}
+ModelsBlock *readModelsDefinition(Params &params) {
 
-size_t findCloseBracket(string &str, size_t start_pos) {
-	int counter = 0;
-	for (size_t pos = start_pos+1; pos < str.length(); pos++) {
-		if (str[pos] == '{') counter++;
-		if (str[pos] == '}') {
-			if (counter == 0) return pos; else counter--;
-		}
-	}
-	return string::npos;
-}
-
-ModelFactory::ModelFactory(Params &params, PhyloTree *tree) { 
-	store_trans_matrix = params.store_trans_matrix;
-	is_storing = false;
-	joint_optimize = params.optimize_model_rate_joint;
-	fused_mix_rate = false;
-
-	string model_str = params.model_name;
-	string rate_str;
-
-	try {
 	ModelsBlock *models_block = new ModelsBlock;
 
+	if (false)
 	{
 		// loading internal model definitions
 		istringstream in(builtin_mixmodels_definition);
@@ -97,6 +69,39 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 	    	if ((*it).flag & NM_FREQ) num_freq++; else num_model++;
 	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
 	}
+	return models_block;
+}
+
+ModelFactory::ModelFactory() { 
+	model = NULL; 
+	site_rate = NULL;
+	store_trans_matrix = false;
+	is_storing = false;
+	joint_optimize = false;
+	fused_mix_rate = false;
+}
+
+size_t findCloseBracket(string &str, size_t start_pos) {
+	int counter = 0;
+	for (size_t pos = start_pos+1; pos < str.length(); pos++) {
+		if (str[pos] == '{') counter++;
+		if (str[pos] == '}') {
+			if (counter == 0) return pos; else counter--;
+		}
+	}
+	return string::npos;
+}
+
+ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block) {
+	store_trans_matrix = params.store_trans_matrix;
+	is_storing = false;
+	joint_optimize = params.optimize_model_rate_joint;
+	fused_mix_rate = false;
+
+	string model_str = params.model_name;
+	string rate_str;
+
+	try {
 
 
 	if (model_str == "") {
@@ -453,7 +458,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree) {
 
 	tree->discardSaturatedSite(params.discard_saturated_site);
 
-	delete models_block;
 	} catch (const char* str) {
 		outError(str);
 	}

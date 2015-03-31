@@ -96,7 +96,7 @@ public:
 		@param params program parameters
 		@param tree associated phylogenetic super-tree
 	*/
-	PartitionModelPlen(Params &params, PhyloSuperTreePlen *tree);
+	PartitionModelPlen(Params &params, PhyloSuperTreePlen *tree, ModelsBlock *models_block);
 
     ~PartitionModelPlen();
 
