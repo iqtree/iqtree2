@@ -128,6 +128,7 @@ void CandidateSet::addCandidateSplits(string treeString) {
 			candidateSplitsHash.insertSplit(sp, 1);
 		}
 	}
+	candidateSplitsHash.setMaxValue(candidateSplitsHash.getMaxValue() + 1);
 }
 
 void CandidateSet::removeCandidateSplits(string treeString) {
@@ -146,6 +147,7 @@ void CandidateSet::removeCandidateSplits(string treeString) {
 			candidateSplitsHash.eraseSplit(*splitIt);
 		}
 	}
+	candidateSplitsHash.setMaxValue(candidateSplitsHash.getMaxValue() - 1);
 }
 
 string CandidateSet::getNextCandTree() {
@@ -197,18 +199,21 @@ bool CandidateSet::update(string tree, double score) {
 		topologies[candidate.topology] = score;
 
 		if (!candidateSplitsHash.empty()) {
+			// ranking of the inserted tree
 			int it_pos = distance(candidateTreeIT, end());
 			if (it_pos <= params->numSupportTrees) {
-				CandidateSet::iterator oldCandidateTreeIT = candidateTreeIT--;
-				removeCandidateSplits(oldCandidateTreeIT->second.topology);
 				addCandidateSplits(candidateTreeIT->second.topology);
-
-				double percentSS = (double) getNumStableSplits() / (aln->getNSeq() - 3) * 100;
-				cout << percentSS << " % of the splits have 100% support and can be fixed." << endl;
+				if (candidateSplitsHash.getMaxValue() > params->numSupportTrees) {
+					pair<double, CandidateTree> toRemoveTree = *candidateTreeIT--;
+					//removeCandidateSplits(toRemoveTree.topology);
+				}
 			}
-
+			double percentSS = (double) getNumStableSplits() / (aln->getNSeq() - 3) * 100;
+			cout << percentSS << " % of the splits have 100% support and can be fixed." << endl;
 		}
+
 	}
+
 	assert(topologies.size() == size());
 	return newTree;
 }
