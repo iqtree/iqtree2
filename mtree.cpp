@@ -60,6 +60,14 @@ MTree::MTree(MTree &tree) {
     init(tree);
 }
 
+MTree::MTree(string& treeString, vector<string>& taxaNames, bool isRooted) {
+    stringstream str;
+    str << treeString;
+    str.seekg(0, ios::beg);
+    readTree(str, isRooted);
+    assignIDs(taxaNames);
+}
+
 void MTree::init(MTree &tree) {
     root = tree.root;
     leafNum = tree.leafNum;
@@ -71,6 +79,41 @@ void MTree::init(MTree &tree) {
     num_precision = tree.num_precision;
     len_scale = tree.len_scale;
     fig_char = tree.fig_char;
+}
+
+void MTree::assignIDs(vector<string>& taxaNames) {
+    bool err = false;
+    int nseq = taxaNames.size();
+    for (int seq = 0; seq < nseq; seq++) {
+        string seq_name = taxaNames[seq];
+        Node *node = findLeafName(seq_name);
+        if (!node) {
+            string str = "Sequence ";
+            str += seq_name;
+            str += " does not appear in the tree";
+            err = true;
+            outError(str, false);
+        } else {
+            assert(node->isLeaf());
+            node->id = seq;
+        }
+    }
+    StrVector taxname;
+    getTaxaName(taxname);
+    for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
+        bool foundTaxa = false;
+        for (vector<string>::iterator it2 = taxaNames.begin(); it2 != taxaNames.end(); it2++) {
+            if ( *it == *it2 ) {
+                foundTaxa = true;
+                break;
+            }
+        }
+        if (!foundTaxa) {
+            outError((string) "Tree taxon " + (*it) + " does not appear in the input taxa names", false);
+            err = true;
+        }
+    }
+    if (err) outError("Tree taxa and input taxa names do not match (see above)");
 }
 
 void MTree::copyTree(MTree *tree) {

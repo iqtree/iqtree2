@@ -254,7 +254,12 @@ public:
      * @param numTrees
      * @return
      */
-    vector<string> getBestCandidateTrees(int numTrees);
+    void getBestCandidateTrees(int numTrees, vector<CandidateTree>& candidateTrees);
+
+    /**
+     *  Get the Nth best tree topology
+     */
+    CandidateTree getNthBestTree(int N);
 
 	SplitIntMap& getCandidateSplitHash() {
 		return candidateSplitsHash;
@@ -284,21 +289,20 @@ public:
 	 */
 	void removeCandidateSplits(string treeString);
 
-public:
-    int getMaxSplitSupport() const {
-        return maxSplitSupport;
+    double getLoglThreshold() const {
+        return loglThreshold;
     }
 
-    void setMaxSplitSupport(int maxSplitSupport) {
-        CandidateSet::maxSplitSupport = maxSplitSupport;
+    void setLoglThreshold(double loglThreshold) {
+        CandidateSet::loglThreshold = loglThreshold;
     }
 
 private:
 /**
-    *  A split is considered stable if it is supported by
-    *  this number of best trees
-    */
-    int maxSplitSupport;
+     *  Log-likelihood threshold for tree to be considered in the set of stable splits.
+     *  All tree with log-likelihood >= logThreshold are used to determine the stable splits
+     */
+    double loglThreshold;
 
 	/**
 	 *  If true, the stable splits set will be computed every time update() is called
@@ -310,11 +314,6 @@ private:
      *  The number of current best trees is specified in params->numSupportTrees
      */
 	SplitIntMap candidateSplitsHash;
-
-    /**
-    *   Set of splits from the current best trees.
-    */
-    SplitGraph candidateSplits;
 
     /**
      *  Shared params pointing to the global params

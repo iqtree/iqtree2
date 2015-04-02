@@ -64,14 +64,6 @@ void PhyloTree::init() {
     central_scale_num = NULL;
     central_partial_pars = NULL;
     model_factory = NULL;
-//    tmp_partial_lh1 = NULL;
-//    tmp_partial_lh2 = NULL;
-//    tmp_anscentral_state_prob1 = NULL;
-//    tmp_anscentral_state_prob2 = NULL;
-    //tmp_ptn_rates = NULL;
-    //state_freqs = NULL;
-//    tmp_scale_num1 = NULL;
-//    tmp_scale_num2 = NULL;
     discard_saturated_site = true;
     _pattern_lh = NULL;
     _pattern_lh_cat = NULL;
@@ -105,6 +97,15 @@ void PhyloTree::init() {
 PhyloTree::PhyloTree(Alignment *aln) : MTree() {
     init();
     this->aln = aln;
+}
+
+PhyloTree::PhyloTree(string& treeString, Alignment* aln, bool isRooted) : MTree() {
+    stringstream str;
+    str << treeString;
+    str.seekg(0, ios::beg);
+    freeNode();
+    readTree(str, isRooted);
+    setAlignment(aln);
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {

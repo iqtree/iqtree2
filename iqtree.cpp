@@ -463,7 +463,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 	cout << "CPU time: " << loglTime << endl;
 
     // Only select the best nNNITrees for doing NNI search
-    vector<string> initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);
+    vector<CandidateTree> initParsimonyTrees;
+    candidateTrees.getBestCandidateTrees(nNNITrees, initParsimonyTrees);
 
     cout << endl;
     cout << "Optimizing top parsimony trees with NNI..." << endl;
@@ -472,11 +473,12 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
       			Do NNI search on the best parsimony trees
     ***********************************************************/
     setCurIt(1);
-    for (vector<string>::iterator it = initParsimonyTrees.begin(); it != initParsimonyTrees.end(); ++it, setCurIt(getCurIt() + 1)) {
+    vector<CandidateTree>::iterator it;
+    for (it = initParsimonyTrees.begin(); it != initParsimonyTrees.end(); ++it, setCurIt(getCurIt() + 1)) {
     	int nniCount, nniStep;
         double initLogl, nniLogl;
         string tree;
-        readTreeString(*it);
+        readTreeString(it->tree);
         computeLogL();
         initLogl = getCurScore();
         tree = doNNISearch(nniCount, nniStep);

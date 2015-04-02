@@ -245,6 +245,12 @@ public:
      */
     PhyloTree(Alignment *aln);
 
+    /**
+     *  Create a phylotree from the tree string and assign alignment.
+     *  Taxa IDs are numbered according to their orders in the alignment.
+     */
+    PhyloTree(string& treeString, Alignment *aln, bool isRooted);
+
     void init();
 
     /**

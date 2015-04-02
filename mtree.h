@@ -58,6 +58,17 @@ public:
     MTree(MTree &tree);
 
     /**
+     *      Constructor, read tree from string.
+     *      Taxa IDs are assigned according to the order in taxaNames
+     */
+    MTree(string& treeString, vector<string>& taxaNames, bool isRooted);
+
+    /**
+     *   Assign taxa IDs according to the order in taxaNames
+     */
+    void assignIDs(vector<string>& taxaNames);
+
+    /**
             constructor
      */
     MTree();
