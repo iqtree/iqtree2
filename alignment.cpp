@@ -47,9 +47,6 @@ char genetic_code23[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSS
 char genetic_code24[] = "KNKNTTTTSSKSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Pterobranchia mitochondrial
 char genetic_code25[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSGCWCLFLF"; // Candidate Division SR1 and Gracilibacteria
 
-const double MIN_FREQUENCY          = 0.0001;
-const double MIN_FREQUENCY_DIFF     = 0.00001;
-
 Alignment::Alignment()
         : vector<Pattern>()
 {
@@ -541,8 +538,8 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
     if (pat_it == pattern_index.end()) { // not found
         pat.frequency = freq;
         computeConst(pat);
-        push_back(pat);
-        pattern_index[pat] = size()-1;
+        push_back(Pattern(pat));
+        pattern_index[(back()] = size()-1;
         site_pattern[site] = size()-1;
     } else {
         int index = pat_it->second;
@@ -1550,6 +1547,11 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     verbose_mode = save_mode;
     countConstSite();
     buildSeqStates();
+    // sanity check
+    for (iterator it = begin(); it != end(); it++)
+    	if (it->at(0) == -1)
+    		assert(0);
+
     //cout << getNSite() << " positions were extracted" << endl;
     //cout << __func__ << " " << num_states << endl;
 }
@@ -2319,11 +2321,12 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 			state_freq[i] /= sum;
 	} else if (freq == FREQ_EMPIRICAL || freq == FREQ_ESTIMATE) {
 		memset(state_freq, 0, num_states*sizeof(double));
-        for (iterator it = begin(); it != end(); it++)
+        i = 0;
+        for (iterator it = begin(); it != end(); it++, i++)
 			for (int seq = 0; seq < nseqs; seq++) {
-				int state = (*it)[seq];
+				int state = it->at(seq);
 				if (state >= num_states) continue;
-				state_freq[state] += (*it).frequency;
+				state_freq[state] += it->frequency;
 			}
         double sum = 0.0;
         for (i = 0; i < num_states; i++)
@@ -2338,13 +2341,14 @@ void Alignment::computeEmpiricalRate (double *rates) {
     int i, j, k;
     assert(rates);
     int nseqs = getNSeq();
-    double **pair_rates = (double**) new double[num_states];
+    double **pair_rates = new double* [num_states];
     for (i = 0; i < num_states; i++) {
         pair_rates[i] = new double[num_states];
         memset(pair_rates[i], 0, sizeof(double)*num_states);
     }
 
-    for (iterator it = begin(); it != end(); it++) {
+    int count = 0;
+    for (iterator it = begin(); it != end(); it++, count++) {
         for (i = 0; i < nseqs-1; i++) {
             char state1 = (*it)[i];
             if (state1 >= num_states) continue;

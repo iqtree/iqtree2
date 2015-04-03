@@ -29,7 +29,9 @@ public:
 	*/
     Pattern();
 
-	/**
+    Pattern(const Pattern &pat);
+
+    /**
 		@param num_states number of states of the model
 		@return the number of ambiguous character incl. gaps 
 	*/
@@ -40,6 +42,8 @@ public:
 		@return the number of gaps 
 	*/
 	int computeGapChar(int num_states, int STATE_UNKNOWN);
+
+//    Pattern &operator= (Pattern pat);
 
 	/** 
 		destructor
