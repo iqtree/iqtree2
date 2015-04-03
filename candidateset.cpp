@@ -112,16 +112,15 @@ bool CandidateSet::replaceTree(string tree, double score) {
 
 
 void CandidateSet::addCandidateSplits(string treeString) {
-	MTree tree;
-	stringstream ss(treeString);
-	tree.readTree(ss, params->is_rooted);
+	vector<string> taxaNames = aln->getSeqNames();
+	MTree tree(treeString, taxaNames, params->is_rooted);
 	SplitGraph allSplits;
 	tree.convertSplits(allSplits);
 	for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
 		int value;
 		Split *sp = candidateSplitsHash.findSplit(*splitIt, value);
 		if (sp != NULL) {
-			sp->setWeight(sp->getWeight() + 1);
+			sp->setWeight(value + 1);
 			candidateSplitsHash.setValue(sp, value + 1);
 		} else {
 			sp = new Split(*(*splitIt));
@@ -133,27 +132,25 @@ void CandidateSet::addCandidateSplits(string treeString) {
 }
 
 void CandidateSet::removeCandidateSplits(string treeString) {
-	MTree tree;
-	stringstream ss(treeString);
-	tree.readTree(ss, params->is_rooted);
+	vector<string> taxaNames = aln->getSeqNames();
+	MTree tree(treeString, taxaNames, params->is_rooted);
 	SplitGraph allSplits;
 	tree.convertSplits(allSplits);
-	SplitGraph bestSplits;
-	for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); ++it) {
-		bestSplits.push_back(it->first);
-	}
 	for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
 		int value;
 		Split *sp = candidateSplitsHash.findSplit(*splitIt, value);
-		if ( sp == NULL) {
-			cout << "Cannot find this split: " << endl;
+		assert(sp->getWeight() == value);
+		if (sp == NULL) {
+			cout << "Cannot find split: ";
 			(*splitIt)->report(cout);
-		}
-		assert( sp != NULL);
-		if (sp->getWeight() > 1) {
-			sp->setWeight(sp->getWeight() - 1);
+			exit(1);
 		} else {
-			candidateSplitsHash.eraseSplit(*splitIt);
+			assert(sp->getWeight() >= 1);
+			if (sp->getWeight() > 1) {
+				sp->setWeight(value - 1);
+			} else {
+				candidateSplitsHash.eraseSplit(*splitIt);
+			}
 		}
 	}
 	candidateSplitsHash.setMaxValue(candidateSplitsHash.getMaxValue() - 1);
@@ -189,51 +186,46 @@ bool CandidateSet::update(string tree, double score) {
 	candidate.tree = tree;
 
 	if (treeTopologyExist(candidate.topology)) {
+
 		newTree = false;
 	    /* If tree topology already exist but the score is better, we replace the old one
 	    by the new one (with new branch lengths) and update the score */
 		if (topologies[candidate.topology] < score) {
+			//TODO Inefficient
 			removeCandidateTree(candidate.topology);
 			topologies[candidate.topology] = score;
 			// insert tree into candidate set
 			insert(CandidateSet::value_type(score, candidate));
 		}
+
 	} else {
+
 		if (getWorstScore() < score && size() >= params->maxCandidates) {
 			// remove the worst-scoring tree
 			topologies.erase(begin()->second.topology);
 			erase(begin());
 		}
-		//TODO For debuggin only
-		string worstTree = getNthBestTree(params->numSupportTrees).topology;
 
 		CandidateSet::iterator candidateTreeIt = insert(CandidateSet::value_type(score, candidate));
 		topologies[candidate.topology] = score;
 
 		if (!candidateSplitsHash.empty()) {
-
 			// ranking of the inserted tree
 			int it_pos = distance(candidateTreeIt, end());
 
 			// A new tree is inserted in the stable tree set
 			if (it_pos <= params->numSupportTrees) {
-
-				addCandidateSplits(candidateTreeIt->second.topology);
-
+				/*
+				addCandidateSplits(candidateTreeIt->second.tree);
 				if (candidateSplitsHash.getMaxValue() > params->numSupportTrees) {
 					assert(candidateSplitsHash.getMaxValue() == params->numSupportTrees + 1);
-					string oldTree = getNthBestTree(candidateSplitsHash.getMaxValue()).topology;
-					cout << "maxValue = " << candidateSplitsHash.getMaxValue() << endl;
-					cout << "20th tree: " << worstTree << endl;
-					cout << "21th tree: " << oldTree << endl;
-					removeCandidateSplits(oldTree);
-					cout << "maxValue = " << candidateSplitsHash.getMaxValue() << endl;
-					exit(0);
+					removeCandidateSplits(getNthBestTree(candidateSplitsHash.getMaxValue()).tree);
 				}
-
+				 */
+				buildTopSplits();
+				double percentSS = (double) getNumStableSplits() / (aln->getNSeq() - 3) * 100;
+				cout << percentSS << " % of the splits have 100% support and can be fixed." << endl;
 			}
-			double percentSS = (double) getNumStableSplits() / (aln->getNSeq() - 3) * 100;
-			cout << percentSS << " % of the splits have 100% support and can be fixed." << endl;
 		}
 
 	}
@@ -366,6 +358,11 @@ int CandidateSet::buildTopSplits() {
 	CandidateTree worstTree = bestCandidateTrees[bestCandidateTrees.size()-1];
 	setLoglThreshold(worstTree.score);
 
+	/* Store all splits in the best trees in candidateSplitsHash.
+	 * Note that the weight of each split is set equal to the number of trees that have this split.
+	 * The variable maxWeight in SpitInMap is the number of trees, from which the splits are converted.
+	 * This is also the maximum weight each split can have.
+	 */
 	vector<CandidateTree>::iterator treeIt;
 	vector<string> taxaNames = aln->getSeqNames();
 	for (treeIt = bestCandidateTrees.begin(); treeIt != bestCandidateTrees.end(); treeIt++) {
@@ -377,8 +374,8 @@ int CandidateSet::buildTopSplits() {
 			int value;
 			Split *sp = candidateSplitsHash.findSplit(*itg, value);
 			if (sp != NULL) {
-				sp->setWeight(sp->getWeight() + 1);
-				candidateSplitsHash.setValue(sp, sp->getWeight());
+				sp->setWeight(value + 1);
+				candidateSplitsHash.setValue(sp, value + 1);
 			}
 			else {
 				sp = new Split(*(*itg));
@@ -387,11 +384,6 @@ int CandidateSet::buildTopSplits() {
 			}
 		}
 	}
-
-	//sanity check
-	removeCandidateSplits(worstTree.topology);
-	cout << "Yahoo it works" << endl;
-	exit(0);
 
 	int numStableSplit = getNumStableSplits();
 	return numStableSplit;
@@ -403,6 +395,7 @@ int CandidateSet::getNumStableSplits() {
 	int numMaxSupport = 0;
 	for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); it++) {
 		if (it->second == candidateSplitsHash.getMaxValue() && it->first->countTaxa() > 1) {
+			assert(it->first->getWeight() == candidateSplitsHash.getMaxValue());
 			numMaxSupport++;
 		}
 	}

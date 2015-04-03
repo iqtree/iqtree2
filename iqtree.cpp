@@ -1047,7 +1047,7 @@ void IQTree::getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, B
 
 
 void IQTree::getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, SplitIntMap* tabuSplits,
-                            SplitIntMap*candidateSplitHash, Node *node, Node *dad) {
+                            SplitIntMap* candidateSplitHash, Node *node, Node *dad) {
     if (!node) {
         node = root;
     }
@@ -1056,6 +1056,8 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, Spl
                 Branch curBranch;
                 curBranch.first = (*it)->node;
                 curBranch.second = node;
+
+                /******************** CHECK STABLE SPLIT **************************/
                 if (candidateSplitHash != NULL && !candidateSplitHash->empty()) {
                     Split* sp = (*it)->split;
                     assert(sp != NULL);
