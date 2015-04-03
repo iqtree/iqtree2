@@ -503,7 +503,7 @@ void MTree::readTree(istream &in, bool &is_rooted)
         ch = readNextChar(in);
         if (ch != '(') {
         	cout << in.rdbuf() << endl;
-            throw "Tree file not started with an opening-bracket '('";
+            throw "Tree file does not start with an opening-bracket '('";
         }
 
         leafNum = 0;

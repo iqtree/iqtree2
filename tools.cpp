@@ -1627,7 +1627,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-mrate") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -mset <model_set>";
+					throw "Use -mrate <model_set>";
 				params.ratehet_set = argv[cnt];
 				continue;
 			}

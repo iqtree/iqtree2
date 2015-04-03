@@ -303,7 +303,10 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 			convert_string_vec(params.model_set, model_names);
 		}
 	} else if (seq_type == SEQ_CODON) {
-		copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
+		if (params.model_set == NULL) {
+			copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
+		} else
+			convert_string_vec(params.model_set, model_names);
 	}
 
 	if (model_names.empty()) return;
@@ -363,11 +366,13 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 					ratedef.push_back(rate_options[j]);
 			ratehet.insert(ratehet.begin(), ratedef.begin(), ratedef.end());
 		}
-		cout << "Rate heterogeneity under selection: ";
-		for (j = 0; j < ratehet.size(); j++) {
-			cout << ratehet[j] << " ";
-		}
-		cout << endl;
+//		if (verbose_mode >= VB_MIN) {
+//			cout << "Rate heterogeneity under selection: ";
+//			for (j = 0; j < ratehet.size(); j++) {
+//				cout << ratehet[j] << " ";
+//			}
+//			cout << endl;
+//		}
 		for (i = 0; i < model_names.size(); i++)
 			for (j = 0; j < ratehet.size(); j++) {
 				models.push_back(model_names[i] + ratehet[j]);
@@ -754,7 +759,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	else if (seq_type == SEQ_MORPH)
 		subst_model = new ModelMorphology("MK", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_CODON)
-		subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", in_tree);
+		subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", in_tree, false);
 
 	assert(subst_model);
 
