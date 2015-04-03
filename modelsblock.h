@@ -23,6 +23,8 @@ public:
 
 	/* true if model the basic model (no mixture etc.) */
 	int flag;
+
+	virtual ~NxsModel() {}
 };
 
 /**

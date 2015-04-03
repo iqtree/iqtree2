@@ -253,7 +253,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 	ModelGTR::init(freq);
 }
 
-void ModelCodon::setRateGroup(IntVector group) {
+void ModelCodon::setRateGroup(IntVector &group) {
 	// sanity check
 	assert(group.size() == getNumRateEntries());
 	rate_group = group;

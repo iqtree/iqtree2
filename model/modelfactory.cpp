@@ -44,7 +44,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
 
 	ModelsBlock *models_block = new ModelsBlock;
 
-	if (false)
+	if (true)
 	{
 		// loading internal model definitions
 		istringstream in(builtin_mixmodels_definition);
