@@ -1811,7 +1811,7 @@ double IQTree::doTreeSearch() {
 
         cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << curIt << " / LogL: ";
         cout << perturbScore << " -> "<< curScore;
-        cout << " / " << nni_count << " rounds, " << nni_count << " NNIs ";
+        cout << " / " << nni_steps << " rounds, " << nni_count << " NNIs ";
         cout << " / Time: " << convert_time(getRealTime() - params->start_real_time);
 
         if (curIt > 10) {
