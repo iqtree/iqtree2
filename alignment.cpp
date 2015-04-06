@@ -315,7 +315,7 @@ int Alignment::getNumNonstopCodons() {
 	assert(genetic_code);
 	int c = 0;
 	for (char *ch = genetic_code; *ch != 0; ch++)
-		if (*ch == '*') c++;
+		if (*ch != '*') c++;
 	return c;
 }
 

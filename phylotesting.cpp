@@ -810,11 +810,11 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		}
 */
 		// initialize model
+		subst_model->setTree(tree);
 		if (model_names[model].find("+F") != string::npos)
 			subst_model->init(model_names[model].substr(0, model_names[model].find('+')).c_str(), "", FREQ_EMPIRICAL, "");
 		else
 			subst_model->init(model_names[model].substr(0, model_names[model].find('+')).c_str(), "", FREQ_UNKNOWN, "");
-		subst_model->setTree(tree);
 		tree->params = &params;
 
 		tree->setModel(subst_model);

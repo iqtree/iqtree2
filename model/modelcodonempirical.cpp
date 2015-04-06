@@ -167,7 +167,7 @@ void ModelCodonEmpirical::init(const char *model_name, string model_params, Stat
 		(*it) = toupper(*it);
 	if (name_upper == "ECM") {
 		def_freq = FREQ_USER_DEFINED;
-		if (num_states != 61)
+		if (phylo_tree->aln->genetic_code != genetic_code1)
 			outError("For ECM a standard genetic code must be used");
 		try {
 			istringstream in(model_ECMunrest);
@@ -178,7 +178,7 @@ void ModelCodonEmpirical::init(const char *model_name, string model_params, Stat
 		}
 	} else if (name_upper == "ECMREST") {
 		def_freq = FREQ_USER_DEFINED;
-		if (num_states != 61)
+		if (phylo_tree->aln->genetic_code != genetic_code1)
 			outError("For ECM a standard genetic code must be used");
 		try {
 			istringstream in(model_ECMrest);

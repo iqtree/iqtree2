@@ -87,16 +87,16 @@ void ModelGTR::init(StateFreqType type) {
 	case FREQ_EQUAL:
 		if (phylo_tree->aln->seq_type == SEQ_CODON) {
 			int nscodon = phylo_tree->aln->getNumNonstopCodons();
-            double freq_codon = (1.0-nscodon*MIN_FREQUENCY)/(num_states - nscodon);
+            double freq_codon = (1.0-(num_states-nscodon)*MIN_FREQUENCY)/(nscodon);
 			for (i = 0; i < num_states; i++)
 				if (phylo_tree->aln->isStopCodon(i))
 					state_freq[i] = MIN_FREQUENCY;
 				else
 					state_freq[i] = freq_codon;
 		} else {
-            double freq_codon = 1.0/num_states;
+            double freq_state = 1.0/num_states;
 			for (i = 0; i < num_states; i++)
-				state_freq[i] = freq_codon;
+				state_freq[i] = freq_state;
 		}
 		break;	
 	case FREQ_ESTIMATE:
