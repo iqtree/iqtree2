@@ -319,6 +319,9 @@ int Alignment::getNumNonstopCodons() {
 	return c;
 }
 
+bool Alignment::isStandardGeneticCode() {
+	return (genetic_code == genetic_code1);
+}
 
 void Alignment::buildSeqStates(bool add_unobs_const) {
 	string unobs_const;

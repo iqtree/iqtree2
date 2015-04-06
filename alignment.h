@@ -565,6 +565,8 @@ public:
      */
     bool isStopCodon(int state);
 
+    bool isStandardGeneticCode();
+
 	/**
 	 * @return number of non-stop codons in the genetic code
 	 */

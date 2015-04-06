@@ -194,12 +194,12 @@ StateFreqType ModelCodon::initCodon(const char *model_name) {
 		initGY94();
 		return FREQ_EMPIRICAL;
 	} else if (name_upper == "ECM") {
-		if (phylo_tree->aln->genetic_code != genetic_code1)
+		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECM a standard genetic code must be used");
 		readCodonModel(model_ECMunrest);
 		return FREQ_USER_DEFINED;
 	} else if (name_upper == "ECMREST") {
-		if (phylo_tree->aln->genetic_code != genetic_code1)
+		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECM a standard genetic code must be used");
 		readCodonModel(model_ECMrest);
 		return FREQ_USER_DEFINED;
@@ -677,8 +677,10 @@ void ModelCodon::readCodonModel(istream &in) {
 		}
 	}
 	memset(state_freq, 0, num_states*sizeof(double));
+	for (i = 0; i < num_states; i++)
+		state_freq[i] = MIN_FREQUENCY;
 	for (i = 0; i < nscodons; i++)
-		state_freq[state_map[i]] = f[i];
+		state_freq[state_map[i]] = f[i]-(num_states-nscodons)*MIN_FREQUENCY/nscodons;
 
 	num_params = 0;
 
