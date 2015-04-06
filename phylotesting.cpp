@@ -272,8 +272,9 @@ void copyCString(const char **cvec, int n, StrVector &strvec) {
  * @param nmodels (OUT) number of models
  * @return array of model names
  */
-void getModelList(Params &params, SeqType seq_type, StrVector &models) {
+void getModelList(Params &params, Alignment *aln, StrVector &models) {
 	StrVector model_names;
+	SeqType seq_type = aln->seq_type;
 	if (seq_type == SEQ_BINARY) {
 		copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
 	} else if (seq_type == SEQ_MORPH) {
@@ -304,7 +305,10 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 		}
 	} else if (seq_type == SEQ_CODON) {
 		if (params.model_set == NULL) {
-			copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
+			if (aln->isStandardGeneticCode())
+				copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
+			else
+				copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*) - 1, model_names);
 		} else
 			convert_string_vec(params.model_set, model_names);
 	}
@@ -314,6 +318,7 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 	const char *rate_options[] = {  "", "+I",  "+ASC", "+F", "+I+F", "+G", "+I+G", "+ASC+G", "+G+F", "+I+G+F", "+R", "+R+F"};
 	bool test_options[] =        {true, true,   false, false, false, true,   true,    false,  false,    false,false, false};
 	bool test_options_aa[] =     {true, true,   false, true,   true, true,   true,    false,   true,     true,false, false};
+	bool test_options_codon[] =  {true,false,   false,false,  false,false,  false,    false,  false,    false,false, false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	const char *must_options[] = {"+I", "+G", "+F","+ASC"};
 	const char *can_options[] = {"+i", "+g", "+f","+asc"};
@@ -322,7 +327,10 @@ void getModelList(Params &params, SeqType seq_type, StrVector &models) {
 	if (seq_type == SEQ_PROTEIN) {
 		// test all options for protein, incl. +F
 		for (i = 0; i < noptions; i++)
-				test_options[i] = test_options_aa[i];
+			test_options[i] = test_options_aa[i];
+	} else if (seq_type == SEQ_CODON) {
+		for (i = 0; i < noptions; i++)
+			test_options[i] = test_options_codon[i];
 	} else if (seq_type == SEQ_MORPH) {
 		// turn off +I
 		for (i = 0; i < noptions; i++)
@@ -671,7 +679,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	sitelh_file += ".sitelh";
 	in_tree->params = &params;
 	StrVector model_names;
-	getModelList(params, in_tree->aln->seq_type, model_names);
+	getModelList(params, in_tree->aln, model_names);
 	int model;
 
 	string best_model;
