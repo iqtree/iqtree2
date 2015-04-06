@@ -520,7 +520,7 @@ void ModelGTR::decomposeRateMatrix(){
 		}
 		delete [] q;
 	} else {
-		double **rate_matrix = (double**) new double[num_states];
+		double **rate_matrix = new double*[num_states];
 
 		for (i = 0; i < num_states; i++)
 			rate_matrix[i] = new double[num_states];

@@ -551,53 +551,54 @@ void ModelCodon::initMG94() {
 	/* Muse-Gaut 1994 model with 1 parameters: omega */
 
 	int i,j,k;
-	IntVector group;
-	group.reserve(getNumRateEntries());
+	IntVector *group = new IntVector;
+	group->reserve(getNumRateEntries());
 	for (i = 0, k = 0; i < num_states-1; i++) {
 		for (j = i+1; j < num_states; j++,k++) {
 			if (isMultipleSubst(i, j))
-				group.push_back(0); // multiple substitution
+				group->push_back(0); // multiple substitution
 			else {
 				extra_rates[k] = ntfreq[targetNucleotide(i, j)];
 				if (isSynonymous(i, j))
-					group.push_back(1); // synonymous substitution
+					group->push_back(1); // synonymous substitution
 				else
-					group.push_back(2); // non-synonymous substitution
+					group->push_back(2); // non-synonymous substitution
 			}
 		}
 	}
-	setRateGroup(group);
+	setRateGroup(*group);
 	// set zero rate for multiple substitution and 1 for synonymous substitution
 	if (empirical_rates)
 		setRateGroupConstraint("x0=fix,x1=fix");
 	else
 		setRateGroupConstraint("x0=0,x1=1");
+	delete group;
 }
 
 
 void ModelCodon::initGY94() {
 	/* Yang-Nielsen 1998 model (also known as Goldman-Yang 1994) with 2 parameters: omega and kappa */
 	int i,j;
-	IntVector group;
-	group.reserve(getNumRateEntries());
+	IntVector *group = new IntVector;
+	group->reserve(getNumRateEntries());
 	for (i = 0; i < num_states-1; i++) {
 		for (j = i+1; j < num_states; j++) {
 			if (isMultipleSubst(i, j))
-				group.push_back(0); // multiple substitution
+				group->push_back(0); // multiple substitution
 			else if (isSynonymous(i, j)) {
 				if (isTransversion(i, j))
-					group.push_back(1); // synonymous transversion
+					group->push_back(1); // synonymous transversion
 				else
-					group.push_back(3); // synonymous transition
+					group->push_back(3); // synonymous transition
 			} else {
 				if (isTransversion(i, j))
-					group.push_back(2); // non-synonymous transversion
+					group->push_back(2); // non-synonymous transversion
 				else
-					group.push_back(4); // non-synonymous transition
+					group->push_back(4); // non-synonymous transition
 			}
 		}
 	}
-	setRateGroup(group);
+	setRateGroup(*group);
 	// set zero rate for multiple substitution
 	// 1 for synonymous transversion
 	// and kappa*omega for non-synonymous transition
@@ -605,6 +606,7 @@ void ModelCodon::initGY94() {
 		setRateGroupConstraint("x0=fix,x1=fix,x4=x2*x3");
 	else
 		setRateGroupConstraint("x0=0,x1=1,x4=x2*x3");
+	delete group;
 }
 
 void ModelCodon::writeInfo(ostream &out) {

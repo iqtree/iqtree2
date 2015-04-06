@@ -1762,7 +1762,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
  * STANDARD NON-PARAMETRIC BOOTSTRAP
  ***********************************************************/
 void runStandardBootstrap(Params &params, string &original_model, Alignment *alignment, IQTree *tree) {
-	vector<ModelInfo> model_info;
+	vector<ModelInfo> *model_info = new vector<ModelInfo>;
 	StrVector removed_seqs, twin_seqs;
 
 	// turn off aLRT test
@@ -1833,7 +1833,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			boot_tree = new IQTree(bootstrap_alignment);
 		if (params.print_bootaln)
 			bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
-		runTreeReconstruction(params, original_model, *boot_tree, model_info);
+		runTreeReconstruction(params, original_model, *boot_tree, *model_info);
 		// read in the output tree file
 		string tree_str;
 		try {
@@ -1863,7 +1863,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 //				((PhyloSuperTree*)tree)->part_info[i].model_name = ((PhyloSuperTree*)boot_tree)->part_info[i].model_name;
 		}
 		if (params.num_bootstrap_samples == 1)
-			reportPhyloAnalysis(params, original_model, *boot_tree, model_info);
+			reportPhyloAnalysis(params, original_model, *boot_tree, *model_info);
 		// WHY was the following line missing, which caused memory leak?
 		delete boot_tree;
 		// fix bug: bootstrap_alignment might be changed
@@ -1882,7 +1882,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 	if (params.compute_ml_tree) {
 		cout << endl << "===> START ANALYSIS ON THE ORIGINAL ALIGNMENT" << endl << endl;
 		params.aLRT_replicates = saved_aLRT_replicates;
-		runTreeReconstruction(params, original_model, *tree, model_info);
+		runTreeReconstruction(params, original_model, *tree, *model_info);
 
 		cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
 		MExtTree ext_tree;
@@ -1890,17 +1890,17 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 				treefile_name.c_str(), false, treefile_name.c_str(),
 				params.out_prefix, ext_tree, NULL, &params);
 		tree->copyTree(&ext_tree);
-		reportPhyloAnalysis(params, original_model, *tree, model_info);
+		reportPhyloAnalysis(params, original_model, *tree, *model_info);
 	} else if (params.consensus_type == CT_CONSENSUS_TREE) {
 		int mi = params.min_iterations;
 		STOP_CONDITION sc = params.stop_condition;
 		params.min_iterations = 0;
 		params.stop_condition = SC_FIXED_ITERATION;
-		runTreeReconstruction(params, original_model, *tree, model_info);
+		runTreeReconstruction(params, original_model, *tree, *model_info);
 		params.min_iterations = mi;
 		params.stop_condition = sc;
 		tree->stop_rule.initialize(params);
-		reportPhyloAnalysis(params, original_model, *tree, model_info);
+		reportPhyloAnalysis(params, original_model, *tree, *model_info);
 	} else
 		cout << endl;
 
@@ -1912,6 +1912,8 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 	if (params.consensus_type == CT_CONSENSUS_TREE)
 		cout << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
 	cout << endl;
+    
+    delete model_info;
 }
 
 void convertAlignment(Params &params, IQTree *iqtree) {
@@ -2007,7 +2009,7 @@ void runPhyloAnalysis(Params &params) {
 		runBootLhTest(params, alignment, *tree);
 	} else if (params.num_bootstrap_samples == 0) {
 		// the main Maximum likelihood tree reconstruction
-		vector<ModelInfo> model_info;
+		vector<ModelInfo> *model_info = new vector<ModelInfo>;
 		alignment->checkGappySeq();
 
 		// remove identical sequences
@@ -2017,7 +2019,7 @@ void runPhyloAnalysis(Params &params) {
         alignment = NULL; // from now on use tree->aln instead
 
 		// call main tree reconstruction
-        runTreeReconstruction(params, original_model, *tree, model_info);
+        runTreeReconstruction(params, original_model, *tree, *model_info);
 		if (params.gbo_replicates && params.online_bootstrap) {
 			if (params.print_ufboot_trees)
 				tree->writeUFBootTrees(params);
@@ -2079,7 +2081,8 @@ void runPhyloAnalysis(Params &params) {
 			tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
 			tree->printResultTree();
 		}
-		reportPhyloAnalysis(params, original_model, *tree, model_info);
+		reportPhyloAnalysis(params, original_model, *tree, *model_info);
+        delete model_info;
 	} else {
 		// the classical non-parameter bootstrap (SBS)
 		if (params.model_name == "TESTLINK" || params.model_name == "TESTONLYLINK")
