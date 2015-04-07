@@ -1948,7 +1948,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     nniBranches.reserve(numInnerBranches);
     tabuNNIBranches.reserve(numInnerBranches);
     positiveNNIs.reserve(numInnerBranches);
-    string candidateTree;
+    string candidateTree = "";
     bool betterScore = false;
 
     for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
@@ -2049,7 +2049,9 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         }
     }
 
-    bool newTree = candidateTrees.update(candidateTree, curScore);
+    bool newTree;
+    if (candidateTree != "")
+        newTree = candidateTrees.update(candidateTree, curScore);
 
     if (betterScore) {
         if (newTree) {
@@ -2061,7 +2063,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     }
 
     if (nni_count == 0) {
-        cout << "NOTE: Tree is already NNI-optimized" << endl;
+        cout << "NOTE: No NNIs performed. Input tree is a NNI-local optimum" << endl;
     }
     if (nni_steps == MAXSTEPS) {
         cout << "WARNING: NNI search needs unusual large number of steps (" << MAXSTEPS << ") to converge!" << endl;
