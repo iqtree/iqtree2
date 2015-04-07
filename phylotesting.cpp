@@ -505,23 +505,24 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 
 	for (it = in_tree->begin(), i = 0; it != in_tree->end(); it++, i++) {
 		// scan through models for this partition, assuming the information occurs consecutively
-		vector<ModelInfo> part_model_info;
-		extractModelInfo(in_tree->part_info[i].name, model_info, part_model_info);
+		vector<ModelInfo> *part_model_info = new vector<ModelInfo>;
+		extractModelInfo(in_tree->part_info[i].name, model_info, *part_model_info);
 
 		cout.width(4);
 		cout << right << nr_model++ << " ";
-		string model = testModel(params, (*it), part_model_info, in_tree->part_info[i].name);
+		string model = testModel(params, (*it), *part_model_info, in_tree->part_info[i].name);
 		cout.width(12);
 		cout << left << model << " ";
 		cout.width(11);
-		double score = computeInformationScore(part_model_info[0].logl,part_model_info[0].df, (*it)->getAlnNSite(),params.model_test_criterion);
+		double score = computeInformationScore(part_model_info->at(0).logl,part_model_info->at(0).df, (*it)->getAlnNSite(),params.model_test_criterion);
 		cout << score << " " << in_tree->part_info[i].name << endl;
 		in_tree->part_info[i].model_name = model;
-		replaceModelInfo(model_info, part_model_info);
-		lhvec.push_back(part_model_info[0].logl);
-		dfvec.push_back(part_model_info[0].df);
+		replaceModelInfo(model_info, *part_model_info);
+		lhvec.push_back(part_model_info->at(0).logl);
+		dfvec.push_back(part_model_info->at(0).df);
 		lhsum += lhvec.back();
 		dfsum += dfvec.back();
+        delete part_model_info;
 	}
 
 	if (params.model_name.find("LINK") == string::npos) {

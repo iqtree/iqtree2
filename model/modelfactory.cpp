@@ -79,6 +79,7 @@ ModelFactory::ModelFactory() {
 	is_storing = false;
 	joint_optimize = false;
 	fused_mix_rate = false;
+	unobserved_ptns = "";
 }
 
 size_t findCloseBracket(string &str, size_t start_pos) {

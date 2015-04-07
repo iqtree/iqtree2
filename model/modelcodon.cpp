@@ -382,7 +382,8 @@ void ModelCodon::setRateGroupConstraint(string constraint) {
 		pos = 0;
 		// NEW: set ZERO rate going in/out stop-codon
 		for (int i = 0; i < num_states; i++)
-			for (int j = 0; j < num_states; j++, pos++)
+			// FIX BUG: start j was 0!!!
+			for (int j = i+1; j < num_states; j++, pos++)
 			if (phylo_tree->aln->isStopCodon(i) || phylo_tree->aln->isStopCodon(j))
 				rates[pos] = 0.0;
 
@@ -579,8 +580,8 @@ void ModelCodon::initMG94() {
 void ModelCodon::initGY94() {
 	/* Yang-Nielsen 1998 model (also known as Goldman-Yang 1994) with 2 parameters: omega and kappa */
 	int i,j;
-	IntVector *group = new IntVector;
-	group->reserve(getNumRateEntries());
+	IntVector *group = new IntVector();
+//	group->reserve(getNumRateEntries());
 	for (i = 0; i < num_states-1; i++) {
 		for (j = i+1; j < num_states; j++) {
 			if (isMultipleSubst(i, j))

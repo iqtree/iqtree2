@@ -234,7 +234,7 @@ public:
         return site_pattern[site];
     }
 
-    inline Pattern &getPattern(int site) {
+    inline Pattern getPattern(int site) {
         return at(site_pattern[site]);
     }
 
