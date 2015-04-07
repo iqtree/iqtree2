@@ -20,6 +20,7 @@ CandidateSet::CandidateSet() {
 	aln = NULL;
 	params = NULL;
 	loglThreshold = -DBL_MAX;
+	numStableSplits = 0;
 }
 
 //void CandidateSet::getRandomStableSplits(int numSplit, SplitGraph& randomStableSplits) {

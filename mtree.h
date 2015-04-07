@@ -573,6 +573,11 @@ public:
     Split* getSplit(Node* node1, Node* node2);
 
     /**
+     *  Slow version of getSplit, which traverses the tree to get the splits
+     */
+    Split* _getSplit(Node* node1, Node* node2);
+
+    /**
      *  Check whehter the tree contains all splits in \a splits
      *  @param splits list of splits to check
      *  @return true or false

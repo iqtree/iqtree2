@@ -1037,6 +1037,13 @@ Split* MTree::getSplit(Node* node1, Node* node2) {
     return node12->split;
 }
 
+Split* MTree::_getSplit(Node* node1, Node* node2) {
+    Split* sp = new Split(leafNum);
+    getTaxa(*sp, node1, node2);
+    if (sp->shouldInvert())
+        sp->invert();
+    return sp;
+}
 
 void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *node, Node *dad) {
     if (!node) node = root;

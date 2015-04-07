@@ -479,7 +479,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     	int nniCount, nniStep;
         double initLogl, nniLogl;
         string tree;
-        readTreeString(it->tree);
+        readTreeString(it->tree, params->fixStableSplits);
         computeLogL();
         initLogl = getCurScore();
         tree = doNNISearch(nniCount, nniStep);
@@ -1057,19 +1057,21 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &tabuBranches, Split
                 curBranch.first = (*it)->node;
                 curBranch.second = node;
 
-                /******************** CHECK STABLE SPLIT **************************/
-                if (candidateSplitHash != NULL && !candidateSplitHash->empty()) {
-                    Split* sp = (*it)->split;
+                if (params->fixStableSplits && !tabuSplits->empty()) {
+                    Split* curSplit;
+                    Split *sp = (*it)->split;
                     assert(sp != NULL);
-                    Split curSplit(*sp);
-                    if (curSplit.shouldInvert())
-                        curSplit.invert();
-                    if (tabuSplits->findSplit(&curSplit) != NULL) {
+                    curSplit = new Split(*sp);
+                    if (curSplit->shouldInvert())
+                        curSplit->invert();
+
+                    /******************** CHECK TABU SPLIT **************************/
+                    if (tabuSplits->findSplit(curSplit) != NULL) {
                         tabuBranches.push_back(curBranch);
-                    } else {
-                        // add unstable branch
+                    } else if (!candidateSplitHash->empty()) {
+                        /******************** CHECK STABLE SPLIT **************************/
                         int value;
-                        candidateSplitHash->findSplit(&curSplit, value);
+                        candidateSplitHash->findSplit(curSplit, value);
                         int maxSupport = candidateSplitHash->getMaxValue();
                         if (value != maxSupport) {
                             nniBranches.push_back(curBranch);
@@ -1078,7 +1080,10 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &tabuBranches, Split
                             if (rndDbl < params->probPerturbSS)
                                 nniBranches.push_back(curBranch);
                         }
+                    } else {
+                        nniBranches.push_back(curBranch);
                     }
+                    delete curSplit;
                 } else {
                     nniBranches.push_back(curBranch);
                 }
@@ -1743,9 +1748,9 @@ double IQTree::doTreeSearch() {
                 int numNNI = floor(searchinfo.curPerStrength * numNonStableBranches);
 
                 if (params->five_plus_five) {
-                    readTreeString(candidateTrees.getNextCandTree(), true);
+                    readTreeString(candidateTrees.getNextCandTree(), params->fixStableSplits);
                 } else {
-                    readTreeString(candidateTrees.getRandCandTree(), true);
+                    readTreeString(candidateTrees.getRandCandTree(), params->fixStableSplits);
                 }
 
                 if (params->iqp) {
@@ -2030,6 +2035,18 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
         if (curScore - oldScore <  params->loglh_epsilon)
             break;
+
+        if (params->fixStableSplits) {
+            // add tabu splits
+            for (int i = 0; i < numNNIs; i++) {
+                Split* sp = getSplit(compatibleNNIs.at(i).node1, compatibleNNIs.at(i).node2);
+                Split* tabuSplit = new Split(*sp);
+                if (tabuSplit->shouldInvert()) {
+                    tabuSplit->invert();
+                }
+                tabuSplits.insertSplit(tabuSplit, 1);
+            }
+        }
     }
 
     bool newTree = candidateTrees.update(candidateTree, curScore);
@@ -2049,7 +2066,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     if (nni_steps == MAXSTEPS) {
         cout << "WARNING: NNI search needs unusual large number of steps (" << MAXSTEPS << ") to converge!" << endl;
     }
-
+    tabuSplits.clear();
     return curScore;
 }
 
