@@ -2063,7 +2063,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     }
 
     if (nni_count == 0) {
-        cout << "NOTE: No NNIs performed. Input tree is a NNI-local optimum" << endl;
+        cout << "NOTE: Input tree is already NNI-local optimal" << endl;
     }
     if (nni_steps == MAXSTEPS) {
         cout << "WARNING: NNI search needs unusual large number of steps (" << MAXSTEPS << ") to converge!" << endl;
