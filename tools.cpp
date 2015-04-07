@@ -2286,8 +2286,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.five_plus_five = true;
 				continue;
 			}
-            if (strcmp(argv[cnt], "-ppt") == 0) {
+            if (strcmp(argv[cnt], "-ps") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -ps <probability_perturb_stable_splits>";
                 params.probPerturbSS = convert_double(argv[cnt]);
+                continue;
             }
 			if (strcmp(argv[cnt], "-ff") == 0) {
 				params.five_plus_five = true;
