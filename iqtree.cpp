@@ -469,6 +469,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << endl;
     cout << "Optimizing top parsimony trees with NNI..." << endl;
     startTime = getCPUTime();
+
     /**********************************************************
       			Do NNI search on the best parsimony trees
     ***********************************************************/
@@ -1046,7 +1047,7 @@ void IQTree::getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, B
 }
 
 
-void IQTree::getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, SplitIntMap* tabuSplits,
+void IQTree::getNNIBranches(Branches &nniBranches, Branches &tabuBranches, SplitIntMap* tabuSplits,
                             SplitIntMap* candidateSplitHash, Node *node, Node *dad) {
     if (!node) {
         node = root;
@@ -1065,7 +1066,7 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, Spl
                     if (curSplit.shouldInvert())
                         curSplit.invert();
                     if (tabuSplits->findSplit(&curSplit) != NULL) {
-                        nonNNIBranches.push_back(curBranch);
+                        tabuBranches.push_back(curBranch);
                     } else {
                         // add unstable branch
                         int value;
@@ -1075,18 +1076,15 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, Spl
                             nniBranches.push_back(curBranch);
                         } else { // add a stable branch with a certain probability
                             double rndDbl = random_double();
-                            if (rndDbl < params->probPerturbSS) {
+                            if (rndDbl < params->probPerturbSS)
                                 nniBranches.push_back(curBranch);
-                            } else {
-                                nonNNIBranches.push_back(curBranch);
-                            }
                         }
                     }
                 } else {
                     nniBranches.push_back(curBranch);
                 }
             }
-            getNNIBranches(nniBranches, nonNNIBranches, tabuSplits, candidateSplitHash, (*it)->node, node);
+            getNNIBranches(nniBranches, tabuBranches, tabuSplits, candidateSplitHash, (*it)->node, node);
         }
 }
 
@@ -1101,13 +1099,14 @@ void IQTree::doRandomNNIs(int numNNI) {
 	}
     int cntNNI = 0;
     int totalBranches = aln->getNSeq() - 3;
+    Branches nniBranches;
+    Branches tabuNNIBranches;
+    nniBranches.reserve(totalBranches);
+    tabuNNIBranches.reserve(totalBranches);
     while (cntNNI < numNNI) {
-        Branches nniBranches;
-        Branches nonNNIBranches;
-        nniBranches.reserve(totalBranches);
-        nonNNIBranches.reserve(totalBranches);
-        getNNIBranches(nniBranches, nonNNIBranches, &tabuSplits, &candidateTrees.getCandidateSplitHash());
-        assert(nonNNIBranches.size() + nniBranches.size() == totalBranches);
+        nniBranches.clear();
+        tabuNNIBranches.clear();
+        getNNIBranches(nniBranches, tabuNNIBranches, &tabuSplits, &candidateTrees.getCandidateSplitHash());
         int randInt = random_int(nniBranches.size());
         NNIMove randNNI = getRandomNNI(nniBranches[randInt]);
         doNNI(randNNI, true);
@@ -1937,6 +1936,13 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     // data structure to store intermediate trees generated in NNI steps
     unordered_map<string, pair<string, double> > intermediateTrees;
 
+    Branches nniBranches;
+    Branches tabuNNIBranches;
+    vector<NNIMove> positiveNNIs;
+    nniBranches.reserve(numInnerBranches);
+    tabuNNIBranches.reserve(numInnerBranches);
+    positiveNNIs.reserve(numInnerBranches);
+
     for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
         double oldScore = curScore;
             if (save_all_trees == 2) {
@@ -1949,8 +1955,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
                 }
             }
 
-        Branches allInnerBranches;
-
         // save all current branch lengths
         DoubleVector lenvec;
     	saveBranchLengths(lenvec);
@@ -1958,20 +1962,18 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         // for super tree
         initPartitionInfo();
 
-        Branches nniBranches;
-        Branches nonNNIBranches;
-        vector<NNIMove> positiveNNIs;
-        nniBranches.reserve(numInnerBranches);
-        nonNNIBranches.reserve(numInnerBranches);
-        getNNIBranches(nniBranches, nonNNIBranches, &tabuSplits, &candidateTrees.getCandidateSplitHash());
-        positiveNNIs.reserve(numInnerBranches);
+        nniBranches.clear();
+        tabuNNIBranches.clear();
+        positiveNNIs.clear();
+
+        getNNIBranches(nniBranches, tabuNNIBranches, &tabuSplits, &candidateTrees.getCandidateSplitHash());
 
         // evaluate NNIs
         evaluateNNIs(nniBranches, positiveNNIs);
 
         if (positiveNNIs.size() == 0) {
-            if (!nonNNIBranches.empty()) {
-                evaluateNNIs(nonNNIBranches, positiveNNIs);
+            if (!tabuNNIBranches.empty()) {
+                evaluateNNIs(tabuNNIBranches, positiveNNIs);
                 tabuSplits.clear();
                 if (positiveNNIs.size() == 0)
                     break;
