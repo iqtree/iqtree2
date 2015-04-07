@@ -493,10 +493,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << "CPU time: " << nniTime << endl;
 
 	if (params->fixStableSplits) {
-		candidateTrees.enableFSS();
 		int nSupportedSplits = candidateTrees.buildTopSplits();
 		cout << ((double) nSupportedSplits / (aln->getNSeq() - 3)) * 100 ;
-		cout << " % of the splits have 100% support and can be fixed." << endl;
+		cout << " % of the splits have 100% support." << endl;
 	}
 }
 void IQTree::initializePLL(Params &params) {
@@ -1738,8 +1737,10 @@ double IQTree::doTreeSearch() {
         } else {
             if (params->snni) {
 
-            	int numStableBranches = aln->getNSeq() - 3 - candidateTrees.getNumStableSplits();
-                int numNNI = floor(searchinfo.curPerStrength * numStableBranches);
+//            	int numNonStableBranches = (int) (
+//                        aln->getNSeq() - 3 - floor(candidateTrees.getNumStableSplits() * (1.0 - params->probPerturbSS)));
+                int numNonStableBranches = (int) (aln->getNSeq() - 3 - candidateTrees.getNumStableSplits());
+                int numNNI = floor(searchinfo.curPerStrength * numNonStableBranches);
 
                 if (params->five_plus_five) {
                     readTreeString(candidateTrees.getNextCandTree(), true);
@@ -1942,6 +1943,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     nniBranches.reserve(numInnerBranches);
     tabuNNIBranches.reserve(numInnerBranches);
     positiveNNIs.reserve(numInnerBranches);
+    string candidateTree;
+    bool betterScore = false;
 
     for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
         double oldScore = curScore;
@@ -2015,8 +2018,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
         nni_count += numNNIs;
 
-        string candidateTree = getTreeString();
-        bool betterScore = false;
+        candidateTree = getTreeString();
+        betterScore = false;
         if (curScore > candidateTrees.getBestScore()) {
             if (params->snni) {
                 candidateTree = optimizeModelParameters(false, params->modelEps);
@@ -2024,19 +2027,20 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             printResultTree();
             betterScore = true;
         }
-        bool newTree = candidateTrees.update(candidateTree, curScore);
-
-        if (betterScore) {
-            if (newTree) {
-                cout << "BETTER TREE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
-                stop_rule.addImprovedIteration(curIt);
-            } else {
-                cout << "BETTER SCORE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
-            }
-        }
 
         if (curScore - oldScore <  params->loglh_epsilon)
             break;
+    }
+
+    bool newTree = candidateTrees.update(candidateTree, curScore);
+
+    if (betterScore) {
+        if (newTree) {
+            cout << "BETTER TREE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
+            stop_rule.addImprovedIteration(curIt);
+        } else {
+            cout << "BETTER SCORE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
+        }
     }
 
     if (nni_count == 0) {

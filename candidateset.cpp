@@ -19,7 +19,6 @@ CandidateSet::~CandidateSet() {
 CandidateSet::CandidateSet() {
 	aln = NULL;
 	params = NULL;
-	computeStableSplit = false;
 	loglThreshold = -DBL_MAX;
 }
 
@@ -224,7 +223,7 @@ bool CandidateSet::update(string tree, double score) {
 				 */
 				buildTopSplits();
 				double percentSS = (double) getNumStableSplits() / (aln->getNSeq() - 3) * 100;
-				cout << percentSS << " % of the splits have 100% support and can be fixed." << endl;
+				cout << percentSS << " % of the splits have 100% support" << endl;
 			}
 		}
 
@@ -355,8 +354,7 @@ int CandidateSet::buildTopSplits() {
 	assert(bestCandidateTrees.size() > 1);
 
 	candidateSplitsHash.setMaxValue(bestCandidateTrees.size());
-	CandidateTree worstTree = bestCandidateTrees[bestCandidateTrees.size()-1];
-	setLoglThreshold(worstTree.score);
+	loglThreshold = bestCandidateTrees.back().score;
 
 	/* Store all splits in the best trees in candidateSplitsHash.
 	 * Note that the weight of each split is set equal to the number of trees that have this split.
@@ -385,11 +383,11 @@ int CandidateSet::buildTopSplits() {
 		}
 	}
 
-	int numStableSplit = getNumStableSplits();
-	return numStableSplit;
+	numStableSplits = countStableSplits();
+	return numStableSplits;
 }
 
-int CandidateSet::getNumStableSplits() {
+int CandidateSet::countStableSplits() {
 	if (candidateSplitsHash.empty())
 		return 0;
 	int numMaxSupport = 0;

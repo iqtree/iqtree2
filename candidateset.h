@@ -199,7 +199,7 @@ public:
     /**
     *   Get number of stable splits
     */
-    int getNumStableSplits();
+    int countStableSplits();
 
     /**
      *  Update the set of stable split when a new tree is inserted
@@ -233,14 +233,6 @@ public:
 
 	const StringDoubleHashMap& getTopologies() const {
 		return topologies;
-	}
-
-	void enableFSS() {
-		computeStableSplit = true;
-	}
-
-	void disableFSS() {
-		computeStableSplit = false;
 	}
 
 	/**
@@ -293,9 +285,6 @@ public:
         return loglThreshold;
     }
 
-    void setLoglThreshold(double loglThreshold) {
-        CandidateSet::loglThreshold = loglThreshold;
-    }
 
 private:
 /**
@@ -304,10 +293,13 @@ private:
      */
     double loglThreshold;
 
-	/**
-	 *  If true, the stable splits set will be computed every time update() is called
-	 */
-	bool computeStableSplit;
+public:
+    int getNumStableSplits() const {
+        return numStableSplits;
+    }
+
+private:
+    int numStableSplits;
 
     /**
      *  Set of splits from the current best trees.
