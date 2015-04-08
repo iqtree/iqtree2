@@ -2198,7 +2198,7 @@ void Alignment::getAppearance(char state, double *state_app) {
 		assert(state<22);
 		state -= 20;
 		for (i = 0; i < 7; i++)
-			if (ambi_aa[state] & (1<<i)) {
+			if (ambi_aa[(int)state] & (1<<i)) {
 				state_app[i] = 1.0;
 			}
 		break;
@@ -2233,7 +2233,7 @@ void Alignment::getAppearance(char state, StateBitset &state_app) {
 		assert(state<22);
 		state -= 20;
 		for (i = 0; i < 7; i++)
-			if (ambi_aa[state] & (1<<i)) {
+			if (ambi_aa[(int)state] & (1<<i)) {
 				state_app[i] = 1;
 			}
 		break;
