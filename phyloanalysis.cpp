@@ -1567,7 +1567,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Optimize model parameters and branch lengths using ML for the initial tree
     double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
 	iqtree.clearAllPartialLH();
-    string initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
+    string initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
