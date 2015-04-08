@@ -727,7 +727,7 @@ protected:
      * 		Hash stable mapping a split into branch.
      * 		This data structure is generated when genSplitMap() is called.
      */
-    unordered_map<Split*, Branch> splitBranchMap;
+    unordered_map<Split*, Branch, hashfunc_Split> splitBranchMap;
 
     /**
             line number of the input file, used to output errors in input file

@@ -21,7 +21,7 @@
 #include <iostream>
 //#include <fstream>
 #include <iterator>
-#include <mtree.h>
+//#include <mtree.h>
 #include "splitgraph.h"
 using namespace std;
 
