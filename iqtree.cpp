@@ -2373,25 +2373,25 @@ void IQTree::saveBranches(map<string, double>& branchLengths, PhyloNode *node, P
 	    saveBranches(branchLengths, (PhyloNode*) (*it)->node, node);
 }
 
-void IQTree::restoreAllBrans(map<string, double>& branchLengths, PhyloNode *node, PhyloNode *dad) {
-    if (!node) {
-        node = (PhyloNode*) root;
-    }
-    if (dad) {
-        string key = getBranchID(node, dad);
-        Neighbor* bran_it = node->findNeighbor(dad);
-        assert(bran_it);
-        Neighbor* bran_it_back = dad->findNeighbor(node);
-        assert(bran_it_back);
-		assert(branchLengths.count(key));
-		bran_it->length = branchLengths[key];
-		bran_it_back->length = branchLengths[key];
-    }
-
-    FOR_NEIGHBOR_IT(node, dad, it){
-	    restoreAllBrans(branchLengths, (PhyloNode*) (*it)->node, node);
-}
-}
+//void IQTree::restoreAllBrans(map<string, double>& branchLengths, PhyloNode *node, PhyloNode *dad) {
+//    if (!node) {
+//        node = (PhyloNode*) root;
+//    }
+//    if (dad) {
+//        string key = getBranchID(node, dad);
+//        Neighbor* bran_it = node->findNeighbor(dad);
+//        assert(bran_it);
+//        Neighbor* bran_it_back = dad->findNeighbor(node);
+//        assert(bran_it_back);
+//		assert(branchLengths.count(key));
+//		bran_it->length = branchLengths[key];
+//		bran_it_back->length = branchLengths[key];
+//    }
+//
+//    FOR_NEIGHBOR_IT(node, dad, it){
+//	    restoreAllBrans(branchLengths, (PhyloNode*) (*it)->node, node);
+//}
+//}
 
 
 //void IQTree::evalNNIs(PhyloNode *node, PhyloNode *dad) {

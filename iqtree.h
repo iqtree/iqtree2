@@ -394,9 +394,10 @@ public:
     void saveBranches(map<string, double> &branchLengths, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
+        OBSOLETE: Please use restoreBranchLengths!
      * 	 Restore the branch lengths from the saved values
      */
-    virtual void restoreAllBrans(map<string, double>& branchLengths, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    virtual void restoreAllBrans(map<string, double>& branchLengths, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * Get the branch length of the branch node1-node2

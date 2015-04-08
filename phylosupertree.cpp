@@ -919,12 +919,12 @@ void PhyloSuperTree::changeNNIBrans(NNIMove move) {
 
 }
 
-void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
-	int part = 0;
-	for (iterator it = begin(); it != end(); it++, part++) {
-		(*it)->setBranchLengths(part_info[part].cur_brlen);
-	}
-}
+//void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+//	int part = 0;
+//	for (iterator it = begin(); it != end(); it++, part++) {
+//		(*it)->setBranchLengths(part_info[part].cur_brlen);
+//	}
+//}
 
 void PhyloSuperTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 	IQTree::reinsertLeaves(del_leaves);
