@@ -35,6 +35,13 @@ public:
 	virtual double getProp(int category) { return (1.0-p_invar)*prop[category]; }
 
 	/**
+		get the rate of a specified category. Default returns 1.0 since it is homogeneous model
+		@param category category ID from 0 to #category-1
+		@return the rate of the specified category
+	*/
+	virtual double getRate(int category) { return RateFree::getRate(category); }
+
+	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
 	virtual string getNameParams() {
@@ -78,6 +85,8 @@ public:
 		@param out output stream
 	*/
 	virtual void writeParameters(ostream &out);
+
+	virtual void setNCategory(int ncat);
 
 protected:
 

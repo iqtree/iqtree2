@@ -2192,9 +2192,9 @@ int main(int argc, char *argv[])
 	if (instruction_set < 3) outError("Your CPU does not support SSE3!");
 	bool has_fma3 = (instruction_set >= 7) && hasFMA3();
 	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
-	bool has_fma =  has_fma3 || has_fma4;
 
 #ifdef __FMA__
+	bool has_fma =  has_fma3 || has_fma4;
 	if (!has_fma) {
 		outError("Your CPU does not support FMA instruction, quiting now...");
 	}

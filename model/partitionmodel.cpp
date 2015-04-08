@@ -25,7 +25,7 @@ PartitionModel::PartitionModel()
 {
 }
 
-PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree)
+PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock *models_block)
         : ModelFactory()
 {
 	store_trans_matrix = params.store_trans_matrix;
@@ -46,7 +46,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree)
         params.model_name = tree->part_info[part].model_name;
         if (params.model_name == "") // if empty, take model name from command option
         	params.model_name = model_name;
-        (*it)->setModelFactory(new ModelFactory(params, (*it)));
+        (*it)->setModelFactory(new ModelFactory(params, (*it), models_block));
         (*it)->setModel((*it)->getModelFactory()->model);
         (*it)->setRate((*it)->getModelFactory()->site_rate);
         params.model_name = model_name;

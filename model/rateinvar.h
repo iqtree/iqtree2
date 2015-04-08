@@ -56,6 +56,13 @@ public:
 	virtual double getProp(int category) { return 1.0 - p_invar; }
 
 	/**
+		get the rate of a specified category. Default returns 1.0 since it is homogeneous model
+		@param category category ID from 0 to #category-1
+		@return the rate of the specified category
+	*/
+	virtual double getRate(int category) { return 1.0 / (1.0 - p_invar); }
+
+	/**
 		get the proportion of invariable sites
 		@return the proportion of invariable sites
 	*/

@@ -927,6 +927,7 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
 {
     char model_name[20];
     NGSAlignment sum_aln(aln.num_states, 1, freq);
+    ModelsBlock *models_block = new ModelsBlock;
 
     NGSTree sum_tree(params, &sum_aln);
     sum_aln.tree = &sum_tree;
@@ -937,7 +938,7 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
         sprintf(model_name, "%s+F1", model.c_str());
     try {
         params.model_name = model_name;
-        sum_tree.setModelFactory(new ModelFactory(params, &sum_tree));
+        sum_tree.setModelFactory(new ModelFactory(params, &sum_tree, models_block));
         sum_tree.setModel(sum_tree.getModelFactory()->model);
         sum_tree.setRate(sum_tree.getModelFactory()->site_rate);
         double bestTreeScore = sum_tree.getModelFactory()->optimizeParameters(false, write_info);
@@ -962,6 +963,7 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
         rate_info.insert(rate_info.end(), rate_mat, rate_mat+aln.num_states);
     }
 	delete [] rate_mat;
+	delete models_block;
 
     if (report_file) {
         DoubleMatrix tmp(1);
@@ -977,8 +979,11 @@ void testTwoRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string m
     char model_name[20];
     NGSAlignment sum_aln(aln.num_states, 1, freq);
 
+
     NGSTreeCat sum_tree(params, &sum_aln);
     sum_aln.tree = &sum_tree;
+
+    ModelsBlock *models_block = new ModelsBlock;
 
     if (model == "")
         sprintf(model_name, "GTR+FC2");
@@ -986,7 +991,7 @@ void testTwoRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string m
         sprintf(model_name, "%s+FC2", model.c_str());
     try {
         params.model_name = model_name;
-        sum_tree.setModelFactory(new ModelFactory(params, &sum_tree));
+        sum_tree.setModelFactory(new ModelFactory(params, &sum_tree, models_block));
         sum_tree.setModel(sum_tree.getModelFactory()->model);
         sum_tree.setRate(sum_tree.getModelFactory()->site_rate);
         double bestTreeScore = sum_tree.getModelFactory()->optimizeParameters(false, write_info);
@@ -1000,6 +1005,7 @@ void testTwoRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string m
         cout << str;
         return;
     }
+    delete models_block;
     //return sum_tree.getRate()->getRate(0);
 
     /*
@@ -1114,6 +1120,7 @@ void runNGSAnalysis(Params &params) {
     // initialize NGSTree
     NGSTree tree(params, &aln);
     aln.tree = &tree;
+    ModelsBlock *models_block = new ModelsBlock;
 
     // initialize Model
     string original_model = params.model_name;
@@ -1124,9 +1131,11 @@ void runNGSAnalysis(Params &params) {
     else
         sprintf(model_name, "%s+F%d", params.model_name.c_str(), aln.ncategory);
     params.model_name = model_name;
-    tree.setModelFactory(new ModelFactory(params, &tree));
+    tree.setModelFactory(new ModelFactory(params, &tree, models_block));
     tree.setModel(tree.getModelFactory()->model);
     tree.setRate(tree.getModelFactory()->site_rate);
+
+    delete models_block;
 
     int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
     cout << endl;

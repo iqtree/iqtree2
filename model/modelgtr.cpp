@@ -87,14 +87,16 @@ void ModelGTR::init(StateFreqType type) {
 	case FREQ_EQUAL:
 		if (phylo_tree->aln->seq_type == SEQ_CODON) {
 			int nscodon = phylo_tree->aln->getNumNonstopCodons();
+            double freq_codon = (1.0-(num_states-nscodon)*MIN_FREQUENCY)/(nscodon);
 			for (i = 0; i < num_states; i++)
 				if (phylo_tree->aln->isStopCodon(i))
-					state_freq[i] = 0.0;
+					state_freq[i] = MIN_FREQUENCY;
 				else
-					state_freq[i] = 1.0/nscodon;
+					state_freq[i] = freq_codon;
 		} else {
+            double freq_state = 1.0/num_states;
 			for (i = 0; i < num_states; i++)
-				state_freq[i] = 1.0/num_states;
+				state_freq[i] = freq_state;
 		}
 		break;	
 	case FREQ_ESTIMATE:
@@ -137,24 +139,24 @@ void ModelGTR::writeInfo(ostream &out) {
 		out << "  T: " << state_freq[3];
 		out << endl;
 	}
-	if (verbose_mode >= VB_MAX) {
-		int i, j;
-		out.precision(6);
-		out << "eigenvalues: " << endl;
-		for (i = 0; i < num_states; i++) out << " " << eigenvalues[i];
-		out << endl << "eigenvectors: " << endl;
-		for (i = 0; i < num_states; i++)  {
-			for (j = 0; j < num_states; j++)
-				out << " " << eigenvectors[i*num_states+j];
-			out << endl;
-		}
-		out << endl << "inv_eigenvectors: " << endl;
-		for (i = 0; i < num_states; i++)  {
-			for (j = 0; j < num_states; j++)
-				out << " " << inv_eigenvectors[i*num_states+j];
-			out << endl;
-		}
-	}
+//	if (verbose_mode >= VB_DEBUG) {
+//		int i, j;
+//		out.precision(6);
+//		out << "eigenvalues: " << endl;
+//		for (i = 0; i < num_states; i++) out << " " << eigenvalues[i];
+//		out << endl << "eigenvectors: " << endl;
+//		for (i = 0; i < num_states; i++)  {
+//			for (j = 0; j < num_states; j++)
+//				out << " " << eigenvectors[i*num_states+j];
+//			out << endl;
+//		}
+//		out << endl << "inv_eigenvectors: " << endl;
+//		for (i = 0; i < num_states; i++)  {
+//			for (j = 0; j < num_states; j++)
+//				out << " " << inv_eigenvectors[i*num_states+j];
+//			out << endl;
+//		}
+//	}
 	//out.unsetf(ios::fixed);
 }
 
@@ -518,7 +520,7 @@ void ModelGTR::decomposeRateMatrix(){
 		}
 		delete [] q;
 	} else {
-		double **rate_matrix = (double**) new double[num_states];
+		double **rate_matrix = new double*[num_states];
 
 		for (i = 0; i < num_states; i++)
 			rate_matrix[i] = new double[num_states];
@@ -599,7 +601,7 @@ void ModelGTR::readRates(string str) throw(const char*) {
 		}
 		end_pos += new_end_pos;
 		if (rates[i] <= 0.0)
-			outError("Negative rates found");
+			outError("Non-positive rates found");
 		if (i == nrates-1 && end_pos < str.length())
 			outError("String too long ", str);
 		if (i < nrates-1 && end_pos >= str.length())

@@ -588,7 +588,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
 		}
 		lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
-		inv_lh_ptn = vc_unit / lh_ptn;
+		inv_lh_ptn = vc_unit / abs(lh_ptn);
 
 		vc_freq.load_a(&ptn_freq[ptn]);
 
@@ -808,7 +808,24 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     }
 #endif
 		tree_lh += horizontal_add(lh_final);
-		assert(!isnan(tree_lh) && !isinf(tree_lh));
+        if (isnan(tree_lh) || isinf(tree_lh)) {
+            cout << "WARNING: Numerical underflow caused by alignment sites";
+            i = aln->getNSite();
+            for (j = 0; j < i; j++) {
+                ptn = aln->getPatternID(j);
+                if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                	cout << " " << j+1;
+                }
+            }
+            tree_lh = 0.0;
+            for (ptn = 0; ptn < orig_nptn; ptn++) {
+                if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                	_pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
+                }
+            	tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
+            }
+            cout << endl << "         Tree log-likelihood is set to " << tree_lh << endl;
+        }
 
 		// ascertainment bias correction
 		if (orig_nptn < nptn) {
@@ -885,7 +902,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 
 			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
-			lh_ptn = log(lh_ptn);
+			lh_ptn = log(abs(lh_ptn));
 			lh_ptn.store_a(&_pattern_lh[ptn]);
 #ifdef _OPENMP
 			lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);

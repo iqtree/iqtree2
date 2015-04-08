@@ -23,6 +23,10 @@
 #include "tools.h"
 #include "modelsubst.h"
 #include "rateheterogeneity.h"
+#include "modelsblock.h"
+
+
+ModelsBlock *readModelsDefinition(Params &params);
 
 /**
 Store the transition matrix corresponding to evolutionary time so that one must not compute again. 
@@ -43,7 +47,7 @@ public:
 		@param params program parameters
 		@param tree associated phylogenetic tree
 	*/
-	ModelFactory(Params &params, PhyloTree *tree);
+	ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block);
 
 	/**
 		blank constructor

@@ -162,6 +162,8 @@ public:
 		fix_gamma_shape = fixGammaShape;
 	}
 
+	virtual void setNCategory(int ncat);
+
 protected:
 
 	/**

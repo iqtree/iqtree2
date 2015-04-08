@@ -59,7 +59,7 @@ public:
 	 * set rates into groups, rates within a group are equal
 	 * @param group assignment of each rate into group
 	 */
-	void setRateGroup(IntVector group);
+	void setRateGroup(IntVector &group);
 
 	/**
 	 * set rates into groups, rates within a group are equal

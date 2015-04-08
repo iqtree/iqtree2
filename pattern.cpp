@@ -20,6 +20,13 @@ Pattern::Pattern()
     const_char = 255;
 }
 
+Pattern::Pattern(const Pattern &pat)
+        : string(pat)
+{
+    frequency = pat.frequency;
+    is_const = pat.is_const;
+    const_char = pat.const_char;
+}
 
 Pattern::~Pattern()
 {
@@ -39,4 +46,10 @@ int Pattern::computeGapChar(int num_states, int STATE_UNKNOWN) {
     return num;
 }
 
-
+//Pattern &Pattern::operator= (Pattern pat) {
+//    assign(pat);
+//    frequency = pat.frequency;
+//    is_const = pat.is_const;
+//    const_char = pat.const_char;
+//    return *this;
+//}

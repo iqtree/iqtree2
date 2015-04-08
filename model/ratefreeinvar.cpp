@@ -15,6 +15,11 @@ RateFreeInvar::RateFreeInvar(int ncat, string params, double p_invar_sites, Phyl
 	full_name = "Invar+" + full_name;
 }
 
+void RateFreeInvar::setNCategory(int ncat) {
+	RateFree::setNCategory(ncat);
+	name = "+I" + name;
+	full_name = "Invar+" + full_name;
+}
 
 double RateFreeInvar::computeFunction(double value) {
 	p_invar = value;

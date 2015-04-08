@@ -551,15 +551,16 @@ void IQTree::initializePLL(Params &params) {
 
 
 void IQTree::initializeModel(Params &params) {
+	ModelsBlock *models_block = readModelsDefinition(params);
     try {
         if (!getModelFactory()) {
             if (isSuperTree()) {
                 if (params.partition_type) {
-                    setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this));
+                    setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this, models_block));
                 } else
-                    setModelFactory(new PartitionModel(params, (PhyloSuperTree*) this));
+                    setModelFactory(new PartitionModel(params, (PhyloSuperTree*) this, models_block));
             } else {
-                setModelFactory(new ModelFactory(params, this));
+                setModelFactory(new ModelFactory(params, this, models_block));
             }
         }
     } catch (string & str) {
@@ -579,7 +580,7 @@ void IQTree::initializeModel(Params &params) {
         	outError("non GTR model for DNA is not yet supported by PLL.");
         pllInitModel(pllInst, pllPartitions);
     }
-
+    delete models_block;
 }
 double IQTree::getProbDelete() {
     return (double) k_delete / leafNum;
@@ -1822,7 +1823,6 @@ double IQTree::doTreeSearch() {
         if (curIt > 10) {
 			cout << " (" << convert_time(realtime_remaining) << " left)";
         }
-        cout << endl;
 
         if (params->write_intermediate_trees && save_all_trees != 2) {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
