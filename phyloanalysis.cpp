@@ -1674,7 +1674,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 			((PhyloSuperTree*) &iqtree)->mapTrees();
 	if (params.snni && params.min_iterations && verbose_mode >= VB_MED) {
 		cout << "Log-likelihoods of best " << params.popSize << " trees: " << endl;
-		iqtree.printBestScores(params.popSize);
+		iqtree.printBestScores();
 		cout << endl;
 	}
 

@@ -290,9 +290,9 @@ public:
     double computeLogL();
 
     /**
-     *	Print numBestScore found so far, starting from the highest
+     *	Print scores of tree used for generating offsprings
      */
-    void printBestScores(int numBestScore);
+    void printBestScores();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
@@ -564,17 +564,6 @@ protected:
      * Taxa set
      */
     NodeVector taxaSet;
-
-    /**
-     * confidence value for number of NNIs found in one iteration
-     */
-    int nni_count_est;
-
-    /**
-     * confidence value for likelihood improvement made by one NNI
-     */
-    double nni_delta_est;
-
 
     /**
      *  Vector contains approximated improvement pro NNI at each iterations
