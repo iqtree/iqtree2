@@ -24,7 +24,7 @@
 
 const double MIN_GAMMA_RATE = 1e-6;
 // change from 0.01 to 0.02 as 0.01 causes numerical problems
-const double MIN_GAMMA_SHAPE = 0.03;
+const double MIN_GAMMA_SHAPE = 0.02;
 const double MAX_GAMMA_SHAPE = 1000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
 
