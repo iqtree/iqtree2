@@ -1058,35 +1058,44 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &tabuBranches, Split
                 curBranch.first = (*it)->node;
                 curBranch.second = node;
 
-                if (params->fixStableSplits && !tabuSplits->empty()) {
-                    Split* curSplit;
+                bool tabuBranch = false;
+                if (params->tabu) {
+                    Split *curSplit;
                     Split *sp = (*it)->split;
                     assert(sp != NULL);
                     curSplit = new Split(*sp);
                     if (curSplit->shouldInvert())
                         curSplit->invert();
-
                     /******************** CHECK TABU SPLIT **************************/
                     if (tabuSplits->findSplit(curSplit) != NULL) {
                         tabuBranches.push_back(curBranch);
-                    } else if (!candidateSplitHash->empty()) {
-                        /******************** CHECK STABLE SPLIT **************************/
-                        int value;
-                        candidateSplitHash->findSplit(curSplit, value);
-                        int maxSupport = candidateSplitHash->getMaxValue();
-                        if (value != maxSupport) {
-                            nniBranches.push_back(curBranch);
-                        } else { // add a stable branch with a certain probability
-                            double rndDbl = random_double();
-                            if (rndDbl < params->probPerturbSS)
-                                nniBranches.push_back(curBranch);
-                        }
-                    } else {
+                        tabuBranch = true;
+                    }
+                    delete curSplit;
+                }
+
+                if (!candidateSplitHash->empty()) {
+                    Split *curSplit;
+                    Split *sp = (*it)->split;
+                    assert(sp != NULL);
+                    curSplit = new Split(*sp);
+                    if (curSplit->shouldInvert())
+                        curSplit->invert();
+                    /******************** CHECK STABLE SPLIT **************************/
+                    int value;
+                    candidateSplitHash->findSplit(curSplit, value);
+                    int maxSupport = candidateSplitHash->getMaxValue();
+                    if (value != maxSupport && !tabuBranch) {
                         nniBranches.push_back(curBranch);
+                    } else { // add a stable branch with a certain probability
+                        double rndDbl = random_double();
+                        if (rndDbl < params->probPerturbSS && !tabuBranch)
+                            nniBranches.push_back(curBranch);
                     }
                     delete curSplit;
                 } else {
-                    nniBranches.push_back(curBranch);
+                    if (!tabuBranch)
+                        nniBranches.push_back(curBranch);
                 }
             }
             getNNIBranches(nniBranches, tabuBranches, tabuSplits, candidateSplitHash, (*it)->node, node);
@@ -1099,7 +1108,7 @@ void IQTree::doRandomNNIs(int numNNI) {
 	NodeVector nodes1, nodes2;
 	NodeVector::iterator it1;
     NodeVector::iterator it2;
-    if (params->fixStableSplits) {
+    if (params->tabu) {
 		tabuSplits.clear();
 	}
     int cntNNI = 0;
@@ -1115,7 +1124,7 @@ void IQTree::doRandomNNIs(int numNNI) {
         int randInt = random_int(nniBranches.size());
         NNIMove randNNI = getRandomNNI(nniBranches[randInt]);
         doNNI(randNNI, true);
-        if (params->fixStableSplits) {
+        if (params->tabu) {
             Split* sp = getSplit(nniBranches[randInt].first, nniBranches[randInt].second);
             Split* tabuSplit = new Split(*sp);
             if (tabuSplit->shouldInvert()) {
@@ -2043,17 +2052,17 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         if (curScore - oldScore <  params->loglh_epsilon)
             break;
 
-        if (params->fixStableSplits) {
-            // add tabu splits
-            for (int i = 0; i < numNNIs; i++) {
-                Split* sp = getSplit(compatibleNNIs.at(i).node1, compatibleNNIs.at(i).node2);
-                Split* tabuSplit = new Split(*sp);
-                if (tabuSplit->shouldInvert()) {
-                    tabuSplit->invert();
-                }
-                tabuSplits.insertSplit(tabuSplit, 1);
-            }
-        }
+//        if (params->fixStableSplits) {
+//            // add tabu splits
+//            for (int i = 0; i < numNNIs; i++) {
+//                Split* sp = getSplit(compatibleNNIs.at(i).node1, compatibleNNIs.at(i).node2);
+//                Split* tabuSplit = new Split(*sp);
+//                if (tabuSplit->shouldInvert()) {
+//                    tabuSplit->invert();
+//                }
+//                tabuSplits.insertSplit(tabuSplit, 1);
+//            }
+//        }
     }
 
     bool newTree;

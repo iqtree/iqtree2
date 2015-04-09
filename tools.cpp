@@ -2312,7 +2312,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-tabu") == 0) {
 				params.tabu = true;
-				params.speednni = false;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-toppars") == 0) {
