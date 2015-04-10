@@ -1084,13 +1084,13 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &tabuBranches, Split
 
 
 void IQTree::doRandomNNIs(int numNNI) {
-	tabuSplits.clear();
     int cntNNI = 0;
     unsigned int totalBranches = aln->getNSeq() - 3;
     Branches nniBranches;
     Branches tabuNNIBranches;
     nniBranches.reserve(totalBranches);
     tabuNNIBranches.reserve(totalBranches);
+    tabuSplits.clear();
     while (cntNNI < numNNI) {
         nniBranches.clear();
         tabuNNIBranches.clear();
@@ -1098,12 +1098,14 @@ void IQTree::doRandomNNIs(int numNNI) {
         int randInt = random_int(nniBranches.size());
         NNIMove randNNI = getRandomNNI(nniBranches[randInt]);
         doNNI(randNNI, true);
-        Split* sp = getSplit(nniBranches[randInt].first, nniBranches[randInt].second);
-        Split* tabuSplit = new Split(*sp);
-        if (tabuSplit->shouldInvert()) {
-            tabuSplit->invert();
+        if (params->tabu) {
+            Split *sp = getSplit(nniBranches[randInt].first, nniBranches[randInt].second);
+            Split *tabuSplit = new Split(*sp);
+            if (tabuSplit->shouldInvert()) {
+                tabuSplit->invert();
+            }
+            tabuSplits.insertSplit(tabuSplit, 1);
         }
-        tabuSplits.insertSplit(tabuSplit, 1);
         cntNNI++;
     }
 	//cout << "Number of random NNI performed: " << cntNNI << endl;
@@ -1113,7 +1115,6 @@ void IQTree::doRandomNNIs(int numNNI) {
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
     }
-    //tabuSplits.clear();
     if (params->pll) {
     	pllReadNewick(getTreeString());
     }
@@ -1961,7 +1962,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 
         getNNIBranches(nniBranches, tabuNNIBranches, &tabuSplits, &candidateTrees.getCandidateSplitHash());
         if (!tabuSplits.empty()) {
-            //cout << "tabuNNIBranches.size(): " << tabuNNIBranches.size() << endl;
             tabuSplits.clear();
         }
 
@@ -2025,17 +2025,17 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         if (curScore - oldScore <  params->loglh_epsilon)
             break;
 
-        if (params->tabu) {
-            // add tabu splits
-            for (int i = 0; i < numNNIs; i++) {
-                Split* sp = getSplit(compatibleNNIs.at(i).node1, compatibleNNIs.at(i).node2);
-                Split* tabuSplit = new Split(*sp);
-                if (tabuSplit->shouldInvert()) {
-                    tabuSplit->invert();
-                }
-                tabuSplits.insertSplit(tabuSplit, 1);
-            }
-        }
+//        if (params->tabu) {
+//            // add tabu splits
+//            for (int i = 0; i < numNNIs; i++) {
+//                Split* sp = getSplit(compatibleNNIs.at(i).node1, compatibleNNIs.at(i).node2);
+//                Split* tabuSplit = new Split(*sp);
+//                if (tabuSplit->shouldInvert()) {
+//                    tabuSplit->invert();
+//                }
+//                tabuSplits.insertSplit(tabuSplit, 1);
+//            }
+//        }
     }
 
     bool newTree;
@@ -2057,7 +2057,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     if (nni_steps == MAXSTEPS) {
         cout << "WARNING: NNI search needs unusual large number of steps (" << MAXSTEPS << ") to converge!" << endl;
     }
-    tabuSplits.clear();
     return curScore;
 }
 
