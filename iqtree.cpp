@@ -1084,9 +1084,7 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &tabuBranches, Split
 
 
 void IQTree::doRandomNNIs(int numNNI) {
-    if (params->tabu) {
-		tabuSplits.clear();
-	}
+	tabuSplits.clear();
     int cntNNI = 0;
     unsigned int totalBranches = aln->getNSeq() - 3;
     Branches nniBranches;
@@ -1100,14 +1098,12 @@ void IQTree::doRandomNNIs(int numNNI) {
         int randInt = random_int(nniBranches.size());
         NNIMove randNNI = getRandomNNI(nniBranches[randInt]);
         doNNI(randNNI, true);
-        if (params->tabu) {
-            Split* sp = getSplit(nniBranches[randInt].first, nniBranches[randInt].second);
-            Split* tabuSplit = new Split(*sp);
-            if (tabuSplit->shouldInvert()) {
-                tabuSplit->invert();
-            }
-            tabuSplits.insertSplit(tabuSplit, 1);
+        Split* sp = getSplit(nniBranches[randInt].first, nniBranches[randInt].second);
+        Split* tabuSplit = new Split(*sp);
+        if (tabuSplit->shouldInvert()) {
+            tabuSplit->invert();
         }
+        tabuSplits.insertSplit(tabuSplit, 1);
         cntNNI++;
     }
 	//cout << "Number of random NNI performed: " << cntNNI << endl;
@@ -1117,7 +1113,7 @@ void IQTree::doRandomNNIs(int numNNI) {
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
     }
-
+    //tabuSplits.clear();
     if (params->pll) {
     	pllReadNewick(getTreeString());
     }
@@ -1728,9 +1724,8 @@ double IQTree::doTreeSearch() {
         } else {
             if (params->snni) {
 
-//            	int numNonStableBranches = (int) (
-//                        aln->getNSeq() - 3 - floor(candidateTrees.getNumStableSplits() * (1.0 - params->probPerturbSS)));
-                int numNonStableBranches =  aln->getNSeq() - 3 - candidateTrees.getNumStableSplits();
+            	int numNonStableBranches = (int) (
+                        aln->getNSeq() - 3 - floor(candidateTrees.getNumStableSplits() * (1.0 - params->probPerturbSS)));
                 int numNNI = floor(searchinfo.curPerStrength * numNonStableBranches);
 
                 if (params->five_plus_five) {
@@ -1965,6 +1960,10 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         positiveNNIs.clear();
 
         getNNIBranches(nniBranches, tabuNNIBranches, &tabuSplits, &candidateTrees.getCandidateSplitHash());
+        if (!tabuSplits.empty()) {
+            //cout << "tabuNNIBranches.size(): " << tabuNNIBranches.size() << endl;
+            tabuSplits.clear();
+        }
 
         // evaluate NNIs
         evaluateNNIs(nniBranches, positiveNNIs);
