@@ -195,7 +195,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
 					break;
 				}
 			if (equal_seq) {
-				if (!keep_two || !first_ident_seq) {
+				if (removed_seqs.size() < getNSeq()-3 && (!keep_two || !first_ident_seq)) {
 					removed_seqs.push_back(getSeqName(seq2));
 					target_seqs.push_back(getSeqName(seq1));
 					removed[seq2] = true;
@@ -208,8 +208,8 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
 	}
 
 	if (removed_seqs.size() > 0) {
-		if (removed_seqs.size() > getNSeq()-3)
-			outError("Your alignment contains too many identical sequences, quiting now...");
+		if (removed_seqs.size() >= getNSeq()-3)
+			outWarning("Your alignment contains too many identical sequences!");
 		IntVector keep_seqs;
 		for (seq1 = 0; seq1 < getNSeq(); seq1++)
 			if (!removed[seq1]) keep_seqs.push_back(seq1);
